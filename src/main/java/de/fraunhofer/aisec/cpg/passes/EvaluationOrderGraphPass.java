@@ -37,7 +37,6 @@ import de.fraunhofer.aisec.cpg.graph.DefaultStatement;
 import de.fraunhofer.aisec.cpg.graph.DeleteExpression;
 import de.fraunhofer.aisec.cpg.graph.DoStatement;
 import de.fraunhofer.aisec.cpg.graph.EmptyStatement;
-import de.fraunhofer.aisec.cpg.graph.Expression;
 import de.fraunhofer.aisec.cpg.graph.ExpressionList;
 import de.fraunhofer.aisec.cpg.graph.ForEachStatement;
 import de.fraunhofer.aisec.cpg.graph.ForStatement;
@@ -133,6 +132,7 @@ public class EvaluationOrderGraphPass implements Pass {
   }
 
   private static class BranchState extends State {
+    List<Node> openConditionEOGs = new ArrayList<>();
     List<Node> openBranchNodes = new ArrayList<>();
   }
 
@@ -382,14 +382,15 @@ public class EvaluationOrderGraphPass implements Pass {
 
       // see at which step we currently are
       if (child == ((IfStatement) parent).getCondition()) {
-        state.tmpEOGNodes = new ArrayList<>(currentEOG);
+        state.openConditionEOGs = new ArrayList<>(currentEOG);
       } else if (child == ((IfStatement) parent).getThenStatement()) {
         state.openBranchNodes = new ArrayList<>(currentEOG);
         if (((IfStatement) parent).getElseStatement() == null) {
-          state.openBranchNodes.addAll(state.tmpEOGNodes);
+          state.openBranchNodes.addAll(state.openConditionEOGs);
+        } else {
+          setCurrentEOGs(state.openConditionEOGs);
         }
       } else if (child == ((IfStatement) parent).getElseStatement()) {
-        setCurrentEOGs(state.tmpEOGNodes);
         state.openBranchNodes.addAll(currentEOG);
       }
     } else if (parent instanceof AssertStatement) {
@@ -505,14 +506,11 @@ public class EvaluationOrderGraphPass implements Pass {
 
       // see at which step we currently are
       if (child == ((ConditionalExpression) parent).getCondition()) {
-        state.tmpEOGNodes = new ArrayList<>(currentEOG);
+        state.openConditionEOGs = new ArrayList<>(currentEOG);
       } else if (child == ((ConditionalExpression) parent).getThenExpr()) {
         state.openBranchNodes = new ArrayList<>(currentEOG);
-        if (((ConditionalExpression) parent).getElseExpr() == null) {
-          state.openBranchNodes.addAll(state.tmpEOGNodes);
-        }
+        setCurrentEOGs(state.openConditionEOGs);
       } else if (child == ((ConditionalExpression) parent).getElseExpr()) {
-        setCurrentEOGs(state.tmpEOGNodes);
         state.openBranchNodes.addAll(currentEOG);
       }
     }
@@ -538,7 +536,6 @@ public class EvaluationOrderGraphPass implements Pass {
         || exiting instanceof CastExpression
         || exiting instanceof CompoundStatement
         || exiting instanceof CompoundStatementExpression
-        || exiting instanceof ConditionalExpression
         || exiting instanceof ConstructExpression
         || exiting instanceof DeleteExpression
         || exiting instanceof EmptyStatement
@@ -598,6 +595,10 @@ public class EvaluationOrderGraphPass implements Pass {
         pushToEOG(exiting);
       }
     } else if (exiting instanceof IfStatement) {
+      BranchState state = (BranchState) intermediateStates.get(exiting);
+      setCurrentEOGs(state.openBranchNodes);
+      pushToEOG(exiting); // Todo Remove root, if not wanted
+    } else if (exiting instanceof ConditionalExpression) {
       BranchState state = (BranchState) intermediateStates.get(exiting);
       setCurrentEOGs(state.openBranchNodes);
       pushToEOG(exiting); // Todo Remove root, if not wanted
