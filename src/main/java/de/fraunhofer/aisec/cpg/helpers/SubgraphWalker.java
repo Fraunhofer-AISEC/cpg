@@ -1,26 +1,14 @@
 /*
  * Copyright (c) 2019, Fraunhofer AISEC. All rights reserved.
  *
- *  Licensed under the Apache License, Version 2.0 (the "License");
- *  you may not use this file except in compliance with the License.
- *  You may obtain a copy of the License at
- *
- *       http://www.apache.org/licenses/LICENSE-2.0
- *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
- *
- *                    $$$$$$\  $$$$$$$\   $$$$$$\
- *                   $$  __$$\ $$  __$$\ $$  __$$\
- *                   $$ /  \__|$$ |  $$ |$$ /  \__|
- *                   $$ |      $$$$$$$  |$$ |$$$$\
- *                   $$ |      $$  ____/ $$ |\_$$ |
- *                   $$ |  $$\ $$ |      $$ |  $$ |
- *                   \$$$$$   |$$ |      \$$$$$   |
- *                    \______/ \__|       \______/
+ *  $$$$$$\  $$$$$$$\   $$$$$$\
+ * $$  __$$\ $$  __$$\ $$  __$$\
+ * $$ /  \__|$$ |  $$ |$$ /  \__|
+ * $$ |      $$$$$$$  |$$ |$$$$\
+ * $$ |      $$  ____/ $$ |\_$$ |
+ * $$ |  $$\ $$ |      $$ |  $$ |
+ * \$$$$$   |$$ |      \$$$$$   |
+ *  \______/ \__|       \______/
  *
  */
 
@@ -46,6 +34,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.function.BiConsumer;
+import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
@@ -137,6 +127,24 @@ public class SubgraphWalker {
   }
 
   /**
+   * For better readability: <code>result.entries</code> instead of <code>result.get(0)</code> when
+   * working with getEOGPathEdges. Can be used for all subgraphs in subgraphs, e.g. AST entries and
+   * exits in a EOG subgraph, EOG entries and exits in a CFG subgraph.
+   */
+  public static class Border {
+    private List<Node> entries = new ArrayList<>();
+    private List<Node> exits = new ArrayList<>();
+
+    public List<Node> getEntries() {
+      return entries;
+    }
+
+    public List<Node> getExits() {
+      return exits;
+    }
+  }
+
+  /**
    * Function returns two lists in a list. The first list contains all eog nodes with no predecesor
    * in the subgraph with root 'n'. The second list contains eog edges that have no successor in the
    * subgraph with root 'n'. The first List marks the entry and the second marks the exit nodes of
@@ -176,24 +184,6 @@ public class SubgraphWalker {
     }
   }
 
-  /**
-   * For better readability: <code>result.entries</code> instead of <code>result.get(0)</code> when
-   * working with getEOGPathEdges. Can be used for all subgraphs in subgraphs, e.g. AST entries and
-   * exits in a EOG subgraph, EOG entries and exits in a CFG subgraph.
-   */
-  public static class Border {
-    private List<Node> entries = new ArrayList<>();
-    private List<Node> exits = new ArrayList<>();
-
-    public List<Node> getEntries() {
-      return entries;
-    }
-
-    public List<Node> getExits() {
-      return exits;
-    }
-  }
-
   public static class IterativeGraphWalker {
 
     private Deque<Node> todo;
@@ -230,6 +220,27 @@ public class SubgraphWalker {
     private List<Consumer<Node>> onScopeExit = new ArrayList<>();
 
     /**
+     * Callback that is triggered whenever a direct child of a node has been exited. First
+     * parameter: parent, second parameter: child.
+     *
+     * <p>So again considering the sample AST from {@link IterativeGraphWalker#onScopeExit}: When we
+     * visited child1 and subchild, onScopeExit is called for child1. Afterwards, onChildExit
+     * notifies the callback that while parent has not yet been completed, we finished one of its
+     * child trees and are about to go to the next child. Thus, via onChildExit, we now have the
+     * ability to perform any actions on data that is only available once a complete subtree has
+     * been visited.
+     */
+    private List<BiConsumer<Node, Node>> onChildExit = new ArrayList<>();
+
+    /**
+     * The standard behavior of the iteration algorithm is to use {@link
+     * SubgraphWalker#getAstChildren} in order to find out which nodes to visit next. If this field
+     * is not null, the default behavior is replaced, and the nodes provided by the provided
+     * function are being used as subsequent iteration targets.
+     */
+    private BiFunction<Node, Set<Node>, List<Node>> unseenChildrenProvider;
+
+    /**
      * The core iterative AST traversal algorithm: In a depth-first way we descend into the tree,
      * providing callbacks for graph modification.
      *
@@ -244,7 +255,12 @@ public class SubgraphWalker {
       while (!todo.isEmpty()) {
         Node current = todo.pop();
         if (!backlog.isEmpty() && backlog.peek().equals(current)) {
-          onScopeExit.forEach(c -> c.accept(backlog.pop()));
+          Node exiting = backlog.pop();
+          onScopeExit.forEach(c -> c.accept(exiting));
+          if (!backlog.isEmpty()) {
+            Node parent = backlog.peek();
+            onChildExit.forEach(c -> c.accept(parent, current));
+          }
         } else {
           // re-place the current node as a marker for the above check to find out when we need to
           // exit a scope
@@ -252,28 +268,49 @@ public class SubgraphWalker {
 
           onNodeVisit.forEach(c -> c.accept(current));
 
-          Set<Node> unseenChildren =
-              SubgraphWalker.getAstChildren(current).stream()
-                  .filter(Predicate.not(seen::contains))
-                  .collect(Collectors.toSet());
+          List<Node> unseenChildren =
+              unseenChildrenProvider == null
+                  ? getUnseenChildren(current, seen)
+                  : unseenChildrenProvider.apply(current, seen);
           seen.addAll(unseenChildren);
-          unseenChildren.forEach(todo::push);
+          // we guarantee that we visit the children from list ID 0 upwards, thus we push them in
+          // reverse order. Like this, there is no confusion on the user's side
+          for (int i = unseenChildren.size() - 1; i >= 0; i--) {
+            todo.push(unseenChildren.get(i));
+          }
+
           backlog.push(current);
         }
       }
+    }
+
+    private List<Node> getUnseenChildren(Node current, Set<Node> seen) {
+      return SubgraphWalker.getAstChildren(current).stream()
+          .filter(Predicate.not(seen::contains))
+          .collect(Collectors.toList());
     }
 
     public void registerOnNodeVisit(Consumer<Node> callback) {
       onNodeVisit.add(callback);
     }
 
+    public void registerOnChildExit(BiConsumer<Node, Node> callback) {
+      onChildExit.add(callback);
+    }
+
     public void registerOnScopeExit(Consumer<Node> callback) {
       onScopeExit.add(callback);
+    }
+
+    public void setUnseenChildrenProvider(
+        BiFunction<Node, Set<Node>, List<Node>> unseenChildrenProvider) {
+      this.unseenChildrenProvider = unseenChildrenProvider;
     }
 
     public void clearCallbacks() {
       onNodeVisit.clear();
       onScopeExit.clear();
+      unseenChildrenProvider = null;
     }
 
     public Deque<Node> getTodo() {
@@ -300,26 +337,35 @@ public class SubgraphWalker {
     private Map<Node, Pair<Node, List<ValueDeclaration>>> declarations = new IdentityHashMap<>();
     private Node currentScope = null;
     private Type currentClass = null;
-    private IterativeGraphWalker walker;
+    private IterativeGraphWalker walker = new IterativeGraphWalker();
 
-    /**
-     * Callback function(s) getting three arguments: the type of the class we're currently in, the
-     * root node of the current declaration scope, the currently visited node. The declaration scope
-     * root can be passed to {@link ScopedWalker#getDeclarationsForScope} in order to retrieve the
-     * currently available declarations.
-     */
-    private List<TriConsumer<Type, Node, Node>> handlers = new ArrayList<>();
+    public ScopedWalker() {
+      walker.registerOnScopeExit(this::leaveScope);
+    }
 
     public void clearCallbacks() {
-      handlers.clear();
+      walker.clearCallbacks();
     }
 
-    public void registerHandler(TriConsumer<Type, Node, Node> handler) {
-      handlers.add(handler);
+    public void registerOnNodeVisit(TriConsumer<Type, Node, Node> handler) {
+      walker.registerOnNodeVisit(n -> handleNode(n, handler));
     }
 
-    public void registerHandler(Consumer<Node> handler) {
-      handlers.add((currClass, currScope, currNode) -> handler.accept(currNode));
+    public void registerOnNodeVisit(Consumer<Node> handler) {
+      walker.registerOnNodeVisit(handler);
+    }
+
+    public void registerOnScopeExit(Consumer<Node> callback) {
+      walker.registerOnScopeExit(callback);
+    }
+
+    public void registerOnChildExit(BiConsumer<Node, Node> callback) {
+      walker.registerOnChildExit(callback);
+    }
+
+    public void setUnseenChildrenProvider(
+        BiFunction<Node, Set<Node>, List<Node>> unseenChildrenProvider) {
+      walker.setUnseenChildrenProvider(unseenChildrenProvider);
     }
 
     /**
@@ -328,9 +374,6 @@ public class SubgraphWalker {
      * @param root The node where AST descent is started
      */
     public void iterate(Node root) {
-      walker = new IterativeGraphWalker();
-      handlers.forEach(h -> walker.registerOnNodeVisit(n -> handleNode(n, h)));
-      walker.registerOnScopeExit(this::leaveScope);
       walker.iterate(root);
     }
 

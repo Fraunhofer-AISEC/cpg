@@ -56,6 +56,7 @@ import de.fraunhofer.aisec.cpg.graph.WhileStatement;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -71,7 +72,7 @@ public class ScopeManager {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(ScopeManager.class);
 
-  private Map<Node, Scope> scopeMap = new HashMap<>();
+  private Map<Node, Scope> scopeMap = new IdentityHashMap<>();
   private Scope currentScope = null;
   private LanguageFrontend lang;
 
