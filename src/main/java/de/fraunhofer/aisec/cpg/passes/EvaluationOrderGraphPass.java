@@ -261,10 +261,27 @@ public class EvaluationOrderGraphPass implements Pass {
       result.add(((SwitchStatement) current).getSelectorDeclaration());
       result.add(((SwitchStatement) current).getSelector());
       Statement statement = ((SwitchStatement) current).getStatement();
+      CompoundStatement compound;
       if (statement instanceof DoStatement) {
-        result.add(((DoStatement) statement).getStatement());
-      } else {
         result.add(statement);
+        compound = (CompoundStatement) ((DoStatement) statement).getStatement();
+      } else {
+        compound = (CompoundStatement) statement;
+      }
+      result.addAll(compound.getStatements());
+
+      if (statement instanceof DoStatement) {
+        compound = (CompoundStatement) ((DoStatement) statement).getStatement();
+      } else {
+        compound = (CompoundStatement) statement;
+      }
+      ParentState<SwitchStatement> parentState = new ParentState<>();
+      parentState.parent = (SwitchStatement) current;
+      for (Statement subStatement : compound.getStatements()) {
+        if (subStatement instanceof CaseStatement || subStatement instanceof DefaultStatement) {
+          // tell the case/default statements who their parent switch is
+          intermediateStates.put(subStatement, parentState);
+        }
       }
     } else if (current instanceof LabelStatement) {
       result.add(((LabelStatement) current).getSubStatement());
@@ -410,10 +427,14 @@ public class EvaluationOrderGraphPass implements Pass {
         state.tmpEOGNodes = new ArrayList<>(currentEOG);
       }
     } else if (parent instanceof ForStatement) {
+      if (!intermediateStates.containsKey(parent)) {
+        intermediateStates.put(parent, new State());
+      }
       if (child == ((ForStatement) parent).getCondition()) {
-        if (!intermediateStates.containsKey(parent)) {
-          intermediateStates.put(parent, new State());
-        }
+        State state = intermediateStates.get(parent);
+        state.tmpEOGNodes = new ArrayList<>(currentEOG);
+      } else if (((ForStatement) parent).getCondition() == null
+          && child == ((ForStatement) parent).getConditionDeclaration()) {
         State state = intermediateStates.get(parent);
         state.tmpEOGNodes = new ArrayList<>(currentEOG);
       }
@@ -481,22 +502,6 @@ public class EvaluationOrderGraphPass implements Pass {
       if (child == ((SwitchStatement) parent).getSelector()) {
         state.tmpEOGNodes = new ArrayList<>(currentEOG);
         currentEOG = new ArrayList<>();
-
-        Statement statement = ((SwitchStatement) parent).getStatement();
-        CompoundStatement compound;
-        if (statement instanceof DoStatement) {
-          compound = (CompoundStatement) ((DoStatement) statement).getStatement();
-        } else {
-          compound = (CompoundStatement) statement;
-        }
-        ParentState<SwitchStatement> parentState = new ParentState<>();
-        parentState.parent = (SwitchStatement) parent;
-        for (Statement subStatement : compound.getStatements()) {
-          if (subStatement instanceof CaseStatement || subStatement instanceof DefaultStatement) {
-            // tell the case/default statements who their parent switch is
-            intermediateStates.put(subStatement, parentState);
-          }
-        }
       }
     } else if (parent instanceof ConditionalExpression) {
       if (!intermediateStates.containsKey(parent)) {
@@ -606,6 +611,15 @@ public class EvaluationOrderGraphPass implements Pass {
       State state = intermediateStates.get(exiting);
       setCurrentEOGs(state.tmpEOGNodes);
       pushToEOG(exiting);
+    } else if (exiting instanceof ForStatement) {
+      State state = intermediateStates.get(exiting);
+      connectCurrentToLoopStart();
+      currentEOG.clear();
+      exitLoop((Statement) exiting, (LoopScope) lang.getScopeManager().leaveScope(exiting));
+
+      currentEOG.addAll(state.tmpEOGNodes);
+
+      pushToEOG(exiting); // Todo Remove root, if not wanted
     } else if (exiting instanceof WhileStatement) {
       State state = intermediateStates.get(exiting);
       connectCurrentToLoopStart();
