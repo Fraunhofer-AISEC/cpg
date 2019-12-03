@@ -121,6 +121,7 @@ public class EvaluationOrderGraphPass implements Pass {
   // Some nodes will have no incoming nor outgoing edges but still need to be associated to the next
   // eog relevant node.
   private List<Node> intermediateNodes = new ArrayList<>();
+  private Map<Node, Boolean> isDone = new IdentityHashMap<>();
 
   // TODO @KW: we need to remove lang here, as we might have multiple language frontends.
   //  Can we move the scopemanager somewhere else?
@@ -139,6 +140,10 @@ public class EvaluationOrderGraphPass implements Pass {
   private static class TryState extends State {
     Map<Type, List<Node>> catchesOrRelays = new HashMap<>();
     boolean canTerminateExceptionfree = false;
+  }
+
+  private static class SwitchState extends State {
+    CompoundStatement compound;
   }
 
   private static class ParentState<P extends Node> extends State {
@@ -170,7 +175,7 @@ public class EvaluationOrderGraphPass implements Pass {
   public void accept(TranslationResult result) {
     lang.setScopeManager(new ScopeManager(lang));
     ScopedWalker walker = new ScopedWalker();
-    walker.setUnseenChildrenProvider(this::getEOGOrderedChildren);
+    walker.setUnseenChildrenProvider(this::getUnseenChildren);
     walker.registerOnNodeVisit(this::onEnter);
     walker.registerOnScopeExit(this::onExit);
     walker.registerOnChildExit(this::onChildExit);
@@ -181,7 +186,14 @@ public class EvaluationOrderGraphPass implements Pass {
     }
   }
 
-  private List<Node> getEOGOrderedChildren(Node current, Set<Node> seen) {
+  private List<Node> getUnseenChildren(Node current, Set<Node> seen) {
+    return getEOGOrderedChildren(current).stream()
+        .filter(Objects::nonNull)
+        .filter(Predicate.not(seen::contains))
+        .collect(Collectors.toList());
+  }
+
+  private List<Node> getEOGOrderedChildren(Node current) {
     List<Node> result = new ArrayList<>();
     if (current instanceof TranslationUnitDeclaration) {
       result.addAll(((TranslationUnitDeclaration) current).getDeclarations());
@@ -270,11 +282,6 @@ public class EvaluationOrderGraphPass implements Pass {
       }
       result.addAll(compound.getStatements());
 
-      if (statement instanceof DoStatement) {
-        compound = (CompoundStatement) ((DoStatement) statement).getStatement();
-      } else {
-        compound = (CompoundStatement) statement;
-      }
       ParentState<SwitchStatement> parentState = new ParentState<>();
       parentState.parent = (SwitchStatement) current;
       for (Statement subStatement : compound.getStatements()) {
@@ -305,11 +312,7 @@ public class EvaluationOrderGraphPass implements Pass {
     } else if (current instanceof ConstructExpression) {
       result.addAll(((ConstructExpression) current).getArguments());
     }
-
-    return result.stream()
-        .filter(Objects::nonNull)
-        .filter(Predicate.not(seen::contains))
-        .collect(Collectors.toList());
+    return result;
   }
 
   private void onEnter(Type currentClass, Node currentScope, Node current) {
@@ -390,7 +393,34 @@ public class EvaluationOrderGraphPass implements Pass {
     }
   }
 
+  private boolean isDone(Node exiting, Node target, List<Node> allChildren) {
+    if (isDone.containsKey(target)) {
+      return false;
+    }
+
+    if (exiting == target) {
+      isDone.put(target, true);
+      return true;
+    }
+
+    int currIndex = allChildren.indexOf(exiting);
+    if (currIndex == -1) {
+      LOGGER.error("Currently exiting child is not in the list of EOG children: {}", exiting);
+    }
+    int targetIndex = allChildren.indexOf(target);
+    if (targetIndex == -1) {
+      LOGGER.error("Target child is not in the list of EOG children: {}", exiting);
+    }
+    if (currIndex >= targetIndex) {
+      isDone.put(target, true);
+      return true;
+    }
+    return false;
+  }
+
   private void onChildExit(Node parent, Node child) {
+    List<Node> allChildren = getEOGOrderedChildren(parent);
+
     if (parent instanceof IfStatement) {
       if (!intermediateStates.containsKey(parent)) {
         intermediateStates.put(parent, new BranchState());
@@ -398,20 +428,22 @@ public class EvaluationOrderGraphPass implements Pass {
       BranchState state = (BranchState) intermediateStates.get(parent);
 
       // see at which step we currently are
-      if (child == ((IfStatement) parent).getCondition()) {
+      if (isDone(child, ((IfStatement) parent).getCondition(), allChildren)) {
         state.openConditionEOGs = new ArrayList<>(currentEOG);
-      } else if (child == ((IfStatement) parent).getThenStatement()) {
+      }
+      if (isDone(child, ((IfStatement) parent).getThenStatement(), allChildren)) {
         state.openBranchNodes = new ArrayList<>(currentEOG);
         if (((IfStatement) parent).getElseStatement() == null) {
           state.openBranchNodes.addAll(state.openConditionEOGs);
         } else {
           setCurrentEOGs(state.openConditionEOGs);
         }
-      } else if (child == ((IfStatement) parent).getElseStatement()) {
+      }
+      if (isDone(child, ((IfStatement) parent).getElseStatement(), allChildren)) {
         state.openBranchNodes.addAll(currentEOG);
       }
     } else if (parent instanceof AssertStatement) {
-      if (child == ((AssertStatement) parent).getCondition()) {
+      if (isDone(child, ((AssertStatement) parent).getCondition(), allChildren)) {
         if (!intermediateStates.containsKey(parent)) {
           intermediateStates.put(parent, new State());
         }
@@ -419,7 +451,7 @@ public class EvaluationOrderGraphPass implements Pass {
         state.tmpEOGNodes = new ArrayList<>(currentEOG);
       }
     } else if (parent instanceof WhileStatement) {
-      if (child == ((WhileStatement) parent).getCondition()) {
+      if (isDone(child, ((WhileStatement) parent).getCondition(), allChildren)) {
         if (!intermediateStates.containsKey(parent)) {
           intermediateStates.put(parent, new State());
         }
@@ -430,11 +462,7 @@ public class EvaluationOrderGraphPass implements Pass {
       if (!intermediateStates.containsKey(parent)) {
         intermediateStates.put(parent, new State());
       }
-      if (child == ((ForStatement) parent).getCondition()) {
-        State state = intermediateStates.get(parent);
-        state.tmpEOGNodes = new ArrayList<>(currentEOG);
-      } else if (((ForStatement) parent).getCondition() == null
-          && child == ((ForStatement) parent).getConditionDeclaration()) {
+      if (isDone(child, ((ForStatement) parent).getCondition(), allChildren)) {
         State state = intermediateStates.get(parent);
         state.tmpEOGNodes = new ArrayList<>(currentEOG);
       }
@@ -443,7 +471,7 @@ public class EvaluationOrderGraphPass implements Pass {
         intermediateStates.put(parent, new State());
       }
       State state = intermediateStates.get(parent);
-      if (child == ((ForEachStatement) parent).getVariable()) {
+      if (isDone(child, ((ForEachStatement) parent).getVariable(), allChildren)) {
         state.tmpEOGNodes = new ArrayList<>(currentEOG);
       }
     } else if (parent instanceof TryStatement) {
@@ -453,7 +481,7 @@ public class EvaluationOrderGraphPass implements Pass {
       TryState state = (TryState) intermediateStates.get(parent);
       List<CatchClause> catchClauses = ((TryStatement) parent).getCatchClauses();
 
-      if (child == ((TryStatement) parent).getTryBlock()) {
+      if (isDone(child, ((TryStatement) parent).getTryBlock(), allChildren)) {
         state.tmpEOGNodes = new ArrayList<>(currentEOG);
         TryScope scope = (TryScope) lang.getScopeManager().getScopeOfStatment(parent);
         state.catchesOrRelays = scope.getCatchesOrRelays();
@@ -464,7 +492,8 @@ public class EvaluationOrderGraphPass implements Pass {
           parentState.parent = (TryStatement) parent;
           intermediateStates.put(clause, parentState);
         }
-      } else if (child instanceof CatchClause && catchClauses.contains(child)) {
+      }
+      if (child instanceof CatchClause && catchClauses.contains(child)) {
         state.tmpEOGNodes.addAll(currentEOG);
 
         // was this the last one?
@@ -485,7 +514,8 @@ public class EvaluationOrderGraphPass implements Pass {
                     .collect(Collectors.toList()));
           }
         }
-      } else if (child == ((TryStatement) parent).getFinallyBlock()) {
+      }
+      if (isDone(child, ((TryStatement) parent).getFinallyBlock(), allChildren)) {
         //  all current-eog edges , result of finally execution as value List of uncought
         // catchesOrRelaysThrows
         for (Map.Entry<Type, List<Node>> entry : state.catchesOrRelays.entrySet()) {
@@ -495,12 +525,24 @@ public class EvaluationOrderGraphPass implements Pass {
       }
     } else if (parent instanceof SwitchStatement) {
       if (!intermediateStates.containsKey(parent)) {
-        intermediateStates.put(parent, new State());
+        Statement statement = ((SwitchStatement) parent).getStatement();
+        CompoundStatement compound;
+        if (statement instanceof DoStatement) {
+          compound = (CompoundStatement) ((DoStatement) statement).getStatement();
+        } else {
+          compound = (CompoundStatement) statement;
+        }
+        SwitchState state = new SwitchState();
+        state.compound = compound;
+        intermediateStates.put(parent, state);
       }
-      State state = intermediateStates.get(parent);
+      SwitchState state = (SwitchState) intermediateStates.get(parent);
 
-      if (child == ((SwitchStatement) parent).getSelector()) {
+      if (isDone(child, ((SwitchStatement) parent).getSelector(), allChildren)) {
         state.tmpEOGNodes = new ArrayList<>(currentEOG);
+        currentEOG = new ArrayList<>();
+      }
+      if (isDone(child, state.compound, allChildren)) {
         currentEOG = new ArrayList<>();
       }
     } else if (parent instanceof ConditionalExpression) {
@@ -510,12 +552,14 @@ public class EvaluationOrderGraphPass implements Pass {
       BranchState state = (BranchState) intermediateStates.get(parent);
 
       // see at which step we currently are
-      if (child == ((ConditionalExpression) parent).getCondition()) {
+      if (isDone(child, ((ConditionalExpression) parent).getCondition(), allChildren)) {
         state.openConditionEOGs = new ArrayList<>(currentEOG);
-      } else if (child == ((ConditionalExpression) parent).getThenExpr()) {
+      }
+      if (isDone(child, ((ConditionalExpression) parent).getThenExpr(), allChildren)) {
         state.openBranchNodes = new ArrayList<>(currentEOG);
         setCurrentEOGs(state.openConditionEOGs);
-      } else if (child == ((ConditionalExpression) parent).getElseExpr()) {
+      }
+      if (isDone(child, ((ConditionalExpression) parent).getElseExpr(), allChildren)) {
         state.openBranchNodes.addAll(currentEOG);
       }
     }
@@ -671,6 +715,15 @@ public class EvaluationOrderGraphPass implements Pass {
 
       pushToEOG(exiting);
     } else if (exiting instanceof SwitchStatement) {
+      Statement statement = ((SwitchStatement) exiting).getStatement();
+      CompoundStatement compound;
+      if (statement instanceof DoStatement) {
+        compound = (CompoundStatement) ((DoStatement) statement).getStatement();
+      } else {
+        compound = (CompoundStatement) statement;
+      }
+      pushToEOG(compound);
+
       SwitchScope switchScope = (SwitchScope) lang.getScopeManager().leaveScope(exiting);
       this.currentEOG.addAll(switchScope.getBreakStatements());
 
