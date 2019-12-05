@@ -1,0 +1,40 @@
+image: gradle:jdk11
+
+services:
+  - neo4j:3.5.3
+
+stages:
+  - build
+  - push
+  - deploy
+
+variables:
+  # for the neo4j service
+  NEO4J_AUTH: neo4j/password
+
+  # for the cpg tests to find the neo4j service
+  NEO4J_URI: bolt://neo4j
+
+build:
+  stage: build
+  variables:
+    GRADLE_USER_HOME: "/cache/.gradle"
+    GRADLE_OPTS: "-Dorg.gradle.daemon=false"
+    PIP_CACHE_DIR: "/cache/.pip"
+  tags:
+    - netsec
+  before_script:
+    - cp netsec.crt /usr/local/share/ca-certificates/netsec.crt
+    - update-ca-certificates
+    - keytool -import -trustcacerts -cacerts -storepass changeit -file netsec.crt -alias netsec -noprompt
+  script:
+    # make sure the cached gradle directory exists
+    - mkdir -p /cache/.gradle
+    # build
+    - echo $GRADLE_PROPERTIES_B64 | base64 -d > gradle.properties
+    - gradle -Dsonar.login=$SONAR_TOKEN -Dsonar.branch.name=$CI_COMMIT_REF_NAME -Dsonar.host.url=https://sonar.netsec.aisec.fraunhofer.de -Dsonar.exclusions=build/generated-src/** --parallel clean build sonarqube
+    - if [[ $CI_COMMIT_REF_NAME == 'master' ]]; then gradle --parallel publishMavenPublicationToMavenRepository; fi
+  artifacts:
+    when: always
+    paths:
+      - build/reports
