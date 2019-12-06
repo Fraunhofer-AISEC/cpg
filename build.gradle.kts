@@ -30,7 +30,7 @@ val deployPassword: String? by extra // imported from settings.gradle.kts
 plugins {
     // built-in
     java
-    application
+    `java-library`
     jacoco
     `maven-publish`
 
@@ -55,21 +55,6 @@ publishing {
             artifact(tasks["sourcesJar"])
         }
     }
-
-    repositories {
-        maven {
-            val repoUrl = "http://repository.netsec.aisec.fraunhofer.de"
-
-            val releasesRepoUrl = "$repoUrl/repository/releases"
-            val snapshotsRepoUrl = "$repoUrl/repository/snapshots"
-            url = uri(if (version.toString().endsWith("SNAPSHOT")) snapshotsRepoUrl else releasesRepoUrl)
-
-            credentials {
-                username = deployUsername
-                password = deployPassword
-            }
-        }
-    }
 }
 
 repositories {
@@ -84,10 +69,6 @@ repositories {
             artifact("/[organisation].[module]_[revision].[ext]")
         }
     }
-
-    /*maven {
-        url = uri("http://repository.netsec.aisec.fraunhofer.de/repository/snapshots/")
-    }*/
 }
 
 java {
@@ -158,23 +139,6 @@ application {
 tasks.named<Test>("test") {
     useJUnitPlatform()
     maxHeapSize="4048m"
-}
-
-tasks {
-    val docker by registering(Exec::class) {
-        description = "Builds a docker image based on the Dockerfile."
-
-        dependsOn(build)
-
-        executable = "docker"
-
-        val commit = System.getenv("CI_COMMIT_SHA")
-
-        setArgs(listOf("build",
-                "-t", "registry.netsec.aisec.fraunhofer.de/cpg/" + project.name + ':' + (commit?.substring(0, 8)
-                ?: "latest"),
-                '.'))
-    }
 }
 
 spotless {
