@@ -45,10 +45,10 @@ This project requires Java 11. If Java 11 is not your default Java version, make
 ## Contributors
 
 The following authors have contributed to this project (in alphabetical order):
-* Christian Banse <christian.banse@aisec.fraunhofer.de>
-* Oliver Braunsdorf <oliver.braunsdorf@aisec.fraunhofer.de>
-* Samuel Hopstock <samuel.hopstock@aisec.fraunhofer.de>
-* Julian Schütte <julian.schuette@aisec.fraunhofer.de>
-* Dennis Titze <dennis.titze@aisec.fraunhofer.de>
-* Konrad Weiss <konrad.weiss@aisec.fraunhofer.de>
-* Florian Wendland <florian.wendland@aisec.fraunhofer.de>
+* Christian Banse ([oxisto](https://github.com/oxisto))
+* Oliver Braunsdorf ([obraunsdorf](https://github.com/obraunsdorf))
+* Samuel Hopstock
+* Julian Schütte ([JulianSchuette](https://github.com/JulianSchuette))
+* Dennis Titze ([titze](https://github.com/titze))
+* Konrad Weiss ([konradweiss](https://github.com/konradweiss))
+* Florian Wendland
