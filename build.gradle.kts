@@ -127,10 +127,6 @@ dependencies {
     testRuntimeOnly("org.junit.jupiter", "junit-jupiter-engine", versions["junit5"])
 }
 
-application {
-    mainClassName = "de.fraunhofer.aisec.cpg.Application"
-}
-
 //tasks.register<Jar>("sourcesJar") {
 //    from(sourceSets.main.get().allJava)
 //    archiveClassifier.set("sources")
