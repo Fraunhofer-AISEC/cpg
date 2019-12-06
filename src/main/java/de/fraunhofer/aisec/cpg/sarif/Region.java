@@ -31,11 +31,12 @@ import org.checkerframework.checker.nullness.qual.NonNull;
 /** Code source location, in a SASP/SARIF-compliant "Region" format. */
 public class Region implements Comparable<Region> {
 
-  static final Region UNKNOWN_REGION = new Region();
   private int startLine;
   private int startColumn;
   private int endLine;
   private int endColumn;
+
+  public static final Region UNKNOWN_REGION = new Region();
 
   public Region(int startLine, int startColumn, int endLine, int endColumn) {
     this.startLine = startLine;

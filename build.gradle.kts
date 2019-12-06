@@ -103,6 +103,16 @@ repositories {
             artifact("/[organisation].[module]_[revision].[ext]")
         }
     }
+
+    maven {
+        url = uri("https://oss.sonatype.org/content/repositories/snapshots")
+        mavenContent {
+            snapshotsOnly()
+        }
+        content {
+            includeGroup("io.github.oxisto")
+        }
+    }    
 }
 
 tasks.withType<GenerateModuleMetadata> {
@@ -150,6 +160,8 @@ dependencies {
 
     // CDT
     api("org.eclipse.cdt:core:6.11.1.202006011430")
+
+    api("io.github.oxisto", "reticulated-python", "0.2-SNAPSHOT")
 
     // JUnit
     testImplementation("org.junit.jupiter:junit-jupiter-api:5.6.2")
