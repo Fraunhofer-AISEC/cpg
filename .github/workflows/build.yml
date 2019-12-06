@@ -17,6 +17,7 @@ jobs:
           -Dsonar.organization=fraunhofer-aisec \
           -Dsonar.host.url=https://sonarcloud.io \
           -Dsonar.login=$SONAR_TOKEN
+          -Dsonar.branch.name=${GITHUB_REF:11}
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
