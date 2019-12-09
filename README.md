@@ -47,7 +47,7 @@ This project requires Java 11. If Java 11 is not your default Java version, make
 The following authors have contributed to this project (in alphabetical order):
 * Christian Banse ([oxisto](https://github.com/oxisto))
 * Oliver Braunsdorf ([obraunsdorf](https://github.com/obraunsdorf))
-* Samuel Hopstock
+* Samuel Hopstock ([Masrepus](github.com/Masrepus))
 * Julian Schütte ([JulianSchuette](https://github.com/JulianSchuette))
 * Dennis Titze ([titze](https://github.com/titze))
 * Konrad Weiss ([konradweiss](https://github.com/konradweiss))
