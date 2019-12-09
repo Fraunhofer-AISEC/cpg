@@ -96,15 +96,15 @@ public class CallResolver implements Pass {
   @Override
   public void accept(TranslationResult translationResult) {
     ScopedWalker walker = new ScopedWalker();
-    walker.registerHandler(this::findRecords);
-    walker.registerHandler(this::registerMethods);
+    walker.registerOnNodeVisit(this::findRecords);
+    walker.registerOnNodeVisit(this::registerMethods);
 
     for (TranslationUnitDeclaration tu : translationResult.getTranslationUnits()) {
       walker.iterate(tu);
     }
 
     walker.clearCallbacks();
-    walker.registerHandler(this::resolve);
+    walker.registerOnNodeVisit(this::resolve);
 
     for (TranslationUnitDeclaration tu : translationResult.getTranslationUnits()) {
       walker.iterate(tu);

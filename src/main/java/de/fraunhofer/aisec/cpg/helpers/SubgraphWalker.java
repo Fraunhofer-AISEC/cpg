@@ -1,14 +1,26 @@
 /*
  * Copyright (c) 2019, Fraunhofer AISEC. All rights reserved.
  *
- *  $$$$$$\  $$$$$$$\   $$$$$$\
- * $$  __$$\ $$  __$$\ $$  __$$\
- * $$ /  \__|$$ |  $$ |$$ /  \__|
- * $$ |      $$$$$$$  |$$ |$$$$\
- * $$ |      $$  ____/ $$ |\_$$ |
- * $$ |  $$\ $$ |      $$ |  $$ |
- * \$$$$$   |$$ |      \$$$$$   |
- *  \______/ \__|       \______/
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ *
+ *                    $$$$$$\  $$$$$$$\   $$$$$$\
+ *                   $$  __$$\ $$  __$$\ $$  __$$\
+ *                   $$ /  \__|$$ |  $$ |$$ /  \__|
+ *                   $$ |      $$$$$$$  |$$ |$$$$\
+ *                   $$ |      $$  ____/ $$ |\_$$ |
+ *                   $$ |  $$\ $$ |      $$ |  $$ |
+ *                   \$$$$$   |$$ |      \$$$$$   |
+ *                    \______/ \__|       \______/
  *
  */
 
@@ -127,24 +139,6 @@ public class SubgraphWalker {
   }
 
   /**
-   * For better readability: <code>result.entries</code> instead of <code>result.get(0)</code> when
-   * working with getEOGPathEdges. Can be used for all subgraphs in subgraphs, e.g. AST entries and
-   * exits in a EOG subgraph, EOG entries and exits in a CFG subgraph.
-   */
-  public static class Border {
-    private List<Node> entries = new ArrayList<>();
-    private List<Node> exits = new ArrayList<>();
-
-    public List<Node> getEntries() {
-      return entries;
-    }
-
-    public List<Node> getExits() {
-      return exits;
-    }
-  }
-
-  /**
    * Function returns two lists in a list. The first list contains all eog nodes with no predecesor
    * in the subgraph with root 'n'. The second list contains eog edges that have no successor in the
    * subgraph with root 'n'. The first List marks the entry and the second marks the exit nodes of
@@ -181,6 +175,24 @@ public class SubgraphWalker {
     List<Node> nodes = flattenAST(stmt);
     for (Node n : nodes) {
       visitor.accept(n);
+    }
+  }
+
+  /**
+   * For better readability: <code>result.entries</code> instead of <code>result.get(0)</code> when
+   * working with getEOGPathEdges. Can be used for all subgraphs in subgraphs, e.g. AST entries and
+   * exits in a EOG subgraph, EOG entries and exits in a CFG subgraph.
+   */
+  public static class Border {
+    private List<Node> entries = new ArrayList<>();
+    private List<Node> exits = new ArrayList<>();
+
+    public List<Node> getEntries() {
+      return entries;
+    }
+
+    public List<Node> getExits() {
+      return exits;
     }
   }
 

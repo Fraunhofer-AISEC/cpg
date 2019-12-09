@@ -111,9 +111,9 @@ public class VariableUsageResolver implements Pass {
 
     for (TranslationUnitDeclaration tu : result.getTranslationUnits()) {
       walker.clearCallbacks();
-      walker.registerHandler(
+      walker.registerOnNodeVisit(
           (currClass, currScope, currNode) -> walker.collectDeclarations(tu, currNode));
-      walker.registerHandler(this::findRecordsAndEnums);
+      walker.registerOnNodeVisit(this::findRecordsAndEnums);
       walker.iterate(tu);
     }
 
@@ -125,8 +125,8 @@ public class VariableUsageResolver implements Pass {
 
     for (TranslationUnitDeclaration tu : result.getTranslationUnits()) {
       walker.clearCallbacks();
-      walker.registerHandler(this::resolveFieldUsages);
-      walker.registerHandler(this::resolveLocalVarUsage);
+      walker.registerOnNodeVisit(this::resolveFieldUsages);
+      walker.registerOnNodeVisit(this::resolveLocalVarUsage);
       walker.iterate(tu);
     }
   }

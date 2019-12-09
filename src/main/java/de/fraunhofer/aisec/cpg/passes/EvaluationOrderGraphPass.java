@@ -1,14 +1,26 @@
 /*
  * Copyright (c) 2019, Fraunhofer AISEC. All rights reserved.
  *
- *  $$$$$$\  $$$$$$$\   $$$$$$\
- * $$  __$$\ $$  __$$\ $$  __$$\
- * $$ /  \__|$$ |  $$ |$$ /  \__|
- * $$ |      $$$$$$$  |$$ |$$$$\
- * $$ |      $$  ____/ $$ |\_$$ |
- * $$ |  $$\ $$ |      $$ |  $$ |
- * \$$$$$   |$$ |      \$$$$$   |
- *  \______/ \__|       \______/
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ *
+ *                    $$$$$$\  $$$$$$$\   $$$$$$\
+ *                   $$  __$$\ $$  __$$\ $$  __$$\
+ *                   $$ /  \__|$$ |  $$ |$$ /  \__|
+ *                   $$ |      $$$$$$$  |$$ |$$$$\
+ *                   $$ |      $$  ____/ $$ |\_$$ |
+ *                   $$ |  $$\ $$ |      $$ |  $$ |
+ *                   \$$$$$   |$$ |      \$$$$$   |
+ *                    \______/ \__|       \______/
  *
  */
 
@@ -150,6 +162,20 @@ public class EvaluationOrderGraphPass implements Pass {
     P parent;
   }
 
+  private static boolean reachableFromValidEOGRoot(Node node) {
+    Set<Node> passedBy = new HashSet<>();
+    List<Node> workList = new ArrayList<>(node.getPrevEOG());
+    while (!workList.isEmpty()) {
+      Node toProcess = workList.get(0);
+      workList.remove(toProcess);
+      passedBy.add(toProcess);
+      if (toProcess instanceof FunctionDeclaration) return true;
+      for (Node pred : toProcess.getPrevEOG())
+        if (!passedBy.contains(pred) && !workList.contains(pred)) workList.add(pred);
+    }
+    return false;
+  }
+
   @Override
   public void cleanup() {
     this.intermediateNodes.clear();
@@ -165,10 +191,6 @@ public class EvaluationOrderGraphPass implements Pass {
   @Override
   public void setLang(LanguageFrontend lang) {
     this.lang = lang;
-  }
-
-  public void setCurrentEOG(List<Node> currentEOG) {
-    this.currentEOG = currentEOG;
   }
 
   @Override
@@ -817,22 +839,12 @@ public class EvaluationOrderGraphPass implements Pass {
     this.currentEOG.add(node);
   }
 
-  private static boolean reachableFromValidEOGRoot(Node node) {
-    Set<Node> passedBy = new HashSet<>();
-    List<Node> workList = new ArrayList<>(node.getPrevEOG());
-    while (!workList.isEmpty()) {
-      Node toProcess = workList.get(0);
-      workList.remove(toProcess);
-      passedBy.add(toProcess);
-      if (toProcess instanceof FunctionDeclaration) return true;
-      for (Node pred : toProcess.getPrevEOG())
-        if (!passedBy.contains(pred) && !workList.contains(pred)) workList.add(pred);
-    }
-    return false;
-  }
-
   public List<Node> getCurrentEOG() {
     return this.currentEOG;
+  }
+
+  public void setCurrentEOG(List<Node> currentEOG) {
+    this.currentEOG = currentEOG;
   }
 
   public void setCurrentEOG(Node node) {
