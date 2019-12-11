@@ -64,6 +64,13 @@ publishing {
                         url.set("http://www.apache.org/licenses/LICENSE-2.0.txt")
                     }
                 }
+                developers {
+                    developer {
+                        id.set("oxisto")
+                        name.set("Christian Banse")
+                        email.set("christian.banse@aisec.fraunhofer.de")
+                    }
+                }
                 scm {
                     connection.set("scm:git:git://github.com:Fraunhofer-AISEC/cpg.git")
                     developerConnection.set("scm:git:ssh://github.com:Fraunhofer-AISEC/cpg.git")
