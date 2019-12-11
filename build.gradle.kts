@@ -32,6 +32,7 @@ plugins {
     java
     `java-library`
     jacoco
+    signing
     `maven-publish`
 
     id("org.sonarqube") version "2.6"
@@ -47,6 +48,12 @@ tasks.register<Jar>("sourcesJar") {
     archiveClassifier.set("sources")
 }
 
+val mavenCentralUri: String
+  get() {
+    val releasesRepoUrl = "https://oss.sonatype.org/service/local/staging/deploy/maven2"
+    val snapshotsRepoUrl = "https://oss.sonatype.org/content/repositories/snapshots"
+    return if ((version as String).endsWith("SNAPSHOT")) snapshotsRepoUrl else releasesRepoUrl
+  }
 
 publishing {
     publications {
@@ -54,6 +61,18 @@ publishing {
             from(components["java"])
             artifact(tasks["sourcesJar"])
         }
+    }
+
+    maven {
+      url = uri(mavenCentralUri)
+
+      credentials {
+        val mavenCentralUsername: String? by project
+        val mavenCentralPassword: String? by project
+
+        username = mavenCentralUsername
+        password = mavenCentralPassword
+      }
     }
 }
 
@@ -69,6 +88,17 @@ repositories {
             artifact("/[organisation].[module]_[revision].[ext]")
         }
     }
+}
+
+tasks.withType<GenerateModuleMetadata> {
+  enabled = false
+}
+
+signing {
+  val signingKey: String? by project
+  val signingPassword: String? by project
+  useInMemoryPgpKeys(signingKey, signingPassword)
+  sign(publishing.publications["maven"])
 }
 
 java {
