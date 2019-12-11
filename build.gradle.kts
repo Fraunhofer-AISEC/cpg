@@ -40,7 +40,7 @@ plugins {
 }
 
 group = "de.fraunhofer.aisec"
-version = "1.1"
+version = "1.2-SNAPSHOT"
 
 val mavenCentralUri: String
   get() {
