@@ -40,7 +40,7 @@ plugins {
 }
 
 group = "de.fraunhofer.aisec"
-version = "1.1-SNAPSHOT"
+version = "1.1"
 
 
 tasks.register<Jar>("sourcesJar") {
