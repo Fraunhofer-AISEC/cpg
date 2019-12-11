@@ -63,16 +63,18 @@ publishing {
         }
     }
 
-    maven {
-      url = uri(mavenCentralUri)
+    repositories {
+        maven {
+            url = uri(mavenCentralUri)
 
-      credentials {
-        val mavenCentralUsername: String? by project
-        val mavenCentralPassword: String? by project
+            credentials {
+                val mavenCentralUsername: String? by project
+                val mavenCentralPassword: String? by project
 
-        username = mavenCentralUsername
-        password = mavenCentralPassword
-      }
+                username = mavenCentralUsername
+                password = mavenCentralPassword
+            }
+        }
     }
 }
 
