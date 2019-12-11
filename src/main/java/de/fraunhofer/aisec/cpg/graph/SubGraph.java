@@ -30,8 +30,8 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 
 /**
- * Annotates single member variables of supertype Node or Collection<? extends Node> to be part of
- * the a sub-graph of the current Node. This is used to iterate over all AST sub-nodes with
+ * Annotates single member variables of supertype {@link Node} or a collection of nodes to be part
+ * of the a sub-graph of the current Node. This is used to iterate over all AST sub-nodes with
  * SubgraphWalkers.getASTChildren. Could be replaced with @Relationship{sub-graph:'ast'} if
  * switching to an OGM that supports relationship properties.
  */

@@ -78,7 +78,7 @@ public class Util {
 
   /**
    * Filters a list of elements with common type T for all elements of instance S, returning a list
-   * of type List<S>.
+   * of type {@link List}.
    *
    * @param genericList List with elements fo type T.
    * @param specificClass Class type to filter for.

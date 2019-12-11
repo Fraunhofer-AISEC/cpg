@@ -58,7 +58,7 @@ public abstract class Handler<S, T, L extends LanguageFrontend> {
   }
 
   /**
-   * Searches for a handler matching the most specific superclass of <T ctx>, the created map
+   * Searches for a handler matching the most specific superclass of {@link T}, the created map
    * therefor should contain a handler for every semantically different AST node and can reuse
    * handler code as long as the handled AST nodes have a common ancestor.
    *

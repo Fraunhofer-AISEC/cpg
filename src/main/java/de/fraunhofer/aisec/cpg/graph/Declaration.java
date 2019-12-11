@@ -29,8 +29,8 @@ package de.fraunhofer.aisec.cpg.graph;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 
 /**
- * Represents a single declaration or definition, i.e. of a variable ({@see VariableDeclaration}) or
- * function ({@see FunctionDeclaration}).
+ * Represents a single declaration or definition, i.e. of a variable ({@link VariableDeclaration})
+ * or function ({@link FunctionDeclaration}).
  *
  * <p>Note: We do NOT (currently) distinguish between the definition and the declaration of a
  * function. This means, that if a function is first declared and later defined with a function

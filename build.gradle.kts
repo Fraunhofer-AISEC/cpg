@@ -42,12 +42,6 @@ plugins {
 group = "de.fraunhofer.aisec"
 version = "1.1"
 
-
-tasks.register<Jar>("sourcesJar") {
-    from(sourceSets.main.get().allJava)
-    archiveClassifier.set("sources")
-}
-
 val mavenCentralUri: String
   get() {
     val releasesRepoUrl = "https://oss.sonatype.org/service/local/staging/deploy/maven2"
@@ -59,7 +53,23 @@ publishing {
     publications {
         create<MavenPublication>("maven") {
             from(components["java"])
-            artifact(tasks["sourcesJar"])
+
+            pom {
+                name.set("Code Property Graph")
+                description.set("A simple library to extract a code property graph out of source code. It has support for multiple passes that can extend the analysis after the graph is constructed.")
+                url.set("https://github.com/Fraunhofer-AISEC/cpg")
+                licenses {
+                    license {
+                        name.set("The Apache License, Version 2.0")
+                        url.set("http://www.apache.org/licenses/LICENSE-2.0.txt")
+                    }
+                }
+                scm {
+                    connection.set("scm:git:git://github.com:Fraunhofer-AISEC/cpg.git")
+                    developerConnection.set("scm:git:ssh://github.com:Fraunhofer-AISEC/cpg.git")
+                    url.set("https://github.com/Fraunhofer-AISEC/cpg")
+                }
+            }
         }
     }
 
@@ -106,6 +116,9 @@ signing {
 java {
     sourceCompatibility = JavaVersion.VERSION_11
     targetCompatibility = JavaVersion.VERSION_11
+
+    withSourcesJar()
+    withJavadocJar()
 }
 
 tasks {

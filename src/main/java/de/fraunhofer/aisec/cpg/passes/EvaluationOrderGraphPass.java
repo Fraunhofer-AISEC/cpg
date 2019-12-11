@@ -840,8 +840,8 @@ public class EvaluationOrderGraphPass implements Pass {
    * points to the previous nodes. 'BIDIRECTIONAL': nextEOG and prevEOG contain references and point
    * to the previous and the next nodes.
    *
-   * @param prev -> next
-   * @param next <- prev
+   * @param prev the previous node
+   * @param next the next node
    */
   public void addEOGEdge(Node prev, Node next) {
     prev.getNextEOG().add(next);

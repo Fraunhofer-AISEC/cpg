@@ -57,11 +57,11 @@ public class TranslationConfiguration {
    * Paths to look for include files.
    *
    * <p>It is recommended to set proper include paths as otherwise unresolved symbols/templates will
-   * result in subsequent parser mistakes, such as treating "<" as a BinaryOperator in the following
-   * example: <code>
-   *     std::unique_ptr<Botan::Cipher_Mode> bla;
-   * </code> As long as loadIncludes is set to false, include files will only be parsed, but not
-   * loaded into the CPG. *
+   * result in subsequent parser mistakes, such as treating "{@literal <}" as a BinaryOperator in
+   * the following example: {@literal <code> std::unique_ptr<Botan::Cipher_Mode> bla; </code>}
+   *
+   * <p>As long as loadIncludes is set to false, include files will only be parsed, but not loaded
+   * into the CPG. *
    */
   public final String[] includePaths;
   /** should the code of a node be shown as parameter in the node * */
