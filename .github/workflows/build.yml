@@ -12,26 +12,22 @@ jobs:
       - uses: actions/setup-java@v1
         with:
           java-version: "11"
-      # this should either be triggered on the forked repository OR a pull_request
-      - name: Build Only
+      - name: Build
         run: |
-          ./gradlew --parallel build
+          if [ "$SONAR_TOKEN" != "" ]
+          then
+            ./gradlew --parallel build sonarqube \
+            -Dsonar.projectKey=Fraunhofer-AISEC_cpg \
+            -Dsonar.organization=fraunhofer-aisec \
+            -Dsonar.host.url=https://sonarcloud.io \
+            -Dsonar.login=$SONAR_TOKEN \
+            -Dsonar.branch.name=${GITHUB_REF:11}
+          else
+            ./gradlew --parallel build
+          fi
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        if: github.repository != 'Fraunhofer-AISEC/cpg' || github.head_ref != ''
-      - name: Build and Quality Check
-        run: |
-          ./gradlew --parallel build sonarqube \
-          -Dsonar.projectKey=Fraunhofer-AISEC_cpg \
-          -Dsonar.organization=fraunhofer-aisec \
-          -Dsonar.host.url=https://sonarcloud.io \
-          -Dsonar.login=$SONAR_TOKEN \
-          -Dsonar.branch.name=${GITHUB_REF:11}
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        if: github.repository == 'Fraunhofer-AISEC/cpg' && github.head_ref == ''
       - name: Publish
         run: |
           export ORG_GRADLE_PROJECT_signingKey=`echo ${{ secrets.GPG_PRIVATE_KEY }} | base64 -d`
