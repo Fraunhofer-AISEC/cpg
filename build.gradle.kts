@@ -48,7 +48,7 @@ val mavenCentralUri: String
   get() {
     val releasesRepoUrl = "https://oss.sonatype.org/service/local/staging/deploy/maven2"
     val snapshotsRepoUrl = "https://oss.sonatype.org/content/repositories/snapshots"
-    return if (project.extra["isReleaseVersion"] as Boolean) snapshotsRepoUrl else releasesRepoUrl
+    return if (project.extra["isReleaseVersion"] as Boolean) releasesRepoUrl else snapshotsRepoUrl
   }
 
 publishing {
