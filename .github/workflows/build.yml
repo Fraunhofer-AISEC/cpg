@@ -16,7 +16,7 @@ jobs:
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        if: github.head_ref != ''
+        if: github.repository != 'Fraunhofer-AISEC/cpg'
       - name: Build and Quality Check
         run: |
           ./gradlew --parallel build sonarqube \
@@ -28,7 +28,7 @@ jobs:
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        if: github.head_ref == ''
+        if: github.repository == 'Fraunhofer-AISEC/cpg'
       - name: Publish
         run: |
           export ORG_GRADLE_PROJECT_signingKey=`echo ${{ secrets.GPG_PRIVATE_KEY }} | base64 -d`
