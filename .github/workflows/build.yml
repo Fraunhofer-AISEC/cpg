@@ -12,19 +12,14 @@ jobs:
       - uses: actions/setup-java@v1
         with:
           java-version: "11"
-      - name: Testing
-        run: |
-          echo $GITHUB_REF
-          echo $GITHUB_HEAD_REF
-          echo $GITHUB_BASE_REF
+      # this should either be triggered on the forked repository OR a pull_request
       - name: Build Only
         run: |
           ./gradlew --parallel build
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        # this should either be triggered on the forked repository OR a pull_request that is
-        if: github.repository != 'Fraunhofer-AISEC/cpg'
+        if: github.repository != 'Fraunhofer-AISEC/cpg' || github.head_ref != ''
       - name: Build and Quality Check
         run: |
           ./gradlew --parallel build sonarqube \
@@ -36,7 +31,7 @@ jobs:
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        if: github.repository == 'Fraunhofer-AISEC/cpg'
+        if: github.repository == 'Fraunhofer-AISEC/cpg' || github.head_ref == ''
       - name: Publish
         run: |
           export ORG_GRADLE_PROJECT_signingKey=`echo ${{ secrets.GPG_PRIVATE_KEY }} | base64 -d`
