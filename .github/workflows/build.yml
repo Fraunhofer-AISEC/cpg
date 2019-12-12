@@ -10,7 +10,14 @@ jobs:
       - uses: actions/setup-java@v1
         with:
           java-version: "11"
-      - name: Build
+      - name: Build Only
+        run: |
+          ./gradlew --parallel build
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        if: github.head.ref != ''
+      - name: Build and Quality Check
         run: |
           ./gradlew --parallel build sonarqube \
           -Dsonar.projectKey=Fraunhofer-AISEC_cpg \
@@ -21,6 +28,7 @@ jobs:
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        if: github.head.ref == ''
       - name: Publish
         run: |
           export ORG_GRADLE_PROJECT_signingKey=`echo ${{ secrets.GPG_PRIVATE_KEY }} | base64 -d`
