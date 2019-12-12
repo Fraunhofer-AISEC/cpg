@@ -51,4 +51,4 @@ The following authors have contributed to this project (in alphabetical order):
 * Julian Schütte ([JulianSchuette](https://github.com/JulianSchuette))
 * Dennis Titze ([titze](https://github.com/titze))
 * Konrad Weiss ([konradweiss](https://github.com/konradweiss))
-* Florian Wendland
+* Florian Wendland ([aisec-fw](https://github.com/aisec-fw))
