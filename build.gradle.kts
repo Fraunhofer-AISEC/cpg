@@ -42,11 +42,13 @@ plugins {
 group = "de.fraunhofer.aisec"
 version = "1.2-SNAPSHOT"
 
+extra["isReleaseVersion"] = !version.toString().endsWith("SNAPSHOT")
+
 val mavenCentralUri: String
   get() {
     val releasesRepoUrl = "https://oss.sonatype.org/service/local/staging/deploy/maven2"
     val snapshotsRepoUrl = "https://oss.sonatype.org/content/repositories/snapshots"
-    return if ((version as String).endsWith("SNAPSHOT")) snapshotsRepoUrl else releasesRepoUrl
+    return if (project.extra["isReleaseVersion"] as Boolean) snapshotsRepoUrl else releasesRepoUrl
   }
 
 publishing {
@@ -118,6 +120,10 @@ signing {
   val signingPassword: String? by project
   useInMemoryPgpKeys(signingKey, signingPassword)
   sign(publishing.publications["maven"])
+}
+
+tasks.withType<Sign>().configureEach {
+    onlyIf { project.extra["isReleaseVersion"] as Boolean }
 }
 
 java {
