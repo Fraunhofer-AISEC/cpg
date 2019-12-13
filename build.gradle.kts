@@ -37,6 +37,7 @@ plugins {
 
     id("org.sonarqube") version "2.6"
     id("com.diffplug.gradle.spotless") version "3.26.0"
+    id("com.github.johnrengelman.shadow") version "5.2.0"
 }
 
 group = "de.fraunhofer.aisec"

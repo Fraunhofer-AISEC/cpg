@@ -8,9 +8,46 @@ It currently supports C/C++ as well as Java.
 
 ## Usage
 
+### As Library
+
 The most recent version is being published to Maven central and can be used as a simple dependency, either using Maven or Gradle. For example, using Gradle's Kotlin syntax:
 ```
 api("de.fraunhofer.aisec", "cpg", "1.1")
+```
+
+### On Command Line
+
+The library can be used on the command line using `jshell`, the Java shell to try out some basic queries.
+
+First, a jar consisting all the necessary dependencies should be created with `./gradlew shadowJar`. Afterwards, the shell can be launched using `jshell --class-path build/libs/cpg-*-all.jar`.
+
+The following snipped creates a basic `TranslationManager` with default settings to analyze a sample file in `src/test/resources/openssl/client.cpp`:
+
+```java
+import de.fraunhofer.aisec.cpg.TranslationConfiguration;
+import de.fraunhofer.aisec.cpg.TranslationManager;
+import de.fraunhofer.aisec.cpg.graph.FunctionDeclaration;
+
+var path = Paths.get("src/test/resources/openssl/client.cpp");
+var config = TranslationConfiguration.builder().sourceFiles(path.toFile()).defaultPasses().debugParser(true).build();
+var analyzer = TranslationManager.builder().config(config).build();
+var result = analyzer.analyze().get();
+var tu = result.getTranslationUnits().get(0);
+```
+
+Afterwards, a list of function declarations can be obtained like this:
+
+```java
+var functions = tu.getDeclarations().stream().filter(decl -> decl instanceof FunctionDeclaration).map(FunctionDeclaration.class::cast).collect(Collectors.toList());
+```
+
+Information about specific functions can be obtained using the property getters:
+
+```java
+var func = functions.get(0);
+func.getName();
+func.getSignature();
+func.getParameters();
 ```
 
 ## Development Setup
