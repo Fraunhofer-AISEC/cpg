@@ -82,10 +82,10 @@ This project requires Java 11. If Java 11 is not your default Java version, make
 ## Contributors
 
 The following authors have contributed to this project (in alphabetical order):
-* ([aisec-fw](https://github.com/aisec-fw))
-* ([JulianSchuette](https://github.com/JulianSchuette))
-* ([konradweiss](https://github.com/konradweiss))
-* ([Masrepus](https://github.com/Masrepus))
-* ([obraunsdorf](https://github.com/obraunsdorf))
-* ([oxisto](https://github.com/oxisto))
-* ([titze](https://github.com/titze))
+* [aisec-fw](https://github.com/aisec-fw)
+* [JulianSchuette](https://github.com/JulianSchuette)
+* [konradweiss](https://github.com/konradweiss)
+* [Masrepus](https://github.com/Masrepus)
+* [obraunsdorf](https://github.com/obraunsdorf)
+* [oxisto](https://github.com/oxisto)
+* [titze](https://github.com/titze)
