@@ -70,8 +70,8 @@ publishing {
                 developers {
                     developer {
                         id.set("oxisto")
-                        name.set("Christian Banse")
-                        email.set("christian.banse@aisec.fraunhofer.de")
+                        organization.set("Fraunhofer AISEC")
+                        organizationUrl.set("https://www.aisec.fraunhofer.de")
                     }
                 }
                 scm {
@@ -167,15 +167,11 @@ dependencies {
     compile("org.eclipse.platform", "org.eclipse.core.runtime", "3.15.100")
     compile("org.eclipse.platform", "org.eclipse.core.jobs", "3.10.200")
     compile("org.eclipse.cdt", "core", "6.6.0.201812101042")
-    // compile("org.eclipse.cdt", "core", "6.6.0.201812101042")
 
     runtime("org.neo4j", "neo4j-ogm-bolt-driver", versions["neo4j-ogm"])
 
     // api stuff
-    //compile("org.glassfish.hk2", "hk2-core", "2.5.0-b62")
-    //compile("org.glassfish.jersey.core", "jersey-server", "2.28")
     compile("org.glassfish.jersey.inject", "jersey-hk2", "2.28")
-    //compile("org.glassfish.jersey.containers", "jersey-container-servlet", "2.28")
     compile("org.glassfish.jersey.containers", "jersey-container-grizzly2-http", "2.28")
     compile("org.glassfish.jersey.media", "jersey-media-json-jackson", "2.28")
 
@@ -185,11 +181,6 @@ dependencies {
     testImplementation("org.junit.jupiter", "junit-jupiter-api", versions["junit5"])
     testRuntimeOnly("org.junit.jupiter", "junit-jupiter-engine", versions["junit5"])
 }
-
-//tasks.register<Jar>("sourcesJar") {
-//    from(sourceSets.main.get().allJava)
-//    archiveClassifier.set("sources")
-//}
 
 tasks.named<Test>("test") {
     useJUnitPlatform()
