@@ -27,7 +27,18 @@
 package de.fraunhofer.aisec.cpg.graph;
 
 /**
- * Represents a {@link CallExpression} to a function, which is a member of an object. For example
- * <code>obj.toString()</code>.
+ * A {@link CallExpression} that targets a static function of a different {@link RecordDeclaration},
+ * without using a static import: <code>SomeClass.invoke()</code>
  */
-public class MemberCallExpression extends CallExpression {}
+public class StaticCallExpression extends CallExpression {
+
+  private String targetRecord;
+
+  public String getTargetRecord() {
+    return targetRecord;
+  }
+
+  public void setTargetRecord(String targetRecord) {
+    this.targetRecord = targetRecord;
+  }
+}

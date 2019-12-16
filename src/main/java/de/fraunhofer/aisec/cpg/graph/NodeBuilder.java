@@ -60,6 +60,19 @@ public class NodeBuilder {
     return node;
   }
 
+  public static StaticCallExpression newStaticCallExpression(
+      String name, String fqn, String code, String targetRecord) {
+    StaticCallExpression node = new StaticCallExpression();
+    node.setName(name);
+    node.setCode(code);
+    node.setFqn(fqn);
+    node.setTargetRecord(targetRecord);
+
+    log(node);
+
+    return node;
+  }
+
   public static CastExpression newCastExpression(String code) {
     CastExpression node = new CastExpression();
 

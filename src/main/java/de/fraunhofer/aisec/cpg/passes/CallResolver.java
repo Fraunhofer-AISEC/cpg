@@ -42,6 +42,7 @@ import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder;
 import de.fraunhofer.aisec.cpg.graph.ParamVariableDeclaration;
 import de.fraunhofer.aisec.cpg.graph.RecordDeclaration;
+import de.fraunhofer.aisec.cpg.graph.StaticCallExpression;
 import de.fraunhofer.aisec.cpg.graph.TranslationUnitDeclaration;
 import de.fraunhofer.aisec.cpg.graph.Type;
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.ScopedWalker;
@@ -180,7 +181,7 @@ public class CallResolver implements Pass {
                   nameParts[nameParts.length - 1], signature, records);
         }
 
-        if (!(call instanceof MemberCallExpression)) {
+        if (!(call instanceof MemberCallExpression || call instanceof StaticCallExpression)) {
           call.setBase(currentClass.getThis());
         }
         call.setInvokes(invocationCandidates);
@@ -298,6 +299,11 @@ public class CallResolver implements Pass {
         HasType base = (HasType) memberCall.getBase();
         possibleTypes.add(base.getType());
         possibleTypes.addAll(base.getPossibleSubTypes());
+      }
+    } else if (node instanceof StaticCallExpression) {
+      StaticCallExpression staticCall = (StaticCallExpression) node;
+      if (staticCall.getTargetRecord() != null) {
+        possibleTypes.add(new Type(staticCall.getTargetRecord()));
       }
     } else if (currentClass != null) {
       possibleTypes.add(new Type(currentClass.getName()));
