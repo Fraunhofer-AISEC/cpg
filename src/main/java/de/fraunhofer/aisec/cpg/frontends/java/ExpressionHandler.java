@@ -586,8 +586,10 @@ public class ExpressionHandler
       // done, but we can try to resolve the Expression, and if the Javaparser does not know about
       // it, we assume that this is a static call
       boolean isresolvable = false;
+      String scopeName = null;
       try {
         if (scope instanceof NameExpr) {
+          scopeName = ((NameExpr) scope).getNameAsString();
           ((NameExpr) scope).resolve();
           isresolvable = true;
         }
@@ -607,7 +609,8 @@ public class ExpressionHandler
                 name, qualifiedName, base, methodCallExpr.toString());
       } else {
         callExpression =
-            NodeBuilder.newCallExpression(name, qualifiedName, methodCallExpr.toString());
+            NodeBuilder.newStaticCallExpression(
+                name, qualifiedName, methodCallExpr.toString(), scopeName);
       }
     } else {
       callExpression =
