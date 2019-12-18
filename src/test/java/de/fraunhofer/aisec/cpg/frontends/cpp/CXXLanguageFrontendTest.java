@@ -786,20 +786,16 @@ class CXXLanguageFrontendTest {
   @Test
   void testLocalVariables() throws TranslationException {
     TranslationUnitDeclaration declaration =
-            new CXXLanguageFrontend(TranslationConfiguration.builder().build())
-                    .parse(new File("src/test/resources/variables/local_variables.cpp"));
-
+        new CXXLanguageFrontend(TranslationConfiguration.builder().build())
+            .parse(new File("src/test/resources/variables/local_variables.cpp"));
 
     FunctionDeclaration function = declaration.getDeclarationAs(2, FunctionDeclaration.class);
 
     assertEquals("testExpressionInExpressionList()int", function.getSignature());
 
-    List<VariableDeclaration> locals = function.getBody()
-                                               .getLocals();
+    List<VariableDeclaration> locals = function.getBody().getLocals();
     // Expecting x, foo, t
-    Set<String> localNames = locals.stream()
-                                             .map(l -> l.getName())
-                                             .collect(Collectors.toSet());
+    Set<String> localNames = locals.stream().map(l -> l.getName()).collect(Collectors.toSet());
     assertTrue(localNames.contains("x"));
     assertTrue(localNames.contains("foo"));
     assertTrue(localNames.contains("t"));
@@ -811,5 +807,4 @@ class CXXLanguageFrontendTest {
     assertEquals("this", clazz.getFields().get(0).getName());
     assertEquals(1, clazz.getFields().size());
   }
-
 }

@@ -144,6 +144,7 @@ public class VariableUsageResolver implements Pass {
   private void resolveLocalVarUsage(Type currentClass, Node currentScope, Node current) {
     if (current instanceof DeclaredReferenceExpression) {
       List<ValueDeclaration> currDeclarations = walker.getDeclarationsForScope(currentScope);
+
       DeclaredReferenceExpression ref = (DeclaredReferenceExpression) current;
       Optional<? extends ValueDeclaration> refersTo =
           currDeclarations.stream().filter(v -> v.getName().equals(ref.getName())).findFirst();
@@ -154,7 +155,10 @@ public class VariableUsageResolver implements Pass {
           && currentClass != null
           && recordMap.containsKey(currentClass)) {
         // Maybe we are referring to a field instead of a local var
+        log.info("did not find a declaration for {}", current.getCode());
         refersTo = Optional.of(resolveMember(currentClass, (DeclaredReferenceExpression) current));
+      } else {
+        log.debug("found a declaration for {}", current.getCode());
       }
 
       ref.setRefersTo(refersTo.orElse(null));

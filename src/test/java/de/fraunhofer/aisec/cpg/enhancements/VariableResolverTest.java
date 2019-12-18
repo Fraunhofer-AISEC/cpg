@@ -26,11 +26,12 @@
 
 package de.fraunhofer.aisec.cpg.enhancements;
 
+import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import de.fraunhofer.aisec.cpg.TestUtils;
 import de.fraunhofer.aisec.cpg.TranslationConfiguration;
 import de.fraunhofer.aisec.cpg.TranslationManager;
-import de.fraunhofer.aisec.cpg.frontends.TranslationException;
-import de.fraunhofer.aisec.cpg.frontends.cpp.CXXLanguageFrontend;
 import de.fraunhofer.aisec.cpg.graph.*;
 import de.fraunhofer.aisec.cpg.helpers.Util;
 import java.io.File;
@@ -40,11 +41,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
-
 import org.junit.jupiter.api.Test;
-
-import static org.junit.jupiter.api.Assertions.*;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class VariableResolverTest {
 
@@ -114,29 +111,24 @@ public class VariableResolverTest {
   @Test
   public void testLocalVarsCpp() throws ExecutionException, InterruptedException {
     TranslationConfiguration config =
-            TranslationConfiguration.builder()
-                                    .sourceFiles(new File("src/test/resources/variables/local_variables.cpp"))
-                                    .topLevel(new File("src/test/resources/variables/"))
-                                    .defaultPasses()
-                                    .debugParser(true)
-                                    .failOnError(true)
-                                    .build();
+        TranslationConfiguration.builder()
+            .sourceFiles(new File("src/test/resources/variables/local_variables.cpp"))
+            .topLevel(new File("src/test/resources/variables/"))
+            .defaultPasses()
+            .debugParser(true)
+            .failOnError(true)
+            .build();
 
     TranslationManager analyzer = TranslationManager.builder().config(config).build();
-    List<TranslationUnitDeclaration> tu = analyzer.analyze()
-                                                  .get()
-                                                  .getTranslationUnits();
+    List<TranslationUnitDeclaration> tu = analyzer.analyze().get().getTranslationUnits();
 
     FunctionDeclaration function = tu.get(0).getDeclarationAs(2, FunctionDeclaration.class);
 
     assertEquals("testExpressionInExpressionList()int", function.getSignature());
 
-    List<VariableDeclaration> locals = function.getBody()
-                                               .getLocals();
+    List<VariableDeclaration> locals = function.getBody().getLocals();
     // Expecting x, foo, t
-    Set<String> localNames = locals.stream()
-                                   .map(l -> l.getName())
-                                   .collect(Collectors.toSet());
+    Set<String> localNames = locals.stream().map(l -> l.getName()).collect(Collectors.toSet());
     assertTrue(localNames.contains("x"));
     assertTrue(localNames.contains("foo"));
     assertTrue(localNames.contains("t"));
@@ -155,6 +147,5 @@ public class VariableResolverTest {
     }
     // FIXME Fails. Actually has "this", "a" and "foo"
     assertEquals(1, clazz.getFields().size());
-
   }
 }
