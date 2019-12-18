@@ -357,13 +357,13 @@ public class SubgraphWalker {
         }
       }
       if (exiting instanceof RecordDeclaration) { // leave a class
-        // currentClass = null;
+        currentClass = null;
       }
     }
 
     public void collectDeclarations(Node root, Node current) {
       Node declarationScope = walker.getBacklog().isEmpty() ? root : walker.getBacklog().pop();
-      //Node parentScope = walker.getBacklog().isEmpty() ? null : walker.getBacklog().peek();
+      // Node parentScope = walker.getBacklog().isEmpty() ? null : walker.getBacklog().peek();
       Node parentBlock = null;
       //      if (!walker.getBacklog().isEmpty()) {
       //          // what does this do??
@@ -378,6 +378,7 @@ public class SubgraphWalker {
             || node instanceof CompoundStatement
             || node instanceof FunctionDeclaration) {
           parentBlock = node;
+          break;
         }
       }
 
@@ -391,7 +392,11 @@ public class SubgraphWalker {
           || current instanceof VariableDeclaration
           || current instanceof ParamVariableDeclaration) {
         LOGGER.debug("Adding variable {}", current.getCode());
-        declarations.get(parentBlock).getRight().add((ValueDeclaration) current);
+        if (parentBlock == null || !declarations.containsKey(parentBlock)) {
+          LOGGER.warn("Parent block is empty during subgraph run");
+        } else {
+          declarations.get(parentBlock).getRight().add((ValueDeclaration) current);
+        }
       }
     }
 
