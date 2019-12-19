@@ -32,6 +32,7 @@ import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
 import org.apache.commons.lang3.builder.ToStringBuilder;
+import org.checkerframework.checker.nullness.qual.NonNull;
 
 /**
  * An expression, which refers to something which is declared, e.g. a variable. For example, the
@@ -48,7 +49,7 @@ public class DeclaredReferenceExpression extends Expression implements TypeListe
     return refersTo;
   }
 
-  public void setRefersTo(ValueDeclaration refersTo) {
+  public void setRefersTo(@NonNull ValueDeclaration refersTo) {
     if (this.refersTo != null) {
       this.refersTo.unregisterTypeListener(this);
       this.removePrevDFG(this.refersTo);
@@ -57,14 +58,13 @@ public class DeclaredReferenceExpression extends Expression implements TypeListe
         this.unregisterTypeListener((TypeListener) this.refersTo);
       }
     }
+
     this.refersTo = refersTo;
-    if (refersTo != null) {
-      refersTo.registerTypeListener(this);
-      this.addPrevDFG(refersTo);
-      refersTo.addPrevDFG(this);
-      if (refersTo instanceof TypeListener) {
-        this.registerTypeListener((TypeListener) refersTo);
-      }
+    refersTo.registerTypeListener(this);
+    this.addPrevDFG(refersTo);
+    refersTo.addPrevDFG(this);
+    if (refersTo instanceof TypeListener) {
+      this.registerTypeListener((TypeListener) refersTo);
     }
   }
 

@@ -52,6 +52,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 public class ImportResolver implements Pass {
 
@@ -60,6 +61,7 @@ public class ImportResolver implements Pass {
   private Map<String, Declaration> unknownTypes = new HashMap<>();
 
   @Override
+  @Nullable
   public LanguageFrontend getLang() {
     return null;
   }
@@ -70,11 +72,8 @@ public class ImportResolver implements Pass {
   @Override
   public void cleanup() {
     records.clear();
-    records = null;
     importables.clear();
-    importables = null;
     unknownTypes.clear();
-    unknownTypes = null;
   }
 
   @Override

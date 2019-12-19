@@ -34,6 +34,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import org.apache.commons.lang3.builder.ToStringBuilder;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
  * Declaration of a field within a {@link RecordDeclaration}. It contains the modifiers associated
@@ -43,6 +44,7 @@ import org.apache.commons.lang3.builder.ToStringBuilder;
 public class FieldDeclaration extends ValueDeclaration implements TypeListener {
 
   @SubGraph("AST")
+  @Nullable
   private Expression initializer;
 
   private List<String> modifiers = new ArrayList<>();
@@ -61,6 +63,7 @@ public class FieldDeclaration extends ValueDeclaration implements TypeListener {
     return new FieldDeclaration(declaration);
   }
 
+  @Nullable
   public Expression getInitializer() {
     return initializer;
   }

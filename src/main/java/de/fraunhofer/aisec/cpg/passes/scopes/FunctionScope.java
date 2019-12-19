@@ -32,20 +32,21 @@ import de.fraunhofer.aisec.cpg.graph.Type;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import org.checkerframework.checker.nullness.qual.NonNull;
 
 public class FunctionScope extends DeclarationScope {
-
-  private Map<Type, List<Node>> catchesOrRelays = new HashMap<>();
+  @NonNull private Map<Type, List<Node>> catchesOrRelays = new HashMap<>();
 
   public FunctionScope(FunctionDeclaration astNode) {
     super(astNode);
   }
 
+  @NonNull
   public Map<Type, List<Node>> getCatchesOrRelays() {
     return catchesOrRelays;
   }
 
-  public void setCatchesOrRelays(Map<Type, List<Node>> catchesOrRelays) {
+  public void setCatchesOrRelays(@NonNull Map<Type, List<Node>> catchesOrRelays) {
     this.catchesOrRelays = catchesOrRelays;
   }
 }

@@ -30,10 +30,10 @@ import de.fraunhofer.aisec.cpg.graph.BreakStatement;
 import de.fraunhofer.aisec.cpg.graph.CompoundStatement;
 import java.util.ArrayList;
 import java.util.List;
+import org.checkerframework.checker.nullness.qual.NonNull;
 
 public class BlockScope extends DeclarationScope implements IBreakable {
-
-  private List<BreakStatement> breaks = new ArrayList<>();
+  @NonNull private List<BreakStatement> breaks = new ArrayList<>();
 
   public BlockScope(CompoundStatement blockStatement) {
     super(blockStatement);

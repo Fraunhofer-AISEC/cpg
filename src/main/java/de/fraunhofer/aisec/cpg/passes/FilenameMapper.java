@@ -31,13 +31,14 @@ import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
 import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.TranslationUnitDeclaration;
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 public class FilenameMapper implements Pass {
 
   @Override
   public void accept(TranslationResult translationResult) {
     for (TranslationUnitDeclaration tu : translationResult.getTranslationUnits()) {
-      String name = tu.getName() == null ? "" : tu.getName();
+      String name = tu.getName();
       tu.getDeclarations().forEach(d -> handle(d, name));
       tu.getIncludes().forEach(d -> handle(d, name));
       tu.getNamespaces().forEach(d -> handle(d, name));
@@ -45,6 +46,7 @@ public class FilenameMapper implements Pass {
   }
 
   @Override
+  @Nullable
   public LanguageFrontend getLang() {
     return null;
   }

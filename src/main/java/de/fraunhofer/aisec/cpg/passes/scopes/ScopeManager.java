@@ -64,6 +64,7 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
+import org.checkerframework.checker.nullness.qual.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -71,7 +72,7 @@ public class ScopeManager {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(ScopeManager.class);
 
-  private Map<Node, Scope> scopeMap = new HashMap<>();
+  private final Map<Node, Scope> scopeMap = new HashMap<>();
   private Scope currentScope = null;
   private LanguageFrontend lang;
 
@@ -87,8 +88,10 @@ public class ScopeManager {
       return;
     }
     scopeMap.put(scope.astNode, scope);
-    if (currentScope != null) currentScope.getChildren().add(scope);
-    scope.setParent(currentScope);
+    if (currentScope != null) {
+      currentScope.getChildren().add(scope);
+      scope.setParent(currentScope);
+    }
     currentScope = scope;
   }
 
@@ -104,7 +107,11 @@ public class ScopeManager {
 
   public List<ValueDeclaration> getGlobals() {
     GlobalScope globalS = (GlobalScope) getFirstScopeThat(scope -> scope instanceof GlobalScope);
-    return globalS.getValueDeclarations();
+    if (globalS != null) {
+      return globalS.getValueDeclarations();
+    } else {
+      return new ArrayList<>();
+    }
   }
 
   public Scope getCurrentScope() {
@@ -119,9 +126,12 @@ public class ScopeManager {
     if (scopeMap.containsKey(nodeToScope)) currentScope = scopeMap.get(nodeToScope);
   }
 
+  @Nullable
   public Scope leaveScopeIfExists(Node nodeToLeave) {
     Scope leaveScope = scopeMap.getOrDefault(nodeToLeave, null);
-    if (leaveScope != null) currentScope = leaveScope.parent;
+    if (leaveScope != null) {
+      currentScope = leaveScope.parent;
+    }
     return leaveScope;
   }
 
@@ -173,23 +183,28 @@ public class ScopeManager {
    * @param nodeToLeave - The scope is defined by its astNode
    * @return the scope is returned for processing
    */
+  @Nullable
   public Scope leaveScope(Node nodeToLeave) {
     Scope leaveScope = getFirstScopeThat(scope -> scope.astNode == nodeToLeave);
     if (leaveScope == null) {
-      if (scopeMap.containsKey(nodeToLeave))
+      if (scopeMap.containsKey(nodeToLeave)) {
         LOGGER.error(
             "Node of type {} has a scope but is not active in the moment.", nodeToLeave.getClass());
-      else LOGGER.error("Node of type {} is not associated with a scope.", nodeToLeave.getClass());
+      } else {
+        LOGGER.error("Node of type {} is not associated with a scope.", nodeToLeave.getClass());
+      }
       return null;
     }
     currentScope = leaveScope.parent;
     return leaveScope;
   }
 
+  @Nullable
   public Scope getFirstScopeThat(Predicate<Scope> predicate) {
     return getFirstScopeThat(currentScope, predicate);
   }
 
+  @Nullable
   public Scope getFirstScopeThat(Scope searchScope, Predicate<Scope> predicate) {
     while (searchScope != null) {
       if (predicate.test(searchScope)) return searchScope;
@@ -258,6 +273,7 @@ public class ScopeManager {
     currentScope.addLabelStatement(labelStatement);
   }
 
+  @Nullable
   public LabelStatement getLabelStatement(String labelString) {
     LabelStatement labelStatement;
     Scope searchScope = currentScope;
@@ -347,10 +363,12 @@ public class ScopeManager {
     }
   }
 
+  @Nullable
   public ValueDeclaration resolve(DeclaredReferenceExpression ref) {
     return resolve(currentScope, ref);
   }
 
+  @Nullable
   private ValueDeclaration resolve(Scope scope, DeclaredReferenceExpression ref) {
     if (scope instanceof DeclarationScope) {
       for (ValueDeclaration valDecl : ((DeclarationScope) scope).getValueDeclarations()) {
@@ -449,6 +467,7 @@ public class ScopeManager {
     // TODO: also check for function definitions?
   }
 
+  @Nullable
   private <T extends ValueDeclaration> Declaration getForName(List<T> variables, String name) {
     Optional<T> any =
         variables.stream().filter(param -> Objects.equals(param.getName(), name)).findAny();

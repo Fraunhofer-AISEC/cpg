@@ -56,6 +56,10 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import org.checkerframework.checker.nullness.qual.NonNull;
+import org.checkerframework.checker.nullness.qual.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Resolves {@link CallExpression} and {@link NewExpression} targets.
@@ -74,10 +78,12 @@ import java.util.stream.Collectors;
  */
 public class CallResolver implements Pass {
 
+  private static final Logger LOGGER = LoggerFactory.getLogger(CallResolver.class);
+
   private Map<String, RecordDeclaration> recordMap = new HashMap<>();
   private Map<FunctionDeclaration, Type> containingType = new HashMap<>();
-  private RecordDeclaration currentClass;
-  private TranslationUnitDeclaration currentTU;
+  @Nullable private RecordDeclaration currentClass;
+  @Nullable private TranslationUnitDeclaration currentTU;
   private LanguageFrontend lang;
 
   @Override
@@ -98,7 +104,7 @@ public class CallResolver implements Pass {
   }
 
   @Override
-  public void accept(TranslationResult translationResult) {
+  public void accept(@NonNull TranslationResult translationResult) {
     ScopedWalker walker = new ScopedWalker();
     walker.registerHandler(this::findRecords);
     walker.registerHandler(this::registerMethods);
@@ -115,19 +121,20 @@ public class CallResolver implements Pass {
     }
   }
 
-  private void findRecords(Node node) {
+  private void findRecords(@NonNull Node node) {
     if (node instanceof RecordDeclaration) {
       recordMap.putIfAbsent(node.getName(), (RecordDeclaration) node);
     }
   }
 
-  private void registerMethods(Type currentClass, Node currentScope, Node currentNode) {
+  private void registerMethods(
+      @NonNull Type currentClass, Node currentScope, @NonNull Node currentNode) {
     if (currentNode instanceof MethodDeclaration) {
       containingType.put((FunctionDeclaration) currentNode, currentClass);
     }
   }
 
-  private void resolve(Node node) {
+  private void resolve(@NonNull Node node) {
     if (node instanceof TranslationUnitDeclaration) {
       this.currentTU = (TranslationUnitDeclaration) node;
     } else if (node instanceof ExplicitConstructorInvocation) {
@@ -171,7 +178,7 @@ public class CallResolver implements Pass {
                 .collect(Collectors.toList());
 
         // Find invokes by supertypes
-        if (invocationCandidates.isEmpty() && call.getName() != null) {
+        if (invocationCandidates.isEmpty()) {
           String[] nameParts = call.getName().split("\\.");
           List<Type> signature = call.getSignature();
           Set<RecordDeclaration> records =
@@ -201,7 +208,12 @@ public class CallResolver implements Pass {
 
         if (record != null) {
           ConstructorDeclaration constructor = getConstructorDeclaration(signature, record);
-          initializer.setConstructor(constructor);
+          if (constructor != null) {
+            initializer.setConstructor(constructor);
+          } else {
+            LOGGER.warn(
+                "Unexpected: Could not create constructor for {}.{}", record.getName(), signature);
+          }
         }
       }
     } else if (node instanceof RecordDeclaration) {
@@ -209,8 +221,8 @@ public class CallResolver implements Pass {
     }
   }
 
-  private boolean handlePossibleStaticImport(CallExpression call) {
-    if (call == null || currentClass == null || call.getName() == null) {
+  private boolean handlePossibleStaticImport(@Nullable CallExpression call) {
+    if (call == null || currentClass == null) {
       return false;
     }
     String name = call.getName().substring(call.getName().lastIndexOf('.') + 1);
@@ -241,9 +253,15 @@ public class CallResolver implements Pass {
   }
 
   private void generateDummies(
-      CallExpression call, String name, List<FunctionDeclaration> invokes) {
+      @NonNull CallExpression call,
+      @NonNull String name,
+      @NonNull List<FunctionDeclaration> invokes) {
     // We had an import for this method name, just not the correct signature. Let's just add
     // a dummy to any class that might be affected
+    if (currentClass == null) {
+      LOGGER.warn("Cannot generate dummies for imports of a null class: {}", call.toString());
+      return;
+    }
     List<RecordDeclaration> containingRecords =
         currentClass.getStaticImportStatements().stream()
             .filter(i -> i.endsWith("." + name))
@@ -272,7 +290,7 @@ public class CallResolver implements Pass {
     }
   }
 
-  private String generateParamName(int i, Type targetType) {
+  private String generateParamName(int i, @NonNull Type targetType) {
     StringBuilder paramName = new StringBuilder();
     boolean capitalize = false;
     for (int j = 0; j < targetType.toString().length(); j++) {
@@ -354,6 +372,7 @@ public class CallResolver implements Pass {
         .collect(Collectors.toSet());
   }
 
+  @Nullable
   private ConstructorDeclaration getConstructorDeclaration(
       List<Type> signature, RecordDeclaration record) {
     return record.getConstructors().stream()

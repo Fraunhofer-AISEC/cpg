@@ -81,6 +81,7 @@ public class ControlFlowGraphPass implements Pass {
     this.breakContinueScopes.clear();
   }
 
+  @Nullable
   @Override
   public LanguageFrontend getLang() {
     return null;

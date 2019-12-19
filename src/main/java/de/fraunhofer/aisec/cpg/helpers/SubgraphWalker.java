@@ -50,8 +50,10 @@ import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
+import javax.swing.border.Border;
 import org.apache.commons.lang3.tuple.MutablePair;
 import org.apache.commons.lang3.tuple.Pair;
+import org.checkerframework.checker.nullness.qual.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -130,8 +132,11 @@ public class SubgraphWalker {
    * @return
    */
   public static List<Node> flattenAST(Node n) {
+    if (n == null) {
+      return new ArrayList<>();
+    }
     List<Node> list = new ArrayList<>();
-    if (n != null) list.add(n);
+    list.add(n);
     SubgraphWalker.getAstChildren(n).forEach(node -> list.addAll(flattenAST(node)));
     list.sort(new NodeComparator());
     return list;
@@ -300,7 +305,7 @@ public class SubgraphWalker {
     // declarationScope -> (parentScope, declarations)
     private Map<Node, Pair<Node, List<ValueDeclaration>>>
         nodeToParentBlockAndContainedValueDeclarations = new IdentityHashMap<>();
-    private Type currentClass = null;
+    @Nullable private Type currentClass = null;
     private IterativeGraphWalker walker;
 
     /**

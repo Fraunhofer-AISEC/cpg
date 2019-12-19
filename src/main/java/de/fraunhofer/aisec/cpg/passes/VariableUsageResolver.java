@@ -88,14 +88,10 @@ public class VariableUsageResolver implements Pass {
   @Override
   public void cleanup() {
     this.superTypesMap.clear();
-    this.superTypesMap = null;
     if (this.recordMap != null) {
       this.recordMap.clear();
-      this.recordMap = null;
     }
     this.enumMap.clear();
-    this.enumMap = null;
-    this.walker = null;
   }
 
   @Override
@@ -162,7 +158,9 @@ public class VariableUsageResolver implements Pass {
         log.debug("found a declaration for {}", current.getCode());
       }
 
-      ref.setRefersTo(refersTo.orElse(null));
+      if (refersTo.isPresent()) {
+        ref.setRefersTo(refersTo.get());
+      }
     }
   }
 
@@ -202,8 +200,13 @@ public class VariableUsageResolver implements Pass {
           }
         }
       }
-      memberExpression.setBase(base);
-      memberExpression.setMember(member);
+
+      if (base != null && member != null) {
+        memberExpression.setBase(base);
+        memberExpression.setMember(member);
+      } else {
+        log.warn("Unexpected: null base or member in field usage: {}", current);
+      }
     }
   }
 

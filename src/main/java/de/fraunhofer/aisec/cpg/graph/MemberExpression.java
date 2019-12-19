@@ -32,6 +32,7 @@ import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
 import org.apache.commons.lang3.builder.ToStringBuilder;
+import org.checkerframework.checker.nullness.qual.NonNull;
 
 /**
  * Represents access to a field of a {@link RecordDeclaration}, such as <code>obj.property</code>.
@@ -42,13 +43,15 @@ public class MemberExpression extends Expression implements TypeListener {
   protected Node member;
 
   @SubGraph("AST")
+  @NonNull
   private Node base;
 
+  @NonNull
   public Node getBase() {
     return base;
   }
 
-  public void setBase(Node base) {
+  public void setBase(@NonNull Node base) {
     this.base = base;
   }
 

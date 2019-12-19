@@ -193,6 +193,5 @@ public class TypeHierarchyResolver implements Pass {
   @Override
   public void cleanup() {
     this.unknownTypes.clear();
-    this.unknownTypes = null;
   }
 }

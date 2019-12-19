@@ -47,14 +47,18 @@ public class Node {
 
   public static final ToStringStyle TO_STRING_STYLE = ToStringStyle.SHORT_PREFIX_STYLE;
   protected static final Logger log = LoggerFactory.getLogger(Node.class);
+
   /** A human readable name. */
-  protected String name;
+  @NonNull protected String name;
 
-  /** Original code snippet of this node. */
-  protected String code;
+  /**
+   * Original code snippet of this node. Most nodes will have a corresponding "code", but in cases
+   * where nodes are created artifically, it may be null.
+   */
+  @Nullable protected String code;
 
-  /** Optional of this node. */
-  protected String comment;
+  /** Optional comment of this node. */
+  @Nullable protected String comment;
 
   /** Location of the finding in source code. */
   @Convert(RegionConverter.class)
@@ -62,6 +66,7 @@ public class Node {
 
   /** Name of the containing file */
   protected String file;
+
   /** Incoming control flow edges. */
   @Relationship(value = "EOG", direction = "INCOMING")
   protected List<Node> prevEOG = new ArrayList<>();
@@ -93,11 +98,12 @@ public class Node {
     return id;
   }
 
+  @NonNull
   public String getName() {
     return name;
   }
 
-  public void setName(String name) {
+  public void setName(@NonNull String name) {
     this.name = name;
   }
 
@@ -114,7 +120,7 @@ public class Node {
     return this.code;
   }
 
-  public void setCode(String code) {
+  public void setCode(@NonNull String code) {
     this.code = code;
   }
 
@@ -134,6 +140,7 @@ public class Node {
     this.prevEOG = prevEOG;
   }
 
+  @NonNull
   public List<Node> getNextEOG() {
     return this.nextEOG;
   }
@@ -209,7 +216,7 @@ public class Node {
         .toString();
   }
 
-  public void setComment(String comment) {
+  public void setComment(@NonNull String comment) {
     this.comment = comment;
   }
 
