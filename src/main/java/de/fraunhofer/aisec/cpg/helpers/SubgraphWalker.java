@@ -27,15 +27,12 @@
 package de.fraunhofer.aisec.cpg.helpers;
 
 import de.fraunhofer.aisec.cpg.graph.CompoundStatement;
-import de.fraunhofer.aisec.cpg.graph.FieldDeclaration;
 import de.fraunhofer.aisec.cpg.graph.FunctionDeclaration;
 import de.fraunhofer.aisec.cpg.graph.Node;
-import de.fraunhofer.aisec.cpg.graph.ParamVariableDeclaration;
 import de.fraunhofer.aisec.cpg.graph.RecordDeclaration;
 import de.fraunhofer.aisec.cpg.graph.SubGraph;
 import de.fraunhofer.aisec.cpg.graph.Type;
 import de.fraunhofer.aisec.cpg.graph.ValueDeclaration;
-import de.fraunhofer.aisec.cpg.graph.VariableDeclaration;
 import java.lang.annotation.AnnotationFormatError;
 import java.lang.reflect.Field;
 import java.util.ArrayDeque;
@@ -48,6 +45,7 @@ import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
@@ -300,16 +298,16 @@ public class SubgraphWalker {
   public static class ScopedWalker {
 
     // declarationScope -> (parentScope, declarations)
-    public Map<Node, Pair<Node, List<ValueDeclaration>>> declarations = new IdentityHashMap<>();
-    private Node currentScope = null;
+    private Map<Node, Pair<Node, List<ValueDeclaration>>>
+        nodeToParentBlockAndContainedValueDeclarations = new IdentityHashMap<>();
     private Type currentClass = null;
     private IterativeGraphWalker walker;
 
     /**
      * Callback function(s) getting three arguments: the type of the class we're currently in, the
      * root node of the current declaration scope, the currently visited node. The declaration scope
-     * root can be passed to {@link ScopedWalker#getDeclarationsForScope} in order to retrieve the
-     * currently available declarations.
+     * root can be passed to {@link ScopedWalker#getAllDeclarationsForScope} in order to retrieve
+     * the currently available declarations.
      */
     private List<TriConsumer<Type, Node, Node>> handlers = new ArrayList<>();
 
@@ -338,9 +336,8 @@ public class SubgraphWalker {
     }
 
     private void handleNode(Node current, TriConsumer<Type, Node, Node> handler) {
-      if (declarations.containsKey(current)) {
-        currentScope = current;
-      }
+
+      Node currentScope = walker.getBacklog().peek();
 
       if (current instanceof RecordDeclaration) {
         currentClass = new Type(current.getName());
@@ -350,27 +347,13 @@ public class SubgraphWalker {
     }
 
     private void leaveScope(Node exiting) {
-      if (currentScope != null) {
-        Pair<Node, List<ValueDeclaration>> entry = declarations.getOrDefault(currentScope, null);
-        if (entry != null) {
-          currentScope = entry.getLeft(); // switch to parent scope, like scope manager exit
-        }
-      }
       if (exiting instanceof RecordDeclaration) { // leave a class
         currentClass = null;
       }
     }
 
     public void collectDeclarations(Node root, Node current) {
-      Node declarationScope = walker.getBacklog().isEmpty() ? root : walker.getBacklog().pop();
-      // Node parentScope = walker.getBacklog().isEmpty() ? null : walker.getBacklog().peek();
       Node parentBlock = null;
-      //      if (!walker.getBacklog().isEmpty()) {
-      //          // what does this do??
-      //        walker.getBacklog().pop();
-      //        parentScope = walker.getBacklog().peek();
-      //      }
-      walker.getBacklog().push(declarationScope);
 
       // get containing Record or Compound
       for (Node node : walker.getBacklog()) {
@@ -381,34 +364,34 @@ public class SubgraphWalker {
           break;
         }
       }
+      nodeToParentBlockAndContainedValueDeclarations.put(
+          current, new MutablePair<>(parentBlock, new ArrayList<>()));
 
-      //      if (!declarations.containsKey(declarationScope)) {
-      //        declarations.put(declarationScope, new MutablePair<>(parentScope, new
-      // ArrayList<>()));
-      //      }
-      declarations.put(current, new MutablePair<>(parentBlock, new ArrayList<>()));
+      if (current instanceof ValueDeclaration) {
 
-      if (current instanceof FieldDeclaration
-          || current instanceof VariableDeclaration
-          || current instanceof ParamVariableDeclaration) {
-        LOGGER.debug("Adding variable {}", current.getCode());
-        if (parentBlock == null || !declarations.containsKey(parentBlock)) {
+        LOGGER.info("Adding variable {}", current.getCode());
+        if (parentBlock == null) {
           LOGGER.warn("Parent block is empty during subgraph run");
         } else {
-          declarations.get(parentBlock).getRight().add((ValueDeclaration) current);
+          nodeToParentBlockAndContainedValueDeclarations
+              .get(parentBlock)
+              .getRight()
+              .add((ValueDeclaration) current);
         }
       }
     }
 
-    public List<ValueDeclaration> getDeclarationsForScope(Node scope) {
+    public List<ValueDeclaration> getAllDeclarationsForScope(Node scope) {
       List<ValueDeclaration> result = new ArrayList<>();
       Node currentScope = scope;
 
       Set<String> scopedVars = new HashSet<>();
 
       // get all declarations from the current scope and all its parent scopes
-      while (currentScope != null && declarations.containsKey(scope)) {
-        Pair<Node, List<ValueDeclaration>> entry = declarations.get(currentScope);
+      while (currentScope != null
+          && nodeToParentBlockAndContainedValueDeclarations.containsKey(scope)) {
+        Pair<Node, List<ValueDeclaration>> entry =
+            nodeToParentBlockAndContainedValueDeclarations.get(currentScope);
         for (ValueDeclaration val : entry.getRight()) {
           // make sure that we only add the variable for the current scope.
           // if the var is already added, all outside vars with this name are shadowed inside a
@@ -421,6 +404,24 @@ public class SubgraphWalker {
         currentScope = entry.getLeft();
       }
       return result;
+    }
+
+    public Optional<? extends ValueDeclaration> getDeclarationForScope(Node scope, String name) {
+      Node currentScope = scope;
+
+      // iterate all declarations from the current scope and all its parent scopes
+      while (currentScope != null
+          && nodeToParentBlockAndContainedValueDeclarations.containsKey(scope)) {
+        Pair<Node, List<ValueDeclaration>> entry =
+            nodeToParentBlockAndContainedValueDeclarations.get(currentScope);
+        for (ValueDeclaration val : entry.getRight()) {
+          if (val.getName().equals(name)) {
+            return Optional.of(val);
+          }
+        }
+        currentScope = entry.getLeft();
+      }
+      return Optional.empty();
     }
   }
 }
