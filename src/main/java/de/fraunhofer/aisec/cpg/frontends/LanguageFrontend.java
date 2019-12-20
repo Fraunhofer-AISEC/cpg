@@ -49,7 +49,7 @@ import org.slf4j.LoggerFactory;
 public abstract class LanguageFrontend {
 
   protected static final Logger log = LoggerFactory.getLogger(LanguageFrontend.class);
-  @Nullable protected TranslationConfiguration config;
+  protected final TranslationConfiguration config;
   protected ScopeManager scopeManager = new ScopeManager(this);
   /**
    * Two data structures used to associate Objects input to a pass to results of a pass, e.g.
@@ -71,7 +71,7 @@ public abstract class LanguageFrontend {
 
   // Todo Moving this to scope manager and add listeners and processedMappings to specified scopes.
 
-  public LanguageFrontend(TranslationConfiguration config, String namespaceDelimiter) {
+  public LanguageFrontend(@NonNull TranslationConfiguration config, String namespaceDelimiter) {
     this.config = config;
     this.namespaceDelimiter = namespaceDelimiter;
   }
@@ -108,8 +108,11 @@ public abstract class LanguageFrontend {
     for (Map.Entry mapping : processedMapping.entrySet())
       if (predicate.test(mapping.getKey(), mapping.getValue())) matchingEntries.add(mapping);
 
-    if (!matchingEntries.isEmpty())
-      for (Map.Entry match : matchingEntries) biConsumer.accept(match.getKey(), match.getValue());
+    if (!matchingEntries.isEmpty()) {
+      for (Map.Entry match : matchingEntries) {
+        biConsumer.accept(match.getKey(), match.getValue());
+      }
+    }
     predicateListeners.put(predicate, biConsumer);
   }
 
@@ -121,16 +124,14 @@ public abstract class LanguageFrontend {
 
   public List<TranslationUnitDeclaration> parseAll() throws TranslationException {
     ArrayList<TranslationUnitDeclaration> units = new ArrayList<>();
-    TranslationConfiguration c = this.config;
-    if (c != null) {
-      for (File sourceFile : c.getSourceFiles()) {
-        units.add(parse(sourceFile));
-      }
+    for (File sourceFile : this.config.getSourceFiles()) {
+      units.add(parse(sourceFile));
     }
 
     return units;
   }
 
+  @NonNull
   public ScopeManager getScopeManager() {
     return scopeManager;
   }
@@ -142,6 +143,7 @@ public abstract class LanguageFrontend {
   public abstract TranslationUnitDeclaration parse(File file) throws TranslationException;
 
   /** Returns the raw code of the ast node, generic for java or c++ ast nodes. */
+  @Nullable
   public abstract <T> String getCodeFromRawNode(T astNode);
 
   /**
@@ -151,10 +153,15 @@ public abstract class LanguageFrontend {
   @NonNull
   public abstract <T> Region getRegionFromRawNode(T astNode);
 
-  public <N, S> N setCodeAndRegion(N cpgNode, S astNode) {
+  public <N, S> N setCodeAndRegion(@NonNull N cpgNode, @NonNull S astNode) {
     if (cpgNode instanceof de.fraunhofer.aisec.cpg.graph.Node) {
       if (config.codeInNodes) {
-        ((de.fraunhofer.aisec.cpg.graph.Node) cpgNode).setCode(getCodeFromRawNode(astNode));
+        String code = getCodeFromRawNode(astNode);
+        if (code != null) {
+          ((de.fraunhofer.aisec.cpg.graph.Node) cpgNode).setCode(code);
+        } else {
+          log.warn("Unexpected: No code for node {}", astNode.toString());
+        }
       }
       ((de.fraunhofer.aisec.cpg.graph.Node) cpgNode).setRegion(getRegionFromRawNode(astNode));
     }
@@ -169,13 +176,12 @@ public abstract class LanguageFrontend {
    */
   public String getNewLineType(Node node) {
     List<String> nls = Arrays.asList("\n\r", "\r\n", "\n");
-    String nlType = null;
     for (String nl : nls)
-      if (node.toString().contains(nl)) {
-        nlType = nl;
-        break;
+      if (node.toString().endsWith(nl)) {
+        return nl;
       }
-    return nlType;
+    log.debug("Could not determine newline type. Assuming \\n. {}", node.toString());
+    return "\n";
   }
 
   /**
@@ -270,10 +276,7 @@ public abstract class LanguageFrontend {
   //  }
 
   public void cleanup() {
-    scopeManager = null;
-    config = null;
     records.clear();
-    records = null;
     //    functions.clear();
     //    functions = null;
     clearProcessed();

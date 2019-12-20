@@ -27,6 +27,8 @@
 package de.fraunhofer.aisec.cpg.graph;
 
 import java.util.Objects;
+import org.checkerframework.checker.nullness.qual.NonNull;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 /** Represents an assert statement */
 public class AssertStatement extends Statement {
@@ -37,6 +39,7 @@ public class AssertStatement extends Statement {
 
   /** The _optional_ message that is shown, if the assert is evaluated as true */
   @SubGraph("AST")
+  @Nullable
   private Statement message;
 
   public Expression getCondition() {
@@ -47,11 +50,12 @@ public class AssertStatement extends Statement {
     this.condition = condition;
   }
 
+  @Nullable
   public Statement getMessage() {
     return message;
   }
 
-  public void setMessage(Statement message) {
+  public void setMessage(@NonNull Statement message) {
     this.message = message;
   }
 

@@ -27,20 +27,24 @@
 package de.fraunhofer.aisec.cpg.graph;
 
 import java.util.Objects;
+import org.checkerframework.checker.nullness.qual.NonNull;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 public class CatchClause extends Statement {
 
   @SubGraph("AST")
+  @Nullable
   private VariableDeclaration parameter;
 
   @SubGraph("AST")
   private CompoundStatement body;
 
+  @Nullable
   public VariableDeclaration getParameter() {
     return parameter;
   }
 
-  public void setParameter(VariableDeclaration parameter) {
+  public void setParameter(@NonNull VariableDeclaration parameter) {
     this.parameter = parameter;
   }
 

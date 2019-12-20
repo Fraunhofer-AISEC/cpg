@@ -34,7 +34,7 @@ import org.checkerframework.checker.nullness.qual.NonNull;
 
 public class SwitchScope extends DeclarationScope implements IBreakable {
 
-  @NonNull private List<BreakStatement> breaks = new ArrayList<>();
+  @NonNull private final List<BreakStatement> breaks = new ArrayList<>();
 
   public SwitchScope(SwitchStatement switchStatement) {
     super(switchStatement);

@@ -36,8 +36,8 @@ import java.util.Map;
 
 public class TryScope extends DeclarationScope implements IBreakable {
 
-  private Map<Type, List<Node>> catchesOrRelays = new HashMap<>();
-  private List<BreakStatement> breaks = new ArrayList<>();
+  private final Map<Type, List<Node>> catchesOrRelays = new HashMap<>();
+  private final List<BreakStatement> breaks = new ArrayList<>();
 
   public TryScope(Node astNode) {
     super(astNode);
@@ -45,10 +45,6 @@ public class TryScope extends DeclarationScope implements IBreakable {
 
   public Map<Type, List<Node>> getCatchesOrRelays() {
     return catchesOrRelays;
-  }
-
-  public void setCatchesOrRelays(Map<Type, List<Node>> catchesOrRelays) {
-    this.catchesOrRelays = catchesOrRelays;
   }
 
   @Override

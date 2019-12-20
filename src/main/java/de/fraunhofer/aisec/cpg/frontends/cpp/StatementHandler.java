@@ -151,7 +151,9 @@ class StatementHandler extends Handler<Statement, IASTStatement, CXXLanguageFron
       decl = this.lang.getDeclarationHandler().handle(catchHandler.getDeclaration());
     }
     catchClause.setBody((CompoundStatement) body);
-    catchClause.setParameter((VariableDeclaration) decl);
+    if (decl != null) {
+      catchClause.setParameter((VariableDeclaration) decl);
+    }
     lang.getScopeManager().leaveScope(catchClause);
     return catchClause;
   }

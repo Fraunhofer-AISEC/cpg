@@ -30,6 +30,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import org.apache.commons.lang3.builder.ToStringBuilder;
+import org.checkerframework.checker.nullness.qual.NonNull;
 
 /**
  * A statement which contains a list of statements. A common example is a function body within a
@@ -38,13 +39,15 @@ import org.apache.commons.lang3.builder.ToStringBuilder;
 public class CompoundStatement extends Statement {
 
   /** The list of statements. */
+  @NonNull
   private @SubGraph("AST") List<Statement> statements = new ArrayList<>();
 
+  @NonNull
   public List<Statement> getStatements() {
     return statements;
   }
 
-  public void setStatements(List<Statement> statements) {
+  public void setStatements(@NonNull List<Statement> statements) {
     this.statements = statements;
   }
 

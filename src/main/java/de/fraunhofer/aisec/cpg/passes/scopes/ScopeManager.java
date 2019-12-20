@@ -95,14 +95,36 @@ public class ScopeManager {
     currentScope = scope;
   }
 
+  @Nullable
   public CompoundStatement getCurrentBlock() {
-    return (CompoundStatement)
-        this.getFirstScopeThat(scope -> scope instanceof BlockScope).getAstNode();
+    Scope blockScope = this.getFirstScopeThat(scope -> scope instanceof BlockScope);
+    if (blockScope == null) {
+      LOGGER.error("Cannot get current block. No scope.");
+      return null;
+    }
+
+    Node node = blockScope.getAstNode();
+    if (node == null || !(node instanceof CompoundStatement)) {
+      LOGGER.error("Cannot get current block. No AST node {}", blockScope.toString());
+      return null;
+    }
+    return (CompoundStatement) node;
   }
 
+  @Nullable
   public FunctionDeclaration getCurrentFunction() {
-    return (FunctionDeclaration)
-        getFirstScopeThat(scope -> scope instanceof FunctionScope).getAstNode();
+    Scope functionScope = getFirstScopeThat(scope -> scope instanceof FunctionScope);
+    if (functionScope == null) {
+      LOGGER.error("Cannot get current function. No scope.");
+      return null;
+    }
+
+    Node node = functionScope.getAstNode();
+    if (node == null || !(node instanceof FunctionDeclaration)) {
+      LOGGER.error("Cannot get current function. No AST node {}", functionScope.toString());
+      return null;
+    }
+    return (FunctionDeclaration) node;
   }
 
   public List<ValueDeclaration> getGlobals() {
@@ -207,7 +229,9 @@ public class ScopeManager {
   @Nullable
   public Scope getFirstScopeThat(Scope searchScope, Predicate<Scope> predicate) {
     while (searchScope != null) {
-      if (predicate.test(searchScope)) return searchScope;
+      if (predicate.test(searchScope)) {
+        return searchScope;
+      }
       searchScope = searchScope.parent;
     }
     return null;
@@ -279,7 +303,9 @@ public class ScopeManager {
     Scope searchScope = currentScope;
     while (searchScope != null) {
       labelStatement = searchScope.getLabelStatements().getOrDefault(labelString, null);
-      if (labelStatement != null) return labelStatement;
+      if (labelStatement != null) {
+        return labelStatement;
+      }
       searchScope = searchScope.parent;
     }
     return null;
@@ -288,33 +314,55 @@ public class ScopeManager {
   public void addValueDeclaration(VariableDeclaration variableDeclaration) {
     DeclarationScope dScope =
         (DeclarationScope) getFirstScopeThat(scope -> scope instanceof DeclarationScope);
+    if (dScope == null) {
+      LOGGER.error("Cannot add VariableDeclaration. Not in declaration scope.");
+      return;
+    }
     dScope.addValueDeclaration(variableDeclaration);
-    if (dScope.astNode instanceof Statement)
+    if (dScope.astNode instanceof Statement) {
       ((Statement) dScope.astNode).getLocals().add(variableDeclaration);
+    }
   }
 
   public void addValueDeclaration(ParamVariableDeclaration paramDeclaration) {
     FunctionScope fScope =
         (FunctionScope) getFirstScopeThat(scope -> scope instanceof FunctionScope);
+    if (fScope == null) {
+      LOGGER.error("Cannot add ParamVariableDeclaration. Not in function scope.");
+      return;
+    }
     fScope.addValueDeclaration(paramDeclaration);
     List<ParamVariableDeclaration> params =
         ((FunctionDeclaration) fScope.getAstNode()).getParameters();
-    if (!params.contains(paramDeclaration)) params.add(paramDeclaration);
+    if (!params.contains(paramDeclaration)) {
+      params.add(paramDeclaration);
+    }
   }
 
   public void addValueDeclaration(FieldDeclaration fieldDeclaration) {
     RecordScope rScope = (RecordScope) getFirstScopeThat(scope -> scope instanceof RecordScope);
+    if (rScope == null) {
+      LOGGER.error("Cannot add FieldDeclaration. Not in record scope.");
+      return;
+    }
     rScope.addValueDeclaration(fieldDeclaration);
     List<FieldDeclaration> fields = ((RecordDeclaration) rScope.getAstNode()).getFields();
-    if (!fields.contains(fieldDeclaration)) fields.add(fieldDeclaration);
+    if (!fields.contains(fieldDeclaration)) {
+      fields.add(fieldDeclaration);
+    }
   }
 
   public void addValueDeclaration(FunctionDeclaration functionDeclaration) {
     DeclarationScope scopeForFunction =
         (DeclarationScope) getFirstScopeThat(scope -> scope instanceof RecordScope);
-    if (scopeForFunction == null)
+    if (scopeForFunction == null) {
       scopeForFunction =
           (DeclarationScope) getFirstScopeThat(scope -> scope instanceof GlobalScope);
+    }
+    if (scopeForFunction == null) {
+      LOGGER.error("Cannot add FunctionDeclaration. Not in record or global scope.");
+      return;
+    }
     scopeForFunction.addValueDeclaration(functionDeclaration);
     if (scopeForFunction.getAstNode() != null) {
       RecordDeclaration rDecl = (RecordDeclaration) scopeForFunction.getAstNode();
@@ -438,6 +486,7 @@ public class ScopeManager {
 
   ///// Copied over for now - not used but maybe necessary at some point ///////
 
+  @Nullable
   public Declaration getDeclarationForName(String name) {
     // first, check locals
     Declaration declaration;
