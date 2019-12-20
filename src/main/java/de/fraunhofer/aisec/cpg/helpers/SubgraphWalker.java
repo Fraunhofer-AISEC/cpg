@@ -300,7 +300,7 @@ public class SubgraphWalker {
     // declarationScope -> (parentScope, declarations)
     private Map<Node, Pair<Node, List<ValueDeclaration>>>
         nodeToParentBlockAndContainedValueDeclarations = new IdentityHashMap<>();
-    private Type currentClass = null;
+    private Deque<Type> currentClass = new ArrayDeque<>();
     private IterativeGraphWalker walker;
 
     /**
@@ -320,7 +320,7 @@ public class SubgraphWalker {
     }
 
     public void registerHandler(Consumer<Node> handler) {
-      handlers.add((currClass, currScope, currNode) -> handler.accept(currNode));
+      handlers.add((currClass, parent, currNode) -> handler.accept(currNode));
     }
 
     /**
@@ -337,22 +337,24 @@ public class SubgraphWalker {
 
     private void handleNode(Node current, TriConsumer<Type, Node, Node> handler) {
 
-      Node currentScope = walker.getBacklog().peek();
+      Node parent = walker.getBacklog().peek();
 
       if (current instanceof RecordDeclaration) {
-        currentClass = new Type(current.getName());
+        currentClass.push(
+            new Type(
+                current.getName())); // we can be in an inner class, so we remember this as a stack
       }
 
-      handler.accept(currentClass, currentScope, current);
+      handler.accept(currentClass.peek(), parent, current);
     }
 
     private void leaveScope(Node exiting) {
       if (exiting instanceof RecordDeclaration) { // leave a class
-        currentClass = null;
+        currentClass.pop();
       }
     }
 
-    public void collectDeclarations(Node root, Node current) {
+    public void collectDeclarations(Node current) {
       Node parentBlock = null;
 
       // get containing Record or Compound
@@ -369,7 +371,7 @@ public class SubgraphWalker {
 
       if (current instanceof ValueDeclaration) {
 
-        LOGGER.info("Adding variable {}", current.getCode());
+        LOGGER.debug("Adding variable {}", current.getCode());
         if (parentBlock == null) {
           LOGGER.warn("Parent block is empty during subgraph run");
         } else {

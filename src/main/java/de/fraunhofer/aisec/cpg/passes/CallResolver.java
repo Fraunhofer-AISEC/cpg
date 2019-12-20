@@ -121,7 +121,7 @@ public class CallResolver implements Pass {
     }
   }
 
-  private void registerMethods(Type currentClass, Node currentScope, Node currentNode) {
+  private void registerMethods(Type currentClass, Node parent, Node currentNode) {
     if (currentNode instanceof MethodDeclaration) {
       containingType.put((FunctionDeclaration) currentNode, currentClass);
     }

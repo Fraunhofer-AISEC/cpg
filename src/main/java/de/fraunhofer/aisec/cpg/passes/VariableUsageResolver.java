@@ -114,8 +114,7 @@ public class VariableUsageResolver implements Pass {
 
     for (TranslationUnitDeclaration tu : result.getTranslationUnits()) {
       walker.clearCallbacks();
-      walker.registerHandler(
-          (currClass, currScope, currNode) -> walker.collectDeclarations(tu, currNode));
+      walker.registerHandler((currClass, parent, currNode) -> walker.collectDeclarations(currNode));
       walker.registerHandler(this::findRecordsAndEnums);
       walker.iterate(tu);
     }
@@ -144,11 +143,11 @@ public class VariableUsageResolver implements Pass {
     }
   }
 
-  private void resolveLocalVarUsage(Type currentClass, Node currentScope, Node current) {
+  private void resolveLocalVarUsage(Type currentClass, Node parent, Node current) {
     if (current instanceof DeclaredReferenceExpression) {
       DeclaredReferenceExpression ref = (DeclaredReferenceExpression) current;
       Optional<? extends ValueDeclaration> refersTo =
-          walker.getDeclarationForScope(currentScope, ref.getName());
+          walker.getDeclarationForScope(parent, ref.getName());
 
       // only add new nodes for non-static unknown
       if (refersTo.isEmpty()
