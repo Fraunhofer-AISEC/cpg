@@ -90,7 +90,7 @@ public class JavaLanguageFrontend extends LanguageFrontend {
   private HashSet<TypeSolver> internalTypeSolvers =
       new HashSet<>(); // we store a reference here to clean them up later
 
-  public JavaLanguageFrontend(TranslationConfiguration config) {
+  public JavaLanguageFrontend(@NonNull TranslationConfiguration config) {
     super(config, ".");
 
     CombinedTypeSolver typeResolver = new CombinedTypeSolver();

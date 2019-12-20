@@ -41,6 +41,7 @@ import java.io.File;
 import java.lang.reflect.Field;
 import java.util.HashMap;
 import org.checkerframework.checker.nullness.qual.NonNull;
+import org.checkerframework.checker.nullness.qual.Nullable;
 import org.eclipse.cdt.core.dom.ast.IASTComment;
 import org.eclipse.cdt.core.dom.ast.IASTExpression;
 import org.eclipse.cdt.core.dom.ast.IASTFileLocation;
@@ -77,6 +78,7 @@ public class CXXLanguageFrontend extends LanguageFrontend {
   private static final Logger LOGGER = LoggerFactory.getLogger(CXXLanguageFrontend.class);
   private static final IncludeFileContentProvider INCLUDE_FILE_PROVIDER =
       new InternalFileContentProvider() {
+        @Nullable
         private InternalFileContent getContentUncached(String path) {
           if (!getInclusionExists(path)) {
             LOGGER.debug("Include file not found: {}", path);
@@ -87,12 +89,14 @@ public class CXXLanguageFrontend extends LanguageFrontend {
           return (InternalFileContent) content;
         }
 
+        @Nullable
         @Override
         public InternalFileContent getContentForInclusion(
             String path, IMacroDictionary macroDictionary) {
           return getContentUncached(path);
         }
 
+        @Nullable
         @Override
         public InternalFileContent getContentForInclusion(IIndexFileLocation ifl, String astPath) {
           return getContentUncached(astPath);
@@ -109,7 +113,7 @@ public class CXXLanguageFrontend extends LanguageFrontend {
   private HashMap<IBinding, Declaration> cachedDeclarations = new HashMap<>();
   private HashMap<Integer, String> comments = new HashMap<>();
 
-  public CXXLanguageFrontend(TranslationConfiguration config) {
+  public CXXLanguageFrontend(@NonNull TranslationConfiguration config) {
     super(config, "::");
   }
 
@@ -211,6 +215,7 @@ public class CXXLanguageFrontend extends LanguageFrontend {
     }
   }
 
+  @Nullable
   @Override
   public <T> String getCodeFromRawNode(T astNode) {
     if (astNode instanceof ASTNode) {
@@ -313,6 +318,7 @@ public class CXXLanguageFrontend extends LanguageFrontend {
     }
   }
 
+  @Nullable
   public Declaration cacheDeclaration(IBinding binding, Declaration declaration) {
     return cachedDeclarations.put(binding, declaration);
   }
@@ -324,14 +330,6 @@ public class CXXLanguageFrontend extends LanguageFrontend {
   @Override
   public void cleanup() {
     super.cleanup();
-    declarationHandler = null;
-    declarationListHandler = null;
-    declaratorHandler = null;
-    expressionHandler = null;
-    initializerHandler = null;
-    parameterDeclarationHandler = null;
-    statementHandler = null;
-    cachedDeclarations = null;
   }
 
   @Override

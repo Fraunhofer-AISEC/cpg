@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.ValueDeclaration;
 import java.util.ArrayList;
 import java.util.List;
+import org.checkerframework.checker.nullness.qual.NonNull;
 
 /**
  * Is a scope where local variables can be declared and independent from specific language
@@ -37,17 +38,18 @@ import java.util.List;
  */
 public class DeclarationScope extends Scope {
 
-  private List<ValueDeclaration> valueDeclarations = new ArrayList<>();
+  @NonNull private List<ValueDeclaration> valueDeclarations = new ArrayList<>();
 
   public DeclarationScope(Node node) {
     this.astNode = node;
   }
 
+  @NonNull
   public List<ValueDeclaration> getValueDeclarations() {
     return valueDeclarations;
   }
 
-  public void setValueDeclarations(List<ValueDeclaration> valueDeclarations) {
+  public void setValueDeclarations(@NonNull List<ValueDeclaration> valueDeclarations) {
     this.valueDeclarations = valueDeclarations;
   }
 

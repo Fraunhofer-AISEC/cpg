@@ -31,6 +31,7 @@ import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder;
 import de.fraunhofer.aisec.cpg.graph.TranslationUnitDeclaration;
 import java.util.function.Consumer;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
  * Represents a class that enhances the graph before it is persisted.
@@ -39,22 +40,15 @@ import java.util.function.Consumer;
  */
 public interface Pass extends Consumer<TranslationResult> {
 
-  /**
-   * We do not want the passes to depend on a language frontend
-   *
-   * @deprecated
-   * @return might be null, as it is not designed to be used anymore
-   */
-  @Deprecated
+  /** @return might be null */
+  @Nullable
   LanguageFrontend getLang();
 
   /**
-   * We do not want the passes to depend on a language frontend
+   * Passes may need information about what source language they are parsing.
    *
-   * @deprecated
-   * @param lang
+   * @param lang May be null
    */
-  @Deprecated
   void setLang(LanguageFrontend lang);
 
   void cleanup();

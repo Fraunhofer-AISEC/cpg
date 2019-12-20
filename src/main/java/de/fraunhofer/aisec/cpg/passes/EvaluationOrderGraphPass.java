@@ -92,6 +92,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+import org.checkerframework.checker.nullness.qual.NonNull;
+import org.checkerframework.checker.nullness.qual.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -113,17 +115,10 @@ import org.slf4j.LoggerFactory;
  *   <li>EOG considers a method header as a node. CFG will consider the first executable statement
  *       of the methods as a node.
  * </ul>
- *
- * @author julian and konrad
  */
 public class EvaluationOrderGraphPass implements Pass {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(EvaluationOrderGraphPass.class);
-
-  // Mapping from AST nodes to the first EOG node, important for
-  // private Map<Node, Node> firstEOG = new HashMap<>();
-  // private List<Node> openNodes =
-  //    new ArrayList<>(); // All AST nodes that have been visited since adding the last EOG edge
 
   private List<Node> currentEOG = new ArrayList<>();
 
@@ -131,12 +126,9 @@ public class EvaluationOrderGraphPass implements Pass {
   // eog relevant node.
   private List<Node> intermediateNodes = new ArrayList<>();
 
-  // TODO @KW: we need to remove lang here, as we might have multiple language frontends.
-  //  Can we move the scopemanager somewhere else?
   private LanguageFrontend lang;
-  //  private Scene scene;
 
-  private static boolean reachableFromValidEOGRoot(Node node) {
+  private static boolean reachableFromValidEOGRoot(@NonNull Node node) {
     Set<Node> passedBy = new HashSet<>();
     List<Node> workList = new ArrayList<>(node.getPrevEOG());
     while (!workList.isEmpty()) {
@@ -154,9 +146,9 @@ public class EvaluationOrderGraphPass implements Pass {
   public void cleanup() {
     this.intermediateNodes.clear();
     this.currentEOG.clear();
-    this.lang = null;
   }
 
+  @NonNull
   @Override
   public LanguageFrontend getLang() {
     return lang;
@@ -169,7 +161,6 @@ public class EvaluationOrderGraphPass implements Pass {
 
   @Override
   public void accept(TranslationResult result) {
-    //    this.scene = result.getScene();
     for (TranslationUnitDeclaration tu : result.getTranslationUnits()) {
       handleDeclaration(tu);
       removeUnreachableEOGEdges(tu);
@@ -183,7 +174,7 @@ public class EvaluationOrderGraphPass implements Pass {
    *
    * @param eogSources
    */
-  private void truncateLooseEdges(List<Node> eogSources) {
+  private void truncateLooseEdges(@NonNull List<Node> eogSources) {
     for (Node eogSourceNode : eogSources) {
       if (eogSourceNode instanceof FunctionDeclaration) continue;
       List<Node> nextNodes = new ArrayList<>(eogSourceNode.getNextEOG());
@@ -202,7 +193,7 @@ public class EvaluationOrderGraphPass implements Pass {
    *
    * @param tu
    */
-  private void removeUnreachableEOGEdges(TranslationUnitDeclaration tu) {
+  private void removeUnreachableEOGEdges(@NonNull TranslationUnitDeclaration tu) {
     List<Node> eognodes =
         SubgraphWalker.flattenAST(tu).stream()
             .filter(node -> !(node.getPrevEOG().isEmpty() && node.getNextEOG().isEmpty()))
@@ -232,8 +223,10 @@ public class EvaluationOrderGraphPass implements Pass {
    *
    * @param declaration
    */
-  private void handleDeclaration(Declaration declaration) {
-    if (declaration == null) return;
+  private void handleDeclaration(@Nullable Declaration declaration) {
+    if (declaration == null) {
+      return;
+    }
     this.intermediateNodes.add(declaration);
     // todo FieldDeclarations have initializers that may be appropriate to
     // expressionRefersToDeclaration to the
@@ -295,9 +288,10 @@ public class EvaluationOrderGraphPass implements Pass {
    *
    * @param statement
    */
-  private void createEOG(Statement statement) {
-    if (statement == null)
+  private void createEOG(@Nullable Statement statement) {
+    if (statement == null) {
       return; // For null statements, and to avoid null checks in every ifelse branch
+    }
     this.intermediateNodes.add(statement);
     if (statement instanceof CallExpression) {
       CallExpression callExpression = (CallExpression) statement;
@@ -493,7 +487,12 @@ public class EvaluationOrderGraphPass implements Pass {
 
       // Replace current EOG nodes without triggering post setEOG ... processing
       currentEOG.clear();
-      exitLoop(statement, (LoopScope) lang.getScopeManager().leaveScope(statement));
+      LoopScope currentLoopScope = (LoopScope) lang.getScopeManager().leaveScope(statement);
+      if (currentLoopScope != null) {
+        exitLoop(statement, currentLoopScope);
+      } else {
+        LOGGER.error("Trying to exit while loop, but no loop scope: {}", statement.toString());
+      }
 
       currentEOG.addAll(tmpEOGNodes);
 
@@ -506,7 +505,12 @@ public class EvaluationOrderGraphPass implements Pass {
 
       createEOG(dos.getCondition());
       connectCurrentToLoopStart();
-      exitLoop(statement, (LoopScope) lang.getScopeManager().leaveScope(statement));
+      LoopScope currentLoopScope = (LoopScope) lang.getScopeManager().leaveScope(statement);
+      if (currentLoopScope != null) {
+        exitLoop(statement, currentLoopScope);
+      } else {
+        LOGGER.error("Trying to exit do loop, but no loop scope: {}", statement.toString());
+      }
 
       pushToEOG(statement); // Todo Remove root, if not wanted
     } else if (statement instanceof ForStatement) {
@@ -524,7 +528,12 @@ public class EvaluationOrderGraphPass implements Pass {
 
       connectCurrentToLoopStart();
       currentEOG.clear();
-      exitLoop(statement, (LoopScope) lang.getScopeManager().leaveScope(statement));
+      LoopScope currentLoopScope = (LoopScope) lang.getScopeManager().leaveScope(statement);
+      if (currentLoopScope != null) {
+        exitLoop(statement, currentLoopScope);
+      } else {
+        LOGGER.error("Trying to exit for loop, but no loop scope: {}", statement.toString());
+      }
 
       currentEOG.addAll(tmpEOGNodes);
 
@@ -542,7 +551,13 @@ public class EvaluationOrderGraphPass implements Pass {
 
       connectCurrentToLoopStart();
       currentEOG.clear();
-      exitLoop(statement, (LoopScope) lang.getScopeManager().leaveScope(statement));
+      LoopScope currentLoopScope = (LoopScope) lang.getScopeManager().leaveScope(statement);
+      if (currentLoopScope != null) {
+        exitLoop(statement, currentLoopScope);
+      } else {
+        LOGGER.error(
+            "Trying to exit foreach loop, but not in loop scope: {}", statement.toString());
+      }
 
       currentEOG.addAll(tmpEOGNodes);
 
@@ -602,23 +617,24 @@ public class EvaluationOrderGraphPass implements Pass {
           ((List) entry.getValue()).addAll(this.currentEOG);
         }
       }
-      // Forwards all open and uncought throwing nodes to the outer scope that may handle them
+      // Forwards all open and uncaught throwing nodes to the outer scope that may handle them
       Scope outerScope =
           lang.getScopeManager()
               .getFirstScopeThat(
                   lang.getScopeManager().getCurrentScope().getParent(),
                   scope -> scope instanceof TryScope || scope instanceof FunctionScope);
-      Map outerCatchesOrRelays =
-          outerScope instanceof TryScope
-              ? ((TryScope) outerScope).getCatchesOrRelays()
-              : ((FunctionScope) outerScope).getCatchesOrRelays();
-      for (Map.Entry entry : catchesOrRelays.entrySet()) {
-        List<Node> catches =
-            (List<Node>) outerCatchesOrRelays.getOrDefault(entry.getKey(), new ArrayList<Node>());
-        catches.addAll((List<Node>) entry.getValue());
-        outerCatchesOrRelays.put(entry.getKey(), catches);
+      if (outerScope != null) {
+        Map outerCatchesOrRelays =
+            outerScope instanceof TryScope
+                ? ((TryScope) outerScope).getCatchesOrRelays()
+                : ((FunctionScope) outerScope).getCatchesOrRelays();
+        for (Map.Entry entry : catchesOrRelays.entrySet()) {
+          List<Node> catches =
+              (List<Node>) outerCatchesOrRelays.getOrDefault(entry.getKey(), new ArrayList<Node>());
+          catches.addAll((List<Node>) entry.getValue());
+          outerCatchesOrRelays.put(entry.getKey(), catches);
+        }
       }
-
       lang.getScopeManager().leaveScope(statement);
       // To Avoid edges out of the finally block to the next regular statement.
       if (!canTerminateExceptionfree) {
@@ -676,7 +692,12 @@ public class EvaluationOrderGraphPass implements Pass {
       pushToEOG(compound);
 
       SwitchScope switchScope = (SwitchScope) lang.getScopeManager().leaveScope(switchStatement);
-      this.currentEOG.addAll(switchScope.getBreakStatements());
+      if (switchScope != null) {
+        this.currentEOG.addAll(switchScope.getBreakStatements());
+      } else {
+        LOGGER.error(
+            "Handling switch statement, but not in switch scope: {}", switchStatement.toString());
+      }
 
       pushToEOG(statement);
     } else if (statement instanceof LabelStatement) {
@@ -799,7 +820,7 @@ public class EvaluationOrderGraphPass implements Pass {
    * Connects the current EOG leaf nodes to the last stacked node, e.g. loop head, and removes the
    * nodes.
    */
-  public void exitLoop(Statement loopStatement, LoopScope loopScope) {
+  public void exitLoop(@NonNull Statement loopStatement, @NonNull LoopScope loopScope) {
 
     // Breaks are connected to the NEXT EOG node and therefore temporarily stored after the loop
     // context is destroyed
@@ -830,6 +851,10 @@ public class EvaluationOrderGraphPass implements Pass {
   public void connectCurrentToLoopStart() {
     LoopScope loopScope =
         (LoopScope) lang.getScopeManager().getFirstScopeThat(scope -> scope instanceof LoopScope);
+    if (loopScope == null) {
+      LOGGER.error("I am unexpectedly not in a loop, cannot add edge to loop start");
+      return;
+    }
     loopScope.starts().forEach(node -> addMultipleIncomingEOGEdges(this.currentEOG, node));
   }
 

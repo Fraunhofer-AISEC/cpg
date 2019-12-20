@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.TranslationConfiguration;
 import de.fraunhofer.aisec.cpg.frontends.cpp.CXXLanguageFrontend;
 import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguageFrontend;
 import java.util.List;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 public class LanguageFrontendFactory {
 
@@ -39,6 +40,7 @@ public class LanguageFrontendFactory {
   // hide ctor
   private LanguageFrontendFactory() {}
 
+  @Nullable
   public static LanguageFrontend getFrontend(String fileType, TranslationConfiguration config) {
 
     if (JAVA_EXTENSIONS.contains(fileType)) {

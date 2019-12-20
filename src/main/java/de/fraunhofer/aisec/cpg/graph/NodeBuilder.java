@@ -27,6 +27,8 @@
 package de.fraunhofer.aisec.cpg.graph;
 
 import java.util.List;
+import org.checkerframework.checker.nullness.qual.NonNull;
+import org.checkerframework.checker.nullness.qual.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -413,14 +415,16 @@ public class NodeBuilder {
       List<String> modifiers,
       String code,
       Region region,
-      Expression initializer) {
+      @Nullable Expression initializer) {
     FieldDeclaration node = new FieldDeclaration();
     node.setName(name);
     node.setType(type);
     node.setModifiers(modifiers);
     node.setCode(code);
     node.setRegion(region);
-    node.setInitializer(initializer);
+    if (initializer != null) {
+      node.setInitializer(initializer);
+    }
 
     log(node);
 
@@ -608,7 +612,7 @@ public class NodeBuilder {
     return node;
   }
 
-  public static NamespaceDeclaration newNamespaceDeclaration(String name) {
+  public static NamespaceDeclaration newNamespaceDeclaration(@NonNull String name) {
     NamespaceDeclaration node = new NamespaceDeclaration();
     node.setName(name);
 
@@ -616,32 +620,32 @@ public class NodeBuilder {
     return node;
   }
 
-  public static CatchClause newCatchClause(String code) {
+  public static CatchClause newCatchClause(@NonNull String code) {
     CatchClause catchClause = new CatchClause();
 
     catchClause.setCode(code);
     return catchClause;
   }
 
-  public static TryStatement newTryStatement(String code) {
+  public static TryStatement newTryStatement(@NonNull String code) {
     TryStatement tryStatement = new TryStatement();
     tryStatement.setCode(code);
     return tryStatement;
   }
 
-  public static AssertStatement newAssertStatement(String code) {
+  public static AssertStatement newAssertStatement(@NonNull String code) {
     AssertStatement assertStatement = new AssertStatement();
     assertStatement.setCode(code);
     return assertStatement;
   }
 
-  public static ASMDeclarationStatement newASMDeclarationStatement(String code) {
+  public static ASMDeclarationStatement newASMDeclarationStatement(@NonNull String code) {
     ASMDeclarationStatement asmStatement = new ASMDeclarationStatement();
     asmStatement.setCode(code);
     return asmStatement;
   }
 
-  public static CompoundStatementExpression newCompoundStatementExpression(String code) {
+  public static CompoundStatementExpression newCompoundStatementExpression(@NonNull String code) {
     CompoundStatementExpression cse = new CompoundStatementExpression();
     cse.setCode(code);
     return cse;
