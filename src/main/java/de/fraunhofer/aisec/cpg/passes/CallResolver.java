@@ -78,6 +78,7 @@ public class CallResolver implements Pass {
   private Map<FunctionDeclaration, Type> containingType = new HashMap<>();
   private RecordDeclaration currentClass;
   private TranslationUnitDeclaration currentTU;
+  private LanguageFrontend lang;
 
   @Override
   public void cleanup() {
@@ -88,11 +89,13 @@ public class CallResolver implements Pass {
 
   @Override
   public LanguageFrontend getLang() {
-    return null;
+    return lang;
   }
 
   @Override
-  public void setLang(LanguageFrontend lang) {}
+  public void setLang(LanguageFrontend lang) {
+    this.lang = lang;
+  }
 
   @Override
   public void accept(TranslationResult translationResult) {
@@ -118,7 +121,7 @@ public class CallResolver implements Pass {
     }
   }
 
-  private void registerMethods(Type currentClass, Node currentScope, Node currentNode) {
+  private void registerMethods(Type currentClass, Node parent, Node currentNode) {
     if (currentNode instanceof MethodDeclaration) {
       containingType.put((FunctionDeclaration) currentNode, currentClass);
     }

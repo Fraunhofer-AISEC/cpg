@@ -68,6 +68,7 @@ import java.io.File;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
@@ -780,5 +781,30 @@ class CXXLanguageFrontendTest {
     assertTrue(die.getRhs() instanceof Literal);
     assertEquals(5, ((Literal) die.getLhs().get(0)).getValue());
     assertEquals(2, ((Literal) die.getRhs()).getValue());
+  }
+
+  @Test
+  void testLocalVariables() throws TranslationException {
+    TranslationUnitDeclaration declaration =
+        new CXXLanguageFrontend(TranslationConfiguration.builder().build())
+            .parse(new File("src/test/resources/variables/local_variables.cpp"));
+
+    FunctionDeclaration function = declaration.getDeclarationAs(2, FunctionDeclaration.class);
+
+    assertEquals("testExpressionInExpressionList()int", function.getSignature());
+
+    List<VariableDeclaration> locals = function.getBody().getLocals();
+    // Expecting x, foo, t
+    Set<String> localNames = locals.stream().map(l -> l.getName()).collect(Collectors.toSet());
+    assertTrue(localNames.contains("x"));
+    assertTrue(localNames.contains("foo"));
+    assertTrue(localNames.contains("t"));
+
+    // ... and nothing else
+    assertEquals(3, localNames.size());
+
+    RecordDeclaration clazz = declaration.getDeclarationAs(0, RecordDeclaration.class);
+    assertEquals("this", clazz.getFields().get(0).getName());
+    assertEquals(1, clazz.getFields().size());
   }
 }

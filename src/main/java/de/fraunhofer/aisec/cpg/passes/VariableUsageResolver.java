@@ -83,6 +83,7 @@ public class VariableUsageResolver implements Pass {
   private Map<Type, RecordDeclaration> recordMap = new HashMap<>();
   private Map<Type, EnumDeclaration> enumMap = new HashMap<>();
   private ScopedWalker walker;
+  private LanguageFrontend lang;
 
   @Override
   public void cleanup() {
@@ -99,11 +100,13 @@ public class VariableUsageResolver implements Pass {
 
   @Override
   public LanguageFrontend getLang() {
-    return null;
+    return lang;
   }
 
   @Override
-  public void setLang(LanguageFrontend lang) {}
+  public void setLang(LanguageFrontend lang) {
+    this.lang = lang;
+  }
 
   @Override
   public void accept(TranslationResult result) {
@@ -111,8 +114,7 @@ public class VariableUsageResolver implements Pass {
 
     for (TranslationUnitDeclaration tu : result.getTranslationUnits()) {
       walker.clearCallbacks();
-      walker.registerHandler(
-          (currClass, currScope, currNode) -> walker.collectDeclarations(tu, currNode));
+      walker.registerHandler((currClass, parent, currNode) -> walker.collectDeclarations(currNode));
       walker.registerHandler(this::findRecordsAndEnums);
       walker.iterate(tu);
     }
@@ -141,20 +143,22 @@ public class VariableUsageResolver implements Pass {
     }
   }
 
-  private void resolveLocalVarUsage(Type currentClass, Node currentScope, Node current) {
+  private void resolveLocalVarUsage(Type currentClass, Node parent, Node current) {
     if (current instanceof DeclaredReferenceExpression) {
-      List<ValueDeclaration> currDeclarations = walker.getDeclarationsForScope(currentScope);
       DeclaredReferenceExpression ref = (DeclaredReferenceExpression) current;
       Optional<? extends ValueDeclaration> refersTo =
-          currDeclarations.stream().filter(v -> v.getName().equals(ref.getName())).findFirst();
+          walker.getDeclarationForScope(parent, ref.getName());
 
       // only add new nodes for non-static unknown
-      if (!(current instanceof StaticReferenceExpression)
-          && refersTo.isEmpty()
+      if (refersTo.isEmpty()
+          && !(current instanceof StaticReferenceExpression)
           && currentClass != null
           && recordMap.containsKey(currentClass)) {
         // Maybe we are referring to a field instead of a local var
+        log.info("did not find a declaration for {}", current.getCode());
         refersTo = Optional.of(resolveMember(currentClass, (DeclaredReferenceExpression) current));
+      } else {
+        log.debug("found a declaration for {}", current.getCode());
       }
 
       ref.setRefersTo(refersTo.orElse(null));

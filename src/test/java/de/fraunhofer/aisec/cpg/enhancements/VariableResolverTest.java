@@ -26,24 +26,21 @@
 
 package de.fraunhofer.aisec.cpg.enhancements;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import de.fraunhofer.aisec.cpg.TestUtils;
 import de.fraunhofer.aisec.cpg.TranslationConfiguration;
 import de.fraunhofer.aisec.cpg.TranslationManager;
-import de.fraunhofer.aisec.cpg.graph.DeclaredReferenceExpression;
-import de.fraunhofer.aisec.cpg.graph.FieldDeclaration;
-import de.fraunhofer.aisec.cpg.graph.MemberExpression;
-import de.fraunhofer.aisec.cpg.graph.MethodDeclaration;
-import de.fraunhofer.aisec.cpg.graph.ReturnStatement;
-import de.fraunhofer.aisec.cpg.graph.TranslationUnitDeclaration;
-import de.fraunhofer.aisec.cpg.graph.VariableDeclaration;
+import de.fraunhofer.aisec.cpg.graph.*;
 import de.fraunhofer.aisec.cpg.helpers.Util;
 import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Set;
+import java.util.concurrent.ExecutionException;
+import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
 
 public class VariableResolverTest {
@@ -109,5 +106,46 @@ public class VariableResolverTest {
     returnValue = (DeclaredReferenceExpression) returnStatement.getReturnValue();
     assertNotEquals(field, returnValue.getRefersTo());
     assertEquals(local, returnValue.getRefersTo());
+  }
+
+  @Test
+  public void testLocalVarsCpp() throws ExecutionException, InterruptedException {
+    TranslationConfiguration config =
+        TranslationConfiguration.builder()
+            .sourceFiles(new File("src/test/resources/variables/local_variables.cpp"))
+            .topLevel(new File("src/test/resources/variables/"))
+            .defaultPasses()
+            .debugParser(true)
+            .failOnError(true)
+            .build();
+
+    TranslationManager analyzer = TranslationManager.builder().config(config).build();
+    List<TranslationUnitDeclaration> tu = analyzer.analyze().get().getTranslationUnits();
+
+    FunctionDeclaration function = tu.get(0).getDeclarationAs(2, FunctionDeclaration.class);
+
+    assertEquals("testExpressionInExpressionList()int", function.getSignature());
+
+    List<VariableDeclaration> locals = function.getBody().getLocals();
+    // Expecting x, foo, t
+    Set<String> localNames = locals.stream().map(l -> l.getName()).collect(Collectors.toSet());
+    assertTrue(localNames.contains("x"));
+    assertTrue(localNames.contains("foo"));
+    assertTrue(localNames.contains("t"));
+
+    // ... and nothing else
+    assertEquals(3, localNames.size());
+
+    // Class "Test" has only one (virtual) field "this"
+    RecordDeclaration clazz = tu.get(0).getDeclarationAs(0, RecordDeclaration.class);
+    for (FieldDeclaration f : clazz.getFields()) {
+      if (f == null) {
+        System.out.println("NULL");
+        continue;
+      }
+      System.out.println(f.getName() + " " + f.getInitializer());
+    }
+    // FIXME Fails. Actually has "this", "a" and "foo"
+    assertEquals(1, clazz.getFields().size());
   }
 }
