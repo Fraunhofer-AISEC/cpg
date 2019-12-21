@@ -255,11 +255,11 @@ public class ExpressionHandler
                   .map(m -> m.getKeyword().asString())
                   .collect(Collectors.joining(" ")));
 
-      Optional<Expression> o = variable.getInitializer();
+      Optional<Expression> oInitializer = variable.getInitializer();
 
-      if (o.isPresent()) {
+      if (oInitializer.isPresent()) {
         de.fraunhofer.aisec.cpg.graph.Expression initializer =
-            (de.fraunhofer.aisec.cpg.graph.Expression) handle(o.get());
+            (de.fraunhofer.aisec.cpg.graph.Expression) handle(oInitializer.get());
 
         declaration.setInitializer(initializer);
       }
