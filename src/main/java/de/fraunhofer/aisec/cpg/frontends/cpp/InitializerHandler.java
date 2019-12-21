@@ -76,6 +76,7 @@ public class InitializerHandler extends Handler<Expression, IASTInitializer, CXX
       arg.setArgumentIndex(i);
 
       constructExpression.getArguments().add(arg);
+      arg.addNextDFG(constructExpression);
 
       i++;
     }
