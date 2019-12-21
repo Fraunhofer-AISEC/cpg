@@ -61,8 +61,7 @@ public class DeclaredReferenceExpression extends Expression implements TypeListe
 
     this.refersTo = refersTo;
     refersTo.registerTypeListener(this);
-    this.addPrevDFG(refersTo);
-    refersTo.addPrevDFG(this);
+    refersTo.addNextDFG(this);
     if (refersTo instanceof TypeListener) {
       this.registerTypeListener((TypeListener) refersTo);
     }
