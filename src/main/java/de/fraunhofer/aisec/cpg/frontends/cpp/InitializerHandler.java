@@ -67,7 +67,6 @@ public class InitializerHandler extends Handler<Expression, IASTInitializer, CXX
       }
     }
     ConstructExpression constructExpression = NodeBuilder.newConstructExpression(code);
-    // TODO: parse constructor
 
     int i = 0;
     for (IASTInitializerClause argument : ctx.getArguments()) {

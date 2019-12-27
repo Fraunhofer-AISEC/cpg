@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.graph;
 
 import de.fraunhofer.aisec.cpg.graph.HasType.TypeListener;
 import de.fraunhofer.aisec.cpg.graph.Type.Origin;
+import de.fraunhofer.aisec.cpg.passes.CallResolver;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -47,7 +48,11 @@ import org.apache.commons.lang3.builder.ToStringBuilder;
  */
 public class ConstructExpression extends Expression implements TypeListener {
 
-  /** The link to the {@link ConstructorDeclaration}. */
+  /**
+   * The link to the {@link ConstructorDeclaration}. This is populated by the {@link
+   * de.fraunhofer.aisec.cpg.passes.CallResolver} later.
+   */
+  @PopulatedByPass(CallResolver.class)
   private ConstructorDeclaration constructor;
 
   /** The list of argument {@link Expression}s passed the constructor. */
