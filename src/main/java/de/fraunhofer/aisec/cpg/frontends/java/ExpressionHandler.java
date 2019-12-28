@@ -135,27 +135,34 @@ public class ExpressionHandler
     return castExpression;
   }
 
+  /**
+   * Creates a new {@link ArrayCreationExpression}, which is usually used as an initializer of a
+   * {@link VariableDeclaration}.
+   *
+   * @param expr the expression
+   * @return the {@link ArrayCreationExpression}
+   */
   private Statement handleArrayCreationExpr(Expression expr) {
     ArrayCreationExpr arrayCreationExpr = (ArrayCreationExpr) expr;
     ArrayCreationExpression creationExpression =
         NodeBuilder.newArrayCreationExpression(expr.toString());
+
+    // in Java, an array creation expression either specifies an initializer or dimensions
+
+    // parse initializer, if present
     arrayCreationExpr
         .getInitializer()
         .ifPresent(
             init -> creationExpression.setInitializer((InitializerListExpression) handle(init)));
 
-    StringBuilder arrayTypeExtension = new StringBuilder();
-
+    // dimensions are only present if you specify them explicitly, such as new int[1]
     for (ArrayCreationLevel lvl : arrayCreationExpr.getLevels()) {
-      arrayTypeExtension.append("[]");
-      Optional<Expression> optional = lvl.getDimension();
-      if (optional.isPresent()) {
-        creationExpression
-            .getDimensions()
-            .add((de.fraunhofer.aisec.cpg.graph.Expression) handle(optional.get()));
-      } else {
-        creationExpression.getDimensions().add(null);
-      }
+      lvl.getDimension()
+          .ifPresent(
+              expression ->
+                  creationExpression
+                      .getDimensions()
+                      .add((de.fraunhofer.aisec.cpg.graph.Expression) handle(expression)));
     }
 
     return creationExpression;

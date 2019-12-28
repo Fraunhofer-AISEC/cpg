@@ -169,13 +169,15 @@ class JavaLanguageFrontendTest {
         (VariableDeclaration) ((DeclarationStatement) statements.get(0)).getSingleDeclaration();
 
     // type should be Integer[]
-    assertEquals(Type.createFrom("java.lang.Integer[]"), a.getType());
+    assertEquals(Type.createFrom("int[]"), a.getType());
 
     // it has an array creation initializer
     ArrayCreationExpression ace = (ArrayCreationExpression) a.getInitializer();
+    assertNotNull(ace);
 
     // which has a initializer list (1 entry)
     InitializerListExpression ile = ace.getInitializer();
+    assertNotNull(ile);
     assertEquals(1, ile.getInitializers().size());
 
     // first one is an int literal
@@ -188,6 +190,7 @@ class JavaLanguageFrontendTest {
 
     // initializer is array subscription
     ArraySubscriptionExpression ase = (ArraySubscriptionExpression) b.getInitializer();
+    assertNotNull(ase);
     assertEquals(a, ((DeclaredReferenceExpression) ase.getArrayExpression()).getRefersTo());
     assertEquals(0, ((Literal<Integer>) ase.getSubscriptExpression()).getValue().intValue());
   }
@@ -219,6 +222,7 @@ class JavaLanguageFrontendTest {
 
     MemberExpression length = (MemberExpression) l.getInitializer();
 
+    assertNotNull(length);
     assertEquals("length", length.getMember().getName());
     assertEquals("int", length.getType().toString());
   }

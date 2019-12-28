@@ -34,12 +34,24 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 
-/** Expressions of the form <code>new Type[]</code> that creates an Array. */
+/**
+ * Expressions of the form <code>new Type[]</code> that represents the creation of an array, mostly
+ * used in combination with a {@link VariableDeclaration}.
+ */
 public class ArrayCreationExpression extends Expression implements TypeListener {
 
+  /**
+   * The initializer of the expression, if present. Many languages, such as Java, either specify
+   * {@link #dimensions} or an initializer.
+   */
   @SubGraph("AST")
   private InitializerListExpression initializer;
 
+  /**
+   * Specifies the dimensions of the array that is to be created. Many languages, such as Java,
+   * either explicitly specify dimensions or an {@link #initializer}, which is used to calculate
+   * dimensions. In the graph, this will NOT be done.
+   */
   @SubGraph("AST")
   private List<Expression> dimensions = new ArrayList<>();
 
