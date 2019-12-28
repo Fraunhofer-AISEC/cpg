@@ -34,6 +34,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import de.fraunhofer.aisec.cpg.TranslationConfiguration;
 import de.fraunhofer.aisec.cpg.frontends.TranslationException;
+import de.fraunhofer.aisec.cpg.graph.ArraySubscriptionExpression;
 import de.fraunhofer.aisec.cpg.graph.BinaryOperator;
 import de.fraunhofer.aisec.cpg.graph.CallExpression;
 import de.fraunhofer.aisec.cpg.graph.CaseStatement;
@@ -80,6 +81,39 @@ import org.slf4j.LoggerFactory;
 class CXXLanguageFrontendTest {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(CXXLanguageFrontendTest.class);
+
+  @Test
+  void testArrays() throws TranslationException {
+    TranslationUnitDeclaration tu =
+        new CXXLanguageFrontend(TranslationConfiguration.builder().build())
+            .parse(new File("src/test/resources/arrays.cpp"));
+
+    FunctionDeclaration main = tu.getDeclarationAs(0, FunctionDeclaration.class);
+
+    CompoundStatement statement = (CompoundStatement) main.getBody();
+
+    // first statement is the variable declaration
+    VariableDeclaration x =
+        (VariableDeclaration)
+            ((DeclarationStatement) statement.getStatements().get(0)).getSingleDeclaration();
+    assertNotNull(x);
+    assertEquals(Type.createFrom("int[]"), x.getType());
+
+    // initializer is a initializer list expression
+    InitializerListExpression ile = (InitializerListExpression) x.getInitializer();
+    List<Expression> initializers = ile.getInitializers();
+    assertNotNull(initializers);
+
+    assertEquals(3, initializers.size());
+
+    // second statement is an expression directly
+    ArraySubscriptionExpression ase =
+        (ArraySubscriptionExpression) statement.getStatements().get(1);
+    assertNotNull(ase);
+
+    assertEquals(x, ((DeclaredReferenceExpression) ase.getArrayExpression()).getRefersTo());
+    assertEquals(0, ((Literal<Integer>) ase.getSubscriptExpression()).getValue().intValue());
+  }
 
   @Test
   void testFunctionDeclaration() throws TranslationException {

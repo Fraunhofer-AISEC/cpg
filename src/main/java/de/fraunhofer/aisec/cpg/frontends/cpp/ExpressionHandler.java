@@ -294,7 +294,12 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
 
     lang.setCodeAndRegion(member, ctx);
 
-    return NodeBuilder.newMemberExpression(base, member, ctx.getRawSignature());
+    MemberExpression memberExpression =
+        NodeBuilder.newMemberExpression(base, member, ctx.getRawSignature());
+
+    this.lang.expressionRefersToDeclaration(memberExpression, ctx);
+
+    return memberExpression;
   }
 
   private Expression handleUnaryExpression(CPPASTUnaryExpression ctx) {
@@ -367,8 +372,6 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
             operatorCode, ctx.isPostfixOperator(), !ctx.isPostfixOperator(), ctx.getRawSignature());
 
     if (input != null) {
-      this.lang.expressionRefersToDeclaration(input, ctx.getOperand());
-
       unaryOperator.setInput(input);
     }
 
@@ -395,15 +398,11 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
               ((MemberExpression) reference).getBase(),
               ctx.getRawSignature());
 
-      this.lang.expressionRefersToDeclaration(reference, ctx.getFunctionNameExpression());
       if (((MemberExpression) reference).getBase() instanceof HasType) {
         callExpression.setType(((HasType) ((MemberExpression) reference).getBase()).getType());
       }
     } else {
       String fqn = reference.getName();
-      if (fqn == null) {
-        fqn = "ANONYMOUS";
-      }
       String name = fqn;
       if (name.contains("::")) {
         name = name.substring(name.lastIndexOf("::") + 2);
@@ -422,24 +421,6 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
     for (IASTInitializerClause argument : ctx.getArguments()) {
       Expression arg = this.handle(argument);
       arg.setArgumentIndex(i);
-
-      if (ctx.getArguments()[i] instanceof CPPASTInitializerList) {
-        for (ICPPASTInitializerClause clause :
-            ((CPPASTInitializerList) ctx.getArguments()[i]).getClauses()) {
-          if (clause instanceof CPPASTInitializerList) {
-            for (ICPPASTInitializerClause innerClause :
-                ((CPPASTInitializerList) clause).getClauses()) {
-              this.lang.expressionRefersToDeclaration(arg, (IASTExpression) innerClause);
-            }
-          } else {
-            this.lang.expressionRefersToDeclaration(arg, (IASTExpression) clause);
-          }
-        }
-      } else if (ctx.getArguments()[i] instanceof IASTExpression) {
-        this.lang.expressionRefersToDeclaration(arg, (IASTExpression) ctx.getArguments()[i]);
-      } else {
-        log.warn("Unknown Argument Class {}", ctx.getArguments()[i].getClass().toGenericString());
-      }
 
       callExpression.getArguments().add(arg);
 
@@ -475,6 +456,8 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
     } else {
       declaredReferenceExpression.setType(Type.createFrom(expressionTypeProxy(ctx).toString()));
     }
+
+    this.lang.expressionRefersToDeclaration(declaredReferenceExpression, ctx);
 
     return declaredReferenceExpression;
   }
@@ -599,23 +582,12 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
         NodeBuilder.newBinaryOperator(operatorCode, ctx.getRawSignature());
 
     Expression lhs = this.handle(ctx.getOperand1());
-    this.lang.expressionRefersToDeclaration(lhs, ctx.getOperand1());
+
     Expression rhs;
     if (ctx.getOperand2() != null) {
       rhs = this.handle(ctx.getOperand2());
-      this.lang.expressionRefersToDeclaration(rhs, ctx.getOperand2());
     } else {
       rhs = this.handle(ctx.getInitOperand2());
-      if (ctx.getInitOperand2() instanceof CPPASTInitializerList) {
-        for (IASTInitializerClause in :
-            ((CPPASTInitializerList) ctx.getInitOperand2()).getClauses()) {
-          if (in instanceof CPPASTIdExpression) {
-            this.lang.expressionRefersToDeclaration(rhs, (CPPASTIdExpression) in);
-          }
-        }
-      } else {
-        log.warn("Do not know how to connect to {}", rhs.getClass().toGenericString());
-      }
     }
 
     binaryOperator.setLhs(lhs);
