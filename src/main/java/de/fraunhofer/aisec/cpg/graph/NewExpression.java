@@ -55,7 +55,20 @@ public class NewExpression extends Expression {
   }
 
   public void setInitializer(Expression initializer) {
+    // TODO: The VariableDeclaration::setInitializer does some DFG stuff. Needed here aswell?
+
+    if (this.initializer instanceof TypeListener) {
+      this.unregisterTypeListener((TypeListener) this.initializer);
+    }
+
     this.initializer = initializer;
+
+    // if the initializer implements a type listener, inform it about our type changes
+    // since the type is tied to the declaration but it is convenient to have the type
+    // information in the initializer, i.e. in a ConstructExpression.
+    if (initializer instanceof TypeListener) {
+      this.registerTypeListener((TypeListener) initializer);
+    }
   }
 
   @Override

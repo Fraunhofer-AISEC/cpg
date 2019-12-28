@@ -51,6 +51,10 @@ public class VariableDeclaration extends ValueDeclaration implements TypeListene
     if (this.initializer != null) {
       this.removePrevDFG(this.initializer);
       this.initializer.unregisterTypeListener(this);
+
+      if (this.initializer instanceof TypeListener) {
+        this.unregisterTypeListener((TypeListener) this.initializer);
+      }
     }
 
     this.initializer = initializer;

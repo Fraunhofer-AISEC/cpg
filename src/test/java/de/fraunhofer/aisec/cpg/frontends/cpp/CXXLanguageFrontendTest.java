@@ -34,7 +34,36 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import de.fraunhofer.aisec.cpg.TranslationConfiguration;
 import de.fraunhofer.aisec.cpg.frontends.TranslationException;
-import de.fraunhofer.aisec.cpg.graph.*;
+import de.fraunhofer.aisec.cpg.graph.BinaryOperator;
+import de.fraunhofer.aisec.cpg.graph.CallExpression;
+import de.fraunhofer.aisec.cpg.graph.CaseStatement;
+import de.fraunhofer.aisec.cpg.graph.CompoundStatement;
+import de.fraunhofer.aisec.cpg.graph.ConstructExpression;
+import de.fraunhofer.aisec.cpg.graph.ConstructorDeclaration;
+import de.fraunhofer.aisec.cpg.graph.Declaration;
+import de.fraunhofer.aisec.cpg.graph.DeclarationStatement;
+import de.fraunhofer.aisec.cpg.graph.DeclaredReferenceExpression;
+import de.fraunhofer.aisec.cpg.graph.DefaultStatement;
+import de.fraunhofer.aisec.cpg.graph.DesignatedInitializerExpression;
+import de.fraunhofer.aisec.cpg.graph.Expression;
+import de.fraunhofer.aisec.cpg.graph.FieldDeclaration;
+import de.fraunhofer.aisec.cpg.graph.FunctionDeclaration;
+import de.fraunhofer.aisec.cpg.graph.IfStatement;
+import de.fraunhofer.aisec.cpg.graph.InitializerListExpression;
+import de.fraunhofer.aisec.cpg.graph.Literal;
+import de.fraunhofer.aisec.cpg.graph.MemberCallExpression;
+import de.fraunhofer.aisec.cpg.graph.MethodDeclaration;
+import de.fraunhofer.aisec.cpg.graph.NewExpression;
+import de.fraunhofer.aisec.cpg.graph.Node;
+import de.fraunhofer.aisec.cpg.graph.RecordDeclaration;
+import de.fraunhofer.aisec.cpg.graph.Region;
+import de.fraunhofer.aisec.cpg.graph.ReturnStatement;
+import de.fraunhofer.aisec.cpg.graph.Statement;
+import de.fraunhofer.aisec.cpg.graph.SwitchStatement;
+import de.fraunhofer.aisec.cpg.graph.TranslationUnitDeclaration;
+import de.fraunhofer.aisec.cpg.graph.Type;
+import de.fraunhofer.aisec.cpg.graph.UnaryOperator;
+import de.fraunhofer.aisec.cpg.graph.VariableDeclaration;
 import de.fraunhofer.aisec.cpg.helpers.NodeComparator;
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker;
 import de.fraunhofer.aisec.cpg.helpers.Util;
@@ -631,10 +660,30 @@ class CXXLanguageFrontendTest {
     assertEquals(new Type("Integer"), i.getType());
 
     // initializer should be a construct expression
-    ConstructExpression expr = (ConstructExpression) i.getInitializer();
+    ConstructExpression constructExpression = (ConstructExpression) i.getInitializer();
 
     // type of the construct expression should also be Integer
-    assertEquals(new Type("Integer"), expr.getType());
+    assertEquals(new Type("Integer"), constructExpression.getType());
+
+    // auto (Integer) k
+    VariableDeclaration k =
+        (VariableDeclaration)
+            ((DeclarationStatement) statement.getStatements().get(5)).getSingleDeclaration();
+
+    // type should be Integer
+    assertEquals(new Type("Integer"), k.getType());
+
+    // initializer should be a new expression
+    NewExpression newExpression = (NewExpression) k.getInitializer();
+
+    // type of the new expression should also be Integer
+    assertEquals(new Type("Integer"), newExpression.getType());
+
+    // initializer should be a construct expression
+    constructExpression = (ConstructExpression) newExpression.getInitializer();
+
+    // type of the construct expression should also be Integer
+    assertEquals(new Type("Integer"), constructExpression.getType());
   }
 
   List<Statement> getStatementsOfFunction(FunctionDeclaration declaration) {
