@@ -70,7 +70,7 @@ public class FunctionDeclaration extends ValueDeclaration {
             .map(x -> x.getType().toString())
             .collect(Collectors.joining(COMMA + WHITESPACE))
         + BRACKET_RIGHT
-        + Objects.requireNonNullElse(this.type, Type.UNKNOWN_TYPE);
+        + Objects.requireNonNullElse(this.type, Type.UNKNOWN_TYPE_STRING);
   }
 
   public boolean hasSignature(List<Type> targetSignature) {

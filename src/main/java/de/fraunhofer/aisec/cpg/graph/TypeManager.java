@@ -70,7 +70,7 @@ public class TypeManager {
   }
 
   public boolean isUnknown(String type) {
-    return type.contains(Type.UNKNOWN_TYPE)
+    return type.contains(Type.UNKNOWN_TYPE_STRING)
         || type.contains("?")
         || type.equals("var")
         || type.equals("");

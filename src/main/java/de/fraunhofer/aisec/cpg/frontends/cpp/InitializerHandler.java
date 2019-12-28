@@ -57,16 +57,8 @@ public class InitializerHandler extends Handler<Expression, IASTInitializer, CXX
   }
 
   private Expression handleConstructorInitializer(CPPASTConstructorInitializer ctx) {
-    // ctx.getRawSignature(); only returns "(1)" for "new Botan(1)". no way to get Botan(1) except:
-    String code = ctx.getRawSignature();
-    if (ctx.getParent() != null && ctx.getParent().getRawSignature() != null) {
-      if (ctx.getParent().getRawSignature().startsWith("new ")) {
-        code = ctx.getParent().getRawSignature().substring(4);
-      } else {
-        code = ctx.getParent().getRawSignature();
-      }
-    }
-    ConstructExpression constructExpression = NodeBuilder.newConstructExpression(code);
+    ConstructExpression constructExpression =
+        NodeBuilder.newConstructExpression(ctx.getRawSignature());
 
     int i = 0;
     for (IASTInitializerClause argument : ctx.getArguments()) {

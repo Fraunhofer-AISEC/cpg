@@ -54,7 +54,7 @@ public class Expression extends Statement implements HasType {
 
   /** The type of the value after evaluation. */
   @Convert(TypeConverter.class)
-  protected Type type = Type.getUnknown();
+  protected Type type = Type.UNKNOWN;
 
   @Transient private Set<TypeListener> typeListeners = new HashSet<>();
 
@@ -63,7 +63,9 @@ public class Expression extends Statement implements HasType {
 
   @Override
   public Type getType() {
-    return type;
+    // just to make sure that we REALLY always return a valid type in case this somehow gets set to
+    // null
+    return type != null ? type : Type.UNKNOWN;
   }
 
   @Override

@@ -290,7 +290,7 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
     String identifierName = ctx.getFieldName().toString();
     DeclaredReferenceExpression member =
         NodeBuilder.newDeclaredReferenceExpression(
-            identifierName, Type.getUnknown(), ctx.getFieldName().getRawSignature());
+            identifierName, Type.UNKNOWN, ctx.getFieldName().getRawSignature());
 
     lang.setCodeAndRegion(member, ctx);
 

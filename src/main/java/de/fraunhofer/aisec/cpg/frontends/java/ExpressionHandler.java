@@ -301,7 +301,7 @@ public class ExpressionHandler
             baseType = new Type(qualifiedNameFromImports);
           } else {
             log.info("Unknown base type for {}", fieldAccessExpr);
-            baseType = Type.getUnknown();
+            baseType = Type.UNKNOWN;
           }
         }
       }
@@ -332,7 +332,7 @@ public class ExpressionHandler
           baseType = new Type(qualifiedNameFromImports);
         } else {
           log.info("Unknown base type for {}", fieldAccessExpr);
-          baseType = Type.getUnknown();
+          baseType = Type.UNKNOWN;
         }
         base =
             NodeBuilder.newStaticReferenceExpression(
@@ -358,7 +358,7 @@ public class ExpressionHandler
         fieldType = new Type("int");
       } else {
         log.info("Unknown field type for {}", fieldAccessExpr);
-        fieldType = Type.getUnknown();
+        fieldType = Type.UNKNOWN;
       }
       member =
           NodeBuilder.newStaticReferenceExpression(
@@ -374,7 +374,7 @@ public class ExpressionHandler
     LiteralExpr literalExpr = expr.asLiteralExpr();
 
     // meh, no easy way to get the type
-    Type type = Type.getUnknown();
+    Type type = Type.UNKNOWN;
     String val = literalExpr.toString();
     if (literalExpr instanceof IntegerLiteralExpr) {
       type.setFrom("int");
@@ -617,7 +617,7 @@ public class ExpressionHandler
           NodeBuilder.newCallExpression(name, qualifiedName, methodCallExpr.toString());
     }
 
-    String type = Type.UNKNOWN_TYPE;
+    String type = Type.UNKNOWN_TYPE_STRING;
     try {
       type = methodCallExpr.resolve().getReturnType().describe();
     } catch (Throwable e) {

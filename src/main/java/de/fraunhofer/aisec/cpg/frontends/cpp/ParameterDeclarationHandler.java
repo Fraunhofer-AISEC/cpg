@@ -87,10 +87,7 @@ public class ParameterDeclarationHandler
 
     ParamVariableDeclaration paramVariableDeclaration =
         NodeBuilder.newMethodParameterIn(
-            ctx.getDeclarator().getName().toString(),
-            Type.getUnknown(),
-            false,
-            ctx.getRawSignature());
+            ctx.getDeclarator().getName().toString(), Type.UNKNOWN, false, ctx.getRawSignature());
 
     // set type
     paramVariableDeclaration.setType(Type.createFrom(ctx.getDeclSpecifier().toString()));

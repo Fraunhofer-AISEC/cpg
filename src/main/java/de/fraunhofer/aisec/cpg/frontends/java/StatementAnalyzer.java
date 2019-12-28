@@ -462,7 +462,7 @@ public class StatementAnalyzer
 
   public String getCodeBetweenTokens(JavaToken startToken, JavaToken endToken) {
     if (startToken == null || endToken == null) {
-      return Type.UNKNOWN_TYPE;
+      return Type.UNKNOWN_TYPE_STRING;
     }
     StringBuilder newCode = new StringBuilder(startToken.getText());
     JavaToken current = startToken;

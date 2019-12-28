@@ -40,7 +40,7 @@ import org.neo4j.ogm.annotation.typeconversion.Convert;
 public abstract class ValueDeclaration extends Declaration implements HasType {
 
   @Convert(TypeConverter.class)
-  protected Type type = Type.getUnknown();
+  protected Type type = Type.UNKNOWN;
 
   @Convert(TypeSetConverter.class)
   protected Set<Type> possibleSubTypes = new HashSet<>();

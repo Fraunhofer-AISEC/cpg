@@ -58,6 +58,10 @@ public class VariableDeclaration extends ValueDeclaration implements TypeListene
     if (initializer != null) {
       this.addPrevDFG(initializer);
       initializer.registerTypeListener(this);
+
+      if (initializer instanceof ConstructExpression) {
+        this.registerTypeListener((ConstructExpression) initializer);
+      }
     }
   }
 

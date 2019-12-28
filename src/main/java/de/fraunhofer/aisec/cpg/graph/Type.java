@@ -36,7 +36,10 @@ import org.slf4j.LoggerFactory;
 
 public class Type {
 
-  public static final String UNKNOWN_TYPE = "UNKNOWN";
+  public static final String UNKNOWN_TYPE_STRING = "UNKNOWN";
+
+  public static final Type UNKNOWN = new Type();
+
   private static final Logger LOGGER = LoggerFactory.getLogger(Type.class);
   // Compile regex patterns once and for all.
   private static final Pattern DOUBLE_COLON = Pattern.compile("::");
@@ -45,7 +48,7 @@ public class Type {
       Pattern.compile(
           "(?:(?<modifier>[a-zA-Z]*) )?(?<type>[a-zA-Z0-9_$.<>]*)(?<adjustment>[\\[\\]*\\s]*)?");
   /** The type of the declaration. */
-  protected String type = UNKNOWN_TYPE;
+  protected String type = UNKNOWN_TYPE_STRING;
   /** Specifies whether this node has any type adjustments, such as a pointer or reference. */
   protected String typeAdjustment = "";
   /** Specifies whether this node has any type modifiers, such as const, final, ... */
@@ -54,6 +57,10 @@ public class Type {
   protected Origin typeOrigin = Origin.UNRESOLVED;
 
   @Id @GeneratedValue private Long id;
+
+  private Type() {
+    // type is initialized as unknown per default
+  }
 
   public Type(String type) {
     setFrom(type);
@@ -81,14 +88,10 @@ public class Type {
     this.typeOrigin = src.typeOrigin;
   }
 
-  public static Type getUnknown() {
-    return new Type("UNKNOWN");
-  }
-
   private static String clean(String type) {
     if (type.contains("?")
         || type.contains("org.eclipse.cdt.internal.core.dom.parser.ProblemType@")) {
-      return UNKNOWN_TYPE;
+      return UNKNOWN_TYPE_STRING;
     }
     type = type.replaceAll("^struct ", "");
     // remove artifacts from unidentified C++ namespaces
@@ -102,10 +105,15 @@ public class Type {
     return type.strip();
   }
 
+  /**
+   * Creates a new type from a string representation. This is basically syntactic sugar for calling
+   * the constructor.
+   *
+   * @param string the string representation of the type
+   * @return the type
+   */
   public static Type createFrom(String string) {
-    Type t = getUnknown();
-    t.setFrom(string);
-    return t;
+    return new Type(string);
   }
 
   public String getTypeName() {

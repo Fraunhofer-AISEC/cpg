@@ -181,7 +181,7 @@ public class VariableUsageResolver implements Pass {
                       .findFirst()
                       .orElse(null);
         } else {
-          Type baseType = new Type(Type.UNKNOWN_TYPE);
+          Type baseType = Type.UNKNOWN;
           if (base instanceof HasType) {
             baseType = ((HasType) base).getType();
           }
@@ -253,7 +253,10 @@ public class VariableUsageResolver implements Pass {
     recordMap.putIfAbsent(
         base,
         NodeBuilder.newRecordDeclaration(
-            base.getTypeName(), new ArrayList<>(), Type.UNKNOWN_TYPE, Type.UNKNOWN_TYPE));
+            base.getTypeName(),
+            new ArrayList<>(),
+            Type.UNKNOWN_TYPE_STRING,
+            Type.UNKNOWN_TYPE_STRING));
     // fields.putIfAbsent(base, new ArrayList<>());
     List<FieldDeclaration> declarations = recordMap.get(base).getFields();
     Optional<FieldDeclaration> target =

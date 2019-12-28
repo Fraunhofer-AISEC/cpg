@@ -169,7 +169,7 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
 
       return handle.get(0);
     } else {
-      log.error("More than one declaration, this should not happpen here.");
+      log.error("More than one declaration, this should not happen here.");
     }
 
     return null;

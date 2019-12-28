@@ -88,7 +88,7 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
     // type will be filled out later
     VariableDeclaration declaration =
         NodeBuilder.newVariableDeclaration(
-            ctx.getName().toString(), Type.getUnknown(), ctx.getRawSignature());
+            ctx.getName().toString(), Type.UNKNOWN, ctx.getRawSignature());
 
     IASTInitializer init = ctx.getInitializer();
 
@@ -192,7 +192,7 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
     // wraps this list
     if (ctx.takesVarArgs()) {
       ParamVariableDeclaration varargs =
-          NodeBuilder.newMethodParameterIn("va_args", Type.getUnknown(), true, "");
+          NodeBuilder.newMethodParameterIn("va_args", Type.UNKNOWN, true, "");
       varargs.setArgumentIndex(i);
       lang.getScopeManager().addValueDeclaration(varargs);
     }

@@ -34,33 +34,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import de.fraunhofer.aisec.cpg.TranslationConfiguration;
 import de.fraunhofer.aisec.cpg.frontends.TranslationException;
-import de.fraunhofer.aisec.cpg.graph.BinaryOperator;
-import de.fraunhofer.aisec.cpg.graph.CallExpression;
-import de.fraunhofer.aisec.cpg.graph.CaseStatement;
-import de.fraunhofer.aisec.cpg.graph.CompoundStatement;
-import de.fraunhofer.aisec.cpg.graph.ConstructorDeclaration;
-import de.fraunhofer.aisec.cpg.graph.Declaration;
-import de.fraunhofer.aisec.cpg.graph.DeclarationStatement;
-import de.fraunhofer.aisec.cpg.graph.DeclaredReferenceExpression;
-import de.fraunhofer.aisec.cpg.graph.DefaultStatement;
-import de.fraunhofer.aisec.cpg.graph.DesignatedInitializerExpression;
-import de.fraunhofer.aisec.cpg.graph.Expression;
-import de.fraunhofer.aisec.cpg.graph.FieldDeclaration;
-import de.fraunhofer.aisec.cpg.graph.FunctionDeclaration;
-import de.fraunhofer.aisec.cpg.graph.IfStatement;
-import de.fraunhofer.aisec.cpg.graph.InitializerListExpression;
-import de.fraunhofer.aisec.cpg.graph.Literal;
-import de.fraunhofer.aisec.cpg.graph.MemberCallExpression;
-import de.fraunhofer.aisec.cpg.graph.MethodDeclaration;
-import de.fraunhofer.aisec.cpg.graph.Node;
-import de.fraunhofer.aisec.cpg.graph.RecordDeclaration;
-import de.fraunhofer.aisec.cpg.graph.Region;
-import de.fraunhofer.aisec.cpg.graph.ReturnStatement;
-import de.fraunhofer.aisec.cpg.graph.Statement;
-import de.fraunhofer.aisec.cpg.graph.SwitchStatement;
-import de.fraunhofer.aisec.cpg.graph.TranslationUnitDeclaration;
-import de.fraunhofer.aisec.cpg.graph.UnaryOperator;
-import de.fraunhofer.aisec.cpg.graph.VariableDeclaration;
+import de.fraunhofer.aisec.cpg.graph.*;
 import de.fraunhofer.aisec.cpg.helpers.NodeComparator;
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker;
 import de.fraunhofer.aisec.cpg.helpers.Util;
@@ -643,6 +617,24 @@ class CXXLanguageFrontendTest {
             .parse(new File("src/test/resources/objcreation.cpp"));
 
     assertNotNull(declaration);
+
+    // get the main method
+    FunctionDeclaration main = declaration.getDeclarationAs(3, FunctionDeclaration.class);
+    CompoundStatement statement = (CompoundStatement) main.getBody();
+
+    // Integer i
+    VariableDeclaration i =
+        (VariableDeclaration)
+            ((DeclarationStatement) statement.getStatements().get(0)).getSingleDeclaration();
+
+    // type should be Integer
+    assertEquals(new Type("Integer"), i.getType());
+
+    // initializer should be a construct expression
+    ConstructExpression expr = (ConstructExpression) i.getInitializer();
+
+    // type of the construct expression should also be Integer
+    assertEquals(new Type("Integer"), expr.getType());
   }
 
   List<Statement> getStatementsOfFunction(FunctionDeclaration declaration) {
