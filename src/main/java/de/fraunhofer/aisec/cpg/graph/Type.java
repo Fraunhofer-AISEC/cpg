@@ -124,7 +124,7 @@ public class Type {
     this.type = type;
   }
 
-  public void setFrom(String string) {
+  private void setFrom(String string) {
     String cleaned = clean(string);
     Matcher matcher = TYPE_FROM_STRING.matcher(cleaned);
     if (matcher.matches()) {

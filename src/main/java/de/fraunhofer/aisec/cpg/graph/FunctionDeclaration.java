@@ -36,8 +36,8 @@ import org.apache.commons.lang3.builder.ToStringBuilder;
 /** Represents the declaration or definition of a function. */
 public class FunctionDeclaration extends ValueDeclaration {
 
-  static final String VOID_TYPE = "void";
-  private static final String INT_TYPE = "int";
+  static final String VOID_TYPE_STRING = "void";
+  private static final String INT_TYPE_STRING = "int";
   private static final String WHITESPACE = " ";
   private static final String BRACKET_LEFT = "(";
   private static final String COMMA = ",";

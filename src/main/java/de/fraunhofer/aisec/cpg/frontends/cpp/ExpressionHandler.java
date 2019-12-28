@@ -466,11 +466,11 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
           declaredReferenceExpression.setType(((ValueDeclaration) declaration).getType());
         } else {
           log.debug("Unknown declaration type, setting to UNKNOWN");
-          declaredReferenceExpression.getType().setFrom("UNKNOWNdeclType");
+          declaredReferenceExpression.setType(Type.createFrom("UNKNOWNdeclType"));
         }
       } else {
         log.debug("Could not deduce type manually, setting to UNKNOWN");
-        declaredReferenceExpression.getType().setFrom("UNKNOWN1");
+        declaredReferenceExpression.setType(Type.createFrom("UNKNOWN1"));
       }
     } else {
       declaredReferenceExpression.setType(Type.createFrom(expressionTypeProxy(ctx).toString()));

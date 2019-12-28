@@ -41,7 +41,7 @@ public class ConstructorDeclaration extends MethodDeclaration {
     ConstructorDeclaration c = new ConstructorDeclaration();
 
     // constructors always have void type
-    c.getType().setFrom(VOID_TYPE);
+    c.setType(Type.createFrom(VOID_TYPE_STRING));
 
     c.name = functionDeclaration.getName();
     c.body = functionDeclaration.getBody();

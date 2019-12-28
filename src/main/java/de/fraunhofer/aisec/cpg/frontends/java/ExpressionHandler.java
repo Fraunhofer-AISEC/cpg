@@ -377,20 +377,20 @@ public class ExpressionHandler
     Type type = Type.UNKNOWN;
     String val = literalExpr.toString();
     if (literalExpr instanceof IntegerLiteralExpr) {
-      type.setFrom("int");
+      type = Type.createFrom("int");
     } else if (literalExpr instanceof StringLiteralExpr) {
-      type.setFrom("java.lang.String");
+      type = Type.createFrom("java.lang.String");
       val = ((StringLiteralExpr) literalExpr).getValue();
     } else if (literalExpr instanceof BooleanLiteralExpr) {
-      type.setFrom("boolean");
+      type = Type.createFrom("boolean");
     } else if (literalExpr instanceof CharLiteralExpr) {
-      type.setFrom("char");
+      type = Type.createFrom("char");
     } else if (literalExpr instanceof DoubleLiteralExpr) {
-      type.setFrom("double");
+      type = Type.createFrom("double");
     } else if (literalExpr instanceof LongLiteralExpr) {
-      type.setFrom("long");
+      type = Type.createFrom("long");
     } else if (literalExpr instanceof NullLiteralExpr) {
-      type.setFrom("null");
+      type = Type.createFrom("null");
     }
 
     // create a LITERAL node
@@ -617,14 +617,14 @@ public class ExpressionHandler
           NodeBuilder.newCallExpression(name, qualifiedName, methodCallExpr.toString());
     }
 
-    String type = Type.UNKNOWN_TYPE_STRING;
+    String typeString = Type.UNKNOWN_TYPE_STRING;
     try {
-      type = methodCallExpr.resolve().getReturnType().describe();
+      typeString = methodCallExpr.resolve().getReturnType().describe();
     } catch (Throwable e) {
       log.debug("Could not resolve return type for {}", methodCallExpr);
     }
 
-    callExpression.getType().setFrom(type);
+    callExpression.setType(Type.createFrom(typeString));
 
     NodeList<Expression> arguments = methodCallExpr.getArguments();
 
