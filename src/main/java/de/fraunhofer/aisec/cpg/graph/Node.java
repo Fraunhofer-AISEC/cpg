@@ -26,6 +26,7 @@
 
 package de.fraunhofer.aisec.cpg.graph;
 
+import de.fraunhofer.aisec.cpg.helpers.RegionConverter;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
