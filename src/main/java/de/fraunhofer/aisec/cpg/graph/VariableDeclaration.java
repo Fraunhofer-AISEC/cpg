@@ -32,19 +32,22 @@ import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
 import org.apache.commons.lang3.builder.ToStringBuilder;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 /** Represents the declaration of a variable. */
 public class VariableDeclaration extends ValueDeclaration implements TypeListener {
 
-  /** The initializer of the declaration. */
+  /** The (optional) initializer of the declaration. */
   @SubGraph("AST")
+  @Nullable
   protected Expression initializer;
 
+  @Nullable
   public Expression getInitializer() {
     return initializer;
   }
 
-  public void setInitializer(Expression initializer) {
+  public void setInitializer(@Nullable Expression initializer) {
     if (this.initializer != null) {
       this.removePrevDFG(this.initializer);
       this.initializer.unregisterTypeListener(this);
