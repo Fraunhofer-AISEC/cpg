@@ -32,12 +32,17 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import de.fraunhofer.aisec.cpg.TranslationConfiguration;
 import de.fraunhofer.aisec.cpg.frontends.TranslationException;
+import de.fraunhofer.aisec.cpg.graph.ArrayCreationExpression;
+import de.fraunhofer.aisec.cpg.graph.ArraySubscriptionExpression;
 import de.fraunhofer.aisec.cpg.graph.CaseStatement;
 import de.fraunhofer.aisec.cpg.graph.CompoundStatement;
 import de.fraunhofer.aisec.cpg.graph.ConstructorDeclaration;
 import de.fraunhofer.aisec.cpg.graph.DeclarationStatement;
+import de.fraunhofer.aisec.cpg.graph.DeclaredReferenceExpression;
 import de.fraunhofer.aisec.cpg.graph.DefaultStatement;
 import de.fraunhofer.aisec.cpg.graph.FieldDeclaration;
+import de.fraunhofer.aisec.cpg.graph.InitializerListExpression;
+import de.fraunhofer.aisec.cpg.graph.Literal;
 import de.fraunhofer.aisec.cpg.graph.MemberExpression;
 import de.fraunhofer.aisec.cpg.graph.MethodDeclaration;
 import de.fraunhofer.aisec.cpg.graph.NamespaceDeclaration;
@@ -46,6 +51,7 @@ import de.fraunhofer.aisec.cpg.graph.RecordDeclaration;
 import de.fraunhofer.aisec.cpg.graph.Statement;
 import de.fraunhofer.aisec.cpg.graph.SwitchStatement;
 import de.fraunhofer.aisec.cpg.graph.TranslationUnitDeclaration;
+import de.fraunhofer.aisec.cpg.graph.Type;
 import de.fraunhofer.aisec.cpg.graph.VariableDeclaration;
 import de.fraunhofer.aisec.cpg.helpers.NodeComparator;
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker;
@@ -137,6 +143,53 @@ class JavaLanguageFrontendTest {
     List<DefaultStatement> defaultStatements =
         Util.filterCast(SubgraphWalker.flattenAST(switchStatement), DefaultStatement.class);
     assertEquals(1, defaultStatements.size());
+  }
+
+  @Test
+  void testArrays() throws TranslationException {
+    TranslationUnitDeclaration declaration =
+        new JavaLanguageFrontend(TranslationConfiguration.builder().build())
+            .parse(new File("src/test/resources/compiling/Arrays.java"));
+
+    assertNotNull(declaration);
+
+    NamespaceDeclaration namespaceDeclaration =
+        declaration.getDeclarationAs(0, NamespaceDeclaration.class);
+    RecordDeclaration record = namespaceDeclaration.getDeclarationAs(0, RecordDeclaration.class);
+
+    assertNotNull(record);
+
+    MethodDeclaration main = record.getMethods().get(0);
+
+    assertNotNull(main);
+
+    List<Statement> statements = ((CompoundStatement) main.getBody()).getStatements();
+
+    VariableDeclaration a =
+        (VariableDeclaration) ((DeclarationStatement) statements.get(0)).getSingleDeclaration();
+
+    // type should be Integer[]
+    assertEquals(Type.createFrom("java.lang.Integer[]"), a.getType());
+
+    // it has an array creation initializer
+    ArrayCreationExpression ace = (ArrayCreationExpression) a.getInitializer();
+
+    // which has a initializer list (1 entry)
+    InitializerListExpression ile = ace.getInitializer();
+    assertEquals(1, ile.getInitializers().size());
+
+    // first one is an int literal
+    Literal<Integer> literal = (Literal<Integer>) ile.getInitializers().get(0);
+    assertEquals(1, literal.getValue().intValue());
+
+    // next one is a declaration with array subscription
+    VariableDeclaration b =
+        (VariableDeclaration) ((DeclarationStatement) statements.get(1)).getSingleDeclaration();
+
+    // initializer is array subscription
+    ArraySubscriptionExpression ase = (ArraySubscriptionExpression) b.getInitializer();
+    assertEquals(a, ((DeclaredReferenceExpression) ase.getArrayExpression()).getRefersTo());
+    assertEquals(0, ((Literal<Integer>) ase.getSubscriptExpression()).getValue().intValue());
   }
 
   @Test

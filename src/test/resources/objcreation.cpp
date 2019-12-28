@@ -32,5 +32,7 @@ int main() {
 
   Integer j(method());
 
-  auto k = new Integer(2);
+  int k = 4;
+
+  auto l = new Integer(k);
 }

@@ -34,7 +34,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 
-/** Expressions of the form new Type[] that creates an Array. */
+/** Expressions of the form <code>new Type[]</code> that creates an Array. */
 public class ArrayCreationExpression extends Expression implements TypeListener {
 
   @SubGraph("AST")

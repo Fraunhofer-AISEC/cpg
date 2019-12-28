@@ -33,9 +33,9 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
- * Represents the Subscription or access of an array of the form array[index] bot array and index
- * are of type {@link Expression}. CPP can overload operators thus changing semantics of array
- * access.
+ * Represents the Subscription or access of an array of the form <code>array[index]</code>, where
+ * both <code>array</code> and <code>index</code> are of type {@link Expression}. CPP can overload
+ * operators thus changing semantics of array access.
  */
 public class ArraySubscriptionExpression extends Expression implements HasType.TypeListener {
 

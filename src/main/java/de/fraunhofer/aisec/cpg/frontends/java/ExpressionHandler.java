@@ -143,7 +143,9 @@ public class ExpressionHandler
         .getInitializer()
         .ifPresent(
             init -> creationExpression.setInitializer((InitializerListExpression) handle(init)));
+
     StringBuilder arrayTypeExtension = new StringBuilder();
+
     for (ArrayCreationLevel lvl : arrayCreationExpr.getLevels()) {
       arrayTypeExtension.append("[]");
       Optional<Expression> optional = lvl.getDimension();
@@ -373,30 +375,29 @@ public class ExpressionHandler
   private Literal handleLiteralExpression(Expression expr) {
     LiteralExpr literalExpr = expr.asLiteralExpr();
 
-    // meh, no easy way to get the type
-    Type type = Type.UNKNOWN;
-    String val = literalExpr.toString();
+    String value = literalExpr.toString();
     if (literalExpr instanceof IntegerLiteralExpr) {
-      type = Type.createFrom("int");
+      return NodeBuilder.newLiteral(
+          literalExpr.asIntegerLiteralExpr().asInt(), Type.createFrom("int"), value);
     } else if (literalExpr instanceof StringLiteralExpr) {
-      type = Type.createFrom("java.lang.String");
-      val = ((StringLiteralExpr) literalExpr).getValue();
+      return NodeBuilder.newLiteral(value, Type.createFrom("java.lang.String"), value);
     } else if (literalExpr instanceof BooleanLiteralExpr) {
-      type = Type.createFrom("boolean");
+      return NodeBuilder.newLiteral(
+          literalExpr.asBooleanLiteralExpr().getValue(), Type.createFrom("boolean"), value);
     } else if (literalExpr instanceof CharLiteralExpr) {
-      type = Type.createFrom("char");
+      return NodeBuilder.newLiteral(
+          literalExpr.asCharLiteralExpr().asChar(), Type.createFrom("char"), value);
     } else if (literalExpr instanceof DoubleLiteralExpr) {
-      type = Type.createFrom("double");
+      return NodeBuilder.newLiteral(
+          literalExpr.asDoubleLiteralExpr().asDouble(), Type.createFrom("double"), value);
     } else if (literalExpr instanceof LongLiteralExpr) {
-      type = Type.createFrom("long");
+      return NodeBuilder.newLiteral(
+          literalExpr.asLongLiteralExpr().asLong(), Type.createFrom("long"), value);
     } else if (literalExpr instanceof NullLiteralExpr) {
-      type = Type.createFrom("null");
+      return NodeBuilder.newLiteral(null, Type.createFrom("null"), value);
     }
 
-    // create a LITERAL node
-    Literal<String> literal = NodeBuilder.newLiteral(val, type, val);
-
-    return literal;
+    return null;
   }
 
   private DeclaredReferenceExpression handleClassExpression(Expression expr) {

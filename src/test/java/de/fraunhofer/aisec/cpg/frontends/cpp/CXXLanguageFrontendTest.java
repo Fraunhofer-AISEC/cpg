@@ -665,16 +665,16 @@ class CXXLanguageFrontendTest {
     // type of the construct expression should also be Integer
     assertEquals(new Type("Integer"), constructExpression.getType());
 
-    // auto (Integer) k
-    VariableDeclaration k =
+    // auto (Integer) m
+    VariableDeclaration m =
         (VariableDeclaration)
-            ((DeclarationStatement) statement.getStatements().get(5)).getSingleDeclaration();
+            ((DeclarationStatement) statement.getStatements().get(6)).getSingleDeclaration();
 
     // type should be Integer
-    assertEquals(new Type("Integer"), k.getType());
+    assertEquals(new Type("Integer"), m.getType());
 
     // initializer should be a new expression
-    NewExpression newExpression = (NewExpression) k.getInitializer();
+    NewExpression newExpression = (NewExpression) m.getInitializer();
 
     // type of the new expression should also be Integer
     assertEquals(new Type("Integer"), newExpression.getType());
@@ -684,6 +684,14 @@ class CXXLanguageFrontendTest {
 
     // type of the construct expression should also be Integer
     assertEquals(new Type("Integer"), constructExpression.getType());
+
+    // argument should be named k and of type m
+    DeclaredReferenceExpression k =
+        (DeclaredReferenceExpression) constructExpression.getArguments().get(0);
+    assertEquals("k", k.getName());
+
+    // type of the construct expression should also be Integer
+    assertEquals(new Type("int"), k.getType());
   }
 
   List<Statement> getStatementsOfFunction(FunctionDeclaration declaration) {
