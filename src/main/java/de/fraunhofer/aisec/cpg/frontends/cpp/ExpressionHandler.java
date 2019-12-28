@@ -470,7 +470,7 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
         }
       } else {
         log.debug("Could not deduce type manually, setting to UNKNOWN");
-        declaredReferenceExpression.setType(Type.createFrom("UNKNOWN1"));
+        declaredReferenceExpression.setType(Type.createFrom("UNKNOWN"));
       }
     } else {
       declaredReferenceExpression.setType(Type.createFrom(expressionTypeProxy(ctx).toString()));
