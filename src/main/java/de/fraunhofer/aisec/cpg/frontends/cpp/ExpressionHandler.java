@@ -60,6 +60,7 @@ import org.eclipse.cdt.core.dom.ast.IASTInitializerClause;
 import org.eclipse.cdt.core.dom.ast.IASTUnaryExpression;
 import org.eclipse.cdt.core.dom.ast.IBasicType.Kind;
 import org.eclipse.cdt.core.dom.ast.IBinding;
+import org.eclipse.cdt.core.dom.ast.IProblemType;
 import org.eclipse.cdt.core.dom.ast.IQualifierType;
 import org.eclipse.cdt.core.dom.ast.IType;
 import org.eclipse.cdt.core.dom.ast.IValue;
@@ -249,9 +250,20 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
     castExpression.setCastOperator(ctx.getOperator());
 
     Type castType;
-    if (expressionTypeProxy(ctx) instanceof CPPPointerType) {
-      CPPPointerType pointerType = (CPPPointerType) expressionTypeProxy(ctx);
-      castType = new Type(pointerType.getType().toString(), "*");
+    IType iType = expressionTypeProxy(ctx);
+    if (iType instanceof CPPPointerType) {
+      CPPPointerType pointerType = (CPPPointerType) iType;
+      if (pointerType.getType() instanceof IProblemType) {
+        // fall back to fTypeId
+        castType = new Type(ctx.getTypeId().getDeclSpecifier().toString(), "*");
+      } else {
+        castType = new Type(pointerType.getType().toString(), "*");
+      }
+    } else if (iType instanceof IProblemType) {
+      // fall back to fTypeId
+      castType = new Type(ctx.getTypeId().getDeclSpecifier().toString());
+      // TODO: try to actually resolve the type (similar to NewExpression) using
+      // ((CPPASTNamedTypeSpecifier) declSpecifier).getName().resolveBinding()
     } else {
       castType = new Type(expressionTypeProxy(ctx).toString());
     }

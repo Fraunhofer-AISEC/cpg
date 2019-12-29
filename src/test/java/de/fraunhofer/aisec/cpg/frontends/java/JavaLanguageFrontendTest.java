@@ -181,6 +181,7 @@ class JavaLanguageFrontendTest {
     // initializer
     CastExpression cast = (CastExpression) b.getInitializer();
     assertNotNull(cast);
+    assertEquals(Type.createFrom("BaseClass"), cast.getCastType());
 
     // expression itself should be a reference
     DeclaredReferenceExpression ref = (DeclaredReferenceExpression) cast.getExpression();

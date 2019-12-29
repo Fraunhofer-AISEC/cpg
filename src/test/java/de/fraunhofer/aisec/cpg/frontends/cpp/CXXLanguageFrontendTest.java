@@ -38,6 +38,7 @@ import de.fraunhofer.aisec.cpg.graph.ArraySubscriptionExpression;
 import de.fraunhofer.aisec.cpg.graph.BinaryOperator;
 import de.fraunhofer.aisec.cpg.graph.CallExpression;
 import de.fraunhofer.aisec.cpg.graph.CaseStatement;
+import de.fraunhofer.aisec.cpg.graph.CastExpression;
 import de.fraunhofer.aisec.cpg.graph.CompoundStatement;
 import de.fraunhofer.aisec.cpg.graph.ConstructExpression;
 import de.fraunhofer.aisec.cpg.graph.ConstructorDeclaration;
@@ -72,6 +73,7 @@ import java.io.File;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
@@ -81,6 +83,58 @@ import org.slf4j.LoggerFactory;
 class CXXLanguageFrontendTest {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(CXXLanguageFrontendTest.class);
+
+  @Test
+  void testCast() throws TranslationException {
+    TranslationUnitDeclaration tu =
+        new CXXLanguageFrontend(TranslationConfiguration.builder().build())
+            .parse(new File("src/test/resources/cast/cast.cpp"));
+
+    FunctionDeclaration main = tu.getDeclarationAs(0, FunctionDeclaration.class);
+
+    VariableDeclaration e =
+        (VariableDeclaration)
+            Objects.requireNonNull(main.getBodyStatementAs(0, DeclarationStatement.class))
+                .getSingleDeclaration();
+    assertNotNull(e);
+    assertEquals(Type.createFrom("ExtendedClass*"), e.getType());
+
+    VariableDeclaration b =
+        (VariableDeclaration)
+            Objects.requireNonNull(main.getBodyStatementAs(1, DeclarationStatement.class))
+                .getSingleDeclaration();
+    assertNotNull(b);
+    assertEquals(Type.createFrom("BaseClass*"), b.getType());
+
+    // initializer
+    CastExpression cast = (CastExpression) b.getInitializer();
+    assertNotNull(cast);
+    assertEquals(Type.createFrom("BaseClass*"), cast.getCastType());
+
+    BinaryOperator staticCast = main.getBodyStatementAs(2, BinaryOperator.class);
+    assertNotNull(staticCast);
+
+    cast = (CastExpression) staticCast.getRhs();
+    assertNotNull(cast);
+    assertEquals("static_cast", cast.getName());
+
+    BinaryOperator reinterpretCast = main.getBodyStatementAs(3, BinaryOperator.class);
+    assertNotNull(reinterpretCast);
+
+    cast = (CastExpression) reinterpretCast.getRhs();
+    assertNotNull(cast);
+    assertEquals("reinterpret_cast", cast.getName());
+
+    VariableDeclaration d =
+        (VariableDeclaration)
+            Objects.requireNonNull(main.getBodyStatementAs(4, DeclarationStatement.class))
+                .getSingleDeclaration();
+    assertNotNull(d);
+
+    cast = (CastExpression) d.getInitializer();
+    assertNotNull(cast);
+    assertEquals(Type.createFrom("int"), cast.getCastType());
+  }
 
   @Test
   void testArrays() throws TranslationException {
