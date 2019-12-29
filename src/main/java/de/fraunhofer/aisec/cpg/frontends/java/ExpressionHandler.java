@@ -119,8 +119,10 @@ public class ExpressionHandler
     CastExpr castExpr = expr.asCastExpr();
     CastExpression castExpression = NodeBuilder.newCastExpression(expr.toString());
 
-    castExpression.setExpression(
-        (de.fraunhofer.aisec.cpg.graph.Expression) handle(castExpr.getExpression()));
+    de.fraunhofer.aisec.cpg.graph.Expression expression =
+        (de.fraunhofer.aisec.cpg.graph.Expression) handle(castExpr.getExpression());
+
+    castExpression.setExpression(expression);
     castExpression.setCastOperator(2);
     Type t = this.lang.getTypeAsGoodAsPossible(castExpr.getType());
     castExpression.setCastType(t);
@@ -436,6 +438,7 @@ public class ExpressionHandler
     return thisExpression;
   }
 
+  // TODO: this function needs a MAJOR overhaul!
   private de.fraunhofer.aisec.cpg.graph.Expression handleNameExpression(Expression expr) {
     NameExpr nameExpr = expr.asNameExpr();
 
@@ -503,13 +506,23 @@ public class ExpressionHandler
       } else {
         t = new Type(typeString, Type.Origin.GUESSED);
       }
-      return NodeBuilder.newDeclaredReferenceExpression(
-          nameExpr.getNameAsString(), t, nameExpr.toString());
+
+      DeclaredReferenceExpression declaredReferenceExpression =
+          NodeBuilder.newDeclaredReferenceExpression(
+              nameExpr.getNameAsString(), t, nameExpr.toString());
+
+      lang.getScopeManager().connectToLocal(declaredReferenceExpression);
+
+      return declaredReferenceExpression;
     } catch (RuntimeException | NoClassDefFoundError ex) {
       Type t = new Type("UNKNOWN4", Type.Origin.UNRESOLVED);
       log.info("Unresolved symbol: {}", nameExpr.getNameAsString());
-      return NodeBuilder.newDeclaredReferenceExpression(
-          nameExpr.getNameAsString(), t, nameExpr.toString());
+
+      DeclaredReferenceExpression declaredReferenceExpression =
+          NodeBuilder.newDeclaredReferenceExpression(
+              nameExpr.getNameAsString(), t, nameExpr.toString());
+
+      return declaredReferenceExpression;
     }
   }
 
