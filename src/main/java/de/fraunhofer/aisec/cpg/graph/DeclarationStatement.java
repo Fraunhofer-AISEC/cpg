@@ -59,7 +59,7 @@ public class DeclarationStatement extends Statement {
     this.declarations.add(declaration);
   }
 
-  public <T extends Declaration> T getSingleDeclaration(Class<T> clazz) {
+  public <T extends Declaration> T getSingleDeclarationAs(Class<T> clazz) {
     return clazz.cast(this.getSingleDeclaration());
   }
 

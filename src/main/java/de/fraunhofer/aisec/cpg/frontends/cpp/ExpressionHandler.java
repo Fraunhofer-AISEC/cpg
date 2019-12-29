@@ -139,13 +139,22 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
         ctx -> handleCompoundStatementExpression((CPPASTCompoundStatementExpression) ctx));
   }
 
+  /**
+   * Tries to return the {@link IType} for a given AST expression. In case this fails, the constant
+   * type {@link ProblemType#UNKNOWN_FOR_EXPRESSION} is returned.
+   *
+   * @param expression the ast expression
+   * @return a CDT type
+   */
   private IType expressionTypeProxy(ICPPASTExpression expression) {
     IType expressionType = ProblemType.UNKNOWN_FOR_EXPRESSION;
+
     try {
       expressionType = expression.getExpressionType();
     } catch (AssertionError e) {
-      log.warn("AssertionError when trying to get expression type");
+      log.warn("AssertionError when trying to get expression type: {}", e.getMessage());
     }
+
     return expressionType;
   }
 
@@ -178,6 +187,7 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
     String name = ctx.getTypeId().getDeclSpecifier().toString();
     String code = ctx.getRawSignature();
 
+    // TODO: obsolete?
     Type t = Type.createFrom(expressionTypeProxy(ctx).toString());
     t.setTypeAdjustment("*");
 
@@ -433,7 +443,7 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
   private DeclaredReferenceExpression handleIdExpression(CPPASTIdExpression ctx) {
     DeclaredReferenceExpression declaredReferenceExpression =
         NodeBuilder.newDeclaredReferenceExpression(
-            ctx.getName().toString(), new Type("UNKNOWN2"), ctx.getRawSignature());
+            ctx.getName().toString(), Type.UNKNOWN, ctx.getRawSignature());
 
     if (expressionTypeProxy(ctx) instanceof ProblemType
         || (expressionTypeProxy(ctx) instanceof IQualifierType
@@ -447,11 +457,11 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
           declaredReferenceExpression.setType(((ValueDeclaration) declaration).getType());
         } else {
           log.debug("Unknown declaration type, setting to UNKNOWN");
-          declaredReferenceExpression.setType(Type.createFrom("UNKNOWN"));
+          declaredReferenceExpression.setType(Type.UNKNOWN);
         }
       } else {
         log.debug("Could not deduce type manually, setting to UNKNOWN");
-        declaredReferenceExpression.setType(Type.createFrom("UNKNOWN"));
+        declaredReferenceExpression.setType(Type.UNKNOWN);
       }
     } else {
       declaredReferenceExpression.setType(Type.createFrom(expressionTypeProxy(ctx).toString()));

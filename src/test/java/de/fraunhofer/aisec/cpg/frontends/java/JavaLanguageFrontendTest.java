@@ -35,6 +35,7 @@ import de.fraunhofer.aisec.cpg.frontends.TranslationException;
 import de.fraunhofer.aisec.cpg.graph.ArrayCreationExpression;
 import de.fraunhofer.aisec.cpg.graph.ArraySubscriptionExpression;
 import de.fraunhofer.aisec.cpg.graph.CaseStatement;
+import de.fraunhofer.aisec.cpg.graph.CastExpression;
 import de.fraunhofer.aisec.cpg.graph.CompoundStatement;
 import de.fraunhofer.aisec.cpg.graph.ConstructorDeclaration;
 import de.fraunhofer.aisec.cpg.graph.DeclarationStatement;
@@ -143,6 +144,43 @@ class JavaLanguageFrontendTest {
     List<DefaultStatement> defaultStatements =
         Util.filterCast(SubgraphWalker.flattenAST(switchStatement), DefaultStatement.class);
     assertEquals(1, defaultStatements.size());
+  }
+
+  @Test
+  void testCast() throws TranslationException {
+    TranslationUnitDeclaration declaration =
+        new JavaLanguageFrontend(TranslationConfiguration.builder().build())
+            .parse(new File("src/test/resources/cast/Cast.java"));
+
+    assertNotNull(declaration);
+
+    NamespaceDeclaration namespaceDeclaration =
+        declaration.getDeclarationAs(0, NamespaceDeclaration.class);
+    RecordDeclaration record = namespaceDeclaration.getDeclarationAs(0, RecordDeclaration.class);
+
+    assertNotNull(record);
+
+    MethodDeclaration main = record.getMethods().get(0);
+
+    assertNotNull(main);
+
+    // e = new ExtendedClass()
+    DeclarationStatement stmt = main.getBodyStatementAs(0, DeclarationStatement.class);
+    assertNotNull(stmt);
+
+    VariableDeclaration e = stmt.getSingleDeclarationAs(VariableDeclaration.class);
+    assertEquals(Type.createFrom("ExtendedClass"), e.getType());
+
+    // b = (BaseClass) e
+    stmt = main.getBodyStatementAs(1, DeclarationStatement.class);
+    assertNotNull(stmt);
+
+    VariableDeclaration b = stmt.getSingleDeclarationAs(VariableDeclaration.class);
+    assertEquals(Type.createFrom("BaseClass"), b.getType());
+
+    // initializer
+    CastExpression cast = (CastExpression) b.getInitializer();
+    assertNotNull(cast);
   }
 
   @Test

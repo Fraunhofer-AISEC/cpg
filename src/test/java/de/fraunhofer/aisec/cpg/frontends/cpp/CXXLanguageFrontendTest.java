@@ -284,13 +284,15 @@ class CXXLanguageFrontendTest {
         });
 
     VariableDeclaration declFromMultiplicateExpression =
-        ((DeclarationStatement) statements.get(0)).getSingleDeclaration(VariableDeclaration.class);
+        ((DeclarationStatement) statements.get(0))
+            .getSingleDeclarationAs(VariableDeclaration.class);
 
     assertEquals("SSL_CTX*", declFromMultiplicateExpression.getType().toString());
     assertEquals("ptr", declFromMultiplicateExpression.getName());
 
     VariableDeclaration withInitializer =
-        ((DeclarationStatement) statements.get(1)).getSingleDeclaration(VariableDeclaration.class);
+        ((DeclarationStatement) statements.get(1))
+            .getSingleDeclarationAs(VariableDeclaration.class);
     Expression initializer = withInitializer.getInitializer();
 
     assertNotNull(initializer);
@@ -303,7 +305,8 @@ class CXXLanguageFrontendTest {
     assertEquals(2, twoDeclarations.size());
 
     VariableDeclaration withoutInitializer =
-        ((DeclarationStatement) statements.get(3)).getSingleDeclaration(VariableDeclaration.class);
+        ((DeclarationStatement) statements.get(3))
+            .getSingleDeclarationAs(VariableDeclaration.class);
     initializer = withoutInitializer.getInitializer();
 
     assertEquals("int*", withoutInitializer.getType().toString());
@@ -312,7 +315,8 @@ class CXXLanguageFrontendTest {
     assertNull(initializer);
 
     VariableDeclaration qualifiedType =
-        ((DeclarationStatement) statements.get(4)).getSingleDeclaration(VariableDeclaration.class);
+        ((DeclarationStatement) statements.get(4))
+            .getSingleDeclarationAs(VariableDeclaration.class);
 
     assertEquals("std.string", qualifiedType.getType().toString());
     assertEquals("text", qualifiedType.getName());
@@ -320,7 +324,8 @@ class CXXLanguageFrontendTest {
     assertEquals("some text", ((Literal) qualifiedType.getInitializer()).getValue());
 
     VariableDeclaration pointerWithAssign =
-        ((DeclarationStatement) statements.get(5)).getSingleDeclaration(VariableDeclaration.class);
+        ((DeclarationStatement) statements.get(5))
+            .getSingleDeclarationAs(VariableDeclaration.class);
 
     assertEquals("void*", pointerWithAssign.getType().toString());
     assertEquals("ptr", pointerWithAssign.getName());

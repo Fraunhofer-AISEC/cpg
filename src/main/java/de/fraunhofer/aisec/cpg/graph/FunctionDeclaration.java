@@ -32,6 +32,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.builder.ToStringBuilder;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 /** Represents the declaration or definition of a function. */
 public class FunctionDeclaration extends ValueDeclaration {
@@ -126,6 +127,15 @@ public class FunctionDeclaration extends ValueDeclaration {
 
   public Statement getBody() {
     return body;
+  }
+
+  @Nullable
+  public <T> T getBodyStatementAs(int i, Class<T> clazz) {
+    if (this.body instanceof CompoundStatement) {
+      return clazz.cast(((CompoundStatement) this.body).getStatements().get(i));
+    }
+
+    return null;
   }
 
   public void setBody(Statement body) {
