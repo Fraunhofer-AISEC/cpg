@@ -389,7 +389,8 @@ public class ExpressionHandler
       return NodeBuilder.newLiteral(
           literalExpr.asIntegerLiteralExpr().asInt(), Type.createFrom("int"), value);
     } else if (literalExpr instanceof StringLiteralExpr) {
-      return NodeBuilder.newLiteral(value, Type.createFrom("java.lang.String"), value);
+      return NodeBuilder.newLiteral(
+          literalExpr.asStringLiteralExpr().asString(), Type.createFrom("java.lang.String"), value);
     } else if (literalExpr instanceof BooleanLiteralExpr) {
       return NodeBuilder.newLiteral(
           literalExpr.asBooleanLiteralExpr().getValue(), Type.createFrom("boolean"), value);

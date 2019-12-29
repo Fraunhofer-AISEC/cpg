@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.frontends.java;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import de.fraunhofer.aisec.cpg.TranslationConfiguration;
@@ -59,6 +60,7 @@ import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker;
 import de.fraunhofer.aisec.cpg.helpers.Util;
 import java.io.File;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -70,6 +72,94 @@ class JavaLanguageFrontendTest {
   @BeforeEach
   void setUp() {
     config = TranslationConfiguration.builder().build();
+  }
+
+  @Test
+  void testLiteral() throws TranslationException {
+    TranslationUnitDeclaration tu =
+        new JavaLanguageFrontend(config)
+            .parse(new File("src/test/resources/components/LiteralExpr.java"));
+
+    RecordDeclaration declaration = (RecordDeclaration) tu.getDeclarations().get(0);
+
+    MethodDeclaration main = declaration.getMethods().get(0);
+
+    // int i = 1;
+    VariableDeclaration i =
+        (VariableDeclaration)
+            Objects.requireNonNull(main.getBodyStatementAs(0, DeclarationStatement.class))
+                .getSingleDeclaration();
+    assertNotNull(i);
+
+    Literal literal = i.getInitializerAs(Literal.class);
+    assertNotNull(literal);
+    assertEquals(1, literal.getValue());
+
+    // String s = "string";
+    VariableDeclaration s =
+        (VariableDeclaration)
+            Objects.requireNonNull(main.getBodyStatementAs(1, DeclarationStatement.class))
+                .getSingleDeclaration();
+    assertNotNull(s);
+
+    literal = s.getInitializerAs(Literal.class);
+    assertNotNull(literal);
+    assertEquals("string", literal.getValue());
+
+    // boolean b = true;
+    VariableDeclaration b =
+        (VariableDeclaration)
+            Objects.requireNonNull(main.getBodyStatementAs(2, DeclarationStatement.class))
+                .getSingleDeclaration();
+    assertNotNull(b);
+
+    literal = b.getInitializerAs(Literal.class);
+    assertNotNull(literal);
+    assertEquals(true, literal.getValue());
+
+    // char c = '0';
+    VariableDeclaration c =
+        (VariableDeclaration)
+            Objects.requireNonNull(main.getBodyStatementAs(3, DeclarationStatement.class))
+                .getSingleDeclaration();
+    assertNotNull(c);
+
+    literal = c.getInitializerAs(Literal.class);
+    assertNotNull(literal);
+    assertEquals('0', literal.getValue());
+
+    // double d = 1.0;
+    VariableDeclaration d =
+        (VariableDeclaration)
+            Objects.requireNonNull(main.getBodyStatementAs(4, DeclarationStatement.class))
+                .getSingleDeclaration();
+    assertNotNull(d);
+
+    literal = d.getInitializerAs(Literal.class);
+    assertNotNull(literal);
+    assertEquals(1.0, literal.getValue());
+
+    // long l = 1L;
+    VariableDeclaration l =
+        (VariableDeclaration)
+            Objects.requireNonNull(main.getBodyStatementAs(5, DeclarationStatement.class))
+                .getSingleDeclaration();
+    assertNotNull(l);
+
+    literal = l.getInitializerAs(Literal.class);
+    assertNotNull(literal);
+    assertEquals(1L, literal.getValue());
+
+    // Object o = null;
+    VariableDeclaration o =
+        (VariableDeclaration)
+            Objects.requireNonNull(main.getBodyStatementAs(6, DeclarationStatement.class))
+                .getSingleDeclaration();
+    assertNotNull(o);
+
+    literal = o.getInitializerAs(Literal.class);
+    assertNotNull(literal);
+    assertNull(literal.getValue());
   }
 
   @Test
@@ -150,7 +240,7 @@ class JavaLanguageFrontendTest {
   void testCast() throws TranslationException {
     TranslationUnitDeclaration declaration =
         new JavaLanguageFrontend(TranslationConfiguration.builder().build())
-            .parse(new File("src/test/resources/cast/Cast.java"));
+            .parse(new File("src/test/resources/components/CastExpr.java"));
 
     assertNotNull(declaration);
 

@@ -88,7 +88,7 @@ class CXXLanguageFrontendTest {
   void testCast() throws TranslationException {
     TranslationUnitDeclaration tu =
         new CXXLanguageFrontend(TranslationConfiguration.builder().build())
-            .parse(new File("src/test/resources/cast/cast.cpp"));
+            .parse(new File("src/test/resources/components/castexpr.cpp"));
 
     FunctionDeclaration main = tu.getDeclarationAs(0, FunctionDeclaration.class);
 
@@ -937,7 +937,7 @@ class CXXLanguageFrontendTest {
 
     List<VariableDeclaration> locals = function.getBody().getLocals();
     // Expecting x, foo, t
-    Set<String> localNames = locals.stream().map(l -> l.getName()).collect(Collectors.toSet());
+    Set<String> localNames = locals.stream().map(Node::getName).collect(Collectors.toSet());
     assertTrue(localNames.contains("x"));
     assertTrue(localNames.contains("foo"));
     assertTrue(localNames.contains("t"));
