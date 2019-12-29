@@ -53,7 +53,7 @@ public interface HasType {
    * Used to set the type and clear the possible subtypes list for when a type is more precise than
    * the current.
    *
-   * @param type
+   * @param type the more precise type
    */
   void resetTypes(Type type);
 

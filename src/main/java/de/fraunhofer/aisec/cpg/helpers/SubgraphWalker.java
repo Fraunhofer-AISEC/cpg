@@ -126,17 +126,24 @@ public class SubgraphWalker {
   /**
    * Flattens the tree, starting at Node n into a list.
    *
-   * @param n
-   * @return
+   * @param n the node which contains the ast children to flatten
+   * @return the flattened nodes
    */
   public static List<Node> flattenAST(Node n) {
     if (n == null) {
       return new ArrayList<>();
     }
+
     List<Node> list = new ArrayList<>();
+    // add the node itself
     list.add(n);
+
+    // add all the ast children
     SubgraphWalker.getAstChildren(n).forEach(node -> list.addAll(flattenAST(node)));
+
+    // sort it
     list.sort(new NodeComparator());
+
     return list;
   }
 
@@ -171,7 +178,8 @@ public class SubgraphWalker {
   /**
    * Visit all nodes.
    *
-   * @param stmt
+   * @param stmt the start note
+   * @param visitor the visitor consumer to call
    */
   public static void visit(Node stmt, Consumer<Node> visitor) {
     List<Node> nodes = flattenAST(stmt);

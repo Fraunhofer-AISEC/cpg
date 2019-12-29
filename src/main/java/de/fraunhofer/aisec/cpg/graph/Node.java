@@ -120,7 +120,7 @@ public class Node {
     return this.code;
   }
 
-  public void setCode(@NonNull String code) {
+  public void setCode(String code) {
     this.code = code;
   }
 

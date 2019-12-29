@@ -142,13 +142,23 @@ public abstract class LanguageFrontend {
 
   public abstract TranslationUnitDeclaration parse(File file) throws TranslationException;
 
-  /** Returns the raw code of the ast node, generic for java or c++ ast nodes. */
+  /**
+   * Returns the raw code of the ast node, generic for java or c++ ast nodes.
+   *
+   * @param <T> the raw ast type
+   * @param astNode the ast node
+   * @return the source code
+   */
   @Nullable
   public abstract <T> String getCodeFromRawNode(T astNode);
 
   /**
-   * Returns the Region of the code with line and column, index starting at 1, generic for java or
-   * c++ ast nodes.
+   * Returns the {@link Region} of the code with line and column, index starting at 1, generic for
+   * java or c++ ast nodes.
+   *
+   * @param <T> the raw ast type
+   * @param astNode the ast node
+   * @return the region
    */
   @NonNull
   public abstract <T> Region getRegionFromRawNode(T astNode);
@@ -215,7 +225,13 @@ public abstract class LanguageFrontend {
     return code.substring(start, end);
   }
 
-  /** Merges two regions. The new region contains both and is the minimal region to do so. */
+  /**
+   * Merges two regions. The new region contains both and is the minimal region to do so.
+   *
+   * @param regionOne the first region
+   * @param regionTwo the second region
+   * @return the merged region
+   */
   public Region mergeRegions(Region regionOne, Region regionTwo) {
     Region ret = new Region();
     if (regionOne.getStartLine() < regionTwo.getStartLine()

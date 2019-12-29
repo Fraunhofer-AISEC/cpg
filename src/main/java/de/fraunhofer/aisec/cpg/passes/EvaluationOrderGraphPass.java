@@ -819,9 +819,11 @@ public class EvaluationOrderGraphPass implements Pass {
   /**
    * Connects the current EOG leaf nodes to the last stacked node, e.g. loop head, and removes the
    * nodes.
+   *
+   * @param loopStatement the loop statement
+   * @param loopScope the loop scope
    */
   public void exitLoop(@NonNull Statement loopStatement, @NonNull LoopScope loopScope) {
-
     // Breaks are connected to the NEXT EOG node and therefore temporarily stored after the loop
     // context is destroyed
     this.currentEOG.addAll(loopScope.getBreakStatements());

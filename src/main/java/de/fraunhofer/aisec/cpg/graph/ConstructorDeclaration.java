@@ -36,6 +36,7 @@ public class ConstructorDeclaration extends MethodDeclaration {
    * Creates a constructor declaration from an existing {@link FunctionDeclaration}.
    *
    * @param functionDeclaration the {@link FunctionDeclaration}.
+   * @return the constructor declaration
    */
   public static ConstructorDeclaration from(FunctionDeclaration functionDeclaration) {
     ConstructorDeclaration c = new ConstructorDeclaration();

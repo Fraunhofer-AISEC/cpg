@@ -62,6 +62,8 @@ public class TranslationManager {
    * Kicks off the analysis.
    *
    * <p>This method orchestrates all passes that will do the main work.
+   *
+   * @return a {@link CompletableFuture} with the {@link TranslationResult}.
    */
   public CompletableFuture<TranslationResult> analyze() {
     TranslationResult result = new TranslationResult(this);
@@ -190,7 +192,7 @@ public class TranslationManager {
   /**
    * Returns the current (immutable) configuration of this TranslationManager.
    *
-   * @return
+   * @return the configuration
    */
   public TranslationConfiguration getConfig() {
     return this.config;
