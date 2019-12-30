@@ -39,6 +39,7 @@ import de.fraunhofer.aisec.cpg.graph.BinaryOperator;
 import de.fraunhofer.aisec.cpg.graph.CallExpression;
 import de.fraunhofer.aisec.cpg.graph.CaseStatement;
 import de.fraunhofer.aisec.cpg.graph.CastExpression;
+import de.fraunhofer.aisec.cpg.graph.CatchClause;
 import de.fraunhofer.aisec.cpg.graph.CompoundStatement;
 import de.fraunhofer.aisec.cpg.graph.ConstructExpression;
 import de.fraunhofer.aisec.cpg.graph.ConstructorDeclaration;
@@ -63,6 +64,7 @@ import de.fraunhofer.aisec.cpg.graph.ReturnStatement;
 import de.fraunhofer.aisec.cpg.graph.Statement;
 import de.fraunhofer.aisec.cpg.graph.SwitchStatement;
 import de.fraunhofer.aisec.cpg.graph.TranslationUnitDeclaration;
+import de.fraunhofer.aisec.cpg.graph.TryStatement;
 import de.fraunhofer.aisec.cpg.graph.Type;
 import de.fraunhofer.aisec.cpg.graph.TypeIdExpression;
 import de.fraunhofer.aisec.cpg.graph.UnaryOperator;
@@ -86,20 +88,48 @@ class CXXLanguageFrontendTest {
   private static final Logger LOGGER = LoggerFactory.getLogger(CXXLanguageFrontendTest.class);
 
   @Test
+  void testTryCatch() throws TranslationException {
+    TranslationUnitDeclaration tu =
+        new CXXLanguageFrontend(TranslationConfiguration.builder().build())
+            .parse(new File("src/test/resources/components/trystmt.cpp"));
+
+    FunctionDeclaration main =
+        tu.getDeclarationByName("main", FunctionDeclaration.class).orElse(null);
+    assertNotNull(main);
+
+    TryStatement tryStatement = main.getBodyStatementAs(0, TryStatement.class);
+    assertNotNull(tryStatement);
+
+    List<CatchClause> catchClauses = tryStatement.getCatchClauses();
+    // should have 3 catch clauses
+    assertEquals(3, catchClauses.size());
+
+    // declared exception variable
+    VariableDeclaration parameter = catchClauses.get(0).getParameter();
+    assertNotNull(parameter);
+    assertEquals("e", parameter.getName());
+    assertEquals(Type.createFrom("const std::exception&"), parameter.getType());
+
+    // anonymous variable (this is not 100% handled correctly but will do for now)
+    parameter = catchClauses.get(1).getParameter();
+    assertNotNull(parameter);
+    // this is currently our 'unnamed' parameter
+    assertEquals("", parameter.getName());
+    assertEquals(Type.createFrom("const std::exception&"), parameter.getType());
+
+    // catch all
+    parameter = catchClauses.get(2).getParameter();
+    assertNull(parameter);
+  }
+
+  @Test
   void testTypeId() throws TranslationException {
     TranslationUnitDeclaration tu =
         new CXXLanguageFrontend(TranslationConfiguration.builder().build())
             .parse(new File("src/test/resources/typeidexpr.cpp"));
 
     FunctionDeclaration main =
-        tu.getDeclarations().stream()
-            .filter(
-                function ->
-                    function instanceof FunctionDeclaration
-                        && Objects.equals("main", function.getName()))
-            .map(FunctionDeclaration.class::cast)
-            .findAny()
-            .orElse(null);
+        tu.getDeclarationByName("main", FunctionDeclaration.class).orElse(null);
     assertNotNull(main);
 
     VariableDeclaration i = main.getVariableDeclarationByName("i").orElse(null);

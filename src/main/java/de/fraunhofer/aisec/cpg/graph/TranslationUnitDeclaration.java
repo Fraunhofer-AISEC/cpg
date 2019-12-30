@@ -29,6 +29,7 @@ package de.fraunhofer.aisec.cpg.graph;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 
 /** The top most declaration, representing a translation unit, for example a file. */
@@ -48,6 +49,22 @@ public class TranslationUnitDeclaration extends Declaration {
 
   public <T> T getDeclarationAs(int i, Class<T> clazz) {
     return clazz.cast(this.declarations.get(i));
+  }
+
+  /**
+   * This returns the first declaration of a specified type and clazz, if it exists.
+   *
+   * @param name the name to search for
+   * @param clazz the declaration class, such as {@link FunctionDeclaration}.
+   * @param <T> the type of the declaration
+   * @return an optional containing the declaration if found
+   */
+  public <T extends Declaration> Optional<T> getDeclarationByName(String name, Class<T> clazz) {
+    return this.declarations.stream()
+        .filter(declaration -> declaration.getClass().isAssignableFrom(clazz))
+        .map(clazz::cast)
+        .filter(declaration -> Objects.equals(declaration.getName(), name))
+        .findFirst();
   }
 
   public List<Declaration> getDeclarations() {

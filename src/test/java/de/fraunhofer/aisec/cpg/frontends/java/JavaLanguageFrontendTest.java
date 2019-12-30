@@ -37,6 +37,7 @@ import de.fraunhofer.aisec.cpg.graph.ArrayCreationExpression;
 import de.fraunhofer.aisec.cpg.graph.ArraySubscriptionExpression;
 import de.fraunhofer.aisec.cpg.graph.CaseStatement;
 import de.fraunhofer.aisec.cpg.graph.CastExpression;
+import de.fraunhofer.aisec.cpg.graph.CatchClause;
 import de.fraunhofer.aisec.cpg.graph.CompoundStatement;
 import de.fraunhofer.aisec.cpg.graph.ConstructorDeclaration;
 import de.fraunhofer.aisec.cpg.graph.DeclarationStatement;
@@ -53,6 +54,7 @@ import de.fraunhofer.aisec.cpg.graph.RecordDeclaration;
 import de.fraunhofer.aisec.cpg.graph.Statement;
 import de.fraunhofer.aisec.cpg.graph.SwitchStatement;
 import de.fraunhofer.aisec.cpg.graph.TranslationUnitDeclaration;
+import de.fraunhofer.aisec.cpg.graph.TryStatement;
 import de.fraunhofer.aisec.cpg.graph.Type;
 import de.fraunhofer.aisec.cpg.graph.VariableDeclaration;
 import de.fraunhofer.aisec.cpg.helpers.NodeComparator;
@@ -72,6 +74,41 @@ class JavaLanguageFrontendTest {
   @BeforeEach
   void setUp() {
     config = TranslationConfiguration.builder().build();
+  }
+
+  @Test
+  void testTryCatch() throws TranslationException {
+    TranslationUnitDeclaration tu =
+        new JavaLanguageFrontend(config)
+            .parse(new File("src/test/resources/components/TryStmt.java"));
+
+    RecordDeclaration declaration = (RecordDeclaration) tu.getDeclarations().get(0);
+
+    MethodDeclaration main = declaration.getMethods().get(0);
+
+    // lets get our try statement
+    TryStatement tryStatement = main.getBodyStatementAs(0, TryStatement.class);
+    assertNotNull(tryStatement);
+
+    // should have 3 catch clauses
+    List<CatchClause> catchClauses = tryStatement.getCatchClauses();
+    assertEquals(3, catchClauses.size());
+    // first exception type was resolved, so we can expect a FQN
+    assertEquals(
+        Type.createFrom("java.lang.NumberFormatException"),
+        Objects.requireNonNull(catchClauses.get(0).getParameter()).getType());
+    // second one could not be resolved so we do not have an FQN
+    assertEquals(
+        Type.createFrom("NotResolvableTypeException"),
+        Objects.requireNonNull(catchClauses.get(1).getParameter()).getType());
+    // third type should have been resolved through the import
+    assertEquals(
+        Type.createFrom("some.ImportedException"),
+        Objects.requireNonNull(catchClauses.get(2).getParameter()).getType());
+
+    // and 1 finally
+    CompoundStatement finallyBlock = tryStatement.getFinallyBlock();
+    assertNotNull(finallyBlock);
   }
 
   @Test

@@ -146,14 +146,18 @@ class StatementHandler extends Handler<Statement, IASTStatement, CXXLanguageFron
     CatchClause catchClause = NodeBuilder.newCatchClause(catchHandler.getRawSignature());
     lang.getScopeManager().enterScope(catchClause);
     Statement body = this.lang.getStatementHandler().handle(catchHandler.getCatchBody());
+
+    // TODO: can also be an 'unnamed' parameter. In this case we should not declare a variable
     Declaration decl = null;
     if (catchHandler.getDeclaration() != null) { // can be null for "catch(...)"
       decl = this.lang.getDeclarationHandler().handle(catchHandler.getDeclaration());
     }
     catchClause.setBody((CompoundStatement) body);
+
     if (decl != null) {
       catchClause.setParameter((VariableDeclaration) decl);
     }
+
     lang.getScopeManager().leaveScope(catchClause);
     return catchClause;
   }
