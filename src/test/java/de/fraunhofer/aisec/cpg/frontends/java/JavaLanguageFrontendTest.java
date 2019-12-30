@@ -28,16 +28,24 @@ package de.fraunhofer.aisec.cpg.frontends.java;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import de.fraunhofer.aisec.cpg.TranslationConfiguration;
 import de.fraunhofer.aisec.cpg.frontends.TranslationException;
+import de.fraunhofer.aisec.cpg.graph.ArrayCreationExpression;
+import de.fraunhofer.aisec.cpg.graph.ArraySubscriptionExpression;
 import de.fraunhofer.aisec.cpg.graph.CaseStatement;
+import de.fraunhofer.aisec.cpg.graph.CastExpression;
+import de.fraunhofer.aisec.cpg.graph.CatchClause;
 import de.fraunhofer.aisec.cpg.graph.CompoundStatement;
 import de.fraunhofer.aisec.cpg.graph.ConstructorDeclaration;
 import de.fraunhofer.aisec.cpg.graph.DeclarationStatement;
+import de.fraunhofer.aisec.cpg.graph.DeclaredReferenceExpression;
 import de.fraunhofer.aisec.cpg.graph.DefaultStatement;
 import de.fraunhofer.aisec.cpg.graph.FieldDeclaration;
+import de.fraunhofer.aisec.cpg.graph.InitializerListExpression;
+import de.fraunhofer.aisec.cpg.graph.Literal;
 import de.fraunhofer.aisec.cpg.graph.MemberExpression;
 import de.fraunhofer.aisec.cpg.graph.MethodDeclaration;
 import de.fraunhofer.aisec.cpg.graph.NamespaceDeclaration;
@@ -46,12 +54,15 @@ import de.fraunhofer.aisec.cpg.graph.RecordDeclaration;
 import de.fraunhofer.aisec.cpg.graph.Statement;
 import de.fraunhofer.aisec.cpg.graph.SwitchStatement;
 import de.fraunhofer.aisec.cpg.graph.TranslationUnitDeclaration;
+import de.fraunhofer.aisec.cpg.graph.TryStatement;
+import de.fraunhofer.aisec.cpg.graph.Type;
 import de.fraunhofer.aisec.cpg.graph.VariableDeclaration;
 import de.fraunhofer.aisec.cpg.helpers.NodeComparator;
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker;
 import de.fraunhofer.aisec.cpg.helpers.Util;
 import java.io.File;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -63,6 +74,129 @@ class JavaLanguageFrontendTest {
   @BeforeEach
   void setUp() {
     config = TranslationConfiguration.builder().build();
+  }
+
+  @Test
+  void testTryCatch() throws TranslationException {
+    TranslationUnitDeclaration tu =
+        new JavaLanguageFrontend(config)
+            .parse(new File("src/test/resources/components/TryStmt.java"));
+
+    RecordDeclaration declaration = (RecordDeclaration) tu.getDeclarations().get(0);
+
+    MethodDeclaration main = declaration.getMethods().get(0);
+
+    // lets get our try statement
+    TryStatement tryStatement = main.getBodyStatementAs(0, TryStatement.class);
+    assertNotNull(tryStatement);
+
+    // should have 3 catch clauses
+    List<CatchClause> catchClauses = tryStatement.getCatchClauses();
+    assertEquals(3, catchClauses.size());
+    // first exception type was resolved, so we can expect a FQN
+    assertEquals(
+        Type.createFrom("java.lang.NumberFormatException"),
+        Objects.requireNonNull(catchClauses.get(0).getParameter()).getType());
+    // second one could not be resolved so we do not have an FQN
+    assertEquals(
+        Type.createFrom("NotResolvableTypeException"),
+        Objects.requireNonNull(catchClauses.get(1).getParameter()).getType());
+    // third type should have been resolved through the import
+    assertEquals(
+        Type.createFrom("some.ImportedException"),
+        Objects.requireNonNull(catchClauses.get(2).getParameter()).getType());
+
+    // and 1 finally
+    CompoundStatement finallyBlock = tryStatement.getFinallyBlock();
+    assertNotNull(finallyBlock);
+  }
+
+  @Test
+  void testLiteral() throws TranslationException {
+    TranslationUnitDeclaration tu =
+        new JavaLanguageFrontend(config)
+            .parse(new File("src/test/resources/components/LiteralExpr.java"));
+
+    RecordDeclaration declaration = (RecordDeclaration) tu.getDeclarations().get(0);
+
+    MethodDeclaration main = declaration.getMethods().get(0);
+
+    // int i = 1;
+    VariableDeclaration i =
+        (VariableDeclaration)
+            Objects.requireNonNull(main.getBodyStatementAs(0, DeclarationStatement.class))
+                .getSingleDeclaration();
+    assertNotNull(i);
+
+    Literal literal = i.getInitializerAs(Literal.class);
+    assertNotNull(literal);
+    assertEquals(1, literal.getValue());
+
+    // String s = "string";
+    VariableDeclaration s =
+        (VariableDeclaration)
+            Objects.requireNonNull(main.getBodyStatementAs(1, DeclarationStatement.class))
+                .getSingleDeclaration();
+    assertNotNull(s);
+
+    literal = s.getInitializerAs(Literal.class);
+    assertNotNull(literal);
+    assertEquals("string", literal.getValue());
+
+    // boolean b = true;
+    VariableDeclaration b =
+        (VariableDeclaration)
+            Objects.requireNonNull(main.getBodyStatementAs(2, DeclarationStatement.class))
+                .getSingleDeclaration();
+    assertNotNull(b);
+
+    literal = b.getInitializerAs(Literal.class);
+    assertNotNull(literal);
+    assertEquals(true, literal.getValue());
+
+    // char c = '0';
+    VariableDeclaration c =
+        (VariableDeclaration)
+            Objects.requireNonNull(main.getBodyStatementAs(3, DeclarationStatement.class))
+                .getSingleDeclaration();
+    assertNotNull(c);
+
+    literal = c.getInitializerAs(Literal.class);
+    assertNotNull(literal);
+    assertEquals('0', literal.getValue());
+
+    // double d = 1.0;
+    VariableDeclaration d =
+        (VariableDeclaration)
+            Objects.requireNonNull(main.getBodyStatementAs(4, DeclarationStatement.class))
+                .getSingleDeclaration();
+    assertNotNull(d);
+
+    literal = d.getInitializerAs(Literal.class);
+    assertNotNull(literal);
+    assertEquals(1.0, literal.getValue());
+
+    // long l = 1L;
+    VariableDeclaration l =
+        (VariableDeclaration)
+            Objects.requireNonNull(main.getBodyStatementAs(5, DeclarationStatement.class))
+                .getSingleDeclaration();
+    assertNotNull(l);
+
+    literal = l.getInitializerAs(Literal.class);
+    assertNotNull(literal);
+    assertEquals(1L, literal.getValue());
+
+    // Object o = null;
+    VariableDeclaration o =
+        (VariableDeclaration)
+            Objects.requireNonNull(main.getBodyStatementAs(6, DeclarationStatement.class))
+                .getSingleDeclaration();
+    assertNotNull(o);
+
+    literal = o.getInitializerAs(Literal.class);
+    assertNotNull(literal);
+    assertNull(literal.getValue());
   }
 
   @Test
@@ -140,6 +274,99 @@ class JavaLanguageFrontendTest {
   }
 
   @Test
+  void testCast() throws TranslationException {
+    TranslationUnitDeclaration declaration =
+        new JavaLanguageFrontend(TranslationConfiguration.builder().build())
+            .parse(new File("src/test/resources/components/CastExpr.java"));
+
+    assertNotNull(declaration);
+
+    NamespaceDeclaration namespaceDeclaration =
+        declaration.getDeclarationAs(0, NamespaceDeclaration.class);
+    RecordDeclaration record = namespaceDeclaration.getDeclarationAs(0, RecordDeclaration.class);
+
+    assertNotNull(record);
+
+    MethodDeclaration main = record.getMethods().get(0);
+
+    assertNotNull(main);
+
+    // e = new ExtendedClass()
+    DeclarationStatement stmt = main.getBodyStatementAs(0, DeclarationStatement.class);
+    assertNotNull(stmt);
+
+    VariableDeclaration e = stmt.getSingleDeclarationAs(VariableDeclaration.class);
+    assertEquals(Type.createFrom("ExtendedClass"), e.getType());
+
+    // b = (BaseClass) e
+    stmt = main.getBodyStatementAs(1, DeclarationStatement.class);
+    assertNotNull(stmt);
+
+    VariableDeclaration b = stmt.getSingleDeclarationAs(VariableDeclaration.class);
+    assertEquals(Type.createFrom("BaseClass"), b.getType());
+
+    // initializer
+    CastExpression cast = (CastExpression) b.getInitializer();
+    assertNotNull(cast);
+    assertEquals(Type.createFrom("BaseClass"), cast.getCastType());
+
+    // expression itself should be a reference
+    DeclaredReferenceExpression ref = (DeclaredReferenceExpression) cast.getExpression();
+    assertNotNull(ref);
+    assertEquals(e, ref.getRefersTo());
+  }
+
+  @Test
+  void testArrays() throws TranslationException {
+    TranslationUnitDeclaration declaration =
+        new JavaLanguageFrontend(TranslationConfiguration.builder().build())
+            .parse(new File("src/test/resources/compiling/Arrays.java"));
+
+    assertNotNull(declaration);
+
+    NamespaceDeclaration namespaceDeclaration =
+        declaration.getDeclarationAs(0, NamespaceDeclaration.class);
+    RecordDeclaration record = namespaceDeclaration.getDeclarationAs(0, RecordDeclaration.class);
+
+    assertNotNull(record);
+
+    MethodDeclaration main = record.getMethods().get(0);
+
+    assertNotNull(main);
+
+    List<Statement> statements = ((CompoundStatement) main.getBody()).getStatements();
+
+    VariableDeclaration a =
+        (VariableDeclaration) ((DeclarationStatement) statements.get(0)).getSingleDeclaration();
+
+    // type should be Integer[]
+    assertEquals(Type.createFrom("int[]"), a.getType());
+
+    // it has an array creation initializer
+    ArrayCreationExpression ace = (ArrayCreationExpression) a.getInitializer();
+    assertNotNull(ace);
+
+    // which has a initializer list (1 entry)
+    InitializerListExpression ile = ace.getInitializer();
+    assertNotNull(ile);
+    assertEquals(1, ile.getInitializers().size());
+
+    // first one is an int literal
+    Literal<Integer> literal = (Literal<Integer>) ile.getInitializers().get(0);
+    assertEquals(1, literal.getValue().intValue());
+
+    // next one is a declaration with array subscription
+    VariableDeclaration b =
+        (VariableDeclaration) ((DeclarationStatement) statements.get(1)).getSingleDeclaration();
+
+    // initializer is array subscription
+    ArraySubscriptionExpression ase = (ArraySubscriptionExpression) b.getInitializer();
+    assertNotNull(ase);
+    assertEquals(a, ((DeclaredReferenceExpression) ase.getArrayExpression()).getRefersTo());
+    assertEquals(0, ((Literal<Integer>) ase.getSubscriptExpression()).getValue().intValue());
+  }
+
+  @Test
   void testFieldAccessExpressions() throws TranslationException {
     TranslationUnitDeclaration declaration =
         new JavaLanguageFrontend(TranslationConfiguration.builder().build())
@@ -166,6 +393,7 @@ class JavaLanguageFrontendTest {
 
     MemberExpression length = (MemberExpression) l.getInitializer();
 
+    assertNotNull(length);
     assertEquals("length", length.getMember().getName());
     assertEquals("int", length.getType().toString());
   }

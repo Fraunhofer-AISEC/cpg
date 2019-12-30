@@ -51,15 +51,18 @@ import de.fraunhofer.aisec.cpg.graph.TypeManager;
 import de.fraunhofer.aisec.cpg.graph.UnaryOperator;
 import de.fraunhofer.aisec.cpg.graph.ValueDeclaration;
 import java.util.ArrayList;
+import java.util.List;
 import org.eclipse.cdt.core.dom.ast.IASTBinaryExpression;
 import org.eclipse.cdt.core.dom.ast.IASTDeclSpecifier;
 import org.eclipse.cdt.core.dom.ast.IASTExpression;
 import org.eclipse.cdt.core.dom.ast.IASTImplicitDestructorName;
 import org.eclipse.cdt.core.dom.ast.IASTInitializer;
 import org.eclipse.cdt.core.dom.ast.IASTInitializerClause;
+import org.eclipse.cdt.core.dom.ast.IASTTypeIdExpression;
 import org.eclipse.cdt.core.dom.ast.IASTUnaryExpression;
 import org.eclipse.cdt.core.dom.ast.IBasicType.Kind;
 import org.eclipse.cdt.core.dom.ast.IBinding;
+import org.eclipse.cdt.core.dom.ast.IProblemType;
 import org.eclipse.cdt.core.dom.ast.IQualifierType;
 import org.eclipse.cdt.core.dom.ast.IType;
 import org.eclipse.cdt.core.dom.ast.IValue;
@@ -139,13 +142,22 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
         ctx -> handleCompoundStatementExpression((CPPASTCompoundStatementExpression) ctx));
   }
 
+  /**
+   * Tries to return the {@link IType} for a given AST expression. In case this fails, the constant
+   * type {@link ProblemType#UNKNOWN_FOR_EXPRESSION} is returned.
+   *
+   * @param expression the ast expression
+   * @return a CDT type
+   */
   private IType expressionTypeProxy(ICPPASTExpression expression) {
     IType expressionType = ProblemType.UNKNOWN_FOR_EXPRESSION;
+
     try {
       expressionType = expression.getExpressionType();
     } catch (AssertionError e) {
-      log.warn("AssertionError when trying to get expression type");
+      log.warn("AssertionError when trying to get expression type: {}", e.getMessage());
     }
+
     return expressionType;
   }
 
@@ -156,14 +168,45 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
     return cse;
   }
 
-  private TypeIdExpression handleTypeIdExpression(CPPASTTypeIdExpression typeId) {
-    TypeIdExpression typeIdExpression = NodeBuilder.newTypeIdExpression(typeId.getRawSignature());
+  private TypeIdExpression handleTypeIdExpression(CPPASTTypeIdExpression ctx) {
+    // Eclipse CDT seems to support the following operators
+    // 0 sizeof
+    // 1 typeid
+    // 2 alignof
+    // 3 typeof
+    // 22 sizeof... (however does not really work)
+    // there are a lot of other constants defined for type traits, but they are not really parsed as
+    // type id expressions
 
-    typeIdExpression.setOperatorCode(typeId.getOperator());
-    typeIdExpression.setReferencedType(new Type(typeId.getTypeId().getDeclSpecifier().toString()));
-    typeIdExpression.setType(new Type("int"));
+    String operatorCode = "";
+    Type type = Type.UNKNOWN;
+    switch (ctx.getOperator()) {
+      case IASTTypeIdExpression.op_sizeof:
+        operatorCode = "sizeof";
+        type = Type.createFrom("std::size_t");
+        break;
+      case IASTTypeIdExpression.op_typeid:
+        operatorCode = "typeid";
+        type = Type.createFrom("const std::type_info&");
+        break;
+      case IASTTypeIdExpression.op_alignof:
+        operatorCode = "alignof";
+        type = Type.createFrom("std::size_t");
+        break;
+      case IASTTypeIdExpression.op_typeof:
+        // typeof is not an official c++ keyword - not sure why eclipse supports it
+        operatorCode = "typeof";
+        // not really sure if this really has a type
+        break;
+      default:
+        log.debug("Unknown typeid operator code: {}", ctx.getOperator());
+    }
 
-    return typeIdExpression;
+    // TODO: proper type resolve
+    Type referencedType = new Type(ctx.getTypeId().getDeclSpecifier().toString());
+
+    return NodeBuilder.newTypeIdExpression(
+        operatorCode, type, referencedType, ctx.getRawSignature());
   }
 
   private Expression handleArraySubscriptExpression(CPPASTArraySubscriptExpression ctx) {
@@ -178,6 +221,7 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
     String name = ctx.getTypeId().getDeclSpecifier().toString();
     String code = ctx.getRawSignature();
 
+    // TODO: obsolete?
     Type t = Type.createFrom(expressionTypeProxy(ctx).toString());
     t.setTypeAdjustment("*");
 
@@ -239,9 +283,20 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
     castExpression.setCastOperator(ctx.getOperator());
 
     Type castType;
-    if (expressionTypeProxy(ctx) instanceof CPPPointerType) {
-      CPPPointerType pointerType = (CPPPointerType) expressionTypeProxy(ctx);
-      castType = new Type(pointerType.getType().toString(), "*");
+    IType iType = expressionTypeProxy(ctx);
+    if (iType instanceof CPPPointerType) {
+      CPPPointerType pointerType = (CPPPointerType) iType;
+      if (pointerType.getType() instanceof IProblemType) {
+        // fall back to fTypeId
+        castType = new Type(ctx.getTypeId().getDeclSpecifier().toString(), "*");
+      } else {
+        castType = new Type(pointerType.getType().toString(), "*");
+      }
+    } else if (iType instanceof IProblemType) {
+      // fall back to fTypeId
+      castType = new Type(ctx.getTypeId().getDeclSpecifier().toString());
+      // TODO: try to actually resolve the type (similar to NewExpression) using
+      // ((CPPASTNamedTypeSpecifier) declSpecifier).getName().resolveBinding()
     } else {
       castType = new Type(expressionTypeProxy(ctx).toString());
     }
@@ -294,7 +349,12 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
 
     lang.setCodeAndRegion(member, ctx);
 
-    return NodeBuilder.newMemberExpression(base, member, ctx.getRawSignature());
+    MemberExpression memberExpression =
+        NodeBuilder.newMemberExpression(base, member, ctx.getRawSignature());
+
+    this.lang.expressionRefersToDeclaration(memberExpression, ctx);
+
+    return memberExpression;
   }
 
   private Expression handleUnaryExpression(CPPASTUnaryExpression ctx) {
@@ -367,8 +427,6 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
             operatorCode, ctx.isPostfixOperator(), !ctx.isPostfixOperator(), ctx.getRawSignature());
 
     if (input != null) {
-      this.lang.expressionRefersToDeclaration(input, ctx.getOperand());
-
       unaryOperator.setInput(input);
     }
 
@@ -395,15 +453,11 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
               ((MemberExpression) reference).getBase(),
               ctx.getRawSignature());
 
-      this.lang.expressionRefersToDeclaration(reference, ctx.getFunctionNameExpression());
       if (((MemberExpression) reference).getBase() instanceof HasType) {
         callExpression.setType(((HasType) ((MemberExpression) reference).getBase()).getType());
       }
     } else {
       String fqn = reference.getName();
-      if (fqn == null) {
-        fqn = "ANONYMOUS";
-      }
       String name = fqn;
       if (name.contains("::")) {
         name = name.substring(name.lastIndexOf("::") + 2);
@@ -423,24 +477,6 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
       Expression arg = this.handle(argument);
       arg.setArgumentIndex(i);
 
-      if (ctx.getArguments()[i] instanceof CPPASTInitializerList) {
-        for (ICPPASTInitializerClause clause :
-            ((CPPASTInitializerList) ctx.getArguments()[i]).getClauses()) {
-          if (clause instanceof CPPASTInitializerList) {
-            for (ICPPASTInitializerClause innerClause :
-                ((CPPASTInitializerList) clause).getClauses()) {
-              this.lang.expressionRefersToDeclaration(arg, (IASTExpression) innerClause);
-            }
-          } else {
-            this.lang.expressionRefersToDeclaration(arg, (IASTExpression) clause);
-          }
-        }
-      } else if (ctx.getArguments()[i] instanceof IASTExpression) {
-        this.lang.expressionRefersToDeclaration(arg, (IASTExpression) ctx.getArguments()[i]);
-      } else {
-        log.warn("Unknown Argument Class {}", ctx.getArguments()[i].getClass().toGenericString());
-      }
-
       callExpression.getArguments().add(arg);
 
       i++;
@@ -452,7 +488,7 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
   private DeclaredReferenceExpression handleIdExpression(CPPASTIdExpression ctx) {
     DeclaredReferenceExpression declaredReferenceExpression =
         NodeBuilder.newDeclaredReferenceExpression(
-            ctx.getName().toString(), new Type("UNKNOWN2"), ctx.getRawSignature());
+            ctx.getName().toString(), Type.UNKNOWN, ctx.getRawSignature());
 
     if (expressionTypeProxy(ctx) instanceof ProblemType
         || (expressionTypeProxy(ctx) instanceof IQualifierType
@@ -466,15 +502,17 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
           declaredReferenceExpression.setType(((ValueDeclaration) declaration).getType());
         } else {
           log.debug("Unknown declaration type, setting to UNKNOWN");
-          declaredReferenceExpression.setType(Type.createFrom("UNKNOWN"));
+          declaredReferenceExpression.setType(Type.UNKNOWN);
         }
       } else {
         log.debug("Could not deduce type manually, setting to UNKNOWN");
-        declaredReferenceExpression.setType(Type.createFrom("UNKNOWN"));
+        declaredReferenceExpression.setType(Type.UNKNOWN);
       }
     } else {
       declaredReferenceExpression.setType(Type.createFrom(expressionTypeProxy(ctx).toString()));
     }
+
+    this.lang.expressionRefersToDeclaration(declaredReferenceExpression, ctx);
 
     return declaredReferenceExpression;
   }
@@ -599,23 +637,12 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
         NodeBuilder.newBinaryOperator(operatorCode, ctx.getRawSignature());
 
     Expression lhs = this.handle(ctx.getOperand1());
-    this.lang.expressionRefersToDeclaration(lhs, ctx.getOperand1());
+
     Expression rhs;
     if (ctx.getOperand2() != null) {
       rhs = this.handle(ctx.getOperand2());
-      this.lang.expressionRefersToDeclaration(rhs, ctx.getOperand2());
     } else {
       rhs = this.handle(ctx.getInitOperand2());
-      if (ctx.getInitOperand2() instanceof CPPASTInitializerList) {
-        for (IASTInitializerClause in :
-            ((CPPASTInitializerList) ctx.getInitOperand2()).getClauses()) {
-          if (in instanceof CPPASTIdExpression) {
-            this.lang.expressionRefersToDeclaration(rhs, (CPPASTIdExpression) in);
-          }
-        }
-      } else {
-        log.warn("Do not know how to connect to {}", rhs.getClass().toGenericString());
-      }
     }
 
     binaryOperator.setLhs(lhs);
@@ -672,7 +699,7 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
     InitializerListExpression expression =
         NodeBuilder.newInitializerListExpression(ctx.getRawSignature());
 
-    ArrayList<Expression> initializers = new ArrayList<>();
+    List<Expression> initializers = new ArrayList<>();
 
     for (ICPPASTInitializerClause clause : ctx.getClauses()) {
       initializers.add(this.handle(clause));

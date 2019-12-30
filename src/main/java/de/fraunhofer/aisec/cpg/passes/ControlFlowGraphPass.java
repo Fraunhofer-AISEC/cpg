@@ -315,13 +315,13 @@ public class ControlFlowGraphPass implements Pass {
   }
 
   /**
-   * Adds a statement to this.remaining, omitting null.
+   * Adds statements to this.remaining, omitting null.
    *
-   * @param index
-   * @param stmts
+   * @param index the index
+   * @param statements the statements to add
    */
-  public void addTodo(int index, Statement... stmts) {
-    addTodo(index, Arrays.asList(stmts));
+  public void addTodo(int index, Statement... statements) {
+    addTodo(index, Arrays.asList(statements));
   }
 
   /**

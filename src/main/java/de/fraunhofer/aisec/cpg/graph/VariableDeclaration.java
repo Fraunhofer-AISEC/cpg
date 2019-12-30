@@ -47,6 +47,11 @@ public class VariableDeclaration extends ValueDeclaration implements TypeListene
     return initializer;
   }
 
+  @Nullable
+  public <T> T getInitializerAs(Class<T> clazz) {
+    return clazz.cast(getInitializer());
+  }
+
   public void setInitializer(@Nullable Expression initializer) {
     if (this.initializer != null) {
       this.removePrevDFG(this.initializer);

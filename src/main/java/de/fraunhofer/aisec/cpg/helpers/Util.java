@@ -28,9 +28,7 @@ package de.fraunhofer.aisec.cpg.helpers;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 
-import de.fraunhofer.aisec.cpg.graph.MethodDeclaration;
 import de.fraunhofer.aisec.cpg.graph.Node;
-import de.fraunhofer.aisec.cpg.graph.RecordDeclaration;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -43,38 +41,6 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 public class Util {
-
-  /**
-   * Returns the fully qualified signature of a method within a record declaration (e.g., a Java
-   * class).
-   *
-   * @param r
-   * @param m
-   * @return
-   */
-  public static String toFullyQualifiedSignature(RecordDeclaration r, MethodDeclaration m) {
-    return r.getName() + "." + m.getSignature();
-  }
-
-  /**
-   * Accessor function for shorter and clearer syntax
-   *
-   * @param node - root node of AST subtree which EOG entries are to be returned.
-   * @return
-   */
-  public static List<Node> entryEOG(Node node) {
-    return SubgraphWalker.getEOGPathEdges(node).getEntries();
-  }
-
-  /**
-   * Accessor function for shorter and clearer syntax
-   *
-   * @param node - root node of AST subtree which EOG exits are to be returned.
-   * @return
-   */
-  public static List<Node> exitEOG(Node node) {
-    return SubgraphWalker.getEOGPathEdges(node).getExits();
-  }
 
   /**
    * Filters a list of elements with common type T for all elements of instance S, returning a list

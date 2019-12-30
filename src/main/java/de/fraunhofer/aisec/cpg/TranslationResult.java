@@ -54,7 +54,11 @@ public class TranslationResult {
     return translationManager.isCancelled();
   }
 
-  /** List of translation units. */
+  /**
+   * List of translation units.
+   *
+   * @return the list of translation units
+   */
   public List<TranslationUnitDeclaration> getTranslationUnits() {
     return this.translationUnits;
   }
@@ -64,7 +68,7 @@ public class TranslationResult {
    * Callers must ensure that keys are unique. It is recommended to prefix them with the class name
    * of the Pass.
    *
-   * @return
+   * @return the scratch storage
    */
   //  public Scene getScene() {
   //    return this.scene;

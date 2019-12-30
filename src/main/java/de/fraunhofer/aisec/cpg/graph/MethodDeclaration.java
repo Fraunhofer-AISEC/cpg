@@ -38,6 +38,7 @@ public class MethodDeclaration extends FunctionDeclaration {
    * Creates a method declaration from an existing {@link FunctionDeclaration}.
    *
    * @param functionDeclaration the {@link FunctionDeclaration}.
+   * @return the new method declaration
    */
   public static MethodDeclaration from(FunctionDeclaration functionDeclaration) {
     MethodDeclaration md = new MethodDeclaration();

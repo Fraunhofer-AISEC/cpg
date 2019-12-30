@@ -36,7 +36,11 @@ import java.util.Objects;
 public class BreakStatement extends Statement {
   private String label = null;
 
-  /** Specifies the loop in a nested structure that the label will 'break' */
+  /**
+   * Specifies the label of the loop in a nested structure that this statement will 'break'
+   *
+   * @return the label
+   */
   public String getLabel() {
     return label;
   }
