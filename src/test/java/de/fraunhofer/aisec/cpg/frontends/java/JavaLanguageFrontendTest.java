@@ -75,7 +75,7 @@ class JavaLanguageFrontendTest {
 
   @BeforeEach
   void setUp() {
-    config = TranslationConfiguration.builder().build();
+    config = TranslationConfiguration.builder().defaultPasses().build();
   }
 
   @Test

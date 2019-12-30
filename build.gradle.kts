@@ -28,16 +28,16 @@ val deployUsername: String? by extra // imported from settings.gradle.kts
 val deployPassword: String? by extra // imported from settings.gradle.kts
 
 plugins {
-    // built-in
-    java
-    `java-library`
-    jacoco
-    signing
-    `maven-publish`
+  // built-in
+  java
+  `java-library`
+  jacoco
+  signing
+  `maven-publish`
 
-    id("org.sonarqube") version "2.6"
-    id("com.diffplug.gradle.spotless") version "3.26.0"
-    id("com.github.johnrengelman.shadow") version "5.2.0"
+  id("org.sonarqube") version "2.6"
+  id("com.diffplug.gradle.spotless") version "3.26.0"
+  id("com.github.johnrengelman.shadow") version "5.2.0"
 }
 
 group = "de.fraunhofer.aisec"
@@ -53,63 +53,63 @@ val mavenCentralUri: String
   }
 
 publishing {
-    publications {
-        create<MavenPublication>("maven") {
-            from(components["java"])
+  publications {
+    create<MavenPublication>("maven") {
+      from(components["java"])
 
-            pom {
-                name.set("Code Property Graph")
-                description.set("A simple library to extract a code property graph out of source code. It has support for multiple passes that can extend the analysis after the graph is constructed.")
-                url.set("https://github.com/Fraunhofer-AISEC/cpg")
-                licenses {
-                    license {
-                        name.set("The Apache License, Version 2.0")
-                        url.set("http://www.apache.org/licenses/LICENSE-2.0.txt")
-                    }
-                }
-                developers {
-                    developer {
-                        id.set("oxisto")
-                        organization.set("Fraunhofer AISEC")
-                        organizationUrl.set("https://www.aisec.fraunhofer.de")
-                    }
-                }
-                scm {
-                    connection.set("scm:git:git://github.com:Fraunhofer-AISEC/cpg.git")
-                    developerConnection.set("scm:git:ssh://github.com:Fraunhofer-AISEC/cpg.git")
-                    url.set("https://github.com/Fraunhofer-AISEC/cpg")
-                }
-            }
+      pom {
+        name.set("Code Property Graph")
+        description.set("A simple library to extract a code property graph out of source code. It has support for multiple passes that can extend the analysis after the graph is constructed.")
+        url.set("https://github.com/Fraunhofer-AISEC/cpg")
+        licenses {
+          license {
+            name.set("The Apache License, Version 2.0")
+            url.set("http://www.apache.org/licenses/LICENSE-2.0.txt")
+          }
         }
-    }
-
-    repositories {
-        maven {
-            url = uri(mavenCentralUri)
-
-            credentials {
-                val mavenCentralUsername: String? by project
-                val mavenCentralPassword: String? by project
-
-                username = mavenCentralUsername
-                password = mavenCentralPassword
-            }
+        developers {
+          developer {
+            id.set("oxisto")
+            organization.set("Fraunhofer AISEC")
+            organizationUrl.set("https://www.aisec.fraunhofer.de")
+          }
         }
+        scm {
+          connection.set("scm:git:git://github.com:Fraunhofer-AISEC/cpg.git")
+          developerConnection.set("scm:git:ssh://github.com:Fraunhofer-AISEC/cpg.git")
+          url.set("https://github.com/Fraunhofer-AISEC/cpg")
+        }
+      }
     }
+  }
+
+  repositories {
+    maven {
+      url = uri(mavenCentralUri)
+
+      credentials {
+        val mavenCentralUsername: String? by project
+        val mavenCentralPassword: String? by project
+
+        username = mavenCentralUsername
+        password = mavenCentralPassword
+      }
+    }
+  }
 }
 
 repositories {
-    mavenCentral()
+  mavenCentral()
 
-    ivy {
-        setUrl("https://download.eclipse.org/tools/cdt/releases/9.6/cdt-9.6.0/plugins")
-        metadataSources {
-            artifact()
-        }
-        patternLayout {
-            artifact("/[organisation].[module]_[revision].[ext]")
-        }
+  ivy {
+    setUrl("https://download.eclipse.org/tools/cdt/releases/9.6/cdt-9.6.0/plugins")
+    metadataSources {
+      artifact()
     }
+    patternLayout {
+      artifact("/[organisation].[module]_[revision].[ext]")
+    }
+  }
 }
 
 tasks.withType<GenerateModuleMetadata> {
@@ -124,76 +124,72 @@ signing {
 }
 
 tasks.withType<Sign>().configureEach {
-    onlyIf { project.extra["isReleaseVersion"] as Boolean }
-}
-
-java {
-    sourceCompatibility = JavaVersion.VERSION_11
-    targetCompatibility = JavaVersion.VERSION_11
-
-    withSourcesJar()
-    withJavadocJar()
-}
-
-tasks {
-    sonarqube {
-        properties {
-            "sonar.host.url" to "localhost"
-        }
-    }
-}
-
-val versions = mapOf(
-        "neo4j-ogm" to "3.1.7",
-        "junit5" to "5.3.1",
-        "commons-lang3" to "3.8.1",
-        "log4j" to "2.11.1",
-        "javaparser" to "3.11.0"
-)
-
-dependencies {
-    compile("org.apache.commons", "commons-lang3", versions["commons-lang3"])
-    compile("org.neo4j", "neo4j-ogm-core", versions["neo4j-ogm"])
-    compile("org.apache.logging.log4j", "log4j-slf4j18-impl", versions["log4j"])
-    compile("org.slf4j", "jul-to-slf4j", "1.8.0-beta2")
-    compile("com.github.javaparser", "javaparser-symbol-solver-core", versions["javaparser"])
-
-    compile("com.ibm.icu", "icu4j", "63.1")
-
-    // seriously eclipse...
-    compile("org.eclipse.platform", "org.eclipse.osgi", "3.13.200")
-    compile("org.eclipse.platform", "org.eclipse.equinox.common", "3.10.200")
-    compile("org.eclipse.platform", "org.eclipse.equinox.preferences", "3.7.200")
-    compile("org.eclipse.platform", "org.eclipse.core.runtime", "3.15.100")
-    compile("org.eclipse.platform", "org.eclipse.core.jobs", "3.10.200")
-    compile("org.eclipse.cdt", "core", "6.6.0.201812101042")
-
-    runtime("org.neo4j", "neo4j-ogm-bolt-driver", versions["neo4j-ogm"])
-
-    // api stuff
-    compile("org.glassfish.jersey.inject", "jersey-hk2", "2.28")
-    compile("org.glassfish.jersey.containers", "jersey-container-grizzly2-http", "2.28")
-    compile("org.glassfish.jersey.media", "jersey-media-json-jackson", "2.28")
-
-    // needed for jersey, not part of JDK anymore
-    compile("javax.xml.bind", "jaxb-api", "2.3.1")
-
-    testImplementation("org.junit.jupiter", "junit-jupiter-api", versions["junit5"])
-    testRuntimeOnly("org.junit.jupiter", "junit-jupiter-engine", versions["junit5"])
+  onlyIf { project.extra["isReleaseVersion"] as Boolean }
 }
 
 tasks.named<Test>("test") {
-    useJUnitPlatform()
-    maxHeapSize="4048m"
+  useJUnitPlatform()
+  maxHeapSize = "4048m"
+}
+
+tasks.named("compileJava") {
+  dependsOn(":spotlessApply")
+}
+
+java {
+  sourceCompatibility = JavaVersion.VERSION_11
+  targetCompatibility = JavaVersion.VERSION_11
+
+  withSourcesJar()
+  withJavadocJar()
+}
+
+val versions = mapOf(
+    "neo4j-ogm" to "3.1.7",
+    "junit5" to "5.3.1",
+    "commons-lang3" to "3.8.1",
+    "log4j" to "2.11.1",
+    "javaparser" to "3.11.0"
+)
+
+dependencies {
+  compile("org.apache.commons", "commons-lang3", versions["commons-lang3"])
+  compile("org.neo4j", "neo4j-ogm-core", versions["neo4j-ogm"])
+  compile("org.apache.logging.log4j", "log4j-slf4j18-impl", versions["log4j"])
+  compile("org.slf4j", "jul-to-slf4j", "1.8.0-beta2")
+  compile("com.github.javaparser", "javaparser-symbol-solver-core", versions["javaparser"])
+
+  compile("com.ibm.icu", "icu4j", "63.1")
+
+  // seriously eclipse...
+  compile("org.eclipse.platform", "org.eclipse.osgi", "3.13.200")
+  compile("org.eclipse.platform", "org.eclipse.equinox.common", "3.10.200")
+  compile("org.eclipse.platform", "org.eclipse.equinox.preferences", "3.7.200")
+  compile("org.eclipse.platform", "org.eclipse.core.runtime", "3.15.100")
+  compile("org.eclipse.platform", "org.eclipse.core.jobs", "3.10.200")
+  compile("org.eclipse.cdt", "core", "6.6.0.201812101042")
+
+  runtime("org.neo4j", "neo4j-ogm-bolt-driver", versions["neo4j-ogm"])
+
+  // api stuff
+  compile("org.glassfish.jersey.inject", "jersey-hk2", "2.28")
+  compile("org.glassfish.jersey.containers", "jersey-container-grizzly2-http", "2.28")
+  compile("org.glassfish.jersey.media", "jersey-media-json-jackson", "2.28")
+
+  // needed for jersey, not part of JDK anymore
+  compile("javax.xml.bind", "jaxb-api", "2.3.1")
+
+  testImplementation("org.junit.jupiter", "junit-jupiter-api", versions["junit5"])
+  testRuntimeOnly("org.junit.jupiter", "junit-jupiter-engine", versions["junit5"])
 }
 
 spotless {
-    java {
-        targetExclude(
-                fileTree(project.projectDir) {
-                    include("build/generated-src/**")
-                }
-        )
-        googleJavaFormat()
-    }
+  java {
+    targetExclude(
+        fileTree(project.projectDir) {
+          include("build/generated-src/**")
+        }
+    )
+    googleJavaFormat()
+  }
 }

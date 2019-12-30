@@ -86,8 +86,8 @@ class DeclarationListHandler
                       .getType()
                       .getTypeAdjustment());
         } else {
-          log.warn("cannot determine auto type for {}", declaration.getClass());
-          declaration.getType().setTypeName(declaration.getType().getTypeName() + " auto");
+          log.warn("cannot determine auto type for {}. we keep it at auto", declaration.getClass());
+          declaration.setType(Type.createFrom("auto"));
         }
       } else {
         // this is not an auto type and therefore already set
