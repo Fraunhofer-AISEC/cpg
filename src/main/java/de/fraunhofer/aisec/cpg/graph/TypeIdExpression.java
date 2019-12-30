@@ -53,6 +53,32 @@ public class TypeIdExpression extends Expression {
     return operatorCode;
   }
 
+  public enum Operator {
+    SIZEOF(0),
+    TYPEID(1),
+    ALIGNOF(2),
+    TYPEOF(3),
+    HAS_NOTHROW_ASSIGN(4),
+    HAS_NOTHROW_COPY(5),
+    HAS_NOTHROW_CONSTRUCTOR(6),
+    HAS_TRIVIAL_ASSIGN(7),
+    HAS_TRIVIAL_COPY(8),
+    HAS_TRIVIAL_CONSTRUCTOR(9),
+    HAS_TRIVIAL_DESTRUCTOR(10),
+    IS_ABSTRACT(11),
+    IS_CLASS(12);
+
+    Operator(int operatorCode) {
+      this.operatorCode = operatorCode;
+    }
+
+    int operatorCode;
+
+    public int getOperatorCode() {
+      return this.operatorCode;
+    }
+  }
+
   public void setOperatorCode(int operatorCode) {
     this.operatorCode = operatorCode;
     switch (operatorCode) {

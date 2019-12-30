@@ -171,7 +171,14 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
 
     typeIdExpression.setOperatorCode(typeId.getOperator());
     typeIdExpression.setReferencedType(new Type(typeId.getTypeId().getDeclSpecifier().toString()));
-    typeIdExpression.setType(new Type("int"));
+
+    if (typeId.getOperator() == TypeIdExpression.Operator.SIZEOF.getOperatorCode()) {
+      typeIdExpression.setType(Type.createFrom("std::size_t"));
+    } else if (typeId.getOperator() == TypeIdExpression.Operator.TYPEID.getOperatorCode()) {
+      typeIdExpression.setType(Type.createFrom("const std::type_info&"));
+    } else {
+      typeIdExpression.setType(Type.createFrom("int"));
+    }
 
     return typeIdExpression;
   }

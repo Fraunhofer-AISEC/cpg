@@ -64,6 +64,7 @@ import de.fraunhofer.aisec.cpg.graph.Statement;
 import de.fraunhofer.aisec.cpg.graph.SwitchStatement;
 import de.fraunhofer.aisec.cpg.graph.TranslationUnitDeclaration;
 import de.fraunhofer.aisec.cpg.graph.Type;
+import de.fraunhofer.aisec.cpg.graph.TypeIdExpression;
 import de.fraunhofer.aisec.cpg.graph.UnaryOperator;
 import de.fraunhofer.aisec.cpg.graph.VariableDeclaration;
 import de.fraunhofer.aisec.cpg.helpers.NodeComparator;
@@ -83,6 +84,46 @@ import org.slf4j.LoggerFactory;
 class CXXLanguageFrontendTest {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(CXXLanguageFrontendTest.class);
+
+  @Test
+  void testTypeId() throws TranslationException {
+    TranslationUnitDeclaration tu =
+        new CXXLanguageFrontend(TranslationConfiguration.builder().build())
+            .parse(new File("src/test/resources/typeidexpr.cpp"));
+
+    FunctionDeclaration main =
+        tu.getDeclarations().stream()
+            .filter(
+                function ->
+                    function instanceof FunctionDeclaration
+                        && Objects.equals("main", function.getName()))
+            .map(FunctionDeclaration.class::cast)
+            .findAny()
+            .orElse(null);
+    assertNotNull(main);
+
+    VariableDeclaration i =
+        (VariableDeclaration)
+            Objects.requireNonNull(main.getBodyStatementAs(0, DeclarationStatement.class))
+                .getSingleDeclaration();
+    assertNotNull(i);
+
+    TypeIdExpression sizeof = (TypeIdExpression) i.getInitializer();
+    assertNotNull(sizeof);
+    assertEquals("sizeof", sizeof.getName());
+    assertEquals(Type.createFrom("std::size_t"), sizeof.getType());
+
+    VariableDeclaration typeInfo =
+        (VariableDeclaration)
+            Objects.requireNonNull(main.getBodyStatementAs(1, DeclarationStatement.class))
+                .getSingleDeclaration();
+    assertNotNull(i);
+
+    TypeIdExpression typeid = (TypeIdExpression) typeInfo.getInitializer();
+    assertNotNull(typeid);
+    assertEquals("typeid", typeid.getName());
+    assertEquals(Type.createFrom("const std::type_info&"), typeid.getType());
+  }
 
   @Test
   void testCast() throws TranslationException {
