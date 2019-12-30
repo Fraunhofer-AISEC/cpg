@@ -30,6 +30,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -166,6 +167,36 @@ public class FunctionDeclaration extends ValueDeclaration {
 
   public void setParameters(List<ParamVariableDeclaration> parameters) {
     this.parameters = parameters;
+  }
+
+  /**
+   * Looks for a variable declaration by the given name.
+   *
+   * @param name the name of the variable
+   * @return an optional value containing the variable declaration if found
+   */
+  public Optional<VariableDeclaration> getVariableDeclarationByName(String name) {
+    if (body instanceof CompoundStatement) {
+      return ((CompoundStatement) body)
+          .getStatements().stream()
+              // only declaration statements
+              .filter(statement -> statement instanceof DeclarationStatement)
+              // cast them
+              .map(DeclarationStatement.class::cast)
+              // flatten the declarations (could be more than one) of the statements so we can
+              // search them
+              .flatMap(declarationStatement -> declarationStatement.getDeclarations().stream())
+              // only variable declarations
+              .filter(declaration -> declaration instanceof VariableDeclaration)
+              // cast them
+              .map(VariableDeclaration.class::cast)
+              // filter them by name
+              .filter(declaration -> Objects.equals(declaration.getName(), name))
+              // return the first (later ones should not exist anyway)
+              .findFirst();
+    }
+
+    return Optional.empty();
   }
 
   @Override

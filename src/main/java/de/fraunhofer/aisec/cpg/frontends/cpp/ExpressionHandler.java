@@ -51,12 +51,14 @@ import de.fraunhofer.aisec.cpg.graph.TypeManager;
 import de.fraunhofer.aisec.cpg.graph.UnaryOperator;
 import de.fraunhofer.aisec.cpg.graph.ValueDeclaration;
 import java.util.ArrayList;
+import java.util.List;
 import org.eclipse.cdt.core.dom.ast.IASTBinaryExpression;
 import org.eclipse.cdt.core.dom.ast.IASTDeclSpecifier;
 import org.eclipse.cdt.core.dom.ast.IASTExpression;
 import org.eclipse.cdt.core.dom.ast.IASTImplicitDestructorName;
 import org.eclipse.cdt.core.dom.ast.IASTInitializer;
 import org.eclipse.cdt.core.dom.ast.IASTInitializerClause;
+import org.eclipse.cdt.core.dom.ast.IASTTypeIdExpression;
 import org.eclipse.cdt.core.dom.ast.IASTUnaryExpression;
 import org.eclipse.cdt.core.dom.ast.IBasicType.Kind;
 import org.eclipse.cdt.core.dom.ast.IBinding;
@@ -166,21 +168,45 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
     return cse;
   }
 
-  private TypeIdExpression handleTypeIdExpression(CPPASTTypeIdExpression typeId) {
-    TypeIdExpression typeIdExpression = NodeBuilder.newTypeIdExpression(typeId.getRawSignature());
+  private TypeIdExpression handleTypeIdExpression(CPPASTTypeIdExpression ctx) {
+    // Eclipse CDT seems to support the following operators
+    // 0 sizeof
+    // 1 typeid
+    // 2 alignof
+    // 3 typeof
+    // 22 sizeof... (however does not really work)
+    // there are a lot of other constants defined for type traits, but they are not really parsed as
+    // type id expressions
 
-    typeIdExpression.setOperatorCode(typeId.getOperator());
-    typeIdExpression.setReferencedType(new Type(typeId.getTypeId().getDeclSpecifier().toString()));
-
-    if (typeId.getOperator() == TypeIdExpression.Operator.SIZEOF.getOperatorCode()) {
-      typeIdExpression.setType(Type.createFrom("std::size_t"));
-    } else if (typeId.getOperator() == TypeIdExpression.Operator.TYPEID.getOperatorCode()) {
-      typeIdExpression.setType(Type.createFrom("const std::type_info&"));
-    } else {
-      typeIdExpression.setType(Type.createFrom("int"));
+    String operatorCode = "";
+    Type type = Type.UNKNOWN;
+    switch (ctx.getOperator()) {
+      case IASTTypeIdExpression.op_sizeof:
+        operatorCode = "sizeof";
+        type = Type.createFrom("std::size_t");
+        break;
+      case IASTTypeIdExpression.op_typeid:
+        operatorCode = "typeid";
+        type = Type.createFrom("const std::type_info&");
+        break;
+      case IASTTypeIdExpression.op_alignof:
+        operatorCode = "alignof";
+        type = Type.createFrom("std::size_t");
+        break;
+      case IASTTypeIdExpression.op_typeof:
+        // typeof is not an official c++ keyword - not sure why eclipse supports it
+        operatorCode = "typeof";
+        // not really sure if this really has a type
+        break;
+      default:
+        log.debug("Unknown typeid operator code: {}", ctx.getOperator());
     }
 
-    return typeIdExpression;
+    // TODO: proper type resolve
+    Type referencedType = new Type(ctx.getTypeId().getDeclSpecifier().toString());
+
+    return NodeBuilder.newTypeIdExpression(
+        operatorCode, type, referencedType, ctx.getRawSignature());
   }
 
   private Expression handleArraySubscriptExpression(CPPASTArraySubscriptExpression ctx) {
@@ -673,7 +699,7 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
     InitializerListExpression expression =
         NodeBuilder.newInitializerListExpression(ctx.getRawSignature());
 
-    ArrayList<Expression> initializers = new ArrayList<>();
+    List<Expression> initializers = new ArrayList<>();
 
     for (ICPPASTInitializerClause clause : ctx.getClauses()) {
       initializers.add(this.handle(clause));

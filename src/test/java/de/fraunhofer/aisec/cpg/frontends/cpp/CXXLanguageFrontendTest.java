@@ -102,10 +102,7 @@ class CXXLanguageFrontendTest {
             .orElse(null);
     assertNotNull(main);
 
-    VariableDeclaration i =
-        (VariableDeclaration)
-            Objects.requireNonNull(main.getBodyStatementAs(0, DeclarationStatement.class))
-                .getSingleDeclaration();
+    VariableDeclaration i = main.getVariableDeclarationByName("i").orElse(null);
     assertNotNull(i);
 
     TypeIdExpression sizeof = (TypeIdExpression) i.getInitializer();
@@ -113,16 +110,21 @@ class CXXLanguageFrontendTest {
     assertEquals("sizeof", sizeof.getName());
     assertEquals(Type.createFrom("std::size_t"), sizeof.getType());
 
-    VariableDeclaration typeInfo =
-        (VariableDeclaration)
-            Objects.requireNonNull(main.getBodyStatementAs(1, DeclarationStatement.class))
-                .getSingleDeclaration();
-    assertNotNull(i);
+    VariableDeclaration typeInfo = main.getVariableDeclarationByName("typeInfo").orElse(null);
+    assertNotNull(typeInfo);
 
     TypeIdExpression typeid = (TypeIdExpression) typeInfo.getInitializer();
     assertNotNull(typeid);
     assertEquals("typeid", typeid.getName());
     assertEquals(Type.createFrom("const std::type_info&"), typeid.getType());
+
+    VariableDeclaration j = main.getVariableDeclarationByName("j").orElse(null);
+    assertNotNull(j);
+
+    TypeIdExpression alignof = (TypeIdExpression) j.getInitializer();
+    assertNotNull(sizeof);
+    assertEquals("alignof", alignof.getName());
+    assertEquals(Type.createFrom("std::size_t"), alignof.getType());
   }
 
   @Test

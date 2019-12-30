@@ -85,9 +85,14 @@ public class NodeBuilder {
     return node;
   }
 
-  public static TypeIdExpression newTypeIdExpression(String code) {
+  public static TypeIdExpression newTypeIdExpression(
+      String operatorCode, Type type, Type referencedType, String code) {
     TypeIdExpression node = new TypeIdExpression();
     node.setCode(code);
+    node.setOperatorCode(operatorCode);
+    node.setName(operatorCode);
+    node.setType(type);
+    node.setReferencedType(type);
 
     log(node);
 
