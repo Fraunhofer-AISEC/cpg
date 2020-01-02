@@ -458,6 +458,9 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
       }
     } else {
       String fqn = reference.getName();
+      if(fqn == null) {
+        fqn = "ANONYMOUS";
+      }
       String name = fqn;
       if (name.contains("::")) {
         name = name.substring(name.lastIndexOf("::") + 2);
