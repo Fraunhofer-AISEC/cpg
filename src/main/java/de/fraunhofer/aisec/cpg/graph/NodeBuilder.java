@@ -361,6 +361,7 @@ public class NodeBuilder {
   public static BinaryOperator newBinaryOperator(String operatorCode, String code) {
     BinaryOperator node = new BinaryOperator();
     node.setOperatorCode(operatorCode);
+    node.setName(operatorCode);
     node.setCode(code);
 
     log(node);

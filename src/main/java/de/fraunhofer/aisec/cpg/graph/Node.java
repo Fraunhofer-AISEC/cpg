@@ -48,12 +48,14 @@ public class Node {
   public static final ToStringStyle TO_STRING_STYLE = ToStringStyle.SHORT_PREFIX_STYLE;
   protected static final Logger log = LoggerFactory.getLogger(Node.class);
 
+  public static final String EMPTY_NAME = "";
+
   /** A human readable name. */
-  @NonNull protected String name;
+  @NonNull protected String name = EMPTY_NAME; // initialize it with an empty string
 
   /**
    * Original code snippet of this node. Most nodes will have a corresponding "code", but in cases
-   * where nodes are created artifically, it may be null.
+   * where nodes are created artificially, it may be null.
    */
   @Nullable protected String code;
 
