@@ -44,6 +44,7 @@ import de.fraunhofer.aisec.cpg.graph.DeclarationStatement;
 import de.fraunhofer.aisec.cpg.graph.DeclaredReferenceExpression;
 import de.fraunhofer.aisec.cpg.graph.DefaultStatement;
 import de.fraunhofer.aisec.cpg.graph.FieldDeclaration;
+import de.fraunhofer.aisec.cpg.graph.ForEachStatement;
 import de.fraunhofer.aisec.cpg.graph.InitializerListExpression;
 import de.fraunhofer.aisec.cpg.graph.Literal;
 import de.fraunhofer.aisec.cpg.graph.MemberExpression;
@@ -52,6 +53,7 @@ import de.fraunhofer.aisec.cpg.graph.NamespaceDeclaration;
 import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.RecordDeclaration;
 import de.fraunhofer.aisec.cpg.graph.Statement;
+import de.fraunhofer.aisec.cpg.graph.StaticCallExpression;
 import de.fraunhofer.aisec.cpg.graph.SwitchStatement;
 import de.fraunhofer.aisec.cpg.graph.TranslationUnitDeclaration;
 import de.fraunhofer.aisec.cpg.graph.TryStatement;
@@ -73,7 +75,41 @@ class JavaLanguageFrontendTest {
 
   @BeforeEach
   void setUp() {
-    config = TranslationConfiguration.builder().build();
+    config = TranslationConfiguration.builder().defaultPasses().build();
+  }
+
+  @Test
+  void testForeach() throws TranslationException {
+    TranslationUnitDeclaration tu =
+        new JavaLanguageFrontend(config)
+            .parse(new File("src/test/resources/components/ForEachStmt.java"));
+
+    RecordDeclaration declaration = (RecordDeclaration) tu.getDeclarations().get(0);
+
+    MethodDeclaration main = declaration.getMethods().get(0);
+
+    VariableDeclaration ls = main.getVariableDeclarationByName("ls").orElse(null);
+    assertNotNull(ls);
+
+    ForEachStatement forEachStatement = main.getBodyStatementAs(1, ForEachStatement.class);
+    assertNotNull(forEachStatement);
+
+    // should loop over ls
+    assertEquals(ls, ((DeclaredReferenceExpression) forEachStatement.getIterable()).getRefersTo());
+
+    // should declare String s
+    VariableDeclaration s = (VariableDeclaration) forEachStatement.getVariable();
+    assertNotNull(s);
+    assertEquals("s", s.getName());
+    assertEquals(Type.createFrom("java.lang.String"), s.getType());
+
+    // should contain a single statement
+    StaticCallExpression sce = (StaticCallExpression) forEachStatement.getStatement();
+    assertNotNull(sce);
+    assertEquals("println", sce.getName());
+    // TODO: this FQN looks weird but it seems that we resolve it like this all over the place
+    // this will fail once we chance the FQN to something real
+    assertEquals("java.io.PrintStream.println", sce.getFqn());
   }
 
   @Test
