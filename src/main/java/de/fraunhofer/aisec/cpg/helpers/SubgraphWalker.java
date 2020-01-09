@@ -311,7 +311,7 @@ public class SubgraphWalker {
     // declarationScope -> (parentScope, declarations)
     private Map<Node, Pair<Node, List<ValueDeclaration>>>
         nodeToParentBlockAndContainedValueDeclarations = new IdentityHashMap<>();
-    private Deque<Type> currentClass = new ArrayDeque<>();
+    private Deque<RecordDeclaration> currentClass = new ArrayDeque<>();
     private IterativeGraphWalker walker;
 
     /**
@@ -352,17 +352,23 @@ public class SubgraphWalker {
 
       if (current instanceof RecordDeclaration) {
         currentClass.push(
-            new Type(
-                current.getName())); // we can be in an inner class, so we remember this as a stack
+            (RecordDeclaration)
+                current); // we can be in an inner class, so we remember this as a stack
       }
 
-      handler.accept(currentClass.peek(), parent, current);
+      Type currentClassType =
+          currentClass.isEmpty() ? null : new Type(currentClass.peek().getName());
+      handler.accept(currentClassType, parent, current);
     }
 
     private void leaveScope(Node exiting) {
       if (exiting instanceof RecordDeclaration) { // leave a class
         currentClass.pop();
       }
+    }
+
+    public RecordDeclaration getCurrentClass() {
+      return currentClass.isEmpty() ? null : currentClass.peek();
     }
 
     public void collectDeclarations(Node current) {

@@ -82,15 +82,15 @@ public class CallResolver implements Pass {
 
   private Map<String, RecordDeclaration> recordMap = new HashMap<>();
   private Map<FunctionDeclaration, Type> containingType = new HashMap<>();
-  @Nullable private RecordDeclaration currentClass;
   @Nullable private TranslationUnitDeclaration currentTU;
   private LanguageFrontend lang;
+  private ScopedWalker walker;
 
   @Override
   public void cleanup() {
     this.containingType.clear();
-    this.currentClass = null;
     this.currentTU = null;
+    this.walker = null;
   }
 
   @Override
@@ -105,7 +105,7 @@ public class CallResolver implements Pass {
 
   @Override
   public void accept(@NonNull TranslationResult translationResult) {
-    ScopedWalker walker = new ScopedWalker();
+    walker = new ScopedWalker();
     walker.registerHandler(this::findRecords);
     walker.registerHandler(this::registerMethods);
 
@@ -154,8 +154,8 @@ public class CallResolver implements Pass {
     } else if (node instanceof CallExpression) {
       CallExpression call = (CallExpression) node;
 
-      if (this.currentClass == null && this.currentTU != null) {
-        // Handle function (not method) calls
+      if (walker.getCurrentClass() == null && this.currentTU != null) {
+        // Handle calls that happen outside of classes
         // C++ allows function overloading. Make sure we have at least the same number of arguments
         List<FunctionDeclaration> invocationCandidates =
             currentTU.getDeclarations().stream()
@@ -191,7 +191,7 @@ public class CallResolver implements Pass {
         }
 
         if (!(call instanceof MemberCallExpression || call instanceof StaticCallExpression)) {
-          call.setBase(currentClass.getThis());
+          call.setBase(walker.getCurrentClass().getThis());
         }
         call.setInvokes(invocationCandidates);
       }
@@ -215,18 +215,16 @@ public class CallResolver implements Pass {
           }
         }
       }
-    } else if (node instanceof RecordDeclaration) {
-      currentClass = (RecordDeclaration) node;
     }
   }
 
   private boolean handlePossibleStaticImport(@Nullable CallExpression call) {
-    if (call == null || currentClass == null) {
+    if (call == null || walker.getCurrentClass() == null) {
       return false;
     }
     String name = call.getName().substring(call.getName().lastIndexOf('.') + 1);
     List<FunctionDeclaration> nameMatches =
-        currentClass.getStaticImports().stream()
+        walker.getCurrentClass().getStaticImports().stream()
             .filter(FunctionDeclaration.class::isInstance)
             .map(FunctionDeclaration.class::cast)
             .filter(m -> m.getName().equals(name) || m.getName().endsWith("." + name))
@@ -257,12 +255,12 @@ public class CallResolver implements Pass {
       @NonNull List<FunctionDeclaration> invokes) {
     // We had an import for this method name, just not the correct signature. Let's just add
     // a dummy to any class that might be affected
-    if (currentClass == null) {
+    if (walker.getCurrentClass() == null) {
       LOGGER.warn("Cannot generate dummies for imports of a null class: {}", call.toString());
       return;
     }
     List<RecordDeclaration> containingRecords =
-        currentClass.getStaticImportStatements().stream()
+        walker.getCurrentClass().getStaticImportStatements().stream()
             .filter(i -> i.endsWith("." + name))
             .map(i -> i.substring(0, i.lastIndexOf('.')))
             .map(c -> recordMap.getOrDefault(c, null))
@@ -284,7 +282,7 @@ public class CallResolver implements Pass {
       }
       dummy.setParameters(params);
       record.getMethods().add(dummy);
-      currentClass.getStaticImports().add(dummy);
+      walker.getCurrentClass().getStaticImports().add(dummy);
       invokes.add(dummy);
     }
   }
@@ -325,9 +323,9 @@ public class CallResolver implements Pass {
       if (staticCall.getTargetRecord() != null) {
         possibleTypes.add(new Type(staticCall.getTargetRecord()));
       }
-    } else if (currentClass != null) {
-      possibleTypes.add(new Type(currentClass.getName()));
-      possibleTypes.addAll(currentClass.getSuperTypes());
+    } else if (walker.getCurrentClass() != null) {
+      possibleTypes.add(new Type(walker.getCurrentClass().getName()));
+      possibleTypes.addAll(walker.getCurrentClass().getSuperTypes());
     }
     return possibleTypes;
   }

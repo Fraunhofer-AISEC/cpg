@@ -245,6 +245,19 @@ public class NodeBuilder {
     return node;
   }
 
+  public static FunctionPointerCallExpression newFunctionPointerCallExpression(
+      String name, String code, Expression instance, Expression pointer) {
+    FunctionPointerCallExpression node = new FunctionPointerCallExpression();
+    node.setInstance(instance);
+    node.setPointer(pointer);
+    node.setName(name);
+    node.setCode(code);
+
+    log(node);
+
+    return node;
+  }
+
   public static UnaryOperator newUnaryOperator(
       String operatorType, boolean postfix, boolean prefix, String code) {
     UnaryOperator node = new UnaryOperator();
