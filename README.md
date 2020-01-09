@@ -110,4 +110,5 @@ An initial publication on the concept of using code property graphs for static a
 [3] is an unrelated, yet similar project by the authors of the above publication, that is used by the open source software Joern [4] for analysing C/C++ code. While [3] is a specification and implementation of the data structure, this project here includes various _Language frontends_ (currently C/C++ and Java, Python to com) and allows creating custom graphs by configuring _Passes_ which extend the graph as necessary for a specific analysis:
 
 [3] https://github.com/ShiftLeftSecurity/codepropertygraph
+
 [4] https://github.com/ShiftLeftSecurity/joern/
