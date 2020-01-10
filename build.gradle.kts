@@ -142,6 +142,10 @@ tasks.named("compileJava") {
   dependsOn(":spotlessApply")
 }
 
+tasks.named("sonarqube") {
+  dependsOn(":jacocoTestReport")
+}
+
 java {
   sourceCompatibility = JavaVersion.VERSION_11
   targetCompatibility = JavaVersion.VERSION_11
