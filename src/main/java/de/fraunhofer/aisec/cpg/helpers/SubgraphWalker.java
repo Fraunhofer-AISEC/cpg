@@ -139,7 +139,10 @@ public class SubgraphWalker {
     list.add(n);
 
     // add all the ast children
-    SubgraphWalker.getAstChildren(n).forEach(node -> list.addAll(flattenAST(node)));
+    list.addAll(
+        SubgraphWalker.getAstChildren(n).stream()
+            .flatMap(node -> flattenAST(node).stream())
+            .collect(Collectors.toSet()));
 
     // sort it
     list.sort(new NodeComparator());
