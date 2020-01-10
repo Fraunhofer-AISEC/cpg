@@ -229,12 +229,15 @@ public class VariableUsageResolver implements Pass {
 
   private ValueDeclaration resolveMember(
       Type containingClass, DeclaredReferenceExpression reference) {
-    Optional<FieldDeclaration> member =
-        TypeManager.getInstance().isUnknown(containingClass)
-            ? Optional.empty()
-            : recordMap.get(containingClass).getFields().stream()
+    Optional<FieldDeclaration> member = Optional.empty();
+    if (!TypeManager.getInstance().isUnknown(containingClass)) {
+      if (recordMap.containsKey(containingClass)) {
+        member =
+            recordMap.get(containingClass).getFields().stream()
                 .filter(f -> f.getName().equals(reference.getName()))
                 .findFirst();
+      }
+    }
     if (member.isEmpty()) {
       member =
           superTypesMap.getOrDefault(containingClass, Collections.emptyList()).stream()
