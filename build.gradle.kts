@@ -40,6 +40,12 @@ plugins {
   id("com.github.johnrengelman.shadow") version "5.2.0"
 }
 
+tasks.jacocoTestReport {
+  reports {
+    xml.isEnabled = true
+  }
+}
+
 group = "de.fraunhofer.aisec"
 version = "1.2-SNAPSHOT"
 
@@ -134,6 +140,10 @@ tasks.named<Test>("test") {
 
 tasks.named("compileJava") {
   dependsOn(":spotlessApply")
+}
+
+tasks.named("sonarqube") {
+  dependsOn(":jacocoTestReport")
 }
 
 java {
