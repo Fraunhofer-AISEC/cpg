@@ -7,7 +7,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  * Models a C/C++ call via a function pointer. These calls may either happen directly (C way: <code>
  * f_ptr(arg_a, arg_b)</code> or equivalently <code>(*f_ptr)(arg_a, arg_b)</code>) or may include a
  * specific object to call the function on (C++ way: <code>(instance.*f_ptr)(arg_a,
- * arg_b)</code> or <code>(*this.*f_ptr)(arg_a, arg_b)</code> or <code>(instance_ptr->*f_ptr)
+ * arg_b)</code> or <code>(*this.*f_ptr)(arg_a, arg_b)</code> or <code>(instance_ptr-&gt;*f_ptr)
  * (arg_a, arg_b)</code>)
  */
 public class FunctionPointerCallExpression extends CallExpression {
