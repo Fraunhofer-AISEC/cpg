@@ -117,26 +117,28 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
     functionDeclaration.setType(Type.createFrom(ctx.getDeclSpecifier().toString()));
     functionDeclaration.getType().setTypeAdjustment(typeAdjustment);
 
-    Statement bodyStatement = this.lang.getStatementHandler().handle(ctx.getBody());
+    if (ctx.getBody() != null) {
+      Statement bodyStatement = this.lang.getStatementHandler().handle(ctx.getBody());
 
-    if (bodyStatement instanceof CompoundStatement) {
-      CompoundStatement body = (CompoundStatement) bodyStatement;
-      List<Statement> statements = body.getStatements();
+      if (bodyStatement instanceof CompoundStatement) {
+        CompoundStatement body = (CompoundStatement) bodyStatement;
+        List<Statement> statements = body.getStatements();
 
-      // get the last statement
-      Statement lastStatement = null;
-      if (statements.size() > 1) {
-        lastStatement = statements.get(statements.size() - 1);
+        // get the last statement
+        Statement lastStatement = null;
+        if (statements.size() > 1) {
+          lastStatement = statements.get(statements.size() - 1);
+        }
+        // make sure, method contains a return statement
+        // todo to-be-discussed: do we need a dummy return statement?
+        if (!(lastStatement instanceof ReturnStatement)) {
+          // statements.add(new StatementHandler(this.lang).handle(new CPPASTReturnStatement()));
+          ReturnStatement returnStatement = NodeBuilder.newReturnStatement("return;");
+          returnStatement.setDummy(true);
+          statements.add(returnStatement);
+        }
+        functionDeclaration.setBody(body);
       }
-      // make sure, method contains a return statement
-      // todo to-be-discussed: do we need a dummy return statement?
-      if (!(lastStatement instanceof ReturnStatement)) {
-        // statements.add(new StatementHandler(this.lang).handle(new CPPASTReturnStatement()));
-        ReturnStatement returnStatement = NodeBuilder.newReturnStatement("return;");
-        returnStatement.setDummy(true);
-        statements.add(returnStatement);
-      }
-      functionDeclaration.setBody(body);
     }
 
     lang.getScopeManager().leaveScope(functionDeclaration);
