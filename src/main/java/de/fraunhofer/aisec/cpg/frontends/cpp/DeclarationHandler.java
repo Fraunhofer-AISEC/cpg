@@ -153,11 +153,6 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
                   .getDeclaratorHandler()
                   .handle((CPPASTCompositeTypeSpecifier) ctx.getDeclSpecifier());
 
-          // cache binding
-          this.lang.cacheDeclaration(
-              ((CPPASTCompositeTypeSpecifier) ctx.getDeclSpecifier()).getName().resolveBinding(),
-              declaration);
-
           return declaration;
         } else {
           log.error(
