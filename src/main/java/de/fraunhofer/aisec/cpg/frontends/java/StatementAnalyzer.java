@@ -238,7 +238,14 @@ public class StatementAnalyzer
   private ForStatement handleForStatement(Statement stmt) {
 
     ForStmt forStmt = stmt.asForStmt();
-    ForStatement statement = NodeBuilder.newForStatement(stmt.toString());
+    String code;
+    Optional<TokenRange> tokenRange = forStmt.getTokenRange();
+    if (tokenRange.isPresent()) {
+      code = tokenRange.get().toString();
+    } else {
+      code = stmt.toString();
+    }
+    ForStatement statement = NodeBuilder.newForStatement(code);
     lang.getScopeManager().enterScope(statement);
 
     if (forStmt.getInitialization().size() > 1) {
