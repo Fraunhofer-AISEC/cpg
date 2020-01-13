@@ -89,6 +89,7 @@ public class Expression extends Statement implements HasType {
     if (!Objects.equals(oldType, type)) {
       this.typeListeners.stream()
           .filter(this::shouldBeNotified)
+          .filter(l -> !l.equals(this))
           .forEach(l -> l.typeChanged(this, oldType));
     }
   }
@@ -109,6 +110,7 @@ public class Expression extends Statement implements HasType {
     if (this.possibleSubTypes.addAll(possibleSubTypes)) {
       this.typeListeners.stream()
           .filter(this::shouldBeNotified)
+          .filter(l -> !l.equals(this))
           .forEach(l -> l.possibleSubTypesChanged(this, oldSubTypes));
     }
   }
@@ -126,11 +128,13 @@ public class Expression extends Statement implements HasType {
     if (!Objects.equals(oldType, type)) {
       this.typeListeners.stream()
           .filter(this::shouldBeNotified)
+          .filter(l -> !l.equals(this))
           .forEach(l -> l.typeChanged(this, oldType));
     }
     if (oldSubTypes.size() != 1 || !oldSubTypes.contains(type))
       this.typeListeners.stream()
           .filter(this::shouldBeNotified)
+          .filter(l -> !l.equals(this))
           .forEach(l -> l.possibleSubTypesChanged(this, oldSubTypes));
   }
 
