@@ -128,13 +128,15 @@ public class UnaryOperator extends Expression implements TypeListener {
     Type previous = this.type;
     Type newType = src.getType();
 
+    setType(newType);
+
     if (operatorCode.equals("*")) {
       newType = newType.dereference();
     } else if (operatorCode.equals("&")) {
       newType = newType.reference();
     }
 
-    setType(newType);
+    this.type = TypeManager.getInstance().getCommonType(getPossibleSubTypes()).orElse(newType);
 
     if (!previous.equals(this.type)) {
       this.type.setTypeOrigin(Origin.DATAFLOW);
@@ -143,8 +145,10 @@ public class UnaryOperator extends Expression implements TypeListener {
 
   @Override
   public void possibleSubTypesChanged(HasType src, Set<Type> oldSubTypes) {
-    Set<Type> currSubTypes = new HashSet<>(getPossibleSubTypes());
+    Set<Type> currSubTypes = getPossibleSubTypes();
     Set<Type> newSubTypes = src.getPossibleSubTypes();
+
+    setPossibleSubTypes(newSubTypes); // notify about the new type
 
     if (operatorCode.equals("*")) {
       newSubTypes = newSubTypes.stream().map(Type::dereference).collect(Collectors.toSet());
@@ -153,7 +157,6 @@ public class UnaryOperator extends Expression implements TypeListener {
     }
 
     currSubTypes.addAll(newSubTypes);
-    setPossibleSubTypes(currSubTypes);
   }
 
   @Override
