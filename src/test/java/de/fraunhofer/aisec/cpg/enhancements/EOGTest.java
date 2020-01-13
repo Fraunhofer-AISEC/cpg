@@ -30,6 +30,7 @@ import static de.fraunhofer.aisec.cpg.helpers.Util.Connect.NODE;
 import static de.fraunhofer.aisec.cpg.helpers.Util.Connect.SUBTREE;
 import static de.fraunhofer.aisec.cpg.helpers.Util.Edge.ENTRIES;
 import static de.fraunhofer.aisec.cpg.helpers.Util.Edge.EXITS;
+import static de.fraunhofer.aisec.cpg.helpers.Util.Quantifier.ALL;
 import static de.fraunhofer.aisec.cpg.helpers.Util.Quantifier.ANY;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -153,6 +154,23 @@ public class EOGTest {
             ifBranched,
             ifBranched.getThenStatement(),
             ifBranched.getElseStatement()));
+  }
+
+  @Test
+  void testConditionShortCircuit() throws TransactionException {
+    List<Node> nodes = translateToNodes("src/test/resources/cfg/ShortCircuit.java");
+
+    List<BinaryOperator> binaryOperators =
+        Util.filterCast(nodes, BinaryOperator.class).stream()
+            .filter(bo -> bo.getOperatorCode().equals("&&") || bo.getOperatorCode().equals("||"))
+            .collect(Collectors.toList());
+
+    for (BinaryOperator bo : binaryOperators) {
+      assertTrue(Util.eogConnect(ALL, SUBTREE, EXITS, bo.getLhs(), SUBTREE, bo.getRhs()));
+      assertTrue(Util.eogConnect(ALL, SUBTREE, EXITS, bo.getLhs(), NODE, bo));
+
+      assertTrue(bo.getLhs().getNextEOG().size() == 2);
+    }
   }
 
   @Test
