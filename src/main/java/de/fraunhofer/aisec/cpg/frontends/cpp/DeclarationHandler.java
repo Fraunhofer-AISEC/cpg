@@ -144,21 +144,28 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
   }
 
   private Declaration handleSimpleDeclaration(CPPASTSimpleDeclaration ctx) {
-    if (ctx.getDeclarators().length == 0
-        && ctx.getDeclSpecifier() != null
-        && ctx.getDeclSpecifier() instanceof CPPASTCompositeTypeSpecifier) {
-      // probably a class or struct declaration
-      Declaration declaration =
-          this.lang
-              .getDeclaratorHandler()
-              .handle((CPPASTCompositeTypeSpecifier) ctx.getDeclSpecifier());
+    if (ctx.getDeclarators().length == 0) {
+      if (ctx.getDeclSpecifier() != null) {
+        if (ctx.getDeclSpecifier() instanceof CPPASTCompositeTypeSpecifier) {
+          // probably a class or struct declaration
+          Declaration declaration =
+              this.lang
+                  .getDeclaratorHandler()
+                  .handle((CPPASTCompositeTypeSpecifier) ctx.getDeclSpecifier());
 
-      // cache binding
-      this.lang.cacheDeclaration(
-          ((CPPASTCompositeTypeSpecifier) ctx.getDeclSpecifier()).getName().resolveBinding(),
-          declaration);
+          // cache binding
+          this.lang.cacheDeclaration(
+              ((CPPASTCompositeTypeSpecifier) ctx.getDeclSpecifier()).getName().resolveBinding(),
+              declaration);
 
-      return declaration;
+          return declaration;
+        } else {
+          log.error(
+              "Unknown Declspecifier in SimpleDeclaration: {}", ctx.getDeclSpecifier().getClass());
+        }
+      } else {
+        log.error("Declspecifier is null");
+      }
     } else if (ctx.getDeclarators().length == 1) {
 
       List<Declaration> handle = (this.lang).getDeclarationListHandler().handle(ctx);
