@@ -95,6 +95,18 @@ public class ScopeManager {
     currentScope = scope;
   }
 
+  public boolean isInBlock() {
+    return this.getFirstScopeThat(scope -> scope instanceof BlockScope) != null;
+  }
+
+  public boolean isInFunction() {
+    return this.getFirstScopeThat(scope -> scope instanceof FunctionScope) != null;
+  }
+
+  public boolean isInRecord() {
+    return this.getFirstScopeThat(scope -> scope instanceof RecordScope) != null;
+  }
+
   @Nullable
   public CompoundStatement getCurrentBlock() {
     Scope blockScope = this.getFirstScopeThat(scope -> scope instanceof BlockScope);
@@ -125,6 +137,22 @@ public class ScopeManager {
       return null;
     }
     return (FunctionDeclaration) node;
+  }
+
+  @Nullable
+  public RecordDeclaration getCurrentRecord() {
+    Scope recordScope = getFirstScopeThat(scope -> scope instanceof RecordScope);
+    if (recordScope == null) {
+      LOGGER.error("Cannot get current function. No scope.");
+      return null;
+    }
+
+    Node node = recordScope.getAstNode();
+    if (node == null || !(node instanceof RecordDeclaration)) {
+      LOGGER.error("Cannot get current function. No AST node {}", recordScope.toString());
+      return null;
+    }
+    return (RecordDeclaration) node;
   }
 
   public List<ValueDeclaration> getGlobals() {
@@ -445,17 +473,27 @@ public class ScopeManager {
   }
 
   public void connectToLocal(DeclaredReferenceExpression referenceExpression) {
-    CompoundStatement currentBlock = getCurrentBlock();
-    if (currentBlock != null
-        && expressionRefersToDeclaration(referenceExpression, currentBlock.getLocals())) {
-      return;
-    }
-    FunctionDeclaration currentFunction = getCurrentFunction();
-    if (currentFunction != null
-        && expressionRefersToDeclaration(referenceExpression, currentFunction.getParameters())) {
-      return;
+    if (isInBlock()) {
+      CompoundStatement currentBlock = getCurrentBlock();
+      if (expressionRefersToDeclaration(referenceExpression, currentBlock.getLocals())) {
+        return;
+      }
     }
 
+    if (isInFunction()) {
+      FunctionDeclaration currentFunction = getCurrentFunction();
+      if (currentFunction != null
+          && expressionRefersToDeclaration(referenceExpression, currentFunction.getParameters())) {
+        return;
+      }
+    }
+
+    if (isInRecord()) {
+      RecordDeclaration currentRecord = getCurrentRecord();
+      if (expressionRefersToDeclaration(referenceExpression, currentRecord.getFields())) {
+        return;
+      }
+    }
     expressionRefersToDeclaration(referenceExpression, getGlobals());
   }
 
@@ -490,18 +528,25 @@ public class ScopeManager {
   public Declaration getDeclarationForName(String name) {
     // first, check locals
     Declaration declaration;
-    CompoundStatement currentBlock = getCurrentBlock();
-    if (currentBlock != null) {
+    if (isInBlock()) {
+      CompoundStatement currentBlock = getCurrentBlock();
       declaration = getForName(currentBlock.getLocals(), name);
 
       if (declaration != null) {
         return declaration;
       }
     }
-
-    FunctionDeclaration currentFunction = getCurrentFunction();
-    if (currentFunction != null) {
+    if (isInFunction()) {
+      FunctionDeclaration currentFunction = getCurrentFunction();
       declaration = getForName(currentFunction.getParameters(), name);
+
+      if (declaration != null) {
+        return declaration;
+      }
+    }
+    if (isInRecord()) {
+      RecordDeclaration currentRecord = getCurrentRecord();
+      declaration = getForName(currentRecord.getFields(), name);
 
       if (declaration != null) {
         return declaration;
