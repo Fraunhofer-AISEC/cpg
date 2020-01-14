@@ -235,7 +235,7 @@ public class ScopeManager {
    */
   @Nullable
   public Scope leaveScope(Node nodeToLeave) {
-    Scope leaveScope = getFirstScopeThat(scope -> scope.astNode == nodeToLeave);
+    Scope leaveScope = getFirstScopeThat(scope -> scope.astNode.equals(nodeToLeave));
     if (leaveScope == null) {
       if (scopeMap.containsKey(nodeToLeave)) {
         LOGGER.error(
