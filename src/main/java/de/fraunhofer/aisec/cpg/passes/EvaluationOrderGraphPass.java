@@ -398,8 +398,6 @@ public class EvaluationOrderGraphPass implements Pass {
 
       List<Node> shortCircuitNodes = new ArrayList<>();
 
-      lang.getScopeManager().leaveScope(statement);
-
       // Two operators that don't evaluate the second operator if the first evaluates to a certain
       // value.
       if (binOp.getOperatorCode().equals("&&") || binOp.getOperatorCode().equals("||")) {

@@ -27,17 +27,37 @@
 package de.fraunhofer.aisec.cpg.helpers;
 
 import de.fraunhofer.aisec.cpg.graph.Type;
-import org.neo4j.ogm.typeconversion.AttributeConverter;
+import java.util.HashMap;
+import java.util.Map;
+import org.neo4j.ogm.typeconversion.CompositeAttributeConverter;
 
-public class TypeConverter implements AttributeConverter<Type, String> {
+/**
+ * The {@link TypeConverter} is a helper converter that takes the Object-based {@link Type} and
+ * serializes into a flatten structured in the database graph. It stores the type as a string
+ * representation, using {@link Type#toString} as well as additional information such as modifiers.
+ */
+public class TypeConverter implements CompositeAttributeConverter<Type> {
 
   @Override
-  public String toGraphProperty(Type value) {
-    return value.toString();
+  public Map<String, ?> toGraphProperties(Type value) {
+    Map<String, String> properties = new HashMap<>();
+    if (value != null) {
+      // the type as string representation
+      properties.put("type", value.toString());
+      properties.put("typeName", value.getTypeName());
+      properties.put("typeModifier", value.getTypeModifier());
+      properties.put("typeAdjustment", value.getTypeAdjustment());
+    }
+
+    return properties;
   }
 
   @Override
-  public Type toEntityAttribute(String value) {
-    return Type.createFrom(value);
+  public Type toEntityAttribute(Map<String, ?> value) {
+    try {
+      return Type.createFrom((String) value.get("type"));
+    } catch (NullPointerException e) {
+      return Type.UNKNOWN;
+    }
   }
 }

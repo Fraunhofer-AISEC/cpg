@@ -24,10 +24,11 @@
  *
  */
 
-package de.fraunhofer.aisec.cpg.graph;
+package de.fraunhofer.aisec.cpg.helpers;
 
 import static java.lang.Math.toIntExact;
 
+import de.fraunhofer.aisec.cpg.graph.Region;
 import java.util.HashMap;
 import java.util.Map;
 import org.neo4j.ogm.typeconversion.CompositeAttributeConverter;
@@ -35,7 +36,6 @@ import org.neo4j.ogm.typeconversion.CompositeAttributeConverter;
 public class RegionConverter implements CompositeAttributeConverter<Region> {
 
   @Override
-  @SuppressWarnings("unchecked")
   public Map<String, ?> toGraphProperties(Region value) {
     Map<String, Integer> properties = new HashMap<>();
     if (value != null) {

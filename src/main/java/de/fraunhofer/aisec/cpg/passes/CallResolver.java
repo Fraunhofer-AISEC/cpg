@@ -179,16 +179,16 @@ public class CallResolver implements Pass {
         // Find invokes by supertypes
         if (invocationCandidates.isEmpty()) {
           String[] nameParts = call.getName().split("\\.");
-          if (nameParts.length>0) {
+          if (nameParts.length > 0) {
             List<Type> signature = call.getSignature();
             Set<RecordDeclaration> records =
-                    possibleContainingTypes.stream()
-                                           .map(t -> recordMap.get(t.getTypeName()))
-                                           .filter(Objects::nonNull)
-                                           .collect(Collectors.toSet());
+                possibleContainingTypes.stream()
+                    .map(t -> recordMap.get(t.getTypeName()))
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toSet());
             invocationCandidates =
-                    getInvocationCandidatesFromParents(
-                            nameParts[nameParts.length - 1], signature, records);
+                getInvocationCandidatesFromParents(
+                    nameParts[nameParts.length - 1], signature, records);
           }
         }
 

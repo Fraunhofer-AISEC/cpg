@@ -204,7 +204,10 @@ public abstract class LanguageFrontend {
    */
   public String getCodeOfSubregion(
       de.fraunhofer.aisec.cpg.graph.Node node, Region nodeRegion, Region subRegion) {
-    String code = node.toString();
+    String code = node.getCode();
+    if (code == null) {
+      return "";
+    }
     String nlType = getNewLineType(node);
     int start;
     int end;
