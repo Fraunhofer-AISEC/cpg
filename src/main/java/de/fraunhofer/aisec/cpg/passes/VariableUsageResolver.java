@@ -156,15 +156,14 @@ public class VariableUsageResolver implements Pass {
           && recordDeclType != null
           && recordMap.containsKey(recordDeclType)) {
         // Maybe we are referring to a field instead of a local var
-        log.info("did not find a declaration for {}", current.getCode());
         refersTo =
             Optional.of(resolveMember(recordDeclType, (DeclaredReferenceExpression) current));
-      } else {
-        log.debug("found a declaration for {}", current.getCode());
       }
 
       if (refersTo.isPresent()) {
         ref.setRefersTo(refersTo.get());
+      } else {
+        log.info("did not find a declaration for {}", current.getCode());
       }
     }
   }
