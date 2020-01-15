@@ -280,14 +280,14 @@ public class JavaLanguageFrontend extends LanguageFrontend {
   }
 
   public String recoverTypeFromUnsolvedException(Throwable ex) {
-    if (ex.getCause() instanceof UnsolvedSymbolException
-        || (ex.getCause() == null && ex instanceof UnsolvedSymbolException)) {
-      String qualifier = ((UnsolvedSymbolException) ex).getName();
-      //      if (ex.getCause() == null) {
-      //        qualifier = ((UnsolvedSymbolException) ex).getName();
-      //      } else {
-      //        qualifier = ((UnsolvedSymbolException) ex.getCause()).getName();
-      //      }
+    if (ex instanceof UnsolvedSymbolException
+        || (ex.getCause() != null && ex.getCause() instanceof UnsolvedSymbolException)) {
+      String qualifier;
+      if (ex instanceof UnsolvedSymbolException) {
+        qualifier = ((UnsolvedSymbolException) ex).getName();
+      } else {
+        qualifier = ((UnsolvedSymbolException) ex.getCause()).getName();
+      }
       // this comes from the Javaparser!
       if (qualifier.startsWith("We are unable to find the value declaration corresponding to")
           || qualifier.startsWith("Solving ")) {
