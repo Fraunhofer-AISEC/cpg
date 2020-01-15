@@ -48,6 +48,7 @@ import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTDesignator;
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTExpression;
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTInitializerClause;
 import org.eclipse.cdt.internal.core.dom.parser.CStringValue;
+import org.eclipse.cdt.internal.core.dom.parser.ProblemBinding;
 import org.eclipse.cdt.internal.core.dom.parser.ProblemType;
 import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTArrayDesignator;
 import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTArrayRangeDesignator;
@@ -633,7 +634,9 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
 
     IType expressionType = expressionTypeProxy(ctx);
 
-    if (expressionType == null || expressionType instanceof ProblemType) {
+    if (expressionType == null
+        || expressionType instanceof ProblemType
+        || expressionType instanceof ProblemBinding) {
       log.debug("CDT could not deduce type. Type is set to null");
     } else {
       binaryOperator.setType(Type.createFrom(expressionTypeProxy(ctx).toString()));
