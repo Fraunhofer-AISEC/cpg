@@ -27,29 +27,7 @@
 package de.fraunhofer.aisec.cpg.frontends.cpp;
 
 import de.fraunhofer.aisec.cpg.frontends.Handler;
-import de.fraunhofer.aisec.cpg.graph.ArraySubscriptionExpression;
-import de.fraunhofer.aisec.cpg.graph.BinaryOperator;
-import de.fraunhofer.aisec.cpg.graph.CallExpression;
-import de.fraunhofer.aisec.cpg.graph.CastExpression;
-import de.fraunhofer.aisec.cpg.graph.CompoundStatementExpression;
-import de.fraunhofer.aisec.cpg.graph.ConditionalExpression;
-import de.fraunhofer.aisec.cpg.graph.Declaration;
-import de.fraunhofer.aisec.cpg.graph.DeclaredReferenceExpression;
-import de.fraunhofer.aisec.cpg.graph.DeleteExpression;
-import de.fraunhofer.aisec.cpg.graph.DesignatedInitializerExpression;
-import de.fraunhofer.aisec.cpg.graph.Expression;
-import de.fraunhofer.aisec.cpg.graph.ExpressionList;
-import de.fraunhofer.aisec.cpg.graph.HasType;
-import de.fraunhofer.aisec.cpg.graph.InitializerListExpression;
-import de.fraunhofer.aisec.cpg.graph.Literal;
-import de.fraunhofer.aisec.cpg.graph.MemberExpression;
-import de.fraunhofer.aisec.cpg.graph.NewExpression;
-import de.fraunhofer.aisec.cpg.graph.NodeBuilder;
-import de.fraunhofer.aisec.cpg.graph.Type;
-import de.fraunhofer.aisec.cpg.graph.TypeIdExpression;
-import de.fraunhofer.aisec.cpg.graph.TypeManager;
-import de.fraunhofer.aisec.cpg.graph.UnaryOperator;
-import de.fraunhofer.aisec.cpg.graph.ValueDeclaration;
+import de.fraunhofer.aisec.cpg.graph.*;
 import java.util.ArrayList;
 import java.util.List;
 import org.eclipse.cdt.core.dom.ast.IASTBinaryExpression;
@@ -155,7 +133,12 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
     try {
       expressionType = expression.getExpressionType();
     } catch (AssertionError e) {
-      log.warn("AssertionError when trying to get expression type: {}", e.getMessage());
+      Region regionFromRawNode = lang.getRegionFromRawNode(expression);
+      String codeFromRawNode = lang.getCodeFromRawNode(expression);
+      log.warn(
+          "Unknown Expression Type in Line {}, code : {}",
+          regionFromRawNode.getStartLine(),
+          codeFromRawNode);
     }
 
     return expressionType;
