@@ -225,12 +225,17 @@ public class VariableUsageResolver implements Pass {
     }
 
     if (recordMap.containsKey(reference.getType())) {
+      RecordDeclaration recordDeclaration = recordMap.get(reference.getType());
       if (reference instanceof StaticReferenceExpression) {
-        return recordMap.get(reference.getType());
+        return recordDeclaration;
       } else {
         // check if we have this type as a class in our graph. If so, we can refer to its "this"
         // field
-        return recordMap.get(reference.getType()).getThis();
+        if (recordDeclaration.getThis() != null) {
+          return recordDeclaration.getThis();
+        } else {
+          return recordDeclaration;
+        }
       }
     } else {
       log.info(
