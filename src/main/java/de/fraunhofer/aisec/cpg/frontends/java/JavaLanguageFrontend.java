@@ -73,7 +73,9 @@ import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Optional;
 import org.checkerframework.checker.nullness.qual.NonNull;
 
@@ -209,7 +211,7 @@ public class JavaLanguageFrontend extends LanguageFrontend {
         return optional.get().toString();
       }
     }
-    return null;
+    return astNode.toString();
   }
 
   @Override
@@ -280,12 +282,12 @@ public class JavaLanguageFrontend extends LanguageFrontend {
   public String recoverTypeFromUnsolvedException(Throwable ex) {
     if (ex.getCause() instanceof UnsolvedSymbolException
         || (ex.getCause() == null && ex instanceof UnsolvedSymbolException)) {
-      String qualifier;
-      if (ex.getCause() == null) {
-        qualifier = ((UnsolvedSymbolException) ex).getName();
-      } else {
-        qualifier = ((UnsolvedSymbolException) ex.getCause()).getName();
-      }
+      String qualifier = ((UnsolvedSymbolException) ex).getName();
+      //      if (ex.getCause() == null) {
+      //        qualifier = ((UnsolvedSymbolException) ex).getName();
+      //      } else {
+      //        qualifier = ((UnsolvedSymbolException) ex.getCause()).getName();
+      //      }
       // this comes from the Javaparser!
       if (qualifier.startsWith("We are unable to find the value declaration corresponding to")
           || qualifier.startsWith("Solving ")) {
@@ -303,10 +305,19 @@ public class JavaLanguageFrontend extends LanguageFrontend {
 
   public String getQualifiedNameFromImports(String className) {
     if (context != null) {
+      List<String> potentialClassNames = new ArrayList<>();
+      String prefix = "";
+      for (String s : className.split("\\.")) {
+        potentialClassNames.add(prefix + s);
+        prefix = prefix + s + ".";
+      }
       // see if we can make the qualifier more precise using the imports
       for (ImportDeclaration importDeclaration : context.getImports()) {
-        if (importDeclaration.getName().asString().endsWith("." + className)) {
-          return importDeclaration.getName().asString();
+        for (String cn : potentialClassNames) {
+          if (importDeclaration.getName().asString().endsWith("." + cn)) {
+            prefix = importDeclaration.getName().asString();
+            return prefix.substring(0, prefix.lastIndexOf(cn)) + className;
+          }
         }
       }
     }
