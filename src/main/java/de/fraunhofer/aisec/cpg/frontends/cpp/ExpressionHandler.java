@@ -27,9 +27,34 @@
 package de.fraunhofer.aisec.cpg.frontends.cpp;
 
 import de.fraunhofer.aisec.cpg.frontends.Handler;
-import de.fraunhofer.aisec.cpg.graph.*;
+import de.fraunhofer.aisec.cpg.graph.ArraySubscriptionExpression;
+import de.fraunhofer.aisec.cpg.graph.BinaryOperator;
+import de.fraunhofer.aisec.cpg.graph.CallExpression;
+import de.fraunhofer.aisec.cpg.graph.CastExpression;
+import de.fraunhofer.aisec.cpg.graph.CompoundStatementExpression;
+import de.fraunhofer.aisec.cpg.graph.ConditionalExpression;
+import de.fraunhofer.aisec.cpg.graph.Declaration;
+import de.fraunhofer.aisec.cpg.graph.DeclaredReferenceExpression;
+import de.fraunhofer.aisec.cpg.graph.DeleteExpression;
+import de.fraunhofer.aisec.cpg.graph.DesignatedInitializerExpression;
+import de.fraunhofer.aisec.cpg.graph.Expression;
+import de.fraunhofer.aisec.cpg.graph.ExpressionList;
+import de.fraunhofer.aisec.cpg.graph.HasType;
+import de.fraunhofer.aisec.cpg.graph.InitializerListExpression;
+import de.fraunhofer.aisec.cpg.graph.Literal;
+import de.fraunhofer.aisec.cpg.graph.MemberExpression;
+import de.fraunhofer.aisec.cpg.graph.NewExpression;
+import de.fraunhofer.aisec.cpg.graph.NodeBuilder;
+import de.fraunhofer.aisec.cpg.graph.Region;
+import de.fraunhofer.aisec.cpg.graph.Type;
+import de.fraunhofer.aisec.cpg.graph.TypeIdExpression;
+import de.fraunhofer.aisec.cpg.graph.TypeManager;
+import de.fraunhofer.aisec.cpg.graph.UnaryOperator;
+import de.fraunhofer.aisec.cpg.graph.ValueDeclaration;
+import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import org.eclipse.cdt.core.dom.ast.IASTBinaryExpression;
 import org.eclipse.cdt.core.dom.ast.IASTDeclSpecifier;
 import org.eclipse.cdt.core.dom.ast.IASTExpression;
@@ -503,8 +528,9 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
 
   private ExpressionList handleExpressionList(CPPASTExpressionList exprList) {
     ExpressionList expressionList = NodeBuilder.newExpressionList(exprList.getRawSignature());
-    for (IASTExpression expr : exprList.getExpressions())
+    for (IASTExpression expr : exprList.getExpressions()) {
       expressionList.getExpressions().add(handle(expr));
+    }
 
     return expressionList;
   }
@@ -656,11 +682,11 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
     }
 
     if (type.isSameType(CPPBasicType.INT)) {
-      return NodeBuilder.newLiteral(
-          value.numberValue().intValue(), generatedType, ctx.getRawSignature());
+      // the evaluated value is very wrong here, so we need to use the raw code
+      return NodeBuilder.newLiteral(asNumber(ctx), generatedType, ctx.getRawSignature());
     } else if (type.isSameType(CPPBasicType.LONG)) {
-      return NodeBuilder.newLiteral(
-          value.numberValue().longValue(), generatedType, ctx.getRawSignature());
+      // the evaluated value is very wrong here, so we need to use the raw code
+      return NodeBuilder.newLiteral(asNumber(ctx), generatedType, ctx.getRawSignature());
     } else if (type.isSameType(CPPBasicType.BOOLEAN)) {
       return NodeBuilder.newLiteral(
           value.numberValue().intValue() == 1, generatedType, ctx.getRawSignature());
@@ -679,6 +705,29 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
     }
 
     return NodeBuilder.newLiteral(value.toString(), generatedType, ctx.getRawSignature());
+  }
+
+  private Number asNumber(CPPASTLiteralExpression ctx) {
+    IValue value = ctx.getEvaluation().getValue();
+    IType type = ctx.getExpressionType();
+
+    if (type.isSameType(CPPBasicType.INT)) {
+      if (Objects.equals(ctx.toString(), "2147483648")) {
+        return 2147483648L;
+      } else {
+        return value.numberValue().intValue();
+      }
+    }
+
+    if (type.isSameType(CPPBasicType.LONG)) {
+      if (Objects.equals(ctx.toString(), "9223372036854775808L")) {
+        return new BigInteger("9223372036854775808");
+      } else {
+        return value.numberValue();
+      }
+    }
+
+    return null;
   }
 
   private InitializerListExpression handleInitializerList(CPPASTInitializerList ctx) {

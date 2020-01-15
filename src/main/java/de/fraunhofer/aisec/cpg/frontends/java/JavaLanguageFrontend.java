@@ -372,7 +372,7 @@ public class JavaLanguageFrontend extends LanguageFrontend {
   @Override
   public void cleanup() {
     JavaParserFacade.clearInstances();
-    
+
     super.cleanup();
     context = null;
     expressionHandler = null;

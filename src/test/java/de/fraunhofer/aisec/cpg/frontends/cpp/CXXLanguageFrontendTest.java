@@ -74,6 +74,7 @@ import de.fraunhofer.aisec.cpg.helpers.NodeComparator;
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker;
 import de.fraunhofer.aisec.cpg.helpers.Util;
 import java.io.File;
+import java.math.BigInteger;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -94,6 +95,43 @@ class CXXLanguageFrontendTest {
   @BeforeEach
   void setUp() {
     config = TranslationConfiguration.builder().defaultPasses().build();
+  }
+
+  @Test
+  void testLargeNegativeNumber() throws TranslationException {
+    TranslationUnitDeclaration tu =
+        new CXXLanguageFrontend(config)
+            .parse(new File("src/test/resources/largenegativenumber.cpp"));
+
+    FunctionDeclaration main =
+        tu.getDeclarationByName("main", FunctionDeclaration.class).orElse(null);
+    assertNotNull(main);
+
+    VariableDeclaration a = main.getVariableDeclarationByName("a").orElse(null);
+    assertNotNull(a);
+    assertEquals(
+        1,
+        ((Literal) Objects.requireNonNull(a.getInitializerAs(UnaryOperator.class)).getInput())
+            .getValue());
+
+    // there are no negative literals, so the construct "-2147483648" is
+    // a unary expression and the literal "2147483648". Since "2147483648" is too large to fit
+    // in an integer, it should be automatically converted to a long. The resulting value
+    // -2147483648 however is small enough to fit into an int, so it is ok for the variable a to
+    // have an int type
+    VariableDeclaration b = main.getVariableDeclarationByName("b").orElse(null);
+    assertNotNull(b);
+    assertEquals(
+        2147483648L,
+        ((Literal) Objects.requireNonNull(b.getInitializerAs(UnaryOperator.class)).getInput())
+            .getValue());
+
+    VariableDeclaration c = main.getVariableDeclarationByName("c").orElse(null);
+    assertNotNull(c);
+    assertEquals(
+        new BigInteger("9223372036854775808"),
+        ((Literal) Objects.requireNonNull(c.getInitializerAs(UnaryOperator.class)).getInput())
+            .getValue());
   }
 
   @Test

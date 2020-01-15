@@ -402,7 +402,7 @@ public class ExpressionHandler
     String value = literalExpr.toString();
     if (literalExpr instanceof IntegerLiteralExpr) {
       return NodeBuilder.newLiteral(
-          literalExpr.asIntegerLiteralExpr().asInt(), Type.createFrom("int"), value);
+          literalExpr.asIntegerLiteralExpr().asNumber(), Type.createFrom("int"), value);
     } else if (literalExpr instanceof StringLiteralExpr) {
       return NodeBuilder.newLiteral(
           literalExpr.asStringLiteralExpr().asString(), Type.createFrom("java.lang.String"), value);
@@ -417,7 +417,7 @@ public class ExpressionHandler
           literalExpr.asDoubleLiteralExpr().asDouble(), Type.createFrom("double"), value);
     } else if (literalExpr instanceof LongLiteralExpr) {
       return NodeBuilder.newLiteral(
-          literalExpr.asLongLiteralExpr().asLong(), Type.createFrom("long"), value);
+          literalExpr.asLongLiteralExpr().asNumber(), Type.createFrom("long"), value);
     } else if (literalExpr instanceof NullLiteralExpr) {
       return NodeBuilder.newLiteral(null, Type.createFrom("null"), value);
     }
