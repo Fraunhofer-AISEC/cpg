@@ -163,7 +163,12 @@ public class VariableUsageResolver implements Pass {
       if (refersTo.isPresent()) {
         ref.setRefersTo(refersTo.get());
       } else {
-        log.info("did not find a declaration for {}", current.getCode());
+        Region region = current.getRegion();
+        int startLine = -1;
+        if (region != null) {
+          startLine = region.getStartLine();
+        }
+        log.info("did not find a declaration for {} (line {})", current.getCode(), startLine);
       }
     }
   }

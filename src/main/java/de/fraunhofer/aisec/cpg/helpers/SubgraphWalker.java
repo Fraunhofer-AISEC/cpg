@@ -27,7 +27,6 @@
 package de.fraunhofer.aisec.cpg.helpers;
 
 import de.fraunhofer.aisec.cpg.graph.*;
-
 import java.lang.annotation.AnnotationFormatError;
 import java.lang.reflect.Field;
 import java.util.ArrayDeque;
@@ -380,7 +379,7 @@ public class SubgraphWalker {
         if (node instanceof RecordDeclaration
             || node instanceof CompoundStatement
             || node instanceof FunctionDeclaration
-                // can also be a translationunit for global (c) functions
+            // can also be a translationunit for global (c) functions
             || node instanceof TranslationUnitDeclaration) {
           parentBlock = node;
           break;
