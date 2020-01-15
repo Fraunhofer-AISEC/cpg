@@ -191,7 +191,7 @@ public class CallResolver implements Pass {
           }
         }
 
-        if (!(call instanceof MemberCallExpression || call instanceof StaticCallExpression)) {
+        if (curClass != null && !(call instanceof MemberCallExpression || call instanceof StaticCallExpression)) {
           call.setBase(curClass.getThis());
         }
         call.setInvokes(invocationCandidates);
