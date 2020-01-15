@@ -129,7 +129,7 @@ public class VariableUsageResolver implements Pass {
     }
   }
 
-  private void findRecordsAndEnums(Node node) {
+  private void findRecordsAndEnums(Node node, RecordDeclaration curClass) {
     if (node instanceof RecordDeclaration) {
       Type type = new Type(node.getName());
       recordMap.putIfAbsent(type, (RecordDeclaration) node);
@@ -139,20 +139,26 @@ public class VariableUsageResolver implements Pass {
     }
   }
 
-  private void resolveLocalVarUsage(Type currentClass, Node parent, Node current) {
+  private void resolveLocalVarUsage(RecordDeclaration currentClass, Node parent, Node current) {
     if (current instanceof DeclaredReferenceExpression) {
       DeclaredReferenceExpression ref = (DeclaredReferenceExpression) current;
       Optional<? extends ValueDeclaration> refersTo =
           walker.getDeclarationForScope(parent, ref.getName());
 
+      Type recordDeclType = null;
+      if (currentClass != null) {
+        recordDeclType = new Type(currentClass.getName());
+      }
+
       // only add new nodes for non-static unknown
       if (refersTo.isEmpty()
           && !(current instanceof StaticReferenceExpression)
-          && currentClass != null
-          && recordMap.containsKey(currentClass)) {
+          && recordDeclType != null
+          && recordMap.containsKey(recordDeclType)) {
         // Maybe we are referring to a field instead of a local var
         log.info("did not find a declaration for {}", current.getCode());
-        refersTo = Optional.of(resolveMember(currentClass, (DeclaredReferenceExpression) current));
+        refersTo =
+            Optional.of(resolveMember(recordDeclType, (DeclaredReferenceExpression) current));
       } else {
         log.debug("found a declaration for {}", current.getCode());
       }
@@ -163,7 +169,7 @@ public class VariableUsageResolver implements Pass {
     }
   }
 
-  private void resolveFieldUsages(Node current) {
+  private void resolveFieldUsages(Node current, RecordDeclaration curClass) {
     if (current instanceof MemberExpression) {
       MemberExpression memberExpression = (MemberExpression) current;
       Node base = memberExpression.getBase();
@@ -184,6 +190,9 @@ public class VariableUsageResolver implements Pass {
           Type baseType = Type.UNKNOWN;
           if (base instanceof HasType) {
             baseType = ((HasType) base).getType();
+          }
+          if (base instanceof RecordDeclaration) {
+            baseType = new Type(base.getName());
           }
           member =
               base == null
@@ -215,10 +224,14 @@ public class VariableUsageResolver implements Pass {
       return enumMap.get(reference.getType());
     }
 
-    // check if we have this type as a class in our graph. If so, we can refer to its "this"
-    // field
     if (recordMap.containsKey(reference.getType())) {
-      return recordMap.get(reference.getType()).getThis();
+      if (reference instanceof StaticReferenceExpression) {
+        return recordMap.get(reference.getType());
+      } else {
+        // check if we have this type as a class in our graph. If so, we can refer to its "this"
+        // field
+        return recordMap.get(reference.getType()).getThis();
+      }
     } else {
       log.info(
           "Type declaration for {} not found in graph, using dummy to collect all " + "usages",

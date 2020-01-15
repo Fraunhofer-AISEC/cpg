@@ -82,14 +82,12 @@ public class CallResolver implements Pass {
 
   private Map<String, RecordDeclaration> recordMap = new HashMap<>();
   private Map<FunctionDeclaration, Type> containingType = new HashMap<>();
-  @Nullable private RecordDeclaration currentClass;
   @Nullable private TranslationUnitDeclaration currentTU;
   private LanguageFrontend lang;
 
   @Override
   public void cleanup() {
     this.containingType.clear();
-    this.currentClass = null;
     this.currentTU = null;
   }
 
@@ -121,19 +119,20 @@ public class CallResolver implements Pass {
     }
   }
 
-  private void findRecords(@NonNull Node node) {
+  private void findRecords(@NonNull Node node, RecordDeclaration curClass) {
     if (node instanceof RecordDeclaration) {
       recordMap.putIfAbsent(node.getName(), (RecordDeclaration) node);
     }
   }
 
-  private void registerMethods(@NonNull Type currentClass, Node parent, @NonNull Node currentNode) {
+  private void registerMethods(
+      @NonNull RecordDeclaration currentClass, Node parent, @NonNull Node currentNode) {
     if (currentNode instanceof MethodDeclaration) {
-      containingType.put((FunctionDeclaration) currentNode, currentClass);
+      containingType.put((FunctionDeclaration) currentNode, new Type(currentClass.getName()));
     }
   }
 
-  private void resolve(@NonNull Node node) {
+  private void resolve(@NonNull Node node, RecordDeclaration curClass) {
     if (node instanceof TranslationUnitDeclaration) {
       this.currentTU = (TranslationUnitDeclaration) node;
     } else if (node instanceof ExplicitConstructorInvocation) {
@@ -154,7 +153,7 @@ public class CallResolver implements Pass {
     } else if (node instanceof CallExpression) {
       CallExpression call = (CallExpression) node;
 
-      if (this.currentClass == null && this.currentTU != null) {
+      if (curClass == null && this.currentTU != null) {
         // Handle function (not method) calls
         // C++ allows function overloading. Make sure we have at least the same number of arguments
         List<FunctionDeclaration> invocationCandidates =
@@ -166,8 +165,8 @@ public class CallResolver implements Pass {
                 .collect(Collectors.toList());
 
         call.setInvokes(invocationCandidates);
-      } else if (!handlePossibleStaticImport(call)) {
-        Set<Type> possibleContainingTypes = getPossibleContainingTypes(node);
+      } else if (!handlePossibleStaticImport(call, curClass)) {
+        Set<Type> possibleContainingTypes = getPossibleContainingTypes(node, curClass);
 
         // Find invokes by type
         List<FunctionDeclaration> invocationCandidates =
@@ -193,7 +192,7 @@ public class CallResolver implements Pass {
         }
 
         if (!(call instanceof MemberCallExpression || call instanceof StaticCallExpression)) {
-          call.setBase(currentClass.getThis());
+          call.setBase(curClass.getThis());
         }
         call.setInvokes(invocationCandidates);
       }
@@ -219,18 +218,17 @@ public class CallResolver implements Pass {
           }
         }
       }
-    } else if (node instanceof RecordDeclaration) {
-      currentClass = (RecordDeclaration) node;
     }
   }
 
-  private boolean handlePossibleStaticImport(@Nullable CallExpression call) {
-    if (call == null || currentClass == null) {
+  private boolean handlePossibleStaticImport(
+      @Nullable CallExpression call, RecordDeclaration curClass) {
+    if (call == null || curClass == null) {
       return false;
     }
     String name = call.getName().substring(call.getName().lastIndexOf('.') + 1);
     List<FunctionDeclaration> nameMatches =
-        currentClass.getStaticImports().stream()
+        curClass.getStaticImports().stream()
             .filter(FunctionDeclaration.class::isInstance)
             .map(FunctionDeclaration.class::cast)
             .filter(m -> m.getName().equals(name) || m.getName().endsWith("." + name))
@@ -245,7 +243,7 @@ public class CallResolver implements Pass {
               .findFirst()
               .orElse(null);
       if (target == null) {
-        generateDummies(call, name, invokes);
+        generateDummies(call, name, invokes, curClass);
       } else {
         invokes.add(target);
       }
@@ -258,15 +256,16 @@ public class CallResolver implements Pass {
   private void generateDummies(
       @NonNull CallExpression call,
       @NonNull String name,
-      @NonNull List<FunctionDeclaration> invokes) {
+      @NonNull List<FunctionDeclaration> invokes,
+      RecordDeclaration curClass) {
     // We had an import for this method name, just not the correct signature. Let's just add
     // a dummy to any class that might be affected
-    if (currentClass == null) {
+    if (curClass == null) {
       LOGGER.warn("Cannot generate dummies for imports of a null class: {}", call.toString());
       return;
     }
     List<RecordDeclaration> containingRecords =
-        currentClass.getStaticImportStatements().stream()
+        curClass.getStaticImportStatements().stream()
             .filter(i -> i.endsWith("." + name))
             .map(i -> i.substring(0, i.lastIndexOf('.')))
             .map(c -> recordMap.getOrDefault(c, null))
@@ -288,7 +287,7 @@ public class CallResolver implements Pass {
       }
       dummy.setParameters(params);
       record.getMethods().add(dummy);
-      currentClass.getStaticImports().add(dummy);
+      curClass.getStaticImports().add(dummy);
       invokes.add(dummy);
     }
   }
@@ -315,7 +314,7 @@ public class CallResolver implements Pass {
     return paramName.toString();
   }
 
-  private Set<Type> getPossibleContainingTypes(Node node) {
+  private Set<Type> getPossibleContainingTypes(Node node, RecordDeclaration curClass) {
     Set<Type> possibleTypes = new HashSet<>();
     if (node instanceof MemberCallExpression) {
       MemberCallExpression memberCall = (MemberCallExpression) node;
@@ -329,9 +328,9 @@ public class CallResolver implements Pass {
       if (staticCall.getTargetRecord() != null) {
         possibleTypes.add(new Type(staticCall.getTargetRecord()));
       }
-    } else if (currentClass != null) {
-      possibleTypes.add(new Type(currentClass.getName()));
-      possibleTypes.addAll(currentClass.getSuperTypes());
+    } else if (curClass != null) {
+      possibleTypes.add(new Type(curClass.getName()));
+      possibleTypes.addAll(curClass.getSuperTypes());
     }
     return possibleTypes;
   }

@@ -31,7 +31,6 @@ import de.fraunhofer.aisec.cpg.graph.FunctionDeclaration;
 import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.RecordDeclaration;
 import de.fraunhofer.aisec.cpg.graph.SubGraph;
-import de.fraunhofer.aisec.cpg.graph.Type;
 import de.fraunhofer.aisec.cpg.graph.ValueDeclaration;
 import java.lang.annotation.AnnotationFormatError;
 import java.lang.reflect.Field;
@@ -47,11 +46,13 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.tuple.MutablePair;
 import org.apache.commons.lang3.tuple.Pair;
+import org.checkerframework.checker.nullness.qual.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -134,20 +135,27 @@ public class SubgraphWalker {
       return new ArrayList<>();
     }
 
-    List<Node> list = new ArrayList<>();
+    Set<Node> list = new HashSet<>();
+
+    flattenASTInternal(list, n);
+
+    List<Node> ret = new ArrayList<>(list);
+
+    // sort it
+    ret.sort(new NodeComparator());
+
+    return ret;
+  }
+
+  private static void flattenASTInternal(@NonNull Set<Node> list, @NonNull Node n) {
     // add the node itself
     list.add(n);
 
-    // add all the ast children
-    list.addAll(
-        SubgraphWalker.getAstChildren(n).stream()
-            .flatMap(node -> flattenAST(node).stream())
-            .collect(Collectors.toSet()));
-
-    // sort it
-    list.sort(new NodeComparator());
-
-    return list;
+    for (Node child : SubgraphWalker.getAstChildren(n)) {
+      if (!list.contains(child)) {
+        flattenASTInternal(list, child);
+      }
+    }
   }
 
   /**
@@ -314,7 +322,7 @@ public class SubgraphWalker {
     // declarationScope -> (parentScope, declarations)
     private Map<Node, Pair<Node, List<ValueDeclaration>>>
         nodeToParentBlockAndContainedValueDeclarations = new IdentityHashMap<>();
-    private Deque<Type> currentClass = new ArrayDeque<>();
+    private Deque<RecordDeclaration> currentClass = new ArrayDeque<>();
     private IterativeGraphWalker walker;
 
     /**
@@ -323,18 +331,18 @@ public class SubgraphWalker {
      * root can be passed to {@link ScopedWalker#getAllDeclarationsForScope} in order to retrieve
      * the currently available declarations.
      */
-    private List<TriConsumer<Type, Node, Node>> handlers = new ArrayList<>();
+    private List<TriConsumer<RecordDeclaration, Node, Node>> handlers = new ArrayList<>();
 
     public void clearCallbacks() {
       handlers.clear();
     }
 
-    public void registerHandler(TriConsumer<Type, Node, Node> handler) {
+    public void registerHandler(TriConsumer<RecordDeclaration, Node, Node> handler) {
       handlers.add(handler);
     }
 
-    public void registerHandler(Consumer<Node> handler) {
-      handlers.add((currClass, parent, currNode) -> handler.accept(currNode));
+    public void registerHandler(BiConsumer<Node, RecordDeclaration> handler) {
+      handlers.add((currClass, parent, currNode) -> handler.accept(currNode, currClass));
     }
 
     /**
@@ -349,14 +357,14 @@ public class SubgraphWalker {
       walker.iterate(root);
     }
 
-    private void handleNode(Node current, TriConsumer<Type, Node, Node> handler) {
+    private void handleNode(Node current, TriConsumer<RecordDeclaration, Node, Node> handler) {
 
       Node parent = walker.getBacklog().peek();
 
       if (current instanceof RecordDeclaration) {
         currentClass.push(
-            new Type(
-                current.getName())); // we can be in an inner class, so we remember this as a stack
+            (RecordDeclaration)
+                current); // we can be in an inner class, so we remember this as a stack
       }
 
       handler.accept(currentClass.peek(), parent, current);
