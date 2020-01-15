@@ -207,13 +207,15 @@ public class CallResolver implements Pass {
         ConstructExpression initializer = (ConstructExpression) newExpression.getInitializer();
         List<Type> signature = initializer.getSignature();
 
-        if (record != null) {
+        if (record != null && record.getCode() != null && !record.getCode().isEmpty()) {
           ConstructorDeclaration constructor = getConstructorDeclaration(signature, record);
           if (constructor != null) {
             initializer.setConstructor(constructor);
           } else {
             LOGGER.warn(
-                "Unexpected: Could not create constructor for {}.{}", record.getName(), signature);
+                "Unexpected: Could not find constructor for {} with signature {}",
+                record.getName(),
+                signature);
           }
         }
       }
