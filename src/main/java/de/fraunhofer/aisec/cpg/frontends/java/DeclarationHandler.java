@@ -334,7 +334,7 @@ public class DeclarationHandler
             initializer);
     lang.getScopeManager().addValueDeclaration(fieldDeclaration);
 
-    return new FieldDeclaration();
+    return fieldDeclaration;
   }
 
   public Declaration /* TODO refine return type*/ handleInitializerDeclaration(
