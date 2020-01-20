@@ -74,7 +74,7 @@ public class TranslationConfiguration {
   final boolean failOnError;
 
   /** Definition of additional symbols, mostly useful for C++. */
-  public Map<String, String> symbols;
+  private Map<String, String> symbols;
 
   /** Source code files to parse. */
   private List<File> sourceFiles;
