@@ -15,9 +15,23 @@ This library uses [Eclipse CDT](https://www.eclipse.org/cdt/) for parsing C/C++ 
 
 ### As Library
 
-The most recent version is being published to Maven central and can be used as a simple dependency, either using Maven or Gradle. For example, using Gradle's Kotlin syntax:
+The most recent version is being published to Maven central and can be used as a simple dependency, either using Maven or Gradle. Since Eclipse CDT is not published on maven central, it is necessary to add a repository with a custom layout to find the released CDT files. For example, using Gradle's Kotlin syntax:
 ```
-api("de.fraunhofer.aisec", "cpg", "1.1")
+repositories {
+    ivy {
+        setUrl("https://download.eclipse.org/tools/cdt/releases/9.6/cdt-9.6.0/plugins")
+        metadataSources {
+            artifact()
+        }
+        patternLayout {
+            artifact("/[organisation].[module]_[revision].[ext]")
+        }
+    }
+}
+
+dependencies {
+    api("de.fraunhofer.aisec", "cpg", "1.1")
+}
 ```
 
 ### On Command Line
