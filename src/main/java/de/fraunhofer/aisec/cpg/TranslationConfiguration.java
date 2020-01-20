@@ -34,9 +34,7 @@ import de.fraunhofer.aisec.cpg.passes.Pass;
 import de.fraunhofer.aisec.cpg.passes.TypeHierarchyResolver;
 import de.fraunhofer.aisec.cpg.passes.VariableUsageResolver;
 import java.io.File;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
 
 /**
  * The configuration for the {@link TranslationManager} holds all information that is used during
@@ -46,6 +44,7 @@ public class TranslationConfiguration {
 
   /** Set to true to generate debug output for the parser. */
   public final boolean debugParser;
+
   /**
    * Set to true to transitively load include files into the CPG.
    *
@@ -53,6 +52,7 @@ public class TranslationConfiguration {
    * symbols/templates from these include, but do not load the parse tree into the CPG
    */
   public final boolean loadIncludes;
+
   /**
    * Paths to look for include files.
    *
@@ -64,6 +64,7 @@ public class TranslationConfiguration {
    * into the CPG. *
    */
   public final String[] includePaths;
+
   /** should the code of a node be shown as parameter in the node * */
   public final boolean codeInNodes;
   /**
@@ -71,6 +72,10 @@ public class TranslationConfiguration {
    * best-effort manner (false).
    */
   final boolean failOnError;
+
+  /** Definition of additional symbols, mostly useful for C++. */
+  public final Map<String, String> symbols;
+
   /** Source code files to parse. */
   private List<File> sourceFiles;
 
@@ -78,6 +83,7 @@ public class TranslationConfiguration {
   private List<Pass> passes;
 
   private TranslationConfiguration(
+      Map<String, String> symbols,
       List<File> sourceFiles,
       File topLevel,
       boolean debugParser,
@@ -86,6 +92,7 @@ public class TranslationConfiguration {
       String[] includePaths,
       List<Pass> passes,
       boolean codeInNodes) {
+    this.symbols = symbols;
     this.sourceFiles = sourceFiles;
     this.topLevel = topLevel;
     this.debugParser = debugParser;
@@ -99,6 +106,10 @@ public class TranslationConfiguration {
 
   public static Builder builder() {
     return new Builder();
+  }
+
+  public Map<String, String> getSymbols() {
+    return this.symbols;
   }
 
   public List<File> getSourceFiles() {
@@ -119,9 +130,15 @@ public class TranslationConfiguration {
     private boolean debugParser = false;
     private boolean failOnError = false;
     private boolean loadIncludes = false;
+    private Map<String, String> symbols = new HashMap<>();
     private List<String> includePaths = new ArrayList<>();
     private List<Pass> passes = new ArrayList<>();
     private boolean codeInNodes = true;
+
+    public Builder symbols(Map<String, String> symbols) {
+      this.symbols = symbols;
+      return this;
+    }
 
     public Builder sourceFiles(File... sourceFiles) {
       this.sourceFiles = Arrays.asList(sourceFiles);
@@ -176,6 +193,7 @@ public class TranslationConfiguration {
     public TranslationConfiguration build() {
       String[] paths = new String[this.includePaths.size()];
       return new TranslationConfiguration(
+          symbols,
           sourceFiles,
           topLevel,
           debugParser,

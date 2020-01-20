@@ -170,13 +170,10 @@ public class CXXLanguageFrontend extends LanguageFrontend {
     TypeManager.getInstance().setLanguageFrontend(this);
     FileContent content = FileContent.createForExternalFileLocation(file.getAbsolutePath());
 
-    // additional symbols?
-    HashMap<String, String> symbols = new HashMap<>();
-
     // include paths
     String[] includePaths = config.includePaths;
 
-    ScannerInfo scannerInfo = new ScannerInfo(symbols, includePaths);
+    ScannerInfo scannerInfo = new ScannerInfo(config.symbols, includePaths);
 
     DefaultLogService log = new DefaultLogService();
 
