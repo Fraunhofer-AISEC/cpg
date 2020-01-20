@@ -54,6 +54,10 @@ public class BinaryOperator extends Expression implements TypeListener {
     return lhs;
   }
 
+  public <T extends Expression> T getLhsAs(Class<T> clazz) {
+    return clazz.isInstance(this.lhs) ? clazz.cast(this.lhs) : null;
+  }
+
   public void setLhs(Expression lhs) {
     if (this.lhs != null) {
       this.lhs.unregisterTypeListener(this);
@@ -86,6 +90,10 @@ public class BinaryOperator extends Expression implements TypeListener {
 
   public Expression getRhs() {
     return rhs;
+  }
+
+  public <T extends Expression> T getRhsAs(Class<T> clazz) {
+    return clazz.isInstance(this.rhs) ? clazz.cast(this.rhs) : null;
   }
 
   public void setRhs(Expression rhs) {
