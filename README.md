@@ -94,6 +94,7 @@ The following authors have contributed to this project (in alphabetical order):
 * [obraunsdorf](https://github.com/obraunsdorf)
 * [oxisto](https://github.com/oxisto)
 * [titze](https://github.com/titze)
+* [vfsrfs](https://github.com/vfsrfs)
 
 ## Further reading
 
