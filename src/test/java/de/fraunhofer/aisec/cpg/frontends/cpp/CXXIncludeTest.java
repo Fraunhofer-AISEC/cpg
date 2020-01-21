@@ -42,10 +42,7 @@ class CXXIncludeTest {
     // checks, whether code and region for nodes in includes are properly set
     TranslationUnitDeclaration tu =
         new CXXLanguageFrontend(
-                TranslationConfiguration.builder()
-                    .loadIncludes(true)
-                    .defaultPasses()
-                    .build())
+                TranslationConfiguration.builder().loadIncludes(true).defaultPasses().build())
             .parse(new File("src/test/resources/include.cpp"));
 
     FunctionDeclaration main =
