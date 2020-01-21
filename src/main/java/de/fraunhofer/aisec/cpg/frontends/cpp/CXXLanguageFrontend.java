@@ -232,17 +232,16 @@ public class CXXLanguageFrontend extends LanguageFrontend {
       ASTNode parent = (ASTNode) node.getParent();
 
       if (fLocation != null) {
-        /* Yes, seriously. getRawSignature() is CPU and heap-costly, because it does an arraycopy. If parent is the whole TranslationUnit and we are doing this repeatedly, we will end up with OOM and waste time.
-         * We thus do a shortcut an directly access the field containing the source code of a node as a CharArray.
+        /* Yes, seriously. getRawSignature() is CPU- and heap-costly, because it does an arraycopy. If parent is the whole TranslationUnit and we are doing this repeatedly, we will end up with OOM and waste time.
+         * We thus do a shortcut and directly access the field containing the source code of a node as a CharArray.
          * This may break in future versions of CDT parser, when fields are renamed (which is unlikely). In this case, we will go the standard route.
          * Note, the only reason we are doing this is to compute the start and end columns of the current node.
          */
         AbstractCharArray parentRawSig = new CharArray("");
         try {
-          IASTFileLocation loc = parent.getFileLocation();
-          Field fLoc = getField(loc.getClass(), "fLocationCtx");
+          Field fLoc = getField(fLocation.getClass(), "fLocationCtx");
           fLoc.setAccessible(true);
-          Object locCtx = fLoc.get(loc);
+          Object locCtx = fLoc.get(fLocation);
 
           Field fSource = getField(locCtx.getClass(), "fSource");
           fSource.setAccessible(true);
