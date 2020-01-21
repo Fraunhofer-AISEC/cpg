@@ -26,11 +26,14 @@
 
 package de.fraunhofer.aisec.cpg.frontends.cpp;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import de.fraunhofer.aisec.cpg.TranslationConfiguration;
 import de.fraunhofer.aisec.cpg.frontends.TranslationException;
-import de.fraunhofer.aisec.cpg.graph.FunctionDeclaration;
+import de.fraunhofer.aisec.cpg.graph.ConstructorDeclaration;
+import de.fraunhofer.aisec.cpg.graph.RecordDeclaration;
+import de.fraunhofer.aisec.cpg.graph.Region;
 import de.fraunhofer.aisec.cpg.graph.TranslationUnitDeclaration;
 import java.io.File;
 import org.junit.jupiter.api.Test;
@@ -45,10 +48,12 @@ class CXXIncludeTest {
                 TranslationConfiguration.builder().loadIncludes(true).defaultPasses().build())
             .parse(new File("src/test/resources/include.cpp"));
 
-    FunctionDeclaration main =
-        tu.getDeclarationByName("main", FunctionDeclaration.class).orElse(null);
-    assertNotNull(main);
+    RecordDeclaration someClass =
+        tu.getDeclarationByName("SomeClass", RecordDeclaration.class).orElse(null);
+    assertNotNull(someClass);
 
-    // TODO: assert that code and region is correct
+    ConstructorDeclaration decl = someClass.getConstructors().get(0);
+    assertEquals("SomeClass();", decl.getCode());
+    assertEquals(new Region(16, 3, 16, 15), decl.getRegion());
   }
 }
