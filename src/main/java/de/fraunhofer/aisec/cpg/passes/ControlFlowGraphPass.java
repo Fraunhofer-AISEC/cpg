@@ -245,7 +245,7 @@ public class ControlFlowGraphPass implements Pass {
         addTodo(i + 1, doStmt.getCondition());
 
       } else if (!(stmt instanceof ReturnStatement)
-          && i + 1 < this.remaining.size() - 1
+          && i + 1 < this.remaining.size()
           && !doNotLinkToFollowingStmt.contains(stmt)) {
         // Next stmt (if any) is "jump" target
         Node nextRealStmt = this.remaining.get(i + 1);
