@@ -27,17 +27,49 @@
 package de.fraunhofer.aisec.cpg.helpers;
 
 import de.fraunhofer.aisec.cpg.graph.Type;
-import org.neo4j.ogm.typeconversion.AttributeConverter;
+import java.util.HashMap;
+import java.util.Map;
+import org.neo4j.ogm.typeconversion.CompositeAttributeConverter;
 
-public class TypeConverter implements AttributeConverter<Type, String> {
+/**
+ * The {@link TypeConverter} is a helper converter that takes the Object-based {@link Type} and
+ * serializes into a flatten structured in the database graph. It stores the type as a string
+ * representation, using {@link Type#toString} as well as additional information such as modifiers.
+ */
+public class TypeConverter implements CompositeAttributeConverter<Type> {
 
-  @Override
-  public String toGraphProperty(Type value) {
-    return value.toString();
+  protected String basePropertyName;
+
+  public TypeConverter(){
+    basePropertyName = "type";
   }
 
   @Override
-  public Type toEntityAttribute(String value) {
-    return Type.createFrom(value);
+  public Map<String, ?> toGraphProperties(Type value) {
+    Map<String, String> properties = new HashMap<>();
+    if (value != null) {
+      // the type as string representation
+      properties.put(basePropertyName, value.toString());
+      properties.put(basePropertyName + "Name", value.getTypeName());
+      properties.put(basePropertyName + "Modifier", value.getTypeModifier());
+      properties.put(basePropertyName + "Adjustment", value.getTypeAdjustment());
+    }
+
+    return properties;
+  }
+
+  @Override
+  public Type toEntityAttribute(Map<String, ?> value) {
+    try {
+      return Type.createFrom((String) value.get(basePropertyName));
+    } catch (NullPointerException e) {
+      return Type.UNKNOWN;
+    }
+  }
+
+  public static class CastTypeConverter extends TypeConverter{
+    public CastTypeConverter(){
+      basePropertyName = "castType";
+    }
   }
 }

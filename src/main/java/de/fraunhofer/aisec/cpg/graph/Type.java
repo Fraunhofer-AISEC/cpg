@@ -94,6 +94,8 @@ public class Type {
       return UNKNOWN_TYPE_STRING;
     }
     type = type.replaceAll("^struct ", "");
+    type = type.replaceAll("^const struct ", "");
+    type = type.replaceAll(" const ", " ");
     // remove artifacts from unidentified C++ namespaces
     type = type.replaceAll("\\{.*}::", "");
     // remove irrelevant array sizes cluttering the type name

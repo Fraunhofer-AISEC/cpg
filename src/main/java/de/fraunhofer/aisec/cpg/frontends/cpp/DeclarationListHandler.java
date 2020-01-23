@@ -27,10 +27,7 @@
 package de.fraunhofer.aisec.cpg.frontends.cpp;
 
 import de.fraunhofer.aisec.cpg.frontends.Handler;
-import de.fraunhofer.aisec.cpg.graph.Declaration;
-import de.fraunhofer.aisec.cpg.graph.Type;
-import de.fraunhofer.aisec.cpg.graph.ValueDeclaration;
-import de.fraunhofer.aisec.cpg.graph.VariableDeclaration;
+import de.fraunhofer.aisec.cpg.graph.*;
 import java.util.ArrayList;
 import java.util.List;
 import org.eclipse.cdt.core.dom.ast.IASTDeclaration;
@@ -86,8 +83,17 @@ class DeclarationListHandler
                       .getType()
                       .getTypeAdjustment());
         } else {
-          log.warn("cannot determine auto type for {}", declaration.getClass());
-          declaration.getType().setTypeName(declaration.getType().getTypeName() + " auto");
+          Region region = declaration.getRegion();
+          int startLine = -1;
+          if (region != null) {
+            startLine = region.getStartLine();
+          }
+          log.warn(
+              "cannot determine auto type for {} \"{}\" (line {})",
+              declaration.getClass(),
+              declaration.getName(),
+              startLine);
+          declaration.setType(Type.createFrom("auto"));
         }
       } else {
         // this is not an auto type and therefore already set

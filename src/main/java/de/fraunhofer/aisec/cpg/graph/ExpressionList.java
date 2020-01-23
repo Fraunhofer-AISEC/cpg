@@ -59,8 +59,6 @@ public class ExpressionList extends Expression implements HasType.TypeListener {
   }
 
   public void addExpression(Statement expression) {
-    // TODO @KW: do expression lists really get some kind of dataflow from their children?
-    //  The JLS suggests that all child values are discarded (JLS 11, 14.14.1.1)
     if (!this.expressions.isEmpty()) {
       Statement lastExpression = this.expressions.get(this.expressions.size() - 1);
       if (lastExpression instanceof HasType)

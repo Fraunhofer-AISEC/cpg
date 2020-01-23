@@ -84,13 +84,11 @@ public class CallResolver implements Pass {
   private Map<FunctionDeclaration, Type> containingType = new HashMap<>();
   @Nullable private TranslationUnitDeclaration currentTU;
   private LanguageFrontend lang;
-  private ScopedWalker walker;
 
   @Override
   public void cleanup() {
     this.containingType.clear();
     this.currentTU = null;
-    this.walker = null;
   }
 
   @Override
@@ -105,7 +103,7 @@ public class CallResolver implements Pass {
 
   @Override
   public void accept(@NonNull TranslationResult translationResult) {
-    walker = new ScopedWalker();
+    ScopedWalker walker = new ScopedWalker();
     walker.registerHandler(this::findRecords);
     walker.registerHandler(this::registerMethods);
 
@@ -121,19 +119,20 @@ public class CallResolver implements Pass {
     }
   }
 
-  private void findRecords(@NonNull Node node) {
+  private void findRecords(@NonNull Node node, RecordDeclaration curClass) {
     if (node instanceof RecordDeclaration) {
       recordMap.putIfAbsent(node.getName(), (RecordDeclaration) node);
     }
   }
 
-  private void registerMethods(@NonNull Type currentClass, Node parent, @NonNull Node currentNode) {
+  private void registerMethods(
+      @NonNull RecordDeclaration currentClass, Node parent, @NonNull Node currentNode) {
     if (currentNode instanceof MethodDeclaration) {
-      containingType.put((FunctionDeclaration) currentNode, currentClass);
+      containingType.put((FunctionDeclaration) currentNode, new Type(currentClass.getName()));
     }
   }
 
-  private void resolve(@NonNull Node node) {
+  private void resolve(@NonNull Node node, RecordDeclaration curClass) {
     if (node instanceof TranslationUnitDeclaration) {
       this.currentTU = (TranslationUnitDeclaration) node;
     } else if (node instanceof ExplicitConstructorInvocation) {
@@ -154,8 +153,8 @@ public class CallResolver implements Pass {
     } else if (node instanceof CallExpression) {
       CallExpression call = (CallExpression) node;
 
-      if (walker.getCurrentClass() == null && this.currentTU != null) {
-        // Handle calls that happen outside of classes
+      if (curClass == null && this.currentTU != null) {
+        // Handle function (not method) calls
         // C++ allows function overloading. Make sure we have at least the same number of arguments
         List<FunctionDeclaration> invocationCandidates =
             currentTU.getDeclarations().stream()
@@ -166,8 +165,8 @@ public class CallResolver implements Pass {
                 .collect(Collectors.toList());
 
         call.setInvokes(invocationCandidates);
-      } else if (!handlePossibleStaticImport(call)) {
-        Set<Type> possibleContainingTypes = getPossibleContainingTypes(node);
+      } else if (!handlePossibleStaticImport(call, curClass)) {
+        Set<Type> possibleContainingTypes = getPossibleContainingTypes(node, curClass);
 
         // Find invokes by type
         List<FunctionDeclaration> invocationCandidates =
@@ -179,19 +178,22 @@ public class CallResolver implements Pass {
         // Find invokes by supertypes
         if (invocationCandidates.isEmpty()) {
           String[] nameParts = call.getName().split("\\.");
-          List<Type> signature = call.getSignature();
-          Set<RecordDeclaration> records =
-              possibleContainingTypes.stream()
-                  .map(t -> recordMap.get(t.getTypeName()))
-                  .filter(Objects::nonNull)
-                  .collect(Collectors.toSet());
-          invocationCandidates =
-              getInvocationCandidatesFromParents(
-                  nameParts[nameParts.length - 1], signature, records);
+          if (nameParts.length > 0) {
+            List<Type> signature = call.getSignature();
+            Set<RecordDeclaration> records =
+                possibleContainingTypes.stream()
+                    .map(t -> recordMap.get(t.getTypeName()))
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toSet());
+            invocationCandidates =
+                getInvocationCandidatesFromParents(
+                    nameParts[nameParts.length - 1], signature, records);
+          }
         }
 
-        if (!(call instanceof MemberCallExpression || call instanceof StaticCallExpression)) {
-          call.setBase(walker.getCurrentClass().getThis());
+        if (curClass != null
+            && !(call instanceof MemberCallExpression || call instanceof StaticCallExpression)) {
+          call.setBase(curClass.getThis());
         }
         call.setInvokes(invocationCandidates);
       }
@@ -205,26 +207,29 @@ public class CallResolver implements Pass {
         ConstructExpression initializer = (ConstructExpression) newExpression.getInitializer();
         List<Type> signature = initializer.getSignature();
 
-        if (record != null) {
+        if (record != null && record.getCode() != null && !record.getCode().isEmpty()) {
           ConstructorDeclaration constructor = getConstructorDeclaration(signature, record);
           if (constructor != null) {
             initializer.setConstructor(constructor);
           } else {
             LOGGER.warn(
-                "Unexpected: Could not create constructor for {}.{}", record.getName(), signature);
+                "Unexpected: Could not find constructor for {} with signature {}",
+                record.getName(),
+                signature);
           }
         }
       }
     }
   }
 
-  private boolean handlePossibleStaticImport(@Nullable CallExpression call) {
-    if (call == null || walker.getCurrentClass() == null) {
+  private boolean handlePossibleStaticImport(
+      @Nullable CallExpression call, RecordDeclaration curClass) {
+    if (call == null || curClass == null) {
       return false;
     }
     String name = call.getName().substring(call.getName().lastIndexOf('.') + 1);
     List<FunctionDeclaration> nameMatches =
-        walker.getCurrentClass().getStaticImports().stream()
+        curClass.getStaticImports().stream()
             .filter(FunctionDeclaration.class::isInstance)
             .map(FunctionDeclaration.class::cast)
             .filter(m -> m.getName().equals(name) || m.getName().endsWith("." + name))
@@ -239,7 +244,7 @@ public class CallResolver implements Pass {
               .findFirst()
               .orElse(null);
       if (target == null) {
-        generateDummies(call, name, invokes);
+        generateDummies(call, name, invokes, curClass);
       } else {
         invokes.add(target);
       }
@@ -252,15 +257,16 @@ public class CallResolver implements Pass {
   private void generateDummies(
       @NonNull CallExpression call,
       @NonNull String name,
-      @NonNull List<FunctionDeclaration> invokes) {
+      @NonNull List<FunctionDeclaration> invokes,
+      RecordDeclaration curClass) {
     // We had an import for this method name, just not the correct signature. Let's just add
     // a dummy to any class that might be affected
-    if (walker.getCurrentClass() == null) {
+    if (curClass == null) {
       LOGGER.warn("Cannot generate dummies for imports of a null class: {}", call.toString());
       return;
     }
     List<RecordDeclaration> containingRecords =
-        walker.getCurrentClass().getStaticImportStatements().stream()
+        curClass.getStaticImportStatements().stream()
             .filter(i -> i.endsWith("." + name))
             .map(i -> i.substring(0, i.lastIndexOf('.')))
             .map(c -> recordMap.getOrDefault(c, null))
@@ -282,7 +288,7 @@ public class CallResolver implements Pass {
       }
       dummy.setParameters(params);
       record.getMethods().add(dummy);
-      walker.getCurrentClass().getStaticImports().add(dummy);
+      curClass.getStaticImports().add(dummy);
       invokes.add(dummy);
     }
   }
@@ -309,7 +315,7 @@ public class CallResolver implements Pass {
     return paramName.toString();
   }
 
-  private Set<Type> getPossibleContainingTypes(Node node) {
+  private Set<Type> getPossibleContainingTypes(Node node, RecordDeclaration curClass) {
     Set<Type> possibleTypes = new HashSet<>();
     if (node instanceof MemberCallExpression) {
       MemberCallExpression memberCall = (MemberCallExpression) node;
@@ -323,9 +329,9 @@ public class CallResolver implements Pass {
       if (staticCall.getTargetRecord() != null) {
         possibleTypes.add(new Type(staticCall.getTargetRecord()));
       }
-    } else if (walker.getCurrentClass() != null) {
-      possibleTypes.add(new Type(walker.getCurrentClass().getName()));
-      possibleTypes.addAll(walker.getCurrentClass().getSuperTypes());
+    } else if (curClass != null) {
+      possibleTypes.add(new Type(curClass.getName()));
+      possibleTypes.addAll(curClass.getSuperTypes());
     }
     return possibleTypes;
   }

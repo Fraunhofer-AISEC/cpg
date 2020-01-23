@@ -26,13 +26,7 @@
 
 package de.fraunhofer.aisec.cpg.helpers;
 
-import de.fraunhofer.aisec.cpg.graph.CompoundStatement;
-import de.fraunhofer.aisec.cpg.graph.FunctionDeclaration;
-import de.fraunhofer.aisec.cpg.graph.Node;
-import de.fraunhofer.aisec.cpg.graph.RecordDeclaration;
-import de.fraunhofer.aisec.cpg.graph.SubGraph;
-import de.fraunhofer.aisec.cpg.graph.Type;
-import de.fraunhofer.aisec.cpg.graph.ValueDeclaration;
+import de.fraunhofer.aisec.cpg.graph.*;
 import java.lang.annotation.AnnotationFormatError;
 import java.lang.reflect.Field;
 import java.util.ArrayDeque;
@@ -47,11 +41,13 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.tuple.MutablePair;
 import org.apache.commons.lang3.tuple.Pair;
+import org.checkerframework.checker.nullness.qual.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -134,17 +130,27 @@ public class SubgraphWalker {
       return new ArrayList<>();
     }
 
-    List<Node> list = new ArrayList<>();
+    Set<Node> list = new HashSet<>();
+
+    flattenASTInternal(list, n);
+
+    List<Node> ret = new ArrayList<>(list);
+
+    // sort it
+    ret.sort(new NodeComparator());
+
+    return ret;
+  }
+
+  private static void flattenASTInternal(@NonNull Set<Node> list, @NonNull Node n) {
     // add the node itself
     list.add(n);
 
-    // add all the ast children
-    SubgraphWalker.getAstChildren(n).forEach(node -> list.addAll(flattenAST(node)));
-
-    // sort it
-    list.sort(new NodeComparator());
-
-    return list;
+    for (Node child : SubgraphWalker.getAstChildren(n)) {
+      if (!list.contains(child)) {
+        flattenASTInternal(list, child);
+      }
+    }
   }
 
   /**
@@ -320,18 +326,18 @@ public class SubgraphWalker {
      * root can be passed to {@link ScopedWalker#getAllDeclarationsForScope} in order to retrieve
      * the currently available declarations.
      */
-    private List<TriConsumer<Type, Node, Node>> handlers = new ArrayList<>();
+    private List<TriConsumer<RecordDeclaration, Node, Node>> handlers = new ArrayList<>();
 
     public void clearCallbacks() {
       handlers.clear();
     }
 
-    public void registerHandler(TriConsumer<Type, Node, Node> handler) {
+    public void registerHandler(TriConsumer<RecordDeclaration, Node, Node> handler) {
       handlers.add(handler);
     }
 
-    public void registerHandler(Consumer<Node> handler) {
-      handlers.add((currClass, parent, currNode) -> handler.accept(currNode));
+    public void registerHandler(BiConsumer<Node, RecordDeclaration> handler) {
+      handlers.add((currClass, parent, currNode) -> handler.accept(currNode, currClass));
     }
 
     /**
@@ -346,7 +352,7 @@ public class SubgraphWalker {
       walker.iterate(root);
     }
 
-    private void handleNode(Node current, TriConsumer<Type, Node, Node> handler) {
+    private void handleNode(Node current, TriConsumer<RecordDeclaration, Node, Node> handler) {
 
       Node parent = walker.getBacklog().peek();
 
@@ -378,7 +384,9 @@ public class SubgraphWalker {
       for (Node node : walker.getBacklog()) {
         if (node instanceof RecordDeclaration
             || node instanceof CompoundStatement
-            || node instanceof FunctionDeclaration) {
+            || node instanceof FunctionDeclaration
+            // can also be a translationunit for global (c) functions
+            || node instanceof TranslationUnitDeclaration) {
           parentBlock = node;
           break;
         }

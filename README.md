@@ -15,9 +15,23 @@ This library uses [Eclipse CDT](https://www.eclipse.org/cdt/) for parsing C/C++ 
 
 ### As Library
 
-The most recent version is being published to Maven central and can be used as a simple dependency, either using Maven or Gradle. For example, using Gradle's Kotlin syntax:
+The most recent version is being published to Maven central and can be used as a simple dependency, either using Maven or Gradle. Since Eclipse CDT is not published on maven central, it is necessary to add a repository with a custom layout to find the released CDT files. For example, using Gradle's Kotlin syntax:
 ```
-api("de.fraunhofer.aisec", "cpg", "1.1")
+repositories {
+    ivy {
+        setUrl("https://download.eclipse.org/tools/cdt/releases/9.6/cdt-9.6.0/plugins")
+        metadataSources {
+            artifact()
+        }
+        patternLayout {
+            artifact("/[organisation].[module]_[revision].[ext]")
+        }
+    }
+}
+
+dependencies {
+    api("de.fraunhofer.aisec", "cpg", "1.1")
+}
 ```
 
 ### On Command Line
@@ -94,6 +108,7 @@ The following authors have contributed to this project (in alphabetical order):
 * [obraunsdorf](https://github.com/obraunsdorf)
 * [oxisto](https://github.com/oxisto)
 * [titze](https://github.com/titze)
+* [vfsrfs](https://github.com/vfsrfs)
 
 ## Further reading
 
@@ -110,4 +125,5 @@ An initial publication on the concept of using code property graphs for static a
 [3] is an unrelated, yet similar project by the authors of the above publication, that is used by the open source software Joern [4] for analysing C/C++ code. While [3] is a specification and implementation of the data structure, this project here includes various _Language frontends_ (currently C/C++ and Java, Python to com) and allows creating custom graphs by configuring _Passes_ which extend the graph as necessary for a specific analysis:
 
 [3] https://github.com/ShiftLeftSecurity/codepropertygraph
+
 [4] https://github.com/ShiftLeftSecurity/joern/

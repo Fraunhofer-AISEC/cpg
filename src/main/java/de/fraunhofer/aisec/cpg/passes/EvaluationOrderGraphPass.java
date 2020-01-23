@@ -128,6 +128,14 @@ public class EvaluationOrderGraphPass implements Pass {
 
   private LanguageFrontend lang;
 
+  /**
+   * Searches backwards in the EOG Graph on whether or not there is a path from a function
+   * declaration to the given node. After the construction phase some unreachable nodes may have EOG
+   * edges. This function also serves to truncate the EOG graph by unreachable paths.
+   *
+   * @param node - That lies on the reachable or unreachable path
+   * @return true if the node can bea reached from a function declaration
+   */
   private static boolean reachableFromValidEOGRoot(@NonNull Node node) {
     Set<Node> passedBy = new HashSet<>();
     List<Node> workList = new ArrayList<>(node.getPrevEOG());
@@ -372,6 +380,7 @@ public class EvaluationOrderGraphPass implements Pass {
 
       // push statement itself
       pushToEOG(statement);
+
     } else if (statement instanceof ReturnStatement) {
       // analyze the return value
       createEOG(((ReturnStatement) statement).getReturnValue());
@@ -386,8 +395,19 @@ public class EvaluationOrderGraphPass implements Pass {
 
       BinaryOperator binOp = (BinaryOperator) statement;
       createEOG(binOp.getLhs());
+
+      List<Node> shortCircuitNodes = new ArrayList<>();
+
+      // Two operators that don't evaluate the second operator if the first evaluates to a certain
+      // value.
+      if (binOp.getOperatorCode().equals("&&") || binOp.getOperatorCode().equals("||")) {
+        shortCircuitNodes.addAll(currentEOG);
+      }
+
       createEOG(binOp.getRhs());
 
+      shortCircuitNodes.addAll(currentEOG);
+      setCurrentEOGs(shortCircuitNodes);
       // push the statement itself
       pushToEOG(statement);
 
@@ -419,12 +439,13 @@ public class EvaluationOrderGraphPass implements Pass {
             throwType = new Type("UKNOWN_THROW_TYPE");
           }
         }
-
         pushToEOG(statement);
+
         if (catchingScope instanceof TryScope) {
           ((TryScope) catchingScope)
               .getCatchesOrRelays()
               .put(throwType, new ArrayList<>(this.currentEOG));
+
         } else if (catchingScope instanceof FunctionScope) {
           ((FunctionScope) catchingScope)
               .getCatchesOrRelays()
@@ -434,6 +455,7 @@ public class EvaluationOrderGraphPass implements Pass {
       } else {
         pushToEOG(statement);
       }
+
     } else if (statement instanceof CompoundStatement) {
       lang.getScopeManager().enterScope(statement);
       // analyze the contained statements
@@ -442,9 +464,11 @@ public class EvaluationOrderGraphPass implements Pass {
       }
       lang.getScopeManager().leaveScope(statement);
       pushToEOG(statement);
+
     } else if (statement instanceof CompoundStatementExpression) {
       createEOG(((CompoundStatementExpression) statement).getStatement());
       pushToEOG(statement);
+
     } else if (statement instanceof IfStatement) {
       IfStatement ifs = (IfStatement) statement;
       List<Node> openBranchNodes = new ArrayList<>();
@@ -466,6 +490,7 @@ public class EvaluationOrderGraphPass implements Pass {
 
       setCurrentEOGs(openBranchNodes);
       pushToEOG(statement); // Todo Remove root, if not wanted
+
     } else if (statement instanceof AssertStatement) {
       AssertStatement ifs = (AssertStatement) statement;
       createEOG(ifs.getCondition());
@@ -473,6 +498,7 @@ public class EvaluationOrderGraphPass implements Pass {
       createEOG(ifs.getMessage());
       setCurrentEOGs(openConditionEOGs);
       pushToEOG(statement);
+
     } else if (statement instanceof WhileStatement) {
 
       lang.getScopeManager().enterScope(statement);
@@ -497,6 +523,7 @@ public class EvaluationOrderGraphPass implements Pass {
       currentEOG.addAll(tmpEOGNodes);
 
       pushToEOG(statement); // Todo Remove root, if not wanted
+
     } else if (statement instanceof DoStatement) {
       lang.getScopeManager().enterScope(statement);
       DoStatement dos = (DoStatement) statement;
@@ -513,6 +540,7 @@ public class EvaluationOrderGraphPass implements Pass {
       }
 
       pushToEOG(statement); // Todo Remove root, if not wanted
+
     } else if (statement instanceof ForStatement) {
       lang.getScopeManager().enterScope(statement);
       ForStatement forStmt = (ForStatement) statement;
@@ -538,6 +566,7 @@ public class EvaluationOrderGraphPass implements Pass {
       currentEOG.addAll(tmpEOGNodes);
 
       pushToEOG(statement); // Todo Remove root, if not wanted
+
     } else if (statement instanceof ForEachStatement) {
       lang.getScopeManager().enterScope(statement);
       ForEachStatement forStmt = (ForEachStatement) statement;
@@ -562,6 +591,7 @@ public class EvaluationOrderGraphPass implements Pass {
       currentEOG.addAll(tmpEOGNodes);
 
       pushToEOG(statement); // Todo Remove root, if not wanted
+
     } else if (statement instanceof TryStatement) {
       lang.getScopeManager().enterScope(statement);
       TryScope tryScope = (TryScope) lang.getScopeManager().getCurrentScope();
@@ -642,6 +672,7 @@ public class EvaluationOrderGraphPass implements Pass {
       }
 
       pushToEOG(statement);
+
     } else if (statement instanceof ContinueStatement) {
       pushToEOG(statement);
 

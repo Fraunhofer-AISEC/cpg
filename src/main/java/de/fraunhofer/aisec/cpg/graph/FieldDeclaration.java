@@ -90,6 +90,10 @@ public class FieldDeclaration extends ValueDeclaration implements TypeListener {
 
   @Override
   public void typeChanged(HasType src, Type oldType) {
+    if (!TypeManager.getInstance().isUnknown(this.type) && src.getType().equals(oldType)) {
+      return;
+    }
+
     Type previous = this.type;
     setType(src.getType());
     if (!previous.equals(this.type)) {

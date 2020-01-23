@@ -26,6 +26,7 @@
 
 package de.fraunhofer.aisec.cpg.frontends.java;
 
+import com.github.javaparser.TokenRange;
 import com.github.javaparser.ast.ArrayCreationLevel;
 import com.github.javaparser.ast.NodeList;
 import com.github.javaparser.ast.body.VariableDeclarator;
@@ -306,12 +307,19 @@ public class ExpressionHandler
         if (typeString != null) {
           baseType = new Type(typeString);
         } else {
-          String qualifiedNameFromImports =
-              this.lang.getQualifiedNameFromImports(scope.asNameExpr().getNameAsString());
+          // try to get the name
+          String name;
+          Optional<TokenRange> tokenRange = scope.asNameExpr().getTokenRange();
+          if (tokenRange.isPresent()) {
+            name = tokenRange.get().toString();
+          } else {
+            name = scope.asNameExpr().getNameAsString();
+          }
+          String qualifiedNameFromImports = this.lang.getQualifiedNameFromImports(name);
           if (qualifiedNameFromImports != null) {
             baseType = new Type(qualifiedNameFromImports);
           } else {
-            log.info("Unknown base type for {}", fieldAccessExpr);
+            log.info("Unknown base type 1 for {}", fieldAccessExpr);
             baseType = Type.UNKNOWN;
           }
         }
@@ -336,13 +344,20 @@ public class ExpressionHandler
         tester = (de.fraunhofer.aisec.cpg.graph.Expression) ((MemberExpression) tester).getBase();
       }
       if (tester instanceof StaticReferenceExpression) {
-        String qualifiedNameFromImports =
-            this.lang.getQualifiedNameFromImports(scope.asFieldAccessExpr().getNameAsString());
+        // try to get the name
+        String name;
+        Optional<TokenRange> tokenRange = scope.asFieldAccessExpr().getTokenRange();
+        if (tokenRange.isPresent()) {
+          name = tokenRange.get().toString();
+        } else {
+          name = scope.asFieldAccessExpr().getNameAsString();
+        }
+        String qualifiedNameFromImports = this.lang.getQualifiedNameFromImports(name);
         Type baseType;
         if (qualifiedNameFromImports != null) {
           baseType = new Type(qualifiedNameFromImports);
         } else {
-          log.info("Unknown base type for {}", fieldAccessExpr);
+          log.info("Unknown base type 2 for {}", fieldAccessExpr);
           baseType = Type.UNKNOWN;
         }
         base =
