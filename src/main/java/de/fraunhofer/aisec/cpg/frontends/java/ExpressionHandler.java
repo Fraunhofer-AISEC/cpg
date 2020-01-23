@@ -625,10 +625,12 @@ public class ExpressionHandler
       }
       if (isresolvable) {
         Statement base = handle(scope);
+        DeclaredReferenceExpression member =
+            NodeBuilder.newDeclaredReferenceExpression(name, Type.UNKNOWN, "");
 
         callExpression =
             NodeBuilder.newMemberCallExpression(
-                name, qualifiedName, base, methodCallExpr.toString());
+                name, qualifiedName, base, member, methodCallExpr.toString());
       } else {
         callExpression =
             NodeBuilder.newStaticCallExpression(

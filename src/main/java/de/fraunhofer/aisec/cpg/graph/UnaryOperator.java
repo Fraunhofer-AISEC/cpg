@@ -29,10 +29,12 @@ package de.fraunhofer.aisec.cpg.graph;
 import de.fraunhofer.aisec.cpg.graph.HasType.TypeListener;
 import de.fraunhofer.aisec.cpg.graph.Type.Origin;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.builder.ToStringBuilder;
+import org.neo4j.ogm.annotation.Transient;
 
 /**
  * A unary operator expression, involving one expression and an operator, such as <code>a++</code>.
@@ -55,7 +57,7 @@ public class UnaryOperator extends Expression implements TypeListener {
   /** Specifies, whether this a pre fix operation. */
   private boolean prefix;
 
-  private Set<TypeListener> checked = new HashSet<>();
+  @Transient private Set<TypeListener> checked = new HashSet<>();
 
   public Expression getInput() {
     return input;
@@ -75,26 +77,30 @@ public class UnaryOperator extends Expression implements TypeListener {
 
   @Override
   public boolean shouldBeNotified(TypeListener listener) {
+    if (listener instanceof HasType
+        && TypeManager.getInstance().isUnknown(((HasType) listener).getType())) {
+      return true;
+    }
     if ("&*".contains(operatorCode)) {
       checked.clear();
-      return !hasInputAsTransitiveListener(listener);
+      return !isTransitiveTypeListenerOfTargets(listener, List.of(this, this.input));
     } else {
       return true;
     }
   }
 
-  private boolean hasInputAsTransitiveListener(TypeListener listener) {
+  private boolean isTransitiveTypeListenerOfTargets(TypeListener listener, List<Object> targets) {
     if (checked.contains(listener)) {
       return false;
     }
     checked.add(listener);
 
-    if (listener == this.input) {
+    if (targets.contains(listener)) {
       return true;
     }
     if (listener instanceof HasType) {
       return ((HasType) listener)
-          .getTypeListeners().stream().anyMatch(this::hasInputAsTransitiveListener);
+          .getTypeListeners().stream().anyMatch(l -> isTransitiveTypeListenerOfTargets(l, targets));
     }
     return false;
   }
@@ -128,6 +134,12 @@ public class UnaryOperator extends Expression implements TypeListener {
     Type previous = this.type;
     Type newType = src.getType();
 
+    checked.clear();
+    if (src instanceof TypeListener
+        && isTransitiveTypeListenerOfTargets((TypeListener) src, List.of(this, this.input))) {
+      return;
+    }
+
     if (operatorCode.equals("*")) {
       newType = newType.dereference();
     } else if (operatorCode.equals("&")) {
@@ -143,6 +155,12 @@ public class UnaryOperator extends Expression implements TypeListener {
 
   @Override
   public void possibleSubTypesChanged(HasType src, Set<Type> oldSubTypes) {
+    checked.clear();
+    if (src instanceof TypeListener
+        && isTransitiveTypeListenerOfTargets((TypeListener) src, List.of(this, this.input))) {
+      return;
+    }
+
     Set<Type> currSubTypes = new HashSet<>(getPossibleSubTypes());
     Set<Type> newSubTypes = src.getPossibleSubTypes();
 

@@ -30,4 +30,15 @@ package de.fraunhofer.aisec.cpg.graph;
  * Represents a {@link CallExpression} to a function, which is a member of an object. For example
  * <code>obj.toString()</code>.
  */
-public class MemberCallExpression extends CallExpression {}
+public class MemberCallExpression extends CallExpression {
+
+  private Node member;
+
+  public Node getMember() {
+    return member;
+  }
+
+  public void setMember(Node member) {
+    this.member = member;
+  }
+}
