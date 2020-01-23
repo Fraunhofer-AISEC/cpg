@@ -40,7 +40,7 @@ public class TypeConverter implements CompositeAttributeConverter<Type> {
 
   protected String basePropertyName;
 
-  public TypeConverter(){
+  public TypeConverter() {
     basePropertyName = "type";
   }
 
@@ -67,8 +67,8 @@ public class TypeConverter implements CompositeAttributeConverter<Type> {
     }
   }
 
-  public static class CastTypeConverter extends TypeConverter{
-    public CastTypeConverter(){
+  public static class CastTypeConverter extends TypeConverter {
+    public CastTypeConverter() {
       basePropertyName = "castType";
     }
   }

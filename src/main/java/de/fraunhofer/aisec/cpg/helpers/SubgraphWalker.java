@@ -362,9 +362,7 @@ public class SubgraphWalker {
                 current); // we can be in an inner class, so we remember this as a stack
       }
 
-      Type currentClassType =
-          currentClass.isEmpty() ? null : new Type(currentClass.peek().getName());
-      handler.accept(currentClassType, parent, current);
+      handler.accept(currentClass.peek(), parent, current);
     }
 
     private void leaveScope(Node exiting) {

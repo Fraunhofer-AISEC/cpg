@@ -28,11 +28,13 @@ package de.fraunhofer.aisec.cpg.graph;
 
 import de.fraunhofer.aisec.cpg.graph.HasType.TypeListener;
 import de.fraunhofer.aisec.cpg.graph.Type.Origin;
+import de.fraunhofer.aisec.cpg.helpers.Util;
 import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.builder.ToStringBuilder;
+import org.neo4j.ogm.annotation.Transient;
 
 /**
  * A unary operator expression, involving one expression and an operator, such as <code>a++</code>.
@@ -55,7 +57,7 @@ public class UnaryOperator extends Expression implements TypeListener {
   /** Specifies, whether this a pre fix operation. */
   private boolean prefix;
 
-  private Set<TypeListener> checked = new HashSet<>();
+  @Transient private Set<TypeListener> checked = new HashSet<>();
 
   public Expression getInput() {
     return input;
@@ -145,18 +147,26 @@ public class UnaryOperator extends Expression implements TypeListener {
 
   @Override
   public void possibleSubTypesChanged(HasType src, Set<Type> oldSubTypes) {
-    Set<Type> currSubTypes = getPossibleSubTypes();
+    Set<Type> currSubTypes = new HashSet<>(getPossibleSubTypes());
     Set<Type> newSubTypes = src.getPossibleSubTypes();
-
-    setPossibleSubTypes(newSubTypes); // notify about the new type
+    currSubTypes.addAll(newSubTypes);
 
     if (operatorCode.equals("*")) {
-      newSubTypes = newSubTypes.stream().map(Type::dereference).collect(Collectors.toSet());
+      currSubTypes =
+          currSubTypes.stream()
+              .filter(Util.distinctBy(Type::getTypeName))
+              .map(Type::dereference)
+              .collect(Collectors.toSet());
     } else if (operatorCode.equals("&")) {
-      newSubTypes = newSubTypes.stream().map(Type::reference).collect(Collectors.toSet());
+      currSubTypes =
+          currSubTypes.stream()
+              .filter(Util.distinctBy(Type::getTypeName))
+              .map(Type::reference)
+              .collect(Collectors.toSet());
     }
 
-    currSubTypes.addAll(newSubTypes);
+    getPossibleSubTypes().clear();
+    setPossibleSubTypes(currSubTypes); // notify about the new type
   }
 
   @Override
