@@ -27,7 +27,6 @@
 package de.fraunhofer.aisec.cpg.passes;
 
 import de.fraunhofer.aisec.cpg.TranslationResult;
-import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
 import de.fraunhofer.aisec.cpg.graph.CallExpression;
 import de.fraunhofer.aisec.cpg.graph.ConstructExpression;
 import de.fraunhofer.aisec.cpg.graph.ConstructorDeclaration;
@@ -115,8 +114,8 @@ public class CallResolver extends Pass {
   }
 
   private void registerMethods(
-      @NonNull RecordDeclaration currentClass, Node parent, @NonNull Node currentNode) {
-    if (currentNode instanceof MethodDeclaration) {
+      RecordDeclaration currentClass, Node parent, @NonNull Node currentNode) {
+    if (currentNode instanceof MethodDeclaration && currentClass != null) {
       containingType.put((FunctionDeclaration) currentNode, new Type(currentClass.getName()));
     }
   }
