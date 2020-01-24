@@ -83,7 +83,6 @@ public class CallResolver extends Pass {
   private Map<String, RecordDeclaration> recordMap = new HashMap<>();
   private Map<FunctionDeclaration, Type> containingType = new HashMap<>();
   @Nullable private TranslationUnitDeclaration currentTU;
-  private LanguageFrontend lang;
 
   @Override
   public void cleanup() {

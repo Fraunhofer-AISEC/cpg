@@ -61,25 +61,6 @@ class DeclarationListHandler
         isAutoType = true;
       }
 
-      /*
-
-      if (declaration instanceof FunctionDeclaration) {
-        // check, if its a method or constructor
-        if (declaration.getName().equals(recordDeclaration.getName())) {
-          ConstructorDeclaration constructor =
-              ConstructorDeclaration.from((FunctionDeclaration) declaration);
-          if (declarationScope != null)
-            declarationScope.setAstNode(
-                constructor); // Adjust cpg Node by which scopes are identified
-          recordDeclaration.getConstructors().add(constructor);
-        } else {
-          MethodDeclaration method = MethodDeclaration.from((FunctionDeclaration) declaration);
-          if (declarationScope != null)
-            declarationScope.setAstNode(method); // Adjust cpg Node by which scopes are identified
-          recordDeclaration.getMethods().add(method);
-        }
-       */
-
       String typeAdjustment = declaration.getType().getTypeAdjustment();
       String typeString = ctx.getDeclSpecifier().toString();
       declaration.setType(Type.createFrom(typeString));

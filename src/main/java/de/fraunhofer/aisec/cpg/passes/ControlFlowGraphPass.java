@@ -81,14 +81,6 @@ public class ControlFlowGraphPass extends Pass {
     this.breakContinueScopes.clear();
   }
 
-  @Nullable
-  @Override
-  public LanguageFrontend getLang() {
-    return null;
-  }
-
-  public void setLang(LanguageFrontend lang) {}
-
   @Override
   public void accept(TranslationResult t) {
     for (TranslationUnitDeclaration tu : t.getTranslationUnits()) {
