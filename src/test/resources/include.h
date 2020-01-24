@@ -15,4 +15,6 @@ class SomeClass {
 
   SomeClass();
 
+  int DoSomething();
+
 };

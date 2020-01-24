@@ -26,6 +26,8 @@
 
 package de.fraunhofer.aisec.cpg.graph;
 
+import org.checkerframework.checker.nullness.qual.Nullable;
+
 /**
  * A method declaration is a {@link FunctionDeclaration} tied to a specific {@link
  * RecordDeclaration}.
@@ -35,20 +37,29 @@ public class MethodDeclaration extends FunctionDeclaration {
   private boolean isStatic;
 
   /**
+   * The {@link RecordDeclaration} this method is tied to. This can be empty if we do not know about
+   * the type.
+   */
+  @Nullable private RecordDeclaration recordDeclaration;
+
+  /**
    * Creates a method declaration from an existing {@link FunctionDeclaration}.
    *
    * @param functionDeclaration the {@link FunctionDeclaration}.
+   * @param recordDeclaration the {@link RecordDeclaration} this constructor belongs to.
    * @return the new method declaration
    */
-  public static MethodDeclaration from(FunctionDeclaration functionDeclaration) {
-    MethodDeclaration md = new MethodDeclaration();
+  public static MethodDeclaration from(
+      FunctionDeclaration functionDeclaration, @Nullable RecordDeclaration recordDeclaration) {
+    MethodDeclaration md =
+        NodeBuilder.newMethodDeclaration(
+            functionDeclaration.getName(), functionDeclaration.getCode(), false, recordDeclaration);
 
-    md.setName(functionDeclaration.getName());
-    md.setCode(functionDeclaration.getCode());
     md.setRegion(functionDeclaration.getRegion());
     md.setParameters(functionDeclaration.getParameters());
     md.setBody(functionDeclaration.getBody());
     md.setType(functionDeclaration.getType());
+    md.setRecordDeclaration(recordDeclaration);
 
     return md;
   }
@@ -59,5 +70,13 @@ public class MethodDeclaration extends FunctionDeclaration {
 
   public void setStatic(boolean isStatic) {
     this.isStatic = isStatic;
+  }
+
+  public RecordDeclaration getRecordDeclaration() {
+    return recordDeclaration;
+  }
+
+  public void setRecordDeclaration(@Nullable RecordDeclaration recordDeclaration) {
+    this.recordDeclaration = recordDeclaration;
   }
 }

@@ -31,14 +31,38 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import de.fraunhofer.aisec.cpg.TranslationConfiguration;
 import de.fraunhofer.aisec.cpg.frontends.TranslationException;
-import de.fraunhofer.aisec.cpg.graph.ConstructorDeclaration;
-import de.fraunhofer.aisec.cpg.graph.RecordDeclaration;
-import de.fraunhofer.aisec.cpg.graph.Region;
-import de.fraunhofer.aisec.cpg.graph.TranslationUnitDeclaration;
+import de.fraunhofer.aisec.cpg.graph.*;
 import java.io.File;
 import org.junit.jupiter.api.Test;
 
 class CXXIncludeTest {
+
+  @Test
+  void testDefinitionsAndDeclaration() throws TranslationException {
+    TranslationUnitDeclaration tu =
+        new CXXLanguageFrontend(
+                TranslationConfiguration.builder().loadIncludes(true).defaultPasses().build())
+            .parse(new File("src/test/resources/include.cpp"));
+    assertEquals(4, tu.getDeclarations().size());
+
+    RecordDeclaration someClass =
+        tu.getDeclarationByName("SomeClass", RecordDeclaration.class).orElse(null);
+    assertNotNull(someClass);
+
+    FunctionDeclaration main =
+        tu.getDeclarationByName("main", FunctionDeclaration.class).orElse(null);
+    assertNotNull(main);
+
+    ConstructorDeclaration someClassConstructor =
+        tu.getDeclarationByName("SomeClass", ConstructorDeclaration.class).orElse(null);
+    assertNotNull(someClassConstructor);
+    assertEquals(someClass, someClassConstructor.getRecordDeclaration());
+
+    MethodDeclaration doSomething =
+        tu.getDeclarationByName("DoSomething", MethodDeclaration.class).orElse(null);
+    assertNotNull(doSomething);
+    assertEquals(someClass, doSomething.getRecordDeclaration());
+  }
 
   @Test
   void testCodeAndRegionInInclude() throws TranslationException {
