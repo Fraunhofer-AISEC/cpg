@@ -76,29 +76,18 @@ import org.slf4j.LoggerFactory;
  * the {@link ConstructExpression#getConstructor()} is set to the according {@link
  * ConstructorDeclaration}
  */
-public class CallResolver implements Pass {
+public class CallResolver extends Pass {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(CallResolver.class);
 
   private Map<String, RecordDeclaration> recordMap = new HashMap<>();
   private Map<FunctionDeclaration, Type> containingType = new HashMap<>();
   @Nullable private TranslationUnitDeclaration currentTU;
-  private LanguageFrontend lang;
 
   @Override
   public void cleanup() {
     this.containingType.clear();
     this.currentTU = null;
-  }
-
-  @Override
-  public LanguageFrontend getLang() {
-    return lang;
-  }
-
-  @Override
-  public void setLang(LanguageFrontend lang) {
-    this.lang = lang;
   }
 
   @Override
@@ -273,7 +262,7 @@ public class CallResolver implements Pass {
             .filter(Objects::nonNull)
             .collect(Collectors.toList());
     for (RecordDeclaration record : containingRecords) {
-      MethodDeclaration dummy = NodeBuilder.newMethodDeclaration(name, "", true);
+      MethodDeclaration dummy = NodeBuilder.newMethodDeclaration(name, "", true, record);
       dummy.setDummy(true);
       // prepare signature
       List<ParamVariableDeclaration> params = new ArrayList<>();

@@ -33,8 +33,13 @@ import de.fraunhofer.aisec.cpg.passes.ImportResolver;
 import de.fraunhofer.aisec.cpg.passes.Pass;
 import de.fraunhofer.aisec.cpg.passes.TypeHierarchyResolver;
 import de.fraunhofer.aisec.cpg.passes.VariableUsageResolver;
+
 import java.io.File;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * The configuration for the {@link TranslationManager} holds all information that is used during

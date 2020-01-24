@@ -27,17 +27,7 @@
 package de.fraunhofer.aisec.cpg.frontends.cpp;
 
 import de.fraunhofer.aisec.cpg.frontends.Handler;
-import de.fraunhofer.aisec.cpg.graph.CompoundStatement;
-import de.fraunhofer.aisec.cpg.graph.Declaration;
-import de.fraunhofer.aisec.cpg.graph.FunctionDeclaration;
-import de.fraunhofer.aisec.cpg.graph.IncludeDeclaration;
-import de.fraunhofer.aisec.cpg.graph.NamespaceDeclaration;
-import de.fraunhofer.aisec.cpg.graph.NodeBuilder;
-import de.fraunhofer.aisec.cpg.graph.ProblemDeclaration;
-import de.fraunhofer.aisec.cpg.graph.ReturnStatement;
-import de.fraunhofer.aisec.cpg.graph.Statement;
-import de.fraunhofer.aisec.cpg.graph.TranslationUnitDeclaration;
-import de.fraunhofer.aisec.cpg.graph.Type;
+import de.fraunhofer.aisec.cpg.graph.*;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -110,11 +100,20 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
     // throw(...) is not compiler enforced (Problem for TryStatement)
     FunctionDeclaration functionDeclaration =
         (FunctionDeclaration) this.lang.getDeclaratorHandler().handle(ctx.getDeclarator());
+
+    String typeString = ctx.getDeclSpecifier().toString();
+
+    // It is a constructor
+    if (functionDeclaration instanceof MethodDeclaration && typeString.isEmpty()) {
+      functionDeclaration = ConstructorDeclaration.from((MethodDeclaration) functionDeclaration);
+    }
+
     lang.getScopeManager().enterScope(functionDeclaration);
 
-    // Pointer type is added in DeklaratorHandler.handleFunctionDeclarator
+    // Pointer type is added in DeclaratorHandler.handleFunctionDeclarator
     String typeAdjustment = functionDeclaration.getType().getTypeAdjustment();
-    functionDeclaration.setType(Type.createFrom(ctx.getDeclSpecifier().toString()));
+
+    functionDeclaration.setType(Type.createFrom(typeString));
     functionDeclaration.getType().setTypeAdjustment(typeAdjustment);
 
     if (ctx.getBody() != null) {

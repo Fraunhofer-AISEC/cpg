@@ -70,7 +70,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  *
  * @author julian
  */
-public class ControlFlowGraphPass implements Pass {
+public class ControlFlowGraphPass extends Pass {
   private List<Statement> remaining = new CopyOnWriteArrayList<>();
   /** For keeping track of nested break/continue scopes. */
   private Deque<BreakContinueScope> breakContinueScopes = new ArrayDeque<>();
@@ -80,14 +80,6 @@ public class ControlFlowGraphPass implements Pass {
     this.remaining.clear();
     this.breakContinueScopes.clear();
   }
-
-  @Nullable
-  @Override
-  public LanguageFrontend getLang() {
-    return null;
-  }
-
-  public void setLang(LanguageFrontend lang) {}
 
   @Override
   public void accept(TranslationResult t) {

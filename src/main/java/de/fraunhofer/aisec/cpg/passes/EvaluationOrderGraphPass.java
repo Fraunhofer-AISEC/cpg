@@ -27,7 +27,6 @@
 package de.fraunhofer.aisec.cpg.passes;
 
 import de.fraunhofer.aisec.cpg.TranslationResult;
-import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
 import de.fraunhofer.aisec.cpg.graph.ArrayCreationExpression;
 import de.fraunhofer.aisec.cpg.graph.ArraySubscriptionExpression;
 import de.fraunhofer.aisec.cpg.graph.AssertStatement;
@@ -116,7 +115,7 @@ import org.slf4j.LoggerFactory;
  *       of the methods as a node.
  * </ul>
  */
-public class EvaluationOrderGraphPass implements Pass {
+public class EvaluationOrderGraphPass extends Pass {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(EvaluationOrderGraphPass.class);
 
@@ -125,8 +124,6 @@ public class EvaluationOrderGraphPass implements Pass {
   // Some nodes will have no incoming nor outgoing edges but still need to be associated to the next
   // eog relevant node.
   private List<Node> intermediateNodes = new ArrayList<>();
-
-  private LanguageFrontend lang;
 
   /**
    * Searches backwards in the EOG Graph on whether or not there is a path from a function
@@ -154,17 +151,6 @@ public class EvaluationOrderGraphPass implements Pass {
   public void cleanup() {
     this.intermediateNodes.clear();
     this.currentEOG.clear();
-  }
-
-  @NonNull
-  @Override
-  public LanguageFrontend getLang() {
-    return lang;
-  }
-
-  @Override
-  public void setLang(LanguageFrontend lang) {
-    this.lang = lang;
   }
 
   @Override
@@ -676,7 +662,7 @@ public class EvaluationOrderGraphPass implements Pass {
     } else if (statement instanceof ContinueStatement) {
       pushToEOG(statement);
 
-      lang.getScopeManager().addContinueStatment((ContinueStatement) statement);
+      lang.getScopeManager().addContinueStatement((ContinueStatement) statement);
 
       currentEOG.clear();
 
@@ -688,7 +674,7 @@ public class EvaluationOrderGraphPass implements Pass {
     } else if (statement instanceof BreakStatement) {
       pushToEOG(statement);
 
-      lang.getScopeManager().addBreakStatment((BreakStatement) statement);
+      lang.getScopeManager().addBreakStatement((BreakStatement) statement);
 
       currentEOG.clear();
 

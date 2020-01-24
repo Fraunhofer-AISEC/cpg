@@ -34,30 +34,50 @@ import java.util.function.Consumer;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
- * Represents a class that enhances the graph before it is persisted.
+ * Represents an abstract class that enhances the graph before it is persisted.
  *
  * <p>Passes are expected to mutate the {@code TranslationResult}.
  */
-public interface Pass extends Consumer<TranslationResult> {
+public abstract class Pass implements Consumer<TranslationResult> {
+
+  protected LanguageFrontend lang;
 
   /** @return might be null */
   @Nullable
-  LanguageFrontend getLang();
+  public LanguageFrontend getLang() {
+    return lang;
+  }
 
   /**
    * Passes may need information about what source language they are parsing.
    *
    * @param lang May be null
    */
-  void setLang(LanguageFrontend lang);
+  public void setLang(LanguageFrontend lang) {
+    this.lang = lang;
+  }
 
-  void cleanup();
+  public abstract void cleanup();
 
-  default TranslationUnitDeclaration createUnknownTranslationUnit(TranslationResult result) {
+  TranslationUnitDeclaration createUnknownTranslationUnit(TranslationResult result) {
     TranslationUnitDeclaration declaration =
         NodeBuilder.newTranslationUnitDeclaration("unknown declarations", "");
     declaration.setDummy(true);
     result.getTranslationUnits().add(declaration);
     return declaration;
+  }
+
+  /**
+   * Specifies, whether this pass supports this particular language frontend. This defaults to
+   * <code>true</code> and needs to be overridden if a different behaviour is wanted.
+   *
+   * <p>Note: this is not yet used, since we do not have an easy way at the moment to find out which
+   * language frontend a result used.
+   *
+   * @param lang the language frontend
+   * @return <code>true</code> by default
+   */
+  public boolean supportsLanguageFrontend(LanguageFrontend lang) {
+    return true;
   }
 }

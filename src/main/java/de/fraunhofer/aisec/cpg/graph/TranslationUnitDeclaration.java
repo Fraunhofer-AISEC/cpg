@@ -61,7 +61,7 @@ public class TranslationUnitDeclaration extends Declaration {
    */
   public <T extends Declaration> Optional<T> getDeclarationByName(String name, Class<T> clazz) {
     return this.declarations.stream()
-        .filter(declaration -> declaration.getClass().isAssignableFrom(clazz))
+        .filter(declaration -> clazz.isAssignableFrom(declaration.getClass()))
         .map(clazz::cast)
         .filter(declaration -> Objects.equals(declaration.getName(), name))
         .findFirst();

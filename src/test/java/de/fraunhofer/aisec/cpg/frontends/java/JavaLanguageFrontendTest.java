@@ -256,12 +256,12 @@ class JavaLanguageFrontendTest {
     assertTrue(fields.contains("field"));
 
     MethodDeclaration method = recordDeclaration.getMethods().get(0);
-
+    assertEquals(recordDeclaration, method.getRecordDeclaration());
     assertEquals("method", method.getName());
-    assertEquals("java.lang.Integer", method.getType().toString());
+    assertEquals(Type.createFrom("java.lang.Integer"), method.getType());
 
     ConstructorDeclaration constructor = recordDeclaration.getConstructors().get(0);
-
+    assertEquals(recordDeclaration, constructor.getRecordDeclaration());
     assertEquals("SimpleClass", constructor.getName());
   }
 

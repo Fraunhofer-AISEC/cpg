@@ -115,7 +115,9 @@ public class DeclarationHandler
 
     de.fraunhofer.aisec.cpg.graph.ConstructorDeclaration declaration =
         NodeBuilder.newConstructorDeclaration(
-            resolvedConstructor.getName(), constructorDecl.toString());
+            resolvedConstructor.getName(),
+            constructorDecl.toString(),
+            lang.getScopeManager().getCurrentRecord());
     lang.getScopeManager().addValueDeclaration(declaration);
 
     lang.getScopeManager().enterScope(declaration);
@@ -164,7 +166,10 @@ public class DeclarationHandler
 
     de.fraunhofer.aisec.cpg.graph.MethodDeclaration functionDeclaration =
         NodeBuilder.newMethodDeclaration(
-            resolvedMethod.getName(), methodDecl.toString(), methodDecl.isStatic());
+            resolvedMethod.getName(),
+            methodDecl.toString(),
+            methodDecl.isStatic(),
+            lang.getScopeManager().getCurrentRecord());
     lang.getScopeManager().enterScope(functionDeclaration);
 
     functionDeclaration
@@ -246,8 +251,7 @@ public class DeclarationHandler
     recordDeclaration.setStaticImportStatements(partitioned.get(true));
     recordDeclaration.setImportStatements(partitioned.get(false));
 
-    // Todo lang.getScopeManager().addValueDeclaration(recordDeclaration); but record dont hold
-    // record declarations currently
+    this.lang.addRecord(recordDeclaration);
     lang.getScopeManager().enterScope(recordDeclaration);
 
     de.fraunhofer.aisec.cpg.graph.FieldDeclaration thisDeclaration =
@@ -266,13 +270,12 @@ public class DeclarationHandler
       if (decl instanceof com.github.javaparser.ast.body.FieldDeclaration) {
         handle(decl); // will be added via the scopemanager
       } else if (decl instanceof com.github.javaparser.ast.body.MethodDeclaration) {
-        recordDeclaration
-            .getMethods()
-            .add((de.fraunhofer.aisec.cpg.graph.MethodDeclaration) handle(decl));
+        MethodDeclaration md = (de.fraunhofer.aisec.cpg.graph.MethodDeclaration) handle(decl);
+        recordDeclaration.getMethods().add(md);
       } else if (decl instanceof com.github.javaparser.ast.body.ConstructorDeclaration) {
-        recordDeclaration
-            .getConstructors()
-            .add((de.fraunhofer.aisec.cpg.graph.ConstructorDeclaration) handle(decl));
+        ConstructorDeclaration c =
+            (de.fraunhofer.aisec.cpg.graph.ConstructorDeclaration) handle(decl);
+        recordDeclaration.getConstructors().add(c);
       } else if (decl instanceof com.github.javaparser.ast.body.ClassOrInterfaceDeclaration) {
         recordDeclaration
             .getRecords()
@@ -289,7 +292,7 @@ public class DeclarationHandler
     if (recordDeclaration.getConstructors().isEmpty()) {
       de.fraunhofer.aisec.cpg.graph.ConstructorDeclaration constructorDeclaration =
           NodeBuilder.newConstructorDeclaration(
-              recordDeclaration.getName(), recordDeclaration.getName());
+              recordDeclaration.getName(), recordDeclaration.getName(), recordDeclaration);
       recordDeclaration.getConstructors().add(constructorDeclaration);
       lang.getScopeManager().addValueDeclaration(constructorDeclaration);
     }

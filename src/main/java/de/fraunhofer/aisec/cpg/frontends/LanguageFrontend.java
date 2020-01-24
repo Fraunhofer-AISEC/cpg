@@ -27,17 +27,10 @@
 package de.fraunhofer.aisec.cpg.frontends;
 
 import de.fraunhofer.aisec.cpg.TranslationConfiguration;
-import de.fraunhofer.aisec.cpg.graph.Node;
-import de.fraunhofer.aisec.cpg.graph.RecordDeclaration;
-import de.fraunhofer.aisec.cpg.graph.Region;
-import de.fraunhofer.aisec.cpg.graph.TranslationUnitDeclaration;
+import de.fraunhofer.aisec.cpg.graph.*;
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager;
 import java.io.File;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.function.BiConsumer;
 import java.util.function.BiPredicate;
 import org.apache.commons.lang3.StringUtils;
@@ -163,19 +156,18 @@ public abstract class LanguageFrontend {
   @NonNull
   public abstract <T> Region getRegionFromRawNode(T astNode);
 
-  public <N, S> N setCodeAndRegion(@NonNull N cpgNode, @NonNull S astNode) {
-    if (cpgNode instanceof de.fraunhofer.aisec.cpg.graph.Node) {
+  public <N, S> void setCodeAndRegion(@NonNull N cpgNode, @NonNull S astNode) {
+    if (cpgNode instanceof Node) {
       if (config.codeInNodes) {
         String code = getCodeFromRawNode(astNode);
         if (code != null) {
-          ((de.fraunhofer.aisec.cpg.graph.Node) cpgNode).setCode(code);
+          ((Node) cpgNode).setCode(code);
         } else {
           log.warn("Unexpected: No code for node {}", astNode.toString());
         }
       }
-      ((de.fraunhofer.aisec.cpg.graph.Node) cpgNode).setRegion(getRegionFromRawNode(astNode));
+      ((Node) cpgNode).setRegion(getRegionFromRawNode(astNode));
     }
-    return cpgNode;
   }
 
   /**
@@ -258,6 +250,7 @@ public abstract class LanguageFrontend {
     return ret;
   }
 
+  // TODO: Move this class to the scope manager to properly handle namespaces
   public void addRecord(RecordDeclaration record) {
     this.records.put(record.getName(), record);
   }
@@ -306,4 +299,14 @@ public abstract class LanguageFrontend {
   }
 
   public abstract <S, T> void setComment(S s, T ctx);
+
+  /**
+   * Returns a record declaration, if it exists for the given name
+   *
+   * @param name the record name
+   * @return an optional containing the {@link RecordDeclaration}, if it exists.
+   */
+  public Optional<RecordDeclaration> getRecordForName(String name) {
+    return Optional.ofNullable(this.records.get(name));
+  }
 }
