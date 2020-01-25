@@ -73,10 +73,12 @@ public class Node {
   /** Incoming control flow edges. */
   @Relationship(value = "EOG", direction = "INCOMING")
   protected List<Node> prevEOG = new ArrayList<>();
+
   /** outgoing control flow edges. */
   @Relationship(value = "EOG", direction = "OUTGOING")
   @NonNull
   protected List<Node> nextEOG = new ArrayList<>();
+
   /** outgoing control flow edges. */
   @NonNull
   @Relationship(value = "CFG", direction = "OUTGOING")
@@ -92,7 +94,7 @@ public class Node {
    * If a node is marked as being a dummy, it means that it was created artificially and does not
    * necessarily have a real counterpart in the actual source code
    */
-  @Deprecated protected boolean dummy = false;
+  protected boolean dummy = false;
 
   /**
    * Specifies, whether this node is implicit, i.e. is not really existing in source code but only
@@ -103,6 +105,7 @@ public class Node {
 
   /** Required field for object graph mapping. It contains the node id. */
   @Id @GeneratedValue private Long id;
+
   /** Index of the argument if this node is used in a function call or parameter list. */
   private int argumentIndex;
 
@@ -214,8 +217,8 @@ public class Node {
     return dummy;
   }
 
-  /** @deprecated You should rather use {@link #isImplicit()}, if it is an implicit expression */
-  @Deprecated
+  /** @deprecated You should rather use {@link #setImplicit(boolean)}, if it is an implicit expression */
+  @Deprecated(forRemoval = true)
   public void setDummy(boolean dummy) {
     this.dummy = dummy;
   }
