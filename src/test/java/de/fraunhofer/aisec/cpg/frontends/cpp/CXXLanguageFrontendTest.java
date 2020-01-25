@@ -286,25 +286,39 @@ class CXXLanguageFrontendTest {
     assertEquals(4, declaration.getDeclarations().size());
 
     FunctionDeclaration method = declaration.getDeclarationAs(0, FunctionDeclaration.class);
-
     assertEquals("function0(int)void", method.getSignature());
 
     method = declaration.getDeclarationAs(1, FunctionDeclaration.class);
-
     assertEquals("function1(int, std.string, SomeType*, AnotherType&)int", method.getSignature());
 
     List<String> args =
         method.getParameters().stream().map(Node::getName).collect(Collectors.toList());
-
     assertEquals(List.of("arg0", "arg1", "arg2", "arg3"), args);
 
     method = declaration.getDeclarationAs(2, FunctionDeclaration.class);
-
     assertEquals("function0(int)void", method.getSignature());
 
-    method = declaration.getDeclarationAs(3, FunctionDeclaration.class);
+    List<Statement> statements = ((CompoundStatement) method.getBody()).getStatements();
+    assertFalse(statements.isEmpty());
+    assertEquals(2, statements.size());
 
+    // last statement should be an implicit return
+    ReturnStatement statement =
+        method.getBodyStatementAs(statements.size() - 1, ReturnStatement.class);
+    assertNotNull(statement);
+    assertTrue(statement.isImplicit());
+
+    method = declaration.getDeclarationAs(3, FunctionDeclaration.class);
     assertEquals("function2()void*", method.getSignature());
+
+    statements = ((CompoundStatement) method.getBody()).getStatements();
+    assertFalse(statements.isEmpty());
+    assertEquals(1, statements.size());
+
+    // should only contain 1 explicit return statement
+    statement = method.getBodyStatementAs(0, ReturnStatement.class);
+    assertNotNull(statement);
+    assertFalse(statement.isImplicit());
   }
 
   @Test
@@ -321,8 +335,7 @@ class CXXLanguageFrontendTest {
     assertNotNull(functionBody);
 
     List<Statement> statements = ((CompoundStatement) functionBody).getStatements();
-
-    assertEquals(2, statements.size());
+    assertEquals(1, statements.size());
 
     ReturnStatement returnStatement = (ReturnStatement) statements.get(0);
 

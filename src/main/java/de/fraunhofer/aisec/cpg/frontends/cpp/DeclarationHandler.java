@@ -125,17 +125,17 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
 
         // get the last statement
         Statement lastStatement = null;
-        if (statements.size() > 1) {
+        if (!statements.isEmpty()) {
           lastStatement = statements.get(statements.size() - 1);
         }
-        // make sure, method contains a return statement
-        // todo to-be-discussed: do we need a dummy return statement?
+
+        // add an implicit return statement, if there is none
         if (!(lastStatement instanceof ReturnStatement)) {
-          // statements.add(new StatementHandler(this.lang).handle(new CPPASTReturnStatement()));
           ReturnStatement returnStatement = NodeBuilder.newReturnStatement("return;");
-          returnStatement.setDummy(true);
+          returnStatement.setImplicit(true);
           statements.add(returnStatement);
         }
+
         functionDeclaration.setBody(body);
       }
     }
