@@ -132,6 +132,13 @@ class CXXLanguageFrontendTest {
         new BigInteger("9223372036854775808"),
         ((Literal) Objects.requireNonNull(c.getInitializerAs(UnaryOperator.class)).getInput())
             .getValue());
+
+    VariableDeclaration d = main.getVariableDeclarationByName("d").orElse(null);
+    assertNotNull(d);
+    assertEquals(
+        9223372036854775807L,
+        ((Literal) Objects.requireNonNull(d.getInitializerAs(UnaryOperator.class)).getInput())
+            .getValue());
   }
 
   @Test
