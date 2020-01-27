@@ -159,7 +159,7 @@ val versions = mapOf(
     "junit5" to "5.3.1",
     "commons-lang3" to "3.8.1",
     "log4j" to "2.11.1",
-    "javaparser" to "3.11.0"
+    "javaparser" to "3.15.10"
 )
 
 dependencies {
