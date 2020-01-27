@@ -372,13 +372,7 @@ public class JavaLanguageFrontend extends LanguageFrontend {
   @Override
   public void cleanup() {
     JavaParserFacade.clearInstances();
-
-    for (TypeSolver tr : internalTypeSolvers) {
-      if (tr != null && tr.getParent() != null) {
-        tr.setParent(null); // trying to help the garbagecollector a bit
-      }
-    }
-
+    
     super.cleanup();
     context = null;
     expressionHandler = null;

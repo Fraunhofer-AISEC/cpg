@@ -217,7 +217,10 @@ public class Node {
     return dummy;
   }
 
-  /** @deprecated You should rather use {@link #setImplicit(boolean)}, if it is an implicit expression */
+  /**
+   * @deprecated You should rather use {@link #setImplicit(boolean)}, if it is an implicit
+   *     expression
+   */
   @Deprecated(forRemoval = true)
   public void setDummy(boolean dummy) {
     this.dummy = dummy;
