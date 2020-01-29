@@ -179,17 +179,8 @@ dependencies {
   compile("org.eclipse.platform", "org.eclipse.core.jobs", "3.10.200")
   compile("org.eclipse.cdt", "core", "6.6.0.201812101042")
 
-  runtime("org.neo4j", "neo4j-ogm-bolt-driver", versions["neo4j-ogm"])
-
-  // api stuff
-  compile("org.glassfish.jersey.inject", "jersey-hk2", "2.28")
-  compile("org.glassfish.jersey.containers", "jersey-container-grizzly2-http", "2.28")
-  compile("org.glassfish.jersey.media", "jersey-media-json-jackson", "2.28")
-
-  // needed for jersey, not part of JDK anymore
-  compile("javax.xml.bind", "jaxb-api", "2.3.1")
-
   testImplementation("org.junit.jupiter", "junit-jupiter-api", versions["junit5"])
+  testImplementation("org.junit.jupiter", "junit-jupiter-params", versions["junit5"])
   testRuntimeOnly("org.junit.jupiter", "junit-jupiter-engine", versions["junit5"])
 }
 

@@ -34,6 +34,7 @@ import de.fraunhofer.aisec.cpg.graph.DeclaredReferenceExpression;
 import de.fraunhofer.aisec.cpg.graph.Expression;
 import de.fraunhofer.aisec.cpg.graph.Region;
 import de.fraunhofer.aisec.cpg.graph.TranslationUnitDeclaration;
+import de.fraunhofer.aisec.cpg.graph.Type;
 import de.fraunhofer.aisec.cpg.graph.TypeManager;
 import de.fraunhofer.aisec.cpg.graph.ValueDeclaration;
 import de.fraunhofer.aisec.cpg.helpers.Benchmark;
@@ -74,6 +75,12 @@ import org.slf4j.LoggerFactory;
  * <p>Frontend for ONE CXX File
  */
 public class CXXLanguageFrontend extends LanguageFrontend {
+
+  public static final Type LONG_TYPE = Type.createFrom("long");
+  public static final Type TYPE_UNSIGNED_LONG_LONG = Type.createFrom("unsigned long long");
+  public static final Type INT_TYPE = Type.createFrom("int");
+  public static final Type LONG_LONG_TYPE = Type.createFrom("long long");
+  public static final Type TYPE_UNSIGNED_LONG = Type.createFrom("unsigned long");
 
   private static final Logger LOGGER = LoggerFactory.getLogger(CXXLanguageFrontend.class);
   private static final IncludeFileContentProvider INCLUDE_FILE_PROVIDER =
