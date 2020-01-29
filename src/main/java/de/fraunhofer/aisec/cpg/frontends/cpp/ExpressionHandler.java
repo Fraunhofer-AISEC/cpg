@@ -27,9 +27,34 @@
 package de.fraunhofer.aisec.cpg.frontends.cpp;
 
 import de.fraunhofer.aisec.cpg.frontends.Handler;
-import de.fraunhofer.aisec.cpg.graph.*;
+import de.fraunhofer.aisec.cpg.graph.ArraySubscriptionExpression;
+import de.fraunhofer.aisec.cpg.graph.BinaryOperator;
+import de.fraunhofer.aisec.cpg.graph.CallExpression;
+import de.fraunhofer.aisec.cpg.graph.CastExpression;
+import de.fraunhofer.aisec.cpg.graph.CompoundStatementExpression;
+import de.fraunhofer.aisec.cpg.graph.ConditionalExpression;
+import de.fraunhofer.aisec.cpg.graph.Declaration;
+import de.fraunhofer.aisec.cpg.graph.DeclaredReferenceExpression;
+import de.fraunhofer.aisec.cpg.graph.DeleteExpression;
+import de.fraunhofer.aisec.cpg.graph.DesignatedInitializerExpression;
+import de.fraunhofer.aisec.cpg.graph.Expression;
+import de.fraunhofer.aisec.cpg.graph.ExpressionList;
+import de.fraunhofer.aisec.cpg.graph.HasType;
+import de.fraunhofer.aisec.cpg.graph.InitializerListExpression;
+import de.fraunhofer.aisec.cpg.graph.Literal;
+import de.fraunhofer.aisec.cpg.graph.MemberExpression;
+import de.fraunhofer.aisec.cpg.graph.NewExpression;
+import de.fraunhofer.aisec.cpg.graph.NodeBuilder;
+import de.fraunhofer.aisec.cpg.graph.Region;
+import de.fraunhofer.aisec.cpg.graph.Type;
+import de.fraunhofer.aisec.cpg.graph.TypeIdExpression;
+import de.fraunhofer.aisec.cpg.graph.TypeManager;
+import de.fraunhofer.aisec.cpg.graph.UnaryOperator;
+import de.fraunhofer.aisec.cpg.graph.ValueDeclaration;
+import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import org.eclipse.cdt.core.dom.ast.IASTBinaryExpression;
 import org.eclipse.cdt.core.dom.ast.IASTDeclSpecifier;
 import org.eclipse.cdt.core.dom.ast.IASTExpression;
@@ -476,7 +501,7 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
 
     if (expressionTypeProxy(ctx) instanceof ProblemType
         || (expressionTypeProxy(ctx) instanceof IQualifierType
-            && ((IQualifierType) expressionTypeProxy(ctx)).getType() instanceof ProblemType)) {
+        && ((IQualifierType) expressionTypeProxy(ctx)).getType() instanceof ProblemType)) {
       log.debug("CDT could not deduce type. Trying manually");
 
       IBinding binding = ctx.getName().resolveBinding();
@@ -503,8 +528,9 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
 
   private ExpressionList handleExpressionList(CPPASTExpressionList exprList) {
     ExpressionList expressionList = NodeBuilder.newExpressionList(exprList.getRawSignature());
-    for (IASTExpression expr : exprList.getExpressions())
+    for (IASTExpression expr : exprList.getExpressions()) {
       expressionList.getExpressions().add(handle(expr));
+    }
 
     return expressionList;
   }
@@ -655,12 +681,8 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
       return NodeBuilder.newLiteral(value.toString(), generatedType, ctx.getRawSignature());
     }
 
-    if (type.isSameType(CPPBasicType.INT)) {
-      return NodeBuilder.newLiteral(
-          value.numberValue().intValue(), generatedType, ctx.getRawSignature());
-    } else if (type.isSameType(CPPBasicType.LONG)) {
-      return NodeBuilder.newLiteral(
-          value.numberValue().longValue(), generatedType, ctx.getRawSignature());
+    if (type instanceof CPPBasicType && ((CPPBasicType) type).getKind() == Kind.eInt) {
+      return handleIntegerLiteral(ctx);
     } else if (type.isSameType(CPPBasicType.BOOLEAN)) {
       return NodeBuilder.newLiteral(
           value.numberValue().intValue() == 1, generatedType, ctx.getRawSignature());
@@ -734,5 +756,101 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
     die.setLhs(lhs);
     die.setRhs(rhs);
     return die;
+  }
+
+  private Literal handleIntegerLiteral(CPPASTLiteralExpression ctx) {
+    String value = new String(ctx.getValue()).toLowerCase();
+
+    BigInteger bigValue;
+
+    int radix = 10;
+    int offset = 0;
+    if (value.startsWith("0b")) {
+      radix = 2; // binary
+      offset = 2; // len("0b")
+    } else if (value.startsWith("0x")) {
+      radix = 16; // hex
+      offset = 2; // len("0x")
+    } else if (value.startsWith("0") && value.length() > 1) {
+      radix = 8; // octal
+      offset = 1; // len("0")
+    }
+
+    String suffix = getSuffix(value);
+    String strippedValue = value.substring(offset, value.length() - suffix.length());
+
+    // basically we parse everything as BigInteger and then decide what to do
+    bigValue = new BigInteger(strippedValue, radix);
+
+    Number numberValue;
+    Type type;
+
+    if (Objects.equals("ull", suffix) || Objects.equals("ul", suffix)) {
+      // unsigned long (long) will always be represented as BigInteger
+      numberValue = bigValue;
+    } else if (Objects.equals("ll", suffix) || Objects.equals("l", suffix)) {
+      // both long and long long can be represented in Java long, but only within Long.MAX_VALUE
+      if (bigValue.compareTo(BigInteger.valueOf(Long.MAX_VALUE)) > 0) {
+        // keep it as BigInteger
+        numberValue = bigValue;
+
+        log.warn(
+            "Integer literal {} is too large to represented in a signed type, interpreting it as unsigned.",
+            ctx);
+      } else {
+        numberValue = bigValue.longValue();
+      }
+    } else {
+      // no suffix, we just cast it to the appropriate signed type that is required, but only within
+      // Long.MAX_VALUE
+      if (bigValue.compareTo(BigInteger.valueOf(Long.MAX_VALUE)) > 0) {
+        // keep it as BigInteger
+        numberValue = bigValue;
+
+        log.warn(
+            "Integer literal {} is too large to represented in a signed type, interpreting it as unsigned.",
+            ctx);
+      } else if (bigValue.longValue() > Integer.MAX_VALUE) {
+        numberValue = bigValue.longValue();
+      } else {
+        numberValue = bigValue.intValue();
+      }
+    }
+
+    // retrieve type based on stored Java number
+    if (numberValue instanceof BigInteger) {
+      // we follow the way clang/llvm handles this and this seems to always
+      // be an unsigned long long, except if it is explicitly specified as ul
+      type =
+          Objects.equals("ul", suffix)
+              ? CXXLanguageFrontend.TYPE_UNSIGNED_LONG
+              : CXXLanguageFrontend.TYPE_UNSIGNED_LONG_LONG;
+    } else if (numberValue instanceof Long) {
+      // differentiate between long and long long
+      type =
+          Objects.equals("ll", suffix)
+              ? CXXLanguageFrontend.LONG_LONG_TYPE
+              : CXXLanguageFrontend.LONG_TYPE;
+    } else {
+      type = CXXLanguageFrontend.INT_TYPE;
+    }
+
+    return NodeBuilder.newLiteral(numberValue, type, ctx.getRawSignature());
+  }
+
+  private String getSuffix(String value) {
+    String suffix = "";
+
+    // maximum suffix length is 3
+    for (int i = 1; i <= 3; i++) {
+      String digit = value.substring(Math.max(0, value.length() - i));
+      if (digit.chars().allMatch(character -> character == 'u' || character == 'l')) {
+        suffix = digit;
+      } else {
+        break;
+      }
+    }
+
+    return suffix;
   }
 }
