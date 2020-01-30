@@ -27,13 +27,11 @@
 package de.fraunhofer.aisec.cpg.passes;
 
 import de.fraunhofer.aisec.cpg.TranslationResult;
-import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
 import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.TranslationUnitDeclaration;
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker;
-import org.checkerframework.checker.nullness.qual.Nullable;
 
-public class FilenameMapper implements Pass {
+public class FilenameMapper extends Pass {
 
   @Override
   public void accept(TranslationResult translationResult) {
@@ -44,15 +42,6 @@ public class FilenameMapper implements Pass {
       tu.getNamespaces().forEach(d -> handle(d, name));
     }
   }
-
-  @Override
-  @Nullable
-  public LanguageFrontend getLang() {
-    return null;
-  }
-
-  @Override
-  public void setLang(LanguageFrontend lang) {}
 
   private void handle(Node node, String file) {
     if (node != null) {

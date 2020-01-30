@@ -19,7 +19,7 @@ The most recent version is being published to Maven central and can be used as a
 ```
 repositories {
     ivy {
-        setUrl("https://download.eclipse.org/tools/cdt/releases/9.6/cdt-9.6.0/plugins")
+        setUrl("https://download.eclipse.org/tools/cdt/releases/9.10/cdt-9.10.0/plugins")
         metadataSources {
             artifact()
         }
@@ -30,7 +30,7 @@ repositories {
 }
 
 dependencies {
-    api("de.fraunhofer.aisec", "cpg", "1.1")
+    api("de.fraunhofer.aisec", "cpg", "1.3-SNAPSHOT")
 }
 ```
 

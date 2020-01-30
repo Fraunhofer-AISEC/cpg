@@ -251,9 +251,13 @@ public class StatementAnalyzer
     if (forStmt.getInitialization().size() > 1) {
       // Include artificial Expressionlist and initializer statement.
       Region ofExprList = null;
-      for (com.github.javaparser.ast.expr.Expression initExpr : forStmt.getInitialization())
-        if (ofExprList == null) ofExprList = lang.getRegionFromRawNode(initExpr);
-        else ofExprList = lang.mergeRegions(ofExprList, lang.getRegionFromRawNode(initExpr));
+      for (com.github.javaparser.ast.expr.Expression initExpr : forStmt.getInitialization()) {
+        if (ofExprList == null) {
+          ofExprList = lang.getRegionFromRawNode(initExpr);
+        } else {
+          ofExprList = lang.mergeRegions(ofExprList, lang.getRegionFromRawNode(initExpr));
+        }
+      }
 
       String initString =
           lang.getCodeOfSubregion(statement, lang.getRegionFromRawNode(stmt), ofExprList);
@@ -285,9 +289,13 @@ public class StatementAnalyzer
     if (forStmt.getUpdate().size() > 1) {
       // Include artificial Expressionlist and initializer statement.
       Region ofExprList = null;
-      for (com.github.javaparser.ast.expr.Expression initExpr : forStmt.getUpdate())
-        if (ofExprList == null) ofExprList = lang.getRegionFromRawNode(initExpr);
-        else ofExprList = lang.mergeRegions(ofExprList, lang.getRegionFromRawNode(initExpr));
+      for (com.github.javaparser.ast.expr.Expression initExpr : forStmt.getUpdate()) {
+        if (ofExprList == null) {
+          ofExprList = lang.getRegionFromRawNode(initExpr);
+        } else {
+          ofExprList = lang.mergeRegions(ofExprList, lang.getRegionFromRawNode(initExpr));
+        }
+      }
 
       String updateString =
           lang.getCodeOfSubregion(statement, lang.getRegionFromRawNode(stmt), ofExprList);
@@ -358,7 +366,8 @@ public class StatementAnalyzer
   private BreakStatement handleBreakStatement(Statement stmt) {
     BreakStmt breakStmt = stmt.asBreakStmt();
     BreakStatement breakStatement = new BreakStatement();
-    breakStmt.getValue().ifPresent(label -> breakStatement.setLabel(label.toString()));
+    breakStmt.getLabel().ifPresent(label -> breakStatement.setLabel(label.toString()));
+
     return breakStatement;
   }
 
@@ -366,6 +375,7 @@ public class StatementAnalyzer
     ContinueStmt continueStmt = stmt.asContinueStmt();
     ContinueStatement continueStatement = new ContinueStatement();
     continueStmt.getLabel().ifPresent(label -> continueStatement.setLabel(label.toString()));
+
     return continueStatement;
   }
 

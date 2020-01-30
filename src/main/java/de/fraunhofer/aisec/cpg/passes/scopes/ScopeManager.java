@@ -116,7 +116,7 @@ public class ScopeManager {
     }
 
     Node node = blockScope.getAstNode();
-    if (node == null || !(node instanceof CompoundStatement)) {
+    if (!(node instanceof CompoundStatement)) {
       LOGGER.error("Cannot get current block. No AST node {}", blockScope.toString());
       return null;
     }
@@ -132,7 +132,7 @@ public class ScopeManager {
     }
 
     Node node = functionScope.getAstNode();
-    if (node == null || !(node instanceof FunctionDeclaration)) {
+    if (!(node instanceof FunctionDeclaration)) {
       LOGGER.error("Cannot get current function. No AST node {}", functionScope.toString());
       return null;
     }
@@ -148,7 +148,7 @@ public class ScopeManager {
     }
 
     Node node = recordScope.getAstNode();
-    if (node == null || !(node instanceof RecordDeclaration)) {
+    if (!(node instanceof RecordDeclaration)) {
       LOGGER.error("Cannot get current function. No AST node {}", recordScope.toString());
       return null;
     }
@@ -283,7 +283,7 @@ public class ScopeManager {
     return scopes;
   }
 
-  public void addBreakStatment(BreakStatement breakStatement) {
+  public void addBreakStatement(BreakStatement breakStatement) {
     if (breakStatement.getLabel() == null) {
       Scope scope = getFirstScopeThat(this::isBreakable);
       if (scope == null) {
@@ -302,7 +302,7 @@ public class ScopeManager {
     }
   }
 
-  public void addContinueStatment(ContinueStatement continueStatement) {
+  public void addContinueStatement(ContinueStatement continueStatement) {
     if (continueStatement.getLabel() == null) {
       Scope scope = getFirstScopeThat(this::isContinuable);
       if (scope == null) {

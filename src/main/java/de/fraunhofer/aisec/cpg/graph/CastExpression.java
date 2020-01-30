@@ -41,7 +41,7 @@ public class CastExpression extends Expression implements HasType.TypeListener {
   @SubGraph("AST")
   private Expression expression;
 
-  @Convert(TypeConverter.class)
+  @Convert(TypeConverter.CastTypeConverter.class)
   private Type castType;
 
   public Expression getExpression() {

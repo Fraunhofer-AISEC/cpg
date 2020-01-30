@@ -58,11 +58,13 @@ import de.fraunhofer.aisec.cpg.graph.SwitchStatement;
 import de.fraunhofer.aisec.cpg.graph.TranslationUnitDeclaration;
 import de.fraunhofer.aisec.cpg.graph.TryStatement;
 import de.fraunhofer.aisec.cpg.graph.Type;
+import de.fraunhofer.aisec.cpg.graph.UnaryOperator;
 import de.fraunhofer.aisec.cpg.graph.VariableDeclaration;
 import de.fraunhofer.aisec.cpg.helpers.NodeComparator;
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker;
 import de.fraunhofer.aisec.cpg.helpers.Util;
 import java.io.File;
+import java.math.BigInteger;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
@@ -76,6 +78,44 @@ class JavaLanguageFrontendTest {
   @BeforeEach
   void setUp() {
     config = TranslationConfiguration.builder().defaultPasses().build();
+  }
+
+  @Test
+  void testLargeNegativeNumber() throws TranslationException {
+    TranslationUnitDeclaration tu =
+        new JavaLanguageFrontend(config)
+            .parse(new File("src/test/resources/LargeNegativeNumber.java"));
+    RecordDeclaration declaration = (RecordDeclaration) tu.getDeclarations().get(0);
+
+    MethodDeclaration main = declaration.getMethods().get(0);
+
+    VariableDeclaration a = main.getVariableDeclarationByName("a").orElse(null);
+    assertNotNull(a);
+    assertEquals(
+        1,
+        ((Literal) Objects.requireNonNull(a.getInitializerAs(UnaryOperator.class)).getInput())
+            .getValue());
+
+    VariableDeclaration b = main.getVariableDeclarationByName("b").orElse(null);
+    assertNotNull(b);
+    assertEquals(
+        2147483648L,
+        ((Literal) Objects.requireNonNull(b.getInitializerAs(UnaryOperator.class)).getInput())
+            .getValue());
+
+    VariableDeclaration c = main.getVariableDeclarationByName("c").orElse(null);
+    assertNotNull(c);
+    assertEquals(
+        new BigInteger("9223372036854775808"),
+        ((Literal) Objects.requireNonNull(c.getInitializerAs(UnaryOperator.class)).getInput())
+            .getValue());
+
+    VariableDeclaration d = main.getVariableDeclarationByName("d").orElse(null);
+    assertNotNull(d);
+    assertEquals(
+        9223372036854775807L,
+        ((Literal) Objects.requireNonNull(d.getInitializerAs(UnaryOperator.class)).getInput())
+            .getValue());
   }
 
   @Test
@@ -256,12 +296,12 @@ class JavaLanguageFrontendTest {
     assertTrue(fields.contains("field"));
 
     MethodDeclaration method = recordDeclaration.getMethods().get(0);
-
+    assertEquals(recordDeclaration, method.getRecordDeclaration());
     assertEquals("method", method.getName());
-    assertEquals("java.lang.Integer", method.getType().toString());
+    assertEquals(Type.createFrom("java.lang.Integer"), method.getType());
 
     ConstructorDeclaration constructor = recordDeclaration.getConstructors().get(0);
-
+    assertEquals(recordDeclaration, constructor.getRecordDeclaration());
     assertEquals("SimpleClass", constructor.getName());
   }
 

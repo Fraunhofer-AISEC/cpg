@@ -38,15 +38,21 @@ import org.neo4j.ogm.typeconversion.CompositeAttributeConverter;
  */
 public class TypeConverter implements CompositeAttributeConverter<Type> {
 
+  protected String basePropertyName;
+
+  public TypeConverter() {
+    basePropertyName = "type";
+  }
+
   @Override
   public Map<String, ?> toGraphProperties(Type value) {
     Map<String, String> properties = new HashMap<>();
     if (value != null) {
       // the type as string representation
-      properties.put("type", value.toString());
-      properties.put("typeName", value.getTypeName());
-      properties.put("typeModifier", value.getTypeModifier());
-      properties.put("typeAdjustment", value.getTypeAdjustment());
+      properties.put(basePropertyName, value.toString());
+      properties.put(basePropertyName + "Name", value.getTypeName());
+      properties.put(basePropertyName + "Modifier", value.getTypeModifier());
+      properties.put(basePropertyName + "Adjustment", value.getTypeAdjustment());
     }
 
     return properties;
@@ -55,9 +61,15 @@ public class TypeConverter implements CompositeAttributeConverter<Type> {
   @Override
   public Type toEntityAttribute(Map<String, ?> value) {
     try {
-      return Type.createFrom((String) value.get("type"));
+      return Type.createFrom((String) value.get(basePropertyName));
     } catch (NullPointerException e) {
       return Type.UNKNOWN;
+    }
+  }
+
+  public static class CastTypeConverter extends TypeConverter {
+    public CastTypeConverter() {
+      basePropertyName = "castType";
     }
   }
 }

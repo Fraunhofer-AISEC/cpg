@@ -33,22 +33,24 @@ package de.fraunhofer.aisec.cpg.graph;
 public class ConstructorDeclaration extends MethodDeclaration {
 
   /**
-   * Creates a constructor declaration from an existing {@link FunctionDeclaration}.
+   * Creates a constructor declaration from an existing {@link MethodDeclaration}.
    *
-   * @param functionDeclaration the {@link FunctionDeclaration}.
+   * @param methodDeclaration the {@link MethodDeclaration}.
    * @return the constructor declaration
    */
-  public static ConstructorDeclaration from(FunctionDeclaration functionDeclaration) {
-    ConstructorDeclaration c = new ConstructorDeclaration();
+  public static ConstructorDeclaration from(MethodDeclaration methodDeclaration) {
+    ConstructorDeclaration c =
+        NodeBuilder.newConstructorDeclaration(
+            methodDeclaration.getName(),
+            methodDeclaration.getCode(),
+            methodDeclaration.getRecordDeclaration());
 
     // constructors always have void type
     c.setType(Type.createFrom(VOID_TYPE_STRING));
 
-    c.name = functionDeclaration.getName();
-    c.body = functionDeclaration.getBody();
-    c.code = functionDeclaration.getCode();
-    c.region = functionDeclaration.getRegion();
-    c.parameters = functionDeclaration.getParameters();
+    c.setBody(methodDeclaration.getBody());
+    c.setRegion(methodDeclaration.getRegion());
+    c.setParameters(methodDeclaration.getParameters());
 
     return c;
   }

@@ -26,16 +26,43 @@
 
 package de.fraunhofer.aisec.cpg.frontends.cpp;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import de.fraunhofer.aisec.cpg.TranslationConfiguration;
 import de.fraunhofer.aisec.cpg.frontends.TranslationException;
-import de.fraunhofer.aisec.cpg.graph.FunctionDeclaration;
-import de.fraunhofer.aisec.cpg.graph.TranslationUnitDeclaration;
+import de.fraunhofer.aisec.cpg.graph.*;
 import java.io.File;
 import org.junit.jupiter.api.Test;
 
 class CXXIncludeTest {
+
+  @Test
+  void testDefinitionsAndDeclaration() throws TranslationException {
+    TranslationUnitDeclaration tu =
+        new CXXLanguageFrontend(
+                TranslationConfiguration.builder().loadIncludes(true).defaultPasses().build())
+            .parse(new File("src/test/resources/include.cpp"));
+    assertEquals(4, tu.getDeclarations().size());
+
+    RecordDeclaration someClass =
+        tu.getDeclarationByName("SomeClass", RecordDeclaration.class).orElse(null);
+    assertNotNull(someClass);
+
+    FunctionDeclaration main =
+        tu.getDeclarationByName("main", FunctionDeclaration.class).orElse(null);
+    assertNotNull(main);
+
+    ConstructorDeclaration someClassConstructor =
+        tu.getDeclarationByName("SomeClass", ConstructorDeclaration.class).orElse(null);
+    assertNotNull(someClassConstructor);
+    assertEquals(someClass, someClassConstructor.getRecordDeclaration());
+
+    MethodDeclaration doSomething =
+        tu.getDeclarationByName("DoSomething", MethodDeclaration.class).orElse(null);
+    assertNotNull(doSomething);
+    assertEquals(someClass, doSomething.getRecordDeclaration());
+  }
 
   @Test
   void testCodeAndRegionInInclude() throws TranslationException {
@@ -45,10 +72,12 @@ class CXXIncludeTest {
                 TranslationConfiguration.builder().loadIncludes(true).defaultPasses().build())
             .parse(new File("src/test/resources/include.cpp"));
 
-    FunctionDeclaration main =
-        tu.getDeclarationByName("main", FunctionDeclaration.class).orElse(null);
-    assertNotNull(main);
+    RecordDeclaration someClass =
+        tu.getDeclarationByName("SomeClass", RecordDeclaration.class).orElse(null);
+    assertNotNull(someClass);
 
-    // TODO: assert that code and region is correct
+    ConstructorDeclaration decl = someClass.getConstructors().get(0);
+    assertEquals("SomeClass();", decl.getCode());
+    assertEquals(new Region(16, 3, 16, 15), decl.getRegion());
   }
 }

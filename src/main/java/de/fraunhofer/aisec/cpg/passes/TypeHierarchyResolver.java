@@ -60,7 +60,7 @@ import java.util.stream.Collectors;
  * which of them are overridden/implemented in the current class. See {@link
  * MethodDeclaration#getOverriddenBy()}
  */
-public class TypeHierarchyResolver implements Pass {
+public class TypeHierarchyResolver extends Pass {
 
   private Map<String, RecordDeclaration> recordMap = new HashMap<>();
   private List<EnumDeclaration> enums = new ArrayList<>();
