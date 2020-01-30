@@ -36,10 +36,10 @@ import de.fraunhofer.aisec.cpg.passes.Pass;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -47,6 +47,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -135,26 +136,22 @@ public class TranslationManager {
    * @param result the translation result that is being mutated
    * @param config the translation configuration
    * @throws TranslationException if the language front-end runs into an error and <code>failOnError
-   *     </code> is <code>true</code>.
-   * @return
+   * </code> is <code>true</code>.
    */
   private HashSet<LanguageFrontend> runFrontends(
       TranslationResult result, TranslationConfiguration config) throws TranslationException {
 
     List<File> sourceLocations = new ArrayList<>(this.config.getSourceLocations());
     HashSet<LanguageFrontend> usedFrontends = new HashSet<>();
-    Iterator<File> it = sourceLocations.iterator();
 
     for (int i = 0; i < sourceLocations.size(); i++) {
       File sourceLocation = sourceLocations.get(i);
 
       // Recursively add files in directories
       if (sourceLocation.isDirectory()) {
-        try {
-          sourceLocations.addAll(
-              Files.find(sourceLocation.toPath(), 999, (p, fileAttr) -> fileAttr.isRegularFile())
-                  .map(p -> p.toFile())
-                  .collect(Collectors.toSet()));
+        try (Stream<Path> stream =
+            Files.find(sourceLocation.toPath(), 999, (p, fileAttr) -> fileAttr.isRegularFile())) {
+          sourceLocations.addAll(stream.map(Path::toFile).collect(Collectors.toSet()));
           continue;
         } catch (IOException e) {
           log.error(e.getMessage(), e);
@@ -224,6 +221,7 @@ public class TranslationManager {
   }
 
   public static class Builder {
+
     private TranslationConfiguration config;
 
     private Builder() {}
