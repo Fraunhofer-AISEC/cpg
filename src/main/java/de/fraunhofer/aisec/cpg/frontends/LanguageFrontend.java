@@ -27,10 +27,19 @@
 package de.fraunhofer.aisec.cpg.frontends;
 
 import de.fraunhofer.aisec.cpg.TranslationConfiguration;
-import de.fraunhofer.aisec.cpg.graph.*;
+import de.fraunhofer.aisec.cpg.graph.Node;
+import de.fraunhofer.aisec.cpg.graph.RecordDeclaration;
+import de.fraunhofer.aisec.cpg.graph.Region;
+import de.fraunhofer.aisec.cpg.graph.TranslationUnitDeclaration;
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager;
 import java.io.File;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Optional;
 import java.util.function.BiConsumer;
 import java.util.function.BiPredicate;
 import org.apache.commons.lang3.StringUtils;
@@ -81,25 +90,31 @@ public abstract class LanguageFrontend {
     // Iterate over existing predicate based listeners, if the predicate matches the
     // listener/handler is executed on the new object.
     for (Map.Entry<BiPredicate<Object, Object>, BiConsumer<Object, Object>> pListener :
-        predicateListeners.entrySet())
+        predicateListeners.entrySet()) {
       if (pListener.getKey().test(from, to)) {
         pListener.getValue().accept(from, to);
         // Delete line if Node should be processed multiple times and should again invoke the
         // listener, e.g. refinement.
         predicateListeners.remove(pListener.getKey());
       }
+    }
   }
 
   public void registerObjectListener(Object from, BiConsumer<Object, Object> biConsumer) {
-    if (processedMapping.containsKey(from)) biConsumer.accept(from, processedMapping.get(from));
+    if (processedMapping.containsKey(from)) {
+      biConsumer.accept(from, processedMapping.get(from));
+    }
     objectListeners.put(from, biConsumer);
   }
 
   public void registerPredicateListener(
       BiPredicate<Object, Object> predicate, BiConsumer<Object, Object> biConsumer) {
-    List<Map.Entry> matchingEntries = new ArrayList<>();
-    for (Map.Entry mapping : processedMapping.entrySet())
-      if (predicate.test(mapping.getKey(), mapping.getValue())) matchingEntries.add(mapping);
+    List<Entry> matchingEntries = new ArrayList<>();
+    for (Map.Entry mapping : processedMapping.entrySet()) {
+      if (predicate.test(mapping.getKey(), mapping.getValue())) {
+        matchingEntries.add(mapping);
+      }
+    }
 
     if (!matchingEntries.isEmpty()) {
       for (Map.Entry match : matchingEntries) {
@@ -117,7 +132,7 @@ public abstract class LanguageFrontend {
 
   public List<TranslationUnitDeclaration> parseAll() throws TranslationException {
     ArrayList<TranslationUnitDeclaration> units = new ArrayList<>();
-    for (File sourceFile : this.config.getSourceFiles()) {
+    for (File sourceFile : this.config.getSourceLocations()) {
       units.add(parse(sourceFile));
     }
 
@@ -178,10 +193,11 @@ public abstract class LanguageFrontend {
    */
   public String getNewLineType(Node node) {
     List<String> nls = Arrays.asList("\n\r", "\r\n", "\n");
-    for (String nl : nls)
+    for (String nl : nls) {
       if (node.toString().endsWith(nl)) {
         return nl;
       }
+    }
     log.debug("Could not determine newline type. Assuming \\n. {}", node.toString());
     return "\n";
   }
@@ -203,20 +219,22 @@ public abstract class LanguageFrontend {
     String nlType = getNewLineType(node);
     int start;
     int end;
-    if (subRegion.getStartLine() == nodeRegion.getStartLine())
+    if (subRegion.getStartLine() == nodeRegion.getStartLine()) {
       start = subRegion.getStartColumn() - nodeRegion.getStartColumn();
-    else
+    } else {
       start =
           StringUtils.ordinalIndexOf(
                   code, nlType, subRegion.getStartLine() - nodeRegion.getStartLine())
               + subRegion.getStartColumn();
-    if (subRegion.getEndLine() == nodeRegion.getStartLine())
+    }
+    if (subRegion.getEndLine() == nodeRegion.getStartLine()) {
       end = subRegion.getStartColumn() - nodeRegion.getStartColumn();
-    else
+    } else {
       end =
           StringUtils.ordinalIndexOf(
                   code, nlType, subRegion.getEndLine() - nodeRegion.getStartLine())
               + subRegion.getEndColumn();
+    }
     return code.substring(start, end);
   }
 

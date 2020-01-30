@@ -501,7 +501,7 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
 
     if (expressionTypeProxy(ctx) instanceof ProblemType
         || (expressionTypeProxy(ctx) instanceof IQualifierType
-        && ((IQualifierType) expressionTypeProxy(ctx)).getType() instanceof ProblemType)) {
+            && ((IQualifierType) expressionTypeProxy(ctx)).getType() instanceof ProblemType)) {
       log.debug("CDT could not deduce type. Trying manually");
 
       IBinding binding = ctx.getName().resolveBinding();

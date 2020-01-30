@@ -103,11 +103,11 @@ public class JavaLanguageFrontend extends LanguageFrontend {
     if (config != null) {
       File root = config.getTopLevel();
       if (root == null) {
-        root = CommonPath.commonPath(config.getSourceFiles());
+        root = CommonPath.commonPath(config.getSourceLocations());
       }
 
       if (root == null) {
-        log.warn("Could not determine source root for {}", config.getSourceFiles());
+        log.warn("Could not determine source root for {}", config.getSourceLocations());
       } else {
         log.info("Source file root used for type solver: {}", root);
         JavaParserTypeSolver javaParserTypeSolver = new JavaParserTypeSolver(root);

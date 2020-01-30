@@ -81,14 +81,14 @@ public class TranslationConfiguration {
   public final Map<String, String> symbols;
 
   /** Source code files to parse. */
-  private List<File> sourceFiles;
+  private List<File> sourceLocations;
 
   private File topLevel;
   private List<Pass> passes;
 
   private TranslationConfiguration(
       Map<String, String> symbols,
-      List<File> sourceFiles,
+      List<File> sourceLocations,
       File topLevel,
       boolean debugParser,
       boolean failOnError,
@@ -97,14 +97,14 @@ public class TranslationConfiguration {
       List<Pass> passes,
       boolean codeInNodes) {
     this.symbols = symbols;
-    this.sourceFiles = sourceFiles;
+    this.sourceLocations = sourceLocations;
     this.topLevel = topLevel;
     this.debugParser = debugParser;
     this.failOnError = failOnError;
     this.loadIncludes = loadIncludes;
     this.includePaths = includePaths;
     this.passes = passes != null ? passes : new ArrayList<>();
-    // Make sure to init this AFTER sourceFiles has been set
+    // Make sure to init this AFTER sourceLocations has been set
     this.codeInNodes = codeInNodes;
   }
 
@@ -116,8 +116,8 @@ public class TranslationConfiguration {
     return this.symbols;
   }
 
-  public List<File> getSourceFiles() {
-    return this.sourceFiles;
+  public List<File> getSourceLocations() {
+    return this.sourceLocations;
   }
 
   public File getTopLevel() {

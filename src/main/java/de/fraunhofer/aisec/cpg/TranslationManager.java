@@ -31,14 +31,23 @@ import de.fraunhofer.aisec.cpg.frontends.LanguageFrontendFactory;
 import de.fraunhofer.aisec.cpg.frontends.TranslationException;
 import de.fraunhofer.aisec.cpg.graph.TypeManager;
 import de.fraunhofer.aisec.cpg.helpers.Benchmark;
+import de.fraunhofer.aisec.cpg.helpers.Util;
 import de.fraunhofer.aisec.cpg.passes.Pass;
 import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -74,8 +83,8 @@ public class TranslationManager {
           Benchmark outerBench =
               new Benchmark(TranslationManager.class, "Translation into full graph");
 
-          HashSet<Pass> passesNeedCleanup = new HashSet<>();
-          HashSet<LanguageFrontend> frontendsNeedCleanup = null;
+          Set<Pass> passesNeedCleanup = new HashSet<>();
+          Set<LanguageFrontend> frontendsNeedCleanup = null;
 
           try {
             // Parse Java/C/CPP files
@@ -127,28 +136,39 @@ public class TranslationManager {
    * @param result the translation result that is being mutated
    * @param config the translation configuration
    * @throws TranslationException if the language front-end runs into an error and <code>failOnError
-   *     </code> is <code>true</code>.
-   * @return
+   * </code> is <code>true</code>.
    */
   private HashSet<LanguageFrontend> runFrontends(
       TranslationResult result, TranslationConfiguration config) throws TranslationException {
 
-    List<File> sourceFiles = this.config.getSourceFiles();
+    List<File> sourceLocations = new ArrayList<>(this.config.getSourceLocations());
     HashSet<LanguageFrontend> usedFrontends = new HashSet<>();
-    for (File sourceFile : sourceFiles) {
-      log.info("Parsing {}", sourceFile.getAbsolutePath());
+
+    for (int i = 0; i < sourceLocations.size(); i++) {
+      File sourceLocation = sourceLocations.get(i);
+
+      // Recursively add files in directories
+      if (sourceLocation.isDirectory()) {
+        try (Stream<Path> stream =
+            Files.find(sourceLocation.toPath(), 999, (p, fileAttr) -> fileAttr.isRegularFile())) {
+          sourceLocations.addAll(stream.map(Path::toFile).collect(Collectors.toSet()));
+          continue;
+        } catch (IOException e) {
+          log.error(e.getMessage(), e);
+        }
+      }
+
+      log.info("Parsing {}", sourceLocation.getAbsolutePath());
       LanguageFrontend frontend = null;
       try {
-        frontend =
-            LanguageFrontendFactory.getFrontend(
-                sourceFile.getName().substring(sourceFile.getName().lastIndexOf('.')).toLowerCase(),
-                config);
+        frontend = LanguageFrontendFactory.getFrontend(Util.getExtension(sourceLocation), config);
 
         if (frontend == null) {
-          log.error("Found no parser frontend for {}", sourceFile.getName());
+          log.error("Found no parser frontend for {}", sourceLocation.getName());
 
           if (config.failOnError) {
-            throw new TranslationException("Found no parser frontend for " + sourceFile.getName());
+            throw new TranslationException(
+                "Found no parser frontend for " + sourceLocation.getName());
           }
           continue;
         }
@@ -161,19 +181,21 @@ public class TranslationManager {
         usedFrontends.add(frontend);
 
         // remember which frontend parsed each file
-        HashMap<String, String> sfToFe =
-            (HashMap<String, String>)
+        Map<String, String> sfToFe =
+            (Map<String, String>)
                 result
                     .getScratch()
                     .computeIfAbsent(
                         TranslationResult.SOURCEFILESTOFRONTEND,
                         x -> new HashMap<String, String>());
-        sfToFe.put(sourceFile.getName(), frontend.getClass().getSimpleName());
+        sfToFe.put(sourceLocation.getName(), frontend.getClass().getSimpleName());
 
-        result.getTranslationUnits().add(frontend.parse(sourceFile));
+        result.getTranslationUnits().add(frontend.parse(sourceLocation));
       } catch (TranslationException ex) {
         log.error(
-            "An error occurred during parsing of {}: {}", sourceFile.getName(), ex.getMessage());
+            "An error occurred during parsing of {}: {}",
+            sourceLocation.getName(),
+            ex.getMessage());
 
         if (config.failOnError) {
           throw ex;
@@ -199,6 +221,7 @@ public class TranslationManager {
   }
 
   public static class Builder {
+
     private TranslationConfiguration config;
 
     private Builder() {}
