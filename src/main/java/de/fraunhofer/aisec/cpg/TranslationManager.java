@@ -36,7 +36,13 @@ import de.fraunhofer.aisec.cpg.passes.Pass;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -76,8 +82,8 @@ public class TranslationManager {
           Benchmark outerBench =
               new Benchmark(TranslationManager.class, "Translation into full graph");
 
-          HashSet<Pass> passesNeedCleanup = new HashSet<>();
-          HashSet<LanguageFrontend> frontendsNeedCleanup = null;
+          Set<Pass> passesNeedCleanup = new HashSet<>();
+          Set<LanguageFrontend> frontendsNeedCleanup = null;
 
           try {
             // Parse Java/C/CPP files
@@ -178,8 +184,8 @@ public class TranslationManager {
         usedFrontends.add(frontend);
 
         // remember which frontend parsed each file
-        HashMap<String, String> sfToFe =
-            (HashMap<String, String>)
+        Map<String, String> sfToFe =
+            (Map<String, String>)
                 result
                     .getScratch()
                     .computeIfAbsent(
