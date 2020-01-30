@@ -31,16 +31,19 @@ import de.fraunhofer.aisec.cpg.frontends.LanguageFrontendFactory;
 import de.fraunhofer.aisec.cpg.frontends.TranslationException;
 import de.fraunhofer.aisec.cpg.graph.TypeManager;
 import de.fraunhofer.aisec.cpg.helpers.Benchmark;
+import de.fraunhofer.aisec.cpg.helpers.Util;
 import de.fraunhofer.aisec.cpg.passes.Pass;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.File;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.atomic.AtomicBoolean;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import java.util.stream.Collectors;
 
 /** Main entry point for all source code translation for all language front-ends. */
 public class TranslationManager {
@@ -133,22 +136,37 @@ public class TranslationManager {
   private HashSet<LanguageFrontend> runFrontends(
       TranslationResult result, TranslationConfiguration config) throws TranslationException {
 
-    List<File> sourceFiles = this.config.getSourceFiles();
+    List<File> sourceLocations = new ArrayList<>(this.config.getSourceLocations());
     HashSet<LanguageFrontend> usedFrontends = new HashSet<>();
-    for (File sourceFile : sourceFiles) {
-      log.info("Parsing {}", sourceFile.getAbsolutePath());
+    Iterator<File> it = sourceLocations.iterator();
+
+    for (int i = 0; i < sourceLocations.size(); i++) {
+      File sourceLocation = sourceLocations.get(i);
+
+      // Recursively add files in directories
+      if (sourceLocation.isDirectory()) {
+        try {
+          sourceLocations.addAll(
+              Files.find(sourceLocation.toPath(), 999, (p, fileAttr) -> fileAttr.isRegularFile())
+                  .map(p -> p.toFile())
+                  .collect(Collectors.toSet()));
+          continue;
+        } catch (IOException e) {
+          log.error(e.getMessage(), e);
+        }
+      }
+
+      log.info("Parsing {}", sourceLocation.getAbsolutePath());
       LanguageFrontend frontend = null;
       try {
-        frontend =
-            LanguageFrontendFactory.getFrontend(
-                sourceFile.getName().substring(sourceFile.getName().lastIndexOf('.')).toLowerCase(),
-                config);
+        frontend = LanguageFrontendFactory.getFrontend(Util.getExtension(sourceLocation), config);
 
         if (frontend == null) {
-          log.error("Found no parser frontend for {}", sourceFile.getName());
+          log.error("Found no parser frontend for {}", sourceLocation.getName());
 
           if (config.failOnError) {
-            throw new TranslationException("Found no parser frontend for " + sourceFile.getName());
+            throw new TranslationException(
+                "Found no parser frontend for " + sourceLocation.getName());
           }
           continue;
         }
@@ -168,12 +186,14 @@ public class TranslationManager {
                     .computeIfAbsent(
                         TranslationResult.SOURCEFILESTOFRONTEND,
                         x -> new HashMap<String, String>());
-        sfToFe.put(sourceFile.getName(), frontend.getClass().getSimpleName());
+        sfToFe.put(sourceLocation.getName(), frontend.getClass().getSimpleName());
 
-        result.getTranslationUnits().add(frontend.parse(sourceFile));
+        result.getTranslationUnits().add(frontend.parse(sourceLocation));
       } catch (TranslationException ex) {
         log.error(
-            "An error occurred during parsing of {}: {}", sourceFile.getName(), ex.getMessage());
+            "An error occurred during parsing of {}: {}",
+            sourceLocation.getName(),
+            ex.getMessage());
 
         if (config.failOnError) {
           throw ex;

@@ -112,7 +112,7 @@ public class TranslationConfiguration {
     return this.symbols;
   }
 
-  public List<File> getSourceFiles() {
+  public List<File> getSourceLocations() {
     return this.sourceFiles;
   }
 

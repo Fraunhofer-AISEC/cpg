@@ -32,19 +32,16 @@ import de.fraunhofer.aisec.cpg.graph.RecordDeclaration;
 import de.fraunhofer.aisec.cpg.graph.Region;
 import de.fraunhofer.aisec.cpg.graph.TranslationUnitDeclaration;
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager;
-import java.io.File;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.function.BiConsumer;
-import java.util.function.BiPredicate;
 import org.apache.commons.lang3.StringUtils;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.File;
+import java.util.*;
+import java.util.function.BiConsumer;
+import java.util.function.BiPredicate;
 
 public abstract class LanguageFrontend {
 
@@ -124,7 +121,7 @@ public abstract class LanguageFrontend {
 
   public List<TranslationUnitDeclaration> parseAll() throws TranslationException {
     ArrayList<TranslationUnitDeclaration> units = new ArrayList<>();
-    for (File sourceFile : this.config.getSourceFiles()) {
+    for (File sourceFile : this.config.getSourceLocations()) {
       units.add(parse(sourceFile));
     }
 
