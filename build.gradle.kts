@@ -47,7 +47,7 @@ tasks.jacocoTestReport {
 }
 
 group = "de.fraunhofer.aisec"
-version = "1.2"
+version = "1.3-SNAPSHOT"
 
 extra["isReleaseVersion"] = !version.toString().endsWith("SNAPSHOT")
 
