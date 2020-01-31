@@ -24,9 +24,6 @@
  *
  */
 
-val deployUsername: String? by extra // imported from settings.gradle.kts
-val deployPassword: String? by extra // imported from settings.gradle.kts
-
 plugins {
     // built-in
     java
@@ -48,7 +45,6 @@ tasks.jacocoTestReport {
 }
 
 group = "de.fraunhofer.aisec"
-version = "1.3-SNAPSHOT"
 
 extra["isReleaseVersion"] = !version.toString().endsWith("SNAPSHOT")
 
