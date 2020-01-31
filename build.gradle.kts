@@ -191,3 +191,7 @@ spotless {
         googleJavaFormat()
     }
 }
+
+release {
+    tagTemplate = "v${version}"
+}
