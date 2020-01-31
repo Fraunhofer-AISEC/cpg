@@ -30,7 +30,7 @@ repositories {
 }
 
 dependencies {
-    api("de.fraunhofer.aisec", "cpg", "1.3-SNAPSHOT")
+    api("de.fraunhofer.aisec", "cpg", "1.3.1")
 }
 ```
 
