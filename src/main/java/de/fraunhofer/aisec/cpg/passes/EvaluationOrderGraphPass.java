@@ -27,69 +27,10 @@
 package de.fraunhofer.aisec.cpg.passes;
 
 import de.fraunhofer.aisec.cpg.TranslationResult;
-import de.fraunhofer.aisec.cpg.graph.ArrayCreationExpression;
-import de.fraunhofer.aisec.cpg.graph.ArraySubscriptionExpression;
-import de.fraunhofer.aisec.cpg.graph.AssertStatement;
-import de.fraunhofer.aisec.cpg.graph.BinaryOperator;
-import de.fraunhofer.aisec.cpg.graph.BreakStatement;
-import de.fraunhofer.aisec.cpg.graph.CallExpression;
-import de.fraunhofer.aisec.cpg.graph.CaseStatement;
-import de.fraunhofer.aisec.cpg.graph.CastExpression;
-import de.fraunhofer.aisec.cpg.graph.CatchClause;
-import de.fraunhofer.aisec.cpg.graph.CompoundStatement;
-import de.fraunhofer.aisec.cpg.graph.CompoundStatementExpression;
-import de.fraunhofer.aisec.cpg.graph.ConditionalExpression;
-import de.fraunhofer.aisec.cpg.graph.ConstructExpression;
-import de.fraunhofer.aisec.cpg.graph.ConstructorDeclaration;
-import de.fraunhofer.aisec.cpg.graph.ContinueStatement;
-import de.fraunhofer.aisec.cpg.graph.Declaration;
-import de.fraunhofer.aisec.cpg.graph.DeclarationStatement;
-import de.fraunhofer.aisec.cpg.graph.DeclaredReferenceExpression;
-import de.fraunhofer.aisec.cpg.graph.DefaultStatement;
-import de.fraunhofer.aisec.cpg.graph.DeleteExpression;
-import de.fraunhofer.aisec.cpg.graph.DoStatement;
-import de.fraunhofer.aisec.cpg.graph.EmptyStatement;
-import de.fraunhofer.aisec.cpg.graph.Expression;
-import de.fraunhofer.aisec.cpg.graph.ExpressionList;
-import de.fraunhofer.aisec.cpg.graph.ForEachStatement;
-import de.fraunhofer.aisec.cpg.graph.ForStatement;
-import de.fraunhofer.aisec.cpg.graph.FunctionDeclaration;
-import de.fraunhofer.aisec.cpg.graph.GotoStatement;
-import de.fraunhofer.aisec.cpg.graph.IfStatement;
-import de.fraunhofer.aisec.cpg.graph.InitializerListExpression;
-import de.fraunhofer.aisec.cpg.graph.LabelStatement;
-import de.fraunhofer.aisec.cpg.graph.Literal;
-import de.fraunhofer.aisec.cpg.graph.MemberCallExpression;
-import de.fraunhofer.aisec.cpg.graph.MemberExpression;
-import de.fraunhofer.aisec.cpg.graph.MethodDeclaration;
-import de.fraunhofer.aisec.cpg.graph.NewExpression;
-import de.fraunhofer.aisec.cpg.graph.Node;
-import de.fraunhofer.aisec.cpg.graph.RecordDeclaration;
-import de.fraunhofer.aisec.cpg.graph.ReturnStatement;
-import de.fraunhofer.aisec.cpg.graph.Statement;
-import de.fraunhofer.aisec.cpg.graph.SwitchStatement;
-import de.fraunhofer.aisec.cpg.graph.SynchronizedStatement;
-import de.fraunhofer.aisec.cpg.graph.TranslationUnitDeclaration;
-import de.fraunhofer.aisec.cpg.graph.TryStatement;
-import de.fraunhofer.aisec.cpg.graph.Type;
-import de.fraunhofer.aisec.cpg.graph.TypeIdExpression;
-import de.fraunhofer.aisec.cpg.graph.TypeManager;
-import de.fraunhofer.aisec.cpg.graph.UnaryOperator;
-import de.fraunhofer.aisec.cpg.graph.VariableDeclaration;
-import de.fraunhofer.aisec.cpg.graph.WhileStatement;
+import de.fraunhofer.aisec.cpg.graph.*;
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker;
-import de.fraunhofer.aisec.cpg.passes.scopes.DeclarationScope;
-import de.fraunhofer.aisec.cpg.passes.scopes.FunctionScope;
-import de.fraunhofer.aisec.cpg.passes.scopes.LoopScope;
-import de.fraunhofer.aisec.cpg.passes.scopes.Scope;
-import de.fraunhofer.aisec.cpg.passes.scopes.SwitchScope;
-import de.fraunhofer.aisec.cpg.passes.scopes.TryScope;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import de.fraunhofer.aisec.cpg.passes.scopes.*;
+import java.util.*;
 import java.util.stream.Collectors;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -221,10 +162,15 @@ public class EvaluationOrderGraphPass extends Pass {
     if (declaration == null) {
       return;
     }
+    if (lang == null) {
+      // Avoid null checks in every if/else branch
+      LOGGER.warn("Will not handle declaration - no information about frontend available.");
+      return;
+    }
     this.intermediateNodes.add(declaration);
     // todo FieldDeclarations have initializers that may be appropriate to
     // expressionRefersToDeclaration to the
-    // constructer body over eog edges
+    // constructor body over eog edges
     if (declaration instanceof TranslationUnitDeclaration) {
       // loop through functions
       for (Declaration child : ((TranslationUnitDeclaration) declaration).getDeclarations()) {
@@ -248,6 +194,7 @@ public class EvaluationOrderGraphPass extends Pass {
       FunctionDeclaration funcDecl = (FunctionDeclaration) declaration;
       // reset EOG
       this.currentEOG.clear();
+
       lang.getScopeManager().enterScope(declaration);
       // push the function declaration
       pushToEOG(declaration);
@@ -284,7 +231,13 @@ public class EvaluationOrderGraphPass extends Pass {
    */
   private void createEOG(@Nullable Statement statement) {
     if (statement == null) {
-      return; // For null statements, and to avoid null checks in every ifelse branch
+      return; // For null statements, and to avoid null checks in every if/else branch
+    }
+
+    if (lang == null) {
+      // Avoid null checks in every if/else branch
+      LOGGER.warn("Skipping EOG construction - no information about frontend available.");
+      return;
     }
     this.intermediateNodes.add(statement);
     if (statement instanceof CallExpression) {
@@ -419,7 +372,9 @@ public class EvaluationOrderGraphPass extends Pass {
           if (decl != null
               && decl.getAstNode() instanceof CatchClause
               && ((CatchClause) decl.getAstNode()).getParameter() != null) {
-            throwType = ((CatchClause) decl.getAstNode()).getParameter().getType();
+            VariableDeclaration param = ((CatchClause) decl.getAstNode()).getParameter();
+            assert param != null;
+            throwType = param.getType();
           } else {
             LOGGER.info("Unknown throw type, potentially throw; in a method");
             throwType = new Type("UKNOWN_THROW_TYPE");
@@ -797,9 +752,17 @@ public class EvaluationOrderGraphPass extends Pass {
     }
   }
 
-  public <T extends Node> void pushToEOG(T node) {
+  public <T extends Node> void pushToEOG(@NonNull T node) {
+    if (lang == null) {
+      // Avoid null checks in every if/else branch
+      LOGGER.warn("Not pushing to EOG - no information about frontend available.");
+      return;
+    }
+
     LOGGER.debug("Pushing {} {} to EOG", node.getClass().getSimpleName(), node);
-    for (Node intermediate : intermediateNodes) lang.process(intermediate, node);
+    for (Node intermediate : intermediateNodes) {
+      lang.process(intermediate, node);
+    }
     addMultipleIncomingEOGEdges(this.currentEOG, node);
     intermediateNodes.clear();
     this.currentEOG.clear();
@@ -868,6 +831,13 @@ public class EvaluationOrderGraphPass extends Pass {
    * Connects current EOG nodes to the previously saved loop start to mimic control flow of loops
    */
   public void connectCurrentToLoopStart() {
+    if (lang == null) {
+      // Avoid null checks in every if/else branch
+      LOGGER.warn(
+          "Skipping connection of EOG loop to start - no information about frontend available.");
+      return;
+    }
+
     LoopScope loopScope =
         (LoopScope) lang.getScopeManager().getFirstScopeThat(scope -> scope instanceof LoopScope);
     if (loopScope == null) {
