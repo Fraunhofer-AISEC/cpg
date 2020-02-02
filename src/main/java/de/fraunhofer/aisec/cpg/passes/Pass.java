@@ -40,9 +40,9 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  */
 public abstract class Pass implements Consumer<TranslationResult> {
 
-  protected LanguageFrontend lang;
+  @Nullable protected LanguageFrontend lang;
 
-  /** @return might be null */
+  /** @return May be null */
   @Nullable
   public LanguageFrontend getLang() {
     return lang;
@@ -53,7 +53,7 @@ public abstract class Pass implements Consumer<TranslationResult> {
    *
    * @param lang May be null
    */
-  public void setLang(LanguageFrontend lang) {
+  public void setLang(@Nullable LanguageFrontend lang) {
     this.lang = lang;
   }
 

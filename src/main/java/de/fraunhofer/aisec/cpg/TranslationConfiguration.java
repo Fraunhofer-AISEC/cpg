@@ -26,19 +26,10 @@
 
 package de.fraunhofer.aisec.cpg;
 
-import de.fraunhofer.aisec.cpg.passes.CallResolver;
-import de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass;
-import de.fraunhofer.aisec.cpg.passes.FilenameMapper;
-import de.fraunhofer.aisec.cpg.passes.ImportResolver;
-import de.fraunhofer.aisec.cpg.passes.Pass;
-import de.fraunhofer.aisec.cpg.passes.TypeHierarchyResolver;
-import de.fraunhofer.aisec.cpg.passes.VariableUsageResolver;
+import de.fraunhofer.aisec.cpg.passes.*;
 import java.io.File;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import org.checkerframework.checker.nullness.qual.NonNull;
 
 /**
  * The configuration for the {@link TranslationManager} holds all information that is used during
@@ -71,6 +62,7 @@ public class TranslationConfiguration {
 
   /** should the code of a node be shown as parameter in the node * */
   public final boolean codeInNodes;
+
   /**
    * Should parser/translation fail on parse/resolving errors (true) or try to continue in a
    * best-effort manner (false).
@@ -84,7 +76,8 @@ public class TranslationConfiguration {
   private List<File> sourceLocations;
 
   private File topLevel;
-  private List<Pass> passes;
+
+  @NonNull private List<Pass> passes;
 
   private TranslationConfiguration(
       Map<String, String> symbols,
@@ -174,7 +167,7 @@ public class TranslationConfiguration {
       return this;
     }
 
-    public Builder registerPass(Pass pass) {
+    public Builder registerPass(@NonNull Pass pass) {
       this.passes.add(pass);
       return this;
     }

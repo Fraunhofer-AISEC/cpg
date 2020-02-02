@@ -144,7 +144,7 @@ public abstract class LanguageFrontend {
     return scopeManager;
   }
 
-  public void setScopeManager(ScopeManager scopeManager) {
+  public void setScopeManager(@NonNull ScopeManager scopeManager) {
     this.scopeManager = scopeManager;
   }
 
