@@ -24,9 +24,6 @@
  *
  */
 
-val deployUsername: String? by extra // imported from settings.gradle.kts
-val deployPassword: String? by extra // imported from settings.gradle.kts
-
 plugins {
     // built-in
     java
@@ -38,6 +35,7 @@ plugins {
     id("org.sonarqube") version "2.8"
     id("com.diffplug.gradle.spotless") version "3.27.1"
     id("com.github.johnrengelman.shadow") version "5.2.0"
+    id("net.researchgate.release") version "2.6.0"
 }
 
 tasks.jacocoTestReport {
@@ -47,7 +45,6 @@ tasks.jacocoTestReport {
 }
 
 group = "de.fraunhofer.aisec"
-version = "1.3-SNAPSHOT"
 
 extra["isReleaseVersion"] = !version.toString().endsWith("SNAPSHOT")
 
@@ -193,4 +190,8 @@ spotless {
         )
         googleJavaFormat()
     }
+}
+
+release {
+    tagTemplate = "v${version}"
 }

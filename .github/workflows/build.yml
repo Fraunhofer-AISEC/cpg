@@ -41,7 +41,7 @@ jobs:
       - name: Publish
         run: |
           export ORG_GRADLE_PROJECT_signingKey=`echo ${{ secrets.GPG_PRIVATE_KEY }} | base64 -d`
-          ./gradlew --parallel build signMavenPublication publish
+          ./gradlew -Dorg.gradle.internal.publish.checksums.insecure=true --parallel build signMavenPublication publish
         if: github.ref == 'refs/heads/master'
         env:
           ORG_GRADLE_PROJECT_signingPassword: ${{ secrets.GPG_PASSWORD }}
