@@ -62,6 +62,7 @@ public class TranslationConfiguration {
 
   /** should the code of a node be shown as parameter in the node * */
   public final boolean codeInNodes;
+
   /**
    * Should parser/translation fail on parse/resolving errors (true) or try to continue in a
    * best-effort manner (false).

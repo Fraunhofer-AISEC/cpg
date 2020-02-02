@@ -200,12 +200,11 @@ public class TranslationManager {
         if (config.failOnError) {
           throw ex;
         }
-      } finally {
-        // this only sets one frontend. once more frontends are allowed in parallel, this needs to
-        // change
-        for (Pass pass : config.getRegisteredPasses()) {
-          pass.setLang(frontend);
-        }
+      }
+
+      // Set frontend so passes know what language they are working on.
+      for (Pass pass : config.getRegisteredPasses()) {
+        pass.setLang(frontend);
       }
     }
     return usedFrontends;
