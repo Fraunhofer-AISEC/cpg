@@ -19,12 +19,12 @@ public class ScopeManagerTest {
   }
 
   @Test
-  void testLiteral() throws TranslationException {
+  void testSetScope() throws TranslationException {
     LanguageFrontend frontend = new JavaLanguageFrontend(config, new ScopeManager());
 
-    assertEquals(frontend, frontend.getScopeManager().getLang());
+    assert(frontend == frontend.getScopeManager().getLang());
 
     frontend.setScopeManager(new ScopeManager());
-    assertEquals(frontend, frontend.getScopeManager().getLang());
+    assert(frontend == frontend.getScopeManager().getLang());
   }
 }
