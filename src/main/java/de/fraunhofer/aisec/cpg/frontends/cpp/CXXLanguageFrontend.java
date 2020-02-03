@@ -40,6 +40,7 @@ import de.fraunhofer.aisec.cpg.helpers.Benchmark;
 import java.io.File;
 import java.lang.reflect.Field;
 import java.util.HashMap;
+import java.util.Set;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.eclipse.cdt.core.dom.ast.IASTComment;
@@ -299,7 +300,8 @@ public class CXXLanguageFrontend extends LanguageFrontend {
       if (declaration != null) {
         LOGGER.debug("Connecting {} to {}", expression, declaration);
 
-        ((DeclaredReferenceExpression) expression).setRefersTo((ValueDeclaration) declaration);
+        ((DeclaredReferenceExpression) expression)
+            .setRefersTo(Set.of((ValueDeclaration) declaration));
       }
     } else {
       if (expression == null) {

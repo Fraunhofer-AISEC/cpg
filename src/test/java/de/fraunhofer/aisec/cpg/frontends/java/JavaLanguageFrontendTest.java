@@ -65,6 +65,7 @@ import de.fraunhofer.aisec.cpg.helpers.Util;
 import java.io.File;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -95,7 +96,8 @@ class JavaLanguageFrontendTest {
     assertNotNull(forEachStatement);
 
     // should loop over ls
-    assertEquals(ls, ((DeclaredReferenceExpression) forEachStatement.getIterable()).getRefersTo());
+    assertEquals(
+        Set.of(ls), ((DeclaredReferenceExpression) forEachStatement.getIterable()).getRefersTo());
 
     // should declare String s
     VariableDeclaration s = (VariableDeclaration) forEachStatement.getVariable();
@@ -349,7 +351,7 @@ class JavaLanguageFrontendTest {
     // expression itself should be a reference
     DeclaredReferenceExpression ref = (DeclaredReferenceExpression) cast.getExpression();
     assertNotNull(ref);
-    assertEquals(e, ref.getRefersTo());
+    assertEquals(Set.of(e), ref.getRefersTo());
   }
 
   @Test
@@ -398,7 +400,7 @@ class JavaLanguageFrontendTest {
     // initializer is array subscription
     ArraySubscriptionExpression ase = (ArraySubscriptionExpression) b.getInitializer();
     assertNotNull(ase);
-    assertEquals(a, ((DeclaredReferenceExpression) ase.getArrayExpression()).getRefersTo());
+    assertEquals(Set.of(a), ((DeclaredReferenceExpression) ase.getArrayExpression()).getRefersTo());
     assertEquals(0, ((Literal<Integer>) ase.getSubscriptExpression()).getValue().intValue());
   }
 

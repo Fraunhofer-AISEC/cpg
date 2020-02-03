@@ -142,38 +142,47 @@ public class VariableUsageResolver implements Pass {
     }
   }
 
-  private ValueDeclaration resolveFunctionPtr(
+  private Set<ValueDeclaration> resolveFunctionPtr(
       Type containingClass, DeclaredReferenceExpression reference) {
-    Optional<ValueDeclaration> target = Optional.empty();
+    Set<ValueDeclaration> targets = Collections.emptySet();
     Matcher matcher =
         Pattern.compile("(?:(?<class>.*)(?:\\.|::))?(?<function>.*)").matcher(reference.getName());
     if (matcher.matches()) {
       String cls = matcher.group("class");
       String function = matcher.group("function");
       if (cls == null) {
-        target =
-            walker.getDeclarationForScope(reference, function).map(ValueDeclaration.class::cast);
+        targets =
+            walker
+                .getDeclarationForScope(reference, function)
+                .map(d -> Set.of((ValueDeclaration) d))
+                .orElse(Collections.emptySet());
       } else {
         containingClass = new Type(cls);
         if (recordMap.containsKey(containingClass)) {
-          target =
+          targets =
               recordMap.get(containingClass).getMethods().stream()
                   .filter(f -> f.getName().equals(function))
-                  .findFirst()
-                  .map(ValueDeclaration.class::cast);
+                  .map(ValueDeclaration.class::cast)
+                  .collect(Collectors.toSet());
         }
       }
     }
 
-    Type finalContainingClass = containingClass;
-    return target.orElseGet(() -> handleUnknownMethod(finalContainingClass, reference));
+    if (targets.isEmpty()) {
+      return Set.of(handleUnknownMethod(containingClass, reference));
+    } else {
+      return targets;
+    }
   }
 
   private void resolveLocalVarUsage(RecordDeclaration currentClass, Node parent, Node current) {
     if (current instanceof DeclaredReferenceExpression) {
       DeclaredReferenceExpression ref = (DeclaredReferenceExpression) current;
-      Optional<? extends ValueDeclaration> refersTo =
-          walker.getDeclarationForScope(parent, ref.getName());
+      Set<ValueDeclaration> refersTo =
+          walker
+              .getDeclarationForScope(parent, ref.getName())
+              .map(d -> Set.of((ValueDeclaration) d))
+              .orElse(Collections.emptySet());
 
       Type recordDeclType = null;
       if (currentClass != null) {
@@ -181,7 +190,7 @@ public class VariableUsageResolver implements Pass {
       }
 
       if (ref.getType().isFunctionPtr()) {
-        refersTo = Optional.of(resolveFunctionPtr(recordDeclType, ref));
+        refersTo = resolveFunctionPtr(recordDeclType, ref);
       }
 
       // only add new nodes for non-static unknown
@@ -190,12 +199,11 @@ public class VariableUsageResolver implements Pass {
           && recordDeclType != null
           && recordMap.containsKey(recordDeclType)) {
         // Maybe we are referring to a field instead of a local var
-        refersTo =
-            Optional.of(resolveMember(recordDeclType, (DeclaredReferenceExpression) current));
+        refersTo = Set.of(resolveMember(recordDeclType, (DeclaredReferenceExpression) current));
       }
 
-      if (refersTo.isPresent()) {
-        ref.setRefersTo(refersTo.get());
+      if (!refersTo.isEmpty()) {
+        ref.setRefersTo(refersTo);
       } else {
         Region region = current.getRegion();
         int startLine = -1;
@@ -285,10 +293,6 @@ public class VariableUsageResolver implements Pass {
 
   private ValueDeclaration resolveMember(
       Type containingClass, DeclaredReferenceExpression reference) {
-
-    if (reference.getType().isFunctionPtr()) {
-      return resolveFunctionPtr(containingClass, reference);
-    }
 
     Optional<FieldDeclaration> member = Optional.empty();
     if (!TypeManager.getInstance().isUnknown(containingClass)) {

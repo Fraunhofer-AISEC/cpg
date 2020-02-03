@@ -508,7 +508,7 @@ public class ScopeManager {
     if (any.isPresent()) {
       T declaration = any.get();
 
-      referenceExpression.setRefersTo(declaration);
+      referenceExpression.setRefersTo(Set.of(declaration));
       referenceExpression.setType(declaration.getType());
       LOGGER.debug(
           "Connecting {} to method parameter {} of type {}",

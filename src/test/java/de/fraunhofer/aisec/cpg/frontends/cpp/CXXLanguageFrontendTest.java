@@ -115,7 +115,8 @@ class CXXLanguageFrontendTest {
     assertNotNull(forEachStatement);
 
     // should loop over ls
-    assertEquals(ls, ((DeclaredReferenceExpression) forEachStatement.getIterable()).getRefersTo());
+    assertEquals(
+        Set.of(ls), ((DeclaredReferenceExpression) forEachStatement.getIterable()).getRefersTo());
 
     // should declare auto i
     VariableDeclaration i = (VariableDeclaration) forEachStatement.getVariable();
@@ -273,7 +274,7 @@ class CXXLanguageFrontendTest {
         (ArraySubscriptionExpression) statement.getStatements().get(1);
     assertNotNull(ase);
 
-    assertEquals(x, ((DeclaredReferenceExpression) ase.getArrayExpression()).getRefersTo());
+    assertEquals(Set.of(x), ((DeclaredReferenceExpression) ase.getArrayExpression()).getRefersTo());
     assertEquals(0, ((Literal<Integer>) ase.getSubscriptExpression()).getValue().intValue());
   }
 
@@ -544,7 +545,7 @@ class CXXLanguageFrontendTest {
 
   private boolean assertRefersTo(Expression expression, Declaration b) {
     if (expression instanceof DeclaredReferenceExpression) {
-      return ((DeclaredReferenceExpression) expression).getRefersTo() == b;
+      return ((DeclaredReferenceExpression) expression).getRefersTo().equals(Set.of(b));
     }
 
     return false;

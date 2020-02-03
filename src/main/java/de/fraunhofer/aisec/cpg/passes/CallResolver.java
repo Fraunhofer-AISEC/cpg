@@ -46,8 +46,10 @@ import de.fraunhofer.aisec.cpg.graph.StaticCallExpression;
 import de.fraunhofer.aisec.cpg.graph.TranslationUnitDeclaration;
 import de.fraunhofer.aisec.cpg.graph.Type;
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.ScopedWalker;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -152,6 +154,26 @@ public class CallResolver implements Pass {
       }
     } else if (node instanceof CallExpression) {
       CallExpression call = (CallExpression) node;
+
+      if (call instanceof MemberCallExpression) {
+        Node member = ((MemberCallExpression) call).getMember();
+        if (member instanceof HasType && ((HasType) member).getType().isFunctionPtr()) {
+          List<FunctionDeclaration> invocationCandidates = new ArrayList<>();
+          Deque<Node> worklist = new ArrayDeque<>();
+          worklist.push(member);
+          while (!worklist.isEmpty()) {
+            Node curr = worklist.pop();
+            if (curr instanceof FunctionDeclaration
+                && ((FunctionDeclaration) curr).hasSignature(call.getSignature())) {
+              invocationCandidates.add((FunctionDeclaration) curr);
+            } else {
+              curr.getPrevDFG().forEach(worklist::push);
+            }
+          }
+          call.setInvokes(invocationCandidates);
+          return;
+        }
+      }
 
       if (curClass == null && this.currentTU != null) {
         // Handle function (not method) calls

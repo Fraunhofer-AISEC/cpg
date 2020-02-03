@@ -42,29 +42,33 @@ import org.checkerframework.checker.nullness.qual.NonNull;
  */
 public class DeclaredReferenceExpression extends Expression implements TypeListener {
 
-  /** The {@link ValueDeclaration} this expression refers to. */
-  private ValueDeclaration refersTo;
+  /** The {@link ValueDeclaration}s this expression might refer to. */
+  private Set<ValueDeclaration> refersTo = new HashSet<>();
 
-  public ValueDeclaration getRefersTo() {
+  public Set<ValueDeclaration> getRefersTo() {
     return refersTo;
   }
 
-  public void setRefersTo(@NonNull ValueDeclaration refersTo) {
-    if (this.refersTo != null) {
-      this.refersTo.unregisterTypeListener(this);
-      this.removePrevDFG(this.refersTo);
-      this.refersTo.removePrevDFG(this);
-      if (this.refersTo instanceof TypeListener) {
-        this.unregisterTypeListener((TypeListener) this.refersTo);
-      }
-    }
+  public void setRefersTo(@NonNull Set<ValueDeclaration> refersTo) {
+    this.refersTo.forEach(
+        r -> {
+          r.unregisterTypeListener(this);
+          this.removePrevDFG(r);
+          r.removePrevDFG(this);
+          if (r instanceof TypeListener) {
+            this.unregisterTypeListener((TypeListener) r);
+          }
+        });
 
     this.refersTo = refersTo;
-    refersTo.registerTypeListener(this);
-    refersTo.addNextDFG(this);
-    if (refersTo instanceof TypeListener) {
-      this.registerTypeListener((TypeListener) refersTo);
-    }
+    refersTo.forEach(
+        r -> {
+          r.registerTypeListener(this);
+          r.addNextDFG(this);
+          if (r instanceof TypeListener) {
+            this.registerTypeListener((TypeListener) r);
+          }
+        });
   }
 
   @Override
