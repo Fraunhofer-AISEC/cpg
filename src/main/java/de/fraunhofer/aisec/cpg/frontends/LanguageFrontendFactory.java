@@ -29,6 +29,7 @@ package de.fraunhofer.aisec.cpg.frontends;
 import de.fraunhofer.aisec.cpg.TranslationConfiguration;
 import de.fraunhofer.aisec.cpg.frontends.cpp.CXXLanguageFrontend;
 import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguageFrontend;
+import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager;
 import java.util.List;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
@@ -41,12 +42,13 @@ public class LanguageFrontendFactory {
   private LanguageFrontendFactory() {}
 
   @Nullable
-  public static LanguageFrontend getFrontend(String fileType, TranslationConfiguration config) {
+  public static LanguageFrontend getFrontend(
+      String fileType, TranslationConfiguration config, ScopeManager scopeManager) {
 
     if (JAVA_EXTENSIONS.contains(fileType)) {
-      return new JavaLanguageFrontend(config);
+      return new JavaLanguageFrontend(config, scopeManager);
     } else if (CXX_EXTENSIONS.contains(fileType)) {
-      return new CXXLanguageFrontend(config);
+      return new CXXLanguageFrontend(config, scopeManager);
     } else {
       return null;
     }

@@ -37,6 +37,7 @@ import de.fraunhofer.aisec.cpg.graph.TranslationUnitDeclaration;
 import de.fraunhofer.aisec.cpg.graph.Type;
 import de.fraunhofer.aisec.cpg.graph.UnaryOperator;
 import de.fraunhofer.aisec.cpg.graph.VariableDeclaration;
+import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager;
 import java.io.File;
 import java.math.BigInteger;
 import java.util.Objects;
@@ -57,7 +58,8 @@ public class CXXLiteralTest {
   @Test
   void testDecimalIntegerLiterals() throws TranslationException {
     TranslationUnitDeclaration tu =
-        new CXXLanguageFrontend(config).parse(new File("src/test/resources/integer_literals.cpp"));
+        new CXXLanguageFrontend(config, new ScopeManager())
+            .parse(new File("src/test/resources/integer_literals.cpp"));
 
     FunctionDeclaration decimal =
         tu.getDeclarationByName("decimal", FunctionDeclaration.class).orElse(null);
@@ -93,7 +95,8 @@ public class CXXLiteralTest {
   @Test
   void testOctalIntegerLiterals() throws TranslationException {
     TranslationUnitDeclaration tu =
-        new CXXLanguageFrontend(config).parse(new File("src/test/resources/integer_literals.cpp"));
+        new CXXLanguageFrontend(config, new ScopeManager())
+            .parse(new File("src/test/resources/integer_literals.cpp"));
 
     FunctionDeclaration octal =
         tu.getDeclarationByName("octal", FunctionDeclaration.class).orElse(null);
@@ -113,7 +116,8 @@ public class CXXLiteralTest {
   @ValueSource(strings = {"octal", "hex", "binary"})
   void testNonDecimalIntegerLiterals() throws TranslationException {
     TranslationUnitDeclaration tu =
-        new CXXLanguageFrontend(config).parse(new File("src/test/resources/integer_literals.cpp"));
+        new CXXLanguageFrontend(config, new ScopeManager())
+            .parse(new File("src/test/resources/integer_literals.cpp"));
 
     FunctionDeclaration functionDeclaration =
         tu.getDeclarationByName("hex", FunctionDeclaration.class).orElse(null);
@@ -132,7 +136,7 @@ public class CXXLiteralTest {
   @Test
   void testLargeNegativeNumber() throws TranslationException {
     TranslationUnitDeclaration tu =
-        new CXXLanguageFrontend(config)
+        new CXXLanguageFrontend(config, new ScopeManager())
             .parse(new File("src/test/resources/largenegativenumber.cpp"));
 
     FunctionDeclaration main =

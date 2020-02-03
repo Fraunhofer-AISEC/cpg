@@ -63,6 +63,7 @@ import de.fraunhofer.aisec.cpg.graph.VariableDeclaration;
 import de.fraunhofer.aisec.cpg.helpers.NodeComparator;
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker;
 import de.fraunhofer.aisec.cpg.helpers.Util;
+import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager;
 import java.io.File;
 import java.math.BigInteger;
 import java.util.List;
@@ -83,7 +84,7 @@ class JavaLanguageFrontendTest {
   @Test
   void testLargeNegativeNumber() throws TranslationException {
     TranslationUnitDeclaration tu =
-        new JavaLanguageFrontend(config)
+        new JavaLanguageFrontend(config, new ScopeManager())
             .parse(new File("src/test/resources/LargeNegativeNumber.java"));
     RecordDeclaration declaration = (RecordDeclaration) tu.getDeclarations().get(0);
 
@@ -121,7 +122,7 @@ class JavaLanguageFrontendTest {
   @Test
   void testForeach() throws TranslationException {
     TranslationUnitDeclaration tu =
-        new JavaLanguageFrontend(config)
+        new JavaLanguageFrontend(config, new ScopeManager())
             .parse(new File("src/test/resources/components/ForEachStmt.java"));
 
     RecordDeclaration declaration = (RecordDeclaration) tu.getDeclarations().get(0);
@@ -155,7 +156,7 @@ class JavaLanguageFrontendTest {
   @Test
   void testTryCatch() throws TranslationException {
     TranslationUnitDeclaration tu =
-        new JavaLanguageFrontend(config)
+        new JavaLanguageFrontend(config, new ScopeManager())
             .parse(new File("src/test/resources/components/TryStmt.java"));
 
     RecordDeclaration declaration = (RecordDeclaration) tu.getDeclarations().get(0);
@@ -190,7 +191,7 @@ class JavaLanguageFrontendTest {
   @Test
   void testLiteral() throws TranslationException {
     TranslationUnitDeclaration tu =
-        new JavaLanguageFrontend(config)
+        new JavaLanguageFrontend(config, new ScopeManager())
             .parse(new File("src/test/resources/components/LiteralExpr.java"));
 
     RecordDeclaration declaration = (RecordDeclaration) tu.getDeclarations().get(0);
@@ -278,7 +279,7 @@ class JavaLanguageFrontendTest {
   @Test
   void testRecordDeclaration() throws TranslationException {
     TranslationUnitDeclaration declaration =
-        new JavaLanguageFrontend(config)
+        new JavaLanguageFrontend(config, new ScopeManager())
             .parse(new File("src/test/resources/compiling/RecordDeclaration.java"));
 
     assertNotNull(declaration);
@@ -308,7 +309,7 @@ class JavaLanguageFrontendTest {
   @Test
   void testVariables() throws TranslationException {
     TranslationUnitDeclaration declaration =
-        new JavaLanguageFrontend(config)
+        new JavaLanguageFrontend(config, new ScopeManager())
             .parse(new File("src/test/resources/compiling/Variables.java"));
 
     assertNotNull(declaration);
@@ -317,7 +318,7 @@ class JavaLanguageFrontendTest {
   @Test
   void testNameExpressions() throws TranslationException {
     TranslationUnitDeclaration declaration =
-        new JavaLanguageFrontend(config)
+        new JavaLanguageFrontend(config, new ScopeManager())
             .parse(new File("src/test/resources/compiling/NameExpression.java"));
 
     assertNotNull(declaration);
@@ -326,7 +327,7 @@ class JavaLanguageFrontendTest {
   @Test
   void testSwitch() throws TranslationException {
     TranslationUnitDeclaration declaration =
-        new JavaLanguageFrontend(TranslationConfiguration.builder().build())
+        new JavaLanguageFrontend(TranslationConfiguration.builder().build(), new ScopeManager())
             .parse(new File("src/test/resources/cfg/Switch.java"));
 
     List<Node> graphNodes = SubgraphWalker.flattenAST(declaration);
@@ -352,7 +353,7 @@ class JavaLanguageFrontendTest {
   @Test
   void testCast() throws TranslationException {
     TranslationUnitDeclaration declaration =
-        new JavaLanguageFrontend(TranslationConfiguration.builder().build())
+        new JavaLanguageFrontend(TranslationConfiguration.builder().build(), new ScopeManager())
             .parse(new File("src/test/resources/components/CastExpr.java"));
 
     assertNotNull(declaration);
@@ -395,7 +396,7 @@ class JavaLanguageFrontendTest {
   @Test
   void testArrays() throws TranslationException {
     TranslationUnitDeclaration declaration =
-        new JavaLanguageFrontend(TranslationConfiguration.builder().build())
+        new JavaLanguageFrontend(TranslationConfiguration.builder().build(), new ScopeManager())
             .parse(new File("src/test/resources/compiling/Arrays.java"));
 
     assertNotNull(declaration);
@@ -445,7 +446,7 @@ class JavaLanguageFrontendTest {
   @Test
   void testFieldAccessExpressions() throws TranslationException {
     TranslationUnitDeclaration declaration =
-        new JavaLanguageFrontend(TranslationConfiguration.builder().build())
+        new JavaLanguageFrontend(TranslationConfiguration.builder().build(), new ScopeManager())
             .parse(new File("src/test/resources/compiling/FieldAccess.java"));
 
     assertNotNull(declaration);

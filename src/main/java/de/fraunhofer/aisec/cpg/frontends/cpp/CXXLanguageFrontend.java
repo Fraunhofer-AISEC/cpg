@@ -38,6 +38,7 @@ import de.fraunhofer.aisec.cpg.graph.Type;
 import de.fraunhofer.aisec.cpg.graph.TypeManager;
 import de.fraunhofer.aisec.cpg.graph.ValueDeclaration;
 import de.fraunhofer.aisec.cpg.helpers.Benchmark;
+import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager;
 import java.io.File;
 import java.lang.reflect.Field;
 import java.util.HashMap;
@@ -120,8 +121,8 @@ public class CXXLanguageFrontend extends LanguageFrontend {
   private HashMap<IBinding, Declaration> cachedDeclarations = new HashMap<>();
   private HashMap<Integer, String> comments = new HashMap<>();
 
-  public CXXLanguageFrontend(@NonNull TranslationConfiguration config) {
-    super(config, "::");
+  public CXXLanguageFrontend(@NonNull TranslationConfiguration config, ScopeManager scopeManager) {
+    super(config, scopeManager, "::");
   }
 
   /**

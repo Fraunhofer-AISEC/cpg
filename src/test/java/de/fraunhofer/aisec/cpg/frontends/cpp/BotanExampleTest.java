@@ -33,6 +33,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import de.fraunhofer.aisec.cpg.TranslationConfiguration;
 import de.fraunhofer.aisec.cpg.frontends.TranslationException;
 import de.fraunhofer.aisec.cpg.graph.*;
+import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager;
 import java.io.File;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -42,7 +43,7 @@ class BotanExampleTest {
   @Test
   void testExample() throws TranslationException {
     TranslationUnitDeclaration declaration =
-        new CXXLanguageFrontend(TranslationConfiguration.builder().build())
+        new CXXLanguageFrontend(TranslationConfiguration.builder().build(), new ScopeManager())
             .parse(new File("src/test/resources/botan/symm_block_cipher.cpp"));
 
     assertNotNull(declaration);

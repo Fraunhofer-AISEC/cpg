@@ -32,6 +32,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import de.fraunhofer.aisec.cpg.TranslationConfiguration;
 import de.fraunhofer.aisec.cpg.frontends.TranslationException;
 import de.fraunhofer.aisec.cpg.graph.*;
+import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager;
 import java.io.File;
 import org.junit.jupiter.api.Test;
 
@@ -41,7 +42,8 @@ class CXXIncludeTest {
   void testDefinitionsAndDeclaration() throws TranslationException {
     TranslationUnitDeclaration tu =
         new CXXLanguageFrontend(
-                TranslationConfiguration.builder().loadIncludes(true).defaultPasses().build())
+                TranslationConfiguration.builder().loadIncludes(true).defaultPasses().build(),
+                new ScopeManager())
             .parse(new File("src/test/resources/include.cpp"));
     assertEquals(4, tu.getDeclarations().size());
 
@@ -69,7 +71,8 @@ class CXXIncludeTest {
     // checks, whether code and region for nodes in includes are properly set
     TranslationUnitDeclaration tu =
         new CXXLanguageFrontend(
-                TranslationConfiguration.builder().loadIncludes(true).defaultPasses().build())
+                TranslationConfiguration.builder().loadIncludes(true).defaultPasses().build(),
+                new ScopeManager())
             .parse(new File("src/test/resources/include.cpp"));
 
     RecordDeclaration someClass =

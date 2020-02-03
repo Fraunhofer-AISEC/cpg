@@ -32,6 +32,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import de.fraunhofer.aisec.cpg.TranslationConfiguration;
 import de.fraunhofer.aisec.cpg.frontends.TranslationException;
 import de.fraunhofer.aisec.cpg.graph.*;
+import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager;
 import java.io.File;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
@@ -41,7 +42,8 @@ public class CXXSymbolConfigurationTest {
   void testWithoutSymbols() throws TranslationException {
     // parse without symbols
     TranslationUnitDeclaration tu =
-        new CXXLanguageFrontend(TranslationConfiguration.builder().defaultPasses().build())
+        new CXXLanguageFrontend(
+                TranslationConfiguration.builder().defaultPasses().build(), new ScopeManager())
             .parse(new File("src/test/resources/symbols.cpp"));
 
     FunctionDeclaration main =
@@ -78,7 +80,8 @@ public class CXXSymbolConfigurationTest {
                             "HELLO_WORLD", "\"Hello World\"",
                             "INCREASE(X)", "X+1"))
                     .defaultPasses()
-                    .build())
+                    .build(),
+                new ScopeManager())
             .parse(new File("src/test/resources/symbols.cpp"));
 
     FunctionDeclaration main =
