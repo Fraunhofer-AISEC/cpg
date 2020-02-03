@@ -38,6 +38,7 @@ import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.RecordDeclaration;
 import de.fraunhofer.aisec.cpg.graph.TranslationUnitDeclaration;
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker;
+import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager;
 import java.io.File;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
@@ -48,7 +49,8 @@ class SubgraphWalkerTest {
   void testASTChildrenGetter() throws TranslationException {
     File file = new File("src/test/resources/compiling/RecordDeclaration.java");
     TranslationConfiguration config = TranslationConfiguration.builder().build();
-    TranslationUnitDeclaration declaration = new JavaLanguageFrontend(config).parse(file);
+    TranslationUnitDeclaration declaration =
+        new JavaLanguageFrontend(config, new ScopeManager()).parse(file);
     NamespaceDeclaration namespace = declaration.getDeclarationAs(0, NamespaceDeclaration.class);
 
     assertNotNull(declaration);

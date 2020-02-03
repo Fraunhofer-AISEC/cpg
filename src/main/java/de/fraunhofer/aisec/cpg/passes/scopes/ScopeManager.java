@@ -68,6 +68,14 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * The scope manager builds a multitree-structure of scopes associated to a scope. These Scopes
+ * capture the are of validity of certain (Variable-, Field-, Record-)declarations but are also used
+ * to identify outer scopes that should be target of a jump (continue, break, throw).
+ *
+ * <p>enterScope(Node) and leaveScope(Node) can be used to enter the Tree of scopes and then sitting
+ * at a path, access the currently valid "stack" of scopes.
+ */
 public class ScopeManager {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(ScopeManager.class);
@@ -76,9 +84,16 @@ public class ScopeManager {
   private Scope currentScope = null;
   private LanguageFrontend lang;
 
-  public ScopeManager(LanguageFrontend lang) {
-    this.lang = lang;
+  public ScopeManager() {
     pushScope(new GlobalScope());
+  }
+
+  public LanguageFrontend getLang() {
+    return lang;
+  }
+
+  public void setLang(LanguageFrontend lang) {
+    this.lang = lang;
   }
 
   private void pushScope(Scope scope) {

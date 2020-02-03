@@ -69,6 +69,7 @@ import de.fraunhofer.aisec.cpg.graph.TypeManager;
 import de.fraunhofer.aisec.cpg.helpers.Benchmark;
 import de.fraunhofer.aisec.cpg.helpers.CommonPath;
 import de.fraunhofer.aisec.cpg.helpers.Util;
+import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager;
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -92,8 +93,8 @@ public class JavaLanguageFrontend extends LanguageFrontend {
   private HashSet<TypeSolver> internalTypeSolvers =
       new HashSet<>(); // we store a reference here to clean them up later
 
-  public JavaLanguageFrontend(@NonNull TranslationConfiguration config) {
-    super(config, ".");
+  public JavaLanguageFrontend(@NonNull TranslationConfiguration config, ScopeManager scopeManager) {
+    super(config, scopeManager, ".");
 
     CombinedTypeSolver typeResolver = new CombinedTypeSolver();
     internalTypeSolvers.add(typeResolver);

@@ -52,7 +52,7 @@ public abstract class LanguageFrontend {
 
   protected static final Logger log = LoggerFactory.getLogger(LanguageFrontend.class);
   protected final TranslationConfiguration config;
-  protected ScopeManager scopeManager = new ScopeManager(this);
+  protected ScopeManager scopeManager;
   /**
    * Two data structures used to associate Objects input to a pass to results of a pass, e.g.
    * Javaparser AST-Nodes to CPG-Nodes. The "Listeners" in processedListener are called after the
@@ -73,9 +73,14 @@ public abstract class LanguageFrontend {
 
   // Todo Moving this to scope manager and add listeners and processedMappings to specified scopes.
 
-  public LanguageFrontend(@NonNull TranslationConfiguration config, String namespaceDelimiter) {
+  public LanguageFrontend(
+      @NonNull TranslationConfiguration config,
+      ScopeManager scopeManager,
+      String namespaceDelimiter) {
     this.config = config;
     this.namespaceDelimiter = namespaceDelimiter;
+    this.scopeManager = scopeManager;
+    this.scopeManager.setLang(this);
   }
 
   public void process(Object from, Object to) {
@@ -146,6 +151,7 @@ public abstract class LanguageFrontend {
 
   public void setScopeManager(@NonNull ScopeManager scopeManager) {
     this.scopeManager = scopeManager;
+    this.scopeManager.setLang(this);
   }
 
   public abstract TranslationUnitDeclaration parse(File file) throws TranslationException;
