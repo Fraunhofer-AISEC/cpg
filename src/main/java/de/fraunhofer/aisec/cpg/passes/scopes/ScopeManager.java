@@ -88,6 +88,10 @@ public class ScopeManager {
     pushScope(new GlobalScope());
   }
 
+  public LanguageFrontend getLang() {
+    return lang;
+  }
+
   public void setLang(LanguageFrontend lang) {
     this.lang = lang;
   }
