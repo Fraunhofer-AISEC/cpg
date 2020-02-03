@@ -34,6 +34,7 @@ import de.fraunhofer.aisec.cpg.graph.EnumDeclaration;
 import de.fraunhofer.aisec.cpg.graph.FieldDeclaration;
 import de.fraunhofer.aisec.cpg.graph.HasType;
 import de.fraunhofer.aisec.cpg.graph.MemberExpression;
+import de.fraunhofer.aisec.cpg.graph.MethodDeclaration;
 import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder;
 import de.fraunhofer.aisec.cpg.graph.RecordDeclaration;
@@ -53,6 +54,8 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -139,6 +142,33 @@ public class VariableUsageResolver implements Pass {
     }
   }
 
+  private ValueDeclaration resolveFunctionPtr(
+      Type containingClass, DeclaredReferenceExpression reference) {
+    Optional<ValueDeclaration> target = Optional.empty();
+    Matcher matcher =
+        Pattern.compile("(?:(?<class>.*)(?:\\.|::))?(?<function>.*)").matcher(reference.getName());
+    if (matcher.matches()) {
+      String cls = matcher.group("class");
+      String function = matcher.group("function");
+      if (cls == null) {
+        target =
+            walker.getDeclarationForScope(reference, function).map(ValueDeclaration.class::cast);
+      } else {
+        containingClass = new Type(cls);
+        if (recordMap.containsKey(containingClass)) {
+          target =
+              recordMap.get(containingClass).getMethods().stream()
+                  .filter(f -> f.getName().equals(function))
+                  .findFirst()
+                  .map(ValueDeclaration.class::cast);
+        }
+      }
+    }
+
+    Type finalContainingClass = containingClass;
+    return target.orElseGet(() -> handleUnknownMethod(finalContainingClass, reference));
+  }
+
   private void resolveLocalVarUsage(RecordDeclaration currentClass, Node parent, Node current) {
     if (current instanceof DeclaredReferenceExpression) {
       DeclaredReferenceExpression ref = (DeclaredReferenceExpression) current;
@@ -148,6 +178,10 @@ public class VariableUsageResolver implements Pass {
       Type recordDeclType = null;
       if (currentClass != null) {
         recordDeclType = new Type(currentClass.getName());
+      }
+
+      if (ref.getType().isFunctionPtr()) {
+        refersTo = Optional.of(resolveFunctionPtr(recordDeclType, ref));
       }
 
       // only add new nodes for non-static unknown
@@ -245,12 +279,17 @@ public class VariableUsageResolver implements Pass {
       log.info(
           "Type declaration for {} not found in graph, using dummy to collect all " + "usages",
           reference.getType());
-      return handleUnknownDeclaration(reference.getType(), reference);
+      return handleUnknownField(reference.getType(), reference);
     }
   }
 
   private ValueDeclaration resolveMember(
       Type containingClass, DeclaredReferenceExpression reference) {
+
+    if (reference.getType().isFunctionPtr()) {
+      return resolveFunctionPtr(containingClass, reference);
+    }
+
     Optional<FieldDeclaration> member = Optional.empty();
     if (!TypeManager.getInstance().isUnknown(containingClass)) {
       if (recordMap.containsKey(containingClass)) {
@@ -270,11 +309,10 @@ public class VariableUsageResolver implements Pass {
               .findFirst();
     }
     // Attention: using orElse instead of orElseGet will always invoke unknown declaration handling!
-    return member.orElseGet(() -> handleUnknownDeclaration(containingClass, reference));
+    return member.orElseGet(() -> handleUnknownField(containingClass, reference));
   }
 
-  private FieldDeclaration handleUnknownDeclaration(
-      Type base, DeclaredReferenceExpression reference) {
+  private FieldDeclaration handleUnknownField(Type base, DeclaredReferenceExpression reference) {
     recordMap.putIfAbsent(
         base,
         NodeBuilder.newRecordDeclaration(
@@ -295,6 +333,31 @@ public class VariableUsageResolver implements Pass {
               "",
               new Region(),
               null);
+      declarations.add(declaration);
+      declaration.setDummy(true);
+      // lang.getScopeManager().addValueDeclaration(declaration);
+      return declaration;
+    } else {
+      return target.get();
+    }
+  }
+
+  private MethodDeclaration handleUnknownMethod(Type base, DeclaredReferenceExpression reference) {
+    recordMap.putIfAbsent(
+        base,
+        NodeBuilder.newRecordDeclaration(
+            base.getTypeName(),
+            new ArrayList<>(),
+            Type.UNKNOWN_TYPE_STRING,
+            Type.UNKNOWN_TYPE_STRING));
+    // fields.putIfAbsent(base, new ArrayList<>());
+    List<MethodDeclaration> declarations = recordMap.get(base).getMethods();
+    Optional<MethodDeclaration> target =
+        declarations.stream().filter(f -> f.getName().equals(reference.getName())).findFirst();
+    if (target.isEmpty()) {
+      MethodDeclaration declaration =
+          NodeBuilder.newMethodDeclaration(reference.getName(), "", false);
+      declaration.setType(reference.getType());
       declarations.add(declaration);
       declaration.setDummy(true);
       // lang.getScopeManager().addValueDeclaration(declaration);

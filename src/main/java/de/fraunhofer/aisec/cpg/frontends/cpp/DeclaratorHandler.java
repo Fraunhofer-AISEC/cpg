@@ -180,8 +180,11 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
         // variable
         result =
             NodeBuilder.newVariableDeclaration(
-                ctx.getName().toString(), Type.UNKNOWN, ctx.getRawSignature());
+                ctx.getNestedDeclarator().getName().toString(),
+                Type.UNKNOWN,
+                ctx.getRawSignature());
         ((VariableDeclaration) result).setInitializer(initializer);
+        result.getType().setFunctionPtr(true);
         result.setRegion(lang.getRegionFromRawNode(ctx));
       } else {
         RecordScope recordScope =

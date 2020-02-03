@@ -356,7 +356,7 @@ public class SubgraphWalker {
 
       Node parent = walker.getBacklog().peek();
 
-      if (current instanceof RecordDeclaration) {
+      if (current instanceof RecordDeclaration && current != currentClass.peek()) {
         currentClass.push(
             (RecordDeclaration)
                 current); // we can be in an inner class, so we remember this as a stack

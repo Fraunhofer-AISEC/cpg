@@ -55,6 +55,8 @@ public class Type {
   protected String typeModifier = "";
   /** Where does this type come from? Provided by a symbol solver, guessed from imports etc? */
   protected Origin typeOrigin = Origin.UNRESOLVED;
+  /** Hint for resolving function pointer calls */
+  protected boolean isFunctionPtr = false;
 
   @Id @GeneratedValue private Long id;
 
@@ -86,6 +88,7 @@ public class Type {
     this.typeAdjustment = src.typeAdjustment;
     this.typeModifier = src.typeModifier;
     this.typeOrigin = src.typeOrigin;
+    this.isFunctionPtr = src.isFunctionPtr;
   }
 
   private static String clean(String type) {
@@ -172,6 +175,14 @@ public class Type {
   public Type dereference() {
     // dereferencing an array results in basically the same as with a pointer
     return new Type(this.type, this.typeAdjustment.replaceFirst("(\\[])|(\\*)", ""));
+  }
+
+  public void setFunctionPtr(boolean functionPtr) {
+    isFunctionPtr = functionPtr;
+  }
+
+  public boolean isFunctionPtr() {
+    return isFunctionPtr;
   }
 
   public String toString() {
