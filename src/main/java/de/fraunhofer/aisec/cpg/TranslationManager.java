@@ -188,7 +188,7 @@ public class TranslationManager {
                 result
                     .getScratch()
                     .computeIfAbsent(
-                        TranslationResult.SOURCEFILESTOFRONTEND,
+                        TranslationResult.SOURCE_LOCATIONS_TO_FRONTEND,
                         x -> new HashMap<String, String>());
         sfToFe.put(sourceLocation.getName(), frontend.getClass().getSimpleName());
 

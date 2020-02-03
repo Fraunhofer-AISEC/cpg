@@ -43,7 +43,7 @@ class LanguageFrontendTest {
         TranslationManager.builder()
             .config(
                 TranslationConfiguration.builder()
-                    .sourceFiles(new File("src/test/resources/botan"))
+                    .sourceLocations(new File("src/test/resources/botan"))
                     .debugParser(true)
                     .build())
             .build();

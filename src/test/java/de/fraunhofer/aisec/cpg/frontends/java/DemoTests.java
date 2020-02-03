@@ -56,7 +56,7 @@ public class DemoTests {
 
     TranslationConfiguration config =
         TranslationConfiguration.builder()
-            .sourceFiles(files)
+            .sourceLocations(files)
             .topLevel(topLevel.toFile())
             .defaultPasses()
             .debugParser(true)
@@ -83,7 +83,7 @@ public class DemoTests {
 
     TranslationConfiguration config =
         TranslationConfiguration.builder()
-            .sourceFiles(files)
+            .sourceLocations(files)
             .topLevel(topLevel.toFile())
             .defaultPasses()
             .debugParser(true)

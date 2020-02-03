@@ -159,6 +159,7 @@ val versions = mapOf(
         "slf4j" to "1.8.0-beta4",
         "javaparser" to "3.15.10",
         "cdt" to "6.10.0.201912051559",
+        "eclipse-core" to "3.17.0",
         "icu4j" to "65.1"
 )
 
@@ -170,7 +171,8 @@ dependencies {
     api("com.github.javaparser", "javaparser-symbol-solver-core", versions["javaparser"])
 
     // Eclipse dependencies
-    api("org.eclipse.platform", "org.eclipse.core.runtime", "3.17.0")
+    api("org.eclipse.platform", "org.eclipse.core.runtime", versions["eclipse-core"])
+    api("com.ibm.icu", "icu4j", versions["icu4j"])
 
     // CDT
     api("org.eclipse.cdt", "core", versions["cdt"])

@@ -38,7 +38,7 @@ import java.util.Map;
  * de.fraunhofer.aisec.cpg.passes.Pass} can extend it.
  */
 public class TranslationResult {
-  public static final String SOURCEFILESTOFRONTEND = "sourceFilesToFrontend";
+  public static final String SOURCE_LOCATIONS_TO_FRONTEND = "sourceLocationsToFrontend";
   private final TranslationManager translationManager;
   /** Entry points to the CPG: "TranslationUnits" refer to source files. */
   private List<TranslationUnitDeclaration> translationUnits = new ArrayList<>();

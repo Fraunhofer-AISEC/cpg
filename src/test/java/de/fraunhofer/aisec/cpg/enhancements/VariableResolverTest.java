@@ -57,7 +57,7 @@ public class VariableResolverTest {
 
     TranslationConfiguration config =
         TranslationConfiguration.builder()
-            .sourceFiles(files)
+            .sourceLocations(files)
             .topLevel(topLevel.toFile())
             .defaultPasses()
             .debugParser(true)
@@ -112,7 +112,7 @@ public class VariableResolverTest {
   public void testLocalVarsCpp() throws ExecutionException, InterruptedException {
     TranslationConfiguration config =
         TranslationConfiguration.builder()
-            .sourceFiles(new File("src/test/resources/variables/local_variables.cpp"))
+            .sourceLocations(new File("src/test/resources/variables/local_variables.cpp"))
             .topLevel(new File("src/test/resources/variables/"))
             .defaultPasses()
             .debugParser(true)

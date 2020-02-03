@@ -66,7 +66,7 @@ public class JavaCfgTest {
         TranslationManager.builder()
             .config(
                 TranslationConfiguration.builder()
-                    .sourceFiles(new File("src/test/resources/cfg/Loops.java"))
+                    .sourceLocations(new File("src/test/resources/cfg/Loops.java"))
                     .registerPass(new ControlFlowGraphPass()) // creates CFG
                     .debugParser(true)
                     .build())
@@ -128,7 +128,7 @@ public class JavaCfgTest {
         TranslationManager.builder()
             .config(
                 TranslationConfiguration.builder()
-                    .sourceFiles(new File("src/test/resources/cfg/If.java"))
+                    .sourceLocations(new File("src/test/resources/cfg/If.java"))
                     .registerPass(new ControlFlowGraphPass()) // creates CFG
                     .debugParser(true)
                     .build())
@@ -190,7 +190,7 @@ public class JavaCfgTest {
         TranslationManager.builder()
             .config(
                 TranslationConfiguration.builder()
-                    .sourceFiles(new File("src/test/resources/cfg/BreakContinue.java"))
+                    .sourceLocations(new File("src/test/resources/cfg/BreakContinue.java"))
                     .registerPass(new ControlFlowGraphPass()) // creates CFG
                     .debugParser(true)
                     .build())

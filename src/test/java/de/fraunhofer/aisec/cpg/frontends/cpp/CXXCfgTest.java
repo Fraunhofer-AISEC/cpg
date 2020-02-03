@@ -61,7 +61,7 @@ public class CXXCfgTest {
         TranslationManager.builder()
             .config(
                 TranslationConfiguration.builder()
-                    .sourceFiles(new File("src/test/resources/cfg.cpp"))
+                    .sourceLocations(new File("src/test/resources/cfg.cpp"))
                     .registerPass(new ControlFlowGraphPass()) // creates CFG
                     .registerPass(new EvaluationOrderGraphPass()) // creates EOG
                     .debugParser(true)
@@ -120,7 +120,7 @@ public class CXXCfgTest {
         TranslationManager.builder()
             .config(
                 TranslationConfiguration.builder()
-                    .sourceFiles(new File("src/test/resources/cfg/loopscfg.cpp"))
+                    .sourceLocations(new File("src/test/resources/cfg/loopscfg.cpp"))
                     .registerPass(new ControlFlowGraphPass()) // creates CFG
                     .debugParser(true)
                     .build())
@@ -183,7 +183,7 @@ public class CXXCfgTest {
         TranslationManager.builder()
             .config(
                 TranslationConfiguration.builder()
-                    .sourceFiles(new File("src/test/resources/cfg/if.cpp"))
+                    .sourceLocations(new File("src/test/resources/cfg/if.cpp"))
                     .registerPass(new ControlFlowGraphPass()) // creates CFG
                     .debugParser(true)
                     .build())
@@ -245,7 +245,7 @@ public class CXXCfgTest {
         TranslationManager.builder()
             .config(
                 TranslationConfiguration.builder()
-                    .sourceFiles(new File("src/test/resources/cfg/break_continue.cpp"))
+                    .sourceLocations(new File("src/test/resources/cfg/break_continue.cpp"))
                     .registerPass(new ControlFlowGraphPass()) // creates CFG
                     .debugParser(true)
                     .build())
