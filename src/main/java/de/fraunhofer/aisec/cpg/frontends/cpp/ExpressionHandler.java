@@ -445,12 +445,13 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
         && ((BinaryOperator) reference).getOperatorCode().equals(".")) {
       // We have a dot operator that was not classified as a member expression. This happens when
       // dealing with function pointer calls that happen on an explicit object
-      return NodeBuilder.newMemberCallExpression(
-          reference.getCode(),
-          "",
-          ((BinaryOperator) reference).getLhs(),
-          ((BinaryOperator) reference).getRhs(),
-          reference.getCode());
+      callExpression =
+          NodeBuilder.newMemberCallExpression(
+              reference.getCode(),
+              "",
+              ((BinaryOperator) reference).getLhs(),
+              ((BinaryOperator) reference).getRhs(),
+              reference.getCode());
     } else {
       String fqn = reference.getName();
       String name = fqn;
