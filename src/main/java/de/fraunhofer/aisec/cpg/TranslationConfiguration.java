@@ -122,7 +122,7 @@ public class TranslationConfiguration {
   }
 
   public static class Builder {
-    private List<File> sourceFiles = new ArrayList<>();
+    private List<File> sourceLocations = new ArrayList<>();
     private File topLevel = null;
     private boolean debugParser = false;
     private boolean failOnError = false;
@@ -137,8 +137,8 @@ public class TranslationConfiguration {
       return this;
     }
 
-    public Builder sourceFiles(File... sourceFiles) {
-      this.sourceFiles = Arrays.asList(sourceFiles);
+    public Builder sourceLocations(File... sourceLocations) {
+      this.sourceLocations = Arrays.asList(sourceLocations);
       return this;
     }
 
@@ -191,7 +191,7 @@ public class TranslationConfiguration {
       String[] paths = new String[this.includePaths.size()];
       return new TranslationConfiguration(
           symbols,
-          sourceFiles,
+          sourceLocations,
           topLevel,
           debugParser,
           failOnError,
