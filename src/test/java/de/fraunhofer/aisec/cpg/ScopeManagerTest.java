@@ -1,7 +1,5 @@
 package de.fraunhofer.aisec.cpg;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
 import de.fraunhofer.aisec.cpg.frontends.TranslationException;
 import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguageFrontend;
@@ -22,9 +20,9 @@ public class ScopeManagerTest {
   void testSetScope() throws TranslationException {
     LanguageFrontend frontend = new JavaLanguageFrontend(config, new ScopeManager());
 
-    assert(frontend == frontend.getScopeManager().getLang());
+    assert (frontend == frontend.getScopeManager().getLang());
 
     frontend.setScopeManager(new ScopeManager());
-    assert(frontend == frontend.getScopeManager().getLang());
+    assert (frontend == frontend.getScopeManager().getLang());
   }
 }
