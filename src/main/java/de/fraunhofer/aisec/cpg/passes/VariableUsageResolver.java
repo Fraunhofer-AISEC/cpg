@@ -32,6 +32,7 @@ import de.fraunhofer.aisec.cpg.graph.Declaration;
 import de.fraunhofer.aisec.cpg.graph.DeclaredReferenceExpression;
 import de.fraunhofer.aisec.cpg.graph.EnumDeclaration;
 import de.fraunhofer.aisec.cpg.graph.FieldDeclaration;
+import de.fraunhofer.aisec.cpg.graph.FunctionDeclaration;
 import de.fraunhofer.aisec.cpg.graph.HasType;
 import de.fraunhofer.aisec.cpg.graph.MemberExpression;
 import de.fraunhofer.aisec.cpg.graph.MethodDeclaration;
@@ -152,10 +153,10 @@ public class VariableUsageResolver implements Pass {
       String function = matcher.group("function");
       if (cls == null) {
         targets =
-            walker
-                .getDeclarationForScope(reference, function)
-                .map(d -> Set.of((ValueDeclaration) d))
-                .orElse(Collections.emptySet());
+            walker.getAllDeclarationsForScope(reference).stream()
+                .filter(FunctionDeclaration.class::isInstance)
+                .filter(d -> d.getName().equals(function))
+                .collect(Collectors.toSet());
       } else {
         containingClass = new Type(cls);
         if (recordMap.containsKey(containingClass)) {

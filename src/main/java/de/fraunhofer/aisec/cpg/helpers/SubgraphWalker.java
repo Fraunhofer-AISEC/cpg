@@ -421,7 +421,7 @@ public class SubgraphWalker {
           // make sure that we only add the variable for the current scope.
           // if the var is already added, all outside vars with this name are shadowed inside a
           // scope and we do not add them here
-          if (!scopedVars.contains(val.getName())) {
+          if (val instanceof FunctionDeclaration || !scopedVars.contains(val.getName())) {
             result.add(val);
             scopedVars.add(val.getName());
           }
