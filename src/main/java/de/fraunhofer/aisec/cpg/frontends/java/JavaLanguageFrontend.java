@@ -69,6 +69,7 @@ import de.fraunhofer.aisec.cpg.graph.TypeManager;
 import de.fraunhofer.aisec.cpg.helpers.Benchmark;
 import de.fraunhofer.aisec.cpg.helpers.CommonPath;
 import de.fraunhofer.aisec.cpg.helpers.Util;
+import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager;
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -92,8 +93,8 @@ public class JavaLanguageFrontend extends LanguageFrontend {
   private HashSet<TypeSolver> internalTypeSolvers =
       new HashSet<>(); // we store a reference here to clean them up later
 
-  public JavaLanguageFrontend(@NonNull TranslationConfiguration config) {
-    super(config, ".");
+  public JavaLanguageFrontend(@NonNull TranslationConfiguration config, ScopeManager scopeManager) {
+    super(config, scopeManager, ".");
 
     CombinedTypeSolver typeResolver = new CombinedTypeSolver();
     internalTypeSolvers.add(typeResolver);
@@ -103,11 +104,11 @@ public class JavaLanguageFrontend extends LanguageFrontend {
     if (config != null) {
       File root = config.getTopLevel();
       if (root == null) {
-        root = CommonPath.commonPath(config.getSourceFiles());
+        root = CommonPath.commonPath(config.getSourceLocations());
       }
 
       if (root == null) {
-        log.warn("Could not determine source root for {}", config.getSourceFiles());
+        log.warn("Could not determine source root for {}", config.getSourceLocations());
       } else {
         log.info("Source file root used for type solver: {}", root);
         JavaParserTypeSolver javaParserTypeSolver = new JavaParserTypeSolver(root);
@@ -372,12 +373,6 @@ public class JavaLanguageFrontend extends LanguageFrontend {
   @Override
   public void cleanup() {
     JavaParserFacade.clearInstances();
-
-    for (TypeSolver tr : internalTypeSolvers) {
-      if (tr != null && tr.getParent() != null) {
-        tr.setParent(null); // trying to help the garbagecollector a bit
-      }
-    }
 
     super.cleanup();
     context = null;

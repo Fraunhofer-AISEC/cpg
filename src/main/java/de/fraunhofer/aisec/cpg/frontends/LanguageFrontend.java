@@ -38,6 +38,8 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Optional;
 import java.util.function.BiConsumer;
 import java.util.function.BiPredicate;
 import org.apache.commons.lang3.StringUtils;
@@ -50,7 +52,7 @@ public abstract class LanguageFrontend {
 
   protected static final Logger log = LoggerFactory.getLogger(LanguageFrontend.class);
   protected final TranslationConfiguration config;
-  protected ScopeManager scopeManager = new ScopeManager(this);
+  protected ScopeManager scopeManager;
   /**
    * Two data structures used to associate Objects input to a pass to results of a pass, e.g.
    * Javaparser AST-Nodes to CPG-Nodes. The "Listeners" in processedListener are called after the
@@ -71,9 +73,14 @@ public abstract class LanguageFrontend {
 
   // Todo Moving this to scope manager and add listeners and processedMappings to specified scopes.
 
-  public LanguageFrontend(@NonNull TranslationConfiguration config, String namespaceDelimiter) {
+  public LanguageFrontend(
+      @NonNull TranslationConfiguration config,
+      ScopeManager scopeManager,
+      String namespaceDelimiter) {
     this.config = config;
     this.namespaceDelimiter = namespaceDelimiter;
+    this.scopeManager = scopeManager;
+    this.scopeManager.setLang(this);
   }
 
   public void process(Object from, Object to) {
@@ -88,25 +95,31 @@ public abstract class LanguageFrontend {
     // Iterate over existing predicate based listeners, if the predicate matches the
     // listener/handler is executed on the new object.
     for (Map.Entry<BiPredicate<Object, Object>, BiConsumer<Object, Object>> pListener :
-        predicateListeners.entrySet())
+        predicateListeners.entrySet()) {
       if (pListener.getKey().test(from, to)) {
         pListener.getValue().accept(from, to);
         // Delete line if Node should be processed multiple times and should again invoke the
         // listener, e.g. refinement.
         predicateListeners.remove(pListener.getKey());
       }
+    }
   }
 
   public void registerObjectListener(Object from, BiConsumer<Object, Object> biConsumer) {
-    if (processedMapping.containsKey(from)) biConsumer.accept(from, processedMapping.get(from));
+    if (processedMapping.containsKey(from)) {
+      biConsumer.accept(from, processedMapping.get(from));
+    }
     objectListeners.put(from, biConsumer);
   }
 
   public void registerPredicateListener(
       BiPredicate<Object, Object> predicate, BiConsumer<Object, Object> biConsumer) {
-    List<Map.Entry> matchingEntries = new ArrayList<>();
-    for (Map.Entry mapping : processedMapping.entrySet())
-      if (predicate.test(mapping.getKey(), mapping.getValue())) matchingEntries.add(mapping);
+    List<Entry> matchingEntries = new ArrayList<>();
+    for (Map.Entry mapping : processedMapping.entrySet()) {
+      if (predicate.test(mapping.getKey(), mapping.getValue())) {
+        matchingEntries.add(mapping);
+      }
+    }
 
     if (!matchingEntries.isEmpty()) {
       for (Map.Entry match : matchingEntries) {
@@ -124,7 +137,7 @@ public abstract class LanguageFrontend {
 
   public List<TranslationUnitDeclaration> parseAll() throws TranslationException {
     ArrayList<TranslationUnitDeclaration> units = new ArrayList<>();
-    for (File sourceFile : this.config.getSourceFiles()) {
+    for (File sourceFile : this.config.getSourceLocations()) {
       units.add(parse(sourceFile));
     }
 
@@ -136,8 +149,9 @@ public abstract class LanguageFrontend {
     return scopeManager;
   }
 
-  public void setScopeManager(ScopeManager scopeManager) {
+  public void setScopeManager(@NonNull ScopeManager scopeManager) {
     this.scopeManager = scopeManager;
+    this.scopeManager.setLang(this);
   }
 
   public abstract TranslationUnitDeclaration parse(File file) throws TranslationException;
@@ -163,19 +177,18 @@ public abstract class LanguageFrontend {
   @NonNull
   public abstract <T> Region getRegionFromRawNode(T astNode);
 
-  public <N, S> N setCodeAndRegion(@NonNull N cpgNode, @NonNull S astNode) {
-    if (cpgNode instanceof de.fraunhofer.aisec.cpg.graph.Node) {
+  public <N, S> void setCodeAndRegion(@NonNull N cpgNode, @NonNull S astNode) {
+    if (cpgNode instanceof Node) {
       if (config.codeInNodes) {
         String code = getCodeFromRawNode(astNode);
         if (code != null) {
-          ((de.fraunhofer.aisec.cpg.graph.Node) cpgNode).setCode(code);
+          ((Node) cpgNode).setCode(code);
         } else {
           log.warn("Unexpected: No code for node {}", astNode.toString());
         }
       }
-      ((de.fraunhofer.aisec.cpg.graph.Node) cpgNode).setRegion(getRegionFromRawNode(astNode));
+      ((Node) cpgNode).setRegion(getRegionFromRawNode(astNode));
     }
-    return cpgNode;
   }
 
   /**
@@ -186,10 +199,11 @@ public abstract class LanguageFrontend {
    */
   public String getNewLineType(Node node) {
     List<String> nls = Arrays.asList("\n\r", "\r\n", "\n");
-    for (String nl : nls)
+    for (String nl : nls) {
       if (node.toString().endsWith(nl)) {
         return nl;
       }
+    }
     log.debug("Could not determine newline type. Assuming \\n. {}", node.toString());
     return "\n";
   }
@@ -211,20 +225,22 @@ public abstract class LanguageFrontend {
     String nlType = getNewLineType(node);
     int start;
     int end;
-    if (subRegion.getStartLine() == nodeRegion.getStartLine())
+    if (subRegion.getStartLine() == nodeRegion.getStartLine()) {
       start = subRegion.getStartColumn() - nodeRegion.getStartColumn();
-    else
+    } else {
       start =
           StringUtils.ordinalIndexOf(
                   code, nlType, subRegion.getStartLine() - nodeRegion.getStartLine())
               + subRegion.getStartColumn();
-    if (subRegion.getEndLine() == nodeRegion.getStartLine())
+    }
+    if (subRegion.getEndLine() == nodeRegion.getStartLine()) {
       end = subRegion.getStartColumn() - nodeRegion.getStartColumn();
-    else
+    } else {
       end =
           StringUtils.ordinalIndexOf(
                   code, nlType, subRegion.getEndLine() - nodeRegion.getStartLine())
               + subRegion.getEndColumn();
+    }
     return code.substring(start, end);
   }
 
@@ -258,6 +274,7 @@ public abstract class LanguageFrontend {
     return ret;
   }
 
+  // TODO: Move this class to the scope manager to properly handle namespaces
   public void addRecord(RecordDeclaration record) {
     this.records.put(record.getName(), record);
   }
@@ -306,4 +323,14 @@ public abstract class LanguageFrontend {
   }
 
   public abstract <S, T> void setComment(S s, T ctx);
+
+  /**
+   * Returns a record declaration, if it exists for the given name
+   *
+   * @param name the record name
+   * @return an optional containing the {@link RecordDeclaration}, if it exists.
+   */
+  public Optional<RecordDeclaration> getRecordForName(String name) {
+    return Optional.ofNullable(this.records.get(name));
+  }
 }

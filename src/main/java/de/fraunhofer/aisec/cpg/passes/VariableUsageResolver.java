@@ -27,7 +27,6 @@
 package de.fraunhofer.aisec.cpg.passes;
 
 import de.fraunhofer.aisec.cpg.TranslationResult;
-import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
 import de.fraunhofer.aisec.cpg.graph.Declaration;
 import de.fraunhofer.aisec.cpg.graph.DeclaredReferenceExpression;
 import de.fraunhofer.aisec.cpg.graph.EnumDeclaration;
@@ -80,14 +79,13 @@ import org.slf4j.LoggerFactory;
  *
  * @author samuel
  */
-public class VariableUsageResolver implements Pass {
+public class VariableUsageResolver extends Pass {
 
   private static final Logger log = LoggerFactory.getLogger(VariableUsageResolver.class);
   private Map<Type, List<Type>> superTypesMap = new HashMap<>();
   private Map<Type, RecordDeclaration> recordMap = new HashMap<>();
   private Map<Type, EnumDeclaration> enumMap = new HashMap<>();
   private ScopedWalker walker;
-  private LanguageFrontend lang;
 
   @Override
   public void cleanup() {
@@ -96,16 +94,6 @@ public class VariableUsageResolver implements Pass {
       this.recordMap.clear();
     }
     this.enumMap.clear();
-  }
-
-  @Override
-  public LanguageFrontend getLang() {
-    return lang;
-  }
-
-  @Override
-  public void setLang(LanguageFrontend lang) {
-    this.lang = lang;
   }
 
   @Override

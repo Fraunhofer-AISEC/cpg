@@ -209,8 +209,26 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
       }
       return result;
     }
-    FunctionDeclaration declaration =
-        NodeBuilder.newFunctionDeclaration(ctx.getName().toString(), ctx.getRawSignature());
+    String name = ctx.getName().toString();
+
+    FunctionDeclaration declaration;
+
+    // check for function definitions that are really methods and constructors
+    if (name.contains("::")) {
+      String[] rr = name.split("::");
+
+      String recordName = rr[0];
+      String methodName = rr[1];
+
+      declaration =
+          NodeBuilder.newMethodDeclaration(
+              methodName,
+              ctx.getRawSignature(),
+              false,
+              this.lang.getRecordForName(recordName).orElse(null));
+    } else {
+      declaration = NodeBuilder.newFunctionDeclaration(name, ctx.getRawSignature());
+    }
     lang.getScopeManager().enterScope(declaration);
 
     int i = 0;
@@ -273,6 +291,8 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
         NodeBuilder.newRecordDeclaration(
             ctx.getName().toString(), new ArrayList<>(), kind, ctx.getRawSignature());
 
+    this.lang.addRecord(recordDeclaration);
+
     lang.getScopeManager().enterScope(recordDeclaration);
 
     if (kind.equals("class")) {
@@ -297,19 +317,23 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
       Scope declarationScope = lang.getScopeManager().getScopeOfStatment(declaration);
 
       if (declaration instanceof FunctionDeclaration) {
-        // check, if its a method or constructor
+        MethodDeclaration method =
+            MethodDeclaration.from((FunctionDeclaration) declaration, recordDeclaration);
+
+        // check, if its a constructor
         if (declaration.getName().equals(recordDeclaration.getName())) {
-          ConstructorDeclaration constructor =
-              ConstructorDeclaration.from((FunctionDeclaration) declaration);
-          if (declarationScope != null)
+          ConstructorDeclaration constructor = ConstructorDeclaration.from(method);
+          if (declarationScope != null) {
             declarationScope.setAstNode(
                 constructor); // Adjust cpg Node by which scopes are identified
+          }
           recordDeclaration.getConstructors().add(constructor);
         } else {
-          MethodDeclaration method = MethodDeclaration.from((FunctionDeclaration) declaration);
-          if (declarationScope != null)
-            declarationScope.setAstNode(method); // Adjust cpg Node by which scopes are identified
           recordDeclaration.getMethods().add(method);
+        }
+
+        if (declarationScope != null) {
+          declarationScope.setAstNode(method); // Adjust cpg Node by which scopes are identified
         }
       } else if (declaration instanceof VariableDeclaration) {
         recordDeclaration.getFields().add(FieldDeclaration.from((VariableDeclaration) declaration));
@@ -319,7 +343,7 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
     if (recordDeclaration.getConstructors().isEmpty()) {
       de.fraunhofer.aisec.cpg.graph.ConstructorDeclaration constructorDeclaration =
           NodeBuilder.newConstructorDeclaration(
-              recordDeclaration.getName(), recordDeclaration.getName());
+              recordDeclaration.getName(), recordDeclaration.getName(), recordDeclaration);
       recordDeclaration.getConstructors().add(constructorDeclaration);
       lang.getScopeManager().addValueDeclaration(constructorDeclaration);
     }

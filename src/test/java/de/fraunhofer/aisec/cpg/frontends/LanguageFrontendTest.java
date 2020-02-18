@@ -24,34 +24,30 @@
  *
  */
 
-package de.fraunhofer.aisec.cpg.passes;
+package de.fraunhofer.aisec.cpg.frontends;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
+import de.fraunhofer.aisec.cpg.TranslationConfiguration;
+import de.fraunhofer.aisec.cpg.TranslationManager;
 import de.fraunhofer.aisec.cpg.TranslationResult;
-import de.fraunhofer.aisec.cpg.graph.Node;
-import de.fraunhofer.aisec.cpg.graph.TranslationUnitDeclaration;
-import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker;
+import java.io.File;
+import java.util.concurrent.ExecutionException;
+import org.junit.jupiter.api.Test;
 
-public class FilenameMapper extends Pass {
+class LanguageFrontendTest {
 
-  @Override
-  public void accept(TranslationResult translationResult) {
-    for (TranslationUnitDeclaration tu : translationResult.getTranslationUnits()) {
-      String name = tu.getName();
-      tu.getDeclarations().forEach(d -> handle(d, name));
-      tu.getIncludes().forEach(d -> handle(d, name));
-      tu.getNamespaces().forEach(d -> handle(d, name));
-    }
+  @Test
+  void testParseDirectory() throws ExecutionException, InterruptedException {
+    TranslationManager analyzer =
+        TranslationManager.builder()
+            .config(
+                TranslationConfiguration.builder()
+                    .sourceLocations(new File("src/test/resources/botan"))
+                    .debugParser(true)
+                    .build())
+            .build();
+    TranslationResult res = analyzer.analyze().get();
+    assertEquals(3, res.getTranslationUnits().size());
   }
-
-  private void handle(Node node, String file) {
-    if (node != null) {
-      node.setFile(file);
-      for (Node child : SubgraphWalker.getAstChildren(node)) {
-        handle(child, file);
-      }
-    }
-  }
-
-  @Override
-  public void cleanup() {}
 }

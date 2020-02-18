@@ -67,7 +67,7 @@ class JavaVsCppTest {
         TranslationManager.builder()
             .config(
                 TranslationConfiguration.builder()
-                    .sourceFiles(new File(pathname))
+                    .sourceLocations(new File(pathname))
                     .defaultPasses()
                     .debugParser(false)
                     .codeInNodes(false)

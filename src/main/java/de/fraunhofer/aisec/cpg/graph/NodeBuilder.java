@@ -504,21 +504,25 @@ public class NodeBuilder {
     return node;
   }
 
-  public static MethodDeclaration newMethodDeclaration(String name, String code, boolean isStatic) {
+  public static MethodDeclaration newMethodDeclaration(
+      String name, String code, boolean isStatic, @Nullable RecordDeclaration recordDeclaration) {
     MethodDeclaration node = new MethodDeclaration();
     node.setName(name);
     node.setCode(code);
     node.setStatic(isStatic);
+    node.setRecordDeclaration(recordDeclaration);
 
     log(node);
 
     return node;
   }
 
-  public static ConstructorDeclaration newConstructorDeclaration(String name, String code) {
+  public static ConstructorDeclaration newConstructorDeclaration(
+      String name, String code, @Nullable RecordDeclaration recordDeclaration) {
     ConstructorDeclaration node = new ConstructorDeclaration();
     node.setName(name);
     node.setCode(code);
+    node.setRecordDeclaration(recordDeclaration);
 
     log(node);
 

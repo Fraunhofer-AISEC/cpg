@@ -54,7 +54,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-public class ImportResolver implements Pass {
+public class ImportResolver extends Pass {
 
   private List<RecordDeclaration> records = new ArrayList<>();
   private Map<String, Declaration> importables = new HashMap<>();
@@ -209,7 +209,7 @@ public class ImportResolver implements Pass {
           NodeBuilder.newFieldDeclaration(
               name, Type.UNKNOWN, new ArrayList<>(), "", new Region(-1, -1, -1, -1), null);
       targetField.setDummy(true);
-      MethodDeclaration targetMethod = NodeBuilder.newMethodDeclaration(name, "", true);
+      MethodDeclaration targetMethod = NodeBuilder.newMethodDeclaration(name, "", true, base);
       targetMethod.setDummy(true);
 
       base.getFields().add(targetField);

@@ -12,7 +12,6 @@ bin
 log
 .volumes
 out
-gradle.properties
 .data/
 logs
 /lsp/*.log

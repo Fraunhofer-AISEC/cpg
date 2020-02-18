@@ -62,7 +62,8 @@ class DeclarationListHandler
       }
 
       String typeAdjustment = declaration.getType().getTypeAdjustment();
-      declaration.setType(Type.createFrom(ctx.getDeclSpecifier().toString()));
+      String typeString = ctx.getDeclSpecifier().toString();
+      declaration.setType(Type.createFrom(typeString));
       declaration.getType().setTypeAdjustment(typeAdjustment);
 
       if (isAutoType) {

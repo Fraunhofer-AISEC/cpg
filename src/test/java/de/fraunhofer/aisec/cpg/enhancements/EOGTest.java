@@ -538,7 +538,7 @@ public class EOGTest {
         TranslationManager.builder()
             .config(
                 TranslationConfiguration.builder()
-                    .sourceFiles(new File(path))
+                    .sourceLocations(new File(path))
                     .registerPass(new EvaluationOrderGraphPass()) // creates EOG
                     .registerPass(new CallResolver()) // creates CG
                     .build())

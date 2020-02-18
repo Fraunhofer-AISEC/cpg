@@ -26,15 +26,10 @@
 
 package de.fraunhofer.aisec.cpg;
 
-import de.fraunhofer.aisec.cpg.passes.CallResolver;
-import de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass;
-import de.fraunhofer.aisec.cpg.passes.FilenameMapper;
-import de.fraunhofer.aisec.cpg.passes.ImportResolver;
-import de.fraunhofer.aisec.cpg.passes.Pass;
-import de.fraunhofer.aisec.cpg.passes.TypeHierarchyResolver;
-import de.fraunhofer.aisec.cpg.passes.VariableUsageResolver;
+import de.fraunhofer.aisec.cpg.passes.*;
 import java.io.File;
 import java.util.*;
+import org.checkerframework.checker.nullness.qual.NonNull;
 
 /**
  * The configuration for the {@link TranslationManager} holds all information that is used during
@@ -67,6 +62,7 @@ public class TranslationConfiguration {
 
   /** should the code of a node be shown as parameter in the node * */
   public final boolean codeInNodes;
+
   /**
    * Should parser/translation fail on parse/resolving errors (true) or try to continue in a
    * best-effort manner (false).
@@ -77,14 +73,15 @@ public class TranslationConfiguration {
   public final Map<String, String> symbols;
 
   /** Source code files to parse. */
-  private List<File> sourceFiles;
+  private List<File> sourceLocations;
 
   private File topLevel;
-  private List<Pass> passes;
+
+  @NonNull private List<Pass> passes;
 
   private TranslationConfiguration(
       Map<String, String> symbols,
-      List<File> sourceFiles,
+      List<File> sourceLocations,
       File topLevel,
       boolean debugParser,
       boolean failOnError,
@@ -93,14 +90,14 @@ public class TranslationConfiguration {
       List<Pass> passes,
       boolean codeInNodes) {
     this.symbols = symbols;
-    this.sourceFiles = sourceFiles;
+    this.sourceLocations = sourceLocations;
     this.topLevel = topLevel;
     this.debugParser = debugParser;
     this.failOnError = failOnError;
     this.loadIncludes = loadIncludes;
     this.includePaths = includePaths;
     this.passes = passes != null ? passes : new ArrayList<>();
-    // Make sure to init this AFTER sourceFiles has been set
+    // Make sure to init this AFTER sourceLocations has been set
     this.codeInNodes = codeInNodes;
   }
 
@@ -112,8 +109,8 @@ public class TranslationConfiguration {
     return this.symbols;
   }
 
-  public List<File> getSourceFiles() {
-    return this.sourceFiles;
+  public List<File> getSourceLocations() {
+    return this.sourceLocations;
   }
 
   public File getTopLevel() {
@@ -125,7 +122,7 @@ public class TranslationConfiguration {
   }
 
   public static class Builder {
-    private List<File> sourceFiles = new ArrayList<>();
+    private List<File> sourceLocations = new ArrayList<>();
     private File topLevel = null;
     private boolean debugParser = false;
     private boolean failOnError = false;
@@ -140,8 +137,8 @@ public class TranslationConfiguration {
       return this;
     }
 
-    public Builder sourceFiles(File... sourceFiles) {
-      this.sourceFiles = Arrays.asList(sourceFiles);
+    public Builder sourceLocations(File... sourceLocations) {
+      this.sourceLocations = Arrays.asList(sourceLocations);
       return this;
     }
 
@@ -170,7 +167,7 @@ public class TranslationConfiguration {
       return this;
     }
 
-    public Builder registerPass(Pass pass) {
+    public Builder registerPass(@NonNull Pass pass) {
       this.passes.add(pass);
       return this;
     }
@@ -194,7 +191,7 @@ public class TranslationConfiguration {
       String[] paths = new String[this.includePaths.size()];
       return new TranslationConfiguration(
           symbols,
-          sourceFiles,
+          sourceLocations,
           topLevel,
           debugParser,
           failOnError,

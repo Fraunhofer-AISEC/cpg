@@ -30,18 +30,14 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 
 import de.fraunhofer.aisec.cpg.graph.Node;
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.IdentityHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
+import org.checkerframework.checker.nullness.qual.NonNull;
 
 public class Util {
 
@@ -214,6 +210,15 @@ public class Util {
   public static <T> Predicate<T> distinctBy(Function<? super T, ?> by) {
     Set<Object> seen = new HashSet<>();
     return t -> seen.add(by.apply(t));
+  }
+
+  public static String getExtension(@NonNull File file) {
+    int pos = file.getName().lastIndexOf('.');
+    if (pos > 0) {
+      return file.getName().substring(pos).toLowerCase();
+    } else {
+      return "";
+    }
   }
 
   public enum Connect {
