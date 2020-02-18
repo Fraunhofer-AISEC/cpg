@@ -234,6 +234,31 @@ public class Node {
     return this.implicit;
   }
 
+  /**
+   * If a node should be removed from the graph, just removing it from the AST is not enough (see
+   * issue #60). It will most probably be referenced somewhere via DFG or EOG edges. Thus, if it
+   * needs to be disconnected completely, we will have to take care of correctly disconnecting these
+   * implicit edges.
+   */
+  public void disconnectFromGraph() {
+    for (Node n : nextDFG) {
+      n.prevDFG.remove(this);
+    }
+    nextDFG.clear();
+    for (Node n : prevDFG) {
+      n.nextDFG.remove(this);
+    }
+    prevDFG.clear();
+    for (Node n : nextEOG) {
+      n.prevEOG.remove(this);
+    }
+    nextEOG.clear();
+    for (Node n : prevEOG) {
+      n.nextEOG.remove(this);
+    }
+    prevEOG.clear();
+  }
+
   @Override
   public String toString() {
     return new ToStringBuilder(this, Node.TO_STRING_STYLE)
