@@ -344,7 +344,6 @@ public class VariableUsageResolver extends Pass {
             new ArrayList<>(),
             Type.UNKNOWN_TYPE_STRING,
             Type.UNKNOWN_TYPE_STRING));
-    // fields.putIfAbsent(base, new ArrayList<>());
     RecordDeclaration containingRecord = recordMap.get(base);
     List<MethodDeclaration> declarations = containingRecord.getMethods();
     Optional<MethodDeclaration> target =
