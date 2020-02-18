@@ -284,6 +284,7 @@ public class CallResolver extends Pass {
             .collect(Collectors.toList());
     for (RecordDeclaration record : containingRecords) {
       MethodDeclaration dummy = NodeBuilder.newMethodDeclaration(name, "", true, record);
+      dummy.setImplicit(true);
       dummy.setDummy(true);
       // prepare signature
       List<ParamVariableDeclaration> params = new ArrayList<>();
@@ -292,6 +293,7 @@ public class CallResolver extends Pass {
         String paramName = generateParamName(i, targetType);
         ParamVariableDeclaration param =
             NodeBuilder.newMethodParameterIn(paramName, targetType, false, "");
+        param.setImplicit(true);
         param.setDummy(true);
         param.setArgumentIndex(i);
         params.add(param);

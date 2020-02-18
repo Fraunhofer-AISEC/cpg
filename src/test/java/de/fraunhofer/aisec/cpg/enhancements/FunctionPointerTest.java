@@ -31,7 +31,7 @@ public class FunctionPointerTest {
 
     TranslationConfiguration config =
         TranslationConfiguration.builder()
-            .sourceFiles(files)
+            .sourceLocations(files)
             .topLevel(topLevel.toFile())
             .defaultPasses()
             .debugParser(true)

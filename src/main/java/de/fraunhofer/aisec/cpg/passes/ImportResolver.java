@@ -208,8 +208,10 @@ public class ImportResolver extends Pass {
       FieldDeclaration targetField =
           NodeBuilder.newFieldDeclaration(
               name, Type.UNKNOWN, new ArrayList<>(), "", new Region(-1, -1, -1, -1), null);
+      targetField.setImplicit(true);
       targetField.setDummy(true);
       MethodDeclaration targetMethod = NodeBuilder.newMethodDeclaration(name, "", true, base);
+      targetMethod.setImplicit(true);
       targetMethod.setDummy(true);
 
       base.getFields().add(targetField);

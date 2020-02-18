@@ -139,7 +139,7 @@ public class StaticImportsTest {
 
     MemberExpression nonStatic = TestUtils.findByName(declaredReferences, "this.nonStaticField");
     assertNotEquals(nonStatic.getMember(), nonStaticField);
-    assertTrue(nonStatic.getMember().isDummy());
+    assertTrue(nonStatic.getMember().isImplicit());
   }
 
   @Test

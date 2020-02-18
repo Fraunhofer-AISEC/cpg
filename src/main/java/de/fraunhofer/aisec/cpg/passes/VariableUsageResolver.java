@@ -327,6 +327,7 @@ public class VariableUsageResolver extends Pass {
               new Region(),
               null);
       declarations.add(declaration);
+      declaration.setImplicit(true);
       declaration.setDummy(true);
       // lang.getScopeManager().addValueDeclaration(declaration);
       return declaration;
@@ -344,16 +345,17 @@ public class VariableUsageResolver extends Pass {
             Type.UNKNOWN_TYPE_STRING,
             Type.UNKNOWN_TYPE_STRING));
     // fields.putIfAbsent(base, new ArrayList<>());
-    List<MethodDeclaration> declarations = recordMap.get(base).getMethods();
+    RecordDeclaration containingRecord = recordMap.get(base);
+    List<MethodDeclaration> declarations = containingRecord.getMethods();
     Optional<MethodDeclaration> target =
         declarations.stream().filter(f -> f.getName().equals(reference.getName())).findFirst();
     if (target.isEmpty()) {
       MethodDeclaration declaration =
-          NodeBuilder.newMethodDeclaration(reference.getName(), "", false);
+          NodeBuilder.newMethodDeclaration(reference.getName(), "", false, containingRecord);
       declaration.setType(reference.getType());
       declarations.add(declaration);
+      declaration.setImplicit(true);
       declaration.setDummy(true);
-      // lang.getScopeManager().addValueDeclaration(declaration);
       return declaration;
     } else {
       return target.get();
