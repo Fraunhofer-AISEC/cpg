@@ -328,7 +328,6 @@ public class VariableUsageResolver extends Pass {
               null);
       declarations.add(declaration);
       declaration.setImplicit(true);
-      declaration.setDummy(true);
       // lang.getScopeManager().addValueDeclaration(declaration);
       return declaration;
     } else {
@@ -354,7 +353,6 @@ public class VariableUsageResolver extends Pass {
       declaration.setType(reference.getType());
       declarations.add(declaration);
       declaration.setImplicit(true);
-      declaration.setDummy(true);
       return declaration;
     } else {
       return target.get();

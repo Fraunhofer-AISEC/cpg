@@ -63,7 +63,6 @@ public abstract class Pass implements Consumer<TranslationResult> {
     TranslationUnitDeclaration declaration =
         NodeBuilder.newTranslationUnitDeclaration("unknown declarations", "");
     declaration.setImplicit(true);
-    declaration.setDummy(true);
     result.getTranslationUnits().add(declaration);
     return declaration;
   }
