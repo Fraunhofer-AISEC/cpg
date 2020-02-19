@@ -239,6 +239,9 @@ public class Node {
    * issue #60). It will most probably be referenced somewhere via DFG or EOG edges. Thus, if it
    * needs to be disconnected completely, we will have to take care of correctly disconnecting these
    * implicit edges.
+   *
+   * <p>ATTENTION! Please note that this might kill an entire subgraph, if the node to disconnect
+   * has further children that have no alternative connection paths to the rest of the graph.
    */
   public void disconnectFromGraph() {
     for (Node n : nextDFG) {
