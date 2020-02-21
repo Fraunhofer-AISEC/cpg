@@ -57,6 +57,16 @@ public class FunctionPointerTest {
             .filter(f -> f.getName().equals("target") && f.getParameters().size() == 1)
             .findFirst()
             .orElseThrow();
+    FunctionDeclaration noParamUnknown =
+        functions.stream()
+            .filter(f -> f.getName().equals("fun") && f.getParameters().isEmpty())
+            .findFirst()
+            .orElseThrow();
+    FunctionDeclaration singleParamUnknown =
+        functions.stream()
+            .filter(f -> f.getName().equals("fun") && f.getParameters().size() == 1)
+            .findFirst()
+            .orElseThrow();
     List<CallExpression> calls = Util.subnodesOfType(main, CallExpression.class);
     Pattern pattern = Pattern.compile("\\((?<member>.+)?\\*(?<func>.+)\\)");
     for (CallExpression call : calls) {
@@ -74,6 +84,14 @@ public class FunctionPointerTest {
         case "unused_single_param":
           // TODO once we have dedicated function pointer types, we need to distinguish here!
           assertEquals(List.of(noParam, singleParam), call.getInvokes());
+          break;
+        case "no_param_unknown":
+          assertEquals(List.of(noParamUnknown), call.getInvokes());
+          assertTrue(noParamUnknown.isImplicit());
+          break;
+        case "single_param_unknown":
+          assertEquals(List.of(singleParamUnknown), call.getInvokes());
+          assertTrue(noParamUnknown.isImplicit());
           break;
         default:
           fail("Unexpected call " + call.getName());

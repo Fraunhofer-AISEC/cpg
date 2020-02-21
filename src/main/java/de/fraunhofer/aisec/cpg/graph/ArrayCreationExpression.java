@@ -94,9 +94,12 @@ public class ArrayCreationExpression extends Expression implements TypeListener 
   }
 
   @Override
-  public void typeChanged(HasType src, Type oldType) {
+  public void typeChanged(HasType src, HasType root, Type oldType) {
+    if (root == this) {
+      return;
+    }
     Type previous = this.type;
-    setType(src.getType());
+    setType(src.getType(), root);
 
     if (!previous.equals(this.type)) {
       this.type.setTypeOrigin(Origin.DATAFLOW);
@@ -104,10 +107,13 @@ public class ArrayCreationExpression extends Expression implements TypeListener 
   }
 
   @Override
-  public void possibleSubTypesChanged(HasType src, Set<Type> oldSubTypes) {
+  public void possibleSubTypesChanged(HasType src, HasType root, Set<Type> oldSubTypes) {
+    if (root == this) {
+      return;
+    }
     Set<Type> subTypes = new HashSet<>(getPossibleSubTypes());
     subTypes.addAll(src.getPossibleSubTypes());
-    setPossibleSubTypes(subTypes);
+    setPossibleSubTypes(subTypes, root);
   }
 
   @Override

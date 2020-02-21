@@ -119,11 +119,11 @@ class CXXLanguageFrontendTest {
     assertEquals(
         Set.of(ls), ((DeclaredReferenceExpression) forEachStatement.getIterable()).getRefersTo());
 
-    // should declare auto i
+    // should declare auto i (so far no concrete type inferrable)
     VariableDeclaration i = (VariableDeclaration) forEachStatement.getVariable();
     assertNotNull(i);
     assertEquals("i", i.getName());
-    assertEquals(Type.createFrom("auto"), i.getType());
+    assertEquals(Type.getUnknown(), i.getType());
   }
 
   @Test

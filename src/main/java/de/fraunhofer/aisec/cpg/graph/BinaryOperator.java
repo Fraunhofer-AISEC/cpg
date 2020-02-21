@@ -129,17 +129,20 @@ public class BinaryOperator extends Expression implements TypeListener {
   }
 
   @Override
-  public void typeChanged(HasType src, Type oldType) {
+  public void typeChanged(HasType src, HasType root, Type oldType) {
+    if (root == this) {
+      return;
+    }
     Type previous = this.type;
     if (this.operatorCode.equals("=")) {
       if (src == this.rhs) {
-        setType(src.getType());
+        setType(src.getType(), root);
       }
     } else {
       if (this.lhs != null && "java.lang.String".equals(this.lhs.getType().toString())
           || this.rhs != null && "java.lang.String".equals(this.rhs.getType().toString())) {
         getPossibleSubTypes().clear();
-        setType(new Type("java.lang.String"));
+        setType(new Type("java.lang.String"), root);
       }
     }
     if (!previous.equals(this.type)) {
@@ -148,10 +151,13 @@ public class BinaryOperator extends Expression implements TypeListener {
   }
 
   @Override
-  public void possibleSubTypesChanged(HasType src, Set<Type> oldSubTypes) {
+  public void possibleSubTypesChanged(HasType src, HasType root, Set<Type> oldSubTypes) {
+    if (root == this) {
+      return;
+    }
     Set<Type> subTypes = new HashSet<>(getPossibleSubTypes());
     subTypes.addAll(src.getPossibleSubTypes());
-    setPossibleSubTypes(subTypes);
+    setPossibleSubTypes(subTypes, root);
   }
 
   @Override

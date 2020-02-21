@@ -75,30 +75,26 @@ public class UnaryOperator extends Expression implements TypeListener {
     }
   }
 
-  @Override
-  public boolean shouldBeNotified(TypeListener listener) {
-    if ("&*".contains(operatorCode)) {
-      checked.clear();
-      return !hasInputAsTransitiveListener(listener);
-    } else {
-      return true;
-    }
-  }
-
-  private boolean hasInputAsTransitiveListener(TypeListener listener) {
-    if (checked.contains(listener)) {
+  private boolean getsDataFromInput(TypeListener curr, TypeListener target) {
+    if (checked.contains(curr)) {
       return false;
     }
-    checked.add(listener);
+    checked.add(curr);
 
-    if (listener == this.input) {
+    if (curr == target) {
       return true;
     }
-    if (listener instanceof HasType) {
-      return ((HasType) listener)
-          .getTypeListeners().stream().anyMatch(this::hasInputAsTransitiveListener);
+
+    if (curr instanceof HasType) {
+      return ((HasType) curr)
+          .getTypeListeners().stream().anyMatch(l -> getsDataFromInput(l, target));
     }
     return false;
+  }
+
+  private boolean getsDataFromInput(TypeListener listener) {
+    checked.clear();
+    return input.getTypeListeners().stream().anyMatch(l -> getsDataFromInput(l, listener));
   }
 
   public String getOperatorCode() {
@@ -126,19 +122,36 @@ public class UnaryOperator extends Expression implements TypeListener {
   }
 
   @Override
-  public void typeChanged(HasType src, Type oldType) {
-    Type previous = this.type;
-    Type newType = src.getType();
-
-    setType(newType);
-
-    if (operatorCode.equals("*")) {
-      newType = newType.dereference();
-    } else if (operatorCode.equals("&")) {
-      newType = newType.reference();
+  public void typeChanged(HasType src, HasType root, Type oldType) {
+    if (root == this) {
+      return;
     }
 
-    this.type = TypeManager.getInstance().getCommonType(getPossibleSubTypes()).orElse(newType);
+    Type previous = this.type;
+
+    if (src == input) {
+      Type newType = src.getType();
+
+      if (operatorCode.equals("*")) {
+        newType = newType.dereference();
+      } else if (operatorCode.equals("&")) {
+        newType = newType.reference();
+      }
+
+      setType(newType, root);
+    } else {
+      // Our input didn't change, so we don't need to (de)reference the type
+      setType(src.getType(), root);
+
+      // Pass the type on to the input in an inversely (de)referenced way
+      Type newType = src.getType();
+      if (operatorCode.equals("*")) {
+        newType = src.getType().reference();
+      } else if (operatorCode.equals("&")) {
+        newType = src.getType().dereference();
+      }
+      input.setType(newType, this);
+    }
 
     if (!previous.equals(this.type)) {
       this.type.setTypeOrigin(Origin.DATAFLOW);
@@ -146,7 +159,13 @@ public class UnaryOperator extends Expression implements TypeListener {
   }
 
   @Override
-  public void possibleSubTypesChanged(HasType src, Set<Type> oldSubTypes) {
+  public void possibleSubTypesChanged(HasType src, HasType root, Set<Type> oldSubTypes) {
+    if (root == this) {
+      return;
+    }
+    if (src instanceof TypeListener && getsDataFromInput((TypeListener) src)) {
+      return;
+    }
     Set<Type> currSubTypes = new HashSet<>(getPossibleSubTypes());
     Set<Type> newSubTypes = src.getPossibleSubTypes();
     currSubTypes.addAll(newSubTypes);
@@ -166,7 +185,7 @@ public class UnaryOperator extends Expression implements TypeListener {
     }
 
     getPossibleSubTypes().clear();
-    setPossibleSubTypes(currSubTypes); // notify about the new type
+    setPossibleSubTypes(currSubTypes, root); // notify about the new type
   }
 
   @Override

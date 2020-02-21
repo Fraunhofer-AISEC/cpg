@@ -73,18 +73,24 @@ public class ExpressionList extends Expression implements HasType.TypeListener {
   }
 
   @Override
-  public void typeChanged(HasType src, Type oldType) {
+  public void typeChanged(HasType src, HasType root, Type oldType) {
+    if (root == this) {
+      return;
+    }
     Type previous = this.type;
-    setType(src.getType());
-    setPossibleSubTypes(new HashSet<>(src.getPossibleSubTypes()));
+    setType(src.getType(), root);
+    setPossibleSubTypes(new HashSet<>(src.getPossibleSubTypes()), root);
     if (!previous.equals(this.type)) {
       this.type.setTypeOrigin(Origin.DATAFLOW);
     }
   }
 
   @Override
-  public void possibleSubTypesChanged(HasType src, Set<Type> oldSubTypes) {
-    setPossibleSubTypes(new HashSet<>(src.getPossibleSubTypes()));
+  public void possibleSubTypesChanged(HasType src, HasType root, Set<Type> oldSubTypes) {
+    if (root == this) {
+      return;
+    }
+    setPossibleSubTypes(new HashSet<>(src.getPossibleSubTypes()), root);
   }
 
   @Override

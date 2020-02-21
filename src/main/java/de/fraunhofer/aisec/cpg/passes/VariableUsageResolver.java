@@ -85,6 +85,7 @@ public class VariableUsageResolver extends Pass {
   private Map<Type, List<Type>> superTypesMap = new HashMap<>();
   private Map<Type, RecordDeclaration> recordMap = new HashMap<>();
   private Map<Type, EnumDeclaration> enumMap = new HashMap<>();
+  private TranslationUnitDeclaration currTu;
   private ScopedWalker walker;
 
   @Override
@@ -101,10 +102,11 @@ public class VariableUsageResolver extends Pass {
     walker = new ScopedWalker();
 
     for (TranslationUnitDeclaration tu : result.getTranslationUnits()) {
+      currTu = tu;
       walker.clearCallbacks();
       walker.registerHandler((currClass, parent, currNode) -> walker.collectDeclarations(currNode));
       walker.registerHandler(this::findRecordsAndEnums);
-      walker.iterate(tu);
+      walker.iterate(currTu);
     }
 
     Map<Type, List<Type>> currSuperTypes =
@@ -134,23 +136,25 @@ public class VariableUsageResolver extends Pass {
   private Set<ValueDeclaration> resolveFunctionPtr(
       Type containingClass, DeclaredReferenceExpression reference) {
     Set<ValueDeclaration> targets = Collections.emptySet();
+    String functionName = reference.getName();
     Matcher matcher =
         Pattern.compile("(?:(?<class>.*)(?:\\.|::))?(?<function>.*)").matcher(reference.getName());
     if (matcher.matches()) {
       String cls = matcher.group("class");
-      String function = matcher.group("function");
+      functionName = matcher.group("function");
+      String finalFunctionName = functionName;
       if (cls == null) {
         targets =
             walker.getAllDeclarationsForScope(reference).stream()
                 .filter(FunctionDeclaration.class::isInstance)
-                .filter(d -> d.getName().equals(function))
+                .filter(d -> d.getName().equals(finalFunctionName))
                 .collect(Collectors.toSet());
       } else {
         containingClass = new Type(cls);
         if (recordMap.containsKey(containingClass)) {
           targets =
               recordMap.get(containingClass).getMethods().stream()
-                  .filter(f -> f.getName().equals(function))
+                  .filter(f -> f.getName().equals(finalFunctionName))
                   .map(ValueDeclaration.class::cast)
                   .collect(Collectors.toSet());
         }
@@ -158,7 +162,11 @@ public class VariableUsageResolver extends Pass {
     }
 
     if (targets.isEmpty()) {
-      return Set.of(handleUnknownMethod(containingClass, reference));
+      if (containingClass == null) {
+        return Set.of(handleUnknownMethod(functionName, reference.getType()));
+      } else {
+        return Set.of(handleUnknownClassMethod(containingClass, functionName, reference.getType()));
+      }
     } else {
       return targets;
     }
@@ -222,7 +230,7 @@ public class VariableUsageResolver extends Pass {
                       .findFirst()
                       .orElse(null);
         } else {
-          Type baseType = Type.UNKNOWN;
+          Type baseType = Type.getUnknown();
           if (base instanceof HasType) {
             baseType = ((HasType) base).getType();
           }
@@ -335,7 +343,7 @@ public class VariableUsageResolver extends Pass {
     }
   }
 
-  private MethodDeclaration handleUnknownMethod(Type base, DeclaredReferenceExpression reference) {
+  private MethodDeclaration handleUnknownClassMethod(Type base, String name, Type type) {
     recordMap.putIfAbsent(
         base,
         NodeBuilder.newRecordDeclaration(
@@ -346,12 +354,30 @@ public class VariableUsageResolver extends Pass {
     RecordDeclaration containingRecord = recordMap.get(base);
     List<MethodDeclaration> declarations = containingRecord.getMethods();
     Optional<MethodDeclaration> target =
-        declarations.stream().filter(f -> f.getName().equals(reference.getName())).findFirst();
+        declarations.stream().filter(f -> f.getName().equals(name)).findFirst();
     if (target.isEmpty()) {
       MethodDeclaration declaration =
-          NodeBuilder.newMethodDeclaration(reference.getName(), "", false, containingRecord);
-      declaration.setType(reference.getType());
+          NodeBuilder.newMethodDeclaration(name, "", false, containingRecord);
+      declaration.setType(type);
       declarations.add(declaration);
+      declaration.setImplicit(true);
+      return declaration;
+    } else {
+      return target.get();
+    }
+  }
+
+  private FunctionDeclaration handleUnknownMethod(String name, Type type) {
+    Optional<FunctionDeclaration> target =
+        currTu.getDeclarations().stream()
+            .filter(FunctionDeclaration.class::isInstance)
+            .map(FunctionDeclaration.class::cast)
+            .filter(f -> f.getName().equals(name))
+            .findFirst();
+    if (target.isEmpty()) {
+      FunctionDeclaration declaration = NodeBuilder.newFunctionDeclaration(name, "");
+      declaration.setType(type);
+      currTu.getDeclarations().add(declaration);
       declaration.setImplicit(true);
       return declaration;
     } else {
