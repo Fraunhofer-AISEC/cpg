@@ -92,9 +92,6 @@ public class ConditionalExpression extends Expression implements TypeListener {
 
   @Override
   public void typeChanged(HasType src, HasType root, Type oldType) {
-    if (root == this) {
-      return;
-    }
     Type previous = this.type;
 
     List<Type> types = new ArrayList<>();

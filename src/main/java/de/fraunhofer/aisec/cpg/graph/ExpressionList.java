@@ -74,9 +74,6 @@ public class ExpressionList extends Expression implements HasType.TypeListener {
 
   @Override
   public void typeChanged(HasType src, HasType root, Type oldType) {
-    if (root == this) {
-      return;
-    }
     Type previous = this.type;
     setType(src.getType(), root);
     setPossibleSubTypes(new HashSet<>(src.getPossibleSubTypes()), root);
@@ -87,9 +84,6 @@ public class ExpressionList extends Expression implements HasType.TypeListener {
 
   @Override
   public void possibleSubTypesChanged(HasType src, HasType root, Set<Type> oldSubTypes) {
-    if (root == this) {
-      return;
-    }
     setPossibleSubTypes(new HashSet<>(src.getPossibleSubTypes()), root);
   }
 

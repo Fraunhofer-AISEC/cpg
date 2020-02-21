@@ -120,9 +120,6 @@ public class CallExpression extends Expression implements TypeListener {
 
   @Override
   public void typeChanged(HasType src, HasType root, Type oldType) {
-    if (root == this) {
-      return;
-    }
     Type previous = this.type;
 
     List<Type> types =
@@ -146,9 +143,6 @@ public class CallExpression extends Expression implements TypeListener {
 
   @Override
   public void possibleSubTypesChanged(HasType src, HasType root, Set<Type> oldSubTypes) {
-    if (root == this) {
-      return;
-    }
     Set<Type> subTypes = new HashSet<>(getPossibleSubTypes());
     subTypes.addAll(src.getPossibleSubTypes());
     setPossibleSubTypes(subTypes, root);

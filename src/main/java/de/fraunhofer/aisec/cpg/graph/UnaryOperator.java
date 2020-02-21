@@ -123,10 +123,6 @@ public class UnaryOperator extends Expression implements TypeListener {
 
   @Override
   public void typeChanged(HasType src, HasType root, Type oldType) {
-    if (root == this) {
-      return;
-    }
-
     Type previous = this.type;
 
     if (src == input) {
@@ -160,9 +156,6 @@ public class UnaryOperator extends Expression implements TypeListener {
 
   @Override
   public void possibleSubTypesChanged(HasType src, HasType root, Set<Type> oldSubTypes) {
-    if (root == this) {
-      return;
-    }
     if (src instanceof TypeListener && getsDataFromInput((TypeListener) src)) {
       return;
     }

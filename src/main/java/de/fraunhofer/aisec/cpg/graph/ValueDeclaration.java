@@ -95,9 +95,7 @@ public abstract class ValueDeclaration extends Declaration implements HasType {
 
   @Override
   public void resetTypes(Type type) {
-
     Set<Type> oldSubTypes = new HashSet<>(getPossibleSubTypes());
-
     Type oldType = this.type;
 
     this.type = type;

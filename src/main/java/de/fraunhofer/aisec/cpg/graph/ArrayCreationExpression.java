@@ -95,9 +95,6 @@ public class ArrayCreationExpression extends Expression implements TypeListener 
 
   @Override
   public void typeChanged(HasType src, HasType root, Type oldType) {
-    if (root == this) {
-      return;
-    }
     Type previous = this.type;
     setType(src.getType(), root);
 
@@ -108,9 +105,6 @@ public class ArrayCreationExpression extends Expression implements TypeListener 
 
   @Override
   public void possibleSubTypesChanged(HasType src, HasType root, Set<Type> oldSubTypes) {
-    if (root == this) {
-      return;
-    }
     Set<Type> subTypes = new HashSet<>(getPossibleSubTypes());
     subTypes.addAll(src.getPossibleSubTypes());
     setPossibleSubTypes(subTypes, root);

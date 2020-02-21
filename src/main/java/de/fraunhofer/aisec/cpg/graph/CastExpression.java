@@ -70,9 +70,6 @@ public class CastExpression extends Expression implements HasType.TypeListener {
 
   @Override
   public void typeChanged(HasType src, HasType root, Type oldType) {
-    if (root == this) {
-      return;
-    }
     Type previous = this.type;
 
     if (TypeManager.getInstance().isSupertypeOf(this.castType, src.getType())) {
@@ -88,9 +85,6 @@ public class CastExpression extends Expression implements HasType.TypeListener {
 
   @Override
   public void possibleSubTypesChanged(HasType src, HasType root, Set<Type> oldSubTypes) {
-    if (root == this) {
-      return;
-    }
     setPossibleSubTypes(src.getPossibleSubTypes(), root);
   }
 
