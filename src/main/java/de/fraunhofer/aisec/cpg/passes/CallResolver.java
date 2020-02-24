@@ -50,12 +50,15 @@ import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.ScopedWalker;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -150,10 +153,14 @@ public class CallResolver extends Pass {
         if (member instanceof HasType && ((HasType) member).getType().isFunctionPtr()) {
           List<FunctionDeclaration> invocationCandidates = new ArrayList<>();
           Deque<Node> worklist = new ArrayDeque<>();
+          Set<Node> seen = Collections.newSetFromMap(new IdentityHashMap<>());
           worklist.push(member);
           DeclaredReferenceExpression finalReference = null;
           while (!worklist.isEmpty()) {
             Node curr = worklist.pop();
+            if (!seen.add(curr)) {
+              continue;
+            }
             if (curr instanceof FunctionDeclaration) {
               if (((FunctionDeclaration) curr).hasSignature(call.getSignature())) {
                 invocationCandidates.add((FunctionDeclaration) curr);
@@ -319,8 +326,36 @@ public class CallResolver extends Pass {
     }
   }
 
+  private Optional<FunctionDeclaration> checkExistingDummies(
+      FunctionDeclaration template, List<Type> signature) {
+    if (template instanceof MethodDeclaration
+        && ((MethodDeclaration) template).getRecordDeclaration() != null) {
+      return ((MethodDeclaration) template)
+          .getRecordDeclaration().getMethods().stream()
+              .filter(m -> m.getName().equals(template.getName()) && m.hasSignature(signature))
+              .map(FunctionDeclaration.class::cast)
+              .findFirst();
+    } else {
+      if (currentTU == null) {
+        LOGGER.error(
+            "No current translation unit when trying to find matching dummy for {}", template);
+        return Optional.empty();
+      }
+      return currentTU.getDeclarations().stream()
+          .filter(FunctionDeclaration.class::isInstance)
+          .map(FunctionDeclaration.class::cast)
+          .filter(f -> f.getName().equals(template.getName()) && f.hasSignature(signature))
+          .findFirst();
+    }
+  }
+
   private FunctionDeclaration createDummyWithMatchingSignature(
       FunctionDeclaration template, List<Type> signature) {
+    Optional<FunctionDeclaration> existing = checkExistingDummies(template, signature);
+    if (existing.isPresent()) {
+      return existing.get();
+    }
+
     List<ParamVariableDeclaration> parameters = createParameters(signature);
     if (template instanceof MethodDeclaration) {
       RecordDeclaration containingRecord = ((MethodDeclaration) template).getRecordDeclaration();
@@ -351,6 +386,7 @@ public class CallResolver extends Pass {
       FunctionDeclaration dummy =
           NodeBuilder.newFunctionDeclaration(template.getName(), template.getCode());
       dummy.setParameters(parameters);
+      dummy.setImplicit(true);
       if (currentTU == null) {
         LOGGER.error(
             "No current translation unit when trying to generate function dummy {}",

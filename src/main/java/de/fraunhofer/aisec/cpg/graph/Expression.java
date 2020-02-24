@@ -79,6 +79,7 @@ public class Expression extends Statement implements HasType {
 
     // work on a copy of the type in order not to modify it
     type = new Type(type);
+    Type oldType = new Type(this.type);
 
     // Once we know this is a function pointer, it will stay that way
     type.setFunctionPtr(type.isFunctionPtr() || this.type.isFunctionPtr());
@@ -90,8 +91,6 @@ public class Expression extends Statement implements HasType {
 
     Set<Type> subTypes = new HashSet<>(getPossibleSubTypes());
     subTypes.add(type);
-
-    Type oldType = this.type;
 
     this.type = TypeManager.getInstance().getCommonType(subTypes).orElse(type);
     setPossibleSubTypes(subTypes);

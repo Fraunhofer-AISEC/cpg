@@ -34,6 +34,7 @@ import java.util.Objects;
  */
 public class MemberCallExpression extends CallExpression {
 
+  @SubGraph("AST")
   private Node member;
 
   public Node getMember() {

@@ -72,11 +72,17 @@ public class FieldDeclaration extends ValueDeclaration implements TypeListener {
     if (this.initializer != null) {
       this.initializer.unregisterTypeListener(this);
       this.removePrevDFG(this.initializer);
+      if (this.initializer instanceof TypeListener) {
+        this.unregisterTypeListener((TypeListener) this.initializer);
+      }
     }
     this.initializer = initializer;
     if (initializer != null) {
       initializer.registerTypeListener(this);
       this.addPrevDFG(initializer);
+      if (initializer instanceof TypeListener) {
+        this.registerTypeListener((TypeListener) initializer);
+      }
     }
   }
 

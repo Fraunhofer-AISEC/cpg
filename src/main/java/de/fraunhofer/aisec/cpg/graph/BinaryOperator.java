@@ -62,6 +62,9 @@ public class BinaryOperator extends Expression implements TypeListener {
     if (this.lhs != null) {
       this.lhs.unregisterTypeListener(this);
       if ("=".equals(operatorCode)) {
+        if (this.lhs instanceof TypeListener) {
+          unregisterTypeListener((TypeListener) this.lhs);
+        }
         if (this.rhs != null) {
           this.lhs.removePrevDFG(this.lhs);
         }
@@ -76,6 +79,15 @@ public class BinaryOperator extends Expression implements TypeListener {
     if (lhs != null) {
       lhs.registerTypeListener(this);
       if ("=".equals(operatorCode)) {
+        if (lhs instanceof DeclaredReferenceExpression) {
+          // declared reference expr is the left hand side of an assignment -> writing to the var
+          ((DeclaredReferenceExpression) lhs).setWritingAccess(true);
+        } else if (lhs instanceof MemberExpression) {
+          ((MemberExpression) lhs).setWritingAccess(true);
+        }
+        if (lhs instanceof TypeListener) {
+          this.registerTypeListener((TypeListener) lhs);
+        }
         if (this.rhs != null) {
           lhs.addPrevDFG(rhs);
         }
@@ -100,6 +112,9 @@ public class BinaryOperator extends Expression implements TypeListener {
     if (this.rhs != null) {
       this.rhs.unregisterTypeListener(this);
       if ("=".equals(operatorCode)) {
+        if (this.rhs instanceof TypeListener) {
+          unregisterTypeListener((TypeListener) this.rhs);
+        }
         if (this.lhs != null) {
           this.lhs.removePrevDFG(this.rhs);
         }
@@ -111,6 +126,9 @@ public class BinaryOperator extends Expression implements TypeListener {
     if (rhs != null) {
       rhs.registerTypeListener(this);
       if ("=".equals(operatorCode)) {
+        if (rhs instanceof TypeListener) {
+          this.registerTypeListener((TypeListener) rhs);
+        }
         if (this.lhs != null) {
           this.lhs.addPrevDFG(rhs);
         }
@@ -132,9 +150,7 @@ public class BinaryOperator extends Expression implements TypeListener {
   public void typeChanged(HasType src, HasType root, Type oldType) {
     Type previous = this.type;
     if (this.operatorCode.equals("=")) {
-      if (src == this.rhs) {
-        setType(src.getType(), root);
-      }
+      setType(src.getType(), root);
     } else {
       if (this.lhs != null && "java.lang.String".equals(this.lhs.getType().toString())
           || this.rhs != null && "java.lang.String".equals(this.rhs.getType().toString())) {

@@ -118,6 +118,10 @@ public class VariableUsageResolver extends Pass {
     for (TranslationUnitDeclaration tu : result.getTranslationUnits()) {
       walker.clearCallbacks();
       walker.registerHandler(this::resolveFieldUsages);
+      walker.iterate(tu);
+    }
+    for (TranslationUnitDeclaration tu : result.getTranslationUnits()) {
+      walker.clearCallbacks();
       walker.registerHandler(this::resolveLocalVarUsage);
       walker.iterate(tu);
     }
@@ -187,7 +191,13 @@ public class VariableUsageResolver extends Pass {
       }
 
       if (ref.getType().isFunctionPtr()) {
-        refersTo = resolveFunctionPtr(recordDeclType, ref);
+        // If we already found something, this might either be a function pointer variable or a
+        // function that would match the name. If we found a function, discard this finding, as
+        // it is most likely not correct yet
+        if (refersTo.isEmpty()
+            || refersTo.stream().anyMatch(FunctionDeclaration.class::isInstance)) {
+          refersTo = resolveFunctionPtr(recordDeclType, ref);
+        }
       }
 
       // only add new nodes for non-static unknown

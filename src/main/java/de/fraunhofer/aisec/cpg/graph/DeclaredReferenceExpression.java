@@ -45,6 +45,12 @@ public class DeclaredReferenceExpression extends Expression implements TypeListe
   /** The {@link ValueDeclaration}s this expression might refer to. */
   private Set<ValueDeclaration> refersTo = new HashSet<>();
 
+  /**
+   * Is this reference used for writing data instead of just reading it? Determines dataflow
+   * direction
+   */
+  private boolean writingAccess = false;
+
   public Set<ValueDeclaration> getRefersTo() {
     return refersTo;
   }
@@ -52,9 +58,12 @@ public class DeclaredReferenceExpression extends Expression implements TypeListe
   public void setRefersTo(@NonNull Set<ValueDeclaration> refersTo) {
     this.refersTo.forEach(
         r -> {
+          if (writingAccess) {
+            this.removeNextDFG(r);
+          } else {
+            this.removePrevDFG(r);
+          }
           r.unregisterTypeListener(this);
-          this.removePrevDFG(r);
-          r.removePrevDFG(this);
           if (r instanceof TypeListener) {
             this.unregisterTypeListener((TypeListener) r);
           }
@@ -63,8 +72,12 @@ public class DeclaredReferenceExpression extends Expression implements TypeListe
     this.refersTo = refersTo;
     refersTo.forEach(
         r -> {
+          if (writingAccess) {
+            this.addNextDFG(r);
+          } else {
+            this.addPrevDFG(r);
+          }
           r.registerTypeListener(this);
-          r.addNextDFG(this);
           if (r instanceof TypeListener) {
             this.registerTypeListener((TypeListener) r);
           }
@@ -93,6 +106,31 @@ public class DeclaredReferenceExpression extends Expression implements TypeListe
         .appendSuper(super.toString())
         .append("refersTo", refersTo)
         .toString();
+  }
+
+  public void setWritingAccess(boolean writingAccess) {
+    this.refersTo.forEach(
+        r -> {
+          if (this.writingAccess) {
+            this.removeNextDFG(r);
+          } else {
+            this.removePrevDFG(r);
+          }
+        });
+
+    this.writingAccess = writingAccess;
+    refersTo.forEach(
+        r -> {
+          if (this.writingAccess) {
+            this.addNextDFG(r);
+          } else {
+            this.addPrevDFG(r);
+          }
+        });
+  }
+
+  public boolean isWritingAccess() {
+    return writingAccess;
   }
 
   @Override

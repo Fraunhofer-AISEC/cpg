@@ -68,30 +68,46 @@ public class FunctionPointerTest {
             .findFirst()
             .orElseThrow();
     List<CallExpression> calls = Util.subnodesOfType(main, CallExpression.class);
-    Pattern pattern = Pattern.compile("\\((?<member>.+)?\\*(?<func>.+)\\)");
+    Pattern pattern = Pattern.compile("\\((?<member>.+)?\\*(?<obj>.+\\.)?(?<func>.+)\\)");
     for (CallExpression call : calls) {
       Matcher matcher = pattern.matcher(call.getName());
       assertTrue(matcher.matches(), "Unexpected call " + call.getName());
 
       switch (matcher.group("func")) {
         case "no_param":
+        case "no_param_uninitialized":
+        case "no_param_field":
+        case "no_param_field_uninitialized":
           assertEquals(List.of(noParam), call.getInvokes());
           break;
         case "single_param":
+        case "single_param_uninitialized":
+        case "single_param_field":
+        case "single_param_field_uninitialized":
           assertEquals(List.of(singleParam), call.getInvokes());
           break;
-        case "unused_no_param":
-        case "unused_single_param":
+        case "no_param_unused":
+        case "no_param_unused_field":
+        case "no_param_unused_uninitialized":
+        case "single_param_unused":
+        case "single_param_unused_field":
+        case "single_param_unused_field_uninitialized":
           // TODO once we have dedicated function pointer types, we need to distinguish here!
           assertEquals(List.of(noParam, singleParam), call.getInvokes());
           break;
         case "no_param_unknown":
+        case "no_param_unknown_uninitialized":
+        case "no_param_unknown_field":
+        case "no_param_unknown_field_uninitialized":
           assertEquals(List.of(noParamUnknown), call.getInvokes());
           assertTrue(noParamUnknown.isImplicit());
           break;
         case "single_param_unknown":
+        case "single_param_unknown_uninitialized":
+        case "single_param_unknown_field":
+        case "single_param_unknown_field_uninitialized":
           assertEquals(List.of(singleParamUnknown), call.getInvokes());
-          assertTrue(noParamUnknown.isImplicit());
+          assertTrue(singleParamUnknown.isImplicit());
           break;
         default:
           fail("Unexpected call " + call.getName());

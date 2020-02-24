@@ -213,7 +213,8 @@ public class Type {
     return other instanceof Type
         && Objects.equals(((Type) other).type, this.type)
         && Objects.equals(((Type) other).typeModifier, this.typeModifier)
-        && Objects.equals(((Type) other).typeAdjustment, this.typeAdjustment);
+        && Objects.equals(((Type) other).typeAdjustment, this.typeAdjustment)
+        && ((Type) other).isFunctionPtr == this.isFunctionPtr;
   }
 
   @Override

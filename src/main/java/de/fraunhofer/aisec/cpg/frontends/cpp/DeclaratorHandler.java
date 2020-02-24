@@ -46,6 +46,8 @@ import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import org.eclipse.cdt.core.dom.ast.IASTCompositeTypeSpecifier;
 import org.eclipse.cdt.core.dom.ast.IASTDeclaration;
@@ -168,10 +170,13 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
   }
 
   private ValueDeclaration handleFunctionDeclarator(CPPASTFunctionDeclarator ctx) {
-    // Attention! If this declarator has an initializer, this is not actually a new function but
+    // Attention! If this declarator has no name, this is not actually a new function but
     // rather a function pointer
-    if (ctx.getInitializer() != null) {
-      Expression initializer = lang.getInitializerHandler().handle(ctx.getInitializer());
+    if (ctx.getName().toString().isEmpty()) {
+      Expression initializer =
+          ctx.getInitializer() == null
+              ? null
+              : lang.getInitializerHandler().handle(ctx.getInitializer());
       // unfortunately we are not told whether this is a field or not, so we have to find it out
       // ourselves
       ValueDeclaration result;
@@ -192,14 +197,24 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
             (RecordScope) lang.getScopeManager().getFirstScopeThat(RecordScope.class::isInstance);
         if (recordScope != null) {
           // field
+          String code = ctx.getRawSignature();
+          Pattern namePattern = Pattern.compile("\\((\\*|.+\\*)(?<name>[^)]*)");
+          Matcher matcher = namePattern.matcher(code);
+          String name = "";
+          if (matcher.find()) {
+            name = matcher.group("name").strip();
+          }
           result =
               NodeBuilder.newFieldDeclaration(
-                  ctx.getName().toString(),
+                  name,
                   Type.getUnknown(),
                   Collections.emptyList(),
-                  ctx.getRawSignature(),
+                  code,
                   lang.getRegionFromRawNode(ctx),
                   initializer);
+          result.setRegion(lang.getRegionFromRawNode(ctx));
+          result.getType().setFunctionPtr(true);
+          result.refreshType();
         } else {
           // not in a record and not in a field, strange. This should not happen
           log.error(
@@ -320,6 +335,7 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
       if (declaration instanceof FunctionDeclaration) {
         MethodDeclaration method =
             MethodDeclaration.from((FunctionDeclaration) declaration, recordDeclaration);
+        declaration.disconnectFromGraph();
 
         // check, if its a constructor
         if (declaration.getName().equals(recordDeclaration.getName())) {
@@ -338,6 +354,8 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
         }
       } else if (declaration instanceof VariableDeclaration) {
         recordDeclaration.getFields().add(FieldDeclaration.from((VariableDeclaration) declaration));
+      } else if (declaration instanceof FieldDeclaration) {
+        recordDeclaration.getFields().add((FieldDeclaration) declaration);
       }
     }
 
