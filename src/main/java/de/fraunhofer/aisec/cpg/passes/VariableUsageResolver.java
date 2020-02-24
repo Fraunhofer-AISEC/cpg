@@ -190,14 +190,13 @@ public class VariableUsageResolver extends Pass {
         recordDeclType = new Type(currentClass.getName());
       }
 
-      if (ref.getType().isFunctionPtr()) {
+      if (ref.getType().isFunctionPtr()
+          && (refersTo.isEmpty()
+              || refersTo.stream().anyMatch(FunctionDeclaration.class::isInstance))) {
         // If we already found something, this might either be a function pointer variable or a
         // function that would match the name. If we found a function, discard this finding, as
         // it is most likely not correct yet
-        if (refersTo.isEmpty()
-            || refersTo.stream().anyMatch(FunctionDeclaration.class::isInstance)) {
-          refersTo = resolveFunctionPtr(recordDeclType, ref);
-        }
+        refersTo = resolveFunctionPtr(recordDeclType, ref);
       }
 
       // only add new nodes for non-static unknown

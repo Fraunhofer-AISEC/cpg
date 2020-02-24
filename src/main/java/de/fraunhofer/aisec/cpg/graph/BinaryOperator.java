@@ -60,43 +60,51 @@ public class BinaryOperator extends Expression implements TypeListener {
 
   public void setLhs(Expression lhs) {
     if (this.lhs != null) {
-      this.lhs.unregisterTypeListener(this);
-      if ("=".equals(operatorCode)) {
-        if (this.lhs instanceof TypeListener) {
-          unregisterTypeListener((TypeListener) this.lhs);
-        }
-        if (this.rhs != null) {
-          this.lhs.removePrevDFG(this.lhs);
-        }
-        if (this.lhs instanceof TypeListener) {
-          this.unregisterTypeListener((TypeListener) this.lhs);
-        }
-      } else {
-        this.removePrevDFG(this.lhs);
-      }
+      disconnectOldLhs();
     }
     this.lhs = lhs;
     if (lhs != null) {
-      lhs.registerTypeListener(this);
-      if ("=".equals(operatorCode)) {
-        if (lhs instanceof DeclaredReferenceExpression) {
-          // declared reference expr is the left hand side of an assignment -> writing to the var
-          ((DeclaredReferenceExpression) lhs).setWritingAccess(true);
-        } else if (lhs instanceof MemberExpression) {
-          ((MemberExpression) lhs).setWritingAccess(true);
-        }
-        if (lhs instanceof TypeListener) {
-          this.registerTypeListener((TypeListener) lhs);
-        }
-        if (this.rhs != null) {
-          lhs.addPrevDFG(rhs);
-        }
-        if (lhs instanceof TypeListener) {
-          this.registerTypeListener((TypeListener) this.lhs);
-        }
-      } else {
-        this.addPrevDFG(lhs);
+      connectNewLhs(lhs);
+    }
+  }
+
+  private void connectNewLhs(Expression lhs) {
+    lhs.registerTypeListener(this);
+    if ("=".equals(operatorCode)) {
+      if (lhs instanceof DeclaredReferenceExpression) {
+        // declared reference expr is the left hand side of an assignment -> writing to the var
+        ((DeclaredReferenceExpression) lhs).setWritingAccess(true);
+      } else if (lhs instanceof MemberExpression) {
+        ((MemberExpression) lhs).setWritingAccess(true);
       }
+      if (lhs instanceof TypeListener) {
+        this.registerTypeListener((TypeListener) lhs);
+      }
+      if (this.rhs != null) {
+        lhs.addPrevDFG(rhs);
+      }
+      if (lhs instanceof TypeListener) {
+        this.registerTypeListener((TypeListener) this.lhs);
+      }
+    } else {
+      this.addPrevDFG(lhs);
+    }
+  }
+
+  private void disconnectOldLhs() {
+    this.lhs.unregisterTypeListener(this);
+    if ("=".equals(operatorCode)) {
+      if (this.lhs instanceof TypeListener) {
+        unregisterTypeListener((TypeListener) this.lhs);
+      }
+      if (this.rhs != null) {
+        this.lhs.removePrevDFG(this.lhs);
+      }
+      if (this.lhs instanceof TypeListener) {
+        this.unregisterTypeListener((TypeListener) this.lhs);
+      }
+    } else {
+      this.removePrevDFG(this.lhs);
     }
   }
 
@@ -110,31 +118,39 @@ public class BinaryOperator extends Expression implements TypeListener {
 
   public void setRhs(Expression rhs) {
     if (this.rhs != null) {
-      this.rhs.unregisterTypeListener(this);
-      if ("=".equals(operatorCode)) {
-        if (this.rhs instanceof TypeListener) {
-          unregisterTypeListener((TypeListener) this.rhs);
-        }
-        if (this.lhs != null) {
-          this.lhs.removePrevDFG(this.rhs);
-        }
-      } else {
-        this.removePrevDFG(this.rhs);
-      }
+      disconnectOldRhs();
     }
     this.rhs = rhs;
     if (rhs != null) {
-      rhs.registerTypeListener(this);
-      if ("=".equals(operatorCode)) {
-        if (rhs instanceof TypeListener) {
-          this.registerTypeListener((TypeListener) rhs);
-        }
-        if (this.lhs != null) {
-          this.lhs.addPrevDFG(rhs);
-        }
-      } else {
-        this.addPrevDFG(rhs);
+      connectNewRhs(rhs);
+    }
+  }
+
+  private void connectNewRhs(Expression rhs) {
+    rhs.registerTypeListener(this);
+    if ("=".equals(operatorCode)) {
+      if (rhs instanceof TypeListener) {
+        this.registerTypeListener((TypeListener) rhs);
       }
+      if (this.lhs != null) {
+        this.lhs.addPrevDFG(rhs);
+      }
+    } else {
+      this.addPrevDFG(rhs);
+    }
+  }
+
+  private void disconnectOldRhs() {
+    this.rhs.unregisterTypeListener(this);
+    if ("=".equals(operatorCode)) {
+      if (this.rhs instanceof TypeListener) {
+        unregisterTypeListener((TypeListener) this.rhs);
+      }
+      if (this.lhs != null) {
+        this.lhs.removePrevDFG(this.rhs);
+      }
+    } else {
+      this.removePrevDFG(this.rhs);
     }
   }
 

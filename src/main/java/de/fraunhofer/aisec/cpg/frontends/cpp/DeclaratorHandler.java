@@ -173,57 +173,7 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
     // Attention! If this declarator has no name, this is not actually a new function but
     // rather a function pointer
     if (ctx.getName().toString().isEmpty()) {
-      Expression initializer =
-          ctx.getInitializer() == null
-              ? null
-              : lang.getInitializerHandler().handle(ctx.getInitializer());
-      // unfortunately we are not told whether this is a field or not, so we have to find it out
-      // ourselves
-      ValueDeclaration result;
-      FunctionDeclaration currFunction = lang.getScopeManager().getCurrentFunction();
-      if (currFunction != null) {
-        // variable
-        result =
-            NodeBuilder.newVariableDeclaration(
-                ctx.getNestedDeclarator().getName().toString(),
-                Type.getUnknown(),
-                ctx.getRawSignature());
-        ((VariableDeclaration) result).setInitializer(initializer);
-        result.setRegion(lang.getRegionFromRawNode(ctx));
-        result.getType().setFunctionPtr(true);
-        result.refreshType();
-      } else {
-        RecordScope recordScope =
-            (RecordScope) lang.getScopeManager().getFirstScopeThat(RecordScope.class::isInstance);
-        if (recordScope != null) {
-          // field
-          String code = ctx.getRawSignature();
-          Pattern namePattern = Pattern.compile("\\((\\*|.+\\*)(?<name>[^)]*)");
-          Matcher matcher = namePattern.matcher(code);
-          String name = "";
-          if (matcher.find()) {
-            name = matcher.group("name").strip();
-          }
-          result =
-              NodeBuilder.newFieldDeclaration(
-                  name,
-                  Type.getUnknown(),
-                  Collections.emptyList(),
-                  code,
-                  lang.getRegionFromRawNode(ctx),
-                  initializer);
-          result.setRegion(lang.getRegionFromRawNode(ctx));
-          result.getType().setFunctionPtr(true);
-          result.refreshType();
-        } else {
-          // not in a record and not in a field, strange. This should not happen
-          log.error(
-              "Function pointer declaration that is neither in a function nor in a record. "
-                  + "This should not happen!");
-          return null;
-        }
-      }
-      return result;
+      return handleFunctionPointer(ctx);
     }
     String name = ctx.getName().toString();
 
@@ -287,6 +237,60 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
     //    lang.addFunctionDeclaration(declaration);
     lang.getScopeManager().leaveScope(declaration);
     return declaration;
+  }
+
+  private ValueDeclaration handleFunctionPointer(CPPASTFunctionDeclarator ctx) {
+    Expression initializer =
+        ctx.getInitializer() == null
+            ? null
+            : lang.getInitializerHandler().handle(ctx.getInitializer());
+    // unfortunately we are not told whether this is a field or not, so we have to find it out
+    // ourselves
+    ValueDeclaration result;
+    FunctionDeclaration currFunction = lang.getScopeManager().getCurrentFunction();
+    if (currFunction != null) {
+      // variable
+      result =
+          NodeBuilder.newVariableDeclaration(
+              ctx.getNestedDeclarator().getName().toString(),
+              Type.getUnknown(),
+              ctx.getRawSignature());
+      ((VariableDeclaration) result).setInitializer(initializer);
+      result.setRegion(lang.getRegionFromRawNode(ctx));
+      result.getType().setFunctionPtr(true);
+      result.refreshType();
+    } else {
+      RecordScope recordScope =
+          (RecordScope) lang.getScopeManager().getFirstScopeThat(RecordScope.class::isInstance);
+      if (recordScope != null) {
+        // field
+        String code = ctx.getRawSignature();
+        Pattern namePattern = Pattern.compile("\\((\\*|.+\\*)(?<name>[^)]*)");
+        Matcher matcher = namePattern.matcher(code);
+        String name = "";
+        if (matcher.find()) {
+          name = matcher.group("name").strip();
+        }
+        result =
+            NodeBuilder.newFieldDeclaration(
+                name,
+                Type.getUnknown(),
+                Collections.emptyList(),
+                code,
+                lang.getRegionFromRawNode(ctx),
+                initializer);
+        result.setRegion(lang.getRegionFromRawNode(ctx));
+        result.getType().setFunctionPtr(true);
+        result.refreshType();
+      } else {
+        // not in a record and not in a field, strange. This should not happen
+        log.error(
+            "Function pointer declaration that is neither in a function nor in a record. "
+                + "This should not happen!");
+        return null;
+      }
+    }
+    return result;
   }
 
   private RecordDeclaration handleCompositeTypeSpecifier(CPPASTCompositeTypeSpecifier ctx) {
