@@ -253,6 +253,12 @@ public class VariableUsageResolver extends Pass {
       }
 
       if (base != null && member != null) {
+        if (base != memberExpression.getBase()) {
+          memberExpression.getBase().disconnectFromGraph();
+        }
+        if (member != memberExpression.getMember()) {
+          memberExpression.getMember().disconnectFromGraph();
+        }
         memberExpression.setBase(base);
         memberExpression.setMember(member);
       } else {
