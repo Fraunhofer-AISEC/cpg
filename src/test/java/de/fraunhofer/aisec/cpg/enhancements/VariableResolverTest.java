@@ -35,7 +35,6 @@ import de.fraunhofer.aisec.cpg.TranslationManager;
 import de.fraunhofer.aisec.cpg.graph.*;
 import de.fraunhofer.aisec.cpg.helpers.Util;
 import java.io.File;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Set;
@@ -45,33 +44,11 @@ import org.junit.jupiter.api.Test;
 
 public class VariableResolverTest {
 
-  private List<TranslationUnitDeclaration> analyze() throws Exception {
-    Path topLevel = Path.of("src", "test", "resources", "variables");
-    File[] files =
-        Files.walk(topLevel, Integer.MAX_VALUE)
-            .map(Path::toFile)
-            .filter(File::isFile)
-            .filter(f -> f.getName().endsWith(".java"))
-            .sorted()
-            .toArray(File[]::new);
-
-    TranslationConfiguration config =
-        TranslationConfiguration.builder()
-            .sourceLocations(files)
-            .topLevel(topLevel.toFile())
-            .defaultPasses()
-            .debugParser(true)
-            .failOnError(true)
-            .build();
-
-    TranslationManager analyzer = TranslationManager.builder().config(config).build();
-
-    return analyzer.analyze().get().getTranslationUnits();
-  }
+  private final Path topLevel = Path.of("src", "test", "resources", "variables");
 
   @Test
   public void testFields() throws Exception {
-    List<TranslationUnitDeclaration> result = analyze();
+    List<TranslationUnitDeclaration> result = TestUtils.analyze("java", topLevel);
     List<MethodDeclaration> methods = Util.subnodesOfType(result, MethodDeclaration.class);
     List<FieldDeclaration> fields = Util.subnodesOfType(result, FieldDeclaration.class);
     FieldDeclaration field = TestUtils.findByName(fields, "field");
@@ -87,7 +64,7 @@ public class VariableResolverTest {
 
   @Test
   public void testLocalVars() throws Exception {
-    List<TranslationUnitDeclaration> result = analyze();
+    List<TranslationUnitDeclaration> result = TestUtils.analyze("java", topLevel);
     List<MethodDeclaration> methods = Util.subnodesOfType(result, MethodDeclaration.class);
     List<FieldDeclaration> fields = Util.subnodesOfType(result, FieldDeclaration.class);
     FieldDeclaration field = TestUtils.findByName(fields, "field");
