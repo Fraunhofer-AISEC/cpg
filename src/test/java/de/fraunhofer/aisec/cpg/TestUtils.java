@@ -26,9 +26,13 @@
 
 package de.fraunhofer.aisec.cpg;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.*;
 
 import de.fraunhofer.aisec.cpg.graph.Node;
+import de.fraunhofer.aisec.cpg.graph.TranslationUnitDeclaration;
+import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Collection;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -40,5 +44,29 @@ public class TestUtils {
         nodes.stream().filter(m -> m.getName().equals(name)).collect(Collectors.toList());
     assertEquals(1, results.size());
     return results.get(0);
+  }
+
+  public static List<TranslationUnitDeclaration> analyze(String fileExtension, Path topLevel)
+      throws Exception {
+    File[] files =
+        Files.walk(topLevel, Integer.MAX_VALUE)
+            .map(Path::toFile)
+            .filter(File::isFile)
+            .filter(f -> f.getName().endsWith(fileExtension))
+            .sorted()
+            .toArray(File[]::new);
+
+    TranslationConfiguration config =
+        TranslationConfiguration.builder()
+            .sourceLocations(files)
+            .topLevel(topLevel.toFile())
+            .defaultPasses()
+            .debugParser(true)
+            .failOnError(true)
+            .build();
+
+    TranslationManager analyzer = TranslationManager.builder().config(config).build();
+
+    return analyzer.analyze().get().getTranslationUnits();
   }
 }
