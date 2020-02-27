@@ -63,7 +63,7 @@ public class TypeConverter implements CompositeAttributeConverter<Type> {
     try {
       return Type.createFrom((String) value.get(basePropertyName));
     } catch (NullPointerException e) {
-      return Type.UNKNOWN;
+      return Type.getUnknown();
     }
   }
 

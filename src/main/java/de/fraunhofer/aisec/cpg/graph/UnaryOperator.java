@@ -28,11 +28,13 @@ package de.fraunhofer.aisec.cpg.graph;
 
 import de.fraunhofer.aisec.cpg.graph.HasType.TypeListener;
 import de.fraunhofer.aisec.cpg.graph.Type.Origin;
+import de.fraunhofer.aisec.cpg.helpers.Util;
 import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.builder.ToStringBuilder;
+import org.neo4j.ogm.annotation.Transient;
 
 /**
  * A unary operator expression, involving one expression and an operator, such as <code>a++</code>.
@@ -55,7 +57,7 @@ public class UnaryOperator extends Expression implements TypeListener {
   /** Specifies, whether this a pre fix operation. */
   private boolean prefix;
 
-  private Set<TypeListener> checked = new HashSet<>();
+  @Transient private Set<TypeListener> checked = new HashSet<>();
 
   public Expression getInput() {
     return input;
@@ -73,30 +75,26 @@ public class UnaryOperator extends Expression implements TypeListener {
     }
   }
 
-  @Override
-  public boolean shouldBeNotified(TypeListener listener) {
-    if ("&*".contains(operatorCode)) {
-      checked.clear();
-      return !hasInputAsTransitiveListener(listener);
-    } else {
-      return true;
-    }
-  }
-
-  private boolean hasInputAsTransitiveListener(TypeListener listener) {
-    if (checked.contains(listener)) {
+  private boolean getsDataFromInput(TypeListener curr, TypeListener target) {
+    if (checked.contains(curr)) {
       return false;
     }
-    checked.add(listener);
+    checked.add(curr);
 
-    if (listener == this.input) {
+    if (curr == target) {
       return true;
     }
-    if (listener instanceof HasType) {
-      return ((HasType) listener)
-          .getTypeListeners().stream().anyMatch(this::hasInputAsTransitiveListener);
+
+    if (curr instanceof HasType) {
+      return ((HasType) curr)
+          .getTypeListeners().stream().anyMatch(l -> getsDataFromInput(l, target));
     }
     return false;
+  }
+
+  private boolean getsDataFromInput(TypeListener listener) {
+    checked.clear();
+    return input.getTypeListeners().stream().anyMatch(l -> getsDataFromInput(l, listener));
   }
 
   public String getOperatorCode() {
@@ -124,19 +122,32 @@ public class UnaryOperator extends Expression implements TypeListener {
   }
 
   @Override
-  public void typeChanged(HasType src, Type oldType) {
+  public void typeChanged(HasType src, HasType root, Type oldType) {
     Type previous = this.type;
-    Type newType = src.getType();
 
-    setType(newType);
+    if (src == input) {
+      Type newType = src.getType();
 
-    if (operatorCode.equals("*")) {
-      newType = newType.dereference();
-    } else if (operatorCode.equals("&")) {
-      newType = newType.reference();
+      if (operatorCode.equals("*")) {
+        newType = newType.dereference();
+      } else if (operatorCode.equals("&")) {
+        newType = newType.reference();
+      }
+
+      setType(newType, root);
+    } else {
+      // Our input didn't change, so we don't need to (de)reference the type
+      setType(src.getType(), root);
+
+      // Pass the type on to the input in an inversely (de)referenced way
+      Type newType = src.getType();
+      if (operatorCode.equals("*")) {
+        newType = src.getType().reference();
+      } else if (operatorCode.equals("&")) {
+        newType = src.getType().dereference();
+      }
+      input.setType(newType, this);
     }
-
-    this.type = TypeManager.getInstance().getCommonType(getPossibleSubTypes()).orElse(newType);
 
     if (!previous.equals(this.type)) {
       this.type.setTypeOrigin(Origin.DATAFLOW);
@@ -144,19 +155,30 @@ public class UnaryOperator extends Expression implements TypeListener {
   }
 
   @Override
-  public void possibleSubTypesChanged(HasType src, Set<Type> oldSubTypes) {
-    Set<Type> currSubTypes = getPossibleSubTypes();
+  public void possibleSubTypesChanged(HasType src, HasType root, Set<Type> oldSubTypes) {
+    if (src instanceof TypeListener && getsDataFromInput((TypeListener) src)) {
+      return;
+    }
+    Set<Type> currSubTypes = new HashSet<>(getPossibleSubTypes());
     Set<Type> newSubTypes = src.getPossibleSubTypes();
-
-    setPossibleSubTypes(newSubTypes); // notify about the new type
+    currSubTypes.addAll(newSubTypes);
 
     if (operatorCode.equals("*")) {
-      newSubTypes = newSubTypes.stream().map(Type::dereference).collect(Collectors.toSet());
+      currSubTypes =
+          currSubTypes.stream()
+              .filter(Util.distinctBy(Type::getTypeName))
+              .map(Type::dereference)
+              .collect(Collectors.toSet());
     } else if (operatorCode.equals("&")) {
-      newSubTypes = newSubTypes.stream().map(Type::reference).collect(Collectors.toSet());
+      currSubTypes =
+          currSubTypes.stream()
+              .filter(Util.distinctBy(Type::getTypeName))
+              .map(Type::reference)
+              .collect(Collectors.toSet());
     }
 
-    currSubTypes.addAll(newSubTypes);
+    getPossibleSubTypes().clear();
+    setPossibleSubTypes(currSubTypes, root); // notify about the new type
   }
 
   @Override

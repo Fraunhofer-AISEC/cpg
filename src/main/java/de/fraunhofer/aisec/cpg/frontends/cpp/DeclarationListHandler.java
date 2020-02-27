@@ -32,8 +32,6 @@ import java.util.ArrayList;
 import java.util.List;
 import org.eclipse.cdt.core.dom.ast.IASTDeclaration;
 import org.eclipse.cdt.core.dom.ast.IASTDeclarator;
-import org.eclipse.cdt.core.dom.ast.IASTSimpleDeclSpecifier;
-import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTSimpleDeclSpecifier;
 import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTSimpleDeclaration;
 
 class DeclarationListHandler
@@ -54,51 +52,10 @@ class DeclarationListHandler
       ValueDeclaration declaration =
           (ValueDeclaration) this.lang.getDeclaratorHandler().handle(declarator);
 
-      boolean isAutoType = false;
-      if (ctx.getDeclSpecifier() instanceof CPPASTSimpleDeclSpecifier
-          && ((CPPASTSimpleDeclSpecifier) ctx.getDeclSpecifier()).getType()
-              == IASTSimpleDeclSpecifier.t_auto) {
-        isAutoType = true;
-      }
-
       String typeAdjustment = declaration.getType().getTypeAdjustment();
       String typeString = ctx.getDeclSpecifier().toString();
       declaration.setType(Type.createFrom(typeString));
       declaration.getType().setTypeAdjustment(typeAdjustment);
-
-      if (isAutoType) {
-        if (declaration instanceof VariableDeclaration
-            && ((VariableDeclaration) declaration).getInitializer() != null) {
-          // TODO @SH: investigate whether this is necessary, should be covered by type listeners
-          declaration.getType().setTypeModifier(ctx.getDeclSpecifier().toString());
-          // set to the type of the initializer
-          declaration
-              .getType()
-              .setTypeName(
-                  ((VariableDeclaration) declaration).getInitializer().getType().getTypeName());
-          declaration
-              .getType()
-              .setTypeAdjustment(
-                  ((VariableDeclaration) declaration)
-                      .getInitializer()
-                      .getType()
-                      .getTypeAdjustment());
-        } else {
-          Region region = declaration.getRegion();
-          int startLine = -1;
-          if (region != null) {
-            startLine = region.getStartLine();
-          }
-          log.warn(
-              "cannot determine auto type for {} \"{}\" (line {})",
-              declaration.getClass(),
-              declaration.getName(),
-              startLine);
-          declaration.setType(Type.createFrom("auto"));
-        }
-      } else {
-        // this is not an auto type and therefore already set
-      }
 
       // cache binding
       this.lang.cacheDeclaration(declarator.getName().resolveBinding(), declaration);

@@ -26,8 +26,42 @@
 
 package de.fraunhofer.aisec.cpg.graph;
 
+import java.util.Objects;
+
 /**
  * Represents a {@link CallExpression} to a function, which is a member of an object. For example
  * <code>obj.toString()</code>.
  */
-public class MemberCallExpression extends CallExpression {}
+public class MemberCallExpression extends CallExpression {
+
+  @SubGraph("AST")
+  private Node member;
+
+  public Node getMember() {
+    return member;
+  }
+
+  public void setMember(Node member) {
+    this.member = member;
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) {
+      return true;
+    }
+    if (!(o instanceof MemberCallExpression)) {
+      return false;
+    }
+    if (!super.equals(o)) {
+      return false;
+    }
+    MemberCallExpression that = (MemberCallExpression) o;
+    return Objects.equals(member, that.member);
+  }
+
+  @Override
+  public int hashCode() {
+    return super.hashCode();
+  }
+}

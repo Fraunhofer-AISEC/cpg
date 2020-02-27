@@ -320,7 +320,7 @@ public class ExpressionHandler
             baseType = new Type(qualifiedNameFromImports);
           } else {
             log.info("Unknown base type 1 for {}", fieldAccessExpr);
-            baseType = Type.UNKNOWN;
+            baseType = Type.getUnknown();
           }
         }
       }
@@ -358,7 +358,7 @@ public class ExpressionHandler
           baseType = new Type(qualifiedNameFromImports);
         } else {
           log.info("Unknown base type 2 for {}", fieldAccessExpr);
-          baseType = Type.UNKNOWN;
+          baseType = Type.getUnknown();
         }
         base =
             NodeBuilder.newStaticReferenceExpression(
@@ -384,7 +384,7 @@ public class ExpressionHandler
         fieldType = new Type("int");
       } else {
         log.info("Unknown field type for {}", fieldAccessExpr);
-        fieldType = Type.UNKNOWN;
+        fieldType = Type.getUnknown();
       }
       member =
           NodeBuilder.newStaticReferenceExpression(
@@ -640,10 +640,12 @@ public class ExpressionHandler
       }
       if (isresolvable) {
         Statement base = handle(scope);
+        DeclaredReferenceExpression member =
+            NodeBuilder.newDeclaredReferenceExpression(name, Type.getUnknown(), "");
 
         callExpression =
             NodeBuilder.newMemberCallExpression(
-                name, qualifiedName, base, methodCallExpr.toString());
+                name, qualifiedName, base, member, methodCallExpr.toString());
       } else {
         callExpression =
             NodeBuilder.newStaticCallExpression(

@@ -179,11 +179,13 @@ public class Node {
 
   public void addNextDFG(Node next) {
     this.nextDFG.add(next);
+    next.prevDFG.add(this);
   }
 
   public void removeNextDFG(Node next) {
     if (next != null) {
       this.nextDFG.remove(next);
+      next.prevDFG.remove(this);
     }
   }
 
@@ -197,11 +199,13 @@ public class Node {
 
   public void addPrevDFG(Node prev) {
     this.prevDFG.add(prev);
+    prev.nextDFG.add(this);
   }
 
   public void removePrevDFG(Node prev) {
     if (prev != null) {
       this.prevDFG.remove(prev);
+      prev.nextDFG.remove(this);
     }
   }
 

@@ -233,10 +233,11 @@ public class NodeBuilder {
   }
 
   public static CallExpression newMemberCallExpression(
-      String name, String fqn, Node base, String code) {
+      String name, String fqn, Node base, Node member, String code) {
     MemberCallExpression node = new MemberCallExpression();
     node.setName(name);
     node.setBase(base);
+    node.setMember(member);
     node.setCode(code);
     node.setFqn(fqn);
 

@@ -188,7 +188,7 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
     // type id expressions
 
     String operatorCode = "";
-    Type type = Type.UNKNOWN;
+    Type type = Type.getUnknown();
     switch (ctx.getOperator()) {
       case IASTTypeIdExpression.op_sizeof:
         operatorCode = "sizeof";
@@ -354,7 +354,7 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
     String identifierName = ctx.getFieldName().toString();
     DeclaredReferenceExpression member =
         NodeBuilder.newDeclaredReferenceExpression(
-            identifierName, Type.UNKNOWN, ctx.getFieldName().getRawSignature());
+            identifierName, Type.getUnknown(), ctx.getFieldName().getRawSignature());
 
     lang.setCodeAndRegion(member, ctx);
 
@@ -460,11 +460,34 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
               ((MemberExpression) reference).getMember().getName(),
               baseTypename + "." + ((MemberExpression) reference).getMember().getName(),
               ((MemberExpression) reference).getBase(),
+              ((MemberExpression) reference).getMember(),
               ctx.getRawSignature());
 
       if (((MemberExpression) reference).getBase() instanceof HasType) {
         callExpression.setType(((HasType) ((MemberExpression) reference).getBase()).getType());
       }
+    } else if (reference instanceof BinaryOperator
+        && ((BinaryOperator) reference).getOperatorCode().equals(".")) {
+      // We have a dot operator that was not classified as a member expression. This happens when
+      // dealing with function pointer calls that happen on an explicit object
+      callExpression =
+          NodeBuilder.newMemberCallExpression(
+              reference.getCode(),
+              "",
+              ((BinaryOperator) reference).getLhs(),
+              ((BinaryOperator) reference).getRhs(),
+              reference.getCode());
+    } else if (reference instanceof UnaryOperator
+        && ((UnaryOperator) reference).getOperatorCode().equals("*")) {
+      // Classic C-style function pointer call -> let's extract the target. For easy
+      // compatibility with C++-style function pointer calls, we create a member call without a base
+      callExpression =
+          NodeBuilder.newMemberCallExpression(
+              reference.getCode(),
+              "",
+              null,
+              ((UnaryOperator) reference).getInput(),
+              reference.getCode());
     } else {
       String fqn = reference.getName();
       String name = fqn;
@@ -497,7 +520,7 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
   private DeclaredReferenceExpression handleIdExpression(CPPASTIdExpression ctx) {
     DeclaredReferenceExpression declaredReferenceExpression =
         NodeBuilder.newDeclaredReferenceExpression(
-            ctx.getName().toString(), Type.UNKNOWN, ctx.getRawSignature());
+            ctx.getName().toString(), Type.getUnknown(), ctx.getRawSignature());
 
     if (expressionTypeProxy(ctx) instanceof ProblemType
         || (expressionTypeProxy(ctx) instanceof IQualifierType
@@ -511,11 +534,11 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
           declaredReferenceExpression.setType(((ValueDeclaration) declaration).getType());
         } else {
           log.debug("Unknown declaration type, setting to UNKNOWN");
-          declaredReferenceExpression.setType(Type.UNKNOWN);
+          declaredReferenceExpression.setType(Type.getUnknown());
         }
       } else {
         log.debug("Could not deduce type manually, setting to UNKNOWN");
-        declaredReferenceExpression.setType(Type.UNKNOWN);
+        declaredReferenceExpression.setType(Type.getUnknown());
       }
     } else {
       declaredReferenceExpression.setType(Type.createFrom(expressionTypeProxy(ctx).toString()));

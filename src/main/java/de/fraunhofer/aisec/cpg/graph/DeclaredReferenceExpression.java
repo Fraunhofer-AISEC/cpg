@@ -42,45 +42,62 @@ import org.checkerframework.checker.nullness.qual.NonNull;
  */
 public class DeclaredReferenceExpression extends Expression implements TypeListener {
 
-  /** The {@link ValueDeclaration} this expression refers to. */
-  private ValueDeclaration refersTo;
+  /** The {@link ValueDeclaration}s this expression might refer to. */
+  private Set<ValueDeclaration> refersTo = new HashSet<>();
 
-  public ValueDeclaration getRefersTo() {
+  /**
+   * Is this reference used for writing data instead of just reading it? Determines dataflow
+   * direction
+   */
+  private boolean writingAccess = false;
+
+  public Set<ValueDeclaration> getRefersTo() {
     return refersTo;
   }
 
-  public void setRefersTo(@NonNull ValueDeclaration refersTo) {
-    if (this.refersTo != null) {
-      this.refersTo.unregisterTypeListener(this);
-      this.removePrevDFG(this.refersTo);
-      this.refersTo.removePrevDFG(this);
-      if (this.refersTo instanceof TypeListener) {
-        this.unregisterTypeListener((TypeListener) this.refersTo);
-      }
-    }
+  public void setRefersTo(@NonNull Set<ValueDeclaration> refersTo) {
+    this.refersTo.forEach(
+        r -> {
+          if (writingAccess) {
+            this.removeNextDFG(r);
+          } else {
+            this.removePrevDFG(r);
+          }
+          r.unregisterTypeListener(this);
+          if (r instanceof TypeListener) {
+            this.unregisterTypeListener((TypeListener) r);
+          }
+        });
 
     this.refersTo = refersTo;
-    refersTo.registerTypeListener(this);
-    refersTo.addNextDFG(this);
-    if (refersTo instanceof TypeListener) {
-      this.registerTypeListener((TypeListener) refersTo);
-    }
+    refersTo.forEach(
+        r -> {
+          if (writingAccess) {
+            this.addNextDFG(r);
+          } else {
+            this.addPrevDFG(r);
+          }
+          r.registerTypeListener(this);
+          if (r instanceof TypeListener) {
+            this.registerTypeListener((TypeListener) r);
+          }
+        });
   }
 
   @Override
-  public void typeChanged(HasType src, Type oldType) {
+  public void typeChanged(HasType src, HasType root, Type oldType) {
     Type previous = this.type;
-    setType(src.getType());
+    setType(src.getType(), root);
     if (!previous.equals(this.type)) {
       this.type.setTypeOrigin(Origin.DATAFLOW);
     }
   }
 
   @Override
-  public void possibleSubTypesChanged(HasType src, Set<Type> oldSubTypes) {
+  public void possibleSubTypesChanged(HasType src, HasType root, Set<Type> oldSubTypes) {
     Set<Type> subTypes = new HashSet<>(getPossibleSubTypes());
     subTypes.addAll(src.getPossibleSubTypes());
-    setPossibleSubTypes(subTypes);
+    setPossibleSubTypes(subTypes, root);
   }
 
   @Override
@@ -89,6 +106,31 @@ public class DeclaredReferenceExpression extends Expression implements TypeListe
         .appendSuper(super.toString())
         .append("refersTo", refersTo)
         .toString();
+  }
+
+  public void setWritingAccess(boolean writingAccess) {
+    this.refersTo.forEach(
+        r -> {
+          if (this.writingAccess) {
+            this.removeNextDFG(r);
+          } else {
+            this.removePrevDFG(r);
+          }
+        });
+
+    this.writingAccess = writingAccess;
+    refersTo.forEach(
+        r -> {
+          if (this.writingAccess) {
+            this.addNextDFG(r);
+          } else {
+            this.addPrevDFG(r);
+          }
+        });
+  }
+
+  public boolean isWritingAccess() {
+    return writingAccess;
   }
 
   @Override
