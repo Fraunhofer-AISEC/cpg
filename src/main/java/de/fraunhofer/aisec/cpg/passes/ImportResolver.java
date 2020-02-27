@@ -97,7 +97,6 @@ public class ImportResolver extends Pass {
               .findFirst()
               .orElseGet(() -> createUnknownTranslationUnit(result));
       unknownDeclarations.setDeclarations(new ArrayList<>(unknownTypes.values()));
-      result.getTranslationUnits().add(unknownDeclarations);
       importables.putAll(unknownTypes);
     }
   }

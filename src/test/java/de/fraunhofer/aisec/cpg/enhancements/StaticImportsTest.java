@@ -26,14 +26,9 @@
 
 package de.fraunhofer.aisec.cpg.enhancements;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 import de.fraunhofer.aisec.cpg.TestUtils;
-import de.fraunhofer.aisec.cpg.TranslationConfiguration;
-import de.fraunhofer.aisec.cpg.TranslationManager;
 import de.fraunhofer.aisec.cpg.graph.CallExpression;
 import de.fraunhofer.aisec.cpg.graph.FieldDeclaration;
 import de.fraunhofer.aisec.cpg.graph.MemberExpression;
@@ -41,8 +36,6 @@ import de.fraunhofer.aisec.cpg.graph.MethodDeclaration;
 import de.fraunhofer.aisec.cpg.graph.RecordDeclaration;
 import de.fraunhofer.aisec.cpg.graph.TranslationUnitDeclaration;
 import de.fraunhofer.aisec.cpg.helpers.Util;
-import java.io.File;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
@@ -51,33 +44,11 @@ import org.junit.jupiter.api.Test;
 
 public class StaticImportsTest {
 
-  private List<TranslationUnitDeclaration> analyze(String path) throws Exception {
-    Path topLevel = Path.of("src", "test", "resources", "staticImports", path);
-    File[] files =
-        Files.walk(topLevel, Integer.MAX_VALUE)
-            .map(Path::toFile)
-            .filter(File::isFile)
-            .filter(f -> f.getName().endsWith(".java"))
-            .sorted()
-            .toArray(File[]::new);
-
-    TranslationConfiguration config =
-        TranslationConfiguration.builder()
-            .sourceLocations(files)
-            .topLevel(topLevel.toFile())
-            .defaultPasses()
-            .debugParser(true)
-            .failOnError(true)
-            .build();
-
-    TranslationManager analyzer = TranslationManager.builder().config(config).build();
-
-    return analyzer.analyze().get().getTranslationUnits();
-  }
+  private Path topLevel = Path.of("src", "test", "resources", "staticImports");
 
   @Test
   void testSingleStaticImport() throws Exception {
-    List<TranslationUnitDeclaration> result = analyze("single");
+    List<TranslationUnitDeclaration> result = TestUtils.analyze("java", topLevel.resolve("single"));
     List<MethodDeclaration> methods = Util.subnodesOfType(result, MethodDeclaration.class);
     MethodDeclaration test = TestUtils.findByName(methods, "test");
     MethodDeclaration main = TestUtils.findByName(methods, "main");
@@ -100,7 +71,8 @@ public class StaticImportsTest {
 
   @Test
   void testAsteriskImport() throws Exception {
-    List<TranslationUnitDeclaration> result = analyze("asterisk");
+    List<TranslationUnitDeclaration> result =
+        TestUtils.analyze("java", topLevel.resolve("asterisk"));
     List<MethodDeclaration> methods = Util.subnodesOfType(result, MethodDeclaration.class);
     MethodDeclaration main = TestUtils.findByName(methods, "main");
     for (CallExpression call : Util.subnodesOfType(main, CallExpression.class)) {
@@ -144,7 +116,10 @@ public class StaticImportsTest {
 
   @Test
   void testDummyGeneration() throws Exception {
-    List<TranslationUnitDeclaration> result = analyze("dummies");
+    List<TranslationUnitDeclaration> result =
+        TestUtils.analyze("java", topLevel.resolve("dummies"));
+    assertEquals(
+        1, result.stream().filter(t -> t.getName().equals("unknown declarations")).count());
     List<RecordDeclaration> records = Util.subnodesOfType(result, RecordDeclaration.class);
 
     RecordDeclaration dummyRecord = TestUtils.findByName(records, "a.b.c.SomeClass");

@@ -109,7 +109,6 @@ public class TypeHierarchyResolver extends Pass {
               .findFirst()
               .orElseGet(() -> createUnknownTranslationUnit(translationResult));
       unknownDeclarations.setDeclarations(new ArrayList<>(unknownTypes.values()));
-      translationResult.getTranslationUnits().add(unknownDeclarations);
       recordMap.putAll(unknownTypes);
     }
 
