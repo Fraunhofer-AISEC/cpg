@@ -103,8 +103,7 @@ public class EvaluationOrderGraphPass extends Pass {
   }
 
   /**
-   * Use with 'SubgraphWalker.flattenAST(tu).stream() .filter(node -> node.getPrevEOG().isEmpty() &&
-   * !node.getNextEOG().isEmpty())' to eliminate edges starting from nodes that have no incoming
+   * To eliminate edges starting from nodes that have no incoming
    * edge and are no function declarations.
    *
    * @param eogSources
