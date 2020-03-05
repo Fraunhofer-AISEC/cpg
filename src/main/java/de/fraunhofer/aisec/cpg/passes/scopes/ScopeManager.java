@@ -250,7 +250,14 @@ public class ScopeManager {
    */
   @Nullable
   public Scope leaveScope(Node nodeToLeave) {
-    Scope leaveScope = getFirstScopeThat(scope -> scope.astNode.equals(nodeToLeave));
+    // Check to return as soon as we know that there is no associated scope, this check could be
+    // omitted
+    // but will increase runtime if leaving a node without scope will happen often.
+    if (!scopeMap.containsKey(nodeToLeave)) {
+      return null;
+    }
+    Scope leaveScope =
+        getFirstScopeThat(scope -> scope.astNode != null && scope.astNode.equals(nodeToLeave));
     if (leaveScope == null) {
       if (scopeMap.containsKey(nodeToLeave)) {
         LOGGER.error(
