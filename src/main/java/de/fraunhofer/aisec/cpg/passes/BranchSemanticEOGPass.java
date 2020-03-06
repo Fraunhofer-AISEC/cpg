@@ -1,24 +1,13 @@
 package de.fraunhofer.aisec.cpg.passes;
 
-import de.fraunhofer.aisec.cpg.graph.CaseStatement;
-import de.fraunhofer.aisec.cpg.graph.CompoundStatement;
-import de.fraunhofer.aisec.cpg.graph.ConditionalExpression;
-import de.fraunhofer.aisec.cpg.graph.DefaultStatement;
-import de.fraunhofer.aisec.cpg.graph.DoStatement;
-import de.fraunhofer.aisec.cpg.graph.ForEachStatement;
-import de.fraunhofer.aisec.cpg.graph.ForStatement;
-import de.fraunhofer.aisec.cpg.graph.IfStatement;
-import de.fraunhofer.aisec.cpg.graph.Node;
-import de.fraunhofer.aisec.cpg.graph.Statement;
-import de.fraunhofer.aisec.cpg.graph.SwitchStatement;
-import de.fraunhofer.aisec.cpg.graph.SynchronizedStatement;
-import de.fraunhofer.aisec.cpg.graph.WhileStatement;
+import de.fraunhofer.aisec.cpg.graph.*;
 import de.fraunhofer.aisec.cpg.passes.scopes.LoopScope;
 import de.fraunhofer.aisec.cpg.passes.scopes.SwitchScope;
-import java.util.ArrayList;
-import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class BranchSemanticEOGPass extends EvaluationOrderGraphPass {
 
@@ -37,7 +26,7 @@ public class BranchSemanticEOGPass extends EvaluationOrderGraphPass {
 
     List<Node> openBranchNodes = new ArrayList<>();
     createEOG(conditionalExpression.getCondition());
-    createEOG(conditionalExpression); // To have semantic information after the condition evaluation
+    pushToEOG(conditionalExpression); // To have semantic information after the condition evaluation
     List<Node> openConditionEOGs = new ArrayList<>(currentEOG);
     createEOG(conditionalExpression.getThenExpr());
     openBranchNodes.addAll(currentEOG);
