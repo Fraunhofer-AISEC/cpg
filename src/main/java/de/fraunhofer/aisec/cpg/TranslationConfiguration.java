@@ -178,7 +178,7 @@ public class TranslationConfiguration {
       registerPass(new ImportResolver());
       registerPass(new VariableUsageResolver());
       registerPass(new CallResolver()); // creates CG
-      registerPass(new EvaluationOrderGraphPass()); // creates EOG
+      registerPass(new BranchSemanticEOGPass()); // creates EOG
       return this;
     }
 
