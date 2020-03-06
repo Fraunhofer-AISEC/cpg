@@ -64,6 +64,7 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
+import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -249,8 +250,14 @@ public class ScopeManager {
    * @return the scope is returned for processing
    */
   @Nullable
-  public Scope leaveScope(Node nodeToLeave) {
-    Scope leaveScope = getFirstScopeThat(scope -> scope.astNode.equals(nodeToLeave));
+  public Scope leaveScope(@NonNull Node nodeToLeave) {
+    // Check to return as soon as we know that there is no associated scope, this check could be
+    // omitted
+    // but will increase runtime if leaving a node without scope will happen often.
+    if (!scopeMap.containsKey(nodeToLeave)) {
+      return null;
+    }
+    Scope leaveScope = getFirstScopeThat(scope -> Objects.equals(scope.astNode, nodeToLeave));
     if (leaveScope == null) {
       if (scopeMap.containsKey(nodeToLeave)) {
         LOGGER.error(
