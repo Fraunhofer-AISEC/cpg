@@ -12,22 +12,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import de.fraunhofer.aisec.cpg.TranslationConfiguration;
 import de.fraunhofer.aisec.cpg.TranslationManager;
 import de.fraunhofer.aisec.cpg.frontends.TranslationException;
-import de.fraunhofer.aisec.cpg.graph.BinaryOperator;
-import de.fraunhofer.aisec.cpg.graph.BreakStatement;
-import de.fraunhofer.aisec.cpg.graph.CallExpression;
-import de.fraunhofer.aisec.cpg.graph.CaseStatement;
-import de.fraunhofer.aisec.cpg.graph.ConstructorDeclaration;
-import de.fraunhofer.aisec.cpg.graph.ContinueStatement;
-import de.fraunhofer.aisec.cpg.graph.DefaultStatement;
-import de.fraunhofer.aisec.cpg.graph.DoStatement;
-import de.fraunhofer.aisec.cpg.graph.ForStatement;
-import de.fraunhofer.aisec.cpg.graph.FunctionDeclaration;
-import de.fraunhofer.aisec.cpg.graph.IfStatement;
-import de.fraunhofer.aisec.cpg.graph.Node;
-import de.fraunhofer.aisec.cpg.graph.Statement;
-import de.fraunhofer.aisec.cpg.graph.SwitchStatement;
-import de.fraunhofer.aisec.cpg.graph.TranslationUnitDeclaration;
-import de.fraunhofer.aisec.cpg.graph.WhileStatement;
+import de.fraunhofer.aisec.cpg.graph.*;
 import de.fraunhofer.aisec.cpg.helpers.NodeComparator;
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker;
 import de.fraunhofer.aisec.cpg.helpers.Util;
@@ -99,6 +84,14 @@ public class BSEOGTest {
    */
   void testIf(String relPath, String refNodeString) throws TranslationException {
     List<Node> nodes = translateToNodes(relPath);
+
+    // All BinaryOperators (including If conditions) have only one successor
+    List<BinaryOperator> binops = Util.filterCast(nodes, BinaryOperator.class);
+    for (BinaryOperator binop : binops) {
+      SubgraphWalker.Border binopEOG = SubgraphWalker.getEOGPathEdges(binop);
+      assertEquals(1, binopEOG.getExits().size());
+    }
+
     List<IfStatement> ifs = Util.filterCast(nodes, IfStatement.class);
 
     assertEquals(2, ifs.size());
@@ -116,8 +109,12 @@ public class BSEOGTest {
             .filter(node -> node.getCode().equals(refNodeString))
             .collect(Collectors.toList());
 
+    SubgraphWalker.Border ifEOG = SubgraphWalker.getEOGPathEdges(ifSimple);
     SubgraphWalker.Border conditionEOG = SubgraphWalker.getEOGPathEdges(ifSimple.getCondition());
     SubgraphWalker.Border thenEOG = SubgraphWalker.getEOGPathEdges(ifSimple.getThenStatement());
+
+    // IfStmt has 2 outgoing EOG edges (for true and false branch)
+    assertEquals(2, ifEOG.getExits().size());
 
     // Assert: Only single entry and exit NODE per block
     assertTrue(conditionEOG.getEntries().size() == 1 && conditionEOG.getExits().size() == 1);
@@ -126,15 +123,13 @@ public class BSEOGTest {
     // Assert: Condition of simple if is preceded by print
     assertTrue(Util.eogConnect(ENTRIES, ifSimple.getCondition(), prints.get(0)));
 
-    // Assert: All EOGs going into the then branch come from the condition
+    // Assert: All EOGs going into the then branch (=the 2nd print stmt) come from the IfStatement
     assertTrue(Util.eogConnect(ENTRIES, ifSimple.getThenStatement(), NODE, ifSimple));
     // Assert: The EOGs going into the second print come either from the then branch or the
-    // condition
-    assertTrue(Util.eogConnect(SUBTREE, EXITS, ifSimple, prints.get(1)));
-    // Assert: The EOGs going into the second print come either from the then branch or the
-    // condition
+    // IfStatement
     assertTrue(Util.eogConnect(NODE, EXITS, ifSimple, prints.get(1)));
-    assertTrue(Util.eogConnect(SUBTREE, EXITS, ifSimple.getThenStatement(), prints.get(1)));
+    assertTrue(Util.eogConnect(NODE, EXITS, ifSimple, ifSimple.getThenStatement()));
+    assertTrue(Util.eogConnect(NODE, EXITS, ifSimple.getThenStatement(), prints.get(1)));
 
     conditionEOG = SubgraphWalker.getEOGPathEdges(ifBranched.getCondition());
     thenEOG = SubgraphWalker.getEOGPathEdges(ifBranched.getThenStatement());
@@ -147,6 +142,12 @@ public class BSEOGTest {
 
     // Assert: Branched if is preceded by the second print
     assertTrue(Util.eogConnect(ENTRIES, ifBranched, prints.get(1)));
+
+    // IfStatement has exactly 2 outgoing EOGS: true (then) and false (else) branch
+    assertTrue(Util.eogConnect(NODE, EXITS, ifBranched, ifBranched.getThenStatement()));
+    assertTrue(Util.eogConnect(NODE, EXITS, ifBranched, ifBranched.getElseStatement()));
+    SubgraphWalker.Border ifBranchedEOG = SubgraphWalker.getEOGPathEdges(ifBranched);
+    assertEquals(2, ifBranchedEOG.getExits().size());
 
     // Assert: EOG going into then branch comes from the condition branch
     assertTrue(Util.eogConnect(ENTRIES, ifBranched.getThenStatement(), NODE, ifBranched));
