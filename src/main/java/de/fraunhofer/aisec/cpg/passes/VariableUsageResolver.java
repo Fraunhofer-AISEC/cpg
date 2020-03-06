@@ -27,33 +27,9 @@
 package de.fraunhofer.aisec.cpg.passes;
 
 import de.fraunhofer.aisec.cpg.TranslationResult;
-import de.fraunhofer.aisec.cpg.graph.Declaration;
-import de.fraunhofer.aisec.cpg.graph.DeclaredReferenceExpression;
-import de.fraunhofer.aisec.cpg.graph.EnumDeclaration;
-import de.fraunhofer.aisec.cpg.graph.FieldDeclaration;
-import de.fraunhofer.aisec.cpg.graph.FunctionDeclaration;
-import de.fraunhofer.aisec.cpg.graph.HasType;
-import de.fraunhofer.aisec.cpg.graph.MemberExpression;
-import de.fraunhofer.aisec.cpg.graph.MethodDeclaration;
-import de.fraunhofer.aisec.cpg.graph.Node;
-import de.fraunhofer.aisec.cpg.graph.NodeBuilder;
-import de.fraunhofer.aisec.cpg.graph.RecordDeclaration;
-import de.fraunhofer.aisec.cpg.graph.Region;
-import de.fraunhofer.aisec.cpg.graph.StaticReferenceExpression;
-import de.fraunhofer.aisec.cpg.graph.TranslationUnitDeclaration;
-import de.fraunhofer.aisec.cpg.graph.Type;
-import de.fraunhofer.aisec.cpg.graph.TypeManager;
-import de.fraunhofer.aisec.cpg.graph.ValueDeclaration;
+import de.fraunhofer.aisec.cpg.graph.*;
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.ScopedWalker;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -139,7 +115,7 @@ public class VariableUsageResolver extends Pass {
 
   private Set<ValueDeclaration> resolveFunctionPtr(
       Type containingClass, DeclaredReferenceExpression reference) {
-    Set<ValueDeclaration> targets = Collections.emptySet();
+    Set<ValueDeclaration> targets = new HashSet<>();
     String functionName = reference.getName();
     Matcher matcher =
         Pattern.compile("(?:(?<class>.*)(?:\\.|::))?(?<function>.*)").matcher(reference.getName());
@@ -152,7 +128,7 @@ public class VariableUsageResolver extends Pass {
             walker.getAllDeclarationsForScope(reference).stream()
                 .filter(FunctionDeclaration.class::isInstance)
                 .filter(d -> d.getName().equals(finalFunctionName))
-                .collect(Collectors.toSet());
+                .collect(Collectors.toCollection(HashSet::new));
       } else {
         containingClass = new Type(cls);
         if (recordMap.containsKey(containingClass)) {
@@ -160,16 +136,21 @@ public class VariableUsageResolver extends Pass {
               recordMap.get(containingClass).getMethods().stream()
                   .filter(f -> f.getName().equals(finalFunctionName))
                   .map(ValueDeclaration.class::cast)
-                  .collect(Collectors.toSet());
+                  .collect(Collectors.toCollection(HashSet::new));
         }
       }
     }
 
     if (targets.isEmpty()) {
       if (containingClass == null) {
-        return Set.of(handleUnknownMethod(functionName, reference.getType()));
+        Set<ValueDeclaration> unknownMethod = new HashSet<>();
+        unknownMethod.add(handleUnknownMethod(functionName, reference.getType()));
+        return unknownMethod;
       } else {
-        return Set.of(handleUnknownClassMethod(containingClass, functionName, reference.getType()));
+        Set<ValueDeclaration> unknownClass = new HashSet<>();
+        unknownClass.add(
+            handleUnknownClassMethod(containingClass, functionName, reference.getType()));
+        return unknownClass;
       }
     } else {
       return targets;
@@ -182,8 +163,13 @@ public class VariableUsageResolver extends Pass {
       Set<ValueDeclaration> refersTo =
           walker
               .getDeclarationForScope(parent, ref.getName())
-              .map(d -> Set.of((ValueDeclaration) d))
-              .orElse(Collections.emptySet());
+              .map(
+                  d -> {
+                    Set<ValueDeclaration> set = new HashSet<>();
+                    set.add(d);
+                    return set;
+                  })
+              .orElse(new HashSet<>());
 
       Type recordDeclType = null;
       if (currentClass != null) {
@@ -205,7 +191,9 @@ public class VariableUsageResolver extends Pass {
           && recordDeclType != null
           && recordMap.containsKey(recordDeclType)) {
         // Maybe we are referring to a field instead of a local var
-        refersTo = Set.of(resolveMember(recordDeclType, (DeclaredReferenceExpression) current));
+        Set<ValueDeclaration> resolvedMember = new HashSet<>();
+        resolvedMember.add(resolveMember(recordDeclType, (DeclaredReferenceExpression) current));
+        refersTo = resolvedMember;
       }
 
       if (!refersTo.isEmpty()) {
