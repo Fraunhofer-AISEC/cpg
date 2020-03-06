@@ -1,29 +1,3 @@
-/*
- * Copyright (c) 2019, Fraunhofer AISEC. All rights reserved.
- *
- *  Licensed under the Apache License, Version 2.0 (the "License");
- *  you may not use this file except in compliance with the License.
- *  You may obtain a copy of the License at
- *
- *       http://www.apache.org/licenses/LICENSE-2.0
- *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
- *
- *                    $$$$$$\  $$$$$$$\   $$$$$$\
- *                   $$  __$$\ $$  __$$\ $$  __$$\
- *                   $$ /  \__|$$ |  $$ |$$ /  \__|
- *                   $$ |      $$$$$$$  |$$ |$$$$\
- *                   $$ |      $$  ____/ $$ |\_$$ |
- *                   $$ |  $$\ $$ |      $$ |  $$ |
- *                   \$$$$$   |$$ |      \$$$$$   |
- *                    \______/ \__|       \______/
- *
- */
-
 package de.fraunhofer.aisec.cpg.enhancements;
 
 import static de.fraunhofer.aisec.cpg.helpers.Util.Connect.NODE;
@@ -85,6 +59,13 @@ public class EOGTest {
   void testIf(String relPath, String refNodeString) throws TranslationException {
     List<Node> nodes = translateToNodes(relPath);
 
+    // All BinaryOperators (including If conditions) have only one successor
+    List<BinaryOperator> binops = Util.filterCast(nodes, BinaryOperator.class);
+    for (BinaryOperator binop : binops) {
+      SubgraphWalker.Border binopEOG = SubgraphWalker.getEOGPathEdges(binop);
+      assertEquals(1, binopEOG.getExits().size());
+    }
+
     List<IfStatement> ifs = Util.filterCast(nodes, IfStatement.class);
 
     assertEquals(2, ifs.size());
@@ -102,8 +83,12 @@ public class EOGTest {
             .filter(node -> node.getCode().equals(refNodeString))
             .collect(Collectors.toList());
 
+    SubgraphWalker.Border ifEOG = SubgraphWalker.getEOGPathEdges(ifSimple);
     SubgraphWalker.Border conditionEOG = SubgraphWalker.getEOGPathEdges(ifSimple.getCondition());
     SubgraphWalker.Border thenEOG = SubgraphWalker.getEOGPathEdges(ifSimple.getThenStatement());
+
+    // IfStmt has 2 outgoing EOG edges (for true and false branch)
+    assertEquals(2, ifEOG.getExits().size());
 
     // Assert: Only single entry and exit NODE per block
     assertTrue(conditionEOG.getEntries().size() == 1 && conditionEOG.getExits().size() == 1);
@@ -112,19 +97,13 @@ public class EOGTest {
     // Assert: Condition of simple if is preceded by print
     assertTrue(Util.eogConnect(ENTRIES, ifSimple.getCondition(), prints.get(0)));
 
-    // Assert: All EOGs going into the then branch come from the condition
-    assertTrue(Util.eogConnect(ENTRIES, ifSimple.getThenStatement(), ifSimple.getCondition()));
+    // Assert: All EOGs going into the then branch (=the 2nd print stmt) come from the IfStatement
+    assertTrue(Util.eogConnect(ENTRIES, ifSimple.getThenStatement(), NODE, ifSimple));
     // Assert: The EOGs going into the second print come either from the then branch or the
-    // condition
+    // IfStatement
     assertTrue(Util.eogConnect(NODE, EXITS, ifSimple, prints.get(1)));
-    // Assert: The EOGs going into the second print come either from the then branch or the
-    // condition
-    assertTrue(
-        Util.eogConnect(
-            NODE, ENTRIES, ifSimple, ifSimple.getCondition(), ifSimple.getThenStatement()));
-    assertTrue(
-        Util.eogConnect(
-            NODE, ENTRIES, ifSimple, ifSimple.getThenStatement(), ifSimple.getCondition()));
+    assertTrue(Util.eogConnect(NODE, EXITS, ifSimple, ifSimple.getThenStatement()));
+    assertTrue(Util.eogConnect(NODE, EXITS, ifSimple.getThenStatement(), prints.get(1)));
 
     conditionEOG = SubgraphWalker.getEOGPathEdges(ifBranched.getCondition());
     thenEOG = SubgraphWalker.getEOGPathEdges(ifBranched.getThenStatement());
@@ -138,22 +117,22 @@ public class EOGTest {
     // Assert: Branched if is preceded by the second print
     assertTrue(Util.eogConnect(ENTRIES, ifBranched, prints.get(1)));
 
+    // IfStatement has exactly 2 outgoing EOGS: true (then) and false (else) branch
+    assertTrue(Util.eogConnect(NODE, EXITS, ifBranched, ifBranched.getThenStatement()));
+    assertTrue(Util.eogConnect(NODE, EXITS, ifBranched, ifBranched.getElseStatement()));
+    SubgraphWalker.Border ifBranchedEOG = SubgraphWalker.getEOGPathEdges(ifBranched);
+    assertEquals(2, ifBranchedEOG.getExits().size());
+
     // Assert: EOG going into then branch comes from the condition branch
-    assertTrue(Util.eogConnect(ENTRIES, ifBranched.getThenStatement(), ifBranched.getCondition()));
+    assertTrue(Util.eogConnect(ENTRIES, ifBranched.getThenStatement(), NODE, ifBranched));
 
     // Assert: EOG going into else branch comes from the condition branch
-    assertTrue(Util.eogConnect(ENTRIES, ifBranched.getElseStatement(), ifBranched.getCondition()));
+    assertTrue(Util.eogConnect(ENTRIES, ifBranched.getElseStatement(), NODE, ifBranched));
 
     // Assert: EOG edges going into the third print either come from the then or else branch
-    assertTrue(Util.eogConnect(NODE, EXITS, ifBranched, prints.get(2)));
+    assertTrue(Util.eogConnect(SUBTREE, EXITS, ifBranched, prints.get(2)));
     // Assert: EOG edges going into the branch root node either come from the then or else branch
-    assertTrue(
-        Util.eogConnect(
-            NODE,
-            ENTRIES,
-            ifBranched,
-            ifBranched.getThenStatement(),
-            ifBranched.getElseStatement()));
+    assertTrue(Util.eogConnect(NODE, ENTRIES, ifBranched, ifBranched.getCondition()));
   }
 
   @Test
@@ -186,16 +165,18 @@ public class EOGTest {
     assertTrue(Util.eogConnect(NODE, EXITS, prints.get(0), SUBTREE, fs));
     assertTrue(Util.eogConnect(NODE, EXITS, prints.get(0), SUBTREE, fs.getInitializerStatement()));
     assertTrue(Util.eogConnect(EXITS, fs.getInitializerStatement(), SUBTREE, fs.getCondition()));
-    assertTrue(Util.eogConnect(EXITS, fs.getCondition(), SUBTREE, fs.getStatement(), fs));
+
+    assertTrue(Util.eogConnect(EXITS, fs.getCondition(), NODE, fs));
+    assertTrue(Util.eogConnect(NODE, EXITS, fs, SUBTREE, fs.getStatement(), prints.get(1)));
+
     assertTrue(Util.eogConnect(EXITS, fs.getStatement(), SUBTREE, fs.getIterationExpression()));
     assertTrue(Util.eogConnect(EXITS, fs.getIterationExpression(), SUBTREE, fs.getCondition()));
-    assertTrue(Util.eogConnect(SUBTREE, EXITS, fs, SUBTREE, prints.get(1)));
 
     fs = fstat.get(1);
     assertTrue(Util.eogConnect(NODE, EXITS, prints.get(1), SUBTREE, fs));
     assertTrue(Util.eogConnect(NODE, EXITS, prints.get(1), SUBTREE, fs.getInitializerStatement()));
     assertTrue(Util.eogConnect(EXITS, fs.getInitializerStatement(), SUBTREE, fs.getCondition()));
-    assertTrue(Util.eogConnect(EXITS, fs.getCondition(), SUBTREE, fs.getStatement(), fs));
+    assertTrue(Util.eogConnect(EXITS, fs.getCondition(), NODE, fs));
     assertTrue(Util.eogConnect(EXITS, fs.getStatement(), SUBTREE, fs.getIterationExpression()));
     assertTrue(Util.eogConnect(EXITS, fs.getIterationExpression(), SUBTREE, fs.getCondition()));
     assertTrue(Util.eogConnect(SUBTREE, EXITS, fs, SUBTREE, prints.get(2)));
@@ -216,8 +197,7 @@ public class EOGTest {
     assertTrue(
         Util.eogConnect(
             EXITS, fs.getInitializerStatement(), SUBTREE, fs.getConditionDeclaration()));
-    assertTrue(
-        Util.eogConnect(EXITS, fs.getConditionDeclaration(), SUBTREE, fs.getStatement(), fs));
+    assertTrue(Util.eogConnect(EXITS, fs.getConditionDeclaration(), NODE, fs));
     assertTrue(Util.eogConnect(EXITS, fs.getStatement(), SUBTREE, fs.getIterationExpression()));
     assertTrue(
         Util.eogConnect(EXITS, fs.getIterationExpression(), SUBTREE, fs.getConditionDeclaration()));
@@ -227,7 +207,7 @@ public class EOGTest {
     assertTrue(Util.eogConnect(NODE, EXITS, prints.get(1), SUBTREE, fs));
     assertTrue(Util.eogConnect(NODE, EXITS, prints.get(1), SUBTREE, fs.getInitializerStatement()));
     assertTrue(Util.eogConnect(EXITS, fs.getInitializerStatement(), SUBTREE, fs.getCondition()));
-    assertTrue(Util.eogConnect(EXITS, fs.getCondition(), SUBTREE, fs.getStatement(), fs));
+    assertTrue(Util.eogConnect(EXITS, fs.getCondition(), NODE, fs));
     assertTrue(Util.eogConnect(EXITS, fs.getStatement(), SUBTREE, fs.getIterationExpression()));
     assertTrue(Util.eogConnect(EXITS, fs.getIterationExpression(), SUBTREE, fs.getCondition()));
     assertTrue(Util.eogConnect(SUBTREE, EXITS, fs, SUBTREE, prints.get(2)));
@@ -236,7 +216,7 @@ public class EOGTest {
     assertTrue(Util.eogConnect(NODE, EXITS, prints.get(3), SUBTREE, fs));
     assertTrue(Util.eogConnect(NODE, EXITS, prints.get(3), SUBTREE, fs.getInitializerStatement()));
     assertTrue(Util.eogConnect(EXITS, fs.getInitializerStatement(), SUBTREE, fs.getCondition()));
-    assertTrue(Util.eogConnect(EXITS, fs.getCondition(), SUBTREE, fs.getStatement(), fs));
+    assertTrue(Util.eogConnect(EXITS, fs.getCondition(), NODE, fs));
     assertTrue(Util.eogConnect(EXITS, fs.getStatement(), SUBTREE, fs.getIterationExpression()));
     assertTrue(Util.eogConnect(EXITS, fs.getIterationExpression(), SUBTREE, fs.getCondition()));
     assertTrue(Util.eogConnect(SUBTREE, EXITS, fs, SUBTREE, prints.get(4)));
@@ -320,11 +300,11 @@ public class EOGTest {
     assertTrue(Util.eogConnect(ENTRIES, wstat.getCondition(), prints.get(0), wstat.getStatement()));
 
     // Assert: All EOGs going into the loop branch come from the condition
-    assertTrue(Util.eogConnect(ENTRIES, wstat.getStatement(), wstat.getCondition()));
+    assertTrue(Util.eogConnect(ENTRIES, wstat.getStatement(), NODE, wstat));
 
     // Assert: The EOGs going into the second print come either from the then branch or the
     // condition
-    assertTrue(Util.eogConnect(NODE, EXITS, wstat, prints.get(1)));
+    assertTrue(Util.eogConnect(SUBTREE, EXITS, wstat, prints.get(1)));
 
     DoStatement dostat = Util.filterCast(nodes, DoStatement.class).get(0);
 
@@ -338,15 +318,15 @@ public class EOGTest {
     // Assert: do is preceded by print
     assertTrue(Util.eogConnect(NODE, ENTRIES, dostat, dostat.getCondition()));
     // Assert: All EOGs going into the loop branch come from the condition
-    assertTrue(
-        Util.eogConnect(ENTRIES, dostat.getStatement(), prints.get(1), dostat.getCondition()));
+    assertTrue(Util.eogConnect(EXITS, prints.get(1), dostat.getStatement()));
+    assertTrue(Util.eogConnect(ANY, NODE, EXITS, dostat, dostat.getStatement()));
 
     // Assert: Condition is preceded by the loop branch
     assertTrue(Util.eogConnect(ENTRIES, dostat.getCondition(), dostat.getStatement()));
 
     // Assert: The EOGs going into the second print come either from the then branch or the
     // condition
-    assertTrue(Util.eogConnect(NODE, EXITS, dostat, prints.get(2)));
+    assertTrue(Util.eogConnect(SUBTREE, EXITS, dostat, prints.get(2)));
   }
 
   void testSwitch(String relPath, String refNodeString) throws TranslationException {
@@ -363,25 +343,29 @@ public class EOGTest {
     List<CaseStatement> cases = Util.subnodesOfType(swch, CaseStatement.class);
     List<DefaultStatement> defaults = Util.subnodesOfType(swch, DefaultStatement.class);
 
-    assertTrue(Util.eogConnect(EXITS, prints.get(0), swch));
-    assertTrue(Util.eogConnect(NODE, EXITS, swch, prints.get(1)));
+    assertTrue(Util.eogConnect(EXITS, prints.get(0), SUBTREE, swch.getSelector()));
+    assertTrue(Util.eogConnect(SUBTREE, EXITS, swch, prints.get(1)));
 
-    // Assert: Selector exits connect to either case or default statements entries
+    // Assert: Selector exits connect to the switch root node
     assertTrue(
         Util.eogConnect(
+            NODE,
             EXITS,
-            swch.getSelector(),
+            swch,
             Stream.of(cases, defaults).flatMap(l -> l.stream()).toArray(size -> new Node[size])));
 
-    // Assert: Entries of case statements have one edge to selector
+    assertTrue(Util.eogConnect(EXITS, swch.getSelector(), NODE, swch));
+
+    // Assert: Entries of case statements have one edge to switch root
     for (Statement s :
         Stream.of(cases, defaults).flatMap(n -> n.stream()).collect(Collectors.toList())) {
-      assertTrue(Util.eogConnect(ANY, ENTRIES, s, swch.getSelector()));
+      assertTrue(Util.eogConnect(ANY, ENTRIES, s, NODE, swch));
     }
 
+    List<Node> printEntries = SubgraphWalker.getEOGPathEdges(prints.get(1)).getEntries();
     // Assert: All breaks inside of switch connect to the switch root node
     for (BreakStatement b : Util.subnodesOfType(swch, BreakStatement.class))
-      assertTrue(Util.eogConnect(EXITS, b, NODE, swch));
+      assertTrue(Util.eogConnect(ALL, SUBTREE, EXITS, b, SUBTREE, prints.get(1)));
 
     // whileswitch
     swch = Util.subnodesOfType(functions.get(1), SwitchStatement.class).get(0);
@@ -392,12 +376,15 @@ public class EOGTest {
 
     assertTrue(Util.eogConnect(EXITS, prints.get(0), wstat));
     assertTrue(Util.eogConnect(NODE, EXITS, wstat, prints.get(2)));
-    // Assert: Selector exits connect to either case or default statements entries
+    // Assert: switch root node exits connect to either case or default statements entries
     assertTrue(
         Util.eogConnect(
+            NODE,
             EXITS,
-            swch.getSelector(),
+            swch,
             Stream.of(cases, defaults).flatMap(l -> l.stream()).toArray(size -> new Node[size])));
+    // Assert: Selector exits connect to the switch root node
+    assertTrue(Util.eogConnect(SUBTREE, EXITS, swch.getSelector(), NODE, swch));
 
     // switchwhile
     swch = Util.subnodesOfType(functions.get(2), SwitchStatement.class).get(0);
@@ -407,26 +394,26 @@ public class EOGTest {
     defaults = Util.subnodesOfType(swch, DefaultStatement.class);
 
     assertTrue(Util.eogConnect(EXITS, prints.get(0), swch));
-    assertTrue(Util.eogConnect(NODE, EXITS, swch, prints.get(2)));
+    assertTrue(Util.eogConnect(EXITS, swch, prints.get(2)));
     // Assert: Selector exits connect to either case or default statements entries
-    assertTrue(
-        Util.eogConnect(
-            EXITS,
-            swch.getSelector(),
-            Stream.of(cases, defaults).flatMap(l -> l.stream()).toArray(size -> new Node[size])));
+    assertTrue(Util.eogConnect(EXITS, swch.getSelector(), NODE, swch));
 
     swch = Util.subnodesOfType(functions.get(1), SwitchStatement.class).get(0);
+    prints = Util.subnodesOfCode(functions.get(1), refNodeString);
     List<BreakStatement> breaks = Util.subnodesOfType(swch, BreakStatement.class);
     WhileStatement whiles = Util.subnodesOfType(functions.get(1), WhileStatement.class).get(0);
 
     // Assert: whileswitch, all breaks inside the switch connect to the containing switch unless it
     // has a label which connects the break to the  while
-    for (BreakStatement b : breaks)
-      if (b.getLabel() != null && b.getLabel().length() > 0)
-        assertTrue(Util.eogConnect(EXITS, b, NODE, whiles));
-      else assertTrue(Util.eogConnect(EXITS, b, NODE, swch));
-
+    for (BreakStatement b : breaks) {
+      if (b.getLabel() != null && b.getLabel().length() > 0) {
+        assertTrue(Util.eogConnect(EXITS, b, NODE, prints.get(2)));
+      } else {
+        assertTrue(Util.eogConnect(EXITS, b, SUBTREE, prints.get(1)));
+      }
+    }
     swch = Util.subnodesOfType(functions.get(2), SwitchStatement.class).get(0);
+    prints = Util.subnodesOfCode(functions.get(2), refNodeString);
     whiles = Util.subnodesOfType(functions.get(2), WhileStatement.class).get(0);
     breaks = Util.subnodesOfType(whiles, BreakStatement.class);
 
@@ -434,8 +421,8 @@ public class EOGTest {
     // has a label which connects the break to the switch
     for (BreakStatement b : breaks)
       if (b.getLabel() != null && b.getLabel().length() > 0)
-        assertTrue(Util.eogConnect(EXITS, b, NODE, swch));
-      else assertTrue(Util.eogConnect(EXITS, b, NODE, whiles));
+        assertTrue(Util.eogConnect(EXITS, b, SUBTREE, prints.get(2)));
+      else assertTrue(Util.eogConnect(EXITS, b, SUBTREE, prints.get(1)));
   }
 
   @Test
@@ -497,8 +484,8 @@ public class EOGTest {
         Util.eogConnect(ENTRIES, wstat.getCondition(), prints.get(0), wstat.getStatement())
             || Util.eogConnect(NODE, EXITS, continues.get(0), wstat.getCondition()));
 
-    // Assert: All EOGs going into the loop branch come from the condition
-    assertTrue(Util.eogConnect(ENTRIES, wstat.getStatement(), wstat.getCondition()));
+    // Assert: All EOGs going into the loop branch come from the Loop root node
+    assertTrue(Util.eogConnect(ENTRIES, wstat.getStatement(), wstat));
 
     // Assert: The EOGs going into the second print come either from the while root or break
     assertTrue(
@@ -516,8 +503,11 @@ public class EOGTest {
     assertTrue(blockEOG.getEntries().size() == 1 && blockEOG.getExits().size() == 3);
 
     // Assert: All EOGs going into the loop branch come from the condition
-    assertTrue(
-        Util.eogConnect(ENTRIES, dostat.getStatement(), prints.get(1), dostat.getCondition()));
+    assertTrue(Util.eogConnect(EXITS, prints.get(1), dostat.getStatement()));
+    assertTrue(Util.eogConnect(ANY, NODE, EXITS, dostat, SUBTREE, dostat.getStatement()));
+
+    assertTrue(Util.eogConnect(EXITS, prints.get(1), dostat.getStatement()));
+    assertTrue(Util.eogConnect(ANY, NODE, EXITS, dostat, dostat.getStatement()));
 
     // Assert: Condition is preceded by the loop branch
     assertTrue(
