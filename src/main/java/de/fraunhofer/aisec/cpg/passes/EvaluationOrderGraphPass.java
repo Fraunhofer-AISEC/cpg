@@ -60,11 +60,11 @@ public class EvaluationOrderGraphPass extends Pass {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(EvaluationOrderGraphPass.class);
 
-  protected List<Node> currentEOG = new ArrayList<>();
+  private List<Node> currentEOG = new ArrayList<>();
 
   // Some nodes will have no incoming nor outgoing edges but still need to be associated to the next
   // eog relevant node.
-  protected List<Node> intermediateNodes = new ArrayList<>();
+  private List<Node> intermediateNodes = new ArrayList<>();
 
   /**
    * Searches backwards in the EOG Graph on whether or not there is a path from a function
@@ -103,12 +103,13 @@ public class EvaluationOrderGraphPass extends Pass {
   }
 
   /**
-   * To eliminate edges starting from nodes that have no incoming
+   * Use with 'SubgraphWalker.flattenAST(tu).stream() .filter(node -> node.getPrevEOG().isEmpty() &&
+   * !node.getNextEOG().isEmpty())' to eliminate edges starting from nodes that have no incoming
    * edge and are no function declarations.
    *
    * @param eogSources
    */
-  protected void truncateLooseEdges(@NonNull List<Node> eogSources) {
+  private void truncateLooseEdges(@NonNull List<Node> eogSources) {
     for (Node eogSourceNode : eogSources) {
       if (eogSourceNode instanceof FunctionDeclaration) continue;
       List<Node> nextNodes = new ArrayList<>(eogSourceNode.getNextEOG());
@@ -157,7 +158,7 @@ public class EvaluationOrderGraphPass extends Pass {
    *
    * @param declaration
    */
-  protected void handleDeclaration(@Nullable Declaration declaration) {
+  private void handleDeclaration(@Nullable Declaration declaration) {
     if (declaration == null) {
       return;
     }
@@ -228,7 +229,7 @@ public class EvaluationOrderGraphPass extends Pass {
    *
    * @param statement
    */
-  protected void createEOG(@Nullable Statement statement) {
+  private void createEOG(@Nullable Statement statement) {
     if (statement == null) {
       return; // For null statements, and to avoid null checks in every if/else branch
     }
@@ -410,7 +411,26 @@ public class EvaluationOrderGraphPass extends Pass {
       pushToEOG(statement);
 
     } else if (statement instanceof IfStatement) {
-      handleIfStatement((IfStatement) statement);
+      IfStatement ifs = (IfStatement) statement;
+      List<Node> openBranchNodes = new ArrayList<>();
+      lang.getScopeManager().enterScope(statement);
+      createEOG(ifs.getInitializerStatement());
+      handleDeclaration(ifs.getConditionDeclaration());
+      createEOG(ifs.getCondition());
+      List<Node> openConditionEOGs = new ArrayList<>(currentEOG);
+      createEOG(ifs.getThenStatement());
+      openBranchNodes.addAll(currentEOG);
+
+      if (ifs.getElseStatement() != null) {
+        setCurrentEOGs(openConditionEOGs);
+        createEOG(ifs.getElseStatement());
+        openBranchNodes.addAll(currentEOG);
+      } else openBranchNodes.addAll(openConditionEOGs);
+
+      lang.getScopeManager().leaveScope(statement);
+
+      setCurrentEOGs(openBranchNodes);
+      pushToEOG(statement); // Todo Remove root, if not wanted
 
     } else if (statement instanceof AssertStatement) {
       AssertStatement ifs = (AssertStatement) statement;
@@ -421,15 +441,97 @@ public class EvaluationOrderGraphPass extends Pass {
       pushToEOG(statement);
 
     } else if (statement instanceof WhileStatement) {
-      handleWhileStatement((WhileStatement) statement);
+
+      lang.getScopeManager().enterScope(statement);
+      WhileStatement whs = (WhileStatement) statement;
+
+      handleDeclaration(whs.getConditionDeclaration());
+
+      createEOG(whs.getCondition());
+      List<Node> tmpEOGNodes = new ArrayList<>(currentEOG);
+      createEOG(whs.getStatement());
+      connectCurrentToLoopStart();
+
+      // Replace current EOG nodes without triggering post setEOG ... processing
+      currentEOG.clear();
+      LoopScope currentLoopScope = (LoopScope) lang.getScopeManager().leaveScope(statement);
+      if (currentLoopScope != null) {
+        exitLoop(statement, currentLoopScope);
+      } else {
+        LOGGER.error("Trying to exit while loop, but no loop scope: {}", statement.toString());
+      }
+
+      currentEOG.addAll(tmpEOGNodes);
+
+      pushToEOG(statement); // Todo Remove root, if not wanted
 
     } else if (statement instanceof DoStatement) {
-      handleDoStatement((DoStatement) statement);
+      lang.getScopeManager().enterScope(statement);
+      DoStatement dos = (DoStatement) statement;
+
+      createEOG(dos.getStatement());
+
+      createEOG(dos.getCondition());
+      connectCurrentToLoopStart();
+      LoopScope currentLoopScope = (LoopScope) lang.getScopeManager().leaveScope(statement);
+      if (currentLoopScope != null) {
+        exitLoop(statement, currentLoopScope);
+      } else {
+        LOGGER.error("Trying to exit do loop, but no loop scope: {}", statement.toString());
+      }
+
+      pushToEOG(statement); // Todo Remove root, if not wanted
 
     } else if (statement instanceof ForStatement) {
-      handleForStatement((ForStatement) statement);
+      lang.getScopeManager().enterScope(statement);
+      ForStatement forStmt = (ForStatement) statement;
+
+      createEOG(forStmt.getInitializerStatement());
+      handleDeclaration(forStmt.getConditionDeclaration());
+      createEOG(forStmt.getCondition());
+
+      List<Node> tmpEOGNodes = new ArrayList<>(currentEOG);
+
+      createEOG(forStmt.getStatement());
+      createEOG(forStmt.getIterationExpression());
+
+      connectCurrentToLoopStart();
+      currentEOG.clear();
+      LoopScope currentLoopScope = (LoopScope) lang.getScopeManager().leaveScope(statement);
+      if (currentLoopScope != null) {
+        exitLoop(statement, currentLoopScope);
+      } else {
+        LOGGER.error("Trying to exit for loop, but no loop scope: {}", statement.toString());
+      }
+
+      currentEOG.addAll(tmpEOGNodes);
+
+      pushToEOG(statement); // Todo Remove root, if not wanted
+
     } else if (statement instanceof ForEachStatement) {
-      handleForEachStatement((ForEachStatement) statement);
+      lang.getScopeManager().enterScope(statement);
+      ForEachStatement forStmt = (ForEachStatement) statement;
+
+      createEOG(forStmt.getIterable());
+      handleDeclaration(forStmt.getVariable());
+
+      List<Node> tmpEOGNodes = new ArrayList<>(currentEOG);
+
+      createEOG(forStmt.getStatement());
+
+      connectCurrentToLoopStart();
+      currentEOG.clear();
+      LoopScope currentLoopScope = (LoopScope) lang.getScopeManager().leaveScope(statement);
+      if (currentLoopScope != null) {
+        exitLoop(statement, currentLoopScope);
+      } else {
+        LOGGER.error(
+            "Trying to exit foreach loop, but not in loop scope: {}", statement.toString());
+      }
+
+      currentEOG.addAll(tmpEOGNodes);
+
+      pushToEOG(statement); // Todo Remove root, if not wanted
 
     } else if (statement instanceof TryStatement) {
       lang.getScopeManager().enterScope(statement);
@@ -532,7 +634,44 @@ public class EvaluationOrderGraphPass extends Pass {
       currentEOG.clear();
 
     } else if (statement instanceof SwitchStatement) {
-      handleSwitchStatement((SwitchStatement) statement);
+
+      SwitchStatement switchStatement = (SwitchStatement) statement;
+
+      lang.getScopeManager().enterScope(statement);
+
+      createEOG(switchStatement.getInitializerStatement());
+
+      handleDeclaration(switchStatement.getSelectorDeclaration());
+
+      createEOG(switchStatement.selector);
+
+      CompoundStatement compound;
+      List<Node> tmp = new ArrayList<>(currentEOG);
+      if (switchStatement.getStatement() instanceof DoStatement) {
+        createEOG(switchStatement.getStatement());
+        compound =
+            (CompoundStatement) ((DoStatement) switchStatement.getStatement()).getStatement();
+      } else {
+        compound = (CompoundStatement) switchStatement.getStatement();
+      }
+      currentEOG = new ArrayList<>();
+
+      for (Statement subStatement : compound.getStatements()) {
+        if (subStatement instanceof CaseStatement || subStatement instanceof DefaultStatement)
+          currentEOG.addAll(tmp);
+        createEOG(subStatement);
+      }
+      pushToEOG(compound);
+
+      SwitchScope switchScope = (SwitchScope) lang.getScopeManager().leaveScope(switchStatement);
+      if (switchScope != null) {
+        this.currentEOG.addAll(switchScope.getBreakStatements());
+      } else {
+        LOGGER.error(
+            "Handling switch statement, but not in switch scope: {}", switchStatement.toString());
+      }
+
+      pushToEOG(statement);
     } else if (statement instanceof LabelStatement) {
       lang.getScopeManager().addLabelStatement((LabelStatement) statement);
       createEOG(((LabelStatement) statement).getSubStatement());
@@ -547,7 +686,9 @@ public class EvaluationOrderGraphPass extends Pass {
       createEOG(((CaseStatement) statement).getCaseExpression());
       pushToEOG(statement);
     } else if (statement instanceof SynchronizedStatement) {
-      handleSynchronizedStatement((SynchronizedStatement) statement);
+      createEOG(((SynchronizedStatement) statement).getExpression());
+      createEOG(((SynchronizedStatement) statement).getBlockStatement());
+      pushToEOG(statement);
     } else if (statement instanceof EmptyStatement) {
       pushToEOG(statement);
     } else if (statement instanceof Literal) {
@@ -571,7 +712,20 @@ public class EvaluationOrderGraphPass extends Pass {
 
       pushToEOG(statement);
     } else if (statement instanceof ConditionalExpression) {
-      handleConditionalExpression((ConditionalExpression) statement);
+      ConditionalExpression condExpr = (ConditionalExpression) statement;
+
+      List<Node> openBranchNodes = new ArrayList<>();
+      createEOG(condExpr.getCondition());
+      List<Node> openConditionEOGs = new ArrayList<>(currentEOG);
+      createEOG(condExpr.getThenExpr());
+      openBranchNodes.addAll(currentEOG);
+
+      setCurrentEOGs(openConditionEOGs);
+      createEOG(condExpr.getElseExpr());
+      openBranchNodes.addAll(currentEOG);
+
+      setCurrentEOGs(openBranchNodes);
+      pushToEOG(statement); // Todo Remove root, if not wanted
     } else if (statement instanceof InitializerListExpression) {
       InitializerListExpression initList = (InitializerListExpression) statement;
 
@@ -596,184 +750,6 @@ public class EvaluationOrderGraphPass extends Pass {
       // In this case the ast -> cpg translation has to implement the cpg node creation
       pushToEOG(statement);
     }
-  }
-
-  protected void handleSynchronizedStatement(SynchronizedStatement synch) {
-    createEOG(synch.getExpression());
-    createEOG(synch.getBlockStatement());
-    pushToEOG(synch);
-  }
-
-  protected void handleWhileStatement(WhileStatement whileStatement) {
-    lang.getScopeManager().enterScope(whileStatement);
-
-    handleDeclaration(whileStatement.getConditionDeclaration());
-
-    createEOG(whileStatement.getCondition());
-    List<Node> tmpEOGNodes = new ArrayList<>(currentEOG);
-    createEOG(whileStatement.getStatement());
-    connectCurrentToLoopStart();
-
-    // Replace current EOG nodes without triggering post setEOG ... processing
-    currentEOG.clear();
-    LoopScope currentLoopScope = (LoopScope) lang.getScopeManager().leaveScope(whileStatement);
-    if (currentLoopScope != null) {
-      exitLoop(whileStatement, currentLoopScope);
-    } else {
-      LOGGER.error("Trying to exit while loop, but no loop scope: {}", whileStatement.toString());
-    }
-
-    currentEOG.addAll(tmpEOGNodes);
-
-    pushToEOG(whileStatement); // Todo Remove root, if not wanted
-  }
-
-  protected void handleDoStatement(DoStatement doStatement) {
-    lang.getScopeManager().enterScope(doStatement);
-
-    createEOG(doStatement.getStatement());
-
-    createEOG(doStatement.getCondition());
-    connectCurrentToLoopStart();
-    LoopScope currentLoopScope = (LoopScope) lang.getScopeManager().leaveScope(doStatement);
-    if (currentLoopScope != null) {
-      exitLoop(doStatement, currentLoopScope);
-    } else {
-      LOGGER.error("Trying to exit do loop, but no loop scope: {}", doStatement.toString());
-    }
-
-    pushToEOG(doStatement); // Todo Remove root, if not wanted
-  }
-
-  protected void handleIfStatement(IfStatement ifStatement) {
-
-    List<Node> openBranchNodes = new ArrayList<>();
-    lang.getScopeManager().enterScope(ifStatement);
-    createEOG(ifStatement.getInitializerStatement());
-    handleDeclaration(ifStatement.getConditionDeclaration());
-    createEOG(ifStatement.getCondition());
-    List<Node> openConditionEOGs = new ArrayList<>(currentEOG);
-    createEOG(ifStatement.getThenStatement());
-    openBranchNodes.addAll(currentEOG);
-
-    if (ifStatement.getElseStatement() != null) {
-      setCurrentEOGs(openConditionEOGs);
-      createEOG(ifStatement.getElseStatement());
-      openBranchNodes.addAll(currentEOG);
-    } else openBranchNodes.addAll(openConditionEOGs);
-
-    lang.getScopeManager().leaveScope(ifStatement);
-
-    setCurrentEOGs(openBranchNodes);
-    pushToEOG(ifStatement); // Todo Remove root, if not wanted
-  }
-
-  protected void handleSwitchStatement(SwitchStatement switchStatement) {
-
-    lang.getScopeManager().enterScope(switchStatement);
-
-    createEOG(switchStatement.getInitializerStatement());
-
-    handleDeclaration(switchStatement.getSelectorDeclaration());
-
-    createEOG(switchStatement.selector);
-
-    CompoundStatement compound;
-    List<Node> tmp = new ArrayList<>(currentEOG);
-    if (switchStatement.getStatement() instanceof DoStatement) {
-      createEOG(switchStatement.getStatement());
-      compound = (CompoundStatement) ((DoStatement) switchStatement.getStatement()).getStatement();
-    } else {
-      compound = (CompoundStatement) switchStatement.getStatement();
-    }
-    currentEOG = new ArrayList<>();
-
-    for (Statement subStatement : compound.getStatements()) {
-      if (subStatement instanceof CaseStatement || subStatement instanceof DefaultStatement)
-        currentEOG.addAll(tmp);
-      createEOG(subStatement);
-    }
-    pushToEOG(compound);
-
-    SwitchScope switchScope = (SwitchScope) lang.getScopeManager().leaveScope(switchStatement);
-    if (switchScope != null) {
-      this.currentEOG.addAll(switchScope.getBreakStatements());
-    } else {
-      LOGGER.error(
-          "Handling switch statement, but not in switch scope: {}", switchStatement.toString());
-    }
-
-    pushToEOG(switchStatement);
-  }
-
-  protected void handleConditionalExpression(ConditionalExpression conditionalExpression) {
-
-    List<Node> openBranchNodes = new ArrayList<>();
-    createEOG(conditionalExpression.getCondition());
-    List<Node> openConditionEOGs = new ArrayList<>(currentEOG);
-    createEOG(conditionalExpression.getThenExpr());
-    openBranchNodes.addAll(currentEOG);
-
-    setCurrentEOGs(openConditionEOGs);
-    createEOG(conditionalExpression.getElseExpr());
-    openBranchNodes.addAll(currentEOG);
-
-    setCurrentEOGs(openBranchNodes);
-    pushToEOG(conditionalExpression); // Todo Remove root, if not wanted
-  }
-
-  protected void handleForStatement(ForStatement forStatement) {
-
-    lang.getScopeManager().enterScope(forStatement);
-    ForStatement forStmt = (ForStatement) forStatement;
-
-    createEOG(forStmt.getInitializerStatement());
-    handleDeclaration(forStmt.getConditionDeclaration());
-    createEOG(forStmt.getCondition());
-
-    List<Node> tmpEOGNodes = new ArrayList<>(currentEOG);
-
-    createEOG(forStmt.getStatement());
-    createEOG(forStmt.getIterationExpression());
-
-    connectCurrentToLoopStart();
-    currentEOG.clear();
-    LoopScope currentLoopScope = (LoopScope) lang.getScopeManager().leaveScope(forStatement);
-    if (currentLoopScope != null) {
-      exitLoop(forStatement, currentLoopScope);
-    } else {
-      LOGGER.error("Trying to exit for loop, but no loop scope: {}", forStatement.toString());
-    }
-
-    currentEOG.addAll(tmpEOGNodes);
-
-    pushToEOG(forStatement); // Todo Remove root, if not wanted
-  }
-
-  protected void handleForEachStatement(ForEachStatement forEachStatement) {
-
-    lang.getScopeManager().enterScope(forEachStatement);
-
-    createEOG(forEachStatement.getIterable());
-    handleDeclaration(forEachStatement.getVariable());
-
-    List<Node> tmpEOGNodes = new ArrayList<>(currentEOG);
-
-    createEOG(forEachStatement.getStatement());
-
-    connectCurrentToLoopStart();
-    currentEOG.clear();
-    LoopScope currentLoopScope = (LoopScope) lang.getScopeManager().leaveScope(forEachStatement);
-    if (currentLoopScope != null) {
-      exitLoop(forEachStatement, currentLoopScope);
-    } else {
-      LOGGER.error(
-          "Trying to exit foreach loop, but not in loop scope: {}", forEachStatement.toString());
-    }
-
-    currentEOG.addAll(tmpEOGNodes);
-
-    pushToEOG(forEachStatement); // Todo Remove root, if not wanted
   }
 
   public <T extends Node> void pushToEOG(@NonNull T node) {

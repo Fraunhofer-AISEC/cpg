@@ -131,14 +131,13 @@ public class Util {
    * AST nodes themselves are used to search the connections or the EOG Border nodes in the AST
    * subnode. Finally, en defines whether the EOG edges go * from n to r in refs or the inverse.
    *
-   * @param q - The quantifier, ALL or ANY node of n must connect to refs, defaults to ALL.
-   * @param cn - NODE if n itself is the NODE to connect or SUBTREE if the EOG borders are of
+   * @param q - The quantifier, all or any node of n must connect to refs, defaults to ALL.
+   * @param cn - NODE if n itself is the node to connect or SUBTREE if the EOG borders are of
    *     interest. Defaults to SUBTREE
-   * @param en - The Edge direction and therefore the borders of n to connect to refs (ENTRIES,
-   *     EXITS)
+   * @param en - The Edge direction and therefore the borders of n to connect to refs
    * @param n - Node of interest
-   * @param cr - NODE if refs nodes itself are the NODE to connect or SUBTREE if the EOG borders are
-   *     of interest
+   * @param cr - NODE if refs nodes itself are the nodes to connect or SUBTREE if the EOG borders
+   *     are of interest
    * @param refs - Multiple reference nodes that can be passed as varargs
    * @return true if all/any of the connections from node connect to n.
    */
