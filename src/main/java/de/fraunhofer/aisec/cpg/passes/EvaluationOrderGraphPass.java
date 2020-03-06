@@ -103,8 +103,8 @@ public class EvaluationOrderGraphPass extends Pass {
   }
 
   /**
-   * To eliminate edges starting from nodes that have no incoming
-   * edge and are no function declarations.
+   * To eliminate edges starting from nodes that have no incoming edge and are no function
+   * declarations.
    *
    * @param eogSources
    */

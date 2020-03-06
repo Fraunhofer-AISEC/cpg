@@ -3,11 +3,10 @@ package de.fraunhofer.aisec.cpg.passes;
 import de.fraunhofer.aisec.cpg.graph.*;
 import de.fraunhofer.aisec.cpg.passes.scopes.LoopScope;
 import de.fraunhofer.aisec.cpg.passes.scopes.SwitchScope;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.util.ArrayList;
 import java.util.List;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class BranchSemanticEOGPass extends EvaluationOrderGraphPass {
 
