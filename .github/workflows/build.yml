@@ -5,14 +5,6 @@ on:
   - pull_request
 
 jobs:
-  # we need to at least execute one job otherwise the overall thing will fail, this is a known issue of GitHub actions
-  # see https://github.community/t5/GitHub-Actions/Workflow-is-failing-if-no-job-can-be-ran-due-to-condition/td-p/38085
-  noop:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Do nothing
-        run: |
-          echo 1
   build:
     runs-on: ubuntu-latest
     # only execute if this is coming from a push or from a PR from a forked repository
