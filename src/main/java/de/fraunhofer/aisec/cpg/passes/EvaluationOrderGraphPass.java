@@ -441,7 +441,7 @@ public class EvaluationOrderGraphPass extends Pass {
             throwType = param.getType();
           } else {
             LOGGER.info("Unknown throw type, potentially throw; in a method");
-            throwType = new Type("UKNOWN_THROW_TYPE");
+            throwType = new Type("UNKNOWN_THROW_TYPE");
           }
         }
         pushToEOG(statement);

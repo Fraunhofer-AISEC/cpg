@@ -53,39 +53,14 @@ import com.github.javaparser.ast.type.ReferenceType;
 import com.github.javaparser.ast.type.UnionType;
 import com.github.javaparser.utils.Pair;
 import de.fraunhofer.aisec.cpg.frontends.Handler;
-import de.fraunhofer.aisec.cpg.graph.AssertStatement;
-import de.fraunhofer.aisec.cpg.graph.BreakStatement;
-import de.fraunhofer.aisec.cpg.graph.CaseStatement;
-import de.fraunhofer.aisec.cpg.graph.CatchClause;
-import de.fraunhofer.aisec.cpg.graph.CompoundStatement;
-import de.fraunhofer.aisec.cpg.graph.ContinueStatement;
-import de.fraunhofer.aisec.cpg.graph.Declaration;
-import de.fraunhofer.aisec.cpg.graph.DeclarationStatement;
-import de.fraunhofer.aisec.cpg.graph.DefaultStatement;
-import de.fraunhofer.aisec.cpg.graph.DoStatement;
-import de.fraunhofer.aisec.cpg.graph.EmptyStatement;
-import de.fraunhofer.aisec.cpg.graph.ExplicitConstructorInvocation;
-import de.fraunhofer.aisec.cpg.graph.Expression;
-import de.fraunhofer.aisec.cpg.graph.ExpressionList;
-import de.fraunhofer.aisec.cpg.graph.ForEachStatement;
-import de.fraunhofer.aisec.cpg.graph.ForStatement;
-import de.fraunhofer.aisec.cpg.graph.IfStatement;
-import de.fraunhofer.aisec.cpg.graph.LabelStatement;
-import de.fraunhofer.aisec.cpg.graph.Literal;
-import de.fraunhofer.aisec.cpg.graph.NodeBuilder;
-import de.fraunhofer.aisec.cpg.graph.Region;
-import de.fraunhofer.aisec.cpg.graph.ReturnStatement;
-import de.fraunhofer.aisec.cpg.graph.SwitchStatement;
-import de.fraunhofer.aisec.cpg.graph.SynchronizedStatement;
-import de.fraunhofer.aisec.cpg.graph.TryStatement;
-import de.fraunhofer.aisec.cpg.graph.Type;
-import de.fraunhofer.aisec.cpg.graph.UnaryOperator;
-import de.fraunhofer.aisec.cpg.graph.VariableDeclaration;
-import de.fraunhofer.aisec.cpg.graph.WhileStatement;
+import de.fraunhofer.aisec.cpg.graph.*;
+import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation;
+import de.fraunhofer.aisec.cpg.sarif.Region;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import org.checkerframework.checker.nullness.qual.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -250,19 +225,22 @@ public class StatementAnalyzer
 
     if (forStmt.getInitialization().size() > 1) {
       // Include artificial Expressionlist and initializer statement.
-      Region ofExprList = null;
+      PhysicalLocation ofExprList = null;
       for (com.github.javaparser.ast.expr.Expression initExpr : forStmt.getInitialization()) {
         if (ofExprList == null) {
-          ofExprList = lang.getRegionFromRawNode(initExpr);
+          ofExprList = lang.getLocationFromRawNode(initExpr);
         } else {
-          ofExprList = lang.mergeRegions(ofExprList, lang.getRegionFromRawNode(initExpr));
+          ofExprList.setRegion(
+              lang.mergeRegions(
+                  ofExprList.getRegion(), lang.getLocationFromRawNode(initExpr).getRegion()));
         }
       }
 
       String initString =
-          lang.getCodeOfSubregion(statement, lang.getRegionFromRawNode(stmt), ofExprList);
+          lang.getCodeOfSubregion(
+              statement, lang.getLocationFromRawNode(stmt).getRegion(), ofExprList.getRegion());
       ExpressionList initExprList = NodeBuilder.newExpressionList(initString);
-      initExprList.setRegion(ofExprList);
+      initExprList.setLocation(ofExprList);
       forStmt
           .getInitialization()
           .forEach(expr -> initExprList.addExpression(lang.getExpressionHandler().handle(expr)));
@@ -282,25 +260,27 @@ public class StatementAnalyzer
     // cpp StatementHandler
     if (statement.getCondition() == null) {
       Literal literal = NodeBuilder.newLiteral(true, new Type("boolean"), "true");
-      literal.setRegion(new Region());
       statement.setCondition(literal);
     }
 
     if (forStmt.getUpdate().size() > 1) {
       // Include artificial Expressionlist and initializer statement.
-      Region ofExprList = null;
+      PhysicalLocation ofExprList = null;
       for (com.github.javaparser.ast.expr.Expression initExpr : forStmt.getUpdate()) {
         if (ofExprList == null) {
-          ofExprList = lang.getRegionFromRawNode(initExpr);
+          ofExprList = lang.getLocationFromRawNode(initExpr);
         } else {
-          ofExprList = lang.mergeRegions(ofExprList, lang.getRegionFromRawNode(initExpr));
+          ofExprList.setRegion(
+              lang.mergeRegions(
+                  ofExprList.getRegion(), lang.getLocationFromRawNode(initExpr).getRegion()));
         }
       }
 
       String updateString =
-          lang.getCodeOfSubregion(statement, lang.getRegionFromRawNode(stmt), ofExprList);
+          lang.getCodeOfSubregion(
+              statement, lang.getLocationFromRawNode(stmt).getRegion(), ofExprList.getRegion());
       ExpressionList updateExprList = NodeBuilder.newExpressionList(updateString);
-      updateExprList.setRegion(ofExprList);
+      updateExprList.setLocation(ofExprList);
       forStmt
           .getUpdate()
           .forEach(
@@ -420,7 +400,7 @@ public class StatementAnalyzer
       }
       DefaultStatement defaultStatement =
           NodeBuilder.newDefaultStatement(getCodeBetweenTokens(caseTokens.a, caseTokens.b));
-      defaultStatement.setRegion(getRegionFromTokens(caseTokens.a, caseTokens.b));
+      defaultStatement.setLocation(getLocationsFromTokens(caseTokens.a, caseTokens.b));
       return defaultStatement;
     }
 
@@ -435,7 +415,7 @@ public class StatementAnalyzer
     caseStatement.setCaseExpression(
         (Expression) lang.getExpressionHandler().handle(caseExpression));
 
-    caseStatement.setRegion(getRegionFromTokens(caseTokens.a, caseTokens.b));
+    caseStatement.setLocation(getLocationsFromTokens(caseTokens.a, caseTokens.b));
 
     return caseStatement;
   }
@@ -463,18 +443,23 @@ public class StatementAnalyzer
     return new Pair<>(getPreviousTokenWith(startDelim, start), getNextTokenWith(endDelim, end));
   }
 
-  public Region getRegionFromTokens(JavaToken startToken, JavaToken endToken) {
+  @Nullable
+  public PhysicalLocation getLocationsFromTokens(JavaToken startToken, JavaToken endToken) {
     if (startToken != null && endToken != null) {
       Optional<Range> startOpt = startToken.getRange();
       Optional<Range> endOpt = endToken.getRange();
       if (startOpt.isPresent() && endOpt.isPresent()) {
         Range rstart = startOpt.get();
         Range rend = endOpt.get();
-        return new Region(
-            rstart.begin.line, rstart.begin.column, rend.end.line, rend.end.column + 1);
+
+        Region region =
+            new Region(rstart.begin.line, rstart.begin.column, rend.end.line, rend.end.column + 1);
+
+        return new PhysicalLocation("", region);
       }
     }
-    return new Region();
+
+    return null;
   }
 
   public String getCodeBetweenTokens(JavaToken startToken, JavaToken endToken) {
@@ -514,7 +499,7 @@ public class StatementAnalyzer
 
     CompoundStatement compoundStatement =
         NodeBuilder.newCompoundStatement(getCodeBetweenTokens(start, end));
-    compoundStatement.setRegion(getRegionFromTokens(start, end));
+    compoundStatement.setLocation(getLocationsFromTokens(start, end));
 
     for (SwitchEntry sentry : switchStmt.getEntries()) {
 

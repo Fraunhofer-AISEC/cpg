@@ -33,6 +33,8 @@ import de.fraunhofer.aisec.cpg.TranslationConfiguration;
 import de.fraunhofer.aisec.cpg.frontends.TranslationException;
 import de.fraunhofer.aisec.cpg.graph.*;
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager;
+import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation;
+import de.fraunhofer.aisec.cpg.sarif.Region;
 import java.io.File;
 import org.junit.jupiter.api.Test;
 
@@ -81,6 +83,10 @@ class CXXIncludeTest {
 
     ConstructorDeclaration decl = someClass.getConstructors().get(0);
     assertEquals("SomeClass();", decl.getCode());
-    assertEquals(new Region(16, 3, 16, 15), decl.getRegion());
+
+    PhysicalLocation location = decl.getLocation();
+    assertNotNull(location);
+
+    assertEquals(new Region(16, 3, 16, 15), location.getRegion());
   }
 }

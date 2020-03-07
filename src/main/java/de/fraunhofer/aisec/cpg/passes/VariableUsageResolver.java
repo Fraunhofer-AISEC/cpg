@@ -26,24 +26,10 @@
 
 package de.fraunhofer.aisec.cpg.passes;
 
+import static de.fraunhofer.aisec.cpg.helpers.Util.warnWithFileLocation;
+
 import de.fraunhofer.aisec.cpg.TranslationResult;
-import de.fraunhofer.aisec.cpg.graph.Declaration;
-import de.fraunhofer.aisec.cpg.graph.DeclaredReferenceExpression;
-import de.fraunhofer.aisec.cpg.graph.EnumDeclaration;
-import de.fraunhofer.aisec.cpg.graph.FieldDeclaration;
-import de.fraunhofer.aisec.cpg.graph.FunctionDeclaration;
-import de.fraunhofer.aisec.cpg.graph.HasType;
-import de.fraunhofer.aisec.cpg.graph.MemberExpression;
-import de.fraunhofer.aisec.cpg.graph.MethodDeclaration;
-import de.fraunhofer.aisec.cpg.graph.Node;
-import de.fraunhofer.aisec.cpg.graph.NodeBuilder;
-import de.fraunhofer.aisec.cpg.graph.RecordDeclaration;
-import de.fraunhofer.aisec.cpg.graph.Region;
-import de.fraunhofer.aisec.cpg.graph.StaticReferenceExpression;
-import de.fraunhofer.aisec.cpg.graph.TranslationUnitDeclaration;
-import de.fraunhofer.aisec.cpg.graph.Type;
-import de.fraunhofer.aisec.cpg.graph.TypeManager;
-import de.fraunhofer.aisec.cpg.graph.ValueDeclaration;
+import de.fraunhofer.aisec.cpg.graph.*;
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.ScopedWalker;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -211,12 +197,7 @@ public class VariableUsageResolver extends Pass {
       if (!refersTo.isEmpty()) {
         ref.setRefersTo(refersTo);
       } else {
-        Region region = current.getRegion();
-        int startLine = -1;
-        if (region != null) {
-          startLine = region.getStartLine();
-        }
-        log.info("did not find a declaration for {} (line {})", current.getCode(), startLine);
+        warnWithFileLocation(current, log, "Did not find a declaration for {}");
       }
     }
   }
@@ -343,12 +324,7 @@ public class VariableUsageResolver extends Pass {
     if (target.isEmpty()) {
       FieldDeclaration declaration =
           NodeBuilder.newFieldDeclaration(
-              reference.getName(),
-              reference.getType(),
-              Collections.emptyList(),
-              "",
-              new Region(),
-              null);
+              reference.getName(), reference.getType(), Collections.emptyList(), "", null, null);
       declarations.add(declaration);
       declaration.setImplicit(true);
       // lang.getScopeManager().addValueDeclaration(declaration);

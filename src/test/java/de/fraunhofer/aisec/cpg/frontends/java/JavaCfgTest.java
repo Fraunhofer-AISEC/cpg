@@ -26,6 +26,8 @@
 
 package de.fraunhofer.aisec.cpg.frontends.java;
 
+import static de.fraunhofer.aisec.cpg.TestUtils.getByLineNr;
+import static de.fraunhofer.aisec.cpg.sarif.PhysicalLocation.locationLink;
 import static org.junit.jupiter.api.Assertions.assertSame;
 
 import de.fraunhofer.aisec.cpg.TranslationConfiguration;
@@ -41,7 +43,6 @@ import de.fraunhofer.aisec.cpg.graph.TranslationUnitDeclaration;
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker;
 import de.fraunhofer.aisec.cpg.passes.ControlFlowGraphPass;
 import java.io.File;
-import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.function.Consumer;
 import org.junit.jupiter.api.Test;
@@ -85,9 +86,9 @@ public class JavaCfgTest {
           for (Node target : stmt.getNextCFG()) {
             System.out.println(
                 "CFG: "
-                    + stmt.getRegion().getStartLine()
+                    + locationLink(stmt.getLocation())
                     + " -> "
-                    + target.getRegion().getStartLine());
+                    + locationLink(target.getLocation()));
           }
         });
 
@@ -103,16 +104,26 @@ public class JavaCfgTest {
     CFG: 14 -> 13
     CFG: 14 -> 15
     */
-    assertSame(7, getByLineNr(body, 6).getNextCFG().get(0).getRegion().getStartLine());
-    assertSame(8, getByLineNr(body, 7).getNextCFG().get(0).getRegion().getStartLine());
-    assertSame(9, getByLineNr(body, 8).getNextCFG().get(0).getRegion().getStartLine());
-    assertSame(11, getByLineNr(body, 8).getNextCFG().get(1).getRegion().getStartLine());
-    assertSame(8, getByLineNr(body, 9).getNextCFG().get(0).getRegion().getStartLine());
-    assertSame(12, getByLineNr(body, 11).getNextCFG().get(0).getRegion().getStartLine());
-    assertSame(13, getByLineNr(body, 12).getNextCFG().get(0).getRegion().getStartLine());
-    assertSame(14, getByLineNr(body, 13).getNextCFG().get(0).getRegion().getStartLine());
-    assertSame(13, getByLineNr(body, 14).getNextCFG().get(0).getRegion().getStartLine());
-    assertSame(15, getByLineNr(body, 14).getNextCFG().get(1).getRegion().getStartLine());
+    assertSame(
+        7, getByLineNr(body, 6).getNextCFG().get(0).getLocation().getRegion().getStartLine());
+    assertSame(
+        8, getByLineNr(body, 7).getNextCFG().get(0).getLocation().getRegion().getStartLine());
+    assertSame(
+        9, getByLineNr(body, 8).getNextCFG().get(0).getLocation().getRegion().getStartLine());
+    assertSame(
+        11, getByLineNr(body, 8).getNextCFG().get(1).getLocation().getRegion().getStartLine());
+    assertSame(
+        8, getByLineNr(body, 9).getNextCFG().get(0).getLocation().getRegion().getStartLine());
+    assertSame(
+        12, getByLineNr(body, 11).getNextCFG().get(0).getLocation().getRegion().getStartLine());
+    assertSame(
+        13, getByLineNr(body, 12).getNextCFG().get(0).getLocation().getRegion().getStartLine());
+    assertSame(
+        14, getByLineNr(body, 13).getNextCFG().get(0).getLocation().getRegion().getStartLine());
+    assertSame(
+        13, getByLineNr(body, 14).getNextCFG().get(0).getLocation().getRegion().getStartLine());
+    assertSame(
+        15, getByLineNr(body, 14).getNextCFG().get(1).getLocation().getRegion().getStartLine());
   }
 
   /**
@@ -147,9 +158,9 @@ public class JavaCfgTest {
           for (Node target : stmt.getNextCFG()) {
             System.out.println(
                 "CFG: "
-                    + stmt.getRegion().getStartLine()
+                    + locationLink(stmt.getLocation())
                     + " -> "
-                    + target.getRegion().getStartLine());
+                    + locationLink(target.getLocation()));
           }
         });
 
@@ -165,16 +176,26 @@ public class JavaCfgTest {
     CFG: 14 -> 15
     CFG: 12 -> 15
         */
-    assertSame(7, getByLineNr(body, 6).getNextCFG().get(0).getRegion().getStartLine());
-    assertSame(8, getByLineNr(body, 7).getNextCFG().get(0).getRegion().getStartLine());
-    assertSame(9, getByLineNr(body, 8).getNextCFG().get(0).getRegion().getStartLine());
-    assertSame(10, getByLineNr(body, 8).getNextCFG().get(1).getRegion().getStartLine());
-    assertSame(10, getByLineNr(body, 9).getNextCFG().get(0).getRegion().getStartLine());
-    assertSame(11, getByLineNr(body, 10).getNextCFG().get(0).getRegion().getStartLine());
-    assertSame(12, getByLineNr(body, 11).getNextCFG().get(0).getRegion().getStartLine());
-    assertSame(14, getByLineNr(body, 11).getNextCFG().get(1).getRegion().getStartLine());
-    assertSame(15, getByLineNr(body, 14).getNextCFG().get(0).getRegion().getStartLine());
-    assertSame(15, getByLineNr(body, 12).getNextCFG().get(0).getRegion().getStartLine());
+    assertSame(
+        7, getByLineNr(body, 6).getNextCFG().get(0).getLocation().getRegion().getStartLine());
+    assertSame(
+        8, getByLineNr(body, 7).getNextCFG().get(0).getLocation().getRegion().getStartLine());
+    assertSame(
+        9, getByLineNr(body, 8).getNextCFG().get(0).getLocation().getRegion().getStartLine());
+    assertSame(
+        10, getByLineNr(body, 8).getNextCFG().get(1).getLocation().getRegion().getStartLine());
+    assertSame(
+        10, getByLineNr(body, 9).getNextCFG().get(0).getLocation().getRegion().getStartLine());
+    assertSame(
+        11, getByLineNr(body, 10).getNextCFG().get(0).getLocation().getRegion().getStartLine());
+    assertSame(
+        12, getByLineNr(body, 11).getNextCFG().get(0).getLocation().getRegion().getStartLine());
+    assertSame(
+        14, getByLineNr(body, 11).getNextCFG().get(1).getLocation().getRegion().getStartLine());
+    assertSame(
+        15, getByLineNr(body, 14).getNextCFG().get(0).getLocation().getRegion().getStartLine());
+    assertSame(
+        15, getByLineNr(body, 12).getNextCFG().get(0).getLocation().getRegion().getStartLine());
   }
 
   /**
@@ -209,9 +230,9 @@ public class JavaCfgTest {
           for (Node target : stmt.getNextCFG()) {
             System.out.println(
                 "CFG: "
-                    + stmt.getRegion().getStartLine()
+                    + locationLink(stmt.getLocation())
                     + " -> "
-                    + target.getRegion().getStartLine());
+                    + locationLink(target.getLocation()));
           }
         });
 
@@ -241,26 +262,46 @@ public class JavaCfgTest {
     CFG: 21 -> 15
     CFG: 21 -> 22
            */
-    assertSame(7, getByLineNr(body, 6).getNextCFG().get(0).getRegion().getStartLine());
-    assertSame(8, getByLineNr(body, 7).getNextCFG().get(0).getRegion().getStartLine());
-    assertSame(9, getByLineNr(body, 8).getNextCFG().get(0).getRegion().getStartLine());
-    assertSame(13, getByLineNr(body, 8).getNextCFG().get(1).getRegion().getStartLine());
-    assertSame(9, getByLineNr(body, 9).getNextCFG().get(0).getRegion().getStartLine());
-    assertSame(10, getByLineNr(body, 9).getNextCFG().get(1).getRegion().getStartLine());
-    assertSame(10, getByLineNr(body, 10).getNextCFG().get(0).getRegion().getStartLine());
-    assertSame(11, getByLineNr(body, 10).getNextCFG().get(1).getRegion().getStartLine());
-    assertSame(8, getByLineNr(body, 11).getNextCFG().get(0).getRegion().getStartLine());
-    assertSame(14, getByLineNr(body, 13).getNextCFG().get(0).getRegion().getStartLine());
-    assertSame(15, getByLineNr(body, 14).getNextCFG().get(0).getRegion().getStartLine());
-    assertSame(17, getByLineNr(body, 16).getNextCFG().get(0).getRegion().getStartLine());
-    assertSame(20, getByLineNr(body, 16).getNextCFG().get(1).getRegion().getStartLine());
-    assertSame(18, getByLineNr(body, 17).getNextCFG().get(0).getRegion().getStartLine());
-    assertSame(15, getByLineNr(body, 18).getNextCFG().get(0).getRegion().getStartLine());
-    assertSame(15, getByLineNr(body, 15).getNextCFG().get(0).getRegion().getStartLine());
-    assertSame(16, getByLineNr(body, 15).getNextCFG().get(1).getRegion().getStartLine());
-    assertSame(21, getByLineNr(body, 20).getNextCFG().get(0).getRegion().getStartLine());
-    assertSame(15, getByLineNr(body, 21).getNextCFG().get(0).getRegion().getStartLine());
-    assertSame(22, getByLineNr(body, 21).getNextCFG().get(1).getRegion().getStartLine());
+    assertSame(
+        7, getByLineNr(body, 6).getNextCFG().get(0).getLocation().getRegion().getStartLine());
+    assertSame(
+        8, getByLineNr(body, 7).getNextCFG().get(0).getLocation().getRegion().getStartLine());
+    assertSame(
+        9, getByLineNr(body, 8).getNextCFG().get(0).getLocation().getRegion().getStartLine());
+    assertSame(
+        13, getByLineNr(body, 8).getNextCFG().get(1).getLocation().getRegion().getStartLine());
+    assertSame(
+        9, getByLineNr(body, 9).getNextCFG().get(0).getLocation().getRegion().getStartLine());
+    assertSame(
+        10, getByLineNr(body, 9).getNextCFG().get(1).getLocation().getRegion().getStartLine());
+    assertSame(
+        10, getByLineNr(body, 10).getNextCFG().get(0).getLocation().getRegion().getStartLine());
+    assertSame(
+        11, getByLineNr(body, 10).getNextCFG().get(1).getLocation().getRegion().getStartLine());
+    assertSame(
+        8, getByLineNr(body, 11).getNextCFG().get(0).getLocation().getRegion().getStartLine());
+    assertSame(
+        14, getByLineNr(body, 13).getNextCFG().get(0).getLocation().getRegion().getStartLine());
+    assertSame(
+        15, getByLineNr(body, 14).getNextCFG().get(0).getLocation().getRegion().getStartLine());
+    assertSame(
+        17, getByLineNr(body, 16).getNextCFG().get(0).getLocation().getRegion().getStartLine());
+    assertSame(
+        20, getByLineNr(body, 16).getNextCFG().get(1).getLocation().getRegion().getStartLine());
+    assertSame(
+        18, getByLineNr(body, 17).getNextCFG().get(0).getLocation().getRegion().getStartLine());
+    assertSame(
+        15, getByLineNr(body, 18).getNextCFG().get(0).getLocation().getRegion().getStartLine());
+    assertSame(
+        15, getByLineNr(body, 15).getNextCFG().get(0).getLocation().getRegion().getStartLine());
+    assertSame(
+        16, getByLineNr(body, 15).getNextCFG().get(1).getLocation().getRegion().getStartLine());
+    assertSame(
+        21, getByLineNr(body, 20).getNextCFG().get(0).getLocation().getRegion().getStartLine());
+    assertSame(
+        15, getByLineNr(body, 21).getNextCFG().get(0).getLocation().getRegion().getStartLine());
+    assertSame(
+        22, getByLineNr(body, 21).getNextCFG().get(1).getLocation().getRegion().getStartLine());
   }
 
   /**
@@ -281,24 +322,5 @@ public class JavaCfgTest {
     } else {
       visitor.accept(stmt);
     }
-  }
-
-  /**
-   * Returns the (first) statement at source line nr.
-   *
-   * <p>If a line contains several statements, only the first one is returned.
-   *
-   * @param body
-   * @param line
-   * @return Statement at source line or null if not present.
-   */
-  private Node getByLineNr(CompoundStatement body, int line) {
-    List<Node> nodes = SubgraphWalker.flattenAST(body);
-    for (Node n : nodes) {
-      if (n.getRegion().getStartLine() == line && n.getNextCFG().size() > 0) {
-        return n;
-      }
-    }
-    return null;
   }
 }

@@ -1,3 +1,29 @@
+/*
+ * Copyright (c) 2019, Fraunhofer AISEC. All rights reserved.
+ *
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ *
+ *                    $$$$$$\  $$$$$$$\   $$$$$$\
+ *                   $$  __$$\ $$  __$$\ $$  __$$\
+ *                   $$ /  \__|$$ |  $$ |$$ /  \__|
+ *                   $$ |      $$$$$$$  |$$ |$$$$\
+ *                   $$ |      $$  ____/ $$ |\_$$ |
+ *                   $$ |  $$\ $$ |      $$ |  $$ |
+ *                   \$$$$$   |$$ |      \$$$$$   |
+ *                    \______/ \__|       \______/
+ *
+ */
+
 package de.fraunhofer.aisec.cpg.enhancements;
 
 import static de.fraunhofer.aisec.cpg.helpers.Util.Connect.NODE;
@@ -6,6 +32,7 @@ import static de.fraunhofer.aisec.cpg.helpers.Util.Edge.ENTRIES;
 import static de.fraunhofer.aisec.cpg.helpers.Util.Edge.EXITS;
 import static de.fraunhofer.aisec.cpg.helpers.Util.Quantifier.ALL;
 import static de.fraunhofer.aisec.cpg.helpers.Util.Quantifier.ANY;
+import static de.fraunhofer.aisec.cpg.sarif.PhysicalLocation.locationLink;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -21,6 +48,7 @@ import de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -272,7 +300,7 @@ public class EOGTest {
 
     List<Node> prints =
         nodes.stream()
-            .filter(node -> node.getCode().equals(refNodeString))
+            .filter(node -> Objects.equals(node.getCode(), refNodeString))
             .collect(Collectors.toList());
 
     assertEquals(1, nodes.stream().filter(node -> node instanceof WhileStatement).count());
@@ -286,7 +314,7 @@ public class EOGTest {
         s -> {
           for (Node pred : s.getPrevEOG()) {
             System.out.println(
-                s.getRegion().getStartLine() + " -> " + pred.getRegion().getStartLine());
+                locationLink(s.getLocation()) + " -> " + locationLink(pred.getLocation()));
           }
         });
 

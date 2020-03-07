@@ -64,8 +64,11 @@ import de.fraunhofer.aisec.cpg.helpers.NodeComparator;
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker;
 import de.fraunhofer.aisec.cpg.helpers.Util;
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager;
+import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation;
+import de.fraunhofer.aisec.cpg.sarif.Region;
 import java.io.File;
 import java.math.BigInteger;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -475,5 +478,32 @@ class JavaLanguageFrontendTest {
     assertNotNull(length);
     assertEquals("length", length.getMember().getName());
     assertEquals("int", length.getType().toString());
+  }
+
+  @Test
+  public void testLocation() throws TranslationException {
+    TranslationUnitDeclaration declaration =
+        new JavaLanguageFrontend(TranslationConfiguration.builder().build(), new ScopeManager())
+            .parse(new File("src/test/resources/compiling/FieldAccess.java"));
+
+    assertNotNull(declaration);
+
+    NamespaceDeclaration namespaceDeclaration =
+        declaration.getDeclarationAs(0, NamespaceDeclaration.class);
+    RecordDeclaration record = namespaceDeclaration.getDeclarationAs(0, RecordDeclaration.class);
+
+    assertNotNull(record);
+
+    MethodDeclaration main = record.getMethods().get(0);
+
+    assertNotNull(main);
+
+    PhysicalLocation location = main.getLocation();
+
+    assertNotNull(location);
+
+    Path path = Path.of(location.getArtifactLocation().getUri());
+    assertEquals("FieldAccess.java", path.getFileName().toString());
+    assertEquals(new Region(7, 3, 10, 4), location.getRegion());
   }
 }

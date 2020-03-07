@@ -26,6 +26,7 @@
 
 package de.fraunhofer.aisec.cpg.graph;
 
+import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation;
 import java.util.List;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -393,11 +394,12 @@ public class NodeBuilder {
     return node;
   }
 
-  public static EnumDeclaration newEnumDeclaration(String name, String code, Region region) {
+  public static EnumDeclaration newEnumDeclaration(
+      String name, String code, PhysicalLocation location) {
     EnumDeclaration node = new EnumDeclaration();
     node.setName(name);
     node.setCode(code);
-    node.setRegion(region);
+    node.setLocation(location);
 
     log(node);
 
@@ -405,11 +407,11 @@ public class NodeBuilder {
   }
 
   public static EnumConstantDeclaration newEnumConstantDeclaration(
-      String name, String code, Region region) {
+      String name, String code, PhysicalLocation location) {
     EnumConstantDeclaration node = new EnumConstantDeclaration();
     node.setName(name);
     node.setCode(code);
-    node.setRegion(region);
+    node.setLocation(location);
 
     log(node);
 
@@ -421,14 +423,14 @@ public class NodeBuilder {
       Type type,
       List<String> modifiers,
       String code,
-      Region region,
+      PhysicalLocation location,
       @Nullable Expression initializer) {
     FieldDeclaration node = new FieldDeclaration();
     node.setName(name);
     node.setType(type);
     node.setModifiers(modifiers);
     node.setCode(code);
-    node.setRegion(region);
+    node.setLocation(location);
     if (initializer != null) {
       node.setInitializer(initializer);
     }

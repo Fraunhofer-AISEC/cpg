@@ -54,7 +54,7 @@ public class FieldDeclaration extends ValueDeclaration implements TypeListener {
   private FieldDeclaration(VariableDeclaration declaration) {
     this.name = declaration.getName();
     this.code = declaration.getCode();
-    this.region = declaration.getRegion();
+    this.location = declaration.getLocation();
     this.type = declaration.getType();
     this.initializer = declaration.getInitializer();
   }

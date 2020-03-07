@@ -26,10 +26,6 @@
 
 package de.fraunhofer.aisec.cpg.frontends.java;
 
-import static com.github.javaparser.ParseStart.COMPILATION_UNIT;
-import static com.github.javaparser.Providers.UTF8;
-import static com.github.javaparser.Providers.provider;
-
 import com.github.javaparser.JavaParser;
 import com.github.javaparser.ParseResult;
 import com.github.javaparser.ParserConfiguration;
@@ -59,26 +55,20 @@ import com.github.javaparser.symbolsolver.resolution.typesolvers.ReflectionTypeS
 import de.fraunhofer.aisec.cpg.TranslationConfiguration;
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
 import de.fraunhofer.aisec.cpg.frontends.TranslationException;
-import de.fraunhofer.aisec.cpg.graph.IncludeDeclaration;
-import de.fraunhofer.aisec.cpg.graph.NamespaceDeclaration;
-import de.fraunhofer.aisec.cpg.graph.NodeBuilder;
-import de.fraunhofer.aisec.cpg.graph.Region;
-import de.fraunhofer.aisec.cpg.graph.TranslationUnitDeclaration;
+import de.fraunhofer.aisec.cpg.graph.*;
 import de.fraunhofer.aisec.cpg.graph.Type.Origin;
-import de.fraunhofer.aisec.cpg.graph.TypeManager;
 import de.fraunhofer.aisec.cpg.helpers.Benchmark;
 import de.fraunhofer.aisec.cpg.helpers.CommonPath;
-import de.fraunhofer.aisec.cpg.helpers.Util;
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager;
-import java.io.ByteArrayInputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
+import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation;
+import de.fraunhofer.aisec.cpg.sarif.Region;
+import java.io.*;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import org.checkerframework.checker.nullness.qual.NonNull;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 /** Main parser for ONE Java files. */
 public class JavaLanguageFrontend extends LanguageFrontend {
@@ -125,14 +115,14 @@ public class JavaLanguageFrontend extends LanguageFrontend {
     TranslationConfiguration c = this.config;
 
     // load in the file
-    try (FileInputStream in = new FileInputStream(file)) {
+    try {
       ParserConfiguration parserConfiguration = new ParserConfiguration();
       parserConfiguration.setSymbolResolver(this.javaSymbolResolver);
       JavaParser parser = new JavaParser(parserConfiguration);
 
       // parse the file
-      Benchmark bench = new Benchmark(this.getClass(), "Parsing sourcefile");
-      context = parse(Util.inputStreamToString(in), parser);
+      Benchmark bench = new Benchmark(this.getClass(), "Parsing source file");
+      context = parse(file, parser);
       bench.stop();
 
       bench = new Benchmark(this.getClass(), "Transform to CPG");
@@ -171,11 +161,10 @@ public class JavaLanguageFrontend extends LanguageFrontend {
     }
   }
 
-  protected CompilationUnit parse(String fileContent, JavaParser parser)
-      throws TranslationException {
+  protected CompilationUnit parse(File file, JavaParser parser)
+      throws TranslationException, FileNotFoundException {
 
-    ByteArrayInputStream stream = new ByteArrayInputStream(fileContent.getBytes());
-    ParseResult<CompilationUnit> result = parser.parse(COMPILATION_UNIT, provider(stream, UTF8));
+    ParseResult<CompilationUnit> result = parser.parse(file);
 
     Optional<CompilationUnit> optional = result.getResult();
     if (optional.isEmpty()) {
@@ -216,18 +205,39 @@ public class JavaLanguageFrontend extends LanguageFrontend {
   }
 
   @Override
-  @NonNull
-  public <T> Region getRegionFromRawNode(T astNode) {
+  @Nullable
+  public <T> PhysicalLocation getLocationFromRawNode(T astNode) {
     if (astNode instanceof Node) {
       Node node = (Node) astNode;
+
+      // find compilation unit of node
+      CompilationUnit cu = node.findCompilationUnit().orElse(null);
+      if (cu == null) {
+        return null;
+      }
+
+      // retrieve storage
+      CompilationUnit.Storage storage = cu.getStorage().orElse(null);
+      if (storage == null) {
+        return null;
+      }
+
       Optional<Range> optional = node.getRange();
       if (optional.isPresent()) {
         Range r = optional.get();
-        return new Region(
-            r.begin.line, r.begin.column, r.end.line, r.end.column + 1); // +1 for SARIF compliance
+
+        Region region =
+            new Region(
+                r.begin.line,
+                r.begin.column,
+                r.end.line,
+                r.end.column + 1); // +1 for SARIF compliance
+
+        return new PhysicalLocation(storage.getPath().toString(), region);
       }
     }
-    return new Region();
+
+    return null;
   }
 
   public de.fraunhofer.aisec.cpg.graph.Type getTypeAsGoodAsPossible(

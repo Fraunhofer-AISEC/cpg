@@ -26,6 +26,8 @@
 
 package de.fraunhofer.aisec.cpg.frontends.cpp;
 
+import static de.fraunhofer.aisec.cpg.helpers.Util.errorWithFileLocation;
+
 import de.fraunhofer.aisec.cpg.frontends.Handler;
 import de.fraunhofer.aisec.cpg.graph.*;
 import java.util.HashMap;
@@ -80,7 +82,8 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
       } else if (child instanceof CPPASTName) {
         // this is the name of the namespace. Already parsed outside, skipping.
       } else {
-        log.error("Unknown child in namespace: {}", child.getClass());
+        errorWithFileLocation(
+            this.lang, ctx, log, "Unknown child in namespace: {}", child.getClass());
       }
     }
     lang.getScopeManager().enterScope(declaration);
@@ -149,30 +152,32 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
       if (ctx.getDeclSpecifier() != null) {
         if (ctx.getDeclSpecifier() instanceof CPPASTCompositeTypeSpecifier) {
           // probably a class or struct declaration
-          Declaration declaration =
-              this.lang
-                  .getDeclaratorHandler()
-                  .handle((CPPASTCompositeTypeSpecifier) ctx.getDeclSpecifier());
-
-          return declaration;
+          return this.lang
+              .getDeclaratorHandler()
+              .handle((CPPASTCompositeTypeSpecifier) ctx.getDeclSpecifier());
         } else {
-          log.error(
-              "Unknown Declspecifier in SimpleDeclaration: {}", ctx.getDeclSpecifier().getClass());
+          errorWithFileLocation(
+              this.lang,
+              ctx,
+              log,
+              "Unknown DeclSpecifier in SimpleDeclaration: {}",
+              ctx.getDeclSpecifier().getClass());
         }
       } else {
-        log.error("Declspecifier is null");
+        errorWithFileLocation(this.lang, ctx, log, ("DeclSpecifier is null"));
       }
     } else if (ctx.getDeclarators().length == 1) {
 
       List<Declaration> handle = (this.lang).getDeclarationListHandler().handle(ctx);
       if (handle.size() != 1) {
-        log.error("Invalid declaration generation");
+        errorWithFileLocation(this.lang, ctx, log, "Invalid declaration generation");
         return NodeBuilder.newDeclaration("");
       }
 
       return handle.get(0);
     } else {
-      log.error("More than one declaration, this should not happen here.");
+      errorWithFileLocation(
+          this.lang, ctx, log, "More than one declaration, this should not happen here.");
     }
 
     return null;
