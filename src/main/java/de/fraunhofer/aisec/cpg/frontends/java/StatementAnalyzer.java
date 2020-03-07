@@ -53,7 +53,34 @@ import com.github.javaparser.ast.type.ReferenceType;
 import com.github.javaparser.ast.type.UnionType;
 import com.github.javaparser.utils.Pair;
 import de.fraunhofer.aisec.cpg.frontends.Handler;
-import de.fraunhofer.aisec.cpg.graph.*;
+import de.fraunhofer.aisec.cpg.graph.AssertStatement;
+import de.fraunhofer.aisec.cpg.graph.BreakStatement;
+import de.fraunhofer.aisec.cpg.graph.CaseStatement;
+import de.fraunhofer.aisec.cpg.graph.CatchClause;
+import de.fraunhofer.aisec.cpg.graph.CompoundStatement;
+import de.fraunhofer.aisec.cpg.graph.ContinueStatement;
+import de.fraunhofer.aisec.cpg.graph.Declaration;
+import de.fraunhofer.aisec.cpg.graph.DeclarationStatement;
+import de.fraunhofer.aisec.cpg.graph.DefaultStatement;
+import de.fraunhofer.aisec.cpg.graph.DoStatement;
+import de.fraunhofer.aisec.cpg.graph.EmptyStatement;
+import de.fraunhofer.aisec.cpg.graph.ExplicitConstructorInvocation;
+import de.fraunhofer.aisec.cpg.graph.Expression;
+import de.fraunhofer.aisec.cpg.graph.ExpressionList;
+import de.fraunhofer.aisec.cpg.graph.ForEachStatement;
+import de.fraunhofer.aisec.cpg.graph.ForStatement;
+import de.fraunhofer.aisec.cpg.graph.IfStatement;
+import de.fraunhofer.aisec.cpg.graph.LabelStatement;
+import de.fraunhofer.aisec.cpg.graph.Literal;
+import de.fraunhofer.aisec.cpg.graph.NodeBuilder;
+import de.fraunhofer.aisec.cpg.graph.ReturnStatement;
+import de.fraunhofer.aisec.cpg.graph.SwitchStatement;
+import de.fraunhofer.aisec.cpg.graph.SynchronizedStatement;
+import de.fraunhofer.aisec.cpg.graph.TryStatement;
+import de.fraunhofer.aisec.cpg.graph.Type;
+import de.fraunhofer.aisec.cpg.graph.UnaryOperator;
+import de.fraunhofer.aisec.cpg.graph.VariableDeclaration;
+import de.fraunhofer.aisec.cpg.graph.WhileStatement;
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation;
 import de.fraunhofer.aisec.cpg.sarif.Region;
 import java.util.HashSet;
@@ -220,30 +247,45 @@ public class StatementAnalyzer
     } else {
       code = stmt.toString();
     }
+
     ForStatement statement = NodeBuilder.newForStatement(code);
+    lang.setCodeAndRegion(statement, stmt);
     lang.getScopeManager().enterScope(statement);
 
     if (forStmt.getInitialization().size() > 1) {
-      // Include artificial Expressionlist and initializer statement.
       PhysicalLocation ofExprList = null;
+
+      // code will be set later
+      ExpressionList initExprList = NodeBuilder.newExpressionList(null);
+
       for (com.github.javaparser.ast.expr.Expression initExpr : forStmt.getInitialization()) {
-        if (ofExprList == null) {
-          ofExprList = lang.getLocationFromRawNode(initExpr);
-        } else {
-          ofExprList.setRegion(
-              lang.mergeRegions(
-                  ofExprList.getRegion(), lang.getLocationFromRawNode(initExpr).getRegion()));
+        de.fraunhofer.aisec.cpg.graph.Statement s = lang.getExpressionHandler().handle(initExpr);
+
+        // make sure location is set
+        lang.setCodeAndRegion(s, initExpr);
+        initExprList.addExpression(s);
+
+        // can not update location
+        if (s.getLocation() == null) {
+          continue;
         }
+
+        if (ofExprList == null) {
+          ofExprList = s.getLocation();
+        }
+
+        ofExprList.setRegion(
+            lang.mergeRegions(ofExprList.getRegion(), s.getLocation().getRegion()));
       }
 
-      String initString =
-          lang.getCodeOfSubregion(
-              statement, lang.getLocationFromRawNode(stmt).getRegion(), ofExprList.getRegion());
-      ExpressionList initExprList = NodeBuilder.newExpressionList(initString);
-      initExprList.setLocation(ofExprList);
-      forStmt
-          .getInitialization()
-          .forEach(expr -> initExprList.addExpression(lang.getExpressionHandler().handle(expr)));
+      // set code and location of init list
+      if (statement.getLocation() != null && ofExprList != null) {
+        String initCode =
+            lang.getCodeOfSubregion(
+                statement, statement.getLocation().getRegion(), ofExprList.getRegion());
+        initExprList.setLocation(ofExprList);
+        initExprList.setCode(initCode);
+      }
       statement.setInitializerStatement(initExprList);
     } else if (forStmt.getInitialization().size() == 1) {
       statement.setInitializerStatement(
@@ -264,30 +306,40 @@ public class StatementAnalyzer
     }
 
     if (forStmt.getUpdate().size() > 1) {
-      // Include artificial Expressionlist and initializer statement.
-      PhysicalLocation ofExprList = null;
-      for (com.github.javaparser.ast.expr.Expression initExpr : forStmt.getUpdate()) {
-        if (ofExprList == null) {
-          ofExprList = lang.getLocationFromRawNode(initExpr);
-        } else {
-          ofExprList.setRegion(
-              lang.mergeRegions(
-                  ofExprList.getRegion(), lang.getLocationFromRawNode(initExpr).getRegion()));
+      PhysicalLocation ofExprList = statement.getLocation();
+
+      // code will be set later
+      ExpressionList iterationExprList = NodeBuilder.newExpressionList(null);
+
+      for (com.github.javaparser.ast.expr.Expression updateExpr : forStmt.getUpdate()) {
+        de.fraunhofer.aisec.cpg.graph.Statement s = lang.getExpressionHandler().handle(updateExpr);
+
+        // make sure location is set
+        lang.setCodeAndRegion(s, updateExpr);
+        iterationExprList.addExpression(s);
+
+        // can not update location
+        if (s.getLocation() == null) {
+          continue;
         }
+
+        if (ofExprList == null) {
+          ofExprList = s.getLocation();
+        }
+
+        ofExprList.setRegion(
+            lang.mergeRegions(ofExprList.getRegion(), s.getLocation().getRegion()));
       }
 
-      String updateString =
-          lang.getCodeOfSubregion(
-              statement, lang.getLocationFromRawNode(stmt).getRegion(), ofExprList.getRegion());
-      ExpressionList updateExprList = NodeBuilder.newExpressionList(updateString);
-      updateExprList.setLocation(ofExprList);
-      forStmt
-          .getUpdate()
-          .forEach(
-              expr ->
-                  updateExprList.addExpression(
-                      (Expression) lang.getExpressionHandler().handle(expr)));
-      statement.setIterationExpression(updateExprList);
+      // set code and location of init list
+      if (statement.getLocation() != null && ofExprList != null) {
+        String updateCode =
+            lang.getCodeOfSubregion(
+                statement, statement.getLocation().getRegion(), ofExprList.getRegion());
+        iterationExprList.setLocation(ofExprList);
+        iterationExprList.setCode(updateCode);
+      }
+      statement.setIterationExpression(iterationExprList);
     } else if (forStmt.getUpdate().size() == 1) {
       statement.setIterationExpression(
           (Expression) lang.getExpressionHandler().handle(forStmt.getUpdate().get(0)));

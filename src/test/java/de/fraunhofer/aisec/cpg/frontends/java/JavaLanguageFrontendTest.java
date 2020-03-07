@@ -43,8 +43,10 @@ import de.fraunhofer.aisec.cpg.graph.ConstructorDeclaration;
 import de.fraunhofer.aisec.cpg.graph.DeclarationStatement;
 import de.fraunhofer.aisec.cpg.graph.DeclaredReferenceExpression;
 import de.fraunhofer.aisec.cpg.graph.DefaultStatement;
+import de.fraunhofer.aisec.cpg.graph.ExpressionList;
 import de.fraunhofer.aisec.cpg.graph.FieldDeclaration;
 import de.fraunhofer.aisec.cpg.graph.ForEachStatement;
+import de.fraunhofer.aisec.cpg.graph.ForStatement;
 import de.fraunhofer.aisec.cpg.graph.InitializerListExpression;
 import de.fraunhofer.aisec.cpg.graph.Literal;
 import de.fraunhofer.aisec.cpg.graph.MemberExpression;
@@ -121,6 +123,33 @@ class JavaLanguageFrontendTest {
         9223372036854775807L,
         ((Literal) Objects.requireNonNull(d.getInitializerAs(UnaryOperator.class)).getInput())
             .getValue());
+  }
+
+  @Test
+  void testFor() throws TranslationException {
+    TranslationUnitDeclaration tu =
+        new JavaLanguageFrontend(config, new ScopeManager())
+            .parse(new File("src/test/resources/components/ForStmt.java"));
+
+    RecordDeclaration declaration = (RecordDeclaration) tu.getDeclarations().get(0);
+
+    MethodDeclaration main = declaration.getMethods().get(0);
+
+    VariableDeclaration ls = main.getVariableDeclarationByName("ls").orElse(null);
+    assertNotNull(ls);
+
+    ForStatement forStatement = main.getBodyStatementAs(2, ForStatement.class);
+    assertNotNull(forStatement);
+
+    // initializer is an expression list
+    ExpressionList list = (ExpressionList) forStatement.getInitializerStatement();
+    assertNotNull(list);
+
+    // check calculated location of sub-expression
+    PhysicalLocation location = list.getLocation();
+    assertNotNull(location);
+
+    assertEquals(new Region(9, 10, 9, 22), location.getRegion());
   }
 
   @Test

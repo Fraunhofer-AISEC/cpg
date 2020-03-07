@@ -27,7 +27,9 @@
 package de.fraunhofer.aisec.cpg.frontends;
 
 import de.fraunhofer.aisec.cpg.TranslationConfiguration;
-import de.fraunhofer.aisec.cpg.graph.*;
+import de.fraunhofer.aisec.cpg.graph.Node;
+import de.fraunhofer.aisec.cpg.graph.RecordDeclaration;
+import de.fraunhofer.aisec.cpg.graph.TranslationUnitDeclaration;
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager;
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation;
 import de.fraunhofer.aisec.cpg.sarif.Region;
@@ -233,7 +235,7 @@ public abstract class LanguageFrontend {
               + subRegion.getStartColumn();
     }
     if (subRegion.getEndLine() == nodeRegion.getStartLine()) {
-      end = subRegion.getStartColumn() - nodeRegion.getStartColumn();
+      end = subRegion.getEndColumn() - nodeRegion.getStartColumn();
     } else {
       end =
           StringUtils.ordinalIndexOf(
