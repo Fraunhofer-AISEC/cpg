@@ -433,6 +433,8 @@ public class StatementAnalyzer
   public de.fraunhofer.aisec.cpg.graph.Statement handleCaseDefaultStatement(
       com.github.javaparser.ast.expr.Expression caseExpression, SwitchEntry sEntry) {
 
+    PhysicalLocation parentLocation = lang.getLocationFromRawNode(sEntry);
+
     Optional<TokenRange> optionalTokenRange = sEntry.getTokenRange();
     Pair<JavaToken, JavaToken> caseTokens = null;
     if (optionalTokenRange.isEmpty()) {
@@ -442,6 +444,11 @@ public class StatementAnalyzer
 
     if (caseExpression == null) {
       if (optionalTokenRange.isPresent()) {
+        /*
+        TODO: not sure if this is really necessary, it seems to be the same location as
+         parentLocation, except that column starts 1 character later and I am not sure if
+         this is correct anyway
+        */
         // Compute region and code for self generated default statement to match the c++ versions
         caseTokens =
             getOuterTokensWithText(
@@ -452,7 +459,8 @@ public class StatementAnalyzer
       }
       DefaultStatement defaultStatement =
           NodeBuilder.newDefaultStatement(getCodeBetweenTokens(caseTokens.a, caseTokens.b));
-      defaultStatement.setLocation(getLocationsFromTokens(caseTokens.a, caseTokens.b));
+      defaultStatement.setLocation(
+          getLocationsFromTokens(parentLocation, caseTokens.a, caseTokens.b));
       return defaultStatement;
     }
 
@@ -462,12 +470,18 @@ public class StatementAnalyzer
           getOuterTokensWithText(
               "case", ":", optionalTokenRange.get().getBegin(), optionalTokenRange.get().getEnd());
     }
+
     CaseStatement caseStatement =
         NodeBuilder.newCaseStatement(getCodeBetweenTokens(caseTokens.a, caseTokens.b));
     caseStatement.setCaseExpression(
         (Expression) lang.getExpressionHandler().handle(caseExpression));
 
-    caseStatement.setLocation(getLocationsFromTokens(caseTokens.a, caseTokens.b));
+    /*
+    TODO: not sure if this is really necessary, it seems to be the same location as
+     parentLocation, except that column starts 1 character later and I am not sure if
+     this is correct anyway
+    */
+    caseStatement.setLocation(getLocationsFromTokens(parentLocation, caseTokens.a, caseTokens.b));
 
     return caseStatement;
   }
@@ -496,7 +510,13 @@ public class StatementAnalyzer
   }
 
   @Nullable
-  public PhysicalLocation getLocationsFromTokens(JavaToken startToken, JavaToken endToken) {
+  public PhysicalLocation getLocationsFromTokens(
+      PhysicalLocation parentLocation, JavaToken startToken, JavaToken endToken) {
+    // cannot construct location without parent location
+    if (parentLocation == null) {
+      return null;
+    }
+
     if (startToken != null && endToken != null) {
       Optional<Range> startOpt = startToken.getRange();
       Optional<Range> endOpt = endToken.getRange();
@@ -507,7 +527,7 @@ public class StatementAnalyzer
         Region region =
             new Region(rstart.begin.line, rstart.begin.column, rend.end.line, rend.end.column + 1);
 
-        return new PhysicalLocation("", region);
+        return new PhysicalLocation(parentLocation.getArtifactLocation().getUri(), region);
       }
     }
 
@@ -534,6 +554,9 @@ public class StatementAnalyzer
     SwitchStmt switchStmt = stmt.asSwitchStmt();
     SwitchStatement switchStatement = NodeBuilder.newSwitchStatement(stmt.toString());
 
+    // make sure location is set
+    lang.setCodeAndRegion(switchStatement, switchStmt);
+
     lang.getScopeManager().enterScope(switchStatement);
 
     switchStatement.setSelector(
@@ -551,7 +574,8 @@ public class StatementAnalyzer
 
     CompoundStatement compoundStatement =
         NodeBuilder.newCompoundStatement(getCodeBetweenTokens(start, end));
-    compoundStatement.setLocation(getLocationsFromTokens(start, end));
+    compoundStatement.setLocation(
+        getLocationsFromTokens(switchStatement.getLocation(), start, end));
 
     for (SwitchEntry sentry : switchStmt.getEntries()) {
 

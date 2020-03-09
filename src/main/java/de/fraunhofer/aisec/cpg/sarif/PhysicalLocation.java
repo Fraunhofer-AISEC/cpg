@@ -26,6 +26,7 @@
 
 package de.fraunhofer.aisec.cpg.sarif;
 
+import java.net.URI;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
@@ -43,14 +44,14 @@ public class PhysicalLocation {
 
   public static class ArtifactLocation {
 
-    @NonNull private String uri;
+    @NonNull private URI uri;
 
-    public ArtifactLocation(@NonNull String uri) {
+    public ArtifactLocation(@NonNull URI uri) {
       this.uri = uri;
     }
 
     @NonNull
-    public String getUri() {
+    public URI getUri() {
       return this.uri;
     }
   }
@@ -59,7 +60,7 @@ public class PhysicalLocation {
 
   @NonNull private Region region;
 
-  public PhysicalLocation(@NonNull String uri, @NonNull Region region) {
+  public PhysicalLocation(URI uri, @NonNull Region region) {
     this.artifactLocation = new ArtifactLocation(uri);
     this.region = region;
   }

@@ -42,6 +42,7 @@ import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation;
 import de.fraunhofer.aisec.cpg.sarif.Region;
 import java.io.File;
 import java.lang.reflect.Field;
+import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Set;
 import org.checkerframework.checker.nullness.qual.NonNull;
@@ -284,7 +285,7 @@ public class CXXLanguageFrontend extends LanguageFrontend {
                 fLocation.getEndingLineNumber(),
                 endColumn);
 
-        return new PhysicalLocation(node.getContainingFilename(), region);
+        return new PhysicalLocation(Path.of(node.getContainingFilename()).toUri(), region);
       }
     }
 

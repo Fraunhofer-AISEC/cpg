@@ -157,7 +157,9 @@ public class JavaLanguageFrontend extends LanguageFrontend {
         declaration.add(incl);
       }
 
-      if (packDecl != null) scopeManager.leaveScope(namespaceDeclaration);
+      if (packDecl != null) {
+        scopeManager.leaveScope(namespaceDeclaration);
+      }
       bench.stop();
 
       return fileDeclaration;
@@ -238,7 +240,7 @@ public class JavaLanguageFrontend extends LanguageFrontend {
                 r.end.line,
                 r.end.column + 1); // +1 for SARIF compliance
 
-        return new PhysicalLocation(storage.getPath().toString(), region);
+        return new PhysicalLocation(storage.getPath().toUri(), region);
       }
     }
 

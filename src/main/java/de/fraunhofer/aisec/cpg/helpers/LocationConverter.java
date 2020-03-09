@@ -30,6 +30,8 @@ import static java.lang.Math.toIntExact;
 
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation;
 import de.fraunhofer.aisec.cpg.sarif.Region;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.HashMap;
 import java.util.Map;
 import org.neo4j.ogm.typeconversion.CompositeAttributeConverter;
@@ -40,7 +42,7 @@ public class LocationConverter implements CompositeAttributeConverter<PhysicalLo
   public Map<String, ?> toGraphProperties(PhysicalLocation value) {
     Map<String, Object> properties = new HashMap<>();
     if (value != null) {
-      properties.put("file", value.getArtifactLocation().getUri());
+      properties.put("artifact", value.getArtifactLocation().getUri());
       properties.put("startLine", value.getRegion().getStartLine());
       properties.put("endLine", value.getRegion().getEndLine());
       properties.put("startColumn", value.getRegion().getStartColumn());
@@ -56,10 +58,10 @@ public class LocationConverter implements CompositeAttributeConverter<PhysicalLo
       int endLine = toIntExact((Integer) value.get("endLine"));
       int startColumn = toIntExact((Integer) value.get("startColumn"));
       int endColumn = toIntExact((Integer) value.get("endColumn"));
-      String uri = (String) value.get("file");
+      URI uri = new URI((String) value.get("artifact"));
 
       return new PhysicalLocation(uri, new Region(startLine, startColumn, endLine, endColumn));
-    } catch (NullPointerException e) {
+    } catch (NullPointerException | URISyntaxException e) {
       return null;
     }
   }
