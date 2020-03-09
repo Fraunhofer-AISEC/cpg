@@ -786,6 +786,12 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
 
     BigInteger bigValue;
 
+    String suffix = getSuffix(value);
+
+    // first, strip the suffix from the value
+    String strippedValue = value.substring(0, value.length() - suffix.length());
+
+    // next, check for possible prefixes
     int radix = 10;
     int offset = 0;
     if (value.startsWith("0b")) {
@@ -794,13 +800,13 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
     } else if (value.startsWith("0x")) {
       radix = 16; // hex
       offset = 2; // len("0x")
-    } else if (value.startsWith("0") && value.length() > 1) {
+    } else if (value.startsWith("0") && strippedValue.length() > 1) {
       radix = 8; // octal
       offset = 1; // len("0")
     }
 
-    String suffix = getSuffix(value);
-    String strippedValue = value.substring(offset, value.length() - suffix.length());
+    // strip the prefix
+    strippedValue = strippedValue.substring(offset);
 
     // basically we parse everything as BigInteger and then decide what to do
     bigValue = new BigInteger(strippedValue, radix);

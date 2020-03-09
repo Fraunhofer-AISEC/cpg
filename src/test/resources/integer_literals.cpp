@@ -1,3 +1,10 @@
+void zero() {
+  int i = 0;
+  long l_with_suffix = 0l;
+  long long l_long_long_with_suffix = 0ll;
+  unsigned long long l_unsigned_long_long_with_suffix = 0ull;
+}
+
 void decimal() {
   int i = 42;
   long l = 9223372036854775807; // still fits into long
