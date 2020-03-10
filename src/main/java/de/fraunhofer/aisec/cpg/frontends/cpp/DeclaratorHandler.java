@@ -36,7 +36,6 @@ import de.fraunhofer.aisec.cpg.graph.MethodDeclaration;
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder;
 import de.fraunhofer.aisec.cpg.graph.ParamVariableDeclaration;
 import de.fraunhofer.aisec.cpg.graph.RecordDeclaration;
-import de.fraunhofer.aisec.cpg.graph.Region;
 import de.fraunhofer.aisec.cpg.graph.Type;
 import de.fraunhofer.aisec.cpg.graph.ValueDeclaration;
 import de.fraunhofer.aisec.cpg.graph.VariableDeclaration;
@@ -256,39 +255,39 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
               Type.getUnknown(),
               ctx.getRawSignature());
       ((VariableDeclaration) result).setInitializer(initializer);
-      result.setRegion(lang.getRegionFromRawNode(ctx));
+      result.setLocation(lang.getLocationFromRawNode(ctx));
       result.getType().setFunctionPtr(true);
       result.refreshType();
     } else {
       RecordScope recordScope =
           (RecordScope) lang.getScopeManager().getFirstScopeThat(RecordScope.class::isInstance);
-      if (recordScope != null) {
-        // field
-        String code = ctx.getRawSignature();
-        Pattern namePattern = Pattern.compile("\\((\\*|.+\\*)(?<name>[^)]*)");
-        Matcher matcher = namePattern.matcher(code);
-        String name = "";
-        if (matcher.find()) {
-          name = matcher.group("name").strip();
-        }
-        result =
-            NodeBuilder.newFieldDeclaration(
-                name,
-                Type.getUnknown(),
-                Collections.emptyList(),
-                code,
-                lang.getRegionFromRawNode(ctx),
-                initializer);
-        result.setRegion(lang.getRegionFromRawNode(ctx));
-        result.getType().setFunctionPtr(true);
-        result.refreshType();
-      } else {
+      // if (recordScope != null) {
+      // field
+      String code = ctx.getRawSignature();
+      Pattern namePattern = Pattern.compile("\\((\\*|.+\\*)(?<name>[^)]*)");
+      Matcher matcher = namePattern.matcher(code);
+      String name = "";
+      if (matcher.find()) {
+        name = matcher.group("name").strip();
+      }
+      result =
+          NodeBuilder.newFieldDeclaration(
+              name,
+              Type.getUnknown(),
+              Collections.emptyList(),
+              code,
+              lang.getLocationFromRawNode(ctx),
+              initializer);
+      result.setLocation(lang.getLocationFromRawNode(ctx));
+      result.getType().setFunctionPtr(true);
+      result.refreshType();
+      /*} else {
         // not in a record and not in a field, strange. This should not happen
         log.error(
             "Function pointer declaration that is neither in a function nor in a record. "
                 + "This should not happen!");
         return null;
-      }
+      }*/
     }
     return result;
   }
@@ -322,7 +321,7 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
               new de.fraunhofer.aisec.cpg.graph.Type(ctx.getName().toString()),
               new ArrayList<>(),
               "this",
-              new Region(-1, -1, -1, -1),
+              null,
               null);
       recordDeclaration.getFields().add(thisDeclaration);
       lang.getScopeManager().addValueDeclaration(thisDeclaration);

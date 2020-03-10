@@ -26,18 +26,27 @@
 
 package de.fraunhofer.aisec.cpg.helpers;
 
+import static de.fraunhofer.aisec.cpg.sarif.PhysicalLocation.locationLink;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
+import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
 import de.fraunhofer.aisec.cpg.graph.Node;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.*;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.IdentityHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import org.checkerframework.checker.nullness.qual.NonNull;
+import org.slf4j.Logger;
 
 public class Util {
 
@@ -219,6 +228,30 @@ public class Util {
     } else {
       return "";
     }
+  }
+
+  public static <S> void warnWithFileLocation(
+      @NonNull LanguageFrontend lang, S astNode, Logger log, String format, Object... arguments) {
+    log.warn(
+        String.format("%s: %s", locationLink(lang.getLocationFromRawNode(astNode)), format),
+        arguments);
+  }
+
+  public static <S> void errorWithFileLocation(
+      @NonNull LanguageFrontend lang, S astNode, Logger log, String format, Object... arguments) {
+    log.error(
+        String.format("%s: %s", locationLink(lang.getLocationFromRawNode(astNode)), format),
+        arguments);
+  }
+
+  public static void warnWithFileLocation(
+      @NonNull Node node, Logger log, String format, Object... arguments) {
+    log.warn(String.format("%s: %s", locationLink(node.getLocation()), format), arguments);
+  }
+
+  public static void errorWithFileLocation(
+      @NonNull Node node, Logger log, String format, Object... arguments) {
+    log.error(String.format("%s: %s", locationLink(node.getLocation()), format), arguments);
   }
 
   public enum Connect {

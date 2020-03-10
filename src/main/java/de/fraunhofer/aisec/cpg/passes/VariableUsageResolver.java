@@ -26,6 +26,8 @@
 
 package de.fraunhofer.aisec.cpg.passes;
 
+import static de.fraunhofer.aisec.cpg.helpers.Util.warnWithFileLocation;
+
 import de.fraunhofer.aisec.cpg.TranslationResult;
 import de.fraunhofer.aisec.cpg.graph.Declaration;
 import de.fraunhofer.aisec.cpg.graph.DeclaredReferenceExpression;
@@ -38,7 +40,6 @@ import de.fraunhofer.aisec.cpg.graph.MethodDeclaration;
 import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder;
 import de.fraunhofer.aisec.cpg.graph.RecordDeclaration;
-import de.fraunhofer.aisec.cpg.graph.Region;
 import de.fraunhofer.aisec.cpg.graph.StaticReferenceExpression;
 import de.fraunhofer.aisec.cpg.graph.TranslationUnitDeclaration;
 import de.fraunhofer.aisec.cpg.graph.Type;
@@ -211,12 +212,7 @@ public class VariableUsageResolver extends Pass {
       if (!refersTo.isEmpty()) {
         ref.setRefersTo(refersTo);
       } else {
-        Region region = current.getRegion();
-        int startLine = -1;
-        if (region != null) {
-          startLine = region.getStartLine();
-        }
-        log.info("did not find a declaration for {} (line {})", current.getCode(), startLine);
+        warnWithFileLocation(current, log, "Did not find a declaration for {}");
       }
     }
   }
@@ -343,12 +339,7 @@ public class VariableUsageResolver extends Pass {
     if (target.isEmpty()) {
       FieldDeclaration declaration =
           NodeBuilder.newFieldDeclaration(
-              reference.getName(),
-              reference.getType(),
-              Collections.emptyList(),
-              "",
-              new Region(),
-              null);
+              reference.getName(), reference.getType(), Collections.emptyList(), "", null, null);
       declarations.add(declaration);
       declaration.setImplicit(true);
       // lang.getScopeManager().addValueDeclaration(declaration);

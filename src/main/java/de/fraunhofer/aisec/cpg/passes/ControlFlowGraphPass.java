@@ -433,11 +433,11 @@ public class ControlFlowGraphPass extends Pass {
     public String toString() {
       return this.label
           + ": "
-          + this.start.getRegion().getStartLine()
+          + this.start.getLocation().getRegion().getStartLine()
           + " to "
-          + this.end.getRegion().getStartLine()
+          + this.end.getLocation().getRegion().getStartLine()
           + ", will break to "
-          + this.breakLocation.getRegion().getStartLine();
+          + this.breakLocation.getLocation().getRegion().getStartLine();
     }
   }
 }

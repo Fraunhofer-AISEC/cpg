@@ -26,7 +26,6 @@
 
 package de.fraunhofer.aisec.cpg.frontends.java;
 
-import com.github.javaparser.Position;
 import com.github.javaparser.ast.ImportDeclaration;
 import com.github.javaparser.ast.NodeList;
 import com.github.javaparser.ast.body.AnnotationDeclaration;
@@ -36,7 +35,6 @@ import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
 import com.github.javaparser.ast.body.InitializerDeclaration;
 import com.github.javaparser.ast.body.Parameter;
 import com.github.javaparser.ast.body.VariableDeclarator;
-import com.github.javaparser.ast.nodeTypes.NodeWithRange;
 import com.github.javaparser.ast.stmt.BlockStmt;
 import com.github.javaparser.ast.stmt.ReturnStmt;
 import com.github.javaparser.ast.stmt.Statement;
@@ -53,9 +51,9 @@ import de.fraunhofer.aisec.cpg.graph.MethodDeclaration;
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder;
 import de.fraunhofer.aisec.cpg.graph.ParamVariableDeclaration;
 import de.fraunhofer.aisec.cpg.graph.RecordDeclaration;
-import de.fraunhofer.aisec.cpg.graph.Region;
 import de.fraunhofer.aisec.cpg.graph.Type;
 import de.fraunhofer.aisec.cpg.passes.scopes.RecordScope;
+import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -260,7 +258,7 @@ public class DeclarationHandler
             new de.fraunhofer.aisec.cpg.graph.Type(name),
             new ArrayList<>(),
             "this",
-            new Region(-1, -1, -1, -1),
+            null,
             null);
     recordDeclaration.getFields().add(thisDeclaration);
     lang.getScopeManager().addValueDeclaration(thisDeclaration);
@@ -310,7 +308,7 @@ public class DeclarationHandler
             .map(modifier -> modifier.getKeyword().asString())
             .collect(Collectors.toList());
 
-    Region region = getRegion(fieldDecl);
+    PhysicalLocation location = this.lang.getLocationFromRawNode(fieldDecl);
 
     de.fraunhofer.aisec.cpg.graph.Expression initializer =
         (de.fraunhofer.aisec.cpg.graph.Expression)
@@ -333,7 +331,7 @@ public class DeclarationHandler
             type,
             modifiers,
             variable.toString(),
-            region,
+            location,
             initializer);
     lang.getScopeManager().addValueDeclaration(fieldDeclaration);
 
@@ -348,10 +346,10 @@ public class DeclarationHandler
   public EnumDeclaration handleEnumDeclaration(
       com.github.javaparser.ast.body.EnumDeclaration enumDecl) {
     String name = getAbsoluteName(enumDecl.getNameAsString());
-    Region region = getRegion(enumDecl);
+    PhysicalLocation location = this.lang.getLocationFromRawNode(enumDecl);
 
     de.fraunhofer.aisec.cpg.graph.EnumDeclaration enumDeclaration =
-        NodeBuilder.newEnumDeclaration(name, enumDecl.toString(), region);
+        NodeBuilder.newEnumDeclaration(name, enumDecl.toString(), location);
     List<EnumConstantDeclaration> entries =
         enumDecl.getEntries().stream()
             .map(e -> (EnumConstantDeclaration) handle(e))
@@ -373,7 +371,9 @@ public class DeclarationHandler
   public EnumConstantDeclaration handleEnumConstantDeclaration(
       com.github.javaparser.ast.body.EnumConstantDeclaration enumConstDecl) {
     return NodeBuilder.newEnumConstantDeclaration(
-        enumConstDecl.getNameAsString(), enumConstDecl.toString(), getRegion(enumConstDecl));
+        enumConstDecl.getNameAsString(),
+        enumConstDecl.toString(),
+        this.lang.getLocationFromRawNode(enumConstDecl));
   }
 
   public Declaration /* TODO refine return type*/ handleAnnotationDeclaration(
@@ -384,17 +384,6 @@ public class DeclarationHandler
   public Declaration /* TODO refine return type*/ handleAnnotationMemberDeclaration(
       AnnotationMemberDeclaration annotationMemberDecl) {
     return new Declaration();
-  }
-
-  private Region getRegion(NodeWithRange<?> node) {
-    Optional<Position> begin = node.getBegin();
-    Optional<Position> end = node.getEnd();
-    Position unknownPosition = Position.pos(-1, -1);
-    return new Region(
-        begin.orElse(unknownPosition).line,
-        begin.orElse(unknownPosition).column,
-        end.orElse(unknownPosition).line,
-        end.orElse(unknownPosition).column);
   }
 
   private String getAbsoluteName(String name) {

@@ -29,9 +29,10 @@ package de.fraunhofer.aisec.cpg.frontends;
 import de.fraunhofer.aisec.cpg.TranslationConfiguration;
 import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.RecordDeclaration;
-import de.fraunhofer.aisec.cpg.graph.Region;
 import de.fraunhofer.aisec.cpg.graph.TranslationUnitDeclaration;
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager;
+import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation;
+import de.fraunhofer.aisec.cpg.sarif.Region;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -172,10 +173,10 @@ public abstract class LanguageFrontend {
    *
    * @param <T> the raw ast type
    * @param astNode the ast node
-   * @return the region
+   * @return the location
    */
-  @NonNull
-  public abstract <T> Region getRegionFromRawNode(T astNode);
+  @Nullable
+  public abstract <T> PhysicalLocation getLocationFromRawNode(T astNode);
 
   public <N, S> void setCodeAndRegion(@NonNull N cpgNode, @NonNull S astNode) {
     if (cpgNode instanceof Node) {
@@ -187,7 +188,7 @@ public abstract class LanguageFrontend {
           log.warn("Unexpected: No code for node {}", astNode.toString());
         }
       }
-      ((Node) cpgNode).setRegion(getRegionFromRawNode(astNode));
+      ((Node) cpgNode).setLocation(getLocationFromRawNode(astNode));
     }
   }
 
@@ -234,7 +235,7 @@ public abstract class LanguageFrontend {
               + subRegion.getStartColumn();
     }
     if (subRegion.getEndLine() == nodeRegion.getStartLine()) {
-      end = subRegion.getStartColumn() - nodeRegion.getStartColumn();
+      end = subRegion.getEndColumn() - nodeRegion.getStartColumn();
     } else {
       end =
           StringUtils.ordinalIndexOf(

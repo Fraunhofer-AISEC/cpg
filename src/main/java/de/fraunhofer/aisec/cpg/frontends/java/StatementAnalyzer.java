@@ -73,7 +73,6 @@ import de.fraunhofer.aisec.cpg.graph.IfStatement;
 import de.fraunhofer.aisec.cpg.graph.LabelStatement;
 import de.fraunhofer.aisec.cpg.graph.Literal;
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder;
-import de.fraunhofer.aisec.cpg.graph.Region;
 import de.fraunhofer.aisec.cpg.graph.ReturnStatement;
 import de.fraunhofer.aisec.cpg.graph.SwitchStatement;
 import de.fraunhofer.aisec.cpg.graph.SynchronizedStatement;
@@ -82,10 +81,13 @@ import de.fraunhofer.aisec.cpg.graph.Type;
 import de.fraunhofer.aisec.cpg.graph.UnaryOperator;
 import de.fraunhofer.aisec.cpg.graph.VariableDeclaration;
 import de.fraunhofer.aisec.cpg.graph.WhileStatement;
+import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation;
+import de.fraunhofer.aisec.cpg.sarif.Region;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import org.checkerframework.checker.nullness.qual.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -245,27 +247,45 @@ public class StatementAnalyzer
     } else {
       code = stmt.toString();
     }
+
     ForStatement statement = NodeBuilder.newForStatement(code);
+    lang.setCodeAndRegion(statement, stmt);
     lang.getScopeManager().enterScope(statement);
 
     if (forStmt.getInitialization().size() > 1) {
-      // Include artificial Expressionlist and initializer statement.
-      Region ofExprList = null;
+      PhysicalLocation ofExprList = null;
+
+      // code will be set later
+      ExpressionList initExprList = NodeBuilder.newExpressionList(null);
+
       for (com.github.javaparser.ast.expr.Expression initExpr : forStmt.getInitialization()) {
-        if (ofExprList == null) {
-          ofExprList = lang.getRegionFromRawNode(initExpr);
-        } else {
-          ofExprList = lang.mergeRegions(ofExprList, lang.getRegionFromRawNode(initExpr));
+        de.fraunhofer.aisec.cpg.graph.Statement s = lang.getExpressionHandler().handle(initExpr);
+
+        // make sure location is set
+        lang.setCodeAndRegion(s, initExpr);
+        initExprList.addExpression(s);
+
+        // can not update location
+        if (s.getLocation() == null) {
+          continue;
         }
+
+        if (ofExprList == null) {
+          ofExprList = s.getLocation();
+        }
+
+        ofExprList.setRegion(
+            lang.mergeRegions(ofExprList.getRegion(), s.getLocation().getRegion()));
       }
 
-      String initString =
-          lang.getCodeOfSubregion(statement, lang.getRegionFromRawNode(stmt), ofExprList);
-      ExpressionList initExprList = NodeBuilder.newExpressionList(initString);
-      initExprList.setRegion(ofExprList);
-      forStmt
-          .getInitialization()
-          .forEach(expr -> initExprList.addExpression(lang.getExpressionHandler().handle(expr)));
+      // set code and location of init list
+      if (statement.getLocation() != null && ofExprList != null) {
+        String initCode =
+            lang.getCodeOfSubregion(
+                statement, statement.getLocation().getRegion(), ofExprList.getRegion());
+        initExprList.setLocation(ofExprList);
+        initExprList.setCode(initCode);
+      }
       statement.setInitializerStatement(initExprList);
     } else if (forStmt.getInitialization().size() == 1) {
       statement.setInitializerStatement(
@@ -282,32 +302,44 @@ public class StatementAnalyzer
     // cpp StatementHandler
     if (statement.getCondition() == null) {
       Literal literal = NodeBuilder.newLiteral(true, new Type("boolean"), "true");
-      literal.setRegion(new Region());
       statement.setCondition(literal);
     }
 
     if (forStmt.getUpdate().size() > 1) {
-      // Include artificial Expressionlist and initializer statement.
-      Region ofExprList = null;
-      for (com.github.javaparser.ast.expr.Expression initExpr : forStmt.getUpdate()) {
-        if (ofExprList == null) {
-          ofExprList = lang.getRegionFromRawNode(initExpr);
-        } else {
-          ofExprList = lang.mergeRegions(ofExprList, lang.getRegionFromRawNode(initExpr));
+      PhysicalLocation ofExprList = statement.getLocation();
+
+      // code will be set later
+      ExpressionList iterationExprList = NodeBuilder.newExpressionList(null);
+
+      for (com.github.javaparser.ast.expr.Expression updateExpr : forStmt.getUpdate()) {
+        de.fraunhofer.aisec.cpg.graph.Statement s = lang.getExpressionHandler().handle(updateExpr);
+
+        // make sure location is set
+        lang.setCodeAndRegion(s, updateExpr);
+        iterationExprList.addExpression(s);
+
+        // can not update location
+        if (s.getLocation() == null) {
+          continue;
         }
+
+        if (ofExprList == null) {
+          ofExprList = s.getLocation();
+        }
+
+        ofExprList.setRegion(
+            lang.mergeRegions(ofExprList.getRegion(), s.getLocation().getRegion()));
       }
 
-      String updateString =
-          lang.getCodeOfSubregion(statement, lang.getRegionFromRawNode(stmt), ofExprList);
-      ExpressionList updateExprList = NodeBuilder.newExpressionList(updateString);
-      updateExprList.setRegion(ofExprList);
-      forStmt
-          .getUpdate()
-          .forEach(
-              expr ->
-                  updateExprList.addExpression(
-                      (Expression) lang.getExpressionHandler().handle(expr)));
-      statement.setIterationExpression(updateExprList);
+      // set code and location of init list
+      if (statement.getLocation() != null && ofExprList != null) {
+        String updateCode =
+            lang.getCodeOfSubregion(
+                statement, statement.getLocation().getRegion(), ofExprList.getRegion());
+        iterationExprList.setLocation(ofExprList);
+        iterationExprList.setCode(updateCode);
+      }
+      statement.setIterationExpression(iterationExprList);
     } else if (forStmt.getUpdate().size() == 1) {
       statement.setIterationExpression(
           (Expression) lang.getExpressionHandler().handle(forStmt.getUpdate().get(0)));
@@ -401,6 +433,8 @@ public class StatementAnalyzer
   public de.fraunhofer.aisec.cpg.graph.Statement handleCaseDefaultStatement(
       com.github.javaparser.ast.expr.Expression caseExpression, SwitchEntry sEntry) {
 
+    PhysicalLocation parentLocation = lang.getLocationFromRawNode(sEntry);
+
     Optional<TokenRange> optionalTokenRange = sEntry.getTokenRange();
     Pair<JavaToken, JavaToken> caseTokens = null;
     if (optionalTokenRange.isEmpty()) {
@@ -410,6 +444,11 @@ public class StatementAnalyzer
 
     if (caseExpression == null) {
       if (optionalTokenRange.isPresent()) {
+        /*
+        TODO: not sure if this is really necessary, it seems to be the same location as
+         parentLocation, except that column starts 1 character later and I am not sure if
+         this is correct anyway
+        */
         // Compute region and code for self generated default statement to match the c++ versions
         caseTokens =
             getOuterTokensWithText(
@@ -420,7 +459,8 @@ public class StatementAnalyzer
       }
       DefaultStatement defaultStatement =
           NodeBuilder.newDefaultStatement(getCodeBetweenTokens(caseTokens.a, caseTokens.b));
-      defaultStatement.setRegion(getRegionFromTokens(caseTokens.a, caseTokens.b));
+      defaultStatement.setLocation(
+          getLocationsFromTokens(parentLocation, caseTokens.a, caseTokens.b));
       return defaultStatement;
     }
 
@@ -430,12 +470,18 @@ public class StatementAnalyzer
           getOuterTokensWithText(
               "case", ":", optionalTokenRange.get().getBegin(), optionalTokenRange.get().getEnd());
     }
+
     CaseStatement caseStatement =
         NodeBuilder.newCaseStatement(getCodeBetweenTokens(caseTokens.a, caseTokens.b));
     caseStatement.setCaseExpression(
         (Expression) lang.getExpressionHandler().handle(caseExpression));
 
-    caseStatement.setRegion(getRegionFromTokens(caseTokens.a, caseTokens.b));
+    /*
+    TODO: not sure if this is really necessary, it seems to be the same location as
+     parentLocation, except that column starts 1 character later and I am not sure if
+     this is correct anyway
+    */
+    caseStatement.setLocation(getLocationsFromTokens(parentLocation, caseTokens.a, caseTokens.b));
 
     return caseStatement;
   }
@@ -463,18 +509,29 @@ public class StatementAnalyzer
     return new Pair<>(getPreviousTokenWith(startDelim, start), getNextTokenWith(endDelim, end));
   }
 
-  public Region getRegionFromTokens(JavaToken startToken, JavaToken endToken) {
+  @Nullable
+  public PhysicalLocation getLocationsFromTokens(
+      PhysicalLocation parentLocation, JavaToken startToken, JavaToken endToken) {
+    // cannot construct location without parent location
+    if (parentLocation == null) {
+      return null;
+    }
+
     if (startToken != null && endToken != null) {
       Optional<Range> startOpt = startToken.getRange();
       Optional<Range> endOpt = endToken.getRange();
       if (startOpt.isPresent() && endOpt.isPresent()) {
         Range rstart = startOpt.get();
         Range rend = endOpt.get();
-        return new Region(
-            rstart.begin.line, rstart.begin.column, rend.end.line, rend.end.column + 1);
+
+        Region region =
+            new Region(rstart.begin.line, rstart.begin.column, rend.end.line, rend.end.column + 1);
+
+        return new PhysicalLocation(parentLocation.getArtifactLocation().getUri(), region);
       }
     }
-    return new Region();
+
+    return null;
   }
 
   public String getCodeBetweenTokens(JavaToken startToken, JavaToken endToken) {
@@ -497,6 +554,9 @@ public class StatementAnalyzer
     SwitchStmt switchStmt = stmt.asSwitchStmt();
     SwitchStatement switchStatement = NodeBuilder.newSwitchStatement(stmt.toString());
 
+    // make sure location is set
+    lang.setCodeAndRegion(switchStatement, switchStmt);
+
     lang.getScopeManager().enterScope(switchStatement);
 
     switchStatement.setSelector(
@@ -514,7 +574,8 @@ public class StatementAnalyzer
 
     CompoundStatement compoundStatement =
         NodeBuilder.newCompoundStatement(getCodeBetweenTokens(start, end));
-    compoundStatement.setRegion(getRegionFromTokens(start, end));
+    compoundStatement.setLocation(
+        getLocationsFromTokens(switchStatement.getLocation(), start, end));
 
     for (SwitchEntry sentry : switchStmt.getEntries()) {
 

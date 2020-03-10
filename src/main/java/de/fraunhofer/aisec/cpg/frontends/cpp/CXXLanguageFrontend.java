@@ -32,15 +32,17 @@ import de.fraunhofer.aisec.cpg.frontends.TranslationException;
 import de.fraunhofer.aisec.cpg.graph.Declaration;
 import de.fraunhofer.aisec.cpg.graph.DeclaredReferenceExpression;
 import de.fraunhofer.aisec.cpg.graph.Expression;
-import de.fraunhofer.aisec.cpg.graph.Region;
 import de.fraunhofer.aisec.cpg.graph.TranslationUnitDeclaration;
 import de.fraunhofer.aisec.cpg.graph.Type;
 import de.fraunhofer.aisec.cpg.graph.TypeManager;
 import de.fraunhofer.aisec.cpg.graph.ValueDeclaration;
 import de.fraunhofer.aisec.cpg.helpers.Benchmark;
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager;
+import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation;
+import de.fraunhofer.aisec.cpg.sarif.Region;
 import java.io.File;
 import java.lang.reflect.Field;
+import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Set;
 import org.checkerframework.checker.nullness.qual.NonNull;
@@ -234,7 +236,7 @@ public class CXXLanguageFrontend extends LanguageFrontend {
   @Override
   @NonNull
   @SuppressWarnings("ConstantConditions")
-  public <T> Region getRegionFromRawNode(T astNode) {
+  public <T> PhysicalLocation getLocationFromRawNode(T astNode) {
     if (astNode instanceof ASTNode) {
       ASTNode node = (ASTNode) astNode;
       IASTFileLocation fLocation = node.getFileLocation();
@@ -276,14 +278,18 @@ public class CXXLanguageFrontend extends LanguageFrontend {
             getEndColumnIndex(
                 parentRawSig, node.getFileLocation().getNodeOffset() + node.getLength());
 
-        return new Region(
-            fLocation.getStartingLineNumber(),
-            startColumn,
-            fLocation.getEndingLineNumber(),
-            endColumn);
+        Region region =
+            new Region(
+                fLocation.getStartingLineNumber(),
+                startColumn,
+                fLocation.getEndingLineNumber(),
+                endColumn);
+
+        return new PhysicalLocation(Path.of(node.getContainingFilename()).toUri(), region);
       }
     }
-    return new Region();
+
+    return null;
   }
 
   private Field getField(Class<?> type, String fieldName) throws NoSuchFieldException {
@@ -343,8 +349,9 @@ public class CXXLanguageFrontend extends LanguageFrontend {
     if (ctx instanceof ASTNode && s instanceof de.fraunhofer.aisec.cpg.graph.Node) {
       de.fraunhofer.aisec.cpg.graph.Node cpgNode = (de.fraunhofer.aisec.cpg.graph.Node) s;
 
-      if (comments.containsKey(cpgNode.getRegion().getEndLine())) { // only exact match for now
-        cpgNode.setComment(comments.get(cpgNode.getRegion().getEndLine()));
+      if (comments.containsKey(
+          cpgNode.getLocation().getRegion().getEndLine())) { // only exact match for now
+        cpgNode.setComment(comments.get(cpgNode.getLocation().getRegion().getEndLine()));
       }
       // TODO: handle orphanComments? i.e. comments which do not correspond to one line
       // todo: what to do with comments which are in a line which contains multiple statements?
