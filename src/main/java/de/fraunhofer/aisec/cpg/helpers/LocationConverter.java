@@ -31,7 +31,6 @@ import static java.lang.Math.toIntExact;
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation;
 import de.fraunhofer.aisec.cpg.sarif.Region;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.HashMap;
 import java.util.Map;
 import org.neo4j.ogm.typeconversion.CompositeAttributeConverter;
@@ -58,10 +57,10 @@ public class LocationConverter implements CompositeAttributeConverter<PhysicalLo
       int endLine = toIntExact((Integer) value.get("endLine"));
       int startColumn = toIntExact((Integer) value.get("startColumn"));
       int endColumn = toIntExact((Integer) value.get("endColumn"));
-      URI uri = new URI((String) value.get("artifact"));
+      URI uri = (URI) value.get("artifact");
 
       return new PhysicalLocation(uri, new Region(startLine, startColumn, endLine, endColumn));
-    } catch (NullPointerException | URISyntaxException e) {
+    } catch (NullPointerException e) {
       return null;
     }
   }
