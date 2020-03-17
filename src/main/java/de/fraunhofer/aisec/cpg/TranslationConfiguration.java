@@ -26,9 +26,19 @@
 
 package de.fraunhofer.aisec.cpg;
 
-import de.fraunhofer.aisec.cpg.passes.*;
+import de.fraunhofer.aisec.cpg.passes.CallResolver;
+import de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass;
+import de.fraunhofer.aisec.cpg.passes.FilenameMapper;
+import de.fraunhofer.aisec.cpg.passes.ImportResolver;
+import de.fraunhofer.aisec.cpg.passes.Pass;
+import de.fraunhofer.aisec.cpg.passes.TypeHierarchyResolver;
+import de.fraunhofer.aisec.cpg.passes.VariableUsageResolver;
 import java.io.File;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import org.checkerframework.checker.nullness.qual.NonNull;
 
 /**

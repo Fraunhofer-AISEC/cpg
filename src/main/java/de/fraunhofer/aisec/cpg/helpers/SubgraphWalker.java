@@ -26,7 +26,13 @@
 
 package de.fraunhofer.aisec.cpg.helpers;
 
-import de.fraunhofer.aisec.cpg.graph.*;
+import de.fraunhofer.aisec.cpg.graph.CompoundStatement;
+import de.fraunhofer.aisec.cpg.graph.FunctionDeclaration;
+import de.fraunhofer.aisec.cpg.graph.Node;
+import de.fraunhofer.aisec.cpg.graph.RecordDeclaration;
+import de.fraunhofer.aisec.cpg.graph.SubGraph;
+import de.fraunhofer.aisec.cpg.graph.TranslationUnitDeclaration;
+import de.fraunhofer.aisec.cpg.graph.ValueDeclaration;
 import java.lang.annotation.AnnotationFormatError;
 import java.lang.reflect.Field;
 import java.util.ArrayDeque;
@@ -356,7 +362,7 @@ public class SubgraphWalker {
 
       Node parent = walker.getBacklog().peek();
 
-      if (current instanceof RecordDeclaration) {
+      if (current instanceof RecordDeclaration && current != currentClass.peek()) {
         currentClass.push(
             (RecordDeclaration)
                 current); // we can be in an inner class, so we remember this as a stack
@@ -369,6 +375,10 @@ public class SubgraphWalker {
       if (exiting instanceof RecordDeclaration) { // leave a class
         currentClass.pop();
       }
+    }
+
+    public RecordDeclaration getCurrentClass() {
+      return currentClass.isEmpty() ? null : currentClass.peek();
     }
 
     public void collectDeclarations(Node current) {
@@ -417,7 +427,7 @@ public class SubgraphWalker {
           // make sure that we only add the variable for the current scope.
           // if the var is already added, all outside vars with this name are shadowed inside a
           // scope and we do not add them here
-          if (!scopedVars.contains(val.getName())) {
+          if (val instanceof FunctionDeclaration || !scopedVars.contains(val.getName())) {
             result.add(val);
             scopedVars.add(val.getName());
           }

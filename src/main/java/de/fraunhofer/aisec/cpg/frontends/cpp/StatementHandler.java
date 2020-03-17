@@ -45,7 +45,6 @@ import de.fraunhofer.aisec.cpg.graph.IfStatement;
 import de.fraunhofer.aisec.cpg.graph.LabelStatement;
 import de.fraunhofer.aisec.cpg.graph.Literal;
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder;
-import de.fraunhofer.aisec.cpg.graph.Region;
 import de.fraunhofer.aisec.cpg.graph.ReturnStatement;
 import de.fraunhofer.aisec.cpg.graph.Statement;
 import de.fraunhofer.aisec.cpg.graph.SwitchStatement;
@@ -255,7 +254,6 @@ class StatementHandler extends Handler<Statement, IASTStatement, CXXLanguageFron
     // java StatementAnalyzer
     if (statement.getConditionDeclaration() == null && statement.getCondition() == null) {
       Literal literal = NodeBuilder.newLiteral(true, new Type("bool"), "true");
-      literal.setRegion(new Region());
       statement.setCondition(literal);
     }
     if (ctx.getIterationExpression() != null)

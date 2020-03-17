@@ -46,6 +46,12 @@ public class MemberExpression extends Expression implements TypeListener {
   @NonNull
   private Node base;
 
+  /**
+   * Is this reference used for writing data instead of just reading it? Determines dataflow
+   * direction
+   */
+  private boolean writingAccess = false;
+
   @NonNull
   public Node getBase() {
     return base;
@@ -65,6 +71,10 @@ public class MemberExpression extends Expression implements TypeListener {
     }
     if (this.member instanceof HasType) {
       ((HasType) this.member).unregisterTypeListener(this);
+    }
+    if (this.writingAccess) {
+      this.removeNextDFG(this.member);
+    } else {
       this.removePrevDFG(this.member);
     }
 
@@ -75,24 +85,28 @@ public class MemberExpression extends Expression implements TypeListener {
     }
     if (member instanceof TypeListener) {
       registerTypeListener((TypeListener) member);
-      this.addPrevDFG(member);
+    }
+    if (this.writingAccess) {
+      this.addNextDFG(this.member);
+    } else {
+      this.addPrevDFG(this.member);
     }
   }
 
   @Override
-  public void typeChanged(HasType src, Type oldType) {
+  public void typeChanged(HasType src, HasType root, Type oldType) {
     Type previous = this.type;
-    setType(src.getType());
+    setType(src.getType(), root);
     if (!previous.equals(this.type)) {
       this.type.setTypeOrigin(Origin.DATAFLOW);
     }
   }
 
   @Override
-  public void possibleSubTypesChanged(HasType src, Set<Type> oldSubTypes) {
+  public void possibleSubTypesChanged(HasType src, HasType root, Set<Type> oldSubTypes) {
     Set<Type> subTypes = new HashSet<>(getPossibleSubTypes());
     subTypes.addAll(src.getPossibleSubTypes());
-    setPossibleSubTypes(subTypes);
+    setPossibleSubTypes(subTypes, root);
   }
 
   @Override
@@ -102,6 +116,26 @@ public class MemberExpression extends Expression implements TypeListener {
         .append("base", base)
         .append("member", member)
         .toString();
+  }
+
+  public void setWritingAccess(boolean writingAccess) {
+    if (this.writingAccess) {
+      this.removeNextDFG(this.member);
+    } else {
+      this.removePrevDFG(this.member);
+    }
+
+    this.writingAccess = writingAccess;
+
+    if (this.writingAccess) {
+      this.addNextDFG(this.member);
+    } else {
+      this.addPrevDFG(this.member);
+    }
+  }
+
+  public boolean isWritingAccess() {
+    return writingAccess;
   }
 
   @Override

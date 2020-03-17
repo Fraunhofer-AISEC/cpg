@@ -24,12 +24,14 @@
  *
  */
 
-package de.fraunhofer.aisec.cpg.graph;
+package de.fraunhofer.aisec.cpg.sarif;
 
+import de.fraunhofer.aisec.cpg.graph.Node;
 import org.apache.commons.lang3.builder.ToStringBuilder;
+import org.checkerframework.checker.nullness.qual.NonNull;
 
 /** Code source location, in a SASP/SARIF-compliant "Region" format. */
-public class Region {
+public class Region implements Comparable<Region> {
 
   static final Region UNKNOWN_REGION = new Region();
   private int startLine;
@@ -103,6 +105,22 @@ public class Region {
         && this.startColumn == that.startColumn
         && this.endLine == that.endLine
         && this.endColumn == that.endColumn);
+  }
+
+  @Override
+  public int compareTo(@NonNull Region region) {
+    int comparisonValue;
+    if ((comparisonValue = Integer.compare(this.getStartLine(), region.getStartLine())) != 0)
+      return comparisonValue;
+    if ((comparisonValue = Integer.compare(this.getStartColumn(), region.getStartColumn())) != 0)
+      return comparisonValue;
+
+    if ((comparisonValue = Integer.compare(this.getEndLine(), region.getEndLine())) != 0)
+      return -comparisonValue;
+    if ((comparisonValue = Integer.compare(this.getEndColumn(), region.getEndColumn())) != 0)
+      return -comparisonValue;
+
+    return comparisonValue;
   }
 
   @Override

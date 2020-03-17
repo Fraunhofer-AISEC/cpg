@@ -26,6 +26,8 @@
 
 package de.fraunhofer.aisec.cpg.frontends;
 
+import static de.fraunhofer.aisec.cpg.helpers.Util.errorWithFileLocation;
+
 import java.lang.reflect.ParameterizedType;
 import java.util.HashMap;
 import java.util.function.Supplier;
@@ -87,7 +89,7 @@ public abstract class Handler<S, T, L extends LanguageFrontend> {
       }
     }
 
-    Class toHandle = ctx.getClass();
+    Class<?> toHandle = ctx.getClass();
     HandlerInterface<S, T> handler = map.get(toHandle);
     while (handler == null) {
       toHandle = toHandle.getSuperclass();
@@ -96,8 +98,13 @@ public abstract class Handler<S, T, L extends LanguageFrontend> {
           &&
           // always ok to handle as generic literal expr
           !ctx.getClass().getSimpleName().contains("LiteralExpr")) {
-        log.info(
-            "No handler for type {}, resolving for its superclass {}.", ctx.getClass(), toHandle);
+        errorWithFileLocation(
+            lang,
+            ctx,
+            log,
+            "No handler for type {}, resolving for its superclass {}.",
+            ctx.getClass(),
+            toHandle);
       }
       if (toHandle == typeOfT || !typeOfT.isAssignableFrom(toHandle)) break;
     }
@@ -107,7 +114,8 @@ public abstract class Handler<S, T, L extends LanguageFrontend> {
       lang.setComment(s, ctx);
       ret = s;
     } else {
-      log.error("Parsing of type {} is not supported (yet)", ctx.getClass());
+      errorWithFileLocation(
+          lang, ctx, log, "Parsing of type {} is not supported (yet)", ctx.getClass());
       ret = this.configConstructor.get();
     }
 

@@ -26,7 +26,8 @@
 
 package de.fraunhofer.aisec.cpg.graph;
 
-import de.fraunhofer.aisec.cpg.helpers.RegionConverter;
+import de.fraunhofer.aisec.cpg.helpers.LocationConverter;
+import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -64,8 +65,9 @@ public class Node {
   @Nullable protected String comment;
 
   /** Location of the finding in source code. */
-  @Convert(RegionConverter.class)
-  protected Region region = new Region();
+  @Convert(LocationConverter.class)
+  @Nullable
+  protected PhysicalLocation location;
 
   /** Name of the containing file */
   protected String file;
@@ -139,12 +141,12 @@ public class Node {
     this.code = code;
   }
 
-  public Region getRegion() {
-    return this.region;
+  public PhysicalLocation getLocation() {
+    return this.location;
   }
 
-  public void setRegion(Region region) {
-    this.region = region;
+  public void setLocation(PhysicalLocation location) {
+    this.location = location;
   }
 
   public List<Node> getPrevEOG() {
@@ -179,11 +181,13 @@ public class Node {
 
   public void addNextDFG(Node next) {
     this.nextDFG.add(next);
+    next.prevDFG.add(this);
   }
 
   public void removeNextDFG(Node next) {
     if (next != null) {
       this.nextDFG.remove(next);
+      next.prevDFG.remove(this);
     }
   }
 
@@ -197,11 +201,13 @@ public class Node {
 
   public void addPrevDFG(Node prev) {
     this.prevDFG.add(prev);
+    prev.nextDFG.add(this);
   }
 
   public void removePrevDFG(Node prev) {
     if (prev != null) {
       this.prevDFG.remove(prev);
+      prev.nextDFG.remove(this);
     }
   }
 
@@ -267,7 +273,7 @@ public class Node {
     return new ToStringBuilder(this, Node.TO_STRING_STYLE)
         .append("id", id)
         .append("name", name)
-        .append("region", region)
+        .append("location", location)
         .append("argumentIndex", argumentIndex)
         .toString();
   }
@@ -285,10 +291,7 @@ public class Node {
       return false;
     }
     Node node = (Node) o;
-    if (region == null
-        || region.equals(Region.UNKNOWN_REGION)
-        || node.region == null
-        || node.region.equals(Region.UNKNOWN_REGION)) {
+    if (location == null || node.location == null) {
       // we do not know the exact region. Need to rely on Object equalness,
       // as a different LOC can have the same name/code/comment/file
       return false;
@@ -296,7 +299,7 @@ public class Node {
     return Objects.equals(name, node.name)
         && Objects.equals(code, node.code)
         && Objects.equals(comment, node.comment)
-        && Objects.equals(region, node.region)
+        && Objects.equals(location, node.location)
         && Objects.equals(file, node.file);
   }
 

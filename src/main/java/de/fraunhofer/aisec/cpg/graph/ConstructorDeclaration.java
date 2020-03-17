@@ -49,7 +49,7 @@ public class ConstructorDeclaration extends MethodDeclaration {
     c.setType(Type.createFrom(VOID_TYPE_STRING));
 
     c.setBody(methodDeclaration.getBody());
-    c.setRegion(methodDeclaration.getRegion());
+    c.setLocation(methodDeclaration.getLocation());
     c.setParameters(methodDeclaration.getParameters());
 
     return c;

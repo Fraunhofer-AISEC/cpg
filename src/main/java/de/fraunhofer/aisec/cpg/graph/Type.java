@@ -37,9 +37,6 @@ import org.slf4j.LoggerFactory;
 public class Type {
 
   public static final String UNKNOWN_TYPE_STRING = "UNKNOWN";
-
-  public static final Type UNKNOWN = new Type();
-
   private static final Logger LOGGER = LoggerFactory.getLogger(Type.class);
   // Compile regex patterns once and for all.
   private static final Pattern DOUBLE_COLON = Pattern.compile("::");
@@ -55,6 +52,8 @@ public class Type {
   protected String typeModifier = "";
   /** Where does this type come from? Provided by a symbol solver, guessed from imports etc? */
   protected Origin typeOrigin = Origin.UNRESOLVED;
+  /** Hint for resolving function pointer calls */
+  protected boolean isFunctionPtr = false;
 
   @Id @GeneratedValue private Long id;
 
@@ -69,6 +68,12 @@ public class Type {
   public Type(String type, String typeAdjustment) {
     this(type);
     this.typeAdjustment = typeAdjustment;
+  }
+
+  public Type(String type, String typeAdjustment, boolean isFunctionPtr) {
+    this.type = type;
+    this.typeAdjustment = typeAdjustment;
+    this.isFunctionPtr = isFunctionPtr;
   }
 
   public Type(String type, String typeAdjustment, Origin typeOrigin) {
@@ -86,6 +91,13 @@ public class Type {
     this.typeAdjustment = src.typeAdjustment;
     this.typeModifier = src.typeModifier;
     this.typeOrigin = src.typeOrigin;
+    this.isFunctionPtr = src.isFunctionPtr;
+  }
+
+  public static Type getUnknown() {
+    // we need to return a new type every time, as we cannot rely on the fact that nobody will
+    // touch our global "UNKNOWN" type...
+    return new Type();
   }
 
   private static String clean(String type) {
@@ -166,12 +178,21 @@ public class Type {
   }
 
   public Type reference() {
-    return new Type(this.type, "*" + this.typeAdjustment);
+    return new Type(this.type, "*" + this.typeAdjustment, this.isFunctionPtr);
   }
 
   public Type dereference() {
     // dereferencing an array results in basically the same as with a pointer
-    return new Type(this.type, this.typeAdjustment.replaceFirst("(\\[])|(\\*)", ""));
+    return new Type(
+        this.type, this.typeAdjustment.replaceFirst("(\\[])|(\\*)", ""), this.isFunctionPtr);
+  }
+
+  public void setFunctionPtr(boolean functionPtr) {
+    isFunctionPtr = functionPtr;
+  }
+
+  public boolean isFunctionPtr() {
+    return isFunctionPtr;
   }
 
   public String toString() {
@@ -192,7 +213,8 @@ public class Type {
     return other instanceof Type
         && Objects.equals(((Type) other).type, this.type)
         && Objects.equals(((Type) other).typeModifier, this.typeModifier)
-        && Objects.equals(((Type) other).typeAdjustment, this.typeAdjustment);
+        && Objects.equals(((Type) other).typeAdjustment, this.typeAdjustment)
+        && ((Type) other).isFunctionPtr == this.isFunctionPtr;
   }
 
   @Override

@@ -37,19 +37,31 @@ public class NodeComparator implements Comparator<Node> {
     if (n2 == null) return -1;
     if (n1 == null) return 1;
 
+    if (n1.getLocation() == null && n2.getLocation() == null) return 0;
+    if (n2.getLocation() == null) return -1;
+    if (n1.getLocation() == null) return 1;
+
     int comparisonValue;
     if ((comparisonValue =
-            Integer.compare(n1.getRegion().getStartLine(), n2.getRegion().getStartLine()))
+            Integer.compare(
+                n1.getLocation().getRegion().getStartLine(),
+                n2.getLocation().getRegion().getStartLine()))
         != 0) return comparisonValue;
     if ((comparisonValue =
-            Integer.compare(n1.getRegion().getStartColumn(), n2.getRegion().getStartColumn()))
+            Integer.compare(
+                n1.getLocation().getRegion().getStartColumn(),
+                n2.getLocation().getRegion().getStartColumn()))
         != 0) return comparisonValue;
 
     if ((comparisonValue =
-            Integer.compare(n1.getRegion().getEndLine(), n2.getRegion().getEndLine()))
+            Integer.compare(
+                n1.getLocation().getRegion().getEndLine(),
+                n2.getLocation().getRegion().getEndLine()))
         != 0) return -comparisonValue;
     if ((comparisonValue =
-            Integer.compare(n1.getRegion().getEndColumn(), n2.getRegion().getEndColumn()))
+            Integer.compare(
+                n1.getLocation().getRegion().getEndColumn(),
+                n2.getLocation().getRegion().getEndColumn()))
         != 0) return -comparisonValue;
 
     if (n1.getCode() == null && n2.getCode() == null) return 0;

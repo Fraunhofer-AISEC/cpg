@@ -54,7 +54,7 @@ public class Expression extends Statement implements HasType {
 
   /** The type of the value after evaluation. */
   @Convert(TypeConverter.class)
-  protected Type type = Type.UNKNOWN;
+  protected Type type = Type.getUnknown();
 
   @Transient private Set<TypeListener> typeListeners = new HashSet<>();
 
@@ -65,32 +65,40 @@ public class Expression extends Statement implements HasType {
   public Type getType() {
     // just to make sure that we REALLY always return a valid type in case this somehow gets set to
     // null
-    return type != null ? type : Type.UNKNOWN;
+    return type != null ? type : Type.getUnknown();
   }
 
   @Override
-  public void setType(Type type) {
-    if (type == null || TypeManager.getInstance().isUnknown(type)) {
+  public void setType(Type type, HasType root) {
+    if (type == null
+        || root == this
+        || (TypeManager.getInstance().isPrimitive(type)
+            && !TypeManager.getInstance().isUnknown(this.type))) {
       return;
     }
-    if (TypeManager.getInstance().isPrimitive(type)
-        && !TypeManager.getInstance().isUnknown(this.type)) {
+
+    // work on a copy of the type in order not to modify it
+    type = new Type(type);
+    Type oldType = new Type(this.type);
+
+    // Once we know this is a function pointer, it will stay that way
+    type.setFunctionPtr(type.isFunctionPtr() || this.type.isFunctionPtr());
+    this.type.setFunctionPtr(type.isFunctionPtr() || this.type.isFunctionPtr());
+
+    if (TypeManager.getInstance().isUnknown(type)) {
       return;
     }
 
     Set<Type> subTypes = new HashSet<>(getPossibleSubTypes());
     subTypes.add(type);
 
-    Type oldType = this.type;
-
     this.type = TypeManager.getInstance().getCommonType(subTypes).orElse(type);
     setPossibleSubTypes(subTypes);
 
     if (!Objects.equals(oldType, type)) {
       this.typeListeners.stream()
-          .filter(this::shouldBeNotified)
           .filter(l -> !l.equals(this))
-          .forEach(l -> l.typeChanged(this, oldType));
+          .forEach(l -> l.typeChanged(this, root == null ? this : root, oldType));
     }
   }
 
@@ -100,7 +108,11 @@ public class Expression extends Statement implements HasType {
   }
 
   @Override
-  public void setPossibleSubTypes(Set<Type> possibleSubTypes) {
+  public void setPossibleSubTypes(Set<Type> possibleSubTypes, HasType root) {
+    if (root == this) {
+      return;
+    }
+
     if (possibleSubTypes.stream().allMatch(TypeManager.getInstance()::isPrimitive)
         && !this.possibleSubTypes.isEmpty()) {
       return;
@@ -109,9 +121,8 @@ public class Expression extends Statement implements HasType {
 
     if (this.possibleSubTypes.addAll(possibleSubTypes)) {
       this.typeListeners.stream()
-          .filter(this::shouldBeNotified)
           .filter(l -> !l.equals(this))
-          .forEach(l -> l.possibleSubTypesChanged(this, oldSubTypes));
+          .forEach(l -> l.possibleSubTypesChanged(this, root == null ? this : root, oldSubTypes));
     }
   }
 
@@ -127,24 +138,20 @@ public class Expression extends Statement implements HasType {
 
     if (!Objects.equals(oldType, type)) {
       this.typeListeners.stream()
-          .filter(this::shouldBeNotified)
           .filter(l -> !l.equals(this))
-          .forEach(l -> l.typeChanged(this, oldType));
+          .forEach(l -> l.typeChanged(this, this, oldType));
     }
     if (oldSubTypes.size() != 1 || !oldSubTypes.contains(type))
       this.typeListeners.stream()
-          .filter(this::shouldBeNotified)
           .filter(l -> !l.equals(this))
-          .forEach(l -> l.possibleSubTypesChanged(this, oldSubTypes));
+          .forEach(l -> l.possibleSubTypesChanged(this, this, oldSubTypes));
   }
 
   @Override
   public void registerTypeListener(TypeListener listener) {
     this.typeListeners.add(listener);
-    if (shouldBeNotified(listener)) {
-      listener.typeChanged(this, this.type);
-      listener.possibleSubTypesChanged(this, this.possibleSubTypes);
-    }
+    listener.typeChanged(this, this, this.type);
+    listener.possibleSubTypesChanged(this, this, this.possibleSubTypes);
   }
 
   @Override
@@ -159,13 +166,11 @@ public class Expression extends Statement implements HasType {
 
   @Override
   public void refreshType() {
-    this.typeListeners.stream()
-        .filter(this::shouldBeNotified)
-        .forEach(
-            l -> {
-              l.typeChanged(this, type);
-              l.possibleSubTypesChanged(this, possibleSubTypes);
-            });
+    this.typeListeners.forEach(
+        l -> {
+          l.typeChanged(this, this, type);
+          l.possibleSubTypesChanged(this, this, possibleSubTypes);
+        });
   }
 
   @Override

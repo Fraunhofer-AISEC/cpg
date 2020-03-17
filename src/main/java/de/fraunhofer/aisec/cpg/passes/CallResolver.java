@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.TranslationResult;
 import de.fraunhofer.aisec.cpg.graph.CallExpression;
 import de.fraunhofer.aisec.cpg.graph.ConstructExpression;
 import de.fraunhofer.aisec.cpg.graph.ConstructorDeclaration;
+import de.fraunhofer.aisec.cpg.graph.DeclaredReferenceExpression;
 import de.fraunhofer.aisec.cpg.graph.ExplicitConstructorInvocation;
 import de.fraunhofer.aisec.cpg.graph.Expression;
 import de.fraunhofer.aisec.cpg.graph.FunctionDeclaration;
@@ -44,14 +45,20 @@ import de.fraunhofer.aisec.cpg.graph.RecordDeclaration;
 import de.fraunhofer.aisec.cpg.graph.StaticCallExpression;
 import de.fraunhofer.aisec.cpg.graph.TranslationUnitDeclaration;
 import de.fraunhofer.aisec.cpg.graph.Type;
+import de.fraunhofer.aisec.cpg.graph.ValueDeclaration;
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.ScopedWalker;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -140,6 +147,54 @@ public class CallResolver extends Pass {
       }
     } else if (node instanceof CallExpression) {
       CallExpression call = (CallExpression) node;
+
+      if (call instanceof MemberCallExpression) {
+        Node member = ((MemberCallExpression) call).getMember();
+        if (member instanceof HasType && ((HasType) member).getType().isFunctionPtr()) {
+          List<FunctionDeclaration> invocationCandidates = new ArrayList<>();
+          Deque<Node> worklist = new ArrayDeque<>();
+          Set<Node> seen = Collections.newSetFromMap(new IdentityHashMap<>());
+          worklist.push(member);
+          DeclaredReferenceExpression finalReference = null;
+          while (!worklist.isEmpty()) {
+            Node curr = worklist.pop();
+            if (!seen.add(curr)) {
+              continue;
+            }
+            if (curr instanceof FunctionDeclaration) {
+              if (((FunctionDeclaration) curr).hasSignature(call.getSignature())) {
+                invocationCandidates.add((FunctionDeclaration) curr);
+              } else if (curr.isImplicit()) {
+                // unknown function, so even if its signature does not fit, we need to make a new
+                // dummy that does match
+                if (((FunctionDeclaration) curr).hasSignature(call.getSignature())) {
+                  invocationCandidates.add((FunctionDeclaration) curr);
+                  // refine the referral pointer
+                  if (finalReference != null && finalReference.getRefersTo().contains(curr)) {
+                    finalReference.setRefersTo(Set.of((ValueDeclaration) curr));
+                  }
+                } else {
+                  FunctionDeclaration dummy =
+                      createDummyWithMatchingSignature(
+                          (FunctionDeclaration) curr, call.getSignature());
+                  invocationCandidates.add(dummy);
+                  // redirect the referral pointer
+                  if (finalReference != null && finalReference.getRefersTo().contains(curr)) {
+                    finalReference.setRefersTo(Set.of(dummy));
+                  }
+                }
+              }
+            } else {
+              if (curr instanceof DeclaredReferenceExpression) {
+                finalReference = (DeclaredReferenceExpression) curr;
+              }
+              curr.getPrevDFG().forEach(worklist::push);
+            }
+          }
+          call.setInvokes(invocationCandidates);
+          return;
+        }
+      }
 
       if (curClass == null && this.currentTU != null) {
         // Handle function (not method) calls
@@ -232,7 +287,7 @@ public class CallResolver extends Pass {
               .findFirst()
               .orElse(null);
       if (target == null) {
-        generateDummies(call, name, invokes, curClass);
+        generateStaticImportDummies(call, name, invokes, curClass);
       } else {
         invokes.add(target);
       }
@@ -242,7 +297,7 @@ public class CallResolver extends Pass {
     }
   }
 
-  private void generateDummies(
+  private void generateStaticImportDummies(
       @NonNull CallExpression call,
       @NonNull String name,
       @NonNull List<FunctionDeclaration> invokes,
@@ -262,23 +317,99 @@ public class CallResolver extends Pass {
             .collect(Collectors.toList());
     for (RecordDeclaration record : containingRecords) {
       MethodDeclaration dummy = NodeBuilder.newMethodDeclaration(name, "", true, record);
-      dummy.setDummy(true);
-      // prepare signature
-      List<ParamVariableDeclaration> params = new ArrayList<>();
-      for (int i = 0; i < call.getSignature().size(); i++) {
-        Type targetType = call.getSignature().get(i);
-        String paramName = generateParamName(i, targetType);
-        ParamVariableDeclaration param =
-            NodeBuilder.newMethodParameterIn(paramName, targetType, false, "");
-        param.setDummy(true);
-        param.setArgumentIndex(i);
-        params.add(param);
-      }
+      dummy.setImplicit(true);
+      List<ParamVariableDeclaration> params = createParameters(call.getSignature());
       dummy.setParameters(params);
       record.getMethods().add(dummy);
       curClass.getStaticImports().add(dummy);
       invokes.add(dummy);
     }
+  }
+
+  private Optional<FunctionDeclaration> checkExistingDummies(
+      FunctionDeclaration template, List<Type> signature) {
+    if (template instanceof MethodDeclaration
+        && ((MethodDeclaration) template).getRecordDeclaration() != null) {
+      return ((MethodDeclaration) template)
+          .getRecordDeclaration().getMethods().stream()
+              .filter(m -> m.getName().equals(template.getName()) && m.hasSignature(signature))
+              .map(FunctionDeclaration.class::cast)
+              .findFirst();
+    } else {
+      if (currentTU == null) {
+        LOGGER.error(
+            "No current translation unit when trying to find matching dummy for {}", template);
+        return Optional.empty();
+      }
+      return currentTU.getDeclarations().stream()
+          .filter(FunctionDeclaration.class::isInstance)
+          .map(FunctionDeclaration.class::cast)
+          .filter(f -> f.getName().equals(template.getName()) && f.hasSignature(signature))
+          .findFirst();
+    }
+  }
+
+  private FunctionDeclaration createDummyWithMatchingSignature(
+      FunctionDeclaration template, List<Type> signature) {
+    Optional<FunctionDeclaration> existing = checkExistingDummies(template, signature);
+    if (existing.isPresent()) {
+      return existing.get();
+    }
+
+    List<ParamVariableDeclaration> parameters = createParameters(signature);
+    if (template instanceof MethodDeclaration) {
+      RecordDeclaration containingRecord = ((MethodDeclaration) template).getRecordDeclaration();
+      MethodDeclaration dummy =
+          NodeBuilder.newMethodDeclaration(
+              template.getName(),
+              template.getCode(),
+              ((MethodDeclaration) template).isStatic(),
+              containingRecord);
+      dummy.setImplicit(true);
+      dummy.setParameters(parameters);
+
+      if (containingRecord == null) {
+        // not inside a class, lets put it inside the translation unit
+        if (currentTU == null) {
+          LOGGER.error(
+              "No current translation unit when trying to generate method dummy {}",
+              dummy.getName());
+        } else {
+          currentTU.getDeclarations().add(dummy);
+        }
+      } else {
+        containingRecord.getMethods().add(dummy);
+      }
+      return dummy;
+    } else {
+      // function declaration, not inside a class
+      FunctionDeclaration dummy =
+          NodeBuilder.newFunctionDeclaration(template.getName(), template.getCode());
+      dummy.setParameters(parameters);
+      dummy.setImplicit(true);
+      if (currentTU == null) {
+        LOGGER.error(
+            "No current translation unit when trying to generate function dummy {}",
+            dummy.getName());
+      } else {
+        currentTU.getDeclarations().add(dummy);
+      }
+      return dummy;
+    }
+  }
+
+  private List<ParamVariableDeclaration> createParameters(List<Type> signature) {
+    List<ParamVariableDeclaration> params = new ArrayList<>();
+    for (int i = 0; i < signature.size(); i++) {
+      Type targetType = signature.get(i);
+      String paramName = generateParamName(i, targetType);
+      ParamVariableDeclaration param =
+          NodeBuilder.newMethodParameterIn(paramName, targetType, false, "");
+      param.setImplicit(true);
+      param.setArgumentIndex(i);
+      params.add(param);
+    }
+    return params;
   }
 
   private String generateParamName(int i, @NonNull Type targetType) {

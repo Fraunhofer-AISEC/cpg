@@ -28,8 +28,15 @@ package de.fraunhofer.aisec.cpg;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import de.fraunhofer.aisec.cpg.graph.CompoundStatement;
 import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.TranslationUnitDeclaration;
+import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import de.fraunhofer.aisec.cpg.graph.TranslationUnitDeclaration;
+import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker;
+import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation;
 import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -68,5 +75,27 @@ public class TestUtils {
     TranslationManager analyzer = TranslationManager.builder().config(config).build();
 
     return analyzer.analyze().get().getTranslationUnits();
+  }
+
+  /**
+   * Returns the (first) statement at source line nr.
+   *
+   * <p>If a line contains several statements, only the first one is returned.
+   *
+   * @param body
+   * @param line
+   * @return Statement at source line or null if not present.
+   */
+  public static Node getByLineNr(CompoundStatement body, int line) {
+    List<Node> nodes = SubgraphWalker.flattenAST(body);
+    for (Node n : nodes) {
+      PhysicalLocation location = n.getLocation();
+      assertNotNull(location);
+
+      if (location.getRegion().getStartLine() == line) {
+        return n;
+      }
+    }
+    return null;
   }
 }

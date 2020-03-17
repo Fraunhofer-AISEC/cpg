@@ -43,8 +43,10 @@ import de.fraunhofer.aisec.cpg.graph.ConstructorDeclaration;
 import de.fraunhofer.aisec.cpg.graph.DeclarationStatement;
 import de.fraunhofer.aisec.cpg.graph.DeclaredReferenceExpression;
 import de.fraunhofer.aisec.cpg.graph.DefaultStatement;
+import de.fraunhofer.aisec.cpg.graph.ExpressionList;
 import de.fraunhofer.aisec.cpg.graph.FieldDeclaration;
 import de.fraunhofer.aisec.cpg.graph.ForEachStatement;
+import de.fraunhofer.aisec.cpg.graph.ForStatement;
 import de.fraunhofer.aisec.cpg.graph.InitializerListExpression;
 import de.fraunhofer.aisec.cpg.graph.Literal;
 import de.fraunhofer.aisec.cpg.graph.MemberExpression;
@@ -64,10 +66,14 @@ import de.fraunhofer.aisec.cpg.helpers.NodeComparator;
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker;
 import de.fraunhofer.aisec.cpg.helpers.Util;
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager;
+import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation;
+import de.fraunhofer.aisec.cpg.sarif.Region;
 import java.io.File;
 import java.math.BigInteger;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -120,6 +126,33 @@ class JavaLanguageFrontendTest {
   }
 
   @Test
+  void testFor() throws TranslationException {
+    TranslationUnitDeclaration tu =
+        new JavaLanguageFrontend(config, new ScopeManager())
+            .parse(new File("src/test/resources/components/ForStmt.java"));
+
+    RecordDeclaration declaration = (RecordDeclaration) tu.getDeclarations().get(0);
+
+    MethodDeclaration main = declaration.getMethods().get(0);
+
+    VariableDeclaration ls = main.getVariableDeclarationByName("ls").orElse(null);
+    assertNotNull(ls);
+
+    ForStatement forStatement = main.getBodyStatementAs(2, ForStatement.class);
+    assertNotNull(forStatement);
+
+    // initializer is an expression list
+    ExpressionList list = (ExpressionList) forStatement.getInitializerStatement();
+    assertNotNull(list);
+
+    // check calculated location of sub-expression
+    PhysicalLocation location = list.getLocation();
+    assertNotNull(location);
+
+    assertEquals(new Region(9, 10, 9, 22), location.getRegion());
+  }
+
+  @Test
   void testForeach() throws TranslationException {
     TranslationUnitDeclaration tu =
         new JavaLanguageFrontend(config, new ScopeManager())
@@ -136,7 +169,8 @@ class JavaLanguageFrontendTest {
     assertNotNull(forEachStatement);
 
     // should loop over ls
-    assertEquals(ls, ((DeclaredReferenceExpression) forEachStatement.getIterable()).getRefersTo());
+    assertEquals(
+        Set.of(ls), ((DeclaredReferenceExpression) forEachStatement.getIterable()).getRefersTo());
 
     // should declare String s
     VariableDeclaration s = (VariableDeclaration) forEachStatement.getVariable();
@@ -390,7 +424,7 @@ class JavaLanguageFrontendTest {
     // expression itself should be a reference
     DeclaredReferenceExpression ref = (DeclaredReferenceExpression) cast.getExpression();
     assertNotNull(ref);
-    assertEquals(e, ref.getRefersTo());
+    assertEquals(Set.of(e), ref.getRefersTo());
   }
 
   @Test
@@ -439,7 +473,7 @@ class JavaLanguageFrontendTest {
     // initializer is array subscription
     ArraySubscriptionExpression ase = (ArraySubscriptionExpression) b.getInitializer();
     assertNotNull(ase);
-    assertEquals(a, ((DeclaredReferenceExpression) ase.getArrayExpression()).getRefersTo());
+    assertEquals(Set.of(a), ((DeclaredReferenceExpression) ase.getArrayExpression()).getRefersTo());
     assertEquals(0, ((Literal<Integer>) ase.getSubscriptExpression()).getValue().intValue());
   }
 
@@ -473,5 +507,32 @@ class JavaLanguageFrontendTest {
     assertNotNull(length);
     assertEquals("length", length.getMember().getName());
     assertEquals("int", length.getType().toString());
+  }
+
+  @Test
+  public void testLocation() throws TranslationException {
+    TranslationUnitDeclaration declaration =
+        new JavaLanguageFrontend(TranslationConfiguration.builder().build(), new ScopeManager())
+            .parse(new File("src/test/resources/compiling/FieldAccess.java"));
+
+    assertNotNull(declaration);
+
+    NamespaceDeclaration namespaceDeclaration =
+        declaration.getDeclarationAs(0, NamespaceDeclaration.class);
+    RecordDeclaration record = namespaceDeclaration.getDeclarationAs(0, RecordDeclaration.class);
+
+    assertNotNull(record);
+
+    MethodDeclaration main = record.getMethods().get(0);
+
+    assertNotNull(main);
+
+    PhysicalLocation location = main.getLocation();
+
+    assertNotNull(location);
+
+    Path path = Path.of(location.getArtifactLocation().getUri());
+    assertEquals("FieldAccess.java", path.getFileName().toString());
+    assertEquals(new Region(7, 3, 10, 4), location.getRegion());
   }
 }

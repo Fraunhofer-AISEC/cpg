@@ -56,6 +56,27 @@ public class CXXLiteralTest {
   }
 
   @Test
+  void testZeroIntegerLiterals() throws TranslationException {
+    TranslationUnitDeclaration tu =
+        new CXXLanguageFrontend(config, new ScopeManager())
+            .parse(new File("src/test/resources/integer_literals.cpp"));
+
+    FunctionDeclaration zero =
+        tu.getDeclarationByName("zero", FunctionDeclaration.class).orElse(null);
+    assertNotNull(zero);
+    assertEquals("zero", zero.getName());
+
+    assertLiteral(0, CXXLanguageFrontend.INT_TYPE, zero, "i");
+    assertLiteral(0L, CXXLanguageFrontend.LONG_TYPE, zero, "l_with_suffix");
+    assertLiteral(0L, CXXLanguageFrontend.LONG_LONG_TYPE, zero, "l_long_long_with_suffix");
+    assertLiteral(
+        BigInteger.valueOf(0),
+        CXXLanguageFrontend.TYPE_UNSIGNED_LONG_LONG,
+        zero,
+        "l_unsigned_long_long_with_suffix");
+  }
+
+  @Test
   void testDecimalIntegerLiterals() throws TranslationException {
     TranslationUnitDeclaration tu =
         new CXXLanguageFrontend(config, new ScopeManager())

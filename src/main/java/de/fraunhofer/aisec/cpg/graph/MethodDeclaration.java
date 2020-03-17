@@ -55,7 +55,7 @@ public class MethodDeclaration extends FunctionDeclaration {
         NodeBuilder.newMethodDeclaration(
             functionDeclaration.getName(), functionDeclaration.getCode(), false, recordDeclaration);
 
-    md.setRegion(functionDeclaration.getRegion());
+    md.setLocation(functionDeclaration.getLocation());
     md.setParameters(functionDeclaration.getParameters());
     md.setBody(functionDeclaration.getBody());
     md.setType(functionDeclaration.getType());

@@ -54,7 +54,7 @@ public class FieldDeclaration extends ValueDeclaration implements TypeListener {
   private FieldDeclaration(VariableDeclaration declaration) {
     this.name = declaration.getName();
     this.code = declaration.getCode();
-    this.region = declaration.getRegion();
+    this.location = declaration.getLocation();
     this.type = declaration.getType();
     this.initializer = declaration.getInitializer();
   }
@@ -72,11 +72,17 @@ public class FieldDeclaration extends ValueDeclaration implements TypeListener {
     if (this.initializer != null) {
       this.initializer.unregisterTypeListener(this);
       this.removePrevDFG(this.initializer);
+      if (this.initializer instanceof TypeListener) {
+        this.unregisterTypeListener((TypeListener) this.initializer);
+      }
     }
     this.initializer = initializer;
     if (initializer != null) {
       initializer.registerTypeListener(this);
       this.addPrevDFG(initializer);
+      if (initializer instanceof TypeListener) {
+        this.registerTypeListener((TypeListener) initializer);
+      }
     }
   }
 
@@ -89,23 +95,23 @@ public class FieldDeclaration extends ValueDeclaration implements TypeListener {
   }
 
   @Override
-  public void typeChanged(HasType src, Type oldType) {
+  public void typeChanged(HasType src, HasType root, Type oldType) {
     if (!TypeManager.getInstance().isUnknown(this.type) && src.getType().equals(oldType)) {
       return;
     }
 
     Type previous = this.type;
-    setType(src.getType());
+    setType(src.getType(), root);
     if (!previous.equals(this.type)) {
       this.type.setTypeOrigin(Origin.DATAFLOW);
     }
   }
 
   @Override
-  public void possibleSubTypesChanged(HasType src, Set<Type> oldSubTypes) {
+  public void possibleSubTypesChanged(HasType src, HasType root, Set<Type> oldSubTypes) {
     Set<Type> subTypes = new HashSet<>(getPossibleSubTypes());
     subTypes.addAll(src.getPossibleSubTypes());
-    setPossibleSubTypes(subTypes);
+    setPossibleSubTypes(subTypes, root);
   }
 
   @Override

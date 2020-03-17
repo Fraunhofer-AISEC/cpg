@@ -91,7 +91,7 @@ public class ConditionalExpression extends Expression implements TypeListener {
   }
 
   @Override
-  public void typeChanged(HasType src, Type oldType) {
+  public void typeChanged(HasType src, HasType root, Type oldType) {
     Type previous = this.type;
 
     List<Type> types = new ArrayList<>();
@@ -106,8 +106,8 @@ public class ConditionalExpression extends Expression implements TypeListener {
     subTypes.addAll(types);
 
     Type alternative = !types.isEmpty() ? types.get(0) : null;
-    setType(TypeManager.getInstance().getCommonType(types).orElse(alternative));
-    setPossibleSubTypes(subTypes);
+    setType(TypeManager.getInstance().getCommonType(types).orElse(alternative), root);
+    setPossibleSubTypes(subTypes, root);
 
     if (!previous.equals(this.type)) {
       this.type.setTypeOrigin(Origin.DATAFLOW);
@@ -115,7 +115,7 @@ public class ConditionalExpression extends Expression implements TypeListener {
   }
 
   @Override
-  public void possibleSubTypesChanged(HasType src, Set<Type> oldSubTypes) {
+  public void possibleSubTypesChanged(HasType src, HasType root, Set<Type> oldSubTypes) {
     Set<Type> subTypes = new HashSet<>(getPossibleSubTypes());
     subTypes.addAll(src.getPossibleSubTypes());
     setPossibleSubTypes(subTypes);

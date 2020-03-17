@@ -26,6 +26,9 @@
 
 package de.fraunhofer.aisec.cpg.frontends.cpp;
 
+import static de.fraunhofer.aisec.cpg.helpers.Util.errorWithFileLocation;
+import static de.fraunhofer.aisec.cpg.helpers.Util.warnWithFileLocation;
+
 import de.fraunhofer.aisec.cpg.frontends.Handler;
 import de.fraunhofer.aisec.cpg.graph.ArraySubscriptionExpression;
 import de.fraunhofer.aisec.cpg.graph.BinaryOperator;
@@ -45,7 +48,6 @@ import de.fraunhofer.aisec.cpg.graph.Literal;
 import de.fraunhofer.aisec.cpg.graph.MemberExpression;
 import de.fraunhofer.aisec.cpg.graph.NewExpression;
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder;
-import de.fraunhofer.aisec.cpg.graph.Region;
 import de.fraunhofer.aisec.cpg.graph.Type;
 import de.fraunhofer.aisec.cpg.graph.TypeIdExpression;
 import de.fraunhofer.aisec.cpg.graph.TypeManager;
@@ -159,12 +161,8 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
     try {
       expressionType = expression.getExpressionType();
     } catch (AssertionError e) {
-      Region regionFromRawNode = lang.getRegionFromRawNode(expression);
       String codeFromRawNode = lang.getCodeFromRawNode(expression);
-      log.warn(
-          "Unknown Expression Type in Line {}, code : {}",
-          regionFromRawNode.getStartLine(),
-          codeFromRawNode);
+      warnWithFileLocation(lang, expression, log, "Unknown Expression Type: {}", codeFromRawNode);
     }
 
     return expressionType;
@@ -188,7 +186,7 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
     // type id expressions
 
     String operatorCode = "";
-    Type type = Type.UNKNOWN;
+    Type type = Type.getUnknown();
     switch (ctx.getOperator()) {
       case IASTTypeIdExpression.op_sizeof:
         operatorCode = "sizeof";
@@ -354,9 +352,7 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
     String identifierName = ctx.getFieldName().toString();
     DeclaredReferenceExpression member =
         NodeBuilder.newDeclaredReferenceExpression(
-            identifierName, Type.UNKNOWN, ctx.getFieldName().getRawSignature());
-
-    lang.setCodeAndRegion(member, ctx);
+            identifierName, Type.getUnknown(), ctx.getFieldName().getRawSignature());
 
     MemberExpression memberExpression =
         NodeBuilder.newMemberExpression(base, member, ctx.getRawSignature());
@@ -428,7 +424,7 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
         operatorCode = "";
         break;
       default:
-        log.error("unknown operator {}", ctx.getOperator());
+        errorWithFileLocation(this.lang, ctx, log, "unknown operator {}", ctx.getOperator());
     }
 
     UnaryOperator unaryOperator =
@@ -460,11 +456,34 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
               ((MemberExpression) reference).getMember().getName(),
               baseTypename + "." + ((MemberExpression) reference).getMember().getName(),
               ((MemberExpression) reference).getBase(),
+              ((MemberExpression) reference).getMember(),
               ctx.getRawSignature());
 
       if (((MemberExpression) reference).getBase() instanceof HasType) {
         callExpression.setType(((HasType) ((MemberExpression) reference).getBase()).getType());
       }
+    } else if (reference instanceof BinaryOperator
+        && ((BinaryOperator) reference).getOperatorCode().equals(".")) {
+      // We have a dot operator that was not classified as a member expression. This happens when
+      // dealing with function pointer calls that happen on an explicit object
+      callExpression =
+          NodeBuilder.newMemberCallExpression(
+              reference.getCode(),
+              "",
+              ((BinaryOperator) reference).getLhs(),
+              ((BinaryOperator) reference).getRhs(),
+              reference.getCode());
+    } else if (reference instanceof UnaryOperator
+        && ((UnaryOperator) reference).getOperatorCode().equals("*")) {
+      // Classic C-style function pointer call -> let's extract the target. For easy
+      // compatibility with C++-style function pointer calls, we create a member call without a base
+      callExpression =
+          NodeBuilder.newMemberCallExpression(
+              reference.getCode(),
+              "",
+              null,
+              ((UnaryOperator) reference).getInput(),
+              reference.getCode());
     } else {
       String fqn = reference.getName();
       String name = fqn;
@@ -497,7 +516,7 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
   private DeclaredReferenceExpression handleIdExpression(CPPASTIdExpression ctx) {
     DeclaredReferenceExpression declaredReferenceExpression =
         NodeBuilder.newDeclaredReferenceExpression(
-            ctx.getName().toString(), Type.UNKNOWN, ctx.getRawSignature());
+            ctx.getName().toString(), Type.getUnknown(), ctx.getRawSignature());
 
     if (expressionTypeProxy(ctx) instanceof ProblemType
         || (expressionTypeProxy(ctx) instanceof IQualifierType
@@ -511,11 +530,11 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
           declaredReferenceExpression.setType(((ValueDeclaration) declaration).getType());
         } else {
           log.debug("Unknown declaration type, setting to UNKNOWN");
-          declaredReferenceExpression.setType(Type.UNKNOWN);
+          declaredReferenceExpression.setType(Type.getUnknown());
         }
       } else {
         log.debug("Could not deduce type manually, setting to UNKNOWN");
-        declaredReferenceExpression.setType(Type.UNKNOWN);
+        declaredReferenceExpression.setType(Type.getUnknown());
       }
     } else {
       declaredReferenceExpression.setType(Type.createFrom(expressionTypeProxy(ctx).toString()));
@@ -641,7 +660,7 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
         operatorCode = "...";
         break;
       default:
-        log.error("unknown operator {}", ctx.getOperator());
+        errorWithFileLocation(this.lang, ctx, log, "unknown operator {}", ctx.getOperator());
     }
     BinaryOperator binaryOperator =
         NodeBuilder.newBinaryOperator(operatorCode, ctx.getRawSignature());
@@ -724,7 +743,7 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
     Expression rhs = handle(ctx.getOperand());
     ArrayList<Expression> lhs = new ArrayList<>();
     if (ctx.getDesignators().length == 0) {
-      log.error("no designator found");
+      errorWithFileLocation(this.lang, ctx, log, "no designator found");
     } else {
       for (ICPPASTDesignator des : ctx.getDesignators()) {
         Expression oneLhs = null;
@@ -743,7 +762,8 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
                   handle(((CPPASTArrayRangeDesignator) des).getRangeCeiling()),
                   des.getRawSignature());
         } else {
-          log.error("Unknown designated lhs {}", des.getClass().toGenericString());
+          errorWithFileLocation(
+              this.lang, ctx, log, "Unknown designated lhs {}", des.getClass().toGenericString());
         }
         if (oneLhs != null) {
           lhs.add(oneLhs);
@@ -763,6 +783,12 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
 
     BigInteger bigValue;
 
+    String suffix = getSuffix(value);
+
+    // first, strip the suffix from the value
+    String strippedValue = value.substring(0, value.length() - suffix.length());
+
+    // next, check for possible prefixes
     int radix = 10;
     int offset = 0;
     if (value.startsWith("0b")) {
@@ -771,13 +797,13 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
     } else if (value.startsWith("0x")) {
       radix = 16; // hex
       offset = 2; // len("0x")
-    } else if (value.startsWith("0") && value.length() > 1) {
+    } else if (value.startsWith("0") && strippedValue.length() > 1) {
       radix = 8; // octal
       offset = 1; // len("0")
     }
 
-    String suffix = getSuffix(value);
-    String strippedValue = value.substring(offset, value.length() - suffix.length());
+    // strip the prefix
+    strippedValue = strippedValue.substring(offset);
 
     // basically we parse everything as BigInteger and then decide what to do
     bigValue = new BigInteger(strippedValue, radix);
@@ -794,7 +820,10 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
         // keep it as BigInteger
         numberValue = bigValue;
 
-        log.warn(
+        warnWithFileLocation(
+            this.lang,
+            ctx,
+            log,
             "Integer literal {} is too large to represented in a signed type, interpreting it as unsigned.",
             ctx);
       } else {
@@ -807,7 +836,10 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
         // keep it as BigInteger
         numberValue = bigValue;
 
-        log.warn(
+        warnWithFileLocation(
+            this.lang,
+            ctx,
+            log,
             "Integer literal {} is too large to represented in a signed type, interpreting it as unsigned.",
             ctx);
       } else if (bigValue.longValue() > Integer.MAX_VALUE) {

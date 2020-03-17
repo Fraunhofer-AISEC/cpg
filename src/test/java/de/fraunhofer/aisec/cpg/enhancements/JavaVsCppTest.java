@@ -32,20 +32,9 @@ import com.github.javaparser.utils.Pair;
 import de.fraunhofer.aisec.cpg.TranslationConfiguration;
 import de.fraunhofer.aisec.cpg.TranslationManager;
 import de.fraunhofer.aisec.cpg.TranslationResult;
-import de.fraunhofer.aisec.cpg.graph.Declaration;
-import de.fraunhofer.aisec.cpg.graph.DeclarationStatement;
-import de.fraunhofer.aisec.cpg.graph.MethodDeclaration;
-import de.fraunhofer.aisec.cpg.graph.Node;
-import de.fraunhofer.aisec.cpg.graph.RecordDeclaration;
-import de.fraunhofer.aisec.cpg.graph.TranslationUnitDeclaration;
-import de.fraunhofer.aisec.cpg.graph.VariableDeclaration;
+import de.fraunhofer.aisec.cpg.graph.*;
 import java.io.File;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.TreeMap;
+import java.util.*;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
@@ -136,14 +125,14 @@ class JavaVsCppTest {
             + "3 DeclaredReferenceExpression\n"
             + "4 Literal\n"
             + "5 BinaryOperator\n"
-            + "6 DeclaredReferenceExpression\n"
-            + "7 IfStatement\n"
+            + "6 IfStatement\n"
+            + "7 DeclaredReferenceExpression\n"
             + "8 DeclaredReferenceExpression\n"
             + "9 DeclaredReferenceExpression\n"
-            + "10 BinaryOperator\n"
-            + "11 CallExpression\n"
-            + "12 CompoundStatement\n"
-            + "13 ReturnStatement\n",
+            + "10 CallExpression\n"
+            + "11 BinaryOperator\n"
+            + "12 ReturnStatement\n"
+            + "13 CompoundStatement\n",
         sbNodes.toString());
 
     List<Pair<Integer, Integer>> collect =
@@ -164,17 +153,16 @@ class JavaVsCppTest {
             + "4 -> 4\n"
             + "5 -> 5\n"
             + "6 -> 6\n"
-            + "6 -> 7\n"
-            + "8 -> 8\n"
+            + "7 -> 7\n"
+            + "7 -> 8\n"
             + "9 -> 9\n"
             + "10 -> 10\n"
             + "11 -> 11\n"
             + "12 -> 12\n"
             + "13 -> 13\n"
-            + "14 -> 7\n"
-            + "14 -> 9\n"
-            + "14 -> 11\n"
-            + "14 -> 13\n",
+            + "14 -> 8\n"
+            + "14 -> 10\n"
+            + "14 -> 12\n",
         sbEdges.toString());
   }
 }
