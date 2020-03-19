@@ -67,6 +67,7 @@ public abstract class LanguageFrontend {
       new HashMap<>();
   protected Map<Object, Object> processedMapping = new HashMap<>();
   private String namespaceDelimiter;
+  protected TranslationUnitDeclaration currentTU = null;
 
   /* Cache functions. */
   //  private Map<String, FunctionDeclaration> functions = new HashMap<>();
@@ -153,6 +154,14 @@ public abstract class LanguageFrontend {
   public void setScopeManager(@NonNull ScopeManager scopeManager) {
     this.scopeManager = scopeManager;
     this.scopeManager.setLang(this);
+  }
+
+  public TranslationUnitDeclaration getCurrentTU() {
+    return currentTU;
+  }
+
+  public void setCurrentTU(TranslationUnitDeclaration currentTU) {
+    this.currentTU = currentTU;
   }
 
   public abstract TranslationUnitDeclaration parse(File file) throws TranslationException;

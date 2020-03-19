@@ -87,11 +87,7 @@ public class Type {
   }
 
   public Type(Type src) {
-    this.type = src.type;
-    this.typeAdjustment = src.typeAdjustment;
-    this.typeModifier = src.typeModifier;
-    this.typeOrigin = src.typeOrigin;
-    this.isFunctionPtr = src.isFunctionPtr;
+    setFrom(src);
   }
 
   public static Type getUnknown() {
@@ -138,6 +134,14 @@ public class Type {
     this.type = type;
   }
 
+  public void setFrom(Type src) {
+    this.type = src.type;
+    this.typeAdjustment = src.typeAdjustment;
+    this.typeModifier = src.typeModifier;
+    this.typeOrigin = src.typeOrigin;
+    this.isFunctionPtr = src.isFunctionPtr;
+  }
+
   private void setFrom(String string) {
     String cleaned = clean(string);
     Matcher matcher = TYPE_FROM_STRING.matcher(cleaned);
@@ -155,6 +159,7 @@ public class Type {
       LOGGER.warn("Type regex does not match for {} (cleaned version of {})", cleaned, string);
       setTypeName(cleaned);
     }
+    setFrom(TypeManager.getInstance().resolvePossibleTypedef(this));
   }
 
   public boolean hasTypeAdjustment() {

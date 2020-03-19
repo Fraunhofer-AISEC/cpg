@@ -66,12 +66,12 @@ public class CXXLiteralTest {
     assertNotNull(zero);
     assertEquals("zero", zero.getName());
 
-    assertLiteral(0, CXXLanguageFrontend.INT_TYPE, zero, "i");
-    assertLiteral(0L, CXXLanguageFrontend.LONG_TYPE, zero, "l_with_suffix");
-    assertLiteral(0L, CXXLanguageFrontend.LONG_LONG_TYPE, zero, "l_long_long_with_suffix");
+    assertLiteral(0, Type.createFrom("int"), zero, "i");
+    assertLiteral(0L, Type.createFrom("long"), zero, "l_with_suffix");
+    assertLiteral(0L, Type.createFrom("long long"), zero, "l_long_long_with_suffix");
     assertLiteral(
         BigInteger.valueOf(0),
-        CXXLanguageFrontend.TYPE_UNSIGNED_LONG_LONG,
+        Type.createFrom("unsigned long long"),
         zero,
         "l_unsigned_long_long_with_suffix");
   }
@@ -87,28 +87,25 @@ public class CXXLiteralTest {
     assertNotNull(decimal);
     assertEquals("decimal", decimal.getName());
 
-    assertLiteral(42, CXXLanguageFrontend.INT_TYPE, decimal, "i");
-    assertLiteral(9223372036854775807L, CXXLanguageFrontend.LONG_TYPE, decimal, "l");
-    assertLiteral(9223372036854775807L, CXXLanguageFrontend.LONG_TYPE, decimal, "l_with_suffix");
+    assertLiteral(42, Type.createFrom("int"), decimal, "i");
+    assertLiteral(9223372036854775807L, Type.createFrom("long"), decimal, "l");
+    assertLiteral(9223372036854775807L, Type.createFrom("long"), decimal, "l_with_suffix");
     assertLiteral(
-        9223372036854775807L,
-        CXXLanguageFrontend.LONG_LONG_TYPE,
-        decimal,
-        "l_long_long_with_suffix");
+        9223372036854775807L, Type.createFrom("long long"), decimal, "l_long_long_with_suffix");
 
     assertLiteral(
         new BigInteger("9223372036854775809"),
-        CXXLanguageFrontend.TYPE_UNSIGNED_LONG,
+        Type.createFrom("unsigned long"),
         decimal,
         "l_unsigned_long_with_suffix");
     assertLiteral(
         new BigInteger("9223372036854775808"),
-        CXXLanguageFrontend.TYPE_UNSIGNED_LONG_LONG,
+        Type.createFrom("unsigned long long"),
         decimal,
         "l_long_long_implicit");
     assertLiteral(
         new BigInteger("9223372036854775809"),
-        CXXLanguageFrontend.TYPE_UNSIGNED_LONG_LONG,
+        Type.createFrom("unsigned long long"),
         decimal,
         "l_unsigned_long_long_with_suffix");
   }
@@ -124,11 +121,11 @@ public class CXXLiteralTest {
     assertNotNull(octal);
     assertEquals("octal", octal.getName());
 
-    assertLiteral(42, CXXLanguageFrontend.INT_TYPE, octal, "i");
-    assertLiteral(42L, CXXLanguageFrontend.LONG_TYPE, octal, "l_with_suffix");
+    assertLiteral(42, Type.createFrom("int"), octal, "i");
+    assertLiteral(42L, Type.createFrom("long"), octal, "l_with_suffix");
     assertLiteral(
         BigInteger.valueOf(42),
-        CXXLanguageFrontend.TYPE_UNSIGNED_LONG_LONG,
+        Type.createFrom("unsigned long long"),
         octal,
         "l_unsigned_long_long_with_suffix");
   }
@@ -145,11 +142,11 @@ public class CXXLiteralTest {
     assertNotNull(functionDeclaration);
     assertEquals("hex", functionDeclaration.getName());
 
-    assertLiteral(42, CXXLanguageFrontend.INT_TYPE, functionDeclaration, "i");
-    assertLiteral(42L, CXXLanguageFrontend.LONG_TYPE, functionDeclaration, "l_with_suffix");
+    assertLiteral(42, Type.createFrom("int"), functionDeclaration, "i");
+    assertLiteral(42L, Type.createFrom("long"), functionDeclaration, "l_with_suffix");
     assertLiteral(
         BigInteger.valueOf(42),
-        CXXLanguageFrontend.TYPE_UNSIGNED_LONG_LONG,
+        Type.createFrom("unsigned long long"),
         functionDeclaration,
         "l_unsigned_long_long_with_suffix");
   }

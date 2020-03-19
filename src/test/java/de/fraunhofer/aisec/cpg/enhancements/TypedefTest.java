@@ -17,14 +17,20 @@ public class TypedefTest {
   private Path topLevel = Path.of("src", "test", "resources", "typedefs");
 
   @Test
-  void testSimple() throws Exception {
+  void testSingle() throws Exception {
     List<TranslationUnitDeclaration> result = TestUtils.analyze("cpp", topLevel);
     List<VariableDeclaration> variables = Util.subnodesOfType(result, VariableDeclaration.class);
     VariableDeclaration l1 = TestUtils.findByName(variables, "l1");
     VariableDeclaration l2 = TestUtils.findByName(variables, "l2");
+    assertEquals(l1.getType(), l2.getType());
+  }
+
+  @Test
+  void testMultiple() throws Exception {
+    List<TranslationUnitDeclaration> result = TestUtils.analyze("cpp", topLevel);
+    List<VariableDeclaration> variables = Util.subnodesOfType(result, VariableDeclaration.class);
     VariableDeclaration i1 = TestUtils.findByName(variables, "i1");
     VariableDeclaration i2 = TestUtils.findByName(variables, "i2");
-    assertEquals(l1.getType(), l2.getType());
     assertEquals(i1.getType(), i2.getType());
   }
 

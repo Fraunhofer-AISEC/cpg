@@ -855,16 +855,13 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
       // be an unsigned long long, except if it is explicitly specified as ul
       type =
           Objects.equals("ul", suffix)
-              ? CXXLanguageFrontend.TYPE_UNSIGNED_LONG
-              : CXXLanguageFrontend.TYPE_UNSIGNED_LONG_LONG;
+              ? Type.createFrom("unsigned long")
+              : Type.createFrom("unsigned long long");
     } else if (numberValue instanceof Long) {
       // differentiate between long and long long
-      type =
-          Objects.equals("ll", suffix)
-              ? CXXLanguageFrontend.LONG_LONG_TYPE
-              : CXXLanguageFrontend.LONG_TYPE;
+      type = Objects.equals("ll", suffix) ? Type.createFrom("long long") : Type.createFrom("long");
     } else {
-      type = CXXLanguageFrontend.INT_TYPE;
+      type = Type.createFrom("int");
     }
 
     return NodeBuilder.newLiteral(numberValue, type, ctx.getRawSignature());

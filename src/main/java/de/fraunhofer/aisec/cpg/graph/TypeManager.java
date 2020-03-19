@@ -41,8 +41,12 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.builder.ToStringBuilder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class TypeManager {
+
+  private static final Logger log = LoggerFactory.getLogger(TypeManager.class);
 
   private static final List<String> primitiveTypeNames =
       List.of("byte", "short", "int", "long", "float", "double", "boolean", "char");
@@ -174,6 +178,41 @@ public class TypeManager {
   public void cleanup() {
     this.frontend = null;
     this.typeToRecord.clear();
+  }
+
+  public void handleTypedef(String rawCode) {
+    String cleaned = rawCode.replaceAll("\\s*(typedef|;)\\s*", "");
+    if (rawCode.contains(",")) {
+      // TODO multiple typedefs
+    } else {
+      List<String> parts = List.of(cleaned.split("\\s+"));
+      if (parts.size() < 2) {
+        log.error("Typedef contains no whitespace to split on: {}", rawCode);
+      }
+      // typedefs can be wildly mixed around, but the last item is always the alias to be defined
+      Type alias = Type.createFrom(parts.get(parts.size() - 1));
+      Type target = Type.createFrom(String.join(" ", parts.subList(0, parts.size() - 1)));
+      TypedefDeclaration typedef = NodeBuilder.newTypedefDeclaration(target, alias, rawCode);
+      frontend.getScopeManager().addTypedef(typedef);
+    }
+  }
+
+  public Type resolvePossibleTypedef(Type alias) {
+    List<TypedefDeclaration> typedefs = frontend.getScopeManager().getCurrentTypedefs();
+    Type currType;
+    Type resolved = alias;
+    do {
+      currType = resolved;
+      Type finalCurrType = currType; // needed for usage in lambda
+      resolved =
+          typedefs.stream()
+              .filter(t -> t.getAlias().equals(finalCurrType))
+              .findAny()
+              .map(TypedefDeclaration::getType)
+              .orElse(currType);
+    } while (!currType.equals(resolved));
+
+    return resolved;
   }
 
   private class Ancestor {

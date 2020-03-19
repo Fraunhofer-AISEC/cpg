@@ -42,6 +42,7 @@ import de.fraunhofer.aisec.cpg.graph.ReturnStatement;
 import de.fraunhofer.aisec.cpg.graph.Statement;
 import de.fraunhofer.aisec.cpg.graph.TranslationUnitDeclaration;
 import de.fraunhofer.aisec.cpg.graph.Type;
+import de.fraunhofer.aisec.cpg.graph.TypeManager;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -160,6 +161,11 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
   }
 
   private Declaration handleSimpleDeclaration(CPPASTSimpleDeclaration ctx) {
+    if (ctx.getRawSignature().contains("typedef")) {
+      TypeManager.getInstance().handleTypedef(ctx.getRawSignature());
+      return null;
+    }
+
     if (ctx.getDeclarators().length == 0) {
       if (ctx.getDeclSpecifier() != null) {
         if (ctx.getDeclSpecifier() instanceof CPPASTCompositeTypeSpecifier) {
@@ -213,6 +219,7 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
     TranslationUnitDeclaration node =
         NodeBuilder.newTranslationUnitDeclaration(
             translationUnit.getFilePath(), translationUnit.getRawSignature());
+    lang.setCurrentTU(node);
 
     HashMap<String, HashSet<ProblemDeclaration>> problematicIncludes = new HashMap<>();
     for (IASTDeclaration declaration : translationUnit.getDeclarations()) {
