@@ -198,21 +198,12 @@ public class TypeManager {
   }
 
   public Type resolvePossibleTypedef(Type alias) {
-    List<TypedefDeclaration> typedefs = frontend.getScopeManager().getCurrentTypedefs();
-    Type currType;
-    Type resolved = alias;
-    do {
-      currType = resolved;
-      Type finalCurrType = currType; // needed for usage in lambda
-      resolved =
-          typedefs.stream()
-              .filter(t -> t.getAlias().equals(finalCurrType))
-              .findAny()
-              .map(TypedefDeclaration::getType)
-              .orElse(currType);
-    } while (!currType.equals(resolved));
-
-    return resolved;
+    Optional<Type> applicable =
+        frontend.getScopeManager().getCurrentTypedefs().stream()
+            .filter(t -> t.getAlias().equals(alias))
+            .findAny()
+            .map(TypedefDeclaration::getType);
+    return applicable.orElse(alias);
   }
 
   private class Ancestor {
