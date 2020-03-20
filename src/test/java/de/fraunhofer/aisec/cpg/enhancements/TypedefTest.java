@@ -6,7 +6,7 @@ import de.fraunhofer.aisec.cpg.TestUtils;
 import de.fraunhofer.aisec.cpg.graph.FieldDeclaration;
 import de.fraunhofer.aisec.cpg.graph.RecordDeclaration;
 import de.fraunhofer.aisec.cpg.graph.TranslationUnitDeclaration;
-import de.fraunhofer.aisec.cpg.graph.VariableDeclaration;
+import de.fraunhofer.aisec.cpg.graph.ValueDeclaration;
 import de.fraunhofer.aisec.cpg.helpers.Util;
 import java.nio.file.Path;
 import java.util.List;
@@ -19,82 +19,78 @@ public class TypedefTest {
   @Test
   void testSingle() throws Exception {
     List<TranslationUnitDeclaration> result = TestUtils.analyze("cpp", topLevel);
-    List<VariableDeclaration> variables = Util.subnodesOfType(result, VariableDeclaration.class);
-    VariableDeclaration l1 = TestUtils.findByName(variables, "l1");
-    VariableDeclaration l2 = TestUtils.findByName(variables, "l2");
+    List<ValueDeclaration> variables = Util.subnodesOfType(result, ValueDeclaration.class);
+    ValueDeclaration l1 = TestUtils.findByName(variables, "l1");
+    ValueDeclaration l2 = TestUtils.findByName(variables, "l2");
     assertEquals(l1.getType(), l2.getType());
-  }
-
-  @Test
-  void testMultiple() throws Exception {
-    List<TranslationUnitDeclaration> result = TestUtils.analyze("cpp", topLevel);
-    List<VariableDeclaration> variables = Util.subnodesOfType(result, VariableDeclaration.class);
-    VariableDeclaration i1 = TestUtils.findByName(variables, "i1");
-    VariableDeclaration i2 = TestUtils.findByName(variables, "i2");
-    assertEquals(i1.getType(), i2.getType());
   }
 
   @Test
   void testChained() throws Exception {
     List<TranslationUnitDeclaration> result = TestUtils.analyze("cpp", topLevel);
-    List<VariableDeclaration> variables = Util.subnodesOfType(result, VariableDeclaration.class);
-    VariableDeclaration l1 = TestUtils.findByName(variables, "l1");
-    VariableDeclaration l3 = TestUtils.findByName(variables, "l3");
-    VariableDeclaration l4 = TestUtils.findByName(variables, "l4");
+    List<ValueDeclaration> variables = Util.subnodesOfType(result, ValueDeclaration.class);
+    ValueDeclaration l1 = TestUtils.findByName(variables, "l1");
+    ValueDeclaration l3 = TestUtils.findByName(variables, "l3");
+    ValueDeclaration l4 = TestUtils.findByName(variables, "l4");
     assertEquals(l1.getType(), l3.getType());
     assertEquals(l1.getType(), l4.getType());
   }
 
   @Test
-  void testComplex() throws Exception {
+  void testMultiple() throws Exception {
     List<TranslationUnitDeclaration> result = TestUtils.analyze("cpp", topLevel);
-    List<VariableDeclaration> variables = Util.subnodesOfType(result, VariableDeclaration.class);
+    List<ValueDeclaration> variables = Util.subnodesOfType(result, ValueDeclaration.class);
+
+    // simple type
+    ValueDeclaration i1 = TestUtils.findByName(variables, "i1");
+    ValueDeclaration i2 = TestUtils.findByName(variables, "i2");
+    assertEquals(i1.getType(), i2.getType());
 
     // array
-    VariableDeclaration a1 = TestUtils.findByName(variables, "a1");
-    VariableDeclaration a2 = TestUtils.findByName(variables, "a2");
+    ValueDeclaration a1 = TestUtils.findByName(variables, "a1");
+    ValueDeclaration a2 = TestUtils.findByName(variables, "a2");
     assertEquals(a1.getType(), a2.getType());
 
     // pointer
-    VariableDeclaration intPtr1 = TestUtils.findByName(variables, "intPtr1");
-    VariableDeclaration intPtr2 = TestUtils.findByName(variables, "intPtr2");
+    ValueDeclaration intPtr1 = TestUtils.findByName(variables, "intPtr1");
+    ValueDeclaration intPtr2 = TestUtils.findByName(variables, "intPtr2");
     assertEquals(intPtr1.getType(), intPtr2.getType());
 
     // function pointer
-    VariableDeclaration fPtr1 = TestUtils.findByName(variables, "intFptr1");
-    VariableDeclaration fPtr2 = TestUtils.findByName(variables, "intFptr2");
+    ValueDeclaration fPtr1 = TestUtils.findByName(variables, "intFptr1");
+    ValueDeclaration fPtr2 = TestUtils.findByName(variables, "intFptr2");
     assertEquals(fPtr1.getType(), fPtr2.getType());
   }
 
   @Test
   void testStructs() throws Exception {
     List<TranslationUnitDeclaration> result = TestUtils.analyze("cpp", topLevel);
-    List<VariableDeclaration> variables = Util.subnodesOfType(result, VariableDeclaration.class);
-    VariableDeclaration ps1 = TestUtils.findByName(variables, "ps1");
-    VariableDeclaration ps2 = TestUtils.findByName(variables, "ps2");
+    List<ValueDeclaration> variables = Util.subnodesOfType(result, ValueDeclaration.class);
+    ValueDeclaration ps1 = TestUtils.findByName(variables, "ps1");
+    ValueDeclaration ps2 = TestUtils.findByName(variables, "ps2");
     assertEquals(ps1.getType(), ps2.getType());
   }
 
   @Test
   void testArbitraryTypedefLocation() throws Exception {
     List<TranslationUnitDeclaration> result = TestUtils.analyze("cpp", topLevel);
-    List<VariableDeclaration> variables = Util.subnodesOfType(result, VariableDeclaration.class);
-    VariableDeclaration ullong1 = TestUtils.findByName(variables, "someUllong1");
-    VariableDeclaration ullong2 = TestUtils.findByName(variables, "someUllong2");
+    List<ValueDeclaration> variables = Util.subnodesOfType(result, ValueDeclaration.class);
+    ValueDeclaration ullong1 = TestUtils.findByName(variables, "someUllong1");
+    ValueDeclaration ullong2 = TestUtils.findByName(variables, "someUllong2");
     assertEquals(ullong1.getType(), ullong2.getType());
   }
 
   @Test
   void testMemberTypeDef() throws Exception {
     List<TranslationUnitDeclaration> result = TestUtils.analyze("cpp", topLevel);
-    List<VariableDeclaration> variables = Util.subnodesOfType(result, VariableDeclaration.class);
+    List<ValueDeclaration> variables = Util.subnodesOfType(result, ValueDeclaration.class);
     List<RecordDeclaration> records = Util.subnodesOfType(result, RecordDeclaration.class);
     RecordDeclaration addConst = TestUtils.findByName(records, "add_const");
     FieldDeclaration typeMember1 = TestUtils.findByName(addConst.getFields(), "typeMember1");
     FieldDeclaration typeMember2 = TestUtils.findByName(addConst.getFields(), "typeMember2");
     assertEquals(typeMember1.getType(), typeMember2.getType());
 
-    VariableDeclaration typeMemberOutside = TestUtils.findByName(variables, "typeMemberOutside");
+    ValueDeclaration typeMemberOutside = TestUtils.findByName(variables, "typeMemberOutside");
     assertNotEquals(typeMemberOutside.getType(), typeMember2.getType());
   }
 }

@@ -81,7 +81,7 @@ public class InitializerListExpression extends Expression implements TypeListene
             .map(
                 t -> {
                   Type arrayType = new Type(t);
-                  arrayType.setTypeAdjustment(arrayType.getTypeAdjustment() + "[]");
+                  arrayType.addTypeAdjustment("[]");
                   return arrayType;
                 })
             .collect(Collectors.toSet());

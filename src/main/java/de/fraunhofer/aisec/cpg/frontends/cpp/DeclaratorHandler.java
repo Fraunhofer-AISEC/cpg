@@ -163,7 +163,7 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
     }
 
     // forward type adjustments
-    declaration.getType().setTypeAdjustment(typeAdjustment);
+    declaration.getType().addTypeAdjustment(typeAdjustment);
     lang.getScopeManager().addValueDeclaration(declaration);
     return declaration;
   }
@@ -228,7 +228,7 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
     // forward type adjustments
     declaration
         .getType()
-        .setTypeAdjustment(
+        .addTypeAdjustment(
             List.of(ctx.getPointerOperators()).stream()
                 .map(IASTNode::getRawSignature)
                 .collect(Collectors.joining()));

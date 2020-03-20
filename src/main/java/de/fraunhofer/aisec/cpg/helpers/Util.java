@@ -35,8 +35,11 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Deque;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.List;
@@ -252,6 +255,79 @@ public class Util {
   public static void errorWithFileLocation(
       @NonNull Node node, Logger log, String format, Object... arguments) {
     log.error(String.format("%s: %s", locationLink(node.getLocation()), format), arguments);
+  }
+
+  /**
+   * Split a String into multiple parts by using one or more delimiter characters. Any delimiters
+   * that are surrounded by matching opening and closing brackets are skipped. E.g. "a,(b,c)" will
+   * result in a list containing "a" and "(b,c)" when splitting on commas. Empty parts are ignored,
+   * so when splitting "a,,,,(b,c)", the same result is returned as in the previous example.
+   *
+   * @param toSplit The input String
+   * @param delimiters A String containing all characters that should be treated as delimiters
+   * @return A list of all parts of the input, as divided by any delimiter
+   */
+  public static List<String> splitLeavingParenthesisContents(String toSplit, String delimiters) {
+    List<String> result = new ArrayList<>();
+    int openParentheses = 0;
+    StringBuilder currPart = new StringBuilder();
+    for (char c : toSplit.toCharArray()) {
+      if (c == '(') {
+        openParentheses++;
+        currPart.append(c);
+      } else if (c == ')') {
+        if (openParentheses > 0) {
+          openParentheses--;
+        }
+        currPart.append(c);
+      } else if (delimiters.contains("" + c)) {
+        if (openParentheses == 0) {
+          String toAdd = currPart.toString().strip();
+          if (!toAdd.isEmpty()) {
+            result.add(currPart.toString().strip());
+          }
+          currPart = new StringBuilder();
+        } else {
+          currPart.append(c);
+        }
+      } else {
+        currPart.append(c);
+      }
+    }
+
+    if (currPart.length() > 0) {
+      result.add(currPart.toString().strip());
+    }
+    return result;
+  }
+
+  /**
+   * Removes pairs of parentheses that do not provide any further separation. E.g. "(foo)" results
+   * in "foo" and "(((foo))((bar)))" in "(foo)(bar)", whereas "(foo)(bar)" stays the same.
+   *
+   * @param original The String to clean
+   * @return The modified version without excess parentheses
+   */
+  public static String removeRedundantParentheses(String original) {
+    char[] result = original.toCharArray();
+    char marker = '\uffff';
+    Deque<Integer> openingParentheses = new ArrayDeque<>();
+    for (int i = 0; i < original.length(); i++) {
+      char c = original.charAt(i);
+      switch (c) {
+        case '(':
+          openingParentheses.push(i);
+          break;
+        case ')':
+          int matching = openingParentheses.pop();
+          if (matching == 0 && i == original.length() - 1) {
+            result[matching] = result[i] = marker;
+          } else if (matching > 0 && result[matching - 1] == '(' && result[i + 1] == ')') {
+            result[matching] = result[i] = marker;
+          }
+      }
+    }
+    return new String(result).replace("" + marker, "");
   }
 
   public enum Connect {

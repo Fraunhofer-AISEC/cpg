@@ -27,6 +27,7 @@
 package de.fraunhofer.aisec.cpg.graph;
 
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
+import de.fraunhofer.aisec.cpg.helpers.Util;
 import de.fraunhofer.aisec.cpg.passes.scopes.RecordScope;
 import java.util.Collection;
 import java.util.Comparator;
@@ -38,6 +39,8 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.builder.ToStringBuilder;
@@ -50,6 +53,8 @@ public class TypeManager {
 
   private static final List<String> primitiveTypeNames =
       List.of("byte", "short", "int", "long", "float", "double", "boolean", "char");
+  private static final Pattern funPointerPattern =
+      Pattern.compile("\\(?\\*(?<alias>[^()]+)\\)?\\(.*\\)");
   private static TypeManager INSTANCE = new TypeManager();
 
   private Map<String, RecordDeclaration> typeToRecord = new HashMap<>();
@@ -180,18 +185,78 @@ public class TypeManager {
     this.typeToRecord.clear();
   }
 
-  public void handleTypedef(String rawCode) {
-    String cleaned = rawCode.replaceAll("\\s*(typedef|;)\\s*", "");
-    if (rawCode.contains(",")) {
-      // TODO multiple typedefs
+  private Type getTargetType(Type currTarget, String alias) {
+    if (alias.contains("(") && alias.contains("*")) {
+      // function pointer
+      Type fptrType = Type.createFrom(currTarget.toString() + " " + alias);
+      fptrType.setFunctionPtr(true);
+      return fptrType;
+    } else if (alias.endsWith("]")) {
+      // array type
+      return Type.createFrom(currTarget.toString() + alias.substring(alias.indexOf('[')));
+    } else if (alias.contains("*")) {
+      // pointer
+      int depth = StringUtils.countMatches(alias, '*');
+      for (int i = 0; i < depth; i++) {
+        currTarget = currTarget.reference();
+      }
+      return currTarget;
     } else {
-      List<String> parts = List.of(cleaned.split("\\s+"));
+      return currTarget;
+    }
+  }
+
+  private Type getAlias(String alias) {
+    if (alias.contains("(") && alias.contains("*")) {
+      // function pointer
+      Matcher matcher = funPointerPattern.matcher(alias);
+      if (matcher.matches()) {
+        return Type.createFrom(matcher.group("alias"));
+      } else {
+        log.error("Could not find alias name in unction pointer typedef: {}", alias);
+        return Type.createFrom(alias);
+      }
+    } else if (alias.endsWith("]")) {
+      // array type
+      return Type.createFrom(alias.substring(0, alias.indexOf('[')));
+    } else if (alias.contains("*")) {
+      // pointer
+      return Type.createFrom(alias.replace("*", ""));
+    } else {
+      return Type.createFrom(alias);
+    }
+  }
+
+  public void handleTypedef(String rawCode) {
+    String cleaned = rawCode.replaceAll("(typedef|;)", "");
+    if (cleaned.contains(",")) {
+      List<String> parts = Util.splitLeavingParenthesisContents(cleaned, ",");
+      String[] splitFirst = parts.get(0).split("\\s+");
+      if (splitFirst.length < 2) {
+        log.error("Cannot find out target type for {}", rawCode);
+        return;
+      }
+      Type target = Type.createFrom(splitFirst[0]);
+      parts.set(0, parts.get(0).substring(splitFirst[0].length()).strip());
+      for (String part : parts) {
+        String cleanedPart = Util.removeRedundantParentheses(part);
+        Type currTarget = getTargetType(target, cleanedPart);
+        Type alias = getAlias(cleanedPart);
+        TypedefDeclaration typedef = NodeBuilder.newTypedefDeclaration(currTarget, alias, rawCode);
+        frontend.getScopeManager().addTypedef(typedef);
+      }
+    } else {
+      List<String> parts = Util.splitLeavingParenthesisContents(cleaned, " \r\n");
       if (parts.size() < 2) {
         log.error("Typedef contains no whitespace to split on: {}", rawCode);
+        return;
       }
       // typedefs can be wildly mixed around, but the last item is always the alias to be defined
-      Type alias = Type.createFrom(parts.get(parts.size() - 1));
-      Type target = Type.createFrom(String.join(" ", parts.subList(0, parts.size() - 1)));
+      Type alias = Type.createFrom(Util.removeRedundantParentheses(parts.get(parts.size() - 1)));
+      Type target =
+          Type.createFrom(
+              Util.removeRedundantParentheses(
+                  String.join(" ", parts.subList(0, parts.size() - 1))));
       TypedefDeclaration typedef = NodeBuilder.newTypedefDeclaration(target, alias, rawCode);
       frontend.getScopeManager().addTypedef(typedef);
     }

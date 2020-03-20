@@ -57,7 +57,7 @@ class DeclarationListHandler
       String typeAdjustment = declaration.getType().getTypeAdjustment();
       String typeString = ctx.getDeclSpecifier().toString();
       declaration.setType(Type.createFrom(typeString));
-      declaration.getType().setTypeAdjustment(typeAdjustment);
+      declaration.getType().addTypeAdjustment(typeAdjustment);
 
       // cache binding
       this.lang.cacheDeclaration(declarator.getName().resolveBinding(), declaration);

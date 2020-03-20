@@ -174,6 +174,18 @@ public class Type {
     this.typeAdjustment = typeAdjustment;
   }
 
+  /**
+   * Sometimes the actual type adjustment might not be apparent (e.g. if intptr_t is defined as
+   * int*, we do not have an adjustment explicitly set for intptr_t, but int* sure has one). So for
+   * these cases we should just add any adjustments as appropriate, in order to not kill implicit
+   * ones
+   *
+   * @param typeAdjustment
+   */
+  public void addTypeAdjustment(String typeAdjustment) {
+    this.typeAdjustment += typeAdjustment;
+  }
+
   public Origin getTypeOrigin() {
     return typeOrigin;
   }

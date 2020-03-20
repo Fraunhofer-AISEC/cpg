@@ -41,7 +41,7 @@ S *ps1;
 pS ps2;
 
 // typedef can be used anywhere in the decl-specifier-seq
-long unsigned typedef int long ullong;
+unsigned long typedef long int ullong;
 // more conventionally spelled "typedef unsigned long long int ullong;"
 unsigned long long int someUllong1;
 ullong someUllong2;

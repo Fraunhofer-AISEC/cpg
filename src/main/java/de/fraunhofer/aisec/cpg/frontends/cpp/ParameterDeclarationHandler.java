@@ -96,7 +96,7 @@ public class ParameterDeclarationHandler
     paramVariableDeclaration.setType(Type.createFrom(ctx.getDeclSpecifier().toString()));
 
     // forward type adjustment
-    paramVariableDeclaration.getType().setTypeAdjustment(typeAdjustment);
+    paramVariableDeclaration.getType().addTypeAdjustment(typeAdjustment);
 
     return paramVariableDeclaration;
   }

@@ -130,7 +130,7 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
     String typeAdjustment = functionDeclaration.getType().getTypeAdjustment();
 
     functionDeclaration.setType(Type.createFrom(typeString));
-    functionDeclaration.getType().setTypeAdjustment(typeAdjustment);
+    functionDeclaration.getType().addTypeAdjustment(typeAdjustment);
 
     if (ctx.getBody() != null) {
       Statement bodyStatement = this.lang.getStatementHandler().handle(ctx.getBody());
