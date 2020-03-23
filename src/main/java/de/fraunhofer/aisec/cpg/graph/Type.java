@@ -62,7 +62,7 @@ public class Type {
   }
 
   public Type(String type) {
-    setFrom(type);
+    setFrom(type, true);
   }
 
   public Type(String type, String typeAdjustment) {
@@ -126,6 +126,19 @@ public class Type {
     return new Type(string);
   }
 
+  /**
+   * Does the same as {@link #createIgnoringAlias(String)} but explicitly does not use type alias
+   * resolution. This is usually not what you want. Use with care!
+   *
+   * @param string the string representation of the type
+   * @return the type
+   */
+  public static Type createIgnoringAlias(String string) {
+    Type type = new Type();
+    type.setFrom(string, false);
+    return type;
+  }
+
   public String getTypeName() {
     return type;
   }
@@ -142,7 +155,7 @@ public class Type {
     this.isFunctionPtr = src.isFunctionPtr;
   }
 
-  private void setFrom(String string) {
+  private void setFrom(String string, boolean resolveAlias) {
     String cleaned = clean(string);
     Matcher matcher = TYPE_FROM_STRING.matcher(cleaned);
     if (matcher.matches()) {
@@ -159,7 +172,9 @@ public class Type {
       LOGGER.warn("Type regex does not match for {} (cleaned version of {})", cleaned, string);
       setTypeName(cleaned);
     }
-    setFrom(TypeManager.getInstance().resolvePossibleTypedef(this));
+    if (resolveAlias) {
+      setFrom(TypeManager.getInstance().resolvePossibleTypedef(this));
+    }
   }
 
   public boolean hasTypeAdjustment() {

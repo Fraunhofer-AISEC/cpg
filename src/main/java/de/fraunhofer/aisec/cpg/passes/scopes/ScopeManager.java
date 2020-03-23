@@ -460,7 +460,13 @@ public class ScopeManager {
     }
 
     if (scope.getParent() != null) {
-      curr.addAll(getCurrentTypedefs(scope.getParent()));
+      for (TypedefDeclaration parentTypedef : getCurrentTypedefs(scope.getParent())) {
+        if (curr.stream()
+            .map(TypedefDeclaration::getAlias)
+            .noneMatch(parentTypedef.getAlias()::equals)) {
+          curr.add(parentTypedef);
+        }
+      }
     }
     return curr;
   }

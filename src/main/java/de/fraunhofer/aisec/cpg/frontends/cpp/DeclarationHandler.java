@@ -161,7 +161,8 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
   }
 
   private Declaration handleSimpleDeclaration(CPPASTSimpleDeclaration ctx) {
-    if (ctx.getRawSignature().contains("typedef")) {
+    if (ctx.getRawSignature().contains("typedef")
+        && !(ctx.getDeclSpecifier() instanceof CPPASTCompositeTypeSpecifier)) {
       TypeManager.getInstance().handleTypedef(ctx.getRawSignature());
       return null;
     }

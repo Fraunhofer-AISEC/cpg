@@ -211,19 +211,19 @@ public class TypeManager {
       // function pointer
       Matcher matcher = funPointerPattern.matcher(alias);
       if (matcher.matches()) {
-        return Type.createFrom(matcher.group("alias"));
+        return Type.createIgnoringAlias(matcher.group("alias"));
       } else {
-        log.error("Could not find alias name in unction pointer typedef: {}", alias);
-        return Type.createFrom(alias);
+        log.error("Could not find alias name in function pointer typedef: {}", alias);
+        return Type.createIgnoringAlias(alias);
       }
     } else if (alias.endsWith("]")) {
       // array type
-      return Type.createFrom(alias.substring(0, alias.indexOf('[')));
+      return Type.createIgnoringAlias(alias.substring(0, alias.indexOf('[')));
     } else if (alias.contains("*")) {
       // pointer
-      return Type.createFrom(alias.replace("*", ""));
+      return Type.createIgnoringAlias(alias.replace("*", ""));
     } else {
-      return Type.createFrom(alias);
+      return Type.createIgnoringAlias(alias);
     }
   }
 
@@ -252,7 +252,8 @@ public class TypeManager {
         return;
       }
       // typedefs can be wildly mixed around, but the last item is always the alias to be defined
-      Type alias = Type.createFrom(Util.removeRedundantParentheses(parts.get(parts.size() - 1)));
+      Type alias =
+          Type.createIgnoringAlias(Util.removeRedundantParentheses(parts.get(parts.size() - 1)));
       Type target =
           Type.createFrom(
               Util.removeRedundantParentheses(
