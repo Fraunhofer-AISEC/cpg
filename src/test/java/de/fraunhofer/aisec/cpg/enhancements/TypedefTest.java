@@ -3,7 +3,6 @@ package de.fraunhofer.aisec.cpg.enhancements;
 import static org.junit.jupiter.api.Assertions.*;
 
 import de.fraunhofer.aisec.cpg.TestUtils;
-import de.fraunhofer.aisec.cpg.graph.FieldDeclaration;
 import de.fraunhofer.aisec.cpg.graph.RecordDeclaration;
 import de.fraunhofer.aisec.cpg.graph.TranslationUnitDeclaration;
 import de.fraunhofer.aisec.cpg.graph.ValueDeclaration;
@@ -20,9 +19,26 @@ public class TypedefTest {
   void testSingle() throws Exception {
     List<TranslationUnitDeclaration> result = TestUtils.analyze("cpp", topLevel);
     List<ValueDeclaration> variables = Util.subnodesOfType(result, ValueDeclaration.class);
+
+    // normal type
     ValueDeclaration l1 = TestUtils.findByName(variables, "l1");
     ValueDeclaration l2 = TestUtils.findByName(variables, "l2");
     assertEquals(l1.getType(), l2.getType());
+
+    // pointer
+    ValueDeclaration longptr1 = TestUtils.findByName(variables, "longptr1");
+    ValueDeclaration longptr2 = TestUtils.findByName(variables, "longptr2");
+    assertEquals(longptr1.getType(), longptr2.getType());
+
+    // array
+    ValueDeclaration arr1 = TestUtils.findByName(variables, "arr1");
+    ValueDeclaration arr2 = TestUtils.findByName(variables, "arr2");
+    assertEquals(arr1.getType(), arr2.getType());
+
+    // function pointer
+    ValueDeclaration uintfp1 = TestUtils.findByName(variables, "uintfp1");
+    ValueDeclaration uintfp2 = TestUtils.findByName(variables, "uintfp2");
+    assertEquals(uintfp1.getType(), uintfp2.getType());
   }
 
   @Test
@@ -86,11 +102,16 @@ public class TypedefTest {
     List<ValueDeclaration> variables = Util.subnodesOfType(result, ValueDeclaration.class);
     List<RecordDeclaration> records = Util.subnodesOfType(result, RecordDeclaration.class);
     RecordDeclaration addConst = TestUtils.findByName(records, "add_const");
-    FieldDeclaration typeMember1 = TestUtils.findByName(addConst.getFields(), "typeMember1");
-    FieldDeclaration typeMember2 = TestUtils.findByName(addConst.getFields(), "typeMember2");
+    ValueDeclaration typeMember1 = TestUtils.findByName(addConst.getFields(), "typeMember1");
+    ValueDeclaration typeMember2 = TestUtils.findByName(addConst.getFields(), "typeMember2");
     assertEquals(typeMember1.getType(), typeMember2.getType());
 
     ValueDeclaration typeMemberOutside = TestUtils.findByName(variables, "typeMemberOutside");
     assertNotEquals(typeMemberOutside.getType(), typeMember2.getType());
+
+    ValueDeclaration cptr1 = TestUtils.findByName(variables, "cptr1");
+    ValueDeclaration cptr2 = TestUtils.findByName(variables, "cptr2");
+    assertEquals(cptr1.getType(), cptr2.getType());
+    assertNotEquals(typeMemberOutside.getType(), cptr2.getType());
   }
 }

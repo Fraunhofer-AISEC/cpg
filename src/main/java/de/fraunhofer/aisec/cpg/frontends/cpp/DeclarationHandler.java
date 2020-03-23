@@ -229,6 +229,10 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
       }
 
       Declaration decl = handle(declaration);
+      if (decl == null) {
+        continue;
+      }
+
       if (decl instanceof ProblemDeclaration) {
         HashSet<ProblemDeclaration> problems =
             problematicIncludes.computeIfAbsent(

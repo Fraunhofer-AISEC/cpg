@@ -11,6 +11,20 @@ ulong l2;
 ulong2 l3;
 ulong3 l4;
 
+// special cases
+typedef long *longp_t;
+typedef int intarr[20];
+typedef unsigned int (*uint_fp_t)(long, long);
+
+long *longptr1;
+longp_t longptr2;
+
+int arr1[20];
+intarr arr2;
+
+unsigned int (*uintfp1)(long, long);
+uint_fp_t uintfp2;
+
 // more complicated typedef
 typedef int int_t, *intp_t, (*fp)(int, ulong), arr_t[10];
 
@@ -57,4 +71,8 @@ struct add_const {
 };
 
 
-int main() {}
+int main() {
+  typedef char *type;
+  char *cptr1;
+  type cptr2;
+}

@@ -330,6 +330,20 @@ public class Util {
     return new String(result).replace("" + marker, "");
   }
 
+  public static boolean containsOnOuterLevel(String input, char marker) {
+    int openParentheses = 0;
+    for (char c : input.toCharArray()) {
+      if (c == '(') {
+        openParentheses++;
+      } else if (c == ')') {
+        openParentheses--;
+      } else if (c == marker && openParentheses == 0) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   public enum Connect {
     NODE,
     SUBTREE;

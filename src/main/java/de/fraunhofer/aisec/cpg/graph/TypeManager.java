@@ -210,7 +210,7 @@ public class TypeManager {
     if (alias.contains("(") && alias.contains("*")) {
       // function pointer
       Matcher matcher = funPointerPattern.matcher(alias);
-      if (matcher.matches()) {
+      if (matcher.find()) {
         return Type.createIgnoringAlias(matcher.group("alias"));
       } else {
         log.error("Could not find alias name in function pointer typedef: {}", alias);
@@ -229,7 +229,7 @@ public class TypeManager {
 
   public void handleTypedef(String rawCode) {
     String cleaned = rawCode.replaceAll("(typedef|;)", "");
-    if (cleaned.contains(",")) {
+    if (Util.containsOnOuterLevel(cleaned, ',')) {
       List<String> parts = Util.splitLeavingParenthesisContents(cleaned, ",");
       String[] splitFirst = parts.get(0).split("\\s+");
       if (splitFirst.length < 2) {
@@ -239,11 +239,7 @@ public class TypeManager {
       Type target = Type.createFrom(splitFirst[0]);
       parts.set(0, parts.get(0).substring(splitFirst[0].length()).strip());
       for (String part : parts) {
-        String cleanedPart = Util.removeRedundantParentheses(part);
-        Type currTarget = getTargetType(target, cleanedPart);
-        Type alias = getAlias(cleanedPart);
-        TypedefDeclaration typedef = NodeBuilder.newTypedefDeclaration(currTarget, alias, rawCode);
-        frontend.getScopeManager().addTypedef(typedef);
+        handleSingleAlias(rawCode, target, part);
       }
     } else {
       List<String> parts = Util.splitLeavingParenthesisContents(cleaned, " \r\n");
@@ -252,15 +248,20 @@ public class TypeManager {
         return;
       }
       // typedefs can be wildly mixed around, but the last item is always the alias to be defined
-      Type alias =
-          Type.createIgnoringAlias(Util.removeRedundantParentheses(parts.get(parts.size() - 1)));
       Type target =
           Type.createFrom(
               Util.removeRedundantParentheses(
                   String.join(" ", parts.subList(0, parts.size() - 1))));
-      TypedefDeclaration typedef = NodeBuilder.newTypedefDeclaration(target, alias, rawCode);
-      frontend.getScopeManager().addTypedef(typedef);
+      handleSingleAlias(rawCode, target, parts.get(parts.size() - 1));
     }
+  }
+
+  public void handleSingleAlias(String rawCode, Type target, String aliasString) {
+    String cleanedPart = Util.removeRedundantParentheses(aliasString);
+    Type currTarget = getTargetType(target, cleanedPart);
+    Type alias = getAlias(cleanedPart);
+    TypedefDeclaration typedef = NodeBuilder.newTypedefDeclaration(currTarget, alias, rawCode);
+    frontend.getScopeManager().addTypedef(typedef);
   }
 
   public Type resolvePossibleTypedef(Type alias) {
