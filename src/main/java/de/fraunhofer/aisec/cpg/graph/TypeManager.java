@@ -228,8 +228,28 @@ public class TypeManager {
   }
 
   public void handleTypedef(String rawCode) {
-    String cleaned = rawCode.replaceAll("(typedef|;)", "");
-    if (Util.containsOnOuterLevel(cleaned, ',')) {
+    String cleaned = rawCode.replaceAll("(typedef|;)", "").strip();
+    if (cleaned.startsWith("struct")) {
+      int endOfStruct = cleaned.lastIndexOf('}');
+      if (endOfStruct + 1 < cleaned.length()) {
+        List<String> parts =
+            Util.splitLeavingParenthesisContents(cleaned.substring(endOfStruct + 1), ",");
+        Optional<String> name =
+            parts.stream().filter(p -> !p.contains("*") && !p.contains("[")).findFirst();
+        if (name.isPresent()) {
+          Type target = Type.createIgnoringAlias(name.get());
+          for (String part : parts) {
+            if (!part.equals(name.get())) {
+              handleSingleAlias(rawCode, target, part);
+            }
+          }
+        } else {
+          log.error("Could not identify struct name: {}", rawCode);
+        }
+      } else {
+        log.error("No alias found for struct typedef: {}", rawCode);
+      }
+    } else if (Util.containsOnOuterLevel(cleaned, ',')) {
       List<String> parts = Util.splitLeavingParenthesisContents(cleaned, ",");
       String[] splitFirst = parts.get(0).split("\\s+");
       if (splitFirst.length < 2) {

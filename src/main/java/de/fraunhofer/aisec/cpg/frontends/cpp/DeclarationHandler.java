@@ -43,10 +43,12 @@ import de.fraunhofer.aisec.cpg.graph.Statement;
 import de.fraunhofer.aisec.cpg.graph.TranslationUnitDeclaration;
 import de.fraunhofer.aisec.cpg.graph.Type;
 import de.fraunhofer.aisec.cpg.graph.TypeManager;
+import de.fraunhofer.aisec.cpg.helpers.Util;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import org.eclipse.cdt.core.dom.ast.IASTDeclaration;
 import org.eclipse.cdt.core.dom.ast.IASTNode;
 import org.eclipse.cdt.core.dom.ast.IASTTranslationUnit;
@@ -160,11 +162,28 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
     return functionDeclaration;
   }
 
+  private boolean isTypedef(CPPASTSimpleDeclaration ctx) {
+    if (ctx.getRawSignature().contains("typedef")) {
+      if (ctx.getDeclSpecifier() instanceof CPPASTCompositeTypeSpecifier) {
+        // we need to make a difference between structs that have typedefs and structs that are
+        // typedefs themselves
+        return ctx.getDeclSpecifier().toString().equals("struct")
+            && ctx.getRawSignature().strip().startsWith("typedef");
+      } else {
+        return true;
+      }
+    } else {
+      return false;
+    }
+  }
+
   private Declaration handleSimpleDeclaration(CPPASTSimpleDeclaration ctx) {
-    if (ctx.getRawSignature().contains("typedef")
-        && !(ctx.getDeclSpecifier() instanceof CPPASTCompositeTypeSpecifier)) {
+    if (isTypedef(ctx)) {
       TypeManager.getInstance().handleTypedef(ctx.getRawSignature());
-      return null;
+      // if this was a struct typedef, we still need to handle this struct!
+      if (!(ctx.getDeclSpecifier() instanceof CPPASTCompositeTypeSpecifier)) {
+        return null;
+      }
     }
 
     if (ctx.getDeclarators().length == 0) {
@@ -195,6 +214,27 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
 
       return handle.get(0);
     } else {
+      // A legitimate case where this will happen is when multiply typedefing a struct
+      // e.g.: typedef struct {...} S, *pS, s_arr[10], ...;
+      if (ctx.getDeclSpecifier() instanceof CPPASTCompositeTypeSpecifier) {
+        Declaration result =
+            this.lang
+                .getDeclaratorHandler()
+                .handle((CPPASTCompositeTypeSpecifier) ctx.getDeclSpecifier());
+        if (result.getName().isEmpty() && ctx.getRawSignature().strip().startsWith("typedef")) {
+          // CDT didn't find out the name due to this thing being a typedef. We need to fix this
+          int endOfDeclaration = ctx.getRawSignature().lastIndexOf('}');
+          if (endOfDeclaration + 1 < ctx.getRawSignature().length()) {
+            List<String> parts =
+                Util.splitLeavingParenthesisContents(
+                    ctx.getRawSignature().substring(endOfDeclaration + 1), ",");
+            Optional<String> name =
+                parts.stream().filter(p -> !p.contains("*") && !p.contains("[")).findFirst();
+            name.ifPresent(s -> result.setName(s.replace(";", "")));
+          }
+        }
+        return result;
+      }
       errorWithFileLocation(
           this.lang, ctx, log, "More than one declaration, this should not happen here.");
     }

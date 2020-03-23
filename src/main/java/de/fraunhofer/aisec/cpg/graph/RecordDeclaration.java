@@ -32,6 +32,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import org.apache.commons.lang3.builder.ToStringBuilder;
+import org.checkerframework.checker.nullness.qual.NonNull;
 
 /** Represents a C++ union/struct/class or Java class */
 public class RecordDeclaration extends Declaration {
@@ -63,6 +64,15 @@ public class RecordDeclaration extends Declaration {
 
   @org.neo4j.ogm.annotation.Relationship
   private Set<ValueDeclaration> staticImports = new HashSet<>();
+
+  @Override
+  public void setName(@NonNull String name) {
+    // special case for record declarations! Constructor names need to match
+    super.setName(name);
+    for (ConstructorDeclaration constructor : constructors) {
+      constructor.setName(name);
+    }
+  }
 
   public String getKind() {
     return kind;
