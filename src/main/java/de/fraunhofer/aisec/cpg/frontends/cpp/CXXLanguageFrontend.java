@@ -315,7 +315,7 @@ public class CXXLanguageFrontend extends LanguageFrontend {
         LOGGER.debug("Connecting {} to {}", expression, declaration);
 
         ((DeclaredReferenceExpression) expression)
-            .setRefersTo(Set.of((ValueDeclaration) declaration));
+            .setRefersTo((ValueDeclaration) declaration);
       }
     } else {
       if (expression == null) {
