@@ -122,7 +122,9 @@ public class TypeManager {
 
   private Set<Ancestor> getAncestors(RecordDeclaration record, int depth) {
     if (record.getSuperTypes().isEmpty()) {
-      return Set.of(new Ancestor(record, depth));
+      HashSet<Ancestor> ret = new HashSet<>();
+      ret.add(new Ancestor(record, depth));
+      return ret;
     }
     Set<Ancestor> ancestors =
         record.getSuperTypes().stream()

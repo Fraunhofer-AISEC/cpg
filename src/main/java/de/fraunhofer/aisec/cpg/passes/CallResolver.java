@@ -171,7 +171,7 @@ public class CallResolver extends Pass {
                   invocationCandidates.add((FunctionDeclaration) curr);
                   // refine the referral pointer
                   if (finalReference != null && finalReference.getRefersTo().contains(curr)) {
-                    finalReference.setRefersTo(Set.of((ValueDeclaration) curr));
+                    finalReference.setRefersTo((ValueDeclaration) curr);
                   }
                 } else {
                   FunctionDeclaration dummy =
@@ -180,7 +180,7 @@ public class CallResolver extends Pass {
                   invocationCandidates.add(dummy);
                   // redirect the referral pointer
                   if (finalReference != null && finalReference.getRefersTo().contains(curr)) {
-                    finalReference.setRefersTo(Set.of(dummy));
+                    finalReference.setRefersTo(dummy);
                   }
                 }
               }
