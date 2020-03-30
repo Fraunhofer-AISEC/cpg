@@ -13,6 +13,10 @@ This library uses [Eclipse CDT](https://www.eclipse.org/cdt/) for parsing C/C++ 
 
 ## Usage
 
+### For Visualization Purposes
+
+In order to get familiar with the graph itself, you can take a look at our companion project [cpg-vis-neo4j](https://github.com/Fraunhofer-AISEC/cpg-vis-neo4j). It uses this library to generate the CPG for a set of user-provided code files. The graph is then persisted to a [Neo4j](https://neo4j.com/) graph database. The advantage this has for the user, is that Neo4j's visualization software [Neo4j Browser](https://neo4j.com/developer/neo4j-browser/) can be used to graphically look at the CPG nodes and edges, instead of their Java representations.
+
 ### As Library
 
 The most recent version is being published to Maven central and can be used as a simple dependency, either using Maven or Gradle. Since Eclipse CDT is not published on maven central, it is necessary to add a repository with a custom layout to find the released CDT files. For example, using Gradle's Kotlin syntax:
