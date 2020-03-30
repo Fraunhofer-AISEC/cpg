@@ -70,9 +70,16 @@ public class Type {
     this.typeAdjustment = typeAdjustment;
   }
 
-  public Type(String type, String typeAdjustment, boolean isFunctionPtr) {
+  public Type(
+      String type,
+      String typeAdjustment,
+      String typeModifier,
+      Origin typeOrigin,
+      boolean isFunctionPtr) {
     this.type = type;
     this.typeAdjustment = typeAdjustment;
+    this.typeModifier = typeModifier;
+    this.typeOrigin = typeOrigin;
     this.isFunctionPtr = isFunctionPtr;
   }
 
@@ -189,18 +196,6 @@ public class Type {
     this.typeAdjustment = typeAdjustment;
   }
 
-  /**
-   * Sometimes the actual type adjustment might not be apparent (e.g. if intptr_t is defined as
-   * int*, we do not have an adjustment explicitly set for intptr_t, but int* sure has one). So for
-   * these cases we should just add any adjustments as appropriate, in order to not kill implicit
-   * ones
-   *
-   * @param typeAdjustment
-   */
-  public void addTypeAdjustment(String typeAdjustment) {
-    this.typeAdjustment += typeAdjustment;
-  }
-
   public Origin getTypeOrigin() {
     return typeOrigin;
   }
@@ -210,13 +205,22 @@ public class Type {
   }
 
   public Type reference() {
-    return new Type(this.type, "*" + this.typeAdjustment, this.isFunctionPtr);
+    return new Type(
+        this.type,
+        "*" + this.typeAdjustment,
+        this.typeModifier,
+        this.typeOrigin,
+        this.isFunctionPtr);
   }
 
   public Type dereference() {
     // dereferencing an array results in basically the same as with a pointer
     return new Type(
-        this.type, this.typeAdjustment.replaceFirst("(\\[])|(\\*)", ""), this.isFunctionPtr);
+        this.type,
+        this.typeAdjustment.replaceFirst("(\\[])|(\\*)", ""),
+        this.typeModifier,
+        this.typeOrigin,
+        this.isFunctionPtr);
   }
 
   public void setFunctionPtr(boolean functionPtr) {

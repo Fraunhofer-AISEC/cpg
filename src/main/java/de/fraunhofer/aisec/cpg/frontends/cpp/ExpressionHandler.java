@@ -230,7 +230,7 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
 
     // TODO: obsolete?
     Type t = Type.createFrom(expressionTypeProxy(ctx).toString());
-    t.addTypeAdjustment("*");
+    t.setTypeAdjustment("*");
 
     NewExpression newExpression = NodeBuilder.newNewExpression(code, t);
 

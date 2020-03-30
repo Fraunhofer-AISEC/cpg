@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import de.fraunhofer.aisec.cpg.TestUtils;
 import de.fraunhofer.aisec.cpg.graph.RecordDeclaration;
 import de.fraunhofer.aisec.cpg.graph.TranslationUnitDeclaration;
+import de.fraunhofer.aisec.cpg.graph.TypeManager;
 import de.fraunhofer.aisec.cpg.graph.ValueDeclaration;
 import de.fraunhofer.aisec.cpg.helpers.Util;
 import java.nio.file.Path;
@@ -39,6 +40,30 @@ public class TypedefTest {
     ValueDeclaration uintfp1 = TestUtils.findByName(variables, "uintfp1");
     ValueDeclaration uintfp2 = TestUtils.findByName(variables, "uintfp2");
     assertEquals(uintfp1.getType(), uintfp2.getType());
+  }
+
+  @Test
+  void testWithModifier() throws Exception {
+    List<TranslationUnitDeclaration> result = TestUtils.analyze("cpp", topLevel);
+    List<ValueDeclaration> variables = Util.subnodesOfType(result, ValueDeclaration.class);
+
+    // pointer
+    ValueDeclaration l1ptr = TestUtils.findByName(variables, "l1ptr");
+    ValueDeclaration l2ptr = TestUtils.findByName(variables, "l2ptr");
+    ValueDeclaration l3ptr = TestUtils.findByName(variables, "l3ptr");
+    ValueDeclaration l4ptr = TestUtils.findByName(variables, "l4ptr");
+    assertEquals(l1ptr.getType(), l2ptr.getType());
+    assertEquals(l1ptr.getType(), l3ptr.getType());
+    assertEquals(l1ptr.getType(), l4ptr.getType());
+
+    // arrays
+    ValueDeclaration l1arr = TestUtils.findByName(variables, "l1arr");
+    ValueDeclaration l2arr = TestUtils.findByName(variables, "l2arr");
+    ValueDeclaration l3arr = TestUtils.findByName(variables, "l3arr");
+    ValueDeclaration l4arr = TestUtils.findByName(variables, "l4arr");
+    assertTrue(TypeManager.getInstance().checkArrayAndPointer(l1arr.getType(), l2arr.getType()));
+    assertTrue(TypeManager.getInstance().checkArrayAndPointer(l1arr.getType(), l3arr.getType()));
+    assertTrue(TypeManager.getInstance().checkArrayAndPointer(l1arr.getType(), l4arr.getType()));
   }
 
   @Test

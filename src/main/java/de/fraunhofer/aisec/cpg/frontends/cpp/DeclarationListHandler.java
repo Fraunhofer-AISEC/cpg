@@ -56,8 +56,12 @@ class DeclarationListHandler
 
       String typeAdjustment = declaration.getType().getTypeAdjustment();
       String typeString = ctx.getDeclSpecifier().toString();
-      declaration.setType(Type.createFrom(typeString));
-      declaration.getType().addTypeAdjustment(typeAdjustment);
+      if (declaration.getType().toString().contains("char")
+          && typeString.toLowerCase().contains("string")) {
+        // char[] = string, so no need to pass on the adjustment
+        typeAdjustment = "";
+      }
+      declaration.setType(Type.createFrom(typeString + typeAdjustment));
 
       // cache binding
       this.lang.cacheDeclaration(declarator.getName().resolveBinding(), declaration);

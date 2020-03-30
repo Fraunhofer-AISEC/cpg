@@ -131,8 +131,7 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
     // Pointer type is added in DeclaratorHandler.handleFunctionDeclarator
     String typeAdjustment = functionDeclaration.getType().getTypeAdjustment();
 
-    functionDeclaration.setType(Type.createFrom(typeString));
-    functionDeclaration.getType().addTypeAdjustment(typeAdjustment);
+    functionDeclaration.setType(Type.createFrom(typeString + typeAdjustment));
 
     if (ctx.getBody() != null) {
       Statement bodyStatement = this.lang.getStatementHandler().handle(ctx.getBody());

@@ -11,6 +11,16 @@ ulong l2;
 ulong2 l3;
 ulong3 l4;
 
+unsigned long *l1ptr;
+ulong *l2ptr;
+ulong2 *l3ptr;
+ulong3 *l4ptr;
+
+unsigned long l1arr[];
+ulong l2arr[];
+ulong2 l3arr[];
+ulong3 l4arr[];
+
 // special cases
 typedef long *longp_t;
 typedef int intarr[20];

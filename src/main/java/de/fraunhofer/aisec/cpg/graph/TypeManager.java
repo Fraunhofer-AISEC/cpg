@@ -150,7 +150,7 @@ public class TypeManager {
     }
 
     // arrays and pointers match in C++
-    if (checkArrayAndPointer(superType, subType) || checkArrayAndPointer(subType, superType)) {
+    if (checkArrayAndPointer(superType, subType)) {
       return true;
     }
 
@@ -170,11 +170,16 @@ public class TypeManager {
     }
   }
 
-  private boolean checkArrayAndPointer(Type first, Type second) {
-    int secondArrayDepth = StringUtils.countMatches(second.getTypeAdjustment(), "[]");
-    int firstPointerDepth = StringUtils.countMatches(first.getTypeAdjustment(), '*');
-    if (secondArrayDepth == firstPointerDepth) {
-      return first.getTypeName().equals(second.getTypeName());
+  public boolean checkArrayAndPointer(Type first, Type second) {
+    int firstDepth =
+        StringUtils.countMatches(first.getTypeAdjustment(), '*')
+            + StringUtils.countMatches(first.getTypeAdjustment(), "[]");
+    int secondDepth =
+        StringUtils.countMatches(second.getTypeAdjustment(), "[]")
+            + StringUtils.countMatches(second.getTypeAdjustment(), '*');
+    if (firstDepth == secondDepth) {
+      return first.getTypeName().equals(second.getTypeName())
+          && first.getTypeModifier().equals(second.getTypeModifier());
     } else {
       return false;
     }
@@ -285,12 +290,31 @@ public class TypeManager {
   }
 
   public Type resolvePossibleTypedef(Type alias) {
+    Type toCheck = alias;
+    int pointerDepth = 0;
+    while (toCheck.getTypeAdjustment().contains("*")
+        || toCheck.getTypeAdjustment().contains("[]")) {
+      toCheck = toCheck.dereference();
+      pointerDepth++;
+    }
+
+    Type finalToCheck = toCheck;
     Optional<Type> applicable =
         frontend.getScopeManager().getCurrentTypedefs().stream()
-            .filter(t -> t.getAlias().equals(alias))
+            .filter(t -> t.getAlias().equals(finalToCheck))
             .findAny()
             .map(TypedefDeclaration::getType);
-    return applicable.orElse(alias);
+
+    if (applicable.isEmpty()) {
+      return alias;
+    } else {
+      Type result = applicable.get();
+      while (pointerDepth > 0) {
+        result = result.reference();
+        pointerDepth--;
+      }
+      return result;
+    }
   }
 
   private class Ancestor {
