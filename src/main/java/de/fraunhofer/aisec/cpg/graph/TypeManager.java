@@ -237,37 +237,9 @@ public class TypeManager {
   public void handleTypedef(String rawCode) {
     String cleaned = rawCode.replaceAll("(typedef|;)", "").strip();
     if (cleaned.startsWith("struct")) {
-      int endOfStruct = cleaned.lastIndexOf('}');
-      if (endOfStruct + 1 < cleaned.length()) {
-        List<String> parts =
-            Util.splitLeavingParenthesisContents(cleaned.substring(endOfStruct + 1), ",");
-        Optional<String> name =
-            parts.stream().filter(p -> !p.contains("*") && !p.contains("[")).findFirst();
-        if (name.isPresent()) {
-          Type target = Type.createIgnoringAlias(name.get());
-          for (String part : parts) {
-            if (!part.equals(name.get())) {
-              handleSingleAlias(rawCode, target, part);
-            }
-          }
-        } else {
-          log.error("Could not identify struct name: {}", rawCode);
-        }
-      } else {
-        log.error("No alias found for struct typedef: {}", rawCode);
-      }
+      handleStructTypedef(rawCode, cleaned);
     } else if (Util.containsOnOuterLevel(cleaned, ',')) {
-      List<String> parts = Util.splitLeavingParenthesisContents(cleaned, ",");
-      String[] splitFirst = parts.get(0).split("\\s+");
-      if (splitFirst.length < 2) {
-        log.error("Cannot find out target type for {}", rawCode);
-        return;
-      }
-      Type target = Type.createFrom(splitFirst[0]);
-      parts.set(0, parts.get(0).substring(splitFirst[0].length()).strip());
-      for (String part : parts) {
-        handleSingleAlias(rawCode, target, part);
-      }
+      handleMultipleAliases(rawCode, cleaned);
     } else {
       List<String> parts = Util.splitLeavingParenthesisContents(cleaned, " \r\n");
       if (parts.size() < 2) {
@@ -280,6 +252,42 @@ public class TypeManager {
               Util.removeRedundantParentheses(
                   String.join(" ", parts.subList(0, parts.size() - 1))));
       handleSingleAlias(rawCode, target, parts.get(parts.size() - 1));
+    }
+  }
+
+  private void handleMultipleAliases(String rawCode, String cleaned) {
+    List<String> parts = Util.splitLeavingParenthesisContents(cleaned, ",");
+    String[] splitFirst = parts.get(0).split("\\s+");
+    if (splitFirst.length < 2) {
+      log.error("Cannot find out target type for {}", rawCode);
+      return;
+    }
+    Type target = Type.createFrom(splitFirst[0]);
+    parts.set(0, parts.get(0).substring(splitFirst[0].length()).strip());
+    for (String part : parts) {
+      handleSingleAlias(rawCode, target, part);
+    }
+  }
+
+  private void handleStructTypedef(String rawCode, String cleaned) {
+    int endOfStruct = cleaned.lastIndexOf('}');
+    if (endOfStruct + 1 < cleaned.length()) {
+      List<String> parts =
+          Util.splitLeavingParenthesisContents(cleaned.substring(endOfStruct + 1), ",");
+      Optional<String> name =
+          parts.stream().filter(p -> !p.contains("*") && !p.contains("[")).findFirst();
+      if (name.isPresent()) {
+        Type target = Type.createIgnoringAlias(name.get());
+        for (String part : parts) {
+          if (!part.equals(name.get())) {
+            handleSingleAlias(rawCode, target, part);
+          }
+        }
+      } else {
+        log.error("Could not identify struct name: {}", rawCode);
+      }
+    } else {
+      log.error("No alias found for struct typedef: {}", rawCode);
     }
   }
 
