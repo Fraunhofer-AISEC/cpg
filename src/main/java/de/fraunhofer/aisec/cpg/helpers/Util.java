@@ -92,6 +92,37 @@ public class Util {
   }
 
   /**
+   * Returns the first element of the specified Class-type {@param specifiedClass} that has the name
+   * {@param name} in the list {@param listOfNodes}.
+   *
+   * @param <S> Some class that extends {@link Node}.
+   */
+  public static <S extends Node> S getOfTypeWithName(
+    List<Node> listOfNodes, Class<S> specificClass, String name) {
+    List<S> listOfNodesWithName =
+        filterCast(listOfNodes, specificClass).stream()
+            .filter(s -> s.getName().equals(name))
+            .collect(Collectors.toList());
+    if (listOfNodesWithName.isEmpty()) {
+      return null;
+    }
+    // Here we return the first node, if there are more nodes
+    return listOfNodesWithName.get(0);
+  }
+
+  /**
+   * Returns the first element of the specified Class-type {@param specifiedClass} that has the name
+   * {@param name} in the list of nodes that are subnodes of the AST-root node {@param root}.
+   *
+   * @param <S> Some class that extends {@link Node}.
+   */
+  public static <S extends Node> S getSubnodeOfTypeWithName(
+      Node root, Class<S> specificClass, String name) {
+    return getOfTypeWithName(SubgraphWalker.flattenAST(root), specificClass, name);
+  }
+
+
+  /**
    * Filters the nodes in the AST subtree at root <code>node</code> for Nodes with the specified
    * code.
    *
