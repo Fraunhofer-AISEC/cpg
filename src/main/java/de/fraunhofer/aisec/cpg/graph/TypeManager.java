@@ -59,6 +59,7 @@ public class TypeManager {
 
   private Map<String, RecordDeclaration> typeToRecord = new HashMap<>();
   private LanguageFrontend frontend;
+  private boolean noFrontendWarningIssued = false;
 
   private TypeManager() {}
 
@@ -300,6 +301,13 @@ public class TypeManager {
   }
 
   public Type resolvePossibleTypedef(Type alias) {
+    if (frontend == null) {
+      if (!noFrontendWarningIssued) {
+        log.warn("No frontend available. Be aware that typedef resolving cannot currently be done");
+        noFrontendWarningIssued = true;
+      }
+      return alias;
+    }
     Type toCheck = alias;
     int pointerDepth = 0;
     while (toCheck.getTypeAdjustment().contains("*")

@@ -201,7 +201,7 @@ public class VariableUsageResolver extends Pass {
       if (!refersTo.isEmpty()) {
         ref.setRefersTo(refersTo);
       } else {
-        warnWithFileLocation(current, log, "Did not find a declaration for {}");
+        warnWithFileLocation(current, log, "Did not find a declaration for {}", ref.getName());
       }
     }
   }
