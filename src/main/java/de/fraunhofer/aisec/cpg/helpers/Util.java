@@ -98,7 +98,7 @@ public class Util {
    * @param <S> Some class that extends {@link Node}.
    */
   public static <S extends Node> S getOfTypeWithName(
-    List<Node> listOfNodes, Class<S> specificClass, String name) {
+      List<Node> listOfNodes, Class<S> specificClass, String name) {
     List<S> listOfNodesWithName =
         filterCast(listOfNodes, specificClass).stream()
             .filter(s -> s.getName().equals(name))
@@ -120,7 +120,6 @@ public class Util {
       Node root, Class<S> specificClass, String name) {
     return getOfTypeWithName(SubgraphWalker.flattenAST(root), specificClass, name);
   }
-
 
   /**
    * Filters the nodes in the AST subtree at root <code>node</code> for Nodes with the specified
