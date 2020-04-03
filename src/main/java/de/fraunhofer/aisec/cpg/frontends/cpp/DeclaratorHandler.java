@@ -93,7 +93,7 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
     // type will be filled out later
     VariableDeclaration declaration =
         NodeBuilder.newVariableDeclaration(
-            ctx.getName().toString(), Type.getUnknown(), ctx.getRawSignature());
+            ctx.getName().toString(), Type.getUnknown(), ctx.getRawSignature(), true);
 
     IASTInitializer init = ctx.getInitializer();
 
@@ -253,7 +253,8 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
           NodeBuilder.newVariableDeclaration(
               ctx.getNestedDeclarator().getName().toString(),
               Type.getUnknown(),
-              ctx.getRawSignature());
+              ctx.getRawSignature(),
+              true);
       ((VariableDeclaration) result).setInitializer(initializer);
       result.setLocation(lang.getLocationFromRawNode(ctx));
       result.getType().setFunctionPtr(true);
@@ -277,7 +278,8 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
               Collections.emptyList(),
               code,
               lang.getLocationFromRawNode(ctx),
-              initializer);
+              initializer,
+              true);
       result.setLocation(lang.getLocationFromRawNode(ctx));
       result.getType().setFunctionPtr(true);
       result.refreshType();
@@ -322,7 +324,8 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
               new ArrayList<>(),
               "this",
               null,
-              null);
+              null,
+              true);
       recordDeclaration.getFields().add(thisDeclaration);
       lang.getScopeManager().addValueDeclaration(thisDeclaration);
     }

@@ -30,13 +30,17 @@ import static de.fraunhofer.aisec.cpg.sarif.PhysicalLocation.locationLink;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
+import de.fraunhofer.aisec.cpg.graph.Expression;
+import de.fraunhofer.aisec.cpg.graph.FunctionDeclaration;
 import de.fraunhofer.aisec.cpg.graph.Node;
+import de.fraunhofer.aisec.cpg.graph.ParamVariableDeclaration;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.List;
@@ -252,6 +256,41 @@ public class Util {
   public static void errorWithFileLocation(
       @NonNull Node node, Logger log, String format, Object... arguments) {
     log.error(String.format("%s: %s", locationLink(node.getLocation()), format), arguments);
+  }
+
+  /**
+   * Establish dataflow from call arguments to the target {@link FunctionDeclaration} parameters
+   *
+   * @param target The call's target {@link FunctionDeclaration}
+   * @param arguments The call's arguments to be connected to the target's parameters
+   */
+  public static void attachCallParameters(FunctionDeclaration target, List<Expression> arguments) {
+    target.getParameters().sort(Comparator.comparing(ParamVariableDeclaration::getArgumentIndex));
+    for (int j = 0; j < arguments.size(); j++) {
+      ParamVariableDeclaration param = target.getParameters().get(j);
+      if (param.isVariadic()) {
+        for (; j < arguments.size(); j++) {
+          // map all the following arguments to this variadic param
+          param.addPrevDFG(arguments.get(j));
+        }
+        break;
+      } else {
+        param.addPrevDFG(arguments.get(j));
+      }
+    }
+  }
+
+  /**
+   * Inverse operation of {@link #attachCallParameters}
+   *
+   * @param target
+   * @param arguments
+   */
+  public static void detachCallParameters(FunctionDeclaration target, List<Expression> arguments) {
+    for (ParamVariableDeclaration param : target.getParameters()) {
+      // A param could be variadic, so multiple arguments could be set as incoming DFG
+      param.getPrevDFG().stream().filter(arguments::contains).forEach(param::removeNextDFG);
+    }
   }
 
   public enum Connect {

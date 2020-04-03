@@ -42,6 +42,24 @@ public class VariableDeclaration extends ValueDeclaration implements TypeListene
   @Nullable
   protected Expression initializer;
 
+  /**
+   * C++ uses implicit constructor calls for statements like <code>A a;</code> but this only applies
+   * to types that are actually classes and not just primitive types or typedef aliases of
+   * primitives. Thus, during AST construction, we can only suggest that an implicit constructor
+   * call might be allowed by the language (so this is set to true for C++ but false for Java, as
+   * such a statement in Java leads to an uninitialized variable). The final decision can then be
+   * made after we have analyzed all classes present in the current scope.
+   */
+  private boolean implicitInitializerAllowed = false;
+
+  public boolean isImplicitInitializerAllowed() {
+    return implicitInitializerAllowed;
+  }
+
+  public void setImplicitInitializerAllowed(boolean implicitInitializerAllowed) {
+    this.implicitInitializerAllowed = implicitInitializerAllowed;
+  }
+
   @Nullable
   public Expression getInitializer() {
     return initializer;

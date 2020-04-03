@@ -259,7 +259,8 @@ public class DeclarationHandler
             new ArrayList<>(),
             "this",
             null,
-            null);
+            null,
+            false);
     recordDeclaration.getFields().add(thisDeclaration);
     lang.getScopeManager().addValueDeclaration(thisDeclaration);
 
@@ -332,7 +333,8 @@ public class DeclarationHandler
             modifiers,
             variable.toString(),
             location,
-            initializer);
+            initializer,
+            false);
     lang.getScopeManager().addValueDeclaration(fieldDeclaration);
 
     return fieldDeclaration;
