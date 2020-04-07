@@ -115,9 +115,9 @@ public class VariableUsageResolver extends Pass {
     }
   }
 
-  private Set<ValueDeclaration> resolveFunctionPtr(
+  private Set<Declaration> resolveFunctionPtr(
       Type containingClass, DeclaredReferenceExpression reference) {
-    Set<ValueDeclaration> targets = new HashSet<>();
+    Set<Declaration> targets = new HashSet<>();
     String functionName = reference.getName();
     Matcher matcher =
         Pattern.compile("(?:(?<class>.*)(?:\\.|::))?(?<function>.*)").matcher(reference.getName());
@@ -145,11 +145,11 @@ public class VariableUsageResolver extends Pass {
 
     if (targets.isEmpty()) {
       if (containingClass == null) {
-        Set<ValueDeclaration> unknownMethod = new HashSet<>();
+        Set<Declaration> unknownMethod = new HashSet<>();
         unknownMethod.add(handleUnknownMethod(functionName, reference.getType()));
         return unknownMethod;
       } else {
-        Set<ValueDeclaration> unknownClass = new HashSet<>();
+        Set<Declaration> unknownClass = new HashSet<>();
         unknownClass.add(
             handleUnknownClassMethod(containingClass, functionName, reference.getType()));
         return unknownClass;
@@ -162,12 +162,12 @@ public class VariableUsageResolver extends Pass {
   private void resolveLocalVarUsage(RecordDeclaration currentClass, Node parent, Node current) {
     if (current instanceof DeclaredReferenceExpression) {
       DeclaredReferenceExpression ref = (DeclaredReferenceExpression) current;
-      Set<ValueDeclaration> refersTo =
+      Set<Declaration> refersTo =
           walker
               .getDeclarationForScope(parent, ref.getName())
               .map(
                   d -> {
-                    Set<ValueDeclaration> set = new HashSet<>();
+                    Set<Declaration> set = new HashSet<>();
                     set.add(d);
                     return set;
                   })
@@ -193,7 +193,7 @@ public class VariableUsageResolver extends Pass {
           && recordDeclType != null
           && recordMap.containsKey(recordDeclType)) {
         // Maybe we are referring to a field instead of a local var
-        Set<ValueDeclaration> resolvedMember = new HashSet<>();
+        Set<Declaration> resolvedMember = new HashSet<>();
         resolvedMember.add(resolveMember(recordDeclType, (DeclaredReferenceExpression) current));
         refersTo = resolvedMember;
       }
@@ -247,14 +247,16 @@ public class VariableUsageResolver extends Pass {
       }
 
       if (base != null && member != null) {
-        if (base != memberExpression.getBase()) {
-          memberExpression.getBase().disconnectFromGraph();
+        // Not replacing the reference expressions but setting the reference to avoid connecting the
+        // ast-subgraph
+        if (member instanceof Declaration) {
+          ((DeclaredReferenceExpression) memberExpression.getMember())
+              .setRefersTo((Declaration) member);
         }
-        if (member != memberExpression.getMember()) {
-          memberExpression.getMember().disconnectFromGraph();
+        if (base instanceof Declaration) {
+          ((DeclaredReferenceExpression) memberExpression.getBase())
+              .setRefersTo((Declaration) base);
         }
-        memberExpression.setBase(base);
-        memberExpression.setMember(member);
       } else {
         log.warn("Unexpected: null base or member in field usage: {}", current);
       }

@@ -43,7 +43,7 @@ import org.checkerframework.checker.nullness.qual.NonNull;
 public class DeclaredReferenceExpression extends Expression implements TypeListener {
 
   /** The {@link ValueDeclaration}s this expression might refer to. */
-  private Set<ValueDeclaration> refersTo = new HashSet<>();
+  private Set<Declaration> refersTo = new HashSet<>();
 
   /**
    * Is this reference used for writing data instead of just reading it? Determines dataflow
@@ -51,17 +51,17 @@ public class DeclaredReferenceExpression extends Expression implements TypeListe
    */
   private boolean writingAccess = false;
 
-  public Set<ValueDeclaration> getRefersTo() {
+  public Set<Declaration> getRefersTo() {
     return refersTo;
   }
 
-  public void setRefersTo(@NonNull ValueDeclaration refersTo) {
-    HashSet<ValueDeclaration> n = new HashSet<>();
+  public void setRefersTo(@NonNull Declaration refersTo) {
+    HashSet<Declaration> n = new HashSet<>();
     n.add(refersTo);
     setRefersTo(n);
   }
 
-  public void setRefersTo(@NonNull Set<ValueDeclaration> refersTo) {
+  public void setRefersTo(@NonNull Set<Declaration> refersTo) {
     this.refersTo.forEach(
         r -> {
           if (writingAccess) {
@@ -69,7 +69,9 @@ public class DeclaredReferenceExpression extends Expression implements TypeListe
           } else {
             this.removePrevDFG(r);
           }
-          r.unregisterTypeListener(this);
+          if (r instanceof HasType) {
+            ((HasType) r).unregisterTypeListener(this);
+          }
           if (r instanceof TypeListener) {
             this.unregisterTypeListener((TypeListener) r);
           }
@@ -85,7 +87,9 @@ public class DeclaredReferenceExpression extends Expression implements TypeListe
           } else {
             this.addPrevDFG(r);
           }
-          r.registerTypeListener(this);
+          if (r instanceof HasType) {
+            ((HasType) r).registerTypeListener(this);
+          }
           if (r instanceof TypeListener) {
             this.registerTypeListener((TypeListener) r);
           }

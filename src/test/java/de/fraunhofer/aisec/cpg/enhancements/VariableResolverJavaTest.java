@@ -25,6 +25,7 @@ import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker;
 import de.fraunhofer.aisec.cpg.helpers.Util;
 import java.io.File;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -36,6 +37,8 @@ import org.junit.jupiter.api.TestInstance;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public class VariableResolverJavaTest {
+
+  public static boolean REFERES_TO_IS_A_COLLECTION = true;
 
   // Externally defined static global
 
@@ -191,7 +194,7 @@ public class VariableResolverJavaTest {
     assertNotNull(asReference);
     VariableDeclaration firstLoopLocal =
         Util.getSubnodeOfTypeWithName(forStatements.get(0), VariableDeclaration.class, "varName");
-    assertSame(
+    assertSameOrContains(
         asReference.getRefersTo(),
         firstLoopLocal); // Todo refers to the second loop variable, apparently only one is
     // collected and there is no defined scope
@@ -203,7 +206,7 @@ public class VariableResolverJavaTest {
     assertNotNull(asReference);
     VariableDeclaration secondLoopLocal =
         Util.getSubnodeOfTypeWithName(forStatements.get(1), VariableDeclaration.class, "varName");
-    assertSame(asReference.getRefersTo(), secondLoopLocal);
+    assertSameOrContains(asReference.getRefersTo(), secondLoopLocal);
   }
 
   @Test
@@ -211,10 +214,10 @@ public class VariableResolverJavaTest {
     MemberExpression asMemberExpression = getCallWithMemberExpression("func1_imp_this_varName");
     assertNotNull(asMemberExpression);
     assertTrue(asMemberExpression.getBase() instanceof DeclaredReferenceExpression);
-    assertSame(
+    assertSameOrContains(
         ((DeclaredReferenceExpression) asMemberExpression.getBase()).getRefersTo(), outerImpThis);
     assertTrue(asMemberExpression.getMember() instanceof DeclaredReferenceExpression);
-    assertSame(
+    assertSameOrContains(
         ((DeclaredReferenceExpression) asMemberExpression.getMember()).getRefersTo(),
         outerVarName); // Todo refers to the second loop local
   }
@@ -225,7 +228,7 @@ public class VariableResolverJavaTest {
     assertNotNull(asReference);
     ValueDeclaration param =
         Util.getSubnodeOfTypeWithName(outer_function2, ParamVariableDeclaration.class, "varName");
-    assertSame(asReference.getRefersTo(), param);
+    assertSameOrContains(asReference.getRefersTo(), param);
   }
 
   @Test
@@ -236,11 +239,11 @@ public class VariableResolverJavaTest {
     VariableDeclaration externalClassInstance =
         Util.getSubnodeOfTypeWithName(outer_function3, VariableDeclaration.class, "externalClass");
     assertTrue(asMemberExpression.getBase() instanceof DeclaredReferenceExpression);
-    assertSame(
+    assertSameOrContains(
         ((DeclaredReferenceExpression) asMemberExpression.getBase()).getRefersTo(),
         externalClassInstance);
     assertTrue(asMemberExpression.getMember() instanceof DeclaredReferenceExpression);
-    assertSame(
+    assertSameOrContains(
         ((DeclaredReferenceExpression) asMemberExpression.getMember()).getRefersTo(),
         externVarName); // Todo points to the function parameter with the same name
   }
@@ -251,11 +254,11 @@ public class VariableResolverJavaTest {
         getCallWithMemberExpression("func3_external_static_staticVarName");
     assertNotNull(asMemberExpression);
     assertTrue(asMemberExpression.getBase() instanceof DeclaredReferenceExpression);
-    assertSame(
+    assertSameOrContains(
         ((DeclaredReferenceExpression) asMemberExpression.getBase()).getRefersTo(),
         externalClass); // Todo here a Unknown record declaration is added
     assertTrue(asMemberExpression.getMember() instanceof DeclaredReferenceExpression);
-    assertSame(
+    assertSameOrContains(
         ((DeclaredReferenceExpression) asMemberExpression.getMember()).getRefersTo(),
         externStaticVarName); // Todo member refers to local variable with the same name of the
     // static field in external
@@ -268,10 +271,10 @@ public class VariableResolverJavaTest {
     assertNotNull(asMemberExpression);
     assertTrue(asMemberExpression.getBase() instanceof DeclaredReferenceExpression);
     // Todo Case is a unknown record declaration
-    assertSame(
+    assertSameOrContains(
         ((DeclaredReferenceExpression) asMemberExpression.getBase()).getRefersTo(), externalClass);
     assertTrue(asMemberExpression.getMember() instanceof DeclaredReferenceExpression);
-    assertSame(
+    assertSameOrContains(
         ((DeclaredReferenceExpression) asMemberExpression.getMember()).getRefersTo(),
         externStaticVarName);
   }
@@ -282,10 +285,10 @@ public class VariableResolverJavaTest {
         getCallWithMemberExpression("func1_inner_imp_this_varName");
     assertNotNull(asMemberExpression);
     assertTrue(asMemberExpression.getBase() instanceof DeclaredReferenceExpression);
-    assertSame(
+    assertSameOrContains(
         ((DeclaredReferenceExpression) asMemberExpression.getBase()).getRefersTo(), innerImpThis);
     assertTrue(asMemberExpression.getMember() instanceof DeclaredReferenceExpression);
-    assertSame(
+    assertSameOrContains(
         ((DeclaredReferenceExpression) asMemberExpression.getMember()).getRefersTo(), innerVarName);
   }
 
@@ -294,10 +297,10 @@ public class VariableResolverJavaTest {
     MemberExpression asMemberExpression = getCallWithMemberExpression("func1_outer_this_varName");
     assertNotNull(asMemberExpression);
     assertTrue(asMemberExpression.getBase() instanceof DeclaredReferenceExpression);
-    assertSame(
+    assertSameOrContains(
         ((DeclaredReferenceExpression) asMemberExpression.getBase()).getRefersTo(), innerImpOuter);
     assertTrue(asMemberExpression.getMember() instanceof DeclaredReferenceExpression);
-    assertSame(
+    assertSameOrContains(
         ((DeclaredReferenceExpression) asMemberExpression.getMember()).getRefersTo(),
         outerVarName); // Todo Points to varName in inner class instead of outer
   }
@@ -308,10 +311,10 @@ public class VariableResolverJavaTest {
         getCallWithMemberExpression("func1_outer_static_staticVarName");
     assertNotNull(asMemberExpression);
     assertTrue(asMemberExpression.getBase() instanceof DeclaredReferenceExpression);
-    assertSame(
+    assertSameOrContains(
         ((DeclaredReferenceExpression) asMemberExpression.getBase()).getRefersTo(), outerClass);
     assertTrue(asMemberExpression.getMember() instanceof DeclaredReferenceExpression);
-    assertSame(
+    assertSameOrContains(
         ((DeclaredReferenceExpression) asMemberExpression.getMember()).getRefersTo(),
         outerStaticVarName); // Todo points to innerStaticVar, this is wrong
   }
@@ -320,7 +323,7 @@ public class VariableResolverJavaTest {
   public void testParamVarNameInInnerClass() {
     DeclaredReferenceExpression asReference = getCallWithReference("func2_inner_param_varName");
     assertNotNull(asReference);
-    assertSame(
+    assertSameOrContains(
         asReference.getRefersTo(),
         Util.getSubnodeOfTypeWithName(inner_function2, ParamVariableDeclaration.class, "varName"));
   }
@@ -329,9 +332,14 @@ public class VariableResolverJavaTest {
   public void testInnerVarnameOverExplicitThis() {
     MemberExpression asMemberExpression = getCallWithMemberExpression("func2_inner_this_varName");
     assertNotNull(asMemberExpression);
+    assertTrue(asMemberExpression.getBase() instanceof DeclaredReferenceExpression);
+    DeclaredReferenceExpression base = (DeclaredReferenceExpression) asMemberExpression.getBase();
+    assertTrue(asMemberExpression.getMember() instanceof DeclaredReferenceExpression);
+    DeclaredReferenceExpression member =
+        (DeclaredReferenceExpression) asMemberExpression.getMember();
     // Todo memeber currently points to an implicitly created field
-    assertSame(asMemberExpression.getMember(), innerVarName);
-    assertSame(asMemberExpression.getBase(), innerImpThis);
+    assertSameOrContains(member.getRefersTo(), innerVarName);
+    assertSameOrContains(base.getRefersTo(), innerImpThis);
   }
 
   @Test
@@ -341,7 +349,7 @@ public class VariableResolverJavaTest {
     assertNotNull(asReference);
     VariableDeclaration staticVarNameException =
         Util.getSubnodeOfTypeWithName(inner_function3, VariableDeclaration.class, "staticVarName");
-    assertSame(asReference.getRefersTo(), staticVarNameException);
+    assertSameOrContains(asReference.getRefersTo(), staticVarNameException);
   }
 
   @Test
@@ -350,6 +358,15 @@ public class VariableResolverJavaTest {
     assertNotNull(asReference);
     VariableDeclaration varNameExcepetion =
         Util.getSubnodeOfTypeWithName(inner_function3, VariableDeclaration.class, "varName");
-    assertSame(asReference.getRefersTo(), varNameExcepetion);
+    assertSameOrContains(asReference.getRefersTo(), varNameExcepetion);
+  }
+
+  public void assertSameOrContains(Object potentialCollection, Object toCompair) {
+    if (REFERES_TO_IS_A_COLLECTION && potentialCollection instanceof Collection) {
+      Collection collection = (Collection) potentialCollection;
+      assertTrue(collection.stream().anyMatch(obj -> obj == toCompair));
+    } else {
+      assertSame(potentialCollection, toCompair);
+    }
   }
 }

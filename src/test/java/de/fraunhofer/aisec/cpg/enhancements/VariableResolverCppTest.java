@@ -1,25 +1,33 @@
 package de.fraunhofer.aisec.cpg.enhancements;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import de.fraunhofer.aisec.cpg.TranslationConfiguration;
 import de.fraunhofer.aisec.cpg.TranslationManager;
 import de.fraunhofer.aisec.cpg.graph.CallExpression;
+import de.fraunhofer.aisec.cpg.graph.CatchClause;
+import de.fraunhofer.aisec.cpg.graph.CompoundStatement;
 import de.fraunhofer.aisec.cpg.graph.DeclaredReferenceExpression;
 import de.fraunhofer.aisec.cpg.graph.Expression;
 import de.fraunhofer.aisec.cpg.graph.FieldDeclaration;
 import de.fraunhofer.aisec.cpg.graph.ForStatement;
+import de.fraunhofer.aisec.cpg.graph.IfStatement;
 import de.fraunhofer.aisec.cpg.graph.Literal;
 import de.fraunhofer.aisec.cpg.graph.MemberExpression;
 import de.fraunhofer.aisec.cpg.graph.MethodDeclaration;
 import de.fraunhofer.aisec.cpg.graph.Node;
+import de.fraunhofer.aisec.cpg.graph.ParamVariableDeclaration;
 import de.fraunhofer.aisec.cpg.graph.RecordDeclaration;
 import de.fraunhofer.aisec.cpg.graph.TranslationUnitDeclaration;
+import de.fraunhofer.aisec.cpg.graph.VariableDeclaration;
 import de.fraunhofer.aisec.cpg.helpers.NodeComparator;
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker;
 import de.fraunhofer.aisec.cpg.helpers.Util;
 import java.io.File;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -27,7 +35,9 @@ import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
 
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public class VariableResolverCppTest {
 
   private RecordDeclaration externalClass;
@@ -61,7 +71,7 @@ public class VariableResolverCppTest {
   @BeforeAll
   public void initTests() throws ExecutionException, InterruptedException {
     final String topLevelPath = "src/test/resources/variables/";
-    List<String> fileNames = Arrays.asList("ScopeVariables.java", "ExternalClass.java");
+    List<String> fileNames = Arrays.asList("scope_variables.cpp", "external_class.cpp");
     List<File> fileLocations =
         fileNames.stream()
             .map(fileName -> new File(topLevelPath + fileName))
@@ -91,21 +101,21 @@ public class VariableResolverCppTest {
     List<RecordDeclaration> records = Util.filterCast(nodes, RecordDeclaration.class);
 
     // Extract all Variable declarations and field declarations for matching
-    externalClass =
-        Util.getOfTypeWithName(nodes, RecordDeclaration.class, "variables.ExternalClass");
+    externalClass = Util.getOfTypeWithName(nodes, RecordDeclaration.class, "ExternalClass");
     externVarName = Util.getSubnodeOfTypeWithName(externalClass, FieldDeclaration.class, "varName");
     externStaticVarName =
         Util.getSubnodeOfTypeWithName(externalClass, FieldDeclaration.class, "staticVarName");
-    outerClass = Util.getOfTypeWithName(nodes, RecordDeclaration.class, "variables.ScopeVariables");
+    outerClass = Util.getOfTypeWithName(nodes, RecordDeclaration.class, "ScopeVariables");
     outerVarName = Util.getSubnodeOfTypeWithName(outerClass, FieldDeclaration.class, "varName");
     outerStaticVarName =
         Util.getSubnodeOfTypeWithName(outerClass, FieldDeclaration.class, "staticVarName");
     outerImpThis = Util.getSubnodeOfTypeWithName(outerClass, FieldDeclaration.class, "this");
 
+    List<RecordDeclaration> classes = Util.filterCast(nodes, RecordDeclaration.class);
+
     // Inner class and its fields
     innerClass =
-        Util.getOfTypeWithName(
-            nodes, RecordDeclaration.class, "variables.ScopeVariables.InnerClass");
+        Util.getOfTypeWithName(nodes, RecordDeclaration.class, "ScopeVariables.InnerClass");
     innerVarName = Util.getSubnodeOfTypeWithName(innerClass, FieldDeclaration.class, "varName");
     innerStaticVarName =
         Util.getSubnodeOfTypeWithName(innerClass, FieldDeclaration.class, "staticVarName");
@@ -170,11 +180,28 @@ public class VariableResolverCppTest {
     return null;
   }
 
+  public void assertSameOrContains(Object potentialCollection, Object toCompair) {
+    if (VariableResolverJavaTest.REFERES_TO_IS_A_COLLECTION
+        && potentialCollection instanceof Collection) {
+      Collection collection = (Collection) potentialCollection;
+      assertTrue(collection.stream().anyMatch(obj -> obj == toCompair));
+    } else {
+      assertSame(potentialCollection, toCompair);
+    }
+  }
+
   @Test
   public void testOuterVarNameAccessedImplicitThis() {
     MemberExpression asMemberExpression =
         getCallWithMemberExpression("func1_impl_this_varName"); // instance_field
     assertNotNull(asMemberExpression);
+    assertTrue(asMemberExpression.getBase() instanceof DeclaredReferenceExpression);
+    DeclaredReferenceExpression base = (DeclaredReferenceExpression) asMemberExpression.getBase();
+    assertTrue(asMemberExpression.getMember() instanceof DeclaredReferenceExpression);
+    DeclaredReferenceExpression member =
+        (DeclaredReferenceExpression) asMemberExpression.getMember();
+    assertSameOrContains(base.getRefersTo(), outerImpThis);
+    assertSameOrContains(member.getRefersTo(), outerVarName);
   }
 
   @Test
@@ -182,6 +209,7 @@ public class VariableResolverCppTest {
     DeclaredReferenceExpression asReference =
         getCallWithReference("func1_static_staticVarName"); // static_field");
     assertNotNull(asReference);
+    assertSameOrContains(asReference.getRefersTo(), outerStaticVarName);
   }
 
   @Test
@@ -189,6 +217,9 @@ public class VariableResolverCppTest {
     DeclaredReferenceExpression asReference =
         getCallWithReference("func1_first_loop_varName"); // first_loop_local
     assertNotNull(asReference);
+    VariableDeclaration vDeclaration =
+        Util.getSubnodeOfTypeWithName(forStatements.get(0), VariableDeclaration.class, "varName");
+    assertSameOrContains(asReference.getRefersTo(), vDeclaration);
   }
 
   @Test
@@ -196,6 +227,11 @@ public class VariableResolverCppTest {
     DeclaredReferenceExpression asReference =
         getCallWithReference("func1_nested_block_shadowed_local_varName"); // local_in_inner_block
     assertNotNull(asReference);
+    CompoundStatement innerBlock =
+        Util.getSubnodeOfTypeWithName(forStatements.get(1), CompoundStatement.class, "");
+    VariableDeclaration nestedDeclaration =
+        Util.getSubnodeOfTypeWithName(innerBlock, VariableDeclaration.class, "varName");
+    assertSameOrContains(asReference.getRefersTo(), nestedDeclaration);
   }
 
   @Test
@@ -203,6 +239,9 @@ public class VariableResolverCppTest {
     DeclaredReferenceExpression asReference =
         getCallWithReference("func1_second_loop_varName"); // second_loop_local
     assertNotNull(asReference);
+    VariableDeclaration vDeclaration =
+        Util.getSubnodeOfTypeWithName(forStatements.get(1), VariableDeclaration.class, "varName");
+    assertSameOrContains(asReference.getRefersTo(), vDeclaration);
   }
 
   @Test
@@ -210,54 +249,103 @@ public class VariableResolverCppTest {
     DeclaredReferenceExpression asReference =
         getCallWithReference("func2_param_varName"); // parameter
     assertNotNull(asReference);
+    ParamVariableDeclaration declaration =
+        Util.getSubnodeOfTypeWithName(outer_function2, ParamVariableDeclaration.class, "varName");
+    assertSameOrContains(asReference.getRefersTo(), declaration);
   }
 
   @Test
   public void testMemberVarNameOverExplicitThis() {
-    DeclaredReferenceExpression asReference =
-        getCallWithReference("func2_this_varName"); // instance_field
-    assertNotNull(asReference);
+    MemberExpression asMemberExpression =
+        getCallWithMemberExpression("func2_this_varName"); // instance_field
+    assertNotNull(asMemberExpression);
+    assertTrue(asMemberExpression.getBase() instanceof DeclaredReferenceExpression);
+    DeclaredReferenceExpression base = (DeclaredReferenceExpression) asMemberExpression.getBase();
+    assertTrue(asMemberExpression.getMember() instanceof DeclaredReferenceExpression);
+    DeclaredReferenceExpression member =
+        (DeclaredReferenceExpression) asMemberExpression.getMember();
+    assertSameOrContains(base.getRefersTo(), outerImpThis);
+    assertSameOrContains(member.getRefersTo(), outerVarName);
   }
 
   @Test
   public void testVarNameDeclaredInIfClause() {
     DeclaredReferenceExpression asReference = getCallWithReference("func2_if_varName"); // if_local
     assertNotNull(asReference);
+    VariableDeclaration declaration =
+        Util.getSubnodeOfTypeWithName(
+            Util.getSubnodeOfTypeWithName(outer_function2, IfStatement.class, Node.EMPTY_NAME),
+            VariableDeclaration.class,
+            "varName");
+    assertSameOrContains(asReference.getRefersTo(), declaration);
   }
 
   @Test
-  public void testCarNameCoughtAsException() {
+  public void testVarNameCoughtAsException() {
     DeclaredReferenceExpression asReference =
         getCallWithReference("func2_catch_varName"); // exception_string
     assertNotNull(asReference);
+    VariableDeclaration declaration =
+        Util.getSubnodeOfTypeWithName(
+            Util.getSubnodeOfTypeWithName(outer_function2, CatchClause.class, Node.EMPTY_NAME),
+            VariableDeclaration.class,
+            "varName");
+    assertSameOrContains(asReference.getRefersTo(), declaration);
   }
 
   @Test
   public void testMemberAccessedOverInstance() {
-    DeclaredReferenceExpression asReference =
-        getCallWithReference("func2_instance_varName"); // instance_field
-    assertNotNull(asReference);
+    MemberExpression asMemberExpression =
+        getCallWithMemberExpression("func2_instance_varName"); // instance_field
+    assertNotNull(asMemberExpression);
+    assertTrue(asMemberExpression.getBase() instanceof DeclaredReferenceExpression);
+    DeclaredReferenceExpression base = (DeclaredReferenceExpression) asMemberExpression.getBase();
+    assertTrue(asMemberExpression.getMember() instanceof DeclaredReferenceExpression);
+    DeclaredReferenceExpression member =
+        (DeclaredReferenceExpression) asMemberExpression.getMember();
+    VariableDeclaration declaration =
+        Util.getSubnodeOfTypeWithName(outer_function2, VariableDeclaration.class, "scopeVariables");
+    assertSameOrContains(base.getRefersTo(), declaration);
+    assertSameOrContains(member.getRefersTo(), outerVarName);
   }
 
   @Test
   public void testMemberAccessedOverInstanceAfterParamDeclaration() {
-    DeclaredReferenceExpression asReference =
-        getCallWithReference("func3_instance_varName"); // instance_field
-    assertNotNull(asReference);
+    MemberExpression asMemberExpression =
+        getCallWithMemberExpression("func3_instance_varName"); // instance_field
+    assertNotNull(asMemberExpression);
+    assertTrue(asMemberExpression.getBase() instanceof DeclaredReferenceExpression);
+    DeclaredReferenceExpression base = (DeclaredReferenceExpression) asMemberExpression.getBase();
+    assertTrue(asMemberExpression.getMember() instanceof DeclaredReferenceExpression);
+    DeclaredReferenceExpression member =
+        (DeclaredReferenceExpression) asMemberExpression.getMember();
+    VariableDeclaration declaration =
+        Util.getSubnodeOfTypeWithName(outer_function3, VariableDeclaration.class, "scopeVariables");
+    assertSameOrContains(base.getRefersTo(), declaration);
+    assertSameOrContains(member.getRefersTo(), outerVarName);
   }
 
   @Test
   public void testAccessExternalClassMemberVarnameOverInstance() {
-    DeclaredReferenceExpression asReference =
-        getCallWithReference("func3_external_instance_varName"); // external_instance_field
-    assertNotNull(asReference);
+    MemberExpression asMemberExpression =
+        getCallWithMemberExpression("func3_external_instance_varName"); // external_instance_field
+    assertNotNull(asMemberExpression);
+    assertTrue(asMemberExpression.getBase() instanceof DeclaredReferenceExpression);
+    DeclaredReferenceExpression base = (DeclaredReferenceExpression) asMemberExpression.getBase();
+    assertTrue(asMemberExpression.getMember() instanceof DeclaredReferenceExpression);
+    DeclaredReferenceExpression member =
+        (DeclaredReferenceExpression) asMemberExpression.getMember();
+    VariableDeclaration declaration =
+        Util.getSubnodeOfTypeWithName(outer_function3, VariableDeclaration.class, "externalClass");
+    assertSameOrContains(base.getRefersTo(), declaration);
+    assertSameOrContains(member.getRefersTo(), externVarName);
   }
 
   @Test
   public void testExplicitlyReferenceStaticMemberInInternalClass() {
-    DeclaredReferenceExpression asReference =
-        getCallWithReference("func4_static_staticVarName"); // static_field
-    assertNotNull(asReference);
+    MemberExpression asMemberExpression =
+        getCallWithMemberExpression("func4_static_staticVarName"); // static_field
+    assertNotNull(asMemberExpression);
   }
 
   @Test
