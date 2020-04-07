@@ -261,11 +261,13 @@ public class NodeBuilder {
     return node;
   }
 
-  public static VariableDeclaration newVariableDeclaration(String name, Type type, String code) {
+  public static VariableDeclaration newVariableDeclaration(
+      String name, Type type, String code, boolean implicitInitializerAllowed) {
     VariableDeclaration node = new VariableDeclaration();
     node.setName(name);
     node.setType(type);
     node.setCode(code);
+    node.setImplicitInitializerAllowed(implicitInitializerAllowed);
 
     log(node);
 
@@ -424,13 +426,15 @@ public class NodeBuilder {
       List<String> modifiers,
       String code,
       PhysicalLocation location,
-      @Nullable Expression initializer) {
+      @Nullable Expression initializer,
+      boolean implicitInitializerAllowed) {
     FieldDeclaration node = new FieldDeclaration();
     node.setName(name);
     node.setType(type);
     node.setModifiers(modifiers);
     node.setCode(code);
     node.setLocation(location);
+    node.setImplicitInitializerAllowed(implicitInitializerAllowed);
     if (initializer != null) {
       node.setInitializer(initializer);
     }

@@ -28,8 +28,8 @@ package de.fraunhofer.aisec.cpg.graph;
 
 import de.fraunhofer.aisec.cpg.graph.HasType.TypeListener;
 import de.fraunhofer.aisec.cpg.graph.Type.Origin;
+import de.fraunhofer.aisec.cpg.helpers.Util;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
@@ -85,31 +85,14 @@ public class CallExpression extends Expression implements TypeListener {
     this.invokes.forEach(
         i -> {
           i.unregisterTypeListener(this);
-          for (ParamVariableDeclaration param : i.getParameters()) {
-            // A param could be variadic, so multiple arguments could be set as incoming DFG
-            param.getPrevDFG().stream()
-                .filter(x -> arguments.contains(x))
-                .forEach(param::removeNextDFG);
-          }
+          Util.detachCallParameters(i, arguments);
           this.removePrevDFG(i);
         });
     this.invokes = invokes;
     invokes.forEach(
         i -> {
           i.registerTypeListener(this);
-          i.getParameters().sort(Comparator.comparing(ParamVariableDeclaration::getArgumentIndex));
-          for (int j = 0; j < arguments.size(); j++) {
-            ParamVariableDeclaration param = i.getParameters().get(j);
-            if (param.isVariadic()) {
-              for (; j < arguments.size(); j++) {
-                // map all the following arguments to this variadic param
-                param.addPrevDFG(arguments.get(j));
-              }
-              break;
-            } else {
-              param.addPrevDFG(arguments.get(j));
-            }
-          }
+          Util.attachCallParameters(i, arguments);
           this.addPrevDFG(i);
         });
   }

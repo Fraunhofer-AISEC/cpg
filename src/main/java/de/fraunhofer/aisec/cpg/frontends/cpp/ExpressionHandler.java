@@ -241,10 +241,6 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
       IBinding binding = ((CPPASTNamedTypeSpecifier) declSpecifier).getName().resolveBinding();
 
       if (binding != null && !(binding instanceof CPPScope.CPPScopeProblem)) {
-        Declaration declaration = this.lang.getCachedDeclaration(binding);
-
-        newExpression.setInstantiates(declaration);
-
         // update the type
         newExpression.setType(new Type(binding.getName()));
       } else {
