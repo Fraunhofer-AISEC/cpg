@@ -310,7 +310,10 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
     }
     RecordDeclaration recordDeclaration =
         NodeBuilder.newRecordDeclaration(
-            ctx.getName().toString(), new ArrayList<>(), kind, ctx.getRawSignature());
+            lang.getScopeManager().getCurrentNamePrefixWithDelimiter() + ctx.getName().toString(),
+            new ArrayList<>(),
+            kind,
+            ctx.getRawSignature());
 
     this.lang.addRecord(recordDeclaration);
 
@@ -362,6 +365,8 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
         recordDeclaration.getFields().add(FieldDeclaration.from((VariableDeclaration) declaration));
       } else if (declaration instanceof FieldDeclaration) {
         recordDeclaration.getFields().add((FieldDeclaration) declaration);
+      } else if (declaration instanceof RecordDeclaration) {
+        recordDeclaration.getRecords().add((RecordDeclaration) declaration);
       }
     }
 
