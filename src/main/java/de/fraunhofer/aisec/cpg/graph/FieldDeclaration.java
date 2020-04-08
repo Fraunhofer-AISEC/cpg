@@ -47,6 +47,17 @@ public class FieldDeclaration extends ValueDeclaration implements TypeListener {
   @Nullable
   private Expression initializer;
 
+  /** @see VariableDeclaration#implicitInitializerAllowed */
+  private boolean implicitInitializerAllowed = false;
+
+  public boolean isImplicitInitializerAllowed() {
+    return implicitInitializerAllowed;
+  }
+
+  public void setImplicitInitializerAllowed(boolean implicitInitializerAllowed) {
+    this.implicitInitializerAllowed = implicitInitializerAllowed;
+  }
+
   private boolean isArray = false;
 
   public boolean isArray() {

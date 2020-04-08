@@ -258,7 +258,8 @@ public class ExpressionHandler
           NodeBuilder.newVariableDeclaration(
               resolved.getName(),
               this.lang.getTypeAsGoodAsPossible(variable, resolved),
-              variable.toString());
+              variable.toString(),
+              false);
 
       if (declaration.getType().getTypeAdjustment().contains("[]")) {
         declaration.setIsArray(true);

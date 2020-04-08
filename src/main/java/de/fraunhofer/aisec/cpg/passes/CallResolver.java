@@ -46,6 +46,7 @@ import de.fraunhofer.aisec.cpg.graph.StaticCallExpression;
 import de.fraunhofer.aisec.cpg.graph.TranslationUnitDeclaration;
 import de.fraunhofer.aisec.cpg.graph.Type;
 import de.fraunhofer.aisec.cpg.graph.ValueDeclaration;
+import de.fraunhofer.aisec.cpg.graph.VariableDeclaration;
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.ScopedWalker;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -62,6 +63,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import org.apache.commons.lang3.StringUtils;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.slf4j.Logger;
@@ -77,9 +79,9 @@ import org.slf4j.LoggerFactory;
  * method might not be present in the current class, but rather has its implementation in a
  * superclass, and sets the pointer accordingly.
  *
- * <p>Constructor calls with {@link NewExpression} are resolved in such a way that their {@link
- * NewExpression#getInstantiates()} points to the correct {@link RecordDeclaration}. Additionally,
- * the {@link ConstructExpression#getConstructor()} is set to the according {@link
+ * <p>Constructor calls with {@link ConstructExpression} are resolved in such a way that their
+ * {@link ConstructExpression#getInstantiates()} points to the correct {@link RecordDeclaration}.
+ * Additionally, the {@link ConstructExpression#getConstructor()} is set to the according {@link
  * ConstructorDeclaration}
  */
 public class CallResolver extends Pass {
@@ -107,6 +109,13 @@ public class CallResolver extends Pass {
     }
 
     walker.clearCallbacks();
+    walker.registerHandler(this::fixInitializers);
+
+    for (TranslationUnitDeclaration tu : translationResult.getTranslationUnits()) {
+      walker.iterate(tu);
+    }
+
+    walker.clearCallbacks();
     walker.registerHandler(this::resolve);
 
     for (TranslationUnitDeclaration tu : translationResult.getTranslationUnits()) {
@@ -124,6 +133,48 @@ public class CallResolver extends Pass {
       RecordDeclaration currentClass, Node parent, @NonNull Node currentNode) {
     if (currentNode instanceof MethodDeclaration && currentClass != null) {
       containingType.put((FunctionDeclaration) currentNode, new Type(currentClass.getName()));
+    }
+  }
+
+  private void fixInitializers(@NonNull Node node, RecordDeclaration curClass) {
+    if (node instanceof VariableDeclaration) {
+      VariableDeclaration declaration = ((VariableDeclaration) node);
+      // check if we have the corresponding class for this type
+      String typeString = declaration.getType().toString();
+      // pointer is also okay
+      if (StringUtils.countMatches(typeString, '*') == 1) {
+        typeString = typeString.replace("*", "");
+      }
+      boolean isRecord = recordMap.containsKey(typeString);
+
+      if (isRecord) {
+        Expression currInitializer = declaration.getInitializer();
+        if (currInitializer == null && declaration.isImplicitInitializerAllowed()) {
+          ConstructExpression initializer = NodeBuilder.newConstructExpression("()");
+          initializer.setImplicit(true);
+          declaration.setInitializer(initializer);
+        } else if (currInitializer instanceof CallExpression
+            && currInitializer.getName().equals(typeString)) {
+          // This should actually be a construct expression, not a call!
+          CallExpression call = (CallExpression) currInitializer;
+          List<Expression> arguments = call.getArguments();
+          String signature =
+              arguments.stream().map(Node::getCode).collect(Collectors.joining(", "));
+          ConstructExpression initializer =
+              NodeBuilder.newConstructExpression("(" + signature + ")");
+          initializer.setArguments(new ArrayList<>(arguments));
+          initializer.setImplicit(true);
+          declaration.setInitializer(initializer);
+          currInitializer.disconnectFromGraph();
+        }
+      }
+    } else if (node instanceof NewExpression) {
+      NewExpression newExpression = (NewExpression) node;
+      if (newExpression.getInitializer() == null) {
+        ConstructExpression initializer = NodeBuilder.newConstructExpression("()");
+        initializer.setImplicit(true);
+        newExpression.setInitializer(initializer);
+      }
     }
   }
 
@@ -240,26 +291,22 @@ public class CallResolver extends Pass {
         }
         call.setInvokes(invocationCandidates);
       }
-    } else if (node instanceof NewExpression) {
-      // Handle constructor calls
-      NewExpression newExpression = (NewExpression) node;
-      String typeName = newExpression.getType().getTypeName();
+    } else if (node instanceof ConstructExpression) {
+      ConstructExpression constructExpression = (ConstructExpression) node;
+      List<Type> signature = constructExpression.getSignature();
+      String typeName = constructExpression.getType().getTypeName();
       RecordDeclaration record = recordMap.get(typeName);
-      newExpression.setInstantiates(record);
-      if (newExpression.getInitializer() instanceof ConstructExpression) {
-        ConstructExpression initializer = (ConstructExpression) newExpression.getInitializer();
-        List<Type> signature = initializer.getSignature();
+      constructExpression.setInstantiates(record);
 
-        if (record != null && record.getCode() != null && !record.getCode().isEmpty()) {
-          ConstructorDeclaration constructor = getConstructorDeclaration(signature, record);
-          if (constructor != null) {
-            initializer.setConstructor(constructor);
-          } else {
-            LOGGER.warn(
-                "Unexpected: Could not find constructor for {} with signature {}",
-                record.getName(),
-                signature);
-          }
+      if (record != null && record.getCode() != null && !record.getCode().isEmpty()) {
+        ConstructorDeclaration constructor = getConstructorDeclaration(signature, record);
+        if (constructor != null) {
+          constructExpression.setConstructor(constructor);
+        } else {
+          LOGGER.warn(
+              "Unexpected: Could not find constructor for {} with signature {}",
+              record.getName(),
+              signature);
         }
       }
     }
