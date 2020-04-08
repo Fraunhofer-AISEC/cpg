@@ -440,6 +440,14 @@ public class ScopeManager {
     return "";
   }
 
+  public String getCurrentNamePrefixWithDelimiter() {
+    String namePrefix = getCurrentNamePrefix();
+    if (!namePrefix.isEmpty()) {
+      namePrefix += lang.getNamespaceDelimiter();
+    }
+    return namePrefix;
+  }
+
   public String getFullNamePrefix() {
     Scope searchScope = currentScope;
     StringBuilder fullname = new StringBuilder();
