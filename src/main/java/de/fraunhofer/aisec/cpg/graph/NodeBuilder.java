@@ -443,6 +443,9 @@ public class NodeBuilder {
     node.setCode(code);
     node.setLocation(location);
     if (initializer != null) {
+      if (initializer instanceof ArrayCreationExpression) {
+        node.setIsArray(true);
+      }
       node.setInitializer(initializer);
     }
 

@@ -160,6 +160,7 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
       }
       */
       typeAdjustment += "[]";
+      declaration.setIsArray(true);
     }
 
     // forward type adjustments

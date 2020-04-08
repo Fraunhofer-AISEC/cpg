@@ -260,6 +260,10 @@ public class ExpressionHandler
               this.lang.getTypeAsGoodAsPossible(variable, resolved),
               variable.toString());
 
+      if (declaration.getType().getTypeAdjustment().contains("[]")) {
+        declaration.setIsArray(true);
+      }
+
       declaration
           .getType()
           .setTypeModifier(
@@ -272,7 +276,9 @@ public class ExpressionHandler
       if (oInitializer.isPresent()) {
         de.fraunhofer.aisec.cpg.graph.Expression initializer =
             (de.fraunhofer.aisec.cpg.graph.Expression) handle(oInitializer.get());
-
+        if (initializer instanceof ArrayCreationExpression) {
+          declaration.setIsArray(true);
+        }
         declaration.setInitializer(initializer);
       }
       lang.setCodeAndRegion(declaration, variable);

@@ -42,7 +42,6 @@ import de.fraunhofer.aisec.cpg.graph.DeleteExpression;
 import de.fraunhofer.aisec.cpg.graph.DesignatedInitializerExpression;
 import de.fraunhofer.aisec.cpg.graph.Expression;
 import de.fraunhofer.aisec.cpg.graph.ExpressionList;
-import de.fraunhofer.aisec.cpg.graph.HasType;
 import de.fraunhofer.aisec.cpg.graph.InitializerListExpression;
 import de.fraunhofer.aisec.cpg.graph.Literal;
 import de.fraunhofer.aisec.cpg.graph.MemberExpression;
@@ -458,10 +457,6 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
               ((MemberExpression) reference).getBase(),
               ((MemberExpression) reference).getMember(),
               ctx.getRawSignature());
-
-      if (((MemberExpression) reference).getBase() instanceof HasType) {
-        callExpression.setType(((HasType) ((MemberExpression) reference).getBase()).getType());
-      }
     } else if (reference instanceof BinaryOperator
         && ((BinaryOperator) reference).getOperatorCode().equals(".")) {
       // We have a dot operator that was not classified as a member expression. This happens when

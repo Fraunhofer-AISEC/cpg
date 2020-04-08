@@ -47,6 +47,16 @@ public class FieldDeclaration extends ValueDeclaration implements TypeListener {
   @Nullable
   private Expression initializer;
 
+  private boolean isArray = false;
+
+  public boolean isArray() {
+    return isArray;
+  }
+
+  public void setIsArray(boolean isArray) {
+    this.isArray = isArray;
+  }
+
   private List<String> modifiers = new ArrayList<>();
 
   public FieldDeclaration() {}
@@ -101,7 +111,24 @@ public class FieldDeclaration extends ValueDeclaration implements TypeListener {
     }
 
     Type previous = this.type;
-    setType(src.getType(), root);
+    Type newType;
+    if (src == initializer && initializer instanceof InitializerListExpression) {
+      // Init list is seen as having an array type, but can be used ambiguously. It can be either
+      // used to initialize an array, or to initialize some objects. If it is used as an
+      // array initializer, we need to remove the array/pointer layer from the type, otherwise it
+      // can be ignored once we have a type
+      if (isArray) {
+        newType = src.getType();
+      } else if (!TypeManager.getInstance().isUnknown(this.type)) {
+        return;
+      } else {
+        newType = src.getType().dereference();
+      }
+    } else {
+      newType = src.getType();
+    }
+
+    setType(newType, root);
     if (!previous.equals(this.type)) {
       this.type.setTypeOrigin(Origin.DATAFLOW);
     }
