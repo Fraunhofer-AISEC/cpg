@@ -69,6 +69,15 @@ class ScopeVariables{
             printLog("func4_second_external_staticVarName", ExternalClass::staticVarName);
         }
 
+        void function5(){
+            ScopeVariables first;
+            ScopeVariables second;
+            first.staticVarName = "staticVarName_Of_Both";
+
+            printLog("func5_staticVarName_throughInstance_first", first.staticVarName);
+            printLog("func5_staticVarName_throughInstance_second", second.staticVarName);
+        }
+
         // C++ inner classes are currently not parsed
         class InnerClass {
             public:
@@ -99,6 +108,7 @@ class ScopeVariables{
                 // There is no speciall reference to the outer-class like ClassName.this.varname as in Java
 
                 }
+
         };
 };
 int main (int argc, char *argv[]) {
@@ -108,6 +118,7 @@ int main (int argc, char *argv[]) {
     scopeVariables.function2(varName);
     scopeVariables.function3(varName);
     scopeVariables.function4();
+    scopeVariables.function5();
     ScopeVariables::InnerClass innerClass;
     innerClass.function1();
     innerClass.function2(varName);

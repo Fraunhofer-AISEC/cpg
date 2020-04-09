@@ -13,6 +13,7 @@ import de.fraunhofer.aisec.cpg.graph.DeclaredReferenceExpression;
 import de.fraunhofer.aisec.cpg.graph.Expression;
 import de.fraunhofer.aisec.cpg.graph.FieldDeclaration;
 import de.fraunhofer.aisec.cpg.graph.ForStatement;
+import de.fraunhofer.aisec.cpg.graph.FunctionDeclaration;
 import de.fraunhofer.aisec.cpg.graph.IfStatement;
 import de.fraunhofer.aisec.cpg.graph.Literal;
 import de.fraunhofer.aisec.cpg.graph.MemberExpression;
@@ -55,13 +56,14 @@ public class VariableResolverCppTest {
   private FieldDeclaration innerImpThis;
   private FieldDeclaration innerImpOuter;
 
-  private MethodDeclaration main;
+  private FunctionDeclaration main;
 
   private MethodDeclaration outer_function1;
   private List<ForStatement> forStatements;
   private MethodDeclaration outer_function2;
   private MethodDeclaration outer_function3;
   private MethodDeclaration outer_function4;
+  private MethodDeclaration outer_function5;
 
   private MethodDeclaration inner_function1;
   private MethodDeclaration inner_function2;
@@ -71,7 +73,8 @@ public class VariableResolverCppTest {
   @BeforeAll
   public void initTests() throws ExecutionException, InterruptedException {
     final String topLevelPath = "src/test/resources/variables/";
-    List<String> fileNames = Arrays.asList("scope_variables.cpp", "external_class.cpp");
+    List<String> fileNames =
+        Arrays.asList("scope_variables.cpp", "external_class.cpp", "external_class.h");
     List<File> fileLocations =
         fileNames.stream()
             .map(fileName -> new File(topLevelPath + fileName))
@@ -115,15 +118,13 @@ public class VariableResolverCppTest {
 
     // Inner class and its fields
     innerClass =
-        Util.getOfTypeWithName(nodes, RecordDeclaration.class, "ScopeVariables.InnerClass");
+        Util.getOfTypeWithName(nodes, RecordDeclaration.class, "ScopeVariables::InnerClass");
     innerVarName = Util.getSubnodeOfTypeWithName(innerClass, FieldDeclaration.class, "varName");
     innerStaticVarName =
         Util.getSubnodeOfTypeWithName(innerClass, FieldDeclaration.class, "staticVarName");
     innerImpThis = Util.getSubnodeOfTypeWithName(innerClass, FieldDeclaration.class, "this");
-    innerImpOuter =
-        Util.getSubnodeOfTypeWithName(innerClass, FieldDeclaration.class, "ScopeVariables.this");
 
-    main = Util.getSubnodeOfTypeWithName(outerClass, MethodDeclaration.class, "main");
+    main = Util.getOfTypeWithName(nodes, FunctionDeclaration.class, "main");
 
     outer_function1 =
         outerClass.getMethods().stream()
@@ -146,6 +147,11 @@ public class VariableResolverCppTest {
     outer_function4 =
         outerClass.getMethods().stream()
             .filter(method -> method.getName().equals("function4"))
+            .collect(Collectors.toList())
+            .get(0);
+    outer_function5 =
+        outerClass.getMethods().stream()
+            .filter(method -> method.getName().equals("function5"))
             .collect(Collectors.toList())
             .get(0);
     inner_function1 =
@@ -194,6 +200,8 @@ public class VariableResolverCppTest {
   public void testOuterVarNameAccessedImplicitThis() {
     MemberExpression asMemberExpression =
         getCallWithMemberExpression("func1_impl_this_varName"); // instance_field
+    // Todo Here a single reference points to the field, a decision is needed if this is prefered
+    // over the member expression
     assertNotNull(asMemberExpression);
     assertTrue(asMemberExpression.getBase() instanceof DeclaredReferenceExpression);
     DeclaredReferenceExpression base = (DeclaredReferenceExpression) asMemberExpression.getBase();
@@ -259,6 +267,7 @@ public class VariableResolverCppTest {
     MemberExpression asMemberExpression =
         getCallWithMemberExpression("func2_this_varName"); // instance_field
     assertNotNull(asMemberExpression);
+    // Todo Points to literal this
     assertTrue(asMemberExpression.getBase() instanceof DeclaredReferenceExpression);
     DeclaredReferenceExpression base = (DeclaredReferenceExpression) asMemberExpression.getBase();
     assertTrue(asMemberExpression.getMember() instanceof DeclaredReferenceExpression);
@@ -343,23 +352,37 @@ public class VariableResolverCppTest {
 
   @Test
   public void testExplicitlyReferenceStaticMemberInInternalClass() {
-    MemberExpression asMemberExpression =
-        getCallWithMemberExpression("func4_static_staticVarName"); // static_field
-    assertNotNull(asMemberExpression);
+    DeclaredReferenceExpression asReference =
+        getCallWithReference("func4_static_staticVarName"); // static_field
+    assertNotNull(asReference);
+    assertSameOrContains(asReference.getRefersTo(), outerStaticVarName);
+    // Todo refers to references a Variable declaration in the global scope because we are not
+    // parsing externaly defined but in class declared members properly
   }
 
   @Test
   public void testExplicitlyReferenceStaticMemberInExternalClass() {
     DeclaredReferenceExpression asReference =
         getCallWithReference("func4_external_staticVarName"); // external_static_field
-    assertNotNull(asReference);
+    // Todo Point to a Unknown field
+    assertSameOrContains(asReference.getRefersTo(), externStaticVarName);
   }
 
   @Test
   public void testAccessExternalMemberOverInstance() {
-    DeclaredReferenceExpression asReference =
-        getCallWithReference("func4_external_instance_varName"); //  external_instance_field
-    assertNotNull(asReference);
+    MemberExpression asMemberExpression =
+        getCallWithMemberExpression("func4_external_instance_varName"); //  external_instance_field
+    assertNotNull(asMemberExpression);
+    assertTrue(asMemberExpression.getBase() instanceof DeclaredReferenceExpression);
+    DeclaredReferenceExpression base = (DeclaredReferenceExpression) asMemberExpression.getBase();
+    assertTrue(asMemberExpression.getMember() instanceof DeclaredReferenceExpression);
+    DeclaredReferenceExpression member =
+        (DeclaredReferenceExpression) asMemberExpression.getMember();
+    VariableDeclaration externalInstance =
+        Util.getSubnodeOfTypeWithName(outer_function4, VariableDeclaration.class, "externalClass");
+    assertSameOrContains(base.getRefersTo(), externalInstance);
+    // Todo Points to the member of inner class instead of the external class
+    assertSameOrContains(member.getRefersTo(), externVarName);
   }
 
   @Test
@@ -367,27 +390,98 @@ public class VariableResolverCppTest {
     DeclaredReferenceExpression asReference =
         getCallWithReference("func4_second_external_staticVarName"); // external_static_field
     assertNotNull(asReference);
+    // Refers to unknown field of staticVarName
+    assertSame(asReference.getRefersTo(), externStaticVarName);
+  }
+
+  @Test
+  public void testAccessStaticMemberThroughInstanceFirst() {
+    MemberExpression asMemberExpression =
+        getCallWithMemberExpression(
+            "func5_staticVarName_throughInstance_first"); // external_static_field
+    assertNotNull(asMemberExpression);
+    // Refers to unknown field of staticVarName
+    assertTrue(asMemberExpression.getBase() instanceof DeclaredReferenceExpression);
+    assertTrue(asMemberExpression.getMember() instanceof DeclaredReferenceExpression);
+    DeclaredReferenceExpression base = (DeclaredReferenceExpression) asMemberExpression.getBase();
+    DeclaredReferenceExpression member =
+        (DeclaredReferenceExpression) asMemberExpression.getMember();
+
+    VariableDeclaration declaration =
+        Util.getSubnodeOfTypeWithName(outer_function5, VariableDeclaration.class, "first");
+
+    assertSameOrContains(base.getRefersTo(), declaration);
+    assertSameOrContains(member.getRefersTo(), outerStaticVarName);
+  }
+
+  @Test
+  public void testAccessStaticMemberThroughInstanceSecond() {
+    MemberExpression asMemberExpression =
+        getCallWithMemberExpression(
+            "func5_staticVarName_throughInstance_second"); // external_static_field
+    assertNotNull(asMemberExpression);
+    // Refers to unknown field of staticVarName
+    assertTrue(asMemberExpression.getBase() instanceof DeclaredReferenceExpression);
+    assertTrue(asMemberExpression.getMember() instanceof DeclaredReferenceExpression);
+    DeclaredReferenceExpression base = (DeclaredReferenceExpression) asMemberExpression.getBase();
+    DeclaredReferenceExpression member =
+        (DeclaredReferenceExpression) asMemberExpression.getMember();
+
+    VariableDeclaration declaration =
+        Util.getSubnodeOfTypeWithName(outer_function5, VariableDeclaration.class, "second");
+
+    assertSameOrContains(base.getRefersTo(), declaration);
+    assertSameOrContains(member.getRefersTo(), outerStaticVarName);
   }
 
   @Test
   public void testImplicitThisAccessOfInnerClassMember() {
-    DeclaredReferenceExpression asReference =
-        getCallWithReference("func1_inner_imp_this_varName"); // inner_instance_field
-    assertNotNull(asReference);
+    MemberExpression asMemberExpression =
+        getCallWithMemberExpression("func1_inner_imp_this_varName"); // instance_field
+    // Todo Here the VariableResolver behaves inconsistently, it points to a field but using a
+    // single reference
+    // instead of a member expression like in
+    assertNotNull(asMemberExpression);
+    assertTrue(asMemberExpression.getBase() instanceof DeclaredReferenceExpression);
+    DeclaredReferenceExpression base = (DeclaredReferenceExpression) asMemberExpression.getBase();
+    assertTrue(asMemberExpression.getMember() instanceof DeclaredReferenceExpression);
+    DeclaredReferenceExpression member =
+        (DeclaredReferenceExpression) asMemberExpression.getMember();
+    assertSameOrContains(base.getRefersTo(), innerImpThis);
+    assertSameOrContains(member.getRefersTo(), innerVarName);
   }
 
   @Test
   public void testAccessOfInnerClassMemberOverInstance() {
-    DeclaredReferenceExpression asReference =
-        getCallWithReference("func1_inner_instance_varName"); // inner_instance_field
-    assertNotNull(asReference);
+    MemberExpression asMemberExpression =
+        getCallWithMemberExpression("func1_inner_instance_varName"); // inner_instance_field
+    assertNotNull(asMemberExpression);
+    assertTrue(asMemberExpression.getBase() instanceof DeclaredReferenceExpression);
+    DeclaredReferenceExpression base = (DeclaredReferenceExpression) asMemberExpression.getBase();
+    assertTrue(asMemberExpression.getMember() instanceof DeclaredReferenceExpression);
+    DeclaredReferenceExpression member =
+        (DeclaredReferenceExpression) asMemberExpression.getMember();
+    VariableDeclaration declaration =
+        Util.getSubnodeOfTypeWithName(inner_function1, VariableDeclaration.class, "inner");
+    assertSameOrContains(base.getRefersTo(), declaration);
+    assertSameOrContains(member.getRefersTo(), innerVarName);
   }
 
   @Test
   public void testAccessOfOuterMemberOverInstance() {
-    DeclaredReferenceExpression asReference =
-        getCallWithReference("func1_outer_instance_varName"); // instance_field
-    assertNotNull(asReference);
+    MemberExpression asMemberExpression =
+        getCallWithMemberExpression("func1_outer_instance_varName"); // inner_instance_field
+    assertNotNull(asMemberExpression);
+    assertTrue(asMemberExpression.getBase() instanceof DeclaredReferenceExpression);
+    DeclaredReferenceExpression base = (DeclaredReferenceExpression) asMemberExpression.getBase();
+    assertTrue(asMemberExpression.getMember() instanceof DeclaredReferenceExpression);
+    DeclaredReferenceExpression member =
+        (DeclaredReferenceExpression) asMemberExpression.getMember();
+    VariableDeclaration declaration =
+        Util.getSubnodeOfTypeWithName(inner_function1, VariableDeclaration.class, "scopeVariables");
+    assertSameOrContains(base.getRefersTo(), declaration);
+    // Todo points to inner varName instead of outerVarname
+    assertSameOrContains(member.getRefersTo(), outerVarName);
   }
 
   @Test
@@ -395,6 +489,10 @@ public class VariableResolverCppTest {
     DeclaredReferenceExpression asReference =
         getCallWithReference("func1_outer_static_staticVarName"); // static_field
     assertNotNull(asReference);
+    // Todo Points to the definition/declaration at the end of the file instead of the static
+    // variable in the class
+    // Todo we have to handle this type of redeclarations
+    assertSameOrContains(asReference.getRefersTo(), outerStaticVarName);
   }
 
   @Test
@@ -402,20 +500,46 @@ public class VariableResolverCppTest {
     DeclaredReferenceExpression asReference =
         getCallWithReference("func1_inner_static_staticVarName"); // inner_static_field
     assertNotNull(asReference);
+    // Todo Points to the definition/declaration at the end of the file instead of the static
+    // variable in the class
+    // Todo we have to handle this type of redeclarations
+    assertSameOrContains(asReference.getRefersTo(), innerStaticVarName);
   }
 
   @Test
   public void testAccessOfInnerClassMemberOverInstanceWithSameNamedVariable() {
-    DeclaredReferenceExpression asReference =
-        getCallWithReference("func2_inner_instance_varName_with_shadows"); // inner_instance_field
-    assertNotNull(asReference);
+    MemberExpression asMemberExpression =
+        getCallWithMemberExpression(
+            "func2_inner_instance_varName_with_shadows"); // inner_instance_field
+    assertNotNull(asMemberExpression);
+    assertTrue(asMemberExpression.getBase() instanceof DeclaredReferenceExpression);
+    DeclaredReferenceExpression base = (DeclaredReferenceExpression) asMemberExpression.getBase();
+    assertTrue(asMemberExpression.getMember() instanceof DeclaredReferenceExpression);
+    DeclaredReferenceExpression member =
+        (DeclaredReferenceExpression) asMemberExpression.getMember();
+    VariableDeclaration declaration =
+        Util.getSubnodeOfTypeWithName(inner_function2, VariableDeclaration.class, "inner");
+    assertSameOrContains(base.getRefersTo(), declaration);
+    // Todo points to the shadowing parameter of same name
+    assertSameOrContains(member.getRefersTo(), innerVarName);
   }
 
   @Test
   public void testAccessOfOuterMemberOverInstanceWithSameNamedVariable() {
-    DeclaredReferenceExpression asReference =
-        getCallWithReference("func2_outer_instance_varName_with_shadows"); // instance_field
-    assertNotNull(asReference);
+    MemberExpression asMemberExpression =
+        getCallWithMemberExpression(
+            "func2_outer_instance_varName_with_shadows"); // inner_instance_field
+    assertNotNull(asMemberExpression);
+    assertTrue(asMemberExpression.getBase() instanceof DeclaredReferenceExpression);
+    DeclaredReferenceExpression base = (DeclaredReferenceExpression) asMemberExpression.getBase();
+    assertTrue(asMemberExpression.getMember() instanceof DeclaredReferenceExpression);
+    DeclaredReferenceExpression member =
+        (DeclaredReferenceExpression) asMemberExpression.getMember();
+    VariableDeclaration declaration =
+        Util.getSubnodeOfTypeWithName(inner_function2, VariableDeclaration.class, "scopeVariables");
+    assertSameOrContains(base.getRefersTo(), declaration);
+    // Todo points to the shadowing parameter
+    assertSameOrContains(member.getRefersTo(), outerVarName);
   }
 
   @Test
@@ -423,6 +547,10 @@ public class VariableResolverCppTest {
     DeclaredReferenceExpression asReference =
         getCallWithReference("func2_outer_static_staticVarName_with_shadows"); // static_field
     assertNotNull(asReference);
+    // Todo Points to the definition/declaration at the end of the file instead of the static
+    // variable in the class
+    // Todo we have to handle this type of redeclarations
+    assertSameOrContains(asReference.getRefersTo(), outerStaticVarName);
   }
 
   @Test
@@ -430,6 +558,10 @@ public class VariableResolverCppTest {
     DeclaredReferenceExpression asReference =
         getCallWithReference("func2_inner_static_staticVarName_with_shadows"); // inner_static_field
     assertNotNull(asReference);
+    // Todo Points to the definition/declaration at the end of the file instead of the static
+    // variable in the class
+    // Todo we have to handle this type of redeclarations
+    assertSameOrContains(asReference.getRefersTo(), innerStaticVarName);
   }
 
   @Test
@@ -437,5 +569,8 @@ public class VariableResolverCppTest {
     DeclaredReferenceExpression asReference =
         getCallWithReference("main_local_varName"); // parameter
     assertNotNull(asReference);
+    VariableDeclaration declaration =
+        Util.getSubnodeOfTypeWithName(main, VariableDeclaration.class, "varName");
+    assertSameOrContains(asReference.getRefersTo(), declaration);
   }
 }
