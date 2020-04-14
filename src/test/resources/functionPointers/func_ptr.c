@@ -38,4 +38,18 @@ int main() {
   (*no_param_unknown_uninitialized)();
   (*single_param_unknown_uninitialized)(42);
   (*single_param_unknown_uninitialized)(43);
+
+  // calls without dedicated function pointer syntax
+  no_param();
+  single_param(42);
+  no_param_unknown();
+  no_param_unknown();
+  single_param_unknown(42);
+  single_param_unknown(43);
+  no_param_uninitialized();
+  single_param_uninitialized(42);
+  no_param_unknown_uninitialized();
+  no_param_unknown_uninitialized();
+  single_param_unknown_uninitialized(42);
+  single_param_unknown_uninitialized(43);
 }
