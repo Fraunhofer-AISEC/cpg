@@ -136,6 +136,7 @@ public class JavaLanguageFrontend extends LanguageFrontend {
       // starting point is always a translation declaration
       TranslationUnitDeclaration fileDeclaration =
           NodeBuilder.newTranslationUnitDeclaration(file.toString(), context.toString());
+      setCurrentTU(fileDeclaration);
       TranslationUnitDeclaration declaration = fileDeclaration;
 
       PackageDeclaration packDecl = context.getPackageDeclaration().orElse(null);

@@ -160,10 +160,13 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
       }
       */
       typeAdjustment += "[]";
+      declaration.setIsArray(true);
     }
 
     // forward type adjustments
-    declaration.getType().setTypeAdjustment(typeAdjustment);
+    if (!typeAdjustment.isEmpty()) {
+      declaration.getType().setTypeAdjustment(typeAdjustment);
+    }
     lang.getScopeManager().addValueDeclaration(declaration);
     return declaration;
   }
@@ -226,12 +229,13 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
     }
 
     // forward type adjustments
-    declaration
-        .getType()
-        .setTypeAdjustment(
-            List.of(ctx.getPointerOperators()).stream()
-                .map(IASTNode::getRawSignature)
-                .collect(Collectors.joining()));
+    String typeAdjustment =
+        List.of(ctx.getPointerOperators()).stream()
+            .map(IASTNode::getRawSignature)
+            .collect(Collectors.joining());
+    if (!typeAdjustment.isEmpty()) {
+      declaration.getType().setTypeAdjustment(typeAdjustment);
+    }
 
     //    lang.addFunctionDeclaration(declaration);
     lang.getScopeManager().leaveScope(declaration);

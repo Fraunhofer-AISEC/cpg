@@ -92,6 +92,8 @@ public class Node {
   @Relationship(value = "DFG")
   protected Set<Node> nextDFG = new HashSet<>();
 
+  protected Set<TypedefDeclaration> typedefs = new HashSet<>();
+
   /**
    * If a node is marked as being a dummy, it means that it was created artificially and does not
    * necessarily have a real counterpart in the actual source code
@@ -209,6 +211,18 @@ public class Node {
       this.prevDFG.remove(prev);
       prev.nextDFG.remove(this);
     }
+  }
+
+  public void addTypedef(TypedefDeclaration typedef) {
+    this.typedefs.add(typedef);
+  }
+
+  public Set<TypedefDeclaration> getTypedefs() {
+    return typedefs;
+  }
+
+  public void setTypedefs(Set<TypedefDeclaration> typedefs) {
+    this.typedefs = typedefs;
   }
 
   public int getArgumentIndex() {

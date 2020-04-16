@@ -66,7 +66,13 @@ public class CallExpression extends Expression implements TypeListener {
   }
 
   public void setBase(Node base) {
+    if (this.base instanceof HasType) {
+      ((HasType) this.base).unregisterTypeListener(this);
+    }
     this.base = base;
+    if (base instanceof HasType) {
+      ((HasType) base).registerTypeListener(this);
+    }
   }
 
   public List<Expression> getArguments() {
@@ -103,32 +109,37 @@ public class CallExpression extends Expression implements TypeListener {
 
   @Override
   public void typeChanged(HasType src, HasType root, Type oldType) {
-    Type previous = this.type;
+    if (src == base) {
+      setFqn(src.getType().getTypeName() + "." + this.getName());
+    } else {
+      Type previous = this.type;
+      List<Type> types =
+          invokes.stream()
+              .map(FunctionDeclaration::getType)
+              .filter(Objects::nonNull)
+              .collect(Collectors.toList());
+      Type alternative = !types.isEmpty() ? types.get(0) : null;
+      Type commonType = TypeManager.getInstance().getCommonType(types).orElse(alternative);
+      Set<Type> subTypes = new HashSet<>(getPossibleSubTypes());
+      subTypes.remove(oldType);
+      subTypes.addAll(types);
 
-    List<Type> types =
-        invokes.stream()
-            .map(FunctionDeclaration::getType)
-            .filter(Objects::nonNull)
-            .collect(Collectors.toList());
-    Type alternative = !types.isEmpty() ? types.get(0) : null;
-    Type commonType = TypeManager.getInstance().getCommonType(types).orElse(alternative);
-    Set<Type> subTypes = new HashSet<>(getPossibleSubTypes());
-    subTypes.remove(oldType);
-    subTypes.addAll(types);
+      setType(commonType, root);
+      setPossibleSubTypes(subTypes, root);
 
-    setType(commonType, root);
-    setPossibleSubTypes(subTypes, root);
-
-    if (!previous.equals(this.type)) {
-      this.type.setTypeOrigin(Origin.DATAFLOW);
+      if (!previous.equals(this.type)) {
+        this.type.setTypeOrigin(Origin.DATAFLOW);
+      }
     }
   }
 
   @Override
   public void possibleSubTypesChanged(HasType src, HasType root, Set<Type> oldSubTypes) {
-    Set<Type> subTypes = new HashSet<>(getPossibleSubTypes());
-    subTypes.addAll(src.getPossibleSubTypes());
-    setPossibleSubTypes(subTypes, root);
+    if (src != base) {
+      Set<Type> subTypes = new HashSet<>(getPossibleSubTypes());
+      subTypes.addAll(src.getPossibleSubTypes());
+      setPossibleSubTypes(subTypes, root);
+    }
   }
 
   @Override

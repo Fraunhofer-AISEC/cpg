@@ -62,7 +62,7 @@ public class Type {
   }
 
   public Type(String type) {
-    setFrom(type);
+    setFrom(type, true);
   }
 
   public Type(String type, String typeAdjustment) {
@@ -70,9 +70,16 @@ public class Type {
     this.typeAdjustment = typeAdjustment;
   }
 
-  public Type(String type, String typeAdjustment, boolean isFunctionPtr) {
+  public Type(
+      String type,
+      String typeAdjustment,
+      String typeModifier,
+      Origin typeOrigin,
+      boolean isFunctionPtr) {
     this.type = type;
     this.typeAdjustment = typeAdjustment;
+    this.typeModifier = typeModifier;
+    this.typeOrigin = typeOrigin;
     this.isFunctionPtr = isFunctionPtr;
   }
 
@@ -87,11 +94,7 @@ public class Type {
   }
 
   public Type(Type src) {
-    this.type = src.type;
-    this.typeAdjustment = src.typeAdjustment;
-    this.typeModifier = src.typeModifier;
-    this.typeOrigin = src.typeOrigin;
-    this.isFunctionPtr = src.isFunctionPtr;
+    setFrom(src);
   }
 
   public static Type getUnknown() {
@@ -130,6 +133,19 @@ public class Type {
     return new Type(string);
   }
 
+  /**
+   * Does the same as {@link #createIgnoringAlias(String)} but explicitly does not use type alias
+   * resolution. This is usually not what you want. Use with care!
+   *
+   * @param string the string representation of the type
+   * @return the type
+   */
+  public static Type createIgnoringAlias(String string) {
+    Type type = new Type();
+    type.setFrom(string, false);
+    return type;
+  }
+
   public String getTypeName() {
     return type;
   }
@@ -138,7 +154,15 @@ public class Type {
     this.type = type;
   }
 
-  private void setFrom(String string) {
+  public void setFrom(Type src) {
+    this.type = src.type;
+    this.typeAdjustment = src.typeAdjustment;
+    this.typeModifier = src.typeModifier;
+    this.typeOrigin = src.typeOrigin;
+    this.isFunctionPtr = src.isFunctionPtr;
+  }
+
+  private void setFrom(String string, boolean resolveAlias) {
     String cleaned = clean(string);
     Matcher matcher = TYPE_FROM_STRING.matcher(cleaned);
     if (matcher.matches()) {
@@ -154,6 +178,9 @@ public class Type {
     } else {
       LOGGER.warn("Type regex does not match for {} (cleaned version of {})", cleaned, string);
       setTypeName(cleaned);
+    }
+    if (resolveAlias) {
+      setFrom(TypeManager.getInstance().resolvePossibleTypedef(this));
     }
   }
 
@@ -178,13 +205,22 @@ public class Type {
   }
 
   public Type reference() {
-    return new Type(this.type, "*" + this.typeAdjustment, this.isFunctionPtr);
+    return new Type(
+        this.type,
+        "*" + this.typeAdjustment,
+        this.typeModifier,
+        this.typeOrigin,
+        this.isFunctionPtr);
   }
 
   public Type dereference() {
     // dereferencing an array results in basically the same as with a pointer
     return new Type(
-        this.type, this.typeAdjustment.replaceFirst("(\\[])|(\\*)", ""), this.isFunctionPtr);
+        this.type,
+        this.typeAdjustment.replaceFirst("(\\[])|(\\*)", ""),
+        this.typeModifier,
+        this.typeOrigin,
+        this.isFunctionPtr);
   }
 
   public void setFunctionPtr(boolean functionPtr) {

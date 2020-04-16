@@ -72,4 +72,10 @@ public class TypeConverter implements CompositeAttributeConverter<Type> {
       basePropertyName = "castType";
     }
   }
+
+  public static class AliasTypeConverter extends TypeConverter {
+    public AliasTypeConverter() {
+      basePropertyName = "aliasType";
+    }
+  }
 }

@@ -100,6 +100,17 @@ public class NodeBuilder {
     return node;
   }
 
+  public static TypedefDeclaration newTypedefDeclaration(Type targetType, Type alias, String code) {
+    TypedefDeclaration node = new TypedefDeclaration();
+    node.setType(targetType);
+    node.setAlias(alias);
+    node.setCode(code);
+
+    log(node);
+
+    return node;
+  }
+
   public static ArraySubscriptionExpression newArraySubscriptionExpression(String code) {
     ArraySubscriptionExpression node = new ArraySubscriptionExpression();
     node.setCode(code);
@@ -436,6 +447,9 @@ public class NodeBuilder {
     node.setLocation(location);
     node.setImplicitInitializerAllowed(implicitInitializerAllowed);
     if (initializer != null) {
+      if (initializer instanceof ArrayCreationExpression) {
+        node.setIsArray(true);
+      }
       node.setInitializer(initializer);
     }
 

@@ -27,6 +27,7 @@
 package de.fraunhofer.aisec.cpg.graph;
 
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
+import de.fraunhofer.aisec.cpg.helpers.Util;
 import de.fraunhofer.aisec.cpg.passes.scopes.RecordScope;
 import java.util.Collection;
 import java.util.Comparator;
@@ -38,18 +39,27 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.builder.ToStringBuilder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class TypeManager {
 
+  private static final Logger log = LoggerFactory.getLogger(TypeManager.class);
+
   private static final List<String> primitiveTypeNames =
       List.of("byte", "short", "int", "long", "float", "double", "boolean", "char");
+  private static final Pattern funPointerPattern =
+      Pattern.compile("\\(?\\*(?<alias>[^()]+)\\)?\\(.*\\)");
   private static TypeManager INSTANCE = new TypeManager();
 
   private Map<String, RecordDeclaration> typeToRecord = new HashMap<>();
   private LanguageFrontend frontend;
+  private boolean noFrontendWarningIssued = false;
 
   private TypeManager() {}
 
@@ -143,7 +153,7 @@ public class TypeManager {
     }
 
     // arrays and pointers match in C++
-    if (checkArrayAndPointer(superType, subType) || checkArrayAndPointer(subType, superType)) {
+    if (checkArrayAndPointer(superType, subType)) {
       return true;
     }
 
@@ -163,11 +173,16 @@ public class TypeManager {
     }
   }
 
-  private boolean checkArrayAndPointer(Type first, Type second) {
-    int secondArrayDepth = StringUtils.countMatches(second.getTypeAdjustment(), "[]");
-    int firstPointerDepth = StringUtils.countMatches(first.getTypeAdjustment(), '*');
-    if (secondArrayDepth == firstPointerDepth) {
-      return first.getTypeName().equals(second.getTypeName());
+  public boolean checkArrayAndPointer(Type first, Type second) {
+    int firstDepth =
+        StringUtils.countMatches(first.getTypeAdjustment(), '*')
+            + StringUtils.countMatches(first.getTypeAdjustment(), "[]");
+    int secondDepth =
+        StringUtils.countMatches(second.getTypeAdjustment(), "[]")
+            + StringUtils.countMatches(second.getTypeAdjustment(), '*');
+    if (firstDepth == secondDepth) {
+      return first.getTypeName().equals(second.getTypeName())
+          && first.getTypeModifier().equals(second.getTypeModifier());
     } else {
       return false;
     }
@@ -176,6 +191,148 @@ public class TypeManager {
   public void cleanup() {
     this.frontend = null;
     this.typeToRecord.clear();
+  }
+
+  private Type getTargetType(Type currTarget, String alias) {
+    if (alias.contains("(") && alias.contains("*")) {
+      // function pointer
+      Type fptrType = Type.createFrom(currTarget.toString() + " " + alias);
+      fptrType.setFunctionPtr(true);
+      return fptrType;
+    } else if (alias.endsWith("]")) {
+      // array type
+      return Type.createFrom(currTarget.toString() + alias.substring(alias.indexOf('[')));
+    } else if (alias.contains("*")) {
+      // pointer
+      int depth = StringUtils.countMatches(alias, '*');
+      for (int i = 0; i < depth; i++) {
+        currTarget = currTarget.reference();
+      }
+      return currTarget;
+    } else {
+      return currTarget;
+    }
+  }
+
+  private Type getAlias(String alias) {
+    if (alias.contains("(") && alias.contains("*")) {
+      // function pointer
+      Matcher matcher = funPointerPattern.matcher(alias);
+      if (matcher.find()) {
+        return Type.createIgnoringAlias(matcher.group("alias"));
+      } else {
+        log.error("Could not find alias name in function pointer typedef: {}", alias);
+        return Type.createIgnoringAlias(alias);
+      }
+    } else if (alias.endsWith("]")) {
+      // array type
+      return Type.createIgnoringAlias(alias.substring(0, alias.indexOf('[')));
+    } else if (alias.contains("*")) {
+      // pointer
+      return Type.createIgnoringAlias(alias.replace("*", ""));
+    } else {
+      return Type.createIgnoringAlias(alias);
+    }
+  }
+
+  public void handleTypedef(String rawCode) {
+    String cleaned = rawCode.replaceAll("(typedef|;)", "").strip();
+    if (cleaned.startsWith("struct")) {
+      handleStructTypedef(rawCode, cleaned);
+    } else if (Util.containsOnOuterLevel(cleaned, ',')) {
+      handleMultipleAliases(rawCode, cleaned);
+    } else {
+      List<String> parts = Util.splitLeavingParenthesisContents(cleaned, " \r\n");
+      if (parts.size() < 2) {
+        log.error("Typedef contains no whitespace to split on: {}", rawCode);
+        return;
+      }
+      // typedefs can be wildly mixed around, but the last item is always the alias to be defined
+      Type target =
+          Type.createFrom(
+              Util.removeRedundantParentheses(
+                  String.join(" ", parts.subList(0, parts.size() - 1))));
+      handleSingleAlias(rawCode, target, parts.get(parts.size() - 1));
+    }
+  }
+
+  private void handleMultipleAliases(String rawCode, String cleaned) {
+    List<String> parts = Util.splitLeavingParenthesisContents(cleaned, ",");
+    String[] splitFirst = parts.get(0).split("\\s+");
+    if (splitFirst.length < 2) {
+      log.error("Cannot find out target type for {}", rawCode);
+      return;
+    }
+    Type target = Type.createFrom(splitFirst[0]);
+    parts.set(0, parts.get(0).substring(splitFirst[0].length()).strip());
+    for (String part : parts) {
+      handleSingleAlias(rawCode, target, part);
+    }
+  }
+
+  private void handleStructTypedef(String rawCode, String cleaned) {
+    int endOfStruct = cleaned.lastIndexOf('}');
+    if (endOfStruct + 1 < cleaned.length()) {
+      List<String> parts =
+          Util.splitLeavingParenthesisContents(cleaned.substring(endOfStruct + 1), ",");
+      Optional<String> name =
+          parts.stream().filter(p -> !p.contains("*") && !p.contains("[")).findFirst();
+      if (name.isPresent()) {
+        Type target = Type.createIgnoringAlias(name.get());
+        for (String part : parts) {
+          if (!part.equals(name.get())) {
+            handleSingleAlias(rawCode, target, part);
+          }
+        }
+      } else {
+        log.error("Could not identify struct name: {}", rawCode);
+      }
+    } else {
+      log.error("No alias found for struct typedef: {}", rawCode);
+    }
+  }
+
+  public void handleSingleAlias(String rawCode, Type target, String aliasString) {
+    String cleanedPart = Util.removeRedundantParentheses(aliasString);
+    Type currTarget = getTargetType(target, cleanedPart);
+    Type alias = getAlias(cleanedPart);
+    TypedefDeclaration typedef = NodeBuilder.newTypedefDeclaration(currTarget, alias, rawCode);
+    frontend.getScopeManager().addTypedef(typedef);
+  }
+
+  public Type resolvePossibleTypedef(Type alias) {
+    if (frontend == null) {
+      if (!noFrontendWarningIssued) {
+        log.warn("No frontend available. Be aware that typedef resolving cannot currently be done");
+        noFrontendWarningIssued = true;
+      }
+      return alias;
+    }
+    Type toCheck = alias;
+    int pointerDepth = 0;
+    while (toCheck.getTypeAdjustment().contains("*")
+        || toCheck.getTypeAdjustment().contains("[]")) {
+      toCheck = toCheck.dereference();
+      pointerDepth++;
+    }
+
+    Type finalToCheck = toCheck;
+    Optional<Type> applicable =
+        frontend.getScopeManager().getCurrentTypedefs().stream()
+            .filter(t -> t.getAlias().equals(finalToCheck))
+            .findAny()
+            .map(TypedefDeclaration::getType);
+
+    if (applicable.isEmpty()) {
+      return alias;
+    } else {
+      Type result = applicable.get();
+      while (pointerDepth > 0) {
+        result = result.reference();
+        pointerDepth--;
+      }
+      return result;
+    }
   }
 
   private class Ancestor {

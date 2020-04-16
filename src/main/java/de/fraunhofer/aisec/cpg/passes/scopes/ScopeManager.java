@@ -50,6 +50,7 @@ import de.fraunhofer.aisec.cpg.graph.RecordDeclaration;
 import de.fraunhofer.aisec.cpg.graph.Statement;
 import de.fraunhofer.aisec.cpg.graph.SwitchStatement;
 import de.fraunhofer.aisec.cpg.graph.TryStatement;
+import de.fraunhofer.aisec.cpg.graph.TypedefDeclaration;
 import de.fraunhofer.aisec.cpg.graph.ValueDeclaration;
 import de.fraunhofer.aisec.cpg.graph.VariableDeclaration;
 import de.fraunhofer.aisec.cpg.graph.WhileStatement;
@@ -430,6 +431,44 @@ public class ScopeManager {
       }
       if (!functions.contains(functionDeclaration)) functions.add(functionDeclaration);
     }
+  }
+
+  public void addTypedef(TypedefDeclaration typedef) {
+    DeclarationScope scope =
+        (DeclarationScope) getFirstScopeThat(DeclarationScope.class::isInstance);
+    if (scope == null) {
+      LOGGER.error("Cannot add typedef. Not in declaration scope.");
+      return;
+    }
+    scope.addTypedef(typedef);
+    if (scope.astNode == null) {
+      lang.getCurrentTU().addTypedef(typedef);
+    } else {
+      scope.astNode.addTypedef(typedef);
+    }
+  }
+
+  public List<TypedefDeclaration> getCurrentTypedefs() {
+    return getCurrentTypedefs(currentScope);
+  }
+
+  private List<TypedefDeclaration> getCurrentTypedefs(Scope scope) {
+    List<TypedefDeclaration> curr = new ArrayList<>();
+
+    if (scope instanceof DeclarationScope) {
+      curr.addAll(((DeclarationScope) scope).getTypedefs());
+    }
+
+    if (scope.getParent() != null) {
+      for (TypedefDeclaration parentTypedef : getCurrentTypedefs(scope.getParent())) {
+        if (curr.stream()
+            .map(TypedefDeclaration::getAlias)
+            .noneMatch(parentTypedef.getAlias()::equals)) {
+          curr.add(parentTypedef);
+        }
+      }
+    }
+    return curr;
   }
 
   public String getCurrentNamePrefix() {

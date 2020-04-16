@@ -50,6 +50,7 @@ import de.fraunhofer.aisec.cpg.graph.Statement;
 import de.fraunhofer.aisec.cpg.graph.SwitchStatement;
 import de.fraunhofer.aisec.cpg.graph.TryStatement;
 import de.fraunhofer.aisec.cpg.graph.Type;
+import de.fraunhofer.aisec.cpg.graph.TypeManager;
 import de.fraunhofer.aisec.cpg.graph.VariableDeclaration;
 import de.fraunhofer.aisec.cpg.graph.WhileStatement;
 import java.util.Arrays;
@@ -297,6 +298,9 @@ class StatementHandler extends Handler<Statement, IASTStatement, CXXLanguageFron
   private DeclarationStatement handleDeclarationStatement(CPPASTDeclarationStatement ctx) {
     if (ctx.getDeclaration() instanceof CPPASTASMDeclaration) {
       return NodeBuilder.newASMDeclarationStatement(ctx.getRawSignature());
+    } else if (ctx.getRawSignature().contains("typedef")) {
+      TypeManager.getInstance().handleTypedef(ctx.getRawSignature());
+      return null;
     } else {
       DeclarationStatement declarationStatement =
           NodeBuilder.newDeclarationStatement(ctx.getRawSignature());
@@ -324,7 +328,10 @@ class StatementHandler extends Handler<Statement, IASTStatement, CXXLanguageFron
     lang.getScopeManager().enterScope(compoundStatement);
 
     for (IASTStatement statement : ctx.getStatements()) {
-      compoundStatement.getStatements().add(handle(statement));
+      Statement handled = handle(statement);
+      if (handled != null) {
+        compoundStatement.getStatements().add(handled);
+      }
     }
     lang.getScopeManager().leaveScope(compoundStatement);
     return compoundStatement;
