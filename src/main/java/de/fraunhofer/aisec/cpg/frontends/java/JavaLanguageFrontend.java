@@ -323,7 +323,7 @@ public class JavaLanguageFrontend extends LanguageFrontend {
   }
 
   public String getQualifiedNameFromImports(String className) {
-    if (context != null) {
+    if (context != null && className != null) {
       List<String> potentialClassNames = new ArrayList<>();
       String prefix = "";
       for (String s : className.split("\\.")) {
