@@ -27,42 +27,22 @@
 package de.fraunhofer.aisec.cpg.frontends.cpp;
 
 import de.fraunhofer.aisec.cpg.frontends.Handler;
-import de.fraunhofer.aisec.cpg.graph.ConstructorDeclaration;
-import de.fraunhofer.aisec.cpg.graph.Declaration;
-import de.fraunhofer.aisec.cpg.graph.Expression;
-import de.fraunhofer.aisec.cpg.graph.FieldDeclaration;
-import de.fraunhofer.aisec.cpg.graph.FunctionDeclaration;
-import de.fraunhofer.aisec.cpg.graph.MethodDeclaration;
-import de.fraunhofer.aisec.cpg.graph.NodeBuilder;
-import de.fraunhofer.aisec.cpg.graph.ParamVariableDeclaration;
-import de.fraunhofer.aisec.cpg.graph.RecordDeclaration;
-import de.fraunhofer.aisec.cpg.graph.Type;
-import de.fraunhofer.aisec.cpg.graph.ValueDeclaration;
-import de.fraunhofer.aisec.cpg.graph.VariableDeclaration;
+import de.fraunhofer.aisec.cpg.graph.*;
+import de.fraunhofer.aisec.cpg.graph.type.FunctionPointerType;
+import de.fraunhofer.aisec.cpg.graph.type.Type;
+import de.fraunhofer.aisec.cpg.graph.type.TypeParser;
+import de.fraunhofer.aisec.cpg.graph.type.UnknownType;
 import de.fraunhofer.aisec.cpg.passes.scopes.RecordScope;
 import de.fraunhofer.aisec.cpg.passes.scopes.Scope;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
-import org.eclipse.cdt.core.dom.ast.IASTCompositeTypeSpecifier;
-import org.eclipse.cdt.core.dom.ast.IASTDeclaration;
-import org.eclipse.cdt.core.dom.ast.IASTExpression;
-import org.eclipse.cdt.core.dom.ast.IASTInitializer;
-import org.eclipse.cdt.core.dom.ast.IASTNameOwner;
-import org.eclipse.cdt.core.dom.ast.IASTNode;
-import org.eclipse.cdt.core.dom.ast.IBinding;
+import org.eclipse.cdt.core.dom.ast.*;
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTCompositeTypeSpecifier;
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTParameterDeclaration;
-import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTArrayDeclarator;
-import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTCompositeTypeSpecifier;
-import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTDeclarator;
-import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTFunctionDeclarator;
-import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTVisibilityLabel;
-import org.eclipse.cdt.internal.core.dom.parser.cpp.ICPPEvaluation;
+import org.eclipse.cdt.internal.core.dom.parser.cpp.*;
 
 class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageFrontend> {
 
@@ -93,77 +73,13 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
     // type will be filled out later
     VariableDeclaration declaration =
         NodeBuilder.newVariableDeclaration(
-            ctx.getName().toString(), Type.getUnknown(), ctx.getRawSignature());
-
+            ctx.getName().toString(), UnknownType.getUnknownType(), ctx.getRawSignature());
     IASTInitializer init = ctx.getInitializer();
 
     if (init != null) {
       declaration.setInitializer(lang.getInitializerHandler().handle(init));
     }
 
-    String typeAdjustment =
-        List.of(ctx.getPointerOperators()).stream()
-            .map(IASTNode::getRawSignature)
-            .collect(Collectors.joining());
-    if (ctx instanceof CPPASTArrayDeclarator) {
-      /* TODO This is responsible for adding array size to the type adjustment. To be determined
-          whether this is necessary and in which form it should be adopted
-      CPPASTArrayDeclarator arrayDecl = (CPPASTArrayDeclarator) ctx;
-      List<String> dimensions = new ArrayList<>();
-      int elementMultiplier = 1;
-      for (IASTArrayModifier mod : arrayDecl.getArrayModifiers()) {
-        dimensions.add(mod.getRawSignature());
-        if (mod.getRawSignature().length() > 2) {
-          int dimension = getEvaluatedIntegerValue(mod.getConstantExpression());
-          if (dimension == -1) {
-            elementMultiplier = -1;
-            break;
-          }
-          dimensions.set(dimensions.size() - 1, "[" + dimension + "]");
-          elementMultiplier *= dimension;
-        }
-      }
-      if (declaration.getInitializer() instanceof InitializerListExpression) {
-        InitializerListExpression initList =
-            (InitializerListExpression) declaration.getInitializer();
-        // narrow down array type to size of initializer list expression
-
-        // Here one could compute the statically determinable dimension size from the initializer.
-        // The initializer list may
-        // be flattened and the computation is far from trivial if the dimension expression is
-        // constant but has to be evaluated
-        // In newer standards dynamic length arrays are possible.
-        if (dimensions.get(0).length() <= 2)
-          if (initList.getInitializers().stream()
-              .noneMatch(elmt -> elmt instanceof InitializerListExpression)) {
-            if (elementMultiplier > 0)
-              dimensions.set(
-                  0,
-                  "["
-                      + (-Math.floorDiv(-initList.getInitializers().size(), elementMultiplier))
-                      + "]");
-          } else {
-            dimensions.set(0, "[" + initList.getInitializers().size() + "]");
-          }
-
-        typeAdjustment += String.join("", dimensions);
-
-      } else if (declaration.getInitializer() instanceof Literal
-          && ((Literal) declaration.getInitializer()).getValue() instanceof String) {
-        // narrow down array type to length of string literal
-        typeAdjustment +=
-            "["
-                + (((String) ((Literal) declaration.getInitializer()).getValue()).length() + 1)
-                + "]";
-      } else {
-        typeAdjustment += String.join("", dimensions);
-      }
-      */
-      typeAdjustment += "[]";
-    }
-
-    // forward type adjustments
-    declaration.getType().setTypeAdjustment(typeAdjustment);
     lang.getScopeManager().addValueDeclaration(declaration);
     return declaration;
   }
@@ -220,18 +136,10 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
     // wraps this list
     if (ctx.takesVarArgs()) {
       ParamVariableDeclaration varargs =
-          NodeBuilder.newMethodParameterIn("va_args", Type.getUnknown(), true, "");
+          NodeBuilder.newMethodParameterIn("va_args", UnknownType.getUnknownType(), true, "");
       varargs.setArgumentIndex(i);
       lang.getScopeManager().addValueDeclaration(varargs);
     }
-
-    // forward type adjustments
-    declaration
-        .getType()
-        .setTypeAdjustment(
-            List.of(ctx.getPointerOperators()).stream()
-                .map(IASTNode::getRawSignature)
-                .collect(Collectors.joining()));
 
     //    lang.addFunctionDeclaration(declaration);
     lang.getScopeManager().leaveScope(declaration);
@@ -252,11 +160,14 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
       result =
           NodeBuilder.newVariableDeclaration(
               ctx.getNestedDeclarator().getName().toString(),
-              Type.getUnknown(),
+              UnknownType.getUnknownType(),
               ctx.getRawSignature());
       ((VariableDeclaration) result).setInitializer(initializer);
       result.setLocation(lang.getLocationFromRawNode(ctx));
-      result.getType().setFunctionPtr(true);
+      // TODO SH add real function pointer handling
+      result.setType(
+          new FunctionPointerType(
+              new Type.Qualifier(), Type.Storage.AUTO, new ArrayList<>(), null));
       result.refreshType();
     } else {
       RecordScope recordScope =
@@ -273,13 +184,16 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
       result =
           NodeBuilder.newFieldDeclaration(
               name,
-              Type.getUnknown(),
+              UnknownType.getUnknownType(),
               Collections.emptyList(),
               code,
               lang.getLocationFromRawNode(ctx),
               initializer);
       result.setLocation(lang.getLocationFromRawNode(ctx));
-      result.getType().setFunctionPtr(true);
+      // TODO SH add real function pointer handling
+      result.setType(
+          new FunctionPointerType(
+              new Type.Qualifier(), Type.Storage.AUTO, new ArrayList<>(), null));
       result.refreshType();
       /*} else {
         // not in a record and not in a field, strange. This should not happen
@@ -318,7 +232,7 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
       de.fraunhofer.aisec.cpg.graph.FieldDeclaration thisDeclaration =
           NodeBuilder.newFieldDeclaration(
               "this",
-              new de.fraunhofer.aisec.cpg.graph.Type(ctx.getName().toString()),
+              TypeParser.createFrom(ctx.getName().toString()),
               new ArrayList<>(),
               "this",
               null,

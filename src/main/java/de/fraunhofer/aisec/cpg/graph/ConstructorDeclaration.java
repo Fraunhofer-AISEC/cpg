@@ -26,6 +26,8 @@
 
 package de.fraunhofer.aisec.cpg.graph;
 
+import de.fraunhofer.aisec.cpg.graph.type.TypeParser;
+
 /**
  * The declaration of a constructor within a {@link RecordDeclaration}. Is it essentially a special
  * case of a {@link MethodDeclaration}.
@@ -46,7 +48,7 @@ public class ConstructorDeclaration extends MethodDeclaration {
             methodDeclaration.getRecordDeclaration());
 
     // constructors always have void type
-    c.setType(Type.createFrom(VOID_TYPE_STRING));
+    c.setType(TypeParser.createFrom(VOID_TYPE_STRING));
 
     c.setBody(methodDeclaration.getBody());
     c.setLocation(methodDeclaration.getLocation());

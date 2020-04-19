@@ -30,77 +30,23 @@ import static de.fraunhofer.aisec.cpg.helpers.Util.errorWithFileLocation;
 import static de.fraunhofer.aisec.cpg.helpers.Util.warnWithFileLocation;
 
 import de.fraunhofer.aisec.cpg.frontends.Handler;
-import de.fraunhofer.aisec.cpg.graph.ArraySubscriptionExpression;
-import de.fraunhofer.aisec.cpg.graph.BinaryOperator;
-import de.fraunhofer.aisec.cpg.graph.CallExpression;
-import de.fraunhofer.aisec.cpg.graph.CastExpression;
-import de.fraunhofer.aisec.cpg.graph.CompoundStatementExpression;
-import de.fraunhofer.aisec.cpg.graph.ConditionalExpression;
-import de.fraunhofer.aisec.cpg.graph.Declaration;
-import de.fraunhofer.aisec.cpg.graph.DeclaredReferenceExpression;
-import de.fraunhofer.aisec.cpg.graph.DeleteExpression;
-import de.fraunhofer.aisec.cpg.graph.DesignatedInitializerExpression;
-import de.fraunhofer.aisec.cpg.graph.Expression;
-import de.fraunhofer.aisec.cpg.graph.ExpressionList;
-import de.fraunhofer.aisec.cpg.graph.HasType;
-import de.fraunhofer.aisec.cpg.graph.InitializerListExpression;
-import de.fraunhofer.aisec.cpg.graph.Literal;
-import de.fraunhofer.aisec.cpg.graph.MemberExpression;
-import de.fraunhofer.aisec.cpg.graph.NewExpression;
-import de.fraunhofer.aisec.cpg.graph.NodeBuilder;
-import de.fraunhofer.aisec.cpg.graph.Type;
-import de.fraunhofer.aisec.cpg.graph.TypeIdExpression;
-import de.fraunhofer.aisec.cpg.graph.TypeManager;
-import de.fraunhofer.aisec.cpg.graph.UnaryOperator;
-import de.fraunhofer.aisec.cpg.graph.ValueDeclaration;
+import de.fraunhofer.aisec.cpg.graph.*;
+import de.fraunhofer.aisec.cpg.graph.type.Type;
+import de.fraunhofer.aisec.cpg.graph.type.TypeParser;
+import de.fraunhofer.aisec.cpg.graph.type.UnknownType;
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import org.eclipse.cdt.core.dom.ast.IASTBinaryExpression;
-import org.eclipse.cdt.core.dom.ast.IASTDeclSpecifier;
-import org.eclipse.cdt.core.dom.ast.IASTExpression;
-import org.eclipse.cdt.core.dom.ast.IASTImplicitDestructorName;
-import org.eclipse.cdt.core.dom.ast.IASTInitializer;
-import org.eclipse.cdt.core.dom.ast.IASTInitializerClause;
-import org.eclipse.cdt.core.dom.ast.IASTTypeIdExpression;
-import org.eclipse.cdt.core.dom.ast.IASTUnaryExpression;
+import org.eclipse.cdt.core.dom.ast.*;
 import org.eclipse.cdt.core.dom.ast.IBasicType.Kind;
-import org.eclipse.cdt.core.dom.ast.IBinding;
-import org.eclipse.cdt.core.dom.ast.IProblemType;
-import org.eclipse.cdt.core.dom.ast.IQualifierType;
-import org.eclipse.cdt.core.dom.ast.IType;
-import org.eclipse.cdt.core.dom.ast.IValue;
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTDesignator;
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTExpression;
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTInitializerClause;
 import org.eclipse.cdt.internal.core.dom.parser.CStringValue;
 import org.eclipse.cdt.internal.core.dom.parser.ProblemBinding;
 import org.eclipse.cdt.internal.core.dom.parser.ProblemType;
-import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTArrayDesignator;
-import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTArrayRangeDesignator;
-import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTArraySubscriptExpression;
-import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTBinaryExpression;
-import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTCastExpression;
-import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTCompoundStatementExpression;
-import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTConditionalExpression;
-import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTDeleteExpression;
-import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTDesignatedInitializer;
-import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTExpressionList;
-import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTFieldDesignator;
-import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTFieldReference;
-import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTFunctionCallExpression;
-import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTIdExpression;
-import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTInitializerList;
-import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTLiteralExpression;
-import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTNamedTypeSpecifier;
-import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTNewExpression;
-import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTSimpleTypeConstructorExpression;
-import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTTypeIdExpression;
-import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTUnaryExpression;
-import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPBasicType;
-import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPPointerType;
-import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPScope;
+import org.eclipse.cdt.internal.core.dom.parser.cpp.*;
 
 class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLanguageFrontend> {
   /*
@@ -186,19 +132,19 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
     // type id expressions
 
     String operatorCode = "";
-    Type type = Type.getUnknown();
+    Type type = UnknownType.getUnknownType();
     switch (ctx.getOperator()) {
       case IASTTypeIdExpression.op_sizeof:
         operatorCode = "sizeof";
-        type = Type.createFrom("std::size_t");
+        type = TypeParser.createFrom("std::size_t");
         break;
       case IASTTypeIdExpression.op_typeid:
         operatorCode = "typeid";
-        type = Type.createFrom("const std::type_info&");
+        type = TypeParser.createFrom("const std::type_info&");
         break;
       case IASTTypeIdExpression.op_alignof:
         operatorCode = "alignof";
-        type = Type.createFrom("std::size_t");
+        type = TypeParser.createFrom("std::size_t");
         break;
       case IASTTypeIdExpression.op_typeof:
         // typeof is not an official c++ keyword - not sure why eclipse supports it
@@ -210,7 +156,7 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
     }
 
     // TODO: proper type resolve
-    Type referencedType = new Type(ctx.getTypeId().getDeclSpecifier().toString());
+    Type referencedType = TypeParser.createFrom(ctx.getTypeId().getDeclSpecifier().toString());
 
     return NodeBuilder.newTypeIdExpression(
         operatorCode, type, referencedType, ctx.getRawSignature());
@@ -229,8 +175,8 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
     String code = ctx.getRawSignature();
 
     // TODO: obsolete?
-    Type t = Type.createFrom(expressionTypeProxy(ctx).toString());
-    t.setTypeAdjustment("*");
+    Type t = TypeParser.createFrom(expressionTypeProxy(ctx).toString());
+    t.reference();
 
     NewExpression newExpression = NodeBuilder.newNewExpression(code, t);
 
@@ -246,7 +192,7 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
         newExpression.setInstantiates(declaration);
 
         // update the type
-        newExpression.setType(new Type(binding.getName()));
+        newExpression.setType(TypeParser.createFrom(binding.getName()));
       } else {
         log.debug(
             "Could not resolve binding of type {} for {}, it is probably defined somewhere externally",
@@ -272,7 +218,7 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
             ? handle(ctx.getPositiveResultExpression())
             : condition,
         handle(ctx.getNegativeResultExpression()),
-        new Type(expressionTypeProxy(ctx).toString()));
+        TypeParser.createFrom(expressionTypeProxy(ctx).toString()));
   }
 
   private DeleteExpression handleDeleteExpression(CPPASTDeleteExpression ctx) {
@@ -295,17 +241,17 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
       CPPPointerType pointerType = (CPPPointerType) iType;
       if (pointerType.getType() instanceof IProblemType) {
         // fall back to fTypeId
-        castType = new Type(ctx.getTypeId().getDeclSpecifier().toString(), "*");
+        castType = TypeParser.createFrom(ctx.getTypeId().getDeclSpecifier().toString() + "*");
       } else {
-        castType = new Type(pointerType.getType().toString(), "*");
+        castType = TypeParser.createFrom(pointerType.getType().toString() + "*");
       }
     } else if (iType instanceof IProblemType) {
       // fall back to fTypeId
-      castType = new Type(ctx.getTypeId().getDeclSpecifier().toString());
+      castType = TypeParser.createFrom(ctx.getTypeId().getDeclSpecifier().toString());
       // TODO: try to actually resolve the type (similar to NewExpression) using
       // ((CPPASTNamedTypeSpecifier) declSpecifier).getName().resolveBinding()
     } else {
-      castType = new Type(expressionTypeProxy(ctx).toString());
+      castType = TypeParser.createFrom(expressionTypeProxy(ctx).toString());
     }
 
     castExpression.setCastType(castType);
@@ -329,9 +275,9 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
     Type castType;
     if (expressionTypeProxy(ctx) instanceof CPPPointerType) {
       CPPPointerType pointerType = (CPPPointerType) expressionTypeProxy(ctx);
-      castType = new Type(pointerType.getType().toString(), "*");
+      castType = TypeParser.createFrom(pointerType.getType().toString() + "*");
     } else {
-      castType = new Type(expressionTypeProxy(ctx).toString());
+      castType = TypeParser.createFrom(expressionTypeProxy(ctx).toString());
     }
 
     castExpression.setCastType(castType);
@@ -352,7 +298,7 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
     String identifierName = ctx.getFieldName().toString();
     DeclaredReferenceExpression member =
         NodeBuilder.newDeclaredReferenceExpression(
-            identifierName, Type.getUnknown(), ctx.getFieldName().getRawSignature());
+            identifierName, UnknownType.getUnknownType(), ctx.getFieldName().getRawSignature());
 
     MemberExpression memberExpression =
         NodeBuilder.newMemberExpression(base, member, ctx.getRawSignature());
@@ -516,7 +462,7 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
   private DeclaredReferenceExpression handleIdExpression(CPPASTIdExpression ctx) {
     DeclaredReferenceExpression declaredReferenceExpression =
         NodeBuilder.newDeclaredReferenceExpression(
-            ctx.getName().toString(), Type.getUnknown(), ctx.getRawSignature());
+            ctx.getName().toString(), UnknownType.getUnknownType(), ctx.getRawSignature());
 
     if (expressionTypeProxy(ctx) instanceof ProblemType
         || (expressionTypeProxy(ctx) instanceof IQualifierType
@@ -530,14 +476,15 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
           declaredReferenceExpression.setType(((ValueDeclaration) declaration).getType());
         } else {
           log.debug("Unknown declaration type, setting to UNKNOWN");
-          declaredReferenceExpression.setType(Type.getUnknown());
+          declaredReferenceExpression.setType(UnknownType.getUnknownType());
         }
       } else {
         log.debug("Could not deduce type manually, setting to UNKNOWN");
-        declaredReferenceExpression.setType(Type.getUnknown());
+        declaredReferenceExpression.setType(UnknownType.getUnknownType());
       }
     } else {
-      declaredReferenceExpression.setType(Type.createFrom(expressionTypeProxy(ctx).toString()));
+      declaredReferenceExpression.setType(
+          TypeParser.createFrom(expressionTypeProxy(ctx).toString()));
     }
 
     this.lang.expressionRefersToDeclaration(declaredReferenceExpression, ctx);
@@ -684,7 +631,7 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
         || expressionType instanceof ProblemBinding) {
       log.debug("CDT could not deduce type. Type is set to null");
     } else {
-      binaryOperator.setType(Type.createFrom(expressionTypeProxy(ctx).toString()));
+      binaryOperator.setType(TypeParser.createFrom(expressionTypeProxy(ctx).toString()));
     }
 
     return binaryOperator;
@@ -694,7 +641,7 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
     IType type = expressionTypeProxy(ctx);
     IValue value = ctx.getEvaluation().getValue();
 
-    Type generatedType = Type.createFrom(type.toString());
+    Type generatedType = TypeParser.createFrom(type.toString());
     if (value.numberValue() == null // e.g. for 0x1p-52
         && !(value instanceof CStringValue)) {
       return NodeBuilder.newLiteral(value.toString(), generatedType, ctx.getRawSignature());
@@ -753,7 +700,7 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
           oneLhs =
               NodeBuilder.newDeclaredReferenceExpression(
                   ((CPPASTFieldDesignator) des).getName().toString(),
-                  new Type("UNKNOWN7"),
+                  UnknownType.getUnknownType(),
                   des.getRawSignature());
         } else if (des instanceof CPPASTArrayRangeDesignator) {
           oneLhs =

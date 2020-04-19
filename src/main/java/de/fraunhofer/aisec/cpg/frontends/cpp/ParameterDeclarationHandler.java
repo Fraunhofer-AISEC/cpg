@@ -31,7 +31,8 @@ import de.fraunhofer.aisec.cpg.graph.InitializerListExpression;
 import de.fraunhofer.aisec.cpg.graph.Literal;
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder;
 import de.fraunhofer.aisec.cpg.graph.ParamVariableDeclaration;
-import de.fraunhofer.aisec.cpg.graph.Type;
+import de.fraunhofer.aisec.cpg.graph.type.TypeParser;
+import de.fraunhofer.aisec.cpg.graph.type.UnknownType;
 import java.util.List;
 import java.util.stream.Collectors;
 import org.eclipse.cdt.core.dom.ast.IASTNode;
@@ -88,15 +89,13 @@ public class ParameterDeclarationHandler
     ParamVariableDeclaration paramVariableDeclaration =
         NodeBuilder.newMethodParameterIn(
             ctx.getDeclarator().getName().toString(),
-            Type.getUnknown(),
+            UnknownType.getUnknownType(),
             false,
             ctx.getRawSignature());
 
     // set type
-    paramVariableDeclaration.setType(Type.createFrom(ctx.getDeclSpecifier().toString()));
-
-    // forward type adjustment
-    paramVariableDeclaration.getType().setTypeAdjustment(typeAdjustment);
+    paramVariableDeclaration.setType(
+        TypeParser.createFrom(ctx.getDeclSpecifier().toString() + typeAdjustment));
 
     return paramVariableDeclaration;
   }

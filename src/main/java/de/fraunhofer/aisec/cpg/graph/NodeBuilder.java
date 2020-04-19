@@ -26,6 +26,7 @@
 
 package de.fraunhofer.aisec.cpg.graph;
 
+import de.fraunhofer.aisec.cpg.graph.type.Type;
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation;
 import java.util.List;
 import org.checkerframework.checker.nullness.qual.NonNull;

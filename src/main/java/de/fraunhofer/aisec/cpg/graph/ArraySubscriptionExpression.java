@@ -26,7 +26,7 @@
 
 package de.fraunhofer.aisec.cpg.graph;
 
-import de.fraunhofer.aisec.cpg.graph.Type.Origin;
+import de.fraunhofer.aisec.cpg.graph.type.Type;
 import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
@@ -57,16 +57,7 @@ public class ArraySubscriptionExpression extends Expression implements HasType.T
   }
 
   private Type getSubscriptType(Type arrayType) {
-    Type t = new Type(arrayType);
-    // check whether this is a pointer or normal array
-    if (t.getTypeAdjustment().contains("*")) {
-      t.setTypeAdjustment(t.getTypeAdjustment().replaceFirst("\\*", ""));
-    } else if (t.getTypeAdjustment().contains("[]")) {
-      t.setTypeAdjustment(t.getTypeAdjustment().replaceFirst("\\[]", ""));
-    }
-    // if neither * nor [] are present, we should rather do nothing, as we have no idea how the
-    // correct type would look like
-    return t;
+    return arrayType.dereference();
   }
 
   public Expression getSubscriptExpression() {
@@ -80,9 +71,9 @@ public class ArraySubscriptionExpression extends Expression implements HasType.T
   @Override
   public void typeChanged(HasType src, HasType root, Type oldType) {
     Type previous = this.type;
-    setType(getSubscriptType(src.getType()), root);
+    setType(getSubscriptType(src.getPropagationType()), root);
     if (!previous.equals(this.type)) {
-      this.type.setTypeOrigin(Origin.DATAFLOW);
+      this.type.setTypeOrigin(Type.Origin.DATAFLOW);
     }
   }
 

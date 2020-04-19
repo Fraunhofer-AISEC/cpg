@@ -26,11 +26,9 @@
 
 package de.fraunhofer.aisec.cpg.graph;
 
-import de.fraunhofer.aisec.cpg.graph.Type.Origin;
-import de.fraunhofer.aisec.cpg.helpers.TypeConverter;
+import de.fraunhofer.aisec.cpg.graph.type.Type;
 import java.util.Objects;
 import java.util.Set;
-import org.neo4j.ogm.annotation.typeconversion.Convert;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,7 +39,6 @@ public class CastExpression extends Expression implements HasType.TypeListener {
   @SubGraph("AST")
   private Expression expression;
 
-  @Convert(TypeConverter.CastTypeConverter.class)
   private Type castType;
 
   public Expression getExpression() {
@@ -72,14 +69,14 @@ public class CastExpression extends Expression implements HasType.TypeListener {
   public void typeChanged(HasType src, HasType root, Type oldType) {
     Type previous = this.type;
 
-    if (TypeManager.getInstance().isSupertypeOf(this.castType, src.getType())) {
-      setType(src.getType(), root);
+    if (TypeManager.getInstance().isSupertypeOf(this.castType, src.getPropagationType())) {
+      setType(src.getPropagationType(), root);
     } else {
       resetTypes(this.getCastType());
     }
 
     if (!previous.equals(this.type)) {
-      this.type.setTypeOrigin(Origin.DATAFLOW);
+      this.type.setTypeOrigin(Type.Origin.DATAFLOW);
     }
   }
 

@@ -26,6 +26,7 @@
 
 package de.fraunhofer.aisec.cpg.graph;
 
+import de.fraunhofer.aisec.cpg.graph.type.TypeParser;
 import java.util.Objects;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 
@@ -46,7 +47,7 @@ public class NewExpression extends Expression {
   public void setInstantiates(Declaration instantiates) {
     this.instantiates = instantiates;
     if (instantiates != null) {
-      setType(new Type(instantiates.getName()));
+      setType(TypeParser.createFrom(instantiates.getName()));
     }
   }
 

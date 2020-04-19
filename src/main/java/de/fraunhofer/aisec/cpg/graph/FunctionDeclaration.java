@@ -26,11 +26,9 @@
 
 package de.fraunhofer.aisec.cpg.graph;
 
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
+import de.fraunhofer.aisec.cpg.graph.type.Type;
+import de.fraunhofer.aisec.cpg.graph.type.UnknownType;
+import java.util.*;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -69,10 +67,10 @@ public class FunctionDeclaration extends ValueDeclaration {
     return this.name
         + BRACKET_LEFT
         + this.parameters.stream()
-            .map(x -> x.getType().toString())
+            .map(x -> x.getType().getTypeName())
             .collect(Collectors.joining(COMMA + WHITESPACE))
         + BRACKET_RIGHT
-        + Objects.requireNonNullElse(this.type, Type.UNKNOWN_TYPE_STRING);
+        + Objects.requireNonNullElse(this.type, UnknownType.getUnknownType()).getTypeName();
   }
 
   public boolean hasSignature(List<Type> targetSignature) {

@@ -27,12 +27,8 @@
 package de.fraunhofer.aisec.cpg.graph;
 
 import de.fraunhofer.aisec.cpg.graph.HasType.TypeListener;
-import de.fraunhofer.aisec.cpg.graph.Type.Origin;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Objects;
-import java.util.Set;
+import de.fraunhofer.aisec.cpg.graph.type.Type;
+import java.util.*;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 
@@ -67,7 +63,8 @@ public class InitializerListExpression extends Expression implements TypeListene
 
   @Override
   public void typeChanged(HasType src, HasType root, Type oldType) {
-    if (!TypeManager.getInstance().isUnknown(this.type) && src.getType().equals(oldType)) {
+    if (!TypeManager.getInstance().isUnknown(this.type)
+        && src.getPropagationType().equals(oldType)) {
       return;
     }
 
@@ -76,12 +73,13 @@ public class InitializerListExpression extends Expression implements TypeListene
     Set<Type> types =
         this.initializers
             .parallelStream()
-            .map(Expression::getType)
+            .map(Expression::getPropagationType)
             .filter(Objects::nonNull)
             .map(
                 t -> {
-                  Type arrayType = new Type(t);
-                  arrayType.setTypeAdjustment(arrayType.getTypeAdjustment() + "[]");
+                  Type arrayType = t.duplicate();
+                  arrayType.reference();
+                  arrayType = TypeManager.getInstance().obtainType(arrayType);
                   return arrayType;
                 })
             .collect(Collectors.toSet());
@@ -95,7 +93,7 @@ public class InitializerListExpression extends Expression implements TypeListene
     setPossibleSubTypes(subTypes, root);
 
     if (!previous.equals(this.type)) {
-      this.type.setTypeOrigin(Origin.DATAFLOW);
+      this.type.setTypeOrigin(Type.Origin.DATAFLOW);
     }
   }
 

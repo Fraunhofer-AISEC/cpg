@@ -26,9 +26,8 @@
 
 package de.fraunhofer.aisec.cpg.graph;
 
-import de.fraunhofer.aisec.cpg.helpers.TypeConverter;
+import de.fraunhofer.aisec.cpg.graph.type.Type;
 import java.util.Objects;
-import org.neo4j.ogm.annotation.typeconversion.Convert;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -36,7 +35,6 @@ public class TypeIdExpression extends Expression {
 
   private static final Logger log = LoggerFactory.getLogger(TypeIdExpression.class);
 
-  @Convert(TypeConverter.class)
   private Type referencedType;
 
   private String operatorCode;

@@ -27,12 +27,8 @@
 package de.fraunhofer.aisec.cpg.graph;
 
 import de.fraunhofer.aisec.cpg.graph.HasType.TypeListener;
-import de.fraunhofer.aisec.cpg.graph.Type.Origin;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Objects;
-import java.util.Set;
+import de.fraunhofer.aisec.cpg.graph.type.Type;
+import java.util.*;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
@@ -96,14 +92,15 @@ public class FieldDeclaration extends ValueDeclaration implements TypeListener {
 
   @Override
   public void typeChanged(HasType src, HasType root, Type oldType) {
-    if (!TypeManager.getInstance().isUnknown(this.type) && src.getType().equals(oldType)) {
+    if (!TypeManager.getInstance().isUnknown(this.type)
+        && src.getPropagationType().equals(oldType)) {
       return;
     }
 
     Type previous = this.type;
-    setType(src.getType(), root);
+    setType(src.getPropagationType(), root);
     if (!previous.equals(this.type)) {
-      this.type.setTypeOrigin(Origin.DATAFLOW);
+      this.type.setTypeOrigin(Type.Origin.DATAFLOW);
     }
   }
 

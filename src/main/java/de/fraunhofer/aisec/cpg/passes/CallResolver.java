@@ -27,39 +27,12 @@
 package de.fraunhofer.aisec.cpg.passes;
 
 import de.fraunhofer.aisec.cpg.TranslationResult;
-import de.fraunhofer.aisec.cpg.graph.CallExpression;
-import de.fraunhofer.aisec.cpg.graph.ConstructExpression;
-import de.fraunhofer.aisec.cpg.graph.ConstructorDeclaration;
-import de.fraunhofer.aisec.cpg.graph.DeclaredReferenceExpression;
-import de.fraunhofer.aisec.cpg.graph.ExplicitConstructorInvocation;
-import de.fraunhofer.aisec.cpg.graph.Expression;
-import de.fraunhofer.aisec.cpg.graph.FunctionDeclaration;
-import de.fraunhofer.aisec.cpg.graph.HasType;
-import de.fraunhofer.aisec.cpg.graph.MemberCallExpression;
-import de.fraunhofer.aisec.cpg.graph.MethodDeclaration;
-import de.fraunhofer.aisec.cpg.graph.NewExpression;
-import de.fraunhofer.aisec.cpg.graph.Node;
-import de.fraunhofer.aisec.cpg.graph.NodeBuilder;
-import de.fraunhofer.aisec.cpg.graph.ParamVariableDeclaration;
-import de.fraunhofer.aisec.cpg.graph.RecordDeclaration;
-import de.fraunhofer.aisec.cpg.graph.StaticCallExpression;
-import de.fraunhofer.aisec.cpg.graph.TranslationUnitDeclaration;
-import de.fraunhofer.aisec.cpg.graph.Type;
-import de.fraunhofer.aisec.cpg.graph.ValueDeclaration;
+import de.fraunhofer.aisec.cpg.graph.*;
+import de.fraunhofer.aisec.cpg.graph.type.FunctionPointerType;
+import de.fraunhofer.aisec.cpg.graph.type.Type;
+import de.fraunhofer.aisec.cpg.graph.type.TypeParser;
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.ScopedWalker;
-import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Deque;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.IdentityHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import org.checkerframework.checker.nullness.qual.NonNull;
@@ -123,7 +96,8 @@ public class CallResolver extends Pass {
   private void registerMethods(
       RecordDeclaration currentClass, Node parent, @NonNull Node currentNode) {
     if (currentNode instanceof MethodDeclaration && currentClass != null) {
-      containingType.put((FunctionDeclaration) currentNode, new Type(currentClass.getName()));
+      containingType.put(
+          (FunctionDeclaration) currentNode, TypeParser.createFrom(currentClass.getName()));
     }
   }
 
@@ -150,7 +124,8 @@ public class CallResolver extends Pass {
 
       if (call instanceof MemberCallExpression) {
         Node member = ((MemberCallExpression) call).getMember();
-        if (member instanceof HasType && ((HasType) member).getType().isFunctionPtr()) {
+        if (member instanceof HasType
+            && ((HasType) member).getType() instanceof FunctionPointerType) {
           List<FunctionDeclaration> invocationCandidates = new ArrayList<>();
           Deque<Node> worklist = new ArrayDeque<>();
           Set<Node> seen = Collections.newSetFromMap(new IdentityHashMap<>());
@@ -446,10 +421,10 @@ public class CallResolver extends Pass {
     } else if (node instanceof StaticCallExpression) {
       StaticCallExpression staticCall = (StaticCallExpression) node;
       if (staticCall.getTargetRecord() != null) {
-        possibleTypes.add(new Type(staticCall.getTargetRecord()));
+        possibleTypes.add(TypeParser.createFrom(staticCall.getTargetRecord()));
       }
     } else if (curClass != null) {
-      possibleTypes.add(new Type(curClass.getName()));
+      possibleTypes.add(TypeParser.createFrom(curClass.getName()));
       possibleTypes.addAll(curClass.getSuperTypes());
     }
     return possibleTypes;

@@ -26,19 +26,9 @@
 
 package de.fraunhofer.aisec.cpg;
 
-import de.fraunhofer.aisec.cpg.passes.CallResolver;
-import de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass;
-import de.fraunhofer.aisec.cpg.passes.FilenameMapper;
-import de.fraunhofer.aisec.cpg.passes.ImportResolver;
-import de.fraunhofer.aisec.cpg.passes.Pass;
-import de.fraunhofer.aisec.cpg.passes.TypeHierarchyResolver;
-import de.fraunhofer.aisec.cpg.passes.VariableUsageResolver;
+import de.fraunhofer.aisec.cpg.passes.*;
 import java.io.File;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import org.checkerframework.checker.nullness.qual.NonNull;
 
 /**
@@ -189,6 +179,7 @@ public class TranslationConfiguration {
       registerPass(new VariableUsageResolver());
       registerPass(new CallResolver()); // creates CG
       registerPass(new EvaluationOrderGraphPass()); // creates EOG
+      registerPass(new TypeClassResolver());
       return this;
     }
 

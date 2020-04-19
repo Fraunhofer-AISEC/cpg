@@ -28,13 +28,7 @@ package de.fraunhofer.aisec.cpg.frontends.java;
 
 import com.github.javaparser.ast.ImportDeclaration;
 import com.github.javaparser.ast.NodeList;
-import com.github.javaparser.ast.body.AnnotationDeclaration;
-import com.github.javaparser.ast.body.AnnotationMemberDeclaration;
-import com.github.javaparser.ast.body.BodyDeclaration;
-import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
-import com.github.javaparser.ast.body.InitializerDeclaration;
-import com.github.javaparser.ast.body.Parameter;
-import com.github.javaparser.ast.body.VariableDeclarator;
+import com.github.javaparser.ast.body.*;
 import com.github.javaparser.ast.stmt.BlockStmt;
 import com.github.javaparser.ast.stmt.ReturnStmt;
 import com.github.javaparser.ast.stmt.Statement;
@@ -42,23 +36,17 @@ import com.github.javaparser.resolution.UnsolvedSymbolException;
 import com.github.javaparser.resolution.declarations.ResolvedConstructorDeclaration;
 import com.github.javaparser.resolution.declarations.ResolvedMethodDeclaration;
 import de.fraunhofer.aisec.cpg.frontends.Handler;
+import de.fraunhofer.aisec.cpg.graph.*;
 import de.fraunhofer.aisec.cpg.graph.ConstructorDeclaration;
-import de.fraunhofer.aisec.cpg.graph.Declaration;
 import de.fraunhofer.aisec.cpg.graph.EnumConstantDeclaration;
 import de.fraunhofer.aisec.cpg.graph.EnumDeclaration;
 import de.fraunhofer.aisec.cpg.graph.FieldDeclaration;
 import de.fraunhofer.aisec.cpg.graph.MethodDeclaration;
-import de.fraunhofer.aisec.cpg.graph.NodeBuilder;
-import de.fraunhofer.aisec.cpg.graph.ParamVariableDeclaration;
-import de.fraunhofer.aisec.cpg.graph.RecordDeclaration;
-import de.fraunhofer.aisec.cpg.graph.Type;
+import de.fraunhofer.aisec.cpg.graph.type.Type;
+import de.fraunhofer.aisec.cpg.graph.type.TypeParser;
 import de.fraunhofer.aisec.cpg.passes.scopes.RecordScope;
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -123,7 +111,7 @@ public class DeclarationHandler
         .getThrowsTypes()
         .addAll(
             constructorDecl.getThrownExceptions().stream()
-                .map(type -> new Type(type.asString()))
+                .map(type -> TypeParser.createFrom(type.asString()))
                 .collect(Collectors.toList()));
 
     for (Parameter parameter : constructorDecl.getParameters()) {
@@ -141,7 +129,7 @@ public class DeclarationHandler
     }
 
     Type type =
-        new Type(
+        TypeParser.createFrom(
             lang.getScopeManager()
                 .getFirstScopeThat(RecordScope.class::isInstance)
                 .getAstNode()
@@ -174,7 +162,7 @@ public class DeclarationHandler
         .getThrowsTypes()
         .addAll(
             methodDecl.getThrownExceptions().stream()
-                .map(type -> new Type(type.asString()))
+                .map(type -> TypeParser.createFrom(type.asString()))
                 .collect(Collectors.toList()));
 
     for (Parameter parameter : methodDecl.getParameters()) {
@@ -221,7 +209,7 @@ public class DeclarationHandler
     // }
     name = getAbsoluteName(name);
 
-    List<de.fraunhofer.aisec.cpg.graph.Type> superTypes =
+    List<Type> superTypes =
         Stream.of(classInterDecl.getExtendedTypes(), classInterDecl.getImplementedTypes())
             .flatMap(Collection::stream)
             .map(this.lang::getTypeAsGoodAsPossible)
@@ -254,12 +242,7 @@ public class DeclarationHandler
 
     de.fraunhofer.aisec.cpg.graph.FieldDeclaration thisDeclaration =
         NodeBuilder.newFieldDeclaration(
-            "this",
-            new de.fraunhofer.aisec.cpg.graph.Type(name),
-            new ArrayList<>(),
-            "this",
-            null,
-            null);
+            "this", TypeParser.createFrom(name), new ArrayList<>(), "this", null, null);
     recordDeclaration.getFields().add(thisDeclaration);
     lang.getScopeManager().addValueDeclaration(thisDeclaration);
 
@@ -313,16 +296,17 @@ public class DeclarationHandler
     de.fraunhofer.aisec.cpg.graph.Expression initializer =
         (de.fraunhofer.aisec.cpg.graph.Expression)
             variable.getInitializer().map(this.lang.getExpressionHandler()::handle).orElse(null);
-    de.fraunhofer.aisec.cpg.graph.Type type;
+    Type type;
     try {
-      type = new de.fraunhofer.aisec.cpg.graph.Type(variable.resolve().getType().describe());
+      type = TypeParser.createFrom(variable.resolve().getType().describe());
     } catch (UnsolvedSymbolException | UnsupportedOperationException e) {
       String t = this.lang.recoverTypeFromUnsolvedException(e);
       if (t == null) {
         log.warn("Could not resolve type for {}", variable);
-        type = new de.fraunhofer.aisec.cpg.graph.Type(variable.getType().asString());
+        type = TypeParser.createFrom(variable.getType().asString());
       } else {
-        type = new Type(t, Type.Origin.GUESSED);
+        type = TypeParser.createFrom(t);
+        type.setTypeOrigin(Type.Origin.GUESSED);
       }
     }
     de.fraunhofer.aisec.cpg.graph.FieldDeclaration fieldDeclaration =
@@ -354,7 +338,7 @@ public class DeclarationHandler
         enumDecl.getEntries().stream()
             .map(e -> (EnumConstantDeclaration) handle(e))
             .collect(Collectors.toList());
-    entries.forEach(e -> e.setType(new Type(enumDeclaration.getName())));
+    entries.forEach(e -> e.setType(TypeParser.createFrom(enumDeclaration.getName())));
     enumDeclaration.setEntries(entries);
 
     List<Type> superTypes =

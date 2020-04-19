@@ -28,8 +28,9 @@ package de.fraunhofer.aisec.cpg.frontends.cpp;
 
 import de.fraunhofer.aisec.cpg.frontends.Handler;
 import de.fraunhofer.aisec.cpg.graph.Declaration;
-import de.fraunhofer.aisec.cpg.graph.Type;
 import de.fraunhofer.aisec.cpg.graph.ValueDeclaration;
+import de.fraunhofer.aisec.cpg.graph.type.Type;
+import de.fraunhofer.aisec.cpg.graph.type.TypeParser;
 import java.util.ArrayList;
 import java.util.List;
 import org.eclipse.cdt.core.dom.ast.IASTDeclaration;
@@ -54,10 +55,10 @@ class DeclarationListHandler
       ValueDeclaration declaration =
           (ValueDeclaration) this.lang.getDeclaratorHandler().handle(declarator);
 
-      String typeAdjustment = declaration.getType().getTypeAdjustment();
-      String typeString = ctx.getDeclSpecifier().toString();
-      declaration.setType(Type.createFrom(typeString));
-      declaration.getType().setTypeAdjustment(typeAdjustment);
+      // String typeAdjustment = declaration.getType().getTypeAdjustment();
+      // String typeString = ctx.getDeclSpecifier().toString();
+      Type result = TypeParser.createFrom(ctx.getRawSignature());
+      declaration.setType(result);
 
       // cache binding
       this.lang.cacheDeclaration(declarator.getName().resolveBinding(), declaration);

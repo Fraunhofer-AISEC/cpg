@@ -27,19 +27,14 @@
 package de.fraunhofer.aisec.cpg.graph;
 
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
+import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguageFrontend;
+import de.fraunhofer.aisec.cpg.graph.type.Type;
+import de.fraunhofer.aisec.cpg.graph.type.TypeParser;
+import de.fraunhofer.aisec.cpg.graph.type.UnknownType;
 import de.fraunhofer.aisec.cpg.passes.scopes.RecordScope;
-import java.util.Collection;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 
 public class TypeManager {
@@ -48,8 +43,69 @@ public class TypeManager {
       List.of("byte", "short", "int", "long", "float", "double", "boolean", "char");
   private static TypeManager INSTANCE = new TypeManager();
 
+  public enum Language {
+    JAVA,
+    CXX
+  }
+
   private Map<String, RecordDeclaration> typeToRecord = new HashMap<>();
+  private Map<Type, List<Type>> typeState = new HashMap<>();
   private LanguageFrontend frontend;
+
+  public Map<Type, List<Type>> getTypeState() {
+    return typeState;
+  }
+
+  public Type obtainType(Type type) {
+    Type root = type.getRoot();
+    if (root.equals(type) && typeState.containsKey(type)) {
+      for (Type t : typeState.keySet()) {
+        if (t.equals(type)) {
+          return t;
+        }
+      }
+    } else {
+      addType(type);
+      return type;
+    }
+
+    if (typeState.containsKey(root)) {
+      List<Type> references = typeState.get(root);
+      for (Type r : references) {
+        if (r.equals(type)) {
+          return r;
+        }
+      }
+      addType(type);
+      return type;
+    }
+
+    addType(type);
+    return type;
+  }
+
+  private void addType(Type type) {
+    Type root = type.getRoot();
+    if (root.equals(type)) {
+      // This is a rootType and is included in the map as key with empty references
+      if (!typeState.containsKey(type)) {
+        typeState.put(type, new ArrayList<>());
+        return;
+      }
+    }
+
+    // ReferencesTypes
+    if (typeState.containsKey(root)) {
+      if (!typeState.get(root).contains(type)) {
+        typeState.get(root).add(type);
+        addType(type.getFollowingLevel());
+      }
+
+    } else {
+      addType(type.getRoot());
+      addType(type);
+    }
+  }
 
   private TypeManager() {}
 
@@ -66,17 +122,13 @@ public class TypeManager {
   }
 
   public boolean isUnknown(Type type) {
-    return isUnknown(type.getTypeName());
-  }
-
-  public boolean isUnknown(String type) {
-    return type.contains(Type.UNKNOWN_TYPE_STRING)
-        || type.contains("?")
-        || type.equals("var")
-        || type.equals("");
+    return type instanceof UnknownType;
   }
 
   public Optional<Type> getCommonType(Collection<Type> types) {
+
+    // TODO SH handle pointer
+
     if (types.isEmpty()) {
       return Optional.empty();
     } else if (types.size() == 1) {
@@ -117,7 +169,7 @@ public class TypeManager {
 
     Optional<Ancestor> lca =
         commonAncestors.stream().max(Comparator.comparingInt(Ancestor::getDepth));
-    return lca.map(a -> new Type(a.getRecord().getName()));
+    return lca.map(a -> TypeParser.createFrom(a.getRecord().getName()));
   }
 
   private Set<Ancestor> getAncestors(RecordDeclaration record, int depth) {
@@ -135,14 +187,17 @@ public class TypeManager {
     return ancestors;
   }
 
-  public boolean isSupertypeOf(Type superType, Type subType) {
-    if (!superType.getTypeAdjustment().equals(subType.getTypeAdjustment())) {
-      return false;
+  public Language getLanguage() {
+    if (frontend instanceof JavaLanguageFrontend) {
+      return Language.JAVA;
+    } else {
+      return Language.CXX;
     }
+  }
 
-    // arrays and pointers match in C++
-    if (checkArrayAndPointer(superType, subType) || checkArrayAndPointer(subType, superType)) {
-      return true;
+  public boolean isSupertypeOf(Type superType, Type subType) {
+    if (superType.getReferenceDepth() != subType.getReferenceDepth()) {
+      return false;
     }
 
     Optional<Type> commonType = getCommonType(new HashSet<>(List.of(superType, subType)));
@@ -158,16 +213,6 @@ public class TypeManager {
         // Not in the class path, can't help here
         return false;
       }
-    }
-  }
-
-  private boolean checkArrayAndPointer(Type first, Type second) {
-    int secondArrayDepth = StringUtils.countMatches(second.getTypeAdjustment(), "[]");
-    int firstPointerDepth = StringUtils.countMatches(first.getTypeAdjustment(), '*');
-    if (secondArrayDepth == firstPointerDepth) {
-      return first.getTypeName().equals(second.getTypeName());
-    } else {
-      return false;
     }
   }
 

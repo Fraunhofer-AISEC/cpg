@@ -27,31 +27,8 @@
 package de.fraunhofer.aisec.cpg.frontends.cpp;
 
 import de.fraunhofer.aisec.cpg.frontends.Handler;
-import de.fraunhofer.aisec.cpg.graph.BreakStatement;
-import de.fraunhofer.aisec.cpg.graph.CaseStatement;
-import de.fraunhofer.aisec.cpg.graph.CatchClause;
-import de.fraunhofer.aisec.cpg.graph.CompoundStatement;
-import de.fraunhofer.aisec.cpg.graph.ContinueStatement;
-import de.fraunhofer.aisec.cpg.graph.Declaration;
-import de.fraunhofer.aisec.cpg.graph.DeclarationStatement;
-import de.fraunhofer.aisec.cpg.graph.DefaultStatement;
-import de.fraunhofer.aisec.cpg.graph.DoStatement;
-import de.fraunhofer.aisec.cpg.graph.EmptyStatement;
-import de.fraunhofer.aisec.cpg.graph.Expression;
-import de.fraunhofer.aisec.cpg.graph.ForEachStatement;
-import de.fraunhofer.aisec.cpg.graph.ForStatement;
-import de.fraunhofer.aisec.cpg.graph.GotoStatement;
-import de.fraunhofer.aisec.cpg.graph.IfStatement;
-import de.fraunhofer.aisec.cpg.graph.LabelStatement;
-import de.fraunhofer.aisec.cpg.graph.Literal;
-import de.fraunhofer.aisec.cpg.graph.NodeBuilder;
-import de.fraunhofer.aisec.cpg.graph.ReturnStatement;
-import de.fraunhofer.aisec.cpg.graph.Statement;
-import de.fraunhofer.aisec.cpg.graph.SwitchStatement;
-import de.fraunhofer.aisec.cpg.graph.TryStatement;
-import de.fraunhofer.aisec.cpg.graph.Type;
-import de.fraunhofer.aisec.cpg.graph.VariableDeclaration;
-import de.fraunhofer.aisec.cpg.graph.WhileStatement;
+import de.fraunhofer.aisec.cpg.graph.*;
+import de.fraunhofer.aisec.cpg.graph.type.TypeParser;
 import java.util.Arrays;
 import java.util.List;
 import java.util.function.BiConsumer;
@@ -60,26 +37,7 @@ import org.eclipse.cdt.core.dom.ast.IASTStatement;
 import org.eclipse.cdt.core.dom.ast.IBinding;
 import org.eclipse.cdt.core.dom.ast.ILabel;
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTCatchHandler;
-import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTASMDeclaration;
-import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTBreakStatement;
-import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTCaseStatement;
-import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTCatchHandler;
-import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTCompoundStatement;
-import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTContinueStatement;
-import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTDeclarationStatement;
-import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTDefaultStatement;
-import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTDoStatement;
-import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTExpressionStatement;
-import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTForStatement;
-import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTGotoStatement;
-import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTIfStatement;
-import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTLabelStatement;
-import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTNullStatement;
-import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTRangeBasedForStatement;
-import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTReturnStatement;
-import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTSwitchStatement;
-import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTTryBlockStatement;
-import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTWhileStatement;
+import org.eclipse.cdt.internal.core.dom.parser.cpp.*;
 
 class StatementHandler extends Handler<Statement, IASTStatement, CXXLanguageFrontend> {
 
@@ -253,7 +211,7 @@ class StatementHandler extends Handler<Statement, IASTStatement, CXXLanguageFron
     // Adds true expression node where default empty condition evaluates to true, remove here and in
     // java StatementAnalyzer
     if (statement.getConditionDeclaration() == null && statement.getCondition() == null) {
-      Literal literal = NodeBuilder.newLiteral(true, new Type("bool"), "true");
+      Literal literal = NodeBuilder.newLiteral(true, TypeParser.createFrom("bool"), "true");
       statement.setCondition(literal);
     }
     if (ctx.getIterationExpression() != null)

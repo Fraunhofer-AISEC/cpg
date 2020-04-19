@@ -26,12 +26,8 @@
 
 package de.fraunhofer.aisec.cpg.graph;
 
-import de.fraunhofer.aisec.cpg.graph.Type.Origin;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Objects;
-import java.util.Set;
+import de.fraunhofer.aisec.cpg.graph.type.Type;
+import java.util.*;
 
 public class ExpressionList extends Expression implements HasType.TypeListener {
 
@@ -75,10 +71,10 @@ public class ExpressionList extends Expression implements HasType.TypeListener {
   @Override
   public void typeChanged(HasType src, HasType root, Type oldType) {
     Type previous = this.type;
-    setType(src.getType(), root);
+    setType(src.getPropagationType(), root);
     setPossibleSubTypes(new HashSet<>(src.getPossibleSubTypes()), root);
     if (!previous.equals(this.type)) {
-      this.type.setTypeOrigin(Origin.DATAFLOW);
+      this.type.setTypeOrigin(Type.Origin.DATAFLOW);
     }
   }
 

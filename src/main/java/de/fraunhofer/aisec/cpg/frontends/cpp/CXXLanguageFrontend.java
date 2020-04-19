@@ -29,13 +29,9 @@ package de.fraunhofer.aisec.cpg.frontends.cpp;
 import de.fraunhofer.aisec.cpg.TranslationConfiguration;
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
 import de.fraunhofer.aisec.cpg.frontends.TranslationException;
-import de.fraunhofer.aisec.cpg.graph.Declaration;
-import de.fraunhofer.aisec.cpg.graph.DeclaredReferenceExpression;
-import de.fraunhofer.aisec.cpg.graph.Expression;
-import de.fraunhofer.aisec.cpg.graph.TranslationUnitDeclaration;
-import de.fraunhofer.aisec.cpg.graph.Type;
-import de.fraunhofer.aisec.cpg.graph.TypeManager;
-import de.fraunhofer.aisec.cpg.graph.ValueDeclaration;
+import de.fraunhofer.aisec.cpg.graph.*;
+import de.fraunhofer.aisec.cpg.graph.type.Type;
+import de.fraunhofer.aisec.cpg.graph.type.TypeParser;
 import de.fraunhofer.aisec.cpg.helpers.Benchmark;
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager;
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation;
@@ -47,12 +43,7 @@ import java.util.HashMap;
 import java.util.Set;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
-import org.eclipse.cdt.core.dom.ast.IASTComment;
-import org.eclipse.cdt.core.dom.ast.IASTExpression;
-import org.eclipse.cdt.core.dom.ast.IASTFileLocation;
-import org.eclipse.cdt.core.dom.ast.IASTNode;
-import org.eclipse.cdt.core.dom.ast.IASTTranslationUnit;
-import org.eclipse.cdt.core.dom.ast.IBinding;
+import org.eclipse.cdt.core.dom.ast.*;
 import org.eclipse.cdt.core.dom.ast.gnu.cpp.GPPLanguage;
 import org.eclipse.cdt.core.index.IIndexFileLocation;
 import org.eclipse.cdt.core.model.ILanguage;
@@ -80,11 +71,11 @@ import org.slf4j.LoggerFactory;
  */
 public class CXXLanguageFrontend extends LanguageFrontend {
 
-  public static final Type LONG_TYPE = Type.createFrom("long");
-  public static final Type TYPE_UNSIGNED_LONG_LONG = Type.createFrom("unsigned long long");
-  public static final Type INT_TYPE = Type.createFrom("int");
-  public static final Type LONG_LONG_TYPE = Type.createFrom("long long");
-  public static final Type TYPE_UNSIGNED_LONG = Type.createFrom("unsigned long");
+  public static final Type LONG_TYPE = TypeParser.createFrom("long");
+  public static final Type TYPE_UNSIGNED_LONG_LONG = TypeParser.createFrom("unsigned long long");
+  public static final Type INT_TYPE = TypeParser.createFrom("int");
+  public static final Type LONG_LONG_TYPE = TypeParser.createFrom("long long");
+  public static final Type TYPE_UNSIGNED_LONG = TypeParser.createFrom("unsigned long");
 
   private static final Logger LOGGER = LoggerFactory.getLogger(CXXLanguageFrontend.class);
   private static final IncludeFileContentProvider INCLUDE_FILE_PROVIDER =

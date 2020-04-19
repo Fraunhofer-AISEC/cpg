@@ -26,10 +26,17 @@
 
 package de.fraunhofer.aisec.cpg.graph;
 
+import de.fraunhofer.aisec.cpg.graph.type.Type;
 import java.util.Set;
 
 public interface HasType {
   Type getType();
+
+  /**
+   * @return The returned Type is always the same as getType() with the exception of ReferenceType
+   *     since there is no case in which we want to propagate a reference when using typeChanged()
+   */
+  Type getPropagationType();
 
   default void setType(Type type) {
     setType(type, null);
