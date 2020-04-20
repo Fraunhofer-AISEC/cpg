@@ -18,6 +18,22 @@ public class TypeParser {
       Pattern.compile(
           "(?:(?<functionptr>(\\h|\\()+[a-zA-Z0-9_$.<>:]*\\*\\h*[a-zA-Z0-9_$.<>:]*(\\h|\\))+)\\h*)(?<args>\\(+[a-zA-Z0-9_$.<>,\\h]*\\))");
 
+  private static TypeManager.Language language = TypeManager.getInstance().getLanguage();
+
+  /**
+   * WARNING: This is only intended for Test Purposes of the TypeParser itself without parsing
+   * files. Do not use this.
+   *
+   * @param language
+   */
+  public static void setLanguage(TypeManager.Language language) {
+    TypeParser.language = language;
+  }
+
+  public static TypeManager.Language getLanguage() {
+    return language;
+  }
+
   private static String clean(String type) {
     if (type.contains("?")
         || type.contains("org.eclipse.cdt.internal.core.dom.parser.ProblemType@")) {
@@ -86,7 +102,7 @@ public class TypeParser {
   }
 
   protected static boolean isStorageSpecifier(String specifier) {
-    if (TypeManager.getInstance().getLanguage() == TypeManager.Language.CXX) {
+    if (getLanguage() == TypeManager.Language.CXX) {
       return specifier.toUpperCase().equals("STATIC");
     } else {
       try {
@@ -99,7 +115,7 @@ public class TypeParser {
   }
 
   protected static boolean isQualifierSpecifier(String qualifier) {
-    if (TypeManager.getInstance().getLanguage() == TypeManager.Language.JAVA) {
+    if (getLanguage() == TypeManager.Language.JAVA) {
       return qualifier.equals("final") || qualifier.equals("volatile");
     } else {
       return qualifier.equals("const")
@@ -160,6 +176,53 @@ public class TypeParser {
 
   private static boolean isUnknownType(String typeName) {
     return typeName.toUpperCase().contains("UNKNOWN");
+  }
+
+  private static String fixGenerics(String type) {
+    StringBuilder out = new StringBuilder();
+    int bracket_count = 0;
+    boolean bracketCountStarted = false;
+    for (int i = 0; i < type.length(); i++) {
+      if (type.charAt(i) == '<') {
+        bracket_count++;
+        out.append(type.charAt(i));
+        i++;
+        while (bracket_count > 0) {
+          bracketCountStarted = true;
+          if (type.charAt(i) == '>') {
+            out.append('>');
+            bracket_count--;
+          } else if (type.charAt(i) == '<') {
+            out.append('<');
+            bracket_count++;
+
+          } else {
+            if (type.charAt(i) != ' ') {
+              out.append(type.charAt(i));
+            }
+          }
+          i++;
+        }
+      } else {
+        out.append(type.charAt(i));
+      }
+
+      if (bracketCountStarted) {
+        bracketCountStarted = false;
+        i--;
+      }
+    }
+
+    String[] splitted = out.toString().split("\\<");
+    StringBuilder out2 = new StringBuilder();
+    for (int i = 0; i < splitted.length; i++) {
+      if (out2.length() > 0) {
+        out2.append('<');
+      }
+      out2.append(splitted[i].trim());
+    }
+
+    return out2.toString();
   }
 
   private static List<String> fix(String type) {
@@ -372,6 +435,7 @@ public class TypeParser {
       return UnknownType.getUnknownType();
     }
     type = clear(type);
+    type = fixGenerics(type);
     List<String> typeBlocks = fix(type);
 
     boolean primitiveType = isPrimitiveType(typeBlocks);

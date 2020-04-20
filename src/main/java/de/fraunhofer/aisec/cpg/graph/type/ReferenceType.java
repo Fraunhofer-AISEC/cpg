@@ -18,6 +18,11 @@ public class ReferenceType extends Type {
     this.reference = reference;
   }
 
+  public ReferenceType(Storage storage, Qualifier qualifier, Type reference) {
+    super(reference.getName() + "&", storage, qualifier);
+    this.reference = reference;
+  }
+
   @Override
   public Type reference() {
     return new PointerType(this);
