@@ -35,6 +35,8 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 
+// Todo Pre-VariableResolverRevamp 8 Failed, 6 Passed
+
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public class VariableResolverJavaTest {
 

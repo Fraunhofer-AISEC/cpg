@@ -38,6 +38,8 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 
+// Todo Pre-VariableResolverRevamp 20 Failed, 8 Passed
+
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public class VariableResolverCppTest {
 
@@ -227,6 +229,7 @@ public class VariableResolverCppTest {
     assertNotNull(asReference);
     VariableDeclaration vDeclaration =
         Util.getSubnodeOfTypeWithName(forStatements.get(0), VariableDeclaration.class, "varName");
+    // Todo Points to the second loop varName local
     assertSameOrContains(asReference.getRefersTo(), vDeclaration);
   }
 
@@ -259,6 +262,7 @@ public class VariableResolverCppTest {
     assertNotNull(asReference);
     ParamVariableDeclaration declaration =
         Util.getSubnodeOfTypeWithName(outer_function2, ParamVariableDeclaration.class, "varName");
+    // Todo Points to a variable that is declared in a catch clause below
     assertSameOrContains(asReference.getRefersTo(), declaration);
   }
 
@@ -286,6 +290,8 @@ public class VariableResolverCppTest {
             Util.getSubnodeOfTypeWithName(outer_function2, IfStatement.class, Node.EMPTY_NAME),
             VariableDeclaration.class,
             "varName");
+    // Todo Refers to the variable declare in the catch clause instead of the variable declared in
+    // the if-condition
     assertSameOrContains(asReference.getRefersTo(), declaration);
   }
 
@@ -315,6 +321,7 @@ public class VariableResolverCppTest {
     VariableDeclaration declaration =
         Util.getSubnodeOfTypeWithName(outer_function2, VariableDeclaration.class, "scopeVariables");
     assertSameOrContains(base.getRefersTo(), declaration);
+    // Todo Points to variable instantiated in if condition
     assertSameOrContains(member.getRefersTo(), outerVarName);
   }
 
@@ -331,6 +338,7 @@ public class VariableResolverCppTest {
     VariableDeclaration declaration =
         Util.getSubnodeOfTypeWithName(outer_function3, VariableDeclaration.class, "scopeVariables");
     assertSameOrContains(base.getRefersTo(), declaration);
+    // Todo Points to the parameter declaration of the same name in the same functionf
     assertSameOrContains(member.getRefersTo(), outerVarName);
   }
 
@@ -347,6 +355,8 @@ public class VariableResolverCppTest {
     VariableDeclaration declaration =
         Util.getSubnodeOfTypeWithName(outer_function3, VariableDeclaration.class, "externalClass");
     assertSameOrContains(base.getRefersTo(), declaration);
+    // Todo Points to the Parameter in the same function instead of the field of the external
+    // variable
     assertSameOrContains(member.getRefersTo(), externVarName);
   }
 
@@ -391,6 +401,7 @@ public class VariableResolverCppTest {
         getCallWithReference("func4_second_external_staticVarName"); // external_static_field
     assertNotNull(asReference);
     // Refers to unknown field of staticVarName
+    // Todo points to an unknown declaration of the static variable
     assertSame(asReference.getRefersTo(), externStaticVarName);
   }
 
