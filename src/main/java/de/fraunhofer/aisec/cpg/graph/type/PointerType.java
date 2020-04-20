@@ -1,7 +1,37 @@
+/*
+ * Copyright (c) 2019, Fraunhofer AISEC. All rights reserved.
+ *
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ *
+ *                    $$$$$$\  $$$$$$$\   $$$$$$\
+ *                   $$  __$$\ $$  __$$\ $$  __$$\
+ *                   $$ /  \__|$$ |  $$ |$$ /  \__|
+ *                   $$ |      $$$$$$$  |$$ |$$$$\
+ *                   $$ |      $$  ____/ $$ |\_$$ |
+ *                   $$ |  $$\ $$ |      $$ |  $$ |
+ *                   \$$$$$   |$$ |      \$$$$$   |
+ *                    \______/ \__|       \______/
+ *
+ */
+
 package de.fraunhofer.aisec.cpg.graph.type;
 
 import java.util.Objects;
 
+/**
+ * PointerTypes represent all references to other Types. For C/CPP this includes pointers, as well as arrays, since
+ * technically arrays are pointers. For JAVA the only use case are arrays as there is no such pointer concept.
+ */
 public class PointerType extends Type {
   private Type elementType;
 
@@ -17,11 +47,17 @@ public class PointerType extends Type {
     this.elementType = elementType;
   }
 
+  /**
+   * @return referencing a PointerType results in another PointerType wrapping the first PointerType, e.g. int**
+   */
   @Override
   public PointerType reference() {
     return new PointerType(this);
   }
 
+  /**
+   * @return dereferencing a PointerType yields the type the pointer was pointing towards
+   */
   @Override
   public Type dereference() {
     return elementType;
@@ -29,7 +65,7 @@ public class PointerType extends Type {
 
   @Override
   public Type duplicate() {
-    return new PointerType(this, this.elementType);
+    return new PointerType(this, this.elementType.duplicate());
   }
 
   @Override
@@ -57,10 +93,6 @@ public class PointerType extends Type {
 
   public Type getElementType() {
     return elementType;
-  }
-
-  public void setElementType(Type elementType) {
-    this.elementType = elementType;
   }
 
   @Override

@@ -51,6 +51,12 @@ public abstract class ValueDeclaration extends Declaration implements HasType {
     return type;
   }
 
+  /**
+   * There is no case in which we would want to propagate a referenceType as in this case always the
+   * underlying ObjectType should be propagated
+   *
+   * @return Type that should be propagated
+   */
   @Override
   public Type getPropagationType() {
     if (this.type instanceof ReferenceType) {

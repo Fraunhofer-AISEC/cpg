@@ -10,11 +10,13 @@ public class IncompleteType extends Type {
     super(type);
   }
 
+  /** @return PointerType to a IncompleteType, e.g. void* */
   @Override
   public Type reference() {
     return new PointerType(this);
   }
 
+  /** @return dereferencing void results in void therefore the same type is returned */
   @Override
   public Type dereference() {
     return this;
@@ -25,6 +27,7 @@ public class IncompleteType extends Type {
     return new IncompleteType(this);
   }
 
+  /** @return this, as IncompleteType is the root of the Type chain */
   @Override
   public Type getRoot() {
     return this;

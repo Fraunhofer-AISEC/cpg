@@ -15,6 +15,12 @@ import java.util.Set;
 public class TypeClassResolver extends Pass {
   private Map<String, ObjectType> nameObjectType = new HashMap<>();
 
+
+  /**
+   * Pass on the TypeSystem: Sets RecordDeclaration Relationship from ObjectType to RecordDeclaration
+   *
+   * @param translationResult
+   */
   @Override
   public void accept(TranslationResult translationResult) {
     Set<Type> types = TypeManager.getInstance().getTypeState().keySet();
@@ -31,6 +37,12 @@ public class TypeClassResolver extends Pass {
     }
   }
 
+  /**
+   * Creates the recordDeclaration relationship between ObjectTypes and RecordDeclaration (from the
+   * Type to the Class)
+   *
+   * @param node
+   */
   public void handle(Node node) {
     if (node instanceof RecordDeclaration) {
       if (this.nameObjectType.containsKey(node.getName())) {

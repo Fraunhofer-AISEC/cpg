@@ -1,12 +1,47 @@
+/*
+ * Copyright (c) 2019, Fraunhofer AISEC. All rights reserved.
+ *
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ *
+ *                    $$$$$$\  $$$$$$$\   $$$$$$\
+ *                   $$  __$$\ $$  __$$\ $$  __$$\
+ *                   $$ /  \__|$$ |  $$ |$$ /  \__|
+ *                   $$ |      $$$$$$$  |$$ |$$$$\
+ *                   $$ |      $$  ____/ $$ |\_$$ |
+ *                   $$ |  $$\ $$ |      $$ |  $$ |
+ *                   \$$$$$   |$$ |      \$$$$$   |
+ *                    \______/ \__|       \______/
+ *
+ */
+
 package de.fraunhofer.aisec.cpg.graph.type;
 
 import de.fraunhofer.aisec.cpg.graph.Node;
 import java.util.Objects;
 import org.neo4j.ogm.annotation.typeconversion.Convert;
 
+/**
+ * Abstract Type, describing all possible SubTypes, i.e. all different Subtypes are complient with this class.
+ * Contains information which is included in any Type such as name, storage, qualifier and origin
+ */
 public abstract class Type extends Node {
   public static final String UNKNOWN_TYPE_STRING = "UNKNOWN";
 
+  /**
+   * Describes Storage specifier of variables. Depending on the storage specifier, variables are
+   * stored in different parts e.g. in C/CPP AUTO stores the variable on the stack whereas static in
+   * the bss section
+   */
   public enum Storage {
     AUTO,
     EXTERN,
@@ -38,6 +73,7 @@ public abstract class Type extends Node {
     this.origin = origin;
   }
 
+  /** Type Origin describes where the Type information came from */
   public enum Origin {
     RESOLVED,
     DATAFLOW,
@@ -45,6 +81,10 @@ public abstract class Type extends Node {
     UNRESOLVED
   }
 
+  /**
+   * Describes possible qualifiers that can be added to the type in order to modify its behavior.
+   * Supported: const (final), volatile, restrict, atomic
+   */
   public static class Qualifier {
     private boolean isConst; // C, C++, Java
     private boolean isVolatile; // C, C++, Java
@@ -137,7 +177,6 @@ public abstract class Type extends Node {
 
   protected Origin origin;
 
-  /** */
   public Type() {
     this.name = "";
     this.storage = Storage.AUTO;
@@ -148,7 +187,6 @@ public abstract class Type extends Node {
     this.name = typeName;
   }
 
-  /** @param type */
   public Type(Type type) {
     this.storage = type.storage;
     this.name = type.name;
@@ -168,29 +206,55 @@ public abstract class Type extends Node {
     this.origin = Origin.UNRESOLVED;
   }
 
+  /**
+   * @return Creates a reference to the current Type. E.g. when creating a pointer to an existing
+   *     ObjectType
+   */
   public abstract Type reference();
 
+  /**
+   * @return Dereferences the current Type by resolving the reference. E.g. when dereferencing an
+   *     pointer type we obtain the type the pointer is pointing towards
+   */
   public abstract Type dereference();
 
+  /** @return Resolves one dereference Level, i.e. the Type is dereferenced one time */
   public abstract Type getFollowingLevel();
 
+  /**
+   * Obtain the root Type Element for a Type Chain (follows Pointer and ReferenceTypes until Object-
+   * Incomplete- FunctionPtrType is reached
+   *
+   * @return root Type
+   */
   public abstract Type getRoot();
 
+  /** @return Creates an exact copy of the curent type (chain) */
   public abstract Type duplicate();
 
   public String getTypeName() {
     return name;
   }
 
+  /**
+   * @return number of steps that are required in order to traverse the type chain until the root is
+   *     reached
+   */
   public int getReferenceDepth() {
     return 0;
   }
 
   public void setTypeModifier(String s) {
+    // TODO CPS fix java
     System.out.println(s);
     return;
   }
 
+  /**
+   * @param t
+   * @return True if the Type parameter t is a FirstOrderType (Root of a chain) -> not a Pointer or
+   *     RefrenceType
+   */
   public boolean isFirstOrderType(Type t) {
     return t instanceof ObjectType
         || t instanceof UnknownType
@@ -198,6 +262,12 @@ public abstract class Type extends Node {
         || t instanceof IncompleteType;
   }
 
+  /**
+   * Required for possibleSubTypes to check if the new Type should be considered a subtype or not
+   *
+   * @param t
+   * @return True if the parameter t is equal to the current type (this)
+   */
   public boolean isSimilar(Type t) {
     if (this.equals(t)) {
       return true;

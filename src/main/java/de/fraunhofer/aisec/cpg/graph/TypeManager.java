@@ -49,13 +49,23 @@ public class TypeManager {
   }
 
   private Map<String, RecordDeclaration> typeToRecord = new HashMap<>();
-  private Map<Type, List<Type>> typeState = new HashMap<>();
+  private Map<Type, List<Type>> typeState =
+      new HashMap<>(); // Stores all the unique types ObjectType as Key and Reference-/PointerTypes
+  // as Values
   private LanguageFrontend frontend;
 
   public Map<Type, List<Type>> getTypeState() {
     return typeState;
   }
 
+  /**
+   * Ensures that two different Types that are created at different Points are still the same object
+   * in order to only store one node into the database
+   *
+   * @param type newly created Type
+   * @return If the same type was already stored in the typeState Map the stored one is returned. In
+   *     the other case the parameter type is stored into the map and the parameter type is returned
+   */
   public Type obtainType(Type type) {
     Type root = type.getRoot();
     if (root.equals(type) && typeState.containsKey(type)) {
@@ -84,6 +94,11 @@ public class TypeManager {
     return type;
   }
 
+  /**
+   * Responsible for storing new types into typeState
+   *
+   * @param type new type
+   */
   private void addType(Type type) {
     Type root = type.getRoot();
     if (root.equals(type)) {
