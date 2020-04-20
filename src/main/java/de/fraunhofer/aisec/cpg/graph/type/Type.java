@@ -31,8 +31,9 @@ import java.util.Objects;
 import org.neo4j.ogm.annotation.typeconversion.Convert;
 
 /**
- * Abstract Type, describing all possible SubTypes, i.e. all different Subtypes are complient with this class.
- * Contains information which is included in any Type such as name, storage, qualifier and origin
+ * Abstract Type, describing all possible SubTypes, i.e. all different Subtypes are complient with
+ * this class. Contains information which is included in any Type such as name, storage, qualifier
+ * and origin
  */
 public abstract class Type extends Node {
   public static final String UNKNOWN_TYPE_STRING = "UNKNOWN";

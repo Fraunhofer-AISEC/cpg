@@ -17,7 +17,8 @@ public class TypeClassResolver extends Pass {
 
 
   /**
-   * Pass on the TypeSystem: Sets RecordDeclaration Relationship from ObjectType to RecordDeclaration
+   * Pass on the TypeSystem: Sets RecordDeclaration Relationship from ObjectType to
+   * RecordDeclaration
    *
    * @param translationResult
    */

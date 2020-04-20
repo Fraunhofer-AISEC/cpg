@@ -87,11 +87,11 @@ public class FunctionPointerType extends Type {
         + name
         + '\''
         + ", storage="
-        + storage
+        + this.getStorage()
         + ", qualifier="
-        + qualifier
+        + this.getQualifier()
         + ", origin="
-        + origin
+        + this.getTypeOrigin()
         + '}';
   }
 }

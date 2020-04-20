@@ -291,6 +291,8 @@ public class DeclarationHandler
             .map(modifier -> modifier.getKeyword().asString())
             .collect(Collectors.toList());
 
+    String joinedModifiers = String.join(" ", modifiers) + " ";
+
     PhysicalLocation location = this.lang.getLocationFromRawNode(fieldDecl);
 
     de.fraunhofer.aisec.cpg.graph.Expression initializer =
@@ -298,14 +300,14 @@ public class DeclarationHandler
             variable.getInitializer().map(this.lang.getExpressionHandler()::handle).orElse(null);
     Type type;
     try {
-      type = TypeParser.createFrom(variable.resolve().getType().describe());
+      type = TypeParser.createFrom(joinedModifiers + variable.resolve().getType().describe());
     } catch (UnsolvedSymbolException | UnsupportedOperationException e) {
       String t = this.lang.recoverTypeFromUnsolvedException(e);
       if (t == null) {
         log.warn("Could not resolve type for {}", variable);
-        type = TypeParser.createFrom(variable.getType().asString());
+        type = TypeParser.createFrom(joinedModifiers + variable.getType().asString());
       } else {
-        type = TypeParser.createFrom(t);
+        type = TypeParser.createFrom(joinedModifiers + t);
         type.setTypeOrigin(Type.Origin.GUESSED);
       }
     }

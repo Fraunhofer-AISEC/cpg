@@ -76,6 +76,11 @@ public class Expression extends Statement implements HasType {
   }
 
   @Override
+  public void updateType(Type type) {
+    this.type = type;
+  }
+
+  @Override
   public void setType(Type type, HasType root) {
     if (type == null || root == this) {
       return;

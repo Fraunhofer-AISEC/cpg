@@ -27,8 +27,9 @@
 package de.fraunhofer.aisec.cpg.graph.type;
 
 /**
- * UnknownType describe the case in which it is not possible for the CPG to determine which Type is used.
- * E.g.: This occurs when the type is inferred by the compiler automatically when using keywords such as auto in cpp
+ * UnknownType describe the case in which it is not possible for the CPG to determine which Type is
+ * used. E.g.: This occurs when the type is inferred by the compiler automatically when using
+ * keywords such as auto in cpp
  */
 public class UnknownType extends Type {
 
@@ -53,16 +54,15 @@ public class UnknownType extends Type {
   }
 
   /**
-   * @return Same UnknownType, as it is makes no sense to obtain a pointer/reference to an UnknownType
+   * @return Same UnknownType, as it is makes no sense to obtain a pointer/reference to an
+   *     UnknownType
    */
   @Override
   public Type reference() {
     return this;
   }
 
-  /**
-   * @return Same UnknownType,
-   */
+  /** @return Same UnknownType, */
   @Override
   public Type dereference() {
     return this;

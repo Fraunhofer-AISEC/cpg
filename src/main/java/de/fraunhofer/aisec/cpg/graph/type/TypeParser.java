@@ -33,8 +33,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * Class responsible for parsing the type definition and create the same Type as described by the type string,
- * but complying to the CPG TypeSystem
+ * Class responsible for parsing the type definition and create the same Type as described by the
+ * type string, but complying to the CPG TypeSystem
  */
 public class TypeParser {
 

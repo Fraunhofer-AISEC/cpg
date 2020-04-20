@@ -32,8 +32,8 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * This is the main type in the Type system. ObjectTypes describe objects, as instances of a class. This also includes
- * primitive data types.
+ * This is the main type in the Type system. ObjectTypes describe objects, as instances of a class.
+ * This also includes primitive data types.
  */
 public class ObjectType extends Type {
 
@@ -152,15 +152,15 @@ public class ObjectType extends Type {
         + name
         + '\''
         + ", storage="
-        + storage
+        + this.getStorage()
         + ", qualifier="
-        + qualifier
+        + this.getQualifier()
         + ", modifier="
         + modifier
         + ", primitive="
         + primitive
         + ", origin="
-        + origin
+        + this.getTypeOrigin()
         + '}';
   }
 }

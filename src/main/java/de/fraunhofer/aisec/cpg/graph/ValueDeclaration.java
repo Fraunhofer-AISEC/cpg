@@ -202,4 +202,9 @@ public abstract class ValueDeclaration extends Declaration implements HasType {
   public int hashCode() {
     return super.hashCode();
   }
+
+  @Override
+  public void updateType(Type type) {
+    this.type = type;
+  }
 }

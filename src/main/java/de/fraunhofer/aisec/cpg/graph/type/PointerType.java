@@ -29,8 +29,9 @@ package de.fraunhofer.aisec.cpg.graph.type;
 import java.util.Objects;
 
 /**
- * PointerTypes represent all references to other Types. For C/CPP this includes pointers, as well as arrays, since
- * technically arrays are pointers. For JAVA the only use case are arrays as there is no such pointer concept.
+ * PointerTypes represent all references to other Types. For C/CPP this includes pointers, as well
+ * as arrays, since technically arrays are pointers. For JAVA the only use case are arrays as there
+ * is no such pointer concept.
  */
 public class PointerType extends Type {
   private Type elementType;
@@ -48,16 +49,15 @@ public class PointerType extends Type {
   }
 
   /**
-   * @return referencing a PointerType results in another PointerType wrapping the first PointerType, e.g. int**
+   * @return referencing a PointerType results in another PointerType wrapping the first
+   *     PointerType, e.g. int**
    */
   @Override
   public PointerType reference() {
     return new PointerType(this);
   }
 
-  /**
-   * @return dereferencing a PointerType yields the type the pointer was pointing towards
-   */
+  /** @return dereferencing a PointerType yields the type the pointer was pointing towards */
   @Override
   public Type dereference() {
     return elementType;
@@ -129,11 +129,11 @@ public class PointerType extends Type {
         + name
         + '\''
         + ", storage="
-        + storage
+        + this.getStorage()
         + ", qualifier="
-        + qualifier
+        + this.getQualifier()
         + ", origin="
-        + origin
+        + this.getTypeOrigin()
         + '}';
   }
 }
