@@ -586,7 +586,7 @@ public class TypeTests {
   // Tests on the resulting graph
 
   @Test
-  void graphTestJava() throws Exception {
+  void graphTest() throws Exception {
     Path topLevel = Path.of("src", "test", "resources", "types");
     List<TranslationUnitDeclaration> result = TestUtils.analyze("java", topLevel);
 
@@ -625,5 +625,28 @@ public class TypeTests {
     VariableDeclaration array = TestUtils.findByUniqueName(variableDeclarations, "array");
     assertTrue(array.getType() instanceof PointerType);
     assertEquals(((PointerType) array.getType()).getElementType(), x.getType());
+
+    topLevel = Path.of("src", "test", "resources", "types");
+    result = TestUtils.analyze("cpp", topLevel);
+
+    variableDeclarations = Util.subnodesOfType(result, VariableDeclaration.class);
+
+    // Test PointerType chain with pointer
+    VariableDeclaration regularInt = TestUtils.findByUniqueName(variableDeclarations, "regularInt");
+    VariableDeclaration ptr = TestUtils.findByUniqueName(variableDeclarations, "ptr");
+    assertTrue(ptr.getType() instanceof PointerType);
+    assertEquals(((PointerType) ptr.getType()).getElementType(), regularInt.getType());
+
+    // Test type Propagation (auto) UnknownType
+    VariableDeclaration unknown = TestUtils.findByUniqueName(variableDeclarations, "unknown");
+    assertEquals(UnknownType.getUnknownType(), unknown.getType());
+
+    // Test type Propagation auto
+    // TODO fix auto propagated
+    VariableDeclaration propagated = TestUtils.findByUniqueName(variableDeclarations, "propagated");
+    assertEquals(regularInt.getType(), propagated.getType());
+
+    // Test ReferenceType chain with reference
+
   }
 }
