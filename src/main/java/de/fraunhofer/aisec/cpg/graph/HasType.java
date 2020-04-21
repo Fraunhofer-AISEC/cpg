@@ -43,11 +43,13 @@ public interface HasType {
   }
 
   /**
-   * Sideeffect free type modification
-   * WARNING: This should only be used by the TypeSystem Pass
+   * Sideeffect free type modification WARNING: This should only be used by the TypeSystem Pass
+   *
    * @param type
    */
   void updateType(Type type);
+
+  void updatePossibleSubtypes(Set<Type> types);
 
   /**
    * Set the node's type. This may start a chain of type listener notifications

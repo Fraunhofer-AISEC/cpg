@@ -88,7 +88,7 @@ public abstract class ValueDeclaration extends Declaration implements HasType {
 
     this.type =
         TypeManager.getInstance()
-            .obtainType(TypeManager.getInstance().getCommonType(subTypes).orElse(type));
+            .registerType(TypeManager.getInstance().getCommonType(subTypes).orElse(type));
 
     subTypes =
         subTypes.stream()
@@ -97,7 +97,7 @@ public abstract class ValueDeclaration extends Declaration implements HasType {
 
     subTypes =
         subTypes.stream()
-            .map(s -> TypeManager.getInstance().obtainType(s))
+            .map(s -> TypeManager.getInstance().registerType(s))
             .collect(Collectors.toSet());
 
     setPossibleSubTypes(subTypes);
@@ -206,5 +206,10 @@ public abstract class ValueDeclaration extends Declaration implements HasType {
   @Override
   public void updateType(Type type) {
     this.type = type;
+  }
+
+  @Override
+  public void updatePossibleSubtypes(Set<Type> types) {
+    this.possibleSubTypes = types;
   }
 }

@@ -27,6 +27,8 @@
 package de.fraunhofer.aisec.cpg.graph.type;
 
 import de.fraunhofer.aisec.cpg.graph.Node;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 import org.neo4j.ogm.annotation.typeconversion.Convert;
 
@@ -230,6 +232,10 @@ public abstract class Type extends Node {
    */
   public abstract Type getRoot();
 
+  public void setRoot(Type newRoot) {
+    return;
+  }
+
   /** @return Creates an exact copy of the curent type (chain) */
   public abstract Type duplicate();
 
@@ -245,22 +251,32 @@ public abstract class Type extends Node {
     return 0;
   }
 
-  public void setTypeModifier(String s) {
-    // TODO CPS fix java
-    System.out.println(s);
-    return;
+  public void setAdditionalTypeKeywords(String keywords) {
+    List<String> separatedKeywords = TypeParser.separate(keywords);
+    for (String keyword : separatedKeywords) {
+      if (TypeParser.isKnownSpecifier(keyword)) {
+        if (TypeParser.isStorageSpecifier(keyword)) {
+          List<String> specifiers = new ArrayList<>();
+          specifiers.add(keyword);
+          this.setStorage(TypeParser.calcStorage(specifiers));
+        } else if (TypeParser.isQualifierSpecifier(keyword)) {
+          List<String> qualifiers = new ArrayList<>();
+          qualifiers.add(keyword);
+          this.setQualifier(TypeParser.calcQualifier(qualifiers, this.getQualifier()));
+        }
+      }
+    }
   }
 
   /**
-   * @param t
    * @return True if the Type parameter t is a FirstOrderType (Root of a chain) -> not a Pointer or
    *     RefrenceType
    */
-  public boolean isFirstOrderType(Type t) {
-    return t instanceof ObjectType
-        || t instanceof UnknownType
-        || t instanceof FunctionPointerType
-        || t instanceof IncompleteType;
+  public boolean isFirstOrderType() {
+    return this instanceof ObjectType
+        || this instanceof UnknownType
+        || this instanceof FunctionPointerType
+        || this instanceof IncompleteType;
   }
 
   /**

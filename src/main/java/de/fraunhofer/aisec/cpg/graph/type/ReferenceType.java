@@ -55,9 +55,7 @@ public class ReferenceType extends Type {
     this.reference = reference;
   }
 
-  /**
-   * @return Referencing a ReferenceType results in a PointerType to the original ReferenceType
-   */
+  /** @return Referencing a ReferenceType results in a PointerType to the original ReferenceType */
   @Override
   public Type reference() {
     return new PointerType(this);
@@ -95,6 +93,23 @@ public class ReferenceType extends Type {
     return t instanceof ReferenceType
         && ((ReferenceType) t).getReference().equals(this)
         && super.isSimilar(t);
+  }
+
+  @Override
+  public void setRoot(Type newRoot) {
+    if (this.reference.isFirstOrderType()) {
+      this.reference = newRoot;
+    } else {
+      this.reference.setRoot(newRoot);
+    }
+  }
+
+  public void setReference(Type reference) {
+    this.reference = reference;
+  }
+
+  public Type getReferenceType() {
+    return reference;
   }
 
   @Override

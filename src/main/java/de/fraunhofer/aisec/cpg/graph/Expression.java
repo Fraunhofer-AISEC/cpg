@@ -81,6 +81,11 @@ public class Expression extends Statement implements HasType {
   }
 
   @Override
+  public void updatePossibleSubtypes(Set<Type> types) {
+    this.possibleSubTypes = types;
+  }
+
+  @Override
   public void setType(Type type, HasType root) {
     if (type == null || root == this) {
       return;
@@ -104,7 +109,7 @@ public class Expression extends Statement implements HasType {
 
     this.type =
         TypeManager.getInstance()
-            .obtainType(TypeManager.getInstance().getCommonType(subTypes).orElse(type));
+            .registerType(TypeManager.getInstance().getCommonType(subTypes).orElse(type));
 
     subTypes =
         subTypes.stream()
@@ -113,7 +118,7 @@ public class Expression extends Statement implements HasType {
 
     subTypes =
         subTypes.stream()
-            .map(s -> TypeManager.getInstance().obtainType(s))
+            .map(s -> TypeManager.getInstance().registerType(s))
             .collect(Collectors.toSet());
 
     setPossibleSubTypes(subTypes);

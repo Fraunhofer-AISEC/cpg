@@ -91,7 +91,7 @@ public class TypeParser {
    * @param old previous qualifier information which is completed with newer qualifier information
    * @return Type.Qualifier
    */
-  private static Type.Qualifier calcQualifier(List<String> typeString, Type.Qualifier old) {
+  public static Type.Qualifier calcQualifier(List<String> typeString, Type.Qualifier old) {
     boolean constant_flag = false;
     boolean volatile_flag = false;
     boolean restrict_flag = false;
@@ -134,7 +134,7 @@ public class TypeParser {
    * @param typeString List of storage keywords
    * @return Storage
    */
-  private static Type.Storage calcStorage(List<String> typeString) {
+  public static Type.Storage calcStorage(List<String> typeString) {
     for (String part : typeString) {
       try {
         return Type.Storage.valueOf(part.toUpperCase());
@@ -145,7 +145,7 @@ public class TypeParser {
     return Type.Storage.AUTO;
   }
 
-  protected static boolean isStorageSpecifier(String specifier) {
+  public static boolean isStorageSpecifier(String specifier) {
     if (getLanguage() == TypeManager.Language.CXX) {
       return specifier.toUpperCase().equals("STATIC");
     } else {
@@ -169,7 +169,7 @@ public class TypeParser {
     }
   }
 
-  private static boolean isKnownSpecifier(String specifier) {
+  public static boolean isKnownSpecifier(String specifier) {
     return isQualifierSpecifier(specifier) || isStorageSpecifier(specifier);
   }
 
@@ -288,7 +288,7 @@ public class TypeParser {
    * @param type
    * @return
    */
-  private static List<String> separate(String type) {
+  public static List<String> separate(String type) {
 
     // Remove :: CPP operator, use . instead
     type = type.replace("::", ".");
@@ -587,6 +587,7 @@ public class TypeParser {
     counter++;
 
     Type finalType;
+    TypeManager typeManager = TypeManager.getInstance();
 
     // Check if type is FunctionPointer
     Matcher funcptr = isFunctionPointer(typeBlocks.subList(counter, typeBlocks.size()));
@@ -594,8 +595,9 @@ public class TypeParser {
     if (funcptr != null) {
       Type returnType = createFrom(typeName);
       List<Type> parameterList = getParameterList(funcptr.group("args"));
-      // TODO CPS into typeState in typeManager
-      return new FunctionPointerType(qualifier, storageValue, parameterList, returnType);
+
+      return typeManager.registerType(
+          new FunctionPointerType(qualifier, storageValue, parameterList, returnType));
     } else {
       if (isIncompleteType(typeName)) {
         // IncompleteType e.g. void
@@ -675,8 +677,7 @@ public class TypeParser {
 
     // Make sure, that only one real instance exists for a type in order to have just one node in
     // the graph representing the type
-    TypeManager typeManager = TypeManager.getInstance();
-    finalType = typeManager.obtainType(finalType);
+    finalType = typeManager.registerType(finalType);
 
     return finalType;
   }

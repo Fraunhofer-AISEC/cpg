@@ -43,6 +43,7 @@ public class UnknownType extends Type {
 
   /**
    * Use this function to obtain an UnknownType or call the TypeParser with the typeString UNKNOWN
+   *
    * @return UnknownType instance
    */
   public static UnknownType getUnknownType() {

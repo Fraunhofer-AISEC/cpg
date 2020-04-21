@@ -52,6 +52,8 @@ public class TypeManager {
   private Map<Type, List<Type>> typeState =
       new HashMap<>(); // Stores all the unique types ObjectType as Key and Reference-/PointerTypes
   // as Values
+  private List<Type> firstOrderTypes = new ArrayList<>();
+  private List<Type> secondOrderTypes = new ArrayList<>();
   private LanguageFrontend frontend;
 
   public Map<Type, List<Type>> getTypeState() {
@@ -92,6 +94,24 @@ public class TypeManager {
 
     addType(type);
     return type;
+  }
+
+  public Type registerType(Type t) {
+    if (t.isFirstOrderType()) {
+      this.firstOrderTypes.add(t);
+    } else {
+      this.secondOrderTypes.add(t);
+      registerType(t.getFollowingLevel());
+    }
+    return t;
+  }
+
+  public List<Type> getFirstOrderTypes() {
+    return firstOrderTypes;
+  }
+
+  public List<Type> getSecondOrderTypes() {
+    return secondOrderTypes;
   }
 
   /**

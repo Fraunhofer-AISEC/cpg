@@ -107,6 +107,19 @@ public class PointerType extends Type {
   }
 
   @Override
+  public void setRoot(Type newRoot) {
+    if (this.elementType.isFirstOrderType()) {
+      this.elementType = newRoot;
+    } else {
+      this.elementType.setRoot(newRoot);
+    }
+  }
+
+  public void setElementType(Type elementType) {
+    this.elementType = elementType;
+  }
+
+  @Override
   public boolean equals(Object o) {
     if (this == o) return true;
     if (!(o instanceof PointerType)) return false;

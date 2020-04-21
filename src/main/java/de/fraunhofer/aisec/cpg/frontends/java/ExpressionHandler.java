@@ -222,10 +222,9 @@ public class ExpressionHandler
               this.lang.getTypeAsGoodAsPossible(variable, resolved),
               variable.toString());
 
-      // TODO CPS what to do with typeModifier?
       declaration
           .getType()
-          .setTypeModifier(
+          .setAdditionalTypeKeywords(
               variableDeclarationExpr.getModifiers().stream()
                   .map(m -> m.getKeyword().asString())
                   .collect(Collectors.joining(" ")));

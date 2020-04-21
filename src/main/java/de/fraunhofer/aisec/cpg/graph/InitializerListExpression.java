@@ -79,7 +79,7 @@ public class InitializerListExpression extends Expression implements TypeListene
                 t -> {
                   Type arrayType = t.duplicate();
                   arrayType.reference();
-                  arrayType = TypeManager.getInstance().obtainType(arrayType);
+                  arrayType = TypeManager.getInstance().registerType(arrayType);
                   return arrayType;
                 })
             .collect(Collectors.toSet());
