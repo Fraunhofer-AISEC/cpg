@@ -93,4 +93,19 @@ public class UnknownType extends Type {
   public String toString() {
     return "UNKNOWN";
   }
+
+  @Override
+  public void setStorage(Storage storage) {
+    return;
+  }
+
+  @Override
+  public void setQualifier(Qualifier qualifier) {
+    return;
+  }
+
+  @Override
+  public void setTypeOrigin(Origin origin) {
+    return;
+  }
 }

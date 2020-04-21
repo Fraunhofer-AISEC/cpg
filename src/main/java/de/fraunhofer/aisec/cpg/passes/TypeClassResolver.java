@@ -2,10 +2,7 @@ package de.fraunhofer.aisec.cpg.passes;
 
 import de.fraunhofer.aisec.cpg.TranslationResult;
 import de.fraunhofer.aisec.cpg.graph.*;
-import de.fraunhofer.aisec.cpg.graph.type.ObjectType;
-import de.fraunhofer.aisec.cpg.graph.type.PointerType;
-import de.fraunhofer.aisec.cpg.graph.type.ReferenceType;
-import de.fraunhofer.aisec.cpg.graph.type.Type;
+import de.fraunhofer.aisec.cpg.graph.type.*;
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker;
 import java.util.*;
 
@@ -42,12 +39,79 @@ public class TypeClassResolver extends Pass {
     }
   }
 
+  /**
+   * Ensures that two different Types that are created at different Points are still the same object
+   * in order to only store one node into the database
+   *
+   * @param type newly created Type
+   * @return If the same type was already stored in the typeState Map the stored one is returned. In
+   *     the other case the parameter type is stored into the map and the parameter type is returned
+   */
+  public Type obtainType(Type type) {
+    if (type == null) {
+      return null;
+    }
+    Type root = type.getRoot();
+    if (root.equals(type) && typeState.containsKey(type)) {
+      for (Type t : typeState.keySet()) {
+        if (t.equals(type)) {
+          return t;
+        }
+      }
+    } else {
+      addType(type);
+      return type;
+    }
+
+    if (typeState.containsKey(root)) {
+      List<Type> references = typeState.get(root);
+      for (Type r : references) {
+        if (r.equals(type)) {
+          return r;
+        }
+      }
+      addType(type);
+      return type;
+    }
+
+    addType(type);
+    return type;
+  }
+
+  /**
+   * Responsible for storing new types into typeState
+   *
+   * @param type new type
+   */
+  private void addType(Type type) {
+    Type root = type.getRoot();
+    if (root.equals(type)) {
+      // This is a rootType and is included in the map as key with empty references
+      if (!typeState.containsKey(type)) {
+        typeState.put(type, new ArrayList<>());
+        return;
+      }
+    }
+
+    // ReferencesTypes
+    if (typeState.containsKey(root)) {
+      if (!typeState.get(root).contains(type)) {
+        typeState.get(root).add(type);
+        addType(type.getFollowingLevel());
+      }
+
+    } else {
+      addType(type.getRoot());
+      addType(type);
+    }
+  }
+
   private void removeDuplicateTypes() {
     TypeManager typeManager = TypeManager.getInstance();
-    // 1. Step: Remove duplicate firstOrderTypes
+    // Remove duplicate firstOrderTypes
     firstOrderTypes.addAll(typeManager.getFirstOrderTypes());
 
-    // 2. Step: Propagate new firstOrderTypes into secondOrderTypes
+    // Propagate new firstOrderTypes into secondOrderTypes
     List<Type> secondOrderTypes = typeManager.getSecondOrderTypes();
     for (Type t : secondOrderTypes) {
       Type root = t.getRoot();
@@ -61,14 +125,33 @@ public class TypeClassResolver extends Pass {
       t.setRoot(newRoot);
     }
 
-    // 3. Step: Build Map from firstOrderTypes to list of secondOderTypes
+    // Build Map from firstOrderTypes to list of secondOderTypes
     for (Type t : firstOrderTypes) {
       typeState.put(t, new ArrayList<>());
     }
 
-    // 4. Step: Remove duplicate secondOrderTypes
+    // Remove duplicate secondOrderTypes
     for (Type t : secondOrderTypes) {
       processSecondOrderTypes(t);
+    }
+
+    // Remove duplicates from fields
+    for (Type t : typeState.keySet()) {
+      if (t instanceof FunctionPointerType) {
+        ((FunctionPointerType) t)
+            .setReturnType(obtainType(((FunctionPointerType) t).getReturnType()));
+        List<Type> newParameters = new ArrayList<>();
+        for (Type t2 : ((FunctionPointerType) t).getParameters()) {
+          newParameters.add(obtainType(t2));
+        }
+        ((FunctionPointerType) t).setParameters(newParameters);
+      } else if (t instanceof ObjectType) {
+        List<Type> newGenerics = new ArrayList<>();
+        for (Type generic : ((ObjectType) t).getGenerics()) {
+          newGenerics.add(obtainType(generic));
+        }
+        ((ObjectType) t).setGenerics(newGenerics);
+      }
     }
   }
 

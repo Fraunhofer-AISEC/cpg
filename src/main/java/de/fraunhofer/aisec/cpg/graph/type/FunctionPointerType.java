@@ -7,6 +7,14 @@ public class FunctionPointerType extends Type {
   private List<Type> parameters;
   private Type returnType;
 
+  public void setParameters(List<Type> parameters) {
+    this.parameters = parameters;
+  }
+
+  public void setReturnType(Type returnType) {
+    this.returnType = returnType;
+  }
+
   public FunctionPointerType(
       Type.Qualifier qualifier, Type.Storage storage, List<Type> parameters, Type returnType) {
     super("", storage, qualifier);

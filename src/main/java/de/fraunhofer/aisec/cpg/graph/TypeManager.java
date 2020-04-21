@@ -28,14 +28,14 @@ package de.fraunhofer.aisec.cpg.graph;
 
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
 import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguageFrontend;
-import de.fraunhofer.aisec.cpg.graph.type.Type;
-import de.fraunhofer.aisec.cpg.graph.type.TypeParser;
-import de.fraunhofer.aisec.cpg.graph.type.UnknownType;
+import de.fraunhofer.aisec.cpg.graph.type.*;
 import de.fraunhofer.aisec.cpg.passes.scopes.RecordScope;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.builder.ToStringBuilder;
+
+import javax.swing.text.html.Option;
 
 public class TypeManager {
 
@@ -60,42 +60,6 @@ public class TypeManager {
     return typeState;
   }
 
-  /**
-   * Ensures that two different Types that are created at different Points are still the same object
-   * in order to only store one node into the database
-   *
-   * @param type newly created Type
-   * @return If the same type was already stored in the typeState Map the stored one is returned. In
-   *     the other case the parameter type is stored into the map and the parameter type is returned
-   */
-  public Type obtainType(Type type) {
-    Type root = type.getRoot();
-    if (root.equals(type) && typeState.containsKey(type)) {
-      for (Type t : typeState.keySet()) {
-        if (t.equals(type)) {
-          return t;
-        }
-      }
-    } else {
-      addType(type);
-      return type;
-    }
-
-    if (typeState.containsKey(root)) {
-      List<Type> references = typeState.get(root);
-      for (Type r : references) {
-        if (r.equals(type)) {
-          return r;
-        }
-      }
-      addType(type);
-      return type;
-    }
-
-    addType(type);
-    return type;
-  }
-
   public Type registerType(Type t) {
     if (t.isFirstOrderType()) {
       this.firstOrderTypes.add(t);
@@ -112,34 +76,6 @@ public class TypeManager {
 
   public List<Type> getSecondOrderTypes() {
     return secondOrderTypes;
-  }
-
-  /**
-   * Responsible for storing new types into typeState
-   *
-   * @param type new type
-   */
-  private void addType(Type type) {
-    Type root = type.getRoot();
-    if (root.equals(type)) {
-      // This is a rootType and is included in the map as key with empty references
-      if (!typeState.containsKey(type)) {
-        typeState.put(type, new ArrayList<>());
-        return;
-      }
-    }
-
-    // ReferencesTypes
-    if (typeState.containsKey(root)) {
-      if (!typeState.get(root).contains(type)) {
-        typeState.get(root).add(type);
-        addType(type.getFollowingLevel());
-      }
-
-    } else {
-      addType(type.getRoot());
-      addType(type);
-    }
   }
 
   private TypeManager() {}
@@ -162,7 +98,33 @@ public class TypeManager {
 
   public Optional<Type> getCommonType(Collection<Type> types) {
 
-    // TODO SH handle pointer
+    boolean sameType = types.stream().map(t -> t.getClass().getCanonicalName()).collect(Collectors.toSet()).size() == 1;
+    if (!sameType){
+      // No commonType for different Types
+      return Optional.empty();
+    }
+
+    Set<Type> unwrappedTypes = new HashSet<>();
+    int depth = 0;
+    int counter = 0;
+    for (Type t : types){
+      if (t instanceof PointerType){
+        if (counter == 0){
+          depth = t.getReferenceDepth();
+          counter++;
+        }
+        if (t.getReferenceDepth() != depth){
+          return Optional.empty();
+        }
+        unwrappedTypes.add(t.getRoot());
+      }
+
+      if (t instanceof ReferenceType){
+        unwrappedTypes.add(((ReferenceType) t).getReference());
+      }
+    }
+
+    types = unwrappedTypes;
 
     if (types.isEmpty()) {
       return Optional.empty();

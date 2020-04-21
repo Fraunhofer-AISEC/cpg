@@ -120,6 +120,10 @@ public class ObjectType extends Type {
     return this;
   }
 
+  public void setGenerics(List<Type> generics) {
+    this.generics = generics;
+  }
+
   @Override
   public boolean isSimilar(Type t) {
     return t instanceof ObjectType
