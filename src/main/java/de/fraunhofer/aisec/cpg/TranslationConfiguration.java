@@ -179,7 +179,7 @@ public class TranslationConfiguration {
       registerPass(new VariableUsageResolver());
       registerPass(new CallResolver()); // creates CG
       registerPass(new EvaluationOrderGraphPass()); // creates EOG
-      registerPass(new TypeClassResolver());
+      registerPass(new TypeResolver());
       return this;
     }
 

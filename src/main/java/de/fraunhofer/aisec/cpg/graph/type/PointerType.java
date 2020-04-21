@@ -97,7 +97,7 @@ public class PointerType extends Type {
 
   @Override
   public int getReferenceDepth() {
-    int depth = 0;
+    int depth = 1;
     Type containedType = this.elementType;
     while (containedType instanceof PointerType) {
       depth++;

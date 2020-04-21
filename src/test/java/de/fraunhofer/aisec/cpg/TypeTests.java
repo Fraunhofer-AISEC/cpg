@@ -26,10 +26,12 @@
 
 package de.fraunhofer.aisec.cpg;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.*;
 
-import de.fraunhofer.aisec.cpg.graph.TypeManager;
+import de.fraunhofer.aisec.cpg.graph.*;
 import de.fraunhofer.aisec.cpg.graph.type.*;
+import de.fraunhofer.aisec.cpg.helpers.Util;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -579,5 +581,49 @@ public class TypeTests {
     typeString = "int const &ref2 = a";
     result = TypeParser.createFrom(typeString);
     assertEquals(expected, result);
+  }
+
+  // Tests on the resulting graph
+
+  @Test
+  void graphTestJava() throws Exception {
+    Path topLevel = Path.of("src", "test", "resources", "types");
+    List<TranslationUnitDeclaration> result = TestUtils.analyze("java", topLevel);
+
+    List<ObjectType> variables = Util.subnodesOfType(result, ObjectType.class);
+    List<RecordDeclaration> recordDeclarations =
+        Util.subnodesOfType(result, RecordDeclaration.class);
+
+    // Test RecordDeclaration relationship
+    List<ObjectType> objectTypes = TestUtils.findByName(variables, "A");
+    RecordDeclaration recordDeclarationA = TestUtils.findByUniqueName(recordDeclarations, "A");
+    for (ObjectType objectType : objectTypes) {
+      assertEquals(recordDeclarationA, objectType.getRecordDeclaration());
+    }
+
+    // Test uniqueness of types x and y have same type
+    List<FieldDeclaration> fieldDeclarations = Util.subnodesOfType(result, FieldDeclaration.class);
+    FieldDeclaration x = TestUtils.findByUniqueName(fieldDeclarations, "x");
+    FieldDeclaration z = TestUtils.findByUniqueName(fieldDeclarations, "z");
+    assertSame(x.getType(), z.getType());
+
+    // Test propagation of specifiers in primitive fields (final int y)
+    FieldDeclaration y = TestUtils.findByUniqueName(fieldDeclarations, "y");
+    assertTrue(y.getType().getQualifier().isConst());
+
+    // Test propagation of specifiers in non-primitive fields (final A a)
+    List<VariableDeclaration> variableDeclarations =
+        Util.subnodesOfType(result, VariableDeclaration.class);
+    VariableDeclaration aA = TestUtils.findByUniqueName(variableDeclarations, "a");
+    assertTrue(aA.getType().getQualifier().isConst());
+
+    // Test propagation of specifiers in variables (final String s)
+    VariableDeclaration sString = TestUtils.findByUniqueName(variableDeclarations, "s");
+    assertTrue(sString.getType().getQualifier().isConst());
+
+    // Test PointerType chain with array
+    VariableDeclaration array = TestUtils.findByUniqueName(variableDeclarations, "array");
+    assertTrue(array.getType() instanceof PointerType);
+    assertEquals(((PointerType) array.getType()).getElementType(), x.getType());
   }
 }

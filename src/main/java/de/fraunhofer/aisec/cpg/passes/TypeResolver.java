@@ -6,7 +6,7 @@ import de.fraunhofer.aisec.cpg.graph.type.*;
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker;
 import java.util.*;
 
-public class TypeClassResolver extends Pass {
+public class TypeResolver extends Pass {
   private Set<Type> firstOrderTypes = new HashSet<>();
   private Map<Type, List<Type>> typeState = new HashMap<>();
 

@@ -35,8 +35,6 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 
-import javax.swing.text.html.Option;
-
 public class TypeManager {
 
   private static final List<String> primitiveTypeNames =
@@ -96,31 +94,46 @@ public class TypeManager {
     return type instanceof UnknownType;
   }
 
+  private Optional<Type> rewrapType(Type type, int depth) {
+    if (depth > 0) {
+      for (int i = 0; i < depth; i++) {
+        type = type.reference();
+      }
+    }
+
+    return Optional.of(type);
+  }
+
   public Optional<Type> getCommonType(Collection<Type> types) {
 
-    boolean sameType = types.stream().map(t -> t.getClass().getCanonicalName()).collect(Collectors.toSet()).size() == 1;
-    if (!sameType){
+    boolean sameType =
+        types.stream().map(t -> t.getClass().getCanonicalName()).collect(Collectors.toSet()).size()
+            == 1;
+    if (!sameType) {
       // No commonType for different Types
       return Optional.empty();
     }
 
+    // TODO CPS fix unwrapping
     Set<Type> unwrappedTypes = new HashSet<>();
     int depth = 0;
     int counter = 0;
-    for (Type t : types){
-      if (t instanceof PointerType){
-        if (counter == 0){
+    boolean reference = false;
+    for (Type t : types) {
+      if (t instanceof PointerType) {
+        if (counter == 0) {
           depth = t.getReferenceDepth();
           counter++;
         }
-        if (t.getReferenceDepth() != depth){
+        if (t.getReferenceDepth() != depth) {
           return Optional.empty();
         }
         unwrappedTypes.add(t.getRoot());
       }
 
-      if (t instanceof ReferenceType){
+      if (t instanceof ReferenceType) {
         unwrappedTypes.add(((ReferenceType) t).getReference());
+        reference = true;
       }
     }
 
@@ -129,7 +142,7 @@ public class TypeManager {
     if (types.isEmpty()) {
       return Optional.empty();
     } else if (types.size() == 1) {
-      return Optional.of(types.iterator().next());
+      return rewrapType(types.iterator().next(), depth);
     }
     typeToRecord =
         frontend.getScopeManager()
@@ -166,7 +179,16 @@ public class TypeManager {
 
     Optional<Ancestor> lca =
         commonAncestors.stream().max(Comparator.comparingInt(Ancestor::getDepth));
-    return lca.map(a -> TypeParser.createFrom(a.getRecord().getName()));
+    Optional<Type> commonType = lca.map(a -> TypeParser.createFrom(a.getRecord().getName()));
+
+    Type finalType;
+    if (commonType.isPresent()) {
+      finalType = commonType.get();
+    } else {
+      return commonType;
+    }
+
+    return rewrapType(finalType, depth);
   }
 
   private Set<Ancestor> getAncestors(RecordDeclaration record, int depth) {

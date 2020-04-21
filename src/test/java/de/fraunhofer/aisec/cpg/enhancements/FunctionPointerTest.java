@@ -72,7 +72,7 @@ public class FunctionPointerTest {
   public void test(String language) throws Exception {
     List<TranslationUnitDeclaration> result = analyze(language);
     List<FunctionDeclaration> functions = Util.subnodesOfType(result, FunctionDeclaration.class);
-    FunctionDeclaration main = TestUtils.findByName(functions, "main");
+    FunctionDeclaration main = TestUtils.findByUniqueName(functions, "main");
     List<CallExpression> calls = Util.subnodesOfType(main, CallExpression.class);
     FunctionDeclaration noParam =
         functions.stream()

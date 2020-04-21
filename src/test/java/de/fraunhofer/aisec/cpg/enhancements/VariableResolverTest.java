@@ -51,13 +51,13 @@ public class VariableResolverTest {
     List<TranslationUnitDeclaration> result = TestUtils.analyze("java", topLevel);
     List<MethodDeclaration> methods = Util.subnodesOfType(result, MethodDeclaration.class);
     List<FieldDeclaration> fields = Util.subnodesOfType(result, FieldDeclaration.class);
-    FieldDeclaration field = TestUtils.findByName(fields, "field");
+    FieldDeclaration field = TestUtils.findByUniqueName(fields, "field");
 
-    MethodDeclaration getField = TestUtils.findByName(methods, "getField");
+    MethodDeclaration getField = TestUtils.findByUniqueName(methods, "getField");
     ReturnStatement returnStatement = Util.subnodesOfType(getField, ReturnStatement.class).get(0);
     assertEquals(field, ((MemberExpression) returnStatement.getReturnValue()).getMember());
 
-    MethodDeclaration noShadow = TestUtils.findByName(methods, "getField");
+    MethodDeclaration noShadow = TestUtils.findByUniqueName(methods, "getField");
     returnStatement = Util.subnodesOfType(noShadow, ReturnStatement.class).get(0);
     assertEquals(field, ((MemberExpression) returnStatement.getReturnValue()).getMember());
   }
@@ -67,9 +67,9 @@ public class VariableResolverTest {
     List<TranslationUnitDeclaration> result = TestUtils.analyze("java", topLevel);
     List<MethodDeclaration> methods = Util.subnodesOfType(result, MethodDeclaration.class);
     List<FieldDeclaration> fields = Util.subnodesOfType(result, FieldDeclaration.class);
-    FieldDeclaration field = TestUtils.findByName(fields, "field");
+    FieldDeclaration field = TestUtils.findByUniqueName(fields, "field");
 
-    MethodDeclaration getLocal = TestUtils.findByName(methods, "getLocal");
+    MethodDeclaration getLocal = TestUtils.findByUniqueName(methods, "getLocal");
     ReturnStatement returnStatement = Util.subnodesOfType(getLocal, ReturnStatement.class).get(0);
     VariableDeclaration local = Util.subnodesOfType(getLocal, VariableDeclaration.class).get(0);
     DeclaredReferenceExpression returnValue =
@@ -77,7 +77,7 @@ public class VariableResolverTest {
     assertNotEquals(Set.of(field), returnValue.getRefersTo());
     assertEquals(Set.of(local), returnValue.getRefersTo());
 
-    MethodDeclaration getShadow = TestUtils.findByName(methods, "getShadow");
+    MethodDeclaration getShadow = TestUtils.findByUniqueName(methods, "getShadow");
     returnStatement = Util.subnodesOfType(getShadow, ReturnStatement.class).get(0);
     local = Util.subnodesOfType(getShadow, VariableDeclaration.class).get(0);
     returnValue = (DeclaredReferenceExpression) returnStatement.getReturnValue();

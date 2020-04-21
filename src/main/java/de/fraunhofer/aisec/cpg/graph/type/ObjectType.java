@@ -85,6 +85,10 @@ public class ObjectType extends Type {
     return generics;
   }
 
+  public RecordDeclaration getRecordDeclaration() {
+    return recordDeclaration;
+  }
+
   public void setRecordDeclaration(RecordDeclaration recordDeclaration) {
     this.recordDeclaration = recordDeclaration;
   }
