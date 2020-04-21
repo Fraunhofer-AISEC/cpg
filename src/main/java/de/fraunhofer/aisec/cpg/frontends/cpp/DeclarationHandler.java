@@ -106,7 +106,9 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
 
     lang.getScopeManager().enterScope(functionDeclaration);
 
-    functionDeclaration.setType(TypeParser.createFrom(ctx.getRawSignature().split("\\{")[0]));
+    functionDeclaration.setType(
+        TypeParser.createFrom(
+            ctx.getRawSignature().split(functionDeclaration.getName())[0].trim()));
 
     if (ctx.getBody() != null) {
       Statement bodyStatement = this.lang.getStatementHandler().handle(ctx.getBody());

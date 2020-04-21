@@ -144,8 +144,8 @@ public class TypeClassResolver extends Pass {
   public void handle(Node node) {
     if (node instanceof RecordDeclaration) {
       String recordDeclarationName = node.getName();
-      for (Type t : typeState.keySet()){
-        if (t.getTypeName().equals(recordDeclarationName) && t instanceof ObjectType){
+      for (Type t : typeState.keySet()) {
+        if (t.getTypeName().equals(recordDeclarationName) && t instanceof ObjectType) {
           ((ObjectType) t).setRecordDeclaration((RecordDeclaration) node);
         }
       }

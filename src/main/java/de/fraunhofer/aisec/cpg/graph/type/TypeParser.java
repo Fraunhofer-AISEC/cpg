@@ -390,7 +390,9 @@ public class TypeParser {
     List<Type> parameters = new ArrayList<>();
     String[] parametersSplit = parameterList.split(",");
     for (String parameter : parametersSplit) {
-      parameters.add(createFrom(parameter.strip()));
+      if (parameter.length() > 0) {
+        parameters.add(createFrom(parameter.strip()));
+      }
     }
 
     return parameters;

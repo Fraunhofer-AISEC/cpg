@@ -128,7 +128,7 @@ public class ReferenceType extends Type {
 
   @Override
   public String toString() {
-    return "ImplicitReferenceType{"
+    return "ReferenceType{"
         + "reference="
         + reference
         + ", typeName='"

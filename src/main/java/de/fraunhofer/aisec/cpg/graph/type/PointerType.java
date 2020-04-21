@@ -135,7 +135,7 @@ public class PointerType extends Type {
 
   @Override
   public String toString() {
-    return "ReferenceType{"
+    return "PointerType{"
         + "elementType="
         + elementType
         + ", typeName='"

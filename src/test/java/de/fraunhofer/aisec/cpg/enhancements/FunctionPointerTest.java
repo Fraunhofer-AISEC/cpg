@@ -73,6 +73,7 @@ public class FunctionPointerTest {
     List<TranslationUnitDeclaration> result = analyze(language);
     List<FunctionDeclaration> functions = Util.subnodesOfType(result, FunctionDeclaration.class);
     FunctionDeclaration main = TestUtils.findByName(functions, "main");
+    List<CallExpression> calls = Util.subnodesOfType(main, CallExpression.class);
     FunctionDeclaration noParam =
         functions.stream()
             .filter(f -> f.getName().equals("target") && f.getParameters().isEmpty())
@@ -93,7 +94,6 @@ public class FunctionPointerTest {
             .filter(f -> f.getName().equals("fun") && f.getParameters().size() == 1)
             .findFirst()
             .orElseThrow();
-    List<CallExpression> calls = Util.subnodesOfType(main, CallExpression.class);
     Pattern pattern = Pattern.compile("\\((?<member>.+)?\\*(?<obj>.+\\.)?(?<func>.+)\\)");
     for (CallExpression call : calls) {
       Matcher matcher = pattern.matcher(call.getName());

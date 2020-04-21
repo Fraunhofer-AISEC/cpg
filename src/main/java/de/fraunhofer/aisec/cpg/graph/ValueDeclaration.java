@@ -26,6 +26,7 @@
 
 package de.fraunhofer.aisec.cpg.graph;
 
+import de.fraunhofer.aisec.cpg.graph.type.FunctionPointerType;
 import de.fraunhofer.aisec.cpg.graph.type.ReferenceType;
 import de.fraunhofer.aisec.cpg.graph.type.Type;
 import de.fraunhofer.aisec.cpg.graph.type.UnknownType;
@@ -68,6 +69,10 @@ public abstract class ValueDeclaration extends Declaration implements HasType {
   @Override
   public void setType(Type type, HasType root) {
     if (type == null || root == this) {
+      return;
+    }
+
+    if (this.type instanceof FunctionPointerType && !(type instanceof FunctionPointerType)) {
       return;
     }
 

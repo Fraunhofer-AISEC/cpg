@@ -373,11 +373,18 @@ public class VariableUsageResolver extends Pass {
             .filter(FunctionDeclaration.class::isInstance)
             .map(FunctionDeclaration.class::cast)
             .filter(f -> f.getName().equals(name))
+            .filter(f -> f.hasSignature(((FunctionPointerType) type).getParameters()))
             .findFirst();
     if (target.isEmpty()) {
       FunctionDeclaration declaration = NodeBuilder.newFunctionDeclaration(name, "");
       if (type instanceof FunctionPointerType) {
         declaration.setType(((FunctionPointerType) type).getReturnType());
+        List<ParamVariableDeclaration> dummyParameters = new ArrayList<>();
+        for (Type t : ((FunctionPointerType) type).getParameters()) {
+          ParamVariableDeclaration param = NodeBuilder.newMethodParameterIn("param", t, false, "");
+          dummyParameters.add(param);
+        }
+        declaration.setParameters(dummyParameters);
       } else {
         declaration.setType(type);
       }

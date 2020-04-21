@@ -55,10 +55,17 @@ public class FunctionPointerType extends Type {
 
   @Override
   public boolean isSimilar(Type t) {
-    return t instanceof FunctionPointerType
-        && this.parameters.equals(((FunctionPointerType) t).parameters)
-        && (this.returnType == ((FunctionPointerType) t).returnType
-            || this.returnType.equals(((FunctionPointerType) t).returnType));
+    if (t instanceof FunctionPointerType) {
+      if (returnType == null || ((FunctionPointerType) t).returnType == null) {
+        return this.parameters.equals(((FunctionPointerType) t).parameters)
+            && (this.returnType == ((FunctionPointerType) t).returnType
+                || returnType == ((FunctionPointerType) t).getReturnType());
+      }
+      return this.parameters.equals(((FunctionPointerType) t).parameters)
+          && (this.returnType == ((FunctionPointerType) t).returnType
+              || this.returnType.equals(((FunctionPointerType) t).returnType));
+    }
+    return false;
   }
 
   @Override
