@@ -114,7 +114,7 @@ public class TypeManager {
       return Optional.empty();
     }
 
-    // TODO CPS fix unwrapping
+    // TODO SH add support for pointer/referencetype
     Set<Type> unwrappedTypes = new HashSet<>();
     int depth = 0;
     int counter = 0;

@@ -642,11 +642,7 @@ public class TypeTests {
     assertEquals(UnknownType.getUnknownType(), unknown.getType());
 
     // Test type Propagation auto
-    // TODO fix auto propagated
     VariableDeclaration propagated = TestUtils.findByUniqueName(variableDeclarations, "propagated");
     assertEquals(regularInt.getType(), propagated.getType());
-
-    // Test ReferenceType chain with reference
-
   }
 }
