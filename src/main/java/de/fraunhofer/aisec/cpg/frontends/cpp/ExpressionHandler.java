@@ -40,6 +40,11 @@ import java.util.List;
 import java.util.Objects;
 import org.eclipse.cdt.core.dom.ast.*;
 import org.eclipse.cdt.core.dom.ast.IBasicType.Kind;
+import org.eclipse.cdt.core.dom.ast.IBinding;
+import org.eclipse.cdt.core.dom.ast.IProblemType;
+import org.eclipse.cdt.core.dom.ast.IQualifierType;
+import org.eclipse.cdt.core.dom.ast.IType;
+import org.eclipse.cdt.core.dom.ast.IValue;
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTDesignator;
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTExpression;
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTInitializerClause;
@@ -187,10 +192,6 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
       IBinding binding = ((CPPASTNamedTypeSpecifier) declSpecifier).getName().resolveBinding();
 
       if (binding != null && !(binding instanceof CPPScope.CPPScopeProblem)) {
-        Declaration declaration = this.lang.getCachedDeclaration(binding);
-
-        newExpression.setInstantiates(declaration);
-
         // update the type
         newExpression.setType(TypeParser.createFrom(binding.getName()));
       } else {
@@ -404,10 +405,6 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
               ((MemberExpression) reference).getBase(),
               ((MemberExpression) reference).getMember(),
               ctx.getRawSignature());
-
-      if (((MemberExpression) reference).getBase() instanceof HasType) {
-        callExpression.setType(((HasType) ((MemberExpression) reference).getBase()).getType());
-      }
     } else if (reference instanceof BinaryOperator
         && ((BinaryOperator) reference).getOperatorCode().equals(".")) {
       // We have a dot operator that was not classified as a member expression. This happens when
@@ -802,16 +799,13 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
       // be an unsigned long long, except if it is explicitly specified as ul
       type =
           Objects.equals("ul", suffix)
-              ? CXXLanguageFrontend.TYPE_UNSIGNED_LONG
-              : CXXLanguageFrontend.TYPE_UNSIGNED_LONG_LONG;
+              ? Type.createFrom("unsigned long")
+              : Type.createFrom("unsigned long long");
     } else if (numberValue instanceof Long) {
       // differentiate between long and long long
-      type =
-          Objects.equals("ll", suffix)
-              ? CXXLanguageFrontend.LONG_LONG_TYPE
-              : CXXLanguageFrontend.LONG_TYPE;
+      type = Objects.equals("ll", suffix) ? Type.createFrom("long long") : Type.createFrom("long");
     } else {
-      type = CXXLanguageFrontend.INT_TYPE;
+      type = Type.createFrom("int");
     }
 
     return NodeBuilder.newLiteral(numberValue, type, ctx.getRawSignature());

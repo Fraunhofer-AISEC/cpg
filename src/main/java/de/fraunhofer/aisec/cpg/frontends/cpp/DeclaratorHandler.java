@@ -73,7 +73,7 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
     // type will be filled out later
     VariableDeclaration declaration =
         NodeBuilder.newVariableDeclaration(
-            ctx.getName().toString(), UnknownType.getUnknownType(), ctx.getRawSignature());
+            ctx.getName().toString(), UnknownType.getUnknownType(), ctx.getRawSignature(), true);
     IASTInitializer init = ctx.getInitializer();
 
     if (init != null) {
@@ -161,7 +161,8 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
           NodeBuilder.newVariableDeclaration(
               ctx.getNestedDeclarator().getName().toString(),
               UnknownType.getUnknownType(),
-              ctx.getRawSignature());
+              ctx.getRawSignature(),
+              true);
       ((VariableDeclaration) result).setInitializer(initializer);
       result.setLocation(lang.getLocationFromRawNode(ctx));
       // TODO SH add real function pointer handling
@@ -188,7 +189,8 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
               Collections.emptyList(),
               code,
               lang.getLocationFromRawNode(ctx),
-              initializer);
+              initializer,
+              true);
       result.setLocation(lang.getLocationFromRawNode(ctx));
       // TODO SH add real function pointer handling
       result.setType(
@@ -222,7 +224,10 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
     }
     RecordDeclaration recordDeclaration =
         NodeBuilder.newRecordDeclaration(
-            ctx.getName().toString(), new ArrayList<>(), kind, ctx.getRawSignature());
+            lang.getScopeManager().getCurrentNamePrefixWithDelimiter() + ctx.getName().toString(),
+            new ArrayList<>(),
+            kind,
+            ctx.getRawSignature());
 
     this.lang.addRecord(recordDeclaration);
 
@@ -236,7 +241,8 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
               new ArrayList<>(),
               "this",
               null,
-              null);
+              null,
+              true);
       recordDeclaration.getFields().add(thisDeclaration);
       lang.getScopeManager().addValueDeclaration(thisDeclaration);
     }
@@ -273,6 +279,8 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
         recordDeclaration.getFields().add(FieldDeclaration.from((VariableDeclaration) declaration));
       } else if (declaration instanceof FieldDeclaration) {
         recordDeclaration.getFields().add((FieldDeclaration) declaration);
+      } else if (declaration instanceof RecordDeclaration) {
+        recordDeclaration.getRecords().add((RecordDeclaration) declaration);
       }
     }
 

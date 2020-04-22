@@ -31,10 +31,13 @@ import static de.fraunhofer.aisec.cpg.helpers.Util.errorWithFileLocation;
 import de.fraunhofer.aisec.cpg.frontends.Handler;
 import de.fraunhofer.aisec.cpg.graph.*;
 import de.fraunhofer.aisec.cpg.graph.type.TypeParser;
+import de.fraunhofer.aisec.cpg.graph.TypeManager;
+import de.fraunhofer.aisec.cpg.helpers.Util;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import org.eclipse.cdt.core.dom.ast.IASTDeclaration;
 import org.eclipse.cdt.core.dom.ast.IASTNode;
 import org.eclipse.cdt.core.dom.ast.IASTTranslationUnit;
@@ -138,39 +141,94 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
     return functionDeclaration;
   }
 
-  private Declaration handleSimpleDeclaration(CPPASTSimpleDeclaration ctx) {
-    if (ctx.getDeclarators().length == 0) {
-      if (ctx.getDeclSpecifier() != null) {
-        if (ctx.getDeclSpecifier() instanceof CPPASTCompositeTypeSpecifier) {
-          // probably a class or struct declaration
-          return this.lang
-              .getDeclaratorHandler()
-              .handle((CPPASTCompositeTypeSpecifier) ctx.getDeclSpecifier());
-        } else {
-          errorWithFileLocation(
-              this.lang,
-              ctx,
-              log,
-              "Unknown DeclSpecifier in SimpleDeclaration: {}",
-              ctx.getDeclSpecifier().getClass());
-        }
+  private boolean isTypedef(CPPASTSimpleDeclaration ctx) {
+    if (ctx.getRawSignature().contains("typedef")) {
+      if (ctx.getDeclSpecifier() instanceof CPPASTCompositeTypeSpecifier) {
+        // we need to make a difference between structs that have typedefs and structs that are
+        // typedefs themselves
+        return ctx.getDeclSpecifier().toString().equals("struct")
+            && ctx.getRawSignature().strip().startsWith("typedef");
       } else {
-        errorWithFileLocation(this.lang, ctx, log, ("DeclSpecifier is null"));
+        return true;
       }
-    } else if (ctx.getDeclarators().length == 1) {
-
-      List<Declaration> handle = (this.lang).getDeclarationListHandler().handle(ctx);
-      if (handle.size() != 1) {
-        errorWithFileLocation(this.lang, ctx, log, "Invalid declaration generation");
-        return NodeBuilder.newDeclaration("");
-      }
-
-      return handle.get(0);
     } else {
-      errorWithFileLocation(
-          this.lang, ctx, log, "More than one declaration, this should not happen here.");
+      return false;
+    }
+  }
+
+  private Declaration handleSimpleDeclaration(CPPASTSimpleDeclaration ctx) {
+    if (isTypedef(ctx)) {
+      TypeManager.getInstance().handleTypedef(ctx.getRawSignature());
+      // if this was a struct typedef, we still need to handle this struct!
+      if (!(ctx.getDeclSpecifier() instanceof CPPASTCompositeTypeSpecifier)) {
+        return null;
+      }
     }
 
+    if (ctx.getDeclarators().length == 0) {
+      return handleNoDeclarator(ctx);
+    } else if (ctx.getDeclarators().length == 1) {
+      return handleSingleDeclarator(ctx);
+    } else {
+      return handleMultipleDeclarators(ctx);
+    }
+  }
+
+  private Declaration handleNoDeclarator(CPPASTSimpleDeclaration ctx) {
+    if (ctx.getDeclSpecifier() != null) {
+      if (ctx.getDeclSpecifier() instanceof CPPASTCompositeTypeSpecifier) {
+        // probably a class or struct declaration
+        return this.lang
+            .getDeclaratorHandler()
+            .handle((CPPASTCompositeTypeSpecifier) ctx.getDeclSpecifier());
+      } else {
+        errorWithFileLocation(
+            this.lang,
+            ctx,
+            log,
+            "Unknown DeclSpecifier in SimpleDeclaration: {}",
+            ctx.getDeclSpecifier().getClass());
+      }
+    } else {
+      errorWithFileLocation(this.lang, ctx, log, ("DeclSpecifier is null"));
+    }
+    return null;
+  }
+
+  private Declaration handleSingleDeclarator(CPPASTSimpleDeclaration ctx) {
+    List<Declaration> handle = (this.lang).getDeclarationListHandler().handle(ctx);
+    if (handle.size() != 1) {
+      errorWithFileLocation(this.lang, ctx, log, "Invalid declaration generation");
+      return NodeBuilder.newDeclaration("");
+    }
+
+    return handle.get(0);
+  }
+
+  private Declaration handleMultipleDeclarators(CPPASTSimpleDeclaration ctx) {
+    // A legitimate case where this will happen is when multiply typedefing a struct
+    // e.g.: typedef struct {...} S, *pS, s_arr[10], ...;
+    if (ctx.getDeclSpecifier() instanceof CPPASTCompositeTypeSpecifier) {
+      Declaration result =
+          this.lang
+              .getDeclaratorHandler()
+              .handle((CPPASTCompositeTypeSpecifier) ctx.getDeclSpecifier());
+      if (result.getName().isEmpty() && ctx.getRawSignature().strip().startsWith("typedef")) {
+        // CDT didn't find out the name due to this thing being a typedef. We need to fix this
+        int endOfDeclaration = ctx.getRawSignature().lastIndexOf('}');
+        if (endOfDeclaration + 1 < ctx.getRawSignature().length()) {
+          List<String> parts =
+              Util.splitLeavingParenthesisContents(
+                  ctx.getRawSignature().substring(endOfDeclaration + 1), ",");
+          Optional<String> name =
+              parts.stream().filter(p -> !p.contains("*") && !p.contains("[")).findFirst();
+          name.ifPresent(s -> result.setName(s.replace(";", "")));
+        }
+      }
+      return result;
+    }
+    errorWithFileLocation(
+        this.lang, ctx, log, "More than one declaration, this should not happen here.");
     return null;
   }
 
@@ -192,6 +250,7 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
     TranslationUnitDeclaration node =
         NodeBuilder.newTranslationUnitDeclaration(
             translationUnit.getFilePath(), translationUnit.getRawSignature());
+    lang.setCurrentTU(node);
 
     HashMap<String, HashSet<ProblemDeclaration>> problematicIncludes = new HashMap<>();
     for (IASTDeclaration declaration : translationUnit.getDeclarations()) {
@@ -200,6 +259,10 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
       }
 
       Declaration decl = handle(declaration);
+      if (decl == null) {
+        continue;
+      }
+
       if (decl instanceof ProblemDeclaration) {
         HashSet<ProblemDeclaration> problems =
             problematicIncludes.computeIfAbsent(

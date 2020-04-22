@@ -55,6 +55,12 @@ public class DeclaredReferenceExpression extends Expression implements TypeListe
     return refersTo;
   }
 
+  public void setRefersTo(@NonNull ValueDeclaration refersTo) {
+    HashSet<ValueDeclaration> n = new HashSet<>();
+    n.add(refersTo);
+    setRefersTo(n);
+  }
+
   public void setRefersTo(@NonNull Set<ValueDeclaration> refersTo) {
     this.refersTo.forEach(
         r -> {
@@ -69,7 +75,9 @@ public class DeclaredReferenceExpression extends Expression implements TypeListe
           }
         });
 
-    this.refersTo = refersTo;
+    this.refersTo.clear();
+    this.refersTo.addAll(refersTo);
+
     refersTo.forEach(
         r -> {
           if (writingAccess) {

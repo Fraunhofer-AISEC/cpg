@@ -27,6 +27,7 @@
 package de.fraunhofer.aisec.cpg.passes.scopes;
 
 import de.fraunhofer.aisec.cpg.graph.Node;
+import de.fraunhofer.aisec.cpg.graph.TypedefDeclaration;
 import de.fraunhofer.aisec.cpg.graph.ValueDeclaration;
 import java.util.ArrayList;
 import java.util.List;
@@ -39,6 +40,7 @@ import org.checkerframework.checker.nullness.qual.NonNull;
 public class DeclarationScope extends Scope {
 
   @NonNull private List<ValueDeclaration> valueDeclarations = new ArrayList<>();
+  @NonNull private List<TypedefDeclaration> typedefs = new ArrayList<>();
 
   public DeclarationScope(Node node) {
     this.astNode = node;
@@ -55,5 +57,17 @@ public class DeclarationScope extends Scope {
 
   public void addValueDeclaration(ValueDeclaration valueDeclaration) {
     this.valueDeclarations.add(valueDeclaration);
+  }
+
+  public List<TypedefDeclaration> getTypedefs() {
+    return typedefs;
+  }
+
+  public void setTypedefs(List<TypedefDeclaration> typedefs) {
+    this.typedefs = typedefs;
+  }
+
+  public void addTypedef(TypedefDeclaration typedef) {
+    this.typedefs.add(typedef);
   }
 }

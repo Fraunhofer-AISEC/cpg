@@ -69,27 +69,30 @@ public class InitializerListExpression extends Expression implements TypeListene
     }
 
     Type previous = this.type;
+    Type newType;
+    Set<Type> subTypes;
 
-    Set<Type> types =
-        this.initializers
-            .parallelStream()
-            .map(Expression::getPropagationType)
-            .filter(Objects::nonNull)
-            .map(
-                t -> {
-                  Type arrayType = t.duplicate();
-                  arrayType.reference();
-                  arrayType = TypeManager.getInstance().registerType(arrayType);
-                  return arrayType;
-                })
-            .collect(Collectors.toSet());
-    Type alternative = !types.isEmpty() ? types.iterator().next() : null;
-    Type commonType = TypeManager.getInstance().getCommonType(types).orElse(alternative);
-    Set<Type> subTypes = new HashSet<>(getPossibleSubTypes());
-    subTypes.remove(oldType);
-    subTypes.addAll(types);
+    if (this.initializers.contains(src)) {
+      Set<Type> types =
+          this.initializers
+              .parallelStream()
+              .map(Expression::getType)
+              .filter(Objects::nonNull)
+              .map(t -> TypeManager.getInstance().registerType(Type.createFrom(t.toString() + "[]")))
+              .collect(Collectors.toSet());
+      Type alternative = !types.isEmpty() ? types.iterator().next() : Type.getUnknown();
+      newType = TypeManager.getInstance().getCommonType(types).orElse(alternative);
+      subTypes = new HashSet<>(getPossibleSubTypes());
+      subTypes.remove(oldType);
+      subTypes.addAll(types);
+    } else {
+      newType = src.getType();
+      subTypes = new HashSet<>(getPossibleSubTypes());
+      subTypes.remove(oldType);
+      subTypes.add(newType);
+    }
 
-    setType(commonType, root);
+    setType(newType, root);
     setPossibleSubTypes(subTypes, root);
 
     if (!previous.equals(this.type)) {

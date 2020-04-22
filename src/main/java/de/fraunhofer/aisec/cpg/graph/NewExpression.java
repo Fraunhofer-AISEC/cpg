@@ -33,23 +33,9 @@ import org.apache.commons.lang3.builder.ToStringBuilder;
 /** Represents the creation of a new object through the <code>new</code> keyword. */
 public class NewExpression extends Expression {
 
-  /** The {@link Declaration} of the type this expression instantiates. */
-  private Declaration instantiates;
-
   /** The initializer expression. */
   @SubGraph("AST")
   private Expression initializer;
-
-  public Declaration getInstantiates() {
-    return instantiates;
-  }
-
-  public void setInstantiates(Declaration instantiates) {
-    this.instantiates = instantiates;
-    if (instantiates != null) {
-      setType(TypeParser.createFrom(instantiates.getName()));
-    }
-  }
 
   public Expression getInitializer() {
     return initializer;
@@ -76,7 +62,6 @@ public class NewExpression extends Expression {
   public String toString() {
     return new ToStringBuilder(this)
         .appendSuper(super.toString())
-        .append("instantiates", instantiates)
         .append("initializer", initializer)
         .toString();
   }
@@ -90,9 +75,7 @@ public class NewExpression extends Expression {
       return false;
     }
     NewExpression that = (NewExpression) o;
-    return super.equals(that)
-        && Objects.equals(instantiates, that.instantiates)
-        && Objects.equals(initializer, that.initializer);
+    return super.equals(that) && Objects.equals(initializer, that.initializer);
   }
 
   @Override

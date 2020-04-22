@@ -632,7 +632,8 @@ public class StatementAnalyzer
         NodeBuilder.newVariableDeclaration(
             catchCls.getParameter().getName().toString(),
             concreteType,
-            catchCls.getParameter().toString());
+            catchCls.getParameter().toString(),
+            false);
     parameter.setPossibleSubTypes(possibleTypes);
     CompoundStatement body = handleBlockStatement(catchCls.getBody());
 

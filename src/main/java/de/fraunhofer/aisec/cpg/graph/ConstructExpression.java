@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.graph;
 
 import de.fraunhofer.aisec.cpg.graph.HasType.TypeListener;
 import de.fraunhofer.aisec.cpg.graph.type.Type;
+import de.fraunhofer.aisec.cpg.helpers.Util;
 import de.fraunhofer.aisec.cpg.passes.CallResolver;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -51,9 +52,24 @@ public class ConstructExpression extends Expression implements TypeListener {
   @PopulatedByPass(CallResolver.class)
   private ConstructorDeclaration constructor;
 
+  /** The {@link Declaration} of the type this expression instantiates. */
+  @PopulatedByPass(CallResolver.class)
+  private Declaration instantiates;
+
   /** The list of argument {@link Expression}s passed the constructor. */
   @SubGraph("AST")
   private List<Expression> arguments = new ArrayList<>();
+
+  public Declaration getInstantiates() {
+    return instantiates;
+  }
+
+  public void setInstantiates(Declaration instantiates) {
+    this.instantiates = instantiates;
+    if (instantiates != null) {
+      setType(new Type(instantiates.getName()));
+    }
+  }
 
   public ConstructorDeclaration getConstructor() {
     return constructor;
@@ -62,11 +78,14 @@ public class ConstructExpression extends Expression implements TypeListener {
   public void setConstructor(ConstructorDeclaration constructor) {
     if (this.constructor != null) {
       this.constructor.unregisterTypeListener(this);
+      Util.detachCallParameters(this.constructor, arguments);
       this.removePrevDFG(this.constructor);
     }
     this.constructor = constructor;
     if (constructor != null) {
       constructor.registerTypeListener(this);
+      Util.attachCallParameters(constructor, arguments);
+      this.addPrevDFG(constructor);
     }
   }
 
@@ -104,6 +123,7 @@ public class ConstructExpression extends Expression implements TypeListener {
     return new ToStringBuilder(this, Node.TO_STRING_STYLE)
         .appendSuper(super.toString())
         .append("constructor", constructor)
+        .append("instantiates", instantiates)
         .append("arguments", arguments)
         .toString();
   }

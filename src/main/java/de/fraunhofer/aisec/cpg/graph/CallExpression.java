@@ -27,6 +27,13 @@
 package de.fraunhofer.aisec.cpg.graph;
 
 import de.fraunhofer.aisec.cpg.graph.HasType.TypeListener;
+import de.fraunhofer.aisec.cpg.graph.Type.Origin;
+import de.fraunhofer.aisec.cpg.helpers.Util;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Objects;
+import java.util.Set;
 import de.fraunhofer.aisec.cpg.graph.type.Type;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -61,7 +68,13 @@ public class CallExpression extends Expression implements TypeListener {
   }
 
   public void setBase(Node base) {
+    if (this.base instanceof HasType) {
+      ((HasType) this.base).unregisterTypeListener(this);
+    }
     this.base = base;
+    if (base instanceof HasType) {
+      ((HasType) base).registerTypeListener(this);
+    }
   }
 
   public List<Expression> getArguments() {
@@ -80,31 +93,14 @@ public class CallExpression extends Expression implements TypeListener {
     this.invokes.forEach(
         i -> {
           i.unregisterTypeListener(this);
-          for (ParamVariableDeclaration param : i.getParameters()) {
-            // A param could be variadic, so multiple arguments could be set as incoming DFG
-            param.getPrevDFG().stream()
-                .filter(x -> arguments.contains(x))
-                .forEach(param::removeNextDFG);
-          }
+          Util.detachCallParameters(i, arguments);
           this.removePrevDFG(i);
         });
     this.invokes = invokes;
     invokes.forEach(
         i -> {
           i.registerTypeListener(this);
-          i.getParameters().sort(Comparator.comparing(ParamVariableDeclaration::getArgumentIndex));
-          for (int j = 0; j < arguments.size(); j++) {
-            ParamVariableDeclaration param = i.getParameters().get(j);
-            if (param.isVariadic()) {
-              for (; j < arguments.size(); j++) {
-                // map all the following arguments to this variadic param
-                param.addPrevDFG(arguments.get(j));
-              }
-              break;
-            } else {
-              param.addPrevDFG(arguments.get(j));
-            }
-          }
+          Util.attachCallParameters(i, arguments);
           this.addPrevDFG(i);
         });
   }
@@ -115,32 +111,37 @@ public class CallExpression extends Expression implements TypeListener {
 
   @Override
   public void typeChanged(HasType src, HasType root, Type oldType) {
-    Type previous = this.type;
+    if (src == base) {
+      setFqn(src.getType().getTypeName() + "." + this.getName());
+    } else {
+      Type previous = this.type;
+      List<Type> types =
+          invokes.stream()
+              .map(FunctionDeclaration::getType)
+              .filter(Objects::nonNull)
+              .collect(Collectors.toList());
+      Type alternative = !types.isEmpty() ? types.get(0) : null;
+      Type commonType = TypeManager.getInstance().getCommonType(types).orElse(alternative);
+      Set<Type> subTypes = new HashSet<>(getPossibleSubTypes());
+      subTypes.remove(oldType);
+      subTypes.addAll(types);
 
-    List<Type> types =
-        invokes.stream()
-            .map(FunctionDeclaration::getType)
-            .filter(Objects::nonNull)
-            .collect(Collectors.toList());
-    Type alternative = !types.isEmpty() ? types.get(0) : null;
-    Type commonType = TypeManager.getInstance().getCommonType(types).orElse(alternative);
-    Set<Type> subTypes = new HashSet<>(getPossibleSubTypes());
-    subTypes.remove(oldType);
-    subTypes.addAll(types);
+      setType(commonType, root);
+      setPossibleSubTypes(subTypes, root);
 
-    setType(commonType, root);
-    setPossibleSubTypes(subTypes, root);
-
-    if (!previous.equals(this.type)) {
-      this.type.setTypeOrigin(Type.Origin.DATAFLOW);
+      if (!previous.equals(this.type)) {
+        this.type.setTypeOrigin(Type.Origin.DATAFLOW);
+      }
     }
   }
 
   @Override
   public void possibleSubTypesChanged(HasType src, HasType root, Set<Type> oldSubTypes) {
-    Set<Type> subTypes = new HashSet<>(getPossibleSubTypes());
-    subTypes.addAll(src.getPossibleSubTypes());
-    setPossibleSubTypes(subTypes, root);
+    if (src != base) {
+      Set<Type> subTypes = new HashSet<>(getPossibleSubTypes());
+      subTypes.addAll(src.getPossibleSubTypes());
+      setPossibleSubTypes(subTypes, root);
+    }
   }
 
   @Override

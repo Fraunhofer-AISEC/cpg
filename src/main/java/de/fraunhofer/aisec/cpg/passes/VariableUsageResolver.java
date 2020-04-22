@@ -206,7 +206,7 @@ public class VariableUsageResolver extends Pass {
       if (!refersTo.isEmpty()) {
         ref.setRefersTo(refersTo);
       } else {
-        warnWithFileLocation(current, log, "Did not find a declaration for {}");
+        warnWithFileLocation(current, log, "Did not find a declaration for {}", ref.getName());
       }
     }
   }
@@ -333,7 +333,13 @@ public class VariableUsageResolver extends Pass {
     if (target.isEmpty()) {
       FieldDeclaration declaration =
           NodeBuilder.newFieldDeclaration(
-              reference.getName(), reference.getType(), Collections.emptyList(), "", null, null);
+              reference.getName(),
+              reference.getType(),
+              Collections.emptyList(),
+              "",
+              null,
+              null,
+              false);
       declarations.add(declaration);
       declaration.setImplicit(true);
       // lang.getScopeManager().addValueDeclaration(declaration);

@@ -42,6 +42,34 @@ public class VariableDeclaration extends ValueDeclaration implements TypeListene
   @Nullable
   protected Expression initializer;
 
+  /**
+   * C++ uses implicit constructor calls for statements like <code>A a;</code> but this only applies
+   * to types that are actually classes and not just primitive types or typedef aliases of
+   * primitives. Thus, during AST construction, we can only suggest that an implicit constructor
+   * call might be allowed by the language (so this is set to true for C++ but false for Java, as
+   * such a statement in Java leads to an uninitialized variable). The final decision can then be
+   * made after we have analyzed all classes present in the current scope.
+   */
+  private boolean implicitInitializerAllowed = false;
+
+  public boolean isImplicitInitializerAllowed() {
+    return implicitInitializerAllowed;
+  }
+
+  public void setImplicitInitializerAllowed(boolean implicitInitializerAllowed) {
+    this.implicitInitializerAllowed = implicitInitializerAllowed;
+  }
+
+  private boolean isArray = false;
+
+  public boolean isArray() {
+    return isArray;
+  }
+
+  public void setIsArray(boolean isArray) {
+    this.isArray = isArray;
+  }
+
   @Nullable
   public Expression getInitializer() {
     return initializer;
@@ -85,7 +113,24 @@ public class VariableDeclaration extends ValueDeclaration implements TypeListene
     }
 
     Type previous = this.type;
-    setType(src.getPropagationType(), root);
+    Type newType;
+    if (src == initializer && initializer instanceof InitializerListExpression) {
+      // Init list is seen as having an array type, but can be used ambiguously. It can be either
+      // used to initialize an array, or to initialize some objects. If it is used as an
+      // array initializer, we need to remove the array/pointer layer from the type, otherwise it
+      // can be ignored once we have a type
+      if (isArray) {
+        newType = src.getType();
+      } else if (!TypeManager.getInstance().isUnknown(this.type)) {
+        return;
+      } else {
+        newType = src.getType().dereference();
+      }
+    } else {
+      newType = src.getPropagationType();
+    }
+
+    setType(newType, root);
     if (!previous.equals(this.type)) {
       this.type.setTypeOrigin(Type.Origin.DATAFLOW);
     }

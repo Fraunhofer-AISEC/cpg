@@ -242,7 +242,8 @@ public class DeclarationHandler
 
     de.fraunhofer.aisec.cpg.graph.FieldDeclaration thisDeclaration =
         NodeBuilder.newFieldDeclaration(
-            "this", TypeParser.createFrom(name), new ArrayList<>(), "this", null, null);
+            "this", TypeParser.createFrom(name), new ArrayList<>(), "this", null, null,
+            false);
     recordDeclaration.getFields().add(thisDeclaration);
     lang.getScopeManager().addValueDeclaration(thisDeclaration);
 
@@ -318,7 +319,8 @@ public class DeclarationHandler
             modifiers,
             variable.toString(),
             location,
-            initializer);
+            initializer,
+            false);
     lang.getScopeManager().addValueDeclaration(fieldDeclaration);
 
     return fieldDeclaration;

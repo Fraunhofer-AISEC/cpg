@@ -32,6 +32,12 @@ import de.fraunhofer.aisec.cpg.frontends.TranslationException;
 import de.fraunhofer.aisec.cpg.graph.*;
 import de.fraunhofer.aisec.cpg.graph.type.Type;
 import de.fraunhofer.aisec.cpg.graph.type.TypeParser;
+import de.fraunhofer.aisec.cpg.graph.Declaration;
+import de.fraunhofer.aisec.cpg.graph.DeclaredReferenceExpression;
+import de.fraunhofer.aisec.cpg.graph.Expression;
+import de.fraunhofer.aisec.cpg.graph.TranslationUnitDeclaration;
+import de.fraunhofer.aisec.cpg.graph.TypeManager;
+import de.fraunhofer.aisec.cpg.graph.ValueDeclaration;
 import de.fraunhofer.aisec.cpg.helpers.Benchmark;
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager;
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation;
@@ -40,7 +46,6 @@ import java.io.File;
 import java.lang.reflect.Field;
 import java.nio.file.Path;
 import java.util.HashMap;
-import java.util.Set;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.eclipse.cdt.core.dom.ast.*;
@@ -305,8 +310,7 @@ public class CXXLanguageFrontend extends LanguageFrontend {
       if (declaration != null) {
         LOGGER.debug("Connecting {} to {}", expression, declaration);
 
-        ((DeclaredReferenceExpression) expression)
-            .setRefersTo(Set.of((ValueDeclaration) declaration));
+        ((DeclaredReferenceExpression) expression).setRefersTo((ValueDeclaration) declaration);
       }
     } else {
       if (expression == null) {

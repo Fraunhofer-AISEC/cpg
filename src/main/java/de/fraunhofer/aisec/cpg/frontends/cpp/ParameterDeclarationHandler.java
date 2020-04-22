@@ -93,9 +93,14 @@ public class ParameterDeclarationHandler
             false,
             ctx.getRawSignature());
 
-    // set type
-    paramVariableDeclaration.setType(
-        TypeParser.createFrom(ctx.getDeclSpecifier().toString() + typeAdjustment));
+
+
+
+    if (!typeAdjustment.isEmpty()) {
+      paramVariableDeclaration.setType(Type.createFrom(ctx.getDeclSpecifier().toString() + typeAdjustment));
+    } else{
+      paramVariableDeclaration.setType(Type.createFrom(ctx.getDeclSpecifier().toString()));
+    }
 
     return paramVariableDeclaration;
   }
