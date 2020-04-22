@@ -94,13 +94,17 @@ public class TypeManager {
     return type instanceof UnknownType;
   }
 
-  private Optional<Type> rewrapType(Type type, int depth) {
+  private Optional<Type> rewrapType(
+      Type type, int depth, boolean reference, ReferenceType referenceType) {
     if (depth > 0) {
       for (int i = 0; i < depth; i++) {
         type = type.reference();
       }
     }
-
+    if (reference) {
+      referenceType.setReference(type);
+      return Optional.of(referenceType);
+    }
     return Optional.of(type);
   }
 
@@ -114,11 +118,29 @@ public class TypeManager {
       return Optional.empty();
     }
 
-    // TODO SH add support for pointer/referencetype
     Set<Type> unwrappedTypes = new HashSet<>();
     int depth = 0;
     int counter = 0;
     boolean reference = false;
+    ReferenceType referenceType = null;
+
+    for (Type t : types) {
+      if (t instanceof ReferenceType) {
+        if (counter == 0) {
+          referenceType = (ReferenceType) t;
+        }
+        if (!referenceType.isSimilar(t)) {
+          return Optional.empty();
+        }
+        unwrappedTypes.add(((ReferenceType) t).getReference());
+        reference = true;
+      } else {
+        break;
+      }
+    }
+
+    types = unwrappedTypes;
+
     for (Type t : types) {
       if (t instanceof PointerType) {
         if (counter == 0) {
@@ -130,11 +152,6 @@ public class TypeManager {
         }
         unwrappedTypes.add(t.getRoot());
       }
-
-      if (t instanceof ReferenceType) {
-        unwrappedTypes.add(((ReferenceType) t).getReference());
-        reference = true;
-      }
     }
 
     types = unwrappedTypes;
@@ -142,7 +159,7 @@ public class TypeManager {
     if (types.isEmpty()) {
       return Optional.empty();
     } else if (types.size() == 1) {
-      return rewrapType(types.iterator().next(), depth);
+      return rewrapType(types.iterator().next(), depth, reference, referenceType);
     }
     typeToRecord =
         frontend.getScopeManager()
@@ -188,7 +205,7 @@ public class TypeManager {
       return commonType;
     }
 
-    return rewrapType(finalType, depth);
+    return rewrapType(finalType, depth, reference, referenceType);
   }
 
   private Set<Ancestor> getAncestors(RecordDeclaration record, int depth) {
