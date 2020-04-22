@@ -188,6 +188,9 @@ public abstract class Type extends Node {
 
   public Type(String typeName) {
     this.name = typeName;
+    this.storage = Storage.AUTO;
+    this.qualifier = new Qualifier();
+    this.origin = Origin.UNRESOLVED;
   }
 
   public Type(Type type) {

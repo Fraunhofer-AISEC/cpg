@@ -236,6 +236,10 @@ public class TypeManager {
       return false;
     }
 
+    if (superType.equals(subType)) {
+      return true;
+    }
+
     Optional<Type> commonType = getCommonType(new HashSet<>(List.of(superType, subType)));
     if (commonType.isPresent()) {
       return commonType.get().equals(superType);
