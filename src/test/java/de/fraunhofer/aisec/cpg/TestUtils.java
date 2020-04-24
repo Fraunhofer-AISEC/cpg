@@ -43,6 +43,12 @@ import java.util.stream.Collectors;
 
 public class TestUtils {
 
+  public static <S extends Node> S findByPredicate(Collection<S> nodes, Predicate<S> predicate) {
+    List<S> results = nodes.stream().filter(predicate).collect(Collectors.toList());
+    assertEquals(1, results.size());
+    return results.get(0);
+  }
+
   public static <S extends Node> S findByUniqueName(Collection<S> nodes, String name) {
     List<S> results =
         nodes.stream().filter(m -> m.getName().equals(name)).collect(Collectors.toList());

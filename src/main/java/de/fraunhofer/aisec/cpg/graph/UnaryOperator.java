@@ -27,6 +27,7 @@
 package de.fraunhofer.aisec.cpg.graph;
 
 import de.fraunhofer.aisec.cpg.graph.HasType.TypeListener;
+import de.fraunhofer.aisec.cpg.graph.type.PointerType;
 import de.fraunhofer.aisec.cpg.graph.type.Type;
 import de.fraunhofer.aisec.cpg.helpers.Util;
 import java.util.HashSet;
@@ -131,7 +132,7 @@ public class UnaryOperator extends Expression implements TypeListener {
       if (operatorCode.equals("*")) {
         newType = newType.dereference();
       } else if (operatorCode.equals("&")) {
-        newType = newType.reference();
+        newType = newType.reference(PointerType.PointerOrigin.POINTER);
       }
 
       setType(newType, root);
@@ -142,7 +143,7 @@ public class UnaryOperator extends Expression implements TypeListener {
       // Pass the type on to the input in an inversely (de)referenced way
       Type newType = src.getPropagationType();
       if (operatorCode.equals("*")) {
-        newType = src.getPropagationType().reference();
+        newType = src.getPropagationType().reference(PointerType.PointerOrigin.POINTER);
       } else if (operatorCode.equals("&")) {
         newType = src.getPropagationType().dereference();
       }
@@ -173,7 +174,7 @@ public class UnaryOperator extends Expression implements TypeListener {
       currSubTypes =
           currSubTypes.stream()
               .filter(Util.distinctBy(Type::getTypeName))
-              .map(Type::reference)
+              .map(t -> t.reference(PointerType.PointerOrigin.POINTER))
               .collect(Collectors.toSet());
     }
 

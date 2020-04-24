@@ -36,16 +36,34 @@ import java.util.Objects;
 public class PointerType extends Type {
   private Type elementType;
 
-  public PointerType(Type elementType) {
+  public enum PointerOrigin {
+    POINTER,
+    ARRAY,
+  }
+
+  private PointerOrigin pointerOrigin;
+
+  public PointerType(Type elementType, PointerOrigin pointerOrigin) {
     super();
-    this.name = elementType.getName() + "*";
+    if (pointerOrigin == PointerOrigin.ARRAY) {
+      this.name = elementType.getName() + "[]";
+      this.pointerOrigin = PointerOrigin.ARRAY;
+    } else {
+      this.name = elementType.getName() + "*";
+      this.pointerOrigin = PointerOrigin.POINTER;
+    }
     this.elementType = elementType;
   }
 
-  public PointerType(Type type, Type elementType) {
+  public PointerType(Type type, Type elementType, PointerOrigin pointerOrigin) {
     super(type);
-    this.name = elementType.getName() + "*";
+    if (pointerOrigin == PointerOrigin.ARRAY) {
+      this.name = elementType.getName() + "[]";
+    } else {
+      this.name = elementType.getName() + "*";
+    }
     this.elementType = elementType;
+    this.pointerOrigin = pointerOrigin;
   }
 
   /**
@@ -53,8 +71,11 @@ public class PointerType extends Type {
    *     PointerType, e.g. int**
    */
   @Override
-  public PointerType reference() {
-    return new PointerType(this);
+  public PointerType reference(PointerOrigin origin) {
+    if (origin == null) {
+      origin = PointerOrigin.ARRAY;
+    }
+    return new PointerType(this, origin);
   }
 
   /** @return dereferencing a PointerType yields the type the pointer was pointing towards */
@@ -63,9 +84,29 @@ public class PointerType extends Type {
     return elementType;
   }
 
+  public void refreshNames() {
+    if (this.getElementType() instanceof PointerType) {
+      ((PointerType) this.getElementType()).refreshNames();
+    }
+    if (this.pointerOrigin == PointerOrigin.ARRAY) {
+      this.name = this.getElementType().getName() + "[]";
+    } else {
+      this.name = this.getElementType().getName() + "*";
+    }
+  }
+
+  @Override
+  public void setFollowingLevel(Type elementType) {
+    this.elementType = elementType;
+  }
+
   @Override
   public Type duplicate() {
-    return new PointerType(this, this.elementType.duplicate());
+    return new PointerType(this, this.elementType.duplicate(), this.pointerOrigin);
+  }
+
+  public boolean isArray() {
+    return this.pointerOrigin == PointerOrigin.ARRAY;
   }
 
   @Override
@@ -84,6 +125,10 @@ public class PointerType extends Type {
   @Override
   public Type getRoot() {
     return this.elementType.getRoot();
+  }
+
+  public PointerOrigin getPointerOrigin() {
+    return pointerOrigin;
   }
 
   @Override

@@ -38,6 +38,7 @@ import com.github.javaparser.resolution.declarations.ResolvedTypeDeclaration;
 import com.github.javaparser.resolution.declarations.ResolvedValueDeclaration;
 import de.fraunhofer.aisec.cpg.frontends.Handler;
 import de.fraunhofer.aisec.cpg.graph.*;
+import de.fraunhofer.aisec.cpg.graph.type.PointerType;
 import de.fraunhofer.aisec.cpg.graph.type.Type;
 import de.fraunhofer.aisec.cpg.graph.type.TypeParser;
 import de.fraunhofer.aisec.cpg.graph.type.UnknownType;
@@ -91,7 +92,7 @@ public class ExpressionHandler
     if (castExpr.getType().isPrimitiveType()) {
       // Set Type based on the Casting type as it will result in a conversion for primitive types
       castExpression.setType(
-          TypeParser.createFrom(castExpr.getType().resolve().asPrimitive().describe()));
+          TypeParser.createFrom(castExpr.getType().resolve().asPrimitive().describe(), true));
     } else {
       // Get Runtime type from cast expression for complex types;
 
@@ -166,11 +167,11 @@ public class ExpressionHandler
     ConditionalExpr conditionalExpr = expr.asConditionalExpr();
     Type superType;
     try {
-      superType = TypeParser.createFrom(conditionalExpr.calculateResolvedType().describe());
+      superType = TypeParser.createFrom(conditionalExpr.calculateResolvedType().describe(), true);
     } catch (RuntimeException | NoClassDefFoundError e) {
       String s = this.lang.recoverTypeFromUnsolvedException(e);
       if (s != null) {
-        superType = TypeParser.createFrom(s);
+        superType = TypeParser.createFrom(s, true);
       } else {
         superType = null;
       }
@@ -223,7 +224,8 @@ public class ExpressionHandler
               variable.toString(),
               false);
 
-      if (declaration.getType().getTypeAdjustment().contains("[]")) {
+      if (declaration.getType() instanceof PointerType
+          && ((PointerType) declaration.getType()).isArray()) {
         declaration.setIsArray(true);
       }
 
@@ -268,13 +270,14 @@ public class ExpressionHandler
         if (resolve.asField().isStatic()) {
           isStaticAccess = true;
         }
-        baseType = TypeParser.createFrom(resolve.asField().declaringType().getQualifiedName());
+        baseType =
+            TypeParser.createFrom(resolve.asField().declaringType().getQualifiedName(), true);
 
       } catch (RuntimeException | NoClassDefFoundError ex) {
         isStaticAccess = true;
         String typeString = this.lang.recoverTypeFromUnsolvedException(ex);
         if (typeString != null) {
-          baseType = TypeParser.createFrom(typeString);
+          baseType = TypeParser.createFrom(typeString, true);
         } else {
           // try to get the name
           String name;
@@ -286,7 +289,7 @@ public class ExpressionHandler
           }
           String qualifiedNameFromImports = this.lang.getQualifiedNameFromImports(name);
           if (qualifiedNameFromImports != null) {
-            baseType = TypeParser.createFrom(qualifiedNameFromImports);
+            baseType = TypeParser.createFrom(qualifiedNameFromImports, true);
           } else {
             log.info("Unknown base type 1 for {}", fieldAccessExpr);
             baseType = UnknownType.getUnknownType();
@@ -324,7 +327,7 @@ public class ExpressionHandler
         String qualifiedNameFromImports = this.lang.getQualifiedNameFromImports(name);
         Type baseType;
         if (qualifiedNameFromImports != null) {
-          baseType = TypeParser.createFrom(qualifiedNameFromImports);
+          baseType = TypeParser.createFrom(qualifiedNameFromImports, true);
         } else {
           log.info("Unknown base type 2 for {}", fieldAccessExpr);
           baseType = UnknownType.getUnknownType();
@@ -341,16 +344,16 @@ public class ExpressionHandler
     Type fieldType;
     try {
       ResolvedValueDeclaration symbol = fieldAccessExpr.resolve();
-      fieldType = TypeParser.createFrom(symbol.asField().getType().describe());
+      fieldType = TypeParser.createFrom(symbol.asField().getType().describe(), true);
       member =
           NodeBuilder.newDeclaredReferenceExpression(
               fieldAccessExpr.getName().getIdentifier(), fieldType, fieldAccessExpr.toString());
     } catch (RuntimeException | NoClassDefFoundError ex) {
       String typeString = this.lang.recoverTypeFromUnsolvedException(ex);
       if (typeString != null) {
-        fieldType = TypeParser.createFrom(typeString);
+        fieldType = TypeParser.createFrom(typeString, true);
       } else if (fieldAccessExpr.toString().endsWith(".length")) {
-        fieldType = TypeParser.createFrom("int");
+        fieldType = TypeParser.createFrom("int", true);
       } else {
         log.info("Unknown field type for {}", fieldAccessExpr);
         fieldType = UnknownType.getUnknownType();
@@ -371,26 +374,30 @@ public class ExpressionHandler
     String value = literalExpr.toString();
     if (literalExpr instanceof IntegerLiteralExpr) {
       return NodeBuilder.newLiteral(
-          literalExpr.asIntegerLiteralExpr().asNumber(), TypeParser.createFrom("int"), value);
+          literalExpr.asIntegerLiteralExpr().asNumber(), TypeParser.createFrom("int", true), value);
     } else if (literalExpr instanceof StringLiteralExpr) {
       return NodeBuilder.newLiteral(
           literalExpr.asStringLiteralExpr().asString(),
-          TypeParser.createFrom("java.lang.String"),
+          TypeParser.createFrom("java.lang.String", true),
           value);
     } else if (literalExpr instanceof BooleanLiteralExpr) {
       return NodeBuilder.newLiteral(
-          literalExpr.asBooleanLiteralExpr().getValue(), TypeParser.createFrom("boolean"), value);
+          literalExpr.asBooleanLiteralExpr().getValue(),
+          TypeParser.createFrom("boolean", true),
+          value);
     } else if (literalExpr instanceof CharLiteralExpr) {
       return NodeBuilder.newLiteral(
-          literalExpr.asCharLiteralExpr().asChar(), TypeParser.createFrom("char"), value);
+          literalExpr.asCharLiteralExpr().asChar(), TypeParser.createFrom("char", true), value);
     } else if (literalExpr instanceof DoubleLiteralExpr) {
       return NodeBuilder.newLiteral(
-          literalExpr.asDoubleLiteralExpr().asDouble(), TypeParser.createFrom("double"), value);
+          literalExpr.asDoubleLiteralExpr().asDouble(),
+          TypeParser.createFrom("double", true),
+          value);
     } else if (literalExpr instanceof LongLiteralExpr) {
       return NodeBuilder.newLiteral(
-          literalExpr.asLongLiteralExpr().asNumber(), TypeParser.createFrom("long"), value);
+          literalExpr.asLongLiteralExpr().asNumber(), TypeParser.createFrom("long", true), value);
     } else if (literalExpr instanceof NullLiteralExpr) {
-      return NodeBuilder.newLiteral(null, TypeParser.createFrom("null"), value);
+      return NodeBuilder.newLiteral(null, TypeParser.createFrom("null", true), value);
     }
 
     return null;
@@ -399,7 +406,7 @@ public class ExpressionHandler
   private DeclaredReferenceExpression handleClassExpression(Expression expr) {
     ClassExpr classExpr = expr.asClassExpr();
 
-    Type type = TypeParser.createFrom(classExpr.getType().asString());
+    Type type = TypeParser.createFrom(classExpr.getType().asString(), true);
 
     DeclaredReferenceExpression thisExpression =
         NodeBuilder.newStaticReferenceExpression(
@@ -416,7 +423,7 @@ public class ExpressionHandler
     ThisExpr thisExpr = expr.asThisExpr();
     ResolvedTypeDeclaration resolvedValueDeclaration = thisExpr.resolve();
 
-    Type type = TypeParser.createFrom(resolvedValueDeclaration.getQualifiedName());
+    Type type = TypeParser.createFrom(resolvedValueDeclaration.getQualifiedName(), true);
 
     DeclaredReferenceExpression thisExpression =
         NodeBuilder.newDeclaredReferenceExpression(thisExpr.toString(), type, thisExpr.toString());
@@ -470,7 +477,7 @@ public class ExpressionHandler
           return (de.fraunhofer.aisec.cpg.graph.Expression) handle(fieldAccessExpr);
         }
       } else {
-        Type type = TypeParser.createFrom(symbol.getType().describe());
+        Type type = TypeParser.createFrom(symbol.getType().describe(), true);
 
         DeclaredReferenceExpression declaredReferenceExpression =
             NodeBuilder.newDeclaredReferenceExpression(symbol.getName(), type, nameExpr.toString());
@@ -488,10 +495,10 @@ public class ExpressionHandler
       }
       Type t;
       if (typeString == null) {
-        t = TypeParser.createFrom("UNKNOWN3");
+        t = TypeParser.createFrom("UNKNOWN3", true);
         log.info("Unresolved symbol: {}", nameExpr.getNameAsString());
       } else {
-        t = TypeParser.createFrom(typeString);
+        t = TypeParser.createFrom(typeString, true);
         t.setTypeOrigin(Type.Origin.GUESSED);
       }
 
@@ -503,7 +510,7 @@ public class ExpressionHandler
 
       return declaredReferenceExpression;
     } catch (RuntimeException | NoClassDefFoundError ex) {
-      Type t = TypeParser.createFrom("UNKNOWN4");
+      Type t = TypeParser.createFrom("UNKNOWN4", true);
       log.info("Unresolved symbol: {}", nameExpr.getNameAsString());
 
       DeclaredReferenceExpression declaredReferenceExpression =
@@ -527,7 +534,7 @@ public class ExpressionHandler
     de.fraunhofer.aisec.cpg.graph.Expression rhs =
         NodeBuilder.newLiteral(
             typeAsGoodAsPossible.getTypeName(),
-            TypeParser.createFrom("class"),
+            TypeParser.createFrom("class", true),
             binaryExpr.getTypeAsString());
 
     BinaryOperator binaryOperator =
@@ -637,7 +644,7 @@ public class ExpressionHandler
       log.debug("Could not resolve return type for {}", methodCallExpr);
     }
 
-    callExpression.setType(TypeParser.createFrom(typeString));
+    callExpression.setType(TypeParser.createFrom(typeString, true));
 
     NodeList<Expression> arguments = methodCallExpr.getArguments();
 

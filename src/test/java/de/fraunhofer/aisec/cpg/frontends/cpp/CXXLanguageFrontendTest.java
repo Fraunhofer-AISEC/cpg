@@ -71,7 +71,7 @@ class CXXLanguageFrontendTest {
 
     VariableDeclaration ls = main.getVariableDeclarationByName("ls").orElse(null);
     assertNotNull(ls);
-    assertEquals(TypeParser.createFrom("std::vector<int>"), ls.getType());
+    assertEquals(TypeParser.createFrom("std::vector<int>", true), ls.getType());
     assertEquals("ls", ls.getName());
 
     ForEachStatement forEachStatement = main.getBodyStatementAs(1, ForEachStatement.class);
@@ -109,14 +109,14 @@ class CXXLanguageFrontendTest {
     VariableDeclaration parameter = catchClauses.get(0).getParameter();
     assertNotNull(parameter);
     assertEquals("e", parameter.getName());
-    assertEquals(TypeParser.createFrom("const std::exception&"), parameter.getType());
+    assertEquals(TypeParser.createFrom("const std::exception&", true), parameter.getType());
 
     // anonymous variable (this is not 100% handled correctly but will do for now)
     parameter = catchClauses.get(1).getParameter();
     assertNotNull(parameter);
     // this is currently our 'unnamed' parameter
     assertEquals("", parameter.getName());
-    assertEquals(TypeParser.createFrom("const std::exception&"), parameter.getType());
+    assertEquals(TypeParser.createFrom("const std::exception&", true), parameter.getType());
 
     // catch all
     parameter = catchClauses.get(2).getParameter();
@@ -139,7 +139,7 @@ class CXXLanguageFrontendTest {
     TypeIdExpression sizeof = (TypeIdExpression) i.getInitializer();
     assertNotNull(sizeof);
     assertEquals("sizeof", sizeof.getName());
-    assertEquals(TypeParser.createFrom("std::size_t"), sizeof.getType());
+    assertEquals(TypeParser.createFrom("std::size_t", true), sizeof.getType());
 
     VariableDeclaration typeInfo = main.getVariableDeclarationByName("typeInfo").orElse(null);
     assertNotNull(typeInfo);
@@ -147,7 +147,7 @@ class CXXLanguageFrontendTest {
     TypeIdExpression typeid = (TypeIdExpression) typeInfo.getInitializer();
     assertNotNull(typeid);
     assertEquals("typeid", typeid.getName());
-    assertEquals(TypeParser.createFrom("const std::type_info&"), typeid.getType());
+    assertEquals(TypeParser.createFrom("const std::type_info&", true), typeid.getType());
 
     VariableDeclaration j = main.getVariableDeclarationByName("j").orElse(null);
     assertNotNull(j);
@@ -155,7 +155,7 @@ class CXXLanguageFrontendTest {
     TypeIdExpression alignof = (TypeIdExpression) j.getInitializer();
     assertNotNull(sizeof);
     assertEquals("alignof", alignof.getName());
-    assertEquals(TypeParser.createFrom("std::size_t"), alignof.getType());
+    assertEquals(TypeParser.createFrom("std::size_t", true), alignof.getType());
   }
 
   @Test
@@ -171,19 +171,19 @@ class CXXLanguageFrontendTest {
             Objects.requireNonNull(main.getBodyStatementAs(0, DeclarationStatement.class))
                 .getSingleDeclaration();
     assertNotNull(e);
-    assertEquals(TypeParser.createFrom("ExtendedClass*"), e.getType());
+    assertEquals(TypeParser.createFrom("ExtendedClass*", true), e.getType());
 
     VariableDeclaration b =
         (VariableDeclaration)
             Objects.requireNonNull(main.getBodyStatementAs(1, DeclarationStatement.class))
                 .getSingleDeclaration();
     assertNotNull(b);
-    assertEquals(TypeParser.createFrom("BaseClass*"), b.getType());
+    assertEquals(TypeParser.createFrom("BaseClass*", true), b.getType());
 
     // initializer
     CastExpression cast = (CastExpression) b.getInitializer();
     assertNotNull(cast);
-    assertEquals(TypeParser.createFrom("BaseClass*"), cast.getCastType());
+    assertEquals(TypeParser.createFrom("BaseClass*", true), cast.getCastType());
 
     BinaryOperator staticCast = main.getBodyStatementAs(2, BinaryOperator.class);
     assertNotNull(staticCast);
@@ -207,7 +207,7 @@ class CXXLanguageFrontendTest {
 
     cast = (CastExpression) d.getInitializer();
     assertNotNull(cast);
-    assertEquals(TypeParser.createFrom("int"), cast.getCastType());
+    assertEquals(TypeParser.createFrom("int", true), cast.getCastType());
   }
 
   @Test
@@ -225,7 +225,7 @@ class CXXLanguageFrontendTest {
         (VariableDeclaration)
             ((DeclarationStatement) statement.getStatements().get(0)).getSingleDeclaration();
     assertNotNull(x);
-    assertEquals(TypeParser.createFrom("int[]"), x.getType());
+    assertEquals(TypeParser.createFrom("int[]", true), x.getType());
 
     // initializer is a initializer list expression
     InitializerListExpression ile = (InitializerListExpression) x.getInitializer();
@@ -428,7 +428,7 @@ class CXXLanguageFrontendTest {
         ((DeclarationStatement) statements.get(0))
             .getSingleDeclarationAs(VariableDeclaration.class);
 
-    assertEquals(TypeParser.createFrom("SSL_CTX*"), declFromMultiplicateExpression.getType());
+    assertEquals(TypeParser.createFrom("SSL_CTX*", true), declFromMultiplicateExpression.getType());
     assertEquals("ptr", declFromMultiplicateExpression.getName());
 
     VariableDeclaration withInitializer =
@@ -450,7 +450,7 @@ class CXXLanguageFrontendTest {
             .getSingleDeclarationAs(VariableDeclaration.class);
     initializer = withoutInitializer.getInitializer();
 
-    assertEquals(TypeParser.createFrom("int*"), withoutInitializer.getType());
+    assertEquals(TypeParser.createFrom("int*", true), withoutInitializer.getType());
     assertEquals("d", withoutInitializer.getName());
 
     assertNull(initializer);
@@ -459,7 +459,7 @@ class CXXLanguageFrontendTest {
         ((DeclarationStatement) statements.get(4))
             .getSingleDeclarationAs(VariableDeclaration.class);
 
-    assertEquals(TypeParser.createFrom("std.string"), qualifiedType.getType());
+    assertEquals(TypeParser.createFrom("std.string", true), qualifiedType.getType());
     assertEquals("text", qualifiedType.getName());
     assertTrue(qualifiedType.getInitializer() instanceof Literal);
     assertEquals("some text", ((Literal) qualifiedType.getInitializer()).getValue());
@@ -468,7 +468,7 @@ class CXXLanguageFrontendTest {
         ((DeclarationStatement) statements.get(5))
             .getSingleDeclarationAs(VariableDeclaration.class);
 
-    assertEquals(TypeParser.createFrom("void*"), pointerWithAssign.getType());
+    assertEquals(TypeParser.createFrom("void*", true), pointerWithAssign.getType());
     assertEquals("ptr", pointerWithAssign.getName());
     assertEquals("NULL", pointerWithAssign.getInitializer().getName());
   }
@@ -663,7 +663,7 @@ class CXXLanguageFrontendTest {
     DeclarationStatement stmt = (DeclarationStatement) statements.get(4);
     VariableDeclaration decl = (VariableDeclaration) stmt.getSingleDeclaration();
 
-    assertEquals(TypeParser.createFrom("std.string*"), decl.getType());
+    assertEquals(TypeParser.createFrom("std.string*", true), decl.getType());
     assertEquals("notMultiplication", decl.getName());
     assertTrue(decl.getInitializer() instanceof BinaryOperator);
 
@@ -694,26 +694,26 @@ class CXXLanguageFrontendTest {
             .findFirst()
             .get();
 
-    assertEquals(TypeParser.createFrom("void*"), field.getType());
+    assertEquals(TypeParser.createFrom("void*", true), field.getType());
 
     assertEquals(2, recordDeclaration.getMethods().size());
 
     MethodDeclaration method = recordDeclaration.getMethods().get(0);
 
     assertEquals("method", method.getName());
-    assertEquals(TypeParser.createFrom("void*"), method.getType());
+    assertEquals(TypeParser.createFrom("void*", true), method.getType());
     assertFalse(method.hasBody());
 
     MethodDeclaration inlineMethod = recordDeclaration.getMethods().get(1);
 
     assertEquals("inlineMethod", inlineMethod.getName());
-    assertEquals(TypeParser.createFrom("void*"), inlineMethod.getType());
+    assertEquals(TypeParser.createFrom("void*", true), inlineMethod.getType());
     assertTrue(inlineMethod.hasBody());
 
     ConstructorDeclaration constructor = recordDeclaration.getConstructors().get(0);
 
     assertEquals(recordDeclaration.getName(), constructor.getName());
-    assertEquals(TypeParser.createFrom("void"), constructor.getType());
+    assertEquals(TypeParser.createFrom("void", true), constructor.getType());
     assertTrue(constructor.hasBody());
   }
 
@@ -725,7 +725,7 @@ class CXXLanguageFrontendTest {
 
     VariableDeclaration s = declaration.getDeclarationAs(0, VariableDeclaration.class);
 
-    assertEquals(TypeParser.createFrom("char[]"), s.getType());
+    assertEquals(TypeParser.createFrom("char[]", true), s.getType());
     assertEquals("s", s.getName());
 
     Expression initializer = s.getInitializer();
@@ -734,7 +734,7 @@ class CXXLanguageFrontendTest {
 
     VariableDeclaration i = declaration.getDeclarationAs(1, VariableDeclaration.class);
 
-    assertEquals(TypeParser.createFrom("int"), i.getType());
+    assertEquals(TypeParser.createFrom("int", true), i.getType());
     assertEquals("i", i.getName());
 
     initializer = i.getInitializer();
@@ -743,7 +743,7 @@ class CXXLanguageFrontendTest {
 
     VariableDeclaration f = declaration.getDeclarationAs(2, VariableDeclaration.class);
 
-    assertEquals(TypeParser.createFrom("float"), f.getType());
+    assertEquals(TypeParser.createFrom("float", true), f.getType());
     assertEquals("f", f.getName());
 
     initializer = f.getInitializer();
@@ -752,7 +752,7 @@ class CXXLanguageFrontendTest {
 
     VariableDeclaration d = declaration.getDeclarationAs(3, VariableDeclaration.class);
 
-    assertEquals(TypeParser.createFrom("double"), d.getType());
+    assertEquals(TypeParser.createFrom("double", true), d.getType());
     assertEquals("d", d.getName());
 
     initializer = d.getInitializer();
@@ -761,7 +761,7 @@ class CXXLanguageFrontendTest {
 
     VariableDeclaration b = declaration.getDeclarationAs(4, VariableDeclaration.class);
 
-    assertEquals(TypeParser.createFrom("bool"), b.getType());
+    assertEquals(TypeParser.createFrom("bool", true), b.getType());
     assertEquals("b", b.getName());
 
     initializer = b.getInitializer();
@@ -770,7 +770,7 @@ class CXXLanguageFrontendTest {
 
     VariableDeclaration c = declaration.getDeclarationAs(5, VariableDeclaration.class);
 
-    assertEquals(TypeParser.createFrom("char"), c.getType());
+    assertEquals(TypeParser.createFrom("char", true), c.getType());
     assertEquals("c", c.getName());
 
     initializer = c.getInitializer();
@@ -807,7 +807,7 @@ class CXXLanguageFrontendTest {
     // int z[] = { 2, 3, 4 };
     VariableDeclaration z = declaration.getDeclarationAs(2, VariableDeclaration.class);
 
-    assertEquals(TypeParser.createFrom("int[]"), z.getType());
+    assertEquals(TypeParser.createFrom("int[]", true), z.getType());
 
     initializer = z.getInitializer();
 
@@ -837,13 +837,13 @@ class CXXLanguageFrontendTest {
             ((DeclarationStatement) statement.getStatements().get(0)).getSingleDeclaration();
 
     // type should be Integer
-    assertEquals(TypeParser.createFrom("Integer"), i.getType());
+    assertEquals(TypeParser.createFrom("Integer", true), i.getType());
 
     // initializer should be a construct expression
     ConstructExpression constructExpression = (ConstructExpression) i.getInitializer();
 
     // type of the construct expression should also be Integer
-    assertEquals(TypeParser.createFrom("Integer"), constructExpression.getType());
+    assertEquals(TypeParser.createFrom("Integer", true), constructExpression.getType());
 
     // auto (Integer) m
     VariableDeclaration m =
@@ -851,19 +851,19 @@ class CXXLanguageFrontendTest {
             ((DeclarationStatement) statement.getStatements().get(6)).getSingleDeclaration();
 
     // type should be Integer
-    assertEquals(TypeParser.createFrom("Integer"), m.getType());
+    assertEquals(TypeParser.createFrom("Integer", true), m.getType());
 
     // initializer should be a new expression
     NewExpression newExpression = (NewExpression) m.getInitializer();
 
     // type of the new expression should also be Integer
-    assertEquals(TypeParser.createFrom("Integer"), newExpression.getType());
+    assertEquals(TypeParser.createFrom("Integer", true), newExpression.getType());
 
     // initializer should be a construct expression
     constructExpression = (ConstructExpression) newExpression.getInitializer();
 
     // type of the construct expression should also be Integer
-    assertEquals(TypeParser.createFrom("Integer"), constructExpression.getType());
+    assertEquals(TypeParser.createFrom("Integer", true), constructExpression.getType());
 
     // argument should be named k and of type m
     DeclaredReferenceExpression k =
@@ -871,7 +871,7 @@ class CXXLanguageFrontendTest {
     assertEquals("k", k.getName());
 
     // type of the construct expression should also be Integer
-    assertEquals(TypeParser.createFrom("int"), k.getType());
+    assertEquals(TypeParser.createFrom("int", true), k.getType());
   }
 
   List<Statement> getStatementsOfFunction(FunctionDeclaration declaration) {

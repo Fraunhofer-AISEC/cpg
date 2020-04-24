@@ -30,8 +30,8 @@ import static de.fraunhofer.aisec.cpg.helpers.Util.errorWithFileLocation;
 
 import de.fraunhofer.aisec.cpg.frontends.Handler;
 import de.fraunhofer.aisec.cpg.graph.*;
-import de.fraunhofer.aisec.cpg.graph.type.TypeParser;
 import de.fraunhofer.aisec.cpg.graph.TypeManager;
+import de.fraunhofer.aisec.cpg.graph.type.TypeParser;
 import de.fraunhofer.aisec.cpg.helpers.Util;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -111,7 +111,7 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
 
     functionDeclaration.setType(
         TypeParser.createFrom(
-            ctx.getRawSignature().split(functionDeclaration.getName())[0].trim()));
+            ctx.getRawSignature().split(functionDeclaration.getName())[0].trim(), true));
 
     if (ctx.getBody() != null) {
       Statement bodyStatement = this.lang.getStatementHandler().handle(ctx.getBody());

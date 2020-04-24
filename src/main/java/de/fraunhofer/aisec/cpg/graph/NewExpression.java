@@ -26,7 +26,6 @@
 
 package de.fraunhofer.aisec.cpg.graph;
 
-import de.fraunhofer.aisec.cpg.graph.type.TypeParser;
 import java.util.Objects;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 

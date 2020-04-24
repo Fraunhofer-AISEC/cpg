@@ -12,8 +12,8 @@ public class IncompleteType extends Type {
 
   /** @return PointerType to a IncompleteType, e.g. void* */
   @Override
-  public Type reference() {
-    return new PointerType(this);
+  public Type reference(PointerType.PointerOrigin pointerOrigin) {
+    return new PointerType(this, pointerOrigin);
   }
 
   /** @return dereferencing void results in void therefore the same type is returned */

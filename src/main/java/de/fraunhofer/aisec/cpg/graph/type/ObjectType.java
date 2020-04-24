@@ -95,8 +95,8 @@ public class ObjectType extends Type {
 
   /** @return PointerType to a ObjectType, e.g. int* */
   @Override
-  public PointerType reference() {
-    return new PointerType(this);
+  public PointerType reference(PointerType.PointerOrigin pointerOrigin) {
+    return new PointerType(this, pointerOrigin);
   }
 
   /**

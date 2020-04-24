@@ -33,6 +33,7 @@ import de.fraunhofer.aisec.cpg.TranslationConfiguration;
 import de.fraunhofer.aisec.cpg.frontends.TranslationException;
 import de.fraunhofer.aisec.cpg.graph.*;
 import de.fraunhofer.aisec.cpg.graph.type.Type;
+import de.fraunhofer.aisec.cpg.graph.type.TypeParser;
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager;
 import java.io.File;
 import java.math.BigInteger;
@@ -62,12 +63,12 @@ public class CXXLiteralTest {
     assertNotNull(zero);
     assertEquals("zero", zero.getName());
 
-    assertLiteral(0, Type.createFrom("int"), zero, "i");
-    assertLiteral(0L, Type.createFrom("long"), zero, "l_with_suffix");
-    assertLiteral(0L, Type.createFrom("long long"), zero, "l_long_long_with_suffix");
+    assertLiteral(0, TypeParser.createFrom("int", true), zero, "i");
+    assertLiteral(0L, TypeParser.createFrom("long", true), zero, "l_with_suffix");
+    assertLiteral(0L, TypeParser.createFrom("long long", true), zero, "l_long_long_with_suffix");
     assertLiteral(
         BigInteger.valueOf(0),
-        Type.createFrom("unsigned long long"),
+        TypeParser.createFrom("unsigned long long", true),
         zero,
         "l_unsigned_long_long_with_suffix");
   }
@@ -83,25 +84,29 @@ public class CXXLiteralTest {
     assertNotNull(decimal);
     assertEquals("decimal", decimal.getName());
 
-    assertLiteral(42, Type.createFrom("int"), decimal, "i");
-    assertLiteral(9223372036854775807L, Type.createFrom("long"), decimal, "l");
-    assertLiteral(9223372036854775807L, Type.createFrom("long"), decimal, "l_with_suffix");
+    assertLiteral(42, TypeParser.createFrom("int", true), decimal, "i");
+    assertLiteral(9223372036854775807L, TypeParser.createFrom("long", true), decimal, "l");
     assertLiteral(
-        9223372036854775807L, Type.createFrom("long long"), decimal, "l_long_long_with_suffix");
+        9223372036854775807L, TypeParser.createFrom("long", true), decimal, "l_with_suffix");
+    assertLiteral(
+        9223372036854775807L,
+        TypeParser.createFrom("long long", true),
+        decimal,
+        "l_long_long_with_suffix");
 
     assertLiteral(
         new BigInteger("9223372036854775809"),
-        Type.createFrom("unsigned long"),
+        TypeParser.createFrom("unsigned long", true),
         decimal,
         "l_unsigned_long_with_suffix");
     assertLiteral(
         new BigInteger("9223372036854775808"),
-        Type.createFrom("unsigned long long"),
+        TypeParser.createFrom("unsigned long long", true),
         decimal,
         "l_long_long_implicit");
     assertLiteral(
         new BigInteger("9223372036854775809"),
-        Type.createFrom("unsigned long long"),
+        TypeParser.createFrom("unsigned long long", true),
         decimal,
         "l_unsigned_long_long_with_suffix");
   }
@@ -117,11 +122,11 @@ public class CXXLiteralTest {
     assertNotNull(octal);
     assertEquals("octal", octal.getName());
 
-    assertLiteral(42, Type.createFrom("int"), octal, "i");
-    assertLiteral(42L, Type.createFrom("long"), octal, "l_with_suffix");
+    assertLiteral(42, TypeParser.createFrom("int", true), octal, "i");
+    assertLiteral(42L, TypeParser.createFrom("long", true), octal, "l_with_suffix");
     assertLiteral(
         BigInteger.valueOf(42),
-        Type.createFrom("unsigned long long"),
+        TypeParser.createFrom("unsigned long long", true),
         octal,
         "l_unsigned_long_long_with_suffix");
   }
@@ -138,11 +143,11 @@ public class CXXLiteralTest {
     assertNotNull(functionDeclaration);
     assertEquals("hex", functionDeclaration.getName());
 
-    assertLiteral(42, Type.createFrom("int"), functionDeclaration, "i");
-    assertLiteral(42L, Type.createFrom("long"), functionDeclaration, "l_with_suffix");
+    assertLiteral(42, TypeParser.createFrom("int", true), functionDeclaration, "i");
+    assertLiteral(42L, TypeParser.createFrom("long", true), functionDeclaration, "l_with_suffix");
     assertLiteral(
         BigInteger.valueOf(42),
-        Type.createFrom("unsigned long long"),
+        TypeParser.createFrom("unsigned long long", true),
         functionDeclaration,
         "l_unsigned_long_long_with_suffix");
   }

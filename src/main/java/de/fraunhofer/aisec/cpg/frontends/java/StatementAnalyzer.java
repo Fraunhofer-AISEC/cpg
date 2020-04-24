@@ -259,7 +259,8 @@ public class StatementAnalyzer
     // Adds true expression node where default empty condition evaluates to true, remove here and in
     // cpp StatementHandler
     if (statement.getCondition() == null) {
-      Literal literal = NodeBuilder.newLiteral(true, TypeParser.createFrom("boolean"), "true");
+      Literal literal =
+          NodeBuilder.newLiteral(true, TypeParser.createFrom("boolean", true), "true");
       statement.setCondition(literal);
     }
 
@@ -621,7 +622,7 @@ public class StatementAnalyzer
         possibleTypes.add(lang.getTypeAsGoodAsPossible(t));
       }
       // we do not know which of the exceptions was actually thrown, so we assume this might be any
-      concreteType = TypeParser.createFrom("java.lang.Throwable");
+      concreteType = TypeParser.createFrom("java.lang.Throwable", true);
       concreteType.setTypeOrigin(Type.Origin.GUESSED);
     } else {
       concreteType = lang.getTypeAsGoodAsPossible(catchCls.getParameter().getType());

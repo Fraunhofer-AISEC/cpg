@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.graph;
 
 import de.fraunhofer.aisec.cpg.graph.HasType.TypeListener;
 import de.fraunhofer.aisec.cpg.graph.type.Type;
+import de.fraunhofer.aisec.cpg.graph.type.TypeParser;
 import de.fraunhofer.aisec.cpg.helpers.Util;
 import de.fraunhofer.aisec.cpg.passes.CallResolver;
 import java.util.*;
@@ -67,7 +68,7 @@ public class ConstructExpression extends Expression implements TypeListener {
   public void setInstantiates(Declaration instantiates) {
     this.instantiates = instantiates;
     if (instantiates != null) {
-      setType(new Type(instantiates.getName()));
+      setType(TypeParser.createFrom(instantiates.getName(), true));
     }
   }
 

@@ -106,10 +106,14 @@ public class TypeManager {
   }
 
   private Optional<Type> rewrapType(
-      Type type, int depth, boolean reference, ReferenceType referenceType) {
+      Type type,
+      int depth,
+      PointerType.PointerOrigin pointerOrigin,
+      boolean reference,
+      ReferenceType referenceType) {
     if (depth > 0) {
       for (int i = 0; i < depth; i++) {
-        type = type.reference();
+        type = type.reference(pointerOrigin);
       }
     }
     if (reference) {
@@ -133,6 +137,7 @@ public class TypeManager {
     int depth = 0;
     int counter = 0;
     boolean reference = false;
+    PointerType.PointerOrigin pointerOrigin = null;
     ReferenceType referenceType = null;
 
     for (Type t : types) {
@@ -162,6 +167,7 @@ public class TypeManager {
           return Optional.empty();
         }
         unwrappedTypes.add(t.getRoot());
+        pointerOrigin = ((PointerType) t).getPointerOrigin();
       }
     }
 
@@ -170,7 +176,7 @@ public class TypeManager {
     if (types.isEmpty()) {
       return Optional.empty();
     } else if (types.size() == 1) {
-      return rewrapType(types.iterator().next(), depth, reference, referenceType);
+      return rewrapType(types.iterator().next(), depth, pointerOrigin, reference, referenceType);
     }
     typeToRecord =
         frontend.getScopeManager()
@@ -207,7 +213,7 @@ public class TypeManager {
 
     Optional<Ancestor> lca =
         commonAncestors.stream().max(Comparator.comparingInt(Ancestor::getDepth));
-    Optional<Type> commonType = lca.map(a -> TypeParser.createFrom(a.getRecord().getName()));
+    Optional<Type> commonType = lca.map(a -> TypeParser.createFrom(a.getRecord().getName(), true));
 
     Type finalType;
     if (commonType.isPresent()) {
@@ -216,7 +222,7 @@ public class TypeManager {
       return commonType;
     }
 
-    return rewrapType(finalType, depth, reference, referenceType);
+    return rewrapType(finalType, depth, pointerOrigin, reference, referenceType);
   }
 
   private Set<Ancestor> getAncestors(RecordDeclaration record, int depth) {
@@ -271,15 +277,10 @@ public class TypeManager {
   }
 
   public boolean checkArrayAndPointer(Type first, Type second) {
-    int firstDepth =
-        StringUtils.countMatches(first.getTypeAdjustment(), '*')
-            + StringUtils.countMatches(first.getTypeAdjustment(), "[]");
-    int secondDepth =
-        StringUtils.countMatches(second.getTypeAdjustment(), "[]")
-            + StringUtils.countMatches(second.getTypeAdjustment(), '*');
+    int firstDepth = first.getReferenceDepth();
+    int secondDepth = second.getReferenceDepth();
     if (firstDepth == secondDepth) {
-      return first.getTypeName().equals(second.getTypeName())
-          && first.getTypeModifier().equals(second.getTypeModifier());
+      return first.getTypeName().equals(second.getTypeName()) && first.isSimilar(second);
     } else {
       return false;
     }
@@ -293,17 +294,18 @@ public class TypeManager {
   private Type getTargetType(Type currTarget, String alias) {
     if (alias.contains("(") && alias.contains("*")) {
       // function pointer
-      Type fptrType = Type.createFrom(currTarget.toString() + " " + alias);
-      fptrType.setFunctionPtr(true);
+      Type fptrType = TypeParser.createFrom(currTarget.getName() + " " + alias, true);
+      // fptrType.setFunctionPtr(true);
+      // TODO CPS check
       return fptrType;
     } else if (alias.endsWith("]")) {
       // array type
-      return Type.createFrom(currTarget.toString() + alias.substring(alias.indexOf('[')));
+      return currTarget.reference(PointerType.PointerOrigin.ARRAY);
     } else if (alias.contains("*")) {
       // pointer
       int depth = StringUtils.countMatches(alias, '*');
       for (int i = 0; i < depth; i++) {
-        currTarget = currTarget.reference();
+        currTarget = currTarget.reference(PointerType.PointerOrigin.POINTER);
       }
       return currTarget;
     } else {
@@ -316,19 +318,15 @@ public class TypeManager {
       // function pointer
       Matcher matcher = funPointerPattern.matcher(alias);
       if (matcher.find()) {
-        return Type.createIgnoringAlias(matcher.group("alias"));
+        return TypeParser.createIgnoringAlias(matcher.group("alias"));
       } else {
         log.error("Could not find alias name in function pointer typedef: {}", alias);
-        return Type.createIgnoringAlias(alias);
+        return TypeParser.createIgnoringAlias(alias);
       }
-    } else if (alias.endsWith("]")) {
-      // array type
-      return Type.createIgnoringAlias(alias.substring(0, alias.indexOf('[')));
-    } else if (alias.contains("*")) {
-      // pointer
-      return Type.createIgnoringAlias(alias.replace("*", ""));
     } else {
-      return Type.createIgnoringAlias(alias);
+      alias = alias.split("\\[")[0];
+      alias = alias.replace("*", "");
+      return TypeParser.createIgnoringAlias(alias);
     }
   }
 
@@ -346,9 +344,9 @@ public class TypeManager {
       }
       // typedefs can be wildly mixed around, but the last item is always the alias to be defined
       Type target =
-          Type.createFrom(
-              Util.removeRedundantParentheses(
-                  String.join(" ", parts.subList(0, parts.size() - 1))));
+          TypeParser.createFrom(
+              Util.removeRedundantParentheses(String.join(" ", parts.subList(0, parts.size() - 1))),
+              true);
       handleSingleAlias(rawCode, target, parts.get(parts.size() - 1));
     }
   }
@@ -360,7 +358,7 @@ public class TypeManager {
       log.error("Cannot find out target type for {}", rawCode);
       return;
     }
-    Type target = Type.createFrom(splitFirst[0]);
+    Type target = TypeParser.createFrom(splitFirst[0], true);
     parts.set(0, parts.get(0).substring(splitFirst[0].length()).strip());
     for (String part : parts) {
       handleSingleAlias(rawCode, target, part);
@@ -375,7 +373,7 @@ public class TypeManager {
       Optional<String> name =
           parts.stream().filter(p -> !p.contains("*") && !p.contains("[")).findFirst();
       if (name.isPresent()) {
-        Type target = Type.createIgnoringAlias(name.get());
+        Type target = TypeParser.createIgnoringAlias(name.get());
         for (String part : parts) {
           if (!part.equals(name.get())) {
             handleSingleAlias(rawCode, target, part);
@@ -393,6 +391,15 @@ public class TypeManager {
     String cleanedPart = Util.removeRedundantParentheses(aliasString);
     Type currTarget = getTargetType(target, cleanedPart);
     Type alias = getAlias(cleanedPart);
+
+    if (!alias.isFirstOrderType()) {
+      Type chain = alias.duplicate();
+      chain.setRoot(currTarget);
+      currTarget = chain;
+      currTarget.refreshNames();
+      alias = alias.getRoot();
+    }
+
     TypedefDeclaration typedef = NodeBuilder.newTypedefDeclaration(currTarget, alias, rawCode);
     frontend.getScopeManager().addTypedef(typedef);
   }
@@ -405,30 +412,19 @@ public class TypeManager {
       }
       return alias;
     }
-    Type toCheck = alias;
-    int pointerDepth = 0;
-    while (toCheck.getTypeAdjustment().contains("*")
-        || toCheck.getTypeAdjustment().contains("[]")) {
-      toCheck = toCheck.dereference();
-      pointerDepth++;
-    }
+    Type toCheck = alias.getRoot();
 
     Type finalToCheck = toCheck;
     Optional<Type> applicable =
         frontend.getScopeManager().getCurrentTypedefs().stream()
-            .filter(t -> t.getAlias().equals(finalToCheck))
+            .filter(t -> t.getAlias().getRoot().equals(finalToCheck))
             .findAny()
             .map(TypedefDeclaration::getType);
 
     if (applicable.isEmpty()) {
       return alias;
     } else {
-      Type result = applicable.get();
-      while (pointerDepth > 0) {
-        result = result.reference();
-        pointerDepth--;
-      }
-      return result;
+      return TypeParser.reWrapType(alias, applicable.get());
     }
   }
 

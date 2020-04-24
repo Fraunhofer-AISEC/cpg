@@ -146,7 +146,7 @@ class JavaLanguageFrontendTest {
     VariableDeclaration s = (VariableDeclaration) forEachStatement.getVariable();
     assertNotNull(s);
     assertEquals("s", s.getName());
-    assertEquals(TypeParser.createFrom("java.lang.String"), s.getType());
+    assertEquals(TypeParser.createFrom("java.lang.String", true), s.getType());
 
     // should contain a single statement
     StaticCallExpression sce = (StaticCallExpression) forEachStatement.getStatement();
@@ -176,15 +176,15 @@ class JavaLanguageFrontendTest {
     assertEquals(3, catchClauses.size());
     // first exception type was resolved, so we can expect a FQN
     assertEquals(
-        TypeParser.createFrom("java.lang.NumberFormatException"),
+        TypeParser.createFrom("java.lang.NumberFormatException", true),
         Objects.requireNonNull(catchClauses.get(0).getParameter()).getType());
     // second one could not be resolved so we do not have an FQN
     assertEquals(
-        TypeParser.createFrom("NotResolvableTypeException"),
+        TypeParser.createFrom("NotResolvableTypeException", true),
         Objects.requireNonNull(catchClauses.get(1).getParameter()).getType());
     // third type should have been resolved through the import
     assertEquals(
-        TypeParser.createFrom("some.ImportedException"),
+        TypeParser.createFrom("some.ImportedException", true),
         Objects.requireNonNull(catchClauses.get(2).getParameter()).getType());
 
     // and 1 finally
@@ -303,7 +303,7 @@ class JavaLanguageFrontendTest {
     MethodDeclaration method = recordDeclaration.getMethods().get(0);
     assertEquals(recordDeclaration, method.getRecordDeclaration());
     assertEquals("method", method.getName());
-    assertEquals(TypeParser.createFrom("java.lang.Integer"), method.getType());
+    assertEquals(TypeParser.createFrom("java.lang.Integer", true), method.getType());
 
     ConstructorDeclaration constructor = recordDeclaration.getConstructors().get(0);
     assertEquals(recordDeclaration, constructor.getRecordDeclaration());
@@ -377,19 +377,19 @@ class JavaLanguageFrontendTest {
     assertNotNull(stmt);
 
     VariableDeclaration e = stmt.getSingleDeclarationAs(VariableDeclaration.class);
-    assertEquals(TypeParser.createFrom("ExtendedClass"), e.getType());
+    assertEquals(TypeParser.createFrom("ExtendedClass", true), e.getType());
 
     // b = (BaseClass) e
     stmt = main.getBodyStatementAs(1, DeclarationStatement.class);
     assertNotNull(stmt);
 
     VariableDeclaration b = stmt.getSingleDeclarationAs(VariableDeclaration.class);
-    assertEquals(TypeParser.createFrom("BaseClass"), b.getType());
+    assertEquals(TypeParser.createFrom("BaseClass", true), b.getType());
 
     // initializer
     CastExpression cast = (CastExpression) b.getInitializer();
     assertNotNull(cast);
-    assertEquals(TypeParser.createFrom("BaseClass"), cast.getCastType());
+    assertEquals(TypeParser.createFrom("BaseClass", true), cast.getCastType());
 
     // expression itself should be a reference
     DeclaredReferenceExpression ref = (DeclaredReferenceExpression) cast.getExpression();
@@ -421,7 +421,7 @@ class JavaLanguageFrontendTest {
         (VariableDeclaration) ((DeclarationStatement) statements.get(0)).getSingleDeclaration();
 
     // type should be Integer[]
-    assertEquals(TypeParser.createFrom("int[]"), a.getType());
+    assertEquals(TypeParser.createFrom("int[]", true), a.getType());
 
     // it has an array creation initializer
     ArrayCreationExpression ace = (ArrayCreationExpression) a.getInitializer();

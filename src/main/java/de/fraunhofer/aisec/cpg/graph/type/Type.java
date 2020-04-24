@@ -216,7 +216,7 @@ public abstract class Type extends Node {
    * @return Creates a reference to the current Type. E.g. when creating a pointer to an existing
    *     ObjectType
    */
-  public abstract Type reference();
+  public abstract Type reference(PointerType.PointerOrigin pointer);
 
   /**
    * @return Dereferences the current Type by resolving the reference. E.g. when dereferencing an
@@ -226,6 +226,10 @@ public abstract class Type extends Node {
 
   /** @return Resolves one dereference Level, i.e. the Type is dereferenced one time */
   public abstract Type getFollowingLevel();
+
+  public void setFollowingLevel(Type level) {}
+
+  public void refreshNames() {}
 
   /**
    * Obtain the root Type Element for a Type Chain (follows Pointer and ReferenceTypes until Object-

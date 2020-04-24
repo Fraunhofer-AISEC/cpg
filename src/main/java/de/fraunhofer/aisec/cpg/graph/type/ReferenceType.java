@@ -57,8 +57,8 @@ public class ReferenceType extends Type {
 
   /** @return Referencing a ReferenceType results in a PointerType to the original ReferenceType */
   @Override
-  public Type reference() {
-    return new PointerType(this);
+  public Type reference(PointerType.PointerOrigin pointerOrigin) {
+    return new PointerType(this, pointerOrigin);
   }
 
   /**
@@ -110,6 +110,10 @@ public class ReferenceType extends Type {
 
   public Type getReferenceType() {
     return reference;
+  }
+
+  public void refreshName() {
+    this.name = this.getReference().getName() + "&";
   }
 
   @Override

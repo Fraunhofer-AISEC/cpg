@@ -95,7 +95,8 @@ public class VariableUsageResolver extends Pass {
         recordMap.values().stream()
             .collect(
                 Collectors.toMap(
-                    r -> TypeParser.createFrom(r.getName()), RecordDeclaration::getSuperTypes));
+                    r -> TypeParser.createFrom(r.getName(), true),
+                    RecordDeclaration::getSuperTypes));
     superTypesMap.putAll(currSuperTypes);
 
     for (TranslationUnitDeclaration tu : result.getTranslationUnits()) {
@@ -112,10 +113,10 @@ public class VariableUsageResolver extends Pass {
 
   private void findRecordsAndEnums(Node node, RecordDeclaration curClass) {
     if (node instanceof RecordDeclaration) {
-      Type type = TypeParser.createFrom(node.getName());
+      Type type = TypeParser.createFrom(node.getName(), true);
       recordMap.putIfAbsent(type, (RecordDeclaration) node);
     } else if (node instanceof EnumDeclaration) {
-      Type type = TypeParser.createFrom(node.getName());
+      Type type = TypeParser.createFrom(node.getName(), true);
       enumMap.putIfAbsent(type, (EnumDeclaration) node);
     }
   }
@@ -137,7 +138,7 @@ public class VariableUsageResolver extends Pass {
                 .filter(d -> d.getName().equals(finalFunctionName))
                 .collect(Collectors.toCollection(HashSet::new));
       } else {
-        containingClass = TypeParser.createFrom(cls);
+        containingClass = TypeParser.createFrom(cls, true);
         if (recordMap.containsKey(containingClass)) {
           targets =
               recordMap.get(containingClass).getMethods().stream()
@@ -180,7 +181,7 @@ public class VariableUsageResolver extends Pass {
 
       Type recordDeclType = null;
       if (currentClass != null) {
-        recordDeclType = TypeParser.createFrom(currentClass.getName());
+        recordDeclType = TypeParser.createFrom(currentClass.getName(), true);
       }
 
       if (ref.getType() instanceof FunctionPointerType
@@ -234,7 +235,7 @@ public class VariableUsageResolver extends Pass {
             baseType = ((HasType) base).getType();
           }
           if (base instanceof RecordDeclaration) {
-            baseType = TypeParser.createFrom(base.getName());
+            baseType = TypeParser.createFrom(base.getName(), true);
           }
           member =
               base == null

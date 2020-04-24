@@ -27,26 +27,6 @@
 package de.fraunhofer.aisec.cpg.passes;
 
 import de.fraunhofer.aisec.cpg.TranslationResult;
-import de.fraunhofer.aisec.cpg.graph.CallExpression;
-import de.fraunhofer.aisec.cpg.graph.ConstructExpression;
-import de.fraunhofer.aisec.cpg.graph.ConstructorDeclaration;
-import de.fraunhofer.aisec.cpg.graph.DeclaredReferenceExpression;
-import de.fraunhofer.aisec.cpg.graph.ExplicitConstructorInvocation;
-import de.fraunhofer.aisec.cpg.graph.Expression;
-import de.fraunhofer.aisec.cpg.graph.FunctionDeclaration;
-import de.fraunhofer.aisec.cpg.graph.HasType;
-import de.fraunhofer.aisec.cpg.graph.MemberCallExpression;
-import de.fraunhofer.aisec.cpg.graph.MethodDeclaration;
-import de.fraunhofer.aisec.cpg.graph.NewExpression;
-import de.fraunhofer.aisec.cpg.graph.Node;
-import de.fraunhofer.aisec.cpg.graph.NodeBuilder;
-import de.fraunhofer.aisec.cpg.graph.ParamVariableDeclaration;
-import de.fraunhofer.aisec.cpg.graph.RecordDeclaration;
-import de.fraunhofer.aisec.cpg.graph.StaticCallExpression;
-import de.fraunhofer.aisec.cpg.graph.TranslationUnitDeclaration;
-import de.fraunhofer.aisec.cpg.graph.Type;
-import de.fraunhofer.aisec.cpg.graph.ValueDeclaration;
-import de.fraunhofer.aisec.cpg.graph.VariableDeclaration;
 import de.fraunhofer.aisec.cpg.graph.*;
 import de.fraunhofer.aisec.cpg.graph.type.FunctionPointerType;
 import de.fraunhofer.aisec.cpg.graph.type.Type;
@@ -55,7 +35,6 @@ import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.ScopedWalker;
 import java.util.*;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
-import org.apache.commons.lang3.StringUtils;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.slf4j.Logger;
@@ -125,7 +104,7 @@ public class CallResolver extends Pass {
       RecordDeclaration currentClass, Node parent, @NonNull Node currentNode) {
     if (currentNode instanceof MethodDeclaration && currentClass != null) {
       containingType.put(
-          (FunctionDeclaration) currentNode, TypeParser.createFrom(currentClass.getName()));
+          (FunctionDeclaration) currentNode, TypeParser.createFrom(currentClass.getName(), true));
     }
   }
 
@@ -133,11 +112,7 @@ public class CallResolver extends Pass {
     if (node instanceof VariableDeclaration) {
       VariableDeclaration declaration = ((VariableDeclaration) node);
       // check if we have the corresponding class for this type
-      String typeString = declaration.getType().toString();
-      // pointer is also okay
-      if (StringUtils.countMatches(typeString, '*') == 1) {
-        typeString = typeString.replace("*", "");
-      }
+      String typeString = declaration.getType().getRoot().getName();
       boolean isRecord = recordMap.containsKey(typeString);
 
       if (isRecord) {
@@ -487,10 +462,10 @@ public class CallResolver extends Pass {
     } else if (node instanceof StaticCallExpression) {
       StaticCallExpression staticCall = (StaticCallExpression) node;
       if (staticCall.getTargetRecord() != null) {
-        possibleTypes.add(TypeParser.createFrom(staticCall.getTargetRecord()));
+        possibleTypes.add(TypeParser.createFrom(staticCall.getTargetRecord(), true));
       }
     } else if (curClass != null) {
-      possibleTypes.add(TypeParser.createFrom(curClass.getName()));
+      possibleTypes.add(TypeParser.createFrom(curClass.getName(), true));
       possibleTypes.addAll(curClass.getSuperTypes());
     }
     return possibleTypes;

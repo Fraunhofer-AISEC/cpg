@@ -30,14 +30,14 @@ import de.fraunhofer.aisec.cpg.TranslationConfiguration;
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
 import de.fraunhofer.aisec.cpg.frontends.TranslationException;
 import de.fraunhofer.aisec.cpg.graph.*;
-import de.fraunhofer.aisec.cpg.graph.type.Type;
-import de.fraunhofer.aisec.cpg.graph.type.TypeParser;
 import de.fraunhofer.aisec.cpg.graph.Declaration;
 import de.fraunhofer.aisec.cpg.graph.DeclaredReferenceExpression;
 import de.fraunhofer.aisec.cpg.graph.Expression;
 import de.fraunhofer.aisec.cpg.graph.TranslationUnitDeclaration;
 import de.fraunhofer.aisec.cpg.graph.TypeManager;
 import de.fraunhofer.aisec.cpg.graph.ValueDeclaration;
+import de.fraunhofer.aisec.cpg.graph.type.Type;
+import de.fraunhofer.aisec.cpg.graph.type.TypeParser;
 import de.fraunhofer.aisec.cpg.helpers.Benchmark;
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager;
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation;
@@ -76,11 +76,12 @@ import org.slf4j.LoggerFactory;
  */
 public class CXXLanguageFrontend extends LanguageFrontend {
 
-  public static final Type LONG_TYPE = TypeParser.createFrom("long");
-  public static final Type TYPE_UNSIGNED_LONG_LONG = TypeParser.createFrom("unsigned long long");
-  public static final Type INT_TYPE = TypeParser.createFrom("int");
-  public static final Type LONG_LONG_TYPE = TypeParser.createFrom("long long");
-  public static final Type TYPE_UNSIGNED_LONG = TypeParser.createFrom("unsigned long");
+  public static final Type LONG_TYPE = TypeParser.createFrom("long", true);
+  public static final Type TYPE_UNSIGNED_LONG_LONG =
+      TypeParser.createFrom("unsigned long long", true);
+  public static final Type INT_TYPE = TypeParser.createFrom("int", true);
+  public static final Type LONG_LONG_TYPE = TypeParser.createFrom("long long", true);
+  public static final Type TYPE_UNSIGNED_LONG = TypeParser.createFrom("unsigned long", true);
 
   private static final Logger LOGGER = LoggerFactory.getLogger(CXXLanguageFrontend.class);
   private static final IncludeFileContentProvider INCLUDE_FILE_PROVIDER =

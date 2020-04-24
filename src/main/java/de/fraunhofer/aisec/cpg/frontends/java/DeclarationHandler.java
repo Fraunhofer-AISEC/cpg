@@ -111,7 +111,7 @@ public class DeclarationHandler
         .getThrowsTypes()
         .addAll(
             constructorDecl.getThrownExceptions().stream()
-                .map(type -> TypeParser.createFrom(type.asString()))
+                .map(type -> TypeParser.createFrom(type.asString(), true))
                 .collect(Collectors.toList()));
 
     for (Parameter parameter : constructorDecl.getParameters()) {
@@ -133,7 +133,8 @@ public class DeclarationHandler
             lang.getScopeManager()
                 .getFirstScopeThat(RecordScope.class::isInstance)
                 .getAstNode()
-                .getName());
+                .getName(),
+            true);
     declaration.setType(type);
 
     // check, if constructor has body (i.e. its not abstract or something)
@@ -162,7 +163,7 @@ public class DeclarationHandler
         .getThrowsTypes()
         .addAll(
             methodDecl.getThrownExceptions().stream()
-                .map(type -> TypeParser.createFrom(type.asString()))
+                .map(type -> TypeParser.createFrom(type.asString(), true))
                 .collect(Collectors.toList()));
 
     for (Parameter parameter : methodDecl.getParameters()) {
@@ -242,7 +243,12 @@ public class DeclarationHandler
 
     de.fraunhofer.aisec.cpg.graph.FieldDeclaration thisDeclaration =
         NodeBuilder.newFieldDeclaration(
-            "this", TypeParser.createFrom(name), new ArrayList<>(), "this", null, null,
+            "this",
+            TypeParser.createFrom(name, true),
+            new ArrayList<>(),
+            "this",
+            null,
+            null,
             false);
     recordDeclaration.getFields().add(thisDeclaration);
     lang.getScopeManager().addValueDeclaration(thisDeclaration);
@@ -301,14 +307,14 @@ public class DeclarationHandler
             variable.getInitializer().map(this.lang.getExpressionHandler()::handle).orElse(null);
     Type type;
     try {
-      type = TypeParser.createFrom(joinedModifiers + variable.resolve().getType().describe());
+      type = TypeParser.createFrom(joinedModifiers + variable.resolve().getType().describe(), true);
     } catch (UnsolvedSymbolException | UnsupportedOperationException e) {
       String t = this.lang.recoverTypeFromUnsolvedException(e);
       if (t == null) {
         log.warn("Could not resolve type for {}", variable);
-        type = TypeParser.createFrom(joinedModifiers + variable.getType().asString());
+        type = TypeParser.createFrom(joinedModifiers + variable.getType().asString(), true);
       } else {
-        type = TypeParser.createFrom(joinedModifiers + t);
+        type = TypeParser.createFrom(joinedModifiers + t, true);
         type.setTypeOrigin(Type.Origin.GUESSED);
       }
     }
@@ -342,7 +348,7 @@ public class DeclarationHandler
         enumDecl.getEntries().stream()
             .map(e -> (EnumConstantDeclaration) handle(e))
             .collect(Collectors.toList());
-    entries.forEach(e -> e.setType(TypeParser.createFrom(enumDeclaration.getName())));
+    entries.forEach(e -> e.setType(TypeParser.createFrom(enumDeclaration.getName(), true)));
     enumDeclaration.setEntries(entries);
 
     List<Type> superTypes =

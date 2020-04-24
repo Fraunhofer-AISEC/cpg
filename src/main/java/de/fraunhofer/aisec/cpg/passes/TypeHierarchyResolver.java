@@ -157,7 +157,7 @@ public class TypeHierarchyResolver extends Pass {
     List<Type> superTypeNames =
         allSupertypeRecords.stream()
             .map(RecordDeclaration::getName)
-            .map(TypeParser::createFrom)
+            .map(t -> TypeParser.createFrom(t, true))
             .distinct()
             .collect(Collectors.toList());
     record.setSuperTypes(superTypeNames);

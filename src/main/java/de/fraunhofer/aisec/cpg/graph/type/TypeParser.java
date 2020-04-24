@@ -391,7 +391,7 @@ public class TypeParser {
     String[] parametersSplit = parameterList.split(",");
     for (String parameter : parametersSplit) {
       if (parameter.length() > 0) {
-        parameters.add(createFrom(parameter.strip()));
+        parameters.add(createFrom(parameter.strip(), true));
       }
     }
 
@@ -404,7 +404,7 @@ public class TypeParser {
       List<Type> genericList = new ArrayList<>();
       String[] parametersSplit = generics.split(",");
       for (String parameter : parametersSplit) {
-        genericList.add(createFrom(parameter.strip()));
+        genericList.add(createFrom(parameter.strip(), true));
       }
 
       return genericList;
@@ -427,7 +427,7 @@ public class TypeParser {
           separate(bracketExpression.substring(1, bracketExpression.length() - 1));
       for (String part : splitExpression) {
         if (part.equals("*")) {
-          finalType = finalType.reference();
+          finalType = finalType.reference(PointerType.PointerOrigin.POINTER);
         }
 
         if (part.equals("&")) {
@@ -435,7 +435,7 @@ public class TypeParser {
         }
 
         if (part.startsWith("[") && part.endsWith("]")) {
-          finalType = finalType.reference();
+          finalType = finalType.reference(PointerType.PointerOrigin.ARRAY);
         }
         if (part.startsWith("(") && part.endsWith(")")) {
           List<String> subBracketExpression = new ArrayList<>();
@@ -521,13 +521,52 @@ public class TypeParser {
     return joinedTypeBlocks;
   }
 
+  public static Type reWrapType(Type oldChain, Type newRoot) {
+    if (oldChain.isFirstOrderType()) {
+      newRoot.setTypeOrigin(oldChain.getTypeOrigin());
+    }
+
+    if (!newRoot.isFirstOrderType()) {
+      return newRoot;
+    }
+
+    if (oldChain instanceof ObjectType && newRoot instanceof ObjectType) {
+      ((ObjectType) newRoot.getRoot()).setGenerics(((ObjectType) oldChain).getGenerics());
+      return newRoot;
+    } else if (oldChain instanceof ReferenceType) {
+      Type reference = reWrapType(((ReferenceType) oldChain).getReference(), newRoot);
+      ReferenceType newChain = (ReferenceType) oldChain.duplicate();
+      newChain.setReference(reference);
+      newChain.refreshName();
+      return newChain;
+    } else if (oldChain instanceof PointerType) {
+      PointerType newChain = (PointerType) oldChain.duplicate();
+      newChain.setRoot(reWrapType(oldChain.getRoot(), newRoot));
+      newChain.refreshNames();
+      return newChain;
+    } else {
+      return newRoot;
+    }
+  }
+
+  /**
+   * Does the same as {@link #createIgnoringAlias(String)} but explicitly does not use type alias
+   * resolution. This is usually not what you want. Use with care!
+   *
+   * @param string the string representation of the type
+   * @return the type
+   */
+  public static Type createIgnoringAlias(String string) {
+    return createFrom(string, false);
+  }
+
   /**
    * Use this function for parsing new types and obtaining a new Type Parser creates from a
    *
    * @param type String the corresponding
    * @return Type
    */
-  public static Type createFrom(String type) {
+  public static Type createFrom(String type, boolean resolveAlias) {
     // Check if Problems during Parsing
     if (type.contains("?")
         || type.contains("org.eclipse.cdt.internal.core.dom.parser.ProblemType@")
@@ -595,7 +634,7 @@ public class TypeParser {
     Matcher funcptr = isFunctionPointer(typeBlocks.subList(counter, typeBlocks.size()));
 
     if (funcptr != null) {
-      Type returnType = createFrom(typeName);
+      Type returnType = createFrom(typeName, false);
       List<Type> parameterList = getParameterList(funcptr.group("args"));
 
       return typeManager.registerType(
@@ -634,7 +673,7 @@ public class TypeParser {
 
       if (part.equals("*")) {
         // Creates a Pointer to the finalType
-        finalType = finalType.reference();
+        finalType = finalType.reference(PointerType.PointerOrigin.POINTER);
       }
 
       if (part.equals("&")) {
@@ -651,7 +690,7 @@ public class TypeParser {
 
       if (part.startsWith("[") && part.endsWith("]")) {
         // Arrays are equal to pointer, create a reference
-        finalType = finalType.reference();
+        finalType = finalType.reference(PointerType.PointerOrigin.ARRAY);
       }
 
       if (part.startsWith("(") && part.endsWith(")")) {
@@ -680,6 +719,10 @@ public class TypeParser {
     // Make sure, that only one real instance exists for a type in order to have just one node in
     // the graph representing the type
     finalType = typeManager.registerType(finalType);
+
+    if (resolveAlias) {
+      return typeManager.registerType(typeManager.resolvePossibleTypedef(finalType));
+    }
 
     return finalType;
   }

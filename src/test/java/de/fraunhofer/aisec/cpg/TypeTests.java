@@ -52,7 +52,7 @@ public class TypeTests {
             new ArrayList<>(),
             ObjectType.Modifier.SIGNED,
             true);
-    Type pointerType = new PointerType(objectType);
+    Type pointerType = new PointerType(objectType, PointerType.PointerOrigin.POINTER);
     Type unknownType = UnknownType.getUnknownType();
     Type incompleteType = new IncompleteType();
 
@@ -70,19 +70,27 @@ public class TypeTests {
             new Type.Qualifier(), Type.Storage.AUTO, parameterList, new IncompleteType());
 
     // Test 1: ObjectType becomes PointerType containing the original ObjectType as ElementType
-    assertEquals(new PointerType(objectType), objectType.reference());
+    assertEquals(
+        new PointerType(objectType, PointerType.PointerOrigin.POINTER),
+        objectType.reference(PointerType.PointerOrigin.POINTER));
 
     // Test 2: Existing PointerType adds one level more of references as ElementType
-    assertEquals(new PointerType(pointerType), pointerType.reference());
+    assertEquals(
+        new PointerType(pointerType, PointerType.PointerOrigin.POINTER),
+        pointerType.reference(PointerType.PointerOrigin.POINTER));
 
     // Test 3: UnknownType cannot be referenced
-    assertEquals(unknownType, unknownType.reference());
+    assertEquals(unknownType, unknownType.reference(null));
 
     // Test 4: IncompleteType can be refereced e.g. void*
-    assertEquals(new PointerType(incompleteType), incompleteType.reference());
+    assertEquals(
+        new PointerType(incompleteType, PointerType.PointerOrigin.POINTER),
+        incompleteType.reference(PointerType.PointerOrigin.POINTER));
 
     // Test 5: Create reference to function pointer = pointer to function pointer
-    assertEquals(new PointerType(functionPointerType), functionPointerType.reference());
+    assertEquals(
+        new PointerType(functionPointerType, PointerType.PointerOrigin.POINTER),
+        functionPointerType.reference(PointerType.PointerOrigin.POINTER));
   }
 
   @Test
@@ -98,7 +106,7 @@ public class TypeTests {
             new ArrayList<>(),
             ObjectType.Modifier.SIGNED,
             true);
-    Type pointerType = new PointerType(objectType);
+    Type pointerType = new PointerType(objectType, PointerType.PointerOrigin.POINTER);
     Type unknownType = UnknownType.getUnknownType();
     Type incompleteType = new IncompleteType();
 
@@ -142,7 +150,7 @@ public class TypeTests {
 
     // Test 1: Ignore Access Modifier Keyword (public, private, protected)
     typeString = "private int a";
-    result = TypeParser.createFrom(typeString);
+    result = TypeParser.createFrom(typeString, true);
     expected =
         new ObjectType(
             "int",
@@ -155,7 +163,7 @@ public class TypeTests {
 
     // Test 2: constant type using final
     typeString = "final int a";
-    result = TypeParser.createFrom(typeString);
+    result = TypeParser.createFrom(typeString, true);
     expected =
         new ObjectType(
             "int",
@@ -168,7 +176,7 @@ public class TypeTests {
 
     // Test 3: static type
     typeString = "static int a";
-    result = TypeParser.createFrom(typeString);
+    result = TypeParser.createFrom(typeString, true);
     expected =
         new ObjectType(
             "int",
@@ -181,7 +189,7 @@ public class TypeTests {
 
     // Test 4: volatile type
     typeString = "public volatile int a";
-    result = TypeParser.createFrom(typeString);
+    result = TypeParser.createFrom(typeString, true);
     expected =
         new ObjectType(
             "int",
@@ -194,7 +202,7 @@ public class TypeTests {
 
     // Test 5: combining a storage type and a qualifier
     typeString = "private static final String a";
-    result = TypeParser.createFrom(typeString);
+    result = TypeParser.createFrom(typeString, true);
     expected =
         new ObjectType(
             "String",
@@ -207,7 +215,7 @@ public class TypeTests {
 
     // Test 6: using two different qualifiers
     typeString = "public final volatile int a";
-    result = TypeParser.createFrom(typeString);
+    result = TypeParser.createFrom(typeString, true);
     expected =
         new ObjectType(
             "int",
@@ -220,7 +228,7 @@ public class TypeTests {
 
     // Test 7: Reference level using arrays
     typeString = "int[] a";
-    result = TypeParser.createFrom(typeString);
+    result = TypeParser.createFrom(typeString, true);
     expected =
         new PointerType(
             new ObjectType(
@@ -229,12 +237,13 @@ public class TypeTests {
                 new Type.Qualifier(),
                 new ArrayList<>(),
                 ObjectType.Modifier.SIGNED,
-                true));
+                true),
+            PointerType.PointerOrigin.ARRAY);
     assertEquals(expected, result);
 
     // Test 8: generics
     typeString = "List<String> list";
-    result = TypeParser.createFrom(typeString);
+    result = TypeParser.createFrom(typeString, true);
     List<Type> generics = new ArrayList<>();
     generics.add(
         new ObjectType(
@@ -256,7 +265,7 @@ public class TypeTests {
 
     // Test 9: more generics
     typeString = "List<List<List<String>>, List<String>> data";
-    result = TypeParser.createFrom(typeString);
+    result = TypeParser.createFrom(typeString, true);
 
     ObjectType genericStringType =
         new ObjectType(
@@ -322,7 +331,7 @@ public class TypeTests {
 
     // Test 1: Function pointer
     typeString = "void (*single_param)(int)";
-    result = TypeParser.createFrom(typeString);
+    result = TypeParser.createFrom(typeString, true);
     List<Type> parameterList =
         List.of(
             new ObjectType(
@@ -339,12 +348,12 @@ public class TypeTests {
 
     // Test 1.1: interleaved brackets in function pointer
     typeString = "void ((*single_param)(int))";
-    result = TypeParser.createFrom(typeString);
+    result = TypeParser.createFrom(typeString, true);
     assertEquals(result, expected);
 
     // Test 2: Stronger binding of brackets and pointer
     typeString = "char (* const a)[]";
-    result = TypeParser.createFrom(typeString);
+    result = TypeParser.createFrom(typeString, true);
     expected =
         new PointerType(
             new PointerType(
@@ -354,13 +363,15 @@ public class TypeTests {
                     new Type.Qualifier(),
                     Collections.emptyList(),
                     ObjectType.Modifier.SIGNED,
-                    true)));
+                    true),
+                PointerType.PointerOrigin.ARRAY),
+            PointerType.PointerOrigin.POINTER);
     expected.setQualifier(new Type.Qualifier(true, false, false, false));
     assertEquals(expected, result);
 
     // Test 3: Mutable pointer to a mutable char
     typeString = "char *p";
-    result = TypeParser.createFrom(typeString);
+    result = TypeParser.createFrom(typeString, true);
     expected =
         new PointerType(
             new ObjectType(
@@ -369,22 +380,23 @@ public class TypeTests {
                 new Type.Qualifier(),
                 Collections.emptyList(),
                 ObjectType.Modifier.SIGNED,
-                true));
+                true),
+            PointerType.PointerOrigin.POINTER);
     assertEquals(expected, result);
 
     // Test 3.1: Different Whitespaces
     typeString = "char* p";
-    result = TypeParser.createFrom(typeString);
+    result = TypeParser.createFrom(typeString, true);
     assertEquals(expected, result);
 
     // Test 3.2: Different Whitespaces
     typeString = "char * p";
-    result = TypeParser.createFrom(typeString);
+    result = TypeParser.createFrom(typeString, true);
     assertEquals(expected, result);
 
     // Test 4: Mutable pointer to a constant char
     typeString = "const char *p;";
-    result = TypeParser.createFrom(typeString);
+    result = TypeParser.createFrom(typeString, true);
     expected =
         new PointerType(
             new ObjectType(
@@ -393,12 +405,13 @@ public class TypeTests {
                 new Type.Qualifier(true, false, false, false),
                 Collections.emptyList(),
                 ObjectType.Modifier.SIGNED,
-                true));
+                true),
+            PointerType.PointerOrigin.POINTER);
     assertEquals(expected, result);
 
     // Test 5: Constant pointer to a mutable char
     typeString = "char * const p;";
-    result = TypeParser.createFrom(typeString);
+    result = TypeParser.createFrom(typeString, true);
     expected =
         new PointerType(
             new ObjectType(
@@ -407,13 +420,14 @@ public class TypeTests {
                 new Type.Qualifier(false, false, false, false),
                 Collections.emptyList(),
                 ObjectType.Modifier.SIGNED,
-                true));
+                true),
+            PointerType.PointerOrigin.POINTER);
     expected.setQualifier(new Type.Qualifier(true, false, false, false));
     assertEquals(expected, result);
 
     // Test 6: Constant pointer to a constant char
     typeString = "const char * const p;";
-    result = TypeParser.createFrom(typeString);
+    result = TypeParser.createFrom(typeString, true);
     expected =
         new PointerType(
             new ObjectType(
@@ -422,13 +436,14 @@ public class TypeTests {
                 new Type.Qualifier(true, false, false, false),
                 Collections.emptyList(),
                 ObjectType.Modifier.SIGNED,
-                true));
+                true),
+            PointerType.PointerOrigin.POINTER);
     expected.setQualifier(new Type.Qualifier(true, false, false, false));
     assertEquals(expected, result);
 
     // Test 7: Array of const pointer to static const char
     typeString = "static const char * const somearray []";
-    result = TypeParser.createFrom(typeString);
+    result = TypeParser.createFrom(typeString, true);
     expected =
         new PointerType(
             new PointerType(
@@ -438,7 +453,9 @@ public class TypeTests {
                     new Type.Qualifier(true, false, false, false),
                     Collections.emptyList(),
                     ObjectType.Modifier.SIGNED,
-                    true)));
+                    true),
+                PointerType.PointerOrigin.POINTER),
+            PointerType.PointerOrigin.ARRAY);
     ((PointerType) expected)
         .getElementType()
         .setQualifier(new Type.Qualifier(true, false, false, false));
@@ -446,7 +463,7 @@ public class TypeTests {
 
     // Test 7.1: Array of array of pointer to static const char
     typeString = "static const char * somearray[][]";
-    result = TypeParser.createFrom(typeString);
+    result = TypeParser.createFrom(typeString, true);
     expected =
         new PointerType(
             new PointerType(
@@ -457,12 +474,15 @@ public class TypeTests {
                         new Type.Qualifier(true, false, false, false),
                         Collections.emptyList(),
                         ObjectType.Modifier.SIGNED,
-                        true))));
+                        true),
+                    PointerType.PointerOrigin.POINTER),
+                PointerType.PointerOrigin.ARRAY),
+            PointerType.PointerOrigin.ARRAY);
     assertEquals(expected, result);
 
     // Test 8: Generics
     typeString = "Array<int> array";
-    result = TypeParser.createFrom(typeString);
+    result = TypeParser.createFrom(typeString, true);
     List<Type> generics = new ArrayList<>();
     generics.add(
         new ObjectType(
@@ -484,7 +504,7 @@ public class TypeTests {
 
     // Test 9: Compound Primitive Types
     typeString = "long long int";
-    result = TypeParser.createFrom(typeString);
+    result = TypeParser.createFrom(typeString, true);
     expected =
         new ObjectType(
             "long long int",
@@ -497,7 +517,7 @@ public class TypeTests {
 
     // Test 10: Unsigned/Signed Types
     typeString = "unsigned int";
-    result = TypeParser.createFrom(typeString);
+    result = TypeParser.createFrom(typeString, true);
     expected =
         new ObjectType(
             "int",
@@ -509,7 +529,7 @@ public class TypeTests {
     assertEquals(expected, result);
 
     typeString = "signed int";
-    result = TypeParser.createFrom(typeString);
+    result = TypeParser.createFrom(typeString, true);
     expected =
         new ObjectType(
             "int",
@@ -521,7 +541,7 @@ public class TypeTests {
     assertEquals(expected, result);
 
     typeString = "A a";
-    result = TypeParser.createFrom(typeString);
+    result = TypeParser.createFrom(typeString, true);
     expected =
         new ObjectType(
             "A",
@@ -543,28 +563,28 @@ public class TypeTests {
             true);
 
     typeString = "const unsigned long long int a = 1";
-    result = TypeParser.createFrom(typeString);
+    result = TypeParser.createFrom(typeString, true);
     assertEquals(expected, result);
 
     typeString = "unsigned const long long int b = 1";
-    result = TypeParser.createFrom(typeString);
+    result = TypeParser.createFrom(typeString, true);
     assertEquals(expected, result);
 
     typeString = "unsigned long const long int c = 1";
-    result = TypeParser.createFrom(typeString);
+    result = TypeParser.createFrom(typeString, true);
     assertEquals(expected, result);
 
     typeString = "unsigned long long const int d = 1";
-    result = TypeParser.createFrom(typeString);
+    result = TypeParser.createFrom(typeString, true);
     assertEquals(expected, result);
 
     typeString = "unsigned long long int const e = 1";
-    result = TypeParser.createFrom(typeString);
+    result = TypeParser.createFrom(typeString, true);
     assertEquals(expected, result);
 
     // Test 12: C++ Reference Types
     typeString = "const int& ref = a";
-    result = TypeParser.createFrom(typeString);
+    result = TypeParser.createFrom(typeString, true);
     expected =
         new ReferenceType(
             Type.Storage.AUTO,
@@ -579,7 +599,7 @@ public class TypeTests {
     assertEquals(expected, result);
 
     typeString = "int const &ref2 = a";
-    result = TypeParser.createFrom(typeString);
+    result = TypeParser.createFrom(typeString, true);
     assertEquals(expected, result);
   }
 

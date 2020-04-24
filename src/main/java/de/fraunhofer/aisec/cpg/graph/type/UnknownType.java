@@ -59,7 +59,7 @@ public class UnknownType extends Type {
    *     UnknownType
    */
   @Override
-  public Type reference() {
+  public Type reference(PointerType.PointerOrigin pointerOrigin) {
     return this;
   }
 

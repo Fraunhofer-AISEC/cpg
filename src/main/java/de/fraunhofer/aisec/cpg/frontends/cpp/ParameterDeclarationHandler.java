@@ -93,13 +93,12 @@ public class ParameterDeclarationHandler
             false,
             ctx.getRawSignature());
 
-
-
-
     if (!typeAdjustment.isEmpty()) {
-      paramVariableDeclaration.setType(Type.createFrom(ctx.getDeclSpecifier().toString() + typeAdjustment));
-    } else{
-      paramVariableDeclaration.setType(Type.createFrom(ctx.getDeclSpecifier().toString()));
+      paramVariableDeclaration.setType(
+          TypeParser.createFrom(ctx.getDeclSpecifier().toString() + typeAdjustment, true));
+    } else {
+      paramVariableDeclaration.setType(
+          TypeParser.createFrom(ctx.getDeclSpecifier().toString(), true));
     }
 
     return paramVariableDeclaration;

@@ -37,8 +37,8 @@ public class FunctionPointerType extends Type {
   }
 
   @Override
-  public PointerType reference() {
-    return new PointerType(this);
+  public PointerType reference(PointerType.PointerOrigin pointerOrigin) {
+    return new PointerType(this, pointerOrigin);
   }
 
   @Override

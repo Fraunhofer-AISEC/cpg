@@ -237,7 +237,7 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
       de.fraunhofer.aisec.cpg.graph.FieldDeclaration thisDeclaration =
           NodeBuilder.newFieldDeclaration(
               "this",
-              TypeParser.createFrom(ctx.getName().toString()),
+              TypeParser.createFrom(ctx.getName().toString(), true),
               new ArrayList<>(),
               "this",
               null,

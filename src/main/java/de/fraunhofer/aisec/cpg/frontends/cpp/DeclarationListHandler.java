@@ -57,7 +57,7 @@ class DeclarationListHandler
 
       // String typeAdjustment = declaration.getType().getTypeAdjustment();
       // String typeString = ctx.getDeclSpecifier().toString();
-      Type result = TypeParser.createFrom(ctx.getRawSignature());
+      Type result = TypeParser.createFrom(ctx.getRawSignature(), true);
       declaration.setType(result);
 
       // cache binding

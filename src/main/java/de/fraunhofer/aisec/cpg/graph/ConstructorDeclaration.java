@@ -48,7 +48,7 @@ public class ConstructorDeclaration extends MethodDeclaration {
             methodDeclaration.getRecordDeclaration());
 
     // constructors always have void type
-    c.setType(TypeParser.createFrom(VOID_TYPE_STRING));
+    c.setType(TypeParser.createFrom(VOID_TYPE_STRING, true));
 
     c.setBody(methodDeclaration.getBody());
     c.setLocation(methodDeclaration.getLocation());
