@@ -91,6 +91,7 @@ public class CallResolver extends Pass {
   private Map<String, RecordDeclaration> recordMap = new HashMap<>();
   private Map<FunctionDeclaration, Type> containingType = new HashMap<>();
   @Nullable private TranslationUnitDeclaration currentTU;
+  private ScopedWalker walker;
 
   @Override
   public void cleanup() {
@@ -100,7 +101,8 @@ public class CallResolver extends Pass {
 
   @Override
   public void accept(@NonNull TranslationResult translationResult) {
-    ScopedWalker walker = new ScopedWalker();
+    walker = new ScopedWalker();
+    walker.registerHandler((currClass, parent, currNode) -> walker.collectDeclarations(currNode));
     walker.registerHandler(this::findRecords);
     walker.registerHandler(this::registerMethods);
 
@@ -182,132 +184,158 @@ public class CallResolver extends Pass {
     if (node instanceof TranslationUnitDeclaration) {
       this.currentTU = (TranslationUnitDeclaration) node;
     } else if (node instanceof ExplicitConstructorInvocation) {
-      ExplicitConstructorInvocation eci = (ExplicitConstructorInvocation) node;
-      if (eci.getContainingClass() != null) {
-        RecordDeclaration record = recordMap.get(eci.getContainingClass());
-        List<Type> signature =
-            eci.getArguments().stream().map(Expression::getType).collect(Collectors.toList());
-        if (record != null) {
-          ConstructorDeclaration constructor = getConstructorDeclaration(signature, record);
-          ArrayList<FunctionDeclaration> invokes = new ArrayList<>();
-          if (constructor != null) {
-            invokes.add(constructor);
-          }
-          eci.setInvokes(invokes);
-        }
-      }
+      resolveExplicitConstructorInvocation((ExplicitConstructorInvocation) node);
     } else if (node instanceof CallExpression) {
       CallExpression call = (CallExpression) node;
 
       if (call instanceof MemberCallExpression) {
         Node member = ((MemberCallExpression) call).getMember();
         if (member instanceof HasType && ((HasType) member).getType().isFunctionPtr()) {
-          List<FunctionDeclaration> invocationCandidates = new ArrayList<>();
-          Deque<Node> worklist = new ArrayDeque<>();
-          Set<Node> seen = Collections.newSetFromMap(new IdentityHashMap<>());
-          worklist.push(member);
-          DeclaredReferenceExpression finalReference = null;
-          while (!worklist.isEmpty()) {
-            Node curr = worklist.pop();
-            if (!seen.add(curr)) {
-              continue;
-            }
-            if (curr instanceof FunctionDeclaration) {
-              if (((FunctionDeclaration) curr).hasSignature(call.getSignature())) {
-                invocationCandidates.add((FunctionDeclaration) curr);
-              } else if (curr.isImplicit()) {
-                // unknown function, so even if its signature does not fit, we need to make a new
-                // dummy that does match
-                if (((FunctionDeclaration) curr).hasSignature(call.getSignature())) {
-                  invocationCandidates.add((FunctionDeclaration) curr);
-                  // refine the referral pointer
-                  if (finalReference != null && finalReference.getRefersTo().contains(curr)) {
-                    finalReference.setRefersTo((ValueDeclaration) curr);
-                  }
-                } else {
-                  FunctionDeclaration dummy =
-                      createDummyWithMatchingSignature(
-                          (FunctionDeclaration) curr, call.getSignature());
-                  invocationCandidates.add(dummy);
-                  // redirect the referral pointer
-                  if (finalReference != null && finalReference.getRefersTo().contains(curr)) {
-                    finalReference.setRefersTo(dummy);
-                  }
-                }
-              }
-            } else {
-              if (curr instanceof DeclaredReferenceExpression) {
-                finalReference = (DeclaredReferenceExpression) curr;
-              }
-              curr.getPrevDFG().forEach(worklist::push);
-            }
-          }
-          call.setInvokes(invocationCandidates);
+          handleFunctionPointerCall(call, member);
           return;
         }
       }
 
-      if (curClass == null && this.currentTU != null) {
-        // Handle function (not method) calls
-        // C++ allows function overloading. Make sure we have at least the same number of arguments
-        List<FunctionDeclaration> invocationCandidates =
-            currentTU.getDeclarations().stream()
-                .filter(FunctionDeclaration.class::isInstance)
-                .map(FunctionDeclaration.class::cast)
-                .filter(
-                    f -> f.getName().equals(call.getName()) && f.hasSignature(call.getSignature()))
-                .collect(Collectors.toList());
-
-        call.setInvokes(invocationCandidates);
-      } else if (!handlePossibleStaticImport(call, curClass)) {
-        Set<Type> possibleContainingTypes = getPossibleContainingTypes(node, curClass);
-
-        // Find invokes by type
-        List<FunctionDeclaration> invocationCandidates =
-            call.getInvokes().stream()
-                .map(f -> getOverridingCandidates(possibleContainingTypes, f))
-                .flatMap(Collection::stream)
-                .collect(Collectors.toList());
-
-        // Find invokes by supertypes
-        if (invocationCandidates.isEmpty()) {
-          String[] nameParts = call.getName().split("\\.");
-          if (nameParts.length > 0) {
-            List<Type> signature = call.getSignature();
-            Set<RecordDeclaration> records =
-                possibleContainingTypes.stream()
-                    .map(t -> recordMap.get(t.getTypeName()))
-                    .filter(Objects::nonNull)
-                    .collect(Collectors.toSet());
-            invocationCandidates =
-                getInvocationCandidatesFromParents(
-                    nameParts[nameParts.length - 1], signature, records);
-          }
-        }
-
-        if (curClass != null
-            && !(call instanceof MemberCallExpression || call instanceof StaticCallExpression)) {
-          call.setBase(curClass.getThis());
-        }
-        call.setInvokes(invocationCandidates);
+      // we could be referring to a function pointer even though it is not a member call if the
+      // usual function pointer syntax (*fp)() has been omitted: fp(). Looks like a normal call,
+      // but it isn't
+      Optional<? extends ValueDeclaration> funcPointer =
+          walker.getDeclarationForScope(
+              call, v -> v.getType().isFunctionPtr() && v.getName().equals(call.getName()));
+      if (funcPointer.isPresent()) {
+        handleFunctionPointerCall(call, funcPointer.get());
+      } else {
+        handleNormalCalls(curClass, call);
       }
     } else if (node instanceof ConstructExpression) {
-      ConstructExpression constructExpression = (ConstructExpression) node;
-      List<Type> signature = constructExpression.getSignature();
-      String typeName = constructExpression.getType().getTypeName();
-      RecordDeclaration record = recordMap.get(typeName);
-      constructExpression.setInstantiates(record);
+      resolveConstructExpression((ConstructExpression) node);
+    }
+  }
 
-      if (record != null && record.getCode() != null && !record.getCode().isEmpty()) {
-        ConstructorDeclaration constructor = getConstructorDeclaration(signature, record);
-        if (constructor != null) {
-          constructExpression.setConstructor(constructor);
-        } else {
-          LOGGER.warn(
-              "Unexpected: Could not find constructor for {} with signature {}",
-              record.getName(),
-              signature);
+  private void handleNormalCalls(RecordDeclaration curClass, CallExpression call) {
+    if (curClass == null && this.currentTU != null) {
+      // Handle function (not method) calls
+      // C++ allows function overloading. Make sure we have at least the same number of arguments
+      List<FunctionDeclaration> invocationCandidates =
+          currentTU.getDeclarations().stream()
+              .filter(FunctionDeclaration.class::isInstance)
+              .map(FunctionDeclaration.class::cast)
+              .filter(
+                  f -> f.getName().equals(call.getName()) && f.hasSignature(call.getSignature()))
+              .collect(Collectors.toList());
+
+      call.setInvokes(invocationCandidates);
+    } else if (!handlePossibleStaticImport(call, curClass)) {
+      handleMethodCall(curClass, call);
+    }
+  }
+
+  private void handleMethodCall(RecordDeclaration curClass, CallExpression call) {
+    Set<Type> possibleContainingTypes = getPossibleContainingTypes(call, curClass);
+
+    // Find invokes by type
+    List<FunctionDeclaration> invocationCandidates =
+        call.getInvokes().stream()
+            .map(f -> getOverridingCandidates(possibleContainingTypes, f))
+            .flatMap(Collection::stream)
+            .collect(Collectors.toList());
+
+    // Find invokes by supertypes
+    if (invocationCandidates.isEmpty()) {
+      String[] nameParts = call.getName().split("\\.");
+      if (nameParts.length > 0) {
+        List<Type> signature = call.getSignature();
+        Set<RecordDeclaration> records =
+            possibleContainingTypes.stream()
+                .map(t -> recordMap.get(t.getTypeName()))
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+        invocationCandidates =
+            getInvocationCandidatesFromParents(nameParts[nameParts.length - 1], signature, records);
+      }
+    }
+
+    if (curClass != null
+        && !(call instanceof MemberCallExpression || call instanceof StaticCallExpression)) {
+      call.setBase(curClass.getThis());
+    }
+    call.setInvokes(invocationCandidates);
+  }
+
+  private void resolveConstructExpression(ConstructExpression constructExpression) {
+    List<Type> signature = constructExpression.getSignature();
+    String typeName = constructExpression.getType().getTypeName();
+    RecordDeclaration record = recordMap.get(typeName);
+    constructExpression.setInstantiates(record);
+
+    if (record != null && record.getCode() != null && !record.getCode().isEmpty()) {
+      ConstructorDeclaration constructor = getConstructorDeclaration(signature, record);
+      if (constructor != null) {
+        constructExpression.setConstructor(constructor);
+      } else {
+        LOGGER.warn(
+            "Unexpected: Could not find constructor for {} with signature {}",
+            record.getName(),
+            signature);
+      }
+    }
+  }
+
+  private void handleFunctionPointerCall(CallExpression call, Node pointer) {
+    List<FunctionDeclaration> invocationCandidates = new ArrayList<>();
+    Deque<Node> worklist = new ArrayDeque<>();
+    Set<Node> seen = Collections.newSetFromMap(new IdentityHashMap<>());
+    worklist.push(pointer);
+    DeclaredReferenceExpression finalReference = null;
+    while (!worklist.isEmpty()) {
+      Node curr = worklist.pop();
+      if (!seen.add(curr)) {
+        continue;
+      }
+      if (curr instanceof FunctionDeclaration) {
+        if (((FunctionDeclaration) curr).hasSignature(call.getSignature())) {
+          invocationCandidates.add((FunctionDeclaration) curr);
+        } else if (curr.isImplicit()) {
+          // unknown function, so even if its signature does not fit, we need to make a new
+          // dummy that does match
+          if (((FunctionDeclaration) curr).hasSignature(call.getSignature())) {
+            invocationCandidates.add((FunctionDeclaration) curr);
+            // refine the referral pointer
+            if (finalReference != null && finalReference.getRefersTo().contains(curr)) {
+              finalReference.setRefersTo((ValueDeclaration) curr);
+            }
+          } else {
+            FunctionDeclaration dummy =
+                createDummyWithMatchingSignature((FunctionDeclaration) curr, call.getSignature());
+            invocationCandidates.add(dummy);
+            // redirect the referral pointer
+            if (finalReference != null && finalReference.getRefersTo().contains(curr)) {
+              finalReference.setRefersTo(dummy);
+            }
+          }
         }
+      } else {
+        if (curr instanceof DeclaredReferenceExpression) {
+          finalReference = (DeclaredReferenceExpression) curr;
+        }
+        curr.getPrevDFG().forEach(worklist::push);
+      }
+    }
+    call.setInvokes(invocationCandidates);
+  }
+
+  private void resolveExplicitConstructorInvocation(ExplicitConstructorInvocation eci) {
+    if (eci.getContainingClass() != null) {
+      RecordDeclaration record = recordMap.get(eci.getContainingClass());
+      List<Type> signature =
+          eci.getArguments().stream().map(Expression::getType).collect(Collectors.toList());
+      if (record != null) {
+        ConstructorDeclaration constructor = getConstructorDeclaration(signature, record);
+        ArrayList<FunctionDeclaration> invokes = new ArrayList<>();
+        if (constructor != null) {
+          invokes.add(constructor);
+        }
+        eci.setInvokes(invokes);
       }
     }
   }

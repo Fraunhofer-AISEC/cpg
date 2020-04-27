@@ -287,13 +287,6 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
       result.setLocation(lang.getLocationFromRawNode(ctx));
       result.getType().setFunctionPtr(true);
       result.refreshType();
-      /*} else {
-        // not in a record and not in a field, strange. This should not happen
-        log.error(
-            "Function pointer declaration that is neither in a function nor in a record. "
-                + "This should not happen!");
-        return null;
-      }*/
     }
     return result;
   }

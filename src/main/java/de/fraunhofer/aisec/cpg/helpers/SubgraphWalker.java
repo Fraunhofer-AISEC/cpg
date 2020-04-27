@@ -437,7 +437,8 @@ public class SubgraphWalker {
       return result;
     }
 
-    public Optional<? extends ValueDeclaration> getDeclarationForScope(Node scope, String name) {
+    public Optional<? extends ValueDeclaration> getDeclarationForScope(
+        Node scope, Predicate<ValueDeclaration> predicate) {
       Node currentScope = scope;
 
       // iterate all declarations from the current scope and all its parent scopes
@@ -446,7 +447,7 @@ public class SubgraphWalker {
         Pair<Node, List<ValueDeclaration>> entry =
             nodeToParentBlockAndContainedValueDeclarations.get(currentScope);
         for (ValueDeclaration val : entry.getRight()) {
-          if (val.getName().equals(name)) {
+          if (predicate.test(val)) {
             return Optional.of(val);
           }
         }

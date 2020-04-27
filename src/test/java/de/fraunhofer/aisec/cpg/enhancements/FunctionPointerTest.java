@@ -96,10 +96,17 @@ public class FunctionPointerTest {
     List<CallExpression> calls = Util.subnodesOfType(main, CallExpression.class);
     Pattern pattern = Pattern.compile("\\((?<member>.+)?\\*(?<obj>.+\\.)?(?<func>.+)\\)");
     for (CallExpression call : calls) {
-      Matcher matcher = pattern.matcher(call.getName());
-      assertTrue(matcher.matches(), "Unexpected call " + call.getName());
+      String func;
+      if (!call.getName().contains("(")) {
+        func = call.getName();
+        assertNotEquals("", func, "Unexpected call " + func);
+      } else {
+        Matcher matcher = pattern.matcher(call.getName());
+        assertTrue(matcher.matches(), "Unexpected call " + call.getName());
+        func = matcher.group("func");
+      }
 
-      switch (matcher.group("func")) {
+      switch (func) {
         case "no_param":
         case "no_param_uninitialized":
         case "no_param_field":
