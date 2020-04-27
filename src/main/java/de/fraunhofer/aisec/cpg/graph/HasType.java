@@ -45,7 +45,7 @@ public interface HasType {
   /**
    * Sideeffect free type modification WARNING: This should only be used by the TypeSystem Pass
    *
-   * @param type
+   * @param type new type
    */
   void updateType(Type type);
 
@@ -54,7 +54,7 @@ public interface HasType {
   /**
    * Set the node's type. This may start a chain of type listener notifications
    *
-   * @param type
+   * @param type new type
    * @param root The node that initiated the type change chain. When a node receives a type setting
    *     command where root == this, we know that we have a type listener circle and can abort. If
    *     root == null, the type change is seen as an externally triggered event and subsequent type

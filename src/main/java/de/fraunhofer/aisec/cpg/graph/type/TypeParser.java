@@ -54,7 +54,7 @@ public class TypeParser {
    * WARNING: This is only intended for Test Purposes of the TypeParser itself without parsing
    * files. Do not use this.
    *
-   * @param language
+   * @param language frontend language Java or CPP
    */
   public static void setLanguage(TypeManager.Language language) {
     TypeParser.language = language;
@@ -285,8 +285,8 @@ public class TypeParser {
   /**
    * Separates typeString into the different Parts that make up the type information
    *
-   * @param type
-   * @return
+   * @param type string with the entire type definition
+   * @return list of strings in which every piece of type information is one element of the list
    */
   public static List<String> separate(String type) {
 
@@ -522,7 +522,9 @@ public class TypeParser {
   }
 
   /**
-   * Reconstructs the type chain when the root node is modified e.g. when swapping with alias (typedef)
+   * Reconstructs the type chain when the root node is modified e.g. when swapping with alias
+   * (typedef)
+   *
    * @param oldChain containing all types until the root
    * @param newRoot root the chain is swapped with
    * @return oldchain but root replaced with newRoot
@@ -567,10 +569,10 @@ public class TypeParser {
   }
 
   /**
-   * Use this function for parsing new types and obtaining a new Type Parser creates from a
-   *
-   * @param type String the corresponding
-   * @return Type
+   * Use this function for parsing new types and obtaining a new Type the TypeParser creates from the typeString
+   * @param type string with type information
+   * @param resolveAlias should replace with original type in typedefs
+   * @return new type representing the type string
    */
   public static Type createFrom(String type, boolean resolveAlias) {
     // Check if Problems during Parsing

@@ -27,10 +27,11 @@
 package de.fraunhofer.aisec.cpg.graph.type;
 
 import de.fraunhofer.aisec.cpg.graph.Node;
+import org.neo4j.ogm.annotation.typeconversion.Convert;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import org.neo4j.ogm.annotation.typeconversion.Convert;
 
 /**
  * Abstract Type, describing all possible SubTypes, i.e. all different Subtypes are complient with
@@ -213,7 +214,8 @@ public abstract class Type extends Node {
   }
 
   /**
-   * @return Creates a reference to the current Type. E.g. when creating a pointer to an existing
+   * @param pointer Reason for the reference (array of pointer)
+   * @return Returns a reference to the current Type. E.g. when creating a pointer to an existing
    *     ObjectType
    */
   public abstract Type reference(PointerType.PointerOrigin pointer);
@@ -276,7 +278,7 @@ public abstract class Type extends Node {
   }
 
   /**
-   * @return True if the Type parameter t is a FirstOrderType (Root of a chain) -> not a Pointer or
+   * @return True if the Type parameter t is a FirstOrderType (Root of a chain) and not a Pointer or
    *     RefrenceType
    */
   public boolean isFirstOrderType() {
@@ -289,7 +291,7 @@ public abstract class Type extends Node {
   /**
    * Required for possibleSubTypes to check if the new Type should be considered a subtype or not
    *
-   * @param t
+   * @param t other type the similarity is checked with
    * @return True if the parameter t is equal to the current type (this)
    */
   public boolean isSimilar(Type t) {

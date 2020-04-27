@@ -29,7 +29,7 @@ package de.fraunhofer.aisec.cpg.graph.type;
 import java.util.Objects;
 
 /**
- * ReferenceTypes describe CPP References (int&), which are represent an alternative name for a
+ * ReferenceTypes describe CPP References (int&amp;), which are represent an alternative name for a
  * variable. It is necessary to make this distinction, and not just rely on the original type as it
  * is required for matching parameters in function arguments to discover which implementation is
  * called.
