@@ -454,7 +454,6 @@ public class TypeParser {
           }
         }
       }
-      return finalType;
     }
 
     return finalType;
@@ -569,7 +568,9 @@ public class TypeParser {
   }
 
   /**
-   * Use this function for parsing new types and obtaining a new Type the TypeParser creates from the typeString
+   * Use this function for parsing new types and obtaining a new Type the TypeParser creates from
+   * the typeString
+   *
    * @param type string with type information
    * @param resolveAlias should replace with original type in typedefs
    * @return new type representing the type string

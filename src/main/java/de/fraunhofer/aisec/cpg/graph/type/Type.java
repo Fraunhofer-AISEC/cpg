@@ -27,11 +27,10 @@
 package de.fraunhofer.aisec.cpg.graph.type;
 
 import de.fraunhofer.aisec.cpg.graph.Node;
-import org.neo4j.ogm.annotation.typeconversion.Convert;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import org.neo4j.ogm.annotation.typeconversion.Convert;
 
 /**
  * Abstract Type, describing all possible SubTypes, i.e. all different Subtypes are complient with

@@ -26,6 +26,8 @@
 
 package de.fraunhofer.aisec.cpg.graph.type;
 
+import java.util.Objects;
+
 /**
  * UnknownType describe the case in which it is not possible for the CPG to determine which Type is
  * used. E.g.: This occurs when the type is inferred by the compiler automatically when using
@@ -82,6 +84,12 @@ public class UnknownType extends Type {
   @Override
   public Type duplicate() {
     return unknownType;
+  }
+
+  @Override
+  public int hashCode() {
+
+    return Objects.hash(super.hashCode());
   }
 
   @Override
