@@ -295,8 +295,6 @@ public class TypeManager {
     if (alias.contains("(") && alias.contains("*")) {
       // function pointer
       Type fptrType = TypeParser.createFrom(currTarget.getName() + " " + alias, true);
-      // fptrType.setFunctionPtr(true);
-      // TODO CPS check
       return fptrType;
     } else if (alias.endsWith("]")) {
       // array type

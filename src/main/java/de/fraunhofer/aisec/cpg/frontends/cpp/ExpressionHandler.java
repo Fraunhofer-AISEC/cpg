@@ -184,7 +184,6 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
     // TODO: obsolete?
     Type t = TypeParser.createFrom(expressionTypeProxy(ctx).toString(), true);
     t.reference(PointerType.PointerOrigin.ARRAY);
-    // TODO CPS fix reference
 
     NewExpression newExpression = NodeBuilder.newNewExpression(code, t);
 

@@ -165,7 +165,6 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
               true);
       ((VariableDeclaration) result).setInitializer(initializer);
       result.setLocation(lang.getLocationFromRawNode(ctx));
-      // TODO SH add real function pointer handling
       result.setType(
           new FunctionPointerType(
               new Type.Qualifier(), Type.Storage.AUTO, new ArrayList<>(), null));
@@ -192,7 +191,6 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
               initializer,
               true);
       result.setLocation(lang.getLocationFromRawNode(ctx));
-      // TODO SH add real function pointer handling
       result.setType(
           new FunctionPointerType(
               new Type.Qualifier(), Type.Storage.AUTO, new ArrayList<>(), null));

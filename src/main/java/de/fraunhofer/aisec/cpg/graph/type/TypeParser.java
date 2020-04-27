@@ -521,6 +521,12 @@ public class TypeParser {
     return joinedTypeBlocks;
   }
 
+  /**
+   * Reconstructs the type chain when the root node is modified e.g. when swapping with alias (typedef)
+   * @param oldChain containing all types until the root
+   * @param newRoot root the chain is swapped with
+   * @return oldchain but root replaced with newRoot
+   */
   public static Type reWrapType(Type oldChain, Type newRoot) {
     if (oldChain.isFirstOrderType()) {
       newRoot.setTypeOrigin(oldChain.getTypeOrigin());
