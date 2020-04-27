@@ -170,7 +170,7 @@ public class VariableUsageResolver extends Pass {
       DeclaredReferenceExpression ref = (DeclaredReferenceExpression) current;
       Set<ValueDeclaration> refersTo =
           walker
-              .getDeclarationForScope(parent, ref.getName())
+              .getDeclarationForScope(parent, v -> v.getName().equals(ref.getName()))
               .map(
                   d -> {
                     Set<ValueDeclaration> set = new HashSet<>();

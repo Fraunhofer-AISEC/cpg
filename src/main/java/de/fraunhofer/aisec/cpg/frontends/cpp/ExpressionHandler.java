@@ -455,6 +455,9 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
       i++;
     }
 
+    // Important: we don't really need the reference node, but even its temporary creation might
+    // leave unwanted artifacts behind in the final graph!
+    reference.disconnectFromGraph();
     return callExpression;
   }
 

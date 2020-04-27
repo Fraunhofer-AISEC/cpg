@@ -195,13 +195,6 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
           new FunctionPointerType(
               new Type.Qualifier(), Type.Storage.AUTO, new ArrayList<>(), null));
       result.refreshType();
-      /*} else {
-        // not in a record and not in a field, strange. This should not happen
-        log.error(
-            "Function pointer declaration that is neither in a function nor in a record. "
-                + "This should not happen!");
-        return null;
-      }*/
     }
     return result;
   }
