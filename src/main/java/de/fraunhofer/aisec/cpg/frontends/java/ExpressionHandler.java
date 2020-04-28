@@ -654,9 +654,13 @@ public class ExpressionHandler
             NodeBuilder.newMemberCallExpression(
                 name, qualifiedName, base, member, methodCallExpr.toString());
       } else {
+        String targetClass = this.lang.getQualifiedNameFromImports(scopeName);
+        if (targetClass == null) {
+          targetClass = scopeName;
+        }
         callExpression =
             NodeBuilder.newStaticCallExpression(
-                name, qualifiedName, methodCallExpr.toString(), scopeName);
+                name, qualifiedName, methodCallExpr.toString(), targetClass);
       }
     } else {
       callExpression =
