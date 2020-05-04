@@ -52,16 +52,6 @@ public class FunctionPointerType extends Type {
   }
 
   @Override
-  public Type getRoot() {
-    return this;
-  }
-
-  @Override
-  public Type getFollowingLevel() {
-    return this;
-  }
-
-  @Override
   public boolean isSimilar(Type t) {
     if (t instanceof FunctionPointerType) {
       if (returnType == null || ((FunctionPointerType) t).returnType == null) {

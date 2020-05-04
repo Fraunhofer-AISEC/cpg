@@ -61,7 +61,7 @@ public abstract class ValueDeclaration extends Declaration implements HasType {
   @Override
   public Type getPropagationType() {
     if (this.type instanceof ReferenceType) {
-      return ((ReferenceType) this.type).getReference();
+      return ((ReferenceType) this.type).getElementType();
     }
     return getType();
   }

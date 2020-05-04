@@ -29,17 +29,6 @@ public class IncompleteType extends Type {
     return new IncompleteType(this);
   }
 
-  /** @return this, as IncompleteType is the root of the Type chain */
-  @Override
-  public Type getRoot() {
-    return this;
-  }
-
-  @Override
-  public Type getFollowingLevel() {
-    return this;
-  }
-
   @Override
   public boolean equals(Object o) {
     return o instanceof IncompleteType;

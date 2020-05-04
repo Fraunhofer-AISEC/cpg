@@ -113,17 +113,6 @@ public class ObjectType extends Type {
     return new ObjectType(this, this.generics, this.modifier, this.primitive);
   }
 
-  /** @return this, as ObjectType is the root of the Type chain */
-  @Override
-  public Type getRoot() {
-    return this;
-  }
-
-  @Override
-  public Type getFollowingLevel() {
-    return this;
-  }
-
   public void setGenerics(List<Type> generics) {
     this.generics = generics;
   }

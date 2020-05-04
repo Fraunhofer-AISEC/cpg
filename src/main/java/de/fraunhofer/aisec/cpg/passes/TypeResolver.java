@@ -18,7 +18,7 @@ public class TypeResolver extends Pass {
       if (type instanceof PointerType) {
         element = ((PointerType) type).getElementType();
       } else if (type instanceof ReferenceType) {
-        element = ((ReferenceType) type).getReference();
+        element = ((ReferenceType) type).getElementType();
       }
       assert element != null;
       if (!element.isFirstOrderType()) {
@@ -28,7 +28,7 @@ public class TypeResolver extends Pass {
               if (type instanceof PointerType) {
                 ((PointerType) type).setElementType(t);
               } else if (type instanceof ReferenceType) {
-                ((ReferenceType) type).setReference(t);
+                ((ReferenceType) type).setElementType(t);
               }
             }
           }
@@ -85,19 +85,17 @@ public class TypeResolver extends Pass {
    */
   private void addType(Type type) {
     Type root = type.getRoot();
-    if (root.equals(type)) {
+    if (root.equals(type) && !typeState.containsKey(type)) {
       // This is a rootType and is included in the map as key with empty references
-      if (!typeState.containsKey(type)) {
-        typeState.put(type, new ArrayList<>());
-        return;
-      }
+      typeState.put(type, new ArrayList<>());
+      return;
     }
 
     // ReferencesTypes
     if (typeState.containsKey(root)) {
       if (!typeState.get(root).contains(type)) {
         typeState.get(root).add(type);
-        addType(type.getFollowingLevel());
+        addType(((SecondOrderType) type).getElementType());
       }
 
     } else {

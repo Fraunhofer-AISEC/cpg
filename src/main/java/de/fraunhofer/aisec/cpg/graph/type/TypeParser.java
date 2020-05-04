@@ -38,12 +38,13 @@ import java.util.regex.Pattern;
  */
 public class TypeParser {
 
+  private TypeParser() {
+    throw new IllegalStateException("Do not instantiate the TypeParser");
+  }
+
   public static final String UNKNOWN_TYPE_STRING = "UNKNOWN";
   private static final List<String> primitives =
       List.of("byte", "short", "int", "long", "float", "double", "boolean", "char");
-  private static final Pattern TYPE_FROM_STRING =
-      Pattern.compile(
-          "(?:(?<modifier>[a-zA-Z]*) )?(?<type>[a-zA-Z0-9_$.<>]*)(?<adjustment>[\\[\\]*&\\s]*)?");
   private static final Pattern functionPtrRegex =
       Pattern.compile(
           "(?:(?<functionptr>(\\h|\\()+[a-zA-Z0-9_$.<>:]*\\*\\h*[a-zA-Z0-9_$.<>:]*(\\h|\\))+)\\h*)(?<args>\\(+[a-zA-Z0-9_$.<>,\\h]*\\))");
@@ -62,26 +63,6 @@ public class TypeParser {
 
   public static TypeManager.Language getLanguage() {
     return language;
-  }
-
-  // TODO needed?
-  private static String clean(String type) {
-    if (type.contains("?")
-        || type.contains("org.eclipse.cdt.internal.core.dom.parser.ProblemType@")) {
-      return UNKNOWN_TYPE_STRING;
-    }
-    type = type.replaceAll("^struct ", "");
-    type = type.replaceAll("^const struct ", "");
-    type = type.replaceAll(" const ", " ");
-    // remove artifacts from unidentified C++ namespaces
-    type = type.replaceAll("\\{.*}::", "");
-    // remove irrelevant array sizes cluttering the type name
-    type = type.replaceAll("\\[[ \\d]*]", "[]");
-    // remove function signature info
-    type = type.replaceAll("\\(.*\\)", "");
-    // unify separator
-    type = type.replace("::", ".");
-    return type.strip();
   }
 
   /**
@@ -541,9 +522,9 @@ public class TypeParser {
       ((ObjectType) newRoot.getRoot()).setGenerics(((ObjectType) oldChain).getGenerics());
       return newRoot;
     } else if (oldChain instanceof ReferenceType) {
-      Type reference = reWrapType(((ReferenceType) oldChain).getReference(), newRoot);
+      Type reference = reWrapType(((ReferenceType) oldChain).getElementType(), newRoot);
       ReferenceType newChain = (ReferenceType) oldChain.duplicate();
-      newChain.setReference(reference);
+      newChain.setElementType(reference);
       newChain.refreshName();
       return newChain;
     } else if (oldChain instanceof PointerType) {

@@ -34,7 +34,7 @@ import java.util.Objects;
  * is required for matching parameters in function arguments to discover which implementation is
  * called.
  */
-public class ReferenceType extends Type {
+public class ReferenceType extends Type implements SecondOrderType {
 
   private Type reference;
 
@@ -74,46 +74,23 @@ public class ReferenceType extends Type {
     return new ReferenceType(this, this.reference);
   }
 
-  @Override
-  public Type getFollowingLevel() {
+  public Type getElementType() {
     return reference;
   }
 
-  @Override
-  public Type getRoot() {
-    return reference.getRoot();
-  }
-
-  public Type getReference() {
-    return reference;
+  public void setElementType(Type reference) {
+    this.reference = reference;
   }
 
   @Override
   public boolean isSimilar(Type t) {
     return t instanceof ReferenceType
-        && ((ReferenceType) t).getReference().equals(this)
+        && ((ReferenceType) t).getElementType().equals(this)
         && super.isSimilar(t);
   }
 
-  @Override
-  public void setRoot(Type newRoot) {
-    if (this.reference.isFirstOrderType()) {
-      this.reference = newRoot;
-    } else {
-      this.reference.setRoot(newRoot);
-    }
-  }
-
-  public void setReference(Type reference) {
-    this.reference = reference;
-  }
-
-  public Type getReferenceType() {
-    return reference;
-  }
-
   public void refreshName() {
-    this.name = this.getReference().getName() + "&";
+    this.name = this.getElementType().getName() + "&";
   }
 
   @Override

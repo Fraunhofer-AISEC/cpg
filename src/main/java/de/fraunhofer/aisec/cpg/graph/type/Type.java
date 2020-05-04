@@ -225,11 +225,6 @@ public abstract class Type extends Node {
    */
   public abstract Type dereference();
 
-  /** @return Resolves one dereference Level, i.e. the Type is dereferenced one time */
-  public abstract Type getFollowingLevel();
-
-  public void setFollowingLevel(Type level) {}
-
   public void refreshNames() {}
 
   /**
@@ -238,10 +233,22 @@ public abstract class Type extends Node {
    *
    * @return root Type
    */
-  public abstract Type getRoot();
+  public Type getRoot() {
+    if (this instanceof SecondOrderType) {
+      return ((SecondOrderType) this).getElementType().getRoot();
+    } else {
+      return this;
+    }
+  }
 
   public void setRoot(Type newRoot) {
-    return;
+    if (this instanceof SecondOrderType) {
+      if (((SecondOrderType) this).getElementType() instanceof SecondOrderType) {
+        ((SecondOrderType) ((SecondOrderType) this).getElementType()).setElementType(newRoot);
+      } else {
+        ((SecondOrderType) this).setElementType(newRoot);
+      }
+    }
   }
 
   /** @return Creates an exact copy of the curent type (chain) */

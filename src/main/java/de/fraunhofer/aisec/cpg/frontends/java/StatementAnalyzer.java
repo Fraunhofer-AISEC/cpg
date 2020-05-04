@@ -259,7 +259,7 @@ public class StatementAnalyzer
     // Adds true expression node where default empty condition evaluates to true, remove here and in
     // cpp StatementHandler
     if (statement.getCondition() == null) {
-      Literal literal =
+      Literal<?> literal =
           NodeBuilder.newLiteral(true, TypeParser.createFrom("boolean", true), "true");
       statement.setCondition(literal);
     }

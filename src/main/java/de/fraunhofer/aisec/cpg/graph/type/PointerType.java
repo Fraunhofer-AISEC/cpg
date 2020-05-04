@@ -33,7 +33,7 @@ import java.util.Objects;
  * as arrays, since technically arrays are pointers. For JAVA the only use case are arrays as there
  * is no such pointer concept.
  */
-public class PointerType extends Type {
+public class PointerType extends Type implements SecondOrderType {
   private Type elementType;
 
   public enum PointerOrigin {
@@ -84,6 +84,7 @@ public class PointerType extends Type {
     return elementType;
   }
 
+  @Override
   public void refreshNames() {
     if (this.getElementType() instanceof PointerType) {
       ((PointerType) this.getElementType()).refreshNames();
@@ -93,11 +94,6 @@ public class PointerType extends Type {
     } else {
       this.name = this.getElementType().getName() + "*";
     }
-  }
-
-  @Override
-  public void setFollowingLevel(Type elementType) {
-    this.elementType = elementType;
   }
 
   @Override
@@ -122,18 +118,8 @@ public class PointerType extends Type {
         && super.isSimilar(t);
   }
 
-  @Override
-  public Type getRoot() {
-    return this.elementType.getRoot();
-  }
-
   public PointerOrigin getPointerOrigin() {
     return pointerOrigin;
-  }
-
-  @Override
-  public Type getFollowingLevel() {
-    return elementType;
   }
 
   public Type getElementType() {
@@ -149,15 +135,6 @@ public class PointerType extends Type {
       containedType = ((PointerType) containedType).getElementType();
     }
     return depth;
-  }
-
-  @Override
-  public void setRoot(Type newRoot) {
-    if (this.elementType.isFirstOrderType()) {
-      this.elementType = newRoot;
-    } else {
-      this.elementType.setRoot(newRoot);
-    }
   }
 
   public void setElementType(Type elementType) {

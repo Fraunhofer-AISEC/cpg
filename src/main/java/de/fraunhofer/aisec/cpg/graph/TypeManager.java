@@ -74,7 +74,7 @@ public class TypeManager {
       this.firstOrderTypes.add(t);
     } else {
       this.secondOrderTypes.add(t);
-      registerType(t.getFollowingLevel());
+      registerType(((SecondOrderType) t).getElementType());
     }
     return t;
   }
@@ -117,7 +117,7 @@ public class TypeManager {
       }
     }
     if (reference) {
-      referenceType.setReference(type);
+      referenceType.setElementType(type);
       return Optional.of(referenceType);
     }
     return Optional.of(type);
@@ -148,7 +148,7 @@ public class TypeManager {
         if (!referenceType.isSimilar(t)) {
           return Optional.empty();
         }
-        unwrappedTypes.add(((ReferenceType) t).getReference());
+        unwrappedTypes.add(((ReferenceType) t).getElementType());
         reference = true;
       } else {
         break;
@@ -294,8 +294,7 @@ public class TypeManager {
   private Type getTargetType(Type currTarget, String alias) {
     if (alias.contains("(") && alias.contains("*")) {
       // function pointer
-      Type fptrType = TypeParser.createFrom(currTarget.getName() + " " + alias, true);
-      return fptrType;
+      return TypeParser.createFrom(currTarget.getName() + " " + alias, true);
     } else if (alias.endsWith("]")) {
       // array type
       return currTarget.reference(PointerType.PointerOrigin.ARRAY);
@@ -390,7 +389,7 @@ public class TypeManager {
     Type currTarget = getTargetType(target, cleanedPart);
     Type alias = getAlias(cleanedPart);
 
-    if (!alias.isFirstOrderType()) {
+    if (alias instanceof SecondOrderType) {
       Type chain = alias.duplicate();
       chain.setRoot(currTarget);
       currTarget = chain;

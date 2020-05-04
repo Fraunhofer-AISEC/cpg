@@ -211,7 +211,8 @@ class StatementHandler extends Handler<Statement, IASTStatement, CXXLanguageFron
     // Adds true expression node where default empty condition evaluates to true, remove here and in
     // java StatementAnalyzer
     if (statement.getConditionDeclaration() == null && statement.getCondition() == null) {
-      Literal literal = NodeBuilder.newLiteral(true, TypeParser.createFrom("bool", true), "true");
+      Literal<?> literal =
+          NodeBuilder.newLiteral(true, TypeParser.createFrom("bool", true), "true");
       statement.setCondition(literal);
     }
     if (ctx.getIterationExpression() != null)

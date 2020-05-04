@@ -55,8 +55,6 @@ class DeclarationListHandler
       ValueDeclaration declaration =
           (ValueDeclaration) this.lang.getDeclaratorHandler().handle(declarator);
 
-      // String typeAdjustment = declaration.getType().getTypeAdjustment();
-      // String typeString = ctx.getDeclSpecifier().toString();
       Type result = TypeParser.createFrom(ctx.getRawSignature(), true);
       declaration.setType(result);
 

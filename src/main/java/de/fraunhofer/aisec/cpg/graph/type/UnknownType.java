@@ -72,16 +72,6 @@ public class UnknownType extends Type {
   }
 
   @Override
-  public Type getRoot() {
-    return unknownType;
-  }
-
-  @Override
-  public Type getFollowingLevel() {
-    return unknownType;
-  }
-
-  @Override
   public Type duplicate() {
     return unknownType;
   }
@@ -103,17 +93,11 @@ public class UnknownType extends Type {
   }
 
   @Override
-  public void setStorage(Storage storage) {
-    return;
-  }
+  public void setStorage(Storage storage) {}
 
   @Override
-  public void setQualifier(Qualifier qualifier) {
-    return;
-  }
+  public void setQualifier(Qualifier qualifier) {}
 
   @Override
-  public void setTypeOrigin(Origin origin) {
-    return;
-  }
+  public void setTypeOrigin(Origin origin) {}
 }
