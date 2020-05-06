@@ -113,7 +113,7 @@ public class MemberExpression extends Expression implements TypeListener {
   public String toString() {
     return new ToStringBuilder(this, Node.TO_STRING_STYLE)
         .appendSuper(super.toString())
-        .append("base", base)
+        .append("base", base.getName())
         .append("member", member)
         .toString();
   }

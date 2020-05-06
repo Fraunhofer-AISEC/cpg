@@ -203,7 +203,6 @@ public class FunctionDeclaration extends ValueDeclaration {
   public String toString() {
     return new ToStringBuilder(this, Node.TO_STRING_STYLE)
         .appendSuper(super.toString())
-        .append("body", body)
         .append("type", type)
         .append("parameters", parameters)
         .toString();

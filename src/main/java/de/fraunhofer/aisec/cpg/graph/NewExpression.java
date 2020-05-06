@@ -59,7 +59,7 @@ public class NewExpression extends Expression {
 
   @Override
   public String toString() {
-    return new ToStringBuilder(this)
+    return new ToStringBuilder(this, Node.TO_STRING_STYLE)
         .appendSuper(super.toString())
         .append("initializer", initializer)
         .toString();
