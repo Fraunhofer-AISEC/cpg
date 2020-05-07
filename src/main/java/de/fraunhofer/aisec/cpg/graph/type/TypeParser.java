@@ -264,6 +264,14 @@ public class TypeParser {
     return out2.toString();
   }
 
+  private static void processBlockUntilLastSplit(
+      String type, int lastSplit, int newPosition, List<String> typeBlocks) {
+    String substr = type.substring(lastSplit, newPosition);
+    if (substr.length() != 0) {
+      typeBlocks.add(substr);
+    }
+  }
+
   /**
    * Separates typeString into the different Parts that make up the type information
    *
@@ -278,14 +286,8 @@ public class TypeParser {
 
     // Guarantee that there is no arbitraty number of whitespces
     String[] typeSubpart = type.split(" ");
+    type = String.join(" ", typeSubpart).strip();
 
-    StringBuilder typeBuilder = new StringBuilder();
-    for (String part : typeSubpart) {
-      if (!part.equals("")) {
-        typeBuilder.append(part).append(" ");
-      }
-    }
-    type = typeBuilder.toString().strip();
     List<String> typeBlocks = new ArrayList<>();
 
     // Splits TypeString into relevant information blocks
@@ -299,19 +301,13 @@ public class TypeParser {
       switch (ch) {
         case ' ':
           // handle space create element
-          substr = type.substring(lastSplit, i);
-          if (substr.length() != 0) {
-            typeBlocks.add(substr);
-          }
+          processBlockUntilLastSplit(type, lastSplit, i, typeBlocks);
           lastSplit = i + 1;
           break;
 
         case '(':
           // handle ( find matching closing ignore content (not relevant type information)
-          substr = type.substring(lastSplit, i);
-          if (substr.length() != 0) {
-            typeBlocks.add(substr);
-          }
+          processBlockUntilLastSplit(type, lastSplit, i, typeBlocks);
           finishPosition = findMatching('(', ')', type.substring(i + 1));
           typeBlocks.add(type.substring(i, i + finishPosition + 1));
           i = finishPosition + i;
@@ -320,10 +316,7 @@ public class TypeParser {
 
         case '[':
           // handle [ find matching closing ignore content (not relevant type information)
-          substr = type.substring(lastSplit, i);
-          if (substr.length() != 0) {
-            typeBlocks.add(substr);
-          }
+          processBlockUntilLastSplit(type, lastSplit, i, typeBlocks);
 
           finishPosition = findMatching('[', ']', type.substring(i + 1));
           typeBlocks.add("[]"); // type.substring(i, i+finishPosition+1)
@@ -333,10 +326,7 @@ public class TypeParser {
 
         case '*':
           // handle * operator
-          substr = type.substring(lastSplit, i);
-          if (substr.length() != 0) {
-            typeBlocks.add(substr);
-          }
+          processBlockUntilLastSplit(type, lastSplit, i, typeBlocks);
 
           typeBlocks.add("*");
           lastSplit = i + 1;
@@ -344,10 +334,7 @@ public class TypeParser {
 
         case '&':
           // handle & operator
-          substr = type.substring(lastSplit, i);
-          if (substr.length() != 0) {
-            typeBlocks.add(substr);
-          }
+          processBlockUntilLastSplit(type, lastSplit, i, typeBlocks);
 
           typeBlocks.add("&");
           lastSplit = i + 1;
