@@ -50,6 +50,11 @@ public class TypeParser {
           "(?:(?<functionptr>(\\h|\\()+[a-zA-Z0-9_$.<>:]*\\*\\h*[a-zA-Z0-9_$.<>:]*(\\h|\\))+)\\h*)(?<args>\\(+[a-zA-Z0-9_$.<>,\\h]*\\))");
 
   private static TypeManager.Language language = TypeManager.getInstance().getLanguage();
+  private static final String volatileQualifier = "volatile";
+  private static final String finalQualifier = "final";
+  private static final String constQualifier = "const";
+  private static final String restrictQualifier = "restrict";
+  private static final String atomicQualifier = "atomic";
 
   /**
    * WARNING: This is only intended for Test Purposes of the TypeParser itself without parsing
@@ -87,22 +92,24 @@ public class TypeParser {
 
     for (String part : typeString) {
       switch (part) {
-        case "final":
-        case "const":
+        case finalQualifier:
+        case constQualifier:
           constantFlag = true;
           break;
 
-        case "volatile":
+        case volatileQualifier:
           volatileFlag = true;
           break;
 
-        case "restrict":
+        case restrictQualifier:
           restrictFlag = true;
           break;
 
-        case "atomic":
+        case atomicQualifier:
           atomicFlag = true;
           break;
+        default:
+          // do nothing
       }
     }
 
@@ -141,12 +148,12 @@ public class TypeParser {
 
   protected static boolean isQualifierSpecifier(String qualifier) {
     if (getLanguage() == TypeManager.Language.JAVA) {
-      return qualifier.equals("final") || qualifier.equals("volatile");
+      return qualifier.equals(finalQualifier) || qualifier.equals(volatileQualifier);
     } else {
-      return qualifier.equals("const")
-          || qualifier.equals("volatile")
-          || qualifier.equals("restrict")
-          || qualifier.equals("atomic");
+      return qualifier.equals(constQualifier)
+          || qualifier.equals(volatileQualifier)
+          || qualifier.equals(restrictQualifier)
+          || qualifier.equals(atomicQualifier);
     }
   }
 
@@ -206,7 +213,7 @@ public class TypeParser {
   }
 
   private static boolean isUnknownType(String typeName) {
-    return typeName.toUpperCase().contains("UNKNOWN");
+    return typeName.toUpperCase().contains(UNKNOWN_TYPE_STRING);
   }
 
   /**
