@@ -10,6 +10,12 @@ public class TypeResolver extends Pass {
   private Set<Type> firstOrderTypes = new HashSet<>();
   private Map<Type, List<Type>> typeState = new HashMap<>();
 
+  /**
+   * Reduce the SecondOrderTypes to store only the unique SecondOrderTypes
+   *
+   * @param type SecondOrderType that is to be eliminated if an equal is already in typeState or is
+   *     added if not
+   */
   private void processSecondOrderTypes(Type type) {
     Type root = type.getRoot();
 
@@ -134,22 +140,33 @@ public class TypeResolver extends Pass {
     }
 
     // Remove duplicates from fields
-    for (Type t : typeState.keySet()) {
-      if (t instanceof FunctionPointerType) {
-        ((FunctionPointerType) t)
-            .setReturnType(obtainType(((FunctionPointerType) t).getReturnType()));
-        List<Type> newParameters = new ArrayList<>();
-        for (Type t2 : ((FunctionPointerType) t).getParameters()) {
-          newParameters.add(obtainType(t2));
-        }
-        ((FunctionPointerType) t).setParameters(newParameters);
-      } else if (t instanceof ObjectType) {
-        List<Type> newGenerics = new ArrayList<>();
-        for (Type generic : ((ObjectType) t).getGenerics()) {
-          newGenerics.add(obtainType(generic));
-        }
-        ((ObjectType) t).setGenerics(newGenerics);
+    for (Type t : secondOrderTypes) {
+      removeDuplicatesInFields(t);
+    }
+  }
+
+  /**
+   * Visits all FirstOrderTypes and replace all the fields like returnVal or paramteres for
+   * FunctionPointertype or Generics for ObjectType
+   *
+   * @param t FirstOrderType
+   */
+  private void removeDuplicatesInFields(Type t) {
+    // Remove duplicates from fields
+    if (t instanceof FunctionPointerType) {
+      ((FunctionPointerType) t)
+          .setReturnType(obtainType(((FunctionPointerType) t).getReturnType()));
+      List<Type> newParameters = new ArrayList<>();
+      for (Type t2 : ((FunctionPointerType) t).getParameters()) {
+        newParameters.add(obtainType(t2));
       }
+      ((FunctionPointerType) t).setParameters(newParameters);
+    } else if (t instanceof ObjectType) {
+      List<Type> newGenerics = new ArrayList<>();
+      for (Type generic : ((ObjectType) t).getGenerics()) {
+        newGenerics.add(obtainType(generic));
+      }
+      ((ObjectType) t).setGenerics(newGenerics);
     }
   }
 

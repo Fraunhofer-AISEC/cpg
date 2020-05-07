@@ -73,40 +73,40 @@ public class TypeParser {
    * @return Type.Qualifier
    */
   public static Type.Qualifier calcQualifier(List<String> typeString, Type.Qualifier old) {
-    boolean constant_flag = false;
-    boolean volatile_flag = false;
-    boolean restrict_flag = false;
-    boolean atomic_flag = false;
+    boolean constantFlag = false;
+    boolean volatileFlag = false;
+    boolean restrictFlag = false;
+    boolean atomicFlag = false;
 
     if (old != null) {
-      constant_flag = old.isConst();
-      volatile_flag = old.isVolatile();
-      restrict_flag = old.isRestrict();
-      atomic_flag = old.isAtomic();
+      constantFlag = old.isConst();
+      volatileFlag = old.isVolatile();
+      restrictFlag = old.isRestrict();
+      atomicFlag = old.isAtomic();
     }
 
     for (String part : typeString) {
       switch (part) {
         case "final":
         case "const":
-          constant_flag = true;
+          constantFlag = true;
           break;
 
         case "volatile":
-          volatile_flag = true;
+          volatileFlag = true;
           break;
 
         case "restrict":
-          restrict_flag = true;
+          restrictFlag = true;
           break;
 
         case "atomic":
-          atomic_flag = true;
+          atomicFlag = true;
           break;
       }
     }
 
-    return new Type.Qualifier(constant_flag, volatile_flag, restrict_flag, atomic_flag);
+    return new Type.Qualifier(constantFlag, volatileFlag, restrictFlag, atomicFlag);
   }
 
   /**
@@ -119,8 +119,7 @@ public class TypeParser {
     for (String part : typeString) {
       try {
         return Type.Storage.valueOf(part.toUpperCase());
-      } catch (IllegalArgumentException e) {
-        continue;
+      } catch (IllegalArgumentException ignored) {
       }
     }
     return Type.Storage.AUTO;
@@ -128,7 +127,7 @@ public class TypeParser {
 
   public static boolean isStorageSpecifier(String specifier) {
     if (getLanguage() == TypeManager.Language.CXX) {
-      return specifier.toUpperCase().equals("STATIC");
+      return specifier.equalsIgnoreCase("STATIC");
     } else {
       try {
         Type.Storage.valueOf(specifier.toUpperCase());
@@ -218,37 +217,39 @@ public class TypeParser {
    */
   private static String fixGenerics(String type) {
     StringBuilder out = new StringBuilder();
-    int bracket_count = 0;
+    int bracketCount = 0;
     boolean bracketCountStarted = false;
-    for (int i = 0; i < type.length(); i++) {
-      if (type.charAt(i) == '<') {
-        bracket_count++;
-        out.append(type.charAt(i));
-        i++;
-        while (bracket_count > 0) {
+    int iterator = 0;
+    while (iterator < type.length()) {
+      if (type.charAt(iterator) == '<') {
+        bracketCount++;
+        out.append(type.charAt(iterator));
+        iterator++;
+        while (bracketCount > 0) {
           bracketCountStarted = true;
-          if (type.charAt(i) == '>') {
+          if (type.charAt(iterator) == '>') {
             out.append('>');
-            bracket_count--;
-          } else if (type.charAt(i) == '<') {
+            bracketCount--;
+          } else if (type.charAt(iterator) == '<') {
             out.append('<');
-            bracket_count++;
+            bracketCount++;
 
           } else {
-            if (type.charAt(i) != ' ') {
-              out.append(type.charAt(i));
+            if (type.charAt(iterator) != ' ') {
+              out.append(type.charAt(iterator));
             }
           }
-          i++;
+          iterator++;
         }
       } else {
-        out.append(type.charAt(i));
+        out.append(type.charAt(iterator));
       }
 
       if (bracketCountStarted) {
         bracketCountStarted = false;
-        i--;
+        iterator--;
       }
+      iterator++;
     }
 
     String[] splitted = out.toString().split("\\<");
@@ -292,7 +293,8 @@ public class TypeParser {
     int finishPosition = 0;
     String substr = "";
 
-    for (int i = 0; i < type.length(); i++) {
+    int i = 0;
+    while (i < type.length()) {
       char ch = type.charAt(i);
       switch (ch) {
         case ' ':
@@ -359,6 +361,7 @@ public class TypeParser {
           }
           break;
       }
+      i++;
     }
 
     return typeBlocks;
@@ -641,7 +644,7 @@ public class TypeParser {
         // Obtain possible generic List from TypeString
         List<Type> generics = getGenerics(typeName);
         if (typeName.contains("<") && typeName.contains(">")) {
-          typeName = typeName.substring(0, typeName.indexOf("<"));
+          typeName = typeName.substring(0, typeName.indexOf('<'));
         }
         finalType =
             new ObjectType(typeName, storageValue, qualifier, generics, modifier, primitiveType);
