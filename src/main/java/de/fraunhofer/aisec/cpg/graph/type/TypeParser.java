@@ -120,6 +120,7 @@ public class TypeParser {
       try {
         return Type.Storage.valueOf(part.toUpperCase());
       } catch (IllegalArgumentException ignored) {
+        // continue in case of illegalArgumentException
       }
     }
     return Type.Storage.AUTO;

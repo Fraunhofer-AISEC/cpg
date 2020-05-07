@@ -123,16 +123,7 @@ public class TypeManager {
     return Optional.of(type);
   }
 
-  public Optional<Type> getCommonType(Collection<Type> types) {
-
-    boolean sameType =
-        types.stream().map(t -> t.getClass().getCanonicalName()).collect(Collectors.toSet()).size()
-            == 1;
-    if (!sameType) {
-      // No commonType for different Types
-      return Optional.empty();
-    }
-
+  private Optional<Set<Type>> unwrapTypes(Collection<Type> types, WrapState wrapState) {
     Set<Type> unwrappedTypes = new HashSet<>();
     int depth = 0;
     int counter = 0;
@@ -142,9 +133,7 @@ public class TypeManager {
 
     for (Type t : types) {
       if (t instanceof ReferenceType) {
-        if (counter == 0) {
-          referenceType = (ReferenceType) t;
-        }
+        referenceType = (ReferenceType) t;
         if (!referenceType.isSimilar(t)) {
           return Optional.empty();
         }
@@ -170,13 +159,41 @@ public class TypeManager {
         pointerOrigin = ((PointerType) t).getPointerOrigin();
       }
     }
+    wrapState.setDepth(depth);
+    wrapState.setPointerOrigin(pointerOrigin);
+    wrapState.setReference(reference);
+    wrapState.setReferenceType(referenceType);
 
-    types = unwrappedTypes;
+    return Optional.of(unwrappedTypes);
+  }
+
+  public Optional<Type> getCommonType(Collection<Type> types) {
+
+    boolean sameType =
+        types.stream().map(t -> t.getClass().getCanonicalName()).collect(Collectors.toSet()).size()
+            == 1;
+    if (!sameType) {
+      // No commonType for different Types
+      return Optional.empty();
+    }
+    WrapState wrapState = new WrapState();
+    Optional<Set<Type>> unwrapTypes = unwrapTypes(types, wrapState);
+
+    if (unwrapTypes.isEmpty()) {
+      return Optional.empty();
+    }
+
+    types = unwrapTypes.get();
 
     if (types.isEmpty()) {
       return Optional.empty();
     } else if (types.size() == 1) {
-      return rewrapType(types.iterator().next(), depth, pointerOrigin, reference, referenceType);
+      return rewrapType(
+          types.iterator().next(),
+          wrapState.getDepth(),
+          wrapState.getPointerOrigin(),
+          wrapState.isReference(),
+          wrapState.getReferenceType());
     }
     typeToRecord =
         frontend.getScopeManager()
@@ -222,7 +239,12 @@ public class TypeManager {
       return commonType;
     }
 
-    return rewrapType(finalType, depth, pointerOrigin, reference, referenceType);
+    return rewrapType(
+        finalType,
+        wrapState.getDepth(),
+        wrapState.getPointerOrigin(),
+        wrapState.isReference(),
+        wrapState.getReferenceType());
   }
 
   private Set<Ancestor> getAncestors(RecordDeclaration record, int depth) {
