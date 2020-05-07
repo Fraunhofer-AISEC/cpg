@@ -597,6 +597,23 @@ public class TypeParser {
     return typeName;
   }
 
+  private static ObjectType.Modifier determineModifier(
+      List<String> typeBlocks, boolean primitiveType) {
+    // Default is signed, unless unsigned keyword is specified. For other classes that are not
+    // primitive this is NOT_APPLICABLE
+    ObjectType.Modifier modifier = ObjectType.Modifier.NOT_APPLICABLE;
+    if (primitiveType) {
+      if (typeBlocks.contains("unsigned")) {
+        modifier = ObjectType.Modifier.UNSIGNED;
+        typeBlocks.remove("unsigned");
+      } else {
+        modifier = ObjectType.Modifier.SIGNED;
+        typeBlocks.remove("signed");
+      }
+    }
+    return modifier;
+  }
+
   /**
    * Use this function for parsing new types and obtaining a new Type the TypeParser creates from
    * the typeString
@@ -626,16 +643,7 @@ public class TypeParser {
 
     // Default is signed, unless unsigned keyword is specified. For other classes that are not
     // primitive this is NOT_APPLICABLE
-    ObjectType.Modifier modifier = ObjectType.Modifier.NOT_APPLICABLE;
-    if (primitiveType) {
-      if (typeBlocks.contains("unsigned")) {
-        modifier = ObjectType.Modifier.UNSIGNED;
-        typeBlocks.remove("unsigned");
-      } else {
-        modifier = ObjectType.Modifier.SIGNED;
-        typeBlocks.remove("signed");
-      }
-    }
+    ObjectType.Modifier modifier = determineModifier(typeBlocks, primitiveType);
 
     // Join compound primitive types into one block i.e. types consisting of more than one word e.g.
     // long long int (only primitive types)
@@ -647,12 +655,11 @@ public class TypeParser {
     // Handle preceeding qualifier or storage specifier to the type name e.g. static const int
     int counter = 0;
     for (String part : typeBlocks) {
-      if (isKnownSpecifier(part)) {
-        if (isQualifierSpecifier(part)) {
-          qualifierList.add(part);
-        } else if (isStorageSpecifier(part)) {
-          storageList.add(part);
-        }
+      if (isQualifierSpecifier(part)) {
+        qualifierList.add(part);
+        counter++;
+      } else if (isStorageSpecifier(part)) {
+        storageList.add(part);
         counter++;
       } else {
         break;
