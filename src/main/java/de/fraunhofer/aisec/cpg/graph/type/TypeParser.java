@@ -544,6 +544,59 @@ public class TypeParser {
     return createFrom(string, false);
   }
 
+  private static Type postTypeParsing(
+      List<String> subPart, Type finalType, List<String> bracketExpressions) {
+    for (String part : subPart) {
+      if (part.equals("*")) {
+        // Creates a Pointer to the finalType
+        finalType = finalType.reference(PointerType.PointerOrigin.POINTER);
+      }
+
+      if (part.equals("&")) {
+        // CPP ReferenceTypes are indicated by an & at the end of the typeName e.g. int&, and are
+        // handled differently to a pointer
+        Type.Qualifier oldQualifier = finalType.getQualifier();
+        Type.Storage oldStorage = finalType.getStorage();
+        finalType.setQualifier(new Type.Qualifier());
+        finalType.setStorage(Type.Storage.AUTO);
+        finalType = new ReferenceType(finalType);
+        finalType.setStorage(oldStorage);
+        finalType.setQualifier(oldQualifier);
+      }
+
+      if (part.startsWith("[") && part.endsWith("]")) {
+        // Arrays are equal to pointer, create a reference
+        finalType = finalType.reference(PointerType.PointerOrigin.ARRAY);
+      }
+
+      if (part.startsWith("(") && part.endsWith(")")) {
+        // BracketExpressions change the binding of operators they are stored in order to be
+        // processed afterwards
+        bracketExpressions.add(part);
+      }
+
+      // Check storage and qualifiers specifierd that are defined after the typeName e.g. int const
+      if (isStorageSpecifier(part)) {
+        List<String> specifiers = new ArrayList<>();
+        specifiers.add(part);
+        finalType.setStorage(calcStorage(specifiers));
+      }
+      if (isQualifierSpecifier(part)) {
+        List<String> qualifiers = new ArrayList<>();
+        qualifiers.add(part);
+        finalType.setQualifier(calcQualifier(qualifiers, finalType.getQualifier()));
+      }
+    }
+    return finalType;
+  }
+
+  private static String removeGenerics(String typeName) {
+    if (typeName.contains("<") && typeName.contains(">")) {
+      typeName = typeName.substring(0, typeName.indexOf('<'));
+    }
+    return typeName;
+  }
+
   /**
    * Use this function for parsing new types and obtaining a new Type the TypeParser creates from
    * the typeString
@@ -625,29 +678,26 @@ public class TypeParser {
 
       return typeManager.registerType(
           new FunctionPointerType(qualifier, storageValue, parameterList, returnType));
+    } else if (isIncompleteType(typeName)) {
+      // IncompleteType e.g. void
+      finalType = new IncompleteType();
+    } else if (isUnknownType(typeName)) {
+      // UnknownType -> no information on how to process this type
+      finalType = new UnknownType(typeName);
     } else {
-      if (isIncompleteType(typeName)) {
-        // IncompleteType e.g. void
-        finalType = new IncompleteType();
-      } else if (isUnknownType(typeName)) {
-        // UnknownType -> no information on how to process this type
-        finalType = new UnknownType(typeName);
-      } else {
-        // ObjectType
-        // Obtain possible generic List from TypeString
-        List<Type> generics = getGenerics(typeName);
-        if (typeName.contains("<") && typeName.contains(">")) {
-          typeName = typeName.substring(0, typeName.indexOf('<'));
-        }
-        finalType =
-            new ObjectType(typeName, storageValue, qualifier, generics, modifier, primitiveType);
-        if (finalType.getTypeName().equals("auto") || (type.contains("auto") && !primitiveType)) {
-          // In C++17 if auto keyword is used the compiler infers the type automatically, hence we
-          // are not able to find out, which type this should be, it will be resolved due to
-          // dataflow
-          return UnknownType.getUnknownType();
-        }
-      }
+      // ObjectType
+      // Obtain possible generic List from TypeString
+      List<Type> generics = getGenerics(typeName);
+      typeName = removeGenerics(typeName);
+      finalType =
+          new ObjectType(typeName, storageValue, qualifier, generics, modifier, primitiveType);
+    }
+
+    if (finalType.getTypeName().equals("auto") || (type.contains("auto") && !primitiveType)) {
+      // In C++17 if auto keyword is used the compiler infers the type automatically, hence we
+      // are not able to find out, which type this should be, it will be resolved due to
+      // dataflow
+      return UnknownType.getUnknownType();
     }
 
     // Process Keywords / Operators (*, &) after typeName
@@ -655,49 +705,7 @@ public class TypeParser {
 
     List<String> bracketExpressions = new ArrayList<>();
 
-    for (String part : subPart) {
-
-      if (part.equals("*")) {
-        // Creates a Pointer to the finalType
-        finalType = finalType.reference(PointerType.PointerOrigin.POINTER);
-      }
-
-      if (part.equals("&")) {
-        // CPP ReferenceTypes are indicated by an & at the end of the typeName e.g. int&, and are
-        // handled differently to a pointer
-        Type.Qualifier oldQualifier = finalType.getQualifier();
-        Type.Storage oldStorage = finalType.getStorage();
-        finalType.setQualifier(new Type.Qualifier());
-        finalType.setStorage(Type.Storage.AUTO);
-        finalType = new ReferenceType(finalType);
-        finalType.setStorage(oldStorage);
-        finalType.setQualifier(oldQualifier);
-      }
-
-      if (part.startsWith("[") && part.endsWith("]")) {
-        // Arrays are equal to pointer, create a reference
-        finalType = finalType.reference(PointerType.PointerOrigin.ARRAY);
-      }
-
-      if (part.startsWith("(") && part.endsWith(")")) {
-        // BracketExpressions change the binding of operators they are stored in order to be
-        // processed afterwards
-        bracketExpressions.add(part);
-      }
-
-      // Check storage and qualifiers specifierd that are defined after the typeName e.g. int const
-      if (isKnownSpecifier(part)) {
-        if (isStorageSpecifier(part)) {
-          List<String> specifiers = new ArrayList<>();
-          specifiers.add(part);
-          finalType.setStorage(calcStorage(specifiers));
-        } else if (isQualifierSpecifier(part)) {
-          List<String> qualifiers = new ArrayList<>();
-          qualifiers.add(part);
-          finalType.setQualifier(calcQualifier(qualifiers, finalType.getQualifier()));
-        }
-      }
-    }
+    finalType = postTypeParsing(subPart, finalType, bracketExpressions);
 
     // Resolve BracketExpressions that were identified previously
     finalType = resolveBracketExpression(finalType, bracketExpressions);
