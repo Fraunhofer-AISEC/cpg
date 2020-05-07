@@ -123,7 +123,7 @@ public class TypeManager {
     return Optional.of(type);
   }
 
-  private Optional<Set<Type>> unwrapTypes(Collection<Type> types, WrapState wrapState) {
+  private Set<Type> unwrapTypes(Collection<Type> types, WrapState wrapState) {
     Set<Type> unwrappedTypes = new HashSet<>();
     int depth = 0;
     int counter = 0;
@@ -135,7 +135,7 @@ public class TypeManager {
       if (t instanceof ReferenceType) {
         referenceType = (ReferenceType) t;
         if (!referenceType.isSimilar(t)) {
-          return Optional.empty();
+          return null;
         }
         unwrappedTypes.add(((ReferenceType) t).getElementType());
         reference = true;
@@ -153,7 +153,7 @@ public class TypeManager {
           counter++;
         }
         if (t.getReferenceDepth() != depth) {
-          return Optional.empty();
+          return null;
         }
         unwrappedTypes.add(t.getRoot());
         pointerOrigin = ((PointerType) t).getPointerOrigin();
@@ -164,7 +164,7 @@ public class TypeManager {
     wrapState.setReference(reference);
     wrapState.setReferenceType(referenceType);
 
-    return Optional.of(unwrappedTypes);
+    return unwrappedTypes;
   }
 
   public Optional<Type> getCommonType(Collection<Type> types) {
@@ -177,15 +177,10 @@ public class TypeManager {
       return Optional.empty();
     }
     WrapState wrapState = new WrapState();
-    Optional<Set<Type>> unwrapTypes = unwrapTypes(types, wrapState);
 
-    if (unwrapTypes.isEmpty()) {
-      return Optional.empty();
-    }
+    types = unwrapTypes(types, wrapState);
 
-    types = unwrapTypes.get();
-
-    if (types.isEmpty()) {
+    if (types == null || types.isEmpty()) {
       return Optional.empty();
     } else if (types.size() == 1) {
       return rewrapType(
