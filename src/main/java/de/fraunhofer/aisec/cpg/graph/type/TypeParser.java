@@ -50,11 +50,11 @@ public class TypeParser {
           "(?:(?<functionptr>(\\h|\\()+[a-zA-Z0-9_$.<>:]*\\*\\h*[a-zA-Z0-9_$.<>:]*(\\h|\\))+)\\h*)(?<args>\\(+[a-zA-Z0-9_$.<>,\\h]*\\))");
 
   private static TypeManager.Language language = TypeManager.getInstance().getLanguage();
-  private static final String volatileQualifier = "volatile";
-  private static final String finalQualifier = "final";
-  private static final String constQualifier = "const";
-  private static final String restrictQualifier = "restrict";
-  private static final String atomicQualifier = "atomic";
+  private static final String VOLATILE_QUALIFIER = "volatile";
+  private static final String FINAL_QUALIFIER = "final";
+  private static final String CONST_QUALIFIER = "const";
+  private static final String RESTRICT_QUALIFIER = "restrict";
+  private static final String ATOMIC_QUALIFIER = "atomic";
 
   /**
    * WARNING: This is only intended for Test Purposes of the TypeParser itself without parsing
@@ -92,20 +92,20 @@ public class TypeParser {
 
     for (String part : typeString) {
       switch (part) {
-        case finalQualifier:
-        case constQualifier:
+        case FINAL_QUALIFIER:
+        case CONST_QUALIFIER:
           constantFlag = true;
           break;
 
-        case volatileQualifier:
+        case VOLATILE_QUALIFIER:
           volatileFlag = true;
           break;
 
-        case restrictQualifier:
+        case RESTRICT_QUALIFIER:
           restrictFlag = true;
           break;
 
-        case atomicQualifier:
+        case ATOMIC_QUALIFIER:
           atomicFlag = true;
           break;
         default:
@@ -148,12 +148,12 @@ public class TypeParser {
 
   protected static boolean isQualifierSpecifier(String qualifier) {
     if (getLanguage() == TypeManager.Language.JAVA) {
-      return qualifier.equals(finalQualifier) || qualifier.equals(volatileQualifier);
+      return qualifier.equals(FINAL_QUALIFIER) || qualifier.equals(VOLATILE_QUALIFIER);
     } else {
-      return qualifier.equals(constQualifier)
-          || qualifier.equals(volatileQualifier)
-          || qualifier.equals(restrictQualifier)
-          || qualifier.equals(atomicQualifier);
+      return qualifier.equals(CONST_QUALIFIER)
+          || qualifier.equals(VOLATILE_QUALIFIER)
+          || qualifier.equals(RESTRICT_QUALIFIER)
+          || qualifier.equals(ATOMIC_QUALIFIER);
     }
   }
 
