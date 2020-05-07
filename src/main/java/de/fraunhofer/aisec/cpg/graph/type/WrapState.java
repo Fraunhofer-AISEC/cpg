@@ -1,8 +1,6 @@
 package de.fraunhofer.aisec.cpg.graph.type;
 
-/**
- * Stores State for rewrap when typeinformation has been unwrapped
- */
+/** Stores State for rewrap when typeinformation has been unwrapped */
 public class WrapState {
 
   int depth;

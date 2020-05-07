@@ -131,34 +131,36 @@ public class TypeManager {
     PointerType.PointerOrigin pointerOrigin = null;
     ReferenceType referenceType = null;
 
-    for (Type t : types) {
-      if (t instanceof ReferenceType) {
+    Type t1 = types.stream().findAny().orElse(null);
+
+    if (t1 instanceof ReferenceType) {
+      for (Type t : types) {
         referenceType = (ReferenceType) t;
         if (!referenceType.isSimilar(t)) {
-          return null;
+          return Collections.emptySet();
         }
         unwrappedTypes.add(((ReferenceType) t).getElementType());
         reference = true;
-      } else {
-        break;
       }
     }
-
     types = unwrappedTypes;
 
-    for (Type t : types) {
-      if (t instanceof PointerType) {
+    Type t2 = types.stream().findAny().orElse(null);
+
+    if (t2 instanceof PointerType) {
+      for (Type t : types) {
         if (counter == 0) {
           depth = t.getReferenceDepth();
           counter++;
         }
         if (t.getReferenceDepth() != depth) {
-          return null;
+          return Collections.emptySet();
         }
         unwrappedTypes.add(t.getRoot());
         pointerOrigin = ((PointerType) t).getPointerOrigin();
       }
     }
+
     wrapState.setDepth(depth);
     wrapState.setPointerOrigin(pointerOrigin);
     wrapState.setReference(reference);
@@ -180,7 +182,7 @@ public class TypeManager {
 
     types = unwrapTypes(types, wrapState);
 
-    if (types == null || types.isEmpty()) {
+    if (types.isEmpty()) {
       return Optional.empty();
     } else if (types.size() == 1) {
       return rewrapType(
