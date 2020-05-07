@@ -12,30 +12,30 @@ public class TypeResolver extends Pass {
 
   private void processSecondOrderTypes(Type type) {
     Type root = type.getRoot();
-    if (!typeState.get(root).contains(type)) {
-      typeState.get(root).add(type);
-      Type element = null;
-      if (type instanceof PointerType) {
-        element = ((PointerType) type).getElementType();
-      } else if (type instanceof ReferenceType) {
-        element = ((ReferenceType) type).getElementType();
-      }
-      assert element != null;
-      if (!element.isFirstOrderType()) {
-        if (typeState.get(root).contains(element)) {
-          for (Type t : typeState.get(root)) {
-            if (t.equals(element)) {
-              if (type instanceof PointerType) {
-                ((PointerType) type).setElementType(t);
-              } else if (type instanceof ReferenceType) {
-                ((ReferenceType) type).setElementType(t);
-              }
-            }
-          }
-        } else {
-          processSecondOrderTypes(element);
-        }
-      }
+
+    if (typeState.get(root).contains(type)) {
+      return;
+    }
+
+    typeState.get(root).add(type);
+    Type element = null;
+
+    if (type instanceof SecondOrderType) {
+      element = ((SecondOrderType) type).getElementType();
+    }
+
+    assert element != null;
+    if (!(element instanceof SecondOrderType)) {
+      return;
+    }
+    Type finalElement = element;
+    Type newElement =
+        typeState.get(root).stream().filter(t -> t.equals(finalElement)).findAny().orElse(null);
+
+    if (newElement != null) {
+      ((SecondOrderType) type).setElementType(newElement);
+    } else {
+      processSecondOrderTypes(element);
     }
   }
 
