@@ -226,47 +226,39 @@ public class TypeParser {
   private static String fixGenerics(String type) {
     StringBuilder out = new StringBuilder();
     int bracketCount = 0;
-    boolean bracketCountStarted = false;
     int iterator = 0;
     while (iterator < type.length()) {
-      if (type.charAt(iterator) == '<') {
-        bracketCount++;
-        out.append(type.charAt(iterator));
-        iterator++;
-        while (bracketCount > 0) {
-          bracketCountStarted = true;
-          if (type.charAt(iterator) == '>') {
-            out.append('>');
-            bracketCount--;
-          } else if (type.charAt(iterator) == '<') {
-            out.append('<');
-            bracketCount++;
+      switch (type.charAt(iterator)) {
+        case '<':
+          bracketCount++;
+          out.append(type.charAt(iterator));
+          break;
 
-          } else {
-            if (type.charAt(iterator) != ' ') {
-              out.append(type.charAt(iterator));
-            }
+        case '>':
+          out.append('>');
+          bracketCount--;
+          break;
+
+        case ' ':
+          if (bracketCount == 0) {
+            out.append(type.charAt(iterator));
           }
-          iterator++;
-        }
-      } else {
-        out.append(type.charAt(iterator));
-      }
+          break;
 
-      if (bracketCountStarted) {
-        bracketCountStarted = false;
-        iterator--;
+        default:
+          out.append(type.charAt(iterator));
+          break;
       }
       iterator++;
     }
 
     String[] splitted = out.toString().split("\\<");
     StringBuilder out2 = new StringBuilder();
-    for (int i = 0; i < splitted.length; i++) {
+    for (String s : splitted) {
       if (out2.length() > 0) {
         out2.append('<');
       }
-      out2.append(splitted[i].trim());
+      out2.append(s.trim());
     }
 
     return out2.toString();
