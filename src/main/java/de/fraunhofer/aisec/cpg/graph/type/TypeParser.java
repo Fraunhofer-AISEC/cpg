@@ -383,6 +383,38 @@ public class TypeParser {
     return new ArrayList<>();
   }
 
+  private static Type performBracketContentAction(Type finalType, String part) {
+    if (part.equals("*")) {
+      return finalType.reference(PointerType.PointerOrigin.POINTER);
+    }
+
+    if (part.equals("&")) {
+      return finalType.dereference();
+    }
+
+    if (part.startsWith("[") && part.endsWith("]")) {
+      return finalType.reference(PointerType.PointerOrigin.ARRAY);
+    }
+    if (part.startsWith("(") && part.endsWith(")")) {
+      List<String> subBracketExpression = new ArrayList<>();
+      subBracketExpression.add(part);
+      return resolveBracketExpression(finalType, subBracketExpression);
+    }
+    if (isStorageSpecifier(part)) {
+      List<String> specifiers = new ArrayList<>();
+      specifiers.add(part);
+      finalType.setStorage(calcStorage(specifiers));
+      return finalType;
+    }
+    if (isQualifierSpecifier(part)) {
+      List<String> qualifiers = new ArrayList<>();
+      qualifiers.add(part);
+      finalType.setQualifier(calcQualifier(qualifiers, finalType.getQualifier()));
+      return finalType;
+    }
+    return finalType;
+  }
+
   /**
    * Makes sure to apply Expressions containing brackets that change the binding of operators e.g.
    * () can change the binding order of operators
@@ -397,33 +429,7 @@ public class TypeParser {
       List<String> splitExpression =
           separate(bracketExpression.substring(1, bracketExpression.length() - 1));
       for (String part : splitExpression) {
-        if (part.equals("*")) {
-          finalType = finalType.reference(PointerType.PointerOrigin.POINTER);
-        }
-
-        if (part.equals("&")) {
-          finalType = finalType.dereference();
-        }
-
-        if (part.startsWith("[") && part.endsWith("]")) {
-          finalType = finalType.reference(PointerType.PointerOrigin.ARRAY);
-        }
-        if (part.startsWith("(") && part.endsWith(")")) {
-          List<String> subBracketExpression = new ArrayList<>();
-          subBracketExpression.add(part);
-          finalType = resolveBracketExpression(finalType, subBracketExpression);
-        }
-        if (isKnownSpecifier(part)) {
-          if (isStorageSpecifier(part)) {
-            List<String> specifiers = new ArrayList<>();
-            specifiers.add(part);
-            finalType.setStorage(calcStorage(specifiers));
-          } else {
-            List<String> qualifiers = new ArrayList<>();
-            qualifiers.add(part);
-            finalType.setQualifier(calcQualifier(qualifiers, finalType.getQualifier()));
-          }
-        }
+        finalType = performBracketContentAction(finalType, part);
       }
     }
 
