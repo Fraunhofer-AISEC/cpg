@@ -463,7 +463,11 @@ public class ExpressionHandler
         if (!field.isStatic()) {
           // convert to FieldAccessExpr
           FieldAccessExpr fieldAccessExpr = new FieldAccessExpr(new ThisExpr(), field.getName());
+          expr.getRange().ifPresent(fieldAccessExpr::setRange);
+          expr.getTokenRange().ifPresent(fieldAccessExpr::setTokenRange);
+          expr.getParentNode().ifPresent(fieldAccessExpr::setParentNode);
           expr.replace(fieldAccessExpr);
+          fieldAccessExpr.getParentNode().ifPresent(expr::setParentNode);
 
           // handle it as a field expression
           return (de.fraunhofer.aisec.cpg.graph.Expression) handle(fieldAccessExpr);
@@ -471,7 +475,11 @@ public class ExpressionHandler
           FieldAccessExpr fieldAccessExpr =
               new FieldAccessExpr(
                   new NameExpr(field.declaringType().getClassName()), field.getName());
+          expr.getRange().ifPresent(fieldAccessExpr::setRange);
+          expr.getTokenRange().ifPresent(fieldAccessExpr::setTokenRange);
+          expr.getParentNode().ifPresent(fieldAccessExpr::setParentNode);
           expr.replace(fieldAccessExpr);
+          fieldAccessExpr.getParentNode().ifPresent(expr::setParentNode);
 
           // handle it as a field expression
           return (de.fraunhofer.aisec.cpg.graph.Expression) handle(fieldAccessExpr);
@@ -628,9 +636,13 @@ public class ExpressionHandler
             NodeBuilder.newMemberCallExpression(
                 name, qualifiedName, base, member, methodCallExpr.toString());
       } else {
+        String targetClass = this.lang.getQualifiedNameFromImports(scopeName);
+        if (targetClass == null) {
+          targetClass = scopeName;
+        }
         callExpression =
             NodeBuilder.newStaticCallExpression(
-                name, qualifiedName, methodCallExpr.toString(), scopeName);
+                name, qualifiedName, methodCallExpr.toString(), targetClass);
       }
     } else {
       callExpression =

@@ -26,6 +26,8 @@
 
 package de.fraunhofer.aisec.cpg.graph;
 
+import org.checkerframework.checker.nullness.qual.NonNull;
+
 /**
  * A {@link CallExpression} that targets a static function of a different {@link RecordDeclaration},
  * without using a static import: <code>SomeClass.invoke()</code>
@@ -38,7 +40,20 @@ public class StaticCallExpression extends CallExpression {
     return targetRecord;
   }
 
+  @Override
+  public void setName(@NonNull String name) {
+    super.setName(name);
+    updateFqn();
+  }
+
   public void setTargetRecord(String targetRecord) {
     this.targetRecord = targetRecord;
+    updateFqn();
+  }
+
+  private void updateFqn() {
+    if (targetRecord != null && !targetRecord.isEmpty() && name != null && !name.isEmpty()) {
+      setFqn(targetRecord + "." + name);
+    }
   }
 }
