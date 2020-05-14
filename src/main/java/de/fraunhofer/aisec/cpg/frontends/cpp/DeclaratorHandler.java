@@ -32,7 +32,6 @@ import de.fraunhofer.aisec.cpg.graph.type.FunctionPointerType;
 import de.fraunhofer.aisec.cpg.graph.type.Type;
 import de.fraunhofer.aisec.cpg.graph.type.TypeParser;
 import de.fraunhofer.aisec.cpg.graph.type.UnknownType;
-import de.fraunhofer.aisec.cpg.passes.scopes.RecordScope;
 import de.fraunhofer.aisec.cpg.passes.scopes.Scope;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
@@ -170,9 +169,6 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
               new Type.Qualifier(), Type.Storage.AUTO, new ArrayList<>(), null));
       result.refreshType();
     } else {
-      RecordScope recordScope =
-          (RecordScope) lang.getScopeManager().getFirstScopeThat(RecordScope.class::isInstance);
-      // if (recordScope != null) {
       // field
       String code = ctx.getRawSignature();
       Pattern namePattern = Pattern.compile("\\((\\*|.+\\*)(?<name>[^)]*)");

@@ -33,12 +33,20 @@ import de.fraunhofer.aisec.cpg.TranslationConfiguration;
 import de.fraunhofer.aisec.cpg.TranslationManager;
 import de.fraunhofer.aisec.cpg.graph.CallExpression;
 import de.fraunhofer.aisec.cpg.graph.FunctionDeclaration;
+import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.TranslationUnitDeclaration;
+import de.fraunhofer.aisec.cpg.graph.VariableDeclaration;
 import de.fraunhofer.aisec.cpg.helpers.Util;
 import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Deque;
+import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.junit.jupiter.api.Test;
@@ -119,15 +127,6 @@ public class FunctionPointerTest {
         case "single_param_field_uninitialized":
           assertEquals(List.of(singleParam), call.getInvokes());
           break;
-        case "no_param_unused":
-        case "no_param_unused_field":
-        case "no_param_unused_uninitialized":
-        case "single_param_unused":
-        case "single_param_unused_field":
-        case "single_param_unused_field_uninitialized":
-          // TODO once we have dedicated function pointer types, we need to distinguish here!
-          assertEquals(List.of(noParam, singleParam), call.getInvokes());
-          break;
         case "no_param_unknown":
         case "no_param_unknown_uninitialized":
         case "no_param_unknown_field":
@@ -145,7 +144,46 @@ public class FunctionPointerTest {
         default:
           fail("Unexpected call " + call.getName());
       }
+
+      List<VariableDeclaration> variables = Util.subnodesOfType(result, VariableDeclaration.class);
+      for (VariableDeclaration variable : variables) {
+        switch (variable.getName()) {
+          case "no_param_unused":
+          case "no_param_unused_field":
+          case "no_param_unused_uninitialized":
+            assertEquals(noParam, getSourceFunction(variable));
+            break;
+          case "single_param_unused":
+          case "single_param_unused_field":
+          case "single_param_unused_field_uninitialized":
+            assertEquals(singleParam, getSourceFunction(variable));
+            break;
+        }
+      }
     }
+  }
+
+  private FunctionDeclaration getSourceFunction(VariableDeclaration variable) {
+    List<FunctionDeclaration> functions = new ArrayList<>();
+    Deque<Node> worklist = new ArrayDeque<>();
+    Set<Node> seen = Collections.newSetFromMap(new IdentityHashMap<>());
+    worklist.push(variable);
+
+    while (!worklist.isEmpty()) {
+      Node curr = worklist.pop();
+      if (!seen.add(curr)) {
+        continue;
+      }
+
+      if (curr instanceof FunctionDeclaration) {
+        functions.add((FunctionDeclaration) curr);
+      } else {
+        curr.getPrevDFG().forEach(worklist::push);
+      }
+    }
+
+    assertEquals(1, functions.size());
+    return functions.get(0);
   }
 
   @Test
