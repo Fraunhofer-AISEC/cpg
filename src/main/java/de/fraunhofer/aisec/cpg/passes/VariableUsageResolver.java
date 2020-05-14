@@ -148,7 +148,7 @@ public class VariableUsageResolver extends Pass {
                     d ->
                         d.getName().equals(finalFunctionName)
                             && d.getType().equals(fptrType.getReturnType())
-                                & d.hasSignature(fptrType.getParameters()))
+                            && d.hasSignature(fptrType.getParameters()))
                 .findFirst();
       } else {
         containingClass = TypeParser.createFrom(cls, true);
@@ -166,22 +166,19 @@ public class VariableUsageResolver extends Pass {
       }
     }
 
-    if (target.isEmpty()) {
-      if (containingClass == null) {
-        Set<ValueDeclaration> unknownMethod = new HashSet<>();
-        unknownMethod.add(handleUnknownMethod(functionName, reference.getType()));
-        return unknownMethod;
-      } else {
-        Set<ValueDeclaration> unknownClass = new HashSet<>();
-        unknownClass.add(
-            handleUnknownClassMethod(containingClass, functionName, reference.getType()));
-        return unknownClass;
-      }
-    } else {
-      Set<ValueDeclaration> targets = new HashSet<>();
+    Set<ValueDeclaration> targets = new HashSet<>();
+
+    if (target.isPresent()) {
       targets.add(target.get());
       return targets;
     }
+
+    if (containingClass == null) {
+      targets.add(handleUnknownMethod(functionName, reference.getType()));
+    } else {
+      targets.add(handleUnknownClassMethod(containingClass, functionName, reference.getType()));
+    }
+    return targets;
   }
 
   private void resolveLocalVarUsage(RecordDeclaration currentClass, Node parent, Node current) {
