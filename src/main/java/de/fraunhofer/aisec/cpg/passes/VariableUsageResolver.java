@@ -35,6 +35,7 @@ import de.fraunhofer.aisec.cpg.graph.type.Type;
 import de.fraunhofer.aisec.cpg.graph.type.TypeParser;
 import de.fraunhofer.aisec.cpg.graph.type.UnknownType;
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.ScopedWalker;
+import de.fraunhofer.aisec.cpg.helpers.Util;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -123,7 +124,14 @@ public class VariableUsageResolver extends Pass {
 
   private Set<ValueDeclaration> resolveFunctionPtr(
       Type containingClass, DeclaredReferenceExpression reference) {
-    Set<ValueDeclaration> targets = new HashSet<>();
+    FunctionPointerType fptrType;
+    if (reference.getType() instanceof FunctionPointerType) {
+      fptrType = (FunctionPointerType) reference.getType();
+    } else {
+      log.error("Can't resolve a function pointer without a function pointer type!");
+      return Collections.emptySet();
+    }
+    Optional<FunctionDeclaration> target = Optional.empty();
     String functionName = reference.getName();
     Matcher matcher =
         Pattern.compile("(?:(?<class>.*)(?:\\.|::))?(?<function>.*)").matcher(reference.getName());
@@ -132,24 +140,33 @@ public class VariableUsageResolver extends Pass {
       functionName = matcher.group("function");
       String finalFunctionName = functionName;
       if (cls == null) {
-        targets =
+        target =
             walker.getAllDeclarationsForScope(reference).stream()
                 .filter(FunctionDeclaration.class::isInstance)
-                .filter(d -> d.getName().equals(finalFunctionName))
-                .collect(Collectors.toCollection(HashSet::new));
+                .map(FunctionDeclaration.class::cast)
+                .filter(
+                    d ->
+                        d.getName().equals(finalFunctionName)
+                            && d.getType().equals(fptrType.getReturnType())
+                                & d.hasSignature(fptrType.getParameters()))
+                .findFirst();
       } else {
         containingClass = TypeParser.createFrom(cls, true);
         if (recordMap.containsKey(containingClass)) {
-          targets =
+          target =
               recordMap.get(containingClass).getMethods().stream()
-                  .filter(f -> f.getName().equals(finalFunctionName))
-                  .map(ValueDeclaration.class::cast)
-                  .collect(Collectors.toCollection(HashSet::new));
+                  .map(FunctionDeclaration.class::cast)
+                  .filter(
+                      f ->
+                          f.getName().equals(finalFunctionName)
+                              && f.getType().equals(fptrType.getReturnType())
+                              && f.hasSignature(fptrType.getParameters()))
+                  .findFirst();
         }
       }
     }
 
-    if (targets.isEmpty()) {
+    if (target.isEmpty()) {
       if (containingClass == null) {
         Set<ValueDeclaration> unknownMethod = new HashSet<>();
         unknownMethod.add(handleUnknownMethod(functionName, reference.getType()));
@@ -161,6 +178,8 @@ public class VariableUsageResolver extends Pass {
         return unknownClass;
       }
     } else {
+      Set<ValueDeclaration> targets = new HashSet<>();
+      targets.add(target.get());
       return targets;
     }
   }
@@ -386,12 +405,8 @@ public class VariableUsageResolver extends Pass {
       FunctionDeclaration declaration = NodeBuilder.newFunctionDeclaration(name, "");
       if (type instanceof FunctionPointerType) {
         declaration.setType(((FunctionPointerType) type).getReturnType());
-        List<ParamVariableDeclaration> dummyParameters = new ArrayList<>();
-        for (Type t : ((FunctionPointerType) type).getParameters()) {
-          ParamVariableDeclaration param = NodeBuilder.newMethodParameterIn("param", t, false, "");
-          dummyParameters.add(param);
-        }
-        declaration.setParameters(dummyParameters);
+        declaration.setParameters(
+            Util.createParameters(((FunctionPointerType) type).getParameters()));
       } else {
         declaration.setType(type);
       }

@@ -32,6 +32,7 @@ import de.fraunhofer.aisec.cpg.graph.type.FunctionPointerType;
 import de.fraunhofer.aisec.cpg.graph.type.Type;
 import de.fraunhofer.aisec.cpg.graph.type.TypeParser;
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.ScopedWalker;
+import de.fraunhofer.aisec.cpg.helpers.Util;
 import java.util.*;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -364,7 +365,7 @@ public class CallResolver extends Pass {
     for (RecordDeclaration record : containingRecords) {
       MethodDeclaration dummy = NodeBuilder.newMethodDeclaration(name, "", true, record);
       dummy.setImplicit(true);
-      List<ParamVariableDeclaration> params = createParameters(call.getSignature());
+      List<ParamVariableDeclaration> params = Util.createParameters(call.getSignature());
       dummy.setParameters(params);
       record.getMethods().add(dummy);
       curClass.getStaticImports().add(dummy);
@@ -402,7 +403,7 @@ public class CallResolver extends Pass {
       return existing.get();
     }
 
-    List<ParamVariableDeclaration> parameters = createParameters(signature);
+    List<ParamVariableDeclaration> parameters = Util.createParameters(signature);
     if (template instanceof MethodDeclaration) {
       RecordDeclaration containingRecord = ((MethodDeclaration) template).getRecordDeclaration();
       MethodDeclaration dummy =
@@ -442,42 +443,6 @@ public class CallResolver extends Pass {
       }
       return dummy;
     }
-  }
-
-  private List<ParamVariableDeclaration> createParameters(List<Type> signature) {
-    List<ParamVariableDeclaration> params = new ArrayList<>();
-    for (int i = 0; i < signature.size(); i++) {
-      Type targetType = signature.get(i);
-      String paramName = generateParamName(i, targetType);
-      ParamVariableDeclaration param =
-          NodeBuilder.newMethodParameterIn(paramName, targetType, false, "");
-      param.setImplicit(true);
-      param.setArgumentIndex(i);
-      params.add(param);
-    }
-    return params;
-  }
-
-  private String generateParamName(int i, @NonNull Type targetType) {
-    StringBuilder paramName = new StringBuilder();
-    boolean capitalize = false;
-    for (int j = 0; j < targetType.toString().length(); j++) {
-      char c = targetType.toString().charAt(j);
-      if (c == '.' || c == ':') {
-        capitalize = true;
-      } else if (c == '*') {
-        paramName.append("Ptr");
-      } else {
-        if (capitalize) {
-          paramName.append(String.valueOf(c).toUpperCase());
-          capitalize = false;
-        } else {
-          paramName.append(c);
-        }
-      }
-    }
-    paramName.append(i);
-    return paramName.toString();
   }
 
   private Set<Type> getPossibleContainingTypes(Node node, RecordDeclaration curClass) {

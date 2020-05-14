@@ -33,7 +33,12 @@ import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
 import de.fraunhofer.aisec.cpg.graph.Expression;
 import de.fraunhofer.aisec.cpg.graph.FunctionDeclaration;
 import de.fraunhofer.aisec.cpg.graph.Node;
+import de.fraunhofer.aisec.cpg.graph.NodeBuilder;
 import de.fraunhofer.aisec.cpg.graph.ParamVariableDeclaration;
+import de.fraunhofer.aisec.cpg.graph.type.FunctionPointerType;
+import de.fraunhofer.aisec.cpg.graph.type.PointerType;
+import de.fraunhofer.aisec.cpg.graph.type.ReferenceType;
+import de.fraunhofer.aisec.cpg.graph.type.Type;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
@@ -381,6 +386,59 @@ public class Util {
       // A param could be variadic, so multiple arguments could be set as incoming DFG
       param.getPrevDFG().stream().filter(arguments::contains).forEach(param::removeNextDFG);
     }
+  }
+
+  public static List<ParamVariableDeclaration> createParameters(List<Type> signature) {
+    List<ParamVariableDeclaration> params = new ArrayList<>();
+    for (int i = 0; i < signature.size(); i++) {
+      Type targetType = signature.get(i);
+      String paramName = generateParamName(i, targetType);
+      ParamVariableDeclaration param =
+          NodeBuilder.newMethodParameterIn(paramName, targetType, false, "");
+      param.setImplicit(true);
+      param.setArgumentIndex(i);
+      params.add(param);
+    }
+    return params;
+  }
+
+  private static String generateParamName(int i, @NonNull Type targetType) {
+    Deque<String> hierarchy = new ArrayDeque<>();
+    Type currLevel = targetType;
+    while (currLevel != null) {
+      if (currLevel instanceof FunctionPointerType) {
+        hierarchy.push("Fptr");
+        currLevel = null;
+      } else if (currLevel instanceof PointerType) {
+        hierarchy.push("Ptr");
+        currLevel = ((PointerType) currLevel).getElementType();
+      } else if (currLevel instanceof ReferenceType) {
+        hierarchy.push("Ref");
+        currLevel = ((ReferenceType) currLevel).getElementType();
+      } else {
+        hierarchy.push(currLevel.getTypeName());
+        currLevel = null;
+      }
+    }
+
+    StringBuilder paramName = new StringBuilder();
+    while (!hierarchy.isEmpty()) {
+      String part = hierarchy.pop();
+      if (part.isEmpty()) {
+        continue;
+      }
+      if (paramName.length() > 0) {
+        paramName.append(part.substring(0, 1).toUpperCase());
+        if (part.length() >= 2) {
+          paramName.append(part.substring(1));
+        }
+      } else {
+        paramName.append(part.toLowerCase());
+      }
+    }
+
+    paramName.append(i);
+    return paramName.toString();
   }
 
   public enum Connect {

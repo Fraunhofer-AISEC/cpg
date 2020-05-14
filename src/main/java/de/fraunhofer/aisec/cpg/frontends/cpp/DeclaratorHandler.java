@@ -28,8 +28,6 @@ package de.fraunhofer.aisec.cpg.frontends.cpp;
 
 import de.fraunhofer.aisec.cpg.frontends.Handler;
 import de.fraunhofer.aisec.cpg.graph.*;
-import de.fraunhofer.aisec.cpg.graph.type.FunctionPointerType;
-import de.fraunhofer.aisec.cpg.graph.type.Type;
 import de.fraunhofer.aisec.cpg.graph.type.TypeParser;
 import de.fraunhofer.aisec.cpg.graph.type.UnknownType;
 import de.fraunhofer.aisec.cpg.passes.scopes.Scope;
@@ -164,9 +162,7 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
               true);
       ((VariableDeclaration) result).setInitializer(initializer);
       result.setLocation(lang.getLocationFromRawNode(ctx));
-      result.setType(
-          new FunctionPointerType(
-              new Type.Qualifier(), Type.Storage.AUTO, new ArrayList<>(), null));
+      result.setType(TypeParser.createFrom(ctx.getParent().getRawSignature(), true));
       result.refreshType();
     } else {
       // field
@@ -187,9 +183,7 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
               initializer,
               true);
       result.setLocation(lang.getLocationFromRawNode(ctx));
-      result.setType(
-          new FunctionPointerType(
-              new Type.Qualifier(), Type.Storage.AUTO, new ArrayList<>(), null));
+      result.setType(TypeParser.createFrom(ctx.getParent().getRawSignature(), true));
       result.refreshType();
     }
     return result;
