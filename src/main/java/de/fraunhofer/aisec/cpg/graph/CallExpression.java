@@ -145,10 +145,8 @@ public class CallExpression extends Expression implements TypeListener {
   @Override
   public String toString() {
     return new ToStringBuilder(this, Node.TO_STRING_STYLE)
-        .append("invokes", invokes)
-        .append("base", (base == null ? "null" : base.getName()))
-        .append("arguments", arguments)
-        .append("location", location)
+        .appendSuper(super.toString())
+        .append("base", base)
         .toString();
   }
 

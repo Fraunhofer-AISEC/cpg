@@ -185,7 +185,6 @@ public class UnaryOperator extends Expression implements TypeListener {
   public String toString() {
     return new ToStringBuilder(this, Node.TO_STRING_STYLE)
         .appendSuper(super.toString())
-        .append("input", input)
         .append("operatorCode", operatorCode)
         .append("postfix", postfix)
         .append("prefix", prefix)

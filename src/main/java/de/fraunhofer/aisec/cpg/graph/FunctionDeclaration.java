@@ -204,7 +204,7 @@ public class FunctionDeclaration extends ValueDeclaration {
     return new ToStringBuilder(this, Node.TO_STRING_STYLE)
         .appendSuper(super.toString())
         .append("type", type)
-        .append("parameters", parameters)
+        .append("parameters", parameters.stream().map(ParamVariableDeclaration::getName))
         .toString();
   }
 
