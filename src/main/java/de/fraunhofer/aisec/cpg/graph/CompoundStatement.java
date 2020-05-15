@@ -53,10 +53,7 @@ public class CompoundStatement extends Statement {
 
   @Override
   public String toString() {
-    return new ToStringBuilder(this, Node.TO_STRING_STYLE)
-        .appendSuper(super.toString())
-        .append("statements", statements)
-        .toString();
+    return new ToStringBuilder(this, Node.TO_STRING_STYLE).appendSuper(super.toString()).toString();
   }
 
   @Override

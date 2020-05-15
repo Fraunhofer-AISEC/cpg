@@ -400,7 +400,7 @@ public class SubgraphWalker {
 
       if (current instanceof ValueDeclaration) {
 
-        LOGGER.debug("Adding variable {}", current.getCode());
+        LOGGER.trace("Adding variable {}", current.getCode());
         if (parentBlock == null) {
           LOGGER.warn("Parent block is empty during subgraph run");
         } else {

@@ -54,6 +54,11 @@ public class PhysicalLocation {
     public URI getUri() {
       return this.uri;
     }
+
+    @Override
+    public String toString() {
+      return this.uri.toASCIIString();
+    }
   }
 
   @NonNull private ArtifactLocation artifactLocation;
@@ -77,5 +82,10 @@ public class PhysicalLocation {
   @NonNull
   public ArtifactLocation getArtifactLocation() {
     return this.artifactLocation;
+  }
+
+  @Override
+  public String toString() {
+    return this.artifactLocation + ":" + this.region.toString();
   }
 }
