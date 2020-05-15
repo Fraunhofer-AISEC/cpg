@@ -26,8 +26,6 @@
 
 package de.fraunhofer.aisec.cpg.sarif;
 
-import de.fraunhofer.aisec.cpg.graph.Node;
-import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.checkerframework.checker.nullness.qual.NonNull;
 
 /** Code source location, in a SASP/SARIF-compliant "Region" format. */
@@ -84,12 +82,15 @@ public class Region implements Comparable<Region> {
 
   @Override
   public String toString() {
-    return new ToStringBuilder(this, Node.TO_STRING_STYLE)
-        .append("startLine", startLine)
-        .append("startColumn", startColumn)
-        .append("endLine", endLine)
-        .append("endColumn", endColumn)
-        .toString();
+    StringBuilder sb = new StringBuilder();
+    sb.append(startLine);
+    sb.append(":");
+    sb.append(startColumn);
+    sb.append("-");
+    sb.append(endLine);
+    sb.append(":");
+    sb.append(endColumn);
+    return sb.toString();
   }
 
   @Override

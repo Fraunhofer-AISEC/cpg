@@ -671,7 +671,7 @@ public class EvaluationOrderGraphPass extends Pass {
       return;
     }
 
-    LOGGER.debug("Pushing {} {} to EOG", node.getClass().getSimpleName(), node);
+    LOGGER.trace("Pushing {} {} to EOG", node.getClass().getSimpleName(), node);
     for (Node intermediate : intermediateNodes) {
       lang.process(intermediate, node);
     }

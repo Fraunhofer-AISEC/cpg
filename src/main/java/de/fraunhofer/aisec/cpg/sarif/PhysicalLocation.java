@@ -57,7 +57,7 @@ public class PhysicalLocation {
 
     @Override
     public String toString() {
-      return this.uri.toASCIIString();
+      return uri.getPath().substring(uri.getPath().lastIndexOf('/') + 1);
     }
   }
 
@@ -86,6 +86,6 @@ public class PhysicalLocation {
 
   @Override
   public String toString() {
-    return this.artifactLocation + ":" + this.region.toString();
+    return artifactLocation.toString() + "(" + region.toString() + ")";
   }
 }

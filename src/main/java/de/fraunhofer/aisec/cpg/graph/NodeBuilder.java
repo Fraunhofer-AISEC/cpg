@@ -178,7 +178,7 @@ public class NodeBuilder {
   }
 
   private static void log(Node node) {
-    LOGGER.debug("Creating {} {}", node.getClass().getSimpleName(), node);
+    LOGGER.debug("Creating {} {}", node);
   }
 
   public static ReturnStatement newReturnStatement(String code) {
