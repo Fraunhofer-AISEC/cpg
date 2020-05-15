@@ -671,7 +671,7 @@ public class EvaluationOrderGraphPass extends Pass {
       return;
     }
 
-    LOGGER.debug("Pushing {} {} to EOG", node.getClass().getSimpleName(), node);
+    LOGGER.trace("Pushing {} {} to EOG", node.getClass().getSimpleName(), node);
     for (Node intermediate : intermediateNodes) {
       lang.process(intermediate, node);
     }
@@ -690,20 +690,20 @@ public class EvaluationOrderGraphPass extends Pass {
   }
 
   public void setCurrentEOG(Node node) {
-    LOGGER.debug("Setting {} to EOG", node);
+    LOGGER.trace("Setting {} to EOG", node);
 
     this.currentEOG = new ArrayList<>();
     this.currentEOG.add(node);
   }
 
   public <T extends Node> void setCurrentEOGs(List<T> nodes) {
-    LOGGER.debug("Setting {} to EOGs", nodes);
+    LOGGER.trace("Setting {} to EOGs", nodes);
 
     this.currentEOG = new ArrayList<>(nodes);
   }
 
   public void addToCurrentEOG(List<Node> nodes) {
-    LOGGER.debug("Adding {} to current EOG", nodes);
+    LOGGER.trace("Adding {} to current EOG", nodes);
 
     this.currentEOG.addAll(nodes);
   }
