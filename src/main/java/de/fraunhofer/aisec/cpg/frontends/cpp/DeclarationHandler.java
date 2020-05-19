@@ -98,7 +98,7 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
             this.lang, ctx, log, "Unknown child in namespace: {}", child.getClass());
       }
     }
-    lang.getScopeManager().enterScope(declaration);
+    lang.getScopeManager().leaveScope(declaration);
 
     return declaration;
   }

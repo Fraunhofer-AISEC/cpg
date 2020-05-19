@@ -48,8 +48,7 @@ import org.slf4j.LoggerFactory;
  * references to fields that are inherited from a superclass and thus not declared in the actual
  * base class. When base or member declarations are not found in the graph, a new "dummy" {@link
  * FieldDeclaration} is being created that is then used to collect all usages to the same unknown
- * declaration. {@link DeclaredReferenceExpression} stubs are removed from the graph after being
- * resolved.
+ * declaration.
  *
  * <p>A local variable access is modeled directly with a {@link DeclaredReferenceExpression}. This
  * step of the pass doesn't remove the {@link DeclaredReferenceExpression} nodes like in the field
@@ -77,7 +76,7 @@ public class VariableUsageResolver extends Pass {
 
   @Override
   public void accept(TranslationResult result) {
-    walker = new ScopedWalker();
+    walker = new ScopedWalker(lang);
 
     for (TranslationUnitDeclaration tu : result.getTranslationUnits()) {
       currTu = tu;
@@ -331,9 +330,9 @@ public class VariableUsageResolver extends Pass {
       FieldDeclaration declaration =
           NodeBuilder.newFieldDeclaration(
               reference.getName(), reference.getType(), Collections.emptyList(), "", null, null);
-      declarations.add(declaration);
+      // declarations.add(declaration);
       declaration.setImplicit(true);
-      // lang.getScopeManager().addValueDeclaration(declaration);
+      lang.getScopeManager().addValueDeclaration(declaration);
       return declaration;
     } else {
       return target.get();
@@ -356,8 +355,9 @@ public class VariableUsageResolver extends Pass {
       MethodDeclaration declaration =
           NodeBuilder.newMethodDeclaration(name, "", false, containingRecord);
       declaration.setType(type);
-      declarations.add(declaration);
+      // declarations.add(declaration);
       declaration.setImplicit(true);
+      lang.getScopeManager().addValueDeclaration(declaration);
       return declaration;
     } else {
       return target.get();
@@ -374,8 +374,10 @@ public class VariableUsageResolver extends Pass {
     if (target.isEmpty()) {
       FunctionDeclaration declaration = NodeBuilder.newFunctionDeclaration(name, "");
       declaration.setType(type);
-      currTu.getDeclarations().add(declaration);
+      // currTu.getDeclarations().add(declaration);
       declaration.setImplicit(true);
+      // Current TU should be the current method
+      lang.getScopeManager().addValueDeclaration(declaration);
       return declaration;
     } else {
       return target.get();

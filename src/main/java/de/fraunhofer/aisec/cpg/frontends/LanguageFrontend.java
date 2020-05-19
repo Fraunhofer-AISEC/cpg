@@ -57,7 +57,7 @@ public abstract class LanguageFrontend {
   /**
    * Two data structures used to associate Objects input to a pass to results of a pass, e.g.
    * Javaparser AST-Nodes to CPG-Nodes. The "Listeners" in processedListener are called after the
-   * node they are saved under get an entry in processedMapping. THis combination allows to keep the
+   * node they are saved under get an entry in processedMapping. This combination allows to keep the
    * information on which AST-Node build which CPG-Node and operate with these associations once
    * they exist, important to resolve connections between labels and label usages.
    */
@@ -283,34 +283,6 @@ public abstract class LanguageFrontend {
   public Map<String, RecordDeclaration> getRecords() {
     return records;
   }
-
-  //  public void addFunctionDeclaration(FunctionDeclaration functionDeclaration) {
-  //    this.functions.put(functionDeclaration.getSignature(), functionDeclaration);
-  //  }
-
-  //  public FunctionDeclaration getMethod(String signature) {
-  //    return this.functions.get(signature);
-  //  }
-
-  //  public FunctionDeclaration findMethod(CallExpression call) {
-  //    // filter for functions with the same name and number of arguments
-  //    List<FunctionDeclaration> candidates =
-  //        this.functions.values().stream()
-  //            .filter(
-  //                function ->
-  //                    function.getName().equals(call.getName())
-  //                        && function.getParameters().size() == call.getArguments().size())
-  //            .collect(Collectors.toList());
-  //
-  //    if (candidates.isEmpty()) {
-  //      return null;
-  //    } else if (candidates.size() == 1) {
-  //      return candidates.get(0);
-  //    } else {
-  //      // for now just return the first, but we could try deduce it via some type parameters
-  //      return candidates.get(0);
-  //    }
-  //  }
 
   public void cleanup() {
     records.clear();

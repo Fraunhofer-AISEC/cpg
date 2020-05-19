@@ -43,6 +43,7 @@ import de.fraunhofer.aisec.cpg.passes.scopes.RecordScope;
 import de.fraunhofer.aisec.cpg.passes.scopes.Scope;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.regex.Matcher;
@@ -258,6 +259,7 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
       result.setLocation(lang.getLocationFromRawNode(ctx));
       result.getType().setFunctionPtr(true);
       result.refreshType();
+      lang.getScopeManager().addValueDeclaration((VariableDeclaration) result);
     } else {
       RecordScope recordScope =
           (RecordScope) lang.getScopeManager().getFirstScopeThat(RecordScope.class::isInstance);
@@ -288,6 +290,7 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
                 + "This should not happen!");
         return null;
       }*/
+      lang.getScopeManager().addValueDeclaration((FieldDeclaration) result);
     }
     return result;
   }
@@ -306,9 +309,21 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
         kind = "class";
         break;
     }
+
+    // resolveBinding().getName().
+    String className =
+        lang.getScopeManager().getCurrentNamePrefixWithDelimiter() + ctx.getName().toString();
+    List<String> bases =
+        Arrays.stream(ctx.getBaseSpecifiers())
+            .map(specifer -> resolveFQN(specifer.getNameSpecifier().resolveBinding()))
+            .collect(Collectors.toList());
+
     RecordDeclaration recordDeclaration =
         NodeBuilder.newRecordDeclaration(
-            ctx.getName().toString(), new ArrayList<>(), kind, ctx.getRawSignature());
+            className,
+            bases.stream().map(base -> new Type(base)).collect(Collectors.toList()),
+            kind,
+            ctx.getRawSignature());
 
     this.lang.addRecord(recordDeclaration);
 
@@ -323,7 +338,6 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
               "this",
               null,
               null);
-      recordDeclaration.getFields().add(thisDeclaration);
       lang.getScopeManager().addValueDeclaration(thisDeclaration);
     }
 
@@ -347,18 +361,27 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
             declarationScope.setAstNode(
                 constructor); // Adjust cpg Node by which scopes are identified
           }
-          recordDeclaration.getConstructors().add(constructor);
+          // recordDeclaration.getConstructors().add(constructor);
+          lang.getScopeManager().addValueDeclaration(constructor);
         } else {
-          recordDeclaration.getMethods().add(method);
+          // recordDeclaration.getMethods().add(method);
+          lang.getScopeManager().addValueDeclaration(method);
         }
 
         if (declarationScope != null) {
           declarationScope.setAstNode(method); // Adjust cpg Node by which scopes are identified
         }
       } else if (declaration instanceof VariableDeclaration) {
-        recordDeclaration.getFields().add(FieldDeclaration.from((VariableDeclaration) declaration));
+        // recordDeclaration.getFields().add();
+        lang.getScopeManager()
+            .addValueDeclaration(FieldDeclaration.from((VariableDeclaration) declaration));
+        lang.getScopeManager().removeDeclaration(declaration);
       } else if (declaration instanceof FieldDeclaration) {
-        recordDeclaration.getFields().add((FieldDeclaration) declaration);
+        // recordDeclaration.getFields().add((FieldDeclaration) declaration);
+        lang.getScopeManager().addValueDeclaration((FieldDeclaration) declaration);
+      } else if (declaration instanceof RecordDeclaration) {
+        // record is not stored as reference in the scope
+        recordDeclaration.getRecords().add((RecordDeclaration) declaration);
       }
     }
 
@@ -372,5 +395,15 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
 
     lang.getScopeManager().leaveScope(recordDeclaration);
     return recordDeclaration;
+  }
+
+  public String resolveFQN(IBinding binding) {
+    String fqn = binding.getName();
+    IBinding owner = binding.getOwner();
+    while (owner != null) {
+      fqn = owner.getName() + lang.getNamespaceDelimiter() + fqn;
+      owner = owner.getOwner();
+    }
+    return fqn;
   }
 }

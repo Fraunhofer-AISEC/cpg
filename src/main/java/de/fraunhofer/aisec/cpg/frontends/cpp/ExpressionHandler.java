@@ -690,11 +690,19 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
     return binaryOperator;
   }
 
-  private Literal handleLiteralExpression(CPPASTLiteralExpression ctx) {
+  private Expression handleLiteralExpression(CPPASTLiteralExpression ctx) {
     IType type = expressionTypeProxy(ctx);
     IValue value = ctx.getEvaluation().getValue();
-
     Type generatedType = Type.createFrom(type.toString());
+
+    if (value.toString().equals("this")
+        && generatedType
+            .getTypeName()
+            .equals(lang.getScopeManager().getCurrentRecord().getName())) {
+      return NodeBuilder.newDeclaredReferenceExpression(
+          value.toString(), generatedType, ctx.getRawSignature());
+    }
+
     if (value.numberValue() == null // e.g. for 0x1p-52
         && !(value instanceof CStringValue)) {
       return NodeBuilder.newLiteral(value.toString(), generatedType, ctx.getRawSignature());

@@ -1,4 +1,4 @@
-package de.fraunhofer.aisec.cpg.enhancements;
+package de.fraunhofer.aisec.cpg.enhancements.variableResolver;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -35,7 +35,8 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 
-// Todo Pre-VariableResolverRevamp 8 Failed, 6 Passed
+// Todo VariableResolver 8 Failed, 6 Passed
+// Todo ReferenceResolver 1 Failed, 13 Passed
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public class VariableResolverJavaTest {
@@ -200,6 +201,8 @@ public class VariableResolverJavaTest {
         asReference.getRefersTo(),
         firstLoopLocal); // Todo refers to the second loop variable, apparently only one is
     // collected and there is no defined scope
+
+    // Todo this is correct now
   }
 
   @Test
@@ -222,6 +225,8 @@ public class VariableResolverJavaTest {
     assertSameOrContains(
         ((DeclaredReferenceExpression) asMemberExpression.getMember()).getRefersTo(),
         outerVarName); // Todo refers to the second loop local
+
+    // Todo This is correct now because we properly pop the loop context
   }
 
   @Test

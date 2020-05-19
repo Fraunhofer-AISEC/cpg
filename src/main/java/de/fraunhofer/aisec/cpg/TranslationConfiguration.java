@@ -31,8 +31,8 @@ import de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass;
 import de.fraunhofer.aisec.cpg.passes.FilenameMapper;
 import de.fraunhofer.aisec.cpg.passes.ImportResolver;
 import de.fraunhofer.aisec.cpg.passes.Pass;
+import de.fraunhofer.aisec.cpg.passes.ReferenceResolverPass;
 import de.fraunhofer.aisec.cpg.passes.TypeHierarchyResolver;
-import de.fraunhofer.aisec.cpg.passes.VariableUsageResolver;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -186,7 +186,7 @@ public class TranslationConfiguration {
       registerPass(new FilenameMapper());
       registerPass(new TypeHierarchyResolver());
       registerPass(new ImportResolver());
-      registerPass(new VariableUsageResolver());
+      registerPass(new ReferenceResolverPass());
       registerPass(new CallResolver()); // creates CG
       registerPass(new EvaluationOrderGraphPass()); // creates EOG
       return this;

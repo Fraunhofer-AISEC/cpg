@@ -43,7 +43,7 @@ public class Type {
   private static final Pattern START_WITH_BACKSLASH = Pattern.compile("\\*");
   private static final Pattern TYPE_FROM_STRING =
       Pattern.compile(
-          "(?:(?<modifier>[a-zA-Z]*) )?(?<type>[a-zA-Z0-9_$.<>]*)(?<adjustment>[\\[\\]*&\\s]*)?");
+          "(?:(?<modifier>[a-zA-Z]*) )?(?<type>[a-zA-Z0-9_$.<>]+)(?<adjustment>[\\[\\]*&\\s]*)?");
   /** The type of the declaration. */
   protected String type = UNKNOWN_TYPE_STRING;
   /** Specifies whether this node has any type adjustments, such as a pointer or reference. */

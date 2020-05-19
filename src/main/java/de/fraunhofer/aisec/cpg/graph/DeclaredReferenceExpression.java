@@ -57,6 +57,8 @@ public class DeclaredReferenceExpression extends Expression implements TypeListe
 
   public void setRefersTo(@NonNull Declaration refersTo) {
     HashSet<Declaration> n = new HashSet<>();
+    if (refersTo instanceof FieldDeclaration) {}
+
     n.add(refersTo);
     setRefersTo(n);
   }

@@ -98,7 +98,7 @@ public class CallResolver extends Pass {
 
   @Override
   public void accept(@NonNull TranslationResult translationResult) {
-    ScopedWalker walker = new ScopedWalker();
+    ScopedWalker walker = new ScopedWalker(lang);
     walker.registerHandler(this::findRecords);
     walker.registerHandler(this::registerMethods);
 

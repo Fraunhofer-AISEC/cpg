@@ -26,6 +26,7 @@
 
 package de.fraunhofer.aisec.cpg.helpers;
 
+import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
 import de.fraunhofer.aisec.cpg.graph.CompoundStatement;
 import de.fraunhofer.aisec.cpg.graph.FunctionDeclaration;
 import de.fraunhofer.aisec.cpg.graph.Node;
@@ -268,7 +269,8 @@ public class SubgraphWalker {
       while (!todo.isEmpty()) {
         Node current = todo.pop();
         if (!backlog.isEmpty() && backlog.peek().equals(current)) {
-          onScopeExit.forEach(c -> c.accept(backlog.pop()));
+          Node popped = backlog.pop();
+          onScopeExit.forEach(c -> c.accept(popped));
         } else {
           // re-place the current node as a marker for the above check to find out when we need to
           // exit a scope
@@ -326,6 +328,12 @@ public class SubgraphWalker {
     private Deque<RecordDeclaration> currentClass = new ArrayDeque<>();
     private IterativeGraphWalker walker;
 
+    private LanguageFrontend lang;
+
+    public ScopedWalker(LanguageFrontend lang) {
+      this.lang = lang;
+    }
+
     /**
      * Callback function(s) getting three arguments: the type of the class we're currently in, the
      * root node of the current declaration scope, the currently visited node. The declaration scope
@@ -360,6 +368,7 @@ public class SubgraphWalker {
 
     private void handleNode(Node current, TriConsumer<RecordDeclaration, Node, Node> handler) {
 
+      lang.getScopeManager().enterScopeIfExists(current);
       Node parent = walker.getBacklog().peek();
 
       if (current instanceof RecordDeclaration && current != currentClass.peek()) {
@@ -375,6 +384,7 @@ public class SubgraphWalker {
       if (exiting instanceof RecordDeclaration) { // leave a class
         currentClass.pop();
       }
+      lang.getScopeManager().leaveScope(exiting);
     }
 
     public RecordDeclaration getCurrentClass() {
