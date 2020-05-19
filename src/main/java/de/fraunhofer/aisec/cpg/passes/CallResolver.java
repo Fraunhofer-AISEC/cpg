@@ -27,43 +27,15 @@
 package de.fraunhofer.aisec.cpg.passes;
 
 import de.fraunhofer.aisec.cpg.TranslationResult;
-import de.fraunhofer.aisec.cpg.graph.CallExpression;
-import de.fraunhofer.aisec.cpg.graph.ConstructExpression;
-import de.fraunhofer.aisec.cpg.graph.ConstructorDeclaration;
-import de.fraunhofer.aisec.cpg.graph.DeclaredReferenceExpression;
-import de.fraunhofer.aisec.cpg.graph.ExplicitConstructorInvocation;
-import de.fraunhofer.aisec.cpg.graph.Expression;
-import de.fraunhofer.aisec.cpg.graph.FunctionDeclaration;
-import de.fraunhofer.aisec.cpg.graph.HasType;
-import de.fraunhofer.aisec.cpg.graph.MemberCallExpression;
-import de.fraunhofer.aisec.cpg.graph.MethodDeclaration;
-import de.fraunhofer.aisec.cpg.graph.NewExpression;
-import de.fraunhofer.aisec.cpg.graph.Node;
-import de.fraunhofer.aisec.cpg.graph.NodeBuilder;
-import de.fraunhofer.aisec.cpg.graph.ParamVariableDeclaration;
-import de.fraunhofer.aisec.cpg.graph.RecordDeclaration;
-import de.fraunhofer.aisec.cpg.graph.StaticCallExpression;
-import de.fraunhofer.aisec.cpg.graph.TranslationUnitDeclaration;
-import de.fraunhofer.aisec.cpg.graph.Type;
-import de.fraunhofer.aisec.cpg.graph.ValueDeclaration;
-import de.fraunhofer.aisec.cpg.graph.VariableDeclaration;
+import de.fraunhofer.aisec.cpg.graph.*;
+import de.fraunhofer.aisec.cpg.graph.type.FunctionPointerType;
+import de.fraunhofer.aisec.cpg.graph.type.Type;
+import de.fraunhofer.aisec.cpg.graph.type.TypeParser;
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.ScopedWalker;
-import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Deque;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.IdentityHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Set;
+import de.fraunhofer.aisec.cpg.helpers.Util;
+import java.util.*;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
-import org.apache.commons.lang3.StringUtils;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.slf4j.Logger;
@@ -134,7 +106,8 @@ public class CallResolver extends Pass {
   private void registerMethods(
       RecordDeclaration currentClass, Node parent, @NonNull Node currentNode) {
     if (currentNode instanceof MethodDeclaration && currentClass != null) {
-      containingType.put((FunctionDeclaration) currentNode, new Type(currentClass.getName()));
+      containingType.put(
+          (FunctionDeclaration) currentNode, TypeParser.createFrom(currentClass.getName(), true));
     }
   }
 
@@ -142,11 +115,7 @@ public class CallResolver extends Pass {
     if (node instanceof VariableDeclaration) {
       VariableDeclaration declaration = ((VariableDeclaration) node);
       // check if we have the corresponding class for this type
-      String typeString = declaration.getType().toString();
-      // pointer is also okay
-      if (StringUtils.countMatches(typeString, '*') == 1) {
-        typeString = typeString.replace("*", "");
-      }
+      String typeString = declaration.getType().getRoot().getName();
       boolean isRecord = recordMap.containsKey(typeString);
 
       if (isRecord) {
@@ -190,7 +159,8 @@ public class CallResolver extends Pass {
 
       if (call instanceof MemberCallExpression) {
         Node member = ((MemberCallExpression) call).getMember();
-        if (member instanceof HasType && ((HasType) member).getType().isFunctionPtr()) {
+        if (member instanceof HasType
+            && ((HasType) member).getType() instanceof FunctionPointerType) {
           handleFunctionPointerCall(call, member);
           return;
         }
@@ -201,7 +171,9 @@ public class CallResolver extends Pass {
       // but it isn't
       Optional<? extends ValueDeclaration> funcPointer =
           walker.getDeclarationForScope(
-              call, v -> v.getType().isFunctionPtr() && v.getName().equals(call.getName()));
+              call,
+              v ->
+                  v.getType() instanceof FunctionPointerType && v.getName().equals(call.getName()));
       if (funcPointer.isPresent()) {
         handleFunctionPointerCall(call, funcPointer.get());
       } else {
@@ -393,7 +365,7 @@ public class CallResolver extends Pass {
     for (RecordDeclaration record : containingRecords) {
       MethodDeclaration dummy = NodeBuilder.newMethodDeclaration(name, "", true, record);
       dummy.setImplicit(true);
-      List<ParamVariableDeclaration> params = createParameters(call.getSignature());
+      List<ParamVariableDeclaration> params = Util.createParameters(call.getSignature());
       dummy.setParameters(params);
       record.getMethods().add(dummy);
       curClass.getStaticImports().add(dummy);
@@ -431,7 +403,7 @@ public class CallResolver extends Pass {
       return existing.get();
     }
 
-    List<ParamVariableDeclaration> parameters = createParameters(signature);
+    List<ParamVariableDeclaration> parameters = Util.createParameters(signature);
     if (template instanceof MethodDeclaration) {
       RecordDeclaration containingRecord = ((MethodDeclaration) template).getRecordDeclaration();
       MethodDeclaration dummy =
@@ -473,42 +445,6 @@ public class CallResolver extends Pass {
     }
   }
 
-  private List<ParamVariableDeclaration> createParameters(List<Type> signature) {
-    List<ParamVariableDeclaration> params = new ArrayList<>();
-    for (int i = 0; i < signature.size(); i++) {
-      Type targetType = signature.get(i);
-      String paramName = generateParamName(i, targetType);
-      ParamVariableDeclaration param =
-          NodeBuilder.newMethodParameterIn(paramName, targetType, false, "");
-      param.setImplicit(true);
-      param.setArgumentIndex(i);
-      params.add(param);
-    }
-    return params;
-  }
-
-  private String generateParamName(int i, @NonNull Type targetType) {
-    StringBuilder paramName = new StringBuilder();
-    boolean capitalize = false;
-    for (int j = 0; j < targetType.toString().length(); j++) {
-      char c = targetType.toString().charAt(j);
-      if (c == '.' || c == ':') {
-        capitalize = true;
-      } else if (c == '*') {
-        paramName.append("Ptr");
-      } else {
-        if (capitalize) {
-          paramName.append(String.valueOf(c).toUpperCase());
-          capitalize = false;
-        } else {
-          paramName.append(c);
-        }
-      }
-    }
-    paramName.append(i);
-    return paramName.toString();
-  }
-
   private Set<Type> getPossibleContainingTypes(Node node, RecordDeclaration curClass) {
     Set<Type> possibleTypes = new HashSet<>();
     if (node instanceof MemberCallExpression) {
@@ -521,10 +457,10 @@ public class CallResolver extends Pass {
     } else if (node instanceof StaticCallExpression) {
       StaticCallExpression staticCall = (StaticCallExpression) node;
       if (staticCall.getTargetRecord() != null) {
-        possibleTypes.add(new Type(staticCall.getTargetRecord()));
+        possibleTypes.add(TypeParser.createFrom(staticCall.getTargetRecord(), true));
       }
     } else if (curClass != null) {
-      possibleTypes.add(new Type(curClass.getName()));
+      possibleTypes.add(TypeParser.createFrom(curClass.getName(), true));
       possibleTypes.addAll(curClass.getSuperTypes());
     }
     return possibleTypes;

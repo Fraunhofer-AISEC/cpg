@@ -1,9 +1,9 @@
 package de.fraunhofer.aisec.cpg.graph;
 
-import de.fraunhofer.aisec.cpg.helpers.TypeConverter;
+import de.fraunhofer.aisec.cpg.graph.type.Type;
+import de.fraunhofer.aisec.cpg.graph.type.UnknownType;
 import java.util.Objects;
 import org.apache.commons.lang3.builder.ToStringBuilder;
-import org.neo4j.ogm.annotation.typeconversion.Convert;
 
 /**
  * Represents a type alias definition as found in C/C++: <code>typedef unsigned long ulong;</code>
@@ -11,12 +11,10 @@ import org.neo4j.ogm.annotation.typeconversion.Convert;
 public class TypedefDeclaration extends Declaration {
 
   /** The already existing type that is to be aliased */
-  @Convert(TypeConverter.class)
-  private Type type = Type.getUnknown();
+  private Type type = UnknownType.getUnknownType();
 
   /** The newly created alias to be defined */
-  @Convert(TypeConverter.AliasTypeConverter.class)
-  private Type alias = Type.getUnknown();
+  private Type alias = UnknownType.getUnknownType();
 
   public Type getType() {
     return type;

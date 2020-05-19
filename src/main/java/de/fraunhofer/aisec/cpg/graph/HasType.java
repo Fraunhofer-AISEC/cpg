@@ -26,19 +26,35 @@
 
 package de.fraunhofer.aisec.cpg.graph;
 
+import de.fraunhofer.aisec.cpg.graph.type.Type;
 import java.util.Set;
 
 public interface HasType {
   Type getType();
+
+  /**
+   * @return The returned Type is always the same as getType() with the exception of ReferenceType
+   *     since there is no case in which we want to propagate a reference when using typeChanged()
+   */
+  Type getPropagationType();
 
   default void setType(Type type) {
     setType(type, null);
   }
 
   /**
+   * Sideeffect free type modification WARNING: This should only be used by the TypeSystem Pass
+   *
+   * @param type new type
+   */
+  void updateType(Type type);
+
+  void updatePossibleSubtypes(Set<Type> types);
+
+  /**
    * Set the node's type. This may start a chain of type listener notifications
    *
-   * @param type
+   * @param type new type
    * @param root The node that initiated the type change chain. When a node receives a type setting
    *     command where root == this, we know that we have a type listener circle and can abort. If
    *     root == null, the type change is seen as an externally triggered event and subsequent type

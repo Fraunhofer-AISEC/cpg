@@ -26,14 +26,16 @@
 
 package de.fraunhofer.aisec.cpg.graph;
 
-import de.fraunhofer.aisec.cpg.helpers.TypeConverter;
-import de.fraunhofer.aisec.cpg.helpers.TypeSetConverter;
+import de.fraunhofer.aisec.cpg.graph.type.FunctionPointerType;
+import de.fraunhofer.aisec.cpg.graph.type.ReferenceType;
+import de.fraunhofer.aisec.cpg.graph.type.Type;
+import de.fraunhofer.aisec.cpg.graph.type.UnknownType;
 import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
+import java.util.stream.Collectors;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.neo4j.ogm.annotation.Transient;
-import org.neo4j.ogm.annotation.typeconversion.Convert;
 
 /**
  * Represents one expression. It is used as a base class for multiple different types of
@@ -53,46 +55,77 @@ import org.neo4j.ogm.annotation.typeconversion.Convert;
 public class Expression extends Statement implements HasType {
 
   /** The type of the value after evaluation. */
-  @Convert(TypeConverter.class)
-  protected Type type = Type.getUnknown();
+  protected Type type = UnknownType.getUnknownType();
 
   @Transient private Set<TypeListener> typeListeners = new HashSet<>();
 
-  @Convert(TypeSetConverter.class)
   private Set<Type> possibleSubTypes = new HashSet<>();
 
   @Override
   public Type getType() {
     // just to make sure that we REALLY always return a valid type in case this somehow gets set to
     // null
-    return type != null ? type : Type.getUnknown();
+    return type != null ? type : UnknownType.getUnknownType();
+  }
+
+  @Override
+  public Type getPropagationType() {
+    if (this.type instanceof ReferenceType) {
+      return ((ReferenceType) this.type).getElementType();
+    }
+    return getType();
+  }
+
+  @Override
+  public void updateType(Type type) {
+    this.type = type;
+  }
+
+  @Override
+  public void updatePossibleSubtypes(Set<Type> types) {
+    this.possibleSubTypes = types;
   }
 
   @Override
   public void setType(Type type, HasType root) {
-    if (type == null
-        || root == this
-        || (TypeManager.getInstance().isPrimitive(type)
-            && !TypeManager.getInstance().isUnknown(this.type))) {
+    if (type == null || root == this) {
       return;
     }
 
-    // work on a copy of the type in order not to modify it
-    type = new Type(type);
-    Type oldType = new Type(this.type);
+    if (this.type instanceof FunctionPointerType && !(type instanceof FunctionPointerType)) {
+      return;
+    }
 
-    // Once we know this is a function pointer, it will stay that way
-    type.setFunctionPtr(type.isFunctionPtr() || this.type.isFunctionPtr());
-    this.type.setFunctionPtr(type.isFunctionPtr() || this.type.isFunctionPtr());
+    Type oldType = this.type;
 
     if (TypeManager.getInstance().isUnknown(type)) {
       return;
     }
 
-    Set<Type> subTypes = new HashSet<>(getPossibleSubTypes());
+    Set<Type> subTypes = new HashSet<>();
+
+    for (Type t : getPossibleSubTypes()) {
+      if (!t.isSimilar(type)) {
+        subTypes.add(t);
+      }
+    }
+
     subTypes.add(type);
 
-    this.type = TypeManager.getInstance().getCommonType(subTypes).orElse(type);
+    this.type =
+        TypeManager.getInstance()
+            .registerType(TypeManager.getInstance().getCommonType(subTypes).orElse(type));
+
+    subTypes =
+        subTypes.stream()
+            .filter(s -> TypeManager.getInstance().isSupertypeOf(this.type, s))
+            .collect(Collectors.toSet());
+
+    subTypes =
+        subTypes.stream()
+            .map(s -> TypeManager.getInstance().registerType(s))
+            .collect(Collectors.toSet());
+
     setPossibleSubTypes(subTypes);
 
     if (!Objects.equals(oldType, type)) {
@@ -118,8 +151,9 @@ public class Expression extends Statement implements HasType {
       return;
     }
     Set<Type> oldSubTypes = this.possibleSubTypes;
+    this.possibleSubTypes = new HashSet<>(possibleSubTypes);
 
-    if (this.possibleSubTypes.addAll(possibleSubTypes)) {
+    if (!this.getPossibleSubTypes().equals(oldSubTypes)) {
       this.typeListeners.stream()
           .filter(l -> !l.equals(this))
           .forEach(l -> l.possibleSubTypesChanged(this, root == null ? this : root, oldSubTypes));

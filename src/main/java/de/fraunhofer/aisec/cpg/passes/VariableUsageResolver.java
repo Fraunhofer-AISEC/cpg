@@ -30,7 +30,12 @@ import static de.fraunhofer.aisec.cpg.helpers.Util.warnWithFileLocation;
 
 import de.fraunhofer.aisec.cpg.TranslationResult;
 import de.fraunhofer.aisec.cpg.graph.*;
+import de.fraunhofer.aisec.cpg.graph.type.FunctionPointerType;
+import de.fraunhofer.aisec.cpg.graph.type.Type;
+import de.fraunhofer.aisec.cpg.graph.type.TypeParser;
+import de.fraunhofer.aisec.cpg.graph.type.UnknownType;
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.ScopedWalker;
+import de.fraunhofer.aisec.cpg.helpers.Util;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -90,7 +95,9 @@ public class VariableUsageResolver extends Pass {
     Map<Type, List<Type>> currSuperTypes =
         recordMap.values().stream()
             .collect(
-                Collectors.toMap(r -> new Type(r.getName()), RecordDeclaration::getSuperTypes));
+                Collectors.toMap(
+                    r -> TypeParser.createFrom(r.getName(), true),
+                    RecordDeclaration::getSuperTypes));
     superTypesMap.putAll(currSuperTypes);
 
     for (TranslationUnitDeclaration tu : result.getTranslationUnits()) {
@@ -107,17 +114,24 @@ public class VariableUsageResolver extends Pass {
 
   private void findRecordsAndEnums(Node node, RecordDeclaration curClass) {
     if (node instanceof RecordDeclaration) {
-      Type type = new Type(node.getName());
+      Type type = TypeParser.createFrom(node.getName(), true);
       recordMap.putIfAbsent(type, (RecordDeclaration) node);
     } else if (node instanceof EnumDeclaration) {
-      Type type = new Type(node.getName());
+      Type type = TypeParser.createFrom(node.getName(), true);
       enumMap.putIfAbsent(type, (EnumDeclaration) node);
     }
   }
 
   private Set<ValueDeclaration> resolveFunctionPtr(
       Type containingClass, DeclaredReferenceExpression reference) {
-    Set<ValueDeclaration> targets = new HashSet<>();
+    FunctionPointerType fptrType;
+    if (reference.getType() instanceof FunctionPointerType) {
+      fptrType = (FunctionPointerType) reference.getType();
+    } else {
+      log.error("Can't resolve a function pointer without a function pointer type!");
+      return Collections.emptySet();
+    }
+    Optional<FunctionDeclaration> target = Optional.empty();
     String functionName = reference.getName();
     Matcher matcher =
         Pattern.compile("(?:(?<class>.*)(?:\\.|::))?(?<function>.*)").matcher(reference.getName());
@@ -126,37 +140,45 @@ public class VariableUsageResolver extends Pass {
       functionName = matcher.group("function");
       String finalFunctionName = functionName;
       if (cls == null) {
-        targets =
+        target =
             walker.getAllDeclarationsForScope(reference).stream()
                 .filter(FunctionDeclaration.class::isInstance)
-                .filter(d -> d.getName().equals(finalFunctionName))
-                .collect(Collectors.toCollection(HashSet::new));
+                .map(FunctionDeclaration.class::cast)
+                .filter(
+                    d ->
+                        d.getName().equals(finalFunctionName)
+                            && d.getType().equals(fptrType.getReturnType())
+                            && d.hasSignature(fptrType.getParameters()))
+                .findFirst();
       } else {
-        containingClass = new Type(cls);
+        containingClass = TypeParser.createFrom(cls, true);
         if (recordMap.containsKey(containingClass)) {
-          targets =
+          target =
               recordMap.get(containingClass).getMethods().stream()
-                  .filter(f -> f.getName().equals(finalFunctionName))
-                  .map(ValueDeclaration.class::cast)
-                  .collect(Collectors.toCollection(HashSet::new));
+                  .map(FunctionDeclaration.class::cast)
+                  .filter(
+                      f ->
+                          f.getName().equals(finalFunctionName)
+                              && f.getType().equals(fptrType.getReturnType())
+                              && f.hasSignature(fptrType.getParameters()))
+                  .findFirst();
         }
       }
     }
 
-    if (targets.isEmpty()) {
-      if (containingClass == null) {
-        Set<ValueDeclaration> unknownMethod = new HashSet<>();
-        unknownMethod.add(handleUnknownMethod(functionName, reference.getType()));
-        return unknownMethod;
-      } else {
-        Set<ValueDeclaration> unknownClass = new HashSet<>();
-        unknownClass.add(
-            handleUnknownClassMethod(containingClass, functionName, reference.getType()));
-        return unknownClass;
-      }
-    } else {
+    Set<ValueDeclaration> targets = new HashSet<>();
+
+    if (target.isPresent()) {
+      targets.add(target.get());
       return targets;
     }
+
+    if (containingClass == null) {
+      targets.add(handleUnknownMethod(functionName, reference.getType()));
+    } else {
+      targets.add(handleUnknownClassMethod(containingClass, functionName, reference.getType()));
+    }
+    return targets;
   }
 
   private void resolveLocalVarUsage(RecordDeclaration currentClass, Node parent, Node current) {
@@ -175,10 +197,10 @@ public class VariableUsageResolver extends Pass {
 
       Type recordDeclType = null;
       if (currentClass != null) {
-        recordDeclType = new Type(currentClass.getName());
+        recordDeclType = TypeParser.createFrom(currentClass.getName(), true);
       }
 
-      if (ref.getType().isFunctionPtr()
+      if (ref.getType() instanceof FunctionPointerType
           && (refersTo.isEmpty()
               || refersTo.stream().anyMatch(FunctionDeclaration.class::isInstance))) {
         // If we already found something, this might either be a function pointer variable or a
@@ -224,12 +246,12 @@ public class VariableUsageResolver extends Pass {
                       .findFirst()
                       .orElse(null);
         } else {
-          Type baseType = Type.getUnknown();
+          Type baseType = UnknownType.getUnknownType();
           if (base instanceof HasType) {
             baseType = ((HasType) base).getType();
           }
           if (base instanceof RecordDeclaration) {
-            baseType = new Type(base.getName());
+            baseType = TypeParser.createFrom(base.getName(), true);
           }
           member =
               base == null
@@ -374,10 +396,17 @@ public class VariableUsageResolver extends Pass {
             .filter(FunctionDeclaration.class::isInstance)
             .map(FunctionDeclaration.class::cast)
             .filter(f -> f.getName().equals(name))
+            .filter(f -> f.hasSignature(((FunctionPointerType) type).getParameters()))
             .findFirst();
     if (target.isEmpty()) {
       FunctionDeclaration declaration = NodeBuilder.newFunctionDeclaration(name, "");
-      declaration.setType(type);
+      if (type instanceof FunctionPointerType) {
+        declaration.setType(((FunctionPointerType) type).getReturnType());
+        declaration.setParameters(
+            Util.createParameters(((FunctionPointerType) type).getParameters()));
+      } else {
+        declaration.setType(type);
+      }
       currTu.getDeclarations().add(declaration);
       declaration.setImplicit(true);
       return declaration;

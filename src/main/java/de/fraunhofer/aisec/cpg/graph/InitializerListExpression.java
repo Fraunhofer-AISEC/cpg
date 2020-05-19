@@ -27,12 +27,10 @@
 package de.fraunhofer.aisec.cpg.graph;
 
 import de.fraunhofer.aisec.cpg.graph.HasType.TypeListener;
-import de.fraunhofer.aisec.cpg.graph.Type.Origin;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Objects;
-import java.util.Set;
+import de.fraunhofer.aisec.cpg.graph.type.Type;
+import de.fraunhofer.aisec.cpg.graph.type.TypeParser;
+import de.fraunhofer.aisec.cpg.graph.type.UnknownType;
+import java.util.*;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 
@@ -67,7 +65,8 @@ public class InitializerListExpression extends Expression implements TypeListene
 
   @Override
   public void typeChanged(HasType src, HasType root, Type oldType) {
-    if (!TypeManager.getInstance().isUnknown(this.type) && src.getType().equals(oldType)) {
+    if (!TypeManager.getInstance().isUnknown(this.type)
+        && src.getPropagationType().equals(oldType)) {
       return;
     }
 
@@ -81,9 +80,12 @@ public class InitializerListExpression extends Expression implements TypeListene
               .parallelStream()
               .map(Expression::getType)
               .filter(Objects::nonNull)
-              .map(t -> Type.createFrom(t.toString() + "[]"))
+              .map(
+                  t ->
+                      TypeManager.getInstance()
+                          .registerType(TypeParser.createFrom(t.toString() + "[]", true)))
               .collect(Collectors.toSet());
-      Type alternative = !types.isEmpty() ? types.iterator().next() : Type.getUnknown();
+      Type alternative = !types.isEmpty() ? types.iterator().next() : UnknownType.getUnknownType();
       newType = TypeManager.getInstance().getCommonType(types).orElse(alternative);
       subTypes = new HashSet<>(getPossibleSubTypes());
       subTypes.remove(oldType);
@@ -99,7 +101,7 @@ public class InitializerListExpression extends Expression implements TypeListene
     setPossibleSubTypes(subTypes, root);
 
     if (!previous.equals(this.type)) {
-      this.type.setTypeOrigin(Origin.DATAFLOW);
+      this.type.setTypeOrigin(Type.Origin.DATAFLOW);
     }
   }
 

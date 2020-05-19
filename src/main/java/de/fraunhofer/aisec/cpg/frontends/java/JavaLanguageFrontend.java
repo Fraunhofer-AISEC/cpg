@@ -26,11 +26,7 @@
 
 package de.fraunhofer.aisec.cpg.frontends.java;
 
-import com.github.javaparser.JavaParser;
-import com.github.javaparser.ParseResult;
-import com.github.javaparser.ParserConfiguration;
-import com.github.javaparser.Range;
-import com.github.javaparser.TokenRange;
+import com.github.javaparser.*;
 import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.ImportDeclaration;
 import com.github.javaparser.ast.Node;
@@ -55,12 +51,8 @@ import com.github.javaparser.symbolsolver.resolution.typesolvers.ReflectionTypeS
 import de.fraunhofer.aisec.cpg.TranslationConfiguration;
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
 import de.fraunhofer.aisec.cpg.frontends.TranslationException;
-import de.fraunhofer.aisec.cpg.graph.IncludeDeclaration;
-import de.fraunhofer.aisec.cpg.graph.NamespaceDeclaration;
-import de.fraunhofer.aisec.cpg.graph.NodeBuilder;
-import de.fraunhofer.aisec.cpg.graph.TranslationUnitDeclaration;
-import de.fraunhofer.aisec.cpg.graph.Type.Origin;
-import de.fraunhofer.aisec.cpg.graph.TypeManager;
+import de.fraunhofer.aisec.cpg.graph.*;
+import de.fraunhofer.aisec.cpg.graph.type.TypeParser;
 import de.fraunhofer.aisec.cpg.helpers.Benchmark;
 import de.fraunhofer.aisec.cpg.helpers.CommonPath;
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager;
@@ -248,10 +240,10 @@ public class JavaLanguageFrontend extends LanguageFrontend {
     return null;
   }
 
-  public de.fraunhofer.aisec.cpg.graph.Type getTypeAsGoodAsPossible(
+  public de.fraunhofer.aisec.cpg.graph.type.Type getTypeAsGoodAsPossible(
       NodeWithType nodeWithType, ResolvedValueDeclaration resolved) {
     try {
-      return new de.fraunhofer.aisec.cpg.graph.Type(resolved.getType().describe());
+      return TypeParser.createFrom(resolved.getType().describe(), true);
     } catch (RuntimeException | NoClassDefFoundError ex) {
       return getTypeFromImportIfPossible(nodeWithType.getType());
     }
@@ -343,24 +335,24 @@ public class JavaLanguageFrontend extends LanguageFrontend {
     return null;
   }
 
-  public de.fraunhofer.aisec.cpg.graph.Type getTypeAsGoodAsPossible(Type type) {
+  public de.fraunhofer.aisec.cpg.graph.type.Type getTypeAsGoodAsPossible(Type type) {
     try {
-      return new de.fraunhofer.aisec.cpg.graph.Type(type.resolve().describe());
+      return TypeParser.createFrom(type.resolve().describe(), true);
     } catch (RuntimeException | NoClassDefFoundError ex) {
       return getTypeFromImportIfPossible(type);
     }
   }
 
-  public de.fraunhofer.aisec.cpg.graph.Type getReturnTypeAsGoodAsPossible(
+  public de.fraunhofer.aisec.cpg.graph.type.Type getReturnTypeAsGoodAsPossible(
       NodeWithType nodeWithType, ResolvedMethodDeclaration resolved) {
     try {
-      return new de.fraunhofer.aisec.cpg.graph.Type(resolved.getReturnType().describe());
+      return TypeParser.createFrom(resolved.getReturnType().describe(), true);
     } catch (RuntimeException | NoClassDefFoundError ex) {
       return getTypeFromImportIfPossible(nodeWithType.getType());
     }
   }
 
-  private de.fraunhofer.aisec.cpg.graph.Type getTypeFromImportIfPossible(Type type) {
+  private de.fraunhofer.aisec.cpg.graph.type.Type getTypeFromImportIfPossible(Type type) {
     Type searchType = type;
     while (searchType.isArrayType()) {
       searchType = searchType.getElementType();
@@ -368,7 +360,10 @@ public class JavaLanguageFrontend extends LanguageFrontend {
     // if this is not a ClassOrInterfaceType, just return
     if (!searchType.isClassOrInterfaceType() || context == null) {
       log.warn("Unable to resolve type for {}", type.asString());
-      return new de.fraunhofer.aisec.cpg.graph.Type(type.asString(), Origin.GUESSED);
+      de.fraunhofer.aisec.cpg.graph.type.Type returnType =
+          TypeParser.createFrom(type.asString(), true);
+      returnType.setTypeOrigin(de.fraunhofer.aisec.cpg.graph.type.Type.Origin.GUESSED);
+      return returnType;
     }
 
     ClassOrInterfaceType clazz = searchType.asClassOrInterfaceType();
@@ -378,14 +373,20 @@ public class JavaLanguageFrontend extends LanguageFrontend {
       for (ImportDeclaration importDeclaration : context.getImports()) {
         if (importDeclaration.getName().getIdentifier().endsWith(clazz.getName().getIdentifier())) {
           // TODO: handle type parameters
-          return new de.fraunhofer.aisec.cpg.graph.Type(importDeclaration.getNameAsString());
+          return TypeParser.createFrom(importDeclaration.getNameAsString(), true);
         }
       }
-      return new de.fraunhofer.aisec.cpg.graph.Type(clazz.getNameAsString(), Origin.GUESSED);
+      de.fraunhofer.aisec.cpg.graph.type.Type returnType =
+          TypeParser.createFrom(clazz.getNameAsString(), true);
+      returnType.setTypeOrigin(de.fraunhofer.aisec.cpg.graph.type.Type.Origin.GUESSED);
+      return returnType;
     }
 
     log.warn("Unable to resolve type for {}", type.asString());
-    return new de.fraunhofer.aisec.cpg.graph.Type(type.asString(), Origin.GUESSED);
+    de.fraunhofer.aisec.cpg.graph.type.Type returnType =
+        TypeParser.createFrom(type.asString(), true);
+    returnType.setTypeOrigin(de.fraunhofer.aisec.cpg.graph.type.Type.Origin.GUESSED);
+    return returnType;
   }
 
   @Override

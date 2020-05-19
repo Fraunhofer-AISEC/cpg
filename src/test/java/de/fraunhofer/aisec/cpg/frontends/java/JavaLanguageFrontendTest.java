@@ -26,42 +26,12 @@
 
 package de.fraunhofer.aisec.cpg.frontends.java;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 import de.fraunhofer.aisec.cpg.TranslationConfiguration;
 import de.fraunhofer.aisec.cpg.frontends.TranslationException;
-import de.fraunhofer.aisec.cpg.graph.ArrayCreationExpression;
-import de.fraunhofer.aisec.cpg.graph.ArraySubscriptionExpression;
-import de.fraunhofer.aisec.cpg.graph.CaseStatement;
-import de.fraunhofer.aisec.cpg.graph.CastExpression;
-import de.fraunhofer.aisec.cpg.graph.CatchClause;
-import de.fraunhofer.aisec.cpg.graph.CompoundStatement;
-import de.fraunhofer.aisec.cpg.graph.ConstructorDeclaration;
-import de.fraunhofer.aisec.cpg.graph.DeclarationStatement;
-import de.fraunhofer.aisec.cpg.graph.DeclaredReferenceExpression;
-import de.fraunhofer.aisec.cpg.graph.DefaultStatement;
-import de.fraunhofer.aisec.cpg.graph.ExpressionList;
-import de.fraunhofer.aisec.cpg.graph.FieldDeclaration;
-import de.fraunhofer.aisec.cpg.graph.ForEachStatement;
-import de.fraunhofer.aisec.cpg.graph.ForStatement;
-import de.fraunhofer.aisec.cpg.graph.InitializerListExpression;
-import de.fraunhofer.aisec.cpg.graph.Literal;
-import de.fraunhofer.aisec.cpg.graph.MemberExpression;
-import de.fraunhofer.aisec.cpg.graph.MethodDeclaration;
-import de.fraunhofer.aisec.cpg.graph.NamespaceDeclaration;
-import de.fraunhofer.aisec.cpg.graph.Node;
-import de.fraunhofer.aisec.cpg.graph.RecordDeclaration;
-import de.fraunhofer.aisec.cpg.graph.Statement;
-import de.fraunhofer.aisec.cpg.graph.StaticCallExpression;
-import de.fraunhofer.aisec.cpg.graph.SwitchStatement;
-import de.fraunhofer.aisec.cpg.graph.TranslationUnitDeclaration;
-import de.fraunhofer.aisec.cpg.graph.TryStatement;
-import de.fraunhofer.aisec.cpg.graph.Type;
-import de.fraunhofer.aisec.cpg.graph.UnaryOperator;
-import de.fraunhofer.aisec.cpg.graph.VariableDeclaration;
+import de.fraunhofer.aisec.cpg.graph.*;
+import de.fraunhofer.aisec.cpg.graph.type.TypeParser;
 import de.fraunhofer.aisec.cpg.helpers.NodeComparator;
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker;
 import de.fraunhofer.aisec.cpg.helpers.Util;
@@ -176,7 +146,7 @@ class JavaLanguageFrontendTest {
     VariableDeclaration s = (VariableDeclaration) forEachStatement.getVariable();
     assertNotNull(s);
     assertEquals("s", s.getName());
-    assertEquals(Type.createFrom("java.lang.String"), s.getType());
+    assertEquals(TypeParser.createFrom("java.lang.String", true), s.getType());
 
     // should contain a single statement
     StaticCallExpression sce = (StaticCallExpression) forEachStatement.getStatement();
@@ -206,15 +176,15 @@ class JavaLanguageFrontendTest {
     assertEquals(3, catchClauses.size());
     // first exception type was resolved, so we can expect a FQN
     assertEquals(
-        Type.createFrom("java.lang.NumberFormatException"),
+        TypeParser.createFrom("java.lang.NumberFormatException", true),
         Objects.requireNonNull(catchClauses.get(0).getParameter()).getType());
     // second one could not be resolved so we do not have an FQN
     assertEquals(
-        Type.createFrom("NotResolvableTypeException"),
+        TypeParser.createFrom("NotResolvableTypeException", true),
         Objects.requireNonNull(catchClauses.get(1).getParameter()).getType());
     // third type should have been resolved through the import
     assertEquals(
-        Type.createFrom("some.ImportedException"),
+        TypeParser.createFrom("some.ImportedException", true),
         Objects.requireNonNull(catchClauses.get(2).getParameter()).getType());
 
     // and 1 finally
@@ -333,7 +303,7 @@ class JavaLanguageFrontendTest {
     MethodDeclaration method = recordDeclaration.getMethods().get(0);
     assertEquals(recordDeclaration, method.getRecordDeclaration());
     assertEquals("method", method.getName());
-    assertEquals(Type.createFrom("java.lang.Integer"), method.getType());
+    assertEquals(TypeParser.createFrom("java.lang.Integer", true), method.getType());
 
     ConstructorDeclaration constructor = recordDeclaration.getConstructors().get(0);
     assertEquals(recordDeclaration, constructor.getRecordDeclaration());
@@ -407,19 +377,19 @@ class JavaLanguageFrontendTest {
     assertNotNull(stmt);
 
     VariableDeclaration e = stmt.getSingleDeclarationAs(VariableDeclaration.class);
-    assertEquals(Type.createFrom("ExtendedClass"), e.getType());
+    assertEquals(TypeParser.createFrom("ExtendedClass", true), e.getType());
 
     // b = (BaseClass) e
     stmt = main.getBodyStatementAs(1, DeclarationStatement.class);
     assertNotNull(stmt);
 
     VariableDeclaration b = stmt.getSingleDeclarationAs(VariableDeclaration.class);
-    assertEquals(Type.createFrom("BaseClass"), b.getType());
+    assertEquals(TypeParser.createFrom("BaseClass", true), b.getType());
 
     // initializer
     CastExpression cast = (CastExpression) b.getInitializer();
     assertNotNull(cast);
-    assertEquals(Type.createFrom("BaseClass"), cast.getCastType());
+    assertEquals(TypeParser.createFrom("BaseClass", true), cast.getCastType());
 
     // expression itself should be a reference
     DeclaredReferenceExpression ref = (DeclaredReferenceExpression) cast.getExpression();
@@ -451,7 +421,7 @@ class JavaLanguageFrontendTest {
         (VariableDeclaration) ((DeclarationStatement) statements.get(0)).getSingleDeclaration();
 
     // type should be Integer[]
-    assertEquals(Type.createFrom("int[]"), a.getType());
+    assertEquals(TypeParser.createFrom("int[]", true), a.getType());
 
     // it has an array creation initializer
     ArrayCreationExpression ace = (ArrayCreationExpression) a.getInitializer();
@@ -506,7 +476,7 @@ class JavaLanguageFrontendTest {
 
     assertNotNull(length);
     assertEquals("length", length.getMember().getName());
-    assertEquals("int", length.getType().toString());
+    assertEquals("int", length.getType().getTypeName());
   }
 
   @Test

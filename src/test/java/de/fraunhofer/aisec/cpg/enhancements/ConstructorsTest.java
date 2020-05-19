@@ -31,7 +31,7 @@ public class ConstructorsTest {
 
     List<VariableDeclaration> variables = Util.subnodesOfType(result, VariableDeclaration.class);
 
-    VariableDeclaration a1 = TestUtils.findByName(variables, "a1");
+    VariableDeclaration a1 = TestUtils.findByUniqueName(variables, "a1");
     assertTrue(a1.getInitializer() instanceof NewExpression);
     assertTrue(
         ((NewExpression) a1.getInitializer()).getInitializer() instanceof ConstructExpression);
@@ -39,7 +39,7 @@ public class ConstructorsTest {
         (ConstructExpression) ((NewExpression) a1.getInitializer()).getInitializer();
     assertEquals(noArg, a1Initializer.getConstructor());
 
-    VariableDeclaration a2 = TestUtils.findByName(variables, "a2");
+    VariableDeclaration a2 = TestUtils.findByUniqueName(variables, "a2");
     assertTrue(a2.getInitializer() instanceof NewExpression);
     assertTrue(
         ((NewExpression) a2.getInitializer()).getInitializer() instanceof ConstructExpression);
@@ -47,7 +47,7 @@ public class ConstructorsTest {
         (ConstructExpression) ((NewExpression) a2.getInitializer()).getInitializer();
     assertEquals(singleArg, a2Initializer.getConstructor());
 
-    VariableDeclaration a3 = TestUtils.findByName(variables, "a3");
+    VariableDeclaration a3 = TestUtils.findByUniqueName(variables, "a3");
     assertTrue(a3.getInitializer() instanceof NewExpression);
     assertTrue(
         ((NewExpression) a3.getInitializer()).getInitializer() instanceof ConstructExpression);
@@ -55,7 +55,7 @@ public class ConstructorsTest {
         (ConstructExpression) ((NewExpression) a3.getInitializer()).getInitializer();
     assertEquals(twoArgs, a3Initializer.getConstructor());
 
-    VariableDeclaration a4 = TestUtils.findByName(variables, "a4");
+    VariableDeclaration a4 = TestUtils.findByUniqueName(variables, "a4");
     assertNull(a4.getInitializer());
   }
 
@@ -73,37 +73,37 @@ public class ConstructorsTest {
 
     List<VariableDeclaration> variables = Util.subnodesOfType(result, VariableDeclaration.class);
 
-    VariableDeclaration a1 = TestUtils.findByName(variables, "a1");
+    VariableDeclaration a1 = TestUtils.findByUniqueName(variables, "a1");
     assertTrue(a1.getInitializer() instanceof ConstructExpression);
     ConstructExpression a1Initializer = (ConstructExpression) a1.getInitializer();
     assertEquals(noArg, a1Initializer.getConstructor());
 
-    VariableDeclaration a2 = TestUtils.findByName(variables, "a2");
+    VariableDeclaration a2 = TestUtils.findByUniqueName(variables, "a2");
     assertTrue(a2.getInitializer() instanceof ConstructExpression);
     ConstructExpression a2Initializer = (ConstructExpression) a2.getInitializer();
     assertEquals(singleArg, a2Initializer.getConstructor());
 
-    VariableDeclaration a3 = TestUtils.findByName(variables, "a3");
+    VariableDeclaration a3 = TestUtils.findByUniqueName(variables, "a3");
     assertTrue(a3.getInitializer() instanceof ConstructExpression);
     ConstructExpression a3Initializer = (ConstructExpression) a3.getInitializer();
     assertEquals(twoArgs, a3Initializer.getConstructor());
 
-    VariableDeclaration a4 = TestUtils.findByName(variables, "a4");
+    VariableDeclaration a4 = TestUtils.findByUniqueName(variables, "a4");
     assertTrue(a4.getInitializer() instanceof ConstructExpression);
     ConstructExpression a4Initializer = (ConstructExpression) a4.getInitializer();
     assertEquals(noArg, a4Initializer.getConstructor());
 
-    VariableDeclaration a5 = TestUtils.findByName(variables, "a5");
+    VariableDeclaration a5 = TestUtils.findByUniqueName(variables, "a5");
     assertTrue(a5.getInitializer() instanceof ConstructExpression);
     ConstructExpression a5Initializer = (ConstructExpression) a5.getInitializer();
     assertEquals(singleArg, a5Initializer.getConstructor());
 
-    VariableDeclaration a6 = TestUtils.findByName(variables, "a6");
+    VariableDeclaration a6 = TestUtils.findByUniqueName(variables, "a6");
     assertTrue(a6.getInitializer() instanceof ConstructExpression);
     ConstructExpression a6Initializer = (ConstructExpression) a6.getInitializer();
     assertEquals(twoArgs, a6Initializer.getConstructor());
 
-    VariableDeclaration a7 = TestUtils.findByName(variables, "a7");
+    VariableDeclaration a7 = TestUtils.findByUniqueName(variables, "a7");
     assertTrue(a7.getInitializer() instanceof NewExpression);
     assertTrue(
         ((NewExpression) a7.getInitializer()).getInitializer() instanceof ConstructExpression);
@@ -111,7 +111,7 @@ public class ConstructorsTest {
         (ConstructExpression) ((NewExpression) a7.getInitializer()).getInitializer();
     assertEquals(noArg, a7Initializer.getConstructor());
 
-    VariableDeclaration a8 = TestUtils.findByName(variables, "a8");
+    VariableDeclaration a8 = TestUtils.findByUniqueName(variables, "a8");
     assertTrue(a8.getInitializer() instanceof NewExpression);
     assertTrue(
         ((NewExpression) a8.getInitializer()).getInitializer() instanceof ConstructExpression);
@@ -119,7 +119,7 @@ public class ConstructorsTest {
         (ConstructExpression) ((NewExpression) a8.getInitializer()).getInitializer();
     assertEquals(noArg, a8Initializer.getConstructor());
 
-    VariableDeclaration a9 = TestUtils.findByName(variables, "a9");
+    VariableDeclaration a9 = TestUtils.findByUniqueName(variables, "a9");
     assertTrue(a9.getInitializer() instanceof NewExpression);
     assertTrue(
         ((NewExpression) a9.getInitializer()).getInitializer() instanceof ConstructExpression);
@@ -127,7 +127,7 @@ public class ConstructorsTest {
         (ConstructExpression) ((NewExpression) a9.getInitializer()).getInitializer();
     assertEquals(singleArg, a9Initializer.getConstructor());
 
-    VariableDeclaration a10 = TestUtils.findByName(variables, "a10");
+    VariableDeclaration a10 = TestUtils.findByUniqueName(variables, "a10");
     assertTrue(a10.getInitializer() instanceof NewExpression);
     assertTrue(
         ((NewExpression) a10.getInitializer()).getInitializer() instanceof ConstructExpression);

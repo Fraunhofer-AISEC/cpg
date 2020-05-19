@@ -27,7 +27,8 @@
 package de.fraunhofer.aisec.cpg.graph;
 
 import de.fraunhofer.aisec.cpg.graph.HasType.TypeListener;
-import de.fraunhofer.aisec.cpg.graph.Type.Origin;
+import de.fraunhofer.aisec.cpg.graph.type.Type;
+import de.fraunhofer.aisec.cpg.graph.type.TypeParser;
 import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
@@ -166,16 +167,16 @@ public class BinaryOperator extends Expression implements TypeListener {
   public void typeChanged(HasType src, HasType root, Type oldType) {
     Type previous = this.type;
     if (this.operatorCode.equals("=")) {
-      setType(src.getType(), root);
+      setType(src.getPropagationType(), root);
     } else {
       if (this.lhs != null && "java.lang.String".equals(this.lhs.getType().toString())
           || this.rhs != null && "java.lang.String".equals(this.rhs.getType().toString())) {
         getPossibleSubTypes().clear();
-        setType(new Type("java.lang.String"), root);
+        setType(TypeParser.createFrom("java.lang.String", true), root);
       }
     }
     if (!previous.equals(this.type)) {
-      this.type.setTypeOrigin(Origin.DATAFLOW);
+      this.type.setTypeOrigin(Type.Origin.DATAFLOW);
     }
   }
 

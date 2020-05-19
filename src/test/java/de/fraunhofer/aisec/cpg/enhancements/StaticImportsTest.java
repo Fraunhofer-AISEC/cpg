@@ -50,8 +50,8 @@ public class StaticImportsTest {
   void testSingleStaticImport() throws Exception {
     List<TranslationUnitDeclaration> result = TestUtils.analyze("java", topLevel.resolve("single"));
     List<MethodDeclaration> methods = Util.subnodesOfType(result, MethodDeclaration.class);
-    MethodDeclaration test = TestUtils.findByName(methods, "test");
-    MethodDeclaration main = TestUtils.findByName(methods, "main");
+    MethodDeclaration test = TestUtils.findByUniqueName(methods, "test");
+    MethodDeclaration main = TestUtils.findByUniqueName(methods, "main");
 
     CallExpression call = Util.subnodesOfType(main, CallExpression.class).get(0);
     assertEquals(List.of(test), call.getInvokes());
@@ -65,7 +65,7 @@ public class StaticImportsTest {
     assertTrue(staticField.getModifiers().contains("static"));
 
     List<MemberExpression> memberExpressions = Util.subnodesOfType(main, MemberExpression.class);
-    MemberExpression usage = TestUtils.findByName(memberExpressions, "A.test");
+    MemberExpression usage = TestUtils.findByUniqueName(memberExpressions, "A.test");
     assertEquals(staticField, usage.getMember());
   }
 
@@ -74,11 +74,11 @@ public class StaticImportsTest {
     List<TranslationUnitDeclaration> result =
         TestUtils.analyze("java", topLevel.resolve("asterisk"));
     List<MethodDeclaration> methods = Util.subnodesOfType(result, MethodDeclaration.class);
-    MethodDeclaration main = TestUtils.findByName(methods, "main");
+    MethodDeclaration main = TestUtils.findByUniqueName(methods, "main");
     for (CallExpression call : Util.subnodesOfType(main, CallExpression.class)) {
       switch (call.getName()) {
         case "a":
-          assertEquals(List.of(TestUtils.findByName(methods, "a")), call.getInvokes());
+          assertEquals(List.of(TestUtils.findByUniqueName(methods, "a")), call.getInvokes());
           assertTrue(((MethodDeclaration) call.getInvokes().get(0)).isStatic());
           break;
         case "b":
@@ -98,18 +98,19 @@ public class StaticImportsTest {
     }
 
     List<RecordDeclaration> records = Util.subnodesOfType(result, RecordDeclaration.class);
-    RecordDeclaration A = TestUtils.findByName(records, "A");
+    RecordDeclaration A = TestUtils.findByUniqueName(records, "A");
     List<FieldDeclaration> testFields = Util.subnodesOfType(A, FieldDeclaration.class);
-    FieldDeclaration staticField = TestUtils.findByName(testFields, "staticField");
-    FieldDeclaration nonStaticField = TestUtils.findByName(testFields, "nonStaticField");
+    FieldDeclaration staticField = TestUtils.findByUniqueName(testFields, "staticField");
+    FieldDeclaration nonStaticField = TestUtils.findByUniqueName(testFields, "nonStaticField");
     assertTrue(staticField.getModifiers().contains("static"));
     assertFalse(nonStaticField.getModifiers().contains("static"));
 
     List<MemberExpression> declaredReferences = Util.subnodesOfType(main, MemberExpression.class);
-    MemberExpression usage = TestUtils.findByName(declaredReferences, "A.staticField");
+    MemberExpression usage = TestUtils.findByUniqueName(declaredReferences, "A.staticField");
     assertEquals(usage.getMember(), staticField);
 
-    MemberExpression nonStatic = TestUtils.findByName(declaredReferences, "this.nonStaticField");
+    MemberExpression nonStatic =
+        TestUtils.findByUniqueName(declaredReferences, "this.nonStaticField");
     assertNotEquals(nonStatic.getMember(), nonStaticField);
     assertTrue(nonStatic.getMember().isImplicit());
   }
@@ -122,7 +123,7 @@ public class StaticImportsTest {
         1, result.stream().filter(t -> t.getName().equals("unknown declarations")).count());
     List<RecordDeclaration> records = Util.subnodesOfType(result, RecordDeclaration.class);
 
-    RecordDeclaration dummyRecord = TestUtils.findByName(records, "a.b.c.SomeClass");
+    RecordDeclaration dummyRecord = TestUtils.findByUniqueName(records, "a.b.c.SomeClass");
     assertEquals(
         1, dummyRecord.getFields().stream().filter(f -> f.getName().equals("someMethod")).count());
     List<MethodDeclaration> dummyMethods =
@@ -140,8 +141,8 @@ public class StaticImportsTest {
     assertEquals(1, dummiesByNumberOfParams.get(4).size());
     MethodDeclaration dummy4 = dummiesByNumberOfParams.get(4).get(0);
 
-    RecordDeclaration mainRecord = TestUtils.findByName(records, "GenerateDummies");
-    MethodDeclaration main = TestUtils.findByName(mainRecord.getMethods(), "main");
+    RecordDeclaration mainRecord = TestUtils.findByUniqueName(records, "GenerateDummies");
+    MethodDeclaration main = TestUtils.findByUniqueName(mainRecord.getMethods(), "main");
     for (CallExpression call : Util.subnodesOfType(main, CallExpression.class)) {
       switch (call.getSignature().size()) {
         case 1:

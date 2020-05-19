@@ -29,20 +29,9 @@ package de.fraunhofer.aisec.cpg.frontends.cpp;
 import static de.fraunhofer.aisec.cpg.helpers.Util.errorWithFileLocation;
 
 import de.fraunhofer.aisec.cpg.frontends.Handler;
-import de.fraunhofer.aisec.cpg.graph.CompoundStatement;
-import de.fraunhofer.aisec.cpg.graph.ConstructorDeclaration;
-import de.fraunhofer.aisec.cpg.graph.Declaration;
-import de.fraunhofer.aisec.cpg.graph.FunctionDeclaration;
-import de.fraunhofer.aisec.cpg.graph.IncludeDeclaration;
-import de.fraunhofer.aisec.cpg.graph.MethodDeclaration;
-import de.fraunhofer.aisec.cpg.graph.NamespaceDeclaration;
-import de.fraunhofer.aisec.cpg.graph.NodeBuilder;
-import de.fraunhofer.aisec.cpg.graph.ProblemDeclaration;
-import de.fraunhofer.aisec.cpg.graph.ReturnStatement;
-import de.fraunhofer.aisec.cpg.graph.Statement;
-import de.fraunhofer.aisec.cpg.graph.TranslationUnitDeclaration;
-import de.fraunhofer.aisec.cpg.graph.Type;
+import de.fraunhofer.aisec.cpg.graph.*;
 import de.fraunhofer.aisec.cpg.graph.TypeManager;
+import de.fraunhofer.aisec.cpg.graph.type.TypeParser;
 import de.fraunhofer.aisec.cpg.helpers.Util;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -52,15 +41,7 @@ import java.util.Optional;
 import org.eclipse.cdt.core.dom.ast.IASTDeclaration;
 import org.eclipse.cdt.core.dom.ast.IASTNode;
 import org.eclipse.cdt.core.dom.ast.IASTTranslationUnit;
-import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTCompositeTypeSpecifier;
-import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTFunctionDefinition;
-import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTLinkageSpecification;
-import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTName;
-import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTNamespaceDefinition;
-import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTProblemDeclaration;
-import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTSimpleDeclaration;
-import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTTranslationUnit;
-import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTUsingDirective;
+import org.eclipse.cdt.internal.core.dom.parser.cpp.*;
 
 public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CXXLanguageFrontend> {
 
@@ -128,10 +109,9 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
 
     lang.getScopeManager().enterScope(functionDeclaration);
 
-    // Pointer type is added in DeclaratorHandler.handleFunctionDeclarator
-    String typeAdjustment = functionDeclaration.getType().getTypeAdjustment();
-
-    functionDeclaration.setType(Type.createFrom(typeString + typeAdjustment));
+    functionDeclaration.setType(
+        TypeParser.createFrom(
+            ctx.getRawSignature().split(functionDeclaration.getName())[0].trim(), true));
 
     if (ctx.getBody() != null) {
       Statement bodyStatement = this.lang.getStatementHandler().handle(ctx.getBody());

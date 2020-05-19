@@ -27,8 +27,9 @@
 package de.fraunhofer.aisec.cpg.graph;
 
 import de.fraunhofer.aisec.cpg.graph.HasType.TypeListener;
-import de.fraunhofer.aisec.cpg.graph.Type.Origin;
+import de.fraunhofer.aisec.cpg.graph.type.Type;
 import de.fraunhofer.aisec.cpg.helpers.Util;
+import java.util.*;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -128,7 +129,7 @@ public class CallExpression extends Expression implements TypeListener {
       setPossibleSubTypes(subTypes, root);
 
       if (!previous.equals(this.type)) {
-        this.type.setTypeOrigin(Origin.DATAFLOW);
+        this.type.setTypeOrigin(Type.Origin.DATAFLOW);
       }
     }
   }

@@ -27,7 +27,8 @@
 package de.fraunhofer.aisec.cpg.graph;
 
 import de.fraunhofer.aisec.cpg.graph.HasType.TypeListener;
-import de.fraunhofer.aisec.cpg.graph.Type.Origin;
+import de.fraunhofer.aisec.cpg.graph.type.PointerType;
+import de.fraunhofer.aisec.cpg.graph.type.Type;
 import de.fraunhofer.aisec.cpg.helpers.Util;
 import java.util.HashSet;
 import java.util.Objects;
@@ -126,31 +127,31 @@ public class UnaryOperator extends Expression implements TypeListener {
     Type previous = this.type;
 
     if (src == input) {
-      Type newType = src.getType();
+      Type newType = src.getPropagationType();
 
       if (operatorCode.equals("*")) {
         newType = newType.dereference();
       } else if (operatorCode.equals("&")) {
-        newType = newType.reference();
+        newType = newType.reference(PointerType.PointerOrigin.POINTER);
       }
 
       setType(newType, root);
     } else {
       // Our input didn't change, so we don't need to (de)reference the type
-      setType(src.getType(), root);
+      setType(src.getPropagationType(), root);
 
       // Pass the type on to the input in an inversely (de)referenced way
-      Type newType = src.getType();
+      Type newType = src.getPropagationType();
       if (operatorCode.equals("*")) {
-        newType = src.getType().reference();
+        newType = src.getPropagationType().reference(PointerType.PointerOrigin.POINTER);
       } else if (operatorCode.equals("&")) {
-        newType = src.getType().dereference();
+        newType = src.getPropagationType().dereference();
       }
       input.setType(newType, this);
     }
 
     if (!previous.equals(this.type)) {
-      this.type.setTypeOrigin(Origin.DATAFLOW);
+      this.type.setTypeOrigin(Type.Origin.DATAFLOW);
     }
   }
 
@@ -173,7 +174,7 @@ public class UnaryOperator extends Expression implements TypeListener {
       currSubTypes =
           currSubTypes.stream()
               .filter(Util.distinctBy(Type::getTypeName))
-              .map(Type::reference)
+              .map(t -> t.reference(PointerType.PointerOrigin.POINTER))
               .collect(Collectors.toSet());
     }
 
