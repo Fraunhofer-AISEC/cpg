@@ -91,6 +91,12 @@ public class RecordDeclaration extends Declaration {
     return fields.stream().filter(f -> f.getName().equals("this")).findFirst().orElse(null);
   }
 
+  public FieldDeclaration getSuper() {
+    Optional<RecordDeclaration> superType =
+        getSuperTypeDeclarations().stream().filter(r -> r.getKind().equals("class")).findFirst();
+    return superType.map(RecordDeclaration::getThis).orElse(null);
+  }
+
   public List<MethodDeclaration> getMethods() {
     return methods;
   }

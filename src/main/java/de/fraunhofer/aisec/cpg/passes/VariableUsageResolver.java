@@ -29,14 +29,37 @@ package de.fraunhofer.aisec.cpg.passes;
 import static de.fraunhofer.aisec.cpg.helpers.Util.warnWithFileLocation;
 
 import de.fraunhofer.aisec.cpg.TranslationResult;
-import de.fraunhofer.aisec.cpg.graph.*;
+import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguageFrontend;
+import de.fraunhofer.aisec.cpg.graph.Declaration;
+import de.fraunhofer.aisec.cpg.graph.DeclaredReferenceExpression;
+import de.fraunhofer.aisec.cpg.graph.EnumDeclaration;
+import de.fraunhofer.aisec.cpg.graph.FieldDeclaration;
+import de.fraunhofer.aisec.cpg.graph.FunctionDeclaration;
+import de.fraunhofer.aisec.cpg.graph.HasType;
+import de.fraunhofer.aisec.cpg.graph.MemberCallExpression;
+import de.fraunhofer.aisec.cpg.graph.MemberExpression;
+import de.fraunhofer.aisec.cpg.graph.MethodDeclaration;
+import de.fraunhofer.aisec.cpg.graph.Node;
+import de.fraunhofer.aisec.cpg.graph.NodeBuilder;
+import de.fraunhofer.aisec.cpg.graph.RecordDeclaration;
+import de.fraunhofer.aisec.cpg.graph.StaticReferenceExpression;
+import de.fraunhofer.aisec.cpg.graph.TranslationUnitDeclaration;
+import de.fraunhofer.aisec.cpg.graph.ValueDeclaration;
 import de.fraunhofer.aisec.cpg.graph.type.FunctionPointerType;
 import de.fraunhofer.aisec.cpg.graph.type.Type;
 import de.fraunhofer.aisec.cpg.graph.type.TypeParser;
 import de.fraunhofer.aisec.cpg.graph.type.UnknownType;
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.ScopedWalker;
 import de.fraunhofer.aisec.cpg.helpers.Util;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -184,9 +207,18 @@ public class VariableUsageResolver extends Pass {
   private void resolveLocalVarUsage(RecordDeclaration currentClass, Node parent, Node current) {
     if (current instanceof DeclaredReferenceExpression) {
       DeclaredReferenceExpression ref = (DeclaredReferenceExpression) current;
+      if (parent instanceof MemberCallExpression
+          && current == ((MemberCallExpression) parent).getMember()
+          && !(ref.getType() instanceof FunctionPointerType)) {
+        // members of a MemberCallExpression are no variables to be resolved, unless we have a
+        // function pointer call
+        return;
+      }
       Set<ValueDeclaration> refersTo =
           walker
-              .getDeclarationForScope(parent, v -> v.getName().equals(ref.getName()))
+              .getDeclarationForScope(
+                  parent,
+                  v -> !(v instanceof FunctionDeclaration) && v.getName().equals(ref.getName()))
               .map(
                   d -> {
                     Set<ValueDeclaration> set = new HashSet<>();
@@ -200,12 +232,7 @@ public class VariableUsageResolver extends Pass {
         recordDeclType = TypeParser.createFrom(currentClass.getName(), true);
       }
 
-      if (ref.getType() instanceof FunctionPointerType
-          && (refersTo.isEmpty()
-              || refersTo.stream().anyMatch(FunctionDeclaration.class::isInstance))) {
-        // If we already found something, this might either be a function pointer variable or a
-        // function that would match the name. If we found a function, discard this finding, as
-        // it is most likely not correct yet
+      if (ref.getType() instanceof FunctionPointerType && refersTo.isEmpty()) {
         refersTo = resolveFunctionPtr(recordDeclType, ref);
       }
 
@@ -215,9 +242,13 @@ public class VariableUsageResolver extends Pass {
           && recordDeclType != null
           && recordMap.containsKey(recordDeclType)) {
         // Maybe we are referring to a field instead of a local var
-        Set<ValueDeclaration> resolvedMember = new HashSet<>();
-        resolvedMember.add(resolveMember(recordDeclType, (DeclaredReferenceExpression) current));
-        refersTo = resolvedMember;
+        ValueDeclaration field =
+            resolveMember(recordDeclType, (DeclaredReferenceExpression) current);
+        if (field != null) {
+          Set<ValueDeclaration> resolvedMember = new HashSet<>();
+          resolvedMember.add(field);
+          refersTo = resolvedMember;
+        }
       }
 
       if (!refersTo.isEmpty()) {
@@ -234,7 +265,11 @@ public class VariableUsageResolver extends Pass {
       Node base = memberExpression.getBase();
       Node member = memberExpression.getMember();
       if (base instanceof DeclaredReferenceExpression) {
-        base = resolveBase((DeclaredReferenceExpression) memberExpression.getBase());
+        if (lang instanceof JavaLanguageFrontend && base.getName().equals("super")) {
+          base = curClass.getSuper();
+        } else {
+          base = resolveBase((DeclaredReferenceExpression) memberExpression.getBase());
+        }
       }
       if (member instanceof DeclaredReferenceExpression) {
         if (base instanceof EnumDeclaration) {
@@ -312,16 +347,20 @@ public class VariableUsageResolver extends Pass {
 
   private ValueDeclaration resolveMember(
       Type containingClass, DeclaredReferenceExpression reference) {
+    if (lang instanceof JavaLanguageFrontend && reference.getName().equals("super")) {
+      // if we have a "super" on the member side, this is a member call. We need to resolve this
+      // in the call resolver instead
+      return null;
+    }
 
     Optional<FieldDeclaration> member = Optional.empty();
-    if (!TypeManager.getInstance().isUnknown(containingClass)) {
-      if (recordMap.containsKey(containingClass)) {
-        member =
-            recordMap.get(containingClass).getFields().stream()
-                .filter(f -> f.getName().equals(reference.getName()))
-                .findFirst();
-      }
+    if (!(containingClass instanceof UnknownType) && recordMap.containsKey(containingClass)) {
+      member =
+          recordMap.get(containingClass).getFields().stream()
+              .filter(f -> f.getName().equals(reference.getName()))
+              .findFirst();
     }
+
     if (member.isEmpty()) {
       member =
           superTypesMap.getOrDefault(containingClass, Collections.emptyList()).stream()
