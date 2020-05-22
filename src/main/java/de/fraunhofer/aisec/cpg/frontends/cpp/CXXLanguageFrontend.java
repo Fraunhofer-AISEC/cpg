@@ -119,6 +119,7 @@ public class CXXLanguageFrontend extends LanguageFrontend {
       new ParameterDeclarationHandler(this);
   private StatementHandler statementHandler = new StatementHandler(this);
   private HashMap<IBinding, Declaration> cachedDeclarations = new HashMap<>();
+  private HashMap<IBinding, Expression> temporaryExpressionsCache = new HashMap<>();
   private HashMap<Integer, String> comments = new HashMap<>();
 
   public CXXLanguageFrontend(@NonNull TranslationConfiguration config, ScopeManager scopeManager) {
@@ -312,6 +313,8 @@ public class CXXLanguageFrontend extends LanguageFrontend {
         LOGGER.debug("Connecting {} to {}", expression, declaration);
 
         ((DeclaredReferenceExpression) expression).setRefersTo((ValueDeclaration) declaration);
+      } else if (binding != null) {
+        temporaryExpressionsCache.put(binding, expression);
       }
     } else {
       if (expression == null) {
@@ -328,6 +331,11 @@ public class CXXLanguageFrontend extends LanguageFrontend {
 
   @Nullable
   public Declaration cacheDeclaration(IBinding binding, Declaration declaration) {
+    if (temporaryExpressionsCache.containsKey(binding)) {
+      Expression expression = temporaryExpressionsCache.get(binding);
+      ((DeclaredReferenceExpression) expression).setRefersTo((ValueDeclaration) declaration);
+      temporaryExpressionsCache.remove(binding);
+    }
     return cachedDeclarations.put(binding, declaration);
   }
 
