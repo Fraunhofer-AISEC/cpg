@@ -11,16 +11,14 @@ import java.io.File;
 import org.eclipse.cdt.core.dom.ast.IBinding;
 import org.junit.jupiter.api.Test;
 
-public class CXXBindingsTest {
+class CXXBindingsTest {
 
   void checkBindings(CXXLanguageFrontend cxxLanguageFrontend) {
     for (IBinding binding : cxxLanguageFrontend.getCachedDeclarations().keySet()) {
       Declaration declaration = cxxLanguageFrontend.getCachedDeclaration(binding);
-      if (cxxLanguageFrontend.getCachedExpression(binding) != null) {
-        for (Expression expression : cxxLanguageFrontend.getCachedExpression(binding)) {
-          for (Declaration refersTo : ((DeclaredReferenceExpression) expression).getRefersTo()) {
-            assertEquals(declaration, refersTo);
-          }
+      for (Expression expression : cxxLanguageFrontend.getCachedExpression(binding)) {
+        for (Declaration refersTo : ((DeclaredReferenceExpression) expression).getRefersTo()) {
+          assertEquals(declaration, refersTo);
         }
       }
     }

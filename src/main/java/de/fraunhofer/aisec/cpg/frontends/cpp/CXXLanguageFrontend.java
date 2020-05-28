@@ -47,6 +47,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.eclipse.cdt.core.dom.ast.*;
@@ -327,7 +328,7 @@ public class CXXLanguageFrontend extends LanguageFrontend {
     IBinding binding =
         cachedDeclarations.entrySet().stream()
             .filter(d -> d.getValue().equals(oldDeclaration))
-            .map(HashMap.Entry::getKey)
+            .map(Map.Entry::getKey)
             .findFirst()
             .orElse(null);
     if (binding != null && cachedExpressions.containsKey(binding)) {
@@ -388,10 +389,10 @@ public class CXXLanguageFrontend extends LanguageFrontend {
     if (cachedExpressions.containsKey(binding)) {
       return cachedExpressions.get(binding);
     }
-    return null;
+    return new ArrayList<>();
   }
 
-  public HashMap<IBinding, Declaration> getCachedDeclarations() {
+  public Map<IBinding, Declaration> getCachedDeclarations() {
     return cachedDeclarations;
   }
 
