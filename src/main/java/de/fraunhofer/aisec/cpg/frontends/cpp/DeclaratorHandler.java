@@ -32,10 +32,11 @@ import de.fraunhofer.aisec.cpg.graph.type.TypeParser;
 import de.fraunhofer.aisec.cpg.graph.type.UnknownType;
 import de.fraunhofer.aisec.cpg.passes.scopes.Scope;
 import java.lang.reflect.Method;
-import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import org.eclipse.cdt.core.dom.ast.*;
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTCompositeTypeSpecifier;
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTParameterDeclaration;
@@ -206,27 +207,17 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
     RecordDeclaration recordDeclaration =
         NodeBuilder.newRecordDeclaration(
             lang.getScopeManager().getCurrentNamePrefixWithDelimiter() + ctx.getName().toString(),
-            new ArrayList<>(),
             kind,
             ctx.getRawSignature());
+    recordDeclaration.setSuperClasses(
+        Arrays.stream(ctx.getBaseSpecifiers())
+            .map(b -> TypeParser.createFrom(b.getNameSpecifier().toString(), true))
+            .collect(Collectors.toList()));
 
     this.lang.addRecord(recordDeclaration);
 
     lang.getScopeManager().enterScope(recordDeclaration);
-
-    if (kind.equals("class")) {
-      de.fraunhofer.aisec.cpg.graph.FieldDeclaration thisDeclaration =
-          NodeBuilder.newFieldDeclaration(
-              "this",
-              TypeParser.createFrom(ctx.getName().toString(), true),
-              new ArrayList<>(),
-              "this",
-              null,
-              null,
-              true);
-      recordDeclaration.getFields().add(thisDeclaration);
-      lang.getScopeManager().addValueDeclaration(thisDeclaration);
-    }
+    lang.getScopeManager().addValueDeclaration(recordDeclaration.getThis());
 
     for (IASTDeclaration member : ctx.getMembers()) {
       if (member instanceof CPPASTVisibilityLabel) {

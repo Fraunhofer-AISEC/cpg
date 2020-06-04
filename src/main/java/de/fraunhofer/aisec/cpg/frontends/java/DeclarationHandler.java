@@ -218,7 +218,20 @@ public class DeclarationHandler
 
     // add a type declaration
     RecordDeclaration recordDeclaration =
-        NodeBuilder.newRecordDeclaration(name, superTypes, "class", classInterDecl.toString());
+        NodeBuilder.newRecordDeclaration(name, "class", classInterDecl.toString());
+    recordDeclaration.setSuperClasses(
+        classInterDecl.getExtendedTypes().stream()
+            .map(this.lang::getTypeAsGoodAsPossible)
+            .collect(Collectors.toList()));
+    if (recordDeclaration.getSuperClasses().isEmpty()) {
+      List<Type> superClasses = new ArrayList<>();
+      superClasses.add(TypeParser.createFrom("java.lang.Object", true));
+      recordDeclaration.setSuperClasses(superClasses);
+    }
+    recordDeclaration.setImplementedInterfaces(
+        classInterDecl.getImplementedTypes().stream()
+            .map(this.lang::getTypeAsGoodAsPossible)
+            .collect(Collectors.toList()));
 
     Map<Boolean, List<String>> partitioned =
         this.lang.getContext().getImports().stream()
@@ -240,18 +253,7 @@ public class DeclarationHandler
 
     this.lang.addRecord(recordDeclaration);
     lang.getScopeManager().enterScope(recordDeclaration);
-
-    de.fraunhofer.aisec.cpg.graph.FieldDeclaration thisDeclaration =
-        NodeBuilder.newFieldDeclaration(
-            "this",
-            TypeParser.createFrom(name, true),
-            new ArrayList<>(),
-            "this",
-            null,
-            null,
-            false);
-    recordDeclaration.getFields().add(thisDeclaration);
-    lang.getScopeManager().addValueDeclaration(thisDeclaration);
+    lang.getScopeManager().addValueDeclaration(recordDeclaration.getThis());
 
     // TODO: 'this' identifier for multiple instances?
     for (BodyDeclaration<?> decl : classInterDecl.getMembers()) {

@@ -28,8 +28,11 @@ package de.fraunhofer.aisec.cpg.graph;
 
 import de.fraunhofer.aisec.cpg.graph.type.Type;
 import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.checkerframework.checker.nullness.qual.NonNull;
+import org.neo4j.ogm.annotation.Transient;
 
 /** Represents a C++ union/struct/class or Java class */
 public class RecordDeclaration extends Declaration {
@@ -49,7 +52,8 @@ public class RecordDeclaration extends Declaration {
   @SubGraph("AST")
   private List<RecordDeclaration> records = new ArrayList<>();
 
-  private List<Type> superTypes = new ArrayList<>();
+  @Transient private List<Type> superClasses = new ArrayList<>();
+  @Transient private List<Type> implementedInterfaces = new ArrayList<>();
 
   @org.neo4j.ogm.annotation.Relationship
   private Set<RecordDeclaration> superTypeDeclarations = new HashSet<>();
@@ -91,12 +95,6 @@ public class RecordDeclaration extends Declaration {
     return fields.stream().filter(f -> f.getName().equals("this")).findFirst().orElse(null);
   }
 
-  public FieldDeclaration getSuper() {
-    Optional<RecordDeclaration> superType =
-        getSuperTypeDeclarations().stream().filter(r -> r.getKind().equals("class")).findFirst();
-    return superType.map(RecordDeclaration::getThis).orElse(null);
-  }
-
   public List<MethodDeclaration> getMethods() {
     return methods;
   }
@@ -121,12 +119,43 @@ public class RecordDeclaration extends Declaration {
     this.records = records;
   }
 
+  /**
+   * Combines both implemented interfaces and extended classes. This is most commonly what you are
+   * looking for when looking for method call targets etc.
+   *
+   * @return concatenation of {@link #getSuperClasses()} and {@link #getImplementedInterfaces()}
+   */
   public List<Type> getSuperTypes() {
-    return superTypes;
+    return Stream.of(superClasses, implementedInterfaces)
+        .flatMap(Collection::stream)
+        .collect(Collectors.toList());
   }
 
-  public void setSuperTypes(List<Type> superTypes) {
-    this.superTypes = superTypes;
+  /**
+   * The classes that are extended by this one. Usually zero or one, but in C++ this can contain
+   * multiple classes
+   *
+   * @return extended classes
+   */
+  public List<Type> getSuperClasses() {
+    return superClasses;
+  }
+
+  public void setSuperClasses(List<Type> superClasses) {
+    this.superClasses = superClasses;
+  }
+
+  /**
+   * Interfaces implemented by this class. This concept is not present in C++
+   *
+   * @return the list of implemented interfaces
+   */
+  public List<Type> getImplementedInterfaces() {
+    return implementedInterfaces;
+  }
+
+  public void setImplementedInterfaces(List<Type> implementedInterfaces) {
+    this.implementedInterfaces = implementedInterfaces;
   }
 
   public Set<RecordDeclaration> getSuperTypeDeclarations() {
@@ -198,7 +227,8 @@ public class RecordDeclaration extends Declaration {
         && Objects.equals(methods, that.methods)
         && Objects.equals(constructors, that.constructors)
         && Objects.equals(records, that.records)
-        && Objects.equals(superTypes, that.superTypes)
+        && Objects.equals(superClasses, that.superClasses)
+        && Objects.equals(implementedInterfaces, that.implementedInterfaces)
         && Objects.equals(superTypeDeclarations, that.superTypeDeclarations);
   }
 
