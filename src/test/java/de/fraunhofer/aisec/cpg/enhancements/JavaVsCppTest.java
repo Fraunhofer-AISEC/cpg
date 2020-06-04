@@ -64,8 +64,11 @@ class JavaVsCppTest {
                     .build())
             .build();
     TranslationResult res = analyzer.analyze().get();
-    assertEquals(1, res.getTranslationUnits().size());
-    TranslationUnitDeclaration tu = res.getTranslationUnits().get(0);
+    TranslationUnitDeclaration tu =
+        res.getTranslationUnits().stream()
+            .filter(t -> !t.getName().equals("unknown declarations"))
+            .findFirst()
+            .orElseThrow();
     assertEquals(1, tu.getDeclarations().size());
     Declaration decl = tu.getDeclarations().get(0);
     assertTrue(decl instanceof RecordDeclaration);
