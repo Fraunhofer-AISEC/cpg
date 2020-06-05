@@ -48,7 +48,6 @@ import de.fraunhofer.aisec.cpg.passes.scopes.RecordScope;
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation;
 import java.util.*;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 public class DeclarationHandler
     extends Handler<Declaration, BodyDeclaration, JavaLanguageFrontend> {
@@ -209,12 +208,6 @@ public class DeclarationHandler
     //  name = packageDeclaration.getNameAsString() + "." + name;
     // }
     name = getAbsoluteName(name);
-
-    List<Type> superTypes =
-        Stream.of(classInterDecl.getExtendedTypes(), classInterDecl.getImplementedTypes())
-            .flatMap(Collection::stream)
-            .map(this.lang::getTypeAsGoodAsPossible)
-            .collect(Collectors.toList());
 
     // add a type declaration
     RecordDeclaration recordDeclaration =

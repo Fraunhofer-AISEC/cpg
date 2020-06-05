@@ -30,35 +30,14 @@ import static de.fraunhofer.aisec.cpg.helpers.Util.warnWithFileLocation;
 
 import de.fraunhofer.aisec.cpg.TranslationResult;
 import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguageFrontend;
-import de.fraunhofer.aisec.cpg.graph.Declaration;
-import de.fraunhofer.aisec.cpg.graph.DeclaredReferenceExpression;
-import de.fraunhofer.aisec.cpg.graph.EnumDeclaration;
-import de.fraunhofer.aisec.cpg.graph.FieldDeclaration;
-import de.fraunhofer.aisec.cpg.graph.FunctionDeclaration;
-import de.fraunhofer.aisec.cpg.graph.HasType;
-import de.fraunhofer.aisec.cpg.graph.MemberCallExpression;
-import de.fraunhofer.aisec.cpg.graph.MemberExpression;
-import de.fraunhofer.aisec.cpg.graph.MethodDeclaration;
-import de.fraunhofer.aisec.cpg.graph.Node;
-import de.fraunhofer.aisec.cpg.graph.NodeBuilder;
-import de.fraunhofer.aisec.cpg.graph.RecordDeclaration;
-import de.fraunhofer.aisec.cpg.graph.StaticReferenceExpression;
-import de.fraunhofer.aisec.cpg.graph.TranslationUnitDeclaration;
-import de.fraunhofer.aisec.cpg.graph.ValueDeclaration;
+import de.fraunhofer.aisec.cpg.graph.*;
 import de.fraunhofer.aisec.cpg.graph.type.FunctionPointerType;
 import de.fraunhofer.aisec.cpg.graph.type.Type;
 import de.fraunhofer.aisec.cpg.graph.type.TypeParser;
 import de.fraunhofer.aisec.cpg.graph.type.UnknownType;
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.ScopedWalker;
 import de.fraunhofer.aisec.cpg.helpers.Util;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -357,7 +336,8 @@ public class VariableUsageResolver extends Pass {
 
   private ValueDeclaration resolveMember(
       Type containingClass, DeclaredReferenceExpression reference) {
-    if (lang instanceof JavaLanguageFrontend && reference.getName().equals("super")) {
+    if (lang instanceof JavaLanguageFrontend
+        && reference.getName().matches("(?<class>.+\\.)?super")) {
       // if we have a "super" on the member side, this is a member call. We need to resolve this
       // in the call resolver instead
       return null;

@@ -7,6 +7,8 @@ import de.fraunhofer.aisec.cpg.graph.*;
 import de.fraunhofer.aisec.cpg.helpers.Util;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
 
 public class SuperCallTest {
@@ -104,5 +106,28 @@ public class SuperCallTest {
         TestUtils.findByPredicate(calls, c -> "SubClass.super.target();".equals(c.getCode()));
 
     assertEquals(List.of(superTarget), superCall.getInvokes());
+  }
+
+  @Test
+  void testNoExcessFields() throws Exception {
+    List<TranslationUnitDeclaration> result = TestUtils.analyze("java", topLevel);
+    List<RecordDeclaration> records = Util.subnodesOfType(result, RecordDeclaration.class);
+
+    RecordDeclaration superClass = TestUtils.findByUniqueName(records, "SuperClass");
+    assertEquals(2, superClass.getFields().size());
+    assertEquals(
+        Set.of("this", "field"),
+        superClass.getFields().stream().map(Node::getName).collect(Collectors.toSet()));
+
+    RecordDeclaration subClass = TestUtils.findByUniqueName(records, "SubClass");
+    assertEquals(2, subClass.getFields().size());
+    assertEquals(
+        Set.of("this", "field"),
+        subClass.getFields().stream().map(Node::getName).collect(Collectors.toSet()));
+
+    RecordDeclaration inner = TestUtils.findByUniqueName(records, "SubClass.Inner");
+    assertEquals(1, inner.getFields().size());
+    assertEquals(
+        Set.of("this"), inner.getFields().stream().map(Node::getName).collect(Collectors.toSet()));
   }
 }
