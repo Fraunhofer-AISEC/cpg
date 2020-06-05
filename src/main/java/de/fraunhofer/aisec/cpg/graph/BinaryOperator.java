@@ -29,9 +29,10 @@ package de.fraunhofer.aisec.cpg.graph;
 import de.fraunhofer.aisec.cpg.graph.HasType.TypeListener;
 import de.fraunhofer.aisec.cpg.graph.type.Type;
 import de.fraunhofer.aisec.cpg.graph.type.TypeParser;
-import java.util.*;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.neo4j.ogm.annotation.Transient;
+
+import java.util.*;
 
 /**
  * A binary operation expression, such as "a + b". It consists of a left hand expression (lhs), a
@@ -81,16 +82,14 @@ public class BinaryOperator extends Expression implements TypeListener {
         ((DeclaredReferenceExpression) lhs)
             .setAccess(DeclaredReferenceExpression.accessValues.WRITE);
       } else if (lhs instanceof MemberExpression) {
-        ((MemberExpression) lhs).setWritingAccess(true);
+        ((MemberExpression) lhs).setAccess(ValueAccess.accessValues.WRITE);
       }
       if (lhs instanceof TypeListener) {
         this.registerTypeListener((TypeListener) lhs);
+        this.registerTypeListener((TypeListener) this.lhs);
       }
       if (this.rhs != null) {
         lhs.addPrevDFG(rhs);
-      }
-      if (lhs instanceof TypeListener) {
-        this.registerTypeListener((TypeListener) this.lhs);
       }
     } else if (compoundOperators.contains(operatorCode)) {
       if (lhs instanceof DeclaredReferenceExpression) {
@@ -98,7 +97,11 @@ public class BinaryOperator extends Expression implements TypeListener {
         ((DeclaredReferenceExpression) lhs)
             .setAccess(DeclaredReferenceExpression.accessValues.READWRITE);
       } else if (lhs instanceof MemberExpression) {
-        ((MemberExpression) lhs).setWritingAccess(true);
+        ((MemberExpression) lhs).setAccess(ValueAccess.accessValues.READWRITE);
+      }
+      if (lhs instanceof TypeListener) {
+        this.registerTypeListener((TypeListener) lhs);
+        this.registerTypeListener((TypeListener) this.lhs);
       }
       this.addPrevDFG(lhs);
       this.addNextDFG(lhs);

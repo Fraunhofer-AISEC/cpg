@@ -30,12 +30,13 @@ import de.fraunhofer.aisec.cpg.graph.HasType.TypeListener;
 import de.fraunhofer.aisec.cpg.graph.type.PointerType;
 import de.fraunhofer.aisec.cpg.graph.type.Type;
 import de.fraunhofer.aisec.cpg.helpers.Util;
+import org.apache.commons.lang3.builder.ToStringBuilder;
+import org.neo4j.ogm.annotation.Transient;
+
 import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
-import org.apache.commons.lang3.builder.ToStringBuilder;
-import org.neo4j.ogm.annotation.Transient;
 
 /**
  * A unary operator expression, involving one expression and an operator, such as <code>a++</code>.
@@ -77,6 +78,20 @@ public class UnaryOperator extends Expression implements TypeListener {
       if (this.operatorCode.equals("++") || this.operatorCode.equals("--")) {
         this.addNextDFG(input);
       }
+      changeExpressionAccess();
+    }
+  }
+
+  private void changeExpressionAccess() {
+    ValueAccess.accessValues access = ValueAccess.accessValues.READ;
+    if (this.operatorCode.equals("++") || this.operatorCode.equals("--")) {
+      access = ValueAccess.accessValues.READWRITE;
+    }
+
+    if (this.input instanceof DeclaredReferenceExpression) {
+      ((DeclaredReferenceExpression) this.input).setAccess(access);
+    } else if (this.input instanceof MemberExpression) {
+      ((MemberExpression) this.input).setAccess(access);
     }
   }
 
@@ -108,6 +123,7 @@ public class UnaryOperator extends Expression implements TypeListener {
 
   public void setOperatorCode(String operatorCode) {
     this.operatorCode = operatorCode;
+    changeExpressionAccess();
   }
 
   public boolean isPostfix() {

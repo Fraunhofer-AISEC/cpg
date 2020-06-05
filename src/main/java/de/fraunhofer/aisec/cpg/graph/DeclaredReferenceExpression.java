@@ -28,11 +28,12 @@ package de.fraunhofer.aisec.cpg.graph;
 
 import de.fraunhofer.aisec.cpg.graph.HasType.TypeListener;
 import de.fraunhofer.aisec.cpg.graph.type.Type;
+import org.apache.commons.lang3.builder.ToStringBuilder;
+import org.checkerframework.checker.nullness.qual.NonNull;
+
 import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
-import org.apache.commons.lang3.builder.ToStringBuilder;
-import org.checkerframework.checker.nullness.qual.NonNull;
 
 /**
  * An expression, which refers to something which is declared, e.g. a variable. For example, the
@@ -40,17 +41,10 @@ import org.checkerframework.checker.nullness.qual.NonNull;
  * DeclaredReferenceExpression}s, one for the variable <code>a</code> and one for variable <code>b
  * </code>, which have been previously been declared.
  */
-public class DeclaredReferenceExpression extends Expression implements TypeListener {
+public class DeclaredReferenceExpression extends Expression implements TypeListener, ValueAccess {
 
   /** The {@link ValueDeclaration}s this expression might refer to. */
   private Set<ValueDeclaration> refersTo = new HashSet<>();
-
-  /** Enum with the different types of accesses */
-  public enum accessValues {
-    READ,
-    WRITE,
-    READWRITE
-  }
 
   /**
    * Is this reference used for writing data instead of just reading it? Determines dataflow

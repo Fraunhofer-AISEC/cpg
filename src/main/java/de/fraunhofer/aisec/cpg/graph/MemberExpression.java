@@ -28,11 +28,12 @@ package de.fraunhofer.aisec.cpg.graph;
 
 import de.fraunhofer.aisec.cpg.graph.HasType.TypeListener;
 import de.fraunhofer.aisec.cpg.graph.type.Type;
+import org.apache.commons.lang3.builder.ToStringBuilder;
+import org.checkerframework.checker.nullness.qual.NonNull;
+
 import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
-import org.apache.commons.lang3.builder.ToStringBuilder;
-import org.checkerframework.checker.nullness.qual.NonNull;
 
 /**
  * Represents access to a field of a {@link RecordDeclaration}, such as <code>obj.property</code>.
@@ -50,7 +51,7 @@ public class MemberExpression extends Expression implements TypeListener {
    * Is this reference used for writing data instead of just reading it? Determines dataflow
    * direction
    */
-  private boolean writingAccess = false;
+  private ValueAccess.accessValues access = ValueAccess.accessValues.READ;
 
   @NonNull
   public Node getBase() {
@@ -72,9 +73,12 @@ public class MemberExpression extends Expression implements TypeListener {
     if (this.member instanceof HasType) {
       ((HasType) this.member).unregisterTypeListener(this);
     }
-    if (this.writingAccess) {
+    if (this.access == ValueAccess.accessValues.WRITE) {
       this.removeNextDFG(this.member);
+    } else if (this.access == ValueAccess.accessValues.READ) {
+      this.removePrevDFG(this.member);
     } else {
+      this.removeNextDFG(this.member);
       this.removePrevDFG(this.member);
     }
 
@@ -86,9 +90,12 @@ public class MemberExpression extends Expression implements TypeListener {
     if (member instanceof TypeListener) {
       registerTypeListener((TypeListener) member);
     }
-    if (this.writingAccess) {
+    if (this.access == ValueAccess.accessValues.WRITE) {
       this.addNextDFG(this.member);
+    } else if (this.access == ValueAccess.accessValues.READ) {
+      this.addPrevDFG(this.member);
     } else {
+      this.addNextDFG(this.member);
       this.addPrevDFG(this.member);
     }
   }
@@ -118,24 +125,26 @@ public class MemberExpression extends Expression implements TypeListener {
         .toString();
   }
 
-  public void setWritingAccess(boolean writingAccess) {
-    if (this.writingAccess) {
+  public void setAccess(ValueAccess.accessValues access) {
+    if (this.access == ValueAccess.accessValues.WRITE) {
       this.removeNextDFG(this.member);
+    } else if (this.access == ValueAccess.accessValues.READ) {
+      this.removePrevDFG(this.member);
     } else {
+      this.removeNextDFG(this.member);
       this.removePrevDFG(this.member);
     }
 
-    this.writingAccess = writingAccess;
+    this.access = access;
 
-    if (this.writingAccess) {
+    if (this.access == ValueAccess.accessValues.WRITE) {
       this.addNextDFG(this.member);
+    } else if (this.access == ValueAccess.accessValues.READ) {
+      this.addPrevDFG(this.member);
     } else {
+      this.addNextDFG(this.member);
       this.addPrevDFG(this.member);
     }
-  }
-
-  public boolean isWritingAccess() {
-    return writingAccess;
   }
 
   @Override
