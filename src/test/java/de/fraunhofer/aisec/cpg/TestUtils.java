@@ -26,13 +26,12 @@
 
 package de.fraunhofer.aisec.cpg;
 
-import static org.junit.jupiter.api.Assertions.*;
-
 import de.fraunhofer.aisec.cpg.graph.CompoundStatement;
 import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.TranslationUnitDeclaration;
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker;
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation;
+
 import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -40,6 +39,9 @@ import java.util.Collection;
 import java.util.List;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 public class TestUtils {
 
@@ -67,6 +69,30 @@ public class TestUtils {
             .map(Path::toFile)
             .filter(File::isFile)
             .filter(f -> f.getName().endsWith(fileExtension))
+            .sorted()
+            .toArray(File[]::new);
+
+    TranslationConfiguration config =
+        TranslationConfiguration.builder()
+            .sourceLocations(files)
+            .topLevel(topLevel.toFile())
+            .defaultPasses()
+            .debugParser(true)
+            .failOnError(true)
+            .build();
+
+    TranslationManager analyzer = TranslationManager.builder().config(config).build();
+
+    return analyzer.analyze().get().getTranslationUnits();
+  }
+
+  public static List<TranslationUnitDeclaration> analyzeFile(String fileName, Path topLevel)
+      throws Exception {
+    File[] files =
+        Files.walk(topLevel, Integer.MAX_VALUE)
+            .map(Path::toFile)
+            .filter(File::isFile)
+            .filter(f -> f.getName().equals(fileName))
             .sorted()
             .toArray(File[]::new);
 
