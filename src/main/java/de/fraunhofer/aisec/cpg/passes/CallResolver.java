@@ -203,31 +203,36 @@ public class CallResolver extends Pass {
     } else {
       // BaseName.super.call(), might either be in order to specify an enclosing class or an
       // interface that is implemented
-      String baseName =
-          call.getBase().getName().substring(0, call.getBase().getName().lastIndexOf(".super"));
-      if (curClass.getImplementedInterfaces().contains(TypeParser.createFrom(baseName, true))) {
-        // Basename is an interface -> BaseName.super refers to BaseName itself
-        target = recordMap.get(baseName);
-      } else {
-        // BaseName refers to an enclosing class -> BaseName.super is BaseName's superclass
-        RecordDeclaration base = recordMap.get(baseName);
-        if (base != null) {
-          if (!base.getSuperClasses().isEmpty()) {
-            target = recordMap.get(base.getSuperClasses().get(0).getTypeName());
-          } else {
-            Util.warnWithFileLocation(
-                call,
-                LOGGER,
-                "super call without direct superclass! Expected "
-                    + "java.lang.Object to be present at least!");
-          }
-        }
-      }
+      target = handleSpecificSupertype(curClass, call);
     }
     if (target != null) {
       ((DeclaredReferenceExpression) call.getBase()).setRefersTo(target.getThis());
       handleMethodCall(target, call);
     }
+  }
+
+  private RecordDeclaration handleSpecificSupertype(RecordDeclaration curClass,
+      CallExpression call) {
+    String baseName =
+        call.getBase().getName().substring(0, call.getBase().getName().lastIndexOf(".super"));
+    if (curClass.getImplementedInterfaces().contains(TypeParser.createFrom(baseName, true))) {
+      // Basename is an interface -> BaseName.super refers to BaseName itself
+      return recordMap.get(baseName);
+    } else {
+      // BaseName refers to an enclosing class -> BaseName.super is BaseName's superclass
+      RecordDeclaration base = recordMap.get(baseName);
+      if (base != null) {
+        if (!base.getSuperClasses().isEmpty()) {
+          return recordMap.get(base.getSuperClasses().get(0).getTypeName());
+        } else {
+          Util.warnWithFileLocation(call,
+              LOGGER,
+              "super call without direct superclass! Expected "
+                  + "java.lang.Object to be present at least!");
+        }
+      }
+    }
+    return null;
   }
 
   private void resolve(@NonNull Node node, RecordDeclaration curClass) {
@@ -236,39 +241,40 @@ public class CallResolver extends Pass {
     } else if (node instanceof ExplicitConstructorInvocation) {
       resolveExplicitConstructorInvocation((ExplicitConstructorInvocation) node);
     } else if (node instanceof CallExpression) {
-      CallExpression call = (CallExpression) node;
-
-      if (lang instanceof JavaLanguageFrontend
-          && call.getBase() instanceof DeclaredReferenceExpression
-          && call.getBase().getName().matches("(?<class>.+\\.)?super")) {
-        handleSuperCall(curClass, call);
-        return;
-      }
-
-      if (call instanceof MemberCallExpression) {
-        Node member = ((MemberCallExpression) call).getMember();
-        if (member instanceof HasType
-            && ((HasType) member).getType() instanceof FunctionPointerType) {
-          handleFunctionPointerCall(call, member);
-          return;
-        }
-      }
-
-      // we could be referring to a function pointer even though it is not a member call if the
-      // usual function pointer syntax (*fp)() has been omitted: fp(). Looks like a normal call,
-      // but it isn't
-      Optional<? extends ValueDeclaration> funcPointer =
-          walker.getDeclarationForScope(
-              call,
-              v ->
-                  v.getType() instanceof FunctionPointerType && v.getName().equals(call.getName()));
-      if (funcPointer.isPresent()) {
-        handleFunctionPointerCall(call, funcPointer.get());
-      } else {
-        handleNormalCalls(curClass, call);
-      }
+      handleCallExpression(curClass, (CallExpression) node);
     } else if (node instanceof ConstructExpression) {
       resolveConstructExpression((ConstructExpression) node);
+    }
+  }
+
+  private void handleCallExpression(RecordDeclaration curClass, CallExpression call) {
+    if (lang instanceof JavaLanguageFrontend
+        && call.getBase() instanceof DeclaredReferenceExpression
+        && call.getBase().getName().matches("(?<class>.+\\.)?super")) {
+      handleSuperCall(curClass, call);
+      return;
+    }
+
+    if (call instanceof MemberCallExpression) {
+      Node member = ((MemberCallExpression) call).getMember();
+      if (member instanceof HasType
+          && ((HasType) member).getType() instanceof FunctionPointerType) {
+        handleFunctionPointerCall(call, member);
+        return;
+      }
+    }
+
+    // we could be referring to a function pointer even though it is not a member call if the
+    // usual function pointer syntax (*fp)() has been omitted: fp(). Looks like a normal call,
+    // but it isn't
+    Optional<? extends ValueDeclaration> funcPointer =
+        walker.getDeclarationForScope(call,
+            v ->
+                v.getType() instanceof FunctionPointerType && v.getName().equals(call.getName()));
+    if (funcPointer.isPresent()) {
+      handleFunctionPointerCall(call, funcPointer.get());
+    } else {
+      handleNormalCalls(curClass, call);
     }
   }
 

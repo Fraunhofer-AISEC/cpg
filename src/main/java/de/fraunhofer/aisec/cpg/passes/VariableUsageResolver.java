@@ -249,7 +249,7 @@ public class VariableUsageResolver extends Pass {
       Node member = memberExpression.getMember();
       if (base instanceof DeclaredReferenceExpression) {
         if (lang instanceof JavaLanguageFrontend && base.getName().equals("super")) {
-          if (curClass != null && curClass.getSuperClasses().size() > 0) {
+          if (curClass != null && !curClass.getSuperClasses().isEmpty()) {
             base = recordMap.get(curClass.getSuperClasses().get(0)).getThis();
           } else {
             // no explicit super type -> java.lang.Object
