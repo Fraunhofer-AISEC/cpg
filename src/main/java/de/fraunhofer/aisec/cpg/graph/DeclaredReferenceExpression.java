@@ -45,11 +45,18 @@ public class DeclaredReferenceExpression extends Expression implements TypeListe
   /** The {@link ValueDeclaration}s this expression might refer to. */
   private Set<ValueDeclaration> refersTo = new HashSet<>();
 
+  /** Enum with the different types of accesses */
+  public enum accessValues {
+    READ,
+    WRITE,
+    READWRITE
+  }
+
   /**
    * Is this reference used for writing data instead of just reading it? Determines dataflow
    * direction
    */
-  private boolean writingAccess = false;
+  private accessValues access = accessValues.READ;
 
   public Set<ValueDeclaration> getRefersTo() {
     return refersTo;
@@ -64,9 +71,12 @@ public class DeclaredReferenceExpression extends Expression implements TypeListe
   public void setRefersTo(@NonNull Set<ValueDeclaration> refersTo) {
     this.refersTo.forEach(
         r -> {
-          if (writingAccess) {
+          if (access == accessValues.WRITE) {
             this.removeNextDFG(r);
+          } else if (access == accessValues.READ) {
+            this.removePrevDFG(r);
           } else {
+            this.removeNextDFG(r);
             this.removePrevDFG(r);
           }
           r.unregisterTypeListener(this);
@@ -80,9 +90,12 @@ public class DeclaredReferenceExpression extends Expression implements TypeListe
 
     refersTo.forEach(
         r -> {
-          if (writingAccess) {
+          if (access == accessValues.WRITE) {
             this.addNextDFG(r);
+          } else if (access == accessValues.READ) {
+            this.addPrevDFG(r);
           } else {
+            this.addNextDFG(r);
             this.addPrevDFG(r);
           }
           r.registerTypeListener(this);
@@ -116,29 +129,31 @@ public class DeclaredReferenceExpression extends Expression implements TypeListe
         .toString();
   }
 
-  public void setWritingAccess(boolean writingAccess) {
+  public void setAccess(accessValues access) {
     this.refersTo.forEach(
         r -> {
-          if (this.writingAccess) {
+          if (this.access == accessValues.WRITE) {
             this.removeNextDFG(r);
+          } else if (this.access == accessValues.READ) {
+            this.removePrevDFG(r);
           } else {
+            this.removeNextDFG(r);
             this.removePrevDFG(r);
           }
         });
 
-    this.writingAccess = writingAccess;
+    this.access = access;
     refersTo.forEach(
         r -> {
-          if (this.writingAccess) {
+          if (this.access == accessValues.WRITE) {
             this.addNextDFG(r);
+          } else if (this.access == accessValues.READ) {
+            this.addPrevDFG(r);
           } else {
+            this.addNextDFG(r);
             this.addPrevDFG(r);
           }
         });
-  }
-
-  public boolean isWritingAccess() {
-    return writingAccess;
   }
 
   @Override

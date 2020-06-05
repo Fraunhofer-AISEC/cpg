@@ -68,11 +68,15 @@ public class UnaryOperator extends Expression implements TypeListener {
     if (this.input != null) {
       this.input.unregisterTypeListener(this);
       this.removePrevDFG(this.input);
+      this.removeNextDFG(this.input);
     }
     this.input = input;
     if (input != null) {
       input.registerTypeListener(this);
       this.addPrevDFG(input);
+      if (this.operatorCode.equals("++") || this.operatorCode.equals("--")) {
+        this.addNextDFG(input);
+      }
     }
   }
 
