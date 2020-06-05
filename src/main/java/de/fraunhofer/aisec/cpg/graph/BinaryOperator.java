@@ -29,10 +29,9 @@ package de.fraunhofer.aisec.cpg.graph;
 import de.fraunhofer.aisec.cpg.graph.HasType.TypeListener;
 import de.fraunhofer.aisec.cpg.graph.type.Type;
 import de.fraunhofer.aisec.cpg.graph.type.TypeParser;
+import java.util.*;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.neo4j.ogm.annotation.Transient;
-
-import java.util.*;
 
 /**
  * A binary operation expression, such as "a + b". It consists of a left hand expression (lhs), a
@@ -80,7 +79,7 @@ public class BinaryOperator extends Expression implements TypeListener {
       if (lhs instanceof DeclaredReferenceExpression) {
         // declared reference expr is the left hand side of an assignment -> writing to the var
         ((DeclaredReferenceExpression) lhs)
-            .setAccess(DeclaredReferenceExpression.accessValues.WRITE);
+            .setAccess(ValueAccess.accessValues.WRITE);
       } else if (lhs instanceof MemberExpression) {
         ((MemberExpression) lhs).setAccess(ValueAccess.accessValues.WRITE);
       }
@@ -95,7 +94,7 @@ public class BinaryOperator extends Expression implements TypeListener {
       if (lhs instanceof DeclaredReferenceExpression) {
         // declared reference expr is the left hand side of an assignment -> writing to the var
         ((DeclaredReferenceExpression) lhs)
-            .setAccess(DeclaredReferenceExpression.accessValues.READWRITE);
+            .setAccess(ValueAccess.accessValues.READWRITE);
       } else if (lhs instanceof MemberExpression) {
         ((MemberExpression) lhs).setAccess(ValueAccess.accessValues.READWRITE);
       }

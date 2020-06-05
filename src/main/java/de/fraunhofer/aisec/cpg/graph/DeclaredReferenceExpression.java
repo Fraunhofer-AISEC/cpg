@@ -28,12 +28,11 @@ package de.fraunhofer.aisec.cpg.graph;
 
 import de.fraunhofer.aisec.cpg.graph.HasType.TypeListener;
 import de.fraunhofer.aisec.cpg.graph.type.Type;
-import org.apache.commons.lang3.builder.ToStringBuilder;
-import org.checkerframework.checker.nullness.qual.NonNull;
-
 import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
+import org.apache.commons.lang3.builder.ToStringBuilder;
+import org.checkerframework.checker.nullness.qual.NonNull;
 
 /**
  * An expression, which refers to something which is declared, e.g. a variable. For example, the

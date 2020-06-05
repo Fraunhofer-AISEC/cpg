@@ -1,17 +1,16 @@
 package de.fraunhofer.aisec.cpg.enhancements;
 
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import de.fraunhofer.aisec.cpg.TestUtils;
 import de.fraunhofer.aisec.cpg.graph.*;
 import de.fraunhofer.aisec.cpg.helpers.Util;
-import org.junit.jupiter.api.Test;
-
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Set;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
-public class ReadWriteDFGTest {
+class ReadWriteDFGTest {
 
   @Test
   void testCompoundOperatorDFG() throws Exception {

@@ -30,13 +30,12 @@ import de.fraunhofer.aisec.cpg.graph.HasType.TypeListener;
 import de.fraunhofer.aisec.cpg.graph.type.PointerType;
 import de.fraunhofer.aisec.cpg.graph.type.Type;
 import de.fraunhofer.aisec.cpg.helpers.Util;
-import org.apache.commons.lang3.builder.ToStringBuilder;
-import org.neo4j.ogm.annotation.Transient;
-
 import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
+import org.apache.commons.lang3.builder.ToStringBuilder;
+import org.neo4j.ogm.annotation.Transient;
 
 /**
  * A unary operator expression, involving one expression and an operator, such as <code>a++</code>.
