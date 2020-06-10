@@ -15,7 +15,7 @@ import org.junit.jupiter.api.Test;
 
 public class ConstructorsTest {
 
-  private Path topLevel = Path.of("src", "test", "resources", "constructors");
+  private final Path topLevel = Path.of("src", "test", "resources", "constructors");
 
   @Test
   void testJava() throws Exception {

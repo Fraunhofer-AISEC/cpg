@@ -31,6 +31,7 @@ import de.fraunhofer.aisec.cpg.graph.*;
 import de.fraunhofer.aisec.cpg.graph.type.FunctionPointerType;
 import de.fraunhofer.aisec.cpg.graph.type.Type;
 import de.fraunhofer.aisec.cpg.graph.type.TypeParser;
+import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker;
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.ScopedWalker;
 import de.fraunhofer.aisec.cpg.helpers.Util;
 import java.util.*;
@@ -156,6 +157,10 @@ public class CallResolver extends Pass {
       resolveExplicitConstructorInvocation((ExplicitConstructorInvocation) node);
     } else if (node instanceof CallExpression) {
       CallExpression call = (CallExpression) node;
+      // We might have call expressions inside our arguments, so in order to correctly resolve
+      // this call's signature, we need to make sure any call expression arguments are fully
+      // resolved
+      resolveArguments(call, curClass);
 
       if (call instanceof MemberCallExpression) {
         Node member = ((MemberCallExpression) call).getMember();
@@ -181,6 +186,19 @@ public class CallResolver extends Pass {
       }
     } else if (node instanceof ConstructExpression) {
       resolveConstructExpression((ConstructExpression) node);
+    }
+  }
+
+  private void resolveArguments(CallExpression call, RecordDeclaration curClass) {
+    Deque<Node> worklist = new ArrayDeque<>();
+    call.getArguments().forEach(worklist::push);
+    while (!worklist.isEmpty()) {
+      Node curr = worklist.pop();
+      if (curr instanceof CallExpression) {
+        resolve(curr, curClass);
+      } else {
+        SubgraphWalker.getAstChildren(curr).forEach(worklist::push);
+      }
     }
   }
 

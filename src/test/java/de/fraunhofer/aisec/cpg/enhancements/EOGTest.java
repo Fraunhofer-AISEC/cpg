@@ -33,23 +33,19 @@ import static de.fraunhofer.aisec.cpg.helpers.Util.Edge.EXITS;
 import static de.fraunhofer.aisec.cpg.helpers.Util.Quantifier.ALL;
 import static de.fraunhofer.aisec.cpg.helpers.Util.Quantifier.ANY;
 import static de.fraunhofer.aisec.cpg.sarif.PhysicalLocation.locationLink;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
-import de.fraunhofer.aisec.cpg.TranslationConfiguration;
-import de.fraunhofer.aisec.cpg.TranslationManager;
+import de.fraunhofer.aisec.cpg.TestUtils;
 import de.fraunhofer.aisec.cpg.frontends.TranslationException;
 import de.fraunhofer.aisec.cpg.graph.*;
 import de.fraunhofer.aisec.cpg.helpers.NodeComparator;
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker;
 import de.fraunhofer.aisec.cpg.helpers.Util;
-import de.fraunhofer.aisec.cpg.passes.CallResolver;
-import de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass;
 import java.io.File;
-import java.util.ArrayList;
+import java.nio.file.Path;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
-import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Assertions;
@@ -258,24 +254,27 @@ public class EOGTest {
   @Test
   void testCPPCallGraph() throws TransactionException {
     List<Node> nodes = translateToNodes("src/test/resources/cg.cpp");
-    List<Node> calls =
-        nodes.stream().filter(node -> node instanceof CallExpression).collect(Collectors.toList());
+    List<CallExpression> calls = Util.subnodesOfType(nodes, CallExpression.class);
+    List<FunctionDeclaration> functions = Util.subnodesOfType(nodes, FunctionDeclaration.class);
+    FunctionDeclaration target;
 
-    CallExpression first =
-        (CallExpression) calls.stream().filter(c -> c.getName().equals("first")).findFirst().get();
-    assertEquals(1, first.getInvokes().size(), "Expected a call to a function");
+    CallExpression first = TestUtils.findByUniqueName(calls, "first");
+    target = TestUtils.findByUniqueName(functions, "first");
+    assertEquals(List.of(target), first.getInvokes());
 
-    CallExpression second =
-        (CallExpression) calls.stream().filter(c -> c.getName().equals("second")).findFirst().get();
-    assertEquals(1, second.getInvokes().size(), "Expected a call to a function");
+    CallExpression second = TestUtils.findByUniqueName(calls, "second");
+    target = TestUtils.findByUniqueName(functions, "second");
+    assertEquals(List.of(target), second.getInvokes());
 
-    CallExpression third =
-        (CallExpression) calls.stream().filter(c -> c.getName().equals("third")).findFirst().get();
-    assertEquals(1, second.getInvokes().size(), "Expected a call to a function");
+    CallExpression third = TestUtils.findByUniqueName(calls, "third");
+    target =
+        TestUtils.findByPredicate(
+            functions, f -> f.getName().equals("third") && f.getParameters().size() == 2);
+    assertEquals(List.of(target), third.getInvokes());
 
-    CallExpression fourth =
-        (CallExpression) calls.stream().filter(c -> c.getName().equals("fourth")).findFirst().get();
-    assertEquals(1, second.getInvokes().size(), "Expected a call to a function");
+    CallExpression fourth = TestUtils.findByUniqueName(calls, "fourth");
+    target = TestUtils.findByUniqueName(functions, "fourth");
+    assertEquals(List.of(target), fourth.getInvokes());
   }
 
   @Test
@@ -552,23 +551,15 @@ public class EOGTest {
    * @param path - path for the file to test.
    */
   private List<Node> translateToNodes(String path) {
-    TranslationManager manager =
-        TranslationManager.builder()
-            .config(
-                TranslationConfiguration.builder()
-                    .sourceLocations(new File(path))
-                    .registerPass(new EvaluationOrderGraphPass()) // creates EOG
-                    .registerPass(new CallResolver()) // creates CG
-                    .build())
-            .build();
-    List<TranslationUnitDeclaration> translationUnits = new ArrayList<>();
+    File toTranslate = new File(path);
+    Path topLevel = toTranslate.getParentFile().toPath();
+    List<TranslationUnitDeclaration> translationUnits = Collections.emptyList();
     try {
-      translationUnits = manager.analyze().get().getTranslationUnits();
-    } catch (ExecutionException | InterruptedException e) {
+      translationUnits = TestUtils.analyze(List.of(toTranslate), topLevel);
+    } catch (Exception e) {
       e.printStackTrace();
-      Assertions.fail();
+      fail("Exception during CPG parsing!");
     }
-
     assertEquals(1, translationUnits.size());
 
     Assertions.assertNotNull(translationUnits.get(0)); // Ensures that the test acan be parsed
