@@ -28,22 +28,19 @@ package de.fraunhofer.aisec.cpg.frontends.cpp;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-import de.fraunhofer.aisec.cpg.TranslationConfiguration;
-import de.fraunhofer.aisec.cpg.frontends.TranslationException;
+import de.fraunhofer.aisec.cpg.TestUtils;
 import de.fraunhofer.aisec.cpg.graph.*;
 import de.fraunhofer.aisec.cpg.graph.type.TypeParser;
 import de.fraunhofer.aisec.cpg.graph.type.UnknownType;
 import de.fraunhofer.aisec.cpg.helpers.NodeComparator;
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker;
 import de.fraunhofer.aisec.cpg.helpers.Util;
-import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager;
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation;
 import de.fraunhofer.aisec.cpg.sarif.Region;
 import java.io.File;
 import java.nio.file.Path;
 import java.util.*;
 import java.util.stream.Collectors;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -52,18 +49,11 @@ class CXXLanguageFrontendTest {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(CXXLanguageFrontendTest.class);
 
-  private TranslationConfiguration config;
-
-  @BeforeEach
-  void setUp() {
-    config = TranslationConfiguration.builder().defaultPasses().build();
-  }
-
   @Test
-  void testForEach() throws TranslationException {
+  void testForEach() throws Exception {
+    File file = new File("src/test/resources/components/foreachstmt.cpp");
     TranslationUnitDeclaration tu =
-        new CXXLanguageFrontend(config, new ScopeManager())
-            .parse(new File("src/test/resources/components/foreachstmt.cpp"));
+        TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true);
 
     FunctionDeclaration main =
         tu.getDeclarationByName("main", FunctionDeclaration.class).orElse(null);
@@ -89,10 +79,10 @@ class CXXLanguageFrontendTest {
   }
 
   @Test
-  void testTryCatch() throws TranslationException {
+  void testTryCatch() throws Exception {
+    File file = new File("src/test/resources/components/trystmt.cpp");
     TranslationUnitDeclaration tu =
-        new CXXLanguageFrontend(config, new ScopeManager())
-            .parse(new File("src/test/resources/components/trystmt.cpp"));
+        TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true);
 
     FunctionDeclaration main =
         tu.getDeclarationByName("main", FunctionDeclaration.class).orElse(null);
@@ -124,10 +114,10 @@ class CXXLanguageFrontendTest {
   }
 
   @Test
-  void testTypeId() throws TranslationException {
+  void testTypeId() throws Exception {
+    File file = new File("src/test/resources/typeidexpr.cpp");
     TranslationUnitDeclaration tu =
-        new CXXLanguageFrontend(config, new ScopeManager())
-            .parse(new File("src/test/resources/typeidexpr.cpp"));
+        TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true);
 
     FunctionDeclaration main =
         tu.getDeclarationByName("main", FunctionDeclaration.class).orElse(null);
@@ -159,10 +149,10 @@ class CXXLanguageFrontendTest {
   }
 
   @Test
-  void testCast() throws TranslationException {
+  void testCast() throws Exception {
+    File file = new File("src/test/resources/components/castexpr.cpp");
     TranslationUnitDeclaration tu =
-        new CXXLanguageFrontend(config, new ScopeManager())
-            .parse(new File("src/test/resources/components/castexpr.cpp"));
+        TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true);
 
     FunctionDeclaration main = tu.getDeclarationAs(0, FunctionDeclaration.class);
 
@@ -211,10 +201,10 @@ class CXXLanguageFrontendTest {
   }
 
   @Test
-  void testArrays() throws TranslationException {
+  void testArrays() throws Exception {
+    File file = new File("src/test/resources/arrays.cpp");
     TranslationUnitDeclaration tu =
-        new CXXLanguageFrontend(config, new ScopeManager())
-            .parse(new File("src/test/resources/arrays.cpp"));
+        TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true);
 
     FunctionDeclaration main = tu.getDeclarationAs(0, FunctionDeclaration.class);
 
@@ -244,10 +234,10 @@ class CXXLanguageFrontendTest {
   }
 
   @Test
-  void testFunctionDeclaration() throws TranslationException {
+  void testFunctionDeclaration() throws Exception {
+    File file = new File("src/test/resources/functiondecl.cpp");
     TranslationUnitDeclaration declaration =
-        new CXXLanguageFrontend(config, new ScopeManager())
-            .parse(new File("src/test/resources/functiondecl.cpp"));
+        TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true);
 
     // should be four method nodes
     assertEquals(4, declaration.getDeclarations().size());
@@ -289,10 +279,10 @@ class CXXLanguageFrontendTest {
   }
 
   @Test
-  void testCompoundStatement() throws TranslationException {
+  void testCompoundStatement() throws Exception {
+    File file = new File("src/test/resources/compoundstmt.cpp");
     TranslationUnitDeclaration declaration =
-        new CXXLanguageFrontend(config, new ScopeManager())
-            .parse(new File("src/test/resources/compoundstmt.cpp"));
+        TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true);
 
     FunctionDeclaration function = declaration.getDeclarationAs(0, FunctionDeclaration.class);
 
@@ -317,10 +307,10 @@ class CXXLanguageFrontendTest {
   }
 
   @Test
-  void testPostfixExpression() throws TranslationException {
+  void testPostfixExpression() throws Exception {
+    File file = new File("src/test/resources/postfixexpression.cpp");
     TranslationUnitDeclaration declaration =
-        new CXXLanguageFrontend(config, new ScopeManager())
-            .parse(new File("src/test/resources/postfixexpression.cpp"));
+        TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true);
 
     List<Statement> statements =
         getStatementsOfFunction(declaration.getDeclarationAs(0, FunctionDeclaration.class));
@@ -354,10 +344,10 @@ class CXXLanguageFrontendTest {
   }
 
   @Test
-  void testIf() throws TranslationException {
+  void testIf() throws Exception {
+    File file = new File("src/test/resources/if.cpp");
     TranslationUnitDeclaration declaration =
-        new CXXLanguageFrontend(config, new ScopeManager())
-            .parse(new File("src/test/resources/if.cpp"));
+        TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true);
 
     List<Statement> statements =
         getStatementsOfFunction(declaration.getDeclarationAs(0, FunctionDeclaration.class));
@@ -379,10 +369,10 @@ class CXXLanguageFrontendTest {
   }
 
   @Test
-  void testSwitch() throws TranslationException {
+  void testSwitch() throws Exception {
+    File file = new File("src/test/resources/cfg/switch.cpp");
     TranslationUnitDeclaration declaration =
-        new CXXLanguageFrontend(config, new ScopeManager())
-            .parse(new File("src/test/resources/cfg/switch.cpp"));
+        TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true);
 
     List<Node> graphNodes = SubgraphWalker.flattenAST(declaration);
     graphNodes.sort(new NodeComparator());
@@ -405,10 +395,10 @@ class CXXLanguageFrontendTest {
   }
 
   @Test
-  void testDeclarationStatement() throws TranslationException {
+  void testDeclarationStatement() throws Exception {
+    File file = new File("src/test/resources/declstmt.cpp");
     TranslationUnitDeclaration declaration =
-        new CXXLanguageFrontend(config, new ScopeManager())
-            .parse(new File("src/test/resources/declstmt.cpp"));
+        TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true);
 
     FunctionDeclaration function = declaration.getDeclarationAs(0, FunctionDeclaration.class);
 
@@ -474,10 +464,10 @@ class CXXLanguageFrontendTest {
   }
 
   @Test
-  void testAssignmentExpression() throws TranslationException {
+  void testAssignmentExpression() throws Exception {
+    File file = new File("src/test/resources/assignmentexpression.cpp");
     TranslationUnitDeclaration declaration =
-        new CXXLanguageFrontend(config, new ScopeManager())
-            .parse(new File("src/test/resources/assignmentexpression.cpp"));
+        TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true);
 
     // just take a look at the second function
     FunctionDeclaration functionDeclaration =
@@ -527,19 +517,19 @@ class CXXLanguageFrontendTest {
     assertRefersTo(call.getArguments().get(0), b);
   }
 
-  private boolean assertRefersTo(Expression expression, Declaration b) {
+  private void assertRefersTo(Expression expression, Declaration b) {
     if (expression instanceof DeclaredReferenceExpression) {
-      return ((DeclaredReferenceExpression) expression).getRefersTo().equals(Set.of(b));
+      assertEquals(Set.of(b), ((DeclaredReferenceExpression) expression).getRefersTo());
+    } else {
+      fail();
     }
-
-    return false;
   }
 
   @Test
-  void testShiftExpression() throws TranslationException {
+  void testShiftExpression() throws Exception {
+    File file = new File("src/test/resources/shiftexpression.cpp");
     TranslationUnitDeclaration declaration =
-        new CXXLanguageFrontend(config, new ScopeManager())
-            .parse(new File("src/test/resources/shiftexpression.cpp"));
+        TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true);
 
     FunctionDeclaration functionDeclaration =
         declaration.getDeclarationAs(0, FunctionDeclaration.class);
@@ -550,10 +540,10 @@ class CXXLanguageFrontendTest {
   }
 
   @Test
-  void testUnaryOperator() throws TranslationException {
+  void testUnaryOperator() throws Exception {
+    File file = new File("src/test/resources/unaryoperator.cpp");
     TranslationUnitDeclaration unit =
-        new CXXLanguageFrontend(config, new ScopeManager())
-            .parse(new File("src/test/resources/unaryoperator.cpp"));
+        TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true);
 
     List<Statement> statements =
         getStatementsOfFunction(unit.getDeclarationAs(0, FunctionDeclaration.class));
@@ -621,10 +611,10 @@ class CXXLanguageFrontendTest {
   }
 
   @Test
-  void testBinaryOperator() throws TranslationException {
+  void testBinaryOperator() throws Exception {
+    File file = new File("src/test/resources/binaryoperator.cpp");
     TranslationUnitDeclaration declaration =
-        new CXXLanguageFrontend(config, new ScopeManager())
-            .parse(new File("src/test/resources/binaryoperator.cpp"));
+        TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true);
 
     List<Statement> statements =
         getStatementsOfFunction(declaration.getDeclarationAs(0, FunctionDeclaration.class));
@@ -677,10 +667,10 @@ class CXXLanguageFrontendTest {
   }
 
   @Test
-  void testRecordDeclaration() throws TranslationException {
+  void testRecordDeclaration() throws Exception {
+    File file = new File("src/test/resources/recordstmt.cpp");
     TranslationUnitDeclaration declaration =
-        new CXXLanguageFrontend(config, new ScopeManager())
-            .parse(new File("src/test/resources/recordstmt.cpp"));
+        TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true);
 
     RecordDeclaration recordDeclaration = declaration.getDeclarationAs(0, RecordDeclaration.class);
 
@@ -713,15 +703,15 @@ class CXXLanguageFrontendTest {
     ConstructorDeclaration constructor = recordDeclaration.getConstructors().get(0);
 
     assertEquals(recordDeclaration.getName(), constructor.getName());
-    assertEquals(TypeParser.createFrom("void", true), constructor.getType());
+    assertEquals(TypeParser.createFrom("SomeClass", true), constructor.getType());
     assertTrue(constructor.hasBody());
   }
 
   @Test
-  void testLiterals() throws TranslationException {
+  void testLiterals() throws Exception {
+    File file = new File("src/test/resources/literals.cpp");
     TranslationUnitDeclaration declaration =
-        new CXXLanguageFrontend(config, new ScopeManager())
-            .parse(new File("src/test/resources/literals.cpp"));
+        TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true);
 
     VariableDeclaration s = declaration.getDeclarationAs(0, VariableDeclaration.class);
 
@@ -779,10 +769,10 @@ class CXXLanguageFrontendTest {
   }
 
   @Test
-  void testInitListExpression() throws TranslationException {
+  void testInitListExpression() throws Exception {
+    File file = new File("src/test/resources/initlistexpression.cpp");
     TranslationUnitDeclaration declaration =
-        new CXXLanguageFrontend(config, new ScopeManager())
-            .parse(new File("src/test/resources/initlistexpression.cpp"));
+        TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true);
 
     // x y = { 1, 2 };
     VariableDeclaration y = declaration.getDeclarationAs(1, VariableDeclaration.class);
@@ -820,10 +810,10 @@ class CXXLanguageFrontendTest {
   }
 
   @Test
-  void testObjectCreation() throws TranslationException {
+  void testObjectCreation() throws Exception {
+    File file = new File("src/test/resources/objcreation.cpp");
     TranslationUnitDeclaration declaration =
-        new CXXLanguageFrontend(config, new ScopeManager())
-            .parse(new File("src/test/resources/objcreation.cpp"));
+        TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true);
 
     assertNotNull(declaration);
 
@@ -879,11 +869,10 @@ class CXXLanguageFrontendTest {
   }
 
   @Test
-  void testRegionsCfg() throws TranslationException {
+  void testRegionsCfg() throws Exception {
+    File file = new File("src/test/resources/cfg.cpp");
     TranslationUnitDeclaration declaration =
-        new CXXLanguageFrontend(config, new ScopeManager())
-            .parse(new File("src/test/resources/cfg.cpp"));
-    assertNotNull(declaration);
+        TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true);
 
     FunctionDeclaration fdecl = declaration.getDeclarationAs(0, FunctionDeclaration.class);
     CompoundStatement body = (CompoundStatement) fdecl.getBody();
@@ -902,10 +891,10 @@ class CXXLanguageFrontendTest {
   }
 
   @Test
-  void testDesignatedInitializer() throws TranslationException {
+  void testDesignatedInitializer() throws Exception {
+    File file = new File("src/test/resources/components/designatedInitializer.c");
     TranslationUnitDeclaration declaration =
-        new CXXLanguageFrontend(config, new ScopeManager())
-            .parse(new File("src/test/resources/components/designatedInitializer.c"));
+        TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true);
 
     // should be four method nodes
     assertEquals(2, declaration.getDeclarations().size());
@@ -1013,10 +1002,10 @@ class CXXLanguageFrontendTest {
   }
 
   @Test
-  void testLocalVariables() throws TranslationException {
+  void testLocalVariables() throws Exception {
+    File file = new File("src/test/resources/variables/local_variables.cpp");
     TranslationUnitDeclaration declaration =
-        new CXXLanguageFrontend(config, new ScopeManager())
-            .parse(new File("src/test/resources/variables/local_variables.cpp"));
+        TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true);
 
     FunctionDeclaration function = declaration.getDeclarationAs(2, FunctionDeclaration.class);
 
@@ -1038,10 +1027,10 @@ class CXXLanguageFrontendTest {
   }
 
   @Test
-  public void testLocation() throws TranslationException {
+  public void testLocation() throws Exception {
+    File file = new File("src/test/resources/components/foreachstmt.cpp");
     TranslationUnitDeclaration tu =
-        new CXXLanguageFrontend(config, new ScopeManager())
-            .parse(new File("src/test/resources/components/foreachstmt.cpp"));
+        TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true);
 
     FunctionDeclaration main =
         tu.getDeclarationByName("main", FunctionDeclaration.class).orElse(null);

@@ -27,8 +27,8 @@
 package de.fraunhofer.aisec.cpg.graph;
 
 import de.fraunhofer.aisec.cpg.graph.HasType.TypeListener;
+import de.fraunhofer.aisec.cpg.graph.type.PointerType.PointerOrigin;
 import de.fraunhofer.aisec.cpg.graph.type.Type;
-import de.fraunhofer.aisec.cpg.graph.type.TypeParser;
 import de.fraunhofer.aisec.cpg.graph.type.UnknownType;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -80,10 +80,7 @@ public class InitializerListExpression extends Expression implements TypeListene
               .parallelStream()
               .map(Expression::getType)
               .filter(Objects::nonNull)
-              .map(
-                  t ->
-                      TypeManager.getInstance()
-                          .registerType(TypeParser.createFrom(t.toString() + "[]", true)))
+              .map(t -> TypeManager.getInstance().registerType(t.reference(PointerOrigin.ARRAY)))
               .collect(Collectors.toSet());
       Type alternative = !types.isEmpty() ? types.iterator().next() : UnknownType.getUnknownType();
       newType = TypeManager.getInstance().getCommonType(types).orElse(alternative);

@@ -608,7 +608,7 @@ public class TypeTests {
   @Test
   void graphTest() throws Exception {
     Path topLevel = Path.of("src", "test", "resources", "types");
-    List<TranslationUnitDeclaration> result = TestUtils.analyze("java", topLevel);
+    List<TranslationUnitDeclaration> result = TestUtils.analyze("java", topLevel, true);
 
     List<ObjectType> variables = Util.subnodesOfType(result, ObjectType.class);
     List<RecordDeclaration> recordDeclarations =
@@ -647,7 +647,7 @@ public class TypeTests {
     assertEquals(((PointerType) array.getType()).getElementType(), x.getType());
 
     topLevel = Path.of("src", "test", "resources", "types");
-    result = TestUtils.analyze("cpp", topLevel);
+    result = TestUtils.analyze("cpp", topLevel, true);
 
     variableDeclarations = Util.subnodesOfType(result, VariableDeclaration.class);
 

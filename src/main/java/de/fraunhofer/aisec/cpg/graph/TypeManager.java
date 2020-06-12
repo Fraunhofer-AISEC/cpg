@@ -69,7 +69,7 @@ public class TypeManager {
     return typeState;
   }
 
-  public Type registerType(Type t) {
+  public <T extends Type> T registerType(T t) {
     if (t.isFirstOrderType()) {
       this.firstOrderTypes.add(t);
     } else {

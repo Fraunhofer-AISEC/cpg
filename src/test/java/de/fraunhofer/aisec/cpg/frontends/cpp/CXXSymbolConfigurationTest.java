@@ -92,7 +92,7 @@ public class CXXSymbolConfigurationTest {
     assertNotNull(binaryOperator);
 
     // should be a literal now
-    Literal literal = binaryOperator.getRhsAs(Literal.class);
+    Literal<?> literal = binaryOperator.getRhsAs(Literal.class);
     assertEquals("Hello World", literal.getValue());
 
     binaryOperator = main.getBodyStatementAs(1, BinaryOperator.class);
@@ -103,10 +103,10 @@ public class CXXSymbolConfigurationTest {
     assertNotNull(add);
     assertEquals("+", add.getOperatorCode());
 
-    Literal literal2 = add.getLhsAs(Literal.class);
+    Literal<?> literal2 = add.getLhsAs(Literal.class);
     assertEquals(2, literal2.getValue());
 
-    Literal literal1 = add.getRhsAs(Literal.class);
+    Literal<?> literal1 = add.getRhsAs(Literal.class);
     assertEquals(1, literal1.getValue());
   }
 }

@@ -29,11 +29,10 @@ package de.fraunhofer.aisec.cpg.enhancements;
 import static org.junit.jupiter.api.Assertions.*;
 
 import com.github.javaparser.utils.Pair;
-import de.fraunhofer.aisec.cpg.TranslationConfiguration;
-import de.fraunhofer.aisec.cpg.TranslationManager;
-import de.fraunhofer.aisec.cpg.TranslationResult;
+import de.fraunhofer.aisec.cpg.TestUtils;
 import de.fraunhofer.aisec.cpg.graph.*;
 import java.io.File;
+import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
@@ -51,21 +50,19 @@ class JavaVsCppTest {
     analyzeAndSave("src/test/resources/javaVsCpp/simple.java");
   }
 
-  private void analyzeAndSave(String pathname) throws ExecutionException, InterruptedException {
-    TranslationManager analyzer =
-        TranslationManager.builder()
-            .config(
-                TranslationConfiguration.builder()
-                    .sourceLocations(new File(pathname))
-                    .defaultPasses()
-                    .debugParser(false)
-                    .codeInNodes(false)
-                    .loadIncludes(false)
-                    .build())
-            .build();
-    TranslationResult res = analyzer.analyze().get();
-    assertEquals(1, res.getTranslationUnits().size());
-    TranslationUnitDeclaration tu = res.getTranslationUnits().get(0);
+  private void analyzeAndSave(String pathname) {
+    File toTranslate = new File(pathname);
+    Path topLevel = toTranslate.getParentFile().toPath();
+    List<TranslationUnitDeclaration> translationUnits = Collections.emptyList();
+    try {
+      translationUnits = TestUtils.analyze(List.of(toTranslate), topLevel, true);
+    } catch (Exception e) {
+      e.printStackTrace();
+      fail("Exception during CPG parsing!");
+    }
+
+    assertEquals(1, translationUnits.size());
+    TranslationUnitDeclaration tu = translationUnits.get(0);
     assertEquals(1, tu.getDeclarations().size());
     Declaration decl = tu.getDeclarations().get(0);
     assertTrue(decl instanceof RecordDeclaration);

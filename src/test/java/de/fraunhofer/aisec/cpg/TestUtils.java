@@ -61,17 +61,18 @@ public class TestUtils {
   }
 
   /**
-   * Like {@link #analyze(List, Path)}, but for all files in a directory tree having a specific file
-   * extension
+   * Like {@link #analyze(List, Path, boolean)}, but for all files in a directory tree having a
+   * specific file extension
    *
    * @param fileExtension All files found in the directory must end on this String. An empty string
    *     matches all files
    * @param topLevel The directory to traverse while looking for files to parse
+   * @param usePasses
    * @return A list of {@link TranslationUnitDeclaration} nodes, representing the CPG roots
    * @throws Exception Any exception thrown during the parsing process
    */
-  public static List<TranslationUnitDeclaration> analyze(String fileExtension, Path topLevel)
-      throws Exception {
+  public static List<TranslationUnitDeclaration> analyze(
+      String fileExtension, Path topLevel, boolean usePasses) throws Exception {
     List<File> files =
         Files.walk(topLevel, Integer.MAX_VALUE)
             .map(Path::toFile)
@@ -79,30 +80,43 @@ public class TestUtils {
             .filter(f -> f.getName().endsWith(fileExtension))
             .sorted()
             .collect(Collectors.toList());
-    return analyze(files, topLevel);
+    return analyze(files, topLevel, usePasses);
   }
 
   /**
    * Default way of parsing a list of files into a full CPG. All default passes are applied
    *
    * @param topLevel The directory to traverse while looking for files to parse
+   * @param usePasses
    * @return A list of {@link TranslationUnitDeclaration} nodes, representing the CPG roots
    * @throws Exception Any exception thrown during the parsing process
    */
-  public static List<TranslationUnitDeclaration> analyze(List<File> files, Path topLevel)
-      throws Exception {
-    TranslationConfiguration config =
+  public static List<TranslationUnitDeclaration> analyze(
+      List<File> files, Path topLevel, boolean usePasses) throws Exception {
+    TranslationConfiguration.Builder builder =
         TranslationConfiguration.builder()
             .sourceLocations(files.toArray(File[]::new))
             .topLevel(topLevel.toFile())
-            .defaultPasses()
+            .loadIncludes(true)
             .debugParser(true)
-            .failOnError(true)
-            .build();
+            .failOnError(true);
+    if (usePasses) {
+      builder.defaultPasses();
+    }
+    TranslationConfiguration config = builder.build();
 
     TranslationManager analyzer = TranslationManager.builder().config(config).build();
 
     return analyzer.analyze().get().getTranslationUnits();
+  }
+
+  public static TranslationUnitDeclaration analyzeAndGetFirstTU(
+      List<File> files, Path topLevel, boolean usePasses) throws Exception {
+    List<TranslationUnitDeclaration> translationUnits = analyze(files, topLevel, usePasses);
+    return translationUnits.stream()
+        .filter(t -> !t.getName().equals("unknown declarations"))
+        .findFirst()
+        .orElseThrow();
   }
 
   /**

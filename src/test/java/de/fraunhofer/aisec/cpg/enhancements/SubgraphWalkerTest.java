@@ -28,32 +28,26 @@ package de.fraunhofer.aisec.cpg.enhancements;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 
-import de.fraunhofer.aisec.cpg.TranslationConfiguration;
-import de.fraunhofer.aisec.cpg.frontends.TranslationException;
-import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguageFrontend;
+import de.fraunhofer.aisec.cpg.TestUtils;
 import de.fraunhofer.aisec.cpg.graph.NamespaceDeclaration;
 import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.RecordDeclaration;
 import de.fraunhofer.aisec.cpg.graph.TranslationUnitDeclaration;
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker;
-import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager;
 import java.io.File;
+import java.util.List;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
 
 class SubgraphWalkerTest {
 
   @Test
-  void testASTChildrenGetter() throws TranslationException {
+  void testASTChildrenGetter() throws Exception {
     File file = new File("src/test/resources/compiling/RecordDeclaration.java");
-    TranslationConfiguration config = TranslationConfiguration.builder().build();
-    TranslationUnitDeclaration declaration =
-        new JavaLanguageFrontend(config, new ScopeManager()).parse(file);
-    NamespaceDeclaration namespace = declaration.getDeclarationAs(0, NamespaceDeclaration.class);
-
-    assertNotNull(declaration);
+    TranslationUnitDeclaration tu =
+        TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), false);
+    NamespaceDeclaration namespace = tu.getDeclarationAs(0, NamespaceDeclaration.class);
 
     RecordDeclaration recordDeclaration = namespace.getDeclarationAs(0, RecordDeclaration.class);
 
