@@ -53,7 +53,7 @@ public class BinaryOperator extends Expression implements TypeListener {
   /** Required for compound BinaryOperators. This should not be stored in the graph */
   @Transient
   private final List<String> compoundOperators =
-      new ArrayList<>(Arrays.asList("*=", "/=", "%=", "+=", "-=", "<<=", ">>=", "&=", "^=", "|="));
+      List.of("*=", "/=", "%=", "+=", "-=", "<<=", ">>=", "&=", "^=", "|=");
 
   public Expression getLhs() {
     return lhs;
