@@ -67,7 +67,10 @@ public class TypeParser {
   }
 
   public static TypeManager.Language getLanguage() {
-    return language;
+    if (TypeManager.getInstance().getFrontend() == null) {
+      return language;
+    }
+    return TypeManager.getInstance().getLanguage();
   }
 
   /**
@@ -623,7 +626,13 @@ public class TypeParser {
    * @return new type representing the type string
    */
   public static Type createFrom(String type, boolean resolveAlias) {
-    System.out.println("Parser: " + type + ", Language: " + getLanguage() + " Fronteend: " + TypeManager.getInstance().getLanguage());
+    System.out.println(
+        "Parser: "
+            + type
+            + ", Language: "
+            + getLanguage()
+            + " Fronteend: "
+            + TypeManager.getInstance().getLanguage());
     // Check if Problems during Parsing
     if (type.contains("?")
         || type.contains("org.eclipse.cdt.internal.core.dom.parser.ProblemType@")

@@ -271,6 +271,10 @@ public class TypeManager {
     }
   }
 
+  public LanguageFrontend getFrontend() {
+    return frontend;
+  }
+
   public boolean isSupertypeOf(Type superType, Type subType) {
     if (superType.getReferenceDepth() != subType.getReferenceDepth()) {
       return false;
@@ -308,10 +312,8 @@ public class TypeManager {
   }
 
   public void cleanup() {
-    return;
-    // System.out.println("DO CLEANUP");
-    // this.frontend = null;
-    // this.typeToRecord.clear();
+    this.frontend = null;
+    this.typeToRecord.clear();
   }
 
   private Type getTargetType(Type currTarget, String alias) {
