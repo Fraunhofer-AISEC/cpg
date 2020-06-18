@@ -257,7 +257,11 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
           declarationScope.setAstNode(method); // Adjust cpg Node by which scopes are identified
         }
       } else if (declaration instanceof VariableDeclaration) {
-        recordDeclaration.getFields().add(FieldDeclaration.from((VariableDeclaration) declaration));
+        FieldDeclaration fieldDeclaration =
+            FieldDeclaration.from((VariableDeclaration) declaration);
+        recordDeclaration.getFields().add(fieldDeclaration);
+        this.lang.replaceDeclarationInExpression(fieldDeclaration, declaration);
+
       } else if (declaration instanceof FieldDeclaration) {
         recordDeclaration.getFields().add((FieldDeclaration) declaration);
       } else if (declaration instanceof RecordDeclaration) {
