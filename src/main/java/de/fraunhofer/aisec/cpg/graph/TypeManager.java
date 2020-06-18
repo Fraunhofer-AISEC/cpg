@@ -309,7 +309,7 @@ public class TypeManager {
 
   public void cleanup() {
     System.out.println("DO CLEANUP");
-    this.frontend = null;
+    //this.frontend = null;
     this.typeToRecord.clear();
   }
 
