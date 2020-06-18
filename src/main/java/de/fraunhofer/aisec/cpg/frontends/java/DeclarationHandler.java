@@ -218,7 +218,7 @@ public class DeclarationHandler
             .collect(Collectors.toList()));
     if (recordDeclaration.getSuperClasses().isEmpty()) {
       List<Type> superClasses = new ArrayList<>();
-      superClasses.add(TypeParser.createFrom("java.lang.Object", true));
+      superClasses.add(TypeParser.createFrom(Object.class.getName(), true));
       recordDeclaration.setSuperClasses(superClasses);
     }
     recordDeclaration.setImplementedInterfaces(

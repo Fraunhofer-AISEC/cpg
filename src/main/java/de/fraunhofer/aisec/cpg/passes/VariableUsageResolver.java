@@ -253,7 +253,7 @@ public class VariableUsageResolver extends Pass {
             base = recordMap.get(curClass.getSuperClasses().get(0)).getThis();
           } else {
             // no explicit super type -> java.lang.Object
-            Type objectType = TypeParser.createFrom("java.lang.Object", true);
+            Type objectType = TypeParser.createFrom(Object.class.getName(), true);
             base = handleUnknownField(objectType, "this", objectType);
           }
         } else {
