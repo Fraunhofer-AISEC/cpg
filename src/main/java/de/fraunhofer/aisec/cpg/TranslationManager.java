@@ -187,7 +187,6 @@ public class TranslationManager {
                 "Different frontends are used for multiple files. This will very likely break the following passes.");
           }
         }
-        System.out.println("Frontend: " + frontend);
         usedFrontends.add(frontend);
 
         // remember which frontend parsed each file

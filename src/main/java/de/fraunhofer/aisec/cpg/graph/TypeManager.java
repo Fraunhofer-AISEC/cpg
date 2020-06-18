@@ -263,10 +263,8 @@ public class TypeManager {
 
   public Language getLanguage() {
     if (frontend instanceof JavaLanguageFrontend) {
-      System.out.println("Language TypeManager: JAVA" + frontend);
       return Language.JAVA;
     } else {
-      System.out.println("Language TypeManager: CXX" + frontend);
       return Language.CXX;
     }
   }
