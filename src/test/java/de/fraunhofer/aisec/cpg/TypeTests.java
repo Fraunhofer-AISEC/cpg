@@ -629,7 +629,7 @@ public class TypeTests {
 
     // Test propagation of specifiers in primitive fields (final int y)
     FieldDeclaration y = TestUtils.findByUniqueName(fieldDeclarations, "y");
-    assertTrue(y.getType().getQualifier().isConst(), "failed assert " + y.toString());
+    assertTrue(y.getType().getQualifier().isConst(), "failed assert:" + TypeManager.getInstance().getLanguage() + " " + y.getType().toString());
 
     // Test propagation of specifiers in non-primitive fields (final A a)
     List<VariableDeclaration> variableDeclarations =
