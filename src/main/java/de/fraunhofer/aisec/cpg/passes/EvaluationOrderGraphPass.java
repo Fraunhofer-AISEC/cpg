@@ -42,9 +42,9 @@ import org.slf4j.LoggerFactory;
 /**
  * Creates an Evaluation Order Graph (EOG) based on AST.
  *
- * <p>EOG is similar to the Control Flow Graph (CFG), but its nodes are not limited to *executable*
- * statements but also include (some) *evaluated* expressions and CompoundStatements. This leads to
- * subtle differences:
+ * <p>EOG is similar to the CFG {@link ControlFlowGraphPass}, but its nodes are not limited to
+ * *executable* statements but also include (some) *evaluated* expressions and CompoundStatements.
+ * This leads to subtle differences:
  *
  * <ul>
  *   <li>For methods without explicit return statement, EOF will have an edge to a virtual return
