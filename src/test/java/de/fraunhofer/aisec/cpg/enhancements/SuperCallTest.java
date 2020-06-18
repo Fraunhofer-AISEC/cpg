@@ -11,7 +11,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
 
-public class SuperCallTest {
+class SuperCallTest {
 
   private final Path topLevel = Path.of("src", "test", "resources", "superCalls");
 
