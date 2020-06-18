@@ -188,6 +188,7 @@ public class BinaryOperator extends Expression implements TypeListener {
     Type previous = this.type;
     if (this.operatorCode.equals("=")) {
       setType(src.getPropagationType(), root);
+      System.err.println("Set Type");
     } else {
       if (this.lhs != null && "java.lang.String".equals(this.lhs.getType().toString())
           || this.rhs != null && "java.lang.String".equals(this.rhs.getType().toString())) {

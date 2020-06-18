@@ -19,13 +19,13 @@ jobs:
         run: |
           if [ "$SONAR_TOKEN" != "" ]
           then
-            ./gradlew --parallel --stacktrace --debug spotlessCheck build sonarqube \
+            ./gradlew --parallel spotlessCheck build sonarqube \
             -Dsonar.projectKey=Fraunhofer-AISEC_cpg \
             -Dsonar.organization=fraunhofer-aisec \
             -Dsonar.host.url=https://sonarcloud.io \
             -Dsonar.login=$SONAR_TOKEN
           else
-            ./gradlew --parallel --stacktrace --debug spotlessCheck build
+            ./gradlew --parallel spotlessCheck build
           fi
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
