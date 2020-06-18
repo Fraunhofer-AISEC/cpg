@@ -46,15 +46,6 @@ tasks.jacocoTestReport {
 
 group = "de.fraunhofer.aisec"
 
-extra["isReleaseVersion"] = !version.toString().endsWith("SNAPSHOT")
-
-val mavenCentralUri: String
-    get() {
-        val releasesRepoUrl = "https://oss.sonatype.org/service/local/staging/deploy/maven2"
-        val snapshotsRepoUrl = "https://oss.sonatype.org/content/repositories/snapshots"
-        return if (project.extra["isReleaseVersion"] as Boolean) releasesRepoUrl else snapshotsRepoUrl
-    }
-
 publishing {
     publications {
         create<MavenPublication>("maven") {
@@ -88,7 +79,7 @@ publishing {
 
     repositories {
         maven {
-            url = uri(mavenCentralUri)
+            url = uri("https://oss.sonatype.org/service/local/staging/deploy/maven2")
 
             credentials {
                 val mavenCentralUsername: String? by project
