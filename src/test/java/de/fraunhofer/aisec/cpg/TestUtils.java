@@ -50,8 +50,7 @@ public class TestUtils {
   }
 
   public static <S extends Node> S findByUniqueName(Collection<S> nodes, String name) {
-    List<S> results =
-        nodes.stream().filter(m -> m.getName().equals(name)).collect(Collectors.toList());
+    List<S> results = findByName(nodes, name);
     assertEquals(1, results.size());
     return results.get(0);
   }

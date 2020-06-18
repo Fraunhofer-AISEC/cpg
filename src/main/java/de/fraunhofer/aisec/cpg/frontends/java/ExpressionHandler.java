@@ -62,6 +62,7 @@ public class ExpressionHandler
     map.put(LiteralExpr.class, this::handleLiteralExpression);
 
     map.put(ThisExpr.class, this::handleThisExpression);
+    map.put(SuperExpr.class, this::handleSuperExpression);
     map.put(ClassExpr.class, this::handleClassExpression);
     map.put(NameExpr.class, this::handleNameExpression);
     map.put(InstanceOfExpr.class, this::handleInstanceOfExpression);
@@ -432,6 +433,18 @@ public class ExpressionHandler
     return thisExpression;
   }
 
+  private DeclaredReferenceExpression handleSuperExpression(Expression expr) {
+    // The actual type is hard to determine at this point, as we may not have full information
+    // about the inheritance structure. Thus we delay the resolving to the variable resolving
+    // process
+    DeclaredReferenceExpression superExpression =
+        NodeBuilder.newDeclaredReferenceExpression(
+            expr.toString(), UnknownType.getUnknownType(), expr.toString());
+    lang.setCodeAndRegion(superExpression, expr);
+
+    return superExpression;
+  }
+
   // TODO: this function needs a MAJOR overhaul!
   private de.fraunhofer.aisec.cpg.graph.Expression handleNameExpression(Expression expr) {
     NameExpr nameExpr = expr.asNameExpr();
@@ -617,6 +630,9 @@ public class ExpressionHandler
         if (scope instanceof NameExpr) {
           scopeName = ((NameExpr) scope).getNameAsString();
           ((NameExpr) scope).resolve();
+          isresolvable = true;
+        } else if (scope instanceof SuperExpr) {
+          scopeName = scope.toString();
           isresolvable = true;
         }
       } catch (UnsolvedSymbolException ex) {

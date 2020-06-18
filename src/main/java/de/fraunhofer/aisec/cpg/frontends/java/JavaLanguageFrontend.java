@@ -187,7 +187,7 @@ public class JavaLanguageFrontend extends LanguageFrontend {
                 }
                 log.error(sb.toString());
               });
-      log.error("Could not parse the file correctly! AST may be empty");
+      log.error("Could not parse the file {} correctly! AST may be empty", file);
     }
     return optional.get();
   }
