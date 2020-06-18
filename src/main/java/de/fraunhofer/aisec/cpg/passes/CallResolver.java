@@ -211,8 +211,8 @@ public class CallResolver extends Pass {
     }
   }
 
-  private RecordDeclaration handleSpecificSupertype(RecordDeclaration curClass,
-      CallExpression call) {
+  private RecordDeclaration handleSpecificSupertype(
+      RecordDeclaration curClass, CallExpression call) {
     String baseName =
         call.getBase().getName().substring(0, call.getBase().getName().lastIndexOf(".super"));
     if (curClass.getImplementedInterfaces().contains(TypeParser.createFrom(baseName, true))) {
@@ -225,7 +225,8 @@ public class CallResolver extends Pass {
         if (!base.getSuperClasses().isEmpty()) {
           return recordMap.get(base.getSuperClasses().get(0).getTypeName());
         } else {
-          Util.warnWithFileLocation(call,
+          Util.warnWithFileLocation(
+              call,
               LOGGER,
               "super call without direct superclass! Expected "
                   + "java.lang.Object to be present at least!");
@@ -268,9 +269,9 @@ public class CallResolver extends Pass {
     // usual function pointer syntax (*fp)() has been omitted: fp(). Looks like a normal call,
     // but it isn't
     Optional<? extends ValueDeclaration> funcPointer =
-        walker.getDeclarationForScope(call,
-            v ->
-                v.getType() instanceof FunctionPointerType && v.getName().equals(call.getName()));
+        walker.getDeclarationForScope(
+            call,
+            v -> v.getType() instanceof FunctionPointerType && v.getName().equals(call.getName()));
     if (funcPointer.isPresent()) {
       handleFunctionPointerCall(call, funcPointer.get());
     } else {

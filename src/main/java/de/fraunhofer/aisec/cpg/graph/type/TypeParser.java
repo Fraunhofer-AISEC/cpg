@@ -67,7 +67,10 @@ public class TypeParser {
   }
 
   public static TypeManager.Language getLanguage() {
-    return language;
+    if (TypeManager.getInstance().getFrontend() == null) {
+      return language;
+    }
+    return TypeManager.getInstance().getLanguage();
   }
 
   /**
