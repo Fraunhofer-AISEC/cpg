@@ -78,8 +78,7 @@ public class BinaryOperator extends Expression implements TypeListener {
     if ("=".equals(operatorCode)) {
       if (lhs instanceof DeclaredReferenceExpression) {
         // declared reference expr is the left hand side of an assignment -> writing to the var
-        ((DeclaredReferenceExpression) lhs)
-            .setAccess(ValueAccess.accessValues.WRITE);
+        ((DeclaredReferenceExpression) lhs).setAccess(ValueAccess.accessValues.WRITE);
       } else if (lhs instanceof MemberExpression) {
         ((MemberExpression) lhs).setAccess(ValueAccess.accessValues.WRITE);
       }
@@ -93,8 +92,7 @@ public class BinaryOperator extends Expression implements TypeListener {
     } else if (compoundOperators.contains(operatorCode)) {
       if (lhs instanceof DeclaredReferenceExpression) {
         // declared reference expr is the left hand side of an assignment -> writing to the var
-        ((DeclaredReferenceExpression) lhs)
-            .setAccess(ValueAccess.accessValues.READWRITE);
+        ((DeclaredReferenceExpression) lhs).setAccess(ValueAccess.accessValues.READWRITE);
       } else if (lhs instanceof MemberExpression) {
         ((MemberExpression) lhs).setAccess(ValueAccess.accessValues.READWRITE);
       }
@@ -188,7 +186,6 @@ public class BinaryOperator extends Expression implements TypeListener {
     Type previous = this.type;
     if (this.operatorCode.equals("=")) {
       setType(src.getPropagationType(), root);
-      System.err.println("Set Type");
     } else {
       if (this.lhs != null && "java.lang.String".equals(this.lhs.getType().toString())
           || this.rhs != null && "java.lang.String".equals(this.rhs.getType().toString())) {
