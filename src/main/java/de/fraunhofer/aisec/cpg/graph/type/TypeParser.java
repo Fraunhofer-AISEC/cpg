@@ -623,6 +623,7 @@ public class TypeParser {
    * @return new type representing the type string
    */
   public static Type createFrom(String type, boolean resolveAlias) {
+    System.out.println("Parser: " + type);
     // Check if Problems during Parsing
     if (type.contains("?")
         || type.contains("org.eclipse.cdt.internal.core.dom.parser.ProblemType@")
