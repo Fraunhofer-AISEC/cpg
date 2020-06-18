@@ -50,7 +50,7 @@ public class MemberExpression extends Expression implements TypeListener {
    * Is this reference used for writing data instead of just reading it? Determines dataflow
    * direction
    */
-  private ValueAccess.accessValues access = ValueAccess.accessValues.READ;
+  private AccessValues access = AccessValues.READ;
 
   @NonNull
   public Node getBase() {
@@ -72,9 +72,9 @@ public class MemberExpression extends Expression implements TypeListener {
     if (this.member instanceof HasType) {
       ((HasType) this.member).unregisterTypeListener(this);
     }
-    if (this.access == ValueAccess.accessValues.WRITE) {
+    if (this.access == AccessValues.WRITE) {
       this.removeNextDFG(this.member);
-    } else if (this.access == ValueAccess.accessValues.READ) {
+    } else if (this.access == AccessValues.READ) {
       this.removePrevDFG(this.member);
     } else {
       this.removeNextDFG(this.member);
@@ -89,9 +89,9 @@ public class MemberExpression extends Expression implements TypeListener {
     if (member instanceof TypeListener) {
       registerTypeListener((TypeListener) member);
     }
-    if (this.access == ValueAccess.accessValues.WRITE) {
+    if (this.access == AccessValues.WRITE) {
       this.addNextDFG(this.member);
-    } else if (this.access == ValueAccess.accessValues.READ) {
+    } else if (this.access == AccessValues.READ) {
       this.addPrevDFG(this.member);
     } else {
       this.addNextDFG(this.member);
@@ -124,10 +124,10 @@ public class MemberExpression extends Expression implements TypeListener {
         .toString();
   }
 
-  public void setAccess(ValueAccess.accessValues access) {
-    if (this.access == ValueAccess.accessValues.WRITE) {
+  public void setAccess(AccessValues access) {
+    if (this.access == AccessValues.WRITE) {
       this.removeNextDFG(this.member);
-    } else if (this.access == ValueAccess.accessValues.READ) {
+    } else if (this.access == AccessValues.READ) {
       this.removePrevDFG(this.member);
     } else {
       this.removeNextDFG(this.member);
@@ -136,9 +136,9 @@ public class MemberExpression extends Expression implements TypeListener {
 
     this.access = access;
 
-    if (this.access == ValueAccess.accessValues.WRITE) {
+    if (this.access == AccessValues.WRITE) {
       this.addNextDFG(this.member);
-    } else if (this.access == ValueAccess.accessValues.READ) {
+    } else if (this.access == AccessValues.READ) {
       this.addPrevDFG(this.member);
     } else {
       this.addNextDFG(this.member);

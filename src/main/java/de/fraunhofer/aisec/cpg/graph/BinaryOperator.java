@@ -29,7 +29,10 @@ package de.fraunhofer.aisec.cpg.graph;
 import de.fraunhofer.aisec.cpg.graph.HasType.TypeListener;
 import de.fraunhofer.aisec.cpg.graph.type.Type;
 import de.fraunhofer.aisec.cpg.graph.type.TypeParser;
-import java.util.*;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Objects;
+import java.util.Set;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.neo4j.ogm.annotation.Transient;
 
@@ -78,9 +81,9 @@ public class BinaryOperator extends Expression implements TypeListener {
     if ("=".equals(operatorCode)) {
       if (lhs instanceof DeclaredReferenceExpression) {
         // declared reference expr is the left hand side of an assignment -> writing to the var
-        ((DeclaredReferenceExpression) lhs).setAccess(ValueAccess.accessValues.WRITE);
+        ((DeclaredReferenceExpression) lhs).setAccess(AccessValues.WRITE);
       } else if (lhs instanceof MemberExpression) {
-        ((MemberExpression) lhs).setAccess(ValueAccess.accessValues.WRITE);
+        ((MemberExpression) lhs).setAccess(AccessValues.WRITE);
       }
       if (lhs instanceof TypeListener) {
         this.registerTypeListener((TypeListener) lhs);
@@ -92,9 +95,9 @@ public class BinaryOperator extends Expression implements TypeListener {
     } else if (compoundOperators.contains(operatorCode)) {
       if (lhs instanceof DeclaredReferenceExpression) {
         // declared reference expr is the left hand side of an assignment -> writing to the var
-        ((DeclaredReferenceExpression) lhs).setAccess(ValueAccess.accessValues.READWRITE);
+        ((DeclaredReferenceExpression) lhs).setAccess(AccessValues.READWRITE);
       } else if (lhs instanceof MemberExpression) {
-        ((MemberExpression) lhs).setAccess(ValueAccess.accessValues.READWRITE);
+        ((MemberExpression) lhs).setAccess(AccessValues.READWRITE);
       }
       if (lhs instanceof TypeListener) {
         this.registerTypeListener((TypeListener) lhs);

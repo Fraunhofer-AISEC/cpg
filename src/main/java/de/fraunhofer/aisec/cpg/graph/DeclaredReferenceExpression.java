@@ -40,7 +40,7 @@ import org.checkerframework.checker.nullness.qual.NonNull;
  * DeclaredReferenceExpression}s, one for the variable <code>a</code> and one for variable <code>b
  * </code>, which have been previously been declared.
  */
-public class DeclaredReferenceExpression extends Expression implements TypeListener, ValueAccess {
+public class DeclaredReferenceExpression extends Expression implements TypeListener {
 
   /** The {@link ValueDeclaration}s this expression might refer to. */
   private Set<ValueDeclaration> refersTo = new HashSet<>();
@@ -49,7 +49,7 @@ public class DeclaredReferenceExpression extends Expression implements TypeListe
    * Is this reference used for writing data instead of just reading it? Determines dataflow
    * direction
    */
-  private accessValues access = accessValues.READ;
+  private AccessValues access = AccessValues.READ;
 
   public Set<ValueDeclaration> getRefersTo() {
     return refersTo;
@@ -64,9 +64,9 @@ public class DeclaredReferenceExpression extends Expression implements TypeListe
   public void setRefersTo(@NonNull Set<ValueDeclaration> refersTo) {
     this.refersTo.forEach(
         r -> {
-          if (access == accessValues.WRITE) {
+          if (access == AccessValues.WRITE) {
             this.removeNextDFG(r);
-          } else if (access == accessValues.READ) {
+          } else if (access == AccessValues.READ) {
             this.removePrevDFG(r);
           } else {
             this.removeNextDFG(r);
@@ -83,9 +83,9 @@ public class DeclaredReferenceExpression extends Expression implements TypeListe
 
     refersTo.forEach(
         r -> {
-          if (access == accessValues.WRITE) {
+          if (access == AccessValues.WRITE) {
             this.addNextDFG(r);
-          } else if (access == accessValues.READ) {
+          } else if (access == AccessValues.READ) {
             this.addPrevDFG(r);
           } else {
             this.addNextDFG(r);
@@ -122,12 +122,12 @@ public class DeclaredReferenceExpression extends Expression implements TypeListe
         .toString();
   }
 
-  public void setAccess(accessValues access) {
+  public void setAccess(AccessValues access) {
     this.refersTo.forEach(
         r -> {
-          if (this.access == accessValues.WRITE) {
+          if (this.access == AccessValues.WRITE) {
             this.removeNextDFG(r);
-          } else if (this.access == accessValues.READ) {
+          } else if (this.access == AccessValues.READ) {
             this.removePrevDFG(r);
           } else {
             this.removeNextDFG(r);
@@ -138,9 +138,9 @@ public class DeclaredReferenceExpression extends Expression implements TypeListe
     this.access = access;
     refersTo.forEach(
         r -> {
-          if (this.access == accessValues.WRITE) {
+          if (this.access == AccessValues.WRITE) {
             this.addNextDFG(r);
-          } else if (this.access == accessValues.READ) {
+          } else if (this.access == AccessValues.READ) {
             this.addPrevDFG(r);
           } else {
             this.addNextDFG(r);
