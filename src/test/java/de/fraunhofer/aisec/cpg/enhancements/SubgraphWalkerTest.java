@@ -30,6 +30,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
+import de.fraunhofer.aisec.cpg.BaseTest;
 import de.fraunhofer.aisec.cpg.TranslationConfiguration;
 import de.fraunhofer.aisec.cpg.frontends.TranslationException;
 import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguageFrontend;
@@ -43,7 +44,7 @@ import java.io.File;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
 
-class SubgraphWalkerTest {
+class SubgraphWalkerTest extends BaseTest {
 
   @Test
   void testASTChildrenGetter() throws TranslationException {

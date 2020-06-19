@@ -30,6 +30,7 @@ import static de.fraunhofer.aisec.cpg.TestUtils.getByLineNr;
 import static de.fraunhofer.aisec.cpg.sarif.PhysicalLocation.locationLink;
 import static org.junit.jupiter.api.Assertions.assertSame;
 
+import de.fraunhofer.aisec.cpg.BaseTest;
 import de.fraunhofer.aisec.cpg.TranslationConfiguration;
 import de.fraunhofer.aisec.cpg.TranslationManager;
 import de.fraunhofer.aisec.cpg.TranslationResult;
@@ -52,7 +53,7 @@ import org.junit.jupiter.api.Test;
  *
  * @author julian
  */
-public class JavaCfgTest {
+class JavaCfgTest extends BaseTest {
 
   /**
    * Tests do-while and while-do loops.

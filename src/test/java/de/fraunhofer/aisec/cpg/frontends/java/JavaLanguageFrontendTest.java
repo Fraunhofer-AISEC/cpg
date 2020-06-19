@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.frontends.java;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import de.fraunhofer.aisec.cpg.BaseTest;
 import de.fraunhofer.aisec.cpg.TranslationConfiguration;
 import de.fraunhofer.aisec.cpg.frontends.TranslationException;
 import de.fraunhofer.aisec.cpg.graph.*;
@@ -48,7 +49,7 @@ import java.util.stream.Collectors;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-class JavaLanguageFrontendTest {
+class JavaLanguageFrontendTest extends BaseTest {
 
   private TranslationConfiguration config;
 
@@ -480,7 +481,7 @@ class JavaLanguageFrontendTest {
   }
 
   @Test
-  public void testLocation() throws TranslationException {
+  void testLocation() throws TranslationException {
     TranslationUnitDeclaration declaration =
         new JavaLanguageFrontend(TranslationConfiguration.builder().build(), new ScopeManager())
             .parse(new File("src/test/resources/compiling/FieldAccess.java"));

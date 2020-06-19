@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.enhancements;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import de.fraunhofer.aisec.cpg.BaseTest;
 import de.fraunhofer.aisec.cpg.TestUtils;
 import de.fraunhofer.aisec.cpg.TranslationConfiguration;
 import de.fraunhofer.aisec.cpg.TranslationManager;
@@ -51,7 +52,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.junit.jupiter.api.Test;
 
-public class FunctionPointerTest {
+class FunctionPointerTest extends BaseTest {
 
   private List<TranslationUnitDeclaration> analyze(String language) throws Exception {
     Path topLevel = Path.of("src", "test", "resources", "functionPointers");
@@ -77,7 +78,7 @@ public class FunctionPointerTest {
     return analyzer.analyze().get().getTranslationUnits();
   }
 
-  public void test(String language) throws Exception {
+  void test(String language) throws Exception {
     List<TranslationUnitDeclaration> result = analyze(language);
     List<FunctionDeclaration> functions = Util.subnodesOfType(result, FunctionDeclaration.class);
     FunctionDeclaration main = TestUtils.findByUniqueName(functions, "main");
@@ -187,12 +188,12 @@ public class FunctionPointerTest {
   }
 
   @Test
-  public void testC() throws Exception {
+  void testC() throws Exception {
     test("C");
   }
 
   @Test
-  public void testCPP() throws Exception {
+  void testCPP() throws Exception {
     test("CPP");
   }
 }

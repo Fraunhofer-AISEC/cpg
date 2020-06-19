@@ -32,9 +32,9 @@ plugins {
     signing
     `maven-publish`
 
-    id("org.sonarqube") version "2.8"
-    id("com.diffplug.gradle.spotless") version "3.30.0"
-    id("com.github.johnrengelman.shadow") version "5.2.0"
+    id("org.sonarqube") version "3.0"
+    id("com.diffplug.gradle.spotless") version "4.3.1"
+    id("com.github.johnrengelman.shadow") version "6.0.0"
 }
 
 tasks.jacocoTestReport {

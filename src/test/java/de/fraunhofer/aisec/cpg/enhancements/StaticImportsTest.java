@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.enhancements;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import de.fraunhofer.aisec.cpg.BaseTest;
 import de.fraunhofer.aisec.cpg.TestUtils;
 import de.fraunhofer.aisec.cpg.graph.CallExpression;
 import de.fraunhofer.aisec.cpg.graph.FieldDeclaration;
@@ -42,7 +43,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
 
-public class StaticImportsTest {
+class StaticImportsTest extends BaseTest {
 
   private Path topLevel = Path.of("src", "test", "resources", "staticImports");
 

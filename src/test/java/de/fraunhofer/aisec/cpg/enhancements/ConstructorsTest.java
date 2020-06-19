@@ -2,6 +2,7 @@ package de.fraunhofer.aisec.cpg.enhancements;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import de.fraunhofer.aisec.cpg.BaseTest;
 import de.fraunhofer.aisec.cpg.TestUtils;
 import de.fraunhofer.aisec.cpg.graph.ConstructExpression;
 import de.fraunhofer.aisec.cpg.graph.ConstructorDeclaration;
@@ -13,7 +14,7 @@ import java.nio.file.Path;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
-public class ConstructorsTest {
+class ConstructorsTest extends BaseTest {
 
   private Path topLevel = Path.of("src", "test", "resources", "constructors");
 

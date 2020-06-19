@@ -30,6 +30,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import de.fraunhofer.aisec.cpg.BaseTest;
 import de.fraunhofer.aisec.cpg.TranslationConfiguration;
 import de.fraunhofer.aisec.cpg.frontends.TranslationException;
 import de.fraunhofer.aisec.cpg.graph.*;
@@ -38,7 +39,7 @@ import java.io.File;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
-class BotanExampleTest {
+class BotanExampleTest extends BaseTest {
 
   @Test
   void testExample() throws TranslationException {

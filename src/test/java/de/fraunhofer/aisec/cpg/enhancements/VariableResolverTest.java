@@ -29,6 +29,7 @@ package de.fraunhofer.aisec.cpg.enhancements;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import de.fraunhofer.aisec.cpg.BaseTest;
 import de.fraunhofer.aisec.cpg.TestUtils;
 import de.fraunhofer.aisec.cpg.TranslationConfiguration;
 import de.fraunhofer.aisec.cpg.TranslationManager;
@@ -42,12 +43,12 @@ import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
 
-public class VariableResolverTest {
+class VariableResolverTest extends BaseTest {
 
   private final Path topLevel = Path.of("src", "test", "resources", "variables");
 
   @Test
-  public void testFields() throws Exception {
+  void testFields() throws Exception {
     List<TranslationUnitDeclaration> result = TestUtils.analyze("java", topLevel);
     List<MethodDeclaration> methods = Util.subnodesOfType(result, MethodDeclaration.class);
     List<FieldDeclaration> fields = Util.subnodesOfType(result, FieldDeclaration.class);
@@ -63,7 +64,7 @@ public class VariableResolverTest {
   }
 
   @Test
-  public void testLocalVars() throws Exception {
+  void testLocalVars() throws Exception {
     List<TranslationUnitDeclaration> result = TestUtils.analyze("java", topLevel);
     List<MethodDeclaration> methods = Util.subnodesOfType(result, MethodDeclaration.class);
     List<FieldDeclaration> fields = Util.subnodesOfType(result, FieldDeclaration.class);
@@ -86,7 +87,7 @@ public class VariableResolverTest {
   }
 
   @Test
-  public void testLocalVarsCpp() throws ExecutionException, InterruptedException {
+  void testLocalVarsCpp() throws ExecutionException, InterruptedException {
     TranslationConfiguration config =
         TranslationConfiguration.builder()
             .sourceLocations(new File("src/test/resources/variables/local_variables.cpp"))
