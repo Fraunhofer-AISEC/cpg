@@ -718,9 +718,10 @@ public class TypeTests {
 
     // Check unrelated type behavior
     Type unrelated = TypeParser.createFrom("Unrelated", true);
+    Type javaObject = TypeParser.createFrom(Object.class.getName(), true);
     for (Type t : List.of(root, level0, level1, level1b, level2)) {
       assertEquals(
-          Optional.empty(), TypeManager.getInstance().getCommonType(List.of(unrelated, t)));
+          Optional.of(javaObject), TypeManager.getInstance().getCommonType(List.of(unrelated, t)));
     }
   }
 }

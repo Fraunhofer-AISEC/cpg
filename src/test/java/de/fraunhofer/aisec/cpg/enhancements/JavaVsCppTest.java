@@ -34,35 +34,26 @@ import de.fraunhofer.aisec.cpg.graph.*;
 import java.io.File;
 import java.nio.file.Path;
 import java.util.*;
-import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
 
 class JavaVsCppTest {
 
   @Test
-  void cpp() throws ExecutionException, InterruptedException {
+  void cpp() throws Exception {
     analyzeAndSave("src/test/resources/javaVsCpp/simple.cpp");
   }
 
   @Test
-  void java() throws ExecutionException, InterruptedException {
+  void java() throws Exception {
     analyzeAndSave("src/test/resources/javaVsCpp/simple.java");
   }
 
-  private void analyzeAndSave(String pathname) {
+  private void analyzeAndSave(String pathname) throws Exception {
     File toTranslate = new File(pathname);
     Path topLevel = toTranslate.getParentFile().toPath();
-    List<TranslationUnitDeclaration> translationUnits = Collections.emptyList();
-    try {
-      translationUnits = TestUtils.analyze(List.of(toTranslate), topLevel, true, true);
-    } catch (Exception e) {
-      e.printStackTrace();
-      fail("Exception during CPG parsing!");
-    }
-
-    assertEquals(1, translationUnits.size());
-    TranslationUnitDeclaration tu = translationUnits.get(0);
+    TranslationUnitDeclaration tu =
+        TestUtils.analyzeAndGetFirstTU(List.of(toTranslate), topLevel, true, true);
     assertEquals(1, tu.getDeclarations().size());
     Declaration decl = tu.getDeclarations().get(0);
     assertTrue(decl instanceof RecordDeclaration);

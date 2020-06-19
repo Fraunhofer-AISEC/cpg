@@ -17,7 +17,7 @@ class SuperCallTest {
 
   @Test
   void testSimpleCall() throws Exception {
-    List<TranslationUnitDeclaration> result = TestUtils.analyze("java", topLevel);
+    List<TranslationUnitDeclaration> result = TestUtils.analyze("java", topLevel, true, true);
     List<RecordDeclaration> records = Util.subnodesOfType(result, RecordDeclaration.class);
 
     RecordDeclaration superClass = TestUtils.findByUniqueName(records, "SuperClass");
@@ -36,7 +36,7 @@ class SuperCallTest {
 
   @Test
   void testInterfaceCall() throws Exception {
-    List<TranslationUnitDeclaration> result = TestUtils.analyze("java", topLevel);
+    List<TranslationUnitDeclaration> result = TestUtils.analyze("java", topLevel, true, true);
     List<RecordDeclaration> records = Util.subnodesOfType(result, RecordDeclaration.class);
 
     RecordDeclaration interface1 = TestUtils.findByUniqueName(records, "Interface1");
@@ -64,7 +64,7 @@ class SuperCallTest {
 
   @Test
   void testSuperField() throws Exception {
-    List<TranslationUnitDeclaration> result = TestUtils.analyze("java", topLevel);
+    List<TranslationUnitDeclaration> result = TestUtils.analyze("java", topLevel, true, true);
     List<RecordDeclaration> records = Util.subnodesOfType(result, RecordDeclaration.class);
 
     RecordDeclaration superClass = TestUtils.findByUniqueName(records, "SuperClass");
@@ -91,7 +91,7 @@ class SuperCallTest {
 
   @Test
   void testInnerCall() throws Exception {
-    List<TranslationUnitDeclaration> result = TestUtils.analyze("java", topLevel);
+    List<TranslationUnitDeclaration> result = TestUtils.analyze("java", topLevel, true, true);
     List<RecordDeclaration> records = Util.subnodesOfType(result, RecordDeclaration.class);
 
     RecordDeclaration superClass = TestUtils.findByUniqueName(records, "SuperClass");
@@ -110,7 +110,7 @@ class SuperCallTest {
 
   @Test
   void testNoExcessFields() throws Exception {
-    List<TranslationUnitDeclaration> result = TestUtils.analyze("java", topLevel);
+    List<TranslationUnitDeclaration> result = TestUtils.analyze("java", topLevel, true, true);
     List<RecordDeclaration> records = Util.subnodesOfType(result, RecordDeclaration.class);
 
     RecordDeclaration superClass = TestUtils.findByUniqueName(records, "SuperClass");

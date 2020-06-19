@@ -43,7 +43,6 @@ import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker;
 import de.fraunhofer.aisec.cpg.helpers.Util;
 import java.io.File;
 import java.nio.file.Path;
-import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
@@ -63,12 +62,12 @@ public class EOGTest {
   public static String REFNODESTRINGCXX = "printf(\"\\n\");";
 
   @Test
-  void testJavaIf() throws TranslationException {
+  void testJavaIf() throws Exception {
     testIf("src/test/resources/cfg/If.java", REFNODESTRINGJAVA);
   }
 
   @Test
-  void testCppIf() throws TranslationException {
+  void testCppIf() throws Exception {
     testIf("src/test/resources/cfg/if.cpp", REFNODESTRINGCXX);
   }
 
@@ -80,7 +79,7 @@ public class EOGTest {
    *     file.
    * @throws TranslationException
    */
-  void testIf(String relPath, String refNodeString) throws TranslationException {
+  void testIf(String relPath, String refNodeString) throws Exception {
     List<Node> nodes = translateToNodes(relPath);
 
     // All BinaryOperators (including If conditions) have only one successor
@@ -160,7 +159,7 @@ public class EOGTest {
   }
 
   @Test
-  void testConditionShortCircuit() throws TransactionException {
+  void testConditionShortCircuit() throws Exception {
     List<Node> nodes = translateToNodes("src/test/resources/cfg/ShortCircuit.java");
 
     List<BinaryOperator> binaryOperators =
@@ -177,7 +176,7 @@ public class EOGTest {
   }
 
   @Test
-  void testJavaFor() throws TransactionException {
+  void testJavaFor() throws Exception {
     List<Node> nodes = translateToNodes("src/test/resources/cfg/ForLoop.java");
     List<Node> prints =
         nodes.stream()
@@ -207,7 +206,7 @@ public class EOGTest {
   }
 
   @Test
-  void testCPPFor() throws TransactionException {
+  void testCPPFor() throws Exception {
     List<Node> nodes = translateToNodes("src/test/resources/cfg/forloop.cpp");
     List<Node> prints =
         nodes.stream()
@@ -252,7 +251,7 @@ public class EOGTest {
    * @throws TransactionException
    */
   @Test
-  void testCPPCallGraph() throws TransactionException {
+  void testCPPCallGraph() throws Exception {
     List<Node> nodes = translateToNodes("src/test/resources/cg.cpp");
     List<CallExpression> calls = Util.subnodesOfType(nodes, CallExpression.class);
     List<FunctionDeclaration> functions = Util.subnodesOfType(nodes, FunctionDeclaration.class);
@@ -278,12 +277,12 @@ public class EOGTest {
   }
 
   @Test
-  void testJavaLoops() throws TranslationException {
+  void testJavaLoops() throws Exception {
     testLoops("src/test/resources/cfg/Loops.java", "System.out.println();");
   }
 
   @Test
-  void testCppLoops() throws TranslationException {
+  void testCppLoops() throws Exception {
     testLoops("src/test/resources/cfg/loops.cpp", "printf(\"\\n\");");
   }
 
@@ -294,7 +293,7 @@ public class EOGTest {
    * @param refNodeString - Exact string of reference nodes, do not change/insert nodes in the test
    *     file.
    */
-  void testLoops(String relPath, String refNodeString) {
+  void testLoops(String relPath, String refNodeString) throws Exception {
     List<Node> nodes = translateToNodes(relPath);
 
     List<Node> prints =
@@ -356,7 +355,7 @@ public class EOGTest {
     assertTrue(Util.eogConnect(SUBTREE, EXITS, dostat, prints.get(2)));
   }
 
-  void testSwitch(String relPath, String refNodeString) throws TranslationException {
+  void testSwitch(String relPath, String refNodeString) throws Exception {
     List<Node> nodes = translateToNodes(relPath);
 
     List<FunctionDeclaration> functions =
@@ -453,22 +452,22 @@ public class EOGTest {
   }
 
   @Test
-  void testCppSwitch() throws TranslationException {
+  void testCppSwitch() throws Exception {
     testSwitch("src/test/resources/cfg/switch.cpp", REFNODESTRINGCXX);
   }
 
   @Test
-  void testJavaSwitch() throws TranslationException {
+  void testJavaSwitch() throws Exception {
     testSwitch("src/test/resources/cfg/Switch.java", REFNODESTRINGJAVA);
   }
 
   @Test
-  void testJavaBreakContinue() throws TranslationException {
+  void testJavaBreakContinue() throws Exception {
     testBreakContinue("src/test/resources/cfg/BreakContinue.java", "System.out.println();");
   }
 
   @Test
-  void testCppBreakContinue() throws TranslationException {
+  void testCppBreakContinue() throws Exception {
     testBreakContinue("src/test/resources/cfg/break_continue.cpp", "printf(\"\\n\");");
   }
 
@@ -480,7 +479,7 @@ public class EOGTest {
    *     file.
    * @throws TranslationException
    */
-  void testBreakContinue(String relPath, String refNodeString) throws TranslationException {
+  void testBreakContinue(String relPath, String refNodeString) throws Exception {
     List<Node> nodes = translateToNodes(relPath);
 
     List<Node> prints =
@@ -550,21 +549,12 @@ public class EOGTest {
    *
    * @param path - path for the file to test.
    */
-  private List<Node> translateToNodes(String path) {
+  private List<Node> translateToNodes(String path) throws Exception {
     File toTranslate = new File(path);
     Path topLevel = toTranslate.getParentFile().toPath();
-    List<TranslationUnitDeclaration> translationUnits = Collections.emptyList();
-    try {
-      translationUnits = TestUtils.analyze(List.of(toTranslate), topLevel, true, true);
-    } catch (Exception e) {
-      e.printStackTrace();
-      fail("Exception during CPG parsing!");
-    }
-    assertEquals(1, translationUnits.size());
-
-    Assertions.assertNotNull(translationUnits.get(0)); // Ensures that the test acan be parsed
-
-    List<Node> nodes = SubgraphWalker.flattenAST(translationUnits.get(0));
+    TranslationUnitDeclaration tu =
+        TestUtils.analyzeAndGetFirstTU(List.of(toTranslate), topLevel, true, true);
+    List<Node> nodes = SubgraphWalker.flattenAST(tu);
     // Todo until explicitly added Return Statements are either removed again or code and region set
     // properly
 
