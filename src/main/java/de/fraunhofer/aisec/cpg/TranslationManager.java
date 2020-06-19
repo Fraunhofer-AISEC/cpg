@@ -111,16 +111,19 @@ public class TranslationManager {
             throw new CompletionException(ex);
           } finally {
             outerBench.stop();
+            if (config.cleanupOnCompletion()) {
+              log.debug("Cleaning up {} Passes", passesNeedCleanup.size());
+              passesNeedCleanup.forEach(Pass::cleanup);
 
-            log.debug("Cleaning up {} Passes", passesNeedCleanup.size());
-            passesNeedCleanup.forEach(Pass::cleanup);
+              if (frontendsNeedCleanup != null) {
+                log.debug("Cleaning up {} Frontends", frontendsNeedCleanup.size());
+                frontendsNeedCleanup.forEach(LanguageFrontend::cleanup);
+              }
 
-            if (frontendsNeedCleanup != null) {
-              log.debug("Cleaning up {} Frontends", frontendsNeedCleanup.size());
-              frontendsNeedCleanup.forEach(LanguageFrontend::cleanup);
+              TypeManager.getInstance().cleanup();
+            } else {
+              log.warn("Cleanup skipped. This should only be used in test cases");
             }
-
-            TypeManager.getInstance().cleanup();
           }
           return result;
         });

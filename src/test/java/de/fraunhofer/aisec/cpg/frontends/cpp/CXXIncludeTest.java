@@ -43,7 +43,7 @@ class CXXIncludeTest {
   void testDefinitionsAndDeclaration() throws Exception {
     File file = new File("src/test/resources/include.cpp");
     TranslationUnitDeclaration tu =
-        TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true);
+        TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true, true);
     assertEquals(4, tu.getDeclarations().size());
 
     RecordDeclaration someClass =
@@ -70,7 +70,7 @@ class CXXIncludeTest {
     // checks, whether code and region for nodes in includes are properly set
     File file = new File("src/test/resources/include.cpp");
     TranslationUnitDeclaration tu =
-        TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true);
+        TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true, true);
 
     RecordDeclaration someClass =
         tu.getDeclarationByName("SomeClass", RecordDeclaration.class).orElse(null);

@@ -61,18 +61,21 @@ public class TestUtils {
   }
 
   /**
-   * Like {@link #analyze(List, Path, boolean)}, but for all files in a directory tree having a
-   * specific file extension
+   * Like {@link #analyze(List, Path, boolean, boolean)}, but for all files in a directory tree
+   * having a specific file extension
    *
    * @param fileExtension All files found in the directory must end on this String. An empty string
    *     matches all files
    * @param topLevel The directory to traverse while looking for files to parse
-   * @param usePasses
+   * @param usePasses Whether the analysis should run passes after the initial phase
+   * @param cleanupOnCompletion Whether {@link de.fraunhofer.aisec.cpg.graph.TypeManager} etc.
+   *     should be cleaned up after the analysis has ended
    * @return A list of {@link TranslationUnitDeclaration} nodes, representing the CPG roots
    * @throws Exception Any exception thrown during the parsing process
    */
   public static List<TranslationUnitDeclaration> analyze(
-      String fileExtension, Path topLevel, boolean usePasses) throws Exception {
+      String fileExtension, Path topLevel, boolean usePasses, boolean cleanupOnCompletion)
+      throws Exception {
     List<File> files =
         Files.walk(topLevel, Integer.MAX_VALUE)
             .map(Path::toFile)
@@ -80,26 +83,30 @@ public class TestUtils {
             .filter(f -> f.getName().endsWith(fileExtension))
             .sorted()
             .collect(Collectors.toList());
-    return analyze(files, topLevel, usePasses);
+    return analyze(files, topLevel, usePasses, cleanupOnCompletion);
   }
 
   /**
    * Default way of parsing a list of files into a full CPG. All default passes are applied
    *
    * @param topLevel The directory to traverse while looking for files to parse
-   * @param usePasses
+   * @param usePasses Whether the analysis should run passes after the initial phase
+   * @param cleanupOnCompletion Whether {@link de.fraunhofer.aisec.cpg.graph.TypeManager} etc.
+   *     should be cleaned up after the analysis has ended
    * @return A list of {@link TranslationUnitDeclaration} nodes, representing the CPG roots
    * @throws Exception Any exception thrown during the parsing process
    */
   public static List<TranslationUnitDeclaration> analyze(
-      List<File> files, Path topLevel, boolean usePasses) throws Exception {
+      List<File> files, Path topLevel, boolean usePasses, boolean cleanupOnCompletion)
+      throws Exception {
     TranslationConfiguration.Builder builder =
         TranslationConfiguration.builder()
             .sourceLocations(files.toArray(File[]::new))
             .topLevel(topLevel.toFile())
             .loadIncludes(true)
             .debugParser(true)
-            .failOnError(true);
+            .failOnError(true)
+            .cleanupOnCompletion(cleanupOnCompletion);
     if (usePasses) {
       builder.defaultPasses();
     }
@@ -111,8 +118,10 @@ public class TestUtils {
   }
 
   public static TranslationUnitDeclaration analyzeAndGetFirstTU(
-      List<File> files, Path topLevel, boolean usePasses) throws Exception {
-    List<TranslationUnitDeclaration> translationUnits = analyze(files, topLevel, usePasses);
+      List<File> files, Path topLevel, boolean usePasses, boolean cleanupOnCompletion)
+      throws Exception {
+    List<TranslationUnitDeclaration> translationUnits =
+        analyze(files, topLevel, usePasses, cleanupOnCompletion);
     return translationUnits.stream()
         .filter(t -> !t.getName().equals("unknown declarations"))
         .findFirst()

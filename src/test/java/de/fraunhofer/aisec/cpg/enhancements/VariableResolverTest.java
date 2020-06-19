@@ -44,7 +44,7 @@ public class VariableResolverTest {
 
   @Test
   public void testFields() throws Exception {
-    List<TranslationUnitDeclaration> result = TestUtils.analyze("java", topLevel, true);
+    List<TranslationUnitDeclaration> result = TestUtils.analyze("java", topLevel, true, true);
     List<MethodDeclaration> methods = Util.subnodesOfType(result, MethodDeclaration.class);
     List<FieldDeclaration> fields = Util.subnodesOfType(result, FieldDeclaration.class);
     FieldDeclaration field = TestUtils.findByUniqueName(fields, "field");
@@ -60,7 +60,7 @@ public class VariableResolverTest {
 
   @Test
   public void testLocalVars() throws Exception {
-    List<TranslationUnitDeclaration> result = TestUtils.analyze("java", topLevel, true);
+    List<TranslationUnitDeclaration> result = TestUtils.analyze("java", topLevel, true, true);
     List<MethodDeclaration> methods = Util.subnodesOfType(result, MethodDeclaration.class);
     List<FieldDeclaration> fields = Util.subnodesOfType(result, FieldDeclaration.class);
     FieldDeclaration field = TestUtils.findByUniqueName(fields, "field");
@@ -83,7 +83,7 @@ public class VariableResolverTest {
 
   @Test
   public void testLocalVarsCpp() throws Exception {
-    List<TranslationUnitDeclaration> tu = TestUtils.analyze("cpp", topLevel, true);
+    List<TranslationUnitDeclaration> tu = TestUtils.analyze("cpp", topLevel, true, true);
     FunctionDeclaration function = tu.get(0).getDeclarationAs(2, FunctionDeclaration.class);
 
     assertEquals("testExpressionInExpressionList()int", function.getSignature());

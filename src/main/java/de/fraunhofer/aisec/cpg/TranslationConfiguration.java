@@ -79,6 +79,9 @@ public class TranslationConfiguration {
 
   @NonNull private List<Pass> passes;
 
+  /** For test purposes, the cleanup phase after the analysis may want to be skipped */
+  private boolean cleanupOnCompletion;
+
   private TranslationConfiguration(
       Map<String, String> symbols,
       List<File> sourceLocations,
@@ -88,7 +91,8 @@ public class TranslationConfiguration {
       boolean loadIncludes,
       String[] includePaths,
       List<Pass> passes,
-      boolean codeInNodes) {
+      boolean codeInNodes,
+      boolean cleanupOnCompletion) {
     this.symbols = symbols;
     this.sourceLocations = sourceLocations;
     this.topLevel = topLevel;
@@ -99,6 +103,7 @@ public class TranslationConfiguration {
     this.passes = passes != null ? passes : new ArrayList<>();
     // Make sure to init this AFTER sourceLocations has been set
     this.codeInNodes = codeInNodes;
+    this.cleanupOnCompletion = cleanupOnCompletion;
   }
 
   public static Builder builder() {
@@ -121,6 +126,10 @@ public class TranslationConfiguration {
     return this.passes;
   }
 
+  public boolean cleanupOnCompletion() {
+    return cleanupOnCompletion;
+  }
+
   public static class Builder {
     private List<File> sourceLocations = new ArrayList<>();
     private File topLevel = null;
@@ -131,6 +140,7 @@ public class TranslationConfiguration {
     private List<String> includePaths = new ArrayList<>();
     private List<Pass> passes = new ArrayList<>();
     private boolean codeInNodes = true;
+    private boolean cleanupOnCompletion = true;
 
     public Builder symbols(Map<String, String> symbols) {
       this.symbols = symbols;
@@ -172,6 +182,11 @@ public class TranslationConfiguration {
       return this;
     }
 
+    public Builder cleanupOnCompletion(boolean cleanupOnCompletion) {
+      this.cleanupOnCompletion = cleanupOnCompletion;
+      return this;
+    }
+
     public Builder defaultPasses() {
       registerPass(new FilenameMapper());
       registerPass(new TypeHierarchyResolver());
@@ -199,7 +214,8 @@ public class TranslationConfiguration {
           loadIncludes,
           includePaths.toArray(paths),
           passes,
-          codeInNodes);
+          codeInNodes,
+          cleanupOnCompletion);
     }
   }
 }

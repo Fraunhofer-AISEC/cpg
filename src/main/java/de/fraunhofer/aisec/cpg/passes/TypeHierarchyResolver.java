@@ -46,6 +46,11 @@ import java.util.stream.Collectors;
  * <p>After determining the ancestors of a class, all inherited methods are scanned to find out
  * which of them are overridden/implemented in the current class. See {@link
  * MethodDeclaration#getOverriddenBy()}
+ *
+ * <p><b>Attention:</b> Needs to be run before other analysis passes, as it triggers a type refresh.
+ * This is needed e.g. for {@link TypeManager#getCommonType(Collection)} to be re-evaluated at
+ * places where it is crucial to have parsed all {@link RecordDeclaration}s. Otherwise, type
+ * information in the graph might not be fully correct
  */
 public class TypeHierarchyResolver extends Pass {
 

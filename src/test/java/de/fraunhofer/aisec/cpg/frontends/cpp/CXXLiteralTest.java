@@ -47,7 +47,7 @@ public class CXXLiteralTest {
   void testZeroIntegerLiterals() throws Exception {
     File file = new File("src/test/resources/integer_literals.cpp");
     TranslationUnitDeclaration tu =
-        TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true);
+        TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true, true);
 
     FunctionDeclaration zero =
         tu.getDeclarationByName("zero", FunctionDeclaration.class).orElse(null);
@@ -68,7 +68,7 @@ public class CXXLiteralTest {
   void testDecimalIntegerLiterals() throws Exception {
     File file = new File("src/test/resources/integer_literals.cpp");
     TranslationUnitDeclaration tu =
-        TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true);
+        TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true, true);
 
     FunctionDeclaration decimal =
         tu.getDeclarationByName("decimal", FunctionDeclaration.class).orElse(null);
@@ -106,7 +106,7 @@ public class CXXLiteralTest {
   void testOctalIntegerLiterals() throws Exception {
     File file = new File("src/test/resources/integer_literals.cpp");
     TranslationUnitDeclaration tu =
-        TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true);
+        TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true, true);
 
     FunctionDeclaration octal =
         tu.getDeclarationByName("octal", FunctionDeclaration.class).orElse(null);
@@ -127,7 +127,7 @@ public class CXXLiteralTest {
   void testNonDecimalIntegerLiterals() throws Exception {
     File file = new File("src/test/resources/integer_literals.cpp");
     TranslationUnitDeclaration tu =
-        TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true);
+        TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true, true);
 
     FunctionDeclaration functionDeclaration =
         tu.getDeclarationByName("hex", FunctionDeclaration.class).orElse(null);
@@ -147,7 +147,7 @@ public class CXXLiteralTest {
   void testLargeNegativeNumber() throws Exception {
     File file = new File("src/test/resources/largenegativenumber.cpp");
     TranslationUnitDeclaration tu =
-        TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true);
+        TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true, true);
 
     FunctionDeclaration main =
         tu.getDeclarationByName("main", FunctionDeclaration.class).orElse(null);

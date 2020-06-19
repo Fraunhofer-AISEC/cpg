@@ -49,7 +49,7 @@ public class StaticImportsTest {
   @Test
   void testSingleStaticImport() throws Exception {
     List<TranslationUnitDeclaration> result =
-        TestUtils.analyze("java", topLevel.resolve("single"), true);
+        TestUtils.analyze("java", topLevel.resolve("single"), true, true);
     List<MethodDeclaration> methods = Util.subnodesOfType(result, MethodDeclaration.class);
     MethodDeclaration test = TestUtils.findByUniqueName(methods, "test");
     MethodDeclaration main = TestUtils.findByUniqueName(methods, "main");
@@ -73,7 +73,7 @@ public class StaticImportsTest {
   @Test
   void testAsteriskImport() throws Exception {
     List<TranslationUnitDeclaration> result =
-        TestUtils.analyze("java", topLevel.resolve("asterisk"), true);
+        TestUtils.analyze("java", topLevel.resolve("asterisk"), true, true);
     List<MethodDeclaration> methods = Util.subnodesOfType(result, MethodDeclaration.class);
     MethodDeclaration main = TestUtils.findByUniqueName(methods, "main");
     for (CallExpression call : Util.subnodesOfType(main, CallExpression.class)) {
@@ -119,7 +119,7 @@ public class StaticImportsTest {
   @Test
   void testDummyGeneration() throws Exception {
     List<TranslationUnitDeclaration> result =
-        TestUtils.analyze("java", topLevel.resolve("dummies"), true);
+        TestUtils.analyze("java", topLevel.resolve("dummies"), true, true);
     assertEquals(
         1, result.stream().filter(t -> t.getName().equals("unknown declarations")).count());
     List<RecordDeclaration> records = Util.subnodesOfType(result, RecordDeclaration.class);

@@ -124,6 +124,7 @@ public class TypeManager {
   }
 
   private Set<Type> unwrapTypes(Collection<Type> types, WrapState wrapState) {
+    Set<Type> original = new HashSet<>(types);
     Set<Type> unwrappedTypes = new HashSet<>();
     int depth = 0;
     int counter = 0;
@@ -142,8 +143,8 @@ public class TypeManager {
         unwrappedTypes.add(((ReferenceType) t).getElementType());
         reference = true;
       }
+      types = unwrappedTypes;
     }
-    types = unwrappedTypes;
 
     Type t2 = types.stream().findAny().orElse(null);
 
@@ -166,7 +167,11 @@ public class TypeManager {
     wrapState.setReference(reference);
     wrapState.setReferenceType(referenceType);
 
-    return unwrappedTypes;
+    if (unwrappedTypes.isEmpty() && !original.isEmpty()) {
+      return original;
+    } else {
+      return unwrappedTypes;
+    }
   }
 
   public Optional<Type> getCommonType(Collection<Type> types) {

@@ -555,7 +555,7 @@ public class EOGTest {
     Path topLevel = toTranslate.getParentFile().toPath();
     List<TranslationUnitDeclaration> translationUnits = Collections.emptyList();
     try {
-      translationUnits = TestUtils.analyze(List.of(toTranslate), topLevel, true);
+      translationUnits = TestUtils.analyze(List.of(toTranslate), topLevel, true, true);
     } catch (Exception e) {
       e.printStackTrace();
       fail("Exception during CPG parsing!");
