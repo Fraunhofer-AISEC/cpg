@@ -37,12 +37,12 @@ import java.util.Collections;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
-public class TypeTests {
+class TypeTests extends BaseTest {
 
   @Test
   void reference() {
 
-    TypeParser.setLanguage(TypeManager.Language.CXX);
+    TypeParser.setLanguageSupplier(() -> TypeManager.Language.CXX);
 
     Type objectType =
         new ObjectType(
@@ -96,7 +96,7 @@ public class TypeTests {
   @Test
   void dereference() {
 
-    TypeParser.setLanguage(TypeManager.Language.CXX);
+    TypeParser.setLanguageSupplier(() -> TypeManager.Language.CXX);
 
     Type objectType =
         new ObjectType(
@@ -146,7 +146,7 @@ public class TypeTests {
     Type result;
     Type expected;
 
-    TypeParser.setLanguage(TypeManager.Language.JAVA);
+    TypeParser.setLanguageSupplier(() -> TypeManager.Language.JAVA);
 
     // Test 1: Ignore Access Modifier Keyword (public, private, protected)
     typeString = "private int a";
@@ -327,7 +327,7 @@ public class TypeTests {
     String typeString;
     Type result;
 
-    TypeParser.setLanguage(TypeManager.Language.CXX);
+    TypeParser.setLanguageSupplier(() -> TypeManager.Language.CXX);
 
     // Test 1: Function pointer
     typeString = "void (*single_param)(int)";

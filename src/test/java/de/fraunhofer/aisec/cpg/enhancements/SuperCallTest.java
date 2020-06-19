@@ -2,6 +2,7 @@ package de.fraunhofer.aisec.cpg.enhancements;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import de.fraunhofer.aisec.cpg.BaseTest;
 import de.fraunhofer.aisec.cpg.TestUtils;
 import de.fraunhofer.aisec.cpg.graph.*;
 import de.fraunhofer.aisec.cpg.helpers.Util;
@@ -11,7 +12,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
 
-class SuperCallTest {
+class SuperCallTest extends BaseTest {
 
   private final Path topLevel = Path.of("src", "test", "resources", "superCalls");
 
