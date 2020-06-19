@@ -38,7 +38,7 @@ import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
-public class TypeTests extends BaseTest {
+class TypeTests extends BaseTest {
 
   @Test
   void reference() {

@@ -1028,7 +1028,7 @@ class CXXLanguageFrontendTest extends BaseTest {
   }
 
   @Test
-  public void testLocation() throws Exception {
+  void testLocation() throws Exception {
     File file = new File("src/test/resources/components/foreachstmt.cpp");
     TranslationUnitDeclaration tu =
         TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true, true);

@@ -13,7 +13,7 @@ import java.nio.file.Path;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
-public class TypedefTest extends BaseTest {
+class TypedefTest extends BaseTest {
 
   private final Path topLevel = Path.of("src", "test", "resources", "typedefs");
 

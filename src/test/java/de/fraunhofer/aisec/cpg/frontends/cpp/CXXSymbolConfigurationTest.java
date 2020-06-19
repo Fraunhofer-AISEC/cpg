@@ -38,7 +38,7 @@ import java.io.File;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 
-public class CXXSymbolConfigurationTest extends BaseTest {
+class CXXSymbolConfigurationTest extends BaseTest {
   @Test
   void testWithoutSymbols() throws TranslationException {
     // parse without symbols

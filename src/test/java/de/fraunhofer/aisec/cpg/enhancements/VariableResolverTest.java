@@ -39,12 +39,12 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
 
-public class VariableResolverTest extends BaseTest {
+class VariableResolverTest extends BaseTest {
 
   private final Path topLevel = Path.of("src", "test", "resources", "variables");
 
   @Test
-  public void testFields() throws Exception {
+  void testFields() throws Exception {
     List<TranslationUnitDeclaration> result = TestUtils.analyze("java", topLevel, true, true);
     List<MethodDeclaration> methods = Util.subnodesOfType(result, MethodDeclaration.class);
     List<FieldDeclaration> fields = Util.subnodesOfType(result, FieldDeclaration.class);
@@ -60,7 +60,7 @@ public class VariableResolverTest extends BaseTest {
   }
 
   @Test
-  public void testLocalVars() throws Exception {
+  void testLocalVars() throws Exception {
     List<TranslationUnitDeclaration> result = TestUtils.analyze("java", topLevel, true, true);
     List<MethodDeclaration> methods = Util.subnodesOfType(result, MethodDeclaration.class);
     List<FieldDeclaration> fields = Util.subnodesOfType(result, FieldDeclaration.class);
@@ -83,7 +83,7 @@ public class VariableResolverTest extends BaseTest {
   }
 
   @Test
-  public void testLocalVarsCpp() throws Exception {
+  void testLocalVarsCpp() throws Exception {
     List<TranslationUnitDeclaration> tu = TestUtils.analyze("cpp", topLevel, true, true);
     FunctionDeclaration function = tu.get(0).getDeclarationAs(2, FunctionDeclaration.class);
 

@@ -462,7 +462,7 @@ class JavaLanguageFrontendTest extends BaseTest {
   }
 
   @Test
-  public void testLocation() throws Exception {
+  void testLocation() throws Exception {
     File file = new File("src/test/resources/compiling/FieldAccess.java");
     TranslationUnitDeclaration declaration =
         TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true, true);

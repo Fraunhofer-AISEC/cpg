@@ -53,7 +53,7 @@ import org.junit.jupiter.api.Test;
  *
  * @author julian
  */
-public class JavaCfgTest extends BaseTest {
+class JavaCfgTest extends BaseTest {
 
   /**
    * Tests do-while and while-do loops.
