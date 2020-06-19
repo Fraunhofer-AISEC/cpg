@@ -29,7 +29,6 @@ package de.fraunhofer.aisec.cpg.frontends.cpp;
 import de.fraunhofer.aisec.cpg.TranslationConfiguration;
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
 import de.fraunhofer.aisec.cpg.frontends.TranslationException;
-import de.fraunhofer.aisec.cpg.graph.*;
 import de.fraunhofer.aisec.cpg.graph.Declaration;
 import de.fraunhofer.aisec.cpg.graph.DeclaredReferenceExpression;
 import de.fraunhofer.aisec.cpg.graph.Expression;
@@ -45,7 +44,10 @@ import de.fraunhofer.aisec.cpg.sarif.Region;
 import java.io.File;
 import java.lang.reflect.Field;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.eclipse.cdt.core.dom.ast.*;
@@ -119,6 +121,7 @@ public class CXXLanguageFrontend extends LanguageFrontend {
       new ParameterDeclarationHandler(this);
   private StatementHandler statementHandler = new StatementHandler(this);
   private HashMap<IBinding, Declaration> cachedDeclarations = new HashMap<>();
+  private HashMap<IBinding, List<Expression>> cachedExpressions = new HashMap<>();
   private HashMap<Integer, String> comments = new HashMap<>();
 
   public CXXLanguageFrontend(@NonNull TranslationConfiguration config, ScopeManager scopeManager) {
@@ -300,6 +303,47 @@ public class CXXLanguageFrontend extends LanguageFrontend {
     }
   }
 
+  private void addCachedExpression(IBinding binding, Expression expression) {
+    if (cachedExpressions.containsKey(binding)) {
+      cachedExpressions.get(binding).add(expression);
+    } else {
+      List<Expression> expressions = new ArrayList<>();
+      expressions.add(expression);
+      cachedExpressions.put(binding, expressions);
+    }
+  }
+
+  /**
+   * Updates Expressions Refers-To Edge and cachedDeclaration from an old Declaration to new
+   * Declaration by using cachedExpressions. E.g. VariableDeclaration is replaced by
+   * FieldDeclaration and the refersTo Edge from the Expression must point to the new
+   * FieldExpression
+   *
+   * @param newDeclaration replaces the old target of the refersTo Edge (e.g. FieldDeclaration)
+   * @param oldDeclaration current target of the refersTo Edge and will be replaced (e.g.
+   *     VariableDeclaration)
+   */
+  public void replaceDeclarationInExpression(
+      Declaration newDeclaration, Declaration oldDeclaration) {
+    IBinding binding =
+        cachedDeclarations.entrySet().stream()
+            .filter(d -> d.getValue().equals(oldDeclaration))
+            .map(Map.Entry::getKey)
+            .findFirst()
+            .orElse(null);
+    if (binding != null && cachedExpressions.containsKey(binding)) {
+      List<Expression> expressions = cachedExpressions.get(binding);
+      for (Expression expression : expressions) {
+        ((DeclaredReferenceExpression) expression).setRefersTo((ValueDeclaration) newDeclaration);
+      }
+    }
+
+    if (binding != null) {
+      cachedDeclarations.remove(binding);
+      cachedDeclarations.put(binding, newDeclaration);
+    }
+  }
+
   public void expressionRefersToDeclaration(Expression expression, IASTExpression iastExpression) {
     if (expression instanceof DeclaredReferenceExpression
         && iastExpression instanceof CPPASTIdExpression) {
@@ -310,9 +354,9 @@ public class CXXLanguageFrontend extends LanguageFrontend {
 
       if (declaration != null) {
         LOGGER.debug("Connecting {} to {}", expression, declaration);
-
         ((DeclaredReferenceExpression) expression).setRefersTo((ValueDeclaration) declaration);
       }
+      addCachedExpression(binding, expression);
     } else {
       if (expression == null) {
         LOGGER.warn(
@@ -328,11 +372,28 @@ public class CXXLanguageFrontend extends LanguageFrontend {
 
   @Nullable
   public Declaration cacheDeclaration(IBinding binding, Declaration declaration) {
+    if (cachedExpressions.containsKey(binding)) {
+      List<Expression> expressionList = cachedExpressions.get(binding);
+      for (Expression expression : expressionList) {
+        ((DeclaredReferenceExpression) expression).setRefersTo((ValueDeclaration) declaration);
+      }
+    }
     return cachedDeclarations.put(binding, declaration);
   }
 
   public Declaration getCachedDeclaration(IBinding binding) {
     return cachedDeclarations.get(binding);
+  }
+
+  public List<Expression> getCachedExpression(IBinding binding) {
+    if (cachedExpressions.containsKey(binding)) {
+      return cachedExpressions.get(binding);
+    }
+    return new ArrayList<>();
+  }
+
+  public Map<IBinding, Declaration> getCachedDeclarations() {
+    return cachedDeclarations;
   }
 
   @Override

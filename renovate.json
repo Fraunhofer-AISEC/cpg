@@ -1,0 +1,6 @@
+{
+  "extends": [
+    "config:base"
+  ],
+  "ignoreDeps": ["org.eclipse.platform:org.eclipse.core.runtime", "org.eclipse.cdt:core", "com.ibm.icu:icu4j"]  
+}

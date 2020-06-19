@@ -274,6 +274,10 @@ public class TypeManager {
     }
   }
 
+  public LanguageFrontend getFrontend() {
+    return frontend;
+  }
+
   public boolean isSupertypeOf(Type superType, Type subType) {
     if (superType.getReferenceDepth() != subType.getReferenceDepth()) {
       return false;

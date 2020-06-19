@@ -75,12 +75,8 @@ public class ImportResolver extends Pass {
 
     if (!unknownTypes.isEmpty()) {
       // Get the translation unit holding all unknown declarations, or create a new one if necessary
-      TranslationUnitDeclaration unknownDeclarations =
-          result.getTranslationUnits().stream()
-              .filter(tu -> tu.getName().equals("unknown declarations"))
-              .findFirst()
-              .orElseGet(() -> createUnknownTranslationUnit(result));
-      unknownDeclarations.setDeclarations(new ArrayList<>(unknownTypes.values()));
+      TranslationUnitDeclaration unknownDeclarations = getUnknownDeclarationsTU(result);
+      unknownDeclarations.getDeclarations().addAll(unknownTypes.values());
       importables.putAll(unknownTypes);
     }
   }
@@ -142,8 +138,7 @@ public class ImportResolver extends Pass {
     } else {
       // Create stubs for unknown imports
       if (!unknownTypes.containsKey(name)) {
-        unknownTypes.put(
-            name, NodeBuilder.newRecordDeclaration(name, Collections.emptyList(), "class", ""));
+        unknownTypes.put(name, NodeBuilder.newRecordDeclaration(name, "class", ""));
       }
       return unknownTypes.get(name);
     }

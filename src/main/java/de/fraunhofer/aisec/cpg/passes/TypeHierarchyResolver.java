@@ -28,11 +28,21 @@ package de.fraunhofer.aisec.cpg.passes;
 
 import de.fraunhofer.aisec.cpg.TranslationResult;
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
-import de.fraunhofer.aisec.cpg.graph.*;
-import de.fraunhofer.aisec.cpg.graph.type.Type;
-import de.fraunhofer.aisec.cpg.graph.type.TypeParser;
+import de.fraunhofer.aisec.cpg.graph.EnumDeclaration;
+import de.fraunhofer.aisec.cpg.graph.HasType;
+import de.fraunhofer.aisec.cpg.graph.MethodDeclaration;
+import de.fraunhofer.aisec.cpg.graph.Node;
+import de.fraunhofer.aisec.cpg.graph.NodeBuilder;
+import de.fraunhofer.aisec.cpg.graph.RecordDeclaration;
+import de.fraunhofer.aisec.cpg.graph.TranslationUnitDeclaration;
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -95,12 +105,8 @@ public class TypeHierarchyResolver extends Pass {
 
     if (!unknownTypes.isEmpty()) {
       // Get the translation unit holding all unknown declarations, or create a new one if necessary
-      TranslationUnitDeclaration unknownDeclarations =
-          translationResult.getTranslationUnits().stream()
-              .filter(tu -> tu.getName().equals("unknown declarations"))
-              .findFirst()
-              .orElseGet(() -> createUnknownTranslationUnit(translationResult));
-      unknownDeclarations.setDeclarations(new ArrayList<>(unknownTypes.values()));
+      TranslationUnitDeclaration unknownDeclarations = getUnknownDeclarationsTU(translationResult);
+      unknownDeclarations.getDeclarations().addAll(unknownTypes.values());
       recordMap.putAll(unknownTypes);
     }
 
@@ -136,7 +142,7 @@ public class TypeHierarchyResolver extends Pass {
   }
 
   private Set<RecordDeclaration> findSupertypeRecords(RecordDeclaration record) {
-    Set<RecordDeclaration> localSuperTypeDeclarations =
+    Set<RecordDeclaration> superTypeDeclarations =
         record.getSuperTypes().stream()
             .map(
                 t -> {
@@ -144,29 +150,18 @@ public class TypeHierarchyResolver extends Pass {
                     return recordMap.get(t.getTypeName());
                   } else {
                     if (!unknownTypes.containsKey(t.getTypeName())) {
-                      unknownTypes.put(
-                          t.getTypeName(),
-                          NodeBuilder.newRecordDeclaration(
-                              t.getTypeName(), Collections.emptyList(), "class", ""));
+                      RecordDeclaration dummy =
+                          NodeBuilder.newRecordDeclaration(t.getTypeName(), "class", "");
+                      dummy.setImplicit(true);
+                      unknownTypes.put(t.getTypeName(), dummy);
                     }
                     return unknownTypes.get(t.getTypeName());
                   }
                 })
             .collect(Collectors.toSet());
-    HashSet<RecordDeclaration> allSupertypeRecords = new HashSet<>(localSuperTypeDeclarations);
-    for (RecordDeclaration superType : localSuperTypeDeclarations) {
-      allSupertypeRecords.addAll(findSupertypeRecords(superType));
-    }
 
-    record.setSuperTypeDeclarations(allSupertypeRecords);
-    List<Type> superTypeNames =
-        allSupertypeRecords.stream()
-            .map(RecordDeclaration::getName)
-            .map(t -> TypeParser.createFrom(t, true))
-            .distinct()
-            .collect(Collectors.toList());
-    record.setSuperTypes(superTypeNames);
-    return allSupertypeRecords;
+    record.setSuperTypeDeclarations(superTypeDeclarations);
+    return superTypeDeclarations;
   }
 
   private void analyzeOverridingMethods(
