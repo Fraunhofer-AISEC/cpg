@@ -65,6 +65,10 @@ public class TypeManager {
   private LanguageFrontend frontend;
   private boolean noFrontendWarningIssued = false;
 
+  public static void reset() {
+    INSTANCE = new TypeManager();
+  }
+
   public Map<Type, List<Type>> getTypeState() {
     return typeState;
   }

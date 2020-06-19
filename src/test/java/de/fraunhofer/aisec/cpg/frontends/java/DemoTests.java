@@ -32,13 +32,26 @@ import de.fraunhofer.aisec.cpg.TranslationConfiguration;
 import de.fraunhofer.aisec.cpg.TranslationManager;
 import de.fraunhofer.aisec.cpg.TranslationResult;
 import de.fraunhofer.aisec.cpg.graph.Node;
+import de.fraunhofer.aisec.cpg.graph.TypeManager;
+import de.fraunhofer.aisec.cpg.graph.type.TypeParser;
 import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 public class DemoTests {
+
+  /**
+   * {@link TypeParser} and {@link TypeManager} hold static state. This needs to be cleared before
+   * all tests in order to avoid strange errors
+   */
+  @BeforeEach
+  void resetPersistentState() {
+    TypeParser.reset();
+    TypeManager.reset();
+  }
 
   @Test
   public void testHierarchy() throws Exception {

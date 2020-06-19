@@ -7,14 +7,26 @@ import de.fraunhofer.aisec.cpg.graph.RecordDeclaration;
 import de.fraunhofer.aisec.cpg.graph.TranslationUnitDeclaration;
 import de.fraunhofer.aisec.cpg.graph.TypeManager;
 import de.fraunhofer.aisec.cpg.graph.ValueDeclaration;
+import de.fraunhofer.aisec.cpg.graph.type.TypeParser;
 import de.fraunhofer.aisec.cpg.helpers.Util;
 import java.nio.file.Path;
 import java.util.List;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 public class TypedefTest {
 
   private Path topLevel = Path.of("src", "test", "resources", "typedefs");
+
+  /**
+   * {@link TypeParser} and {@link TypeManager} hold static state. This needs to be cleared before
+   * all tests in order to avoid strange errors
+   */
+  @BeforeEach
+  void resetPersistentState() {
+    TypeParser.reset();
+    TypeManager.reset();
+  }
 
   @Test
   void testSingle() throws Exception {

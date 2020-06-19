@@ -52,6 +52,16 @@ public class CXXLiteralTest {
     config = TranslationConfiguration.builder().defaultPasses().build();
   }
 
+  /**
+   * {@link TypeParser} and {@link TypeManager} hold static state. This needs to be cleared before
+   * all tests in order to avoid strange errors
+   */
+  @BeforeEach
+  void resetPersistentState() {
+    TypeParser.reset();
+    TypeManager.reset();
+  }
+
   @Test
   void testZeroIntegerLiterals() throws TranslationException {
     TranslationUnitDeclaration tu =

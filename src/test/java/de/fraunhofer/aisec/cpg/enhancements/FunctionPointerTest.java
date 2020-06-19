@@ -31,11 +31,8 @@ import static org.junit.jupiter.api.Assertions.*;
 import de.fraunhofer.aisec.cpg.TestUtils;
 import de.fraunhofer.aisec.cpg.TranslationConfiguration;
 import de.fraunhofer.aisec.cpg.TranslationManager;
-import de.fraunhofer.aisec.cpg.graph.CallExpression;
-import de.fraunhofer.aisec.cpg.graph.FunctionDeclaration;
-import de.fraunhofer.aisec.cpg.graph.Node;
-import de.fraunhofer.aisec.cpg.graph.TranslationUnitDeclaration;
-import de.fraunhofer.aisec.cpg.graph.VariableDeclaration;
+import de.fraunhofer.aisec.cpg.graph.*;
+import de.fraunhofer.aisec.cpg.graph.type.TypeParser;
 import de.fraunhofer.aisec.cpg.helpers.Util;
 import java.io.File;
 import java.nio.file.Files;
@@ -49,9 +46,20 @@ import java.util.List;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 public class FunctionPointerTest {
+
+  /**
+   * {@link TypeParser} and {@link TypeManager} hold static state. This needs to be cleared before
+   * all tests in order to avoid strange errors
+   */
+  @BeforeEach
+  void resetPersistentState() {
+    TypeParser.reset();
+    TypeManager.reset();
+  }
 
   private List<TranslationUnitDeclaration> analyze(String language) throws Exception {
     Path topLevel = Path.of("src", "test", "resources", "functionPointers");

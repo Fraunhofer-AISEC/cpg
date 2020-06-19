@@ -35,9 +35,20 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 public class TypeTests {
+
+  /**
+   * {@link TypeParser} and {@link TypeManager} hold static state. This needs to be cleared before
+   * all tests in order to avoid strange errors
+   */
+  @BeforeEach
+  void resetPersistentState() {
+    TypeParser.reset();
+    TypeManager.reset();
+  }
 
   @Test
   void reference() {

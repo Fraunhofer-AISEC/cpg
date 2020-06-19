@@ -58,6 +58,10 @@ public class TypeParser {
   private static final String RESTRICT_QUALIFIER = "restrict";
   private static final String ATOMIC_QUALIFIER = "atomic";
 
+  public static void reset() {
+    TypeParser.languageSupplier = () -> TypeManager.getInstance().getLanguage();
+  }
+
   /**
    * WARNING: This is only intended for Test Purposes of the TypeParser itself without parsing
    * files. Do not use this.
