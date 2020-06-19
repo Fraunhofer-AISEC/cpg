@@ -62,7 +62,7 @@ import org.neo4j.ogm.exception.TransactionException;
  *
  * @author konrad.weiss@aisec.fraunhofer.de
  */
-public class EOGTest extends BaseTest {
+class EOGTest extends BaseTest {
 
   public static String REFNODESTRINGJAVA = "System.out.println();";
   public static String REFNODESTRINGCXX = "printf(\"\\n\");";

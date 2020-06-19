@@ -1039,7 +1039,7 @@ class CXXLanguageFrontendTest extends BaseTest {
   }
 
   @Test
-  public void testLocation() throws TranslationException {
+  void testLocation() throws TranslationException {
     TranslationUnitDeclaration tu =
         new CXXLanguageFrontend(config, new ScopeManager())
             .parse(new File("src/test/resources/components/foreachstmt.cpp"));

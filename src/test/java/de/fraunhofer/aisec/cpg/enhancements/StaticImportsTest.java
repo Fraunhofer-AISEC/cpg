@@ -43,7 +43,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
 
-public class StaticImportsTest extends BaseTest {
+class StaticImportsTest extends BaseTest {
 
   private Path topLevel = Path.of("src", "test", "resources", "staticImports");
 

@@ -14,7 +14,7 @@ import java.nio.file.Path;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
-public class ConstructorsTest extends BaseTest {
+class ConstructorsTest extends BaseTest {
 
   private Path topLevel = Path.of("src", "test", "resources", "constructors");
 

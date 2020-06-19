@@ -42,10 +42,10 @@ import java.nio.file.Paths;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-public class DemoTests extends BaseTest {
+class DemoTests extends BaseTest {
 
   @Test
-  public void testHierarchy() throws Exception {
+  void testHierarchy() throws Exception {
 
     //    assertTrue(Database.getInstance().connect(), "Couldn't connect to the database!");
     //    Database.getInstance().purgeDatabase();
@@ -74,7 +74,7 @@ public class DemoTests extends BaseTest {
   }
 
   @Test
-  public void testPartial() throws Exception {
+  void testPartial() throws Exception {
 
     Path topLevel = Paths.get("src/test/resources/partial");
 

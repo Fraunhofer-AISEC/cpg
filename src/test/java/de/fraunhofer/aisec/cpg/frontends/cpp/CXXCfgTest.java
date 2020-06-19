@@ -55,7 +55,7 @@ import org.junit.jupiter.api.Test;
  *
  * @author julian
  */
-public class CXXCfgTest extends BaseTest {
+class CXXCfgTest extends BaseTest {
 
   @Test
   void testCfg() throws TranslationException, InterruptedException, ExecutionException {

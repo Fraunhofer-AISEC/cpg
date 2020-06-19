@@ -481,7 +481,7 @@ class JavaLanguageFrontendTest extends BaseTest {
   }
 
   @Test
-  public void testLocation() throws TranslationException {
+  void testLocation() throws TranslationException {
     TranslationUnitDeclaration declaration =
         new JavaLanguageFrontend(TranslationConfiguration.builder().build(), new ScopeManager())
             .parse(new File("src/test/resources/compiling/FieldAccess.java"));
