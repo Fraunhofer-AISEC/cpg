@@ -34,7 +34,7 @@ plugins {
 
     id("org.sonarqube") version "3.0"
     id("com.diffplug.gradle.spotless") version "4.3.1"
-    id("com.github.johnrengelman.shadow") version "5.2.0"
+    id("com.github.johnrengelman.shadow") version "6.0.0"
     id("net.researchgate.release") version "2.8.1"
 }
 
