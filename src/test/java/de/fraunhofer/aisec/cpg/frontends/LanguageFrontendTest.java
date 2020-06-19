@@ -28,27 +28,15 @@ package de.fraunhofer.aisec.cpg.frontends;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import de.fraunhofer.aisec.cpg.BaseTest;
 import de.fraunhofer.aisec.cpg.TranslationConfiguration;
 import de.fraunhofer.aisec.cpg.TranslationManager;
 import de.fraunhofer.aisec.cpg.TranslationResult;
-import de.fraunhofer.aisec.cpg.graph.TypeManager;
-import de.fraunhofer.aisec.cpg.graph.type.TypeParser;
 import java.io.File;
 import java.util.concurrent.ExecutionException;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-class LanguageFrontendTest {
-
-  /**
-   * {@link TypeParser} and {@link TypeManager} hold static state. This needs to be cleared before
-   * all tests in order to avoid strange errors
-   */
-  @BeforeEach
-  void resetPersistentState() {
-    TypeParser.reset();
-    TypeManager.reset();
-  }
+class LanguageFrontendTest extends BaseTest {
 
   @Test
   void testParseDirectory() throws ExecutionException, InterruptedException {

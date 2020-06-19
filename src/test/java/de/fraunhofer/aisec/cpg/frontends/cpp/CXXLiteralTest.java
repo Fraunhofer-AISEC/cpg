@@ -29,6 +29,7 @@ package de.fraunhofer.aisec.cpg.frontends.cpp;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
+import de.fraunhofer.aisec.cpg.BaseTest;
 import de.fraunhofer.aisec.cpg.TranslationConfiguration;
 import de.fraunhofer.aisec.cpg.frontends.TranslationException;
 import de.fraunhofer.aisec.cpg.graph.*;
@@ -43,23 +44,13 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
-public class CXXLiteralTest {
+public class CXXLiteralTest extends BaseTest {
 
   private TranslationConfiguration config;
 
   @BeforeEach
   void setUp() {
     config = TranslationConfiguration.builder().defaultPasses().build();
-  }
-
-  /**
-   * {@link TypeParser} and {@link TypeManager} hold static state. This needs to be cleared before
-   * all tests in order to avoid strange errors
-   */
-  @BeforeEach
-  void resetPersistentState() {
-    TypeParser.reset();
-    TypeManager.reset();
   }
 
   @Test

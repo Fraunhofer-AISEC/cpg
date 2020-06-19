@@ -36,11 +36,11 @@ import static de.fraunhofer.aisec.cpg.sarif.PhysicalLocation.locationLink;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import de.fraunhofer.aisec.cpg.BaseTest;
 import de.fraunhofer.aisec.cpg.TranslationConfiguration;
 import de.fraunhofer.aisec.cpg.TranslationManager;
 import de.fraunhofer.aisec.cpg.frontends.TranslationException;
 import de.fraunhofer.aisec.cpg.graph.*;
-import de.fraunhofer.aisec.cpg.graph.type.TypeParser;
 import de.fraunhofer.aisec.cpg.helpers.NodeComparator;
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker;
 import de.fraunhofer.aisec.cpg.helpers.Util;
@@ -54,7 +54,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.neo4j.ogm.exception.TransactionException;
 
@@ -63,20 +62,10 @@ import org.neo4j.ogm.exception.TransactionException;
  *
  * @author konrad.weiss@aisec.fraunhofer.de
  */
-public class EOGTest {
+public class EOGTest extends BaseTest {
 
   public static String REFNODESTRINGJAVA = "System.out.println();";
   public static String REFNODESTRINGCXX = "printf(\"\\n\");";
-
-  /**
-   * {@link TypeParser} and {@link TypeManager} hold static state. This needs to be cleared before
-   * all tests in order to avoid strange errors
-   */
-  @BeforeEach
-  void resetPersistentState() {
-    TypeParser.reset();
-    TypeManager.reset();
-  }
 
   @Test
   void testJavaIf() throws TranslationException {

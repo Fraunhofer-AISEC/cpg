@@ -29,28 +29,17 @@ package de.fraunhofer.aisec.cpg.frontends.cpp;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
+import de.fraunhofer.aisec.cpg.BaseTest;
 import de.fraunhofer.aisec.cpg.TranslationConfiguration;
 import de.fraunhofer.aisec.cpg.frontends.TranslationException;
 import de.fraunhofer.aisec.cpg.graph.*;
-import de.fraunhofer.aisec.cpg.graph.type.TypeParser;
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager;
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation;
 import de.fraunhofer.aisec.cpg.sarif.Region;
 import java.io.File;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-class CXXIncludeTest {
-
-  /**
-   * {@link TypeParser} and {@link TypeManager} hold static state. This needs to be cleared before
-   * all tests in order to avoid strange errors
-   */
-  @BeforeEach
-  void resetPersistentState() {
-    TypeParser.reset();
-    TypeManager.reset();
-  }
+class CXXIncludeTest extends BaseTest {
 
   @Test
   void testDefinitionsAndDeclaration() throws TranslationException {

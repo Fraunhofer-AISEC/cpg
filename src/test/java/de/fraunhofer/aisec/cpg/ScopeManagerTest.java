@@ -29,29 +29,17 @@ package de.fraunhofer.aisec.cpg;
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
 import de.fraunhofer.aisec.cpg.frontends.TranslationException;
 import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguageFrontend;
-import de.fraunhofer.aisec.cpg.graph.TypeManager;
-import de.fraunhofer.aisec.cpg.graph.type.TypeParser;
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-public class ScopeManagerTest {
+public class ScopeManagerTest extends BaseTest {
 
   private TranslationConfiguration config;
 
   @BeforeEach
   void setUp() {
     config = TranslationConfiguration.builder().defaultPasses().build();
-  }
-
-  /**
-   * {@link TypeParser} and {@link TypeManager} hold static state. This needs to be cleared before
-   * all tests in order to avoid strange errors
-   */
-  @BeforeEach
-  void resetPersistentState() {
-    TypeParser.reset();
-    TypeManager.reset();
   }
 
   @Test

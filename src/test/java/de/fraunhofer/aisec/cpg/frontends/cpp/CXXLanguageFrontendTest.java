@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.frontends.cpp;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import de.fraunhofer.aisec.cpg.BaseTest;
 import de.fraunhofer.aisec.cpg.TranslationConfiguration;
 import de.fraunhofer.aisec.cpg.frontends.TranslationException;
 import de.fraunhofer.aisec.cpg.graph.*;
@@ -48,7 +49,7 @@ import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-class CXXLanguageFrontendTest {
+class CXXLanguageFrontendTest extends BaseTest {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(CXXLanguageFrontendTest.class);
 
@@ -57,16 +58,6 @@ class CXXLanguageFrontendTest {
   @BeforeEach
   void setUp() {
     config = TranslationConfiguration.builder().defaultPasses().build();
-  }
-
-  /**
-   * {@link TypeParser} and {@link TypeManager} hold static state. This needs to be cleared before
-   * all tests in order to avoid strange errors
-   */
-  @BeforeEach
-  void resetPersistentState() {
-    TypeParser.reset();
-    TypeManager.reset();
   }
 
   @Test
