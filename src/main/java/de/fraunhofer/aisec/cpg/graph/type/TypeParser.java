@@ -29,6 +29,7 @@ package de.fraunhofer.aisec.cpg.graph.type;
 import de.fraunhofer.aisec.cpg.graph.TypeManager;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Supplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -49,7 +50,8 @@ public class TypeParser {
       Pattern.compile(
           "(?:(?<functionptr>(\\h|\\()+[a-zA-Z0-9_$.<>:]*\\*\\h*[a-zA-Z0-9_$.<>:]*(\\h|\\))+)\\h*)(?<args>\\(+[a-zA-Z0-9_$.<>,\\*\\&\\h]*\\))");
 
-  private static TypeManager.Language language = TypeManager.getInstance().getLanguage();
+  private static Supplier<TypeManager.Language> languageSupplier =
+      () -> TypeManager.getInstance().getLanguage();
   private static final String VOLATILE_QUALIFIER = "volatile";
   private static final String FINAL_QUALIFIER = "final";
   private static final String CONST_QUALIFIER = "const";
@@ -60,17 +62,14 @@ public class TypeParser {
    * WARNING: This is only intended for Test Purposes of the TypeParser itself without parsing
    * files. Do not use this.
    *
-   * @param language frontend language Java or CPP
+   * @param languageSupplier frontend language Java or CPP
    */
-  public static void setLanguage(TypeManager.Language language) {
-    TypeParser.language = language;
+  public static void setLanguageSupplier(Supplier<TypeManager.Language> languageSupplier) {
+    TypeParser.languageSupplier = languageSupplier;
   }
 
   public static TypeManager.Language getLanguage() {
-    if (TypeManager.getInstance().getFrontend() == null) {
-      return language;
-    }
-    return TypeManager.getInstance().getLanguage();
+    return TypeParser.languageSupplier.get();
   }
 
   /**
