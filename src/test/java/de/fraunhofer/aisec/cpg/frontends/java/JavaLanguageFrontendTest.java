@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.frontends.java;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import de.fraunhofer.aisec.cpg.BaseTest;
 import de.fraunhofer.aisec.cpg.TestUtils;
 import de.fraunhofer.aisec.cpg.graph.*;
 import de.fraunhofer.aisec.cpg.graph.type.TypeParser;
@@ -45,7 +46,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
 
-class JavaLanguageFrontendTest {
+class JavaLanguageFrontendTest extends BaseTest {
 
   @Test
   void testLargeNegativeNumber() throws Exception {

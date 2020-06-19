@@ -29,6 +29,7 @@ package de.fraunhofer.aisec.cpg.enhancements;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import de.fraunhofer.aisec.cpg.BaseTest;
 import de.fraunhofer.aisec.cpg.TestUtils;
 import de.fraunhofer.aisec.cpg.graph.*;
 import de.fraunhofer.aisec.cpg.helpers.Util;
@@ -38,7 +39,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
 
-public class VariableResolverTest {
+public class VariableResolverTest extends BaseTest {
 
   private final Path topLevel = Path.of("src", "test", "resources", "variables");
 

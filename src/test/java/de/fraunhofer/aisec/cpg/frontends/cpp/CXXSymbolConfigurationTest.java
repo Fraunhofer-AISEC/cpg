@@ -29,6 +29,7 @@ package de.fraunhofer.aisec.cpg.frontends.cpp;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
+import de.fraunhofer.aisec.cpg.BaseTest;
 import de.fraunhofer.aisec.cpg.TranslationConfiguration;
 import de.fraunhofer.aisec.cpg.frontends.TranslationException;
 import de.fraunhofer.aisec.cpg.graph.*;
@@ -37,7 +38,7 @@ import java.io.File;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 
-public class CXXSymbolConfigurationTest {
+public class CXXSymbolConfigurationTest extends BaseTest {
   @Test
   void testWithoutSymbols() throws TranslationException {
     // parse without symbols

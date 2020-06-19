@@ -33,7 +33,7 @@ import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-public class ScopeManagerTest {
+public class ScopeManagerTest extends BaseTest {
 
   private TranslationConfiguration config;
 

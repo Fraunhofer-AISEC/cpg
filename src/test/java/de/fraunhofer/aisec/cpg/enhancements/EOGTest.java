@@ -35,6 +35,7 @@ import static de.fraunhofer.aisec.cpg.helpers.Util.Quantifier.ANY;
 import static de.fraunhofer.aisec.cpg.sarif.PhysicalLocation.locationLink;
 import static org.junit.jupiter.api.Assertions.*;
 
+import de.fraunhofer.aisec.cpg.BaseTest;
 import de.fraunhofer.aisec.cpg.TestUtils;
 import de.fraunhofer.aisec.cpg.frontends.TranslationException;
 import de.fraunhofer.aisec.cpg.graph.*;
@@ -56,7 +57,7 @@ import org.neo4j.ogm.exception.TransactionException;
  *
  * @author konrad.weiss@aisec.fraunhofer.de
  */
-public class EOGTest {
+public class EOGTest extends BaseTest {
 
   public static String REFNODESTRINGJAVA = "System.out.println();";
   public static String REFNODESTRINGCXX = "printf(\"\\n\");";

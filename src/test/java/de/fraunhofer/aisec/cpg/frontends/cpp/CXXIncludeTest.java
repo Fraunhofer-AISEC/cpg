@@ -29,6 +29,7 @@ package de.fraunhofer.aisec.cpg.frontends.cpp;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
+import de.fraunhofer.aisec.cpg.BaseTest;
 import de.fraunhofer.aisec.cpg.TestUtils;
 import de.fraunhofer.aisec.cpg.graph.*;
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation;
@@ -37,7 +38,7 @@ import java.io.File;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
-class CXXIncludeTest {
+class CXXIncludeTest extends BaseTest {
 
   @Test
   void testDefinitionsAndDeclaration() throws Exception {

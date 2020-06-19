@@ -2,6 +2,7 @@ package de.fraunhofer.aisec.cpg.frontends.cpp;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import de.fraunhofer.aisec.cpg.BaseTest;
 import de.fraunhofer.aisec.cpg.TranslationConfiguration;
 import de.fraunhofer.aisec.cpg.graph.Declaration;
 import de.fraunhofer.aisec.cpg.graph.DeclaredReferenceExpression;
@@ -11,7 +12,7 @@ import java.io.File;
 import org.eclipse.cdt.core.dom.ast.IBinding;
 import org.junit.jupiter.api.Test;
 
-class CXXBindingsTest {
+class CXXBindingsTest extends BaseTest {
 
   void checkBindings(CXXLanguageFrontend cxxLanguageFrontend) {
     for (IBinding binding : cxxLanguageFrontend.getCachedDeclarations().keySet()) {

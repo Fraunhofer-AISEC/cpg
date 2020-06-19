@@ -29,6 +29,7 @@ package de.fraunhofer.aisec.cpg.enhancements;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 
+import de.fraunhofer.aisec.cpg.BaseTest;
 import de.fraunhofer.aisec.cpg.TestUtils;
 import de.fraunhofer.aisec.cpg.graph.NamespaceDeclaration;
 import de.fraunhofer.aisec.cpg.graph.Node;
@@ -40,7 +41,7 @@ import java.util.List;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
 
-class SubgraphWalkerTest {
+class SubgraphWalkerTest extends BaseTest {
 
   @Test
   void testASTChildrenGetter() throws Exception {
