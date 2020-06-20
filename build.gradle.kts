@@ -36,6 +36,7 @@ plugins {
     id("com.diffplug.gradle.spotless") version "4.3.1"
     id("com.github.johnrengelman.shadow") version "6.0.0"
     id("net.researchgate.release") version "2.8.1"
+    id("org.ajoberstar.git-publish") version "3.0.0-rc.1"
 }
 
 tasks.jacocoTestReport {
@@ -192,4 +193,36 @@ spotless {
         )
         googleJavaFormat()
     }
+}
+
+val umldoclet by configurations.creating
+
+dependencies {
+    umldoclet("nl.talsmasoftware:umldoclet:2.0.9")
+}
+
+tasks.register("configureJavadoc") {
+    doLast {
+        tasks.javadoc {
+            source = sourceSets.main.get().allJava
+            options.doclet = "nl.talsmasoftware.umldoclet.UMLDoclet"
+            options.docletpath = umldoclet.files.toList()
+        }
+    }
+}
+
+tasks.javadoc {
+    dependsOn("configureJavadoc")
+}
+
+configure<org.ajoberstar.gradle.git.publish.GitPublishExtension> {
+    branch.set("gh-pages")
+    commitMessage.set("Publish JavaDoc")
+    contents {
+        from("src/pages")
+        from(tasks.javadoc) {
+            into("api")
+        }
+    }
+    repoUri.set("git@github.com:Fraunhofer-AISEC/cpg.git")
 }
