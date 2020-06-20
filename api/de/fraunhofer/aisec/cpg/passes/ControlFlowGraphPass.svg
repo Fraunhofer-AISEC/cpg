@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" contentScriptType="application/ecmascript" contentStyleType="text/css" height="256px" preserveAspectRatio="none" style="width:250px;height:256px;" version="1.1" viewBox="0 0 250 256" width="250px" zoomAndPan="magnify"><defs><filter height="300%" id="f1jo0iwp6jpjlj" width="300%" x="-1" y="-1"><feGaussianBlur result="blurOut" stdDeviation="2.0"/><feColorMatrix in="blurOut" result="blurOut2" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .4 0"/><feOffset dx="4.0" dy="4.0" in="blurOut2" result="blurOut3"/><feBlend in="SourceGraphic" in2="blurOut3" mode="normal"/></filter></defs><g><!--MD5=[a870330a96f1202e2f542ab20f0d6607]
+class de.fraunhofer.aisec.cpg.passes.ControlFlowGraphPass--><a href="ControlFlowGraphPass.html" target="_top" title="ControlFlowGraphPass.html" xlink:actuate="onRequest" xlink:href="ControlFlowGraphPass.html" xlink:show="new" xlink:title="ControlFlowGraphPass.html" xlink:type="simple"><rect fill="#FEFECE" filter="url(#f1jo0iwp6jpjlj)" height="97.1563" id="de.fraunhofer.aisec.cpg.passes.ControlFlowGraphPass" style="stroke: #A80036; stroke-width: 1.5;" width="233" x="6" y="127"/><ellipse cx="41.25" cy="145.9688" fill="#ADD1B2" rx="11" ry="11" style="stroke: #A80036; stroke-width: 1.0;"/><path d="M44.2188,151.6094 Q43.6406,151.9063 43,152.0469 Q42.3594,152.2031 41.6563,152.2031 Q39.1563,152.2031 37.8281,150.5625 Q36.5156,148.9063 36.5156,145.7813 Q36.5156,142.6563 37.8281,141 Q39.1563,139.3438 41.6563,139.3438 Q42.3594,139.3438 43,139.5 Q43.6563,139.6563 44.2188,139.9531 L44.2188,142.6719 Q43.5938,142.0938 43,141.8281 Q42.4063,141.5469 41.7813,141.5469 Q40.4375,141.5469 39.75,142.625 Q39.0625,143.6875 39.0625,145.7813 Q39.0625,147.875 39.75,148.9531 Q40.4375,150.0156 41.7813,150.0156 Q42.4063,150.0156 43,149.75 Q43.5938,149.4688 44.2188,148.8906 L44.2188,151.6094 Z "/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacingAndGlyphs" textLength="156" x="59.75" y="144.9951">ControlFlowGraphPass</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="150" x="62.75" y="157.5791">de.fraunhofer.aisec.cpg.passes</text><line style="stroke: #A80036; stroke-width: 1.5;" x1="7" x2="238" y1="164.9375" y2="164.9375"/><ellipse cx="17" cy="175.9375" fill="#84BE84" rx="3" ry="3" style="stroke: #038048; stroke-width: 1.0;"/><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacingAndGlyphs" textLength="83" x="26" y="179.1479">cleanup(): void</text><ellipse cx="17" cy="188.7422" fill="#84BE84" rx="3" ry="3" style="stroke: #038048; stroke-width: 1.0;"/><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacingAndGlyphs" textLength="175" x="26" y="191.9526">accept(TranslationResult): void</text><ellipse cx="17" cy="201.5469" fill="#84BE84" rx="3" ry="3" style="stroke: #038048; stroke-width: 1.0;"/><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacingAndGlyphs" textLength="207" x="26" y="204.7573">addTodo(int, List&lt;Statement&gt;): void</text><ellipse cx="17" cy="214.3516" fill="#84BE84" rx="3" ry="3" style="stroke: #038048; stroke-width: 1.0;"/><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacingAndGlyphs" textLength="181" x="26" y="217.562">addTodo(int, Statement...): void</text></a><!--MD5=[c235e2277994a546abaab258d0865298]
+class de.fraunhofer.aisec.cpg.passes.Pass--><a href="Pass.html" target="_top" title="Pass.html" xlink:actuate="onRequest" xlink:href="Pass.html" xlink:show="new" xlink:title="Pass.html" xlink:type="simple"><rect fill="#FEFECE" filter="url(#f1jo0iwp6jpjlj)" height="58.7422" id="de.fraunhofer.aisec.cpg.passes.Pass" style="stroke: #A80036; stroke-width: 1.5;" width="185" x="30" y="8"/><ellipse cx="45" cy="26.9688" fill="#A9DCDF" rx="11" ry="11" style="stroke: #A80036; stroke-width: 1.0;"/><path d="M45.1094,22.3125 L43.9531,27.3906 L46.2813,27.3906 L45.1094,22.3125 Z M43.625,20.0781 L46.6094,20.0781 L49.9688,32.4688 L47.5156,32.4688 L46.75,29.4063 L43.4688,29.4063 L42.7188,32.4688 L40.2813,32.4688 L43.625,20.0781 Z "/><text fill="#000000" font-family="sans-serif" font-size="14" font-style="italic" lengthAdjust="spacingAndGlyphs" textLength="30" x="120.5" y="25.9951">Pass</text><text fill="#000000" font-family="sans-serif" font-size="10" font-style="italic" lengthAdjust="spacingAndGlyphs" textLength="153" x="59" y="38.5791">de.fraunhofer.aisec.cpg.passes</text><line style="stroke: #A80036; stroke-width: 1.5;" x1="31" x2="214" y1="45.9375" y2="45.9375"/><ellipse cx="41" cy="56.9375" fill="#84BE84" rx="3" ry="3" style="stroke: #038048; stroke-width: 1.0;"/><text fill="#000000" font-family="sans-serif" font-size="11" font-style="italic" lengthAdjust="spacingAndGlyphs" textLength="84" x="50" y="60.1479">cleanup(): void</text></a><!--MD5=[c4b7f30df2f93d67c217c3e2e14c9873]
+reverse link de.fraunhofer.aisec.cpg.passes.Pass to de.fraunhofer.aisec.cpg.passes.ControlFlowGraphPass--><path d="M122.5,87.31 C122.5,100.15 122.5,113.97 122.5,126.75 " fill="none" id="de.fraunhofer.aisec.cpg.passes.Pass&lt;-de.fraunhofer.aisec.cpg.passes.ControlFlowGraphPass" style="stroke: #A80036; stroke-width: 1.0;"/><polygon fill="none" points="115.5,87.01,122.5,67.01,129.5,87.01,115.5,87.01" style="stroke: #A80036; stroke-width: 1.0;"/><text fill="#888888" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="186" x="35.5" y="243.2822">UMLDoclet 2.0.9, PlantUML 1.2020.08</text><!--MD5=[3823ef8b1686b544db110f73bc74bd26]
+@startuml
+    set namespaceSeparator none
+    hide empty fields
+    hide empty methods
+
+    class "<size:14>ControlFlowGraphPass\n<size:10>de.fraunhofer.aisec.cpg.passes" as de.fraunhofer.aisec.cpg.passes.ControlFlowGraphPass [[ControlFlowGraphPass.html]] {
+        +cleanup(): void
+        +accept(TranslationResult): void
+        +addTodo(int, List<Statement>): void
+        +addTodo(int, Statement...): void
+    }
+
+    abstract class "<size:14>Pass\n<size:10>de.fraunhofer.aisec.cpg.passes" as de.fraunhofer.aisec.cpg.passes.Pass [[Pass.html]] {
+        {abstract} +cleanup(): void
+    }
+
+    de.fraunhofer.aisec.cpg.passes.Pass <|- - de.fraunhofer.aisec.cpg.passes.ControlFlowGraphPass
+
+    center footer UMLDoclet 2.0.9, PlantUML 1.2020.08
+@enduml
+
+PlantUML version 1.2020.08(Sun Apr 26 16:08:22 CEST 2020)
+(APACHE source distribution)
+Java Runtime: OpenJDK Runtime Environment
+JVM: OpenJDK 64-Bit Server VM
+Java Version: 12.0.2+9-Ubuntu-118.04
+Operating System: Linux
+Default Encoding: UTF-8
+Language: en
+Country: US
+--></g></svg>

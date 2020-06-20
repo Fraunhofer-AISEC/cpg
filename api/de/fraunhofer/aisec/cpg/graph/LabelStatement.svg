@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" contentScriptType="application/ecmascript" contentStyleType="text/css" height="235px" preserveAspectRatio="none" style="width:240px;height:235px;" version="1.1" viewBox="0 0 240 235" width="240px" zoomAndPan="magnify"><defs><filter height="300%" id="f1amxre41q5opz" width="300%" x="-1" y="-1"><feGaussianBlur result="blurOut" stdDeviation="2.0"/><feColorMatrix in="blurOut" result="blurOut2" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .4 0"/><feOffset dx="4.0" dy="4.0" in="blurOut2" result="blurOut3"/><feBlend in="SourceGraphic" in2="blurOut3" mode="normal"/></filter></defs><g><!--MD5=[f541ff7f82ec4bbacfe1ad0e83fdb855]
+class de.fraunhofer.aisec.cpg.graph.LabelStatement--><a href="LabelStatement.html" target="_top" title="LabelStatement.html" xlink:actuate="onRequest" xlink:href="LabelStatement.html" xlink:show="new" xlink:title="LabelStatement.html" xlink:type="simple"><rect fill="#FEFECE" filter="url(#f1amxre41q5opz)" height="97.1563" id="de.fraunhofer.aisec.cpg.graph.LabelStatement" style="stroke: #A80036; stroke-width: 1.5;" width="223" x="6" y="106"/><ellipse cx="41.7" cy="124.9688" fill="#ADD1B2" rx="11" ry="11" style="stroke: #A80036; stroke-width: 1.0;"/><path d="M44.6688,130.6094 Q44.0906,130.9063 43.45,131.0469 Q42.8094,131.2031 42.1063,131.2031 Q39.6063,131.2031 38.2781,129.5625 Q36.9656,127.9063 36.9656,124.7813 Q36.9656,121.6563 38.2781,120 Q39.6063,118.3438 42.1063,118.3438 Q42.8094,118.3438 43.45,118.5 Q44.1063,118.6563 44.6688,118.9531 L44.6688,121.6719 Q44.0438,121.0938 43.45,120.8281 Q42.8563,120.5469 42.2313,120.5469 Q40.8875,120.5469 40.2,121.625 Q39.5125,122.6875 39.5125,124.7813 Q39.5125,126.875 40.2,127.9531 Q40.8875,129.0156 42.2313,129.0156 Q42.8563,129.0156 43.45,128.75 Q44.0438,128.4688 44.6688,127.8906 L44.6688,130.6094 Z "/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacingAndGlyphs" textLength="108" x="78.8" y="123.9951">LabelStatement</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="145" x="60.3" y="136.5791">de.fraunhofer.aisec.cpg.graph</text><line style="stroke: #A80036; stroke-width: 1.5;" x1="7" x2="228" y1="143.9375" y2="143.9375"/><ellipse cx="17" cy="154.9375" fill="#84BE84" rx="3" ry="3" style="stroke: #038048; stroke-width: 1.0;"/><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacingAndGlyphs" textLength="174" x="26" y="158.1479">getSubStatement(): Statement</text><ellipse cx="17" cy="167.7422" fill="#84BE84" rx="3" ry="3" style="stroke: #038048; stroke-width: 1.0;"/><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacingAndGlyphs" textLength="197" x="26" y="170.9526">setSubStatement(Statement): void</text><ellipse cx="17" cy="180.5469" fill="#84BE84" rx="3" ry="3" style="stroke: #038048; stroke-width: 1.0;"/><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacingAndGlyphs" textLength="98" x="26" y="183.7573">getLabel(): String</text><ellipse cx="17" cy="193.3516" fill="#84BE84" rx="3" ry="3" style="stroke: #038048; stroke-width: 1.0;"/><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacingAndGlyphs" textLength="121" x="26" y="196.562">setLabel(String): void</text></a><!--MD5=[9566dda5ff1f2bf4890c28c79b7fba98]
+class de.fraunhofer.aisec.cpg.graph.Statement--><a href="Statement.html" target="_top" title="Statement.html" xlink:actuate="onRequest" xlink:href="Statement.html" xlink:show="new" xlink:title="Statement.html" xlink:type="simple"><rect fill="#FEFECE" filter="url(#f1amxre41q5opz)" height="37.9375" id="de.fraunhofer.aisec.cpg.graph.Statement" style="stroke: #A80036; stroke-width: 1.5;" width="177" x="29" y="8"/><ellipse cx="44" cy="26.9688" fill="#ADD1B2" rx="11" ry="11" style="stroke: #A80036; stroke-width: 1.0;"/><path d="M46.9688,32.6094 Q46.3906,32.9063 45.75,33.0469 Q45.1094,33.2031 44.4063,33.2031 Q41.9063,33.2031 40.5781,31.5625 Q39.2656,29.9063 39.2656,26.7813 Q39.2656,23.6563 40.5781,22 Q41.9063,20.3438 44.4063,20.3438 Q45.1094,20.3438 45.75,20.5 Q46.4063,20.6563 46.9688,20.9531 L46.9688,23.6719 Q46.3438,23.0938 45.75,22.8281 Q45.1563,22.5469 44.5313,22.5469 Q43.1875,22.5469 42.5,23.625 Q41.8125,24.6875 41.8125,26.7813 Q41.8125,28.875 42.5,29.9531 Q43.1875,31.0156 44.5313,31.0156 Q45.1563,31.0156 45.75,30.75 Q46.3438,30.4688 46.9688,29.8906 L46.9688,32.6094 Z "/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacingAndGlyphs" textLength="72" x="94.5" y="25.9951">Statement</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="145" x="58" y="38.5791">de.fraunhofer.aisec.cpg.graph</text></a><!--MD5=[0933882410a2127c4a0580bd90a30e35]
+reverse link de.fraunhofer.aisec.cpg.graph.Statement to de.fraunhofer.aisec.cpg.graph.LabelStatement--><path d="M117.5,66.52 C117.5,78.97 117.5,92.93 117.5,105.96 " fill="none" id="de.fraunhofer.aisec.cpg.graph.Statement&lt;-de.fraunhofer.aisec.cpg.graph.LabelStatement" style="stroke: #A80036; stroke-width: 1.0;"/><polygon fill="none" points="110.5,66.25,117.5,46.25,124.5,66.25,110.5,66.25" style="stroke: #A80036; stroke-width: 1.0;"/><text fill="#888888" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="186" x="30.5" y="222.2822">UMLDoclet 2.0.9, PlantUML 1.2020.08</text><!--MD5=[b7633da8071e85acf3eb834dbfceef93]
+@startuml
+    set namespaceSeparator none
+    hide empty fields
+    hide empty methods
+
+    class "<size:14>LabelStatement\n<size:10>de.fraunhofer.aisec.cpg.graph" as de.fraunhofer.aisec.cpg.graph.LabelStatement [[LabelStatement.html]] {
+        +getSubStatement(): Statement
+        +setSubStatement(Statement): void
+        +getLabel(): String
+        +setLabel(String): void
+    }
+
+    class "<size:14>Statement\n<size:10>de.fraunhofer.aisec.cpg.graph" as de.fraunhofer.aisec.cpg.graph.Statement [[Statement.html]]
+
+    de.fraunhofer.aisec.cpg.graph.Statement <|- - de.fraunhofer.aisec.cpg.graph.LabelStatement
+
+    center footer UMLDoclet 2.0.9, PlantUML 1.2020.08
+@enduml
+
+PlantUML version 1.2020.08(Sun Apr 26 16:08:22 CEST 2020)
+(APACHE source distribution)
+Java Runtime: OpenJDK Runtime Environment
+JVM: OpenJDK 64-Bit Server VM
+Java Version: 12.0.2+9-Ubuntu-118.04
+Operating System: Linux
+Default Encoding: UTF-8
+Language: en
+Country: US
+--></g></svg>

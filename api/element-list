@@ -1,0 +1,10 @@
+de.fraunhofer.aisec.cpg
+de.fraunhofer.aisec.cpg.frontends
+de.fraunhofer.aisec.cpg.frontends.cpp
+de.fraunhofer.aisec.cpg.frontends.java
+de.fraunhofer.aisec.cpg.graph
+de.fraunhofer.aisec.cpg.graph.type
+de.fraunhofer.aisec.cpg.helpers
+de.fraunhofer.aisec.cpg.passes
+de.fraunhofer.aisec.cpg.passes.scopes
+de.fraunhofer.aisec.cpg.sarif

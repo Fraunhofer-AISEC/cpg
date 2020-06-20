@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" contentScriptType="application/ecmascript" contentStyleType="text/css" height="294px" preserveAspectRatio="none" style="width:222px;height:294px;" version="1.1" viewBox="0 0 222 294" width="222px" zoomAndPan="magnify"><defs><filter height="300%" id="f1hua6pfzt8508" width="300%" x="-1" y="-1"><feGaussianBlur result="blurOut" stdDeviation="2.0"/><feColorMatrix in="blurOut" result="blurOut2" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .4 0"/><feOffset dx="4.0" dy="4.0" in="blurOut2" result="blurOut3"/><feBlend in="SourceGraphic" in2="blurOut3" mode="normal"/></filter></defs><g><!--MD5=[ccfc3a041a36986817d9c220c3d297c3]
+class de.fraunhofer.aisec.cpg.graph.type.IncompleteType--><a href="IncompleteType.html" target="_top" title="IncompleteType.html" xlink:actuate="onRequest" xlink:href="IncompleteType.html" xlink:show="new" xlink:title="IncompleteType.html" xlink:type="simple"><rect fill="#FEFECE" filter="url(#f1hua6pfzt8508)" height="109.9609" id="de.fraunhofer.aisec.cpg.graph.type.IncompleteType" style="stroke: #A80036; stroke-width: 1.5;" width="202" x="7.5" y="152"/><ellipse cx="22.5" cy="170.9688" fill="#ADD1B2" rx="11" ry="11" style="stroke: #A80036; stroke-width: 1.0;"/><path d="M25.4688,176.6094 Q24.8906,176.9063 24.25,177.0469 Q23.6094,177.2031 22.9063,177.2031 Q20.4063,177.2031 19.0781,175.5625 Q17.7656,173.9063 17.7656,170.7813 Q17.7656,167.6563 19.0781,166 Q20.4063,164.3438 22.9063,164.3438 Q23.6094,164.3438 24.25,164.5 Q24.9063,164.6563 25.4688,164.9531 L25.4688,167.6719 Q24.8438,167.0938 24.25,166.8281 Q23.6563,166.5469 23.0313,166.5469 Q21.6875,166.5469 21,167.625 Q20.3125,168.6875 20.3125,170.7813 Q20.3125,172.875 21,173.9531 Q21.6875,175.0156 23.0313,175.0156 Q23.6563,175.0156 24.25,174.75 Q24.8438,174.4688 25.4688,173.8906 L25.4688,176.6094 Z "/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacingAndGlyphs" textLength="111" x="66" y="169.9951">IncompleteType</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="170" x="36.5" y="182.5791">de.fraunhofer.aisec.cpg.graph.type</text><line style="stroke: #A80036; stroke-width: 1.5;" x1="8.5" x2="208.5" y1="189.9375" y2="189.9375"/><ellipse cx="18.5" cy="200.9375" fill="#84BE84" rx="3" ry="3" style="stroke: #038048; stroke-width: 1.0;"/><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacingAndGlyphs" textLength="97" x="27.5" y="204.1479">IncompleteType()</text><ellipse cx="18.5" cy="213.7422" fill="#84BE84" rx="3" ry="3" style="stroke: #038048; stroke-width: 1.0;"/><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacingAndGlyphs" textLength="124" x="27.5" y="216.9526">IncompleteType(Type)</text><ellipse cx="18.5" cy="226.5469" fill="#84BE84" rx="3" ry="3" style="stroke: #038048; stroke-width: 1.0;"/><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacingAndGlyphs" textLength="172" x="27.5" y="229.7573">reference(PointerOrigin): Type</text><ellipse cx="18.5" cy="239.3516" fill="#84BE84" rx="3" ry="3" style="stroke: #038048; stroke-width: 1.0;"/><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacingAndGlyphs" textLength="112" x="27.5" y="242.562">dereference(): Type</text><ellipse cx="18.5" cy="252.1563" fill="#84BE84" rx="3" ry="3" style="stroke: #038048; stroke-width: 1.0;"/><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacingAndGlyphs" textLength="94" x="27.5" y="255.3667">duplicate(): Type</text></a><!--MD5=[3866cdf684664279cf1e955b13aec5cd]
+class de.fraunhofer.aisec.cpg.graph.type.Type--><a href="Type.html" target="_top" title="Type.html" xlink:actuate="onRequest" xlink:href="Type.html" xlink:show="new" xlink:title="Type.html" xlink:type="simple"><rect fill="#FEFECE" filter="url(#f1hua6pfzt8508)" height="84.3516" id="de.fraunhofer.aisec.cpg.graph.type.Type" style="stroke: #A80036; stroke-width: 1.5;" width="205" x="6" y="8"/><ellipse cx="21" cy="26.9688" fill="#A9DCDF" rx="11" ry="11" style="stroke: #A80036; stroke-width: 1.0;"/><path d="M21.1094,22.3125 L19.9531,27.3906 L22.2813,27.3906 L21.1094,22.3125 Z M19.625,20.0781 L22.6094,20.0781 L25.9688,32.4688 L23.5156,32.4688 L22.75,29.4063 L19.4688,29.4063 L18.7188,32.4688 L16.2813,32.4688 L19.625,20.0781 Z "/><text fill="#000000" font-family="sans-serif" font-size="14" font-style="italic" lengthAdjust="spacingAndGlyphs" textLength="35" x="104" y="25.9951">Type</text><text fill="#000000" font-family="sans-serif" font-size="10" font-style="italic" lengthAdjust="spacingAndGlyphs" textLength="173" x="35" y="38.5791">de.fraunhofer.aisec.cpg.graph.type</text><line style="stroke: #A80036; stroke-width: 1.5;" x1="7" x2="210" y1="45.9375" y2="45.9375"/><ellipse cx="17" cy="56.9375" fill="#84BE84" rx="3" ry="3" style="stroke: #038048; stroke-width: 1.0;"/><text fill="#000000" font-family="sans-serif" font-size="11" font-style="italic" lengthAdjust="spacingAndGlyphs" textLength="173" x="26" y="60.1479">reference(PointerOrigin): Type</text><ellipse cx="17" cy="69.7422" fill="#84BE84" rx="3" ry="3" style="stroke: #038048; stroke-width: 1.0;"/><text fill="#000000" font-family="sans-serif" font-size="11" font-style="italic" lengthAdjust="spacingAndGlyphs" textLength="113" x="26" y="72.9526">dereference(): Type</text><ellipse cx="17" cy="82.5469" fill="#84BE84" rx="3" ry="3" style="stroke: #038048; stroke-width: 1.0;"/><text fill="#000000" font-family="sans-serif" font-size="11" font-style="italic" lengthAdjust="spacingAndGlyphs" textLength="95" x="26" y="85.7573">duplicate(): Type</text></a><!--MD5=[733e8ffa2290d1b285ab89512763c20e]
+reverse link de.fraunhofer.aisec.cpg.graph.type.Type to de.fraunhofer.aisec.cpg.graph.type.IncompleteType--><path d="M108.5,112.48 C108.5,125.48 108.5,139.11 108.5,151.82 " fill="none" id="de.fraunhofer.aisec.cpg.graph.type.Type&lt;-de.fraunhofer.aisec.cpg.graph.type.IncompleteType" style="stroke: #A80036; stroke-width: 1.0;"/><polygon fill="none" points="101.5,112.13,108.5,92.13,115.5,112.13,101.5,112.13" style="stroke: #A80036; stroke-width: 1.0;"/><text fill="#888888" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="186" x="21.5" y="281.2822">UMLDoclet 2.0.9, PlantUML 1.2020.08</text><!--MD5=[1cd05bc1f5a1b11ba575d47f34c84175]
+@startuml
+    set namespaceSeparator none
+    hide empty fields
+    hide empty methods
+
+    class "<size:14>IncompleteType\n<size:10>de.fraunhofer.aisec.cpg.graph.type" as de.fraunhofer.aisec.cpg.graph.type.IncompleteType [[IncompleteType.html]] {
+        +IncompleteType()
+        +IncompleteType(Type)
+        +reference(PointerOrigin): Type
+        +dereference(): Type
+        +duplicate(): Type
+    }
+
+    abstract class "<size:14>Type\n<size:10>de.fraunhofer.aisec.cpg.graph.type" as de.fraunhofer.aisec.cpg.graph.type.Type [[Type.html]] {
+        {abstract} +reference(PointerOrigin): Type
+        {abstract} +dereference(): Type
+        {abstract} +duplicate(): Type
+    }
+
+    de.fraunhofer.aisec.cpg.graph.type.Type <|- - de.fraunhofer.aisec.cpg.graph.type.IncompleteType
+
+    center footer UMLDoclet 2.0.9, PlantUML 1.2020.08
+@enduml
+
+PlantUML version 1.2020.08(Sun Apr 26 16:08:22 CEST 2020)
+(APACHE source distribution)
+Java Runtime: OpenJDK Runtime Environment
+JVM: OpenJDK 64-Bit Server VM
+Java Version: 12.0.2+9-Ubuntu-118.04
+Operating System: Linux
+Default Encoding: UTF-8
+Language: en
+Country: US
+--></g></svg>

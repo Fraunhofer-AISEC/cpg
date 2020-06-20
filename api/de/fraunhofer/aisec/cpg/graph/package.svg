@@ -1,0 +1,657 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" contentScriptType="application/ecmascript" contentStyleType="text/css" height="711px" preserveAspectRatio="none" style="width:594px;height:711px;background:#000000;" version="1.1" viewBox="0 0 594 711" width="594px" zoomAndPan="magnify"><defs/><g><rect fill="#270826" height="1" style="stroke: #270826; stroke-width: 1.0;" width="1" x="0" y="0"/><rect fill="#33FF02" height="21.2969" style="stroke: #33FF02; stroke-width: 1.0;" width="587" x="5" y="5"/><text fill="#000000" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="178" x="6" y="20">[From string (line 40) ]</text><text fill="#33FF02" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="0" x="10" y="40.2969"/><text fill="#33FF02" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="79" x="5" y="56.5938">@startuml</text><text fill="#33FF02" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="351" x="25" y="72.8906">namespace de.fraunhofer.aisec.cpg.graph {</text><text fill="#33FF02" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="0" x="10" y="89.1875"/><text fill="#33FF02" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="358" x="45" y="105.4844">class CallExpression [[CallExpression.html]] {</text><text fill="#33FF02" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="368" x="65" y="121.7813">+typeChanged(HasType, HasType, Type): void</text><text fill="#33FF02" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="527" x="65" y="138.0781">+possibleSubTypesChanged(HasType, HasType, Set&lt;Type&gt;): void</text><text fill="#33FF02" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="137" x="65" y="154.375">+getFqn(): String</text><text fill="#33FF02" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="169" x="65" y="170.6719">+setFqn(String): void</text><text fill="#33FF02" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="10" x="45" y="186.9688">}</text><text fill="#33FF02" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="0" x="10" y="203.2656"/><text fill="#33FF02" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="491" x="45" y="219.5625">class SynchronizedStatement [[SynchronizedStatement.html]]</text><text fill="#33FF02" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="0" x="10" y="235.8594"/><text fill="#33FF02" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="332" x="45" y="252.1563">class DoStatement [[DoStatement.html]] {</text><text fill="#33FF02" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="10" x="45" y="268.4531">}</text><text fill="#33FF02" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="0" x="10" y="284.75"/><text fill="#33FF02" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="500" x="45" y="301.0469">class InitializerListExpression [[InitializerListExpression.html]] {</text><text fill="#33FF02" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="368" x="65" y="317.3438">+typeChanged(HasType, HasType, Type): void</text><text fill="#33FF02" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="527" x="65" y="333.6406">+possibleSubTypesChanged(HasType, HasType, Set&lt;Type&gt;): void</text><text fill="#33FF02" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="10" x="45" y="349.9375">}</text><text fill="#33FF02" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="0" x="10" y="366.2344"/><text fill="#33FF02" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="396" x="45" y="382.5313">class SwitchStatement [[SwitchStatement.html]] {</text><text fill="#33FF02" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="10" x="45" y="398.8281">}</text><text fill="#33FF02" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="0" x="10" y="415.125"/><text fill="#33FF02" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="521" x="45" y="431.4219">class ASMDeclarationStatement [[ASMDeclarationStatement.html]]</text><text fill="#33FF02" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="0" x="10" y="447.7188"/><text fill="#33FF02" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="376" x="45" y="464.0156">class WhileStatement [[WhileStatement.html]] {</text><text fill="#33FF02" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="10" x="45" y="480.3125">}</text><text fill="#33FF02" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="0" x="10" y="496.6094"/><text fill="#33FF02" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="464" x="45" y="512.9063">abstract class ValueDeclaration [[ValueDeclaration.html]] {</text><text fill="#33FF02" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="249" x="65" y="529.2031">+setType(Type, HasType): void</text><text fill="#33FF02" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="197" x="65" y="545.5">+resetTypes(Type): void</text><text fill="#33FF02" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="339" x="65" y="561.7969">+registerTypeListener(TypeListener): void</text><text fill="#33FF02" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="359" x="65" y="578.0938">+unregisterTypeListener(TypeListener): void</text><text fill="#33FF02" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="404" x="65" y="594.3906">+setPossibleSubTypes(Set&lt;Type&gt;, HasType): void</text><text fill="#33FF02" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="166" x="65" y="610.6875">+refreshType(): void</text><text fill="#33FF02" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="201" x="65" y="626.9844">+updateType(Type): void</text><text fill="#33FF02" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="352" x="65" y="643.2813">+updatePossibleSubtypes(Set&lt;Type&gt;): void</text><text fill="#33FF02" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="10" x="45" y="659.5781">}</text><text fill="#33FF02" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="0" x="10" y="675.875"/><text fill="#33FF02" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="442" x="45" y="692.1719">annotation PopulatedByPass [[PopulatedByPass.html]] {</text><text fill="#FF0000" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="106" x="10" y="708.4688">Syntax Error?</text><!--MD5=[019c5be9153cd2b78e675a8cfb592a98]
+@startuml
+    namespace de.fraunhofer.aisec.cpg.graph {
+
+        class CallExpression [[CallExpression.html]] {
+            +typeChanged(HasType, HasType, Type): void
+            +possibleSubTypesChanged(HasType, HasType, Set<Type>): void
+            +getFqn(): String
+            +setFqn(String): void
+        }
+
+        class SynchronizedStatement [[SynchronizedStatement.html]]
+
+        class DoStatement [[DoStatement.html]] {
+        }
+
+        class InitializerListExpression [[InitializerListExpression.html]] {
+            +typeChanged(HasType, HasType, Type): void
+            +possibleSubTypesChanged(HasType, HasType, Set<Type>): void
+        }
+
+        class SwitchStatement [[SwitchStatement.html]] {
+        }
+
+        class ASMDeclarationStatement [[ASMDeclarationStatement.html]]
+
+        class WhileStatement [[WhileStatement.html]] {
+        }
+
+        abstract class ValueDeclaration [[ValueDeclaration.html]] {
+            +setType(Type, HasType): void
+            +resetTypes(Type): void
+            +registerTypeListener(TypeListener): void
+            +unregisterTypeListener(TypeListener): void
+            +setPossibleSubTypes(Set<Type>, HasType): void
+            +refreshType(): void
+            +updateType(Type): void
+            +updatePossibleSubtypes(Set<Type>): void
+        }
+
+        annotation PopulatedByPass [[PopulatedByPass.html]] {
+            {abstract} +value(): Class<? extends Pass>
+        }
+
+        class Literal<T> [[Literal.html]] {
+            +getValue(): T
+            +setValue(T): void
+        }
+
+        class MemberExpression [[MemberExpression.html]] {
+            +typeChanged(HasType, HasType, Type): void
+            +possibleSubTypesChanged(HasType, HasType, Set<Type>): void
+            +setWritingAccess(boolean): void
+            +isWritingAccess(): boolean
+        }
+
+        class TypeIdExpression [[TypeIdExpression.html]] {
+            +getOperatorCode(): String
+            +setOperatorCode(String): void
+        }
+
+        class ArrayRangeExpression [[ArrayRangeExpression.html]] {
+        }
+
+        class ArrayCreationExpression [[ArrayCreationExpression.html]] {
+            +typeChanged(HasType, HasType, Type): void
+            +possibleSubTypesChanged(HasType, HasType, Set<Type>): void
+        }
+
+        annotation EdgeProperty [[EdgeProperty.html]] {
+            {abstract} +key(): String
+        }
+
+        class RecordDeclaration [[RecordDeclaration.html]] {
+            +setName(String): void
+            +getKind(): String
+            +setKind(String): void
+            +getImportStatements(): List<String>
+            +setImportStatements(List<String>): void
+            +getStaticImportStatements(): List<String>
+            +setStaticImportStatements(List<String>): void
+        }
+
+        class ParamVariableDeclaration [[ParamVariableDeclaration.html]] {
+            +isVariadic(): boolean
+            +setVariadic(boolean): void
+        }
+
+        class StaticReferenceExpression [[StaticReferenceExpression.html]]
+
+        class GotoStatement [[GotoStatement.html]] {
+            +getLabelName(): String
+            +setLabelName(String): void
+        }
+
+        class ConstructExpression [[ConstructExpression.html]] {
+            +typeChanged(HasType, HasType, Type): void
+            +possibleSubTypesChanged(HasType, HasType, Set<Type>): void
+        }
+
+        class ExplicitConstructorInvocation [[ExplicitConstructorInvocation.html]] {
+            +getContainingClass(): String
+            +setContainingClass(String): void
+        }
+
+        class ForStatement [[ForStatement.html]] {
+        }
+
+        class TranslationUnitDeclaration [[TranslationUnitDeclaration.html]] {
+            +getDeclarationAs(int, Class<T>): T
+            +getDeclarationByName(String, Class<T extends Declaration>): Optional<T extends Declaration>
+            +add(Declaration): void
+        }
+
+        class UsingDirective [[UsingDirective.html]] {
+            +getQualifiedName(): String
+            +setQualifiedName(String): void
+        }
+
+        class IncludeDeclaration [[IncludeDeclaration.html]] {
+            +getFilename(): String
+            +setFilename(String): void
+        }
+
+        class TypeManager [[TypeManager.html]] {
+            {static} +reset(): void
+            +getTypeState(): Map<Type, List<Type>>
+            +registerType(Type): Type
+            +setLanguageFrontend(LanguageFrontend): void
+            +isPrimitive(Type): boolean
+            +isUnknown(Type): boolean
+            +getCommonType(Collection<Type>): Optional<Type>
+            +getFrontend(): LanguageFrontend
+            +isSupertypeOf(Type, Type): boolean
+            +checkArrayAndPointer(Type, Type): boolean
+            +cleanup(): void
+            +handleTypedef(String): void
+            +handleSingleAlias(String, Type, String): void
+            +resolvePossibleTypedef(Type): Type
+        }
+
+        enum de.fraunhofer.aisec.cpg.graph.TypeManager.Language [[TypeManager.Language.html]] {
+            {static} +JAVA
+            {static} +CXX
+        }
+
+        class CompoundStatementExpression [[CompoundStatementExpression.html]] {
+        }
+
+        class ExpressionList [[ExpressionList.html]] {
+            +addExpression(Statement): void
+            +typeChanged(HasType, HasType, Type): void
+            +possibleSubTypesChanged(HasType, HasType, Set<Type>): void
+        }
+
+        class CastExpression [[CastExpression.html]] {
+            +typeChanged(HasType, HasType, Type): void
+            +possibleSubTypesChanged(HasType, HasType, Set<Type>): void
+            +setCastOperator(int): void
+        }
+
+        class ForEachStatement [[ForEachStatement.html]] {
+        }
+
+        class DeclaredReferenceExpression [[DeclaredReferenceExpression.html]] {
+            +typeChanged(HasType, HasType, Type): void
+            +possibleSubTypesChanged(HasType, HasType, Set<Type>): void
+            +setWritingAccess(boolean): void
+            +isWritingAccess(): boolean
+        }
+
+        class EnumConstantDeclaration [[EnumConstantDeclaration.html]]
+
+        class EmptyStatement [[EmptyStatement.html]]
+
+        class Expression [[Expression.html]] {
+            +updateType(Type): void
+            +updatePossibleSubtypes(Set<Type>): void
+            +setType(Type, HasType): void
+            +setPossibleSubTypes(Set<Type>, HasType): void
+            +resetTypes(Type): void
+            +registerTypeListener(TypeListener): void
+            +unregisterTypeListener(TypeListener): void
+            +refreshType(): void
+        }
+
+        class FieldDeclaration [[FieldDeclaration.html]] {
+            +FieldDeclaration()
+            +isImplicitInitializerAllowed(): boolean
+            +setImplicitInitializerAllowed(boolean): void
+            +isArray(): boolean
+            +setIsArray(boolean): void
+            {static} +from(VariableDeclaration): FieldDeclaration
+            +getModifiers(): List<String>
+            +setModifiers(List<String>): void
+            +typeChanged(HasType, HasType, Type): void
+            +possibleSubTypesChanged(HasType, HasType, Set<Type>): void
+        }
+
+        class NamespaceDeclaration [[NamespaceDeclaration.html]]
+
+        class Node [[Node.html]] {
+            {static} +TO_STRING_STYLE: ToStringStyle
+            {static} #log: Logger
+            {static} +EMPTY_NAME: String
+            #name: String
+            #code: String
+            #comment: String
+            #location: PhysicalLocation
+            #file: String
+            #dummy: boolean
+            #implicit: boolean
+            +getId(): Long
+            +getName(): String
+            +setName(String): void
+            +getFile(): String
+            +setFile(String): void
+            +getCode(): String
+            +setCode(String): void
+            +getLocation(): PhysicalLocation
+            +setLocation(PhysicalLocation): void
+            +addNextDFG(Node): void
+            +removeNextDFG(Node): void
+            +addPrevDFG(Node): void
+            +removePrevDFG(Node): void
+            +addTypedef(TypedefDeclaration): void
+            +getArgumentIndex(): int
+            +setArgumentIndex(int): void
+            +isDummy(): boolean
+            +- -setDummy- -(boolean): void
+            +setImplicit(boolean): void
+            +isImplicit(): boolean
+            +disconnectFromGraph(): void
+            +setComment(String): void
+        }
+
+        class ContinueStatement [[ContinueStatement.html]] {
+            +getLabel(): String
+            +setLabel(String): void
+        }
+
+        class CompoundStatement [[CompoundStatement.html]] {
+        }
+
+        class BreakStatement [[BreakStatement.html]] {
+            +getLabel(): String
+            +setLabel(String): void
+        }
+
+        class TypedefDeclaration [[TypedefDeclaration.html]] {
+        }
+
+        class CatchClause [[CatchClause.html]] {
+        }
+
+        class BinaryOperator [[BinaryOperator.html]] {
+            +getLhsAs(Class<T extends Expression>): T extends Expression
+            +getRhsAs(Class<T extends Expression>): T extends Expression
+            +getOperatorCode(): String
+            +setOperatorCode(String): void
+            +typeChanged(HasType, HasType, Type): void
+            +possibleSubTypesChanged(HasType, HasType, Set<Type>): void
+        }
+
+        class ConditionalExpression [[ConditionalExpression.html]] {
+            +typeChanged(HasType, HasType, Type): void
+            +possibleSubTypesChanged(HasType, HasType, Set<Type>): void
+        }
+
+        annotation SubGraph [[SubGraph.html]] {
+            {abstract} +value(): String[]
+        }
+
+        interface HasType [[HasType.html]] {
+            {abstract} +updateType(Type): void
+            {abstract} +updatePossibleSubtypes(Set<Type>): void
+            {abstract} +registerTypeListener(TypeListener): void
+            {abstract} +unregisterTypeListener(TypeListener): void
+            {abstract} +refreshType(): void
+            {abstract} +resetTypes(Type): void
+        }
+
+        interface de.fraunhofer.aisec.cpg.graph.HasType.TypeListener [[HasType.TypeListener.html]] {
+            {abstract} +typeChanged(HasType, HasType, Type): void
+            {abstract} +possibleSubTypesChanged(HasType, HasType, Set<Type>): void
+        }
+
+        class ArraySubscriptionExpression [[ArraySubscriptionExpression.html]] {
+            +typeChanged(HasType, HasType, Type): void
+            +possibleSubTypesChanged(HasType, HasType, Set<Type>): void
+        }
+
+        class IfStatement [[IfStatement.html]] {
+            +isConstExpression(): boolean
+            +setConstExpression(boolean): void
+        }
+
+        class UnaryOperator [[UnaryOperator.html]] {
+            {static} +OPERATOR_POSTFIX_INCREMENT: String
+            {static} +OPERATOR_POSTFIX_DECREMENT: String
+            +getOperatorCode(): String
+            +setOperatorCode(String): void
+            +isPostfix(): boolean
+            +setPostfix(boolean): void
+            +isPrefix(): boolean
+            +setPrefix(boolean): void
+            +typeChanged(HasType, HasType, Type): void
+            +possibleSubTypesChanged(HasType, HasType, Set<Type>): void
+        }
+
+        class NodeBuilder [[NodeBuilder.html]] {
+            {static} +newUsingDirective(String, String): UsingDirective
+            {static} +newCallExpression(String, String, String): CallExpression
+            {static} +newStaticCallExpression(String, String, String, String): StaticCallExpression
+            {static} +newCastExpression(String): CastExpression
+            {static} +newTypeIdExpression(String, Type, Type, String): TypeIdExpression
+            {static} +newTypedefDeclaration(Type, Type, String): TypedefDeclaration
+            {static} +newArraySubscriptionExpression(String): ArraySubscriptionExpression
+            {static} +newLiteral(T, Type, String): Literal<T>
+            {static} +newDeclaredReferenceExpression(String, Type, String): DeclaredReferenceExpression
+            {static} +newArrayRangeExpression(Expression, Expression, String): ArrayRangeExpression
+            {static} +newStaticReferenceExpression(String, Type, String): StaticReferenceExpression
+            {static} +newFunctionDeclaration(String, String): FunctionDeclaration
+            {static} +newReturnStatement(String): ReturnStatement
+            {static} +newSynchronizedStatement(String): SynchronizedStatement
+            {static} +newDeleteExpression(String): DeleteExpression
+            {static} +newEmptyStatement(String): EmptyStatement
+            {static} +newMethodParameterIn(String, Type, boolean, String): ParamVariableDeclaration
+            {static} +newCompoundStatement(String): CompoundStatement
+            {static} +newExpressionList(String): ExpressionList
+            {static} +newMemberCallExpression(String, String, Node, Node, String): CallExpression
+            {static} +newUnaryOperator(String, boolean, boolean, String): UnaryOperator
+            {static} +newVariableDeclaration(String, Type, String, boolean): VariableDeclaration
+            {static} +newDeclarationStatement(String): DeclarationStatement
+            {static} +newIfStatement(String): IfStatement
+            {static} +newLabelStatement(String): LabelStatement
+            {static} +newGotoStatement(String): GotoStatement
+            {static} +newWhileStatement(String): WhileStatement
+            {static} +newDoStatement(String): DoStatement
+            {static} +newForEachStatement(String): ForEachStatement
+            {static} +newForStatement(String): ForStatement
+            {static} +newContinueStatement(String): ContinueStatement
+            {static} +newBreakStatement(String): BreakStatement
+            {static} +newBinaryOperator(String, String): BinaryOperator
+            {static} +newTranslationUnitDeclaration(String, String): TranslationUnitDeclaration
+            {static} +newRecordDeclaration(String, String, String): RecordDeclaration
+            {static} +newEnumDeclaration(String, String, PhysicalLocation): EnumDeclaration
+            {static} +newEnumConstantDeclaration(String, String, PhysicalLocation): EnumConstantDeclaration
+            {static} +newFieldDeclaration(String, Type, List<String>, String, PhysicalLocation, Expression, boolean): FieldDeclaration
+            {static} +newMemberExpression(Expression, Node, String): MemberExpression
+            {static} +newStatement(String): Statement
+            {static} +newExpression(String): Expression
+            {static} +newInitializerListExpression(String): InitializerListExpression
+            {static} +newDesignatedInitializerExpression(String): DesignatedInitializerExpression
+            {static} +newArrayCreationExpression(String): ArrayCreationExpression
+            {static} +newConstructExpression(String): ConstructExpression
+            {static} +newMethodDeclaration(String, String, boolean, RecordDeclaration): MethodDeclaration
+            {static} +newConstructorDeclaration(String, String, RecordDeclaration): ConstructorDeclaration
+            {static} +newDeclaration(String): Declaration
+            {static} +newProblemDeclaration(String, String, String): ProblemDeclaration
+            {static} +newIncludeDeclaration(String): IncludeDeclaration
+            {static} +newNewExpression(String, Type): NewExpression
+            {static} +newSwitchStatement(String): SwitchStatement
+            {static} +newCaseStatement(String): CaseStatement
+            {static} +newDefaultStatement(String): DefaultStatement
+            {static} +newConditionalExpression(Expression, Expression, Expression, Type): ConditionalExpression
+            {static} +newExplicitConstructorInvocation(String, String): ExplicitConstructorInvocation
+            {static} +newNamespaceDeclaration(String): NamespaceDeclaration
+            {static} +newCatchClause(String): CatchClause
+            {static} +newTryStatement(String): TryStatement
+            {static} +newAssertStatement(String): AssertStatement
+            {static} +newASMDeclarationStatement(String): ASMDeclarationStatement
+            {static} +newCompoundStatementExpression(String): CompoundStatementExpression
+        }
+
+        class DefaultStatement [[DefaultStatement.html]]
+
+        class MethodDeclaration [[MethodDeclaration.html]] {
+            {static} +from(FunctionDeclaration, RecordDeclaration): MethodDeclaration
+            +isStatic(): boolean
+            +setStatic(boolean): void
+        }
+
+        class TryStatement [[TryStatement.html]] {
+        }
+
+        class AssertStatement [[AssertStatement.html]] {
+        }
+
+        class MemberCallExpression [[MemberCallExpression.html]] {
+        }
+
+        class NewExpression [[NewExpression.html]] {
+        }
+
+        class FunctionDeclaration [[FunctionDeclaration.html]] {
+            +hasBody(): boolean
+            +getSignature(): String
+            +hasSignature(List<Type>): boolean
+            +isOverrideCandidate(FunctionDeclaration): boolean
+            +getBodyStatementAs(int, Class<T>): Nullable T
+            +getVariableDeclarationByName(String): Optional<VariableDeclaration>
+        }
+
+        class DeleteExpression [[DeleteExpression.html]] {
+        }
+
+        class DeclarationStatement [[DeclarationStatement.html]] {
+            +isSingleDeclaration(): boolean
+            +getSingleDeclarationAs(Class<T extends Declaration>): T extends Declaration
+        }
+
+        class ReturnStatement [[ReturnStatement.html]] {
+        }
+
+        class ConstructorDeclaration [[ConstructorDeclaration.html]] {
+            {static} +from(MethodDeclaration): ConstructorDeclaration
+        }
+
+        class CaseStatement [[CaseStatement.html]]
+
+        class Statement [[Statement.html]] {
+        }
+
+        class Declaration [[Declaration.html]]
+
+        class LabelStatement [[LabelStatement.html]] {
+            +getLabel(): String
+            +setLabel(String): void
+        }
+
+        class DesignatedInitializerExpression [[DesignatedInitializerExpression.html]] {
+        }
+
+        class VariableDeclaration [[VariableDeclaration.html]] {
+            +isImplicitInitializerAllowed(): boolean
+            +setImplicitInitializerAllowed(boolean): void
+            +isArray(): boolean
+            +setIsArray(boolean): void
+            +getInitializerAs(Class<T>): Nullable T
+            +typeChanged(HasType, HasType, Type): void
+            +possibleSubTypesChanged(HasType, HasType, Set<Type>): void
+        }
+
+        class EnumDeclaration [[EnumDeclaration.html]] {
+        }
+
+        class StaticCallExpression [[StaticCallExpression.html]] {
+            +getTargetRecord(): String
+            +setName(String): void
+            +setTargetRecord(String): void
+        }
+
+        class ProblemDeclaration [[ProblemDeclaration.html]] {
+            +getFilename(): String
+            +setFilename(String): void
+            +getProblem(): String
+            +setProblem(String): void
+            +getProblemLocation(): String
+            +setProblemLocation(String): void
+        }
+
+        Expression <|- - CallExpression
+        de.fraunhofer.aisec.cpg.graph.HasType.TypeListener <|.. CallExpression
+        CallExpression - -> Node: base
+        CallExpression - -> "*" Expression: arguments
+        CallExpression - -> "*" FunctionDeclaration: invokes
+        CallExpression - -> "*" de.fraunhofer.aisec.cpg.graph.type.Type: signature
+        Statement <|- - SynchronizedStatement
+        SynchronizedStatement - -> Expression: expression
+        SynchronizedStatement - -> CompoundStatement: blockStatement
+        Statement <|- - DoStatement
+        DoStatement - -> Expression: condition
+        DoStatement - -> Statement: statement
+        Expression <|- - InitializerListExpression
+        de.fraunhofer.aisec.cpg.graph.HasType.TypeListener <|.. InitializerListExpression
+        InitializerListExpression - -> "*" Expression: initializers
+        Statement <|- - SwitchStatement
+        SwitchStatement - -> Declaration: selectorDeclaration
+        SwitchStatement - -> Expression: selector
+        SwitchStatement - -> Statement: initializerStatement\nstatement
+        DeclarationStatement <|- - ASMDeclarationStatement
+        Statement <|- - WhileStatement
+        WhileStatement - -> Declaration: conditionDeclaration
+        WhileStatement - -> Expression: condition
+        WhileStatement - -> Statement: statement
+        Declaration <|- - ValueDeclaration
+        HasType <|.. ValueDeclaration
+        ValueDeclaration - -> de.fraunhofer.aisec.cpg.graph.type.Type: type\npropagationType
+        ValueDeclaration - -> "*" de.fraunhofer.aisec.cpg.graph.HasType.TypeListener: typeListeners
+        ValueDeclaration - -> "*" de.fraunhofer.aisec.cpg.graph.type.Type: possibleSubTypes
+        Expression <|- - Literal
+        Expression <|- - MemberExpression
+        de.fraunhofer.aisec.cpg.graph.HasType.TypeListener <|.. MemberExpression
+        MemberExpression - -> Node: member\nbase
+        Expression <|- - TypeIdExpression
+        TypeIdExpression - -> de.fraunhofer.aisec.cpg.graph.type.Type: referencedType
+        Expression <|- - ArrayRangeExpression
+        ArrayRangeExpression - -> Expression: ceiling\nfloor
+        Expression <|- - ArrayCreationExpression
+        de.fraunhofer.aisec.cpg.graph.HasType.TypeListener <|.. ArrayCreationExpression
+        ArrayCreationExpression - -> InitializerListExpression: initializer
+        ArrayCreationExpression - -> "*" Expression: dimensions
+        Declaration <|- - RecordDeclaration
+        RecordDeclaration - -> "*" FieldDeclaration: fields
+        RecordDeclaration - -> FieldDeclaration: this
+        RecordDeclaration - -> "*" MethodDeclaration: methods
+        RecordDeclaration - -> "*" ConstructorDeclaration: constructors
+        RecordDeclaration - -> "*" de.fraunhofer.aisec.cpg.graph.type.Type: superTypes\nsuperClasses\nimplementedInterfaces
+        RecordDeclaration - -> "*" RecordDeclaration: records\nsuperTypeDeclarations
+        RecordDeclaration - -> "*" Declaration: imports
+        RecordDeclaration - -> "*" ValueDeclaration: staticImports
+        ValueDeclaration <|- - ParamVariableDeclaration
+        DeclaredReferenceExpression <|- - StaticReferenceExpression
+        de.fraunhofer.aisec.cpg.graph.HasType.TypeListener <|.. StaticReferenceExpression
+        Statement <|- - GotoStatement
+        GotoStatement - -> LabelStatement: targetLabel
+        Expression <|- - ConstructExpression
+        de.fraunhofer.aisec.cpg.graph.HasType.TypeListener <|.. ConstructExpression
+        ConstructExpression - -> Declaration: instantiates
+        ConstructExpression - -> ConstructorDeclaration: constructor
+        ConstructExpression - -> "*" Expression: arguments
+        ConstructExpression - -> "*" de.fraunhofer.aisec.cpg.graph.type.Type: signature
+        CallExpression <|- - ExplicitConstructorInvocation
+        Statement <|- - ForStatement
+        ForStatement - -> Statement: statement\ninitializerStatement
+        ForStatement - -> Declaration: conditionDeclaration
+        ForStatement - -> Expression: condition\niterationExpression
+        Declaration <|- - TranslationUnitDeclaration
+        TranslationUnitDeclaration - -> "*" Declaration: declarations\nincludes\nnamespaces
+        Declaration <|- - UsingDirective
+        Declaration <|- - IncludeDeclaration
+        IncludeDeclaration - -> "*" IncludeDeclaration: includes
+        IncludeDeclaration - -> "*" ProblemDeclaration: problems
+        TypeManager - -> "*" de.fraunhofer.aisec.cpg.graph.type.Type: firstOrderTypes\nsecondOrderTypes
+        TypeManager - -> TypeManager: instance
+        TypeManager - -> de.fraunhofer.aisec.cpg.graph.TypeManager.Language: language
+        TypeManager +- - de.fraunhofer.aisec.cpg.graph.TypeManager.Language
+        Expression <|- - CompoundStatementExpression
+        CompoundStatementExpression - -> Statement: statement
+        Expression <|- - ExpressionList
+        de.fraunhofer.aisec.cpg.graph.HasType.TypeListener <|.. ExpressionList
+        ExpressionList - -> "*" Statement: expressions
+        Expression <|- - CastExpression
+        de.fraunhofer.aisec.cpg.graph.HasType.TypeListener <|.. CastExpression
+        CastExpression - -> Expression: expression
+        CastExpression - -> de.fraunhofer.aisec.cpg.graph.type.Type: castType
+        Statement <|- - ForEachStatement
+        ForEachStatement - -> Declaration: variable
+        ForEachStatement - -> Statement: statement\niterable
+        Expression <|- - DeclaredReferenceExpression
+        de.fraunhofer.aisec.cpg.graph.HasType.TypeListener <|.. DeclaredReferenceExpression
+        DeclaredReferenceExpression - -> ValueDeclaration: refersTo
+        DeclaredReferenceExpression - -> "*" ValueDeclaration: refersTo
+        ValueDeclaration <|- - EnumConstantDeclaration
+        Statement <|- - EmptyStatement
+        Statement <|- - Expression
+        HasType <|.. Expression
+        Expression - -> de.fraunhofer.aisec.cpg.graph.type.Type: type\npropagationType
+        Expression - -> "*" de.fraunhofer.aisec.cpg.graph.type.Type: possibleSubTypes
+        Expression - -> "*" de.fraunhofer.aisec.cpg.graph.HasType.TypeListener: typeListeners
+        ValueDeclaration <|- - FieldDeclaration
+        de.fraunhofer.aisec.cpg.graph.HasType.TypeListener <|.. FieldDeclaration
+        FieldDeclaration - -> Expression: initializer
+        TranslationUnitDeclaration <|- - NamespaceDeclaration
+        Node - -> "*" Node: prevEOG\nnextEOG\nnextCFG\nprevDFG\nnextDFG
+        Node - -> "*" TypedefDeclaration: typedefs
+        Statement <|- - ContinueStatement
+        Statement <|- - CompoundStatement
+        CompoundStatement - -> "*" Statement: statements
+        Statement <|- - BreakStatement
+        Declaration <|- - TypedefDeclaration
+        TypedefDeclaration - -> de.fraunhofer.aisec.cpg.graph.type.Type: type\nalias
+        Statement <|- - CatchClause
+        CatchClause - -> VariableDeclaration: parameter
+        CatchClause - -> CompoundStatement: body
+        Expression <|- - BinaryOperator
+        de.fraunhofer.aisec.cpg.graph.HasType.TypeListener <|.. BinaryOperator
+        BinaryOperator - -> Expression: lhs\nrhs
+        Expression <|- - ConditionalExpression
+        de.fraunhofer.aisec.cpg.graph.HasType.TypeListener <|.. ConditionalExpression
+        ConditionalExpression - -> Expression: condition\nthenExpr\nelseExpr
+        HasType - -> de.fraunhofer.aisec.cpg.graph.type.Type: type\npropagationType
+        HasType - -> "*" de.fraunhofer.aisec.cpg.graph.type.Type: possibleSubTypes
+        HasType - -> "*" de.fraunhofer.aisec.cpg.graph.HasType.TypeListener: typeListeners
+        HasType +- - de.fraunhofer.aisec.cpg.graph.HasType.TypeListener
+        Expression <|- - ArraySubscriptionExpression
+        de.fraunhofer.aisec.cpg.graph.HasType.TypeListener <|.. ArraySubscriptionExpression
+        ArraySubscriptionExpression - -> Expression: arrayExpression\nsubscriptExpression
+        Statement <|- - IfStatement
+        IfStatement - -> Expression: condition
+        IfStatement - -> Declaration: conditionDeclaration
+        IfStatement - -> Statement: initializerStatement\nthenStatement\nelseStatement
+        Expression <|- - UnaryOperator
+        de.fraunhofer.aisec.cpg.graph.HasType.TypeListener <|.. UnaryOperator
+        UnaryOperator - -> Expression: input
+        Statement <|- - DefaultStatement
+        FunctionDeclaration <|- - MethodDeclaration
+        MethodDeclaration - -> RecordDeclaration: recordDeclaration
+        Statement <|- - TryStatement
+        TryStatement - -> "*" Statement: resources
+        TryStatement - -> CompoundStatement: tryBlock\nfinallyBlock
+        TryStatement - -> "*" CatchClause: catchClauses
+        Statement <|- - AssertStatement
+        AssertStatement - -> Expression: condition
+        AssertStatement - -> Statement: message
+        CallExpression <|- - MemberCallExpression
+        MemberCallExpression - -> Node: member
+        Expression <|- - NewExpression
+        NewExpression - -> Expression: initializer
+        ValueDeclaration <|- - FunctionDeclaration
+        FunctionDeclaration - -> "*" FunctionDeclaration: overriddenBy\noverrides
+        FunctionDeclaration - -> "*" de.fraunhofer.aisec.cpg.graph.type.Type: throwsTypes
+        FunctionDeclaration - -> Statement: body
+        FunctionDeclaration - -> "*" ParamVariableDeclaration: parameters
+        Expression <|- - DeleteExpression
+        DeleteExpression - -> Expression: operand
+        Statement <|- - DeclarationStatement
+        DeclarationStatement - -> Declaration: singleDeclaration
+        DeclarationStatement - -> "*" Declaration: declarations
+        Statement <|- - ReturnStatement
+        ReturnStatement - -> Expression: returnValue
+        MethodDeclaration <|- - ConstructorDeclaration
+        Statement <|- - CaseStatement
+        CaseStatement - -> Expression: caseExpression
+        Node <|- - Statement
+        Statement - -> "*" VariableDeclaration: locals
+        Node <|- - Declaration
+        Statement <|- - LabelStatement
+        LabelStatement - -> Statement: subStatement
+        Expression <|- - DesignatedInitializerExpression
+        DesignatedInitializerExpression - -> Expression: rhs
+        DesignatedInitializerExpression - -> "*" Expression: lhs
+        ValueDeclaration <|- - VariableDeclaration
+        de.fraunhofer.aisec.cpg.graph.HasType.TypeListener <|.. VariableDeclaration
+        VariableDeclaration - -> Expression: initializer
+        Declaration <|- - EnumDeclaration
+        EnumDeclaration - -> "*" EnumConstantDeclaration: entries
+        EnumDeclaration - -> "*" de.fraunhofer.aisec.cpg.graph.type.Type: superTypes
+        EnumDeclaration - -> "*" RecordDeclaration: superTypeDeclarations
+        CallExpression <|- - StaticCallExpression
+        Declaration <|- - ProblemDeclaration
+    }
+
+    center footer UMLDoclet 2.0.9, PlantUML 1.2020.08
+@enduml
+
+PlantUML version 1.2020.08(Sun Apr 26 16:08:22 CEST 2020)
+(APACHE source distribution)
+Java Runtime: OpenJDK Runtime Environment
+JVM: OpenJDK 64-Bit Server VM
+Java Version: 12.0.2+9-Ubuntu-118.04
+Operating System: Linux
+Default Encoding: UTF-8
+Language: en
+Country: US
+--></g></svg>

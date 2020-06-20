@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" contentScriptType="application/ecmascript" contentStyleType="text/css" height="210px" preserveAspectRatio="none" style="width:223px;height:210px;" version="1.1" viewBox="0 0 223 210" width="223px" zoomAndPan="magnify"><defs><filter height="300%" id="fncgfud4nyqz4" width="300%" x="-1" y="-1"><feGaussianBlur result="blurOut" stdDeviation="2.0"/><feColorMatrix in="blurOut" result="blurOut2" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .4 0"/><feOffset dx="4.0" dy="4.0" in="blurOut2" result="blurOut3"/><feBlend in="SourceGraphic" in2="blurOut3" mode="normal"/></filter></defs><g><!--MD5=[f1c045e9ae2c34b66a13ffd73298f509]
+class de.fraunhofer.aisec.cpg.frontends.TranslationException--><a href="TranslationException.html" target="_top" title="TranslationException.html" xlink:actuate="onRequest" xlink:href="TranslationException.html" xlink:show="new" xlink:title="TranslationException.html" xlink:type="simple"><rect fill="#FEFECE" filter="url(#fncgfud4nyqz4)" height="71.5469" id="de.fraunhofer.aisec.cpg.frontends.TranslationException" style="stroke: #A80036; stroke-width: 1.5;" width="206" x="6" y="106"/><ellipse cx="25.5" cy="124.9688" fill="#ADD1B2" rx="11" ry="11" style="stroke: #A80036; stroke-width: 1.0;"/><path d="M28.4688,130.6094 Q27.8906,130.9063 27.25,131.0469 Q26.6094,131.2031 25.9063,131.2031 Q23.4063,131.2031 22.0781,129.5625 Q20.7656,127.9063 20.7656,124.7813 Q20.7656,121.6563 22.0781,120 Q23.4063,118.3438 25.9063,118.3438 Q26.6094,118.3438 27.25,118.5 Q27.9063,118.6563 28.4688,118.9531 L28.4688,121.6719 Q27.8438,121.0938 27.25,120.8281 Q26.6563,120.5469 26.0313,120.5469 Q24.6875,120.5469 24,121.625 Q23.3125,122.6875 23.3125,124.7813 Q23.3125,126.875 24,127.9531 Q24.6875,129.0156 26.0313,129.0156 Q26.6563,129.0156 27.25,128.75 Q27.8438,128.4688 28.4688,127.8906 L28.4688,130.6094 Z "/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacingAndGlyphs" textLength="144" x="50.5" y="123.9951">TranslationException</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="164" x="40.5" y="136.5791">de.fraunhofer.aisec.cpg.frontends</text><line style="stroke: #A80036; stroke-width: 1.5;" x1="7" x2="211" y1="143.9375" y2="143.9375"/><ellipse cx="17" cy="154.9375" fill="#84BE84" rx="3" ry="3" style="stroke: #038048; stroke-width: 1.0;"/><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacingAndGlyphs" textLength="180" x="26" y="158.1479">TranslationException(Exception)</text><ellipse cx="17" cy="167.7422" fill="#84BE84" rx="3" ry="3" style="stroke: #038048; stroke-width: 1.0;"/><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacingAndGlyphs" textLength="160" x="26" y="170.9526">TranslationException(String)</text></a><!--MD5=[46c05dfe24a0851e179497c4631d3ff2]
+class java.lang.Exception--><rect fill="#FEFECE" filter="url(#fncgfud4nyqz4)" height="37.9375" id="java.lang.Exception" style="stroke: #A80036; stroke-width: 1.5;" width="100" x="59" y="8"/><ellipse cx="74" cy="26.9688" fill="#ADD1B2" rx="11" ry="11" style="stroke: #A80036; stroke-width: 1.0;"/><path d="M76.9688,32.6094 Q76.3906,32.9063 75.75,33.0469 Q75.1094,33.2031 74.4063,33.2031 Q71.9063,33.2031 70.5781,31.5625 Q69.2656,29.9063 69.2656,26.7813 Q69.2656,23.6563 70.5781,22 Q71.9063,20.3438 74.4063,20.3438 Q75.1094,20.3438 75.75,20.5 Q76.4063,20.6563 76.9688,20.9531 L76.9688,23.6719 Q76.3438,23.0938 75.75,22.8281 Q75.1563,22.5469 74.5313,22.5469 Q73.1875,22.5469 72.5,23.625 Q71.8125,24.6875 71.8125,26.7813 Q71.8125,28.875 72.5,29.9531 Q73.1875,31.0156 74.5313,31.0156 Q75.1563,31.0156 75.75,30.75 Q76.3438,30.4688 76.9688,29.8906 L76.9688,32.6094 Z "/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacingAndGlyphs" textLength="68" x="88" y="25.9951">Exception</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="43" x="100.5" y="38.5791">java.lang</text><!--MD5=[3d0f8264c03ec85a5974394a18206e7a]
+reverse link java.lang.Exception to de.fraunhofer.aisec.cpg.frontends.TranslationException--><path d="M109,66.3 C109,79 109,93.08 109,105.56 " fill="none" id="java.lang.Exception&lt;-de.fraunhofer.aisec.cpg.frontends.TranslationException" style="stroke: #A80036; stroke-width: 1.0;"/><polygon fill="none" points="102,66.16,109,46.16,116,66.16,102,66.16" style="stroke: #A80036; stroke-width: 1.0;"/><text fill="#888888" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="186" x="22" y="197.2822">UMLDoclet 2.0.9, PlantUML 1.2020.08</text><!--MD5=[4ba71f333a2064cc6fb65264afbda755]
+@startuml
+    set namespaceSeparator none
+    hide empty fields
+    hide empty methods
+
+    class "<size:14>TranslationException\n<size:10>de.fraunhofer.aisec.cpg.frontends" as de.fraunhofer.aisec.cpg.frontends.TranslationException [[TranslationException.html]] {
+        +TranslationException(Exception)
+        +TranslationException(String)
+    }
+
+    class "<size:14>Exception\n<size:10>java.lang" as java.lang.Exception
+
+    java.lang.Exception <|- - de.fraunhofer.aisec.cpg.frontends.TranslationException
+
+    center footer UMLDoclet 2.0.9, PlantUML 1.2020.08
+@enduml
+
+PlantUML version 1.2020.08(Sun Apr 26 16:08:22 CEST 2020)
+(APACHE source distribution)
+Java Runtime: OpenJDK Runtime Environment
+JVM: OpenJDK 64-Bit Server VM
+Java Version: 12.0.2+9-Ubuntu-118.04
+Operating System: Linux
+Default Encoding: UTF-8
+Language: en
+Country: US
+--></g></svg>

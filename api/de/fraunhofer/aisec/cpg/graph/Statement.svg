@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" contentScriptType="application/ecmascript" contentStyleType="text/css" height="210px" preserveAspectRatio="none" style="width:284px;height:210px;" version="1.1" viewBox="0 0 284 210" width="284px" zoomAndPan="magnify"><defs><filter height="300%" id="flmm6aumd32i1" width="300%" x="-1" y="-1"><feGaussianBlur result="blurOut" stdDeviation="2.0"/><feColorMatrix in="blurOut" result="blurOut2" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .4 0"/><feOffset dx="4.0" dy="4.0" in="blurOut2" result="blurOut3"/><feBlend in="SourceGraphic" in2="blurOut3" mode="normal"/></filter></defs><g><!--MD5=[9566dda5ff1f2bf4890c28c79b7fba98]
+class de.fraunhofer.aisec.cpg.graph.Statement--><a href="Statement.html" target="_top" title="Statement.html" xlink:actuate="onRequest" xlink:href="Statement.html" xlink:show="new" xlink:title="Statement.html" xlink:type="simple"><rect fill="#FEFECE" filter="url(#flmm6aumd32i1)" height="71.5469" id="de.fraunhofer.aisec.cpg.graph.Statement" style="stroke: #A80036; stroke-width: 1.5;" width="267" x="6" y="106"/><ellipse cx="62.75" cy="124.9688" fill="#ADD1B2" rx="11" ry="11" style="stroke: #A80036; stroke-width: 1.0;"/><path d="M65.7188,130.6094 Q65.1406,130.9063 64.5,131.0469 Q63.8594,131.2031 63.1563,131.2031 Q60.6563,131.2031 59.3281,129.5625 Q58.0156,127.9063 58.0156,124.7813 Q58.0156,121.6563 59.3281,120 Q60.6563,118.3438 63.1563,118.3438 Q63.8594,118.3438 64.5,118.5 Q65.1563,118.6563 65.7188,118.9531 L65.7188,121.6719 Q65.0938,121.0938 64.5,120.8281 Q63.9063,120.5469 63.2813,120.5469 Q61.9375,120.5469 61.25,121.625 Q60.5625,122.6875 60.5625,124.7813 Q60.5625,126.875 61.25,127.9531 Q61.9375,129.0156 63.2813,129.0156 Q63.9063,129.0156 64.5,128.75 Q65.0938,128.4688 65.7188,127.8906 L65.7188,130.6094 Z "/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacingAndGlyphs" textLength="72" x="119.75" y="123.9951">Statement</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="145" x="83.25" y="136.5791">de.fraunhofer.aisec.cpg.graph</text><line style="stroke: #A80036; stroke-width: 1.5;" x1="7" x2="272" y1="143.9375" y2="143.9375"/><ellipse cx="17" cy="154.9375" fill="#84BE84" rx="3" ry="3" style="stroke: #038048; stroke-width: 1.0;"/><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacingAndGlyphs" textLength="218" x="26" y="158.1479">getLocals(): List&lt;VariableDeclaration&gt;</text><ellipse cx="17" cy="167.7422" fill="#84BE84" rx="3" ry="3" style="stroke: #038048; stroke-width: 1.0;"/><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacingAndGlyphs" textLength="241" x="26" y="170.9526">setLocals(List&lt;VariableDeclaration&gt;): void</text></a><!--MD5=[f81c6146b1d076807881e8ef0d844bc2]
+class de.fraunhofer.aisec.cpg.graph.Node--><a href="Node.html" target="_top" title="Node.html" xlink:actuate="onRequest" xlink:href="Node.html" xlink:show="new" xlink:title="Node.html" xlink:type="simple"><rect fill="#FEFECE" filter="url(#flmm6aumd32i1)" height="37.9375" id="de.fraunhofer.aisec.cpg.graph.Node" style="stroke: #A80036; stroke-width: 1.5;" width="177" x="51" y="8"/><ellipse cx="66" cy="26.9688" fill="#ADD1B2" rx="11" ry="11" style="stroke: #A80036; stroke-width: 1.0;"/><path d="M68.9688,32.6094 Q68.3906,32.9063 67.75,33.0469 Q67.1094,33.2031 66.4063,33.2031 Q63.9063,33.2031 62.5781,31.5625 Q61.2656,29.9063 61.2656,26.7813 Q61.2656,23.6563 62.5781,22 Q63.9063,20.3438 66.4063,20.3438 Q67.1094,20.3438 67.75,20.5 Q68.4063,20.6563 68.9688,20.9531 L68.9688,23.6719 Q68.3438,23.0938 67.75,22.8281 Q67.1563,22.5469 66.5313,22.5469 Q65.1875,22.5469 64.5,23.625 Q63.8125,24.6875 63.8125,26.7813 Q63.8125,28.875 64.5,29.9531 Q65.1875,31.0156 66.5313,31.0156 Q67.1563,31.0156 67.75,30.75 Q68.3438,30.4688 68.9688,29.8906 L68.9688,32.6094 Z "/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacingAndGlyphs" textLength="37" x="134" y="25.9951">Node</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="145" x="80" y="38.5791">de.fraunhofer.aisec.cpg.graph</text></a><!--MD5=[e189ca0cd3c74ce2bf55727be2b62890]
+reverse link de.fraunhofer.aisec.cpg.graph.Node to de.fraunhofer.aisec.cpg.graph.Statement--><path d="M139.5,66.3 C139.5,79 139.5,93.08 139.5,105.56 " fill="none" id="de.fraunhofer.aisec.cpg.graph.Node&lt;-de.fraunhofer.aisec.cpg.graph.Statement" style="stroke: #A80036; stroke-width: 1.0;"/><polygon fill="none" points="132.5,66.16,139.5,46.16,146.5,66.16,132.5,66.16" style="stroke: #A80036; stroke-width: 1.0;"/><text fill="#888888" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="186" x="52.5" y="197.2822">UMLDoclet 2.0.9, PlantUML 1.2020.08</text><!--MD5=[6462a3047924298823365864696ea64f]
+@startuml
+    set namespaceSeparator none
+    hide empty fields
+    hide empty methods
+
+    class "<size:14>Statement\n<size:10>de.fraunhofer.aisec.cpg.graph" as de.fraunhofer.aisec.cpg.graph.Statement [[Statement.html]] {
+        +getLocals(): List<VariableDeclaration>
+        +setLocals(List<VariableDeclaration>): void
+    }
+
+    class "<size:14>Node\n<size:10>de.fraunhofer.aisec.cpg.graph" as de.fraunhofer.aisec.cpg.graph.Node [[Node.html]]
+
+    de.fraunhofer.aisec.cpg.graph.Node <|- - de.fraunhofer.aisec.cpg.graph.Statement
+
+    center footer UMLDoclet 2.0.9, PlantUML 1.2020.08
+@enduml
+
+PlantUML version 1.2020.08(Sun Apr 26 16:08:22 CEST 2020)
+(APACHE source distribution)
+Java Runtime: OpenJDK Runtime Environment
+JVM: OpenJDK 64-Bit Server VM
+Java Version: 12.0.2+9-Ubuntu-118.04
+Operating System: Linux
+Default Encoding: UTF-8
+Language: en
+Country: US
+--></g></svg>

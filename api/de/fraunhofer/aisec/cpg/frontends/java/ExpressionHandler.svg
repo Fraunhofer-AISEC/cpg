@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" contentScriptType="application/ecmascript" contentStyleType="text/css" height="197px" preserveAspectRatio="none" style="width:518px;height:197px;" version="1.1" viewBox="0 0 518 197" width="518px" zoomAndPan="magnify"><defs><filter height="300%" id="fke4xwzc8k4t2" width="300%" x="-1" y="-1"><feGaussianBlur result="blurOut" stdDeviation="2.0"/><feColorMatrix in="blurOut" result="blurOut2" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .4 0"/><feOffset dx="4.0" dy="4.0" in="blurOut2" result="blurOut3"/><feBlend in="SourceGraphic" in2="blurOut3" mode="normal"/></filter></defs><g><!--MD5=[642a44cab8f1684f573beb954714b869]
+class de.fraunhofer.aisec.cpg.frontends.java.ExpressionHandler--><a href="ExpressionHandler.html" target="_top" title="ExpressionHandler.html" xlink:actuate="onRequest" xlink:href="ExpressionHandler.html" xlink:show="new" xlink:title="ExpressionHandler.html" xlink:type="simple"><rect fill="#FEFECE" filter="url(#fke4xwzc8k4t2)" height="58.7422" id="de.fraunhofer.aisec.cpg.frontends.java.ExpressionHandler" style="stroke: #A80036; stroke-width: 1.5;" width="269" x="120.5" y="106"/><ellipse cx="158" cy="124.9688" fill="#ADD1B2" rx="11" ry="11" style="stroke: #A80036; stroke-width: 1.0;"/><path d="M160.9688,130.6094 Q160.3906,130.9063 159.75,131.0469 Q159.1094,131.2031 158.4063,131.2031 Q155.9063,131.2031 154.5781,129.5625 Q153.2656,127.9063 153.2656,124.7813 Q153.2656,121.6563 154.5781,120 Q155.9063,118.3438 158.4063,118.3438 Q159.1094,118.3438 159.75,118.5 Q160.4063,118.6563 160.9688,118.9531 L160.9688,121.6719 Q160.3438,121.0938 159.75,120.8281 Q159.1563,120.5469 158.5313,120.5469 Q157.1875,120.5469 156.5,121.625 Q155.8125,122.6875 155.8125,124.7813 Q155.8125,126.875 156.5,127.9531 Q157.1875,129.0156 158.5313,129.0156 Q159.1563,129.0156 159.75,128.75 Q160.3438,128.4688 160.9688,127.8906 L160.9688,130.6094 Z "/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacingAndGlyphs" textLength="129" x="206" y="123.9951">ExpressionHandler</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="187" x="177" y="136.5791">de.fraunhofer.aisec.cpg.frontends.java</text><line style="stroke: #A80036; stroke-width: 1.5;" x1="121.5" x2="388.5" y1="143.9375" y2="143.9375"/><ellipse cx="131.5" cy="154.9375" fill="#84BE84" rx="3" ry="3" style="stroke: #038048; stroke-width: 1.0;"/><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacingAndGlyphs" textLength="243" x="140.5" y="158.1479">ExpressionHandler(JavaLanguageFrontend)</text></a><!--MD5=[0d38b1d8da00c1a18e998a73bfd83290]
+class de.fraunhofer.aisec.cpg.frontends.Handler--><a href="../Handler.html" target="_top" title="../Handler.html" xlink:actuate="onRequest" xlink:href="../Handler.html" xlink:show="new" xlink:title="../Handler.html" xlink:type="simple"><rect fill="#FEFECE" filter="url(#fke4xwzc8k4t2)" height="37.9375" id="de.fraunhofer.aisec.cpg.frontends.Handler" style="stroke: #A80036; stroke-width: 1.5;" width="498" x="6" y="8"/><ellipse cx="21" cy="26.9688" fill="#A9DCDF" rx="11" ry="11" style="stroke: #A80036; stroke-width: 1.0;"/><path d="M21.1094,22.3125 L19.9531,27.3906 L22.2813,27.3906 L21.1094,22.3125 Z M19.625,20.0781 L22.6094,20.0781 L25.9688,32.4688 L23.5156,32.4688 L22.75,29.4063 L19.4688,29.4063 L18.7188,32.4688 L16.2813,32.4688 L19.625,20.0781 Z "/><text fill="#000000" font-family="sans-serif" font-size="14" font-style="italic" lengthAdjust="spacingAndGlyphs" textLength="54" x="91.5" y="25.9951">Handler</text><text fill="#000000" font-family="sans-serif" font-size="10" font-style="italic" lengthAdjust="spacingAndGlyphs" textLength="167" x="35" y="38.5791">de.fraunhofer.aisec.cpg.frontends</text><rect fill="#FFFFFF" height="15.9688" style="stroke: #000000; stroke-width: 1.0; stroke-dasharray: 2.0,2.0;" width="297" x="210" y="5"/><text fill="#000000" font-family="sans-serif" font-size="12" font-style="italic" lengthAdjust="spacingAndGlyphs" textLength="295" x="211" y="17.1387">Statement, Expression, JavaLanguageFrontend</text></a><!--MD5=[38674acd06f08dc4d9b6e81268253fba]
+reverse link de.fraunhofer.aisec.cpg.frontends.Handler to de.fraunhofer.aisec.cpg.frontends.java.ExpressionHandler--><path d="M255,66.22 C255,79.3 255,93.7 255,105.89 " fill="none" id="de.fraunhofer.aisec.cpg.frontends.Handler&lt;-de.fraunhofer.aisec.cpg.frontends.java.ExpressionHandler" style="stroke: #A80036; stroke-width: 1.0;"/><polygon fill="none" points="248,66.07,255,46.07,262,66.07,248,66.07" style="stroke: #A80036; stroke-width: 1.0;"/><text fill="#888888" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="186" x="168" y="184.2822">UMLDoclet 2.0.9, PlantUML 1.2020.08</text><!--MD5=[fb9fd3c57ddf585731ca1e51f0c4f7c2]
+@startuml
+    set namespaceSeparator none
+    hide empty fields
+    hide empty methods
+
+    class "<size:14>ExpressionHandler\n<size:10>de.fraunhofer.aisec.cpg.frontends.java" as de.fraunhofer.aisec.cpg.frontends.java.ExpressionHandler [[ExpressionHandler.html]] {
+        +ExpressionHandler(JavaLanguageFrontend)
+    }
+
+    abstract class "<size:14>Handler\n<size:10>de.fraunhofer.aisec.cpg.frontends" as de.fraunhofer.aisec.cpg.frontends.Handler<Statement, Expression, JavaLanguageFrontend> [[../Handler.html]]
+
+    de.fraunhofer.aisec.cpg.frontends.Handler <|- - de.fraunhofer.aisec.cpg.frontends.java.ExpressionHandler
+
+    center footer UMLDoclet 2.0.9, PlantUML 1.2020.08
+@enduml
+
+PlantUML version 1.2020.08(Sun Apr 26 16:08:22 CEST 2020)
+(APACHE source distribution)
+Java Runtime: OpenJDK Runtime Environment
+JVM: OpenJDK 64-Bit Server VM
+Java Version: 12.0.2+9-Ubuntu-118.04
+Operating System: Linux
+Default Encoding: UTF-8
+Language: en
+Country: US
+--></g></svg>

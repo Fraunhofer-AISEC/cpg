@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" contentScriptType="application/ecmascript" contentStyleType="text/css" height="346px" preserveAspectRatio="none" style="width:202px;height:346px;" version="1.1" viewBox="0 0 202 346" width="202px" zoomAndPan="magnify"><defs><filter height="300%" id="fnwrd2x2coaf3" width="300%" x="-1" y="-1"><feGaussianBlur result="blurOut" stdDeviation="2.0"/><feColorMatrix in="blurOut" result="blurOut2" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .4 0"/><feOffset dx="4.0" dy="4.0" in="blurOut2" result="blurOut3"/><feBlend in="SourceGraphic" in2="blurOut3" mode="normal"/></filter></defs><g><!--MD5=[3ab0021e74727c8dab8a8ca70002fced]
+class de.fraunhofer.aisec.cpg.sarif.Region--><a href="Region.html" target="_top" title="Region.html" xlink:actuate="onRequest" xlink:href="Region.html" xlink:show="new" xlink:title="Region.html" xlink:type="simple"><rect fill="#FEFECE" filter="url(#fnwrd2x2coaf3)" height="186.7891" id="de.fraunhofer.aisec.cpg.sarif.Region" style="stroke: #A80036; stroke-width: 1.5;" width="170" x="6" y="127"/><ellipse cx="21" cy="145.9688" fill="#ADD1B2" rx="11" ry="11" style="stroke: #A80036; stroke-width: 1.0;"/><path d="M23.9688,151.6094 Q23.3906,151.9063 22.75,152.0469 Q22.1094,152.2031 21.4063,152.2031 Q18.9063,152.2031 17.5781,150.5625 Q16.2656,148.9063 16.2656,145.7813 Q16.2656,142.6563 17.5781,141 Q18.9063,139.3438 21.4063,139.3438 Q22.1094,139.3438 22.75,139.5 Q23.4063,139.6563 23.9688,139.9531 L23.9688,142.6719 Q23.3438,142.0938 22.75,141.8281 Q22.1563,141.5469 21.5313,141.5469 Q20.1875,141.5469 19.5,142.625 Q18.8125,143.6875 18.8125,145.7813 Q18.8125,147.875 19.5,148.9531 Q20.1875,150.0156 21.5313,150.0156 Q22.1563,150.0156 22.75,149.75 Q23.3438,149.4688 23.9688,148.8906 L23.9688,151.6094 Z "/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacingAndGlyphs" textLength="49" x="79.5" y="144.9951">Region</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="138" x="35" y="157.5791">de.fraunhofer.aisec.cpg.sarif</text><line style="stroke: #A80036; stroke-width: 1.5;" x1="7" x2="175" y1="164.9375" y2="164.9375"/><ellipse cx="17" cy="175.9375" fill="#84BE84" rx="3" ry="3" style="stroke: #038048; stroke-width: 1.0;"/><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacingAndGlyphs" textLength="126" x="26" y="179.1479">Region(int, int, int, int)</text><ellipse cx="17" cy="188.7422" fill="#84BE84" rx="3" ry="3" style="stroke: #038048; stroke-width: 1.0;"/><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacingAndGlyphs" textLength="46" x="26" y="191.9526">Region()</text><ellipse cx="17" cy="201.5469" fill="#84BE84" rx="3" ry="3" style="stroke: #038048; stroke-width: 1.0;"/><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacingAndGlyphs" textLength="99" x="26" y="204.7573">getStartLine(): int</text><ellipse cx="17" cy="214.3516" fill="#84BE84" rx="3" ry="3" style="stroke: #038048; stroke-width: 1.0;"/><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacingAndGlyphs" textLength="122" x="26" y="217.562">setStartLine(int): void</text><ellipse cx="17" cy="227.1563" fill="#84BE84" rx="3" ry="3" style="stroke: #038048; stroke-width: 1.0;"/><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacingAndGlyphs" textLength="119" x="26" y="230.3667">getStartColumn(): int</text><ellipse cx="17" cy="239.9609" fill="#84BE84" rx="3" ry="3" style="stroke: #038048; stroke-width: 1.0;"/><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacingAndGlyphs" textLength="142" x="26" y="243.1714">setStartColumn(int): void</text><ellipse cx="17" cy="252.7656" fill="#84BE84" rx="3" ry="3" style="stroke: #038048; stroke-width: 1.0;"/><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacingAndGlyphs" textLength="92" x="26" y="255.9761">getEndLine(): int</text><ellipse cx="17" cy="265.5703" fill="#84BE84" rx="3" ry="3" style="stroke: #038048; stroke-width: 1.0;"/><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacingAndGlyphs" textLength="115" x="26" y="268.7808">setEndLine(int): void</text><ellipse cx="17" cy="278.375" fill="#84BE84" rx="3" ry="3" style="stroke: #038048; stroke-width: 1.0;"/><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacingAndGlyphs" textLength="112" x="26" y="281.5854">getEndColumn(): int</text><ellipse cx="17" cy="291.1797" fill="#84BE84" rx="3" ry="3" style="stroke: #038048; stroke-width: 1.0;"/><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacingAndGlyphs" textLength="135" x="26" y="294.3901">setEndColumn(int): void</text><ellipse cx="17" cy="303.9844" fill="#84BE84" rx="3" ry="3" style="stroke: #038048; stroke-width: 1.0;"/><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacingAndGlyphs" textLength="132" x="26" y="307.1948">compareTo(Region): int</text></a><!--MD5=[008d82c49f85b4d489e041917c99c847]
+class java.lang.Comparable--><rect fill="#FEFECE" filter="url(#fnwrd2x2coaf3)" height="58.7422" id="java.lang.Comparable" style="stroke: #A80036; stroke-width: 1.5;" width="162" x="10" y="8"/><ellipse cx="25" cy="26.9688" fill="#B4A7E5" rx="11" ry="11" style="stroke: #A80036; stroke-width: 1.0;"/><path d="M20.9219,22.7344 L20.9219,20.5781 L28.3125,20.5781 L28.3125,22.7344 L25.8438,22.7344 L25.8438,30.8125 L28.3125,30.8125 L28.3125,32.9688 L20.9219,32.9688 L20.9219,30.8125 L23.3906,30.8125 L23.3906,22.7344 L20.9219,22.7344 Z "/><text fill="#000000" font-family="sans-serif" font-size="14" font-style="italic" lengthAdjust="spacingAndGlyphs" textLength="83" x="39" y="25.9951">Comparable</text><text fill="#000000" font-family="sans-serif" font-size="10" font-style="italic" lengthAdjust="spacingAndGlyphs" textLength="45" x="58" y="38.5791">java.lang</text><rect fill="#FFFFFF" height="15.9688" style="stroke: #000000; stroke-width: 1.0; stroke-dasharray: 2.0,2.0;" width="45" x="130" y="5"/><text fill="#000000" font-family="sans-serif" font-size="12" font-style="italic" lengthAdjust="spacingAndGlyphs" textLength="43" x="131" y="17.1387">Region</text><line style="stroke: #A80036; stroke-width: 1.5;" x1="11" x2="171" y1="45.9375" y2="45.9375"/><ellipse cx="21" cy="56.9375" fill="#84BE84" rx="3" ry="3" style="stroke: #038048; stroke-width: 1.0;"/><text fill="#000000" font-family="sans-serif" font-size="11" font-style="italic" lengthAdjust="spacingAndGlyphs" textLength="133" x="30" y="60.1479">compareTo(Region): int</text><!--MD5=[7d450d64f39750ad301e55097619acc8]
+reverse link java.lang.Comparable to de.fraunhofer.aisec.cpg.sarif.Region--><path d="M91,87.48 C91,99.68 91,113.16 91,126.71 " fill="none" id="java.lang.Comparable&lt;-de.fraunhofer.aisec.cpg.sarif.Region" style="stroke: #A80036; stroke-width: 1.0; stroke-dasharray: 7.0,7.0;"/><polygon fill="none" points="84,87.18,91,67.18,98,87.18,84,87.18" style="stroke: #A80036; stroke-width: 1.0;"/><text fill="#888888" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="186" x="4" y="333.2822">UMLDoclet 2.0.9, PlantUML 1.2020.08</text><!--MD5=[e0bf9707e9ed41d7735a9da7cfeba428]
+@startuml
+    set namespaceSeparator none
+    hide empty fields
+    hide empty methods
+
+    class "<size:14>Region\n<size:10>de.fraunhofer.aisec.cpg.sarif" as de.fraunhofer.aisec.cpg.sarif.Region [[Region.html]] {
+        +Region(int, int, int, int)
+        +Region()
+        +getStartLine(): int
+        +setStartLine(int): void
+        +getStartColumn(): int
+        +setStartColumn(int): void
+        +getEndLine(): int
+        +setEndLine(int): void
+        +getEndColumn(): int
+        +setEndColumn(int): void
+        +compareTo(Region): int
+    }
+
+    interface "<size:14>Comparable\n<size:10>java.lang" as java.lang.Comparable<Region> {
+        {abstract} +compareTo(Region): int
+    }
+
+    java.lang.Comparable <|.. de.fraunhofer.aisec.cpg.sarif.Region
+
+    center footer UMLDoclet 2.0.9, PlantUML 1.2020.08
+@enduml
+
+PlantUML version 1.2020.08(Sun Apr 26 16:08:22 CEST 2020)
+(APACHE source distribution)
+Java Runtime: OpenJDK Runtime Environment
+JVM: OpenJDK 64-Bit Server VM
+Java Version: 12.0.2+9-Ubuntu-118.04
+Operating System: Linux
+Default Encoding: UTF-8
+Language: en
+Country: US
+--></g></svg>

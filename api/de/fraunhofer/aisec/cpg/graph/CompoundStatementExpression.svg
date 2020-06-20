@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" contentScriptType="application/ecmascript" contentStyleType="text/css" height="210px" preserveAspectRatio="none" style="width:274px;height:210px;" version="1.1" viewBox="0 0 274 210" width="274px" zoomAndPan="magnify"><defs><filter height="300%" id="ffoqotyearinh" width="300%" x="-1" y="-1"><feGaussianBlur result="blurOut" stdDeviation="2.0"/><feColorMatrix in="blurOut" result="blurOut2" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .4 0"/><feOffset dx="4.0" dy="4.0" in="blurOut2" result="blurOut3"/><feBlend in="SourceGraphic" in2="blurOut3" mode="normal"/></filter></defs><g><!--MD5=[64dcb6c19328648e5e22379179125de3]
+class de.fraunhofer.aisec.cpg.graph.CompoundStatementExpression--><a href="CompoundStatementExpression.html" target="_top" title="CompoundStatementExpression.html" xlink:actuate="onRequest" xlink:href="CompoundStatementExpression.html" xlink:show="new" xlink:title="CompoundStatementExpression.html" xlink:type="simple"><rect fill="#FEFECE" filter="url(#ffoqotyearinh)" height="71.5469" id="de.fraunhofer.aisec.cpg.graph.CompoundStatementExpression" style="stroke: #A80036; stroke-width: 1.5;" width="257" x="6" y="106"/><ellipse cx="21" cy="124.9688" fill="#ADD1B2" rx="11" ry="11" style="stroke: #A80036; stroke-width: 1.0;"/><path d="M23.9688,130.6094 Q23.3906,130.9063 22.75,131.0469 Q22.1094,131.2031 21.4063,131.2031 Q18.9063,131.2031 17.5781,129.5625 Q16.2656,127.9063 16.2656,124.7813 Q16.2656,121.6563 17.5781,120 Q18.9063,118.3438 21.4063,118.3438 Q22.1094,118.3438 22.75,118.5 Q23.4063,118.6563 23.9688,118.9531 L23.9688,121.6719 Q23.3438,121.0938 22.75,120.8281 Q22.1563,120.5469 21.5313,120.5469 Q20.1875,120.5469 19.5,121.625 Q18.8125,122.6875 18.8125,124.7813 Q18.8125,126.875 19.5,127.9531 Q20.1875,129.0156 21.5313,129.0156 Q22.1563,129.0156 22.75,128.75 Q23.3438,128.4688 23.9688,127.8906 L23.9688,130.6094 Z "/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacingAndGlyphs" textLength="225" x="35" y="123.9951">CompoundStatementExpression</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="145" x="75" y="136.5791">de.fraunhofer.aisec.cpg.graph</text><line style="stroke: #A80036; stroke-width: 1.5;" x1="7" x2="262" y1="143.9375" y2="143.9375"/><ellipse cx="17" cy="154.9375" fill="#84BE84" rx="3" ry="3" style="stroke: #038048; stroke-width: 1.0;"/><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacingAndGlyphs" textLength="152" x="26" y="158.1479">getStatement(): Statement</text><ellipse cx="17" cy="167.7422" fill="#84BE84" rx="3" ry="3" style="stroke: #038048; stroke-width: 1.0;"/><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacingAndGlyphs" textLength="175" x="26" y="170.9526">setStatement(Statement): void</text></a><!--MD5=[f602dd8d46e7ba17465d0a1e20507055]
+class de.fraunhofer.aisec.cpg.graph.Expression--><a href="Expression.html" target="_top" title="Expression.html" xlink:actuate="onRequest" xlink:href="Expression.html" xlink:show="new" xlink:title="Expression.html" xlink:type="simple"><rect fill="#FEFECE" filter="url(#ffoqotyearinh)" height="37.9375" id="de.fraunhofer.aisec.cpg.graph.Expression" style="stroke: #A80036; stroke-width: 1.5;" width="177" x="46" y="8"/><ellipse cx="61" cy="26.9688" fill="#ADD1B2" rx="11" ry="11" style="stroke: #A80036; stroke-width: 1.0;"/><path d="M63.9688,32.6094 Q63.3906,32.9063 62.75,33.0469 Q62.1094,33.2031 61.4063,33.2031 Q58.9063,33.2031 57.5781,31.5625 Q56.2656,29.9063 56.2656,26.7813 Q56.2656,23.6563 57.5781,22 Q58.9063,20.3438 61.4063,20.3438 Q62.1094,20.3438 62.75,20.5 Q63.4063,20.6563 63.9688,20.9531 L63.9688,23.6719 Q63.3438,23.0938 62.75,22.8281 Q62.1563,22.5469 61.5313,22.5469 Q60.1875,22.5469 59.5,23.625 Q58.8125,24.6875 58.8125,26.7813 Q58.8125,28.875 59.5,29.9531 Q60.1875,31.0156 61.5313,31.0156 Q62.1563,31.0156 62.75,30.75 Q63.3438,30.4688 63.9688,29.8906 L63.9688,32.6094 Z "/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacingAndGlyphs" textLength="76" x="109.5" y="25.9951">Expression</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="145" x="75" y="38.5791">de.fraunhofer.aisec.cpg.graph</text></a><!--MD5=[5cbd81c439dc19bb7ca179cfc786c297]
+reverse link de.fraunhofer.aisec.cpg.graph.Expression to de.fraunhofer.aisec.cpg.graph.CompoundStatementExpression--><path d="M134.5,66.3 C134.5,79 134.5,93.08 134.5,105.56 " fill="none" id="de.fraunhofer.aisec.cpg.graph.Expression&lt;-de.fraunhofer.aisec.cpg.graph.CompoundStatementExpression" style="stroke: #A80036; stroke-width: 1.0;"/><polygon fill="none" points="127.5,66.16,134.5,46.16,141.5,66.16,127.5,66.16" style="stroke: #A80036; stroke-width: 1.0;"/><text fill="#888888" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="186" x="47.5" y="197.2822">UMLDoclet 2.0.9, PlantUML 1.2020.08</text><!--MD5=[df945c03086ac16a7d378b4d6e4b0639]
+@startuml
+    set namespaceSeparator none
+    hide empty fields
+    hide empty methods
+
+    class "<size:14>CompoundStatementExpression\n<size:10>de.fraunhofer.aisec.cpg.graph" as de.fraunhofer.aisec.cpg.graph.CompoundStatementExpression [[CompoundStatementExpression.html]] {
+        +getStatement(): Statement
+        +setStatement(Statement): void
+    }
+
+    class "<size:14>Expression\n<size:10>de.fraunhofer.aisec.cpg.graph" as de.fraunhofer.aisec.cpg.graph.Expression [[Expression.html]]
+
+    de.fraunhofer.aisec.cpg.graph.Expression <|- - de.fraunhofer.aisec.cpg.graph.CompoundStatementExpression
+
+    center footer UMLDoclet 2.0.9, PlantUML 1.2020.08
+@enduml
+
+PlantUML version 1.2020.08(Sun Apr 26 16:08:22 CEST 2020)
+(APACHE source distribution)
+Java Runtime: OpenJDK Runtime Environment
+JVM: OpenJDK 64-Bit Server VM
+Java Version: 12.0.2+9-Ubuntu-118.04
+Operating System: Linux
+Default Encoding: UTF-8
+Language: en
+Country: US
+--></g></svg>
