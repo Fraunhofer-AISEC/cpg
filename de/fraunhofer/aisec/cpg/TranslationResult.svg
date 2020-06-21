@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" contentScriptType="application/ecmascript" contentStyleType="text/css" height="154px" preserveAspectRatio="none" style="width:359px;height:154px;" version="1.1" viewBox="0 0 359 154" width="359px" zoomAndPan="magnify"><defs><filter height="300%" id="f1ei2mqt7gjfys" width="300%" x="-1" y="-1"><feGaussianBlur result="blurOut" stdDeviation="2.0"/><feColorMatrix in="blurOut" result="blurOut2" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .4 0"/><feOffset dx="4.0" dy="4.0" in="blurOut2" result="blurOut3"/><feBlend in="SourceGraphic" in2="blurOut3" mode="normal"/></filter></defs><g><!--MD5=[0b80c1371b4c8b6dcb2dd52eed0a322a]
+class de.fraunhofer.aisec.cpg.TranslationResult--><a href="TranslationResult.html" target="_top" title="TranslationResult.html" xlink:actuate="onRequest" xlink:href="TranslationResult.html" xlink:show="new" xlink:title="TranslationResult.html" xlink:type="simple"><rect fill="#FEFECE" filter="url(#f1ei2mqt7gjfys)" height="117.9609" id="de.fraunhofer.aisec.cpg.TranslationResult" style="stroke: #A80036; stroke-width: 1.5;" width="341" x="7" y="7"/><ellipse cx="113.25" cy="25.9688" fill="#ADD1B2" rx="11" ry="11" style="stroke: #A80036; stroke-width: 1.0;"/><path d="M116.2188,31.6094 Q115.6406,31.9063 115,32.0469 Q114.3594,32.2031 113.6563,32.2031 Q111.1563,32.2031 109.8281,30.5625 Q108.5156,28.9063 108.5156,25.7813 Q108.5156,22.6563 109.8281,21 Q111.1563,19.3438 113.6563,19.3438 Q114.3594,19.3438 115,19.5 Q115.6563,19.6563 116.2188,19.9531 L116.2188,22.6719 Q115.5938,22.0938 115,21.8281 Q114.4063,21.5469 113.7813,21.5469 Q112.4375,21.5469 111.75,22.625 Q111.0625,23.6875 111.0625,25.7813 Q111.0625,27.875 111.75,28.9531 Q112.4375,30.0156 113.7813,30.0156 Q114.4063,30.0156 115,29.75 Q115.5938,29.4688 116.2188,28.8906 L116.2188,31.6094 Z "/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacingAndGlyphs" textLength="120" x="133.75" y="24.9951">TranslationResult</text><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="114" x="136.75" y="37.5791">de.fraunhofer.aisec.cpg</text><line style="stroke: #A80036; stroke-width: 1.5;" x1="8" x2="347" y1="44.9375" y2="44.9375"/><ellipse cx="18" cy="55.9375" fill="none" rx="3" ry="3" style="stroke: #038048; stroke-width: 1.0;"/><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacingAndGlyphs" text-decoration="underline" textLength="248" x="27" y="59.1479">SOURCE_LOCATIONS_TO_FRONTEND: String</text><line style="stroke: #A80036; stroke-width: 1.5;" x1="8" x2="347" y1="65.7422" y2="65.7422"/><ellipse cx="18" cy="76.7422" fill="#84BE84" rx="3" ry="3" style="stroke: #038048; stroke-width: 1.0;"/><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacingAndGlyphs" textLength="220" x="27" y="79.9526">TranslationResult(TranslationManager)</text><ellipse cx="18" cy="89.5469" fill="#84BE84" rx="3" ry="3" style="stroke: #038048; stroke-width: 1.0;"/><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacingAndGlyphs" textLength="126" x="27" y="92.7573">isCancelled(): boolean</text><ellipse cx="18" cy="102.3516" fill="#84BE84" rx="3" ry="3" style="stroke: #038048; stroke-width: 1.0;"/><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacingAndGlyphs" textLength="315" x="27" y="105.562">getTranslationUnits(): List&lt;TranslationUnitDeclaration&gt;</text><ellipse cx="18" cy="115.1563" fill="#84BE84" rx="3" ry="3" style="stroke: #038048; stroke-width: 1.0;"/><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacingAndGlyphs" textLength="196" x="27" y="118.3667">getScratch(): Map&lt;String, Object&gt;</text></a><text fill="#888888" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="186" x="84.5" y="141.2432">UMLDoclet 2.0.9, PlantUML 1.2020.08</text><!--MD5=[a79525d94ee30607be2e789d017ce8e4]
+@startuml
+    set namespaceSeparator none
+    hide empty fields
+    hide empty methods
+
+    class "<size:14>TranslationResult\n<size:10>de.fraunhofer.aisec.cpg" as de.fraunhofer.aisec.cpg.TranslationResult [[TranslationResult.html]] {
+        {static} +SOURCE_LOCATIONS_TO_FRONTEND: String
+        +TranslationResult(TranslationManager)
+        +isCancelled(): boolean
+        +getTranslationUnits(): List<TranslationUnitDeclaration>
+        +getScratch(): Map<String, Object>
+    }
+
+    center footer UMLDoclet 2.0.9, PlantUML 1.2020.08
+@enduml
+
+PlantUML version 1.2020.08(Sun Apr 26 14:08:22 UTC 2020)
+(APACHE source distribution)
+Java Runtime: OpenJDK Runtime Environment
+JVM: OpenJDK 64-Bit Server VM
+Java Version: 11.0.7+10-LTS
+Operating System: Linux
+Default Encoding: UTF-8
+Language: en
+Country: null
+--></g></svg>

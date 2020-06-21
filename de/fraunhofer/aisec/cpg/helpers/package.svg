@@ -1,0 +1,163 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" contentScriptType="application/ecmascript" contentStyleType="text/css" height="228px" preserveAspectRatio="none" style="width:308px;height:228px;background:#000000;" version="1.1" viewBox="0 0 308 228" width="308px" zoomAndPan="magnify"><defs/><g><text fill="#33FF02" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="261" x="5" y="19">Dot Executable: /opt/local/bin/dot</text><text fill="#33FF02" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="145" x="5" y="35.2969">File does not exist</text><text fill="#33FF02" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="291" x="5" y="51.5938">Cannot find Graphviz. You should try</text><text fill="#33FF02" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="0" x="10" y="67.8906"/><text fill="#33FF02" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="79" x="5" y="84.1875">@startuml</text><text fill="#33FF02" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="57" x="5" y="100.4844">testdot</text><text fill="#33FF02" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="72" x="5" y="116.7813">@enduml</text><text fill="#33FF02" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="0" x="10" y="133.0781"/><text fill="#33FF02" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="17" x="10" y="149.375">or</text><text fill="#33FF02" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="0" x="10" y="165.6719"/><text fill="#33FF02" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="227" x="5" y="181.9688">java -jar plantuml.jar -testdot</text><text fill="#33FF02" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="0" x="10" y="198.2656"/><text fill="#888888" font-family="sans-serif" font-size="10" lengthAdjust="spacingAndGlyphs" textLength="186" x="57.5" y="214.8447">UMLDoclet 2.0.9, PlantUML 1.2020.08</text><!--MD5=[51ae74ae4a033d17694620dfa8c1b6e8]
+@startuml
+    namespace de.fraunhofer.aisec.cpg.helpers {
+
+        class SubgraphWalker [[SubgraphWalker.html]] {
+            {static} +getAstChildren(Node): Set<Node>
+            {static} +flattenAST(Node): List<Node>
+            {static} +getEOGPathEdges(Node): Border
+            {static} +visit(Node, Consumer<Node>): void
+        }
+
+        class de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.Border [[SubgraphWalker.Border.html]] {
+            +getEntries(): List<Node>
+            +getExits(): List<Node>
+        }
+
+        class de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.IterativeGraphWalker [[SubgraphWalker.IterativeGraphWalker.html]] {
+            +iterate(Node): void
+            +registerOnNodeVisit(Consumer<Node>): void
+            +registerOnScopeExit(Consumer<Node>): void
+            +clearCallbacks(): void
+            +getTodo(): Deque<Node>
+            +getBacklog(): Deque<Node>
+        }
+
+        class de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.ScopedWalker [[SubgraphWalker.ScopedWalker.html]] {
+            +clearCallbacks(): void
+            +registerHandler(TriConsumer<RecordDeclaration, Node, Node>): void
+            +registerHandler(BiConsumer<Node, RecordDeclaration>): void
+            +iterate(Node): void
+            +getCurrentClass(): RecordDeclaration
+            +collectDeclarations(Node): void
+            +getAllDeclarationsForScope(Node): List<ValueDeclaration>
+            +getDeclarationForScope(Node, Predicate<ValueDeclaration>): Optional<? extends ValueDeclaration>
+        }
+
+        interface TriConsumer<A, B, C> [[TriConsumer.html]] {
+            {abstract} +accept(A, B, C): void
+        }
+
+        class LocationConverter [[LocationConverter.html]] {
+            +toGraphProperties(PhysicalLocation): Map<String, ?>
+            +toEntityAttribute(Map<String, ?>): PhysicalLocation
+        }
+
+        class ShutDownException [[ShutDownException.html]]
+
+        class Util [[Util.html]] {
+            {static} +filterCast(List<T>, Class<S extends T>): List<S extends T>
+            {static} +subnodesOfType(Node, Class<S extends Node>): List<S extends Node>
+            {static} +subnodesOfType(Collection<? extends Node>, Class<S extends Node>): List<S extends Node>
+            {static} +subnodesOfCode(Node, String): List<Node>
+            {static} +eogConnect(Connect, Edge, Node, Connect, Node...): boolean
+            {static} +eogConnect(Quantifier, Connect, Edge, Node, Node...): boolean
+            {static} +eogConnect(Quantifier, Edge, Node, Connect, Node...): boolean
+            {static} +eogConnect(Connect, Edge, Node, Node...): boolean
+            {static} +eogConnect(Quantifier, Edge, Node, Node...): boolean
+            {static} +eogConnect(Edge, Node, Connect, Node...): boolean
+            {static} +eogConnect(Edge, Node, Node...): boolean
+            {static} +eogConnect(Quantifier, Connect, Edge, Node, Connect, Node...): boolean
+            {static} +inputStreamToString(InputStream): String
+            {static} +distinctByIdentity(): Predicate<T>
+            {static} +distinctBy(Function<? super T, ?>): Predicate<T>
+            {static} +getExtension(File): String
+            {static} +warnWithFileLocation(LanguageFrontend, S, Logger, String, Object...): void
+            {static} +errorWithFileLocation(LanguageFrontend, S, Logger, String, Object...): void
+            {static} +warnWithFileLocation(Node, Logger, String, Object...): void
+            {static} +errorWithFileLocation(Node, Logger, String, Object...): void
+            {static} +splitLeavingParenthesisContents(String, String): List<String>
+            {static} +removeRedundantParentheses(String): String
+            {static} +containsOnOuterLevel(String, char): boolean
+            {static} +attachCallParameters(FunctionDeclaration, List<Expression>): void
+            {static} +detachCallParameters(FunctionDeclaration, List<Expression>): void
+            {static} +createParameters(List<Type>): List<ParamVariableDeclaration>
+        }
+
+        enum de.fraunhofer.aisec.cpg.helpers.Util.Connect [[Util.Connect.html]] {
+            {static} +NODE
+            {static} +SUBTREE
+        }
+
+        enum de.fraunhofer.aisec.cpg.helpers.Util.Quantifier [[Util.Quantifier.html]] {
+            {static} +ANY
+            {static} +ALL
+        }
+
+        enum de.fraunhofer.aisec.cpg.helpers.Util.Edge [[Util.Edge.html]] {
+            {static} +ENTRIES
+            {static} +EXITS
+        }
+
+        class CommonPath [[CommonPath.html]] {
+            {static} +commonPath(Collection<File>): File
+        }
+
+        class Benchmark [[Benchmark.html]] {
+            +Benchmark(Class, String)
+            +stop(): long
+            +getDuration(): long
+        }
+
+        class NodeComparator [[NodeComparator.html]] {
+            +compare(Node, Node): int
+        }
+
+        SubgraphWalker +- - de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.Border
+        SubgraphWalker +- - de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.IterativeGraphWalker
+        SubgraphWalker +- - de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.ScopedWalker
+        org.neo4j.ogm.typeconversion.CompositeAttributeConverter <|.. LocationConverter
+        java.lang.Exception <|- - ShutDownException
+        Util +- - de.fraunhofer.aisec.cpg.helpers.Util.Connect
+        Util +- - de.fraunhofer.aisec.cpg.helpers.Util.Quantifier
+        Util +- - de.fraunhofer.aisec.cpg.helpers.Util.Edge
+        java.util.Comparator <|.. NodeComparator
+    }
+
+    namespace org.neo4j.ogm.typeconversion {
+        interface CompositeAttributeConverter<T> {
+            {abstract} +toGraphProperties(T): Map<String, ?>
+            {abstract} +toEntityAttribute(Map<String, ?>): T
+        }
+    }
+
+    namespace java.lang {
+        class Exception {
+        }
+    }
+
+    namespace java.util {
+        interface Comparator<T> {
+            {abstract} +compare(T, T): int
+            +reversed(): Comparator<T>
+            +thenComparing(Comparator<? super T>): Comparator<T>
+            +thenComparing(Function<? super T, ? extends U>, Comparator<? super U>): Comparator<T>
+            +thenComparing(Function<? super T, ? extends Comparable<? super U>>): Comparator<T>
+            +thenComparingInt(ToIntFunction<? super T>): Comparator<T>
+            +thenComparingLong(ToLongFunction<? super T>): Comparator<T>
+            +thenComparingDouble(ToDoubleFunction<? super T>): Comparator<T>
+            {static} +reverseOrder(): Comparator<T extends Comparable<? super T>>
+            {static} +naturalOrder(): Comparator<T extends Comparable<? super T>>
+            {static} +nullsFirst(Comparator<? super T>): Comparator<T>
+            {static} +nullsLast(Comparator<? super T>): Comparator<T>
+            {static} +comparing(Function<? super T, ? extends U>, Comparator<? super U>): Comparator<T>
+            {static} +comparing(Function<? super T, ? extends Comparable<? super U>>): Comparator<T>
+            {static} +comparingInt(ToIntFunction<? super T>): Comparator<T>
+            {static} +comparingLong(ToLongFunction<? super T>): Comparator<T>
+            {static} +comparingDouble(ToDoubleFunction<? super T>): Comparator<T>
+        }
+    }
+
+    center footer UMLDoclet 2.0.9, PlantUML 1.2020.08
+@enduml
+
+PlantUML version 1.2020.08(Sun Apr 26 14:08:22 UTC 2020)
+(APACHE source distribution)
+Java Runtime: OpenJDK Runtime Environment
+JVM: OpenJDK 64-Bit Server VM
+Java Version: 11.0.7+10-LTS
+Operating System: Linux
+Default Encoding: UTF-8
+Language: en
+Country: null
+--></g></svg>
