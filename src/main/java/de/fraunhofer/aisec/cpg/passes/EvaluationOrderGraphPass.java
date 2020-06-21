@@ -42,18 +42,23 @@ import org.slf4j.LoggerFactory;
 /**
  * Creates an Evaluation Order Graph (EOG) based on AST.
  *
- * <p>EOG is similar to the CFG {@code ControlFlowGraphPass}, but its nodes are not limited to
- * *executable* statements but also include (some) *evaluated* expressions and CompoundStatements.
- * This leads to subtle differences:
+ * An EOG is an intraprocedural directed graph whose vertices are executable AST nodes and edges
+ * connect them in the order they would be executed when running the program.
+ *
+ * An EOG always starts at the header of a method/function and ends in one (virtual) or multiple return statements.
+ * A virtual return statement with a code location of (-1,-1) is used if the actual source code does not have an explicit
+ * return statement.
+ *
+ * <p>The EOG is similar to the CFG {@code ControlFlowGraphPass}, but there are some subtle differences:
  *
  * <ul>
  *   <li>For methods without explicit return statement, EOF will have an edge to a virtual return
- *       node with line number -1 which does not exist in the original code. In CFG, the last
- *       reachable statement(s) will not have any further nextCFG edges.
+ *       node with line number -1 which does not exist in the original code. A CFG will always end with the last
+ *       reachable statement(s) and not insert any virtual return statements.
+ *   <li>EOG considers an opening blocking ("CompoundStatement", indicated by a "{") as a separate
+ *       node. A CFG will rather use the first actual executable statement within the block.
  *   <li>For IF statements, EOG treats the "if" keyword and the condition as separate nodes. CFG
  *       treats this as one "if" statement.
- *   <li>EOG considers an opening blocking ("CompoundStatement", indicated by a "{") as a separate
- *       node. CFG will rather use the first actual executable statement within the block.
  *   <li>EOG considers a method header as a node. CFG will consider the first executable statement
  *       of the methods as a node.
  * </ul>
