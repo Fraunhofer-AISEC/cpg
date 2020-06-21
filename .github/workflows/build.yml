@@ -31,10 +31,11 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: JavaDoc
-        run: |
-          ./gradlew -Dorg.ajoberstar.grgit.auth.username=$GITHUB_TOKEN gitPublishPush
-        env:
+        uses: JamesIves/github-pages-deploy-action@releases/v3
+        with:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BRANCH: gh-pages
+          FOLDER: build/docs/javadoc
       - name: Publish
         run: |
           export ORG_GRADLE_PROJECT_signingKey=`echo ${{ secrets.GPG_PRIVATE_KEY }} | base64 -d`
