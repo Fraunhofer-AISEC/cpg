@@ -17,6 +17,8 @@ class ScopeVariables{
         string varName = "instance_field";
         static string staticVarName;
 
+        int functionX();
+
         void function1(){
             printLog("func1_impl_this_varName", varName);
             printLog("func1_static_staticVarName", staticVarName);
@@ -127,4 +129,8 @@ int main (int argc, char *argv[]) {
 
 string ScopeVariables::staticVarName = "static_field";
 string ScopeVariables::InnerClass::staticVarName = "inner_static_field";
+
+int ScopeVariables::functionX(){
+    return 0;
+}
 

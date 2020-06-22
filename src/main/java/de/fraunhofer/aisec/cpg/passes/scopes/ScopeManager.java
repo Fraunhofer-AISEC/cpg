@@ -50,11 +50,14 @@ import de.fraunhofer.aisec.cpg.graph.ParamVariableDeclaration;
 import de.fraunhofer.aisec.cpg.graph.RecordDeclaration;
 import de.fraunhofer.aisec.cpg.graph.Statement;
 import de.fraunhofer.aisec.cpg.graph.SwitchStatement;
+import de.fraunhofer.aisec.cpg.graph.TranslationUnitDeclaration;
 import de.fraunhofer.aisec.cpg.graph.TryStatement;
+import de.fraunhofer.aisec.cpg.graph.Type;
 import de.fraunhofer.aisec.cpg.graph.ValueDeclaration;
 import de.fraunhofer.aisec.cpg.graph.VariableDeclaration;
 import de.fraunhofer.aisec.cpg.graph.WhileStatement;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -64,6 +67,8 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.stream.Collectors;
+
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.slf4j.Logger;
@@ -217,8 +222,8 @@ public class ScopeManager {
   }
 
   public void enterScope(Node nodeToScope) {
+    Scope newScope = null;
     if (!scopeMap.containsKey(nodeToScope)) {
-      Scope newScope;
       if (nodeToScope instanceof CompoundStatement) {
         newScope = new BlockScope((CompoundStatement) nodeToScope);
       } else if (nodeToScope instanceof WhileStatement
@@ -236,7 +241,7 @@ public class ScopeManager {
       } else if (nodeToScope instanceof CatchClause) {
         newScope = new DeclarationScope(nodeToScope);
       } else if (nodeToScope instanceof RecordDeclaration) {
-        newScope = new RecordScope(nodeToScope);
+        newScope = new RecordScope(nodeToScope, getCurrentNamePrefix(), lang.getNamespaceDelimiter());
       } else if (nodeToScope instanceof TryStatement) {
         newScope = new TryScope(nodeToScope);
       } else if (nodeToScope instanceof NamespaceDeclaration) {
@@ -248,6 +253,9 @@ public class ScopeManager {
       pushScope(newScope);
     }
     currentScope = scopeMap.get(nodeToScope);
+    if(newScope != null){
+      newScope.setScopedName(getCurrentNamePrefix());
+    }
   }
 
   public boolean isBreakable(Scope scope) {
@@ -437,10 +445,100 @@ public class ScopeManager {
     } while (toIterate != null);
   }
 
+  // Todo need to move this somwhere apropriatee
+  private String getSimpleName(Node node){
+    String name = node.getName();
+    if(name.contains(lang.getNamespaceDelimiter())){
+      return name.substring(name.lastIndexOf(lang.getNamespaceDelimiter())
+              + lang.getNamespaceDelimiter().length());
+    }else{
+      return name;
+    }
+  }
+
+  public void addExternalFieldDeclaration(FieldDeclaration field){
+    String name = field.getName();
+    String path = name.substring(0, name.lastIndexOf(lang.getNamespaceDelimiter()));
+    String simpleName = name.substring(name.lastIndexOf(lang.getNamespaceDelimiter()) + lang.getNamespaceDelimiter().length(), name.length() - 1);
+
+    Scope recordScope = resolveScopeWithPath(path);
+    if(recordScope instanceof RecordScope){
+      RecordDeclaration record = (RecordDeclaration)recordScope.getAstNode();
+      FieldDeclaration existing = record.getFields().stream().filter(containedField ->
+              getSimpleName(containedField).equals(simpleName))
+              .collect(Collectors.toList()).get(0);
+      if(existing != null){
+        record.getFields().remove(existing);
+        record.getFields().add(field);
+      }
+    }else{
+      LOGGER.warn("Scope found with path to the field is not scoping a record declaration.");
+    }
+
+  }
+
+  public void addExternalFunctionDeclaration(FunctionDeclaration function){
+    String name = function.getName();
+    String path = name.substring(0, name.lastIndexOf(lang.getNamespaceDelimiter()));
+    String simpleName = name.substring(name.lastIndexOf(lang.getNamespaceDelimiter()) + lang.getNamespaceDelimiter().length(), name.length() - 1);
+
+    Scope nameScope = resolveScopeWithPath(path);
+    if(nameScope instanceof NameScope){
+      NamespaceDeclaration namespace= (NamespaceDeclaration) nameScope.getAstNode();
+      FunctionDeclaration existing = namespace.getFunctions.stream().filter(containedField ->
+              getSimpleName(containedField).equals(simpleName))
+              .collect(Collectors.toList()).get(0);
+      if(existing != null){
+        record.getFields().remove(existing);
+        record.getFields().add(field);
+      }
+    }else{
+      LOGGER.warn("Scope found with path to the field is not scoping a record declaration.");
+    }
+  }
+
+  public void addExternalRecordDeclaration(RecordDeclaration recordDeclaration){
+
+  }
+  // 1. enter scope of element to replace and move to parent or
+
+  public void addDeclaration(Declaration declaration) {
+    if(declaration instanceof ValueDeclaration){
+      addValueDeclaration((ValueDeclaration)declaration);
+    }else if(declaration instanceof RecordDeclaration){
+      if(declaration.getName().contains(lang.getNamespaceDelimiter())){
+
+      }else{
+        Scope scopeForRecord = getFirstScopeThat(scope -> scope instanceof RecordScope || scope instanceof GlobalScope);
+        if(scopeForRecord instanceof RecordScope){
+          ((RecordDeclaration) scopeForRecord.getAstNode()).getRecords().add((RecordDeclaration) declaration);
+
+        }else if(scopeForRecord instanceof GlobalScope){
+          scopeForRecord.
+        }
+
+        .getRecords().add((RecordDeclaration) declaration);
+      }
+    }
+
+  }
+
+  public void addValueDeclaration(ValueDeclaration valueDeclaration) {
+    if (valueDeclaration instanceof FunctionDeclaration) {
+      addValueDeclaration((FunctionDeclaration) valueDeclaration);
+    } else if (valueDeclaration instanceof FieldDeclaration) {
+      addValueDeclaration((FieldDeclaration) valueDeclaration);
+    } else if (valueDeclaration instanceof VariableDeclaration) {
+      addValueDeclaration((VariableDeclaration) valueDeclaration);
+    } else if (valueDeclaration instanceof ParamVariableDeclaration) {
+      addValueDeclaration((ParamVariableDeclaration) valueDeclaration);
+    }
+  }
+
   public void addValueDeclaration(FieldDeclaration fieldDeclaration) {
-    RecordScope rScope = (RecordScope) getFirstScopeThat(scope -> scope instanceof RecordScope);
+    NameScope rScope = (NameScope) getFirstScopeThat(scope ->  scope instanceof NameScope);
     if (rScope == null) {
-      LOGGER.error("Cannot add FieldDeclaration. Not in record scope.");
+      LOGGER.error("Cannot add FieldDeclaration. Not in record or name scope.");
       return;
     }
     rScope.addValueDeclaration(fieldDeclaration);
@@ -452,7 +550,7 @@ public class ScopeManager {
 
   public void addValueDeclaration(FunctionDeclaration functionDeclaration) {
     DeclarationScope scopeForFunction =
-        (DeclarationScope) getFirstScopeThat(scope -> scope instanceof RecordScope);
+        (DeclarationScope) getFirstScopeThat(scope -> scope instanceof RecordScope || scope instanceof NameScope);
     if (scopeForFunction == null) {
       scopeForFunction =
           (DeclarationScope) getFirstScopeThat(scope -> scope instanceof GlobalScope);
@@ -490,27 +588,6 @@ public class ScopeManager {
     return namePrefix;
   }
 
-  public String getFullNamePrefix() {
-    Scope searchScope = currentScope;
-    StringBuilder fullname = new StringBuilder();
-    do {
-      if (searchScope instanceof NameScope || searchScope instanceof RecordScope) {
-        if (searchScope instanceof NameScope) {
-          fullname.insert(0, ((NameScope) searchScope).getNamePrefix() + ".");
-        }
-        if (searchScope instanceof RecordScope) {
-          fullname.insert(0, searchScope.getAstNode().getName() + ".");
-        }
-      }
-      searchScope = searchScope.parent;
-    } while (searchScope != null);
-    if (fullname.length() > 0) {
-      return fullname.substring(0, fullname.length() - 1); // remove last .
-    } else {
-      return "";
-    }
-  }
-
   @Nullable
   public ValueDeclaration resolve(DeclaredReferenceExpression ref) {
     return resolve(currentScope, ref);
@@ -524,6 +601,47 @@ public class ScopeManager {
       }
     }
     return scope.getParent() != null ? resolve(scope.getParent(), ref) : null;
+  }
+
+  /**
+   * This function tries to resolve a FQN to a scope. The name is the name of the AST-Node associated to a scope.
+   * The Name may be the FQN-name or a relative name that with the currently active namespace gives the AST-Nodes,
+   * FQN. If the provided name and the current namespace overlap ,they are merged and the FQN is resolved. If there is no
+   * node with the merged FQN-name null is returned. This is due to the behaviour of C++ when resolving names for AST-elements
+   * that are definitions of exiting declarations.
+   *
+   * @param astNodeName relative (to the current Namespace) or fqn-Name of an entity associated to a scope.
+   *
+   * @return The scope that the resolved name is associated to.
+   */
+  private Scope resolveScopeWithPath(@Nullable String astNodeName) {
+    if (astNodeName == null || astNodeName.isEmpty()) {
+      return currentScope;
+    }
+    List<String> namePath = Arrays.asList(astNodeName.split(lang.getNamespaceDelimiter()));
+    List<String> currentPath = Arrays.asList(getCurrentNamePrefix().split(lang.getNamespaceDelimiter()));
+
+    // Last index because the inner name has preference
+    int nameIndexInCurrent = currentPath.lastIndexOf(namePath.get(0));
+
+    if(nameIndexInCurrent >= 0){
+      // Overlapping relative resolution
+      List<String> mergedPath = currentPath.subList(0, nameIndexInCurrent);
+      mergedPath.addAll(namePath);
+      return this.fqnScopeMap.getOrDefault(String.join(lang.getNamespaceDelimiter(), mergedPath), null);
+    }else{
+      // Absolute name of the node by concatenating the current namespace and the relative name
+      String relativeToAbsolute = getCurrentNamePrefixWithDelimiter() + lang.getNamespaceDelimiter() +
+              String.join(lang.getNamespaceDelimiter(), namePath);
+      // Relative resolution
+      Scope scope = this.fqnScopeMap.getOrDefault(relativeToAbsolute, null);
+      if(scope != null){
+          return scope;
+      }else{
+        // Absolut resolution: The name is used as absolut name.
+        return this.fqnScopeMap.getOrDefault(astNodeName, null);
+      }
+    }
   }
 
   @Nullable

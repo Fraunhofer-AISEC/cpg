@@ -228,8 +228,11 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
         problems.add((ProblemDeclaration) decl);
       } else if (decl instanceof NamespaceDeclaration) {
         node.add(decl);
+        lang.getScopeManager().addDeclaration(decl);
       } else {
         node.add(decl);
+        lang.getScopeManager().addDeclaration(decl);
+        //
       }
     }
 

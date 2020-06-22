@@ -90,16 +90,38 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
     }
   }
 
-  private VariableDeclaration handleDeclarator(CPPASTDeclarator ctx) {
+  private Declaration handleDeclarator(CPPASTDeclarator ctx) {
     // type will be filled out later
-    VariableDeclaration declaration =
+    String declName = ctx.getName().toString();
+    ValueDeclaration declaration;
+    declaration =
         NodeBuilder.newVariableDeclaration(
             ctx.getName().toString(), Type.getUnknown(), ctx.getRawSignature());
 
-    IASTInitializer init = ctx.getInitializer();
+    if (declName.contains(lang.getNamespaceDelimiter())) {
+      // Todo we have to check whether externally defined functions and classes get put here to
+      declaration =
+          NodeBuilder.newFieldDeclaration(
+              ctx.getName().toString(),
+              Type.getUnknown(),
+              new ArrayList<>(),
+              ctx.getRawSignature(),
+              null,
+              null);
+    } else {
+      declaration =
+          NodeBuilder.newVariableDeclaration(
+              ctx.getName().toString(), Type.getUnknown(), ctx.getRawSignature());
+    }
 
+    IASTInitializer init = ctx.getInitializer();
     if (init != null) {
-      declaration.setInitializer(lang.getInitializerHandler().handle(init));
+      if (declaration instanceof VariableDeclaration) {
+        ((VariableDeclaration) declaration)
+            .setInitializer(lang.getInitializerHandler().handle(init));
+      } else if (declaration instanceof FieldDeclaration) {
+        ((FieldDeclaration) declaration).setInitializer(lang.getInitializerHandler().handle(init));
+      }
     }
 
     String typeAdjustment =
@@ -172,10 +194,10 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
   private ValueDeclaration handleFunctionDeclarator(CPPASTFunctionDeclarator ctx) {
     // Attention! If this declarator has no name, this is not actually a new function but
     // rather a function pointer
+    String name = ctx.getName().toString();
     if (ctx.getName().toString().isEmpty()) {
       return handleFunctionPointer(ctx);
     }
-    String name = ctx.getName().toString();
 
     FunctionDeclaration declaration;
 
@@ -381,7 +403,7 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
         lang.getScopeManager().addValueDeclaration((FieldDeclaration) declaration);
       } else if (declaration instanceof RecordDeclaration) {
         // record is not stored as reference in the scope
-        recordDeclaration.getRecords().add((RecordDeclaration) declaration);
+        lang.getScopeManager().addDeclaration(declaration);
       }
     }
 

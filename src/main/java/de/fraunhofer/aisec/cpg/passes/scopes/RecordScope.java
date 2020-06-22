@@ -28,8 +28,10 @@ package de.fraunhofer.aisec.cpg.passes.scopes;
 
 import de.fraunhofer.aisec.cpg.graph.Node;
 
-public class RecordScope extends DeclarationScope {
-  public RecordScope(Node node) {
-    super(node);
+public class RecordScope extends NameScope {
+
+  public RecordScope(Node node, String currentPrefix, String delimiter)
+  {
+    super(node, currentPrefix, delimiter);
   }
 }
