@@ -30,8 +30,7 @@ import de.fraunhofer.aisec.cpg.graph.Node;
 
 public class RecordScope extends NameScope {
 
-  public RecordScope(Node node, String currentPrefix, String delimiter)
-  {
+  public RecordScope(Node node, String currentPrefix, String delimiter) {
     super(node, currentPrefix, delimiter);
   }
 }

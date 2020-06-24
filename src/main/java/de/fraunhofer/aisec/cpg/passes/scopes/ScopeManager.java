@@ -485,12 +485,12 @@ public class ScopeManager {
     Scope nameScope = resolveScopeWithPath(path);
     if(nameScope instanceof NameScope){
       NamespaceDeclaration namespace= (NamespaceDeclaration) nameScope.getAstNode();
-      FunctionDeclaration existing = namespace.getFunctions.stream().filter(containedField ->
+      FunctionDeclaration existing = namespace.getFunctions().stream().filter(containedField ->
               getSimpleName(containedField).equals(simpleName))
               .collect(Collectors.toList()).get(0);
       if(existing != null){
-        record.getFields().remove(existing);
-        record.getFields().add(field);
+        namespace.getFunctions().remove(existing);
+        namespace.getFunctions().add(function);
       }
     }else{
       LOGGER.warn("Scope found with path to the field is not scoping a record declaration.");

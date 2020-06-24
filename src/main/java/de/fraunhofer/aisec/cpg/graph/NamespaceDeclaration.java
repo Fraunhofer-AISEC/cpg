@@ -30,39 +30,63 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Declares the scope of a namespace and appends its own name to the current namespace-ürefix to form a new namespace
- * prefix. While RecordDeclarations in C++ and Java have their own namespace, namespace declarations can be declared
- * multiple times.
- * At the beginning of a Java-file, a namespace declaration is used to represent the package name as namespace. In its
- * explicit appearance a namespace declaration can contain {@link FunctionDeclaration}, {@link FieldDeclaration} and
- * {@link RecordDeclaration} similar to a {@link RecordDeclaration} and the semantical difference between NamespaceDeclaration
- * and {@link RecordDeclaration} lies in the non-instantiabillity of a namespace.
+ * Declares the scope of a namespace and appends its own name to the current namespace-ürefix to
+ * form a new namespace prefix. While RecordDeclarations in C++ and Java have their own namespace,
+ * namespace declarations can be declared multiple times. At the beginning of a Java-file, a
+ * namespace declaration is used to represent the package name as namespace. In its explicit
+ * appearance a namespace declaration can contain {@link FunctionDeclaration}, {@link
+ * FieldDeclaration} and {@link RecordDeclaration} similar to a {@link RecordDeclaration} and the
+ * semantical difference between NamespaceDeclaration and {@link RecordDeclaration} lies in the
+ * non-instantiabillity of a namespace.
  */
 public class NamespaceDeclaration extends Declaration {
 
-    /**
-     * Edges to a {@link FieldDeclaration} defined in a namespace, these fields are static.
-     */
-    @SubGraph("AST")
-    private List<FieldDeclaration> fields = new ArrayList<>();
+  /** Edges to a {@link FieldDeclaration} defined in a namespace, these fields are static. */
+  @SubGraph("AST")
+  private List<FieldDeclaration> fields = new ArrayList<>();
 
-    /**
-     * Edge to {@link FunctionDeclaration}s defined in a namespace, these functions are static.
-     */
-    @SubGraph("AST")
-    private List<MethodDeclaration> functions = new ArrayList<>();
+  /** Edge to {@link FunctionDeclaration}s defined in a namespace, these functions are static. */
+  @SubGraph("AST")
+  private List<FunctionDeclaration> functions = new ArrayList<>();
 
-    /**
-     * Edges to {@link RecordDeclaration}s defined in a namespace.
-     */
-    @SubGraph("AST")
-    private List<RecordDeclaration> records = new ArrayList<>();
+  /** Edges to {@link RecordDeclaration}s defined in a namespace. */
+  @SubGraph("AST")
+  private List<RecordDeclaration> records = new ArrayList<>();
+
+  /** Edges to nested namespaces contained in the current namespace. */
+  @SubGraph("AST")
+  private List<NamespaceDeclaration> namespaces = new ArrayList<>();
 
 
-    /**
-     * Edges to nested namespaces contained in the current namespace.
-     */
-    @SubGraph("AST")
-    private List<NamespaceDeclaration> namespaces = new ArrayList<>();
+  public List<FieldDeclaration> getFields() {
+    return fields;
+  }
 
+  public void setFields(List<FieldDeclaration> fields) {
+    this.fields = fields;
+  }
+
+  public List<FunctionDeclaration> getFunctions() {
+    return functions;
+  }
+
+  public void setFunctions(List<FunctionDeclaration> functions) {
+    this.functions = functions;
+  }
+
+  public List<RecordDeclaration> getRecords() {
+    return records;
+  }
+
+  public void setRecords(List<RecordDeclaration> records) {
+    this.records = records;
+  }
+
+  public List<NamespaceDeclaration> getNamespaces() {
+    return namespaces;
+  }
+
+  public void setNamespaces(List<NamespaceDeclaration> namespaces) {
+    this.namespaces = namespaces;
+  }
 }
