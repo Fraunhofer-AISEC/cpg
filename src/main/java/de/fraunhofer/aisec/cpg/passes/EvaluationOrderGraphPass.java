@@ -37,7 +37,6 @@ import java.util.*;
 import java.util.stream.Collectors;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
-import org.eclipse.cdt.internal.core.model.Binary;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -163,10 +162,10 @@ public class EvaluationOrderGraphPass extends Pass {
   }
 
   /**
-   * Use with 'SubgraphWalker.flattenAST(tu).stream() .filter(node ->
-   * node.getPrevEOG().isEmpty() && !node.getNextEOG().isEmpty())' to eliminate edges starting from
-   * nodes that have no incoming edge and are no function declarations. ======= To eliminate edges
-   * starting from nodes that have no incoming edge and are no function declarations.
+   * Use with 'SubgraphWalker.flattenAST(tu).stream() .filter(node -> node.getPrevEOG().isEmpty() &&
+   * !node.getNextEOG().isEmpty())' to eliminate edges starting from nodes that have no incoming
+   * edge and are no function declarations. ======= To eliminate edges starting from nodes that have
+   * no incoming edge and are no function declarations.
    */
   private void truncateLooseEdges(@NonNull List<Node> eogSources) {
     for (Node eogSourceNode : eogSources) {
@@ -227,13 +226,11 @@ public class EvaluationOrderGraphPass extends Pass {
     pushToEOG(declaration);
   }
 
-
   private void handleRecordDeclaration(Node node) {
     Declaration declaration = (Declaration) node;
     lang.getScopeManager().enterScope(declaration);
     this.currentEOG.clear();
-    for (ConstructorDeclaration constructor :
-        ((RecordDeclaration) declaration).getConstructors()) {
+    for (ConstructorDeclaration constructor : ((RecordDeclaration) declaration).getConstructors()) {
       createEOG(constructor);
     }
 
@@ -242,7 +239,6 @@ public class EvaluationOrderGraphPass extends Pass {
     }
     lang.getScopeManager().leaveScope(declaration);
   }
-
 
   private void handleFunctionDeclaration(Node node) {
     FunctionDeclaration funcDecl = (FunctionDeclaration) node;
@@ -363,7 +359,7 @@ public class EvaluationOrderGraphPass extends Pass {
   }
 
   private void handleReturnStatement(Node node) {
-    ReturnStatement returnStatement = (ReturnStatement) node ;
+    ReturnStatement returnStatement = (ReturnStatement) node;
     // analyze the return value
     createEOG(returnStatement.getReturnValue());
 
