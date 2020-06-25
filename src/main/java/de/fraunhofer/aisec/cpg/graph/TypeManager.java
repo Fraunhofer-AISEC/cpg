@@ -230,7 +230,19 @@ public class TypeManager {
       if (i == 0) {
         commonAncestors.addAll(allAncestors.get(i));
       } else {
-        commonAncestors.retainAll(allAncestors.get(i));
+        Set<Ancestor> others = allAncestors.get(i);
+        Set<Ancestor> newCommonAncestors = new HashSet<>();
+        // like Collection#retainAll but swaps relevant items out if the other set's matching
+        // ancestor has a higher depth
+        for (Ancestor curr : commonAncestors) {
+          Optional<Ancestor> toRetain =
+              others.stream()
+                  .filter(a -> a.equals(curr))
+                  .map(a -> curr.getDepth() >= a.getDepth() ? curr : a)
+                  .findFirst();
+          toRetain.ifPresent(newCommonAncestors::add);
+        }
+        commonAncestors = newCommonAncestors;
       }
     }
 
@@ -457,7 +469,7 @@ public class TypeManager {
     }
   }
 
-  private class Ancestor {
+  private static class Ancestor {
 
     private RecordDeclaration record;
     private int depth;
@@ -485,13 +497,15 @@ public class TypeManager {
     }
 
     @Override
-    public boolean equals(Object obj) {
-      if (obj instanceof Ancestor) {
-        return ((Ancestor) obj).getRecord().equals(this.getRecord())
-            && ((Ancestor) obj).getDepth() == this.getDepth();
-      } else {
+    public boolean equals(Object o) {
+      if (this == o) {
+        return true;
+      }
+      if (!(o instanceof Ancestor)) {
         return false;
       }
+      Ancestor ancestor = (Ancestor) o;
+      return Objects.equals(record, ancestor.record);
     }
 
     @Override
