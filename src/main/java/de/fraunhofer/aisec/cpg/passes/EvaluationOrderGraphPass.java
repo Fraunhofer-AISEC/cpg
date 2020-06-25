@@ -27,6 +27,7 @@
 package de.fraunhofer.aisec.cpg.passes;
 
 import de.fraunhofer.aisec.cpg.TranslationResult;
+import de.fraunhofer.aisec.cpg.frontends.CallableInterface;
 import de.fraunhofer.aisec.cpg.graph.*;
 import de.fraunhofer.aisec.cpg.graph.type.Type;
 import de.fraunhofer.aisec.cpg.graph.type.TypeParser;
@@ -36,6 +37,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
+import org.eclipse.cdt.internal.core.model.Binary;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -67,11 +69,57 @@ public class EvaluationOrderGraphPass extends Pass {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(EvaluationOrderGraphPass.class);
 
+  protected final HashMap<Class<? extends Node>, CallableInterface<? extends Node>> map =
+      new HashMap<>();
+
   private List<Node> currentEOG = new ArrayList<>();
 
   // Some nodes will have no incoming nor outgoing edges but still need to be associated to the next
   // eog relevant node.
   private List<Node> intermediateNodes = new ArrayList<>();
+
+  public EvaluationOrderGraphPass() {
+    map.put(TranslationUnitDeclaration.class, this::handleTranslationUnitDeclaration);
+    map.put(RecordDeclaration.class, this::handleRecordDeclaration);
+    map.put(FunctionDeclaration.class, this::handleFunctionDeclaration);
+    map.put(VariableDeclaration.class, this::handleVariableDeclaration);
+    map.put(CallExpression.class, this::handleCallExpression);
+    map.put(MemberExpression.class, this::handleMemberExpression);
+    map.put(ArraySubscriptionExpression.class, this::handleArraySubscriptionExpression);
+    map.put(ArrayCreationExpression.class, this::handleArrayCreationExpression);
+    map.put(DeclarationStatement.class, this::handleDeclarationStatement);
+    map.put(ReturnStatement.class, this::handleReturnStatement);
+    map.put(BinaryOperator.class, this::handleBinaryOperator);
+    map.put(UnaryOperator.class, this::handleUnaryOperator);
+    map.put(CompoundStatement.class, this::handleCompoundStatement);
+    map.put(CompoundStatementExpression.class, this::handleCompoundStatementExpression);
+    map.put(IfStatement.class, this::handleIfStatement);
+    map.put(AssertStatement.class, this::handleAssertStatement);
+    map.put(WhileStatement.class, this::handleWhileStatement);
+    map.put(DoStatement.class, this::handleDoStatement);
+    map.put(ForStatement.class, this::handleForStatement);
+    map.put(ForEachStatement.class, this::handleForEachStatement);
+    map.put(TryStatement.class, this::handleTryStatement);
+    map.put(ContinueStatement.class, this::handleContinueStatement);
+    map.put(DeleteExpression.class, this::handleDeleteExpression);
+    map.put(BreakStatement.class, this::handleBreakStatement);
+    map.put(SwitchStatement.class, this::handleSwitchStatement);
+    map.put(LabelStatement.class, this::handleLabelStatement);
+    map.put(GotoStatement.class, this::handleGotoStatement);
+    map.put(CaseStatement.class, this::handleCaseStatement);
+    map.put(SynchronizedStatement.class, this::handleSynchronizedStatement);
+    map.put(NewExpression.class, this::handleNewExpression);
+    map.put(CastExpression.class, this::handleCastExpression);
+    map.put(ExpressionList.class, this::handleExpressionList);
+    map.put(ConditionalExpression.class, this::handleConditionalExpression);
+    map.put(InitializerListExpression.class, this::handleInitializerListExpression);
+    map.put(ConstructExpression.class, this::handleConstructExpression);
+    map.put(EmptyStatement.class, this::handleDefault);
+    map.put(Literal.class, this::handleDefault);
+    map.put(DefaultStatement.class, this::handleDefault);
+    map.put(TypeIdExpression.class, this::handleDefault);
+    map.put(DeclaredReferenceExpression.class, this::handleDefault);
+  }
 
   /**
    * Searches backwards in the EOG Graph on whether or not there is a path from a function
@@ -109,17 +157,16 @@ public class EvaluationOrderGraphPass extends Pass {
   @Override
   public void accept(TranslationResult result) {
     for (TranslationUnitDeclaration tu : result.getTranslationUnits()) {
-      handleDeclaration(tu);
+      createEOG(tu);
       removeUnreachableEOGEdges(tu);
     }
   }
 
   /**
-   * <<<<<<< HEAD Use with 'SubgraphWalker.flattenAST(tu).stream() .filter(node ->
+   * Use with 'SubgraphWalker.flattenAST(tu).stream() .filter(node ->
    * node.getPrevEOG().isEmpty() && !node.getNextEOG().isEmpty())' to eliminate edges starting from
    * nodes that have no incoming edge and are no function declarations. ======= To eliminate edges
-   * starting from nodes that have no incoming edge and are no function declarations. >>>>>>>
-   * feature/rootNodeASBranchingOperator
+   * starting from nodes that have no incoming edge and are no function declarations.
    */
   private void truncateLooseEdges(@NonNull List<Node> eogSources) {
     for (Node eogSourceNode : eogSources) {
@@ -164,465 +211,432 @@ public class EvaluationOrderGraphPass extends Pass {
     }
   }
 
-  /**
-   * Handles declarations and is mainly used to propagate EOG construction to actually interesting
-   * nodes.
-   */
-  private void handleDeclaration(@Nullable Declaration declaration) {
-    if (declaration == null) {
+  private void handleTranslationUnitDeclaration(Node node) {
+    TranslationUnitDeclaration declaration = (TranslationUnitDeclaration) node;
+    // loop through functions
+    for (Declaration child : declaration.getDeclarations()) {
+      createEOG(child);
+    }
+    lang.clearProcessed();
+  }
+
+  private void handleVariableDeclaration(Node node) {
+    Declaration declaration = (Declaration) node;
+    // analyze the initializer
+    createEOG(((VariableDeclaration) declaration).getInitializer());
+    pushToEOG(declaration);
+  }
+
+
+  private void handleRecordDeclaration(Node node) {
+    Declaration declaration = (Declaration) node;
+    lang.getScopeManager().enterScope(declaration);
+    this.currentEOG.clear();
+    for (ConstructorDeclaration constructor :
+        ((RecordDeclaration) declaration).getConstructors()) {
+      createEOG(constructor);
+    }
+
+    for (MethodDeclaration method : ((RecordDeclaration) declaration).getMethods()) {
+      createEOG(method);
+    }
+    lang.getScopeManager().leaveScope(declaration);
+  }
+
+
+  private void handleFunctionDeclaration(Node node) {
+    FunctionDeclaration funcDecl = (FunctionDeclaration) node;
+    // reset EOG
+    this.currentEOG.clear();
+
+    lang.getScopeManager().enterScope(funcDecl);
+    // push the function declaration
+    pushToEOG(funcDecl);
+
+    // analyze the body
+    if (funcDecl.hasBody()) {
+      createEOG(funcDecl.getBody());
+    }
+    FunctionScope scope = ((FunctionScope) lang.getScopeManager().getCurrentScope());
+    List<Node> uncaughtEOGThrows =
+        scope.getCatchesOrRelays().values().stream()
+            .flatMap(Collection::stream)
+            .collect(Collectors.toList());
+    // Connect uncaught throws to block node
+    addMultipleIncomingEOGEdges(uncaughtEOGThrows, funcDecl.getBody());
+    lang.getScopeManager().leaveScope(funcDecl);
+  }
+
+  public void createEOG(@Nullable Node node) {
+    if (node == null) {
       return;
     }
-    if (lang == null) {
-      // Avoid null checks in every if/else branch
-      LOGGER.warn("Will not handle declaration - no information about frontend available.");
-      return;
+    this.intermediateNodes.add(node);
+    Class<?> toHandle = node.getClass();
+    CallableInterface callable = map.get(toHandle);
+    while (callable == null) {
+      toHandle = toHandle.getSuperclass();
+      callable = map.get(toHandle);
+      if (toHandle == Node.class || !Node.class.isAssignableFrom(toHandle)) break;
     }
-    this.intermediateNodes.add(declaration);
-    // todo FieldDeclarations have initializers that may be appropriate to
-    // expressionRefersToDeclaration to the
-    // constructor body over eog edges
-    if (declaration instanceof TranslationUnitDeclaration) {
-      // loop through functions
-      for (Declaration child : ((TranslationUnitDeclaration) declaration).getDeclarations()) {
-        handleDeclaration(child);
-      }
-      lang.clearProcessed();
-    } else if (declaration instanceof RecordDeclaration) {
-      lang.getScopeManager().enterScope(declaration);
-      this.currentEOG.clear();
-      for (ConstructorDeclaration constructor :
-          ((RecordDeclaration) declaration).getConstructors()) {
-        handleDeclaration(constructor);
-      }
-
-      for (MethodDeclaration method : ((RecordDeclaration) declaration).getMethods()) {
-        handleDeclaration(method);
-      }
-      lang.getScopeManager().leaveScope(declaration);
-    } else if (declaration instanceof FunctionDeclaration) {
-      FunctionDeclaration funcDecl = (FunctionDeclaration) declaration;
-      // reset EOG
-      this.currentEOG.clear();
-
-      lang.getScopeManager().enterScope(declaration);
-      // push the function declaration
-      pushToEOG(declaration);
-
-      // analyze the body
-      if (funcDecl.hasBody()) {
-        createEOG(((FunctionDeclaration) declaration).getBody());
-      }
-      FunctionScope scope = ((FunctionScope) lang.getScopeManager().getCurrentScope());
-      List<Node> uncaughtEOGThrows =
-          scope.getCatchesOrRelays().values().stream()
-              .flatMap(Collection::stream)
-              .collect(Collectors.toList());
-      // Connect uncaught throws to block node
-      addMultipleIncomingEOGEdges(uncaughtEOGThrows, funcDecl.getBody());
-      lang.getScopeManager().leaveScope(declaration);
-    } else if (declaration instanceof VariableDeclaration) {
-      // analyze the initializer
-      createEOG(((VariableDeclaration) declaration).getInitializer());
-      pushToEOG(declaration);
+    if (callable != null) {
+      callable.dispatch(node);
     } else {
-      // In this case the ast -> cpg translation has to implement the cpg node creation
-      pushToEOG(declaration);
+      LOGGER.info("Parsing of type " + node.getClass() + " is not supported (yet)");
     }
   }
 
-  /**
-   * Builds the EOG by explicitly adding edges. Every Statement that can contain EOG nodes, must
-   * propagate constructions to the child nodes, e.g. If has to propagate to its CONDITION and to
-   * both branches THENSTATEMENT and ELSESTATEMENT. EOG Edges are built in AST order and only with
-   * first level statements, conditions, blocks, children of blocks etc. No sub-expressions of
-   * statements themselves. The edges are added to the nextEOG member and thus only forward
-   * exploration is possible.
-   */
-  private void createEOG(@Nullable Statement statement) {
-    if (statement == null) {
-      return; // For null statements, and to avoid null checks in every if/else branch
+  private void handleDefault(Node node) {
+    pushToEOG(node);
+  }
+
+  private void handleCallExpression(Node node) {
+    CallExpression callExpression = (CallExpression) node;
+
+    // Todo add call as throwexpression to outer scope of call can throw (which is trivial to find
+    // out for java, but impossible for c++)
+
+    // evaluate base first, if there is one
+    if (callExpression instanceof MemberCallExpression
+        && callExpression.getBase() instanceof Statement) {
+      createEOG(callExpression.getBase());
     }
 
-    if (lang == null) {
-      // Avoid null checks in every if/else branch
-      LOGGER.warn("Skipping EOG construction - no information about frontend available.");
-      return;
+    // first the arguments
+    for (Expression arg : callExpression.getArguments()) {
+      createEOG(arg);
     }
-    this.intermediateNodes.add(statement);
-    if (statement instanceof CallExpression) {
-      CallExpression callExpression = (CallExpression) statement;
+    // then the call itself
+    pushToEOG(callExpression);
+  }
 
-      // Todo add call as throwexpression to outer scope of call can throw (which is trivial to find
-      // out for java, but impossible for c++)
+  private void handleMemberExpression(@Nullable Node node) {
+    MemberExpression memberExpression = (MemberExpression) node;
+    // analyze the base
+    if (memberExpression.getBase() instanceof Statement) {
+      createEOG(memberExpression.getBase());
+    }
 
-      // evaluate base first, if there is one
-      if (callExpression instanceof MemberCallExpression
-          && ((MemberCallExpression) callExpression).getBase() instanceof Statement) {
-        createEOG((Statement) ((MemberCallExpression) callExpression).getBase());
+    // analyze the member
+    if (memberExpression.getMember() instanceof Statement) {
+      createEOG(memberExpression.getMember());
+    }
+
+    pushToEOG(memberExpression);
+  }
+
+  private void handleArraySubscriptionExpression(Node node) {
+    ArraySubscriptionExpression arraySubs = (ArraySubscriptionExpression) node;
+
+    // Connect according to evaluation order, first the array reference, then the contained index.
+    createEOG(arraySubs.getArrayExpression());
+    createEOG(arraySubs.getSubscriptExpression());
+
+    pushToEOG(arraySubs);
+  }
+
+  private void handleArrayCreationExpression(Node node) {
+    ArrayCreationExpression arrayCreate = (ArrayCreationExpression) node;
+
+    for (Expression dimension : arrayCreate.getDimensions()) {
+      if (dimension != null) {
+        createEOG(dimension);
       }
+    }
+    createEOG(arrayCreate.getInitializer());
 
-      // first the arguments
-      for (Expression arg : callExpression.getArguments()) {
-        createEOG(arg);
+    pushToEOG(arrayCreate);
+  }
+
+  private void handleDeclarationStatement(Node node) {
+    DeclarationStatement declarationStatement = (DeclarationStatement) node;
+    // loop through declarations
+    for (Declaration declaration : declarationStatement.getDeclarations()) {
+      if (declaration instanceof VariableDeclaration) {
+        // analyze the initializers if there is one
+        createEOG(declaration);
       }
+    }
 
-      // then the call itself
-      pushToEOG(statement);
+    // push statement itself
+    pushToEOG(declarationStatement);
+  }
 
-      // look, whether the function is known to us
-      /*
+  private void handleReturnStatement(Node node) {
+    ReturnStatement returnStatement = (ReturnStatement) node ;
+    // analyze the return value
+    createEOG(returnStatement.getReturnValue());
 
-      State state = State.getInstance();
+    // push the statement itself
+    pushToEOG(returnStatement);
 
-       todo Reconsider if this is the right thing to do "Do we want to expressionRefersToDeclaration to the call target?
-       todo We might not resolve the appropriate function". In addition the Return may better expressionRefersToDeclaration to the block
-       todo root node instead of just leading to nowhere.
-      functionDeclaration = state.findMethod(callExpression);
-      if (functionDeclaration != null) {
-        // expressionRefersToDeclaration call to function
-        State.getInstance().addEOGEdge(callExpression, functionDeclaration);
+    // reset the state afterwards, we're done with this function
+    currentEOG.clear();
+  }
 
-        // expressionRefersToDeclaration all return statements of function to statement after call expression
-        State.getInstance().setCurrentEOGs(functionDeclaration.getReturnStatements());
-      }*/
+  private void handleBinaryOperator(Node node) {
+    BinaryOperator binOp = (BinaryOperator) node;
+    createEOG(binOp.getLhs());
 
-    } else if (statement instanceof MemberExpression) {
-      // analyze the base
-      if (((MemberExpression) statement).getBase() instanceof Statement) {
-        createEOG((Statement) ((MemberExpression) statement).getBase());
-      }
+    List<Node> shortCircuitNodes = new ArrayList<>();
 
-      // analyze the member
-      if (((MemberExpression) statement).getMember() instanceof Statement) {
-        createEOG((Statement) ((MemberExpression) statement).getMember());
-      }
-
-      pushToEOG(statement);
-
-    } else if (statement instanceof ArraySubscriptionExpression) {
-      ArraySubscriptionExpression arraySubs = (ArraySubscriptionExpression) statement;
-
-      // Connect according to evaluation order, first the array reference, then the contained index.
-      createEOG(arraySubs.getArrayExpression());
-      createEOG(arraySubs.getSubscriptExpression());
-
-      pushToEOG(statement);
-
-    } else if (statement instanceof ArrayCreationExpression) {
-      ArrayCreationExpression arrayCreate = (ArrayCreationExpression) statement;
-
-      for (Expression dimension : arrayCreate.getDimensions()) {
-        if (dimension != null) {
-          createEOG(dimension);
-        }
-      }
-      createEOG(arrayCreate.getInitializer());
-
-      pushToEOG(statement);
-
-    } else if (statement instanceof DeclarationStatement) {
-      // loop through declarations
-      for (Declaration declaration : ((DeclarationStatement) statement).getDeclarations()) {
-        if (declaration instanceof VariableDeclaration) {
-          // analyze the initializers if there is one
-          handleDeclaration(declaration);
-        }
-      }
-
-      // push statement itself
-      pushToEOG(statement);
-
-    } else if (statement instanceof ReturnStatement) {
-      // analyze the return value
-      createEOG(((ReturnStatement) statement).getReturnValue());
-
-      // push the statement itself
-      pushToEOG(statement);
-
-      // reset the state afterwards, we're done with this function
-      currentEOG.clear();
-
-    } else if (statement instanceof BinaryOperator) {
-
-      BinaryOperator binOp = (BinaryOperator) statement;
-      createEOG(binOp.getLhs());
-
-      List<Node> shortCircuitNodes = new ArrayList<>();
-
-      // Two operators that don't evaluate the second operator if the first evaluates to a certain
-      // value.
-      if (binOp.getOperatorCode().equals("&&") || binOp.getOperatorCode().equals("||")) {
-        shortCircuitNodes.addAll(currentEOG);
-      }
-
-      createEOG(binOp.getRhs());
-
+    // Two operators that don't evaluate the second operator if the first evaluates to a certain
+    // value.
+    if (binOp.getOperatorCode().equals("&&") || binOp.getOperatorCode().equals("||")) {
       shortCircuitNodes.addAll(currentEOG);
-      setCurrentEOGs(shortCircuitNodes);
-      // push the statement itself
-      pushToEOG(statement);
+    }
 
-    } else if (statement instanceof UnaryOperator) {
+    createEOG(binOp.getRhs());
 
-      Expression input = ((UnaryOperator) statement).getInput();
-      createEOG(input);
-      if (((UnaryOperator) statement).getOperatorCode().equals("throw")) {
-        Type throwType;
-        Scope catchingScope =
-            lang.getScopeManager()
-                .getFirstScopeThat(
-                    scope -> scope instanceof TryScope || scope instanceof FunctionScope);
+    shortCircuitNodes.addAll(currentEOG);
+    setCurrentEOGs(shortCircuitNodes);
+    // push the statement itself
+    pushToEOG(binOp);
+  }
 
-        if (input != null) {
-          throwType = input.getType();
-        } else {
-          // do not check via instanceof, since we do not want to allow subclasses of
-          // DeclarationScope here
-          Scope decl =
-              lang.getScopeManager()
-                  .getFirstScopeThat(scope -> scope.getClass().equals(DeclarationScope.class));
-          if (decl != null
-              && decl.getAstNode() instanceof CatchClause
-              && ((CatchClause) decl.getAstNode()).getParameter() != null) {
-            VariableDeclaration param = ((CatchClause) decl.getAstNode()).getParameter();
-            assert param != null;
-            throwType = param.getType();
-          } else {
-            LOGGER.info("Unknown throw type, potentially throw; in a method");
-            throwType = TypeParser.createFrom("UNKNOWN_THROW_TYPE", true);
-          }
-        }
-        pushToEOG(statement);
+  private void handleCompoundStatement(Node node) {
+    CompoundStatement compoundStatement = (CompoundStatement) node;
+    lang.getScopeManager().enterScope(compoundStatement);
+    // analyze the contained statements
+    for (Statement child : compoundStatement.getStatements()) {
+      createEOG(child);
+    }
+    lang.getScopeManager().leaveScope(compoundStatement);
+    pushToEOG(compoundStatement);
+  }
 
-        if (catchingScope instanceof TryScope) {
-          ((TryScope) catchingScope)
-              .getCatchesOrRelays()
-              .put(throwType, new ArrayList<>(this.currentEOG));
-
-        } else if (catchingScope instanceof FunctionScope) {
-          ((FunctionScope) catchingScope)
-              .getCatchesOrRelays()
-              .put(throwType, new ArrayList<>(this.currentEOG));
-        }
-        currentEOG.clear();
-      } else {
-        pushToEOG(statement);
-      }
-
-    } else if (statement instanceof CompoundStatement) {
-      lang.getScopeManager().enterScope(statement);
-      // analyze the contained statements
-      for (Statement child : ((CompoundStatement) statement).getStatements()) {
-        createEOG(child);
-      }
-      lang.getScopeManager().leaveScope(statement);
-      pushToEOG(statement);
-
-    } else if (statement instanceof CompoundStatementExpression) {
-      createEOG(((CompoundStatementExpression) statement).getStatement());
-      pushToEOG(statement);
-
-    } else if (statement instanceof IfStatement) {
-      handleIfStatement((IfStatement) statement);
-    } else if (statement instanceof AssertStatement) {
-      AssertStatement ifs = (AssertStatement) statement;
-      createEOG(ifs.getCondition());
-      List<Node> openConditionEOGs = new ArrayList<>(currentEOG);
-      createEOG(ifs.getMessage());
-      setCurrentEOGs(openConditionEOGs);
-      pushToEOG(statement);
-
-    } else if (statement instanceof WhileStatement) {
-      handleWhileStatement((WhileStatement) statement);
-    } else if (statement instanceof DoStatement) {
-      handleDoStatement((DoStatement) statement);
-    } else if (statement instanceof ForStatement) {
-      handleForStatement((ForStatement) statement);
-    } else if (statement instanceof ForEachStatement) {
-      handleForEachStatement((ForEachStatement) statement);
-    } else if (statement instanceof TryStatement) {
-      lang.getScopeManager().enterScope(statement);
-      TryScope tryScope = (TryScope) lang.getScopeManager().getCurrentScope();
-      TryStatement tryStmt = (TryStatement) statement;
-
-      if (tryStmt.getResources() != null) {
-        tryStmt.getResources().forEach(this::createEOG);
-      }
-      createEOG(tryStmt.getTryBlock());
-
-      List<Node> tmpEOGNodes = new ArrayList<>(currentEOG);
-
-      Map<Type, List<Node>> catchesOrRelays = tryScope.getCatchesOrRelays();
-
-      for (CatchClause catchClause : tryStmt.getCatchClauses()) {
-        currentEOG.clear();
-        // Try to catch all internally thrown exceptions under the catching clause and remove caught
-        // ones
-        HashSet<Type> toRemove = new HashSet<>();
-        for (Map.Entry entry : catchesOrRelays.entrySet()) {
-          Type throwType = (Type) entry.getKey();
-          List<Node> eogEdges = (List<Node>) entry.getValue();
-          if (catchClause.getParameter() == null) { // e.g. catch (...)
-            currentEOG.addAll(eogEdges);
-          } else if (TypeManager.getInstance()
-              .isSupertypeOf(catchClause.getParameter().getType(), throwType)) {
-            currentEOG.addAll(eogEdges);
-            toRemove.add(throwType);
-          }
-        }
-        toRemove.forEach(catchesOrRelays::remove);
-
-        createEOG(catchClause.getBody());
-        tmpEOGNodes.addAll(currentEOG);
-      }
-      boolean canTerminateExceptionfree =
-          tmpEOGNodes.stream().anyMatch(EvaluationOrderGraphPass::reachableFromValidEOGRoot);
-
-      currentEOG.clear();
-      currentEOG.addAll(tmpEOGNodes);
-      // connect all try-block, catch-clause and uncought throws eog points to finally start if
-      // finally exists
-      if (tryStmt.getFinallyBlock() != null) {
-        // extends current EOG by all value EOG from open throws
-        currentEOG.addAll(
-            catchesOrRelays.entrySet().stream()
-                .flatMap(entry -> entry.getValue().stream())
-                .collect(Collectors.toList()));
-        createEOG(tryStmt.getFinallyBlock());
-
-        //  all current-eog edges , result of finally execution as value List of uncought
-        // catchesOrRelaysThrows
-        for (Map.Entry entry : catchesOrRelays.entrySet()) {
-          ((List) entry.getValue()).clear();
-          ((List) entry.getValue()).addAll(this.currentEOG);
-        }
-      }
-      // Forwards all open and uncaught throwing nodes to the outer scope that may handle them
-      Scope outerScope =
+  private void handleUnaryOperator(Node node) {
+    UnaryOperator unaryOperator = (UnaryOperator) node;
+    Expression input = unaryOperator.getInput();
+    createEOG(input);
+    if (unaryOperator.getOperatorCode().equals("throw")) {
+      Type throwType;
+      Scope catchingScope =
           lang.getScopeManager()
               .getFirstScopeThat(
-                  lang.getScopeManager().getCurrentScope().getParent(),
                   scope -> scope instanceof TryScope || scope instanceof FunctionScope);
-      if (outerScope != null) {
-        Map outerCatchesOrRelays =
-            outerScope instanceof TryScope
-                ? ((TryScope) outerScope).getCatchesOrRelays()
-                : ((FunctionScope) outerScope).getCatchesOrRelays();
-        for (Map.Entry entry : catchesOrRelays.entrySet()) {
-          List<Node> catches =
-              (List<Node>) outerCatchesOrRelays.getOrDefault(entry.getKey(), new ArrayList<Node>());
-          catches.addAll((List<Node>) entry.getValue());
-          outerCatchesOrRelays.put(entry.getKey(), catches);
+
+      if (input != null) {
+        throwType = input.getType();
+      } else {
+        // do not check via instanceof, since we do not want to allow subclasses of
+        // DeclarationScope here
+        Scope decl =
+            lang.getScopeManager()
+                .getFirstScopeThat(scope -> scope.getClass().equals(DeclarationScope.class));
+        if (decl != null
+            && decl.getAstNode() instanceof CatchClause
+            && ((CatchClause) decl.getAstNode()).getParameter() != null) {
+          VariableDeclaration param = ((CatchClause) decl.getAstNode()).getParameter();
+          assert param != null;
+          throwType = param.getType();
+        } else {
+          LOGGER.info("Unknown throw type, potentially throw; in a method");
+          throwType = TypeParser.createFrom("UNKNOWN_THROW_TYPE", true);
         }
       }
-      lang.getScopeManager().leaveScope(statement);
-      // To Avoid edges out of the finally block to the next regular statement.
-      if (!canTerminateExceptionfree) {
-        currentEOG.clear();
-      }
+      pushToEOG(unaryOperator);
 
-      pushToEOG(statement);
+      if (catchingScope instanceof TryScope) {
+        ((TryScope) catchingScope)
+            .getCatchesOrRelays()
+            .put(throwType, new ArrayList<>(this.currentEOG));
 
-    } else if (statement instanceof ContinueStatement) {
-      pushToEOG(statement);
-
-      lang.getScopeManager().addContinueStatement((ContinueStatement) statement);
-
-      currentEOG.clear();
-
-    } else if (statement instanceof DeleteExpression) {
-
-      createEOG(((DeleteExpression) statement).getOperand());
-      pushToEOG(statement);
-
-    } else if (statement instanceof BreakStatement) {
-      pushToEOG(statement);
-
-      lang.getScopeManager().addBreakStatement((BreakStatement) statement);
-
-      currentEOG.clear();
-
-    } else if (statement instanceof SwitchStatement) {
-      handleSwitchStatement((SwitchStatement) statement);
-    } else if (statement instanceof LabelStatement) {
-      lang.getScopeManager().addLabelStatement((LabelStatement) statement);
-      createEOG(((LabelStatement) statement).getSubStatement());
-    } else if (statement instanceof GotoStatement) {
-      GotoStatement gotoStatement = (GotoStatement) statement;
-      pushToEOG(gotoStatement);
-      if (gotoStatement.getTargetLabel() != null) {
-        lang.registerObjectListener(
-            gotoStatement.getTargetLabel(), (from, to) -> addEOGEdge(gotoStatement, (Node) to));
+      } else if (catchingScope instanceof FunctionScope) {
+        ((FunctionScope) catchingScope)
+            .getCatchesOrRelays()
+            .put(throwType, new ArrayList<>(this.currentEOG));
       }
       currentEOG.clear();
-    } else if (statement instanceof CaseStatement) {
-      createEOG(((CaseStatement) statement).getCaseExpression());
-      pushToEOG(statement);
-    } else if (statement instanceof SynchronizedStatement) {
-      handleSynchronizedStatement((SynchronizedStatement) statement);
-    } else if (statement instanceof EmptyStatement) {
-      pushToEOG(statement);
-    } else if (statement instanceof Literal) {
-      pushToEOG(statement);
-    } else if (statement instanceof DefaultStatement) {
-      pushToEOG(statement);
-    } else if (statement instanceof TypeIdExpression) {
-      pushToEOG(statement);
-    } else if (statement instanceof NewExpression) {
-      NewExpression newStmt = (NewExpression) statement;
-      createEOG(newStmt.getInitializer());
-
-      pushToEOG(statement);
-    } else if (statement instanceof CastExpression) {
-      CastExpression castExpr = (CastExpression) statement;
-      createEOG(castExpr.getExpression());
-      pushToEOG(castExpr);
-    } else if (statement instanceof ExpressionList) {
-      ExpressionList exprList = (ExpressionList) statement;
-      for (Statement expr : exprList.getExpressions()) {
-        createEOG(expr);
-      }
-
-      pushToEOG(statement);
-    } else if (statement instanceof ConditionalExpression) {
-      handleConditionalExpression((ConditionalExpression) statement);
-    } else if (statement instanceof InitializerListExpression) {
-      InitializerListExpression initList = (InitializerListExpression) statement;
-
-      // first the arguments
-      for (Expression inits : initList.getInitializers()) {
-        createEOG(inits);
-      }
-
-      pushToEOG(statement);
-    } else if (statement instanceof ConstructExpression) {
-      ConstructExpression constructExpr = (ConstructExpression) statement;
-
-      // first the arguments
-      for (Expression arg : constructExpr.getArguments()) {
-        createEOG(arg);
-      }
-
-      pushToEOG(statement);
-    } else if (statement instanceof DeclaredReferenceExpression) {
-      pushToEOG(statement);
     } else {
-      // In this case the ast -> cpg translation has to implement the cpg node creation
-      pushToEOG(statement);
+      pushToEOG(unaryOperator);
     }
   }
 
-  public <T extends Node> void pushToEOG(@NonNull T node) {
-    if (lang == null) {
-      // Avoid null checks in every if/else branch
-      LOGGER.warn("Not pushing to EOG - no information about frontend available.");
-      return;
+  private void handleCompoundStatementExpression(Node node) {
+    createEOG(((CompoundStatementExpression) node).getStatement());
+    pushToEOG(node);
+  }
+
+  private void handleAssertStatement(Node node) {
+    AssertStatement ifs = (AssertStatement) node;
+    createEOG(ifs.getCondition());
+    List<Node> openConditionEOGs = new ArrayList<>(currentEOG);
+    createEOG(ifs.getMessage());
+    setCurrentEOGs(openConditionEOGs);
+    pushToEOG(node);
+  }
+
+  private void handleTryStatement(Node node) {
+    TryStatement tryStatement = (TryStatement) node;
+    lang.getScopeManager().enterScope(tryStatement);
+    TryScope tryScope = (TryScope) lang.getScopeManager().getCurrentScope();
+    TryStatement tryStmt = (TryStatement) tryStatement;
+    if (tryStmt.getResources() != null) {
+      tryStmt.getResources().forEach(this::createEOG);
+    }
+    createEOG(tryStmt.getTryBlock());
+    List<Node> tmpEOGNodes = new ArrayList<>(currentEOG);
+    Map<Type, List<Node>> catchesOrRelays = tryScope.getCatchesOrRelays();
+    for (CatchClause catchClause : tryStmt.getCatchClauses()) {
+      currentEOG.clear();
+      // Try to catch all internally thrown exceptions under the catching clause and remove caught
+      // ones
+      HashSet<Type> toRemove = new HashSet<>();
+      for (Map.Entry entry : catchesOrRelays.entrySet()) {
+        Type throwType = (Type) entry.getKey();
+        List<Node> eogEdges = (List<Node>) entry.getValue();
+        if (catchClause.getParameter() == null) { // e.g. catch (...)
+          currentEOG.addAll(eogEdges);
+        } else if (TypeManager.getInstance()
+            .isSupertypeOf(catchClause.getParameter().getType(), throwType)) {
+          currentEOG.addAll(eogEdges);
+          toRemove.add(throwType);
+        }
+      }
+      toRemove.forEach(catchesOrRelays::remove);
+      createEOG(catchClause.getBody());
+      tmpEOGNodes.addAll(currentEOG);
+    }
+    boolean canTerminateExceptionfree =
+        tmpEOGNodes.stream().anyMatch(EvaluationOrderGraphPass::reachableFromValidEOGRoot);
+
+    currentEOG.clear();
+    currentEOG.addAll(tmpEOGNodes);
+    // connect all try-block, catch-clause and uncought throws eog points to finally start if
+    // finally exists
+    if (tryStmt.getFinallyBlock() != null) {
+      // extends current EOG by all value EOG from open throws
+      currentEOG.addAll(
+          catchesOrRelays.entrySet().stream()
+              .flatMap(entry -> entry.getValue().stream())
+              .collect(Collectors.toList()));
+      createEOG(tryStmt.getFinallyBlock());
+
+      //  all current-eog edges , result of finally execution as value List of uncought
+      // catchesOrRelaysThrows
+      for (Map.Entry entry : catchesOrRelays.entrySet()) {
+        ((List) entry.getValue()).clear();
+        ((List) entry.getValue()).addAll(this.currentEOG);
+      }
+    }
+    // Forwards all open and uncaught throwing nodes to the outer scope that may handle them
+    Scope outerScope =
+        lang.getScopeManager()
+            .getFirstScopeThat(
+                lang.getScopeManager().getCurrentScope().getParent(),
+                scope -> scope instanceof TryScope || scope instanceof FunctionScope);
+    if (outerScope != null) {
+      Map outerCatchesOrRelays =
+          outerScope instanceof TryScope
+              ? ((TryScope) outerScope).getCatchesOrRelays()
+              : ((FunctionScope) outerScope).getCatchesOrRelays();
+      for (Map.Entry entry : catchesOrRelays.entrySet()) {
+        List<Node> catches =
+            (List<Node>) outerCatchesOrRelays.getOrDefault(entry.getKey(), new ArrayList<Node>());
+        catches.addAll((List<Node>) entry.getValue());
+        outerCatchesOrRelays.put(entry.getKey(), catches);
+      }
+    }
+    lang.getScopeManager().leaveScope(tryStatement);
+    // To Avoid edges out of the finally block to the next regular statement.
+    if (!canTerminateExceptionfree) {
+      currentEOG.clear();
+    }
+    pushToEOG(tryStatement);
+  }
+
+  private void handleContinueStatement(Node node) {
+    pushToEOG(node);
+    lang.getScopeManager().addContinueStatement((ContinueStatement) node);
+    currentEOG.clear();
+  }
+
+  private void handleDeleteExpression(Node node) {
+    createEOG(((DeleteExpression) node).getOperand());
+    pushToEOG(node);
+  }
+
+  private void handleBreakStatement(Node node) {
+    pushToEOG(node);
+    lang.getScopeManager().addBreakStatement((BreakStatement) node);
+    currentEOG.clear();
+  }
+
+  private void handleLabelStatement(Node node) {
+    LabelStatement labelStatement = (LabelStatement) node;
+    lang.getScopeManager().addLabelStatement(labelStatement);
+    createEOG(labelStatement.getSubStatement());
+  }
+
+  private void handleGotoStatement(Node node) {
+    GotoStatement gotoStatement = (GotoStatement) node;
+    pushToEOG(gotoStatement);
+    if (gotoStatement.getTargetLabel() != null) {
+      lang.registerObjectListener(
+          gotoStatement.getTargetLabel(), (from, to) -> addEOGEdge(gotoStatement, (Node) to));
+    }
+    currentEOG.clear();
+  }
+
+  private void handleCaseStatement(Node node) {
+    createEOG(((CaseStatement) node).getCaseExpression());
+    pushToEOG(node);
+  }
+
+  private void handleNewExpression(Node node) {
+    NewExpression newStmt = (NewExpression) node;
+    createEOG(newStmt.getInitializer());
+
+    pushToEOG(node);
+  }
+
+  private void handleCastExpression(Node node) {
+    CastExpression castExpr = (CastExpression) node;
+    createEOG(castExpr.getExpression());
+    pushToEOG(castExpr);
+  }
+
+  private void handleExpressionList(Node node) {
+    ExpressionList exprList = (ExpressionList) node;
+    for (Statement expr : exprList.getExpressions()) {
+      createEOG(expr);
     }
 
+    pushToEOG(exprList);
+  }
+
+  private void handleInitializerListExpression(Node node) {
+    InitializerListExpression initList = (InitializerListExpression) node;
+
+    // first the arguments
+    for (Expression inits : initList.getInitializers()) {
+      createEOG(inits);
+    }
+
+    pushToEOG(initList);
+  }
+
+  private void handleConstructExpression(Node node) {
+    ConstructExpression constructExpr = (ConstructExpression) node;
+    // first the arguments
+    for (Expression arg : constructExpr.getArguments()) {
+      createEOG(arg);
+    }
+    pushToEOG(constructExpr);
+  }
+
+  /**
+   * Creates an EOG-edge between the given argument node and the saved currentEOG Edges.
+   *
+   * @param node node that gets the incoming edge
+   */
+  public void pushToEOG(@NonNull Node node) {
     LOGGER.trace("Pushing {} {} to EOG", node.getClass().getSimpleName(), node);
     for (Node intermediate : intermediateNodes) {
       lang.process(intermediate, node);
     }
+
     addMultipleIncomingEOGEdges(this.currentEOG, node);
     intermediateNodes.clear();
     this.currentEOG.clear();
@@ -726,13 +740,15 @@ public class EvaluationOrderGraphPass extends Pass {
     prevs.forEach(prev -> addEOGEdge(prev, next));
   }
 
-  private void handleSynchronizedStatement(SynchronizedStatement synch) {
+  private void handleSynchronizedStatement(Node node) {
+    SynchronizedStatement synch = (SynchronizedStatement) node;
     createEOG(synch.getExpression());
     pushToEOG(synch);
     createEOG(synch.getBlockStatement());
   }
 
-  private void handleConditionalExpression(ConditionalExpression conditionalExpression) {
+  private void handleConditionalExpression(Node node) {
+    ConditionalExpression conditionalExpression = (ConditionalExpression) node;
     List<Node> openBranchNodes = new ArrayList<>();
     createEOG(conditionalExpression.getCondition());
     pushToEOG(conditionalExpression); // To have semantic information after the condition evaluation
@@ -747,7 +763,8 @@ public class EvaluationOrderGraphPass extends Pass {
     setCurrentEOGs(openBranchNodes);
   }
 
-  private void handleDoStatement(DoStatement doStatement) {
+  private void handleDoStatement(Node node) {
+    DoStatement doStatement = (DoStatement) node;
     lang.getScopeManager().enterScope(doStatement);
 
     createEOG(doStatement.getStatement());
@@ -763,11 +780,12 @@ public class EvaluationOrderGraphPass extends Pass {
     }
   }
 
-  private void handleForEachStatement(ForEachStatement forEachStatement) {
+  private void handleForEachStatement(Node node) {
+    ForEachStatement forEachStatement = (ForEachStatement) node;
     lang.getScopeManager().enterScope(forEachStatement);
 
     createEOG(forEachStatement.getIterable());
-    handleDeclaration(forEachStatement.getVariable());
+    createEOG(forEachStatement.getVariable());
 
     pushToEOG(forEachStatement); // To have semantic information after the variable declaration
 
@@ -788,12 +806,13 @@ public class EvaluationOrderGraphPass extends Pass {
     currentEOG.addAll(tmpEOGNodes);
   }
 
-  private void handleForStatement(ForStatement forStatement) {
+  private void handleForStatement(Node node) {
+    ForStatement forStatement = (ForStatement) node;
     lang.getScopeManager().enterScope(forStatement);
     ForStatement forStmt = forStatement;
 
     createEOG(forStmt.getInitializerStatement());
-    handleDeclaration(forStmt.getConditionDeclaration());
+    createEOG(forStmt.getConditionDeclaration());
     createEOG(forStmt.getCondition());
 
     pushToEOG(forStatement); // To have semantic information after the condition evaluation
@@ -815,11 +834,12 @@ public class EvaluationOrderGraphPass extends Pass {
     currentEOG.addAll(tmpEOGNodes);
   }
 
-  private void handleIfStatement(IfStatement ifStatement) {
+  private void handleIfStatement(Node node) {
+    IfStatement ifStatement = (IfStatement) node;
     List<Node> openBranchNodes = new ArrayList<>();
     lang.getScopeManager().enterScope(ifStatement);
     createEOG(ifStatement.getInitializerStatement());
-    handleDeclaration(ifStatement.getConditionDeclaration());
+    createEOG(ifStatement.getConditionDeclaration());
     createEOG(ifStatement.getCondition());
 
     pushToEOG(ifStatement); // To have semantic information after the condition evaluation
@@ -840,12 +860,13 @@ public class EvaluationOrderGraphPass extends Pass {
     setCurrentEOGs(openBranchNodes);
   }
 
-  private void handleSwitchStatement(SwitchStatement switchStatement) {
+  private void handleSwitchStatement(Node node) {
+    SwitchStatement switchStatement = (SwitchStatement) node;
     lang.getScopeManager().enterScope(switchStatement);
 
     createEOG(switchStatement.getInitializerStatement());
 
-    handleDeclaration(switchStatement.getSelectorDeclaration());
+    createEOG(switchStatement.getSelectorDeclaration());
 
     createEOG(switchStatement.selector);
 
@@ -878,10 +899,11 @@ public class EvaluationOrderGraphPass extends Pass {
     }
   }
 
-  private void handleWhileStatement(WhileStatement whileStatement) {
+  private void handleWhileStatement(Node node) {
+    WhileStatement whileStatement = (WhileStatement) node;
     lang.getScopeManager().enterScope(whileStatement);
 
-    handleDeclaration(whileStatement.getConditionDeclaration());
+    createEOG(whileStatement.getConditionDeclaration());
 
     createEOG(whileStatement.getCondition());
 
