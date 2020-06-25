@@ -69,7 +69,7 @@ public class EvaluationOrderGraphPass extends Pass {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(EvaluationOrderGraphPass.class);
 
-  protected final HashMap<Class<? extends Node>, CallableInterface<? extends Node>> map =
+  protected final Map<Class<? extends Node>, CallableInterface<? extends Node>> map =
       new HashMap<>();
 
   private List<Node> currentEOG = new ArrayList<>();
