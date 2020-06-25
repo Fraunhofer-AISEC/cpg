@@ -207,14 +207,14 @@ public class ScopeManager {
       Scope newScope;
       if (nodeToScope instanceof CompoundStatement) {
         newScope = new BlockScope((CompoundStatement) nodeToScope);
-      } else if (nodeToScope instanceof WhileStatement
-          || nodeToScope instanceof DoStatement
-          || nodeToScope instanceof AssertStatement) {
+      } else if (nodeToScope instanceof WhileStatement || nodeToScope instanceof DoStatement) {
         newScope = new LoopScope((Statement) nodeToScope);
       } else if (nodeToScope instanceof ForStatement || nodeToScope instanceof ForEachStatement) {
         newScope = new LoopScope((Statement) nodeToScope);
       } else if (nodeToScope instanceof SwitchStatement) {
         newScope = new SwitchScope((SwitchStatement) nodeToScope);
+      } else if (nodeToScope instanceof AssertStatement) {
+        newScope = new DeclarationScope(nodeToScope);
       } else if (nodeToScope instanceof FunctionDeclaration) {
         newScope = new FunctionScope((FunctionDeclaration) nodeToScope);
       } else if (nodeToScope instanceof IfStatement) {
