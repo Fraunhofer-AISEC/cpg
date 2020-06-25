@@ -43,19 +43,20 @@ import org.slf4j.LoggerFactory;
 /**
  * Creates an Evaluation Order Graph (EOG) based on AST.
  *
- * An EOG is an intraprocedural directed graph whose vertices are executable AST nodes and edges
+ * <p>An EOG is an intraprocedural directed graph whose vertices are executable AST nodes and edges
  * connect them in the order they would be executed when running the program.
  *
- * An EOG always starts at the header of a method/function and ends in one (virtual) or multiple return statements.
- * A virtual return statement with a code location of (-1,-1) is used if the actual source code does not have an explicit
- * return statement.
+ * <p>An EOG always starts at the header of a method/function and ends in one (virtual) or multiple
+ * return statements. A virtual return statement with a code location of (-1,-1) is used if the
+ * actual source code does not have an explicit return statement.
  *
- * <p>The EOG is similar to the CFG {@code ControlFlowGraphPass}, but there are some subtle differences:
+ * <p>The EOG is similar to the CFG {@code ControlFlowGraphPass}, but there are some subtle
+ * differences:
  *
  * <ul>
  *   <li>For methods without explicit return statement, EOF will have an edge to a virtual return
- *       node with line number -1 which does not exist in the original code. A CFG will always end with the last
- *       reachable statement(s) and not insert any virtual return statements.
+ *       node with line number -1 which does not exist in the original code. A CFG will always end
+ *       with the last reachable statement(s) and not insert any virtual return statements.
  *   <li>EOG considers an opening blocking ("CompoundStatement", indicated by a "{") as a separate
  *       node. A CFG will rather use the first actual executable statement within the block.
  *   <li>For IF statements, EOG treats the "if" keyword and the condition as separate nodes. CFG
@@ -210,7 +211,7 @@ public class EvaluationOrderGraphPass extends Pass {
     }
   }
 
-  private void handleTranslationUnitDeclaration(Node node) {
+  private void handleTranslationUnitDeclaration(@NonNull Node node) {
     TranslationUnitDeclaration declaration = (TranslationUnitDeclaration) node;
     // loop through functions
     for (Declaration child : declaration.getDeclarations()) {
@@ -219,14 +220,14 @@ public class EvaluationOrderGraphPass extends Pass {
     lang.clearProcessed();
   }
 
-  private void handleVariableDeclaration(Node node) {
+  private void handleVariableDeclaration(@NonNull Node node) {
     Declaration declaration = (Declaration) node;
     // analyze the initializer
     createEOG(((VariableDeclaration) declaration).getInitializer());
     pushToEOG(declaration);
   }
 
-  private void handleRecordDeclaration(Node node) {
+  private void handleRecordDeclaration(@NonNull Node node) {
     Declaration declaration = (Declaration) node;
     lang.getScopeManager().enterScope(declaration);
     this.currentEOG.clear();
@@ -240,7 +241,7 @@ public class EvaluationOrderGraphPass extends Pass {
     lang.getScopeManager().leaveScope(declaration);
   }
 
-  private void handleFunctionDeclaration(Node node) {
+  private void handleFunctionDeclaration(@NonNull Node node) {
     FunctionDeclaration funcDecl = (FunctionDeclaration) node;
     // reset EOG
     this.currentEOG.clear();
@@ -282,11 +283,11 @@ public class EvaluationOrderGraphPass extends Pass {
     }
   }
 
-  private void handleDefault(Node node) {
+  private void handleDefault(@NonNull Node node) {
     pushToEOG(node);
   }
 
-  private void handleCallExpression(Node node) {
+  private void handleCallExpression(@NonNull Node node) {
     CallExpression callExpression = (CallExpression) node;
 
     // Todo add call as throwexpression to outer scope of call can throw (which is trivial to find
@@ -306,7 +307,7 @@ public class EvaluationOrderGraphPass extends Pass {
     pushToEOG(callExpression);
   }
 
-  private void handleMemberExpression(@Nullable Node node) {
+  private void handleMemberExpression(@NonNull Node node) {
     MemberExpression memberExpression = (MemberExpression) node;
     // analyze the base
     if (memberExpression.getBase() instanceof Statement) {
@@ -321,7 +322,7 @@ public class EvaluationOrderGraphPass extends Pass {
     pushToEOG(memberExpression);
   }
 
-  private void handleArraySubscriptionExpression(Node node) {
+  private void handleArraySubscriptionExpression(@NonNull Node node) {
     ArraySubscriptionExpression arraySubs = (ArraySubscriptionExpression) node;
 
     // Connect according to evaluation order, first the array reference, then the contained index.
@@ -331,7 +332,7 @@ public class EvaluationOrderGraphPass extends Pass {
     pushToEOG(arraySubs);
   }
 
-  private void handleArrayCreationExpression(Node node) {
+  private void handleArrayCreationExpression(@NonNull Node node) {
     ArrayCreationExpression arrayCreate = (ArrayCreationExpression) node;
 
     for (Expression dimension : arrayCreate.getDimensions()) {
@@ -344,7 +345,7 @@ public class EvaluationOrderGraphPass extends Pass {
     pushToEOG(arrayCreate);
   }
 
-  private void handleDeclarationStatement(Node node) {
+  private void handleDeclarationStatement(@NonNull Node node) {
     DeclarationStatement declarationStatement = (DeclarationStatement) node;
     // loop through declarations
     for (Declaration declaration : declarationStatement.getDeclarations()) {
@@ -358,7 +359,7 @@ public class EvaluationOrderGraphPass extends Pass {
     pushToEOG(declarationStatement);
   }
 
-  private void handleReturnStatement(Node node) {
+  private void handleReturnStatement(@NonNull Node node) {
     ReturnStatement returnStatement = (ReturnStatement) node;
     // analyze the return value
     createEOG(returnStatement.getReturnValue());
@@ -370,7 +371,7 @@ public class EvaluationOrderGraphPass extends Pass {
     currentEOG.clear();
   }
 
-  private void handleBinaryOperator(Node node) {
+  private void handleBinaryOperator(@NonNull Node node) {
     BinaryOperator binOp = (BinaryOperator) node;
     createEOG(binOp.getLhs());
 
@@ -390,7 +391,7 @@ public class EvaluationOrderGraphPass extends Pass {
     pushToEOG(binOp);
   }
 
-  private void handleCompoundStatement(Node node) {
+  private void handleCompoundStatement(@NonNull Node node) {
     CompoundStatement compoundStatement = (CompoundStatement) node;
     lang.getScopeManager().enterScope(compoundStatement);
     // analyze the contained statements
@@ -401,7 +402,7 @@ public class EvaluationOrderGraphPass extends Pass {
     pushToEOG(compoundStatement);
   }
 
-  private void handleUnaryOperator(Node node) {
+  private void handleUnaryOperator(@NonNull Node node) {
     UnaryOperator unaryOperator = (UnaryOperator) node;
     Expression input = unaryOperator.getInput();
     createEOG(input);
@@ -449,12 +450,12 @@ public class EvaluationOrderGraphPass extends Pass {
     }
   }
 
-  private void handleCompoundStatementExpression(Node node) {
+  private void handleCompoundStatementExpression(@NonNull Node node) {
     createEOG(((CompoundStatementExpression) node).getStatement());
     pushToEOG(node);
   }
 
-  private void handleAssertStatement(Node node) {
+  private void handleAssertStatement(@NonNull Node node) {
     AssertStatement ifs = (AssertStatement) node;
     createEOG(ifs.getCondition());
     List<Node> openConditionEOGs = new ArrayList<>(currentEOG);
@@ -463,7 +464,7 @@ public class EvaluationOrderGraphPass extends Pass {
     pushToEOG(node);
   }
 
-  private void handleTryStatement(Node node) {
+  private void handleTryStatement(@NonNull Node node) {
     TryStatement tryStatement = (TryStatement) node;
     lang.getScopeManager().enterScope(tryStatement);
     TryScope tryScope = (TryScope) lang.getScopeManager().getCurrentScope();
@@ -542,30 +543,30 @@ public class EvaluationOrderGraphPass extends Pass {
     pushToEOG(tryStatement);
   }
 
-  private void handleContinueStatement(Node node) {
+  private void handleContinueStatement(@NonNull Node node) {
     pushToEOG(node);
     lang.getScopeManager().addContinueStatement((ContinueStatement) node);
     currentEOG.clear();
   }
 
-  private void handleDeleteExpression(Node node) {
+  private void handleDeleteExpression(@NonNull Node node) {
     createEOG(((DeleteExpression) node).getOperand());
     pushToEOG(node);
   }
 
-  private void handleBreakStatement(Node node) {
+  private void handleBreakStatement(@NonNull Node node) {
     pushToEOG(node);
     lang.getScopeManager().addBreakStatement((BreakStatement) node);
     currentEOG.clear();
   }
 
-  private void handleLabelStatement(Node node) {
+  private void handleLabelStatement(@NonNull Node node) {
     LabelStatement labelStatement = (LabelStatement) node;
     lang.getScopeManager().addLabelStatement(labelStatement);
     createEOG(labelStatement.getSubStatement());
   }
 
-  private void handleGotoStatement(Node node) {
+  private void handleGotoStatement(@NonNull Node node) {
     GotoStatement gotoStatement = (GotoStatement) node;
     pushToEOG(gotoStatement);
     if (gotoStatement.getTargetLabel() != null) {
@@ -575,25 +576,25 @@ public class EvaluationOrderGraphPass extends Pass {
     currentEOG.clear();
   }
 
-  private void handleCaseStatement(Node node) {
+  private void handleCaseStatement(@NonNull Node node) {
     createEOG(((CaseStatement) node).getCaseExpression());
     pushToEOG(node);
   }
 
-  private void handleNewExpression(Node node) {
+  private void handleNewExpression(@NonNull Node node) {
     NewExpression newStmt = (NewExpression) node;
     createEOG(newStmt.getInitializer());
 
     pushToEOG(node);
   }
 
-  private void handleCastExpression(Node node) {
+  private void handleCastExpression(@NonNull Node node) {
     CastExpression castExpr = (CastExpression) node;
     createEOG(castExpr.getExpression());
     pushToEOG(castExpr);
   }
 
-  private void handleExpressionList(Node node) {
+  private void handleExpressionList(@NonNull Node node) {
     ExpressionList exprList = (ExpressionList) node;
     for (Statement expr : exprList.getExpressions()) {
       createEOG(expr);
@@ -602,7 +603,7 @@ public class EvaluationOrderGraphPass extends Pass {
     pushToEOG(exprList);
   }
 
-  private void handleInitializerListExpression(Node node) {
+  private void handleInitializerListExpression(@NonNull Node node) {
     InitializerListExpression initList = (InitializerListExpression) node;
 
     // first the arguments
@@ -613,7 +614,7 @@ public class EvaluationOrderGraphPass extends Pass {
     pushToEOG(initList);
   }
 
-  private void handleConstructExpression(Node node) {
+  private void handleConstructExpression(@NonNull Node node) {
     ConstructExpression constructExpr = (ConstructExpression) node;
     // first the arguments
     for (Expression arg : constructExpr.getArguments()) {
@@ -736,14 +737,14 @@ public class EvaluationOrderGraphPass extends Pass {
     prevs.forEach(prev -> addEOGEdge(prev, next));
   }
 
-  private void handleSynchronizedStatement(Node node) {
+  private void handleSynchronizedStatement(@NonNull Node node) {
     SynchronizedStatement synch = (SynchronizedStatement) node;
     createEOG(synch.getExpression());
     pushToEOG(synch);
     createEOG(synch.getBlockStatement());
   }
 
-  private void handleConditionalExpression(Node node) {
+  private void handleConditionalExpression(@NonNull Node node) {
     ConditionalExpression conditionalExpression = (ConditionalExpression) node;
     List<Node> openBranchNodes = new ArrayList<>();
     createEOG(conditionalExpression.getCondition());
@@ -759,7 +760,7 @@ public class EvaluationOrderGraphPass extends Pass {
     setCurrentEOGs(openBranchNodes);
   }
 
-  private void handleDoStatement(Node node) {
+  private void handleDoStatement(@NonNull Node node) {
     DoStatement doStatement = (DoStatement) node;
     lang.getScopeManager().enterScope(doStatement);
 
@@ -776,7 +777,7 @@ public class EvaluationOrderGraphPass extends Pass {
     }
   }
 
-  private void handleForEachStatement(Node node) {
+  private void handleForEachStatement(@NonNull Node node) {
     ForEachStatement forEachStatement = (ForEachStatement) node;
     lang.getScopeManager().enterScope(forEachStatement);
 
@@ -802,7 +803,7 @@ public class EvaluationOrderGraphPass extends Pass {
     currentEOG.addAll(tmpEOGNodes);
   }
 
-  private void handleForStatement(Node node) {
+  private void handleForStatement(@NonNull Node node) {
     ForStatement forStatement = (ForStatement) node;
     lang.getScopeManager().enterScope(forStatement);
     ForStatement forStmt = forStatement;
@@ -830,7 +831,7 @@ public class EvaluationOrderGraphPass extends Pass {
     currentEOG.addAll(tmpEOGNodes);
   }
 
-  private void handleIfStatement(Node node) {
+  private void handleIfStatement(@NonNull Node node) {
     IfStatement ifStatement = (IfStatement) node;
     List<Node> openBranchNodes = new ArrayList<>();
     lang.getScopeManager().enterScope(ifStatement);
@@ -856,7 +857,7 @@ public class EvaluationOrderGraphPass extends Pass {
     setCurrentEOGs(openBranchNodes);
   }
 
-  private void handleSwitchStatement(Node node) {
+  private void handleSwitchStatement(@NonNull Node node) {
     SwitchStatement switchStatement = (SwitchStatement) node;
     lang.getScopeManager().enterScope(switchStatement);
 
@@ -895,7 +896,7 @@ public class EvaluationOrderGraphPass extends Pass {
     }
   }
 
-  private void handleWhileStatement(Node node) {
+  private void handleWhileStatement(@NonNull Node node) {
     WhileStatement whileStatement = (WhileStatement) node;
     lang.getScopeManager().enterScope(whileStatement);
 
