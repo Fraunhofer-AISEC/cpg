@@ -130,6 +130,21 @@ public class TranslationConfiguration {
     return cleanupOnCompletion;
   }
 
+  /**
+   * Builds a {@link TranslationConfiguration}.
+   *
+   * <p>Example:
+   *
+   * <pre>{@code
+   * TranslationManager.builder()
+   *    .config( TranslationConfiguration.builder()
+   *        .sourceLocations(new File("example.cpp"))
+   *        .defaultPasses()
+   *        .debugParser(true)
+   *        .build())
+   * .build();
+   * }</pre>
+   */
   public static class Builder {
     private List<File> sourceLocations = new ArrayList<>();
     private File topLevel = null;
@@ -147,6 +162,12 @@ public class TranslationConfiguration {
       return this;
     }
 
+    /**
+     * Files or directories containing the source code to analyze.
+     *
+     * @param sourceLocations
+     * @return
+     */
     public Builder sourceLocations(File... sourceLocations) {
       this.sourceLocations = Arrays.asList(sourceLocations);
       return this;
@@ -157,26 +178,58 @@ public class TranslationConfiguration {
       return this;
     }
 
+    /**
+     * Dump parser debug output to the logs (Caution: this will generate a lot of output).
+     *
+     * @param debugParser
+     * @return
+     */
     public Builder debugParser(boolean debugParser) {
       this.debugParser = debugParser;
       return this;
     }
 
+    /**
+     * Fail analysis on first error. Try to continue otherwise.
+     *
+     * @param failOnError
+     * @return
+     */
     public Builder failOnError(boolean failOnError) {
       this.failOnError = failOnError;
       return this;
     }
 
+    /**
+     * Load C/C++ include headers before the analysis.
+     *
+     * <p>Required for macro expansion.
+     *
+     * @param loadIncludes
+     * @return
+     */
     public Builder loadIncludes(boolean loadIncludes) {
       this.loadIncludes = loadIncludes;
       return this;
     }
 
+    /**
+     * Directory containing include headers.
+     *
+     * @param includePath
+     * @return
+     */
     public Builder includePath(String includePath) {
       this.includePaths.add(includePath);
       return this;
     }
 
+    /**
+     * Register an additional {@link Pass}.
+     *
+     * @param pass
+     * @return
+     */
     public Builder registerPass(@NonNull Pass pass) {
       this.passes.add(pass);
       return this;
@@ -187,6 +240,23 @@ public class TranslationConfiguration {
       return this;
     }
 
+    /**
+     * Register all default {@link Pass}es.
+     *
+     * <p>This will register
+     *
+     * <ul>
+     *   <li>FilenameMapper
+     *   <li>TypeHierarchyResolver
+     *   <li>ImportResolver
+     *   <li>VariableUsageResolver
+     *   <li>CallResolver()
+     *   <li>EvaluationOrderGraphPass
+     *   <li>TypeResolver
+     * </ul>
+     *
+     * @return
+     */
     public Builder defaultPasses() {
       registerPass(new FilenameMapper());
       registerPass(new TypeHierarchyResolver());
