@@ -116,10 +116,6 @@ signing {
     sign(publishing.publications["maven"])
 }
 
-tasks.withType<Sign>().configureEach {
-    onlyIf { project.extra["isReleaseVersion"] as Boolean }
-}
-
 tasks.named<Test>("test") {
     useJUnitPlatform()
     maxHeapSize = "4048m"
