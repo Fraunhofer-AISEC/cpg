@@ -35,7 +35,6 @@ plugins {
     id("org.sonarqube") version "3.0"
     id("com.diffplug.gradle.spotless") version "4.4.0"
     id("com.github.johnrengelman.shadow") version "6.0.0"
-    id("net.researchgate.release") version "2.8.1"
 }
 
 tasks.jacocoTestReport {
@@ -45,15 +44,6 @@ tasks.jacocoTestReport {
 }
 
 group = "de.fraunhofer.aisec"
-
-extra["isReleaseVersion"] = !version.toString().endsWith("SNAPSHOT")
-
-val mavenCentralUri: String
-    get() {
-        val releasesRepoUrl = "https://oss.sonatype.org/service/local/staging/deploy/maven2"
-        val snapshotsRepoUrl = "https://oss.sonatype.org/content/repositories/snapshots"
-        return if (project.extra["isReleaseVersion"] as Boolean) releasesRepoUrl else snapshotsRepoUrl
-    }
 
 publishing {
     publications {
@@ -88,7 +78,7 @@ publishing {
 
     repositories {
         maven {
-            url = uri(mavenCentralUri)
+            url = uri("https://oss.sonatype.org/service/local/staging/deploy/maven2")
 
             credentials {
                 val mavenCentralUsername: String? by project
