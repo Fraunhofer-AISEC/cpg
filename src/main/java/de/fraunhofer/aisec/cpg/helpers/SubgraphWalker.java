@@ -54,6 +54,7 @@ import java.util.stream.Collectors;
 import org.apache.commons.lang3.tuple.MutablePair;
 import org.apache.commons.lang3.tuple.Pair;
 import org.checkerframework.checker.nullness.qual.NonNull;
+import org.checkerframework.checker.nullness.qual.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -187,18 +188,6 @@ public class SubgraphWalker {
     return border;
   }
 
-  /**
-   * Visit all nodes.
-   *
-   * @param stmt the start note
-   * @param visitor the visitor consumer to call
-   */
-  public static void visit(Node stmt, Consumer<Node> visitor) {
-    List<Node> nodes = flattenAST(stmt);
-    for (Node n : nodes) {
-      visitor.accept(n);
-    }
-  }
 
   /**
    * For better readability: <code>result.entries</code> instead of <code>result.get(0)</code> when
@@ -378,6 +367,7 @@ public class SubgraphWalker {
       }
     }
 
+    @Nullable
     public RecordDeclaration getCurrentClass() {
       return currentClass.isEmpty() ? null : currentClass.peek();
     }

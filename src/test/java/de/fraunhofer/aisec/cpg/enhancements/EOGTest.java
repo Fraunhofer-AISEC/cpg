@@ -46,6 +46,7 @@ import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker;
 import de.fraunhofer.aisec.cpg.helpers.Util;
 import de.fraunhofer.aisec.cpg.passes.CallResolver;
 import de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass;
+import de.fraunhofer.aisec.cpg.processing.strategy.DepthFirstNodeVisitor;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
@@ -310,14 +311,17 @@ class EOGTest extends BaseTest {
     SubgraphWalker.Border blockEOG = SubgraphWalker.getEOGPathEdges(wstat.getStatement());
 
     // Print EOG edges for debugging
-    SubgraphWalker.visit(
-        nodes.get(0),
-        s -> {
-          for (Node pred : s.getPrevEOG()) {
-            System.out.println(
-                locationLink(s.getLocation()) + " -> " + locationLink(pred.getLocation()));
-          }
-        });
+    nodes
+        .get(0)
+        .accept(
+            new DepthFirstNodeVisitor<>(
+                n -> {
+                  for (Node x : n.getPrevEOG()) {
+                    System.out.println(
+                        locationLink(n.getLocation()) + " -> " + locationLink(x.getLocation()));
+                  }
+                },
+                n -> n.getPrevEOG().iterator()));
 
     // Assert: Only single entry and exit NODE per block
     assertTrue(conditionEOG.getEntries().size() == 1 && conditionEOG.getExits().size() == 1);

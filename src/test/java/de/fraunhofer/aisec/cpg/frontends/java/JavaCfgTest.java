@@ -41,8 +41,8 @@ import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.RecordDeclaration;
 import de.fraunhofer.aisec.cpg.graph.Statement;
 import de.fraunhofer.aisec.cpg.graph.TranslationUnitDeclaration;
-import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker;
 import de.fraunhofer.aisec.cpg.passes.ControlFlowGraphPass;
+import de.fraunhofer.aisec.cpg.processing.strategy.DepthFirstNodeVisitor;
 import java.io.File;
 import java.util.concurrent.ExecutionException;
 import java.util.function.Consumer;
@@ -81,17 +81,18 @@ class JavaCfgTest extends BaseTest {
     CompoundStatement body = (CompoundStatement) rec.getMethods().get(0).getBody();
 
     // Just for debugging
-    SubgraphWalker.visit(
-        body,
-        (stmt) -> {
-          for (Node target : stmt.getNextCFG()) {
-            System.out.println(
-                "CFG: "
-                    + locationLink(stmt.getLocation())
-                    + " -> "
-                    + locationLink(target.getLocation()));
-          }
-        });
+    body.accept(
+        new DepthFirstNodeVisitor<>(
+            n -> {
+              for (Node x : n.getNextCFG()) {
+                System.out.println(
+                    "Das ist er: "
+                        + locationLink(n.getLocation())
+                        + " -> "
+                        + locationLink(x.getLocation()));
+              }
+            },
+            n -> n.getNextCFG().iterator()));
 
     /*
     CFG: 6 -> 7
@@ -153,17 +154,18 @@ class JavaCfgTest extends BaseTest {
     CompoundStatement body = (CompoundStatement) f.getMethods().get(0).getBody();
 
     // Just for debugging
-    SubgraphWalker.visit(
-        body,
-        (stmt) -> {
-          for (Node target : stmt.getNextCFG()) {
-            System.out.println(
-                "CFG: "
-                    + locationLink(stmt.getLocation())
-                    + " -> "
-                    + locationLink(target.getLocation()));
-          }
-        });
+    body.accept(
+        new DepthFirstNodeVisitor<>(
+            n -> {
+              for (Node x : n.getNextCFG()) {
+                System.out.println(
+                    "CFG: "
+                        + locationLink(n.getLocation())
+                        + " -> "
+                        + locationLink(x.getLocation()));
+              }
+            },
+            n -> n.getNextCFG().iterator()));
 
     /*
     CFG: 6 -> 7
@@ -225,17 +227,18 @@ class JavaCfgTest extends BaseTest {
     CompoundStatement body = (CompoundStatement) f.getMethods().get(0).getBody();
 
     // Just for debugging
-    SubgraphWalker.visit(
-        body,
-        (stmt) -> {
-          for (Node target : stmt.getNextCFG()) {
-            System.out.println(
-                "CFG: "
-                    + locationLink(stmt.getLocation())
-                    + " -> "
-                    + locationLink(target.getLocation()));
-          }
-        });
+    body.accept(
+        new DepthFirstNodeVisitor<>(
+            n -> {
+              for (Node x : n.getNextCFG()) {
+                System.out.println(
+                    "CFG: "
+                        + locationLink(n.getLocation())
+                        + " -> "
+                        + locationLink(x.getLocation()));
+              }
+            },
+            n -> n.getNextCFG().iterator()));
 
     /*
     CFG: 6 -> 7

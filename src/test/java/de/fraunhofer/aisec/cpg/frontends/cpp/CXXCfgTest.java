@@ -41,9 +41,9 @@ import de.fraunhofer.aisec.cpg.graph.IfStatement;
 import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.Statement;
 import de.fraunhofer.aisec.cpg.graph.TranslationUnitDeclaration;
-import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker;
 import de.fraunhofer.aisec.cpg.passes.ControlFlowGraphPass;
 import de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass;
+import de.fraunhofer.aisec.cpg.processing.strategy.DepthFirstNodeVisitor;
 import java.io.File;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
@@ -77,17 +77,18 @@ class CXXCfgTest extends BaseTest {
     CompoundStatement body = (CompoundStatement) f.getBody();
 
     // Just for debugging
-    SubgraphWalker.visit(
-        body,
-        (stmt) -> {
-          for (Node target : stmt.getNextCFG()) {
-            System.out.println(
-                "CFG: "
-                    + locationLink(stmt.getLocation())
-                    + " -> "
-                    + locationLink(target.getLocation()));
-          }
-        });
+    body.accept(
+        new DepthFirstNodeVisitor<>(
+            n -> {
+              for (Node x : n.getNextCFG()) {
+                System.out.println(
+                    "CFG: "
+                        + locationLink(n.getLocation())
+                        + " -> "
+                        + locationLink(x.getLocation()));
+              }
+            },
+            n -> n.getNextCFG().iterator()));
 
     /*
     CFG: 4 -> 5
@@ -141,17 +142,18 @@ class CXXCfgTest extends BaseTest {
     CompoundStatement body = (CompoundStatement) f.getBody();
 
     // Just for debugging
-    SubgraphWalker.visit(
-        body,
-        (stmt) -> {
-          for (Node target : stmt.getNextCFG()) {
-            System.out.println(
-                "CFG: "
-                    + locationLink(stmt.getLocation())
-                    + " -> "
-                    + locationLink(target.getLocation()));
-          }
-        });
+    body.accept(
+        new DepthFirstNodeVisitor<>(
+            n -> {
+              for (Node x : n.getNextCFG()) {
+                System.out.println(
+                    "CFG: "
+                        + locationLink(n.getLocation())
+                        + " -> "
+                        + locationLink(x.getLocation()));
+              }
+            },
+            n -> n.getNextCFG().iterator()));
 
     /*
     CFG: 4 -> 5
@@ -213,17 +215,18 @@ class CXXCfgTest extends BaseTest {
     CompoundStatement body = (CompoundStatement) f.getBody();
 
     // Just for debugging
-    SubgraphWalker.visit(
-        body,
-        (stmt) -> {
-          for (Node target : stmt.getNextCFG()) {
-            System.out.println(
-                "CFG: "
-                    + locationLink(stmt.getLocation())
-                    + " -> "
-                    + locationLink(target.getLocation()));
-          }
-        });
+    body.accept(
+        new DepthFirstNodeVisitor<>(
+            n -> {
+              for (Node x : n.getNextCFG()) {
+                System.out.println(
+                    "CFG: "
+                        + locationLink(n.getLocation())
+                        + " -> "
+                        + locationLink(x.getLocation()));
+              }
+            },
+            n -> n.getNextCFG().iterator()));
 
     /*
     CFG: 4 -> 5
@@ -285,17 +288,18 @@ class CXXCfgTest extends BaseTest {
     CompoundStatement body = (CompoundStatement) f.getBody();
 
     // Just for debugging
-    SubgraphWalker.visit(
-        body,
-        (stmt) -> {
-          for (Node target : stmt.getNextCFG()) {
-            System.out.println(
-                "CFG: "
-                    + locationLink(stmt.getLocation())
-                    + " -> "
-                    + locationLink(target.getLocation()));
-          }
-        });
+    body.accept(
+        new DepthFirstNodeVisitor<>(
+            n -> {
+              for (Node x : n.getNextCFG()) {
+                System.out.println(
+                    "CFG: "
+                        + locationLink(n.getLocation())
+                        + " -> "
+                        + locationLink(x.getLocation()));
+              }
+            },
+            n -> n.getNextCFG().iterator()));
 
     /*
     CFG: 4 -> 5
