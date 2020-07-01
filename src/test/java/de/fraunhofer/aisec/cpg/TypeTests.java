@@ -609,7 +609,7 @@ class TypeTests extends BaseTest {
   @Test
   void graphTest() throws Exception {
     Path topLevel = Path.of("src", "test", "resources", "types");
-    List<TranslationUnitDeclaration> result = TestUtils.analyze("java", topLevel, true, true);
+    List<TranslationUnitDeclaration> result = TestUtils.analyze("java", topLevel, true);
 
     List<ObjectType> variables = Util.subnodesOfType(result, ObjectType.class);
     List<RecordDeclaration> recordDeclarations =
@@ -648,7 +648,7 @@ class TypeTests extends BaseTest {
     assertEquals(((PointerType) array.getType()).getElementType(), x.getType());
 
     topLevel = Path.of("src", "test", "resources", "types");
-    result = TestUtils.analyze("cpp", topLevel, true, true);
+    result = TestUtils.analyze("cpp", topLevel, true);
 
     variableDeclarations = Util.subnodesOfType(result, VariableDeclaration.class);
 
@@ -672,7 +672,7 @@ class TypeTests extends BaseTest {
     TestUtils.disableTypeManagerCleanup();
 
     Path topLevel = Path.of("src", "test", "resources", "compiling", "hierarchy", "multistep");
-    TestUtils.analyze("java", topLevel, true, false);
+    TestUtils.analyze("java", topLevel, true);
 
     Type root = TypeParser.createFrom("Root", true);
     Type level0 = TypeParser.createFrom("Level0", true);
@@ -696,7 +696,7 @@ class TypeTests extends BaseTest {
     TestUtils.disableTypeManagerCleanup();
 
     Path topLevel = Path.of("src", "test", "resources", "compiling", "hierarchy", "multistep");
-    TestUtils.analyze("simple_inheritance.cpp", topLevel, true, false);
+    TestUtils.analyze("simple_inheritance.cpp", topLevel, true);
 
     Type root = TypeParser.createFrom("Root", true);
     Type level0 = TypeParser.createFrom("Level0", true);
@@ -719,7 +719,7 @@ class TypeTests extends BaseTest {
     TestUtils.disableTypeManagerCleanup();
 
     Path topLevel = Path.of("src", "test", "resources", "compiling", "hierarchy", "multistep");
-    TestUtils.analyze("multi_inheritance.cpp", topLevel, true, false);
+    TestUtils.analyze("multi_inheritance.cpp", topLevel, true);
 
     Type root = TypeParser.createFrom("Root", true);
     Type level0 = TypeParser.createFrom("Level0", true);

@@ -20,7 +20,7 @@ class ConstructorsTest extends BaseTest {
 
   @Test
   void testJava() throws Exception {
-    List<TranslationUnitDeclaration> result = TestUtils.analyze("java", topLevel, true, true);
+    List<TranslationUnitDeclaration> result = TestUtils.analyze("java", topLevel, true);
     List<ConstructorDeclaration> constructors =
         Util.subnodesOfType(result, ConstructorDeclaration.class);
     ConstructorDeclaration noArg =
@@ -62,7 +62,7 @@ class ConstructorsTest extends BaseTest {
 
   @Test
   void testCPP() throws Exception {
-    List<TranslationUnitDeclaration> result = TestUtils.analyze("cpp", topLevel, true, true);
+    List<TranslationUnitDeclaration> result = TestUtils.analyze("cpp", topLevel, true);
     List<ConstructorDeclaration> constructors =
         Util.subnodesOfType(result, ConstructorDeclaration.class);
     ConstructorDeclaration noArg =

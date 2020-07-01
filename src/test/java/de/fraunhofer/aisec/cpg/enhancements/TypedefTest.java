@@ -19,7 +19,7 @@ class TypedefTest extends BaseTest {
 
   @Test
   void testSingle() throws Exception {
-    List<TranslationUnitDeclaration> result = TestUtils.analyze("cpp", topLevel, true, true);
+    List<TranslationUnitDeclaration> result = TestUtils.analyze("cpp", topLevel, true);
     List<ValueDeclaration> variables = Util.subnodesOfType(result, ValueDeclaration.class);
 
     // normal type
@@ -45,7 +45,7 @@ class TypedefTest extends BaseTest {
 
   @Test
   void testWithModifier() throws Exception {
-    List<TranslationUnitDeclaration> result = TestUtils.analyze("cpp", topLevel, true, true);
+    List<TranslationUnitDeclaration> result = TestUtils.analyze("cpp", topLevel, true);
     List<ValueDeclaration> variables = Util.subnodesOfType(result, ValueDeclaration.class);
 
     // pointer
@@ -69,7 +69,7 @@ class TypedefTest extends BaseTest {
 
   @Test
   void testChained() throws Exception {
-    List<TranslationUnitDeclaration> result = TestUtils.analyze("cpp", topLevel, true, true);
+    List<TranslationUnitDeclaration> result = TestUtils.analyze("cpp", topLevel, true);
     List<ValueDeclaration> variables = Util.subnodesOfType(result, ValueDeclaration.class);
     ValueDeclaration l1 = TestUtils.findByUniqueName(variables, "l1");
     ValueDeclaration l3 = TestUtils.findByUniqueName(variables, "l3");
@@ -80,7 +80,7 @@ class TypedefTest extends BaseTest {
 
   @Test
   void testMultiple() throws Exception {
-    List<TranslationUnitDeclaration> result = TestUtils.analyze("cpp", topLevel, true, true);
+    List<TranslationUnitDeclaration> result = TestUtils.analyze("cpp", topLevel, true);
     List<ValueDeclaration> variables = Util.subnodesOfType(result, ValueDeclaration.class);
 
     // simple type
@@ -106,7 +106,7 @@ class TypedefTest extends BaseTest {
 
   @Test
   void testStructs() throws Exception {
-    List<TranslationUnitDeclaration> result = TestUtils.analyze("cpp", topLevel, true, true);
+    List<TranslationUnitDeclaration> result = TestUtils.analyze("cpp", topLevel, true);
     List<ValueDeclaration> variables = Util.subnodesOfType(result, ValueDeclaration.class);
     ValueDeclaration ps1 = TestUtils.findByUniqueName(variables, "ps1");
     ValueDeclaration ps2 = TestUtils.findByUniqueName(variables, "ps2");
@@ -115,7 +115,7 @@ class TypedefTest extends BaseTest {
 
   @Test
   void testArbitraryTypedefLocation() throws Exception {
-    List<TranslationUnitDeclaration> result = TestUtils.analyze("cpp", topLevel, true, true);
+    List<TranslationUnitDeclaration> result = TestUtils.analyze("cpp", topLevel, true);
     List<ValueDeclaration> variables = Util.subnodesOfType(result, ValueDeclaration.class);
     ValueDeclaration ullong1 = TestUtils.findByUniqueName(variables, "someUllong1");
     ValueDeclaration ullong2 = TestUtils.findByUniqueName(variables, "someUllong2");
@@ -124,7 +124,7 @@ class TypedefTest extends BaseTest {
 
   @Test
   void testMemberTypeDef() throws Exception {
-    List<TranslationUnitDeclaration> result = TestUtils.analyze("cpp", topLevel, true, true);
+    List<TranslationUnitDeclaration> result = TestUtils.analyze("cpp", topLevel, true);
     List<ValueDeclaration> variables = Util.subnodesOfType(result, ValueDeclaration.class);
     List<RecordDeclaration> records = Util.subnodesOfType(result, RecordDeclaration.class);
     RecordDeclaration addConst = TestUtils.findByUniqueName(records, "add_const");
