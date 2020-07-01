@@ -554,7 +554,7 @@ class EOGTest extends BaseTest {
     File toTranslate = new File(path);
     Path topLevel = toTranslate.getParentFile().toPath();
     TranslationUnitDeclaration tu =
-        TestUtils.analyzeAndGetFirstTU(List.of(toTranslate), topLevel, true, true);
+        TestUtils.analyzeAndGetFirstTU(List.of(toTranslate), topLevel, true);
     List<Node> nodes = SubgraphWalker.flattenAST(tu);
     // Todo until explicitly added Return Statements are either removed again or code and region set
     // properly

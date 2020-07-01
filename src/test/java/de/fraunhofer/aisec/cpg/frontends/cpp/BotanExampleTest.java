@@ -43,7 +43,7 @@ class BotanExampleTest extends BaseTest {
   void testExample() throws Exception {
     File file = new File("src/test/resources/botan/symm_block_cipher.cpp");
     TranslationUnitDeclaration declaration =
-        TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), false, true);
+        TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), false);
 
     assertNotNull(declaration);
 

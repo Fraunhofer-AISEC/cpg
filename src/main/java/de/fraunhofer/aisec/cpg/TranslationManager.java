@@ -38,12 +38,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -111,19 +106,15 @@ public class TranslationManager {
             throw new CompletionException(ex);
           } finally {
             outerBench.stop();
-            if (config.cleanupOnCompletion()) {
-              log.debug("Cleaning up {} Passes", passesNeedCleanup.size());
-              passesNeedCleanup.forEach(Pass::cleanup);
+            log.debug("Cleaning up {} Passes", passesNeedCleanup.size());
+            passesNeedCleanup.forEach(Pass::cleanup);
 
-              if (frontendsNeedCleanup != null) {
-                log.debug("Cleaning up {} Frontends", frontendsNeedCleanup.size());
-                frontendsNeedCleanup.forEach(LanguageFrontend::cleanup);
-              }
-
-              TypeManager.getInstance().cleanup();
-            } else {
-              log.warn("Cleanup skipped. This should only be used in test cases");
+            if (frontendsNeedCleanup != null) {
+              log.debug("Cleaning up {} Frontends", frontendsNeedCleanup.size());
+              frontendsNeedCleanup.forEach(LanguageFrontend::cleanup);
             }
+
+            TypeManager.getInstance().cleanup();
           }
           return result;
         });

@@ -669,6 +669,8 @@ class TypeTests extends BaseTest {
 
   @Test
   void getCommonTypeTestJava() throws Exception {
+    TestUtils.disableTypeManagerCleanup();
+
     Path topLevel = Path.of("src", "test", "resources", "compiling", "hierarchy", "multistep");
     TestUtils.analyze("java", topLevel, true, false);
 
@@ -691,6 +693,8 @@ class TypeTests extends BaseTest {
 
   @Test
   void getCommonTypeTestCpp() throws Exception {
+    TestUtils.disableTypeManagerCleanup();
+
     Path topLevel = Path.of("src", "test", "resources", "compiling", "hierarchy", "multistep");
     TestUtils.analyze("simple_inheritance.cpp", topLevel, true, false);
 
@@ -712,6 +716,8 @@ class TypeTests extends BaseTest {
 
   @Test
   void getCommonTypeTestCpp_multiInheritance() throws Exception {
+    TestUtils.disableTypeManagerCleanup();
+
     Path topLevel = Path.of("src", "test", "resources", "compiling", "hierarchy", "multistep");
     TestUtils.analyze("multi_inheritance.cpp", topLevel, true, false);
 

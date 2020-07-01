@@ -47,7 +47,7 @@ class SubgraphWalkerTest extends BaseTest {
   void testASTChildrenGetter() throws Exception {
     File file = new File("src/test/resources/compiling/RecordDeclaration.java");
     TranslationUnitDeclaration tu =
-        TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), false, true);
+        TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), false);
     NamespaceDeclaration namespace = tu.getDeclarationAs(0, NamespaceDeclaration.class);
 
     RecordDeclaration recordDeclaration = namespace.getDeclarationAs(0, RecordDeclaration.class);

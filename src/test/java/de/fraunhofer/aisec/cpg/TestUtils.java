@@ -31,6 +31,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import de.fraunhofer.aisec.cpg.graph.CompoundStatement;
 import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.TranslationUnitDeclaration;
+import de.fraunhofer.aisec.cpg.graph.TypeManager;
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker;
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation;
 import java.io.File;
@@ -40,6 +41,8 @@ import java.util.Collection;
 import java.util.List;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
+import org.apache.commons.lang3.reflect.FieldUtils;
+import org.mockito.Mockito;
 
 public class TestUtils {
 
@@ -60,8 +63,8 @@ public class TestUtils {
   }
 
   /**
-   * Like {@link #analyze(List, Path, boolean, boolean)}, but for all files in a directory tree
-   * having a specific file extension
+   * Like {@link #analyze(List, Path, boolean)}, but for all files in a directory tree having a
+   * specific file extension
    *
    * @param fileExtension All files found in the directory must end on this String. An empty string
    *     matches all files
@@ -82,7 +85,7 @@ public class TestUtils {
             .filter(f -> f.getName().endsWith(fileExtension))
             .sorted()
             .collect(Collectors.toList());
-    return analyze(files, topLevel, usePasses, cleanupOnCompletion);
+    return analyze(files, topLevel, usePasses);
   }
 
   /**
@@ -90,22 +93,18 @@ public class TestUtils {
    *
    * @param topLevel The directory to traverse while looking for files to parse
    * @param usePasses Whether the analysis should run passes after the initial phase
-   * @param cleanupOnCompletion Whether {@link de.fraunhofer.aisec.cpg.graph.TypeManager} etc.
-   *     should be cleaned up after the analysis has ended
    * @return A list of {@link TranslationUnitDeclaration} nodes, representing the CPG roots
    * @throws Exception Any exception thrown during the parsing process
    */
   public static List<TranslationUnitDeclaration> analyze(
-      List<File> files, Path topLevel, boolean usePasses, boolean cleanupOnCompletion)
-      throws Exception {
+      List<File> files, Path topLevel, boolean usePasses) throws Exception {
     TranslationConfiguration.Builder builder =
         TranslationConfiguration.builder()
             .sourceLocations(files)
             .topLevel(topLevel.toFile())
             .loadIncludes(true)
             .debugParser(true)
-            .failOnError(true)
-            .cleanupOnCompletion(cleanupOnCompletion);
+            .failOnError(true);
     if (usePasses) {
       builder.defaultPasses();
     }
@@ -117,10 +116,8 @@ public class TestUtils {
   }
 
   public static TranslationUnitDeclaration analyzeAndGetFirstTU(
-      List<File> files, Path topLevel, boolean usePasses, boolean cleanupOnCompletion)
-      throws Exception {
-    List<TranslationUnitDeclaration> translationUnits =
-        analyze(files, topLevel, usePasses, cleanupOnCompletion);
+      List<File> files, Path topLevel, boolean usePasses) throws Exception {
+    List<TranslationUnitDeclaration> translationUnits = analyze(files, topLevel, usePasses);
     return translationUnits.stream()
         .filter(t -> !t.getName().equals("unknown declarations"))
         .findFirst()
@@ -147,5 +144,11 @@ public class TestUtils {
       }
     }
     return null;
+  }
+
+  static void disableTypeManagerCleanup() throws IllegalAccessException {
+    TypeManager spy = Mockito.spy(TypeManager.getInstance());
+    Mockito.doNothing().when(spy).cleanup();
+    FieldUtils.writeStaticField(TypeManager.class, "INSTANCE", spy, true);
   }
 }

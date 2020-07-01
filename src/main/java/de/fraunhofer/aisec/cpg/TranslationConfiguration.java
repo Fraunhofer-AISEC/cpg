@@ -79,9 +79,6 @@ public class TranslationConfiguration {
 
   @NonNull private List<Pass> passes;
 
-  /** For test purposes, the cleanup phase after the analysis may want to be skipped */
-  private boolean cleanupOnCompletion;
-
   private TranslationConfiguration(
       Map<String, String> symbols,
       List<File> sourceLocations,
@@ -91,8 +88,7 @@ public class TranslationConfiguration {
       boolean loadIncludes,
       String[] includePaths,
       List<Pass> passes,
-      boolean codeInNodes,
-      boolean cleanupOnCompletion) {
+      boolean codeInNodes) {
     this.symbols = symbols;
     this.sourceLocations = sourceLocations;
     this.topLevel = topLevel;
@@ -103,7 +99,6 @@ public class TranslationConfiguration {
     this.passes = passes != null ? passes : new ArrayList<>();
     // Make sure to init this AFTER sourceLocations has been set
     this.codeInNodes = codeInNodes;
-    this.cleanupOnCompletion = cleanupOnCompletion;
   }
 
   public static Builder builder() {
@@ -124,10 +119,6 @@ public class TranslationConfiguration {
 
   public List<Pass> getRegisteredPasses() {
     return this.passes;
-  }
-
-  public boolean cleanupOnCompletion() {
-    return cleanupOnCompletion;
   }
 
   /**
@@ -247,20 +238,6 @@ public class TranslationConfiguration {
     }
 
     /**
-     * For test purposes, the clean-up procedures to e.g. remove static state may want to be
-     * skipped.
-     *
-     * <p>NOTE: This is usually not wanted environment.
-     *
-     * @param cleanupOnCompletion If true, the clean-up procedures are skipped
-     * @return
-     */
-    public Builder cleanupOnCompletion(boolean cleanupOnCompletion) {
-      this.cleanupOnCompletion = cleanupOnCompletion;
-      return this;
-    }
-
-    /**
      * Register all default {@link Pass}es.
      *
      * <p>This will register
@@ -306,8 +283,7 @@ public class TranslationConfiguration {
           loadIncludes,
           includePaths.toArray(paths),
           passes,
-          codeInNodes,
-          cleanupOnCompletion);
+          codeInNodes);
     }
   }
 }

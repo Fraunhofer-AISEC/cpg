@@ -54,7 +54,7 @@ class JavaVsCppTest extends BaseTest {
     File toTranslate = new File(pathname);
     Path topLevel = toTranslate.getParentFile().toPath();
     TranslationUnitDeclaration tu =
-        TestUtils.analyzeAndGetFirstTU(List.of(toTranslate), topLevel, true, true);
+        TestUtils.analyzeAndGetFirstTU(List.of(toTranslate), topLevel, true);
     assertEquals(1, tu.getDeclarations().size());
     Declaration decl = tu.getDeclarations().get(0);
     assertTrue(decl instanceof RecordDeclaration);

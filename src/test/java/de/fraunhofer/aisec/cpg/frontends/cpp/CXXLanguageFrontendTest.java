@@ -54,7 +54,7 @@ class CXXLanguageFrontendTest extends BaseTest {
   void testForEach() throws Exception {
     File file = new File("src/test/resources/components/foreachstmt.cpp");
     TranslationUnitDeclaration tu =
-        TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true, true);
+        TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true);
 
     FunctionDeclaration main =
         tu.getDeclarationByName("main", FunctionDeclaration.class).orElse(null);
@@ -83,7 +83,7 @@ class CXXLanguageFrontendTest extends BaseTest {
   void testTryCatch() throws Exception {
     File file = new File("src/test/resources/components/trystmt.cpp");
     TranslationUnitDeclaration tu =
-        TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true, true);
+        TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true);
 
     FunctionDeclaration main =
         tu.getDeclarationByName("main", FunctionDeclaration.class).orElse(null);
@@ -118,7 +118,7 @@ class CXXLanguageFrontendTest extends BaseTest {
   void testTypeId() throws Exception {
     File file = new File("src/test/resources/typeidexpr.cpp");
     TranslationUnitDeclaration tu =
-        TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true, true);
+        TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true);
 
     FunctionDeclaration main =
         tu.getDeclarationByName("main", FunctionDeclaration.class).orElse(null);
@@ -153,7 +153,7 @@ class CXXLanguageFrontendTest extends BaseTest {
   void testCast() throws Exception {
     File file = new File("src/test/resources/components/castexpr.cpp");
     TranslationUnitDeclaration tu =
-        TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true, true);
+        TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true);
 
     FunctionDeclaration main = tu.getDeclarationAs(0, FunctionDeclaration.class);
 
@@ -205,7 +205,7 @@ class CXXLanguageFrontendTest extends BaseTest {
   void testArrays() throws Exception {
     File file = new File("src/test/resources/arrays.cpp");
     TranslationUnitDeclaration tu =
-        TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true, true);
+        TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true);
 
     FunctionDeclaration main = tu.getDeclarationAs(0, FunctionDeclaration.class);
 
@@ -238,7 +238,7 @@ class CXXLanguageFrontendTest extends BaseTest {
   void testFunctionDeclaration() throws Exception {
     File file = new File("src/test/resources/functiondecl.cpp");
     TranslationUnitDeclaration declaration =
-        TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true, true);
+        TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true);
 
     // should be four method nodes
     assertEquals(4, declaration.getDeclarations().size());
@@ -283,7 +283,7 @@ class CXXLanguageFrontendTest extends BaseTest {
   void testCompoundStatement() throws Exception {
     File file = new File("src/test/resources/compoundstmt.cpp");
     TranslationUnitDeclaration declaration =
-        TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true, true);
+        TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true);
 
     FunctionDeclaration function = declaration.getDeclarationAs(0, FunctionDeclaration.class);
 
@@ -311,7 +311,7 @@ class CXXLanguageFrontendTest extends BaseTest {
   void testPostfixExpression() throws Exception {
     File file = new File("src/test/resources/postfixexpression.cpp");
     TranslationUnitDeclaration declaration =
-        TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true, true);
+        TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true);
 
     List<Statement> statements =
         getStatementsOfFunction(declaration.getDeclarationAs(0, FunctionDeclaration.class));
@@ -348,7 +348,7 @@ class CXXLanguageFrontendTest extends BaseTest {
   void testIf() throws Exception {
     File file = new File("src/test/resources/if.cpp");
     TranslationUnitDeclaration declaration =
-        TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true, true);
+        TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true);
 
     List<Statement> statements =
         getStatementsOfFunction(declaration.getDeclarationAs(0, FunctionDeclaration.class));
@@ -373,7 +373,7 @@ class CXXLanguageFrontendTest extends BaseTest {
   void testSwitch() throws Exception {
     File file = new File("src/test/resources/cfg/switch.cpp");
     TranslationUnitDeclaration declaration =
-        TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true, true);
+        TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true);
 
     List<Node> graphNodes = SubgraphWalker.flattenAST(declaration);
     graphNodes.sort(new NodeComparator());
@@ -399,7 +399,7 @@ class CXXLanguageFrontendTest extends BaseTest {
   void testDeclarationStatement() throws Exception {
     File file = new File("src/test/resources/declstmt.cpp");
     TranslationUnitDeclaration declaration =
-        TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true, true);
+        TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true);
 
     FunctionDeclaration function = declaration.getDeclarationAs(0, FunctionDeclaration.class);
 
@@ -468,7 +468,7 @@ class CXXLanguageFrontendTest extends BaseTest {
   void testAssignmentExpression() throws Exception {
     File file = new File("src/test/resources/assignmentexpression.cpp");
     TranslationUnitDeclaration declaration =
-        TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true, true);
+        TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true);
 
     // just take a look at the second function
     FunctionDeclaration functionDeclaration =
@@ -530,7 +530,7 @@ class CXXLanguageFrontendTest extends BaseTest {
   void testShiftExpression() throws Exception {
     File file = new File("src/test/resources/shiftexpression.cpp");
     TranslationUnitDeclaration declaration =
-        TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true, true);
+        TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true);
 
     FunctionDeclaration functionDeclaration =
         declaration.getDeclarationAs(0, FunctionDeclaration.class);
@@ -544,7 +544,7 @@ class CXXLanguageFrontendTest extends BaseTest {
   void testUnaryOperator() throws Exception {
     File file = new File("src/test/resources/unaryoperator.cpp");
     TranslationUnitDeclaration unit =
-        TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true, true);
+        TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true);
 
     List<Statement> statements =
         getStatementsOfFunction(unit.getDeclarationAs(0, FunctionDeclaration.class));
@@ -615,7 +615,7 @@ class CXXLanguageFrontendTest extends BaseTest {
   void testBinaryOperator() throws Exception {
     File file = new File("src/test/resources/binaryoperator.cpp");
     TranslationUnitDeclaration declaration =
-        TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true, true);
+        TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true);
 
     List<Statement> statements =
         getStatementsOfFunction(declaration.getDeclarationAs(0, FunctionDeclaration.class));
@@ -671,7 +671,7 @@ class CXXLanguageFrontendTest extends BaseTest {
   void testRecordDeclaration() throws Exception {
     File file = new File("src/test/resources/recordstmt.cpp");
     TranslationUnitDeclaration declaration =
-        TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true, true);
+        TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true);
 
     RecordDeclaration recordDeclaration = declaration.getDeclarationAs(0, RecordDeclaration.class);
 
@@ -712,7 +712,7 @@ class CXXLanguageFrontendTest extends BaseTest {
   void testLiterals() throws Exception {
     File file = new File("src/test/resources/literals.cpp");
     TranslationUnitDeclaration declaration =
-        TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true, true);
+        TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true);
 
     VariableDeclaration s = declaration.getDeclarationAs(0, VariableDeclaration.class);
 
@@ -773,7 +773,7 @@ class CXXLanguageFrontendTest extends BaseTest {
   void testInitListExpression() throws Exception {
     File file = new File("src/test/resources/initlistexpression.cpp");
     TranslationUnitDeclaration declaration =
-        TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true, true);
+        TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true);
 
     // x y = { 1, 2 };
     VariableDeclaration y = declaration.getDeclarationAs(1, VariableDeclaration.class);
@@ -814,7 +814,7 @@ class CXXLanguageFrontendTest extends BaseTest {
   void testObjectCreation() throws Exception {
     File file = new File("src/test/resources/objcreation.cpp");
     TranslationUnitDeclaration declaration =
-        TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true, true);
+        TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true);
 
     assertNotNull(declaration);
 
@@ -873,7 +873,7 @@ class CXXLanguageFrontendTest extends BaseTest {
   void testRegionsCfg() throws Exception {
     File file = new File("src/test/resources/cfg.cpp");
     TranslationUnitDeclaration declaration =
-        TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true, true);
+        TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true);
 
     FunctionDeclaration fdecl = declaration.getDeclarationAs(0, FunctionDeclaration.class);
     CompoundStatement body = (CompoundStatement) fdecl.getBody();
@@ -895,7 +895,7 @@ class CXXLanguageFrontendTest extends BaseTest {
   void testDesignatedInitializer() throws Exception {
     File file = new File("src/test/resources/components/designatedInitializer.c");
     TranslationUnitDeclaration declaration =
-        TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true, true);
+        TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true);
 
     // should be four method nodes
     assertEquals(2, declaration.getDeclarations().size());
@@ -1006,7 +1006,7 @@ class CXXLanguageFrontendTest extends BaseTest {
   void testLocalVariables() throws Exception {
     File file = new File("src/test/resources/variables/local_variables.cpp");
     TranslationUnitDeclaration declaration =
-        TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true, true);
+        TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true);
 
     FunctionDeclaration function = declaration.getDeclarationAs(2, FunctionDeclaration.class);
 
@@ -1031,7 +1031,7 @@ class CXXLanguageFrontendTest extends BaseTest {
   void testLocation() throws Exception {
     File file = new File("src/test/resources/components/foreachstmt.cpp");
     TranslationUnitDeclaration tu =
-        TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true, true);
+        TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true);
 
     FunctionDeclaration main =
         tu.getDeclarationByName("main", FunctionDeclaration.class).orElse(null);
