@@ -26,6 +26,7 @@
 
 package de.fraunhofer.aisec.cpg.graph;
 
+import de.fraunhofer.aisec.cpg.helpers.NodeComparator;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -57,7 +58,6 @@ public class NamespaceDeclaration extends Declaration {
   @SubGraph("AST")
   private List<NamespaceDeclaration> namespaces = new ArrayList<>();
 
-
   public List<FieldDeclaration> getFields() {
     return fields;
   }
@@ -88,5 +88,19 @@ public class NamespaceDeclaration extends Declaration {
 
   public void setNamespaces(List<NamespaceDeclaration> namespaces) {
     this.namespaces = namespaces;
+  }
+
+  public List<Declaration> getDeclarations() {
+    ArrayList<Declaration> ret = new ArrayList<>();
+    ret.addAll(getFields());
+    ret.addAll(getRecords());
+    ret.addAll(getFunctions());
+    ret.addAll(getNamespaces());
+    ret.sort(new NodeComparator());
+    return ret;
+  }
+
+  public <T> T getDeclarationAs(int i, Class<T> clazz) {
+    return clazz.cast(getDeclarations().get(i));
   }
 }

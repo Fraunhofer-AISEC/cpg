@@ -644,7 +644,7 @@ public class StatementAnalyzer
       if (r instanceof DeclarationStatement) {
         for (Declaration d : ((DeclarationStatement) r).getDeclarations()) {
           if (d instanceof VariableDeclaration) {
-            lang.getScopeManager().addValueDeclaration((VariableDeclaration) d);
+            lang.getScopeManager().addDeclaration((VariableDeclaration) d);
           }
         }
       }
@@ -680,7 +680,7 @@ public class StatementAnalyzer
     cClause.setBody(body);
     cClause.setParameter(parameter);
 
-    lang.getScopeManager().addValueDeclaration(parameter);
+    lang.getScopeManager().addDeclaration(parameter);
     lang.getScopeManager().leaveScope(cClause);
     return cClause;
   }

@@ -53,6 +53,11 @@ public class FunctionDeclaration extends ValueDeclaration {
   @SubGraph("AST")
   protected List<ParamVariableDeclaration> parameters = new ArrayList<>();
 
+  /**
+   * Classes and Structs can be declared inside a function and are only valid within the function.
+   */
+  protected List<RecordDeclaration> records = new ArrayList<>();
+
   protected List<Type> throwsTypes = new ArrayList<>();
 
   @org.neo4j.ogm.annotation.Relationship(value = "OVERRIDES", direction = "INCOMING")
@@ -159,6 +164,14 @@ public class FunctionDeclaration extends ValueDeclaration {
               .filter(ReturnStatement.class::isInstance)
               .forEach(this::addPrevDFG);
     }
+  }
+
+  public List<RecordDeclaration> getRecords() {
+    return records;
+  }
+
+  public void setRecords(List<RecordDeclaration> records) {
+    this.records = records;
   }
 
   public List<ParamVariableDeclaration> getParameters() {

@@ -278,7 +278,7 @@ public class ExpressionHandler
       lang.setCodeAndRegion(declaration, variable);
       declarationStatement.getDeclarations().add(declaration);
 
-      lang.getScopeManager().addValueDeclaration(declaration);
+      lang.getScopeManager().addDeclaration(declaration);
     }
 
     return declarationStatement;

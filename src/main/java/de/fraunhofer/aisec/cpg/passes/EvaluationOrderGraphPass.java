@@ -78,12 +78,12 @@ import de.fraunhofer.aisec.cpg.graph.UnaryOperator;
 import de.fraunhofer.aisec.cpg.graph.VariableDeclaration;
 import de.fraunhofer.aisec.cpg.graph.WhileStatement;
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker;
-import de.fraunhofer.aisec.cpg.passes.scopes.DeclarationScope;
 import de.fraunhofer.aisec.cpg.passes.scopes.FunctionScope;
 import de.fraunhofer.aisec.cpg.passes.scopes.LoopScope;
 import de.fraunhofer.aisec.cpg.passes.scopes.Scope;
 import de.fraunhofer.aisec.cpg.passes.scopes.SwitchScope;
 import de.fraunhofer.aisec.cpg.passes.scopes.TryScope;
+import de.fraunhofer.aisec.cpg.passes.scopes.ValueDeclarationScope;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
@@ -432,7 +432,7 @@ public class EvaluationOrderGraphPass extends Pass {
           // DeclarationScope here
           Scope decl =
               lang.getScopeManager()
-                  .getFirstScopeThat(scope -> scope.getClass().equals(DeclarationScope.class));
+                  .getFirstScopeThat(scope -> scope.getClass().equals(ValueDeclarationScope.class));
           if (decl != null
               && decl.getAstNode() instanceof CatchClause
               && ((CatchClause) decl.getAstNode()).getParameter() != null) {

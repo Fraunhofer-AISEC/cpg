@@ -361,7 +361,7 @@ class JavaLanguageFrontendTest {
   @Test
   void testSwitch() throws TranslationException {
     TranslationUnitDeclaration declaration =
-        new JavaLanguageFrontend(TranslationConfiguration.builder().build(), new ScopeManager())
+        new JavaLanguageFrontend(config, new ScopeManager())
             .parse(new File("src/test/resources/cfg/Switch.java"));
 
     List<Node> graphNodes = SubgraphWalker.flattenAST(declaration);
@@ -387,7 +387,7 @@ class JavaLanguageFrontendTest {
   @Test
   void testCast() throws TranslationException {
     TranslationUnitDeclaration declaration =
-        new JavaLanguageFrontend(TranslationConfiguration.builder().build(), new ScopeManager())
+        new JavaLanguageFrontend(config, new ScopeManager())
             .parse(new File("src/test/resources/components/CastExpr.java"));
 
     assertNotNull(declaration);
@@ -430,7 +430,7 @@ class JavaLanguageFrontendTest {
   @Test
   void testArrays() throws TranslationException {
     TranslationUnitDeclaration declaration =
-        new JavaLanguageFrontend(TranslationConfiguration.builder().build(), new ScopeManager())
+        new JavaLanguageFrontend(config, new ScopeManager())
             .parse(new File("src/test/resources/compiling/Arrays.java"));
 
     assertNotNull(declaration);
@@ -480,7 +480,7 @@ class JavaLanguageFrontendTest {
   @Test
   void testFieldAccessExpressions() throws TranslationException {
     TranslationUnitDeclaration declaration =
-        new JavaLanguageFrontend(TranslationConfiguration.builder().build(), new ScopeManager())
+        new JavaLanguageFrontend(config, new ScopeManager())
             .parse(new File("src/test/resources/compiling/FieldAccess.java"));
 
     assertNotNull(declaration);
@@ -512,7 +512,7 @@ class JavaLanguageFrontendTest {
   @Test
   public void testLocation() throws TranslationException {
     TranslationUnitDeclaration declaration =
-        new JavaLanguageFrontend(TranslationConfiguration.builder().build(), new ScopeManager())
+        new JavaLanguageFrontend(config, new ScopeManager())
             .parse(new File("src/test/resources/compiling/FieldAccess.java"));
 
     assertNotNull(declaration);

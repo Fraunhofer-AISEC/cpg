@@ -390,7 +390,7 @@ public class ReferenceResolverPass extends Pass {
               reference.getName(), reference.getType(), Collections.emptyList(), "", null, null);
       // declarations.add(declaration);
       declaration.setImplicit(true);
-      lang.getScopeManager().addValueDeclaration(declaration);
+      lang.getScopeManager().addDeclaration(declaration);
       return declaration;
     } else {
       return target.get();
@@ -415,7 +415,7 @@ public class ReferenceResolverPass extends Pass {
       declaration.setType(type);
       // declarations.add(declaration);
       declaration.setImplicit(true);
-      lang.getScopeManager().addValueDeclaration(declaration);
+      lang.getScopeManager().addDeclaration(declaration);
       return declaration;
     } else {
       return target.get();
@@ -435,7 +435,7 @@ public class ReferenceResolverPass extends Pass {
       currTu.getDeclarations().add(declaration);
       declaration.setImplicit(true);
       // Current TU should be the current method
-      lang.getScopeManager().addValueDeclaration(declaration);
+      lang.getScopeManager().addDeclaration(declaration);
       return declaration;
     } else {
       return target.get();

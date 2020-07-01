@@ -34,7 +34,7 @@ import java.util.List;
 import java.util.Map;
 import org.checkerframework.checker.nullness.qual.NonNull;
 
-public class FunctionScope extends DeclarationScope {
+public class FunctionScope extends StructureDeclarationScope {
   @NonNull private Map<Type, List<Node>> catchesOrRelays = new HashMap<>();
 
   public FunctionScope(FunctionDeclaration astNode) {

@@ -26,11 +26,23 @@
 
 package de.fraunhofer.aisec.cpg.passes.scopes;
 
-public class GlobalScope extends DeclarationScope {
+import de.fraunhofer.aisec.cpg.graph.Declaration;
+import java.util.ArrayList;
+import java.util.List;
+
+/** Used as root note for the scoping structure. */
+public class GlobalScope extends StructureDeclarationScope {
+
+  /**
+   * Declarations are devided into value-declarations (variables, fields, functions, ...) and
+   * structure declarations(classes, structs, enums, ...).
+   */
+  private List<Declaration> structureDeclarations = new ArrayList<>();
 
   public GlobalScope() {
     super(null);
   }
+
   /*
 
   private List<VariableDeclaration> variables = new ArrayList<>();

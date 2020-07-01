@@ -116,7 +116,7 @@ public class DeclarationHandler
             resolvedConstructor.getName(),
             constructorDecl.toString(),
             lang.getScopeManager().getCurrentRecord());
-    lang.getScopeManager().addValueDeclaration(declaration);
+    lang.getScopeManager().addDeclaration(declaration);
 
     lang.getScopeManager().enterScope(declaration);
     declaration
@@ -137,7 +137,7 @@ public class DeclarationHandler
       declaration.getParameters().add(param);
 
       lang.setCodeAndRegion(param, parameter);
-      lang.getScopeManager().addValueDeclaration(param);
+      lang.getScopeManager().addDeclaration(param);
     }
 
     Type type =
@@ -187,7 +187,7 @@ public class DeclarationHandler
 
       functionDeclaration.getParameters().add(param);
       lang.setCodeAndRegion(param, parameter);
-      lang.getScopeManager().addValueDeclaration(param);
+      lang.getScopeManager().addDeclaration(param);
     }
 
     functionDeclaration.setType(
@@ -261,7 +261,7 @@ public class DeclarationHandler
             null,
             null);
     recordDeclaration.getFields().add(thisDeclaration);
-    lang.getScopeManager().addValueDeclaration(thisDeclaration);
+    lang.getScopeManager().addDeclaration(thisDeclaration);
 
     // TODO: 'this' identifier for multiple instances?
     for (BodyDeclaration<?> decl : classInterDecl.getMembers()) {
@@ -292,7 +292,7 @@ public class DeclarationHandler
           NodeBuilder.newConstructorDeclaration(
               recordDeclaration.getName(), recordDeclaration.getName(), recordDeclaration);
       recordDeclaration.getConstructors().add(constructorDeclaration);
-      lang.getScopeManager().addValueDeclaration(constructorDeclaration);
+      lang.getScopeManager().addDeclaration(constructorDeclaration);
     }
     lang.getScopeManager().leaveScope(recordDeclaration);
     return recordDeclaration;
@@ -333,7 +333,7 @@ public class DeclarationHandler
             variable.toString(),
             location,
             initializer);
-    lang.getScopeManager().addValueDeclaration(fieldDeclaration);
+    lang.getScopeManager().addDeclaration(fieldDeclaration);
 
     return fieldDeclaration;
   }

@@ -187,7 +187,7 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
 
     // forward type adjustments
     declaration.getType().setTypeAdjustment(typeAdjustment);
-    lang.getScopeManager().addValueDeclaration(declaration);
+    lang.getScopeManager().addDeclaration(declaration);
     return declaration;
   }
 
@@ -232,7 +232,7 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
       arg.setArgumentIndex(i);
       // Note that this .addValueDeclaration call already adds arg to the function's parameters.
       // This is why the following line has been commented out by @KW
-      lang.getScopeManager().addValueDeclaration(arg);
+      lang.getScopeManager().addDeclaration(arg);
       // declaration.getParameters().add(arg);
       i++;
     }
@@ -245,7 +245,7 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
       ParamVariableDeclaration varargs =
           NodeBuilder.newMethodParameterIn("va_args", Type.getUnknown(), true, "");
       varargs.setArgumentIndex(i);
-      lang.getScopeManager().addValueDeclaration(varargs);
+      lang.getScopeManager().addDeclaration(varargs);
     }
 
     // forward type adjustments
@@ -281,7 +281,7 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
       result.setLocation(lang.getLocationFromRawNode(ctx));
       result.getType().setFunctionPtr(true);
       result.refreshType();
-      lang.getScopeManager().addValueDeclaration((VariableDeclaration) result);
+      lang.getScopeManager().addDeclaration(result);
     } else {
       RecordScope recordScope =
           (RecordScope) lang.getScopeManager().getFirstScopeThat(RecordScope.class::isInstance);
@@ -312,7 +312,7 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
                 + "This should not happen!");
         return null;
       }*/
-      lang.getScopeManager().addValueDeclaration((FieldDeclaration) result);
+      lang.getScopeManager().addDeclaration((FieldDeclaration) result);
     }
     return result;
   }
@@ -360,7 +360,7 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
               "this",
               null,
               null);
-      lang.getScopeManager().addValueDeclaration(thisDeclaration);
+      lang.getScopeManager().addDeclaration(thisDeclaration);
     }
 
     for (IASTDeclaration member : ctx.getMembers()) {
@@ -384,10 +384,10 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
                 constructor); // Adjust cpg Node by which scopes are identified
           }
           // recordDeclaration.getConstructors().add(constructor);
-          lang.getScopeManager().addValueDeclaration(constructor);
+          lang.getScopeManager().addDeclaration(constructor);
         } else {
           // recordDeclaration.getMethods().add(method);
-          lang.getScopeManager().addValueDeclaration(method);
+          lang.getScopeManager().addDeclaration(method);
         }
 
         if (declarationScope != null) {
@@ -396,11 +396,11 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
       } else if (declaration instanceof VariableDeclaration) {
         // recordDeclaration.getFields().add();
         lang.getScopeManager()
-            .addValueDeclaration(FieldDeclaration.from((VariableDeclaration) declaration));
+            .addDeclaration(FieldDeclaration.from((VariableDeclaration) declaration));
         lang.getScopeManager().removeDeclaration(declaration);
       } else if (declaration instanceof FieldDeclaration) {
         // recordDeclaration.getFields().add((FieldDeclaration) declaration);
-        lang.getScopeManager().addValueDeclaration((FieldDeclaration) declaration);
+        lang.getScopeManager().addDeclaration(declaration);
       } else if (declaration instanceof RecordDeclaration) {
         // record is not stored as reference in the scope
         lang.getScopeManager().addDeclaration(declaration);
@@ -412,7 +412,7 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
           NodeBuilder.newConstructorDeclaration(
               recordDeclaration.getName(), recordDeclaration.getName(), recordDeclaration);
       recordDeclaration.getConstructors().add(constructorDeclaration);
-      lang.getScopeManager().addValueDeclaration(constructorDeclaration);
+      lang.getScopeManager().addDeclaration(constructorDeclaration);
     }
 
     lang.getScopeManager().leaveScope(recordDeclaration);

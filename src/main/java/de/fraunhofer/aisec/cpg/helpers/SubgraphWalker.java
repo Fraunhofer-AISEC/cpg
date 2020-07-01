@@ -27,6 +27,7 @@
 package de.fraunhofer.aisec.cpg.helpers;
 
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
+import de.fraunhofer.aisec.cpg.graph.CastExpression;
 import de.fraunhofer.aisec.cpg.graph.CompoundStatement;
 import de.fraunhofer.aisec.cpg.graph.FunctionDeclaration;
 import de.fraunhofer.aisec.cpg.graph.Node;
@@ -270,6 +271,9 @@ public class SubgraphWalker {
         Node current = todo.pop();
         if (!backlog.isEmpty() && backlog.peek().equals(current)) {
           Node popped = backlog.pop();
+          if (popped instanceof CastExpression) {
+            System.out.println();
+          }
           onScopeExit.forEach(c -> c.accept(popped));
         } else {
           // re-place the current node as a marker for the above check to find out when we need to

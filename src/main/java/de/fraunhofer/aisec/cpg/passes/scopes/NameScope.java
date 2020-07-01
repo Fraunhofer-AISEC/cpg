@@ -28,7 +28,7 @@ package de.fraunhofer.aisec.cpg.passes.scopes;
 
 import de.fraunhofer.aisec.cpg.graph.Node;
 
-public class NameScope extends DeclarationScope {
+public class NameScope extends StructureDeclarationScope {
 
   private String namePrefix;
 

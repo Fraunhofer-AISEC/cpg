@@ -90,7 +90,8 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
     lang.getScopeManager().enterScope(declaration);
     for (IASTNode child : ctx.getChildren()) {
       if (child instanceof IASTDeclaration) {
-        declaration.add(this.lang.getDeclarationHandler().handle((IASTDeclaration) child));
+        lang.getScopeManager()
+            .addDeclaration(this.lang.getDeclarationHandler().handle((IASTDeclaration) child));
       } else if (child instanceof CPPASTName) {
         // this is the name of the namespace. Already parsed outside, skipping.
       } else {
