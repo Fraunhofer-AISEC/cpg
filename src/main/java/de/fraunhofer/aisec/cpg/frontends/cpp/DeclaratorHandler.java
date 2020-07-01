@@ -28,8 +28,10 @@ package de.fraunhofer.aisec.cpg.frontends.cpp;
 
 import de.fraunhofer.aisec.cpg.frontends.Handler;
 import de.fraunhofer.aisec.cpg.graph.*;
+import de.fraunhofer.aisec.cpg.graph.type.Type;
 import de.fraunhofer.aisec.cpg.graph.type.TypeParser;
 import de.fraunhofer.aisec.cpg.graph.type.UnknownType;
+import de.fraunhofer.aisec.cpg.passes.scopes.RecordScope;
 import de.fraunhofer.aisec.cpg.passes.scopes.Scope;
 import java.lang.reflect.Method;
 import java.util.Arrays;
@@ -219,6 +221,22 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
     lang.getScopeManager().enterScope(recordDeclaration);
     lang.getScopeManager().addValueDeclaration(recordDeclaration.getThis());
 
+    processMembers(ctx, recordDeclaration);
+
+    if (recordDeclaration.getConstructors().isEmpty()) {
+      de.fraunhofer.aisec.cpg.graph.ConstructorDeclaration constructorDeclaration =
+          NodeBuilder.newConstructorDeclaration(
+              recordDeclaration.getName(), recordDeclaration.getName(), recordDeclaration);
+      recordDeclaration.getConstructors().add(constructorDeclaration);
+      lang.getScopeManager().addValueDeclaration(constructorDeclaration);
+    }
+
+    lang.getScopeManager().leaveScope(recordDeclaration);
+    return recordDeclaration;
+  }
+
+  private void processMembers(
+      CPPASTCompositeTypeSpecifier ctx, RecordDeclaration recordDeclaration) {
     for (IASTDeclaration member : ctx.getMembers()) {
       if (member instanceof CPPASTVisibilityLabel) {
         // TODO: parse visibility
@@ -239,6 +257,14 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
             declarationScope.setAstNode(
                 constructor); // Adjust cpg Node by which scopes are identified
           }
+          Type type =
+              TypeParser.createFrom(
+                  lang.getScopeManager()
+                      .getFirstScopeThat(RecordScope.class::isInstance)
+                      .getAstNode()
+                      .getName(),
+                  true);
+          constructor.setType(type);
           recordDeclaration.getConstructors().add(constructor);
         } else {
           recordDeclaration.getMethods().add(method);
@@ -259,16 +285,5 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
         recordDeclaration.getRecords().add((RecordDeclaration) declaration);
       }
     }
-
-    if (recordDeclaration.getConstructors().isEmpty()) {
-      de.fraunhofer.aisec.cpg.graph.ConstructorDeclaration constructorDeclaration =
-          NodeBuilder.newConstructorDeclaration(
-              recordDeclaration.getName(), recordDeclaration.getName(), recordDeclaration);
-      recordDeclaration.getConstructors().add(constructorDeclaration);
-      lang.getScopeManager().addValueDeclaration(constructorDeclaration);
-    }
-
-    lang.getScopeManager().leaveScope(recordDeclaration);
-    return recordDeclaration;
   }
 }

@@ -38,12 +38,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -111,7 +106,6 @@ public class TranslationManager {
             throw new CompletionException(ex);
           } finally {
             outerBench.stop();
-
             log.debug("Cleaning up {} Passes", passesNeedCleanup.size());
             passesNeedCleanup.forEach(Pass::cleanup);
 

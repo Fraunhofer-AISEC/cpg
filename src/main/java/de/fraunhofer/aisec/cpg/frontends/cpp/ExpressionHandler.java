@@ -573,10 +573,10 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
         operatorCode = "-=";
         break;
       case IASTBinaryExpression.op_shiftLeftAssign:
-        operatorCode = ">>=";
+        operatorCode = "<<=";
         break;
       case IASTBinaryExpression.op_shiftRightAssign:
-        operatorCode = "<<=";
+        operatorCode = ">>=";
         break;
       case IASTBinaryExpression.op_binaryAndAssign:
         operatorCode = "&=";

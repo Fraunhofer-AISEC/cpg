@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.graph;
 
 import de.fraunhofer.aisec.cpg.graph.HasType.TypeListener;
 import de.fraunhofer.aisec.cpg.graph.type.Type;
+import de.fraunhofer.aisec.cpg.graph.type.UnknownType;
 import java.util.*;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 
@@ -101,7 +102,7 @@ public class ConditionalExpression extends Expression implements TypeListener {
     subTypes.remove(oldType);
     subTypes.addAll(types);
 
-    Type alternative = !types.isEmpty() ? types.get(0) : null;
+    Type alternative = !types.isEmpty() ? types.get(0) : UnknownType.getUnknownType();
     setType(TypeManager.getInstance().getCommonType(types).orElse(alternative), root);
     setPossibleSubTypes(subTypes, root);
 

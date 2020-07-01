@@ -16,11 +16,11 @@ import org.junit.jupiter.api.Test;
 
 class ConstructorsTest extends BaseTest {
 
-  private Path topLevel = Path.of("src", "test", "resources", "constructors");
+  private final Path topLevel = Path.of("src", "test", "resources", "constructors");
 
   @Test
   void testJava() throws Exception {
-    List<TranslationUnitDeclaration> result = TestUtils.analyze("java", topLevel);
+    List<TranslationUnitDeclaration> result = TestUtils.analyze("java", topLevel, true);
     List<ConstructorDeclaration> constructors =
         Util.subnodesOfType(result, ConstructorDeclaration.class);
     ConstructorDeclaration noArg =
@@ -62,7 +62,7 @@ class ConstructorsTest extends BaseTest {
 
   @Test
   void testCPP() throws Exception {
-    List<TranslationUnitDeclaration> result = TestUtils.analyze("cpp", topLevel);
+    List<TranslationUnitDeclaration> result = TestUtils.analyze("cpp", topLevel, true);
     List<ConstructorDeclaration> constructors =
         Util.subnodesOfType(result, ConstructorDeclaration.class);
     ConstructorDeclaration noArg =
