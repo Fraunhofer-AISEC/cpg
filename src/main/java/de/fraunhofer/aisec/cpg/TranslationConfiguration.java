@@ -146,7 +146,6 @@ public class TranslationConfiguration {
     private List<String> includePaths = new ArrayList<>();
     private List<Pass> passes = new ArrayList<>();
     private boolean codeInNodes = true;
-    private boolean cleanupOnCompletion = true;
 
     public Builder symbols(Map<String, String> symbols) {
       this.symbols = symbols;

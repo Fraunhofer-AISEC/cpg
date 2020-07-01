@@ -70,14 +70,11 @@ public class TestUtils {
    *     matches all files
    * @param topLevel The directory to traverse while looking for files to parse
    * @param usePasses Whether the analysis should run passes after the initial phase
-   * @param cleanupOnCompletion Whether {@link de.fraunhofer.aisec.cpg.graph.TypeManager} etc.
-   *     should be cleaned up after the analysis has ended
    * @return A list of {@link TranslationUnitDeclaration} nodes, representing the CPG roots
    * @throws Exception Any exception thrown during the parsing process
    */
   public static List<TranslationUnitDeclaration> analyze(
-      String fileExtension, Path topLevel, boolean usePasses, boolean cleanupOnCompletion)
-      throws Exception {
+      String fileExtension, Path topLevel, boolean usePasses) throws Exception {
     List<File> files =
         Files.walk(topLevel, Integer.MAX_VALUE)
             .map(Path::toFile)
