@@ -50,19 +50,20 @@ import java.util.List;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
 
 class FunctionPointerTest extends BaseTest {
 
   private List<TranslationUnitDeclaration> analyze(String language) throws Exception {
     Path topLevel = Path.of("src", "test", "resources", "functionPointers");
-    File[] files =
+    List<File> files =
         Files.walk(topLevel, Integer.MAX_VALUE)
             .map(Path::toFile)
             .filter(File::isFile)
             .filter(f -> f.getName().endsWith("." + language.toLowerCase()))
             .sorted()
-            .toArray(File[]::new);
+            .collect(Collectors.toList());
 
     TranslationConfiguration config =
         TranslationConfiguration.builder()

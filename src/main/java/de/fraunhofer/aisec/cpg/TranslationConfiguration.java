@@ -173,6 +173,17 @@ public class TranslationConfiguration {
       return this;
     }
 
+    /**
+     * Files or directories containing the source code to analyze
+     *
+     * @param sourceLocations
+     * @return
+     */
+    public Builder sourceLocations(List<File> sourceLocations) {
+      this.sourceLocations = sourceLocations;
+      return this;
+    }
+
     public Builder topLevel(File topLevel) {
       this.topLevel = topLevel;
       return this;

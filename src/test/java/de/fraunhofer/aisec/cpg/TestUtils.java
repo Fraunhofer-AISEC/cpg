@@ -100,7 +100,7 @@ public class TestUtils {
       throws Exception {
     TranslationConfiguration.Builder builder =
         TranslationConfiguration.builder()
-            .sourceLocations(files.toArray(File[]::new))
+            .sourceLocations(files)
             .topLevel(topLevel.toFile())
             .loadIncludes(true)
             .debugParser(true)

@@ -221,7 +221,7 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
     lang.getScopeManager().enterScope(recordDeclaration);
     lang.getScopeManager().addValueDeclaration(recordDeclaration.getThis());
 
-    handleMembers(ctx, recordDeclaration);
+    processMembers(ctx, recordDeclaration);
 
     if (recordDeclaration.getConstructors().isEmpty()) {
       de.fraunhofer.aisec.cpg.graph.ConstructorDeclaration constructorDeclaration =
@@ -235,7 +235,7 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
     return recordDeclaration;
   }
 
-  private void handleMembers(
+  private void processMembers(
       CPPASTCompositeTypeSpecifier ctx, RecordDeclaration recordDeclaration) {
     for (IASTDeclaration member : ctx.getMembers()) {
       if (member instanceof CPPASTVisibilityLabel) {
