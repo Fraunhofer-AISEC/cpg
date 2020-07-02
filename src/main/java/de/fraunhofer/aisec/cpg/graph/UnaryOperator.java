@@ -82,9 +82,9 @@ public class UnaryOperator extends Expression implements TypeListener {
   }
 
   private void changeExpressionAccess() {
-    ValueAccess.accessValues access = ValueAccess.accessValues.READ;
+    AccessValues access = AccessValues.READ;
     if (this.operatorCode.equals("++") || this.operatorCode.equals("--")) {
-      access = ValueAccess.accessValues.READWRITE;
+      access = AccessValues.READWRITE;
     }
 
     if (this.input instanceof DeclaredReferenceExpression) {
