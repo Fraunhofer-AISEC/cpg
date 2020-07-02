@@ -16,7 +16,8 @@ class ReadWriteDFGTest {
   void testCompoundOperatorDFG() throws Exception {
     Path topLevel = Path.of("src", "test", "resources", "dfg");
     List<TranslationUnitDeclaration> result =
-        TestUtils.analyzeFile("compoundoperator.cpp", topLevel);
+        TestUtils.analyze(
+            List.of(topLevel.resolve("compoundoperator.cpp").toFile()), topLevel, true);
 
     BinaryOperator rwCompoundOperator =
         TestUtils.findByUniqueName(Util.subnodesOfType(result, BinaryOperator.class), "+=");
@@ -42,7 +43,8 @@ class ReadWriteDFGTest {
   @Test
   void testUnaryOperatorDFG() throws Exception {
     Path topLevel = Path.of("src", "test", "resources", "dfg");
-    List<TranslationUnitDeclaration> result = TestUtils.analyzeFile("unaryoperator.cpp", topLevel);
+    List<TranslationUnitDeclaration> result =
+        TestUtils.analyze(List.of(topLevel.resolve("unaryoperator.cpp").toFile()), topLevel, true);
 
     UnaryOperator rwUnaryOperator =
         TestUtils.findByUniqueName(Util.subnodesOfType(result, UnaryOperator.class), "++");
