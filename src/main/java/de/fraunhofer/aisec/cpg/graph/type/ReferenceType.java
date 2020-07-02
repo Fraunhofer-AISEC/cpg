@@ -38,6 +38,8 @@ public class ReferenceType extends Type implements SecondOrderType {
 
   private Type reference;
 
+  private ReferenceType() {}
+
   public ReferenceType(Type reference) {
     super();
     this.name = reference.getName() + "&";
