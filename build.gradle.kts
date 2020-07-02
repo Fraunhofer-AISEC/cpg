@@ -152,7 +152,7 @@ dependencies {
     api("org.eclipse.cdt:core:6.10.0.201912051559")
 
     // JUnit
-    testImplementation("org.junit.jupiter:junit-jupiter-api:5.6.0")
+    testImplementation("org.junit.jupiter:junit-jupiter-api:5.6.2")
     testImplementation("org.junit.jupiter:junit-jupiter-params:5.6.2")
     testImplementation("org.mockito:mockito-core:3.3.3")
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.6.0")
