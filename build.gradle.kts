@@ -33,7 +33,7 @@ plugins {
     `maven-publish`
 
     id("org.sonarqube") version "3.0"
-    id("com.diffplug.gradle.spotless") version "4.4.0"
+    id("com.diffplug.gradle.spotless") version "4.5.0"
     id("com.github.johnrengelman.shadow") version "6.0.0"
 }
 
