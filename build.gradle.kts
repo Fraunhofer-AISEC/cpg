@@ -32,10 +32,9 @@ plugins {
     signing
     `maven-publish`
 
-    id("org.sonarqube") version "2.8"
-    id("com.diffplug.gradle.spotless") version "3.27.1"
-    id("com.github.johnrengelman.shadow") version "5.2.0"
-    id("net.researchgate.release") version "2.6.0"
+    id("org.sonarqube") version "3.0"
+    id("com.diffplug.gradle.spotless") version "4.5.0"
+    id("com.github.johnrengelman.shadow") version "6.0.0"
 }
 
 tasks.jacocoTestReport {
@@ -45,15 +44,6 @@ tasks.jacocoTestReport {
 }
 
 group = "de.fraunhofer.aisec"
-
-extra["isReleaseVersion"] = !version.toString().endsWith("SNAPSHOT")
-
-val mavenCentralUri: String
-    get() {
-        val releasesRepoUrl = "https://oss.sonatype.org/service/local/staging/deploy/maven2"
-        val snapshotsRepoUrl = "https://oss.sonatype.org/content/repositories/snapshots"
-        return if (project.extra["isReleaseVersion"] as Boolean) releasesRepoUrl else snapshotsRepoUrl
-    }
 
 publishing {
     publications {
@@ -88,7 +78,7 @@ publishing {
 
     repositories {
         maven {
-            url = uri(mavenCentralUri)
+            url = uri("https://oss.sonatype.org/service/local/staging/deploy/maven2")
 
             credentials {
                 val mavenCentralUsername: String? by project
@@ -126,10 +116,6 @@ signing {
     sign(publishing.publications["maven"])
 }
 
-tasks.withType<Sign>().configureEach {
-    onlyIf { project.extra["isReleaseVersion"] as Boolean }
-}
-
 tasks.named<Test>("test") {
     useJUnitPlatform()
     maxHeapSize = "4048m"
@@ -151,36 +137,25 @@ java {
     withJavadocJar()
 }
 
-val versions = mapOf(
-        "neo4j-ogm" to "3.1.7",
-        "junit5" to "5.6.0",
-        "commons-lang3" to "3.9",
-        "log4j" to "2.13.0",
-        "slf4j" to "1.8.0-beta4",
-        "javaparser" to "3.15.10",
-        "cdt" to "6.10.0.201912051559",
-        "eclipse-core" to "3.17.0",
-        "icu4j" to "65.1"
-)
-
 dependencies {
-    api("org.apache.commons", "commons-lang3", versions["commons-lang3"])
-    api("org.neo4j", "neo4j-ogm-core", versions["neo4j-ogm"])
-    api("org.apache.logging.log4j", "log4j-slf4j18-impl", versions["log4j"])
-    api("org.slf4j", "jul-to-slf4j", versions["slf4j"])
-    api("com.github.javaparser", "javaparser-symbol-solver-core", versions["javaparser"])
+    api("org.apache.commons:commons-lang3:3.10")
+    api("org.neo4j:neo4j-ogm-core:3.1.7")
+    api("org.apache.logging.log4j:log4j-slf4j18-impl:2.13.3")
+    api("org.slf4j:jul-to-slf4j:1.8.0-beta4")
+    api("com.github.javaparser:javaparser-symbol-solver-core:3.16.1")
 
     // Eclipse dependencies
-    api("org.eclipse.platform", "org.eclipse.core.runtime", versions["eclipse-core"])
-    api("com.ibm.icu", "icu4j", versions["icu4j"])
+    api("org.eclipse.platform:org.eclipse.core.runtime:3.17.0")
+    api("com.ibm.icu:icu4j:65.1")
 
     // CDT
-    api("org.eclipse.cdt", "core", versions["cdt"])
+    api("org.eclipse.cdt:core:6.10.0.201912051559")
 
     // JUnit
-    testImplementation("org.junit.jupiter", "junit-jupiter-api", versions["junit5"])
-    testImplementation("org.junit.jupiter", "junit-jupiter-params", versions["junit5"])
-    testRuntimeOnly("org.junit.jupiter", "junit-jupiter-engine", versions["junit5"])
+    testImplementation("org.junit.jupiter:junit-jupiter-api:5.6.2")
+    testImplementation("org.junit.jupiter:junit-jupiter-params:5.6.2")
+    testImplementation("org.mockito:mockito-core:3.3.3")
+    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.6.2")
 }
 
 spotless {

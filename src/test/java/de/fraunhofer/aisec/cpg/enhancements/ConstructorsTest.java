@@ -2,6 +2,7 @@ package de.fraunhofer.aisec.cpg.enhancements;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import de.fraunhofer.aisec.cpg.BaseTest;
 import de.fraunhofer.aisec.cpg.TestUtils;
 import de.fraunhofer.aisec.cpg.graph.ConstructExpression;
 import de.fraunhofer.aisec.cpg.graph.ConstructorDeclaration;
@@ -13,13 +14,13 @@ import java.nio.file.Path;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
-public class ConstructorsTest {
+class ConstructorsTest extends BaseTest {
 
-  private Path topLevel = Path.of("src", "test", "resources", "constructors");
+  private final Path topLevel = Path.of("src", "test", "resources", "constructors");
 
   @Test
   void testJava() throws Exception {
-    List<TranslationUnitDeclaration> result = TestUtils.analyze("java", topLevel);
+    List<TranslationUnitDeclaration> result = TestUtils.analyze("java", topLevel, true);
     List<ConstructorDeclaration> constructors =
         Util.subnodesOfType(result, ConstructorDeclaration.class);
     ConstructorDeclaration noArg =
@@ -61,7 +62,7 @@ public class ConstructorsTest {
 
   @Test
   void testCPP() throws Exception {
-    List<TranslationUnitDeclaration> result = TestUtils.analyze("cpp", topLevel);
+    List<TranslationUnitDeclaration> result = TestUtils.analyze("cpp", topLevel, true);
     List<ConstructorDeclaration> constructors =
         Util.subnodesOfType(result, ConstructorDeclaration.class);
     ConstructorDeclaration noArg =

@@ -27,11 +27,14 @@
 package de.fraunhofer.aisec.cpg.passes;
 
 import de.fraunhofer.aisec.cpg.TranslationResult;
+import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguageFrontend;
 import de.fraunhofer.aisec.cpg.graph.*;
 import de.fraunhofer.aisec.cpg.graph.type.FunctionPointerType;
 import de.fraunhofer.aisec.cpg.graph.type.Type;
 import de.fraunhofer.aisec.cpg.graph.type.TypeParser;
+import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker;
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.ScopedWalker;
+import de.fraunhofer.aisec.cpg.helpers.Util;
 import java.util.*;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -148,6 +151,62 @@ public class CallResolver extends Pass {
     }
   }
 
+  /**
+   * Handle calls in the form of <code>super.call()</code> or <code>ClassName.super.call()
+   * </code>, conforming to JLS13 §15.12.1
+   *
+   * @param curClass The class containing the call
+   * @param call The call to be resolved
+   */
+  private void handleSuperCall(RecordDeclaration curClass, CallExpression call) {
+    RecordDeclaration target = null;
+    if (call.getBase().getName().equals("super")) {
+      // direct superclass, either defined explicitly or java.lang.Object by default
+      if (!curClass.getSuperClasses().isEmpty()) {
+        target = recordMap.get(curClass.getSuperClasses().get(0).getTypeName());
+      } else {
+        Util.warnWithFileLocation(
+            call,
+            LOGGER,
+            "super call without direct superclass! Expected "
+                + "java.lang.Object to be present at least!");
+      }
+    } else {
+      // BaseName.super.call(), might either be in order to specify an enclosing class or an
+      // interface that is implemented
+      target = handleSpecificSupertype(curClass, call);
+    }
+    if (target != null) {
+      ((DeclaredReferenceExpression) call.getBase()).setRefersTo(target.getThis());
+      handleMethodCall(target, call);
+    }
+  }
+
+  private RecordDeclaration handleSpecificSupertype(
+      RecordDeclaration curClass, CallExpression call) {
+    String baseName =
+        call.getBase().getName().substring(0, call.getBase().getName().lastIndexOf(".super"));
+    if (curClass.getImplementedInterfaces().contains(TypeParser.createFrom(baseName, true))) {
+      // Basename is an interface -> BaseName.super refers to BaseName itself
+      return recordMap.get(baseName);
+    } else {
+      // BaseName refers to an enclosing class -> BaseName.super is BaseName's superclass
+      RecordDeclaration base = recordMap.get(baseName);
+      if (base != null) {
+        if (!base.getSuperClasses().isEmpty()) {
+          return recordMap.get(base.getSuperClasses().get(0).getTypeName());
+        } else {
+          Util.warnWithFileLocation(
+              call,
+              LOGGER,
+              "super call without direct superclass! Expected "
+                  + "java.lang.Object to be present at least!");
+        }
+      }
+    }
+    return null;
+  }
+
   private void resolve(@NonNull Node node, RecordDeclaration curClass) {
     if (node instanceof TranslationUnitDeclaration) {
       this.currentTU = (TranslationUnitDeclaration) node;
@@ -155,31 +214,57 @@ public class CallResolver extends Pass {
       resolveExplicitConstructorInvocation((ExplicitConstructorInvocation) node);
     } else if (node instanceof CallExpression) {
       CallExpression call = (CallExpression) node;
-
-      if (call instanceof MemberCallExpression) {
-        Node member = ((MemberCallExpression) call).getMember();
-        if (member instanceof HasType
-            && ((HasType) member).getType() instanceof FunctionPointerType) {
-          handleFunctionPointerCall(call, member);
-          return;
-        }
-      }
-
-      // we could be referring to a function pointer even though it is not a member call if the
-      // usual function pointer syntax (*fp)() has been omitted: fp(). Looks like a normal call,
-      // but it isn't
-      Optional<? extends ValueDeclaration> funcPointer =
-          walker.getDeclarationForScope(
-              call,
-              v ->
-                  v.getType() instanceof FunctionPointerType && v.getName().equals(call.getName()));
-      if (funcPointer.isPresent()) {
-        handleFunctionPointerCall(call, funcPointer.get());
-      } else {
-        handleNormalCalls(curClass, call);
-      }
+      // We might have call expressions inside our arguments, so in order to correctly resolve
+      // this call's signature, we need to make sure any call expression arguments are fully
+      // resolved
+      resolveArguments(call, curClass);
+      handleCallExpression(curClass, call);
     } else if (node instanceof ConstructExpression) {
       resolveConstructExpression((ConstructExpression) node);
+    }
+  }
+
+  private void handleCallExpression(RecordDeclaration curClass, CallExpression call) {
+    if (lang instanceof JavaLanguageFrontend
+        && call.getBase() instanceof DeclaredReferenceExpression
+        && call.getBase().getName().matches("(?<class>.+\\.)?super")) {
+      handleSuperCall(curClass, call);
+      return;
+    }
+
+    if (call instanceof MemberCallExpression) {
+      Node member = ((MemberCallExpression) call).getMember();
+      if (member instanceof HasType
+          && ((HasType) member).getType() instanceof FunctionPointerType) {
+        handleFunctionPointerCall(call, member);
+        return;
+      }
+    }
+
+    // we could be referring to a function pointer even though it is not a member call if the
+    // usual function pointer syntax (*fp)() has been omitted: fp(). Looks like a normal call,
+    // but it isn't
+    Optional<? extends ValueDeclaration> funcPointer =
+        walker.getDeclarationForScope(
+            call,
+            v -> v.getType() instanceof FunctionPointerType && v.getName().equals(call.getName()));
+    if (funcPointer.isPresent()) {
+      handleFunctionPointerCall(call, funcPointer.get());
+    } else {
+      handleNormalCalls(curClass, call);
+    }
+  }
+
+  private void resolveArguments(CallExpression call, RecordDeclaration curClass) {
+    Deque<Node> worklist = new ArrayDeque<>();
+    call.getArguments().forEach(worklist::push);
+    while (!worklist.isEmpty()) {
+      Node curr = worklist.pop();
+      if (curr instanceof CallExpression) {
+        resolve(curr, curClass);
+      } else {
+        SubgraphWalker.getAstChildren(curr).forEach(worklist::push);
+      }
     }
   }
 
@@ -364,7 +449,7 @@ public class CallResolver extends Pass {
     for (RecordDeclaration record : containingRecords) {
       MethodDeclaration dummy = NodeBuilder.newMethodDeclaration(name, "", true, record);
       dummy.setImplicit(true);
-      List<ParamVariableDeclaration> params = createParameters(call.getSignature());
+      List<ParamVariableDeclaration> params = Util.createParameters(call.getSignature());
       dummy.setParameters(params);
       record.getMethods().add(dummy);
       curClass.getStaticImports().add(dummy);
@@ -402,7 +487,7 @@ public class CallResolver extends Pass {
       return existing.get();
     }
 
-    List<ParamVariableDeclaration> parameters = createParameters(signature);
+    List<ParamVariableDeclaration> parameters = Util.createParameters(signature);
     if (template instanceof MethodDeclaration) {
       RecordDeclaration containingRecord = ((MethodDeclaration) template).getRecordDeclaration();
       MethodDeclaration dummy =
@@ -442,42 +527,6 @@ public class CallResolver extends Pass {
       }
       return dummy;
     }
-  }
-
-  private List<ParamVariableDeclaration> createParameters(List<Type> signature) {
-    List<ParamVariableDeclaration> params = new ArrayList<>();
-    for (int i = 0; i < signature.size(); i++) {
-      Type targetType = signature.get(i);
-      String paramName = generateParamName(i, targetType);
-      ParamVariableDeclaration param =
-          NodeBuilder.newMethodParameterIn(paramName, targetType, false, "");
-      param.setImplicit(true);
-      param.setArgumentIndex(i);
-      params.add(param);
-    }
-    return params;
-  }
-
-  private String generateParamName(int i, @NonNull Type targetType) {
-    StringBuilder paramName = new StringBuilder();
-    boolean capitalize = false;
-    for (int j = 0; j < targetType.toString().length(); j++) {
-      char c = targetType.toString().charAt(j);
-      if (c == '.' || c == ':') {
-        capitalize = true;
-      } else if (c == '*') {
-        paramName.append("Ptr");
-      } else {
-        if (capitalize) {
-          paramName.append(String.valueOf(c).toUpperCase());
-          capitalize = false;
-        } else {
-          paramName.append(c);
-        }
-      }
-    }
-    paramName.append(i);
-    return paramName.toString();
   }
 
   private Set<Type> getPossibleContainingTypes(Node node, RecordDeclaration curClass) {

@@ -43,6 +43,8 @@ public class PointerType extends Type implements SecondOrderType {
 
   private PointerOrigin pointerOrigin;
 
+  private PointerType() {}
+
   public PointerType(Type elementType, PointerOrigin pointerOrigin) {
     super();
     if (pointerOrigin == PointerOrigin.ARRAY) {

@@ -29,8 +29,6 @@ package de.fraunhofer.aisec.cpg.passes;
 import de.fraunhofer.aisec.cpg.TranslationResult;
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
 import de.fraunhofer.aisec.cpg.graph.*;
-import de.fraunhofer.aisec.cpg.graph.type.Type;
-import de.fraunhofer.aisec.cpg.graph.type.TypeParser;
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -46,6 +44,12 @@ import java.util.stream.Collectors;
  * <p>After determining the ancestors of a class, all inherited methods are scanned to find out
  * which of them are overridden/implemented in the current class. See {@link
  * MethodDeclaration#getOverriddenBy()}
+ *
+ * <p><b>Attention:</b> Needs to be run before other analysis passes, as it triggers a type refresh.
+ * This is needed e.g. for {@link
+ * de.fraunhofer.aisec.cpg.graph.TypeManager#getCommonType(Collection)} to be re-evaluated at places
+ * where it is crucial to have parsed all {@link RecordDeclaration}s. Otherwise, type information in
+ * the graph might not be fully correct
  */
 public class TypeHierarchyResolver extends Pass {
 
@@ -90,12 +94,8 @@ public class TypeHierarchyResolver extends Pass {
 
     if (!unknownTypes.isEmpty()) {
       // Get the translation unit holding all unknown declarations, or create a new one if necessary
-      TranslationUnitDeclaration unknownDeclarations =
-          translationResult.getTranslationUnits().stream()
-              .filter(tu -> tu.getName().equals("unknown declarations"))
-              .findFirst()
-              .orElseGet(() -> createUnknownTranslationUnit(translationResult));
-      unknownDeclarations.setDeclarations(new ArrayList<>(unknownTypes.values()));
+      TranslationUnitDeclaration unknownDeclarations = getUnknownDeclarationsTU(translationResult);
+      unknownDeclarations.getDeclarations().addAll(unknownTypes.values());
       recordMap.putAll(unknownTypes);
     }
 
@@ -131,7 +131,7 @@ public class TypeHierarchyResolver extends Pass {
   }
 
   private Set<RecordDeclaration> findSupertypeRecords(RecordDeclaration record) {
-    Set<RecordDeclaration> localSuperTypeDeclarations =
+    Set<RecordDeclaration> superTypeDeclarations =
         record.getSuperTypes().stream()
             .map(
                 t -> {
@@ -139,29 +139,18 @@ public class TypeHierarchyResolver extends Pass {
                     return recordMap.get(t.getTypeName());
                   } else {
                     if (!unknownTypes.containsKey(t.getTypeName())) {
-                      unknownTypes.put(
-                          t.getTypeName(),
-                          NodeBuilder.newRecordDeclaration(
-                              t.getTypeName(), Collections.emptyList(), "class", ""));
+                      RecordDeclaration dummy =
+                          NodeBuilder.newRecordDeclaration(t.getTypeName(), "class", "");
+                      dummy.setImplicit(true);
+                      unknownTypes.put(t.getTypeName(), dummy);
                     }
                     return unknownTypes.get(t.getTypeName());
                   }
                 })
             .collect(Collectors.toSet());
-    HashSet<RecordDeclaration> allSupertypeRecords = new HashSet<>(localSuperTypeDeclarations);
-    for (RecordDeclaration superType : localSuperTypeDeclarations) {
-      allSupertypeRecords.addAll(findSupertypeRecords(superType));
-    }
 
-    record.setSuperTypeDeclarations(allSupertypeRecords);
-    List<Type> superTypeNames =
-        allSupertypeRecords.stream()
-            .map(RecordDeclaration::getName)
-            .map(t -> TypeParser.createFrom(t, true))
-            .distinct()
-            .collect(Collectors.toList());
-    record.setSuperTypes(superTypeNames);
-    return allSupertypeRecords;
+    record.setSuperTypeDeclarations(superTypeDeclarations);
+    return superTypeDeclarations;
   }
 
   private void analyzeOverridingMethods(

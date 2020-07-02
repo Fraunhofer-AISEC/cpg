@@ -29,43 +29,32 @@ package de.fraunhofer.aisec.cpg.enhancements;
 import static org.junit.jupiter.api.Assertions.*;
 
 import com.github.javaparser.utils.Pair;
-import de.fraunhofer.aisec.cpg.TranslationConfiguration;
-import de.fraunhofer.aisec.cpg.TranslationManager;
-import de.fraunhofer.aisec.cpg.TranslationResult;
+import de.fraunhofer.aisec.cpg.BaseTest;
+import de.fraunhofer.aisec.cpg.TestUtils;
 import de.fraunhofer.aisec.cpg.graph.*;
 import java.io.File;
+import java.nio.file.Path;
 import java.util.*;
-import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
 
-class JavaVsCppTest {
+class JavaVsCppTest extends BaseTest {
 
   @Test
-  void cpp() throws ExecutionException, InterruptedException {
+  void cpp() throws Exception {
     analyzeAndSave("src/test/resources/javaVsCpp/simple.cpp");
   }
 
   @Test
-  void java() throws ExecutionException, InterruptedException {
+  void java() throws Exception {
     analyzeAndSave("src/test/resources/javaVsCpp/simple.java");
   }
 
-  private void analyzeAndSave(String pathname) throws ExecutionException, InterruptedException {
-    TranslationManager analyzer =
-        TranslationManager.builder()
-            .config(
-                TranslationConfiguration.builder()
-                    .sourceLocations(new File(pathname))
-                    .defaultPasses()
-                    .debugParser(false)
-                    .codeInNodes(false)
-                    .loadIncludes(false)
-                    .build())
-            .build();
-    TranslationResult res = analyzer.analyze().get();
-    assertEquals(1, res.getTranslationUnits().size());
-    TranslationUnitDeclaration tu = res.getTranslationUnits().get(0);
+  private void analyzeAndSave(String pathname) throws Exception {
+    File toTranslate = new File(pathname);
+    Path topLevel = toTranslate.getParentFile().toPath();
+    TranslationUnitDeclaration tu =
+        TestUtils.analyzeAndGetFirstTU(List.of(toTranslate), topLevel, true);
     assertEquals(1, tu.getDeclarations().size());
     Declaration decl = tu.getDeclarations().get(0);
     assertTrue(decl instanceof RecordDeclaration);

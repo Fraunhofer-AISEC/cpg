@@ -27,7 +27,9 @@
 package de.fraunhofer.aisec.cpg.graph;
 
 import de.fraunhofer.aisec.cpg.graph.type.Type;
+import de.fraunhofer.aisec.cpg.graph.type.TypeParser;
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation;
+import java.util.ArrayList;
 import java.util.List;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -179,7 +181,7 @@ public class NodeBuilder {
   }
 
   private static void log(Node node) {
-    LOGGER.debug("Creating {} {}", node.getClass().getSimpleName(), node);
+    LOGGER.debug("Creating {}", node);
   }
 
   public static ReturnStatement newReturnStatement(String code) {
@@ -395,13 +397,24 @@ public class NodeBuilder {
     return node;
   }
 
-  public static RecordDeclaration newRecordDeclaration(
-      String name, List<Type> superTypes, String kind, String code) {
+  public static RecordDeclaration newRecordDeclaration(String name, String kind, String code) {
     RecordDeclaration node = new RecordDeclaration();
     node.setName(name);
-    node.setSuperTypes(superTypes);
     node.setKind(kind);
     node.setCode(code);
+
+    if (kind.equals("class")) {
+      de.fraunhofer.aisec.cpg.graph.FieldDeclaration thisDeclaration =
+          NodeBuilder.newFieldDeclaration(
+              "this",
+              TypeParser.createFrom(name, true),
+              new ArrayList<>(),
+              "this",
+              null,
+              null,
+              true);
+      node.getFields().add(thisDeclaration);
+    }
 
     log(node);
 

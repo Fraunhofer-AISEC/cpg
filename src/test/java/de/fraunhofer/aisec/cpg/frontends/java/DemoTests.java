@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.frontends.java;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import de.fraunhofer.aisec.cpg.BaseTest;
 import de.fraunhofer.aisec.cpg.TranslationConfiguration;
 import de.fraunhofer.aisec.cpg.TranslationManager;
 import de.fraunhofer.aisec.cpg.TranslationResult;
@@ -38,10 +39,10 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import org.junit.jupiter.api.Test;
 
-public class DemoTests {
+class DemoTests extends BaseTest {
 
   @Test
-  public void testHierarchy() throws Exception {
+  void testHierarchy() throws Exception {
 
     //    assertTrue(Database.getInstance().connect(), "Couldn't connect to the database!");
     //    Database.getInstance().purgeDatabase();
@@ -70,7 +71,7 @@ public class DemoTests {
   }
 
   @Test
-  public void testPartial() throws Exception {
+  void testPartial() throws Exception {
 
     Path topLevel = Paths.get("src/test/resources/partial");
 

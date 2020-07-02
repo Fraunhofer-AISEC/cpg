@@ -52,7 +52,14 @@ public class UnknownType extends Type {
     return unknownType;
   }
 
-  public UnknownType(String typeName) {
+  /**
+   * This is only intended to be used by {@link TypeParser} for edge cases like distinct unknown
+   * types, such as "UNKNOWN1", thus the package-private visibility. Other users should see {@link
+   * #getUnknownType()} instead
+   *
+   * @param typeName The name of this unknown type, usually a variation of UNKNOWN
+   */
+  UnknownType(String typeName) {
     super(typeName);
   }
 

@@ -2,6 +2,7 @@ package de.fraunhofer.aisec.cpg.enhancements;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import de.fraunhofer.aisec.cpg.BaseTest;
 import de.fraunhofer.aisec.cpg.TestUtils;
 import de.fraunhofer.aisec.cpg.graph.RecordDeclaration;
 import de.fraunhofer.aisec.cpg.graph.TranslationUnitDeclaration;
@@ -12,13 +13,13 @@ import java.nio.file.Path;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
-public class TypedefTest {
+class TypedefTest extends BaseTest {
 
-  private Path topLevel = Path.of("src", "test", "resources", "typedefs");
+  private final Path topLevel = Path.of("src", "test", "resources", "typedefs");
 
   @Test
   void testSingle() throws Exception {
-    List<TranslationUnitDeclaration> result = TestUtils.analyze("cpp", topLevel);
+    List<TranslationUnitDeclaration> result = TestUtils.analyze("cpp", topLevel, true);
     List<ValueDeclaration> variables = Util.subnodesOfType(result, ValueDeclaration.class);
 
     // normal type
@@ -44,7 +45,7 @@ public class TypedefTest {
 
   @Test
   void testWithModifier() throws Exception {
-    List<TranslationUnitDeclaration> result = TestUtils.analyze("cpp", topLevel);
+    List<TranslationUnitDeclaration> result = TestUtils.analyze("cpp", topLevel, true);
     List<ValueDeclaration> variables = Util.subnodesOfType(result, ValueDeclaration.class);
 
     // pointer
@@ -68,7 +69,7 @@ public class TypedefTest {
 
   @Test
   void testChained() throws Exception {
-    List<TranslationUnitDeclaration> result = TestUtils.analyze("cpp", topLevel);
+    List<TranslationUnitDeclaration> result = TestUtils.analyze("cpp", topLevel, true);
     List<ValueDeclaration> variables = Util.subnodesOfType(result, ValueDeclaration.class);
     ValueDeclaration l1 = TestUtils.findByUniqueName(variables, "l1");
     ValueDeclaration l3 = TestUtils.findByUniqueName(variables, "l3");
@@ -79,7 +80,7 @@ public class TypedefTest {
 
   @Test
   void testMultiple() throws Exception {
-    List<TranslationUnitDeclaration> result = TestUtils.analyze("cpp", topLevel);
+    List<TranslationUnitDeclaration> result = TestUtils.analyze("cpp", topLevel, true);
     List<ValueDeclaration> variables = Util.subnodesOfType(result, ValueDeclaration.class);
 
     // simple type
@@ -105,7 +106,7 @@ public class TypedefTest {
 
   @Test
   void testStructs() throws Exception {
-    List<TranslationUnitDeclaration> result = TestUtils.analyze("cpp", topLevel);
+    List<TranslationUnitDeclaration> result = TestUtils.analyze("cpp", topLevel, true);
     List<ValueDeclaration> variables = Util.subnodesOfType(result, ValueDeclaration.class);
     ValueDeclaration ps1 = TestUtils.findByUniqueName(variables, "ps1");
     ValueDeclaration ps2 = TestUtils.findByUniqueName(variables, "ps2");
@@ -114,7 +115,7 @@ public class TypedefTest {
 
   @Test
   void testArbitraryTypedefLocation() throws Exception {
-    List<TranslationUnitDeclaration> result = TestUtils.analyze("cpp", topLevel);
+    List<TranslationUnitDeclaration> result = TestUtils.analyze("cpp", topLevel, true);
     List<ValueDeclaration> variables = Util.subnodesOfType(result, ValueDeclaration.class);
     ValueDeclaration ullong1 = TestUtils.findByUniqueName(variables, "someUllong1");
     ValueDeclaration ullong2 = TestUtils.findByUniqueName(variables, "someUllong2");
@@ -123,7 +124,7 @@ public class TypedefTest {
 
   @Test
   void testMemberTypeDef() throws Exception {
-    List<TranslationUnitDeclaration> result = TestUtils.analyze("cpp", topLevel);
+    List<TranslationUnitDeclaration> result = TestUtils.analyze("cpp", topLevel, true);
     List<ValueDeclaration> variables = Util.subnodesOfType(result, ValueDeclaration.class);
     List<RecordDeclaration> records = Util.subnodesOfType(result, RecordDeclaration.class);
     RecordDeclaration addConst = TestUtils.findByUniqueName(records, "add_const");

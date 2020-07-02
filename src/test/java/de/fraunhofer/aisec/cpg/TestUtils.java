@@ -26,12 +26,12 @@
 
 package de.fraunhofer.aisec.cpg;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.*;
 
 import de.fraunhofer.aisec.cpg.graph.CompoundStatement;
 import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.TranslationUnitDeclaration;
+import de.fraunhofer.aisec.cpg.graph.TypeManager;
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker;
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation;
 import java.io.File;
@@ -41,6 +41,8 @@ import java.util.Collection;
 import java.util.List;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
+import org.apache.commons.lang3.reflect.FieldUtils;
+import org.mockito.Mockito;
 
 public class TestUtils {
 
@@ -51,8 +53,7 @@ public class TestUtils {
   }
 
   public static <S extends Node> S findByUniqueName(Collection<S> nodes, String name) {
-    List<S> results =
-        nodes.stream().filter(m -> m.getName().equals(name)).collect(Collectors.toList());
+    List<S> results = findByName(nodes, name);
     assertEquals(1, results.size());
     return results.get(0);
   }
@@ -61,52 +62,63 @@ public class TestUtils {
     return nodes.stream().filter(m -> m.getName().equals(name)).collect(Collectors.toList());
   }
 
-  public static List<TranslationUnitDeclaration> analyze(String fileExtension, Path topLevel)
-      throws Exception {
-    File[] files =
+  /**
+   * Like {@link #analyze(List, Path, boolean)}, but for all files in a directory tree having a
+   * specific file extension
+   *
+   * @param fileExtension All files found in the directory must end on this String. An empty string
+   *     matches all files
+   * @param topLevel The directory to traverse while looking for files to parse
+   * @param usePasses Whether the analysis should run passes after the initial phase
+   * @return A list of {@link TranslationUnitDeclaration} nodes, representing the CPG roots
+   * @throws Exception Any exception thrown during the parsing process
+   */
+  public static List<TranslationUnitDeclaration> analyze(
+      String fileExtension, Path topLevel, boolean usePasses) throws Exception {
+    List<File> files =
         Files.walk(topLevel, Integer.MAX_VALUE)
             .map(Path::toFile)
             .filter(File::isFile)
             .filter(f -> f.getName().endsWith(fileExtension))
             .sorted()
-            .toArray(File[]::new);
+            .collect(Collectors.toList());
+    return analyze(files, topLevel, usePasses);
+  }
 
-    TranslationConfiguration config =
+  /**
+   * Default way of parsing a list of files into a full CPG. All default passes are applied
+   *
+   * @param topLevel The directory to traverse while looking for files to parse
+   * @param usePasses Whether the analysis should run passes after the initial phase
+   * @return A list of {@link TranslationUnitDeclaration} nodes, representing the CPG roots
+   * @throws Exception Any exception thrown during the parsing process
+   */
+  public static List<TranslationUnitDeclaration> analyze(
+      List<File> files, Path topLevel, boolean usePasses) throws Exception {
+    TranslationConfiguration.Builder builder =
         TranslationConfiguration.builder()
             .sourceLocations(files)
             .topLevel(topLevel.toFile())
-            .defaultPasses()
+            .loadIncludes(true)
             .debugParser(true)
-            .failOnError(true)
-            .build();
+            .failOnError(true);
+    if (usePasses) {
+      builder.defaultPasses();
+    }
+    TranslationConfiguration config = builder.build();
 
     TranslationManager analyzer = TranslationManager.builder().config(config).build();
 
     return analyzer.analyze().get().getTranslationUnits();
   }
 
-  public static List<TranslationUnitDeclaration> analyzeFile(String fileName, Path topLevel)
-      throws Exception {
-    File[] files =
-        Files.walk(topLevel, Integer.MAX_VALUE)
-            .map(Path::toFile)
-            .filter(File::isFile)
-            .filter(f -> f.getName().equals(fileName))
-            .sorted()
-            .toArray(File[]::new);
-
-    TranslationConfiguration config =
-        TranslationConfiguration.builder()
-            .sourceLocations(files)
-            .topLevel(topLevel.toFile())
-            .defaultPasses()
-            .debugParser(true)
-            .failOnError(true)
-            .build();
-
-    TranslationManager analyzer = TranslationManager.builder().config(config).build();
-
-    return analyzer.analyze().get().getTranslationUnits();
+  public static TranslationUnitDeclaration analyzeAndGetFirstTU(
+      List<File> files, Path topLevel, boolean usePasses) throws Exception {
+    List<TranslationUnitDeclaration> translationUnits = analyze(files, topLevel, usePasses);
+    return translationUnits.stream()
+        .filter(t -> !t.getName().equals("unknown declarations"))
+        .findFirst()
+        .orElseThrow();
   }
 
   /**
@@ -129,5 +141,11 @@ public class TestUtils {
       }
     }
     return null;
+  }
+
+  static void disableTypeManagerCleanup() throws IllegalAccessException {
+    TypeManager spy = Mockito.spy(TypeManager.getInstance());
+    Mockito.doNothing().when(spy).cleanup();
+    FieldUtils.writeStaticField(TypeManager.class, "INSTANCE", spy, true);
   }
 }

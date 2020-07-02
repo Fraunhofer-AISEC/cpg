@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.enhancements;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import de.fraunhofer.aisec.cpg.BaseTest;
 import de.fraunhofer.aisec.cpg.TestUtils;
 import de.fraunhofer.aisec.cpg.graph.CallExpression;
 import de.fraunhofer.aisec.cpg.graph.FieldDeclaration;
@@ -42,13 +43,14 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
 
-public class StaticImportsTest {
+class StaticImportsTest extends BaseTest {
 
-  private Path topLevel = Path.of("src", "test", "resources", "staticImports");
+  private final Path topLevel = Path.of("src", "test", "resources", "staticImports");
 
   @Test
   void testSingleStaticImport() throws Exception {
-    List<TranslationUnitDeclaration> result = TestUtils.analyze("java", topLevel.resolve("single"));
+    List<TranslationUnitDeclaration> result =
+        TestUtils.analyze("java", topLevel.resolve("single"), true);
     List<MethodDeclaration> methods = Util.subnodesOfType(result, MethodDeclaration.class);
     MethodDeclaration test = TestUtils.findByUniqueName(methods, "test");
     MethodDeclaration main = TestUtils.findByUniqueName(methods, "main");
@@ -72,7 +74,7 @@ public class StaticImportsTest {
   @Test
   void testAsteriskImport() throws Exception {
     List<TranslationUnitDeclaration> result =
-        TestUtils.analyze("java", topLevel.resolve("asterisk"));
+        TestUtils.analyze("java", topLevel.resolve("asterisk"), true);
     List<MethodDeclaration> methods = Util.subnodesOfType(result, MethodDeclaration.class);
     MethodDeclaration main = TestUtils.findByUniqueName(methods, "main");
     for (CallExpression call : Util.subnodesOfType(main, CallExpression.class)) {
@@ -118,7 +120,7 @@ public class StaticImportsTest {
   @Test
   void testDummyGeneration() throws Exception {
     List<TranslationUnitDeclaration> result =
-        TestUtils.analyze("java", topLevel.resolve("dummies"));
+        TestUtils.analyze("java", topLevel.resolve("dummies"), true);
     assertEquals(
         1, result.stream().filter(t -> t.getName().equals("unknown declarations")).count());
     List<RecordDeclaration> records = Util.subnodesOfType(result, RecordDeclaration.class);

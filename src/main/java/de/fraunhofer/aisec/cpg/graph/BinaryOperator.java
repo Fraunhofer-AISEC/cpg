@@ -211,9 +211,8 @@ public class BinaryOperator extends Expression implements TypeListener {
   @Override
   public String toString() {
     return new ToStringBuilder(this, Node.TO_STRING_STYLE)
-        .appendSuper(super.toString())
-        .append("lhs", lhs)
-        .append("rhs", rhs)
+        .append("lhs", (lhs == null ? "null" : lhs.name))
+        .append("rhs", (rhs == null ? "null" : rhs.name))
         .append("operatorCode", operatorCode)
         .toString();
   }

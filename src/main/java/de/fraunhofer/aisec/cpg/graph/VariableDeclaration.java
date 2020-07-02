@@ -146,6 +146,8 @@ public class VariableDeclaration extends ValueDeclaration implements TypeListene
   @Override
   public String toString() {
     return new ToStringBuilder(this, Node.TO_STRING_STYLE)
+        .append("name", name)
+        .append("location", location)
         .append("initializer", initializer)
         .toString();
   }

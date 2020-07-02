@@ -28,32 +28,42 @@ package de.fraunhofer.aisec.cpg.enhancements;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import de.fraunhofer.aisec.cpg.BaseTest;
 import de.fraunhofer.aisec.cpg.TestUtils;
 import de.fraunhofer.aisec.cpg.TranslationConfiguration;
 import de.fraunhofer.aisec.cpg.TranslationManager;
 import de.fraunhofer.aisec.cpg.graph.CallExpression;
 import de.fraunhofer.aisec.cpg.graph.FunctionDeclaration;
+import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.TranslationUnitDeclaration;
+import de.fraunhofer.aisec.cpg.graph.VariableDeclaration;
 import de.fraunhofer.aisec.cpg.helpers.Util;
 import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Deque;
+import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
 
-public class FunctionPointerTest {
+class FunctionPointerTest extends BaseTest {
 
   private List<TranslationUnitDeclaration> analyze(String language) throws Exception {
     Path topLevel = Path.of("src", "test", "resources", "functionPointers");
-    File[] files =
+    List<File> files =
         Files.walk(topLevel, Integer.MAX_VALUE)
             .map(Path::toFile)
             .filter(File::isFile)
             .filter(f -> f.getName().endsWith("." + language.toLowerCase()))
             .sorted()
-            .toArray(File[]::new);
+            .collect(Collectors.toList());
 
     TranslationConfiguration config =
         TranslationConfiguration.builder()
@@ -69,7 +79,7 @@ public class FunctionPointerTest {
     return analyzer.analyze().get().getTranslationUnits();
   }
 
-  public void test(String language) throws Exception {
+  void test(String language) throws Exception {
     List<TranslationUnitDeclaration> result = analyze(language);
     List<FunctionDeclaration> functions = Util.subnodesOfType(result, FunctionDeclaration.class);
     FunctionDeclaration main = TestUtils.findByUniqueName(functions, "main");
@@ -119,15 +129,6 @@ public class FunctionPointerTest {
         case "single_param_field_uninitialized":
           assertEquals(List.of(singleParam), call.getInvokes());
           break;
-        case "no_param_unused":
-        case "no_param_unused_field":
-        case "no_param_unused_uninitialized":
-        case "single_param_unused":
-        case "single_param_unused_field":
-        case "single_param_unused_field_uninitialized":
-          // TODO once we have dedicated function pointer types, we need to distinguish here!
-          assertEquals(List.of(noParam, singleParam), call.getInvokes());
-          break;
         case "no_param_unknown":
         case "no_param_unknown_uninitialized":
         case "no_param_unknown_field":
@@ -145,16 +146,55 @@ public class FunctionPointerTest {
         default:
           fail("Unexpected call " + call.getName());
       }
+
+      List<VariableDeclaration> variables = Util.subnodesOfType(result, VariableDeclaration.class);
+      for (VariableDeclaration variable : variables) {
+        switch (variable.getName()) {
+          case "no_param_unused":
+          case "no_param_unused_field":
+          case "no_param_unused_uninitialized":
+            assertEquals(noParam, getSourceFunction(variable));
+            break;
+          case "single_param_unused":
+          case "single_param_unused_field":
+          case "single_param_unused_field_uninitialized":
+            assertEquals(singleParam, getSourceFunction(variable));
+            break;
+        }
+      }
     }
   }
 
+  private FunctionDeclaration getSourceFunction(VariableDeclaration variable) {
+    List<FunctionDeclaration> functions = new ArrayList<>();
+    Deque<Node> worklist = new ArrayDeque<>();
+    Set<Node> seen = Collections.newSetFromMap(new IdentityHashMap<>());
+    worklist.push(variable);
+
+    while (!worklist.isEmpty()) {
+      Node curr = worklist.pop();
+      if (!seen.add(curr)) {
+        continue;
+      }
+
+      if (curr instanceof FunctionDeclaration) {
+        functions.add((FunctionDeclaration) curr);
+      } else {
+        curr.getPrevDFG().forEach(worklist::push);
+      }
+    }
+
+    assertEquals(1, functions.size());
+    return functions.get(0);
+  }
+
   @Test
-  public void testC() throws Exception {
+  void testC() throws Exception {
     test("C");
   }
 
   @Test
-  public void testCPP() throws Exception {
+  void testCPP() throws Exception {
     test("CPP");
   }
 }

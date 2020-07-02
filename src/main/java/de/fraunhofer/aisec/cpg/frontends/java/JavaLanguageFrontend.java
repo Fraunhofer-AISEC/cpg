@@ -89,20 +89,18 @@ public class JavaLanguageFrontend extends LanguageFrontend {
     ReflectionTypeSolver reflectionTypeSolver = new ReflectionTypeSolver();
     internalTypeSolvers.add(reflectionTypeSolver);
     typeResolver.add(reflectionTypeSolver);
-    if (config != null) {
-      File root = config.getTopLevel();
-      if (root == null) {
-        root = CommonPath.commonPath(config.getSourceLocations());
-      }
+    File root = config.getTopLevel();
+    if (root == null) {
+      root = CommonPath.commonPath(config.getSourceLocations());
+    }
 
-      if (root == null) {
-        log.warn("Could not determine source root for {}", config.getSourceLocations());
-      } else {
-        log.info("Source file root used for type solver: {}", root);
-        JavaParserTypeSolver javaParserTypeSolver = new JavaParserTypeSolver(root);
-        internalTypeSolvers.add(javaParserTypeSolver);
-        typeResolver.add(javaParserTypeSolver);
-      }
+    if (root == null) {
+      log.warn("Could not determine source root for {}", config.getSourceLocations());
+    } else {
+      log.info("Source file root used for type solver: {}", root);
+      JavaParserTypeSolver javaParserTypeSolver = new JavaParserTypeSolver(root);
+      internalTypeSolvers.add(javaParserTypeSolver);
+      typeResolver.add(javaParserTypeSolver);
     }
     this.javaSymbolResolver = new JavaSymbolSolver(typeResolver);
   }
@@ -187,7 +185,7 @@ public class JavaLanguageFrontend extends LanguageFrontend {
                 }
                 log.error(sb.toString());
               });
-      log.error("Could not parse the file correctly! AST may be empty");
+      log.error("Could not parse the file {} correctly! AST may be empty", file);
     }
     return optional.get();
   }

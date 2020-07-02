@@ -268,7 +268,8 @@ public class SubgraphWalker {
       while (!todo.isEmpty()) {
         Node current = todo.pop();
         if (!backlog.isEmpty() && backlog.peek().equals(current)) {
-          onScopeExit.forEach(c -> c.accept(backlog.pop()));
+          Node exiting = backlog.pop();
+          onScopeExit.forEach(c -> c.accept(exiting));
         } else {
           // re-place the current node as a marker for the above check to find out when we need to
           // exit a scope
@@ -400,7 +401,7 @@ public class SubgraphWalker {
 
       if (current instanceof ValueDeclaration) {
 
-        LOGGER.debug("Adding variable {}", current.getCode());
+        LOGGER.trace("Adding variable {}", current.getCode());
         if (parentBlock == null) {
           LOGGER.warn("Parent block is empty during subgraph run");
         } else {

@@ -29,6 +29,7 @@ package de.fraunhofer.aisec.cpg.frontends.cpp;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
+import de.fraunhofer.aisec.cpg.BaseTest;
 import de.fraunhofer.aisec.cpg.TranslationConfiguration;
 import de.fraunhofer.aisec.cpg.frontends.TranslationException;
 import de.fraunhofer.aisec.cpg.graph.*;
@@ -37,7 +38,7 @@ import java.io.File;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 
-public class CXXSymbolConfigurationTest {
+class CXXSymbolConfigurationTest extends BaseTest {
   @Test
   void testWithoutSymbols() throws TranslationException {
     // parse without symbols
@@ -92,7 +93,7 @@ public class CXXSymbolConfigurationTest {
     assertNotNull(binaryOperator);
 
     // should be a literal now
-    Literal literal = binaryOperator.getRhsAs(Literal.class);
+    Literal<?> literal = binaryOperator.getRhsAs(Literal.class);
     assertEquals("Hello World", literal.getValue());
 
     binaryOperator = main.getBodyStatementAs(1, BinaryOperator.class);
@@ -103,10 +104,10 @@ public class CXXSymbolConfigurationTest {
     assertNotNull(add);
     assertEquals("+", add.getOperatorCode());
 
-    Literal literal2 = add.getLhsAs(Literal.class);
+    Literal<?> literal2 = add.getLhsAs(Literal.class);
     assertEquals(2, literal2.getValue());
 
-    Literal literal1 = add.getRhsAs(Literal.class);
+    Literal<?> literal1 = add.getRhsAs(Literal.class);
     assertEquals(1, literal1.getValue());
   }
 }

@@ -29,24 +29,22 @@ package de.fraunhofer.aisec.cpg.frontends.cpp;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
-import de.fraunhofer.aisec.cpg.TranslationConfiguration;
-import de.fraunhofer.aisec.cpg.frontends.TranslationException;
+import de.fraunhofer.aisec.cpg.BaseTest;
+import de.fraunhofer.aisec.cpg.TestUtils;
 import de.fraunhofer.aisec.cpg.graph.*;
-import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager;
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation;
 import de.fraunhofer.aisec.cpg.sarif.Region;
 import java.io.File;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 
-class CXXIncludeTest {
+class CXXIncludeTest extends BaseTest {
 
   @Test
-  void testDefinitionsAndDeclaration() throws TranslationException {
+  void testDefinitionsAndDeclaration() throws Exception {
+    File file = new File("src/test/resources/include.cpp");
     TranslationUnitDeclaration tu =
-        new CXXLanguageFrontend(
-                TranslationConfiguration.builder().loadIncludes(true).defaultPasses().build(),
-                new ScopeManager())
-            .parse(new File("src/test/resources/include.cpp"));
+        TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true);
     assertEquals(4, tu.getDeclarations().size());
 
     RecordDeclaration someClass =
@@ -69,13 +67,11 @@ class CXXIncludeTest {
   }
 
   @Test
-  void testCodeAndRegionInInclude() throws TranslationException {
+  void testCodeAndRegionInInclude() throws Exception {
     // checks, whether code and region for nodes in includes are properly set
+    File file = new File("src/test/resources/include.cpp");
     TranslationUnitDeclaration tu =
-        new CXXLanguageFrontend(
-                TranslationConfiguration.builder().loadIncludes(true).defaultPasses().build(),
-                new ScopeManager())
-            .parse(new File("src/test/resources/include.cpp"));
+        TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true);
 
     RecordDeclaration someClass =
         tu.getDeclarationByName("SomeClass", RecordDeclaration.class).orElse(null);

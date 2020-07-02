@@ -48,7 +48,6 @@ import de.fraunhofer.aisec.cpg.passes.scopes.RecordScope;
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation;
 import java.util.*;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 public class DeclarationHandler
     extends Handler<Declaration, BodyDeclaration, JavaLanguageFrontend> {
@@ -210,15 +209,22 @@ public class DeclarationHandler
     // }
     name = getAbsoluteName(name);
 
-    List<Type> superTypes =
-        Stream.of(classInterDecl.getExtendedTypes(), classInterDecl.getImplementedTypes())
-            .flatMap(Collection::stream)
-            .map(this.lang::getTypeAsGoodAsPossible)
-            .collect(Collectors.toList());
-
     // add a type declaration
     RecordDeclaration recordDeclaration =
-        NodeBuilder.newRecordDeclaration(name, superTypes, "class", classInterDecl.toString());
+        NodeBuilder.newRecordDeclaration(name, "class", classInterDecl.toString());
+    recordDeclaration.setSuperClasses(
+        classInterDecl.getExtendedTypes().stream()
+            .map(this.lang::getTypeAsGoodAsPossible)
+            .collect(Collectors.toList()));
+    if (recordDeclaration.getSuperClasses().isEmpty()) {
+      List<Type> superClasses = new ArrayList<>();
+      superClasses.add(TypeParser.createFrom(Object.class.getName(), true));
+      recordDeclaration.setSuperClasses(superClasses);
+    }
+    recordDeclaration.setImplementedInterfaces(
+        classInterDecl.getImplementedTypes().stream()
+            .map(this.lang::getTypeAsGoodAsPossible)
+            .collect(Collectors.toList()));
 
     Map<Boolean, List<String>> partitioned =
         this.lang.getContext().getImports().stream()
@@ -240,18 +246,7 @@ public class DeclarationHandler
 
     this.lang.addRecord(recordDeclaration);
     lang.getScopeManager().enterScope(recordDeclaration);
-
-    de.fraunhofer.aisec.cpg.graph.FieldDeclaration thisDeclaration =
-        NodeBuilder.newFieldDeclaration(
-            "this",
-            TypeParser.createFrom(name, true),
-            new ArrayList<>(),
-            "this",
-            null,
-            null,
-            false);
-    recordDeclaration.getFields().add(thisDeclaration);
-    lang.getScopeManager().addValueDeclaration(thisDeclaration);
+    lang.getScopeManager().addValueDeclaration(recordDeclaration.getThis());
 
     // TODO: 'this' identifier for multiple instances?
     for (BodyDeclaration<?> decl : classInterDecl.getMembers()) {

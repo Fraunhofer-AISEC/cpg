@@ -65,11 +65,15 @@ public class TypeManager {
   private LanguageFrontend frontend;
   private boolean noFrontendWarningIssued = false;
 
+  public static void reset() {
+    INSTANCE = new TypeManager();
+  }
+
   public Map<Type, List<Type>> getTypeState() {
     return typeState;
   }
 
-  public Type registerType(Type t) {
+  public <T extends Type> T registerType(T t) {
     if (t.isFirstOrderType()) {
       this.firstOrderTypes.add(t);
     } else {
@@ -124,6 +128,7 @@ public class TypeManager {
   }
 
   private Set<Type> unwrapTypes(Collection<Type> types, WrapState wrapState) {
+    Set<Type> original = new HashSet<>(types);
     Set<Type> unwrappedTypes = new HashSet<>();
     int depth = 0;
     int counter = 0;
@@ -142,8 +147,8 @@ public class TypeManager {
         unwrappedTypes.add(((ReferenceType) t).getElementType());
         reference = true;
       }
+      types = unwrappedTypes;
     }
-    types = unwrappedTypes;
 
     Type t2 = types.stream().findAny().orElse(null);
 
@@ -166,7 +171,11 @@ public class TypeManager {
     wrapState.setReference(reference);
     wrapState.setReferenceType(referenceType);
 
-    return unwrappedTypes;
+    if (unwrappedTypes.isEmpty() && !original.isEmpty()) {
+      return original;
+    } else {
+      return unwrappedTypes;
+    }
   }
 
   public Optional<Type> getCommonType(Collection<Type> types) {
@@ -221,7 +230,19 @@ public class TypeManager {
       if (i == 0) {
         commonAncestors.addAll(allAncestors.get(i));
       } else {
-        commonAncestors.retainAll(allAncestors.get(i));
+        Set<Ancestor> others = allAncestors.get(i);
+        Set<Ancestor> newCommonAncestors = new HashSet<>();
+        // like Collection#retainAll but swaps relevant items out if the other set's matching
+        // ancestor has a higher depth
+        for (Ancestor curr : commonAncestors) {
+          Optional<Ancestor> toRetain =
+              others.stream()
+                  .filter(a -> a.equals(curr))
+                  .map(a -> curr.getDepth() >= a.getDepth() ? curr : a)
+                  .findFirst();
+          toRetain.ifPresent(newCommonAncestors::add);
+        }
+        commonAncestors = newCommonAncestors;
       }
     }
 
@@ -448,7 +469,7 @@ public class TypeManager {
     }
   }
 
-  private class Ancestor {
+  private static class Ancestor {
 
     private RecordDeclaration record;
     private int depth;
@@ -476,13 +497,15 @@ public class TypeManager {
     }
 
     @Override
-    public boolean equals(Object obj) {
-      if (obj instanceof Ancestor) {
-        return ((Ancestor) obj).getRecord().equals(this.getRecord())
-            && ((Ancestor) obj).getDepth() == this.getDepth();
-      } else {
+    public boolean equals(Object o) {
+      if (this == o) {
+        return true;
+      }
+      if (!(o instanceof Ancestor)) {
         return false;
       }
+      Ancestor ancestor = (Ancestor) o;
+      return Objects.equals(record, ancestor.record);
     }
 
     @Override
