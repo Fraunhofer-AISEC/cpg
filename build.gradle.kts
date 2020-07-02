@@ -155,7 +155,7 @@ dependencies {
     testImplementation("org.junit.jupiter:junit-jupiter-api:5.6.2")
     testImplementation("org.junit.jupiter:junit-jupiter-params:5.6.2")
     testImplementation("org.mockito:mockito-core:3.3.3")
-    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.6.0")
+    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.6.2")
 }
 
 spotless {
