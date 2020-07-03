@@ -674,21 +674,7 @@ class TypeTests extends BaseTest {
     Path topLevel = Path.of("src", "test", "resources", "compiling", "hierarchy", "multistep");
     TestUtils.analyze("java", topLevel, true);
 
-    Type root = TypeParser.createFrom("Root", true);
-    Type level0 = TypeParser.createFrom("Level0", true);
-    Type level1 = TypeParser.createFrom("Level1", true);
-    Type level1b = TypeParser.createFrom("Level1B", true);
-    Type level2 = TypeParser.createFrom("Level2", true);
-
     getCommonTypeTestGeneral();
-
-    // Check unrelated type behavior: Everything is a java.lang.Object!
-    Type unrelated = TypeParser.createFrom("Unrelated", true);
-    Type javaObject = TypeParser.createFrom(Object.class.getName(), true);
-    for (Type t : List.of(root, level0, level1, level1b, level2)) {
-      assertEquals(
-          Optional.of(javaObject), TypeManager.getInstance().getCommonType(List.of(unrelated, t)));
-    }
   }
 
   @Test
@@ -698,20 +684,7 @@ class TypeTests extends BaseTest {
     Path topLevel = Path.of("src", "test", "resources", "compiling", "hierarchy", "multistep");
     TestUtils.analyze("simple_inheritance.cpp", topLevel, true);
 
-    Type root = TypeParser.createFrom("Root", true);
-    Type level0 = TypeParser.createFrom("Level0", true);
-    Type level1 = TypeParser.createFrom("Level1", true);
-    Type level1b = TypeParser.createFrom("Level1B", true);
-    Type level2 = TypeParser.createFrom("Level2", true);
-
     getCommonTypeTestGeneral();
-
-    // Check unrelated type behavior: No common root class
-    Type unrelated = TypeParser.createFrom("Unrelated", true);
-    for (Type t : List.of(root, level0, level1, level1b, level2)) {
-      assertEquals(
-          Optional.empty(), TypeManager.getInstance().getCommonType(List.of(unrelated, t)));
-    }
   }
 
   @Test
@@ -807,5 +780,12 @@ class TypeTests extends BaseTest {
     // Level1 and Level2 have Level1 as common ancestor
     assertEquals(
         Optional.of(level1), TypeManager.getInstance().getCommonType(List.of(level1, level2)));
+
+    // Check unrelated type behavior: No common root class
+    Type unrelated = TypeParser.createFrom("Unrelated", true);
+    for (Type t : List.of(root, level0, level1, level1b, level2)) {
+      assertEquals(
+          Optional.empty(), TypeManager.getInstance().getCommonType(List.of(unrelated, t)));
+    }
   }
 }

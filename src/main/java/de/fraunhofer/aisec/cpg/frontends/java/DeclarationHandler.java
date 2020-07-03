@@ -216,11 +216,6 @@ public class DeclarationHandler
         classInterDecl.getExtendedTypes().stream()
             .map(this.lang::getTypeAsGoodAsPossible)
             .collect(Collectors.toList()));
-    if (recordDeclaration.getSuperClasses().isEmpty()) {
-      List<Type> superClasses = new ArrayList<>();
-      superClasses.add(TypeParser.createFrom(Object.class.getName(), true));
-      recordDeclaration.setSuperClasses(superClasses);
-    }
     recordDeclaration.setImplementedInterfaces(
         classInterDecl.getImplementedTypes().stream()
             .map(this.lang::getTypeAsGoodAsPossible)

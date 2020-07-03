@@ -29,6 +29,7 @@ package de.fraunhofer.aisec.cpg.passes;
 import de.fraunhofer.aisec.cpg.TranslationResult;
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
 import de.fraunhofer.aisec.cpg.graph.*;
+import de.fraunhofer.aisec.cpg.graph.type.Type;
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -55,7 +56,6 @@ public class TypeHierarchyResolver extends Pass {
 
   private Map<String, RecordDeclaration> recordMap = new HashMap<>();
   private List<EnumDeclaration> enums = new ArrayList<>();
-  private Map<String, RecordDeclaration> unknownTypes = new HashMap<>();
 
   @Override
   public LanguageFrontend getLang() {
@@ -92,13 +92,6 @@ public class TypeHierarchyResolver extends Pass {
       enumDecl.setSuperTypeDeclarations(allSupertypes);
     }
 
-    if (!unknownTypes.isEmpty()) {
-      // Get the translation unit holding all unknown declarations, or create a new one if necessary
-      TranslationUnitDeclaration unknownDeclarations = getUnknownDeclarationsTU(translationResult);
-      unknownDeclarations.getDeclarations().addAll(unknownTypes.values());
-      recordMap.putAll(unknownTypes);
-    }
-
     translationResult.getTranslationUnits().forEach(this::refreshType);
   }
 
@@ -133,20 +126,9 @@ public class TypeHierarchyResolver extends Pass {
   private Set<RecordDeclaration> findSupertypeRecords(RecordDeclaration record) {
     Set<RecordDeclaration> superTypeDeclarations =
         record.getSuperTypes().stream()
-            .map(
-                t -> {
-                  if (recordMap.containsKey(t.getTypeName())) {
-                    return recordMap.get(t.getTypeName());
-                  } else {
-                    if (!unknownTypes.containsKey(t.getTypeName())) {
-                      RecordDeclaration dummy =
-                          NodeBuilder.newRecordDeclaration(t.getTypeName(), "class", "");
-                      dummy.setImplicit(true);
-                      unknownTypes.put(t.getTypeName(), dummy);
-                    }
-                    return unknownTypes.get(t.getTypeName());
-                  }
-                })
+            .map(Type::getTypeName)
+            .map(recordMap::get)
+            .filter(Objects::nonNull)
             .collect(Collectors.toSet());
 
     record.setSuperTypeDeclarations(superTypeDeclarations);
@@ -166,7 +148,5 @@ public class TypeHierarchyResolver extends Pass {
   }
 
   @Override
-  public void cleanup() {
-    this.unknownTypes.clear();
-  }
+  public void cleanup() {}
 }
