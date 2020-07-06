@@ -36,25 +36,30 @@ public class TranslationUnitDeclaration extends Declaration {
 
   /** A list of declarations within this unit. */
   @SubGraph("AST")
+  @NonNull
   private List<Declaration> declarations = new ArrayList<>();
 
   /** A list of includes within this unit. */
   @SubGraph("AST")
+  @NonNull
   private List<Declaration> includes = new ArrayList<>();
 
   /** A list of namespaces within this unit. */
   @SubGraph("AST")
+  @NonNull
   private List<Declaration> namespaces = new ArrayList<>();
 
+  // TODO Fragile! May easily throw ClassCastException. Use visitor instead.
   public <T> T getDeclarationAs(int i, Class<T> clazz) {
     return clazz.cast(this.declarations.get(i));
   }
 
   /**
-   * Returns a non-null, possibly empty {@code Set} of the declaration of a specified type and clazz.
+   * Returns a non-null, possibly empty {@code Set} of the declaration of a specified type and
+   * clazz.
    *
-   * The set may contain more than one element if a declaration exists in the {@link TranslationUnitDeclaration}
-   * itself and in an included header file.
+   * <p>The set may contain more than one element if a declaration exists in the {@link
+   * TranslationUnitDeclaration} itself and in an included header file.
    *
    * @param name the name to search for
    * @param clazz the declaration class, such as {@link FunctionDeclaration}.
@@ -71,27 +76,22 @@ public class TranslationUnitDeclaration extends Declaration {
         .collect(Collectors.toSet());
   }
 
+  @NonNull
   public List<Declaration> getDeclarations() {
-    return declarations;
+    return Collections.unmodifiableList(declarations);
   }
 
-  public void setDeclarations(List<Declaration> declarations) {
-    this.declarations = declarations;
-  }
-
+  @NonNull
   public List<Declaration> getIncludes() {
-    return includes;
+    return Collections.unmodifiableList(includes);
   }
 
-  public void setIncludes(List<Declaration> includes) {
-    this.includes = includes;
-  }
-
+  @NonNull
   public List<Declaration> getNamespaces() {
-    return namespaces;
+    return Collections.unmodifiableList(namespaces);
   }
 
-  public void add(Declaration decl) {
+  public void add(@NonNull Declaration decl) {
     if (decl instanceof IncludeDeclaration) {
       includes.add(decl);
     } else if (decl instanceof NamespaceDeclaration) {

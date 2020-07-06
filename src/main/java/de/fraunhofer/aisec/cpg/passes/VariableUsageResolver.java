@@ -422,7 +422,7 @@ public class VariableUsageResolver extends Pass {
       } else {
         declaration.setType(type);
       }
-      currTu.getDeclarations().add(declaration);
+      currTu.add(declaration);
       declaration.setImplicit(true);
       return declaration;
     } else {
