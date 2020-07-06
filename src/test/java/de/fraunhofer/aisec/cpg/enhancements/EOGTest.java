@@ -46,7 +46,8 @@ import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker;
 import de.fraunhofer.aisec.cpg.helpers.Util;
 import de.fraunhofer.aisec.cpg.passes.CallResolver;
 import de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass;
-import de.fraunhofer.aisec.cpg.processing.strategy.DepthFirstNodeVisitor;
+import de.fraunhofer.aisec.cpg.processing.IVisitor;
+import de.fraunhofer.aisec.cpg.processing.strategy.Strategy;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
@@ -314,14 +315,14 @@ class EOGTest extends BaseTest {
     nodes
         .get(0)
         .accept(
-            new DepthFirstNodeVisitor<>(
-                n -> {
-                  for (Node x : n.getPrevEOG()) {
-                    System.out.println(
-                        locationLink(n.getLocation()) + " -> " + locationLink(x.getLocation()));
-                  }
-                },
-                n -> n.getPrevEOG().iterator()));
+            Strategy::EOG_BACKWARD,
+            new IVisitor<Node>() {
+              @Override
+              public void visit(Node n) {
+                System.out.println(
+                    locationLink(n.getLocation()) + " -> " + locationLink(n.getLocation()));
+              }
+            });
 
     // Assert: Only single entry and exit NODE per block
     assertTrue(conditionEOG.getEntries().size() == 1 && conditionEOG.getExits().size() == 1);

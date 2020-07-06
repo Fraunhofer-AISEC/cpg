@@ -43,7 +43,7 @@ import de.fraunhofer.aisec.cpg.graph.Statement;
 import de.fraunhofer.aisec.cpg.graph.TranslationUnitDeclaration;
 import de.fraunhofer.aisec.cpg.passes.ControlFlowGraphPass;
 import de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass;
-import de.fraunhofer.aisec.cpg.processing.strategy.DepthFirstNodeVisitor;
+import de.fraunhofer.aisec.cpg.processing.IVisitor;
 import java.io.File;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
@@ -78,17 +78,16 @@ class CXXCfgTest extends BaseTest {
 
     // Just for debugging
     body.accept(
-        new DepthFirstNodeVisitor<>(
-            n -> {
-              for (Node x : n.getNextCFG()) {
-                System.out.println(
-                    "CFG: "
-                        + locationLink(n.getLocation())
-                        + " -> "
-                        + locationLink(x.getLocation()));
-              }
-            },
-            n -> n.getNextCFG().iterator()));
+        n -> n.getNextCFG().iterator(),
+        new IVisitor<Node>() {
+          @Override
+          public void visit(Node n) {
+            for (Node x : n.getNextCFG()) {
+              System.out.println(
+                  "CFG: " + locationLink(n.getLocation()) + " -> " + locationLink(x.getLocation()));
+            }
+          }
+        });
 
     /*
     CFG: 4 -> 5
@@ -143,17 +142,16 @@ class CXXCfgTest extends BaseTest {
 
     // Just for debugging
     body.accept(
-        new DepthFirstNodeVisitor<>(
-            n -> {
-              for (Node x : n.getNextCFG()) {
-                System.out.println(
-                    "CFG: "
-                        + locationLink(n.getLocation())
-                        + " -> "
-                        + locationLink(x.getLocation()));
-              }
-            },
-            n -> n.getNextCFG().iterator()));
+        n -> n.getNextCFG().iterator(),
+        new IVisitor<Node>() {
+          @Override
+          public void visit(Node n) {
+            for (Node x : n.getNextCFG()) {
+              System.out.println(
+                  "CFG: " + locationLink(n.getLocation()) + " -> " + locationLink(x.getLocation()));
+            }
+          }
+        });
 
     /*
     CFG: 4 -> 5
@@ -216,17 +214,16 @@ class CXXCfgTest extends BaseTest {
 
     // Just for debugging
     body.accept(
-        new DepthFirstNodeVisitor<>(
-            n -> {
-              for (Node x : n.getNextCFG()) {
-                System.out.println(
-                    "CFG: "
-                        + locationLink(n.getLocation())
-                        + " -> "
-                        + locationLink(x.getLocation()));
-              }
-            },
-            n -> n.getNextCFG().iterator()));
+        n -> n.getNextCFG().iterator(),
+        new IVisitor<Node>() {
+          @Override
+          public void visit(Node n) {
+            for (Node x : n.getNextCFG()) {
+              System.out.println(
+                  "CFG: " + locationLink(n.getLocation()) + " -> " + locationLink(x.getLocation()));
+            }
+          }
+        });
 
     /*
     CFG: 4 -> 5
@@ -289,17 +286,16 @@ class CXXCfgTest extends BaseTest {
 
     // Just for debugging
     body.accept(
-        new DepthFirstNodeVisitor<>(
-            n -> {
-              for (Node x : n.getNextCFG()) {
-                System.out.println(
-                    "CFG: "
-                        + locationLink(n.getLocation())
-                        + " -> "
-                        + locationLink(x.getLocation()));
-              }
-            },
-            n -> n.getNextCFG().iterator()));
+        n -> n.getNextCFG().iterator(),
+        new IVisitor<Node>() {
+          @Override
+          public void visit(Node n) {
+            for (Node x : n.getNextCFG()) {
+              System.out.println(
+                  "CFG: " + locationLink(n.getLocation()) + " -> " + locationLink(x.getLocation()));
+            }
+          }
+        });
 
     /*
     CFG: 4 -> 5

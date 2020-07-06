@@ -188,7 +188,6 @@ public class SubgraphWalker {
     return border;
   }
 
-
   /**
    * For better readability: <code>result.entries</code> instead of <code>result.get(0)</code> when
    * working with getEOGPathEdges. Can be used for all subgraphs in subgraphs, e.g. AST entries and

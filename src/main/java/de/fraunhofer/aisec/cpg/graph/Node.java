@@ -28,7 +28,6 @@ package de.fraunhofer.aisec.cpg.graph;
 
 import de.fraunhofer.aisec.cpg.helpers.LocationConverter;
 import de.fraunhofer.aisec.cpg.processing.IVisitable;
-import de.fraunhofer.aisec.cpg.processing.IVisitor;
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -47,7 +46,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /** The base class for all graph objects that are going to be persisted in the database. */
-public class Node implements IVisitable<Node> {
+public class Node extends IVisitable<Node> {
 
   public static final ToStringStyle TO_STRING_STYLE = ToStringStyle.SHORT_PREFIX_STYLE;
   protected static final Logger log = LoggerFactory.getLogger(Node.class);
@@ -322,10 +321,5 @@ public class Node implements IVisitable<Node> {
   @Override
   public int hashCode() {
     return Objects.hash(name, this.getClass());
-  }
-
-  @Override
-  public void accept(IVisitor<Node> visitor) {
-    visitor.visit(this);
   }
 }
