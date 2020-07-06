@@ -31,15 +31,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import de.fraunhofer.aisec.cpg.BaseTest;
 import de.fraunhofer.aisec.cpg.TestUtils;
-import de.fraunhofer.aisec.cpg.TranslationConfiguration;
-import de.fraunhofer.aisec.cpg.TranslationManager;
 import de.fraunhofer.aisec.cpg.graph.*;
 import de.fraunhofer.aisec.cpg.helpers.Util;
-import java.io.File;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
 
@@ -49,7 +45,7 @@ class VariableResolverTest extends BaseTest {
 
   @Test
   void testFields() throws Exception {
-    List<TranslationUnitDeclaration> result = TestUtils.analyze("java", topLevel);
+    List<TranslationUnitDeclaration> result = TestUtils.analyze("java", topLevel, true);
     List<MethodDeclaration> methods = Util.subnodesOfType(result, MethodDeclaration.class);
     List<FieldDeclaration> fields = Util.subnodesOfType(result, FieldDeclaration.class);
     FieldDeclaration field = TestUtils.findByUniqueName(fields, "field");
@@ -65,7 +61,7 @@ class VariableResolverTest extends BaseTest {
 
   @Test
   void testLocalVars() throws Exception {
-    List<TranslationUnitDeclaration> result = TestUtils.analyze("java", topLevel);
+    List<TranslationUnitDeclaration> result = TestUtils.analyze("java", topLevel, true);
     List<MethodDeclaration> methods = Util.subnodesOfType(result, MethodDeclaration.class);
     List<FieldDeclaration> fields = Util.subnodesOfType(result, FieldDeclaration.class);
     FieldDeclaration field = TestUtils.findByUniqueName(fields, "field");
@@ -87,19 +83,8 @@ class VariableResolverTest extends BaseTest {
   }
 
   @Test
-  void testLocalVarsCpp() throws ExecutionException, InterruptedException {
-    TranslationConfiguration config =
-        TranslationConfiguration.builder()
-            .sourceLocations(new File("src/test/resources/variables/local_variables.cpp"))
-            .topLevel(new File("src/test/resources/variables/"))
-            .defaultPasses()
-            .debugParser(true)
-            .failOnError(true)
-            .build();
-
-    TranslationManager analyzer = TranslationManager.builder().config(config).build();
-    List<TranslationUnitDeclaration> tu = analyzer.analyze().get().getTranslationUnits();
-
+  void testLocalVarsCpp() throws Exception {
+    List<TranslationUnitDeclaration> tu = TestUtils.analyze("cpp", topLevel, true);
     FunctionDeclaration function = tu.get(0).getDeclarationAs(2, FunctionDeclaration.class);
 
     assertEquals("testExpressionInExpressionList()int", function.getSignature());

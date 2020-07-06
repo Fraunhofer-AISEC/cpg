@@ -33,26 +33,21 @@ import static de.fraunhofer.aisec.cpg.helpers.Util.Edge.EXITS;
 import static de.fraunhofer.aisec.cpg.helpers.Util.Quantifier.ALL;
 import static de.fraunhofer.aisec.cpg.helpers.Util.Quantifier.ANY;
 import static de.fraunhofer.aisec.cpg.sarif.PhysicalLocation.locationLink;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 import de.fraunhofer.aisec.cpg.BaseTest;
-import de.fraunhofer.aisec.cpg.TranslationConfiguration;
-import de.fraunhofer.aisec.cpg.TranslationManager;
+import de.fraunhofer.aisec.cpg.TestUtils;
 import de.fraunhofer.aisec.cpg.frontends.TranslationException;
 import de.fraunhofer.aisec.cpg.graph.*;
 import de.fraunhofer.aisec.cpg.helpers.NodeComparator;
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker;
 import de.fraunhofer.aisec.cpg.helpers.Util;
-import de.fraunhofer.aisec.cpg.passes.CallResolver;
-import de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass;
 import de.fraunhofer.aisec.cpg.processing.IVisitor;
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy;
 import java.io.File;
-import java.util.ArrayList;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.Objects;
-import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Assertions;
@@ -70,12 +65,12 @@ class EOGTest extends BaseTest {
   public static String REFNODESTRINGCXX = "printf(\"\\n\");";
 
   @Test
-  void testJavaIf() throws TranslationException {
+  void testJavaIf() throws Exception {
     testIf("src/test/resources/cfg/If.java", REFNODESTRINGJAVA);
   }
 
   @Test
-  void testCppIf() throws TranslationException {
+  void testCppIf() throws Exception {
     testIf("src/test/resources/cfg/if.cpp", REFNODESTRINGCXX);
   }
 
@@ -87,7 +82,7 @@ class EOGTest extends BaseTest {
    *     file.
    * @throws TranslationException
    */
-  void testIf(String relPath, String refNodeString) throws TranslationException {
+  void testIf(String relPath, String refNodeString) throws Exception {
     List<Node> nodes = translateToNodes(relPath);
 
     // All BinaryOperators (including If conditions) have only one successor
@@ -167,7 +162,7 @@ class EOGTest extends BaseTest {
   }
 
   @Test
-  void testConditionShortCircuit() throws TransactionException {
+  void testConditionShortCircuit() throws Exception {
     List<Node> nodes = translateToNodes("src/test/resources/cfg/ShortCircuit.java");
 
     List<BinaryOperator> binaryOperators =
@@ -184,7 +179,7 @@ class EOGTest extends BaseTest {
   }
 
   @Test
-  void testJavaFor() throws TransactionException {
+  void testJavaFor() throws Exception {
     List<Node> nodes = translateToNodes("src/test/resources/cfg/ForLoop.java");
     List<Node> prints =
         nodes.stream()
@@ -214,7 +209,7 @@ class EOGTest extends BaseTest {
   }
 
   @Test
-  void testCPPFor() throws TransactionException {
+  void testCPPFor() throws Exception {
     List<Node> nodes = translateToNodes("src/test/resources/cfg/forloop.cpp");
     List<Node> prints =
         nodes.stream()
@@ -259,35 +254,38 @@ class EOGTest extends BaseTest {
    * @throws TransactionException
    */
   @Test
-  void testCPPCallGraph() throws TransactionException {
+  void testCPPCallGraph() throws Exception {
     List<Node> nodes = translateToNodes("src/test/resources/cg.cpp");
-    List<Node> calls =
-        nodes.stream().filter(node -> node instanceof CallExpression).collect(Collectors.toList());
+    List<CallExpression> calls = Util.subnodesOfType(nodes, CallExpression.class);
+    List<FunctionDeclaration> functions = Util.subnodesOfType(nodes, FunctionDeclaration.class);
+    FunctionDeclaration target;
 
-    CallExpression first =
-        (CallExpression) calls.stream().filter(c -> c.getName().equals("first")).findFirst().get();
-    assertEquals(1, first.getInvokes().size(), "Expected a call to a function");
+    CallExpression first = TestUtils.findByUniqueName(calls, "first");
+    target = TestUtils.findByUniqueName(functions, "first");
+    assertEquals(List.of(target), first.getInvokes());
 
-    CallExpression second =
-        (CallExpression) calls.stream().filter(c -> c.getName().equals("second")).findFirst().get();
-    assertEquals(1, second.getInvokes().size(), "Expected a call to a function");
+    CallExpression second = TestUtils.findByUniqueName(calls, "second");
+    target = TestUtils.findByUniqueName(functions, "second");
+    assertEquals(List.of(target), second.getInvokes());
 
-    CallExpression third =
-        (CallExpression) calls.stream().filter(c -> c.getName().equals("third")).findFirst().get();
-    assertEquals(1, second.getInvokes().size(), "Expected a call to a function");
+    CallExpression third = TestUtils.findByUniqueName(calls, "third");
+    target =
+        TestUtils.findByPredicate(
+            functions, f -> f.getName().equals("third") && f.getParameters().size() == 2);
+    assertEquals(List.of(target), third.getInvokes());
 
-    CallExpression fourth =
-        (CallExpression) calls.stream().filter(c -> c.getName().equals("fourth")).findFirst().get();
-    assertEquals(1, second.getInvokes().size(), "Expected a call to a function");
+    CallExpression fourth = TestUtils.findByUniqueName(calls, "fourth");
+    target = TestUtils.findByUniqueName(functions, "fourth");
+    assertEquals(List.of(target), fourth.getInvokes());
   }
 
   @Test
-  void testJavaLoops() throws TranslationException {
+  void testJavaLoops() throws Exception {
     testLoops("src/test/resources/cfg/Loops.java", "System.out.println();");
   }
 
   @Test
-  void testCppLoops() throws TranslationException {
+  void testCppLoops() throws Exception {
     testLoops("src/test/resources/cfg/loops.cpp", "printf(\"\\n\");");
   }
 
@@ -298,7 +296,7 @@ class EOGTest extends BaseTest {
    * @param refNodeString - Exact string of reference nodes, do not change/insert nodes in the test
    *     file.
    */
-  void testLoops(String relPath, String refNodeString) {
+  void testLoops(String relPath, String refNodeString) throws Exception {
     List<Node> nodes = translateToNodes(relPath);
 
     List<Node> prints =
@@ -363,7 +361,7 @@ class EOGTest extends BaseTest {
     assertTrue(Util.eogConnect(SUBTREE, EXITS, dostat, prints.get(2)));
   }
 
-  void testSwitch(String relPath, String refNodeString) throws TranslationException {
+  void testSwitch(String relPath, String refNodeString) throws Exception {
     List<Node> nodes = translateToNodes(relPath);
 
     List<FunctionDeclaration> functions =
@@ -460,22 +458,22 @@ class EOGTest extends BaseTest {
   }
 
   @Test
-  void testCppSwitch() throws TranslationException {
+  void testCppSwitch() throws Exception {
     testSwitch("src/test/resources/cfg/switch.cpp", REFNODESTRINGCXX);
   }
 
   @Test
-  void testJavaSwitch() throws TranslationException {
+  void testJavaSwitch() throws Exception {
     testSwitch("src/test/resources/cfg/Switch.java", REFNODESTRINGJAVA);
   }
 
   @Test
-  void testJavaBreakContinue() throws TranslationException {
+  void testJavaBreakContinue() throws Exception {
     testBreakContinue("src/test/resources/cfg/BreakContinue.java", "System.out.println();");
   }
 
   @Test
-  void testCppBreakContinue() throws TranslationException {
+  void testCppBreakContinue() throws Exception {
     testBreakContinue("src/test/resources/cfg/break_continue.cpp", "printf(\"\\n\");");
   }
 
@@ -487,7 +485,7 @@ class EOGTest extends BaseTest {
    *     file.
    * @throws TranslationException
    */
-  void testBreakContinue(String relPath, String refNodeString) throws TranslationException {
+  void testBreakContinue(String relPath, String refNodeString) throws Exception {
     List<Node> nodes = translateToNodes(relPath);
 
     List<Node> prints =
@@ -557,29 +555,12 @@ class EOGTest extends BaseTest {
    *
    * @param path - path for the file to test.
    */
-  private List<Node> translateToNodes(String path) {
-    TranslationManager manager =
-        TranslationManager.builder()
-            .config(
-                TranslationConfiguration.builder()
-                    .sourceLocations(new File(path))
-                    .registerPass(new EvaluationOrderGraphPass()) // creates EOG
-                    .registerPass(new CallResolver()) // creates CG
-                    .build())
-            .build();
-    List<TranslationUnitDeclaration> translationUnits = new ArrayList<>();
-    try {
-      translationUnits = manager.analyze().get().getTranslationUnits();
-    } catch (ExecutionException | InterruptedException e) {
-      e.printStackTrace();
-      Assertions.fail();
-    }
-
-    assertEquals(1, translationUnits.size());
-
-    Assertions.assertNotNull(translationUnits.get(0)); // Ensures that the test acan be parsed
-
-    List<Node> nodes = SubgraphWalker.flattenAST(translationUnits.get(0));
+  private List<Node> translateToNodes(String path) throws Exception {
+    File toTranslate = new File(path);
+    Path topLevel = toTranslate.getParentFile().toPath();
+    TranslationUnitDeclaration tu =
+        TestUtils.analyzeAndGetFirstTU(List.of(toTranslate), topLevel, true);
+    List<Node> nodes = SubgraphWalker.flattenAST(tu);
     // Todo until explicitly added Return Statements are either removed again or code and region set
     // properly
 

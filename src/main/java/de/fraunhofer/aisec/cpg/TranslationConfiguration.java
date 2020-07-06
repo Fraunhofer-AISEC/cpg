@@ -163,6 +163,17 @@ public class TranslationConfiguration {
       return this;
     }
 
+    /**
+     * Files or directories containing the source code to analyze
+     *
+     * @param sourceLocations
+     * @return
+     */
+    public Builder sourceLocations(List<File> sourceLocations) {
+      this.sourceLocations = sourceLocations;
+      return this;
+    }
+
     public Builder topLevel(File topLevel) {
       this.topLevel = topLevel;
       return this;
@@ -230,15 +241,17 @@ public class TranslationConfiguration {
      *
      * <p>This will register
      *
-     * <ul>
+     * <ol>
      *   <li>FilenameMapper
      *   <li>TypeHierarchyResolver
      *   <li>ImportResolver
      *   <li>VariableUsageResolver
-     *   <li>CallResolver()
+     *   <li>CallResolver
      *   <li>EvaluationOrderGraphPass
      *   <li>TypeResolver
-     * </ul>
+     * </ol>
+     *
+     * to be executed exactly in the specified order
      *
      * @return
      */

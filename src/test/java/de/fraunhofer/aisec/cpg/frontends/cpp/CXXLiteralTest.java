@@ -30,34 +30,25 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import de.fraunhofer.aisec.cpg.BaseTest;
-import de.fraunhofer.aisec.cpg.TranslationConfiguration;
-import de.fraunhofer.aisec.cpg.frontends.TranslationException;
+import de.fraunhofer.aisec.cpg.TestUtils;
 import de.fraunhofer.aisec.cpg.graph.*;
 import de.fraunhofer.aisec.cpg.graph.type.Type;
 import de.fraunhofer.aisec.cpg.graph.type.TypeParser;
-import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager;
 import java.io.File;
 import java.math.BigInteger;
+import java.util.List;
 import java.util.Objects;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
 class CXXLiteralTest extends BaseTest {
 
-  private TranslationConfiguration config;
-
-  @BeforeEach
-  void setUp() {
-    config = TranslationConfiguration.builder().defaultPasses().build();
-  }
-
   @Test
-  void testZeroIntegerLiterals() throws TranslationException {
+  void testZeroIntegerLiterals() throws Exception {
+    File file = new File("src/test/resources/integer_literals.cpp");
     TranslationUnitDeclaration tu =
-        new CXXLanguageFrontend(config, new ScopeManager())
-            .parse(new File("src/test/resources/integer_literals.cpp"));
+        TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true);
 
     FunctionDeclaration zero =
         tu.getDeclarationByName("zero", FunctionDeclaration.class).orElse(null);
@@ -75,10 +66,10 @@ class CXXLiteralTest extends BaseTest {
   }
 
   @Test
-  void testDecimalIntegerLiterals() throws TranslationException {
+  void testDecimalIntegerLiterals() throws Exception {
+    File file = new File("src/test/resources/integer_literals.cpp");
     TranslationUnitDeclaration tu =
-        new CXXLanguageFrontend(config, new ScopeManager())
-            .parse(new File("src/test/resources/integer_literals.cpp"));
+        TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true);
 
     FunctionDeclaration decimal =
         tu.getDeclarationByName("decimal", FunctionDeclaration.class).orElse(null);
@@ -113,10 +104,10 @@ class CXXLiteralTest extends BaseTest {
   }
 
   @Test
-  void testOctalIntegerLiterals() throws TranslationException {
+  void testOctalIntegerLiterals() throws Exception {
+    File file = new File("src/test/resources/integer_literals.cpp");
     TranslationUnitDeclaration tu =
-        new CXXLanguageFrontend(config, new ScopeManager())
-            .parse(new File("src/test/resources/integer_literals.cpp"));
+        TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true);
 
     FunctionDeclaration octal =
         tu.getDeclarationByName("octal", FunctionDeclaration.class).orElse(null);
@@ -134,10 +125,10 @@ class CXXLiteralTest extends BaseTest {
 
   @ParameterizedTest
   @ValueSource(strings = {"octal", "hex", "binary"})
-  void testNonDecimalIntegerLiterals() throws TranslationException {
+  void testNonDecimalIntegerLiterals() throws Exception {
+    File file = new File("src/test/resources/integer_literals.cpp");
     TranslationUnitDeclaration tu =
-        new CXXLanguageFrontend(config, new ScopeManager())
-            .parse(new File("src/test/resources/integer_literals.cpp"));
+        TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true);
 
     FunctionDeclaration functionDeclaration =
         tu.getDeclarationByName("hex", FunctionDeclaration.class).orElse(null);
@@ -154,10 +145,10 @@ class CXXLiteralTest extends BaseTest {
   }
 
   @Test
-  void testLargeNegativeNumber() throws TranslationException {
+  void testLargeNegativeNumber() throws Exception {
+    File file = new File("src/test/resources/largenegativenumber.cpp");
     TranslationUnitDeclaration tu =
-        new CXXLanguageFrontend(config, new ScopeManager())
-            .parse(new File("src/test/resources/largenegativenumber.cpp"));
+        TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true);
 
     FunctionDeclaration main =
         tu.getDeclarationByName("main", FunctionDeclaration.class).orElse(null);
@@ -206,7 +197,7 @@ class CXXLiteralTest extends BaseTest {
         functionDeclaration.getVariableDeclarationByName(name).orElse(null);
     assertNotNull(variableDeclaration);
 
-    Literal literal = variableDeclaration.getInitializerAs(Literal.class);
+    Literal<?> literal = variableDeclaration.getInitializerAs(Literal.class);
     assertNotNull(literal);
 
     assertEquals(expectedType, literal.getType());
