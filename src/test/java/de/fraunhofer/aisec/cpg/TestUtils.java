@@ -115,10 +115,7 @@ public class TestUtils {
   public static TranslationUnitDeclaration analyzeAndGetFirstTU(
       List<File> files, Path topLevel, boolean usePasses) throws Exception {
     List<TranslationUnitDeclaration> translationUnits = analyze(files, topLevel, usePasses);
-    return translationUnits.stream()
-        .filter(t -> !t.getName().equals("unknown declarations"))
-        .findFirst()
-        .orElseThrow();
+    return translationUnits.stream().findFirst().orElseThrow();
   }
 
   /**

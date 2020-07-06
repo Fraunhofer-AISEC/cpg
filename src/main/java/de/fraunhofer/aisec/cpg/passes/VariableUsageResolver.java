@@ -68,7 +68,6 @@ public class VariableUsageResolver extends Pass {
   private static final Logger log = LoggerFactory.getLogger(VariableUsageResolver.class);
   private Map<Type, List<Type>> superTypesMap = new HashMap<>();
   private Map<Type, RecordDeclaration> recordMap = new HashMap<>();
-  private Set<RecordDeclaration> unknownRecords = new HashSet<>();
   private Map<Type, EnumDeclaration> enumMap = new HashMap<>();
   private TranslationUnitDeclaration currTu;
   private ScopedWalker walker;
@@ -111,10 +110,6 @@ public class VariableUsageResolver extends Pass {
       walker.clearCallbacks();
       walker.registerHandler(this::resolveLocalVarUsage);
       walker.iterate(tu);
-    }
-    if (!unknownRecords.isEmpty()) {
-      TranslationUnitDeclaration unknownDeclarations = getUnknownDeclarationsTU(result);
-      unknownDeclarations.getDeclarations().addAll(unknownRecords);
     }
   }
 
@@ -182,7 +177,11 @@ public class VariableUsageResolver extends Pass {
     if (containingClass == null) {
       targets.add(handleUnknownMethod(functionName, reference.getType()));
     } else {
-      targets.add(handleUnknownClassMethod(containingClass, functionName, reference.getType()));
+      MethodDeclaration resolved =
+          handleUnknownClassMethod(containingClass, functionName, reference.getType());
+      if (resolved != null) {
+        targets.add(resolved);
+      }
     }
     return targets;
   }
@@ -367,12 +366,7 @@ public class VariableUsageResolver extends Pass {
 
   private FieldDeclaration handleUnknownField(Type base, String name, Type type) {
     if (!recordMap.containsKey(base)) {
-      RecordDeclaration dummy =
-          NodeBuilder.newRecordDeclaration(
-              base.getTypeName(), Type.UNKNOWN_TYPE_STRING, Type.UNKNOWN_TYPE_STRING);
-      dummy.setImplicit(true);
-      recordMap.put(base, dummy);
-      unknownRecords.add(dummy);
+      return null;
     }
     // fields.putIfAbsent(base, new ArrayList<>());
     List<FieldDeclaration> declarations = recordMap.get(base).getFields();
@@ -393,12 +387,7 @@ public class VariableUsageResolver extends Pass {
 
   private MethodDeclaration handleUnknownClassMethod(Type base, String name, Type type) {
     if (!recordMap.containsKey(base)) {
-      RecordDeclaration dummy =
-          NodeBuilder.newRecordDeclaration(
-              base.getTypeName(), Type.UNKNOWN_TYPE_STRING, Type.UNKNOWN_TYPE_STRING);
-      dummy.setImplicit(true);
-      recordMap.put(base, dummy);
-      unknownRecords.add(dummy);
+      return null;
     }
     RecordDeclaration containingRecord = recordMap.get(base);
     List<MethodDeclaration> declarations = containingRecord.getMethods();

@@ -28,9 +28,6 @@ package de.fraunhofer.aisec.cpg.passes;
 
 import de.fraunhofer.aisec.cpg.TranslationResult;
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
-import de.fraunhofer.aisec.cpg.graph.NodeBuilder;
-import de.fraunhofer.aisec.cpg.graph.TranslationUnitDeclaration;
-import java.util.Optional;
 import java.util.function.Consumer;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
@@ -59,30 +56,6 @@ public abstract class Pass implements Consumer<TranslationResult> {
   }
 
   public abstract void cleanup();
-
-  /**
-   * Get the {@link TranslationUnitDeclaration} that is to be used for grouping unknown
-   * declarations, e.g. dummy {@link de.fraunhofer.aisec.cpg.graph.RecordDeclaration} nodes. This TU
-   * should be unique, thus this method ensures that a new one is only created if needed.
-   *
-   * @param result The {@link TranslationResult} that should contain this translation unit
-   * @return The {@link TranslationUnitDeclaration} used for dummy declarations
-   */
-  TranslationUnitDeclaration getUnknownDeclarationsTU(TranslationResult result) {
-    Optional<TranslationUnitDeclaration> unknownDeclarations =
-        result.getTranslationUnits().stream()
-            .filter(tu -> tu.getName().equals("unknown declarations"))
-            .findFirst();
-    if (unknownDeclarations.isPresent()) {
-      return unknownDeclarations.get();
-    } else {
-      TranslationUnitDeclaration declaration =
-          NodeBuilder.newTranslationUnitDeclaration("unknown declarations", "");
-      declaration.setImplicit(true);
-      result.getTranslationUnits().add(declaration);
-      return declaration;
-    }
-  }
 
   /**
    * Specifies, whether this pass supports this particular language frontend. This defaults to
