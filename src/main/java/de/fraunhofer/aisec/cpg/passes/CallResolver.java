@@ -32,9 +32,10 @@ import de.fraunhofer.aisec.cpg.graph.*;
 import de.fraunhofer.aisec.cpg.graph.type.FunctionPointerType;
 import de.fraunhofer.aisec.cpg.graph.type.Type;
 import de.fraunhofer.aisec.cpg.graph.type.TypeParser;
-import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker;
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.ScopedWalker;
 import de.fraunhofer.aisec.cpg.helpers.Util;
+import de.fraunhofer.aisec.cpg.processing.IVisitor;
+import de.fraunhofer.aisec.cpg.processing.strategy.Strategy;
 import java.util.*;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -263,7 +264,13 @@ public class CallResolver extends Pass {
       if (curr instanceof CallExpression) {
         resolve(curr, curClass);
       } else {
-        SubgraphWalker.getAstChildren(curr).forEach(worklist::push);
+        curr.accept(
+            Strategy::AST_FORWARD,
+            new IVisitor<Node>() {
+              public void visit(ValueDeclaration t) {
+                worklist.push(t);
+              }
+            });
       }
     }
   }
