@@ -26,8 +26,7 @@
 
 package de.fraunhofer.aisec.cpg.frontends.cpp;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.*;
 
 import de.fraunhofer.aisec.cpg.BaseTest;
 import de.fraunhofer.aisec.cpg.TranslationConfiguration;
@@ -36,6 +35,7 @@ import de.fraunhofer.aisec.cpg.graph.*;
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager;
 import java.io.File;
 import java.util.Map;
+import java.util.Set;
 import org.junit.jupiter.api.Test;
 
 class CXXSymbolConfigurationTest extends BaseTest {
@@ -47,11 +47,11 @@ class CXXSymbolConfigurationTest extends BaseTest {
                 TranslationConfiguration.builder().defaultPasses().build(), new ScopeManager())
             .parse(new File("src/test/resources/symbols.cpp"));
 
-    FunctionDeclaration main =
-        tu.getDeclarationByName("main", FunctionDeclaration.class).orElse(null);
-    assertNotNull(main);
+    Set<FunctionDeclaration> main = tu.getDeclarationsByName("main", FunctionDeclaration.class);
+    assertFalse(main.isEmpty());
+    FunctionDeclaration funcDecl = main.iterator().next();
 
-    BinaryOperator binaryOperator = main.getBodyStatementAs(0, BinaryOperator.class);
+    BinaryOperator binaryOperator = funcDecl.getBodyStatementAs(0, BinaryOperator.class);
     assertNotNull(binaryOperator);
 
     // without additional symbols, the first line will look like a reference (to something we do not
@@ -60,7 +60,7 @@ class CXXSymbolConfigurationTest extends BaseTest {
     assertNotNull(dre);
     assertEquals("HELLO_WORLD", dre.getName());
 
-    binaryOperator = main.getBodyStatementAs(1, BinaryOperator.class);
+    binaryOperator = funcDecl.getBodyStatementAs(1, BinaryOperator.class);
     assertNotNull(binaryOperator);
 
     // without additional symbols, the second line will look like a function call (to something we
@@ -85,18 +85,18 @@ class CXXSymbolConfigurationTest extends BaseTest {
                 new ScopeManager())
             .parse(new File("src/test/resources/symbols.cpp"));
 
-    FunctionDeclaration main =
-        tu.getDeclarationByName("main", FunctionDeclaration.class).orElse(null);
-    assertNotNull(main);
+    Set<FunctionDeclaration> main = tu.getDeclarationsByName("main", FunctionDeclaration.class);
+    assertFalse(main.isEmpty());
+    FunctionDeclaration funcDecl = main.iterator().next();
 
-    BinaryOperator binaryOperator = main.getBodyStatementAs(0, BinaryOperator.class);
+    BinaryOperator binaryOperator = funcDecl.getBodyStatementAs(0, BinaryOperator.class);
     assertNotNull(binaryOperator);
 
     // should be a literal now
     Literal<?> literal = binaryOperator.getRhsAs(Literal.class);
     assertEquals("Hello World", literal.getValue());
 
-    binaryOperator = main.getBodyStatementAs(1, BinaryOperator.class);
+    binaryOperator = funcDecl.getBodyStatementAs(1, BinaryOperator.class);
     assertNotNull(binaryOperator);
 
     // should be expanded to another binary operation 1+1

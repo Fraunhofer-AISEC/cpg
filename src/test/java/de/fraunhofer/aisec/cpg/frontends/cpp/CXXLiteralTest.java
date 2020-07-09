@@ -26,8 +26,7 @@
 
 package de.fraunhofer.aisec.cpg.frontends.cpp;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.*;
 
 import de.fraunhofer.aisec.cpg.BaseTest;
 import de.fraunhofer.aisec.cpg.TestUtils;
@@ -38,6 +37,7 @@ import java.io.File;
 import java.math.BigInteger;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -50,18 +50,19 @@ class CXXLiteralTest extends BaseTest {
     TranslationUnitDeclaration tu =
         TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true);
 
-    FunctionDeclaration zero =
-        tu.getDeclarationByName("zero", FunctionDeclaration.class).orElse(null);
-    assertNotNull(zero);
-    assertEquals("zero", zero.getName());
+    Set<FunctionDeclaration> zero = tu.getDeclarationsByName("zero", FunctionDeclaration.class);
+    assertFalse(zero.isEmpty());
+    FunctionDeclaration funcDecl = zero.iterator().next();
+    assertEquals("zero", funcDecl.getName());
 
-    assertLiteral(0, TypeParser.createFrom("int", true), zero, "i");
-    assertLiteral(0L, TypeParser.createFrom("long", true), zero, "l_with_suffix");
-    assertLiteral(0L, TypeParser.createFrom("long long", true), zero, "l_long_long_with_suffix");
+    assertLiteral(0, TypeParser.createFrom("int", true), funcDecl, "i");
+    assertLiteral(0L, TypeParser.createFrom("long", true), funcDecl, "l_with_suffix");
+    assertLiteral(
+        0L, TypeParser.createFrom("long long", true), funcDecl, "l_long_long_with_suffix");
     assertLiteral(
         BigInteger.valueOf(0),
         TypeParser.createFrom("unsigned long long", true),
-        zero,
+        funcDecl,
         "l_unsigned_long_long_with_suffix");
   }
 
@@ -71,35 +72,36 @@ class CXXLiteralTest extends BaseTest {
     TranslationUnitDeclaration tu =
         TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true);
 
-    FunctionDeclaration decimal =
-        tu.getDeclarationByName("decimal", FunctionDeclaration.class).orElse(null);
-    assertNotNull(decimal);
-    assertEquals("decimal", decimal.getName());
+    Set<FunctionDeclaration> decimal =
+        tu.getDeclarationsByName("decimal", FunctionDeclaration.class);
+    assertFalse(decimal.isEmpty());
+    FunctionDeclaration funcDecl = decimal.iterator().next();
+    assertEquals("decimal", funcDecl.getName());
 
-    assertLiteral(42, TypeParser.createFrom("int", true), decimal, "i");
-    assertLiteral(9223372036854775807L, TypeParser.createFrom("long", true), decimal, "l");
+    assertLiteral(42, TypeParser.createFrom("int", true), funcDecl, "i");
+    assertLiteral(9223372036854775807L, TypeParser.createFrom("long", true), funcDecl, "l");
     assertLiteral(
-        9223372036854775807L, TypeParser.createFrom("long", true), decimal, "l_with_suffix");
+        9223372036854775807L, TypeParser.createFrom("long", true), funcDecl, "l_with_suffix");
     assertLiteral(
         9223372036854775807L,
         TypeParser.createFrom("long long", true),
-        decimal,
+        funcDecl,
         "l_long_long_with_suffix");
 
     assertLiteral(
         new BigInteger("9223372036854775809"),
         TypeParser.createFrom("unsigned long", true),
-        decimal,
+        funcDecl,
         "l_unsigned_long_with_suffix");
     assertLiteral(
         new BigInteger("9223372036854775808"),
         TypeParser.createFrom("unsigned long long", true),
-        decimal,
+        funcDecl,
         "l_long_long_implicit");
     assertLiteral(
         new BigInteger("9223372036854775809"),
         TypeParser.createFrom("unsigned long long", true),
-        decimal,
+        funcDecl,
         "l_unsigned_long_long_with_suffix");
   }
 
@@ -109,17 +111,17 @@ class CXXLiteralTest extends BaseTest {
     TranslationUnitDeclaration tu =
         TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true);
 
-    FunctionDeclaration octal =
-        tu.getDeclarationByName("octal", FunctionDeclaration.class).orElse(null);
-    assertNotNull(octal);
-    assertEquals("octal", octal.getName());
+    Set<FunctionDeclaration> octal = tu.getDeclarationsByName("octal", FunctionDeclaration.class);
+    assertFalse(octal.isEmpty());
+    FunctionDeclaration funcDecl = octal.iterator().next();
+    assertEquals("octal", funcDecl.getName());
 
-    assertLiteral(42, TypeParser.createFrom("int", true), octal, "i");
-    assertLiteral(42L, TypeParser.createFrom("long", true), octal, "l_with_suffix");
+    assertLiteral(42, TypeParser.createFrom("int", true), funcDecl, "i");
+    assertLiteral(42L, TypeParser.createFrom("long", true), funcDecl, "l_with_suffix");
     assertLiteral(
         BigInteger.valueOf(42),
         TypeParser.createFrom("unsigned long long", true),
-        octal,
+        funcDecl,
         "l_unsigned_long_long_with_suffix");
   }
 
@@ -130,17 +132,17 @@ class CXXLiteralTest extends BaseTest {
     TranslationUnitDeclaration tu =
         TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true);
 
-    FunctionDeclaration functionDeclaration =
-        tu.getDeclarationByName("hex", FunctionDeclaration.class).orElse(null);
-    assertNotNull(functionDeclaration);
-    assertEquals("hex", functionDeclaration.getName());
+    Set<FunctionDeclaration> hex = tu.getDeclarationsByName("hex", FunctionDeclaration.class);
+    assertFalse(hex.isEmpty());
+    FunctionDeclaration funcDecl = hex.iterator().next();
+    assertEquals("hex", funcDecl.getName());
 
-    assertLiteral(42, TypeParser.createFrom("int", true), functionDeclaration, "i");
-    assertLiteral(42L, TypeParser.createFrom("long", true), functionDeclaration, "l_with_suffix");
+    assertLiteral(42, TypeParser.createFrom("int", true), funcDecl, "i");
+    assertLiteral(42L, TypeParser.createFrom("long", true), funcDecl, "l_with_suffix");
     assertLiteral(
         BigInteger.valueOf(42),
         TypeParser.createFrom("unsigned long long", true),
-        functionDeclaration,
+        funcDecl,
         "l_unsigned_long_long_with_suffix");
   }
 
@@ -150,11 +152,11 @@ class CXXLiteralTest extends BaseTest {
     TranslationUnitDeclaration tu =
         TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true);
 
-    FunctionDeclaration main =
-        tu.getDeclarationByName("main", FunctionDeclaration.class).orElse(null);
-    assertNotNull(main);
+    Set<FunctionDeclaration> main = tu.getDeclarationsByName("main", FunctionDeclaration.class);
+    assertFalse(main.isEmpty());
+    FunctionDeclaration funcDecl = main.iterator().next();
 
-    VariableDeclaration a = main.getVariableDeclarationByName("a").orElse(null);
+    VariableDeclaration a = funcDecl.getVariableDeclarationByName("a").orElse(null);
     assertNotNull(a);
     assertEquals(
         1,
@@ -166,21 +168,21 @@ class CXXLiteralTest extends BaseTest {
     // in an integer, it should be automatically converted to a long. The resulting value
     // -2147483648 however is small enough to fit into an int, so it is ok for the variable a to
     // have an int type
-    VariableDeclaration b = main.getVariableDeclarationByName("b").orElse(null);
+    VariableDeclaration b = funcDecl.getVariableDeclarationByName("b").orElse(null);
     assertNotNull(b);
     assertEquals(
         2147483648L,
         ((Literal) Objects.requireNonNull(b.getInitializerAs(UnaryOperator.class)).getInput())
             .getValue());
 
-    VariableDeclaration c = main.getVariableDeclarationByName("c").orElse(null);
+    VariableDeclaration c = funcDecl.getVariableDeclarationByName("c").orElse(null);
     assertNotNull(c);
     assertEquals(
         2147483649L,
         ((Literal) Objects.requireNonNull(c.getInitializerAs(UnaryOperator.class)).getInput())
             .getValue());
 
-    VariableDeclaration d = main.getVariableDeclarationByName("d").orElse(null);
+    VariableDeclaration d = funcDecl.getVariableDeclarationByName("d").orElse(null);
     assertNotNull(d);
     assertEquals(
         new BigInteger("9223372036854775808"),

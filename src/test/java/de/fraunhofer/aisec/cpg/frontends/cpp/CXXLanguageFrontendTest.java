@@ -42,6 +42,7 @@ import java.io.File;
 import java.nio.file.Path;
 import java.util.*;
 import java.util.stream.Collectors;
+import org.checkerframework.checker.nullness.qual.NonNull;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -56,16 +57,17 @@ class CXXLanguageFrontendTest extends BaseTest {
     TranslationUnitDeclaration tu =
         TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true);
 
-    FunctionDeclaration main =
-        tu.getDeclarationByName("main", FunctionDeclaration.class).orElse(null);
-    assertNotNull(main);
+    @NonNull
+    Set<FunctionDeclaration> main = tu.getDeclarationsByName("main", FunctionDeclaration.class);
+    assertFalse(main.isEmpty());
 
-    VariableDeclaration ls = main.getVariableDeclarationByName("ls").orElse(null);
+    FunctionDeclaration decl = main.iterator().next();
+    VariableDeclaration ls = decl.getVariableDeclarationByName("ls").orElse(null);
     assertNotNull(ls);
     assertEquals(TypeParser.createFrom("std::vector<int>", true), ls.getType());
     assertEquals("ls", ls.getName());
 
-    ForEachStatement forEachStatement = main.getBodyStatementAs(1, ForEachStatement.class);
+    ForEachStatement forEachStatement = decl.getBodyStatementAs(1, ForEachStatement.class);
     assertNotNull(forEachStatement);
 
     // should loop over ls
@@ -85,11 +87,10 @@ class CXXLanguageFrontendTest extends BaseTest {
     TranslationUnitDeclaration tu =
         TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true);
 
-    FunctionDeclaration main =
-        tu.getDeclarationByName("main", FunctionDeclaration.class).orElse(null);
-    assertNotNull(main);
+    Set<FunctionDeclaration> main = tu.getDeclarationsByName("main", FunctionDeclaration.class);
+    assertFalse(main.isEmpty());
 
-    TryStatement tryStatement = main.getBodyStatementAs(0, TryStatement.class);
+    TryStatement tryStatement = main.iterator().next().getBodyStatementAs(0, TryStatement.class);
     assertNotNull(tryStatement);
 
     List<CatchClause> catchClauses = tryStatement.getCatchClauses();
@@ -120,11 +121,11 @@ class CXXLanguageFrontendTest extends BaseTest {
     TranslationUnitDeclaration tu =
         TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true);
 
-    FunctionDeclaration main =
-        tu.getDeclarationByName("main", FunctionDeclaration.class).orElse(null);
+    Set<FunctionDeclaration> main = tu.getDeclarationsByName("main", FunctionDeclaration.class);
     assertNotNull(main);
 
-    VariableDeclaration i = main.getVariableDeclarationByName("i").orElse(null);
+    FunctionDeclaration funcDecl = main.iterator().next();
+    VariableDeclaration i = funcDecl.getVariableDeclarationByName("i").orElse(null);
     assertNotNull(i);
 
     TypeIdExpression sizeof = (TypeIdExpression) i.getInitializer();
@@ -132,7 +133,7 @@ class CXXLanguageFrontendTest extends BaseTest {
     assertEquals("sizeof", sizeof.getName());
     assertEquals(TypeParser.createFrom("std::size_t", true), sizeof.getType());
 
-    VariableDeclaration typeInfo = main.getVariableDeclarationByName("typeInfo").orElse(null);
+    VariableDeclaration typeInfo = funcDecl.getVariableDeclarationByName("typeInfo").orElse(null);
     assertNotNull(typeInfo);
 
     TypeIdExpression typeid = (TypeIdExpression) typeInfo.getInitializer();
@@ -140,7 +141,7 @@ class CXXLanguageFrontendTest extends BaseTest {
     assertEquals("typeid", typeid.getName());
     assertEquals(TypeParser.createFrom("const std::type_info&", true), typeid.getType());
 
-    VariableDeclaration j = main.getVariableDeclarationByName("j").orElse(null);
+    VariableDeclaration j = funcDecl.getVariableDeclarationByName("j").orElse(null);
     assertNotNull(j);
 
     TypeIdExpression alignof = (TypeIdExpression) j.getInitializer();
@@ -1033,11 +1034,10 @@ class CXXLanguageFrontendTest extends BaseTest {
     TranslationUnitDeclaration tu =
         TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true);
 
-    FunctionDeclaration main =
-        tu.getDeclarationByName("main", FunctionDeclaration.class).orElse(null);
-    assertNotNull(main);
+    Set<FunctionDeclaration> main = tu.getDeclarationsByName("main", FunctionDeclaration.class);
+    assertFalse(main.isEmpty());
 
-    PhysicalLocation location = main.getLocation();
+    PhysicalLocation location = main.iterator().next().getLocation();
 
     assertNotNull(location);
 
