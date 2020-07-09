@@ -50,7 +50,7 @@ public class MemberExpression extends Expression implements TypeListener {
    * Is this reference used for writing data instead of just reading it? Determines dataflow
    * direction
    */
-  private boolean writingAccess = false;
+  private AccessValues access = AccessValues.READ;
 
   @NonNull
   public Node getBase() {
@@ -72,9 +72,12 @@ public class MemberExpression extends Expression implements TypeListener {
     if (this.member instanceof HasType) {
       ((HasType) this.member).unregisterTypeListener(this);
     }
-    if (this.writingAccess) {
+    if (this.access == AccessValues.WRITE) {
       this.removeNextDFG(this.member);
+    } else if (this.access == AccessValues.READ) {
+      this.removePrevDFG(this.member);
     } else {
+      this.removeNextDFG(this.member);
       this.removePrevDFG(this.member);
     }
 
@@ -86,9 +89,12 @@ public class MemberExpression extends Expression implements TypeListener {
     if (member instanceof TypeListener) {
       registerTypeListener((TypeListener) member);
     }
-    if (this.writingAccess) {
+    if (this.access == AccessValues.WRITE) {
       this.addNextDFG(this.member);
+    } else if (this.access == AccessValues.READ) {
+      this.addPrevDFG(this.member);
     } else {
+      this.addNextDFG(this.member);
       this.addPrevDFG(this.member);
     }
   }
@@ -118,24 +124,26 @@ public class MemberExpression extends Expression implements TypeListener {
         .toString();
   }
 
-  public void setWritingAccess(boolean writingAccess) {
-    if (this.writingAccess) {
+  public void setAccess(AccessValues access) {
+    if (this.access == AccessValues.WRITE) {
       this.removeNextDFG(this.member);
+    } else if (this.access == AccessValues.READ) {
+      this.removePrevDFG(this.member);
     } else {
+      this.removeNextDFG(this.member);
       this.removePrevDFG(this.member);
     }
 
-    this.writingAccess = writingAccess;
+    this.access = access;
 
-    if (this.writingAccess) {
+    if (this.access == AccessValues.WRITE) {
       this.addNextDFG(this.member);
+    } else if (this.access == AccessValues.READ) {
+      this.addPrevDFG(this.member);
     } else {
+      this.addNextDFG(this.member);
       this.addPrevDFG(this.member);
     }
-  }
-
-  public boolean isWritingAccess() {
-    return writingAccess;
   }
 
   @Override

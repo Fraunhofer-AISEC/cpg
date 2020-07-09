@@ -30,9 +30,11 @@ import de.fraunhofer.aisec.cpg.graph.HasType.TypeListener;
 import de.fraunhofer.aisec.cpg.graph.type.Type;
 import de.fraunhofer.aisec.cpg.graph.type.TypeParser;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import org.apache.commons.lang3.builder.ToStringBuilder;
+import org.neo4j.ogm.annotation.Transient;
 
 /**
  * A binary operation expression, such as "a + b". It consists of a left hand expression (lhs), a
@@ -50,6 +52,11 @@ public class BinaryOperator extends Expression implements TypeListener {
 
   /** The operator code. */
   private String operatorCode;
+
+  /** Required for compound BinaryOperators. This should not be stored in the graph */
+  @Transient
+  private final List<String> compoundOperators =
+      List.of("*=", "/=", "%=", "+=", "-=", "<<=", ">>=", "&=", "^=", "|=");
 
   public Expression getLhs() {
     return lhs;
@@ -74,19 +81,30 @@ public class BinaryOperator extends Expression implements TypeListener {
     if ("=".equals(operatorCode)) {
       if (lhs instanceof DeclaredReferenceExpression) {
         // declared reference expr is the left hand side of an assignment -> writing to the var
-        ((DeclaredReferenceExpression) lhs).setWritingAccess(true);
+        ((DeclaredReferenceExpression) lhs).setAccess(AccessValues.WRITE);
       } else if (lhs instanceof MemberExpression) {
-        ((MemberExpression) lhs).setWritingAccess(true);
+        ((MemberExpression) lhs).setAccess(AccessValues.WRITE);
       }
       if (lhs instanceof TypeListener) {
         this.registerTypeListener((TypeListener) lhs);
+        this.registerTypeListener((TypeListener) this.lhs);
       }
       if (this.rhs != null) {
         lhs.addPrevDFG(rhs);
       }
+    } else if (compoundOperators.contains(operatorCode)) {
+      if (lhs instanceof DeclaredReferenceExpression) {
+        // declared reference expr is the left hand side of an assignment -> writing to the var
+        ((DeclaredReferenceExpression) lhs).setAccess(AccessValues.READWRITE);
+      } else if (lhs instanceof MemberExpression) {
+        ((MemberExpression) lhs).setAccess(AccessValues.READWRITE);
+      }
       if (lhs instanceof TypeListener) {
+        this.registerTypeListener((TypeListener) lhs);
         this.registerTypeListener((TypeListener) this.lhs);
       }
+      this.addPrevDFG(lhs);
+      this.addNextDFG(lhs);
     } else {
       this.addPrevDFG(lhs);
     }
@@ -104,6 +122,9 @@ public class BinaryOperator extends Expression implements TypeListener {
       if (this.lhs instanceof TypeListener) {
         this.unregisterTypeListener((TypeListener) this.lhs);
       }
+    } else if (compoundOperators.contains(operatorCode)) {
+      this.removePrevDFG(this.lhs);
+      this.removeNextDFG(this.lhs);
     } else {
       this.removePrevDFG(this.lhs);
     }
