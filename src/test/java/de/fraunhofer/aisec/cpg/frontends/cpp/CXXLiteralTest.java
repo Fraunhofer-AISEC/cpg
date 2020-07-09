@@ -133,7 +133,7 @@ class CXXLiteralTest extends BaseTest {
         TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true);
 
     Set<FunctionDeclaration> hex = tu.getDeclarationsByName("hex", FunctionDeclaration.class);
-    assertNotNull(hex.isEmpty());
+    assertFalse(hex.isEmpty());
     FunctionDeclaration funcDecl = hex.iterator().next();
     assertEquals("hex", funcDecl.getName());
 
