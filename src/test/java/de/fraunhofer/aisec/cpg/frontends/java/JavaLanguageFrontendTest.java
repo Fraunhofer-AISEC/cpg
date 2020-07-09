@@ -35,6 +35,8 @@ import de.fraunhofer.aisec.cpg.graph.type.TypeParser;
 import de.fraunhofer.aisec.cpg.helpers.NodeComparator;
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker;
 import de.fraunhofer.aisec.cpg.helpers.Util;
+import de.fraunhofer.aisec.cpg.processing.IVisitor;
+import de.fraunhofer.aisec.cpg.processing.strategy.Strategy;
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation;
 import de.fraunhofer.aisec.cpg.sarif.Region;
 import java.io.File;
@@ -459,6 +461,26 @@ class JavaLanguageFrontendTest extends BaseTest {
     assertNotNull(length);
     assertEquals("length", length.getMember().getName());
     assertEquals("int", length.getType().getTypeName());
+  }
+
+  @Test
+  void testMemberCallExpressions() throws Exception {
+    File file = new File("src/test/resources/compiling/MemberCallExpression.java");
+    TranslationUnitDeclaration tu =
+        TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true);
+
+    assertNotNull(tu);
+
+    // Simply count MemberCallExpressions
+    final int[] count = {0};
+    tu.accept(
+        Strategy::AST_FORWARD,
+        new IVisitor<Node>() {
+          public void visit(MemberCallExpression ex) {
+            count[0]++;
+          }
+        });
+    assertEquals(6, count[0]);
   }
 
   @Test

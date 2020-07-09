@@ -68,11 +68,29 @@ public class UnaryOperator extends Expression implements TypeListener {
     if (this.input != null) {
       this.input.unregisterTypeListener(this);
       this.removePrevDFG(this.input);
+      this.removeNextDFG(this.input);
     }
     this.input = input;
     if (input != null) {
       input.registerTypeListener(this);
       this.addPrevDFG(input);
+      if (this.operatorCode.equals("++") || this.operatorCode.equals("--")) {
+        this.addNextDFG(input);
+      }
+      changeExpressionAccess();
+    }
+  }
+
+  private void changeExpressionAccess() {
+    AccessValues access = AccessValues.READ;
+    if (this.operatorCode.equals("++") || this.operatorCode.equals("--")) {
+      access = AccessValues.READWRITE;
+    }
+
+    if (this.input instanceof DeclaredReferenceExpression) {
+      ((DeclaredReferenceExpression) this.input).setAccess(access);
+    } else if (this.input instanceof MemberExpression) {
+      ((MemberExpression) this.input).setAccess(access);
     }
   }
 
@@ -104,6 +122,7 @@ public class UnaryOperator extends Expression implements TypeListener {
 
   public void setOperatorCode(String operatorCode) {
     this.operatorCode = operatorCode;
+    changeExpressionAccess();
   }
 
   public boolean isPostfix() {
