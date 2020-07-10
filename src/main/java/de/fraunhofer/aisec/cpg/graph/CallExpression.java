@@ -111,7 +111,11 @@ public class CallExpression extends Expression implements TypeListener {
   @Override
   public void typeChanged(HasType src, HasType root, Type oldType) {
     if (src == base) {
-      setFqn(src.getType().getTypeName() + "." + this.getName());
+      if (src.getType() instanceof PointerType) {
+        setFqn(((PointerType) src.getType()).getElementType().getTypeName() + "." + this.getName());
+      } else {
+        setFqn(src.getType().getTypeName() + "." + this.getName());
+      }
     } else {
       Type previous = this.type;
       List<Type> types =

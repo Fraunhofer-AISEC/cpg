@@ -392,14 +392,15 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
 
     CallExpression callExpression;
     if (reference instanceof MemberExpression) {
-      String baseTypename =
-          ((Expression) ((MemberExpression) reference).getBase()).getType().getTypeName();
-      // FIXME this is only true if we are in a namespace! If we are in a class, this is wrong!
-      //  happens again in l398
-      // String fullNamePrefix = lang.getScopeManager().getFullNamePrefix();
-      // if (!fullNamePrefix.isEmpty()) {
-      //  baseTypename = fullNamePrefix + "." + baseTypename;
-      // }
+      String baseTypename;
+      // Pointer types contain * or []. We do not want that here.
+      Type baseType = ((Expression) ((MemberExpression) reference).getBase()).getType();
+      if (baseType instanceof PointerType) {
+        baseTypename = (((PointerType) baseType).getElementType().getTypeName());
+      } else {
+        baseTypename = baseType.getTypeName();
+      }
+
       callExpression =
           NodeBuilder.newMemberCallExpression(
               ((MemberExpression) reference).getMember().getName(),
