@@ -435,6 +435,10 @@
     "allDeclaredMethods": true
   },
   {
+    "name": "de.fraunhofer.aisec.cpg.passes.CallResolver$1",
+    "allDeclaredMethods": true
+  },
+  {
     "name": "de.fraunhofer.aisec.cpg.helpers.LocationConverter",
     "methods": [
       {
