@@ -1,8 +1,9 @@
 {
   "resources":[
-    {"pattern":"META-INF/org/apache/logging/log4j/core/config/plugins/Log4j2Plugins.dat"},
-    {"pattern":"META-INF/services/org.apache.logging.log4j.spi.Provider"},
-    {"pattern":"META-INF/services/org.apache.logging.log4j.util.PropertySource"},
-    {"pattern":"org/slf4j/impl/StaticLoggerBinder.class"}
-  ]
+    {"pattern":"\\QMETA-INF/org/apache/logging/log4j/core/config/plugins/Log4j2Plugins.dat\\E"},
+    {"pattern":"\\QMETA-INF/services/org.apache.logging.log4j.spi.Provider\\E"},
+    {"pattern":"\\QMETA-INF/services/org.apache.logging.log4j.util.PropertySource\\E"},
+    {"pattern":"\\QMETA-INF/services/org.slf4j.spi.SLF4JServiceProvider\\E"}
+  ],
+  "bundles":[]
 }
