@@ -258,13 +258,23 @@ public class CXXLanguageFrontend extends LanguageFrontend {
           translationUnitRawSignature = (AbstractCharArray) fSource.get(locCtx);
         } catch (ReflectiveOperationException | ClassCastException | NullPointerException e) {
           LOGGER.warn(
-              "Reflective retrieval of AST node source failed. Must go the official but costly route via getRawSignature(). Watch your heap!");
-          translationUnitRawSignature = new CharArray(node.getTranslationUnit().getRawSignature());
+              "Reflective retrieval of AST node source failed. Cannot reliably determine content of the file that contains the node");
+          return null;
         }
 
         // Get start column by stepping backwards from begin of node to first occurrence of '\n'
         int startColumn = 1;
         for (int i = node.getFileLocation().getNodeOffset() - 1; i > 1; i--) {
+          if (i >= translationUnitRawSignature.getLength()) {
+            // Fail gracefully, so that we can at least find out why this fails
+            LOGGER.warn(
+                "Requested index {} exceeds length of translation unit code ({})",
+                i,
+                translationUnitRawSignature.getLength());
+
+            return null;
+          }
+
           if (translationUnitRawSignature.get(i) == '\n') {
             break;
           }
