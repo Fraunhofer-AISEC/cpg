@@ -35,7 +35,6 @@ import de.fraunhofer.aisec.cpg.graph.type.Type;
 import de.fraunhofer.aisec.cpg.graph.type.TypeParser;
 import java.util.ArrayList;
 import java.util.List;
-import org.eclipse.cdt.core.dom.ast.IASTDeclSpecifier;
 import org.eclipse.cdt.core.dom.ast.IASTDeclaration;
 import org.eclipse.cdt.core.dom.ast.IASTDeclarator;
 import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTSimpleDeclaration;
@@ -58,12 +57,10 @@ class DeclarationListHandler
       ValueDeclaration declaration =
           (ValueDeclaration) this.lang.getDeclaratorHandler().handle(declarator);
 
-      IASTDeclSpecifier declSpecifier = ctx.getDeclSpecifier();
-
       String typeString;
       if (declaration instanceof FunctionDeclaration) {
         // if it is a function definition, we are only interested in the return type
-        typeString = ctx.getRawSignature().split("[ ]")[0];
+        typeString = ctx.getRawSignature().split(declaration.getName())[0].trim();
       } else if (declaration instanceof VariableDeclaration) {
         // if it is a variable declaration, we are only interested in the declaration, not the
         // initializer (if any)
