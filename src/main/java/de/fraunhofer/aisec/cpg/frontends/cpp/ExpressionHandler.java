@@ -31,10 +31,7 @@ import static de.fraunhofer.aisec.cpg.helpers.Util.warnWithFileLocation;
 
 import de.fraunhofer.aisec.cpg.frontends.Handler;
 import de.fraunhofer.aisec.cpg.graph.*;
-import de.fraunhofer.aisec.cpg.graph.type.PointerType;
-import de.fraunhofer.aisec.cpg.graph.type.Type;
-import de.fraunhofer.aisec.cpg.graph.type.TypeParser;
-import de.fraunhofer.aisec.cpg.graph.type.UnknownType;
+import de.fraunhofer.aisec.cpg.graph.type.*;
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
@@ -394,12 +391,9 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
     if (reference instanceof MemberExpression) {
       String baseTypename;
       // Pointer types contain * or []. We do not want that here.
-      Type baseType = ((Expression) ((MemberExpression) reference).getBase()).getType();
-      if (baseType instanceof PointerType) {
-        baseTypename = (((PointerType) baseType).getElementType().getTypeName());
-      } else {
-        baseTypename = baseType.getTypeName();
-      }
+      Type baseType = ((Expression) ((MemberExpression) reference).getBase()).getType().getRoot();
+      assert !(baseType instanceof SecondOrderType);
+      baseTypename = baseType.getTypeName();
 
       callExpression =
           NodeBuilder.newMemberCallExpression(
