@@ -219,7 +219,7 @@ public class TypeParser {
   }
 
   private static boolean isUnknownType(String typeName) {
-    return typeName.toUpperCase().contains(UNKNOWN_TYPE_STRING);
+    return typeName.equals(UNKNOWN_TYPE_STRING);
   }
 
   /**
