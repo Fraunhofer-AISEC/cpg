@@ -55,7 +55,7 @@ class DeclarationListHandler
       ValueDeclaration declaration =
           (ValueDeclaration) this.lang.getDeclaratorHandler().handle(declarator);
 
-      Type result = TypeParser.createFrom(ctx.getRawSignature(), true);
+      Type result = TypeParser.createFrom(ctx.getDeclSpecifier().toString(), true);
       declaration.setType(result);
 
       // cache binding
