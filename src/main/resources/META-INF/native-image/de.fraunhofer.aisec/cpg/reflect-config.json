@@ -1,0 +1,10 @@
+[
+  {
+    "name": "org.eclipse.cdt.internal.core.parser.scanner.ASTFileLocation",
+    "allDeclaredFields": true
+  },
+  {
+    "name": "org.eclipse.cdt.internal.core.parser.scanner.LocationCtxContainer",
+    "allDeclaredFields": true
+  }
+]
