@@ -116,7 +116,7 @@ public class TypeResolver extends Pass {
     firstOrderTypes.addAll(typeManager.getFirstOrderTypes());
 
     // Propagate new firstOrderTypes into secondOrderTypes
-    List<Type> secondOrderTypes = typeManager.getSecondOrderTypes();
+    Set<Type> secondOrderTypes = typeManager.getSecondOrderTypes();
     for (Type t : secondOrderTypes) {
       Type root = t.getRoot();
       Type newRoot = root;
@@ -146,7 +146,7 @@ public class TypeResolver extends Pass {
   }
 
   /**
-   * Visits all FirstOrderTypes and replace all the fields like returnVal or paramteres for
+   * Visits all FirstOrderTypes and replace all the fields like returnVal or parameters for
    * FunctionPointertype or Generics for ObjectType
    *
    * @param t FirstOrderType

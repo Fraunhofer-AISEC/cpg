@@ -60,8 +60,8 @@ public class TypeManager {
   private Map<Type, List<Type>> typeState =
       new HashMap<>(); // Stores all the unique types ObjectType as Key and Reference-/PointerTypes
   // as Values
-  private List<Type> firstOrderTypes = new ArrayList<>();
-  private List<Type> secondOrderTypes = new ArrayList<>();
+  private Set<Type> firstOrderTypes = new HashSet<>();
+  private Set<Type> secondOrderTypes = new HashSet<>();
   private LanguageFrontend frontend;
   private boolean noFrontendWarningIssued = false;
 
@@ -83,11 +83,11 @@ public class TypeManager {
     return t;
   }
 
-  public List<Type> getFirstOrderTypes() {
+  public Set<Type> getFirstOrderTypes() {
     return firstOrderTypes;
   }
 
-  public List<Type> getSecondOrderTypes() {
+  public Set<Type> getSecondOrderTypes() {
     return secondOrderTypes;
   }
 
