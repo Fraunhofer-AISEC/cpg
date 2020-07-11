@@ -233,8 +233,8 @@ public class CXXLanguageFrontend extends LanguageFrontend {
     return null;
   }
 
+  @Nullable
   @Override
-  @NonNull
   @SuppressWarnings("ConstantConditions")
   public <T> PhysicalLocation getLocationFromRawNode(T astNode) {
     if (astNode instanceof ASTNode) {
