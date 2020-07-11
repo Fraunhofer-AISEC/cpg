@@ -92,6 +92,14 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
     }
     String name = ctx.getName().toString();
 
+    /* as always, there are some special cases to consider and one of those are C++ operators.
+     * They are regarded as functions and eclipse CDT for some reason introduces a whitespace in the function name, which will complicate things later on
+     */
+
+    if (name.startsWith("operator")) {
+      name = name.replace(" ", "");
+    }
+
     FunctionDeclaration declaration;
 
     // check for function definitions that are really methods and constructors

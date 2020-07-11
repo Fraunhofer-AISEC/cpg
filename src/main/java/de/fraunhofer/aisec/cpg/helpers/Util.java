@@ -58,6 +58,7 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import org.checkerframework.checker.nullness.qual.NonNull;
+import org.checkerframework.checker.nullness.qual.Nullable;
 import org.slf4j.Logger;
 
 public class Util {
@@ -450,9 +451,16 @@ public class Util {
    * @param rawSignature the function's raw signature
    * @return the raw function return type
    */
+  @Nullable
   public static String getRawFunctionReturnType(
       FunctionDeclaration functionDeclaration, String rawSignature) {
-    return rawSignature.substring(0, rawSignature.indexOf(functionDeclaration.getName())).trim();
+    int index = rawSignature.indexOf(functionDeclaration.getName());
+
+    if (index == -1) {
+      return "";
+    }
+
+    return rawSignature.substring(0, index).trim();
   }
 
   public enum Connect {
