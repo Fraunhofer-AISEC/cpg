@@ -27,18 +27,76 @@
 package de.fraunhofer.aisec.cpg.graph.type;
 
 import de.fraunhofer.aisec.cpg.graph.Node;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
+import org.checkerframework.checker.nullness.qual.NonNull;
+import org.checkerframework.checker.nullness.qual.Nullable;
+import org.neo4j.ogm.annotation.Relationship;
 import org.neo4j.ogm.annotation.typeconversion.Convert;
 
 /**
- * Abstract Type, describing all possible SubTypes, i.e. all different Subtypes are complient with
+ * Abstract Type, describing all possible SubTypes, i.e. all different Subtypes are compliant with
  * this class. Contains information which is included in any Type such as name, storage, qualifier
  * and origin
  */
 public abstract class Type extends Node {
   public static final String UNKNOWN_TYPE_STRING = "UNKNOWN";
+
+  @Relationship(value = "SUPER_TYPE", direction = "OUTGOING")
+  @NonNull
+  protected Set<Type> superTypes = new HashSet<>();
+
+  /**
+   * auto, extern, static, register --> consider auto as modifier or auto to automatically infer the
+   * value.
+   */
+  @NonNull protected Storage storage = Storage.AUTO;
+
+  @Convert(QualifierConverter.class)
+  protected Qualifier qualifier;
+
+  protected Origin origin;
+
+  public Type() {
+    this.name = "";
+    this.storage = Storage.AUTO;
+    this.qualifier = new Qualifier(false, false, false, false);
+  }
+
+  public Type(String typeName) {
+    this.name = typeName;
+    this.storage = Storage.AUTO;
+    this.qualifier = new Qualifier();
+    this.origin = Origin.UNRESOLVED;
+  }
+
+  public Type(Type type) {
+    this.storage = type.storage;
+    this.name = type.name;
+    this.qualifier =
+        new Qualifier(
+            type.qualifier.isConst,
+            type.qualifier.isVolatile,
+            type.qualifier.isRestrict,
+            type.qualifier.isAtomic);
+    this.origin = type.origin;
+  }
+
+  public Type(String typeName, @Nullable Storage storage, Qualifier qualifier) {
+    this.name = typeName;
+    this.storage = storage != null ? storage : Storage.AUTO;
+    this.qualifier = qualifier;
+    this.origin = Origin.UNRESOLVED;
+  }
+
+  /**
+   * All direct supertypes of this type.
+   *
+   * @return
+   */
+  @NonNull
+  public Set<Type> getSuperTypes() {
+    return superTypes;
+  }
 
   /**
    * Describes Storage specifier of variables. Depending on the storage specifier, variables are
@@ -52,11 +110,12 @@ public abstract class Type extends Node {
     REGISTER
   }
 
+  @NonNull
   public Storage getStorage() {
     return storage;
   }
 
-  public void setStorage(Storage storage) {
+  public void setStorage(@NonNull Storage storage) {
     this.storage = storage;
   }
 
@@ -171,47 +230,6 @@ public abstract class Type extends Node {
     }
   }
 
-  protected Storage
-      storage; // auto, extern, static, register --> consider auto as modifier or auto to
-  // automatically infer the value
-
-  @Convert(QualifierConverter.class)
-  protected Qualifier qualifier;
-
-  protected Origin origin;
-
-  public Type() {
-    this.name = "";
-    this.storage = Storage.AUTO;
-    this.qualifier = new Qualifier(false, false, false, false);
-  }
-
-  public Type(String typeName) {
-    this.name = typeName;
-    this.storage = Storage.AUTO;
-    this.qualifier = new Qualifier();
-    this.origin = Origin.UNRESOLVED;
-  }
-
-  public Type(Type type) {
-    this.storage = type.storage;
-    this.name = type.name;
-    this.qualifier =
-        new Qualifier(
-            type.qualifier.isConst,
-            type.qualifier.isVolatile,
-            type.qualifier.isRestrict,
-            type.qualifier.isAtomic);
-    this.origin = type.origin;
-  }
-
-  public Type(String typeName, Storage storage, Qualifier qualifier) {
-    this.name = typeName;
-    this.storage = storage;
-    this.qualifier = qualifier;
-    this.origin = Origin.UNRESOLVED;
-  }
-
   /**
    * @param pointer Reason for the reference (array of pointer)
    * @return Returns a reference to the current Type. E.g. when creating a pointer to an existing
@@ -251,7 +269,7 @@ public abstract class Type extends Node {
     }
   }
 
-  /** @return Creates an exact copy of the curent type (chain) */
+  /** @return Creates an exact copy of the current type (chain) */
   public abstract Type duplicate();
 
   public String getTypeName() {
