@@ -33,11 +33,14 @@ import de.fraunhofer.aisec.cpg.graph.ValueDeclaration;
 import de.fraunhofer.aisec.cpg.graph.VariableDeclaration;
 import de.fraunhofer.aisec.cpg.graph.type.Type;
 import de.fraunhofer.aisec.cpg.graph.type.TypeParser;
+
 import java.util.ArrayList;
 import java.util.List;
 import org.eclipse.cdt.core.dom.ast.IASTDeclaration;
 import org.eclipse.cdt.core.dom.ast.IASTDeclarator;
 import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTSimpleDeclaration;
+
+import static de.fraunhofer.aisec.cpg.helpers.Util.getRawFunctionReturnType;
 
 class DeclarationListHandler
     extends Handler<List<Declaration>, IASTDeclaration, CXXLanguageFrontend> {
@@ -60,7 +63,8 @@ class DeclarationListHandler
       String typeString;
       if (declaration instanceof FunctionDeclaration) {
         // if it is a function definition, we are only interested in the return type
-        typeString = ctx.getRawSignature().split(declaration.getName())[0].trim();
+        typeString =
+            getRawFunctionReturnType((FunctionDeclaration) declaration, ctx.getRawSignature());
       } else if (declaration instanceof VariableDeclaration) {
         // if it is a variable declaration, we are only interested in the declaration, not the
         // initializer (if any)

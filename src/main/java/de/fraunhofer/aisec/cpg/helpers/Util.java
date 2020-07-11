@@ -441,6 +441,20 @@ public class Util {
     return paramName.toString();
   }
 
+  /**
+   * Returns the raw return type of a function declaration before types are parsed. This is primarly
+   * used to clean the type before dispatching it to the {@link
+   * de.fraunhofer.aisec.cpg.graph.type.TypeParser}.
+   *
+   * @param functionDeclaration the function declaration
+   * @param rawSignature the function's raw signature
+   * @return the raw function return type
+   */
+  public static String getRawFunctionReturnType(
+      FunctionDeclaration functionDeclaration, String rawSignature) {
+    return rawSignature.substring(0, rawSignature.indexOf(functionDeclaration.getName())).trim();
+  }
+
   public enum Connect {
     NODE,
     SUBTREE;

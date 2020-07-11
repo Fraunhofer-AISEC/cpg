@@ -27,6 +27,7 @@
 package de.fraunhofer.aisec.cpg.frontends.cpp;
 
 import static de.fraunhofer.aisec.cpg.helpers.Util.errorWithFileLocation;
+import static de.fraunhofer.aisec.cpg.helpers.Util.getRawFunctionReturnType;
 
 import de.fraunhofer.aisec.cpg.frontends.Handler;
 import de.fraunhofer.aisec.cpg.graph.*;
@@ -109,9 +110,10 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
 
     lang.getScopeManager().enterScope(functionDeclaration);
 
-    functionDeclaration.setType(
-        TypeParser.createFrom(
-            ctx.getRawSignature().split(functionDeclaration.getName())[0].trim(), true));
+    // use our own version, since the decl specifier might be imprecise, i.e. not having pointers
+    typeString = getRawFunctionReturnType(functionDeclaration, ctx.getRawSignature());
+
+    functionDeclaration.setType(TypeParser.createFrom(typeString, true));
 
     if (ctx.getBody() != null) {
       Statement bodyStatement = this.lang.getStatementHandler().handle(ctx.getBody());

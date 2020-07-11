@@ -180,6 +180,11 @@ public class TypeParser {
     int i = 0;
 
     while (counter != 0) {
+      if (i >= string.length()) {
+        // dirty hack for now
+        return string.length();
+      }
+
       char actualChar = string.charAt(i);
       if (actualChar == openBracket) {
         counter++;
