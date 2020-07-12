@@ -107,6 +107,9 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
 
     FunctionDeclaration declaration;
 
+    // If this is a method, this is its record declaration
+    RecordDeclaration recordDeclaration = null;
+
     // check for function definitions that are really methods and constructors
     if (name.contains("::")) {
       String[] rr = name.split("::");
@@ -114,12 +117,16 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
       String recordName = rr[0];
       String methodName = rr[1];
 
+      recordDeclaration = this.lang.getRecordForName(recordName).orElse(null);
+
       declaration =
           NodeBuilder.newMethodDeclaration(
-              methodName,
-              ctx.getRawSignature(),
-              false,
-              this.lang.getRecordForName(recordName).orElse(null));
+              methodName, ctx.getRawSignature(), false, recordDeclaration);
+
+      // everything inside the method is within the scope of its record
+      if (recordDeclaration != null) {
+        this.lang.getScopeManager().enterScope(recordDeclaration);
+      }
     } else {
       declaration = NodeBuilder.newFunctionDeclaration(name, ctx.getRawSignature());
     }
@@ -156,6 +163,12 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
 
     //    lang.addFunctionDeclaration(declaration);
     lang.getScopeManager().leaveScope(declaration);
+
+    // leave record scope if this was a method
+    if (declaration instanceof MethodDeclaration && recordDeclaration != null) {
+      this.lang.getScopeManager().leaveScope(recordDeclaration);
+    }
+
     return declaration;
   }
 

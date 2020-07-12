@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.helpers;
 
 import de.fraunhofer.aisec.cpg.graph.CompoundStatement;
 import de.fraunhofer.aisec.cpg.graph.FunctionDeclaration;
+import de.fraunhofer.aisec.cpg.graph.MethodDeclaration;
 import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.RecordDeclaration;
 import de.fraunhofer.aisec.cpg.graph.SubGraph;
@@ -355,6 +356,17 @@ public class SubgraphWalker {
         currentClass.push(
             (RecordDeclaration)
                 current); // we can be in an inner class, so we remember this as a stack
+      }
+
+      // TODO: actually we should not handle this in handleNode but have something similar to
+      // onScopeEnter because the method declaration already correctly sets the scope
+
+      // methods can also contain record scopes
+      if (current instanceof MethodDeclaration) {
+        RecordDeclaration recordDeclaration = ((MethodDeclaration) current).getRecordDeclaration();
+        if (recordDeclaration != currentClass.peek()) {
+          currentClass.push(recordDeclaration);
+        }
       }
 
       handler.accept(currentClass.peek(), parent, current);
