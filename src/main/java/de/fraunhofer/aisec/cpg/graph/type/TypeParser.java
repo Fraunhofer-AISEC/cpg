@@ -58,6 +58,11 @@ public class TypeParser {
   private static final String RESTRICT_QUALIFIER = "restrict";
   private static final String ATOMIC_QUALIFIER = "atomic";
 
+  private static final String ELABORATED_TYPE_CLASS = "class";
+  private static final String ELABORATED_TYPE_STRUCT = "struct";
+  private static final String ELABORATED_TYPE_UNION = "union";
+  private static final String ELABORATED_TYPE_ENUM = "enum";
+
   public static void reset() {
     TypeParser.languageSupplier = () -> TypeManager.getInstance().getLanguage();
   }
@@ -161,6 +166,25 @@ public class TypeParser {
           || qualifier.equals(RESTRICT_QUALIFIER)
           || qualifier.equals(ATOMIC_QUALIFIER);
     }
+  }
+
+  /**
+   * Returns whether the specifier is part of an elaborated type specifier. This only applies to C++
+   * and can be used to declare that a type is a class / struct or union even though the type is not
+   * visible in the scope.
+   *
+   * @param specifier the specifier
+   * @return true, if it is part of an elaborated type. false, otherwise
+   */
+  public static boolean isElaboratedTypeSpecifier(String specifier) {
+    if (getLanguage() == TypeManager.Language.CXX) {
+      return specifier.equals(ELABORATED_TYPE_CLASS)
+          || specifier.equals(ELABORATED_TYPE_STRUCT)
+          || specifier.equals(ELABORATED_TYPE_UNION)
+          || specifier.equals(ELABORATED_TYPE_ENUM);
+    }
+
+    return false;
   }
 
   public static boolean isKnownSpecifier(String specifier) {
@@ -411,18 +435,21 @@ public class TypeParser {
       subBracketExpression.add(part);
       return resolveBracketExpression(finalType, subBracketExpression);
     }
+
     if (isStorageSpecifier(part)) {
       List<String> specifiers = new ArrayList<>();
       specifiers.add(part);
       finalType.setStorage(calcStorage(specifiers));
       return finalType;
     }
+
     if (isQualifierSpecifier(part)) {
       List<String> qualifiers = new ArrayList<>();
       qualifiers.add(part);
       finalType.setQualifier(calcQualifier(qualifiers, finalType.getQualifier()));
       return finalType;
     }
+
     return finalType;
   }
 
@@ -592,6 +619,7 @@ public class TypeParser {
         specifiers.add(part);
         finalType.setStorage(calcStorage(specifiers));
       }
+
       if (isQualifierSpecifier(part)) {
         List<String> qualifiers = new ArrayList<>();
         qualifiers.add(part);
@@ -663,7 +691,7 @@ public class TypeParser {
     List<String> qualifierList = new ArrayList<>();
     List<String> storageList = new ArrayList<>();
 
-    // Handle preceeding qualifier or storage specifier to the type name e.g. static const int
+    // Handle preceding qualifier or storage specifier to the type name e.g. static const int
     int counter = 0;
     for (String part : typeBlocks) {
       if (isQualifierSpecifier(part)) {
@@ -671,6 +699,9 @@ public class TypeParser {
         counter++;
       } else if (isStorageSpecifier(part)) {
         storageList.add(part);
+        counter++;
+      } else if (isElaboratedTypeSpecifier(part)) {
+        // ignore elaborated types for now
         counter++;
       } else {
         break;
@@ -680,7 +711,7 @@ public class TypeParser {
     Type.Storage storageValue = calcStorage(storageList);
     Type.Qualifier qualifier = calcQualifier(qualifierList, null);
 
-    // Once all preceeding known keywords (if any) are handled the next word must be the TypeName
+    // Once all preceding known keywords (if any) are handled the next word must be the TypeName
     String typeName = typeBlocks.get(counter);
     counter++;
 

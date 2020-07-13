@@ -16,7 +16,7 @@ void* function2() {
   return NULL;
 }
 
-UnknownType* function3();
+class UnknownType* function3();
 
 #define SOME_MACRO(x) x
 void function4(int a = SOME_MACRO(1));
