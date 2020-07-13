@@ -364,7 +364,7 @@ public class SubgraphWalker {
       // methods can also contain record scopes
       if (current instanceof MethodDeclaration) {
         RecordDeclaration recordDeclaration = ((MethodDeclaration) current).getRecordDeclaration();
-        if (recordDeclaration != currentClass.peek()) {
+        if (recordDeclaration != null && recordDeclaration != currentClass.peek()) {
           currentClass.push(recordDeclaration);
         }
       }
