@@ -88,7 +88,7 @@ public class CXXLanguageFrontend extends LanguageFrontend {
   public static final Type TYPE_UNSIGNED_LONG = TypeParser.createFrom("unsigned long", true);
 
   private static final Logger LOGGER = LoggerFactory.getLogger(CXXLanguageFrontend.class);
-  private final IncludeFileContentProvider INCLUDE_FILE_PROVIDER =
+  private final IncludeFileContentProvider includeFileContentProvider =
       new InternalFileContentProvider() {
         @Nullable
         private InternalFileContent getContentUncached(String path) {
@@ -104,16 +104,21 @@ public class CXXLanguageFrontend extends LanguageFrontend {
           }
 
           // check, if the white-list exists at all
-          if (config.includeWhitelist != null && !config.includeWhitelist.isEmpty()) {
-            if (!absoluteOrRelativePathIsInList(path, config.includeWhitelist)) {
-              LOGGER.debug("Include file {} not on the whitelist. Ignoring.", path);
-              return null;
-            }
+          if (hasWhitelist()
+              &&
+              // and ignore the file if it is not on the whitelist
+              !absoluteOrRelativePathIsInList(path, config.includeWhitelist)) {
+            LOGGER.debug("Include file {} not on the whitelist. Ignoring.", path);
+            return null;
           }
 
           LOGGER.debug("Loading include file {}", path);
           FileContent content = FileContent.createForExternalFileLocation(path);
           return (InternalFileContent) content;
+        }
+
+        private boolean hasWhitelist() {
+          return config.includeWhitelist != null && !config.includeWhitelist.isEmpty();
         }
 
         /**
@@ -126,6 +131,11 @@ public class CXXLanguageFrontend extends LanguageFrontend {
          * @return true, if the path is in the list, false otherwise
          */
         private boolean absoluteOrRelativePathIsInList(String path, List<String> list) {
+          // path cannot be in the list if its empty or null
+          if (list == null || list.isEmpty()) {
+            return false;
+          }
+
           // check, if the absolute header path is in the list
           if (list.contains(path)) {
             return true;
@@ -243,7 +253,7 @@ public class CXXLanguageFrontend extends LanguageFrontend {
 
     IncludeFileContentProvider includeProvider;
     if (config.loadIncludes) {
-      includeProvider = INCLUDE_FILE_PROVIDER;
+      includeProvider = includeFileContentProvider;
     } else {
       includeProvider = IncludeFileContentProvider.getEmptyFilesProvider();
     }

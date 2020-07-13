@@ -108,7 +108,7 @@ class CXXIncludeTest extends BaseTest {
     assertNotNull(next);
 
     // another-include.h should be there - include.h should not be there
-    assertEquals(next.getIncludes().size(), 1);
+    assertEquals(1, next.getIncludes().size());
     assertTrue(
         next.getIncludes().stream()
             .anyMatch(
@@ -136,7 +136,7 @@ class CXXIncludeTest extends BaseTest {
     assertNotNull(next);
 
     // another-include.h should be there - include.h should not be there
-    assertEquals(next.getIncludes().size(), 1);
+    assertEquals(1, next.getIncludes().size());
     assertTrue(
         next.getIncludes().stream()
             .anyMatch(
@@ -164,7 +164,7 @@ class CXXIncludeTest extends BaseTest {
     assertNotNull(next);
 
     // include.h should be there - another-include.h should not be there
-    assertEquals(next.getIncludes().size(), 1);
+    assertEquals(1, next.getIncludes().size());
     assertTrue(
         next.getIncludes().stream()
             .anyMatch(
@@ -191,7 +191,7 @@ class CXXIncludeTest extends BaseTest {
     assertNotNull(next);
 
     // include.h should be there - another-include.h should not be there
-    assertEquals(next.getIncludes().size(), 1);
+    assertEquals(1, next.getIncludes().size());
     assertTrue(
         next.getIncludes().stream()
             .anyMatch(
