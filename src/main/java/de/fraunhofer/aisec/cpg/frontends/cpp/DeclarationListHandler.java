@@ -26,7 +26,7 @@
 
 package de.fraunhofer.aisec.cpg.frontends.cpp;
 
-import static de.fraunhofer.aisec.cpg.helpers.Util.getRawFunctionReturnType;
+import static de.fraunhofer.aisec.cpg.frontends.cpp.DeclarationHandler.getTypeStringFromDeclarator;
 
 import de.fraunhofer.aisec.cpg.frontends.Handler;
 import de.fraunhofer.aisec.cpg.graph.Declaration;
@@ -60,14 +60,9 @@ class DeclarationListHandler
           (ValueDeclaration) this.lang.getDeclaratorHandler().handle(declarator);
 
       String typeString;
-      if (declaration instanceof FunctionDeclaration) {
-        // if it is a function definition, we are only interested in the return type
-        typeString =
-            getRawFunctionReturnType((FunctionDeclaration) declaration, ctx.getRawSignature());
-      } else if (declaration instanceof VariableDeclaration) {
-        // if it is a variable declaration, we are only interested in the declaration, not the
-        // initializer (if any)
-        typeString = ctx.getRawSignature().split("[=]")[0];
+      if (declaration instanceof FunctionDeclaration
+          || declaration instanceof VariableDeclaration) {
+        typeString = getTypeStringFromDeclarator(declarator, ctx.getDeclSpecifier());
       } else {
         // otherwise, use the complete raw code and let the type parser handle it
         typeString = ctx.getRawSignature();

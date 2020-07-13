@@ -27,7 +27,6 @@
 package de.fraunhofer.aisec.cpg.frontends.cpp;
 
 import static de.fraunhofer.aisec.cpg.helpers.Util.errorWithFileLocation;
-import static de.fraunhofer.aisec.cpg.helpers.Util.getRawFunctionReturnType;
 
 import de.fraunhofer.aisec.cpg.frontends.Handler;
 import de.fraunhofer.aisec.cpg.graph.*;
@@ -39,8 +38,12 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import org.eclipse.cdt.core.dom.ast.IASTArrayModifier;
+import org.eclipse.cdt.core.dom.ast.IASTDeclSpecifier;
 import org.eclipse.cdt.core.dom.ast.IASTDeclaration;
+import org.eclipse.cdt.core.dom.ast.IASTDeclarator;
 import org.eclipse.cdt.core.dom.ast.IASTNode;
+import org.eclipse.cdt.core.dom.ast.IASTPointerOperator;
 import org.eclipse.cdt.core.dom.ast.IASTTranslationUnit;
 import org.eclipse.cdt.internal.core.dom.parser.cpp.*;
 
@@ -101,7 +104,7 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
     FunctionDeclaration functionDeclaration =
         (FunctionDeclaration) this.lang.getDeclaratorHandler().handle(ctx.getDeclarator());
 
-    String typeString = ctx.getDeclSpecifier().toString();
+    String typeString = getTypeStringFromDeclarator(ctx.getDeclarator(), ctx.getDeclSpecifier());
 
     // It is a constructor
     if (functionDeclaration instanceof MethodDeclaration && typeString.isEmpty()) {
@@ -109,9 +112,6 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
     }
 
     lang.getScopeManager().enterScope(functionDeclaration);
-
-    // use our own version, since the decl specifier might be imprecise, i.e. not having pointers
-    typeString = getRawFunctionReturnType(functionDeclaration, ctx.getRawSignature());
 
     functionDeclaration.setType(TypeParser.createFrom(typeString, true));
 
@@ -326,5 +326,28 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
     }
 
     return node;
+  }
+
+  /**
+   * Returns a raw type string (that can be parsed by the {@link TypeParser} out of a cpp declarator
+   * and associated declaration specifiers.
+   *
+   * @param declarator the declarator
+   * @param declSpecifier the declaration specifier
+   * @return the type string
+   */
+  static String getTypeStringFromDeclarator(
+      IASTDeclarator declarator, IASTDeclSpecifier declSpecifier) {
+    // use the declaration specifier as basis
+    StringBuilder typeString = new StringBuilder(declSpecifier.getRawSignature());
+
+    // append names, pointer operators and array modifiers and such
+    for (IASTNode node : declarator.getChildren()) {
+      if (node instanceof IASTPointerOperator || node instanceof IASTArrayModifier) {
+        typeString.append(node.getRawSignature());
+      }
+    }
+
+    return typeString.toString();
   }
 }

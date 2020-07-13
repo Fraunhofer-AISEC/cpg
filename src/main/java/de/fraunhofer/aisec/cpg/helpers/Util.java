@@ -58,7 +58,6 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import org.checkerframework.checker.nullness.qual.NonNull;
-import org.checkerframework.checker.nullness.qual.Nullable;
 import org.slf4j.Logger;
 
 public class Util {
@@ -440,27 +439,6 @@ public class Util {
 
     paramName.append(i);
     return paramName.toString();
-  }
-
-  /**
-   * Returns the raw return type of a function declaration before types are parsed. This is primarly
-   * used to clean the type before dispatching it to the {@link
-   * de.fraunhofer.aisec.cpg.graph.type.TypeParser}.
-   *
-   * @param functionDeclaration the function declaration
-   * @param rawSignature the function's raw signature
-   * @return the raw function return type
-   */
-  @Nullable
-  public static String getRawFunctionReturnType(
-      FunctionDeclaration functionDeclaration, String rawSignature) {
-    int index = rawSignature.indexOf(functionDeclaration.getName());
-
-    if (index == -1) {
-      return "";
-    }
-
-    return rawSignature.substring(0, index).trim();
   }
 
   public enum Connect {
