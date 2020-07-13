@@ -143,7 +143,12 @@ public class CXXLanguageFrontend extends LanguageFrontend {
 
           // check for relative path based on the top level and all include paths
           List<Path> includeLocations = new ArrayList<>();
-          includeLocations.add(config.getTopLevel().toPath().toAbsolutePath());
+          File topLevel = config.getTopLevel();
+
+          if (topLevel != null) {
+            includeLocations.add(topLevel.toPath().toAbsolutePath());
+          }
+
           includeLocations.addAll(
               Arrays.stream(config.includePaths)
                   .map(s -> Path.of(s).toAbsolutePath())
