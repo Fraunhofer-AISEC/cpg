@@ -104,7 +104,7 @@ public class CXXLanguageFrontend extends LanguageFrontend {
           }
 
           // check, if the white-list exists at all
-          if (hasWhitelist()
+          if (hasIncludeWhitelist()
               &&
               // and ignore the file if it is not on the whitelist
               !absoluteOrRelativePathIsInList(path, config.includeWhitelist)) {
@@ -117,7 +117,7 @@ public class CXXLanguageFrontend extends LanguageFrontend {
           return (InternalFileContent) content;
         }
 
-        private boolean hasWhitelist() {
+        private boolean hasIncludeWhitelist() {
           return config.includeWhitelist != null && !config.includeWhitelist.isEmpty();
         }
 

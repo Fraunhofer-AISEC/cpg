@@ -200,4 +200,36 @@ class CXXIncludeTest extends BaseTest {
                         .getFilename()
                         .equals(new File("src/test/resources/include.h").getAbsolutePath())));
   }
+
+  @Test
+  void testIncludeBothLists() throws Exception {
+    File file = new File("src/test/resources/include.cpp");
+    List<TranslationUnitDeclaration> translationUnitDeclarations =
+        analyzeWithBuilder(
+            TranslationConfiguration.builder()
+                .sourceLocations(List.of(file))
+                .topLevel(file.getParentFile())
+                .loadIncludes(true)
+                .debugParser(true)
+                .includeBlacklist("include.h") // blacklist entries take priority
+                .includeWhitelist("include.h")
+                .includeWhitelist("another-include.h")
+                .failOnError(true));
+
+    TranslationUnitDeclaration next = translationUnitDeclarations.iterator().next();
+    assertNotNull(next);
+
+    // while the whitelist has two entries, one is also part of the blacklist and thus will be
+    // overridden, so only 1 entry should be left
+    assertEquals(1, next.getIncludes().size());
+    // another-include.h will stay in the include list
+    assertTrue(
+        next.getIncludes().stream()
+            .anyMatch(
+                d ->
+                    ((IncludeDeclaration) d)
+                        .getFilename()
+                        .equals(
+                            new File("src/test/resources/another-include.h").getAbsolutePath())));
+  }
 }

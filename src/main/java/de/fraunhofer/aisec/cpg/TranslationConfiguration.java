@@ -62,13 +62,15 @@ public class TranslationConfiguration {
 
   /**
    * This acts as a white list for include files, if the array is not empty. Only the specified
-   * includes files will be parsed and processed in the CPG.
+   * includes files will be parsed and processed in the CPG, unless it is a port of the blacklist,
+   * in which it will be ignored.
    */
   public final List<String> includeWhitelist;
 
   /**
    * This acts as a black list for include files, if the array is not empty. The specified includes
-   * files will excluded from being parsed and processed in the CPG.
+   * files will excluded from being parsed and processed in the CPG. The blacklist entries always
+   * take priority over those in the whitelist.
    */
   public final List<String> includeBlacklist;
 
