@@ -60,6 +60,18 @@ public class TranslationConfiguration {
    */
   public final String[] includePaths;
 
+  /**
+   * This acts as a white list for include files, if the array is not empty. Only the specified
+   * includes files will be parsed and processed in the CPG.
+   */
+  public final List<String> includeWhitelist;
+
+  /**
+   * This acts as a black list for include files, if the array is not empty. The specified includes
+   * files will excluded from being parsed and processed in the CPG.
+   */
+  public final List<String> includeBlacklist;
+
   /** should the code of a node be shown as parameter in the node * */
   public final boolean codeInNodes;
 
@@ -73,11 +85,11 @@ public class TranslationConfiguration {
   public final Map<String, String> symbols;
 
   /** Source code files to parse. */
-  private List<File> sourceLocations;
+  private final List<File> sourceLocations;
 
-  private File topLevel;
+  private final File topLevel;
 
-  @NonNull private List<Pass> passes;
+  @NonNull private final List<Pass> passes;
 
   private TranslationConfiguration(
       Map<String, String> symbols,
@@ -87,6 +99,8 @@ public class TranslationConfiguration {
       boolean failOnError,
       boolean loadIncludes,
       String[] includePaths,
+      List<String> includeWhitelist,
+      List<String> includeBlacklist,
       List<Pass> passes,
       boolean codeInNodes) {
     this.symbols = symbols;
@@ -96,6 +110,8 @@ public class TranslationConfiguration {
     this.failOnError = failOnError;
     this.loadIncludes = loadIncludes;
     this.includePaths = includePaths;
+    this.includeWhitelist = includeWhitelist;
+    this.includeBlacklist = includeBlacklist;
     this.passes = passes != null ? passes : new ArrayList<>();
     // Make sure to init this AFTER sourceLocations has been set
     this.codeInNodes = codeInNodes;
@@ -144,6 +160,8 @@ public class TranslationConfiguration {
     private boolean loadIncludes = false;
     private Map<String, String> symbols = new HashMap<>();
     private List<String> includePaths = new ArrayList<>();
+    private List<String> includeWhitelist = new ArrayList<>();
+    private List<String> includeBlacklist = new ArrayList<>();
     private List<Pass> passes = new ArrayList<>();
     private boolean codeInNodes = true;
 
@@ -226,6 +244,28 @@ public class TranslationConfiguration {
     }
 
     /**
+     * Adds the specified file to the include whitelist.
+     *
+     * @param includeFile
+     * @return
+     */
+    public Builder includeWhitelist(String includeFile) {
+      this.includeWhitelist.add(includeFile);
+      return this;
+    }
+
+    /**
+     * Adds the specified file to the include blacklist.
+     *
+     * @param includeFile
+     * @return
+     */
+    public Builder includeBlacklist(String includeFile) {
+      this.includeBlacklist.add(includeFile);
+      return this;
+    }
+
+    /**
      * Register an additional {@link Pass}.
      *
      * @param pass
@@ -272,7 +312,6 @@ public class TranslationConfiguration {
     }
 
     public TranslationConfiguration build() {
-      String[] paths = new String[this.includePaths.size()];
       return new TranslationConfiguration(
           symbols,
           sourceLocations,
@@ -280,7 +319,9 @@ public class TranslationConfiguration {
           debugParser,
           failOnError,
           loadIncludes,
-          includePaths.toArray(paths),
+          includePaths.toArray(new String[] {}),
+          includeWhitelist,
+          includeBlacklist,
           passes,
           codeInNodes);
     }

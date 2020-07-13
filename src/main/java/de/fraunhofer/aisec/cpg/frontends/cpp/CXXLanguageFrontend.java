@@ -86,7 +86,7 @@ public class CXXLanguageFrontend extends LanguageFrontend {
   public static final Type TYPE_UNSIGNED_LONG = TypeParser.createFrom("unsigned long", true);
 
   private static final Logger LOGGER = LoggerFactory.getLogger(CXXLanguageFrontend.class);
-  private static final IncludeFileContentProvider INCLUDE_FILE_PROVIDER =
+  private final IncludeFileContentProvider INCLUDE_FILE_PROVIDER =
       new InternalFileContentProvider() {
         @Nullable
         private InternalFileContent getContentUncached(String path) {
@@ -94,6 +94,22 @@ public class CXXLanguageFrontend extends LanguageFrontend {
             LOGGER.debug("Include file not found: {}", path);
             return null;
           }
+
+          // check, if the file is on the blacklist (currently only absolute paths are supported).
+          if (config.includeBlacklist.contains(path)) {
+            LOGGER.debug("Blacklisting include file: {}", path);
+            return null;
+          }
+
+          // check, if the white-list exists at all
+          if (config.includeWhitelist != null && !config.includeWhitelist.isEmpty()) {
+            // check, if header is white-listed
+            if (!config.includeWhitelist.contains(path)) {
+              LOGGER.debug("Include file {} not on the whitelist. Ignoring.", path);
+              return null;
+            }
+          }
+
           LOGGER.debug("Loading include file {}", path);
           FileContent content = FileContent.createForExternalFileLocation(path);
           return (InternalFileContent) content;

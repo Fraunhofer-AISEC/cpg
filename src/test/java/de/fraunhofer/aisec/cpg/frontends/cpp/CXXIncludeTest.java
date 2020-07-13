@@ -26,10 +26,12 @@
 
 package de.fraunhofer.aisec.cpg.frontends.cpp;
 
+import static de.fraunhofer.aisec.cpg.TestUtils.analyzeWithBuilder;
 import static org.junit.jupiter.api.Assertions.*;
 
 import de.fraunhofer.aisec.cpg.BaseTest;
 import de.fraunhofer.aisec.cpg.TestUtils;
+import de.fraunhofer.aisec.cpg.TranslationConfiguration;
 import de.fraunhofer.aisec.cpg.graph.*;
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation;
 import de.fraunhofer.aisec.cpg.sarif.Region;
@@ -87,5 +89,46 @@ class CXXIncludeTest extends BaseTest {
     assertNotNull(location);
 
     assertEquals(new Region(16, 3, 16, 15), location.getRegion());
+  }
+
+  @Test
+  void testIncludeBlacklist() throws Exception {
+    File file = new File("src/test/resources/include.cpp");
+    List<TranslationUnitDeclaration> translationUnitDeclarations =
+        analyzeWithBuilder(
+            TranslationConfiguration.builder()
+                .sourceLocations(List.of(file))
+                .topLevel(file.getParentFile())
+                .loadIncludes(true)
+                .debugParser(true)
+                .includeBlacklist(new File("src/test/resources/include.h").getAbsolutePath())
+                .failOnError(true));
+
+    TranslationUnitDeclaration next = translationUnitDeclarations.iterator().next();
+    assertNotNull(next);
+
+    // the only include should have been blacklisted
+    assertTrue(next.getIncludes().isEmpty());
+  }
+
+  @Test
+  void testIncludeWhitelist() throws Exception {
+    File file = new File("src/test/resources/include.cpp");
+    List<TranslationUnitDeclaration> translationUnitDeclarations =
+        analyzeWithBuilder(
+            TranslationConfiguration.builder()
+                .sourceLocations(List.of(file))
+                .topLevel(file.getParentFile())
+                .loadIncludes(true)
+                .debugParser(true)
+                .includeWhitelist(
+                    new File("src/test/resources/another-include.h").getAbsolutePath())
+                .failOnError(true));
+
+    TranslationUnitDeclaration next = translationUnitDeclarations.iterator().next();
+    assertNotNull(next);
+
+    // include.h was not in the whitelist, so it should be empty
+    assertTrue(next.getIncludes().isEmpty());
   }
 }
