@@ -45,9 +45,11 @@ import java.io.File;
 import java.lang.reflect.Field;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.eclipse.cdt.core.dom.ast.*;
@@ -96,15 +98,14 @@ public class CXXLanguageFrontend extends LanguageFrontend {
           }
 
           // check, if the file is on the blacklist (currently only absolute paths are supported).
-          if (config.includeBlacklist.contains(path)) {
+          if (absoluteOrRelativePathIsInList(path, config.includeBlacklist)) {
             LOGGER.debug("Blacklisting include file: {}", path);
             return null;
           }
 
           // check, if the white-list exists at all
           if (config.includeWhitelist != null && !config.includeWhitelist.isEmpty()) {
-            // check, if header is white-listed
-            if (!config.includeWhitelist.contains(path)) {
+            if (!absoluteOrRelativePathIsInList(path, config.includeWhitelist)) {
               LOGGER.debug("Include file {} not on the whitelist. Ignoring.", path);
               return null;
             }
@@ -113,6 +114,42 @@ public class CXXLanguageFrontend extends LanguageFrontend {
           LOGGER.debug("Loading include file {}", path);
           FileContent content = FileContent.createForExternalFileLocation(path);
           return (InternalFileContent) content;
+        }
+
+        /**
+         * This utility function checks, if the specified path is in the included list, either as an
+         * absolute path or as a path relative to the translation configurations top level or
+         * include paths
+         *
+         * @param path the absolute path to look for
+         * @param list the list of paths to look for, either relative or absolute
+         * @return true, if the path is in the list, false otherwise
+         */
+        private boolean absoluteOrRelativePathIsInList(String path, List<String> list) {
+          // check, if the absolute header path is in the list
+          if (list.contains(path)) {
+            return true;
+          }
+
+          // check for relative path based on the top level and all include paths
+          List<Path> includeLocations = new ArrayList<>();
+          includeLocations.add(config.getTopLevel().toPath().toAbsolutePath());
+          includeLocations.addAll(
+              Arrays.stream(config.includePaths)
+                  .map(s -> Path.of(s).toAbsolutePath())
+                  .collect(Collectors.toList()));
+
+          for (Path includeLocation : includeLocations) {
+            // try to resolve path relatively
+            Path includeFile = Path.of(path);
+            Path relative = includeLocation.relativize(includeFile);
+
+            if (list.contains(relative.toString())) {
+              return true;
+            }
+          }
+
+          return false;
         }
 
         @Nullable
