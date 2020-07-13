@@ -1045,4 +1045,27 @@ class CXXLanguageFrontendTest extends BaseTest {
     assertEquals("foreachstmt.cpp", path.getFileName().toString());
     assertEquals(new Region(4, 1, 8, 2), location.getRegion());
   }
+
+  @Test
+  void testNamespaces() throws Exception {
+    File file = new File("src/test/resources/namespaces.cpp");
+    TranslationUnitDeclaration tu =
+        TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true);
+    assertNotNull(tu);
+
+    NamespaceDeclaration firstNamespace =
+        tu.getDeclarationsByName("FirstNamespace", NamespaceDeclaration.class).iterator().next();
+    assertNotNull(firstNamespace);
+
+    RecordDeclaration someClass =
+        firstNamespace
+            .getDeclarationsByName("FirstNamespace::SomeClass", RecordDeclaration.class)
+            .iterator()
+            .next();
+    assertNotNull(someClass);
+
+    RecordDeclaration anotherClass =
+        tu.getDeclarationsByName("AnotherClass", RecordDeclaration.class).iterator().next();
+    assertNotNull(anotherClass);
+  }
 }
