@@ -244,7 +244,7 @@ public class TranslationConfiguration {
     }
 
     /**
-     * Adds the specified file to the include whitelist.
+     * Adds the specified file to the include whitelist. Relative and absolute paths are supported.
      *
      * @param includeFile
      * @return
@@ -255,7 +255,7 @@ public class TranslationConfiguration {
     }
 
     /**
-     * Adds the specified file to the include blacklist.
+     * Adds the specified file to the include blacklist. Relative and absolute paths are supported.
      *
      * @param includeFile
      * @return

@@ -97,7 +97,7 @@ public class CXXLanguageFrontend extends LanguageFrontend {
             return null;
           }
 
-          // check, if the file is on the blacklist (currently only absolute paths are supported).
+          // check, if the file is on the blacklist
           if (absoluteOrRelativePathIsInList(path, config.includeBlacklist)) {
             LOGGER.debug("Blacklisting include file: {}", path);
             return null;
