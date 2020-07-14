@@ -31,7 +31,6 @@ public class GlobalScope extends DeclarationScope {
   public GlobalScope() {
     super(null);
   }
-
   /*
 
   private List<VariableDeclaration> variables = new ArrayList<>();

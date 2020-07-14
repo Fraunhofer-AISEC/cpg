@@ -111,22 +111,22 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
       functionDeclaration = ConstructorDeclaration.from((MethodDeclaration) functionDeclaration);
     }
 
-    // Add it to the record declaration if its a method or constructor
-    if (functionDeclaration instanceof MethodDeclaration
-        && ((MethodDeclaration) functionDeclaration).getRecordDeclaration() != null) {
-      RecordDeclaration recordDeclaration =
-          ((MethodDeclaration) functionDeclaration).getRecordDeclaration();
-      if (recordDeclaration != null) {
-        recordDeclaration.getMethods().add((MethodDeclaration) functionDeclaration);
-      }
-    }
+    // associated record declaration if this is a method or constructor
+    RecordDeclaration recordDeclaration =
+        functionDeclaration instanceof MethodDeclaration
+            ? ((MethodDeclaration) functionDeclaration).getRecordDeclaration()
+            : null;
+    if (recordDeclaration != null) {
+      // everything inside the method is within the scope of its record
+      this.lang.getScopeManager().enterScope(recordDeclaration);
 
-    if (functionDeclaration instanceof ConstructorDeclaration
-        && ((MethodDeclaration) functionDeclaration).getRecordDeclaration() != null) {
-      RecordDeclaration recordDeclaration =
-          ((MethodDeclaration) functionDeclaration).getRecordDeclaration();
-      if (recordDeclaration != null) {
+      // Add it to the record declaration if its a method or constructor
+      // For now we just add it, however it might make more sense to replace the original
+      // declaration if its already there or extend it
+      if (functionDeclaration instanceof ConstructorDeclaration) {
         recordDeclaration.getConstructors().add((ConstructorDeclaration) functionDeclaration);
+      } else {
+        recordDeclaration.getMethods().add((MethodDeclaration) functionDeclaration);
       }
     }
 
@@ -159,6 +159,11 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
     }
 
     lang.getScopeManager().leaveScope(functionDeclaration);
+
+    if (recordDeclaration != null) {
+      this.lang.getScopeManager().leaveScope(recordDeclaration);
+    }
+
     return functionDeclaration;
   }
 
