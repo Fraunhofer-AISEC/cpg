@@ -46,7 +46,7 @@ public abstract class Type extends Node {
   protected Set<Type> superTypes = new HashSet<>();
 
   /**
-   * auto, extern, static, register --> consider auto as modifier or auto to automatically infer the
+   * auto, extern, static, register: consider "auto" as modifier or auto to automatically infer the
    * value.
    */
   @NonNull protected Storage storage = Storage.AUTO;
