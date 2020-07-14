@@ -26,10 +26,12 @@
 
 package de.fraunhofer.aisec.cpg.frontends.cpp;
 
+import static de.fraunhofer.aisec.cpg.TestUtils.analyzeWithBuilder;
 import static org.junit.jupiter.api.Assertions.*;
 
 import de.fraunhofer.aisec.cpg.BaseTest;
 import de.fraunhofer.aisec.cpg.TestUtils;
+import de.fraunhofer.aisec.cpg.TranslationConfiguration;
 import de.fraunhofer.aisec.cpg.graph.*;
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation;
 import de.fraunhofer.aisec.cpg.sarif.Region;
@@ -48,7 +50,7 @@ class CXXIncludeTest extends BaseTest {
     for (Declaration d : tu.getDeclarations()) {
       System.out.println(d.getName() + " " + d.getLocation());
     }
-    assertEquals(5, tu.getDeclarations().size());
+    assertEquals(6, tu.getDeclarations().size());
 
     Set<RecordDeclaration> someClass =
         tu.getDeclarationsByName("SomeClass", RecordDeclaration.class);
@@ -87,5 +89,147 @@ class CXXIncludeTest extends BaseTest {
     assertNotNull(location);
 
     assertEquals(new Region(16, 3, 16, 15), location.getRegion());
+  }
+
+  @Test
+  void testIncludeBlacklist() throws Exception {
+    File file = new File("src/test/resources/include.cpp");
+    List<TranslationUnitDeclaration> translationUnitDeclarations =
+        analyzeWithBuilder(
+            TranslationConfiguration.builder()
+                .sourceLocations(List.of(file))
+                .topLevel(file.getParentFile())
+                .loadIncludes(true)
+                .debugParser(true)
+                .includeBlacklist(new File("src/test/resources/include.h").getAbsolutePath())
+                .failOnError(true));
+
+    TranslationUnitDeclaration next = translationUnitDeclarations.iterator().next();
+    assertNotNull(next);
+
+    // another-include.h should be there - include.h should not be there
+    assertEquals(1, next.getIncludes().size());
+    assertTrue(
+        next.getIncludes().stream()
+            .anyMatch(
+                d ->
+                    ((IncludeDeclaration) d)
+                        .getFilename()
+                        .equals(
+                            new File("src/test/resources/another-include.h").getAbsolutePath())));
+  }
+
+  @Test
+  void testIncludeBlacklistRelative() throws Exception {
+    File file = new File("src/test/resources/include.cpp");
+    List<TranslationUnitDeclaration> translationUnitDeclarations =
+        analyzeWithBuilder(
+            TranslationConfiguration.builder()
+                .sourceLocations(List.of(file))
+                .topLevel(file.getParentFile())
+                .loadIncludes(true)
+                .debugParser(true)
+                .includeBlacklist("include.h")
+                .failOnError(true));
+
+    TranslationUnitDeclaration next = translationUnitDeclarations.iterator().next();
+    assertNotNull(next);
+
+    // another-include.h should be there - include.h should not be there
+    assertEquals(1, next.getIncludes().size());
+    assertTrue(
+        next.getIncludes().stream()
+            .anyMatch(
+                d ->
+                    ((IncludeDeclaration) d)
+                        .getFilename()
+                        .equals(
+                            new File("src/test/resources/another-include.h").getAbsolutePath())));
+  }
+
+  @Test
+  void testIncludeWhitelist() throws Exception {
+    File file = new File("src/test/resources/include.cpp");
+    List<TranslationUnitDeclaration> translationUnitDeclarations =
+        analyzeWithBuilder(
+            TranslationConfiguration.builder()
+                .sourceLocations(List.of(file))
+                .topLevel(file.getParentFile())
+                .loadIncludes(true)
+                .debugParser(true)
+                .includeWhitelist(new File("src/test/resources/include.h").getAbsolutePath())
+                .failOnError(true));
+
+    TranslationUnitDeclaration next = translationUnitDeclarations.iterator().next();
+    assertNotNull(next);
+
+    // include.h should be there - another-include.h should not be there
+    assertEquals(1, next.getIncludes().size());
+    assertTrue(
+        next.getIncludes().stream()
+            .anyMatch(
+                d ->
+                    ((IncludeDeclaration) d)
+                        .getFilename()
+                        .equals(new File("src/test/resources/include.h").getAbsolutePath())));
+  }
+
+  @Test
+  void testIncludeWhitelistRelative() throws Exception {
+    File file = new File("src/test/resources/include.cpp");
+    List<TranslationUnitDeclaration> translationUnitDeclarations =
+        analyzeWithBuilder(
+            TranslationConfiguration.builder()
+                .sourceLocations(List.of(file))
+                .topLevel(file.getParentFile())
+                .loadIncludes(true)
+                .debugParser(true)
+                .includeWhitelist("include.h")
+                .failOnError(true));
+
+    TranslationUnitDeclaration next = translationUnitDeclarations.iterator().next();
+    assertNotNull(next);
+
+    // include.h should be there - another-include.h should not be there
+    assertEquals(1, next.getIncludes().size());
+    assertTrue(
+        next.getIncludes().stream()
+            .anyMatch(
+                d ->
+                    ((IncludeDeclaration) d)
+                        .getFilename()
+                        .equals(new File("src/test/resources/include.h").getAbsolutePath())));
+  }
+
+  @Test
+  void testIncludeBothLists() throws Exception {
+    File file = new File("src/test/resources/include.cpp");
+    List<TranslationUnitDeclaration> translationUnitDeclarations =
+        analyzeWithBuilder(
+            TranslationConfiguration.builder()
+                .sourceLocations(List.of(file))
+                .topLevel(file.getParentFile())
+                .loadIncludes(true)
+                .debugParser(true)
+                .includeBlacklist("include.h") // blacklist entries take priority
+                .includeWhitelist("include.h")
+                .includeWhitelist("another-include.h")
+                .failOnError(true));
+
+    TranslationUnitDeclaration next = translationUnitDeclarations.iterator().next();
+    assertNotNull(next);
+
+    // while the whitelist has two entries, one is also part of the blacklist and thus will be
+    // overridden, so only 1 entry should be left
+    assertEquals(1, next.getIncludes().size());
+    // another-include.h will stay in the include list
+    assertTrue(
+        next.getIncludes().stream()
+            .anyMatch(
+                d ->
+                    ((IncludeDeclaration) d)
+                        .getFilename()
+                        .equals(
+                            new File("src/test/resources/another-include.h").getAbsolutePath())));
   }
 }
