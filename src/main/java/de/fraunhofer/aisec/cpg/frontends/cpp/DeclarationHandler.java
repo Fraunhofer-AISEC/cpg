@@ -40,6 +40,7 @@ import java.util.Map;
 import java.util.Optional;
 import org.eclipse.cdt.core.dom.ast.IASTArrayModifier;
 import org.eclipse.cdt.core.dom.ast.IASTDeclSpecifier;
+import java.util.stream.Collectors;
 import org.eclipse.cdt.core.dom.ast.IASTDeclaration;
 import org.eclipse.cdt.core.dom.ast.IASTDeclarator;
 import org.eclipse.cdt.core.dom.ast.IASTNode;
@@ -106,10 +107,16 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
 
     String typeString = getTypeStringFromDeclarator(ctx.getDeclarator(), ctx.getDeclSpecifier());
 
+    functionDeclaration.setIsDefinition(true);
+
     // It is a constructor
     if (functionDeclaration instanceof MethodDeclaration && typeString.isEmpty()) {
       functionDeclaration = ConstructorDeclaration.from((MethodDeclaration) functionDeclaration);
     }
+
+    functionDeclaration.setType(
+        TypeParser.createFrom(
+            ctx.getRawSignature().split(functionDeclaration.getName())[0].trim(), true));
 
     // associated record declaration if this is a method or constructor
     RecordDeclaration recordDeclaration =
@@ -120,13 +127,53 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
       // everything inside the method is within the scope of its record
       this.lang.getScopeManager().enterScope(recordDeclaration);
 
-      // Add it to the record declaration if its a method or constructor
-      // For now we just add it, however it might make more sense to replace the original
-      // declaration if its already there or extend it
-      if (functionDeclaration instanceof ConstructorDeclaration) {
-        recordDeclaration.getConstructors().add((ConstructorDeclaration) functionDeclaration);
-      } else {
-        recordDeclaration.getMethods().add((MethodDeclaration) functionDeclaration);
+      // look for the method
+      FunctionDeclaration finalFunctionDeclaration = functionDeclaration;
+      List<MethodDeclaration> candidates =
+          recordDeclaration.getMethods().stream()
+              .filter(
+                  m -> {
+                    if (!m.getName().equals(finalFunctionDeclaration.getName())) {
+                      return false;
+                    }
+
+                    if (!m.getType().equals(finalFunctionDeclaration.getType())) {
+                      return false;
+                    }
+
+                    List<ParamVariableDeclaration> parameters = m.getParameters();
+                    if (parameters.size() != finalFunctionDeclaration.getParameters().size()) {
+                      return false;
+                    }
+
+                    for (int i = 0; i < parameters.size(); i++) {
+                      // only the type has to be the same, names do not matter
+                      if (!parameters
+                          .get(0)
+                          .getType()
+                          .equals(finalFunctionDeclaration.getParameters().get(0).getType())) {
+                        return false;
+                      }
+                    }
+
+                    return true;
+                  })
+              .collect(Collectors.toList());
+
+      if (candidates.isEmpty()) {
+        log.warn(
+            "Could not find declaration of method {} in record {}",
+            functionDeclaration.getName(),
+            recordDeclaration.getName());
+      } else if (candidates.size() > 1) {
+        log.warn(
+            "Found more than one candidate to connect definition of method {} in record {} to its declaration. We will comply, but this is suspicious.",
+            functionDeclaration.getName(),
+            recordDeclaration.getName());
+      }
+
+      for (MethodDeclaration candidate : candidates) {
+        candidate.setDefinition(functionDeclaration);
       }
     }
 
