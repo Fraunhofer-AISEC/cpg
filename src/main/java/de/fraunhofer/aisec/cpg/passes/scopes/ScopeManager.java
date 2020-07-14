@@ -49,7 +49,6 @@ import de.fraunhofer.aisec.cpg.graph.ParamVariableDeclaration;
 import de.fraunhofer.aisec.cpg.graph.RecordDeclaration;
 import de.fraunhofer.aisec.cpg.graph.Statement;
 import de.fraunhofer.aisec.cpg.graph.SwitchStatement;
-import de.fraunhofer.aisec.cpg.graph.TranslationUnitDeclaration;
 import de.fraunhofer.aisec.cpg.graph.TryStatement;
 import de.fraunhofer.aisec.cpg.graph.TypedefDeclaration;
 import de.fraunhofer.aisec.cpg.graph.ValueDeclaration;
@@ -228,8 +227,6 @@ public class ScopeManager {
         newScope = new TryScope(nodeToScope);
       } else if (nodeToScope instanceof NamespaceDeclaration) {
         newScope = new NameScope(nodeToScope, getCurrentNamePrefix(), lang.getNamespaceDelimiter());
-      } else if (nodeToScope instanceof TranslationUnitDeclaration) {
-        newScope = new GlobalScope(nodeToScope);
       } else {
         LOGGER.error("No known scope for AST-nodes of type {}", nodeToScope.getClass());
         return;
@@ -641,6 +638,13 @@ public class ScopeManager {
         variables.stream().filter(param -> Objects.equals(param.getName(), name)).findAny();
 
     return any.orElse(null);
+  }
+
+  public void resetToGlobal() {
+    GlobalScope global = (GlobalScope) getFirstScopeThat(scope -> scope instanceof GlobalScope);
+    if (global != null) {
+      currentScope = global;
+    }
   }
 
   ///// End copied over for now ///////
