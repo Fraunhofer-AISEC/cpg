@@ -233,14 +233,13 @@ public class CXXLanguageFrontend extends LanguageFrontend {
     return null;
   }
 
+  @Nullable
   @Override
-  @NonNull
   @SuppressWarnings("ConstantConditions")
   public <T> PhysicalLocation getLocationFromRawNode(T astNode) {
     if (astNode instanceof ASTNode) {
       ASTNode node = (ASTNode) astNode;
       IASTFileLocation fLocation = node.getFileLocation();
-      ASTNode parent = (ASTNode) node.getParent();
 
       if (fLocation != null) {
         /* Yes, seriously. getRawSignature() is CPU- and heap-costly, because it does an arraycopy. If parent is the whole TranslationUnit and we are doing this repeatedly, we will end up with OOM and waste time.
@@ -248,7 +247,7 @@ public class CXXLanguageFrontend extends LanguageFrontend {
          * This may break in future versions of CDT parser, when fields are renamed (which is unlikely). In this case, we will go the standard route.
          * Note, the only reason we are doing this is to compute the start and end columns of the current node.
          */
-        AbstractCharArray parentRawSig = new CharArray("");
+        AbstractCharArray translationUnitRawSignature = new CharArray("");
         try {
           Field fLoc = getField(fLocation.getClass(), "fLocationCtx");
           fLoc.setAccessible(true);
@@ -256,27 +255,35 @@ public class CXXLanguageFrontend extends LanguageFrontend {
 
           Field fSource = getField(locCtx.getClass(), "fSource");
           fSource.setAccessible(true);
-          parentRawSig = (AbstractCharArray) fSource.get(locCtx);
+          translationUnitRawSignature = (AbstractCharArray) fSource.get(locCtx);
         } catch (ReflectiveOperationException | ClassCastException | NullPointerException e) {
           LOGGER.warn(
-              "Reflective retrieval of AST node source failed. Must go the official but costly route via getRawSignature(). Watch your heap!");
-          while (parent.getParent() != null) {
-            parent = (ASTNode) parent.getParent();
-          }
-          parentRawSig = new CharArray(parent.getRawSignature());
+              "Reflective retrieval of AST node source failed. Cannot reliably determine content of the file that contains the node");
+          return null;
         }
 
         // Get start column by stepping backwards from begin of node to first occurrence of '\n'
         int startColumn = 1;
         for (int i = node.getFileLocation().getNodeOffset() - 1; i > 1; i--) {
-          if (parentRawSig.get(i) == '\n') {
+          if (i >= translationUnitRawSignature.getLength()) {
+            // Fail gracefully, so that we can at least find out why this fails
+            LOGGER.warn(
+                "Requested index {} exceeds length of translation unit code ({})",
+                i,
+                translationUnitRawSignature.getLength());
+
+            return null;
+          }
+
+          if (translationUnitRawSignature.get(i) == '\n') {
             break;
           }
           startColumn++;
         }
         int endColumn =
             getEndColumnIndex(
-                parentRawSig, node.getFileLocation().getNodeOffset() + node.getLength());
+                translationUnitRawSignature,
+                node.getFileLocation().getNodeOffset() + node.getLength());
 
         Region region =
             new Region(
