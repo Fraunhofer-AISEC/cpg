@@ -26,73 +26,78 @@
 
 package de.fraunhofer.aisec.cpg.graph;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
+import java.util.*;
+import java.util.stream.Collectors;
 import org.apache.commons.lang3.builder.ToStringBuilder;
+import org.checkerframework.checker.nullness.qual.NonNull;
 
 /** The top most declaration, representing a translation unit, for example a file. */
 public class TranslationUnitDeclaration extends Declaration {
 
   /** A list of declarations within this unit. */
   @SubGraph("AST")
+  @NonNull
   private List<Declaration> declarations = new ArrayList<>();
 
   /** A list of includes within this unit. */
   @SubGraph("AST")
+  @NonNull
   private List<Declaration> includes = new ArrayList<>();
 
   /** A list of namespaces within this unit. */
   @SubGraph("AST")
+  @NonNull
   private List<Declaration> namespaces = new ArrayList<>();
 
+  // TODO Fragile! May easily throw ClassCastException. Use visitor instead.
   public <T> T getDeclarationAs(int i, Class<T> clazz) {
     return clazz.cast(this.declarations.get(i));
   }
 
   /**
-   * This returns the first declaration of a specified type and clazz, if it exists.
+   * Returns a non-null, possibly empty {@code Set} of the declaration of a specified type and
+   * clazz.
+   *
+   * <p>The set may contain more than one element if a declaration exists in the {@link
+   * TranslationUnitDeclaration} itself and in an included header file.
    *
    * @param name the name to search for
    * @param clazz the declaration class, such as {@link FunctionDeclaration}.
    * @param <T> the type of the declaration
-   * @return an optional containing the declaration if found
+   * @return a {@code Set} containing the declarations, if any.
    */
-  public <T extends Declaration> Optional<T> getDeclarationByName(String name, Class<T> clazz) {
+  @NonNull
+  public <T extends Declaration> Set<T> getDeclarationsByName(
+      @NonNull String name, @NonNull Class<T> clazz) {
     return this.declarations.stream()
         .filter(declaration -> clazz.isAssignableFrom(declaration.getClass()))
         .map(clazz::cast)
         .filter(declaration -> Objects.equals(declaration.getName(), name))
-        .findFirst();
+        .collect(Collectors.toSet());
   }
 
+  @NonNull
   public List<Declaration> getDeclarations() {
-    return declarations;
+    return Collections.unmodifiableList(declarations);
   }
 
-  public void setDeclarations(List<Declaration> declarations) {
-    this.declarations = declarations;
-  }
-
+  @NonNull
   public List<Declaration> getIncludes() {
-    return includes;
+    return Collections.unmodifiableList(includes);
   }
 
-  public void setIncludes(List<Declaration> includes) {
-    this.includes = includes;
-  }
-
+  @NonNull
   public List<Declaration> getNamespaces() {
-    return namespaces;
+    return Collections.unmodifiableList(namespaces);
   }
 
-  public void add(Declaration decl) {
+  public void add(@NonNull Declaration decl) {
     if (decl instanceof IncludeDeclaration) {
       includes.add(decl);
-    } else {
-      declarations.add(decl);
+    } else if (decl instanceof NamespaceDeclaration) {
+      namespaces.add(decl);
     }
+    declarations.add(decl);
   }
 
   @Override

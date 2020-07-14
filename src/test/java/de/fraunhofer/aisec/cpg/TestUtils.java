@@ -112,6 +112,22 @@ public class TestUtils {
     return analyzer.analyze().get().getTranslationUnits();
   }
 
+  /**
+   * Default way of parsing a list of files into a full CPG. All default passes are applied
+   *
+   * @param builder A {@link TranslationConfiguration.Builder} which contains the configuration
+   * @return A list of {@link TranslationUnitDeclaration} nodes, representing the CPG roots
+   * @throws Exception Any exception thrown during the parsing process
+   */
+  public static List<TranslationUnitDeclaration> analyzeWithBuilder(
+      TranslationConfiguration.Builder builder) throws Exception {
+    TranslationConfiguration config = builder.build();
+
+    TranslationManager analyzer = TranslationManager.builder().config(config).build();
+
+    return analyzer.analyze().get().getTranslationUnits();
+  }
+
   public static TranslationUnitDeclaration analyzeAndGetFirstTU(
       List<File> files, Path topLevel, boolean usePasses) throws Exception {
     List<TranslationUnitDeclaration> translationUnits = analyze(files, topLevel, usePasses);
