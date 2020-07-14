@@ -231,7 +231,9 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
       declaration = handleMultipleDeclarators(ctx);
     }
 
-    this.lang.processAttributes(declaration, ctx);
+    if (declaration != null) {
+      this.lang.processAttributes(declaration, ctx);
+    }
 
     return declaration;
   }
