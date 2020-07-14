@@ -250,6 +250,7 @@ public class TranslationConfiguration {
       registerPass(new CallResolver()); // creates CG
       registerPass(new EvaluationOrderGraphPass()); // creates EOG
       registerPass(new TypeResolver());
+      registerPass(new ControlFlowSensitivePass());
       return this;
     }
 
