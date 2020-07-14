@@ -127,37 +127,19 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
       // everything inside the method is within the scope of its record
       this.lang.getScopeManager().enterScope(recordDeclaration);
 
-      // look for the method
+      List<? extends MethodDeclaration> candidates;
+
+      if (functionDeclaration instanceof ConstructorDeclaration) {
+        candidates = recordDeclaration.getConstructors();
+      } else {
+        candidates = recordDeclaration.getMethods();
+      }
+
+      // look for the method or constructor
       FunctionDeclaration finalFunctionDeclaration = functionDeclaration;
-      List<MethodDeclaration> candidates =
-          recordDeclaration.getMethods().stream()
-              .filter(
-                  m -> {
-                    if (!m.getName().equals(finalFunctionDeclaration.getName())) {
-                      return false;
-                    }
-
-                    if (!m.getType().equals(finalFunctionDeclaration.getType())) {
-                      return false;
-                    }
-
-                    List<ParamVariableDeclaration> parameters = m.getParameters();
-                    if (parameters.size() != finalFunctionDeclaration.getParameters().size()) {
-                      return false;
-                    }
-
-                    for (int i = 0; i < parameters.size(); i++) {
-                      // only the type has to be the same, names do not matter
-                      if (!parameters
-                          .get(0)
-                          .getType()
-                          .equals(finalFunctionDeclaration.getParameters().get(0).getType())) {
-                        return false;
-                      }
-                    }
-
-                    return true;
-                  })
+      candidates =
+          candidates.stream()
+              .filter(m -> m.getSignature().equals(finalFunctionDeclaration.getSignature()))
               .collect(Collectors.toList());
 
       if (candidates.isEmpty()) {
