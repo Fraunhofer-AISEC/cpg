@@ -339,7 +339,7 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
   static String getTypeStringFromDeclarator(
       IASTDeclarator declarator, IASTDeclSpecifier declSpecifier) {
     // use the declaration specifier as basis
-    StringBuilder typeString = new StringBuilder(declSpecifier.getRawSignature());
+    StringBuilder typeString = new StringBuilder(declSpecifier.toString());
 
     // append names, pointer operators and array modifiers and such
     for (IASTNode node : declarator.getChildren()) {

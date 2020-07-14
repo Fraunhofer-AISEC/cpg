@@ -5,8 +5,6 @@ private:
 public:
   void* method();
 
-  // cannot parse inline correctly (issue #4)
-  //inline void* inlineMethod() {
   void* inlineMethod() {
     return 0;
   }
