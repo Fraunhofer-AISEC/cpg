@@ -114,6 +114,10 @@ public class Node extends IVisitable<Node> {
   /** Index of the argument if this node is used in a function call or parameter list. */
   private int argumentIndex;
 
+  /** List of annotations associated with that node. */
+  @SubGraph("AST")
+  protected List<Annotation> annotations;
+
   public Long getId() {
     return id;
   }
@@ -321,5 +325,13 @@ public class Node extends IVisitable<Node> {
   @Override
   public int hashCode() {
     return Objects.hash(name, this.getClass());
+  }
+
+  public void setAnnotations(List<Annotation> annotations) {
+    this.annotations = annotations;
+  }
+
+  public List<Annotation> getAnnotations() {
+    return annotations;
   }
 }

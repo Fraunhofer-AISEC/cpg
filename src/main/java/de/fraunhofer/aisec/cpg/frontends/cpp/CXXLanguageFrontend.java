@@ -26,17 +26,24 @@
 
 package de.fraunhofer.aisec.cpg.frontends.cpp;
 
+import static de.fraunhofer.aisec.cpg.graph.NodeBuilder.newAnnotation;
+import static de.fraunhofer.aisec.cpg.graph.NodeBuilder.newDeclaredReferenceExpression;
+import static de.fraunhofer.aisec.cpg.graph.NodeBuilder.newLiteral;
+
 import de.fraunhofer.aisec.cpg.TranslationConfiguration;
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
 import de.fraunhofer.aisec.cpg.frontends.TranslationException;
+import de.fraunhofer.aisec.cpg.graph.Annotation;
 import de.fraunhofer.aisec.cpg.graph.Declaration;
 import de.fraunhofer.aisec.cpg.graph.DeclaredReferenceExpression;
 import de.fraunhofer.aisec.cpg.graph.Expression;
+import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.TranslationUnitDeclaration;
 import de.fraunhofer.aisec.cpg.graph.TypeManager;
 import de.fraunhofer.aisec.cpg.graph.ValueDeclaration;
 import de.fraunhofer.aisec.cpg.graph.type.Type;
 import de.fraunhofer.aisec.cpg.graph.type.TypeParser;
+import de.fraunhofer.aisec.cpg.graph.type.UnknownType;
 import de.fraunhofer.aisec.cpg.helpers.Benchmark;
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager;
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation;
@@ -308,7 +315,6 @@ public class CXXLanguageFrontend extends LanguageFrontend {
 
   @Nullable
   @Override
-  @SuppressWarnings("ConstantConditions")
   public <T> PhysicalLocation getLocationFromRawNode(T astNode) {
     if (astNode instanceof ASTNode) {
       ASTNode node = (ASTNode) astNode;
@@ -370,6 +376,69 @@ public class CXXLanguageFrontend extends LanguageFrontend {
     }
 
     return null;
+  }
+
+  /**
+   * Processes C++ attributes into {@link Annotation} nodes.
+   *
+   * @param node the node to process
+   * @param owner the AST node which holds the attribute
+   */
+  public void processAttributes(@NonNull Node node, @NonNull IASTAttributeOwner owner) {
+    if (this.config.processAnnotations) {
+      // set attributes
+      node.setAnnotations(handleAttributes(owner));
+    }
+  }
+
+  private List<Annotation> handleAttributes(IASTAttributeOwner owner) {
+    List<Annotation> list = new ArrayList<>();
+
+    for (IASTAttribute attribute : owner.getAttributes()) {
+      Annotation annotation =
+          newAnnotation(new String(attribute.getName()), attribute.getRawSignature());
+
+      // go over the parameters
+      if (attribute.getArgumentClause() instanceof IASTTokenList) {
+        List<Expression> values = handleTokenList((IASTTokenList) attribute.getArgumentClause());
+
+        annotation.setValues(values);
+      }
+
+      list.add(annotation);
+    }
+
+    return list;
+  }
+
+  private List<Expression> handleTokenList(IASTTokenList tokenList) {
+    List<Expression> list = new ArrayList<>();
+
+    for (IASTToken token : tokenList.getTokens()) {
+      if (token.getTokenType() == 6) {
+        continue;
+      }
+
+      list.add(handleToken(token));
+    }
+
+    return list;
+  }
+
+  private Expression handleToken(IASTToken token) {
+    String code = new String(token.getTokenCharImage());
+
+    switch (token.getTokenType()) {
+      case 1:
+        return newDeclaredReferenceExpression(code, UnknownType.getUnknownType(), code);
+      case 2:
+        return newLiteral(Integer.parseInt(code), CXXLanguageFrontend.INT_TYPE, code);
+      case 130:
+        return newLiteral(
+            code.replace("\"", ""), TypeParser.createFrom("const char*", false), code);
+      default:
+        return newLiteral(code, TypeParser.createFrom("const char*", false), code);
+    }
   }
 
   private Field getField(Class<?> type, String fieldName) throws NoSuchFieldException {

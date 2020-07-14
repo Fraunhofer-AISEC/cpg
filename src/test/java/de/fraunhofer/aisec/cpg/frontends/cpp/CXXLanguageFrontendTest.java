@@ -30,6 +30,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import de.fraunhofer.aisec.cpg.BaseTest;
 import de.fraunhofer.aisec.cpg.TestUtils;
+import de.fraunhofer.aisec.cpg.TranslationConfiguration;
 import de.fraunhofer.aisec.cpg.graph.*;
 import de.fraunhofer.aisec.cpg.graph.type.TypeParser;
 import de.fraunhofer.aisec.cpg.graph.type.UnknownType;
@@ -1105,5 +1106,59 @@ class CXXLanguageFrontendTest extends BaseTest {
     RecordDeclaration anotherClass =
         tu.getDeclarationsByName("AnotherClass", RecordDeclaration.class).iterator().next();
     assertNotNull(anotherClass);
+  }
+
+  @Test
+  void testAttributes() throws Exception {
+    File file = new File("src/test/resources/attributes.cpp");
+    List<TranslationUnitDeclaration> declarations =
+        TestUtils.analyzeWithBuilder(
+            TranslationConfiguration.builder()
+                .sourceLocations(List.of(file))
+                .topLevel(file.getParentFile())
+                .defaultPasses()
+                .processAnnotations(true)
+                .symbols(
+                    Map.of("PROPERTY_ATTRIBUTE(...)", "[[property_attribute(#__VA_ARGS__)]]")));
+    assertFalse(declarations.isEmpty());
+
+    TranslationUnitDeclaration tu = declarations.get(0);
+    assertNotNull(tu);
+
+    FunctionDeclaration main =
+        tu.getDeclarationsByName("main", FunctionDeclaration.class).iterator().next();
+    assertNotNull(main);
+
+    assertEquals("function_attribute", main.getAnnotations().get(0).getName());
+
+    RecordDeclaration someClass =
+        tu.getDeclarationsByName("SomeClass", RecordDeclaration.class).iterator().next();
+    assertNotNull(someClass);
+
+    assertEquals("record_attribute", someClass.getAnnotations().get(0).getName());
+
+    FieldDeclaration a =
+        someClass.getFields().stream().filter(f -> f.getName().equals("a")).findAny().orElse(null);
+    assertNotNull(a);
+
+    Annotation annotation = a.getAnnotations().get(0);
+    assertNotNull(annotation);
+
+    assertEquals("property_attribute", annotation.getName());
+    assertEquals(3, annotation.getValues().size());
+    assertEquals("a", ((Literal<String>) annotation.getValues().get(0)).getValue());
+
+    FieldDeclaration b =
+        someClass.getFields().stream().filter(f -> f.getName().equals("b")).findAny().orElse(null);
+    assertNotNull(a);
+
+    annotation = b.getAnnotations().get(0);
+    assertNotNull(annotation);
+
+    assertEquals("property_attribute", annotation.getName());
+    assertEquals(1, annotation.getValues().size());
+    assertEquals(
+        "SomeCategory, SomeOtherThing",
+        ((Literal<String>) annotation.getValues().get(0)).getValue());
   }
 }
