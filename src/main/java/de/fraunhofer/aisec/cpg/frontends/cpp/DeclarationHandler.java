@@ -111,6 +111,25 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
       functionDeclaration = ConstructorDeclaration.from((MethodDeclaration) functionDeclaration);
     }
 
+    // Add it to the record declaration if its a method or constructor
+    if (functionDeclaration instanceof MethodDeclaration
+        && ((MethodDeclaration) functionDeclaration).getRecordDeclaration() != null) {
+      RecordDeclaration recordDeclaration =
+          ((MethodDeclaration) functionDeclaration).getRecordDeclaration();
+      if (recordDeclaration != null) {
+        recordDeclaration.getMethods().add((MethodDeclaration) functionDeclaration);
+      }
+    }
+
+    if (functionDeclaration instanceof ConstructorDeclaration
+        && ((MethodDeclaration) functionDeclaration).getRecordDeclaration() != null) {
+      RecordDeclaration recordDeclaration =
+          ((MethodDeclaration) functionDeclaration).getRecordDeclaration();
+      if (recordDeclaration != null) {
+        recordDeclaration.getConstructors().add((ConstructorDeclaration) functionDeclaration);
+      }
+    }
+
     lang.getScopeManager().enterScope(functionDeclaration);
 
     functionDeclaration.setType(TypeParser.createFrom(typeString, true));
