@@ -271,6 +271,12 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
     TranslationUnitDeclaration node =
         NodeBuilder.newTranslationUnitDeclaration(
             translationUnit.getFilePath(), translationUnit.getRawSignature());
+
+    // There might have been errors in the previous translation unit and in any case
+    // we need to reset the scope manager scope to global, to avoid spilling scope errors into other
+    // translation units
+    lang.getScopeManager().enterScope(node);
+
     lang.setCurrentTU(node);
 
     HashMap<String, HashSet<ProblemDeclaration>> problematicIncludes = new HashMap<>();
@@ -343,6 +349,9 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
         }
       }
     }
+
+    // wrap the translation unit into its own global scope
+    lang.getScopeManager().leaveScope(node);
 
     return node;
   }
