@@ -39,24 +39,26 @@ public class StructureDeclarationScope extends ValueDeclarationScope {
       if (astNode instanceof FunctionDeclaration) {
         FunctionDeclaration functionD = (FunctionDeclaration) astNode;
         if (declaration instanceof RecordDeclaration) {
-          addByNameAndReplaceIfNotContained(functionD.getRecords(), declaration);
+          addByNameAndReplaceIfNotContained(
+              functionD.getRecords(), (RecordDeclaration) declaration);
         }
 
       } else if (astNode instanceof NamespaceDeclaration) {
         NamespaceDeclaration nameD = (NamespaceDeclaration) astNode;
 
         if (declaration instanceof RecordDeclaration) {
-          addByNameAndReplaceIfNotContained(nameD.getRecords(), declaration);
+          addByNameAndReplaceIfNotContained(nameD.getRecords(), (RecordDeclaration) declaration);
         } else if (declaration instanceof NamespaceDeclaration) {
-          addByNameAndReplaceIfNotContained(nameD.getNamespaces(), declaration);
+          addByNameAndReplaceIfNotContained(
+              nameD.getNamespaces(), (NamespaceDeclaration) declaration);
         }
 
       } else if (astNode instanceof RecordDeclaration) {
         RecordDeclaration recordD = (RecordDeclaration) astNode;
         if (declaration instanceof RecordDeclaration) {
-          addByNameAndReplaceIfNotContained(recordD.getRecords(), declaration);
+          addByNameAndReplaceIfNotContained(recordD.getRecords(), (RecordDeclaration) declaration);
         } else if (declaration instanceof FieldDeclaration) {
-          addByNameAndReplaceIfNotContained(recordD.getFields(), declaration);
+          addByNameAndReplaceIfNotContained(recordD.getFields(), (FieldDeclaration) declaration);
         }
 
       } else if (this instanceof GlobalScope) {

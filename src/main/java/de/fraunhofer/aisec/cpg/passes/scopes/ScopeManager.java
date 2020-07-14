@@ -477,28 +477,34 @@ public class ScopeManager {
 
   // 1. enter scope of element to replace and move to parent or
 
-  public void addDeclaration(Declaration declaration){
+  public void addDeclaration(Declaration declaration) {
 
-    if(!declaration.getName().contains(lang.getNamespaceDelimiter())){
+    if (!declaration.getName().contains(lang.getNamespaceDelimiter())) {
       addDeclarationInCurrentScope(declaration);
-    }else{
+    } else {
       Scope tmpScope = currentScope;
       // Todo search for the right scope to add
       // Todo set that scope as current scope
       String prefix = declaration.getName();
       prefix = prefix.substring(0, prefix.lastIndexOf(lang.getNamespaceDelimiter()));
       Scope scope = resolveScopeWithPath(prefix);
-      if(scope != null){
+      if (scope != null) {
         currentScope = scope;
         addDeclarationInCurrentScope(declaration);
-      }else{
-        LOGGER.warn("External declaration {} could not be added to unknown parent {}.", declaration.getName(), prefix);
+      } else {
+        LOGGER.warn(
+            "External declaration {} could not be added to unknown parent {}.",
+            declaration.getName(),
+            prefix);
         return;
       }
 
       // Cut of the name prefix before adding to the appropriate scope
       String name = declaration.getName();
-      name = name.substring(name.lastIndexOf(lang.getNamespaceDelimiter() + lang.getNamespaceDelimiter().length()));
+      name =
+          name.substring(
+              name.lastIndexOf(
+                  lang.getNamespaceDelimiter() + lang.getNamespaceDelimiter().length()));
       declaration.setName(name);
 
       addDeclarationInCurrentScope(declaration);

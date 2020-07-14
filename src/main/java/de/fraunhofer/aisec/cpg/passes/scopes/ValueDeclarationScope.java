@@ -40,7 +40,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.stream.Collectors;
-
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -88,17 +87,21 @@ public class ValueDeclarationScope extends Scope {
       NamespaceDeclaration namespaceD = (NamespaceDeclaration) astNode;
 
       if (valueDeclaration instanceof FieldDeclaration) {
-        addByNameAndReplaceIfNotContained(namespaceD.getFields(), (FieldDeclaration) valueDeclaration);
+        addByNameAndReplaceIfNotContained(
+            namespaceD.getFields(), (FieldDeclaration) valueDeclaration);
       } else if (valueDeclaration instanceof FunctionDeclaration) {
-        addByNameAndReplaceIfNotContained(namespaceD.getFunctions(), (FunctionDeclaration) valueDeclaration);
+        addByNameAndReplaceIfNotContained(
+            namespaceD.getFunctions(), (FunctionDeclaration) valueDeclaration);
       }
 
     } else if (astNode instanceof RecordDeclaration) {
       RecordDeclaration recordD = (RecordDeclaration) astNode;
       if (valueDeclaration instanceof ConstructorDeclaration) {
-        addByNameAndReplaceIfNotContained(recordD.getConstructors(), (ConstructorDeclaration) valueDeclaration);
+        addByNameAndReplaceIfNotContained(
+            recordD.getConstructors(), (ConstructorDeclaration) valueDeclaration);
       } else if (valueDeclaration instanceof MethodDeclaration) {
-        addByNameAndReplaceIfNotContained(recordD.getMethods(), (MethodDeclaration) valueDeclaration);
+        addByNameAndReplaceIfNotContained(
+            recordD.getMethods(), (MethodDeclaration) valueDeclaration);
       } else if (valueDeclaration instanceof FieldDeclaration) {
         addByNameAndReplaceIfNotContained(recordD.getFields(), (FieldDeclaration) valueDeclaration);
       }
@@ -106,7 +109,8 @@ public class ValueDeclarationScope extends Scope {
     } else if (astNode instanceof FunctionDeclaration) {
       FunctionDeclaration functionD = (FunctionDeclaration) astNode;
       if (valueDeclaration instanceof ParamVariableDeclaration) {
-        addByNameAndReplaceIfNotContained(functionD.getParameters(), (ParamVariableDeclaration) valueDeclaration);
+        addByNameAndReplaceIfNotContained(
+            functionD.getParameters(), (ParamVariableDeclaration) valueDeclaration);
       }
     } else if (this instanceof GlobalScope) {
       // Here ther is no ast-node
@@ -119,12 +123,16 @@ public class ValueDeclarationScope extends Scope {
     */
   }
 
-  protected <T extends Node> void addByNameAndReplaceIfNotContained(Collection<T> collection, T nodeToAdd) {
+  protected <T extends Node> void addByNameAndReplaceIfNotContained(
+      Collection<T> collection, T nodeToAdd) {
     if (!collection.contains(nodeToAdd)) {
-      List<Node> existing = collection.stream().filter(node -> node.getName().equals(nodeToAdd)).collect(Collectors.toList());
-      if(existing.size() == 0){
+      List<Node> existing =
+          collection.stream()
+              .filter(node -> node.getName().equals(nodeToAdd))
+              .collect(Collectors.toList());
+      if (existing.size() == 0) {
         collection.add(nodeToAdd);
-      }else {
+      } else {
         existing.stream().forEach(toRemove -> collection.remove(toRemove));
         collection.add(nodeToAdd);
       }
