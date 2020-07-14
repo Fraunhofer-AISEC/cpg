@@ -12,10 +12,15 @@ public:
   SomeClass() {
 
   }
+
+  SomeClass(int a);
 };
 
 void* SomeClass::method() {
   return 0;
+}
+
+SomeClass::SomeClass(int a) {
 }
 
 int main() {

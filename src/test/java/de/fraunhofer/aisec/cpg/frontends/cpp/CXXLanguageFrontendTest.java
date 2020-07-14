@@ -713,6 +713,16 @@ class CXXLanguageFrontendTest extends BaseTest {
     assertEquals(recordDeclaration.getName(), constructor.getName());
     assertEquals(TypeParser.createFrom("SomeClass", true), constructor.getType());
     assertTrue(constructor.hasBody());
+
+    ConstructorDeclaration constructorDefinition =
+        declaration.getDeclarationAs(2, ConstructorDeclaration.class);
+
+    assertNotNull(constructorDefinition);
+    assertEquals(1, constructorDefinition.getParameters().size());
+    assertEquals(
+        TypeParser.createFrom("int", true), constructorDefinition.getParameters().get(0).getType());
+    assertEquals(TypeParser.createFrom("SomeClass", true), constructorDefinition.getType());
+    assertTrue(constructorDefinition.hasBody());
   }
 
   @Test
