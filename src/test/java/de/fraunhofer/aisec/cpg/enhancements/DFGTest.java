@@ -5,7 +5,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import de.fraunhofer.aisec.cpg.TestUtils;
 import de.fraunhofer.aisec.cpg.graph.*;
-import de.fraunhofer.aisec.cpg.helpers.Util;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Set;
@@ -27,11 +26,11 @@ class DFGTest {
     // Test If-Block
     Literal<?> literal2 =
         TestUtils.findByPredicate(
-            Util.subnodesOfType(result, Literal.class), l -> l.getValue().equals(2));
+            TestUtils.subnodesOfType(result, Literal.class), l -> l.getValue().equals(2));
 
     DeclaredReferenceExpression a2 =
         TestUtils.findByPredicate(
-            Util.subnodesOfType(result, DeclaredReferenceExpression.class),
+            TestUtils.subnodesOfType(result, DeclaredReferenceExpression.class),
             e -> e.getAccess().equals(AccessValues.WRITE));
 
     assertTrue(literal2.getNextDFG().contains(a2));
@@ -46,15 +45,16 @@ class DFGTest {
     // Test Else-Block with System.out.println()
     Literal<?> literal1 =
         TestUtils.findByPredicate(
-            Util.subnodesOfType(result, Literal.class), l -> l.getValue().equals(1));
+            TestUtils.subnodesOfType(result, Literal.class), l -> l.getValue().equals(1));
 
     CallExpression println =
         TestUtils.findByPredicate(
-            Util.subnodesOfType(result, CallExpression.class), c -> c.getName().equals("println"));
+            TestUtils.subnodesOfType(result, CallExpression.class),
+            c -> c.getName().equals("println"));
 
     DeclaredReferenceExpression a1 =
         TestUtils.findByPredicate(
-            Util.subnodesOfType(result, DeclaredReferenceExpression.class),
+            TestUtils.subnodesOfType(result, DeclaredReferenceExpression.class),
             e -> e.getNextEOG().contains(println));
 
     assertEquals(1, a1.getPrevDFG().size());
@@ -66,7 +66,8 @@ class DFGTest {
     // Test Merging
     VariableDeclaration b =
         TestUtils.findByPredicate(
-            Util.subnodesOfType(result, VariableDeclaration.class), v -> v.getName().equals("b"));
+            TestUtils.subnodesOfType(result, VariableDeclaration.class),
+            v -> v.getName().equals("b"));
 
     DeclaredReferenceExpression ab = (DeclaredReferenceExpression) b.getPrevEOG().get(0);
 
@@ -91,13 +92,14 @@ class DFGTest {
 
     VariableDeclaration b =
         TestUtils.findByPredicate(
-            Util.subnodesOfType(result, VariableDeclaration.class), v -> v.getName().equals("b"));
+            TestUtils.subnodesOfType(result, VariableDeclaration.class),
+            v -> v.getName().equals("b"));
 
     DeclaredReferenceExpression ab = (DeclaredReferenceExpression) b.getPrevEOG().get(0);
 
     Literal<?> literal4 =
         TestUtils.findByPredicate(
-            Util.subnodesOfType(result, Literal.class), l -> l.getValue().equals(4));
+            TestUtils.subnodesOfType(result, Literal.class), l -> l.getValue().equals(4));
 
     assertTrue(literal4.getNextDFG().contains(ab));
     assertEquals(1, ab.getPrevDFG().size());
@@ -114,22 +116,23 @@ class DFGTest {
 
     VariableDeclaration b =
         TestUtils.findByPredicate(
-            Util.subnodesOfType(result, VariableDeclaration.class), v -> v.getName().equals("b"));
+            TestUtils.subnodesOfType(result, VariableDeclaration.class),
+            v -> v.getName().equals("b"));
 
     DeclaredReferenceExpression ab = (DeclaredReferenceExpression) b.getPrevEOG().get(0);
 
     Literal<?> literal0 =
         TestUtils.findByPredicate(
-            Util.subnodesOfType(result, Literal.class), l -> l.getValue().equals(0));
+            TestUtils.subnodesOfType(result, Literal.class), l -> l.getValue().equals(0));
     Literal<?> literal10 =
         TestUtils.findByPredicate(
-            Util.subnodesOfType(result, Literal.class), l -> l.getValue().equals(10));
+            TestUtils.subnodesOfType(result, Literal.class), l -> l.getValue().equals(10));
     Literal<?> literal11 =
         TestUtils.findByPredicate(
-            Util.subnodesOfType(result, Literal.class), l -> l.getValue().equals(11));
+            TestUtils.subnodesOfType(result, Literal.class), l -> l.getValue().equals(11));
     Literal<?> literal12 =
         TestUtils.findByPredicate(
-            Util.subnodesOfType(result, Literal.class), l -> l.getValue().equals(12));
+            TestUtils.subnodesOfType(result, Literal.class), l -> l.getValue().equals(12));
 
     assertTrue(ab.getPrevDFG().contains(literal0));
     assertTrue(ab.getPrevDFG().contains(literal10));
@@ -163,12 +166,13 @@ class DFGTest {
             List.of(topLevel.resolve("compoundoperator.cpp").toFile()), topLevel, true);
 
     BinaryOperator rwCompoundOperator =
-        TestUtils.findByUniqueName(Util.subnodesOfType(result, BinaryOperator.class), "+=");
+        TestUtils.findByUniqueName(TestUtils.subnodesOfType(result, BinaryOperator.class), "+=");
     DeclaredReferenceExpression expression =
         TestUtils.findByUniqueName(
-            Util.subnodesOfType(result, DeclaredReferenceExpression.class), "i");
+            TestUtils.subnodesOfType(result, DeclaredReferenceExpression.class), "i");
     VariableDeclaration variableDeclaration =
-        TestUtils.findByUniqueName(Util.subnodesOfType(result, VariableDeclaration.class), "i");
+        TestUtils.findByUniqueName(
+            TestUtils.subnodesOfType(result, VariableDeclaration.class), "i");
 
     Set<Node> prevDFGOperator = rwCompoundOperator.getPrevDFG();
     Set<Node> nextDFGOperator = rwCompoundOperator.getNextDFG();
@@ -184,12 +188,13 @@ class DFGTest {
         TestUtils.analyze(List.of(topLevel.resolve("unaryoperator.cpp").toFile()), topLevel, true);
 
     UnaryOperator rwUnaryOperator =
-        TestUtils.findByUniqueName(Util.subnodesOfType(result, UnaryOperator.class), "++");
+        TestUtils.findByUniqueName(TestUtils.subnodesOfType(result, UnaryOperator.class), "++");
     DeclaredReferenceExpression expression =
         TestUtils.findByUniqueName(
-            Util.subnodesOfType(result, DeclaredReferenceExpression.class), "i");
+            TestUtils.subnodesOfType(result, DeclaredReferenceExpression.class), "i");
     VariableDeclaration variableDeclaration =
-        TestUtils.findByUniqueName(Util.subnodesOfType(result, VariableDeclaration.class), "i");
+        TestUtils.findByUniqueName(
+            TestUtils.subnodesOfType(result, VariableDeclaration.class), "i");
 
     Set<Node> prevDFGOperator = rwUnaryOperator.getPrevDFG();
     Set<Node> nextDFGOperator = rwUnaryOperator.getNextDFG();

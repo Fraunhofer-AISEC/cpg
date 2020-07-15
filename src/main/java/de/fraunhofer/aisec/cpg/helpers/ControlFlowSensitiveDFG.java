@@ -237,7 +237,9 @@ public class ControlFlowSensitiveDFG {
         // New VariableDeclaration is found, and we start the tracking
         addVisitedToMap((VariableDeclaration) currNode);
       } else if (currNode instanceof IfStatement || currNode instanceof SwitchStatement) {
-        // TODO Currently we treat the CaseStatements in SwitchStatements as if they were mutually exclusive. This must be updated once we have an order for the cases to determine the target of a fall through
+        // TODO Currently we treat the CaseStatements in SwitchStatements as if they were mutually
+        // exclusive. This must be updated once we have an order for the cases to determine the
+        // target of a fall through
         // If an IfStatement or a SwitchStatement is found we split the ControlFlowSensitiveDFG for
         // every case and merge it, when the execution reaches the joinPoint
         Node joinNode = obtainJoinPoint(currNode);
