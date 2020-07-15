@@ -7,7 +7,7 @@ public class ControlFlowSensitiveDFGIfMerge {
       System.out.println(a);
     }
 
-    //int b = a;
+    int b = a;
   }
 
 }

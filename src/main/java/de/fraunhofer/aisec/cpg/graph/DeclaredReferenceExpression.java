@@ -55,6 +55,10 @@ public class DeclaredReferenceExpression extends Expression implements TypeListe
     return refersTo;
   }
 
+  public AccessValues getAccess() {
+    return access;
+  }
+
   public void setRefersTo(@NonNull ValueDeclaration refersTo) {
     HashSet<ValueDeclaration> n = new HashSet<>();
     n.add(refersTo);

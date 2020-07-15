@@ -7,7 +7,17 @@ import de.fraunhofer.aisec.cpg.graph.TranslationUnitDeclaration;
 import de.fraunhofer.aisec.cpg.helpers.ControlFlowSensitiveDFG;
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker;
 
-public class ControlFlowSensitivePass extends Pass {
+/**
+ * This pass tracks VariableDeclarations and values that are included in the graph by the DFG edge.
+ * For this pass we traverse the EOG in order to detect mutually exclusive code blocks (e.g. If-Else
+ * Statement) in order to remove the DFG edges that are not feasible.
+ *
+ * <p>Control Flow Sensitivity in the DFG is only performed on VariableDeclarations and not on
+ * FieldDeclarations. The reason for this being the fact, that the value of a field might be
+ * modified to a value that is not present in the method, thus it is not detected by our variable
+ * tracking
+ */
+public class ControlFlowSensitiveDFGPass extends Pass {
 
   @Override
   public void cleanup() {}

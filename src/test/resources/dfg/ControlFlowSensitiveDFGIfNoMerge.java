@@ -4,7 +4,7 @@ public class ControlFlowSensitiveDFGIfNoMerge {
     if (args.length > 3) {
       a = 2;
     } else {
-      a = 3;
+      a = 4;
       int b = a;
     }
   }
