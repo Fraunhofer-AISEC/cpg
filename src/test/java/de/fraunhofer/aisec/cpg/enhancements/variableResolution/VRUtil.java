@@ -1,4 +1,4 @@
-package de.fraunhofer.aisec.cpg.enhancements.variableResolution;
+package de.fraunhofer.aisec.cpg.enhancements.variable_resolution;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
