@@ -37,7 +37,7 @@ import org.junit.jupiter.api.TestInstance;
 @Disabled(
     "Until changing variable resolution to ScopeManager. Then in detail disable the tests that need specific fixes")
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-public class VariableResolverJavaTest extends BaseTest {
+class VariableResolverJavaTest extends BaseTest {
 
   // Externally defined static global
 
@@ -71,7 +71,7 @@ public class VariableResolverJavaTest extends BaseTest {
   private Map<String, Expression> callParamMap = new HashMap<>();
 
   @BeforeAll
-  public void initTests() throws ExecutionException, InterruptedException {
+  void initTests() throws ExecutionException, InterruptedException {
     final String topLevelPath = "src/test/resources/variables_extended/";
     List<String> fileNames = Arrays.asList("ScopeVariables.java", "ExternalClass.java");
     List<File> fileLocations =
@@ -176,20 +176,20 @@ public class VariableResolverJavaTest extends BaseTest {
     }
   }
 
-  public DeclaredReferenceExpression getCallWithReference(String literal) {
+  DeclaredReferenceExpression getCallWithReference(String literal) {
     Expression exp = callParamMap.get(literal);
     if (exp instanceof DeclaredReferenceExpression) return (DeclaredReferenceExpression) exp;
     return null;
   }
 
-  public MemberExpression getCallWithMemberExpression(String literal) {
+  MemberExpression getCallWithMemberExpression(String literal) {
     Expression exp = callParamMap.get(literal);
     if (exp instanceof MemberExpression) return (MemberExpression) exp;
     return null;
   }
 
   @Test
-  public void testVarNameDeclaredInLoop() {
+  void testVarNameDeclaredInLoop() {
     VariableDeclaration firstLoopLocal =
         Util.getSubnodeOfTypeWithName(forStatements.get(0), VariableDeclaration.class, "varName");
 
@@ -202,7 +202,7 @@ public class VariableResolverJavaTest extends BaseTest {
   }
 
   @Test
-  public void testVarNameInSecondLoop() {
+  void testVarNameInSecondLoop() {
     VariableDeclaration secondLoopLocal =
         Util.getSubnodeOfTypeWithName(forStatements.get(1), VariableDeclaration.class, "varName");
 
@@ -210,7 +210,7 @@ public class VariableResolverJavaTest extends BaseTest {
   }
 
   @Test
-  public void testImplicitThisVarNameAfterLoops() {
+  void testImplicitThisVarNameAfterLoops() {
     // Todo refers to the second loop local
     // Todo This is correct now because we properly pop the loop context
     VRUtil.assertUsageOfMemberAndBase(
@@ -218,14 +218,14 @@ public class VariableResolverJavaTest extends BaseTest {
   }
 
   @Test
-  public void testReferenceToParameter() {
+  void testReferenceToParameter() {
     ValueDeclaration param =
         Util.getSubnodeOfTypeWithName(outerFunction2, ParamVariableDeclaration.class, "varName");
     VRUtil.assertUsageOf(callParamMap.get("func2_param_varName"), param);
   }
 
   @Test
-  public void testVarNameInInstanceOfExternalClass() {
+  void testVarNameInInstanceOfExternalClass() {
     VariableDeclaration externalClassInstance =
         Util.getSubnodeOfTypeWithName(outerFunction3, VariableDeclaration.class, "externalClass");
     // Todo member points to the function parameter with the same name instead of the field in the
@@ -235,7 +235,7 @@ public class VariableResolverJavaTest extends BaseTest {
   }
 
   @Test
-  public void testStaticVarNameInExternalClass() {
+  void testStaticVarNameInExternalClass() {
     // Todo here a Unknown record declaration is added
     // Todo member refers to local variable with the same name of the
     // static field in external
@@ -246,7 +246,7 @@ public class VariableResolverJavaTest extends BaseTest {
   }
 
   @Test
-  public void testStaticVarnameWithoutPreviousInstance() {
+  void testStaticVarnameWithoutPreviousInstance() {
     // Todo Case is a unknown record declaration
     VRUtil.assertUsageOfMemberAndBase(
         callParamMap.get("func4_external_static_staticVarName"),
@@ -255,27 +255,27 @@ public class VariableResolverJavaTest extends BaseTest {
   }
 
   @Test
-  public void testVarNameOverImpThisInnerClass() {
+  void testVarNameOverImpThisInnerClass() {
     VRUtil.assertUsageOfMemberAndBase(
         callParamMap.get("func1_inner_imp_this_varName"), innerImpThis, innerVarName);
   }
 
   @Test
-  public void testVarNameInOuterFromInnerClass() {
+  void testVarNameInOuterFromInnerClass() {
     // Todo Points to varName in inner class instead of outer
     VRUtil.assertUsageOfMemberAndBase(
         callParamMap.get("func1_outer_this_varName"), innerImpOuter, outerVarName);
   }
 
   @Test
-  public void testStaticOuterFromInner() {
+  void testStaticOuterFromInner() {
     // Todo points to innerStaticVar, this is wrong
     VRUtil.assertUsageOfMemberAndBase(
         callParamMap.get("func1_outer_static_staticVarName"), outerClass, outerStaticVarName);
   }
 
   @Test
-  public void testParamVarNameInInnerClass() {
+  void testParamVarNameInInnerClass() {
 
     VRUtil.assertUsageOf(
         callParamMap.get("func2_inner_param_varName"),
@@ -283,14 +283,14 @@ public class VariableResolverJavaTest extends BaseTest {
   }
 
   @Test
-  public void testInnerVarnameOverExplicitThis() {
+  void testInnerVarnameOverExplicitThis() {
     // Todo memeber currently points to an implicitly created field
     VRUtil.assertUsageOfMemberAndBase(
         callParamMap.get("func2_inner_this_varName"), innerImpThis, innerVarName);
   }
 
   @Test
-  public void testStaticVarNameAsCoughtExcpetionInInner() {
+  void testStaticVarNameAsCoughtExcpetionInInner() {
     VariableDeclaration staticVarNameException =
         Util.getSubnodeOfTypeWithName(innerFunction3, VariableDeclaration.class, "staticVarName");
     VRUtil.assertUsageOf(
@@ -298,7 +298,7 @@ public class VariableResolverJavaTest extends BaseTest {
   }
 
   @Test
-  public void testVarNameAsCoughtExcpetionInInner() {
+  void testVarNameAsCoughtExcpetionInInner() {
     VariableDeclaration varNameExcepetion =
         Util.getSubnodeOfTypeWithName(innerFunction3, VariableDeclaration.class, "varName");
     VRUtil.assertUsageOf(callParamMap.get("func3_inner_exception_varName"), varNameExcepetion);
