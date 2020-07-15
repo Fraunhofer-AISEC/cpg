@@ -737,7 +737,7 @@ class CXXLanguageFrontendTest extends BaseTest {
     assertTrue(constructor.hasBody());
 
     ConstructorDeclaration constructorDefinition =
-        declaration.getDeclarationAs(2, ConstructorDeclaration.class);
+        declaration.getDeclarationAs(3, ConstructorDeclaration.class);
 
     assertNotNull(constructorDefinition);
     assertEquals(1, constructorDefinition.getParameters().size());

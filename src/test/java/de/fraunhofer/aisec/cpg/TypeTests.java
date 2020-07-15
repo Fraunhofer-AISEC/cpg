@@ -26,6 +26,8 @@
 
 package de.fraunhofer.aisec.cpg;
 
+import static de.fraunhofer.aisec.cpg.TestUtils.findByUniqueName;
+import static de.fraunhofer.aisec.cpg.TestUtils.subnodesOfType;
 import static org.junit.jupiter.api.Assertions.*;
 
 import de.fraunhofer.aisec.cpg.graph.*;
@@ -610,60 +612,58 @@ class TypeTests extends BaseTest {
     Path topLevel = Path.of("src", "test", "resources", "types");
     List<TranslationUnitDeclaration> result = TestUtils.analyze("java", topLevel, true);
 
-    List<ObjectType> variables = TestUtils.subnodesOfType(result, ObjectType.class);
-    List<RecordDeclaration> recordDeclarations =
-        TestUtils.subnodesOfType(result, RecordDeclaration.class);
+    List<ObjectType> variables = subnodesOfType(result, ObjectType.class);
+    List<RecordDeclaration> recordDeclarations = subnodesOfType(result, RecordDeclaration.class);
 
     // Test RecordDeclaration relationship
     List<ObjectType> objectTypes = TestUtils.findByName(variables, "A");
-    RecordDeclaration recordDeclarationA = TestUtils.findByUniqueName(recordDeclarations, "A");
+    RecordDeclaration recordDeclarationA = findByUniqueName(recordDeclarations, "A");
     for (ObjectType objectType : objectTypes) {
       assertEquals(recordDeclarationA, objectType.getRecordDeclaration());
     }
 
     // Test uniqueness of types x and y have same type
-    List<FieldDeclaration> fieldDeclarations =
-        TestUtils.subnodesOfType(result, FieldDeclaration.class);
-    FieldDeclaration x = TestUtils.findByUniqueName(fieldDeclarations, "x");
-    FieldDeclaration z = TestUtils.findByUniqueName(fieldDeclarations, "z");
+    List<FieldDeclaration> fieldDeclarations = subnodesOfType(result, FieldDeclaration.class);
+    FieldDeclaration x = findByUniqueName(fieldDeclarations, "x");
+    FieldDeclaration z = findByUniqueName(fieldDeclarations, "z");
     assertSame(x.getType(), z.getType());
 
     // Test propagation of specifiers in primitive fields (final int y)
-    FieldDeclaration y = TestUtils.findByUniqueName(fieldDeclarations, "y");
+    FieldDeclaration y = findByUniqueName(fieldDeclarations, "y");
     assertTrue(y.getType().getQualifier().isConst());
 
     // Test propagation of specifiers in non-primitive fields (final A a)
     List<VariableDeclaration> variableDeclarations =
-        TestUtils.subnodesOfType(result, VariableDeclaration.class);
-    VariableDeclaration aA = TestUtils.findByUniqueName(variableDeclarations, "a");
+        subnodesOfType(result, VariableDeclaration.class);
+    VariableDeclaration aA = findByUniqueName(variableDeclarations, "a");
     assertTrue(aA.getType().getQualifier().isConst());
 
     // Test propagation of specifiers in variables (final String s)
-    VariableDeclaration sString = TestUtils.findByUniqueName(variableDeclarations, "s");
+    VariableDeclaration sString = findByUniqueName(variableDeclarations, "s");
     assertTrue(sString.getType().getQualifier().isConst());
 
     // Test PointerType chain with array
-    VariableDeclaration array = TestUtils.findByUniqueName(variableDeclarations, "array");
+    VariableDeclaration array = findByUniqueName(variableDeclarations, "array");
     assertTrue(array.getType() instanceof PointerType);
     assertEquals(((PointerType) array.getType()).getElementType(), x.getType());
 
     topLevel = Path.of("src", "test", "resources", "types");
     result = TestUtils.analyze("cpp", topLevel, true);
 
-    variableDeclarations = TestUtils.subnodesOfType(result, VariableDeclaration.class);
+    variableDeclarations = subnodesOfType(result, VariableDeclaration.class);
 
     // Test PointerType chain with pointer
-    VariableDeclaration regularInt = TestUtils.findByUniqueName(variableDeclarations, "regularInt");
-    VariableDeclaration ptr = TestUtils.findByUniqueName(variableDeclarations, "ptr");
+    VariableDeclaration regularInt = findByUniqueName(variableDeclarations, "regularInt");
+    VariableDeclaration ptr = findByUniqueName(variableDeclarations, "ptr");
     assertTrue(ptr.getType() instanceof PointerType);
     assertEquals(((PointerType) ptr.getType()).getElementType(), regularInt.getType());
 
     // Test type Propagation (auto) UnknownType
-    VariableDeclaration unknown = TestUtils.findByUniqueName(variableDeclarations, "unknown");
+    VariableDeclaration unknown = findByUniqueName(variableDeclarations, "unknown");
     assertEquals(UnknownType.getUnknownType(), unknown.getType());
 
     // Test type Propagation auto
-    VariableDeclaration propagated = TestUtils.findByUniqueName(variableDeclarations, "propagated");
+    VariableDeclaration propagated = findByUniqueName(variableDeclarations, "propagated");
     assertEquals(regularInt.getType(), propagated.getType());
   }
 
@@ -720,20 +720,20 @@ class TypeTests extends BaseTest {
                 ObjectType.Modifier.SIGNED,
                 true));
 
-    List<VariableDeclaration> variables = Util.subnodesOfType(tu, VariableDeclaration.class);
-    VariableDeclaration localTwoParam = TestUtils.findByUniqueName(variables, "local_two_param");
+    List<VariableDeclaration> variables = subnodesOfType(tu, VariableDeclaration.class);
+    VariableDeclaration localTwoParam = findByUniqueName(variables, "local_two_param");
     assertNotNull(localTwoParam);
     assertEquals(twoParamType, localTwoParam.getType());
 
-    VariableDeclaration localOneParam = TestUtils.findByUniqueName(variables, "local_one_param");
+    VariableDeclaration localOneParam = findByUniqueName(variables, "local_one_param");
     assertNotNull(localOneParam);
     assertEquals(oneParamType, localOneParam.getType());
 
-    VariableDeclaration globalTwoParam = TestUtils.findByUniqueName(variables, "global_two_param");
+    VariableDeclaration globalTwoParam = findByUniqueName(variables, "global_two_param");
     assertNotNull(globalTwoParam);
     assertEquals(twoParamType, globalTwoParam.getType());
 
-    VariableDeclaration globalOneParam = TestUtils.findByUniqueName(variables, "global_one_param");
+    VariableDeclaration globalOneParam = findByUniqueName(variables, "global_one_param");
     assertNotNull(globalOneParam);
     assertEquals(oneParamType, globalOneParam.getType());
   }
