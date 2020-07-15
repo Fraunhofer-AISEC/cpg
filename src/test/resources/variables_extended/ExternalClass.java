@@ -1,4 +1,4 @@
-package variablesExtended;
+package variables_extended;
 
 public class ExternalClass {
   public String varName = "external_instance_field";

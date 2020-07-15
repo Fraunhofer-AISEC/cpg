@@ -1,4 +1,4 @@
-package variablesExtended;
+package variables_extended;
 
 import java.lang.RuntimeException;
 import java.lang.Exception;
