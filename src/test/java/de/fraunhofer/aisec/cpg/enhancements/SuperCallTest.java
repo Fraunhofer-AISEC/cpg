@@ -5,7 +5,6 @@ import static org.junit.jupiter.api.Assertions.*;
 import de.fraunhofer.aisec.cpg.BaseTest;
 import de.fraunhofer.aisec.cpg.TestUtils;
 import de.fraunhofer.aisec.cpg.graph.*;
-import de.fraunhofer.aisec.cpg.helpers.Util;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Set;
@@ -19,16 +18,17 @@ class SuperCallTest extends BaseTest {
   @Test
   void testSimpleCall() throws Exception {
     List<TranslationUnitDeclaration> result = TestUtils.analyze("java", topLevel, true);
-    List<RecordDeclaration> records = Util.subnodesOfType(result, RecordDeclaration.class);
+    List<RecordDeclaration> records = TestUtils.subnodesOfType(result, RecordDeclaration.class);
 
     RecordDeclaration superClass = TestUtils.findByUniqueName(records, "SuperClass");
-    List<MethodDeclaration> superMethods = Util.subnodesOfType(superClass, MethodDeclaration.class);
+    List<MethodDeclaration> superMethods =
+        TestUtils.subnodesOfType(superClass, MethodDeclaration.class);
     MethodDeclaration superTarget = TestUtils.findByUniqueName(superMethods, "target");
 
     RecordDeclaration subClass = TestUtils.findByUniqueName(records, "SubClass");
-    List<MethodDeclaration> methods = Util.subnodesOfType(subClass, MethodDeclaration.class);
+    List<MethodDeclaration> methods = TestUtils.subnodesOfType(subClass, MethodDeclaration.class);
     MethodDeclaration target = TestUtils.findByUniqueName(methods, "target");
-    List<CallExpression> calls = Util.subnodesOfType(target, CallExpression.class);
+    List<CallExpression> calls = TestUtils.subnodesOfType(target, CallExpression.class);
     CallExpression superCall =
         TestUtils.findByPredicate(calls, c -> "super.target();".equals(c.getCode()));
 
@@ -38,22 +38,22 @@ class SuperCallTest extends BaseTest {
   @Test
   void testInterfaceCall() throws Exception {
     List<TranslationUnitDeclaration> result = TestUtils.analyze("java", topLevel, true);
-    List<RecordDeclaration> records = Util.subnodesOfType(result, RecordDeclaration.class);
+    List<RecordDeclaration> records = TestUtils.subnodesOfType(result, RecordDeclaration.class);
 
     RecordDeclaration interface1 = TestUtils.findByUniqueName(records, "Interface1");
     List<MethodDeclaration> interface1Methods =
-        Util.subnodesOfType(interface1, MethodDeclaration.class);
+        TestUtils.subnodesOfType(interface1, MethodDeclaration.class);
     MethodDeclaration interface1Target = TestUtils.findByUniqueName(interface1Methods, "target");
 
     RecordDeclaration interface2 = TestUtils.findByUniqueName(records, "Interface2");
     List<MethodDeclaration> interface2Methods =
-        Util.subnodesOfType(interface2, MethodDeclaration.class);
+        TestUtils.subnodesOfType(interface2, MethodDeclaration.class);
     MethodDeclaration interface2Target = TestUtils.findByUniqueName(interface2Methods, "target");
 
     RecordDeclaration subClass = TestUtils.findByUniqueName(records, "SubClass");
-    List<MethodDeclaration> methods = Util.subnodesOfType(subClass, MethodDeclaration.class);
+    List<MethodDeclaration> methods = TestUtils.subnodesOfType(subClass, MethodDeclaration.class);
     MethodDeclaration target = TestUtils.findByUniqueName(methods, "target");
-    List<CallExpression> calls = Util.subnodesOfType(target, CallExpression.class);
+    List<CallExpression> calls = TestUtils.subnodesOfType(target, CallExpression.class);
     CallExpression interface1Call =
         TestUtils.findByPredicate(calls, c -> "Interface1.super.target();".equals(c.getCode()));
     CallExpression interface2Call =
@@ -66,21 +66,21 @@ class SuperCallTest extends BaseTest {
   @Test
   void testSuperField() throws Exception {
     List<TranslationUnitDeclaration> result = TestUtils.analyze("java", topLevel, true);
-    List<RecordDeclaration> records = Util.subnodesOfType(result, RecordDeclaration.class);
+    List<RecordDeclaration> records = TestUtils.subnodesOfType(result, RecordDeclaration.class);
 
     RecordDeclaration superClass = TestUtils.findByUniqueName(records, "SuperClass");
     FieldDeclaration superField = TestUtils.findByUniqueName(superClass.getFields(), "field");
 
     RecordDeclaration subClass = TestUtils.findByUniqueName(records, "SubClass");
-    List<MethodDeclaration> methods = Util.subnodesOfType(subClass, MethodDeclaration.class);
+    List<MethodDeclaration> methods = TestUtils.subnodesOfType(subClass, MethodDeclaration.class);
     FieldDeclaration field = TestUtils.findByUniqueName(subClass.getFields(), "field");
 
     MethodDeclaration getField = TestUtils.findByUniqueName(methods, "getField");
-    List<MemberExpression> refs = Util.subnodesOfType(getField, MemberExpression.class);
+    List<MemberExpression> refs = TestUtils.subnodesOfType(getField, MemberExpression.class);
     MemberExpression fieldRef = TestUtils.findByPredicate(refs, r -> "field".equals(r.getCode()));
 
     MethodDeclaration getSuperField = TestUtils.findByUniqueName(methods, "getSuperField");
-    refs = Util.subnodesOfType(getSuperField, MemberExpression.class);
+    refs = TestUtils.subnodesOfType(getSuperField, MemberExpression.class);
     MemberExpression superFieldRef =
         TestUtils.findByPredicate(refs, r -> "super.field".equals(r.getCode()));
 
@@ -93,16 +93,17 @@ class SuperCallTest extends BaseTest {
   @Test
   void testInnerCall() throws Exception {
     List<TranslationUnitDeclaration> result = TestUtils.analyze("java", topLevel, true);
-    List<RecordDeclaration> records = Util.subnodesOfType(result, RecordDeclaration.class);
+    List<RecordDeclaration> records = TestUtils.subnodesOfType(result, RecordDeclaration.class);
 
     RecordDeclaration superClass = TestUtils.findByUniqueName(records, "SuperClass");
-    List<MethodDeclaration> superMethods = Util.subnodesOfType(superClass, MethodDeclaration.class);
+    List<MethodDeclaration> superMethods =
+        TestUtils.subnodesOfType(superClass, MethodDeclaration.class);
     MethodDeclaration superTarget = TestUtils.findByUniqueName(superMethods, "target");
 
     RecordDeclaration innerClass = TestUtils.findByUniqueName(records, "SubClass.Inner");
-    List<MethodDeclaration> methods = Util.subnodesOfType(innerClass, MethodDeclaration.class);
+    List<MethodDeclaration> methods = TestUtils.subnodesOfType(innerClass, MethodDeclaration.class);
     MethodDeclaration target = TestUtils.findByUniqueName(methods, "inner");
-    List<CallExpression> calls = Util.subnodesOfType(target, CallExpression.class);
+    List<CallExpression> calls = TestUtils.subnodesOfType(target, CallExpression.class);
     CallExpression superCall =
         TestUtils.findByPredicate(calls, c -> "SubClass.super.target();".equals(c.getCode()));
 
@@ -112,7 +113,7 @@ class SuperCallTest extends BaseTest {
   @Test
   void testNoExcessFields() throws Exception {
     List<TranslationUnitDeclaration> result = TestUtils.analyze("java", topLevel, true);
-    List<RecordDeclaration> records = Util.subnodesOfType(result, RecordDeclaration.class);
+    List<RecordDeclaration> records = TestUtils.subnodesOfType(result, RecordDeclaration.class);
 
     RecordDeclaration superClass = TestUtils.findByUniqueName(records, "SuperClass");
     assertEquals(2, superClass.getFields().size());

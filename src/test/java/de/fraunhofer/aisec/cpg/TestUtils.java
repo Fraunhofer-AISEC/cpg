@@ -33,6 +33,7 @@ import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.TranslationUnitDeclaration;
 import de.fraunhofer.aisec.cpg.graph.TypeManager;
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker;
+import de.fraunhofer.aisec.cpg.helpers.Util;
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation;
 import java.io.File;
 import java.nio.file.Files;
@@ -160,5 +161,80 @@ public class TestUtils {
     TypeManager spy = Mockito.spy(TypeManager.getInstance());
     Mockito.doNothing().when(spy).cleanup();
     FieldUtils.writeStaticField(TypeManager.class, "INSTANCE", spy, true);
+  }
+
+  /**
+   * Returns the first element of the specified Class-type {@code specificClass} that has the name
+   * {@code name} in the list {@code listOfNodes}.
+   *
+   * @param <S> Some class that extends {@link Node}.
+   */
+  public static <S extends Node> S getOfTypeWithName(
+      List<Node> listOfNodes, Class<S> specificClass, String name) {
+    List<S> listOfNodesWithName =
+        filterCast(listOfNodes, specificClass).stream()
+            .filter(s -> s.getName().equals(name))
+            .collect(Collectors.toList());
+    if (listOfNodesWithName.isEmpty()) {
+      return null;
+    }
+    // Here we return the first node, if there are more nodes
+    return listOfNodesWithName.get(0);
+  }
+
+  /**
+   * Filters a list of elements with common type T for all elements of instance S, returning a list
+   * of type {@link List}.
+   *
+   * @param genericList List with elements fo type T.
+   * @param specificClass Class type to filter for.
+   * @param <T> Generic List type.
+   * @param <S> Class type to filter for.
+   * @return a specific List as all elements are cast to the specified class type.
+   */
+  public static <T, S extends T> List<S> filterCast(List<T> genericList, Class<S> specificClass) {
+    return genericList.stream()
+        .filter(g -> specificClass.isAssignableFrom(g.getClass()))
+        .map(specificClass::cast)
+        .collect(Collectors.toList());
+  }
+
+  /**
+   * Returns the first element of the specified Class-type {code specifiedClass} that has the name
+   * {@code name} in the list of nodes that are subnodes of the AST-root node {@code root}.
+   *
+   * @param <S> Some class that extends {@link Node}.
+   */
+  public static <S extends Node> S getSubnodeOfTypeWithName(
+      Node root, Class<S> specificClass, String name) {
+    return getOfTypeWithName(SubgraphWalker.flattenAST(root), specificClass, name);
+  }
+
+  /**
+   * Given a root node in the AST graph, all AST children of the node are filtered for a specific
+   * CPG Node type and returned.
+   *
+   * @param node root of the searched AST subtree
+   * @param specificClass Class type to be searched for
+   * @param <S> Type variable that allows returning a list of specific type
+   * @return a List of searched types
+   */
+  public static <S extends Node> List<S> subnodesOfType(Node node, Class<S> specificClass) {
+    return filterCast(SubgraphWalker.flattenAST(node), specificClass).stream()
+        .filter(Util.distinctByIdentity())
+        .collect(Collectors.toList());
+  }
+
+  /**
+   * Similar to {@link TestUtils#subnodesOfType(Node, Class)} but used when working with a list of
+   * nodes that is already flat. No walking to get childnodes necessary.
+   */
+  public static <S extends Node> List<S> subnodesOfType(
+      Collection<? extends Node> roots, Class<S> specificClass) {
+    return roots.stream()
+        .map(n -> subnodesOfType(n, specificClass))
+        .flatMap(Collection::stream)
+        .filter(Util.distinctByIdentity())
+        .collect(Collectors.toList());
   }
 }

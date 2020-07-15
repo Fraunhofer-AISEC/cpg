@@ -46,7 +46,6 @@ import java.io.InputStream;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.Comparator;
 import java.util.Deque;
 import java.util.HashSet;
@@ -61,47 +60,6 @@ import org.checkerframework.checker.nullness.qual.NonNull;
 import org.slf4j.Logger;
 
 public class Util {
-
-  /**
-   * Filters a list of elements with common type T for all elements of instance S, returning a list
-   * of type {@link List}.
-   *
-   * @param genericList List with elements fo type T.
-   * @param specificClass Class type to filter for.
-   * @param <T> Generic List type.
-   * @param <S> Class type to filter for.
-   * @return a specific List as all elements are cast to the specified class type.
-   */
-  public static <T, S extends T> List<S> filterCast(List<T> genericList, Class<S> specificClass) {
-    return genericList.stream()
-        .filter(g -> specificClass.isAssignableFrom(g.getClass()))
-        .map(specificClass::cast)
-        .collect(Collectors.toList());
-  }
-
-  /**
-   * Given a root node in the AST graph, all AST children of the node are filtered for a specific
-   * CPG Node type and returned.
-   *
-   * @param node root of the searched AST subtree
-   * @param specificClass Class type to be searched for
-   * @param <S> Type variable that allows returning a list of specific type
-   * @return a List of searched types
-   */
-  public static <S extends Node> List<S> subnodesOfType(Node node, Class<S> specificClass) {
-    return filterCast(SubgraphWalker.flattenAST(node), specificClass).stream()
-        .filter(distinctByIdentity())
-        .collect(Collectors.toList());
-  }
-
-  public static <S extends Node> List<S> subnodesOfType(
-      Collection<? extends Node> roots, Class<S> specificClass) {
-    return roots.stream()
-        .map(n -> subnodesOfType(n, specificClass))
-        .flatMap(Collection::stream)
-        .filter(distinctByIdentity())
-        .collect(Collectors.toList());
-  }
 
   /**
    * Filters the nodes in the AST subtree at root <code>node</code> for Nodes with the specified
