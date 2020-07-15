@@ -9,7 +9,6 @@ import de.fraunhofer.aisec.cpg.graph.ConstructorDeclaration;
 import de.fraunhofer.aisec.cpg.graph.NewExpression;
 import de.fraunhofer.aisec.cpg.graph.TranslationUnitDeclaration;
 import de.fraunhofer.aisec.cpg.graph.VariableDeclaration;
-import de.fraunhofer.aisec.cpg.helpers.Util;
 import java.nio.file.Path;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -22,7 +21,7 @@ class ConstructorsTest extends BaseTest {
   void testJava() throws Exception {
     List<TranslationUnitDeclaration> result = TestUtils.analyze("java", topLevel, true);
     List<ConstructorDeclaration> constructors =
-        Util.subnodesOfType(result, ConstructorDeclaration.class);
+        TestUtils.subnodesOfType(result, ConstructorDeclaration.class);
     ConstructorDeclaration noArg =
         TestUtils.findByPredicate(constructors, c -> c.getParameters().size() == 0);
     ConstructorDeclaration singleArg =
@@ -30,7 +29,8 @@ class ConstructorsTest extends BaseTest {
     ConstructorDeclaration twoArgs =
         TestUtils.findByPredicate(constructors, c -> c.getParameters().size() == 2);
 
-    List<VariableDeclaration> variables = Util.subnodesOfType(result, VariableDeclaration.class);
+    List<VariableDeclaration> variables =
+        TestUtils.subnodesOfType(result, VariableDeclaration.class);
 
     VariableDeclaration a1 = TestUtils.findByUniqueName(variables, "a1");
     assertTrue(a1.getInitializer() instanceof NewExpression);
@@ -64,7 +64,7 @@ class ConstructorsTest extends BaseTest {
   void testCPP() throws Exception {
     List<TranslationUnitDeclaration> result = TestUtils.analyze("cpp", topLevel, true);
     List<ConstructorDeclaration> constructors =
-        Util.subnodesOfType(result, ConstructorDeclaration.class);
+        TestUtils.subnodesOfType(result, ConstructorDeclaration.class);
     ConstructorDeclaration noArg =
         TestUtils.findByPredicate(constructors, c -> c.getParameters().size() == 0);
     ConstructorDeclaration singleArg =
@@ -72,7 +72,8 @@ class ConstructorsTest extends BaseTest {
     ConstructorDeclaration twoArgs =
         TestUtils.findByPredicate(constructors, c -> c.getParameters().size() == 2);
 
-    List<VariableDeclaration> variables = Util.subnodesOfType(result, VariableDeclaration.class);
+    List<VariableDeclaration> variables =
+        TestUtils.subnodesOfType(result, VariableDeclaration.class);
 
     VariableDeclaration a1 = TestUtils.findByUniqueName(variables, "a1");
     assertTrue(a1.getInitializer() instanceof ConstructExpression);

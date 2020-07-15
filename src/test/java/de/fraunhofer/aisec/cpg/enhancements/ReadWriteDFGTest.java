@@ -4,7 +4,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import de.fraunhofer.aisec.cpg.TestUtils;
 import de.fraunhofer.aisec.cpg.graph.*;
-import de.fraunhofer.aisec.cpg.helpers.Util;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Set;
@@ -20,12 +19,13 @@ class ReadWriteDFGTest {
             List.of(topLevel.resolve("compoundoperator.cpp").toFile()), topLevel, true);
 
     BinaryOperator rwCompoundOperator =
-        TestUtils.findByUniqueName(Util.subnodesOfType(result, BinaryOperator.class), "+=");
+        TestUtils.findByUniqueName(TestUtils.subnodesOfType(result, BinaryOperator.class), "+=");
     DeclaredReferenceExpression expression =
         TestUtils.findByUniqueName(
-            Util.subnodesOfType(result, DeclaredReferenceExpression.class), "i");
+            TestUtils.subnodesOfType(result, DeclaredReferenceExpression.class), "i");
     VariableDeclaration variableDeclaration =
-        TestUtils.findByUniqueName(Util.subnodesOfType(result, VariableDeclaration.class), "i");
+        TestUtils.findByUniqueName(
+            TestUtils.subnodesOfType(result, VariableDeclaration.class), "i");
 
     Set<Node> prevDFGOperator = rwCompoundOperator.getPrevDFG();
     Set<Node> nextDFGOperator = rwCompoundOperator.getNextDFG();
@@ -47,12 +47,13 @@ class ReadWriteDFGTest {
         TestUtils.analyze(List.of(topLevel.resolve("unaryoperator.cpp").toFile()), topLevel, true);
 
     UnaryOperator rwUnaryOperator =
-        TestUtils.findByUniqueName(Util.subnodesOfType(result, UnaryOperator.class), "++");
+        TestUtils.findByUniqueName(TestUtils.subnodesOfType(result, UnaryOperator.class), "++");
     DeclaredReferenceExpression expression =
         TestUtils.findByUniqueName(
-            Util.subnodesOfType(result, DeclaredReferenceExpression.class), "i");
+            TestUtils.subnodesOfType(result, DeclaredReferenceExpression.class), "i");
     VariableDeclaration variableDeclaration =
-        TestUtils.findByUniqueName(Util.subnodesOfType(result, VariableDeclaration.class), "i");
+        TestUtils.findByUniqueName(
+            TestUtils.subnodesOfType(result, VariableDeclaration.class), "i");
 
     Set<Node> prevDFGOperator = rwUnaryOperator.getPrevDFG();
     Set<Node> nextDFGOperator = rwUnaryOperator.getNextDFG();

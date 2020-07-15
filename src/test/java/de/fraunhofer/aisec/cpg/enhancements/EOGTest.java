@@ -86,13 +86,13 @@ class EOGTest extends BaseTest {
     List<Node> nodes = translateToNodes(relPath);
 
     // All BinaryOperators (including If conditions) have only one successor
-    List<BinaryOperator> binops = Util.filterCast(nodes, BinaryOperator.class);
+    List<BinaryOperator> binops = TestUtils.filterCast(nodes, BinaryOperator.class);
     for (BinaryOperator binop : binops) {
       SubgraphWalker.Border binopEOG = SubgraphWalker.getEOGPathEdges(binop);
       assertEquals(1, binopEOG.getExits().size());
     }
 
-    List<IfStatement> ifs = Util.filterCast(nodes, IfStatement.class);
+    List<IfStatement> ifs = TestUtils.filterCast(nodes, IfStatement.class);
 
     assertEquals(2, ifs.size());
     ifs.forEach(ifnode -> Assertions.assertNotNull(ifnode.getThenStatement()));
@@ -166,7 +166,7 @@ class EOGTest extends BaseTest {
     List<Node> nodes = translateToNodes("src/test/resources/cfg/ShortCircuit.java");
 
     List<BinaryOperator> binaryOperators =
-        Util.filterCast(nodes, BinaryOperator.class).stream()
+        TestUtils.filterCast(nodes, BinaryOperator.class).stream()
             .filter(bo -> bo.getOperatorCode().equals("&&") || bo.getOperatorCode().equals("||"))
             .collect(Collectors.toList());
 
@@ -185,7 +185,7 @@ class EOGTest extends BaseTest {
         nodes.stream()
             .filter(node -> node.getCode().equals(REFNODESTRINGJAVA))
             .collect(Collectors.toList());
-    List<ForStatement> fstat = Util.filterCast(nodes, ForStatement.class);
+    List<ForStatement> fstat = TestUtils.filterCast(nodes, ForStatement.class);
 
     ForStatement fs = fstat.get(0);
     assertTrue(Util.eogConnect(NODE, EXITS, prints.get(0), SUBTREE, fs));
@@ -215,7 +215,7 @@ class EOGTest extends BaseTest {
         nodes.stream()
             .filter(node -> node.getCode().equals(REFNODESTRINGCXX))
             .collect(Collectors.toList());
-    List<ForStatement> fstat = Util.filterCast(nodes, ForStatement.class);
+    List<ForStatement> fstat = TestUtils.filterCast(nodes, ForStatement.class);
 
     ForStatement fs = fstat.get(0);
     assertTrue(Util.eogConnect(NODE, EXITS, prints.get(0), SUBTREE, fs));
@@ -256,8 +256,9 @@ class EOGTest extends BaseTest {
   @Test
   void testCPPCallGraph() throws Exception {
     List<Node> nodes = translateToNodes("src/test/resources/cg.cpp");
-    List<CallExpression> calls = Util.subnodesOfType(nodes, CallExpression.class);
-    List<FunctionDeclaration> functions = Util.subnodesOfType(nodes, FunctionDeclaration.class);
+    List<CallExpression> calls = TestUtils.subnodesOfType(nodes, CallExpression.class);
+    List<FunctionDeclaration> functions =
+        TestUtils.subnodesOfType(nodes, FunctionDeclaration.class);
     FunctionDeclaration target;
 
     CallExpression first = TestUtils.findByUniqueName(calls, "first");
@@ -305,7 +306,7 @@ class EOGTest extends BaseTest {
             .collect(Collectors.toList());
 
     assertEquals(1, nodes.stream().filter(node -> node instanceof WhileStatement).count());
-    WhileStatement wstat = Util.filterCast(nodes, WhileStatement.class).get(0);
+    WhileStatement wstat = TestUtils.filterCast(nodes, WhileStatement.class).get(0);
     SubgraphWalker.Border conditionEOG = SubgraphWalker.getEOGPathEdges(wstat.getCondition());
     SubgraphWalker.Border blockEOG = SubgraphWalker.getEOGPathEdges(wstat.getStatement());
 
@@ -338,7 +339,7 @@ class EOGTest extends BaseTest {
     // condition
     assertTrue(Util.eogConnect(SUBTREE, EXITS, wstat, prints.get(1)));
 
-    DoStatement dostat = Util.filterCast(nodes, DoStatement.class).get(0);
+    DoStatement dostat = TestUtils.filterCast(nodes, DoStatement.class).get(0);
 
     conditionEOG = SubgraphWalker.getEOGPathEdges(dostat.getCondition());
     blockEOG = SubgraphWalker.getEOGPathEdges(dostat.getStatement());
@@ -365,15 +366,15 @@ class EOGTest extends BaseTest {
     List<Node> nodes = translateToNodes(relPath);
 
     List<FunctionDeclaration> functions =
-        Util.filterCast(nodes, FunctionDeclaration.class).stream()
+        TestUtils.filterCast(nodes, FunctionDeclaration.class).stream()
             .filter(f -> !(f instanceof ConstructorDeclaration))
             .collect(Collectors.toList());
 
     // main()
-    SwitchStatement swch = Util.subnodesOfType(functions.get(0), SwitchStatement.class).get(0);
+    SwitchStatement swch = TestUtils.subnodesOfType(functions.get(0), SwitchStatement.class).get(0);
     List<Node> prints = Util.subnodesOfCode(functions.get(0), refNodeString);
-    List<CaseStatement> cases = Util.subnodesOfType(swch, CaseStatement.class);
-    List<DefaultStatement> defaults = Util.subnodesOfType(swch, DefaultStatement.class);
+    List<CaseStatement> cases = TestUtils.subnodesOfType(swch, CaseStatement.class);
+    List<DefaultStatement> defaults = TestUtils.subnodesOfType(swch, DefaultStatement.class);
 
     assertTrue(Util.eogConnect(EXITS, prints.get(0), SUBTREE, swch.getSelector()));
     assertTrue(Util.eogConnect(SUBTREE, EXITS, swch, prints.get(1)));
@@ -396,15 +397,15 @@ class EOGTest extends BaseTest {
 
     List<Node> printEntries = SubgraphWalker.getEOGPathEdges(prints.get(1)).getEntries();
     // Assert: All breaks inside of switch connect to the switch root node
-    for (BreakStatement b : Util.subnodesOfType(swch, BreakStatement.class))
+    for (BreakStatement b : TestUtils.subnodesOfType(swch, BreakStatement.class))
       assertTrue(Util.eogConnect(ALL, SUBTREE, EXITS, b, SUBTREE, prints.get(1)));
 
     // whileswitch
-    swch = Util.subnodesOfType(functions.get(1), SwitchStatement.class).get(0);
+    swch = TestUtils.subnodesOfType(functions.get(1), SwitchStatement.class).get(0);
     prints = Util.subnodesOfCode(functions.get(1), refNodeString);
-    cases = Util.subnodesOfType(swch, CaseStatement.class);
-    defaults = Util.subnodesOfType(swch, DefaultStatement.class);
-    WhileStatement wstat = Util.subnodesOfType(functions.get(1), WhileStatement.class).get(0);
+    cases = TestUtils.subnodesOfType(swch, CaseStatement.class);
+    defaults = TestUtils.subnodesOfType(swch, DefaultStatement.class);
+    WhileStatement wstat = TestUtils.subnodesOfType(functions.get(1), WhileStatement.class).get(0);
 
     assertTrue(Util.eogConnect(EXITS, prints.get(0), wstat));
     assertTrue(Util.eogConnect(NODE, EXITS, wstat, prints.get(2)));
@@ -419,21 +420,21 @@ class EOGTest extends BaseTest {
     assertTrue(Util.eogConnect(SUBTREE, EXITS, swch.getSelector(), NODE, swch));
 
     // switchwhile
-    swch = Util.subnodesOfType(functions.get(2), SwitchStatement.class).get(0);
+    swch = TestUtils.subnodesOfType(functions.get(2), SwitchStatement.class).get(0);
     prints = Util.subnodesOfCode(functions.get(2), refNodeString);
-    wstat = Util.subnodesOfType(functions.get(2), WhileStatement.class).get(0);
-    cases = Util.subnodesOfType(swch, CaseStatement.class);
-    defaults = Util.subnodesOfType(swch, DefaultStatement.class);
+    wstat = TestUtils.subnodesOfType(functions.get(2), WhileStatement.class).get(0);
+    cases = TestUtils.subnodesOfType(swch, CaseStatement.class);
+    defaults = TestUtils.subnodesOfType(swch, DefaultStatement.class);
 
     assertTrue(Util.eogConnect(EXITS, prints.get(0), swch));
     assertTrue(Util.eogConnect(EXITS, swch, prints.get(2)));
     // Assert: Selector exits connect to either case or default statements entries
     assertTrue(Util.eogConnect(EXITS, swch.getSelector(), NODE, swch));
 
-    swch = Util.subnodesOfType(functions.get(1), SwitchStatement.class).get(0);
+    swch = TestUtils.subnodesOfType(functions.get(1), SwitchStatement.class).get(0);
     prints = Util.subnodesOfCode(functions.get(1), refNodeString);
-    List<BreakStatement> breaks = Util.subnodesOfType(swch, BreakStatement.class);
-    WhileStatement whiles = Util.subnodesOfType(functions.get(1), WhileStatement.class).get(0);
+    List<BreakStatement> breaks = TestUtils.subnodesOfType(swch, BreakStatement.class);
+    WhileStatement whiles = TestUtils.subnodesOfType(functions.get(1), WhileStatement.class).get(0);
 
     // Assert: whileswitch, all breaks inside the switch connect to the containing switch unless it
     // has a label which connects the break to the  while
@@ -444,10 +445,10 @@ class EOGTest extends BaseTest {
         assertTrue(Util.eogConnect(EXITS, b, SUBTREE, prints.get(1)));
       }
     }
-    swch = Util.subnodesOfType(functions.get(2), SwitchStatement.class).get(0);
+    swch = TestUtils.subnodesOfType(functions.get(2), SwitchStatement.class).get(0);
     prints = Util.subnodesOfCode(functions.get(2), refNodeString);
-    whiles = Util.subnodesOfType(functions.get(2), WhileStatement.class).get(0);
-    breaks = Util.subnodesOfType(whiles, BreakStatement.class);
+    whiles = TestUtils.subnodesOfType(functions.get(2), WhileStatement.class).get(0);
+    breaks = TestUtils.subnodesOfType(whiles, BreakStatement.class);
 
     // Assert: switchwhile, all breaks inside the while connect to the containing while unless it
     // has a label which connects the break to the switch
@@ -494,10 +495,10 @@ class EOGTest extends BaseTest {
             .collect(Collectors.toList());
 
     assertEquals(1, nodes.stream().filter(node -> node instanceof WhileStatement).count());
-    List<BreakStatement> breaks = Util.filterCast(nodes, BreakStatement.class);
-    List<ContinueStatement> continues = Util.filterCast(nodes, ContinueStatement.class);
+    List<BreakStatement> breaks = TestUtils.filterCast(nodes, BreakStatement.class);
+    List<ContinueStatement> continues = TestUtils.filterCast(nodes, ContinueStatement.class);
 
-    WhileStatement wstat = Util.filterCast(nodes, WhileStatement.class).get(0);
+    WhileStatement wstat = TestUtils.filterCast(nodes, WhileStatement.class).get(0);
 
     SubgraphWalker.Border conditionEOG = SubgraphWalker.getEOGPathEdges(wstat.getCondition());
     SubgraphWalker.Border blockEOG = SubgraphWalker.getEOGPathEdges(wstat.getStatement());
@@ -524,7 +525,7 @@ class EOGTest extends BaseTest {
         Util.eogConnect(NODE, EXITS, wstat, prints.get(1))
             || Util.eogConnect(NODE, EXITS, breaks.get(0), prints.get(1)));
 
-    DoStatement dostat = Util.filterCast(nodes, DoStatement.class).get(0);
+    DoStatement dostat = TestUtils.filterCast(nodes, DoStatement.class).get(0);
 
     conditionEOG = SubgraphWalker.getEOGPathEdges(dostat.getCondition());
 

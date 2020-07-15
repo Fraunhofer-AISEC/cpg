@@ -1,6 +1,7 @@
 package de.fraunhofer.aisec.cpg.enhancements.variable_resolution;
 
 import de.fraunhofer.aisec.cpg.BaseTest;
+import de.fraunhofer.aisec.cpg.TestUtils;
 import de.fraunhofer.aisec.cpg.TranslationConfiguration;
 import de.fraunhofer.aisec.cpg.TranslationManager;
 import de.fraunhofer.aisec.cpg.graph.CallExpression;
@@ -19,7 +20,6 @@ import de.fraunhofer.aisec.cpg.graph.ValueDeclaration;
 import de.fraunhofer.aisec.cpg.graph.VariableDeclaration;
 import de.fraunhofer.aisec.cpg.helpers.NodeComparator;
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker;
-import de.fraunhofer.aisec.cpg.helpers.Util;
 import java.io.File;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -95,45 +95,50 @@ class VariableResolverJavaTest extends BaseTest {
             .flatMap(tUnit -> SubgraphWalker.flattenAST(tUnit).stream())
             .collect(Collectors.toList());
     List<CallExpression> calls =
-        Util.filterCast(nodes, CallExpression.class).stream()
-            .filter(call -> call.getName().equals("printLog"))
-            .collect(Collectors.toList());
+        TestUtils.findByName(TestUtils.filterCast(nodes, CallExpression.class), "printLog");
     calls.sort(new NodeComparator());
 
-    List<RecordDeclaration> records = Util.filterCast(nodes, RecordDeclaration.class);
+    List<RecordDeclaration> records = TestUtils.filterCast(nodes, RecordDeclaration.class);
 
     // Extract all Variable declarations and field declarations for matching
     externalClass =
-        Util.getOfTypeWithName(nodes, RecordDeclaration.class, "variables_extended.ExternalClass");
-    externVarName = Util.getSubnodeOfTypeWithName(externalClass, FieldDeclaration.class, "varName");
+        TestUtils.getOfTypeWithName(
+            nodes, RecordDeclaration.class, "variables_extended.ExternalClass");
+    externVarName =
+        TestUtils.getSubnodeOfTypeWithName(externalClass, FieldDeclaration.class, "varName");
     externStaticVarName =
-        Util.getSubnodeOfTypeWithName(externalClass, FieldDeclaration.class, "staticVarName");
+        TestUtils.getSubnodeOfTypeWithName(externalClass, FieldDeclaration.class, "staticVarName");
     outerClass =
-        Util.getOfTypeWithName(nodes, RecordDeclaration.class, "variables_extended.ScopeVariables");
-    outerVarName = Util.getSubnodeOfTypeWithName(outerClass, FieldDeclaration.class, "varName");
+        TestUtils.getOfTypeWithName(
+            nodes, RecordDeclaration.class, "variables_extended.ScopeVariables");
+    outerVarName =
+        TestUtils.getSubnodeOfTypeWithName(outerClass, FieldDeclaration.class, "varName");
     outerStaticVarName =
-        Util.getSubnodeOfTypeWithName(outerClass, FieldDeclaration.class, "staticVarName");
-    outerImpThis = Util.getSubnodeOfTypeWithName(outerClass, FieldDeclaration.class, "this");
+        TestUtils.getSubnodeOfTypeWithName(outerClass, FieldDeclaration.class, "staticVarName");
+    outerImpThis = TestUtils.getSubnodeOfTypeWithName(outerClass, FieldDeclaration.class, "this");
 
     // Inner class and its fields
     innerClass =
-        Util.getOfTypeWithName(
+        TestUtils.getOfTypeWithName(
             nodes, RecordDeclaration.class, "variables_extended.ScopeVariables.InnerClass");
-    innerVarName = Util.getSubnodeOfTypeWithName(innerClass, FieldDeclaration.class, "varName");
+    innerVarName =
+        TestUtils.getSubnodeOfTypeWithName(innerClass, FieldDeclaration.class, "varName");
     innerStaticVarName =
-        Util.getSubnodeOfTypeWithName(innerClass, FieldDeclaration.class, "staticVarName");
-    innerImpThis = Util.getSubnodeOfTypeWithName(innerClass, FieldDeclaration.class, "this");
+        TestUtils.getSubnodeOfTypeWithName(innerClass, FieldDeclaration.class, "staticVarName");
+    innerImpThis = TestUtils.getSubnodeOfTypeWithName(innerClass, FieldDeclaration.class, "this");
     innerImpOuter =
-        Util.getSubnodeOfTypeWithName(innerClass, FieldDeclaration.class, "ScopeVariables.this");
+        TestUtils.getSubnodeOfTypeWithName(
+            innerClass, FieldDeclaration.class, "ScopeVariables.this");
 
-    main = Util.getSubnodeOfTypeWithName(outerClass, MethodDeclaration.class, "main");
+    main = TestUtils.getSubnodeOfTypeWithName(outerClass, MethodDeclaration.class, "main");
 
     outerFunction1 =
         outerClass.getMethods().stream()
             .filter(method -> method.getName().equals("function1"))
             .collect(Collectors.toList())
             .get(0);
-    forStatements = Util.filterCast(SubgraphWalker.flattenAST(outerFunction1), ForStatement.class);
+    forStatements =
+        TestUtils.filterCast(SubgraphWalker.flattenAST(outerFunction1), ForStatement.class);
 
     // Functions i nthe outer and inner object
     outerFunction2 =
@@ -191,7 +196,8 @@ class VariableResolverJavaTest extends BaseTest {
   @Test
   void testVarNameDeclaredInLoop() {
     VariableDeclaration firstLoopLocal =
-        Util.getSubnodeOfTypeWithName(forStatements.get(0), VariableDeclaration.class, "varName");
+        TestUtils.getSubnodeOfTypeWithName(
+            forStatements.get(0), VariableDeclaration.class, "varName");
 
     VRUtil.assertUsageOf(
         callParamMap.get("func1_first_loop_varName"),
@@ -204,7 +210,8 @@ class VariableResolverJavaTest extends BaseTest {
   @Test
   void testVarNameInSecondLoop() {
     VariableDeclaration secondLoopLocal =
-        Util.getSubnodeOfTypeWithName(forStatements.get(1), VariableDeclaration.class, "varName");
+        TestUtils.getSubnodeOfTypeWithName(
+            forStatements.get(1), VariableDeclaration.class, "varName");
 
     VRUtil.assertUsageOf(callParamMap.get("func1_second_loop_varName"), secondLoopLocal);
   }
@@ -220,14 +227,16 @@ class VariableResolverJavaTest extends BaseTest {
   @Test
   void testReferenceToParameter() {
     ValueDeclaration param =
-        Util.getSubnodeOfTypeWithName(outerFunction2, ParamVariableDeclaration.class, "varName");
+        TestUtils.getSubnodeOfTypeWithName(
+            outerFunction2, ParamVariableDeclaration.class, "varName");
     VRUtil.assertUsageOf(callParamMap.get("func2_param_varName"), param);
   }
 
   @Test
   void testVarNameInInstanceOfExternalClass() {
     VariableDeclaration externalClassInstance =
-        Util.getSubnodeOfTypeWithName(outerFunction3, VariableDeclaration.class, "externalClass");
+        TestUtils.getSubnodeOfTypeWithName(
+            outerFunction3, VariableDeclaration.class, "externalClass");
     // Todo member points to the function parameter with the same name instead of the field in the
     // external class
     VRUtil.assertUsageOfMemberAndBase(
@@ -279,7 +288,8 @@ class VariableResolverJavaTest extends BaseTest {
 
     VRUtil.assertUsageOf(
         callParamMap.get("func2_inner_param_varName"),
-        Util.getSubnodeOfTypeWithName(innerFunction2, ParamVariableDeclaration.class, "varName"));
+        TestUtils.getSubnodeOfTypeWithName(
+            innerFunction2, ParamVariableDeclaration.class, "varName"));
   }
 
   @Test
@@ -292,7 +302,8 @@ class VariableResolverJavaTest extends BaseTest {
   @Test
   void testStaticVarNameAsCoughtExcpetionInInner() {
     VariableDeclaration staticVarNameException =
-        Util.getSubnodeOfTypeWithName(innerFunction3, VariableDeclaration.class, "staticVarName");
+        TestUtils.getSubnodeOfTypeWithName(
+            innerFunction3, VariableDeclaration.class, "staticVarName");
     VRUtil.assertUsageOf(
         callParamMap.get("func3_inner_exception_staticVarName"), staticVarNameException);
   }
@@ -300,7 +311,7 @@ class VariableResolverJavaTest extends BaseTest {
   @Test
   void testVarNameAsCoughtExcpetionInInner() {
     VariableDeclaration varNameExcepetion =
-        Util.getSubnodeOfTypeWithName(innerFunction3, VariableDeclaration.class, "varName");
+        TestUtils.getSubnodeOfTypeWithName(innerFunction3, VariableDeclaration.class, "varName");
     VRUtil.assertUsageOf(callParamMap.get("func3_inner_exception_varName"), varNameExcepetion);
   }
 }

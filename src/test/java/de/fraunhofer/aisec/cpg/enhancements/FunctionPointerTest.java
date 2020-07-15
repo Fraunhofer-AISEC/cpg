@@ -37,7 +37,6 @@ import de.fraunhofer.aisec.cpg.graph.FunctionDeclaration;
 import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.TranslationUnitDeclaration;
 import de.fraunhofer.aisec.cpg.graph.VariableDeclaration;
-import de.fraunhofer.aisec.cpg.helpers.Util;
 import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -81,9 +80,10 @@ class FunctionPointerTest extends BaseTest {
 
   void test(String language) throws Exception {
     List<TranslationUnitDeclaration> result = analyze(language);
-    List<FunctionDeclaration> functions = Util.subnodesOfType(result, FunctionDeclaration.class);
+    List<FunctionDeclaration> functions =
+        TestUtils.subnodesOfType(result, FunctionDeclaration.class);
     FunctionDeclaration main = TestUtils.findByUniqueName(functions, "main");
-    List<CallExpression> calls = Util.subnodesOfType(main, CallExpression.class);
+    List<CallExpression> calls = TestUtils.subnodesOfType(main, CallExpression.class);
     FunctionDeclaration noParam =
         functions.stream()
             .filter(f -> f.getName().equals("target") && f.getParameters().isEmpty())
@@ -147,7 +147,8 @@ class FunctionPointerTest extends BaseTest {
           fail("Unexpected call " + call.getName());
       }
 
-      List<VariableDeclaration> variables = Util.subnodesOfType(result, VariableDeclaration.class);
+      List<VariableDeclaration> variables =
+          TestUtils.subnodesOfType(result, VariableDeclaration.class);
       for (VariableDeclaration variable : variables) {
         switch (variable.getName()) {
           case "no_param_unused":

@@ -30,7 +30,6 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import de.fraunhofer.aisec.cpg.graph.*;
 import de.fraunhofer.aisec.cpg.graph.type.*;
-import de.fraunhofer.aisec.cpg.helpers.Util;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -611,9 +610,9 @@ class TypeTests extends BaseTest {
     Path topLevel = Path.of("src", "test", "resources", "types");
     List<TranslationUnitDeclaration> result = TestUtils.analyze("java", topLevel, true);
 
-    List<ObjectType> variables = Util.subnodesOfType(result, ObjectType.class);
+    List<ObjectType> variables = TestUtils.subnodesOfType(result, ObjectType.class);
     List<RecordDeclaration> recordDeclarations =
-        Util.subnodesOfType(result, RecordDeclaration.class);
+        TestUtils.subnodesOfType(result, RecordDeclaration.class);
 
     // Test RecordDeclaration relationship
     List<ObjectType> objectTypes = TestUtils.findByName(variables, "A");
@@ -623,7 +622,8 @@ class TypeTests extends BaseTest {
     }
 
     // Test uniqueness of types x and y have same type
-    List<FieldDeclaration> fieldDeclarations = Util.subnodesOfType(result, FieldDeclaration.class);
+    List<FieldDeclaration> fieldDeclarations =
+        TestUtils.subnodesOfType(result, FieldDeclaration.class);
     FieldDeclaration x = TestUtils.findByUniqueName(fieldDeclarations, "x");
     FieldDeclaration z = TestUtils.findByUniqueName(fieldDeclarations, "z");
     assertSame(x.getType(), z.getType());
@@ -634,7 +634,7 @@ class TypeTests extends BaseTest {
 
     // Test propagation of specifiers in non-primitive fields (final A a)
     List<VariableDeclaration> variableDeclarations =
-        Util.subnodesOfType(result, VariableDeclaration.class);
+        TestUtils.subnodesOfType(result, VariableDeclaration.class);
     VariableDeclaration aA = TestUtils.findByUniqueName(variableDeclarations, "a");
     assertTrue(aA.getType().getQualifier().isConst());
 
@@ -650,7 +650,7 @@ class TypeTests extends BaseTest {
     topLevel = Path.of("src", "test", "resources", "types");
     result = TestUtils.analyze("cpp", topLevel, true);
 
-    variableDeclarations = Util.subnodesOfType(result, VariableDeclaration.class);
+    variableDeclarations = TestUtils.subnodesOfType(result, VariableDeclaration.class);
 
     // Test PointerType chain with pointer
     VariableDeclaration regularInt = TestUtils.findByUniqueName(variableDeclarations, "regularInt");

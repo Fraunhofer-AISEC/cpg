@@ -3,6 +3,7 @@ package de.fraunhofer.aisec.cpg.enhancements.variable_resolution;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import de.fraunhofer.aisec.cpg.BaseTest;
+import de.fraunhofer.aisec.cpg.TestUtils;
 import de.fraunhofer.aisec.cpg.TranslationConfiguration;
 import de.fraunhofer.aisec.cpg.TranslationManager;
 import de.fraunhofer.aisec.cpg.graph.CallExpression;
@@ -24,7 +25,6 @@ import de.fraunhofer.aisec.cpg.graph.TranslationUnitDeclaration;
 import de.fraunhofer.aisec.cpg.graph.VariableDeclaration;
 import de.fraunhofer.aisec.cpg.helpers.NodeComparator;
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker;
-import de.fraunhofer.aisec.cpg.helpers.Util;
 import java.io.File;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -77,7 +77,7 @@ class VariableResolverCppTest extends BaseTest {
   void initTests() throws ExecutionException, InterruptedException {
     final String topLevelPath = "src/test/resources/variables_extended/";
     List<String> fileNames =
-        Arrays.asList("scope_variables.cpp", "external_class.cpp", "external_class.h");
+        Arrays.asList("scope_variables.cpp", "external_class.cpp");
     List<File> fileLocations =
         fileNames.stream()
             .map(fileName -> new File(topLevelPath + fileName))
@@ -89,6 +89,7 @@ class VariableResolverCppTest extends BaseTest {
             .defaultPasses()
             .debugParser(true)
             .failOnError(true)
+            .loadIncludes(true)
             .build();
 
     TranslationManager analyzer = TranslationManager.builder().config(config).build();
@@ -99,35 +100,37 @@ class VariableResolverCppTest extends BaseTest {
             .flatMap(tUnit -> SubgraphWalker.flattenAST(tUnit).stream())
             .collect(Collectors.toList());
     List<CallExpression> calls =
-        Util.filterCast(nodes, CallExpression.class).stream()
-            .filter(call -> call.getName().equals("printLog"))
-            .collect(Collectors.toList());
+        TestUtils.findByName(TestUtils.filterCast(nodes, CallExpression.class), "printLog");
+
     calls.sort(new NodeComparator());
 
-    List<RecordDeclaration> records = Util.filterCast(nodes, RecordDeclaration.class);
+    List<RecordDeclaration> records = TestUtils.filterCast(nodes, RecordDeclaration.class);
 
     // Extract all Variable declarations and field declarations for matching
-    externalClass = Util.getOfTypeWithName(nodes, RecordDeclaration.class, "ExternalClass");
-    externVarName = Util.getSubnodeOfTypeWithName(externalClass, FieldDeclaration.class, "varName");
+    externalClass = TestUtils.getOfTypeWithName(nodes, RecordDeclaration.class, "ExternalClass");
+    externVarName =
+        TestUtils.getSubnodeOfTypeWithName(externalClass, FieldDeclaration.class, "varName");
     externStaticVarName =
-        Util.getSubnodeOfTypeWithName(externalClass, FieldDeclaration.class, "staticVarName");
-    outerClass = Util.getOfTypeWithName(nodes, RecordDeclaration.class, "ScopeVariables");
-    outerVarName = Util.getSubnodeOfTypeWithName(outerClass, FieldDeclaration.class, "varName");
+        TestUtils.getSubnodeOfTypeWithName(externalClass, FieldDeclaration.class, "staticVarName");
+    outerClass = TestUtils.getOfTypeWithName(nodes, RecordDeclaration.class, "ScopeVariables");
+    outerVarName =
+        TestUtils.getSubnodeOfTypeWithName(outerClass, FieldDeclaration.class, "varName");
     outerStaticVarName =
-        Util.getSubnodeOfTypeWithName(outerClass, FieldDeclaration.class, "staticVarName");
-    outerImpThis = Util.getSubnodeOfTypeWithName(outerClass, FieldDeclaration.class, "this");
+        TestUtils.getSubnodeOfTypeWithName(outerClass, FieldDeclaration.class, "staticVarName");
+    outerImpThis = TestUtils.getSubnodeOfTypeWithName(outerClass, FieldDeclaration.class, "this");
 
-    List<RecordDeclaration> classes = Util.filterCast(nodes, RecordDeclaration.class);
+    List<RecordDeclaration> classes = TestUtils.filterCast(nodes, RecordDeclaration.class);
 
     // Inner class and its fields
     innerClass =
-        Util.getOfTypeWithName(nodes, RecordDeclaration.class, "ScopeVariables::InnerClass");
-    innerVarName = Util.getSubnodeOfTypeWithName(innerClass, FieldDeclaration.class, "varName");
+        TestUtils.getOfTypeWithName(nodes, RecordDeclaration.class, "ScopeVariables::InnerClass");
+    innerVarName =
+        TestUtils.getSubnodeOfTypeWithName(innerClass, FieldDeclaration.class, "varName");
     innerStaticVarName =
-        Util.getSubnodeOfTypeWithName(innerClass, FieldDeclaration.class, "staticVarName");
-    innerImpThis = Util.getSubnodeOfTypeWithName(innerClass, FieldDeclaration.class, "this");
+        TestUtils.getSubnodeOfTypeWithName(innerClass, FieldDeclaration.class, "staticVarName");
+    innerImpThis = TestUtils.getSubnodeOfTypeWithName(innerClass, FieldDeclaration.class, "this");
 
-    main = Util.getOfTypeWithName(nodes, FunctionDeclaration.class, "main");
+    main = TestUtils.getOfTypeWithName(nodes, FunctionDeclaration.class, "main");
 
     // Functions in the outer and inner object
     outerFunction1 =
@@ -135,7 +138,8 @@ class VariableResolverCppTest extends BaseTest {
             .filter(method -> method.getName().equals("function1"))
             .collect(Collectors.toList())
             .get(0);
-    forStatements = Util.filterCast(SubgraphWalker.flattenAST(outerFunction1), ForStatement.class);
+    forStatements =
+        TestUtils.filterCast(SubgraphWalker.flattenAST(outerFunction1), ForStatement.class);
     outerFunction2 =
         outerClass.getMethods().stream()
             .filter(method -> method.getName().equals("function2"))
@@ -204,7 +208,8 @@ class VariableResolverCppTest extends BaseTest {
         getCallWithReference("func1_first_loop_varName"); // first_loop_local
     assertNotNull(asReference);
     VariableDeclaration vDeclaration =
-        Util.getSubnodeOfTypeWithName(forStatements.get(0), VariableDeclaration.class, "varName");
+        TestUtils.getSubnodeOfTypeWithName(
+            forStatements.get(0), VariableDeclaration.class, "varName");
     // Todo Points to the second loop varName local
     VRUtil.assertUsageOf(callParamMap.get("func1_first_loop_varName"), vDeclaration);
   }
@@ -212,9 +217,9 @@ class VariableResolverCppTest extends BaseTest {
   @Test
   void testAccessLocalVarNameInNestedBlock() {
     CompoundStatement innerBlock =
-        Util.getSubnodeOfTypeWithName(forStatements.get(1), CompoundStatement.class, "");
+        TestUtils.getSubnodeOfTypeWithName(forStatements.get(1), CompoundStatement.class, "");
     VariableDeclaration nestedDeclaration =
-        Util.getSubnodeOfTypeWithName(innerBlock, VariableDeclaration.class, "varName");
+        TestUtils.getSubnodeOfTypeWithName(innerBlock, VariableDeclaration.class, "varName");
     VRUtil.assertUsageOf(
         callParamMap.get("func1_nested_block_shadowed_local_varName"), nestedDeclaration);
   }
@@ -222,14 +227,16 @@ class VariableResolverCppTest extends BaseTest {
   @Test
   void testVarNameOfSecondLoopAccessed() {
     VariableDeclaration vDeclaration =
-        Util.getSubnodeOfTypeWithName(forStatements.get(1), VariableDeclaration.class, "varName");
+        TestUtils.getSubnodeOfTypeWithName(
+            forStatements.get(1), VariableDeclaration.class, "varName");
     VRUtil.assertUsageOf(callParamMap.get("func1_second_loop_varName"), vDeclaration);
   }
 
   @Test
   void testParamVarNameAccessed() {
     ParamVariableDeclaration declaration =
-        Util.getSubnodeOfTypeWithName(outerFunction2, ParamVariableDeclaration.class, "varName");
+        TestUtils.getSubnodeOfTypeWithName(
+            outerFunction2, ParamVariableDeclaration.class, "varName");
     // Todo Points to a variable that is declared in a catch clause below
     VRUtil.assertUsageOf(callParamMap.get("func2_param_varName"), declaration);
   }
@@ -243,8 +250,8 @@ class VariableResolverCppTest extends BaseTest {
   @Test
   void testVarNameDeclaredInIfClause() {
     VariableDeclaration declaration =
-        Util.getSubnodeOfTypeWithName(
-            Util.getSubnodeOfTypeWithName(outerFunction2, IfStatement.class, Node.EMPTY_NAME),
+        TestUtils.getSubnodeOfTypeWithName(
+            TestUtils.getSubnodeOfTypeWithName(outerFunction2, IfStatement.class, Node.EMPTY_NAME),
             VariableDeclaration.class,
             "varName");
     // Todo Refers to the variable declare in the catch clause instead of the variable declared in
@@ -255,8 +262,8 @@ class VariableResolverCppTest extends BaseTest {
   @Test
   void testVarNameCoughtAsException() {
     VariableDeclaration declaration =
-        Util.getSubnodeOfTypeWithName(
-            Util.getSubnodeOfTypeWithName(outerFunction2, CatchClause.class, Node.EMPTY_NAME),
+        TestUtils.getSubnodeOfTypeWithName(
+            TestUtils.getSubnodeOfTypeWithName(outerFunction2, CatchClause.class, Node.EMPTY_NAME),
             VariableDeclaration.class,
             "varName");
     VRUtil.assertUsageOf(callParamMap.get("func2_catch_varName"), declaration);
@@ -265,7 +272,8 @@ class VariableResolverCppTest extends BaseTest {
   @Test
   void testMemberAccessedOverInstance() {
     VariableDeclaration declaration =
-        Util.getSubnodeOfTypeWithName(outerFunction2, VariableDeclaration.class, "scopeVariables");
+        TestUtils.getSubnodeOfTypeWithName(
+            outerFunction2, VariableDeclaration.class, "scopeVariables");
     // Todo Points to variable instantiated in if condition
     VRUtil.assertUsageOfMemberAndBase(
         callParamMap.get("func2_instance_varName"), declaration, outerVarName); // instance_field
@@ -274,7 +282,8 @@ class VariableResolverCppTest extends BaseTest {
   @Test
   void testMemberAccessedOverInstanceAfterParamDeclaration() {
     VariableDeclaration declaration =
-        Util.getSubnodeOfTypeWithName(outerFunction3, VariableDeclaration.class, "scopeVariables");
+        TestUtils.getSubnodeOfTypeWithName(
+            outerFunction3, VariableDeclaration.class, "scopeVariables");
     // Todo Points to the parameter declaration of the same name in the same functionf
     VRUtil.assertUsageOfMemberAndBase(
         callParamMap.get("func3_instance_varName"), declaration, outerVarName); // instance_field
@@ -283,7 +292,8 @@ class VariableResolverCppTest extends BaseTest {
   @Test
   void testAccessExternalClassMemberVarnameOverInstance() {
     VariableDeclaration declaration =
-        Util.getSubnodeOfTypeWithName(outerFunction3, VariableDeclaration.class, "externalClass");
+        TestUtils.getSubnodeOfTypeWithName(
+            outerFunction3, VariableDeclaration.class, "externalClass");
     // Todo Points to the Parameter in the same function instead of the field of the external
     // variable
     VRUtil.assertUsageOfMemberAndBase(
@@ -307,7 +317,8 @@ class VariableResolverCppTest extends BaseTest {
   @Test
   void testAccessExternalMemberOverInstance() {
     VariableDeclaration externalInstance =
-        Util.getSubnodeOfTypeWithName(outerFunction4, VariableDeclaration.class, "externalClass");
+        TestUtils.getSubnodeOfTypeWithName(
+            outerFunction4, VariableDeclaration.class, "externalClass");
     // Todo Points to the member of inner class instead of the external class
     VRUtil.assertUsageOfMemberAndBase(
         callParamMap.get("func4_external_instance_varName"),
@@ -327,7 +338,7 @@ class VariableResolverCppTest extends BaseTest {
   void testAccessStaticMemberThroughInstanceFirst() {
     // Refers to unknown field of staticVarName
     VariableDeclaration declaration =
-        Util.getSubnodeOfTypeWithName(outerFunction5, VariableDeclaration.class, "first");
+        TestUtils.getSubnodeOfTypeWithName(outerFunction5, VariableDeclaration.class, "first");
     VRUtil.assertUsageOfMemberAndBase(
         callParamMap.get("func5_staticVarName_throughInstance_first"),
         declaration,
@@ -337,7 +348,7 @@ class VariableResolverCppTest extends BaseTest {
   @Test
   void testAccessStaticMemberThroughInstanceSecond() {
     VariableDeclaration declaration =
-        Util.getSubnodeOfTypeWithName(outerFunction5, VariableDeclaration.class, "second");
+        TestUtils.getSubnodeOfTypeWithName(outerFunction5, VariableDeclaration.class, "second");
 
     VRUtil.assertUsageOfMemberAndBase(
         callParamMap.get("func5_staticVarName_throughInstance_second"),
@@ -353,7 +364,7 @@ class VariableResolverCppTest extends BaseTest {
   @Test
   void testAccessOfInnerClassMemberOverInstance() {
     VariableDeclaration declaration =
-        Util.getSubnodeOfTypeWithName(innerFunction1, VariableDeclaration.class, "inner");
+        TestUtils.getSubnodeOfTypeWithName(innerFunction1, VariableDeclaration.class, "inner");
     VRUtil.assertUsageOfMemberAndBase(
         callParamMap.get("func1_inner_instance_varName"),
         declaration,
@@ -363,7 +374,8 @@ class VariableResolverCppTest extends BaseTest {
   @Test
   void testAccessOfOuterMemberOverInstance() {
     VariableDeclaration declaration =
-        Util.getSubnodeOfTypeWithName(innerFunction1, VariableDeclaration.class, "scopeVariables");
+        TestUtils.getSubnodeOfTypeWithName(
+            innerFunction1, VariableDeclaration.class, "scopeVariables");
     // Todo points to inner varName instead of outerVarname
 
     VRUtil.assertUsageOfMemberAndBase(
@@ -389,7 +401,7 @@ class VariableResolverCppTest extends BaseTest {
   @Test
   void testAccessOfInnerClassMemberOverInstanceWithSameNamedVariable() {
     VariableDeclaration declaration =
-        Util.getSubnodeOfTypeWithName(innerFunction2, VariableDeclaration.class, "inner");
+        TestUtils.getSubnodeOfTypeWithName(innerFunction2, VariableDeclaration.class, "inner");
     // Todo points to the shadowing parameter of same name
     VRUtil.assertUsageOfMemberAndBase(
         callParamMap.get("func2_inner_instance_varName_with_shadows"), declaration, innerVarName);
@@ -398,7 +410,8 @@ class VariableResolverCppTest extends BaseTest {
   @Test
   void testAccessOfOuterMemberOverInstanceWithSameNamedVariable() {
     VariableDeclaration declaration =
-        Util.getSubnodeOfTypeWithName(innerFunction2, VariableDeclaration.class, "scopeVariables");
+        TestUtils.getSubnodeOfTypeWithName(
+            innerFunction2, VariableDeclaration.class, "scopeVariables");
     // Todo points to the shadowing parameter
     VRUtil.assertUsageOfMemberAndBase(
         callParamMap.get("func2_outer_instance_varName_with_shadows"), declaration, outerVarName);
@@ -427,7 +440,7 @@ class VariableResolverCppTest extends BaseTest {
   @Test
   void testLocalVariableUsedAsParameter() {
     VariableDeclaration declaration =
-        Util.getSubnodeOfTypeWithName(main, VariableDeclaration.class, "varName");
+        TestUtils.getSubnodeOfTypeWithName(main, VariableDeclaration.class, "varName");
     VRUtil.assertUsageOf(callParamMap.get("main_local_varName"), declaration);
   }
 }
