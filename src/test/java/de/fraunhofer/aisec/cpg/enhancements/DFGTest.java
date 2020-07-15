@@ -13,9 +13,16 @@ import org.junit.jupiter.api.Test;
 class DFGTest {
   // Test DFG
 
-
   // Test ControlFlowSensitiveDFGPass
-
+  @Test
+  void testControlSensitiveDFGPassIf() throws Exception {
+    Path topLevel = Path.of("src", "test", "resources", "dfg");
+    List<TranslationUnitDeclaration> result =
+        TestUtils.analyze(
+            List.of(topLevel.resolve("ControlFlowSensitiveDFGIfMerge.java").toFile()),
+            topLevel,
+            true);
+  }
 
   // Test DFG when ReadWrite access occurs, such as compoundoperators or unaryoperators
 
