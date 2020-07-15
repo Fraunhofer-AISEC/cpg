@@ -667,6 +667,39 @@ class TypeTests extends BaseTest {
     assertEquals(regularInt.getType(), propagated.getType());
   }
 
+  /**
+   * Test for usage of getTypeStringFromDeclarator to determine function pointer raw type string
+   *
+   * @throws Exception Any exception thrown during the analysis process
+   */
+  @Test
+  void fptrRawTypeStringTest() throws Exception {
+    Path topLevel = Path.of("src", "test", "resources", "types");
+    List<TranslationUnitDeclaration> result =
+        TestUtils.analyze(List.of(topLevel.resolve("fptr_type.cpp").toFile()), topLevel, true);
+
+    // TODO: Apparently there is another issue, as the name of the VariableDeclaration is empty
+    // instead of being single_param
+    // As there is only one VariableDeclaration in the provided snippet we can access it this way
+    VariableDeclaration variableDeclaration =
+        Util.subnodesOfType(result, VariableDeclaration.class).get(0);
+
+    List<Type> parameterList =
+        List.of(
+            new ObjectType(
+                "int",
+                Type.Storage.AUTO,
+                new Type.Qualifier(),
+                new ArrayList<>(),
+                ObjectType.Modifier.SIGNED,
+                true));
+    FunctionPointerType fptrType =
+        new FunctionPointerType(
+            new Type.Qualifier(), Type.Storage.AUTO, parameterList, new IncompleteType());
+
+    assertEquals(fptrType, variableDeclaration.getType());
+  }
+
   @Test
   void getCommonTypeTestJava() throws Exception {
     TestUtils.disableTypeManagerCleanup();
