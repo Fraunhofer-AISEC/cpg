@@ -69,7 +69,12 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
     }
   }
 
-  private VariableDeclaration handleDeclarator(CPPASTDeclarator ctx) {
+  private Declaration handleDeclarator(CPPASTDeclarator ctx) {
+    // this is just a nested declarator, i.e. () wrapping the real declarator
+    if (ctx.getInitializer() == null && ctx.getNestedDeclarator() instanceof CPPASTDeclarator) {
+      return handle(ctx.getNestedDeclarator());
+    }
+
     // type will be filled out later
     VariableDeclaration declaration =
         NodeBuilder.newVariableDeclaration(
@@ -91,6 +96,14 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
       return handleFunctionPointer(ctx);
     }
     String name = ctx.getName().toString();
+
+    /*
+     * As always, there are some special cases to consider and one of those are C++ operators.
+     * They are regarded as functions and eclipse CDT for some reason introduces a whitespace in the function name, which will complicate things later on
+     */
+    if (name.startsWith("operator")) {
+      name = name.replace(" ", "");
+    }
 
     FunctionDeclaration declaration;
 
@@ -154,8 +167,8 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
     // unfortunately we are not told whether this is a field or not, so we have to find it out
     // ourselves
     ValueDeclaration result;
-    FunctionDeclaration currFunction = lang.getScopeManager().getCurrentFunction();
-    if (currFunction != null) {
+    RecordDeclaration recordDeclaration = lang.getScopeManager().getCurrentRecord();
+    if (recordDeclaration == null) {
       // variable
       result =
           NodeBuilder.newVariableDeclaration(
@@ -164,9 +177,6 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
               ctx.getRawSignature(),
               true);
       ((VariableDeclaration) result).setInitializer(initializer);
-      result.setLocation(lang.getLocationFromRawNode(ctx));
-      result.setType(TypeParser.createFrom(ctx.getParent().getRawSignature(), true));
-      result.refreshType();
     } else {
       // field
       String code = ctx.getRawSignature();
@@ -185,10 +195,33 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
               lang.getLocationFromRawNode(ctx),
               initializer,
               true);
-      result.setLocation(lang.getLocationFromRawNode(ctx));
-      result.setType(TypeParser.createFrom(ctx.getParent().getRawSignature(), true));
-      result.refreshType();
     }
+
+    /*
+     * Now it gets tricky, because we are looking for the parent declaration to get the full
+     * raw signature. However it could be that the declarator is wrapped in nested declarators,
+     * so we need to loop.
+     *
+     * Comment from @oxisto: I think it would still be better to parse the type in the handleSimpleDeclaration
+     * and going downwards into the decl-specifiers and declarator and see whether we can re-construct them in
+     * the correct order for the function type rather than going upwards from the declarator and use the raw string,
+     * but that is the way it is for now.
+     */
+    IASTNode parent = ctx.getParent();
+
+    while (parent != null && !(parent instanceof CPPASTSimpleDeclaration)) {
+      parent = parent.getParent();
+    }
+
+    if (parent != null) {
+      result.setType(TypeParser.createFrom(parent.getRawSignature(), true));
+      result.refreshType();
+    } else {
+      log.warn("Could not find suitable parent ast node for function pointer node: {}", this);
+    }
+
+    result.setLocation(lang.getLocationFromRawNode(ctx));
+
     return result;
   }
 

@@ -38,8 +38,12 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import org.eclipse.cdt.core.dom.ast.IASTArrayModifier;
+import org.eclipse.cdt.core.dom.ast.IASTDeclSpecifier;
 import org.eclipse.cdt.core.dom.ast.IASTDeclaration;
+import org.eclipse.cdt.core.dom.ast.IASTDeclarator;
 import org.eclipse.cdt.core.dom.ast.IASTNode;
+import org.eclipse.cdt.core.dom.ast.IASTPointerOperator;
 import org.eclipse.cdt.core.dom.ast.IASTTranslationUnit;
 import org.eclipse.cdt.internal.core.dom.parser.cpp.*;
 
@@ -100,7 +104,7 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
     FunctionDeclaration functionDeclaration =
         (FunctionDeclaration) this.lang.getDeclaratorHandler().handle(ctx.getDeclarator());
 
-    String typeString = ctx.getDeclSpecifier().toString();
+    String typeString = getTypeStringFromDeclarator(ctx.getDeclarator(), ctx.getDeclSpecifier());
 
     // It is a constructor
     if (functionDeclaration instanceof MethodDeclaration && typeString.isEmpty()) {
@@ -109,9 +113,7 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
 
     lang.getScopeManager().enterScope(functionDeclaration);
 
-    functionDeclaration.setType(
-        TypeParser.createFrom(
-            ctx.getRawSignature().split(functionDeclaration.getName())[0].trim(), true));
+    functionDeclaration.setType(TypeParser.createFrom(typeString, true));
 
     if (ctx.getBody() != null) {
       Statement bodyStatement = this.lang.getStatementHandler().handle(ctx.getBody());
@@ -324,5 +326,28 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
     }
 
     return node;
+  }
+
+  /**
+   * Returns a raw type string (that can be parsed by the {@link TypeParser} out of a cpp declarator
+   * and associated declaration specifiers.
+   *
+   * @param declarator the declarator
+   * @param declSpecifier the declaration specifier
+   * @return the type string
+   */
+  static String getTypeStringFromDeclarator(
+      IASTDeclarator declarator, IASTDeclSpecifier declSpecifier) {
+    // use the declaration specifier as basis
+    StringBuilder typeString = new StringBuilder(declSpecifier.toString());
+
+    // append names, pointer operators and array modifiers and such
+    for (IASTNode node : declarator.getChildren()) {
+      if (node instanceof IASTPointerOperator || node instanceof IASTArrayModifier) {
+        typeString.append(node.getRawSignature());
+      }
+    }
+
+    return typeString.toString();
   }
 }

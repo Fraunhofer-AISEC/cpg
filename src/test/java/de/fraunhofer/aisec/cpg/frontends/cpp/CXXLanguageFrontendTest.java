@@ -240,8 +240,8 @@ class CXXLanguageFrontendTest extends BaseTest {
     TranslationUnitDeclaration declaration =
         TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true);
 
-    // should be four method nodes
-    assertEquals(4, declaration.getDeclarations().size());
+    // should be six function nodes
+    assertEquals(6, declaration.getDeclarations().size());
 
     FunctionDeclaration method = declaration.getDeclarationAs(0, FunctionDeclaration.class);
     assertEquals("function0(int)void", method.getSignature());
@@ -277,6 +277,12 @@ class CXXLanguageFrontendTest extends BaseTest {
     statement = method.getBodyStatementAs(0, ReturnStatement.class);
     assertNotNull(statement);
     assertFalse(statement.isImplicit());
+
+    method = declaration.getDeclarationAs(4, FunctionDeclaration.class);
+    assertEquals("function3()UnknownType*", method.getSignature());
+
+    method = declaration.getDeclarationAs(5, FunctionDeclaration.class);
+    assertEquals("function4(int)void", method.getSignature());
   }
 
   @Test
@@ -707,6 +713,16 @@ class CXXLanguageFrontendTest extends BaseTest {
     assertEquals(recordDeclaration.getName(), constructor.getName());
     assertEquals(TypeParser.createFrom("SomeClass", true), constructor.getType());
     assertTrue(constructor.hasBody());
+
+    ConstructorDeclaration constructorDefinition =
+        declaration.getDeclarationAs(2, ConstructorDeclaration.class);
+
+    assertNotNull(constructorDefinition);
+    assertEquals(1, constructorDefinition.getParameters().size());
+    assertEquals(
+        TypeParser.createFrom("int", true), constructorDefinition.getParameters().get(0).getType());
+    assertEquals(TypeParser.createFrom("SomeClass", true), constructorDefinition.getType());
+    assertTrue(constructorDefinition.hasBody());
   }
 
   @Test

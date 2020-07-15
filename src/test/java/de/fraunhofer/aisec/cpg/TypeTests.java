@@ -667,6 +667,77 @@ class TypeTests extends BaseTest {
     assertEquals(regularInt.getType(), propagated.getType());
   }
 
+  /**
+   * Test for usage of getTypeStringFromDeclarator to determine function pointer raw type string
+   *
+   * @throws Exception Any exception thrown during the analysis process
+   */
+  @Test
+  void testFunctionPointerTypes() throws Exception {
+    Path topLevel = Path.of("src", "test", "resources", "types");
+    TranslationUnitDeclaration tu =
+        TestUtils.analyzeAndGetFirstTU(
+            List.of(topLevel.resolve("fptr_type.cpp").toFile()), topLevel, true);
+
+    FunctionPointerType oneParamType =
+        new FunctionPointerType(
+            new Type.Qualifier(),
+            Type.Storage.AUTO,
+            List.of(
+                new ObjectType(
+                    "int",
+                    Type.Storage.AUTO,
+                    new Type.Qualifier(),
+                    new ArrayList<>(),
+                    ObjectType.Modifier.SIGNED,
+                    true)),
+            new IncompleteType());
+
+    FunctionPointerType twoParamType =
+        new FunctionPointerType(
+            new Type.Qualifier(),
+            Type.Storage.AUTO,
+            List.of(
+                new ObjectType(
+                    "int",
+                    Type.Storage.AUTO,
+                    new Type.Qualifier(),
+                    new ArrayList<>(),
+                    ObjectType.Modifier.SIGNED,
+                    true),
+                new ObjectType(
+                    "long",
+                    Type.Storage.AUTO,
+                    new Type.Qualifier(),
+                    new ArrayList<>(),
+                    ObjectType.Modifier.UNSIGNED,
+                    true)),
+            new ObjectType(
+                "int",
+                Type.Storage.AUTO,
+                new Type.Qualifier(),
+                new ArrayList<>(),
+                ObjectType.Modifier.SIGNED,
+                true));
+
+    List<VariableDeclaration> variables = Util.subnodesOfType(tu, VariableDeclaration.class);
+    VariableDeclaration localTwoParam = TestUtils.findByUniqueName(variables, "local_two_param");
+    assertNotNull(localTwoParam);
+    assertEquals(twoParamType, localTwoParam.getType());
+
+    VariableDeclaration localOneParam = TestUtils.findByUniqueName(variables, "local_one_param");
+    assertNotNull(localOneParam);
+    assertEquals(oneParamType, localOneParam.getType());
+
+    VariableDeclaration globalTwoParam = TestUtils.findByUniqueName(variables, "global_two_param");
+    assertNotNull(globalTwoParam);
+    assertEquals(twoParamType, globalTwoParam.getType());
+
+    VariableDeclaration globalOneParam = TestUtils.findByUniqueName(variables, "global_one_param");
+    assertNotNull(globalOneParam);
+    assertEquals(oneParamType, globalOneParam.getType());
+  }
+
   @Test
   void getCommonTypeTestJava() throws Exception {
     TestUtils.disableTypeManagerCleanup();

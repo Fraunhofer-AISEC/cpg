@@ -41,14 +41,16 @@ public class ConstructorDeclaration extends MethodDeclaration {
    * @return the constructor declaration
    */
   public static ConstructorDeclaration from(MethodDeclaration methodDeclaration) {
+    RecordDeclaration recordDeclaration = methodDeclaration.getRecordDeclaration();
+
     ConstructorDeclaration c =
         NodeBuilder.newConstructorDeclaration(
-            methodDeclaration.getName(),
-            methodDeclaration.getCode(),
-            methodDeclaration.getRecordDeclaration());
+            methodDeclaration.getName(), methodDeclaration.getCode(), recordDeclaration);
 
-    // constructors always have void type
-    c.setType(TypeParser.createFrom(VOID_TYPE_STRING, true));
+    if (recordDeclaration != null) {
+      // constructors always have implicitly the return type of their class
+      c.setType(TypeParser.createFrom(recordDeclaration.getName(), true));
+    }
 
     c.setBody(methodDeclaration.getBody());
     c.setLocation(methodDeclaration.getLocation());
