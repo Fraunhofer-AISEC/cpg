@@ -1,10 +1,5 @@
-public class ContextSensitiveDFG {
-
-  void test(){
-  }
-
+public class ControlFlowSensitiveDFGIfMerge {
   void func() {
-    test();
     int a = 1;
     if (args.length > 3) {
       a = 2;
@@ -13,6 +8,5 @@ public class ContextSensitiveDFG {
     }
 
     int b = a;
-
   }
 }

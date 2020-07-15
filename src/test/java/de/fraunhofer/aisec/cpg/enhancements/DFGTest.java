@@ -10,7 +10,14 @@ import java.util.List;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
 
-class ReadWriteDFGTest {
+class DFGTest {
+  // Test DFG
+
+
+  // Test ControlFlowSensitiveDFGPass
+
+
+  // Test DFG when ReadWrite access occurs, such as compoundoperators or unaryoperators
 
   @Test
   void testCompoundOperatorDFG() throws Exception {
