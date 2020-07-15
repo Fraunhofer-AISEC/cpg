@@ -300,6 +300,7 @@ public class TranslationConfiguration {
     public Builder defaultPasses() {
       registerPass(new FilenameMapper());
       registerPass(new TypeHierarchyResolver());
+      registerPass(new JavaExternalTypeHierarchyResolver());
       registerPass(new ImportResolver());
       registerPass(new VariableUsageResolver());
       registerPass(new CallResolver()); // creates CG

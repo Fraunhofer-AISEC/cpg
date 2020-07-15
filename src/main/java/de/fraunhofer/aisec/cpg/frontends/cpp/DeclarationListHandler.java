@@ -26,9 +26,13 @@
 
 package de.fraunhofer.aisec.cpg.frontends.cpp;
 
+import static de.fraunhofer.aisec.cpg.frontends.cpp.DeclarationHandler.getTypeStringFromDeclarator;
+
 import de.fraunhofer.aisec.cpg.frontends.Handler;
 import de.fraunhofer.aisec.cpg.graph.Declaration;
+import de.fraunhofer.aisec.cpg.graph.FunctionDeclaration;
 import de.fraunhofer.aisec.cpg.graph.ValueDeclaration;
+import de.fraunhofer.aisec.cpg.graph.VariableDeclaration;
 import de.fraunhofer.aisec.cpg.graph.type.Type;
 import de.fraunhofer.aisec.cpg.graph.type.TypeParser;
 import java.util.ArrayList;
@@ -55,7 +59,16 @@ class DeclarationListHandler
       ValueDeclaration declaration =
           (ValueDeclaration) this.lang.getDeclaratorHandler().handle(declarator);
 
-      Type result = TypeParser.createFrom(ctx.getRawSignature(), true);
+      String typeString;
+      if (declaration instanceof FunctionDeclaration
+          || declaration instanceof VariableDeclaration) {
+        typeString = getTypeStringFromDeclarator(declarator, ctx.getDeclSpecifier());
+      } else {
+        // otherwise, use the complete raw code and let the type parser handle it
+        typeString = ctx.getRawSignature();
+      }
+
+      Type result = TypeParser.createFrom(typeString, true);
       declaration.setType(result);
 
       // cache binding

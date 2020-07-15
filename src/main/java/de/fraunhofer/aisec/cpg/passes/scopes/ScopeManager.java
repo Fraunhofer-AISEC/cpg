@@ -268,7 +268,9 @@ public class ScopeManager {
       }
       return null;
     }
+
     currentScope = leaveScope.parent;
+
     return leaveScope;
   }
 
@@ -636,6 +638,13 @@ public class ScopeManager {
         variables.stream().filter(param -> Objects.equals(param.getName(), name)).findAny();
 
     return any.orElse(null);
+  }
+
+  public void resetToGlobal() {
+    GlobalScope global = (GlobalScope) getFirstScopeThat(scope -> scope instanceof GlobalScope);
+    if (global != null) {
+      currentScope = global;
+    }
   }
 
   ///// End copied over for now ///////

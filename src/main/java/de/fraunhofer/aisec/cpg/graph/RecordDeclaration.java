@@ -32,6 +32,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.checkerframework.checker.nullness.qual.NonNull;
+import org.checkerframework.checker.nullness.qual.Nullable;
 import org.neo4j.ogm.annotation.Transient;
 
 /** Represents a C++ union/struct/class or Java class */
@@ -85,6 +86,11 @@ public class RecordDeclaration extends Declaration {
 
   public List<FieldDeclaration> getFields() {
     return fields;
+  }
+
+  @Nullable
+  public FieldDeclaration getField(String name) {
+    return fields.stream().filter(f -> f.name.equals(name)).findFirst().orElse(null);
   }
 
   public void setFields(List<FieldDeclaration> fields) {

@@ -32,7 +32,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import de.fraunhofer.aisec.cpg.BaseTest;
 import de.fraunhofer.aisec.cpg.TestUtils;
 import de.fraunhofer.aisec.cpg.graph.*;
-import de.fraunhofer.aisec.cpg.helpers.Util;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Set;
@@ -46,37 +45,40 @@ class VariableResolverTest extends BaseTest {
   @Test
   void testFields() throws Exception {
     List<TranslationUnitDeclaration> result = TestUtils.analyze("java", topLevel, true);
-    List<MethodDeclaration> methods = Util.subnodesOfType(result, MethodDeclaration.class);
-    List<FieldDeclaration> fields = Util.subnodesOfType(result, FieldDeclaration.class);
+    List<MethodDeclaration> methods = TestUtils.subnodesOfType(result, MethodDeclaration.class);
+    List<FieldDeclaration> fields = TestUtils.subnodesOfType(result, FieldDeclaration.class);
     FieldDeclaration field = TestUtils.findByUniqueName(fields, "field");
 
     MethodDeclaration getField = TestUtils.findByUniqueName(methods, "getField");
-    ReturnStatement returnStatement = Util.subnodesOfType(getField, ReturnStatement.class).get(0);
+    ReturnStatement returnStatement =
+        TestUtils.subnodesOfType(getField, ReturnStatement.class).get(0);
     assertEquals(field, ((MemberExpression) returnStatement.getReturnValue()).getMember());
 
     MethodDeclaration noShadow = TestUtils.findByUniqueName(methods, "getField");
-    returnStatement = Util.subnodesOfType(noShadow, ReturnStatement.class).get(0);
+    returnStatement = TestUtils.subnodesOfType(noShadow, ReturnStatement.class).get(0);
     assertEquals(field, ((MemberExpression) returnStatement.getReturnValue()).getMember());
   }
 
   @Test
   void testLocalVars() throws Exception {
     List<TranslationUnitDeclaration> result = TestUtils.analyze("java", topLevel, true);
-    List<MethodDeclaration> methods = Util.subnodesOfType(result, MethodDeclaration.class);
-    List<FieldDeclaration> fields = Util.subnodesOfType(result, FieldDeclaration.class);
+    List<MethodDeclaration> methods = TestUtils.subnodesOfType(result, MethodDeclaration.class);
+    List<FieldDeclaration> fields = TestUtils.subnodesOfType(result, FieldDeclaration.class);
     FieldDeclaration field = TestUtils.findByUniqueName(fields, "field");
 
     MethodDeclaration getLocal = TestUtils.findByUniqueName(methods, "getLocal");
-    ReturnStatement returnStatement = Util.subnodesOfType(getLocal, ReturnStatement.class).get(0);
-    VariableDeclaration local = Util.subnodesOfType(getLocal, VariableDeclaration.class).get(0);
+    ReturnStatement returnStatement =
+        TestUtils.subnodesOfType(getLocal, ReturnStatement.class).get(0);
+    VariableDeclaration local =
+        TestUtils.subnodesOfType(getLocal, VariableDeclaration.class).get(0);
     DeclaredReferenceExpression returnValue =
         (DeclaredReferenceExpression) returnStatement.getReturnValue();
     assertNotEquals(Set.of(field), returnValue.getRefersTo());
     assertEquals(Set.of(local), returnValue.getRefersTo());
 
     MethodDeclaration getShadow = TestUtils.findByUniqueName(methods, "getShadow");
-    returnStatement = Util.subnodesOfType(getShadow, ReturnStatement.class).get(0);
-    local = Util.subnodesOfType(getShadow, VariableDeclaration.class).get(0);
+    returnStatement = TestUtils.subnodesOfType(getShadow, ReturnStatement.class).get(0);
+    local = TestUtils.subnodesOfType(getShadow, VariableDeclaration.class).get(0);
     returnValue = (DeclaredReferenceExpression) returnStatement.getReturnValue();
     assertNotEquals(Set.of(field), returnValue.getRefersTo());
     assertEquals(Set.of(local), returnValue.getRefersTo());

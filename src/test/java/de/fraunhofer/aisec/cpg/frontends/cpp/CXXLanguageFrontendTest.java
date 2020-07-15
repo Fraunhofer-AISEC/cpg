@@ -35,7 +35,6 @@ import de.fraunhofer.aisec.cpg.graph.type.TypeParser;
 import de.fraunhofer.aisec.cpg.graph.type.UnknownType;
 import de.fraunhofer.aisec.cpg.helpers.NodeComparator;
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker;
-import de.fraunhofer.aisec.cpg.helpers.Util;
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation;
 import de.fraunhofer.aisec.cpg.sarif.Region;
 import java.io.File;
@@ -241,8 +240,8 @@ class CXXLanguageFrontendTest extends BaseTest {
     TranslationUnitDeclaration declaration =
         TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true);
 
-    // should be four method nodes
-    assertEquals(4, declaration.getDeclarations().size());
+    // should be six function nodes
+    assertEquals(6, declaration.getDeclarations().size());
 
     FunctionDeclaration method = declaration.getDeclarationAs(0, FunctionDeclaration.class);
     assertEquals("function0(int)void", method.getSignature());
@@ -278,6 +277,12 @@ class CXXLanguageFrontendTest extends BaseTest {
     statement = method.getBodyStatementAs(0, ReturnStatement.class);
     assertNotNull(statement);
     assertFalse(statement.isImplicit());
+
+    method = declaration.getDeclarationAs(4, FunctionDeclaration.class);
+    assertEquals("function3()UnknownType*", method.getSignature());
+
+    method = declaration.getDeclarationAs(5, FunctionDeclaration.class);
+    assertEquals("function4(int)void", method.getSignature());
   }
 
   @Test
@@ -380,7 +385,8 @@ class CXXLanguageFrontendTest extends BaseTest {
     graphNodes.sort(new NodeComparator());
     assertTrue(graphNodes.size() != 0);
 
-    List<SwitchStatement> switchStatements = Util.filterCast(graphNodes, SwitchStatement.class);
+    List<SwitchStatement> switchStatements =
+        TestUtils.filterCast(graphNodes, SwitchStatement.class);
     assertTrue(switchStatements.size() == 3);
 
     SwitchStatement switchStatement = switchStatements.get(0);
@@ -388,11 +394,11 @@ class CXXLanguageFrontendTest extends BaseTest {
     assertTrue(((CompoundStatement) switchStatement.getStatement()).getStatements().size() == 11);
 
     List<CaseStatement> caseStatements =
-        Util.filterCast(SubgraphWalker.flattenAST(switchStatement), CaseStatement.class);
+        TestUtils.filterCast(SubgraphWalker.flattenAST(switchStatement), CaseStatement.class);
     assertTrue(caseStatements.size() == 4);
 
     List<DefaultStatement> defaultStatements =
-        Util.filterCast(SubgraphWalker.flattenAST(switchStatement), DefaultStatement.class);
+        TestUtils.filterCast(SubgraphWalker.flattenAST(switchStatement), DefaultStatement.class);
     assertTrue(defaultStatements.size() == 1);
   }
 
@@ -688,15 +694,37 @@ class CXXLanguageFrontendTest extends BaseTest {
 
     assertEquals(TypeParser.createFrom("void*", true), field.getType());
 
-    assertEquals(2, recordDeclaration.getMethods().size());
+    assertEquals(3, recordDeclaration.getMethods().size());
 
     MethodDeclaration method = recordDeclaration.getMethods().get(0);
 
     assertEquals("method", method.getName());
+    assertEquals(0, method.getParameters().size());
     assertEquals(TypeParser.createFrom("void*", true), method.getType());
     assertFalse(method.hasBody());
 
-    MethodDeclaration inlineMethod = recordDeclaration.getMethods().get(1);
+    MethodDeclaration definition = (MethodDeclaration) method.getDefinition();
+    assertNotNull(definition);
+    assertEquals("method", definition.getName());
+    assertEquals(0, definition.getParameters().size());
+    assertTrue(definition.isDefinition());
+
+    MethodDeclaration methodWithParam = recordDeclaration.getMethods().get(1);
+
+    assertEquals("method", methodWithParam.getName());
+    assertEquals(1, methodWithParam.getParameters().size());
+    assertEquals(
+        TypeParser.createFrom("int", true), methodWithParam.getParameters().get(0).getType());
+    assertEquals(TypeParser.createFrom("void*", true), methodWithParam.getType());
+    assertFalse(methodWithParam.hasBody());
+
+    definition = (MethodDeclaration) methodWithParam.getDefinition();
+    assertNotNull(definition);
+    assertEquals("method", definition.getName());
+    assertEquals(1, definition.getParameters().size());
+    assertTrue(definition.isDefinition());
+
+    MethodDeclaration inlineMethod = recordDeclaration.getMethods().get(2);
 
     assertEquals("inlineMethod", inlineMethod.getName());
     assertEquals(TypeParser.createFrom("void*", true), inlineMethod.getType());
@@ -707,6 +735,16 @@ class CXXLanguageFrontendTest extends BaseTest {
     assertEquals(recordDeclaration.getName(), constructor.getName());
     assertEquals(TypeParser.createFrom("SomeClass", true), constructor.getType());
     assertTrue(constructor.hasBody());
+
+    ConstructorDeclaration constructorDefinition =
+        declaration.getDeclarationAs(3, ConstructorDeclaration.class);
+
+    assertNotNull(constructorDefinition);
+    assertEquals(1, constructorDefinition.getParameters().size());
+    assertEquals(
+        TypeParser.createFrom("int", true), constructorDefinition.getParameters().get(0).getType());
+    assertEquals(TypeParser.createFrom("SomeClass", true), constructorDefinition.getType());
+    assertTrue(constructorDefinition.hasBody());
   }
 
   @Test

@@ -26,11 +26,12 @@
 
 package de.fraunhofer.aisec.cpg;
 
+import static de.fraunhofer.aisec.cpg.TestUtils.findByUniqueName;
+import static de.fraunhofer.aisec.cpg.TestUtils.subnodesOfType;
 import static org.junit.jupiter.api.Assertions.*;
 
 import de.fraunhofer.aisec.cpg.graph.*;
 import de.fraunhofer.aisec.cpg.graph.type.*;
-import de.fraunhofer.aisec.cpg.helpers.Util;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -611,70 +612,147 @@ class TypeTests extends BaseTest {
     Path topLevel = Path.of("src", "test", "resources", "types");
     List<TranslationUnitDeclaration> result = TestUtils.analyze("java", topLevel, true);
 
-    List<ObjectType> variables = Util.subnodesOfType(result, ObjectType.class);
-    List<RecordDeclaration> recordDeclarations =
-        Util.subnodesOfType(result, RecordDeclaration.class);
+    List<ObjectType> variables = subnodesOfType(result, ObjectType.class);
+    List<RecordDeclaration> recordDeclarations = subnodesOfType(result, RecordDeclaration.class);
 
     // Test RecordDeclaration relationship
     List<ObjectType> objectTypes = TestUtils.findByName(variables, "A");
-    RecordDeclaration recordDeclarationA = TestUtils.findByUniqueName(recordDeclarations, "A");
+    RecordDeclaration recordDeclarationA = findByUniqueName(recordDeclarations, "A");
     for (ObjectType objectType : objectTypes) {
       assertEquals(recordDeclarationA, objectType.getRecordDeclaration());
     }
 
     // Test uniqueness of types x and y have same type
-    List<FieldDeclaration> fieldDeclarations = Util.subnodesOfType(result, FieldDeclaration.class);
-    FieldDeclaration x = TestUtils.findByUniqueName(fieldDeclarations, "x");
-    FieldDeclaration z = TestUtils.findByUniqueName(fieldDeclarations, "z");
+    List<FieldDeclaration> fieldDeclarations = subnodesOfType(result, FieldDeclaration.class);
+    FieldDeclaration x = findByUniqueName(fieldDeclarations, "x");
+    FieldDeclaration z = findByUniqueName(fieldDeclarations, "z");
     assertSame(x.getType(), z.getType());
 
     // Test propagation of specifiers in primitive fields (final int y)
-    FieldDeclaration y = TestUtils.findByUniqueName(fieldDeclarations, "y");
+    FieldDeclaration y = findByUniqueName(fieldDeclarations, "y");
     assertTrue(y.getType().getQualifier().isConst());
 
     // Test propagation of specifiers in non-primitive fields (final A a)
     List<VariableDeclaration> variableDeclarations =
-        Util.subnodesOfType(result, VariableDeclaration.class);
-    VariableDeclaration aA = TestUtils.findByUniqueName(variableDeclarations, "a");
+        subnodesOfType(result, VariableDeclaration.class);
+    VariableDeclaration aA = findByUniqueName(variableDeclarations, "a");
     assertTrue(aA.getType().getQualifier().isConst());
 
     // Test propagation of specifiers in variables (final String s)
-    VariableDeclaration sString = TestUtils.findByUniqueName(variableDeclarations, "s");
+    VariableDeclaration sString = findByUniqueName(variableDeclarations, "s");
     assertTrue(sString.getType().getQualifier().isConst());
 
     // Test PointerType chain with array
-    VariableDeclaration array = TestUtils.findByUniqueName(variableDeclarations, "array");
+    VariableDeclaration array = findByUniqueName(variableDeclarations, "array");
     assertTrue(array.getType() instanceof PointerType);
     assertEquals(((PointerType) array.getType()).getElementType(), x.getType());
 
     topLevel = Path.of("src", "test", "resources", "types");
     result = TestUtils.analyze("cpp", topLevel, true);
 
-    variableDeclarations = Util.subnodesOfType(result, VariableDeclaration.class);
+    variableDeclarations = subnodesOfType(result, VariableDeclaration.class);
 
     // Test PointerType chain with pointer
-    VariableDeclaration regularInt = TestUtils.findByUniqueName(variableDeclarations, "regularInt");
-    VariableDeclaration ptr = TestUtils.findByUniqueName(variableDeclarations, "ptr");
+    VariableDeclaration regularInt = findByUniqueName(variableDeclarations, "regularInt");
+    VariableDeclaration ptr = findByUniqueName(variableDeclarations, "ptr");
     assertTrue(ptr.getType() instanceof PointerType);
     assertEquals(((PointerType) ptr.getType()).getElementType(), regularInt.getType());
 
     // Test type Propagation (auto) UnknownType
-    VariableDeclaration unknown = TestUtils.findByUniqueName(variableDeclarations, "unknown");
+    VariableDeclaration unknown = findByUniqueName(variableDeclarations, "unknown");
     assertEquals(UnknownType.getUnknownType(), unknown.getType());
 
     // Test type Propagation auto
-    VariableDeclaration propagated = TestUtils.findByUniqueName(variableDeclarations, "propagated");
+    VariableDeclaration propagated = findByUniqueName(variableDeclarations, "propagated");
     assertEquals(regularInt.getType(), propagated.getType());
+  }
+
+  /**
+   * Test for usage of getTypeStringFromDeclarator to determine function pointer raw type string
+   *
+   * @throws Exception Any exception thrown during the analysis process
+   */
+  @Test
+  void testFunctionPointerTypes() throws Exception {
+    Path topLevel = Path.of("src", "test", "resources", "types");
+    TranslationUnitDeclaration tu =
+        TestUtils.analyzeAndGetFirstTU(
+            List.of(topLevel.resolve("fptr_type.cpp").toFile()), topLevel, true);
+
+    FunctionPointerType oneParamType =
+        new FunctionPointerType(
+            new Type.Qualifier(),
+            Type.Storage.AUTO,
+            List.of(
+                new ObjectType(
+                    "int",
+                    Type.Storage.AUTO,
+                    new Type.Qualifier(),
+                    new ArrayList<>(),
+                    ObjectType.Modifier.SIGNED,
+                    true)),
+            new IncompleteType());
+
+    FunctionPointerType twoParamType =
+        new FunctionPointerType(
+            new Type.Qualifier(),
+            Type.Storage.AUTO,
+            List.of(
+                new ObjectType(
+                    "int",
+                    Type.Storage.AUTO,
+                    new Type.Qualifier(),
+                    new ArrayList<>(),
+                    ObjectType.Modifier.SIGNED,
+                    true),
+                new ObjectType(
+                    "long",
+                    Type.Storage.AUTO,
+                    new Type.Qualifier(),
+                    new ArrayList<>(),
+                    ObjectType.Modifier.UNSIGNED,
+                    true)),
+            new ObjectType(
+                "int",
+                Type.Storage.AUTO,
+                new Type.Qualifier(),
+                new ArrayList<>(),
+                ObjectType.Modifier.SIGNED,
+                true));
+
+    List<VariableDeclaration> variables = subnodesOfType(tu, VariableDeclaration.class);
+    VariableDeclaration localTwoParam = findByUniqueName(variables, "local_two_param");
+    assertNotNull(localTwoParam);
+    assertEquals(twoParamType, localTwoParam.getType());
+
+    VariableDeclaration localOneParam = findByUniqueName(variables, "local_one_param");
+    assertNotNull(localOneParam);
+    assertEquals(oneParamType, localOneParam.getType());
+
+    VariableDeclaration globalTwoParam = findByUniqueName(variables, "global_two_param");
+    assertNotNull(globalTwoParam);
+    assertEquals(twoParamType, globalTwoParam.getType());
+
+    VariableDeclaration globalOneParam = findByUniqueName(variables, "global_one_param");
+    assertNotNull(globalOneParam);
+    assertEquals(oneParamType, globalOneParam.getType());
   }
 
   @Test
   void getCommonTypeTestJava() throws Exception {
     TestUtils.disableTypeManagerCleanup();
 
-    Path topLevel = Path.of("src", "test", "resources", "compiling", "hierarchy", "multistep");
+    Path topLevel = Path.of("src", "test", "resources", "compiling", "hierarchy");
     TestUtils.analyze("java", topLevel, true);
 
-    getCommonTypeTestGeneral();
+    Type root = TypeParser.createFrom("multistep.Root", true);
+    Type level0 = TypeParser.createFrom("multistep.Level0", true);
+    Type level1 = TypeParser.createFrom("multistep.Level1", true);
+    Type level1b = TypeParser.createFrom("multistep.Level1B", true);
+    Type level2 = TypeParser.createFrom("multistep.Level2", true);
+    Type unrelated = TypeParser.createFrom("multistep.Unrelated", true);
+
+    getCommonTypeTestGeneral(root, level0, level1, level1b, level2, unrelated);
   }
 
   @Test
@@ -684,7 +762,14 @@ class TypeTests extends BaseTest {
     Path topLevel = Path.of("src", "test", "resources", "compiling", "hierarchy", "multistep");
     TestUtils.analyze("simple_inheritance.cpp", topLevel, true);
 
-    getCommonTypeTestGeneral();
+    Type root = TypeParser.createFrom("Root", true);
+    Type level0 = TypeParser.createFrom("Level0", true);
+    Type level1 = TypeParser.createFrom("Level1", true);
+    Type level1b = TypeParser.createFrom("Level1B", true);
+    Type level2 = TypeParser.createFrom("Level2", true);
+    Type unrelated = TypeParser.createFrom("Unrelated", true);
+
+    getCommonTypeTestGeneral(root, level0, level1, level1b, level2, unrelated);
   }
 
   @Test
@@ -736,7 +821,8 @@ class TypeTests extends BaseTest {
         Optional.of(level0), TypeManager.getInstance().getCommonType(List.of(level2, level2b)));
   }
 
-  void getCommonTypeTestGeneral() {
+  void getCommonTypeTestGeneral(
+      Type root, Type level0, Type level1, Type level1b, Type level2, Type unrelated) {
     /*
     Type hierarchy:
               Root
@@ -747,11 +833,6 @@ class TypeTests extends BaseTest {
            |
          Level2
      */
-    Type root = TypeParser.createFrom("Root", true);
-    Type level0 = TypeParser.createFrom("Level0", true);
-    Type level1 = TypeParser.createFrom("Level1", true);
-    Type level1b = TypeParser.createFrom("Level1B", true);
-    Type level2 = TypeParser.createFrom("Level2", true);
 
     // A single type is its own least common ancestor
     for (Type t : List.of(root, level0, level1, level1b, level2)) {
@@ -782,7 +863,6 @@ class TypeTests extends BaseTest {
         Optional.of(level1), TypeManager.getInstance().getCommonType(List.of(level1, level2)));
 
     // Check unrelated type behavior: No common root class
-    Type unrelated = TypeParser.createFrom("Unrelated", true);
     for (Type t : List.of(root, level0, level1, level1b, level2)) {
       assertEquals(
           Optional.empty(), TypeManager.getInstance().getCommonType(List.of(unrelated, t)));

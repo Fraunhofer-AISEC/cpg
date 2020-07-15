@@ -15,3 +15,8 @@ void function0(int arg0) {
 void* function2() {
   return NULL;
 }
+
+class UnknownType* function3();
+
+#define SOME_MACRO(x) x
+void function4(int a = SOME_MACRO(1));

@@ -44,8 +44,6 @@ class DemoTests extends BaseTest {
   @Test
   void testHierarchy() throws Exception {
 
-    //    assertTrue(Database.getInstance().connect(), "Couldn't connect to the database!");
-    //    Database.getInstance().purgeDatabase();
     Path topLevel = Paths.get("src/test/resources/compiling/hierarchy");
 
     File[] files =
@@ -67,7 +65,6 @@ class DemoTests extends BaseTest {
     TranslationManager analyzer = TranslationManager.builder().config(config).build();
 
     var result = analyzer.analyze().get();
-    //    Database.getInstance().saveAll(result.getTranslationUnits());
   }
 
   @Test

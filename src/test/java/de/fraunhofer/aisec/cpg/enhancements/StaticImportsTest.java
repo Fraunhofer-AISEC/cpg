@@ -36,7 +36,6 @@ import de.fraunhofer.aisec.cpg.graph.MemberExpression;
 import de.fraunhofer.aisec.cpg.graph.MethodDeclaration;
 import de.fraunhofer.aisec.cpg.graph.RecordDeclaration;
 import de.fraunhofer.aisec.cpg.graph.TranslationUnitDeclaration;
-import de.fraunhofer.aisec.cpg.helpers.Util;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -50,22 +49,23 @@ class StaticImportsTest extends BaseTest {
   void testSingleStaticImport() throws Exception {
     List<TranslationUnitDeclaration> result =
         TestUtils.analyze("java", topLevel.resolve("single"), true);
-    List<MethodDeclaration> methods = Util.subnodesOfType(result, MethodDeclaration.class);
+    List<MethodDeclaration> methods = TestUtils.subnodesOfType(result, MethodDeclaration.class);
     MethodDeclaration test = TestUtils.findByUniqueName(methods, "test");
     MethodDeclaration main = TestUtils.findByUniqueName(methods, "main");
 
-    CallExpression call = Util.subnodesOfType(main, CallExpression.class).get(0);
+    CallExpression call = TestUtils.subnodesOfType(main, CallExpression.class).get(0);
     assertEquals(List.of(test), call.getInvokes());
 
     List<FieldDeclaration> testFields =
-        Util.subnodesOfType(result, FieldDeclaration.class).stream()
+        TestUtils.subnodesOfType(result, FieldDeclaration.class).stream()
             .filter(f -> f.getName().equals("test"))
             .collect(Collectors.toList());
     assertEquals(1, testFields.size());
     FieldDeclaration staticField = testFields.get(0);
     assertTrue(staticField.getModifiers().contains("static"));
 
-    List<MemberExpression> memberExpressions = Util.subnodesOfType(main, MemberExpression.class);
+    List<MemberExpression> memberExpressions =
+        TestUtils.subnodesOfType(main, MemberExpression.class);
     MemberExpression usage = TestUtils.findByUniqueName(memberExpressions, "A.test");
     assertEquals(staticField, usage.getMember());
   }
@@ -74,9 +74,9 @@ class StaticImportsTest extends BaseTest {
   void testAsteriskImport() throws Exception {
     List<TranslationUnitDeclaration> result =
         TestUtils.analyze("java", topLevel.resolve("asterisk"), true);
-    List<MethodDeclaration> methods = Util.subnodesOfType(result, MethodDeclaration.class);
+    List<MethodDeclaration> methods = TestUtils.subnodesOfType(result, MethodDeclaration.class);
     MethodDeclaration main = TestUtils.findByUniqueName(methods, "main");
-    for (CallExpression call : Util.subnodesOfType(main, CallExpression.class)) {
+    for (CallExpression call : TestUtils.subnodesOfType(main, CallExpression.class)) {
       switch (call.getName()) {
         case "a":
           assertEquals(List.of(TestUtils.findByUniqueName(methods, "a")), call.getInvokes());
@@ -98,15 +98,16 @@ class StaticImportsTest extends BaseTest {
       }
     }
 
-    List<RecordDeclaration> records = Util.subnodesOfType(result, RecordDeclaration.class);
+    List<RecordDeclaration> records = TestUtils.subnodesOfType(result, RecordDeclaration.class);
     RecordDeclaration A = TestUtils.findByUniqueName(records, "A");
-    List<FieldDeclaration> testFields = Util.subnodesOfType(A, FieldDeclaration.class);
+    List<FieldDeclaration> testFields = TestUtils.subnodesOfType(A, FieldDeclaration.class);
     FieldDeclaration staticField = TestUtils.findByUniqueName(testFields, "staticField");
     FieldDeclaration nonStaticField = TestUtils.findByUniqueName(testFields, "nonStaticField");
     assertTrue(staticField.getModifiers().contains("static"));
     assertFalse(nonStaticField.getModifiers().contains("static"));
 
-    List<MemberExpression> declaredReferences = Util.subnodesOfType(main, MemberExpression.class);
+    List<MemberExpression> declaredReferences =
+        TestUtils.subnodesOfType(main, MemberExpression.class);
     MemberExpression usage = TestUtils.findByUniqueName(declaredReferences, "A.staticField");
     assertEquals(usage.getMember(), staticField);
 
