@@ -201,11 +201,5 @@ class DFGTest {
 
     assertTrue(prevDFGOperator.contains(expression));
     assertTrue(nextDFGOperator.contains(expression));
-
-    Set<Node> prevDFGDeclaredReferenceExpression = expression.getPrevDFG();
-    Set<Node> nextDFGDeclaredReferenceExpression = expression.getNextDFG();
-
-    assertTrue(prevDFGDeclaredReferenceExpression.contains(variableDeclaration));
-    assertTrue(nextDFGDeclaredReferenceExpression.contains(variableDeclaration));
   }
 }

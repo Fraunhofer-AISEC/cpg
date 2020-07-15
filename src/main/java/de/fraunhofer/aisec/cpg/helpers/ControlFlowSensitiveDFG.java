@@ -11,7 +11,7 @@ public class ControlFlowSensitiveDFG {
   */
   private Map<VariableDeclaration, Set<Node>> variables;
   private Set<Node> visited = new HashSet<>();
-  private Set<Node> visitedEOG = new HashSet<>();
+  private Set<Node> visitedEOG;
   // Node where the ControlFlowSensitive analysis is started. On analysis start this will be the
   // MethodDeclaration, but
   // it can be any other node where the analysis is splitted (such as if of switch)
@@ -21,16 +21,21 @@ public class ControlFlowSensitiveDFG {
   private Node endNode;
 
   public ControlFlowSensitiveDFG(
-      Node startNode, Node endNode, Map<VariableDeclaration, Set<Node>> variables) {
+      Node startNode,
+      Node endNode,
+      Map<VariableDeclaration, Set<Node>> variables,
+      Set<Node> visitedEOG) {
     this.variables = duplicateMap(variables);
     this.startNode = startNode;
     this.endNode = endNode;
+    this.visitedEOG = visitedEOG;
   }
 
   public ControlFlowSensitiveDFG(Node startNode) {
     this.variables = new HashMap<>();
     this.startNode = startNode;
     this.endNode = null;
+    this.visitedEOG = new HashSet<>();
   }
 
   public Map<VariableDeclaration, Set<Node>> getVariables() {
@@ -86,7 +91,8 @@ public class ControlFlowSensitiveDFG {
    * @return set containing all nodes that have been reached
    */
   private Set<Node> eogTraversal(Node node, Set<Node> eogReachableNodes) {
-    if (eogReachableNodes.contains(node)) {
+    return eogTraversal2(node);
+    /*if (eogReachableNodes.contains(node)) {
       return eogReachableNodes;
     }
 
@@ -95,6 +101,21 @@ public class ControlFlowSensitiveDFG {
     Set<Node> nextEog = new HashSet<>(node.getNextEOG());
     for (Node n : nextEog) {
       eogReachableNodes.addAll(eogTraversal(n, eogReachableNodes));
+    }
+
+    return eogReachableNodes;*/
+  }
+
+  private Set<Node> eogTraversal2(Node node) {
+    Set<Node> eogReachableNodes = new HashSet<>();
+    Set<Node> checkRechable = new HashSet<>();
+    checkRechable.add(node);
+
+    while (checkRechable.size() > 0) {
+      Node n = checkRechable.iterator().next();
+      checkRechable.addAll(n.getNextEOG());
+      eogReachableNodes.add(n);
+      checkRechable.removeAll(eogReachableNodes);
     }
 
     return eogReachableNodes;
@@ -223,7 +244,7 @@ public class ControlFlowSensitiveDFG {
   /** Main method that performs the ControlFlowSensitveDFG analysis and transformation. */
   public void handle() {
     Node currNode = startNode;
-    while (currNode != null && !currNode.equals(endNode)) {
+    while (!visitedEOG.contains(currNode) && currNode != null && !currNode.equals(endNode)) {
       Node nextNode = null;
       visited.add(currNode);
       visitedEOG.add(currNode);
@@ -247,7 +268,8 @@ public class ControlFlowSensitiveDFG {
         List<Node> eogList = currNode.getNextEOG();
         List<ControlFlowSensitiveDFG> dfgs = new ArrayList<>();
         for (Node n : eogList) {
-          ControlFlowSensitiveDFG dfg = new ControlFlowSensitiveDFG(n, joinNode, variables);
+          ControlFlowSensitiveDFG dfg =
+              new ControlFlowSensitiveDFG(n, joinNode, variables, this.visitedEOG);
           dfgs.add(dfg);
           dfg.handle();
         }
