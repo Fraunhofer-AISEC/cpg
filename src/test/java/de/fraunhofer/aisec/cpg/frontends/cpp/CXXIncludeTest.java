@@ -52,23 +52,34 @@ class CXXIncludeTest extends BaseTest {
     }
     assertEquals(6, tu.getDeclarations().size());
 
-    Set<RecordDeclaration> someClass =
-        tu.getDeclarationsByName("SomeClass", RecordDeclaration.class);
-    assertFalse(someClass.isEmpty());
+    RecordDeclaration someClass =
+        tu.getDeclarationsByName("SomeClass", RecordDeclaration.class).iterator().next();
+    assertNotNull(someClass);
 
     Set<FunctionDeclaration> main = tu.getDeclarationsByName("main", FunctionDeclaration.class);
     assertFalse(main.isEmpty());
 
-    Set<ConstructorDeclaration> someClassConstructor =
-        tu.getDeclarationsByName("SomeClass", ConstructorDeclaration.class);
-    assertFalse(someClassConstructor.isEmpty());
-    assertEquals(
-        someClass.iterator().next(), someClassConstructor.iterator().next().getRecordDeclaration());
+    ConstructorDeclaration someClassConstructor =
+        tu.getDeclarationsByName("SomeClass", ConstructorDeclaration.class).iterator().next();
+    assertNotNull(someClassConstructor);
+    assertEquals(someClass, someClassConstructor.getRecordDeclaration());
 
-    Set<MethodDeclaration> doSomething =
-        tu.getDeclarationsByName("DoSomething", MethodDeclaration.class);
-    assertFalse(doSomething.isEmpty());
-    assertEquals(someClass.iterator().next(), doSomething.iterator().next().getRecordDeclaration());
+    MethodDeclaration doSomething =
+        tu.getDeclarationsByName("DoSomething", MethodDeclaration.class).iterator().next();
+    assertNotNull(doSomething);
+    assertEquals(someClass, doSomething.getRecordDeclaration());
+
+    ReturnStatement returnStatement = doSomething.getBodyStatementAs(0, ReturnStatement.class);
+    assertNotNull(returnStatement);
+
+    DeclaredReferenceExpression ref =
+        (DeclaredReferenceExpression) returnStatement.getReturnValue();
+    assertNotNull(ref);
+
+    FieldDeclaration someField = someClass.getField("someField");
+    assertNotNull(someField);
+
+    assertTrue(ref.getRefersTo().contains(someField));
   }
 
   @Test

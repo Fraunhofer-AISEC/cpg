@@ -12,9 +12,11 @@
 */
 
 class SomeClass {
-
+public:
   SomeClass();
 
   int DoSomething();
 
+private:
+  int someField;
 };

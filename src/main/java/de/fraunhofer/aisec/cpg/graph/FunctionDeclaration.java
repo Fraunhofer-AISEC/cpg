@@ -32,6 +32,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.checkerframework.checker.nullness.qual.Nullable;
+import org.neo4j.ogm.annotation.Relationship;
 
 /** Represents the declaration or definition of a function. */
 public class FunctionDeclaration extends ValueDeclaration {
@@ -58,6 +59,16 @@ public class FunctionDeclaration extends ValueDeclaration {
 
   @org.neo4j.ogm.annotation.Relationship(value = "OVERRIDES", direction = "OUTGOING")
   private List<FunctionDeclaration> overrides = new ArrayList<>();
+
+  /**
+   * Specifies, whether this function declaration is also a definition, i.e. has a function body
+   * definition.
+   */
+  private boolean isDefinition;
+
+  /** If this is a declaration, this provides a link to the definition of the function. */
+  @Relationship(value = "DEFINES", direction = "INCOMING")
+  private FunctionDeclaration definition;
 
   public boolean hasBody() {
     return this.body != null;
@@ -226,5 +237,21 @@ public class FunctionDeclaration extends ValueDeclaration {
   @Override
   public int hashCode() {
     return super.hashCode();
+  }
+
+  public FunctionDeclaration getDefinition() {
+    return definition;
+  }
+
+  public boolean isDefinition() {
+    return isDefinition;
+  }
+
+  public void setIsDefinition(boolean definition) {
+    this.isDefinition = definition;
+  }
+
+  public void setDefinition(FunctionDeclaration definition) {
+    this.definition = definition;
   }
 }

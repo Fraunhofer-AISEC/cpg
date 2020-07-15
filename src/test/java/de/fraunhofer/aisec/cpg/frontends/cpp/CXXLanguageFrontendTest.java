@@ -694,15 +694,37 @@ class CXXLanguageFrontendTest extends BaseTest {
 
     assertEquals(TypeParser.createFrom("void*", true), field.getType());
 
-    assertEquals(2, recordDeclaration.getMethods().size());
+    assertEquals(3, recordDeclaration.getMethods().size());
 
     MethodDeclaration method = recordDeclaration.getMethods().get(0);
 
     assertEquals("method", method.getName());
+    assertEquals(0, method.getParameters().size());
     assertEquals(TypeParser.createFrom("void*", true), method.getType());
     assertFalse(method.hasBody());
 
-    MethodDeclaration inlineMethod = recordDeclaration.getMethods().get(1);
+    MethodDeclaration definition = (MethodDeclaration) method.getDefinition();
+    assertNotNull(definition);
+    assertEquals("method", definition.getName());
+    assertEquals(0, definition.getParameters().size());
+    assertTrue(definition.isDefinition());
+
+    MethodDeclaration methodWithParam = recordDeclaration.getMethods().get(1);
+
+    assertEquals("method", methodWithParam.getName());
+    assertEquals(1, methodWithParam.getParameters().size());
+    assertEquals(
+        TypeParser.createFrom("int", true), methodWithParam.getParameters().get(0).getType());
+    assertEquals(TypeParser.createFrom("void*", true), methodWithParam.getType());
+    assertFalse(methodWithParam.hasBody());
+
+    definition = (MethodDeclaration) methodWithParam.getDefinition();
+    assertNotNull(definition);
+    assertEquals("method", definition.getName());
+    assertEquals(1, definition.getParameters().size());
+    assertTrue(definition.isDefinition());
+
+    MethodDeclaration inlineMethod = recordDeclaration.getMethods().get(2);
 
     assertEquals("inlineMethod", inlineMethod.getName());
     assertEquals(TypeParser.createFrom("void*", true), inlineMethod.getType());
@@ -715,7 +737,7 @@ class CXXLanguageFrontendTest extends BaseTest {
     assertTrue(constructor.hasBody());
 
     ConstructorDeclaration constructorDefinition =
-        declaration.getDeclarationAs(2, ConstructorDeclaration.class);
+        declaration.getDeclarationAs(3, ConstructorDeclaration.class);
 
     assertNotNull(constructorDefinition);
     assertEquals(1, constructorDefinition.getParameters().size());

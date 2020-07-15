@@ -38,6 +38,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import org.eclipse.cdt.core.dom.ast.IASTArrayModifier;
 import org.eclipse.cdt.core.dom.ast.IASTDeclSpecifier;
 import org.eclipse.cdt.core.dom.ast.IASTDeclaration;
@@ -106,9 +107,56 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
 
     String typeString = getTypeStringFromDeclarator(ctx.getDeclarator(), ctx.getDeclSpecifier());
 
+    functionDeclaration.setIsDefinition(true);
+
     // It is a constructor
     if (functionDeclaration instanceof MethodDeclaration && typeString.isEmpty()) {
       functionDeclaration = ConstructorDeclaration.from((MethodDeclaration) functionDeclaration);
+    }
+
+    functionDeclaration.setType(
+        TypeParser.createFrom(
+            ctx.getRawSignature().split(functionDeclaration.getName())[0].trim(), true));
+
+    // associated record declaration if this is a method or constructor
+    RecordDeclaration recordDeclaration =
+        functionDeclaration instanceof MethodDeclaration
+            ? ((MethodDeclaration) functionDeclaration).getRecordDeclaration()
+            : null;
+    if (recordDeclaration != null) {
+      // everything inside the method is within the scope of its record
+      this.lang.getScopeManager().enterScope(recordDeclaration);
+
+      List<? extends MethodDeclaration> candidates;
+
+      if (functionDeclaration instanceof ConstructorDeclaration) {
+        candidates = recordDeclaration.getConstructors();
+      } else {
+        candidates = recordDeclaration.getMethods();
+      }
+
+      // look for the method or constructor
+      FunctionDeclaration finalFunctionDeclaration = functionDeclaration;
+      candidates =
+          candidates.stream()
+              .filter(m -> m.getSignature().equals(finalFunctionDeclaration.getSignature()))
+              .collect(Collectors.toList());
+
+      if (candidates.isEmpty()) {
+        log.warn(
+            "Could not find declaration of method {} in record {}",
+            functionDeclaration.getName(),
+            recordDeclaration.getName());
+      } else if (candidates.size() > 1) {
+        log.warn(
+            "Found more than one candidate to connect definition of method {} in record {} to its declaration. We will comply, but this is suspicious.",
+            functionDeclaration.getName(),
+            recordDeclaration.getName());
+      }
+
+      for (MethodDeclaration candidate : candidates) {
+        candidate.setDefinition(functionDeclaration);
+      }
     }
 
     lang.getScopeManager().enterScope(functionDeclaration);
@@ -140,6 +188,11 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
     }
 
     lang.getScopeManager().leaveScope(functionDeclaration);
+
+    if (recordDeclaration != null) {
+      this.lang.getScopeManager().leaveScope(recordDeclaration);
+    }
+
     return functionDeclaration;
   }
 
@@ -252,6 +305,12 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
     TranslationUnitDeclaration node =
         NodeBuilder.newTranslationUnitDeclaration(
             translationUnit.getFilePath(), translationUnit.getRawSignature());
+
+    // There might have been errors in the previous translation unit and in any case
+    // we need to reset the scope manager scope to global, to avoid spilling scope errors into other
+    // translation units
+    lang.getScopeManager().resetToGlobal();
+
     lang.setCurrentTU(node);
 
     HashMap<String, HashSet<ProblemDeclaration>> problematicIncludes = new HashMap<>();
