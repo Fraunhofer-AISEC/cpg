@@ -45,9 +45,11 @@ import java.io.File;
 import java.lang.reflect.Field;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.eclipse.cdt.core.dom.ast.*;
@@ -86,7 +88,7 @@ public class CXXLanguageFrontend extends LanguageFrontend {
   public static final Type TYPE_UNSIGNED_LONG = TypeParser.createFrom("unsigned long", true);
 
   private static final Logger LOGGER = LoggerFactory.getLogger(CXXLanguageFrontend.class);
-  private static final IncludeFileContentProvider INCLUDE_FILE_PROVIDER =
+  private final IncludeFileContentProvider includeFileContentProvider =
       new InternalFileContentProvider() {
         @Nullable
         private InternalFileContent getContentUncached(String path) {
@@ -94,9 +96,75 @@ public class CXXLanguageFrontend extends LanguageFrontend {
             LOGGER.debug("Include file not found: {}", path);
             return null;
           }
+
+          // check, if the file is on the blacklist
+          if (absoluteOrRelativePathIsInList(path, config.includeBlacklist)) {
+            LOGGER.debug("Blacklisting include file: {}", path);
+            return null;
+          }
+
+          // check, if the white-list exists at all
+          if (hasIncludeWhitelist()
+              &&
+              // and ignore the file if it is not on the whitelist
+              !absoluteOrRelativePathIsInList(path, config.includeWhitelist)) {
+            LOGGER.debug("Include file {} not on the whitelist. Ignoring.", path);
+            return null;
+          }
+
           LOGGER.debug("Loading include file {}", path);
           FileContent content = FileContent.createForExternalFileLocation(path);
           return (InternalFileContent) content;
+        }
+
+        private boolean hasIncludeWhitelist() {
+          return config.includeWhitelist != null && !config.includeWhitelist.isEmpty();
+        }
+
+        /**
+         * This utility function checks, if the specified path is in the included list, either as an
+         * absolute path or as a path relative to the translation configurations top level or
+         * include paths
+         *
+         * @param path the absolute path to look for
+         * @param list the list of paths to look for, either relative or absolute
+         * @return true, if the path is in the list, false otherwise
+         */
+        private boolean absoluteOrRelativePathIsInList(String path, List<String> list) {
+          // path cannot be in the list if its empty or null
+          if (list == null || list.isEmpty()) {
+            return false;
+          }
+
+          // check, if the absolute header path is in the list
+          if (list.contains(path)) {
+            return true;
+          }
+
+          // check for relative path based on the top level and all include paths
+          List<Path> includeLocations = new ArrayList<>();
+          File topLevel = config.getTopLevel();
+
+          if (topLevel != null) {
+            includeLocations.add(topLevel.toPath().toAbsolutePath());
+          }
+
+          includeLocations.addAll(
+              Arrays.stream(config.includePaths)
+                  .map(s -> Path.of(s).toAbsolutePath())
+                  .collect(Collectors.toList()));
+
+          for (Path includeLocation : includeLocations) {
+            // try to resolve path relatively
+            Path includeFile = Path.of(path);
+            Path relative = includeLocation.relativize(includeFile);
+
+            if (list.contains(relative.toString())) {
+              return true;
+            }
+          }
+
+          return false;
         }
 
         @Nullable
@@ -190,7 +258,7 @@ public class CXXLanguageFrontend extends LanguageFrontend {
 
     IncludeFileContentProvider includeProvider;
     if (config.loadIncludes) {
-      includeProvider = INCLUDE_FILE_PROVIDER;
+      includeProvider = includeFileContentProvider;
     } else {
       includeProvider = IncludeFileContentProvider.getEmptyFilesProvider();
     }
@@ -233,14 +301,13 @@ public class CXXLanguageFrontend extends LanguageFrontend {
     return null;
   }
 
+  @Nullable
   @Override
-  @NonNull
   @SuppressWarnings("ConstantConditions")
   public <T> PhysicalLocation getLocationFromRawNode(T astNode) {
     if (astNode instanceof ASTNode) {
       ASTNode node = (ASTNode) astNode;
       IASTFileLocation fLocation = node.getFileLocation();
-      ASTNode parent = (ASTNode) node.getParent();
 
       if (fLocation != null) {
         /* Yes, seriously. getRawSignature() is CPU- and heap-costly, because it does an arraycopy. If parent is the whole TranslationUnit and we are doing this repeatedly, we will end up with OOM and waste time.
@@ -248,7 +315,7 @@ public class CXXLanguageFrontend extends LanguageFrontend {
          * This may break in future versions of CDT parser, when fields are renamed (which is unlikely). In this case, we will go the standard route.
          * Note, the only reason we are doing this is to compute the start and end columns of the current node.
          */
-        AbstractCharArray parentRawSig = new CharArray("");
+        AbstractCharArray translationUnitRawSignature = new CharArray("");
         try {
           Field fLoc = getField(fLocation.getClass(), "fLocationCtx");
           fLoc.setAccessible(true);
@@ -256,27 +323,35 @@ public class CXXLanguageFrontend extends LanguageFrontend {
 
           Field fSource = getField(locCtx.getClass(), "fSource");
           fSource.setAccessible(true);
-          parentRawSig = (AbstractCharArray) fSource.get(locCtx);
+          translationUnitRawSignature = (AbstractCharArray) fSource.get(locCtx);
         } catch (ReflectiveOperationException | ClassCastException | NullPointerException e) {
           LOGGER.warn(
-              "Reflective retrieval of AST node source failed. Must go the official but costly route via getRawSignature(). Watch your heap!");
-          while (parent.getParent() != null) {
-            parent = (ASTNode) parent.getParent();
-          }
-          parentRawSig = new CharArray(parent.getRawSignature());
+              "Reflective retrieval of AST node source failed. Cannot reliably determine content of the file that contains the node");
+          return null;
         }
 
         // Get start column by stepping backwards from begin of node to first occurrence of '\n'
         int startColumn = 1;
         for (int i = node.getFileLocation().getNodeOffset() - 1; i > 1; i--) {
-          if (parentRawSig.get(i) == '\n') {
+          if (i >= translationUnitRawSignature.getLength()) {
+            // Fail gracefully, so that we can at least find out why this fails
+            LOGGER.warn(
+                "Requested index {} exceeds length of translation unit code ({})",
+                i,
+                translationUnitRawSignature.getLength());
+
+            return null;
+          }
+
+          if (translationUnitRawSignature.get(i) == '\n') {
             break;
           }
           startColumn++;
         }
         int endColumn =
             getEndColumnIndex(
-                parentRawSig, node.getFileLocation().getNodeOffset() + node.getLength());
+                translationUnitRawSignature,
+                node.getFileLocation().getNodeOffset() + node.getLength());
 
         Region region =
             new Region(

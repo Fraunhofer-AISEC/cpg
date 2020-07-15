@@ -42,7 +42,6 @@ public class ImportResolver extends Pass {
 
   private List<RecordDeclaration> records = new ArrayList<>();
   private Map<String, Declaration> importables = new HashMap<>();
-  private Map<String, Declaration> unknownTypes = new HashMap<>();
 
   @Override
   @Nullable
@@ -57,7 +56,6 @@ public class ImportResolver extends Pass {
   public void cleanup() {
     records.clear();
     importables.clear();
-    unknownTypes.clear();
   }
 
   @Override
@@ -71,13 +69,6 @@ public class ImportResolver extends Pass {
       record.setImports(imports);
       Set<ValueDeclaration> staticImports = getStaticImports(record);
       record.setStaticImports(staticImports);
-    }
-
-    if (!unknownTypes.isEmpty()) {
-      // Get the translation unit holding all unknown declarations, or create a new one if necessary
-      TranslationUnitDeclaration unknownDeclarations = getUnknownDeclarationsTU(result);
-      unknownDeclarations.getDeclarations().addAll(unknownTypes.values());
-      importables.putAll(unknownTypes);
     }
   }
 
@@ -93,7 +84,7 @@ public class ImportResolver extends Pass {
       if (!matcher.matches()) {
         continue;
       }
-      Declaration base = getOrCreateDeclaration(matcher.group("base"));
+      Declaration base = importables.get((matcher.group("base")));
       Set<ValueDeclaration> members = new HashSet<>();
       if (base instanceof RecordDeclaration) {
         members = getOrCreateMembers((RecordDeclaration) base, matcher.group("member"));
@@ -104,7 +95,7 @@ public class ImportResolver extends Pass {
     }
 
     for (String asteriskImport : partitioned.get(true)) {
-      Declaration base = getOrCreateDeclaration(asteriskImport.replace(".*", ""));
+      Declaration base = importables.get(asteriskImport.replace(".*", ""));
       if (base instanceof RecordDeclaration) {
         RecordDeclaration baseRecord = (RecordDeclaration) base;
         staticImports.addAll(
@@ -129,19 +120,10 @@ public class ImportResolver extends Pass {
   }
 
   private Set<Declaration> getDeclarationsForTypeNames(List<String> targetTypes) {
-    return targetTypes.stream().map(this::getOrCreateDeclaration).collect(Collectors.toSet());
-  }
-
-  private Declaration getOrCreateDeclaration(String name) {
-    if (importables.containsKey(name)) {
-      return importables.get(name);
-    } else {
-      // Create stubs for unknown imports
-      if (!unknownTypes.containsKey(name)) {
-        unknownTypes.put(name, NodeBuilder.newRecordDeclaration(name, "class", ""));
-      }
-      return unknownTypes.get(name);
-    }
+    return targetTypes.stream()
+        .map(importables::get)
+        .filter(Objects::nonNull)
+        .collect(Collectors.toSet());
   }
 
   private Set<ValueDeclaration> getOrCreateMembers(EnumDeclaration base, String name) {

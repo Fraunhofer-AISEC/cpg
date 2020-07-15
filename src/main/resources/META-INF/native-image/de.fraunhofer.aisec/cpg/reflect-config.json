@@ -1,0 +1,488 @@
+[
+  {
+    "name": "byte[]"
+  },
+  {
+    "name": "char[]"
+  },
+  {
+    "name": "com.fasterxml.jackson.databind.deser.Deserializers[]"
+  },
+  {
+    "name": "com.fasterxml.jackson.databind.deser.KeyDeserializers[]"
+  },
+  {
+    "name": "com.fasterxml.jackson.databind.deser.ValueInstantiators[]"
+  },
+  {
+    "name": "com.fasterxml.jackson.databind.ext.Java7SupportImpl",
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": []
+      }
+    ]
+  },
+  {
+    "name": "com.fasterxml.jackson.databind.ser.Serializers[]"
+  },
+  {
+    "name": "com.github.javaparser.ParseStart"
+  },
+  {
+    "name": "com.github.javaparser.ast.body.FieldDeclaration",
+    "allDeclaredFields": true
+  },
+  {
+    "name": "com.github.javaparser.ast.expr.ArrayCreationExpr",
+    "allDeclaredFields": true
+  },
+  {
+    "name": "com.github.javaparser.ast.expr.VariableDeclarationExpr",
+    "allDeclaredFields": true
+  },
+  {
+    "name": "com.google.common.util.concurrent.AbstractFuture",
+    "fields": [
+      {
+        "name": "listeners",
+        "allowUnsafeAccess": true
+      },
+      {
+        "name": "value",
+        "allowUnsafeAccess": true
+      },
+      {
+        "name": "waiters",
+        "allowUnsafeAccess": true
+      }
+    ]
+  },
+  {
+    "name": "com.google.common.util.concurrent.AbstractFuture$Waiter",
+    "fields": [
+      {
+        "name": "next",
+        "allowUnsafeAccess": true
+      },
+      {
+        "name": "thread",
+        "allowUnsafeAccess": true
+      }
+    ]
+  },
+  {
+    "name": "de.fraunhofer.aisec.cpg.frontends.LanguageFrontend"
+  },
+  {
+    "name": "de.fraunhofer.aisec.cpg.graph.ASMDeclarationStatement",
+    "allDeclaredFields": true,
+    "allDeclaredMethods": true
+  },
+  {
+    "name": "de.fraunhofer.aisec.cpg.graph.ArrayCreationExpression",
+    "allDeclaredFields": true,
+    "allDeclaredMethods": true
+  },
+  {
+    "name": "de.fraunhofer.aisec.cpg.graph.ArrayRangeExpression",
+    "allDeclaredFields": true,
+    "allDeclaredMethods": true
+  },
+  {
+    "name": "de.fraunhofer.aisec.cpg.graph.ArraySubscriptionExpression",
+    "allDeclaredFields": true,
+    "allDeclaredMethods": true
+  },
+  {
+    "name": "de.fraunhofer.aisec.cpg.graph.AssertStatement",
+    "allDeclaredFields": true,
+    "allDeclaredMethods": true
+  },
+  {
+    "name": "de.fraunhofer.aisec.cpg.graph.BinaryOperator",
+    "allDeclaredFields": true,
+    "allDeclaredMethods": true
+  },
+  {
+    "name": "de.fraunhofer.aisec.cpg.graph.BreakStatement",
+    "allDeclaredFields": true,
+    "allDeclaredMethods": true
+  },
+  {
+    "name": "de.fraunhofer.aisec.cpg.graph.CallExpression",
+    "allDeclaredFields": true,
+    "allDeclaredMethods": true
+  },
+  {
+    "name": "de.fraunhofer.aisec.cpg.graph.CaseStatement",
+    "allDeclaredFields": true,
+    "allDeclaredMethods": true
+  },
+  {
+    "name": "de.fraunhofer.aisec.cpg.graph.CastExpression",
+    "allDeclaredFields": true,
+    "allDeclaredMethods": true
+  },
+  {
+    "name": "de.fraunhofer.aisec.cpg.graph.CatchClause",
+    "allDeclaredFields": true,
+    "allDeclaredMethods": true
+  },
+  {
+    "name": "de.fraunhofer.aisec.cpg.graph.CompoundStatement",
+    "allDeclaredFields": true,
+    "allDeclaredMethods": true
+  },
+  {
+    "name": "de.fraunhofer.aisec.cpg.graph.CompoundStatementExpression",
+    "allDeclaredFields": true,
+    "allDeclaredMethods": true
+  },
+  {
+    "name": "de.fraunhofer.aisec.cpg.graph.ConditionalExpression",
+    "allDeclaredFields": true,
+    "allDeclaredMethods": true
+  },
+  {
+    "name": "de.fraunhofer.aisec.cpg.graph.ConstructExpression",
+    "allDeclaredFields": true,
+    "allDeclaredMethods": true
+  },
+  {
+    "name": "de.fraunhofer.aisec.cpg.graph.ConstructorDeclaration",
+    "allDeclaredFields": true,
+    "allDeclaredMethods": true
+  },
+  {
+    "name": "de.fraunhofer.aisec.cpg.graph.ContinueStatement",
+    "allDeclaredFields": true,
+    "allDeclaredMethods": true
+  },
+  {
+    "name": "de.fraunhofer.aisec.cpg.graph.Declaration",
+    "allDeclaredFields": true,
+    "allDeclaredMethods": true
+  },
+  {
+    "name": "de.fraunhofer.aisec.cpg.graph.DeclarationStatement",
+    "allDeclaredFields": true,
+    "allDeclaredMethods": true
+  },
+  {
+    "name": "de.fraunhofer.aisec.cpg.graph.DeclaredReferenceExpression",
+    "allDeclaredFields": true,
+    "allDeclaredMethods": true
+  },
+  {
+    "name": "de.fraunhofer.aisec.cpg.graph.DefaultStatement",
+    "allDeclaredFields": true,
+    "allDeclaredMethods": true
+  },
+  {
+    "name": "de.fraunhofer.aisec.cpg.graph.DeleteExpression",
+    "allDeclaredFields": true,
+    "allDeclaredMethods": true
+  },
+  {
+    "name": "de.fraunhofer.aisec.cpg.graph.DesignatedInitializerExpression",
+    "allDeclaredFields": true,
+    "allDeclaredMethods": true
+  },
+  {
+    "name": "de.fraunhofer.aisec.cpg.graph.DoStatement",
+    "allDeclaredFields": true,
+    "allDeclaredMethods": true
+  },
+  {
+    "name": "de.fraunhofer.aisec.cpg.graph.EdgeProperty"
+  },
+  {
+    "name": "de.fraunhofer.aisec.cpg.graph.EmptyStatement",
+    "allDeclaredFields": true,
+    "allDeclaredMethods": true
+  },
+  {
+    "name": "de.fraunhofer.aisec.cpg.graph.EnumConstantDeclaration",
+    "allDeclaredFields": true,
+    "allDeclaredMethods": true
+  },
+  {
+    "name": "de.fraunhofer.aisec.cpg.graph.EnumDeclaration",
+    "allDeclaredFields": true,
+    "allDeclaredMethods": true
+  },
+  {
+    "name": "de.fraunhofer.aisec.cpg.graph.ExplicitConstructorInvocation",
+    "allDeclaredFields": true,
+    "allDeclaredMethods": true
+  },
+  {
+    "name": "de.fraunhofer.aisec.cpg.graph.Expression",
+    "allDeclaredFields": true,
+    "allDeclaredMethods": true
+  },
+  {
+    "name": "de.fraunhofer.aisec.cpg.graph.ExpressionList",
+    "allDeclaredFields": true,
+    "allDeclaredMethods": true
+  },
+  {
+    "name": "de.fraunhofer.aisec.cpg.graph.FieldDeclaration",
+    "allDeclaredFields": true,
+    "allDeclaredMethods": true
+  },
+  {
+    "name": "de.fraunhofer.aisec.cpg.graph.ForEachStatement",
+    "allDeclaredFields": true,
+    "allDeclaredMethods": true
+  },
+  {
+    "name": "de.fraunhofer.aisec.cpg.graph.ForStatement",
+    "allDeclaredFields": true,
+    "allDeclaredMethods": true
+  },
+  {
+    "name": "de.fraunhofer.aisec.cpg.graph.FunctionDeclaration",
+    "allDeclaredFields": true,
+    "allDeclaredMethods": true
+  },
+  {
+    "name": "de.fraunhofer.aisec.cpg.graph.GotoStatement",
+    "allDeclaredFields": true,
+    "allDeclaredMethods": true
+  },
+  {
+    "name": "de.fraunhofer.aisec.cpg.graph.HasType",
+    "allDeclaredFields": true,
+    "allDeclaredMethods": true
+  },
+  {
+    "name": "de.fraunhofer.aisec.cpg.graph.HasType$TypeListener",
+    "allDeclaredFields": true,
+    "allDeclaredMethods": true
+  },
+  {
+    "name": "de.fraunhofer.aisec.cpg.graph.IfStatement",
+    "allDeclaredFields": true,
+    "allDeclaredMethods": true
+  },
+  {
+    "name": "de.fraunhofer.aisec.cpg.graph.IncludeDeclaration",
+    "allDeclaredFields": true,
+    "allDeclaredMethods": true
+  },
+  {
+    "name": "de.fraunhofer.aisec.cpg.graph.InitializerListExpression",
+    "allDeclaredFields": true,
+    "allDeclaredMethods": true
+  },
+  {
+    "name": "de.fraunhofer.aisec.cpg.graph.LabelStatement",
+    "allDeclaredFields": true,
+    "allDeclaredMethods": true
+  },
+  {
+    "name": "de.fraunhofer.aisec.cpg.graph.Literal",
+    "allDeclaredFields": true,
+    "allDeclaredMethods": true
+  },
+  {
+    "name": "de.fraunhofer.aisec.cpg.graph.MemberCallExpression",
+    "allDeclaredFields": true,
+    "allDeclaredMethods": true
+  },
+  {
+    "name": "de.fraunhofer.aisec.cpg.graph.MemberExpression",
+    "allDeclaredFields": true,
+    "allDeclaredMethods": true
+  },
+  {
+    "name": "de.fraunhofer.aisec.cpg.graph.MethodDeclaration",
+    "allDeclaredFields": true,
+    "allDeclaredMethods": true
+  },
+  {
+    "name": "de.fraunhofer.aisec.cpg.graph.NamespaceDeclaration",
+    "allDeclaredFields": true,
+    "allDeclaredMethods": true
+  },
+  {
+    "name": "de.fraunhofer.aisec.cpg.graph.NewExpression",
+    "allDeclaredFields": true,
+    "allDeclaredMethods": true
+  },
+  {
+    "name": "de.fraunhofer.aisec.cpg.graph.Node",
+    "allDeclaredFields": true,
+    "allDeclaredMethods": true
+  },
+  {
+    "name": "de.fraunhofer.aisec.cpg.graph.NodeBuilder",
+    "allDeclaredFields": true,
+    "allDeclaredMethods": true
+  },
+  {
+    "name": "de.fraunhofer.aisec.cpg.graph.ParamVariableDeclaration",
+    "allDeclaredFields": true,
+    "allDeclaredMethods": true
+  },
+  {
+    "name": "de.fraunhofer.aisec.cpg.graph.PopulatedByPass"
+  },
+  {
+    "name": "de.fraunhofer.aisec.cpg.graph.ProblemDeclaration",
+    "allDeclaredFields": true,
+    "allDeclaredMethods": true
+  },
+  {
+    "name": "de.fraunhofer.aisec.cpg.graph.RecordDeclaration",
+    "allDeclaredFields": true,
+    "allDeclaredMethods": true
+  },
+  {
+    "name": "de.fraunhofer.aisec.cpg.graph.ReturnStatement",
+    "allDeclaredFields": true,
+    "allDeclaredMethods": true
+  },
+  {
+    "name": "de.fraunhofer.aisec.cpg.graph.Statement",
+    "allDeclaredFields": true,
+    "allDeclaredMethods": true
+  },
+  {
+    "name": "de.fraunhofer.aisec.cpg.graph.StaticCallExpression",
+    "allDeclaredFields": true,
+    "allDeclaredMethods": true
+  },
+  {
+    "name": "de.fraunhofer.aisec.cpg.graph.StaticReferenceExpression",
+    "allDeclaredFields": true,
+    "allDeclaredMethods": true
+  },
+  {
+    "name": "de.fraunhofer.aisec.cpg.graph.SubGraph",
+    "allDeclaredMethods": true
+  },
+  {
+    "name": "de.fraunhofer.aisec.cpg.graph.SwitchStatement",
+    "allDeclaredFields": true,
+    "allDeclaredMethods": true
+  },
+  {
+    "name": "de.fraunhofer.aisec.cpg.graph.SynchronizedStatement",
+    "allDeclaredFields": true,
+    "allDeclaredMethods": true
+  },
+  {
+    "name": "de.fraunhofer.aisec.cpg.graph.TranslationUnitDeclaration",
+    "allDeclaredFields": true,
+    "allDeclaredMethods": true
+  },
+  {
+    "name": "de.fraunhofer.aisec.cpg.graph.TryStatement",
+    "allDeclaredFields": true,
+    "allDeclaredMethods": true
+  },
+  {
+    "name": "de.fraunhofer.aisec.cpg.graph.Type",
+    "allDeclaredFields": true,
+    "allDeclaredMethods": true
+  },
+  {
+    "name": "de.fraunhofer.aisec.cpg.graph.Type$Origin",
+    "allDeclaredFields": true,
+    "allDeclaredMethods": true
+  },
+  {
+    "name": "de.fraunhofer.aisec.cpg.graph.TypeIdExpression",
+    "allDeclaredFields": true,
+    "allDeclaredMethods": true
+  },
+  {
+    "name": "de.fraunhofer.aisec.cpg.graph.TypeManager",
+    "allDeclaredFields": true,
+    "allDeclaredMethods": true
+  },
+  {
+    "name": "de.fraunhofer.aisec.cpg.graph.TypeManager$Ancestor",
+    "allDeclaredFields": true,
+    "allDeclaredMethods": true
+  },
+  {
+    "name": "de.fraunhofer.aisec.cpg.graph.UnaryOperator",
+    "allDeclaredFields": true,
+    "allDeclaredMethods": true
+  },
+  {
+    "name": "de.fraunhofer.aisec.cpg.graph.UsingDirective",
+    "allDeclaredFields": true,
+    "allDeclaredMethods": true
+  },
+  {
+    "name": "de.fraunhofer.aisec.cpg.graph.ValueDeclaration",
+    "allDeclaredFields": true,
+    "allDeclaredMethods": true
+  },
+  {
+    "name": "de.fraunhofer.aisec.cpg.graph.VariableDeclaration",
+    "allDeclaredFields": true,
+    "allDeclaredMethods": true
+  },
+  {
+    "name": "de.fraunhofer.aisec.cpg.graph.WhileStatement",
+    "allDeclaredFields": true,
+    "allDeclaredMethods": true
+  },
+  {
+    "name": "de.fraunhofer.aisec.cpg.passes.CallResolver$1",
+    "allDeclaredMethods": true
+  },
+  {
+    "name": "de.fraunhofer.aisec.cpg.helpers.LocationConverter",
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": []
+      }
+    ]
+  },
+  {
+    "name": "de.fraunhofer.aisec.cpg.helpers.TypeConverter",
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": []
+      }
+    ]
+  },
+  {
+    "name": "de.fraunhofer.aisec.cpg.helpers.TypeConverter$CastTypeConverter",
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": []
+      }
+    ]
+  },
+  {
+    "name": "de.fraunhofer.aisec.cpg.helpers.TypeSetConverter",
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": []
+      }
+    ]
+  },
+  {
+    "name": "de.fraunhofer.aisec.cpg.sarif.PhysicalLocation"
+  },
+  {
+    "name": "org.eclipse.cdt.internal.core.parser.scanner.ASTFileLocation",
+    "allDeclaredFields": true
+  },
+  {
+    "name": "org.eclipse.cdt.internal.core.parser.scanner.LocationCtxContainer",
+    "allDeclaredFields": true
+  }
+]

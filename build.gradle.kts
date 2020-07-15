@@ -33,7 +33,7 @@ plugins {
     `maven-publish`
 
     id("org.sonarqube") version "3.0"
-    id("com.diffplug.gradle.spotless") version "4.4.0"
+    id("com.diffplug.spotless") version "5.1.0"
     id("com.github.johnrengelman.shadow") version "6.0.0"
 }
 
@@ -138,23 +138,24 @@ java {
 }
 
 dependencies {
-    api("org.apache.commons", "commons-lang3", "3.9")
-    api("org.neo4j", "neo4j-ogm-core", "3.1.7")
-    api("org.apache.logging.log4j", "log4j-slf4j18-impl", "2.13.0")
-    api("org.slf4j", "jul-to-slf4j", "1.8.0-beta4")
-    api("com.github.javaparser", "javaparser-symbol-solver-core", "3.15.10")
+    api("org.apache.commons:commons-lang3:3.10")
+    api("org.neo4j:neo4j-ogm-core:3.1.7")
+    api("org.apache.logging.log4j:log4j-slf4j18-impl:2.13.3")
+    api("org.slf4j:jul-to-slf4j:1.8.0-beta4")
+    api("com.github.javaparser:javaparser-symbol-solver-core:3.16.1")
 
     // Eclipse dependencies
-    api("org.eclipse.platform", "org.eclipse.core.runtime", "3.17.0")
-    api("com.ibm.icu", "icu4j", "65.1")
+    api("org.eclipse.platform:org.eclipse.core.runtime:3.17.0")
+    api("com.ibm.icu:icu4j:65.1")
 
     // CDT
-    api("org.eclipse.cdt", "core", "6.10.0.201912051559")
+    api("org.eclipse.cdt:core:6.10.0.201912051559")
 
     // JUnit
-    testImplementation("org.junit.jupiter", "junit-jupiter-api", "5.6.0")
-    testImplementation("org.junit.jupiter", "junit-jupiter-params", "5.6.0")
-    testRuntimeOnly("org.junit.jupiter", "junit-jupiter-engine", "5.6.0")
+    testImplementation("org.junit.jupiter:junit-jupiter-api:5.6.2")
+    testImplementation("org.junit.jupiter:junit-jupiter-params:5.6.2")
+    testImplementation("org.mockito:mockito-core:3.4.0")
+    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.6.2")
 }
 
 spotless {

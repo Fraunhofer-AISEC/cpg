@@ -15,6 +15,8 @@ public class FunctionPointerType extends Type {
     this.returnType = returnType;
   }
 
+  private FunctionPointerType() {}
+
   public FunctionPointerType(
       Type.Qualifier qualifier, Type.Storage storage, List<Type> parameters, Type returnType) {
     super("", storage, qualifier);

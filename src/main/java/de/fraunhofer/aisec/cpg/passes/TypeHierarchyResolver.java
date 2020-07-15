@@ -28,21 +28,10 @@ package de.fraunhofer.aisec.cpg.passes;
 
 import de.fraunhofer.aisec.cpg.TranslationResult;
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
-import de.fraunhofer.aisec.cpg.graph.EnumDeclaration;
-import de.fraunhofer.aisec.cpg.graph.HasType;
-import de.fraunhofer.aisec.cpg.graph.MethodDeclaration;
-import de.fraunhofer.aisec.cpg.graph.Node;
-import de.fraunhofer.aisec.cpg.graph.NodeBuilder;
-import de.fraunhofer.aisec.cpg.graph.RecordDeclaration;
-import de.fraunhofer.aisec.cpg.graph.TranslationUnitDeclaration;
+import de.fraunhofer.aisec.cpg.graph.*;
+import de.fraunhofer.aisec.cpg.graph.type.Type;
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -56,12 +45,17 @@ import java.util.stream.Collectors;
  * <p>After determining the ancestors of a class, all inherited methods are scanned to find out
  * which of them are overridden/implemented in the current class. See {@link
  * MethodDeclaration#getOverriddenBy()}
+ *
+ * <p><b>Attention:</b> Needs to be run before other analysis passes, as it triggers a type refresh.
+ * This is needed e.g. for {@link
+ * de.fraunhofer.aisec.cpg.graph.TypeManager#getCommonType(Collection)} to be re-evaluated at places
+ * where it is crucial to have parsed all {@link RecordDeclaration}s. Otherwise, type information in
+ * the graph might not be fully correct
  */
 public class TypeHierarchyResolver extends Pass {
 
   private Map<String, RecordDeclaration> recordMap = new HashMap<>();
   private List<EnumDeclaration> enums = new ArrayList<>();
-  private Map<String, RecordDeclaration> unknownTypes = new HashMap<>();
 
   @Override
   public LanguageFrontend getLang() {
@@ -98,13 +92,6 @@ public class TypeHierarchyResolver extends Pass {
       enumDecl.setSuperTypeDeclarations(allSupertypes);
     }
 
-    if (!unknownTypes.isEmpty()) {
-      // Get the translation unit holding all unknown declarations, or create a new one if necessary
-      TranslationUnitDeclaration unknownDeclarations = getUnknownDeclarationsTU(translationResult);
-      unknownDeclarations.getDeclarations().addAll(unknownTypes.values());
-      recordMap.putAll(unknownTypes);
-    }
-
     translationResult.getTranslationUnits().forEach(this::refreshType);
   }
 
@@ -139,20 +126,9 @@ public class TypeHierarchyResolver extends Pass {
   private Set<RecordDeclaration> findSupertypeRecords(RecordDeclaration record) {
     Set<RecordDeclaration> superTypeDeclarations =
         record.getSuperTypes().stream()
-            .map(
-                t -> {
-                  if (recordMap.containsKey(t.getTypeName())) {
-                    return recordMap.get(t.getTypeName());
-                  } else {
-                    if (!unknownTypes.containsKey(t.getTypeName())) {
-                      RecordDeclaration dummy =
-                          NodeBuilder.newRecordDeclaration(t.getTypeName(), "class", "");
-                      dummy.setImplicit(true);
-                      unknownTypes.put(t.getTypeName(), dummy);
-                    }
-                    return unknownTypes.get(t.getTypeName());
-                  }
-                })
+            .map(Type::getTypeName)
+            .map(recordMap::get)
+            .filter(Objects::nonNull)
             .collect(Collectors.toSet());
 
     record.setSuperTypeDeclarations(superTypeDeclarations);
@@ -172,7 +148,5 @@ public class TypeHierarchyResolver extends Pass {
   }
 
   @Override
-  public void cleanup() {
-    this.unknownTypes.clear();
-  }
+  public void cleanup() {}
 }

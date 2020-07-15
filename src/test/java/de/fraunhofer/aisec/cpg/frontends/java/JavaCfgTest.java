@@ -34,15 +34,9 @@ import de.fraunhofer.aisec.cpg.BaseTest;
 import de.fraunhofer.aisec.cpg.TranslationConfiguration;
 import de.fraunhofer.aisec.cpg.TranslationManager;
 import de.fraunhofer.aisec.cpg.TranslationResult;
-import de.fraunhofer.aisec.cpg.graph.CompoundStatement;
-import de.fraunhofer.aisec.cpg.graph.IfStatement;
-import de.fraunhofer.aisec.cpg.graph.NamespaceDeclaration;
-import de.fraunhofer.aisec.cpg.graph.Node;
-import de.fraunhofer.aisec.cpg.graph.RecordDeclaration;
-import de.fraunhofer.aisec.cpg.graph.Statement;
-import de.fraunhofer.aisec.cpg.graph.TranslationUnitDeclaration;
-import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker;
+import de.fraunhofer.aisec.cpg.graph.*;
 import de.fraunhofer.aisec.cpg.passes.ControlFlowGraphPass;
+import de.fraunhofer.aisec.cpg.processing.IVisitor;
 import java.io.File;
 import java.util.concurrent.ExecutionException;
 import java.util.function.Consumer;
@@ -81,15 +75,15 @@ class JavaCfgTest extends BaseTest {
     CompoundStatement body = (CompoundStatement) rec.getMethods().get(0).getBody();
 
     // Just for debugging
-    SubgraphWalker.visit(
-        body,
-        (stmt) -> {
-          for (Node target : stmt.getNextCFG()) {
-            System.out.println(
-                "CFG: "
-                    + locationLink(stmt.getLocation())
-                    + " -> "
-                    + locationLink(target.getLocation()));
+    body.accept(
+        n -> n.getNextCFG().iterator(),
+        new IVisitor<Node>() {
+          @Override
+          public void visit(Node n) {
+            for (Node x : n.getNextCFG()) {
+              System.out.println(
+                  "CFG: " + locationLink(n.getLocation()) + " -> " + locationLink(x.getLocation()));
+            }
           }
         });
 
@@ -153,15 +147,15 @@ class JavaCfgTest extends BaseTest {
     CompoundStatement body = (CompoundStatement) f.getMethods().get(0).getBody();
 
     // Just for debugging
-    SubgraphWalker.visit(
-        body,
-        (stmt) -> {
-          for (Node target : stmt.getNextCFG()) {
-            System.out.println(
-                "CFG: "
-                    + locationLink(stmt.getLocation())
-                    + " -> "
-                    + locationLink(target.getLocation()));
+    body.accept(
+        n -> n.getNextCFG().iterator(),
+        new IVisitor<Node>() {
+          @Override
+          public void visit(Node n) {
+            for (Node x : n.getNextCFG()) {
+              System.out.println(
+                  "CFG: " + locationLink(n.getLocation()) + " -> " + locationLink(x.getLocation()));
+            }
           }
         });
 
@@ -225,15 +219,15 @@ class JavaCfgTest extends BaseTest {
     CompoundStatement body = (CompoundStatement) f.getMethods().get(0).getBody();
 
     // Just for debugging
-    SubgraphWalker.visit(
-        body,
-        (stmt) -> {
-          for (Node target : stmt.getNextCFG()) {
-            System.out.println(
-                "CFG: "
-                    + locationLink(stmt.getLocation())
-                    + " -> "
-                    + locationLink(target.getLocation()));
+    body.accept(
+        n -> n.getNextCFG().iterator(),
+        new IVisitor<Node>() {
+          @Override
+          public void visit(Node n) {
+            for (Node x : n.getNextCFG()) {
+              System.out.println(
+                  "CFG: " + locationLink(n.getLocation()) + " -> " + locationLink(x.getLocation()));
+            }
           }
         });
 

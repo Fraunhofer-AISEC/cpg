@@ -39,17 +39,17 @@ import de.fraunhofer.aisec.cpg.graph.TranslationUnitDeclaration;
 import de.fraunhofer.aisec.cpg.helpers.Util;
 import java.nio.file.Path;
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
 
 class StaticImportsTest extends BaseTest {
 
-  private Path topLevel = Path.of("src", "test", "resources", "staticImports");
+  private final Path topLevel = Path.of("src", "test", "resources", "staticImports");
 
   @Test
   void testSingleStaticImport() throws Exception {
-    List<TranslationUnitDeclaration> result = TestUtils.analyze("java", topLevel.resolve("single"));
+    List<TranslationUnitDeclaration> result =
+        TestUtils.analyze("java", topLevel.resolve("single"), true);
     List<MethodDeclaration> methods = Util.subnodesOfType(result, MethodDeclaration.class);
     MethodDeclaration test = TestUtils.findByUniqueName(methods, "test");
     MethodDeclaration main = TestUtils.findByUniqueName(methods, "main");
@@ -73,7 +73,7 @@ class StaticImportsTest extends BaseTest {
   @Test
   void testAsteriskImport() throws Exception {
     List<TranslationUnitDeclaration> result =
-        TestUtils.analyze("java", topLevel.resolve("asterisk"));
+        TestUtils.analyze("java", topLevel.resolve("asterisk"), true);
     List<MethodDeclaration> methods = Util.subnodesOfType(result, MethodDeclaration.class);
     MethodDeclaration main = TestUtils.findByUniqueName(methods, "main");
     for (CallExpression call : Util.subnodesOfType(main, CallExpression.class)) {
@@ -114,45 +114,5 @@ class StaticImportsTest extends BaseTest {
         TestUtils.findByUniqueName(declaredReferences, "this.nonStaticField");
     assertNotEquals(nonStatic.getMember(), nonStaticField);
     assertTrue(nonStatic.getMember().isImplicit());
-  }
-
-  @Test
-  void testDummyGeneration() throws Exception {
-    List<TranslationUnitDeclaration> result =
-        TestUtils.analyze("java", topLevel.resolve("dummies"));
-    assertEquals(
-        1, result.stream().filter(t -> t.getName().equals("unknown declarations")).count());
-    List<RecordDeclaration> records = Util.subnodesOfType(result, RecordDeclaration.class);
-
-    RecordDeclaration dummyRecord = TestUtils.findByUniqueName(records, "a.b.c.SomeClass");
-    assertEquals(
-        1, dummyRecord.getFields().stream().filter(f -> f.getName().equals("someMethod")).count());
-    List<MethodDeclaration> dummyMethods =
-        dummyRecord.getMethods().stream()
-            .filter(m -> m.getName().equals("someMethod"))
-            .collect(Collectors.toList());
-    Map<Integer, List<MethodDeclaration>> dummiesByNumberOfParams =
-        dummyMethods.stream().collect(Collectors.groupingBy(m -> m.getParameters().size()));
-
-    assertTrue(dummiesByNumberOfParams.containsKey(1));
-    assertEquals(1, dummiesByNumberOfParams.get(1).size());
-    MethodDeclaration dummy1 = dummiesByNumberOfParams.get(1).get(0);
-
-    assertTrue(dummiesByNumberOfParams.containsKey(4));
-    assertEquals(1, dummiesByNumberOfParams.get(4).size());
-    MethodDeclaration dummy4 = dummiesByNumberOfParams.get(4).get(0);
-
-    RecordDeclaration mainRecord = TestUtils.findByUniqueName(records, "GenerateDummies");
-    MethodDeclaration main = TestUtils.findByUniqueName(mainRecord.getMethods(), "main");
-    for (CallExpression call : Util.subnodesOfType(main, CallExpression.class)) {
-      switch (call.getSignature().size()) {
-        case 1:
-          assertEquals(call.getInvokes(), List.of(dummy1));
-          break;
-        case 4:
-          assertEquals(call.getInvokes(), List.of(dummy4));
-          break;
-      }
-    }
   }
 }

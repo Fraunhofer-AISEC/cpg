@@ -1,4 +1,5 @@
 #include "include.h"
+#include "another-include.h"
 
 int main() {
   SomeClass* c = new SomeClass();

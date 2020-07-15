@@ -29,14 +29,14 @@ package de.fraunhofer.aisec.cpg.frontends.java;
 import static org.junit.jupiter.api.Assertions.*;
 
 import de.fraunhofer.aisec.cpg.BaseTest;
-import de.fraunhofer.aisec.cpg.TranslationConfiguration;
-import de.fraunhofer.aisec.cpg.frontends.TranslationException;
+import de.fraunhofer.aisec.cpg.TestUtils;
 import de.fraunhofer.aisec.cpg.graph.*;
 import de.fraunhofer.aisec.cpg.graph.type.TypeParser;
 import de.fraunhofer.aisec.cpg.helpers.NodeComparator;
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker;
 import de.fraunhofer.aisec.cpg.helpers.Util;
-import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager;
+import de.fraunhofer.aisec.cpg.processing.IVisitor;
+import de.fraunhofer.aisec.cpg.processing.strategy.Strategy;
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation;
 import de.fraunhofer.aisec.cpg.sarif.Region;
 import java.io.File;
@@ -46,23 +46,15 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 class JavaLanguageFrontendTest extends BaseTest {
 
-  private TranslationConfiguration config;
-
-  @BeforeEach
-  void setUp() {
-    config = TranslationConfiguration.builder().defaultPasses().build();
-  }
-
   @Test
-  void testLargeNegativeNumber() throws TranslationException {
+  void testLargeNegativeNumber() throws Exception {
+    File file = new File("src/test/resources/LargeNegativeNumber.java");
     TranslationUnitDeclaration tu =
-        new JavaLanguageFrontend(config, new ScopeManager())
-            .parse(new File("src/test/resources/LargeNegativeNumber.java"));
+        TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true);
     RecordDeclaration declaration = (RecordDeclaration) tu.getDeclarations().get(0);
 
     MethodDeclaration main = declaration.getMethods().get(0);
@@ -97,10 +89,10 @@ class JavaLanguageFrontendTest extends BaseTest {
   }
 
   @Test
-  void testFor() throws TranslationException {
+  void testFor() throws Exception {
+    File file = new File("src/test/resources/components/ForStmt.java");
     TranslationUnitDeclaration tu =
-        new JavaLanguageFrontend(config, new ScopeManager())
-            .parse(new File("src/test/resources/components/ForStmt.java"));
+        TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true);
 
     RecordDeclaration declaration = (RecordDeclaration) tu.getDeclarations().get(0);
 
@@ -124,10 +116,10 @@ class JavaLanguageFrontendTest extends BaseTest {
   }
 
   @Test
-  void testForeach() throws TranslationException {
+  void testForeach() throws Exception {
+    File file = new File("src/test/resources/components/ForEachStmt.java");
     TranslationUnitDeclaration tu =
-        new JavaLanguageFrontend(config, new ScopeManager())
-            .parse(new File("src/test/resources/components/ForEachStmt.java"));
+        TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true);
 
     RecordDeclaration declaration = (RecordDeclaration) tu.getDeclarations().get(0);
 
@@ -159,10 +151,10 @@ class JavaLanguageFrontendTest extends BaseTest {
   }
 
   @Test
-  void testTryCatch() throws TranslationException {
+  void testTryCatch() throws Exception {
+    File file = new File("src/test/resources/components/TryStmt.java");
     TranslationUnitDeclaration tu =
-        new JavaLanguageFrontend(config, new ScopeManager())
-            .parse(new File("src/test/resources/components/TryStmt.java"));
+        TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true);
 
     RecordDeclaration declaration = (RecordDeclaration) tu.getDeclarations().get(0);
 
@@ -194,10 +186,10 @@ class JavaLanguageFrontendTest extends BaseTest {
   }
 
   @Test
-  void testLiteral() throws TranslationException {
+  void testLiteral() throws Exception {
+    File file = new File("src/test/resources/components/LiteralExpr.java");
     TranslationUnitDeclaration tu =
-        new JavaLanguageFrontend(config, new ScopeManager())
-            .parse(new File("src/test/resources/components/LiteralExpr.java"));
+        TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true);
 
     RecordDeclaration declaration = (RecordDeclaration) tu.getDeclarations().get(0);
 
@@ -282,10 +274,10 @@ class JavaLanguageFrontendTest extends BaseTest {
   }
 
   @Test
-  void testRecordDeclaration() throws TranslationException {
+  void testRecordDeclaration() throws Exception {
+    File file = new File("src/test/resources/compiling/RecordDeclaration.java");
     TranslationUnitDeclaration declaration =
-        new JavaLanguageFrontend(config, new ScopeManager())
-            .parse(new File("src/test/resources/compiling/RecordDeclaration.java"));
+        TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true);
 
     assertNotNull(declaration);
     NamespaceDeclaration namespaceDeclaration =
@@ -312,28 +304,19 @@ class JavaLanguageFrontendTest extends BaseTest {
   }
 
   @Test
-  void testVariables() throws TranslationException {
+  void testNameExpressions() throws Exception {
+    File file = new File("src/test/resources/compiling/NameExpression.java");
     TranslationUnitDeclaration declaration =
-        new JavaLanguageFrontend(config, new ScopeManager())
-            .parse(new File("src/test/resources/compiling/Variables.java"));
+        TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true);
 
     assertNotNull(declaration);
   }
 
   @Test
-  void testNameExpressions() throws TranslationException {
+  void testSwitch() throws Exception {
+    File file = new File("src/test/resources/cfg/Switch.java");
     TranslationUnitDeclaration declaration =
-        new JavaLanguageFrontend(config, new ScopeManager())
-            .parse(new File("src/test/resources/compiling/NameExpression.java"));
-
-    assertNotNull(declaration);
-  }
-
-  @Test
-  void testSwitch() throws TranslationException {
-    TranslationUnitDeclaration declaration =
-        new JavaLanguageFrontend(TranslationConfiguration.builder().build(), new ScopeManager())
-            .parse(new File("src/test/resources/cfg/Switch.java"));
+        TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true);
 
     List<Node> graphNodes = SubgraphWalker.flattenAST(declaration);
     graphNodes.sort(new NodeComparator());
@@ -356,10 +339,10 @@ class JavaLanguageFrontendTest extends BaseTest {
   }
 
   @Test
-  void testCast() throws TranslationException {
+  void testCast() throws Exception {
+    File file = new File("src/test/resources/components/CastExpr.java");
     TranslationUnitDeclaration declaration =
-        new JavaLanguageFrontend(TranslationConfiguration.builder().build(), new ScopeManager())
-            .parse(new File("src/test/resources/components/CastExpr.java"));
+        TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true);
 
     assertNotNull(declaration);
 
@@ -399,10 +382,10 @@ class JavaLanguageFrontendTest extends BaseTest {
   }
 
   @Test
-  void testArrays() throws TranslationException {
+  void testArrays() throws Exception {
+    File file = new File("src/test/resources/compiling/Arrays.java");
     TranslationUnitDeclaration declaration =
-        new JavaLanguageFrontend(TranslationConfiguration.builder().build(), new ScopeManager())
-            .parse(new File("src/test/resources/compiling/Arrays.java"));
+        TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true);
 
     assertNotNull(declaration);
 
@@ -449,10 +432,10 @@ class JavaLanguageFrontendTest extends BaseTest {
   }
 
   @Test
-  void testFieldAccessExpressions() throws TranslationException {
+  void testFieldAccessExpressions() throws Exception {
+    File file = new File("src/test/resources/compiling/FieldAccess.java");
     TranslationUnitDeclaration declaration =
-        new JavaLanguageFrontend(TranslationConfiguration.builder().build(), new ScopeManager())
-            .parse(new File("src/test/resources/compiling/FieldAccess.java"));
+        TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true);
 
     assertNotNull(declaration);
 
@@ -481,10 +464,30 @@ class JavaLanguageFrontendTest extends BaseTest {
   }
 
   @Test
-  void testLocation() throws TranslationException {
+  void testMemberCallExpressions() throws Exception {
+    File file = new File("src/test/resources/compiling/MemberCallExpression.java");
+    TranslationUnitDeclaration tu =
+        TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true);
+
+    assertNotNull(tu);
+
+    // Simply count MemberCallExpressions
+    final int[] count = {0};
+    tu.accept(
+        Strategy::AST_FORWARD,
+        new IVisitor<Node>() {
+          public void visit(MemberCallExpression ex) {
+            count[0]++;
+          }
+        });
+    assertEquals(6, count[0]);
+  }
+
+  @Test
+  void testLocation() throws Exception {
+    File file = new File("src/test/resources/compiling/FieldAccess.java");
     TranslationUnitDeclaration declaration =
-        new JavaLanguageFrontend(TranslationConfiguration.builder().build(), new ScopeManager())
-            .parse(new File("src/test/resources/compiling/FieldAccess.java"));
+        TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true);
 
     assertNotNull(declaration);
 

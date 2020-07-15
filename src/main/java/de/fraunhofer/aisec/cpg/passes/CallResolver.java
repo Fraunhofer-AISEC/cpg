@@ -28,43 +28,15 @@ package de.fraunhofer.aisec.cpg.passes;
 
 import de.fraunhofer.aisec.cpg.TranslationResult;
 import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguageFrontend;
-import de.fraunhofer.aisec.cpg.graph.CallExpression;
-import de.fraunhofer.aisec.cpg.graph.ConstructExpression;
-import de.fraunhofer.aisec.cpg.graph.ConstructorDeclaration;
-import de.fraunhofer.aisec.cpg.graph.DeclaredReferenceExpression;
-import de.fraunhofer.aisec.cpg.graph.ExplicitConstructorInvocation;
-import de.fraunhofer.aisec.cpg.graph.Expression;
-import de.fraunhofer.aisec.cpg.graph.FunctionDeclaration;
-import de.fraunhofer.aisec.cpg.graph.HasType;
-import de.fraunhofer.aisec.cpg.graph.MemberCallExpression;
-import de.fraunhofer.aisec.cpg.graph.MethodDeclaration;
-import de.fraunhofer.aisec.cpg.graph.NewExpression;
-import de.fraunhofer.aisec.cpg.graph.Node;
-import de.fraunhofer.aisec.cpg.graph.NodeBuilder;
-import de.fraunhofer.aisec.cpg.graph.ParamVariableDeclaration;
-import de.fraunhofer.aisec.cpg.graph.RecordDeclaration;
-import de.fraunhofer.aisec.cpg.graph.StaticCallExpression;
-import de.fraunhofer.aisec.cpg.graph.TranslationUnitDeclaration;
-import de.fraunhofer.aisec.cpg.graph.ValueDeclaration;
-import de.fraunhofer.aisec.cpg.graph.VariableDeclaration;
+import de.fraunhofer.aisec.cpg.graph.*;
 import de.fraunhofer.aisec.cpg.graph.type.FunctionPointerType;
 import de.fraunhofer.aisec.cpg.graph.type.Type;
 import de.fraunhofer.aisec.cpg.graph.type.TypeParser;
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.ScopedWalker;
 import de.fraunhofer.aisec.cpg.helpers.Util;
-import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Deque;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.IdentityHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Set;
+import de.fraunhofer.aisec.cpg.processing.IVisitor;
+import de.fraunhofer.aisec.cpg.processing.strategy.Strategy;
+import java.util.*;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import org.checkerframework.checker.nullness.qual.NonNull;
@@ -242,7 +214,12 @@ public class CallResolver extends Pass {
     } else if (node instanceof ExplicitConstructorInvocation) {
       resolveExplicitConstructorInvocation((ExplicitConstructorInvocation) node);
     } else if (node instanceof CallExpression) {
-      handleCallExpression(curClass, (CallExpression) node);
+      CallExpression call = (CallExpression) node;
+      // We might have call expressions inside our arguments, so in order to correctly resolve
+      // this call's signature, we need to make sure any call expression arguments are fully
+      // resolved
+      resolveArguments(call, curClass);
+      handleCallExpression(curClass, call);
     } else if (node instanceof ConstructExpression) {
       resolveConstructExpression((ConstructExpression) node);
     }
@@ -276,6 +253,25 @@ public class CallResolver extends Pass {
       handleFunctionPointerCall(call, funcPointer.get());
     } else {
       handleNormalCalls(curClass, call);
+    }
+  }
+
+  private void resolveArguments(CallExpression call, RecordDeclaration curClass) {
+    Deque<Node> worklist = new ArrayDeque<>();
+    call.getArguments().forEach(worklist::push);
+    while (!worklist.isEmpty()) {
+      Node curr = worklist.pop();
+      if (curr instanceof CallExpression) {
+        resolve(curr, curClass);
+      } else {
+        curr.accept(
+            Strategy::AST_FORWARD,
+            new IVisitor<Node>() {
+              public void visit(ValueDeclaration t) {
+                worklist.push(t);
+              }
+            });
+      }
     }
   }
 
