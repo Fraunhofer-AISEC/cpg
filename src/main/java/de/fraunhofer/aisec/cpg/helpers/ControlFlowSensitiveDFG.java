@@ -269,7 +269,7 @@ public class ControlFlowSensitiveDFG {
 
       // If the nextNode has not been set by a JoinPoint we take the nextEOG
       if (nextNode == null) {
-        getNextEOG(currNode);
+        nextNode = getNextEOG(currNode);
       }
 
       currNode = nextNode;
