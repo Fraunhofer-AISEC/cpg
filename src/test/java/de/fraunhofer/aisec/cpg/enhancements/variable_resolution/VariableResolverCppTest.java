@@ -33,13 +33,14 @@ import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 
 // Todo VariableResolverPass 23 Failed, 5 Passed
 
-// @Disabled("Until changing variable resolution to ScopeManager. Then in detail disable the tests
-// that need specific fixes")
+@Disabled(
+    "Until changing variable resolution to ScopeManager. Then in detail disable the tests that need specific fixes")
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public class VariableResolverCppTest extends BaseTest {
 
