@@ -80,8 +80,8 @@ public class Util {
   }
 
   /**
-   * Returns the first element of the specified Class-type {@param specifiedClass} that has the name
-   * {@param name} in the list {@param listOfNodes}.
+   * Returns the first element of the specified Class-type {@code specificClass} that has the name
+   * {@code name} in the list {@code listOfNodes}.
    *
    * @param <S> Some class that extends {@link Node}.
    */
@@ -99,8 +99,8 @@ public class Util {
   }
 
   /**
-   * Returns the first element of the specified Class-type {@param specifiedClass} that has the name
-   * {@param name} in the list of nodes that are subnodes of the AST-root node {@param root}.
+   * Returns the first element of the specified Class-type {code specifiedClass} that has the name
+   * {@code name} in the list of nodes that are subnodes of the AST-root node {@code root}.
    *
    * @param <S> Some class that extends {@link Node}.
    */
