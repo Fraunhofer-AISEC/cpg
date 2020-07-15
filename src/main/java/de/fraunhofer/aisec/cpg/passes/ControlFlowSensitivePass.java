@@ -21,11 +21,15 @@ public class ControlFlowSensitivePass extends Pass {
     }
   }
 
+  /**
+   * ControlFlowSensitiveDFG Pass is perfomed on every Method
+   *
+   * @param node every node in the TranslationResult
+   */
   public void handle(Node node) {
     if (node instanceof MethodDeclaration) {
       ControlFlowSensitiveDFG controlFlowSensitiveDFG = new ControlFlowSensitiveDFG(node);
       controlFlowSensitiveDFG.handle();
     }
   }
-
 }
