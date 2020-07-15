@@ -14,6 +14,17 @@ public class Strategy {
   }
 
   /**
+   * Do not traverse any nodes.
+   *
+   * @param x
+   * @return
+   */
+  @NonNull
+  public static Iterator<Node> NO_STRATEGY(@NonNull Node x) {
+    return Collections.emptyIterator();
+  }
+
+  /**
    * Traverse Evaluation Order Graph in forward direction.
    *
    * @param x Current node in EOG.

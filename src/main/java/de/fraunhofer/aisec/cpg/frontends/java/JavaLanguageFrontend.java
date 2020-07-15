@@ -44,7 +44,6 @@ import com.github.javaparser.resolution.declarations.ResolvedMethodDeclaration;
 import com.github.javaparser.resolution.declarations.ResolvedValueDeclaration;
 import com.github.javaparser.symbolsolver.JavaSymbolSolver;
 import com.github.javaparser.symbolsolver.javaparsermodel.JavaParserFacade;
-import com.github.javaparser.symbolsolver.model.resolution.TypeSolver;
 import com.github.javaparser.symbolsolver.resolution.typesolvers.CombinedTypeSolver;
 import com.github.javaparser.symbolsolver.resolution.typesolvers.JavaParserTypeSolver;
 import com.github.javaparser.symbolsolver.resolution.typesolvers.ReflectionTypeSolver;
@@ -61,10 +60,7 @@ import de.fraunhofer.aisec.cpg.sarif.Region;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
@@ -78,17 +74,14 @@ public class JavaLanguageFrontend extends LanguageFrontend {
   private DeclarationHandler declarationHandler = new DeclarationHandler(this);
 
   private JavaSymbolSolver javaSymbolResolver;
-  private HashSet<TypeSolver> internalTypeSolvers =
-      new HashSet<>(); // we store a reference here to clean them up later
+  private CombinedTypeSolver internalTypeSolver = new CombinedTypeSolver();
 
   public JavaLanguageFrontend(@NonNull TranslationConfiguration config, ScopeManager scopeManager) {
     super(config, scopeManager, ".");
 
-    CombinedTypeSolver typeResolver = new CombinedTypeSolver();
-    internalTypeSolvers.add(typeResolver);
     ReflectionTypeSolver reflectionTypeSolver = new ReflectionTypeSolver();
-    internalTypeSolvers.add(reflectionTypeSolver);
-    typeResolver.add(reflectionTypeSolver);
+    internalTypeSolver.add(reflectionTypeSolver);
+
     File root = config.getTopLevel();
     if (root == null) {
       root = CommonPath.commonPath(config.getSourceLocations());
@@ -99,10 +92,9 @@ public class JavaLanguageFrontend extends LanguageFrontend {
     } else {
       log.info("Source file root used for type solver: {}", root);
       JavaParserTypeSolver javaParserTypeSolver = new JavaParserTypeSolver(root);
-      internalTypeSolvers.add(javaParserTypeSolver);
-      typeResolver.add(javaParserTypeSolver);
+      internalTypeSolver.add(javaParserTypeSolver);
     }
-    this.javaSymbolResolver = new JavaSymbolSolver(typeResolver);
+    this.javaSymbolResolver = new JavaSymbolSolver(internalTypeSolver);
   }
 
   @Override
@@ -288,6 +280,7 @@ public class JavaLanguageFrontend extends LanguageFrontend {
     }
   }
 
+  @Nullable
   public String recoverTypeFromUnsolvedException(Throwable ex) {
     if (ex instanceof UnsolvedSymbolException
         || (ex.getCause() != null && ex.getCause() instanceof UnsolvedSymbolException)) {
@@ -312,6 +305,7 @@ public class JavaLanguageFrontend extends LanguageFrontend {
     return null;
   }
 
+  @Nullable
   public String getQualifiedNameFromImports(String className) {
     if (context != null && className != null) {
       List<String> potentialClassNames = new ArrayList<>();
@@ -423,5 +417,9 @@ public class JavaLanguageFrontend extends LanguageFrontend {
 
   public CompilationUnit getContext() {
     return context;
+  }
+
+  public CombinedTypeSolver getNativeTypeResolver() {
+    return this.internalTypeSolver;
   }
 }
