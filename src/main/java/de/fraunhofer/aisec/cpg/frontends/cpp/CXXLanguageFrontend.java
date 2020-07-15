@@ -435,7 +435,9 @@ public class CXXLanguageFrontend extends LanguageFrontend {
         return newLiteral(Integer.parseInt(code), CXXLanguageFrontend.INT_TYPE, code);
       case 130:
         return newLiteral(
-            code.replace("\"", ""), TypeParser.createFrom("const char*", false), code);
+            code.length() >= 2 ? code.substring(1, code.length() - 1) : "",
+            TypeParser.createFrom("const char*", false),
+            code);
       default:
         return newLiteral(code, TypeParser.createFrom("const char*", false), code);
     }
