@@ -673,19 +673,45 @@ class TypeTests extends BaseTest {
    * @throws Exception Any exception thrown during the analysis process
    */
   @Test
-  void fptrRawTypeStringTest() throws Exception {
+  void testFunctionPointerTypes() throws Exception {
     Path topLevel = Path.of("src", "test", "resources", "types");
-    List<TranslationUnitDeclaration> result =
-        TestUtils.analyze(List.of(topLevel.resolve("fptr_type.cpp").toFile()), topLevel, true);
+    TranslationUnitDeclaration tu =
+        TestUtils.analyzeAndGetFirstTU(
+            List.of(topLevel.resolve("fptr_type.cpp").toFile()), topLevel, true);
 
-    // TODO: Apparently there is another issue, as the name of the VariableDeclaration is empty
-    // instead of being single_param
-    // As there is only one VariableDeclaration in the provided snippet we can access it this way
-    VariableDeclaration variableDeclaration =
-        Util.subnodesOfType(result, VariableDeclaration.class).get(0);
+    FunctionPointerType oneParamType =
+        new FunctionPointerType(
+            new Type.Qualifier(),
+            Type.Storage.AUTO,
+            List.of(
+                new ObjectType(
+                    "int",
+                    Type.Storage.AUTO,
+                    new Type.Qualifier(),
+                    new ArrayList<>(),
+                    ObjectType.Modifier.SIGNED,
+                    true)),
+            new IncompleteType());
 
-    List<Type> parameterList =
-        List.of(
+    FunctionPointerType twoParamType =
+        new FunctionPointerType(
+            new Type.Qualifier(),
+            Type.Storage.AUTO,
+            List.of(
+                new ObjectType(
+                    "int",
+                    Type.Storage.AUTO,
+                    new Type.Qualifier(),
+                    new ArrayList<>(),
+                    ObjectType.Modifier.SIGNED,
+                    true),
+                new ObjectType(
+                    "long",
+                    Type.Storage.AUTO,
+                    new Type.Qualifier(),
+                    new ArrayList<>(),
+                    ObjectType.Modifier.UNSIGNED,
+                    true)),
             new ObjectType(
                 "int",
                 Type.Storage.AUTO,
@@ -693,11 +719,23 @@ class TypeTests extends BaseTest {
                 new ArrayList<>(),
                 ObjectType.Modifier.SIGNED,
                 true));
-    FunctionPointerType fptrType =
-        new FunctionPointerType(
-            new Type.Qualifier(), Type.Storage.AUTO, parameterList, new IncompleteType());
 
-    assertEquals(fptrType, variableDeclaration.getType());
+    List<VariableDeclaration> variables = Util.subnodesOfType(tu, VariableDeclaration.class);
+    VariableDeclaration localTwoParam = TestUtils.findByUniqueName(variables, "local_two_param");
+    assertNotNull(localTwoParam);
+    assertEquals(twoParamType, localTwoParam.getType());
+
+    VariableDeclaration localOneParam = TestUtils.findByUniqueName(variables, "local_one_param");
+    assertNotNull(localOneParam);
+    assertEquals(oneParamType, localOneParam.getType());
+
+    VariableDeclaration globalTwoParam = TestUtils.findByUniqueName(variables, "global_two_param");
+    assertNotNull(globalTwoParam);
+    assertEquals(twoParamType, globalTwoParam.getType());
+
+    VariableDeclaration globalOneParam = TestUtils.findByUniqueName(variables, "global_one_param");
+    assertNotNull(globalOneParam);
+    assertEquals(oneParamType, globalOneParam.getType());
   }
 
   @Test
