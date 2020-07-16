@@ -32,6 +32,8 @@ import java.util.List;
 import java.util.function.Supplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import org.checkerframework.checker.nullness.qual.NonNull;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
  * Class responsible for parsing the type definition and create the same Type as described by the
@@ -227,7 +229,8 @@ public class TypeParser {
    * @param type separated type string
    * @return true if function pointer structure is found in typeString, false if not
    */
-  private static Matcher isFunctionPointer(List<String> type) {
+  @Nullable
+  private static Matcher getFunctionPtrMatcher(@NonNull List<String> type) {
 
     StringBuilder typeStringBuilder = new StringBuilder();
     for (String typePart : type) {
@@ -313,7 +316,8 @@ public class TypeParser {
    * @param type string with the entire type definition
    * @return list of strings in which every piece of type information is one element of the list
    */
-  public static List<String> separate(String type) {
+  @NonNull
+  public static List<String> separate(@NonNull String type) {
 
     // Remove :: CPP operator, use . instead
     type = type.replace("::", ".");
@@ -661,7 +665,7 @@ public class TypeParser {
    * @param resolveAlias should replace with original type in typedefs
    * @return new type representing the type string
    */
-  public static Type createFrom(String type, boolean resolveAlias) {
+  public static Type createFrom(@NonNull String type, boolean resolveAlias) {
     // Check if Problems during Parsing
     if (type.contains("?")
         || type.contains("org.eclipse.cdt.internal.core.dom.parser.ProblemType@")
@@ -713,8 +717,7 @@ public class TypeParser {
 
     // Once all preceding known keywords (if any) are handled the next word must be the TypeName
     if (counter >= typeBlocks.size()) {
-      // TODO Note that "const auto bla = ..." will end here with typeName="const" as "auto" is not
-      // supported.
+      // Note that "const auto ..." will end here with typeName="const" as auto is not supported.
       return UnknownType.getUnknownType();
     }
     assert counter < typeBlocks.size();
@@ -725,7 +728,7 @@ public class TypeParser {
     TypeManager typeManager = TypeManager.getInstance();
 
     // Check if type is FunctionPointer
-    Matcher funcptr = isFunctionPointer(typeBlocks.subList(counter, typeBlocks.size()));
+    Matcher funcptr = getFunctionPtrMatcher(typeBlocks.subList(counter, typeBlocks.size()));
 
     if (funcptr != null) {
       Type returnType = createFrom(typeName, false);
