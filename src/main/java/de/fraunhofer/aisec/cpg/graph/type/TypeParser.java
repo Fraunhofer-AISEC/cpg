@@ -712,6 +712,12 @@ public class TypeParser {
     Type.Qualifier qualifier = calcQualifier(qualifierList, null);
 
     // Once all preceding known keywords (if any) are handled the next word must be the TypeName
+    if (counter >= typeBlocks.size()) {
+      // TODO Note that "const auto bla = ..." will end here with typeName="const" as "auto" is not
+      // supported.
+      return UnknownType.getUnknownType();
+    }
+    assert counter < typeBlocks.size();
     String typeName = typeBlocks.get(counter);
     counter++;
 
