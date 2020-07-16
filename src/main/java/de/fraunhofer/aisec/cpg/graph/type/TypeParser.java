@@ -665,7 +665,7 @@ public class TypeParser {
     // Check if Problems during Parsing
     if (type.contains("?")
         || type.contains("org.eclipse.cdt.internal.core.dom.parser.ProblemType@")
-        || type.length() == 0) {
+        || type.trim().length() == 0) {
       return UnknownType.getUnknownType();
     }
 
