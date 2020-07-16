@@ -603,6 +603,29 @@ class TypeTests extends BaseTest {
     typeString = "int const &ref2 = a";
     result = TypeParser.createFrom(typeString, true);
     assertEquals(expected, result);
+
+    // Test 13: Elaborated Type in Generics
+    result = TypeParser.createFrom("Array<struct Node>", true);
+    generics = new ArrayList<>();
+    ObjectType generic =
+        new ObjectType(
+            "Node",
+            Type.Storage.AUTO,
+            new Type.Qualifier(),
+            new ArrayList<>(),
+            ObjectType.Modifier.NOT_APPLICABLE,
+            false);
+    generics.add(generic);
+
+    expected =
+        new ObjectType(
+            "Array",
+            Type.Storage.AUTO,
+            new Type.Qualifier(),
+            generics,
+            ObjectType.Modifier.NOT_APPLICABLE,
+            false);
+    assertEquals(expected, result);
   }
 
   // Tests on the resulting graph

@@ -61,6 +61,13 @@ public class TypeParser {
   private static final String ELABORATED_TYPE_UNION = "union";
   private static final String ELABORATED_TYPE_ENUM = "enum";
 
+  private static final List<String> elaboratedTypes =
+      List.of(
+          ELABORATED_TYPE_CLASS,
+          ELABORATED_TYPE_STRUCT,
+          ELABORATED_TYPE_UNION,
+          ELABORATED_TYPE_ENUM);
+
   private TypeParser() {
     throw new IllegalStateException("Do not instantiate the TypeParser");
   }
@@ -263,6 +270,20 @@ public class TypeParser {
    */
   @NonNull
   private static String fixGenerics(@NonNull String type) {
+    if (type.contains("<") && type.contains(">")) {
+      String generics = type.substring(type.indexOf('<') + 1, type.lastIndexOf('>'));
+      for (String elaborated : elaboratedTypes) {
+        if (getLanguage() == TypeManager.Language.CXX && generics.contains(elaborated + " ")) {
+          generics = generics.replace(elaborated + " ", "");
+        }
+      }
+
+      type =
+          type.substring(0, type.indexOf('<') + 1)
+              + generics.trim()
+              + type.substring(type.lastIndexOf('>'));
+    }
+
     StringBuilder out = new StringBuilder();
     int bracketCount = 0;
     int iterator = 0;
