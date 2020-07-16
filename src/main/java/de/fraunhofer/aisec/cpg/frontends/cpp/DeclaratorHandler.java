@@ -280,7 +280,7 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
         continue;
       }
       Declaration declaration = lang.getDeclarationHandler().handle(member);
-      Scope declarationScope = lang.getScopeManager().getScopeOfStatment(declaration);
+      Scope declarationScope = lang.getScopeManager().getScopeOfStatement(declaration);
 
       if (declaration instanceof FunctionDeclaration) {
         MethodDeclaration method =

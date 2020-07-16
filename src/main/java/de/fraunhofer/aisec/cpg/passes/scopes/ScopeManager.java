@@ -55,13 +55,13 @@ import de.fraunhofer.aisec.cpg.graph.ValueDeclaration;
 import de.fraunhofer.aisec.cpg.graph.VariableDeclaration;
 import de.fraunhofer.aisec.cpg.graph.WhileStatement;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
@@ -82,7 +82,7 @@ public class ScopeManager {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(ScopeManager.class);
 
-  private final Map<Node, Scope> scopeMap = new HashMap<>();
+  private final ConcurrentMap<Node, Scope> scopeMap = new ConcurrentHashMap<>();
   private Scope currentScope = null;
   private LanguageFrontend lang;
 
@@ -321,7 +321,7 @@ public class ScopeManager {
     } else {
       LabelStatement labelStatement = getLabelStatement(breakStatement.getLabel());
       if (labelStatement != null) {
-        Scope scope = getScopeOfStatment(labelStatement.getSubStatement());
+        Scope scope = getScopeOfStatement(labelStatement.getSubStatement());
         ((IBreakable) scope).addBreakStatement(breakStatement);
       }
     }
@@ -340,7 +340,7 @@ public class ScopeManager {
     } else {
       LabelStatement labelStatement = getLabelStatement(continueStatement.getLabel());
       if (labelStatement != null) {
-        Scope scope = getScopeOfStatment(labelStatement.getSubStatement());
+        Scope scope = getScopeOfStatement(labelStatement.getSubStatement());
         ((IContinuable) scope).addContinueStatement(continueStatement);
       }
     }
@@ -539,7 +539,11 @@ public class ScopeManager {
     return scope.getParent() != null ? resolve(scope.getParent(), ref) : null;
   }
 
-  public Scope getScopeOfStatment(Node node) {
+  public Scope getScopeOfStatement(Node node) {
+    if (node == null) {
+      return null;
+    }
+
     return scopeMap.getOrDefault(node, null);
   }
 

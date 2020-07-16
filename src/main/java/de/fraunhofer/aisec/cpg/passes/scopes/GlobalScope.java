@@ -26,10 +26,13 @@
 
 package de.fraunhofer.aisec.cpg.passes.scopes;
 
+import de.fraunhofer.aisec.cpg.graph.Node;
+
 public class GlobalScope extends DeclarationScope {
 
   public GlobalScope() {
-    super(null);
+    // we need a root node
+    super(new Node());
   }
 
   /*
