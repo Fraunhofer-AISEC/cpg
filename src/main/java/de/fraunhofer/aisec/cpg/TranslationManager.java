@@ -33,7 +33,7 @@ import de.fraunhofer.aisec.cpg.graph.TranslationUnitDeclaration;
 import de.fraunhofer.aisec.cpg.graph.TypeManager;
 import de.fraunhofer.aisec.cpg.helpers.Benchmark;
 import de.fraunhofer.aisec.cpg.passes.Pass;
-import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager;
+import de.fraunhofer.aisec.cpg.passes.scopes.GlobalScope;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -85,7 +85,6 @@ public class TranslationManager {
     // We wrap the analysis in a CompletableFuture, i.e. in an asynch task.
     return CompletableFuture.supplyAsync(
         () -> {
-          ScopeManager scopesBuildForAnalysis = new ScopeManager();
           Benchmark outerBench =
               new Benchmark(TranslationManager.class, "Translation into full graph");
 
@@ -93,9 +92,12 @@ public class TranslationManager {
           Set<LanguageFrontend> frontendsNeedCleanup = null;
 
           try {
+            // could later be used to be passes to passes
+            GlobalScope globalScope = new GlobalScope();
+
             // Parse Java/C/CPP files
             Benchmark bench = new Benchmark(this.getClass(), "Frontend");
-            frontendsNeedCleanup = runFrontends(result, this.config, scopesBuildForAnalysis);
+            frontendsNeedCleanup = runFrontends(result, this.config, globalScope);
             bench.stop();
 
             // TODO: Find a way to identify the right language during the execution of a pass (and
@@ -148,7 +150,7 @@ public class TranslationManager {
   private HashSet<LanguageFrontend> runFrontends(
       @NonNull TranslationResult result,
       @NonNull TranslationConfiguration config,
-      @NonNull ScopeManager scopeManager)
+      @NonNull GlobalScope globalScope)
       throws TranslationException {
 
     List<File> sourceLocations = new ArrayList<>(this.config.getSourceLocations());
@@ -172,7 +174,7 @@ public class TranslationManager {
       log.info("Parsing {}", sourceLocation.getAbsolutePath());
       LanguageFrontend frontend = null;
       try {
-        frontend = LanguageFrontendFactory.getFrontend(sourceLocation, config, scopeManager);
+        frontend = LanguageFrontendFactory.getFrontend(sourceLocation, config, globalScope);
         if (frontend == null) {
           log.error("Found no parser frontend for {}", sourceLocation.getName());
 

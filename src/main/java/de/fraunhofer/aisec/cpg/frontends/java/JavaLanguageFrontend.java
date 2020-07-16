@@ -54,6 +54,7 @@ import de.fraunhofer.aisec.cpg.graph.*;
 import de.fraunhofer.aisec.cpg.graph.type.TypeParser;
 import de.fraunhofer.aisec.cpg.helpers.Benchmark;
 import de.fraunhofer.aisec.cpg.helpers.CommonPath;
+import de.fraunhofer.aisec.cpg.passes.scopes.GlobalScope;
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager;
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation;
 import de.fraunhofer.aisec.cpg.sarif.Region;
@@ -76,8 +77,9 @@ public class JavaLanguageFrontend extends LanguageFrontend {
   private JavaSymbolSolver javaSymbolResolver;
   private CombinedTypeSolver internalTypeSolver = new CombinedTypeSolver();
 
-  public JavaLanguageFrontend(File file, @NonNull TranslationConfiguration config) {
-    super(file, config, new ScopeManager(), ".");
+  public JavaLanguageFrontend(
+      File file, @NonNull TranslationConfiguration config, GlobalScope globalScope) {
+    super(file, config, new ScopeManager(globalScope), ".");
 
     ReflectionTypeSolver reflectionTypeSolver = new ReflectionTypeSolver();
     internalTypeSolver.add(reflectionTypeSolver);

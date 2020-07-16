@@ -38,6 +38,7 @@ import de.fraunhofer.aisec.cpg.graph.ValueDeclaration;
 import de.fraunhofer.aisec.cpg.graph.type.Type;
 import de.fraunhofer.aisec.cpg.graph.type.TypeParser;
 import de.fraunhofer.aisec.cpg.helpers.Benchmark;
+import de.fraunhofer.aisec.cpg.passes.scopes.GlobalScope;
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager;
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation;
 import de.fraunhofer.aisec.cpg.sarif.Region;
@@ -192,8 +193,9 @@ public class CXXLanguageFrontend extends LanguageFrontend {
   private HashMap<IBinding, List<Expression>> cachedExpressions = new HashMap<>();
   private HashMap<Integer, String> comments = new HashMap<>();
 
-  public CXXLanguageFrontend(File file, @NonNull TranslationConfiguration config) {
-    super(file, config, new ScopeManager(), "::");
+  public CXXLanguageFrontend(
+      File file, @NonNull TranslationConfiguration config, GlobalScope globalScope) {
+    super(file, config, new ScopeManager(globalScope), "::");
   }
 
   /**

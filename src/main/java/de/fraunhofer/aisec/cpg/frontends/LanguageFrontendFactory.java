@@ -30,7 +30,7 @@ import de.fraunhofer.aisec.cpg.TranslationConfiguration;
 import de.fraunhofer.aisec.cpg.frontends.cpp.CXXLanguageFrontend;
 import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguageFrontend;
 import de.fraunhofer.aisec.cpg.helpers.Util;
-import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager;
+import de.fraunhofer.aisec.cpg.passes.scopes.GlobalScope;
 import java.io.File;
 import java.util.List;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -45,14 +45,14 @@ public class LanguageFrontendFactory {
 
   @Nullable
   public static LanguageFrontend getFrontend(
-      File file, TranslationConfiguration config, ScopeManager scopeManager) {
+      File file, TranslationConfiguration config, GlobalScope globalScope) {
 
     String fileType = Util.getExtension(file);
 
     if (JAVA_EXTENSIONS.contains(fileType)) {
-      return new JavaLanguageFrontend(file, config);
+      return new JavaLanguageFrontend(file, config, globalScope);
     } else if (CXX_EXTENSIONS.contains(fileType)) {
-      return new CXXLanguageFrontend(file, config);
+      return new CXXLanguageFrontend(file, config, globalScope);
     } else {
       return null;
     }

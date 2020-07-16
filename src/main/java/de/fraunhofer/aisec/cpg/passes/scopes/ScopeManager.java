@@ -86,8 +86,8 @@ public class ScopeManager {
   private Scope currentScope = null;
   private LanguageFrontend lang;
 
-  public ScopeManager() {
-    pushScope(new GlobalScope());
+  public ScopeManager(GlobalScope globalScope) {
+    pushScope(globalScope);
   }
 
   public LanguageFrontend getLang() {
