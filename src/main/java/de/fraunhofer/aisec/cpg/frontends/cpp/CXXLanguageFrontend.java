@@ -250,9 +250,14 @@ public class CXXLanguageFrontend extends LanguageFrontend {
     FileContent content = FileContent.createForExternalFileLocation(file.getAbsolutePath());
 
     // include paths
-    String[] includePaths = config.includePaths;
+    List<String> includePaths = new ArrayList<>();
+    if (config.getTopLevel() != null) {
+      includePaths.add(config.getTopLevel().toPath().toAbsolutePath().toString());
+    }
+    includePaths.addAll(Arrays.asList(config.includePaths));
 
-    ScannerInfo scannerInfo = new ScannerInfo(config.symbols, includePaths);
+    ScannerInfo scannerInfo =
+        new ScannerInfo(config.symbols, includePaths.toArray(new String[] {}));
 
     DefaultLogService log = new DefaultLogService();
 
