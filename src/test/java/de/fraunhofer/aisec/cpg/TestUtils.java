@@ -101,6 +101,7 @@ public class TestUtils {
             .sourceLocations(files)
             .topLevel(topLevel.toFile())
             .loadIncludes(true)
+            .disableCleanup()
             .debugParser(true)
             .failOnError(true);
     if (usePasses) {

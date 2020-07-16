@@ -74,6 +74,13 @@ public class TranslationConfiguration {
    */
   public final List<String> includeBlacklist;
 
+  /**
+   * Switch off cleaning up TypeManager memory after analysis.
+   *
+   * <p>Set this to {@code true} only for testing.
+   */
+  public boolean disableCleanup = false;
+
   /** should the code of a node be shown as parameter in the node * */
   public final boolean codeInNodes;
 
@@ -104,7 +111,8 @@ public class TranslationConfiguration {
       List<String> includeWhitelist,
       List<String> includeBlacklist,
       List<Pass> passes,
-      boolean codeInNodes) {
+      boolean codeInNodes,
+      boolean disableCleanup) {
     this.symbols = symbols;
     this.sourceLocations = sourceLocations;
     this.topLevel = topLevel;
@@ -117,6 +125,7 @@ public class TranslationConfiguration {
     this.passes = passes != null ? passes : new ArrayList<>();
     // Make sure to init this AFTER sourceLocations has been set
     this.codeInNodes = codeInNodes;
+    this.disableCleanup = disableCleanup;
   }
 
   public static Builder builder() {
@@ -166,6 +175,7 @@ public class TranslationConfiguration {
     private List<String> includeBlacklist = new ArrayList<>();
     private List<Pass> passes = new ArrayList<>();
     private boolean codeInNodes = true;
+    private boolean disableCleanup = false;
 
     public Builder symbols(Map<String, String> symbols) {
       this.symbols = symbols;
@@ -256,6 +266,11 @@ public class TranslationConfiguration {
       return this;
     }
 
+    public Builder disableCleanup() {
+      this.disableCleanup = true;
+      return this;
+    }
+
     /**
      * Adds the specified file to the include blacklist. Relative and absolute paths are supported.
      *
@@ -326,7 +341,8 @@ public class TranslationConfiguration {
           includeWhitelist,
           includeBlacklist,
           passes,
-          codeInNodes);
+          codeInNodes,
+          disableCleanup);
     }
   }
 }

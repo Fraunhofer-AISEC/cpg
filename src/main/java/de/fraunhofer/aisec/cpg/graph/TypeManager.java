@@ -38,6 +38,8 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.builder.ToStringBuilder;
+import org.checkerframework.checker.nullness.qual.NonNull;
+import org.checkerframework.checker.nullness.qual.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -49,14 +51,16 @@ public class TypeManager {
       List.of("byte", "short", "int", "long", "float", "double", "boolean", "char");
   private static final Pattern funPointerPattern =
       Pattern.compile("\\(?\\*(?<alias>[^()]+)\\)?\\(.*\\)");
-  private static TypeManager INSTANCE = new TypeManager();
+  @NonNull private static TypeManager INSTANCE = new TypeManager();
 
   public enum Language {
     JAVA,
     CXX
   }
 
-  private Map<String, RecordDeclaration> typeToRecord = new HashMap<>();
+  @NonNull private Map<String, RecordDeclaration> typeToRecord = new HashMap<>();
+
+  @NonNull
   private Map<Type, List<Type>> typeState =
       new HashMap<>(); // Stores all the unique types ObjectType as Key and Reference-/PointerTypes
   // as Values
@@ -69,6 +73,7 @@ public class TypeManager {
     INSTANCE = new TypeManager();
   }
 
+  @NonNull
   public Map<Type, List<Type>> getTypeState() {
     return typeState;
   }
@@ -97,7 +102,7 @@ public class TypeManager {
     return INSTANCE;
   }
 
-  public void setLanguageFrontend(LanguageFrontend frontend) {
+  public void setLanguageFrontend(@NonNull LanguageFrontend frontend) {
     this.frontend = frontend;
   }
 
@@ -178,7 +183,8 @@ public class TypeManager {
     }
   }
 
-  public Optional<Type> getCommonType(Collection<Type> types) {
+  @NonNull
+  public Optional<Type> getCommonType(@NonNull Collection<Type> types) {
 
     boolean sameType =
         types.stream().map(t -> t.getClass().getCanonicalName()).collect(Collectors.toSet()).size()
@@ -282,6 +288,7 @@ public class TypeManager {
     return ancestors;
   }
 
+  @NonNull
   public Language getLanguage() {
     if (frontend instanceof JavaLanguageFrontend) {
       return Language.JAVA;
@@ -290,6 +297,7 @@ public class TypeManager {
     }
   }
 
+  @Nullable
   public LanguageFrontend getFrontend() {
     return frontend;
   }
