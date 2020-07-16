@@ -1,6 +1,7 @@
 package de.fraunhofer.aisec.cpg.helpers;
 
 import de.fraunhofer.aisec.cpg.graph.*;
+
 import java.util.*;
 
 public class ControlFlowSensitiveDFG {
@@ -83,6 +84,10 @@ public class ControlFlowSensitiveDFG {
     }
   }
 
+  /**
+   * Reverses the removal of prevDFG for VariableDeclarations perfomed by {@link
+   * #addVisitedToMap(VariableDeclaration)}, when there a unique DFG path
+   */
   private void addUniqueDFGs() {
     for (VariableDeclaration v : this.variables.keySet()) {
       if (this.variables.get(v).size() == 1) {
