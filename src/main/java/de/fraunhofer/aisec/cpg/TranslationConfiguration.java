@@ -266,6 +266,11 @@ public class TranslationConfiguration {
       return this;
     }
 
+    public Builder disableCleanup() {
+      this.disableCleanup = true;
+      return this;
+    }
+
     /**
      * Adds the specified file to the include blacklist. Relative and absolute paths are supported.
      *
