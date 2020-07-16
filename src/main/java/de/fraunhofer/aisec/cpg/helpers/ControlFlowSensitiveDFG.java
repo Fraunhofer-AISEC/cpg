@@ -83,6 +83,14 @@ public class ControlFlowSensitiveDFG {
     }
   }
 
+  private void addUniqueDFGs() {
+    for (VariableDeclaration v : this.variables.keySet()) {
+      if (this.variables.get(v).size() == 1) {
+        v.addPrevDFG(this.variables.get(v).iterator().next());
+      }
+    }
+  }
+
   /**
    * Traverses the EOG starting at a node until there is no more outgoing EOGs to new nodes.
    *
@@ -298,6 +306,10 @@ public class ControlFlowSensitiveDFG {
       }
 
       currNode = nextNode;
+    }
+
+    if (this.startNode instanceof FunctionDeclaration) {
+      addUniqueDFGs();
     }
   }
 }
