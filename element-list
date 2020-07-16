@@ -7,4 +7,6 @@ de.fraunhofer.aisec.cpg.graph.type
 de.fraunhofer.aisec.cpg.helpers
 de.fraunhofer.aisec.cpg.passes
 de.fraunhofer.aisec.cpg.passes.scopes
+de.fraunhofer.aisec.cpg.processing
+de.fraunhofer.aisec.cpg.processing.strategy
 de.fraunhofer.aisec.cpg.sarif
