@@ -73,6 +73,7 @@ public class TypeManager {
     INSTANCE = new TypeManager();
   }
 
+  @NonNull
   public Map<Type, List<Type>> getTypeState() {
     return typeState;
   }
@@ -182,7 +183,8 @@ public class TypeManager {
     }
   }
 
-  public Optional<Type> getCommonType(Collection<Type> types) {
+  @NonNull
+  public Optional<Type> getCommonType(@NonNull Collection<Type> types) {
 
     boolean sameType =
         types.stream().map(t -> t.getClass().getCanonicalName()).collect(Collectors.toSet()).size()
@@ -286,6 +288,7 @@ public class TypeManager {
     return ancestors;
   }
 
+  @NonNull
   public Language getLanguage() {
     if (frontend instanceof JavaLanguageFrontend) {
       return Language.JAVA;
