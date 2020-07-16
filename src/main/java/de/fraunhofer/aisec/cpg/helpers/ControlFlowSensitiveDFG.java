@@ -1,6 +1,7 @@
 package de.fraunhofer.aisec.cpg.helpers;
 
 import de.fraunhofer.aisec.cpg.graph.*;
+import org.eclipse.cdt.internal.core.model.Variable;
 
 import java.util.*;
 
@@ -55,9 +56,9 @@ public class ControlFlowSensitiveDFG {
       Map<VariableDeclaration, Set<Node>> in) {
     Map<VariableDeclaration, Set<Node>> duplicatedVariables = new HashMap<>();
 
-    for (VariableDeclaration v : in.keySet()) {
-      Set<Node> nodes = new HashSet<>(in.get(v));
-      duplicatedVariables.put(v, nodes);
+    for (Map.Entry<VariableDeclaration, Set<Node>> e : in.entrySet()) {
+      Set<Node> nodes = new HashSet<>(e.getValue());
+      duplicatedVariables.put(e.getKey(), nodes);
     }
 
     return duplicatedVariables;
@@ -71,9 +72,9 @@ public class ControlFlowSensitiveDFG {
         if (variables.containsKey(variableDeclaration)) {
           variables.get(variableDeclaration).add(prev);
         } else {
-          Set<Node> DFGSet = new HashSet<>();
-          DFGSet.add(prev);
-          variables.put(variableDeclaration, DFGSet);
+          Set<Node> dfgSet = new HashSet<>();
+          dfgSet.add(prev);
+          variables.put(variableDeclaration, dfgSet);
         }
         removePrevDFG.add(prev);
       }
@@ -89,9 +90,9 @@ public class ControlFlowSensitiveDFG {
    * #addVisitedToMap(VariableDeclaration)}, when there a unique DFG path
    */
   private void addUniqueDFGs() {
-    for (VariableDeclaration v : this.variables.keySet()) {
-      if (this.variables.get(v).size() == 1) {
-        v.addPrevDFG(this.variables.get(v).iterator().next());
+    for (Map.Entry<VariableDeclaration, Set<Node>> entry : this.variables.entrySet()) {
+      if (entry.getValue().size() == 1) {
+        entry.getKey().addPrevDFG(entry.getValue().iterator().next());
       }
     }
   }
@@ -100,31 +101,14 @@ public class ControlFlowSensitiveDFG {
    * Traverses the EOG starting at a node until there is no more outgoing EOGs to new nodes.
    *
    * @param node starting node
-   * @param eogReachableNodes set containing all nodes that have been reached (loop prevention)
    * @return set containing all nodes that have been reached
    */
-  private Set<Node> eogTraversal(Node node, Set<Node> eogReachableNodes) {
-    return eogTraversal2(node);
-    /*if (eogReachableNodes.contains(node)) {
-      return eogReachableNodes;
-    }
-
-    eogReachableNodes.add(node);
-
-    Set<Node> nextEog = new HashSet<>(node.getNextEOG());
-    for (Node n : nextEog) {
-      eogReachableNodes.addAll(eogTraversal(n, eogReachableNodes));
-    }
-
-    return eogReachableNodes;*/
-  }
-
-  private Set<Node> eogTraversal2(Node node) {
+  private Set<Node> eogTraversal(Node node) {
     Set<Node> eogReachableNodes = new HashSet<>();
     Set<Node> checkRechable = new HashSet<>();
     checkRechable.add(node);
 
-    while (checkRechable.size() > 0) {
+    while (!checkRechable.isEmpty()) {
       Node n = checkRechable.iterator().next();
       checkRechable.addAll(n.getNextEOG());
       eogReachableNodes.add(n);
@@ -143,8 +127,7 @@ public class ControlFlowSensitiveDFG {
     Set<Node> nextEOG = new HashSet<>(node.getNextEOG());
     List<Set<Node>> eogs = new ArrayList<>();
     for (Node next : nextEOG) {
-      Set<Node> rechableEOG = new HashSet<>();
-      eogs.add(eogTraversal(next, rechableEOG));
+      eogs.add(eogTraversal(next));
     }
 
     // Calculate intersection to locate point in which the execution paths join
@@ -163,7 +146,7 @@ public class ControlFlowSensitiveDFG {
       Optional<Node> elementFromSet = intersection.stream().findFirst();
       if (elementFromSet.isPresent()) {
         element = elementFromSet.get();
-        Set<Node> eog = eogTraversal(element, new HashSet<>());
+        Set<Node> eog = eogTraversal(element);
         eog.remove(element);
         intersection.removeAll(eog);
       }
