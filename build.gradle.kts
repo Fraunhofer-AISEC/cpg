@@ -95,7 +95,7 @@ repositories {
     mavenCentral()
 
     ivy {
-        setUrl("https://download.eclipse.org/tools/cdt/releases/9.10/cdt-9.10.0/plugins")
+        setUrl("https://download.eclipse.org/tools/cdt/releases/9.11/cdt-9.11.1/plugins")
         metadataSources {
             artifact()
         }
@@ -145,11 +145,11 @@ dependencies {
     api("com.github.javaparser:javaparser-symbol-solver-core:3.16.1")
 
     // Eclipse dependencies
-    api("org.eclipse.platform:org.eclipse.core.runtime:3.17.0")
-    api("com.ibm.icu:icu4j:65.1")
+    api("org.eclipse.platform:org.eclipse.core.runtime:3.18.0")
+    api("com.ibm.icu:icu4j:67.1")
 
     // CDT
-    api("org.eclipse.cdt:core:6.10.0.201912051559")
+    api("org.eclipse.cdt:core:6.11.1.202006011430")
 
     // JUnit
     testImplementation("org.junit.jupiter:junit-jupiter-api:5.6.2")
