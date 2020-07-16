@@ -20,7 +20,9 @@ import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker;
 public class ControlFlowSensitiveDFGPass extends Pass {
 
   @Override
-  public void cleanup() {}
+  public void cleanup() {
+    // Nothing to cleanup
+  }
 
   @Override
   public void accept(TranslationResult translationResult) {

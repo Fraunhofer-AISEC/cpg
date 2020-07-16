@@ -1,8 +1,6 @@
 package de.fraunhofer.aisec.cpg.helpers;
 
 import de.fraunhofer.aisec.cpg.graph.*;
-import org.eclipse.cdt.internal.core.model.Variable;
-
 import java.util.*;
 
 public class ControlFlowSensitiveDFG {
@@ -237,6 +235,37 @@ public class ControlFlowSensitiveDFG {
     return null;
   }
 
+  /**
+   * Handles when there is a mutually exclusive split for the DFG
+   *
+   * @param currNode node where the split occcurs (e.g. IfStatement or SwitchStatement)
+   * @return node at which the split is over and both execution paths are equal again
+   */
+  private Node handleDFGSplit(Node currNode) {
+    // TODO Currently we treat the CaseStatements in SwitchStatements as if they were mutually
+    // exclusive. This must be updated once we have an order for the cases to determine the
+    // target of a fall through
+    // If an IfStatement or a SwitchStatement is found we split the ControlFlowSensitiveDFG for
+    // every case and merge it, when the execution reaches the joinPoint
+    Node joinNode = obtainJoinPoint(currNode);
+
+    List<Node> eogList = currNode.getNextEOG();
+    List<ControlFlowSensitiveDFG> dfgs = new ArrayList<>();
+    for (Node n : eogList) {
+      ControlFlowSensitiveDFG dfg =
+          new ControlFlowSensitiveDFG(n, joinNode, variables, this.visitedEOG);
+      dfgs.add(dfg);
+      dfg.handle();
+    }
+
+    this.variables = joinVariables(dfgs);
+
+    for (ControlFlowSensitiveDFG dfg : dfgs) {
+      this.visitedEOG.addAll(dfg.getVisitedEOG());
+    }
+    return joinNode;
+  }
+
   /** Main method that performs the ControlFlowSensitveDFG analysis and transformation. */
   public void handle() {
     Node currNode = startNode;
@@ -246,7 +275,7 @@ public class ControlFlowSensitiveDFG {
       visitedEOG.add(currNode);
 
       List<Node> nextEOG = currNode.getNextEOG();
-      if (nextEOG.size() == 0) {
+      if (nextEOG.isEmpty()) {
         break;
       }
 
@@ -254,29 +283,7 @@ public class ControlFlowSensitiveDFG {
         // New VariableDeclaration is found, and we start the tracking
         addVisitedToMap((VariableDeclaration) currNode);
       } else if (currNode instanceof IfStatement || currNode instanceof SwitchStatement) {
-        // TODO Currently we treat the CaseStatements in SwitchStatements as if they were mutually
-        // exclusive. This must be updated once we have an order for the cases to determine the
-        // target of a fall through
-        // If an IfStatement or a SwitchStatement is found we split the ControlFlowSensitiveDFG for
-        // every case and merge it, when the execution reaches the joinPoint
-        Node joinNode = obtainJoinPoint(currNode);
-
-        List<Node> eogList = currNode.getNextEOG();
-        List<ControlFlowSensitiveDFG> dfgs = new ArrayList<>();
-        for (Node n : eogList) {
-          ControlFlowSensitiveDFG dfg =
-              new ControlFlowSensitiveDFG(n, joinNode, variables, this.visitedEOG);
-          dfgs.add(dfg);
-          dfg.handle();
-        }
-
-        this.variables = joinVariables(dfgs);
-
-        for (ControlFlowSensitiveDFG dfg : dfgs) {
-          this.visitedEOG.addAll(dfg.getVisitedEOG());
-        }
-
-        nextNode = joinNode;
+        nextNode = handleDFGSplit(currNode);
 
       } else if (currNode instanceof DeclaredReferenceExpression) {
         // A DeclaredReferenceExpression makes use of one of the VariableDeclaration we are
