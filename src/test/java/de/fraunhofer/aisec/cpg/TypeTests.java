@@ -626,6 +626,28 @@ class TypeTests extends BaseTest {
             ObjectType.Modifier.NOT_APPLICABLE,
             false);
     assertEquals(expected, result);
+
+    result = TypeParser.createFrom("Array<myclass >", true);
+    generics = new ArrayList<>();
+    generic =
+        new ObjectType(
+            "myclass",
+            Type.Storage.AUTO,
+            new Type.Qualifier(),
+            new ArrayList<>(),
+            ObjectType.Modifier.NOT_APPLICABLE,
+            false);
+    generics.add(generic);
+
+    expected =
+        new ObjectType(
+            "Array",
+            Type.Storage.AUTO,
+            new Type.Qualifier(),
+            generics,
+            ObjectType.Modifier.NOT_APPLICABLE,
+            false);
+    assertEquals(expected, result);
   }
 
   // Tests on the resulting graph

@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.graph.type;
 
 import de.fraunhofer.aisec.cpg.graph.TypeManager;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.function.Supplier;
 import java.util.regex.Matcher;
@@ -272,18 +273,32 @@ public class TypeParser {
   private static String fixGenerics(@NonNull String type) {
     if (type.contains("<") && type.contains(">")) {
       String generics = type.substring(type.indexOf('<') + 1, type.lastIndexOf('>'));
-      for (String elaborated : elaboratedTypes) {
-        if (getLanguage() == TypeManager.Language.CXX && generics.contains(elaborated + " ")) {
-          generics = generics.replace(elaborated + " ", "");
+      String[] genericsBlocks = generics.split(",");
+
+      // elaborated type must
+      List<String> clearedGenericBlock = new ArrayList<>();
+      boolean containsElaboratedType;
+      for (String generic : genericsBlocks) {
+        containsElaboratedType = false;
+        for (String elaborated : elaboratedTypes) {
+          if (getLanguage() == TypeManager.Language.CXX
+              && generic.trim().startsWith((elaborated + " "))) {
+            clearedGenericBlock.add(generic.replace(elaborated + " ", ""));
+            containsElaboratedType = true;
+          }
+        }
+        if (!containsElaboratedType) {
+          clearedGenericBlock.add(generic);
         }
       }
+
+      generics = String.join(",", clearedGenericBlock);
 
       type =
           type.substring(0, type.indexOf('<') + 1)
               + generics.trim()
               + type.substring(type.lastIndexOf('>'));
     }
-
 
     StringBuilder out = new StringBuilder();
     int bracketCount = 0;
