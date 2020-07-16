@@ -28,7 +28,6 @@ package de.fraunhofer.aisec.cpg.graph.type;
 
 import de.fraunhofer.aisec.cpg.graph.TypeManager;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.function.Supplier;
 import java.util.regex.Matcher;
@@ -271,29 +270,12 @@ public class TypeParser {
    */
   @NonNull
   private static String fixGenerics(@NonNull String type) {
-    if (type.contains("<") && type.contains(">")) {
+    if (type.contains("<") && type.contains(">") && getLanguage() == TypeManager.Language.CXX) {
       String generics = type.substring(type.indexOf('<') + 1, type.lastIndexOf('>'));
-      String[] genericsBlocks = generics.split(",");
 
-      // elaborated type must
-      List<String> clearedGenericBlock = new ArrayList<>();
-      boolean containsElaboratedType;
-      for (String generic : genericsBlocks) {
-        containsElaboratedType = false;
-        for (String elaborated : elaboratedTypes) {
-          if (getLanguage() == TypeManager.Language.CXX
-              && generic.trim().startsWith((elaborated + " "))) {
-            clearedGenericBlock.add(generic.replace(elaborated + " ", ""));
-            containsElaboratedType = true;
-          }
-        }
-        if (!containsElaboratedType) {
-          clearedGenericBlock.add(generic);
-        }
+      for (String elaborate : elaboratedTypes) {
+        generics = generics.replaceAll("(^|(?<=[\\h,<]))\\h*(?<main>" + elaborate + "\\h+)", "");
       }
-
-      generics = String.join(",", clearedGenericBlock);
-
       type =
           type.substring(0, type.indexOf('<') + 1)
               + generics.trim()
