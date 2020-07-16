@@ -284,6 +284,7 @@ public class TypeParser {
               + type.substring(type.lastIndexOf('>'));
     }
 
+
     StringBuilder out = new StringBuilder();
     int bracketCount = 0;
     int iterator = 0;
