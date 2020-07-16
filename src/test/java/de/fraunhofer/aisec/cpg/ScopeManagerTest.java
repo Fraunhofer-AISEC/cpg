@@ -44,7 +44,7 @@ class ScopeManagerTest extends BaseTest {
 
   @Test
   void testSetScope() throws TranslationException {
-    LanguageFrontend frontend = new JavaLanguageFrontend(config, new ScopeManager());
+    LanguageFrontend frontend = new JavaLanguageFrontend(null, config);
 
     assert (frontend == frontend.getScopeManager().getLang());
 

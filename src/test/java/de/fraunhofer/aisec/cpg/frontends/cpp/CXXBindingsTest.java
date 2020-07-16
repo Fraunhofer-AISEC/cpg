@@ -7,7 +7,6 @@ import de.fraunhofer.aisec.cpg.TranslationConfiguration;
 import de.fraunhofer.aisec.cpg.graph.Declaration;
 import de.fraunhofer.aisec.cpg.graph.DeclaredReferenceExpression;
 import de.fraunhofer.aisec.cpg.graph.Expression;
-import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager;
 import java.io.File;
 import org.eclipse.cdt.core.dom.ast.IBinding;
 import org.junit.jupiter.api.Test;
@@ -27,18 +26,20 @@ class CXXBindingsTest extends BaseTest {
 
   @Test
   void testUseThenDeclaration() throws Exception {
+    File file = new File("src/test/resources/bindings/use_then_declare.cpp");
     CXXLanguageFrontend cxxLanguageFrontend =
-        new CXXLanguageFrontend(TranslationConfiguration.builder().build(), new ScopeManager());
-    cxxLanguageFrontend.parse(new File("src/test/resources/bindings/use_then_declare.cpp"));
+        new CXXLanguageFrontend(file, TranslationConfiguration.builder().build());
+    cxxLanguageFrontend.parse(file);
 
     checkBindings(cxxLanguageFrontend);
   }
 
   @Test
   void testDeclarationReplacement() throws Exception {
+    File file = new File("src/test/resources/bindings/replace_declaration.cpp");
     CXXLanguageFrontend cxxLanguageFrontend =
-        new CXXLanguageFrontend(TranslationConfiguration.builder().build(), new ScopeManager());
-    cxxLanguageFrontend.parse(new File("src/test/resources/bindings/replace_declaration.cpp"));
+        new CXXLanguageFrontend(file, TranslationConfiguration.builder().build());
+    cxxLanguageFrontend.parse(file);
 
     checkBindings(cxxLanguageFrontend);
   }

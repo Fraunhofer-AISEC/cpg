@@ -41,6 +41,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
+import java.util.concurrent.Callable;
 import java.util.function.BiConsumer;
 import java.util.function.BiPredicate;
 import org.apache.commons.lang3.StringUtils;
@@ -49,7 +50,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public abstract class LanguageFrontend {
+public abstract class LanguageFrontend implements Callable<TranslationUnitDeclaration> {
 
   protected static final Logger log = LoggerFactory.getLogger(LanguageFrontend.class);
   protected final TranslationConfiguration config;
@@ -73,12 +74,17 @@ public abstract class LanguageFrontend {
   //  private Map<String, FunctionDeclaration> functions = new HashMap<>();
   private Map<String, RecordDeclaration> records = new HashMap<>();
 
+  /** The current file this language frontend was created for */
+  private File file;
+
   // Todo Moving this to scope manager and add listeners and processedMappings to specified scopes.
 
   public LanguageFrontend(
+      File file,
       @NonNull TranslationConfiguration config,
       ScopeManager scopeManager,
       String namespaceDelimiter) {
+    this.file = file;
     this.config = config;
     this.namespaceDelimiter = namespaceDelimiter;
     this.scopeManager = scopeManager;
@@ -137,15 +143,6 @@ public abstract class LanguageFrontend {
     this.processedMapping.clear();
   }
 
-  public List<TranslationUnitDeclaration> parseAll() throws TranslationException {
-    ArrayList<TranslationUnitDeclaration> units = new ArrayList<>();
-    for (File sourceFile : this.config.getSourceLocations()) {
-      units.add(parse(sourceFile));
-    }
-
-    return units;
-  }
-
   @NonNull
   public ScopeManager getScopeManager() {
     return scopeManager;
@@ -164,7 +161,7 @@ public abstract class LanguageFrontend {
     this.currentTU = currentTU;
   }
 
-  public abstract TranslationUnitDeclaration parse(File file) throws TranslationException;
+  protected abstract TranslationUnitDeclaration parse(File file) throws TranslationException;
 
   /**
    * Returns the raw code of the ast node, generic for java or c++ ast nodes.
@@ -342,5 +339,10 @@ public abstract class LanguageFrontend {
    */
   public Optional<RecordDeclaration> getRecordForName(String name) {
     return Optional.ofNullable(this.records.get(name));
+  }
+
+  @Override
+  public TranslationUnitDeclaration call() throws Exception {
+    return parse(this.file);
   }
 }

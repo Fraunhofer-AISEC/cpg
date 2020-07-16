@@ -26,26 +26,26 @@
 
 package de.fraunhofer.aisec.cpg.frontends.cpp;
 
+import static de.fraunhofer.aisec.cpg.TestUtils.analyzeAndGetFirstTU;
+import static de.fraunhofer.aisec.cpg.TestUtils.analyzeWithBuilder;
 import static org.junit.jupiter.api.Assertions.*;
 
 import de.fraunhofer.aisec.cpg.BaseTest;
 import de.fraunhofer.aisec.cpg.TranslationConfiguration;
-import de.fraunhofer.aisec.cpg.frontends.TranslationException;
 import de.fraunhofer.aisec.cpg.graph.*;
-import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager;
 import java.io.File;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
 
 class CXXSymbolConfigurationTest extends BaseTest {
   @Test
-  void testWithoutSymbols() throws TranslationException {
+  void testWithoutSymbols() throws Exception {
+    File file = new File("src/test/resources/symbols.cpp");
     // parse without symbols
     TranslationUnitDeclaration tu =
-        new CXXLanguageFrontend(
-                TranslationConfiguration.builder().defaultPasses().build(), new ScopeManager())
-            .parse(new File("src/test/resources/symbols.cpp"));
+        analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true);
 
     Set<FunctionDeclaration> main = tu.getDeclarationsByName("main", FunctionDeclaration.class);
     assertFalse(main.isEmpty());
@@ -71,19 +71,21 @@ class CXXSymbolConfigurationTest extends BaseTest {
   }
 
   @Test
-  void testWithSymbols() throws TranslationException {
-    // let's try with symbol definitions
+  void testWithSymbols() throws Exception {
+    File file = new File("src/test/resources/symbols.cpp");
+
     TranslationUnitDeclaration tu =
-        new CXXLanguageFrontend(
+        analyzeWithBuilder(
                 TranslationConfiguration.builder()
+                    .sourceLocations(List.of(file))
+                    .topLevel(file.getParentFile())
                     .symbols(
                         Map.of(
                             "HELLO_WORLD", "\"Hello World\"",
                             "INCREASE(X)", "X+1"))
-                    .defaultPasses()
-                    .build(),
-                new ScopeManager())
-            .parse(new File("src/test/resources/symbols.cpp"));
+                    .defaultPasses())
+            .iterator()
+            .next();
 
     Set<FunctionDeclaration> main = tu.getDeclarationsByName("main", FunctionDeclaration.class);
     assertFalse(main.isEmpty());

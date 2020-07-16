@@ -29,9 +29,9 @@ package de.fraunhofer.aisec.cpg;
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontendFactory;
 import de.fraunhofer.aisec.cpg.frontends.TranslationException;
+import de.fraunhofer.aisec.cpg.graph.TranslationUnitDeclaration;
 import de.fraunhofer.aisec.cpg.graph.TypeManager;
 import de.fraunhofer.aisec.cpg.helpers.Benchmark;
-import de.fraunhofer.aisec.cpg.helpers.Util;
 import de.fraunhofer.aisec.cpg.passes.Pass;
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager;
 import java.io.File;
@@ -41,6 +41,10 @@ import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -53,11 +57,15 @@ public class TranslationManager {
 
   private static final Logger log = LoggerFactory.getLogger(TranslationManager.class);
 
-  @NonNull private TranslationConfiguration config;
-  private AtomicBoolean isCancelled = new AtomicBoolean(false);
+  @NonNull private final TranslationConfiguration config;
+  private final AtomicBoolean isCancelled = new AtomicBoolean(false);
+
+  private ExecutorService executorService;
 
   private TranslationManager(@NonNull TranslationConfiguration config) {
     this.config = config;
+
+    this.executorService = Executors.newCachedThreadPool();
   }
 
   public static Builder builder() {
@@ -146,6 +154,7 @@ public class TranslationManager {
     List<File> sourceLocations = new ArrayList<>(this.config.getSourceLocations());
     HashSet<LanguageFrontend> usedFrontends = new HashSet<>();
 
+    List<Future<TranslationUnitDeclaration>> translationUnits = new ArrayList<>();
     for (int i = 0; i < sourceLocations.size(); i++) {
       File sourceLocation = sourceLocations.get(i);
 
@@ -163,9 +172,7 @@ public class TranslationManager {
       log.info("Parsing {}", sourceLocation.getAbsolutePath());
       LanguageFrontend frontend = null;
       try {
-        frontend =
-            LanguageFrontendFactory.getFrontend(
-                Util.getExtension(sourceLocation), config, scopeManager);
+        frontend = LanguageFrontendFactory.getFrontend(sourceLocation, config, scopeManager);
         if (frontend == null) {
           log.error("Found no parser frontend for {}", sourceLocation.getName());
 
@@ -193,7 +200,10 @@ public class TranslationManager {
                         x -> new HashMap<String, String>());
         sfToFe.put(sourceLocation.getName(), frontend.getClass().getSimpleName());
 
-        result.getTranslationUnits().add(frontend.parse(sourceLocation));
+        // result.getTranslationUnits().add(frontend.parse(sourceLocation));
+        Future<TranslationUnitDeclaration> f = this.executorService.submit(frontend);
+
+        translationUnits.add(f);
       } catch (TranslationException ex) {
         log.error(
             "An error occurred during parsing of {}: {}",
@@ -210,6 +220,15 @@ public class TranslationManager {
         pass.setLang(frontend);
       }
     }
+
+    for (Future<TranslationUnitDeclaration> f : translationUnits) {
+      try {
+        result.getTranslationUnits().add(f.get());
+      } catch (InterruptedException | ExecutionException e) {
+        e.printStackTrace();
+      }
+    }
+
     return usedFrontends;
   }
 

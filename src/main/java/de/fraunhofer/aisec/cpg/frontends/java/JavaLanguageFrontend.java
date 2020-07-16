@@ -76,8 +76,8 @@ public class JavaLanguageFrontend extends LanguageFrontend {
   private JavaSymbolSolver javaSymbolResolver;
   private CombinedTypeSolver internalTypeSolver = new CombinedTypeSolver();
 
-  public JavaLanguageFrontend(@NonNull TranslationConfiguration config, ScopeManager scopeManager) {
-    super(config, scopeManager, ".");
+  public JavaLanguageFrontend(File file, @NonNull TranslationConfiguration config) {
+    super(file, config, new ScopeManager(), ".");
 
     ReflectionTypeSolver reflectionTypeSolver = new ReflectionTypeSolver();
     internalTypeSolver.add(reflectionTypeSolver);
@@ -98,7 +98,7 @@ public class JavaLanguageFrontend extends LanguageFrontend {
   }
 
   @Override
-  public TranslationUnitDeclaration parse(File file) throws TranslationException {
+  protected TranslationUnitDeclaration parse(File file) throws TranslationException {
     TypeManager.getInstance().setLanguageFrontend(this);
 
     // load in the file

@@ -192,8 +192,8 @@ public class CXXLanguageFrontend extends LanguageFrontend {
   private HashMap<IBinding, List<Expression>> cachedExpressions = new HashMap<>();
   private HashMap<Integer, String> comments = new HashMap<>();
 
-  public CXXLanguageFrontend(@NonNull TranslationConfiguration config, ScopeManager scopeManager) {
-    super(config, scopeManager, "::");
+  public CXXLanguageFrontend(File file, @NonNull TranslationConfiguration config) {
+    super(file, config, new ScopeManager(), "::");
   }
 
   /**
@@ -245,7 +245,7 @@ public class CXXLanguageFrontend extends LanguageFrontend {
   }
 
   @Override
-  public TranslationUnitDeclaration parse(File file) throws TranslationException {
+  protected TranslationUnitDeclaration parse(File file) throws TranslationException {
     TypeManager.getInstance().setLanguageFrontend(this);
     FileContent content = FileContent.createForExternalFileLocation(file.getAbsolutePath());
 
