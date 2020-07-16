@@ -1,7 +1,7 @@
 package de.fraunhofer.aisec.cpg.passes;
 
 import de.fraunhofer.aisec.cpg.TranslationResult;
-import de.fraunhofer.aisec.cpg.graph.MethodDeclaration;
+import de.fraunhofer.aisec.cpg.graph.FunctionDeclaration;
 import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.TranslationUnitDeclaration;
 import de.fraunhofer.aisec.cpg.helpers.ControlFlowSensitiveDFG;
@@ -37,7 +37,7 @@ public class ControlFlowSensitiveDFGPass extends Pass {
    * @param node every node in the TranslationResult
    */
   public void handle(Node node) {
-    if (node instanceof MethodDeclaration) {
+    if (node instanceof FunctionDeclaration) {
       ControlFlowSensitiveDFG controlFlowSensitiveDFG = new ControlFlowSensitiveDFG(node);
       controlFlowSensitiveDFG.handle();
     }
