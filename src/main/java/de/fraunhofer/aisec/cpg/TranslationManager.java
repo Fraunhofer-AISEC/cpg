@@ -112,8 +112,10 @@ public class TranslationManager {
                 log.warn("Analysis interrupted, stopping Pass evaluation");
               }
             }
-          } catch (TranslationException ex) {
+          } catch (ExecutionException | TranslationException ex) {
             throw new CompletionException(ex);
+          } catch (InterruptedException ex) {
+            Thread.currentThread().interrupt();
           } finally {
             outerBench.stop();
             log.debug("Cleaning up {} Passes", passesNeedCleanup.size());
@@ -144,14 +146,14 @@ public class TranslationManager {
    *
    * @param result the translation result that is being mutated
    * @param config the translation configuration
-   * @throws TranslationException if the language front-end runs into an error and <code>failOnError
+   * @throws ExecutionException if the language front-end runs into an error and <code>failOnError
    * </code> is <code>true</code>.
    */
   private HashSet<LanguageFrontend> runFrontends(
       @NonNull TranslationResult result,
       @NonNull TranslationConfiguration config,
       @NonNull GlobalScope globalScope)
-      throws TranslationException {
+      throws TranslationException, ExecutionException, InterruptedException {
 
     List<File> sourceLocations = new ArrayList<>(this.config.getSourceLocations());
     HashSet<LanguageFrontend> usedFrontends = new HashSet<>();
@@ -173,49 +175,39 @@ public class TranslationManager {
 
       log.info("Parsing {}", sourceLocation.getAbsolutePath());
       LanguageFrontend frontend = null;
-      try {
-        frontend = LanguageFrontendFactory.getFrontend(sourceLocation, config, globalScope);
-        if (frontend == null) {
-          log.error("Found no parser frontend for {}", sourceLocation.getName());
 
-          if (config.failOnError) {
-            throw new TranslationException(
-                "Found no parser frontend for " + sourceLocation.getName());
-          }
-          continue;
-        }
-        for (LanguageFrontend previous : usedFrontends) {
-          if (!previous.getClass().equals(frontend.getClass())) {
-            log.error(
-                "Different frontends are used for multiple files. This will very likely break the following passes.");
-          }
-        }
-        usedFrontends.add(frontend);
-
-        // remember which frontend parsed each file
-        Map<String, String> sfToFe =
-            (Map<String, String>)
-                result
-                    .getScratch()
-                    .computeIfAbsent(
-                        TranslationResult.SOURCE_LOCATIONS_TO_FRONTEND,
-                        x -> new HashMap<String, String>());
-        sfToFe.put(sourceLocation.getName(), frontend.getClass().getSimpleName());
-
-        // result.getTranslationUnits().add(frontend.parse(sourceLocation));
-        Future<TranslationUnitDeclaration> f = this.executorService.submit(frontend);
-
-        translationUnits.add(f);
-      } catch (TranslationException ex) {
-        log.error(
-            "An error occurred during parsing of {}: {}",
-            sourceLocation.getName(),
-            ex.getMessage());
+      frontend = LanguageFrontendFactory.getFrontend(sourceLocation, config, globalScope);
+      if (frontend == null) {
+        log.error("Found no parser frontend for {}", sourceLocation.getName());
 
         if (config.failOnError) {
-          throw ex;
+          throw new TranslationException(
+              "Found no parser frontend for " + sourceLocation.getName());
+        }
+        continue;
+      }
+      for (LanguageFrontend previous : usedFrontends) {
+        if (!previous.getClass().equals(frontend.getClass())) {
+          log.error(
+              "Different frontends are used for multiple files. This will very likely break the following passes.");
         }
       }
+      usedFrontends.add(frontend);
+
+      // remember which frontend parsed each file
+      Map<String, String> sfToFe =
+          (Map<String, String>)
+              result
+                  .getScratch()
+                  .computeIfAbsent(
+                      TranslationResult.SOURCE_LOCATIONS_TO_FRONTEND,
+                      x -> new HashMap<String, String>());
+      sfToFe.put(sourceLocation.getName(), frontend.getClass().getSimpleName());
+
+      // result.getTranslationUnits().add(frontend.parse(sourceLocation));
+      Future<TranslationUnitDeclaration> f = this.executorService.submit(frontend);
+
+      translationUnits.add(f);
 
       // Set frontend so passes know what language they are working on.
       for (Pass pass : config.getRegisteredPasses()) {
@@ -224,10 +216,10 @@ public class TranslationManager {
     }
 
     for (Future<TranslationUnitDeclaration> f : translationUnits) {
-      try {
-        result.getTranslationUnits().add(f.get());
-      } catch (InterruptedException | ExecutionException e) {
-        e.printStackTrace();
+      TranslationUnitDeclaration tu = f.get();
+
+      if (tu != null) {
+        result.getTranslationUnits().add(tu);
       }
     }
 

@@ -343,6 +343,16 @@ public abstract class LanguageFrontend implements Callable<TranslationUnitDeclar
 
   @Override
   public TranslationUnitDeclaration call() throws Exception {
-    return parse(this.file);
+    try {
+      return parse(this.file);
+    } catch (Exception ex) {
+      log.error("An error occurred during parsing of {}: {}", file.getName(), ex.getMessage());
+
+      if (config.failOnError) {
+        throw ex;
+      }
+
+      return null;
+    }
   }
 }

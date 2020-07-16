@@ -81,7 +81,7 @@ public class TranslationConfiguration {
    * Should parser/translation fail on parse/resolving errors (true) or try to continue in a
    * best-effort manner (false).
    */
-  final boolean failOnError;
+  public final boolean failOnError;
 
   /** Definition of additional symbols, mostly useful for C++. */
   public final Map<String, String> symbols;
