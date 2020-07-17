@@ -61,6 +61,13 @@ public class TypeParser {
   private static final String ELABORATED_TYPE_UNION = "union";
   private static final String ELABORATED_TYPE_ENUM = "enum";
 
+  private static final List<String> elaboratedTypes =
+      List.of(
+          ELABORATED_TYPE_CLASS,
+          ELABORATED_TYPE_STRUCT,
+          ELABORATED_TYPE_UNION,
+          ELABORATED_TYPE_ENUM);
+
   private TypeParser() {
     throw new IllegalStateException("Do not instantiate the TypeParser");
   }
@@ -263,6 +270,27 @@ public class TypeParser {
    */
   @NonNull
   private static String fixGenerics(@NonNull String type) {
+    if (type.contains("<") && type.contains(">") && getLanguage() == TypeManager.Language.CXX) {
+      String generics = type.substring(type.indexOf('<') + 1, type.lastIndexOf('>'));
+
+      /* Explanation from @vfsrfs:
+       * We fist extract the generic string (the substring between < and >). Then, the elaborate
+       * string can either start directly with the elaborate type specifier e.g. struct Node or it
+       * must be preceded by <, \\h (horizontal whitespace), or ,. If any other character precedes
+       * the elaborate type specifier then it is not considered to be a type specifier e.g.
+       * mystruct. Then there can be an arbitrary amount of horizontal whitespaces. This is followed
+       * by the elaborate type specifier and at least one more horizontal whitespace, which marks
+       * that it is indeed an elaborate type and not something like structMy.
+       */
+      for (String elaborate : elaboratedTypes) {
+        generics = generics.replaceAll("(^|(?<=[\\h,<]))\\h*(?<main>" + elaborate + "\\h+)", "");
+      }
+      type =
+          type.substring(0, type.indexOf('<') + 1)
+              + generics.trim()
+              + type.substring(type.lastIndexOf('>'));
+    }
+
     StringBuilder out = new StringBuilder();
     int bracketCount = 0;
     int iterator = 0;
@@ -729,7 +757,6 @@ public class TypeParser {
       // Note that "const auto ..." will end here with typeName="const" as auto is not supported.
       return UnknownType.getUnknownType();
     }
-    assert counter < typeBlocks.size();
     String typeName = typeBlocks.get(counter);
     counter++;
 
