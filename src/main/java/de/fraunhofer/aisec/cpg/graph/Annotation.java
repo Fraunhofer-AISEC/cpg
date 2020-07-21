@@ -27,6 +27,7 @@
 package de.fraunhofer.aisec.cpg.graph;
 
 import java.util.List;
+import java.util.Objects;
 
 public class Annotation extends Node {
 
@@ -39,5 +40,23 @@ public class Annotation extends Node {
 
   public void setValues(List<Expression> values) {
     this.values = values;
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) {
+      return true;
+    }
+    if (!(o instanceof Annotation)) {
+      return false;
+    }
+
+    Annotation that = (Annotation) o;
+    return super.equals(that) && Objects.equals(values, that.values);
+  }
+
+  @Override
+  public int hashCode() {
+    return super.hashCode();
   }
 }
