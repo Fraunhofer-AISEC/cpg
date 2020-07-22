@@ -63,6 +63,7 @@ import org.eclipse.cdt.core.dom.ast.IASTNode;
 import org.eclipse.cdt.core.dom.ast.IASTPointerOperator;
 import org.eclipse.cdt.core.dom.ast.IASTTranslationUnit;
 import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTCompositeTypeSpecifier;
+import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTElaboratedTypeSpecifier;
 import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTFunctionDefinition;
 import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTLinkageSpecification;
 import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTName;
@@ -271,6 +272,9 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
       this.lang.processAttributes(declaration, ctx);
 
       sequence.add(declaration);
+    } else if (declSpecifier instanceof CPPASTElaboratedTypeSpecifier) {
+      errorWithFileLocation(
+          lang, ctx, log, "Parsing of type {} is not supported (yet)", declSpecifier.getClass());
     }
 
     for (IASTDeclarator declarator : ctx.getDeclarators()) {

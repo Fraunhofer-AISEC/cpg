@@ -96,15 +96,16 @@ public class TranslationUnitDeclaration extends Declaration {
   }
 
   public void add(@NonNull Declaration decl) {
-    if (decl instanceof IncludeDeclaration) {
-      includes.add(decl);
-    } else if (decl instanceof NamespaceDeclaration) {
-      namespaces.add(decl);
-    } else if (decl instanceof DeclarationSequence) {
+    if (decl instanceof DeclarationSequence) {
       declarations.addAll(((DeclarationSequence) decl).asList());
+    } else {
+      if (decl instanceof IncludeDeclaration) {
+        includes.add(decl);
+      } else if (decl instanceof NamespaceDeclaration) {
+        namespaces.add(decl);
+      }
+      declarations.add(decl);
     }
-
-    declarations.add(decl);
   }
 
   @Override
