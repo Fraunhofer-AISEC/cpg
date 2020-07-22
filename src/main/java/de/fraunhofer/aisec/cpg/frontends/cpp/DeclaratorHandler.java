@@ -349,6 +349,10 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
         recordDeclaration.getFields().add((FieldDeclaration) declaration);
       } else if (declaration instanceof RecordDeclaration) {
         recordDeclaration.getRecords().add((RecordDeclaration) declaration);
+      } else if (declaration instanceof ProblemDeclaration) {
+        // there is no place to put them here so let's attach them to the translation unit so that
+        // we do not loose them
+        lang.getCurrentTU().add(declaration);
       }
     }
   }
