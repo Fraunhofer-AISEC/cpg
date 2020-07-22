@@ -26,7 +26,11 @@
 
 package de.fraunhofer.aisec.cpg.graph;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.checkerframework.checker.nullness.qual.NonNull;
@@ -96,7 +100,10 @@ public class TranslationUnitDeclaration extends Declaration {
       includes.add(decl);
     } else if (decl instanceof NamespaceDeclaration) {
       namespaces.add(decl);
+    } else if (decl instanceof DeclarationSequence) {
+      declarations.addAll(((DeclarationSequence) decl).asList());
     }
+
     declarations.add(decl);
   }
 

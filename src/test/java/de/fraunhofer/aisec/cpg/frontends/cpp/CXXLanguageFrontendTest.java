@@ -26,12 +26,53 @@
 
 package de.fraunhofer.aisec.cpg.frontends.cpp;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import de.fraunhofer.aisec.cpg.BaseTest;
 import de.fraunhofer.aisec.cpg.TestUtils;
 import de.fraunhofer.aisec.cpg.TranslationConfiguration;
-import de.fraunhofer.aisec.cpg.graph.*;
+import de.fraunhofer.aisec.cpg.graph.Annotation;
+import de.fraunhofer.aisec.cpg.graph.ArraySubscriptionExpression;
+import de.fraunhofer.aisec.cpg.graph.BinaryOperator;
+import de.fraunhofer.aisec.cpg.graph.CallExpression;
+import de.fraunhofer.aisec.cpg.graph.CaseStatement;
+import de.fraunhofer.aisec.cpg.graph.CastExpression;
+import de.fraunhofer.aisec.cpg.graph.CatchClause;
+import de.fraunhofer.aisec.cpg.graph.CompoundStatement;
+import de.fraunhofer.aisec.cpg.graph.ConstructExpression;
+import de.fraunhofer.aisec.cpg.graph.ConstructorDeclaration;
+import de.fraunhofer.aisec.cpg.graph.Declaration;
+import de.fraunhofer.aisec.cpg.graph.DeclarationStatement;
+import de.fraunhofer.aisec.cpg.graph.DeclaredReferenceExpression;
+import de.fraunhofer.aisec.cpg.graph.DefaultStatement;
+import de.fraunhofer.aisec.cpg.graph.DesignatedInitializerExpression;
+import de.fraunhofer.aisec.cpg.graph.Expression;
+import de.fraunhofer.aisec.cpg.graph.FieldDeclaration;
+import de.fraunhofer.aisec.cpg.graph.ForEachStatement;
+import de.fraunhofer.aisec.cpg.graph.FunctionDeclaration;
+import de.fraunhofer.aisec.cpg.graph.IfStatement;
+import de.fraunhofer.aisec.cpg.graph.InitializerListExpression;
+import de.fraunhofer.aisec.cpg.graph.Literal;
+import de.fraunhofer.aisec.cpg.graph.MemberCallExpression;
+import de.fraunhofer.aisec.cpg.graph.MethodDeclaration;
+import de.fraunhofer.aisec.cpg.graph.NamespaceDeclaration;
+import de.fraunhofer.aisec.cpg.graph.NewExpression;
+import de.fraunhofer.aisec.cpg.graph.Node;
+import de.fraunhofer.aisec.cpg.graph.RecordDeclaration;
+import de.fraunhofer.aisec.cpg.graph.ReturnStatement;
+import de.fraunhofer.aisec.cpg.graph.Statement;
+import de.fraunhofer.aisec.cpg.graph.SwitchStatement;
+import de.fraunhofer.aisec.cpg.graph.TranslationUnitDeclaration;
+import de.fraunhofer.aisec.cpg.graph.TryStatement;
+import de.fraunhofer.aisec.cpg.graph.TypeIdExpression;
+import de.fraunhofer.aisec.cpg.graph.UnaryOperator;
+import de.fraunhofer.aisec.cpg.graph.VariableDeclaration;
+import de.fraunhofer.aisec.cpg.graph.type.ObjectType;
 import de.fraunhofer.aisec.cpg.graph.type.TypeParser;
 import de.fraunhofer.aisec.cpg.graph.type.UnknownType;
 import de.fraunhofer.aisec.cpg.helpers.NodeComparator;
@@ -40,7 +81,11 @@ import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation;
 import de.fraunhofer.aisec.cpg.sarif.Region;
 import java.io.File;
 import java.nio.file.Path;
-import java.util.*;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.junit.jupiter.api.Test;
@@ -443,6 +488,15 @@ class CXXLanguageFrontendTest extends BaseTest {
         ((DeclarationStatement) statements.get(2)).getDeclarations();
 
     assertEquals(2, twoDeclarations.size());
+    VariableDeclaration b = (VariableDeclaration) twoDeclarations.get(0);
+    assertNotNull(b);
+    assertEquals("b", b.getName());
+    assertEquals(TypeParser.createFrom("int*", false), b.getType());
+
+    VariableDeclaration c = (VariableDeclaration) twoDeclarations.get(1);
+    assertNotNull(c);
+    assertEquals("c", c.getName());
+    assertEquals(TypeParser.createFrom("int", false), c.getType());
 
     VariableDeclaration withoutInitializer =
         ((DeclarationStatement) statements.get(3))
@@ -468,8 +522,21 @@ class CXXLanguageFrontendTest extends BaseTest {
             .getSingleDeclarationAs(VariableDeclaration.class);
 
     assertEquals(TypeParser.createFrom("void*", true), pointerWithAssign.getType());
-    assertEquals("ptr", pointerWithAssign.getName());
+    assertEquals("ptr2", pointerWithAssign.getName());
     assertEquals("NULL", pointerWithAssign.getInitializer().getName());
+
+    List<Declaration> classWithVariable =
+        ((DeclarationStatement) statements.get(6)).getDeclarations();
+    assertEquals(2, classWithVariable.size());
+
+    RecordDeclaration classA = (RecordDeclaration) classWithVariable.get(0);
+    assertNotNull(classA);
+    assertEquals("A", classA.getName());
+
+    VariableDeclaration myA = (VariableDeclaration) classWithVariable.get(1);
+    assertNotNull(myA);
+    assertEquals("myA", myA.getName());
+    assertEquals(classA, ((ObjectType) myA.getType()).getRecordDeclaration());
   }
 
   @Test

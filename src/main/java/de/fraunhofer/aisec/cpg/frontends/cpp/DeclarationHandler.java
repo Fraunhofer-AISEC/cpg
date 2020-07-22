@@ -29,8 +29,24 @@ package de.fraunhofer.aisec.cpg.frontends.cpp;
 import static de.fraunhofer.aisec.cpg.helpers.Util.errorWithFileLocation;
 
 import de.fraunhofer.aisec.cpg.frontends.Handler;
-import de.fraunhofer.aisec.cpg.graph.*;
+import de.fraunhofer.aisec.cpg.graph.CompoundStatement;
+import de.fraunhofer.aisec.cpg.graph.ConstructorDeclaration;
+import de.fraunhofer.aisec.cpg.graph.Declaration;
+import de.fraunhofer.aisec.cpg.graph.DeclarationSequence;
+import de.fraunhofer.aisec.cpg.graph.FunctionDeclaration;
+import de.fraunhofer.aisec.cpg.graph.IncludeDeclaration;
+import de.fraunhofer.aisec.cpg.graph.MethodDeclaration;
+import de.fraunhofer.aisec.cpg.graph.NamespaceDeclaration;
+import de.fraunhofer.aisec.cpg.graph.NodeBuilder;
+import de.fraunhofer.aisec.cpg.graph.ProblemDeclaration;
+import de.fraunhofer.aisec.cpg.graph.RecordDeclaration;
+import de.fraunhofer.aisec.cpg.graph.ReturnStatement;
+import de.fraunhofer.aisec.cpg.graph.Statement;
+import de.fraunhofer.aisec.cpg.graph.TranslationUnitDeclaration;
 import de.fraunhofer.aisec.cpg.graph.TypeManager;
+import de.fraunhofer.aisec.cpg.graph.ValueDeclaration;
+import de.fraunhofer.aisec.cpg.graph.VariableDeclaration;
+import de.fraunhofer.aisec.cpg.graph.type.Type;
 import de.fraunhofer.aisec.cpg.graph.type.TypeParser;
 import de.fraunhofer.aisec.cpg.helpers.Util;
 import java.util.HashMap;
@@ -46,7 +62,15 @@ import org.eclipse.cdt.core.dom.ast.IASTDeclarator;
 import org.eclipse.cdt.core.dom.ast.IASTNode;
 import org.eclipse.cdt.core.dom.ast.IASTPointerOperator;
 import org.eclipse.cdt.core.dom.ast.IASTTranslationUnit;
-import org.eclipse.cdt.internal.core.dom.parser.cpp.*;
+import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTCompositeTypeSpecifier;
+import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTFunctionDefinition;
+import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTLinkageSpecification;
+import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTName;
+import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTNamespaceDefinition;
+import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTProblemDeclaration;
+import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTSimpleDeclaration;
+import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTTranslationUnit;
+import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTUsingDirective;
 
 public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CXXLanguageFrontend> {
 
@@ -216,68 +240,22 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
   private Declaration handleSimpleDeclaration(CPPASTSimpleDeclaration ctx) {
     if (isTypedef(ctx)) {
       TypeManager.getInstance().handleTypedef(ctx.getRawSignature());
-      // if this was a struct typedef, we still need to handle this struct!
-      if (!(ctx.getDeclSpecifier() instanceof CPPASTCompositeTypeSpecifier)) {
-        return null;
-      }
     }
 
-    Declaration declaration;
-    if (ctx.getDeclarators().length == 0) {
-      declaration = handleNoDeclarator(ctx);
-    } else if (ctx.getDeclarators().length == 1) {
-      declaration = handleSingleDeclarator(ctx);
-    } else {
-      declaration = handleMultipleDeclarators(ctx);
-    }
+    DeclarationSequence sequence = new DeclarationSequence();
 
-    if (declaration != null) {
-      this.lang.processAttributes(declaration, ctx);
-    }
+    // check, whether the declaration specifier also contains declarations, i.e. class definitions
+    IASTDeclSpecifier declSpecifier = ctx.getDeclSpecifier();
 
-    return declaration;
-  }
-
-  private Declaration handleNoDeclarator(CPPASTSimpleDeclaration ctx) {
-    if (ctx.getDeclSpecifier() != null) {
-      if (ctx.getDeclSpecifier() instanceof CPPASTCompositeTypeSpecifier) {
-        // probably a class or struct declaration
-        return this.lang
-            .getDeclaratorHandler()
-            .handle((CPPASTCompositeTypeSpecifier) ctx.getDeclSpecifier());
-      } else {
-        errorWithFileLocation(
-            this.lang,
-            ctx,
-            log,
-            "Unknown DeclSpecifier in SimpleDeclaration: {}",
-            ctx.getDeclSpecifier().getClass());
-      }
-    } else {
-      errorWithFileLocation(this.lang, ctx, log, ("DeclSpecifier is null"));
-    }
-    return null;
-  }
-
-  private Declaration handleSingleDeclarator(CPPASTSimpleDeclaration ctx) {
-    List<Declaration> handle = (this.lang).getDeclarationListHandler().handle(ctx);
-    if (handle.size() != 1) {
-      errorWithFileLocation(this.lang, ctx, log, "Invalid declaration generation");
-      return NodeBuilder.newDeclaration("");
-    }
-
-    return handle.get(0);
-  }
-
-  private Declaration handleMultipleDeclarators(CPPASTSimpleDeclaration ctx) {
-    // A legitimate case where this will happen is when multiply typedefing a struct
-    // e.g.: typedef struct {...} S, *pS, s_arr[10], ...;
-    if (ctx.getDeclSpecifier() instanceof CPPASTCompositeTypeSpecifier) {
-      Declaration result =
+    if (declSpecifier instanceof CPPASTCompositeTypeSpecifier) {
+      Declaration declaration =
           this.lang
               .getDeclaratorHandler()
               .handle((CPPASTCompositeTypeSpecifier) ctx.getDeclSpecifier());
-      if (result.getName().isEmpty() && ctx.getRawSignature().strip().startsWith("typedef")) {
+
+      // handle typedef
+      if ((declaration.getName().isEmpty()
+          && ctx.getRawSignature().strip().startsWith("typedef"))) {
         // CDT didn't find out the name due to this thing being a typedef. We need to fix this
         int endOfDeclaration = ctx.getRawSignature().lastIndexOf('}');
         if (endOfDeclaration + 1 < ctx.getRawSignature().length()) {
@@ -286,14 +264,45 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
                   ctx.getRawSignature().substring(endOfDeclaration + 1), ",");
           Optional<String> name =
               parts.stream().filter(p -> !p.contains("*") && !p.contains("[")).findFirst();
-          name.ifPresent(s -> result.setName(s.replace(";", "")));
+          name.ifPresent(s -> declaration.setName(s.replace(";", "")));
         }
       }
-      return result;
+
+      this.lang.processAttributes(declaration, ctx);
+
+      sequence.add(declaration);
     }
-    errorWithFileLocation(
-        this.lang, ctx, log, "More than one declaration, this should not happen here.");
-    return null;
+
+    for (IASTDeclarator declarator : ctx.getDeclarators()) {
+      ValueDeclaration declaration =
+          (ValueDeclaration) this.lang.getDeclaratorHandler().handle(declarator);
+
+      String typeString;
+      if (declaration instanceof FunctionDeclaration
+          || declaration instanceof VariableDeclaration) {
+        typeString = getTypeStringFromDeclarator(declarator, ctx.getDeclSpecifier());
+      } else {
+        // otherwise, use the complete raw code and let the type parser handle it
+        typeString = ctx.getRawSignature();
+      }
+
+      Type result = TypeParser.createFrom(typeString, true);
+      declaration.setType(result);
+
+      // cache binding
+      this.lang.cacheDeclaration(declarator.getName().resolveBinding(), declaration);
+
+      // process attributes
+      this.lang.processAttributes(declaration, ctx);
+
+      sequence.add(declaration);
+    }
+
+    if (sequence.isSingle()) {
+      return sequence.first();
+    } else {
+      return sequence;
+    }
   }
 
   private void parseInclusions(
@@ -338,8 +347,6 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
             problematicIncludes.computeIfAbsent(
                 ((ProblemDeclaration) decl).getFilename(), k -> new HashSet<>());
         problems.add((ProblemDeclaration) decl);
-      } else if (decl instanceof NamespaceDeclaration) {
-        node.add(decl);
       } else {
         node.add(decl);
       }

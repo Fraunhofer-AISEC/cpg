@@ -279,7 +279,9 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
         // TODO: parse visibility
         continue;
       }
+
       Declaration declaration = lang.getDeclarationHandler().handle(member);
+
       Scope declarationScope = lang.getScopeManager().getScopeOfStatment(declaration);
 
       if (declaration instanceof FunctionDeclaration) {

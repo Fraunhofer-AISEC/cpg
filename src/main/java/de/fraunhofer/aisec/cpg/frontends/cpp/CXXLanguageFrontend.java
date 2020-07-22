@@ -188,7 +188,6 @@ public class CXXLanguageFrontend extends LanguageFrontend {
         }
       };
   private DeclarationHandler declarationHandler = new DeclarationHandler(this);
-  private DeclarationListHandler declarationListHandler = new DeclarationListHandler(this);
   private DeclaratorHandler declaratorHandler = new DeclaratorHandler(this);
   private ExpressionHandler expressionHandler = new ExpressionHandler(this);
   private InitializerHandler initializerHandler = new InitializerHandler(this);
@@ -568,10 +567,6 @@ public class CXXLanguageFrontend extends LanguageFrontend {
 
   public DeclarationHandler getDeclarationHandler() {
     return declarationHandler;
-  }
-
-  public DeclarationListHandler getDeclarationListHandler() {
-    return declarationListHandler;
   }
 
   public DeclaratorHandler getDeclaratorHandler() {
