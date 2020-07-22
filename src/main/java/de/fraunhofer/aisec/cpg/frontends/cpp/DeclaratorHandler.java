@@ -26,6 +26,8 @@
 
 package de.fraunhofer.aisec.cpg.frontends.cpp;
 
+import static java.util.Collections.emptyList;
+
 import de.fraunhofer.aisec.cpg.frontends.Handler;
 import de.fraunhofer.aisec.cpg.graph.*;
 import de.fraunhofer.aisec.cpg.graph.type.Type;
@@ -35,7 +37,6 @@ import de.fraunhofer.aisec.cpg.passes.scopes.RecordScope;
 import de.fraunhofer.aisec.cpg.passes.scopes.Scope;
 import java.lang.reflect.Method;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -51,6 +52,7 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
 
     map.put(CPPASTDeclarator.class, ctx -> handleDeclarator((CPPASTDeclarator) ctx));
     map.put(CPPASTArrayDeclarator.class, ctx -> handleDeclarator((CPPASTDeclarator) ctx));
+    map.put(CPPASTFieldDeclarator.class, ctx -> handleFieldDeclarator((CPPASTDeclarator) ctx));
     map.put(
         CPPASTFunctionDeclarator.class,
         ctx -> handleFunctionDeclarator((CPPASTFunctionDeclarator) ctx));
@@ -86,6 +88,31 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
     }
 
     lang.getScopeManager().addValueDeclaration(declaration);
+
+    return declaration;
+  }
+
+  private FieldDeclaration handleFieldDeclarator(CPPASTDeclarator ctx) {
+    IASTInitializer init = ctx.getInitializer();
+    Expression initializer = null;
+
+    if (init != null) {
+      initializer = lang.getInitializerHandler().handle(init);
+    }
+
+    // type will be filled out later
+    FieldDeclaration declaration =
+        NodeBuilder.newFieldDeclaration(
+            ctx.getName().toString(),
+            UnknownType.getUnknownType(),
+            emptyList(),
+            ctx.getRawSignature(),
+            this.lang.getLocationFromRawNode(ctx),
+            initializer,
+            true);
+
+    lang.getScopeManager().addValueDeclaration(declaration);
+
     return declaration;
   }
 
@@ -194,7 +221,7 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
           NodeBuilder.newFieldDeclaration(
               name,
               UnknownType.getUnknownType(),
-              Collections.emptyList(),
+              emptyList(),
               code,
               lang.getLocationFromRawNode(ctx),
               initializer,
