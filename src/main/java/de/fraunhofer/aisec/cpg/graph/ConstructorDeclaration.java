@@ -55,6 +55,7 @@ public class ConstructorDeclaration extends MethodDeclaration {
     c.setBody(methodDeclaration.getBody());
     c.setLocation(methodDeclaration.getLocation());
     c.setParameters(methodDeclaration.getParameters());
+    c.setAnnotations(methodDeclaration.getAnnotations());
 
     return c;
   }

@@ -84,6 +84,9 @@ public class TranslationConfiguration {
   /** should the code of a node be shown as parameter in the node * */
   public final boolean codeInNodes;
 
+  /** Set to true to process annotations or annotation-like elements. */
+  public final boolean processAnnotations;
+
   /**
    * Should parser/translation fail on parse/resolving errors (true) or try to continue in a
    * best-effort manner (false).
@@ -112,6 +115,7 @@ public class TranslationConfiguration {
       List<String> includeBlacklist,
       List<Pass> passes,
       boolean codeInNodes,
+      boolean processAnnotations,
       boolean disableCleanup) {
     this.symbols = symbols;
     this.sourceLocations = sourceLocations;
@@ -125,6 +129,7 @@ public class TranslationConfiguration {
     this.passes = passes != null ? passes : new ArrayList<>();
     // Make sure to init this AFTER sourceLocations has been set
     this.codeInNodes = codeInNodes;
+    this.processAnnotations = processAnnotations;
     this.disableCleanup = disableCleanup;
   }
 
@@ -170,11 +175,12 @@ public class TranslationConfiguration {
     private boolean failOnError = false;
     private boolean loadIncludes = false;
     private Map<String, String> symbols = new HashMap<>();
-    private List<String> includePaths = new ArrayList<>();
-    private List<String> includeWhitelist = new ArrayList<>();
-    private List<String> includeBlacklist = new ArrayList<>();
-    private List<Pass> passes = new ArrayList<>();
+    private final List<String> includePaths = new ArrayList<>();
+    private final List<String> includeWhitelist = new ArrayList<>();
+    private final List<String> includeBlacklist = new ArrayList<>();
+    private final List<Pass> passes = new ArrayList<>();
     private boolean codeInNodes = true;
+    private boolean processAnnotations = false;
     private boolean disableCleanup = false;
 
     public Builder symbols(Map<String, String> symbols) {
@@ -329,6 +335,18 @@ public class TranslationConfiguration {
       return this;
     }
 
+    /**
+     * Specifies, whether annotations should be process or not. By default, they are not processed,
+     * since they might populate the graph too much.
+     *
+     * @param b the new value
+     * @return
+     */
+    public Builder processAnnotations(boolean b) {
+      this.processAnnotations = b;
+      return this;
+    }
+
     public TranslationConfiguration build() {
       return new TranslationConfiguration(
           symbols,
@@ -342,6 +360,7 @@ public class TranslationConfiguration {
           includeBlacklist,
           passes,
           codeInNodes,
+          processAnnotations,
           disableCleanup);
     }
   }

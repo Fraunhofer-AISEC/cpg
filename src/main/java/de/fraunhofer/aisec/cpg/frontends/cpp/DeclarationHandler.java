@@ -187,6 +187,8 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
       }
     }
 
+    this.lang.processAttributes(functionDeclaration, ctx);
+
     lang.getScopeManager().leaveScope(functionDeclaration);
 
     if (recordDeclaration != null) {
@@ -220,13 +222,20 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
       }
     }
 
+    Declaration declaration;
     if (ctx.getDeclarators().length == 0) {
-      return handleNoDeclarator(ctx);
+      declaration = handleNoDeclarator(ctx);
     } else if (ctx.getDeclarators().length == 1) {
-      return handleSingleDeclarator(ctx);
+      declaration = handleSingleDeclarator(ctx);
     } else {
-      return handleMultipleDeclarators(ctx);
+      declaration = handleMultipleDeclarators(ctx);
     }
+
+    if (declaration != null) {
+      this.lang.processAttributes(declaration, ctx);
+    }
+
+    return declaration;
   }
 
   private Declaration handleNoDeclarator(CPPASTSimpleDeclaration ctx) {

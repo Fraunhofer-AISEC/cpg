@@ -74,6 +74,9 @@ class DeclarationListHandler
       // cache binding
       this.lang.cacheDeclaration(declarator.getName().resolveBinding(), declaration);
 
+      // process attributes
+      this.lang.processAttributes(declaration, ctx);
+
       list.add(declaration);
     }
 
