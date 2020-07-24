@@ -798,11 +798,11 @@ class CXXLanguageFrontendTest extends BaseTest {
     assertEquals(TypeParser.createFrom("void*", true), inlineMethod.getType());
     assertTrue(inlineMethod.hasBody());
 
-    ConstructorDeclaration constructor = recordDeclaration.getConstructors().get(0);
+    ConstructorDeclaration inlineConstructor = recordDeclaration.getConstructors().get(0);
 
-    assertEquals(recordDeclaration.getName(), constructor.getName());
-    assertEquals(TypeParser.createFrom("SomeClass", true), constructor.getType());
-    assertTrue(constructor.hasBody());
+    assertEquals(recordDeclaration.getName(), inlineConstructor.getName());
+    assertEquals(TypeParser.createFrom("SomeClass", true), inlineConstructor.getType());
+    assertTrue(inlineConstructor.hasBody());
 
     ConstructorDeclaration constructorDefinition =
         declaration.getDeclarationAs(3, ConstructorDeclaration.class);
@@ -813,6 +813,12 @@ class CXXLanguageFrontendTest extends BaseTest {
         TypeParser.createFrom("int", true), constructorDefinition.getParameters().get(0).getType());
     assertEquals(TypeParser.createFrom("SomeClass", true), constructorDefinition.getType());
     assertTrue(constructorDefinition.hasBody());
+
+    ConstructorDeclaration constructorDeclaration = recordDeclaration.getConstructors().get(1);
+
+    assertNotNull(constructorDeclaration);
+    assertFalse(constructorDeclaration.isDefinition());
+    assertEquals(constructorDefinition, constructorDeclaration.getDefinition());
   }
 
   @Test

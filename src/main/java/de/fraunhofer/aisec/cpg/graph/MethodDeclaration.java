@@ -61,6 +61,8 @@ public class MethodDeclaration extends FunctionDeclaration {
     md.setType(functionDeclaration.getType());
     md.setAnnotations(functionDeclaration.getAnnotations());
     md.setRecordDeclaration(recordDeclaration);
+    md.setIsDefinition(functionDeclaration.isDefinition());
+    md.setDefinition(functionDeclaration.getDefinition());
 
     return md;
   }
