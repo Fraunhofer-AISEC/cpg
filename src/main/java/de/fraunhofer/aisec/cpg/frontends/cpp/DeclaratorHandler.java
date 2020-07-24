@@ -29,7 +29,18 @@ package de.fraunhofer.aisec.cpg.frontends.cpp;
 import static java.util.Collections.emptyList;
 
 import de.fraunhofer.aisec.cpg.frontends.Handler;
-import de.fraunhofer.aisec.cpg.graph.*;
+import de.fraunhofer.aisec.cpg.graph.ConstructorDeclaration;
+import de.fraunhofer.aisec.cpg.graph.Declaration;
+import de.fraunhofer.aisec.cpg.graph.Expression;
+import de.fraunhofer.aisec.cpg.graph.FieldDeclaration;
+import de.fraunhofer.aisec.cpg.graph.FunctionDeclaration;
+import de.fraunhofer.aisec.cpg.graph.MethodDeclaration;
+import de.fraunhofer.aisec.cpg.graph.NodeBuilder;
+import de.fraunhofer.aisec.cpg.graph.ParamVariableDeclaration;
+import de.fraunhofer.aisec.cpg.graph.ProblemDeclaration;
+import de.fraunhofer.aisec.cpg.graph.RecordDeclaration;
+import de.fraunhofer.aisec.cpg.graph.ValueDeclaration;
+import de.fraunhofer.aisec.cpg.graph.VariableDeclaration;
 import de.fraunhofer.aisec.cpg.graph.type.Type;
 import de.fraunhofer.aisec.cpg.graph.type.TypeParser;
 import de.fraunhofer.aisec.cpg.graph.type.UnknownType;
@@ -40,10 +51,23 @@ import java.util.Arrays;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
-import org.eclipse.cdt.core.dom.ast.*;
+import org.eclipse.cdt.core.dom.ast.IASTCompositeTypeSpecifier;
+import org.eclipse.cdt.core.dom.ast.IASTDeclaration;
+import org.eclipse.cdt.core.dom.ast.IASTExpression;
+import org.eclipse.cdt.core.dom.ast.IASTInitializer;
+import org.eclipse.cdt.core.dom.ast.IASTNameOwner;
+import org.eclipse.cdt.core.dom.ast.IASTNode;
+import org.eclipse.cdt.core.dom.ast.IBinding;
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTCompositeTypeSpecifier;
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTParameterDeclaration;
-import org.eclipse.cdt.internal.core.dom.parser.cpp.*;
+import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTArrayDeclarator;
+import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTCompositeTypeSpecifier;
+import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTDeclarator;
+import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTFieldDeclarator;
+import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTFunctionDeclarator;
+import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTSimpleDeclaration;
+import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTVisibilityLabel;
+import org.eclipse.cdt.internal.core.dom.parser.cpp.ICPPEvaluation;
 
 class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageFrontend> {
 
@@ -291,7 +315,15 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
       de.fraunhofer.aisec.cpg.graph.ConstructorDeclaration constructorDeclaration =
           NodeBuilder.newConstructorDeclaration(
               recordDeclaration.getName(), recordDeclaration.getName(), recordDeclaration);
+
+      // set this as implicit
+      constructorDeclaration.setImplicit(true);
+
+      // and set the type, constructors always have implicitly the return type of their class
+      constructorDeclaration.setType(TypeParser.createFrom(recordDeclaration.getName(), true));
+
       recordDeclaration.getConstructors().add(constructorDeclaration);
+
       lang.getScopeManager().addValueDeclaration(constructorDeclaration);
     }
 
