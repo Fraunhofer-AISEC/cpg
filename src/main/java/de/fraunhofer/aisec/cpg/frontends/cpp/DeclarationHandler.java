@@ -139,9 +139,7 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
       functionDeclaration = ConstructorDeclaration.from((MethodDeclaration) functionDeclaration);
     }
 
-    functionDeclaration.setType(
-        TypeParser.createFrom(
-            ctx.getRawSignature().split(functionDeclaration.getName())[0].trim(), true));
+    functionDeclaration.setType(TypeParser.createFrom(typeString, true));
 
     // associated record declaration if this is a method or constructor
     RecordDeclaration recordDeclaration =
