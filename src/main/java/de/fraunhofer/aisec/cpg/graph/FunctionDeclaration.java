@@ -248,7 +248,7 @@ public class FunctionDeclaration extends ValueDeclaration {
   }
 
   public FunctionDeclaration getDefinition() {
-    return definition;
+    return isDefinition ? this : definition;
   }
 
   public boolean isDefinition() {
