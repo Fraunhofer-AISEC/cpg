@@ -170,6 +170,11 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
 
       recordDeclaration = this.lang.getRecordForName(recordName).orElse(null);
 
+      if (recordDeclaration != null) {
+        // to make sure, that the scope of this function is associated to the record
+        this.lang.getScopeManager().enterScope(recordDeclaration);
+      }
+
       declaration =
           NodeBuilder.newMethodDeclaration(
               methodName, ctx.getRawSignature(), false, recordDeclaration);
@@ -210,6 +215,10 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
 
     //    lang.addFunctionDeclaration(declaration);
     lang.getScopeManager().leaveScope(declaration);
+
+    if (recordDeclaration != null) {
+      this.lang.getScopeManager().enterScope(recordDeclaration);
+    }
 
     return declaration;
   }

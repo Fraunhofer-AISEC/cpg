@@ -127,6 +127,7 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
   private FunctionDeclaration handleFunctionDefinition(CPPASTFunctionDefinition ctx) {
     // Todo: A problem with cpp functions is that we cannot know if they may throw an exception as
     // throw(...) is not compiler enforced (Problem for TryStatement)
+
     FunctionDeclaration functionDeclaration =
         (FunctionDeclaration) this.lang.getDeclaratorHandler().handle(ctx.getDeclarator());
 
