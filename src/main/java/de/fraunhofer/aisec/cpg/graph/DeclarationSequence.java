@@ -38,7 +38,7 @@ import org.checkerframework.checker.nullness.qual.NonNull;
  */
 public class DeclarationSequence extends Declaration {
 
-  private List<Declaration> children = new ArrayList<>();
+  private final List<Declaration> children = new ArrayList<>();
 
   public void add(@NonNull Declaration declaration) {
     if (declaration instanceof DeclarationSequence) {
@@ -49,7 +49,7 @@ public class DeclarationSequence extends Declaration {
   }
 
   public List<Declaration> asList() {
-    return new ArrayList<>(children);
+    return children;
   }
 
   public boolean isSingle() {
