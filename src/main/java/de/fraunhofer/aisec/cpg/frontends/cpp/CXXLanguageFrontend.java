@@ -41,7 +41,6 @@ import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.TranslationUnitDeclaration;
 import de.fraunhofer.aisec.cpg.graph.TypeManager;
 import de.fraunhofer.aisec.cpg.graph.ValueDeclaration;
-import de.fraunhofer.aisec.cpg.graph.type.Type;
 import de.fraunhofer.aisec.cpg.graph.type.TypeParser;
 import de.fraunhofer.aisec.cpg.graph.type.UnknownType;
 import de.fraunhofer.aisec.cpg.helpers.Benchmark;
@@ -86,13 +85,6 @@ import org.slf4j.LoggerFactory;
  * <p>Frontend for ONE CXX File
  */
 public class CXXLanguageFrontend extends LanguageFrontend {
-
-  public static final Type LONG_TYPE = TypeParser.createFrom("long", true);
-  public static final Type TYPE_UNSIGNED_LONG_LONG =
-      TypeParser.createFrom("unsigned long long", true);
-  public static final Type INT_TYPE = TypeParser.createFrom("int", true);
-  public static final Type LONG_LONG_TYPE = TypeParser.createFrom("long long", true);
-  public static final Type TYPE_UNSIGNED_LONG = TypeParser.createFrom("unsigned long", true);
 
   private static final Logger LOGGER = LoggerFactory.getLogger(CXXLanguageFrontend.class);
   private final IncludeFileContentProvider includeFileContentProvider =
@@ -431,7 +423,7 @@ public class CXXLanguageFrontend extends LanguageFrontend {
       case 1:
         return newDeclaredReferenceExpression(code, UnknownType.getUnknownType(), code);
       case 2:
-        return newLiteral(Integer.parseInt(code), CXXLanguageFrontend.INT_TYPE, code);
+        return newLiteral(Integer.parseInt(code), TypeParser.createFrom("int", true), code);
       case 130:
         return newLiteral(
             code.length() >= 2 ? code.substring(1, code.length() - 1) : "",

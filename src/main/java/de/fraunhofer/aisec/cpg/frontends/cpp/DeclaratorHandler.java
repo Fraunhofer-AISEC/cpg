@@ -46,14 +46,12 @@ import de.fraunhofer.aisec.cpg.graph.type.TypeParser;
 import de.fraunhofer.aisec.cpg.graph.type.UnknownType;
 import de.fraunhofer.aisec.cpg.passes.scopes.RecordScope;
 import de.fraunhofer.aisec.cpg.passes.scopes.Scope;
-import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import org.eclipse.cdt.core.dom.ast.IASTCompositeTypeSpecifier;
 import org.eclipse.cdt.core.dom.ast.IASTDeclaration;
-import org.eclipse.cdt.core.dom.ast.IASTExpression;
 import org.eclipse.cdt.core.dom.ast.IASTInitializer;
 import org.eclipse.cdt.core.dom.ast.IASTNameOwner;
 import org.eclipse.cdt.core.dom.ast.IASTNode;
@@ -67,7 +65,6 @@ import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTFieldDeclarator;
 import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTFunctionDeclarator;
 import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTSimpleDeclaration;
 import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTVisibilityLabel;
-import org.eclipse.cdt.internal.core.dom.parser.cpp.ICPPEvaluation;
 
 class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageFrontend> {
 
@@ -83,16 +80,6 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
     map.put(
         CPPASTCompositeTypeSpecifier.class,
         ctx -> handleCompositeTypeSpecifier((CPPASTCompositeTypeSpecifier) ctx));
-  }
-
-  private int getEvaluatedIntegerValue(IASTExpression exp) {
-    try {
-      Method method = exp.getClass().getMethod("getEvaluation");
-      ICPPEvaluation evaluation = (ICPPEvaluation) method.invoke(exp);
-      return evaluation.getValue().numberValue().intValue();
-    } catch (Exception e) {
-      return -1;
-    }
   }
 
   private Declaration handleDeclarator(CPPASTDeclarator ctx) {

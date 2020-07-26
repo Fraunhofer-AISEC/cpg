@@ -27,6 +27,7 @@
 package de.fraunhofer.aisec.cpg.frontends.cpp;
 
 import static de.fraunhofer.aisec.cpg.helpers.Util.errorWithFileLocation;
+import static de.fraunhofer.aisec.cpg.helpers.Util.warnWithFileLocation;
 
 import de.fraunhofer.aisec.cpg.frontends.Handler;
 import de.fraunhofer.aisec.cpg.graph.CompoundStatement;
@@ -70,6 +71,7 @@ import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTName;
 import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTNamespaceDefinition;
 import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTProblemDeclaration;
 import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTSimpleDeclaration;
+import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTTemplateDeclaration;
 import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTTranslationUnit;
 import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTUsingDirective;
 
@@ -78,6 +80,9 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
   public DeclarationHandler(CXXLanguageFrontend lang) {
     super(Declaration::new, lang);
 
+    map.put(
+        CPPASTTemplateDeclaration.class,
+        ctx -> handleTemplateDeclaration((CPPASTTemplateDeclaration) ctx));
     map.put(
         CPPASTSimpleDeclaration.class,
         ctx -> handleSimpleDeclaration((CPPASTSimpleDeclaration) ctx));
@@ -237,6 +242,16 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
     }
   }
 
+  private Declaration handleTemplateDeclaration(CPPASTTemplateDeclaration ctx) {
+    warnWithFileLocation(
+        lang,
+        ctx,
+        log,
+        "Parsing template declarations is not supported (yet). Will ignore template and parse inner declaration");
+
+    return handle(ctx.getDeclaration());
+  }
+
   private Declaration handleSimpleDeclaration(CPPASTSimpleDeclaration ctx) {
     if (isTypedef(ctx)) {
       TypeManager.getInstance().handleTypedef(ctx.getRawSignature());
@@ -272,8 +287,12 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
 
       sequence.add(declaration);
     } else if (declSpecifier instanceof CPPASTElaboratedTypeSpecifier) {
-      errorWithFileLocation(
-          lang, ctx, log, "Parsing of type {} is not supported (yet)", declSpecifier.getClass());
+      warnWithFileLocation(
+          lang,
+          ctx,
+          log,
+          "Parsing elaborated type specifiers is not supported (yet)",
+          declSpecifier.getClass());
     }
 
     for (IASTDeclarator declarator : ctx.getDeclarators()) {
