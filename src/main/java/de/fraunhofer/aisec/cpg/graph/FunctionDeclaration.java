@@ -69,7 +69,7 @@ public class FunctionDeclaration extends ValueDeclaration {
   private boolean isDefinition;
 
   /** If this is only a declaration, this provides a link to the definition of the function. */
-  @Relationship(value = "DEFINES", direction = "INCOMING")
+  @Relationship(value = "DEFINES")
   private FunctionDeclaration definition;
 
   public boolean hasBody() {
