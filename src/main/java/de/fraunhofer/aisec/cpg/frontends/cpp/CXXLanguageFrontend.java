@@ -268,20 +268,14 @@ public class CXXLanguageFrontend extends LanguageFrontend {
 
     DefaultLogService log = new DefaultLogService();
 
-    IncludeFileContentProvider includeProvider;
-    if (config.loadIncludes) {
-      includeProvider = includeFileContentProvider;
-    } else {
-      includeProvider = IncludeFileContentProvider.getEmptyFilesProvider();
-    }
-
     int opts = ILanguage.OPTION_PARSE_INACTIVE_CODE; // | ILanguage.OPTION_ADD_COMMENTS;
 
     try {
       Benchmark bench = new Benchmark(this.getClass(), "Parsing sourcefile");
       IASTTranslationUnit translationUnit =
           GPPLanguage.getDefault()
-              .getASTTranslationUnit(content, scannerInfo, includeProvider, null, opts, log);
+              .getASTTranslationUnit(
+                  content, scannerInfo, includeFileContentProvider, null, opts, log);
       bench.stop();
 
       bench = new Benchmark(this.getClass(), "Transform to CPG");
