@@ -88,6 +88,7 @@ public class Expression extends Statement implements HasType {
 
   @Override
   public void setType(Type type, HasType root) {
+    //TODO Document this method. It is called very often (potentially for each AST node) and performs less than optimal.
     if (type == null || root == this) {
       return;
     }
