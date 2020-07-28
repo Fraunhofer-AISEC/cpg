@@ -233,11 +233,11 @@ public class CXXLanguageFrontend extends LanguageFrontend {
 
     s.append(" ".repeat(indent));
 
-    log.debug(
+    log.trace(
         "{}{} -> {}",
         s,
         node.getClass().getSimpleName(),
-        node.getRawSignature().replaceAll("\n", " \\ ").replaceAll("\\s+", "  "));
+        node.getRawSignature().replace('\n', '\\').replace('\t', ' '));
 
     for (IASTNode iastNode : children) {
       explore(iastNode, indent + 2);
