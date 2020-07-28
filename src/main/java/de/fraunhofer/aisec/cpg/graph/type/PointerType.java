@@ -36,7 +36,7 @@ import org.neo4j.ogm.annotation.Relationship;
  */
 public class PointerType extends Type implements SecondOrderType {
 
-  @Relationship(value = "ELEMENT_TYPE", direction = "INCOMING")
+  @Relationship(value = "ELEMENT_TYPE")
   private Type elementType;
 
   public enum PointerOrigin {
