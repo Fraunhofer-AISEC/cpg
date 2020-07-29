@@ -62,7 +62,12 @@ public class MethodDeclaration extends FunctionDeclaration {
     md.setAnnotations(functionDeclaration.getAnnotations());
     md.setRecordDeclaration(recordDeclaration);
     md.setIsDefinition(functionDeclaration.isDefinition());
-    md.setDefinition(functionDeclaration.getDefinition());
+
+    if (!md.isDefinition()) {
+      // do not call getDefinition if this is a definition itself, otherwise this
+      // will return a 'this' to the old function declaration
+      md.setDefinition(functionDeclaration.getDefinition());
+    }
 
     return md;
   }
