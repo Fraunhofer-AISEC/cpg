@@ -142,7 +142,14 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
 
     // It is a constructor
     if (functionDeclaration instanceof MethodDeclaration && typeString.isEmpty()) {
-      functionDeclaration = ConstructorDeclaration.from((MethodDeclaration) functionDeclaration);
+      ConstructorDeclaration constructorDeclaration =
+          ConstructorDeclaration.from((MethodDeclaration) functionDeclaration);
+
+      // update our scope manager, otherwise scopes will still point to our old non-existing
+      // function declaration
+      this.lang.getScopeManager().replaceNode(constructorDeclaration, functionDeclaration);
+
+      functionDeclaration = constructorDeclaration;
     }
 
     functionDeclaration.setType(TypeParser.createFrom(typeString, true));

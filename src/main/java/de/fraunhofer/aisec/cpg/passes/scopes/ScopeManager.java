@@ -593,9 +593,39 @@ public class ScopeManager {
     return false;
   }
 
+  /**
+   * Replaces the node inside of the scope manager. This is primarily used if we 'upgrade' a node in
+   * the hierarchy chain, i.e. if we construct a {@link ConstructorDeclaration} out of a {@link
+   * MethodDeclaration}.
+   *
+   * @param newNode the new node
+   * @param oldNode the old node
+   */
+  public void replaceNode(Node newNode, Node oldNode) {
+    Scope scope = scopeMap.get(oldNode);
+
+    // check, if old node has a scope
+    if (scope != null) {
+      // update ast node
+      scope.astNode = newNode;
+
+      // update key
+      scopeMap.remove(oldNode);
+      scopeMap.put(newNode, scope);
+    }
+  }
+
+  public void resetToGlobal() {
+    GlobalScope global = (GlobalScope) getFirstScopeThat(scope -> scope instanceof GlobalScope);
+    if (global != null) {
+      currentScope = global;
+    }
+  }
+
   ///// Copied over for now - not used but maybe necessary at some point ///////
 
   @Nullable
+  @Deprecated
   public Declaration getDeclarationForName(String name) {
     // first, check locals
     Declaration declaration;
@@ -633,18 +663,12 @@ public class ScopeManager {
   }
 
   @Nullable
+  @Deprecated
   private <T extends ValueDeclaration> Declaration getForName(List<T> variables, String name) {
     Optional<T> any =
         variables.stream().filter(param -> Objects.equals(param.getName(), name)).findAny();
 
     return any.orElse(null);
-  }
-
-  public void resetToGlobal() {
-    GlobalScope global = (GlobalScope) getFirstScopeThat(scope -> scope instanceof GlobalScope);
-    if (global != null) {
-      currentScope = global;
-    }
   }
 
   ///// End copied over for now ///////

@@ -360,8 +360,14 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
                   true);
           constructor.setType(type);
           recordDeclaration.getConstructors().add(constructor);
+
+          // update scope manager, otherwise we point at the old function declaration
+          this.lang.getScopeManager().replaceNode(constructor, declaration);
         } else {
           recordDeclaration.getMethods().add(method);
+
+          // update scope manager, otherwise we point at the old function declaration
+          this.lang.getScopeManager().replaceNode(method, declaration);
         }
 
         if (declarationScope != null) {
