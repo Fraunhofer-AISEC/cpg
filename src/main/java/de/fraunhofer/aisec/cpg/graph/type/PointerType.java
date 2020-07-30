@@ -27,6 +27,7 @@
 package de.fraunhofer.aisec.cpg.graph.type;
 
 import java.util.Objects;
+import org.neo4j.ogm.annotation.Relationship;
 
 /**
  * PointerTypes represent all references to other Types. For C/CPP this includes pointers, as well
@@ -34,6 +35,8 @@ import java.util.Objects;
  * is no such pointer concept.
  */
 public class PointerType extends Type implements SecondOrderType {
+
+  @Relationship(value = "ELEMENT_TYPE")
   private Type elementType;
 
   public enum PointerOrigin {

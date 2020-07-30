@@ -26,10 +26,12 @@
 
 package de.fraunhofer.aisec.cpg;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import de.fraunhofer.aisec.cpg.graph.CompoundStatement;
 import de.fraunhofer.aisec.cpg.graph.Node;
+import de.fraunhofer.aisec.cpg.graph.Statement;
 import de.fraunhofer.aisec.cpg.graph.TranslationUnitDeclaration;
 import de.fraunhofer.aisec.cpg.graph.TypeManager;
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker;
@@ -146,8 +148,8 @@ public class TestUtils {
    * @return Statement at source line or null if not present.
    */
   public static Node getByLineNr(CompoundStatement body, int line) {
-    List<Node> nodes = SubgraphWalker.flattenAST(body);
-    for (Node n : nodes) {
+    List<Statement> nodes = subnodesOfType(body, Statement.class);
+    for (Statement n : nodes) {
       PhysicalLocation location = n.getLocation();
       assertNotNull(location);
 
@@ -155,6 +157,7 @@ public class TestUtils {
         return n;
       }
     }
+
     return null;
   }
 
