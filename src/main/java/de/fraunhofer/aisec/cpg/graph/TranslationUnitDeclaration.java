@@ -34,6 +34,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.checkerframework.checker.nullness.qual.NonNull;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 /** The top most declaration, representing a translation unit, for example a file. */
 public class TranslationUnitDeclaration extends Declaration {
@@ -53,9 +54,25 @@ public class TranslationUnitDeclaration extends Declaration {
   @NonNull
   private List<Declaration> namespaces = new ArrayList<>();
 
-  // TODO Fragile! May easily throw ClassCastException. Use visitor instead.
-  public <T> T getDeclarationAs(int i, Class<T> clazz) {
-    return clazz.cast(this.declarations.get(i));
+  /**
+   * Returns the i-th declaration as a specific class, if it can be cast
+   *
+   * @param i the index
+   * @param clazz the class
+   * @param <T> the type of the class
+   * @return the declaration or null, if it the declaration can not be cast to the class
+   */
+  @Nullable
+  public <T extends Declaration> T getDeclarationAs(int i, Class<T> clazz) {
+    Declaration declaration = this.declarations.get(i);
+
+    if (declaration == null) {
+      return null;
+    }
+
+    return declaration.getClass().isAssignableFrom(clazz)
+        ? clazz.cast(this.declarations.get(i))
+        : null;
   }
 
   /**
