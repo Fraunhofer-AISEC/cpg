@@ -45,7 +45,6 @@ import de.fraunhofer.aisec.cpg.graph.type.Type;
 import de.fraunhofer.aisec.cpg.graph.type.TypeParser;
 import de.fraunhofer.aisec.cpg.graph.type.UnknownType;
 import de.fraunhofer.aisec.cpg.passes.scopes.RecordScope;
-import de.fraunhofer.aisec.cpg.passes.scopes.Scope;
 import java.util.Arrays;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -337,8 +336,6 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
 
       Declaration declaration = lang.getDeclarationHandler().handle(member);
 
-      Scope declarationScope = lang.getScopeManager().getScopeOfStatment(declaration);
-
       if (declaration instanceof FunctionDeclaration) {
         MethodDeclaration method =
             MethodDeclaration.from((FunctionDeclaration) declaration, recordDeclaration);
@@ -347,10 +344,7 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
         // check, if its a constructor
         if (declaration.getName().equals(recordDeclaration.getName())) {
           ConstructorDeclaration constructor = ConstructorDeclaration.from(method);
-          if (declarationScope != null) {
-            declarationScope.setAstNode(
-                constructor); // Adjust cpg Node by which scopes are identified
-          }
+
           Type type =
               TypeParser.createFrom(
                   lang.getScopeManager()
@@ -368,10 +362,6 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
 
           // update scope manager, otherwise we point at the old function declaration
           this.lang.getScopeManager().replaceNode(method, declaration);
-        }
-
-        if (declarationScope != null) {
-          declarationScope.setAstNode(method); // Adjust cpg Node by which scopes are identified
         }
       } else if (declaration instanceof VariableDeclaration) {
         FieldDeclaration fieldDeclaration =
