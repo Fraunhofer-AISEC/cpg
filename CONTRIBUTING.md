@@ -16,7 +16,7 @@ git clone https://github.com/<<<your-github-account>>>/TODO.git
 Add the upstream repository as a second remote, so you can incorporate upstream changes into your fork:
 
 ```
-git remote add upstream https://github.com/FraunhoferAISEC/TODO.git
+git remote add upstream https://github.com/Fraunhofer-AISEC/cpg.git
 ```
 
 ## Build
