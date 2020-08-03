@@ -59,3 +59,6 @@ Please stick to English for all discussions and comments. This helps to make the
 # Publishing
 
 To publish a release, push a tag that contains the version number beginning with `v`, i.e. `v2.0.0`. The GitHub Actions workflow will then automatically build a release zip and create a GitHub release. Afterwards it would be good to adjust the release text to include a minimal changelog.
+
+## Versioning
+The versioning number is split up in major, minor and bugfix releases: `major.minor.bugfix`. Most releases will have the form `major.minor.0`, and bugfixes will be either included in a future version, and the bugfix release number will only be used to ship bug fixes for older versions when necessary.
