@@ -41,6 +41,16 @@ To enable us to quickly review and accept your pull requests, always create one 
 Never merge multiple requests in one unless they have the same root cause. Be sure your code is formatted correctly using the respective formatting task.
 Keep code changes as small as possible. 
 Pull requests should contain tests whenever possible.
+## Change-Log
+Every PR that changes the graph or interaction with one of the classes that run the analysis has to be documented in the changelog. For this, one should add the appropriated change type (added, changed, removed) under the heading of the thematic change (Graph-changes, Interface-changes). Fixes for specific issues should also be mentioned but their inclusion in the release changelog is optional. An example of a PR-changelog:
+### Graph-changes
+#### Added
+* New node `A` with edges of name `B` and `C` to its ast-children.
+#### Changed
+* Property of Node `A` that describes the name changed from `name` to `simple-name`.
+### Interface-changes
+#### Added
+* function `loadIncludes` which persists nodes to the graph comming from in-file includes.
 
 # Language
 
