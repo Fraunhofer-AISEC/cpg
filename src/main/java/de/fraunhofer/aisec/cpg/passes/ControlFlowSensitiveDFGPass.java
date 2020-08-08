@@ -33,6 +33,14 @@ public class ControlFlowSensitiveDFGPass extends Pass {
     }
   }
 
+  private void removeValues(ControlFlowSensitiveDFG dfg) {
+    for (Node currNode : dfg.getRemoves().keySet()) {
+      for (Node prev : dfg.getRemoves().get(currNode)) {
+        currNode.removePrevDFG(prev);
+      }
+    }
+  }
+
   /**
    * ControlFlowSensitiveDFG Pass is perfomed on every Method
    *
@@ -42,6 +50,7 @@ public class ControlFlowSensitiveDFGPass extends Pass {
     if (node instanceof FunctionDeclaration) {
       ControlFlowSensitiveDFG controlFlowSensitiveDFG = new ControlFlowSensitiveDFG(node);
       controlFlowSensitiveDFG.handle();
+      removeValues(controlFlowSensitiveDFG);
     }
   }
 }

@@ -34,13 +34,14 @@ class DFGTest {
             e -> e.getAccess().equals(AccessValues.WRITE));
 
     assertTrue(literal2.getNextDFG().contains(a2));
-    assertEquals(0, a2.getNextDFG().size()); // Outgoing DFG Edges are not allowed
+    assertEquals(1, a2.getNextDFG().size()); // Outgoing DFG Edges only to VariableDeclaration
 
     assertEquals(1, a2.getRefersTo().size());
     Node refersTo = a2.getRefersTo().iterator().next();
     assertTrue(refersTo instanceof VariableDeclaration);
     VariableDeclaration a = (VariableDeclaration) refersTo;
     assertEquals(0, a.getNextDFG().size());
+    assertTrue(a.equals(a2.getNextDFG().iterator().next()));
 
     // Test Else-Block with System.out.println()
     Literal<?> literal1 =
@@ -114,12 +115,30 @@ class DFGTest {
             topLevel,
             true);
 
+    VariableDeclaration a =
+        TestUtils.findByPredicate(
+            TestUtils.subnodesOfType(result, VariableDeclaration.class),
+            v -> v.getName().equals("a"));
+
     VariableDeclaration b =
         TestUtils.findByPredicate(
             TestUtils.subnodesOfType(result, VariableDeclaration.class),
             v -> v.getName().equals("b"));
 
     DeclaredReferenceExpression ab = (DeclaredReferenceExpression) b.getPrevEOG().get(0);
+
+    DeclaredReferenceExpression a10 =
+        TestUtils.findByPredicate(
+            TestUtils.subnodesOfType(result, DeclaredReferenceExpression.class),
+            dre -> dre.getLocation().getRegion().getStartLine() == 8);
+    DeclaredReferenceExpression a11 =
+        TestUtils.findByPredicate(
+            TestUtils.subnodesOfType(result, DeclaredReferenceExpression.class),
+            dre -> dre.getLocation().getRegion().getStartLine() == 11);
+    DeclaredReferenceExpression a12 =
+        TestUtils.findByPredicate(
+            TestUtils.subnodesOfType(result, DeclaredReferenceExpression.class),
+            dre -> dre.getLocation().getRegion().getStartLine() == 14);
 
     Literal<?> literal0 =
         TestUtils.findByPredicate(
@@ -134,26 +153,43 @@ class DFGTest {
         TestUtils.findByPredicate(
             TestUtils.subnodesOfType(result, Literal.class), l -> l.getValue().equals(12));
 
+    assertEquals(2, literal10.getNextDFG().size());
+    assertTrue(literal10.getNextDFG().contains(a10));
+
+    assertEquals(2, literal11.getNextDFG().size());
+    assertTrue(literal11.getNextDFG().contains(a11));
+
+    assertEquals(3, literal12.getNextDFG().size());
+    assertTrue(literal12.getNextDFG().contains(a12));
+
+    assertEquals(4, a.getPrevDFG().size());
+    assertTrue(a.getPrevDFG().contains(literal0));
+    assertTrue(a.getPrevDFG().contains(a10));
+    assertTrue(a.getPrevDFG().contains(a11));
+    assertTrue(a.getPrevDFG().contains(a12));
+
     assertTrue(ab.getPrevDFG().contains(literal0));
     assertTrue(ab.getPrevDFG().contains(literal10));
     assertTrue(ab.getPrevDFG().contains(literal11));
     assertTrue(ab.getPrevDFG().contains(literal12));
 
-    // Fallthrough test
-    // TODO: Right now we are not able to have an order in SwitchStatements. This is required in
-    // order to determine to which case the execution performs the fallthrough
-    /*CallExpression println =
-        TestUtils.findByPredicate(
-            Util.subnodesOfType(result, CallExpression.class), c -> c.getName().equals("println"));
+    assertEquals(1, ab.getNextDFG().size());
+    assertTrue(ab.getNextDFG().contains(b));
 
-    DeclaredReferenceExpression a =
+    // Fallthrough test
+    CallExpression println =
         TestUtils.findByPredicate(
-            Util.subnodesOfType(result, DeclaredReferenceExpression.class),
+            TestUtils.subnodesOfType(result, CallExpression.class),
+            c -> c.getName().equals("println"));
+
+    DeclaredReferenceExpression aPrintln =
+        TestUtils.findByPredicate(
+            TestUtils.subnodesOfType(result, DeclaredReferenceExpression.class),
             e -> e.getNextEOG().contains(println));
 
-    assertEquals(2, a.getPrevDFG().size());
-    assertTrue(a.getPrevDFG().contains(literal0));
-    assertTrue(a.getPrevDFG().contains(literal12));*/
+    assertEquals(2, aPrintln.getPrevDFG().size());
+    assertTrue(aPrintln.getPrevDFG().contains(literal0));
+    assertTrue(aPrintln.getPrevDFG().contains(literal12));
   }
 
   // Test DFG when ReadWrite access occurs, such as compoundoperators or unaryoperators

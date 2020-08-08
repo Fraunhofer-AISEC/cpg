@@ -12,6 +12,7 @@ public class ControlFlowSensitiveDFG {
   private Map<VariableDeclaration, Set<Node>> variables;
   private Set<Node> visited = new HashSet<>();
   private Set<Node> visitedEOG;
+  private Map<Node, Set<Node>> removes;
   // Node where the ControlFlowSensitive analysis is started. On analysis start this will be the
   // MethodDeclaration, but
   // it can be any other node where the analysis is splitted (such as if of switch)
@@ -28,7 +29,8 @@ public class ControlFlowSensitiveDFG {
     this.variables = duplicateMap(variables);
     this.startNode = startNode;
     this.endNode = endNode;
-    this.visitedEOG = visitedEOG;
+    this.visitedEOG = new HashSet<>(visitedEOG);
+    this.removes = new HashMap<>();
   }
 
   public ControlFlowSensitiveDFG(Node startNode) {
@@ -36,6 +38,19 @@ public class ControlFlowSensitiveDFG {
     this.startNode = startNode;
     this.endNode = null;
     this.visitedEOG = new HashSet<>();
+    this.removes = new HashMap<>();
+  }
+
+  public Map<Node, Set<Node>> getRemoves() {
+    return removes;
+  }
+
+  private void addToRemoves(Node curr, Node prev) {
+    if (!this.removes.containsKey(curr)) {
+      this.removes.put(curr, new HashSet<>());
+    }
+
+    this.removes.get(curr).add(prev);
   }
 
   public Map<VariableDeclaration, Set<Node>> getVariables() {
@@ -64,7 +79,6 @@ public class ControlFlowSensitiveDFG {
 
   private void addVisitedToMap(VariableDeclaration variableDeclaration) {
     Set<Node> prevDFGSet = variableDeclaration.getPrevDFG();
-    Set<Node> removePrevDFG = new HashSet<>();
     for (Node prev : prevDFGSet) {
       if (checkVisited(prev)) {
         if (variables.containsKey(variableDeclaration)) {
@@ -74,12 +88,7 @@ public class ControlFlowSensitiveDFG {
           dfgSet.add(prev);
           variables.put(variableDeclaration, dfgSet);
         }
-        removePrevDFG.add(prev);
       }
-    }
-
-    for (Node prev : removePrevDFG) {
-      variableDeclaration.removePrevDFG(prev);
     }
   }
 
@@ -182,6 +191,19 @@ public class ControlFlowSensitiveDFG {
     return joindVariables;
   }
 
+  private Map<Node, Set<Node>> joinRemoves(List<ControlFlowSensitiveDFG> dfgs) {
+    Map<Node, Set<Node>> newRemoves = new HashMap<>();
+    for (ControlFlowSensitiveDFG dfg : dfgs) {
+      for (Node n : dfg.getRemoves().keySet()) {
+        if (!newRemoves.containsKey(n)) {
+          newRemoves.put(n, new HashSet<>());
+        }
+        newRemoves.get(n).addAll(dfg.getRemoves().get(n));
+      }
+    }
+    return newRemoves;
+  }
+
   /**
    * Removes the prevDFG to a VariableDeclaration of a node and adds the values of the
    * VariableDeclaration as prevDFGs to the node
@@ -195,7 +217,8 @@ public class ControlFlowSensitiveDFG {
         for (Node target : variables.get(prev)) {
           currNode.addPrevDFG(target);
         }
-        currNode.removePrevDFG(prev);
+        // currNode.removePrevDFG(prev);
+        addToRemoves(currNode, prev);
       }
     }
   }
@@ -212,7 +235,6 @@ public class ControlFlowSensitiveDFG {
       if (next instanceof VariableDeclaration && variables.containsKey(next)) {
         Set<Node> values = new HashSet<>(currNode.getPrevDFG());
         variables.replace((VariableDeclaration) next, values);
-        currNode.removeNextDFG(next);
       }
     }
   }
@@ -242,9 +264,6 @@ public class ControlFlowSensitiveDFG {
    * @return node at which the split is over and both execution paths are equal again
    */
   private Node handleDFGSplit(Node currNode) {
-    // TODO Currently we treat the CaseStatements in SwitchStatements as if they were mutually
-    // exclusive. This must be updated once we have an order for the cases to determine the
-    // target of a fall through
     // If an IfStatement or a SwitchStatement is found we split the ControlFlowSensitiveDFG for
     // every case and merge it, when the execution reaches the joinPoint
     Node joinNode = obtainJoinPoint(currNode);
@@ -259,6 +278,7 @@ public class ControlFlowSensitiveDFG {
     }
 
     this.variables = joinVariables(dfgs);
+    this.removes = joinRemoves(dfgs);
 
     for (ControlFlowSensitiveDFG dfg : dfgs) {
       this.visitedEOG.addAll(dfg.getVisitedEOG());
