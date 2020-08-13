@@ -372,7 +372,7 @@ public class CXXLanguageFrontend extends LanguageFrontend {
   public void processAttributes(@NonNull Node node, @NonNull IASTAttributeOwner owner) {
     if (this.config.processAnnotations) {
       // set attributes
-      node.setAnnotations(handleAttributes(owner));
+      node.addAnnotations(handleAttributes(owner));
     }
   }
 
