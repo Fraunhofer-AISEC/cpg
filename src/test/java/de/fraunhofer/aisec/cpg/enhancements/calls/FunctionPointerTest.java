@@ -24,7 +24,7 @@
  *
  */
 
-package de.fraunhofer.aisec.cpg.enhancements;
+package de.fraunhofer.aisec.cpg.enhancements.calls;
 
 import static org.junit.jupiter.api.Assertions.*;
 

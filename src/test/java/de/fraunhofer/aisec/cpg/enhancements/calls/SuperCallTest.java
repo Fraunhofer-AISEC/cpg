@@ -1,4 +1,4 @@
-package de.fraunhofer.aisec.cpg.enhancements;
+package de.fraunhofer.aisec.cpg.enhancements.calls;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -30,7 +30,7 @@ class SuperCallTest extends BaseTest {
     MethodDeclaration target = TestUtils.findByUniqueName(methods, "target");
     List<CallExpression> calls = TestUtils.subnodesOfType(target, CallExpression.class);
     CallExpression superCall =
-        TestUtils.findByPredicate(calls, c -> "super.target();".equals(c.getCode()));
+        TestUtils.findByUniquePredicate(calls, c -> "super.target();".equals(c.getCode()));
 
     assertEquals(List.of(superTarget), superCall.getInvokes());
   }
@@ -55,9 +55,11 @@ class SuperCallTest extends BaseTest {
     MethodDeclaration target = TestUtils.findByUniqueName(methods, "target");
     List<CallExpression> calls = TestUtils.subnodesOfType(target, CallExpression.class);
     CallExpression interface1Call =
-        TestUtils.findByPredicate(calls, c -> "Interface1.super.target();".equals(c.getCode()));
+        TestUtils.findByUniquePredicate(
+            calls, c -> "Interface1.super.target();".equals(c.getCode()));
     CallExpression interface2Call =
-        TestUtils.findByPredicate(calls, c -> "Interface2.super.target();".equals(c.getCode()));
+        TestUtils.findByUniquePredicate(
+            calls, c -> "Interface2.super.target();".equals(c.getCode()));
 
     assertEquals(List.of(interface1Target), interface1Call.getInvokes());
     assertEquals(List.of(interface2Target), interface2Call.getInvokes());
@@ -77,12 +79,13 @@ class SuperCallTest extends BaseTest {
 
     MethodDeclaration getField = TestUtils.findByUniqueName(methods, "getField");
     List<MemberExpression> refs = TestUtils.subnodesOfType(getField, MemberExpression.class);
-    MemberExpression fieldRef = TestUtils.findByPredicate(refs, r -> "field".equals(r.getCode()));
+    MemberExpression fieldRef =
+        TestUtils.findByUniquePredicate(refs, r -> "field".equals(r.getCode()));
 
     MethodDeclaration getSuperField = TestUtils.findByUniqueName(methods, "getSuperField");
     refs = TestUtils.subnodesOfType(getSuperField, MemberExpression.class);
     MemberExpression superFieldRef =
-        TestUtils.findByPredicate(refs, r -> "super.field".equals(r.getCode()));
+        TestUtils.findByUniquePredicate(refs, r -> "super.field".equals(r.getCode()));
 
     assertEquals(subClass.getThis(), fieldRef.getBase());
     assertEquals(field, fieldRef.getMember());
@@ -105,7 +108,7 @@ class SuperCallTest extends BaseTest {
     MethodDeclaration target = TestUtils.findByUniqueName(methods, "inner");
     List<CallExpression> calls = TestUtils.subnodesOfType(target, CallExpression.class);
     CallExpression superCall =
-        TestUtils.findByPredicate(calls, c -> "SubClass.super.target();".equals(c.getCode()));
+        TestUtils.findByUniquePredicate(calls, c -> "SubClass.super.target();".equals(c.getCode()));
 
     assertEquals(List.of(superTarget), superCall.getInvokes());
   }
