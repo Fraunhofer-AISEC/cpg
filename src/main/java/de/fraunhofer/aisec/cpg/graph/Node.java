@@ -120,7 +120,7 @@ public class Node extends IVisitable<Node> {
 
   /** List of annotations associated with that node. */
   @SubGraph("AST")
-  public List<Annotation> annotations = new ArrayList<>();
+  protected List<Annotation> annotations = new ArrayList<>();
 
   public Long getId() {
     return id;
