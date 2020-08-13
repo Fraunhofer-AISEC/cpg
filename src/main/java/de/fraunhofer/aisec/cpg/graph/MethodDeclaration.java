@@ -59,7 +59,7 @@ public class MethodDeclaration extends FunctionDeclaration {
     md.setParameters(functionDeclaration.getParameters());
     md.setBody(functionDeclaration.getBody());
     md.setType(functionDeclaration.getType());
-    md.setAnnotations(functionDeclaration.getAnnotations());
+    md.addAnnotations(functionDeclaration.getAnnotations());
     md.setRecordDeclaration(recordDeclaration);
     md.setIsDefinition(functionDeclaration.isDefinition());
 
@@ -80,6 +80,7 @@ public class MethodDeclaration extends FunctionDeclaration {
     this.isStatic = isStatic;
   }
 
+  @Nullable
   public RecordDeclaration getRecordDeclaration() {
     return recordDeclaration;
   }

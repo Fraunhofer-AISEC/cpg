@@ -29,11 +29,7 @@ package de.fraunhofer.aisec.cpg.graph;
 import de.fraunhofer.aisec.cpg.helpers.LocationConverter;
 import de.fraunhofer.aisec.cpg.processing.IVisitable;
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;
 import org.checkerframework.checker.nullness.qual.NonNull;
@@ -96,8 +92,7 @@ public class Node extends IVisitable<Node> {
   @Relationship(value = "DFG")
   protected Set<Node> nextDFG = new HashSet<>();
 
-  @NonNull
-  protected Set<TypedefDeclaration> typedefs = new HashSet<>();
+  @NonNull protected Set<TypedefDeclaration> typedefs = new HashSet<>();
 
   /**
    * If a node is marked as being a dummy, it means that it was created artificially and does not
@@ -272,8 +267,8 @@ public class Node extends IVisitable<Node> {
     return annotations;
   }
 
-  public void setAnnotations(@NonNull List<Annotation> annotations) {
-    this.annotations = annotations;
+  public void addAnnotations(@NonNull Collection<Annotation> annotations) {
+    this.annotations.addAll(annotations);
   }
 
   /**
