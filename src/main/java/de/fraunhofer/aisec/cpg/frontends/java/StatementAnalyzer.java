@@ -557,12 +557,12 @@ public class StatementAnalyzer
 
   private ExplicitConstructorInvocation handleExplicitConstructorInvocation(Statement stmt) {
     ExplicitConstructorInvocationStmt eciStatement = stmt.asExplicitConstructorInvocationStmt();
-    String containingClass;
-    try {
-      containingClass = eciStatement.resolve().declaringType().getQualifiedName();
-    } catch (RuntimeException | NoClassDefFoundError e) {
-      containingClass = lang.recoverTypeFromUnsolvedException(e);
-      // base can be null here
+    String containingClass = "";
+    RecordDeclaration currentRecord = lang.getScopeManager().getCurrentRecord();
+    if (currentRecord == null) {
+      log.error("Explicit constructor invocation has to be located inside a record declaration!");
+    } else {
+      containingClass = currentRecord.getName();
     }
 
     ExplicitConstructorInvocation node =
