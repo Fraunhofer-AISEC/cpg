@@ -26,7 +26,7 @@
 
 package de.fraunhofer.aisec.cpg.passes.scopes;
 
-public class GlobalScope extends DeclarationScope {
+public class GlobalScope extends StructureDeclarationScope {
 
   public GlobalScope() {
     super(null);
