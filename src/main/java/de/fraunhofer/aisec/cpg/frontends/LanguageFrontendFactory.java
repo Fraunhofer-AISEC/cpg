@@ -29,12 +29,10 @@ package de.fraunhofer.aisec.cpg.frontends;
 import de.fraunhofer.aisec.cpg.TranslationConfiguration;
 import de.fraunhofer.aisec.cpg.frontends.cpp.CXXLanguageFrontend;
 import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguageFrontend;
-<<<<<<< HEAD
-import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager;
-=======
 import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguageFrontend;
->>>>>>> b39e2a2... Initial python branch
+import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager;
 import java.util.List;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 public class LanguageFrontendFactory {
 
@@ -48,7 +46,6 @@ public class LanguageFrontendFactory {
   @Nullable
   public static LanguageFrontend getFrontend(
       String fileType, TranslationConfiguration config, ScopeManager scopeManager) {
-
     if (JAVA_EXTENSIONS.contains(fileType)) {
       return new JavaLanguageFrontend(config, scopeManager);
     } else if (CXX_EXTENSIONS.contains(fileType)) {
@@ -56,8 +53,7 @@ public class LanguageFrontendFactory {
     } else if (PYTHON_EXTENSIONS.contains(fileType)) {
       return new PythonLanguageFrontend(config, scopeManager);
     } else {
-      throw new TranslationException(
-          String.format("No language frontend found for extension %s ", fileType));
+      return null;
     }
   }
 }

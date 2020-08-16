@@ -133,7 +133,8 @@ public class TypeManager {
   }
 
   private Set<Type> unwrapTypes(Collection<Type> types, WrapState wrapState) {
-    // TODO Performance: This method is called very often (for each setType()) and does four iterations over "types". Reduce number of iterations.
+    // TODO Performance: This method is called very often (for each setType()) and does four
+    // iterations over "types". Reduce number of iterations.
     Set<Type> original = new HashSet<>(types);
     Set<Type> unwrappedTypes = new HashSet<>();
     int depth = 0;

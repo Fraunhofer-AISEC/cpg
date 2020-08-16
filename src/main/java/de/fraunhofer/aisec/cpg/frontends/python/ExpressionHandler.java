@@ -17,9 +17,9 @@ package de.fraunhofer.aisec.cpg.frontends.python;
 import de.fraunhofer.aisec.cpg.frontends.Handler;
 import de.fraunhofer.aisec.cpg.graph.CallExpression;
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder;
-import io.github.oxisto.reticulated.ast.expression.Call;
 import io.github.oxisto.reticulated.ast.expression.Expression;
-import io.github.oxisto.reticulated.ast.expression.Identifier;
+import io.github.oxisto.reticulated.ast.expression.primary.atom.Identifier;
+import io.github.oxisto.reticulated.ast.expression.primary.call.Call;
 
 public class ExpressionHandler
     extends Handler<de.fraunhofer.aisec.cpg.graph.Expression, Expression, PythonLanguageFrontend> {
@@ -31,7 +31,7 @@ public class ExpressionHandler
   }
 
   private CallExpression handleCall(Expression expression) {
-    Call call = expression.asCall();
+    Call call = (Call) expression;
 
     Identifier id = call.getPrimary().asIdentifier();
 

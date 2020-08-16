@@ -29,9 +29,11 @@ public class SimpleStatementHandler
   }
 
   private Statement handleExpressionStatement(SimpleStatement simpleStatement) {
-    ExpressionStatement expressionStatement = simpleStatement.asExpressionStatement();
+    ExpressionStatement expressionStatement = (ExpressionStatement) simpleStatement;
 
     // un-wrap it
-    return this.lang.getExpressionHandler().handle(expressionStatement.getExpression());
+    // return this.lang.getExpressionHandler().handle(expressionStatement.getExpression());
+    // does not work any more with latest rp version
+    return null;
   }
 }

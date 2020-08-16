@@ -20,10 +20,14 @@ import de.fraunhofer.aisec.cpg.graph.Declaration;
 import de.fraunhofer.aisec.cpg.graph.FunctionDeclaration;
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder;
 import de.fraunhofer.aisec.cpg.graph.ParamVariableDeclaration;
-import de.fraunhofer.aisec.cpg.graph.Type;
+import de.fraunhofer.aisec.cpg.graph.type.Type;
+import de.fraunhofer.aisec.cpg.graph.type.UnknownType;
+import io.github.oxisto.reticulated.ast.Suite;
+import io.github.oxisto.reticulated.ast.expression.primary.atom.Identifier;
 import io.github.oxisto.reticulated.ast.statement.Definition;
 import io.github.oxisto.reticulated.ast.statement.FunctionDefinition;
-import io.github.oxisto.reticulated.ast.statement.Parameter;
+import io.github.oxisto.reticulated.ast.statement.parameter.BaseParameter;
+import io.github.oxisto.reticulated.ast.statement.parameter.ParameterList;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -40,15 +44,16 @@ public class DefinitionHandler extends Handler<Declaration, Definition, PythonLa
     FunctionDefinition func = def.asFunctionDefinition();
 
     FunctionDeclaration declaration =
-        NodeBuilder.newFunctionDeclaration(func.getId().getName(), null);
+        NodeBuilder.newFunctionDeclaration(func.getFuncName().getName(), null);
 
     this.lang.getScopeManager().enterScope(declaration);
 
     // build parameters
     List<ParamVariableDeclaration> parameters = new ArrayList<>();
-    for (Parameter parameter : func.getParameterList()) {
-      String name = parameter.getId().getName();
-      Type type = Type.UNKNOWN;
+    ParameterList list = (ParameterList) func.getParameterList();
+    for (BaseParameter parameter : list) {
+      String name = ((Identifier) parameter).getName();
+      Type type = UnknownType.getUnknownType();
 
       // TODO: resolve parameter/type
 
@@ -58,7 +63,7 @@ public class DefinitionHandler extends Handler<Declaration, Definition, PythonLa
     declaration.setParameters(parameters);
 
     // build function body
-    CompoundStatement body = this.lang.getSuiteHandler().handle(func.getSuite());
+    CompoundStatement body = this.lang.getSuiteHandler().handle((Suite) func.getSuite());
 
     declaration.setBody(body);
 

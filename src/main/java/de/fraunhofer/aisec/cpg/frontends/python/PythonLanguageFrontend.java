@@ -17,15 +17,16 @@ package de.fraunhofer.aisec.cpg.frontends.python;
 import de.fraunhofer.aisec.cpg.TranslationConfiguration;
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
 import de.fraunhofer.aisec.cpg.frontends.TranslationException;
-import de.fraunhofer.aisec.cpg.graph.Region;
 import de.fraunhofer.aisec.cpg.graph.TranslationUnitDeclaration;
+import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager;
+import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation;
 import io.github.oxisto.reticulated.ParserResult;
 import io.github.oxisto.reticulated.PythonParser;
 import io.github.oxisto.reticulated.ast.FileInput;
 import io.github.oxisto.reticulated.ast.statement.Definition;
 import io.github.oxisto.reticulated.ast.statement.Statement;
 import java.io.File;
-import org.checkerframework.checker.nullness.qual.NonNull;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
  * The language frontend for translating python language into the graph. It uses antlr to parse the
@@ -33,15 +34,15 @@ import org.checkerframework.checker.nullness.qual.NonNull;
  */
 public class PythonLanguageFrontend extends LanguageFrontend {
 
-  private StatementHandler statementHandler = new StatementHandler(this);
-  private StatementListHandler statementListHandler = new StatementListHandler(this);
-  private DefinitionHandler definitionHandler = new DefinitionHandler(this);
-  private SuiteHandler suiteHandler = new SuiteHandler(this);
-  private ExpressionHandler expressionHandler = new ExpressionHandler(this);
-  private SimpleStatementHandler simpleStatementHandler = new SimpleStatementHandler(this);
+  private final StatementHandler statementHandler = new StatementHandler(this);
+  private final StatementListHandler statementListHandler = new StatementListHandler(this);
+  private final DefinitionHandler definitionHandler = new DefinitionHandler(this);
+  private final SuiteHandler suiteHandler = new SuiteHandler(this);
+  private final ExpressionHandler expressionHandler = new ExpressionHandler(this);
+  private final SimpleStatementHandler simpleStatementHandler = new SimpleStatementHandler(this);
 
-  public PythonLanguageFrontend(TranslationConfiguration config) {
-    super(config, "");
+  public PythonLanguageFrontend(TranslationConfiguration config, ScopeManager scopeManager) {
+    super(config, scopeManager, "");
   }
 
   @Override
@@ -74,8 +75,8 @@ public class PythonLanguageFrontend extends LanguageFrontend {
   }
 
   @Override
-  public @NonNull <T> Region getRegionFromRawNode(T astNode) {
-    return Region.UNKNOWN_REGION;
+  public @Nullable <T> PhysicalLocation getLocationFromRawNode(T astNode) {
+    return null;
   }
 
   @Override

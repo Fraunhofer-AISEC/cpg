@@ -161,7 +161,7 @@ dependencies {
     // CDT
     api("org.eclipse.cdt:core:6.11.1.202006011430")
 
-    api("io.github.oxisto", "reticulated-python", "0.2-SNAPSHOT")
+    api("io.github.oxisto", "reticulated-python", "0.3-SNAPSHOT")
 
     // JUnit
     testImplementation("org.junit.jupiter:junit-jupiter-api:5.6.2")
