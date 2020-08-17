@@ -176,7 +176,7 @@ public class ScopeManager {
 
     Node node = recordScope.getAstNode();
     if (!(node instanceof RecordDeclaration)) {
-      LOGGER.error("Cannot get current Record. No AST node {}", recordScope.toString());
+      LOGGER.error("Cannot get current Record. No AST node {}", recordScope);
       return null;
     }
     return (RecordDeclaration) node;
@@ -409,17 +409,6 @@ public class ScopeManager {
 
       toIterate = toIterate.getParent();
     } while (toIterate != null);
-  }
-
-  // Todo need to move this somwhere apropriatee
-  private String getSimpleName(Node node) {
-    String name = node.getName();
-    if (name.contains(lang.getNamespaceDelimiter())) {
-      return name.substring(
-          name.lastIndexOf(lang.getNamespaceDelimiter()) + lang.getNamespaceDelimiter().length());
-    } else {
-      return name;
-    }
   }
 
   /**

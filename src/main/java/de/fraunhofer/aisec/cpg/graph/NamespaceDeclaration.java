@@ -94,4 +94,21 @@ public class NamespaceDeclaration extends Declaration {
   public <T> T getDeclarationAs(int i, Class<T> clazz) {
     return clazz.cast(getDeclarations().get(i));
   }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) {
+      return true;
+    }
+    if (!(o instanceof NamespaceDeclaration)) {
+      return false;
+    }
+    NamespaceDeclaration that = (NamespaceDeclaration) o;
+    return super.equals(that) && Objects.equals(declarations, that.declarations);
+  }
+
+  @Override
+  public int hashCode() {
+    return super.hashCode();
+  }
 }

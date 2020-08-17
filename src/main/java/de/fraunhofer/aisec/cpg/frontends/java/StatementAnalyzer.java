@@ -603,7 +603,7 @@ public class StatementAnalyzer
       if (r instanceof DeclarationStatement) {
         for (Declaration d : ((DeclarationStatement) r).getDeclarations()) {
           if (d instanceof VariableDeclaration) {
-            lang.getScopeManager().addDeclaration((VariableDeclaration) d);
+            lang.getScopeManager().addDeclaration(d);
           }
         }
       }
