@@ -453,97 +453,10 @@ public class ScopeManager {
     }
   }
 
-  public void addExternalFieldDeclaration(FieldDeclaration field) {
-    String name = field.getName();
-    String path = name.substring(0, name.lastIndexOf(lang.getNamespaceDelimiter()));
-    String simpleName =
-        name.substring(
-            name.lastIndexOf(lang.getNamespaceDelimiter()) + lang.getNamespaceDelimiter().length(),
-            name.length() - 1);
-
-    Scope recordScope = resolveScopeWithPath(path);
-    if (recordScope instanceof RecordScope) {
-      RecordDeclaration record = (RecordDeclaration) recordScope.getAstNode();
-      FieldDeclaration existing =
-          record.getFields().stream()
-              .filter(containedField -> getSimpleName(containedField).equals(simpleName))
-              .collect(Collectors.toList())
-              .get(0);
-      if (existing != null) {
-        record.getFields().remove(existing);
-        record.getFields().add(field);
-      }
-    } else {
-      LOGGER.warn("Scope found with path to the field is not scoping a record declaration.");
-    }
-  }
-
-  public void addExternalFunctionDeclaration(FunctionDeclaration function) {
-    String name = function.getName();
-    String path = name.substring(0, name.lastIndexOf(lang.getNamespaceDelimiter()));
-    String simpleName =
-        name.substring(
-            name.lastIndexOf(lang.getNamespaceDelimiter()) + lang.getNamespaceDelimiter().length(),
-            name.length() - 1);
-
-    Scope nameScope = resolveScopeWithPath(path);
-    if (nameScope instanceof NameScope) {
-      NamespaceDeclaration namespace = (NamespaceDeclaration) nameScope.getAstNode();
-      FunctionDeclaration existing =
-          namespace.getFunctions().stream()
-              .filter(containedField -> getSimpleName(containedField).equals(simpleName))
-              .collect(Collectors.toList())
-              .get(0);
-      if (existing != null) {
-        namespace.getFunctions().remove(existing);
-        namespace.getFunctions().add(function);
-      }
-    } else {
-      LOGGER.warn("Scope found with path to the field is not scoping a record declaration.");
-    }
-  }
-
-  public void addExternalRecordDeclaration(RecordDeclaration recordDeclaration) {}
-
   // 1. enter scope of element to replace and move to parent or
 
   public void addDeclaration(Declaration declaration) {
-
     addDeclarationInCurrentScope(declaration);
-    return;
-    /*
-    if (!declaration.getName().contains(lang.getNamespaceDelimiter())) {
-      addDeclarationInCurrentScope(declaration);
-    } else {
-      Scope tmpScope = currentScope;
-      // Todo search for the right scope to add
-      // Todo set that scope as current scope
-      String prefix = declaration.getName();
-      prefix = prefix.substring(0, prefix.lastIndexOf(lang.getNamespaceDelimiter()));
-      Scope scope = resolveScopeWithPath(prefix);
-      if (scope != null) {
-        currentScope = scope;
-        addDeclarationInCurrentScope(declaration);
-      } else {
-        LOGGER.warn(
-            "External declaration {} could not be added to unknown parent {}.",
-            declaration.getName(),
-            prefix);
-        return;
-      }
-
-      // Cut of the name prefix before adding to the appropriate scope
-      String name = declaration.getName();
-      name =
-          name.substring(
-              name.lastIndexOf(
-                  lang.getNamespaceDelimiter() + lang.getNamespaceDelimiter().length()));
-      declaration.setName(name);
-
-      addDeclarationInCurrentScope(declaration);
-      currentScope = tmpScope;
-    }
-    */
   }
 
   public void addDeclarationInCurrentScope(Declaration declaration) {
