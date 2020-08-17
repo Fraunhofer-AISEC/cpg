@@ -42,7 +42,6 @@ import de.fraunhofer.aisec.cpg.graph.VariableDeclaration;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.stream.Collectors;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -103,37 +102,27 @@ public class ValueDeclarationScope extends Scope {
     if (astNode instanceof NamespaceDeclaration) {
       NamespaceDeclaration namespaceD = (NamespaceDeclaration) astNode;
 
-      if (valueDeclaration instanceof FieldDeclaration) {
-        addByNameAndReplaceIfNotContained(
-            namespaceD.getFields(), (FieldDeclaration) valueDeclaration);
-      } else if (valueDeclaration instanceof FunctionDeclaration) {
-        addByNameAndReplaceIfNotContained(
-            namespaceD.getFunctions(), (FunctionDeclaration) valueDeclaration);
-      }
+      addIfNotContained(namespaceD.getDeclarations(), valueDeclaration);
 
     } else if (astNode instanceof RecordDeclaration) {
       RecordDeclaration recordD = (RecordDeclaration) astNode;
       if (valueDeclaration instanceof ConstructorDeclaration) {
-        addByNameAndReplaceIfNotContained(
-            recordD.getConstructors(), (ConstructorDeclaration) valueDeclaration);
+        addIfNotContained(recordD.getConstructors(), (ConstructorDeclaration) valueDeclaration);
       } else if (valueDeclaration instanceof MethodDeclaration) {
-        addByNameAndReplaceIfNotContained(
-            recordD.getMethods(), (MethodDeclaration) valueDeclaration);
+        addIfNotContained(recordD.getMethods(), (MethodDeclaration) valueDeclaration);
       } else if (valueDeclaration instanceof FieldDeclaration) {
-        addByNameAndReplaceIfNotContained(recordD.getFields(), (FieldDeclaration) valueDeclaration);
+        addIfNotContained(recordD.getFields(), (FieldDeclaration) valueDeclaration);
       }
 
     } else if (astNode instanceof FunctionDeclaration) {
       FunctionDeclaration functionD = (FunctionDeclaration) astNode;
       if (valueDeclaration instanceof ParamVariableDeclaration) {
-        addByNameAndReplaceIfNotContained(
-            functionD.getParameters(), (ParamVariableDeclaration) valueDeclaration);
+        addIfNotContained(functionD.getParameters(), (ParamVariableDeclaration) valueDeclaration);
       }
     } else if (astNode instanceof CompoundStatement) {
       CompoundStatement compoundStatement = (CompoundStatement) astNode;
       if (valueDeclaration instanceof VariableDeclaration) {
-        addByNameAndReplaceIfNotContained(
-            compoundStatement.getLocals(), (VariableDeclaration) valueDeclaration);
+        addIfNotContained(compoundStatement.getLocals(), (VariableDeclaration) valueDeclaration);
       }
     } else if (this instanceof GlobalScope) {
       // Here ther is no ast-node
@@ -146,29 +135,9 @@ public class ValueDeclarationScope extends Scope {
     */
   }
 
-  /**
-   * Function that adds a node to the list and checks them for the name property, if the name
-   * already exists the existing node is replaced. This function behaves like a normal add if the
-   * name does not exist. This is useful when replacing declaration notes on redeclaration an
-   * similar.
-   *
-   * @param collection
-   * @param nodeToAdd
-   * @param <T>
-   */
-  protected <T extends Node> void addByNameAndReplaceIfNotContained(
-      Collection<T> collection, T nodeToAdd) {
+  protected <T extends Node> void addIfNotContained(Collection<T> collection, T nodeToAdd) {
     if (!collection.contains(nodeToAdd)) {
-      List<Node> existing =
-          collection.stream()
-              .filter(node -> node.getName().equals(nodeToAdd))
-              .collect(Collectors.toList());
-      if (existing.size() == 0) {
-        collection.add(nodeToAdd);
-      } else {
-        existing.stream().forEach(toRemove -> collection.remove(toRemove));
-        collection.add(nodeToAdd);
-      }
+      collection.add(nodeToAdd);
     }
   }
 }

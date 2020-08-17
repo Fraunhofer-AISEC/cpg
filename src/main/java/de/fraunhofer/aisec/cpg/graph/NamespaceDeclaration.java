@@ -26,7 +26,7 @@
 
 package de.fraunhofer.aisec.cpg.graph;
 
-import de.fraunhofer.aisec.cpg.helpers.NodeComparator;
+import de.fraunhofer.aisec.cpg.helpers.Util;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -46,62 +46,30 @@ import org.checkerframework.checker.nullness.qual.NonNull;
  */
 public class NamespaceDeclaration extends Declaration {
 
-  /** Edges to a {@link FieldDeclaration} defined in a namespace, these fields are static. */
+  /**
+   * Edges to nested namespaces, records, functions, fields etc. contained in the current namespace.
+   */
   @SubGraph("AST")
-  private List<FieldDeclaration> fields = new ArrayList<>();
-
-  /** Edge to {@link FunctionDeclaration}s defined in a namespace, these functions are static. */
-  @SubGraph("AST")
-  private List<FunctionDeclaration> functions = new ArrayList<>();
-
-  /** Edges to {@link RecordDeclaration}s defined in a namespace. */
-  @SubGraph("AST")
-  private List<RecordDeclaration> records = new ArrayList<>();
-
-  /** Edges to nested namespaces contained in the current namespace. */
-  @SubGraph("AST")
-  private List<NamespaceDeclaration> namespaces = new ArrayList<>();
+  private List<Declaration> declarations = new ArrayList<>();
 
   public List<FieldDeclaration> getFields() {
-    return fields;
-  }
-
-  public void setFields(List<FieldDeclaration> fields) {
-    this.fields = fields;
+    return Util.filterCast(declarations, FieldDeclaration.class);
   }
 
   public List<FunctionDeclaration> getFunctions() {
-    return functions;
-  }
-
-  public void setFunctions(List<FunctionDeclaration> functions) {
-    this.functions = functions;
+    return Util.filterCast(declarations, FunctionDeclaration.class);
   }
 
   public List<RecordDeclaration> getRecords() {
-    return records;
-  }
-
-  public void setRecords(List<RecordDeclaration> records) {
-    this.records = records;
+    return Util.filterCast(declarations, RecordDeclaration.class);
   }
 
   public List<NamespaceDeclaration> getNamespaces() {
-    return namespaces;
-  }
-
-  public void setNamespaces(List<NamespaceDeclaration> namespaces) {
-    this.namespaces = namespaces;
+    return Util.filterCast(declarations, NamespaceDeclaration.class);
   }
 
   public List<Declaration> getDeclarations() {
-    ArrayList<Declaration> ret = new ArrayList<>();
-    ret.addAll(getFields());
-    ret.addAll(getRecords());
-    ret.addAll(getFunctions());
-    ret.addAll(getNamespaces());
-    ret.sort(new NodeComparator());
-    return ret;
+    return declarations;
   }
 
   /**

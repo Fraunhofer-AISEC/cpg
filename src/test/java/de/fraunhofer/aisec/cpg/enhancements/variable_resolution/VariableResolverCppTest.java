@@ -25,6 +25,7 @@ import de.fraunhofer.aisec.cpg.graph.TranslationUnitDeclaration;
 import de.fraunhofer.aisec.cpg.graph.VariableDeclaration;
 import de.fraunhofer.aisec.cpg.helpers.NodeComparator;
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker;
+import de.fraunhofer.aisec.cpg.helpers.Util;
 import java.io.File;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -99,11 +100,11 @@ class VariableResolverCppTest extends BaseTest {
             .flatMap(tUnit -> SubgraphWalker.flattenAST(tUnit).stream())
             .collect(Collectors.toList());
     List<CallExpression> calls =
-        TestUtils.findByName(TestUtils.filterCast(nodes, CallExpression.class), "printLog");
+        TestUtils.findByName(Util.filterCast(nodes, CallExpression.class), "printLog");
 
     calls.sort(new NodeComparator());
 
-    List<RecordDeclaration> records = TestUtils.filterCast(nodes, RecordDeclaration.class);
+    List<RecordDeclaration> records = Util.filterCast(nodes, RecordDeclaration.class);
 
     // Extract all Variable declarations and field declarations for matching
     externalClass = TestUtils.getOfTypeWithName(nodes, RecordDeclaration.class, "ExternalClass");
@@ -118,7 +119,7 @@ class VariableResolverCppTest extends BaseTest {
         TestUtils.getSubnodeOfTypeWithName(outerClass, FieldDeclaration.class, "staticVarName");
     outerImpThis = TestUtils.getSubnodeOfTypeWithName(outerClass, FieldDeclaration.class, "this");
 
-    List<RecordDeclaration> classes = TestUtils.filterCast(nodes, RecordDeclaration.class);
+    List<RecordDeclaration> classes = Util.filterCast(nodes, RecordDeclaration.class);
 
     // Inner class and its fields
     innerClass =
@@ -137,8 +138,7 @@ class VariableResolverCppTest extends BaseTest {
             .filter(method -> method.getName().equals("function1"))
             .collect(Collectors.toList())
             .get(0);
-    forStatements =
-        TestUtils.filterCast(SubgraphWalker.flattenAST(outerFunction1), ForStatement.class);
+    forStatements = Util.filterCast(SubgraphWalker.flattenAST(outerFunction1), ForStatement.class);
     outerFunction2 =
         outerClass.getMethods().stream()
             .filter(method -> method.getName().equals("function2"))
