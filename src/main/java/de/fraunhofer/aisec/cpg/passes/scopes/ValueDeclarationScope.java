@@ -146,6 +146,16 @@ public class ValueDeclarationScope extends Scope {
     */
   }
 
+  /**
+   * Function that adds a node to the list and checks them for the name property, if the name
+   * already exists the existing node is replaced. This function behaves like a normal add if the
+   * name does not exist. This is useful when replacing declaration notes on redeclaration an
+   * similar.
+   *
+   * @param collection
+   * @param nodeToAdd
+   * @param <T>
+   */
   protected <T extends Node> void addByNameAndReplaceIfNotContained(
       Collection<T> collection, T nodeToAdd) {
     if (!collection.contains(nodeToAdd)) {
