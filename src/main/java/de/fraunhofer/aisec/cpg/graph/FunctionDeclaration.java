@@ -53,7 +53,6 @@ public class FunctionDeclaration extends ValueDeclaration {
   /**
    * Classes and Structs can be declared inside a function and are only valid within the function.
    */
-  @SubGraph("AST")
   protected List<RecordDeclaration> records = new ArrayList<>();
 
   /** The list of function parameters. */
