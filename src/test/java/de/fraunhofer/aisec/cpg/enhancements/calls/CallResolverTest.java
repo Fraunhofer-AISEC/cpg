@@ -57,6 +57,12 @@ public class CallResolverTest extends BaseTest {
     List<MethodDeclaration> superMethods =
         TestUtils.findByName(
             TestUtils.subnodesOfType(superClassRecord, MethodDeclaration.class), "superTarget");
+    // We can't infer that a call to superTarget(int, int, int) is intended to be part of the
+    // superclass. It looks like a call to a member of Calls.java, thus we need to add these
+    // methods to the lookup
+    superMethods.addAll(
+        TestUtils.findByName(
+            TestUtils.subnodesOfType(callsRecord, MethodDeclaration.class), "superTarget"));
     List<CallExpression> superCalls =
         TestUtils.findByName(
             TestUtils.subnodesOfType(callsRecord, CallExpression.class), "superTarget");
@@ -88,21 +94,23 @@ public class CallResolverTest extends BaseTest {
     List<List<Type>> signatures =
         List.of(List.of(), List.of(intType, intType), List.of(intType, stringType));
     for (List<Type> signature : signatures) {
-      CallExpression call =
-          TestUtils.findByUniquePredicate(calls, c -> c.getSignature().equals(signature));
-      FunctionDeclaration target =
-          TestUtils.findByUniquePredicate(methods, m -> m.hasSignature(signature));
-      assertEquals(List.of(target), call.getInvokes());
+      for (CallExpression call :
+          TestUtils.findByPredicate(calls, c -> c.getSignature().equals(signature))) {
+        FunctionDeclaration target =
+            TestUtils.findByUniquePredicate(methods, m -> m.hasSignature(signature));
+        assertEquals(List.of(target), call.getInvokes());
+      }
     }
 
     // Check for dummies
     List<Type> dummySignature = List.of(intType, intType, intType);
-    CallExpression dummyCall =
-        TestUtils.findByUniquePredicate(calls, c -> c.getSignature().equals(dummySignature));
-    FunctionDeclaration dummyTarget =
-        TestUtils.findByUniquePredicate(methods, m -> m.hasSignature(dummySignature));
-    assertEquals(List.of(dummyTarget), dummyCall.getInvokes());
-    assertTrue(dummyTarget.isImplicit());
+    for (CallExpression dummyCall :
+        TestUtils.findByPredicate(calls, c -> c.getSignature().equals(dummySignature))) {
+      FunctionDeclaration dummyTarget =
+          TestUtils.findByUniquePredicate(methods, m -> m.hasSignature(dummySignature));
+      assertEquals(List.of(dummyTarget), dummyCall.getInvokes());
+      assertTrue(dummyTarget.isImplicit());
+    }
   }
 
   @Test
@@ -129,7 +137,7 @@ public class CallResolverTest extends BaseTest {
     List<FunctionDeclaration> functions =
         TestUtils.findByPredicate(
             TestUtils.subnodesOfType(result, FunctionDeclaration.class),
-            f -> !(f instanceof MethodDeclaration));
+            f -> f.getName().equals("functionTarget") && !(f instanceof MethodDeclaration));
     List<CallExpression> calls =
         TestUtils.findByName(
             TestUtils.subnodesOfType(result, CallExpression.class), "functionTarget");

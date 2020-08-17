@@ -76,6 +76,10 @@ class StaticImportsTest extends BaseTest {
         TestUtils.analyze("java", topLevel.resolve("asterisk"), true);
     List<MethodDeclaration> methods = TestUtils.subnodesOfType(result, MethodDeclaration.class);
     MethodDeclaration main = TestUtils.findByUniqueName(methods, "main");
+    List<RecordDeclaration> records = TestUtils.subnodesOfType(result, RecordDeclaration.class);
+    RecordDeclaration A = TestUtils.findByUniqueName(records, "A");
+    RecordDeclaration B = TestUtils.findByUniqueName(records, "B");
+
     for (CallExpression call : TestUtils.subnodesOfType(main, CallExpression.class)) {
       switch (call.getName()) {
         case "a":
@@ -94,12 +98,12 @@ class StaticImportsTest extends BaseTest {
                   .collect(Collectors.toList()));
           break;
         case "nonStatic":
-          assertTrue(call.getInvokes().isEmpty());
+          MethodDeclaration nonStatic = TestUtils.findByUniqueName(B.getMethods(), "nonStatic");
+          assertTrue(nonStatic.isImplicit());
+          assertEquals(List.of(nonStatic), call.getInvokes());
       }
     }
 
-    List<RecordDeclaration> records = TestUtils.subnodesOfType(result, RecordDeclaration.class);
-    RecordDeclaration A = TestUtils.findByUniqueName(records, "A");
     List<FieldDeclaration> testFields = TestUtils.subnodesOfType(A, FieldDeclaration.class);
     FieldDeclaration staticField = TestUtils.findByUniqueName(testFields, "staticField");
     FieldDeclaration nonStaticField = TestUtils.findByUniqueName(testFields, "nonStaticField");

@@ -27,8 +27,6 @@ public class Calls extends SuperClass {
     e.superTarget();
     e.superTarget(1, 2);
     e.superTarget(1, "2");
-    // dummy
-    e.superTarget(1, 2, 3);
 
     Unknown u = new Unknown();
     // don't create dummy for methods of unknown classes!

@@ -26,8 +26,6 @@ class Calls: SuperClass {
       functionTarget();
       functionTarget(1, 2);
       functionTarget(1, "2");
-      // dummy
-      functionTarget(1, 2, 3);
 
       innerTarget();
       innerTarget(1, 2);
@@ -51,11 +49,14 @@ class Calls: SuperClass {
       e.superTarget();
       e.superTarget(1, 2);
       e.superTarget(1, "2");
-      // dummy
-      e.superTarget(1, 2, 3);
 
       Unknown u;
       // don't create dummy for methods of unknown classes!
       u.unknownTarget();
     }
 };
+
+void main() {
+  // dummy
+  functionTarget(1, 2, 3);
+}

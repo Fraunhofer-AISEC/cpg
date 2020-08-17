@@ -285,6 +285,10 @@ public class CallResolver extends Pass {
               .filter(
                   f -> f.getName().equals(call.getName()) && f.hasSignature(call.getSignature()))
               .collect(Collectors.toList());
+      if (invocationCandidates.isEmpty()) {
+        invocationCandidates =
+            List.of(createDummy(null, call.getName(), call.getCode(), false, call.getSignature()));
+      }
 
       call.setInvokes(invocationCandidates);
     } else if (!handlePossibleStaticImport(call, curClass)) {
@@ -295,12 +299,23 @@ public class CallResolver extends Pass {
   private void handleMethodCall(RecordDeclaration curClass, CallExpression call) {
     Set<Type> possibleContainingTypes = getPossibleContainingTypes(call, curClass);
 
-    // Find invokes by type
+    // Find overridden invokes
     List<FunctionDeclaration> invocationCandidates =
         call.getInvokes().stream()
             .map(f -> getOverridingCandidates(possibleContainingTypes, f))
             .flatMap(Collection::stream)
             .collect(Collectors.toList());
+
+    // Find function targets
+    if (invocationCandidates.isEmpty() && currentTU != null) {
+      invocationCandidates =
+          currentTU.getDeclarations().stream()
+              .filter(FunctionDeclaration.class::isInstance)
+              .map(FunctionDeclaration.class::cast)
+              .filter(
+                  f -> f.getName().equals(call.getName()) && f.hasSignature(call.getSignature()))
+              .collect(Collectors.toList());
+    }
 
     // Find invokes by supertypes
     if (invocationCandidates.isEmpty()) {
@@ -320,6 +335,14 @@ public class CallResolver extends Pass {
     if (curClass != null
         && !(call instanceof MemberCallExpression || call instanceof StaticCallExpression)) {
       call.setBase(curClass.getThis());
+    }
+
+    if (invocationCandidates.isEmpty()) {
+      possibleContainingTypes.stream()
+          .map(t -> recordMap.get(t.getTypeName()))
+          .filter(Objects::nonNull)
+          .map(r -> createDummy(r, call.getName(), call.getCode(), false, call.getSignature()))
+          .forEach(invocationCandidates::add);
     }
     call.setInvokes(invocationCandidates);
   }
@@ -445,7 +468,8 @@ public class CallResolver extends Pass {
     }
   }
 
-  private FunctionDeclaration createDummyWithMatchingSignature(
+  @NonNull
+  private FunctionDeclaration createDummy(
       RecordDeclaration containingRecord,
       String name,
       String code,
@@ -471,7 +495,7 @@ public class CallResolver extends Pass {
             "No current translation unit when trying to generate function dummy {}",
             dummy.getName());
       } else {
-        currentTU.getDeclarations().add(dummy);
+        currentTU.add(dummy);
       }
       return dummy;
     }
@@ -503,7 +527,6 @@ public class CallResolver extends Pass {
       }
     } else if (curClass != null) {
       possibleTypes.add(TypeParser.createFrom(curClass.getName(), true));
-      possibleTypes.addAll(curClass.getSuperTypes());
     }
     return possibleTypes;
   }

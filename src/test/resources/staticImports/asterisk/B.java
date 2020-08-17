@@ -6,8 +6,8 @@ public class B {
     a();
     b();
     b(true);
-    nonStatic(); // needs to stay unresolved
+    nonStatic(); // must not be resolved to A.nonStatic but rather a dummy in B
     int y = staticField;
-    int z = nonStaticField; // needs to stay unresolved
+    int z = nonStaticField; // must not be resolved to A.nonStaticField but rather a dummy in B
   }
 }
