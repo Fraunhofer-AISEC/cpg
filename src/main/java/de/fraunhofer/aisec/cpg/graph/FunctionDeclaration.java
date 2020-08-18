@@ -46,6 +46,11 @@ public class FunctionDeclaration extends ValueDeclaration {
   @SubGraph("AST")
   protected Statement body;
 
+  /**
+   * Classes and Structs can be declared inside a function and are only valid within the function.
+   */
+  protected List<RecordDeclaration> records = new ArrayList<>();
+
   /** The list of function parameters. */
   @SubGraph("AST")
   protected List<ParamVariableDeclaration> parameters = new ArrayList<>();
@@ -261,5 +266,13 @@ public class FunctionDeclaration extends ValueDeclaration {
 
   public void setDefinition(FunctionDeclaration definition) {
     this.definition = definition;
+  }
+
+  public List<RecordDeclaration> getRecords() {
+    return records;
+  }
+
+  public void setRecords(List<RecordDeclaration> records) {
+    this.records = records;
   }
 }

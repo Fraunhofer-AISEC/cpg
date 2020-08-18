@@ -80,6 +80,7 @@ public class EvaluationOrderGraphPass extends Pass {
 
   public EvaluationOrderGraphPass() {
     map.put(TranslationUnitDeclaration.class, this::handleTranslationUnitDeclaration);
+    map.put(NamespaceDeclaration.class, this::handleNamespaceDeclaration);
     map.put(RecordDeclaration.class, this::handleRecordDeclaration);
     map.put(FunctionDeclaration.class, this::handleFunctionDeclaration);
     map.put(VariableDeclaration.class, this::handleVariableDeclaration);
@@ -213,6 +214,15 @@ public class EvaluationOrderGraphPass extends Pass {
 
   private void handleTranslationUnitDeclaration(@NonNull Node node) {
     TranslationUnitDeclaration declaration = (TranslationUnitDeclaration) node;
+    // loop through functions
+    for (Declaration child : declaration.getDeclarations()) {
+      createEOG(child);
+    }
+    lang.clearProcessed();
+  }
+
+  private void handleNamespaceDeclaration(@NonNull Node node) {
+    NamespaceDeclaration declaration = (NamespaceDeclaration) node;
     // loop through functions
     for (Declaration child : declaration.getDeclarations()) {
       createEOG(child);
@@ -420,7 +430,7 @@ public class EvaluationOrderGraphPass extends Pass {
         // DeclarationScope here
         Scope decl =
             lang.getScopeManager()
-                .getFirstScopeThat(scope -> scope.getClass().equals(DeclarationScope.class));
+                .getFirstScopeThat(scope -> scope.getClass().equals(ValueDeclarationScope.class));
         if (decl != null
             && decl.getAstNode() instanceof CatchClause
             && ((CatchClause) decl.getAstNode()).getParameter() != null) {

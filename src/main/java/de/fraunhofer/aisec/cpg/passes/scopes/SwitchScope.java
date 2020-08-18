@@ -32,7 +32,7 @@ import java.util.ArrayList;
 import java.util.List;
 import org.checkerframework.checker.nullness.qual.NonNull;
 
-public class SwitchScope extends DeclarationScope implements IBreakable {
+public class SwitchScope extends ValueDeclarationScope implements IBreakable {
 
   @NonNull private final List<BreakStatement> breaks = new ArrayList<>();
 

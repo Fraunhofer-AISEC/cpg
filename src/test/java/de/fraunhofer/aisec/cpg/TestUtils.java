@@ -180,7 +180,7 @@ public class TestUtils {
   public static <S extends Node> S getOfTypeWithName(
       List<Node> listOfNodes, Class<S> specificClass, String name) {
     List<S> listOfNodesWithName =
-        filterCast(listOfNodes, specificClass).stream()
+        Util.filterCast(listOfNodes, specificClass).stream()
             .filter(s -> s.getName().equals(name))
             .collect(Collectors.toList());
     if (listOfNodesWithName.isEmpty()) {
@@ -188,23 +188,6 @@ public class TestUtils {
     }
     // Here we return the first node, if there are more nodes
     return listOfNodesWithName.get(0);
-  }
-
-  /**
-   * Filters a list of elements with common type T for all elements of instance S, returning a list
-   * of type {@link List}.
-   *
-   * @param genericList List with elements fo type T.
-   * @param specificClass Class type to filter for.
-   * @param <T> Generic List type.
-   * @param <S> Class type to filter for.
-   * @return a specific List as all elements are cast to the specified class type.
-   */
-  public static <T, S extends T> List<S> filterCast(List<T> genericList, Class<S> specificClass) {
-    return genericList.stream()
-        .filter(g -> specificClass.isAssignableFrom(g.getClass()))
-        .map(specificClass::cast)
-        .collect(Collectors.toList());
   }
 
   /**
@@ -228,7 +211,7 @@ public class TestUtils {
    * @return a List of searched types
    */
   public static <S extends Node> List<S> subnodesOfType(Node node, Class<S> specificClass) {
-    return filterCast(SubgraphWalker.flattenAST(node), specificClass).stream()
+    return Util.filterCast(SubgraphWalker.flattenAST(node), specificClass).stream()
         .filter(Util.distinctByIdentity())
         .collect(Collectors.toList());
   }

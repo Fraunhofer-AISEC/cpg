@@ -399,6 +399,23 @@ public class Util {
     return paramName.toString();
   }
 
+  /**
+   * Filters a list of elements with common type T for all elements of instance S, returning a list
+   * of type {@link List}.
+   *
+   * @param genericList List with elements fo type T.
+   * @param specificClass Class type to filter for.
+   * @param <T> Generic List type.
+   * @param <S> Class type to filter for.
+   * @return a specific List as all elements are cast to the specified class type.
+   */
+  public static <T, S extends T> List<S> filterCast(List<T> genericList, Class<S> specificClass) {
+    return genericList.stream()
+        .filter(g -> specificClass.isAssignableFrom(g.getClass()))
+        .map(specificClass::cast)
+        .collect(Collectors.toList());
+  }
+
   public enum Connect {
     NODE,
     SUBTREE;

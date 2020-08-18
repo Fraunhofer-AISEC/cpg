@@ -42,12 +42,23 @@ public abstract class Scope {
 
   protected Node astNode;
 
+  // FQN Name currently valid
+  protected String scopedName;
+
   /* Scopes are nested and therefore have a parent child relationship, this two members will help
   navigate through the scopes,e.g. when looking up variables */
   protected Scope parent = null;
   protected List<Scope> children = new ArrayList<>();
 
   protected Map<String, LabelStatement> labelStatements = new HashMap<>();
+
+  public String getScopedName() {
+    return scopedName;
+  }
+
+  public void setScopedName(String scopedName) {
+    this.scopedName = scopedName;
+  }
 
   public Node getAstNode() {
     return astNode;
