@@ -35,7 +35,7 @@ import java.util.stream.Collectors;
 import org.checkerframework.checker.nullness.qual.NonNull;
 
 /**
- * Declares the scope of a namespace and appends its own name to the current namespace-ürefix to
+ * Declares the scope of a namespace and appends its own name to the current namespace-prefix to
  * form a new namespace prefix. While RecordDeclarations in C++ and Java have their own namespace,
  * namespace declarations can be declared multiple times. At the beginning of a Java-file, a
  * namespace declaration is used to represent the package name as namespace. In its explicit
