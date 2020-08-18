@@ -440,13 +440,17 @@ public class ScopeManager {
     }
   }
 
-  // 1. enter scope of element to replace and move to parent or
 
+  /**
+   * Adds a declaration to the CPG by taking into account the currently active scope, and add the Declaration to the
+   * appropriate node. This function will keep the declaration in the Scopes and allows the ScopeManager by himself to
+   * resolve ValueDeclarations through.
+   *
+   * {@link ScopeManager#resolve(DeclaredReferenceExpression)}.
+   *
+   * @param declaration
+   */
   public void addDeclaration(Declaration declaration) {
-    addDeclarationInCurrentScope(declaration);
-  }
-
-  public void addDeclarationInCurrentScope(Declaration declaration) {
     if (declaration instanceof ValueDeclaration) {
       ValueDeclarationScope scopeForValueDeclaration =
           (ValueDeclarationScope)
