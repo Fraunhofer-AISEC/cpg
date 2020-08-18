@@ -97,7 +97,7 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
       declaration.setInitializer(lang.getInitializerHandler().handle(init));
     }
 
-    lang.getScopeManager().addValueDeclaration(declaration);
+    lang.getScopeManager().addDeclaration(declaration);
 
     return declaration;
   }
@@ -121,7 +121,7 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
             initializer,
             true);
 
-    lang.getScopeManager().addValueDeclaration(declaration);
+    lang.getScopeManager().addDeclaration(declaration);
 
     return declaration;
   }
@@ -183,7 +183,7 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
       arg.setArgumentIndex(i);
       // Note that this .addValueDeclaration call already adds arg to the function's parameters.
       // This is why the following line has been commented out by @KW
-      lang.getScopeManager().addValueDeclaration(arg);
+      lang.getScopeManager().addDeclaration(arg);
       // declaration.getParameters().add(arg);
       i++;
     }
@@ -196,7 +196,7 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
       ParamVariableDeclaration varargs =
           NodeBuilder.newMethodParameterIn("va_args", UnknownType.getUnknownType(), true, "");
       varargs.setArgumentIndex(i);
-      lang.getScopeManager().addValueDeclaration(varargs);
+      lang.getScopeManager().addDeclaration(varargs);
     }
 
     //    lang.addFunctionDeclaration(declaration);
@@ -302,7 +302,7 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
     this.lang.addRecord(recordDeclaration);
 
     lang.getScopeManager().enterScope(recordDeclaration);
-    lang.getScopeManager().addValueDeclaration(recordDeclaration.getThis());
+    lang.getScopeManager().addDeclaration(recordDeclaration.getThis());
 
     processMembers(ctx, recordDeclaration);
 
@@ -319,7 +319,7 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
 
       recordDeclaration.getConstructors().add(constructorDeclaration);
 
-      lang.getScopeManager().addValueDeclaration(constructorDeclaration);
+      lang.getScopeManager().addDeclaration(constructorDeclaration);
     }
 
     lang.getScopeManager().leaveScope(recordDeclaration);

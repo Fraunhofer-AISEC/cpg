@@ -28,11 +28,12 @@ package de.fraunhofer.aisec.cpg.passes.scopes;
 
 import de.fraunhofer.aisec.cpg.graph.Node;
 
-public class NameScope extends Scope {
+public class NameScope extends StructureDeclarationScope {
 
   private String namePrefix;
 
   public NameScope(Node node, String currentPrefix, String delimiter) {
+    super(node);
     if (currentPrefix == null || !currentPrefix.isEmpty()) {
       this.namePrefix = currentPrefix + delimiter + node.getName();
     } else {

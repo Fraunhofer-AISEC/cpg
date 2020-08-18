@@ -77,6 +77,7 @@ import de.fraunhofer.aisec.cpg.graph.type.TypeParser;
 import de.fraunhofer.aisec.cpg.graph.type.UnknownType;
 import de.fraunhofer.aisec.cpg.helpers.NodeComparator;
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker;
+import de.fraunhofer.aisec.cpg.helpers.Util;
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation;
 import de.fraunhofer.aisec.cpg.sarif.Region;
 import java.io.File;
@@ -431,8 +432,7 @@ class CXXLanguageFrontendTest extends BaseTest {
     graphNodes.sort(new NodeComparator());
     assertTrue(graphNodes.size() != 0);
 
-    List<SwitchStatement> switchStatements =
-        TestUtils.filterCast(graphNodes, SwitchStatement.class);
+    List<SwitchStatement> switchStatements = Util.filterCast(graphNodes, SwitchStatement.class);
     assertTrue(switchStatements.size() == 3);
 
     SwitchStatement switchStatement = switchStatements.get(0);
@@ -440,11 +440,11 @@ class CXXLanguageFrontendTest extends BaseTest {
     assertTrue(((CompoundStatement) switchStatement.getStatement()).getStatements().size() == 11);
 
     List<CaseStatement> caseStatements =
-        TestUtils.filterCast(SubgraphWalker.flattenAST(switchStatement), CaseStatement.class);
+        Util.filterCast(SubgraphWalker.flattenAST(switchStatement), CaseStatement.class);
     assertTrue(caseStatements.size() == 4);
 
     List<DefaultStatement> defaultStatements =
-        TestUtils.filterCast(SubgraphWalker.flattenAST(switchStatement), DefaultStatement.class);
+        Util.filterCast(SubgraphWalker.flattenAST(switchStatement), DefaultStatement.class);
     assertTrue(defaultStatements.size() == 1);
   }
 
