@@ -472,12 +472,13 @@ public class NodeBuilder {
     return node;
   }
 
-  public static MemberExpression newMemberExpression(Expression base, Node member, String code) {
+  public static MemberExpression newMemberExpression(
+      Expression base, Type memberType, String name, String code) {
     MemberExpression node = new MemberExpression();
     node.setBase(base);
-    node.setMember(member);
     node.setCode(code);
-    node.setName(code);
+    node.setName(name);
+    node.setType(memberType);
 
     log(node);
 

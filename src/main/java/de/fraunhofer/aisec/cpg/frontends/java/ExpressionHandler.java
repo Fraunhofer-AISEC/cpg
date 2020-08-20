@@ -346,9 +346,6 @@ public class ExpressionHandler
     try {
       ResolvedValueDeclaration symbol = fieldAccessExpr.resolve();
       fieldType = TypeParser.createFrom(symbol.asField().getType().describe(), true);
-      member =
-          NodeBuilder.newDeclaredReferenceExpression(
-              fieldAccessExpr.getName().getIdentifier(), fieldType, fieldAccessExpr.toString());
     } catch (RuntimeException | NoClassDefFoundError ex) {
       String typeString = this.lang.recoverTypeFromUnsolvedException(ex);
       if (typeString != null) {
@@ -359,14 +356,10 @@ public class ExpressionHandler
         log.info("Unknown field type for {}", fieldAccessExpr);
         fieldType = UnknownType.getUnknownType();
       }
-      member =
-          NodeBuilder.newStaticReferenceExpression(
-              fieldAccessExpr.getName().getIdentifier(), fieldType, fieldAccessExpr.toString());
     }
 
-    lang.setCodeAndRegion(member, fieldAccessExpr.getName());
-
-    return NodeBuilder.newMemberExpression(base, member, fieldAccessExpr.toString());
+    return NodeBuilder.newMemberExpression(
+        base, fieldType, fieldAccessExpr.getName().getIdentifier(), fieldAccessExpr.toString());
   }
 
   private Literal handleLiteralExpression(Expression expr) {

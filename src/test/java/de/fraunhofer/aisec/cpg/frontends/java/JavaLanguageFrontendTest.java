@@ -459,7 +459,7 @@ class JavaLanguageFrontendTest extends BaseTest {
     MemberExpression length = (MemberExpression) l.getInitializer();
 
     assertNotNull(length);
-    assertEquals("length", length.getMember().getName());
+    assertEquals("length", length.getName());
     assertEquals("int", length.getType().getTypeName());
   }
 

@@ -70,9 +70,8 @@ public class VRUtil {
       assertTrue(usingNode instanceof MemberExpression);
       MemberExpression memberExpression = (MemberExpression) usingNode;
       Node base = memberExpression.getBase();
-      Node member = memberExpression.getMember();
       assertUsageOf(base, usedBase);
-      assertUsageOf(member, usedMember);
+      assertSameOrContains(memberExpression.getRefersTo(), usedMember);
     }
   }
 

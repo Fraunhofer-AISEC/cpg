@@ -84,10 +84,17 @@ class SuperCallTest extends BaseTest {
     MemberExpression superFieldRef =
         TestUtils.findByPredicate(refs, r -> "super.field".equals(r.getCode()));
 
-    assertEquals(subClass.getThis(), fieldRef.getBase());
-    assertEquals(field, fieldRef.getMember());
-    assertEquals(superClass.getThis(), superFieldRef.getBase());
-    assertEquals(superField, superFieldRef.getMember());
+    assertTrue(fieldRef.getBase() instanceof DeclaredReferenceExpression);
+    assertEquals(
+        Set.of(subClass.getThis()),
+        ((DeclaredReferenceExpression) fieldRef.getBase()).getRefersTo());
+    assertEquals(Set.of(field), fieldRef.getRefersTo());
+
+    assertTrue(superFieldRef.getBase() instanceof DeclaredReferenceExpression);
+    assertEquals(
+        Set.of(superClass.getThis()),
+        ((DeclaredReferenceExpression) superFieldRef.getBase()).getRefersTo());
+    assertEquals(Set.of(superField), superFieldRef.getRefersTo());
   }
 
   @Test
