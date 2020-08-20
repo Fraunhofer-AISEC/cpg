@@ -154,7 +154,7 @@ dependencies {
     // JUnit
     testImplementation("org.junit.jupiter:junit-jupiter-api:5.6.2")
     testImplementation("org.junit.jupiter:junit-jupiter-params:5.6.2")
-    testImplementation("org.mockito:mockito-core:3.5.0")
+    testImplementation("org.mockito:mockito-core:3.5.2")
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.6.2")
 }
 
