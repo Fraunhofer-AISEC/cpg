@@ -113,6 +113,29 @@ public class CallResolverTest extends BaseTest {
     }
   }
 
+  private void testOverriding(List<RecordDeclaration> records) {
+    RecordDeclaration callsRecord = TestUtils.findByUniqueName(records, "Calls");
+    RecordDeclaration externalRecord = TestUtils.findByUniqueName(records, "External");
+    RecordDeclaration superClassRecord = TestUtils.findByUniqueName(records, "SuperClass");
+
+    MethodDeclaration originalMethod =
+        TestUtils.findByUniqueName(
+            TestUtils.subnodesOfType(superClassRecord, MethodDeclaration.class),
+            "overridingTarget");
+    MethodDeclaration overridingMethod =
+        TestUtils.findByUniqueName(
+            TestUtils.subnodesOfType(externalRecord, MethodDeclaration.class), "overridingTarget");
+    CallExpression call =
+        TestUtils.findByUniqueName(
+            TestUtils.subnodesOfType(callsRecord, CallExpression.class), "overridingTarget");
+
+    // TODO related to #204: Currently we have both the original and the overriding method in the
+    //  invokes list. This check needs to be adjusted to the choice we make on solving #204
+    assertTrue(call.getInvokes().contains(overridingMethod));
+    assertEquals(List.of(originalMethod), overridingMethod.getOverrides());
+    assertEquals(List.of(overridingMethod), originalMethod.getOverriddenBy());
+  }
+
   @Test
   void testJava() throws Exception {
     List<TranslationUnitDeclaration> result = TestUtils.analyze("java", topLevel, true);
@@ -121,6 +144,7 @@ public class CallResolverTest extends BaseTest {
     Type stringType = TypeParser.createFrom("java.lang.String", true);
 
     testMethods(records, intType, stringType);
+    testOverriding(records);
     ensureNoUnknownClassDummies(records);
   }
 
@@ -132,6 +156,7 @@ public class CallResolverTest extends BaseTest {
     Type stringType = TypeParser.createFrom("char*", true);
 
     testMethods(records, intType, stringType);
+    testOverriding(records);
 
     // Test functions (not methods!)
     List<FunctionDeclaration> functions =

@@ -7,6 +7,7 @@ class SuperClass {
     void superTarget() {}
     void superTarget(int param1, int param2) {}
     void superTarget(int param1, const char* param2) {}
+    virtual void overridingTarget() {}
 };
 
 class External: public SuperClass {
@@ -14,6 +15,7 @@ class External: public SuperClass {
     void externalTarget() {}
     void externalTarget(int param1, int param2) {}
     void externalTarget(int param1, const char* param2) {}
+    void overridingTarget() override {}
 };
 
 class Calls: SuperClass {
@@ -49,6 +51,9 @@ class Calls: SuperClass {
       e.superTarget();
       e.superTarget(1, 2);
       e.superTarget(1, "2");
+
+      SuperClass *s = new External();
+      s->overridingTarget();
 
       Unknown u;
       // don't create dummy for methods of unknown classes!
