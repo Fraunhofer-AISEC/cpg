@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.frontends;
 
 import de.fraunhofer.aisec.cpg.TranslationConfiguration;
 import de.fraunhofer.aisec.cpg.frontends.cpp.CXXLanguageFrontend;
+import de.fraunhofer.aisec.cpg.frontends.grpc.GrpcLanguageFrontend;
 import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguageFrontend;
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager;
 import java.util.List;
@@ -37,6 +38,7 @@ public class LanguageFrontendFactory {
 
   private static final List<String> JAVA_EXTENSIONS = List.of(".java");
   private static final List<String> CXX_EXTENSIONS = List.of(".h", ".c", ".cpp", ".cc");
+  private static final List<String> GRPC_EXTENSIONS = List.of(".pr");
 
   // hide ctor
   private LanguageFrontendFactory() {}
@@ -49,6 +51,8 @@ public class LanguageFrontendFactory {
       return new JavaLanguageFrontend(config, scopeManager);
     } else if (CXX_EXTENSIONS.contains(fileType)) {
       return new CXXLanguageFrontend(config, scopeManager);
+    } else if (GRPC_EXTENSIONS.contains(fileType)) {
+      return new GrpcLanguageFrontend(config, scopeManager);
     } else {
       return null;
     }

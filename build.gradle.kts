@@ -24,6 +24,8 @@
  *
  */
 
+import com.google.protobuf.gradle.*
+
 plugins {
     // built-in
     java
@@ -35,6 +37,7 @@ plugins {
     id("org.sonarqube") version "3.0"
     id("com.diffplug.spotless") version "5.1.1"
     id("com.github.johnrengelman.shadow") version "6.0.0"
+    id("com.google.protobuf") version "0.8.8"
 }
 
 tasks.jacocoTestReport {
@@ -156,6 +159,24 @@ dependencies {
     testImplementation("org.junit.jupiter:junit-jupiter-params:5.6.2")
     testImplementation("org.mockito:mockito-core:3.5.0")
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.6.2")
+
+    // Protobuf
+    implementation("com.google.protobuf:protobuf-java:3.13.0")
+    implementation("io.grpc:grpc-stub:1.31.1")
+    implementation("io.grpc:grpc-protobuf:1.31.1")
+    if (JavaVersion.current().isJava9Compatible) {
+        implementation("javax.annotation:javax.annotation-api:1.3.2")
+    }
+}
+
+sourceSets {
+
+    main {
+        java {
+            srcDir("build/generated/source/proto/main/java")
+            srcDir("build/generated/source/proto/main/grpc")
+        }
+    }
 }
 
 spotless {
@@ -166,5 +187,23 @@ spotless {
                 }
         )
         googleJavaFormat()
+    }
+}
+
+protobuf {
+    protoc {
+        artifact = "com.google.protobuf:protoc:3.13.0"
+    }
+    plugins {
+        id("grpc") {
+            artifact = "io.grpc:protoc-gen-grpc-java:1.31.1"
+        }
+    }
+    generateProtoTasks {
+        ofSourceSet("main").forEach {
+            it.plugins {
+                id("grpc")
+            }
+        }
     }
 }

@@ -1,0 +1,112 @@
+syntax = "proto3";
+package ast_tree;
+
+option go_package = "github.com/Fraunhofer-AISEC/cpg-rpc/proto";
+option java_package = "de.fraunhofer.aisec.cpg.frontends.proto.messages";
+option java_multiple_files = true;
+
+// Using this guide (except for the 80 chars/line):
+// https://developers.google.com/protocol-buffers/docs/style#packages
+
+// Currently only supports one file
+
+service TransferCpg {
+	rpc GetCpg (CpgRequest) returns (CpgResponse);
+}
+
+message CpgRequest {
+  string filename = 1;
+}
+
+message CpgResponse {
+  repeated Node nodes = 1;
+
+  repeated NodeId translationUnitDeclarations = 2;
+}
+
+message NodeId {
+  uint32 id = 1;
+}
+
+message Node {
+  NodeId node_id = 1;
+
+  string name = 2;
+  string code = 3;
+  string comment = 4;
+  string file = 5;
+  
+  // TODO: PhysicalLocation, dummy, implicit, etc.
+
+  // The actual node
+  oneof a {
+    Annotation annotation = 6;
+    Declaration declaration = 7;
+    Statement statement = 8;
+    Type type = 9;
+  }
+}
+
+message Annotation {
+  // TODO
+}
+
+message Declaration {
+  oneof declaration {
+    ValueDeclaration value_decl = 1;
+    TranslationUnitDeclaration translation_unit_decl = 2;
+    // TODO
+  };
+}
+
+message Statement {
+  // TODO
+}
+
+message Type {
+  repeated NodeId superTypes = 1;
+  Storage storage = 2;
+  Origin origin = 4;
+  Qualifier qualifier = 3;
+
+  enum Storage {
+    AUTO = 0;
+    EXTERN = 1;
+    STATIC = 2;
+    REGISTER = 3;
+  }
+  enum Origin {
+    RESOLVED = 0;
+    DATAFLOW = 1;
+    GUESSED = 2;
+    UNRESOLVED = 3;
+  }
+  message Qualifier {
+    bool isConst = 1;
+    bool isVolatile = 2;
+    bool isRestrict = 3;
+    bool isAtomic = 4;
+  }
+}
+
+message ValueDeclaration {
+  NodeId type = 1;
+  repeated NodeId possibleSubTypes = 2;
+
+  oneof value_decl {
+    VariableDeclaration variable_decl = 3;
+    // TODO
+  }
+}
+
+message TranslationUnitDeclaration {  
+  repeated NodeId declarations = 1;
+  repeated NodeId includes = 2;
+  repeated NodeId namespaces = 3;
+}
+
+message VariableDeclaration {
+  NodeId initializer = 1;
+  bool implicitInitializerAllowed = 2;
+  bool isArray = 3;
+}
