@@ -41,7 +41,7 @@ class DFGTest {
     assertTrue(refersTo instanceof VariableDeclaration);
     VariableDeclaration a = (VariableDeclaration) refersTo;
     assertEquals(0, a.getNextDFG().size());
-    assertTrue(a.equals(a2.getNextDFG().iterator().next()));
+    assertEquals(a2.getNextDFG().iterator().next(), a);
 
     // Test Else-Block with System.out.println()
     Literal<?> literal1 =
@@ -206,9 +206,6 @@ class DFGTest {
     DeclaredReferenceExpression expression =
         TestUtils.findByUniqueName(
             TestUtils.subnodesOfType(result, DeclaredReferenceExpression.class), "i");
-    VariableDeclaration variableDeclaration =
-        TestUtils.findByUniqueName(
-            TestUtils.subnodesOfType(result, VariableDeclaration.class), "i");
 
     Set<Node> prevDFGOperator = rwCompoundOperator.getPrevDFG();
     Set<Node> nextDFGOperator = rwCompoundOperator.getNextDFG();
@@ -228,9 +225,6 @@ class DFGTest {
     DeclaredReferenceExpression expression =
         TestUtils.findByUniqueName(
             TestUtils.subnodesOfType(result, DeclaredReferenceExpression.class), "i");
-    VariableDeclaration variableDeclaration =
-        TestUtils.findByUniqueName(
-            TestUtils.subnodesOfType(result, VariableDeclaration.class), "i");
 
     Set<Node> prevDFGOperator = rwUnaryOperator.getPrevDFG();
     Set<Node> nextDFGOperator = rwUnaryOperator.getNextDFG();

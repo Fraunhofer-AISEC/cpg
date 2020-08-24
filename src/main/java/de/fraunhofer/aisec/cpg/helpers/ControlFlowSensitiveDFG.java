@@ -12,6 +12,9 @@ public class ControlFlowSensitiveDFG {
   private Map<VariableDeclaration, Set<Node>> variables;
   private Set<Node> visited = new HashSet<>();
   private Set<Node> visitedEOG;
+
+  // A Node with refined DFG edges (key) is mapped to a set of nodes that were the previous
+  // (unrefined) DFG edges and need to be removed later on
   private Map<Node, Set<Node>> removes;
   // Node where the ControlFlowSensitive analysis is started. On analysis start this will be the
   // MethodDeclaration, but
@@ -191,6 +194,10 @@ public class ControlFlowSensitiveDFG {
     return joindVariables;
   }
 
+  /**
+   * @param dfgs exclusive DFG Paths
+   * @return combination of all dfg paths that need to be removed for every exclusive DFG Path
+   */
   private Map<Node, Set<Node>> joinRemoves(List<ControlFlowSensitiveDFG> dfgs) {
     Map<Node, Set<Node>> newRemoves = new HashMap<>();
     for (ControlFlowSensitiveDFG dfg : dfgs) {
@@ -205,8 +212,8 @@ public class ControlFlowSensitiveDFG {
   }
 
   /**
-   * Removes the prevDFG to a VariableDeclaration of a node and adds the values of the
-   * VariableDeclaration as prevDFGs to the node
+   * Stores the prevDFG to a VariableDeclaration of a node in the removes map and adds the values of
+   * the VariableDeclaration as prevDFGs to the node
    *
    * @param currNode node that is analyzed
    */
@@ -217,7 +224,6 @@ public class ControlFlowSensitiveDFG {
         for (Node target : variables.get(prev)) {
           currNode.addPrevDFG(target);
         }
-        // currNode.removePrevDFG(prev);
         addToRemoves(currNode, prev);
       }
     }

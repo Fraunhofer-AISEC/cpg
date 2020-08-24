@@ -33,6 +33,11 @@ public class ControlFlowSensitiveDFGPass extends Pass {
     }
   }
 
+  /**
+   * Removes unrefined DFG edges
+   *
+   * @param dfg ControlFlowSensitiveDFG of entire Method
+   */
   private void removeValues(ControlFlowSensitiveDFG dfg) {
     for (Node currNode : dfg.getRemoves().keySet()) {
       for (Node prev : dfg.getRemoves().get(currNode)) {
