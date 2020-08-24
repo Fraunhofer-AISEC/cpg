@@ -74,8 +74,18 @@ public class TranslationConfiguration {
    */
   public final List<String> includeBlacklist;
 
+  /**
+   * Switch off cleaning up TypeManager memory after analysis.
+   *
+   * <p>Set this to {@code true} only for testing.
+   */
+  public boolean disableCleanup = false;
+
   /** should the code of a node be shown as parameter in the node * */
   public final boolean codeInNodes;
+
+  /** Set to true to process annotations or annotation-like elements. */
+  public final boolean processAnnotations;
 
   /**
    * Should parser/translation fail on parse/resolving errors (true) or try to continue in a
@@ -104,7 +114,9 @@ public class TranslationConfiguration {
       List<String> includeWhitelist,
       List<String> includeBlacklist,
       List<Pass> passes,
-      boolean codeInNodes) {
+      boolean codeInNodes,
+      boolean processAnnotations,
+      boolean disableCleanup) {
     this.symbols = symbols;
     this.sourceLocations = sourceLocations;
     this.topLevel = topLevel;
@@ -117,6 +129,8 @@ public class TranslationConfiguration {
     this.passes = passes != null ? passes : new ArrayList<>();
     // Make sure to init this AFTER sourceLocations has been set
     this.codeInNodes = codeInNodes;
+    this.processAnnotations = processAnnotations;
+    this.disableCleanup = disableCleanup;
   }
 
   public static Builder builder() {
@@ -161,11 +175,13 @@ public class TranslationConfiguration {
     private boolean failOnError = false;
     private boolean loadIncludes = false;
     private Map<String, String> symbols = new HashMap<>();
-    private List<String> includePaths = new ArrayList<>();
-    private List<String> includeWhitelist = new ArrayList<>();
-    private List<String> includeBlacklist = new ArrayList<>();
-    private List<Pass> passes = new ArrayList<>();
+    private final List<String> includePaths = new ArrayList<>();
+    private final List<String> includeWhitelist = new ArrayList<>();
+    private final List<String> includeBlacklist = new ArrayList<>();
+    private final List<Pass> passes = new ArrayList<>();
     private boolean codeInNodes = true;
+    private boolean processAnnotations = false;
+    private boolean disableCleanup = false;
 
     public Builder symbols(Map<String, String> symbols) {
       this.symbols = symbols;
@@ -256,6 +272,11 @@ public class TranslationConfiguration {
       return this;
     }
 
+    public Builder disableCleanup() {
+      this.disableCleanup = true;
+      return this;
+    }
+
     /**
      * Adds the specified file to the include blacklist. Relative and absolute paths are supported.
      *
@@ -315,6 +336,18 @@ public class TranslationConfiguration {
       return this;
     }
 
+    /**
+     * Specifies, whether annotations should be process or not. By default, they are not processed,
+     * since they might populate the graph too much.
+     *
+     * @param b the new value
+     * @return
+     */
+    public Builder processAnnotations(boolean b) {
+      this.processAnnotations = b;
+      return this;
+    }
+
     public TranslationConfiguration build() {
       return new TranslationConfiguration(
           symbols,
@@ -327,7 +360,9 @@ public class TranslationConfiguration {
           includeWhitelist,
           includeBlacklist,
           passes,
-          codeInNodes);
+          codeInNodes,
+          processAnnotations,
+          disableCleanup);
     }
   }
 }

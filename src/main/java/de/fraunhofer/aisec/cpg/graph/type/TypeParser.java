@@ -32,16 +32,14 @@ import java.util.List;
 import java.util.function.Supplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import org.checkerframework.checker.nullness.qual.NonNull;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
  * Class responsible for parsing the type definition and create the same Type as described by the
  * type string, but complying to the CPG TypeSystem
  */
 public class TypeParser {
-
-  private TypeParser() {
-    throw new IllegalStateException("Do not instantiate the TypeParser");
-  }
 
   public static final String UNKNOWN_TYPE_STRING = "UNKNOWN";
   private static final List<String> primitives =
@@ -62,6 +60,17 @@ public class TypeParser {
   private static final String ELABORATED_TYPE_STRUCT = "struct";
   private static final String ELABORATED_TYPE_UNION = "union";
   private static final String ELABORATED_TYPE_ENUM = "enum";
+
+  private static final List<String> elaboratedTypes =
+      List.of(
+          ELABORATED_TYPE_CLASS,
+          ELABORATED_TYPE_STRUCT,
+          ELABORATED_TYPE_UNION,
+          ELABORATED_TYPE_ENUM);
+
+  private TypeParser() {
+    throw new IllegalStateException("Do not instantiate the TypeParser");
+  }
 
   public static void reset() {
     TypeParser.languageSupplier = () -> TypeManager.getInstance().getLanguage();
@@ -227,14 +236,15 @@ public class TypeParser {
    * @param type separated type string
    * @return true if function pointer structure is found in typeString, false if not
    */
-  private static Matcher isFunctionPointer(List<String> type) {
+  @Nullable
+  private static Matcher getFunctionPtrMatcher(@NonNull List<String> type) {
 
     StringBuilder typeStringBuilder = new StringBuilder();
     for (String typePart : type) {
       typeStringBuilder.append(typePart);
     }
 
-    String typeString = typeStringBuilder.toString().strip();
+    String typeString = typeStringBuilder.toString().trim();
 
     Matcher matcher = functionPtrRegex.matcher(typeString);
     if (matcher.find()) {
@@ -244,7 +254,7 @@ public class TypeParser {
   }
 
   private static boolean isIncompleteType(String typeName) {
-    return typeName.strip().equals("void");
+    return typeName.trim().equals("void");
   }
 
   private static boolean isUnknownType(String typeName) {
@@ -258,7 +268,29 @@ public class TypeParser {
    * @param type typeString
    * @return typeString without spaces in the generic Expression
    */
-  private static String fixGenerics(String type) {
+  @NonNull
+  private static String fixGenerics(@NonNull String type) {
+    if (type.contains("<") && type.contains(">") && getLanguage() == TypeManager.Language.CXX) {
+      String generics = type.substring(type.indexOf('<') + 1, type.lastIndexOf('>'));
+
+      /* Explanation from @vfsrfs:
+       * We fist extract the generic string (the substring between < and >). Then, the elaborate
+       * string can either start directly with the elaborate type specifier e.g. struct Node or it
+       * must be preceded by <, \\h (horizontal whitespace), or ,. If any other character precedes
+       * the elaborate type specifier then it is not considered to be a type specifier e.g.
+       * mystruct. Then there can be an arbitrary amount of horizontal whitespaces. This is followed
+       * by the elaborate type specifier and at least one more horizontal whitespace, which marks
+       * that it is indeed an elaborate type and not something like structMy.
+       */
+      for (String elaborate : elaboratedTypes) {
+        generics = generics.replaceAll("(^|(?<=[\\h,<]))\\h*(?<main>" + elaborate + "\\h+)", "");
+      }
+      type =
+          type.substring(0, type.indexOf('<') + 1)
+              + generics.trim()
+              + type.substring(type.lastIndexOf('>'));
+    }
+
     StringBuilder out = new StringBuilder();
     int bracketCount = 0;
     int iterator = 0;
@@ -300,7 +332,7 @@ public class TypeParser {
   }
 
   private static void processBlockUntilLastSplit(
-      String type, int lastSplit, int newPosition, List<String> typeBlocks) {
+      @NonNull String type, int lastSplit, int newPosition, @NonNull List<String> typeBlocks) {
     String substr = type.substring(lastSplit, newPosition);
     if (substr.length() != 0) {
       typeBlocks.add(substr);
@@ -313,15 +345,16 @@ public class TypeParser {
    * @param type string with the entire type definition
    * @return list of strings in which every piece of type information is one element of the list
    */
-  public static List<String> separate(String type) {
+  @NonNull
+  public static List<String> separate(@NonNull String type) {
 
     // Remove :: CPP operator, use . instead
     type = type.replace("::", ".");
     type = type.split("=")[0];
 
-    // Guarantee that there is no arbitraty number of whitespces
+    // Guarantee that there is no arbitrary number of whitespaces
     String[] typeSubpart = type.split(" ");
-    type = String.join(" ", typeSubpart).strip();
+    type = String.join(" ", typeSubpart).trim();
 
     List<String> typeBlocks = new ArrayList<>();
 
@@ -391,13 +424,13 @@ public class TypeParser {
 
   private static List<Type> getParameterList(String parameterList) {
     if (parameterList.startsWith("(") && parameterList.endsWith(")")) {
-      parameterList = parameterList.strip().substring(1, parameterList.strip().length() - 1);
+      parameterList = parameterList.trim().substring(1, parameterList.trim().length() - 1);
     }
     List<Type> parameters = new ArrayList<>();
     String[] parametersSplit = parameterList.split(",");
     for (String parameter : parametersSplit) {
       if (parameter.length() > 0) {
-        parameters.add(createFrom(parameter.strip(), true));
+        parameters.add(createFrom(parameter.trim(), true));
       }
     }
 
@@ -410,7 +443,7 @@ public class TypeParser {
       List<Type> genericList = new ArrayList<>();
       String[] parametersSplit = generics.split(",");
       for (String parameter : parametersSplit) {
-        genericList.add(createFrom(parameter.strip(), true));
+        genericList.add(createFrom(parameter.trim(), true));
       }
 
       return genericList;
@@ -457,12 +490,13 @@ public class TypeParser {
    * Makes sure to apply Expressions containing brackets that change the binding of operators e.g.
    * () can change the binding order of operators
    *
-   * @param finalType Modifications are applyed to this type which is the result of the preceding
+   * @param finalType Modifications are applied to this type which is the result of the preceding
    *     type calculations
    * @param bracketExpressions List of Strings containing bracket expressions
    * @return modified finalType performing the resolution of the bracket expressions
    */
-  private static Type resolveBracketExpression(Type finalType, List<String> bracketExpressions) {
+  private static Type resolveBracketExpression(
+      @NonNull Type finalType, @NonNull List<String> bracketExpressions) {
     for (String bracketExpression : bracketExpressions) {
       List<String> splitExpression =
           separate(bracketExpression.substring(1, bracketExpression.length() - 1));
@@ -475,13 +509,13 @@ public class TypeParser {
   }
 
   /**
-   * Help function that removes access modifier from the typeString
+   * Helper function that removes access modifier from the typeString.
    *
    * @param type provided typeString
    * @return typeString without access modifier
    */
-  private static String clear(String type) {
-    return type.replaceAll("public|private|protected", "").strip();
+  private static String clear(@NonNull String type) {
+    return type.replaceAll("public|private|protected", "").trim();
   }
 
   /**
@@ -491,7 +525,7 @@ public class TypeParser {
    * @param stringList
    * @return
    */
-  private static boolean isPrimitiveType(List<String> stringList) {
+  private static boolean isPrimitiveType(@NonNull List<String> stringList) {
     for (String s : stringList) {
       if (primitives.contains(s)) {
         return true;
@@ -507,7 +541,8 @@ public class TypeParser {
    * @param typeBlocks
    * @return separated words of compound types are joined into one string
    */
-  private static List<String> joinPrimitive(List<String> typeBlocks) {
+  @NonNull
+  private static List<String> joinPrimitive(@NonNull List<String> typeBlocks) {
     List<String> joinedTypeBlocks = new ArrayList<>();
     StringBuilder primitiveType = new StringBuilder();
     boolean foundPrimitive = false;
@@ -543,7 +578,8 @@ public class TypeParser {
    * @param newRoot root the chain is swapped with
    * @return oldchain but root replaced with newRoot
    */
-  public static Type reWrapType(Type oldChain, Type newRoot) {
+  @NonNull
+  public static Type reWrapType(@NonNull Type oldChain, @NonNull Type newRoot) {
     if (oldChain.isFirstOrderType()) {
       newRoot.setTypeOrigin(oldChain.getTypeOrigin());
     }
@@ -578,12 +614,16 @@ public class TypeParser {
    * @param string the string representation of the type
    * @return the type
    */
-  public static Type createIgnoringAlias(String string) {
+  @NonNull
+  public static Type createIgnoringAlias(@NonNull String string) {
     return createFrom(string, false);
   }
 
+  @NonNull
   private static Type postTypeParsing(
-      List<String> subPart, Type finalType, List<String> bracketExpressions) {
+      @NonNull List<String> subPart,
+      @NonNull Type finalType,
+      @NonNull List<String> bracketExpressions) {
     for (String part : subPart) {
       if (part.equals("*")) {
         // Creates a Pointer to the finalType
@@ -661,11 +701,12 @@ public class TypeParser {
    * @param resolveAlias should replace with original type in typedefs
    * @return new type representing the type string
    */
-  public static Type createFrom(String type, boolean resolveAlias) {
+  @NonNull
+  public static Type createFrom(@NonNull String type, boolean resolveAlias) {
     // Check if Problems during Parsing
     if (type.contains("?")
         || type.contains("org.eclipse.cdt.internal.core.dom.parser.ProblemType@")
-        || type.length() == 0) {
+        || type.trim().length() == 0) {
       return UnknownType.getUnknownType();
     }
 
@@ -712,6 +753,10 @@ public class TypeParser {
     Type.Qualifier qualifier = calcQualifier(qualifierList, null);
 
     // Once all preceding known keywords (if any) are handled the next word must be the TypeName
+    if (counter >= typeBlocks.size()) {
+      // Note that "const auto ..." will end here with typeName="const" as auto is not supported.
+      return UnknownType.getUnknownType();
+    }
     String typeName = typeBlocks.get(counter);
     counter++;
 
@@ -719,7 +764,7 @@ public class TypeParser {
     TypeManager typeManager = TypeManager.getInstance();
 
     // Check if type is FunctionPointer
-    Matcher funcptr = isFunctionPointer(typeBlocks.subList(counter, typeBlocks.size()));
+    Matcher funcptr = getFunctionPtrMatcher(typeBlocks.subList(counter, typeBlocks.size()));
 
     if (funcptr != null) {
       Type returnType = createFrom(typeName, false);

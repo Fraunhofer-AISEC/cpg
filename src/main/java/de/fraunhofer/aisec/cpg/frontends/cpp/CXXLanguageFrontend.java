@@ -26,17 +26,23 @@
 
 package de.fraunhofer.aisec.cpg.frontends.cpp;
 
+import static de.fraunhofer.aisec.cpg.graph.NodeBuilder.newAnnotation;
+import static de.fraunhofer.aisec.cpg.graph.NodeBuilder.newDeclaredReferenceExpression;
+import static de.fraunhofer.aisec.cpg.graph.NodeBuilder.newLiteral;
+
 import de.fraunhofer.aisec.cpg.TranslationConfiguration;
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
 import de.fraunhofer.aisec.cpg.frontends.TranslationException;
+import de.fraunhofer.aisec.cpg.graph.Annotation;
 import de.fraunhofer.aisec.cpg.graph.Declaration;
 import de.fraunhofer.aisec.cpg.graph.DeclaredReferenceExpression;
 import de.fraunhofer.aisec.cpg.graph.Expression;
+import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.TranslationUnitDeclaration;
 import de.fraunhofer.aisec.cpg.graph.TypeManager;
 import de.fraunhofer.aisec.cpg.graph.ValueDeclaration;
-import de.fraunhofer.aisec.cpg.graph.type.Type;
 import de.fraunhofer.aisec.cpg.graph.type.TypeParser;
+import de.fraunhofer.aisec.cpg.graph.type.UnknownType;
 import de.fraunhofer.aisec.cpg.helpers.Benchmark;
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager;
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation;
@@ -79,13 +85,6 @@ import org.slf4j.LoggerFactory;
  * <p>Frontend for ONE CXX File
  */
 public class CXXLanguageFrontend extends LanguageFrontend {
-
-  public static final Type LONG_TYPE = TypeParser.createFrom("long", true);
-  public static final Type TYPE_UNSIGNED_LONG_LONG =
-      TypeParser.createFrom("unsigned long long", true);
-  public static final Type INT_TYPE = TypeParser.createFrom("int", true);
-  public static final Type LONG_LONG_TYPE = TypeParser.createFrom("long long", true);
-  public static final Type TYPE_UNSIGNED_LONG = TypeParser.createFrom("unsigned long", true);
 
   private static final Logger LOGGER = LoggerFactory.getLogger(CXXLanguageFrontend.class);
   private final IncludeFileContentProvider includeFileContentProvider =
@@ -181,7 +180,6 @@ public class CXXLanguageFrontend extends LanguageFrontend {
         }
       };
   private DeclarationHandler declarationHandler = new DeclarationHandler(this);
-  private DeclarationListHandler declarationListHandler = new DeclarationListHandler(this);
   private DeclaratorHandler declaratorHandler = new DeclaratorHandler(this);
   private ExpressionHandler expressionHandler = new ExpressionHandler(this);
   private InitializerHandler initializerHandler = new InitializerHandler(this);
@@ -233,11 +231,11 @@ public class CXXLanguageFrontend extends LanguageFrontend {
 
     s.append(" ".repeat(indent));
 
-    log.debug(
+    log.trace(
         "{}{} -> {}",
         s,
         node.getClass().getSimpleName(),
-        node.getRawSignature().replaceAll("\n", " \\ ").replaceAll("\\s+", "  "));
+        node.getRawSignature().replace('\n', '\\').replace('\t', ' '));
 
     for (IASTNode iastNode : children) {
       explore(iastNode, indent + 2);
@@ -250,18 +248,16 @@ public class CXXLanguageFrontend extends LanguageFrontend {
     FileContent content = FileContent.createForExternalFileLocation(file.getAbsolutePath());
 
     // include paths
-    String[] includePaths = config.includePaths;
+    List<String> includePaths = new ArrayList<>();
+    if (config.getTopLevel() != null) {
+      includePaths.add(config.getTopLevel().toPath().toAbsolutePath().toString());
+    }
+    includePaths.addAll(Arrays.asList(config.includePaths));
 
-    ScannerInfo scannerInfo = new ScannerInfo(config.symbols, includePaths);
+    ScannerInfo scannerInfo =
+        new ScannerInfo(config.symbols, includePaths.toArray(new String[] {}));
 
     DefaultLogService log = new DefaultLogService();
-
-    IncludeFileContentProvider includeProvider;
-    if (config.loadIncludes) {
-      includeProvider = includeFileContentProvider;
-    } else {
-      includeProvider = IncludeFileContentProvider.getEmptyFilesProvider();
-    }
 
     int opts = ILanguage.OPTION_PARSE_INACTIVE_CODE; // | ILanguage.OPTION_ADD_COMMENTS;
 
@@ -269,7 +265,8 @@ public class CXXLanguageFrontend extends LanguageFrontend {
       Benchmark bench = new Benchmark(this.getClass(), "Parsing sourcefile");
       IASTTranslationUnit translationUnit =
           GPPLanguage.getDefault()
-              .getASTTranslationUnit(content, scannerInfo, includeProvider, null, opts, log);
+              .getASTTranslationUnit(
+                  content, scannerInfo, includeFileContentProvider, null, opts, log);
       bench.stop();
 
       bench = new Benchmark(this.getClass(), "Transform to CPG");
@@ -279,6 +276,10 @@ public class CXXLanguageFrontend extends LanguageFrontend {
       }
 
       for (IASTComment c : translationUnit.getComments()) {
+        if (c.getFileLocation() == null) {
+          LOGGER.warn("Found comment with null location in {}", translationUnit.getFilePath());
+          continue;
+        }
         comments.put(c.getFileLocation().getStartingLineNumber(), c.getRawSignature());
       }
 
@@ -303,7 +304,6 @@ public class CXXLanguageFrontend extends LanguageFrontend {
 
   @Nullable
   @Override
-  @SuppressWarnings("ConstantConditions")
   public <T> PhysicalLocation getLocationFromRawNode(T astNode) {
     if (astNode instanceof ASTNode) {
       ASTNode node = (ASTNode) astNode;
@@ -365,6 +365,71 @@ public class CXXLanguageFrontend extends LanguageFrontend {
     }
 
     return null;
+  }
+
+  /**
+   * Processes C++ attributes into {@link Annotation} nodes.
+   *
+   * @param node the node to process
+   * @param owner the AST node which holds the attribute
+   */
+  public void processAttributes(@NonNull Node node, @NonNull IASTAttributeOwner owner) {
+    if (this.config.processAnnotations) {
+      // set attributes
+      node.addAnnotations(handleAttributes(owner));
+    }
+  }
+
+  private List<Annotation> handleAttributes(IASTAttributeOwner owner) {
+    List<Annotation> list = new ArrayList<>();
+
+    for (IASTAttribute attribute : owner.getAttributes()) {
+      Annotation annotation =
+          newAnnotation(new String(attribute.getName()), attribute.getRawSignature());
+
+      // go over the parameters
+      if (attribute.getArgumentClause() instanceof IASTTokenList) {
+        List<Expression> values = handleTokenList((IASTTokenList) attribute.getArgumentClause());
+
+        annotation.setValues(values);
+      }
+
+      list.add(annotation);
+    }
+
+    return list;
+  }
+
+  private List<Expression> handleTokenList(IASTTokenList tokenList) {
+    List<Expression> list = new ArrayList<>();
+
+    for (IASTToken token : tokenList.getTokens()) {
+      if (token.getTokenType() == 6) {
+        continue;
+      }
+
+      list.add(handleToken(token));
+    }
+
+    return list;
+  }
+
+  private Expression handleToken(IASTToken token) {
+    String code = new String(token.getTokenCharImage());
+
+    switch (token.getTokenType()) {
+      case 1:
+        return newDeclaredReferenceExpression(code, UnknownType.getUnknownType(), code);
+      case 2:
+        return newLiteral(Integer.parseInt(code), TypeParser.createFrom("int", true), code);
+      case 130:
+        return newLiteral(
+            code.length() >= 2 ? code.substring(1, code.length() - 1) : "",
+            TypeParser.createFrom("const char*", false),
+            code);
+      default:
+        return newLiteral(code, TypeParser.createFrom("const char*", false), code);
+    }
   }
 
   private Field getField(Class<?> type, String fieldName) throws NoSuchFieldException {
@@ -492,10 +557,6 @@ public class CXXLanguageFrontend extends LanguageFrontend {
 
   public DeclarationHandler getDeclarationHandler() {
     return declarationHandler;
-  }
-
-  public DeclarationListHandler getDeclarationListHandler() {
-    return declarationListHandler;
   }
 
   public DeclaratorHandler getDeclaratorHandler() {

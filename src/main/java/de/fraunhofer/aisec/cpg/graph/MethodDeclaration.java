@@ -59,7 +59,15 @@ public class MethodDeclaration extends FunctionDeclaration {
     md.setParameters(functionDeclaration.getParameters());
     md.setBody(functionDeclaration.getBody());
     md.setType(functionDeclaration.getType());
+    md.addAnnotations(functionDeclaration.getAnnotations());
     md.setRecordDeclaration(recordDeclaration);
+    md.setIsDefinition(functionDeclaration.isDefinition());
+
+    if (!md.isDefinition()) {
+      // do not call getDefinition if this is a definition itself, otherwise this
+      // will return a 'this' to the old function declaration
+      md.setDefinition(functionDeclaration.getDefinition());
+    }
 
     return md;
   }
@@ -72,6 +80,7 @@ public class MethodDeclaration extends FunctionDeclaration {
     this.isStatic = isStatic;
   }
 
+  @Nullable
   public RecordDeclaration getRecordDeclaration() {
     return recordDeclaration;
   }

@@ -26,23 +26,44 @@
 
 package de.fraunhofer.aisec.cpg.frontends.cpp;
 
+import static java.util.Collections.emptyList;
+
 import de.fraunhofer.aisec.cpg.frontends.Handler;
-import de.fraunhofer.aisec.cpg.graph.*;
+import de.fraunhofer.aisec.cpg.graph.ConstructorDeclaration;
+import de.fraunhofer.aisec.cpg.graph.Declaration;
+import de.fraunhofer.aisec.cpg.graph.Expression;
+import de.fraunhofer.aisec.cpg.graph.FieldDeclaration;
+import de.fraunhofer.aisec.cpg.graph.FunctionDeclaration;
+import de.fraunhofer.aisec.cpg.graph.MethodDeclaration;
+import de.fraunhofer.aisec.cpg.graph.NodeBuilder;
+import de.fraunhofer.aisec.cpg.graph.ParamVariableDeclaration;
+import de.fraunhofer.aisec.cpg.graph.ProblemDeclaration;
+import de.fraunhofer.aisec.cpg.graph.RecordDeclaration;
+import de.fraunhofer.aisec.cpg.graph.ValueDeclaration;
+import de.fraunhofer.aisec.cpg.graph.VariableDeclaration;
 import de.fraunhofer.aisec.cpg.graph.type.Type;
 import de.fraunhofer.aisec.cpg.graph.type.TypeParser;
 import de.fraunhofer.aisec.cpg.graph.type.UnknownType;
 import de.fraunhofer.aisec.cpg.passes.scopes.RecordScope;
-import de.fraunhofer.aisec.cpg.passes.scopes.Scope;
-import java.lang.reflect.Method;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
-import org.eclipse.cdt.core.dom.ast.*;
+import org.eclipse.cdt.core.dom.ast.IASTCompositeTypeSpecifier;
+import org.eclipse.cdt.core.dom.ast.IASTDeclaration;
+import org.eclipse.cdt.core.dom.ast.IASTInitializer;
+import org.eclipse.cdt.core.dom.ast.IASTNameOwner;
+import org.eclipse.cdt.core.dom.ast.IASTNode;
+import org.eclipse.cdt.core.dom.ast.IBinding;
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTCompositeTypeSpecifier;
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTParameterDeclaration;
-import org.eclipse.cdt.internal.core.dom.parser.cpp.*;
+import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTArrayDeclarator;
+import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTCompositeTypeSpecifier;
+import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTDeclarator;
+import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTFieldDeclarator;
+import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTFunctionDeclarator;
+import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTSimpleDeclaration;
+import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTVisibilityLabel;
 
 class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageFrontend> {
 
@@ -51,22 +72,13 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
 
     map.put(CPPASTDeclarator.class, ctx -> handleDeclarator((CPPASTDeclarator) ctx));
     map.put(CPPASTArrayDeclarator.class, ctx -> handleDeclarator((CPPASTDeclarator) ctx));
+    map.put(CPPASTFieldDeclarator.class, ctx -> handleFieldDeclarator((CPPASTDeclarator) ctx));
     map.put(
         CPPASTFunctionDeclarator.class,
         ctx -> handleFunctionDeclarator((CPPASTFunctionDeclarator) ctx));
     map.put(
         CPPASTCompositeTypeSpecifier.class,
         ctx -> handleCompositeTypeSpecifier((CPPASTCompositeTypeSpecifier) ctx));
-  }
-
-  private int getEvaluatedIntegerValue(IASTExpression exp) {
-    try {
-      Method method = exp.getClass().getMethod("getEvaluation");
-      ICPPEvaluation evaluation = (ICPPEvaluation) method.invoke(exp);
-      return evaluation.getValue().numberValue().intValue();
-    } catch (Exception e) {
-      return -1;
-    }
   }
 
   private Declaration handleDeclarator(CPPASTDeclarator ctx) {
@@ -85,7 +97,32 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
       declaration.setInitializer(lang.getInitializerHandler().handle(init));
     }
 
-    lang.getScopeManager().addValueDeclaration(declaration);
+    lang.getScopeManager().addDeclaration(declaration);
+
+    return declaration;
+  }
+
+  private FieldDeclaration handleFieldDeclarator(CPPASTDeclarator ctx) {
+    IASTInitializer init = ctx.getInitializer();
+    Expression initializer = null;
+
+    if (init != null) {
+      initializer = lang.getInitializerHandler().handle(init);
+    }
+
+    // type will be filled out later
+    FieldDeclaration declaration =
+        NodeBuilder.newFieldDeclaration(
+            ctx.getName().toString(),
+            UnknownType.getUnknownType(),
+            emptyList(),
+            ctx.getRawSignature(),
+            this.lang.getLocationFromRawNode(ctx),
+            initializer,
+            true);
+
+    lang.getScopeManager().addDeclaration(declaration);
+
     return declaration;
   }
 
@@ -119,6 +156,11 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
 
       recordDeclaration = this.lang.getRecordForName(recordName).orElse(null);
 
+      if (recordDeclaration != null) {
+        // to make sure, that the scope of this function is associated to the record
+        this.lang.getScopeManager().enterScope(recordDeclaration);
+      }
+
       declaration =
           NodeBuilder.newMethodDeclaration(
               methodName, ctx.getRawSignature(), false, recordDeclaration);
@@ -141,7 +183,7 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
       arg.setArgumentIndex(i);
       // Note that this .addValueDeclaration call already adds arg to the function's parameters.
       // This is why the following line has been commented out by @KW
-      lang.getScopeManager().addValueDeclaration(arg);
+      lang.getScopeManager().addDeclaration(arg);
       // declaration.getParameters().add(arg);
       i++;
     }
@@ -154,11 +196,15 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
       ParamVariableDeclaration varargs =
           NodeBuilder.newMethodParameterIn("va_args", UnknownType.getUnknownType(), true, "");
       varargs.setArgumentIndex(i);
-      lang.getScopeManager().addValueDeclaration(varargs);
+      lang.getScopeManager().addDeclaration(varargs);
     }
 
     //    lang.addFunctionDeclaration(declaration);
     lang.getScopeManager().leaveScope(declaration);
+
+    if (recordDeclaration != null) {
+      this.lang.getScopeManager().enterScope(recordDeclaration);
+    }
 
     return declaration;
   }
@@ -194,7 +240,7 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
           NodeBuilder.newFieldDeclaration(
               name,
               UnknownType.getUnknownType(),
-              Collections.emptyList(),
+              emptyList(),
               code,
               lang.getLocationFromRawNode(ctx),
               initializer,
@@ -256,7 +302,7 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
     this.lang.addRecord(recordDeclaration);
 
     lang.getScopeManager().enterScope(recordDeclaration);
-    lang.getScopeManager().addValueDeclaration(recordDeclaration.getThis());
+    lang.getScopeManager().addDeclaration(recordDeclaration.getThis());
 
     processMembers(ctx, recordDeclaration);
 
@@ -264,8 +310,16 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
       de.fraunhofer.aisec.cpg.graph.ConstructorDeclaration constructorDeclaration =
           NodeBuilder.newConstructorDeclaration(
               recordDeclaration.getName(), recordDeclaration.getName(), recordDeclaration);
+
+      // set this as implicit
+      constructorDeclaration.setImplicit(true);
+
+      // and set the type, constructors always have implicitly the return type of their class
+      constructorDeclaration.setType(TypeParser.createFrom(recordDeclaration.getName(), true));
+
       recordDeclaration.getConstructors().add(constructorDeclaration);
-      lang.getScopeManager().addValueDeclaration(constructorDeclaration);
+
+      lang.getScopeManager().addDeclaration(constructorDeclaration);
     }
 
     lang.getScopeManager().leaveScope(recordDeclaration);
@@ -279,8 +333,8 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
         // TODO: parse visibility
         continue;
       }
+
       Declaration declaration = lang.getDeclarationHandler().handle(member);
-      Scope declarationScope = lang.getScopeManager().getScopeOfStatment(declaration);
 
       if (declaration instanceof FunctionDeclaration) {
         MethodDeclaration method =
@@ -290,10 +344,7 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
         // check, if its a constructor
         if (declaration.getName().equals(recordDeclaration.getName())) {
           ConstructorDeclaration constructor = ConstructorDeclaration.from(method);
-          if (declarationScope != null) {
-            declarationScope.setAstNode(
-                constructor); // Adjust cpg Node by which scopes are identified
-          }
+
           Type type =
               TypeParser.createFrom(
                   lang.getScopeManager()
@@ -303,12 +354,14 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
                   true);
           constructor.setType(type);
           recordDeclaration.getConstructors().add(constructor);
+
+          // update scope manager, otherwise we point at the old function declaration
+          this.lang.getScopeManager().replaceNode(constructor, declaration);
         } else {
           recordDeclaration.getMethods().add(method);
-        }
 
-        if (declarationScope != null) {
-          declarationScope.setAstNode(method); // Adjust cpg Node by which scopes are identified
+          // update scope manager, otherwise we point at the old function declaration
+          this.lang.getScopeManager().replaceNode(method, declaration);
         }
       } else if (declaration instanceof VariableDeclaration) {
         FieldDeclaration fieldDeclaration =
@@ -320,6 +373,10 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
         recordDeclaration.getFields().add((FieldDeclaration) declaration);
       } else if (declaration instanceof RecordDeclaration) {
         recordDeclaration.getRecords().add((RecordDeclaration) declaration);
+      } else if (declaration instanceof ProblemDeclaration) {
+        // there is no place to put them here so let's attach them to the translation unit so that
+        // we do not loose them
+        lang.getCurrentTU().add(declaration);
       }
     }
   }

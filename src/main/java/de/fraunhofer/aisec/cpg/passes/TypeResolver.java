@@ -254,5 +254,7 @@ public class TypeResolver extends Pass {
   public void cleanup() {
     this.firstOrderTypes.clear();
     this.typeState.clear();
+    TypeParser.reset();
+    TypeManager.reset();
   }
 }

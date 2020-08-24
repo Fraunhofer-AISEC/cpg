@@ -77,15 +77,14 @@ public abstract class Handler<S, T, L extends LanguageFrontend> {
       return null;
     }
 
-    // If we do not want to load includes into the CPG and the current fileLocation is an include
-    // file ->
+    // If we do not want to load includes into the CPG and the current fileLocation was included
     if (!this.lang.config.loadIncludes && ctx instanceof ASTNode) {
       ASTNode astNode = (ASTNode) ctx;
-      for (String inclPath : this.lang.config.includePaths) {
-        if (astNode.getContainingFilename().startsWith(inclPath)) {
-          log.debug("Skip parsing include file" + astNode.getContainingFilename());
-          return null;
-        }
+
+      if (astNode.getFileLocation() != null
+          && astNode.getFileLocation().getContextInclusionStatement() != null) {
+        log.debug("Skip parsing include file" + astNode.getContainingFilename());
+        return null;
       }
     }
 

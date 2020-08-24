@@ -243,4 +243,24 @@ class CXXIncludeTest extends BaseTest {
                         .equals(
                             new File("src/test/resources/another-include.h").getAbsolutePath())));
   }
+
+  @Test
+  void testLoadIncludes() throws Exception {
+    File file = new File("src/test/resources/include.cpp");
+    List<TranslationUnitDeclaration> translationUnitDeclarations =
+        analyzeWithBuilder(
+            TranslationConfiguration.builder()
+                .sourceLocations(List.of(file))
+                .topLevel(file.getParentFile())
+                .loadIncludes(false)
+                .debugParser(true)
+                .failOnError(true));
+
+    assertNotNull(translationUnitDeclarations);
+
+    // first one should NOT be a class (since it is defined in the header)
+    RecordDeclaration recordDeclaration =
+        translationUnitDeclarations.get(0).getDeclarationAs(0, RecordDeclaration.class);
+    assertNull(recordDeclaration);
+  }
 }

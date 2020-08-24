@@ -24,29 +24,39 @@
  *
  */
 
-package de.fraunhofer.aisec.cpg.passes.scopes;
+package de.fraunhofer.aisec.cpg.graph;
 
-import de.fraunhofer.aisec.cpg.graph.Node;
+import java.util.ArrayList;
+import java.util.List;
+import org.checkerframework.checker.nullness.qual.NonNull;
 
-public class NameScope extends StructureDeclarationScope {
+/**
+ * This represents a sequence of one or more declaration(s). The purpose of this node is primarily
+ * to bridge between a single declaration and a list of declarations in the front-end handlers. It
+ * will be converted into a list-structure and all its children will be added to the parent, i.e.
+ * the translation unit. It should not end up in the final graph.
+ */
+public class DeclarationSequence extends Declaration {
 
-  private String namePrefix;
+  private final List<Declaration> children = new ArrayList<>();
 
-  public NameScope(Node node, String currentPrefix, String delimiter) {
-    super(node);
-    if (currentPrefix == null || !currentPrefix.isEmpty()) {
-      this.namePrefix = currentPrefix + delimiter + node.getName();
-    } else {
-      this.namePrefix = node.getName();
+  public void add(@NonNull Declaration declaration) {
+    if (declaration instanceof DeclarationSequence) {
+      children.addAll(((DeclarationSequence) declaration).asList());
     }
-    this.astNode = node;
+
+    children.add(declaration);
   }
 
-  public String getNamePrefix() {
-    return namePrefix;
+  public List<Declaration> asList() {
+    return children;
   }
 
-  public void setNamePrefix(String namePrefix) {
-    this.namePrefix = namePrefix;
+  public boolean isSingle() {
+    return children.size() == 1;
+  }
+
+  public Declaration first() {
+    return children.get(0);
   }
 }

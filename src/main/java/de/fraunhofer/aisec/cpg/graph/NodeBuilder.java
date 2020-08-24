@@ -181,7 +181,7 @@ public class NodeBuilder {
   }
 
   private static void log(Node node) {
-    LOGGER.debug("Creating {}", node);
+    LOGGER.trace("Creating {}", node);
   }
 
   public static ReturnStatement newReturnStatement(String code) {
@@ -694,5 +694,13 @@ public class NodeBuilder {
     CompoundStatementExpression cse = new CompoundStatementExpression();
     cse.setCode(code);
     return cse;
+  }
+
+  public static Annotation newAnnotation(String name, @NonNull String code) {
+    Annotation annotation = new Annotation();
+    annotation.setName(name);
+    annotation.setCode(code);
+
+    return annotation;
   }
 }

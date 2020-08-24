@@ -29,11 +29,7 @@ package de.fraunhofer.aisec.cpg.graph;
 import de.fraunhofer.aisec.cpg.helpers.LocationConverter;
 import de.fraunhofer.aisec.cpg.processing.IVisitable;
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;
 import org.checkerframework.checker.nullness.qual.NonNull;
@@ -74,6 +70,7 @@ public class Node extends IVisitable<Node> {
   protected String file;
 
   /** Incoming control flow edges. */
+  @NonNull
   @Relationship(value = "EOG", direction = "INCOMING")
   protected List<Node> prevEOG = new ArrayList<>();
 
@@ -87,13 +84,15 @@ public class Node extends IVisitable<Node> {
   @Relationship(value = "CFG", direction = "OUTGOING")
   protected List<Node> nextCFG = new ArrayList<>();
 
+  @NonNull
   @Relationship(value = "DFG", direction = "INCOMING")
   protected Set<Node> prevDFG = new HashSet<>();
 
+  @NonNull
   @Relationship(value = "DFG")
   protected Set<Node> nextDFG = new HashSet<>();
 
-  protected Set<TypedefDeclaration> typedefs = new HashSet<>();
+  @NonNull protected Set<TypedefDeclaration> typedefs = new HashSet<>();
 
   /**
    * If a node is marked as being a dummy, it means that it was created artificially and does not
@@ -113,6 +112,10 @@ public class Node extends IVisitable<Node> {
 
   /** Index of the argument if this node is used in a function call or parameter list. */
   private int argumentIndex;
+
+  /** List of annotations associated with that node. */
+  @SubGraph("AST")
+  protected List<Annotation> annotations = new ArrayList<>();
 
   public Long getId() {
     return id;
@@ -152,11 +155,12 @@ public class Node extends IVisitable<Node> {
     this.location = location;
   }
 
+  @NonNull
   public List<Node> getPrevEOG() {
     return this.prevEOG;
   }
 
-  public void setPrevEOG(List<Node> prevEOG) {
+  public void setPrevEOG(@NonNull List<Node> prevEOG) {
     this.prevEOG = prevEOG;
   }
 
@@ -174,11 +178,12 @@ public class Node extends IVisitable<Node> {
     return this.nextCFG;
   }
 
+  @NonNull
   public Set<Node> getNextDFG() {
     return nextDFG;
   }
 
-  public void setNextDFG(Set<Node> nextDFG) {
+  public void setNextDFG(@NonNull Set<Node> nextDFG) {
     this.nextDFG = nextDFG;
   }
 
@@ -194,11 +199,12 @@ public class Node extends IVisitable<Node> {
     }
   }
 
+  @NonNull
   public Set<Node> getPrevDFG() {
     return prevDFG;
   }
 
-  public void setPrevDFG(Set<Node> prevDFG) {
+  public void setPrevDFG(@NonNull Set<Node> prevDFG) {
     this.prevDFG = prevDFG;
   }
 
@@ -218,11 +224,12 @@ public class Node extends IVisitable<Node> {
     this.typedefs.add(typedef);
   }
 
+  @NonNull
   public Set<TypedefDeclaration> getTypedefs() {
     return typedefs;
   }
 
-  public void setTypedefs(Set<TypedefDeclaration> typedefs) {
+  public void setTypedefs(@NonNull Set<TypedefDeclaration> typedefs) {
     this.typedefs = typedefs;
   }
 
@@ -253,6 +260,15 @@ public class Node extends IVisitable<Node> {
 
   public boolean isImplicit() {
     return this.implicit;
+  }
+
+  @NonNull
+  public List<Annotation> getAnnotations() {
+    return annotations;
+  }
+
+  public void addAnnotations(@NonNull Collection<Annotation> annotations) {
+    this.annotations.addAll(annotations);
   }
 
   /**

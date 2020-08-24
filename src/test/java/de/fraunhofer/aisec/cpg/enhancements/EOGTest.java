@@ -86,13 +86,13 @@ class EOGTest extends BaseTest {
     List<Node> nodes = translateToNodes(relPath);
 
     // All BinaryOperators (including If conditions) have only one successor
-    List<BinaryOperator> binops = TestUtils.filterCast(nodes, BinaryOperator.class);
+    List<BinaryOperator> binops = Util.filterCast(nodes, BinaryOperator.class);
     for (BinaryOperator binop : binops) {
       SubgraphWalker.Border binopEOG = SubgraphWalker.getEOGPathEdges(binop);
       assertEquals(1, binopEOG.getExits().size());
     }
 
-    List<IfStatement> ifs = TestUtils.filterCast(nodes, IfStatement.class);
+    List<IfStatement> ifs = Util.filterCast(nodes, IfStatement.class);
 
     assertEquals(2, ifs.size());
     ifs.forEach(ifnode -> Assertions.assertNotNull(ifnode.getThenStatement()));
@@ -166,7 +166,7 @@ class EOGTest extends BaseTest {
     List<Node> nodes = translateToNodes("src/test/resources/cfg/ShortCircuit.java");
 
     List<BinaryOperator> binaryOperators =
-        TestUtils.filterCast(nodes, BinaryOperator.class).stream()
+        Util.filterCast(nodes, BinaryOperator.class).stream()
             .filter(bo -> bo.getOperatorCode().equals("&&") || bo.getOperatorCode().equals("||"))
             .collect(Collectors.toList());
 
@@ -185,7 +185,7 @@ class EOGTest extends BaseTest {
         nodes.stream()
             .filter(node -> node.getCode().equals(REFNODESTRINGJAVA))
             .collect(Collectors.toList());
-    List<ForStatement> fstat = TestUtils.filterCast(nodes, ForStatement.class);
+    List<ForStatement> fstat = Util.filterCast(nodes, ForStatement.class);
 
     ForStatement fs = fstat.get(0);
     assertTrue(Util.eogConnect(NODE, EXITS, prints.get(0), SUBTREE, fs));
@@ -215,7 +215,7 @@ class EOGTest extends BaseTest {
         nodes.stream()
             .filter(node -> node.getCode().equals(REFNODESTRINGCXX))
             .collect(Collectors.toList());
-    List<ForStatement> fstat = TestUtils.filterCast(nodes, ForStatement.class);
+    List<ForStatement> fstat = Util.filterCast(nodes, ForStatement.class);
 
     ForStatement fs = fstat.get(0);
     assertTrue(Util.eogConnect(NODE, EXITS, prints.get(0), SUBTREE, fs));
@@ -306,7 +306,7 @@ class EOGTest extends BaseTest {
             .collect(Collectors.toList());
 
     assertEquals(1, nodes.stream().filter(node -> node instanceof WhileStatement).count());
-    WhileStatement wstat = TestUtils.filterCast(nodes, WhileStatement.class).get(0);
+    WhileStatement wstat = Util.filterCast(nodes, WhileStatement.class).get(0);
     SubgraphWalker.Border conditionEOG = SubgraphWalker.getEOGPathEdges(wstat.getCondition());
     SubgraphWalker.Border blockEOG = SubgraphWalker.getEOGPathEdges(wstat.getStatement());
 
@@ -339,7 +339,7 @@ class EOGTest extends BaseTest {
     // condition
     assertTrue(Util.eogConnect(SUBTREE, EXITS, wstat, prints.get(1)));
 
-    DoStatement dostat = TestUtils.filterCast(nodes, DoStatement.class).get(0);
+    DoStatement dostat = Util.filterCast(nodes, DoStatement.class).get(0);
 
     conditionEOG = SubgraphWalker.getEOGPathEdges(dostat.getCondition());
     blockEOG = SubgraphWalker.getEOGPathEdges(dostat.getStatement());
@@ -366,7 +366,7 @@ class EOGTest extends BaseTest {
     List<Node> nodes = translateToNodes(relPath);
 
     List<FunctionDeclaration> functions =
-        TestUtils.filterCast(nodes, FunctionDeclaration.class).stream()
+        Util.filterCast(nodes, FunctionDeclaration.class).stream()
             .filter(f -> !(f instanceof ConstructorDeclaration))
             .collect(Collectors.toList());
 
@@ -495,10 +495,10 @@ class EOGTest extends BaseTest {
             .collect(Collectors.toList());
 
     assertEquals(1, nodes.stream().filter(node -> node instanceof WhileStatement).count());
-    List<BreakStatement> breaks = TestUtils.filterCast(nodes, BreakStatement.class);
-    List<ContinueStatement> continues = TestUtils.filterCast(nodes, ContinueStatement.class);
+    List<BreakStatement> breaks = Util.filterCast(nodes, BreakStatement.class);
+    List<ContinueStatement> continues = Util.filterCast(nodes, ContinueStatement.class);
 
-    WhileStatement wstat = TestUtils.filterCast(nodes, WhileStatement.class).get(0);
+    WhileStatement wstat = Util.filterCast(nodes, WhileStatement.class).get(0);
 
     SubgraphWalker.Border conditionEOG = SubgraphWalker.getEOGPathEdges(wstat.getCondition());
     SubgraphWalker.Border blockEOG = SubgraphWalker.getEOGPathEdges(wstat.getStatement());
@@ -525,7 +525,7 @@ class EOGTest extends BaseTest {
         Util.eogConnect(NODE, EXITS, wstat, prints.get(1))
             || Util.eogConnect(NODE, EXITS, breaks.get(0), prints.get(1)));
 
-    DoStatement dostat = TestUtils.filterCast(nodes, DoStatement.class).get(0);
+    DoStatement dostat = Util.filterCast(nodes, DoStatement.class).get(0);
 
     conditionEOG = SubgraphWalker.getEOGPathEdges(dostat.getCondition());
 

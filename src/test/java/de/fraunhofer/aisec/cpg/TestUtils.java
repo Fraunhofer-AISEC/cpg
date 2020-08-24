@@ -26,10 +26,12 @@
 
 package de.fraunhofer.aisec.cpg;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import de.fraunhofer.aisec.cpg.graph.CompoundStatement;
 import de.fraunhofer.aisec.cpg.graph.Node;
+import de.fraunhofer.aisec.cpg.graph.Statement;
 import de.fraunhofer.aisec.cpg.graph.TranslationUnitDeclaration;
 import de.fraunhofer.aisec.cpg.graph.TypeManager;
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker;
@@ -101,6 +103,7 @@ public class TestUtils {
             .sourceLocations(files)
             .topLevel(topLevel.toFile())
             .loadIncludes(true)
+            .disableCleanup()
             .debugParser(true)
             .failOnError(true);
     if (usePasses) {
@@ -145,8 +148,8 @@ public class TestUtils {
    * @return Statement at source line or null if not present.
    */
   public static Node getByLineNr(CompoundStatement body, int line) {
-    List<Node> nodes = SubgraphWalker.flattenAST(body);
-    for (Node n : nodes) {
+    List<Statement> nodes = subnodesOfType(body, Statement.class);
+    for (Statement n : nodes) {
       PhysicalLocation location = n.getLocation();
       assertNotNull(location);
 
@@ -154,6 +157,7 @@ public class TestUtils {
         return n;
       }
     }
+
     return null;
   }
 
@@ -172,7 +176,7 @@ public class TestUtils {
   public static <S extends Node> S getOfTypeWithName(
       List<Node> listOfNodes, Class<S> specificClass, String name) {
     List<S> listOfNodesWithName =
-        filterCast(listOfNodes, specificClass).stream()
+        Util.filterCast(listOfNodes, specificClass).stream()
             .filter(s -> s.getName().equals(name))
             .collect(Collectors.toList());
     if (listOfNodesWithName.isEmpty()) {
@@ -180,23 +184,6 @@ public class TestUtils {
     }
     // Here we return the first node, if there are more nodes
     return listOfNodesWithName.get(0);
-  }
-
-  /**
-   * Filters a list of elements with common type T for all elements of instance S, returning a list
-   * of type {@link List}.
-   *
-   * @param genericList List with elements fo type T.
-   * @param specificClass Class type to filter for.
-   * @param <T> Generic List type.
-   * @param <S> Class type to filter for.
-   * @return a specific List as all elements are cast to the specified class type.
-   */
-  public static <T, S extends T> List<S> filterCast(List<T> genericList, Class<S> specificClass) {
-    return genericList.stream()
-        .filter(g -> specificClass.isAssignableFrom(g.getClass()))
-        .map(specificClass::cast)
-        .collect(Collectors.toList());
   }
 
   /**
@@ -220,7 +207,7 @@ public class TestUtils {
    * @return a List of searched types
    */
   public static <S extends Node> List<S> subnodesOfType(Node node, Class<S> specificClass) {
-    return filterCast(SubgraphWalker.flattenAST(node), specificClass).stream()
+    return Util.filterCast(SubgraphWalker.flattenAST(node), specificClass).stream()
         .filter(Util.distinctByIdentity())
         .collect(Collectors.toList());
   }

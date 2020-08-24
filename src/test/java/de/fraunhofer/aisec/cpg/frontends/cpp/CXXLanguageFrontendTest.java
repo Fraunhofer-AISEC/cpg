@@ -26,20 +26,67 @@
 
 package de.fraunhofer.aisec.cpg.frontends.cpp;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import de.fraunhofer.aisec.cpg.BaseTest;
 import de.fraunhofer.aisec.cpg.TestUtils;
-import de.fraunhofer.aisec.cpg.graph.*;
+import de.fraunhofer.aisec.cpg.TranslationConfiguration;
+import de.fraunhofer.aisec.cpg.graph.Annotation;
+import de.fraunhofer.aisec.cpg.graph.ArraySubscriptionExpression;
+import de.fraunhofer.aisec.cpg.graph.BinaryOperator;
+import de.fraunhofer.aisec.cpg.graph.CallExpression;
+import de.fraunhofer.aisec.cpg.graph.CaseStatement;
+import de.fraunhofer.aisec.cpg.graph.CastExpression;
+import de.fraunhofer.aisec.cpg.graph.CatchClause;
+import de.fraunhofer.aisec.cpg.graph.CompoundStatement;
+import de.fraunhofer.aisec.cpg.graph.ConstructExpression;
+import de.fraunhofer.aisec.cpg.graph.ConstructorDeclaration;
+import de.fraunhofer.aisec.cpg.graph.Declaration;
+import de.fraunhofer.aisec.cpg.graph.DeclarationStatement;
+import de.fraunhofer.aisec.cpg.graph.DeclaredReferenceExpression;
+import de.fraunhofer.aisec.cpg.graph.DefaultStatement;
+import de.fraunhofer.aisec.cpg.graph.DesignatedInitializerExpression;
+import de.fraunhofer.aisec.cpg.graph.Expression;
+import de.fraunhofer.aisec.cpg.graph.FieldDeclaration;
+import de.fraunhofer.aisec.cpg.graph.ForEachStatement;
+import de.fraunhofer.aisec.cpg.graph.FunctionDeclaration;
+import de.fraunhofer.aisec.cpg.graph.IfStatement;
+import de.fraunhofer.aisec.cpg.graph.InitializerListExpression;
+import de.fraunhofer.aisec.cpg.graph.Literal;
+import de.fraunhofer.aisec.cpg.graph.MemberCallExpression;
+import de.fraunhofer.aisec.cpg.graph.MethodDeclaration;
+import de.fraunhofer.aisec.cpg.graph.NamespaceDeclaration;
+import de.fraunhofer.aisec.cpg.graph.NewExpression;
+import de.fraunhofer.aisec.cpg.graph.Node;
+import de.fraunhofer.aisec.cpg.graph.RecordDeclaration;
+import de.fraunhofer.aisec.cpg.graph.ReturnStatement;
+import de.fraunhofer.aisec.cpg.graph.Statement;
+import de.fraunhofer.aisec.cpg.graph.SwitchStatement;
+import de.fraunhofer.aisec.cpg.graph.TranslationUnitDeclaration;
+import de.fraunhofer.aisec.cpg.graph.TryStatement;
+import de.fraunhofer.aisec.cpg.graph.TypeIdExpression;
+import de.fraunhofer.aisec.cpg.graph.UnaryOperator;
+import de.fraunhofer.aisec.cpg.graph.VariableDeclaration;
+import de.fraunhofer.aisec.cpg.graph.type.ObjectType;
 import de.fraunhofer.aisec.cpg.graph.type.TypeParser;
 import de.fraunhofer.aisec.cpg.graph.type.UnknownType;
 import de.fraunhofer.aisec.cpg.helpers.NodeComparator;
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker;
+import de.fraunhofer.aisec.cpg.helpers.Util;
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation;
 import de.fraunhofer.aisec.cpg.sarif.Region;
 import java.io.File;
 import java.nio.file.Path;
-import java.util.*;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.junit.jupiter.api.Test;
@@ -385,8 +432,7 @@ class CXXLanguageFrontendTest extends BaseTest {
     graphNodes.sort(new NodeComparator());
     assertTrue(graphNodes.size() != 0);
 
-    List<SwitchStatement> switchStatements =
-        TestUtils.filterCast(graphNodes, SwitchStatement.class);
+    List<SwitchStatement> switchStatements = Util.filterCast(graphNodes, SwitchStatement.class);
     assertTrue(switchStatements.size() == 3);
 
     SwitchStatement switchStatement = switchStatements.get(0);
@@ -394,11 +440,11 @@ class CXXLanguageFrontendTest extends BaseTest {
     assertTrue(((CompoundStatement) switchStatement.getStatement()).getStatements().size() == 11);
 
     List<CaseStatement> caseStatements =
-        TestUtils.filterCast(SubgraphWalker.flattenAST(switchStatement), CaseStatement.class);
+        Util.filterCast(SubgraphWalker.flattenAST(switchStatement), CaseStatement.class);
     assertTrue(caseStatements.size() == 4);
 
     List<DefaultStatement> defaultStatements =
-        TestUtils.filterCast(SubgraphWalker.flattenAST(switchStatement), DefaultStatement.class);
+        Util.filterCast(SubgraphWalker.flattenAST(switchStatement), DefaultStatement.class);
     assertTrue(defaultStatements.size() == 1);
   }
 
@@ -442,6 +488,15 @@ class CXXLanguageFrontendTest extends BaseTest {
         ((DeclarationStatement) statements.get(2)).getDeclarations();
 
     assertEquals(2, twoDeclarations.size());
+    VariableDeclaration b = (VariableDeclaration) twoDeclarations.get(0);
+    assertNotNull(b);
+    assertEquals("b", b.getName());
+    assertEquals(TypeParser.createFrom("int*", false), b.getType());
+
+    VariableDeclaration c = (VariableDeclaration) twoDeclarations.get(1);
+    assertNotNull(c);
+    assertEquals("c", c.getName());
+    assertEquals(TypeParser.createFrom("int", false), c.getType());
 
     VariableDeclaration withoutInitializer =
         ((DeclarationStatement) statements.get(3))
@@ -467,8 +522,21 @@ class CXXLanguageFrontendTest extends BaseTest {
             .getSingleDeclarationAs(VariableDeclaration.class);
 
     assertEquals(TypeParser.createFrom("void*", true), pointerWithAssign.getType());
-    assertEquals("ptr", pointerWithAssign.getName());
+    assertEquals("ptr2", pointerWithAssign.getName());
     assertEquals("NULL", pointerWithAssign.getInitializer().getName());
+
+    List<Declaration> classWithVariable =
+        ((DeclarationStatement) statements.get(6)).getDeclarations();
+    assertEquals(2, classWithVariable.size());
+
+    RecordDeclaration classA = (RecordDeclaration) classWithVariable.get(0);
+    assertNotNull(classA);
+    assertEquals("A", classA.getName());
+
+    VariableDeclaration myA = (VariableDeclaration) classWithVariable.get(1);
+    assertNotNull(myA);
+    assertEquals("myA", myA.getName());
+    assertEquals(classA, ((ObjectType) myA.getType()).getRecordDeclaration());
   }
 
   @Test
@@ -730,11 +798,11 @@ class CXXLanguageFrontendTest extends BaseTest {
     assertEquals(TypeParser.createFrom("void*", true), inlineMethod.getType());
     assertTrue(inlineMethod.hasBody());
 
-    ConstructorDeclaration constructor = recordDeclaration.getConstructors().get(0);
+    ConstructorDeclaration inlineConstructor = recordDeclaration.getConstructors().get(0);
 
-    assertEquals(recordDeclaration.getName(), constructor.getName());
-    assertEquals(TypeParser.createFrom("SomeClass", true), constructor.getType());
-    assertTrue(constructor.hasBody());
+    assertEquals(recordDeclaration.getName(), inlineConstructor.getName());
+    assertEquals(TypeParser.createFrom("SomeClass", true), inlineConstructor.getType());
+    assertTrue(inlineConstructor.hasBody());
 
     ConstructorDeclaration constructorDefinition =
         declaration.getDeclarationAs(3, ConstructorDeclaration.class);
@@ -745,6 +813,12 @@ class CXXLanguageFrontendTest extends BaseTest {
         TypeParser.createFrom("int", true), constructorDefinition.getParameters().get(0).getType());
     assertEquals(TypeParser.createFrom("SomeClass", true), constructorDefinition.getType());
     assertTrue(constructorDefinition.hasBody());
+
+    ConstructorDeclaration constructorDeclaration = recordDeclaration.getConstructors().get(1);
+
+    assertNotNull(constructorDeclaration);
+    assertFalse(constructorDeclaration.isDefinition());
+    assertEquals(constructorDefinition, constructorDeclaration.getDefinition());
   }
 
   @Test
@@ -1105,5 +1179,59 @@ class CXXLanguageFrontendTest extends BaseTest {
     RecordDeclaration anotherClass =
         tu.getDeclarationsByName("AnotherClass", RecordDeclaration.class).iterator().next();
     assertNotNull(anotherClass);
+  }
+
+  @Test
+  void testAttributes() throws Exception {
+    File file = new File("src/test/resources/attributes.cpp");
+    List<TranslationUnitDeclaration> declarations =
+        TestUtils.analyzeWithBuilder(
+            TranslationConfiguration.builder()
+                .sourceLocations(List.of(file))
+                .topLevel(file.getParentFile())
+                .defaultPasses()
+                .processAnnotations(true)
+                .symbols(
+                    Map.of("PROPERTY_ATTRIBUTE(...)", "[[property_attribute(#__VA_ARGS__)]]")));
+    assertFalse(declarations.isEmpty());
+
+    TranslationUnitDeclaration tu = declarations.get(0);
+    assertNotNull(tu);
+
+    FunctionDeclaration main =
+        tu.getDeclarationsByName("main", FunctionDeclaration.class).iterator().next();
+    assertNotNull(main);
+
+    assertEquals("function_attribute", main.getAnnotations().get(0).getName());
+
+    RecordDeclaration someClass =
+        tu.getDeclarationsByName("SomeClass", RecordDeclaration.class).iterator().next();
+    assertNotNull(someClass);
+
+    assertEquals("record_attribute", someClass.getAnnotations().get(0).getName());
+
+    FieldDeclaration a =
+        someClass.getFields().stream().filter(f -> f.getName().equals("a")).findAny().orElse(null);
+    assertNotNull(a);
+
+    Annotation annotation = a.getAnnotations().get(0);
+    assertNotNull(annotation);
+
+    assertEquals("property_attribute", annotation.getName());
+    assertEquals(3, annotation.getValues().size());
+    assertEquals("a", ((Literal<String>) annotation.getValues().get(0)).getValue());
+
+    FieldDeclaration b =
+        someClass.getFields().stream().filter(f -> f.getName().equals("b")).findAny().orElse(null);
+    assertNotNull(a);
+
+    annotation = b.getAnnotations().get(0);
+    assertNotNull(annotation);
+
+    assertEquals("property_attribute", annotation.getName());
+    assertEquals(1, annotation.getValues().size());
+    assertEquals(
+        "SomeCategory, SomeOtherThing",
+        ((Literal<String>) annotation.getValues().get(0)).getValue());
   }
 }

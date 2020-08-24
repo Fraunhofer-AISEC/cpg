@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2020, Fraunhofer AISEC. All rights reserved.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -24,29 +24,39 @@
  *
  */
 
-package de.fraunhofer.aisec.cpg.passes.scopes;
+package de.fraunhofer.aisec.cpg.graph;
 
-import de.fraunhofer.aisec.cpg.graph.Node;
+import java.util.List;
+import java.util.Objects;
 
-public class NameScope extends StructureDeclarationScope {
+public class Annotation extends Node {
 
-  private String namePrefix;
+  // should be extended later into annotation members
+  private List<Expression> values;
 
-  public NameScope(Node node, String currentPrefix, String delimiter) {
-    super(node);
-    if (currentPrefix == null || !currentPrefix.isEmpty()) {
-      this.namePrefix = currentPrefix + delimiter + node.getName();
-    } else {
-      this.namePrefix = node.getName();
+  public List<Expression> getValues() {
+    return values;
+  }
+
+  public void setValues(List<Expression> values) {
+    this.values = values;
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) {
+      return true;
     }
-    this.astNode = node;
+    if (!(o instanceof Annotation)) {
+      return false;
+    }
+
+    Annotation that = (Annotation) o;
+    return super.equals(that) && Objects.equals(values, that.values);
   }
 
-  public String getNamePrefix() {
-    return namePrefix;
-  }
-
-  public void setNamePrefix(String namePrefix) {
-    this.namePrefix = namePrefix;
+  @Override
+  public int hashCode() {
+    return super.hashCode();
   }
 }

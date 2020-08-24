@@ -36,7 +36,11 @@ public class PhysicalLocation {
   @NonNull
   public static String locationLink(@Nullable PhysicalLocation location) {
     if (location != null) {
-      return location.getArtifactLocation().getUri() + ":" + location.getRegion().getStartLine();
+      return location.getArtifactLocation().getUri()
+          + ":"
+          + location.getRegion().getStartLine()
+          + ":"
+          + location.getRegion().getStartColumn();
     }
 
     return "unknown";
@@ -44,7 +48,7 @@ public class PhysicalLocation {
 
   public static class ArtifactLocation {
 
-    @NonNull private URI uri;
+    @NonNull private final URI uri;
 
     public ArtifactLocation(@NonNull URI uri) {
       this.uri = uri;
@@ -61,7 +65,7 @@ public class PhysicalLocation {
     }
   }
 
-  @NonNull private ArtifactLocation artifactLocation;
+  @NonNull private final ArtifactLocation artifactLocation;
 
   @NonNull private Region region;
 

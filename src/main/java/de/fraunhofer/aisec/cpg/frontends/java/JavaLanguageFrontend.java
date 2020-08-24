@@ -119,7 +119,7 @@ public class JavaLanguageFrontend extends LanguageFrontend {
       TranslationUnitDeclaration fileDeclaration =
           NodeBuilder.newTranslationUnitDeclaration(file.toString(), context.toString());
       setCurrentTU(fileDeclaration);
-      TranslationUnitDeclaration declaration = fileDeclaration;
+      Declaration declaration = fileDeclaration;
 
       PackageDeclaration packDecl = context.getPackageDeclaration().orElse(null);
       NamespaceDeclaration namespaceDeclaration = null;
@@ -127,17 +127,28 @@ public class JavaLanguageFrontend extends LanguageFrontend {
         namespaceDeclaration = NodeBuilder.newNamespaceDeclaration(packDecl.getName().asString());
         // Todo set region and code and push/pop scope
         scopeManager.enterScope(namespaceDeclaration);
-        declaration.add(namespaceDeclaration);
+        if (declaration instanceof TranslationUnitDeclaration) {
+          ((TranslationUnitDeclaration) declaration).add(namespaceDeclaration);
+        }
         declaration = namespaceDeclaration;
       }
 
       for (TypeDeclaration<?> type : context.getTypes()) {
-        declaration.add(getDeclarationHandler().handle(type));
+        Declaration typeD = getDeclarationHandler().handle(type);
+        if (declaration instanceof TranslationUnitDeclaration) {
+          ((TranslationUnitDeclaration) declaration).add(typeD);
+        } else {
+          scopeManager.addDeclaration(typeD);
+        }
       }
 
       for (ImportDeclaration anImport : context.getImports()) {
         IncludeDeclaration incl = NodeBuilder.newIncludeDeclaration(anImport.getNameAsString());
-        declaration.add(incl);
+        if (declaration instanceof TranslationUnitDeclaration) {
+          ((TranslationUnitDeclaration) declaration).add(incl);
+        } else {
+          scopeManager.addDeclaration(incl);
+        }
       }
 
       if (packDecl != null) {

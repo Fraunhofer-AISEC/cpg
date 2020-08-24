@@ -55,6 +55,14 @@ public class ConstructorDeclaration extends MethodDeclaration {
     c.setBody(methodDeclaration.getBody());
     c.setLocation(methodDeclaration.getLocation());
     c.setParameters(methodDeclaration.getParameters());
+    c.addAnnotations(methodDeclaration.getAnnotations());
+    c.setIsDefinition(methodDeclaration.isDefinition());
+
+    if (!c.isDefinition()) {
+      // do not call getDefinition if this is a definition itself, otherwise this
+      // will return a 'this' to the old method declaration
+      c.setDefinition(methodDeclaration.getDefinition());
+    }
 
     return c;
   }

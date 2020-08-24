@@ -28,7 +28,11 @@ package de.fraunhofer.aisec.cpg.graph;
 
 import de.fraunhofer.aisec.cpg.graph.type.Type;
 import de.fraunhofer.aisec.cpg.graph.type.UnknownType;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -37,8 +41,6 @@ import org.neo4j.ogm.annotation.Relationship;
 /** Represents the declaration or definition of a function. */
 public class FunctionDeclaration extends ValueDeclaration {
 
-  static final String VOID_TYPE_STRING = "void";
-  private static final String INT_TYPE_STRING = "int";
   private static final String WHITESPACE = " ";
   private static final String BRACKET_LEFT = "(";
   private static final String COMMA = ",";
@@ -47,6 +49,11 @@ public class FunctionDeclaration extends ValueDeclaration {
   /** The function body. Usually a {@link CompoundStatement}. */
   @SubGraph("AST")
   protected Statement body;
+
+  /**
+   * Classes and Structs can be declared inside a function and are only valid within the function.
+   */
+  protected List<RecordDeclaration> records = new ArrayList<>();
 
   /** The list of function parameters. */
   @SubGraph("AST")
@@ -66,8 +73,8 @@ public class FunctionDeclaration extends ValueDeclaration {
    */
   private boolean isDefinition;
 
-  /** If this is a declaration, this provides a link to the definition of the function. */
-  @Relationship(value = "DEFINES", direction = "INCOMING")
+  /** If this is only a declaration, this provides a link to the definition of the function. */
+  @Relationship(value = "DEFINES")
   private FunctionDeclaration definition;
 
   public boolean hasBody() {
@@ -142,7 +149,13 @@ public class FunctionDeclaration extends ValueDeclaration {
   @Nullable
   public <T> T getBodyStatementAs(int i, Class<T> clazz) {
     if (this.body instanceof CompoundStatement) {
-      return clazz.cast(((CompoundStatement) this.body).getStatements().get(i));
+      Statement statement = ((CompoundStatement) this.body).getStatements().get(i);
+
+      if (statement == null) {
+        return null;
+      }
+
+      return statement.getClass().isAssignableFrom(clazz) ? clazz.cast(statement) : null;
     }
 
     return null;
@@ -240,7 +253,7 @@ public class FunctionDeclaration extends ValueDeclaration {
   }
 
   public FunctionDeclaration getDefinition() {
-    return definition;
+    return isDefinition ? this : definition;
   }
 
   public boolean isDefinition() {
@@ -253,5 +266,13 @@ public class FunctionDeclaration extends ValueDeclaration {
 
   public void setDefinition(FunctionDeclaration definition) {
     this.definition = definition;
+  }
+
+  public List<RecordDeclaration> getRecords() {
+    return records;
+  }
+
+  public void setRecords(List<RecordDeclaration> records) {
+    this.records = records;
   }
 }
