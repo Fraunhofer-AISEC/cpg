@@ -194,7 +194,19 @@ public class VariableUsageResolver extends Pass {
       Set<ValueDeclaration> refersTo = new HashSet<>();
       if (current instanceof MemberExpression) {
         MemberExpression memberExpression = (MemberExpression) current;
-        resolve(currentClass, memberExpression, memberExpression.getBase());
+        if (memberExpression.getBase() instanceof DeclaredReferenceExpression
+            && lang instanceof JavaLanguageFrontend
+            && memberExpression.getBase().getName().equals("super")) {
+          if (currentClass != null && !currentClass.getSuperClasses().isEmpty()) {
+            ((DeclaredReferenceExpression) memberExpression.getBase())
+                .setRefersTo(recordMap.get(currentClass.getSuperClasses().get(0)).getThis());
+          } else {
+            // no explicit super type -> java.lang.Object
+            memberExpression.getBase().setType(TypeParser.createFrom(Object.class.getName(), true));
+          }
+        } else {
+          resolve(currentClass, memberExpression, memberExpression.getBase());
+        }
         Type containingClass = ((MemberExpression) current).getBase().getType();
         resolveField(containingClass, ref).ifPresent(refersTo::add);
       } else {
