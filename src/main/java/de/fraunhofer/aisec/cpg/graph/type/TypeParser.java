@@ -253,6 +253,11 @@ public class TypeParser {
     return null;
   }
 
+  /**
+   * Right now IncompleteTypes are only defined as void {@link IncompleteType}
+   * @param typeName String with the type
+   * @return true if the type is void, false otherwise
+   */
   private static boolean isIncompleteType(String typeName) {
     return typeName.trim().equals("void");
   }
