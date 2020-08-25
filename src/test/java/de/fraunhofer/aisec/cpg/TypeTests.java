@@ -648,6 +648,10 @@ class TypeTests extends BaseTest {
             ObjectType.Modifier.NOT_APPLICABLE,
             false);
     assertEquals(expected, result);
+
+    // Test 14: Inner and Outer Class with generics
+    result = TypeParser.createFrom("OuterClass<int>::InnerClass<int>", true);
+    // TODO Add test
   }
 
   // Tests on the resulting graph

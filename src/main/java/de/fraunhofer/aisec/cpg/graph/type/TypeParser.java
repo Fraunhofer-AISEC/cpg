@@ -34,12 +34,16 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Class responsible for parsing the type definition and create the same Type as described by the
  * type string, but complying to the CPG TypeSystem
  */
 public class TypeParser {
+
+  private static final Logger log = LoggerFactory.getLogger(TypeParser.class);
 
   public static final String UNKNOWN_TYPE_STRING = "UNKNOWN";
   private static final List<String> primitives =
@@ -699,6 +703,7 @@ public class TypeParser {
   }
 
   /**
+   * Warning: Type parsing is hard and this function might crash. Use createFrom instead
    * Use this function for parsing new types and obtaining a new Type the TypeParser creates from
    * the typeString
    *
@@ -707,7 +712,7 @@ public class TypeParser {
    * @return new type representing the type string
    */
   @NonNull
-  public static Type createFrom(@NonNull String type, boolean resolveAlias) {
+  private static Type createFromUnsafe(@NonNull String type, boolean resolveAlias) {
     // Check if Problems during Parsing
     if (type.contains("?")
         || type.contains("org.eclipse.cdt.internal.core.dom.parser.ProblemType@")
@@ -819,4 +824,24 @@ public class TypeParser {
 
     return finalType;
   }
+
+  /**
+   * Use this function for parsing new types and obtaining a new Type the TypeParser creates from *
+   * the typeString
+   *
+   * @param type string with type information
+   * @param resolveAlias should replace with original type in typedefs
+   * @return new type representing the type string
+   */
+  @NonNull
+  public static Type createFrom(@NonNull String type, boolean resolveAlias) {
+    try {
+      return createFromUnsafe(type, resolveAlias);
+    } catch (Exception e) {
+      log.error("Could not parse the type correctly", e);
+      return UnknownType.getUnknownType();
+    }
+  }
+
+
 }
