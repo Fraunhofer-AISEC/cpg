@@ -158,18 +158,6 @@ public class NodeBuilder {
     return node;
   }
 
-  public static StaticReferenceExpression newStaticReferenceExpression(
-      String name, Type typeFullName, String code) {
-    StaticReferenceExpression node = new StaticReferenceExpression();
-    node.setName(name);
-    node.setType(typeFullName);
-    node.setCode(code);
-
-    log(node);
-
-    return node;
-  }
-
   public static FunctionDeclaration newFunctionDeclaration(String name, String code) {
     FunctionDeclaration node = new FunctionDeclaration();
     node.setName(name);

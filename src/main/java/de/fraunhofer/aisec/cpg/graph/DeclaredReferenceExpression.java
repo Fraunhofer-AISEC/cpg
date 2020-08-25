@@ -33,6 +33,7 @@ import java.util.Objects;
 import java.util.Set;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.checkerframework.checker.nullness.qual.NonNull;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
  * An expression, which refers to something which is declared, e.g. a variable. For example, the
@@ -43,7 +44,7 @@ import org.checkerframework.checker.nullness.qual.NonNull;
 public class DeclaredReferenceExpression extends Expression implements TypeListener {
 
   /** The {@link ValueDeclaration}s this expression might refer to. */
-  private Set<ValueDeclaration> refersTo = new HashSet<>();
+  private Set<Declaration> refersTo = new HashSet<>();
 
   /**
    * Is this reference used for writing data instead of just reading it? Determines dataflow
@@ -51,51 +52,70 @@ public class DeclaredReferenceExpression extends Expression implements TypeListe
    */
   private AccessValues access = AccessValues.READ;
 
-  public Set<ValueDeclaration> getRefersTo() {
+  private boolean staticAccess = false;
+
+  public boolean isStaticAccess() {
+    return staticAccess;
+  }
+
+  public void setStaticAccess(boolean staticAccess) {
+    this.staticAccess = staticAccess;
+  }
+
+  public Set<Declaration> getRefersTo() {
     return refersTo;
   }
 
-  public void setRefersTo(@NonNull ValueDeclaration refersTo) {
-    HashSet<ValueDeclaration> n = new HashSet<>();
+  public void setRefersTo(@Nullable Declaration refersTo) {
+    if (refersTo == null) {
+      return;
+    }
+    HashSet<Declaration> n = new HashSet<>();
     n.add(refersTo);
     setRefersTo(n);
   }
 
-  public void setRefersTo(@NonNull Set<ValueDeclaration> refersTo) {
-    this.refersTo.forEach(
-        r -> {
-          if (access == AccessValues.WRITE) {
-            this.removeNextDFG(r);
-          } else if (access == AccessValues.READ) {
-            this.removePrevDFG(r);
-          } else {
-            this.removeNextDFG(r);
-            this.removePrevDFG(r);
-          }
-          r.unregisterTypeListener(this);
-          if (r instanceof TypeListener) {
-            this.unregisterTypeListener((TypeListener) r);
-          }
-        });
+  public void setRefersTo(@NonNull Set<Declaration> refersTo) {
+    this.refersTo.stream()
+        .filter(ValueDeclaration.class::isInstance)
+        .map(ValueDeclaration.class::cast)
+        .forEach(
+            r -> {
+              if (access == AccessValues.WRITE) {
+                this.removeNextDFG(r);
+              } else if (access == AccessValues.READ) {
+                this.removePrevDFG(r);
+              } else {
+                this.removeNextDFG(r);
+                this.removePrevDFG(r);
+              }
+              r.unregisterTypeListener(this);
+              if (r instanceof TypeListener) {
+                this.unregisterTypeListener((TypeListener) r);
+              }
+            });
 
     this.refersTo.clear();
     this.refersTo.addAll(refersTo);
 
-    refersTo.forEach(
-        r -> {
-          if (access == AccessValues.WRITE) {
-            this.addNextDFG(r);
-          } else if (access == AccessValues.READ) {
-            this.addPrevDFG(r);
-          } else {
-            this.addNextDFG(r);
-            this.addPrevDFG(r);
-          }
-          r.registerTypeListener(this);
-          if (r instanceof TypeListener) {
-            this.registerTypeListener((TypeListener) r);
-          }
-        });
+    refersTo.stream()
+        .filter(ValueDeclaration.class::isInstance)
+        .map(ValueDeclaration.class::cast)
+        .forEach(
+            r -> {
+              if (access == AccessValues.WRITE) {
+                this.addNextDFG(r);
+              } else if (access == AccessValues.READ) {
+                this.addPrevDFG(r);
+              } else {
+                this.addNextDFG(r);
+                this.addPrevDFG(r);
+              }
+              r.registerTypeListener(this);
+              if (r instanceof TypeListener) {
+                this.registerTypeListener((TypeListener) r);
+              }
+            });
   }
 
   @Override

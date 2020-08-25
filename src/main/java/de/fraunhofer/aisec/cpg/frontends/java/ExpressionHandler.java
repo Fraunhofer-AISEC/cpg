@@ -297,15 +297,10 @@ public class ExpressionHandler
           }
         }
       }
-      if (isStaticAccess) {
-        base =
-            NodeBuilder.newStaticReferenceExpression(
-                scope.asNameExpr().getNameAsString(), baseType, scope.toString());
-      } else {
-        base =
-            NodeBuilder.newDeclaredReferenceExpression(
-                scope.asNameExpr().getNameAsString(), baseType, scope.toString());
-      }
+      base =
+          NodeBuilder.newDeclaredReferenceExpression(
+              scope.asNameExpr().getNameAsString(), baseType, scope.toString());
+      ((DeclaredReferenceExpression) base).setStaticAccess(isStaticAccess);
 
       lang.setCodeAndRegion(base, fieldAccessExpr.getScope());
     } else if (scope.isFieldAccessExpr()) {
@@ -316,7 +311,8 @@ public class ExpressionHandler
         // to this base
         tester = (de.fraunhofer.aisec.cpg.graph.Expression) ((MemberExpression) tester).getBase();
       }
-      if (tester instanceof StaticReferenceExpression) {
+      if (tester instanceof DeclaredReferenceExpression
+          && ((DeclaredReferenceExpression) tester).isStaticAccess()) {
         // try to get the name
         String name;
         Optional<TokenRange> tokenRange = scope.asFieldAccessExpr().getTokenRange();
@@ -334,8 +330,9 @@ public class ExpressionHandler
           baseType = UnknownType.getUnknownType();
         }
         base =
-            NodeBuilder.newStaticReferenceExpression(
+            NodeBuilder.newDeclaredReferenceExpression(
                 scope.asFieldAccessExpr().getNameAsString(), baseType, scope.toString());
+        ((DeclaredReferenceExpression) base).setStaticAccess(true);
       }
       lang.setCodeAndRegion(base, fieldAccessExpr.getScope());
     } else {
@@ -356,6 +353,15 @@ public class ExpressionHandler
         log.info("Unknown field type for {}", fieldAccessExpr);
         fieldType = UnknownType.getUnknownType();
       }
+
+      MemberExpression memberExpression =
+          NodeBuilder.newMemberExpression(
+              base,
+              fieldType,
+              fieldAccessExpr.getName().getIdentifier(),
+              fieldAccessExpr.toString());
+      memberExpression.setStaticAccess(true);
+      return memberExpression;
     }
 
     return NodeBuilder.newMemberExpression(
@@ -403,10 +409,11 @@ public class ExpressionHandler
     Type type = TypeParser.createFrom(classExpr.getType().asString(), true);
 
     DeclaredReferenceExpression thisExpression =
-        NodeBuilder.newStaticReferenceExpression(
+        NodeBuilder.newDeclaredReferenceExpression(
             classExpr.toString().substring(classExpr.toString().lastIndexOf('.') + 1),
             type,
             classExpr.toString());
+    thisExpression.setStaticAccess(true);
     lang.setCodeAndRegion(thisExpression, classExpr);
 
     return thisExpression;
