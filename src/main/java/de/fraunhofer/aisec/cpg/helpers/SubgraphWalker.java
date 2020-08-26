@@ -26,6 +26,7 @@
 
 package de.fraunhofer.aisec.cpg.helpers;
 
+import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
 import de.fraunhofer.aisec.cpg.graph.CompoundStatement;
 import de.fraunhofer.aisec.cpg.graph.FunctionDeclaration;
 import de.fraunhofer.aisec.cpg.graph.MethodDeclaration;
@@ -316,6 +317,12 @@ public class SubgraphWalker {
     private Deque<RecordDeclaration> currentClass = new ArrayDeque<>();
     private IterativeGraphWalker walker;
 
+    private LanguageFrontend lang;
+
+    public ScopedWalker(LanguageFrontend lang) {
+      this.lang = lang;
+    }
+
     /**
      * Callback function(s) getting three arguments: the type of the class we're currently in, the
      * root node of the current declaration scope, the currently visited node. The declaration scope
@@ -349,6 +356,7 @@ public class SubgraphWalker {
     }
 
     private void handleNode(Node current, TriConsumer<RecordDeclaration, Node, Node> handler) {
+      lang.getScopeManager().enterScopeIfExists(current);
 
       Node parent = walker.getBacklog().peek();
 
@@ -376,6 +384,8 @@ public class SubgraphWalker {
       if (exiting instanceof RecordDeclaration) { // leave a class
         currentClass.pop();
       }
+
+      lang.getScopeManager().leaveScope(exiting);
     }
 
     @Nullable

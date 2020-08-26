@@ -83,7 +83,7 @@ public class VariableUsageResolver extends Pass {
 
   @Override
   public void accept(TranslationResult result) {
-    walker = new ScopedWalker();
+    walker = new ScopedWalker(lang);
 
     for (TranslationUnitDeclaration tu : result.getTranslationUnits()) {
       currTu = tu;
