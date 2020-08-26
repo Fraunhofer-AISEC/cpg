@@ -430,7 +430,7 @@ public class TypeParser {
     String[] parametersSplit = parameterList.split(",");
     for (String parameter : parametersSplit) {
       // ignore void parameters
-      if (parameter.length() > 0 && !parameter.equals("void")) {
+      if (parameter.length() > 0 && !parameter.trim().equals("void")) {
         parameters.add(createFrom(parameter.trim(), true));
       }
     }
