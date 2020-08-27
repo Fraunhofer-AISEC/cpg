@@ -26,12 +26,14 @@ class DFGTest {
     // Test If-Block
     Literal<?> literal2 =
         TestUtils.findByPredicate(
-            TestUtils.subnodesOfType(result, Literal.class), l -> l.getValue().equals(2));
+                TestUtils.subnodesOfType(result, Literal.class), l -> l.getValue().equals(2))
+            .get(0);
 
     DeclaredReferenceExpression a2 =
         TestUtils.findByPredicate(
-            TestUtils.subnodesOfType(result, DeclaredReferenceExpression.class),
-            e -> e.getAccess().equals(AccessValues.WRITE));
+                TestUtils.subnodesOfType(result, DeclaredReferenceExpression.class),
+                e -> e.getAccess().equals(AccessValues.WRITE))
+            .get(0);
 
     assertTrue(literal2.getNextDFG().contains(a2));
     assertEquals(1, a2.getNextDFG().size()); // Outgoing DFG Edges only to VariableDeclaration
@@ -46,17 +48,20 @@ class DFGTest {
     // Test Else-Block with System.out.println()
     Literal<?> literal1 =
         TestUtils.findByPredicate(
-            TestUtils.subnodesOfType(result, Literal.class), l -> l.getValue().equals(1));
+                TestUtils.subnodesOfType(result, Literal.class), l -> l.getValue().equals(1))
+            .get(0);
 
     CallExpression println =
         TestUtils.findByPredicate(
-            TestUtils.subnodesOfType(result, CallExpression.class),
-            c -> c.getName().equals("println"));
+                TestUtils.subnodesOfType(result, CallExpression.class),
+                c -> c.getName().equals("println"))
+            .get(0);
 
     DeclaredReferenceExpression a1 =
         TestUtils.findByPredicate(
-            TestUtils.subnodesOfType(result, DeclaredReferenceExpression.class),
-            e -> e.getNextEOG().contains(println));
+                TestUtils.subnodesOfType(result, DeclaredReferenceExpression.class),
+                e -> e.getNextEOG().contains(println))
+            .get(0);
 
     assertEquals(1, a1.getPrevDFG().size());
     assertEquals(literal1, a1.getPrevDFG().iterator().next());
@@ -67,8 +72,9 @@ class DFGTest {
     // Test Merging
     VariableDeclaration b =
         TestUtils.findByPredicate(
-            TestUtils.subnodesOfType(result, VariableDeclaration.class),
-            v -> v.getName().equals("b"));
+                TestUtils.subnodesOfType(result, VariableDeclaration.class),
+                v -> v.getName().equals("b"))
+            .get(0);
 
     DeclaredReferenceExpression ab = (DeclaredReferenceExpression) b.getPrevEOG().get(0);
 
@@ -93,14 +99,16 @@ class DFGTest {
 
     VariableDeclaration b =
         TestUtils.findByPredicate(
-            TestUtils.subnodesOfType(result, VariableDeclaration.class),
-            v -> v.getName().equals("b"));
+                TestUtils.subnodesOfType(result, VariableDeclaration.class),
+                v -> v.getName().equals("b"))
+            .get(0);
 
     DeclaredReferenceExpression ab = (DeclaredReferenceExpression) b.getPrevEOG().get(0);
 
     Literal<?> literal4 =
         TestUtils.findByPredicate(
-            TestUtils.subnodesOfType(result, Literal.class), l -> l.getValue().equals(4));
+                TestUtils.subnodesOfType(result, Literal.class), l -> l.getValue().equals(4))
+            .get(0);
 
     assertTrue(literal4.getNextDFG().contains(ab));
     assertEquals(1, ab.getPrevDFG().size());
@@ -117,41 +125,50 @@ class DFGTest {
 
     VariableDeclaration a =
         TestUtils.findByPredicate(
-            TestUtils.subnodesOfType(result, VariableDeclaration.class),
-            v -> v.getName().equals("a"));
+                TestUtils.subnodesOfType(result, VariableDeclaration.class),
+                v -> v.getName().equals("a"))
+            .get(0);
 
     VariableDeclaration b =
         TestUtils.findByPredicate(
-            TestUtils.subnodesOfType(result, VariableDeclaration.class),
-            v -> v.getName().equals("b"));
+                TestUtils.subnodesOfType(result, VariableDeclaration.class),
+                v -> v.getName().equals("b"))
+            .get(0);
 
     DeclaredReferenceExpression ab = (DeclaredReferenceExpression) b.getPrevEOG().get(0);
 
     DeclaredReferenceExpression a10 =
         TestUtils.findByPredicate(
-            TestUtils.subnodesOfType(result, DeclaredReferenceExpression.class),
-            dre -> dre.getLocation().getRegion().getStartLine() == 8);
+                TestUtils.subnodesOfType(result, DeclaredReferenceExpression.class),
+                dre -> dre.getLocation().getRegion().getStartLine() == 8)
+            .get(0);
     DeclaredReferenceExpression a11 =
         TestUtils.findByPredicate(
-            TestUtils.subnodesOfType(result, DeclaredReferenceExpression.class),
-            dre -> dre.getLocation().getRegion().getStartLine() == 11);
+                TestUtils.subnodesOfType(result, DeclaredReferenceExpression.class),
+                dre -> dre.getLocation().getRegion().getStartLine() == 11)
+            .get(0);
     DeclaredReferenceExpression a12 =
         TestUtils.findByPredicate(
-            TestUtils.subnodesOfType(result, DeclaredReferenceExpression.class),
-            dre -> dre.getLocation().getRegion().getStartLine() == 14);
+                TestUtils.subnodesOfType(result, DeclaredReferenceExpression.class),
+                dre -> dre.getLocation().getRegion().getStartLine() == 14)
+            .get(0);
 
     Literal<?> literal0 =
         TestUtils.findByPredicate(
-            TestUtils.subnodesOfType(result, Literal.class), l -> l.getValue().equals(0));
+                TestUtils.subnodesOfType(result, Literal.class), l -> l.getValue().equals(0))
+            .get(0);
     Literal<?> literal10 =
         TestUtils.findByPredicate(
-            TestUtils.subnodesOfType(result, Literal.class), l -> l.getValue().equals(10));
+                TestUtils.subnodesOfType(result, Literal.class), l -> l.getValue().equals(10))
+            .get(0);
     Literal<?> literal11 =
         TestUtils.findByPredicate(
-            TestUtils.subnodesOfType(result, Literal.class), l -> l.getValue().equals(11));
+                TestUtils.subnodesOfType(result, Literal.class), l -> l.getValue().equals(11))
+            .get(0);
     Literal<?> literal12 =
         TestUtils.findByPredicate(
-            TestUtils.subnodesOfType(result, Literal.class), l -> l.getValue().equals(12));
+                TestUtils.subnodesOfType(result, Literal.class), l -> l.getValue().equals(12))
+            .get(0);
 
     assertEquals(2, literal10.getNextDFG().size());
     assertTrue(literal10.getNextDFG().contains(a10));
@@ -179,13 +196,15 @@ class DFGTest {
     // Fallthrough test
     CallExpression println =
         TestUtils.findByPredicate(
-            TestUtils.subnodesOfType(result, CallExpression.class),
-            c -> c.getName().equals("println"));
+                TestUtils.subnodesOfType(result, CallExpression.class),
+                c -> c.getName().equals("println"))
+            .get(0);
 
     DeclaredReferenceExpression aPrintln =
         TestUtils.findByPredicate(
-            TestUtils.subnodesOfType(result, DeclaredReferenceExpression.class),
-            e -> e.getNextEOG().contains(println));
+                TestUtils.subnodesOfType(result, DeclaredReferenceExpression.class),
+                e -> e.getNextEOG().contains(println))
+            .get(0);
 
     assertEquals(2, aPrintln.getPrevDFG().size());
     assertTrue(aPrintln.getPrevDFG().contains(literal0));
