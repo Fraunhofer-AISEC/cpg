@@ -2,13 +2,14 @@ syntax = "proto3";
 package ast_tree;
 
 option go_package = "github.com/Fraunhofer-AISEC/cpg-rpc/proto";
-option java_package = "de.fraunhofer.aisec.cpg.frontends.proto.messages";
+option java_package = "de.fraunhofer.aisec.cpg.frontends.grpc.messages";
 option java_multiple_files = true;
 
 // Using this guide (except for the 80 chars/line):
 // https://developers.google.com/protocol-buffers/docs/style#packages
 
 // Currently only supports one file
+// TODO: Sort the file
 
 service TransferCpg {
 	rpc GetCpg (CpgRequest) returns (CpgResponse);
@@ -21,16 +22,18 @@ message CpgRequest {
 message CpgResponse {
   repeated Node nodes = 1;
 
-  repeated NodeId translationUnitDeclarations = 2;
+  // TODO: Add repeated keyword
+  NodeIndex translation_unit_declaration = 2;
 }
 
-message NodeId {
-  uint32 id = 1;
+// A NodeIndex is the index of a specifig node in the repeated
+// Node field in the CpgResponse Message
+message NodeIndex {
+  uint32 index = 1;
 }
 
 message Node {
-  NodeId node_id = 1;
-
+  // Filename
   string name = 2;
   string code = 3;
   string comment = 4;
@@ -39,7 +42,7 @@ message Node {
   // TODO: PhysicalLocation, dummy, implicit, etc.
 
   // The actual node
-  oneof a {
+  oneof node {
     Annotation annotation = 6;
     Declaration declaration = 7;
     Statement statement = 8;
@@ -53,10 +56,37 @@ message Annotation {
 
 message Declaration {
   oneof declaration {
-    ValueDeclaration value_decl = 1;
-    TranslationUnitDeclaration translation_unit_decl = 2;
+    ValueDeclaration value_declaration = 1;
+    TranslationUnitDeclaration translation_unit_declaration = 2;
+    NamespaceDeclaration namespace_declaration = 3;
     // TODO
   };
+}
+
+message TranslationUnitDeclaration {  
+  repeated NodeIndex declarations = 1;
+  repeated NodeIndex includes = 2;
+  repeated NodeIndex namespaces = 3;
+}
+
+message ValueDeclaration {
+  NodeIndex type = 1;
+  repeated NodeIndex possible_sub_types = 2;
+
+  oneof value_declaration {
+    VariableDeclaration variable_declaration = 3;
+    // TODO
+  }
+}
+
+message VariableDeclaration {
+  NodeIndex initializer = 1;
+  bool implicit_initializer_allowed = 2;
+  bool is_array = 3;
+}
+
+message NamespaceDeclaration {
+  repeated Declaration declarations = 1;
 }
 
 message Statement {
@@ -64,10 +94,15 @@ message Statement {
 }
 
 message Type {
-  repeated NodeId superTypes = 1;
+  repeated NodeIndex super_types = 1;
   Storage storage = 2;
-  Origin origin = 4;
-  Qualifier qualifier = 3;
+  Origin origin = 3;
+  Qualifier qualifier = 4;
+
+  oneof type {
+    // TODO
+    ObjectType objectType = 7;
+  }
 
   enum Storage {
     AUTO = 0;
@@ -82,31 +117,21 @@ message Type {
     UNRESOLVED = 3;
   }
   message Qualifier {
-    bool isConst = 1;
-    bool isVolatile = 2;
-    bool isRestrict = 3;
-    bool isAtomic = 4;
+    bool is_const = 1;
+    bool is_Volatile = 2;
+    bool is_restrict = 3;
+    bool is_atomic = 4;
   }
 }
 
-message ValueDeclaration {
-  NodeId type = 1;
-  repeated NodeId possibleSubTypes = 2;
+message ObjectType {
+  bool primitive = 1;
+  Modifier modifier = 2;
+  // TODO
 
-  oneof value_decl {
-    VariableDeclaration variable_decl = 3;
-    // TODO
+  enum Modifier {
+    SIGNED = 0;
+    UNSIGNED = 1;
+    NOT_APPLICABLE = 3;
   }
-}
-
-message TranslationUnitDeclaration {  
-  repeated NodeId declarations = 1;
-  repeated NodeId includes = 2;
-  repeated NodeId namespaces = 3;
-}
-
-message VariableDeclaration {
-  NodeId initializer = 1;
-  bool implicitInitializerAllowed = 2;
-  bool isArray = 3;
 }

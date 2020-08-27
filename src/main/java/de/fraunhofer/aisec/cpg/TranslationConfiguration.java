@@ -319,14 +319,14 @@ public class TranslationConfiguration {
      * @return
      */
     public Builder defaultPasses() {
-      registerPass(new FilenameMapper());
-      registerPass(new TypeHierarchyResolver());
-      registerPass(new JavaExternalTypeHierarchyResolver());
-      registerPass(new ImportResolver());
-      registerPass(new VariableUsageResolver());
-      registerPass(new CallResolver()); // creates CG
-      registerPass(new EvaluationOrderGraphPass()); // creates EOG
-      registerPass(new TypeResolver());
+      // registerPass(new FilenameMapper());
+      // registerPass(new TypeHierarchyResolver());
+      // registerPass(new JavaExternalTypeHierarchyResolver());
+      // registerPass(new ImportResolver());
+      // registerPass(new VariableUsageResolver());
+      // registerPass(new CallResolver()); // creates CG
+      // registerPass(new EvaluationOrderGraphPass()); // creates EOG
+      // registerPass(new TypeResolver());
       return this;
     }
 

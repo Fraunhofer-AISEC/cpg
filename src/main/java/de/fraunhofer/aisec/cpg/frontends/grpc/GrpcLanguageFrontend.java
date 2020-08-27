@@ -29,7 +29,7 @@ package de.fraunhofer.aisec.cpg.frontends.grpc;
 import de.fraunhofer.aisec.cpg.TranslationConfiguration;
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
 import de.fraunhofer.aisec.cpg.frontends.TranslationException;
-import de.fraunhofer.aisec.cpg.frontends.proto.messages.CpgResponse;
+import de.fraunhofer.aisec.cpg.frontends.grpc.messages.CpgResponse;
 import de.fraunhofer.aisec.cpg.graph.*;
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager;
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation;
@@ -40,6 +40,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.net.URI;
 import java.util.*;
+import java.util.stream.Collectors;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
@@ -59,18 +60,26 @@ public class GrpcLanguageFrontend extends LanguageFrontend {
       String filename = reader.readLine();
 
       GrpcClient client = new GrpcClient(host, port);
-
       CpgResponse response = client.sendMessage(filename);
-      // TODO: Parse response (very basic)
 
-      // Create a map nodeId -> node (using streams)
-      // List<Messages.Node> nodes = response.getNodesList();
+      // 1. Create a list of Nodes with the same length as response.getNodesList()
+      // 2. Everything in the list is set to null
+      // 3. Create the TranslationUnitDeclaration:
+      //    a. This will then create a TranslationUnitDeclaration and set its parameters
+      //    b. It will then iterate over its parts and check if they have been initialized
+      //    c. If they have, it will use these references. If not, it will call the methods
 
-      // Iterate over the map and connect the node Ids to the actual objects (using streams)
-      // Try to convert the node at the translationUnitDeclarations to a TranslationDeclarationUnit
-      // Return that node
+      List<Node> cpgNodes = new ArrayList<>(Collections.nCopies(response.getNodesList().size(), null));
+      Node node = NodeFactory.createNode(
+        response.getTranslationUnitDeclaration().getIndex(),
+        response.getNodesList(),
+        cpgNodes);
 
-      return NodeBuilder.newTranslationUnitDeclaration(filename, "getCode");
+      if (node instanceof TranslationUnitDeclaration) {
+        return (TranslationUnitDeclaration)node;
+      } else {
+        throw new TranslationException("Root node is not a TranslationUnitDeclaration");
+      }
     } catch (IOException e) {
       throw new TranslationException(e.getMessage());
     } catch (NumberFormatException e) {
@@ -80,17 +89,21 @@ public class GrpcLanguageFrontend extends LanguageFrontend {
 
   @Override
   public <T> String getCodeFromRawNode(T astNode) {
+    // TODO
     return "getCodeFromRawNode() from proto called";
   }
 
   @Override
   @Nullable
   public <T> PhysicalLocation getLocationFromRawNode(T astNode) {
+    // TODO
     Region region = new Region(0, 0, 0, 1); // +1 for SARIF compliance
 
     return new PhysicalLocation(URI.create("/home/lennard/git/prototproto"), region);
   }
 
   @Override
-  public <S, T> void setComment(S s, T ctx) {}
+  public <S, T> void setComment(S s, T ctx) {
+    // TODO
+  }
 }

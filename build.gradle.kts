@@ -161,9 +161,9 @@ dependencies {
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.6.2")
 
     // Protobuf
-    implementation("com.google.protobuf:protobuf-java:3.13.0")
-    implementation("io.grpc:grpc-stub:1.31.1")
-    implementation("io.grpc:grpc-protobuf:1.31.1")
+    api("com.google.protobuf:protobuf-java:3.13.0")
+    api("io.grpc:grpc-stub:1.31.1")
+    api("io.grpc:grpc-protobuf:1.31.1")
     if (JavaVersion.current().isJava9Compatible) {
         implementation("javax.annotation:javax.annotation-api:1.3.2")
     }
