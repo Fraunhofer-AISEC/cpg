@@ -175,10 +175,12 @@ public class VariableUsageResolver extends Pass {
     }
 
     if (containingClass == null) {
-      targets.add(handleUnknownMethod(functionName, reference.getType()));
+      targets.add(
+          handleUnknownMethod(functionName, fptrType.getReturnType(), fptrType.getParameters()));
     } else {
       MethodDeclaration resolved =
-          handleUnknownClassMethod(containingClass, functionName, reference.getType());
+          handleUnknownClassMethod(
+              containingClass, functionName, fptrType.getReturnType(), fptrType.getParameters());
       if (resolved != null) {
         targets.add(resolved);
       }
@@ -385,18 +387,24 @@ public class VariableUsageResolver extends Pass {
     }
   }
 
-  private MethodDeclaration handleUnknownClassMethod(Type base, String name, Type type) {
+  private MethodDeclaration handleUnknownClassMethod(
+      Type base, String name, Type returnType, List<Type> signature) {
     if (!recordMap.containsKey(base)) {
       return null;
     }
     RecordDeclaration containingRecord = recordMap.get(base);
     List<MethodDeclaration> declarations = containingRecord.getMethods();
     Optional<MethodDeclaration> target =
-        declarations.stream().filter(f -> f.getName().equals(name)).findFirst();
+        declarations.stream()
+            .filter(f -> f.getName().equals(name))
+            .filter(f -> f.getType().equals(returnType))
+            .filter(f -> f.hasSignature(signature))
+            .findFirst();
     if (target.isEmpty()) {
       MethodDeclaration declaration =
           NodeBuilder.newMethodDeclaration(name, "", false, containingRecord);
-      declaration.setType(type);
+      declaration.setType(returnType);
+      declaration.setParameters(Util.createParameters(signature));
       declarations.add(declaration);
       declaration.setImplicit(true);
       return declaration;
@@ -405,23 +413,21 @@ public class VariableUsageResolver extends Pass {
     }
   }
 
-  private FunctionDeclaration handleUnknownMethod(String name, Type type) {
+  private FunctionDeclaration handleUnknownMethod(
+      String name, Type returnType, List<Type> signature) {
     Optional<FunctionDeclaration> target =
         currTu.getDeclarations().stream()
             .filter(FunctionDeclaration.class::isInstance)
             .map(FunctionDeclaration.class::cast)
             .filter(f -> f.getName().equals(name))
-            .filter(f -> f.hasSignature(((FunctionPointerType) type).getParameters()))
+            .filter(f -> f.getType().equals(returnType))
+            .filter(f -> f.hasSignature(signature))
             .findFirst();
     if (target.isEmpty()) {
       FunctionDeclaration declaration = NodeBuilder.newFunctionDeclaration(name, "");
-      if (type instanceof FunctionPointerType) {
-        declaration.setType(((FunctionPointerType) type).getReturnType());
-        declaration.setParameters(
-            Util.createParameters(((FunctionPointerType) type).getParameters()));
-      } else {
-        declaration.setType(type);
-      }
+      declaration.setType(returnType);
+      declaration.setParameters(Util.createParameters(signature));
+
       currTu.add(declaration);
       declaration.setImplicit(true);
       return declaration;

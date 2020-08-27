@@ -271,7 +271,7 @@ class EOGTest extends BaseTest {
 
     CallExpression third = TestUtils.findByUniqueName(calls, "third");
     target =
-        TestUtils.findByPredicate(
+        TestUtils.findByUniquePredicate(
             functions, f -> f.getName().equals("third") && f.getParameters().size() == 2);
     assertEquals(List.of(target), third.getInvokes());
 

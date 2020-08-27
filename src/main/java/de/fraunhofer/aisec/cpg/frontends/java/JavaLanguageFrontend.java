@@ -60,7 +60,9 @@ import de.fraunhofer.aisec.cpg.sarif.Region;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
@@ -302,8 +304,7 @@ public class JavaLanguageFrontend extends LanguageFrontend {
         qualifier = ((UnsolvedSymbolException) ex.getCause()).getName();
       }
       // this comes from the Javaparser!
-      if (qualifier.startsWith("We are unable to find the value declaration corresponding to")
-          || qualifier.startsWith("Solving ")) {
+      if (qualifier.startsWith("We are unable to find") || qualifier.startsWith("Solving ")) {
         return null;
       }
       String fromImport = getQualifiedNameFromImports(qualifier);
