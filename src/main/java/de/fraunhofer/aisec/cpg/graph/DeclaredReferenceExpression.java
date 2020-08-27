@@ -66,6 +66,10 @@ public class DeclaredReferenceExpression extends Expression implements TypeListe
     return refersTo;
   }
 
+  public AccessValues getAccess() {
+    return access;
+  }
+
   public void setRefersTo(@Nullable Declaration refersTo) {
     if (refersTo == null) {
       return;

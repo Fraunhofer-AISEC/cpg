@@ -276,6 +276,10 @@ public class CXXLanguageFrontend extends LanguageFrontend {
       }
 
       for (IASTComment c : translationUnit.getComments()) {
+        if (c.getFileLocation() == null) {
+          LOGGER.warn("Found comment with null location in {}", translationUnit.getFilePath());
+          continue;
+        }
         comments.put(c.getFileLocation().getStartingLineNumber(), c.getRawSignature());
       }
 

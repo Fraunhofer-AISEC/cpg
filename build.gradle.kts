@@ -33,7 +33,7 @@ plugins {
     `maven-publish`
 
     id("org.sonarqube") version "3.0"
-    id("com.diffplug.spotless") version "5.1.1"
+    id("com.diffplug.spotless") version "5.2.0"
     id("com.github.johnrengelman.shadow") version "6.0.0"
 }
 
@@ -154,7 +154,7 @@ dependencies {
     // JUnit
     testImplementation("org.junit.jupiter:junit-jupiter-api:5.6.2")
     testImplementation("org.junit.jupiter:junit-jupiter-params:5.6.2")
-    testImplementation("org.mockito:mockito-core:3.5.0")
+    testImplementation("org.mockito:mockito-core:3.5.7")
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.6.2")
 }
 
