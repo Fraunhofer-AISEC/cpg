@@ -258,7 +258,6 @@ public class ExpressionHandler
 
   private de.fraunhofer.aisec.cpg.graph.Expression handleFieldAccessExpression(Expression expr) {
     FieldAccessExpr fieldAccessExpr = expr.asFieldAccessExpr();
-    de.fraunhofer.aisec.cpg.graph.Expression member;
     de.fraunhofer.aisec.cpg.graph.Expression base;
     // first, resolve the scope. this adds the necessary nodes, such as IDENTIFIER for the scope.
     // it also acts as the first argument of the operator call
@@ -362,6 +361,10 @@ public class ExpressionHandler
               fieldAccessExpr.toString());
       memberExpression.setStaticAccess(true);
       return memberExpression;
+    }
+
+    if (base.getLocation() == null) {
+      base.setLocation(lang.getLocationFromRawNode(fieldAccessExpr));
     }
 
     return NodeBuilder.newMemberExpression(
