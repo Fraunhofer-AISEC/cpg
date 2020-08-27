@@ -288,7 +288,7 @@ class CXXLanguageFrontendTest extends BaseTest {
         TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true);
 
     // should be six function nodes
-    assertEquals(6, declaration.getDeclarations().size());
+    assertEquals(7, declaration.getDeclarations().size());
 
     FunctionDeclaration method = declaration.getDeclarationAs(0, FunctionDeclaration.class);
     assertEquals("function0(int)void", method.getSignature());
@@ -326,10 +326,17 @@ class CXXLanguageFrontendTest extends BaseTest {
     assertFalse(statement.isImplicit());
 
     method = declaration.getDeclarationAs(4, FunctionDeclaration.class);
+    assertNotNull(method);
     assertEquals("function3()UnknownType*", method.getSignature());
 
     method = declaration.getDeclarationAs(5, FunctionDeclaration.class);
+    assertNotNull(method);
     assertEquals("function4(int)void", method.getSignature());
+
+    method = declaration.getDeclarationAs(6, FunctionDeclaration.class);
+    assertNotNull(method);
+    assertEquals(0, method.getParameters().size());
+    assertEquals("function5()void", method.getSignature());
   }
 
   @Test

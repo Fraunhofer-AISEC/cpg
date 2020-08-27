@@ -26,6 +26,7 @@
 
 package de.fraunhofer.aisec.cpg.frontends.cpp;
 
+import static de.fraunhofer.aisec.cpg.helpers.Util.warnWithFileLocation;
 import static java.util.Collections.emptyList;
 
 import de.fraunhofer.aisec.cpg.frontends.Handler;
@@ -41,6 +42,7 @@ import de.fraunhofer.aisec.cpg.graph.ProblemDeclaration;
 import de.fraunhofer.aisec.cpg.graph.RecordDeclaration;
 import de.fraunhofer.aisec.cpg.graph.ValueDeclaration;
 import de.fraunhofer.aisec.cpg.graph.VariableDeclaration;
+import de.fraunhofer.aisec.cpg.graph.type.IncompleteType;
 import de.fraunhofer.aisec.cpg.graph.type.Type;
 import de.fraunhofer.aisec.cpg.graph.type.TypeParser;
 import de.fraunhofer.aisec.cpg.graph.type.UnknownType;
@@ -173,6 +175,21 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
     int i = 0;
     for (ICPPASTParameterDeclaration param : ctx.getParameters()) {
       ParamVariableDeclaration arg = lang.getParameterDeclarationHandler().handle(param);
+
+      // check for void type parameters
+      if (arg.getType() instanceof IncompleteType) {
+        if (!arg.getName().isEmpty()) {
+          warnWithFileLocation(declaration, log, "Named parameter cannot have void type");
+        } else {
+          // specifying void as first parameter is ok and means that the function has no parameters
+          if (i == 0) {
+            continue;
+          } else {
+            warnWithFileLocation(
+                declaration, log, "void parameter must be the first and only parameter");
+          }
+        }
+      }
 
       IBinding binding = ctx.getParameters()[i].getDeclarator().getName().resolveBinding();
 

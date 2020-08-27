@@ -20,3 +20,6 @@ class UnknownType* function3();
 
 #define SOME_MACRO(x) x
 void function4(int a = SOME_MACRO(1));
+
+// void parameter without name
+void function5(void);
