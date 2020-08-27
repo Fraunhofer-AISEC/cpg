@@ -34,14 +34,18 @@ import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 
 // Todo VariableResolverPass 23 Failed, 5 Passed
+// Todo VariableResolverPass 19 Failed, 9 Passed after resolving base with scopeManager
+// Todo VariableResolverPass 17 Failed, 11 Passed after adding scopeManager resolution to
+// localVariableUsageResolution
+// Todo VariableResolverPass 13 Failed, 15 Passed after correcting a bug in the test itself
 
-@Disabled(
-    "Until changing variable resolution to ScopeManager. Then in detail disable the tests that need specific fixes")
+// @Disabled(
+//    "Until changing variable resolution to ScopeManager. Then in detail disable the tests that
+// need specific fixes")
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class VariableResolverCppTest extends BaseTest {
 
@@ -114,10 +118,17 @@ class VariableResolverCppTest extends BaseTest {
         TestUtils.getSubnodeOfTypeWithName(externalClass, FieldDeclaration.class, "staticVarName");
     outerClass = TestUtils.getOfTypeWithName(nodes, RecordDeclaration.class, "ScopeVariables");
     outerVarName =
-        TestUtils.getSubnodeOfTypeWithName(outerClass, FieldDeclaration.class, "varName");
+        outerClass.getFields().stream()
+            .filter(n -> n.getName().equals("varName"))
+            .findFirst()
+            .get();
     outerStaticVarName =
-        TestUtils.getSubnodeOfTypeWithName(outerClass, FieldDeclaration.class, "staticVarName");
-    outerImpThis = TestUtils.getSubnodeOfTypeWithName(outerClass, FieldDeclaration.class, "this");
+        outerClass.getFields().stream()
+            .filter(n -> n.getName().equals("staticVarName"))
+            .findFirst()
+            .get();
+    outerImpThis =
+        outerClass.getFields().stream().filter(n -> n.getName().equals("this")).findFirst().get();
 
     List<RecordDeclaration> classes = Util.filterCast(nodes, RecordDeclaration.class);
 

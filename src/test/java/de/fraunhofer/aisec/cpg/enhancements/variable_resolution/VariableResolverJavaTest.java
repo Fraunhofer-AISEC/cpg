@@ -29,14 +29,15 @@ import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 
 // Todo VariableResolver 7 Failed, 7 Passed
+// Todo VariableResolver 6 Failed, 8 Passed after correcting a bug in the tests themselves
 
-@Disabled(
-    "Until changing variable resolution to ScopeManager. Then in detail disable the tests that need specific fixes")
+// @Disabled(
+//    "Until changing variable resolution to ScopeManager. Then in detail disable the tests that
+// need specific fixes")
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class VariableResolverJavaTest extends BaseTest {
 
@@ -113,10 +114,17 @@ class VariableResolverJavaTest extends BaseTest {
         TestUtils.getOfTypeWithName(
             nodes, RecordDeclaration.class, "variables_extended.ScopeVariables");
     outerVarName =
-        TestUtils.getSubnodeOfTypeWithName(outerClass, FieldDeclaration.class, "varName");
+        outerClass.getFields().stream()
+            .filter(n -> n.getName().equals("varName"))
+            .findFirst()
+            .get();
     outerStaticVarName =
-        TestUtils.getSubnodeOfTypeWithName(outerClass, FieldDeclaration.class, "staticVarName");
-    outerImpThis = TestUtils.getSubnodeOfTypeWithName(outerClass, FieldDeclaration.class, "this");
+        outerClass.getFields().stream()
+            .filter(n -> n.getName().equals("staticVarName"))
+            .findFirst()
+            .get();
+    outerImpThis =
+        outerClass.getFields().stream().filter(n -> n.getName().equals("this")).findFirst().get();
 
     // Inner class and its fields
     innerClass =
@@ -218,6 +226,7 @@ class VariableResolverJavaTest extends BaseTest {
 
   @Test
   void testImplicitThisVarNameAfterLoops() {
+    // Todo here we get a heisenbug, this test randomly fails sometimes
     // Todo refers to the second loop local
     // Todo This is correct now because we properly pop the loop context
     VRUtil.assertUsageOfMemberAndBase(
