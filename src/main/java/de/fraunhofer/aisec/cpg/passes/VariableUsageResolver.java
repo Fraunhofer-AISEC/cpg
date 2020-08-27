@@ -167,7 +167,7 @@ public class VariableUsageResolver extends Pass {
       }
     }
 
-    Set<ValueDeclaration> targets = new HashSet<>();
+    Set<ValueDeclaration> targets = new LinkedHashSet<>();
 
     if (target.isPresent()) {
       targets.add(target.get());
@@ -196,18 +196,11 @@ public class VariableUsageResolver extends Pass {
         // function pointer call
         return;
       }
-      Set<ValueDeclaration> refersTo =
-          walker
-              .getDeclarationForScope(
-                  parent,
-                  v -> !(v instanceof FunctionDeclaration) && v.getName().equals(ref.getName()))
-              .map(
-                  d -> {
-                    Set<ValueDeclaration> set = new HashSet<>();
-                    set.add(d);
-                    return set;
-                  })
-              .orElse(new HashSet<>());
+      Set<ValueDeclaration> refersTo = new LinkedHashSet<>();
+      ValueDeclaration scopeResolved = lang.getScopeManager().resolve(ref);
+      if (scopeResolved != null) {
+        refersTo.add(scopeResolved);
+      }
 
       Type recordDeclType = null;
       if (currentClass != null) {
@@ -227,7 +220,7 @@ public class VariableUsageResolver extends Pass {
         ValueDeclaration field =
             resolveMember(recordDeclType, (DeclaredReferenceExpression) current);
         if (field != null) {
-          Set<ValueDeclaration> resolvedMember = new HashSet<>();
+          Set<ValueDeclaration> resolvedMember = new LinkedHashSet<>();
           resolvedMember.add(field);
           refersTo = resolvedMember;
         }
@@ -284,7 +277,7 @@ public class VariableUsageResolver extends Pass {
           if (member != null) {
             HasType typedMember = (HasType) member;
             typedMember.setType(memberExpression.getType());
-            Set<Type> subTypes = new HashSet<>(typedMember.getPossibleSubTypes());
+            Set<Type> subTypes = new LinkedHashSet<>(typedMember.getPossibleSubTypes());
             subTypes.addAll(memberExpression.getPossibleSubTypes());
             typedMember.setPossibleSubTypes(subTypes);
           }
@@ -307,6 +300,12 @@ public class VariableUsageResolver extends Pass {
   }
 
   private Declaration resolveBase(DeclaredReferenceExpression reference) {
+
+    Declaration declaration = lang.getScopeManager().resolve(reference);
+    if (declaration != null) {
+      return declaration;
+    }
+
     // check if this refers to an enum
     if (enumMap.containsKey(reference.getType())) {
       return enumMap.get(reference.getType());
