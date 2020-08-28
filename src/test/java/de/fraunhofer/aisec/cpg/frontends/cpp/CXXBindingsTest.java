@@ -1,6 +1,6 @@
 package de.fraunhofer.aisec.cpg.frontends.cpp;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import de.fraunhofer.aisec.cpg.BaseTest;
 import de.fraunhofer.aisec.cpg.TranslationConfiguration;
@@ -18,9 +18,7 @@ class CXXBindingsTest extends BaseTest {
     for (IBinding binding : cxxLanguageFrontend.getCachedDeclarations().keySet()) {
       Declaration declaration = cxxLanguageFrontend.getCachedDeclaration(binding);
       for (Expression expression : cxxLanguageFrontend.getCachedExpression(binding)) {
-        for (Declaration refersTo : ((DeclaredReferenceExpression) expression).getRefersTo()) {
-          assertEquals(declaration, refersTo);
-        }
+        assertEquals(declaration, ((DeclaredReferenceExpression) expression).getRefersTo());
       }
     }
   }

@@ -43,7 +43,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  */
 public class DeclaredReferenceExpression extends Expression implements TypeListener {
 
-  /** The {@link ValueDeclaration}s this expression might refer to. */
+  /** The {@link Declaration}s this expression might refer to. */
   @Nullable private ValueDeclaration refersTo;
 
   /**
@@ -52,9 +52,24 @@ public class DeclaredReferenceExpression extends Expression implements TypeListe
    */
   private AccessValues access = AccessValues.READ;
 
-  @Deprecated
-  public Set<ValueDeclaration> getRefersTo() {
-    return Set.of(refersTo);
+  public @Nullable ValueDeclaration getRefersTo() {
+    return this.refersTo;
+  }
+
+  /**
+   * Returns the contents of {@link #refersTo} as the specified class, if the class is assignable.
+   * Otherwise, it will return null.
+   *
+   * @param clazz the expected class
+   * @param <T> the type
+   * @return the declaration cast to the expected class, or null if the class is not assignable
+   */
+  public @Nullable <T extends VariableDeclaration> T getRefersToAs(Class<T> clazz) {
+    if (this.refersTo == null) {
+      return null;
+    }
+
+    return clazz.isAssignableFrom(this.refersTo.getClass()) ? clazz.cast(this.refersTo) : null;
   }
 
   public AccessValues getAccess() {

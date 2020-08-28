@@ -1,6 +1,7 @@
 package de.fraunhofer.aisec.cpg.enhancements;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import de.fraunhofer.aisec.cpg.TestUtils;
@@ -38,12 +39,11 @@ class DFGTest {
     assertTrue(literal2.getNextDFG().contains(a2));
     assertEquals(1, a2.getNextDFG().size()); // Outgoing DFG Edges only to VariableDeclaration
 
-    assertEquals(1, a2.getRefersTo().size());
-    Node refersTo = a2.getRefersTo().iterator().next();
-    assertTrue(refersTo instanceof VariableDeclaration);
-    VariableDeclaration a = (VariableDeclaration) refersTo;
-    assertEquals(0, a.getNextDFG().size());
-    assertEquals(a2.getNextDFG().iterator().next(), a);
+    var refersTo = a2.getRefersToAs(VariableDeclaration.class);
+    assertNotNull(refersTo);
+
+    assertEquals(0, refersTo.getNextDFG().size());
+    assertEquals(a2.getNextDFG().iterator().next(), refersTo);
 
     // Test Else-Block with System.out.println()
     Literal<?> literal1 =

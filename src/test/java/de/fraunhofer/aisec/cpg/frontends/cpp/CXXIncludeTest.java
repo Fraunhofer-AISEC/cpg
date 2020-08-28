@@ -79,7 +79,7 @@ class CXXIncludeTest extends BaseTest {
     FieldDeclaration someField = someClass.getField("someField");
     assertNotNull(someField);
 
-    assertTrue(ref.getRefersTo().contains(someField));
+    assertEquals(someField, ref.getRefersTo());
   }
 
   @Test
