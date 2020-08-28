@@ -34,6 +34,7 @@ import java.util.Set;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
+import org.neo4j.ogm.annotation.Relationship;
 
 /**
  * An expression, which refers to something which is declared, e.g. a variable. For example, the
@@ -44,6 +45,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 public class DeclaredReferenceExpression extends Expression implements TypeListener {
 
   /** The {@link Declaration}s this expression might refer to. */
+  @Relationship(value = "REFERS_TO")
   @Nullable private ValueDeclaration refersTo;
 
   /**
