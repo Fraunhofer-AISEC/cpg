@@ -30,14 +30,35 @@ import static de.fraunhofer.aisec.cpg.helpers.Util.warnWithFileLocation;
 
 import de.fraunhofer.aisec.cpg.TranslationResult;
 import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguageFrontend;
-import de.fraunhofer.aisec.cpg.graph.*;
+import de.fraunhofer.aisec.cpg.graph.Declaration;
+import de.fraunhofer.aisec.cpg.graph.DeclaredReferenceExpression;
+import de.fraunhofer.aisec.cpg.graph.EnumDeclaration;
+import de.fraunhofer.aisec.cpg.graph.FieldDeclaration;
+import de.fraunhofer.aisec.cpg.graph.FunctionDeclaration;
+import de.fraunhofer.aisec.cpg.graph.HasType;
+import de.fraunhofer.aisec.cpg.graph.MemberCallExpression;
+import de.fraunhofer.aisec.cpg.graph.MemberExpression;
+import de.fraunhofer.aisec.cpg.graph.MethodDeclaration;
+import de.fraunhofer.aisec.cpg.graph.Node;
+import de.fraunhofer.aisec.cpg.graph.NodeBuilder;
+import de.fraunhofer.aisec.cpg.graph.RecordDeclaration;
+import de.fraunhofer.aisec.cpg.graph.StaticReferenceExpression;
+import de.fraunhofer.aisec.cpg.graph.TranslationUnitDeclaration;
+import de.fraunhofer.aisec.cpg.graph.ValueDeclaration;
 import de.fraunhofer.aisec.cpg.graph.type.FunctionPointerType;
 import de.fraunhofer.aisec.cpg.graph.type.Type;
 import de.fraunhofer.aisec.cpg.graph.type.TypeParser;
 import de.fraunhofer.aisec.cpg.graph.type.UnknownType;
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.ScopedWalker;
 import de.fraunhofer.aisec.cpg.helpers.Util;
-import java.util.*;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -123,16 +144,19 @@ public class VariableUsageResolver extends Pass {
     }
   }
 
-  private Set<ValueDeclaration> resolveFunctionPtr(
+  private Optional<? extends ValueDeclaration> resolveFunctionPtr(
       Type containingClass, DeclaredReferenceExpression reference) {
     FunctionPointerType fptrType;
     if (reference.getType() instanceof FunctionPointerType) {
       fptrType = (FunctionPointerType) reference.getType();
     } else {
       log.error("Can't resolve a function pointer without a function pointer type!");
-      return Collections.emptySet();
+
+      return Optional.empty();
     }
+
     Optional<FunctionDeclaration> target = Optional.empty();
+
     String functionName = reference.getName();
     Matcher matcher =
         Pattern.compile("(?:(?<class>.*)(?:\\.|::))?(?<function>.*)").matcher(reference.getName());
@@ -167,25 +191,26 @@ public class VariableUsageResolver extends Pass {
       }
     }
 
-    Set<ValueDeclaration> targets = new HashSet<>();
-
     if (target.isPresent()) {
-      targets.add(target.get());
-      return targets;
+      return target;
     }
 
     if (containingClass == null) {
-      targets.add(
-          handleUnknownMethod(functionName, fptrType.getReturnType(), fptrType.getParameters()));
+      target =
+          Optional.of(
+              handleUnknownMethod(
+                  functionName, fptrType.getReturnType(), fptrType.getParameters()));
     } else {
-      MethodDeclaration resolved =
-          handleUnknownClassMethod(
-              containingClass, functionName, fptrType.getReturnType(), fptrType.getParameters());
-      if (resolved != null) {
-        targets.add(resolved);
-      }
+      target =
+          Optional.ofNullable(
+              handleUnknownClassMethod(
+                  containingClass,
+                  functionName,
+                  fptrType.getReturnType(),
+                  fptrType.getParameters()));
     }
-    return targets;
+
+    return target;
   }
 
   private void resolveLocalVarUsage(RecordDeclaration currentClass, Node parent, Node current) {
@@ -198,18 +223,11 @@ public class VariableUsageResolver extends Pass {
         // function pointer call
         return;
       }
-      Set<ValueDeclaration> refersTo =
-          walker
-              .getDeclarationForScope(
-                  parent,
-                  v -> !(v instanceof FunctionDeclaration) && v.getName().equals(ref.getName()))
-              .map(
-                  d -> {
-                    Set<ValueDeclaration> set = new HashSet<>();
-                    set.add(d);
-                    return set;
-                  })
-              .orElse(new HashSet<>());
+
+      var refersTo =
+          walker.getDeclarationForScope(
+              parent,
+              v -> !(v instanceof FunctionDeclaration) && v.getName().equals(ref.getName()));
 
       Type recordDeclType = null;
       if (currentClass != null) {
@@ -229,14 +247,12 @@ public class VariableUsageResolver extends Pass {
         ValueDeclaration field =
             resolveMember(recordDeclType, (DeclaredReferenceExpression) current);
         if (field != null) {
-          Set<ValueDeclaration> resolvedMember = new HashSet<>();
-          resolvedMember.add(field);
-          refersTo = resolvedMember;
+          refersTo = Optional.of(field);
         }
       }
 
-      if (!refersTo.isEmpty()) {
-        ref.setRefersTo(refersTo);
+      if (refersTo.isPresent()) {
+        ref.setRefersTo(refersTo.get());
       } else {
         warnWithFileLocation(current, log, "Did not find a declaration for {}", ref.getName());
       }
