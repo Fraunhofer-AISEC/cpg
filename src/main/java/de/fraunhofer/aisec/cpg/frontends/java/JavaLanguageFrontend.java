@@ -372,6 +372,7 @@ public class JavaLanguageFrontend extends LanguageFrontend {
     ClassOrInterfaceType clazz = searchType.asClassOrInterfaceType();
 
     if (clazz != null) {
+
       // try to look for imports matching the name
       for (ImportDeclaration importDeclaration : context.getImports()) {
         if (importDeclaration.getName().getIdentifier().endsWith(clazz.getName().getIdentifier())) {
@@ -379,8 +380,19 @@ public class JavaLanguageFrontend extends LanguageFrontend {
           return TypeParser.createFrom(importDeclaration.getNameAsString(), true);
         }
       }
-      de.fraunhofer.aisec.cpg.graph.type.Type returnType =
-          TypeParser.createFrom(clazz.getNameAsString(), true);
+      // Assuming that the Class is somewhere in the current package as classes in the same package
+      // are automatically imported, however here we should actually check if there is an exisiting
+      // declaration.
+      String fqName = clazz.getNameAsString();
+      if (!fqName.contains(getNamespaceDelimiter())) {
+        fqName =
+            getScopeManager()
+                    .getFirstScopeThat(scope -> scope.getAstNode() instanceof NamespaceDeclaration)
+                    .getScopedName()
+                + getNamespaceDelimiter()
+                + fqName;
+      }
+      de.fraunhofer.aisec.cpg.graph.type.Type returnType = TypeParser.createFrom(fqName, true);
       returnType.setTypeOrigin(de.fraunhofer.aisec.cpg.graph.type.Type.Origin.GUESSED);
       return returnType;
     }
