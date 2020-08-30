@@ -217,6 +217,13 @@ public class VariableUsageResolver extends Pass {
           && recordDeclType != null
           && recordMap.containsKey(recordDeclType)) {
         // Maybe we are referring to a field instead of a local var
+        if (current.getName().contains(lang.getNamespaceDelimiter())) {
+          List<String> path = Arrays.asList(current.getName().split(lang.getNamespaceDelimiter()));
+          recordDeclType =
+              TypeParser.createFrom(
+                  String.join(lang.getNamespaceDelimiter(), path.subList(0, path.size() - 1)),
+                  true);
+        }
         ValueDeclaration field =
             resolveMember(recordDeclType, (DeclaredReferenceExpression) current);
         if (field != null) {
@@ -341,11 +348,12 @@ public class VariableUsageResolver extends Pass {
       return null;
     }
 
+    String simpleName = Util.getSimpleName(lang.getNamespaceDelimiter(), reference.getName());
     Optional<FieldDeclaration> member = Optional.empty();
     if (!(containingClass instanceof UnknownType) && recordMap.containsKey(containingClass)) {
       member =
           recordMap.get(containingClass).getFields().stream()
-              .filter(f -> f.getName().equals(reference.getName()))
+              .filter(f -> f.getName().equals(simpleName))
               .map(field -> field.getDefinition())
               .findFirst();
     }
@@ -356,7 +364,7 @@ public class VariableUsageResolver extends Pass {
               .map(recordMap::get)
               .filter(Objects::nonNull)
               .flatMap(r -> r.getFields().stream())
-              .filter(f -> f.getName().equals(reference.getName()))
+              .filter(f -> f.getName().equals(simpleName))
               .map(field -> field.getDefinition())
               .findFirst();
     }

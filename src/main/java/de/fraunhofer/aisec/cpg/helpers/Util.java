@@ -335,6 +335,13 @@ public class Util {
     }
   }
 
+  public static String getSimpleName(String delimiter, String name) {
+    if (name.contains(delimiter)) {
+      name = name.substring(name.lastIndexOf(delimiter) + delimiter.length());
+    }
+    return name;
+  }
+
   /**
    * Inverse operation of {@link #attachCallParameters}
    *

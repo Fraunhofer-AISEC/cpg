@@ -43,7 +43,9 @@ import org.junit.jupiter.api.TestInstance;
 // localVariableUsageResolution
 // Todo VariableResolverPass 13 Failed, 15 Passed after correcting a bug in the test itself
 // Todo VariableResolverPass 11 Failed, 17 Passed after adding member declarations with the scope
-// Todo VariableResolverPass 6 Failed, 22 Passed after adding declaration definition pattern of methods to fields
+// Todo VariableResolverPass 6 Failed, 22 Passed after adding declaration definition pattern of
+// Todo VariableResolverPass 4 Failed, 24 Passed after searching fields by their simple name and extracting the base class from the prefix
+// methods to fields
 // manager
 
 // @Disabled(
