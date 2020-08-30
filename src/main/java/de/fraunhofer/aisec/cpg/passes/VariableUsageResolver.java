@@ -346,6 +346,7 @@ public class VariableUsageResolver extends Pass {
       member =
           recordMap.get(containingClass).getFields().stream()
               .filter(f -> f.getName().equals(reference.getName()))
+              .map(field -> field.getDefinition())
               .findFirst();
     }
 
@@ -356,6 +357,7 @@ public class VariableUsageResolver extends Pass {
               .filter(Objects::nonNull)
               .flatMap(r -> r.getFields().stream())
               .filter(f -> f.getName().equals(reference.getName()))
+              .map(field -> field.getDefinition())
               .findFirst();
     }
     // Attention: using orElse instead of orElseGet will always invoke unknown declaration handling!

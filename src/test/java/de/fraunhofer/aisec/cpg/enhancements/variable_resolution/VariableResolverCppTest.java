@@ -42,6 +42,9 @@ import org.junit.jupiter.api.TestInstance;
 // Todo VariableResolverPass 17 Failed, 11 Passed after adding scopeManager resolution to
 // localVariableUsageResolution
 // Todo VariableResolverPass 13 Failed, 15 Passed after correcting a bug in the test itself
+// Todo VariableResolverPass 11 Failed, 17 Passed after adding member declarations with the scope
+// Todo VariableResolverPass 6 Failed, 22 Passed after adding declaration definition pattern of methods to fields
+// manager
 
 // @Disabled(
 //    "Until changing variable resolution to ScopeManager. Then in detail disable the tests that
@@ -314,14 +317,16 @@ class VariableResolverCppTest extends BaseTest {
 
   @Test
   void testExplicitlyReferenceStaticMemberInInternalClass() {
-    VRUtil.assertUsageOf(callParamMap.get("func4_static_staticVarName"), outerStaticVarName);
+    VRUtil.assertUsageOf(
+        callParamMap.get("func4_static_staticVarName"), outerStaticVarName.getDefinition());
     // Todo refers to the definition instead of the declaration
   }
 
   @Test
   void testExplicitlyReferenceStaticMemberInExternalClass() {
     // Todo Point to the redeclaration that actually is a definition.
-    VRUtil.assertUsageOf(callParamMap.get("func4_external_staticVarName"), externStaticVarName);
+    VRUtil.assertUsageOf(
+        callParamMap.get("func4_external_staticVarName"), externStaticVarName.getDefinition());
   }
 
   @Test
@@ -341,7 +346,8 @@ class VariableResolverCppTest extends BaseTest {
     // Refers to unknown field of staticVarName
     // Todo Points to the definition instead of the declaration
     VRUtil.assertUsageOf(
-        callParamMap.get("func4_second_external_staticVarName"), externStaticVarName);
+        callParamMap.get("func4_second_external_staticVarName"),
+        externStaticVarName.getDefinition());
   }
 
   @Test
@@ -352,7 +358,7 @@ class VariableResolverCppTest extends BaseTest {
     VRUtil.assertUsageOfMemberAndBase(
         callParamMap.get("func5_staticVarName_throughInstance_first"),
         declaration,
-        outerStaticVarName); // external_static_field
+        outerStaticVarName.getDefinition()); // external_static_field
   }
 
   @Test
@@ -363,7 +369,7 @@ class VariableResolverCppTest extends BaseTest {
     VRUtil.assertUsageOfMemberAndBase(
         callParamMap.get("func5_staticVarName_throughInstance_second"),
         declaration,
-        outerStaticVarName); // external_static_field
+        outerStaticVarName.getDefinition()); // external_static_field
   }
 
   @Test
@@ -397,7 +403,8 @@ class VariableResolverCppTest extends BaseTest {
     // Todo Points to the definition/declaration at the end of the file instead of the static
     // variable in the class
     // Todo we have to handle this type of redeclarations
-    VRUtil.assertUsageOf(callParamMap.get("func1_outer_static_staticVarName"), outerStaticVarName);
+    VRUtil.assertUsageOf(
+        callParamMap.get("func1_outer_static_staticVarName"), outerStaticVarName.getDefinition());
   }
 
   @Test
@@ -405,7 +412,8 @@ class VariableResolverCppTest extends BaseTest {
     // Todo Points to the definition/declaration at the end of the file instead of the static
     // variable in the class
     // Todo we have to handle this type of redeclarations
-    VRUtil.assertUsageOf(callParamMap.get("func1_inner_static_staticVarName"), innerStaticVarName);
+    VRUtil.assertUsageOf(
+        callParamMap.get("func1_inner_static_staticVarName"), innerStaticVarName.getDefinition());
   }
 
   @Test
@@ -434,7 +442,8 @@ class VariableResolverCppTest extends BaseTest {
     // variable in the class
     // Todo we have to handle this type of redeclarations
     VRUtil.assertUsageOf(
-        callParamMap.get("func2_outer_static_staticVarName_with_shadows"), outerStaticVarName);
+        callParamMap.get("func2_outer_static_staticVarName_with_shadows"),
+        outerStaticVarName.getDefinition());
   }
 
   @Test
@@ -444,7 +453,8 @@ class VariableResolverCppTest extends BaseTest {
     // variable in the class
     // Todo we have to handle this type of redeclarations
     VRUtil.assertUsageOf(
-        callParamMap.get("func2_inner_static_staticVarName_with_shadows"), innerStaticVarName);
+        callParamMap.get("func2_inner_static_staticVarName_with_shadows"),
+        innerStaticVarName.getDefinition());
   }
 
   @Test

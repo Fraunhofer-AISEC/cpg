@@ -46,6 +46,7 @@ import de.fraunhofer.aisec.cpg.graph.type.TypeParser;
 import de.fraunhofer.aisec.cpg.graph.type.UnknownType;
 import de.fraunhofer.aisec.cpg.passes.scopes.RecordScope;
 import java.util.Arrays;
+import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -87,14 +88,34 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
       return handle(ctx.getNestedDeclarator());
     }
 
-    // type will be filled out later
-    VariableDeclaration declaration =
+    Declaration declaration;
+
+    declaration =
         NodeBuilder.newVariableDeclaration(
             ctx.getName().toString(), UnknownType.getUnknownType(), ctx.getRawSignature(), true);
     IASTInitializer init = ctx.getInitializer();
-
     if (init != null) {
-      declaration.setInitializer(lang.getInitializerHandler().handle(init));
+      ((VariableDeclaration) declaration).setInitializer(lang.getInitializerHandler().handle(init));
+    }
+    String name = ctx.getName().toString();
+    if (name.contains(lang.getNamespaceDelimiter())) {
+
+      String[] rr = name.split(lang.getNamespaceDelimiter());
+
+      String recordName =
+          String.join(lang.getNamespaceDelimiter(), Arrays.asList(rr).subList(0, rr.length - 1));
+      String fieldName = rr[rr.length - 1];
+
+      RecordDeclaration recordDeclaration = this.lang.getRecordForName(recordName).orElse(null);
+
+      declaration = FieldDeclaration.from((VariableDeclaration) declaration);
+      Optional<FieldDeclaration> existingDeclaration =
+          recordDeclaration.getFields().stream()
+              .filter(f -> f.getName().equals(fieldName))
+              .findFirst();
+      if (existingDeclaration.isPresent()) {
+        existingDeclaration.get().setDefinition((FieldDeclaration) declaration);
+      }
     }
 
     lang.getScopeManager().addDeclaration(declaration);
@@ -356,15 +377,16 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
           this.lang.getScopeManager().replaceNode(method, declaration);
         }
       } else if (declaration instanceof VariableDeclaration) {
-        FieldDeclaration fieldDeclaration =
-            FieldDeclaration.from((VariableDeclaration) declaration);
-        recordDeclaration.getFields().add(fieldDeclaration);
-        this.lang.replaceDeclarationInExpression(fieldDeclaration, declaration);
-
+        // recordDeclaration.getFields().add();
+        lang.getScopeManager()
+            .addDeclaration(FieldDeclaration.from((VariableDeclaration) declaration));
+        lang.getScopeManager().removeDeclaration(declaration);
       } else if (declaration instanceof FieldDeclaration) {
-        recordDeclaration.getFields().add((FieldDeclaration) declaration);
+        // recordDeclaration.getFields().add((FieldDeclaration) declaration);
+        lang.getScopeManager().addDeclaration(declaration);
       } else if (declaration instanceof RecordDeclaration) {
-        recordDeclaration.getRecords().add((RecordDeclaration) declaration);
+        // record is not stored as reference in the scope
+        lang.getScopeManager().addDeclaration(declaration);
       } else if (declaration instanceof ProblemDeclaration) {
         // there is no place to put them here so let's attach them to the translation unit so that
         // we do not loose them
