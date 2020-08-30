@@ -151,15 +151,11 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
     if (name.contains("::")) {
       String[] rr = name.split("::");
 
-      String recordName = rr[0];
-      String methodName = rr[1];
+      String recordName =
+          String.join(lang.getNamespaceDelimiter(), Arrays.asList(rr).subList(0, rr.length - 1));
+      String methodName = rr[rr.length - 1];
 
       recordDeclaration = this.lang.getRecordForName(recordName).orElse(null);
-
-      if (recordDeclaration != null) {
-        // to make sure, that the scope of this function is associated to the record
-        this.lang.getScopeManager().enterScope(recordDeclaration);
-      }
 
       declaration =
           NodeBuilder.newMethodDeclaration(
@@ -201,10 +197,6 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
 
     //    lang.addFunctionDeclaration(declaration);
     lang.getScopeManager().leaveScope(declaration);
-
-    if (recordDeclaration != null) {
-      this.lang.getScopeManager().enterScope(recordDeclaration);
-    }
 
     return declaration;
   }
