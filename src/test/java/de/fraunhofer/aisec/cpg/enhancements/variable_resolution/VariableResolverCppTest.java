@@ -44,7 +44,8 @@ import org.junit.jupiter.api.TestInstance;
 // Todo VariableResolverPass 13 Failed, 15 Passed after correcting a bug in the test itself
 // Todo VariableResolverPass 11 Failed, 17 Passed after adding member declarations with the scope
 // Todo VariableResolverPass 6 Failed, 22 Passed after adding declaration definition pattern of
-// Todo VariableResolverPass 4 Failed, 24 Passed after searching fields by their simple name and extracting the base class from the prefix
+// Todo VariableResolverPass 4 Failed, 24 Passed after searching fields by their simple name and
+// extracting the base class from the prefix
 // methods to fields
 // manager
 
@@ -141,10 +142,17 @@ class VariableResolverCppTest extends BaseTest {
     innerClass =
         TestUtils.getOfTypeWithName(nodes, RecordDeclaration.class, "ScopeVariables::InnerClass");
     innerVarName =
-        TestUtils.getSubnodeOfTypeWithName(innerClass, FieldDeclaration.class, "varName");
+        innerClass.getFields().stream()
+            .filter(n -> n.getName().equals("varName"))
+            .findFirst()
+            .get();
     innerStaticVarName =
-        TestUtils.getSubnodeOfTypeWithName(innerClass, FieldDeclaration.class, "staticVarName");
-    innerImpThis = TestUtils.getSubnodeOfTypeWithName(innerClass, FieldDeclaration.class, "this");
+        innerClass.getFields().stream()
+            .filter(n -> n.getName().equals("staticVarName"))
+            .findFirst()
+            .get();
+    innerImpThis =
+        innerClass.getFields().stream().filter(n -> n.getName().equals("this")).findFirst().get();
 
     main = TestUtils.getOfTypeWithName(nodes, FunctionDeclaration.class, "main");
 

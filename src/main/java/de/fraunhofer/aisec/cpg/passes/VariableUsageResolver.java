@@ -276,6 +276,16 @@ public class VariableUsageResolver extends Pass {
           if (base instanceof RecordDeclaration) {
             baseType = TypeParser.createFrom(base.getName(), true);
           }
+          if (!recordMap.containsKey(baseType)) {
+            final Type containingT = baseType;
+            Optional<Type> fqnResolvedType =
+                recordMap.keySet().stream()
+                    .filter(t -> t.getName().endsWith("." + containingT.getName()))
+                    .findFirst();
+            if (fqnResolvedType.isPresent()) {
+              baseType = fqnResolvedType.get();
+            }
+          }
           member =
               base == null
                   ? null
