@@ -44,6 +44,7 @@ import java.util.Collection;
 import java.util.Deque;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -87,7 +88,7 @@ public class SubgraphWalker {
    * @return a set of children from the nodes member variables
    */
   public static Set<Node> getAstChildren(Node node) {
-    HashSet<Node> children = new HashSet<>(); // Set for duplicate elimination
+    LinkedHashSet<Node> children = new LinkedHashSet<>(); // Set for duplicate elimination
     if (node == null) return children;
 
     Class classType = node.getClass();
@@ -252,7 +253,7 @@ public class SubgraphWalker {
     public void iterate(Node root) {
       todo = new ArrayDeque<>();
       backlog = new ArrayDeque<>();
-      Set<Node> seen = new HashSet<>();
+      Set<Node> seen = new LinkedHashSet<>();
 
       todo.push(root);
       while (!todo.isEmpty()) {
@@ -264,7 +265,6 @@ public class SubgraphWalker {
           // re-place the current node as a marker for the above check to find out when we need to
           // exit a scope
           todo.push(current);
-
           onNodeVisit.forEach(c -> c.accept(current));
 
           Set<Node> unseenChildren =
@@ -272,7 +272,7 @@ public class SubgraphWalker {
                   .filter(Predicate.not(seen::contains))
                   .collect(Collectors.toSet());
           seen.addAll(unseenChildren);
-          unseenChildren.forEach(todo::push);
+          Util.reverse(unseenChildren.stream()).forEach(todo::push);
           backlog.push(current);
         }
       }

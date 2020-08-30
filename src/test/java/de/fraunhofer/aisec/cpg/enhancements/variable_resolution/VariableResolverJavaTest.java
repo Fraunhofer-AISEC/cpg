@@ -34,6 +34,8 @@ import org.junit.jupiter.api.TestInstance;
 
 // Todo VariableResolver 7 Failed, 7 Passed
 // Todo VariableResolver 6 Failed, 8 Passed after correcting a bug in the tests themselves
+// Todo VariableResolver 5 Failed, 9 Passed after defaulting unknown types to be in the same package
+// Todo Solved all after fixing order on stack in ScopeWalker
 
 // @Disabled(
 //    "Until changing variable resolution to ScopeManager. Then in detail disable the tests that
@@ -131,7 +133,10 @@ class VariableResolverJavaTest extends BaseTest {
         TestUtils.getOfTypeWithName(
             nodes, RecordDeclaration.class, "variables_extended.ScopeVariables.InnerClass");
     innerVarName =
-        TestUtils.getSubnodeOfTypeWithName(innerClass, FieldDeclaration.class, "varName");
+        innerClass.getFields().stream()
+            .filter(n -> n.getName().equals("varName"))
+            .findFirst()
+            .get();
     innerStaticVarName =
         TestUtils.getSubnodeOfTypeWithName(innerClass, FieldDeclaration.class, "staticVarName");
     innerImpThis = TestUtils.getSubnodeOfTypeWithName(innerClass, FieldDeclaration.class, "this");
@@ -282,7 +287,7 @@ class VariableResolverJavaTest extends BaseTest {
   void testVarNameInOuterFromInnerClass() {
     // Todo Points to varName in inner class instead of outer
     VRUtil.assertUsageOfMemberAndBase(
-        callParamMap.get("func1_outer_this_varName"), innerImpOuter, outerVarName);
+        callParamMap.get("func1_outer_this_varName"), outerImpThis, outerVarName);
   }
 
   @Test
