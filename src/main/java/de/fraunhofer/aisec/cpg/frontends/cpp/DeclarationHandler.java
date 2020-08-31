@@ -26,6 +26,7 @@
 
 package de.fraunhofer.aisec.cpg.frontends.cpp;
 
+import static de.fraunhofer.aisec.cpg.graph.NodeBuilder.newRecordDeclaration;
 import static de.fraunhofer.aisec.cpg.helpers.Util.errorWithFileLocation;
 import static de.fraunhofer.aisec.cpg.helpers.Util.warnWithFileLocation;
 
@@ -58,13 +59,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
-import org.eclipse.cdt.core.dom.ast.IASTArrayModifier;
-import org.eclipse.cdt.core.dom.ast.IASTDeclSpecifier;
-import org.eclipse.cdt.core.dom.ast.IASTDeclaration;
-import org.eclipse.cdt.core.dom.ast.IASTDeclarator;
-import org.eclipse.cdt.core.dom.ast.IASTNode;
-import org.eclipse.cdt.core.dom.ast.IASTPointerOperator;
-import org.eclipse.cdt.core.dom.ast.IASTTranslationUnit;
+import org.checkerframework.checker.nullness.qual.NonNull;
+import org.eclipse.cdt.core.dom.ast.*;
+import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTCompositeTypeSpecifier;
 import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTCompositeTypeSpecifier;
 import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTElaboratedTypeSpecifier;
 import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTFunctionDefinition;
@@ -296,12 +293,21 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
 
       sequence.addDeclaration(declaration);
     } else if (declSpecifier instanceof CPPASTElaboratedTypeSpecifier) {
-      warnWithFileLocation(
-          lang,
-          ctx,
-          log,
-          "Parsing elaborated type specifiers is not supported (yet)",
-          declSpecifier.getClass());
+      var name = ((CPPASTElaboratedTypeSpecifier) declSpecifier).getName().toString();
+
+      // check, if the declaration for this particular type already exists
+      var existingDeclaration =
+          this.lang
+              .getScopeManager()
+              .getRecordForName(this.lang.getScopeManager().getCurrentScope(), name);
+
+      if (existingDeclaration == null) {
+        var kind = getKindString(((CPPASTElaboratedTypeSpecifier) declSpecifier).getKind());
+
+        var declaration = newRecordDeclaration(name, kind, declSpecifier.getRawSignature());
+
+        lang.getScopeManager().addDeclaration(declaration);
+      }
     }
 
     for (IASTDeclarator declarator : ctx.getDeclarators()) {
@@ -333,6 +339,31 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
     } else {
       return sequence;
     }
+  }
+
+  /**
+   * Returns the appropriate "kind" string for record declarations.
+   *
+   * @param kindIndex the kind index from CDT
+   * @return a string representation
+   */
+  @NonNull
+  static String getKindString(int kindIndex) {
+    String kind;
+    switch (kindIndex) {
+      default:
+      case IASTCompositeTypeSpecifier.k_struct:
+        kind = "struct";
+        break;
+      case IASTCompositeTypeSpecifier.k_union:
+        kind = "union";
+        break;
+      case ICPPASTCompositeTypeSpecifier.k_class:
+        kind = "class";
+        break;
+    }
+
+    return kind;
   }
 
   private void parseInclusions(

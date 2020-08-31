@@ -26,6 +26,7 @@
 
 package de.fraunhofer.aisec.cpg.frontends.cpp;
 
+import static de.fraunhofer.aisec.cpg.frontends.cpp.DeclarationHandler.getKindString;
 import static de.fraunhofer.aisec.cpg.graph.NodeBuilder.newConstructorDeclaration;
 import static de.fraunhofer.aisec.cpg.graph.NodeBuilder.newMethodDeclaration;
 import static de.fraunhofer.aisec.cpg.helpers.Util.warnWithFileLocation;
@@ -53,7 +54,6 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.eclipse.cdt.core.dom.ast.*;
-import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTCompositeTypeSpecifier;
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTParameterDeclaration;
 import org.eclipse.cdt.internal.core.dom.parser.cpp.*;
 
@@ -359,23 +359,10 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
   }
 
   private RecordDeclaration handleCompositeTypeSpecifier(CPPASTCompositeTypeSpecifier ctx) {
-    String kind;
-    switch (ctx.getKey()) {
-      default:
-      case IASTCompositeTypeSpecifier.k_struct:
-        kind = "struct";
-        break;
-      case IASTCompositeTypeSpecifier.k_union:
-        kind = "union";
-        break;
-      case ICPPASTCompositeTypeSpecifier.k_class:
-        kind = "class";
-        break;
-    }
     RecordDeclaration recordDeclaration =
         NodeBuilder.newRecordDeclaration(
             lang.getScopeManager().getCurrentNamePrefixWithDelimiter() + ctx.getName().toString(),
-            kind,
+            getKindString(ctx.getKey()),
             ctx.getRawSignature());
     recordDeclaration.setSuperClasses(
         Arrays.stream(ctx.getBaseSpecifiers())

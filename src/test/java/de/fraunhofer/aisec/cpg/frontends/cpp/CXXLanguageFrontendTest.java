@@ -26,6 +26,7 @@
 
 package de.fraunhofer.aisec.cpg.frontends.cpp;
 
+import static de.fraunhofer.aisec.cpg.TestUtils.subnodesOfType;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -286,20 +287,26 @@ class CXXLanguageFrontendTest extends BaseTest {
     TranslationUnitDeclaration declaration =
         TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true);
 
-    // should be six function nodes
-    assertEquals(7, declaration.getDeclarations().size());
+    // should be 7 function nodes
+    var functions =
+        declaration.getDeclarations().stream()
+            .filter(node -> node instanceof FunctionDeclaration)
+            .map(node -> (FunctionDeclaration) node)
+            .collect(Collectors.toList());
 
-    FunctionDeclaration method = declaration.getDeclarationAs(0, FunctionDeclaration.class);
+    assertEquals(7, functions.size());
+
+    FunctionDeclaration method = functions.get(0);
     assertEquals("function0(int)void", method.getSignature());
 
-    method = declaration.getDeclarationAs(1, FunctionDeclaration.class);
+    method = functions.get(1);
     assertEquals("function1(int, std.string, SomeType*, AnotherType&)int", method.getSignature());
 
     List<String> args =
         method.getParameters().stream().map(Node::getName).collect(Collectors.toList());
     assertEquals(List.of("arg0", "arg1", "arg2", "arg3"), args);
 
-    method = declaration.getDeclarationAs(2, FunctionDeclaration.class);
+    method = functions.get(2);
     assertEquals("function0(int)void", method.getSignature());
 
     List<Statement> statements = ((CompoundStatement) method.getBody()).getStatements();
@@ -312,7 +319,7 @@ class CXXLanguageFrontendTest extends BaseTest {
     assertNotNull(statement);
     assertTrue(statement.isImplicit());
 
-    method = declaration.getDeclarationAs(3, FunctionDeclaration.class);
+    method = functions.get(3);
     assertEquals("function2()void*", method.getSignature());
 
     statements = ((CompoundStatement) method.getBody()).getStatements();
@@ -324,18 +331,33 @@ class CXXLanguageFrontendTest extends BaseTest {
     assertNotNull(statement);
     assertFalse(statement.isImplicit());
 
-    method = declaration.getDeclarationAs(4, FunctionDeclaration.class);
+    method = functions.get(4);
     assertNotNull(method);
     assertEquals("function3()UnknownType*", method.getSignature());
 
-    method = declaration.getDeclarationAs(5, FunctionDeclaration.class);
+    method = functions.get(5);
     assertNotNull(method);
     assertEquals("function4(int)void", method.getSignature());
 
-    method = declaration.getDeclarationAs(6, FunctionDeclaration.class);
+    method = functions.get(6);
     assertNotNull(method);
     assertEquals(0, method.getParameters().size());
     assertEquals("function5()void", method.getSignature());
+
+    // should contain one record declaration from the elaborated type specifier
+    var records =
+        declaration.getDeclarations().stream()
+            .filter(node -> node instanceof RecordDeclaration)
+            .map(node -> (RecordDeclaration) node)
+            .collect(Collectors.toList());
+
+    assertEquals(1, records.size());
+
+    var record = records.get(0);
+
+    assertNotNull(record);
+    assertEquals("UnknownType", record.getName());
+    assertEquals("struct", record.getKind());
   }
 
   @Test
@@ -1258,5 +1280,16 @@ class CXXLanguageFrontendTest extends BaseTest {
 
     // should contain 3 declarations (2 include and 1 function decl from the include)
     assertEquals(3, declarations.get(0).getDeclarations().size());
+  }
+
+  @Test
+  void testForwardDeclarations() throws Exception {
+    Path topLevel = Path.of("src", "test", "resources");
+    TranslationUnitDeclaration tu =
+        TestUtils.analyzeAndGetFirstTU(
+            List.of(topLevel.resolve("forward_decl.cpp").toFile()), topLevel, true);
+
+    var records = subnodesOfType(tu, RecordDeclaration.class);
+    assertNotNull(records);
   }
 }

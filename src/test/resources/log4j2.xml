@@ -1,0 +1,12 @@
+<Configuration status="ERROR">
+    <Appenders>
+        <Console name="CONSOLE" target="SYSTEM_OUT">
+            <PatternLayout   pattern="[%-5level] %d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %c{1} - %msg%n" />
+        </Console>
+    </Appenders>
+    <Loggers>
+        <logger level="DEBUG" additivity="false" name="de.fraunhofer.aisec">
+            <appender-ref ref="CONSOLE" />
+        </logger>
+    </Loggers>
+</Configuration>

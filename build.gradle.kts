@@ -127,16 +127,12 @@ tasks.named("compileJava") {
     dependsOn(":spotlessApply")
 }
 
-val compileKotlin: KotlinCompile by tasks
-compileKotlin.kotlinOptions {
-    jvmTarget = "11"
-    freeCompilerArgs = listOf("-Xopt-in=kotlin.RequiresOptIn")
-}
+tasks.withType<org.jetbrains.kotlin.gradle.dsl.KotlinJvmCompile> {
+    kotlinOptions {
+        jvmTarget = "11"
+        freeCompilerArgs = listOf("-Xopt-in=kotlin.RequiresOptIn", "-Xjvm-default=compatibility")
 
-val compileTestKotlin: KotlinCompile by tasks
-compileTestKotlin.kotlinOptions {
-    jvmTarget = "11"
-    freeCompilerArgs = listOf("-Xopt-in=kotlin.RequiresOptIn")
+    }
 }
 
 tasks.named("sonarqube") {

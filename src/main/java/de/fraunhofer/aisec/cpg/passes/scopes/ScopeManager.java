@@ -726,7 +726,7 @@ public class ScopeManager {
     }
 
     // no parent left
-    if (scope.getParent() == null) {
+    if (scope instanceof GlobalScope) {
       return null;
     }
 

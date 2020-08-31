@@ -116,6 +116,6 @@ public class NamespaceDeclaration extends Declaration implements DeclarationHold
 
   @Override
   public void addDeclaration(@NonNull Declaration declaration) {
-    addIfNotContains(this.declarations, declaration);
+    addIfNotContainsRaw(this.declarations, declaration);
   }
 }

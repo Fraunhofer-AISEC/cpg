@@ -26,8 +26,6 @@
 
 package de.fraunhofer.aisec.cpg.passes.scopes;
 
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration;
-
 public class GlobalScope extends StructureDeclarationScope {
 
   /**
