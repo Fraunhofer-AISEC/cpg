@@ -308,7 +308,7 @@ public class ExpressionHandler
       while (tester instanceof MemberExpression) {
         // we need to check if any base is only a static access, otherwise, this is a member access
         // to this base
-        tester = (de.fraunhofer.aisec.cpg.graph.Expression) ((MemberExpression) tester).getBase();
+        tester = ((MemberExpression) tester).getBase();
       }
       if (tester instanceof DeclaredReferenceExpression
           && ((DeclaredReferenceExpression) tester).isStaticAccess()) {
