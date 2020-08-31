@@ -89,15 +89,14 @@ class SuperCallTest extends BaseTest {
 
     assertTrue(fieldRef.getBase() instanceof DeclaredReferenceExpression);
     assertEquals(
-        Set.of(subClass.getThis()),
-        ((DeclaredReferenceExpression) fieldRef.getBase()).getRefersTo());
-    assertEquals(Set.of(field), fieldRef.getRefersTo());
+        subClass.getThis(), ((DeclaredReferenceExpression) fieldRef.getBase()).getRefersTo());
+    assertEquals(field, fieldRef.getRefersTo());
 
     assertTrue(superFieldRef.getBase() instanceof DeclaredReferenceExpression);
     assertEquals(
-        Set.of(superClass.getThis()),
+        superClass.getThis(),
         ((DeclaredReferenceExpression) superFieldRef.getBase()).getRefersTo());
-    assertEquals(Set.of(superField), superFieldRef.getRefersTo());
+    assertEquals(superField, superFieldRef.getRefersTo());
   }
 
   @Test

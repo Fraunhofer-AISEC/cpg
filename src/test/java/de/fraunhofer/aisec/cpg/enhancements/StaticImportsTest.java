@@ -63,7 +63,7 @@ class StaticImportsTest extends BaseTest {
     List<MemberExpression> memberExpressions =
         TestUtils.subnodesOfType(main, MemberExpression.class);
     MemberExpression usage = TestUtils.findByUniqueName(memberExpressions, "test");
-    assertEquals(Set.of(staticField), usage.getRefersTo());
+    assertEquals(staticField, usage.getRefersTo());
   }
 
   @Test
@@ -109,10 +109,10 @@ class StaticImportsTest extends BaseTest {
     List<MemberExpression> declaredReferences =
         TestUtils.subnodesOfType(main, MemberExpression.class);
     MemberExpression usage = TestUtils.findByUniqueName(declaredReferences, "staticField");
-    assertEquals(Set.of(staticField), usage.getRefersTo());
+    assertEquals(staticField, usage.getRefersTo());
 
     MemberExpression nonStatic = TestUtils.findByUniqueName(declaredReferences, "nonStaticField");
     assertNotEquals(Set.of(nonStaticField), nonStatic.getRefersTo());
-    assertTrue(nonStatic.getRefersTo().stream().allMatch(Node::isImplicit));
+    assertTrue(nonStatic.getRefersTo().isImplicit());
   }
 }

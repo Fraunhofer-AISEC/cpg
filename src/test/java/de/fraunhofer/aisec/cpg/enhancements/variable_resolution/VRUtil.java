@@ -53,7 +53,7 @@ public class VRUtil {
    * Asserts that {@code usingNode} uses/references the provided {@code usedBase} and {@code
    * usedMember}. If {@link VRUtil#ENFORCE_MEMBER_EXPRESSION} is true, {@code usingNode} must be a
    * {@link MemberExpression} where {@link MemberExpression#base} uses {@code usedBase} and {@link
-   * MemberExpression#member} uses {@code usedMember}. Using is checked as preformed per {@link
+   * MemberExpression#refersTo} uses {@code usedMember}. Using is checked as preformed per {@link
    * VRUtil#assertUsageOf(Node,Node)}
    *
    * @param usingNode - Node that uses some member
@@ -71,7 +71,7 @@ public class VRUtil {
       MemberExpression memberExpression = (MemberExpression) usingNode;
       Node base = memberExpression.getBase();
       assertUsageOf(base, usedBase);
-      assertSameOrContains(memberExpression.getRefersTo(), usedMember);
+      assertUsageOf(memberExpression.getRefersTo(), usedMember);
     }
   }
 }
