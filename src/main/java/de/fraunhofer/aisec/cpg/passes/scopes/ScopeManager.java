@@ -62,6 +62,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.regex.Pattern;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.slf4j.Logger;
@@ -550,9 +551,10 @@ public class ScopeManager {
     if (astNodeName == null || astNodeName.isEmpty()) {
       return currentScope;
     }
-    List<String> namePath = Arrays.asList(astNodeName.split(lang.getNamespaceDelimiter()));
+    List<String> namePath =
+        Arrays.asList(astNodeName.split(Pattern.quote(lang.getNamespaceDelimiter())));
     List<String> currentPath =
-        Arrays.asList(getCurrentNamePrefix().split(lang.getNamespaceDelimiter()));
+        Arrays.asList(getCurrentNamePrefix().split(Pattern.quote(lang.getNamespaceDelimiter())));
 
     // Last index because the inner name has preference
     int nameIndexInCurrent = currentPath.lastIndexOf(namePath.get(0));

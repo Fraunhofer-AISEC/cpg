@@ -218,7 +218,8 @@ public class VariableUsageResolver extends Pass {
           && recordMap.containsKey(recordDeclType)) {
         // Maybe we are referring to a field instead of a local var
         if (current.getName().contains(lang.getNamespaceDelimiter())) {
-          List<String> path = Arrays.asList(current.getName().split(lang.getNamespaceDelimiter()));
+          List<String> path =
+              Arrays.asList(current.getName().split(Pattern.quote(lang.getNamespaceDelimiter())));
           recordDeclType =
               TypeParser.createFrom(
                   String.join(lang.getNamespaceDelimiter(), path.subList(0, path.size() - 1)),
