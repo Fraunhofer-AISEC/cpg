@@ -26,6 +26,8 @@
 
 package de.fraunhofer.aisec.cpg.passes.scopes;
 
+import static de.fraunhofer.aisec.cpg.helpers.Util.errorWithFileLocation;
+
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
 import de.fraunhofer.aisec.cpg.graph.AssertStatement;
 import de.fraunhofer.aisec.cpg.graph.BreakStatement;
@@ -277,10 +279,17 @@ public class ScopeManager {
     Scope leaveScope = getFirstScopeThat(scope -> Objects.equals(scope.astNode, nodeToLeave));
     if (leaveScope == null) {
       if (scopeMap.containsKey(nodeToLeave)) {
-        LOGGER.error(
-            "Node of type {} has a scope but is not active in the moment.", nodeToLeave.getClass());
+        errorWithFileLocation(
+            nodeToLeave,
+            LOGGER,
+            "Node of type {} has a scope but is not active in the moment.",
+            nodeToLeave.getClass());
       } else {
-        LOGGER.error("Node of type {} is not associated with a scope.", nodeToLeave.getClass());
+        errorWithFileLocation(
+            nodeToLeave,
+            LOGGER,
+            "Node of type {} is not associated with a scope.",
+            nodeToLeave.getClass());
       }
       return null;
     }
@@ -426,7 +435,7 @@ public class ScopeManager {
     // check, if old node has a scope
     if (scope != null) {
       // update ast node
-      // scope.astNode = newNode;
+      scope.astNode = newNode;
       // update key
       scopeMap.remove(oldNode);
       scopeMap.put(newNode, scope);

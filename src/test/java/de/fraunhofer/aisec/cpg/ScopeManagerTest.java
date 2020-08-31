@@ -26,10 +26,19 @@
 
 package de.fraunhofer.aisec.cpg;
 
+import static de.fraunhofer.aisec.cpg.TestUtils.subnodesOfType;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertSame;
+
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
 import de.fraunhofer.aisec.cpg.frontends.TranslationException;
+import de.fraunhofer.aisec.cpg.frontends.cpp.CXXLanguageFrontend;
 import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguageFrontend;
+import de.fraunhofer.aisec.cpg.graph.ConstructorDeclaration;
+import de.fraunhofer.aisec.cpg.graph.MethodDeclaration;
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager;
+import java.io.File;
+import java.util.stream.Collectors;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -50,5 +59,38 @@ class ScopeManagerTest extends BaseTest {
 
     frontend.setScopeManager(new ScopeManager());
     assert (frontend == frontend.getScopeManager().getLang());
+  }
+
+  @Test
+  void testReplaceNode() throws TranslationException {
+    var scopeManager = new ScopeManager();
+    var frontend = new CXXLanguageFrontend(config, scopeManager);
+    var tu = frontend.parse(new File("src/test/resources/recordstmt.cpp"));
+
+    var methods =
+        subnodesOfType(tu.getDeclarations(), MethodDeclaration.class).stream()
+            .filter(m -> !(m instanceof ConstructorDeclaration))
+            .collect(Collectors.toList());
+    assertFalse(methods.isEmpty());
+
+    methods.forEach(
+        m -> {
+          var scope = scopeManager.getScopeOfStatment(m);
+          assertSame(m, scope.getAstNode());
+        });
+
+    var constructors = subnodesOfType(tu.getDeclarations(), ConstructorDeclaration.class);
+    assertFalse(constructors.isEmpty());
+
+    /*
+    make sure that the scope of the constructor actually has the constructor as an ast node.
+    this is necessary, since the constructor was probably created as a function declaration which
+    later gets 'upgraded' to a constructor declaration.
+    */
+    constructors.forEach(
+        c -> {
+          var scope = scopeManager.getScopeOfStatment(c);
+          assertSame(c, scope.getAstNode());
+        });
   }
 }
