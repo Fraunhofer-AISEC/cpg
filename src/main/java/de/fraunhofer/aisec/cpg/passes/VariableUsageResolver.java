@@ -37,7 +37,14 @@ import de.fraunhofer.aisec.cpg.graph.type.TypeParser;
 import de.fraunhofer.aisec.cpg.graph.type.UnknownType;
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.ScopedWalker;
 import de.fraunhofer.aisec.cpg.helpers.Util;
-import java.util.*;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -123,16 +130,19 @@ public class VariableUsageResolver extends Pass {
     }
   }
 
-  private Set<Declaration> resolveFunctionPtr(
+  private Optional<? extends ValueDeclaration> resolveFunctionPtr(
       Type containingClass, DeclaredReferenceExpression reference) {
     FunctionPointerType fptrType;
     if (reference.getType() instanceof FunctionPointerType) {
       fptrType = (FunctionPointerType) reference.getType();
     } else {
       log.error("Can't resolve a function pointer without a function pointer type!");
-      return Collections.emptySet();
+
+      return Optional.empty();
     }
+
     Optional<FunctionDeclaration> target = Optional.empty();
+
     String functionName = reference.getName();
     Matcher matcher =
         Pattern.compile("(?:(?<class>.*)(?:\\.|::))?(?<function>.*)").matcher(reference.getName());
@@ -167,23 +177,26 @@ public class VariableUsageResolver extends Pass {
       }
     }
 
-    Set<Declaration> targets = new HashSet<>();
-
     if (target.isPresent()) {
-      targets.add(target.get());
-      return targets;
+      return target;
     }
 
     if (containingClass == null) {
-      targets.add(handleUnknownMethod(functionName, reference.getType()));
+      target =
+          Optional.of(
+              handleUnknownMethod(
+                  functionName, fptrType.getReturnType(), fptrType.getParameters()));
     } else {
-      MethodDeclaration resolved =
-          handleUnknownClassMethod(containingClass, functionName, reference.getType());
-      if (resolved != null) {
-        targets.add(resolved);
-      }
+      target =
+          Optional.ofNullable(
+              handleUnknownClassMethod(
+                  containingClass,
+                  functionName,
+                  fptrType.getReturnType(),
+                  fptrType.getParameters()));
     }
-    return targets;
+
+    return target;
   }
 
   private void resolveLocalVarUsage(RecordDeclaration currentClass, Node parent, Node current) {
@@ -196,18 +209,11 @@ public class VariableUsageResolver extends Pass {
         // function pointer call
         return;
       }
-      Set<Declaration> refersTo =
-          walker
-              .getDeclarationForScope(
-                  parent,
-                  v -> !(v instanceof FunctionDeclaration) && v.getName().equals(ref.getName()))
-              .map(
-                  d -> {
-                    Set<Declaration> set = new HashSet<>();
-                    set.add(d);
-                    return set;
-                  })
-              .orElse(new HashSet<>());
+
+      var refersTo =
+          walker.getDeclarationForScope(
+              parent,
+              v -> !(v instanceof FunctionDeclaration) && v.getName().equals(ref.getName()));
 
       Type recordDeclType = null;
       if (currentClass != null) {
@@ -227,14 +233,12 @@ public class VariableUsageResolver extends Pass {
         ValueDeclaration field =
             resolveMember(recordDeclType, (DeclaredReferenceExpression) current);
         if (field != null) {
-          Set<Declaration> resolvedMember = new HashSet<>();
-          resolvedMember.add(field);
-          refersTo = resolvedMember;
+          refersTo = Optional.of(field);
         }
       }
 
-      if (!refersTo.isEmpty()) {
-        ref.setRefersTo(refersTo);
+      if (refersTo.isPresent()) {
+        ref.setRefersTo(refersTo.get());
       } else {
         warnWithFileLocation(current, log, "Did not find a declaration for {}", ref.getName());
       }
@@ -361,18 +365,24 @@ public class VariableUsageResolver extends Pass {
     }
   }
 
-  private MethodDeclaration handleUnknownClassMethod(Type base, String name, Type type) {
+  private MethodDeclaration handleUnknownClassMethod(
+      Type base, String name, Type returnType, List<Type> signature) {
     if (!recordMap.containsKey(base)) {
       return null;
     }
     RecordDeclaration containingRecord = recordMap.get(base);
     List<MethodDeclaration> declarations = containingRecord.getMethods();
     Optional<MethodDeclaration> target =
-        declarations.stream().filter(f -> f.getName().equals(name)).findFirst();
+        declarations.stream()
+            .filter(f -> f.getName().equals(name))
+            .filter(f -> f.getType().equals(returnType))
+            .filter(f -> f.hasSignature(signature))
+            .findFirst();
     if (target.isEmpty()) {
       MethodDeclaration declaration =
           NodeBuilder.newMethodDeclaration(name, "", false, containingRecord);
-      declaration.setType(type);
+      declaration.setType(returnType);
+      declaration.setParameters(Util.createParameters(signature));
       declarations.add(declaration);
       declaration.setImplicit(true);
       return declaration;
@@ -381,23 +391,21 @@ public class VariableUsageResolver extends Pass {
     }
   }
 
-  private FunctionDeclaration handleUnknownMethod(String name, Type type) {
+  private FunctionDeclaration handleUnknownMethod(
+      String name, Type returnType, List<Type> signature) {
     Optional<FunctionDeclaration> target =
         currTu.getDeclarations().stream()
             .filter(FunctionDeclaration.class::isInstance)
             .map(FunctionDeclaration.class::cast)
             .filter(f -> f.getName().equals(name))
-            .filter(f -> f.hasSignature(((FunctionPointerType) type).getParameters()))
+            .filter(f -> f.getType().equals(returnType))
+            .filter(f -> f.hasSignature(signature))
             .findFirst();
     if (target.isEmpty()) {
       FunctionDeclaration declaration = NodeBuilder.newFunctionDeclaration(name, "");
-      if (type instanceof FunctionPointerType) {
-        declaration.setType(((FunctionPointerType) type).getReturnType());
-        declaration.setParameters(
-            Util.createParameters(((FunctionPointerType) type).getParameters()));
-      } else {
-        declaration.setType(type);
-      }
+      declaration.setType(returnType);
+      declaration.setParameters(Util.createParameters(signature));
+
       currTu.add(declaration);
       declaration.setImplicit(true);
       return declaration;

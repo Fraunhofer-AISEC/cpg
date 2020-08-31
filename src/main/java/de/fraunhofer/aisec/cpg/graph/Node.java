@@ -241,6 +241,8 @@ public class Node extends IVisitable<Node> {
     this.argumentIndex = argumentIndex;
   }
 
+  /** @deprecated You should rather use {@link #isImplicit()} */
+  @Deprecated(forRemoval = true)
   public boolean isDummy() {
     return dummy;
   }

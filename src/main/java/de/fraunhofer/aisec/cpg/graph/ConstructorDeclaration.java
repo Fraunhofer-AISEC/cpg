@@ -27,6 +27,7 @@
 package de.fraunhofer.aisec.cpg.graph;
 
 import de.fraunhofer.aisec.cpg.graph.type.TypeParser;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
  * The declaration of a constructor within a {@link RecordDeclaration}. Is it essentially a special
@@ -47,11 +48,6 @@ public class ConstructorDeclaration extends MethodDeclaration {
         NodeBuilder.newConstructorDeclaration(
             methodDeclaration.getName(), methodDeclaration.getCode(), recordDeclaration);
 
-    if (recordDeclaration != null) {
-      // constructors always have implicitly the return type of their class
-      c.setType(TypeParser.createFrom(recordDeclaration.getName(), true));
-    }
-
     c.setBody(methodDeclaration.getBody());
     c.setLocation(methodDeclaration.getLocation());
     c.setParameters(methodDeclaration.getParameters());
@@ -65,5 +61,14 @@ public class ConstructorDeclaration extends MethodDeclaration {
     }
 
     return c;
+  }
+
+  @Override
+  public void setRecordDeclaration(@Nullable RecordDeclaration recordDeclaration) {
+    super.setRecordDeclaration(recordDeclaration);
+    if (recordDeclaration != null) {
+      // constructors always have implicitly the return type of their class
+      setType(TypeParser.createFrom(recordDeclaration.getName(), true));
+    }
   }
 }

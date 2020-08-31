@@ -28,11 +28,7 @@ package de.fraunhofer.aisec.cpg.graph;
 
 import de.fraunhofer.aisec.cpg.graph.type.Type;
 import de.fraunhofer.aisec.cpg.graph.type.UnknownType;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -226,7 +222,11 @@ public class FunctionDeclaration extends ValueDeclaration {
     return new ToStringBuilder(this, Node.TO_STRING_STYLE)
         .appendSuper(super.toString())
         .append("type", type)
-        .append("parameters", parameters.stream().map(ParamVariableDeclaration::getName))
+        .append(
+            "parameters",
+            parameters.stream()
+                .map(ParamVariableDeclaration::getName)
+                .collect(Collectors.joining(", ")))
         .toString();
   }
 

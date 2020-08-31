@@ -32,8 +32,8 @@ import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
 import org.apache.commons.lang3.builder.ToStringBuilder;
-import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
+import org.neo4j.ogm.annotation.Relationship;
 
 /**
  * An expression, which refers to something which is declared, e.g. a variable. For example, the
@@ -43,8 +43,10 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  */
 public class DeclaredReferenceExpression extends Expression implements TypeListener {
 
-  /** The {@link ValueDeclaration}s this expression might refer to. */
-  private Set<Declaration> refersTo = new HashSet<>();
+  /** The {@link Declaration}s this expression might refer to. */
+  @Relationship(value = "REFERS_TO")
+  @Nullable
+  private Declaration refersTo;
 
   /**
    * Is this reference used for writing data instead of just reading it? Determines dataflow
@@ -62,8 +64,24 @@ public class DeclaredReferenceExpression extends Expression implements TypeListe
     this.staticAccess = staticAccess;
   }
 
-  public Set<Declaration> getRefersTo() {
-    return refersTo;
+  public @Nullable Declaration getRefersTo() {
+    return this.refersTo;
+  }
+
+  /**
+   * Returns the contents of {@link #refersTo} as the specified class, if the class is assignable.
+   * Otherwise, it will return null.
+   *
+   * @param clazz the expected class
+   * @param <T> the type
+   * @return the declaration cast to the expected class, or null if the class is not assignable
+   */
+  public @Nullable <T extends VariableDeclaration> T getRefersToAs(Class<T> clazz) {
+    if (this.refersTo == null) {
+      return null;
+    }
+
+    return clazz.isAssignableFrom(this.refersTo.getClass()) ? clazz.cast(this.refersTo) : null;
   }
 
   public AccessValues getAccess() {
@@ -74,52 +92,45 @@ public class DeclaredReferenceExpression extends Expression implements TypeListe
     if (refersTo == null) {
       return;
     }
-    HashSet<Declaration> n = new HashSet<>();
-    n.add(refersTo);
-    setRefersTo(n);
-  }
+    var current = this.refersTo;
 
-  public void setRefersTo(@NonNull Set<Declaration> refersTo) {
-    this.refersTo.stream()
-        .filter(ValueDeclaration.class::isInstance)
-        .map(ValueDeclaration.class::cast)
-        .forEach(
-            r -> {
-              if (access == AccessValues.WRITE) {
-                this.removeNextDFG(r);
-              } else if (access == AccessValues.READ) {
-                this.removePrevDFG(r);
-              } else {
-                this.removeNextDFG(r);
-                this.removePrevDFG(r);
-              }
-              r.unregisterTypeListener(this);
-              if (r instanceof TypeListener) {
-                this.unregisterTypeListener((TypeListener) r);
-              }
-            });
+    // unregister type listeners for current declaration
+    if (current != null) {
+      if (access == AccessValues.WRITE) {
+        this.removeNextDFG(current);
+      } else if (access == AccessValues.READ) {
+        this.removePrevDFG(current);
+      } else {
+        this.removeNextDFG(current);
+        this.removePrevDFG(current);
+      }
 
-    this.refersTo.clear();
-    this.refersTo.addAll(refersTo);
+      if (current instanceof ValueDeclaration) {
+        ((ValueDeclaration) current).unregisterTypeListener(this);
+      }
+      if (current instanceof TypeListener) {
+        this.unregisterTypeListener((TypeListener) current);
+      }
+    }
 
-    refersTo.stream()
-        .filter(ValueDeclaration.class::isInstance)
-        .map(ValueDeclaration.class::cast)
-        .forEach(
-            r -> {
-              if (access == AccessValues.WRITE) {
-                this.addNextDFG(r);
-              } else if (access == AccessValues.READ) {
-                this.addPrevDFG(r);
-              } else {
-                this.addNextDFG(r);
-                this.addPrevDFG(r);
-              }
-              r.registerTypeListener(this);
-              if (r instanceof TypeListener) {
-                this.registerTypeListener((TypeListener) r);
-              }
-            });
+    // set it
+    this.refersTo = refersTo;
+
+    // update type listeners
+    if (access == AccessValues.WRITE) {
+      this.addNextDFG(this.refersTo);
+    } else if (access == AccessValues.READ) {
+      this.addPrevDFG(this.refersTo);
+    } else {
+      this.addNextDFG(this.refersTo);
+      this.addPrevDFG(this.refersTo);
+    }
+    if (this.refersTo instanceof ValueDeclaration) {
+      ((ValueDeclaration) this.refersTo).registerTypeListener(this);
+    }
+    if (this.refersTo instanceof TypeListener) {
+      this.registerTypeListener((TypeListener) this.refersTo);
+    }
   }
 
   @Override
@@ -149,30 +160,34 @@ public class DeclaredReferenceExpression extends Expression implements TypeListe
   }
 
   public void setAccess(AccessValues access) {
-    this.refersTo.forEach(
-        r -> {
-          if (this.access == AccessValues.WRITE) {
-            this.removeNextDFG(r);
-          } else if (this.access == AccessValues.READ) {
-            this.removePrevDFG(r);
-          } else {
-            this.removeNextDFG(r);
-            this.removePrevDFG(r);
-          }
-        });
+    var current = this.refersTo;
 
+    // remove DFG for the current reference
+    if (current != null) {
+      if (this.access == AccessValues.WRITE) {
+        this.removeNextDFG(current);
+      } else if (this.access == AccessValues.READ) {
+        this.removePrevDFG(current);
+      } else {
+        this.removeNextDFG(current);
+        this.removePrevDFG(current);
+      }
+    }
+
+    // set the access
     this.access = access;
-    refersTo.forEach(
-        r -> {
-          if (this.access == AccessValues.WRITE) {
-            this.addNextDFG(r);
-          } else if (this.access == AccessValues.READ) {
-            this.addPrevDFG(r);
-          } else {
-            this.addNextDFG(r);
-            this.addPrevDFG(r);
-          }
-        });
+
+    // update the DFG again
+    if (current != null) {
+      if (this.access == AccessValues.WRITE) {
+        this.addNextDFG(current);
+      } else if (this.access == AccessValues.READ) {
+        this.addPrevDFG(current);
+      } else {
+        this.addNextDFG(current);
+        this.addPrevDFG(current);
+      }
+    }
   }
 
   @Override
