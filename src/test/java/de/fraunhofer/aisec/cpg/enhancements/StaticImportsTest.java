@@ -33,7 +33,6 @@ import de.fraunhofer.aisec.cpg.TestUtils;
 import de.fraunhofer.aisec.cpg.graph.*;
 import java.nio.file.Path;
 import java.util.List;
-import java.util.Set;
 import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
 
@@ -112,7 +111,7 @@ class StaticImportsTest extends BaseTest {
     assertEquals(staticField, usage.getRefersTo());
 
     MemberExpression nonStatic = TestUtils.findByUniqueName(declaredReferences, "nonStaticField");
-    assertNotEquals(Set.of(nonStaticField), nonStatic.getRefersTo());
+    assertNotEquals(nonStaticField, nonStatic.getRefersTo());
     assertTrue(nonStatic.getRefersTo().isImplicit());
   }
 }
