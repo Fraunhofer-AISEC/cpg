@@ -37,7 +37,12 @@ import de.fraunhofer.aisec.cpg.graph.type.TypeParser;
 import de.fraunhofer.aisec.cpg.graph.type.UnknownType;
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.ScopedWalker;
 import de.fraunhofer.aisec.cpg.helpers.Util;
-import java.util.*;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -123,16 +128,19 @@ public class VariableUsageResolver extends Pass {
     }
   }
 
-  private Set<ValueDeclaration> resolveFunctionPtr(
+  private Optional<? extends ValueDeclaration> resolveFunctionPtr(
       Type containingClass, DeclaredReferenceExpression reference) {
     FunctionPointerType fptrType;
     if (reference.getType() instanceof FunctionPointerType) {
       fptrType = (FunctionPointerType) reference.getType();
     } else {
       log.error("Can't resolve a function pointer without a function pointer type!");
-      return Collections.emptySet();
+
+      return Optional.empty();
     }
+
     Optional<FunctionDeclaration> target = Optional.empty();
+
     String functionName = reference.getName();
     Matcher matcher =
         Pattern.compile("(?:(?<class>.*)(?:\\.|::))?(?<function>.*)").matcher(reference.getName());
@@ -167,29 +175,30 @@ public class VariableUsageResolver extends Pass {
       }
     }
 
-    Set<ValueDeclaration> targets = new HashSet<>();
-
     if (target.isPresent()) {
-      targets.add(target.get());
-      return targets;
+      return target;
     }
 
     if (containingClass == null) {
-      targets.add(
-          handleUnknownMethod(functionName, fptrType.getReturnType(), fptrType.getParameters()));
+      target =
+          Optional.of(
+              handleUnknownMethod(
+                  functionName, fptrType.getReturnType(), fptrType.getParameters()));
     } else {
-      MethodDeclaration resolved =
-          handleUnknownClassMethod(
-              containingClass, functionName, fptrType.getReturnType(), fptrType.getParameters());
-      if (resolved != null) {
-        targets.add(resolved);
-      }
+      target =
+          Optional.ofNullable(
+              handleUnknownClassMethod(
+                  containingClass,
+                  functionName,
+                  fptrType.getReturnType(),
+                  fptrType.getParameters()));
     }
-    return targets;
+
+    return target;
   }
 
   private void resolveLocalVarUsage(RecordDeclaration currentClass, Node parent, Node current) {
-    if (current instanceof DeclaredReferenceExpression) {
+    if (current instanceof DeclaredReferenceExpression && !(current instanceof MemberExpression)) {
       DeclaredReferenceExpression ref = (DeclaredReferenceExpression) current;
       if (parent instanceof MemberCallExpression
           && current == ((MemberCallExpression) parent).getMember()
@@ -198,18 +207,11 @@ public class VariableUsageResolver extends Pass {
         // function pointer call
         return;
       }
-      Set<ValueDeclaration> refersTo =
-          walker
-              .getDeclarationForScope(
-                  parent,
-                  v -> !(v instanceof FunctionDeclaration) && v.getName().equals(ref.getName()))
-              .map(
-                  d -> {
-                    Set<ValueDeclaration> set = new HashSet<>();
-                    set.add(d);
-                    return set;
-                  })
-              .orElse(new HashSet<>());
+
+      var refersTo =
+          walker.getDeclarationForScope(
+              parent,
+              v -> !(v instanceof FunctionDeclaration) && v.getName().equals(ref.getName()));
 
       Type recordDeclType = null;
       if (currentClass != null) {
@@ -222,21 +224,19 @@ public class VariableUsageResolver extends Pass {
 
       // only add new nodes for non-static unknown
       if (refersTo.isEmpty()
-          && !(current instanceof StaticReferenceExpression)
+          && !(((DeclaredReferenceExpression) current).isStaticAccess())
           && recordDeclType != null
           && recordMap.containsKey(recordDeclType)) {
         // Maybe we are referring to a field instead of a local var
         ValueDeclaration field =
             resolveMember(recordDeclType, (DeclaredReferenceExpression) current);
         if (field != null) {
-          Set<ValueDeclaration> resolvedMember = new HashSet<>();
-          resolvedMember.add(field);
-          refersTo = resolvedMember;
+          refersTo = Optional.of(field);
         }
       }
 
-      if (!refersTo.isEmpty()) {
-        ref.setRefersTo(refersTo);
+      if (refersTo.isPresent()) {
+        ref.setRefersTo(refersTo.get());
       } else {
         warnWithFileLocation(current, log, "Did not find a declaration for {}", ref.getName());
       }
@@ -246,65 +246,41 @@ public class VariableUsageResolver extends Pass {
   private void resolveFieldUsages(Node current, RecordDeclaration curClass) {
     if (current instanceof MemberExpression) {
       MemberExpression memberExpression = (MemberExpression) current;
-      Node base = memberExpression.getBase();
-      Node member = memberExpression.getMember();
-      if (base instanceof DeclaredReferenceExpression) {
+      Declaration baseTarget = null;
+      if (memberExpression.getBase() instanceof DeclaredReferenceExpression) {
+        DeclaredReferenceExpression base = (DeclaredReferenceExpression) memberExpression.getBase();
         if (lang instanceof JavaLanguageFrontend && base.getName().equals("super")) {
           if (curClass != null && !curClass.getSuperClasses().isEmpty()) {
-            base = recordMap.get(curClass.getSuperClasses().get(0)).getThis();
+            baseTarget = recordMap.get(curClass.getSuperClasses().get(0)).getThis();
+            base.setRefersTo(baseTarget);
           } else {
             // no explicit super type -> java.lang.Object
             Type objectType = TypeParser.createFrom(Object.class.getName(), true);
-            base = handleUnknownField(objectType, "this", objectType);
+            base.setType(objectType);
           }
         } else {
-          base = resolveBase((DeclaredReferenceExpression) memberExpression.getBase());
+          baseTarget = resolveBase((DeclaredReferenceExpression) memberExpression.getBase());
+          base.setRefersTo(baseTarget);
         }
-      }
-      if (member instanceof DeclaredReferenceExpression) {
-        if (base instanceof EnumDeclaration) {
-          String name = member.getName();
-          member =
-              ((EnumDeclaration) base)
-                  .getEntries().stream()
-                      .filter(e -> e.getName().equals(name))
-                      .findFirst()
-                      .orElse(null);
-        } else {
-          Type baseType = UnknownType.getUnknownType();
-          if (base instanceof HasType) {
-            baseType = ((HasType) base).getType();
+
+        if (baseTarget instanceof EnumDeclaration) {
+          String name = memberExpression.getName();
+          Optional<EnumConstantDeclaration> memberTarget =
+              ((EnumDeclaration) baseTarget)
+                  .getEntries().stream().filter(e -> e.getName().equals(name)).findFirst();
+          if (memberTarget.isPresent()) {
+            memberExpression.setRefersTo(memberTarget.get());
+            return;
           }
-          if (base instanceof RecordDeclaration) {
-            baseType = TypeParser.createFrom(base.getName(), true);
-          }
-          member =
-              base == null
-                  ? null
-                  : resolveMember(
-                      baseType, (DeclaredReferenceExpression) memberExpression.getMember());
-          if (member != null) {
-            HasType typedMember = (HasType) member;
-            typedMember.setType(memberExpression.getType());
-            Set<Type> subTypes = new HashSet<>(typedMember.getPossibleSubTypes());
-            subTypes.addAll(memberExpression.getPossibleSubTypes());
-            typedMember.setPossibleSubTypes(subTypes);
-          }
+        } else if (baseTarget instanceof RecordDeclaration) {
+          memberExpression.setRefersTo(
+              resolveMember(TypeParser.createFrom(baseTarget.getName(), true), memberExpression));
+          return;
         }
       }
 
-      if (base != null && member != null) {
-        if (base != memberExpression.getBase()) {
-          memberExpression.getBase().disconnectFromGraph();
-        }
-        if (member != memberExpression.getMember()) {
-          memberExpression.getMember().disconnectFromGraph();
-        }
-        memberExpression.setBase(base);
-        memberExpression.setMember(member);
-      } else {
-        log.warn("Unexpected: null base or member in field usage: {}", current);
-      }
+      memberExpression.setRefersTo(
+          resolveMember(memberExpression.getBase().getType(), memberExpression));
     }
   }
 
@@ -316,7 +292,7 @@ public class VariableUsageResolver extends Pass {
 
     if (recordMap.containsKey(reference.getType())) {
       RecordDeclaration recordDeclaration = recordMap.get(reference.getType());
-      if (reference instanceof StaticReferenceExpression) {
+      if (reference.isStaticAccess()) {
         return recordDeclaration;
       } else {
         // check if we have this type as a class in our graph. If so, we can refer to its "this"

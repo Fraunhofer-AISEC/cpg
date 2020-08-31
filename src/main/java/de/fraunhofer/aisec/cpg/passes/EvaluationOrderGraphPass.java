@@ -319,16 +319,7 @@ public class EvaluationOrderGraphPass extends Pass {
 
   private void handleMemberExpression(@NonNull Node node) {
     MemberExpression memberExpression = (MemberExpression) node;
-    // analyze the base
-    if (memberExpression.getBase() instanceof Statement) {
-      createEOG(memberExpression.getBase());
-    }
-
-    // analyze the member
-    if (memberExpression.getMember() instanceof Statement) {
-      createEOG(memberExpression.getMember());
-    }
-
+    createEOG(memberExpression.getBase());
     pushToEOG(memberExpression);
   }
 
