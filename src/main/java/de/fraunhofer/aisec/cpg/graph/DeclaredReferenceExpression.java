@@ -32,7 +32,6 @@ import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
 import org.apache.commons.lang3.builder.ToStringBuilder;
-import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.neo4j.ogm.annotation.Relationship;
 
@@ -46,7 +45,8 @@ public class DeclaredReferenceExpression extends Expression implements TypeListe
 
   /** The {@link Declaration}s this expression might refer to. */
   @Relationship(value = "REFERS_TO")
-  @Nullable private ValueDeclaration refersTo;
+  @Nullable
+  private Declaration refersTo;
 
   /**
    * Is this reference used for writing data instead of just reading it? Determines dataflow
@@ -54,7 +54,17 @@ public class DeclaredReferenceExpression extends Expression implements TypeListe
    */
   private AccessValues access = AccessValues.READ;
 
-  public @Nullable ValueDeclaration getRefersTo() {
+  private boolean staticAccess = false;
+
+  public boolean isStaticAccess() {
+    return staticAccess;
+  }
+
+  public void setStaticAccess(boolean staticAccess) {
+    this.staticAccess = staticAccess;
+  }
+
+  public @Nullable Declaration getRefersTo() {
     return this.refersTo;
   }
 
@@ -78,7 +88,10 @@ public class DeclaredReferenceExpression extends Expression implements TypeListe
     return access;
   }
 
-  public void setRefersTo(@NonNull ValueDeclaration refersTo) {
+  public void setRefersTo(@Nullable Declaration refersTo) {
+    if (refersTo == null) {
+      return;
+    }
     var current = this.refersTo;
 
     // unregister type listeners for current declaration
@@ -92,7 +105,9 @@ public class DeclaredReferenceExpression extends Expression implements TypeListe
         this.removePrevDFG(current);
       }
 
-      current.unregisterTypeListener(this);
+      if (current instanceof ValueDeclaration) {
+        ((ValueDeclaration) current).unregisterTypeListener(this);
+      }
       if (current instanceof TypeListener) {
         this.unregisterTypeListener((TypeListener) current);
       }
@@ -110,7 +125,9 @@ public class DeclaredReferenceExpression extends Expression implements TypeListe
       this.addNextDFG(this.refersTo);
       this.addPrevDFG(this.refersTo);
     }
-    this.refersTo.registerTypeListener(this);
+    if (this.refersTo instanceof ValueDeclaration) {
+      ((ValueDeclaration) this.refersTo).registerTypeListener(this);
+    }
     if (this.refersTo instanceof TypeListener) {
       this.registerTypeListener((TypeListener) this.refersTo);
     }
