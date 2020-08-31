@@ -42,7 +42,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /** The base class for all graph objects that are going to be persisted in the database. */
-public class Node extends IVisitable<Node> {
+public class Node implements IVisitable<Node> {
 
   public static final ToStringStyle TO_STRING_STYLE = ToStringStyle.SHORT_PREFIX_STYLE;
   protected static final Logger log = LoggerFactory.getLogger(Node.class);
