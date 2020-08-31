@@ -73,15 +73,15 @@ class VariableResolverTest extends BaseTest {
         TestUtils.subnodesOfType(getLocal, VariableDeclaration.class).get(0);
     DeclaredReferenceExpression returnValue =
         (DeclaredReferenceExpression) returnStatement.getReturnValue();
-    assertNotEquals(Set.of(field), returnValue.getRefersTo());
-    assertEquals(Set.of(local), returnValue.getRefersTo());
+    assertNotEquals(field, returnValue.getRefersTo());
+    assertEquals(local, returnValue.getRefersTo());
 
     MethodDeclaration getShadow = TestUtils.findByUniqueName(methods, "getShadow");
     returnStatement = TestUtils.subnodesOfType(getShadow, ReturnStatement.class).get(0);
     local = TestUtils.subnodesOfType(getShadow, VariableDeclaration.class).get(0);
     returnValue = (DeclaredReferenceExpression) returnStatement.getReturnValue();
-    assertNotEquals(Set.of(field), returnValue.getRefersTo());
-    assertEquals(Set.of(local), returnValue.getRefersTo());
+    assertNotEquals(field, returnValue.getRefersTo());
+    assertEquals(local, returnValue.getRefersTo());
   }
 
   @Test
