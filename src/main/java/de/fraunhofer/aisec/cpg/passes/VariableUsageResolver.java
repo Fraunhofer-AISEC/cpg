@@ -274,8 +274,18 @@ public class VariableUsageResolver extends Pass {
             return;
           }
         } else if (baseTarget instanceof RecordDeclaration) {
-          memberExpression.setRefersTo(
-              resolveMember(TypeParser.createFrom(baseTarget.getName(), true), memberExpression));
+          Type baseType = TypeParser.createFrom(baseTarget.getName(), true);
+          if (!recordMap.containsKey(baseType)) {
+            final Type containingT = baseType;
+            Optional<Type> fqnResolvedType =
+                recordMap.keySet().stream()
+                    .filter(t -> t.getName().endsWith("." + containingT.getName()))
+                    .findFirst();
+            if (fqnResolvedType.isPresent()) {
+              baseType = fqnResolvedType.get();
+            }
+          }
+          memberExpression.setRefersTo(resolveMember(baseType, memberExpression));
           return;
         }
       }

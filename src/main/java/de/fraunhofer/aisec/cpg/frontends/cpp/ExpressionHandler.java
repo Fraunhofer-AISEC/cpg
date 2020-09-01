@@ -33,7 +33,6 @@ import de.fraunhofer.aisec.cpg.frontends.Handler;
 import de.fraunhofer.aisec.cpg.graph.*;
 import de.fraunhofer.aisec.cpg.graph.type.*;
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation;
-import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation;
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
