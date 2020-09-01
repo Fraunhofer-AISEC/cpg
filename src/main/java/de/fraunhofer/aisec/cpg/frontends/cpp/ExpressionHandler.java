@@ -33,17 +33,13 @@ import de.fraunhofer.aisec.cpg.frontends.Handler;
 import de.fraunhofer.aisec.cpg.graph.*;
 import de.fraunhofer.aisec.cpg.graph.type.*;
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation;
+import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation;
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import org.eclipse.cdt.core.dom.ast.*;
 import org.eclipse.cdt.core.dom.ast.IBasicType.Kind;
-import org.eclipse.cdt.core.dom.ast.IBinding;
-import org.eclipse.cdt.core.dom.ast.IProblemType;
-import org.eclipse.cdt.core.dom.ast.IQualifierType;
-import org.eclipse.cdt.core.dom.ast.IType;
-import org.eclipse.cdt.core.dom.ast.IValue;
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTDesignator;
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTExpression;
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTInitializerClause;
@@ -303,15 +299,13 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
               base.getCode());
       base.setLocation(location);
     }
-    // TODO: this should actually be the MemberDeclaration of the defined record
-    // for now we just create a reference declaration
-    String identifierName = ctx.getFieldName().toString();
-    DeclaredReferenceExpression member =
-        NodeBuilder.newDeclaredReferenceExpression(
-            identifierName, UnknownType.getUnknownType(), ctx.getFieldName().getRawSignature());
 
     MemberExpression memberExpression =
-        NodeBuilder.newMemberExpression(base, member, ctx.getRawSignature());
+        NodeBuilder.newMemberExpression(
+            base,
+            UnknownType.getUnknownType(),
+            ctx.getFieldName().toString(),
+            ctx.getRawSignature());
 
     this.lang.expressionRefersToDeclaration(memberExpression, ctx);
 
@@ -401,16 +395,19 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
     if (reference instanceof MemberExpression) {
       String baseTypename;
       // Pointer types contain * or []. We do not want that here.
-      Type baseType = ((Expression) ((MemberExpression) reference).getBase()).getType().getRoot();
+      Type baseType = ((MemberExpression) reference).getBase().getType().getRoot();
       assert !(baseType instanceof SecondOrderType);
       baseTypename = baseType.getTypeName();
+      DeclaredReferenceExpression member =
+          NodeBuilder.newDeclaredReferenceExpression(
+              reference.getName(), UnknownType.getUnknownType(), reference.getName());
 
       callExpression =
           NodeBuilder.newMemberCallExpression(
-              ((MemberExpression) reference).getMember().getName(),
-              baseTypename + "." + ((MemberExpression) reference).getMember().getName(),
+              member.getName(),
+              baseTypename + "." + member.getName(),
               ((MemberExpression) reference).getBase(),
-              ((MemberExpression) reference).getMember(),
+              member,
               ctx.getRawSignature());
     } else if (reference instanceof BinaryOperator
         && ((BinaryOperator) reference).getOperatorCode().equals(".")) {

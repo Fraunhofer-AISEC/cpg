@@ -44,7 +44,6 @@ import java.math.BigInteger;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Objects;
-import java.util.Set;
 import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
 
@@ -132,8 +131,7 @@ class JavaLanguageFrontendTest extends BaseTest {
     assertNotNull(forEachStatement);
 
     // should loop over ls
-    assertEquals(
-        Set.of(ls), ((DeclaredReferenceExpression) forEachStatement.getIterable()).getRefersTo());
+    assertEquals(ls, ((DeclaredReferenceExpression) forEachStatement.getIterable()).getRefersTo());
 
     // should declare String s
     VariableDeclaration s = (VariableDeclaration) forEachStatement.getVariable();
@@ -385,7 +383,7 @@ class JavaLanguageFrontendTest extends BaseTest {
     // expression itself should be a reference
     DeclaredReferenceExpression ref = (DeclaredReferenceExpression) cast.getExpression();
     assertNotNull(ref);
-    assertEquals(Set.of(e), ref.getRefersTo());
+    assertEquals(e, ref.getRefersTo());
   }
 
   @Test
@@ -434,7 +432,7 @@ class JavaLanguageFrontendTest extends BaseTest {
     // initializer is array subscription
     ArraySubscriptionExpression ase = (ArraySubscriptionExpression) b.getInitializer();
     assertNotNull(ase);
-    assertEquals(Set.of(a), ((DeclaredReferenceExpression) ase.getArrayExpression()).getRefersTo());
+    assertEquals(a, ((DeclaredReferenceExpression) ase.getArrayExpression()).getRefersTo());
     assertEquals(0, ((Literal<Integer>) ase.getSubscriptExpression()).getValue().intValue());
   }
 
@@ -466,7 +464,7 @@ class JavaLanguageFrontendTest extends BaseTest {
     MemberExpression length = (MemberExpression) l.getInitializer();
 
     assertNotNull(length);
-    assertEquals("length", length.getMember().getName());
+    assertEquals("length", length.getName());
     assertEquals("int", length.getType().getTypeName());
   }
 

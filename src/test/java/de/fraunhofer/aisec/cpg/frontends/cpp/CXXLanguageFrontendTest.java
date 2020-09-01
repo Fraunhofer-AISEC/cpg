@@ -117,8 +117,7 @@ class CXXLanguageFrontendTest extends BaseTest {
     assertNotNull(forEachStatement);
 
     // should loop over ls
-    assertEquals(
-        Set.of(ls), ((DeclaredReferenceExpression) forEachStatement.getIterable()).getRefersTo());
+    assertEquals(ls, ((DeclaredReferenceExpression) forEachStatement.getIterable()).getRefersTo());
 
     // should declare auto i (so far no concrete type inferrable)
     VariableDeclaration i = (VariableDeclaration) forEachStatement.getVariable();
@@ -277,7 +276,7 @@ class CXXLanguageFrontendTest extends BaseTest {
         (ArraySubscriptionExpression) statement.getStatements().get(1);
     assertNotNull(ase);
 
-    assertEquals(Set.of(x), ((DeclaredReferenceExpression) ase.getArrayExpression()).getRefersTo());
+    assertEquals(x, ((DeclaredReferenceExpression) ase.getArrayExpression()).getRefersTo());
     assertEquals(0, ((Literal<Integer>) ase.getSubscriptExpression()).getValue().intValue());
   }
 
@@ -288,7 +287,7 @@ class CXXLanguageFrontendTest extends BaseTest {
         TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true);
 
     // should be six function nodes
-    assertEquals(6, declaration.getDeclarations().size());
+    assertEquals(7, declaration.getDeclarations().size());
 
     FunctionDeclaration method = declaration.getDeclarationAs(0, FunctionDeclaration.class);
     assertEquals("function0(int)void", method.getSignature());
@@ -326,10 +325,17 @@ class CXXLanguageFrontendTest extends BaseTest {
     assertFalse(statement.isImplicit());
 
     method = declaration.getDeclarationAs(4, FunctionDeclaration.class);
+    assertNotNull(method);
     assertEquals("function3()UnknownType*", method.getSignature());
 
     method = declaration.getDeclarationAs(5, FunctionDeclaration.class);
+    assertNotNull(method);
     assertEquals("function4(int)void", method.getSignature());
+
+    method = declaration.getDeclarationAs(6, FunctionDeclaration.class);
+    assertNotNull(method);
+    assertEquals(0, method.getParameters().size());
+    assertEquals("function5()void", method.getSignature());
   }
 
   @Test
@@ -595,7 +601,7 @@ class CXXLanguageFrontendTest extends BaseTest {
 
   private void assertRefersTo(Expression expression, Declaration b) {
     if (expression instanceof DeclaredReferenceExpression) {
-      assertEquals(Set.of(b), ((DeclaredReferenceExpression) expression).getRefersTo());
+      assertEquals(b, ((DeclaredReferenceExpression) expression).getRefersTo());
     } else {
       fail();
     }

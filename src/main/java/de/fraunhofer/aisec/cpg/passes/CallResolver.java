@@ -285,6 +285,10 @@ public class CallResolver extends Pass {
               .filter(
                   f -> f.getName().equals(call.getName()) && f.hasSignature(call.getSignature()))
               .collect(Collectors.toList());
+      if (invocationCandidates.isEmpty()) {
+        invocationCandidates =
+            List.of(createDummy(null, call.getName(), call.getCode(), false, call.getSignature()));
+      }
 
       call.setInvokes(invocationCandidates);
     } else if (!handlePossibleStaticImport(call, curClass)) {
@@ -295,12 +299,23 @@ public class CallResolver extends Pass {
   private void handleMethodCall(RecordDeclaration curClass, CallExpression call) {
     Set<Type> possibleContainingTypes = getPossibleContainingTypes(call, curClass);
 
-    // Find invokes by type
+    // Find overridden invokes
     List<FunctionDeclaration> invocationCandidates =
         call.getInvokes().stream()
             .map(f -> getOverridingCandidates(possibleContainingTypes, f))
             .flatMap(Collection::stream)
             .collect(Collectors.toList());
+
+    // Find function targets
+    if (invocationCandidates.isEmpty() && currentTU != null) {
+      invocationCandidates =
+          currentTU.getDeclarations().stream()
+              .filter(FunctionDeclaration.class::isInstance)
+              .map(FunctionDeclaration.class::cast)
+              .filter(
+                  f -> f.getName().equals(call.getName()) && f.hasSignature(call.getSignature()))
+              .collect(Collectors.toList());
+    }
 
     // Find invokes by supertypes
     if (invocationCandidates.isEmpty()) {
@@ -321,6 +336,14 @@ public class CallResolver extends Pass {
         && !(call instanceof MemberCallExpression || call instanceof StaticCallExpression)) {
       call.setBase(curClass.getThis());
     }
+
+    if (invocationCandidates.isEmpty()) {
+      possibleContainingTypes.stream()
+          .map(t -> recordMap.get(t.getTypeName()))
+          .filter(Objects::nonNull)
+          .map(r -> createDummy(r, call.getName(), call.getCode(), false, call.getSignature()))
+          .forEach(invocationCandidates::add);
+    }
     call.setInvokes(invocationCandidates);
   }
 
@@ -332,56 +355,40 @@ public class CallResolver extends Pass {
 
     if (record != null && record.getCode() != null && !record.getCode().isEmpty()) {
       ConstructorDeclaration constructor = getConstructorDeclaration(signature, record);
-      if (constructor != null) {
-        constructExpression.setConstructor(constructor);
-      } else {
-        LOGGER.warn(
-            "Unexpected: Could not find constructor for {} with signature {}",
-            record.getName(),
-            signature);
-      }
+      constructExpression.setConstructor(constructor);
     }
   }
 
   private void handleFunctionPointerCall(CallExpression call, Node pointer) {
+    if (!(pointer instanceof HasType
+        && ((HasType) pointer).getType() instanceof FunctionPointerType)) {
+      LOGGER.error("Can't handle a function pointer call without function pointer type");
+      return;
+    }
+    FunctionPointerType pointerType = (FunctionPointerType) ((HasType) pointer).getType();
     List<FunctionDeclaration> invocationCandidates = new ArrayList<>();
     Deque<Node> worklist = new ArrayDeque<>();
     Set<Node> seen = Collections.newSetFromMap(new IdentityHashMap<>());
     worklist.push(pointer);
-    DeclaredReferenceExpression finalReference = null;
     while (!worklist.isEmpty()) {
       Node curr = worklist.pop();
       if (!seen.add(curr)) {
         continue;
       }
       if (curr instanceof FunctionDeclaration) {
-        if (((FunctionDeclaration) curr).hasSignature(call.getSignature())) {
+        FunctionDeclaration f = (FunctionDeclaration) curr;
+        // Even if it is a function declaration, the dataflow might just come from a situation
+        // where the target of a fptr is passed through via a return value. Keep searching if
+        // return type or signature don't match
+        if (TypeManager.getInstance().isSupertypeOf(pointerType.getReturnType(), f.getType())
+            && f.hasSignature(pointerType.getParameters())) {
           invocationCandidates.add((FunctionDeclaration) curr);
-        } else if (curr.isImplicit()) {
-          // unknown function, so even if its signature does not fit, we need to make a new
-          // dummy that does match
-          if (((FunctionDeclaration) curr).hasSignature(call.getSignature())) {
-            invocationCandidates.add((FunctionDeclaration) curr);
-            // refine the referral pointer
-            if (finalReference != null && finalReference.getRefersTo().contains(curr)) {
-              finalReference.setRefersTo((ValueDeclaration) curr);
-            }
-          } else {
-            FunctionDeclaration dummy =
-                createDummyWithMatchingSignature((FunctionDeclaration) curr, call.getSignature());
-            invocationCandidates.add(dummy);
-            // redirect the referral pointer
-            if (finalReference != null && finalReference.getRefersTo().contains(curr)) {
-              finalReference.setRefersTo(dummy);
-            }
-          }
+          // We have found a target. Don't follow this path any further, but still continue the
+          // other paths that might be left, as we could have several potential targets at runtime
+          continue;
         }
-      } else {
-        if (curr instanceof DeclaredReferenceExpression) {
-          finalReference = (DeclaredReferenceExpression) curr;
-        }
-        curr.getPrevDFG().forEach(worklist::push);
       }
+      curr.getPrevDFG().forEach(worklist::push);
     }
     call.setInvokes(invocationCandidates);
   }
@@ -394,9 +401,7 @@ public class CallResolver extends Pass {
       if (record != null) {
         ConstructorDeclaration constructor = getConstructorDeclaration(signature, record);
         ArrayList<FunctionDeclaration> invokes = new ArrayList<>();
-        if (constructor != null) {
-          invokes.add(constructor);
-        }
+        invokes.add(constructor);
         eci.setInvokes(invokes);
       }
     }
@@ -463,65 +468,26 @@ public class CallResolver extends Pass {
     }
   }
 
-  private Optional<FunctionDeclaration> checkExistingDummies(
-      FunctionDeclaration template, List<Type> signature) {
-    if (template instanceof MethodDeclaration
-        && ((MethodDeclaration) template).getRecordDeclaration() != null) {
-      return ((MethodDeclaration) template)
-          .getRecordDeclaration().getMethods().stream()
-              .filter(m -> m.getName().equals(template.getName()) && m.hasSignature(signature))
-              .map(FunctionDeclaration.class::cast)
-              .findFirst();
-    } else {
-      if (currentTU == null) {
-        LOGGER.error(
-            "No current translation unit when trying to find matching dummy for {}", template);
-        return Optional.empty();
-      }
-      return currentTU.getDeclarations().stream()
-          .filter(FunctionDeclaration.class::isInstance)
-          .map(FunctionDeclaration.class::cast)
-          .filter(f -> f.getName().equals(template.getName()) && f.hasSignature(signature))
-          .findFirst();
-    }
-  }
-
-  private FunctionDeclaration createDummyWithMatchingSignature(
-      FunctionDeclaration template, List<Type> signature) {
-    Optional<FunctionDeclaration> existing = checkExistingDummies(template, signature);
-    if (existing.isPresent()) {
-      return existing.get();
-    }
+  @NonNull
+  private FunctionDeclaration createDummy(
+      RecordDeclaration containingRecord,
+      String name,
+      String code,
+      boolean isStatic,
+      List<Type> signature) {
 
     List<ParamVariableDeclaration> parameters = Util.createParameters(signature);
-    if (template instanceof MethodDeclaration) {
-      RecordDeclaration containingRecord = ((MethodDeclaration) template).getRecordDeclaration();
+    if (containingRecord != null) {
       MethodDeclaration dummy =
-          NodeBuilder.newMethodDeclaration(
-              template.getName(),
-              template.getCode(),
-              ((MethodDeclaration) template).isStatic(),
-              containingRecord);
+          NodeBuilder.newMethodDeclaration(name, code, isStatic, containingRecord);
       dummy.setImplicit(true);
       dummy.setParameters(parameters);
 
-      if (containingRecord == null) {
-        // not inside a class, lets put it inside the translation unit
-        if (currentTU == null) {
-          LOGGER.error(
-              "No current translation unit when trying to generate method dummy {}",
-              dummy.getName());
-        } else {
-          currentTU.getDeclarations().add(dummy);
-        }
-      } else {
-        containingRecord.getMethods().add(dummy);
-      }
+      containingRecord.getMethods().add(dummy);
       return dummy;
     } else {
       // function declaration, not inside a class
-      FunctionDeclaration dummy =
-          NodeBuilder.newFunctionDeclaration(template.getName(), template.getCode());
+      FunctionDeclaration dummy = NodeBuilder.newFunctionDeclaration(name, code);
       dummy.setParameters(parameters);
       dummy.setImplicit(true);
       if (currentTU == null) {
@@ -529,10 +495,20 @@ public class CallResolver extends Pass {
             "No current translation unit when trying to generate function dummy {}",
             dummy.getName());
       } else {
-        currentTU.getDeclarations().add(dummy);
+        currentTU.add(dummy);
       }
       return dummy;
     }
+  }
+
+  private ConstructorDeclaration createConstructorDummy(
+      @NonNull RecordDeclaration containingRecord, List<Type> signature) {
+    ConstructorDeclaration dummy =
+        NodeBuilder.newConstructorDeclaration(containingRecord.getName(), "", containingRecord);
+    dummy.setImplicit(true);
+    dummy.setParameters(Util.createParameters(signature));
+    containingRecord.getConstructors().add(dummy);
+    return dummy;
   }
 
   private Set<Type> getPossibleContainingTypes(Node node, RecordDeclaration curClass) {
@@ -551,7 +527,6 @@ public class CallResolver extends Pass {
       }
     } else if (curClass != null) {
       possibleTypes.add(TypeParser.createFrom(curClass.getName(), true));
-      possibleTypes.addAll(curClass.getSuperTypes());
     }
     return possibleTypes;
   }
@@ -595,12 +570,12 @@ public class CallResolver extends Pass {
         .collect(Collectors.toSet());
   }
 
-  @Nullable
+  @NonNull
   private ConstructorDeclaration getConstructorDeclaration(
       List<Type> signature, RecordDeclaration record) {
     return record.getConstructors().stream()
         .filter(f -> f.hasSignature(signature))
         .findFirst()
-        .orElse(null);
+        .orElseGet(() -> createConstructorDummy(record, signature));
   }
 }

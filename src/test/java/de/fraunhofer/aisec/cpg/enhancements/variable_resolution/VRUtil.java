@@ -1,5 +1,6 @@
 package de.fraunhofer.aisec.cpg.enhancements.variable_resolution;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -7,7 +8,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import de.fraunhofer.aisec.cpg.graph.DeclaredReferenceExpression;
 import de.fraunhofer.aisec.cpg.graph.MemberExpression;
 import de.fraunhofer.aisec.cpg.graph.Node;
-import java.util.Collection;
 
 /**
  * Utility-class to bundle functionality for the both test classes {@link VariableResolverCppTest}
@@ -45,7 +45,7 @@ public class VRUtil {
     } else {
       assertTrue(usingNode instanceof DeclaredReferenceExpression);
       DeclaredReferenceExpression reference = (DeclaredReferenceExpression) usingNode;
-      assertSameOrContains(reference.getRefersTo(), usedNode);
+      assertEquals(reference.getRefersTo(), usedNode);
     }
   }
 
@@ -53,7 +53,7 @@ public class VRUtil {
    * Asserts that {@code usingNode} uses/references the provided {@code usedBase} and {@code
    * usedMember}. If {@link VRUtil#ENFORCE_MEMBER_EXPRESSION} is true, {@code usingNode} must be a
    * {@link MemberExpression} where {@link MemberExpression#base} uses {@code usedBase} and {@link
-   * MemberExpression#member} uses {@code usedMember}. Using is checked as preformed per {@link
+   * MemberExpression#refersTo} uses {@code usedMember}. Using is checked as preformed per {@link
    * VRUtil#assertUsageOf(Node,Node)}
    *
    * @param usingNode - Node that uses some member
@@ -70,18 +70,8 @@ public class VRUtil {
       assertTrue(usingNode instanceof MemberExpression);
       MemberExpression memberExpression = (MemberExpression) usingNode;
       Node base = memberExpression.getBase();
-      Node member = memberExpression.getMember();
       assertUsageOf(base, usedBase);
-      assertUsageOf(member, usedMember);
-    }
-  }
-
-  public static void assertSameOrContains(Object potentialCollection, Object toCompair) {
-    if (REFERES_TO_IS_A_COLLECTION && potentialCollection instanceof Collection) {
-      Collection collection = (Collection) potentialCollection;
-      assertTrue(collection.stream().anyMatch(obj -> obj == toCompair));
-    } else {
-      assertSame(potentialCollection, toCompair);
+      assertUsageOf(memberExpression.getRefersTo(), usedMember);
     }
   }
 }

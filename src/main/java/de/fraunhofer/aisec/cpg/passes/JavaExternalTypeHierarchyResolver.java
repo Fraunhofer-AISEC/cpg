@@ -22,7 +22,7 @@ public class JavaExternalTypeHierarchyResolver extends Pass {
   @Override
   public void accept(TranslationResult translationResult) {
     // Run only for Java.
-    if (JavaLanguageFrontend.class.equals(this.lang.getClass())) {
+    if (this.lang instanceof JavaLanguageFrontend) {
       TypeSolver resolver = ((JavaLanguageFrontend) this.lang).getNativeTypeResolver();
       TypeManager tm = TypeManager.getInstance();
 

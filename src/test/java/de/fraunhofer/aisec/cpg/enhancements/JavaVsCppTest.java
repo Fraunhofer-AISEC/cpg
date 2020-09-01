@@ -60,7 +60,7 @@ class JavaVsCppTest extends BaseTest {
     assertTrue(decl instanceof RecordDeclaration);
     RecordDeclaration rec = (RecordDeclaration) decl;
     assertEquals("Simple", rec.getName());
-    assertEquals(1, rec.getMethods().size());
+    assertEquals(2, rec.getMethods().size()); // printf dummy
     assertEquals("class", rec.getKind());
 
     MethodDeclaration methodDeclaration = rec.getMethods().get(0);
