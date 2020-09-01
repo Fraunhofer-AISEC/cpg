@@ -284,6 +284,7 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
     }
 
     result.setLocation(lang.getLocationFromRawNode(ctx));
+    lang.getScopeManager().addDeclaration(result);
 
     return result;
   }
