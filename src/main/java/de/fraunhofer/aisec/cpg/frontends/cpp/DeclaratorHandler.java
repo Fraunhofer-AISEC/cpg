@@ -109,12 +109,14 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
       RecordDeclaration recordDeclaration = this.lang.getRecordForName(recordName).orElse(null);
 
       declaration = FieldDeclaration.from((VariableDeclaration) declaration);
-      Optional<FieldDeclaration> existingDeclaration =
-          recordDeclaration.getFields().stream()
-              .filter(f -> f.getName().equals(fieldName))
-              .findFirst();
-      if (existingDeclaration.isPresent()) {
-        existingDeclaration.get().setDefinition((FieldDeclaration) declaration);
+      if (recordDeclaration != null) {
+        Optional<FieldDeclaration> existingDeclaration =
+            recordDeclaration.getFields().stream()
+                .filter(f -> f.getName().equals(fieldName))
+                .findFirst();
+        if (existingDeclaration.isPresent()) {
+          existingDeclaration.get().setDefinition((FieldDeclaration) declaration);
+        }
       }
     }
 
