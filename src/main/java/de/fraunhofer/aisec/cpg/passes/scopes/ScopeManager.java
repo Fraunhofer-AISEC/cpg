@@ -27,30 +27,27 @@
 package de.fraunhofer.aisec.cpg.passes.scopes;
 
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
-import de.fraunhofer.aisec.cpg.graph.AssertStatement;
-import de.fraunhofer.aisec.cpg.graph.BreakStatement;
-import de.fraunhofer.aisec.cpg.graph.CatchClause;
-import de.fraunhofer.aisec.cpg.graph.CompoundStatement;
-import de.fraunhofer.aisec.cpg.graph.ContinueStatement;
-import de.fraunhofer.aisec.cpg.graph.Declaration;
-import de.fraunhofer.aisec.cpg.graph.DeclaredReferenceExpression;
-import de.fraunhofer.aisec.cpg.graph.DoStatement;
-import de.fraunhofer.aisec.cpg.graph.EnumDeclaration;
-import de.fraunhofer.aisec.cpg.graph.ForEachStatement;
-import de.fraunhofer.aisec.cpg.graph.ForStatement;
-import de.fraunhofer.aisec.cpg.graph.FunctionDeclaration;
-import de.fraunhofer.aisec.cpg.graph.IfStatement;
-import de.fraunhofer.aisec.cpg.graph.LabelStatement;
-import de.fraunhofer.aisec.cpg.graph.NamespaceDeclaration;
 import de.fraunhofer.aisec.cpg.graph.Node;
-import de.fraunhofer.aisec.cpg.graph.RecordDeclaration;
-import de.fraunhofer.aisec.cpg.graph.Statement;
-import de.fraunhofer.aisec.cpg.graph.SwitchStatement;
-import de.fraunhofer.aisec.cpg.graph.TryStatement;
-import de.fraunhofer.aisec.cpg.graph.TypedefDeclaration;
-import de.fraunhofer.aisec.cpg.graph.ValueDeclaration;
-import de.fraunhofer.aisec.cpg.graph.VariableDeclaration;
-import de.fraunhofer.aisec.cpg.graph.WhileStatement;
+import de.fraunhofer.aisec.cpg.graph.declaration.*;
+import de.fraunhofer.aisec.cpg.graph.declaration.EnumDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declaration.NamespaceDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declaration.ValueDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declaration.VariableDeclaration;
+import de.fraunhofer.aisec.cpg.graph.statement.AssertStatement;
+import de.fraunhofer.aisec.cpg.graph.statement.BreakStatement;
+import de.fraunhofer.aisec.cpg.graph.statement.CatchClause;
+import de.fraunhofer.aisec.cpg.graph.statement.CompoundStatement;
+import de.fraunhofer.aisec.cpg.graph.statement.ContinueStatement;
+import de.fraunhofer.aisec.cpg.graph.statement.DoStatement;
+import de.fraunhofer.aisec.cpg.graph.statement.ForEachStatement;
+import de.fraunhofer.aisec.cpg.graph.statement.ForStatement;
+import de.fraunhofer.aisec.cpg.graph.statement.IfStatement;
+import de.fraunhofer.aisec.cpg.graph.statement.LabelStatement;
+import de.fraunhofer.aisec.cpg.graph.statement.Statement;
+import de.fraunhofer.aisec.cpg.graph.statement.SwitchStatement;
+import de.fraunhofer.aisec.cpg.graph.statement.TryStatement;
+import de.fraunhofer.aisec.cpg.graph.statement.WhileStatement;
+import de.fraunhofer.aisec.cpg.graph.statement.expression.DeclaredReferenceExpression;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -413,9 +410,8 @@ public class ScopeManager {
 
   /**
    * Replaces the node inside of the scope manager. This is primarily used if we 'upgrade' a node in
-   * the hierarchy chain, i.e. if we construct a {@link
-   * de.fraunhofer.aisec.cpg.graph.ConstructorDeclaration} out of a {@link
-   * de.fraunhofer.aisec.cpg.graph.MethodDeclaration}.
+   * the hierarchy chain, i.e. if we construct a {@link ConstructorDeclaration} out of a {@link
+   * MethodDeclaration}.
    *
    * @param newNode the new node
    * @param oldNode the old node

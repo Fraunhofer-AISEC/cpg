@@ -31,10 +31,10 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 
 import de.fraunhofer.aisec.cpg.BaseTest;
 import de.fraunhofer.aisec.cpg.TestUtils;
-import de.fraunhofer.aisec.cpg.graph.NamespaceDeclaration;
 import de.fraunhofer.aisec.cpg.graph.Node;
-import de.fraunhofer.aisec.cpg.graph.RecordDeclaration;
-import de.fraunhofer.aisec.cpg.graph.TranslationUnitDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declaration.NamespaceDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declaration.RecordDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declaration.TranslationUnitDeclaration;
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker;
 import java.io.File;
 import java.util.List;

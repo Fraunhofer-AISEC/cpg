@@ -31,7 +31,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import de.fraunhofer.aisec.cpg.BaseTest;
 import de.fraunhofer.aisec.cpg.TestUtils;
-import de.fraunhofer.aisec.cpg.graph.*;
+import de.fraunhofer.aisec.cpg.graph.declaration.*;
+import de.fraunhofer.aisec.cpg.graph.statement.ReturnStatement;
+import de.fraunhofer.aisec.cpg.graph.statement.expression.DeclaredReferenceExpression;
+import de.fraunhofer.aisec.cpg.graph.statement.expression.MemberExpression;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Set;

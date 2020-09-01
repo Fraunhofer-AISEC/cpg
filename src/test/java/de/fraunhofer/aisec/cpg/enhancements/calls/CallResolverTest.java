@@ -30,7 +30,11 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import de.fraunhofer.aisec.cpg.BaseTest;
 import de.fraunhofer.aisec.cpg.TestUtils;
-import de.fraunhofer.aisec.cpg.graph.*;
+import de.fraunhofer.aisec.cpg.graph.declaration.FunctionDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declaration.MethodDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declaration.RecordDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declaration.TranslationUnitDeclaration;
+import de.fraunhofer.aisec.cpg.graph.statement.expression.CallExpression;
 import de.fraunhofer.aisec.cpg.graph.type.Type;
 import de.fraunhofer.aisec.cpg.graph.type.TypeParser;
 import java.nio.file.Path;

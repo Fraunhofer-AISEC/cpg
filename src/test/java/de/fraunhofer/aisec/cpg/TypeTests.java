@@ -32,6 +32,10 @@ import static java.util.Collections.emptyList;
 import static org.junit.jupiter.api.Assertions.*;
 
 import de.fraunhofer.aisec.cpg.graph.*;
+import de.fraunhofer.aisec.cpg.graph.declaration.FieldDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declaration.RecordDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declaration.TranslationUnitDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declaration.VariableDeclaration;
 import de.fraunhofer.aisec.cpg.graph.type.*;
 import java.nio.file.Path;
 import java.util.ArrayList;

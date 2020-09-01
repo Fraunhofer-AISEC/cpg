@@ -26,6 +26,9 @@
 
 package de.fraunhofer.aisec.cpg.graph;
 
+import de.fraunhofer.aisec.cpg.graph.declaration.*;
+import de.fraunhofer.aisec.cpg.graph.statement.*;
+import de.fraunhofer.aisec.cpg.graph.statement.expression.*;
 import de.fraunhofer.aisec.cpg.graph.type.Type;
 import de.fraunhofer.aisec.cpg.graph.type.TypeParser;
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation;
@@ -392,7 +395,7 @@ public class NodeBuilder {
     node.setCode(code);
 
     if (kind.equals("class")) {
-      de.fraunhofer.aisec.cpg.graph.FieldDeclaration thisDeclaration =
+      FieldDeclaration thisDeclaration =
           NodeBuilder.newFieldDeclaration(
               "this",
               TypeParser.createFrom(name, true),

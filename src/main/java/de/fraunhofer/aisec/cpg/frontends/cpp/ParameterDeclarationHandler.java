@@ -27,10 +27,10 @@
 package de.fraunhofer.aisec.cpg.frontends.cpp;
 
 import de.fraunhofer.aisec.cpg.frontends.Handler;
-import de.fraunhofer.aisec.cpg.graph.InitializerListExpression;
-import de.fraunhofer.aisec.cpg.graph.Literal;
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder;
-import de.fraunhofer.aisec.cpg.graph.ParamVariableDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declaration.ParamVariableDeclaration;
+import de.fraunhofer.aisec.cpg.graph.statement.expression.InitializerListExpression;
+import de.fraunhofer.aisec.cpg.graph.statement.expression.Literal;
 import de.fraunhofer.aisec.cpg.graph.type.TypeParser;
 import de.fraunhofer.aisec.cpg.graph.type.UnknownType;
 import java.util.List;

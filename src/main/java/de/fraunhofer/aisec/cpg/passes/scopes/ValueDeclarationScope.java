@@ -26,19 +26,19 @@
 
 package de.fraunhofer.aisec.cpg.passes.scopes;
 
-import de.fraunhofer.aisec.cpg.graph.CompoundStatement;
-import de.fraunhofer.aisec.cpg.graph.ConstructorDeclaration;
-import de.fraunhofer.aisec.cpg.graph.Declaration;
-import de.fraunhofer.aisec.cpg.graph.FieldDeclaration;
-import de.fraunhofer.aisec.cpg.graph.FunctionDeclaration;
-import de.fraunhofer.aisec.cpg.graph.MethodDeclaration;
-import de.fraunhofer.aisec.cpg.graph.NamespaceDeclaration;
 import de.fraunhofer.aisec.cpg.graph.Node;
-import de.fraunhofer.aisec.cpg.graph.ParamVariableDeclaration;
-import de.fraunhofer.aisec.cpg.graph.RecordDeclaration;
-import de.fraunhofer.aisec.cpg.graph.TypedefDeclaration;
-import de.fraunhofer.aisec.cpg.graph.ValueDeclaration;
-import de.fraunhofer.aisec.cpg.graph.VariableDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declaration.ConstructorDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declaration.Declaration;
+import de.fraunhofer.aisec.cpg.graph.declaration.FieldDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declaration.FunctionDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declaration.MethodDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declaration.NamespaceDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declaration.ParamVariableDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declaration.RecordDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declaration.TypedefDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declaration.ValueDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declaration.VariableDeclaration;
+import de.fraunhofer.aisec.cpg.graph.statement.CompoundStatement;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;

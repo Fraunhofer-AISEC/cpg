@@ -26,14 +26,14 @@
 
 package de.fraunhofer.aisec.cpg.helpers;
 
-import de.fraunhofer.aisec.cpg.graph.CompoundStatement;
-import de.fraunhofer.aisec.cpg.graph.FunctionDeclaration;
-import de.fraunhofer.aisec.cpg.graph.MethodDeclaration;
 import de.fraunhofer.aisec.cpg.graph.Node;
-import de.fraunhofer.aisec.cpg.graph.RecordDeclaration;
 import de.fraunhofer.aisec.cpg.graph.SubGraph;
-import de.fraunhofer.aisec.cpg.graph.TranslationUnitDeclaration;
-import de.fraunhofer.aisec.cpg.graph.ValueDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declaration.FunctionDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declaration.MethodDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declaration.RecordDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declaration.TranslationUnitDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declaration.ValueDeclaration;
+import de.fraunhofer.aisec.cpg.graph.statement.CompoundStatement;
 import java.lang.annotation.AnnotationFormatError;
 import java.lang.reflect.Field;
 import java.util.ArrayDeque;

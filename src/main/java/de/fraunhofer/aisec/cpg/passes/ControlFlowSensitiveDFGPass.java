@@ -1,9 +1,9 @@
 package de.fraunhofer.aisec.cpg.passes;
 
 import de.fraunhofer.aisec.cpg.TranslationResult;
-import de.fraunhofer.aisec.cpg.graph.FunctionDeclaration;
 import de.fraunhofer.aisec.cpg.graph.Node;
-import de.fraunhofer.aisec.cpg.graph.TranslationUnitDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declaration.FunctionDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declaration.TranslationUnitDeclaration;
 import de.fraunhofer.aisec.cpg.helpers.ControlFlowSensitiveDFG;
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker;
 

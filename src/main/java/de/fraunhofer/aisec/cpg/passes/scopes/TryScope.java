@@ -26,8 +26,8 @@
 
 package de.fraunhofer.aisec.cpg.passes.scopes;
 
-import de.fraunhofer.aisec.cpg.graph.BreakStatement;
 import de.fraunhofer.aisec.cpg.graph.Node;
+import de.fraunhofer.aisec.cpg.graph.statement.BreakStatement;
 import de.fraunhofer.aisec.cpg.graph.type.Type;
 import java.util.ArrayList;
 import java.util.HashMap;

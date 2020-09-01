@@ -4,11 +4,11 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import de.fraunhofer.aisec.cpg.BaseTest;
 import de.fraunhofer.aisec.cpg.TestUtils;
-import de.fraunhofer.aisec.cpg.graph.ConstructExpression;
-import de.fraunhofer.aisec.cpg.graph.ConstructorDeclaration;
-import de.fraunhofer.aisec.cpg.graph.NewExpression;
-import de.fraunhofer.aisec.cpg.graph.TranslationUnitDeclaration;
-import de.fraunhofer.aisec.cpg.graph.VariableDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declaration.ConstructorDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declaration.TranslationUnitDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declaration.VariableDeclaration;
+import de.fraunhofer.aisec.cpg.graph.statement.expression.ConstructExpression;
+import de.fraunhofer.aisec.cpg.graph.statement.expression.NewExpression;
 import java.nio.file.Path;
 import java.util.List;
 import org.junit.jupiter.api.Test;

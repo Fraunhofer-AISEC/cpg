@@ -32,6 +32,8 @@ import com.github.javaparser.utils.Pair;
 import de.fraunhofer.aisec.cpg.BaseTest;
 import de.fraunhofer.aisec.cpg.TestUtils;
 import de.fraunhofer.aisec.cpg.graph.*;
+import de.fraunhofer.aisec.cpg.graph.declaration.*;
+import de.fraunhofer.aisec.cpg.graph.statement.DeclarationStatement;
 import java.io.File;
 import java.nio.file.Path;
 import java.util.*;

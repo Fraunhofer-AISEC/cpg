@@ -6,6 +6,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import de.fraunhofer.aisec.cpg.TestUtils;
 import de.fraunhofer.aisec.cpg.graph.*;
+import de.fraunhofer.aisec.cpg.graph.declaration.TranslationUnitDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declaration.VariableDeclaration;
+import de.fraunhofer.aisec.cpg.graph.statement.expression.*;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Set;

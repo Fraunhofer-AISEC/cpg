@@ -26,7 +26,7 @@
 
 package de.fraunhofer.aisec.cpg.graph.type;
 
-import de.fraunhofer.aisec.cpg.graph.RecordDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declaration.RecordDeclaration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;

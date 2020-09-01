@@ -26,14 +26,14 @@
 
 package de.fraunhofer.aisec.cpg.passes.scopes;
 
-import de.fraunhofer.aisec.cpg.graph.BreakStatement;
-import de.fraunhofer.aisec.cpg.graph.ContinueStatement;
-import de.fraunhofer.aisec.cpg.graph.DoStatement;
-import de.fraunhofer.aisec.cpg.graph.ForEachStatement;
-import de.fraunhofer.aisec.cpg.graph.ForStatement;
 import de.fraunhofer.aisec.cpg.graph.Node;
-import de.fraunhofer.aisec.cpg.graph.Statement;
-import de.fraunhofer.aisec.cpg.graph.WhileStatement;
+import de.fraunhofer.aisec.cpg.graph.statement.BreakStatement;
+import de.fraunhofer.aisec.cpg.graph.statement.ContinueStatement;
+import de.fraunhofer.aisec.cpg.graph.statement.DoStatement;
+import de.fraunhofer.aisec.cpg.graph.statement.ForEachStatement;
+import de.fraunhofer.aisec.cpg.graph.statement.ForStatement;
+import de.fraunhofer.aisec.cpg.graph.statement.Statement;
+import de.fraunhofer.aisec.cpg.graph.statement.WhileStatement;
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker;
 import java.util.ArrayList;
 import java.util.List;

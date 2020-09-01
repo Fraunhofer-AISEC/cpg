@@ -30,18 +30,18 @@ import static de.fraunhofer.aisec.cpg.helpers.Util.warnWithFileLocation;
 import static java.util.Collections.emptyList;
 
 import de.fraunhofer.aisec.cpg.frontends.Handler;
-import de.fraunhofer.aisec.cpg.graph.ConstructorDeclaration;
-import de.fraunhofer.aisec.cpg.graph.Declaration;
-import de.fraunhofer.aisec.cpg.graph.Expression;
-import de.fraunhofer.aisec.cpg.graph.FieldDeclaration;
-import de.fraunhofer.aisec.cpg.graph.FunctionDeclaration;
-import de.fraunhofer.aisec.cpg.graph.MethodDeclaration;
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder;
-import de.fraunhofer.aisec.cpg.graph.ParamVariableDeclaration;
-import de.fraunhofer.aisec.cpg.graph.ProblemDeclaration;
-import de.fraunhofer.aisec.cpg.graph.RecordDeclaration;
-import de.fraunhofer.aisec.cpg.graph.ValueDeclaration;
-import de.fraunhofer.aisec.cpg.graph.VariableDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declaration.ConstructorDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declaration.Declaration;
+import de.fraunhofer.aisec.cpg.graph.declaration.FieldDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declaration.FunctionDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declaration.MethodDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declaration.ParamVariableDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declaration.ProblemDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declaration.RecordDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declaration.ValueDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declaration.VariableDeclaration;
+import de.fraunhofer.aisec.cpg.graph.statement.expression.Expression;
 import de.fraunhofer.aisec.cpg.graph.type.IncompleteType;
 import de.fraunhofer.aisec.cpg.graph.type.Type;
 import de.fraunhofer.aisec.cpg.graph.type.TypeParser;
@@ -324,7 +324,7 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
     processMembers(ctx, recordDeclaration);
 
     if (recordDeclaration.getConstructors().isEmpty()) {
-      de.fraunhofer.aisec.cpg.graph.ConstructorDeclaration constructorDeclaration =
+      ConstructorDeclaration constructorDeclaration =
           NodeBuilder.newConstructorDeclaration(
               recordDeclaration.getName(), recordDeclaration.getName(), recordDeclaration);
 
