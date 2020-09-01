@@ -290,8 +290,19 @@ public class VariableUsageResolver extends Pass {
         }
       }
 
-      memberExpression.setRefersTo(
-          resolveMember(memberExpression.getBase().getType(), memberExpression));
+      Type baseType = memberExpression.getBase().getType();
+      if (!recordMap.containsKey(baseType)) {
+        final Type containingT = baseType;
+        Optional<Type> fqnResolvedType =
+            recordMap.keySet().stream()
+                .filter(t -> t.getName().endsWith("." + containingT.getName()))
+                .findFirst();
+        if (fqnResolvedType.isPresent()) {
+          baseType = fqnResolvedType.get();
+        }
+      }
+
+      memberExpression.setRefersTo(resolveMember(baseType, memberExpression));
     }
   }
 
