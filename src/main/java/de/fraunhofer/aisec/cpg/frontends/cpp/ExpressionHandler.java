@@ -293,7 +293,7 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
       PhysicalLocation location = base.getLocation();
       base =
           NodeBuilder.newDeclaredReferenceExpression(
-              base.toString(),
+              "this",
               lang.getScopeManager().getCurrentRecord().getThis().getType(),
               base.getCode());
       base.setLocation(location);
