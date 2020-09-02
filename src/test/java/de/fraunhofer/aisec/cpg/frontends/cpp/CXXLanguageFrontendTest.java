@@ -1240,4 +1240,22 @@ class CXXLanguageFrontendTest extends BaseTest {
         "SomeCategory, SomeOtherThing",
         ((Literal<String>) annotation.getValues().get(0)).getValue());
   }
+
+  @Test
+  void testUnityBuild() throws Exception {
+    File file = new File("src/test/resources/unity");
+    List<TranslationUnitDeclaration> declarations =
+        TestUtils.analyzeWithBuilder(
+            TranslationConfiguration.builder()
+                .sourceLocations(List.of(file))
+                .topLevel(file.getParentFile())
+                .useUnityBuild(true)
+                .loadIncludes(true)
+                .defaultPasses());
+
+    assertEquals(1, declarations.size());
+
+    // should contain 3 declarations (2 include and 1 function decl from the include)
+    assertEquals(3, declarations.get(0).getDeclarations().size());
+  }
 }

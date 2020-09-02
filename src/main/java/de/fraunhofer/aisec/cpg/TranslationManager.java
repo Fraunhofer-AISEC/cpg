@@ -26,6 +26,8 @@
 
 package de.fraunhofer.aisec.cpg;
 
+import static de.fraunhofer.aisec.cpg.frontends.LanguageFrontendFactory.CXX_EXTENSIONS;
+
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontendFactory;
 import de.fraunhofer.aisec.cpg.frontends.TranslationException;
@@ -36,9 +38,15 @@ import de.fraunhofer.aisec.cpg.passes.Pass;
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager;
 import java.io.File;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -147,6 +155,41 @@ public class TranslationManager {
 
     List<File> sourceLocations = new ArrayList<>(this.config.getSourceLocations());
     HashSet<LanguageFrontend> usedFrontends = new HashSet<>();
+
+    if (config.useUnityBuild) {
+      try {
+        File tmpFile = Files.createTempFile("compile", ".cpp").toFile();
+        tmpFile.deleteOnExit();
+
+        try (var writer = new PrintWriter(tmpFile)) {
+          for (int i = 0; i < sourceLocations.size(); i++) {
+            File sourceLocation = sourceLocations.get(i);
+            // Recursively add files in directories
+            if (sourceLocation.isDirectory()) {
+              try (Stream<Path> stream =
+                  Files.find(
+                      sourceLocation.toPath(), 999, (p, fileAttr) -> fileAttr.isRegularFile())) {
+                sourceLocations.addAll(stream.map(Path::toFile).collect(Collectors.toSet()));
+              }
+            } else {
+              if (CXX_EXTENSIONS.contains(Util.getExtension(sourceLocation))) {
+                if (config.getTopLevel() != null) {
+                  Path topLevel = config.getTopLevel().toPath();
+                  writer.write(
+                      "#include \"" + topLevel.relativize(sourceLocation.toPath()) + "\"\n");
+                } else {
+                  writer.write("#include \"" + sourceLocation.getAbsolutePath() + "\"\n");
+                }
+              }
+            }
+          }
+        }
+
+        sourceLocations = List.of(tmpFile);
+      } catch (IOException e) {
+        throw new TranslationException(e);
+      }
+    }
 
     for (int i = 0; i < sourceLocations.size(); i++) {
       File sourceLocation = sourceLocations.get(i);
