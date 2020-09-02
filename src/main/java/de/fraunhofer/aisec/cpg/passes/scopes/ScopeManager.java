@@ -420,29 +420,7 @@ public class ScopeManager {
       toIterate = toIterate.getParent();
     } while (toIterate != null);
   }
-
-  /**
-   * Replaces the node inside of the scope manager. This is primarily used if we 'upgrade' a node in
-   * the hierarchy chain, i.e. if we construct a {@link
-   * de.fraunhofer.aisec.cpg.graph.ConstructorDeclaration} out of a {@link
-   * de.fraunhofer.aisec.cpg.graph.MethodDeclaration}.
-   *
-   * @param newNode the new node
-   * @param oldNode the old node
-   */
-  public void replaceNode(Node newNode, Node oldNode) {
-    Scope scope = scopeMap.get(oldNode);
-
-    // check, if old node has a scope
-    if (scope != null) {
-      // update ast node
-      scope.astNode = newNode;
-      // update key
-      scopeMap.remove(oldNode);
-      scopeMap.put(newNode, scope);
-    }
-  }
-
+  
   public void resetToGlobal(TranslationUnitDeclaration declaration) {
     GlobalScope global = (GlobalScope) getFirstScopeThat(scope -> scope instanceof GlobalScope);
     if (global != null) {
