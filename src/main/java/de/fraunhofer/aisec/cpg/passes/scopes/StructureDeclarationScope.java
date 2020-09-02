@@ -1,11 +1,11 @@
 package de.fraunhofer.aisec.cpg.passes.scopes;
 
 import de.fraunhofer.aisec.cpg.graph.Declaration;
-import de.fraunhofer.aisec.cpg.graph.FieldDeclaration;
 import de.fraunhofer.aisec.cpg.graph.FunctionDeclaration;
 import de.fraunhofer.aisec.cpg.graph.NamespaceDeclaration;
 import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.RecordDeclaration;
+import de.fraunhofer.aisec.cpg.graph.TranslationUnitDeclaration;
 import de.fraunhofer.aisec.cpg.graph.ValueDeclaration;
 import java.util.ArrayList;
 import java.util.List;
@@ -51,13 +51,10 @@ public class StructureDeclarationScope extends ValueDeclarationScope {
         RecordDeclaration recordD = (RecordDeclaration) astNode;
         if (declaration instanceof RecordDeclaration) {
           addIfNotContained(recordD.getRecords(), (RecordDeclaration) declaration);
-        } else if (declaration instanceof FieldDeclaration) {
-          addIfNotContained(recordD.getFields(), (FieldDeclaration) declaration);
         }
-
-      } else if (this instanceof GlobalScope) {
-        // Doe not have to be added in a declaration scope but could be added to the
-        // translationUnitDeclaration
+      } else if (astNode instanceof TranslationUnitDeclaration) {
+        TranslationUnitDeclaration tu = (TranslationUnitDeclaration) astNode;
+        addIfNotContained(tu.getDeclarations(), declaration);
       }
     }
   }

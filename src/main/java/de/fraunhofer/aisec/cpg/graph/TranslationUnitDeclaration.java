@@ -99,7 +99,7 @@ public class TranslationUnitDeclaration extends Declaration {
 
   @NonNull
   public List<Declaration> getDeclarations() {
-    return Collections.unmodifiableList(declarations);
+    return declarations;
   }
 
   @NonNull

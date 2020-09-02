@@ -36,6 +36,7 @@ import de.fraunhofer.aisec.cpg.graph.NamespaceDeclaration;
 import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.ParamVariableDeclaration;
 import de.fraunhofer.aisec.cpg.graph.RecordDeclaration;
+import de.fraunhofer.aisec.cpg.graph.TranslationUnitDeclaration;
 import de.fraunhofer.aisec.cpg.graph.TypedefDeclaration;
 import de.fraunhofer.aisec.cpg.graph.ValueDeclaration;
 import de.fraunhofer.aisec.cpg.graph.VariableDeclaration;
@@ -124,8 +125,9 @@ public class ValueDeclarationScope extends Scope {
       if (valueDeclaration instanceof VariableDeclaration) {
         addIfNotContained(compoundStatement.getLocals(), (VariableDeclaration) valueDeclaration);
       }
-    } else if (this instanceof GlobalScope) {
-      // Here ther is no ast-node
+    } else if (astNode instanceof TranslationUnitDeclaration) {
+      var tu = (TranslationUnitDeclaration) astNode;
+      addIfNotContained(((TranslationUnitDeclaration) astNode).getDeclarations(), valueDeclaration);
     }
     /*
      There are nodes where we do not set the declaration when storing them in the scope,

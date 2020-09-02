@@ -106,11 +106,13 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
   private Declaration handleNamespace(CPPASTNamespaceDefinition ctx) {
     NamespaceDeclaration declaration =
         NodeBuilder.newNamespaceDeclaration(ctx.getName().toString());
+
+    lang.getScopeManager().addDeclaration(declaration);
+
     lang.getScopeManager().enterScope(declaration);
     for (IASTNode child : ctx.getChildren()) {
       if (child instanceof IASTDeclaration) {
-        lang.getScopeManager()
-            .addDeclaration(this.lang.getDeclarationHandler().handle((IASTDeclaration) child));
+        handle((IASTDeclaration) child);
       } else if (child instanceof CPPASTName) {
         // this is the name of the namespace. Already parsed outside, skipping.
       } else {
@@ -140,19 +142,6 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
     String typeString = getTypeStringFromDeclarator(ctx.getDeclarator(), ctx.getDeclSpecifier());
 
     functionDeclaration.setIsDefinition(true);
-
-    // It is a constructor
-    if (functionDeclaration instanceof MethodDeclaration && typeString.isEmpty()) {
-      ConstructorDeclaration constructorDeclaration =
-          ConstructorDeclaration.from((MethodDeclaration) functionDeclaration);
-
-      // update our scope manager, otherwise scopes will still point to our old non-existing
-      // function declaration
-      this.lang.getScopeManager().replaceNode(constructorDeclaration, functionDeclaration);
-
-      functionDeclaration = constructorDeclaration;
-    }
-
     functionDeclaration.setType(TypeParser.createFrom(typeString, true));
 
     // associated record declaration if this is a method or constructor
@@ -160,10 +149,15 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
         functionDeclaration instanceof MethodDeclaration
             ? ((MethodDeclaration) functionDeclaration).getRecordDeclaration()
             : null;
-    if (recordDeclaration != null) {
-      // everything inside the method is within the scope of its record
-      this.lang.getScopeManager().enterScope(recordDeclaration);
+    var outsideOfRecord = !this.lang.getScopeManager().isInRecord();
 
+    if (recordDeclaration != null) {
+      if (outsideOfRecord) {
+        // everything inside the method is within the scope of its record
+        this.lang.getScopeManager().enterScope(recordDeclaration);
+      }
+
+      // update the definition
       List<? extends MethodDeclaration> candidates;
 
       if (functionDeclaration instanceof ConstructorDeclaration) {
@@ -228,7 +222,7 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
 
     lang.getScopeManager().leaveScope(functionDeclaration);
 
-    if (recordDeclaration != null) {
+    if (recordDeclaration != null && outsideOfRecord) {
       this.lang.getScopeManager().leaveScope(recordDeclaration);
     }
 
@@ -357,7 +351,7 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
     // There might have been errors in the previous translation unit and in any case
     // we need to reset the scope manager scope to global, to avoid spilling scope errors into other
     // translation units
-    lang.getScopeManager().resetToGlobal();
+    lang.getScopeManager().resetToGlobal(node);
 
     lang.setCurrentTU(node);
 
@@ -378,7 +372,7 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
                 ((ProblemDeclaration) decl).getFilename(), k -> new HashSet<>());
         problems.add((ProblemDeclaration) decl);
       } else {
-        node.add(decl);
+        // node.add(decl);
       }
     }
 

@@ -48,6 +48,7 @@ import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.RecordDeclaration;
 import de.fraunhofer.aisec.cpg.graph.Statement;
 import de.fraunhofer.aisec.cpg.graph.SwitchStatement;
+import de.fraunhofer.aisec.cpg.graph.TranslationUnitDeclaration;
 import de.fraunhofer.aisec.cpg.graph.TryStatement;
 import de.fraunhofer.aisec.cpg.graph.TypedefDeclaration;
 import de.fraunhofer.aisec.cpg.graph.ValueDeclaration;
@@ -442,9 +443,12 @@ public class ScopeManager {
     }
   }
 
-  public void resetToGlobal() {
+  public void resetToGlobal(TranslationUnitDeclaration declaration) {
     GlobalScope global = (GlobalScope) getFirstScopeThat(scope -> scope instanceof GlobalScope);
     if (global != null) {
+      // update the AST node to this translation unit declaration
+      global.astNode = declaration;
+
       currentScope = global;
     }
   }
@@ -452,9 +456,8 @@ public class ScopeManager {
   /**
    * Adds a declaration to the CPG by taking into account the currently active scope, and add the
    * Declaration to the appropriate node. This function will keep the declaration in the Scopes and
-   * allows the ScopeManager by himself to resolve ValueDeclarations through.
-   *
-   * <p>{@link ScopeManager#resolve(DeclaredReferenceExpression)}.
+   * allows the ScopeManager by himself to resolve ValueDeclarations through {@link
+   * ScopeManager#resolve(DeclaredReferenceExpression)}.
    *
    * @param declaration
    */
@@ -690,53 +693,37 @@ public class ScopeManager {
     return false;
   }
 
-  ///// Copied over for now - not used but maybe necessary at some point ///////
-
+  /**
+   * Retrieves the {@link RecordDeclaration} for the given name in the given scope.
+   *
+   * @param scope the scope
+   * @param name the name
+   * @return the declaration, or null if it does not exist
+   */
   @Nullable
-  @Deprecated
-  public Declaration getDeclarationForName(String name) {
-    // first, check locals
-    Declaration declaration;
-    if (isInBlock()) {
-      CompoundStatement currentBlock = getCurrentBlock();
-      declaration = getForName(currentBlock.getLocals(), name);
+  public RecordDeclaration getRecordForName(Scope scope, String name) {
+    Optional<RecordDeclaration> o = Optional.empty();
 
-      if (declaration != null) {
-        return declaration;
-      }
-    }
-    if (isInFunction()) {
-      FunctionDeclaration currentFunction = getCurrentFunction();
-      declaration = getForName(currentFunction.getParameters(), name);
-
-      if (declaration != null) {
-        return declaration;
-      }
-    }
-    if (isInRecord()) {
-      RecordDeclaration currentRecord = getCurrentRecord();
-      declaration = getForName(currentRecord.getFields(), name);
-
-      if (declaration != null) {
-        return declaration;
-      }
+    // check current scope first
+    if (scope instanceof StructureDeclarationScope) {
+      o =
+          ((StructureDeclarationScope) scope)
+              .getStructureDeclarations().stream()
+                  .filter(d -> d instanceof RecordDeclaration && Objects.equals(d.getName(), name))
+                  .map(d -> (RecordDeclaration) d)
+                  .findFirst();
     }
 
-    // lastly, check globals
-    declaration = getForName(getGlobals(), name);
+    if (o.isPresent()) {
+      return o.get();
+    }
 
-    return declaration;
+    // no parent left
+    if (scope.getParent() == null) {
+      return null;
+    }
 
-    // TODO: also check for function definitions?
-  }
-
-  @Nullable
-  @Deprecated
-  private <T extends ValueDeclaration> Declaration getForName(List<T> variables, String name) {
-    Optional<T> any =
-        variables.stream().filter(param -> Objects.equals(param.getName(), name)).findAny();
-
-    return any.orElse(null);
+    return getRecordForName(scope.getParent(), name);
   }
 
   ///// End copied over for now ///////
