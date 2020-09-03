@@ -36,14 +36,14 @@ import com.github.javaparser.ast.type.UnionType;
 import com.github.javaparser.utils.Pair;
 import de.fraunhofer.aisec.cpg.frontends.Handler;
 import de.fraunhofer.aisec.cpg.graph.*;
-import de.fraunhofer.aisec.cpg.graph.declaration.Declaration;
-import de.fraunhofer.aisec.cpg.graph.declaration.RecordDeclaration;
-import de.fraunhofer.aisec.cpg.graph.declaration.VariableDeclaration;
-import de.fraunhofer.aisec.cpg.graph.statement.*;
-import de.fraunhofer.aisec.cpg.graph.statement.CatchClause;
-import de.fraunhofer.aisec.cpg.graph.statement.expression.*;
-import de.fraunhofer.aisec.cpg.graph.type.Type;
-import de.fraunhofer.aisec.cpg.graph.type.TypeParser;
+import de.fraunhofer.aisec.cpg.graph.declarations.Declaration;
+import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration;
+import de.fraunhofer.aisec.cpg.graph.statements.*;
+import de.fraunhofer.aisec.cpg.graph.statements.CatchClause;
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.*;
+import de.fraunhofer.aisec.cpg.graph.types.Type;
+import de.fraunhofer.aisec.cpg.graph.types.TypeParser;
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation;
 import de.fraunhofer.aisec.cpg.sarif.Region;
 import java.util.HashSet;
@@ -56,12 +56,12 @@ import org.slf4j.LoggerFactory;
 
 public class StatementAnalyzer
     extends Handler<
-        de.fraunhofer.aisec.cpg.graph.statement.Statement, Statement, JavaLanguageFrontend> {
+        de.fraunhofer.aisec.cpg.graph.statements.Statement, Statement, JavaLanguageFrontend> {
 
   private static final Logger log = LoggerFactory.getLogger(StatementAnalyzer.class);
 
   public StatementAnalyzer(JavaLanguageFrontend lang) {
-    super(de.fraunhofer.aisec.cpg.graph.statement.Statement::new, lang);
+    super(de.fraunhofer.aisec.cpg.graph.statements.Statement::new, lang);
 
     map.put(IfStmt.class, this::handleIfStatement);
     map.put(AssertStmt.class, this::handleAssertStatement);
@@ -83,12 +83,12 @@ public class StatementAnalyzer
     map.put(ThrowStmt.class, this::handleThrowStmt);
   }
 
-  public de.fraunhofer.aisec.cpg.graph.statement.Statement handleExpressionStatement(
+  public de.fraunhofer.aisec.cpg.graph.statements.Statement handleExpressionStatement(
       Statement stmt) {
     return lang.getExpressionHandler().handle(stmt.asExpressionStmt().getExpression());
   }
 
-  private de.fraunhofer.aisec.cpg.graph.statement.Statement handleThrowStmt(Statement stmt) {
+  private de.fraunhofer.aisec.cpg.graph.statements.Statement handleThrowStmt(Statement stmt) {
     ThrowStmt throwStmt = (ThrowStmt) stmt;
     UnaryOperator throwOperation =
         NodeBuilder.newUnaryOperator("throw", false, true, throwStmt.toString());
@@ -180,9 +180,9 @@ public class StatementAnalyzer
     lang.getScopeManager().enterScope(statement);
 
     ForEachStmt forEachStmt = stmt.asForEachStmt();
-    de.fraunhofer.aisec.cpg.graph.statement.Statement var =
+    de.fraunhofer.aisec.cpg.graph.statements.Statement var =
         lang.getExpressionHandler().handle(forEachStmt.getVariable());
-    de.fraunhofer.aisec.cpg.graph.statement.Statement iterable =
+    de.fraunhofer.aisec.cpg.graph.statements.Statement iterable =
         lang.getExpressionHandler().handle(forEachStmt.getIterable());
 
     if (!(var instanceof DeclarationStatement
@@ -220,7 +220,7 @@ public class StatementAnalyzer
       ExpressionList initExprList = NodeBuilder.newExpressionList(null);
 
       for (com.github.javaparser.ast.expr.Expression initExpr : forStmt.getInitialization()) {
-        de.fraunhofer.aisec.cpg.graph.statement.Statement s =
+        de.fraunhofer.aisec.cpg.graph.statements.Statement s =
             lang.getExpressionHandler().handle(initExpr);
 
         // make sure location is set
@@ -275,7 +275,7 @@ public class StatementAnalyzer
       ExpressionList iterationExprList = NodeBuilder.newExpressionList(null);
 
       for (com.github.javaparser.ast.expr.Expression updateExpr : forStmt.getUpdate()) {
-        de.fraunhofer.aisec.cpg.graph.statement.Statement s =
+        de.fraunhofer.aisec.cpg.graph.statements.Statement s =
             lang.getExpressionHandler().handle(updateExpr);
 
         // make sure location is set
@@ -382,7 +382,7 @@ public class StatementAnalyzer
     lang.getScopeManager().enterScope(compoundStatement);
 
     for (Statement child : blockStmt.getStatements()) {
-      de.fraunhofer.aisec.cpg.graph.statement.Statement statement = handle(child);
+      de.fraunhofer.aisec.cpg.graph.statements.Statement statement = handle(child);
 
       compoundStatement.getStatements().add(statement);
     }
@@ -392,7 +392,7 @@ public class StatementAnalyzer
     return compoundStatement;
   }
 
-  public de.fraunhofer.aisec.cpg.graph.statement.Statement handleCaseDefaultStatement(
+  public de.fraunhofer.aisec.cpg.graph.statements.Statement handleCaseDefaultStatement(
       com.github.javaparser.ast.expr.Expression caseExpression, SwitchEntry sEntry) {
 
     PhysicalLocation parentLocation = lang.getLocationFromRawNode(sEntry);
@@ -585,7 +585,7 @@ public class StatementAnalyzer
     TryStmt tryStmt = stmt.asTryStmt();
     TryStatement tryStatement = NodeBuilder.newTryStatement(stmt.toString());
     lang.getScopeManager().enterScope(tryStatement);
-    List<de.fraunhofer.aisec.cpg.graph.statement.Statement> resources =
+    List<de.fraunhofer.aisec.cpg.graph.statements.Statement> resources =
         tryStmt.getResources().stream()
             .map(lang.getExpressionHandler()::handle)
             .collect(Collectors.toList());
@@ -602,7 +602,7 @@ public class StatementAnalyzer
     tryStatement.setFinallyBlock(finallyBlock);
     tryStatement.setCatchClauses(catchClauses);
 
-    for (de.fraunhofer.aisec.cpg.graph.statement.Statement r : resources) {
+    for (de.fraunhofer.aisec.cpg.graph.statements.Statement r : resources) {
       if (r instanceof DeclarationStatement) {
         for (Declaration d : ((DeclarationStatement) r).getDeclarations()) {
           if (d instanceof VariableDeclaration) {

@@ -1,11 +1,11 @@
 package de.fraunhofer.aisec.cpg.helpers;
 
 import de.fraunhofer.aisec.cpg.graph.*;
-import de.fraunhofer.aisec.cpg.graph.declaration.FunctionDeclaration;
-import de.fraunhofer.aisec.cpg.graph.declaration.VariableDeclaration;
-import de.fraunhofer.aisec.cpg.graph.statement.IfStatement;
-import de.fraunhofer.aisec.cpg.graph.statement.SwitchStatement;
-import de.fraunhofer.aisec.cpg.graph.statement.expression.DeclaredReferenceExpression;
+import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration;
+import de.fraunhofer.aisec.cpg.graph.statements.IfStatement;
+import de.fraunhofer.aisec.cpg.graph.statements.SwitchStatement;
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression;
 import java.util.*;
 
 public class ControlFlowSensitiveDFG {

@@ -26,7 +26,7 @@
 
 package de.fraunhofer.aisec.cpg;
 
-import de.fraunhofer.aisec.cpg.graph.declaration.TranslationUnitDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;

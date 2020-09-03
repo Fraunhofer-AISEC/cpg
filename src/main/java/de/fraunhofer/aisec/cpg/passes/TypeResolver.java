@@ -2,9 +2,9 @@ package de.fraunhofer.aisec.cpg.passes;
 
 import de.fraunhofer.aisec.cpg.TranslationResult;
 import de.fraunhofer.aisec.cpg.graph.*;
-import de.fraunhofer.aisec.cpg.graph.declaration.RecordDeclaration;
-import de.fraunhofer.aisec.cpg.graph.declaration.TranslationUnitDeclaration;
-import de.fraunhofer.aisec.cpg.graph.type.*;
+import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration;
+import de.fraunhofer.aisec.cpg.graph.types.*;
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker;
 import java.util.*;
 

@@ -6,8 +6,8 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import de.fraunhofer.aisec.cpg.graph.Node;
-import de.fraunhofer.aisec.cpg.graph.statement.expression.DeclaredReferenceExpression;
-import de.fraunhofer.aisec.cpg.graph.statement.expression.MemberExpression;
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression;
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression;
 
 /**
  * Utility-class to bundle functionality for the both test classes {@link VariableResolverCppTest}

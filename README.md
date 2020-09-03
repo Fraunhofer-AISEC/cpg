@@ -49,7 +49,7 @@ The following snippet creates a basic `TranslationManager` with default settings
 ```java
 import de.fraunhofer.aisec.cpg.TranslationConfiguration;
 import de.fraunhofer.aisec.cpg.TranslationManager;
-import de.fraunhofer.aisec.cpg.graph.declaration.FunctionDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration;
 
 var path = Paths.get("src/test/resources/openssl/client.cpp");
 var config = TranslationConfiguration.builder().sourceLocations(path.toFile()).defaultPasses().debugParser(true).build();

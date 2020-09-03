@@ -1,12 +1,12 @@
 package de.fraunhofer.aisec.cpg.passes.scopes;
 
 import de.fraunhofer.aisec.cpg.graph.Node;
-import de.fraunhofer.aisec.cpg.graph.declaration.Declaration;
-import de.fraunhofer.aisec.cpg.graph.declaration.FieldDeclaration;
-import de.fraunhofer.aisec.cpg.graph.declaration.FunctionDeclaration;
-import de.fraunhofer.aisec.cpg.graph.declaration.NamespaceDeclaration;
-import de.fraunhofer.aisec.cpg.graph.declaration.RecordDeclaration;
-import de.fraunhofer.aisec.cpg.graph.declaration.ValueDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declarations.Declaration;
+import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration;
 import java.util.ArrayList;
 import java.util.List;
 import org.checkerframework.checker.nullness.qual.NonNull;

@@ -51,11 +51,11 @@ import de.fraunhofer.aisec.cpg.TranslationConfiguration;
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
 import de.fraunhofer.aisec.cpg.frontends.TranslationException;
 import de.fraunhofer.aisec.cpg.graph.*;
-import de.fraunhofer.aisec.cpg.graph.declaration.Declaration;
-import de.fraunhofer.aisec.cpg.graph.declaration.IncludeDeclaration;
-import de.fraunhofer.aisec.cpg.graph.declaration.NamespaceDeclaration;
-import de.fraunhofer.aisec.cpg.graph.declaration.TranslationUnitDeclaration;
-import de.fraunhofer.aisec.cpg.graph.type.TypeParser;
+import de.fraunhofer.aisec.cpg.graph.declarations.Declaration;
+import de.fraunhofer.aisec.cpg.graph.declarations.IncludeDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration;
+import de.fraunhofer.aisec.cpg.graph.types.TypeParser;
 import de.fraunhofer.aisec.cpg.helpers.Benchmark;
 import de.fraunhofer.aisec.cpg.helpers.CommonPath;
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager;
@@ -247,7 +247,7 @@ public class JavaLanguageFrontend extends LanguageFrontend {
     return null;
   }
 
-  public de.fraunhofer.aisec.cpg.graph.type.Type getTypeAsGoodAsPossible(
+  public de.fraunhofer.aisec.cpg.graph.types.Type getTypeAsGoodAsPossible(
       NodeWithType nodeWithType, ResolvedValueDeclaration resolved) {
     try {
       return TypeParser.createFrom(resolved.getType().describe(), true);
@@ -343,7 +343,7 @@ public class JavaLanguageFrontend extends LanguageFrontend {
     return null;
   }
 
-  public de.fraunhofer.aisec.cpg.graph.type.Type getTypeAsGoodAsPossible(Type type) {
+  public de.fraunhofer.aisec.cpg.graph.types.Type getTypeAsGoodAsPossible(Type type) {
     try {
       return TypeParser.createFrom(type.resolve().describe(), true);
     } catch (RuntimeException | NoClassDefFoundError ex) {
@@ -351,7 +351,7 @@ public class JavaLanguageFrontend extends LanguageFrontend {
     }
   }
 
-  public de.fraunhofer.aisec.cpg.graph.type.Type getReturnTypeAsGoodAsPossible(
+  public de.fraunhofer.aisec.cpg.graph.types.Type getReturnTypeAsGoodAsPossible(
       NodeWithType nodeWithType, ResolvedMethodDeclaration resolved) {
     try {
       return TypeParser.createFrom(resolved.getReturnType().describe(), true);
@@ -360,7 +360,7 @@ public class JavaLanguageFrontend extends LanguageFrontend {
     }
   }
 
-  private de.fraunhofer.aisec.cpg.graph.type.Type getTypeFromImportIfPossible(Type type) {
+  private de.fraunhofer.aisec.cpg.graph.types.Type getTypeFromImportIfPossible(Type type) {
     Type searchType = type;
     while (searchType.isArrayType()) {
       searchType = searchType.getElementType();
@@ -368,9 +368,9 @@ public class JavaLanguageFrontend extends LanguageFrontend {
     // if this is not a ClassOrInterfaceType, just return
     if (!searchType.isClassOrInterfaceType() || context == null) {
       log.warn("Unable to resolve type for {}", type.asString());
-      de.fraunhofer.aisec.cpg.graph.type.Type returnType =
+      de.fraunhofer.aisec.cpg.graph.types.Type returnType =
           TypeParser.createFrom(type.asString(), true);
-      returnType.setTypeOrigin(de.fraunhofer.aisec.cpg.graph.type.Type.Origin.GUESSED);
+      returnType.setTypeOrigin(de.fraunhofer.aisec.cpg.graph.types.Type.Origin.GUESSED);
       return returnType;
     }
 
@@ -384,16 +384,16 @@ public class JavaLanguageFrontend extends LanguageFrontend {
           return TypeParser.createFrom(importDeclaration.getNameAsString(), true);
         }
       }
-      de.fraunhofer.aisec.cpg.graph.type.Type returnType =
+      de.fraunhofer.aisec.cpg.graph.types.Type returnType =
           TypeParser.createFrom(clazz.getNameAsString(), true);
-      returnType.setTypeOrigin(de.fraunhofer.aisec.cpg.graph.type.Type.Origin.GUESSED);
+      returnType.setTypeOrigin(de.fraunhofer.aisec.cpg.graph.types.Type.Origin.GUESSED);
       return returnType;
     }
 
     log.warn("Unable to resolve type for {}", type.asString());
-    de.fraunhofer.aisec.cpg.graph.type.Type returnType =
+    de.fraunhofer.aisec.cpg.graph.types.Type returnType =
         TypeParser.createFrom(type.asString(), true);
-    returnType.setTypeOrigin(de.fraunhofer.aisec.cpg.graph.type.Type.Origin.GUESSED);
+    returnType.setTypeOrigin(de.fraunhofer.aisec.cpg.graph.types.Type.Origin.GUESSED);
     return returnType;
   }
 

@@ -38,14 +38,14 @@ import com.github.javaparser.resolution.declarations.ResolvedTypeDeclaration;
 import com.github.javaparser.resolution.declarations.ResolvedValueDeclaration;
 import de.fraunhofer.aisec.cpg.frontends.Handler;
 import de.fraunhofer.aisec.cpg.graph.*;
-import de.fraunhofer.aisec.cpg.graph.declaration.VariableDeclaration;
-import de.fraunhofer.aisec.cpg.graph.statement.DeclarationStatement;
-import de.fraunhofer.aisec.cpg.graph.statement.Statement;
-import de.fraunhofer.aisec.cpg.graph.statement.expression.*;
-import de.fraunhofer.aisec.cpg.graph.type.PointerType;
-import de.fraunhofer.aisec.cpg.graph.type.Type;
-import de.fraunhofer.aisec.cpg.graph.type.TypeParser;
-import de.fraunhofer.aisec.cpg.graph.type.UnknownType;
+import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration;
+import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement;
+import de.fraunhofer.aisec.cpg.graph.statements.Statement;
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.*;
+import de.fraunhofer.aisec.cpg.graph.types.PointerType;
+import de.fraunhofer.aisec.cpg.graph.types.Type;
+import de.fraunhofer.aisec.cpg.graph.types.TypeParser;
+import de.fraunhofer.aisec.cpg.graph.types.UnknownType;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -57,7 +57,7 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
   private static final Logger log = LoggerFactory.getLogger(ExpressionHandler.class);
 
   public ExpressionHandler(JavaLanguageFrontend lang) {
-    super(de.fraunhofer.aisec.cpg.graph.statement.expression.Expression::new, lang);
+    super(de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression::new, lang);
 
     map.put(AssignExpr.class, this::handleAssignmentExpression);
     map.put(FieldAccessExpr.class, this::handleFieldAccessExpression);
@@ -86,8 +86,8 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
     CastExpr castExpr = expr.asCastExpr();
     CastExpression castExpression = NodeBuilder.newCastExpression(expr.toString());
 
-    de.fraunhofer.aisec.cpg.graph.statement.expression.Expression expression =
-        (de.fraunhofer.aisec.cpg.graph.statement.expression.Expression)
+    de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression expression =
+        (de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression)
             handle(castExpr.getExpression());
 
     castExpression.setExpression(expression);
@@ -134,7 +134,7 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
                   creationExpression
                       .getDimensions()
                       .add(
-                          (de.fraunhofer.aisec.cpg.graph.statement.expression.Expression)
+                          (de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression)
                               handle(expression)));
     }
 
@@ -146,10 +146,10 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
     // ArrayInitializerExpressions are converted into InitializerListExpressions to reduce the
     // syntactic distance a CPP and JAVA CPG
     InitializerListExpression initList = NodeBuilder.newInitializerListExpression(expr.toString());
-    List<de.fraunhofer.aisec.cpg.graph.statement.expression.Expression> initializers =
+    List<de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression> initializers =
         arrayInitializerExpr.getValues().stream()
             .map(this::handle)
-            .map(de.fraunhofer.aisec.cpg.graph.statement.expression.Expression.class::cast)
+            .map(de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression.class::cast)
             .collect(Collectors.toList());
     initList.setInitializers(initializers);
     return initList;
@@ -160,10 +160,10 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
     ArraySubscriptionExpression arraySubsExpression =
         NodeBuilder.newArraySubscriptionExpression(expr.toString());
     arraySubsExpression.setArrayExpression(
-        (de.fraunhofer.aisec.cpg.graph.statement.expression.Expression)
+        (de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression)
             handle(arrayAccessExpr.getName()));
     arraySubsExpression.setSubscriptExpression(
-        (de.fraunhofer.aisec.cpg.graph.statement.expression.Expression)
+        (de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression)
             handle(arrayAccessExpr.getIndex()));
     return arraySubsExpression;
   }
@@ -186,14 +186,14 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
       }
     }
 
-    de.fraunhofer.aisec.cpg.graph.statement.expression.Expression condition =
-        (de.fraunhofer.aisec.cpg.graph.statement.expression.Expression)
+    de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression condition =
+        (de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression)
             handle(conditionalExpr.getCondition());
-    de.fraunhofer.aisec.cpg.graph.statement.expression.Expression thenExpr =
-        (de.fraunhofer.aisec.cpg.graph.statement.expression.Expression)
+    de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression thenExpr =
+        (de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression)
             handle(conditionalExpr.getThenExpr());
-    de.fraunhofer.aisec.cpg.graph.statement.expression.Expression elseExpr =
-        (de.fraunhofer.aisec.cpg.graph.statement.expression.Expression)
+    de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression elseExpr =
+        (de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression)
             handle(conditionalExpr.getElseExpr());
     return NodeBuilder.newConditionalExpression(condition, thenExpr, elseExpr, superType);
   }
@@ -202,13 +202,13 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
     AssignExpr assignExpr = expr.asAssignExpr();
 
     // first, handle the target. this is the first argument of the operator call
-    de.fraunhofer.aisec.cpg.graph.statement.expression.Expression lhs =
-        (de.fraunhofer.aisec.cpg.graph.statement.expression.Expression)
+    de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression lhs =
+        (de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression)
             this.handle(assignExpr.getTarget());
 
     // second, handle the value. this is the second argument of the operator call
-    de.fraunhofer.aisec.cpg.graph.statement.expression.Expression rhs =
-        (de.fraunhofer.aisec.cpg.graph.statement.expression.Expression)
+    de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression rhs =
+        (de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression)
             handle(assignExpr.getValue());
 
     BinaryOperator binaryOperator =
@@ -253,8 +253,8 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
       Optional<Expression> oInitializer = variable.getInitializer();
 
       if (oInitializer.isPresent()) {
-        de.fraunhofer.aisec.cpg.graph.statement.expression.Expression initializer =
-            (de.fraunhofer.aisec.cpg.graph.statement.expression.Expression)
+        de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression initializer =
+            (de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression)
                 handle(oInitializer.get());
         if (initializer instanceof ArrayCreationExpression) {
           declaration.setIsArray(true);
@@ -270,10 +270,10 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
     return declarationStatement;
   }
 
-  private de.fraunhofer.aisec.cpg.graph.statement.expression.Expression handleFieldAccessExpression(
-      Expression expr) {
+  private de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+      handleFieldAccessExpression(Expression expr) {
     FieldAccessExpr fieldAccessExpr = expr.asFieldAccessExpr();
-    de.fraunhofer.aisec.cpg.graph.statement.expression.Expression base;
+    de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression base;
     // first, resolve the scope. this adds the necessary nodes, such as IDENTIFIER for the scope.
     // it also acts as the first argument of the operator call
     Expression scope = fieldAccessExpr.getScope();
@@ -318,8 +318,8 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
 
       lang.setCodeAndRegion(base, fieldAccessExpr.getScope());
     } else if (scope.isFieldAccessExpr()) {
-      base = (de.fraunhofer.aisec.cpg.graph.statement.expression.Expression) handle(scope);
-      de.fraunhofer.aisec.cpg.graph.statement.expression.Expression tester = base;
+      base = (de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression) handle(scope);
+      de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression tester = base;
       while (tester instanceof MemberExpression) {
         // we need to check if any base is only a static access, otherwise, this is a member access
         // to this base
@@ -350,7 +350,7 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
       }
       lang.setCodeAndRegion(base, fieldAccessExpr.getScope());
     } else {
-      base = (de.fraunhofer.aisec.cpg.graph.statement.expression.Expression) handle(scope);
+      base = (de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression) handle(scope);
     }
 
     Type fieldType;
@@ -464,7 +464,7 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
   }
 
   // TODO: this function needs a MAJOR overhaul!
-  private de.fraunhofer.aisec.cpg.graph.statement.expression.Expression handleNameExpression(
+  private de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression handleNameExpression(
       Expression expr) {
     NameExpr nameExpr = expr.asNameExpr();
 
@@ -502,7 +502,7 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
           fieldAccessExpr.getParentNode().ifPresent(expr::setParentNode);
 
           // handle it as a field expression
-          return (de.fraunhofer.aisec.cpg.graph.statement.expression.Expression)
+          return (de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression)
               handle(fieldAccessExpr);
         } else {
           FieldAccessExpr fieldAccessExpr =
@@ -515,7 +515,7 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
           fieldAccessExpr.getParentNode().ifPresent(expr::setParentNode);
 
           // handle it as a field expression
-          return (de.fraunhofer.aisec.cpg.graph.statement.expression.Expression)
+          return (de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression)
               handle(fieldAccessExpr);
         }
       } else {
@@ -567,14 +567,14 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
     InstanceOfExpr binaryExpr = expr.asInstanceOfExpr();
 
     // first, handle the target. this is the first argument of the operator callUnresolved symbol
-    de.fraunhofer.aisec.cpg.graph.statement.expression.Expression lhs =
-        (de.fraunhofer.aisec.cpg.graph.statement.expression.Expression)
+    de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression lhs =
+        (de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression)
             handle(binaryExpr.getExpression());
 
     Type typeAsGoodAsPossible = this.lang.getTypeAsGoodAsPossible(binaryExpr.getType());
 
     // second, handle the value. this is the second argument of the operator call
-    de.fraunhofer.aisec.cpg.graph.statement.expression.Expression rhs =
+    de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression rhs =
         NodeBuilder.newLiteral(
             typeAsGoodAsPossible.getTypeName(),
             TypeParser.createFrom("class", true),
@@ -593,8 +593,8 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
     UnaryExpr unaryExpr = expr.asUnaryExpr();
 
     // handle the 'inner' expression, which is affected by the unary expression
-    de.fraunhofer.aisec.cpg.graph.statement.expression.Expression expression =
-        (de.fraunhofer.aisec.cpg.graph.statement.expression.Expression)
+    de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression expression =
+        (de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression)
             handle(unaryExpr.getExpression());
 
     UnaryOperator unaryOperator =
@@ -614,13 +614,13 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
     BinaryExpr binaryExpr = expr.asBinaryExpr();
 
     // first, handle the target. this is the first argument of the operator call
-    de.fraunhofer.aisec.cpg.graph.statement.expression.Expression lhs =
-        (de.fraunhofer.aisec.cpg.graph.statement.expression.Expression)
+    de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression lhs =
+        (de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression)
             handle(binaryExpr.getLeft());
 
     // second, handle the value. this is the second argument of the operator call
-    de.fraunhofer.aisec.cpg.graph.statement.expression.Expression rhs =
-        (de.fraunhofer.aisec.cpg.graph.statement.expression.Expression)
+    de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression rhs =
+        (de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression)
             handle(binaryExpr.getRight());
 
     BinaryOperator binaryOperator =
@@ -703,8 +703,9 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
 
     // handle the arguments
     for (int i = 0; i < arguments.size(); i++) {
-      de.fraunhofer.aisec.cpg.graph.statement.expression.Expression argument =
-          (de.fraunhofer.aisec.cpg.graph.statement.expression.Expression) handle(arguments.get(i));
+      de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression argument =
+          (de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression)
+              handle(arguments.get(i));
 
       argument.setArgumentIndex(i);
 
@@ -742,8 +743,9 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
 
     // handle the arguments
     for (int i = 0; i < arguments.size(); i++) {
-      de.fraunhofer.aisec.cpg.graph.statement.expression.Expression argument =
-          (de.fraunhofer.aisec.cpg.graph.statement.expression.Expression) handle(arguments.get(i));
+      de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression argument =
+          (de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression)
+              handle(arguments.get(i));
 
       argument.setArgumentIndex(i);
 

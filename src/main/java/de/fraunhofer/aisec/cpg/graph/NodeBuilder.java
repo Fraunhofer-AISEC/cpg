@@ -26,11 +26,11 @@
 
 package de.fraunhofer.aisec.cpg.graph;
 
-import de.fraunhofer.aisec.cpg.graph.declaration.*;
-import de.fraunhofer.aisec.cpg.graph.statement.*;
-import de.fraunhofer.aisec.cpg.graph.statement.expression.*;
-import de.fraunhofer.aisec.cpg.graph.type.Type;
-import de.fraunhofer.aisec.cpg.graph.type.TypeParser;
+import de.fraunhofer.aisec.cpg.graph.declarations.*;
+import de.fraunhofer.aisec.cpg.graph.statements.*;
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.*;
+import de.fraunhofer.aisec.cpg.graph.types.Type;
+import de.fraunhofer.aisec.cpg.graph.types.TypeParser;
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation;
 import java.util.ArrayList;
 import java.util.List;

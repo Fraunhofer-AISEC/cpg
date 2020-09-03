@@ -26,7 +26,7 @@
 
 package de.fraunhofer.aisec.cpg.passes.scopes;
 
-import de.fraunhofer.aisec.cpg.graph.statement.ContinueStatement;
+import de.fraunhofer.aisec.cpg.graph.statements.ContinueStatement;
 import java.util.List;
 
 /**

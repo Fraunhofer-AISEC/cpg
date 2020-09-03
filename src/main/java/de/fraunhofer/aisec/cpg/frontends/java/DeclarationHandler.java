@@ -37,10 +37,10 @@ import com.github.javaparser.resolution.declarations.ResolvedConstructorDeclarat
 import com.github.javaparser.resolution.declarations.ResolvedMethodDeclaration;
 import de.fraunhofer.aisec.cpg.frontends.Handler;
 import de.fraunhofer.aisec.cpg.graph.*;
-import de.fraunhofer.aisec.cpg.graph.declaration.*;
-import de.fraunhofer.aisec.cpg.graph.statement.expression.Expression;
-import de.fraunhofer.aisec.cpg.graph.type.Type;
-import de.fraunhofer.aisec.cpg.graph.type.TypeParser;
+import de.fraunhofer.aisec.cpg.graph.declarations.*;
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression;
+import de.fraunhofer.aisec.cpg.graph.types.Type;
+import de.fraunhofer.aisec.cpg.graph.types.TypeParser;
 import de.fraunhofer.aisec.cpg.passes.scopes.RecordScope;
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation;
 import java.util.*;
@@ -91,12 +91,12 @@ public class DeclarationHandler
     }
   }
 
-  public de.fraunhofer.aisec.cpg.graph.declaration.ConstructorDeclaration
+  public de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDeclaration
       handleConstructorDeclaration(
           com.github.javaparser.ast.body.ConstructorDeclaration constructorDecl) {
     ResolvedConstructorDeclaration resolvedConstructor = constructorDecl.resolve();
 
-    de.fraunhofer.aisec.cpg.graph.declaration.ConstructorDeclaration declaration =
+    de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDeclaration declaration =
         NodeBuilder.newConstructorDeclaration(
             resolvedConstructor.getName(),
             constructorDecl.toString(),
@@ -144,11 +144,11 @@ public class DeclarationHandler
     return declaration;
   }
 
-  public de.fraunhofer.aisec.cpg.graph.declaration.MethodDeclaration handleMethodDeclaration(
+  public de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration handleMethodDeclaration(
       com.github.javaparser.ast.body.MethodDeclaration methodDecl) {
     ResolvedMethodDeclaration resolvedMethod = methodDecl.resolve();
 
-    de.fraunhofer.aisec.cpg.graph.declaration.MethodDeclaration functionDeclaration =
+    de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration functionDeclaration =
         NodeBuilder.newMethodDeclaration(
             resolvedMethod.getName(),
             methodDecl.toString(),
@@ -246,12 +246,12 @@ public class DeclarationHandler
       if (decl instanceof com.github.javaparser.ast.body.FieldDeclaration) {
         handle(decl); // will be added via the scopemanager
       } else if (decl instanceof com.github.javaparser.ast.body.MethodDeclaration) {
-        de.fraunhofer.aisec.cpg.graph.declaration.MethodDeclaration md =
-            (de.fraunhofer.aisec.cpg.graph.declaration.MethodDeclaration) handle(decl);
+        de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration md =
+            (de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration) handle(decl);
         recordDeclaration.getMethods().add(md);
       } else if (decl instanceof com.github.javaparser.ast.body.ConstructorDeclaration) {
-        de.fraunhofer.aisec.cpg.graph.declaration.ConstructorDeclaration c =
-            (de.fraunhofer.aisec.cpg.graph.declaration.ConstructorDeclaration) handle(decl);
+        de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDeclaration c =
+            (de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDeclaration) handle(decl);
         recordDeclaration.getConstructors().add(c);
       } else if (decl instanceof com.github.javaparser.ast.body.ClassOrInterfaceDeclaration) {
         recordDeclaration.getRecords().add((RecordDeclaration) handle(decl));
@@ -265,7 +265,7 @@ public class DeclarationHandler
     }
 
     if (recordDeclaration.getConstructors().isEmpty()) {
-      de.fraunhofer.aisec.cpg.graph.declaration.ConstructorDeclaration constructorDeclaration =
+      de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDeclaration constructorDeclaration =
           NodeBuilder.newConstructorDeclaration(
               recordDeclaration.getName(), recordDeclaration.getName(), recordDeclaration);
       recordDeclaration.getConstructors().add(constructorDeclaration);
@@ -275,7 +275,7 @@ public class DeclarationHandler
     return recordDeclaration;
   }
 
-  public de.fraunhofer.aisec.cpg.graph.declaration.FieldDeclaration handleFieldDeclaration(
+  public de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration handleFieldDeclaration(
       com.github.javaparser.ast.body.FieldDeclaration fieldDecl) {
 
     // TODO: can  field have more than one variable?
@@ -305,7 +305,7 @@ public class DeclarationHandler
         type.setTypeOrigin(Type.Origin.GUESSED);
       }
     }
-    de.fraunhofer.aisec.cpg.graph.declaration.FieldDeclaration fieldDeclaration =
+    de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration fieldDeclaration =
         NodeBuilder.newFieldDeclaration(
             variable.getName().asString(),
             type,
@@ -324,16 +324,17 @@ public class DeclarationHandler
     return new Declaration();
   }
 
-  public de.fraunhofer.aisec.cpg.graph.declaration.EnumDeclaration handleEnumDeclaration(
+  public de.fraunhofer.aisec.cpg.graph.declarations.EnumDeclaration handleEnumDeclaration(
       com.github.javaparser.ast.body.EnumDeclaration enumDecl) {
     String name = getAbsoluteName(enumDecl.getNameAsString());
     PhysicalLocation location = this.lang.getLocationFromRawNode(enumDecl);
 
-    de.fraunhofer.aisec.cpg.graph.declaration.EnumDeclaration enumDeclaration =
+    de.fraunhofer.aisec.cpg.graph.declarations.EnumDeclaration enumDeclaration =
         NodeBuilder.newEnumDeclaration(name, enumDecl.toString(), location);
-    List<de.fraunhofer.aisec.cpg.graph.declaration.EnumConstantDeclaration> entries =
+    List<de.fraunhofer.aisec.cpg.graph.declarations.EnumConstantDeclaration> entries =
         enumDecl.getEntries().stream()
-            .map(e -> (de.fraunhofer.aisec.cpg.graph.declaration.EnumConstantDeclaration) handle(e))
+            .map(
+                e -> (de.fraunhofer.aisec.cpg.graph.declarations.EnumConstantDeclaration) handle(e))
             .collect(Collectors.toList());
     entries.forEach(e -> e.setType(TypeParser.createFrom(enumDeclaration.getName(), true)));
     enumDeclaration.setEntries(entries);
@@ -349,7 +350,7 @@ public class DeclarationHandler
 
   /* Not so sure about the place of Annotations in the CPG currently */
 
-  public de.fraunhofer.aisec.cpg.graph.declaration.EnumConstantDeclaration
+  public de.fraunhofer.aisec.cpg.graph.declarations.EnumConstantDeclaration
       handleEnumConstantDeclaration(
           com.github.javaparser.ast.body.EnumConstantDeclaration enumConstDecl) {
     return NodeBuilder.newEnumConstantDeclaration(

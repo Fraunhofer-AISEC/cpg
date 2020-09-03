@@ -26,7 +26,7 @@
 
 package de.fraunhofer.aisec.cpg.graph;
 
-import de.fraunhofer.aisec.cpg.graph.declaration.TypedefDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declarations.TypedefDeclaration;
 import de.fraunhofer.aisec.cpg.helpers.LocationConverter;
 import de.fraunhofer.aisec.cpg.processing.IVisitable;
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation;
