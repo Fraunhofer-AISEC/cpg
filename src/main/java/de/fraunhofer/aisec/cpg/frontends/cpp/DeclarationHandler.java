@@ -372,8 +372,6 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
             problematicIncludes.computeIfAbsent(
                 ((ProblemDeclaration) decl).getFilename(), k -> new HashSet<>());
         problems.add((ProblemDeclaration) decl);
-      } else {
-        // node.add(decl);
       }
     }
 

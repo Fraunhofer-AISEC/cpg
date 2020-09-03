@@ -420,7 +420,7 @@ public class ScopeManager {
       toIterate = toIterate.getParent();
     } while (toIterate != null);
   }
-  
+
   public void resetToGlobal(TranslationUnitDeclaration declaration) {
     GlobalScope global = (GlobalScope) getFirstScopeThat(scope -> scope instanceof GlobalScope);
     if (global != null) {
