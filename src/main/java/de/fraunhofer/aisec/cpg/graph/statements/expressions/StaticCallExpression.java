@@ -27,6 +27,7 @@
 package de.fraunhofer.aisec.cpg.graph.statements.expressions;
 
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration;
+import java.util.Objects;
 import org.checkerframework.checker.nullness.qual.NonNull;
 
 /**
@@ -53,8 +54,28 @@ public class StaticCallExpression extends CallExpression {
   }
 
   private void updateFqn() {
-    if (targetRecord != null && !targetRecord.isEmpty() && name != null && !name.isEmpty()) {
+    if (targetRecord != null && !targetRecord.isEmpty() && !name.isEmpty()) {
       setFqn(targetRecord + "." + name);
     }
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    if (!super.equals(o)) {
+      return false;
+    }
+    StaticCallExpression that = (StaticCallExpression) o;
+    return Objects.equals(targetRecord, that.targetRecord);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(super.hashCode(), targetRecord);
   }
 }

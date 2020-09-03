@@ -225,23 +225,35 @@ public class RecordDeclaration extends Declaration {
     if (this == o) {
       return true;
     }
-    if (!(o instanceof RecordDeclaration)) {
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    if (!super.equals(o)) {
       return false;
     }
     RecordDeclaration that = (RecordDeclaration) o;
-    return super.equals(that)
-        && Objects.equals(kind, that.kind)
+    return Objects.equals(kind, that.kind)
         && Objects.equals(fields, that.fields)
         && Objects.equals(methods, that.methods)
         && Objects.equals(constructors, that.constructors)
         && Objects.equals(records, that.records)
         && Objects.equals(superClasses, that.superClasses)
         && Objects.equals(implementedInterfaces, that.implementedInterfaces)
-        && Objects.equals(superTypeDeclarations, that.superTypeDeclarations);
+        && Objects.equals(superTypeDeclarations, that.superTypeDeclarations)
+        && Objects.equals(importStatements, that.importStatements)
+        && Objects.equals(imports, that.imports)
+        && Objects.equals(staticImportStatements, that.staticImportStatements)
+        && Objects.equals(staticImports, that.staticImports);
   }
 
   @Override
   public int hashCode() {
-    return super.hashCode();
+    return Objects.hash(
+        super.hashCode(),
+        kind,
+        superClasses,
+        implementedInterfaces,
+        importStatements,
+        staticImportStatements);
   }
 }

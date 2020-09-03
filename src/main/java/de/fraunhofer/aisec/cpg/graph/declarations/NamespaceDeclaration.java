@@ -101,15 +101,13 @@ public class NamespaceDeclaration extends Declaration {
     if (this == o) {
       return true;
     }
-    if (!(o instanceof NamespaceDeclaration)) {
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    if (!super.equals(o)) {
       return false;
     }
     NamespaceDeclaration that = (NamespaceDeclaration) o;
-    return super.equals(that) && Objects.equals(declarations, that.declarations);
-  }
-
-  @Override
-  public int hashCode() {
-    return super.hashCode();
+    return Objects.equals(declarations, that.declarations);
   }
 }

@@ -67,9 +67,4 @@ public class ArrayRangeExpression extends Expression {
         && Objects.equals(floor, that.floor)
         && Objects.equals(ceiling, that.ceiling);
   }
-
-  @Override
-  public int hashCode() {
-    return super.hashCode();
-  }
 }

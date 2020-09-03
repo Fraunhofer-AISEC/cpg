@@ -26,7 +26,9 @@
 
 package de.fraunhofer.aisec.cpg.graph.declarations;
 
-import de.fraunhofer.aisec.cpg.graph.*;
+import de.fraunhofer.aisec.cpg.graph.Node;
+import de.fraunhofer.aisec.cpg.graph.SubGraph;
+import de.fraunhofer.aisec.cpg.graph.TypeManager;
 import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement;
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement;
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement;
@@ -240,21 +242,18 @@ public class FunctionDeclaration extends ValueDeclaration {
     if (this == o) {
       return true;
     }
-    if (!(o instanceof FunctionDeclaration)) {
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    if (!super.equals(o)) {
       return false;
     }
     FunctionDeclaration that = (FunctionDeclaration) o;
-    return super.equals(that)
+    return isDefinition == that.isDefinition
         && Objects.equals(body, that.body)
         && Objects.equals(parameters, that.parameters)
         && Objects.equals(throwsTypes, that.throwsTypes)
-        && Objects.equals(overriddenBy, that.overriddenBy)
-        && Objects.equals(overrides, that.overrides);
-  }
-
-  @Override
-  public int hashCode() {
-    return super.hashCode();
+        && Objects.equals(definition, that.definition);
   }
 
   public FunctionDeclaration getDefinition() {

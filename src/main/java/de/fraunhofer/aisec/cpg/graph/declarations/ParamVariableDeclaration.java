@@ -26,6 +26,8 @@
 
 package de.fraunhofer.aisec.cpg.graph.declarations;
 
+import java.util.Objects;
+
 /** A declaration of a function parameter. */
 public class ParamVariableDeclaration extends ValueDeclaration {
 
@@ -37,5 +39,25 @@ public class ParamVariableDeclaration extends ValueDeclaration {
 
   public void setVariadic(boolean variadic) {
     this.variadic = variadic;
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    if (!super.equals(o)) {
+      return false;
+    }
+    ParamVariableDeclaration that = (ParamVariableDeclaration) o;
+    return variadic == that.variadic;
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(super.hashCode(), variadic);
   }
 }

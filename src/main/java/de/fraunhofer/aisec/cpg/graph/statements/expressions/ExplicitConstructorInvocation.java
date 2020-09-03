@@ -55,15 +55,18 @@ public class ExplicitConstructorInvocation extends CallExpression {
     if (this == o) {
       return true;
     }
-    if (!(o instanceof ExplicitConstructorInvocation)) {
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    if (!super.equals(o)) {
       return false;
     }
     ExplicitConstructorInvocation that = (ExplicitConstructorInvocation) o;
-    return super.equals(that) && Objects.equals(containingClass, that.containingClass);
+    return Objects.equals(containingClass, that.containingClass);
   }
 
   @Override
   public int hashCode() {
-    return super.hashCode();
+    return Objects.hash(super.hashCode(), containingClass);
   }
 }

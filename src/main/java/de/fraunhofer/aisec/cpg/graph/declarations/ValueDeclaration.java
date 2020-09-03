@@ -197,18 +197,20 @@ public abstract class ValueDeclaration extends Declaration implements HasType {
     if (this == o) {
       return true;
     }
-    if (!(o instanceof ValueDeclaration)) {
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    if (!super.equals(o)) {
       return false;
     }
     ValueDeclaration that = (ValueDeclaration) o;
-    return super.equals(that)
-        && Objects.equals(type, that.type)
+    return Objects.equals(type, that.type)
         && Objects.equals(possibleSubTypes, that.possibleSubTypes);
   }
 
   @Override
   public int hashCode() {
-    return super.hashCode();
+    return Objects.hash(super.hashCode(), type, possibleSubTypes);
   }
 
   @Override

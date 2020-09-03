@@ -60,17 +60,19 @@ public class TypeIdExpression extends Expression {
     if (this == o) {
       return true;
     }
-    if (!(o instanceof TypeIdExpression)) {
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    if (!super.equals(o)) {
       return false;
     }
     TypeIdExpression that = (TypeIdExpression) o;
-    return super.equals(that)
-        && Objects.equals(operatorCode, that.operatorCode)
-        && Objects.equals(referencedType, that.referencedType);
+    return Objects.equals(referencedType, that.referencedType)
+        && Objects.equals(operatorCode, that.operatorCode);
   }
 
   @Override
   public int hashCode() {
-    return super.hashCode();
+    return Objects.hash(super.hashCode(), referencedType, operatorCode);
   }
 }

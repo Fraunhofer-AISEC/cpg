@@ -72,15 +72,13 @@ public class NewExpression extends Expression {
     if (this == o) {
       return true;
     }
-    if (!(o instanceof NewExpression)) {
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    if (!super.equals(o)) {
       return false;
     }
     NewExpression that = (NewExpression) o;
-    return super.equals(that) && Objects.equals(initializer, that.initializer);
-  }
-
-  @Override
-  public int hashCode() {
-    return super.hashCode();
+    return Objects.equals(initializer, that.initializer);
   }
 }

@@ -64,15 +64,13 @@ public class MemberExpression extends DeclaredReferenceExpression {
     if (this == o) {
       return true;
     }
-    if (!(o instanceof MemberExpression)) {
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    if (!super.equals(o)) {
       return false;
     }
     MemberExpression that = (MemberExpression) o;
-    return super.equals(that) && Objects.equals(base, that.base);
-  }
-
-  @Override
-  public int hashCode() {
-    return super.hashCode();
+    return Objects.equals(base, that.base);
   }
 }

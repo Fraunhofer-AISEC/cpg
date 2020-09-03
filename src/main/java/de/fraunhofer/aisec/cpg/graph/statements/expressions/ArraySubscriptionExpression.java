@@ -95,17 +95,14 @@ public class ArraySubscriptionExpression extends Expression implements TypeListe
     if (this == o) {
       return true;
     }
-    if (!(o instanceof ArraySubscriptionExpression)) {
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    if (!super.equals(o)) {
       return false;
     }
     ArraySubscriptionExpression that = (ArraySubscriptionExpression) o;
-    return super.equals(that)
-        && Objects.equals(arrayExpression, that.arrayExpression)
+    return Objects.equals(arrayExpression, that.arrayExpression)
         && Objects.equals(subscriptExpression, that.subscriptExpression);
-  }
-
-  @Override
-  public int hashCode() {
-    return super.hashCode();
   }
 }

@@ -170,17 +170,16 @@ public class FieldDeclaration extends ValueDeclaration implements TypeListener {
     if (this == o) {
       return true;
     }
-    if (!(o instanceof FieldDeclaration)) {
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    if (!super.equals(o)) {
       return false;
     }
     FieldDeclaration that = (FieldDeclaration) o;
-    return super.equals(that)
+    return implicitInitializerAllowed == that.implicitInitializerAllowed
+        && isArray == that.isArray
         && Objects.equals(initializer, that.initializer)
         && Objects.equals(modifiers, that.modifiers);
-  }
-
-  @Override
-  public int hashCode() {
-    return super.hashCode();
   }
 }

@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.graph.declarations;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import org.checkerframework.checker.nullness.qual.NonNull;
 
 /**
@@ -58,5 +59,20 @@ public class DeclarationSequence extends Declaration {
 
   public Declaration first() {
     return children.get(0);
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    if (!super.equals(o)) {
+      return false;
+    }
+    DeclarationSequence that = (DeclarationSequence) o;
+    return Objects.equals(children, that.children);
   }
 }

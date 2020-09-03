@@ -79,14 +79,6 @@ public class IncludeDeclaration extends Declaration {
       return false;
     }
     IncludeDeclaration that = (IncludeDeclaration) o;
-    return super.equals(that)
-        && Objects.equals(includes, that.includes)
-        && Objects.equals(problems, that.problems)
-        && Objects.equals(filename, that.filename);
-  }
-
-  @Override
-  public int hashCode() {
-    return super.hashCode();
+    return super.equals(that) && Objects.equals(filename, that.filename);
   }
 }

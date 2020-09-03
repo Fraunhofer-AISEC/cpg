@@ -46,15 +46,13 @@ public class DeleteExpression extends Expression {
     if (this == o) {
       return true;
     }
-    if (!(o instanceof DeleteExpression)) {
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    if (!super.equals(o)) {
       return false;
     }
     DeleteExpression that = (DeleteExpression) o;
-    return super.equals(that) && Objects.equals(operand, that.operand);
-  }
-
-  @Override
-  public int hashCode() {
-    return super.hashCode();
+    return Objects.equals(operand, that.operand);
   }
 }

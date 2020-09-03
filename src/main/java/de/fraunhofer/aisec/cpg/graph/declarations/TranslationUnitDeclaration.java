@@ -150,9 +150,4 @@ public class TranslationUnitDeclaration extends Declaration {
         && Objects.equals(includes, that.includes)
         && Objects.equals(namespaces, that.namespaces);
   }
-
-  @Override
-  public int hashCode() {
-    return super.hashCode();
-  }
 }

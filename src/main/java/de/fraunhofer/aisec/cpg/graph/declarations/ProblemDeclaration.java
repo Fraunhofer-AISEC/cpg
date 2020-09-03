@@ -74,18 +74,20 @@ public class ProblemDeclaration extends Declaration {
     if (this == o) {
       return true;
     }
-    if (!(o instanceof ProblemDeclaration)) {
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    if (!super.equals(o)) {
       return false;
     }
     ProblemDeclaration that = (ProblemDeclaration) o;
-    return super.equals(that)
-        && Objects.equals(filename, that.filename)
+    return Objects.equals(filename, that.filename)
         && Objects.equals(problem, that.problem)
         && Objects.equals(problemLocation, that.problemLocation);
   }
 
   @Override
   public int hashCode() {
-    return super.hashCode();
+    return Objects.hash(super.hashCode(), filename, problem, problemLocation);
   }
 }

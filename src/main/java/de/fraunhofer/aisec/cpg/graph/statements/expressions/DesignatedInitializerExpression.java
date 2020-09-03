@@ -70,15 +70,13 @@ public class DesignatedInitializerExpression extends Expression {
     if (this == o) {
       return true;
     }
-    if (!(o instanceof DesignatedInitializerExpression)) {
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    if (!super.equals(o)) {
       return false;
     }
     DesignatedInitializerExpression that = (DesignatedInitializerExpression) o;
-    return super.equals(that) && Objects.equals(rhs, that.rhs) && Objects.equals(lhs, that.lhs);
-  }
-
-  @Override
-  public int hashCode() {
-    return super.hashCode();
+    return Objects.equals(rhs, that.rhs) && Objects.equals(lhs, that.lhs);
   }
 }

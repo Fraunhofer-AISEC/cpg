@@ -226,18 +226,21 @@ public class BinaryOperator extends Expression implements TypeListener {
     if (this == o) {
       return true;
     }
-    if (!(o instanceof BinaryOperator)) {
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    if (!super.equals(o)) {
       return false;
     }
     BinaryOperator that = (BinaryOperator) o;
-    return super.equals(that)
-        && Objects.equals(lhs, that.lhs)
+    return Objects.equals(lhs, that.lhs)
         && Objects.equals(rhs, that.rhs)
-        && Objects.equals(operatorCode, that.operatorCode);
+        && Objects.equals(operatorCode, that.operatorCode)
+        && Objects.equals(compoundOperators, that.compoundOperators);
   }
 
   @Override
   public int hashCode() {
-    return super.hashCode();
+    return Objects.hash(super.hashCode(), operatorCode, compoundOperators);
   }
 }

@@ -126,15 +126,13 @@ public class InitializerListExpression extends Expression implements TypeListene
     if (this == o) {
       return true;
     }
-    if (!(o instanceof InitializerListExpression)) {
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    if (!super.equals(o)) {
       return false;
     }
     InitializerListExpression that = (InitializerListExpression) o;
-    return super.equals(that) && Objects.equals(initializers, that.initializers);
-  }
-
-  @Override
-  public int hashCode() {
-    return super.hashCode();
+    return Objects.equals(initializers, that.initializers);
   }
 }

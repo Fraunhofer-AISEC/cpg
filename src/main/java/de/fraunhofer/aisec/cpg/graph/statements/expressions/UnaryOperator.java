@@ -220,12 +220,14 @@ public class UnaryOperator extends Expression implements TypeListener {
     if (this == o) {
       return true;
     }
-    if (!(o instanceof UnaryOperator)) {
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    if (!super.equals(o)) {
       return false;
     }
     UnaryOperator that = (UnaryOperator) o;
-    return super.equals(that)
-        && postfix == that.postfix
+    return postfix == that.postfix
         && prefix == that.prefix
         && Objects.equals(input, that.input)
         && Objects.equals(operatorCode, that.operatorCode);
@@ -233,6 +235,6 @@ public class UnaryOperator extends Expression implements TypeListener {
 
   @Override
   public int hashCode() {
-    return super.hashCode();
+    return Objects.hash(super.hashCode(), operatorCode, postfix, prefix);
   }
 }

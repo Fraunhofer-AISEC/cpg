@@ -63,7 +63,10 @@ public class TypedefDeclaration extends Declaration {
     if (this == o) {
       return true;
     }
-    if (!(o instanceof TypedefDeclaration)) {
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    if (!super.equals(o)) {
       return false;
     }
     TypedefDeclaration that = (TypedefDeclaration) o;
@@ -72,7 +75,7 @@ public class TypedefDeclaration extends Declaration {
 
   @Override
   public int hashCode() {
-    return Objects.hash(type, alias);
+    return Objects.hash(super.hashCode(), type, alias);
   }
 
   @Override

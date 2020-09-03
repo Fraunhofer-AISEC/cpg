@@ -54,15 +54,13 @@ public class CompoundStatementExpression extends Expression {
     if (this == o) {
       return true;
     }
-    if (!(o instanceof CompoundStatementExpression)) {
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    if (!super.equals(o)) {
       return false;
     }
     CompoundStatementExpression that = (CompoundStatementExpression) o;
-    return super.equals(that) && Objects.equals(statement, that.statement);
-  }
-
-  @Override
-  public int hashCode() {
-    return super.hashCode();
+    return Objects.equals(statement, that.statement);
   }
 }

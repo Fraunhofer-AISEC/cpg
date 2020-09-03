@@ -83,12 +83,14 @@ public class ArrayCreationExpression extends Expression implements TypeListener 
     if (this == o) {
       return true;
     }
-    if (!(o instanceof ArrayCreationExpression)) {
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    if (!super.equals(o)) {
       return false;
     }
     ArrayCreationExpression that = (ArrayCreationExpression) o;
-    return super.equals(that)
-        && Objects.equals(initializer, that.initializer)
+    return Objects.equals(initializer, that.initializer)
         && Objects.equals(dimensions, that.dimensions);
   }
 
@@ -107,10 +109,5 @@ public class ArrayCreationExpression extends Expression implements TypeListener 
     Set<Type> subTypes = new HashSet<>(getPossibleSubTypes());
     subTypes.addAll(src.getPossibleSubTypes());
     setPossibleSubTypes(subTypes, root);
-  }
-
-  @Override
-  public int hashCode() {
-    return super.hashCode();
   }
 }

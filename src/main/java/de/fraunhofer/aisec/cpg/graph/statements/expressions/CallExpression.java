@@ -26,16 +26,15 @@
 
 package de.fraunhofer.aisec.cpg.graph.statements.expressions;
 
-import de.fraunhofer.aisec.cpg.graph.*;
+import de.fraunhofer.aisec.cpg.graph.HasType;
 import de.fraunhofer.aisec.cpg.graph.HasType.TypeListener;
+import de.fraunhofer.aisec.cpg.graph.Node;
+import de.fraunhofer.aisec.cpg.graph.SubGraph;
+import de.fraunhofer.aisec.cpg.graph.TypeManager;
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration;
 import de.fraunhofer.aisec.cpg.graph.types.Type;
 import de.fraunhofer.aisec.cpg.helpers.Util;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 
@@ -165,18 +164,20 @@ public class CallExpression extends Expression implements TypeListener {
     if (this == o) {
       return true;
     }
-    if (!(o instanceof CallExpression)) {
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    if (!super.equals(o)) {
       return false;
     }
     CallExpression that = (CallExpression) o;
-    return super.equals(that)
-        && Objects.equals(arguments, that.arguments)
-        && Objects.equals(invokes, that.invokes)
-        && Objects.equals(base, that.base);
+    return Objects.equals(arguments, that.arguments)
+        && Objects.equals(base, that.base)
+        && Objects.equals(fqn, that.fqn);
   }
 
   @Override
   public int hashCode() {
-    return super.hashCode();
+    return Objects.hash(super.hashCode(), fqn);
   }
 }

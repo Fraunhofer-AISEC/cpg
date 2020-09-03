@@ -137,17 +137,13 @@ public class ConstructExpression extends Expression implements TypeListener {
     if (this == o) {
       return true;
     }
-    if (!(o instanceof ConstructExpression)) {
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    if (!super.equals(o)) {
       return false;
     }
     ConstructExpression that = (ConstructExpression) o;
-    return super.equals(that)
-        && Objects.equals(constructor, that.constructor)
-        && Objects.equals(arguments, that.arguments);
-  }
-
-  @Override
-  public int hashCode() {
-    return super.hashCode();
+    return Objects.equals(arguments, that.arguments);
   }
 }

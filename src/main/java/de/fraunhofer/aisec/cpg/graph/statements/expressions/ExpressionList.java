@@ -92,15 +92,13 @@ public class ExpressionList extends Expression implements TypeListener {
     if (this == o) {
       return true;
     }
-    if (!(o instanceof ExpressionList)) {
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    if (!super.equals(o)) {
       return false;
     }
     ExpressionList that = (ExpressionList) o;
-    return super.equals(that) && Objects.equals(expressions, that.expressions);
-  }
-
-  @Override
-  public int hashCode() {
-    return super.hashCode();
+    return Objects.equals(expressions, that.expressions);
   }
 }

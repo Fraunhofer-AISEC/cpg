@@ -52,7 +52,7 @@ public class MemberCallExpression extends CallExpression {
     if (this == o) {
       return true;
     }
-    if (!(o instanceof MemberCallExpression)) {
+    if (o == null || getClass() != o.getClass()) {
       return false;
     }
     if (!super.equals(o)) {
@@ -60,10 +60,5 @@ public class MemberCallExpression extends CallExpression {
     }
     MemberCallExpression that = (MemberCallExpression) o;
     return Objects.equals(member, that.member);
-  }
-
-  @Override
-  public int hashCode() {
-    return super.hashCode();
   }
 }

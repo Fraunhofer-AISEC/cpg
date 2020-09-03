@@ -146,9 +146,4 @@ public class ConditionalExpression extends Expression implements TypeListener {
         && Objects.equals(thenExpr, that.thenExpr)
         && Objects.equals(elseExpr, that.elseExpr);
   }
-
-  @Override
-  public int hashCode() {
-    return super.hashCode();
-  }
 }

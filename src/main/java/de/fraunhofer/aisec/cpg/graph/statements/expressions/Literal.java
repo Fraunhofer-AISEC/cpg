@@ -58,15 +58,18 @@ public class Literal<T> extends Expression {
     if (this == o) {
       return true;
     }
-    if (!(o instanceof Literal)) {
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    if (!super.equals(o)) {
       return false;
     }
     Literal<?> literal = (Literal<?>) o;
-    return super.equals(literal) && Objects.equals(value, literal.value);
+    return Objects.equals(value, literal.value);
   }
 
   @Override
   public int hashCode() {
-    return super.hashCode();
+    return Objects.hash(super.hashCode(), value);
   }
 }

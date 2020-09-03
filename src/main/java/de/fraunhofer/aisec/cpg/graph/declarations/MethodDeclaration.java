@@ -27,6 +27,7 @@
 package de.fraunhofer.aisec.cpg.graph.declarations;
 
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder;
+import java.util.Objects;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
@@ -88,5 +89,25 @@ public class MethodDeclaration extends FunctionDeclaration {
 
   public void setRecordDeclaration(@Nullable RecordDeclaration recordDeclaration) {
     this.recordDeclaration = recordDeclaration;
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    if (!super.equals(o)) {
+      return false;
+    }
+    MethodDeclaration that = (MethodDeclaration) o;
+    return isStatic == that.isStatic;
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(super.hashCode(), isStatic);
   }
 }

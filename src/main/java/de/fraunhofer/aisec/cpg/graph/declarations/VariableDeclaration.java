@@ -163,15 +163,20 @@ public class VariableDeclaration extends ValueDeclaration implements TypeListene
     if (this == o) {
       return true;
     }
-    if (!(o instanceof VariableDeclaration)) {
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    if (!super.equals(o)) {
       return false;
     }
     VariableDeclaration that = (VariableDeclaration) o;
-    return super.equals(that) && Objects.equals(initializer, that.initializer);
+    return implicitInitializerAllowed == that.implicitInitializerAllowed
+        && isArray == that.isArray
+        && Objects.equals(initializer, that.initializer);
   }
 
   @Override
   public int hashCode() {
-    return super.hashCode();
+    return Objects.hash(super.hashCode(), implicitInitializerAllowed, isArray);
   }
 }

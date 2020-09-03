@@ -225,17 +225,19 @@ public class Expression extends Statement implements HasType {
     if (this == o) {
       return true;
     }
-    if (!(o instanceof Expression)) {
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    if (!super.equals(o)) {
       return false;
     }
     Expression that = (Expression) o;
-    return super.equals(that)
-        && Objects.equals(type, that.type)
+    return Objects.equals(type, that.type)
         && Objects.equals(possibleSubTypes, that.possibleSubTypes);
   }
 
   @Override
   public int hashCode() {
-    return super.hashCode();
+    return Objects.hash(super.hashCode(), type, possibleSubTypes);
   }
 }

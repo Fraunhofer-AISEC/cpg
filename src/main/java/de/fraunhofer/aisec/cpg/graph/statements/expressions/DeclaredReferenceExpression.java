@@ -26,8 +26,10 @@
 
 package de.fraunhofer.aisec.cpg.graph.statements.expressions;
 
-import de.fraunhofer.aisec.cpg.graph.*;
+import de.fraunhofer.aisec.cpg.graph.AccessValues;
+import de.fraunhofer.aisec.cpg.graph.HasType;
 import de.fraunhofer.aisec.cpg.graph.HasType.TypeListener;
+import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration;
 import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration;
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration;
@@ -199,15 +201,18 @@ public class DeclaredReferenceExpression extends Expression implements TypeListe
     if (this == o) {
       return true;
     }
-    if (!(o instanceof DeclaredReferenceExpression)) {
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    if (!super.equals(o)) {
       return false;
     }
     DeclaredReferenceExpression that = (DeclaredReferenceExpression) o;
-    return super.equals(that) && Objects.equals(refersTo, that.refersTo);
+    return staticAccess == that.staticAccess && access == that.access;
   }
 
   @Override
   public int hashCode() {
-    return super.hashCode();
+    return Objects.hash(super.hashCode(), access, staticAccess);
   }
 }
