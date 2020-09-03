@@ -50,6 +50,7 @@ import de.fraunhofer.aisec.cpg.graph.VariableDeclaration;
 import de.fraunhofer.aisec.cpg.graph.type.Type;
 import de.fraunhofer.aisec.cpg.graph.type.TypeParser;
 import de.fraunhofer.aisec.cpg.helpers.Util;
+import de.fraunhofer.aisec.cpg.passes.scopes.RecordScope;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -149,7 +150,7 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
         functionDeclaration instanceof MethodDeclaration
             ? ((MethodDeclaration) functionDeclaration).getRecordDeclaration()
             : null;
-    var outsideOfRecord = !this.lang.getScopeManager().isInRecord();
+    var outsideOfRecord = !(lang.getScopeManager().getCurrentScope() instanceof RecordScope);
 
     if (recordDeclaration != null) {
       if (outsideOfRecord) {

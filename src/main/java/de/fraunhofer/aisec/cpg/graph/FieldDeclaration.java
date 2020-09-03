@@ -66,21 +66,6 @@ public class FieldDeclaration extends ValueDeclaration implements TypeListener {
 
   private List<String> modifiers = new ArrayList<>();
 
-  public FieldDeclaration() {}
-
-  private FieldDeclaration(VariableDeclaration declaration) {
-    this.name = declaration.getName();
-    this.code = declaration.getCode();
-    this.location = declaration.getLocation();
-    this.type = declaration.getType();
-    this.initializer = declaration.getInitializer();
-    this.annotations = declaration.getAnnotations();
-  }
-
-  public static FieldDeclaration from(VariableDeclaration declaration) {
-    return new FieldDeclaration(declaration);
-  }
-
   @Nullable
   public Expression getInitializer() {
     return initializer;

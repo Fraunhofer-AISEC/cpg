@@ -46,6 +46,7 @@ import de.fraunhofer.aisec.cpg.graph.VariableDeclaration;
 import de.fraunhofer.aisec.cpg.graph.type.IncompleteType;
 import de.fraunhofer.aisec.cpg.graph.type.TypeParser;
 import de.fraunhofer.aisec.cpg.graph.type.UnknownType;
+import de.fraunhofer.aisec.cpg.passes.scopes.RecordScope;
 import java.util.Arrays;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -89,19 +90,25 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
       return handle(ctx.getNestedDeclarator());
     }
 
-    // type will be filled out later
-    VariableDeclaration declaration =
-        NodeBuilder.newVariableDeclaration(
-            ctx.getName().toString(), UnknownType.getUnknownType(), ctx.getRawSignature(), true);
-    IASTInitializer init = ctx.getInitializer();
+    if (lang.getScopeManager().getCurrentScope() instanceof RecordScope) {
+      // forward it to handleFieldDeclarator
+      return handleFieldDeclarator(ctx);
+    } else {
+      // type will be filled out later
+      VariableDeclaration declaration =
+          NodeBuilder.newVariableDeclaration(
+              ctx.getName().toString(), UnknownType.getUnknownType(), ctx.getRawSignature(), true);
 
-    if (init != null) {
-      declaration.setInitializer(lang.getInitializerHandler().handle(init));
+      IASTInitializer init = ctx.getInitializer();
+
+      if (init != null) {
+        declaration.setInitializer(lang.getInitializerHandler().handle(init));
+      }
+
+      lang.getScopeManager().addDeclaration(declaration);
+
+      return declaration;
     }
-
-    lang.getScopeManager().addDeclaration(declaration);
-
-    return declaration;
   }
 
   private FieldDeclaration handleFieldDeclarator(CPPASTDeclarator ctx) {
@@ -160,7 +167,7 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
     RecordDeclaration recordDeclaration = null;
 
     // remember, if this is a method declaration outside of the record
-    var outsideOfRecord = !this.lang.getScopeManager().isInRecord();
+    var outsideOfRecord = !(lang.getScopeManager().getCurrentScope() instanceof RecordScope);
 
     // check for function definitions that are really methods and constructors, i.e. if they contain
     // a scope operator
@@ -381,12 +388,12 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
 
       Declaration declaration = lang.getDeclarationHandler().handle(member);
 
-      if (declaration instanceof VariableDeclaration) {
+      /*if (declaration instanceof VariableDeclaration) {
         FieldDeclaration fieldDeclaration =
             FieldDeclaration.from((VariableDeclaration) declaration);
         recordDeclaration.getFields().add(fieldDeclaration);
         this.lang.replaceDeclarationInExpression(fieldDeclaration, declaration);
-      } else if (declaration instanceof ProblemDeclaration) {
+      } else */ if (declaration instanceof ProblemDeclaration) {
         // there is no place to put them here so let's attach them to the translation unit so that
         // we do not loose them
         lang.getCurrentTU().add(declaration);
