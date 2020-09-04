@@ -28,11 +28,13 @@ package de.fraunhofer.aisec.cpg.graph;
 
 import de.fraunhofer.aisec.cpg.helpers.Util;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 import org.checkerframework.checker.nullness.qual.NonNull;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
  * Declares the scope of a namespace and appends its own name to the current namespace-prefix to
@@ -44,7 +46,7 @@ import org.checkerframework.checker.nullness.qual.NonNull;
  * semantical difference between NamespaceDeclaration and {@link RecordDeclaration} lies in the
  * non-instantiabillity of a namespace.
  */
-public class NamespaceDeclaration extends Declaration {
+public class NamespaceDeclaration extends Declaration implements DeclarationHolder {
 
   /**
    * Edges to nested namespaces, records, functions, fields etc. contained in the current namespace.
@@ -110,5 +112,11 @@ public class NamespaceDeclaration extends Declaration {
   @Override
   public int hashCode() {
     return super.hashCode();
+  }
+
+  @Override
+  public @Nullable Collection<? extends Declaration> getContainerForDeclaration(
+      Declaration declaration) {
+    return this.declarations;
   }
 }

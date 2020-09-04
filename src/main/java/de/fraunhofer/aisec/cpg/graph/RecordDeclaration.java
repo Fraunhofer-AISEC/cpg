@@ -27,7 +27,12 @@
 package de.fraunhofer.aisec.cpg.graph;
 
 import de.fraunhofer.aisec.cpg.graph.type.Type;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.apache.commons.lang3.builder.ToStringBuilder;
@@ -36,7 +41,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 import org.neo4j.ogm.annotation.Transient;
 
 /** Represents a C++ union/struct/class or Java class */
-public class RecordDeclaration extends Declaration {
+public class RecordDeclaration extends Declaration implements DeclarationHolder {
 
   /** The kind, i.e. struct, class, union or enum. */
   private String kind;
@@ -241,5 +246,21 @@ public class RecordDeclaration extends Declaration {
   @Override
   public int hashCode() {
     return super.hashCode();
+  }
+
+  @Override
+  public @Nullable Collection<? extends Declaration> getContainerForDeclaration(
+      Declaration declaration) {
+    if (declaration instanceof ConstructorDeclaration) {
+      return this.constructors;
+    } else if (declaration instanceof MethodDeclaration) {
+      return this.methods;
+    } else if (declaration instanceof FieldDeclaration) {
+      return this.fields;
+    } else if (declaration instanceof RecordDeclaration) {
+      return this.records;
+    }
+
+    return null;
   }
 }

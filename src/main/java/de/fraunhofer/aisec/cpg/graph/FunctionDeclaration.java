@@ -28,14 +28,19 @@ package de.fraunhofer.aisec.cpg.graph;
 
 import de.fraunhofer.aisec.cpg.graph.type.Type;
 import de.fraunhofer.aisec.cpg.graph.type.UnknownType;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.neo4j.ogm.annotation.Relationship;
 
 /** Represents the declaration or definition of a function. */
-public class FunctionDeclaration extends ValueDeclaration {
+public class FunctionDeclaration extends ValueDeclaration implements DeclarationHolder {
 
   private static final String WHITESPACE = " ";
   private static final String BRACKET_LEFT = "(";
@@ -274,5 +279,19 @@ public class FunctionDeclaration extends ValueDeclaration {
 
   public void setRecords(List<RecordDeclaration> records) {
     this.records = records;
+  }
+
+  @Override
+  public @Nullable Collection<? extends Declaration> getContainerForDeclaration(
+      Declaration declaration) {
+    if (declaration instanceof ParamVariableDeclaration) {
+      return this.parameters;
+    }
+
+    if (declaration instanceof RecordDeclaration) {
+      return this.records;
+    }
+
+    return null;
   }
 }

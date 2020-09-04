@@ -26,20 +26,11 @@
 
 package de.fraunhofer.aisec.cpg.passes.scopes;
 
-import de.fraunhofer.aisec.cpg.graph.CompoundStatement;
-import de.fraunhofer.aisec.cpg.graph.ConstructorDeclaration;
 import de.fraunhofer.aisec.cpg.graph.Declaration;
-import de.fraunhofer.aisec.cpg.graph.FieldDeclaration;
-import de.fraunhofer.aisec.cpg.graph.FunctionDeclaration;
-import de.fraunhofer.aisec.cpg.graph.MethodDeclaration;
-import de.fraunhofer.aisec.cpg.graph.NamespaceDeclaration;
+import de.fraunhofer.aisec.cpg.graph.DeclarationHolder;
 import de.fraunhofer.aisec.cpg.graph.Node;
-import de.fraunhofer.aisec.cpg.graph.ParamVariableDeclaration;
-import de.fraunhofer.aisec.cpg.graph.RecordDeclaration;
-import de.fraunhofer.aisec.cpg.graph.TranslationUnitDeclaration;
 import de.fraunhofer.aisec.cpg.graph.TypedefDeclaration;
 import de.fraunhofer.aisec.cpg.graph.ValueDeclaration;
-import de.fraunhofer.aisec.cpg.graph.VariableDeclaration;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -53,7 +44,7 @@ import org.slf4j.LoggerFactory;
  */
 public class ValueDeclarationScope extends Scope {
 
-  private static final Logger log = LoggerFactory.getLogger(ValueDeclarationScope.class);
+  protected static final Logger log = LoggerFactory.getLogger(ValueDeclarationScope.class);
 
   @NonNull private List<ValueDeclaration> valueDeclarations = new ArrayList<>();
 
@@ -100,31 +91,17 @@ public class ValueDeclarationScope extends Scope {
    */
   public void addValueDeclaration(ValueDeclaration valueDeclaration) {
     this.valueDeclarations.add(valueDeclaration);
-    if (astNode instanceof NamespaceDeclaration) {
-      NamespaceDeclaration namespaceD = (NamespaceDeclaration) astNode;
 
-      addIfNotContained(namespaceD.getDeclarations(), valueDeclaration);
-    } else if (astNode instanceof RecordDeclaration) {
-      RecordDeclaration recordD = (RecordDeclaration) astNode;
-      if (valueDeclaration instanceof ConstructorDeclaration) {
-        addIfNotContained(recordD.getConstructors(), (ConstructorDeclaration) valueDeclaration);
-      } else if (valueDeclaration instanceof MethodDeclaration) {
-        addIfNotContained(recordD.getMethods(), (MethodDeclaration) valueDeclaration);
-      } else if (valueDeclaration instanceof FieldDeclaration) {
-        addIfNotContained(recordD.getFields(), (FieldDeclaration) valueDeclaration);
+    if (astNode instanceof DeclarationHolder) {
+      var holder = (DeclarationHolder) astNode;
+      var collection = holder.getContainerForDeclaration(valueDeclaration);
+
+      if (collection != null) {
+        addIfNotContained((Collection<Declaration>) collection, valueDeclaration);
       }
-    } else if (astNode instanceof FunctionDeclaration) {
-      FunctionDeclaration functionD = (FunctionDeclaration) astNode;
-      if (valueDeclaration instanceof ParamVariableDeclaration) {
-        addIfNotContained(functionD.getParameters(), (ParamVariableDeclaration) valueDeclaration);
-      }
-    } else if (astNode instanceof CompoundStatement) {
-      CompoundStatement compoundStatement = (CompoundStatement) astNode;
-      if (valueDeclaration instanceof VariableDeclaration) {
-        addIfNotContained(compoundStatement.getLocals(), (VariableDeclaration) valueDeclaration);
-      }
-    } else if (astNode instanceof TranslationUnitDeclaration) {
-      addIfNotContained(((TranslationUnitDeclaration) astNode).getDeclarations(), valueDeclaration);
+    } else {
+      log.error(
+          "Trying to add a value declaration to a scope which does not have a declaration holder AST node");
     }
     /*
      There are nodes where we do not set the declaration when storing them in the scope,
@@ -134,7 +111,7 @@ public class ValueDeclarationScope extends Scope {
     */
   }
 
-  protected <T extends Node> void addIfNotContained(Collection<T> collection, T nodeToAdd) {
+  protected void addIfNotContained(Collection<Declaration> collection, Declaration nodeToAdd) {
     if (!collection.contains(nodeToAdd)) {
       collection.add(nodeToAdd);
     }

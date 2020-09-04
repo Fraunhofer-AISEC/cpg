@@ -37,7 +37,7 @@ import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /** The top most declaration, representing a translation unit, for example a file. */
-public class TranslationUnitDeclaration extends Declaration {
+public class TranslationUnitDeclaration extends Declaration implements DeclarationHolder {
 
   /** A list of declarations within this unit. */
   @SubGraph("AST")
@@ -152,5 +152,9 @@ public class TranslationUnitDeclaration extends Declaration {
   @Override
   public int hashCode() {
     return super.hashCode();
+  }
+
+  public @NonNull List<? extends Declaration> getContainerForDeclaration(Declaration declaration) {
+    return this.declarations;
   }
 }

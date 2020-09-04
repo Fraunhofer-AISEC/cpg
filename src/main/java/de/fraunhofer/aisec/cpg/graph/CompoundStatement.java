@@ -27,16 +27,18 @@
 package de.fraunhofer.aisec.cpg.graph;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.checkerframework.checker.nullness.qual.NonNull;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
  * A statement which contains a list of statements. A common example is a function body within a
  * {@link FunctionDeclaration}.
  */
-public class CompoundStatement extends Statement {
+public class CompoundStatement extends Statement implements DeclarationHolder {
 
   /** The list of statements. */
   @NonNull
@@ -71,5 +73,11 @@ public class CompoundStatement extends Statement {
   @Override
   public int hashCode() {
     return super.hashCode();
+  }
+
+  @Override
+  public @Nullable Collection<? extends Declaration> getContainerForDeclaration(
+      Declaration declaration) {
+    return this.getLocals();
   }
 }
