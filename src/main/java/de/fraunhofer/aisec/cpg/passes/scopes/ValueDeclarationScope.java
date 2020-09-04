@@ -104,7 +104,6 @@ public class ValueDeclarationScope extends Scope {
       NamespaceDeclaration namespaceD = (NamespaceDeclaration) astNode;
 
       addIfNotContained(namespaceD.getDeclarations(), valueDeclaration);
-
     } else if (astNode instanceof RecordDeclaration) {
       RecordDeclaration recordD = (RecordDeclaration) astNode;
       if (valueDeclaration instanceof ConstructorDeclaration) {
@@ -114,7 +113,6 @@ public class ValueDeclarationScope extends Scope {
       } else if (valueDeclaration instanceof FieldDeclaration) {
         addIfNotContained(recordD.getFields(), (FieldDeclaration) valueDeclaration);
       }
-
     } else if (astNode instanceof FunctionDeclaration) {
       FunctionDeclaration functionD = (FunctionDeclaration) astNode;
       if (valueDeclaration instanceof ParamVariableDeclaration) {
@@ -126,7 +124,6 @@ public class ValueDeclarationScope extends Scope {
         addIfNotContained(compoundStatement.getLocals(), (VariableDeclaration) valueDeclaration);
       }
     } else if (astNode instanceof TranslationUnitDeclaration) {
-      var tu = (TranslationUnitDeclaration) astNode;
       addIfNotContained(((TranslationUnitDeclaration) astNode).getDeclarations(), valueDeclaration);
     }
     /*

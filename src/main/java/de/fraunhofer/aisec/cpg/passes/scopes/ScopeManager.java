@@ -45,6 +45,7 @@ import de.fraunhofer.aisec.cpg.graph.IfStatement;
 import de.fraunhofer.aisec.cpg.graph.LabelStatement;
 import de.fraunhofer.aisec.cpg.graph.NamespaceDeclaration;
 import de.fraunhofer.aisec.cpg.graph.Node;
+import de.fraunhofer.aisec.cpg.graph.ProblemDeclaration;
 import de.fraunhofer.aisec.cpg.graph.RecordDeclaration;
 import de.fraunhofer.aisec.cpg.graph.Statement;
 import de.fraunhofer.aisec.cpg.graph.SwitchStatement;
@@ -440,7 +441,11 @@ public class ScopeManager {
    * @param declaration
    */
   public void addDeclaration(Declaration declaration) {
-    if (declaration instanceof ValueDeclaration) {
+    if (declaration instanceof ProblemDeclaration) {
+      // directly add problems to the global scope
+      var globalScope = (GlobalScope) getFirstScopeThat(scope -> scope instanceof GlobalScope);
+      globalScope.addDeclaration(declaration);
+    } else if (declaration instanceof ValueDeclaration) {
       ValueDeclarationScope scopeForValueDeclaration =
           (ValueDeclarationScope)
               getFirstScopeThat(scope -> scope instanceof ValueDeclarationScope);

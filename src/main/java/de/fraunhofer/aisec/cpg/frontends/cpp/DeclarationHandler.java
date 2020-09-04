@@ -127,10 +127,15 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
   }
 
   private Declaration handleProblem(CPPASTProblemDeclaration ctx) {
-    return NodeBuilder.newProblemDeclaration(
-        ctx.getContainingFilename(),
-        ctx.getProblem().getMessage(),
-        ctx.getProblem().getFileLocation().toString());
+    var problem =
+        NodeBuilder.newProblemDeclaration(
+            ctx.getContainingFilename(),
+            ctx.getProblem().getMessage(),
+            ctx.getProblem().getFileLocation().toString());
+
+    this.lang.getScopeManager().addDeclaration(problem);
+
+    return problem;
   }
 
   private FunctionDeclaration handleFunctionDefinition(CPPASTFunctionDefinition ctx) {
@@ -362,7 +367,7 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
         continue; // do not care about these for now
       }
 
-      Declaration decl = handle(declaration);
+      var decl = handle(declaration);
       if (decl == null) {
         continue;
       }
@@ -375,6 +380,8 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
       }
     }
 
+    // TODO: Remark CB: I am not quite sure, what the point of the code beyord this line is.
+    // Probably needs to be refactored
     boolean addIncludesToGraph = true; // todo move to config
     if (addIncludesToGraph) {
 

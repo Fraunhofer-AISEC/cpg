@@ -39,7 +39,6 @@ import de.fraunhofer.aisec.cpg.graph.FunctionDeclaration;
 import de.fraunhofer.aisec.cpg.graph.MethodDeclaration;
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder;
 import de.fraunhofer.aisec.cpg.graph.ParamVariableDeclaration;
-import de.fraunhofer.aisec.cpg.graph.ProblemDeclaration;
 import de.fraunhofer.aisec.cpg.graph.RecordDeclaration;
 import de.fraunhofer.aisec.cpg.graph.ValueDeclaration;
 import de.fraunhofer.aisec.cpg.graph.VariableDeclaration;
@@ -356,7 +355,7 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
     lang.getScopeManager().enterScope(recordDeclaration);
     lang.getScopeManager().addDeclaration(recordDeclaration.getThis());
 
-    processMembers(ctx, recordDeclaration);
+    processMembers(ctx);
 
     if (recordDeclaration.getConstructors().isEmpty()) {
       de.fraunhofer.aisec.cpg.graph.ConstructorDeclaration constructorDeclaration =
@@ -378,26 +377,14 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
     return recordDeclaration;
   }
 
-  private void processMembers(
-      CPPASTCompositeTypeSpecifier ctx, RecordDeclaration recordDeclaration) {
+  private void processMembers(CPPASTCompositeTypeSpecifier ctx) {
     for (IASTDeclaration member : ctx.getMembers()) {
       if (member instanceof CPPASTVisibilityLabel) {
         // TODO: parse visibility
         continue;
       }
 
-      Declaration declaration = lang.getDeclarationHandler().handle(member);
-
-      /*if (declaration instanceof VariableDeclaration) {
-        FieldDeclaration fieldDeclaration =
-            FieldDeclaration.from((VariableDeclaration) declaration);
-        recordDeclaration.getFields().add(fieldDeclaration);
-        this.lang.replaceDeclarationInExpression(fieldDeclaration, declaration);
-      } else */ if (declaration instanceof ProblemDeclaration) {
-        // there is no place to put them here so let's attach them to the translation unit so that
-        // we do not loose them
-        lang.getCurrentTU().add(declaration);
-      }
+      lang.getDeclarationHandler().handle(member);
     }
   }
 }
