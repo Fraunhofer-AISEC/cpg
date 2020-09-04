@@ -29,13 +29,13 @@ package de.fraunhofer.aisec.cpg.graph;
 import de.fraunhofer.aisec.cpg.graph.type.Type;
 import de.fraunhofer.aisec.cpg.graph.type.UnknownType;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.builder.ToStringBuilder;
+import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.neo4j.ogm.annotation.Relationship;
 
@@ -282,16 +282,13 @@ public class FunctionDeclaration extends ValueDeclaration implements Declaration
   }
 
   @Override
-  public @Nullable Collection<? extends Declaration> getContainerForDeclaration(
-      Declaration declaration) {
+  public void addDeclaration(@NonNull Declaration declaration) {
     if (declaration instanceof ParamVariableDeclaration) {
-      return this.parameters;
+      addIfNotContains(parameters, (ParamVariableDeclaration) declaration);
     }
 
     if (declaration instanceof RecordDeclaration) {
-      return this.records;
+      addIfNotContains(records, (RecordDeclaration) declaration);
     }
-
-    return null;
   }
 }

@@ -417,8 +417,9 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
 
         // attach to root note
         for (String incl : allIncludes.get(translationUnit.getFilePath())) {
-          node.add(includeMap.get(incl));
+          node.addDeclaration(includeMap.get(incl));
         }
+
         allIncludes.remove(translationUnit.getFilePath());
         // attach to remaining nodes
         for (Map.Entry<String, HashSet<String>> entry : allIncludes.entrySet()) {

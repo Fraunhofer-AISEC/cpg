@@ -112,17 +112,14 @@ public class TranslationUnitDeclaration extends Declaration implements Declarati
     return Collections.unmodifiableList(namespaces);
   }
 
-  public void add(@NonNull Declaration decl) {
-    if (decl instanceof DeclarationSequence) {
-      declarations.addAll(((DeclarationSequence) decl).asList());
-    } else {
-      if (decl instanceof IncludeDeclaration) {
-        includes.add(decl);
-      } else if (decl instanceof NamespaceDeclaration) {
-        namespaces.add(decl);
-      }
-      declarations.add(decl);
+  public void addDeclaration(@NonNull Declaration declaration) {
+    if (declaration instanceof IncludeDeclaration) {
+      includes.add(declaration);
+    } else if (declaration instanceof NamespaceDeclaration) {
+      namespaces.add(declaration);
     }
+
+    addIfNotContains(declarations, declaration);
   }
 
   @Override
@@ -152,9 +149,5 @@ public class TranslationUnitDeclaration extends Declaration implements Declarati
   @Override
   public int hashCode() {
     return super.hashCode();
-  }
-
-  public @NonNull List<? extends Declaration> getContainerForDeclaration(Declaration declaration) {
-    return this.declarations;
   }
 }

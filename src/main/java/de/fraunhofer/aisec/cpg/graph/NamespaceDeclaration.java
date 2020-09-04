@@ -28,13 +28,11 @@ package de.fraunhofer.aisec.cpg.graph;
 
 import de.fraunhofer.aisec.cpg.helpers.Util;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 import org.checkerframework.checker.nullness.qual.NonNull;
-import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
  * Declares the scope of a namespace and appends its own name to the current namespace-prefix to
@@ -115,8 +113,7 @@ public class NamespaceDeclaration extends Declaration implements DeclarationHold
   }
 
   @Override
-  public @Nullable Collection<? extends Declaration> getContainerForDeclaration(
-      Declaration declaration) {
-    return this.declarations;
+  public void addDeclaration(@NonNull Declaration declaration) {
+    addIfNotContains(this.declarations, declaration);
   }
 }

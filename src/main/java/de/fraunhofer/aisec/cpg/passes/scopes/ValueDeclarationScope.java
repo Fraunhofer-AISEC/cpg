@@ -32,7 +32,6 @@ import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.TypedefDeclaration;
 import de.fraunhofer.aisec.cpg.graph.ValueDeclaration;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.slf4j.Logger;
@@ -89,16 +88,12 @@ public class ValueDeclarationScope extends Scope {
    *
    * @param valueDeclaration
    */
-  public void addValueDeclaration(ValueDeclaration valueDeclaration) {
+  void addValueDeclaration(ValueDeclaration valueDeclaration) {
     this.valueDeclarations.add(valueDeclaration);
 
     if (astNode instanceof DeclarationHolder) {
       var holder = (DeclarationHolder) astNode;
-      var collection = holder.getContainerForDeclaration(valueDeclaration);
-
-      if (collection != null) {
-        addIfNotContained((Collection<Declaration>) collection, valueDeclaration);
-      }
+      holder.addDeclaration(valueDeclaration);
     } else {
       log.error(
           "Trying to add a value declaration to a scope which does not have a declaration holder AST node");
@@ -109,11 +104,5 @@ public class ValueDeclarationScope extends Scope {
      ForStatement, SwitchStatement; and others where the location of declaration is somewhere
      deeper in the AST-subtree: CompoundStatement, AssertStatement.
     */
-  }
-
-  protected void addIfNotContained(Collection<Declaration> collection, Declaration nodeToAdd) {
-    if (!collection.contains(nodeToAdd)) {
-      collection.add(nodeToAdd);
-    }
   }
 }

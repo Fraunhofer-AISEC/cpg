@@ -249,18 +249,15 @@ public class RecordDeclaration extends Declaration implements DeclarationHolder 
   }
 
   @Override
-  public @Nullable Collection<? extends Declaration> getContainerForDeclaration(
-      Declaration declaration) {
+  public void addDeclaration(@NonNull Declaration declaration) {
     if (declaration instanceof ConstructorDeclaration) {
-      return this.constructors;
+      addIfNotContains(this.constructors, (ConstructorDeclaration) declaration);
     } else if (declaration instanceof MethodDeclaration) {
-      return this.methods;
+      addIfNotContains(this.methods, (MethodDeclaration) declaration);
     } else if (declaration instanceof FieldDeclaration) {
-      return this.fields;
+      addIfNotContains(this.fields, (FieldDeclaration) declaration);
     } else if (declaration instanceof RecordDeclaration) {
-      return this.records;
+      addIfNotContains(this.records, (RecordDeclaration) declaration);
     }
-
-    return null;
   }
 }

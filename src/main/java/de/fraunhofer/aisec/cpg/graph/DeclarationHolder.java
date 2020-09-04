@@ -27,16 +27,22 @@
 package de.fraunhofer.aisec.cpg.graph;
 
 import java.util.Collection;
-import org.checkerframework.checker.nullness.qual.Nullable;
+import org.checkerframework.checker.nullness.qual.NonNull;
 
 public interface DeclarationHolder {
 
   /**
-   * Returns a list of declaration that is suitable for the supplied declaration.
+   * Adds the specified declaration to this declaration holder. Ideally, the declaration holder
+   * should use the {@link #addIfNotContains(Collection, Declaration)} method to consistently add
+   * declarations.
    *
-   * @param declaration the declaration which needs to be stored
-   * @return the appropriate list or null
+   * @param declaration the declaration
    */
-  @Nullable
-  Collection<? extends Declaration> getContainerForDeclaration(Declaration declaration);
+  void addDeclaration(@NonNull Declaration declaration);
+
+  default <N extends Declaration> void addIfNotContains(Collection<N> collection, N declaration) {
+    if (!collection.contains(declaration)) {
+      collection.add(declaration);
+    }
+  }
 }

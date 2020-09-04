@@ -38,7 +38,8 @@ public class Statement extends Node {
    * VariableDeclaration} extracted from Block because for, while, if, switch can declare locals in
    * their condition or initializers
    */
-  private @SubGraph("AST") List<VariableDeclaration> locals = new ArrayList<>();
+  @SubGraph("AST")
+  protected List<VariableDeclaration> locals = new ArrayList<>();
 
   public List<VariableDeclaration> getLocals() {
     return locals;

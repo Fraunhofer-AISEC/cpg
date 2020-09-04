@@ -404,7 +404,7 @@ public class VariableUsageResolver extends Pass {
       declaration.setType(returnType);
       declaration.setParameters(Util.createParameters(signature));
 
-      currTu.add(declaration);
+      currTu.addDeclaration(declaration);
       declaration.setImplicit(true);
       return declaration;
     } else {
