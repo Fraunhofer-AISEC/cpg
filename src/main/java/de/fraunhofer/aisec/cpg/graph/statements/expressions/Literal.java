@@ -67,9 +67,4 @@ public class Literal<T> extends Expression {
     Literal<?> literal = (Literal<?>) o;
     return Objects.equals(value, literal.value);
   }
-
-  @Override
-  public int hashCode() {
-    return Objects.hash(super.hashCode(), value);
-  }
 }

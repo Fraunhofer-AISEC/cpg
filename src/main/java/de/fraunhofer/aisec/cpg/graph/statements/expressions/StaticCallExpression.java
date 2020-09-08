@@ -73,9 +73,4 @@ public class StaticCallExpression extends CallExpression {
     StaticCallExpression that = (StaticCallExpression) o;
     return Objects.equals(targetRecord, that.targetRecord);
   }
-
-  @Override
-  public int hashCode() {
-    return Objects.hash(super.hashCode(), targetRecord);
-  }
 }

@@ -93,20 +93,17 @@ public class ForStatement extends Statement {
     if (this == o) {
       return true;
     }
-    if (!(o instanceof ForStatement)) {
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    if (!super.equals(o)) {
       return false;
     }
     ForStatement that = (ForStatement) o;
-    return super.equals(that)
-        && Objects.equals(statement, that.statement)
+    return Objects.equals(statement, that.statement)
         && Objects.equals(initializerStatement, that.initializerStatement)
         && Objects.equals(conditionDeclaration, that.conditionDeclaration)
         && Objects.equals(condition, that.condition)
         && Objects.equals(iterationExpression, that.iterationExpression);
-  }
-
-  @Override
-  public int hashCode() {
-    return super.hashCode();
   }
 }

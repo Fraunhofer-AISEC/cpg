@@ -87,15 +87,13 @@ public class DeclarationStatement extends Statement {
     if (this == o) {
       return true;
     }
-    if (!(o instanceof DeclarationStatement)) {
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    if (!super.equals(o)) {
       return false;
     }
     DeclarationStatement that = (DeclarationStatement) o;
-    return super.equals(that) && Objects.equals(declarations, that.declarations);
-  }
-
-  @Override
-  public int hashCode() {
-    return super.hashCode();
+    return Objects.equals(declarations, that.declarations);
   }
 }

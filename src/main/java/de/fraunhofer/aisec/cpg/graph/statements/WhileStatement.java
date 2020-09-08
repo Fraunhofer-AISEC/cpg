@@ -89,18 +89,15 @@ public class WhileStatement extends Statement {
     if (this == o) {
       return true;
     }
-    if (!(o instanceof WhileStatement)) {
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    if (!super.equals(o)) {
       return false;
     }
     WhileStatement that = (WhileStatement) o;
-    return super.equals(that)
-        && Objects.equals(conditionDeclaration, that.conditionDeclaration)
+    return Objects.equals(conditionDeclaration, that.conditionDeclaration)
         && Objects.equals(condition, that.condition)
         && Objects.equals(statement, that.statement);
-  }
-
-  @Override
-  public int hashCode() {
-    return super.hashCode();
   }
 }

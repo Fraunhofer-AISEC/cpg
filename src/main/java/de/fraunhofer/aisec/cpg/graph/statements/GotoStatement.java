@@ -55,17 +55,13 @@ public class GotoStatement extends Statement {
     if (this == o) {
       return true;
     }
-    if (!(o instanceof GotoStatement)) {
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    if (!super.equals(o)) {
       return false;
     }
     GotoStatement that = (GotoStatement) o;
-    return super.equals(that)
-        && Objects.equals(labelName, that.labelName)
-        && Objects.equals(targetLabel, that.targetLabel);
-  }
-
-  @Override
-  public int hashCode() {
-    return super.hashCode();
+    return Objects.equals(labelName, that.labelName);
   }
 }

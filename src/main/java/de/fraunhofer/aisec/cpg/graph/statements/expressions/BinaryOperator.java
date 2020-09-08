@@ -238,9 +238,4 @@ public class BinaryOperator extends Expression implements TypeListener {
         && Objects.equals(operatorCode, that.operatorCode)
         && Objects.equals(compoundOperators, that.compoundOperators);
   }
-
-  @Override
-  public int hashCode() {
-    return Objects.hash(super.hashCode(), operatorCode, compoundOperators);
-  }
 }

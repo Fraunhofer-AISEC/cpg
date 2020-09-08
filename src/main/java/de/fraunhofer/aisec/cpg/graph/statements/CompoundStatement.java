@@ -64,15 +64,13 @@ public class CompoundStatement extends Statement {
     if (this == o) {
       return true;
     }
-    if (!(o instanceof CompoundStatement)) {
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    if (!super.equals(o)) {
       return false;
     }
     CompoundStatement that = (CompoundStatement) o;
-    return super.equals(that) && Objects.equals(statements, that.statements);
-  }
-
-  @Override
-  public int hashCode() {
-    return super.hashCode();
+    return Objects.equals(statements, that.statements);
   }
 }

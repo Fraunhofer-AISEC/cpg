@@ -76,17 +76,13 @@ public class DoStatement extends Statement {
     if (this == o) {
       return true;
     }
-    if (!(o instanceof DoStatement)) {
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    if (!super.equals(o)) {
       return false;
     }
     DoStatement that = (DoStatement) o;
-    return super.equals(that)
-        && Objects.equals(condition, that.condition)
-        && Objects.equals(statement, that.statement);
-  }
-
-  @Override
-  public int hashCode() {
-    return super.hashCode();
+    return Objects.equals(condition, that.condition) && Objects.equals(statement, that.statement);
   }
 }

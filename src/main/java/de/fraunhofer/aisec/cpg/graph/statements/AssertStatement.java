@@ -66,17 +66,13 @@ public class AssertStatement extends Statement {
     if (this == o) {
       return true;
     }
-    if (!(o instanceof AssertStatement)) {
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    if (!super.equals(o)) {
       return false;
     }
     AssertStatement that = (AssertStatement) o;
-    return super.equals(that)
-        && Objects.equals(condition, that.condition)
-        && Objects.equals(message, that.message);
-  }
-
-  @Override
-  public int hashCode() {
-    return super.hashCode();
+    return Objects.equals(condition, that.condition) && Objects.equals(message, that.message);
   }
 }

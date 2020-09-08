@@ -74,17 +74,13 @@ public class LabelStatement extends Statement {
     if (this == o) {
       return true;
     }
-    if (!(o instanceof LabelStatement)) {
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    if (!super.equals(o)) {
       return false;
     }
     LabelStatement that = (LabelStatement) o;
-    return super.equals(that)
-        && Objects.equals(subStatement, that.subStatement)
-        && Objects.equals(label, that.label);
-  }
-
-  @Override
-  public int hashCode() {
-    return super.hashCode();
+    return Objects.equals(subStatement, that.subStatement) && Objects.equals(label, that.label);
   }
 }

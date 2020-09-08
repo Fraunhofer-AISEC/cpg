@@ -209,11 +209,6 @@ public abstract class ValueDeclaration extends Declaration implements HasType {
   }
 
   @Override
-  public int hashCode() {
-    return Objects.hash(super.hashCode(), type, possibleSubTypes);
-  }
-
-  @Override
   public void updateType(Type type) {
     this.type = type;
   }

@@ -235,9 +235,4 @@ public class Expression extends Statement implements HasType {
     return Objects.equals(type, that.type)
         && Objects.equals(possibleSubTypes, that.possibleSubTypes);
   }
-
-  @Override
-  public int hashCode() {
-    return Objects.hash(super.hashCode(), type, possibleSubTypes);
-  }
 }

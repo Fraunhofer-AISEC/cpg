@@ -63,17 +63,13 @@ public class CatchClause extends Statement {
     if (this == o) {
       return true;
     }
-    if (!(o instanceof CatchClause)) {
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    if (!super.equals(o)) {
       return false;
     }
     CatchClause that = (CatchClause) o;
-    return super.equals(that)
-        && Objects.equals(parameter, that.parameter)
-        && Objects.equals(body, that.body);
-  }
-
-  @Override
-  public int hashCode() {
-    return super.hashCode();
+    return Objects.equals(parameter, that.parameter) && Objects.equals(body, that.body);
   }
 }

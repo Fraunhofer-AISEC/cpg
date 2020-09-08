@@ -51,15 +51,13 @@ public class ContinueStatement extends Statement {
     if (this == o) {
       return true;
     }
-    if (!(o instanceof ContinueStatement)) {
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    if (!super.equals(o)) {
       return false;
     }
     ContinueStatement that = (ContinueStatement) o;
-    return super.equals(that) && Objects.equals(label, that.label);
-  }
-
-  @Override
-  public int hashCode() {
-    return super.hashCode();
+    return Objects.equals(label, that.label);
   }
 }

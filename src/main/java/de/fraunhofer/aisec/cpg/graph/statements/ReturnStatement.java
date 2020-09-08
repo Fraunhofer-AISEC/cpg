@@ -68,15 +68,13 @@ public class ReturnStatement extends Statement {
     if (this == o) {
       return true;
     }
-    if (!(o instanceof ReturnStatement)) {
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    if (!super.equals(o)) {
       return false;
     }
     ReturnStatement that = (ReturnStatement) o;
-    return super.equals(that) && Objects.equals(returnValue, that.returnValue);
-  }
-
-  @Override
-  public int hashCode() {
-    return super.hashCode();
+    return Objects.equals(returnValue, that.returnValue);
   }
 }

@@ -35,7 +35,6 @@ import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration;
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration;
 import de.fraunhofer.aisec.cpg.graph.types.Type;
 import java.util.HashSet;
-import java.util.Objects;
 import java.util.Set;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -209,10 +208,5 @@ public class DeclaredReferenceExpression extends Expression implements TypeListe
     }
     DeclaredReferenceExpression that = (DeclaredReferenceExpression) o;
     return staticAccess == that.staticAccess && access == that.access;
-  }
-
-  @Override
-  public int hashCode() {
-    return Objects.hash(super.hashCode(), access, staticAccess);
   }
 }

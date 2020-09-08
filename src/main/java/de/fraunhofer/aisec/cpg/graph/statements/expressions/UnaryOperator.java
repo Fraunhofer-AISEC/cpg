@@ -232,9 +232,4 @@ public class UnaryOperator extends Expression implements TypeListener {
         && Objects.equals(input, that.input)
         && Objects.equals(operatorCode, that.operatorCode);
   }
-
-  @Override
-  public int hashCode() {
-    return Objects.hash(super.hashCode(), operatorCode, postfix, prefix);
-  }
 }

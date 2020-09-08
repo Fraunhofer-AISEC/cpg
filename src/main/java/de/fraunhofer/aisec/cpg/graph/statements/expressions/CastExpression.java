@@ -125,9 +125,4 @@ public class CastExpression extends Expression implements TypeListener {
     CastExpression that = (CastExpression) o;
     return Objects.equals(expression, that.expression) && Objects.equals(castType, that.castType);
   }
-
-  @Override
-  public int hashCode() {
-    return Objects.hash(super.hashCode(), castType);
-  }
 }

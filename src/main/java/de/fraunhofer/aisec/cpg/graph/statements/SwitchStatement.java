@@ -91,19 +91,16 @@ public class SwitchStatement extends Statement {
     if (this == o) {
       return true;
     }
-    if (!(o instanceof SwitchStatement)) {
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    if (!super.equals(o)) {
       return false;
     }
     SwitchStatement that = (SwitchStatement) o;
-    return super.equals(that)
+    return Objects.equals(selector, that.selector)
         && Objects.equals(initializerStatement, that.initializerStatement)
         && Objects.equals(selectorDeclaration, that.selectorDeclaration)
-        && Objects.equals(selector, that.selector)
         && Objects.equals(statement, that.statement);
-  }
-
-  @Override
-  public int hashCode() {
-    return super.hashCode();
   }
 }

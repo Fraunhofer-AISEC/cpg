@@ -128,21 +128,18 @@ public class IfStatement extends Statement {
     if (this == o) {
       return true;
     }
-    if (!(o instanceof IfStatement)) {
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    if (!super.equals(o)) {
       return false;
     }
     IfStatement that = (IfStatement) o;
-    return super.equals(that)
-        && isConstExpression == that.isConstExpression
+    return isConstExpression == that.isConstExpression
         && Objects.equals(initializerStatement, that.initializerStatement)
         && Objects.equals(conditionDeclaration, that.conditionDeclaration)
         && Objects.equals(condition, that.condition)
         && Objects.equals(thenStatement, that.thenStatement)
         && Objects.equals(elseStatement, that.elseStatement);
-  }
-
-  @Override
-  public int hashCode() {
-    return super.hashCode();
   }
 }

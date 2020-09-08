@@ -54,9 +54,4 @@ public class UsingDirective extends Declaration {
     UsingDirective that = (UsingDirective) o;
     return Objects.equals(qualifiedName, that.qualifiedName);
   }
-
-  @Override
-  public int hashCode() {
-    return Objects.hash(super.hashCode(), qualifiedName);
-  }
 }

@@ -70,9 +70,4 @@ public class TypeIdExpression extends Expression {
     return Objects.equals(referencedType, that.referencedType)
         && Objects.equals(operatorCode, that.operatorCode);
   }
-
-  @Override
-  public int hashCode() {
-    return Objects.hash(super.hashCode(), referencedType, operatorCode);
-  }
 }

@@ -81,19 +81,16 @@ public class TryStatement extends Statement {
     if (this == o) {
       return true;
     }
-    if (!(o instanceof TryStatement)) {
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    if (!super.equals(o)) {
       return false;
     }
     TryStatement that = (TryStatement) o;
-    return super.equals(that)
-        && Objects.equals(resources, that.resources)
+    return Objects.equals(resources, that.resources)
         && Objects.equals(tryBlock, that.tryBlock)
         && Objects.equals(finallyBlock, that.finallyBlock)
         && Objects.equals(catchClauses, that.catchClauses);
-  }
-
-  @Override
-  public int hashCode() {
-    return super.hashCode();
   }
 }

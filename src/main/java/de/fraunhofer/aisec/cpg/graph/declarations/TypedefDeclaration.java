@@ -74,11 +74,6 @@ public class TypedefDeclaration extends Declaration {
   }
 
   @Override
-  public int hashCode() {
-    return Objects.hash(super.hashCode(), type, alias);
-  }
-
-  @Override
   public String toString() {
     return new ToStringBuilder(this).append("type", type).append("alias", alias).toString();
   }

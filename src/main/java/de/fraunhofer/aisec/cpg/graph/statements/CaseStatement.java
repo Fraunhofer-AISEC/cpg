@@ -58,15 +58,13 @@ public class CaseStatement extends Statement {
     if (this == o) {
       return true;
     }
-    if (!(o instanceof CaseStatement)) {
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    if (!super.equals(o)) {
       return false;
     }
     CaseStatement that = (CaseStatement) o;
-    return super.equals(that) && Objects.equals(caseExpression, that.caseExpression);
-  }
-
-  @Override
-  public int hashCode() {
-    return super.hashCode();
+    return Objects.equals(caseExpression, that.caseExpression);
   }
 }

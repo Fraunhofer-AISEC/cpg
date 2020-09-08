@@ -64,9 +64,4 @@ public class ExplicitConstructorInvocation extends CallExpression {
     ExplicitConstructorInvocation that = (ExplicitConstructorInvocation) o;
     return Objects.equals(containingClass, that.containingClass);
   }
-
-  @Override
-  public int hashCode() {
-    return Objects.hash(super.hashCode(), containingClass);
-  }
 }

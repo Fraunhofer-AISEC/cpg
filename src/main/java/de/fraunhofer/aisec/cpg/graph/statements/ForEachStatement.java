@@ -70,18 +70,15 @@ public class ForEachStatement extends Statement {
     if (this == o) {
       return true;
     }
-    if (!(o instanceof ForEachStatement)) {
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    if (!super.equals(o)) {
       return false;
     }
     ForEachStatement that = (ForEachStatement) o;
-    return super.equals(that)
-        && Objects.equals(variable, that.variable)
+    return Objects.equals(variable, that.variable)
         && Objects.equals(iterable, that.iterable)
         && Objects.equals(statement, that.statement);
-  }
-
-  @Override
-  public int hashCode() {
-    return super.hashCode();
   }
 }

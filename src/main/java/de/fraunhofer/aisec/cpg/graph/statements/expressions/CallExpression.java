@@ -175,9 +175,4 @@ public class CallExpression extends Expression implements TypeListener {
         && Objects.equals(base, that.base)
         && Objects.equals(fqn, that.fqn);
   }
-
-  @Override
-  public int hashCode() {
-    return Objects.hash(super.hashCode(), fqn);
-  }
 }

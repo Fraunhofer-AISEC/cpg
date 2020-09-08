@@ -88,9 +88,4 @@ public class EnumDeclaration extends Declaration {
     EnumDeclaration that = (EnumDeclaration) o;
     return Objects.equals(entries, that.entries) && Objects.equals(superTypes, that.superTypes);
   }
-
-  @Override
-  public int hashCode() {
-    return Objects.hash(super.hashCode(), superTypes);
-  }
 }

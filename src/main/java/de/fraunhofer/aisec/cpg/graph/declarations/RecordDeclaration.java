@@ -245,15 +245,4 @@ public class RecordDeclaration extends Declaration {
         && Objects.equals(staticImportStatements, that.staticImportStatements)
         && Objects.equals(staticImports, that.staticImports);
   }
-
-  @Override
-  public int hashCode() {
-    return Objects.hash(
-        super.hashCode(),
-        kind,
-        superClasses,
-        implementedInterfaces,
-        importStatements,
-        staticImportStatements);
-  }
 }

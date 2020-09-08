@@ -27,11 +27,9 @@
 package de.fraunhofer.aisec.cpg.graph.statements;
 
 import de.fraunhofer.aisec.cpg.graph.Node;
-import de.fraunhofer.aisec.cpg.graph.SubGraph;
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 
 /** A statement. */
 public class Statement extends Node {
@@ -41,7 +39,7 @@ public class Statement extends Node {
    * VariableDeclaration} extracted from Block because for, while, if, switch can declare locals in
    * their condition or initializers
    */
-  private @SubGraph("AST") List<VariableDeclaration> locals = new ArrayList<>();
+  private List<VariableDeclaration> locals = new ArrayList<>();
 
   public List<VariableDeclaration> getLocals() {
     return locals;
@@ -49,22 +47,5 @@ public class Statement extends Node {
 
   public void setLocals(List<VariableDeclaration> locals) {
     this.locals = locals;
-  }
-
-  @Override
-  public boolean equals(Object o) {
-    if (this == o) {
-      return true;
-    }
-    if (!(o instanceof Statement)) {
-      return false;
-    }
-    Statement statement = (Statement) o;
-    return super.equals(statement) && Objects.equals(locals, statement.locals);
-  }
-
-  @Override
-  public int hashCode() {
-    return super.hashCode();
   }
 }

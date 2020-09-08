@@ -85,9 +85,4 @@ public class ProblemDeclaration extends Declaration {
         && Objects.equals(problem, that.problem)
         && Objects.equals(problemLocation, that.problemLocation);
   }
-
-  @Override
-  public int hashCode() {
-    return Objects.hash(super.hashCode(), filename, problem, problemLocation);
-  }
 }

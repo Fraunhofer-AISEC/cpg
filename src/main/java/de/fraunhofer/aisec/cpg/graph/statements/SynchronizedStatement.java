@@ -59,17 +59,14 @@ public class SynchronizedStatement extends Statement {
     if (this == o) {
       return true;
     }
-    if (!(o instanceof SynchronizedStatement)) {
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    if (!super.equals(o)) {
       return false;
     }
     SynchronizedStatement that = (SynchronizedStatement) o;
-    return super.equals(that)
-        && Objects.equals(expression, that.expression)
+    return Objects.equals(expression, that.expression)
         && Objects.equals(blockStatement, that.blockStatement);
-  }
-
-  @Override
-  public int hashCode() {
-    return super.hashCode();
   }
 }

@@ -347,6 +347,6 @@ public class Node implements IVisitable<Node> {
 
   @Override
   public int hashCode() {
-    return Objects.hash(name, code, comment, location, file, this.getClass().getName());
+    return Objects.hash(name, code, this.getClass().getName());
   }
 }

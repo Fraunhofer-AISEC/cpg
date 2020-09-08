@@ -174,9 +174,4 @@ public class VariableDeclaration extends ValueDeclaration implements TypeListene
         && isArray == that.isArray
         && Objects.equals(initializer, that.initializer);
   }
-
-  @Override
-  public int hashCode() {
-    return Objects.hash(super.hashCode(), implicitInitializerAllowed, isArray);
-  }
 }
