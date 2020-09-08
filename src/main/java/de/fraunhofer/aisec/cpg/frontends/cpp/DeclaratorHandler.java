@@ -371,7 +371,6 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
       if (declaration instanceof FunctionDeclaration) {
         MethodDeclaration method =
             MethodDeclaration.from((FunctionDeclaration) declaration, recordDeclaration);
-        declaration.disconnectFromGraph();
 
         // check, if its a constructor
         if (declaration.getName().equals(recordDeclaration.getName())) {
