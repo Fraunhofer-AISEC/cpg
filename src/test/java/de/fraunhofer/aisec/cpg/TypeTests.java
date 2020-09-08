@@ -654,6 +654,11 @@ class TypeTests extends BaseTest {
     // TODO Add test
   }
 
+  @Test
+  void crash() {
+    TypeParser.createFromUnsafe("OuterClass<int>::InnerClass<int>", true);
+  }
+
   // Tests on the resulting graph
 
   @Test

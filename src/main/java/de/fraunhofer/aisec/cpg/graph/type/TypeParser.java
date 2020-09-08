@@ -703,16 +703,16 @@ public class TypeParser {
   }
 
   /**
-   * Warning: Type parsing is hard and this function might crash. Use createFrom instead
-   * Use this function for parsing new types and obtaining a new Type the TypeParser creates from
-   * the typeString
+   * Warning: This function might crash, when a type cannot be parsed. Use createFrom instead Use this
+   * function for parsing new types and obtaining a new Type the TypeParser creates from the
+   * typeString
    *
    * @param type string with type information
    * @param resolveAlias should replace with original type in typedefs
    * @return new type representing the type string
    */
   @NonNull
-  private static Type createFromUnsafe(@NonNull String type, boolean resolveAlias) {
+  public static Type createFromUnsafe(@NonNull String type, boolean resolveAlias) {
     // Check if Problems during Parsing
     if (type.contains("?")
         || type.contains("org.eclipse.cdt.internal.core.dom.parser.ProblemType@")
@@ -842,6 +842,4 @@ public class TypeParser {
       return UnknownType.getUnknownType();
     }
   }
-
-
 }
