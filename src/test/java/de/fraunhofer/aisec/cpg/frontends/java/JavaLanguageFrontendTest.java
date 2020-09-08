@@ -359,7 +359,7 @@ class JavaLanguageFrontendTest extends BaseTest {
     assertNotNull(stmt);
 
     VariableDeclaration e = stmt.getSingleDeclarationAs(VariableDeclaration.class);
-    // This test can be simplified once we solved the Issue with
+    // This test can be simplified once we solved the issue with inconsistently used simple names vs. fully qualified names.
     assertTrue(
         e.getType().getName().equals("ExtendedClass")
             || e.getType().getName().equals("cast.ExtendedClass"));
