@@ -32,11 +32,14 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import de.fraunhofer.aisec.cpg.graph.*;
 import de.fraunhofer.aisec.cpg.graph.type.*;
+
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 class TypeTests extends BaseTest {
@@ -649,14 +652,21 @@ class TypeTests extends BaseTest {
             false);
     assertEquals(expected, result);
 
-    // Test 14: Inner and Outer Class with generics
-    result = TypeParser.createFrom("OuterClass<int>::InnerClass<int>", true);
-    // TODO Add test
   }
 
+  @Disabled
   @Test
-  void crash() {
+  void toImplement() {
+
+    // TODO CPS the following types need to be supported by the reworked typeparser/typesystem
+
     TypeParser.createFromUnsafe("OuterClass<int>::InnerClass<int>", true);
+    TypeParser.createFromUnsafe(
+            "Map<String, String>", true); // requires property edges to indicate the idx
+    TypeParser.createFromUnsafe("List<?>", true); // no wildcard support yet
+    TypeParser.createFromUnsafe("List<? extends A>", true);
+    TypeParser.createFromUnsafe("List<? super A>", true);
+    TypeParser.createFromUnsafe("List<? extends A & B & C", true); // generics with multiple bounds
   }
 
   // Tests on the resulting graph

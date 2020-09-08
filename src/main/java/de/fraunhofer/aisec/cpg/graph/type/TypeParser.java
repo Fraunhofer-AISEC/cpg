@@ -259,6 +259,7 @@ public class TypeParser {
 
   /**
    * Right now IncompleteTypes are only defined as void {@link IncompleteType}
+   *
    * @param typeName String with the type
    * @return true if the type is void, false otherwise
    */
@@ -523,8 +524,18 @@ public class TypeParser {
    * @param type provided typeString
    * @return typeString without access modifier
    */
-  private static String clear(@NonNull String type) {
+  private static String removeAccessModifier(@NonNull String type) {
     return type.replaceAll("public|private|protected", "").trim();
+  }
+
+  /**
+   * Replaces the Scope Resolution Operator (::) in C++ by . for a consistent parsing
+   *
+   * @param type provided typeString
+   * @return typeString which uses . instead of the substring :: if CPP is the current language
+   */
+  private static String replaceScopeResolutionOperator(@NonNull String type) {
+    return (getLanguage() == TypeManager.Language.CXX) ? type.replaceAll("::", ".").trim() : type;
   }
 
   /**
@@ -703,8 +714,8 @@ public class TypeParser {
   }
 
   /**
-   * Warning: This function might crash, when a type cannot be parsed. Use createFrom instead Use this
-   * function for parsing new types and obtaining a new Type the TypeParser creates from the
+   * Warning: This function might crash, when a type cannot be parsed. Use createFrom instead Use
+   * this function for parsing new types and obtaining a new Type the TypeParser creates from the
    * typeString
    *
    * @param type string with type information
@@ -714,14 +725,20 @@ public class TypeParser {
   @NonNull
   public static Type createFromUnsafe(@NonNull String type, boolean resolveAlias) {
     // Check if Problems during Parsing
+    // Todo check can be in ?
     if (type.contains("?")
-        || type.contains("org.eclipse.cdt.internal.core.dom.parser.ProblemType@")
-        || type.trim().length() == 0) {
+            || type.contains("org.eclipse.cdt.internal.core.dom.parser.ProblemType@")
+            || type.trim().length() == 0) {
       return UnknownType.getUnknownType();
     }
 
     // Preprocessing of the typeString
-    type = clear(type);
+    type = removeAccessModifier(type);
+    // Remove CPP :: Operator
+    type = replaceScopeResolutionOperator(type);
+
+    // Determine if inner class
+
     type = fixGenerics(type);
 
     // Separate typeString into a List containing each part of the typeString
