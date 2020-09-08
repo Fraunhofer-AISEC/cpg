@@ -235,7 +235,6 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
       lang.getScopeManager().addDeclaration(varargs);
     }
 
-    //    lang.addFunctionDeclaration(declaration);
     lang.getScopeManager().leaveScope(declaration);
 
     return declaration;
@@ -397,15 +396,12 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
           this.lang.getScopeManager().replaceNode(method, declaration);
         }
       } else if (declaration instanceof VariableDeclaration) {
-        // recordDeclaration.getFields().add();
         lang.getScopeManager()
             .addDeclaration(FieldDeclaration.from((VariableDeclaration) declaration));
         lang.getScopeManager().removeDeclaration(declaration);
       } else if (declaration instanceof FieldDeclaration) {
-        // recordDeclaration.getFields().add((FieldDeclaration) declaration);
         lang.getScopeManager().addDeclaration(declaration);
       } else if (declaration instanceof RecordDeclaration) {
-        // record is not stored as reference in the scope
         lang.getScopeManager().addDeclaration(declaration);
       } else if (declaration instanceof ProblemDeclaration) {
         // there is no place to put them here so let's attach them to the translation unit so that
