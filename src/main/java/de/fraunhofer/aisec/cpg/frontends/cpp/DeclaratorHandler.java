@@ -89,7 +89,10 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
       return handle(ctx.getNestedDeclarator());
     }
 
-    if (lang.getScopeManager().getCurrentScope() instanceof RecordScope) {
+    String name = ctx.getName().toString();
+
+    if (lang.getScopeManager().getCurrentScope() instanceof RecordScope
+        || name.contains(lang.getNamespaceDelimiter())) {
       // forward it to handleFieldDeclarator
       return handleFieldDeclarator(ctx);
     } else {
@@ -118,16 +121,44 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
       initializer = lang.getInitializerHandler().handle(init);
     }
 
-    // type will be filled out later
-    FieldDeclaration declaration =
-        NodeBuilder.newFieldDeclaration(
-            ctx.getName().toString(),
-            UnknownType.getUnknownType(),
-            emptyList(),
-            ctx.getRawSignature(),
-            this.lang.getLocationFromRawNode(ctx),
-            initializer,
-            true);
+    String name = ctx.getName().toString();
+
+    FieldDeclaration declaration;
+
+    if (name.contains(lang.getNamespaceDelimiter())) {
+      String[] rr = name.split(lang.getNamespaceDelimiter());
+
+      String recordName =
+          String.join(lang.getNamespaceDelimiter(), Arrays.asList(rr).subList(0, rr.length - 1));
+      String fieldName = rr[rr.length - 1];
+
+      declaration =
+          NodeBuilder.newFieldDeclaration(
+              fieldName,
+              UnknownType.getUnknownType(),
+              emptyList(),
+              ctx.getRawSignature(),
+              this.lang.getLocationFromRawNode(ctx),
+              initializer,
+              true);
+
+      var recordDeclaration =
+          this.lang
+              .getScopeManager()
+              .getRecordForName(this.lang.getScopeManager().getCurrentScope(), recordName);
+
+      // prepared for PR #223 - to set the definition here
+    } else {
+      declaration =
+          NodeBuilder.newFieldDeclaration(
+              name,
+              UnknownType.getUnknownType(),
+              emptyList(),
+              ctx.getRawSignature(),
+              this.lang.getLocationFromRawNode(ctx),
+              initializer,
+              true);
+    }
 
     lang.getScopeManager().addDeclaration(declaration);
 
@@ -170,11 +201,12 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
 
     // check for function definitions that are really methods and constructors, i.e. if they contain
     // a scope operator
-    if (name.contains("::")) {
-      String[] rr = name.split("::");
+    if (name.contains(lang.getNamespaceDelimiter())) {
+      String[] rr = name.split(lang.getNamespaceDelimiter());
 
-      String recordName = rr[0];
-      String methodName = rr[1];
+      String recordName =
+          String.join(lang.getNamespaceDelimiter(), Arrays.asList(rr).subList(0, rr.length - 1));
+      String methodName = rr[rr.length - 1];
 
       recordDeclaration =
           this.lang
