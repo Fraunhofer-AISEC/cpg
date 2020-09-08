@@ -26,10 +26,15 @@
 
 package de.fraunhofer.aisec.cpg.graph.types;
 
+import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration;
+import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import org.neo4j.ogm.annotation.Property;
+import org.neo4j.ogm.annotation.Relationship;
+import org.neo4j.ogm.annotation.RelationshipEntity;
 
 /**
  * This is the main type in the Type system. ObjectTypes describe objects, as instances of a class.
@@ -52,7 +57,23 @@ public class ObjectType extends Type {
   private final boolean primitive;
   // Reference from the ObjectType to its class (RecordDeclaration) only if the class is available
   private RecordDeclaration recordDeclaration = null;
-  private List<Type> generics;
+
+  @Relationship(type = "GENERICS", direction = Relationship.OUTGOING)
+  private List<GenericEdge> generics;
+
+  @RelationshipEntity(type = "GENERICS")
+  public static class GenericEdge extends PropertyEdge {
+    @Property private int index;
+
+    public GenericEdge(Node start, Node target, int index) {
+      super(start, target);
+      this.index = index;
+    }
+
+    public int getIndex() {
+      return index;
+    }
+  }
 
   public ObjectType(
       String typeName,
@@ -62,14 +83,14 @@ public class ObjectType extends Type {
       Modifier modifier,
       boolean primitive) {
     super(typeName, storage, qualifier);
-    this.generics = generics;
+    this.generics = convertToGenericEdge(generics);
     this.modifier = modifier;
     this.primitive = primitive;
   }
 
   public ObjectType(Type type, List<Type> generics, Modifier modifier, boolean primitive) {
     super(type);
-    this.generics = generics;
+    this.generics = convertToGenericEdge(generics);
     this.modifier = modifier;
     this.primitive = primitive;
   }
@@ -81,8 +102,31 @@ public class ObjectType extends Type {
     this.primitive = false;
   }
 
+  private List<GenericEdge> convertToGenericEdge(List<Type> generics) {
+    List<GenericEdge> genericEdges = new ArrayList<>();
+    int counter = 0;
+    for (Type t : generics) {
+      genericEdges.add(new GenericEdge(this, t, counter));
+      counter++;
+    }
+
+    return genericEdges;
+  }
+
+  /**
+   * @deprecated
+   */
+  @Deprecated
   public List<Type> getGenerics() {
-    return generics;
+    List<Type> genericValues = new ArrayList<>();
+    for (GenericEdge edge : this.generics) {
+      genericValues.add((Type) edge.getEnd());
+    }
+    return genericValues;
+  }
+
+  public List<GenericEdge> getGenericEdges() {
+    return this.generics;
   }
 
   public RecordDeclaration getRecordDeclaration() {
@@ -110,11 +154,11 @@ public class ObjectType extends Type {
 
   @Override
   public Type duplicate() {
-    return new ObjectType(this, this.generics, this.modifier, this.primitive);
+    return new ObjectType(this, this.getGenerics(), this.modifier, this.primitive);
   }
 
   public void setGenerics(List<Type> generics) {
-    this.generics = generics;
+    this.generics = convertToGenericEdge(generics);
   }
 
   @Override
