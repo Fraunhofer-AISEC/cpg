@@ -55,9 +55,4 @@ public class Annotation extends Node {
     Annotation that = (Annotation) o;
     return super.equals(that) && Objects.equals(values, that.values);
   }
-
-  @Override
-  public int hashCode() {
-    return super.hashCode();
-  }
 }

@@ -26,7 +26,6 @@
 
 package de.fraunhofer.aisec.cpg.graph.types;
 
-import java.util.Objects;
 import org.checkerframework.checker.nullness.qual.NonNull;
 
 /**
@@ -82,12 +81,6 @@ public class UnknownType extends Type {
   @Override
   public Type duplicate() {
     return unknownType;
-  }
-
-  @Override
-  public int hashCode() {
-
-    return Objects.hash(super.hashCode());
   }
 
   @Override

@@ -345,6 +345,13 @@ public class Node implements IVisitable<Node> {
         && Objects.equals(file, node.file);
   }
 
+  /**
+   * Caution when overriding this method: Don't include node properties that are subject to runtime
+   * change. This leads to cases where a {@link HashSet} or other collections don't know they
+   * contain a node that actually is part of their contents, as its hash value has changed.
+   *
+   * @return The node's hash value
+   */
   @Override
   public int hashCode() {
     return Objects.hash(name, code, this.getClass().getName());

@@ -1,7 +1,5 @@
 package de.fraunhofer.aisec.cpg.graph.types;
 
-import java.util.Objects;
-
 public class IncompleteType extends Type {
 
   public IncompleteType() {
@@ -32,12 +30,6 @@ public class IncompleteType extends Type {
   @Override
   public boolean equals(Object o) {
     return o instanceof IncompleteType;
-  }
-
-  @Override
-  public int hashCode() {
-
-    return Objects.hash(super.hashCode());
   }
 
   @Override
