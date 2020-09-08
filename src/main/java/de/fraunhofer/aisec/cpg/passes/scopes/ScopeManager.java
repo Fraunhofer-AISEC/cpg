@@ -436,7 +436,7 @@ public class ScopeManager {
     // check, if old node has a scope
     if (scope != null) {
       // update ast node
-      // scope.astNode = newNode;
+      scope.astNode = newNode;
       // update key
       scopeMap.remove(oldNode);
       scopeMap.put(newNode, scope);
