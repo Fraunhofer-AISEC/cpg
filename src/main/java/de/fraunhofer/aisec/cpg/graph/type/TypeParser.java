@@ -725,7 +725,7 @@ public class TypeParser {
   @NonNull
   public static Type createFromUnsafe(@NonNull String type, boolean resolveAlias) {
     // Check if Problems during Parsing
-    // Todo check can be in ?
+    // Todo ? can be part of generic string -> more fine-grained analysis necessary
     if (type.contains("?")
             || type.contains("org.eclipse.cdt.internal.core.dom.parser.ProblemType@")
             || type.trim().length() == 0) {
