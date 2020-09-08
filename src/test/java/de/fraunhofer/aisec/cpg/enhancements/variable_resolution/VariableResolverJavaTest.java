@@ -204,9 +204,7 @@ class VariableResolverJavaTest extends BaseTest {
         TestUtils.getSubnodeOfTypeWithName(
             forStatements.get(0), VariableDeclaration.class, "varName");
 
-    VRUtil.assertUsageOf(
-        callParamMap.get("func1_first_loop_varName"),
-        firstLoopLocal);
+    VRUtil.assertUsageOf(callParamMap.get("func1_first_loop_varName"), firstLoopLocal);
   }
 
   @Test

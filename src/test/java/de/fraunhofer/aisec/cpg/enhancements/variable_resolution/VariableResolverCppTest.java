@@ -212,8 +212,7 @@ class VariableResolverCppTest extends BaseTest {
 
   @Test
   void testVarNameOfFirstLoopAccessed() {
-    DeclaredReferenceExpression asReference =
-        getCallWithReference("func1_first_loop_varName");
+    DeclaredReferenceExpression asReference = getCallWithReference("func1_first_loop_varName");
     assertNotNull(asReference);
     VariableDeclaration vDeclaration =
         TestUtils.getSubnodeOfTypeWithName(
@@ -297,9 +296,7 @@ class VariableResolverCppTest extends BaseTest {
         TestUtils.getSubnodeOfTypeWithName(
             outerFunction3, VariableDeclaration.class, "externalClass");
     VRUtil.assertUsageOfMemberAndBase(
-        callParamMap.get("func3_external_instance_varName"),
-        declaration,
-        externVarName);
+        callParamMap.get("func3_external_instance_varName"), declaration, externVarName);
   }
 
   @Test
@@ -320,9 +317,7 @@ class VariableResolverCppTest extends BaseTest {
         TestUtils.getSubnodeOfTypeWithName(
             outerFunction4, VariableDeclaration.class, "externalClass");
     VRUtil.assertUsageOfMemberAndBase(
-        callParamMap.get("func4_external_instance_varName"),
-        externalInstance,
-        externVarName);
+        callParamMap.get("func4_external_instance_varName"), externalInstance, externVarName);
   }
 
   @Test
@@ -363,9 +358,7 @@ class VariableResolverCppTest extends BaseTest {
     VariableDeclaration declaration =
         TestUtils.getSubnodeOfTypeWithName(innerFunction1, VariableDeclaration.class, "inner");
     VRUtil.assertUsageOfMemberAndBase(
-        callParamMap.get("func1_inner_instance_varName"),
-        declaration,
-        innerVarName);
+        callParamMap.get("func1_inner_instance_varName"), declaration, innerVarName);
   }
 
   @Test
