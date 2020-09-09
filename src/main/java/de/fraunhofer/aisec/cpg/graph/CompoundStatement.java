@@ -36,7 +36,7 @@ import org.checkerframework.checker.nullness.qual.NonNull;
  * A statement which contains a list of statements. A common example is a function body within a
  * {@link FunctionDeclaration}.
  */
-public class CompoundStatement extends Statement implements DeclarationHolder {
+public class CompoundStatement extends Statement {
 
   /** The list of statements. */
   @NonNull
@@ -71,12 +71,5 @@ public class CompoundStatement extends Statement implements DeclarationHolder {
   @Override
   public int hashCode() {
     return super.hashCode();
-  }
-
-  @Override
-  public void addDeclaration(@NonNull Declaration declaration) {
-    if (declaration instanceof VariableDeclaration) {
-      this.locals.add((VariableDeclaration) declaration);
-    }
   }
 }

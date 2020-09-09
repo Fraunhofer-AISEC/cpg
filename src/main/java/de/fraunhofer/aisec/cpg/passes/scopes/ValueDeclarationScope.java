@@ -26,6 +26,8 @@
 
 package de.fraunhofer.aisec.cpg.passes.scopes;
 
+import static de.fraunhofer.aisec.cpg.helpers.Util.errorWithFileLocation;
+
 import de.fraunhofer.aisec.cpg.graph.Declaration;
 import de.fraunhofer.aisec.cpg.graph.DeclarationHolder;
 import de.fraunhofer.aisec.cpg.graph.Node;
@@ -78,7 +80,8 @@ public class ValueDeclarationScope extends Scope {
     if (declaration instanceof ValueDeclaration) {
       addValueDeclaration((ValueDeclaration) declaration);
     } else {
-      log.error("A non ValueDeclaration can not be added to a DeclarationScope");
+      errorWithFileLocation(
+          declaration, log, "A non ValueDeclaration can not be added to a DeclarationScope");
     }
   }
 
@@ -86,7 +89,7 @@ public class ValueDeclarationScope extends Scope {
    * THe value declarations are only set in the ast node if the handler of the ast node may not know
    * the outer
    *
-   * @param valueDeclaration
+   * @param valueDeclaration the {@link ValueDeclaration}
    */
   void addValueDeclaration(ValueDeclaration valueDeclaration) {
     this.valueDeclarations.add(valueDeclaration);
@@ -95,7 +98,9 @@ public class ValueDeclarationScope extends Scope {
       var holder = (DeclarationHolder) astNode;
       holder.addDeclaration(valueDeclaration);
     } else {
-      log.error(
+      errorWithFileLocation(
+          valueDeclaration,
+          log,
           "Trying to add a value declaration to a scope which does not have a declaration holder AST node");
     }
     /*

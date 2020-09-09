@@ -29,15 +29,17 @@ package de.fraunhofer.aisec.cpg.graph;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import org.checkerframework.checker.nullness.qual.NonNull;
 
 /** A statement. */
-public class Statement extends Node {
+public class Statement extends Node implements DeclarationHolder {
 
   /**
    * A list of local variables associated to this statement, defined by their {@link
    * VariableDeclaration} extracted from Block because for, while, if, switch can declare locals in
    * their condition or initializers
    */
+  // TODO: This is actually an AST node just for a subset of nodes, i.e. initializers in for-loops
   @SubGraph("AST")
   protected List<VariableDeclaration> locals = new ArrayList<>();
 
@@ -64,5 +66,12 @@ public class Statement extends Node {
   @Override
   public int hashCode() {
     return super.hashCode();
+  }
+
+  @Override
+  public void addDeclaration(@NonNull Declaration declaration) {
+    if (declaration instanceof VariableDeclaration) {
+      this.locals.add((VariableDeclaration) declaration);
+    }
   }
 }
