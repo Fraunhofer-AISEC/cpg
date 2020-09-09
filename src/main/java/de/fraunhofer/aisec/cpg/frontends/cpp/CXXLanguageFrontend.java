@@ -263,10 +263,14 @@ public class CXXLanguageFrontend extends LanguageFrontend {
 
     try {
       Benchmark bench = new Benchmark(this.getClass(), "Parsing sourcefile");
-      IASTTranslationUnit translationUnit =
-          GPPLanguage.getDefault()
-              .getASTTranslationUnit(
-                  content, scannerInfo, includeFileContentProvider, null, opts, log);
+      CPPASTTranslationUnit translationUnit =
+          (CPPASTTranslationUnit)
+              GPPLanguage.getDefault()
+                  .getASTTranslationUnit(
+                      content, scannerInfo, includeFileContentProvider, null, opts, log);
+
+      var length = translationUnit.getLength();
+      LOGGER.info("Parsed {} bytes corresponding roughly to {} LoC", length, length / 50);
       bench.stop();
 
       bench = new Benchmark(this.getClass(), "Transform to CPG");
