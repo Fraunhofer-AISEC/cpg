@@ -536,7 +536,7 @@ public class TypeParser {
    * @return typeString which uses . instead of the substring :: if CPP is the current language
    */
   private static String replaceScopeResolutionOperator(@NonNull String type) {
-    return (getLanguage() == TypeManager.Language.CXX) ? type.replaceAll("::", ".").trim() : type;
+    return (getLanguage() == TypeManager.Language.CXX) ? type.replace("::", ".").trim() : type;
   }
 
   /**
@@ -714,6 +714,16 @@ public class TypeParser {
     return modifier;
   }
 
+  private static boolean checkValidTypeString(String type) {
+    // Todo ? can be part of generic string -> more fine-grained analysis necessary
+    if (type.contains("?")
+            || type.contains("org.eclipse.cdt.internal.core.dom.parser.ProblemType@")
+            || type.trim().length() == 0) {
+      return false;
+    }
+    return true;
+  }
+
   /**
    * Warning: This function might crash, when a type cannot be parsed. Use createFrom instead Use
    * this function for parsing new types and obtaining a new Type the TypeParser creates from the
@@ -726,10 +736,7 @@ public class TypeParser {
   @NonNull
   private static Type createFromUnsafe(@NonNull String type, boolean resolveAlias) {
     // Check if Problems during Parsing
-    // Todo ? can be part of generic string -> more fine-grained analysis necessary
-    if (type.contains("?")
-            || type.contains("org.eclipse.cdt.internal.core.dom.parser.ProblemType@")
-            || type.trim().length() == 0) {
+    if (!checkValidTypeString(type)) {
       return UnknownType.getUnknownType();
     }
 
@@ -847,9 +854,10 @@ public class TypeParser {
    * Use this function for parsing new types and obtaining a new Type the TypeParser creates from *
    * the typeString
    *
-   * @param type         string with type information
+   * @param type string with type information
    * @param resolveAlias should replace with original type in typedefs
-   * @return new type representing the type string. If an exception occurs during the parsing, UnknownType is returned
+   * @return new type representing the type string. If an exception occurs during the parsing,
+   *     UnknownType is returned
    */
   @NonNull
   public static Type createFrom(@NonNull String type, boolean resolveAlias) {
