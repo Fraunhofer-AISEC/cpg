@@ -718,12 +718,12 @@ public class TypeParser {
    * this function for parsing new types and obtaining a new Type the TypeParser creates from the
    * typeString
    *
-   * @param type string with type information
+   * @param type         string with type information
    * @param resolveAlias should replace with original type in typedefs
    * @return new type representing the type string
    */
   @NonNull
-  public static Type createFromUnsafe(@NonNull String type, boolean resolveAlias) {
+  private static Type createFromUnsafe(@NonNull String type, boolean resolveAlias) {
     // Check if Problems during Parsing
     // Todo ? can be part of generic string -> more fine-grained analysis necessary
     if (type.contains("?")
