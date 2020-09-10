@@ -33,14 +33,19 @@ import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement;
 import de.fraunhofer.aisec.cpg.graph.statements.Statement;
 import de.fraunhofer.aisec.cpg.graph.types.Type;
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.builder.ToStringBuilder;
+import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.neo4j.ogm.annotation.Relationship;
 
 /** Represents the declaration or definition of a function. */
-public class FunctionDeclaration extends ValueDeclaration {
+public class FunctionDeclaration extends ValueDeclaration implements DeclarationHolder {
 
   private static final String WHITESPACE = " ";
   private static final String BRACKET_LEFT = "(";
@@ -279,5 +284,16 @@ public class FunctionDeclaration extends ValueDeclaration {
 
   public void setRecords(List<RecordDeclaration> records) {
     this.records = records;
+  }
+
+  @Override
+  public void addDeclaration(@NonNull Declaration declaration) {
+    if (declaration instanceof ParamVariableDeclaration) {
+      addIfNotContains(parameters, (ParamVariableDeclaration) declaration);
+    }
+
+    if (declaration instanceof RecordDeclaration) {
+      addIfNotContains(records, (RecordDeclaration) declaration);
+    }
   }
 }

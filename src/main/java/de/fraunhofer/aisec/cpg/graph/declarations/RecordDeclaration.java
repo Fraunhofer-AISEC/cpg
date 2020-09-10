@@ -29,7 +29,12 @@ package de.fraunhofer.aisec.cpg.graph.declarations;
 import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.SubGraph;
 import de.fraunhofer.aisec.cpg.graph.types.Type;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.apache.commons.lang3.builder.ToStringBuilder;
@@ -38,7 +43,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 import org.neo4j.ogm.annotation.Transient;
 
 /** Represents a C++ union/struct/class or Java class */
-public class RecordDeclaration extends Declaration {
+public class RecordDeclaration extends Declaration implements DeclarationHolder {
 
   /** The kind, i.e. struct, class, union or enum. */
   private String kind;
@@ -243,5 +248,18 @@ public class RecordDeclaration extends Declaration {
   @Override
   public int hashCode() {
     return super.hashCode();
+  }
+
+  @Override
+  public void addDeclaration(@NonNull Declaration declaration) {
+    if (declaration instanceof ConstructorDeclaration) {
+      addIfNotContains(this.constructors, (ConstructorDeclaration) declaration);
+    } else if (declaration instanceof MethodDeclaration) {
+      addIfNotContains(this.methods, (MethodDeclaration) declaration);
+    } else if (declaration instanceof FieldDeclaration) {
+      addIfNotContains(this.fields, (FieldDeclaration) declaration);
+    } else if (declaration instanceof RecordDeclaration) {
+      addIfNotContains(this.records, (RecordDeclaration) declaration);
+    }
   }
 }

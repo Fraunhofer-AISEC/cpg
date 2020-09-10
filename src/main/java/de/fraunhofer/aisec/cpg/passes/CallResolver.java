@@ -496,7 +496,7 @@ public class CallResolver extends Pass {
             "No current translation unit when trying to generate function dummy {}",
             dummy.getName());
       } else {
-        currentTU.add(dummy);
+        currentTU.addDeclaration(dummy);
       }
       return dummy;
     }

@@ -24,37 +24,25 @@
  *
  */
 
-package de.fraunhofer.aisec.cpg.passes.scopes;
+package de.fraunhofer.aisec.cpg.graph;
 
-import de.fraunhofer.aisec.cpg.graph.TranslationUnitDeclaration;
+import java.util.Collection;
+import org.checkerframework.checker.nullness.qual.NonNull;
 
-public class GlobalScope extends StructureDeclarationScope {
+public interface DeclarationHolder {
 
   /**
-   * This should ideally only be called once. It constructs a new global scope, which is not
-   * associated to any AST node. However, depending on the language, a language frontend can
-   * explicitly set the ast node using {@link
-   * ScopeManager#resetToGlobal(TranslationUnitDeclaration)} if the language needs a global scope
-   * that is restricted to a translation unit, i.e. C++ while still maintaing a unique list of
-   * global variables.
+   * Adds the specified declaration to this declaration holder. Ideally, the declaration holder
+   * should use the {@link #addIfNotContains(Collection, Declaration)} method to consistently add
+   * declarations.
+   *
+   * @param declaration the declaration
    */
-  public GlobalScope() {
-    super(null);
+  void addDeclaration(@NonNull Declaration declaration);
+
+  default <N extends Declaration> void addIfNotContains(Collection<N> collection, N declaration) {
+    if (!collection.contains(declaration)) {
+      collection.add(declaration);
+    }
   }
-  /*
-
-  private List<VariableDeclaration> variables = new ArrayList<>();
-
-  public List<VariableDeclaration> getVariables() {
-    return variables;
-  }
-
-  public void setVariables(List<VariableDeclaration> variables) {
-    this.variables = variables;
-  }
-
-  public void addVariable(VariableDeclaration variable) {
-    this.variables.add(variable);
-  }*/
-
 }

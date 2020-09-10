@@ -26,7 +26,11 @@
 
 package de.fraunhofer.aisec.cpg.frontends.java;
 
-import com.github.javaparser.*;
+import com.github.javaparser.JavaParser;
+import com.github.javaparser.ParseResult;
+import com.github.javaparser.ParserConfiguration;
+import com.github.javaparser.Range;
+import com.github.javaparser.TokenRange;
 import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.ImportDeclaration;
 import com.github.javaparser.ast.Node;
@@ -50,7 +54,11 @@ import com.github.javaparser.symbolsolver.resolution.typesolvers.ReflectionTypeS
 import de.fraunhofer.aisec.cpg.TranslationConfiguration;
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
 import de.fraunhofer.aisec.cpg.frontends.TranslationException;
-import de.fraunhofer.aisec.cpg.graph.*;
+import de.fraunhofer.aisec.cpg.graph.IncludeDeclaration;
+import de.fraunhofer.aisec.cpg.graph.NamespaceDeclaration;
+import de.fraunhofer.aisec.cpg.graph.NodeBuilder;
+import de.fraunhofer.aisec.cpg.graph.TranslationUnitDeclaration;
+import de.fraunhofer.aisec.cpg.graph.TypeManager;
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration;
 import de.fraunhofer.aisec.cpg.graph.declarations.IncludeDeclaration;
 import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration;
@@ -125,41 +133,35 @@ public class JavaLanguageFrontend extends LanguageFrontend {
       TranslationUnitDeclaration fileDeclaration =
           NodeBuilder.newTranslationUnitDeclaration(file.toString(), context.toString());
       setCurrentTU(fileDeclaration);
-      Declaration declaration = fileDeclaration;
+
+      scopeManager.resetToGlobal(fileDeclaration);
 
       PackageDeclaration packDecl = context.getPackageDeclaration().orElse(null);
       NamespaceDeclaration namespaceDeclaration = null;
       if (packDecl != null) {
         namespaceDeclaration = NodeBuilder.newNamespaceDeclaration(packDecl.getName().asString());
         // Todo set region and code and push/pop scope
+
+        scopeManager.addDeclaration(namespaceDeclaration);
+
         scopeManager.enterScope(namespaceDeclaration);
-        if (declaration instanceof TranslationUnitDeclaration) {
-          ((TranslationUnitDeclaration) declaration).add(namespaceDeclaration);
-        }
-        declaration = namespaceDeclaration;
       }
 
       for (TypeDeclaration<?> type : context.getTypes()) {
-        Declaration typeD = getDeclarationHandler().handle(type);
-        if (declaration instanceof TranslationUnitDeclaration) {
-          ((TranslationUnitDeclaration) declaration).add(typeD);
-        } else {
-          scopeManager.addDeclaration(typeD);
-        }
+        // handle each type. all declaration in this type will be added by the scope manager along
+        // the way
+        getDeclarationHandler().handle(type);
       }
 
       for (ImportDeclaration anImport : context.getImports()) {
         IncludeDeclaration incl = NodeBuilder.newIncludeDeclaration(anImport.getNameAsString());
-        if (declaration instanceof TranslationUnitDeclaration) {
-          ((TranslationUnitDeclaration) declaration).add(incl);
-        } else {
-          scopeManager.addDeclaration(incl);
-        }
+        scopeManager.addDeclaration(incl);
       }
 
       if (packDecl != null) {
         scopeManager.leaveScope(namespaceDeclaration);
       }
+
       bench.stop();
 
       return fileDeclaration;

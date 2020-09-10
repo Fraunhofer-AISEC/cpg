@@ -43,36 +43,6 @@ public class MethodDeclaration extends FunctionDeclaration {
    */
   @Nullable private RecordDeclaration recordDeclaration;
 
-  /**
-   * Creates a method declaration from an existing {@link FunctionDeclaration}.
-   *
-   * @param functionDeclaration the {@link FunctionDeclaration}.
-   * @param recordDeclaration the {@link RecordDeclaration} this constructor belongs to.
-   * @return the new method declaration
-   */
-  public static MethodDeclaration from(
-      FunctionDeclaration functionDeclaration, @Nullable RecordDeclaration recordDeclaration) {
-    MethodDeclaration md =
-        NodeBuilder.newMethodDeclaration(
-            functionDeclaration.getName(), functionDeclaration.getCode(), false, recordDeclaration);
-
-    md.setLocation(functionDeclaration.getLocation());
-    md.setParameters(functionDeclaration.getParameters());
-    md.setBody(functionDeclaration.getBody());
-    md.setType(functionDeclaration.getType());
-    md.addAnnotations(functionDeclaration.getAnnotations());
-    md.setRecordDeclaration(recordDeclaration);
-    md.setIsDefinition(functionDeclaration.isDefinition());
-
-    if (!md.isDefinition()) {
-      // do not call getDefinition if this is a definition itself, otherwise this
-      // will return a 'this' to the old function declaration
-      md.setDefinition(functionDeclaration.getDefinition());
-    }
-
-    return md;
-  }
-
   public boolean isStatic() {
     return isStatic;
   }
