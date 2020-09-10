@@ -716,12 +716,9 @@ public class TypeParser {
 
   private static boolean checkValidTypeString(String type) {
     // Todo ? can be part of generic string -> more fine-grained analysis necessary
-    if (type.contains("?")
-            || type.contains("org.eclipse.cdt.internal.core.dom.parser.ProblemType@")
-            || type.trim().length() == 0) {
-      return false;
-    }
-    return true;
+    return !type.contains("?")
+            && !type.contains("org.eclipse.cdt.internal.core.dom.parser.ProblemType@")
+            && type.trim().length() != 0;
   }
 
   /**
