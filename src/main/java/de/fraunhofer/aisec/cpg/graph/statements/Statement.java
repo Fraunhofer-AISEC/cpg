@@ -26,8 +26,10 @@
 
 package de.fraunhofer.aisec.cpg.graph.statements;
 
+import de.fraunhofer.aisec.cpg.graph.DeclarationHolder;
 import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.SubGraph;
+import de.fraunhofer.aisec.cpg.graph.declarations.Declaration;
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration;
 import java.util.ArrayList;
 import java.util.List;

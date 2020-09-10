@@ -26,6 +26,7 @@
 
 package de.fraunhofer.aisec.cpg.graph;
 
+import de.fraunhofer.aisec.cpg.graph.declarations.Declaration;
 import java.util.Collection;
 import org.checkerframework.checker.nullness.qual.NonNull;
 

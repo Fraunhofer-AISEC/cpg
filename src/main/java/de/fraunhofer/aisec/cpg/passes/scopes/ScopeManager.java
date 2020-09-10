@@ -30,7 +30,6 @@ import static de.fraunhofer.aisec.cpg.helpers.Util.errorWithFileLocation;
 
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
 import de.fraunhofer.aisec.cpg.graph.Node;
-import de.fraunhofer.aisec.cpg.graph.ProblemDeclaration;
 import de.fraunhofer.aisec.cpg.graph.declarations.*;
 import de.fraunhofer.aisec.cpg.graph.declarations.EnumDeclaration;
 import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration;
@@ -39,7 +38,6 @@ import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration;
 import de.fraunhofer.aisec.cpg.graph.statements.AssertStatement;
 import de.fraunhofer.aisec.cpg.graph.statements.BreakStatement;
 import de.fraunhofer.aisec.cpg.graph.statements.CatchClause;
-import de.fraunhofer.aisec.cpg.graph.TranslationUnitDeclaration;
 import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement;
 import de.fraunhofer.aisec.cpg.graph.statements.ContinueStatement;
 import de.fraunhofer.aisec.cpg.graph.statements.DoStatement;

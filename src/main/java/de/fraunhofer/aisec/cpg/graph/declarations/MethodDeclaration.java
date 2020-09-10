@@ -26,7 +26,6 @@
 
 package de.fraunhofer.aisec.cpg.graph.declarations;
 
-import de.fraunhofer.aisec.cpg.graph.NodeBuilder;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
