@@ -26,6 +26,7 @@
 
 package de.fraunhofer.aisec.cpg.graph.declarations;
 
+import de.fraunhofer.aisec.cpg.graph.DeclarationHolder;
 import de.fraunhofer.aisec.cpg.graph.SubGraph;
 import de.fraunhofer.aisec.cpg.helpers.Util;
 import java.util.ArrayList;
@@ -45,7 +46,7 @@ import org.checkerframework.checker.nullness.qual.NonNull;
  * semantical difference between NamespaceDeclaration and {@link RecordDeclaration} lies in the
  * non-instantiabillity of a namespace.
  */
-public class NamespaceDeclaration extends Declaration {
+public class NamespaceDeclaration extends Declaration implements DeclarationHolder {
 
   /**
    * Edges to nested namespaces, records, functions, fields etc. contained in the current namespace.
@@ -109,5 +110,10 @@ public class NamespaceDeclaration extends Declaration {
     }
     NamespaceDeclaration that = (NamespaceDeclaration) o;
     return Objects.equals(declarations, that.declarations);
+  }
+
+  @Override
+  public void addDeclaration(@NonNull Declaration declaration) {
+    addIfNotContains(this.declarations, declaration);
   }
 }

@@ -26,6 +26,7 @@
 
 package de.fraunhofer.aisec.cpg.graph.declarations;
 
+import de.fraunhofer.aisec.cpg.graph.DeclarationHolder;
 import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.SubGraph;
 import java.util.ArrayList;
@@ -39,7 +40,7 @@ import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /** The top most declaration, representing a translation unit, for example a file. */
-public class TranslationUnitDeclaration extends Declaration {
+public class TranslationUnitDeclaration extends Declaration implements DeclarationHolder {
 
   /** A list of declarations within this unit. */
   @SubGraph("AST")
@@ -101,7 +102,7 @@ public class TranslationUnitDeclaration extends Declaration {
 
   @NonNull
   public List<Declaration> getDeclarations() {
-    return Collections.unmodifiableList(declarations);
+    return declarations;
   }
 
   @NonNull
@@ -114,17 +115,14 @@ public class TranslationUnitDeclaration extends Declaration {
     return Collections.unmodifiableList(namespaces);
   }
 
-  public void add(@NonNull Declaration decl) {
-    if (decl instanceof DeclarationSequence) {
-      declarations.addAll(((DeclarationSequence) decl).asList());
-    } else {
-      if (decl instanceof IncludeDeclaration) {
-        includes.add(decl);
-      } else if (decl instanceof NamespaceDeclaration) {
-        namespaces.add(decl);
-      }
-      declarations.add(decl);
+  public void addDeclaration(@NonNull Declaration declaration) {
+    if (declaration instanceof IncludeDeclaration) {
+      includes.add(declaration);
+    } else if (declaration instanceof NamespaceDeclaration) {
+      namespaces.add(declaration);
     }
+
+    addIfNotContains(declarations, declaration);
   }
 
   @Override

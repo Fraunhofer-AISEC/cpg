@@ -80,8 +80,7 @@ public class InitializerListExpression extends Expression implements TypeListene
 
     if (this.initializers.contains(src)) {
       Set<Type> types =
-          this.initializers
-              .parallelStream()
+          this.initializers.parallelStream()
               .map(Expression::getType)
               .filter(Objects::nonNull)
               .map(t -> TypeManager.getInstance().registerType(t.reference(PointerOrigin.ARRAY)))

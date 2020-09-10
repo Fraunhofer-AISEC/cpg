@@ -50,6 +50,7 @@ import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import org.checkerframework.checker.nullness.qual.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -288,6 +289,7 @@ public class VariableUsageResolver extends Pass {
     }
   }
 
+  @Nullable
   private Declaration resolveBase(DeclaredReferenceExpression reference) {
     // check if this refers to an enum
     if (enumMap.containsKey(reference.getType())) {
@@ -308,10 +310,7 @@ public class VariableUsageResolver extends Pass {
         }
       }
     } else {
-      log.info(
-          "Type declaration for {} not found in graph, using dummy to collect all " + "usages",
-          reference.getType());
-      return handleUnknownField(reference.getType(), reference.getName(), reference.getType());
+      return null;
     }
   }
 
@@ -408,7 +407,7 @@ public class VariableUsageResolver extends Pass {
       declaration.setType(returnType);
       declaration.setParameters(Util.createParameters(signature));
 
-      currTu.add(declaration);
+      currTu.addDeclaration(declaration);
       declaration.setImplicit(true);
       return declaration;
     } else {
