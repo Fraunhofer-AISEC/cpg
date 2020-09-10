@@ -33,6 +33,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Declaration;
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import org.checkerframework.checker.nullness.qual.NonNull;
 
 /** A statement. */
@@ -60,5 +61,20 @@ public class Statement extends Node implements DeclarationHolder {
     if (declaration instanceof VariableDeclaration) {
       this.locals.add((VariableDeclaration) declaration);
     }
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    if (!super.equals(o)) {
+      return false;
+    }
+    Statement statement = (Statement) o;
+    return Objects.equals(locals, statement.locals);
   }
 }
