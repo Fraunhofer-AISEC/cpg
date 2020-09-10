@@ -29,7 +29,12 @@ package de.fraunhofer.aisec.cpg.graph;
 import de.fraunhofer.aisec.cpg.helpers.LocationConverter;
 import de.fraunhofer.aisec.cpg.processing.IVisitable;
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Objects;
+import java.util.Set;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;
 import org.checkerframework.checker.nullness.qual.NonNull;
@@ -42,7 +47,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /** The base class for all graph objects that are going to be persisted in the database. */
-public class Node extends IVisitable<Node> {
+public class Node implements IVisitable<Node> {
 
   public static final ToStringStyle TO_STRING_STYLE = ToStringStyle.SHORT_PREFIX_STYLE;
   protected static final Logger log = LoggerFactory.getLogger(Node.class);
@@ -66,8 +71,11 @@ public class Node extends IVisitable<Node> {
   @Nullable
   protected PhysicalLocation location;
 
-  /** Name of the containing file */
-  protected String file;
+  /**
+   * Name of the containing file. It can be null for artificially created nodes or if just analyzing
+   * snippets of code without an associated file name.
+   */
+  @Nullable protected String file;
 
   /** Incoming control flow edges. */
   @NonNull
@@ -241,6 +249,8 @@ public class Node extends IVisitable<Node> {
     this.argumentIndex = argumentIndex;
   }
 
+  /** @deprecated You should rather use {@link #isImplicit()} */
+  @Deprecated(forRemoval = true)
   public boolean isDummy() {
     return dummy;
   }

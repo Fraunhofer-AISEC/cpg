@@ -49,20 +49,24 @@ import org.mockito.Mockito;
 
 public class TestUtils {
 
-  public static <S extends Node> S findByPredicate(Collection<S> nodes, Predicate<S> predicate) {
-    List<S> results = nodes.stream().filter(predicate).collect(Collectors.toList());
-    assertEquals(1, results.size());
+  public static <S extends Node> S findByUniquePredicate(
+      Collection<S> nodes, Predicate<S> predicate) {
+    List<S> results = findByPredicate(nodes, predicate);
+    assertEquals(1, results.size(), "Expected exactly one node matching the predicate");
     return results.get(0);
+  }
+
+  public static <S extends Node> List<S> findByPredicate(
+      Collection<S> nodes, Predicate<S> predicate) {
+    return nodes.stream().filter(predicate).collect(Collectors.toList());
   }
 
   public static <S extends Node> S findByUniqueName(Collection<S> nodes, String name) {
-    List<S> results = findByName(nodes, name);
-    assertEquals(1, results.size());
-    return results.get(0);
+    return findByUniquePredicate(nodes, m -> m.getName().equals(name));
   }
 
   public static <S extends Node> List<S> findByName(Collection<S> nodes, String name) {
-    return nodes.stream().filter(m -> m.getName().equals(name)).collect(Collectors.toList());
+    return findByPredicate(nodes, m -> m.getName().equals(name));
   }
 
   /**

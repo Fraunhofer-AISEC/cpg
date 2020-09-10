@@ -28,13 +28,13 @@ package de.fraunhofer.aisec.cpg;
 
 import static de.fraunhofer.aisec.cpg.TestUtils.findByUniqueName;
 import static de.fraunhofer.aisec.cpg.TestUtils.subnodesOfType;
+import static java.util.Collections.emptyList;
 import static org.junit.jupiter.api.Assertions.*;
 
 import de.fraunhofer.aisec.cpg.graph.*;
 import de.fraunhofer.aisec.cpg.graph.type.*;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
@@ -64,7 +64,7 @@ class TypeTests extends BaseTest {
                 "int",
                 Type.Storage.AUTO,
                 new Type.Qualifier(),
-                Collections.emptyList(),
+                emptyList(),
                 ObjectType.Modifier.SIGNED,
                 true));
     Type functionPointerType =
@@ -118,7 +118,7 @@ class TypeTests extends BaseTest {
                 "int",
                 Type.Storage.AUTO,
                 new Type.Qualifier(),
-                Collections.emptyList(),
+                emptyList(),
                 ObjectType.Modifier.SIGNED,
                 true));
     Type functionPointerType =
@@ -340,7 +340,7 @@ class TypeTests extends BaseTest {
                 "int",
                 Type.Storage.AUTO,
                 new Type.Qualifier(),
-                Collections.emptyList(),
+                emptyList(),
                 ObjectType.Modifier.SIGNED,
                 true));
     Type expected =
@@ -363,7 +363,7 @@ class TypeTests extends BaseTest {
                     "char",
                     Type.Storage.AUTO,
                     new Type.Qualifier(),
-                    Collections.emptyList(),
+                    emptyList(),
                     ObjectType.Modifier.SIGNED,
                     true),
                 PointerType.PointerOrigin.ARRAY),
@@ -380,7 +380,7 @@ class TypeTests extends BaseTest {
                 "char",
                 Type.Storage.AUTO,
                 new Type.Qualifier(),
-                Collections.emptyList(),
+                emptyList(),
                 ObjectType.Modifier.SIGNED,
                 true),
             PointerType.PointerOrigin.POINTER);
@@ -405,7 +405,7 @@ class TypeTests extends BaseTest {
                 "char",
                 Type.Storage.AUTO,
                 new Type.Qualifier(true, false, false, false),
-                Collections.emptyList(),
+                emptyList(),
                 ObjectType.Modifier.SIGNED,
                 true),
             PointerType.PointerOrigin.POINTER);
@@ -420,7 +420,7 @@ class TypeTests extends BaseTest {
                 "char",
                 Type.Storage.AUTO,
                 new Type.Qualifier(false, false, false, false),
-                Collections.emptyList(),
+                emptyList(),
                 ObjectType.Modifier.SIGNED,
                 true),
             PointerType.PointerOrigin.POINTER);
@@ -436,7 +436,7 @@ class TypeTests extends BaseTest {
                 "char",
                 Type.Storage.AUTO,
                 new Type.Qualifier(true, false, false, false),
-                Collections.emptyList(),
+                emptyList(),
                 ObjectType.Modifier.SIGNED,
                 true),
             PointerType.PointerOrigin.POINTER);
@@ -453,7 +453,7 @@ class TypeTests extends BaseTest {
                     "char",
                     Type.Storage.STATIC,
                     new Type.Qualifier(true, false, false, false),
-                    Collections.emptyList(),
+                    emptyList(),
                     ObjectType.Modifier.SIGNED,
                     true),
                 PointerType.PointerOrigin.POINTER),
@@ -474,7 +474,7 @@ class TypeTests extends BaseTest {
                         "char",
                         Type.Storage.STATIC,
                         new Type.Qualifier(true, false, false, false),
-                        Collections.emptyList(),
+                        emptyList(),
                         ObjectType.Modifier.SIGNED,
                         true),
                     PointerType.PointerOrigin.POINTER),
@@ -491,7 +491,7 @@ class TypeTests extends BaseTest {
             "int",
             Type.Storage.AUTO,
             new Type.Qualifier(),
-            Collections.emptyList(),
+            emptyList(),
             ObjectType.Modifier.SIGNED,
             true));
     expected =
@@ -732,6 +732,10 @@ class TypeTests extends BaseTest {
         TestUtils.analyzeAndGetFirstTU(
             List.of(topLevel.resolve("fptr_type.cpp").toFile()), topLevel, true);
 
+    FunctionPointerType noParamType =
+        new FunctionPointerType(
+            new Type.Qualifier(), Type.Storage.AUTO, emptyList(), new IncompleteType());
+
     FunctionPointerType oneParamType =
         new FunctionPointerType(
             new Type.Qualifier(),
@@ -781,6 +785,14 @@ class TypeTests extends BaseTest {
     VariableDeclaration localOneParam = findByUniqueName(variables, "local_one_param");
     assertNotNull(localOneParam);
     assertEquals(oneParamType, localOneParam.getType());
+
+    VariableDeclaration globalNoParam = findByUniqueName(variables, "global_no_param");
+    assertNotNull(globalNoParam);
+    assertEquals(noParamType, globalNoParam.getType());
+
+    VariableDeclaration globalNoParamVoid = findByUniqueName(variables, "global_no_param_void");
+    assertNotNull(globalNoParamVoid);
+    assertEquals(noParamType, globalNoParamVoid.getType());
 
     VariableDeclaration globalTwoParam = findByUniqueName(variables, "global_two_param");
     assertNotNull(globalTwoParam);

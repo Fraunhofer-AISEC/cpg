@@ -8,13 +8,13 @@ import org.checkerframework.checker.nullness.qual.NonNull;
  *
  * @param <V>
  */
-public abstract class IVisitable<V extends IVisitable> {
+public interface IVisitable<V extends IVisitable> {
 
   /**
    * @param strategy Traversal strategy.
    * @param visitor Instance of the visitor to call.
    */
-  public void accept(IStrategy<V> strategy, IVisitor<V> visitor) {
+  default void accept(IStrategy<V> strategy, IVisitor<V> visitor) {
     if (!visitor.getVisited().contains(this)) {
       visitor.getVisited().add((V) this);
       visitor.visit((V) this);

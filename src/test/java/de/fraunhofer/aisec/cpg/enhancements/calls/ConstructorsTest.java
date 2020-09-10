@@ -1,4 +1,4 @@
-package de.fraunhofer.aisec.cpg.enhancements;
+package de.fraunhofer.aisec.cpg.enhancements.calls;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -23,11 +23,11 @@ class ConstructorsTest extends BaseTest {
     List<ConstructorDeclaration> constructors =
         TestUtils.subnodesOfType(result, ConstructorDeclaration.class);
     ConstructorDeclaration noArg =
-        TestUtils.findByPredicate(constructors, c -> c.getParameters().size() == 0);
+        TestUtils.findByUniquePredicate(constructors, c -> c.getParameters().size() == 0);
     ConstructorDeclaration singleArg =
-        TestUtils.findByPredicate(constructors, c -> c.getParameters().size() == 1);
+        TestUtils.findByUniquePredicate(constructors, c -> c.getParameters().size() == 1);
     ConstructorDeclaration twoArgs =
-        TestUtils.findByPredicate(constructors, c -> c.getParameters().size() == 2);
+        TestUtils.findByUniquePredicate(constructors, c -> c.getParameters().size() == 2);
 
     List<VariableDeclaration> variables =
         TestUtils.subnodesOfType(result, VariableDeclaration.class);
@@ -66,11 +66,11 @@ class ConstructorsTest extends BaseTest {
     List<ConstructorDeclaration> constructors =
         TestUtils.subnodesOfType(result, ConstructorDeclaration.class);
     ConstructorDeclaration noArg =
-        TestUtils.findByPredicate(constructors, c -> c.getParameters().size() == 0);
+        TestUtils.findByUniquePredicate(constructors, c -> c.getParameters().size() == 0);
     ConstructorDeclaration singleArg =
-        TestUtils.findByPredicate(constructors, c -> c.getParameters().size() == 1);
+        TestUtils.findByUniquePredicate(constructors, c -> c.getParameters().size() == 1);
     ConstructorDeclaration twoArgs =
-        TestUtils.findByPredicate(constructors, c -> c.getParameters().size() == 2);
+        TestUtils.findByUniquePredicate(constructors, c -> c.getParameters().size() == 2);
 
     List<VariableDeclaration> variables =
         TestUtils.subnodesOfType(result, VariableDeclaration.class);

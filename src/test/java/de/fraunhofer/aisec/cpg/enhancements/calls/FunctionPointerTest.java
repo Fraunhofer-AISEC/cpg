@@ -24,7 +24,7 @@
  *
  */
 
-package de.fraunhofer.aisec.cpg.enhancements;
+package de.fraunhofer.aisec.cpg.enhancements.calls;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -32,21 +32,11 @@ import de.fraunhofer.aisec.cpg.BaseTest;
 import de.fraunhofer.aisec.cpg.TestUtils;
 import de.fraunhofer.aisec.cpg.TranslationConfiguration;
 import de.fraunhofer.aisec.cpg.TranslationManager;
-import de.fraunhofer.aisec.cpg.graph.CallExpression;
-import de.fraunhofer.aisec.cpg.graph.FunctionDeclaration;
-import de.fraunhofer.aisec.cpg.graph.Node;
-import de.fraunhofer.aisec.cpg.graph.TranslationUnitDeclaration;
-import de.fraunhofer.aisec.cpg.graph.VariableDeclaration;
+import de.fraunhofer.aisec.cpg.graph.*;
 import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Deque;
-import java.util.IdentityHashMap;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -85,25 +75,17 @@ class FunctionPointerTest extends BaseTest {
     FunctionDeclaration main = TestUtils.findByUniqueName(functions, "main");
     List<CallExpression> calls = TestUtils.subnodesOfType(main, CallExpression.class);
     FunctionDeclaration noParam =
-        functions.stream()
-            .filter(f -> f.getName().equals("target") && f.getParameters().isEmpty())
-            .findFirst()
-            .orElseThrow();
+        TestUtils.findByUniquePredicate(
+            functions, f -> f.getName().equals("target") && f.getParameters().isEmpty());
     FunctionDeclaration singleParam =
-        functions.stream()
-            .filter(f -> f.getName().equals("target") && f.getParameters().size() == 1)
-            .findFirst()
-            .orElseThrow();
+        TestUtils.findByUniquePredicate(
+            functions, f -> f.getName().equals("target") && f.getParameters().size() == 1);
     FunctionDeclaration noParamUnknown =
-        functions.stream()
-            .filter(f -> f.getName().equals("fun") && f.getParameters().isEmpty())
-            .findFirst()
-            .orElseThrow();
+        TestUtils.findByUniquePredicate(
+            functions, f -> f.getName().equals("fun") && f.getParameters().isEmpty());
     FunctionDeclaration singleParamUnknown =
-        functions.stream()
-            .filter(f -> f.getName().equals("fun") && f.getParameters().size() == 1)
-            .findFirst()
-            .orElseThrow();
+        TestUtils.findByUniquePredicate(
+            functions, f -> f.getName().equals("fun") && f.getParameters().size() == 1);
     Pattern pattern = Pattern.compile("\\((?<member>.+)?\\*(?<obj>.+\\.)?(?<func>.+)\\)");
     for (CallExpression call : calls) {
       String func;
