@@ -847,9 +847,9 @@ public class TypeParser {
    * Use this function for parsing new types and obtaining a new Type the TypeParser creates from *
    * the typeString
    *
-   * @param type string with type information
+   * @param type         string with type information
    * @param resolveAlias should replace with original type in typedefs
-   * @return new type representing the type string
+   * @return new type representing the type string. If an exception occurs during the parsing, UnknownType is returned
    */
   @NonNull
   public static Type createFrom(@NonNull String type, boolean resolveAlias) {
