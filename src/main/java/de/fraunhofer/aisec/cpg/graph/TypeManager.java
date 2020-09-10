@@ -210,7 +210,8 @@ public class TypeManager {
           wrapState.getReferenceType());
     }
     typeToRecord =
-        frontend.getScopeManager()
+        frontend
+            .getScopeManager()
             .getUniqueScopesThat(RecordScope.class::isInstance, s -> s.getAstNode().getName())
             .stream()
             .map(s -> (RecordDeclaration) s.getAstNode())

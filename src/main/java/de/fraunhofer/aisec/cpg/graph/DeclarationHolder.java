@@ -26,36 +26,23 @@
 
 package de.fraunhofer.aisec.cpg.graph;
 
-import org.checkerframework.checker.nullness.qual.Nullable;
+import java.util.Collection;
+import org.checkerframework.checker.nullness.qual.NonNull;
 
-/**
- * A method declaration is a {@link FunctionDeclaration} tied to a specific {@link
- * RecordDeclaration}.
- */
-public class MethodDeclaration extends FunctionDeclaration {
-
-  private boolean isStatic;
+public interface DeclarationHolder {
 
   /**
-   * The {@link RecordDeclaration} this method is tied to. This can be empty if we do not know about
-   * the type.
+   * Adds the specified declaration to this declaration holder. Ideally, the declaration holder
+   * should use the {@link #addIfNotContains(Collection, Declaration)} method to consistently add
+   * declarations.
+   *
+   * @param declaration the declaration
    */
-  @Nullable private RecordDeclaration recordDeclaration;
+  void addDeclaration(@NonNull Declaration declaration);
 
-  public boolean isStatic() {
-    return isStatic;
-  }
-
-  public void setStatic(boolean isStatic) {
-    this.isStatic = isStatic;
-  }
-
-  @Nullable
-  public RecordDeclaration getRecordDeclaration() {
-    return recordDeclaration;
-  }
-
-  public void setRecordDeclaration(@Nullable RecordDeclaration recordDeclaration) {
-    this.recordDeclaration = recordDeclaration;
+  default <N extends Declaration> void addIfNotContains(Collection<N> collection, N declaration) {
+    if (!collection.contains(declaration)) {
+      collection.add(declaration);
+    }
   }
 }
