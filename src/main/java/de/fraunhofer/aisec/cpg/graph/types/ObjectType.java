@@ -26,15 +26,12 @@
 
 package de.fraunhofer.aisec.cpg.graph.types;
 
-import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration;
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import org.neo4j.ogm.annotation.Property;
 import org.neo4j.ogm.annotation.Relationship;
-import org.neo4j.ogm.annotation.RelationshipEntity;
 
 /**
  * This is the main type in the Type system. ObjectTypes describe objects, as instances of a class.
@@ -59,21 +56,7 @@ public class ObjectType extends Type {
   private RecordDeclaration recordDeclaration = null;
 
   @Relationship(type = "GENERICS", direction = Relationship.OUTGOING)
-  private List<GenericEdge> generics;
-
-  @RelationshipEntity(type = "GENERICS")
-  public static class GenericEdge extends PropertyEdge {
-    @Property private int index;
-
-    public GenericEdge(Node start, Node target, int index) {
-      super(start, target);
-      this.index = index;
-    }
-
-    public int getIndex() {
-      return index;
-    }
-  }
+  private List<PropertyEdge> generics;
 
   public ObjectType(
       String typeName,
@@ -102,30 +85,28 @@ public class ObjectType extends Type {
     this.primitive = false;
   }
 
-  private List<GenericEdge> convertToGenericEdge(List<Type> generics) {
-    List<GenericEdge> genericEdges = new ArrayList<>();
+  private List<PropertyEdge> convertToGenericEdge(List<Type> generics) {
+    List<PropertyEdge> genericEdges = new ArrayList<>();
     int counter = 0;
     for (Type t : generics) {
-      genericEdges.add(new GenericEdge(this, t, counter));
+      PropertyEdge edge = new PropertyEdge(this, t);
+      edge.addProperty("index", counter);
+      genericEdges.add(edge);
       counter++;
     }
 
     return genericEdges;
   }
 
-  /**
-   * @deprecated
-   */
-  @Deprecated
   public List<Type> getGenerics() {
     List<Type> genericValues = new ArrayList<>();
-    for (GenericEdge edge : this.generics) {
+    for (PropertyEdge edge : this.generics) {
       genericValues.add((Type) edge.getEnd());
     }
     return genericValues;
   }
 
-  public List<GenericEdge> getGenericEdges() {
+  public List<PropertyEdge> getGenericEdges() {
     return this.generics;
   }
 
