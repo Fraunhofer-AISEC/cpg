@@ -166,15 +166,19 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
   }
 
   private ValueDeclaration handleFunctionDeclarator(CPPASTFunctionDeclarator ctx) {
-    // Attention! This might actually be a function pointer
-    if (ctx.getNestedDeclarator() != null
-        && ctx.getNestedDeclarator().getPointerOperators().length > 0) {
-      return handleFunctionPointer(ctx);
+    // Programmers can wrap the function name in as many levels of parentheses as they like. CDT
+    // treats these levels as separate declarators, so we need to get to the bottom for the
+    // actual name...
+    IASTDeclarator nameDecl = ctx;
+    while (nameDecl.getNestedDeclarator() != null) {
+      nameDecl = nameDecl.getNestedDeclarator();
     }
-    String name = ctx.getName().toString();
-    if (name.isEmpty() && ctx.getNestedDeclarator() != null) {
-      name = ctx.getNestedDeclarator().getName().toString();
+    // Attention! This might actually be a function pointer (requires at least one level of
+    // parentheses and a pointer operator)
+    if (nameDecl != ctx && nameDecl.getPointerOperators().length > 0) {
+      return handleFunctionPointer(ctx, nameDecl.getName().toString());
     }
+    String name = nameDecl.getName().toString();
 
     /*
      * As always, there are some special cases to consider and one of those are C++ operators.
@@ -283,7 +287,7 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
     return declaration;
   }
 
-  private ValueDeclaration handleFunctionPointer(CPPASTFunctionDeclarator ctx) {
+  private ValueDeclaration handleFunctionPointer(CPPASTFunctionDeclarator ctx, String name) {
     Expression initializer =
         ctx.getInitializer() == null
             ? null
@@ -296,23 +300,20 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
       // variable
       result =
           NodeBuilder.newVariableDeclaration(
-              ctx.getNestedDeclarator().getName().toString(),
-              UnknownType.getUnknownType(),
-              ctx.getRawSignature(),
-              true);
+              name, UnknownType.getUnknownType(), ctx.getRawSignature(), true);
       ((VariableDeclaration) result).setInitializer(initializer);
     } else {
       // field
       String code = ctx.getRawSignature();
       Pattern namePattern = Pattern.compile("\\((\\*|.+\\*)(?<name>[^)]*)");
       Matcher matcher = namePattern.matcher(code);
-      String name = "";
+      String fieldName = "";
       if (matcher.find()) {
-        name = matcher.group("name").strip();
+        fieldName = matcher.group("name").strip();
       }
       result =
           NodeBuilder.newFieldDeclaration(
-              name,
+              fieldName,
               UnknownType.getUnknownType(),
               emptyList(),
               code,
