@@ -7,7 +7,7 @@ import java.util.Map;
 import org.neo4j.ogm.annotation.*;
 import org.neo4j.ogm.annotation.typeconversion.Convert;
 
-@RelationshipEntity(type = "GENERICS")
+@RelationshipEntity()
 public class PropertyEdge implements Persistable {
 
   /** Required field for object graph mapping. It contains the node id. */
@@ -25,9 +25,7 @@ public class PropertyEdge implements Persistable {
     this.properties = new HashMap<>();
   }
 
-  /**
-   * Map containing all properties of an edge
-   */
+  /** Map containing all properties of an edge */
   @Convert(PropertyEdgeConverter.class)
   private Map<String, Object> properties;
 
@@ -36,8 +34,9 @@ public class PropertyEdge implements Persistable {
   }
 
   /**
-   * Adds a property to a {@link PropertyEdge}
-   * If the object is not a built-in type you must provide a serializer and deserializer in the {@link PropertyEdgeConverter}
+   * Adds a property to a {@link PropertyEdge} If the object is not a built-in type you must provide
+   * a serializer and deserializer in the {@link PropertyEdgeConverter}
+   *
    * @param property String containing the name of the property
    * @param value Object containing the value of the property
    */

@@ -1,10 +1,9 @@
 package de.fraunhofer.aisec.cpg.graph.edge;
 
-import org.neo4j.ogm.typeconversion.CompositeAttributeConverter;
-
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Function;
+import org.neo4j.ogm.typeconversion.CompositeAttributeConverter;
 
 public class PropertyEdgeConverter implements CompositeAttributeConverter<Map<String, Object>> {
 
