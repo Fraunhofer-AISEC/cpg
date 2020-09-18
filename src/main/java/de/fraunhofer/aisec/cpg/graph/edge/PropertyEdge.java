@@ -25,9 +25,15 @@ public class PropertyEdge implements Persistable {
     this.properties = new HashMap<>();
   }
 
+  public PropertyEdge(Node start, Node end, Map<Properties, Object> properties) {
+    this.start = start;
+    this.end = end;
+    this.properties = properties;
+  }
+
   /** Map containing all properties of an edge */
   @Convert(PropertyEdgeConverter.class)
-  private Map<String, Object> properties;
+  private Map<Properties, Object> properties;
 
   public Object getProperty(String property) {
     return properties.getOrDefault(property, null);
@@ -40,7 +46,7 @@ public class PropertyEdge implements Persistable {
    * @param property String containing the name of the property
    * @param value Object containing the value of the property
    */
-  public void addProperty(String property, Object value) {
+  public void addProperty(Properties property, Object value) {
     properties.put(property, value);
   }
 

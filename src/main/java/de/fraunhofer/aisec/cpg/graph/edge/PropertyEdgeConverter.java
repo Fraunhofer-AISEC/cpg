@@ -5,7 +5,7 @@ import java.util.Map;
 import java.util.function.Function;
 import org.neo4j.ogm.typeconversion.CompositeAttributeConverter;
 
-public class PropertyEdgeConverter implements CompositeAttributeConverter<Map<String, Object>> {
+public class PropertyEdgeConverter implements CompositeAttributeConverter<Map<Properties, Object>> {
 
   /**
    * For every PropertyValue that is not a supported type, a serializer and a deserializer must be
@@ -27,15 +27,15 @@ public class PropertyEdgeConverter implements CompositeAttributeConverter<Map<St
   private Map<String, Function<Object, String>> deserializer = new HashMap<>();
 
   @Override
-  public Map<String, Object> toGraphProperties(Map<String, Object> value) {
+  public Map<String, Object> toGraphProperties(Map<Properties, Object> value) {
     Map<String, Object> result = new HashMap<>();
-    for (String key : value.keySet()) {
+    for (Properties key : value.keySet()) {
       Object propertyValue = value.get(key);
       if (serializer.containsKey(propertyValue.getClass())) {
         Object serializedProperty = serializer.get(propertyValue.getClass()).apply(propertyValue);
-        result.put(key, serializedProperty);
+        result.put(key.name(), serializedProperty);
       } else {
-        result.put(key, propertyValue);
+        result.put(key.name(), propertyValue);
       }
     }
 
@@ -43,15 +43,15 @@ public class PropertyEdgeConverter implements CompositeAttributeConverter<Map<St
   }
 
   @Override
-  public Map<String, Object> toEntityAttribute(Map<String, ?> value) {
-    Map<String, Object> result = new HashMap<>();
+  public Map<Properties, Object> toEntityAttribute(Map<String, ?> value) {
+    Map<Properties, Object> result = new HashMap<>();
     for (String key : value.keySet()) {
       Object propertyValue = value.get(key);
       if (deserializer.containsKey(key)) {
         Object deserializedProperty = deserializer.get(key).apply(propertyValue);
-        result.put(key, deserializedProperty);
+        result.put(Properties.valueOf(key), deserializedProperty);
       } else {
-        result.put(key, propertyValue);
+        result.put(Properties.valueOf(key), propertyValue);
       }
     }
 

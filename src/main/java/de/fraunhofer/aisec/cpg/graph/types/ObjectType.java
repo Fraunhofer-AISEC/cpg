@@ -27,6 +27,7 @@
 package de.fraunhofer.aisec.cpg.graph.types;
 
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration;
+import de.fraunhofer.aisec.cpg.graph.edge.Properties;
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import java.util.ArrayList;
 import java.util.List;
@@ -55,7 +56,7 @@ public class ObjectType extends Type {
   // Reference from the ObjectType to its class (RecordDeclaration) only if the class is available
   private RecordDeclaration recordDeclaration = null;
 
-  @Relationship(type = "GENERICS", direction = Relationship.OUTGOING)
+  @Relationship(value = "GENERICS", direction = "OUTGOING")
   private List<PropertyEdge> generics;
 
   public ObjectType(
@@ -90,7 +91,7 @@ public class ObjectType extends Type {
     int counter = 0;
     for (Type t : generics) {
       PropertyEdge edge = new PropertyEdge(this, t);
-      edge.addProperty("index", counter);
+      edge.addProperty(Properties.Index, counter);
       genericEdges.add(edge);
       counter++;
     }
