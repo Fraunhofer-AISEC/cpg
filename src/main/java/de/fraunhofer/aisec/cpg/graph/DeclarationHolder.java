@@ -26,13 +26,23 @@
 
 package de.fraunhofer.aisec.cpg.graph;
 
-import de.fraunhofer.aisec.cpg.graph.HasType.TypeListener;
+import java.util.Collection;
+import org.checkerframework.checker.nullness.qual.NonNull;
 
-/**
- * An expression, which refers to something which is declared, e.g. a variable. For example, the
- * expression <code>a = b</code>, which itself is a {@link BinaryOperator}, contains two {@link
- * StaticReferenceExpression}s, one for the variable <code>a</code> and one for variable <code>b
- * </code>, which have been previously been declared.
- */
-public class StaticReferenceExpression extends DeclaredReferenceExpression
-    implements TypeListener {}
+public interface DeclarationHolder {
+
+  /**
+   * Adds the specified declaration to this declaration holder. Ideally, the declaration holder
+   * should use the {@link #addIfNotContains(Collection, Declaration)} method to consistently add
+   * declarations.
+   *
+   * @param declaration the declaration
+   */
+  void addDeclaration(@NonNull Declaration declaration);
+
+  default <N extends Declaration> void addIfNotContains(Collection<N> collection, N declaration) {
+    if (!collection.contains(declaration)) {
+      collection.add(declaration);
+    }
+  }
+}

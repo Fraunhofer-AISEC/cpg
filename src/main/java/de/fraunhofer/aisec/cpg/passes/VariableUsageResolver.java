@@ -30,21 +30,7 @@ import static de.fraunhofer.aisec.cpg.helpers.Util.warnWithFileLocation;
 
 import de.fraunhofer.aisec.cpg.TranslationResult;
 import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguageFrontend;
-import de.fraunhofer.aisec.cpg.graph.Declaration;
-import de.fraunhofer.aisec.cpg.graph.DeclaredReferenceExpression;
-import de.fraunhofer.aisec.cpg.graph.EnumDeclaration;
-import de.fraunhofer.aisec.cpg.graph.FieldDeclaration;
-import de.fraunhofer.aisec.cpg.graph.FunctionDeclaration;
-import de.fraunhofer.aisec.cpg.graph.HasType;
-import de.fraunhofer.aisec.cpg.graph.MemberCallExpression;
-import de.fraunhofer.aisec.cpg.graph.MemberExpression;
-import de.fraunhofer.aisec.cpg.graph.MethodDeclaration;
-import de.fraunhofer.aisec.cpg.graph.Node;
-import de.fraunhofer.aisec.cpg.graph.NodeBuilder;
-import de.fraunhofer.aisec.cpg.graph.RecordDeclaration;
-import de.fraunhofer.aisec.cpg.graph.StaticReferenceExpression;
-import de.fraunhofer.aisec.cpg.graph.TranslationUnitDeclaration;
-import de.fraunhofer.aisec.cpg.graph.ValueDeclaration;
+import de.fraunhofer.aisec.cpg.graph.*;
 import de.fraunhofer.aisec.cpg.graph.type.FunctionPointerType;
 import de.fraunhofer.aisec.cpg.graph.type.Type;
 import de.fraunhofer.aisec.cpg.graph.type.TypeParser;
@@ -53,15 +39,14 @@ import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.ScopedWalker;
 import de.fraunhofer.aisec.cpg.helpers.Util;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import org.checkerframework.checker.nullness.qual.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -214,7 +199,7 @@ public class VariableUsageResolver extends Pass {
   }
 
   private void resolveLocalVarUsage(RecordDeclaration currentClass, Node parent, Node current) {
-    if (current instanceof DeclaredReferenceExpression) {
+    if (current instanceof DeclaredReferenceExpression && !(current instanceof MemberExpression)) {
       DeclaredReferenceExpression ref = (DeclaredReferenceExpression) current;
       if (parent instanceof MemberCallExpression
           && current == ((MemberCallExpression) parent).getMember()
@@ -240,7 +225,7 @@ public class VariableUsageResolver extends Pass {
 
       // only add new nodes for non-static unknown
       if (refersTo.isEmpty()
-          && !(current instanceof StaticReferenceExpression)
+          && !(((DeclaredReferenceExpression) current).isStaticAccess())
           && recordDeclType != null
           && recordMap.containsKey(recordDeclType)) {
         // Maybe we are referring to a field instead of a local var
@@ -262,68 +247,45 @@ public class VariableUsageResolver extends Pass {
   private void resolveFieldUsages(Node current, RecordDeclaration curClass) {
     if (current instanceof MemberExpression) {
       MemberExpression memberExpression = (MemberExpression) current;
-      Node base = memberExpression.getBase();
-      Node member = memberExpression.getMember();
-      if (base instanceof DeclaredReferenceExpression) {
+      Declaration baseTarget = null;
+      if (memberExpression.getBase() instanceof DeclaredReferenceExpression) {
+        DeclaredReferenceExpression base = (DeclaredReferenceExpression) memberExpression.getBase();
         if (lang instanceof JavaLanguageFrontend && base.getName().equals("super")) {
           if (curClass != null && !curClass.getSuperClasses().isEmpty()) {
-            base = recordMap.get(curClass.getSuperClasses().get(0)).getThis();
+            baseTarget = recordMap.get(curClass.getSuperClasses().get(0)).getThis();
+            base.setRefersTo(baseTarget);
           } else {
             // no explicit super type -> java.lang.Object
             Type objectType = TypeParser.createFrom(Object.class.getName(), true);
-            base = handleUnknownField(objectType, "this", objectType);
+            base.setType(objectType);
           }
         } else {
-          base = resolveBase((DeclaredReferenceExpression) memberExpression.getBase());
+          baseTarget = resolveBase((DeclaredReferenceExpression) memberExpression.getBase());
+          base.setRefersTo(baseTarget);
         }
-      }
-      if (member instanceof DeclaredReferenceExpression) {
-        if (base instanceof EnumDeclaration) {
-          String name = member.getName();
-          member =
-              ((EnumDeclaration) base)
-                  .getEntries().stream()
-                      .filter(e -> e.getName().equals(name))
-                      .findFirst()
-                      .orElse(null);
-        } else {
-          Type baseType = UnknownType.getUnknownType();
-          if (base instanceof HasType) {
-            baseType = ((HasType) base).getType();
+
+        if (baseTarget instanceof EnumDeclaration) {
+          String name = memberExpression.getName();
+          Optional<EnumConstantDeclaration> memberTarget =
+              ((EnumDeclaration) baseTarget)
+                  .getEntries().stream().filter(e -> e.getName().equals(name)).findFirst();
+          if (memberTarget.isPresent()) {
+            memberExpression.setRefersTo(memberTarget.get());
+            return;
           }
-          if (base instanceof RecordDeclaration) {
-            baseType = TypeParser.createFrom(base.getName(), true);
-          }
-          member =
-              base == null
-                  ? null
-                  : resolveMember(
-                      baseType, (DeclaredReferenceExpression) memberExpression.getMember());
-          if (member != null) {
-            HasType typedMember = (HasType) member;
-            typedMember.setType(memberExpression.getType());
-            Set<Type> subTypes = new HashSet<>(typedMember.getPossibleSubTypes());
-            subTypes.addAll(memberExpression.getPossibleSubTypes());
-            typedMember.setPossibleSubTypes(subTypes);
-          }
+        } else if (baseTarget instanceof RecordDeclaration) {
+          memberExpression.setRefersTo(
+              resolveMember(TypeParser.createFrom(baseTarget.getName(), true), memberExpression));
+          return;
         }
       }
 
-      if (base != null && member != null) {
-        if (base != memberExpression.getBase()) {
-          memberExpression.getBase().disconnectFromGraph();
-        }
-        if (member != memberExpression.getMember()) {
-          memberExpression.getMember().disconnectFromGraph();
-        }
-        memberExpression.setBase(base);
-        memberExpression.setMember(member);
-      } else {
-        log.warn("Unexpected: null base or member in field usage: {}", current);
-      }
+      memberExpression.setRefersTo(
+          resolveMember(memberExpression.getBase().getType(), memberExpression));
     }
   }
 
+  @Nullable
   private Declaration resolveBase(DeclaredReferenceExpression reference) {
     // check if this refers to an enum
     if (enumMap.containsKey(reference.getType())) {
@@ -332,7 +294,7 @@ public class VariableUsageResolver extends Pass {
 
     if (recordMap.containsKey(reference.getType())) {
       RecordDeclaration recordDeclaration = recordMap.get(reference.getType());
-      if (reference instanceof StaticReferenceExpression) {
+      if (reference.isStaticAccess()) {
         return recordDeclaration;
       } else {
         // check if we have this type as a class in our graph. If so, we can refer to its "this"
@@ -344,10 +306,7 @@ public class VariableUsageResolver extends Pass {
         }
       }
     } else {
-      log.info(
-          "Type declaration for {} not found in graph, using dummy to collect all " + "usages",
-          reference.getType());
-      return handleUnknownField(reference.getType(), reference.getName(), reference.getType());
+      return null;
     }
   }
 
@@ -444,7 +403,7 @@ public class VariableUsageResolver extends Pass {
       declaration.setType(returnType);
       declaration.setParameters(Util.createParameters(signature));
 
-      currTu.add(declaration);
+      currTu.addDeclaration(declaration);
       declaration.setImplicit(true);
       return declaration;
     } else {

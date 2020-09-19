@@ -52,11 +52,11 @@ class VariableResolverTest extends BaseTest {
     MethodDeclaration getField = TestUtils.findByUniqueName(methods, "getField");
     ReturnStatement returnStatement =
         TestUtils.subnodesOfType(getField, ReturnStatement.class).get(0);
-    assertEquals(field, ((MemberExpression) returnStatement.getReturnValue()).getMember());
+    assertEquals(field, ((MemberExpression) returnStatement.getReturnValue()).getRefersTo());
 
     MethodDeclaration noShadow = TestUtils.findByUniqueName(methods, "getField");
     returnStatement = TestUtils.subnodesOfType(noShadow, ReturnStatement.class).get(0);
-    assertEquals(field, ((MemberExpression) returnStatement.getReturnValue()).getMember());
+    assertEquals(field, ((MemberExpression) returnStatement.getReturnValue()).getRefersTo());
   }
 
   @Test

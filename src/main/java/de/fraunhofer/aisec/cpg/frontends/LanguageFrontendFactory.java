@@ -36,7 +36,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 public class LanguageFrontendFactory {
 
   private static final List<String> JAVA_EXTENSIONS = List.of(".java");
-  private static final List<String> CXX_EXTENSIONS = List.of(".h", ".c", ".cpp", ".cc");
+  private static final List<String> CXX_EXTENSIONS = List.of(".h", ".hpp", ".c", ".cpp", ".cc");
 
   // hide ctor
   private LanguageFrontendFactory() {}

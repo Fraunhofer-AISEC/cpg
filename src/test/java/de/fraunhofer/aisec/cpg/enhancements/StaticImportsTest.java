@@ -30,12 +30,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import de.fraunhofer.aisec.cpg.BaseTest;
 import de.fraunhofer.aisec.cpg.TestUtils;
-import de.fraunhofer.aisec.cpg.graph.CallExpression;
-import de.fraunhofer.aisec.cpg.graph.FieldDeclaration;
-import de.fraunhofer.aisec.cpg.graph.MemberExpression;
-import de.fraunhofer.aisec.cpg.graph.MethodDeclaration;
-import de.fraunhofer.aisec.cpg.graph.RecordDeclaration;
-import de.fraunhofer.aisec.cpg.graph.TranslationUnitDeclaration;
+import de.fraunhofer.aisec.cpg.graph.*;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -66,8 +61,8 @@ class StaticImportsTest extends BaseTest {
 
     List<MemberExpression> memberExpressions =
         TestUtils.subnodesOfType(main, MemberExpression.class);
-    MemberExpression usage = TestUtils.findByUniqueName(memberExpressions, "A.test");
-    assertEquals(staticField, usage.getMember());
+    MemberExpression usage = TestUtils.findByUniqueName(memberExpressions, "test");
+    assertEquals(staticField, usage.getRefersTo());
   }
 
   @Test
@@ -112,12 +107,11 @@ class StaticImportsTest extends BaseTest {
 
     List<MemberExpression> declaredReferences =
         TestUtils.subnodesOfType(main, MemberExpression.class);
-    MemberExpression usage = TestUtils.findByUniqueName(declaredReferences, "A.staticField");
-    assertEquals(usage.getMember(), staticField);
+    MemberExpression usage = TestUtils.findByUniqueName(declaredReferences, "staticField");
+    assertEquals(staticField, usage.getRefersTo());
 
-    MemberExpression nonStatic =
-        TestUtils.findByUniqueName(declaredReferences, "this.nonStaticField");
-    assertNotEquals(nonStatic.getMember(), nonStaticField);
-    assertTrue(nonStatic.getMember().isImplicit());
+    MemberExpression nonStatic = TestUtils.findByUniqueName(declaredReferences, "nonStaticField");
+    assertNotEquals(nonStaticField, nonStatic.getRefersTo());
+    assertTrue(nonStatic.getRefersTo().isImplicit());
   }
 }

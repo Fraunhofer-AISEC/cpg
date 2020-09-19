@@ -258,7 +258,6 @@ public class ExpressionHandler
 
   private de.fraunhofer.aisec.cpg.graph.Expression handleFieldAccessExpression(Expression expr) {
     FieldAccessExpr fieldAccessExpr = expr.asFieldAccessExpr();
-    de.fraunhofer.aisec.cpg.graph.Expression member;
     de.fraunhofer.aisec.cpg.graph.Expression base;
     // first, resolve the scope. this adds the necessary nodes, such as IDENTIFIER for the scope.
     // it also acts as the first argument of the operator call
@@ -297,15 +296,10 @@ public class ExpressionHandler
           }
         }
       }
-      if (isStaticAccess) {
-        base =
-            NodeBuilder.newStaticReferenceExpression(
-                scope.asNameExpr().getNameAsString(), baseType, scope.toString());
-      } else {
-        base =
-            NodeBuilder.newDeclaredReferenceExpression(
-                scope.asNameExpr().getNameAsString(), baseType, scope.toString());
-      }
+      base =
+          NodeBuilder.newDeclaredReferenceExpression(
+              scope.asNameExpr().getNameAsString(), baseType, scope.toString());
+      ((DeclaredReferenceExpression) base).setStaticAccess(isStaticAccess);
 
       lang.setCodeAndRegion(base, fieldAccessExpr.getScope());
     } else if (scope.isFieldAccessExpr()) {
@@ -314,9 +308,10 @@ public class ExpressionHandler
       while (tester instanceof MemberExpression) {
         // we need to check if any base is only a static access, otherwise, this is a member access
         // to this base
-        tester = (de.fraunhofer.aisec.cpg.graph.Expression) ((MemberExpression) tester).getBase();
+        tester = ((MemberExpression) tester).getBase();
       }
-      if (tester instanceof StaticReferenceExpression) {
+      if (tester instanceof DeclaredReferenceExpression
+          && ((DeclaredReferenceExpression) tester).isStaticAccess()) {
         // try to get the name
         String name;
         Optional<TokenRange> tokenRange = scope.asFieldAccessExpr().getTokenRange();
@@ -334,8 +329,9 @@ public class ExpressionHandler
           baseType = UnknownType.getUnknownType();
         }
         base =
-            NodeBuilder.newStaticReferenceExpression(
+            NodeBuilder.newDeclaredReferenceExpression(
                 scope.asFieldAccessExpr().getNameAsString(), baseType, scope.toString());
+        ((DeclaredReferenceExpression) base).setStaticAccess(true);
       }
       lang.setCodeAndRegion(base, fieldAccessExpr.getScope());
     } else {
@@ -346,9 +342,6 @@ public class ExpressionHandler
     try {
       ResolvedValueDeclaration symbol = fieldAccessExpr.resolve();
       fieldType = TypeParser.createFrom(symbol.asField().getType().describe(), true);
-      member =
-          NodeBuilder.newDeclaredReferenceExpression(
-              fieldAccessExpr.getName().getIdentifier(), fieldType, fieldAccessExpr.toString());
     } catch (RuntimeException | NoClassDefFoundError ex) {
       String typeString = this.lang.recoverTypeFromUnsolvedException(ex);
       if (typeString != null) {
@@ -359,14 +352,23 @@ public class ExpressionHandler
         log.info("Unknown field type for {}", fieldAccessExpr);
         fieldType = UnknownType.getUnknownType();
       }
-      member =
-          NodeBuilder.newStaticReferenceExpression(
-              fieldAccessExpr.getName().getIdentifier(), fieldType, fieldAccessExpr.toString());
+
+      MemberExpression memberExpression =
+          NodeBuilder.newMemberExpression(
+              base,
+              fieldType,
+              fieldAccessExpr.getName().getIdentifier(),
+              fieldAccessExpr.toString());
+      memberExpression.setStaticAccess(true);
+      return memberExpression;
     }
 
-    lang.setCodeAndRegion(member, fieldAccessExpr.getName());
+    if (base.getLocation() == null) {
+      base.setLocation(lang.getLocationFromRawNode(fieldAccessExpr));
+    }
 
-    return NodeBuilder.newMemberExpression(base, member, fieldAccessExpr.toString());
+    return NodeBuilder.newMemberExpression(
+        base, fieldType, fieldAccessExpr.getName().getIdentifier(), fieldAccessExpr.toString());
   }
 
   private Literal handleLiteralExpression(Expression expr) {
@@ -410,10 +412,11 @@ public class ExpressionHandler
     Type type = TypeParser.createFrom(classExpr.getType().asString(), true);
 
     DeclaredReferenceExpression thisExpression =
-        NodeBuilder.newStaticReferenceExpression(
+        NodeBuilder.newDeclaredReferenceExpression(
             classExpr.toString().substring(classExpr.toString().lastIndexOf('.') + 1),
             type,
             classExpr.toString());
+    thisExpression.setStaticAccess(true);
     lang.setCodeAndRegion(thisExpression, classExpr);
 
     return thisExpression;

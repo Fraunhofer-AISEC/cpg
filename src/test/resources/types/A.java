@@ -14,6 +14,7 @@ public class A {
         // Test propagation in variables
         final String s = "";
         int[] array = new int[5];
+        C<D, E> map;
         return x;
     }
 }
