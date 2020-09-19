@@ -402,11 +402,8 @@ public class JavaLanguageFrontend extends LanguageFrontend {
           return TypeParser.createFrom(importDeclaration.getNameAsString(), true);
         }
       }
-      // Assuming that the Class is somewhere in the current package as classes in the same package
-      // are automatically imported, however here we should actually check if there is an exisiting
-      // declaration.
-      String fqName = getFQNInCurrentPackage(clazz.getNameAsString());
-      de.fraunhofer.aisec.cpg.graph.type.Type returnType = TypeParser.createFrom(fqName, true);
+      de.fraunhofer.aisec.cpg.graph.type.Type returnType =
+              TypeParser.createFrom(clazz.asString(), true);
       returnType.setTypeOrigin(de.fraunhofer.aisec.cpg.graph.type.Type.Origin.GUESSED);
       return returnType;
     }
