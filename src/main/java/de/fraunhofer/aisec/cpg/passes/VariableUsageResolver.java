@@ -145,16 +145,8 @@ public class VariableUsageResolver extends Pass {
       functionName = matcher.group("function");
       String finalFunctionName = functionName;
       if (cls == null) {
-        target =
-            walker.getAllDeclarationsForScope(reference).stream()
-                .filter(FunctionDeclaration.class::isInstance)
-                .map(FunctionDeclaration.class::cast)
-                .filter(
-                    d ->
-                        d.getName().equals(finalFunctionName)
-                            && d.getType().equals(fptrType.getReturnType())
-                            && d.hasSignature(fptrType.getParameters()))
-                .findFirst();
+        log.error(
+            "Resolution of pointers to functions inside the current scope should have been done by the ScopeManager");
       } else {
         containingClass = TypeParser.createFrom(cls, true);
         if (recordMap.containsKey(containingClass)) {

@@ -68,7 +68,7 @@ class VariableResolverJavaTest extends BaseTest {
 
   @BeforeAll
   void initTests() throws ExecutionException, InterruptedException {
-    final String topLevelPath = "src/test/resources/variables_extended/";
+    final String topLevelPath = "src/test/resources/variables_extended/java/";
     List<String> fileNames = Arrays.asList("ScopeVariables.java", "ExternalClass.java");
     List<File> fileLocations =
         fileNames.stream()

@@ -403,7 +403,7 @@ public class JavaLanguageFrontend extends LanguageFrontend {
         }
       }
       de.fraunhofer.aisec.cpg.graph.type.Type returnType =
-              TypeParser.createFrom(clazz.asString(), true);
+          TypeParser.createFrom(clazz.asString(), true);
       returnType.setTypeOrigin(de.fraunhofer.aisec.cpg.graph.type.Type.Origin.GUESSED);
       return returnType;
     }

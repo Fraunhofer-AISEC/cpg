@@ -71,7 +71,7 @@ class VariableResolverCppTest extends BaseTest {
 
   @BeforeAll
   void initTests() throws ExecutionException, InterruptedException {
-    final String topLevelPath = "src/test/resources/variables_extended/";
+    final String topLevelPath = "src/test/resources/variables_extended/cpp/";
     List<String> fileNames = Arrays.asList("scope_variables.cpp", "external_class.cpp");
     List<File> fileLocations =
         fileNames.stream()
