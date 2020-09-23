@@ -315,7 +315,6 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
         // otherwise, use the complete raw code and let the type parser handle it
         typeString = ctx.getRawSignature();
       }
-
       Type result = TypeParser.createFrom(typeString, true);
       declaration.setType(result);
 

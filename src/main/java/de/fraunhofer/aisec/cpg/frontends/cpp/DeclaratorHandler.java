@@ -279,7 +279,6 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
       lang.getScopeManager().addDeclaration(varargs);
     }
 
-    //    lang.addFunctionDeclaration(declaration);
     lang.getScopeManager().leaveScope(declaration);
 
     // if we know our record declaration, but are outside the actual record, we

@@ -210,12 +210,12 @@ public class TypeManager {
           wrapState.getReferenceType());
     }
     typeToRecord =
-            frontend
-                    .getScopeManager()
-                    .getUniqueScopesThat(RecordScope.class::isInstance, s -> s.getAstNode().getName())
-                    .stream()
-                    .map(s -> (RecordDeclaration) s.getAstNode())
-                    .collect(Collectors.toMap(RecordDeclaration::getName, Function.identity()));
+        frontend
+            .getScopeManager()
+            .getUniqueScopesThat(RecordScope.class::isInstance, s -> s.getAstNode().getName())
+            .stream()
+            .map(s -> (RecordDeclaration) s.getAstNode())
+            .collect(Collectors.toMap(RecordDeclaration::getName, Function.identity()));
 
     List<Set<Ancestor>> allAncestors =
         types.stream()

@@ -717,8 +717,8 @@ public class TypeParser {
   private static boolean checkValidTypeString(String type) {
     // Todo ? can be part of generic string -> more fine-grained analysis necessary
     return !type.contains("?")
-            && !type.contains("org.eclipse.cdt.internal.core.dom.parser.ProblemType@")
-            && type.trim().length() != 0;
+        && !type.contains("org.eclipse.cdt.internal.core.dom.parser.ProblemType@")
+        && type.trim().length() != 0;
   }
 
   /**
@@ -726,7 +726,7 @@ public class TypeParser {
    * this function for parsing new types and obtaining a new Type the TypeParser creates from the
    * typeString
    *
-   * @param type         string with type information
+   * @param type string with type information
    * @param resolveAlias should replace with original type in typedefs
    * @return new type representing the type string
    */
