@@ -29,9 +29,11 @@ package de.fraunhofer.aisec.cpg.passes;
 import de.fraunhofer.aisec.cpg.TranslationResult;
 import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguageFrontend;
 import de.fraunhofer.aisec.cpg.graph.*;
-import de.fraunhofer.aisec.cpg.graph.type.FunctionPointerType;
-import de.fraunhofer.aisec.cpg.graph.type.Type;
-import de.fraunhofer.aisec.cpg.graph.type.TypeParser;
+import de.fraunhofer.aisec.cpg.graph.declarations.*;
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.*;
+import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType;
+import de.fraunhofer.aisec.cpg.graph.types.Type;
+import de.fraunhofer.aisec.cpg.graph.types.TypeParser;
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.ScopedWalker;
 import de.fraunhofer.aisec.cpg.helpers.Util;
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy;
@@ -48,10 +50,9 @@ import org.slf4j.LoggerFactory;
  *
  * <p>A {@link CallExpression} specifies the method that wants to be called via {@link
  * CallExpression#getName()}. The call target is a method of the same class the caller belongs to,
- * so the name is resolved to the appropriate {@link
- * de.fraunhofer.aisec.cpg.graph.MethodDeclaration}. This pass also takes into consideration that a
- * method might not be present in the current class, but rather has its implementation in a
- * superclass, and sets the pointer accordingly.
+ * so the name is resolved to the appropriate {@link MethodDeclaration}. This pass also takes into
+ * consideration that a method might not be present in the current class, but rather has its
+ * implementation in a superclass, and sets the pointer accordingly.
  *
  * <p>Constructor calls with {@link ConstructExpression} are resolved in such a way that their
  * {@link ConstructExpression#getInstantiates()} points to the correct {@link RecordDeclaration}.
