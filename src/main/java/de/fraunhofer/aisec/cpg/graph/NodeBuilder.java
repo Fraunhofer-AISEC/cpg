@@ -26,8 +26,11 @@
 
 package de.fraunhofer.aisec.cpg.graph;
 
-import de.fraunhofer.aisec.cpg.graph.type.Type;
-import de.fraunhofer.aisec.cpg.graph.type.TypeParser;
+import de.fraunhofer.aisec.cpg.graph.declarations.*;
+import de.fraunhofer.aisec.cpg.graph.statements.*;
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.*;
+import de.fraunhofer.aisec.cpg.graph.types.Type;
+import de.fraunhofer.aisec.cpg.graph.types.TypeParser;
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation;
 import java.util.ArrayList;
 import java.util.List;
@@ -392,7 +395,7 @@ public class NodeBuilder {
     node.setCode(code);
 
     if (kind.equals("class")) {
-      de.fraunhofer.aisec.cpg.graph.FieldDeclaration thisDeclaration =
+      FieldDeclaration thisDeclaration =
           NodeBuilder.newFieldDeclaration(
               "this",
               TypeParser.createFrom(name, true),
