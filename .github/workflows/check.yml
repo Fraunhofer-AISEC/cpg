@@ -1,11 +1,31 @@
-name: build
+name: check
 
 on:
-  - push
+  pull_request:
+    types: [labeled, opened, synchronize, reopened]
 
 jobs:
-  build:
+  check_codyze:
     runs-on: ubuntu-latest
+    if: contains(github.event.pull_request.labels.*.name, 'codyze-check')
+    steps:
+      - uses: actions/checkout@v1
+      - uses: actions/setup-java@v1
+        with:
+          java-version: "11"
+      - name: Build for Codyze
+        run: |
+          ./gradlew --parallel -Pversion=0.0.0-SNAPSHOT -x signMavenPublication -x javadoc publishToMavenLocal
+      - name: Checkout and test codyze
+        run: |
+          git clone https://github.com/Fraunhofer-AISEC/codyze.git
+          cd codyze
+          sed -i 's|cpg:\([0-9\.]*\).*|cpg:0.0.0-SNAPSHOT")|' build.gradle.kts
+          ./gradlew --parallel test
+  build_external_pull_request:
+    runs-on: ubuntu-latest
+    # only run this for external pull requests, internal pull request will run the build step from build.yml
+    if: (github.event.pull_request.base.repo.full_name != github.event.pull_request.head.repo.full_name)
     steps:
       - uses: actions/checkout@v1
       - uses: actions/setup-java@v1
@@ -43,31 +63,3 @@ jobs:
           VERSION: ${{ steps.determine_version.outputs.version }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - name: JavaDoc
-        if: startsWith(github.ref, 'refs/tags/v')
-        uses: JamesIves/github-pages-deploy-action@releases/v3
-        with:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          BRANCH: gh-pages
-          FOLDER: build/docs/javadoc
-      - name: Publish
-        run: |
-          export ORG_GRADLE_PROJECT_signingKey=`echo ${{ secrets.GPG_PRIVATE_KEY }} | base64 -d`
-          ./gradlew -Dorg.gradle.internal.publish.checksums.insecure=true --parallel -Pversion=$VERSION build signMavenPublication publish
-        if: startsWith(github.ref, 'refs/tags/v')
-        env:
-          VERSION: ${{ steps.determine_version.outputs.version }}
-          ORG_GRADLE_PROJECT_signingPassword: ${{ secrets.GPG_PASSWORD }}
-          ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
-          ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
-      - name: "Create Release"
-        if: startsWith(github.ref, 'refs/tags/v')
-        id: create_release
-        uses: actions/create-release@latest
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ github.ref }}
-          release_name: ${{ steps.determine_version.outputs.version }}
-          draft: false
-          prerelease: false

@@ -28,7 +28,6 @@ package de.fraunhofer.aisec.cpg.frontends;
 
 import de.fraunhofer.aisec.cpg.TranslationConfiguration;
 import de.fraunhofer.aisec.cpg.graph.Node;
-import de.fraunhofer.aisec.cpg.graph.RecordDeclaration;
 import de.fraunhofer.aisec.cpg.graph.TranslationUnitDeclaration;
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager;
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation;
@@ -40,7 +39,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Optional;
 import java.util.function.BiConsumer;
 import java.util.function.BiPredicate;
 import org.apache.commons.lang3.StringUtils;
@@ -68,10 +66,6 @@ public abstract class LanguageFrontend {
   protected Map<Object, Object> processedMapping = new HashMap<>();
   private String namespaceDelimiter;
   protected TranslationUnitDeclaration currentTU = null;
-
-  /* Cache functions. */
-  //  private Map<String, FunctionDeclaration> functions = new HashMap<>();
-  private Map<String, RecordDeclaration> records = new HashMap<>();
 
   // Todo Moving this to scope manager and add listeners and processedMappings to specified scopes.
 
@@ -284,47 +278,7 @@ public abstract class LanguageFrontend {
     return ret;
   }
 
-  // TODO: Move this class to the scope manager to properly handle namespaces
-  public void addRecord(RecordDeclaration record) {
-    this.records.put(record.getName(), record);
-  }
-
-  public Map<String, RecordDeclaration> getRecords() {
-    return records;
-  }
-
-  //  public void addFunctionDeclaration(FunctionDeclaration functionDeclaration) {
-  //    this.functions.put(functionDeclaration.getSignature(), functionDeclaration);
-  //  }
-
-  //  public FunctionDeclaration getMethod(String signature) {
-  //    return this.functions.get(signature);
-  //  }
-
-  //  public FunctionDeclaration findMethod(CallExpression call) {
-  //    // filter for functions with the same name and number of arguments
-  //    List<FunctionDeclaration> candidates =
-  //        this.functions.values().stream()
-  //            .filter(
-  //                function ->
-  //                    function.getName().equals(call.getName())
-  //                        && function.getParameters().size() == call.getArguments().size())
-  //            .collect(Collectors.toList());
-  //
-  //    if (candidates.isEmpty()) {
-  //      return null;
-  //    } else if (candidates.size() == 1) {
-  //      return candidates.get(0);
-  //    } else {
-  //      // for now just return the first, but we could try deduce it via some type parameters
-  //      return candidates.get(0);
-  //    }
-  //  }
-
   public void cleanup() {
-    records.clear();
-    //    functions.clear();
-    //    functions = null;
     clearProcessed();
   }
 
@@ -333,14 +287,4 @@ public abstract class LanguageFrontend {
   }
 
   public abstract <S, T> void setComment(S s, T ctx);
-
-  /**
-   * Returns a record declaration, if it exists for the given name
-   *
-   * @param name the record name
-   * @return an optional containing the {@link RecordDeclaration}, if it exists.
-   */
-  public Optional<RecordDeclaration> getRecordForName(String name) {
-    return Optional.ofNullable(this.records.get(name));
-  }
 }

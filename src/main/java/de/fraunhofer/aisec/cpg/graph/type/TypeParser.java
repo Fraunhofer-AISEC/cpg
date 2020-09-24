@@ -34,12 +34,16 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Class responsible for parsing the type definition and create the same Type as described by the
  * type string, but complying to the CPG TypeSystem
  */
 public class TypeParser {
+
+  private static final Logger log = LoggerFactory.getLogger(TypeParser.class);
 
   public static final String UNKNOWN_TYPE_STRING = "UNKNOWN";
   private static final List<String> primitives =
@@ -253,6 +257,12 @@ public class TypeParser {
     return null;
   }
 
+  /**
+   * Right now IncompleteTypes are only defined as void {@link IncompleteType}
+   *
+   * @param typeName String with the type
+   * @return true if the type is void, false otherwise
+   */
   private static boolean isIncompleteType(String typeName) {
     return typeName.trim().equals("void");
   }
@@ -515,8 +525,18 @@ public class TypeParser {
    * @param type provided typeString
    * @return typeString without access modifier
    */
-  private static String clear(@NonNull String type) {
+  private static String removeAccessModifier(@NonNull String type) {
     return type.replaceAll("public|private|protected", "").trim();
+  }
+
+  /**
+   * Replaces the Scope Resolution Operator (::) in C++ by . for a consistent parsing
+   *
+   * @param type provided typeString
+   * @return typeString which uses . instead of the substring :: if CPP is the current language
+   */
+  private static String replaceScopeResolutionOperator(@NonNull String type) {
+    return (getLanguage() == TypeManager.Language.CXX) ? type.replace("::", ".").trim() : type;
   }
 
   /**
@@ -694,25 +714,36 @@ public class TypeParser {
     return modifier;
   }
 
+  private static boolean checkValidTypeString(String type) {
+    // Todo ? can be part of generic string -> more fine-grained analysis necessary
+    return !type.contains("?")
+        && !type.contains("org.eclipse.cdt.internal.core.dom.parser.ProblemType@")
+        && type.trim().length() != 0;
+  }
+
   /**
-   * Use this function for parsing new types and obtaining a new Type the TypeParser creates from
-   * the typeString
+   * Warning: This function might crash, when a type cannot be parsed. Use createFrom instead Use
+   * this function for parsing new types and obtaining a new Type the TypeParser creates from the
+   * typeString
    *
    * @param type string with type information
    * @param resolveAlias should replace with original type in typedefs
    * @return new type representing the type string
    */
   @NonNull
-  public static Type createFrom(@NonNull String type, boolean resolveAlias) {
+  private static Type createFromUnsafe(@NonNull String type, boolean resolveAlias) {
     // Check if Problems during Parsing
-    if (type.contains("?")
-        || type.contains("org.eclipse.cdt.internal.core.dom.parser.ProblemType@")
-        || type.trim().length() == 0) {
+    if (!checkValidTypeString(type)) {
       return UnknownType.getUnknownType();
     }
 
     // Preprocessing of the typeString
-    type = clear(type);
+    type = removeAccessModifier(type);
+    // Remove CPP :: Operator
+    type = replaceScopeResolutionOperator(type);
+
+    // Determine if inner class
+
     type = fixGenerics(type);
 
     // Separate typeString into a List containing each part of the typeString
@@ -814,5 +845,24 @@ public class TypeParser {
     }
 
     return finalType;
+  }
+
+  /**
+   * Use this function for parsing new types and obtaining a new Type the TypeParser creates from *
+   * the typeString
+   *
+   * @param type string with type information
+   * @param resolveAlias should replace with original type in typedefs
+   * @return new type representing the type string. If an exception occurs during the parsing,
+   *     UnknownType is returned
+   */
+  @NonNull
+  public static Type createFrom(@NonNull String type, boolean resolveAlias) {
+    try {
+      return createFromUnsafe(type, resolveAlias);
+    } catch (Exception e) {
+      log.error("Could not parse the type correctly", e);
+      return UnknownType.getUnknownType();
+    }
   }
 }

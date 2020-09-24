@@ -31,6 +31,7 @@ import de.fraunhofer.aisec.cpg.graph.type.Type;
 import java.util.*;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.checkerframework.checker.nullness.qual.Nullable;
+import org.neo4j.ogm.annotation.Relationship;
 
 /**
  * Declaration of a field within a {@link RecordDeclaration}. It contains the modifiers associated
@@ -42,6 +43,13 @@ public class FieldDeclaration extends ValueDeclaration implements TypeListener {
   @SubGraph("AST")
   @Nullable
   private Expression initializer;
+
+  /** Specifies, whether this field declaration is also a definition, i.e. has an initializer. */
+  private boolean isDefinition = false;
+
+  /** If this is only a declaration, this provides a link to the definition of the field. */
+  @Relationship(value = "DEFINES")
+  private FieldDeclaration definition = this;
 
   /** @see VariableDeclaration#implicitInitializerAllowed */
   private boolean implicitInitializerAllowed = false;
@@ -66,21 +74,6 @@ public class FieldDeclaration extends ValueDeclaration implements TypeListener {
 
   private List<String> modifiers = new ArrayList<>();
 
-  public FieldDeclaration() {}
-
-  private FieldDeclaration(VariableDeclaration declaration) {
-    this.name = declaration.getName();
-    this.code = declaration.getCode();
-    this.location = declaration.getLocation();
-    this.type = declaration.getType();
-    this.initializer = declaration.getInitializer();
-    this.annotations = declaration.getAnnotations();
-  }
-
-  public static FieldDeclaration from(VariableDeclaration declaration) {
-    return new FieldDeclaration(declaration);
-  }
-
   @Nullable
   public Expression getInitializer() {
     return initializer;
@@ -88,6 +81,7 @@ public class FieldDeclaration extends ValueDeclaration implements TypeListener {
 
   public void setInitializer(Expression initializer) {
     if (this.initializer != null) {
+      setIsDefinition(true);
       this.initializer.unregisterTypeListener(this);
       this.removePrevDFG(this.initializer);
       if (this.initializer instanceof TypeListener) {
@@ -102,6 +96,22 @@ public class FieldDeclaration extends ValueDeclaration implements TypeListener {
         this.registerTypeListener((TypeListener) initializer);
       }
     }
+  }
+
+  public FieldDeclaration getDefinition() {
+    return isDefinition ? this : definition;
+  }
+
+  public boolean isDefinition() {
+    return isDefinition;
+  }
+
+  public void setIsDefinition(boolean definition) {
+    this.isDefinition = definition;
+  }
+
+  public void setDefinition(FieldDeclaration definition) {
+    this.definition = definition;
   }
 
   public List<String> getModifiers() {

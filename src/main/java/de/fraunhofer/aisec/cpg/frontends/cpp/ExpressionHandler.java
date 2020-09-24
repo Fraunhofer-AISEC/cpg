@@ -32,6 +32,7 @@ import static de.fraunhofer.aisec.cpg.helpers.Util.warnWithFileLocation;
 import de.fraunhofer.aisec.cpg.frontends.Handler;
 import de.fraunhofer.aisec.cpg.graph.*;
 import de.fraunhofer.aisec.cpg.graph.type.*;
+import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation;
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
@@ -287,6 +288,16 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
 
   private Expression handleFieldReference(CPPASTFieldReference ctx) {
     Expression base = this.handle(ctx.getFieldOwner());
+    // Replace Literal this with a reference pointing to this
+    if (base instanceof Literal && ((Literal) base).getValue().equals("this")) {
+      PhysicalLocation location = base.getLocation();
+      base =
+          NodeBuilder.newDeclaredReferenceExpression(
+              "this",
+              lang.getScopeManager().getCurrentRecord().getThis().getType(),
+              base.getCode());
+      base.setLocation(location);
+    }
 
     MemberExpression memberExpression =
         NodeBuilder.newMemberExpression(

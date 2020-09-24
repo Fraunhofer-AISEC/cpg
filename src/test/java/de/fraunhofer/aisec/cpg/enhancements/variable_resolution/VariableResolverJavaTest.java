@@ -29,14 +29,9 @@ import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 
-// Todo VariableResolver 7 Failed, 7 Passed
-
-@Disabled(
-    "Until changing variable resolution to ScopeManager. Then in detail disable the tests that need specific fixes")
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class VariableResolverJavaTest extends BaseTest {
 
@@ -73,7 +68,7 @@ class VariableResolverJavaTest extends BaseTest {
 
   @BeforeAll
   void initTests() throws ExecutionException, InterruptedException {
-    final String topLevelPath = "src/test/resources/variables_extended/";
+    final String topLevelPath = "src/test/resources/variables_extended/java/";
     List<String> fileNames = Arrays.asList("ScopeVariables.java", "ExternalClass.java");
     List<File> fileLocations =
         fileNames.stream()
@@ -113,17 +108,27 @@ class VariableResolverJavaTest extends BaseTest {
         TestUtils.getOfTypeWithName(
             nodes, RecordDeclaration.class, "variables_extended.ScopeVariables");
     outerVarName =
-        TestUtils.getSubnodeOfTypeWithName(outerClass, FieldDeclaration.class, "varName");
+        outerClass.getFields().stream()
+            .filter(n -> n.getName().equals("varName"))
+            .findFirst()
+            .get();
     outerStaticVarName =
-        TestUtils.getSubnodeOfTypeWithName(outerClass, FieldDeclaration.class, "staticVarName");
-    outerImpThis = TestUtils.getSubnodeOfTypeWithName(outerClass, FieldDeclaration.class, "this");
+        outerClass.getFields().stream()
+            .filter(n -> n.getName().equals("staticVarName"))
+            .findFirst()
+            .get();
+    outerImpThis =
+        outerClass.getFields().stream().filter(n -> n.getName().equals("this")).findFirst().get();
 
     // Inner class and its fields
     innerClass =
         TestUtils.getOfTypeWithName(
             nodes, RecordDeclaration.class, "variables_extended.ScopeVariables.InnerClass");
     innerVarName =
-        TestUtils.getSubnodeOfTypeWithName(innerClass, FieldDeclaration.class, "varName");
+        innerClass.getFields().stream()
+            .filter(n -> n.getName().equals("varName"))
+            .findFirst()
+            .get();
     innerStaticVarName =
         TestUtils.getSubnodeOfTypeWithName(innerClass, FieldDeclaration.class, "staticVarName");
     innerImpThis = TestUtils.getSubnodeOfTypeWithName(innerClass, FieldDeclaration.class, "this");
@@ -199,12 +204,7 @@ class VariableResolverJavaTest extends BaseTest {
         TestUtils.getSubnodeOfTypeWithName(
             forStatements.get(0), VariableDeclaration.class, "varName");
 
-    VRUtil.assertUsageOf(
-        callParamMap.get("func1_first_loop_varName"),
-        firstLoopLocal); // Todo refers to the second loop variable, apparently only one is
-    // collected and there is no defined scope
-
-    // Todo this is correct now
+    VRUtil.assertUsageOf(callParamMap.get("func1_first_loop_varName"), firstLoopLocal);
   }
 
   @Test
@@ -218,8 +218,6 @@ class VariableResolverJavaTest extends BaseTest {
 
   @Test
   void testImplicitThisVarNameAfterLoops() {
-    // Todo refers to the second loop local
-    // Todo This is correct now because we properly pop the loop context
     VRUtil.assertUsageOfMemberAndBase(
         callParamMap.get("func1_imp_this_varName"), outerImpThis, outerVarName);
   }
@@ -237,17 +235,12 @@ class VariableResolverJavaTest extends BaseTest {
     VariableDeclaration externalClassInstance =
         TestUtils.getSubnodeOfTypeWithName(
             outerFunction3, VariableDeclaration.class, "externalClass");
-    // Todo member points to the function parameter with the same name instead of the field in the
-    // external class
     VRUtil.assertUsageOfMemberAndBase(
         callParamMap.get("func3_external_instance_varName"), externalClassInstance, externVarName);
   }
 
   @Test
   void testStaticVarNameInExternalClass() {
-    // Todo here a Unknown record declaration is added
-    // Todo member refers to local variable with the same name of the
-    // static field in external
     VRUtil.assertUsageOfMemberAndBase(
         callParamMap.get("func3_external_static_staticVarName"),
         externalClass,
@@ -256,7 +249,6 @@ class VariableResolverJavaTest extends BaseTest {
 
   @Test
   void testStaticVarnameWithoutPreviousInstance() {
-    // Todo Case is a unknown record declaration
     VRUtil.assertUsageOfMemberAndBase(
         callParamMap.get("func4_external_static_staticVarName"),
         externalClass,
@@ -271,14 +263,12 @@ class VariableResolverJavaTest extends BaseTest {
 
   @Test
   void testVarNameInOuterFromInnerClass() {
-    // Todo Points to varName in inner class instead of outer
     VRUtil.assertUsageOfMemberAndBase(
-        callParamMap.get("func1_outer_this_varName"), innerImpOuter, outerVarName);
+        callParamMap.get("func1_outer_this_varName"), outerImpThis, outerVarName);
   }
 
   @Test
   void testStaticOuterFromInner() {
-    // Todo points to innerStaticVar, this is wrong
     VRUtil.assertUsageOfMemberAndBase(
         callParamMap.get("func1_outer_static_staticVarName"), outerClass, outerStaticVarName);
   }
@@ -294,7 +284,6 @@ class VariableResolverJavaTest extends BaseTest {
 
   @Test
   void testInnerVarnameOverExplicitThis() {
-    // Todo memeber currently points to an implicitly created field
     VRUtil.assertUsageOfMemberAndBase(
         callParamMap.get("func2_inner_this_varName"), innerImpThis, innerVarName);
   }

@@ -26,7 +26,11 @@
 
 package de.fraunhofer.aisec.cpg.frontends.java;
 
-import com.github.javaparser.*;
+import com.github.javaparser.JavaParser;
+import com.github.javaparser.ParseResult;
+import com.github.javaparser.ParserConfiguration;
+import com.github.javaparser.Range;
+import com.github.javaparser.TokenRange;
 import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.ImportDeclaration;
 import com.github.javaparser.ast.Node;
@@ -50,10 +54,15 @@ import com.github.javaparser.symbolsolver.resolution.typesolvers.ReflectionTypeS
 import de.fraunhofer.aisec.cpg.TranslationConfiguration;
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
 import de.fraunhofer.aisec.cpg.frontends.TranslationException;
-import de.fraunhofer.aisec.cpg.graph.*;
+import de.fraunhofer.aisec.cpg.graph.IncludeDeclaration;
+import de.fraunhofer.aisec.cpg.graph.NamespaceDeclaration;
+import de.fraunhofer.aisec.cpg.graph.NodeBuilder;
+import de.fraunhofer.aisec.cpg.graph.TranslationUnitDeclaration;
+import de.fraunhofer.aisec.cpg.graph.TypeManager;
 import de.fraunhofer.aisec.cpg.graph.type.TypeParser;
 import de.fraunhofer.aisec.cpg.helpers.Benchmark;
 import de.fraunhofer.aisec.cpg.helpers.CommonPath;
+import de.fraunhofer.aisec.cpg.passes.scopes.Scope;
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager;
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation;
 import de.fraunhofer.aisec.cpg.sarif.Region;
@@ -121,41 +130,35 @@ public class JavaLanguageFrontend extends LanguageFrontend {
       TranslationUnitDeclaration fileDeclaration =
           NodeBuilder.newTranslationUnitDeclaration(file.toString(), context.toString());
       setCurrentTU(fileDeclaration);
-      Declaration declaration = fileDeclaration;
+
+      scopeManager.resetToGlobal(fileDeclaration);
 
       PackageDeclaration packDecl = context.getPackageDeclaration().orElse(null);
       NamespaceDeclaration namespaceDeclaration = null;
       if (packDecl != null) {
         namespaceDeclaration = NodeBuilder.newNamespaceDeclaration(packDecl.getName().asString());
         // Todo set region and code and push/pop scope
+
+        scopeManager.addDeclaration(namespaceDeclaration);
+
         scopeManager.enterScope(namespaceDeclaration);
-        if (declaration instanceof TranslationUnitDeclaration) {
-          ((TranslationUnitDeclaration) declaration).add(namespaceDeclaration);
-        }
-        declaration = namespaceDeclaration;
       }
 
       for (TypeDeclaration<?> type : context.getTypes()) {
-        Declaration typeD = getDeclarationHandler().handle(type);
-        if (declaration instanceof TranslationUnitDeclaration) {
-          ((TranslationUnitDeclaration) declaration).add(typeD);
-        } else {
-          scopeManager.addDeclaration(typeD);
-        }
+        // handle each type. all declaration in this type will be added by the scope manager along
+        // the way
+        getDeclarationHandler().handle(type);
       }
 
       for (ImportDeclaration anImport : context.getImports()) {
         IncludeDeclaration incl = NodeBuilder.newIncludeDeclaration(anImport.getNameAsString());
-        if (declaration instanceof TranslationUnitDeclaration) {
-          ((TranslationUnitDeclaration) declaration).add(incl);
-        } else {
-          scopeManager.addDeclaration(incl);
-        }
+        scopeManager.addDeclaration(incl);
       }
 
       if (packDecl != null) {
         scopeManager.leaveScope(namespaceDeclaration);
       }
+
       bench.stop();
 
       return fileDeclaration;
@@ -311,7 +314,7 @@ public class JavaLanguageFrontend extends LanguageFrontend {
       if (fromImport != null) {
         return fromImport;
       }
-      return qualifier;
+      return getFQNInCurrentPackage(qualifier);
     }
     log.debug("Unable to resolve qualified name from exception");
     return null;
@@ -356,6 +359,24 @@ public class JavaLanguageFrontend extends LanguageFrontend {
     }
   }
 
+  /**
+   * Returns the FQN of the given parameter assuming that is declared somewhere in the same package.
+   * Names declared in a package are automatically imported.
+   *
+   * @param simpleName
+   * @return
+   */
+  private String getFQNInCurrentPackage(String simpleName) {
+    Scope theScope =
+        getScopeManager()
+            .getFirstScopeThat(scope -> scope.getAstNode() instanceof NamespaceDeclaration);
+    // If scope is null we are in a default package
+    if (theScope == null) {
+      return simpleName;
+    }
+    return theScope.getScopedName() + getNamespaceDelimiter() + simpleName;
+  }
+
   private de.fraunhofer.aisec.cpg.graph.type.Type getTypeFromImportIfPossible(Type type) {
     Type searchType = type;
     while (searchType.isArrayType()) {
@@ -373,6 +394,7 @@ public class JavaLanguageFrontend extends LanguageFrontend {
     ClassOrInterfaceType clazz = searchType.asClassOrInterfaceType();
 
     if (clazz != null) {
+
       // try to look for imports matching the name
       for (ImportDeclaration importDeclaration : context.getImports()) {
         if (importDeclaration.getName().getIdentifier().endsWith(clazz.getName().getIdentifier())) {
@@ -381,7 +403,7 @@ public class JavaLanguageFrontend extends LanguageFrontend {
         }
       }
       de.fraunhofer.aisec.cpg.graph.type.Type returnType =
-          TypeParser.createFrom(clazz.getNameAsString(), true);
+          TypeParser.createFrom(clazz.asString(), true);
       returnType.setTypeOrigin(de.fraunhofer.aisec.cpg.graph.type.Type.Origin.GUESSED);
       return returnType;
     }

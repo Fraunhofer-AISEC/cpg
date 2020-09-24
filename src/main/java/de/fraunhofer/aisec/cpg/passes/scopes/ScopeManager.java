@@ -26,6 +26,8 @@
 
 package de.fraunhofer.aisec.cpg.passes.scopes;
 
+import static de.fraunhofer.aisec.cpg.helpers.Util.errorWithFileLocation;
+
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
 import de.fraunhofer.aisec.cpg.graph.AssertStatement;
 import de.fraunhofer.aisec.cpg.graph.BreakStatement;
@@ -43,14 +45,17 @@ import de.fraunhofer.aisec.cpg.graph.IfStatement;
 import de.fraunhofer.aisec.cpg.graph.LabelStatement;
 import de.fraunhofer.aisec.cpg.graph.NamespaceDeclaration;
 import de.fraunhofer.aisec.cpg.graph.Node;
+import de.fraunhofer.aisec.cpg.graph.ProblemDeclaration;
 import de.fraunhofer.aisec.cpg.graph.RecordDeclaration;
 import de.fraunhofer.aisec.cpg.graph.Statement;
 import de.fraunhofer.aisec.cpg.graph.SwitchStatement;
+import de.fraunhofer.aisec.cpg.graph.TranslationUnitDeclaration;
 import de.fraunhofer.aisec.cpg.graph.TryStatement;
 import de.fraunhofer.aisec.cpg.graph.TypedefDeclaration;
 import de.fraunhofer.aisec.cpg.graph.ValueDeclaration;
 import de.fraunhofer.aisec.cpg.graph.VariableDeclaration;
 import de.fraunhofer.aisec.cpg.graph.WhileStatement;
+import de.fraunhofer.aisec.cpg.graph.type.FunctionPointerType;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -62,6 +67,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.regex.Pattern;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.slf4j.Logger;
@@ -277,10 +283,17 @@ public class ScopeManager {
     Scope leaveScope = getFirstScopeThat(scope -> Objects.equals(scope.astNode, nodeToLeave));
     if (leaveScope == null) {
       if (scopeMap.containsKey(nodeToLeave)) {
-        LOGGER.error(
-            "Node of type {} has a scope but is not active in the moment.", nodeToLeave.getClass());
+        errorWithFileLocation(
+            nodeToLeave,
+            LOGGER,
+            "Node of type {} has a scope but is not active in the moment.",
+            nodeToLeave.getClass());
       } else {
-        LOGGER.error("Node of type {} is not associated with a scope.", nodeToLeave.getClass());
+        errorWithFileLocation(
+            nodeToLeave,
+            LOGGER,
+            "Node of type {} is not associated with a scope.",
+            nodeToLeave.getClass());
       }
       return null;
     }
@@ -411,31 +424,12 @@ public class ScopeManager {
     } while (toIterate != null);
   }
 
-  /**
-   * Replaces the node inside of the scope manager. This is primarily used if we 'upgrade' a node in
-   * the hierarchy chain, i.e. if we construct a {@link
-   * de.fraunhofer.aisec.cpg.graph.ConstructorDeclaration} out of a {@link
-   * de.fraunhofer.aisec.cpg.graph.MethodDeclaration}.
-   *
-   * @param newNode the new node
-   * @param oldNode the old node
-   */
-  public void replaceNode(Node newNode, Node oldNode) {
-    Scope scope = scopeMap.get(oldNode);
-
-    // check, if old node has a scope
-    if (scope != null) {
-      // update ast node
-      // scope.astNode = newNode;
-      // update key
-      scopeMap.remove(oldNode);
-      scopeMap.put(newNode, scope);
-    }
-  }
-
-  public void resetToGlobal() {
+  public void resetToGlobal(TranslationUnitDeclaration declaration) {
     GlobalScope global = (GlobalScope) getFirstScopeThat(scope -> scope instanceof GlobalScope);
     if (global != null) {
+      // update the AST node to this translation unit declaration
+      global.astNode = declaration;
+
       currentScope = global;
     }
   }
@@ -443,14 +437,17 @@ public class ScopeManager {
   /**
    * Adds a declaration to the CPG by taking into account the currently active scope, and add the
    * Declaration to the appropriate node. This function will keep the declaration in the Scopes and
-   * allows the ScopeManager by himself to resolve ValueDeclarations through.
-   *
-   * <p>{@link ScopeManager#resolve(DeclaredReferenceExpression)}.
+   * allows the ScopeManager by himself to resolve ValueDeclarations through {@link
+   * ScopeManager#resolve(DeclaredReferenceExpression)}.
    *
    * @param declaration
    */
   public void addDeclaration(Declaration declaration) {
-    if (declaration instanceof ValueDeclaration) {
+    if (declaration instanceof ProblemDeclaration) {
+      // directly add problems to the global scope
+      var globalScope = (GlobalScope) getFirstScopeThat(scope -> scope instanceof GlobalScope);
+      globalScope.addDeclaration(declaration);
+    } else if (declaration instanceof ValueDeclaration) {
       ValueDeclarationScope scopeForValueDeclaration =
           (ValueDeclarationScope)
               getFirstScopeThat(scope -> scope instanceof ValueDeclarationScope);
@@ -524,11 +521,34 @@ public class ScopeManager {
     return resolve(currentScope, ref);
   }
 
+  /**
+   * Resolves only references to Values in the current scope, static references to other visible
+   * records are not resolved over the ScopeManager.
+   *
+   * @param scope
+   * @param ref
+   * @return
+   */
   @Nullable
   private ValueDeclaration resolve(Scope scope, DeclaredReferenceExpression ref) {
     if (scope instanceof ValueDeclarationScope) {
       for (ValueDeclaration valDecl : ((ValueDeclarationScope) scope).getValueDeclarations()) {
-        if (valDecl.getName().equals(ref.getName())) return valDecl;
+        if (valDecl.getName().equals(ref.getName())) {
+
+          // If the reference seems to point to a function the entire signature is checked for
+          // equality
+          if (ref.getType() instanceof FunctionPointerType
+              && valDecl instanceof FunctionDeclaration) {
+            FunctionPointerType fptrType = (FunctionPointerType) ref.getType();
+            FunctionDeclaration d = (FunctionDeclaration) valDecl;
+            if (d.getType().equals(fptrType.getReturnType())
+                && d.hasSignature(fptrType.getParameters())) {
+              return valDecl;
+            }
+          } else {
+            return valDecl;
+          }
+        }
       }
     }
     return scope.getParent() != null ? resolve(scope.getParent(), ref) : null;
@@ -550,9 +570,10 @@ public class ScopeManager {
     if (astNodeName == null || astNodeName.isEmpty()) {
       return currentScope;
     }
-    List<String> namePath = Arrays.asList(astNodeName.split(lang.getNamespaceDelimiter()));
+    List<String> namePath =
+        Arrays.asList(astNodeName.split(Pattern.quote(lang.getNamespaceDelimiter())));
     List<String> currentPath =
-        Arrays.asList(getCurrentNamePrefix().split(lang.getNamespaceDelimiter()));
+        Arrays.asList(getCurrentNamePrefix().split(Pattern.quote(lang.getNamespaceDelimiter())));
 
     // Last index because the inner name has preference
     int nameIndexInCurrent = currentPath.lastIndexOf(namePath.get(0));
@@ -681,53 +702,37 @@ public class ScopeManager {
     return false;
   }
 
-  ///// Copied over for now - not used but maybe necessary at some point ///////
-
+  /**
+   * Retrieves the {@link RecordDeclaration} for the given name in the given scope.
+   *
+   * @param scope the scope
+   * @param name the name
+   * @return the declaration, or null if it does not exist
+   */
   @Nullable
-  @Deprecated
-  public Declaration getDeclarationForName(String name) {
-    // first, check locals
-    Declaration declaration;
-    if (isInBlock()) {
-      CompoundStatement currentBlock = getCurrentBlock();
-      declaration = getForName(currentBlock.getLocals(), name);
+  public RecordDeclaration getRecordForName(Scope scope, String name) {
+    Optional<RecordDeclaration> o = Optional.empty();
 
-      if (declaration != null) {
-        return declaration;
-      }
-    }
-    if (isInFunction()) {
-      FunctionDeclaration currentFunction = getCurrentFunction();
-      declaration = getForName(currentFunction.getParameters(), name);
-
-      if (declaration != null) {
-        return declaration;
-      }
-    }
-    if (isInRecord()) {
-      RecordDeclaration currentRecord = getCurrentRecord();
-      declaration = getForName(currentRecord.getFields(), name);
-
-      if (declaration != null) {
-        return declaration;
-      }
+    // check current scope first
+    if (scope instanceof StructureDeclarationScope) {
+      o =
+          ((StructureDeclarationScope) scope)
+              .getStructureDeclarations().stream()
+                  .filter(d -> d instanceof RecordDeclaration && Objects.equals(d.getName(), name))
+                  .map(d -> (RecordDeclaration) d)
+                  .findFirst();
     }
 
-    // lastly, check globals
-    declaration = getForName(getGlobals(), name);
+    if (o.isPresent()) {
+      return o.get();
+    }
 
-    return declaration;
+    // no parent left
+    if (scope.getParent() == null) {
+      return null;
+    }
 
-    // TODO: also check for function definitions?
-  }
-
-  @Nullable
-  @Deprecated
-  private <T extends ValueDeclaration> Declaration getForName(List<T> variables, String name) {
-    Optional<T> any =
-        variables.stream().filter(param -> Objects.equals(param.getName(), name)).findAny();
-
-    return any.orElse(null);
+    return getRecordForName(scope.getParent(), name);
   }
 
   ///// End copied over for now ///////

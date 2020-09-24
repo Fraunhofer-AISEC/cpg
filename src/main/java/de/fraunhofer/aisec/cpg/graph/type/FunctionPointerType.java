@@ -3,6 +3,10 @@ package de.fraunhofer.aisec.cpg.graph.type;
 import java.util.List;
 import java.util.Objects;
 
+/**
+ * FunctionPointerType represents FunctionPointers in CPP containing a list of parameters and a
+ * return type.
+ */
 public class FunctionPointerType extends Type {
   private List<Type> parameters;
   private Type returnType;
