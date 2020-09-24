@@ -50,6 +50,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.SwitchStatement;
 import de.fraunhofer.aisec.cpg.graph.statements.TryStatement;
 import de.fraunhofer.aisec.cpg.graph.statements.WhileStatement;
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression;
+import de.fraunhofer.aisec.cpg.graph.type.FunctionPointerType;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -61,6 +62,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.regex.Pattern;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.slf4j.Logger;
@@ -514,11 +516,34 @@ public class ScopeManager {
     return resolve(currentScope, ref);
   }
 
+  /**
+   * Resolves only references to Values in the current scope, static references to other visible
+   * records are not resolved over the ScopeManager.
+   *
+   * @param scope
+   * @param ref
+   * @return
+   */
   @Nullable
   private ValueDeclaration resolve(Scope scope, DeclaredReferenceExpression ref) {
     if (scope instanceof ValueDeclarationScope) {
       for (ValueDeclaration valDecl : ((ValueDeclarationScope) scope).getValueDeclarations()) {
-        if (valDecl.getName().equals(ref.getName())) return valDecl;
+        if (valDecl.getName().equals(ref.getName())) {
+
+          // If the reference seems to point to a function the entire signature is checked for
+          // equality
+          if (ref.getType() instanceof FunctionPointerType
+              && valDecl instanceof FunctionDeclaration) {
+            FunctionPointerType fptrType = (FunctionPointerType) ref.getType();
+            FunctionDeclaration d = (FunctionDeclaration) valDecl;
+            if (d.getType().equals(fptrType.getReturnType())
+                && d.hasSignature(fptrType.getParameters())) {
+              return valDecl;
+            }
+          } else {
+            return valDecl;
+          }
+        }
       }
     }
     return scope.getParent() != null ? resolve(scope.getParent(), ref) : null;
@@ -540,9 +565,10 @@ public class ScopeManager {
     if (astNodeName == null || astNodeName.isEmpty()) {
       return currentScope;
     }
-    List<String> namePath = Arrays.asList(astNodeName.split(lang.getNamespaceDelimiter()));
+    List<String> namePath =
+        Arrays.asList(astNodeName.split(Pattern.quote(lang.getNamespaceDelimiter())));
     List<String> currentPath =
-        Arrays.asList(getCurrentNamePrefix().split(lang.getNamespaceDelimiter()));
+        Arrays.asList(getCurrentNamePrefix().split(Pattern.quote(lang.getNamespaceDelimiter())));
 
     // Last index because the inner name has preference
     int nameIndexInCurrent = currentPath.lastIndexOf(namePath.get(0));

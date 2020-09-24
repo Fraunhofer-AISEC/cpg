@@ -41,12 +41,7 @@ import de.fraunhofer.aisec.cpg.graph.types.TypeParser;
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType;
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.ScopedWalker;
 import de.fraunhofer.aisec.cpg.helpers.Util;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -93,7 +88,7 @@ public class VariableUsageResolver extends Pass {
 
   @Override
   public void accept(TranslationResult result) {
-    walker = new ScopedWalker();
+    walker = new ScopedWalker(lang);
 
     for (TranslationUnitDeclaration tu : result.getTranslationUnits()) {
       currTu = tu;
@@ -154,16 +149,8 @@ public class VariableUsageResolver extends Pass {
       functionName = matcher.group("function");
       String finalFunctionName = functionName;
       if (cls == null) {
-        target =
-            walker.getAllDeclarationsForScope(reference).stream()
-                .filter(FunctionDeclaration.class::isInstance)
-                .map(FunctionDeclaration.class::cast)
-                .filter(
-                    d ->
-                        d.getName().equals(finalFunctionName)
-                            && d.getType().equals(fptrType.getReturnType())
-                            && d.hasSignature(fptrType.getParameters()))
-                .findFirst();
+        log.error(
+            "Resolution of pointers to functions inside the current scope should have been done by the ScopeManager");
       } else {
         containingClass = TypeParser.createFrom(cls, true);
         if (recordMap.containsKey(containingClass)) {
@@ -213,10 +200,8 @@ public class VariableUsageResolver extends Pass {
         return;
       }
 
-      var refersTo =
-          walker.getDeclarationForScope(
-              parent,
-              v -> !(v instanceof FunctionDeclaration) && v.getName().equals(ref.getName()));
+      Optional<? extends ValueDeclaration> refersTo =
+          Optional.ofNullable(lang.getScopeManager().resolve(ref));
 
       Type recordDeclType = null;
       if (currentClass != null) {
@@ -233,6 +218,14 @@ public class VariableUsageResolver extends Pass {
           && recordDeclType != null
           && recordMap.containsKey(recordDeclType)) {
         // Maybe we are referring to a field instead of a local var
+        if (current.getName().contains(lang.getNamespaceDelimiter())) {
+          List<String> path =
+              Arrays.asList(current.getName().split(Pattern.quote(lang.getNamespaceDelimiter())));
+          recordDeclType =
+              TypeParser.createFrom(
+                  String.join(lang.getNamespaceDelimiter(), path.subList(0, path.size() - 1)),
+                  true);
+        }
         ValueDeclaration field =
             resolveMember(recordDeclType, (DeclaredReferenceExpression) current);
         if (field != null) {
@@ -278,19 +271,46 @@ public class VariableUsageResolver extends Pass {
             return;
           }
         } else if (baseTarget instanceof RecordDeclaration) {
-          memberExpression.setRefersTo(
-              resolveMember(TypeParser.createFrom(baseTarget.getName(), true), memberExpression));
+          Type baseType = TypeParser.createFrom(baseTarget.getName(), true);
+          if (!recordMap.containsKey(baseType)) {
+            final Type containingT = baseType;
+            Optional<Type> fqnResolvedType =
+                recordMap.keySet().stream()
+                    .filter(t -> t.getName().endsWith("." + containingT.getName()))
+                    .findFirst();
+            if (fqnResolvedType.isPresent()) {
+              baseType = fqnResolvedType.get();
+            }
+          }
+          memberExpression.setRefersTo(resolveMember(baseType, memberExpression));
           return;
         }
       }
 
-      memberExpression.setRefersTo(
-          resolveMember(memberExpression.getBase().getType(), memberExpression));
+      Type baseType = memberExpression.getBase().getType();
+      if (!recordMap.containsKey(baseType)) {
+        final Type containingT = baseType;
+        Optional<Type> fqnResolvedType =
+            recordMap.keySet().stream()
+                .filter(t -> t.getName().endsWith("." + containingT.getName()))
+                .findFirst();
+        if (fqnResolvedType.isPresent()) {
+          baseType = fqnResolvedType.get();
+        }
+      }
+
+      memberExpression.setRefersTo(resolveMember(baseType, memberExpression));
     }
   }
 
   @Nullable
   private Declaration resolveBase(DeclaredReferenceExpression reference) {
+
+    Declaration declaration = lang.getScopeManager().resolve(reference);
+    if (declaration != null) {
+      return declaration;
+    }
+
     // check if this refers to an enum
     if (enumMap.containsKey(reference.getType())) {
       return enumMap.get(reference.getType());
@@ -323,11 +343,13 @@ public class VariableUsageResolver extends Pass {
       return null;
     }
 
+    String simpleName = Util.getSimpleName(lang.getNamespaceDelimiter(), reference.getName());
     Optional<FieldDeclaration> member = Optional.empty();
     if (!(containingClass instanceof UnknownType) && recordMap.containsKey(containingClass)) {
       member =
           recordMap.get(containingClass).getFields().stream()
-              .filter(f -> f.getName().equals(reference.getName()))
+              .filter(f -> f.getName().equals(simpleName))
+              .map(FieldDeclaration::getDefinition)
               .findFirst();
     }
 
@@ -337,7 +359,8 @@ public class VariableUsageResolver extends Pass {
               .map(recordMap::get)
               .filter(Objects::nonNull)
               .flatMap(r -> r.getFields().stream())
-              .filter(f -> f.getName().equals(reference.getName()))
+              .filter(f -> f.getName().equals(simpleName))
+              .map(FieldDeclaration::getDefinition)
               .findFirst();
     }
     // Attention: using orElse instead of orElseGet will always invoke unknown declaration handling!
