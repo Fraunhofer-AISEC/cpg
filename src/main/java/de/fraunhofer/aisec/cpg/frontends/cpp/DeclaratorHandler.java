@@ -170,15 +170,22 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
     // treats these levels as separate declarators, so we need to get to the bottom for the
     // actual name...
     IASTDeclarator nameDecl = ctx;
+    var hasPointer = false;
+
     while (nameDecl.getNestedDeclarator() != null) {
       nameDecl = nameDecl.getNestedDeclarator();
+      if (nameDecl.getPointerOperators().length > 0) {
+        hasPointer = true;
+      }
     }
+
+    String name = nameDecl.getName().toString();
+
     // Attention! This might actually be a function pointer (requires at least one level of
     // parentheses and a pointer operator)
-    if (nameDecl != ctx && nameDecl.getPointerOperators().length > 0) {
-      return handleFunctionPointer(ctx, nameDecl.getName().toString());
+    if (nameDecl != ctx && hasPointer) {
+      return handleFunctionPointer(ctx, name);
     }
-    String name = nameDecl.getName().toString();
 
     /*
      * As always, there are some special cases to consider and one of those are C++ operators.
