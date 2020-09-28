@@ -36,7 +36,8 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 public class LanguageFrontendFactory {
 
   private static final List<String> JAVA_EXTENSIONS = List.of(".java");
-  private static final List<String> CXX_EXTENSIONS = List.of(".h", ".hpp", ".c", ".cpp", ".cc");
+  public static final List<String> CXX_EXTENSIONS = List.of(".c", ".cpp", ".cc");
+  private static final List<String> CXX_HEADER_EXTENSIONS = List.of(".h", ".hpp");
 
   // hide ctor
   private LanguageFrontendFactory() {}
@@ -47,7 +48,7 @@ public class LanguageFrontendFactory {
 
     if (JAVA_EXTENSIONS.contains(fileType)) {
       return new JavaLanguageFrontend(config, scopeManager);
-    } else if (CXX_EXTENSIONS.contains(fileType)) {
+    } else if (CXX_EXTENSIONS.contains(fileType) || CXX_HEADER_EXTENSIONS.contains(fileType)) {
       return new CXXLanguageFrontend(config, scopeManager);
     } else {
       return null;

@@ -62,6 +62,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration;
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser;
 import de.fraunhofer.aisec.cpg.helpers.Benchmark;
 import de.fraunhofer.aisec.cpg.helpers.CommonPath;
+import de.fraunhofer.aisec.cpg.passes.scopes.Scope;
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager;
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation;
 import de.fraunhofer.aisec.cpg.sarif.Region;
@@ -313,7 +314,7 @@ public class JavaLanguageFrontend extends LanguageFrontend {
       if (fromImport != null) {
         return fromImport;
       }
-      return qualifier;
+      return getFQNInCurrentPackage(qualifier);
     }
     log.debug("Unable to resolve qualified name from exception");
     return null;
@@ -358,6 +359,24 @@ public class JavaLanguageFrontend extends LanguageFrontend {
     }
   }
 
+  /**
+   * Returns the FQN of the given parameter assuming that is declared somewhere in the same package.
+   * Names declared in a package are automatically imported.
+   *
+   * @param simpleName
+   * @return
+   */
+  private String getFQNInCurrentPackage(String simpleName) {
+    Scope theScope =
+        getScopeManager()
+            .getFirstScopeThat(scope -> scope.getAstNode() instanceof NamespaceDeclaration);
+    // If scope is null we are in a default package
+    if (theScope == null) {
+      return simpleName;
+    }
+    return theScope.getScopedName() + getNamespaceDelimiter() + simpleName;
+  }
+
   private de.fraunhofer.aisec.cpg.graph.types.Type getTypeFromImportIfPossible(Type type) {
     Type searchType = type;
     while (searchType.isArrayType()) {
@@ -375,6 +394,7 @@ public class JavaLanguageFrontend extends LanguageFrontend {
     ClassOrInterfaceType clazz = searchType.asClassOrInterfaceType();
 
     if (clazz != null) {
+
       // try to look for imports matching the name
       for (ImportDeclaration importDeclaration : context.getImports()) {
         if (importDeclaration.getName().getIdentifier().endsWith(clazz.getName().getIdentifier())) {
@@ -383,7 +403,7 @@ public class JavaLanguageFrontend extends LanguageFrontend {
         }
       }
       de.fraunhofer.aisec.cpg.graph.types.Type returnType =
-          TypeParser.createFrom(clazz.getNameAsString(), true);
+          TypeParser.createFrom(clazz.asString(), true);
       returnType.setTypeOrigin(de.fraunhofer.aisec.cpg.graph.types.Type.Origin.GUESSED);
       return returnType;
     }

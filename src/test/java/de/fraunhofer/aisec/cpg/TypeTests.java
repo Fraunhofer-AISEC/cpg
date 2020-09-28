@@ -696,6 +696,14 @@ class TypeTests extends BaseTest {
     assertTrue(array.getType() instanceof PointerType);
     assertEquals(((PointerType) array.getType()).getElementType(), x.getType());
 
+    // Test java generics
+    VariableDeclaration map = findByUniqueName(variableDeclarations, "map");
+    assertTrue(map.getType() instanceof ObjectType);
+    assertEquals("C", map.getType().getName());
+    assertEquals(2, ((ObjectType) map.getType()).getGenerics().size());
+    assertEquals("D", ((ObjectType) map.getType()).getGenerics().get(0).getName());
+    assertEquals("E", ((ObjectType) map.getType()).getGenerics().get(1).getName());
+
     topLevel = Path.of("src", "test", "resources", "types");
     result = TestUtils.analyze("cpp", topLevel, true);
 

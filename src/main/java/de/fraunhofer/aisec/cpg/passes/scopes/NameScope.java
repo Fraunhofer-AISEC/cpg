@@ -35,7 +35,13 @@ public class NameScope extends StructureDeclarationScope {
   public NameScope(Node node, String currentPrefix, String delimiter) {
     super(node);
     if (currentPrefix == null || !currentPrefix.isEmpty()) {
-      this.namePrefix = currentPrefix + delimiter + node.getName();
+      String nodeName = node.getName();
+      // If the name already contains some form of prefix we have to remove it.
+      nodeName =
+          nodeName.contains(delimiter)
+              ? nodeName.substring(nodeName.lastIndexOf(delimiter) + delimiter.length())
+              : nodeName;
+      this.namePrefix = currentPrefix + delimiter + nodeName;
     } else {
       this.namePrefix = node.getName();
     }
