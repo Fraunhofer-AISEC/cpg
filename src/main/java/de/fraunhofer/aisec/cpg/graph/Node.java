@@ -346,9 +346,16 @@ public class Node implements IVisitable<Node> {
   }
 
   /**
-   * Caution when overriding this method: Don't include node properties that are subject to runtime
-   * change. This leads to cases where a {@link HashSet} or other collections don't know they
-   * contain a node that actually is part of their contents, as its hash value has changed.
+   * CAUTION: There may be quite a lot hash collisions due to the fact that only the node type and
+   * its name are used for hashing. Once the whole graph creation process is done, i.e. if you are
+   * using the CPG as a library, it would make sense to include more properties in order to better
+   * spread out the hash values. But internally, during graph creation, we need to absolutely make
+   * sure that the hash of a node will never change once it has been created. Otherwise we get bad
+   * behavior where a node is e.g. put inside a {@link HashSet} at the beginning of its life cycle,
+   * but then some fundamental properties are changed during further processing steps. Then, the
+   * {@link HashSet} will no longer recognize the node, making it possible to add a duplicate to the
+   * same set. Thus, we are only using a node's name and its Java type, as this provides us with
+   * more or less good hashes that will never change throughout the node's life cycle.
    *
    * @return The node's hash value
    */

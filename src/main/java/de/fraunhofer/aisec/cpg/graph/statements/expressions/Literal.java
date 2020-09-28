@@ -46,6 +46,7 @@ public class Literal<T> extends Expression {
 
   public void setValue(T value) {
     this.value = value;
+    setName(value == null ? "null" : value.toString());
   }
 
   @Override
