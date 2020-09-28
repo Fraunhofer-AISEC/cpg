@@ -644,7 +644,6 @@ public class ScopeManager {
   }
 
   public Scope getScopeOfStatment(Node node) {
-    int x = 0;
     return scopeMap.getOrDefault(node, null);
   }
 
