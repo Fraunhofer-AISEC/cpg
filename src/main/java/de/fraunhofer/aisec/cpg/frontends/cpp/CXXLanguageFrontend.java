@@ -436,14 +436,17 @@ public class CXXLanguageFrontend extends LanguageFrontend {
     switch (token.getTokenType()) {
       case 1:
         expression = newDeclaredReferenceExpression(code, UnknownType.getUnknownType(), code);
+        break;
       case 2:
         expression = newLiteral(Integer.parseInt(code), TypeParser.createFrom("int", true), code);
+        break;
       case 130:
         expression =
             newLiteral(
                 code.length() >= 2 ? code.substring(1, code.length() - 1) : "",
                 TypeParser.createFrom("const char*", false),
                 code);
+        break;
       default:
         expression = newLiteral(code, TypeParser.createFrom("const char*", false), code);
     }
