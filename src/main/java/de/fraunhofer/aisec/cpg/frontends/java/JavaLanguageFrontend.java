@@ -26,6 +26,9 @@
 
 package de.fraunhofer.aisec.cpg.frontends.java;
 
+import static de.fraunhofer.aisec.cpg.graph.NodeBuilder.newAnnotation;
+import static de.fraunhofer.aisec.cpg.graph.NodeBuilder.newAnnotationMember;
+
 import com.github.javaparser.JavaParser;
 import com.github.javaparser.ParseResult;
 import com.github.javaparser.ParserConfiguration;
@@ -33,13 +36,14 @@ import com.github.javaparser.Range;
 import com.github.javaparser.TokenRange;
 import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.ImportDeclaration;
-import com.github.javaparser.ast.Node;
 import com.github.javaparser.ast.Node.Parsedness;
 import com.github.javaparser.ast.PackageDeclaration;
 import com.github.javaparser.ast.body.TypeDeclaration;
 import com.github.javaparser.ast.expr.Expression;
+import com.github.javaparser.ast.expr.MemberValuePair;
 import com.github.javaparser.ast.expr.MethodCallExpr;
 import com.github.javaparser.ast.expr.NameExpr;
+import com.github.javaparser.ast.nodeTypes.NodeWithAnnotations;
 import com.github.javaparser.ast.nodeTypes.NodeWithType;
 import com.github.javaparser.ast.type.ClassOrInterfaceType;
 import com.github.javaparser.ast.type.Type;
@@ -54,6 +58,9 @@ import com.github.javaparser.symbolsolver.resolution.typesolvers.ReflectionTypeS
 import de.fraunhofer.aisec.cpg.TranslationConfiguration;
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
 import de.fraunhofer.aisec.cpg.frontends.TranslationException;
+import de.fraunhofer.aisec.cpg.graph.Annotation;
+import de.fraunhofer.aisec.cpg.graph.AnnotationMember;
+import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder;
 import de.fraunhofer.aisec.cpg.graph.TypeManager;
 import de.fraunhofer.aisec.cpg.graph.declarations.IncludeDeclaration;
@@ -200,8 +207,8 @@ public class JavaLanguageFrontend extends LanguageFrontend {
 
   @Override
   public <T> String getCodeFromRawNode(T astNode) {
-    if (astNode instanceof Node) {
-      Node node = (Node) astNode;
+    if (astNode instanceof com.github.javaparser.ast.Node) {
+      var node = (com.github.javaparser.ast.Node) astNode;
       Optional<TokenRange> optional = node.getTokenRange();
       if (optional.isPresent()) {
         return optional.get().toString();
@@ -213,8 +220,8 @@ public class JavaLanguageFrontend extends LanguageFrontend {
   @Override
   @Nullable
   public <T> PhysicalLocation getLocationFromRawNode(T astNode) {
-    if (astNode instanceof Node) {
-      Node node = (Node) astNode;
+    if (astNode instanceof com.github.javaparser.ast.Node) {
+      var node = (com.github.javaparser.ast.Node) astNode;
 
       // find compilation unit of node
       CompilationUnit cu = node.findCompilationUnit().orElse(null);
@@ -430,7 +437,7 @@ public class JavaLanguageFrontend extends LanguageFrontend {
   @Override
   public <S, T> void setComment(S s, T ctx) {
     if (ctx instanceof Node && s instanceof de.fraunhofer.aisec.cpg.graph.Node) {
-      Node node = (Node) ctx;
+      var node = (com.github.javaparser.ast.Node) ctx;
       de.fraunhofer.aisec.cpg.graph.Node cpgNode = (de.fraunhofer.aisec.cpg.graph.Node) s;
       node.getComment().ifPresent(comment -> cpgNode.setComment(comment.getContent()));
       // TODO: handle orphanComments?
@@ -455,5 +462,42 @@ public class JavaLanguageFrontend extends LanguageFrontend {
 
   public CombinedTypeSolver getNativeTypeResolver() {
     return this.internalTypeSolver;
+  }
+
+  public void processAnnotations(@NonNull Node node, NodeWithAnnotations<?> owner) {
+    if (this.config.processAnnotations) {
+      node.addAnnotations(handleAnnotations(owner));
+    }
+  }
+
+  private List<Annotation> handleAnnotations(NodeWithAnnotations<?> owner) {
+    var list = new ArrayList<Annotation>();
+
+    for (var expr : owner.getAnnotations()) {
+      var annotation = newAnnotation(expr.getNameAsString(), getCodeFromRawNode(expr));
+
+      var members = new ArrayList<AnnotationMember>();
+
+      for (var child : expr.getChildNodes()) {
+        if (child instanceof MemberValuePair) {
+          var pair = (MemberValuePair) child;
+
+          var member =
+              newAnnotationMember(
+                  pair.getNameAsString(),
+                  (de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression)
+                      expressionHandler.handle(pair.getValue()),
+                  getCodeFromRawNode(pair));
+
+          members.add(member);
+        }
+
+        annotation.setMembers(members);
+      }
+
+      list.add(annotation);
+    }
+
+    return list;
   }
 }

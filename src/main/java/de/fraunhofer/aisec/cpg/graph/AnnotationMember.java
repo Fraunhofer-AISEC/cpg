@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2019, Fraunhofer AISEC. All rights reserved.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -27,46 +27,16 @@
 package de.fraunhofer.aisec.cpg.graph;
 
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression;
-import java.util.List;
-import java.util.Objects;
-import javax.annotation.Nullable;
 
-public class Annotation extends Node {
+public class AnnotationMember extends Node {
 
-  private List<AnnotationMember> members;
-
-  public List<AnnotationMember> getMembers() {
-    return members;
+  public Expression getValue() {
+    return value;
   }
 
-  public void setMembers(List<AnnotationMember> members) {
-    this.members = members;
+  public void setValue(Expression value) {
+    this.value = value;
   }
 
-  @Nullable
-  public Expression getValueForName(String name) {
-    return members.stream()
-        .filter(member -> Objects.equals(member.name, name))
-        .map(AnnotationMember::getValue)
-        .findAny()
-        .orElse(null);
-  }
-
-  @Override
-  public boolean equals(Object o) {
-    if (this == o) {
-      return true;
-    }
-    if (!(o instanceof Annotation)) {
-      return false;
-    }
-
-    Annotation that = (Annotation) o;
-    return super.equals(that) && Objects.equals(members, that.members);
-  }
-
-  @Override
-  public int hashCode() {
-    return super.hashCode();
-  }
+  private Expression value;
 }
