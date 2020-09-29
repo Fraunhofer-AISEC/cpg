@@ -5,6 +5,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration;
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration;
 import de.fraunhofer.aisec.cpg.graph.statements.IfStatement;
 import de.fraunhofer.aisec.cpg.graph.statements.SwitchStatement;
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator;
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression;
 import java.util.*;
 
@@ -297,7 +298,63 @@ public class ControlFlowSensitiveDFG {
     return joinNode;
   }
 
-  /** Main method that performs the ControlFlowSensitveDFG analysis and transformation. */
+  private Node obtainAssignmentNode(Node node) {
+    Set<Node> nextEOG = new HashSet<>(node.getNextEOG());
+    Set<Node> rechableEOGs = new HashSet<>();
+    for (Node next : nextEOG) {
+      rechableEOGs.addAll(eogTraversal(next));
+    }
+
+    Node binaryOperator =
+            rechableEOGs.stream()
+                    .filter(n -> n instanceof BinaryOperator && ((BinaryOperator) n).getLhs().equals(node))
+                    .findAny()
+                    .get();
+    return binaryOperator;
+  }
+
+  private void modifyDFGEdges(Node currNode) {
+    // A DeclaredReferenceExpression makes use of one of the VariableDeclaration we are
+    // tracking. Therefore we must modify the outgoing and ingoing DFG edges
+    // Check for outgoing DFG edges
+    registerOutgoingDFG(currNode);
+
+    // Check for ingoing DFG edges
+    setIngoingDFG(currNode);
+  }
+
+  private Node handleDeclaredReferenceExpression(DeclaredReferenceExpression currNode) {
+    if (currNode.getAccess().equals(AccessValues.WRITE)) {
+      // This is an assignment
+      Node binaryOperator = obtainAssignmentNode(currNode);
+
+      Node nextEOG =
+              currNode
+                      .getNextEOG()
+                      .get(0); // Only one outgoing eog edge from an assignment DeclaredReferenceExpression
+      List<ControlFlowSensitiveDFG> dfgs = new ArrayList<>();
+
+      ControlFlowSensitiveDFG dfg =
+              new ControlFlowSensitiveDFG(nextEOG, binaryOperator, variables, this.visitedEOG);
+      dfgs.add(dfg);
+      dfg.handle();
+
+      this.variables = joinVariables(dfgs);
+      this.removes = joinRemoves(dfgs);
+
+      this.visitedEOG.addAll(dfg.getVisitedEOG());
+      modifyDFGEdges(currNode);
+
+      return binaryOperator;
+    } else {
+      modifyDFGEdges(currNode);
+      return getNextEOG(currNode);
+    }
+  }
+
+  /**
+   * Main method that performs the ControlFlowSensitveDFG analysis and transformation.
+   */
   public void handle() {
     Node currNode = startNode;
     while (!visitedEOG.contains(currNode) && currNode != null && !currNode.equals(endNode)) {
@@ -317,13 +374,7 @@ public class ControlFlowSensitiveDFG {
         nextNode = handleDFGSplit(currNode);
 
       } else if (currNode instanceof DeclaredReferenceExpression) {
-        // A DeclaredReferenceExpression makes use of one of the VariableDeclaration we are
-        // tracking. Therefore we must modify the outgoing and ingoing DFG edges
-        // Check for outgoing DFG edges
-        registerOutgoingDFG(currNode);
-
-        // Check for ingoing DFG edges
-        setIngoingDFG(currNode);
+        nextNode = handleDeclaredReferenceExpression((DeclaredReferenceExpression) currNode);
       }
 
       // If the nextNode has not been set by a JoinPoint we take the nextEOG
