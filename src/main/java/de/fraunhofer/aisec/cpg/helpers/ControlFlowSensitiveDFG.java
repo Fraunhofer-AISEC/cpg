@@ -290,7 +290,7 @@ public class ControlFlowSensitiveDFG {
     }
 
     this.variables = joinVariables(dfgs);
-    this.removes = joinRemoves(dfgs);
+    mergeRemoves(joinRemoves(dfgs));
 
     for (ControlFlowSensitiveDFG dfg : dfgs) {
       this.visitedEOG.addAll(dfg.getVisitedEOG());
@@ -323,6 +323,16 @@ public class ControlFlowSensitiveDFG {
     setIngoingDFG(currNode);
   }
 
+  private void mergeRemoves(Map<Node, Set<Node>> newRemoves) {
+    for (Node n : newRemoves.keySet()) {
+      if (this.removes.containsKey(n)) {
+        this.removes.get(n).addAll(newRemoves.get(n));
+      } else {
+        this.removes.put(n, newRemoves.get(n));
+      }
+    }
+  }
+
   private Node handleDeclaredReferenceExpression(DeclaredReferenceExpression currNode) {
     if (currNode.getAccess().equals(AccessValues.WRITE)) {
       // This is an assignment
@@ -340,7 +350,7 @@ public class ControlFlowSensitiveDFG {
       dfg.handle();
 
       this.variables = joinVariables(dfgs);
-      this.removes = joinRemoves(dfgs);
+      mergeRemoves(joinRemoves(dfgs));
 
       this.visitedEOG.addAll(dfg.getVisitedEOG());
       modifyDFGEdges(currNode);
