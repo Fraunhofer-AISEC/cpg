@@ -315,7 +315,7 @@ public class ControlFlowSensitiveDFG {
             rechableEOGs.stream()
                     .filter(n -> n instanceof BinaryOperator && ((BinaryOperator) n).getLhs().equals(node))
                     .findAny()
-                    .get();
+                    .orElse(null);
     return binaryOperator;
   }
 
