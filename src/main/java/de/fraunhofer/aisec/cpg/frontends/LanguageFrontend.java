@@ -26,6 +26,7 @@
 
 package de.fraunhofer.aisec.cpg.frontends;
 
+import com.github.javaparser.ast.nodeTypes.NodeWithAnnotations;
 import de.fraunhofer.aisec.cpg.TranslationConfiguration;
 import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration;

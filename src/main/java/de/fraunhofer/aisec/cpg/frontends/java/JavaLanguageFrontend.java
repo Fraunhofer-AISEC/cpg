@@ -464,6 +464,12 @@ public class JavaLanguageFrontend extends LanguageFrontend {
     return this.internalTypeSolver;
   }
 
+  /**
+   * Processes Java annotations.
+   *
+   * @param node the node
+   * @param owner the AST owner node
+   */
   public void processAnnotations(@NonNull Node node, NodeWithAnnotations<?> owner) {
     if (this.config.processAnnotations) {
       node.addAnnotations(handleAnnotations(owner));
