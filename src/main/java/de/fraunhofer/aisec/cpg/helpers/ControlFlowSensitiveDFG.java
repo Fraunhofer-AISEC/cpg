@@ -311,12 +311,10 @@ public class ControlFlowSensitiveDFG {
       rechableEOGs.addAll(eogTraversal(next));
     }
 
-    Node binaryOperator =
-            rechableEOGs.stream()
-                    .filter(n -> n instanceof BinaryOperator && ((BinaryOperator) n).getLhs().equals(node))
-                    .findAny()
-                    .orElse(null);
-    return binaryOperator;
+    return rechableEOGs.stream()
+            .filter(n -> n instanceof BinaryOperator && ((BinaryOperator) n).getLhs().equals(node))
+            .findAny()
+            .orElse(null);
   }
 
   /**
@@ -340,11 +338,11 @@ public class ControlFlowSensitiveDFG {
    * @param newRemoves remove map of the other ControlFlowSensitiveDFG
    */
   private void mergeRemoves(Map<Node, Set<Node>> newRemoves) {
-    for (Node n : newRemoves.keySet()) {
-      if (this.removes.containsKey(n)) {
-        this.removes.get(n).addAll(newRemoves.get(n));
+    for (Map.Entry<Node, Set<Node>> entry : newRemoves.entrySet()) {
+      if (this.removes.containsKey(entry.getKey())) {
+        this.removes.get(entry.getKey()).addAll(entry.getValue());
       } else {
-        this.removes.put(n, newRemoves.get(n));
+        this.removes.put(entry.getKey(), entry.getValue());
       }
     }
   }
