@@ -298,6 +298,12 @@ public class ControlFlowSensitiveDFG {
     return joinNode;
   }
 
+  /**
+   * Get node of the BinaryOperator where the assignment is finished (last node of the Assignment)
+   *
+   * @param node start node of the assignment LHS DeclaredReferenceExpression
+   * @return return the last (in eog order) node of the assignment
+   */
   private Node obtainAssignmentNode(Node node) {
     Set<Node> nextEOG = new HashSet<>(node.getNextEOG());
     Set<Node> rechableEOGs = new HashSet<>();
@@ -313,6 +319,11 @@ public class ControlFlowSensitiveDFG {
     return binaryOperator;
   }
 
+  /**
+   * Perform the actual modification of the DFG edges based on the values that are recorded in the variables map for every VariableDeclaration
+   *
+   * @param currNode node whose dfg edges have to be replaced
+   */
   private void modifyDFGEdges(Node currNode) {
     // A DeclaredReferenceExpression makes use of one of the VariableDeclaration we are
     // tracking. Therefore we must modify the outgoing and ingoing DFG edges
@@ -323,6 +334,11 @@ public class ControlFlowSensitiveDFG {
     setIngoingDFG(currNode);
   }
 
+  /**
+   * Merge the removes Map from the current object with another instance of ContolFlowSensitiveDFG
+   *
+   * @param newRemoves remove map of the other ControlFlowSensitiveDFG
+   */
   private void mergeRemoves(Map<Node, Set<Node>> newRemoves) {
     for (Node n : newRemoves.keySet()) {
       if (this.removes.containsKey(n)) {
@@ -333,10 +349,16 @@ public class ControlFlowSensitiveDFG {
     }
   }
 
+  /**
+   * Method that handles DeclaredReferenceExpressions when the EOG is traversed
+   *
+   * @param currNode DeclaredReferenceExpression that is found in
+   * @return Node where the EOG traversal should continue
+   */
   private Node handleDeclaredReferenceExpression(DeclaredReferenceExpression currNode) {
     if (currNode.getAccess().equals(AccessValues.WRITE)) {
-      // This is an assignment
-      Node binaryOperator = obtainAssignmentNode(currNode);
+      // This is an assignment -> DeclaredReferenceExpression + Write Access
+      Node binaryOperator = obtainAssignmentNode(currNode); // Search for = BinaryOperator as it marks the end of the assignment
 
       Node nextEOG =
               currNode
@@ -345,18 +367,22 @@ public class ControlFlowSensitiveDFG {
       List<ControlFlowSensitiveDFG> dfgs = new ArrayList<>();
 
       ControlFlowSensitiveDFG dfg =
-              new ControlFlowSensitiveDFG(nextEOG, binaryOperator, variables, this.visitedEOG);
+              new ControlFlowSensitiveDFG(nextEOG, binaryOperator, variables, this.visitedEOG); // Run DFG Pass until we reach the end of the assignment
       dfgs.add(dfg);
       dfg.handle();
 
+
+      // Update values of DFG Pass until the end of the assignment
       this.variables = joinVariables(dfgs);
       mergeRemoves(joinRemoves(dfgs));
-
       this.visitedEOG.addAll(dfg.getVisitedEOG());
+
+      // Perform Delayed DFG modifications (after having processed the entire assignment)
       modifyDFGEdges(currNode);
 
-      return binaryOperator;
+      return binaryOperator; // Continue the EOG traversal after the assignment
     } else {
+      // Other DeclaredReferenceExpression that do not have a write assignment we do not have to delay the replacement of the value in the VariableDeclaration
       modifyDFGEdges(currNode);
       return getNextEOG(currNode);
     }
