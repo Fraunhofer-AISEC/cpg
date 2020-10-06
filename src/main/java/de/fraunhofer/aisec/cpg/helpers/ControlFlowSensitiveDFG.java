@@ -318,7 +318,8 @@ public class ControlFlowSensitiveDFG {
   }
 
   /**
-   * Perform the actual modification of the DFG edges based on the values that are recorded in the variables map for every VariableDeclaration
+   * Perform the actual modification of the DFG edges based on the values that are recorded in the
+   * variables map for every VariableDeclaration
    *
    * @param currNode node whose dfg edges have to be replaced
    */
@@ -356,7 +357,9 @@ public class ControlFlowSensitiveDFG {
   private Node handleDeclaredReferenceExpression(DeclaredReferenceExpression currNode) {
     if (currNode.getAccess().equals(AccessValues.WRITE)) {
       // This is an assignment -> DeclaredReferenceExpression + Write Access
-      Node binaryOperator = obtainAssignmentNode(currNode); // Search for = BinaryOperator as it marks the end of the assignment
+      Node binaryOperator =
+              obtainAssignmentNode(
+                      currNode); // Search for = BinaryOperator as it marks the end of the assignment
 
       Node nextEOG =
               currNode
@@ -365,10 +368,13 @@ public class ControlFlowSensitiveDFG {
       List<ControlFlowSensitiveDFG> dfgs = new ArrayList<>();
 
       ControlFlowSensitiveDFG dfg =
-              new ControlFlowSensitiveDFG(nextEOG, binaryOperator, variables, this.visitedEOG); // Run DFG Pass until we reach the end of the assignment
+              new ControlFlowSensitiveDFG(
+                      nextEOG,
+                      binaryOperator,
+                      variables,
+                      this.visitedEOG); // Run DFG Pass until we reach the end of the assignment
       dfgs.add(dfg);
       dfg.handle();
-
 
       // Update values of DFG Pass until the end of the assignment
       this.variables = joinVariables(dfgs);
@@ -380,15 +386,14 @@ public class ControlFlowSensitiveDFG {
 
       return binaryOperator; // Continue the EOG traversal after the assignment
     } else {
-      // Other DeclaredReferenceExpression that do not have a write assignment we do not have to delay the replacement of the value in the VariableDeclaration
+      // Other DeclaredReferenceExpression that do not have a write assignment we do not have to
+      // delay the replacement of the value in the VariableDeclaration
       modifyDFGEdges(currNode);
       return getNextEOG(currNode);
     }
   }
 
-  /**
-   * Main method that performs the ControlFlowSensitveDFG analysis and transformation.
-   */
+  /** Main method that performs the ControlFlowSensitveDFG analysis and transformation. */
   public void handle() {
     Node currNode = startNode;
     while (!visitedEOG.contains(currNode) && currNode != null && !currNode.equals(endNode)) {

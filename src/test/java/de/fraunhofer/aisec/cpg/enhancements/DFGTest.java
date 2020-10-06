@@ -243,7 +243,7 @@ class DFGTest {
         TestUtils.analyze(List.of(topLevel.resolve("unaryoperator.cpp").toFile()), topLevel, true);
 
     UnaryOperator rwUnaryOperator =
-        TestUtils.findByUniqueName(TestUtils.subnodesOfType(result, UnaryOperator.class), "++");
+            TestUtils.findByUniqueName(TestUtils.subnodesOfType(result, UnaryOperator.class), "++");
     DeclaredReferenceExpression expression =
             TestUtils.findByUniqueName(
                     TestUtils.subnodesOfType(result, DeclaredReferenceExpression.class), "i");
