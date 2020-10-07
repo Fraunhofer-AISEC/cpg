@@ -120,6 +120,7 @@ public class EvaluationOrderGraphPass extends Pass {
     map.put(ConstructExpression.class, this::handleConstructExpression);
     map.put(EmptyStatement.class, this::handleDefault);
     map.put(Literal.class, this::handleDefault);
+    map.put(UninitializedValue.class, this::handleDefault);
     map.put(DefaultStatement.class, this::handleDefault);
     map.put(TypeIdExpression.class, this::handleDefault);
     map.put(DeclaredReferenceExpression.class, this::handleDefault);
