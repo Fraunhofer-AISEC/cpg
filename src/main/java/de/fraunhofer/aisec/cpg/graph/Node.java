@@ -30,12 +30,6 @@ import de.fraunhofer.aisec.cpg.graph.declarations.TypedefDeclaration;
 import de.fraunhofer.aisec.cpg.helpers.LocationConverter;
 import de.fraunhofer.aisec.cpg.processing.IVisitable;
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Objects;
-import java.util.Set;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;
 import org.checkerframework.checker.nullness.qual.NonNull;
@@ -47,8 +41,12 @@ import org.neo4j.ogm.annotation.typeconversion.Convert;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/** The base class for all graph objects that are going to be persisted in the database. */
-public class Node implements IVisitable<Node> implements Persistable {
+import java.util.*;
+
+/**
+ * The base class for all graph objects that are going to be persisted in the database.
+ */
+public class Node implements IVisitable<Node>, Persistable {
 
   public static final ToStringStyle TO_STRING_STYLE = ToStringStyle.SHORT_PREFIX_STYLE;
   protected static final Logger log = LoggerFactory.getLogger(Node.class);
@@ -56,7 +54,8 @@ public class Node implements IVisitable<Node> implements Persistable {
   public static final String EMPTY_NAME = "";
 
   /** A human readable name. */
-  @NonNull protected String name = EMPTY_NAME; // initialize it with an empty string
+  @NonNull
+  protected String name = EMPTY_NAME; // initialize it with an empty string
 
   /**
    * Original code snippet of this node. Most nodes will have a corresponding "code", but in cases
