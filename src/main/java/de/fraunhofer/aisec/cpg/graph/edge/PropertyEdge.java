@@ -4,6 +4,8 @@ import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.Persistable;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
+
 import org.neo4j.ogm.annotation.*;
 import org.neo4j.ogm.annotation.typeconversion.Convert;
 
@@ -56,5 +58,23 @@ public class PropertyEdge implements Persistable {
 
   public Node getStart() {
     return start;
+  }
+
+  /**
+   * Note that the start node cannot be checked for equality, as it would create an endless loop We
+   * can do this, as the start node is always equals to the node where the relationship is stored
+   */
+  @Override
+  public boolean equals(Object obj) {
+    if (this == obj) return true;
+    if (!(obj instanceof PropertyEdge)) return false;
+    PropertyEdge propertyEdge = (PropertyEdge) obj;
+    return Objects.equals(this.end, propertyEdge.end)
+            && Objects.equals(this.properties, propertyEdge.properties);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(end, properties);
   }
 }
