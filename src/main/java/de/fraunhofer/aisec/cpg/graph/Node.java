@@ -32,9 +32,6 @@ import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import de.fraunhofer.aisec.cpg.helpers.LocationConverter;
 import de.fraunhofer.aisec.cpg.processing.IVisitable;
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation;
-
-import java.util.*;
-
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;
 import org.checkerframework.checker.nullness.qual.NonNull;
@@ -46,6 +43,8 @@ import org.neo4j.ogm.annotation.typeconversion.Convert;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.*;
+
 /**
  * The base class for all graph objects that are going to be persisted in the database.
  */
@@ -56,9 +55,7 @@ public class Node implements IVisitable<Node>, Persistable {
 
   public static final String EMPTY_NAME = "";
 
-  /**
-   * A human readable name.
-   */
+  /** A human readable name. */
   @NonNull
   protected String name = EMPTY_NAME; // initialize it with an empty string
 
@@ -66,10 +63,12 @@ public class Node implements IVisitable<Node>, Persistable {
    * Original code snippet of this node. Most nodes will have a corresponding "code", but in cases
    * where nodes are created artificially, it may be null.
    */
-  @Nullable protected String code;
+  @Nullable
+  protected String code;
 
   /** Optional comment of this node. */
-  @Nullable protected String comment;
+  @Nullable
+  protected String comment;
 
   /** Location of the finding in source code. */
   @Convert(LocationConverter.class)
@@ -82,16 +81,12 @@ public class Node implements IVisitable<Node>, Persistable {
    */
   @Nullable protected String file;
 
-  /**
-   * Incoming control flow edges.
-   */
+  /** Incoming control flow edges. */
   @NonNull
   @Relationship(value = "EOG", direction = "INCOMING")
   protected List<PropertyEdge> prevEOG = new ArrayList<>();
 
-  /**
-   * outgoing control flow edges.
-   */
+  /** outgoing control flow edges. */
   @Relationship(value = "EOG", direction = "OUTGOING")
   @NonNull
   protected List<PropertyEdge> nextEOG = new ArrayList<>();
@@ -342,12 +337,16 @@ public class Node implements IVisitable<Node>, Persistable {
     }
     prevDFG.clear();
     for (PropertyEdge n : nextEOG) {
-      List<PropertyEdge> remove = PropertyEdge.findPropertyEdgesByPredicate(n.getEnd().prevEOG, e -> e.getStart().equals(this));
+      List<PropertyEdge> remove =
+              PropertyEdge.findPropertyEdgesByPredicate(
+                      n.getEnd().prevEOG, e -> e.getStart().equals(this));
       n.getEnd().prevEOG.removeAll(remove);
     }
     nextEOG.clear();
     for (PropertyEdge n : prevEOG) {
-      List<PropertyEdge> remove = PropertyEdge.findPropertyEdgesByPredicate(n.getStart().nextEOG, e -> e.getEnd().equals(this));
+      List<PropertyEdge> remove =
+              PropertyEdge.findPropertyEdgesByPredicate(
+                      n.getStart().nextEOG, e -> e.getEnd().equals(this));
       n.getStart().nextEOG.removeAll(remove);
     }
     prevEOG.clear();

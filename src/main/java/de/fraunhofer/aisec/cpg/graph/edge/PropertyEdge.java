@@ -2,12 +2,9 @@ package de.fraunhofer.aisec.cpg.graph.edge;
 
 import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.Persistable;
-
 import java.util.*;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
-
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal;
 import org.neo4j.ogm.annotation.*;
 import org.neo4j.ogm.annotation.typeconversion.Convert;
 
@@ -55,7 +52,7 @@ public class PropertyEdge implements Persistable {
    * a serializer and deserializer in the {@link PropertyEdgeConverter}
    *
    * @param property String containing the name of the property
-   * @param value    Object containing the value of the property
+   * @param value Object containing the value of the property
    */
   public void addProperty(Properties property, Object value) {
     properties.put(property, value);
@@ -70,7 +67,8 @@ public class PropertyEdge implements Persistable {
   }
 
   /**
-   * Note that the start and end node cannot be checked for equality here, as it would create an endless loop. Check of start and end node must be done separately.
+   * Note that the start and end node cannot be checked for equality here, as it would create an
+   * endless loop. Check of start and end node must be done separately.
    */
   @Override
   public boolean equals(Object obj) {
