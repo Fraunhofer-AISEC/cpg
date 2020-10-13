@@ -52,10 +52,14 @@ public class PropertyEdge implements Persistable {
    * a serializer and deserializer in the {@link PropertyEdgeConverter}
    *
    * @param property String containing the name of the property
-   * @param value Object containing the value of the property
+   * @param value    Object containing the value of the property
    */
   public void addProperty(Properties property, Object value) {
     properties.put(property, value);
+  }
+
+  public void addProperties(Map<Properties, Object> propertyMap) {
+    this.properties.putAll(propertyMap);
   }
 
   public Node getEnd() {

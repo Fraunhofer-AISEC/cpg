@@ -32,6 +32,9 @@ import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import de.fraunhofer.aisec.cpg.helpers.LocationConverter;
 import de.fraunhofer.aisec.cpg.processing.IVisitable;
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation;
+
+import java.util.*;
+
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;
 import org.checkerframework.checker.nullness.qual.NonNull;
@@ -43,8 +46,6 @@ import org.neo4j.ogm.annotation.typeconversion.Convert;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.*;
-
 /**
  * The base class for all graph objects that are going to be persisted in the database.
  */
@@ -55,7 +56,9 @@ public class Node implements IVisitable<Node>, Persistable {
 
   public static final String EMPTY_NAME = "";
 
-  /** A human readable name. */
+  /**
+   * A human readable name.
+   */
   @NonNull
   protected String name = EMPTY_NAME; // initialize it with an empty string
 
@@ -66,7 +69,9 @@ public class Node implements IVisitable<Node>, Persistable {
   @Nullable
   protected String code;
 
-  /** Optional comment of this node. */
+  /**
+   * Optional comment of this node.
+   */
   @Nullable
   protected String comment;
 
@@ -176,6 +181,18 @@ public class Node implements IVisitable<Node>, Persistable {
     this.prevEOG = prevEOG;
   }
 
+  public void removePrevEOGEntry(@NonNull Node eog) {
+    removePrevEOGEntries(List.of(eog));
+  }
+
+  public void removePrevEOGEntries(@NonNull List<Node> prevEOGs) {
+    for (Node n : prevEOGs) {
+      List<PropertyEdge> remove =
+              PropertyEdge.findPropertyEdgesByPredicate(this.prevEOG, e -> e.getStart().equals(n));
+      this.prevEOG.removeAll(remove);
+    }
+  }
+
   @NonNull
   public List<Node> getPrevEOG() {
     List<Node> prevEOGTargets = new ArrayList<>();
@@ -195,6 +212,11 @@ public class Node implements IVisitable<Node>, Persistable {
     }
 
     this.prevEOG = propertyEdgesEOG;
+  }
+
+  @NonNull
+  public List<PropertyEdge> getNextEOGProperties() {
+    return this.nextEOG;
   }
 
   @NonNull

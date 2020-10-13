@@ -30,14 +30,18 @@ import de.fraunhofer.aisec.cpg.TranslationResult;
 import de.fraunhofer.aisec.cpg.frontends.CallableInterface;
 import de.fraunhofer.aisec.cpg.graph.*;
 import de.fraunhofer.aisec.cpg.graph.declarations.*;
+import de.fraunhofer.aisec.cpg.graph.edge.Properties;
+import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import de.fraunhofer.aisec.cpg.graph.statements.*;
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*;
 import de.fraunhofer.aisec.cpg.graph.types.Type;
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser;
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker;
 import de.fraunhofer.aisec.cpg.passes.scopes.*;
+
 import java.util.*;
 import java.util.stream.Collectors;
+
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.slf4j.Logger;
@@ -76,6 +80,7 @@ public class EvaluationOrderGraphPass extends Pass {
       new HashMap<>();
 
   private List<Node> currentEOG = new ArrayList<>();
+  private Map<Properties, Object> currentProperties = new HashMap<>();
 
   // Some nodes will have no incoming nor outgoing edges but still need to be associated to the next
   // eog relevant node.
@@ -180,11 +185,11 @@ public class EvaluationOrderGraphPass extends Pass {
       }
       List<Node> nextNodes = new ArrayList<>(eogSourceNode.getNextEOG());
       eogSourceNode.getNextEOG().clear();
-      nextNodes.forEach(node -> node.getPrevEOG().remove(eogSourceNode));
+      nextNodes.forEach(node -> node.removePrevEOGEntry(eogSourceNode));
       truncateLooseEdges(
-          nextNodes.stream()
-              .filter(node -> node.getPrevEOG().isEmpty() && !node.getNextEOG().isEmpty())
-              .collect(Collectors.toList()));
+              nextNodes.stream()
+                      .filter(node -> node.getPrevEOG().isEmpty() && !node.getNextEOG().isEmpty())
+                      .collect(Collectors.toList()));
     }
   }
 
@@ -211,8 +216,10 @@ public class EvaluationOrderGraphPass extends Pass {
     }
     // remaining eognodes were not visited and have to be removed from the EOG
     for (Node unvisitedNode : eognodes) {
-      unvisitedNode.getNextEOG().forEach(next -> next.getPrevEOG().remove(unvisitedNode));
-      unvisitedNode.getNextEOG().clear();
+      unvisitedNode
+              .getNextEOGProperties()
+              .forEach(next -> next.getEnd().removePrevEOGEntry(unvisitedNode));
+      unvisitedNode.getNextEOGProperties().clear();
     }
   }
 
@@ -642,6 +649,7 @@ public class EvaluationOrderGraphPass extends Pass {
     addMultipleIncomingEOGEdges(this.currentEOG, node);
     intermediateNodes.clear();
     this.currentEOG.clear();
+    this.currentProperties.clear();
     this.currentEOG.add(node);
   }
 
@@ -734,8 +742,10 @@ public class EvaluationOrderGraphPass extends Pass {
    * @param next the next node
    */
   public void addEOGEdge(Node prev, Node next) {
-    prev.getNextEOG().add(next);
-    next.getPrevEOG().add(prev);
+    PropertyEdge propertyEdge = new PropertyEdge(prev, next);
+    propertyEdge.addProperties(this.currentProperties);
+    prev.getNextEOGProperties().add(propertyEdge);
+    next.getPrevEOGProperties().add(propertyEdge);
   }
 
   public void addMultipleIncomingEOGEdges(List<Node> prevs, Node next) {
@@ -846,11 +856,13 @@ public class EvaluationOrderGraphPass extends Pass {
 
     pushToEOG(ifStatement); // To have semantic information after the condition evaluation
     List<Node> openConditionEOGs = new ArrayList<>(currentEOG);
+    currentProperties.put(de.fraunhofer.aisec.cpg.graph.edge.Properties.Branch, true);
     createEOG(ifStatement.getThenStatement());
     openBranchNodes.addAll(currentEOG);
 
     if (ifStatement.getElseStatement() != null) {
       setCurrentEOGs(openConditionEOGs);
+      currentProperties.put(Properties.Branch, false);
       createEOG(ifStatement.getElseStatement());
       openBranchNodes.addAll(currentEOG);
     } else {
