@@ -32,9 +32,11 @@ import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import org.neo4j.ogm.annotation.Relationship;
 
 public class TryStatement extends Statement {
 
+  @Relationship(value = "resources", direction = "OUTGOING")
   @SubGraph("AST")
   private List<PropertyEdge> resources;
 
@@ -44,8 +46,9 @@ public class TryStatement extends Statement {
   @SubGraph("AST")
   private CompoundStatement finallyBlock;
 
+  @Relationship(value = "catchClauses", direction = "OUTGOING")
   @SubGraph("AST")
-  private List<CatchClause> catchClauses;
+  private List<PropertyEdge> catchClauses;
 
   public List<Statement> getResources() {
     if (this.resources == null) {
@@ -86,11 +89,26 @@ public class TryStatement extends Statement {
   }
 
   public List<CatchClause> getCatchClauses() {
+    if (this.catchClauses == null) {
+      return null;
+    }
+    List<CatchClause> catchClauses = new ArrayList<>();
+    for (PropertyEdge propertyEdge : this.catchClauses) {
+      catchClauses.add((CatchClause) propertyEdge.getEnd());
+    }
     return catchClauses;
   }
 
   public void setCatchClauses(List<CatchClause> catchClauses) {
-    this.catchClauses = catchClauses;
+    this.catchClauses = new ArrayList<>();
+    int counter = 0;
+
+    for (CatchClause c : catchClauses) {
+      PropertyEdge propertyEdge = new PropertyEdge(this, c);
+      propertyEdge.addProperty(Properties.Index, counter);
+      this.catchClauses.add(propertyEdge);
+      counter++;
+    }
   }
 
   @Override
