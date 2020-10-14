@@ -27,13 +27,16 @@
 package de.fraunhofer.aisec.cpg.graph.statements;
 
 import de.fraunhofer.aisec.cpg.graph.SubGraph;
+import de.fraunhofer.aisec.cpg.graph.edge.Properties;
+import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
 public class TryStatement extends Statement {
 
   @SubGraph("AST")
-  private List<Statement> resources;
+  private List<PropertyEdge> resources;
 
   @SubGraph("AST")
   private CompoundStatement tryBlock;
@@ -45,11 +48,25 @@ public class TryStatement extends Statement {
   private List<CatchClause> catchClauses;
 
   public List<Statement> getResources() {
+    if (this.resources == null) {
+      return null;
+    }
+    List<Statement> resources = new ArrayList<>();
+    for (PropertyEdge propertyEdge : this.resources) {
+      resources.add((Statement) propertyEdge.getEnd());
+    }
     return resources;
   }
 
   public void setResources(List<Statement> resources) {
-    this.resources = resources;
+    this.resources = new ArrayList<>();
+    int c = 0;
+    for (Statement s : resources) {
+      PropertyEdge propertyEdge = new PropertyEdge(this, s);
+      propertyEdge.addProperty(Properties.Index, c);
+      this.resources.add(propertyEdge);
+      c++;
+    }
   }
 
   public CompoundStatement getTryBlock() {
