@@ -243,10 +243,10 @@ class DFGTest {
         TestUtils.analyze(List.of(topLevel.resolve("unaryoperator.cpp").toFile()), topLevel, true);
 
     UnaryOperator rwUnaryOperator =
-            TestUtils.findByUniqueName(TestUtils.subnodesOfType(result, UnaryOperator.class), "++");
+        TestUtils.findByUniqueName(TestUtils.subnodesOfType(result, UnaryOperator.class), "++");
     DeclaredReferenceExpression expression =
-            TestUtils.findByUniqueName(
-                    TestUtils.subnodesOfType(result, DeclaredReferenceExpression.class), "i");
+        TestUtils.findByUniqueName(
+            TestUtils.subnodesOfType(result, DeclaredReferenceExpression.class), "i");
 
     Set<Node> prevDFGOperator = rwUnaryOperator.getPrevDFG();
     Set<Node> nextDFGOperator = rwUnaryOperator.getNextDFG();
@@ -267,40 +267,40 @@ class DFGTest {
   void testDelayedAssignment() throws Exception {
     Path topLevel = Path.of("src", "test", "resources", "dfg");
     List<TranslationUnitDeclaration> result =
-            TestUtils.analyze(
-                    List.of(topLevel.resolve("DelayedAssignmentAfterRHS.java").toFile()), topLevel, true);
+        TestUtils.analyze(
+            List.of(topLevel.resolve("DelayedAssignmentAfterRHS.java").toFile()), topLevel, true);
 
     BinaryOperator binaryOperatorAssignment =
-            TestUtils.findByUniqueName(TestUtils.subnodesOfType(result, BinaryOperator.class), "=");
+        TestUtils.findByUniqueName(TestUtils.subnodesOfType(result, BinaryOperator.class), "=");
 
     BinaryOperator binaryOperatorAddition =
-            TestUtils.findByUniqueName(TestUtils.subnodesOfType(result, BinaryOperator.class), "+");
+        TestUtils.findByUniqueName(TestUtils.subnodesOfType(result, BinaryOperator.class), "+");
 
     VariableDeclaration varA =
-            TestUtils.findByUniqueName(
-                    TestUtils.subnodesOfType(result, VariableDeclaration.class), "a");
+        TestUtils.findByUniqueName(
+            TestUtils.subnodesOfType(result, VariableDeclaration.class), "a");
     VariableDeclaration varB =
-            TestUtils.findByUniqueName(
-                    TestUtils.subnodesOfType(result, VariableDeclaration.class), "b");
+        TestUtils.findByUniqueName(
+            TestUtils.subnodesOfType(result, VariableDeclaration.class), "b");
 
     DeclaredReferenceExpression lhsA =
-            (DeclaredReferenceExpression) binaryOperatorAssignment.getLhs();
+        (DeclaredReferenceExpression) binaryOperatorAssignment.getLhs();
     DeclaredReferenceExpression rhsA =
-            (DeclaredReferenceExpression) binaryOperatorAddition.getLhs();
+        (DeclaredReferenceExpression) binaryOperatorAddition.getLhs();
 
     DeclaredReferenceExpression b =
-            TestUtils.findByUniqueName(
-                    TestUtils.subnodesOfType(result, DeclaredReferenceExpression.class), "b");
+        TestUtils.findByUniqueName(
+            TestUtils.subnodesOfType(result, DeclaredReferenceExpression.class), "b");
 
     Literal<?> literal0 =
-            TestUtils.findByPredicate(
-                    TestUtils.subnodesOfType(result, Literal.class), l -> l.getValue().equals(0))
-                    .get(0);
+        TestUtils.findByPredicate(
+                TestUtils.subnodesOfType(result, Literal.class), l -> l.getValue().equals(0))
+            .get(0);
 
     Literal<?> literal1 =
-            TestUtils.findByPredicate(
-                    TestUtils.subnodesOfType(result, Literal.class), l -> l.getValue().equals(1))
-                    .get(0);
+        TestUtils.findByPredicate(
+                TestUtils.subnodesOfType(result, Literal.class), l -> l.getValue().equals(1))
+            .get(0);
 
     assertEquals(0, varA.getNextDFG().size()); // No outgoing DFG edges from VariableDeclaration a
     assertEquals(0, varB.getNextDFG().size()); // No outgoing DFG edges from VariableDeclaration b
@@ -350,11 +350,11 @@ class DFGTest {
   void testNoOutgoingDFGFromVariableDeclaration() throws Exception {
     Path topLevel = Path.of("src", "test", "resources", "dfg");
     List<TranslationUnitDeclaration> result =
-            TestUtils.analyze(List.of(topLevel.resolve("BasicSlice.java").toFile()), topLevel, true);
+        TestUtils.analyze(List.of(topLevel.resolve("BasicSlice.java").toFile()), topLevel, true);
 
     VariableDeclaration varA =
-            TestUtils.findByUniqueName(
-                    TestUtils.subnodesOfType(result, VariableDeclaration.class), "a");
+        TestUtils.findByUniqueName(
+            TestUtils.subnodesOfType(result, VariableDeclaration.class), "a");
 
     assertEquals(0, varA.getNextDFG().size());
     assertEquals(7, varA.getPrevDFG().size());

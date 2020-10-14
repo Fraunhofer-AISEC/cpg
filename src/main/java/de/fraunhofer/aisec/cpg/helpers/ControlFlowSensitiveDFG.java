@@ -312,9 +312,9 @@ public class ControlFlowSensitiveDFG {
     }
 
     return rechableEOGs.stream()
-            .filter(n -> n instanceof BinaryOperator && ((BinaryOperator) n).getLhs().equals(node))
-            .findAny()
-            .orElse(null);
+        .filter(n -> n instanceof BinaryOperator && ((BinaryOperator) n).getLhs().equals(node))
+        .findAny()
+        .orElse(null);
   }
 
   /**
@@ -358,21 +358,21 @@ public class ControlFlowSensitiveDFG {
     if (currNode.getAccess().equals(AccessValues.WRITE)) {
       // This is an assignment -> DeclaredReferenceExpression + Write Access
       Node binaryOperator =
-              obtainAssignmentNode(
-                      currNode); // Search for = BinaryOperator as it marks the end of the assignment
+          obtainAssignmentNode(
+              currNode); // Search for = BinaryOperator as it marks the end of the assignment
 
       Node nextEOG =
-              currNode
-                      .getNextEOG()
-                      .get(0); // Only one outgoing eog edge from an assignment DeclaredReferenceExpression
+          currNode
+              .getNextEOG()
+              .get(0); // Only one outgoing eog edge from an assignment DeclaredReferenceExpression
       List<ControlFlowSensitiveDFG> dfgs = new ArrayList<>();
 
       ControlFlowSensitiveDFG dfg =
-              new ControlFlowSensitiveDFG(
-                      nextEOG,
-                      binaryOperator,
-                      variables,
-                      this.visitedEOG); // Run DFG Pass until we reach the end of the assignment
+          new ControlFlowSensitiveDFG(
+              nextEOG,
+              binaryOperator,
+              variables,
+              this.visitedEOG); // Run DFG Pass until we reach the end of the assignment
       dfgs.add(dfg);
       dfg.handle();
 
