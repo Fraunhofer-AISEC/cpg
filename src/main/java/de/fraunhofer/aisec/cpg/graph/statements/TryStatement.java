@@ -122,9 +122,11 @@ public class TryStatement extends Statement {
     TryStatement that = (TryStatement) o;
     return super.equals(that)
         && Objects.equals(resources, that.resources)
+        && Objects.equals(this.getResources(), that.getResources())
         && Objects.equals(tryBlock, that.tryBlock)
         && Objects.equals(finallyBlock, that.finallyBlock)
-        && Objects.equals(catchClauses, that.catchClauses);
+        && Objects.equals(catchClauses, that.catchClauses)
+        && Objects.equals(this.getCatchClauses(), that.getCatchClauses());
   }
 
   @Override
