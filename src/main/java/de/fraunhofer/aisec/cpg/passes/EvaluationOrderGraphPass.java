@@ -38,10 +38,8 @@ import de.fraunhofer.aisec.cpg.graph.types.Type;
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser;
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker;
 import de.fraunhofer.aisec.cpg.passes.scopes.*;
-
 import java.util.*;
 import java.util.stream.Collectors;
-
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.slf4j.Logger;
@@ -184,12 +182,12 @@ public class EvaluationOrderGraphPass extends Pass {
         continue;
       }
       List<Node> nextNodes = new ArrayList<>(eogSourceNode.getNextEOG());
-      eogSourceNode.getNextEOG().clear();
+      eogSourceNode.clearNextEOG();
       nextNodes.forEach(node -> node.removePrevEOGEntry(eogSourceNode));
       truncateLooseEdges(
-              nextNodes.stream()
-                      .filter(node -> node.getPrevEOG().isEmpty() && !node.getNextEOG().isEmpty())
-                      .collect(Collectors.toList()));
+          nextNodes.stream()
+              .filter(node -> node.getPrevEOG().isEmpty() && !node.getNextEOG().isEmpty())
+              .collect(Collectors.toList()));
     }
   }
 
@@ -217,8 +215,8 @@ public class EvaluationOrderGraphPass extends Pass {
     // remaining eognodes were not visited and have to be removed from the EOG
     for (Node unvisitedNode : eognodes) {
       unvisitedNode
-              .getNextEOGProperties()
-              .forEach(next -> next.getEnd().removePrevEOGEntry(unvisitedNode));
+          .getNextEOGProperties()
+          .forEach(next -> next.getEnd().removePrevEOGEntry(unvisitedNode));
       unvisitedNode.getNextEOGProperties().clear();
     }
   }
@@ -744,8 +742,8 @@ public class EvaluationOrderGraphPass extends Pass {
   public void addEOGEdge(Node prev, Node next) {
     PropertyEdge propertyEdge = new PropertyEdge(prev, next);
     propertyEdge.addProperties(this.currentProperties);
-    prev.getNextEOGProperties().add(propertyEdge);
-    next.getPrevEOGProperties().add(propertyEdge);
+    prev.addNextEOG(propertyEdge);
+    next.addPrevEOG(new PropertyEdge(propertyEdge));
   }
 
   public void addMultipleIncomingEOGEdges(List<Node> prevs, Node next) {

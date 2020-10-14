@@ -26,20 +26,25 @@ public class PropertyEdge implements Persistable {
     this.properties = new HashMap<>();
   }
 
+  public PropertyEdge(PropertyEdge propertyEdge) {
+    this.start = propertyEdge.start;
+    this.end = propertyEdge.end;
+    this.properties = new HashMap<>();
+    this.properties.putAll(propertyEdge.properties);
+  }
+
   public PropertyEdge(Node start, Node end, Map<Properties, Object> properties) {
     this.start = start;
     this.end = end;
     this.properties = properties;
   }
 
-  /**
-   * Map containing all properties of an edge
-   */
+  /** Map containing all properties of an edge */
   @Convert(PropertyEdgeConverter.class)
   private Map<Properties, Object> properties;
 
   public static <S extends PropertyEdge> List<S> findPropertyEdgesByPredicate(
-          Collection<S> edges, Predicate<S> predicate) {
+      Collection<S> edges, Predicate<S> predicate) {
     return edges.stream().filter(predicate).collect(Collectors.toList());
   }
 
@@ -52,7 +57,7 @@ public class PropertyEdge implements Persistable {
    * a serializer and deserializer in the {@link PropertyEdgeConverter}
    *
    * @param property String containing the name of the property
-   * @param value    Object containing the value of the property
+   * @param value Object containing the value of the property
    */
   public void addProperty(Properties property, Object value) {
     properties.put(property, value);
