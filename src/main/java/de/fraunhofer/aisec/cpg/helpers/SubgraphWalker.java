@@ -38,7 +38,6 @@ import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement;
 import java.lang.annotation.AnnotationFormatError;
 import java.lang.reflect.Field;
-import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -83,38 +82,6 @@ public class SubgraphWalker {
     return new ArrayList<>();
   }
 
-  public static Object unwrapPropertyEdge(Object obj, Boolean outgoing) {
-    if (obj instanceof PropertyEdge) {
-      if (outgoing) {
-        return ((PropertyEdge) obj).getEnd();
-      } else {
-        return ((PropertyEdge) obj).getStart();
-      }
-    } else if (obj instanceof Collection && ((Collection<?>) obj).size() > 0) {
-      Object element = ((Collection<?>) obj).stream().findAny().get();
-      if (element instanceof PropertyEdge) {
-        try {
-          Collection<Node> outputCollection =
-              (Collection<Node>) obj.getClass().getDeclaredConstructor().newInstance();
-          for (PropertyEdge propertyEdge : (Collection<PropertyEdge>) obj) {
-            if (outgoing) {
-              outputCollection.add(propertyEdge.getEnd());
-            } else {
-              outputCollection.add(propertyEdge.getStart());
-            }
-          }
-          return outputCollection;
-        } catch (InstantiationException
-            | IllegalAccessException
-            | InvocationTargetException
-            | NoSuchMethodException e) {
-          e.printStackTrace();
-        }
-      }
-    }
-    return obj;
-  }
-
   /**
    * Calls handler function of all super-classes of the current node to get the AST children of the
    * node.
@@ -147,7 +114,7 @@ public class SubgraphWalker {
           if (field.getAnnotation(Relationship.class) != null) {
             boolean outgoing =
                 field.getAnnotation(Relationship.class).direction().equals("OUTGOING");
-            obj = unwrapPropertyEdge(obj, outgoing);
+            obj = PropertyEdge.unwrapPropertyEdge(obj, outgoing);
           }
 
           if (obj instanceof Node) {

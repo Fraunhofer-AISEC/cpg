@@ -2,9 +2,11 @@ package de.fraunhofer.aisec.cpg.processing.strategy;
 
 import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.SubGraph;
+import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import java.lang.reflect.Field;
 import java.util.*;
 import org.checkerframework.checker.nullness.qual.NonNull;
+import org.neo4j.ogm.annotation.Relationship;
 
 /** Strategies (iterators) for traversing graphs to be used by visitors. */
 public class Strategy {
@@ -93,6 +95,12 @@ public class Strategy {
           // skip, if null
           if (obj == null) {
             continue;
+          }
+
+          if (field.getAnnotation(Relationship.class) != null) {
+            boolean outgoing =
+                field.getAnnotation(Relationship.class).direction().equals("OUTGOING");
+            obj = PropertyEdge.unwrapPropertyEdge(obj, outgoing);
           }
 
           if (obj instanceof Node) {

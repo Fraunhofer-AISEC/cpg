@@ -2,6 +2,7 @@ package de.fraunhofer.aisec.cpg.graph.edge;
 
 import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.Persistable;
+import java.lang.reflect.InvocationTargetException;
 import java.util.*;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
@@ -73,6 +74,74 @@ public class PropertyEdge implements Persistable {
 
   public Node getStart() {
     return start;
+  }
+
+  public static List<PropertyEdge> applyIndexProperty(List<PropertyEdge> propertyEdges) {
+    int counter = 0;
+    for (PropertyEdge propertyEdge : propertyEdges) {
+      propertyEdge.addProperty(Properties.Index, counter);
+      counter++;
+    }
+    return propertyEdges;
+  }
+
+  public static List<PropertyEdge> transformIntoPropertyEdgeList(
+      List<? extends Node> nodes, Node commonRelationshipNode, boolean outgoing) {
+    List<PropertyEdge> propertyEdges = new ArrayList<>();
+    for (Node n : nodes) {
+      if (outgoing) {
+        propertyEdges.add(new PropertyEdge(commonRelationshipNode, n));
+      } else {
+        propertyEdges.add(new PropertyEdge(n, commonRelationshipNode));
+      }
+    }
+    return propertyEdges;
+  }
+
+  public static Object unwrapPropertyEdge(Object obj, Boolean outgoing) {
+    if (obj instanceof PropertyEdge) {
+      if (outgoing) {
+        return ((PropertyEdge) obj).getEnd();
+      } else {
+        return ((PropertyEdge) obj).getStart();
+      }
+    } else if (obj instanceof Collection && ((Collection<?>) obj).size() > 0) {
+      Object element = ((Collection<?>) obj).stream().findAny().get();
+      if (element instanceof PropertyEdge) {
+        try {
+          Collection<Node> outputCollection =
+              (Collection<Node>) obj.getClass().getDeclaredConstructor().newInstance();
+          for (PropertyEdge propertyEdge : (Collection<PropertyEdge>) obj) {
+            if (outgoing) {
+              outputCollection.add(propertyEdge.getEnd());
+            } else {
+              outputCollection.add(propertyEdge.getStart());
+            }
+          }
+          return outputCollection;
+        } catch (InstantiationException
+            | IllegalAccessException
+            | InvocationTargetException
+            | NoSuchMethodException e) {
+          e.printStackTrace();
+        }
+      }
+    }
+    return obj;
+  }
+
+  public static List<PropertyEdge> removeElementFromList(
+      List<PropertyEdge> propertyEdges, Node element, boolean end) {
+    List<PropertyEdge> newPropertyEdges = new ArrayList<>();
+    for (PropertyEdge propertyEdge : propertyEdges) {
+      if (end && !propertyEdge.getEnd().equals(element)) {
+        newPropertyEdges.add(propertyEdge);
+      }
+      if (!end && !propertyEdge.getStart().equals(element)) {
+        newPropertyEdges.add(propertyEdge);
+      }
+    }
+    return applyIndexProperty(newPropertyEdges);
   }
 
   /**
