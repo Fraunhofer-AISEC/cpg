@@ -243,15 +243,120 @@ class DFGTest {
         TestUtils.analyze(List.of(topLevel.resolve("unaryoperator.cpp").toFile()), topLevel, true);
 
     UnaryOperator rwUnaryOperator =
-        TestUtils.findByUniqueName(TestUtils.subnodesOfType(result, UnaryOperator.class), "++");
+            TestUtils.findByUniqueName(TestUtils.subnodesOfType(result, UnaryOperator.class), "++");
     DeclaredReferenceExpression expression =
-        TestUtils.findByUniqueName(
-            TestUtils.subnodesOfType(result, DeclaredReferenceExpression.class), "i");
+            TestUtils.findByUniqueName(
+                    TestUtils.subnodesOfType(result, DeclaredReferenceExpression.class), "i");
 
     Set<Node> prevDFGOperator = rwUnaryOperator.getPrevDFG();
     Set<Node> nextDFGOperator = rwUnaryOperator.getNextDFG();
 
     assertTrue(prevDFGOperator.contains(expression));
     assertTrue(nextDFGOperator.contains(expression));
+  }
+
+  /**
+   * Ensures that if there is an assignment like a = a + b the replacement of the current value of
+   * the VariableDeclaration is delayed until the entire assignment has been traversed. This is
+   * necessary, since if the replacement was not delayed the rhs a would have an incoming dfg edge
+   * from a + b
+   *
+   * @throws Exception
+   */
+  @Test
+  void testDelayedAssignment() throws Exception {
+    Path topLevel = Path.of("src", "test", "resources", "dfg");
+    List<TranslationUnitDeclaration> result =
+            TestUtils.analyze(
+                    List.of(topLevel.resolve("DelayedAssignmentAfterRHS.java").toFile()), topLevel, true);
+
+    BinaryOperator binaryOperatorAssignment =
+            TestUtils.findByUniqueName(TestUtils.subnodesOfType(result, BinaryOperator.class), "=");
+
+    BinaryOperator binaryOperatorAddition =
+            TestUtils.findByUniqueName(TestUtils.subnodesOfType(result, BinaryOperator.class), "+");
+
+    VariableDeclaration varA =
+            TestUtils.findByUniqueName(
+                    TestUtils.subnodesOfType(result, VariableDeclaration.class), "a");
+    VariableDeclaration varB =
+            TestUtils.findByUniqueName(
+                    TestUtils.subnodesOfType(result, VariableDeclaration.class), "b");
+
+    DeclaredReferenceExpression lhsA =
+            (DeclaredReferenceExpression) binaryOperatorAssignment.getLhs();
+    DeclaredReferenceExpression rhsA =
+            (DeclaredReferenceExpression) binaryOperatorAddition.getLhs();
+
+    DeclaredReferenceExpression b =
+            TestUtils.findByUniqueName(
+                    TestUtils.subnodesOfType(result, DeclaredReferenceExpression.class), "b");
+
+    Literal<?> literal0 =
+            TestUtils.findByPredicate(
+                    TestUtils.subnodesOfType(result, Literal.class), l -> l.getValue().equals(0))
+                    .get(0);
+
+    Literal<?> literal1 =
+            TestUtils.findByPredicate(
+                    TestUtils.subnodesOfType(result, Literal.class), l -> l.getValue().equals(1))
+                    .get(0);
+
+    assertEquals(0, varA.getNextDFG().size()); // No outgoing DFG edges from VariableDeclaration a
+    assertEquals(0, varB.getNextDFG().size()); // No outgoing DFG edges from VariableDeclaration b
+
+    // Check that the replacement of the current value for VariableDeclaration a is delayed until
+    // the assignment is completed. This means that the DeclaredReferenceExpression on the rhs must
+    // contain a prev dfg edge to the previous valid value for VariableDeclaration a (literal 0)
+    assertEquals(1, rhsA.getPrevDFG().size());
+    assertTrue(rhsA.getPrevDFG().contains(literal0));
+
+    // Check outgoing dfg edges of literal 0 (VariableDeclaration a initializer and rhs expression
+    // of a = a + b
+    assertEquals(2, literal0.getNextDFG().size());
+    assertEquals(0, literal0.getPrevDFG().size());
+    assertTrue(literal0.getNextDFG().contains(varA));
+
+    // Check incoming dfg edges of VariableDeclaration a (lhs of a = a + b, 0 and expr a + b
+    assertEquals(3, varA.getPrevDFG().size());
+    assertTrue(varA.getPrevDFG().contains(lhsA));
+    assertTrue(varA.getPrevDFG().contains(binaryOperatorAddition));
+    assertTrue(varA.getPrevDFG().contains(literal0));
+
+    // Check incoming dfg edges in binaryOperator + (DeclaredReferenceExpression a and b)
+    assertEquals(2, binaryOperatorAddition.getPrevDFG().size());
+    assertTrue(binaryOperatorAddition.getPrevDFG().contains(b));
+    assertTrue(binaryOperatorAddition.getPrevDFG().contains(rhsA));
+
+    // Check outgoing dfg edges from binaryOperator + (lhs a from a = a + b and into
+    // VariableDeclaration a)
+    assertEquals(2, binaryOperatorAddition.getNextDFG().size());
+    assertTrue(binaryOperatorAddition.getNextDFG().contains(varA));
+    assertTrue(binaryOperatorAddition.getNextDFG().contains(lhsA));
+
+    // Check outgoing dfg edges of literal1 (VariableDeclaration b and DeclaredReferenceExpression
+    // b)
+    assertEquals(2, literal1.getNextDFG().size());
+    assertTrue(literal1.getNextDFG().contains(varB));
+    assertTrue(literal1.getNextDFG().contains(b));
+  }
+
+  /**
+   * Tests that there are no outgoing DFG edges from a VariableDeclaration
+   *
+   * @throws Exception
+   */
+  @Test
+  void testNoOutgoingDFGFromVariableDeclaration() throws Exception {
+    Path topLevel = Path.of("src", "test", "resources", "dfg");
+    List<TranslationUnitDeclaration> result =
+            TestUtils.analyze(List.of(topLevel.resolve("BasicSlice.java").toFile()), topLevel, true);
+
+    VariableDeclaration varA =
+            TestUtils.findByUniqueName(
+                    TestUtils.subnodesOfType(result, VariableDeclaration.class), "a");
+
+    assertEquals(0, varA.getNextDFG().size());
+    assertEquals(7, varA.getPrevDFG().size());
   }
 }
