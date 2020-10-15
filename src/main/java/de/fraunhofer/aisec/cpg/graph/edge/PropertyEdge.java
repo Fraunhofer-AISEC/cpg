@@ -130,6 +130,18 @@ public class PropertyEdge implements Persistable {
     return obj;
   }
 
+  public static List<? extends Node> getTarget(List<PropertyEdge> propertyEdges, boolean outgoing) {
+    List<Node> targets = new ArrayList<>();
+    for (PropertyEdge propertyEdge : propertyEdges) {
+      if (outgoing) {
+        targets.add(propertyEdge.getEnd());
+      } else {
+        targets.add(propertyEdge.getStart());
+      }
+    }
+    return targets;
+  }
+
   public static List<PropertyEdge> removeElementFromList(
       List<PropertyEdge> propertyEdges, Node element, boolean end) {
     List<PropertyEdge> newPropertyEdges = new ArrayList<>();

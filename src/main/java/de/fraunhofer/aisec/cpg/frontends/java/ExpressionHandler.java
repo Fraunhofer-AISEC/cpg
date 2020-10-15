@@ -267,7 +267,7 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
         declaration.getNextEOG();
       }
       lang.setCodeAndRegion(declaration, variable);
-      declarationStatement.getDeclarations().add(declaration);
+      declarationStatement.addToPropertyEdgeDeclaration(declaration);
 
       lang.getScopeManager().addDeclaration(declaration);
     }
