@@ -140,6 +140,9 @@ public class DeclarationHandler
     addImplicitReturn(body);
 
     declaration.setBody(this.lang.getStatementHandler().handle(body));
+
+    lang.processAnnotations(declaration, constructorDecl);
+
     lang.getScopeManager().leaveScope(declaration);
     return declaration;
   }
@@ -192,6 +195,9 @@ public class DeclarationHandler
     addImplicitReturn(body);
 
     functionDeclaration.setBody(this.lang.getStatementHandler().handle(body));
+
+    lang.processAnnotations(functionDeclaration, methodDecl);
+
     lang.getScopeManager().leaveScope(functionDeclaration);
     return functionDeclaration;
   }
@@ -272,6 +278,9 @@ public class DeclarationHandler
       recordDeclaration.getConstructors().add(constructorDeclaration);
       lang.getScopeManager().addDeclaration(constructorDeclaration);
     }
+
+    lang.processAnnotations(recordDeclaration, classInterDecl);
+
     lang.getScopeManager().leaveScope(recordDeclaration);
     return recordDeclaration;
   }
@@ -316,6 +325,8 @@ public class DeclarationHandler
             initializer,
             false);
     lang.getScopeManager().addDeclaration(fieldDeclaration);
+
+    this.lang.processAnnotations(fieldDeclaration, fieldDecl);
 
     return fieldDeclaration;
   }

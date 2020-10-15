@@ -695,4 +695,14 @@ public class NodeBuilder {
 
     return annotation;
   }
+
+  public static AnnotationMember newAnnotationMember(
+      String name, Expression value, @NonNull String code) {
+    var member = new AnnotationMember();
+    member.setName(name);
+    member.setValue(value);
+    member.setCode(code);
+
+    return member;
+  }
 }
