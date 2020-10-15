@@ -419,6 +419,7 @@ public class CXXLanguageFrontend extends LanguageFrontend {
     List<AnnotationMember> list = new ArrayList<>();
 
     for (IASTToken token : tokenList.getTokens()) {
+      // skip commas and such
       if (token.getTokenType() == 6) {
         continue;
       }
@@ -435,12 +436,15 @@ public class CXXLanguageFrontend extends LanguageFrontend {
     Expression expression;
     switch (token.getTokenType()) {
       case 1:
+        // a variable
         expression = newDeclaredReferenceExpression(code, UnknownType.getUnknownType(), code);
         break;
       case 2:
+        // an integer
         expression = newLiteral(Integer.parseInt(code), TypeParser.createFrom("int", true), code);
         break;
       case 130:
+        // a string
         expression =
             newLiteral(
                 code.length() >= 2 ? code.substring(1, code.length() - 1) : "",
