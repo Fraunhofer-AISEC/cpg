@@ -79,7 +79,9 @@ public class Statement extends Node implements DeclarationHolder {
       return false;
     }
     Statement statement = (Statement) o;
-    return super.equals(statement) && Objects.equals(this.getLocals(), statement.getLocals()) && Objects.equals(this.locals, statement.locals);
+    return super.equals(statement)
+        && Objects.equals(this.getLocals(), statement.getLocals())
+        && Objects.equals(this.locals, statement.locals);
   }
 
   @Override
