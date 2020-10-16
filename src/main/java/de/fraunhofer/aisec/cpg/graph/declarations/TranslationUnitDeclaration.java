@@ -49,7 +49,7 @@ public class TranslationUnitDeclaration extends Declaration implements Declarati
   @Relationship(value = "declarations", direction = "OUTGOING")
   @SubGraph("AST")
   @NonNull
-  private List<Declaration> declarations = new ArrayList<>();
+  private List<PropertyEdge> declarations = new ArrayList<>();
 
   /** A list of includes within this unit. */
   @Relationship(value = "includes", direction = "OUTGOING")
@@ -73,14 +73,14 @@ public class TranslationUnitDeclaration extends Declaration implements Declarati
    */
   @Nullable
   public <T extends Declaration> T getDeclarationAs(int i, Class<T> clazz) {
-    Declaration declaration = this.declarations.get(i);
+    Declaration declaration = (Declaration) this.declarations.get(i).getEnd();
 
     if (declaration == null) {
       return null;
     }
 
     return declaration.getClass().isAssignableFrom(clazz)
-        ? clazz.cast(this.declarations.get(i))
+        ? clazz.cast(this.declarations.get(i).getEnd())
         : null;
   }
 
@@ -100,6 +100,7 @@ public class TranslationUnitDeclaration extends Declaration implements Declarati
   public <T extends Declaration> Set<T> getDeclarationsByName(
       @NonNull String name, @NonNull Class<T> clazz) {
     return this.declarations.stream()
+        .map(pe -> (Declaration) pe.getEnd())
         .filter(declaration -> clazz.isAssignableFrom(declaration.getClass()))
         .map(clazz::cast)
         .filter(declaration -> Objects.equals(declaration.getName(), name))
@@ -108,7 +109,11 @@ public class TranslationUnitDeclaration extends Declaration implements Declarati
 
   @NonNull
   public List<Declaration> getDeclarations() {
-    return declarations;
+    List<Declaration> target = new ArrayList<>();
+    for (PropertyEdge propertyEdge : this.declarations) {
+      target.add((Declaration) propertyEdge.getEnd());
+    }
+    return target;
   }
 
   @NonNull
@@ -140,7 +145,9 @@ public class TranslationUnitDeclaration extends Declaration implements Declarati
       namespaces.add(propertyEdgeNamespace);
     }
 
-    addIfNotContains(declarations, declaration);
+    PropertyEdge propertyEdgeDeclaration = new PropertyEdge(this, declaration);
+    propertyEdgeDeclaration.addProperty(Properties.Index, this.declarations.size());
+    addIfNotContains(declarations, propertyEdgeDeclaration);
   }
 
   @Override
@@ -163,6 +170,7 @@ public class TranslationUnitDeclaration extends Declaration implements Declarati
     TranslationUnitDeclaration that = (TranslationUnitDeclaration) o;
     return super.equals(that)
         && Objects.equals(declarations, that.declarations)
+        && Objects.equals(this.getDeclarations(), that.getDeclarations())
         && Objects.equals(includes, that.includes)
         && Objects.equals(this.getIncludes(), that.getIncludes())
         && Objects.equals(namespaces, that.namespaces)

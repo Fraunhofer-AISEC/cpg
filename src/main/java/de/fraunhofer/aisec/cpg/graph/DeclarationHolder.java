@@ -27,6 +27,7 @@
 package de.fraunhofer.aisec.cpg.graph;
 
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration;
+import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import java.util.Collection;
 import org.checkerframework.checker.nullness.qual.NonNull;
 
@@ -44,6 +45,12 @@ public interface DeclarationHolder {
   default <N extends Declaration> void addIfNotContains(Collection<N> collection, N declaration) {
     if (!collection.contains(declaration)) {
       collection.add(declaration);
+    }
+  }
+
+  default void addIfNotContains(Collection<PropertyEdge> collection, PropertyEdge propertyEdge) {
+    if (!collection.contains(propertyEdge)) {
+      collection.add(propertyEdge);
     }
   }
 }
