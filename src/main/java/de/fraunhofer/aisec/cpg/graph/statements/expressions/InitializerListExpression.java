@@ -38,11 +38,13 @@ import de.fraunhofer.aisec.cpg.graph.types.UnknownType;
 import java.util.*;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.builder.ToStringBuilder;
+import org.neo4j.ogm.annotation.Relationship;
 
 /** A list of initializer expressions. */
 public class InitializerListExpression extends Expression implements TypeListener {
 
   /** The list of initializers. */
+  @Relationship(value = "initializers", direction = "OUTGOING")
   @SubGraph("AST")
   private List<PropertyEdge> initializers = new ArrayList<>();
 

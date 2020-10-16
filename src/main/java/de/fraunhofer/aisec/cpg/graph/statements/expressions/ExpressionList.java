@@ -34,10 +34,11 @@ import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import de.fraunhofer.aisec.cpg.graph.statements.Statement;
 import de.fraunhofer.aisec.cpg.graph.types.Type;
 import java.util.*;
+import org.neo4j.ogm.annotation.Relationship;
 
 public class ExpressionList extends Expression implements TypeListener {
 
-  @org.neo4j.ogm.annotation.Relationship(value = "SUBEXPR")
+  @Relationship(value = "SUBEXPR", direction = "OUTGOING")
   @SubGraph("AST")
   private List<PropertyEdge> expressions = new ArrayList<>();
 
