@@ -29,6 +29,8 @@ package de.fraunhofer.aisec.cpg.graph.declarations;
 import de.fraunhofer.aisec.cpg.graph.DeclarationHolder;
 import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.SubGraph;
+import de.fraunhofer.aisec.cpg.graph.edge.Properties;
+import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import de.fraunhofer.aisec.cpg.graph.types.Type;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -41,6 +43,7 @@ import java.util.stream.Stream;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
+import org.neo4j.ogm.annotation.Relationship;
 import org.neo4j.ogm.annotation.Transient;
 
 /** Represents a C++ union/struct/class or Java class */
@@ -49,8 +52,9 @@ public class RecordDeclaration extends Declaration implements DeclarationHolder 
   /** The kind, i.e. struct, class, union or enum. */
   private String kind;
 
+  @Relationship(value = "fields", direction = "OUTGOING")
   @SubGraph("AST")
-  private List<FieldDeclaration> fields = new ArrayList<>();
+  private List<PropertyEdge> fields = new ArrayList<>();
 
   @SubGraph("AST")
   private List<MethodDeclaration> methods = new ArrayList<>();
@@ -93,20 +97,42 @@ public class RecordDeclaration extends Declaration implements DeclarationHolder 
   }
 
   public List<FieldDeclaration> getFields() {
-    return fields;
+    List<FieldDeclaration> target = new ArrayList<>();
+    for (PropertyEdge propertyEdge : this.fields) {
+      target.add((FieldDeclaration) propertyEdge.getEnd());
+    }
+    return target;
+  }
+
+  public void addField(FieldDeclaration fieldDeclaration) {
+    PropertyEdge propertyEdge = new PropertyEdge(this, fieldDeclaration);
+    propertyEdge.addProperty(Properties.Index, fieldDeclaration);
+    this.fields.add(propertyEdge);
+  }
+
+  public void removeField(FieldDeclaration fieldDeclaration) {
+    this.fields = PropertyEdge.removeElementFromList(this.fields, fieldDeclaration, true);
   }
 
   @Nullable
   public FieldDeclaration getField(String name) {
-    return fields.stream().filter(f -> f.getName().equals(name)).findFirst().orElse(null);
+    return fields.stream()
+        .map(pe -> (FieldDeclaration) pe.getEnd())
+        .filter(f -> f.getName().equals(name))
+        .findFirst()
+        .orElse(null);
   }
 
   public void setFields(List<FieldDeclaration> fields) {
-    this.fields = fields;
+    this.fields = PropertyEdge.transformIntoPropertyEdgeList(fields, this, true);
   }
 
   public FieldDeclaration getThis() {
-    return fields.stream().filter(f -> f.getName().equals("this")).findFirst().orElse(null);
+    return fields.stream()
+        .map(p -> (FieldDeclaration) p.getEnd())
+        .filter(f -> f.getName().equals("this"))
+        .findFirst()
+        .orElse(null);
   }
 
   public List<MethodDeclaration> getMethods() {
@@ -238,6 +264,7 @@ public class RecordDeclaration extends Declaration implements DeclarationHolder 
     return super.equals(that)
         && Objects.equals(kind, that.kind)
         && Objects.equals(fields, that.fields)
+        && Objects.equals(this.getFields(), that.getFields())
         && Objects.equals(methods, that.methods)
         && Objects.equals(constructors, that.constructors)
         && Objects.equals(records, that.records)
@@ -253,12 +280,15 @@ public class RecordDeclaration extends Declaration implements DeclarationHolder 
 
   @Override
   public void addDeclaration(@NonNull Declaration declaration) {
+    PropertyEdge propertyEdge;
     if (declaration instanceof ConstructorDeclaration) {
       addIfNotContains(this.constructors, (ConstructorDeclaration) declaration);
     } else if (declaration instanceof MethodDeclaration) {
       addIfNotContains(this.methods, (MethodDeclaration) declaration);
     } else if (declaration instanceof FieldDeclaration) {
-      addIfNotContains(this.fields, (FieldDeclaration) declaration);
+      propertyEdge = new PropertyEdge(this, declaration);
+      propertyEdge.addProperty(Properties.Index, this.fields.size());
+      addIfNotContains(this.fields, propertyEdge);
     } else if (declaration instanceof RecordDeclaration) {
       addIfNotContains(this.records, (RecordDeclaration) declaration);
     }
