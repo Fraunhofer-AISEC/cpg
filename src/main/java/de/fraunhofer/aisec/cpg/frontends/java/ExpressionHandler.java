@@ -714,7 +714,7 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
 
       argument.setArgumentIndex(i);
 
-      callExpression.getArguments().add(argument);
+      callExpression.addArgument(argument);
     }
 
     return callExpression;
