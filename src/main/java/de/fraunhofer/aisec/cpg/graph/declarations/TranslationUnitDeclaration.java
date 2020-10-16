@@ -55,7 +55,7 @@ public class TranslationUnitDeclaration extends Declaration implements Declarati
   @Relationship(value = "includes", direction = "OUTGOING")
   @SubGraph("AST")
   @NonNull
-  private List<Declaration> includes = new ArrayList<>();
+  private List<PropertyEdge> includes = new ArrayList<>();
 
   /** A list of namespaces within this unit. */
   @Relationship(value = "namespaces", direction = "OUTGOING")
@@ -113,7 +113,11 @@ public class TranslationUnitDeclaration extends Declaration implements Declarati
 
   @NonNull
   public List<Declaration> getIncludes() {
-    return Collections.unmodifiableList(includes);
+    List<Declaration> targets = new ArrayList<>();
+    for (PropertyEdge propertyEdge : this.includes) {
+      targets.add((Declaration) propertyEdge.getEnd());
+    }
+    return Collections.unmodifiableList(targets);
   }
 
   @NonNull
@@ -127,7 +131,9 @@ public class TranslationUnitDeclaration extends Declaration implements Declarati
 
   public void addDeclaration(@NonNull Declaration declaration) {
     if (declaration instanceof IncludeDeclaration) {
-      includes.add(declaration);
+      PropertyEdge propertyEdgeInclude = new PropertyEdge(this, declaration);
+      propertyEdgeInclude.addProperty(Properties.Index, this.includes.size());
+      includes.add(propertyEdgeInclude);
     } else if (declaration instanceof NamespaceDeclaration) {
       PropertyEdge propertyEdgeNamespace = new PropertyEdge(this, declaration);
       propertyEdgeNamespace.addProperty(Properties.Index, this.namespaces.size());
@@ -158,6 +164,7 @@ public class TranslationUnitDeclaration extends Declaration implements Declarati
     return super.equals(that)
         && Objects.equals(declarations, that.declarations)
         && Objects.equals(includes, that.includes)
+        && Objects.equals(this.getIncludes(), that.getIncludes())
         && Objects.equals(namespaces, that.namespaces)
         && Objects.equals(this.getNamespaces(), that.getNamespaces());
   }
