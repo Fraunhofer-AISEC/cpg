@@ -38,6 +38,7 @@ import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement;
 import java.lang.annotation.AnnotationFormatError;
 import java.lang.reflect.Field;
+import java.lang.reflect.ParameterizedType;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -82,6 +83,16 @@ public class SubgraphWalker {
     return new ArrayList<>();
   }
 
+  private static boolean checkForPropertyEdge(Field f, Object obj) {
+    if (obj instanceof PropertyEdge) {
+      return true;
+    } else if (obj instanceof Collection<?>) {
+      return List.of(((ParameterizedType) f.getGenericType()).getActualTypeArguments())
+          .contains(PropertyEdge.class);
+    }
+    return false;
+  }
+
   /**
    * Calls handler function of all super-classes of the current node to get the AST children of the
    * node.
@@ -111,9 +122,12 @@ public class SubgraphWalker {
             continue;
           }
 
+          boolean outgoing = true; // default
           if (field.getAnnotation(Relationship.class) != null) {
-            boolean outgoing =
-                field.getAnnotation(Relationship.class).direction().equals("OUTGOING");
+            outgoing = field.getAnnotation(Relationship.class).direction().equals("OUTGOING");
+          }
+
+          if (checkForPropertyEdge(field, obj)) {
             obj = PropertyEdge.unwrapPropertyEdge(obj, outgoing);
           }
 
