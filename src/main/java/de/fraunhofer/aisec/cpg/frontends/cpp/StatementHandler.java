@@ -337,7 +337,7 @@ class StatementHandler extends Handler<Statement, IASTStatement, CXXLanguageFron
     for (IASTStatement statement : ctx.getStatements()) {
       Statement handled = handle(statement);
       if (handled != null) {
-        compoundStatement.getStatements().add(handled);
+        compoundStatement.addStatement(handled);
       }
     }
     lang.getScopeManager().leaveScope(compoundStatement);
