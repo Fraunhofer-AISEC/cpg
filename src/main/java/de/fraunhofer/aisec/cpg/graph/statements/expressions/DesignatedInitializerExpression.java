@@ -33,12 +33,14 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import org.apache.commons.lang3.builder.ToStringBuilder;
+import org.neo4j.ogm.annotation.Relationship;
 
 public class DesignatedInitializerExpression extends Expression {
 
   @SubGraph("AST")
   private Expression rhs;
 
+  @Relationship(value = "lhs", direction = "OUTGOING")
   @SubGraph("AST")
   private List<PropertyEdge> lhs;
 
