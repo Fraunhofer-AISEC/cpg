@@ -104,7 +104,9 @@ public class DeclarationStatement extends Statement {
       return false;
     }
     DeclarationStatement that = (DeclarationStatement) o;
-    return super.equals(that) && Objects.equals(declarations, that.declarations) && Objects.equals(this.getDeclarations(), that.getDeclarations());
+    return super.equals(that)
+        && Objects.equals(declarations, that.declarations)
+        && Objects.equals(this.getDeclarations(), that.getDeclarations());
   }
 
   @Override
