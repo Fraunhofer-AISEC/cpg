@@ -50,8 +50,8 @@ public interface DeclarationHolder {
 
   default void addIfNotContains(Collection<PropertyEdge> collection, PropertyEdge propertyEdge) {
     boolean contains = false;
-    for (PropertyEdge pEdge : collection) {
-      if (pEdge.getEnd().equals(propertyEdge.getEnd())) {
+    for (PropertyEdge element : collection) {
+      if (element.getEnd().equals(propertyEdge.getEnd())) {
         contains = true;
         break;
       }

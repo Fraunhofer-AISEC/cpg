@@ -380,7 +380,7 @@ public class VariableUsageResolver extends Pass {
       FieldDeclaration declaration =
           NodeBuilder.newFieldDeclaration(
               name, type, Collections.emptyList(), "", null, null, false);
-      declarations.add(declaration);
+      recordMap.get(base).addField(declaration);
       declaration.setImplicit(true);
       // lang.getScopeManager().addValueDeclaration(declaration);
       return declaration;

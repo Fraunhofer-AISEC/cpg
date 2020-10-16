@@ -106,12 +106,12 @@ public class RecordDeclaration extends Declaration implements DeclarationHolder 
 
   public void addField(FieldDeclaration fieldDeclaration) {
     PropertyEdge propertyEdge = new PropertyEdge(this, fieldDeclaration);
-    propertyEdge.addProperty(Properties.Index, fieldDeclaration);
-    this.fields.add(propertyEdge);
+    propertyEdge.addProperty(Properties.Index, this.fields.size());
+    addIfNotContains(this.fields, propertyEdge);
   }
 
   public void removeField(FieldDeclaration fieldDeclaration) {
-    this.fields = PropertyEdge.removeElementFromList(this.fields, fieldDeclaration, true);
+    this.fields.removeIf(propertyEdge -> propertyEdge.getEnd().equals(fieldDeclaration));
   }
 
   @Nullable
