@@ -41,7 +41,7 @@ public class LocationConverter implements CompositeAttributeConverter<PhysicalLo
   public Map<String, ?> toGraphProperties(PhysicalLocation value) {
     Map<String, Object> properties = new HashMap<>();
     if (value != null) {
-      properties.put("artifact", value.getArtifactLocation().getUri());
+      properties.put("artifact", value.getArtifactLocation().getUri().toString());
       properties.put("startLine", value.getRegion().getStartLine());
       properties.put("endLine", value.getRegion().getEndLine());
       properties.put("startColumn", value.getRegion().getStartColumn());
@@ -57,7 +57,7 @@ public class LocationConverter implements CompositeAttributeConverter<PhysicalLo
       int endLine = toIntExact((Integer) value.get("endLine"));
       int startColumn = toIntExact((Integer) value.get("startColumn"));
       int endColumn = toIntExact((Integer) value.get("endColumn"));
-      URI uri = (URI) value.get("artifact");
+      URI uri = URI.create((String) value.get("artifact"));
 
       return new PhysicalLocation(uri, new Region(startLine, startColumn, endLine, endColumn));
     } catch (NullPointerException e) {
