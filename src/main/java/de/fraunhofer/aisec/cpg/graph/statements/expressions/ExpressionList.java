@@ -29,6 +29,8 @@ package de.fraunhofer.aisec.cpg.graph.statements.expressions;
 import de.fraunhofer.aisec.cpg.graph.HasType;
 import de.fraunhofer.aisec.cpg.graph.HasType.TypeListener;
 import de.fraunhofer.aisec.cpg.graph.SubGraph;
+import de.fraunhofer.aisec.cpg.graph.edge.Properties;
+import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import de.fraunhofer.aisec.cpg.graph.statements.Statement;
 import de.fraunhofer.aisec.cpg.graph.types.Type;
 import java.util.*;
@@ -37,22 +39,28 @@ public class ExpressionList extends Expression implements TypeListener {
 
   @org.neo4j.ogm.annotation.Relationship(value = "SUBEXPR")
   @SubGraph("AST")
-  private List<Statement> expressions = new ArrayList<>();
+  private List<PropertyEdge> expressions = new ArrayList<>();
 
   public List<Statement> getExpressions() {
-    return expressions;
+    List<Statement> target = new ArrayList<>();
+    for (PropertyEdge propertyEdge : this.expressions) {
+      target.add((Statement) propertyEdge.getEnd());
+    }
+    return target;
   }
 
   public void setExpressions(List<Statement> expressions) {
     if (!this.expressions.isEmpty()) {
-      Statement lastExpression = this.expressions.get(this.expressions.size() - 1);
+      Statement lastExpression =
+          (Statement) this.expressions.get(this.expressions.size() - 1).getEnd();
       if (lastExpression instanceof HasType)
         ((HasType) lastExpression).unregisterTypeListener(this);
       this.removePrevDFG(lastExpression);
     }
-    this.expressions = expressions;
+    this.expressions = PropertyEdge.transformIntoPropertyEdgeList(expressions, this, true);
     if (!this.expressions.isEmpty()) {
-      Statement lastExpression = this.expressions.get(this.expressions.size() - 1);
+      Statement lastExpression =
+          (Statement) this.expressions.get(this.expressions.size() - 1).getEnd();
       this.addPrevDFG(lastExpression);
       if (lastExpression instanceof HasType) ((HasType) lastExpression).registerTypeListener(this);
     }
@@ -60,12 +68,15 @@ public class ExpressionList extends Expression implements TypeListener {
 
   public void addExpression(Statement expression) {
     if (!this.expressions.isEmpty()) {
-      Statement lastExpression = this.expressions.get(this.expressions.size() - 1);
+      Statement lastExpression =
+          (Statement) this.expressions.get(this.expressions.size() - 1).getEnd();
       if (lastExpression instanceof HasType)
         ((HasType) lastExpression).unregisterTypeListener(this);
       this.removePrevDFG(lastExpression);
     }
-    this.expressions.add(expression);
+    PropertyEdge propertyEdge = new PropertyEdge(this, expression);
+    propertyEdge.addProperty(Properties.Index, this.expressions.size());
+    this.expressions.add(propertyEdge);
     this.addPrevDFG(expression);
     if (expression instanceof HasType) {
       ((HasType) expression).registerTypeListener(this);
@@ -96,7 +107,9 @@ public class ExpressionList extends Expression implements TypeListener {
       return false;
     }
     ExpressionList that = (ExpressionList) o;
-    return super.equals(that) && Objects.equals(expressions, that.expressions);
+    return super.equals(that)
+        && Objects.equals(expressions, that.expressions)
+        && Objects.equals(this.getExpressions(), that.getExpressions());
   }
 
   @Override
