@@ -395,9 +395,9 @@ public class VariableUsageResolver extends Pass {
       return null;
     }
     RecordDeclaration containingRecord = recordMap.get(base);
-    List<MethodDeclaration> declarations = containingRecord.getMethods();
+
     Optional<MethodDeclaration> target =
-        declarations.stream()
+        containingRecord.getMethods().stream()
             .filter(f -> f.getName().equals(name))
             .filter(f -> f.getType().equals(returnType))
             .filter(f -> f.hasSignature(signature))
@@ -407,7 +407,7 @@ public class VariableUsageResolver extends Pass {
           NodeBuilder.newMethodDeclaration(name, "", false, containingRecord);
       declaration.setType(returnType);
       declaration.setParameters(Util.createParameters(signature));
-      declarations.add(declaration);
+      containingRecord.addMethod(declaration);
       declaration.setImplicit(true);
       return declaration;
     } else {

@@ -174,7 +174,7 @@ public class ImportResolver extends Pass {
       targetMethod.setImplicit(true);
 
       base.addField(targetField);
-      base.getMethods().add(targetMethod);
+      base.addMethod(targetMethod);
       result.add(targetField);
       result.add(targetMethod);
     }

@@ -463,7 +463,7 @@ public class CallResolver extends Pass {
       dummy.setImplicit(true);
       List<ParamVariableDeclaration> params = Util.createParameters(call.getSignature());
       dummy.setParameters(params);
-      record.getMethods().add(dummy);
+      record.addMethod(dummy);
       curClass.getStaticImports().add(dummy);
       invokes.add(dummy);
     }
@@ -484,7 +484,7 @@ public class CallResolver extends Pass {
       dummy.setImplicit(true);
       dummy.setParameters(parameters);
 
-      containingRecord.getMethods().add(dummy);
+      containingRecord.addMethod(dummy);
       return dummy;
     } else {
       // function declaration, not inside a class

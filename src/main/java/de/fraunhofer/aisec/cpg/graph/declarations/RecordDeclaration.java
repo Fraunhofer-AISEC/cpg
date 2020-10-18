@@ -56,8 +56,9 @@ public class RecordDeclaration extends Declaration implements DeclarationHolder 
   @SubGraph("AST")
   private List<PropertyEdge> fields = new ArrayList<>();
 
+  @Relationship(value = "methods", direction = "OUTGOING")
   @SubGraph("AST")
-  private List<MethodDeclaration> methods = new ArrayList<>();
+  private List<PropertyEdge> methods = new ArrayList<>();
 
   @SubGraph("AST")
   private List<ConstructorDeclaration> constructors = new ArrayList<>();
@@ -136,11 +137,25 @@ public class RecordDeclaration extends Declaration implements DeclarationHolder 
   }
 
   public List<MethodDeclaration> getMethods() {
-    return methods;
+    List<MethodDeclaration> target = new ArrayList<>();
+    for (PropertyEdge propertyEdge : this.methods) {
+      target.add((MethodDeclaration) propertyEdge.getEnd());
+    }
+    return target;
+  }
+
+  public void addMethod(MethodDeclaration methodDeclaration) {
+    PropertyEdge propertyEdge = new PropertyEdge(this, methodDeclaration);
+    propertyEdge.addProperty(Properties.Index, this.methods.size());
+    addIfNotContains(this.methods, propertyEdge);
+  }
+
+  public void removeMethod(MethodDeclaration methodDeclaration) {
+    this.methods.removeIf(propertyEdge -> propertyEdge.getEnd().equals(methodDeclaration));
   }
 
   public void setMethods(List<MethodDeclaration> methods) {
-    this.methods = methods;
+    this.methods = PropertyEdge.transformIntoPropertyEdgeList(methods, this, true);
   }
 
   public List<ConstructorDeclaration> getConstructors() {
@@ -266,6 +281,7 @@ public class RecordDeclaration extends Declaration implements DeclarationHolder 
         && Objects.equals(fields, that.fields)
         && Objects.equals(this.getFields(), that.getFields())
         && Objects.equals(methods, that.methods)
+        && Objects.equals(this.getMethods(), that.getMethods())
         && Objects.equals(constructors, that.constructors)
         && Objects.equals(records, that.records)
         && Objects.equals(superClasses, that.superClasses)
@@ -284,7 +300,9 @@ public class RecordDeclaration extends Declaration implements DeclarationHolder 
     if (declaration instanceof ConstructorDeclaration) {
       addIfNotContains(this.constructors, (ConstructorDeclaration) declaration);
     } else if (declaration instanceof MethodDeclaration) {
-      addIfNotContains(this.methods, (MethodDeclaration) declaration);
+      propertyEdge = new PropertyEdge(this, declaration);
+      propertyEdge.addProperty(Properties.Index, this.methods.size());
+      addIfNotContains(this.methods, propertyEdge);
     } else if (declaration instanceof FieldDeclaration) {
       propertyEdge = new PropertyEdge(this, declaration);
       propertyEdge.addProperty(Properties.Index, this.fields.size());
