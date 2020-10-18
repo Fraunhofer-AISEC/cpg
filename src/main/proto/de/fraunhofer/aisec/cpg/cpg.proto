@@ -1,7 +1,7 @@
 syntax = "proto3";
 package ast_tree;
 
-option go_package = "github.com/Fraunhofer-AISEC/cpg-rpc/proto";
+option go_package = "github.com/Fraunhofer-AISEC/cpg-rpc/proto;proto";
 option java_package = "de.fraunhofer.aisec.cpg.frontends.grpc.messages";
 option java_multiple_files = true;
 
@@ -75,6 +75,7 @@ message ValueDeclaration {
 
   oneof value_declaration {
     VariableDeclaration variable_declaration = 3;
+    FunctionDeclaration function_declaration = 4;
     // TODO
   }
 }
@@ -86,11 +87,33 @@ message VariableDeclaration {
 }
 
 message NamespaceDeclaration {
-  repeated Declaration declarations = 1;
+  repeated NodeIndex declarations = 1;
+}
+
+message FunctionDeclaration {
+  NodeIndex body = 1;
 }
 
 message Statement {
   // TODO
+  oneof statement {
+    CompoundStatement compoundStatement = 1;
+    ReturnStatement returnStatement = 2;
+    Expression expression = 3;
+  }
+}
+
+message CompoundStatement {
+  repeated NodeIndex statements = 1;
+}
+
+message ReturnStatement {
+  NodeIndex expression = 1;
+}
+
+message Expression {
+  NodeIndex type = 1;
+  repeated NodeIndex possibleSubtypes = 2;
 }
 
 message Type {

@@ -40,7 +40,6 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.net.URI;
 import java.util.*;
-import java.util.stream.Collectors;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
@@ -69,14 +68,16 @@ public class GrpcLanguageFrontend extends LanguageFrontend {
       //    b. It will then iterate over its parts and check if they have been initialized
       //    c. If they have, it will use these references. If not, it will call the methods
 
-      List<Node> cpgNodes = new ArrayList<>(Collections.nCopies(response.getNodesList().size(), null));
-      Node node = NodeFactory.createNode(
-        response.getTranslationUnitDeclaration().getIndex(),
-        response.getNodesList(),
-        cpgNodes);
+      List<Node> cpgNodes =
+          new ArrayList<>(Collections.nCopies(response.getNodesList().size(), null));
+      Node node =
+          NodeFactory.createNode(
+              response.getTranslationUnitDeclaration().getIndex(),
+              response.getNodesList(),
+              cpgNodes);
 
       if (node instanceof TranslationUnitDeclaration) {
-        return (TranslationUnitDeclaration)node;
+        return (TranslationUnitDeclaration) node;
       } else {
         throw new TranslationException("Root node is not a TranslationUnitDeclaration");
       }
@@ -99,7 +100,7 @@ public class GrpcLanguageFrontend extends LanguageFrontend {
     // TODO
     Region region = new Region(0, 0, 0, 1); // +1 for SARIF compliance
 
-    return new PhysicalLocation(URI.create("/home/lennard/git/prototproto"), region);
+    return new PhysicalLocation(URI.create("/home/user/dummy/location"), region);
   }
 
   @Override
