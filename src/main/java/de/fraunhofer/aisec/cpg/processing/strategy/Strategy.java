@@ -97,9 +97,12 @@ public class Strategy {
             continue;
           }
 
+          boolean outgoing = true; // default
           if (field.getAnnotation(Relationship.class) != null) {
-            boolean outgoing =
-                field.getAnnotation(Relationship.class).direction().equals("OUTGOING");
+            outgoing = field.getAnnotation(Relationship.class).direction().equals("OUTGOING");
+          }
+
+          if (PropertyEdge.checkForPropertyEdge(field, obj)) {
             obj = PropertyEdge.unwrapPropertyEdge(obj, outgoing);
           }
 
