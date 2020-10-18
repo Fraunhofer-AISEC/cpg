@@ -403,7 +403,7 @@ public class ScopeManager {
             RecordDeclaration rec = (RecordDeclaration) declScope.getAstNode();
             rec.removeField((FieldDeclaration) declaration);
             rec.removeMethod((MethodDeclaration) declaration);
-            rec.getConstructors().remove(declaration);
+            rec.removeConstructor((ConstructorDeclaration) declaration);
             rec.getRecords().remove(declaration);
           } else if (declScope.getAstNode() instanceof FunctionDeclaration) {
             ((FunctionDeclaration) declScope.getAstNode()).getParameters().remove(declaration);

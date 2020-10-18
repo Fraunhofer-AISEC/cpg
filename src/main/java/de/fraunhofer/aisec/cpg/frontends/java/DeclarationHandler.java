@@ -253,7 +253,7 @@ public class DeclarationHandler
       } else if (decl instanceof com.github.javaparser.ast.body.ConstructorDeclaration) {
         de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDeclaration c =
             (de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDeclaration) handle(decl);
-        recordDeclaration.getConstructors().add(c);
+        recordDeclaration.addConstructor(c);
       } else if (decl instanceof com.github.javaparser.ast.body.ClassOrInterfaceDeclaration) {
         recordDeclaration.getRecords().add((RecordDeclaration) handle(decl));
       } else {
@@ -269,7 +269,7 @@ public class DeclarationHandler
       de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDeclaration constructorDeclaration =
           NodeBuilder.newConstructorDeclaration(
               recordDeclaration.getName(), recordDeclaration.getName(), recordDeclaration);
-      recordDeclaration.getConstructors().add(constructorDeclaration);
+      recordDeclaration.addConstructor(constructorDeclaration);
       lang.getScopeManager().addDeclaration(constructorDeclaration);
     }
     lang.getScopeManager().leaveScope(recordDeclaration);

@@ -508,7 +508,7 @@ public class CallResolver extends Pass {
         NodeBuilder.newConstructorDeclaration(containingRecord.getName(), "", containingRecord);
     dummy.setImplicit(true);
     dummy.setParameters(Util.createParameters(signature));
-    containingRecord.getConstructors().add(dummy);
+    containingRecord.addConstructor(dummy);
     return dummy;
   }
 
