@@ -1,18 +1,23 @@
 package de.fraunhofer.aisec.cpg.graph.types;
 
+import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import org.neo4j.ogm.annotation.Relationship;
 
 /**
  * FunctionPointerType represents FunctionPointers in CPP containing a list of parameters and a
  * return type.
  */
 public class FunctionPointerType extends Type {
-  private List<Type> parameters;
+  @Relationship(value = "parameters", direction = "OUTGOING")
+  private List<PropertyEdge> parameters;
+
   private Type returnType;
 
   public void setParameters(List<Type> parameters) {
-    this.parameters = parameters;
+    this.parameters = PropertyEdge.transformIntoPropertyEdgeList(parameters, this, true);
   }
 
   public void setReturnType(Type returnType) {
@@ -24,18 +29,22 @@ public class FunctionPointerType extends Type {
   public FunctionPointerType(
       Type.Qualifier qualifier, Type.Storage storage, List<Type> parameters, Type returnType) {
     super("", storage, qualifier);
-    this.parameters = parameters;
+    this.parameters = PropertyEdge.transformIntoPropertyEdgeList(parameters, this, true);
     this.returnType = returnType;
   }
 
   public FunctionPointerType(Type type, List<Type> parameters, Type returnType) {
     super(type);
-    this.parameters = parameters;
+    this.parameters = PropertyEdge.transformIntoPropertyEdgeList(parameters, this, true);
     this.returnType = returnType;
   }
 
   public List<Type> getParameters() {
-    return parameters;
+    List<Type> target = new ArrayList<>();
+    for (PropertyEdge propertyEdge : this.parameters) {
+      target.add((Type) propertyEdge.getEnd());
+    }
+    return target;
   }
 
   public Type getReturnType() {
@@ -54,7 +63,8 @@ public class FunctionPointerType extends Type {
 
   @Override
   public Type duplicate() {
-    return new FunctionPointerType(this, this.parameters, this.returnType);
+    return new FunctionPointerType(
+        this, (List<Type>) PropertyEdge.getTarget(this.parameters, true), this.returnType);
   }
 
   @Override
@@ -79,6 +89,7 @@ public class FunctionPointerType extends Type {
     if (!super.equals(o)) return false;
     FunctionPointerType that = (FunctionPointerType) o;
     return Objects.equals(parameters, that.parameters)
+        && Objects.equals(this.getParameters(), that.getParameters())
         && Objects.equals(returnType, that.returnType);
   }
 
