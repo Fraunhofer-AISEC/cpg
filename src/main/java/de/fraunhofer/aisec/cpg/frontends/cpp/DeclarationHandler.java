@@ -410,7 +410,7 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
 
           IncludeDeclaration includeDeclaration = NodeBuilder.newIncludeDeclaration(includeString);
           if (problems != null) {
-            includeDeclaration.getProblems().addAll(problems);
+            includeDeclaration.addProblems(problems);
           }
           includeMap.put(includeString, includeDeclaration);
         }
@@ -425,7 +425,7 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
         for (Map.Entry<String, HashSet<String>> entry : allIncludes.entrySet()) {
           IncludeDeclaration includeDeclaration = includeMap.get(entry.getKey());
           for (String s : entry.getValue()) {
-            includeDeclaration.getIncludes().add(includeMap.get(s));
+            includeDeclaration.addInclude(includeMap.get(s));
           }
         }
       }
