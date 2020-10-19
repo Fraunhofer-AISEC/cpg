@@ -65,13 +65,14 @@ public class FunctionDeclaration extends ValueDeclaration implements Declaration
   @SubGraph("AST")
   protected List<PropertyEdge> parameters = new ArrayList<>();
 
+  @Relationship(value = "throwsTypes", direction = "OUTGOING")
   protected List<PropertyEdge> throwsTypes = new ArrayList<>();
 
   @org.neo4j.ogm.annotation.Relationship(value = "OVERRIDES", direction = "INCOMING")
   private List<PropertyEdge> overriddenBy = new ArrayList<>();
 
   @org.neo4j.ogm.annotation.Relationship(value = "OVERRIDES", direction = "OUTGOING")
-  private List<FunctionDeclaration> overrides = new ArrayList<>();
+  private List<PropertyEdge> overrides = new ArrayList<>();
 
   /**
    * Specifies, whether this function declaration is also a definition, i.e. has a function body
@@ -155,7 +156,17 @@ public class FunctionDeclaration extends ValueDeclaration implements Declaration
   }
 
   public List<FunctionDeclaration> getOverrides() {
-    return overrides;
+    List<FunctionDeclaration> target = new ArrayList<>();
+    for (PropertyEdge propertyEdge : this.overrides) {
+      target.add((FunctionDeclaration) propertyEdge.getEnd());
+    }
+    return target;
+  }
+
+  public void addOverrides(FunctionDeclaration functionDeclaration) {
+    PropertyEdge propertyEdge = new PropertyEdge(this, functionDeclaration);
+    propertyEdge.addProperty(Properties.Index, this.overrides.size());
+    this.overrides.add(propertyEdge);
   }
 
   public List<Type> getThrowsTypes() {
@@ -294,7 +305,9 @@ public class FunctionDeclaration extends ValueDeclaration implements Declaration
         && Objects.equals(throwsTypes, that.throwsTypes)
         && Objects.equals(this.getThrowsTypes(), that.getThrowsTypes())
         && Objects.equals(overriddenBy, that.overriddenBy)
-        && Objects.equals(overrides, that.overrides);
+        && Objects.equals(this.getOverriddenBy(), that.getOverriddenBy())
+        && Objects.equals(overrides, that.overrides)
+        && Objects.equals(this.getOverrides(), that.getOverrides());
   }
 
   @Override
