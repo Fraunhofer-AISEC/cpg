@@ -273,7 +273,7 @@ public class FunctionDeclaration extends ValueDeclaration implements Declaration
     FunctionDeclaration that = (FunctionDeclaration) o;
     return super.equals(that)
         && Objects.equals(body, that.body)
-        && Objects.equals(parameters, that.parameters)
+        && Objects.equals(parameters, that.parameters) && Objects.equals(this.getParameters(), that.getParameters())
         && Objects.equals(throwsTypes, that.throwsTypes)
         && Objects.equals(overriddenBy, that.overriddenBy)
         && Objects.equals(overrides, that.overrides);
