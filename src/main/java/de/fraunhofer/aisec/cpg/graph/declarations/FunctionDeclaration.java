@@ -65,8 +65,9 @@ public class FunctionDeclaration extends ValueDeclaration implements Declaration
   protected List<PropertyEdge> records = new ArrayList<>();
 
   /** The list of function parameters. */
+  @Relationship(value = "parameters", direction = "OUTGOING")
   @SubGraph("AST")
-  protected List<ParamVariableDeclaration> parameters = new ArrayList<>();
+  protected List<PropertyEdge> parameters = new ArrayList<>();
 
   protected List<Type> throwsTypes = new ArrayList<>();
 
@@ -94,6 +95,7 @@ public class FunctionDeclaration extends ValueDeclaration implements Declaration
     return this.name
         + BRACKET_LEFT
         + this.parameters.stream()
+            .map(pe -> (ParamVariableDeclaration) pe.getEnd())
             .map(x -> x.getType().getTypeName())
             .collect(Collectors.joining(COMMA + WHITESPACE))
         + BRACKET_RIGHT
@@ -103,6 +105,7 @@ public class FunctionDeclaration extends ValueDeclaration implements Declaration
   public boolean hasSignature(List<Type> targetSignature) {
     List<ParamVariableDeclaration> signature =
         parameters.stream()
+                .map(pe -> (ParamVariableDeclaration) pe.getEnd())
             .sorted(Comparator.comparingInt(ParamVariableDeclaration::getArgumentIndex))
             .collect(Collectors.toList());
     if (targetSignature.size() < signature.size()) {
@@ -193,11 +196,26 @@ public class FunctionDeclaration extends ValueDeclaration implements Declaration
   }
 
   public List<ParamVariableDeclaration> getParameters() {
-    return parameters;
+    List<ParamVariableDeclaration> target = new ArrayList<>();
+    for (PropertyEdge propertyEdge : this.parameters){
+      target.add((ParamVariableDeclaration) propertyEdge.getEnd());
+    }
+    return target;
+  }
+
+  public void addParameter(ParamVariableDeclaration paramVariableDeclaration){
+    PropertyEdge propertyEdge = new PropertyEdge(this, paramVariableDeclaration);
+    propertyEdge.addProperty(Properties.Index, this.parameters.size());
+    this.parameters.add(propertyEdge);
+  }
+
+  public void removeParameter(ParamVariableDeclaration paramVariableDeclaration){
+    this.parameters.removeIf(
+            propertyEdge -> propertyEdge.getEnd().equals(paramVariableDeclaration));
   }
 
   public void setParameters(List<ParamVariableDeclaration> parameters) {
-    this.parameters = parameters;
+    this.parameters = PropertyEdge.transformIntoPropertyEdgeList(parameters, this, true);
   }
 
   /**
@@ -238,6 +256,7 @@ public class FunctionDeclaration extends ValueDeclaration implements Declaration
         .append(
             "parameters",
             parameters.stream()
+                    .map(pe -> (ParamVariableDeclaration) pe.getEnd())
                 .map(ParamVariableDeclaration::getName)
                 .collect(Collectors.joining(", ")))
         .toString();
@@ -297,7 +316,9 @@ public class FunctionDeclaration extends ValueDeclaration implements Declaration
   public void addDeclaration(@NonNull Declaration declaration) {
     PropertyEdge propertyEdge;
     if (declaration instanceof ParamVariableDeclaration) {
-      addIfNotContains(parameters, (ParamVariableDeclaration) declaration);
+      propertyEdge = new PropertyEdge(this, declaration);
+      propertyEdge.addProperty(Properties.Index, declaration);
+      addIfNotContains(parameters, propertyEdge);
     }
 
     if (declaration instanceof RecordDeclaration) {

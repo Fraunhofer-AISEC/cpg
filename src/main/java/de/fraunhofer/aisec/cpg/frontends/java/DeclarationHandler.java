@@ -119,7 +119,7 @@ public class DeclarationHandler
               parameter.isVarArgs(),
               parameter.toString());
 
-      declaration.getParameters().add(param);
+      declaration.addParameter(param);
 
       lang.setCodeAndRegion(param, parameter);
       lang.getScopeManager().addDeclaration(param);
@@ -171,7 +171,7 @@ public class DeclarationHandler
               parameter.isVarArgs(),
               parameter.toString());
 
-      functionDeclaration.getParameters().add(param);
+      functionDeclaration.addParameter(param);
       lang.setCodeAndRegion(param, parameter);
       lang.getScopeManager().addDeclaration(param);
     }
