@@ -60,11 +60,13 @@ public class RecordDeclaration extends Declaration implements DeclarationHolder 
   @SubGraph("AST")
   private List<PropertyEdge> methods = new ArrayList<>();
 
+  @Relationship(value = "constructors", direction = "OUTGOING")
   @SubGraph("AST")
   private List<PropertyEdge> constructors = new ArrayList<>();
 
+  @Relationship(value = "records", direction = "OUTGOING")
   @SubGraph("AST")
-  private List<RecordDeclaration> records = new ArrayList<>();
+  private List<PropertyEdge> records = new ArrayList<>();
 
   @Transient private List<Type> superClasses = new ArrayList<>();
   @Transient private List<Type> implementedInterfaces = new ArrayList<>();
@@ -182,11 +184,25 @@ public class RecordDeclaration extends Declaration implements DeclarationHolder 
   }
 
   public List<RecordDeclaration> getRecords() {
-    return records;
+    List<RecordDeclaration> target = new ArrayList<>();
+    for (PropertyEdge propertyEdge : this.records) {
+      target.add((RecordDeclaration) propertyEdge.getEnd());
+    }
+    return target;
   }
 
   public void setRecords(List<RecordDeclaration> records) {
-    this.records = records;
+    this.records = PropertyEdge.transformIntoPropertyEdgeList(records, this, true);
+  }
+
+  public void addRecord(RecordDeclaration recordDeclaration) {
+    PropertyEdge propertyEdge = new PropertyEdge(this, recordDeclaration);
+    propertyEdge.addProperty(Properties.Index, this.records.size());
+    this.constructors.add(propertyEdge);
+  }
+
+  public void removeRecord(RecordDeclaration recordDeclaration) {
+    this.records.removeIf(propertyEdge -> propertyEdge.getEnd().equals(recordDeclaration));
   }
 
   /**
@@ -300,6 +316,7 @@ public class RecordDeclaration extends Declaration implements DeclarationHolder 
         && Objects.equals(constructors, that.constructors)
         && Objects.equals(this.getConstructors(), that.getConstructors())
         && Objects.equals(records, that.records)
+        && Objects.equals(this.getRecords(), that.getRecords())
         && Objects.equals(superClasses, that.superClasses)
         && Objects.equals(implementedInterfaces, that.implementedInterfaces)
         && Objects.equals(superTypeDeclarations, that.superTypeDeclarations);
@@ -326,7 +343,9 @@ public class RecordDeclaration extends Declaration implements DeclarationHolder 
       propertyEdge.addProperty(Properties.Index, this.fields.size());
       addIfNotContains(this.fields, propertyEdge);
     } else if (declaration instanceof RecordDeclaration) {
-      addIfNotContains(this.records, (RecordDeclaration) declaration);
+      propertyEdge = new PropertyEdge(this, declaration);
+      propertyEdge.addProperty(Properties.Index, this.records.size());
+      addIfNotContains(this.records, propertyEdge);
     }
   }
 }

@@ -255,7 +255,7 @@ public class DeclarationHandler
             (de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDeclaration) handle(decl);
         recordDeclaration.addConstructor(c);
       } else if (decl instanceof com.github.javaparser.ast.body.ClassOrInterfaceDeclaration) {
-        recordDeclaration.getRecords().add((RecordDeclaration) handle(decl));
+        recordDeclaration.addDeclaration((RecordDeclaration) handle(decl));
       } else {
         log.debug(
             "Member {} of type {} is something that we do not parse yet: {}",
