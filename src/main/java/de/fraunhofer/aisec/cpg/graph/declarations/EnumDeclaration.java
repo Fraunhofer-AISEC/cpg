@@ -43,13 +43,14 @@ public class EnumDeclaration extends Declaration {
   @SubGraph("AST")
   private List<PropertyEdge> entries = new ArrayList<>();
 
-  private List<Type> superTypes = new ArrayList<>();
+  @Relationship(value = "superTypes", direction = "OUTGOING")
+  private List<PropertyEdge> superTypes = new ArrayList<>();
 
   @Relationship private Set<RecordDeclaration> superTypeDeclarations = new HashSet<>();
 
   public List<EnumConstantDeclaration> getEntries() {
     List<EnumConstantDeclaration> target = new ArrayList<>();
-    for (PropertyEdge propertyEdge : this.entries){
+    for (PropertyEdge propertyEdge : this.entries) {
       target.add((EnumConstantDeclaration) propertyEdge.getEnd());
     }
     return target;
@@ -60,11 +61,15 @@ public class EnumDeclaration extends Declaration {
   }
 
   public List<Type> getSuperTypes() {
-    return superTypes;
+    List<Type> target = new ArrayList<>();
+    for (PropertyEdge propertyEdge : this.superTypes) {
+      target.add((Type) propertyEdge.getEnd());
+    }
+    return target;
   }
 
   public void setSuperTypes(List<Type> superTypes) {
-    this.superTypes = superTypes;
+    this.superTypes = PropertyEdge.transformIntoPropertyEdgeList(superTypes, this, true);
   }
 
   public Set<RecordDeclaration> getSuperTypeDeclarations() {
