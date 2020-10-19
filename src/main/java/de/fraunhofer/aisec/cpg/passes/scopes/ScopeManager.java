@@ -406,7 +406,8 @@ public class ScopeManager {
             rec.removeConstructor((ConstructorDeclaration) declaration);
             rec.removeRecord((RecordDeclaration) declaration);
           } else if (declScope.getAstNode() instanceof FunctionDeclaration) {
-            ((FunctionDeclaration) declScope.getAstNode()).removeParameter((ParamVariableDeclaration) declaration);
+            ((FunctionDeclaration) declScope.getAstNode())
+                .removeParameter((ParamVariableDeclaration) declaration);
           } else if (declScope.getAstNode() instanceof Statement) {
             ((Statement) declScope.getAstNode()).removeLocal(declaration);
           } else if (declScope.getAstNode() instanceof EnumDeclaration) {

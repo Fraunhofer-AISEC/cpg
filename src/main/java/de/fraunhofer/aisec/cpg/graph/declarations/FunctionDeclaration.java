@@ -69,7 +69,7 @@ public class FunctionDeclaration extends ValueDeclaration implements Declaration
   @SubGraph("AST")
   protected List<PropertyEdge> parameters = new ArrayList<>();
 
-  protected List<Type> throwsTypes = new ArrayList<>();
+  protected List<PropertyEdge> throwsTypes = new ArrayList<>();
 
   @org.neo4j.ogm.annotation.Relationship(value = "OVERRIDES", direction = "INCOMING")
   private List<FunctionDeclaration> overriddenBy = new ArrayList<>();
@@ -105,7 +105,7 @@ public class FunctionDeclaration extends ValueDeclaration implements Declaration
   public boolean hasSignature(List<Type> targetSignature) {
     List<ParamVariableDeclaration> signature =
         parameters.stream()
-                .map(pe -> (ParamVariableDeclaration) pe.getEnd())
+            .map(pe -> (ParamVariableDeclaration) pe.getEnd())
             .sorted(Comparator.comparingInt(ParamVariableDeclaration::getArgumentIndex))
             .collect(Collectors.toList());
     if (targetSignature.size() < signature.size()) {
@@ -147,11 +147,15 @@ public class FunctionDeclaration extends ValueDeclaration implements Declaration
   }
 
   public List<Type> getThrowsTypes() {
-    return throwsTypes;
+    List<Type> target = new ArrayList<>();
+    for (PropertyEdge propertyEdge : this.throwsTypes) {
+      target.add((Type) propertyEdge.getEnd());
+    }
+    return target;
   }
 
   public void setThrowsTypes(List<Type> throwsTypes) {
-    this.throwsTypes = throwsTypes;
+    this.throwsTypes = PropertyEdge.transformIntoPropertyEdgeList(throwsTypes, this, true);
   }
 
   public Statement getBody() {
@@ -197,21 +201,21 @@ public class FunctionDeclaration extends ValueDeclaration implements Declaration
 
   public List<ParamVariableDeclaration> getParameters() {
     List<ParamVariableDeclaration> target = new ArrayList<>();
-    for (PropertyEdge propertyEdge : this.parameters){
+    for (PropertyEdge propertyEdge : this.parameters) {
       target.add((ParamVariableDeclaration) propertyEdge.getEnd());
     }
     return target;
   }
 
-  public void addParameter(ParamVariableDeclaration paramVariableDeclaration){
+  public void addParameter(ParamVariableDeclaration paramVariableDeclaration) {
     PropertyEdge propertyEdge = new PropertyEdge(this, paramVariableDeclaration);
     propertyEdge.addProperty(Properties.Index, this.parameters.size());
     this.parameters.add(propertyEdge);
   }
 
-  public void removeParameter(ParamVariableDeclaration paramVariableDeclaration){
+  public void removeParameter(ParamVariableDeclaration paramVariableDeclaration) {
     this.parameters.removeIf(
-            propertyEdge -> propertyEdge.getEnd().equals(paramVariableDeclaration));
+        propertyEdge -> propertyEdge.getEnd().equals(paramVariableDeclaration));
   }
 
   public void setParameters(List<ParamVariableDeclaration> parameters) {
@@ -256,7 +260,7 @@ public class FunctionDeclaration extends ValueDeclaration implements Declaration
         .append(
             "parameters",
             parameters.stream()
-                    .map(pe -> (ParamVariableDeclaration) pe.getEnd())
+                .map(pe -> (ParamVariableDeclaration) pe.getEnd())
                 .map(ParamVariableDeclaration::getName)
                 .collect(Collectors.joining(", ")))
         .toString();
@@ -273,7 +277,8 @@ public class FunctionDeclaration extends ValueDeclaration implements Declaration
     FunctionDeclaration that = (FunctionDeclaration) o;
     return super.equals(that)
         && Objects.equals(body, that.body)
-        && Objects.equals(parameters, that.parameters) && Objects.equals(this.getParameters(), that.getParameters())
+        && Objects.equals(parameters, that.parameters)
+        && Objects.equals(this.getParameters(), that.getParameters())
         && Objects.equals(throwsTypes, that.throwsTypes)
         && Objects.equals(overriddenBy, that.overriddenBy)
         && Objects.equals(overrides, that.overrides);
