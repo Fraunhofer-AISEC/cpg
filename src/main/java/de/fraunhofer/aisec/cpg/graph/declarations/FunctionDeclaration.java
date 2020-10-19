@@ -35,11 +35,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement;
 import de.fraunhofer.aisec.cpg.graph.statements.Statement;
 import de.fraunhofer.aisec.cpg.graph.types.Type;
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.checkerframework.checker.nullness.qual.NonNull;
@@ -72,7 +68,7 @@ public class FunctionDeclaration extends ValueDeclaration implements Declaration
   protected List<PropertyEdge> throwsTypes = new ArrayList<>();
 
   @org.neo4j.ogm.annotation.Relationship(value = "OVERRIDES", direction = "INCOMING")
-  private List<FunctionDeclaration> overriddenBy = new ArrayList<>();
+  private List<PropertyEdge> overriddenBy = new ArrayList<>();
 
   @org.neo4j.ogm.annotation.Relationship(value = "OVERRIDES", direction = "OUTGOING")
   private List<FunctionDeclaration> overrides = new ArrayList<>();
@@ -139,7 +135,23 @@ public class FunctionDeclaration extends ValueDeclaration implements Declaration
   }
 
   public List<FunctionDeclaration> getOverriddenBy() {
-    return overriddenBy;
+    List<FunctionDeclaration> target = new ArrayList<>();
+    for (PropertyEdge propertyEdge : this.overriddenBy) {
+      target.add((FunctionDeclaration) propertyEdge.getStart());
+    }
+    return target;
+  }
+
+  public void addAllOverridenBy(Collection<? extends FunctionDeclaration> c) {
+    for (FunctionDeclaration functionDeclaration : c) {
+      addOverridenBy(functionDeclaration);
+    }
+  }
+
+  public void addOverridenBy(FunctionDeclaration functionDeclaration) {
+    PropertyEdge propertyEdge = new PropertyEdge(functionDeclaration, this);
+    propertyEdge.addProperty(Properties.Index, this.overriddenBy.size());
+    this.overriddenBy.add(propertyEdge);
   }
 
   public List<FunctionDeclaration> getOverrides() {
@@ -279,7 +291,8 @@ public class FunctionDeclaration extends ValueDeclaration implements Declaration
         && Objects.equals(body, that.body)
         && Objects.equals(parameters, that.parameters)
         && Objects.equals(this.getParameters(), that.getParameters())
-        && Objects.equals(throwsTypes, that.throwsTypes) && Objects.equals(this.getThrowsTypes(), that.getThrowsTypes())
+        && Objects.equals(throwsTypes, that.throwsTypes)
+        && Objects.equals(this.getThrowsTypes(), that.getThrowsTypes())
         && Objects.equals(overriddenBy, that.overriddenBy)
         && Objects.equals(overrides, that.overrides);
   }
