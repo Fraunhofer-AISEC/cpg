@@ -27,6 +27,8 @@
 package de.fraunhofer.aisec.cpg.graph.declarations;
 
 import de.fraunhofer.aisec.cpg.graph.*;
+import de.fraunhofer.aisec.cpg.graph.edge.Properties;
+import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement;
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement;
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement;
@@ -59,7 +61,8 @@ public class FunctionDeclaration extends ValueDeclaration implements Declaration
   /**
    * Classes and Structs can be declared inside a function and are only valid within the function.
    */
-  protected List<RecordDeclaration> records = new ArrayList<>();
+  @Relationship(value = "records", direction = "OUTGOING")
+  protected List<PropertyEdge> records = new ArrayList<>();
 
   /** The list of function parameters. */
   @SubGraph("AST")
@@ -279,21 +282,28 @@ public class FunctionDeclaration extends ValueDeclaration implements Declaration
   }
 
   public List<RecordDeclaration> getRecords() {
-    return records;
+    List<RecordDeclaration> target = new ArrayList<>();
+    for (PropertyEdge propertyEdge : this.records) {
+      target.add((RecordDeclaration) propertyEdge.getEnd());
+    }
+    return target;
   }
 
   public void setRecords(List<RecordDeclaration> records) {
-    this.records = records;
+    this.records = PropertyEdge.transformIntoPropertyEdgeList(records, this, true);
   }
 
   @Override
   public void addDeclaration(@NonNull Declaration declaration) {
+    PropertyEdge propertyEdge;
     if (declaration instanceof ParamVariableDeclaration) {
       addIfNotContains(parameters, (ParamVariableDeclaration) declaration);
     }
 
     if (declaration instanceof RecordDeclaration) {
-      addIfNotContains(records, (RecordDeclaration) declaration);
+      propertyEdge = new PropertyEdge(this, declaration);
+      propertyEdge.addProperty(Properties.Index, this.records.size());
+      addIfNotContains(records, propertyEdge);
     }
   }
 }

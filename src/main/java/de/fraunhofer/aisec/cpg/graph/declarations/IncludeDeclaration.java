@@ -43,6 +43,7 @@ public class IncludeDeclaration extends Declaration {
   @SubGraph("AST")
   private List<PropertyEdge> includes = new ArrayList<>();
 
+  @Relationship(value = "problems", direction = "OUTGOING")
   @SubGraph("AST")
   private List<PropertyEdge> problems = new ArrayList<>();
 
