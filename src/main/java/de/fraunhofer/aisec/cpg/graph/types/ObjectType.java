@@ -27,7 +27,6 @@
 package de.fraunhofer.aisec.cpg.graph.types;
 
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration;
-import de.fraunhofer.aisec.cpg.graph.edge.Properties;
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import java.util.ArrayList;
 import java.util.List;
@@ -67,14 +66,14 @@ public class ObjectType extends Type {
       Modifier modifier,
       boolean primitive) {
     super(typeName, storage, qualifier);
-    this.generics = convertToGenericEdge(generics);
+    this.generics = PropertyEdge.transformIntoPropertyEdgeList(generics, this, true);
     this.modifier = modifier;
     this.primitive = primitive;
   }
 
   public ObjectType(Type type, List<Type> generics, Modifier modifier, boolean primitive) {
     super(type);
-    this.generics = convertToGenericEdge(generics);
+    this.generics = PropertyEdge.transformIntoPropertyEdgeList(generics, this, true);
     this.modifier = modifier;
     this.primitive = primitive;
   }
@@ -84,19 +83,6 @@ public class ObjectType extends Type {
     this.generics = new ArrayList<>();
     this.modifier = Modifier.NOT_APPLICABLE;
     this.primitive = false;
-  }
-
-  private List<PropertyEdge> convertToGenericEdge(List<Type> generics) {
-    List<PropertyEdge> genericEdges = new ArrayList<>();
-    int counter = 0;
-    for (Type t : generics) {
-      PropertyEdge edge = new PropertyEdge(this, t);
-      edge.addProperty(Properties.Index, counter);
-      genericEdges.add(edge);
-      counter++;
-    }
-
-    return genericEdges;
   }
 
   public List<Type> getGenerics() {
@@ -140,7 +126,7 @@ public class ObjectType extends Type {
   }
 
   public void setGenerics(List<Type> generics) {
-    this.generics = convertToGenericEdge(generics);
+    this.generics = PropertyEdge.transformIntoPropertyEdgeList(generics, this, true);
   }
 
   @Override
