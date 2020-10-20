@@ -30,10 +30,7 @@ import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.SubGraph;
 import de.fraunhofer.aisec.cpg.graph.edge.Properties;
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.neo4j.ogm.annotation.Relationship;
 
@@ -54,7 +51,11 @@ public class IncludeDeclaration extends Declaration {
     for (PropertyEdge propertyEdge : this.includes) {
       target.add((IncludeDeclaration) propertyEdge.getEnd());
     }
-    return target;
+    return Collections.unmodifiableList(target);
+  }
+
+  public List<PropertyEdge> getIncludesPropertyEdge() {
+    return this.includes;
   }
 
   public void addInclude(IncludeDeclaration includeDeclaration) {
@@ -68,7 +69,11 @@ public class IncludeDeclaration extends Declaration {
     for (PropertyEdge propertyEdge : this.problems) {
       target.add((ProblemDeclaration) propertyEdge.getEnd());
     }
-    return target;
+    return Collections.unmodifiableList(target);
+  }
+
+  public List<PropertyEdge> getProblemsPropertyEdge() {
+    return this.problems;
   }
 
   public void addProblems(Collection<ProblemDeclaration> c) {

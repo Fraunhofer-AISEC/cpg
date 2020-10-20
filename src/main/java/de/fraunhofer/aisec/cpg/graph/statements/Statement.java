@@ -33,9 +33,9 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Declaration;
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration;
 import de.fraunhofer.aisec.cpg.graph.edge.Properties;
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
+
+import java.util.*;
+
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.neo4j.ogm.annotation.Relationship;
 
@@ -59,7 +59,11 @@ public class Statement extends Node implements DeclarationHolder {
       localsVariableDeclaration.add((VariableDeclaration) propertyEdge.getEnd());
     }
 
-    return localsVariableDeclaration;
+    return Collections.unmodifiableList(localsVariableDeclaration);
+  }
+
+  public List<PropertyEdge> getLocalsPropertyEdge() {
+    return this.locals;
   }
 
   public void removeLocal(Declaration variableDeclaration) {

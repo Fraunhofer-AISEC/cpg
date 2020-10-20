@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.SubGraph;
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import org.apache.commons.lang3.builder.ToStringBuilder;
@@ -57,7 +58,11 @@ public class DesignatedInitializerExpression extends Expression {
     for (PropertyEdge propertyEdge : this.lhs) {
       target.add((Expression) propertyEdge.getEnd());
     }
-    return target;
+    return Collections.unmodifiableList(target);
+  }
+
+  public List<PropertyEdge> getLhsPropertyEdge() {
+    return this.lhs;
   }
 
   public void setLhs(List<Expression> lhs) {

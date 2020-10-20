@@ -32,6 +32,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration;
 import de.fraunhofer.aisec.cpg.graph.edge.Properties;
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import org.apache.commons.lang3.builder.ToStringBuilder;
@@ -55,7 +56,12 @@ public class CompoundStatement extends Statement {
     for (PropertyEdge propertyEdge : this.statements) {
       targets.add((Statement) propertyEdge.getEnd());
     }
-    return targets;
+    return Collections.unmodifiableList(targets);
+  }
+
+  @NonNull
+  public List<PropertyEdge> getStatementsPropertyEdge() {
+    return this.statements;
   }
 
   public void setStatements(@NonNull List<Statement> statements) {

@@ -209,7 +209,7 @@ public class Node implements IVisitable<Node>, Persistable {
   }
 
   @NonNull
-  public List<PropertyEdge> getNextEOGProperties() {
+  public List<PropertyEdge> getNextEOGPropertyEdge() {
     return this.nextEOG;
   }
 
@@ -217,21 +217,11 @@ public class Node implements IVisitable<Node>, Persistable {
   public List<Node> getNextEOG() {
     List<Node> nextEOGTargets = new ArrayList<>();
     this.nextEOG.forEach(propertyEdge -> nextEOGTargets.add(propertyEdge.getEnd()));
-    return nextEOGTargets;
+    return Collections.unmodifiableList(nextEOGTargets);
   }
 
   public void setNextEOG(@NonNull List<Node> nextEOG) {
-    List<PropertyEdge> propertyEdgesEOG = new ArrayList<>();
-    int idx = 0;
-
-    for (Node next : nextEOG) {
-      PropertyEdge propertyEdge = new PropertyEdge(this, next);
-      propertyEdge.addProperty(Properties.Index, idx);
-      propertyEdgesEOG.add(propertyEdge);
-      idx++;
-    }
-
-    this.nextEOG = propertyEdgesEOG;
+    this.nextEOG = PropertyEdge.transformIntoPropertyEdgeList(nextEOG, this, true);
   }
 
   public void addNextEOG(@NonNull PropertyEdge propertyEdge) {

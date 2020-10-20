@@ -53,7 +53,11 @@ public class InitializerListExpression extends Expression implements TypeListene
     for (PropertyEdge propertyEdge : this.initializers) {
       target.add((Expression) propertyEdge.getEnd());
     }
-    return target;
+    return Collections.unmodifiableList(target);
+  }
+
+  public List<PropertyEdge> getInitializersPropertyEdge() {
+    return this.initializers;
   }
 
   public void setInitializers(List<Expression> initializers) {

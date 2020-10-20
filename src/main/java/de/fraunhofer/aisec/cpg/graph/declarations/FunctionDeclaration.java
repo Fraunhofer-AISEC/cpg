@@ -140,10 +140,14 @@ public class FunctionDeclaration extends ValueDeclaration implements Declaration
     for (PropertyEdge propertyEdge : this.overriddenBy) {
       target.add((FunctionDeclaration) propertyEdge.getStart());
     }
-    return target;
+    return Collections.unmodifiableList(target);
   }
 
-  public void addAllOverridenBy(Collection<? extends FunctionDeclaration> c) {
+  public List<PropertyEdge> getOverriddenByPropertyEdge() {
+    return this.overriddenBy;
+  }
+
+  public void addOverridenBy(Collection<? extends FunctionDeclaration> c) {
     for (FunctionDeclaration functionDeclaration : c) {
       addOverridenBy(functionDeclaration);
     }
@@ -160,7 +164,11 @@ public class FunctionDeclaration extends ValueDeclaration implements Declaration
     for (PropertyEdge propertyEdge : this.overrides) {
       target.add((FunctionDeclaration) propertyEdge.getEnd());
     }
-    return target;
+    return Collections.unmodifiableList(target);
+  }
+
+  public List<PropertyEdge> getOverridesPropertyEdge() {
+    return this.overrides;
   }
 
   public void addOverrides(FunctionDeclaration functionDeclaration) {
@@ -174,7 +182,11 @@ public class FunctionDeclaration extends ValueDeclaration implements Declaration
     for (PropertyEdge propertyEdge : this.throwsTypes) {
       target.add((Type) propertyEdge.getEnd());
     }
-    return target;
+    return Collections.unmodifiableList(target);
+  }
+
+  public List<PropertyEdge> getThrowsTypesPropertyEdge() {
+    return this.throwsTypes;
   }
 
   public void setThrowsTypes(List<Type> throwsTypes) {
@@ -227,7 +239,11 @@ public class FunctionDeclaration extends ValueDeclaration implements Declaration
     for (PropertyEdge propertyEdge : this.parameters) {
       target.add((ParamVariableDeclaration) propertyEdge.getEnd());
     }
-    return target;
+    return Collections.unmodifiableList(target);
+  }
+
+  public List<PropertyEdge> getParametersPropertyEdge() {
+    return this.parameters;
   }
 
   public void addParameter(ParamVariableDeclaration paramVariableDeclaration) {
@@ -336,7 +352,11 @@ public class FunctionDeclaration extends ValueDeclaration implements Declaration
     for (PropertyEdge propertyEdge : this.records) {
       target.add((RecordDeclaration) propertyEdge.getEnd());
     }
-    return target;
+    return Collections.unmodifiableList(target);
+  }
+
+  public List<PropertyEdge> getRecordsPropertyEdge() {
+    return this.records;
   }
 
   public void setRecords(List<RecordDeclaration> records) {

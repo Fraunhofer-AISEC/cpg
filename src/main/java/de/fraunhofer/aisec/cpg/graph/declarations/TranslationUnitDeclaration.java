@@ -113,7 +113,12 @@ public class TranslationUnitDeclaration extends Declaration implements Declarati
     for (PropertyEdge propertyEdge : this.declarations) {
       target.add((Declaration) propertyEdge.getEnd());
     }
-    return target;
+    return Collections.unmodifiableList(target);
+  }
+
+  @NonNull
+  public List<PropertyEdge> getDeclarationsPropertyEdge() {
+    return this.declarations;
   }
 
   @NonNull
@@ -126,12 +131,22 @@ public class TranslationUnitDeclaration extends Declaration implements Declarati
   }
 
   @NonNull
+  public List<PropertyEdge> getIncludesPropertyEdge() {
+    return this.includes;
+  }
+
+  @NonNull
   public List<Declaration> getNamespaces() {
     List<Declaration> targets = new ArrayList<>();
     for (PropertyEdge propertyEdge : this.namespaces) {
       targets.add((Declaration) propertyEdge.getEnd());
     }
     return Collections.unmodifiableList(targets);
+  }
+
+  @NonNull
+  public List<PropertyEdge> getNamespacesPropertyEdge() {
+    return this.namespaces;
   }
 
   public void addDeclaration(@NonNull Declaration declaration) {

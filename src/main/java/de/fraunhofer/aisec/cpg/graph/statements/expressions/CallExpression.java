@@ -33,13 +33,10 @@ import de.fraunhofer.aisec.cpg.graph.edge.Properties;
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import de.fraunhofer.aisec.cpg.graph.types.Type;
 import de.fraunhofer.aisec.cpg.helpers.Util;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.builder.ToStringBuilder;
+import org.checkerframework.checker.nullness.qual.NonNull;
 import org.neo4j.ogm.annotation.Relationship;
 
 /**
@@ -82,12 +79,18 @@ public class CallExpression extends Expression implements TypeListener {
     }
   }
 
+  @NonNull
   public List<Expression> getArguments() {
     List<Expression> targets = new ArrayList<>();
     for (PropertyEdge propertyEdge : this.arguments) {
       targets.add((Expression) propertyEdge.getEnd());
     }
-    return targets;
+    return Collections.unmodifiableList(targets);
+  }
+
+  @NonNull
+  public List<PropertyEdge> getArgumentsPropertyEdge() {
+    return this.arguments;
   }
 
   public void addArgument(Expression expression) {
@@ -100,12 +103,17 @@ public class CallExpression extends Expression implements TypeListener {
     this.arguments = PropertyEdge.transformIntoPropertyEdgeList(arguments, this, true);
   }
 
+  @NonNull
   public List<FunctionDeclaration> getInvokes() {
     List<FunctionDeclaration> targets = new ArrayList<>();
     for (PropertyEdge propertyEdge : this.invokes) {
       targets.add((FunctionDeclaration) propertyEdge.getEnd());
     }
-    return targets;
+    return Collections.unmodifiableList(targets);
+  }
+
+  public List<PropertyEdge> getInvokesPropertyEdge() {
+    return this.invokes;
   }
 
   public void setInvokes(List<FunctionDeclaration> invokes) {

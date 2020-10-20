@@ -33,6 +33,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration;
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import de.fraunhofer.aisec.cpg.graph.types.Type;
 import java.util.*;
+import org.checkerframework.checker.nullness.qual.NonNull;
 import org.neo4j.ogm.annotation.Relationship;
 
 /**
@@ -73,12 +74,18 @@ public class ArrayCreationExpression extends Expression implements TypeListener 
     }
   }
 
+  @NonNull
   public List<Expression> getDimensions() {
     List<Expression> targets = new ArrayList<>();
     for (PropertyEdge propertyEdge : this.dimensions) {
       targets.add((Expression) propertyEdge.getEnd());
     }
-    return targets;
+    return Collections.unmodifiableList(targets);
+  }
+
+  @NonNull
+  public List<PropertyEdge> getDimensionsPropertyEdge() {
+    return this.dimensions;
   }
 
   public void setDimensions(List<Expression> dimensions) {

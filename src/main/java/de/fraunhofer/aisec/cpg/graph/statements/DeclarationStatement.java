@@ -32,6 +32,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Declaration;
 import de.fraunhofer.aisec.cpg.graph.edge.Properties;
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import org.apache.commons.lang3.builder.ToStringBuilder;
@@ -73,8 +74,17 @@ public class DeclarationStatement extends Statement {
     return clazz.cast(this.getSingleDeclaration());
   }
 
+  @NonNull
   public List<Declaration> getDeclarations() {
-    return (List<Declaration>) PropertyEdge.getTarget(this.declarations, true);
+    List<Declaration> target = new ArrayList<>();
+    for (PropertyEdge propertyEdge : this.declarations) {
+      target.add((Declaration) propertyEdge.getEnd());
+    }
+    return Collections.unmodifiableList(target);
+  }
+
+  public List<PropertyEdge> getDeclarationsPropertyEdge() {
+    return this.declarations;
   }
 
   public void setDeclarations(List<Declaration> declarations) {

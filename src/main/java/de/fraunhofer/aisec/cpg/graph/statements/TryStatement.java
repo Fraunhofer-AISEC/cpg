@@ -29,9 +29,9 @@ package de.fraunhofer.aisec.cpg.graph.statements;
 import de.fraunhofer.aisec.cpg.graph.SubGraph;
 import de.fraunhofer.aisec.cpg.graph.edge.Properties;
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
+
+import java.util.*;
+
 import org.neo4j.ogm.annotation.Relationship;
 
 public class TryStatement extends Statement {
@@ -58,7 +58,11 @@ public class TryStatement extends Statement {
     for (PropertyEdge propertyEdge : this.resources) {
       resources.add((Statement) propertyEdge.getEnd());
     }
-    return resources;
+    return Collections.unmodifiableList(resources);
+  }
+
+  public List<PropertyEdge> getResourcesPropertyEdge() {
+    return this.resources;
   }
 
   public void setResources(List<Statement> resources) {
@@ -96,7 +100,11 @@ public class TryStatement extends Statement {
     for (PropertyEdge propertyEdge : this.catchClauses) {
       catchClauses.add((CatchClause) propertyEdge.getEnd());
     }
-    return catchClauses;
+    return Collections.unmodifiableList(catchClauses);
+  }
+
+  public List<PropertyEdge> getCatchClausesPropertyEdge() {
+    return this.catchClauses;
   }
 
   public void setCatchClauses(List<CatchClause> catchClauses) {

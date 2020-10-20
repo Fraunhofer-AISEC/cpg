@@ -143,7 +143,7 @@ public class TypeHierarchyResolver extends Pass {
           declaration.getMethods().stream()
               .filter(superMethod::isOverrideCandidate)
               .collect(Collectors.toList());
-      superMethod.addAllOverridenBy(overrideCandidates);
+      superMethod.addOverridenBy(overrideCandidates);
       overrideCandidates.forEach(o -> o.addOverrides(superMethod));
     }
   }

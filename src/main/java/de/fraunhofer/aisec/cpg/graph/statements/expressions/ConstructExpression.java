@@ -102,7 +102,11 @@ public class ConstructExpression extends Expression implements TypeListener {
     for (PropertyEdge propertyEdge : this.arguments) {
       target.add((Expression) propertyEdge.getEnd());
     }
-    return target;
+    return Collections.unmodifiableList(target);
+  }
+
+  public List<PropertyEdge> getArgumentsPropertyEdge() {
+    return this.arguments;
   }
 
   public void setArguments(List<Expression> arguments) {

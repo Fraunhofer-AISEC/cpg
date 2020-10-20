@@ -29,6 +29,7 @@ package de.fraunhofer.aisec.cpg.graph.types;
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration;
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import org.neo4j.ogm.annotation.Relationship;
@@ -90,10 +91,10 @@ public class ObjectType extends Type {
     for (PropertyEdge edge : this.generics) {
       genericValues.add((Type) edge.getEnd());
     }
-    return genericValues;
+    return Collections.unmodifiableList(genericValues);
   }
 
-  public List<PropertyEdge> getGenericEdges() {
+  public List<PropertyEdge> getGenericPropertyEdges() {
     return this.generics;
   }
 

@@ -32,12 +32,7 @@ import de.fraunhofer.aisec.cpg.graph.SubGraph;
 import de.fraunhofer.aisec.cpg.graph.edge.Properties;
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import de.fraunhofer.aisec.cpg.graph.types.Type;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.apache.commons.lang3.builder.ToStringBuilder;
@@ -104,7 +99,11 @@ public class RecordDeclaration extends Declaration implements DeclarationHolder 
     for (PropertyEdge propertyEdge : this.fields) {
       target.add((FieldDeclaration) propertyEdge.getEnd());
     }
-    return target;
+    return Collections.unmodifiableList(target);
+  }
+
+  public List<PropertyEdge> getFieldsPropertyEdge() {
+    return this.fields;
   }
 
   public void addField(FieldDeclaration fieldDeclaration) {
@@ -143,7 +142,11 @@ public class RecordDeclaration extends Declaration implements DeclarationHolder 
     for (PropertyEdge propertyEdge : this.methods) {
       target.add((MethodDeclaration) propertyEdge.getEnd());
     }
-    return target;
+    return Collections.unmodifiableList(target);
+  }
+
+  public List<PropertyEdge> getMethodsPropertyEdge() {
+    return this.methods;
   }
 
   public void addMethod(MethodDeclaration methodDeclaration) {
@@ -165,7 +168,11 @@ public class RecordDeclaration extends Declaration implements DeclarationHolder 
     for (PropertyEdge propertyEdge : this.constructors) {
       target.add((ConstructorDeclaration) propertyEdge.getEnd());
     }
-    return target;
+    return Collections.unmodifiableList(target);
+  }
+
+  public List<PropertyEdge> getConstructorsPropertyEdge() {
+    return this.constructors;
   }
 
   public void setConstructors(List<ConstructorDeclaration> constructors) {
@@ -188,7 +195,11 @@ public class RecordDeclaration extends Declaration implements DeclarationHolder 
     for (PropertyEdge propertyEdge : this.records) {
       target.add((RecordDeclaration) propertyEdge.getEnd());
     }
-    return target;
+    return Collections.unmodifiableList(target);
+  }
+
+  public List<PropertyEdge> getRecordsPropertyEdge() {
+    return this.records;
   }
 
   public void setRecords(List<RecordDeclaration> records) {

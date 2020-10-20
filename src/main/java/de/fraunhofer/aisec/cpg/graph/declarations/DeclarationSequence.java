@@ -29,6 +29,7 @@ package de.fraunhofer.aisec.cpg.graph.declarations;
 import de.fraunhofer.aisec.cpg.graph.edge.Properties;
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.neo4j.ogm.annotation.Relationship;
@@ -44,12 +45,16 @@ public class DeclarationSequence extends Declaration {
   @Relationship(value = "children", direction = "OUTGOING")
   private final List<PropertyEdge> children = new ArrayList<>();
 
-  private List<Declaration> getChildren() {
+  public List<PropertyEdge> getChildrenPropertyEdge() {
+    return this.children;
+  }
+
+  public List<Declaration> getChildren() {
     List<Declaration> target = new ArrayList<>();
     for (PropertyEdge propertyEdge : this.children) {
       target.add((Declaration) propertyEdge.getEnd());
     }
-    return target;
+    return Collections.unmodifiableList(target);
   }
 
   public void add(@NonNull Declaration declaration) {

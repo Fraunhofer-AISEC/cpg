@@ -215,9 +215,9 @@ public class EvaluationOrderGraphPass extends Pass {
     // remaining eognodes were not visited and have to be removed from the EOG
     for (Node unvisitedNode : eognodes) {
       unvisitedNode
-          .getNextEOGProperties()
+          .getNextEOGPropertyEdge()
           .forEach(next -> next.getEnd().removePrevEOGEntry(unvisitedNode));
-      unvisitedNode.getNextEOGProperties().clear();
+      unvisitedNode.getNextEOGPropertyEdge().clear();
     }
   }
 

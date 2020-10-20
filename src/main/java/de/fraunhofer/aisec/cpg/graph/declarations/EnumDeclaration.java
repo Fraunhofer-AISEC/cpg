@@ -30,10 +30,7 @@ import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.SubGraph;
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import de.fraunhofer.aisec.cpg.graph.types.Type;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.neo4j.ogm.annotation.Relationship;
 
@@ -48,12 +45,16 @@ public class EnumDeclaration extends Declaration {
 
   @Relationship private Set<RecordDeclaration> superTypeDeclarations = new HashSet<>();
 
+  public List<PropertyEdge> getEntriesPropertyEdge() {
+    return this.entries;
+  }
+
   public List<EnumConstantDeclaration> getEntries() {
     List<EnumConstantDeclaration> target = new ArrayList<>();
     for (PropertyEdge propertyEdge : this.entries) {
       target.add((EnumConstantDeclaration) propertyEdge.getEnd());
     }
-    return target;
+    return Collections.unmodifiableList(target);
   }
 
   public void setEntries(List<EnumConstantDeclaration> entries) {
@@ -65,7 +66,11 @@ public class EnumDeclaration extends Declaration {
     for (PropertyEdge propertyEdge : this.superTypes) {
       target.add((Type) propertyEdge.getEnd());
     }
-    return target;
+    return Collections.unmodifiableList(target);
+  }
+
+  public List<PropertyEdge> getSuperTypesPropertyEdge() {
+    return this.superTypes;
   }
 
   public void setSuperTypes(List<Type> superTypes) {

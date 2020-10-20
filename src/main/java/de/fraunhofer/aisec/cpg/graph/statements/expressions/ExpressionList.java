@@ -47,7 +47,11 @@ public class ExpressionList extends Expression implements TypeListener {
     for (PropertyEdge propertyEdge : this.expressions) {
       target.add((Statement) propertyEdge.getEnd());
     }
-    return target;
+    return Collections.unmodifiableList(target);
+  }
+
+  public List<PropertyEdge> getExpressionsPropertyEdges() {
+    return this.expressions;
   }
 
   public void setExpressions(List<Statement> expressions) {
