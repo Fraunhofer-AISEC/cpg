@@ -104,12 +104,10 @@ public class DeclarationHandler
     lang.getScopeManager().addDeclaration(declaration);
 
     lang.getScopeManager().enterScope(declaration);
-    declaration
-        .getThrowsTypes()
-        .addAll(
-            constructorDecl.getThrownExceptions().stream()
-                .map(type -> TypeParser.createFrom(type.asString(), true))
-                .collect(Collectors.toList()));
+    declaration.addThrowTypes(
+        constructorDecl.getThrownExceptions().stream()
+            .map(type -> TypeParser.createFrom(type.asString(), true))
+            .collect(Collectors.toList()));
 
     for (Parameter parameter : constructorDecl.getParameters()) {
       ParamVariableDeclaration param =
@@ -156,12 +154,10 @@ public class DeclarationHandler
             lang.getScopeManager().getCurrentRecord());
     lang.getScopeManager().enterScope(functionDeclaration);
 
-    functionDeclaration
-        .getThrowsTypes()
-        .addAll(
-            methodDecl.getThrownExceptions().stream()
-                .map(type -> TypeParser.createFrom(type.asString(), true))
-                .collect(Collectors.toList()));
+    functionDeclaration.addThrowTypes(
+        methodDecl.getThrownExceptions().stream()
+            .map(type -> TypeParser.createFrom(type.asString(), true))
+            .collect(Collectors.toList()));
 
     for (Parameter parameter : methodDecl.getParameters()) {
       ParamVariableDeclaration param =

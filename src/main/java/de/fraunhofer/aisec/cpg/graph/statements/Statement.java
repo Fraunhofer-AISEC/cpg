@@ -33,9 +33,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Declaration;
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration;
 import de.fraunhofer.aisec.cpg.graph.edge.Properties;
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
-
 import java.util.*;
-
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.neo4j.ogm.annotation.Relationship;
 

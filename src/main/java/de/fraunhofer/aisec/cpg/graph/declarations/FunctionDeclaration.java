@@ -193,6 +193,18 @@ public class FunctionDeclaration extends ValueDeclaration implements Declaration
     this.throwsTypes = PropertyEdge.transformIntoPropertyEdgeList(throwsTypes, this, true);
   }
 
+  public void addThrowTypes(Type type) {
+    PropertyEdge propertyEdge = new PropertyEdge(this, type);
+    propertyEdge.addProperty(Properties.Index, this.throwsTypes.size());
+    this.throwsTypes.add(propertyEdge);
+  }
+
+  public void addThrowTypes(Collection<Type> collection) {
+    for (Type type : collection) {
+      addThrowTypes(type);
+    }
+  }
+
   public Statement getBody() {
     return body;
   }

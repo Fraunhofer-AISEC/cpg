@@ -505,7 +505,7 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
   private ExpressionList handleExpressionList(CPPASTExpressionList exprList) {
     ExpressionList expressionList = NodeBuilder.newExpressionList(exprList.getRawSignature());
     for (IASTExpression expr : exprList.getExpressions()) {
-      expressionList.getExpressions().add(handle(expr));
+      expressionList.addExpression(handle(expr));
     }
 
     return expressionList;

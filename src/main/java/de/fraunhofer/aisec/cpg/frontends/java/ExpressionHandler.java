@@ -131,11 +131,9 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
       lvl.getDimension()
           .ifPresent(
               expression ->
-                  creationExpression
-                      .getDimensions()
-                      .add(
-                          (de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression)
-                              handle(expression)));
+                  creationExpression.addDimension(
+                      (de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression)
+                          handle(expression)));
     }
 
     return creationExpression;
