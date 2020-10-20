@@ -854,13 +854,13 @@ public class EvaluationOrderGraphPass extends Pass {
 
     pushToEOG(ifStatement); // To have semantic information after the condition evaluation
     List<Node> openConditionEOGs = new ArrayList<>(currentEOG);
-    currentProperties.put(de.fraunhofer.aisec.cpg.graph.edge.Properties.branch, true);
+    currentProperties.put(de.fraunhofer.aisec.cpg.graph.edge.Properties.BRANCH, true);
     createEOG(ifStatement.getThenStatement());
     openBranchNodes.addAll(currentEOG);
 
     if (ifStatement.getElseStatement() != null) {
       setCurrentEOGs(openConditionEOGs);
-      currentProperties.put(Properties.branch, false);
+      currentProperties.put(Properties.BRANCH, false);
       createEOG(ifStatement.getElseStatement());
       openBranchNodes.addAll(currentEOG);
     } else {

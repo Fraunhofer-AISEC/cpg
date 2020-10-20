@@ -69,12 +69,11 @@ public class FunctionPointerType extends Type {
 
   @Override
   public Type duplicate() {
-    List<Type> parameters = new ArrayList<>();
-    for (Node node : PropertyEdge.getTarget(this.parameters, true)){
-      parameters.add((Type) node);
+    List<Type> copiedParameters = new ArrayList<>();
+    for (Node node : PropertyEdge.getTarget(this.parameters, true)) {
+      copiedParameters.add((Type) node);
     }
-    return new FunctionPointerType(
-        this, parameters, this.returnType);
+    return new FunctionPointerType(this, copiedParameters, this.returnType);
   }
 
   @Override

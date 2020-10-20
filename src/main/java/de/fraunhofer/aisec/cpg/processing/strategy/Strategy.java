@@ -71,6 +71,26 @@ public class Strategy {
   }
 
   /**
+   * Perform unwrapping if Object is a PropertyEdge by looking at the direction of the field and
+   * returning either the start ot the end node
+   *
+   * @param field field containing the object
+   * @param obj object
+   * @return node object if obj was a PropertyEdge, obj else
+   */
+  private static Object handlePropertyEdges(Field field, Object obj) {
+    boolean outgoing = true; // default
+    if (field.getAnnotation(Relationship.class) != null) {
+      outgoing = field.getAnnotation(Relationship.class).direction().equals("OUTGOING");
+    }
+
+    if (PropertyEdge.checkForPropertyEdge(field, obj)) {
+      return PropertyEdge.unwrapPropertyEdge(obj, outgoing);
+    }
+    return obj;
+  }
+
+  /**
    * Traverse AST in forward direction.
    *
    * @param x
@@ -97,14 +117,7 @@ public class Strategy {
             continue;
           }
 
-          boolean outgoing = true; // default
-          if (field.getAnnotation(Relationship.class) != null) {
-            outgoing = field.getAnnotation(Relationship.class).direction().equals("OUTGOING");
-          }
-
-          if (PropertyEdge.checkForPropertyEdge(field, obj)) {
-            obj = PropertyEdge.unwrapPropertyEdge(obj, outgoing);
-          }
+          obj = handlePropertyEdges(field, obj);
 
           if (obj instanceof Node) {
             children.add((Node) obj);

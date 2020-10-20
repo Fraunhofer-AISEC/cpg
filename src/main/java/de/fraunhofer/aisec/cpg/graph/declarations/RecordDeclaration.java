@@ -108,7 +108,7 @@ public class RecordDeclaration extends Declaration implements DeclarationHolder 
 
   public void addField(FieldDeclaration fieldDeclaration) {
     PropertyEdge propertyEdge = new PropertyEdge(this, fieldDeclaration);
-    propertyEdge.addProperty(Properties.index, this.fields.size());
+    propertyEdge.addProperty(Properties.INDEX, this.fields.size());
     addIfNotContains(this.fields, propertyEdge);
   }
 
@@ -151,7 +151,7 @@ public class RecordDeclaration extends Declaration implements DeclarationHolder 
 
   public void addMethod(MethodDeclaration methodDeclaration) {
     PropertyEdge propertyEdge = new PropertyEdge(this, methodDeclaration);
-    propertyEdge.addProperty(Properties.index, this.methods.size());
+    propertyEdge.addProperty(Properties.INDEX, this.methods.size());
     addIfNotContains(this.methods, propertyEdge);
   }
 
@@ -181,7 +181,7 @@ public class RecordDeclaration extends Declaration implements DeclarationHolder 
 
   public void addConstructor(ConstructorDeclaration constructorDeclaration) {
     PropertyEdge propertyEdge = new PropertyEdge(this, constructorDeclaration);
-    propertyEdge.addProperty(Properties.index, this.constructors.size());
+    propertyEdge.addProperty(Properties.INDEX, this.constructors.size());
     addIfNotContains(this.constructors, propertyEdge);
   }
 
@@ -208,7 +208,7 @@ public class RecordDeclaration extends Declaration implements DeclarationHolder 
 
   public void addRecord(RecordDeclaration recordDeclaration) {
     PropertyEdge propertyEdge = new PropertyEdge(this, recordDeclaration);
-    propertyEdge.addProperty(Properties.index, this.records.size());
+    propertyEdge.addProperty(Properties.INDEX, this.records.size());
     this.constructors.add(propertyEdge);
   }
 
@@ -343,19 +343,19 @@ public class RecordDeclaration extends Declaration implements DeclarationHolder 
     PropertyEdge propertyEdge;
     if (declaration instanceof ConstructorDeclaration) {
       propertyEdge = new PropertyEdge(this, declaration);
-      propertyEdge.addProperty(Properties.index, this.constructors.size());
+      propertyEdge.addProperty(Properties.INDEX, this.constructors.size());
       addIfNotContains(this.constructors, propertyEdge);
     } else if (declaration instanceof MethodDeclaration) {
       propertyEdge = new PropertyEdge(this, declaration);
-      propertyEdge.addProperty(Properties.index, this.methods.size());
+      propertyEdge.addProperty(Properties.INDEX, this.methods.size());
       addIfNotContains(this.methods, propertyEdge);
     } else if (declaration instanceof FieldDeclaration) {
       propertyEdge = new PropertyEdge(this, declaration);
-      propertyEdge.addProperty(Properties.index, this.fields.size());
+      propertyEdge.addProperty(Properties.INDEX, this.fields.size());
       addIfNotContains(this.fields, propertyEdge);
     } else if (declaration instanceof RecordDeclaration) {
       propertyEdge = new PropertyEdge(this, declaration);
-      propertyEdge.addProperty(Properties.index, this.records.size());
+      propertyEdge.addProperty(Properties.INDEX, this.records.size());
       addIfNotContains(this.records, propertyEdge);
     }
   }

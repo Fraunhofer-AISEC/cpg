@@ -66,7 +66,7 @@ public class DeclarationStatement extends Statement {
   public void setSingleDeclaration(Declaration declaration) {
     this.declarations.clear();
     PropertyEdge propertyEdge = new PropertyEdge(this, declaration);
-    propertyEdge.addProperty(Properties.index, 0);
+    propertyEdge.addProperty(Properties.INDEX, 0);
     this.declarations.add(propertyEdge);
   }
 
@@ -93,7 +93,7 @@ public class DeclarationStatement extends Statement {
 
   public void addToPropertyEdgeDeclaration(@NonNull Declaration declaration) {
     PropertyEdge propertyEdge = new PropertyEdge(this, declaration);
-    propertyEdge.addProperty(Properties.index, this.declarations.size());
+    propertyEdge.addProperty(Properties.INDEX, this.declarations.size());
     this.declarations.add(propertyEdge);
   }
 

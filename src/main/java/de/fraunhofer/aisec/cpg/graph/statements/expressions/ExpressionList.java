@@ -80,7 +80,7 @@ public class ExpressionList extends Expression implements TypeListener {
       this.removePrevDFG(lastExpression);
     }
     PropertyEdge propertyEdge = new PropertyEdge(this, expression);
-    propertyEdge.addProperty(Properties.index, this.expressions.size());
+    propertyEdge.addProperty(Properties.INDEX, this.expressions.size());
     this.expressions.add(propertyEdge);
     this.addPrevDFG(expression);
     if (expression instanceof HasType) {

@@ -75,7 +75,7 @@ public class CompoundStatement extends Statement {
 
   public void addStatement(Statement s) {
     PropertyEdge propertyEdge = new PropertyEdge(this, s);
-    propertyEdge.addProperty(Properties.index, this.statements.size());
+    propertyEdge.addProperty(Properties.INDEX, this.statements.size());
     this.statements.add(propertyEdge);
   }
 

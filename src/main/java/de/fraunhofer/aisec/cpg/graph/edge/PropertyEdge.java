@@ -30,13 +30,13 @@ public class PropertyEdge implements Persistable {
   public PropertyEdge(Node start, Node end) {
     this.start = start;
     this.end = end;
-    this.properties = new EnumMap<Properties, Object>(Properties.class);
+    this.properties = new EnumMap<>(Properties.class);
   }
 
   public PropertyEdge(PropertyEdge propertyEdge) {
     this.start = propertyEdge.start;
     this.end = propertyEdge.end;
-    this.properties = new EnumMap<Properties, Object>(Properties.class);
+    this.properties = new EnumMap<>(Properties.class);
     this.properties.putAll(propertyEdge.properties);
   }
 
@@ -82,15 +82,27 @@ public class PropertyEdge implements Persistable {
     return start;
   }
 
+  /**
+   * Add/Update index element of list of PropertyEdges
+   * @param propertyEdges propertyEdge list
+   * @return new PropertyEdge list with updated index property
+   */
   public static List<PropertyEdge> applyIndexProperty(List<PropertyEdge> propertyEdges) {
     int counter = 0;
     for (PropertyEdge propertyEdge : propertyEdges) {
-      propertyEdge.addProperty(Properties.index, counter);
+      propertyEdge.addProperty(Properties.INDEX, counter);
       counter++;
     }
     return propertyEdges;
   }
 
+  /**
+   * Transforms a List of Nodes into targets of PropertyEdges depending on the direction of the edge. Include Index Property as Lists are indexed
+   * @param nodes List of nodes that should be transformed into PropertyEdges
+   * @param commonRelationshipNode node where all the Edges should start or end (depending on the direction)
+   * @param outgoing direction of the edge
+   * @return List of PropertyEdges with the targets of the nodes and index property.
+   */
   public static List<PropertyEdge> transformIntoPropertyEdgeList(
       List<? extends Node> nodes, Node commonRelationshipNode, boolean outgoing) {
     List<PropertyEdge> propertyEdges = new ArrayList<>();
@@ -104,6 +116,47 @@ public class PropertyEdge implements Persistable {
     return propertyEdges;
   }
 
+  /**
+   *
+   * @param obj is a collection of propertyedges
+   * @param outgoing direction of the edges
+   * @return collection of nodes containing the targets of the edges
+   */
+  private static Object unwrapPropertyEdgeCollection(Object obj, boolean outgoing) {
+    Object element = null;
+    Optional<?> value = ((Collection<?>) obj).stream().findAny();
+    if (value.isPresent()) {
+      element = value.get();
+    }
+
+    if (element instanceof PropertyEdge) {
+      try {
+        Collection<Node> outputCollection =
+            (Collection<Node>) obj.getClass().getDeclaredConstructor().newInstance();
+        for (PropertyEdge propertyEdge : (Collection<PropertyEdge>) obj) {
+          if (outgoing) {
+            outputCollection.add(propertyEdge.getEnd());
+          } else {
+            outputCollection.add(propertyEdge.getStart());
+          }
+        }
+        return outputCollection;
+      } catch (InstantiationException
+          | IllegalAccessException
+          | InvocationTargetException
+          | NoSuchMethodException e) {
+        log.warn("PropertyEdges could not be unwrapped");
+      }
+    }
+    return obj;
+  }
+
+  /**
+   *
+   * @param obj PropertyEdge that must be unwrapped
+   * @param outgoing direction of the edge
+   * @return node representing target of edge
+   */
   public static Object unwrapPropertyEdge(Object obj, boolean outgoing) {
     if (obj instanceof PropertyEdge) {
       if (outgoing) {
@@ -112,35 +165,17 @@ public class PropertyEdge implements Persistable {
         return ((PropertyEdge) obj).getStart();
       }
     } else if (obj instanceof Collection && !((Collection<?>) obj).isEmpty()) {
-      Object element = null;
-      Optional<?> value = ((Collection<?>) obj).stream().findAny();
-      if (value.isPresent()) {
-        element = value.get();
-      }
-
-      if (element instanceof PropertyEdge) {
-        try {
-          Collection<Node> outputCollection =
-              (Collection<Node>) obj.getClass().getDeclaredConstructor().newInstance();
-          for (PropertyEdge propertyEdge : (Collection<PropertyEdge>) obj) {
-            if (outgoing) {
-              outputCollection.add(propertyEdge.getEnd());
-            } else {
-              outputCollection.add(propertyEdge.getStart());
-            }
-          }
-          return outputCollection;
-        } catch (InstantiationException
-            | IllegalAccessException
-            | InvocationTargetException
-            | NoSuchMethodException e) {
-          log.warn("PropertyEdges could not be unwrapped");
-        }
-      }
+      return unwrapPropertyEdgeCollection(obj, outgoing);
     }
     return obj;
   }
 
+  /**
+   * Checks if an Object is a PropertyEdge or a collection of PropertyEdges
+   * @param f Field containing the object
+   * @param obj object that is checked if it is a PropertyEdge
+   * @return true if obj is/contains a PropertyEdge
+   */
   public static boolean checkForPropertyEdge(Field f, Object obj) {
     if (obj instanceof PropertyEdge) {
       return true;
@@ -151,6 +186,12 @@ public class PropertyEdge implements Persistable {
     return false;
   }
 
+  /**
+   *
+   * @param propertyEdges List of PropertyEdges
+   * @param outgoing direction of the edge
+   * @return List of nodes corresponding to the targets of the edges depending on their direction
+   */
   public static List<Node> getTarget(List<PropertyEdge> propertyEdges, boolean outgoing) {
     List<Node> targets = new ArrayList<>();
     for (PropertyEdge propertyEdge : propertyEdges) {

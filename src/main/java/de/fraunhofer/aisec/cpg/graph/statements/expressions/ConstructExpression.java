@@ -115,7 +115,7 @@ public class ConstructExpression extends Expression implements TypeListener {
 
   public void addArgument(Expression argument) {
     PropertyEdge propertyEdge = new PropertyEdge(this, argument);
-    propertyEdge.addProperty(Properties.index, this.arguments.size());
+    propertyEdge.addProperty(Properties.INDEX, this.arguments.size());
     this.arguments.add(propertyEdge);
   }
 
