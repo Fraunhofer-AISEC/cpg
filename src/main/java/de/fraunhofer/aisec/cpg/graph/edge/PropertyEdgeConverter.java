@@ -1,5 +1,6 @@
 package de.fraunhofer.aisec.cpg.graph.edge;
 
+import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Function;
@@ -29,13 +30,13 @@ public class PropertyEdgeConverter implements CompositeAttributeConverter<Map<Pr
   @Override
   public Map<String, Object> toGraphProperties(Map<Properties, Object> value) {
     Map<String, Object> result = new HashMap<>();
-    for (Properties key : value.keySet()) {
-      Object propertyValue = value.get(key);
+    for (Map.Entry<Properties, Object> entry : value.entrySet()) {
+      Object propertyValue = entry.getValue();
       if (serializer.containsKey(propertyValue.getClass())) {
         Object serializedProperty = serializer.get(propertyValue.getClass()).apply(propertyValue);
-        result.put(key.name(), serializedProperty);
+        result.put(entry.getKey().name(), serializedProperty);
       } else {
-        result.put(key.name(), propertyValue);
+        result.put(entry.getKey().name(), propertyValue);
       }
     }
 
@@ -44,14 +45,14 @@ public class PropertyEdgeConverter implements CompositeAttributeConverter<Map<Pr
 
   @Override
   public Map<Properties, Object> toEntityAttribute(Map<String, ?> value) {
-    Map<Properties, Object> result = new HashMap<>();
-    for (String key : value.keySet()) {
-      Object propertyValue = value.get(key);
-      if (deserializer.containsKey(key)) {
-        Object deserializedProperty = deserializer.get(key).apply(propertyValue);
-        result.put(Properties.valueOf(key), deserializedProperty);
+    Map<Properties, Object> result = new EnumMap<Properties, Object>(Properties.class);
+    for (Map.Entry<String, ?> entry : value.entrySet()) {
+      Object propertyValue = entry.getValue();
+      if (deserializer.containsKey(entry.getKey())) {
+        Object deserializedProperty = deserializer.get(entry.getKey()).apply(propertyValue);
+        result.put(Properties.valueOf(entry.getKey()), deserializedProperty);
       } else {
-        result.put(Properties.valueOf(key), propertyValue);
+        result.put(Properties.valueOf(entry.getKey()), propertyValue);
       }
     }
 

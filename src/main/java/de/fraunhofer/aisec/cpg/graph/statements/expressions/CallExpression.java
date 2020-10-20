@@ -95,7 +95,7 @@ public class CallExpression extends Expression implements TypeListener {
 
   public void addArgument(Expression expression) {
     PropertyEdge propertyEdge = new PropertyEdge(this, expression);
-    propertyEdge.addProperty(Properties.Index, this.arguments.size());
+    propertyEdge.addProperty(Properties.index, this.arguments.size());
     this.arguments.add(propertyEdge);
   }
 
@@ -117,11 +117,11 @@ public class CallExpression extends Expression implements TypeListener {
   }
 
   public void setInvokes(List<FunctionDeclaration> invokes) {
-    ((List<FunctionDeclaration>) PropertyEdge.getTarget(this.invokes, true))
+    PropertyEdge.getTarget(this.invokes, true)
         .forEach(
             i -> {
-              i.unregisterTypeListener(this);
-              Util.detachCallParameters(i, this.getArguments());
+              ((FunctionDeclaration) i).unregisterTypeListener(this);
+              Util.detachCallParameters((FunctionDeclaration) i, this.getArguments());
               this.removePrevDFG(i);
             });
     this.invokes = PropertyEdge.transformIntoPropertyEdgeList(invokes, this, true);

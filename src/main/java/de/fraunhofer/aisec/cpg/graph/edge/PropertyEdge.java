@@ -10,12 +10,16 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import org.neo4j.ogm.annotation.*;
 import org.neo4j.ogm.annotation.typeconversion.Convert;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @RelationshipEntity()
 public class PropertyEdge implements Persistable {
 
   /** Required field for object graph mapping. It contains the node id. */
   @Id @GeneratedValue private Long id;
+
+  protected static final Logger log = LoggerFactory.getLogger(PropertyEdge.class);
 
   // Node where the edge is outgoing
   @StartNode private Node start;
@@ -26,13 +30,13 @@ public class PropertyEdge implements Persistable {
   public PropertyEdge(Node start, Node end) {
     this.start = start;
     this.end = end;
-    this.properties = new HashMap<>();
+    this.properties = new EnumMap<Properties, Object>(Properties.class);
   }
 
   public PropertyEdge(PropertyEdge propertyEdge) {
     this.start = propertyEdge.start;
     this.end = propertyEdge.end;
-    this.properties = new HashMap<>();
+    this.properties = new EnumMap<Properties, Object>(Properties.class);
     this.properties.putAll(propertyEdge.properties);
   }
 
@@ -81,7 +85,7 @@ public class PropertyEdge implements Persistable {
   public static List<PropertyEdge> applyIndexProperty(List<PropertyEdge> propertyEdges) {
     int counter = 0;
     for (PropertyEdge propertyEdge : propertyEdges) {
-      propertyEdge.addProperty(Properties.Index, counter);
+      propertyEdge.addProperty(Properties.index, counter);
       counter++;
     }
     return propertyEdges;
@@ -100,15 +104,20 @@ public class PropertyEdge implements Persistable {
     return propertyEdges;
   }
 
-  public static Object unwrapPropertyEdge(Object obj, Boolean outgoing) {
+  public static Object unwrapPropertyEdge(Object obj, boolean outgoing) {
     if (obj instanceof PropertyEdge) {
       if (outgoing) {
         return ((PropertyEdge) obj).getEnd();
       } else {
         return ((PropertyEdge) obj).getStart();
       }
-    } else if (obj instanceof Collection && ((Collection<?>) obj).size() > 0) {
-      Object element = ((Collection<?>) obj).stream().findAny().get();
+    } else if (obj instanceof Collection && !((Collection<?>) obj).isEmpty()) {
+      Object element = null;
+      Optional<?> value = ((Collection<?>) obj).stream().findAny();
+      if (value.isPresent()) {
+        element = value.get();
+      }
+
       if (element instanceof PropertyEdge) {
         try {
           Collection<Node> outputCollection =
@@ -125,7 +134,7 @@ public class PropertyEdge implements Persistable {
             | IllegalAccessException
             | InvocationTargetException
             | NoSuchMethodException e) {
-          e.printStackTrace();
+          log.warn("PropertyEdges could not be unwrapped");
         }
       }
     }
@@ -142,7 +151,7 @@ public class PropertyEdge implements Persistable {
     return false;
   }
 
-  public static List<? extends Node> getTarget(List<PropertyEdge> propertyEdges, boolean outgoing) {
+  public static List<Node> getTarget(List<PropertyEdge> propertyEdges, boolean outgoing) {
     List<Node> targets = new ArrayList<>();
     for (PropertyEdge propertyEdge : propertyEdges) {
       if (outgoing) {

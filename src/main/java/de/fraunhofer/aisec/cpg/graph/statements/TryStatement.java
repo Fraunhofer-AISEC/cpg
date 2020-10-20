@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.graph.SubGraph;
 import de.fraunhofer.aisec.cpg.graph.edge.Properties;
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import java.util.*;
+import org.checkerframework.checker.nullness.qual.NonNull;
 import org.neo4j.ogm.annotation.Relationship;
 
 public class TryStatement extends Statement {
@@ -48,15 +49,16 @@ public class TryStatement extends Statement {
   @SubGraph("AST")
   private List<PropertyEdge> catchClauses;
 
+  @NonNull
   public List<Statement> getResources() {
     if (this.resources == null) {
-      return null;
+      return new ArrayList<>();
     }
-    List<Statement> resources = new ArrayList<>();
+    List<Statement> target = new ArrayList<>();
     for (PropertyEdge propertyEdge : this.resources) {
-      resources.add((Statement) propertyEdge.getEnd());
+      target.add((Statement) propertyEdge.getEnd());
     }
-    return Collections.unmodifiableList(resources);
+    return Collections.unmodifiableList(target);
   }
 
   public List<PropertyEdge> getResourcesPropertyEdge() {
@@ -68,7 +70,7 @@ public class TryStatement extends Statement {
     int c = 0;
     for (Statement s : resources) {
       PropertyEdge propertyEdge = new PropertyEdge(this, s);
-      propertyEdge.addProperty(Properties.Index, c);
+      propertyEdge.addProperty(Properties.index, c);
       this.resources.add(propertyEdge);
       c++;
     }
@@ -90,15 +92,16 @@ public class TryStatement extends Statement {
     this.finallyBlock = finallyBlock;
   }
 
+  @NonNull
   public List<CatchClause> getCatchClauses() {
     if (this.catchClauses == null) {
-      return null;
+      return new ArrayList<>();
     }
-    List<CatchClause> catchClauses = new ArrayList<>();
+    List<CatchClause> target = new ArrayList<>();
     for (PropertyEdge propertyEdge : this.catchClauses) {
-      catchClauses.add((CatchClause) propertyEdge.getEnd());
+      target.add((CatchClause) propertyEdge.getEnd());
     }
-    return Collections.unmodifiableList(catchClauses);
+    return Collections.unmodifiableList(target);
   }
 
   public List<PropertyEdge> getCatchClausesPropertyEdge() {
@@ -111,7 +114,7 @@ public class TryStatement extends Statement {
 
     for (CatchClause c : catchClauses) {
       PropertyEdge propertyEdge = new PropertyEdge(this, c);
-      propertyEdge.addProperty(Properties.Index, counter);
+      propertyEdge.addProperty(Properties.index, counter);
       this.catchClauses.add(propertyEdge);
       counter++;
     }

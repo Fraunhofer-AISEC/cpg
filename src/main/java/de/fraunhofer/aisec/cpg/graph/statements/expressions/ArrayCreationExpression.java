@@ -86,7 +86,7 @@ public class ArrayCreationExpression extends Expression implements TypeListener 
 
   public void addDimension(Expression expression) {
     PropertyEdge propertyEdge = new PropertyEdge(this, expression);
-    propertyEdge.addProperty(Properties.Index, this.dimensions.size());
+    propertyEdge.addProperty(Properties.index, this.dimensions.size());
     this.dimensions.add(propertyEdge);
   }
 

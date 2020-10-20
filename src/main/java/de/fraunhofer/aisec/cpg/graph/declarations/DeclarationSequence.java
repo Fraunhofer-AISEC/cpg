@@ -62,12 +62,12 @@ public class DeclarationSequence extends Declaration {
     if (declaration instanceof DeclarationSequence) {
       for (Declaration declarationChild : ((DeclarationSequence) declaration).getChildren()) {
         propertyEdge = new PropertyEdge(this, declarationChild);
-        propertyEdge.addProperty(Properties.Index, this.children.size());
+        propertyEdge.addProperty(Properties.index, this.children.size());
         children.add(propertyEdge);
       }
     }
     propertyEdge = new PropertyEdge(this, declaration);
-    propertyEdge.addProperty(Properties.Index, this.children.size());
+    propertyEdge.addProperty(Properties.index, this.children.size());
     children.add(propertyEdge);
   }
 
