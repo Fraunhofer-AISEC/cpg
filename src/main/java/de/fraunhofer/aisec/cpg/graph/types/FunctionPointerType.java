@@ -1,5 +1,6 @@
 package de.fraunhofer.aisec.cpg.graph.types;
 
+import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -68,8 +69,12 @@ public class FunctionPointerType extends Type {
 
   @Override
   public Type duplicate() {
+    List<Type> parameters = new ArrayList<>();
+    for (Node node : PropertyEdge.getTarget(this.parameters, true)){
+      parameters.add((Type) node);
+    }
     return new FunctionPointerType(
-        this, (List<Type>) PropertyEdge.getTarget(this.parameters, true), this.returnType);
+        this, parameters, this.returnType);
   }
 
   @Override
