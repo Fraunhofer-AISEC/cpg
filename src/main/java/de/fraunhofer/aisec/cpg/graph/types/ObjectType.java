@@ -143,6 +143,7 @@ public class ObjectType extends Type {
     if (!super.equals(o)) return false;
     ObjectType that = (ObjectType) o;
     return Objects.equals(generics, that.generics)
+        && Objects.equals(this.getGenerics(), that.getGenerics())
         && this.primitive == that.primitive
         && this.modifier.equals(that.modifier);
   }

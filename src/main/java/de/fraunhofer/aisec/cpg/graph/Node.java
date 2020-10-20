@@ -88,7 +88,7 @@ public class Node implements IVisitable<Node>, Persistable {
   /** outgoing control flow edges. */
   @NonNull
   @Relationship(value = "CFG", direction = "OUTGOING")
-  protected List<Node> nextCFG = new ArrayList<>();
+  protected List<PropertyEdge> nextCFG = new ArrayList<>();
 
   @NonNull
   @Relationship(value = "DFG", direction = "INCOMING")
@@ -245,7 +245,23 @@ public class Node implements IVisitable<Node>, Persistable {
 
   @NonNull
   public List<Node> getNextCFG() {
-    return this.nextCFG;
+    List<Node> target = new ArrayList<>();
+    for (PropertyEdge propertyEdge : this.nextCFG) {
+      target.add((Node) propertyEdge.getEnd());
+    }
+    return Collections.unmodifiableList(target);
+  }
+
+  public void addNextCFG(Node node) {
+    PropertyEdge propertyEdge = new PropertyEdge(this, node);
+    propertyEdge.addProperty(Properties.Index, this.nextCFG.size());
+    this.nextCFG.add(propertyEdge);
+  }
+
+  public void addNextCFG(Collection<? extends Node> collection) {
+    for (Node n : collection) {
+      addNextCFG(n);
+    }
   }
 
   @NonNull
