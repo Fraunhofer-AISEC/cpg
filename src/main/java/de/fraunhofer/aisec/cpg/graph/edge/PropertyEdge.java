@@ -84,6 +84,7 @@ public class PropertyEdge implements Persistable {
 
   /**
    * Add/Update index element of list of PropertyEdges
+   *
    * @param propertyEdges propertyEdge list
    * @return new PropertyEdge list with updated index property
    */
@@ -97,9 +98,12 @@ public class PropertyEdge implements Persistable {
   }
 
   /**
-   * Transforms a List of Nodes into targets of PropertyEdges depending on the direction of the edge. Include Index Property as Lists are indexed
+   * Transforms a List of Nodes into targets of PropertyEdges depending on the direction of the
+   * edge. Include Index Property as Lists are indexed
+   *
    * @param nodes List of nodes that should be transformed into PropertyEdges
-   * @param commonRelationshipNode node where all the Edges should start or end (depending on the direction)
+   * @param commonRelationshipNode node where all the Edges should start or end (depending on the
+   *     direction)
    * @param outgoing direction of the edge
    * @return List of PropertyEdges with the targets of the nodes and index property.
    */
@@ -117,7 +121,6 @@ public class PropertyEdge implements Persistable {
   }
 
   /**
-   *
    * @param obj is a collection of propertyedges
    * @param outgoing direction of the edges
    * @return collection of nodes containing the targets of the edges
@@ -152,7 +155,6 @@ public class PropertyEdge implements Persistable {
   }
 
   /**
-   *
    * @param obj PropertyEdge that must be unwrapped
    * @param outgoing direction of the edge
    * @return node representing target of edge
@@ -172,6 +174,7 @@ public class PropertyEdge implements Persistable {
 
   /**
    * Checks if an Object is a PropertyEdge or a collection of PropertyEdges
+   *
    * @param f Field containing the object
    * @param obj object that is checked if it is a PropertyEdge
    * @return true if obj is/contains a PropertyEdge
@@ -187,7 +190,6 @@ public class PropertyEdge implements Persistable {
   }
 
   /**
-   *
    * @param propertyEdges List of PropertyEdges
    * @param outgoing direction of the edge
    * @return List of nodes corresponding to the targets of the edges depending on their direction
