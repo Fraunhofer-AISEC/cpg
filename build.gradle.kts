@@ -35,8 +35,8 @@ plugins {
     `maven-publish`
 
     id("org.sonarqube") version "3.0"
-    id("com.diffplug.spotless") version "5.1.1"
-    id("com.github.johnrengelman.shadow") version "6.0.0"
+    id("com.diffplug.spotless") version "5.6.1"
+    id("com.github.johnrengelman.shadow") version "6.1.0"
     id("com.google.protobuf") version "0.8.8"
 }
 
@@ -155,10 +155,10 @@ dependencies {
     api("org.eclipse.cdt:core:6.11.1.202006011430")
 
     // JUnit
-    testImplementation("org.junit.jupiter:junit-jupiter-api:5.6.2")
-    testImplementation("org.junit.jupiter:junit-jupiter-params:5.6.2")
-    testImplementation("org.mockito:mockito-core:3.5.0")
-    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.6.2")
+    testImplementation("org.junit.jupiter:junit-jupiter-api:5.7.0")
+    testImplementation("org.junit.jupiter:junit-jupiter-params:5.7.0")
+    testImplementation("org.mockito:mockito-core:3.5.13")
+    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.7.0")
 
     // Protobuf
     api("com.google.protobuf:protobuf-java:3.13.0")
@@ -177,6 +177,7 @@ sourceSets {
             srcDir("build/generated/source/proto/main/grpc")
         }
     }
+
 }
 
 spotless {

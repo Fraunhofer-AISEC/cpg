@@ -26,8 +26,11 @@
 
 package de.fraunhofer.aisec.cpg.graph;
 
-import de.fraunhofer.aisec.cpg.graph.type.Type;
-import de.fraunhofer.aisec.cpg.graph.type.TypeParser;
+import de.fraunhofer.aisec.cpg.graph.declarations.*;
+import de.fraunhofer.aisec.cpg.graph.statements.*;
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.*;
+import de.fraunhofer.aisec.cpg.graph.types.Type;
+import de.fraunhofer.aisec.cpg.graph.types.TypeParser;
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation;
 import java.util.ArrayList;
 import java.util.List;
@@ -152,18 +155,6 @@ public class NodeBuilder {
     node.setCode(code);
     node.setFloor(floor);
     node.setCeiling(ceil);
-
-    log(node);
-
-    return node;
-  }
-
-  public static StaticReferenceExpression newStaticReferenceExpression(
-      String name, Type typeFullName, String code) {
-    StaticReferenceExpression node = new StaticReferenceExpression();
-    node.setName(name);
-    node.setType(typeFullName);
-    node.setCode(code);
 
     log(node);
 
@@ -404,7 +395,7 @@ public class NodeBuilder {
     node.setCode(code);
 
     if (kind.equals("class")) {
-      de.fraunhofer.aisec.cpg.graph.FieldDeclaration thisDeclaration =
+      FieldDeclaration thisDeclaration =
           NodeBuilder.newFieldDeclaration(
               "this",
               TypeParser.createFrom(name, true),
@@ -472,12 +463,13 @@ public class NodeBuilder {
     return node;
   }
 
-  public static MemberExpression newMemberExpression(Expression base, Node member, String code) {
+  public static MemberExpression newMemberExpression(
+      Expression base, Type memberType, String name, String code) {
     MemberExpression node = new MemberExpression();
     node.setBase(base);
-    node.setMember(member);
     node.setCode(code);
-    node.setName(code);
+    node.setName(name);
+    node.setType(memberType);
 
     log(node);
 

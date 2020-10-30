@@ -28,7 +28,10 @@ package de.fraunhofer.aisec.cpg.frontends.grpc;
 
 import de.fraunhofer.aisec.cpg.frontends.TranslationException;
 import de.fraunhofer.aisec.cpg.graph.*;
-import de.fraunhofer.aisec.cpg.graph.type.*;
+import de.fraunhofer.aisec.cpg.graph.declarations.*;
+import de.fraunhofer.aisec.cpg.graph.declarations.Declaration;
+import de.fraunhofer.aisec.cpg.graph.statements.*;
+import de.fraunhofer.aisec.cpg.graph.types.*;
 import java.util.List;
 
 public class NodeFactory {
@@ -129,14 +132,16 @@ public class NodeFactory {
     return declaration;
   }
 
-  private static TranslationUnitDeclaration createTranslationUnitDeclaration(
-      de.fraunhofer.aisec.cpg.frontends.grpc.messages.TranslationUnitDeclaration d,
-      int index,
-      List<de.fraunhofer.aisec.cpg.frontends.grpc.messages.Node> grpcNodes,
-      List<Node> cpgNodes)
-      throws TranslationException {
+  private static de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+      createTranslationUnitDeclaration(
+          de.fraunhofer.aisec.cpg.frontends.grpc.messages.TranslationUnitDeclaration d,
+          int index,
+          List<de.fraunhofer.aisec.cpg.frontends.grpc.messages.Node> grpcNodes,
+          List<Node> cpgNodes)
+          throws TranslationException {
 
-    TranslationUnitDeclaration tud = new TranslationUnitDeclaration();
+    de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration tud =
+        new de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration();
     cpgNodes.set(index, tud);
 
     // TODO: All 3 parts do exactly the same thing. Maybe think if we want to unify that
@@ -148,7 +153,7 @@ public class NodeFactory {
       if (!(n instanceof Declaration)) {
         throw new TranslationException("Node at " + idx.getIndex() + " is not a declaration.");
       }
-      tud.add((Declaration) createNode(idx.getIndex(), grpcNodes, cpgNodes));
+      tud.addDeclaration((Declaration) createNode(idx.getIndex(), grpcNodes, cpgNodes));
     }
     // Includes
     for (de.fraunhofer.aisec.cpg.frontends.grpc.messages.NodeIndex idx : d.getIncludesList()) {
@@ -157,7 +162,7 @@ public class NodeFactory {
       if (!(n instanceof Declaration)) {
         throw new TranslationException("Node at " + idx.getIndex() + " is not a declaration.");
       }
-      tud.add((Declaration) createNode(idx.getIndex(), grpcNodes, cpgNodes));
+      tud.addDeclaration((Declaration) createNode(idx.getIndex(), grpcNodes, cpgNodes));
     }
     // Namespaces
     for (de.fraunhofer.aisec.cpg.frontends.grpc.messages.NodeIndex idx : d.getNamespacesList()) {
@@ -166,19 +171,19 @@ public class NodeFactory {
       if (!(n instanceof Declaration)) {
         throw new TranslationException("Node at " + idx.getIndex() + " is not a declaration.");
       }
-      tud.add((Declaration) createNode(idx.getIndex(), grpcNodes, cpgNodes));
+      tud.addDeclaration((Declaration) createNode(idx.getIndex(), grpcNodes, cpgNodes));
     }
 
     return tud;
   }
 
-  private static ValueDeclaration createValueDeclaration(
+  private static de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration createValueDeclaration(
       de.fraunhofer.aisec.cpg.frontends.grpc.messages.ValueDeclaration v,
       int index,
       List<de.fraunhofer.aisec.cpg.frontends.grpc.messages.Node> grpcNodes,
       List<Node> cpgNodes)
       throws TranslationException {
-    ValueDeclaration valueDeclaration;
+    de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration valueDeclaration;
 
     if (v.hasVariableDeclaration()) {
       valueDeclaration =
@@ -193,13 +198,15 @@ public class NodeFactory {
     return valueDeclaration;
   }
 
-  private static NamespaceDeclaration createNamespaceDeclaration(
-      de.fraunhofer.aisec.cpg.frontends.grpc.messages.NamespaceDeclaration d,
-      int index,
-      List<de.fraunhofer.aisec.cpg.frontends.grpc.messages.Node> grpcNodes,
-      List<Node> cpgNodes)
-      throws TranslationException {
-    NamespaceDeclaration namespaceDeclaration = new NamespaceDeclaration();
+  private static de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration
+      createNamespaceDeclaration(
+          de.fraunhofer.aisec.cpg.frontends.grpc.messages.NamespaceDeclaration d,
+          int index,
+          List<de.fraunhofer.aisec.cpg.frontends.grpc.messages.Node> grpcNodes,
+          List<Node> cpgNodes)
+          throws TranslationException {
+    de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration namespaceDeclaration =
+        new de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration();
     cpgNodes.set(index, namespaceDeclaration);
 
     for (de.fraunhofer.aisec.cpg.frontends.grpc.messages.NodeIndex idx : d.getDeclarationsList()) {
@@ -214,38 +221,43 @@ public class NodeFactory {
     return namespaceDeclaration;
   }
 
-  private static VariableDeclaration createVariableDeclaration(
-      de.fraunhofer.aisec.cpg.frontends.grpc.messages.VariableDeclaration v,
-      int index,
-      List<de.fraunhofer.aisec.cpg.frontends.grpc.messages.Node> grpcNodes,
-      List<Node> cpgNodes)
-      throws TranslationException {
-    VariableDeclaration variableDeclaration = new VariableDeclaration();
+  private static de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+      createVariableDeclaration(
+          de.fraunhofer.aisec.cpg.frontends.grpc.messages.VariableDeclaration v,
+          int index,
+          List<de.fraunhofer.aisec.cpg.frontends.grpc.messages.Node> grpcNodes,
+          List<Node> cpgNodes)
+          throws TranslationException {
+    de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration variableDeclaration =
+        new de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration();
     variableDeclaration.setIsArray(v.getIsArray());
     variableDeclaration.setImplicitInitializerAllowed(v.getImplicitInitializerAllowed());
     return variableDeclaration;
   }
 
-  private static FunctionDeclaration createFunctionDeclaration(
-      de.fraunhofer.aisec.cpg.frontends.grpc.messages.FunctionDeclaration v,
-      int index,
-      List<de.fraunhofer.aisec.cpg.frontends.grpc.messages.Node> grpcNodes,
-      List<Node> cpgNodes)
-      throws TranslationException {
-    FunctionDeclaration functionDeclaration = new FunctionDeclaration();
+  private static de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+      createFunctionDeclaration(
+          de.fraunhofer.aisec.cpg.frontends.grpc.messages.FunctionDeclaration v,
+          int index,
+          List<de.fraunhofer.aisec.cpg.frontends.grpc.messages.Node> grpcNodes,
+          List<Node> cpgNodes)
+          throws TranslationException {
+    de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration functionDeclaration =
+        new de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration();
     functionDeclaration.setBody(
-        (Statement) createNode(v.getBody().getIndex(), grpcNodes, cpgNodes));
+        (de.fraunhofer.aisec.cpg.graph.statements.Statement)
+            createNode(v.getBody().getIndex(), grpcNodes, cpgNodes));
     System.out.println("Here in CreateFunctionDecl");
     return functionDeclaration;
   }
 
-  private static Statement createStatement(
+  private static de.fraunhofer.aisec.cpg.graph.statements.Statement createStatement(
       de.fraunhofer.aisec.cpg.frontends.grpc.messages.Statement s,
       int index,
       List<de.fraunhofer.aisec.cpg.frontends.grpc.messages.Node> grpcNodes,
       List<Node> cpgNodes)
       throws TranslationException {
-    return new Statement();
+    return new de.fraunhofer.aisec.cpg.graph.statements.Statement();
   }
 
   private static Type createType(

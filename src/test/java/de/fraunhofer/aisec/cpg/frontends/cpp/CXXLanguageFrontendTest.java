@@ -37,44 +37,44 @@ import de.fraunhofer.aisec.cpg.BaseTest;
 import de.fraunhofer.aisec.cpg.TestUtils;
 import de.fraunhofer.aisec.cpg.TranslationConfiguration;
 import de.fraunhofer.aisec.cpg.graph.Annotation;
-import de.fraunhofer.aisec.cpg.graph.ArraySubscriptionExpression;
-import de.fraunhofer.aisec.cpg.graph.BinaryOperator;
-import de.fraunhofer.aisec.cpg.graph.CallExpression;
-import de.fraunhofer.aisec.cpg.graph.CaseStatement;
-import de.fraunhofer.aisec.cpg.graph.CastExpression;
-import de.fraunhofer.aisec.cpg.graph.CatchClause;
-import de.fraunhofer.aisec.cpg.graph.CompoundStatement;
-import de.fraunhofer.aisec.cpg.graph.ConstructExpression;
-import de.fraunhofer.aisec.cpg.graph.ConstructorDeclaration;
-import de.fraunhofer.aisec.cpg.graph.Declaration;
-import de.fraunhofer.aisec.cpg.graph.DeclarationStatement;
-import de.fraunhofer.aisec.cpg.graph.DeclaredReferenceExpression;
-import de.fraunhofer.aisec.cpg.graph.DefaultStatement;
-import de.fraunhofer.aisec.cpg.graph.DesignatedInitializerExpression;
-import de.fraunhofer.aisec.cpg.graph.Expression;
-import de.fraunhofer.aisec.cpg.graph.FieldDeclaration;
-import de.fraunhofer.aisec.cpg.graph.ForEachStatement;
-import de.fraunhofer.aisec.cpg.graph.FunctionDeclaration;
-import de.fraunhofer.aisec.cpg.graph.IfStatement;
-import de.fraunhofer.aisec.cpg.graph.InitializerListExpression;
-import de.fraunhofer.aisec.cpg.graph.Literal;
-import de.fraunhofer.aisec.cpg.graph.MemberCallExpression;
-import de.fraunhofer.aisec.cpg.graph.MethodDeclaration;
-import de.fraunhofer.aisec.cpg.graph.NamespaceDeclaration;
-import de.fraunhofer.aisec.cpg.graph.NewExpression;
 import de.fraunhofer.aisec.cpg.graph.Node;
-import de.fraunhofer.aisec.cpg.graph.RecordDeclaration;
-import de.fraunhofer.aisec.cpg.graph.ReturnStatement;
-import de.fraunhofer.aisec.cpg.graph.Statement;
-import de.fraunhofer.aisec.cpg.graph.SwitchStatement;
-import de.fraunhofer.aisec.cpg.graph.TranslationUnitDeclaration;
-import de.fraunhofer.aisec.cpg.graph.TryStatement;
-import de.fraunhofer.aisec.cpg.graph.TypeIdExpression;
-import de.fraunhofer.aisec.cpg.graph.UnaryOperator;
-import de.fraunhofer.aisec.cpg.graph.VariableDeclaration;
-import de.fraunhofer.aisec.cpg.graph.type.ObjectType;
-import de.fraunhofer.aisec.cpg.graph.type.TypeParser;
-import de.fraunhofer.aisec.cpg.graph.type.UnknownType;
+import de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declarations.Declaration;
+import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration;
+import de.fraunhofer.aisec.cpg.graph.statements.CaseStatement;
+import de.fraunhofer.aisec.cpg.graph.statements.CatchClause;
+import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement;
+import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement;
+import de.fraunhofer.aisec.cpg.graph.statements.DefaultStatement;
+import de.fraunhofer.aisec.cpg.graph.statements.ForEachStatement;
+import de.fraunhofer.aisec.cpg.graph.statements.IfStatement;
+import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement;
+import de.fraunhofer.aisec.cpg.graph.statements.Statement;
+import de.fraunhofer.aisec.cpg.graph.statements.SwitchStatement;
+import de.fraunhofer.aisec.cpg.graph.statements.TryStatement;
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.ArraySubscriptionExpression;
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator;
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression;
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.CastExpression;
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.ConstructExpression;
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression;
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.DesignatedInitializerExpression;
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression;
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.InitializerListExpression;
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal;
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression;
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.NewExpression;
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.TypeIdExpression;
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator;
+import de.fraunhofer.aisec.cpg.graph.types.ObjectType;
+import de.fraunhofer.aisec.cpg.graph.types.TypeParser;
+import de.fraunhofer.aisec.cpg.graph.types.UnknownType;
 import de.fraunhofer.aisec.cpg.helpers.NodeComparator;
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker;
 import de.fraunhofer.aisec.cpg.helpers.Util;
@@ -117,8 +117,7 @@ class CXXLanguageFrontendTest extends BaseTest {
     assertNotNull(forEachStatement);
 
     // should loop over ls
-    assertEquals(
-        Set.of(ls), ((DeclaredReferenceExpression) forEachStatement.getIterable()).getRefersTo());
+    assertEquals(ls, ((DeclaredReferenceExpression) forEachStatement.getIterable()).getRefersTo());
 
     // should declare auto i (so far no concrete type inferrable)
     VariableDeclaration i = (VariableDeclaration) forEachStatement.getVariable();
@@ -277,7 +276,7 @@ class CXXLanguageFrontendTest extends BaseTest {
         (ArraySubscriptionExpression) statement.getStatements().get(1);
     assertNotNull(ase);
 
-    assertEquals(Set.of(x), ((DeclaredReferenceExpression) ase.getArrayExpression()).getRefersTo());
+    assertEquals(x, ((DeclaredReferenceExpression) ase.getArrayExpression()).getRefersTo());
     assertEquals(0, ((Literal<Integer>) ase.getSubscriptExpression()).getValue().intValue());
   }
 
@@ -288,7 +287,7 @@ class CXXLanguageFrontendTest extends BaseTest {
         TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true);
 
     // should be six function nodes
-    assertEquals(6, declaration.getDeclarations().size());
+    assertEquals(7, declaration.getDeclarations().size());
 
     FunctionDeclaration method = declaration.getDeclarationAs(0, FunctionDeclaration.class);
     assertEquals("function0(int)void", method.getSignature());
@@ -326,10 +325,17 @@ class CXXLanguageFrontendTest extends BaseTest {
     assertFalse(statement.isImplicit());
 
     method = declaration.getDeclarationAs(4, FunctionDeclaration.class);
+    assertNotNull(method);
     assertEquals("function3()UnknownType*", method.getSignature());
 
     method = declaration.getDeclarationAs(5, FunctionDeclaration.class);
+    assertNotNull(method);
     assertEquals("function4(int)void", method.getSignature());
+
+    method = declaration.getDeclarationAs(6, FunctionDeclaration.class);
+    assertNotNull(method);
+    assertEquals(0, method.getParameters().size());
+    assertEquals("function5()void", method.getSignature());
   }
 
   @Test
@@ -595,7 +601,7 @@ class CXXLanguageFrontendTest extends BaseTest {
 
   private void assertRefersTo(Expression expression, Declaration b) {
     if (expression instanceof DeclaredReferenceExpression) {
-      assertEquals(Set.of(b), ((DeclaredReferenceExpression) expression).getRefersTo());
+      assertEquals(b, ((DeclaredReferenceExpression) expression).getRefersTo());
     } else {
       fail();
     }
@@ -749,6 +755,7 @@ class CXXLanguageFrontendTest extends BaseTest {
         TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true);
 
     RecordDeclaration recordDeclaration = declaration.getDeclarationAs(0, RecordDeclaration.class);
+    assertNotNull(recordDeclaration);
 
     assertEquals("SomeClass", recordDeclaration.getName());
     assertEquals("class", recordDeclaration.getKind());
@@ -1233,5 +1240,23 @@ class CXXLanguageFrontendTest extends BaseTest {
     assertEquals(
         "SomeCategory, SomeOtherThing",
         ((Literal<String>) annotation.getValues().get(0)).getValue());
+  }
+
+  @Test
+  void testUnityBuild() throws Exception {
+    File file = new File("src/test/resources/unity");
+    List<TranslationUnitDeclaration> declarations =
+        TestUtils.analyzeWithBuilder(
+            TranslationConfiguration.builder()
+                .sourceLocations(List.of(file))
+                .topLevel(file.getParentFile())
+                .useUnityBuild(true)
+                .loadIncludes(true)
+                .defaultPasses());
+
+    assertEquals(1, declarations.size());
+
+    // should contain 3 declarations (2 include and 1 function decl from the include)
+    assertEquals(3, declarations.get(0).getDeclarations().size());
   }
 }

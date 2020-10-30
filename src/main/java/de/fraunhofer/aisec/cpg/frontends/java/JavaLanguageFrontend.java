@@ -26,7 +26,11 @@
 
 package de.fraunhofer.aisec.cpg.frontends.java;
 
-import com.github.javaparser.*;
+import com.github.javaparser.JavaParser;
+import com.github.javaparser.ParseResult;
+import com.github.javaparser.ParserConfiguration;
+import com.github.javaparser.Range;
+import com.github.javaparser.TokenRange;
 import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.ImportDeclaration;
 import com.github.javaparser.ast.Node;
@@ -50,17 +54,24 @@ import com.github.javaparser.symbolsolver.resolution.typesolvers.ReflectionTypeS
 import de.fraunhofer.aisec.cpg.TranslationConfiguration;
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
 import de.fraunhofer.aisec.cpg.frontends.TranslationException;
-import de.fraunhofer.aisec.cpg.graph.*;
-import de.fraunhofer.aisec.cpg.graph.type.TypeParser;
+import de.fraunhofer.aisec.cpg.graph.NodeBuilder;
+import de.fraunhofer.aisec.cpg.graph.TypeManager;
+import de.fraunhofer.aisec.cpg.graph.declarations.IncludeDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration;
+import de.fraunhofer.aisec.cpg.graph.types.TypeParser;
 import de.fraunhofer.aisec.cpg.helpers.Benchmark;
 import de.fraunhofer.aisec.cpg.helpers.CommonPath;
+import de.fraunhofer.aisec.cpg.passes.scopes.Scope;
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager;
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation;
 import de.fraunhofer.aisec.cpg.sarif.Region;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
@@ -119,41 +130,35 @@ public class JavaLanguageFrontend extends LanguageFrontend {
       TranslationUnitDeclaration fileDeclaration =
           NodeBuilder.newTranslationUnitDeclaration(file.toString(), context.toString());
       setCurrentTU(fileDeclaration);
-      Declaration declaration = fileDeclaration;
+
+      scopeManager.resetToGlobal(fileDeclaration);
 
       PackageDeclaration packDecl = context.getPackageDeclaration().orElse(null);
       NamespaceDeclaration namespaceDeclaration = null;
       if (packDecl != null) {
         namespaceDeclaration = NodeBuilder.newNamespaceDeclaration(packDecl.getName().asString());
         // Todo set region and code and push/pop scope
+
+        scopeManager.addDeclaration(namespaceDeclaration);
+
         scopeManager.enterScope(namespaceDeclaration);
-        if (declaration instanceof TranslationUnitDeclaration) {
-          ((TranslationUnitDeclaration) declaration).add(namespaceDeclaration);
-        }
-        declaration = namespaceDeclaration;
       }
 
       for (TypeDeclaration<?> type : context.getTypes()) {
-        Declaration typeD = getDeclarationHandler().handle(type);
-        if (declaration instanceof TranslationUnitDeclaration) {
-          ((TranslationUnitDeclaration) declaration).add(typeD);
-        } else {
-          scopeManager.addDeclaration(typeD);
-        }
+        // handle each type. all declaration in this type will be added by the scope manager along
+        // the way
+        getDeclarationHandler().handle(type);
       }
 
       for (ImportDeclaration anImport : context.getImports()) {
         IncludeDeclaration incl = NodeBuilder.newIncludeDeclaration(anImport.getNameAsString());
-        if (declaration instanceof TranslationUnitDeclaration) {
-          ((TranslationUnitDeclaration) declaration).add(incl);
-        } else {
-          scopeManager.addDeclaration(incl);
-        }
+        scopeManager.addDeclaration(incl);
       }
 
       if (packDecl != null) {
         scopeManager.leaveScope(namespaceDeclaration);
       }
+
       bench.stop();
 
       return fileDeclaration;
@@ -241,7 +246,7 @@ public class JavaLanguageFrontend extends LanguageFrontend {
     return null;
   }
 
-  public de.fraunhofer.aisec.cpg.graph.type.Type getTypeAsGoodAsPossible(
+  public de.fraunhofer.aisec.cpg.graph.types.Type getTypeAsGoodAsPossible(
       NodeWithType nodeWithType, ResolvedValueDeclaration resolved) {
     try {
       return TypeParser.createFrom(resolved.getType().describe(), true);
@@ -302,15 +307,14 @@ public class JavaLanguageFrontend extends LanguageFrontend {
         qualifier = ((UnsolvedSymbolException) ex.getCause()).getName();
       }
       // this comes from the Javaparser!
-      if (qualifier.startsWith("We are unable to find the value declaration corresponding to")
-          || qualifier.startsWith("Solving ")) {
+      if (qualifier.startsWith("We are unable to find") || qualifier.startsWith("Solving ")) {
         return null;
       }
       String fromImport = getQualifiedNameFromImports(qualifier);
       if (fromImport != null) {
         return fromImport;
       }
-      return qualifier;
+      return getFQNInCurrentPackage(qualifier);
     }
     log.debug("Unable to resolve qualified name from exception");
     return null;
@@ -338,7 +342,7 @@ public class JavaLanguageFrontend extends LanguageFrontend {
     return null;
   }
 
-  public de.fraunhofer.aisec.cpg.graph.type.Type getTypeAsGoodAsPossible(Type type) {
+  public de.fraunhofer.aisec.cpg.graph.types.Type getTypeAsGoodAsPossible(Type type) {
     try {
       return TypeParser.createFrom(type.resolve().describe(), true);
     } catch (RuntimeException | NoClassDefFoundError ex) {
@@ -346,7 +350,7 @@ public class JavaLanguageFrontend extends LanguageFrontend {
     }
   }
 
-  public de.fraunhofer.aisec.cpg.graph.type.Type getReturnTypeAsGoodAsPossible(
+  public de.fraunhofer.aisec.cpg.graph.types.Type getReturnTypeAsGoodAsPossible(
       NodeWithType nodeWithType, ResolvedMethodDeclaration resolved) {
     try {
       return TypeParser.createFrom(resolved.getReturnType().describe(), true);
@@ -355,7 +359,25 @@ public class JavaLanguageFrontend extends LanguageFrontend {
     }
   }
 
-  private de.fraunhofer.aisec.cpg.graph.type.Type getTypeFromImportIfPossible(Type type) {
+  /**
+   * Returns the FQN of the given parameter assuming that is declared somewhere in the same package.
+   * Names declared in a package are automatically imported.
+   *
+   * @param simpleName
+   * @return
+   */
+  private String getFQNInCurrentPackage(String simpleName) {
+    Scope theScope =
+        getScopeManager()
+            .getFirstScopeThat(scope -> scope.getAstNode() instanceof NamespaceDeclaration);
+    // If scope is null we are in a default package
+    if (theScope == null) {
+      return simpleName;
+    }
+    return theScope.getScopedName() + getNamespaceDelimiter() + simpleName;
+  }
+
+  private de.fraunhofer.aisec.cpg.graph.types.Type getTypeFromImportIfPossible(Type type) {
     Type searchType = type;
     while (searchType.isArrayType()) {
       searchType = searchType.getElementType();
@@ -363,15 +385,16 @@ public class JavaLanguageFrontend extends LanguageFrontend {
     // if this is not a ClassOrInterfaceType, just return
     if (!searchType.isClassOrInterfaceType() || context == null) {
       log.warn("Unable to resolve type for {}", type.asString());
-      de.fraunhofer.aisec.cpg.graph.type.Type returnType =
+      de.fraunhofer.aisec.cpg.graph.types.Type returnType =
           TypeParser.createFrom(type.asString(), true);
-      returnType.setTypeOrigin(de.fraunhofer.aisec.cpg.graph.type.Type.Origin.GUESSED);
+      returnType.setTypeOrigin(de.fraunhofer.aisec.cpg.graph.types.Type.Origin.GUESSED);
       return returnType;
     }
 
     ClassOrInterfaceType clazz = searchType.asClassOrInterfaceType();
 
     if (clazz != null) {
+
       // try to look for imports matching the name
       for (ImportDeclaration importDeclaration : context.getImports()) {
         if (importDeclaration.getName().getIdentifier().endsWith(clazz.getName().getIdentifier())) {
@@ -379,16 +402,16 @@ public class JavaLanguageFrontend extends LanguageFrontend {
           return TypeParser.createFrom(importDeclaration.getNameAsString(), true);
         }
       }
-      de.fraunhofer.aisec.cpg.graph.type.Type returnType =
-          TypeParser.createFrom(clazz.getNameAsString(), true);
-      returnType.setTypeOrigin(de.fraunhofer.aisec.cpg.graph.type.Type.Origin.GUESSED);
+      de.fraunhofer.aisec.cpg.graph.types.Type returnType =
+          TypeParser.createFrom(clazz.asString(), true);
+      returnType.setTypeOrigin(de.fraunhofer.aisec.cpg.graph.types.Type.Origin.GUESSED);
       return returnType;
     }
 
     log.warn("Unable to resolve type for {}", type.asString());
-    de.fraunhofer.aisec.cpg.graph.type.Type returnType =
+    de.fraunhofer.aisec.cpg.graph.types.Type returnType =
         TypeParser.createFrom(type.asString(), true);
-    returnType.setTypeOrigin(de.fraunhofer.aisec.cpg.graph.type.Type.Origin.GUESSED);
+    returnType.setTypeOrigin(de.fraunhofer.aisec.cpg.graph.types.Type.Origin.GUESSED);
     return returnType;
   }
 

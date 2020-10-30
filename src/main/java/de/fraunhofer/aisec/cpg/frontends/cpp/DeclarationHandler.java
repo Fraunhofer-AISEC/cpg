@@ -30,26 +30,27 @@ import static de.fraunhofer.aisec.cpg.helpers.Util.errorWithFileLocation;
 import static de.fraunhofer.aisec.cpg.helpers.Util.warnWithFileLocation;
 
 import de.fraunhofer.aisec.cpg.frontends.Handler;
-import de.fraunhofer.aisec.cpg.graph.CompoundStatement;
-import de.fraunhofer.aisec.cpg.graph.ConstructorDeclaration;
-import de.fraunhofer.aisec.cpg.graph.Declaration;
-import de.fraunhofer.aisec.cpg.graph.DeclarationSequence;
-import de.fraunhofer.aisec.cpg.graph.FunctionDeclaration;
-import de.fraunhofer.aisec.cpg.graph.IncludeDeclaration;
-import de.fraunhofer.aisec.cpg.graph.MethodDeclaration;
-import de.fraunhofer.aisec.cpg.graph.NamespaceDeclaration;
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder;
-import de.fraunhofer.aisec.cpg.graph.ProblemDeclaration;
-import de.fraunhofer.aisec.cpg.graph.RecordDeclaration;
-import de.fraunhofer.aisec.cpg.graph.ReturnStatement;
-import de.fraunhofer.aisec.cpg.graph.Statement;
-import de.fraunhofer.aisec.cpg.graph.TranslationUnitDeclaration;
 import de.fraunhofer.aisec.cpg.graph.TypeManager;
-import de.fraunhofer.aisec.cpg.graph.ValueDeclaration;
-import de.fraunhofer.aisec.cpg.graph.VariableDeclaration;
-import de.fraunhofer.aisec.cpg.graph.type.Type;
-import de.fraunhofer.aisec.cpg.graph.type.TypeParser;
+import de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declarations.Declaration;
+import de.fraunhofer.aisec.cpg.graph.declarations.DeclarationSequence;
+import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declarations.IncludeDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declarations.ProblemDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration;
+import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement;
+import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement;
+import de.fraunhofer.aisec.cpg.graph.statements.Statement;
+import de.fraunhofer.aisec.cpg.graph.types.Type;
+import de.fraunhofer.aisec.cpg.graph.types.TypeParser;
 import de.fraunhofer.aisec.cpg.helpers.Util;
+import de.fraunhofer.aisec.cpg.passes.scopes.RecordScope;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -106,11 +107,13 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
   private Declaration handleNamespace(CPPASTNamespaceDefinition ctx) {
     NamespaceDeclaration declaration =
         NodeBuilder.newNamespaceDeclaration(ctx.getName().toString());
+
+    lang.getScopeManager().addDeclaration(declaration);
+
     lang.getScopeManager().enterScope(declaration);
     for (IASTNode child : ctx.getChildren()) {
       if (child instanceof IASTDeclaration) {
-        lang.getScopeManager()
-            .addDeclaration(this.lang.getDeclarationHandler().handle((IASTDeclaration) child));
+        handle((IASTDeclaration) child);
       } else if (child instanceof CPPASTName) {
         // this is the name of the namespace. Already parsed outside, skipping.
       } else {
@@ -124,10 +127,15 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
   }
 
   private Declaration handleProblem(CPPASTProblemDeclaration ctx) {
-    return NodeBuilder.newProblemDeclaration(
-        ctx.getContainingFilename(),
-        ctx.getProblem().getMessage(),
-        ctx.getProblem().getFileLocation().toString());
+    var problem =
+        NodeBuilder.newProblemDeclaration(
+            ctx.getContainingFilename(),
+            ctx.getProblem().getMessage(),
+            ctx.getProblem().getFileLocation().toString());
+
+    this.lang.getScopeManager().addDeclaration(problem);
+
+    return problem;
   }
 
   private FunctionDeclaration handleFunctionDefinition(CPPASTFunctionDefinition ctx) {
@@ -140,19 +148,6 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
     String typeString = getTypeStringFromDeclarator(ctx.getDeclarator(), ctx.getDeclSpecifier());
 
     functionDeclaration.setIsDefinition(true);
-
-    // It is a constructor
-    if (functionDeclaration instanceof MethodDeclaration && typeString.isEmpty()) {
-      ConstructorDeclaration constructorDeclaration =
-          ConstructorDeclaration.from((MethodDeclaration) functionDeclaration);
-
-      // update our scope manager, otherwise scopes will still point to our old non-existing
-      // function declaration
-      this.lang.getScopeManager().replaceNode(constructorDeclaration, functionDeclaration);
-
-      functionDeclaration = constructorDeclaration;
-    }
-
     functionDeclaration.setType(TypeParser.createFrom(typeString, true));
 
     // associated record declaration if this is a method or constructor
@@ -160,10 +155,15 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
         functionDeclaration instanceof MethodDeclaration
             ? ((MethodDeclaration) functionDeclaration).getRecordDeclaration()
             : null;
-    if (recordDeclaration != null) {
-      // everything inside the method is within the scope of its record
-      this.lang.getScopeManager().enterScope(recordDeclaration);
+    var outsideOfRecord = !(lang.getScopeManager().getCurrentScope() instanceof RecordScope);
 
+    if (recordDeclaration != null) {
+      if (outsideOfRecord) {
+        // everything inside the method is within the scope of its record
+        this.lang.getScopeManager().enterScope(recordDeclaration);
+      }
+
+      // update the definition
       List<? extends MethodDeclaration> candidates;
 
       if (functionDeclaration instanceof ConstructorDeclaration) {
@@ -228,7 +228,7 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
 
     lang.getScopeManager().leaveScope(functionDeclaration);
 
-    if (recordDeclaration != null) {
+    if (recordDeclaration != null && outsideOfRecord) {
       this.lang.getScopeManager().leaveScope(recordDeclaration);
     }
 
@@ -315,7 +315,6 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
         // otherwise, use the complete raw code and let the type parser handle it
         typeString = ctx.getRawSignature();
       }
-
       Type result = TypeParser.createFrom(typeString, true);
       declaration.setType(result);
 
@@ -357,7 +356,7 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
     // There might have been errors in the previous translation unit and in any case
     // we need to reset the scope manager scope to global, to avoid spilling scope errors into other
     // translation units
-    lang.getScopeManager().resetToGlobal();
+    lang.getScopeManager().resetToGlobal(node);
 
     lang.setCurrentTU(node);
 
@@ -367,7 +366,7 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
         continue; // do not care about these for now
       }
 
-      Declaration decl = handle(declaration);
+      var decl = handle(declaration);
       if (decl == null) {
         continue;
       }
@@ -377,11 +376,11 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
             problematicIncludes.computeIfAbsent(
                 ((ProblemDeclaration) decl).getFilename(), k -> new HashSet<>());
         problems.add((ProblemDeclaration) decl);
-      } else {
-        node.add(decl);
       }
     }
 
+    // TODO: Remark CB: I am not quite sure, what the point of the code beyord this line is.
+    // Probably needs to be refactored
     boolean addIncludesToGraph = true; // todo move to config
     if (addIncludesToGraph) {
 
@@ -417,8 +416,9 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
 
         // attach to root note
         for (String incl : allIncludes.get(translationUnit.getFilePath())) {
-          node.add(includeMap.get(incl));
+          node.addDeclaration(includeMap.get(incl));
         }
+
         allIncludes.remove(translationUnit.getFilePath());
         // attach to remaining nodes
         for (Map.Entry<String, HashSet<String>> entry : allIncludes.entrySet()) {

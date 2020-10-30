@@ -29,8 +29,11 @@ package de.fraunhofer.aisec.cpg.passes;
 import de.fraunhofer.aisec.cpg.TranslationResult;
 import de.fraunhofer.aisec.cpg.frontends.CallableInterface;
 import de.fraunhofer.aisec.cpg.graph.*;
-import de.fraunhofer.aisec.cpg.graph.type.Type;
-import de.fraunhofer.aisec.cpg.graph.type.TypeParser;
+import de.fraunhofer.aisec.cpg.graph.declarations.*;
+import de.fraunhofer.aisec.cpg.graph.statements.*;
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.*;
+import de.fraunhofer.aisec.cpg.graph.types.Type;
+import de.fraunhofer.aisec.cpg.graph.types.TypeParser;
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker;
 import de.fraunhofer.aisec.cpg.passes.scopes.*;
 import java.util.*;
@@ -117,6 +120,7 @@ public class EvaluationOrderGraphPass extends Pass {
     map.put(ConstructExpression.class, this::handleConstructExpression);
     map.put(EmptyStatement.class, this::handleDefault);
     map.put(Literal.class, this::handleDefault);
+    map.put(UninitializedValue.class, this::handleDefault);
     map.put(DefaultStatement.class, this::handleDefault);
     map.put(TypeIdExpression.class, this::handleDefault);
     map.put(DeclaredReferenceExpression.class, this::handleDefault);
@@ -319,16 +323,7 @@ public class EvaluationOrderGraphPass extends Pass {
 
   private void handleMemberExpression(@NonNull Node node) {
     MemberExpression memberExpression = (MemberExpression) node;
-    // analyze the base
-    if (memberExpression.getBase() instanceof Statement) {
-      createEOG(memberExpression.getBase());
-    }
-
-    // analyze the member
-    if (memberExpression.getMember() instanceof Statement) {
-      createEOG(memberExpression.getMember());
-    }
-
+    createEOG(memberExpression.getBase());
     pushToEOG(memberExpression);
   }
 

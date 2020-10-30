@@ -30,15 +30,15 @@ import static de.fraunhofer.aisec.cpg.sarif.PhysicalLocation.locationLink;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
-import de.fraunhofer.aisec.cpg.graph.Expression;
-import de.fraunhofer.aisec.cpg.graph.FunctionDeclaration;
 import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder;
-import de.fraunhofer.aisec.cpg.graph.ParamVariableDeclaration;
-import de.fraunhofer.aisec.cpg.graph.type.FunctionPointerType;
-import de.fraunhofer.aisec.cpg.graph.type.PointerType;
-import de.fraunhofer.aisec.cpg.graph.type.ReferenceType;
-import de.fraunhofer.aisec.cpg.graph.type.Type;
+import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declarations.ParamVariableDeclaration;
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression;
+import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType;
+import de.fraunhofer.aisec.cpg.graph.types.PointerType;
+import de.fraunhofer.aisec.cpg.graph.types.ReferenceType;
+import de.fraunhofer.aisec.cpg.graph.types.Type;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
@@ -56,6 +56,8 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+import java.util.stream.Stream;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.slf4j.Logger;
 
@@ -333,6 +335,13 @@ public class Util {
     }
   }
 
+  public static String getSimpleName(String delimiter, String name) {
+    if (name.contains(delimiter)) {
+      name = name.substring(name.lastIndexOf(delimiter) + delimiter.length());
+    }
+    return name;
+  }
+
   /**
    * Inverse operation of {@link #attachCallParameters}
    *
@@ -414,6 +423,11 @@ public class Util {
         .filter(g -> specificClass.isAssignableFrom(g.getClass()))
         .map(specificClass::cast)
         .collect(Collectors.toList());
+  }
+
+  static <T> Stream<T> reverse(Stream<T> input) {
+    Object[] temp = input.toArray();
+    return (Stream<T>) IntStream.range(0, temp.length).mapToObj(i -> temp[temp.length - i - 1]);
   }
 
   public enum Connect {

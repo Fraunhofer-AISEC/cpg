@@ -31,7 +31,10 @@ import static org.junit.jupiter.api.Assertions.*;
 import de.fraunhofer.aisec.cpg.BaseTest;
 import de.fraunhofer.aisec.cpg.TestUtils;
 import de.fraunhofer.aisec.cpg.graph.*;
-import de.fraunhofer.aisec.cpg.graph.type.TypeParser;
+import de.fraunhofer.aisec.cpg.graph.declarations.*;
+import de.fraunhofer.aisec.cpg.graph.statements.*;
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.*;
+import de.fraunhofer.aisec.cpg.graph.types.TypeParser;
 import de.fraunhofer.aisec.cpg.helpers.NodeComparator;
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker;
 import de.fraunhofer.aisec.cpg.helpers.Util;
@@ -44,7 +47,6 @@ import java.math.BigInteger;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Objects;
-import java.util.Set;
 import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
 
@@ -132,8 +134,7 @@ class JavaLanguageFrontendTest extends BaseTest {
     assertNotNull(forEachStatement);
 
     // should loop over ls
-    assertEquals(
-        Set.of(ls), ((DeclaredReferenceExpression) forEachStatement.getIterable()).getRefersTo());
+    assertEquals(ls, ((DeclaredReferenceExpression) forEachStatement.getIterable()).getRefersTo());
 
     // should declare String s
     VariableDeclaration s = (VariableDeclaration) forEachStatement.getVariable();
@@ -361,24 +362,32 @@ class JavaLanguageFrontendTest extends BaseTest {
     assertNotNull(stmt);
 
     VariableDeclaration e = stmt.getSingleDeclarationAs(VariableDeclaration.class);
-    assertEquals(TypeParser.createFrom("ExtendedClass", true), e.getType());
+    // This test can be simplified once we solved the issue with inconsistently used simple names
+    // vs. fully qualified names.
+    assertTrue(
+        e.getType().getName().equals("ExtendedClass")
+            || e.getType().getName().equals("cast.ExtendedClass"));
 
     // b = (BaseClass) e
     stmt = main.getBodyStatementAs(1, DeclarationStatement.class);
     assertNotNull(stmt);
 
     VariableDeclaration b = stmt.getSingleDeclarationAs(VariableDeclaration.class);
-    assertEquals(TypeParser.createFrom("BaseClass", true), b.getType());
+    assertTrue(
+        b.getType().getName().equals("BaseClass")
+            || b.getType().getName().equals("cast.BaseClass"));
 
     // initializer
     CastExpression cast = (CastExpression) b.getInitializer();
     assertNotNull(cast);
-    assertEquals(TypeParser.createFrom("BaseClass", true), cast.getCastType());
+    assertTrue(
+        cast.getType().getName().equals("BaseClass")
+            || cast.getType().getName().equals("cast.BaseClass"));
 
     // expression itself should be a reference
     DeclaredReferenceExpression ref = (DeclaredReferenceExpression) cast.getExpression();
     assertNotNull(ref);
-    assertEquals(Set.of(e), ref.getRefersTo());
+    assertEquals(e, ref.getRefersTo());
   }
 
   @Test
@@ -427,7 +436,7 @@ class JavaLanguageFrontendTest extends BaseTest {
     // initializer is array subscription
     ArraySubscriptionExpression ase = (ArraySubscriptionExpression) b.getInitializer();
     assertNotNull(ase);
-    assertEquals(Set.of(a), ((DeclaredReferenceExpression) ase.getArrayExpression()).getRefersTo());
+    assertEquals(a, ((DeclaredReferenceExpression) ase.getArrayExpression()).getRefersTo());
     assertEquals(0, ((Literal<Integer>) ase.getSubscriptExpression()).getValue().intValue());
   }
 
@@ -459,7 +468,7 @@ class JavaLanguageFrontendTest extends BaseTest {
     MemberExpression length = (MemberExpression) l.getInitializer();
 
     assertNotNull(length);
-    assertEquals("length", length.getMember().getName());
+    assertEquals("length", length.getName());
     assertEquals("int", length.getType().getTypeName());
   }
 

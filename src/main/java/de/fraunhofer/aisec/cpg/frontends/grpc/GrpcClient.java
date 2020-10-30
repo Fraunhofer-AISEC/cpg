@@ -30,8 +30,8 @@ import de.fraunhofer.aisec.cpg.frontends.TranslationException;
 import de.fraunhofer.aisec.cpg.frontends.grpc.messages.CpgRequest;
 import de.fraunhofer.aisec.cpg.frontends.grpc.messages.CpgResponse;
 import de.fraunhofer.aisec.cpg.frontends.grpc.messages.TransferCpgGrpc;
-import io.grpc.ManagedChannelBuilder;
 import io.grpc.Channel;
+import io.grpc.ManagedChannelBuilder;
 
 public class GrpcClient {
   private final Channel channel;

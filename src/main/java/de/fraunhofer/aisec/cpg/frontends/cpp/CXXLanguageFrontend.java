@@ -34,15 +34,15 @@ import de.fraunhofer.aisec.cpg.TranslationConfiguration;
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
 import de.fraunhofer.aisec.cpg.frontends.TranslationException;
 import de.fraunhofer.aisec.cpg.graph.Annotation;
-import de.fraunhofer.aisec.cpg.graph.Declaration;
-import de.fraunhofer.aisec.cpg.graph.DeclaredReferenceExpression;
-import de.fraunhofer.aisec.cpg.graph.Expression;
 import de.fraunhofer.aisec.cpg.graph.Node;
-import de.fraunhofer.aisec.cpg.graph.TranslationUnitDeclaration;
 import de.fraunhofer.aisec.cpg.graph.TypeManager;
-import de.fraunhofer.aisec.cpg.graph.ValueDeclaration;
-import de.fraunhofer.aisec.cpg.graph.type.TypeParser;
-import de.fraunhofer.aisec.cpg.graph.type.UnknownType;
+import de.fraunhofer.aisec.cpg.graph.declarations.Declaration;
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration;
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression;
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression;
+import de.fraunhofer.aisec.cpg.graph.types.TypeParser;
+import de.fraunhofer.aisec.cpg.graph.types.UnknownType;
 import de.fraunhofer.aisec.cpg.helpers.Benchmark;
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager;
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation;
@@ -263,10 +263,14 @@ public class CXXLanguageFrontend extends LanguageFrontend {
 
     try {
       Benchmark bench = new Benchmark(this.getClass(), "Parsing sourcefile");
-      IASTTranslationUnit translationUnit =
-          GPPLanguage.getDefault()
-              .getASTTranslationUnit(
-                  content, scannerInfo, includeFileContentProvider, null, opts, log);
+      CPPASTTranslationUnit translationUnit =
+          (CPPASTTranslationUnit)
+              GPPLanguage.getDefault()
+                  .getASTTranslationUnit(
+                      content, scannerInfo, includeFileContentProvider, null, opts, log);
+
+      var length = translationUnit.getLength();
+      LOGGER.info("Parsed {} bytes corresponding roughly to {} LoC", length, length / 50);
       bench.stop();
 
       bench = new Benchmark(this.getClass(), "Transform to CPG");
@@ -276,6 +280,10 @@ public class CXXLanguageFrontend extends LanguageFrontend {
       }
 
       for (IASTComment c : translationUnit.getComments()) {
+        if (c.getFileLocation() == null) {
+          LOGGER.warn("Found comment with null location in {}", translationUnit.getFilePath());
+          continue;
+        }
         comments.put(c.getFileLocation().getStartingLineNumber(), c.getRawSignature());
       }
 
