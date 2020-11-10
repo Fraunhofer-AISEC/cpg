@@ -27,6 +27,7 @@
 package de.fraunhofer.aisec.cpg.frontends.cpp;
 
 import static de.fraunhofer.aisec.cpg.graph.NodeBuilder.newAnnotation;
+import static de.fraunhofer.aisec.cpg.graph.NodeBuilder.newAnnotationMember;
 import static de.fraunhofer.aisec.cpg.graph.NodeBuilder.newDeclaredReferenceExpression;
 import static de.fraunhofer.aisec.cpg.graph.NodeBuilder.newLiteral;
 
@@ -34,6 +35,7 @@ import de.fraunhofer.aisec.cpg.TranslationConfiguration;
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
 import de.fraunhofer.aisec.cpg.frontends.TranslationException;
 import de.fraunhofer.aisec.cpg.graph.Annotation;
+import de.fraunhofer.aisec.cpg.graph.AnnotationMember;
 import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.TypeManager;
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration;
@@ -58,7 +60,15 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
-import org.eclipse.cdt.core.dom.ast.*;
+import org.eclipse.cdt.core.dom.ast.IASTAttribute;
+import org.eclipse.cdt.core.dom.ast.IASTAttributeOwner;
+import org.eclipse.cdt.core.dom.ast.IASTComment;
+import org.eclipse.cdt.core.dom.ast.IASTExpression;
+import org.eclipse.cdt.core.dom.ast.IASTFileLocation;
+import org.eclipse.cdt.core.dom.ast.IASTNode;
+import org.eclipse.cdt.core.dom.ast.IASTToken;
+import org.eclipse.cdt.core.dom.ast.IASTTokenList;
+import org.eclipse.cdt.core.dom.ast.IBinding;
 import org.eclipse.cdt.core.dom.ast.gnu.cpp.GPPLanguage;
 import org.eclipse.cdt.core.index.IIndexFileLocation;
 import org.eclipse.cdt.core.model.ILanguage;
@@ -393,9 +403,10 @@ public class CXXLanguageFrontend extends LanguageFrontend {
 
       // go over the parameters
       if (attribute.getArgumentClause() instanceof IASTTokenList) {
-        List<Expression> values = handleTokenList((IASTTokenList) attribute.getArgumentClause());
+        List<AnnotationMember> members =
+            handleTokenList((IASTTokenList) attribute.getArgumentClause());
 
-        annotation.setValues(values);
+        annotation.setMembers(members);
       }
 
       list.add(annotation);
@@ -404,10 +415,11 @@ public class CXXLanguageFrontend extends LanguageFrontend {
     return list;
   }
 
-  private List<Expression> handleTokenList(IASTTokenList tokenList) {
-    List<Expression> list = new ArrayList<>();
+  private List<AnnotationMember> handleTokenList(IASTTokenList tokenList) {
+    List<AnnotationMember> list = new ArrayList<>();
 
     for (IASTToken token : tokenList.getTokens()) {
+      // skip commas and such
       if (token.getTokenType() == 6) {
         continue;
       }
@@ -418,22 +430,32 @@ public class CXXLanguageFrontend extends LanguageFrontend {
     return list;
   }
 
-  private Expression handleToken(IASTToken token) {
+  private AnnotationMember handleToken(IASTToken token) {
     String code = new String(token.getTokenCharImage());
 
+    Expression expression;
     switch (token.getTokenType()) {
       case 1:
-        return newDeclaredReferenceExpression(code, UnknownType.getUnknownType(), code);
+        // a variable
+        expression = newDeclaredReferenceExpression(code, UnknownType.getUnknownType(), code);
+        break;
       case 2:
-        return newLiteral(Integer.parseInt(code), TypeParser.createFrom("int", true), code);
+        // an integer
+        expression = newLiteral(Integer.parseInt(code), TypeParser.createFrom("int", true), code);
+        break;
       case 130:
-        return newLiteral(
-            code.length() >= 2 ? code.substring(1, code.length() - 1) : "",
-            TypeParser.createFrom("const char*", false),
-            code);
+        // a string
+        expression =
+            newLiteral(
+                code.length() >= 2 ? code.substring(1, code.length() - 1) : "",
+                TypeParser.createFrom("const char*", false),
+                code);
+        break;
       default:
-        return newLiteral(code, TypeParser.createFrom("const char*", false), code);
+        expression = newLiteral(code, TypeParser.createFrom("const char*", false), code);
     }
+
+    return newAnnotationMember(null, expression, code);
   }
 
   private Field getField(Class<?> type, String fieldName) throws NoSuchFieldException {

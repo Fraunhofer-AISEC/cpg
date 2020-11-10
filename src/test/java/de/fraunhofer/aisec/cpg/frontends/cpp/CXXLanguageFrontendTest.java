@@ -1225,8 +1225,8 @@ class CXXLanguageFrontendTest extends BaseTest {
     assertNotNull(annotation);
 
     assertEquals("property_attribute", annotation.getName());
-    assertEquals(3, annotation.getValues().size());
-    assertEquals("a", ((Literal<String>) annotation.getValues().get(0)).getValue());
+    assertEquals(3, annotation.getMembers().size());
+    assertEquals("a", ((Literal<String>) annotation.getMembers().get(0).getValue()).getValue());
 
     FieldDeclaration b =
         someClass.getFields().stream().filter(f -> f.getName().equals("b")).findAny().orElse(null);
@@ -1236,10 +1236,10 @@ class CXXLanguageFrontendTest extends BaseTest {
     assertNotNull(annotation);
 
     assertEquals("property_attribute", annotation.getName());
-    assertEquals(1, annotation.getValues().size());
+    assertEquals(1, annotation.getMembers().size());
     assertEquals(
         "SomeCategory, SomeOtherThing",
-        ((Literal<String>) annotation.getValues().get(0)).getValue());
+        ((Literal<String>) annotation.getMembers().get(0).getValue()).getValue());
   }
 
   @Test

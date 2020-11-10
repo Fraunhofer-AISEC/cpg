@@ -26,14 +26,44 @@
 
 package de.fraunhofer.aisec.cpg.frontends.java;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import de.fraunhofer.aisec.cpg.BaseTest;
 import de.fraunhofer.aisec.cpg.TestUtils;
-import de.fraunhofer.aisec.cpg.graph.*;
-import de.fraunhofer.aisec.cpg.graph.declarations.*;
-import de.fraunhofer.aisec.cpg.graph.statements.*;
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.*;
+import de.fraunhofer.aisec.cpg.TranslationConfiguration;
+import de.fraunhofer.aisec.cpg.graph.Node;
+import de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration;
+import de.fraunhofer.aisec.cpg.graph.statements.CaseStatement;
+import de.fraunhofer.aisec.cpg.graph.statements.CatchClause;
+import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement;
+import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement;
+import de.fraunhofer.aisec.cpg.graph.statements.DefaultStatement;
+import de.fraunhofer.aisec.cpg.graph.statements.ForEachStatement;
+import de.fraunhofer.aisec.cpg.graph.statements.ForStatement;
+import de.fraunhofer.aisec.cpg.graph.statements.Statement;
+import de.fraunhofer.aisec.cpg.graph.statements.SwitchStatement;
+import de.fraunhofer.aisec.cpg.graph.statements.TryStatement;
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.ArrayCreationExpression;
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.ArraySubscriptionExpression;
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.CastExpression;
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression;
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.ExpressionList;
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.InitializerListExpression;
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal;
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression;
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression;
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.StaticCallExpression;
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator;
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser;
 import de.fraunhofer.aisec.cpg.helpers.NodeComparator;
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker;
@@ -517,5 +547,43 @@ class JavaLanguageFrontendTest extends BaseTest {
     Path path = Path.of(location.getArtifactLocation().getUri());
     assertEquals("FieldAccess.java", path.getFileName().toString());
     assertEquals(new Region(7, 3, 10, 4), location.getRegion());
+  }
+
+  @Test
+  void testAnnotations() throws Exception {
+    File file = new File("src/test/resources/Annotation.java");
+    List<TranslationUnitDeclaration> declarations =
+        TestUtils.analyzeWithBuilder(
+            TranslationConfiguration.builder()
+                .sourceLocations(List.of(file))
+                .topLevel(file.getParentFile())
+                .defaultPasses()
+                .processAnnotations(true));
+    assertFalse(declarations.isEmpty());
+
+    TranslationUnitDeclaration tu = declarations.get(0);
+    assertNotNull(tu);
+
+    var record = tu.getDeclarationAs(0, RecordDeclaration.class);
+    assertNotNull(record);
+
+    var annotations = record.getAnnotations();
+    assertEquals(1, annotations.size());
+
+    var forClass = annotations.get(0);
+    assertEquals("AnnotationForClass", forClass.getName());
+
+    var value = forClass.getMembers().get(0);
+    assertEquals("value", value.getName());
+    assertEquals(2, ((Literal<Integer>) value.getValue()).getValue());
+
+    var field = record.getField("field");
+    assertNotNull(field);
+
+    annotations = field.getAnnotations();
+    assertEquals(1, annotations.size());
+
+    var forField = annotations.get(0);
+    assertEquals("AnnotatedField", forField.getName());
   }
 }
