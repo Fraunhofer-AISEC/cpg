@@ -78,7 +78,7 @@ public class EvaluationOrderGraphPass extends Pass {
       new HashMap<>();
 
   private List<Node> currentEOG = new ArrayList<>();
-  private Map<Properties, Object> currentProperties = new HashMap<>();
+  private EnumMap<Properties, Object> currentProperties = new EnumMap<>(Properties.class);
 
   // Some nodes will have no incoming nor outgoing edges but still need to be associated to the next
   // eog relevant node.
