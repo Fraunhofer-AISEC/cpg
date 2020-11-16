@@ -289,33 +289,34 @@ public class CFSensitiveDFGPass extends Pass {
             obtainAssignmentNode(
                 currNode); // Search for = BinaryOperator as it marks the end of the assignment
 
-        Node nextEOG =
-            currNode
-                .getNextEOG()
-                .get(
-                    0); // Only one outgoing eog edge from an assignment DeclaredReferenceExpression
-        iterateTillFixpoint(nextEOG, variables, binaryOperator, true);
+        if (binaryOperator != null) {
+          Node nextEOG =
+              currNode.getNextEOG().get(0); // Only one outgoing eog edge from an assignment
+          // DeclaredReferenceExpression
+          iterateTillFixpoint(nextEOG, variables, binaryOperator, true);
 
-        // Todo check if this causes problems when the lhs of an assignment is non trivial and also
-        // contains state chainging effects else we have to change this check to if(parent instance
-        // of Assignment-Statment)
+          // Todo check if this causes problems when the lhs of an assignment is non trivial and
+          // also
+          // contains state chainging effects else we have to change this check to if(parent
+          // instance
+          // of Assignment-Statment)
 
-        // Perform Delayed DFG modifications (after having processed the entire assignment)
-        modifyDFGEdges(currNode, variables);
+          // Perform Delayed DFG modifications (after having processed the entire assignment)
+          modifyDFGEdges(currNode, variables);
 
-        // Update values of DFG Pass until the end of the assignment
-        // this.variables = joinVariables(dfgs);
-        // mergeRemoves(joinRemoves(dfgs));
-        return binaryOperator
-            .getPrevEOG()
-            .get(0); // Still has to compute the joinPoints at the assignment, we take one of its
-        // predecessors to ensure it running through the loop once
-      } else {
-        // Other DeclaredReferenceExpression that do not have a write assignment we do not have to
-        // delay the replacement of the value in the VariableDeclaration
-        modifyDFGEdges(currNode, variables);
-        return currNode; // It is necessary for it to return the already processed node
+          // Update values of DFG Pass until the end of the assignment
+          // this.variables = joinVariables(dfgs);
+          // mergeRemoves(joinRemoves(dfgs));
+          return binaryOperator
+              .getPrevEOG()
+              .get(0); // Still has to compute the joinPoints at the assignment, we take one of its
+          // predecessors to ensure it running through the loop once
+        }
       }
+      // Other DeclaredReferenceExpression that do not have a write assignment we do not have to
+      // delay the replacement of the value in the VariableDeclaration
+      modifyDFGEdges(currNode, variables);
+      return currNode; // It is necessary for it to return the already processed node
     }
 
     private Node probagateAtDeclaredReferenceExpression(
@@ -325,28 +326,29 @@ public class CFSensitiveDFGPass extends Pass {
         Node binaryOperator =
             obtainAssignmentNode(
                 currNode); // Search for = BinaryOperator as it marks the end of the assignment
+        if (binaryOperator != null) {
 
-        Node nextEOG =
-            currNode
-                .getNextEOG()
-                .get(
-                    0); // Only one outgoing eog edge from an assignment DeclaredReferenceExpression
-        propagateFromJoinPoints(nextEOG, variables, binaryOperator, true);
+          Node nextEOG =
+              currNode.getNextEOG().get(0); // Only one outgoing eog edge from an assignment
+          // DeclaredReferenceExpression
+          propagateFromJoinPoints(nextEOG, variables, binaryOperator, true);
 
-        // Todo check if this causes problems when the lhs of an assignment is non trivial and also
-        // contains state chainging effects else we have to change this check to if(parent instance
-        // of Assignment-Statment)
+          // Todo check if this causes problems when the lhs of an assignment is non trivial and
+          // also
+          // contains state chainging effects else we have to change this check to if(parent
+          // instance
+          // of Assignment-Statment)
 
-        // Perform Delayed DFG modifications (after having processed the entire assignment)
-        modifyDFGEdges(currNode, variables);
+          // Perform Delayed DFG modifications (after having processed the entire assignment)
+          modifyDFGEdges(currNode, variables);
 
-        return binaryOperator.getPrevEOG().get(0); // Continue the EOG traversal at the assignment
-      } else {
-        // Other DeclaredReferenceExpression that do not have a write assignment we do not have to
-        // delay the replacement of the value in the VariableDeclaration
-        modifyDFGEdges(currNode, variables);
-        return currNode; // It is necessary for it to return the already processed node
+          return binaryOperator.getPrevEOG().get(0); // Continue the EOG traversal at the assignment
+        }
       }
+      // Other DeclaredReferenceExpression that do not have a write assignment we do not have to
+      // delay the replacement of the value in the VariableDeclaration
+      modifyDFGEdges(currNode, variables);
+      return currNode; // It is necessary for it to return the already processed node
     }
 
     public void propagateValues() {
