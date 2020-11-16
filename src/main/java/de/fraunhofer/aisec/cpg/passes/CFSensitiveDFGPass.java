@@ -72,29 +72,29 @@ public class CFSensitiveDFGPass extends Pass {
     if (node instanceof FunctionDeclaration) {
 
       CFSensitiveDFGPass.FunctionLevelFixpointIterator flfIterator =
-          new CFSensitiveDFGPass.FunctionLevelFixpointIterator(node);
-      flfIterator.handle();
+          new CFSensitiveDFGPass.FunctionLevelFixpointIterator();
+      flfIterator.handle(node);
       removeValues(flfIterator);
     }
   }
 
+  private interface IterationFunction {
+    public Map<VariableDeclaration, Set<Node>> iterate(
+        Node node, Map<VariableDeclaration, Set<Node>> variables, Node endNode, boolean stopBefore);
+  }
+
   private class FunctionLevelFixpointIterator {
 
-    private Node eogRootNode;
-
-    // A Node with refined DFG edges (key) is mapped to a set of nodes that were the previous
-    // (unrefined) DFG edges and need to be removed later on
-    private Map<Node, Set<Node>> removes;
+    /**
+     * A Node with refined DFG edges (key) is mapped to a set of nodes that were the previous
+     * (unrefined) DFG edges and need to be removed later on
+     */
+    private Map<Node, Set<Node>> removes = new HashMap<>();
 
     private Map<Node, Map<VariableDeclaration, Set<Node>>> joinPoints = new HashMap<>();
 
-    public FunctionLevelFixpointIterator(Node node) {
-      this.eogRootNode = node;
-      this.removes = new HashMap<>();
-    }
-
-    public void handle() {
-      iterateTillFixpoint(this.eogRootNode, new HashMap<>(), null, false);
+    public void handle(Node functionRoot) {
+      iterateTillFixpoint(functionRoot, new HashMap<>(), null, false);
       this.removes = new HashMap<>(); // Reseting removes, computing removes is not necessary in the
       // previous step, this can be removed
       propagateValues();
@@ -203,20 +203,26 @@ public class CFSensitiveDFGPass extends Pass {
     }
 
     /**
-     * Merge the removes Map from the current object with another instance of ContolFlowSensitiveDFG
+     * This function collects the set of variable definitions valid for the VariableDeclarations
+     * defined in the program when reaching a join-point, a node reached by more than one incoming
+     * EOG-Edge. The state is computed whenever a write access to a variable is encountered. A node
+     * may passed by multiple paths and therefore the states have to be merged at these join-points.
+     * However the number of paths is finite and scales well enough to make a fixpoint iteration of
+     * states at join-points is therefore terminating and feasable.
      *
-     * @param newRemoves remove map of the other ControlFlowSensitiveDFG
+     * <p>This function iterates over the entire EOG starting at a fixed node. If the execution of
+     * this function is started with the function-Node which also represents the EOG-Root-Node all
+     * Nodes that are part of a valid execution path will be traversed.
+     *
+     * @param node - Start of the fixpoint iteration
+     * @param variables - The state, composed of a mapping from variables to expression that were
+     *     prior written to it.
+     * @param endNode - A node where the iteration shall stop, if null the iteration stops at a
+     *     point once a fix-point no outgoing eog edge is reached
+     * @param stopBefore - denotes whether the iteration shall stop before or after processing the
+     *     reached node.
+     * @return The state after reaching on of the terminating conditions
      */
-    private void mergeRemoves(Map<Node, Set<Node>> newRemoves) {
-      for (Map.Entry<Node, Set<Node>> entry : newRemoves.entrySet()) {
-        if (this.removes.containsKey(entry.getKey())) {
-          this.removes.get(entry.getKey()).addAll(entry.getValue());
-        } else {
-          this.removes.put(entry.getKey(), entry.getValue());
-        }
-      }
-    }
-
     public Map<VariableDeclaration, Set<Node>> iterateTillFixpoint(
         Node node,
         Map<VariableDeclaration, Set<Node>> variables,
@@ -245,7 +251,9 @@ public class CFSensitiveDFGPass extends Pass {
         }
 
         if (node instanceof DeclaredReferenceExpression) {
-          node = handleDeclaredReferenceExpression((DeclaredReferenceExpression) node, variables);
+          node =
+              handleDeclaredReferenceExpression(
+                  (DeclaredReferenceExpression) node, variables, this::iterateTillFixpoint);
         }
 
         if (node.equals(endNode) && !stopBefore) {
@@ -282,7 +290,9 @@ public class CFSensitiveDFGPass extends Pass {
      * @return Node where the EOG traversal should continue
      */
     private Node handleDeclaredReferenceExpression(
-        DeclaredReferenceExpression currNode, Map<VariableDeclaration, Set<Node>> variables) {
+        DeclaredReferenceExpression currNode,
+        Map<VariableDeclaration, Set<Node>> variables,
+        IterationFunction iterationFunction) {
       if (currNode.getAccess().equals(AccessValues.WRITE)) {
         // This is an assignment -> DeclaredReferenceExpression + Write Access
         Node binaryOperator =
@@ -293,56 +303,16 @@ public class CFSensitiveDFGPass extends Pass {
           Node nextEOG =
               currNode.getNextEOG().get(0); // Only one outgoing eog edge from an assignment
           // DeclaredReferenceExpression
-          iterateTillFixpoint(nextEOG, variables, binaryOperator, true);
-
-          // Todo check if this causes problems when the lhs of an assignment is non trivial and
-          // also
-          // contains state chainging effects else we have to change this check to if(parent
-          // instance
-          // of Assignment-Statment)
+          iterationFunction.iterate(nextEOG, variables, binaryOperator, true);
 
           // Perform Delayed DFG modifications (after having processed the entire assignment)
           modifyDFGEdges(currNode, variables);
 
           // Update values of DFG Pass until the end of the assignment
-          // this.variables = joinVariables(dfgs);
-          // mergeRemoves(joinRemoves(dfgs));
           return binaryOperator
               .getPrevEOG()
               .get(0); // Still has to compute the joinPoints at the assignment, we take one of its
           // predecessors to ensure it running through the loop once
-        }
-      }
-      // Other DeclaredReferenceExpression that do not have a write assignment we do not have to
-      // delay the replacement of the value in the VariableDeclaration
-      modifyDFGEdges(currNode, variables);
-      return currNode; // It is necessary for it to return the already processed node
-    }
-
-    private Node probagateAtDeclaredReferenceExpression(
-        DeclaredReferenceExpression currNode, Map<VariableDeclaration, Set<Node>> variables) {
-      if (currNode.getAccess().equals(AccessValues.WRITE)) {
-        // This is an assignment -> DeclaredReferenceExpression + Write Access
-        Node binaryOperator =
-            obtainAssignmentNode(
-                currNode); // Search for = BinaryOperator as it marks the end of the assignment
-        if (binaryOperator != null) {
-
-          Node nextEOG =
-              currNode.getNextEOG().get(0); // Only one outgoing eog edge from an assignment
-          // DeclaredReferenceExpression
-          propagateFromJoinPoints(nextEOG, variables, binaryOperator, true);
-
-          // Todo check if this causes problems when the lhs of an assignment is non trivial and
-          // also
-          // contains state chainging effects else we have to change this check to if(parent
-          // instance
-          // of Assignment-Statment)
-
-          // Perform Delayed DFG modifications (after having processed the entire assignment)
-          modifyDFGEdges(currNode, variables);
-
-          return binaryOperator.getPrevEOG().get(0); // Continue the EOG traversal at the assignment
         }
       }
       // Other DeclaredReferenceExpression that do not have a write assignment we do not have to
@@ -370,7 +340,8 @@ public class CFSensitiveDFGPass extends Pass {
 
         if (node instanceof DeclaredReferenceExpression) {
           node =
-              probagateAtDeclaredReferenceExpression((DeclaredReferenceExpression) node, variables);
+              handleDeclaredReferenceExpression(
+                  (DeclaredReferenceExpression) node, variables, this::propagateFromJoinPoints);
         }
 
         if (node.equals(endNode) && !stopBefore) {
