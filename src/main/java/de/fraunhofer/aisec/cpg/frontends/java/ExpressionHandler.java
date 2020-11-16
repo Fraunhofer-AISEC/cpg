@@ -254,15 +254,15 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
 
       if (oInitializer.isPresent()) {
         de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression initializer =
-                (de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression)
-                        handle(oInitializer.get());
+            (de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression)
+                handle(oInitializer.get());
         if (initializer instanceof ArrayCreationExpression) {
           declaration.setIsArray(true);
         }
         declaration.setInitializer(initializer);
       } else {
         de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression uninitialzedInitializer =
-                new UninitializedValue();
+            new UninitializedValue();
         declaration.setInitializer(uninitialzedInitializer);
         declaration.getNextEOG();
       }
