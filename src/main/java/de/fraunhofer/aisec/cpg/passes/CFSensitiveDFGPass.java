@@ -321,12 +321,28 @@ public class CFSensitiveDFGPass extends Pass {
       return currNode; // It is necessary for it to return the already processed node
     }
 
+    /**
+     * Iterates over all join-points and propagates the state that is valid for the sum of incoming
+     * eog-Paths to refine the dfg edges at variable usage points.
+     */
     public void propagateValues() {
       for (Node joinPoint : this.joinPoints.keySet()) {
         propagateFromJoinPoints(joinPoint, this.joinPoints.get(joinPoint), null, true);
       }
     }
 
+    /**
+     * Propagates the state from the join-point until the next join-point is reached.
+     *
+     * @param node - Start of the propagation
+     * @param variables - The state, composed of a mapping from variables to expression that were
+     *     prior written to it collected at some join-point.
+     * @param endNode - A node where the iteration shall stop, if null the iteration stops at a
+     *     point once a fix-point no outgoing eog edge is reached
+     * @param stopBefore - denotes whether the iteration shall stop before or after processing the
+     *     reached node.
+     * @return The state after reaching on of the terminating conditions
+     */
     public Map<VariableDeclaration, Set<Node>> propagateFromJoinPoints(
         Node node,
         Map<VariableDeclaration, Set<Node>> variables,
@@ -378,6 +394,13 @@ public class CFSensitiveDFGPass extends Pass {
       return variables;
     }
 
+    /**
+     * Adds a DFG-Edge to the Mapping of variables. Updating the state.
+     *
+     * @param variableDeclaration - for which a new valid definition has to be added to the state
+     * @param prev - the defining expression to the variable
+     * @param variables - the state that is updated by the DFG edge
+     */
     private void addDFGToMap(
         VariableDeclaration variableDeclaration,
         Node prev,
@@ -395,6 +418,14 @@ public class CFSensitiveDFGPass extends Pass {
       }
     }
 
+    /**
+     * Merges two states asusming that both states come from valid paths. All the definition for
+     * variables are collected into the current state represented by {@ref currentJoinpoint}
+     *
+     * @param currentJoinpoint - The state we are merging into
+     * @param variables - tje state we are merging from
+     * @return - whether or not the merging resulted into an update to {@ref currentJoinpoint}
+     */
     public boolean mergeStates(
         Map<VariableDeclaration, Set<Node>> currentJoinpoint,
         Map<VariableDeclaration, Set<Node>> variables) {
