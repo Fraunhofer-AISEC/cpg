@@ -470,8 +470,8 @@ public class ControlFlowSensitiveDFGPass extends Pass {
     public Map<VariableDeclaration, Set<Node>> createShallowCopy(
         Map<VariableDeclaration, Set<Node>> state) {
       Map<VariableDeclaration, Set<Node>> shallowCopy = new LinkedHashMap<>();
-      for (VariableDeclaration key : state.keySet()) {
-        shallowCopy.put(key, new LinkedHashSet<>(state.get(key)));
+      for (Map.Entry<VariableDeclaration, Set<Node>> entry : state.entrySet()) {
+        shallowCopy.put(entry.getKey(), new LinkedHashSet<>(entry.getValue()));
       }
       return shallowCopy;
     }
