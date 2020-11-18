@@ -34,7 +34,7 @@ import java.util.*;
  * <p>We here do not solve the problem of Exception-Handling, for this we will need additional
  * semantics on Edges. --------
  */
-public class CFSensitiveDFGPass extends Pass {
+public class ControlFlowSensitiveDFGPass extends Pass {
 
   @Override
   public void cleanup() {
@@ -55,7 +55,7 @@ public class CFSensitiveDFGPass extends Pass {
    *
    * @param fixDFGs ControlFlowSensitiveDFG of entire Method
    */
-  private void removeValues(CFSensitiveDFGPass.FunctionLevelFixpointIterator fixDFGs) {
+  private void removeValues(ControlFlowSensitiveDFGPass.FunctionLevelFixpointIterator fixDFGs) {
     for (Node currNode : fixDFGs.getRemoves().keySet()) {
       for (Node prev : fixDFGs.getRemoves().get(currNode)) {
         currNode.removePrevDFG(prev);
@@ -71,8 +71,8 @@ public class CFSensitiveDFGPass extends Pass {
   public void handle(Node node) {
     if (node instanceof FunctionDeclaration) {
 
-      CFSensitiveDFGPass.FunctionLevelFixpointIterator flfIterator =
-          new CFSensitiveDFGPass.FunctionLevelFixpointIterator();
+      ControlFlowSensitiveDFGPass.FunctionLevelFixpointIterator flfIterator =
+          new ControlFlowSensitiveDFGPass.FunctionLevelFixpointIterator();
       flfIterator.handle(node);
       removeValues(flfIterator);
     }
@@ -228,7 +228,7 @@ public class CFSensitiveDFGPass extends Pass {
         Map<VariableDeclaration, Set<Node>> variables,
         Node endNode,
         boolean stopBefore) {
-      if (node == null){
+      if (node == null) {
         return variables;
       }
       do {
@@ -328,7 +328,8 @@ public class CFSensitiveDFGPass extends Pass {
      * eog-Paths to refine the dfg edges at variable usage points.
      */
     public void propagateValues() {
-      for (Map.Entry<Node, Map<VariableDeclaration, Set<Node>>> joinPoint : this.joinPoints.entrySet()) {
+      for (Map.Entry<Node, Map<VariableDeclaration, Set<Node>>> joinPoint :
+          this.joinPoints.entrySet()) {
         propagateFromJoinPoints(joinPoint.getKey(), joinPoint.getValue(), null, true);
       }
     }
@@ -350,7 +351,7 @@ public class CFSensitiveDFGPass extends Pass {
         Map<VariableDeclaration, Set<Node>> variables,
         Node endNode,
         boolean stopBefore) {
-      if (node == null){
+      if (node == null) {
         return variables;
       }
       do {
@@ -448,7 +449,10 @@ public class CFSensitiveDFGPass extends Pass {
         } else {
           currentJoinpoint.put(
               entry.getKey(),
-              new LinkedHashSet<>(entry.getValue())); // We create a copy of the set to avoid changes when processing other
+              new LinkedHashSet<>(
+                  entry
+                      .getValue())); // We create a copy of the set to avoid changes when processing
+          // other
           // paths
           changed = true;
         }

@@ -26,8 +26,8 @@
 
 package de.fraunhofer.aisec.cpg;
 
-import de.fraunhofer.aisec.cpg.passes.CFSensitiveDFGPass;
 import de.fraunhofer.aisec.cpg.passes.CallResolver;
+import de.fraunhofer.aisec.cpg.passes.ControlFlowSensitiveDFGPass;
 import de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass;
 import de.fraunhofer.aisec.cpg.passes.FilenameMapper;
 import de.fraunhofer.aisec.cpg.passes.ImportResolver;
@@ -349,7 +349,7 @@ public class TranslationConfiguration {
       registerPass(new CallResolver()); // creates CG
       registerPass(new EvaluationOrderGraphPass()); // creates EOG
       registerPass(new TypeResolver());
-      registerPass(new CFSensitiveDFGPass());
+      registerPass(new ControlFlowSensitiveDFGPass());
       registerPass(new FilenameMapper());
       return this;
     }

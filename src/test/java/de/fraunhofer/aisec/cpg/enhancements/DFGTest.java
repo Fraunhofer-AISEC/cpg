@@ -393,8 +393,9 @@ class DFGTest {
   }
 
   /**
-   * Gets Integer Literal from the List of nodes to simplify testsyntax. The Literal is expected to be contained in the
-   * list and the function will throw an {@link IndexOutOfBoundsException} otherwise.
+   * Gets Integer Literal from the List of nodes to simplify testsyntax. The Literal is expected to
+   * be contained in the list and the function will throw an {@link IndexOutOfBoundsException}
+   * otherwise.
    *
    * @param nodes - The list of nodes to filter for the Literal.
    * @param v - The integer value expected from the Literal.
@@ -463,11 +464,12 @@ class DFGTest {
   }
 
   /**
-   * Traverses the DFG Graph induced by the provided node in the specified direction and retrieves all nodes that are
-   * passed by and are therefor part of the incoming or outgoing data-flow.
+   * Traverses the DFG Graph induced by the provided node in the specified direction and retrieves
+   * all nodes that are passed by and are therefor part of the incoming or outgoing data-flow.
    *
    * @param node - The node that induces the DFG-subgraph for which nodes are retrieved
-   * @param outgoing - true if the Data-Flow from this node should be considered, false if the data-flow is to this node.
+   * @param outgoing - true if the Data-Flow from this node should be considered, false if the
+   *     data-flow is to this node.
    * @return A set of nodes that are part of the data-flow
    */
   public Set<Node> flattenDFGGraph(Node node, boolean outgoing) {
