@@ -228,7 +228,9 @@ public class CFSensitiveDFGPass extends Pass {
         Map<VariableDeclaration, Set<Node>> variables,
         Node endNode,
         boolean stopBefore) {
-      if (node == null) return variables;
+      if (node == null){
+        return variables;
+      }
       do {
         if (node.getPrevEOG().size() != 1) {
           // We only want to keep track of variables where they can change due to multiple incoming
@@ -237,7 +239,7 @@ public class CFSensitiveDFGPass extends Pass {
             joinPoints.put(node, createShallowCopy(variables));
 
           } else {
-            Map currentJoinpoint = joinPoints.get(node);
+            Map<VariableDeclaration, Set<Node>> currentJoinpoint = joinPoints.get(node);
             if (!mergeStates(currentJoinpoint, variables)) {
               return currentJoinpoint; // Stop when we get to a joinpoint that does not get a
               // broader state through this path this ensures termination
@@ -270,7 +272,7 @@ public class CFSensitiveDFGPass extends Pass {
             iterateTillFixpoint(next, createShallowCopy(variables), endNode, stopBefore);
           }
           return variables;
-        } else if (node.getNextEOG().size() == 0) {
+        } else if (node.getNextEOG().isEmpty()) {
           return variables;
         } else {
           Node next = node.getNextEOG().get(0);
@@ -326,8 +328,8 @@ public class CFSensitiveDFGPass extends Pass {
      * eog-Paths to refine the dfg edges at variable usage points.
      */
     public void propagateValues() {
-      for (Node joinPoint : this.joinPoints.keySet()) {
-        propagateFromJoinPoints(joinPoint, this.joinPoints.get(joinPoint), null, true);
+      for (Map.Entry<Node, Map<VariableDeclaration, Set<Node>>> joinPoint : this.joinPoints.entrySet()) {
+        propagateFromJoinPoints(joinPoint.getKey(), joinPoint.getValue(), null, true);
       }
     }
 
@@ -348,7 +350,9 @@ public class CFSensitiveDFGPass extends Pass {
         Map<VariableDeclaration, Set<Node>> variables,
         Node endNode,
         boolean stopBefore) {
-      if (node == null) return variables;
+      if (node == null){
+        return variables;
+      }
       do {
         if (node.equals(endNode) && stopBefore) {
           return variables;
@@ -378,7 +382,7 @@ public class CFSensitiveDFGPass extends Pass {
             }
           }
           return variables;
-        } else if (node.getNextEOG().size() == 0) {
+        } else if (node.getNextEOG().isEmpty()) {
           return variables;
         } else {
           Node next = node.getNextEOG().get(0);
@@ -431,10 +435,10 @@ public class CFSensitiveDFGPass extends Pass {
         Map<VariableDeclaration, Set<Node>> variables) {
       boolean changed = false;
       // This merging may be more efficiently done with some native function
-      for (VariableDeclaration key : variables.keySet()) {
-        Set<Node> newAssignments = variables.get(key);
-        if (currentJoinpoint.containsKey(key)) {
-          Set<Node> existing = currentJoinpoint.get(key);
+      for (Map.Entry<VariableDeclaration, Set<Node>> entry : variables.entrySet()) {
+        Set<Node> newAssignments = entry.getValue();
+        if (currentJoinpoint.containsKey(entry.getKey())) {
+          Set<Node> existing = currentJoinpoint.get(entry.getKey());
           for (Node assignment : newAssignments) {
             if (!existing.contains(assignment)) {
               existing.add(assignment);
@@ -443,10 +447,8 @@ public class CFSensitiveDFGPass extends Pass {
           }
         } else {
           currentJoinpoint.put(
-              key,
-              new LinkedHashSet<>(
-                  variables.get(
-                      key))); // We create a copy of the set to avoid changes when processing other
+              entry.getKey(),
+              new LinkedHashSet<>(entry.getValue())); // We create a copy of the set to avoid changes when processing other
           // paths
           changed = true;
         }
