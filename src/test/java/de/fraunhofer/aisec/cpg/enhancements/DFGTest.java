@@ -1,15 +1,20 @@
 package de.fraunhofer.aisec.cpg.enhancements;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import de.fraunhofer.aisec.cpg.TestUtils;
 import de.fraunhofer.aisec.cpg.graph.*;
+import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration;
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration;
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration;
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*;
+import de.fraunhofer.aisec.cpg.helpers.NodeComparator;
+import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker;
 import java.nio.file.Path;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
@@ -243,10 +248,10 @@ class DFGTest {
         TestUtils.analyze(List.of(topLevel.resolve("unaryoperator.cpp").toFile()), topLevel, true);
 
     UnaryOperator rwUnaryOperator =
-            TestUtils.findByUniqueName(TestUtils.subnodesOfType(result, UnaryOperator.class), "++");
+        TestUtils.findByUniqueName(TestUtils.subnodesOfType(result, UnaryOperator.class), "++");
     DeclaredReferenceExpression expression =
-            TestUtils.findByUniqueName(
-                    TestUtils.subnodesOfType(result, DeclaredReferenceExpression.class), "i");
+        TestUtils.findByUniqueName(
+            TestUtils.subnodesOfType(result, DeclaredReferenceExpression.class), "i");
 
     Set<Node> prevDFGOperator = rwUnaryOperator.getPrevDFG();
     Set<Node> nextDFGOperator = rwUnaryOperator.getNextDFG();
@@ -267,40 +272,40 @@ class DFGTest {
   void testDelayedAssignment() throws Exception {
     Path topLevel = Path.of("src", "test", "resources", "dfg");
     List<TranslationUnitDeclaration> result =
-            TestUtils.analyze(
-                    List.of(topLevel.resolve("DelayedAssignmentAfterRHS.java").toFile()), topLevel, true);
+        TestUtils.analyze(
+            List.of(topLevel.resolve("DelayedAssignmentAfterRHS.java").toFile()), topLevel, true);
 
     BinaryOperator binaryOperatorAssignment =
-            TestUtils.findByUniqueName(TestUtils.subnodesOfType(result, BinaryOperator.class), "=");
+        TestUtils.findByUniqueName(TestUtils.subnodesOfType(result, BinaryOperator.class), "=");
 
     BinaryOperator binaryOperatorAddition =
-            TestUtils.findByUniqueName(TestUtils.subnodesOfType(result, BinaryOperator.class), "+");
+        TestUtils.findByUniqueName(TestUtils.subnodesOfType(result, BinaryOperator.class), "+");
 
     VariableDeclaration varA =
-            TestUtils.findByUniqueName(
-                    TestUtils.subnodesOfType(result, VariableDeclaration.class), "a");
+        TestUtils.findByUniqueName(
+            TestUtils.subnodesOfType(result, VariableDeclaration.class), "a");
     VariableDeclaration varB =
-            TestUtils.findByUniqueName(
-                    TestUtils.subnodesOfType(result, VariableDeclaration.class), "b");
+        TestUtils.findByUniqueName(
+            TestUtils.subnodesOfType(result, VariableDeclaration.class), "b");
 
     DeclaredReferenceExpression lhsA =
-            (DeclaredReferenceExpression) binaryOperatorAssignment.getLhs();
+        (DeclaredReferenceExpression) binaryOperatorAssignment.getLhs();
     DeclaredReferenceExpression rhsA =
-            (DeclaredReferenceExpression) binaryOperatorAddition.getLhs();
+        (DeclaredReferenceExpression) binaryOperatorAddition.getLhs();
 
     DeclaredReferenceExpression b =
-            TestUtils.findByUniqueName(
-                    TestUtils.subnodesOfType(result, DeclaredReferenceExpression.class), "b");
+        TestUtils.findByUniqueName(
+            TestUtils.subnodesOfType(result, DeclaredReferenceExpression.class), "b");
 
     Literal<?> literal0 =
-            TestUtils.findByPredicate(
-                    TestUtils.subnodesOfType(result, Literal.class), l -> l.getValue().equals(0))
-                    .get(0);
+        TestUtils.findByPredicate(
+                TestUtils.subnodesOfType(result, Literal.class), l -> l.getValue().equals(0))
+            .get(0);
 
     Literal<?> literal1 =
-            TestUtils.findByPredicate(
-                    TestUtils.subnodesOfType(result, Literal.class), l -> l.getValue().equals(1))
-                    .get(0);
+        TestUtils.findByPredicate(
+                TestUtils.subnodesOfType(result, Literal.class), l -> l.getValue().equals(1))
+            .get(0);
 
     assertEquals(0, varA.getNextDFG().size()); // No outgoing DFG edges from VariableDeclaration a
     assertEquals(0, varB.getNextDFG().size()); // No outgoing DFG edges from VariableDeclaration b
@@ -318,9 +323,8 @@ class DFGTest {
     assertTrue(literal0.getNextDFG().contains(varA));
 
     // Check incoming dfg edges of VariableDeclaration a (lhs of a = a + b, 0 and expr a + b
-    assertEquals(3, varA.getPrevDFG().size());
+    assertEquals(2, varA.getPrevDFG().size());
     assertTrue(varA.getPrevDFG().contains(lhsA));
-    assertTrue(varA.getPrevDFG().contains(binaryOperatorAddition));
     assertTrue(varA.getPrevDFG().contains(literal0));
 
     // Check incoming dfg edges in binaryOperator + (DeclaredReferenceExpression a and b)
@@ -328,10 +332,9 @@ class DFGTest {
     assertTrue(binaryOperatorAddition.getPrevDFG().contains(b));
     assertTrue(binaryOperatorAddition.getPrevDFG().contains(rhsA));
 
-    // Check outgoing dfg edges from binaryOperator + (lhs a from a = a + b and into
+    // Check outgoing dfg edges from a of a = a + b and into
     // VariableDeclaration a)
-    assertEquals(2, binaryOperatorAddition.getNextDFG().size());
-    assertTrue(binaryOperatorAddition.getNextDFG().contains(varA));
+    assertEquals(1, binaryOperatorAddition.getNextDFG().size());
     assertTrue(binaryOperatorAddition.getNextDFG().contains(lhsA));
 
     // Check outgoing dfg edges of literal1 (VariableDeclaration b and DeclaredReferenceExpression
@@ -350,13 +353,149 @@ class DFGTest {
   void testNoOutgoingDFGFromVariableDeclaration() throws Exception {
     Path topLevel = Path.of("src", "test", "resources", "dfg");
     List<TranslationUnitDeclaration> result =
-            TestUtils.analyze(List.of(topLevel.resolve("BasicSlice.java").toFile()), topLevel, true);
+        TestUtils.analyze(List.of(topLevel.resolve("BasicSlice.java").toFile()), topLevel, true);
 
     VariableDeclaration varA =
-            TestUtils.findByUniqueName(
-                    TestUtils.subnodesOfType(result, VariableDeclaration.class), "a");
+        TestUtils.findByUniqueName(
+            TestUtils.subnodesOfType(result, VariableDeclaration.class), "a");
 
     assertEquals(0, varA.getNextDFG().size());
     assertEquals(7, varA.getPrevDFG().size());
+  }
+
+  @Test
+  void testSensitivityThroughLoop() throws Exception {
+    Path topLevel = Path.of("src", "test", "resources", "dfg");
+    TranslationUnitDeclaration result =
+        TestUtils.analyze(List.of(topLevel.resolve("LoopDFGs.java").toFile()), topLevel, true)
+            .get(0);
+
+    MethodDeclaration looping =
+        TestUtils.getSubnodeOfTypeWithName(result, MethodDeclaration.class, "looping");
+    List<Node> methodNodes = SubgraphWalker.flattenAST(looping);
+    Literal l0 = getLiteral(methodNodes, 0);
+    Literal l1 = getLiteral(methodNodes, 1);
+    Literal l2 = getLiteral(methodNodes, 2);
+    Literal l3 = getLiteral(methodNodes, 3);
+    List<Node> calls =
+        TestUtils.findByPredicate(
+            SubgraphWalker.flattenAST(looping),
+            n -> n instanceof CallExpression && n.getName().equals("println"));
+    Set<Node> dfgNodes =
+        flattenDFGGraph(
+            TestUtils.getSubnodeOfTypeWithName(
+                calls.get(0), DeclaredReferenceExpression.class, "a"),
+            false);
+    assertTrue(dfgNodes.contains(l0));
+    assertTrue(dfgNodes.contains(l1));
+    assertTrue(dfgNodes.contains(l2));
+
+    assertFalse(dfgNodes.contains(l3));
+  }
+
+  /**
+   * Gets Integer Literal from the List of nodes to simplify testsyntax. The Literal is expected to
+   * be contained in the list and the function will throw an {@link IndexOutOfBoundsException}
+   * otherwise.
+   *
+   * @param nodes - The list of nodes to filter for the Literal.
+   * @param v - The integer value expected from the Literal.
+   * @return The Literal with the specified value.
+   */
+  private Literal getLiteral(List<Node> nodes, int v) {
+    return (Literal)
+        TestUtils.findByPredicate(
+                nodes,
+                n -> n instanceof Literal && ((Literal) n).getValue().equals(Integer.valueOf(v)))
+            .get(0);
+  }
+
+  @Test
+  void testSensitivityWithLabels() throws Exception {
+    Path topLevel = Path.of("src", "test", "resources", "dfg");
+    TranslationUnitDeclaration result =
+        TestUtils.analyze(List.of(topLevel.resolve("LoopDFGs.java").toFile()), topLevel, true)
+            .get(0);
+    MethodDeclaration looping =
+        TestUtils.getSubnodeOfTypeWithName(result, MethodDeclaration.class, "labeledBreakContinue");
+
+    List<Node> methodNodes = SubgraphWalker.flattenAST(looping);
+    Literal l0 = getLiteral(methodNodes, 0);
+    Literal l1 = getLiteral(methodNodes, 1);
+    Literal l2 = getLiteral(methodNodes, 2);
+    Literal l3 = getLiteral(methodNodes, 3);
+    Literal l4 = getLiteral(methodNodes, 4);
+    List<Node> calls =
+        TestUtils.findByPredicate(
+            SubgraphWalker.flattenAST(looping),
+            n -> n instanceof CallExpression && n.getName().equals("println"));
+    calls.sort(new NodeComparator());
+    Set<Node> dfgNodesA0 =
+        flattenDFGGraph(
+            TestUtils.getSubnodeOfTypeWithName(
+                calls.get(0), DeclaredReferenceExpression.class, "a"),
+            false);
+
+    Set<Node> dfgNodesA1 =
+        flattenDFGGraph(
+            TestUtils.getSubnodeOfTypeWithName(
+                calls.get(1), DeclaredReferenceExpression.class, "a"),
+            false);
+    Set<Node> dfgNodesA2 =
+        flattenDFGGraph(
+            TestUtils.getSubnodeOfTypeWithName(
+                calls.get(2), DeclaredReferenceExpression.class, "a"),
+            false);
+
+    assertTrue(dfgNodesA0.contains(l0));
+    assertTrue(dfgNodesA0.contains(l1));
+    assertTrue(dfgNodesA0.contains(l3));
+    assertFalse(dfgNodesA0.contains(l4));
+
+    assertTrue(dfgNodesA1.contains(l0));
+    assertTrue(dfgNodesA1.contains(l1));
+    assertTrue(dfgNodesA1.contains(l3));
+    assertFalse(dfgNodesA1.contains(l4));
+
+    assertTrue(dfgNodesA2.contains(l0));
+    assertTrue(dfgNodesA2.contains(l1));
+    assertTrue(dfgNodesA2.contains(l2));
+    assertTrue(dfgNodesA2.contains(l3));
+    assertFalse(dfgNodesA2.contains(l4));
+  }
+
+  /**
+   * Traverses the DFG Graph induced by the provided node in the specified direction and retrieves
+   * all nodes that are passed by and are therefor part of the incoming or outgoing data-flow.
+   *
+   * @param node - The node that induces the DFG-subgraph for which nodes are retrieved
+   * @param outgoing - true if the Data-Flow from this node should be considered, false if the
+   *     data-flow is to this node.
+   * @return A set of nodes that are part of the data-flow
+   */
+  public Set<Node> flattenDFGGraph(Node node, boolean outgoing) {
+    Set<Node> dfgNodes = new LinkedHashSet<>();
+    dfgNodes.add(node);
+    LinkedHashSet<Node> worklist = new LinkedHashSet<Node>();
+    worklist.add(node);
+    while (!worklist.isEmpty()) {
+      Node toProcess = worklist.iterator().next();
+      worklist.remove(toProcess);
+      Set<Node> nextDFGNodes;
+      // DataFlow direction
+      if (outgoing) {
+        nextDFGNodes = toProcess.getNextDFG();
+      } else {
+        nextDFGNodes = toProcess.getPrevDFG();
+      }
+      // Adding all NEWLY discovered df-nodes to the worklist.
+      for (Node dfgNode : nextDFGNodes) {
+        if (!dfgNodes.contains(dfgNode)) {
+          worklist.add(dfgNode);
+          dfgNodes.add(dfgNode);
+        }
+      }
+    }
+    return dfgNodes;
   }
 }
