@@ -10,7 +10,6 @@ A code property graph (CPG) is a representation of source code in form of a labe
 
 This library uses [Eclipse CDT](https://www.eclipse.org/cdt/) for parsing C/C++ source code and [JavaParser](https://javaparser.org/) for parsing Java. In contrast to compiler AST generators, both are "forgiving" parsers that can cope with incomplete or even syntactically incorrect source code. That makes it possible to analyze source code even without being able to compile it (due to missing dependencies or minor syntax errors). 
 
-
 ## Usage
 
 ### For Visualization Purposes
@@ -34,7 +33,7 @@ repositories {
 }
 
 dependencies {
-    api("de.fraunhofer.aisec", "cpg", "2.1.1")
+    api("de.fraunhofer.aisec", "cpg", "3.1.0")
 }
 ```
 
@@ -120,11 +119,9 @@ A preliminary version of this cpg has been used to analyze ARM binaries of iOS a
 
 [1] Julian Schütte, Dennis Titze. _liOS: Lifting iOS Apps for Fun and Profit._ Proceedings of the ESORICS International Workshop on Secure Internet of Things (SIoT), Luxembourg, 2019
 
-
 An initial publication on the concept of using code property graphs for static analysis:
 
 [2] Yamaguchi et al. - Modeling and Discovering Vulnerabilities with Code Property Graphs https://www.sec.cs.tu-bs.de/pubs/2014-ieeesp.pdf
-
 
 [3] is an unrelated, yet similar project by the authors of the above publication, that is used by the open source software Joern [4] for analysing C/C++ code. While [3] is a specification and implementation of the data structure, this project here includes various _Language frontends_ (currently C/C++ and Java, Python to com) and allows creating custom graphs by configuring _Passes_ which extend the graph as necessary for a specific analysis:
 
