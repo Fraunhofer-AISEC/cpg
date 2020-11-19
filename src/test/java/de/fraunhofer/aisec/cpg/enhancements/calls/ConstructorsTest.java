@@ -10,7 +10,6 @@ import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration;
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ConstructExpression;
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.NewExpression;
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.UninitializedValue;
-
 import java.nio.file.Path;
 import java.util.List;
 import org.junit.jupiter.api.Test;
