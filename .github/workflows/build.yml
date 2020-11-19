@@ -72,15 +72,13 @@ jobs:
           draft: false
           prerelease: false
       - name: Update README
-        #if: startsWith(github.ref, 'refs/tags/v')
+        if: startsWith(github.ref, 'refs/tags/v')
         run: |
           cd readme && yarn install && yarn run ts-node index.ts && cd ..
-          pwd
           git config --local user.email "actions@users.noreply.github.com"
-          git config --local user.name "GitHub Action"
+          git config --local user.name "GitHub Actions"
           git add README.md
           git commit -m "Updated README.md"
-          #git push "https://${GITHUB_ACTOR}:${GITHUB_TOKEN}@github.com/Fraunhofer-AISEC/cpg.git" HEAD:master
-          git push "https://${GITHUB_ACTOR}:${GITHUB_TOKEN}@github.com/Fraunhofer-AISEC/cpg.git" HEAD:readme-updater
+          git push "https://${GITHUB_ACTOR}:${GITHUB_TOKEN}@github.com/Fraunhofer-AISEC/cpg.git" HEAD:master
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
