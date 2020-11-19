@@ -1,6 +1,7 @@
 package de.fraunhofer.aisec.cpg.enhancements;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -389,7 +390,7 @@ class DFGTest {
     assertTrue(dfgNodes.contains(l1));
     assertTrue(dfgNodes.contains(l2));
 
-    assertTrue(!dfgNodes.contains(l3));
+    assertFalse(dfgNodes.contains(l3));
   }
 
   /**
@@ -449,18 +450,18 @@ class DFGTest {
     assertTrue(dfgNodesA0.contains(l0));
     assertTrue(dfgNodesA0.contains(l1));
     assertTrue(dfgNodesA0.contains(l3));
-    assertTrue(!dfgNodesA0.contains(l4));
+    assertFalse(dfgNodesA0.contains(l4));
 
     assertTrue(dfgNodesA1.contains(l0));
     assertTrue(dfgNodesA1.contains(l1));
     assertTrue(dfgNodesA1.contains(l3));
-    assertTrue(!dfgNodesA1.contains(l4));
+    assertFalse(dfgNodesA1.contains(l4));
 
     assertTrue(dfgNodesA2.contains(l0));
     assertTrue(dfgNodesA2.contains(l1));
     assertTrue(dfgNodesA2.contains(l2));
     assertTrue(dfgNodesA2.contains(l3));
-    assertTrue(!dfgNodesA2.contains(l4));
+    assertFalse(dfgNodesA2.contains(l4));
   }
 
   /**
