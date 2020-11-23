@@ -34,6 +34,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration;
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration;
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration;
 import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration;
+import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement;
 import java.lang.annotation.AnnotationFormatError;
 import java.lang.reflect.Field;
@@ -58,6 +59,7 @@ import org.apache.commons.lang3.tuple.MutablePair;
 import org.apache.commons.lang3.tuple.Pair;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
+import org.neo4j.ogm.annotation.Relationship;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -107,6 +109,15 @@ public class SubgraphWalker {
           // skip, if null
           if (obj == null) {
             continue;
+          }
+
+          boolean outgoing = true; // default
+          if (field.getAnnotation(Relationship.class) != null) {
+            outgoing = field.getAnnotation(Relationship.class).direction().equals("OUTGOING");
+          }
+
+          if (PropertyEdge.checkForPropertyEdge(field, obj)) {
+            obj = PropertyEdge.unwrapPropertyEdge(obj, outgoing);
           }
 
           if (obj instanceof Node) {

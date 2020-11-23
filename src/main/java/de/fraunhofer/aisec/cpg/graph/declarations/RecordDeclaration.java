@@ -29,18 +29,16 @@ package de.fraunhofer.aisec.cpg.graph.declarations;
 import de.fraunhofer.aisec.cpg.graph.DeclarationHolder;
 import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.SubGraph;
+import de.fraunhofer.aisec.cpg.graph.edge.Properties;
+import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import de.fraunhofer.aisec.cpg.graph.types.Type;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
+import org.neo4j.ogm.annotation.Relationship;
 import org.neo4j.ogm.annotation.Transient;
 
 /** Represents a C++ union/struct/class or Java class */
@@ -49,17 +47,21 @@ public class RecordDeclaration extends Declaration implements DeclarationHolder 
   /** The kind, i.e. struct, class, union or enum. */
   private String kind;
 
+  @Relationship(value = "fields", direction = "OUTGOING")
   @SubGraph("AST")
-  private List<FieldDeclaration> fields = new ArrayList<>();
+  private List<PropertyEdge> fields = new ArrayList<>();
 
+  @Relationship(value = "methods", direction = "OUTGOING")
   @SubGraph("AST")
-  private List<MethodDeclaration> methods = new ArrayList<>();
+  private List<PropertyEdge> methods = new ArrayList<>();
 
+  @Relationship(value = "constructors", direction = "OUTGOING")
   @SubGraph("AST")
-  private List<ConstructorDeclaration> constructors = new ArrayList<>();
+  private List<PropertyEdge> constructors = new ArrayList<>();
 
+  @Relationship(value = "records", direction = "OUTGOING")
   @SubGraph("AST")
-  private List<RecordDeclaration> records = new ArrayList<>();
+  private List<PropertyEdge> records = new ArrayList<>();
 
   @Transient private List<Type> superClasses = new ArrayList<>();
   @Transient private List<Type> implementedInterfaces = new ArrayList<>();
@@ -79,8 +81,8 @@ public class RecordDeclaration extends Declaration implements DeclarationHolder 
   public void setName(@NonNull String name) {
     // special case for record declarations! Constructor names need to match
     super.setName(name);
-    for (ConstructorDeclaration constructor : constructors) {
-      constructor.setName(name);
+    for (PropertyEdge constructorEdge : constructors) {
+      constructorEdge.getEnd().setName(name);
     }
   }
 
@@ -93,44 +95,125 @@ public class RecordDeclaration extends Declaration implements DeclarationHolder 
   }
 
   public List<FieldDeclaration> getFields() {
-    return fields;
+    List<FieldDeclaration> target = new ArrayList<>();
+    for (PropertyEdge propertyEdge : this.fields) {
+      target.add((FieldDeclaration) propertyEdge.getEnd());
+    }
+    return Collections.unmodifiableList(target);
+  }
+
+  public List<PropertyEdge> getFieldsPropertyEdge() {
+    return this.fields;
+  }
+
+  public void addField(FieldDeclaration fieldDeclaration) {
+    PropertyEdge propertyEdge = new PropertyEdge(this, fieldDeclaration);
+    propertyEdge.addProperty(Properties.INDEX, this.fields.size());
+    addIfNotContains(this.fields, propertyEdge);
+  }
+
+  public void removeField(FieldDeclaration fieldDeclaration) {
+    this.fields.removeIf(propertyEdge -> propertyEdge.getEnd().equals(fieldDeclaration));
   }
 
   @Nullable
   public FieldDeclaration getField(String name) {
-    return fields.stream().filter(f -> f.getName().equals(name)).findFirst().orElse(null);
+    return fields.stream()
+        .map(pe -> (FieldDeclaration) pe.getEnd())
+        .filter(f -> f.getName().equals(name))
+        .findFirst()
+        .orElse(null);
   }
 
   public void setFields(List<FieldDeclaration> fields) {
-    this.fields = fields;
+    this.fields = PropertyEdge.transformIntoPropertyEdgeList(fields, this, true);
   }
 
   public FieldDeclaration getThis() {
-    return fields.stream().filter(f -> f.getName().equals("this")).findFirst().orElse(null);
+    return fields.stream()
+        .map(p -> (FieldDeclaration) p.getEnd())
+        .filter(f -> f.getName().equals("this"))
+        .findFirst()
+        .orElse(null);
   }
 
   public List<MethodDeclaration> getMethods() {
-    return methods;
+    List<MethodDeclaration> target = new ArrayList<>();
+    for (PropertyEdge propertyEdge : this.methods) {
+      target.add((MethodDeclaration) propertyEdge.getEnd());
+    }
+    return Collections.unmodifiableList(target);
+  }
+
+  public List<PropertyEdge> getMethodsPropertyEdge() {
+    return this.methods;
+  }
+
+  public void addMethod(MethodDeclaration methodDeclaration) {
+    PropertyEdge propertyEdge = new PropertyEdge(this, methodDeclaration);
+    propertyEdge.addProperty(Properties.INDEX, this.methods.size());
+    addIfNotContains(this.methods, propertyEdge);
+  }
+
+  public void removeMethod(MethodDeclaration methodDeclaration) {
+    this.methods.removeIf(propertyEdge -> propertyEdge.getEnd().equals(methodDeclaration));
   }
 
   public void setMethods(List<MethodDeclaration> methods) {
-    this.methods = methods;
+    this.methods = PropertyEdge.transformIntoPropertyEdgeList(methods, this, true);
   }
 
   public List<ConstructorDeclaration> getConstructors() {
-    return constructors;
+    List<ConstructorDeclaration> target = new ArrayList<>();
+    for (PropertyEdge propertyEdge : this.constructors) {
+      target.add((ConstructorDeclaration) propertyEdge.getEnd());
+    }
+    return Collections.unmodifiableList(target);
+  }
+
+  public List<PropertyEdge> getConstructorsPropertyEdge() {
+    return this.constructors;
   }
 
   public void setConstructors(List<ConstructorDeclaration> constructors) {
-    this.constructors = constructors;
+    this.constructors = PropertyEdge.transformIntoPropertyEdgeList(constructors, this, true);
+  }
+
+  public void addConstructor(ConstructorDeclaration constructorDeclaration) {
+    PropertyEdge propertyEdge = new PropertyEdge(this, constructorDeclaration);
+    propertyEdge.addProperty(Properties.INDEX, this.constructors.size());
+    addIfNotContains(this.constructors, propertyEdge);
+  }
+
+  public void removeConstructor(ConstructorDeclaration constructorDeclaration) {
+    this.constructors.removeIf(
+        propertyEdge -> propertyEdge.getEnd().equals(constructorDeclaration));
   }
 
   public List<RecordDeclaration> getRecords() {
-    return records;
+    List<RecordDeclaration> target = new ArrayList<>();
+    for (PropertyEdge propertyEdge : this.records) {
+      target.add((RecordDeclaration) propertyEdge.getEnd());
+    }
+    return Collections.unmodifiableList(target);
+  }
+
+  public List<PropertyEdge> getRecordsPropertyEdge() {
+    return this.records;
   }
 
   public void setRecords(List<RecordDeclaration> records) {
-    this.records = records;
+    this.records = PropertyEdge.transformIntoPropertyEdgeList(records, this, true);
+  }
+
+  public void addRecord(RecordDeclaration recordDeclaration) {
+    PropertyEdge propertyEdge = new PropertyEdge(this, recordDeclaration);
+    propertyEdge.addProperty(Properties.INDEX, this.records.size());
+    this.constructors.add(propertyEdge);
+  }
+
+  public void removeRecord(RecordDeclaration recordDeclaration) {
+    this.records.removeIf(propertyEdge -> propertyEdge.getEnd().equals(recordDeclaration));
   }
 
   /**
@@ -238,9 +321,13 @@ public class RecordDeclaration extends Declaration implements DeclarationHolder 
     return super.equals(that)
         && Objects.equals(kind, that.kind)
         && Objects.equals(fields, that.fields)
+        && Objects.equals(this.getFields(), that.getFields())
         && Objects.equals(methods, that.methods)
+        && Objects.equals(this.getMethods(), that.getMethods())
         && Objects.equals(constructors, that.constructors)
+        && Objects.equals(this.getConstructors(), that.getConstructors())
         && Objects.equals(records, that.records)
+        && Objects.equals(this.getRecords(), that.getRecords())
         && Objects.equals(superClasses, that.superClasses)
         && Objects.equals(implementedInterfaces, that.implementedInterfaces)
         && Objects.equals(superTypeDeclarations, that.superTypeDeclarations);
@@ -253,14 +340,23 @@ public class RecordDeclaration extends Declaration implements DeclarationHolder 
 
   @Override
   public void addDeclaration(@NonNull Declaration declaration) {
+    PropertyEdge propertyEdge;
     if (declaration instanceof ConstructorDeclaration) {
-      addIfNotContains(this.constructors, (ConstructorDeclaration) declaration);
+      propertyEdge = new PropertyEdge(this, declaration);
+      propertyEdge.addProperty(Properties.INDEX, this.constructors.size());
+      addIfNotContains(this.constructors, propertyEdge);
     } else if (declaration instanceof MethodDeclaration) {
-      addIfNotContains(this.methods, (MethodDeclaration) declaration);
+      propertyEdge = new PropertyEdge(this, declaration);
+      propertyEdge.addProperty(Properties.INDEX, this.methods.size());
+      addIfNotContains(this.methods, propertyEdge);
     } else if (declaration instanceof FieldDeclaration) {
-      addIfNotContains(this.fields, (FieldDeclaration) declaration);
+      propertyEdge = new PropertyEdge(this, declaration);
+      propertyEdge.addProperty(Properties.INDEX, this.fields.size());
+      addIfNotContains(this.fields, propertyEdge);
     } else if (declaration instanceof RecordDeclaration) {
-      addIfNotContains(this.records, (RecordDeclaration) declaration);
+      propertyEdge = new PropertyEdge(this, declaration);
+      propertyEdge.addProperty(Properties.INDEX, this.records.size());
+      addIfNotContains(this.records, propertyEdge);
     }
   }
 }

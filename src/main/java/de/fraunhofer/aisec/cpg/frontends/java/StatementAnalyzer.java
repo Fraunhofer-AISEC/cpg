@@ -384,7 +384,7 @@ public class StatementAnalyzer
     for (Statement child : blockStmt.getStatements()) {
       de.fraunhofer.aisec.cpg.graph.statements.Statement statement = handle(child);
 
-      compoundStatement.getStatements().add(statement);
+      compoundStatement.addStatement(statement);
     }
     lang.setCodeAndRegion(compoundStatement, stmt);
 
@@ -542,15 +542,15 @@ public class StatementAnalyzer
     for (SwitchEntry sentry : switchStmt.getEntries()) {
 
       if (sentry.getLabels().isEmpty()) {
-        compoundStatement.getStatements().add(handleCaseDefaultStatement(null, sentry));
+        compoundStatement.addStatement(handleCaseDefaultStatement(null, sentry));
       }
 
       for (com.github.javaparser.ast.expr.Expression caseExp : sentry.getLabels()) {
-        compoundStatement.getStatements().add(handleCaseDefaultStatement(caseExp, sentry));
+        compoundStatement.addStatement(handleCaseDefaultStatement(caseExp, sentry));
       }
 
       for (Statement subStmt : sentry.getStatements()) {
-        compoundStatement.getStatements().add(handle(subStmt));
+        compoundStatement.addStatement(handle(subStmt));
       }
     }
     switchStatement.setStatement(compoundStatement);

@@ -404,7 +404,7 @@ public class NodeBuilder {
               null,
               null,
               true);
-      node.getFields().add(thisDeclaration);
+      node.addField(thisDeclaration);
     }
 
     log(node);

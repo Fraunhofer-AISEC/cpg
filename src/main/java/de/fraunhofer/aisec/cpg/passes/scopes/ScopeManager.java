@@ -401,14 +401,15 @@ public class ScopeManager {
           declScope.getValueDeclarations().remove(declaration);
           if (declScope.getAstNode() instanceof RecordDeclaration) {
             RecordDeclaration rec = (RecordDeclaration) declScope.getAstNode();
-            rec.getFields().remove(declaration);
-            rec.getMethods().remove(declaration);
-            rec.getConstructors().remove(declaration);
-            rec.getRecords().remove(declaration);
+            rec.removeField((FieldDeclaration) declaration);
+            rec.removeMethod((MethodDeclaration) declaration);
+            rec.removeConstructor((ConstructorDeclaration) declaration);
+            rec.removeRecord((RecordDeclaration) declaration);
           } else if (declScope.getAstNode() instanceof FunctionDeclaration) {
-            ((FunctionDeclaration) declScope.getAstNode()).getParameters().remove(declaration);
+            ((FunctionDeclaration) declScope.getAstNode())
+                .removeParameter((ParamVariableDeclaration) declaration);
           } else if (declScope.getAstNode() instanceof Statement) {
-            ((Statement) declScope.getAstNode()).getLocals().remove(declaration);
+            ((Statement) declScope.getAstNode()).removeLocal(declaration);
           } else if (declScope.getAstNode() instanceof EnumDeclaration) {
             ((EnumDeclaration) declScope.getAstNode()).getEntries().remove(declaration);
           }

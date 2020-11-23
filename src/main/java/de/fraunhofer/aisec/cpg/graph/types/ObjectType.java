@@ -27,9 +27,12 @@
 package de.fraunhofer.aisec.cpg.graph.types;
 
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration;
+import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+import org.neo4j.ogm.annotation.Relationship;
 
 /**
  * This is the main type in the Type system. ObjectTypes describe objects, as instances of a class.
@@ -52,7 +55,9 @@ public class ObjectType extends Type {
   private final boolean primitive;
   // Reference from the ObjectType to its class (RecordDeclaration) only if the class is available
   private RecordDeclaration recordDeclaration = null;
-  private List<Type> generics;
+
+  @Relationship(value = "GENERICS", direction = "OUTGOING")
+  private List<PropertyEdge> generics;
 
   public ObjectType(
       String typeName,
@@ -62,14 +67,14 @@ public class ObjectType extends Type {
       Modifier modifier,
       boolean primitive) {
     super(typeName, storage, qualifier);
-    this.generics = generics;
+    this.generics = PropertyEdge.transformIntoPropertyEdgeList(generics, this, true);
     this.modifier = modifier;
     this.primitive = primitive;
   }
 
   public ObjectType(Type type, List<Type> generics, Modifier modifier, boolean primitive) {
     super(type);
-    this.generics = generics;
+    this.generics = PropertyEdge.transformIntoPropertyEdgeList(generics, this, true);
     this.modifier = modifier;
     this.primitive = primitive;
   }
@@ -82,7 +87,15 @@ public class ObjectType extends Type {
   }
 
   public List<Type> getGenerics() {
-    return generics;
+    List<Type> genericValues = new ArrayList<>();
+    for (PropertyEdge edge : this.generics) {
+      genericValues.add((Type) edge.getEnd());
+    }
+    return Collections.unmodifiableList(genericValues);
+  }
+
+  public List<PropertyEdge> getGenericPropertyEdges() {
+    return this.generics;
   }
 
   public RecordDeclaration getRecordDeclaration() {
@@ -110,11 +123,11 @@ public class ObjectType extends Type {
 
   @Override
   public Type duplicate() {
-    return new ObjectType(this, this.generics, this.modifier, this.primitive);
+    return new ObjectType(this, this.getGenerics(), this.modifier, this.primitive);
   }
 
   public void setGenerics(List<Type> generics) {
-    this.generics = generics;
+    this.generics = PropertyEdge.transformIntoPropertyEdgeList(generics, this, true);
   }
 
   @Override
@@ -131,6 +144,7 @@ public class ObjectType extends Type {
     if (!super.equals(o)) return false;
     ObjectType that = (ObjectType) o;
     return Objects.equals(generics, that.generics)
+        && Objects.equals(this.getGenerics(), that.getGenerics())
         && this.primitive == that.primitive
         && this.modifier.equals(that.modifier);
   }

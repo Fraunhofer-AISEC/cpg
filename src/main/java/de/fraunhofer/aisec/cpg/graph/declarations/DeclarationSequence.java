@@ -26,9 +26,13 @@
 
 package de.fraunhofer.aisec.cpg.graph.declarations;
 
+import de.fraunhofer.aisec.cpg.graph.edge.Properties;
+import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import org.checkerframework.checker.nullness.qual.NonNull;
+import org.neo4j.ogm.annotation.Relationship;
 
 /**
  * This represents a sequence of one or more declaration(s). The purpose of this node is primarily
@@ -38,18 +42,37 @@ import org.checkerframework.checker.nullness.qual.NonNull;
  */
 public class DeclarationSequence extends Declaration {
 
-  private final List<Declaration> children = new ArrayList<>();
+  @Relationship(value = "children", direction = "OUTGOING")
+  private final List<PropertyEdge> children = new ArrayList<>();
+
+  public List<PropertyEdge> getChildrenPropertyEdge() {
+    return this.children;
+  }
+
+  public List<Declaration> getChildren() {
+    List<Declaration> target = new ArrayList<>();
+    for (PropertyEdge propertyEdge : this.children) {
+      target.add((Declaration) propertyEdge.getEnd());
+    }
+    return Collections.unmodifiableList(target);
+  }
 
   public void add(@NonNull Declaration declaration) {
+    PropertyEdge propertyEdge;
     if (declaration instanceof DeclarationSequence) {
-      children.addAll(((DeclarationSequence) declaration).asList());
+      for (Declaration declarationChild : ((DeclarationSequence) declaration).getChildren()) {
+        propertyEdge = new PropertyEdge(this, declarationChild);
+        propertyEdge.addProperty(Properties.INDEX, this.children.size());
+        children.add(propertyEdge);
+      }
     }
-
-    children.add(declaration);
+    propertyEdge = new PropertyEdge(this, declaration);
+    propertyEdge.addProperty(Properties.INDEX, this.children.size());
+    children.add(propertyEdge);
   }
 
   public List<Declaration> asList() {
-    return children;
+    return getChildren();
   }
 
   public boolean isSingle() {
@@ -57,6 +80,6 @@ public class DeclarationSequence extends Declaration {
   }
 
   public Declaration first() {
-    return children.get(0);
+    return (Declaration) children.get(0).getEnd();
   }
 }

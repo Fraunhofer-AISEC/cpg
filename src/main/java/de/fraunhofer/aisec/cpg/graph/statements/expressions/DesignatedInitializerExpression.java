@@ -28,17 +28,22 @@ package de.fraunhofer.aisec.cpg.graph.statements.expressions;
 
 import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.SubGraph;
+import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import org.apache.commons.lang3.builder.ToStringBuilder;
+import org.neo4j.ogm.annotation.Relationship;
 
 public class DesignatedInitializerExpression extends Expression {
 
   @SubGraph("AST")
   private Expression rhs;
 
+  @Relationship(value = "lhs", direction = "OUTGOING")
   @SubGraph("AST")
-  private List<Expression> lhs;
+  private List<PropertyEdge> lhs;
 
   public Expression getRhs() {
     return rhs;
@@ -49,11 +54,19 @@ public class DesignatedInitializerExpression extends Expression {
   }
 
   public List<Expression> getLhs() {
-    return lhs;
+    List<Expression> target = new ArrayList<>();
+    for (PropertyEdge propertyEdge : this.lhs) {
+      target.add((Expression) propertyEdge.getEnd());
+    }
+    return Collections.unmodifiableList(target);
+  }
+
+  public List<PropertyEdge> getLhsPropertyEdge() {
+    return this.lhs;
   }
 
   public void setLhs(List<Expression> lhs) {
-    this.lhs = lhs;
+    this.lhs = PropertyEdge.transformIntoPropertyEdgeList(lhs, this, true);
   }
 
   @Override
@@ -74,7 +87,10 @@ public class DesignatedInitializerExpression extends Expression {
       return false;
     }
     DesignatedInitializerExpression that = (DesignatedInitializerExpression) o;
-    return super.equals(that) && Objects.equals(rhs, that.rhs) && Objects.equals(lhs, that.lhs);
+    return super.equals(that)
+        && Objects.equals(rhs, that.rhs)
+        && Objects.equals(lhs, that.lhs)
+        && Objects.equals(this.getLhs(), that.getLhs());
   }
 
   @Override

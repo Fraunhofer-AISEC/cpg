@@ -28,27 +28,64 @@ package de.fraunhofer.aisec.cpg.graph.declarations;
 
 import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.SubGraph;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
+import de.fraunhofer.aisec.cpg.graph.edge.Properties;
+import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
+import java.util.*;
 import org.apache.commons.lang3.builder.ToStringBuilder;
+import org.neo4j.ogm.annotation.Relationship;
 
 public class IncludeDeclaration extends Declaration {
 
+  @Relationship(value = "includes", direction = "OUTGOING")
   @SubGraph("AST")
-  private List<IncludeDeclaration> includes = new ArrayList<>();
+  private List<PropertyEdge> includes = new ArrayList<>();
 
+  @Relationship(value = "problems", direction = "OUTGOING")
   @SubGraph("AST")
-  private List<ProblemDeclaration> problems = new ArrayList<>();
+  private List<PropertyEdge> problems = new ArrayList<>();
 
   private String filename;
 
   public List<IncludeDeclaration> getIncludes() {
-    return includes;
+    List<IncludeDeclaration> target = new ArrayList<>();
+    for (PropertyEdge propertyEdge : this.includes) {
+      target.add((IncludeDeclaration) propertyEdge.getEnd());
+    }
+    return Collections.unmodifiableList(target);
+  }
+
+  public List<PropertyEdge> getIncludesPropertyEdge() {
+    return this.includes;
+  }
+
+  public void addInclude(IncludeDeclaration includeDeclaration) {
+    PropertyEdge propertyEdge = new PropertyEdge(this, includeDeclaration);
+    propertyEdge.addProperty(Properties.INDEX, this.includes.size());
+    this.includes.add(propertyEdge);
   }
 
   public List<ProblemDeclaration> getProblems() {
-    return problems;
+    List<ProblemDeclaration> target = new ArrayList<>();
+    for (PropertyEdge propertyEdge : this.problems) {
+      target.add((ProblemDeclaration) propertyEdge.getEnd());
+    }
+    return Collections.unmodifiableList(target);
+  }
+
+  public List<PropertyEdge> getProblemsPropertyEdge() {
+    return this.problems;
+  }
+
+  public void addProblems(Collection<ProblemDeclaration> c) {
+    for (ProblemDeclaration problemDeclaration : c) {
+      addProblem(problemDeclaration);
+    }
+  }
+
+  public void addProblem(ProblemDeclaration problemDeclaration) {
+    PropertyEdge propertyEdge = new PropertyEdge(this, problemDeclaration);
+    propertyEdge.addProperty(Properties.INDEX, this.problems.size());
+    this.problems.add(propertyEdge);
   }
 
   @Override
@@ -81,7 +118,9 @@ public class IncludeDeclaration extends Declaration {
     IncludeDeclaration that = (IncludeDeclaration) o;
     return super.equals(that)
         && Objects.equals(includes, that.includes)
+        && Objects.equals(this.getIncludes(), that.getIncludes())
         && Objects.equals(problems, that.problems)
+        && Objects.equals(this.getProblems(), that.getProblems())
         && Objects.equals(filename, that.filename);
   }
 
