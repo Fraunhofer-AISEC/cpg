@@ -19,7 +19,7 @@ public class PropertyEdge implements Persistable {
   /** Required field for object graph mapping. It contains the node id. */
   @Id @GeneratedValue private Long id;
 
-  protected static final Logger log = LoggerFactory.getLogger(PropertyEdge.class);
+  @Transient protected static final Logger log = LoggerFactory.getLogger(PropertyEdge.class);
 
   // Node where the edge is outgoing
   @StartNode private Node start;

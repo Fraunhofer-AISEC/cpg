@@ -51,7 +51,7 @@ public class PropertyEdgeConverter implements CompositeAttributeConverter<Map<Pr
       if (deserializer.containsKey(entry.getKey())) {
         Object deserializedProperty = deserializer.get(entry.getKey()).apply(propertyValue);
         result.put(Properties.valueOf(entry.getKey()), deserializedProperty);
-      } else {
+      } else if (!entry.getKey().equals("sub-graph")) {
         result.put(Properties.valueOf(entry.getKey()), propertyValue);
       }
     }
