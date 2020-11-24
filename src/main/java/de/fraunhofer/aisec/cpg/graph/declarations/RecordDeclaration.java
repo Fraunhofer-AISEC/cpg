@@ -47,19 +47,19 @@ public class RecordDeclaration extends Declaration implements DeclarationHolder 
   /** The kind, i.e. struct, class, union or enum. */
   private String kind;
 
-  @Relationship(value = "fields", direction = "OUTGOING")
+  @Relationship(value = "FIELDS", direction = "OUTGOING")
   @SubGraph("AST")
   private List<PropertyEdge> fields = new ArrayList<>();
 
-  @Relationship(value = "methods", direction = "OUTGOING")
+  @Relationship(value = "METHODS", direction = "OUTGOING")
   @SubGraph("AST")
   private List<PropertyEdge> methods = new ArrayList<>();
 
-  @Relationship(value = "constructors", direction = "OUTGOING")
+  @Relationship(value = "CONSTRUCTORS", direction = "OUTGOING")
   @SubGraph("AST")
   private List<PropertyEdge> constructors = new ArrayList<>();
 
-  @Relationship(value = "records", direction = "OUTGOING")
+  @Relationship(value = "RECORDS", direction = "OUTGOING")
   @SubGraph("AST")
   private List<PropertyEdge> records = new ArrayList<>();
 

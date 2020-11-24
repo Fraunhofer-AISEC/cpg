@@ -57,15 +57,15 @@ public class FunctionDeclaration extends ValueDeclaration implements Declaration
   /**
    * Classes and Structs can be declared inside a function and are only valid within the function.
    */
-  @Relationship(value = "records", direction = "OUTGOING")
+  @Relationship(value = "RECORDS", direction = "OUTGOING")
   protected List<PropertyEdge> records = new ArrayList<>();
 
   /** The list of function parameters. */
-  @Relationship(value = "parameters", direction = "OUTGOING")
+  @Relationship(value = "PARAMETERS", direction = "OUTGOING")
   @SubGraph("AST")
   protected List<PropertyEdge> parameters = new ArrayList<>();
 
-  @Relationship(value = "throwsTypes", direction = "OUTGOING")
+  @Relationship(value = "THROWS_TYPES", direction = "OUTGOING")
   protected List<PropertyEdge> throwsTypes = new ArrayList<>();
 
   @org.neo4j.ogm.annotation.Relationship(value = "OVERRIDES", direction = "INCOMING")

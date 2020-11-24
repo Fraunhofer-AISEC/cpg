@@ -46,19 +46,19 @@ import org.neo4j.ogm.annotation.Relationship;
 public class TranslationUnitDeclaration extends Declaration implements DeclarationHolder {
 
   /** A list of declarations within this unit. */
-  @Relationship(value = "declarations", direction = "OUTGOING")
+  @Relationship(value = "DECLARATIONS", direction = "OUTGOING")
   @SubGraph("AST")
   @NonNull
   private List<PropertyEdge> declarations = new ArrayList<>();
 
   /** A list of includes within this unit. */
-  @Relationship(value = "includes", direction = "OUTGOING")
+  @Relationship(value = "INCLUDES", direction = "OUTGOING")
   @SubGraph("AST")
   @NonNull
   private List<PropertyEdge> includes = new ArrayList<>();
 
   /** A list of namespaces within this unit. */
-  @Relationship(value = "namespaces", direction = "OUTGOING")
+  @Relationship(value = "NAMESPACES", direction = "OUTGOING")
   @SubGraph("AST")
   @NonNull
   private List<PropertyEdge> namespaces = new ArrayList<>();

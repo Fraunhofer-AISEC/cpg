@@ -42,7 +42,7 @@ import org.neo4j.ogm.annotation.Relationship;
  */
 public class DeclarationSequence extends Declaration {
 
-  @Relationship(value = "children", direction = "OUTGOING")
+  @Relationship(value = "CHILDREN", direction = "OUTGOING")
   private final List<PropertyEdge> children = new ArrayList<>();
 
   public List<PropertyEdge> getChildrenPropertyEdge() {

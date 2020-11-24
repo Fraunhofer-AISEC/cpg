@@ -44,7 +44,7 @@ import org.neo4j.ogm.annotation.Relationship;
 public class InitializerListExpression extends Expression implements TypeListener {
 
   /** The list of initializers. */
-  @Relationship(value = "initializers", direction = "OUTGOING")
+  @Relationship(value = "INITIALIZERS", direction = "OUTGOING")
   @SubGraph("AST")
   private List<PropertyEdge> initializers = new ArrayList<>();
 

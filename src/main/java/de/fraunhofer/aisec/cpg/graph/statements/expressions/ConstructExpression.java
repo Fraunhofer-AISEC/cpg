@@ -64,7 +64,7 @@ public class ConstructExpression extends Expression implements TypeListener {
   private Declaration instantiates;
 
   /** The list of argument {@link Expression}s passed the constructor. */
-  @Relationship(value = "arguments", direction = "OUTGOING")
+  @Relationship(value = "ARGUMENTS", direction = "OUTGOING")
   @SubGraph("AST")
   private List<PropertyEdge> arguments = new ArrayList<>();
 

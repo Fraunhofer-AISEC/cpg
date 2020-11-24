@@ -49,10 +49,10 @@ public class CallExpression extends Expression implements TypeListener {
    * Connection to its {@link FunctionDeclaration}. This will be populated by the {@link
    * de.fraunhofer.aisec.cpg.passes.CallResolver}.
    */
-  @Relationship(value = "invokes", direction = "OUTGOING")
+  @Relationship(value = "INVOKES", direction = "OUTGOING")
   protected List<PropertyEdge> invokes = new ArrayList<>();
   /** The list of arguments. */
-  @Relationship(value = "arguments", direction = "OUTGOING")
+  @Relationship(value = "ARGUMENTS", direction = "OUTGOING")
   @SubGraph("AST")
   private List<PropertyEdge> arguments = new ArrayList<>();
   /**

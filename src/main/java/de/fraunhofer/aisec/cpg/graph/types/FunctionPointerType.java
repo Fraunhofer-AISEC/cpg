@@ -13,7 +13,7 @@ import org.neo4j.ogm.annotation.Relationship;
  * return type.
  */
 public class FunctionPointerType extends Type {
-  @Relationship(value = "parameters", direction = "OUTGOING")
+  @Relationship(value = "PARAMETERS", direction = "OUTGOING")
   private List<PropertyEdge> parameters;
 
   private Type returnType;

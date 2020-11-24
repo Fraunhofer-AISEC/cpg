@@ -46,7 +46,7 @@ public class Statement extends Node implements DeclarationHolder {
    * their condition or initializers
    */
   // TODO: This is actually an AST node just for a subset of nodes, i.e. initializers in for-loops
-  @Relationship(value = "locals", direction = "OUTGOING")
+  @Relationship(value = "LOCALS", direction = "OUTGOING")
   @SubGraph("AST")
   protected List<PropertyEdge> locals = new ArrayList<>();
 
