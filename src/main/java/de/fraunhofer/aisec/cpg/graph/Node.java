@@ -199,7 +199,7 @@ public class Node implements IVisitable<Node>, Persistable {
     int idx = 0;
 
     for (Node prev : prevEOG) {
-      PropertyEdge<Node> propertyEdge = new PropertyEdge(prev, this);
+      var propertyEdge = new PropertyEdge<>(prev, this);
       propertyEdge.addProperty(Properties.INDEX, idx);
       propertyEdgesEOG.add(propertyEdge);
       idx++;
@@ -246,7 +246,7 @@ public class Node implements IVisitable<Node>, Persistable {
   }
 
   public void addNextCFG(Node node) {
-    PropertyEdge<Node> propertyEdge = new PropertyEdge(this, node);
+    var propertyEdge = new PropertyEdge<>(this, node);
     propertyEdge.addProperty(Properties.INDEX, this.nextCFG.size());
     this.nextCFG.add(propertyEdge);
   }
@@ -370,14 +370,14 @@ public class Node implements IVisitable<Node>, Persistable {
       n.nextDFG.remove(this);
     }
     prevDFG.clear();
-    for (PropertyEdge<Node> n : nextEOG) {
+    for (var n : nextEOG) {
       List<PropertyEdge<Node>> remove =
           PropertyEdge.findPropertyEdgesByPredicate(
               n.getEnd().prevEOG, e -> e.getStart().equals(this));
       n.getEnd().prevEOG.removeAll(remove);
     }
     nextEOG.clear();
-    for (PropertyEdge n : prevEOG) {
+    for (var n : prevEOG) {
       List<PropertyEdge<Node>> remove =
           PropertyEdge.findPropertyEdgesByPredicate(
               n.getStart().nextEOG, e -> e.getEnd().equals(this));

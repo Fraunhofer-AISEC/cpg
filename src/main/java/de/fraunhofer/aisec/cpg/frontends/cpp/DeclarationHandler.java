@@ -211,7 +211,7 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
         // get the last statement
         Statement lastStatement = null;
         if (!statements.isEmpty()) {
-          lastStatement = (Statement) statements.get(statements.size() - 1).getEnd();
+          lastStatement = statements.get(statements.size() - 1).getEnd();
         }
 
         // add an implicit return statement, if there is none
