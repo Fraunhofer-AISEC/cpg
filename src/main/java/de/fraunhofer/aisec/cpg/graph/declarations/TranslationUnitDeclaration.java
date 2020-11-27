@@ -33,7 +33,6 @@ import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.SubGraph;
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -74,7 +73,7 @@ public class TranslationUnitDeclaration extends Declaration implements Declarati
    */
   @Nullable
   public <T extends Declaration> T getDeclarationAs(int i, Class<T> clazz) {
-    Declaration declaration = (Declaration) this.declarations.get(i).getEnd();
+    Declaration declaration = this.declarations.get(i).getEnd();
 
     if (declaration == null) {
       return null;
@@ -101,7 +100,7 @@ public class TranslationUnitDeclaration extends Declaration implements Declarati
   public <T extends Declaration> Set<T> getDeclarationsByName(
       @NonNull String name, @NonNull Class<T> clazz) {
     return this.declarations.stream()
-        .map(pe -> (Declaration) pe.getEnd())
+        .map(pe -> pe.getEnd())
         .filter(declaration -> clazz.isAssignableFrom(declaration.getClass()))
         .map(clazz::cast)
         .filter(declaration -> Objects.equals(declaration.getName(), name))
@@ -120,11 +119,7 @@ public class TranslationUnitDeclaration extends Declaration implements Declarati
 
   @NonNull
   public List<Declaration> getIncludes() {
-    List<Declaration> targets = new ArrayList<>();
-    for (PropertyEdge<Declaration> propertyEdge : this.includes) {
-      targets.add(propertyEdge.getEnd());
-    }
-    return Collections.unmodifiableList(targets);
+    return unwrap(this.includes);
   }
 
   @NonNull
@@ -134,11 +129,7 @@ public class TranslationUnitDeclaration extends Declaration implements Declarati
 
   @NonNull
   public List<Declaration> getNamespaces() {
-    List<Declaration> targets = new ArrayList<>();
-    for (PropertyEdge<Declaration> propertyEdge : this.namespaces) {
-      targets.add(propertyEdge.getEnd());
-    }
-    return Collections.unmodifiableList(targets);
+    return unwrap(this.namespaces);
   }
 
   @NonNull

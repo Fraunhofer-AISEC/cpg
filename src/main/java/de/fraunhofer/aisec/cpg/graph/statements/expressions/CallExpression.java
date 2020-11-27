@@ -51,10 +51,12 @@ public class CallExpression extends Expression implements TypeListener {
    */
   @Relationship(value = "INVOKES", direction = "OUTGOING")
   protected List<PropertyEdge<FunctionDeclaration>> invokes = new ArrayList<>();
+
   /** The list of arguments. */
   @Relationship(value = "ARGUMENTS", direction = "OUTGOING")
   @SubGraph("AST")
   private List<PropertyEdge<Expression>> arguments = new ArrayList<>();
+
   /**
    * The base object. This is marked as an AST child, because this is required for {@link
    * MemberCallExpression}. Be aware that for simple calls the implicit "this" base is not part of
@@ -120,8 +122,8 @@ public class CallExpression extends Expression implements TypeListener {
     PropertyEdge.getTarget(this.invokes)
         .forEach(
             i -> {
-              ((FunctionDeclaration) i).unregisterTypeListener(this);
-              Util.detachCallParameters((FunctionDeclaration) i, this.getArguments());
+              i.unregisterTypeListener(this);
+              Util.detachCallParameters(i, this.getArguments());
               this.removePrevDFG(i);
             });
     this.invokes = PropertyEdge.transformIntoOutgoingPropertyEdgeList(invokes, this);
@@ -145,7 +147,7 @@ public class CallExpression extends Expression implements TypeListener {
       Type previous = this.type;
       List<Type> types =
           invokes.stream()
-              .map(pe -> (FunctionDeclaration) pe.getEnd())
+              .map(pe -> pe.getEnd())
               .map(FunctionDeclaration::getType)
               .filter(Objects::nonNull)
               .collect(Collectors.toList());

@@ -26,12 +26,13 @@
 
 package de.fraunhofer.aisec.cpg.graph.statements;
 
+import static de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.unwrap;
+
 import de.fraunhofer.aisec.cpg.graph.DeclarationHolder;
 import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.SubGraph;
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration;
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration;
-import de.fraunhofer.aisec.cpg.graph.edge.Properties;
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import java.util.*;
 import org.checkerframework.checker.nullness.qual.NonNull;
@@ -51,13 +52,7 @@ public class Statement extends Node implements DeclarationHolder {
   protected List<PropertyEdge<VariableDeclaration>> locals = new ArrayList<>();
 
   public List<VariableDeclaration> getLocals() {
-    List<VariableDeclaration> localsVariableDeclaration = new ArrayList<>();
-
-    for (PropertyEdge<VariableDeclaration> propertyEdge : this.locals) {
-      localsVariableDeclaration.add((VariableDeclaration) propertyEdge.getEnd());
-    }
-
-    return Collections.unmodifiableList(localsVariableDeclaration);
+    return unwrap(this.locals);
   }
 
   public List<PropertyEdge<VariableDeclaration>> getLocalsPropertyEdge() {
@@ -94,10 +89,7 @@ public class Statement extends Node implements DeclarationHolder {
   @Override
   public void addDeclaration(@NonNull Declaration declaration) {
     if (declaration instanceof VariableDeclaration) {
-      PropertyEdge<VariableDeclaration> propertyEdge =
-          new PropertyEdge<>(this, (VariableDeclaration) declaration);
-      propertyEdge.addProperty(Properties.INDEX, this.locals.size());
-      this.locals.add(propertyEdge);
+      addIfNotContains(this.locals, (VariableDeclaration) declaration);
     }
   }
 }

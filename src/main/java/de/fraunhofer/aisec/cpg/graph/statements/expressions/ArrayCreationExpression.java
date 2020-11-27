@@ -26,11 +26,12 @@
 
 package de.fraunhofer.aisec.cpg.graph.statements.expressions;
 
+import static de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.unwrap;
+
 import de.fraunhofer.aisec.cpg.graph.HasType;
 import de.fraunhofer.aisec.cpg.graph.HasType.TypeListener;
 import de.fraunhofer.aisec.cpg.graph.SubGraph;
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration;
-import de.fraunhofer.aisec.cpg.graph.edge.Properties;
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import de.fraunhofer.aisec.cpg.graph.types.Type;
 import java.util.*;
@@ -77,17 +78,11 @@ public class ArrayCreationExpression extends Expression implements TypeListener 
 
   @NonNull
   public List<Expression> getDimensions() {
-    List<Expression> targets = new ArrayList<>();
-    for (PropertyEdge<Expression> propertyEdge : this.dimensions) {
-      targets.add((Expression) propertyEdge.getEnd());
-    }
-    return Collections.unmodifiableList(targets);
+    return unwrap(this.dimensions);
   }
 
   public void addDimension(Expression expression) {
-    PropertyEdge<Expression> propertyEdge = new PropertyEdge<>(this, expression);
-    propertyEdge.addProperty(Properties.INDEX, this.dimensions.size());
-    this.dimensions.add(propertyEdge);
+    addIfNotContains(this.dimensions, expression);
   }
 
   @NonNull

@@ -155,16 +155,9 @@ public class PropertyEdge<T extends Node> implements Persistable {
    */
   public static <T extends Node> List<T> unwrap(
       @NonNull List<PropertyEdge<T>> collection, boolean outgoing) {
-    var target = new ArrayList<T>();
-    for (var propertyEdge : collection) {
-      if (outgoing) {
-        target.add(propertyEdge.getEnd());
-      } else {
-        target.add((T) propertyEdge.getStart());
-      }
-    }
-
-    return Collections.unmodifiableList(target);
+    return collection.stream()
+        .map(edge -> outgoing ? edge.getEnd() : (T) edge.getStart())
+        .collect(Collectors.toUnmodifiableList());
   }
 
   /**
@@ -293,7 +286,7 @@ public class PropertyEdge<T extends Node> implements Persistable {
   public boolean equals(Object obj) {
     if (this == obj) return true;
     if (!(obj instanceof PropertyEdge)) return false;
-    PropertyEdge propertyEdge = (PropertyEdge) obj;
+    var propertyEdge = (PropertyEdge<?>) obj;
     return Objects.equals(this.properties, propertyEdge.properties);
   }
 
