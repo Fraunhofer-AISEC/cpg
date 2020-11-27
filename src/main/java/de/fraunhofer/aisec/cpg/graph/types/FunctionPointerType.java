@@ -1,8 +1,9 @@
 package de.fraunhofer.aisec.cpg.graph.types;
 
+import static de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.unwrap;
+
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import org.neo4j.ogm.annotation.Relationship;
@@ -45,11 +46,7 @@ public class FunctionPointerType extends Type {
   }
 
   public List<Type> getParameters() {
-    List<Type> target = new ArrayList<>();
-    for (PropertyEdge<Type> propertyEdge : this.parameters) {
-      target.add(propertyEdge.getEnd());
-    }
-    return Collections.unmodifiableList(target);
+    return unwrap(this.parameters);
   }
 
   public Type getReturnType() {
@@ -97,7 +94,6 @@ public class FunctionPointerType extends Type {
     if (!super.equals(o)) return false;
     FunctionPointerType that = (FunctionPointerType) o;
     return Objects.equals(parameters, that.parameters)
-        && Objects.equals(this.getParameters(), that.getParameters())
         && Objects.equals(returnType, that.returnType);
   }
 

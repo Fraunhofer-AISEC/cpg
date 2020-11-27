@@ -9,6 +9,7 @@ import java.lang.reflect.Type;
 import java.util.*;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
+import org.checkerframework.checker.nullness.qual.NonNull;
 import org.neo4j.ogm.annotation.*;
 import org.neo4j.ogm.annotation.typeconversion.Convert;
 import org.slf4j.Logger;
@@ -131,6 +132,39 @@ public class PropertyEdge<T extends Node> implements Persistable {
       propertyEdges.add(new PropertyEdge<>(n, commonRelationshipNode));
     }
     return propertyEdges;
+  }
+
+  /**
+   * Unwraps this outgoing property edge into a list of its target nodes.
+   *
+   * @param collection the collection of edges
+   * @param <T> the type of the edges
+   * @return the list of target nodes
+   */
+  public static <T extends Node> List<T> unwrap(@NonNull List<PropertyEdge<T>> collection) {
+    return unwrap(collection, true);
+  }
+
+  /**
+   * Unwraps this property edge into a list of its target nodes.
+   *
+   * @param collection the collection of edges
+   * @param outgoing whether it is outgoing or not
+   * @param <T> the type of the edges
+   * @return the list of target nodes
+   */
+  public static <T extends Node> List<T> unwrap(
+      @NonNull List<PropertyEdge<T>> collection, boolean outgoing) {
+    var target = new ArrayList<T>();
+    for (var propertyEdge : collection) {
+      if (outgoing) {
+        target.add(propertyEdge.getEnd());
+      } else {
+        target.add((T) propertyEdge.getStart());
+      }
+    }
+
+    return Collections.unmodifiableList(target);
   }
 
   /**

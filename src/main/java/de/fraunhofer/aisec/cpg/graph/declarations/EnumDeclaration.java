@@ -26,6 +26,8 @@
 
 package de.fraunhofer.aisec.cpg.graph.declarations;
 
+import static de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.unwrap;
+
 import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.SubGraph;
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
@@ -50,11 +52,7 @@ public class EnumDeclaration extends Declaration {
   }
 
   public List<EnumConstantDeclaration> getEntries() {
-    List<EnumConstantDeclaration> target = new ArrayList<>();
-    for (PropertyEdge<EnumConstantDeclaration> propertyEdge : this.entries) {
-      target.add(propertyEdge.getEnd());
-    }
-    return Collections.unmodifiableList(target);
+    return unwrap(this.entries);
   }
 
   public void setEntries(List<EnumConstantDeclaration> entries) {
@@ -62,11 +60,7 @@ public class EnumDeclaration extends Declaration {
   }
 
   public List<Type> getSuperTypes() {
-    List<Type> target = new ArrayList<>();
-    for (PropertyEdge<Type> propertyEdge : this.superTypes) {
-      target.add(propertyEdge.getEnd());
-    }
-    return Collections.unmodifiableList(target);
+    return unwrap(this.superTypes);
   }
 
   public List<PropertyEdge<Type>> getSuperTypesPropertyEdge() {

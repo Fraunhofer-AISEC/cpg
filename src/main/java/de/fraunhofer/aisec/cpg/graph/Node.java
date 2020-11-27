@@ -26,6 +26,8 @@
 
 package de.fraunhofer.aisec.cpg.graph;
 
+import static de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.unwrap;
+
 import de.fraunhofer.aisec.cpg.graph.declarations.TypedefDeclaration;
 import de.fraunhofer.aisec.cpg.graph.edge.Properties;
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
@@ -238,11 +240,7 @@ public class Node implements IVisitable<Node>, Persistable {
 
   @NonNull
   public List<Node> getNextCFG() {
-    List<Node> target = new ArrayList<>();
-    for (PropertyEdge<Node> propertyEdge : this.nextCFG) {
-      target.add(propertyEdge.getEnd());
-    }
-    return Collections.unmodifiableList(target);
+    return unwrap(this.nextCFG);
   }
 
   public void addNextCFG(Node node) {

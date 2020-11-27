@@ -26,10 +26,11 @@
 
 package de.fraunhofer.aisec.cpg.graph.declarations;
 
+import static de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.unwrap;
+
 import de.fraunhofer.aisec.cpg.graph.DeclarationHolder;
 import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.SubGraph;
-import de.fraunhofer.aisec.cpg.graph.edge.Properties;
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import de.fraunhofer.aisec.cpg.graph.types.Type;
 import java.util.*;
@@ -95,11 +96,7 @@ public class RecordDeclaration extends Declaration implements DeclarationHolder 
   }
 
   public List<FieldDeclaration> getFields() {
-    List<FieldDeclaration> target = new ArrayList<>();
-    for (PropertyEdge<FieldDeclaration> propertyEdge : this.fields) {
-      target.add(propertyEdge.getEnd());
-    }
-    return Collections.unmodifiableList(target);
+    return unwrap(this.fields);
   }
 
   public List<PropertyEdge<FieldDeclaration>> getFieldsPropertyEdge() {
@@ -136,11 +133,7 @@ public class RecordDeclaration extends Declaration implements DeclarationHolder 
   }
 
   public List<MethodDeclaration> getMethods() {
-    List<MethodDeclaration> target = new ArrayList<>();
-    for (PropertyEdge<MethodDeclaration> propertyEdge : this.methods) {
-      target.add(propertyEdge.getEnd());
-    }
-    return Collections.unmodifiableList(target);
+    return unwrap(this.methods);
   }
 
   public List<PropertyEdge<MethodDeclaration>> getMethodsPropertyEdge() {
@@ -160,11 +153,7 @@ public class RecordDeclaration extends Declaration implements DeclarationHolder 
   }
 
   public List<ConstructorDeclaration> getConstructors() {
-    List<ConstructorDeclaration> target = new ArrayList<>();
-    for (PropertyEdge<ConstructorDeclaration> propertyEdge : this.constructors) {
-      target.add(propertyEdge.getEnd());
-    }
-    return Collections.unmodifiableList(target);
+    return unwrap(this.constructors);
   }
 
   public List<PropertyEdge<ConstructorDeclaration>> getConstructorsPropertyEdge() {
@@ -185,11 +174,7 @@ public class RecordDeclaration extends Declaration implements DeclarationHolder 
   }
 
   public List<RecordDeclaration> getRecords() {
-    List<RecordDeclaration> target = new ArrayList<>();
-    for (PropertyEdge<RecordDeclaration> propertyEdge : this.records) {
-      target.add(propertyEdge.getEnd());
-    }
-    return Collections.unmodifiableList(target);
+    return unwrap(this.records);
   }
 
   public List<PropertyEdge<RecordDeclaration>> getRecordsPropertyEdge() {
@@ -198,12 +183,6 @@ public class RecordDeclaration extends Declaration implements DeclarationHolder 
 
   public void setRecords(List<RecordDeclaration> records) {
     this.records = PropertyEdge.transformIntoOutgoingPropertyEdgeList(records, this);
-  }
-
-  public void addRecord(RecordDeclaration recordDeclaration) {
-    PropertyEdge<RecordDeclaration> propertyEdge = new PropertyEdge<>(this, recordDeclaration);
-    propertyEdge.addProperty(Properties.INDEX, this.records.size());
-    this.records.add(propertyEdge);
   }
 
   public void removeRecord(RecordDeclaration recordDeclaration) {

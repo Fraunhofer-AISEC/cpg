@@ -26,6 +26,8 @@
 
 package de.fraunhofer.aisec.cpg.graph.declarations;
 
+import static de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.unwrap;
+
 import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.SubGraph;
 import de.fraunhofer.aisec.cpg.graph.edge.Properties;
@@ -47,11 +49,7 @@ public class IncludeDeclaration extends Declaration {
   private String filename;
 
   public List<IncludeDeclaration> getIncludes() {
-    List<IncludeDeclaration> target = new ArrayList<>();
-    for (PropertyEdge<IncludeDeclaration> propertyEdge : this.includes) {
-      target.add(propertyEdge.getEnd());
-    }
-    return Collections.unmodifiableList(target);
+    return unwrap(this.includes);
   }
 
   public List<PropertyEdge<IncludeDeclaration>> getIncludesPropertyEdge() {
@@ -65,11 +63,7 @@ public class IncludeDeclaration extends Declaration {
   }
 
   public List<ProblemDeclaration> getProblems() {
-    List<ProblemDeclaration> target = new ArrayList<>();
-    for (PropertyEdge<ProblemDeclaration> propertyEdge : this.problems) {
-      target.add((ProblemDeclaration) propertyEdge.getEnd());
-    }
-    return Collections.unmodifiableList(target);
+    return unwrap(this.problems);
   }
 
   public List<PropertyEdge<ProblemDeclaration>> getProblemsPropertyEdge() {

@@ -26,13 +26,14 @@
 
 package de.fraunhofer.aisec.cpg.graph.statements;
 
+import static de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.unwrap;
+
 import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.SubGraph;
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration;
 import de.fraunhofer.aisec.cpg.graph.edge.Properties;
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import org.apache.commons.lang3.builder.ToStringBuilder;
@@ -76,11 +77,7 @@ public class DeclarationStatement extends Statement {
 
   @NonNull
   public List<Declaration> getDeclarations() {
-    List<Declaration> target = new ArrayList<>();
-    for (PropertyEdge<Declaration> propertyEdge : this.declarations) {
-      target.add(propertyEdge.getEnd());
-    }
-    return Collections.unmodifiableList(target);
+    return unwrap(this.declarations, true);
   }
 
   public List<PropertyEdge<Declaration>> getDeclarationsPropertyEdge() {

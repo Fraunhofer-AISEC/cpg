@@ -26,6 +26,8 @@
 
 package de.fraunhofer.aisec.cpg.graph.statements.expressions;
 
+import static de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.unwrap;
+
 import de.fraunhofer.aisec.cpg.graph.HasType;
 import de.fraunhofer.aisec.cpg.graph.HasType.TypeListener;
 import de.fraunhofer.aisec.cpg.graph.Node;
@@ -49,11 +51,7 @@ public class InitializerListExpression extends Expression implements TypeListene
   private List<PropertyEdge<Expression>> initializers = new ArrayList<>();
 
   public List<Expression> getInitializers() {
-    List<Expression> target = new ArrayList<>();
-    for (PropertyEdge<Expression> propertyEdge : this.initializers) {
-      target.add(propertyEdge.getEnd());
-    }
-    return Collections.unmodifiableList(target);
+    return unwrap(this.initializers);
   }
 
   public List<PropertyEdge<Expression>> getInitializersPropertyEdge() {

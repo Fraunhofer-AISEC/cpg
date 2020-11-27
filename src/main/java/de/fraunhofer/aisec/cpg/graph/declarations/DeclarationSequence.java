@@ -26,7 +26,7 @@
 
 package de.fraunhofer.aisec.cpg.graph.declarations;
 
-import de.fraunhofer.aisec.cpg.graph.edge.Properties;
+import de.fraunhofer.aisec.cpg.graph.DeclarationHolder;
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -40,7 +40,7 @@ import org.neo4j.ogm.annotation.Relationship;
  * will be converted into a list-structure and all its children will be added to the parent, i.e.
  * the translation unit. It should not end up in the final graph.
  */
-public class DeclarationSequence extends Declaration {
+public class DeclarationSequence extends Declaration implements DeclarationHolder {
 
   @Relationship(value = "CHILDREN", direction = "OUTGOING")
   private final List<PropertyEdge<Declaration>> children = new ArrayList<>();
@@ -57,18 +57,14 @@ public class DeclarationSequence extends Declaration {
     return Collections.unmodifiableList(target);
   }
 
-  public void add(@NonNull Declaration declaration) {
-    PropertyEdge<Declaration> propertyEdge;
+  public void addDeclaration(@NonNull Declaration declaration) {
     if (declaration instanceof DeclarationSequence) {
       for (Declaration declarationChild : ((DeclarationSequence) declaration).getChildren()) {
-        propertyEdge = new PropertyEdge<>(this, declarationChild);
-        propertyEdge.addProperty(Properties.INDEX, this.children.size());
-        children.add(propertyEdge);
+        addIfNotContains(this.children, declarationChild);
       }
     }
-    propertyEdge = new PropertyEdge<>(this, declaration);
-    propertyEdge.addProperty(Properties.INDEX, this.children.size());
-    children.add(propertyEdge);
+
+    addIfNotContains(this.children, declaration);
   }
 
   public List<Declaration> asList() {

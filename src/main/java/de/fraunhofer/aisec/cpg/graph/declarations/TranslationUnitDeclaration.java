@@ -26,6 +26,8 @@
 
 package de.fraunhofer.aisec.cpg.graph.declarations;
 
+import static de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.unwrap;
+
 import de.fraunhofer.aisec.cpg.graph.DeclarationHolder;
 import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.SubGraph;
@@ -108,11 +110,7 @@ public class TranslationUnitDeclaration extends Declaration implements Declarati
 
   @NonNull
   public List<Declaration> getDeclarations() {
-    List<Declaration> target = new ArrayList<>();
-    for (PropertyEdge<Declaration> propertyEdge : this.declarations) {
-      target.add(propertyEdge.getEnd());
-    }
-    return Collections.unmodifiableList(target);
+    return unwrap(this.declarations);
   }
 
   @NonNull

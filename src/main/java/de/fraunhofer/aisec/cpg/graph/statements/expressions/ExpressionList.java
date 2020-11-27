@@ -26,6 +26,8 @@
 
 package de.fraunhofer.aisec.cpg.graph.statements.expressions;
 
+import static de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.unwrap;
+
 import de.fraunhofer.aisec.cpg.graph.HasType;
 import de.fraunhofer.aisec.cpg.graph.HasType.TypeListener;
 import de.fraunhofer.aisec.cpg.graph.SubGraph;
@@ -43,11 +45,7 @@ public class ExpressionList extends Expression implements TypeListener {
   private List<PropertyEdge<Statement>> expressions = new ArrayList<>();
 
   public List<Statement> getExpressions() {
-    List<Statement> target = new ArrayList<>();
-    for (PropertyEdge<Statement> propertyEdge : this.expressions) {
-      target.add((Statement) propertyEdge.getEnd());
-    }
-    return Collections.unmodifiableList(target);
+    return unwrap(this.expressions);
   }
 
   public List<PropertyEdge<Statement>> getExpressionsPropertyEdges() {
@@ -71,8 +69,7 @@ public class ExpressionList extends Expression implements TypeListener {
 
   public void addExpression(Statement expression) {
     if (!this.expressions.isEmpty()) {
-      Statement lastExpression =
-              this.expressions.get(this.expressions.size() - 1).getEnd();
+      Statement lastExpression = this.expressions.get(this.expressions.size() - 1).getEnd();
       if (lastExpression instanceof HasType)
         ((HasType) lastExpression).unregisterTypeListener(this);
       this.removePrevDFG(lastExpression);

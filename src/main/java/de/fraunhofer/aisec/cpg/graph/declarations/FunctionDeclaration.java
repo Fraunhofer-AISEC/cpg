@@ -26,6 +26,8 @@
 
 package de.fraunhofer.aisec.cpg.graph.declarations;
 
+import static de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.unwrap;
+
 import de.fraunhofer.aisec.cpg.graph.*;
 import de.fraunhofer.aisec.cpg.graph.edge.Properties;
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
@@ -136,11 +138,7 @@ public class FunctionDeclaration extends ValueDeclaration implements Declaration
   }
 
   public List<FunctionDeclaration> getOverriddenBy() {
-    List<FunctionDeclaration> target = new ArrayList<>();
-    for (PropertyEdge<FunctionDeclaration> propertyEdge : this.overriddenBy) {
-      target.add((FunctionDeclaration) propertyEdge.getStart());
-    }
-    return Collections.unmodifiableList(target);
+    return unwrap(this.overriddenBy, false);
   }
 
   public List<PropertyEdge<FunctionDeclaration>> getOverriddenByPropertyEdge() {
@@ -158,11 +156,7 @@ public class FunctionDeclaration extends ValueDeclaration implements Declaration
   }
 
   public List<FunctionDeclaration> getOverrides() {
-    List<FunctionDeclaration> target = new ArrayList<>();
-    for (var propertyEdge : this.overrides) {
-      target.add(propertyEdge.getEnd());
-    }
-    return Collections.unmodifiableList(target);
+    return unwrap(this.overrides);
   }
 
   public List<PropertyEdge<FunctionDeclaration>> getOverridesPropertyEdge() {
@@ -174,11 +168,7 @@ public class FunctionDeclaration extends ValueDeclaration implements Declaration
   }
 
   public List<Type> getThrowsTypes() {
-    List<Type> target = new ArrayList<>();
-    for (var propertyEdge : this.throwsTypes) {
-      target.add((Type) propertyEdge.getEnd());
-    }
-    return Collections.unmodifiableList(target);
+    return unwrap(this.throwsTypes);
   }
 
   public List<PropertyEdge<Type>> getThrowsTypesPropertyEdge() {
@@ -243,11 +233,7 @@ public class FunctionDeclaration extends ValueDeclaration implements Declaration
   }
 
   public List<ParamVariableDeclaration> getParameters() {
-    List<ParamVariableDeclaration> target = new ArrayList<>();
-    for (PropertyEdge<ParamVariableDeclaration> propertyEdge : this.parameters) {
-      target.add(propertyEdge.getEnd());
-    }
-    return Collections.unmodifiableList(target);
+    return unwrap(this.parameters);
   }
 
   public List<PropertyEdge<ParamVariableDeclaration>> getParametersPropertyEdge() {
@@ -357,11 +343,7 @@ public class FunctionDeclaration extends ValueDeclaration implements Declaration
   }
 
   public List<RecordDeclaration> getRecords() {
-    List<RecordDeclaration> target = new ArrayList<>();
-    for (PropertyEdge<RecordDeclaration> propertyEdge : this.records) {
-      target.add(propertyEdge.getEnd());
-    }
-    return Collections.unmodifiableList(target);
+    return unwrap(this.records);
   }
 
   public List<PropertyEdge<RecordDeclaration>> getRecordsPropertyEdge() {

@@ -294,7 +294,7 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
 
       this.lang.processAttributes(declaration, ctx);
 
-      sequence.add(declaration);
+      sequence.addDeclaration(declaration);
     } else if (declSpecifier instanceof CPPASTElaboratedTypeSpecifier) {
       warnWithFileLocation(
           lang,
@@ -325,7 +325,7 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
       // process attributes
       this.lang.processAttributes(declaration, ctx);
 
-      sequence.add(declaration);
+      sequence.addDeclaration(declaration);
     }
 
     if (sequence.isSingle()) {

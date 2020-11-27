@@ -26,6 +26,8 @@
 
 package de.fraunhofer.aisec.cpg.graph.statements.expressions;
 
+import static de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.unwrap;
+
 import de.fraunhofer.aisec.cpg.graph.*;
 import de.fraunhofer.aisec.cpg.graph.HasType.TypeListener;
 import de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDeclaration;
@@ -98,11 +100,7 @@ public class ConstructExpression extends Expression implements TypeListener {
   }
 
   public List<Expression> getArguments() {
-    List<Expression> target = new ArrayList<>();
-    for (PropertyEdge<Expression> propertyEdge : this.arguments) {
-      target.add((Expression) propertyEdge.getEnd());
-    }
-    return Collections.unmodifiableList(target);
+    return unwrap(this.arguments);
   }
 
   public List<PropertyEdge<Expression>> getArgumentsPropertyEdge() {
