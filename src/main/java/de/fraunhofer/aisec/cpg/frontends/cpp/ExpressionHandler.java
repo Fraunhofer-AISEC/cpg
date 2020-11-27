@@ -301,7 +301,7 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
                 lang.getScopeManager().getCurrentRecord().getThis().getType(),
                 base.getCode());
       } catch (NullPointerException e) {
-        log.error("No Current Record found for field access: " + ctx.getRawSignature());
+        log.error("No Current Record found for field access: {}", ctx.getRawSignature());
       }
       base.setLocation(location);
     }
