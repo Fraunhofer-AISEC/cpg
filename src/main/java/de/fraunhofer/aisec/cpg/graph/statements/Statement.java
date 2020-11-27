@@ -95,7 +95,7 @@ public class Statement extends Node implements DeclarationHolder {
   public void addDeclaration(@NonNull Declaration declaration) {
     if (declaration instanceof VariableDeclaration) {
       PropertyEdge<VariableDeclaration> propertyEdge =
-          new PropertyEdge(this, (VariableDeclaration) declaration);
+          new PropertyEdge<>(this, (VariableDeclaration) declaration);
       propertyEdge.addProperty(Properties.INDEX, this.locals.size());
       this.locals.add(propertyEdge);
     }

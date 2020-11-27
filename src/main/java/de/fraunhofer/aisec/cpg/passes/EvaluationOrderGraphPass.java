@@ -740,7 +740,7 @@ public class EvaluationOrderGraphPass extends Pass {
    * @param next the next node
    */
   public void addEOGEdge(Node prev, Node next) {
-    PropertyEdge<Node> propertyEdge = new PropertyEdge(prev, next);
+    PropertyEdge<Node> propertyEdge = new PropertyEdge<>(prev, next);
     propertyEdge.addProperties(this.currentProperties);
     propertyEdge.addProperty(Properties.INDEX, prev.getNextEOG().size());
     prev.addNextEOG(propertyEdge);

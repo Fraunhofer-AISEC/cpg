@@ -69,7 +69,7 @@ public class TryStatement extends Statement {
     this.resources = new ArrayList<>();
     int c = 0;
     for (Statement s : resources) {
-      PropertyEdge<Statement> propertyEdge = new PropertyEdge(this, s);
+      PropertyEdge<Statement> propertyEdge = new PropertyEdge<>(this, s);
       propertyEdge.addProperty(Properties.INDEX, c);
       this.resources.add(propertyEdge);
       c++;
@@ -113,7 +113,7 @@ public class TryStatement extends Statement {
     int counter = 0;
 
     for (CatchClause c : catchClauses) {
-      PropertyEdge<CatchClause> propertyEdge = new PropertyEdge(this, c);
+      PropertyEdge<CatchClause> propertyEdge = new PropertyEdge<>(this, c);
       propertyEdge.addProperty(Properties.INDEX, counter);
       this.catchClauses.add(propertyEdge);
       counter++;

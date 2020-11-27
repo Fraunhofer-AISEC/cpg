@@ -154,7 +154,7 @@ public class FunctionDeclaration extends ValueDeclaration implements Declaration
   }
 
   public void addOverridenBy(FunctionDeclaration functionDeclaration) {
-    PropertyEdge propertyEdge = new PropertyEdge(functionDeclaration, this);
+    PropertyEdge propertyEdge = new PropertyEdge<>(functionDeclaration, this);
     propertyEdge.addProperty(Properties.INDEX, this.overriddenBy.size());
     this.overriddenBy.add(propertyEdge);
   }
@@ -172,7 +172,7 @@ public class FunctionDeclaration extends ValueDeclaration implements Declaration
   }
 
   public void addOverrides(FunctionDeclaration functionDeclaration) {
-    PropertyEdge propertyEdge = new PropertyEdge(this, functionDeclaration);
+    PropertyEdge propertyEdge = new PropertyEdge<>(this, functionDeclaration);
     propertyEdge.addProperty(Properties.INDEX, this.overrides.size());
     this.overrides.add(propertyEdge);
   }
@@ -194,7 +194,7 @@ public class FunctionDeclaration extends ValueDeclaration implements Declaration
   }
 
   public void addThrowTypes(Type type) {
-    PropertyEdge<Type> propertyEdge = new PropertyEdge(this, type);
+    PropertyEdge<Type> propertyEdge = new PropertyEdge<>(this, type);
     propertyEdge.addProperty(Properties.INDEX, this.throwsTypes.size());
     this.throwsTypes.add(propertyEdge);
   }
@@ -260,7 +260,7 @@ public class FunctionDeclaration extends ValueDeclaration implements Declaration
 
   public void addParameter(ParamVariableDeclaration paramVariableDeclaration) {
     PropertyEdge<ParamVariableDeclaration> propertyEdge =
-        new PropertyEdge(this, paramVariableDeclaration);
+        new PropertyEdge<>(this, paramVariableDeclaration);
     propertyEdge.addProperty(Properties.INDEX, this.parameters.size());
     this.parameters.add(propertyEdge);
   }
@@ -380,13 +380,13 @@ public class FunctionDeclaration extends ValueDeclaration implements Declaration
   public void addDeclaration(@NonNull Declaration declaration) {
     PropertyEdge propertyEdge;
     if (declaration instanceof ParamVariableDeclaration) {
-      propertyEdge = new PropertyEdge(this, declaration);
+      propertyEdge = new PropertyEdge<>(this, declaration);
       propertyEdge.addProperty(Properties.INDEX, declaration);
       addIfNotContains(parameters, propertyEdge);
     }
 
     if (declaration instanceof RecordDeclaration) {
-      propertyEdge = new PropertyEdge(this, declaration);
+      propertyEdge = new PropertyEdge<>(this, declaration);
       propertyEdge.addProperty(Properties.INDEX, this.records.size());
       addIfNotContains(records, propertyEdge);
     }

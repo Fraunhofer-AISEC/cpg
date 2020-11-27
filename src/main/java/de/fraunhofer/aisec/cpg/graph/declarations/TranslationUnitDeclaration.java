@@ -151,16 +151,16 @@ public class TranslationUnitDeclaration extends Declaration implements Declarati
 
   public void addDeclaration(@NonNull Declaration declaration) {
     if (declaration instanceof IncludeDeclaration) {
-      PropertyEdge<Declaration> propertyEdgeInclude = new PropertyEdge(this, declaration);
+      PropertyEdge<Declaration> propertyEdgeInclude = new PropertyEdge<>(this, declaration);
       propertyEdgeInclude.addProperty(Properties.INDEX, this.includes.size());
       includes.add(propertyEdgeInclude);
     } else if (declaration instanceof NamespaceDeclaration) {
-      PropertyEdge<Declaration> propertyEdgeNamespace = new PropertyEdge(this, declaration);
+      PropertyEdge<Declaration> propertyEdgeNamespace = new PropertyEdge<>(this, declaration);
       propertyEdgeNamespace.addProperty(Properties.INDEX, this.namespaces.size());
       namespaces.add(propertyEdgeNamespace);
     }
 
-    PropertyEdge<Declaration> propertyEdgeDeclaration = new PropertyEdge(this, declaration);
+    PropertyEdge<Declaration> propertyEdgeDeclaration = new PropertyEdge<>(this, declaration);
     propertyEdgeDeclaration.addProperty(Properties.INDEX, this.declarations.size());
     addIfNotContains(declarations, propertyEdgeDeclaration);
   }

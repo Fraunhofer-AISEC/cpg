@@ -59,7 +59,7 @@ public class IncludeDeclaration extends Declaration {
   }
 
   public void addInclude(IncludeDeclaration includeDeclaration) {
-    PropertyEdge<IncludeDeclaration> propertyEdge = new PropertyEdge(this, includeDeclaration);
+    PropertyEdge<IncludeDeclaration> propertyEdge = new PropertyEdge<>(this, includeDeclaration);
     propertyEdge.addProperty(Properties.INDEX, this.includes.size());
     this.includes.add(propertyEdge);
   }
@@ -83,7 +83,7 @@ public class IncludeDeclaration extends Declaration {
   }
 
   public void addProblem(ProblemDeclaration problemDeclaration) {
-    PropertyEdge<ProblemDeclaration> propertyEdge = new PropertyEdge(this, problemDeclaration);
+    PropertyEdge<ProblemDeclaration> propertyEdge = new PropertyEdge<>(this, problemDeclaration);
     propertyEdge.addProperty(Properties.INDEX, this.problems.size());
     this.problems.add(propertyEdge);
   }

@@ -77,7 +77,7 @@ public class ExpressionList extends Expression implements TypeListener {
         ((HasType) lastExpression).unregisterTypeListener(this);
       this.removePrevDFG(lastExpression);
     }
-    PropertyEdge<Statement> propertyEdge = new PropertyEdge(this, expression);
+    PropertyEdge<Statement> propertyEdge = new PropertyEdge<>(this, expression);
     propertyEdge.addProperty(Properties.INDEX, this.expressions.size());
     this.expressions.add(propertyEdge);
     this.addPrevDFG(expression);

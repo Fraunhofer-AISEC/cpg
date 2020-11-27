@@ -94,7 +94,7 @@ public class CallExpression extends Expression implements TypeListener {
   }
 
   public void addArgument(Expression expression) {
-    PropertyEdge<Expression> propertyEdge = new PropertyEdge(this, expression);
+    PropertyEdge<Expression> propertyEdge = new PropertyEdge<>(this, expression);
     propertyEdge.addProperty(Properties.INDEX, this.arguments.size());
     this.arguments.add(propertyEdge);
   }

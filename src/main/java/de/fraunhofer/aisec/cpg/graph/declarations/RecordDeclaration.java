@@ -107,7 +107,7 @@ public class RecordDeclaration extends Declaration implements DeclarationHolder 
   }
 
   public void addField(FieldDeclaration fieldDeclaration) {
-    PropertyEdge<FieldDeclaration> propertyEdge = new PropertyEdge(this, fieldDeclaration);
+    PropertyEdge<FieldDeclaration> propertyEdge = new PropertyEdge<>(this, fieldDeclaration);
     propertyEdge.addProperty(Properties.INDEX, this.fields.size());
     addIfNotContains(this.fields, propertyEdge);
   }
@@ -150,7 +150,7 @@ public class RecordDeclaration extends Declaration implements DeclarationHolder 
   }
 
   public void addMethod(MethodDeclaration methodDeclaration) {
-    PropertyEdge<MethodDeclaration> propertyEdge = new PropertyEdge(this, methodDeclaration);
+    PropertyEdge<MethodDeclaration> propertyEdge = new PropertyEdge<>(this, methodDeclaration);
     propertyEdge.addProperty(Properties.INDEX, this.methods.size());
     addIfNotContains(this.methods, propertyEdge);
   }
@@ -181,7 +181,7 @@ public class RecordDeclaration extends Declaration implements DeclarationHolder 
 
   public void addConstructor(ConstructorDeclaration constructorDeclaration) {
     PropertyEdge<ConstructorDeclaration> propertyEdge =
-        new PropertyEdge(this, constructorDeclaration);
+        new PropertyEdge<>(this, constructorDeclaration);
     propertyEdge.addProperty(Properties.INDEX, this.constructors.size());
     addIfNotContains(this.constructors, propertyEdge);
   }
@@ -208,7 +208,7 @@ public class RecordDeclaration extends Declaration implements DeclarationHolder 
   }
 
   public void addRecord(RecordDeclaration recordDeclaration) {
-    PropertyEdge<RecordDeclaration> propertyEdge = new PropertyEdge(this, recordDeclaration);
+    PropertyEdge<RecordDeclaration> propertyEdge = new PropertyEdge<>(this, recordDeclaration);
     propertyEdge.addProperty(Properties.INDEX, this.records.size());
     this.records.add(propertyEdge);
   }
@@ -342,19 +342,19 @@ public class RecordDeclaration extends Declaration implements DeclarationHolder 
   @Override
   public void addDeclaration(@NonNull Declaration declaration) {
     if (declaration instanceof ConstructorDeclaration) {
-      PropertyEdge<ConstructorDeclaration> propertyEdge = new PropertyEdge(this, declaration);
+      var propertyEdge = new PropertyEdge<>(this, (ConstructorDeclaration) declaration);
       propertyEdge.addProperty(Properties.INDEX, this.constructors.size());
       addIfNotContains(this.constructors, propertyEdge);
     } else if (declaration instanceof MethodDeclaration) {
-      PropertyEdge<MethodDeclaration> propertyEdge = new PropertyEdge(this, declaration);
+      var propertyEdge = new PropertyEdge<>(this, (MethodDeclaration) declaration);
       propertyEdge.addProperty(Properties.INDEX, this.methods.size());
       addIfNotContains(this.methods, propertyEdge);
     } else if (declaration instanceof FieldDeclaration) {
-      PropertyEdge<FieldDeclaration> propertyEdge = new PropertyEdge(this, declaration);
+      var propertyEdge = new PropertyEdge<>(this, (FieldDeclaration) declaration);
       propertyEdge.addProperty(Properties.INDEX, this.fields.size());
       addIfNotContains(this.fields, propertyEdge);
     } else if (declaration instanceof RecordDeclaration) {
-      PropertyEdge<RecordDeclaration> propertyEdge = new PropertyEdge(this, declaration);
+      var propertyEdge = new PropertyEdge<>(this, (RecordDeclaration) declaration);
       propertyEdge.addProperty(Properties.INDEX, this.records.size());
       addIfNotContains(this.records, propertyEdge);
     }
