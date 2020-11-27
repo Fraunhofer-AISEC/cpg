@@ -294,11 +294,15 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
     // Replace Literal this with a reference pointing to this
     if (base instanceof Literal && ((Literal) base).getValue().equals("this")) {
       PhysicalLocation location = base.getLocation();
-      base =
-          NodeBuilder.newDeclaredReferenceExpression(
-              "this",
-              lang.getScopeManager().getCurrentRecord().getThis().getType(),
-              base.getCode());
+      try {
+        base =
+            NodeBuilder.newDeclaredReferenceExpression(
+                "this",
+                lang.getScopeManager().getCurrentRecord().getThis().getType(),
+                base.getCode());
+      } catch (NullPointerException e) {
+        log.error("No Current Record found for field access: " + ctx.getRawSignature());
+      }
       base.setLocation(location);
     }
 

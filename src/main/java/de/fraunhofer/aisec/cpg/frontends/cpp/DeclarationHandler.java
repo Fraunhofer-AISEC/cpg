@@ -255,9 +255,22 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
         lang,
         ctx,
         log,
-        "Parsing template declarations is not supported (yet). Will ignore template and parse inner declaration");
+        "Parsing template declarations is not supported (yet). Will ignore template, create a recordDeclaration and parse inner declaration");
+    // TODO add support for parsing templates
+    RecordDeclaration recordDeclaration =
+        NodeBuilder.newRecordDeclaration(
+            lang.getScopeManager().getCurrentNamePrefixWithDelimiter(),
+            "template",
+            ctx.getRawSignature());
 
-    return handle(ctx.getDeclaration());
+    lang.getScopeManager().addDeclaration(recordDeclaration);
+    lang.getScopeManager().enterScope(recordDeclaration);
+
+    handle(ctx.getDeclaration());
+
+    lang.getScopeManager().leaveScope(recordDeclaration);
+
+    return recordDeclaration;
   }
 
   private Declaration handleSimpleDeclaration(CPPASTSimpleDeclaration ctx) {

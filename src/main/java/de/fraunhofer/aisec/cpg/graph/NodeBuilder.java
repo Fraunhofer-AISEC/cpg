@@ -394,7 +394,7 @@ public class NodeBuilder {
     node.setKind(kind);
     node.setCode(code);
 
-    if (kind.equals("class")) {
+    if (kind.equals("class") || kind.equals("template")) {
       FieldDeclaration thisDeclaration =
           NodeBuilder.newFieldDeclaration(
               "this",
