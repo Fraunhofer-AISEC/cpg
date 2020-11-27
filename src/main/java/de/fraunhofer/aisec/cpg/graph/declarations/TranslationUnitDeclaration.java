@@ -29,6 +29,8 @@ package de.fraunhofer.aisec.cpg.graph.declarations;
 import de.fraunhofer.aisec.cpg.graph.DeclarationHolder;
 import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.SubGraph;
+import de.fraunhofer.aisec.cpg.graph.edge.Properties;
+import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -38,24 +40,28 @@ import java.util.stream.Collectors;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
+import org.neo4j.ogm.annotation.Relationship;
 
 /** The top most declaration, representing a translation unit, for example a file. */
 public class TranslationUnitDeclaration extends Declaration implements DeclarationHolder {
 
   /** A list of declarations within this unit. */
+  @Relationship(value = "declarations", direction = "OUTGOING")
   @SubGraph("AST")
   @NonNull
-  private List<Declaration> declarations = new ArrayList<>();
+  private List<PropertyEdge> declarations = new ArrayList<>();
 
   /** A list of includes within this unit. */
+  @Relationship(value = "includes", direction = "OUTGOING")
   @SubGraph("AST")
   @NonNull
-  private List<Declaration> includes = new ArrayList<>();
+  private List<PropertyEdge> includes = new ArrayList<>();
 
   /** A list of namespaces within this unit. */
+  @Relationship(value = "namespaces", direction = "OUTGOING")
   @SubGraph("AST")
   @NonNull
-  private List<Declaration> namespaces = new ArrayList<>();
+  private List<PropertyEdge> namespaces = new ArrayList<>();
 
   /**
    * Returns the i-th declaration as a specific class, if it can be cast
@@ -67,14 +73,14 @@ public class TranslationUnitDeclaration extends Declaration implements Declarati
    */
   @Nullable
   public <T extends Declaration> T getDeclarationAs(int i, Class<T> clazz) {
-    Declaration declaration = this.declarations.get(i);
+    Declaration declaration = (Declaration) this.declarations.get(i).getEnd();
 
     if (declaration == null) {
       return null;
     }
 
     return declaration.getClass().isAssignableFrom(clazz)
-        ? clazz.cast(this.declarations.get(i))
+        ? clazz.cast(this.declarations.get(i).getEnd())
         : null;
   }
 
@@ -94,6 +100,7 @@ public class TranslationUnitDeclaration extends Declaration implements Declarati
   public <T extends Declaration> Set<T> getDeclarationsByName(
       @NonNull String name, @NonNull Class<T> clazz) {
     return this.declarations.stream()
+        .map(pe -> (Declaration) pe.getEnd())
         .filter(declaration -> clazz.isAssignableFrom(declaration.getClass()))
         .map(clazz::cast)
         .filter(declaration -> Objects.equals(declaration.getName(), name))
@@ -102,27 +109,60 @@ public class TranslationUnitDeclaration extends Declaration implements Declarati
 
   @NonNull
   public List<Declaration> getDeclarations() {
-    return declarations;
+    List<Declaration> target = new ArrayList<>();
+    for (PropertyEdge propertyEdge : this.declarations) {
+      target.add((Declaration) propertyEdge.getEnd());
+    }
+    return Collections.unmodifiableList(target);
+  }
+
+  @NonNull
+  public List<PropertyEdge> getDeclarationsPropertyEdge() {
+    return this.declarations;
   }
 
   @NonNull
   public List<Declaration> getIncludes() {
-    return Collections.unmodifiableList(includes);
+    List<Declaration> targets = new ArrayList<>();
+    for (PropertyEdge propertyEdge : this.includes) {
+      targets.add((Declaration) propertyEdge.getEnd());
+    }
+    return Collections.unmodifiableList(targets);
+  }
+
+  @NonNull
+  public List<PropertyEdge> getIncludesPropertyEdge() {
+    return this.includes;
   }
 
   @NonNull
   public List<Declaration> getNamespaces() {
-    return Collections.unmodifiableList(namespaces);
+    List<Declaration> targets = new ArrayList<>();
+    for (PropertyEdge propertyEdge : this.namespaces) {
+      targets.add((Declaration) propertyEdge.getEnd());
+    }
+    return Collections.unmodifiableList(targets);
+  }
+
+  @NonNull
+  public List<PropertyEdge> getNamespacesPropertyEdge() {
+    return this.namespaces;
   }
 
   public void addDeclaration(@NonNull Declaration declaration) {
     if (declaration instanceof IncludeDeclaration) {
-      includes.add(declaration);
+      PropertyEdge propertyEdgeInclude = new PropertyEdge(this, declaration);
+      propertyEdgeInclude.addProperty(Properties.INDEX, this.includes.size());
+      includes.add(propertyEdgeInclude);
     } else if (declaration instanceof NamespaceDeclaration) {
-      namespaces.add(declaration);
+      PropertyEdge propertyEdgeNamespace = new PropertyEdge(this, declaration);
+      propertyEdgeNamespace.addProperty(Properties.INDEX, this.namespaces.size());
+      namespaces.add(propertyEdgeNamespace);
     }
 
-    addIfNotContains(declarations, declaration);
+    PropertyEdge propertyEdgeDeclaration = new PropertyEdge(this, declaration);
+    propertyEdgeDeclaration.addProperty(Properties.INDEX, this.declarations.size());
+    addIfNotContains(declarations, propertyEdgeDeclaration);
   }
 
   @Override
@@ -145,8 +185,11 @@ public class TranslationUnitDeclaration extends Declaration implements Declarati
     TranslationUnitDeclaration that = (TranslationUnitDeclaration) o;
     return super.equals(that)
         && Objects.equals(declarations, that.declarations)
+        && Objects.equals(this.getDeclarations(), that.getDeclarations())
         && Objects.equals(includes, that.includes)
-        && Objects.equals(namespaces, that.namespaces);
+        && Objects.equals(this.getIncludes(), that.getIncludes())
+        && Objects.equals(namespaces, that.namespaces)
+        && Objects.equals(this.getNamespaces(), that.getNamespaces());
   }
 
   @Override

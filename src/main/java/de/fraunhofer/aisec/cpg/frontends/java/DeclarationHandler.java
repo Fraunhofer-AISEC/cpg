@@ -104,12 +104,10 @@ public class DeclarationHandler
     lang.getScopeManager().addDeclaration(declaration);
 
     lang.getScopeManager().enterScope(declaration);
-    declaration
-        .getThrowsTypes()
-        .addAll(
-            constructorDecl.getThrownExceptions().stream()
-                .map(type -> TypeParser.createFrom(type.asString(), true))
-                .collect(Collectors.toList()));
+    declaration.addThrowTypes(
+        constructorDecl.getThrownExceptions().stream()
+            .map(type -> TypeParser.createFrom(type.asString(), true))
+            .collect(Collectors.toList()));
 
     for (Parameter parameter : constructorDecl.getParameters()) {
       ParamVariableDeclaration param =
@@ -119,7 +117,7 @@ public class DeclarationHandler
               parameter.isVarArgs(),
               parameter.toString());
 
-      declaration.getParameters().add(param);
+      declaration.addParameter(param);
 
       lang.setCodeAndRegion(param, parameter);
       lang.getScopeManager().addDeclaration(param);
@@ -159,12 +157,10 @@ public class DeclarationHandler
             lang.getScopeManager().getCurrentRecord());
     lang.getScopeManager().enterScope(functionDeclaration);
 
-    functionDeclaration
-        .getThrowsTypes()
-        .addAll(
-            methodDecl.getThrownExceptions().stream()
-                .map(type -> TypeParser.createFrom(type.asString(), true))
-                .collect(Collectors.toList()));
+    functionDeclaration.addThrowTypes(
+        methodDecl.getThrownExceptions().stream()
+            .map(type -> TypeParser.createFrom(type.asString(), true))
+            .collect(Collectors.toList()));
 
     for (Parameter parameter : methodDecl.getParameters()) {
       ParamVariableDeclaration param =
@@ -174,7 +170,7 @@ public class DeclarationHandler
               parameter.isVarArgs(),
               parameter.toString());
 
-      functionDeclaration.getParameters().add(param);
+      functionDeclaration.addParameter(param);
       lang.setCodeAndRegion(param, parameter);
       lang.getScopeManager().addDeclaration(param);
     }
@@ -255,13 +251,13 @@ public class DeclarationHandler
       } else if (decl instanceof com.github.javaparser.ast.body.MethodDeclaration) {
         de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration md =
             (de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration) handle(decl);
-        recordDeclaration.getMethods().add(md);
+        recordDeclaration.addMethod(md);
       } else if (decl instanceof com.github.javaparser.ast.body.ConstructorDeclaration) {
         de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDeclaration c =
             (de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDeclaration) handle(decl);
-        recordDeclaration.getConstructors().add(c);
+        recordDeclaration.addConstructor(c);
       } else if (decl instanceof com.github.javaparser.ast.body.ClassOrInterfaceDeclaration) {
-        recordDeclaration.getRecords().add((RecordDeclaration) handle(decl));
+        recordDeclaration.addDeclaration(handle(decl));
       } else {
         log.debug(
             "Member {} of type {} is something that we do not parse yet: {}",
@@ -275,7 +271,7 @@ public class DeclarationHandler
       de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDeclaration constructorDeclaration =
           NodeBuilder.newConstructorDeclaration(
               recordDeclaration.getName(), recordDeclaration.getName(), recordDeclaration);
-      recordDeclaration.getConstructors().add(constructorDeclaration);
+      recordDeclaration.addConstructor(constructorDeclaration);
       lang.getScopeManager().addDeclaration(constructorDeclaration);
     }
 

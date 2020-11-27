@@ -31,10 +31,11 @@ import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.SubGraph;
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration;
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
+import de.fraunhofer.aisec.cpg.graph.edge.Properties;
+import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
+import java.util.*;
 import org.checkerframework.checker.nullness.qual.NonNull;
+import org.neo4j.ogm.annotation.Relationship;
 
 /** A statement. */
 public class Statement extends Node implements DeclarationHolder {
@@ -45,15 +46,30 @@ public class Statement extends Node implements DeclarationHolder {
    * their condition or initializers
    */
   // TODO: This is actually an AST node just for a subset of nodes, i.e. initializers in for-loops
+  @Relationship(value = "locals", direction = "OUTGOING")
   @SubGraph("AST")
-  protected List<VariableDeclaration> locals = new ArrayList<>();
+  protected List<PropertyEdge> locals = new ArrayList<>();
 
   public List<VariableDeclaration> getLocals() {
-    return locals;
+    List<VariableDeclaration> localsVariableDeclaration = new ArrayList<>();
+
+    for (PropertyEdge propertyEdge : this.locals) {
+      localsVariableDeclaration.add((VariableDeclaration) propertyEdge.getEnd());
+    }
+
+    return Collections.unmodifiableList(localsVariableDeclaration);
+  }
+
+  public List<PropertyEdge> getLocalsPropertyEdge() {
+    return this.locals;
+  }
+
+  public void removeLocal(Declaration variableDeclaration) {
+    this.locals = PropertyEdge.removeElementFromList(this.locals, variableDeclaration, true);
   }
 
   public void setLocals(List<VariableDeclaration> locals) {
-    this.locals = locals;
+    this.locals = PropertyEdge.transformIntoPropertyEdgeList(locals, this, true);
   }
 
   @Override
@@ -65,7 +81,9 @@ public class Statement extends Node implements DeclarationHolder {
       return false;
     }
     Statement statement = (Statement) o;
-    return super.equals(statement) && Objects.equals(locals, statement.locals);
+    return super.equals(statement)
+        && Objects.equals(this.getLocals(), statement.getLocals())
+        && Objects.equals(this.locals, statement.locals);
   }
 
   @Override
@@ -76,7 +94,9 @@ public class Statement extends Node implements DeclarationHolder {
   @Override
   public void addDeclaration(@NonNull Declaration declaration) {
     if (declaration instanceof VariableDeclaration) {
-      this.locals.add((VariableDeclaration) declaration);
+      PropertyEdge propertyEdge = new PropertyEdge(this, (VariableDeclaration) declaration);
+      propertyEdge.addProperty(Properties.INDEX, this.locals.size());
+      this.locals.add(propertyEdge);
     }
   }
 }

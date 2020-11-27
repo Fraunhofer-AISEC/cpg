@@ -29,11 +29,15 @@ package de.fraunhofer.aisec.cpg.graph.statements;
 import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.SubGraph;
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration;
+import de.fraunhofer.aisec.cpg.graph.edge.Properties;
+import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.checkerframework.checker.nullness.qual.NonNull;
+import org.neo4j.ogm.annotation.Relationship;
 
 /**
  * A statement which contains a list of statements. A common example is a function body within a
@@ -42,16 +46,37 @@ import org.checkerframework.checker.nullness.qual.NonNull;
 public class CompoundStatement extends Statement {
 
   /** The list of statements. */
+  @Relationship(value = "statements", direction = "OUTGOING")
   @NonNull
-  private @SubGraph("AST") List<Statement> statements = new ArrayList<>();
+  private @SubGraph("AST") List<PropertyEdge> statements = new ArrayList<>();
 
   @NonNull
   public List<Statement> getStatements() {
-    return statements;
+    List<Statement> targets = new ArrayList<>();
+    for (PropertyEdge propertyEdge : this.statements) {
+      targets.add((Statement) propertyEdge.getEnd());
+    }
+    return Collections.unmodifiableList(targets);
+  }
+
+  @NonNull
+  public List<PropertyEdge> getStatementsPropertyEdge() {
+    return this.statements;
   }
 
   public void setStatements(@NonNull List<Statement> statements) {
-    this.statements = statements;
+    this.statements = PropertyEdge.transformIntoPropertyEdgeList(statements, this, true);
+  }
+
+  @NonNull
+  public List<PropertyEdge> getStatementEdges() {
+    return this.statements;
+  }
+
+  public void addStatement(Statement s) {
+    PropertyEdge propertyEdge = new PropertyEdge(this, s);
+    propertyEdge.addProperty(Properties.INDEX, this.statements.size());
+    this.statements.add(propertyEdge);
   }
 
   @Override
@@ -68,7 +93,9 @@ public class CompoundStatement extends Statement {
       return false;
     }
     CompoundStatement that = (CompoundStatement) o;
-    return super.equals(that) && Objects.equals(statements, that.statements);
+    return super.equals(that)
+        && Objects.equals(statements, that.statements)
+        && Objects.equals(this.getStatements(), that.getStatements());
   }
 
   @Override

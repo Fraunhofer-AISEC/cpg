@@ -30,6 +30,8 @@ import de.fraunhofer.aisec.cpg.graph.*;
 import de.fraunhofer.aisec.cpg.graph.HasType.TypeListener;
 import de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDeclaration;
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration;
+import de.fraunhofer.aisec.cpg.graph.edge.Properties;
+import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import de.fraunhofer.aisec.cpg.graph.types.Type;
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser;
 import de.fraunhofer.aisec.cpg.helpers.Util;
@@ -37,6 +39,7 @@ import de.fraunhofer.aisec.cpg.passes.CallResolver;
 import java.util.*;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.builder.ToStringBuilder;
+import org.neo4j.ogm.annotation.Relationship;
 
 /**
  * Represents a call to a constructor, usually as an initializer.
@@ -61,8 +64,9 @@ public class ConstructExpression extends Expression implements TypeListener {
   private Declaration instantiates;
 
   /** The list of argument {@link Expression}s passed the constructor. */
+  @Relationship(value = "arguments", direction = "OUTGOING")
   @SubGraph("AST")
-  private List<Expression> arguments = new ArrayList<>();
+  private List<PropertyEdge> arguments = new ArrayList<>();
 
   public Declaration getInstantiates() {
     return instantiates;
@@ -82,23 +86,37 @@ public class ConstructExpression extends Expression implements TypeListener {
   public void setConstructor(ConstructorDeclaration constructor) {
     if (this.constructor != null) {
       this.constructor.unregisterTypeListener(this);
-      Util.detachCallParameters(this.constructor, arguments);
+      Util.detachCallParameters(this.constructor, this.getArguments());
       this.removePrevDFG(this.constructor);
     }
     this.constructor = constructor;
     if (constructor != null) {
       constructor.registerTypeListener(this);
-      Util.attachCallParameters(constructor, arguments);
+      Util.attachCallParameters(constructor, this.getArguments());
       this.addPrevDFG(constructor);
     }
   }
 
   public List<Expression> getArguments() {
-    return arguments;
+    List<Expression> target = new ArrayList<>();
+    for (PropertyEdge propertyEdge : this.arguments) {
+      target.add((Expression) propertyEdge.getEnd());
+    }
+    return Collections.unmodifiableList(target);
+  }
+
+  public List<PropertyEdge> getArgumentsPropertyEdge() {
+    return this.arguments;
   }
 
   public void setArguments(List<Expression> arguments) {
-    this.arguments = arguments;
+    this.arguments = PropertyEdge.transformIntoPropertyEdgeList(arguments, this, true);
+  }
+
+  public void addArgument(Expression argument) {
+    PropertyEdge propertyEdge = new PropertyEdge(this, argument);
+    propertyEdge.addProperty(Properties.INDEX, this.arguments.size());
+    this.arguments.add(propertyEdge);
   }
 
   public List<Type> getSignature() {
@@ -143,7 +161,8 @@ public class ConstructExpression extends Expression implements TypeListener {
     ConstructExpression that = (ConstructExpression) o;
     return super.equals(that)
         && Objects.equals(constructor, that.constructor)
-        && Objects.equals(arguments, that.arguments);
+        && Objects.equals(arguments, that.arguments)
+        && Objects.equals(this.getArguments(), that.getArguments());
   }
 
   @Override

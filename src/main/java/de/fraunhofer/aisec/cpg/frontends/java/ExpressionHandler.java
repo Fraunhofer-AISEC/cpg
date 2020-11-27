@@ -131,11 +131,9 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
       lvl.getDimension()
           .ifPresent(
               expression ->
-                  creationExpression
-                      .getDimensions()
-                      .add(
-                          (de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression)
-                              handle(expression)));
+                  creationExpression.addDimension(
+                      (de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression)
+                          handle(expression)));
     }
 
     return creationExpression;
@@ -254,20 +252,20 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
 
       if (oInitializer.isPresent()) {
         de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression initializer =
-                (de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression)
-                        handle(oInitializer.get());
+            (de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression)
+                handle(oInitializer.get());
         if (initializer instanceof ArrayCreationExpression) {
           declaration.setIsArray(true);
         }
         declaration.setInitializer(initializer);
       } else {
         de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression uninitialzedInitializer =
-                new UninitializedValue();
+            new UninitializedValue();
         declaration.setInitializer(uninitialzedInitializer);
         declaration.getNextEOG();
       }
       lang.setCodeAndRegion(declaration, variable);
-      declarationStatement.getDeclarations().add(declaration);
+      declarationStatement.addToPropertyEdgeDeclaration(declaration);
 
       lang.getScopeManager().addDeclaration(declaration);
     }
@@ -714,7 +712,7 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
 
       argument.setArgumentIndex(i);
 
-      callExpression.getArguments().add(argument);
+      callExpression.addArgument(argument);
     }
 
     return callExpression;
@@ -754,7 +752,7 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
 
       argument.setArgumentIndex(i);
 
-      ctor.getArguments().add(argument);
+      ctor.addArgument(argument);
     }
 
     newExpression.setInitializer(ctor);

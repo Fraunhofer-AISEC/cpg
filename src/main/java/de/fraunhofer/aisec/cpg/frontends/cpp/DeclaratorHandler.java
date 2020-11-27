@@ -400,7 +400,7 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
       // and set the type, constructors always have implicitly the return type of their class
       constructorDeclaration.setType(TypeParser.createFrom(recordDeclaration.getName(), true));
 
-      recordDeclaration.getConstructors().add(constructorDeclaration);
+      recordDeclaration.addConstructor(constructorDeclaration);
 
       lang.getScopeManager().addDeclaration(constructorDeclaration);
     }
