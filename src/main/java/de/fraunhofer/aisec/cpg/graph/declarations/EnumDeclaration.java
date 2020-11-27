@@ -38,43 +38,43 @@ public class EnumDeclaration extends Declaration {
 
   @Relationship(value = "ENTRIES", direction = "OUTGOING")
   @SubGraph("AST")
-  private List<PropertyEdge> entries = new ArrayList<>();
+  private List<PropertyEdge<EnumConstantDeclaration>> entries = new ArrayList<>();
 
   @Relationship(value = "SUPER_TYPES", direction = "OUTGOING")
-  private List<PropertyEdge> superTypes = new ArrayList<>();
+  private List<PropertyEdge<Type>> superTypes = new ArrayList<>();
 
   @Relationship private Set<RecordDeclaration> superTypeDeclarations = new HashSet<>();
 
-  public List<PropertyEdge> getEntriesPropertyEdge() {
+  public List<PropertyEdge<EnumConstantDeclaration>> getEntriesPropertyEdge() {
     return this.entries;
   }
 
   public List<EnumConstantDeclaration> getEntries() {
     List<EnumConstantDeclaration> target = new ArrayList<>();
-    for (PropertyEdge propertyEdge : this.entries) {
-      target.add((EnumConstantDeclaration) propertyEdge.getEnd());
+    for (PropertyEdge<EnumConstantDeclaration> propertyEdge : this.entries) {
+      target.add(propertyEdge.getEnd());
     }
     return Collections.unmodifiableList(target);
   }
 
   public void setEntries(List<EnumConstantDeclaration> entries) {
-    this.entries = PropertyEdge.transformIntoPropertyEdgeList(entries, this, true);
+    this.entries = PropertyEdge.transformIntoOutgoingPropertyEdgeList(entries, this);
   }
 
   public List<Type> getSuperTypes() {
     List<Type> target = new ArrayList<>();
-    for (PropertyEdge propertyEdge : this.superTypes) {
-      target.add((Type) propertyEdge.getEnd());
+    for (PropertyEdge<Type> propertyEdge : this.superTypes) {
+      target.add(propertyEdge.getEnd());
     }
     return Collections.unmodifiableList(target);
   }
 
-  public List<PropertyEdge> getSuperTypesPropertyEdge() {
+  public List<PropertyEdge<Type>> getSuperTypesPropertyEdge() {
     return this.superTypes;
   }
 
   public void setSuperTypes(List<Type> superTypes) {
-    this.superTypes = PropertyEdge.transformIntoPropertyEdgeList(superTypes, this, true);
+    this.superTypes = PropertyEdge.transformIntoOutgoingPropertyEdgeList(superTypes, this);
   }
 
   public Set<RecordDeclaration> getSuperTypeDeclarations() {

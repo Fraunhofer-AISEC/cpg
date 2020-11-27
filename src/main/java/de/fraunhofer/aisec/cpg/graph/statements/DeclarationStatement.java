@@ -53,10 +53,10 @@ public class DeclarationStatement extends Statement {
    */
   @Relationship(value = "DECLARATIONS", direction = "OUTGOING")
   @SubGraph("AST")
-  private List<PropertyEdge> declarations = new ArrayList<>();
+  private List<PropertyEdge<Declaration>> declarations = new ArrayList<>();
 
   public Declaration getSingleDeclaration() {
-    return isSingleDeclaration() ? (Declaration) this.declarations.get(0).getEnd() : null;
+    return isSingleDeclaration() ? this.declarations.get(0).getEnd() : null;
   }
 
   public boolean isSingleDeclaration() {
@@ -65,7 +65,7 @@ public class DeclarationStatement extends Statement {
 
   public void setSingleDeclaration(Declaration declaration) {
     this.declarations.clear();
-    PropertyEdge propertyEdge = new PropertyEdge(this, declaration);
+    PropertyEdge<Declaration> propertyEdge = new PropertyEdge(this, declaration);
     propertyEdge.addProperty(Properties.INDEX, 0);
     this.declarations.add(propertyEdge);
   }
@@ -77,22 +77,22 @@ public class DeclarationStatement extends Statement {
   @NonNull
   public List<Declaration> getDeclarations() {
     List<Declaration> target = new ArrayList<>();
-    for (PropertyEdge propertyEdge : this.declarations) {
-      target.add((Declaration) propertyEdge.getEnd());
+    for (PropertyEdge<Declaration> propertyEdge : this.declarations) {
+      target.add(propertyEdge.getEnd());
     }
     return Collections.unmodifiableList(target);
   }
 
-  public List<PropertyEdge> getDeclarationsPropertyEdge() {
+  public List<PropertyEdge<Declaration>> getDeclarationsPropertyEdge() {
     return this.declarations;
   }
 
   public void setDeclarations(List<Declaration> declarations) {
-    this.declarations = PropertyEdge.transformIntoPropertyEdgeList(declarations, this, true);
+    this.declarations = PropertyEdge.transformIntoOutgoingPropertyEdgeList(declarations, this);
   }
 
   public void addToPropertyEdgeDeclaration(@NonNull Declaration declaration) {
-    PropertyEdge propertyEdge = new PropertyEdge(this, declaration);
+    PropertyEdge<Declaration> propertyEdge = new PropertyEdge(this, declaration);
     propertyEdge.addProperty(Properties.INDEX, this.declarations.size());
     this.declarations.add(propertyEdge);
   }

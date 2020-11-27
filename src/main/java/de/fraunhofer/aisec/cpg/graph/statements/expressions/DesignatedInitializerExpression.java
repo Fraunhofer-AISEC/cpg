@@ -43,7 +43,7 @@ public class DesignatedInitializerExpression extends Expression {
 
   @Relationship(value = "LHS", direction = "OUTGOING")
   @SubGraph("AST")
-  private List<PropertyEdge> lhs;
+  private List<PropertyEdge<Expression>> lhs;
 
   public Expression getRhs() {
     return rhs;
@@ -55,18 +55,18 @@ public class DesignatedInitializerExpression extends Expression {
 
   public List<Expression> getLhs() {
     List<Expression> target = new ArrayList<>();
-    for (PropertyEdge propertyEdge : this.lhs) {
+    for (PropertyEdge<Expression> propertyEdge : this.lhs) {
       target.add((Expression) propertyEdge.getEnd());
     }
     return Collections.unmodifiableList(target);
   }
 
-  public List<PropertyEdge> getLhsPropertyEdge() {
+  public List<PropertyEdge<Expression>> getLhsPropertyEdge() {
     return this.lhs;
   }
 
   public void setLhs(List<Expression> lhs) {
-    this.lhs = PropertyEdge.transformIntoPropertyEdgeList(lhs, this, true);
+    this.lhs = PropertyEdge.transformIntoOutgoingPropertyEdgeList(lhs, this);
   }
 
   @Override

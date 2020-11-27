@@ -48,33 +48,33 @@ public class CompoundStatement extends Statement {
   /** The list of statements. */
   @Relationship(value = "STATEMENTS", direction = "OUTGOING")
   @NonNull
-  private @SubGraph("AST") List<PropertyEdge> statements = new ArrayList<>();
+  private @SubGraph("AST") List<PropertyEdge<Statement>> statements = new ArrayList<>();
 
   @NonNull
   public List<Statement> getStatements() {
     List<Statement> targets = new ArrayList<>();
-    for (PropertyEdge propertyEdge : this.statements) {
-      targets.add((Statement) propertyEdge.getEnd());
+    for (PropertyEdge<Statement> propertyEdge : this.statements) {
+      targets.add(propertyEdge.getEnd());
     }
     return Collections.unmodifiableList(targets);
   }
 
   @NonNull
-  public List<PropertyEdge> getStatementsPropertyEdge() {
+  public List<PropertyEdge<Statement>> getStatementsPropertyEdge() {
     return this.statements;
   }
 
   public void setStatements(@NonNull List<Statement> statements) {
-    this.statements = PropertyEdge.transformIntoPropertyEdgeList(statements, this, true);
+    this.statements = PropertyEdge.transformIntoOutgoingPropertyEdgeList(statements, this);
   }
 
   @NonNull
-  public List<PropertyEdge> getStatementEdges() {
+  public List<PropertyEdge<Statement>> getStatementEdges() {
     return this.statements;
   }
 
   public void addStatement(Statement s) {
-    PropertyEdge propertyEdge = new PropertyEdge(this, s);
+    PropertyEdge<Statement> propertyEdge = new PropertyEdge(this, s);
     propertyEdge.addProperty(Properties.INDEX, this.statements.size());
     this.statements.add(propertyEdge);
   }

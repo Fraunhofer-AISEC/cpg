@@ -48,28 +48,28 @@ public class Statement extends Node implements DeclarationHolder {
   // TODO: This is actually an AST node just for a subset of nodes, i.e. initializers in for-loops
   @Relationship(value = "LOCALS", direction = "OUTGOING")
   @SubGraph("AST")
-  protected List<PropertyEdge> locals = new ArrayList<>();
+  protected List<PropertyEdge<VariableDeclaration>> locals = new ArrayList<>();
 
   public List<VariableDeclaration> getLocals() {
     List<VariableDeclaration> localsVariableDeclaration = new ArrayList<>();
 
-    for (PropertyEdge propertyEdge : this.locals) {
+    for (PropertyEdge<VariableDeclaration> propertyEdge : this.locals) {
       localsVariableDeclaration.add((VariableDeclaration) propertyEdge.getEnd());
     }
 
     return Collections.unmodifiableList(localsVariableDeclaration);
   }
 
-  public List<PropertyEdge> getLocalsPropertyEdge() {
+  public List<PropertyEdge<VariableDeclaration>> getLocalsPropertyEdge() {
     return this.locals;
   }
 
-  public void removeLocal(Declaration variableDeclaration) {
+  public void removeLocal(VariableDeclaration variableDeclaration) {
     this.locals = PropertyEdge.removeElementFromList(this.locals, variableDeclaration, true);
   }
 
   public void setLocals(List<VariableDeclaration> locals) {
-    this.locals = PropertyEdge.transformIntoPropertyEdgeList(locals, this, true);
+    this.locals = PropertyEdge.transformIntoOutgoingPropertyEdgeList(locals, this);
   }
 
   @Override
@@ -94,7 +94,8 @@ public class Statement extends Node implements DeclarationHolder {
   @Override
   public void addDeclaration(@NonNull Declaration declaration) {
     if (declaration instanceof VariableDeclaration) {
-      PropertyEdge propertyEdge = new PropertyEdge(this, (VariableDeclaration) declaration);
+      PropertyEdge<VariableDeclaration> propertyEdge =
+          new PropertyEdge(this, (VariableDeclaration) declaration);
       propertyEdge.addProperty(Properties.INDEX, this.locals.size());
       this.locals.add(propertyEdge);
     }

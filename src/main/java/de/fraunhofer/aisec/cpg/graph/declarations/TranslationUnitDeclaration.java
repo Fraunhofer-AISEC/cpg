@@ -49,19 +49,19 @@ public class TranslationUnitDeclaration extends Declaration implements Declarati
   @Relationship(value = "DECLARATIONS", direction = "OUTGOING")
   @SubGraph("AST")
   @NonNull
-  private List<PropertyEdge> declarations = new ArrayList<>();
+  private List<PropertyEdge<Declaration>> declarations = new ArrayList<>();
 
   /** A list of includes within this unit. */
   @Relationship(value = "INCLUDES", direction = "OUTGOING")
   @SubGraph("AST")
   @NonNull
-  private List<PropertyEdge> includes = new ArrayList<>();
+  private List<PropertyEdge<Declaration>> includes = new ArrayList<>();
 
   /** A list of namespaces within this unit. */
   @Relationship(value = "NAMESPACES", direction = "OUTGOING")
   @SubGraph("AST")
   @NonNull
-  private List<PropertyEdge> namespaces = new ArrayList<>();
+  private List<PropertyEdge<Declaration>> namespaces = new ArrayList<>();
 
   /**
    * Returns the i-th declaration as a specific class, if it can be cast
@@ -110,57 +110,57 @@ public class TranslationUnitDeclaration extends Declaration implements Declarati
   @NonNull
   public List<Declaration> getDeclarations() {
     List<Declaration> target = new ArrayList<>();
-    for (PropertyEdge propertyEdge : this.declarations) {
-      target.add((Declaration) propertyEdge.getEnd());
+    for (PropertyEdge<Declaration> propertyEdge : this.declarations) {
+      target.add(propertyEdge.getEnd());
     }
     return Collections.unmodifiableList(target);
   }
 
   @NonNull
-  public List<PropertyEdge> getDeclarationsPropertyEdge() {
+  public List<PropertyEdge<Declaration>> getDeclarationsPropertyEdge() {
     return this.declarations;
   }
 
   @NonNull
   public List<Declaration> getIncludes() {
     List<Declaration> targets = new ArrayList<>();
-    for (PropertyEdge propertyEdge : this.includes) {
-      targets.add((Declaration) propertyEdge.getEnd());
+    for (PropertyEdge<Declaration> propertyEdge : this.includes) {
+      targets.add(propertyEdge.getEnd());
     }
     return Collections.unmodifiableList(targets);
   }
 
   @NonNull
-  public List<PropertyEdge> getIncludesPropertyEdge() {
+  public List<PropertyEdge<Declaration>> getIncludesPropertyEdge() {
     return this.includes;
   }
 
   @NonNull
   public List<Declaration> getNamespaces() {
     List<Declaration> targets = new ArrayList<>();
-    for (PropertyEdge propertyEdge : this.namespaces) {
-      targets.add((Declaration) propertyEdge.getEnd());
+    for (PropertyEdge<Declaration> propertyEdge : this.namespaces) {
+      targets.add(propertyEdge.getEnd());
     }
     return Collections.unmodifiableList(targets);
   }
 
   @NonNull
-  public List<PropertyEdge> getNamespacesPropertyEdge() {
+  public List<PropertyEdge<Declaration>> getNamespacesPropertyEdge() {
     return this.namespaces;
   }
 
   public void addDeclaration(@NonNull Declaration declaration) {
     if (declaration instanceof IncludeDeclaration) {
-      PropertyEdge propertyEdgeInclude = new PropertyEdge(this, declaration);
+      PropertyEdge<Declaration> propertyEdgeInclude = new PropertyEdge(this, declaration);
       propertyEdgeInclude.addProperty(Properties.INDEX, this.includes.size());
       includes.add(propertyEdgeInclude);
     } else if (declaration instanceof NamespaceDeclaration) {
-      PropertyEdge propertyEdgeNamespace = new PropertyEdge(this, declaration);
+      PropertyEdge<Declaration> propertyEdgeNamespace = new PropertyEdge(this, declaration);
       propertyEdgeNamespace.addProperty(Properties.INDEX, this.namespaces.size());
       namespaces.add(propertyEdgeNamespace);
     }
 
-    PropertyEdge propertyEdgeDeclaration = new PropertyEdge(this, declaration);
+    PropertyEdge<Declaration> propertyEdgeDeclaration = new PropertyEdge(this, declaration);
     propertyEdgeDeclaration.addProperty(Properties.INDEX, this.declarations.size());
     addIfNotContains(declarations, propertyEdgeDeclaration);
   }

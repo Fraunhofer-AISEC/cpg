@@ -206,7 +206,7 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
 
       if (bodyStatement instanceof CompoundStatement) {
         CompoundStatement body = (CompoundStatement) bodyStatement;
-        List<PropertyEdge> statements = body.getStatementEdges();
+        List<PropertyEdge<Statement>> statements = body.getStatementEdges();
 
         // get the last statement
         Statement lastStatement = null;

@@ -43,22 +43,22 @@ import org.neo4j.ogm.annotation.Relationship;
 public class DeclarationSequence extends Declaration {
 
   @Relationship(value = "CHILDREN", direction = "OUTGOING")
-  private final List<PropertyEdge> children = new ArrayList<>();
+  private final List<PropertyEdge<Declaration>> children = new ArrayList<>();
 
-  public List<PropertyEdge> getChildrenPropertyEdge() {
+  public List<PropertyEdge<Declaration>> getChildrenPropertyEdge() {
     return this.children;
   }
 
   public List<Declaration> getChildren() {
     List<Declaration> target = new ArrayList<>();
-    for (PropertyEdge propertyEdge : this.children) {
-      target.add((Declaration) propertyEdge.getEnd());
+    for (PropertyEdge<Declaration> propertyEdge : this.children) {
+      target.add(propertyEdge.getEnd());
     }
     return Collections.unmodifiableList(target);
   }
 
   public void add(@NonNull Declaration declaration) {
-    PropertyEdge propertyEdge;
+    PropertyEdge<Declaration> propertyEdge;
     if (declaration instanceof DeclarationSequence) {
       for (Declaration declarationChild : ((DeclarationSequence) declaration).getChildren()) {
         propertyEdge = new PropertyEdge(this, declarationChild);

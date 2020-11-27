@@ -38,41 +38,41 @@ public class IncludeDeclaration extends Declaration {
 
   @Relationship(value = "INCLUDES", direction = "OUTGOING")
   @SubGraph("AST")
-  private List<PropertyEdge> includes = new ArrayList<>();
+  private List<PropertyEdge<IncludeDeclaration>> includes = new ArrayList<>();
 
   @Relationship(value = "PROBLEMS", direction = "OUTGOING")
   @SubGraph("AST")
-  private List<PropertyEdge> problems = new ArrayList<>();
+  private List<PropertyEdge<ProblemDeclaration>> problems = new ArrayList<>();
 
   private String filename;
 
   public List<IncludeDeclaration> getIncludes() {
     List<IncludeDeclaration> target = new ArrayList<>();
-    for (PropertyEdge propertyEdge : this.includes) {
-      target.add((IncludeDeclaration) propertyEdge.getEnd());
+    for (PropertyEdge<IncludeDeclaration> propertyEdge : this.includes) {
+      target.add(propertyEdge.getEnd());
     }
     return Collections.unmodifiableList(target);
   }
 
-  public List<PropertyEdge> getIncludesPropertyEdge() {
+  public List<PropertyEdge<IncludeDeclaration>> getIncludesPropertyEdge() {
     return this.includes;
   }
 
   public void addInclude(IncludeDeclaration includeDeclaration) {
-    PropertyEdge propertyEdge = new PropertyEdge(this, includeDeclaration);
+    PropertyEdge<IncludeDeclaration> propertyEdge = new PropertyEdge(this, includeDeclaration);
     propertyEdge.addProperty(Properties.INDEX, this.includes.size());
     this.includes.add(propertyEdge);
   }
 
   public List<ProblemDeclaration> getProblems() {
     List<ProblemDeclaration> target = new ArrayList<>();
-    for (PropertyEdge propertyEdge : this.problems) {
+    for (PropertyEdge<ProblemDeclaration> propertyEdge : this.problems) {
       target.add((ProblemDeclaration) propertyEdge.getEnd());
     }
     return Collections.unmodifiableList(target);
   }
 
-  public List<PropertyEdge> getProblemsPropertyEdge() {
+  public List<PropertyEdge<ProblemDeclaration>> getProblemsPropertyEdge() {
     return this.problems;
   }
 
@@ -83,7 +83,7 @@ public class IncludeDeclaration extends Declaration {
   }
 
   public void addProblem(ProblemDeclaration problemDeclaration) {
-    PropertyEdge propertyEdge = new PropertyEdge(this, problemDeclaration);
+    PropertyEdge<ProblemDeclaration> propertyEdge = new PropertyEdge(this, problemDeclaration);
     propertyEdge.addProperty(Properties.INDEX, this.problems.size());
     this.problems.add(propertyEdge);
   }

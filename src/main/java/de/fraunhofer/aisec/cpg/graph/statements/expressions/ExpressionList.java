@@ -40,32 +40,30 @@ public class ExpressionList extends Expression implements TypeListener {
 
   @Relationship(value = "SUBEXPR", direction = "OUTGOING")
   @SubGraph("AST")
-  private List<PropertyEdge> expressions = new ArrayList<>();
+  private List<PropertyEdge<Statement>> expressions = new ArrayList<>();
 
   public List<Statement> getExpressions() {
     List<Statement> target = new ArrayList<>();
-    for (PropertyEdge propertyEdge : this.expressions) {
+    for (PropertyEdge<Statement> propertyEdge : this.expressions) {
       target.add((Statement) propertyEdge.getEnd());
     }
     return Collections.unmodifiableList(target);
   }
 
-  public List<PropertyEdge> getExpressionsPropertyEdges() {
+  public List<PropertyEdge<Statement>> getExpressionsPropertyEdges() {
     return this.expressions;
   }
 
   public void setExpressions(List<Statement> expressions) {
     if (!this.expressions.isEmpty()) {
-      Statement lastExpression =
-          (Statement) this.expressions.get(this.expressions.size() - 1).getEnd();
+      Statement lastExpression = this.expressions.get(this.expressions.size() - 1).getEnd();
       if (lastExpression instanceof HasType)
         ((HasType) lastExpression).unregisterTypeListener(this);
       this.removePrevDFG(lastExpression);
     }
-    this.expressions = PropertyEdge.transformIntoPropertyEdgeList(expressions, this, true);
+    this.expressions = PropertyEdge.transformIntoOutgoingPropertyEdgeList(expressions, this);
     if (!this.expressions.isEmpty()) {
-      Statement lastExpression =
-          (Statement) this.expressions.get(this.expressions.size() - 1).getEnd();
+      Statement lastExpression = this.expressions.get(this.expressions.size() - 1).getEnd();
       this.addPrevDFG(lastExpression);
       if (lastExpression instanceof HasType) ((HasType) lastExpression).registerTypeListener(this);
     }
@@ -79,7 +77,7 @@ public class ExpressionList extends Expression implements TypeListener {
         ((HasType) lastExpression).unregisterTypeListener(this);
       this.removePrevDFG(lastExpression);
     }
-    PropertyEdge propertyEdge = new PropertyEdge(this, expression);
+    PropertyEdge<Statement> propertyEdge = new PropertyEdge(this, expression);
     propertyEdge.addProperty(Properties.INDEX, this.expressions.size());
     this.expressions.add(propertyEdge);
     this.addPrevDFG(expression);

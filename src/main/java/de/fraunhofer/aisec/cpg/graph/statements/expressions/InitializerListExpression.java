@@ -46,17 +46,17 @@ public class InitializerListExpression extends Expression implements TypeListene
   /** The list of initializers. */
   @Relationship(value = "INITIALIZERS", direction = "OUTGOING")
   @SubGraph("AST")
-  private List<PropertyEdge> initializers = new ArrayList<>();
+  private List<PropertyEdge<Expression>> initializers = new ArrayList<>();
 
   public List<Expression> getInitializers() {
     List<Expression> target = new ArrayList<>();
-    for (PropertyEdge propertyEdge : this.initializers) {
-      target.add((Expression) propertyEdge.getEnd());
+    for (PropertyEdge<Expression> propertyEdge : this.initializers) {
+      target.add(propertyEdge.getEnd());
     }
     return Collections.unmodifiableList(target);
   }
 
-  public List<PropertyEdge> getInitializersPropertyEdge() {
+  public List<PropertyEdge<Expression>> getInitializersPropertyEdge() {
     return this.initializers;
   }
 
@@ -68,7 +68,7 @@ public class InitializerListExpression extends Expression implements TypeListene
             this.removePrevDFG(i.getEnd());
           });
     }
-    this.initializers = PropertyEdge.transformIntoPropertyEdgeList(initializers, this, true);
+    this.initializers = PropertyEdge.transformIntoOutgoingPropertyEdgeList(initializers, this);
     if (initializers != null) {
       initializers.forEach(
           i -> {

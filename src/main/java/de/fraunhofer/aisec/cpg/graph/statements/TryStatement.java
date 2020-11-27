@@ -37,7 +37,7 @@ public class TryStatement extends Statement {
 
   @Relationship(value = "RESOURCES", direction = "OUTGOING")
   @SubGraph("AST")
-  private List<PropertyEdge> resources;
+  private List<PropertyEdge<Statement>> resources;
 
   @SubGraph("AST")
   private CompoundStatement tryBlock;
@@ -47,7 +47,7 @@ public class TryStatement extends Statement {
 
   @Relationship(value = "CATCH_CLAUSES", direction = "OUTGOING")
   @SubGraph("AST")
-  private List<PropertyEdge> catchClauses;
+  private List<PropertyEdge<CatchClause>> catchClauses;
 
   @NonNull
   public List<Statement> getResources() {
@@ -55,13 +55,13 @@ public class TryStatement extends Statement {
       return new ArrayList<>();
     }
     List<Statement> target = new ArrayList<>();
-    for (PropertyEdge propertyEdge : this.resources) {
-      target.add((Statement) propertyEdge.getEnd());
+    for (PropertyEdge<Statement> propertyEdge : this.resources) {
+      target.add(propertyEdge.getEnd());
     }
     return Collections.unmodifiableList(target);
   }
 
-  public List<PropertyEdge> getResourcesPropertyEdge() {
+  public List<PropertyEdge<Statement>> getResourcesPropertyEdge() {
     return this.resources;
   }
 
@@ -69,7 +69,7 @@ public class TryStatement extends Statement {
     this.resources = new ArrayList<>();
     int c = 0;
     for (Statement s : resources) {
-      PropertyEdge propertyEdge = new PropertyEdge(this, s);
+      PropertyEdge<Statement> propertyEdge = new PropertyEdge(this, s);
       propertyEdge.addProperty(Properties.INDEX, c);
       this.resources.add(propertyEdge);
       c++;
@@ -98,13 +98,13 @@ public class TryStatement extends Statement {
       return new ArrayList<>();
     }
     List<CatchClause> target = new ArrayList<>();
-    for (PropertyEdge propertyEdge : this.catchClauses) {
-      target.add((CatchClause) propertyEdge.getEnd());
+    for (PropertyEdge<CatchClause> propertyEdge : this.catchClauses) {
+      target.add(propertyEdge.getEnd());
     }
     return Collections.unmodifiableList(target);
   }
 
-  public List<PropertyEdge> getCatchClausesPropertyEdge() {
+  public List<PropertyEdge<CatchClause>> getCatchClausesPropertyEdge() {
     return this.catchClauses;
   }
 
@@ -113,7 +113,7 @@ public class TryStatement extends Statement {
     int counter = 0;
 
     for (CatchClause c : catchClauses) {
-      PropertyEdge propertyEdge = new PropertyEdge(this, c);
+      PropertyEdge<CatchClause> propertyEdge = new PropertyEdge(this, c);
       propertyEdge.addProperty(Properties.INDEX, counter);
       this.catchClauses.add(propertyEdge);
       counter++;

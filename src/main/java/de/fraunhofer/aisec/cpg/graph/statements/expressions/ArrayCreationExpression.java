@@ -57,7 +57,7 @@ public class ArrayCreationExpression extends Expression implements TypeListener 
    */
   @Relationship(value = "DIMENSIONS", direction = "OUTGOING")
   @SubGraph("AST")
-  private List<PropertyEdge> dimensions = new ArrayList<>();
+  private List<PropertyEdge<Expression>> dimensions = new ArrayList<>();
 
   public InitializerListExpression getInitializer() {
     return initializer;
@@ -78,25 +78,25 @@ public class ArrayCreationExpression extends Expression implements TypeListener 
   @NonNull
   public List<Expression> getDimensions() {
     List<Expression> targets = new ArrayList<>();
-    for (PropertyEdge propertyEdge : this.dimensions) {
+    for (PropertyEdge<Expression> propertyEdge : this.dimensions) {
       targets.add((Expression) propertyEdge.getEnd());
     }
     return Collections.unmodifiableList(targets);
   }
 
   public void addDimension(Expression expression) {
-    PropertyEdge propertyEdge = new PropertyEdge(this, expression);
+    PropertyEdge<Expression> propertyEdge = new PropertyEdge(this, expression);
     propertyEdge.addProperty(Properties.INDEX, this.dimensions.size());
     this.dimensions.add(propertyEdge);
   }
 
   @NonNull
-  public List<PropertyEdge> getDimensionsPropertyEdge() {
+  public List<PropertyEdge<Expression>> getDimensionsPropertyEdge() {
     return this.dimensions;
   }
 
   public void setDimensions(List<Expression> dimensions) {
-    this.dimensions = PropertyEdge.transformIntoPropertyEdgeList(dimensions, this, true);
+    this.dimensions = PropertyEdge.transformIntoOutgoingPropertyEdgeList(dimensions, this);
   }
 
   @Override
