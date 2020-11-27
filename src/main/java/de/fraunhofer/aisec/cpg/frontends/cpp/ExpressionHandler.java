@@ -292,12 +292,15 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
   private Expression handleFieldReference(CPPASTFieldReference ctx) {
     Expression base = this.handle(ctx.getFieldOwner());
     // Replace Literal this with a reference pointing to this
-    if (base instanceof Literal && ((Literal) base).getValue().equals("this")) {
+    if (base instanceof Literal && ((Literal<?>) base).getValue().equals("this")) {
       PhysicalLocation location = base.getLocation();
+
+      var record = lang.getScopeManager().getCurrentRecord();
+
       base =
           NodeBuilder.newDeclaredReferenceExpression(
               "this",
-              lang.getScopeManager().getCurrentRecord().getThis().getType(),
+              record != null ? record.getThis().getType() : UnknownType.getUnknownType(),
               base.getCode());
       base.setLocation(location);
     }
