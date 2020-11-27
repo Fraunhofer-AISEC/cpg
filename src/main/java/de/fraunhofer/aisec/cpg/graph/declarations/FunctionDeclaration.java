@@ -69,10 +69,10 @@ public class FunctionDeclaration extends ValueDeclaration implements Declaration
   protected List<PropertyEdge<Type>> throwsTypes = new ArrayList<>();
 
   @org.neo4j.ogm.annotation.Relationship(value = "OVERRIDES", direction = "INCOMING")
-  private List<PropertyEdge<FunctionDeclaration>> overriddenBy = new ArrayList<>();
+  private final List<PropertyEdge<FunctionDeclaration>> overriddenBy = new ArrayList<>();
 
   @org.neo4j.ogm.annotation.Relationship(value = "OVERRIDES", direction = "OUTGOING")
-  private List<PropertyEdge<FunctionDeclaration>> overrides = new ArrayList<>();
+  private final List<PropertyEdge<FunctionDeclaration>> overrides = new ArrayList<>();
 
   /**
    * Specifies, whether this function declaration is also a definition, i.e. has a function body
@@ -92,7 +92,7 @@ public class FunctionDeclaration extends ValueDeclaration implements Declaration
     return this.name
         + BRACKET_LEFT
         + this.parameters.stream()
-            .map(pe -> (ParamVariableDeclaration) pe.getEnd())
+            .map(PropertyEdge::getEnd)
             .map(x -> x.getType().getTypeName())
             .collect(Collectors.joining(COMMA + WHITESPACE))
         + BRACKET_RIGHT
@@ -102,7 +102,7 @@ public class FunctionDeclaration extends ValueDeclaration implements Declaration
   public boolean hasSignature(List<Type> targetSignature) {
     List<ParamVariableDeclaration> signature =
         parameters.stream()
-            .map(pe -> (ParamVariableDeclaration) pe.getEnd())
+            .map(PropertyEdge::getEnd)
             .sorted(Comparator.comparingInt(ParamVariableDeclaration::getArgumentIndex))
             .collect(Collectors.toList());
     if (targetSignature.size() < signature.size()) {
@@ -147,22 +147,20 @@ public class FunctionDeclaration extends ValueDeclaration implements Declaration
     return this.overriddenBy;
   }
 
-  public void addOverridenBy(Collection<? extends FunctionDeclaration> c) {
+  public void addOverriddenBy(Collection<? extends FunctionDeclaration> c) {
     for (FunctionDeclaration functionDeclaration : c) {
-      addOverridenBy(functionDeclaration);
+      addOverriddenBy(functionDeclaration);
     }
   }
 
-  public void addOverridenBy(FunctionDeclaration functionDeclaration) {
-    PropertyEdge propertyEdge = new PropertyEdge<>(functionDeclaration, this);
-    propertyEdge.addProperty(Properties.INDEX, this.overriddenBy.size());
-    this.overriddenBy.add(propertyEdge);
+  public void addOverriddenBy(FunctionDeclaration functionDeclaration) {
+    addIfNotContains(this.overriddenBy, functionDeclaration, false);
   }
 
   public List<FunctionDeclaration> getOverrides() {
     List<FunctionDeclaration> target = new ArrayList<>();
-    for (PropertyEdge propertyEdge : this.overrides) {
-      target.add((FunctionDeclaration) propertyEdge.getEnd());
+    for (var propertyEdge : this.overrides) {
+      target.add(propertyEdge.getEnd());
     }
     return Collections.unmodifiableList(target);
   }
@@ -172,14 +170,12 @@ public class FunctionDeclaration extends ValueDeclaration implements Declaration
   }
 
   public void addOverrides(FunctionDeclaration functionDeclaration) {
-    PropertyEdge propertyEdge = new PropertyEdge<>(this, functionDeclaration);
-    propertyEdge.addProperty(Properties.INDEX, this.overrides.size());
-    this.overrides.add(propertyEdge);
+    addIfNotContains(this.overrides, functionDeclaration);
   }
 
   public List<Type> getThrowsTypes() {
     List<Type> target = new ArrayList<>();
-    for (PropertyEdge propertyEdge : this.throwsTypes) {
+    for (var propertyEdge : this.throwsTypes) {
       target.add((Type) propertyEdge.getEnd());
     }
     return Collections.unmodifiableList(target);
@@ -312,7 +308,7 @@ public class FunctionDeclaration extends ValueDeclaration implements Declaration
         .append(
             "parameters",
             parameters.stream()
-                .map(pe -> (ParamVariableDeclaration) pe.getEnd())
+                .map(PropertyEdge::getEnd)
                 .map(ParamVariableDeclaration::getName)
                 .collect(Collectors.joining(", ")))
         .toString();
@@ -378,17 +374,12 @@ public class FunctionDeclaration extends ValueDeclaration implements Declaration
 
   @Override
   public void addDeclaration(@NonNull Declaration declaration) {
-    PropertyEdge propertyEdge;
     if (declaration instanceof ParamVariableDeclaration) {
-      propertyEdge = new PropertyEdge<>(this, declaration);
-      propertyEdge.addProperty(Properties.INDEX, declaration);
-      addIfNotContains(parameters, propertyEdge);
+      addIfNotContains(parameters, (ParamVariableDeclaration) declaration);
     }
 
     if (declaration instanceof RecordDeclaration) {
-      propertyEdge = new PropertyEdge<>(this, declaration);
-      propertyEdge.addProperty(Properties.INDEX, this.records.size());
-      addIfNotContains(records, propertyEdge);
+      addIfNotContains(records, (RecordDeclaration) declaration);
     }
   }
 }

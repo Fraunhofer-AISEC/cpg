@@ -89,7 +89,7 @@ public class ObjectType extends Type {
   public List<Type> getGenerics() {
     List<Type> genericValues = new ArrayList<>();
     for (PropertyEdge<Type> edge : this.generics) {
-      genericValues.add((Type) edge.getEnd());
+      genericValues.add(edge.getEnd());
     }
     return Collections.unmodifiableList(genericValues);
   }

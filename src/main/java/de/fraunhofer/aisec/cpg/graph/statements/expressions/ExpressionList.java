@@ -72,7 +72,7 @@ public class ExpressionList extends Expression implements TypeListener {
   public void addExpression(Statement expression) {
     if (!this.expressions.isEmpty()) {
       Statement lastExpression =
-          (Statement) this.expressions.get(this.expressions.size() - 1).getEnd();
+              this.expressions.get(this.expressions.size() - 1).getEnd();
       if (lastExpression instanceof HasType)
         ((HasType) lastExpression).unregisterTypeListener(this);
       this.removePrevDFG(lastExpression);

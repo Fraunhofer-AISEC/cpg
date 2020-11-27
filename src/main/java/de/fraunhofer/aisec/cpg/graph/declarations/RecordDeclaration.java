@@ -107,9 +107,7 @@ public class RecordDeclaration extends Declaration implements DeclarationHolder 
   }
 
   public void addField(FieldDeclaration fieldDeclaration) {
-    PropertyEdge<FieldDeclaration> propertyEdge = new PropertyEdge<>(this, fieldDeclaration);
-    propertyEdge.addProperty(Properties.INDEX, this.fields.size());
-    addIfNotContains(this.fields, propertyEdge);
+    addIfNotContains(this.fields, fieldDeclaration);
   }
 
   public void removeField(FieldDeclaration fieldDeclaration) {
@@ -119,7 +117,7 @@ public class RecordDeclaration extends Declaration implements DeclarationHolder 
   @Nullable
   public FieldDeclaration getField(String name) {
     return fields.stream()
-        .map(pe -> (FieldDeclaration) pe.getEnd())
+        .map(PropertyEdge::getEnd)
         .filter(f -> f.getName().equals(name))
         .findFirst()
         .orElse(null);
@@ -131,7 +129,7 @@ public class RecordDeclaration extends Declaration implements DeclarationHolder 
 
   public FieldDeclaration getThis() {
     return fields.stream()
-        .map(p -> (FieldDeclaration) p.getEnd())
+        .map(PropertyEdge::getEnd)
         .filter(f -> f.getName().equals("this"))
         .findFirst()
         .orElse(null);
@@ -150,9 +148,7 @@ public class RecordDeclaration extends Declaration implements DeclarationHolder 
   }
 
   public void addMethod(MethodDeclaration methodDeclaration) {
-    PropertyEdge<MethodDeclaration> propertyEdge = new PropertyEdge<>(this, methodDeclaration);
-    propertyEdge.addProperty(Properties.INDEX, this.methods.size());
-    addIfNotContains(this.methods, propertyEdge);
+    addIfNotContains(this.methods, methodDeclaration);
   }
 
   public void removeMethod(MethodDeclaration methodDeclaration) {
@@ -180,10 +176,7 @@ public class RecordDeclaration extends Declaration implements DeclarationHolder 
   }
 
   public void addConstructor(ConstructorDeclaration constructorDeclaration) {
-    PropertyEdge<ConstructorDeclaration> propertyEdge =
-        new PropertyEdge<>(this, constructorDeclaration);
-    propertyEdge.addProperty(Properties.INDEX, this.constructors.size());
-    addIfNotContains(this.constructors, propertyEdge);
+    addIfNotContains(this.constructors, constructorDeclaration);
   }
 
   public void removeConstructor(ConstructorDeclaration constructorDeclaration) {
@@ -342,21 +335,13 @@ public class RecordDeclaration extends Declaration implements DeclarationHolder 
   @Override
   public void addDeclaration(@NonNull Declaration declaration) {
     if (declaration instanceof ConstructorDeclaration) {
-      var propertyEdge = new PropertyEdge<>(this, (ConstructorDeclaration) declaration);
-      propertyEdge.addProperty(Properties.INDEX, this.constructors.size());
-      addIfNotContains(this.constructors, propertyEdge);
+      addIfNotContains(this.constructors, (ConstructorDeclaration) declaration);
     } else if (declaration instanceof MethodDeclaration) {
-      var propertyEdge = new PropertyEdge<>(this, (MethodDeclaration) declaration);
-      propertyEdge.addProperty(Properties.INDEX, this.methods.size());
-      addIfNotContains(this.methods, propertyEdge);
+      addIfNotContains(this.methods, (MethodDeclaration) declaration);
     } else if (declaration instanceof FieldDeclaration) {
-      var propertyEdge = new PropertyEdge<>(this, (FieldDeclaration) declaration);
-      propertyEdge.addProperty(Properties.INDEX, this.fields.size());
-      addIfNotContains(this.fields, propertyEdge);
+      addIfNotContains(this.fields, (FieldDeclaration) declaration);
     } else if (declaration instanceof RecordDeclaration) {
-      var propertyEdge = new PropertyEdge<>(this, (RecordDeclaration) declaration);
-      propertyEdge.addProperty(Properties.INDEX, this.records.size());
-      addIfNotContains(this.records, propertyEdge);
+      addIfNotContains(this.records, (RecordDeclaration) declaration);
     }
   }
 }

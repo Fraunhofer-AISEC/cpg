@@ -29,7 +29,6 @@ package de.fraunhofer.aisec.cpg.graph.declarations;
 import de.fraunhofer.aisec.cpg.graph.DeclarationHolder;
 import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.SubGraph;
-import de.fraunhofer.aisec.cpg.graph.edge.Properties;
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -151,18 +150,12 @@ public class TranslationUnitDeclaration extends Declaration implements Declarati
 
   public void addDeclaration(@NonNull Declaration declaration) {
     if (declaration instanceof IncludeDeclaration) {
-      PropertyEdge<Declaration> propertyEdgeInclude = new PropertyEdge<>(this, declaration);
-      propertyEdgeInclude.addProperty(Properties.INDEX, this.includes.size());
-      includes.add(propertyEdgeInclude);
+      addIfNotContains(includes, declaration);
     } else if (declaration instanceof NamespaceDeclaration) {
-      PropertyEdge<Declaration> propertyEdgeNamespace = new PropertyEdge<>(this, declaration);
-      propertyEdgeNamespace.addProperty(Properties.INDEX, this.namespaces.size());
-      namespaces.add(propertyEdgeNamespace);
+      addIfNotContains(namespaces, declaration);
     }
 
-    PropertyEdge<Declaration> propertyEdgeDeclaration = new PropertyEdge<>(this, declaration);
-    propertyEdgeDeclaration.addProperty(Properties.INDEX, this.declarations.size());
-    addIfNotContains(declarations, propertyEdgeDeclaration);
+    addIfNotContains(declarations, declaration);
   }
 
   @Override

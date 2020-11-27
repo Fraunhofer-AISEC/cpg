@@ -27,6 +27,7 @@
 package de.fraunhofer.aisec.cpg.graph;
 
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration;
+import de.fraunhofer.aisec.cpg.graph.edge.Properties;
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import java.util.Collection;
 import org.checkerframework.checker.nullness.qual.NonNull;
@@ -49,7 +50,29 @@ public interface DeclarationHolder {
   }
 
   default <T extends Node> void addIfNotContains(
-      Collection<PropertyEdge<T>> collection, PropertyEdge<T> propertyEdge) {
+      Collection<PropertyEdge<T>> collection, T declaration) {
+    addIfNotContains(collection, declaration, true);
+  }
+
+  /**
+   * Adds a declaration to a collection of property edges, which contain the declarations
+   *
+   * @param collection the collection
+   * @param declaration the declaration
+   * @param <T> the type of the declaration
+   * @param outgoing whether the property is outgoing
+   */
+  default <T extends Node> void addIfNotContains(
+      Collection<PropertyEdge<T>> collection, T declaration, boolean outgoing) {
+    // create a new property edge
+    var propertyEdge =
+        outgoing
+            ? new PropertyEdge<>((Node) this, declaration)
+            : new PropertyEdge<>(declaration, (T) this);
+
+    // set the index property
+    propertyEdge.addProperty(Properties.INDEX, collection.size());
+
     boolean contains = false;
     for (PropertyEdge<T> element : collection) {
       if (element.getEnd().equals(propertyEdge.getEnd())) {

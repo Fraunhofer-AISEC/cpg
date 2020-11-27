@@ -64,7 +64,7 @@ public class InitializerListExpression extends Expression implements TypeListene
     if (this.initializers != null) {
       this.initializers.forEach(
           i -> {
-            ((Expression) i.getEnd()).unregisterTypeListener(this);
+            i.getEnd().unregisterTypeListener(this);
             this.removePrevDFG(i.getEnd());
           });
     }
@@ -92,7 +92,7 @@ public class InitializerListExpression extends Expression implements TypeListene
     if (this.getInitializers().contains(src)) {
       Set<Type> types =
           this.initializers.parallelStream()
-              .map(pe -> (Expression) pe.getEnd())
+              .map(PropertyEdge::getEnd)
               .map(Expression::getType)
               .filter(Objects::nonNull)
               .map(t -> TypeManager.getInstance().registerType(t.reference(PointerOrigin.ARRAY)))
