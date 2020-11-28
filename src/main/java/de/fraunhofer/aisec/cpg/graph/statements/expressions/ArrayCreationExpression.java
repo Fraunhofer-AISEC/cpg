@@ -26,11 +26,12 @@
 
 package de.fraunhofer.aisec.cpg.graph.statements.expressions;
 
+import static de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.unwrap;
+
 import de.fraunhofer.aisec.cpg.graph.HasType;
 import de.fraunhofer.aisec.cpg.graph.HasType.TypeListener;
 import de.fraunhofer.aisec.cpg.graph.SubGraph;
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration;
-import de.fraunhofer.aisec.cpg.graph.edge.Properties;
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import de.fraunhofer.aisec.cpg.graph.types.Type;
 import java.util.*;
@@ -55,9 +56,9 @@ public class ArrayCreationExpression extends Expression implements TypeListener 
    * either explicitly specify dimensions or an {@link #initializer}, which is used to calculate
    * dimensions. In the graph, this will NOT be done.
    */
-  @Relationship(value = "dimensions", direction = "OUTGOING")
+  @Relationship(value = "DIMENSIONS", direction = "OUTGOING")
   @SubGraph("AST")
-  private List<PropertyEdge> dimensions = new ArrayList<>();
+  private List<PropertyEdge<Expression>> dimensions = new ArrayList<>();
 
   public InitializerListExpression getInitializer() {
     return initializer;
@@ -77,26 +78,20 @@ public class ArrayCreationExpression extends Expression implements TypeListener 
 
   @NonNull
   public List<Expression> getDimensions() {
-    List<Expression> targets = new ArrayList<>();
-    for (PropertyEdge propertyEdge : this.dimensions) {
-      targets.add((Expression) propertyEdge.getEnd());
-    }
-    return Collections.unmodifiableList(targets);
+    return unwrap(this.dimensions);
   }
 
   public void addDimension(Expression expression) {
-    PropertyEdge propertyEdge = new PropertyEdge(this, expression);
-    propertyEdge.addProperty(Properties.INDEX, this.dimensions.size());
-    this.dimensions.add(propertyEdge);
+    addIfNotContains(this.dimensions, expression);
   }
 
   @NonNull
-  public List<PropertyEdge> getDimensionsPropertyEdge() {
+  public List<PropertyEdge<Expression>> getDimensionsPropertyEdge() {
     return this.dimensions;
   }
 
   public void setDimensions(List<Expression> dimensions) {
-    this.dimensions = PropertyEdge.transformIntoPropertyEdgeList(dimensions, this, true);
+    this.dimensions = PropertyEdge.transformIntoOutgoingPropertyEdgeList(dimensions, this);
   }
 
   @Override

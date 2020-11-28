@@ -26,6 +26,8 @@
 
 package de.fraunhofer.aisec.cpg.graph.declarations;
 
+import static de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.unwrap;
+
 import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.SubGraph;
 import de.fraunhofer.aisec.cpg.graph.edge.Properties;
@@ -36,43 +38,35 @@ import org.neo4j.ogm.annotation.Relationship;
 
 public class IncludeDeclaration extends Declaration {
 
-  @Relationship(value = "includes", direction = "OUTGOING")
+  @Relationship(value = "INCLUDES", direction = "OUTGOING")
   @SubGraph("AST")
-  private List<PropertyEdge> includes = new ArrayList<>();
+  private List<PropertyEdge<IncludeDeclaration>> includes = new ArrayList<>();
 
-  @Relationship(value = "problems", direction = "OUTGOING")
+  @Relationship(value = "PROBLEMS", direction = "OUTGOING")
   @SubGraph("AST")
-  private List<PropertyEdge> problems = new ArrayList<>();
+  private List<PropertyEdge<ProblemDeclaration>> problems = new ArrayList<>();
 
   private String filename;
 
   public List<IncludeDeclaration> getIncludes() {
-    List<IncludeDeclaration> target = new ArrayList<>();
-    for (PropertyEdge propertyEdge : this.includes) {
-      target.add((IncludeDeclaration) propertyEdge.getEnd());
-    }
-    return Collections.unmodifiableList(target);
+    return unwrap(this.includes);
   }
 
-  public List<PropertyEdge> getIncludesPropertyEdge() {
+  public List<PropertyEdge<IncludeDeclaration>> getIncludesPropertyEdge() {
     return this.includes;
   }
 
   public void addInclude(IncludeDeclaration includeDeclaration) {
-    PropertyEdge propertyEdge = new PropertyEdge(this, includeDeclaration);
+    PropertyEdge<IncludeDeclaration> propertyEdge = new PropertyEdge<>(this, includeDeclaration);
     propertyEdge.addProperty(Properties.INDEX, this.includes.size());
     this.includes.add(propertyEdge);
   }
 
   public List<ProblemDeclaration> getProblems() {
-    List<ProblemDeclaration> target = new ArrayList<>();
-    for (PropertyEdge propertyEdge : this.problems) {
-      target.add((ProblemDeclaration) propertyEdge.getEnd());
-    }
-    return Collections.unmodifiableList(target);
+    return unwrap(this.problems);
   }
 
-  public List<PropertyEdge> getProblemsPropertyEdge() {
+  public List<PropertyEdge<ProblemDeclaration>> getProblemsPropertyEdge() {
     return this.problems;
   }
 
@@ -83,7 +77,7 @@ public class IncludeDeclaration extends Declaration {
   }
 
   public void addProblem(ProblemDeclaration problemDeclaration) {
-    PropertyEdge propertyEdge = new PropertyEdge(this, problemDeclaration);
+    PropertyEdge<ProblemDeclaration> propertyEdge = new PropertyEdge<>(this, problemDeclaration);
     propertyEdge.addProperty(Properties.INDEX, this.problems.size());
     this.problems.add(propertyEdge);
   }

@@ -26,6 +26,8 @@
 
 package de.fraunhofer.aisec.cpg.graph.statements.expressions;
 
+import static de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.unwrap;
+
 import de.fraunhofer.aisec.cpg.graph.HasType;
 import de.fraunhofer.aisec.cpg.graph.HasType.TypeListener;
 import de.fraunhofer.aisec.cpg.graph.Node;
@@ -44,19 +46,15 @@ import org.neo4j.ogm.annotation.Relationship;
 public class InitializerListExpression extends Expression implements TypeListener {
 
   /** The list of initializers. */
-  @Relationship(value = "initializers", direction = "OUTGOING")
+  @Relationship(value = "INITIALIZERS", direction = "OUTGOING")
   @SubGraph("AST")
-  private List<PropertyEdge> initializers = new ArrayList<>();
+  private List<PropertyEdge<Expression>> initializers = new ArrayList<>();
 
   public List<Expression> getInitializers() {
-    List<Expression> target = new ArrayList<>();
-    for (PropertyEdge propertyEdge : this.initializers) {
-      target.add((Expression) propertyEdge.getEnd());
-    }
-    return Collections.unmodifiableList(target);
+    return unwrap(this.initializers);
   }
 
-  public List<PropertyEdge> getInitializersPropertyEdge() {
+  public List<PropertyEdge<Expression>> getInitializersPropertyEdge() {
     return this.initializers;
   }
 
@@ -64,11 +62,11 @@ public class InitializerListExpression extends Expression implements TypeListene
     if (this.initializers != null) {
       this.initializers.forEach(
           i -> {
-            ((Expression) i.getEnd()).unregisterTypeListener(this);
+            i.getEnd().unregisterTypeListener(this);
             this.removePrevDFG(i.getEnd());
           });
     }
-    this.initializers = PropertyEdge.transformIntoPropertyEdgeList(initializers, this, true);
+    this.initializers = PropertyEdge.transformIntoOutgoingPropertyEdgeList(initializers, this);
     if (initializers != null) {
       initializers.forEach(
           i -> {
@@ -92,7 +90,7 @@ public class InitializerListExpression extends Expression implements TypeListene
     if (this.getInitializers().contains(src)) {
       Set<Type> types =
           this.initializers.parallelStream()
-              .map(pe -> (Expression) pe.getEnd())
+              .map(PropertyEdge::getEnd)
               .map(Expression::getType)
               .filter(Objects::nonNull)
               .map(t -> TypeManager.getInstance().registerType(t.reference(PointerOrigin.ARRAY)))

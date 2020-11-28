@@ -26,13 +26,14 @@
 
 package de.fraunhofer.aisec.cpg.graph.statements;
 
+import static de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.unwrap;
+
 import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.SubGraph;
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration;
 import de.fraunhofer.aisec.cpg.graph.edge.Properties;
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import org.apache.commons.lang3.builder.ToStringBuilder;
@@ -51,12 +52,12 @@ public class DeclarationStatement extends Statement {
    * The list of declarations declared or defined by this statement. It is always a list, even if it
    * only contains a single {@link Declaration}.
    */
-  @Relationship(value = "declarations", direction = "OUTGOING")
+  @Relationship(value = "DECLARATIONS", direction = "OUTGOING")
   @SubGraph("AST")
-  private List<PropertyEdge> declarations = new ArrayList<>();
+  private List<PropertyEdge<Declaration>> declarations = new ArrayList<>();
 
   public Declaration getSingleDeclaration() {
-    return isSingleDeclaration() ? (Declaration) this.declarations.get(0).getEnd() : null;
+    return isSingleDeclaration() ? this.declarations.get(0).getEnd() : null;
   }
 
   public boolean isSingleDeclaration() {
@@ -65,7 +66,7 @@ public class DeclarationStatement extends Statement {
 
   public void setSingleDeclaration(Declaration declaration) {
     this.declarations.clear();
-    PropertyEdge propertyEdge = new PropertyEdge(this, declaration);
+    PropertyEdge<Declaration> propertyEdge = new PropertyEdge<>(this, declaration);
     propertyEdge.addProperty(Properties.INDEX, 0);
     this.declarations.add(propertyEdge);
   }
@@ -76,23 +77,19 @@ public class DeclarationStatement extends Statement {
 
   @NonNull
   public List<Declaration> getDeclarations() {
-    List<Declaration> target = new ArrayList<>();
-    for (PropertyEdge propertyEdge : this.declarations) {
-      target.add((Declaration) propertyEdge.getEnd());
-    }
-    return Collections.unmodifiableList(target);
+    return unwrap(this.declarations, true);
   }
 
-  public List<PropertyEdge> getDeclarationsPropertyEdge() {
+  public List<PropertyEdge<Declaration>> getDeclarationsPropertyEdge() {
     return this.declarations;
   }
 
   public void setDeclarations(List<Declaration> declarations) {
-    this.declarations = PropertyEdge.transformIntoPropertyEdgeList(declarations, this, true);
+    this.declarations = PropertyEdge.transformIntoOutgoingPropertyEdgeList(declarations, this);
   }
 
   public void addToPropertyEdgeDeclaration(@NonNull Declaration declaration) {
-    PropertyEdge propertyEdge = new PropertyEdge(this, declaration);
+    PropertyEdge<Declaration> propertyEdge = new PropertyEdge<>(this, declaration);
     propertyEdge.addProperty(Properties.INDEX, this.declarations.size());
     this.declarations.add(propertyEdge);
   }

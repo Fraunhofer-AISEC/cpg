@@ -26,6 +26,8 @@
 
 package de.fraunhofer.aisec.cpg.graph;
 
+import static de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.unwrap;
+
 import de.fraunhofer.aisec.cpg.graph.declarations.TypedefDeclaration;
 import de.fraunhofer.aisec.cpg.graph.edge.Properties;
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
@@ -78,17 +80,17 @@ public class Node implements IVisitable<Node>, Persistable {
   /** Incoming control flow edges. */
   @NonNull
   @Relationship(value = "EOG", direction = "INCOMING")
-  protected List<PropertyEdge> prevEOG = new ArrayList<>();
+  protected List<PropertyEdge<Node>> prevEOG = new ArrayList<>();
 
   /** outgoing control flow edges. */
   @Relationship(value = "EOG", direction = "OUTGOING")
   @NonNull
-  protected List<PropertyEdge> nextEOG = new ArrayList<>();
+  protected List<PropertyEdge<Node>> nextEOG = new ArrayList<>();
 
   /** outgoing control flow edges. */
   @NonNull
   @Relationship(value = "CFG", direction = "OUTGOING")
-  protected List<PropertyEdge> nextCFG = new ArrayList<>();
+  protected List<PropertyEdge<Node>> nextCFG = new ArrayList<>();
 
   @NonNull
   @Relationship(value = "DFG", direction = "INCOMING")
@@ -162,16 +164,16 @@ public class Node implements IVisitable<Node>, Persistable {
   }
 
   @NonNull
-  public List<PropertyEdge> getPrevEOGProperties() {
+  public List<PropertyEdge<Node>> getPrevEOGProperties() {
     return this.prevEOG;
   }
 
   @NonNull
-  public List<PropertyEdge> getNextEOGProperties() {
+  public List<PropertyEdge<Node>> getNextEOGProperties() {
     return this.nextEOG;
   }
 
-  public void setPrevEOGProperties(@NonNull List<PropertyEdge> prevEOG) {
+  public void setPrevEOGProperties(@NonNull List<PropertyEdge<Node>> prevEOG) {
     this.prevEOG = prevEOG;
   }
 
@@ -181,7 +183,7 @@ public class Node implements IVisitable<Node>, Persistable {
 
   public void removePrevEOGEntries(@NonNull List<Node> prevEOGs) {
     for (Node n : prevEOGs) {
-      List<PropertyEdge> remove =
+      List<PropertyEdge<Node>> remove =
           PropertyEdge.findPropertyEdgesByPredicate(this.prevEOG, e -> e.getStart().equals(n));
       this.prevEOG.removeAll(remove);
     }
@@ -195,11 +197,11 @@ public class Node implements IVisitable<Node>, Persistable {
   }
 
   public void setPrevEOG(@NonNull List<Node> prevEOG) {
-    List<PropertyEdge> propertyEdgesEOG = new ArrayList<>();
+    List<PropertyEdge<Node>> propertyEdgesEOG = new ArrayList<>();
     int idx = 0;
 
     for (Node prev : prevEOG) {
-      PropertyEdge propertyEdge = new PropertyEdge(prev, this);
+      var propertyEdge = new PropertyEdge<>(prev, this);
       propertyEdge.addProperty(Properties.INDEX, idx);
       propertyEdgesEOG.add(propertyEdge);
       idx++;
@@ -208,12 +210,12 @@ public class Node implements IVisitable<Node>, Persistable {
     this.prevEOG = propertyEdgesEOG;
   }
 
-  public void addPrevEOG(@NonNull PropertyEdge propertyEdge) {
+  public void addPrevEOG(@NonNull PropertyEdge<Node> propertyEdge) {
     this.prevEOG.add(propertyEdge);
   }
 
   @NonNull
-  public List<PropertyEdge> getNextEOGPropertyEdge() {
+  public List<PropertyEdge<Node>> getNextEOGPropertyEdge() {
     return this.nextEOG;
   }
 
@@ -225,10 +227,10 @@ public class Node implements IVisitable<Node>, Persistable {
   }
 
   public void setNextEOG(@NonNull List<Node> nextEOG) {
-    this.nextEOG = PropertyEdge.transformIntoPropertyEdgeList(nextEOG, this, true);
+    this.nextEOG = PropertyEdge.transformIntoOutgoingPropertyEdgeList(nextEOG, this);
   }
 
-  public void addNextEOG(@NonNull PropertyEdge propertyEdge) {
+  public void addNextEOG(@NonNull PropertyEdge<Node> propertyEdge) {
     this.nextEOG.add(propertyEdge);
   }
 
@@ -238,15 +240,11 @@ public class Node implements IVisitable<Node>, Persistable {
 
   @NonNull
   public List<Node> getNextCFG() {
-    List<Node> target = new ArrayList<>();
-    for (PropertyEdge propertyEdge : this.nextCFG) {
-      target.add(propertyEdge.getEnd());
-    }
-    return Collections.unmodifiableList(target);
+    return unwrap(this.nextCFG);
   }
 
   public void addNextCFG(Node node) {
-    PropertyEdge propertyEdge = new PropertyEdge(this, node);
+    var propertyEdge = new PropertyEdge<>(this, node);
     propertyEdge.addProperty(Properties.INDEX, this.nextCFG.size());
     this.nextCFG.add(propertyEdge);
   }
@@ -370,15 +368,15 @@ public class Node implements IVisitable<Node>, Persistable {
       n.nextDFG.remove(this);
     }
     prevDFG.clear();
-    for (PropertyEdge n : nextEOG) {
-      List<PropertyEdge> remove =
+    for (var n : nextEOG) {
+      List<PropertyEdge<Node>> remove =
           PropertyEdge.findPropertyEdgesByPredicate(
               n.getEnd().prevEOG, e -> e.getStart().equals(this));
       n.getEnd().prevEOG.removeAll(remove);
     }
     nextEOG.clear();
-    for (PropertyEdge n : prevEOG) {
-      List<PropertyEdge> remove =
+    for (var n : prevEOG) {
+      List<PropertyEdge<Node>> remove =
           PropertyEdge.findPropertyEdgesByPredicate(
               n.getStart().nextEOG, e -> e.getEnd().equals(this));
       n.getStart().nextEOG.removeAll(remove);

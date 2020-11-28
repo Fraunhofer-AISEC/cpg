@@ -57,7 +57,7 @@ public class ObjectType extends Type {
   private RecordDeclaration recordDeclaration = null;
 
   @Relationship(value = "GENERICS", direction = "OUTGOING")
-  private List<PropertyEdge> generics;
+  private List<PropertyEdge<Type>> generics;
 
   public ObjectType(
       String typeName,
@@ -67,14 +67,14 @@ public class ObjectType extends Type {
       Modifier modifier,
       boolean primitive) {
     super(typeName, storage, qualifier);
-    this.generics = PropertyEdge.transformIntoPropertyEdgeList(generics, this, true);
+    this.generics = PropertyEdge.transformIntoOutgoingPropertyEdgeList(generics, this);
     this.modifier = modifier;
     this.primitive = primitive;
   }
 
   public ObjectType(Type type, List<Type> generics, Modifier modifier, boolean primitive) {
     super(type);
-    this.generics = PropertyEdge.transformIntoPropertyEdgeList(generics, this, true);
+    this.generics = PropertyEdge.transformIntoOutgoingPropertyEdgeList(generics, this);
     this.modifier = modifier;
     this.primitive = primitive;
   }
@@ -88,13 +88,13 @@ public class ObjectType extends Type {
 
   public List<Type> getGenerics() {
     List<Type> genericValues = new ArrayList<>();
-    for (PropertyEdge edge : this.generics) {
-      genericValues.add((Type) edge.getEnd());
+    for (PropertyEdge<Type> edge : this.generics) {
+      genericValues.add(edge.getEnd());
     }
     return Collections.unmodifiableList(genericValues);
   }
 
-  public List<PropertyEdge> getGenericPropertyEdges() {
+  public List<PropertyEdge<Type>> getGenericPropertyEdges() {
     return this.generics;
   }
 
@@ -127,7 +127,7 @@ public class ObjectType extends Type {
   }
 
   public void setGenerics(List<Type> generics) {
-    this.generics = PropertyEdge.transformIntoPropertyEdgeList(generics, this, true);
+    this.generics = PropertyEdge.transformIntoOutgoingPropertyEdgeList(generics, this);
   }
 
   @Override

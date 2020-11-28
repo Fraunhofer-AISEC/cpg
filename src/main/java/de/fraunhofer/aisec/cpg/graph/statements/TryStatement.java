@@ -26,6 +26,8 @@
 
 package de.fraunhofer.aisec.cpg.graph.statements;
 
+import static de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.unwrap;
+
 import de.fraunhofer.aisec.cpg.graph.SubGraph;
 import de.fraunhofer.aisec.cpg.graph.edge.Properties;
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
@@ -35,9 +37,9 @@ import org.neo4j.ogm.annotation.Relationship;
 
 public class TryStatement extends Statement {
 
-  @Relationship(value = "resources", direction = "OUTGOING")
+  @Relationship(value = "RESOURCES", direction = "OUTGOING")
   @SubGraph("AST")
-  private List<PropertyEdge> resources;
+  private List<PropertyEdge<Statement>> resources = new ArrayList<>();
 
   @SubGraph("AST")
   private CompoundStatement tryBlock;
@@ -45,23 +47,16 @@ public class TryStatement extends Statement {
   @SubGraph("AST")
   private CompoundStatement finallyBlock;
 
-  @Relationship(value = "catchClauses", direction = "OUTGOING")
+  @Relationship(value = "CATCH_CLAUSES", direction = "OUTGOING")
   @SubGraph("AST")
-  private List<PropertyEdge> catchClauses;
+  private List<PropertyEdge<CatchClause>> catchClauses = new ArrayList<>();
 
   @NonNull
   public List<Statement> getResources() {
-    if (this.resources == null) {
-      return new ArrayList<>();
-    }
-    List<Statement> target = new ArrayList<>();
-    for (PropertyEdge propertyEdge : this.resources) {
-      target.add((Statement) propertyEdge.getEnd());
-    }
-    return Collections.unmodifiableList(target);
+    return unwrap(this.resources);
   }
 
-  public List<PropertyEdge> getResourcesPropertyEdge() {
+  public List<PropertyEdge<Statement>> getResourcesPropertyEdge() {
     return this.resources;
   }
 
@@ -69,7 +64,7 @@ public class TryStatement extends Statement {
     this.resources = new ArrayList<>();
     int c = 0;
     for (Statement s : resources) {
-      PropertyEdge propertyEdge = new PropertyEdge(this, s);
+      PropertyEdge<Statement> propertyEdge = new PropertyEdge<>(this, s);
       propertyEdge.addProperty(Properties.INDEX, c);
       this.resources.add(propertyEdge);
       c++;
@@ -94,17 +89,10 @@ public class TryStatement extends Statement {
 
   @NonNull
   public List<CatchClause> getCatchClauses() {
-    if (this.catchClauses == null) {
-      return new ArrayList<>();
-    }
-    List<CatchClause> target = new ArrayList<>();
-    for (PropertyEdge propertyEdge : this.catchClauses) {
-      target.add((CatchClause) propertyEdge.getEnd());
-    }
-    return Collections.unmodifiableList(target);
+    return unwrap(this.catchClauses);
   }
 
-  public List<PropertyEdge> getCatchClausesPropertyEdge() {
+  public List<PropertyEdge<CatchClause>> getCatchClausesPropertyEdge() {
     return this.catchClauses;
   }
 
@@ -113,7 +101,7 @@ public class TryStatement extends Statement {
     int counter = 0;
 
     for (CatchClause c : catchClauses) {
-      PropertyEdge propertyEdge = new PropertyEdge(this, c);
+      PropertyEdge<CatchClause> propertyEdge = new PropertyEdge<>(this, c);
       propertyEdge.addProperty(Properties.INDEX, counter);
       this.catchClauses.add(propertyEdge);
       counter++;

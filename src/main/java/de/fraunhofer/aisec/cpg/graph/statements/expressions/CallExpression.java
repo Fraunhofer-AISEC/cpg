@@ -49,12 +49,14 @@ public class CallExpression extends Expression implements TypeListener {
    * Connection to its {@link FunctionDeclaration}. This will be populated by the {@link
    * de.fraunhofer.aisec.cpg.passes.CallResolver}.
    */
-  @Relationship(value = "invokes", direction = "OUTGOING")
-  protected List<PropertyEdge> invokes = new ArrayList<>();
+  @Relationship(value = "INVOKES", direction = "OUTGOING")
+  protected List<PropertyEdge<FunctionDeclaration>> invokes = new ArrayList<>();
+
   /** The list of arguments. */
-  @Relationship(value = "arguments", direction = "OUTGOING")
+  @Relationship(value = "ARGUMENTS", direction = "OUTGOING")
   @SubGraph("AST")
-  private List<PropertyEdge> arguments = new ArrayList<>();
+  private List<PropertyEdge<Expression>> arguments = new ArrayList<>();
+
   /**
    * The base object. This is marked as an AST child, because this is required for {@link
    * MemberCallExpression}. Be aware that for simple calls the implicit "this" base is not part of
@@ -82,49 +84,49 @@ public class CallExpression extends Expression implements TypeListener {
   @NonNull
   public List<Expression> getArguments() {
     List<Expression> targets = new ArrayList<>();
-    for (PropertyEdge propertyEdge : this.arguments) {
-      targets.add((Expression) propertyEdge.getEnd());
+    for (PropertyEdge<Expression> propertyEdge : this.arguments) {
+      targets.add(propertyEdge.getEnd());
     }
     return Collections.unmodifiableList(targets);
   }
 
   @NonNull
-  public List<PropertyEdge> getArgumentsPropertyEdge() {
+  public List<PropertyEdge<Expression>> getArgumentsPropertyEdge() {
     return this.arguments;
   }
 
   public void addArgument(Expression expression) {
-    PropertyEdge propertyEdge = new PropertyEdge(this, expression);
+    PropertyEdge<Expression> propertyEdge = new PropertyEdge<>(this, expression);
     propertyEdge.addProperty(Properties.INDEX, this.arguments.size());
     this.arguments.add(propertyEdge);
   }
 
   public void setArguments(List<Expression> arguments) {
-    this.arguments = PropertyEdge.transformIntoPropertyEdgeList(arguments, this, true);
+    this.arguments = PropertyEdge.transformIntoOutgoingPropertyEdgeList(arguments, this);
   }
 
   @NonNull
   public List<FunctionDeclaration> getInvokes() {
     List<FunctionDeclaration> targets = new ArrayList<>();
-    for (PropertyEdge propertyEdge : this.invokes) {
-      targets.add((FunctionDeclaration) propertyEdge.getEnd());
+    for (PropertyEdge<FunctionDeclaration> propertyEdge : this.invokes) {
+      targets.add(propertyEdge.getEnd());
     }
     return Collections.unmodifiableList(targets);
   }
 
-  public List<PropertyEdge> getInvokesPropertyEdge() {
+  public List<PropertyEdge<FunctionDeclaration>> getInvokesPropertyEdge() {
     return this.invokes;
   }
 
   public void setInvokes(List<FunctionDeclaration> invokes) {
-    PropertyEdge.getTarget(this.invokes, true)
+    PropertyEdge.getTarget(this.invokes)
         .forEach(
             i -> {
-              ((FunctionDeclaration) i).unregisterTypeListener(this);
-              Util.detachCallParameters((FunctionDeclaration) i, this.getArguments());
+              i.unregisterTypeListener(this);
+              Util.detachCallParameters(i, this.getArguments());
               this.removePrevDFG(i);
             });
-    this.invokes = PropertyEdge.transformIntoPropertyEdgeList(invokes, this, true);
+    this.invokes = PropertyEdge.transformIntoOutgoingPropertyEdgeList(invokes, this);
     invokes.forEach(
         i -> {
           i.registerTypeListener(this);
@@ -145,7 +147,7 @@ public class CallExpression extends Expression implements TypeListener {
       Type previous = this.type;
       List<Type> types =
           invokes.stream()
-              .map(pe -> (FunctionDeclaration) pe.getEnd())
+              .map(pe -> pe.getEnd())
               .map(FunctionDeclaration::getType)
               .filter(Objects::nonNull)
               .collect(Collectors.toList());

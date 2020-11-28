@@ -517,9 +517,9 @@ class EOGTest extends BaseTest {
                 l -> l.getLocation().getRegion().getStartLine() == 7 && l.getName().equals("b"))
             .get(0);
 
-    List<PropertyEdge> nextEOG = firstIf.getNextEOGProperties();
+    List<PropertyEdge<Node>> nextEOG = firstIf.getNextEOGProperties();
     assertEquals(2, nextEOG.size());
-    for (PropertyEdge edge : nextEOG) {
+    for (PropertyEdge<Node> edge : nextEOG) {
       assertEquals(firstIf, edge.getStart());
       if (edge.getEnd().equals(b)) {
         assertEquals(true, edge.getProperty(Properties.BRANCH));
@@ -554,7 +554,7 @@ class EOGTest extends BaseTest {
     nextEOG = elseIf.getNextEOGProperties();
     assertEquals(2, nextEOG.size());
 
-    for (PropertyEdge edge : nextEOG) {
+    for (PropertyEdge<Node> edge : nextEOG) {
       assertEquals(elseIf, edge.getStart());
       if (edge.getEnd().equals(b2)) {
         assertEquals(true, edge.getProperty(Properties.BRANCH));

@@ -206,12 +206,12 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
 
       if (bodyStatement instanceof CompoundStatement) {
         CompoundStatement body = (CompoundStatement) bodyStatement;
-        List<PropertyEdge> statements = body.getStatementEdges();
+        List<PropertyEdge<Statement>> statements = body.getStatementEdges();
 
         // get the last statement
         Statement lastStatement = null;
         if (!statements.isEmpty()) {
-          lastStatement = (Statement) statements.get(statements.size() - 1).getEnd();
+          lastStatement = statements.get(statements.size() - 1).getEnd();
         }
 
         // add an implicit return statement, if there is none
@@ -294,7 +294,7 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
 
       this.lang.processAttributes(declaration, ctx);
 
-      sequence.add(declaration);
+      sequence.addDeclaration(declaration);
     } else if (declSpecifier instanceof CPPASTElaboratedTypeSpecifier) {
       warnWithFileLocation(
           lang,
@@ -325,7 +325,7 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
       // process attributes
       this.lang.processAttributes(declaration, ctx);
 
-      sequence.add(declaration);
+      sequence.addDeclaration(declaration);
     }
 
     if (sequence.isSingle()) {
