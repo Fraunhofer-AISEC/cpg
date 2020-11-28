@@ -26,11 +26,11 @@
 
 package de.fraunhofer.aisec.cpg.graph.statements.expressions;
 
+import static de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.unwrap;
+
 import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.SubGraph;
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import org.apache.commons.lang3.builder.ToStringBuilder;
@@ -41,9 +41,9 @@ public class DesignatedInitializerExpression extends Expression {
   @SubGraph("AST")
   private Expression rhs;
 
-  @Relationship(value = "lhs", direction = "OUTGOING")
+  @Relationship(value = "LHS", direction = "OUTGOING")
   @SubGraph("AST")
-  private List<PropertyEdge> lhs;
+  private List<PropertyEdge<Expression>> lhs;
 
   public Expression getRhs() {
     return rhs;
@@ -54,19 +54,15 @@ public class DesignatedInitializerExpression extends Expression {
   }
 
   public List<Expression> getLhs() {
-    List<Expression> target = new ArrayList<>();
-    for (PropertyEdge propertyEdge : this.lhs) {
-      target.add((Expression) propertyEdge.getEnd());
-    }
-    return Collections.unmodifiableList(target);
+    return unwrap(this.lhs);
   }
 
-  public List<PropertyEdge> getLhsPropertyEdge() {
+  public List<PropertyEdge<Expression>> getLhsPropertyEdge() {
     return this.lhs;
   }
 
   public void setLhs(List<Expression> lhs) {
-    this.lhs = PropertyEdge.transformIntoPropertyEdgeList(lhs, this, true);
+    this.lhs = PropertyEdge.transformIntoOutgoingPropertyEdgeList(lhs, this);
   }
 
   @Override

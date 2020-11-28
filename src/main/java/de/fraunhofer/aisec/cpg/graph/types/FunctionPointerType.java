@@ -1,9 +1,9 @@
 package de.fraunhofer.aisec.cpg.graph.types;
 
-import de.fraunhofer.aisec.cpg.graph.Node;
+import static de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.unwrap;
+
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import org.neo4j.ogm.annotation.Relationship;
@@ -13,13 +13,13 @@ import org.neo4j.ogm.annotation.Relationship;
  * return type.
  */
 public class FunctionPointerType extends Type {
-  @Relationship(value = "parameters", direction = "OUTGOING")
-  private List<PropertyEdge> parameters;
+  @Relationship(value = "PARAMETERS", direction = "OUTGOING")
+  private List<PropertyEdge<Type>> parameters;
 
   private Type returnType;
 
   public void setParameters(List<Type> parameters) {
-    this.parameters = PropertyEdge.transformIntoPropertyEdgeList(parameters, this, true);
+    this.parameters = PropertyEdge.transformIntoOutgoingPropertyEdgeList(parameters, this);
   }
 
   public void setReturnType(Type returnType) {
@@ -31,26 +31,22 @@ public class FunctionPointerType extends Type {
   public FunctionPointerType(
       Type.Qualifier qualifier, Type.Storage storage, List<Type> parameters, Type returnType) {
     super("", storage, qualifier);
-    this.parameters = PropertyEdge.transformIntoPropertyEdgeList(parameters, this, true);
+    this.parameters = PropertyEdge.transformIntoOutgoingPropertyEdgeList(parameters, this);
     this.returnType = returnType;
   }
 
   public FunctionPointerType(Type type, List<Type> parameters, Type returnType) {
     super(type);
-    this.parameters = PropertyEdge.transformIntoPropertyEdgeList(parameters, this, true);
+    this.parameters = PropertyEdge.transformIntoOutgoingPropertyEdgeList(parameters, this);
     this.returnType = returnType;
   }
 
-  public List<PropertyEdge> getParametersPropertyEdge() {
+  public List<PropertyEdge<Type>> getParametersPropertyEdge() {
     return this.parameters;
   }
 
   public List<Type> getParameters() {
-    List<Type> target = new ArrayList<>();
-    for (PropertyEdge propertyEdge : this.parameters) {
-      target.add((Type) propertyEdge.getEnd());
-    }
-    return Collections.unmodifiableList(target);
+    return unwrap(this.parameters);
   }
 
   public Type getReturnType() {
@@ -70,8 +66,8 @@ public class FunctionPointerType extends Type {
   @Override
   public Type duplicate() {
     List<Type> copiedParameters = new ArrayList<>();
-    for (Node node : PropertyEdge.getTarget(this.parameters, true)) {
-      copiedParameters.add((Type) node);
+    for (Type type : PropertyEdge.getTarget(this.parameters)) {
+      copiedParameters.add(type);
     }
     return new FunctionPointerType(this, copiedParameters, this.returnType);
   }

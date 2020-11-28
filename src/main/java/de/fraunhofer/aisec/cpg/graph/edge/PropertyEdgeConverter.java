@@ -46,13 +46,13 @@ public class PropertyEdgeConverter implements CompositeAttributeConverter<Map<Pr
   @Override
   public Map<Properties, Object> toEntityAttribute(Map<String, ?> value) {
     Map<Properties, Object> result = new EnumMap<>(Properties.class);
-    for (Map.Entry<String, ?> entry : value.entrySet()) {
-      Object propertyValue = entry.getValue();
-      if (deserializer.containsKey(entry.getKey())) {
-        Object deserializedProperty = deserializer.get(entry.getKey()).apply(propertyValue);
-        result.put(Properties.valueOf(entry.getKey()), deserializedProperty);
+
+    for (Properties prop : Properties.values()) {
+      if (deserializer.containsKey(prop.name())) {
+        Object deserializedProperty = deserializer.get(prop.name()).apply(value.get(prop.name()));
+        result.put(prop, deserializedProperty);
       } else {
-        result.put(Properties.valueOf(entry.getKey()), propertyValue);
+        result.put(prop, value.get(prop.name()));
       }
     }
 

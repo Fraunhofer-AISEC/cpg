@@ -26,6 +26,8 @@
 
 package de.fraunhofer.aisec.cpg.graph.statements.expressions;
 
+import static de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.unwrap;
+
 import de.fraunhofer.aisec.cpg.graph.*;
 import de.fraunhofer.aisec.cpg.graph.HasType.TypeListener;
 import de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDeclaration;
@@ -64,9 +66,9 @@ public class ConstructExpression extends Expression implements TypeListener {
   private Declaration instantiates;
 
   /** The list of argument {@link Expression}s passed the constructor. */
-  @Relationship(value = "arguments", direction = "OUTGOING")
+  @Relationship(value = "ARGUMENTS", direction = "OUTGOING")
   @SubGraph("AST")
-  private List<PropertyEdge> arguments = new ArrayList<>();
+  private List<PropertyEdge<Expression>> arguments = new ArrayList<>();
 
   public Declaration getInstantiates() {
     return instantiates;
@@ -98,23 +100,19 @@ public class ConstructExpression extends Expression implements TypeListener {
   }
 
   public List<Expression> getArguments() {
-    List<Expression> target = new ArrayList<>();
-    for (PropertyEdge propertyEdge : this.arguments) {
-      target.add((Expression) propertyEdge.getEnd());
-    }
-    return Collections.unmodifiableList(target);
+    return unwrap(this.arguments);
   }
 
-  public List<PropertyEdge> getArgumentsPropertyEdge() {
+  public List<PropertyEdge<Expression>> getArgumentsPropertyEdge() {
     return this.arguments;
   }
 
   public void setArguments(List<Expression> arguments) {
-    this.arguments = PropertyEdge.transformIntoPropertyEdgeList(arguments, this, true);
+    this.arguments = PropertyEdge.transformIntoOutgoingPropertyEdgeList(arguments, this);
   }
 
   public void addArgument(Expression argument) {
-    PropertyEdge propertyEdge = new PropertyEdge(this, argument);
+    PropertyEdge<Expression> propertyEdge = new PropertyEdge<>(this, argument);
     propertyEdge.addProperty(Properties.INDEX, this.arguments.size());
     this.arguments.add(propertyEdge);
   }
