@@ -38,95 +38,59 @@ val TranslationResult.graph: Graph
     }
 
 
-/**
- * Represents a graph consisting of the specified nodes. It can be queried using openCypher queries.
- */
 @ExperimentalGraph
-class Graph(var nodes: List<Node>) {
+class QueryContext constructor(val graph: Graph) {
+    val streams = mutableMapOf<Variable, Stream<Node>>()
 
-    private val parser = CypherParser()
+    internal fun handleReturn(`return`: Return): List<Node> {
+        // hacky hack
+        val item = (`return`.returnItems() as ReturnItems).items().head() as UnaliasedReturnItem
+        val variable = item.expression() as Variable
 
-    fun size(): Int {
-        return nodes.size
-    }
+        var stream = streams[variable]
+        if (stream != null) {
+            val limit: Limit? = `return`.limit().getOrElse { null }
+            if (limit != null) {
+                val expression = limit.expression()
 
-    operator fun plusAssign(node: Node) {
-        nodes += node
-    }
-
-    fun query(queryText: String): List<Node> {
-        val query = parser.parse(queryText, null) as Query
-
-        return executeQuery(query)
-    }
-
-    @OptIn(ExperimentalTime::class)
-    fun executeQuery(query: Query): List<Node> {
-        var list: List<Node> = listOf()
-        val b = QueryBenchmark(this, query)
-        b.use {
-            // very hacky for now
-            val singleQuery = query.part() as SingleQuery
-
-            lateinit var stream: Stream<Node>
-            for (clause in singleQuery.clauses()) {
-                // TODO: have a map of streams for the variables?
-                if (clause is Match) {
-                    stream = handleMatch(clause)
-                } else if (clause is Return) {
-                    list = handleReturn(clause, stream)
+                if (expression is IntegerLiteral) {
+                    stream = stream.limit(expression.value())
+                } else {
+                    throw RuntimeException("Only non-negative integers are allowed")
                 }
             }
-        }
 
-        println("Query took ${b.duration.milliseconds}")
-
-        return list
-    }
-
-    private fun handleReturn(`return`: Return, streamIn: Stream<Node>): List<Node> {
-        var stream = streamIn
-
-        val limit: Limit? = `return`.limit().getOrElse { null }
-        if (limit != null) {
-            val expression = limit.expression()
-
-            if (expression is IntegerLiteral) {
-                stream = stream.limit(expression.value())
-            } else {
-                throw RuntimeException("Only non-negative integers are allowed")
+            if (stream != null) {
+                return stream.collect(Collectors.toList())
             }
         }
 
-        return stream.collect(Collectors.toList())
+        return emptyList()
     }
 
-    private fun handleMatch(match: Match): Stream<Node> {
-        var stream = nodes.parallelStream()
-
+    internal fun handleMatch(match: Match) {
         // keep track of bound variables
         val variables = mutableSetOf<LogicalVariable>()
 
         // find out which class we need (only first pattern for now)
         val pattern = match.pattern().patternParts().head()
         if (pattern is EveryPath) {
-            stream = handleEveryPath(pattern, stream, variables, match.where())
+            handleEveryPath(pattern, variables, match.where())
         }
-
-        return stream
     }
 
-    private fun handleEveryPath(pattern: PatternPart, streamIn: Stream<Node>, variables: MutableSet<LogicalVariable>, where: Option<Where>): Stream<Node> {
-        var stream = streamIn
+    private fun handleEveryPath(pattern: PatternPart, variables: MutableSet<LogicalVariable>, where: Option<Where>) {
         val element = pattern.element()
+
+        var variable: Variable? = element.variable().getOrElse { null }
+
+        var stream = graph.nodes.parallelStream()
 
         if (element is NodePattern) {
             stream = handleNodePattern(element, stream, variables, where)
         } else if (element is RelationshipChain) {
             stream = handleRelationshipChain(element, stream, variables, where)
         }
-
-        return stream
     }
 
     private fun handleRelationshipChain(chain: RelationshipChain, streamIn: Stream<Node>, variables: MutableSet<LogicalVariable>, where: Option<Where>): Stream<Node> {
@@ -169,6 +133,13 @@ class Graph(var nodes: List<Node>) {
                     relationshipProperty != null
                 }
             }
+
+            // hacky, this is already done by handleNodePattern but we need to update the stream
+            val o = (chain.element() as NodePattern).variable()
+            val variable: Variable? = o.getOrElse { null }
+
+            // update stream
+            variable?.let { streams[it] = stream }
         }
 
         return stream
@@ -187,6 +158,13 @@ class Graph(var nodes: List<Node>) {
             }
         }
 
+        // variable seems optional
+        val o = element.variable()
+        val variable: Variable? = o.getOrElse { null }
+
+        // add to variables
+        variable?.let { variables += it }
+
         // lets do the where
         if (where.isDefined) {
             val inner = where.get()
@@ -198,13 +176,6 @@ class Graph(var nodes: List<Node>) {
             if (list.size > 1) {
                 TODO("Cannot handle comparison between two variables yet")
             }
-
-            // variable seems optional
-            val o = element.variable()
-            val variable: Variable? = o.getOrElse { null }
-
-            // add to variables
-            variable?.let { variables += it }
 
             /*list.forEach {
                 if (!variables.contains(it)) {
@@ -225,6 +196,8 @@ class Graph(var nodes: List<Node>) {
                 }
             }
         }
+
+        variable?.let { streams[it] = stream }
 
         return stream
     }
@@ -295,7 +268,7 @@ class Graph(var nodes: List<Node>) {
     private fun getVariables(expression: Expression): List<Variable> {
         if (expression is Property) {
             return getVariables(expression)
-        } else if(expression is Equals) {
+        } else if (expression is Equals) {
             return getVariables(expression)
         }
 
@@ -314,57 +287,106 @@ class Graph(var nodes: List<Node>) {
     private fun getVariables(property: Property): List<Variable> {
         return listOf(property.map() as Variable)
     }
+}
 
-    operator fun Node.get(key: String): Any? {
-        return getProperty(this.javaClass, key)
+/**
+ * Represents a graph consisting of the specified nodes. It can be queried using openCypher queries.
+ */
+@ExperimentalGraph
+class Graph(var nodes: List<Node>) {
+
+    private val parser = CypherParser()
+
+    fun size(): Int {
+        return nodes.size
     }
 
-    operator fun Node.get(key: String, direction: String): Any? {
-        return getRelationship(this.javaClass, key, direction)
+    operator fun plusAssign(node: Node) {
+        nodes += node
     }
 
-    private fun Node.getRelationship(clazz: Class<*>, key: String, direction: String): Any? {
-        return try {
-            val field = clazz.getDeclaredField(key)
+    fun query(queryText: String): List<Node> {
+        val query = parser.parse(queryText, null) as Query
 
-            if (field.trySetAccessible()) {
-                val annotation = field.getAnnotation(Relationship::class.java)
+        return executeQuery(query)
+    }
 
-                if (annotation.direction == direction) {
-                    field.get(this)
-                } else {
-                    null
+    @OptIn(ExperimentalTime::class)
+    fun executeQuery(query: Query): List<Node> {
+        var ctx = QueryContext(this)
+
+        var list: List<Node> = listOf()
+        val b = QueryBenchmark(this, query)
+        b.use {
+            // very hacky for now
+            val singleQuery = query.part() as SingleQuery
+
+            for (clause in singleQuery.clauses()) {
+                // TODO: have a map of streams for the variables?
+                if (clause is Match) {
+                    ctx.handleMatch(clause)
+                } else if (clause is Return) {
+                    list = ctx.handleReturn(clause)
                 }
-            } else {
-                // TODO: throw exception?
-                null
-            }
-        } catch (e: NoSuchFieldException) {
-            if (clazz.superclass != null) {
-                getRelationship(clazz.superclass, key, direction)
-            } else {
-                null
             }
         }
+
+        println("Query took ${b.duration.milliseconds}")
+
+        return list
     }
+}
 
-    private fun Node.getProperty(clazz: Class<*>, key: String): Any? {
-        // TODO: cache fields somehow?
-        return try {
-            val field = clazz.getDeclaredField(key)
 
-            if (field.trySetAccessible()) {
+operator fun Node.get(key: String): Any? {
+    return getProperty(this.javaClass, key)
+}
+
+operator fun Node.get(key: String, direction: String): Any? {
+    return getRelationship(this.javaClass, key, direction)
+}
+
+private fun Node.getRelationship(clazz: Class<*>, key: String, direction: String): Any? {
+    return try {
+        val field = clazz.getDeclaredField(key)
+
+        if (field.trySetAccessible()) {
+            val annotation = field.getAnnotation(Relationship::class.java)
+
+            if (annotation.direction == direction) {
                 field.get(this)
             } else {
-                // TODO: throw exception?
                 null
             }
-        } catch (e: NoSuchFieldException) {
-            if (clazz.superclass != null) {
-                getProperty(clazz.superclass, key)
-            } else {
-                null
-            }
+        } else {
+            // TODO: throw exception?
+            null
+        }
+    } catch (e: NoSuchFieldException) {
+        if (clazz.superclass != null) {
+            getRelationship(clazz.superclass, key, direction)
+        } else {
+            null
+        }
+    }
+}
+
+private fun Node.getProperty(clazz: Class<*>, key: String): Any? {
+    // TODO: cache fields somehow?
+    return try {
+        val field = clazz.getDeclaredField(key)
+
+        if (field.trySetAccessible()) {
+            field.get(this)
+        } else {
+            // TODO: throw exception?
+            null
+        }
+    } catch (e: NoSuchFieldException) {
+        if (clazz.superclass != null) {
+            getProperty(clazz.superclass, key)
+        } else {
+            null
         }
     }
 }
