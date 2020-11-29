@@ -68,9 +68,6 @@ class QueryContext constructor(val graph: Graph) {
     }
 
     internal fun handleMatch(match: Match) {
-        // keep track of bound variables
-        val variables = mutableSetOf<LogicalVariable>()
-
         // find out which class we need (only first pattern for now)
         val pattern = match.pattern().patternParts().head()
         if (pattern is EveryPath) {
@@ -89,7 +86,6 @@ class QueryContext constructor(val graph: Graph) {
     }
 
     private fun handleRelationshipChain(chain: RelationshipChain, nodes: List<Node>, where: Option<Where>) {
-        // TODO: support relationships based on 'any' label
         // relationship = we need the label for now
         val relationship = chain.relationship()
 
@@ -129,10 +125,6 @@ class QueryContext constructor(val graph: Graph) {
 
     private fun handleNodePattern(element: NodePattern, nodes: List<Node>, where: Option<Where>, predicate: Predicate<in Node>?): List<Node> {
         var stream = nodes.parallelStream()
-
-        if (predicate != null) {
-            stream = stream.filter(predicate)
-        }
 
         val labels = element.labels()
 
@@ -178,6 +170,10 @@ class QueryContext constructor(val graph: Graph) {
                     }
                 }
             }
+        }
+
+        if (predicate != null) {
+            stream = stream.filter(predicate)
         }
 
         val list = stream.collect(Collectors.toList())
@@ -307,7 +303,7 @@ class Graph(var nodes: List<Node>) {
 
     @OptIn(ExperimentalTime::class)
     fun executeQuery(query: Query): List<Node> {
-        var ctx = QueryContext(this)
+        val ctx = QueryContext(this)
 
         var list: List<Node> = listOf()
         val b = QueryBenchmark(this, query)

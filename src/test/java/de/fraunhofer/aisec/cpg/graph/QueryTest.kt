@@ -25,14 +25,13 @@ class QueryTest {
         val query = parser.parse("MATCH (n:FunctionDeclaration)-[:PARAMETERS]->(m:ParamVariableDeclaration) RETURN n", null) as Query
         var nodes = listOf<Node>()
 
-        var b: Benchmark
         var variables = mutableMapOf<String, MutableList<Node>>()
 
         nodes = db.executeQuery(query)
 
         assertEquals(2, nodes.size)
 
-        b = Benchmark(QueryTest::class.java, "something else - stream version")
+        var b: Benchmark = Benchmark(QueryTest::class.java, "something else - stream version")
         variables = mutableMapOf()
         variables["n"] = mutableListOf()
         variables["m"] = mutableListOf()
@@ -42,7 +41,7 @@ class QueryTest {
                 .filter {
                     val parameters = PropertyEdge.unwrap(it["parameters", "OUTGOING"] as List<PropertyEdge<Node>>)
 
-                    var params = parameters.parallelStream().filter { it is ParamVariableDeclaration }.collect(Collectors.toList())
+                    val params = parameters.parallelStream().filter { it is ParamVariableDeclaration }.collect(Collectors.toList())
 
                     variables["m"]?.addAll(params)
                     !params.isEmpty()
@@ -56,7 +55,6 @@ class QueryTest {
         println("Experimental query2 took: ${b.duration.milliseconds}")
 
         b = Benchmark(QueryTest::class.java, "something else")
-        nodes = mutableListOf()
         variables["n"] = mutableListOf()
         variables["m"] = mutableListOf()
 
