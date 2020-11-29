@@ -2,25 +2,100 @@ package de.fraunhofer.aisec.cpg.graph
 
 import de.fraunhofer.aisec.cpg.ExperimentalGraph
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.ParamVariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
+import de.fraunhofer.aisec.cpg.helpers.Benchmark
 import org.junit.jupiter.api.BeforeAll
 import org.opencypher.v9_0.ast.Query
 import org.opencypher.v9_0.parser.CypherParser
+import java.util.stream.Collector
+import java.util.stream.Collectors
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 import kotlin.time.ExperimentalTime
+import kotlin.time.milliseconds
 
 @ExperimentalGraph
 @ExperimentalTime
 class QueryTest {
     @Test
     fun testQueryExistenceOfEdge() {
-        val query = parser.parse("MATCH (n:FunctionDeclaration)-[:PARAMETERS]->(:ParamVariableDeclaration) RETURN n", null) as Query
+        val query = parser.parse("MATCH (n:FunctionDeclaration)-[:PARAMETERS]->(m:ParamVariableDeclaration) RETURN n", null) as Query
+        var nodes = listOf<Node>()
+
+        var b: Benchmark
+        var variables = mutableMapOf<String, MutableList<Node>>()
+
+        nodes = db.executeQuery(query)
+
+        assertEquals(2, nodes.size)
+
+        b = Benchmark(QueryTest::class.java, "something else - stream version")
+        variables = mutableMapOf()
+        variables["n"] = mutableListOf()
+        variables["m"] = mutableListOf()
+
+        variables["n"] = db.nodes.parallelStream()
+                .filter { it is FunctionDeclaration }
+                .filter {
+                    val parameters = PropertyEdge.unwrap(it["parameters", "OUTGOING"] as List<PropertyEdge<Node>>)
+
+                    var params = parameters.parallelStream().filter { it is ParamVariableDeclaration }.collect(Collectors.toList())
+
+                    variables["m"]?.addAll(params)
+                    !params.isEmpty()
+                }
+                .collect(Collectors.toList())
+
+        nodes = variables["n"]!!
+        assertEquals(2, nodes.size)
+
+        b.stop()
+        println("Experimental query2 took: ${b.duration.milliseconds}")
+
+        b = Benchmark(QueryTest::class.java, "something else")
+        nodes = mutableListOf()
+        variables["n"] = mutableListOf()
+        variables["m"] = mutableListOf()
+
+        for(node in db.nodes) {
+            if(node is FunctionDeclaration) {
+                val parameters = PropertyEdge.unwrap(node["parameters", "OUTGOING"] as List<PropertyEdge<Node>>)
+
+                for(parameter in parameters) {
+                    if(parameter is ParamVariableDeclaration) {
+                        variables["m"]?.plusAssign(parameter)
+                    }
+                }
+
+                if(parameters.isNotEmpty()) {
+                    variables["n"]?.plusAssign(node)
+                }
+
+            }
+        }
+
+        nodes = variables["n"]!!
+        assertEquals(2, nodes.size)
+
+        b.stop()
+        println("Experimental query2 took: ${b.duration.milliseconds}")
+
+
+    }
+
+    @Test
+    fun testQueryExistenceOfEdgeOtherVar() {
+        val query = parser.parse("MATCH (n:FunctionDeclaration)-[:PARAMETERS]->(m:ParamVariableDeclaration) RETURN m", null) as Query
 
         val nodes = db.executeQuery(query)
 
         assertEquals(2, nodes.size)
+
+
+
     }
 
     @Test

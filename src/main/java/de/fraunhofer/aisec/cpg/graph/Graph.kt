@@ -11,6 +11,7 @@ import org.opencypher.v9_0.expressions.*
 import org.opencypher.v9_0.parser.CypherParser
 import scala.Option
 import java.io.Closeable
+import java.util.function.Predicate
 import java.util.stream.Collectors
 import java.util.stream.Stream
 import kotlin.time.ExperimentalTime
@@ -40,29 +41,27 @@ val TranslationResult.graph: Graph
 
 @ExperimentalGraph
 class QueryContext constructor(val graph: Graph) {
-    val streams = mutableMapOf<Variable, Stream<Node>>()
+    val results = mutableMapOf<Variable, MutableList<Node>>()
 
     internal fun handleReturn(`return`: Return): List<Node> {
         // hacky hack
         val item = (`return`.returnItems() as ReturnItems).items().head() as UnaliasedReturnItem
         val variable = item.expression() as Variable
 
-        var stream = streams[variable]
-        if (stream != null) {
+        val nodes = results[variable]
+        if (nodes != null) {
             val limit: Limit? = `return`.limit().getOrElse { null }
             if (limit != null) {
                 val expression = limit.expression()
 
                 if (expression is IntegerLiteral) {
-                    stream = stream.limit(expression.value())
+                    return nodes.stream().limit(expression.value()).collect(Collectors.toList())
                 } else {
                     throw RuntimeException("Only non-negative integers are allowed")
                 }
             }
 
-            if (stream != null) {
-                return stream.collect(Collectors.toList())
-            }
+            return nodes
         }
 
         return emptyList()
@@ -75,30 +74,21 @@ class QueryContext constructor(val graph: Graph) {
         // find out which class we need (only first pattern for now)
         val pattern = match.pattern().patternParts().head()
         if (pattern is EveryPath) {
-            handleEveryPath(pattern, variables, match.where())
+            handleEveryPath(pattern, match.where())
         }
     }
 
-    private fun handleEveryPath(pattern: PatternPart, variables: MutableSet<LogicalVariable>, where: Option<Where>) {
+    private fun handleEveryPath(pattern: PatternPart, where: Option<Where>) {
         val element = pattern.element()
 
-        var variable: Variable? = element.variable().getOrElse { null }
-
-        var stream = graph.nodes.parallelStream()
-
         if (element is NodePattern) {
-            stream = handleNodePattern(element, stream, variables, where)
+            handleNodePattern(element, graph.nodes, where, null)
         } else if (element is RelationshipChain) {
-            stream = handleRelationshipChain(element, stream, variables, where)
+            handleRelationshipChain(element, graph.nodes, where)
         }
     }
 
-    private fun handleRelationshipChain(chain: RelationshipChain, streamIn: Stream<Node>, variables: MutableSet<LogicalVariable>, where: Option<Where>): Stream<Node> {
-        var stream = streamIn
-
-        // first, handle it like a normal node
-        stream = handleNodePattern(chain.element() as NodePattern, stream, variables, where)
-
+    private fun handleRelationshipChain(chain: RelationshipChain, nodes: List<Node>, where: Option<Where>) {
         // TODO: support relationships based on 'any' label
         // relationship = we need the label for now
         val relationship = chain.relationship()
@@ -112,7 +102,8 @@ class QueryContext constructor(val graph: Graph) {
         } else {
             val type = relationship.types().head()
 
-            stream = stream.filter {
+            // creating a predicate that checks for the existence of a relationship
+            val predicate: (Node) -> Boolean = {
                 var relationshipProperty = it[type.name().toLowerCase(), relationship.direction().toString()]
 
                 // check for the existence of the edge
@@ -120,33 +111,29 @@ class QueryContext constructor(val graph: Graph) {
                     // TODO: check if it really needs unwrapping, not all our nodes are modelled this way
                     relationshipProperty = PropertyEdge.unwrap(relationshipProperty as MutableList<PropertyEdge<Node>>)
 
-                    // TODO: save these sub streams somehow or use flatmap?
-                    var subStream = relationshipProperty.stream() as Stream<Node>
                     if (chain.rightNode() is NodePattern) {
-                        subStream = handleNodePattern(chain.rightNode(), subStream, variables, where)
+                        val list = handleNodePattern(chain.rightNode(), relationshipProperty, where, null)
+                        list.isNotEmpty()
                     } else {
                         TODO()
                     }
-
-                    subStream.count() > 0
                 } else {
                     relationshipProperty != null
                 }
             }
 
-            // hacky, this is already done by handleNodePattern but we need to update the stream
-            val o = (chain.element() as NodePattern).variable()
-            val variable: Variable? = o.getOrElse { null }
-
-            // update stream
-            variable?.let { streams[it] = stream }
+            // finally handle it like a normal node
+            handleNodePattern(chain.element() as NodePattern, nodes, where, predicate)
         }
-
-        return stream
     }
 
-    private fun handleNodePattern(element: NodePattern, streamIn: Stream<Node>, variables: MutableSet<LogicalVariable>, where: Option<Where>): Stream<Node> {
-        var stream = streamIn
+    private fun handleNodePattern(element: NodePattern, nodes: List<Node>, where: Option<Where>, predicate: Predicate<in Node>?): List<Node> {
+        var stream = nodes.parallelStream()
+
+        if (predicate != null) {
+            stream = stream.filter(predicate)
+        }
+
         val labels = element.labels()
 
         // only one label for now
@@ -161,9 +148,6 @@ class QueryContext constructor(val graph: Graph) {
         // variable seems optional
         val o = element.variable()
         val variable: Variable? = o.getOrElse { null }
-
-        // add to variables
-        variable?.let { variables += it }
 
         // lets do the where
         if (where.isDefined) {
@@ -185,21 +169,31 @@ class QueryContext constructor(val graph: Graph) {
 
             // only select it, if contains a variable bound for this node pattern; or no variables are present
             if (list.isEmpty() || list.contains(variable)) {
-                if (expression is Equals) {
-                    stream = handleEquals(expression, stream)
-                } else if (expression is LessThan) {
-                    stream = handleLessThan(expression, stream)
-                } else if (expression is GreaterThan) {
-                    stream = handleGreaterThan(expression, stream)
-                } else {
-                    TODO()
+                stream = when (expression) {
+                    is Equals -> handleEquals(expression, stream)
+                    is LessThan -> handleLessThan(expression, stream)
+                    is GreaterThan -> handleGreaterThan(expression, stream)
+                    else -> {
+                        TODO()
+                    }
                 }
             }
         }
 
-        variable?.let { streams[it] = stream }
+        val list = stream.collect(Collectors.toList())
 
-        return stream
+        // we could do a little optimization and just return a stream and let the caller handle the collection, this would be an optimization
+        // if no variable is used and thus just the existence is needed, i.e. for filter, but we do not need the result
+        variable?.let {
+            // collect the results and put it into the variable list
+            if (!results.containsKey(it)) {
+                results[it] = list
+            } else {
+                results[it]?.addAll(list)
+            }
+        }
+
+        return list
     }
 
     private fun handleEquals(expression: Equals, stream: Stream<Node>): Stream<Node> {
