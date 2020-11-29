@@ -10,7 +10,7 @@ import org.opencypher.v9_0.ast.*
 import org.opencypher.v9_0.expressions.*
 import org.opencypher.v9_0.parser.CypherParser
 import scala.Option
-import java.util.*
+import java.io.Closeable
 import java.util.stream.Collectors
 import java.util.stream.Stream
 import kotlin.time.ExperimentalTime
@@ -19,7 +19,7 @@ import kotlin.time.milliseconds
 @ExperimentalGraph
 class QueryBenchmark constructor(db: Graph, query: Query) :
         Benchmark(db.javaClass,
-                "totalNodes: " + db.size() + " query: " + query.toString()), AutoCloseable {
+                "totalNodes: " + db.size() + " query: " + query.toString()), AutoCloseable, Closeable {
     override fun close() {
         stop()
     }
@@ -192,30 +192,36 @@ class Graph(var nodes: List<Node>) {
             val inner = where.get()
 
             val expression = inner.expression()
-            if (expression is Equals) {
-                // check for variables
-                val list = getVariables(expression)
+            // check for variables
+            val list = getVariables(expression)
 
-                if (list.size > 1) {
-                    TODO("Cannot handle comparison between two variables yet")
+            if (list.size > 1) {
+                TODO("Cannot handle comparison between two variables yet")
+            }
+
+            // variable seems optional
+            val o = element.variable()
+            val variable: Variable? = o.getOrElse { null }
+
+            // add to variables
+            variable?.let { variables += it }
+
+            /*list.forEach {
+                if (!variables.contains(it)) {
+                    throw RuntimeException("Variable ${it.name()} is not defined")
                 }
+            }*/
 
-                // variable seems optional
-                val o = element.variable()
-                val variable: Variable? = o.getOrElse { null }
-
-                // add to variables
-                variable?.let { variables += it }
-
-                /*list.forEach {
-                    if (!variables.contains(it)) {
-                        throw RuntimeException("Variable ${it.name()} is not defined")
-                    }
-                }*/
-
-                // only select it, if contains a variable bound for this node pattern; or no variables are present
-                if (list.isEmpty() || list.contains(variable)) {
+            // only select it, if contains a variable bound for this node pattern; or no variables are present
+            if (list.isEmpty() || list.contains(variable)) {
+                if (expression is Equals) {
                     stream = handleEquals(expression, stream)
+                } else if (expression is LessThan) {
+                    stream = handleLessThan(expression, stream)
+                } else if (expression is GreaterThan) {
+                    stream = handleGreaterThan(expression, stream)
+                } else {
+                    TODO()
                 }
             }
         }
@@ -232,6 +238,36 @@ class Graph(var nodes: List<Node>) {
                 lhs.toLong() == rhs.toLong()
             } else {
                 lhs == rhs
+            }
+        }
+    }
+
+    private fun handleLessThan(expression: LessThan, stream: Stream<Node>): Stream<Node> {
+        return stream.filter {
+            val lhs = handleExpression(it, expression.lhs())
+            val rhs = handleExpression(it, expression.rhs())
+
+            if (lhs is Number && rhs is Number) {
+                lhs.toLong() < rhs.toLong()
+            } else if (lhs is String && rhs is String) {
+                lhs < rhs
+            } else {
+                throw java.lang.RuntimeException("Cannot compare")
+            }
+        }
+    }
+
+    private fun handleGreaterThan(expression: GreaterThan, stream: Stream<Node>): Stream<Node> {
+        return stream.filter {
+            val lhs = handleExpression(it, expression.lhs())
+            val rhs = handleExpression(it, expression.rhs())
+
+            if (lhs is Number && rhs is Number) {
+                lhs.toLong() > rhs.toLong()
+            } else if (lhs is String && rhs is String) {
+                lhs > rhs
+            } else {
+                throw java.lang.RuntimeException("Cannot compare")
             }
         }
     }
@@ -256,21 +292,23 @@ class Graph(var nodes: List<Node>) {
         return literal.value()
     }
 
-    fun getVariables(equals: Equals): List<Variable> {
+    private fun getVariables(expression: Expression): List<Variable> {
+        if (expression is Property) {
+            return getVariables(expression)
+        } else if(expression is Equals) {
+            return getVariables(expression)
+        }
+
+        return emptyList()
+    }
+
+    private fun getVariables(equals: Equals): List<Variable> {
         val list = mutableListOf<Variable>()
 
         list.addAll(getVariables(equals.lhs()))
         list.addAll(getVariables(equals.rhs()))
 
         return list
-    }
-
-    private fun getVariables(expression: Expression): List<Variable> {
-        if (expression is Property) {
-            return getVariables(expression)
-        }
-
-        return emptyList()
     }
 
     private fun getVariables(property: Property): List<Variable> {

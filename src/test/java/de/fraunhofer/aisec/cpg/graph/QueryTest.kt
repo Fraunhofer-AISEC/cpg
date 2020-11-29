@@ -88,6 +88,30 @@ class QueryTest {
         assertTrue(nodes.isEmpty())
     }
 
+    @Test
+    fun testQueryLesser() {
+        // should return no nodes
+        val query = parser.parse("MATCH (n) WHERE 1<0 RETURN n", null) as Query
+        println(query)
+
+        val nodes = db.executeQuery(query)
+        println(nodes)
+
+        assertTrue(nodes.isEmpty())
+    }
+
+    @Test
+    fun testQueryGreaterThan() {
+        // should return no nodes
+        val query = parser.parse("MATCH (n) WHERE 0>1 RETURN n", null) as Query
+        println(query)
+
+        val nodes = db.executeQuery(query)
+        println(nodes)
+
+        assertTrue(nodes.isEmpty())
+    }
+
     companion object {
         lateinit var db: Graph
         val parser = CypherParser()
