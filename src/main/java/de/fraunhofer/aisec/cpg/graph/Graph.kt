@@ -327,6 +327,23 @@ class Graph(var nodes: List<Node>) {
     }
 }
 
+/**
+ * Returns the node's label based on its class hierarchy. It might seem like a good idea to cache this somehow
+ * but for some reason, it is faster to do it this way. An example query run almost twice as fast this way.
+ * So it looks like Kotlin optimizes the heck out of this.
+ */
+val Node.labels: List<String>
+    get() {
+        val labels = mutableListOf<String>()
+
+        var clazz: Class<*>? = this.javaClass
+        while (clazz != null && clazz != Object::class.java) {
+            labels += clazz.simpleName
+            clazz = clazz.superclass
+        }
+
+        return labels
+    }
 
 operator fun Node.get(key: String): Any? {
     return getProperty(this.javaClass, key)
@@ -381,16 +398,5 @@ private fun Node.getProperty(clazz: Class<*>, key: String): Any? {
     }
 }
 
-// TODO: do this once and cache it
-val Node.labels: List<String>
-    get() {
-        // for now, just the class itself
-        // TODO: hierarchy
 
-        val labels = mutableListOf<String>()
-
-        labels += this.javaClass.simpleName
-
-        return labels
-    }
 
