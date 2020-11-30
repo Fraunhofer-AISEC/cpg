@@ -31,7 +31,8 @@ class TranslationResultTest : BaseTest() {
         assertNotNull(graph)
 
         var nodes = graph.query("MATCH (m:MethodDeclaration) RETURN m")
-        assertEquals(1, nodes.size)
+        // returns the method declaration as well as the constructor declaration
+        assertEquals(2, nodes.size)
 
         nodes = graph.query("MATCH (l:Literal) WHERE l.value = 0 RETURN l")
         assertEquals(2, nodes.size)
