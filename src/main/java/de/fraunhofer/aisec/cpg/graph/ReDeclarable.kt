@@ -107,4 +107,9 @@ interface ReDeclarable<N : Declaration> : Iterable<N> {
 
     fun updateFields() {}
     fun isSameDeclaration(declaration: N): Boolean
+
+    /**
+     * Implemented classes can use this to check, if another declaration can be added or not.
+     */
+    fun canBeAdded(): Boolean
 }

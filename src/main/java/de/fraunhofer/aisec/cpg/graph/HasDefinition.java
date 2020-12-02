@@ -45,8 +45,8 @@ public interface HasDefinition<N extends Declaration> extends ReDeclarable<N> {
         definition = (HasDefinition<N>) node;
       }
     }*/
-    for (var it = iterator(); it.hasNext(); ) {
-      var node = (HasDefinition<?>) it.next();
+    for (N n : this) {
+      var node = (HasDefinition<?>) n;
       if (node.isDefinition()) {
         definition = (HasDefinition<N>) node;
       }
@@ -56,9 +56,28 @@ public interface HasDefinition<N extends Declaration> extends ReDeclarable<N> {
     // but not sure we can do it any other way
     this.setDefinition(definition);
 
-    for (var it = iterator(); it.hasNext(); ) {
-      var node = (HasDefinition<N>) it.next();
+    for (N n : this) {
+      var node = (HasDefinition<N>) n;
       node.setDefinition(definition);
     }
+  }
+
+  @Override
+  default boolean canBeAdded() {
+    return !isAlreadyDefined();
+  }
+
+  /**
+   * Declaration can be declared as many times as we want, but can only be *defined* once. All
+   * future definitions will be ignored.
+   */
+  default boolean isAlreadyDefined() {
+    for (var declaration : this) {
+      if (((HasDefinition<N>) declaration).isDefinition()) {
+        return true;
+      }
+    }
+
+    return false;
   }
 }

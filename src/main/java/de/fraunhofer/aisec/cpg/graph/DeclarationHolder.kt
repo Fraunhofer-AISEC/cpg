@@ -45,7 +45,9 @@ interface DeclarationHolder {
         if (declaration is ReDeclarable<*>) {
             val previous = collection.firstOrNull { it == declaration } as ReDeclarable<N>?
             (declaration as ReDeclarable<N>).setPreviousDeclaration(previous)
-            collection.add(declaration)
+            if(declaration.canBeAdded()) {
+                collection.add(declaration)
+            }
         } else {
             if (!collection.contains(declaration)) {
                 collection.add(declaration)
@@ -103,7 +105,9 @@ interface DeclarationHolder {
                     .firstOrNull { it.isSameDeclaration(declaration) }
 
             (declaration as ReDeclarable<Declaration>).setPreviousDeclaration(previous)
-            collection.add(propertyEdge)
+            if(declaration.canBeAdded()) {
+                collection.add(propertyEdge)
+            }
         } else {
             if (!contains) {
                 collection.add(propertyEdge)
