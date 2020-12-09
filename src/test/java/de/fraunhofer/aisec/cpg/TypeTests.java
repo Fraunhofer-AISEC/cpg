@@ -658,6 +658,7 @@ class TypeTests extends BaseTest {
     // TODO CPS the following types need to be supported by the reworked typeparser/typesystem
 
     TypeParser.createFromUnsafe("OuterClass<int>::InnerClass<int>", true);
+    TypeParser.createFromUnsafe("Array<struct Node>", true);
     TypeParser.createFromUnsafe(
             "Map<String, String>", true); // requires property edges to indicate the idx
     TypeParser.createFromUnsafe("List<?>", true); // no wildcard support yet

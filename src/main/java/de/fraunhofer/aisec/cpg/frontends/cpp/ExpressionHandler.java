@@ -481,7 +481,7 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
       }
     } else {
       declaredReferenceExpression.setType(
-          TypeParser.createFrom(expressionTypeProxy(ctx).toString(), true));
+          TypeParser.createFrom(ctx.getRawSignature(), true));
     }
 
     /* this expression could actually be a field / member expression, but somehow CDT only recognizes them as a member expression if it has an explicit 'this'
