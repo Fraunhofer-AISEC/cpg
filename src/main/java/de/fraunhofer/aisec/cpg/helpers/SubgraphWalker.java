@@ -99,7 +99,7 @@ public class SubgraphWalker {
       if (subGraph != null && Arrays.asList(subGraph.value()).contains("AST")) {
         try {
           // disable access mechanisms
-          field.setAccessible(true);
+          field.trySetAccessible();
 
           Object obj = field.get(node);
 

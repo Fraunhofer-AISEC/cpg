@@ -332,11 +332,11 @@ public class CXXLanguageFrontend extends LanguageFrontend {
         AbstractCharArray translationUnitRawSignature = new CharArray("");
         try {
           Field fLoc = getField(fLocation.getClass(), "fLocationCtx");
-          fLoc.setAccessible(true);
+          fLoc.trySetAccessible();
           Object locCtx = fLoc.get(fLocation);
 
           Field fSource = getField(locCtx.getClass(), "fSource");
-          fSource.setAccessible(true);
+          fSource.trySetAccessible();
           translationUnitRawSignature = (AbstractCharArray) fSource.get(locCtx);
         } catch (ReflectiveOperationException | ClassCastException | NullPointerException e) {
           LOGGER.warn(

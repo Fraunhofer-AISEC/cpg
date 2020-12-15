@@ -23,6 +23,7 @@
  *                    \______/ \__|       \______/
  *
  */
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
     // built-in
@@ -35,6 +36,7 @@ plugins {
     id("org.sonarqube") version "3.0"
     id("com.diffplug.spotless") version "5.8.2"
     id("com.github.johnrengelman.shadow") version "6.1.0"
+    kotlin("jvm") version "1.4.20"
 }
 
 tasks.jacocoTestReport {
@@ -125,6 +127,18 @@ tasks.named("compileJava") {
     dependsOn(":spotlessApply")
 }
 
+val compileKotlin: KotlinCompile by tasks
+compileKotlin.kotlinOptions {
+    jvmTarget = "11"
+    freeCompilerArgs = listOf("-Xopt-in=kotlin.RequiresOptIn")
+}
+
+val compileTestKotlin: KotlinCompile by tasks
+compileTestKotlin.kotlinOptions {
+    jvmTarget = "11"
+    freeCompilerArgs = listOf("-Xopt-in=kotlin.RequiresOptIn")
+}
+
 tasks.named("sonarqube") {
     dependsOn(":jacocoTestReport")
 }
@@ -151,7 +165,12 @@ dependencies {
     // CDT
     api("org.eclipse.cdt:core:6.11.1.202006011430")
 
+    implementation(platform("org.jetbrains.kotlin:kotlin-bom"))
+    implementation("org.jetbrains.kotlin:kotlin-stdlib")
+
     // JUnit
+    testImplementation("org.jetbrains.kotlin:kotlin-test")
+    testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
     testImplementation("org.junit.jupiter:junit-jupiter-api:5.7.0")
     testImplementation("org.junit.jupiter:junit-jupiter-params:5.7.0")
 
