@@ -33,19 +33,26 @@ import de.fraunhofer.aisec.cpg.sarif.Region;
 import java.net.URI;
 import java.util.HashMap;
 import java.util.Map;
+
 import org.neo4j.ogm.typeconversion.CompositeAttributeConverter;
 
 public class LocationConverter implements CompositeAttributeConverter<PhysicalLocation> {
+
+  public static final String START_LINE = "startLine";
+  public static final String END_LINE = "endLine";
+  public static final String START_COLUMN = "startColumn";
+  public static final String END_COLUMN = "endColumn";
+  public static final String ARTIFACT = "artifact";
 
   @Override
   public Map<String, ?> toGraphProperties(PhysicalLocation value) {
     Map<String, Object> properties = new HashMap<>();
     if (value != null) {
-      properties.put("artifact", value.getArtifactLocation().getUri().toString());
-      properties.put("startLine", value.getRegion().getStartLine());
-      properties.put("endLine", value.getRegion().getEndLine());
-      properties.put("startColumn", value.getRegion().getStartColumn());
-      properties.put("endColumn", value.getRegion().getEndColumn());
+      properties.put(ARTIFACT, value.getArtifactLocation().getUri().toString());
+      properties.put(START_LINE, value.getRegion().getStartLine());
+      properties.put(END_LINE, value.getRegion().getEndLine());
+      properties.put(START_COLUMN, value.getRegion().getStartColumn());
+      properties.put(END_COLUMN, value.getRegion().getEndColumn());
     }
     return properties;
   }
@@ -53,15 +60,20 @@ public class LocationConverter implements CompositeAttributeConverter<PhysicalLo
   @Override
   public PhysicalLocation toEntityAttribute(Map<String, ?> value) {
     try {
-      int startLine = toIntExact((Integer) value.get("startLine"));
-      int endLine = toIntExact((Integer) value.get("endLine"));
-      int startColumn = toIntExact((Integer) value.get("startColumn"));
-      int endColumn = toIntExact((Integer) value.get("endColumn"));
-      URI uri = URI.create((String) value.get("artifact"));
+      final int startLine = toInt(value.get(START_LINE));
+      final int endLine = toInt(value.get(END_LINE));
+      final int startColumn = toInt(value.get(START_COLUMN));
+      final int endColumn = toInt(value.get(END_COLUMN));
+      final URI uri = URI.create((String) value.get(ARTIFACT));
 
       return new PhysicalLocation(uri, new Region(startLine, startColumn, endLine, endColumn));
     } catch (NullPointerException e) {
       return null;
     }
+  }
+
+  private int toInt(final Object objectToMap) {
+    final long value = Long.parseLong(objectToMap.toString());
+    return toIntExact(value);
   }
 }
