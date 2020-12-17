@@ -168,6 +168,111 @@ public class LocationConverterTest extends BaseAttributeConverterTest<PhysicalLo
     Assertions.assertEquals(want, have);
   }
 
+  @Test
+  void toEntityAttributeWithMixedTypes() {
+    // arrange
+    final CompositeAttributeConverter<PhysicalLocation> sut = getSut();
+    final Map<String, Object> value = new HashMap<>();
+    final Object startLineValue = 1;
+    value.put(LocationConverter.START_LINE, startLineValue);
+    final Object endLineValue = (long) 2;
+    value.put(LocationConverter.END_LINE, endLineValue);
+    final Object startColumnValue = "3";
+    value.put(LocationConverter.START_COLUMN, startColumnValue);
+    final Object endColumnValue = new CustomNumber(4);
+    value.put(LocationConverter.END_COLUMN, endColumnValue);
+    value.put(LocationConverter.ARTIFACT, URI_STRING);
+    final Region region =
+        new Region(
+            Integer.parseInt(startLineValue.toString()),
+            Integer.parseInt(startColumnValue.toString()),
+            Integer.parseInt(endLineValue.toString()),
+            Integer.parseInt(endColumnValue.toString()));
+    final PhysicalLocation want = new PhysicalLocation(URI_TO_TEST, region);
+    // act
+    final PhysicalLocation have = sut.toEntityAttribute(value);
+    // assert
+    Assertions.assertEquals(want, have);
+  }
+
+  @Test
+  void toEntityAttributeWithValueBiggerMaxIntBooms() {
+    // arrange
+    final CompositeAttributeConverter<PhysicalLocation> sut = getSut();
+    final Map<String, Object> value = new HashMap<>();
+
+    final long startLineValue = (long) Integer.MAX_VALUE + 1;
+    value.put(LocationConverter.START_LINE, startLineValue);
+
+    // act // assert
+    Assertions.assertThrows(ArithmeticException.class, () -> sut.toEntityAttribute(value));
+  }
+
+  @Test
+  void toEntityAttributeWithValueSmallerMinIntBooms() {
+    // arrange
+    final CompositeAttributeConverter<PhysicalLocation> sut = getSut();
+    final Map<String, Object> value = new HashMap<>();
+
+    final long startLineValue = (long) Integer.MIN_VALUE - 1;
+    value.put(LocationConverter.START_LINE, startLineValue);
+
+    // act // assert
+    Assertions.assertThrows(ArithmeticException.class, () -> sut.toEntityAttribute(value));
+  }
+
+  @Test
+  void toEntityAttributeWithAFloatBooms() {
+    // arrange
+    final CompositeAttributeConverter<PhysicalLocation> sut = getSut();
+    final Map<String, Object> value = new HashMap<>();
+
+    final Float startLineValue = (float) 1.;
+    value.put(LocationConverter.START_LINE, startLineValue);
+
+    // act // assert
+    Assertions.assertThrows(NumberFormatException.class, () -> sut.toEntityAttribute(value));
+  }
+
+  @Test
+  void toEntityAttributeWithADoubleBooms() {
+    // arrange
+    final CompositeAttributeConverter<PhysicalLocation> sut = getSut();
+    final Map<String, Object> value = new HashMap<>();
+
+    final Double startLineValue = 1.;
+    value.put(LocationConverter.START_LINE, startLineValue);
+
+    // act // assert
+    Assertions.assertThrows(NumberFormatException.class, () -> sut.toEntityAttribute(value));
+  }
+
+  @Test
+  void toEntityAttributeWithAStringBooms() {
+    // arrange
+    final CompositeAttributeConverter<PhysicalLocation> sut = getSut();
+    final Map<String, Object> value = new HashMap<>();
+
+    final Object startLineValue = "TEST STRING";
+    value.put(LocationConverter.START_LINE, startLineValue);
+
+    // act // assert
+    Assertions.assertThrows(NumberFormatException.class, () -> sut.toEntityAttribute(value));
+  }
+
+  @Test
+  void toEntityAttributeWithAObjectBooms() {
+    // arrange
+    final CompositeAttributeConverter<PhysicalLocation> sut = getSut();
+    final Map<String, Object> value = new HashMap<>();
+
+    final Object startLineValue = new Object();
+    value.put(LocationConverter.START_LINE, startLineValue);
+
+    // act // assert
+    Assertions.assertThrows(NumberFormatException.class, () -> sut.toEntityAttribute(value));
+  }
+
   private static class CustomNumber extends Number {
 
     private final int value;

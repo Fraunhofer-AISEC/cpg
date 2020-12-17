@@ -26,9 +26,8 @@
 
 package de.fraunhofer.aisec.cpg.sarif;
 
-import java.net.URI;
-
 import com.google.common.base.Objects;
+import java.net.URI;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
