@@ -10,7 +10,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.neo4j.ogm.typeconversion.CompositeAttributeConverter;
 
-public class LocationConverterTest extends BaseAttributeConverterTest<PhysicalLocation> {
+class LocationConverterTest extends BaseAttributeConverterTest<PhysicalLocation> {
 
   private static final String URI_STRING = "test://test:1234";
   private static final URI URI_TO_TEST = URI.create(URI_STRING);
