@@ -113,7 +113,7 @@ public class PhysicalLocation {
     if (!(o instanceof PhysicalLocation)) return false;
     PhysicalLocation that = (PhysicalLocation) o;
     return Objects.equal(artifactLocation, that.artifactLocation)
-            && Objects.equal(region, that.region);
+        && Objects.equal(region, that.region);
   }
 
   @Override
