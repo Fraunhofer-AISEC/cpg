@@ -325,15 +325,19 @@ public class Util {
         .sort(Comparator.comparing(pe -> pe.getEnd().getArgumentIndex()));
 
     for (int j = 0; j < arguments.size(); j++) {
-      ParamVariableDeclaration param = target.getParameters().get(j);
-      if (param.isVariadic()) {
-        for (; j < arguments.size(); j++) {
-          // map all the following arguments to this variadic param
+      var parameters = target.getParameters();
+
+      if (j < parameters.size()) {
+        var param = parameters.get(j);
+        if (param.isVariadic()) {
+          for (; j < arguments.size(); j++) {
+            // map all the following arguments to this variadic param
+            param.addPrevDFG(arguments.get(j));
+          }
+          break;
+        } else {
           param.addPrevDFG(arguments.get(j));
         }
-        break;
-      } else {
-        param.addPrevDFG(arguments.get(j));
       }
     }
   }

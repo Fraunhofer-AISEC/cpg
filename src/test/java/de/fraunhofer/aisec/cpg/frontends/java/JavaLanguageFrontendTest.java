@@ -583,6 +583,19 @@ class JavaLanguageFrontendTest extends BaseTest {
 
     var forField = annotations.get(0);
     assertEquals("AnnotatedField", forField.getName());
+
+    field = record.getField("anotherField");
+    assertNotNull(field);
+
+    annotations = field.getAnnotations();
+    assertEquals(1, annotations.size());
+
+    forField = annotations.get(0);
+    assertEquals("AnnotatedField", forField.getName());
+
+    value = forField.getMembers().get(0);
+    assertEquals(JavaLanguageFrontend.ANNOTATION_MEMBER_VALUE, value.getName());
+    assertEquals("myString", ((Literal<String>) value.getValue()).getValue());
   }
 
   @Test
