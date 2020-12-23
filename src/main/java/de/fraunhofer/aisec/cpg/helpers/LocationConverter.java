@@ -33,7 +33,6 @@ import de.fraunhofer.aisec.cpg.sarif.Region;
 import java.net.URI;
 import java.util.HashMap;
 import java.util.Map;
-
 import org.neo4j.ogm.typeconversion.CompositeAttributeConverter;
 
 public class LocationConverter implements CompositeAttributeConverter<PhysicalLocation> {
