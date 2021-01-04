@@ -43,7 +43,6 @@ import de.fraunhofer.aisec.cpg.graph.declarations.ProblemDeclaration;
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration;
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration;
 import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration;
-import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration;
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement;
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement;
@@ -308,14 +307,8 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
       ValueDeclaration declaration =
           (ValueDeclaration) this.lang.getDeclaratorHandler().handle(declarator);
 
-      String typeString;
-      if (declaration instanceof FunctionDeclaration
-          || declaration instanceof VariableDeclaration) {
-        typeString = getTypeStringFromDeclarator(declarator, ctx.getDeclSpecifier());
-      } else {
-        // otherwise, use the complete raw code and let the type parser handle it
-        typeString = ctx.getRawSignature();
-      }
+      String typeString = getTypeStringFromDeclarator(declarator, ctx.getDeclSpecifier());
+
       Type result = TypeParser.createFrom(typeString, true);
       declaration.setType(result);
 
