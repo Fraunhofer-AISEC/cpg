@@ -276,7 +276,7 @@ public class CallResolver extends Pass {
   }
 
   private void handleNormalCalls(RecordDeclaration curClass, CallExpression call) {
-    if (curClass == null && this.currentTU != null) {
+    if (curClass == null && this.currentTU != null && !(call instanceof MemberCallExpression)) {
       // Handle function (not method) calls
       // C++ allows function overloading. Make sure we have at least the same number of arguments
       List<FunctionDeclaration> invocationCandidates =
