@@ -87,6 +87,10 @@ public class CallResolverTest extends BaseTest {
     assertEquals(List.of(), unknownCall.getInvokes());
   }
 
+  /**
+   * Checks that method calls from a function outside a class are correctly resolved to the MethodDeclaration
+   * @param result
+   */
   private void ensureInvocationOfMethodsInFunction(List<TranslationUnitDeclaration> result) {
     assertEquals(1, result.size());
     TranslationUnitDeclaration tu = result.get(0);
