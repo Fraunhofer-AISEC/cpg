@@ -407,6 +407,8 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
           NodeBuilder.newDeclaredReferenceExpression(
               reference.getName(), UnknownType.getUnknownType(), reference.getName());
 
+      member.setLocation(lang.getLocationFromRawNode(reference));
+
       callExpression =
           NodeBuilder.newMemberCallExpression(
               member.getName(),
