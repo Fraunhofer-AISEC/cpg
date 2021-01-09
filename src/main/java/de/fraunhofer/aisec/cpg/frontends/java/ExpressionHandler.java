@@ -708,6 +708,9 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
         DeclaredReferenceExpression member =
             NodeBuilder.newDeclaredReferenceExpression(name, UnknownType.getUnknownType(), "");
 
+        lang.setCodeAndRegion(
+            member,
+            methodCallExpr); // This will also overwrite the code set to the empty string set above
         callExpression =
             NodeBuilder.newMemberCallExpression(
                 name, qualifiedName, base, member, methodCallExpr.toString());
