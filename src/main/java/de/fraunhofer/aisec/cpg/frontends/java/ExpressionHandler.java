@@ -379,6 +379,7 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
               base,
               fieldType,
               fieldAccessExpr.getName().getIdentifier(),
+              ".", // there is only "." in java
               fieldAccessExpr.toString());
       memberExpression.setStaticAccess(true);
       return memberExpression;
@@ -389,7 +390,11 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
     }
 
     return NodeBuilder.newMemberExpression(
-        base, fieldType, fieldAccessExpr.getName().getIdentifier(), fieldAccessExpr.toString());
+        base,
+        fieldType,
+        fieldAccessExpr.getName().getIdentifier(),
+        ".",
+        fieldAccessExpr.toString());
   }
 
   private Literal handleLiteralExpression(Expression expr) {
@@ -713,7 +718,7 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
             methodCallExpr); // This will also overwrite the code set to the empty string set above
         callExpression =
             NodeBuilder.newMemberCallExpression(
-                name, qualifiedName, base, member, methodCallExpr.toString());
+                name, qualifiedName, base, member, ".", methodCallExpr.toString());
       } else {
         String targetClass;
         if (resolved != null) {
