@@ -166,7 +166,7 @@ dependencies {
     api("org.eclipse.cdt:core:6.11.1.202006011430")
 
 
-    api("org.neo4j:neo4j-ogm-bolt-driver:3.2.10")
+    api("org.neo4j:neo4j-ogm-bolt-driver:3.2.19")
 
     implementation(platform("org.jetbrains.kotlin:kotlin-bom"))
     implementation("org.jetbrains.kotlin:kotlin-stdlib")
