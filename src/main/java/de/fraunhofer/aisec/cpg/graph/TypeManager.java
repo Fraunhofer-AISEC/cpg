@@ -317,6 +317,11 @@ public class TypeManager {
       return true;
     }
 
+    // ObjectTypes can be passed as ReferenceTypes
+    if (superType instanceof ReferenceType) {
+      return isSupertypeOf(((ReferenceType) superType).getElementType(), subType);
+    }
+
     Optional<Type> commonType = getCommonType(new HashSet<>(List.of(superType, subType)));
     if (commonType.isPresent()) {
       return commonType.get().equals(superType);
