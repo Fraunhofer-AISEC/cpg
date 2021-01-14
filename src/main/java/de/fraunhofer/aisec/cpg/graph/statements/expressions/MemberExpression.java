@@ -51,6 +51,8 @@ public class MemberExpression extends DeclaredReferenceExpression {
     this.base = base;
   }
 
+  private String operatorCode;
+
   @Override
   public String toString() {
     return new ToStringBuilder(this, Node.TO_STRING_STYLE)
@@ -74,5 +76,13 @@ public class MemberExpression extends DeclaredReferenceExpression {
   @Override
   public int hashCode() {
     return super.hashCode();
+  }
+
+  public void setOperatorCode(String operatorCode) {
+    this.operatorCode = operatorCode;
+  }
+
+  public String getOperatorCode() {
+    return this.operatorCode;
   }
 }

@@ -148,17 +148,17 @@ class DFGTest {
     DeclaredReferenceExpression a10 =
         TestUtils.findByPredicate(
                 TestUtils.subnodesOfType(result, DeclaredReferenceExpression.class),
-                dre -> dre.getLocation().getRegion().getStartLine() == 8)
+                dre -> TestUtils.compareLineFromLocationIfExists(dre, true, 8))
             .get(0);
     DeclaredReferenceExpression a11 =
         TestUtils.findByPredicate(
                 TestUtils.subnodesOfType(result, DeclaredReferenceExpression.class),
-                dre -> dre.getLocation().getRegion().getStartLine() == 11)
+                dre -> TestUtils.compareLineFromLocationIfExists(dre, true, 11))
             .get(0);
     DeclaredReferenceExpression a12 =
         TestUtils.findByPredicate(
                 TestUtils.subnodesOfType(result, DeclaredReferenceExpression.class),
-                dre -> dre.getLocation().getRegion().getStartLine() == 14)
+                dre -> TestUtils.compareLineFromLocationIfExists(dre, true, 14))
             .get(0);
 
     Literal<?> literal0 =

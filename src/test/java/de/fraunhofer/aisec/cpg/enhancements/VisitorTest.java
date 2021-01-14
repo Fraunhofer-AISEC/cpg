@@ -112,12 +112,12 @@ class VisitorTest extends BaseTest {
           }
         });
 
-    assertEquals(31, nodeList.size());
+    assertEquals(34, nodeList.size());
   }
 
   /** Visits only ReturnStatement nodes. */
   @Test
-  void testReturnStmtVisior() {
+  void testReturnStmtVisitor() {
     List<ReturnStatement> returnStmts = new ArrayList<>();
 
     RecordDeclaration recordDeclaration = namespace.getDeclarationAs(0, RecordDeclaration.class);

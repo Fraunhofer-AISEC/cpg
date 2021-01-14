@@ -331,16 +331,16 @@ public class JavaLanguageFrontend extends LanguageFrontend {
   public String getQualifiedNameFromImports(String className) {
     if (context != null && className != null) {
       List<String> potentialClassNames = new ArrayList<>();
-      String prefix = "";
+      StringBuilder prefix = new StringBuilder();
       for (String s : className.split("\\.")) {
         potentialClassNames.add(prefix + s);
-        prefix = prefix + s + ".";
+        prefix.append(s).append(".");
       }
       // see if we can make the qualifier more precise using the imports
       for (ImportDeclaration importDeclaration : context.getImports()) {
         for (String cn : potentialClassNames) {
           if (importDeclaration.getName().asString().endsWith("." + cn)) {
-            prefix = importDeclaration.getName().asString();
+            prefix = new StringBuilder(importDeclaration.getName().asString());
             return prefix.substring(0, prefix.lastIndexOf(cn)) + className;
           }
         }

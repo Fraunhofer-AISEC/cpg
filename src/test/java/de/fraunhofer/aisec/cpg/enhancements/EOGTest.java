@@ -449,7 +449,7 @@ class EOGTest extends BaseTest {
     // has a label which connects the break to the  while
     for (BreakStatement b : breaks) {
       if (b.getLabel() != null && b.getLabel().length() > 0) {
-        assertTrue(Util.eogConnect(EXITS, b, NODE, prints.get(2)));
+        assertTrue(Util.eogConnect(EXITS, b, SUBTREE, prints.get(2)));
       } else {
         assertTrue(Util.eogConnect(EXITS, b, SUBTREE, prints.get(1)));
       }
