@@ -173,11 +173,9 @@ class JavaLanguageFrontendTest extends BaseTest {
     assertEquals(TypeParser.createFrom("java.lang.String", true), s.getType());
 
     // should contain a single statement
-    StaticCallExpression sce = (StaticCallExpression) forEachStatement.getStatement();
+    var sce = (MemberCallExpression) forEachStatement.getStatement();
     assertNotNull(sce);
     assertEquals("println", sce.getName());
-    // TODO: this FQN looks weird but it seems that we resolve it like this all over the place
-    // this will fail once we chance the FQN to something real
     assertEquals("java.io.PrintStream.println", sce.getFqn());
   }
 
@@ -598,5 +596,43 @@ class JavaLanguageFrontendTest extends BaseTest {
     value = forField.getMembers().get(0);
     assertEquals(JavaLanguageFrontend.ANNOTATION_MEMBER_VALUE, value.getName());
     assertEquals("myString", ((Literal<String>) value.getValue()).getValue());
+  }
+
+  @Test
+  void testChainedCalls() throws Exception {
+    var file = new File("src/test/resources/Issue285.java");
+    var tu = TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true);
+    var record = (RecordDeclaration) tu.getDeclarationAs(0, RecordDeclaration.class);
+    assertNotNull(record);
+
+    var nodes = SubgraphWalker.flattenAST(record);
+
+    var request =
+        nodes.stream()
+            .filter(
+                node ->
+                    node instanceof VariableDeclaration
+                        && Objects.equals("request", node.getName()))
+            .map(node -> (VariableDeclaration) node)
+            .findFirst()
+            .orElse(null);
+    assertNotNull(request);
+
+    var initializer = request.getInitializer();
+    assertNotNull(initializer);
+
+    assertTrue(initializer instanceof MemberCallExpression);
+    var call = (MemberCallExpression) initializer;
+    assertEquals("get", call.getName());
+
+    var staticCall =
+        nodes.stream()
+            .filter(node -> node instanceof StaticCallExpression)
+            .map(node -> (StaticCallExpression) node)
+            .findFirst()
+            .orElse(null);
+    assertNotNull(staticCall);
+
+    assertEquals("doSomethingStatic", staticCall.getName());
   }
 }
