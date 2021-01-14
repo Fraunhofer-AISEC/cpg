@@ -239,6 +239,9 @@ public class CallResolver extends Pass {
           && ((HasType) member).getType() instanceof FunctionPointerType) {
         handleFunctionPointerCall(call, member);
         return;
+      } else {
+        handleMethodCall(curClass, call);
+        return;
       }
     }
 
