@@ -39,6 +39,7 @@ import de.fraunhofer.aisec.cpg.frontends.Handler;
 import de.fraunhofer.aisec.cpg.graph.*;
 import de.fraunhofer.aisec.cpg.graph.declarations.*;
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression;
+import de.fraunhofer.aisec.cpg.graph.types.ParameterizedType;
 import de.fraunhofer.aisec.cpg.graph.types.Type;
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser;
 import de.fraunhofer.aisec.cpg.passes.scopes.RecordScope;
@@ -163,10 +164,16 @@ public class DeclarationHandler
             .collect(Collectors.toList()));
 
     for (Parameter parameter : methodDecl.getParameters()) {
+      Type resolvedType =
+          functionDeclaration.getRecordDeclaration().getParameter(parameter.getType().toString());
+      if (resolvedType == null) {
+        resolvedType = this.lang.getTypeAsGoodAsPossible(parameter, parameter.resolve());
+      }
+
       ParamVariableDeclaration param =
           NodeBuilder.newMethodParameterIn(
               parameter.getNameAsString(),
-              this.lang.getTypeAsGoodAsPossible(parameter, parameter.resolve()),
+              resolvedType,
               parameter.isVarArgs(),
               parameter.toString());
 
@@ -219,6 +226,11 @@ public class DeclarationHandler
     recordDeclaration.setImplementedInterfaces(
         classInterDecl.getImplementedTypes().stream()
             .map(this.lang::getTypeAsGoodAsPossible)
+            .collect(Collectors.toList()));
+
+    recordDeclaration.setParameters(
+        classInterDecl.getTypeParameters().stream()
+            .map(t -> new ParameterizedType(t.getNameAsString()))
             .collect(Collectors.toList()));
 
     Map<Boolean, List<String>> partitioned =

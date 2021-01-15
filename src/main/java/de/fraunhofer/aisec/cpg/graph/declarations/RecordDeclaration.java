@@ -32,6 +32,7 @@ import de.fraunhofer.aisec.cpg.graph.DeclarationHolder;
 import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.SubGraph;
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
+import de.fraunhofer.aisec.cpg.graph.types.ParameterizedType;
 import de.fraunhofer.aisec.cpg.graph.types.Type;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -63,6 +64,9 @@ public class RecordDeclaration extends Declaration implements DeclarationHolder 
   @Relationship(value = "RECORDS", direction = "OUTGOING")
   @SubGraph("AST")
   private List<PropertyEdge<RecordDeclaration>> records = new ArrayList<>();
+
+  @Relationship(value = "PARAMETERS", direction = "OUTGOING")
+  private List<PropertyEdge<ParameterizedType>> parameters = new ArrayList<>();
 
   @Transient private List<Type> superClasses = new ArrayList<>();
   @Transient private List<Type> implementedInterfaces = new ArrayList<>();
@@ -122,6 +126,27 @@ public class RecordDeclaration extends Declaration implements DeclarationHolder 
 
   public void setFields(List<FieldDeclaration> fields) {
     this.fields = PropertyEdge.transformIntoOutgoingPropertyEdgeList(fields, this);
+  }
+
+  public List<ParameterizedType> getParameters() {
+    return unwrap(this.parameters);
+  }
+
+  public void setParameters(List<ParameterizedType> parameters) {
+    this.parameters = PropertyEdge.transformIntoOutgoingPropertyEdgeList(parameters, this);
+  }
+
+  public void addParameter(ParameterizedType parameter) {
+    addIfNotContains(this.parameters, parameter);
+  }
+
+  @Nullable
+  public Type getParameter(String name) {
+    return this.parameters.stream()
+        .map(PropertyEdge::getEnd)
+        .filter(f -> f.getName().equals(name))
+        .findAny()
+        .orElse(null);
   }
 
   public FieldDeclaration getThis() {
