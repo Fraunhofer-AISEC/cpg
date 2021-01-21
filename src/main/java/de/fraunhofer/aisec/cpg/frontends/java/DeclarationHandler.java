@@ -312,7 +312,16 @@ public class DeclarationHandler
             variable.getInitializer().map(this.lang.getExpressionHandler()::handle).orElse(null);
     Type type;
     try {
-      type = TypeParser.createFrom(joinedModifiers + variable.resolve().getType().describe(), true);
+      // Resolve type first with ParameterizedType
+      type =
+          this.lang
+              .getScopeManager()
+              .getCurrentRecord()
+              .getParameter(variable.resolve().getType().describe());
+      if (type == null) {
+        type =
+            TypeParser.createFrom(joinedModifiers + variable.resolve().getType().describe(), true);
+      }
     } catch (UnsolvedSymbolException | UnsupportedOperationException e) {
       String t = this.lang.recoverTypeFromUnsolvedException(e);
       if (t == null) {

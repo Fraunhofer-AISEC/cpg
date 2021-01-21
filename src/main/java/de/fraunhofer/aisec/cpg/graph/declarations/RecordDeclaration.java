@@ -66,6 +66,7 @@ public class RecordDeclaration extends Declaration implements DeclarationHolder 
   private List<PropertyEdge<RecordDeclaration>> records = new ArrayList<>();
 
   @Relationship(value = "PARAMETERS", direction = "OUTGOING")
+  @SubGraph("AST")
   private List<PropertyEdge<ParameterizedType>> parameters = new ArrayList<>();
 
   @Transient private List<Type> superClasses = new ArrayList<>();
