@@ -670,7 +670,10 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
       resolved = methodCallExpr.resolve();
       isStatic = resolved.isStatic();
       typeString = resolved.getReturnType().describe();
-    } catch (UnsolvedSymbolException | NoClassDefFoundError ignored) {
+    } catch (NoClassDefFoundError | RuntimeException ignored) {
+      // Unfortunately, JavaParser also throws a simple RuntimeException instead of an
+      // UnsolvedSymbolException within resolve() if it fails to resolve it under certain
+      // circumstances, we catch all that and continue on our own
       log.debug("Could not resolve method {}", methodCallExpr);
     }
 
