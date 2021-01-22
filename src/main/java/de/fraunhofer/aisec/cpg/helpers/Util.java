@@ -479,7 +479,7 @@ public class Util {
 
   /**
    * Connects the node <code>n</code> with the node <code>branchingExp</code> if present or with the
-   * node <node>branchingDecl</node>. The assumption is that only <code>branchingExp</code> or
+   * node <code>branchingDecl</code>. The assumption is that only <code>branchingExp</code> or
    * <code>branchingDecl</code> are present, e.g. C++.
    *
    * @param n
