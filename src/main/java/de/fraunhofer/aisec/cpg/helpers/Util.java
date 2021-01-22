@@ -451,4 +451,51 @@ public class Util {
     ENTRIES,
     EXITS;
   }
+
+  /**
+   * This function returns the set of adjacent DFG nodes that is contained in the nodes subgraph.
+   *
+   * @param n Node of interest
+   * @param incoming whether the node connected by an incoming or, if false, outgoing DFG edge
+   * @return
+   */
+  public static List<Node> getAdjacentDFGNodes(final Node n, boolean incoming) {
+
+    Set<Node> subnodes = SubgraphWalker.getAstChildren(n);
+    List<Node> adjacentNodes;
+    if (incoming) {
+      adjacentNodes =
+          subnodes.stream()
+              .filter(prevCandidate -> prevCandidate.getNextDFG().contains(n))
+              .collect(Collectors.toList());
+    } else {
+      adjacentNodes =
+          subnodes.stream()
+              .filter(nextCandidate -> nextCandidate.getPrevDFG().contains(n))
+              .collect(Collectors.toList());
+    }
+    return adjacentNodes;
+  }
+
+  /**
+   * Connects the node <code>n</code> with the node <code>branchingExp</code> if present or with the
+   * node <node>branchingDecl</node>. The assumption is that only <code>branchingExp</code> or
+   * <code>branchingDecl</code> are present, e.g. C++.
+   *
+   * @param n
+   * @param branchingExp
+   * @param branchingDecl
+   */
+  public static void addDFGEdgesForMutuallyExclusiveBranchingExpression(
+      Node n, Node branchingExp, Node branchingDecl) {
+    List<Node> conditionNodes = new ArrayList<>();
+
+    if (branchingExp != null) {
+      conditionNodes = new ArrayList<Node>();
+      conditionNodes.add(branchingExp);
+    } else if (branchingDecl != null) {
+      conditionNodes = getAdjacentDFGNodes(branchingDecl, true);
+    }
+    conditionNodes.forEach(c -> n.addPrevDFG(c));
+  }
 }
