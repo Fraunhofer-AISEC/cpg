@@ -239,11 +239,12 @@ public class NodeBuilder {
   }
 
   public static CallExpression newMemberCallExpression(
-      String name, String fqn, Node base, Node member, String code) {
+      String name, String fqn, Node base, Node member, String operatorCode, String code) {
     MemberCallExpression node = new MemberCallExpression();
     node.setName(name);
     node.setBase(base);
     node.setMember(member);
+    node.setOperatorCode(operatorCode);
     node.setCode(code);
     node.setFqn(fqn);
 
@@ -464,9 +465,10 @@ public class NodeBuilder {
   }
 
   public static MemberExpression newMemberExpression(
-      Expression base, Type memberType, String name, String code) {
+      Expression base, Type memberType, String name, String operatorCode, String code) {
     MemberExpression node = new MemberExpression();
     node.setBase(base);
+    node.setOperatorCode(operatorCode);
     node.setCode(code);
     node.setName(name);
     node.setType(memberType);

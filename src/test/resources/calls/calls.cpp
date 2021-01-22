@@ -18,6 +18,11 @@ class External: public SuperClass {
     void overridingTarget() override {}
 };
 
+class Invocation {
+  public:
+    void invoke() {}
+};
+
 class Calls: SuperClass {
   private:
     void innerTarget() {}
@@ -62,6 +67,9 @@ class Calls: SuperClass {
 };
 
 void main() {
+  // Invocation of method from function (main function not in a class)
+  Invocation i;
+  i.invoke();
   // dummy
   functionTarget(1, 2, 3);
 }
