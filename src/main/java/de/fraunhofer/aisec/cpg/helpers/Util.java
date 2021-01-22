@@ -491,7 +491,7 @@ public class Util {
     List<Node> conditionNodes = new ArrayList<>();
 
     if (branchingExp != null) {
-      conditionNodes = new ArrayList<Node>();
+      conditionNodes = new ArrayList<>();
       conditionNodes.add(branchingExp);
     } else if (branchingDecl != null) {
       conditionNodes = getAdjacentDFGNodes(branchingDecl, true);
