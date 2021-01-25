@@ -33,7 +33,7 @@ plugins {
     signing
     `maven-publish`
 
-    id("org.sonarqube") version "3.0"
+    id("org.sonarqube") version "3.1"
     id("com.diffplug.spotless") version "5.9.0"
     id("com.github.johnrengelman.shadow") version "6.1.0"
     kotlin("jvm") version "1.4.20"
@@ -153,10 +153,10 @@ java {
 
 dependencies {
     api("org.apache.commons:commons-lang3:3.11")
-    api("org.neo4j:neo4j-ogm-core:3.2.10")
+    api("org.neo4j:neo4j-ogm-core:3.2.19")
     api("org.apache.logging.log4j:log4j-slf4j18-impl:2.14.0")
     api("org.slf4j:jul-to-slf4j:1.8.0-beta4")
-    api("com.github.javaparser:javaparser-symbol-solver-core:3.18.0")
+    api("com.github.javaparser:javaparser-symbol-solver-core:3.17.0")
 
     // Eclipse dependencies
     api("org.eclipse.platform:org.eclipse.core.runtime:3.18.0")
@@ -164,9 +164,6 @@ dependencies {
 
     // CDT
     api("org.eclipse.cdt:core:6.11.1.202006011430")
-
-
-    api("org.neo4j:neo4j-ogm-bolt-driver:3.2.19")
 
     implementation(platform("org.jetbrains.kotlin:kotlin-bom"))
     implementation("org.jetbrains.kotlin:kotlin-stdlib")
@@ -177,7 +174,7 @@ dependencies {
     testImplementation("org.junit.jupiter:junit-jupiter-api:5.7.0")
     testImplementation("org.junit.jupiter:junit-jupiter-params:5.7.0")
 
-    testImplementation("org.mockito:mockito-core:3.7.0")
+    testImplementation("org.mockito:mockito-core:3.7.7")
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.7.0")
 }
 
