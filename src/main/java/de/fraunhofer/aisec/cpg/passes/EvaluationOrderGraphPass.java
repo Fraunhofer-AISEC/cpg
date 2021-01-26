@@ -37,6 +37,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.*;
 import de.fraunhofer.aisec.cpg.graph.types.Type;
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser;
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker;
+import de.fraunhofer.aisec.cpg.helpers.Util;
 import de.fraunhofer.aisec.cpg.passes.scopes.*;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -781,7 +782,10 @@ public class EvaluationOrderGraphPass extends Pass {
     createEOG(doStatement.getStatement());
 
     createEOG(doStatement.getCondition());
+
+    doStatement.addPrevDFG(doStatement.getCondition());
     pushToEOG(doStatement); // To have semantic information after the condition evaluation
+
     connectCurrentToLoopStart();
     LoopScope currentLoopScope = (LoopScope) lang.getScopeManager().leaveScope(doStatement);
     if (currentLoopScope != null) {
@@ -798,6 +802,7 @@ public class EvaluationOrderGraphPass extends Pass {
     createEOG(forEachStatement.getIterable());
     createEOG(forEachStatement.getVariable());
 
+    forEachStatement.addPrevDFG(forEachStatement.getVariable());
     pushToEOG(forEachStatement); // To have semantic information after the variable declaration
 
     List<Node> tmpEOGNodes = new ArrayList<>(currentEOG);
@@ -818,6 +823,7 @@ public class EvaluationOrderGraphPass extends Pass {
   }
 
   private void handleForStatement(@NonNull Node node) {
+
     ForStatement forStatement = (ForStatement) node;
     lang.getScopeManager().enterScope(forStatement);
     ForStatement forStmt = forStatement;
@@ -825,6 +831,9 @@ public class EvaluationOrderGraphPass extends Pass {
     createEOG(forStmt.getInitializerStatement());
     createEOG(forStmt.getConditionDeclaration());
     createEOG(forStmt.getCondition());
+
+    Util.addDFGEdgesForMutuallyExclusiveBranchingExpression(
+        forStatement, forStatement.getCondition(), forStatement.getConditionDeclaration());
 
     pushToEOG(forStatement); // To have semantic information after the condition evaluation
 
@@ -852,6 +861,9 @@ public class EvaluationOrderGraphPass extends Pass {
     createEOG(ifStatement.getInitializerStatement());
     createEOG(ifStatement.getConditionDeclaration());
     createEOG(ifStatement.getCondition());
+
+    Util.addDFGEdgesForMutuallyExclusiveBranchingExpression(
+        ifStatement, ifStatement.getCondition(), ifStatement.getConditionDeclaration());
 
     pushToEOG(ifStatement); // To have semantic information after the condition evaluation
     List<Node> openConditionEOGs = new ArrayList<>(currentEOG);
@@ -882,6 +894,9 @@ public class EvaluationOrderGraphPass extends Pass {
     createEOG(switchStatement.getSelectorDeclaration());
 
     createEOG(switchStatement.selector);
+
+    Util.addDFGEdgesForMutuallyExclusiveBranchingExpression(
+        switchStatement, switchStatement.getSelector(), switchStatement.getSelectorDeclaration());
 
     pushToEOG(switchStatement); // To have semantic information after the condition evaluation
 
@@ -919,6 +934,9 @@ public class EvaluationOrderGraphPass extends Pass {
     createEOG(whileStatement.getConditionDeclaration());
 
     createEOG(whileStatement.getCondition());
+
+    Util.addDFGEdgesForMutuallyExclusiveBranchingExpression(
+        whileStatement, whileStatement.getCondition(), whileStatement.getConditionDeclaration());
 
     pushToEOG(whileStatement); // To have semantic information after the condition evaluation
 
