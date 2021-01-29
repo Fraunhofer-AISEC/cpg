@@ -23,16 +23,13 @@ class QueryTest {
     @Test
     fun testQueryExistenceOfEdge() {
         val query = parser.parse("MATCH (n:FunctionDeclaration)-[:PARAMETERS]->(m:ParamVariableDeclaration) RETURN n", null) as Query
-        var nodes = listOf<Node>()
 
-        var variables = mutableMapOf<String, MutableList<Node>>()
-
-        nodes = db.executeQuery(query)
+        var nodes: List<Node> = db.executeQuery(query)
 
         assertEquals(2, nodes.size)
 
         var b: Benchmark = Benchmark(QueryTest::class.java, "something else - stream version")
-        variables = mutableMapOf()
+        val variables: MutableMap<String, MutableList<Node>> = mutableMapOf()
         variables["n"] = mutableListOf()
         variables["m"] = mutableListOf()
 
@@ -44,7 +41,7 @@ class QueryTest {
                     val params = parameters.parallelStream().filter { it is ParamVariableDeclaration }.collect(Collectors.toList())
 
                     variables["m"]?.addAll(params)
-                    !params.isEmpty()
+                    params.isNotEmpty()
                 }
                 .collect(Collectors.toList())
 
@@ -91,9 +88,6 @@ class QueryTest {
         val nodes = db.executeQuery(query)
 
         assertEquals(2, nodes.size)
-
-
-
     }
 
     @Test
