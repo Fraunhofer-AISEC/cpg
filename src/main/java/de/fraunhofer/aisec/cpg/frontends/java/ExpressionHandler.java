@@ -363,10 +363,10 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
     try {
       ResolvedValueDeclaration symbol = fieldAccessExpr.resolve();
       fieldType =
-          this.lang
-              .getScopeManager()
-              .getCurrentRecord()
-              .getParameter(symbol.asField().getType().describe());
+          TypeManager.getInstance()
+              .getTypeParameter(
+                  this.lang.getScopeManager().getCurrentRecord(),
+                  symbol.asField().getType().describe());
       if (fieldType == null) {
         fieldType = TypeParser.createFrom(symbol.asField().getType().describe(), true);
       }
@@ -539,10 +539,9 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
       } else {
         // Resolve type first with ParameterizedType
         Type type =
-            this.lang
-                .getScopeManager()
-                .getCurrentRecord()
-                .getParameter(symbol.getType().describe());
+            TypeManager.getInstance()
+                .getTypeParameter(
+                    this.lang.getScopeManager().getCurrentRecord(), symbol.getType().describe());
 
         if (type == null) {
           type = TypeParser.createFrom(symbol.getType().describe(), true);

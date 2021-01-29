@@ -658,12 +658,13 @@ class TypeTests extends BaseTest {
     Path topLevel = Path.of("src", "test", "resources", "types");
     List<TranslationUnitDeclaration> result = TestUtils.analyze("java", topLevel, true);
 
-    ParameterizedType typeT = subnodesOfType(result, ParameterizedType.class).get(0);
-
     // Check Parameterized
     List<RecordDeclaration> recordDeclarations = subnodesOfType(result, RecordDeclaration.class);
     RecordDeclaration recordDeclarationBox = findByUniqueName(recordDeclarations, "Box");
-    assertEquals(typeT, recordDeclarationBox.getParameter("T"));
+
+    ParameterizedType typeT = TypeManager.getInstance().getTypeParameter(recordDeclarationBox, "T");
+
+    assertEquals(typeT, TypeManager.getInstance().getTypeParameter(recordDeclarationBox, "T"));
 
     // Type of field t
     List<FieldDeclaration> fieldDeclarations = subnodesOfType(result, FieldDeclaration.class);

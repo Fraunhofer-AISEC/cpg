@@ -362,7 +362,9 @@ public class JavaLanguageFrontend extends LanguageFrontend {
     try {
       // Resolve type first with ParameterizedType
       de.fraunhofer.aisec.cpg.graph.types.Type type =
-          scopeManager.getCurrentRecord().getParameter(resolved.getReturnType().describe());
+          TypeManager.getInstance()
+              .getTypeParameter(
+                  scopeManager.getCurrentRecord(), resolved.getReturnType().describe());
       if (type == null) {
         type = TypeParser.createFrom(resolved.getReturnType().describe(), true);
       }

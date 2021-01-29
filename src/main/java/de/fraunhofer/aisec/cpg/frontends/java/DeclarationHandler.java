@@ -165,7 +165,9 @@ public class DeclarationHandler
 
     for (Parameter parameter : methodDecl.getParameters()) {
       Type resolvedType =
-          functionDeclaration.getRecordDeclaration().getParameter(parameter.getType().toString());
+          TypeManager.getInstance()
+              .getTypeParameter(
+                  functionDeclaration.getRecordDeclaration(), parameter.getType().toString());
       if (resolvedType == null) {
         resolvedType = this.lang.getTypeAsGoodAsPossible(parameter, parameter.resolve());
       }
@@ -228,10 +230,12 @@ public class DeclarationHandler
             .map(this.lang::getTypeAsGoodAsPossible)
             .collect(Collectors.toList()));
 
-    recordDeclaration.setParameters(
-        classInterDecl.getTypeParameters().stream()
-            .map(t -> new ParameterizedType(t.getNameAsString()))
-            .collect(Collectors.toList()));
+    TypeManager.getInstance()
+        .addTypeParameter(
+            recordDeclaration,
+            classInterDecl.getTypeParameters().stream()
+                .map(t -> new ParameterizedType(t.getNameAsString()))
+                .collect(Collectors.toList()));
 
     Map<Boolean, List<String>> partitioned =
         this.lang.getContext().getImports().stream()
@@ -314,10 +318,10 @@ public class DeclarationHandler
     try {
       // Resolve type first with ParameterizedType
       type =
-          this.lang
-              .getScopeManager()
-              .getCurrentRecord()
-              .getParameter(variable.resolve().getType().describe());
+          TypeManager.getInstance()
+              .getTypeParameter(
+                  this.lang.getScopeManager().getCurrentRecord(),
+                  variable.resolve().getType().describe());
       if (type == null) {
         type =
             TypeParser.createFrom(joinedModifiers + variable.resolve().getType().describe(), true);

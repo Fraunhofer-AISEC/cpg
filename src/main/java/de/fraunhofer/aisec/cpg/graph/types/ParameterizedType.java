@@ -1,7 +1,7 @@
 package de.fraunhofer.aisec.cpg.graph.types;
 /**
- * ParameterizedTypes describe types, that are passed as Paramters to Classes
- * E.g. uninitialized generics in the graph are represented as ParameterizedTypes
+ * ParameterizedTypes describe types, that are passed as Paramters to Classes E.g. uninitialized
+ * generics in the graph are represented as ParameterizedTypes
  */
 public class ParameterizedType extends Type {
 

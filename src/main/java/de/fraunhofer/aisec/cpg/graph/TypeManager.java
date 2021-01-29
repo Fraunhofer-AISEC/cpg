@@ -63,6 +63,9 @@ public class TypeManager {
   @NonNull private Map<String, RecordDeclaration> typeToRecord = new HashMap<>();
 
   @NonNull
+  private Map<RecordDeclaration, List<ParameterizedType>> recordToTypeParameters = new HashMap<>();
+
+  @NonNull
   private Map<Type, List<Type>> typeState =
       new HashMap<>(); // Stores all the unique types ObjectType as Key and Reference-/PointerTypes
   // as Values
@@ -73,6 +76,23 @@ public class TypeManager {
 
   public static void reset() {
     INSTANCE = new TypeManager();
+  }
+
+  public ParameterizedType getTypeParameter(RecordDeclaration recordDeclaration, String name) {
+    if (this.recordToTypeParameters.containsKey(recordDeclaration)) {
+      for (ParameterizedType parameterizedType :
+          this.recordToTypeParameters.get(recordDeclaration)) {
+        if (parameterizedType.getName().equals(name)) {
+          return parameterizedType;
+        }
+      }
+    }
+    return null;
+  }
+
+  public void addTypeParameter(
+      RecordDeclaration recordDeclaration, List<ParameterizedType> typeParameters) {
+    this.recordToTypeParameters.put(recordDeclaration, typeParameters);
   }
 
   @NonNull
