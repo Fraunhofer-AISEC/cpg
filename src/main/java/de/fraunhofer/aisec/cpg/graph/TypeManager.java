@@ -62,6 +62,11 @@ public class TypeManager {
 
   @NonNull private Map<String, RecordDeclaration> typeToRecord = new HashMap<>();
 
+  /**
+   * Stores the relationship between parameterized RecordDeclarations (e.g. Classes using Generics)
+   * to the ParameterizedType to be able to resolve the Type of the fields, since ParameterizedTypes
+   * are unique to the RecordDeclaration and are not merged.
+   */
   @NonNull
   private Map<RecordDeclaration, List<ParameterizedType>> recordToTypeParameters = new HashMap<>();
 
