@@ -5,10 +5,12 @@ import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
+import de.fraunhofer.aisec.cpg.passes.CallResolver
 import org.neo4j.ogm.annotation.Relationship
 import org.opencypher.v9_0.ast.*
 import org.opencypher.v9_0.expressions.*
 import org.opencypher.v9_0.parser.CypherParser
+import org.slf4j.LoggerFactory
 import scala.Option
 import java.io.Closeable
 import java.util.function.Predicate
@@ -38,7 +40,15 @@ val TranslationResult.graph: Graph
         return Graph(nodes)
     }
 
-
+/**
+ * A query context represents an interface between an openCypher query and the actual graph.
+ * It contains of different handler functions, belonging to different language constructs in
+ * the openCypher language, such as MATCH or RETURN. These handler functions basically execute
+ * the query on the graph.
+ *
+ * Please see https://github.com/Fraunhofer-AISEC/cpg/pull/276 for an overview of currently
+ * supported openCypher features.
+ */
 @ExperimentalGraph
 class QueryContext constructor(val graph: Graph) {
     val results = mutableMapOf<Variable, MutableList<Node>>()
@@ -285,6 +295,8 @@ class QueryContext constructor(val graph: Graph) {
 @ExperimentalGraph
 class Graph(var nodes: List<Node>) {
 
+    private val logger = LoggerFactory.getLogger(Graph::class.java)
+
     private val parser = CypherParser()
 
     fun size(): Int {
@@ -321,7 +333,7 @@ class Graph(var nodes: List<Node>) {
             }
         }
 
-        println("Query took ${b.duration.milliseconds}")
+        logger.info("Query took ${b.duration.milliseconds}")
 
         return list
     }

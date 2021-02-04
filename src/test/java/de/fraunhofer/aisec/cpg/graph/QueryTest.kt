@@ -77,8 +77,6 @@ class QueryTest {
 
         b.stop()
         println("Experimental query2 took: ${b.duration.milliseconds}")
-
-
     }
 
     @Test
