@@ -249,8 +249,18 @@ public class VariableUsageResolver extends Pass {
         DeclaredReferenceExpression base = (DeclaredReferenceExpression) memberExpression.getBase();
         if (lang instanceof JavaLanguageFrontend && base.getName().equals("super")) {
           if (curClass != null && !curClass.getSuperClasses().isEmpty()) {
-            baseTarget = recordMap.get(curClass.getSuperClasses().get(0)).getThis();
-            base.setRefersTo(baseTarget);
+            var superType = curClass.getSuperClasses().get(0);
+            var superRecord = recordMap.get(superType);
+
+            if (superRecord == null) {
+              log.error(
+                  "Could not find referring super type {} for {} in the record map. This is a bit odd because they should have been parsed as well. Will set the super type to java.lang.Object",
+                  superType.getTypeName(), curClass.getName());
+              base.setType(TypeParser.createFrom(Object.class.getName(), true));
+            } else {
+              baseTarget = superRecord.getThis();
+              base.setRefersTo(baseTarget);
+            }
           } else {
             // no explicit super type -> java.lang.Object
             Type objectType = TypeParser.createFrom(Object.class.getName(), true);
