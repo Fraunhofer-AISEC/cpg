@@ -165,17 +165,20 @@ dependencies {
     // CDT
     api("org.eclipse.cdt:core:6.11.1.202006011430")
 
+    // openCypher
+    api("org.opencypher:parser-9.0:9.0.20190305")
+
     implementation(platform("org.jetbrains.kotlin:kotlin-bom"))
     implementation("org.jetbrains.kotlin:kotlin-stdlib")
 
     // JUnit
     testImplementation("org.jetbrains.kotlin:kotlin-test")
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
-    testImplementation("org.junit.jupiter:junit-jupiter-api:5.7.0")
-    testImplementation("org.junit.jupiter:junit-jupiter-params:5.7.0")
+    testImplementation("org.junit.jupiter:junit-jupiter-api:5.7.1")
+    testImplementation("org.junit.jupiter:junit-jupiter-params:5.7.1")
 
     testImplementation("org.mockito:mockito-core:3.7.7")
-    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.7.0")
+    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.7.1")
 }
 
 spotless {
