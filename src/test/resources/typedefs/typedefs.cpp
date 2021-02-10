@@ -74,6 +74,9 @@ ullong someUllong2;
 typedef long type;
 type typeMemberOutside;
 
+// sample typedef with tabs
+typedef uint8		test;
+
 struct add_const {
     typedef const int type;
     const int typeMember1;
