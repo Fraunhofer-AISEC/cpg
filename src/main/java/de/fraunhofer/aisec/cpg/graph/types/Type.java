@@ -309,7 +309,8 @@ public abstract class Type extends Node {
     return this instanceof ObjectType
         || this instanceof UnknownType
         || this instanceof FunctionPointerType
-        || this instanceof IncompleteType;
+        || this instanceof IncompleteType
+        || this instanceof ParameterizedType;
   }
 
   /**

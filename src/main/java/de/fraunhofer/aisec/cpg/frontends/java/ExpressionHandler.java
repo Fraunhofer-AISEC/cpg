@@ -362,7 +362,14 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
     Type fieldType;
     try {
       ResolvedValueDeclaration symbol = fieldAccessExpr.resolve();
-      fieldType = TypeParser.createFrom(symbol.asField().getType().describe(), true);
+      fieldType =
+          TypeManager.getInstance()
+              .getTypeParameter(
+                  this.lang.getScopeManager().getCurrentRecord(),
+                  symbol.asField().getType().describe());
+      if (fieldType == null) {
+        fieldType = TypeParser.createFrom(symbol.asField().getType().describe(), true);
+      }
     } catch (RuntimeException | NoClassDefFoundError ex) {
       String typeString = this.lang.recoverTypeFromUnsolvedException(ex);
       if (typeString != null) {
@@ -530,7 +537,15 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
               handle(fieldAccessExpr);
         }
       } else {
-        Type type = TypeParser.createFrom(symbol.getType().describe(), true);
+        // Resolve type first with ParameterizedType
+        Type type =
+            TypeManager.getInstance()
+                .getTypeParameter(
+                    this.lang.getScopeManager().getCurrentRecord(), symbol.getType().describe());
+
+        if (type == null) {
+          type = TypeParser.createFrom(symbol.getType().describe(), true);
+        }
 
         DeclaredReferenceExpression declaredReferenceExpression =
             NodeBuilder.newDeclaredReferenceExpression(symbol.getName(), type, nameExpr.toString());
@@ -681,21 +696,12 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
     // thus, only because the scope is present, this is not automatically a member call
     if (o.isPresent()) {
       Expression scope = o.get();
-      // We need to check if there is a value decl corresponding to the base. This cannot easily be
-      // done, but we can try to resolve the Expression, and if the JavaParser does not know about
-      // it, this could be a static call, but it could also be that the base is a further member
-      // call
       String scopeName = null;
 
-      try {
-        if (scope instanceof NameExpr) {
-          scopeName = ((NameExpr) scope).getNameAsString();
-          ((NameExpr) scope).resolve();
-        } else if (scope instanceof SuperExpr) {
-          scopeName = scope.toString();
-        }
-      } catch (UnsolvedSymbolException | NoClassDefFoundError ignored) {
-        // ignore
+      if (scope instanceof NameExpr) {
+        scopeName = ((NameExpr) scope).getNameAsString();
+      } else if (scope instanceof SuperExpr) {
+        scopeName = scope.toString();
       }
 
       Statement base = handle(scope);
