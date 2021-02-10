@@ -360,7 +360,15 @@ public class JavaLanguageFrontend extends LanguageFrontend {
   public de.fraunhofer.aisec.cpg.graph.types.Type getReturnTypeAsGoodAsPossible(
       NodeWithType nodeWithType, ResolvedMethodDeclaration resolved) {
     try {
-      return TypeParser.createFrom(resolved.getReturnType().describe(), true);
+      // Resolve type first with ParameterizedType
+      de.fraunhofer.aisec.cpg.graph.types.Type type =
+          TypeManager.getInstance()
+              .getTypeParameter(
+                  scopeManager.getCurrentRecord(), resolved.getReturnType().describe());
+      if (type == null) {
+        type = TypeParser.createFrom(resolved.getReturnType().describe(), true);
+      }
+      return type;
     } catch (RuntimeException | NoClassDefFoundError ex) {
       return getTypeFromImportIfPossible(nodeWithType.getType());
     }

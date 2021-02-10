@@ -362,7 +362,14 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
     Type fieldType;
     try {
       ResolvedValueDeclaration symbol = fieldAccessExpr.resolve();
-      fieldType = TypeParser.createFrom(symbol.asField().getType().describe(), true);
+      fieldType =
+          TypeManager.getInstance()
+              .getTypeParameter(
+                  this.lang.getScopeManager().getCurrentRecord(),
+                  symbol.asField().getType().describe());
+      if (fieldType == null) {
+        fieldType = TypeParser.createFrom(symbol.asField().getType().describe(), true);
+      }
     } catch (RuntimeException | NoClassDefFoundError ex) {
       String typeString = this.lang.recoverTypeFromUnsolvedException(ex);
       if (typeString != null) {
@@ -530,7 +537,15 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
               handle(fieldAccessExpr);
         }
       } else {
-        Type type = TypeParser.createFrom(symbol.getType().describe(), true);
+        // Resolve type first with ParameterizedType
+        Type type =
+            TypeManager.getInstance()
+                .getTypeParameter(
+                    this.lang.getScopeManager().getCurrentRecord(), symbol.getType().describe());
+
+        if (type == null) {
+          type = TypeParser.createFrom(symbol.getType().describe(), true);
+        }
 
         DeclaredReferenceExpression declaredReferenceExpression =
             NodeBuilder.newDeclaredReferenceExpression(symbol.getName(), type, nameExpr.toString());

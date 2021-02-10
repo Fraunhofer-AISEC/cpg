@@ -39,6 +39,7 @@ import de.fraunhofer.aisec.cpg.frontends.Handler;
 import de.fraunhofer.aisec.cpg.graph.*;
 import de.fraunhofer.aisec.cpg.graph.declarations.*;
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression;
+import de.fraunhofer.aisec.cpg.graph.types.ParameterizedType;
 import de.fraunhofer.aisec.cpg.graph.types.Type;
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser;
 import de.fraunhofer.aisec.cpg.passes.scopes.RecordScope;
@@ -163,10 +164,18 @@ public class DeclarationHandler
             .collect(Collectors.toList()));
 
     for (Parameter parameter : methodDecl.getParameters()) {
+      Type resolvedType =
+          TypeManager.getInstance()
+              .getTypeParameter(
+                  functionDeclaration.getRecordDeclaration(), parameter.getType().toString());
+      if (resolvedType == null) {
+        resolvedType = this.lang.getTypeAsGoodAsPossible(parameter, parameter.resolve());
+      }
+
       ParamVariableDeclaration param =
           NodeBuilder.newMethodParameterIn(
               parameter.getNameAsString(),
-              this.lang.getTypeAsGoodAsPossible(parameter, parameter.resolve()),
+              resolvedType,
               parameter.isVarArgs(),
               parameter.toString());
 
@@ -220,6 +229,13 @@ public class DeclarationHandler
         classInterDecl.getImplementedTypes().stream()
             .map(this.lang::getTypeAsGoodAsPossible)
             .collect(Collectors.toList()));
+
+    TypeManager.getInstance()
+        .addTypeParameter(
+            recordDeclaration,
+            classInterDecl.getTypeParameters().stream()
+                .map(t -> new ParameterizedType(t.getNameAsString()))
+                .collect(Collectors.toList()));
 
     Map<Boolean, List<String>> partitioned =
         this.lang.getContext().getImports().stream()
@@ -300,7 +316,16 @@ public class DeclarationHandler
             variable.getInitializer().map(this.lang.getExpressionHandler()::handle).orElse(null);
     Type type;
     try {
-      type = TypeParser.createFrom(joinedModifiers + variable.resolve().getType().describe(), true);
+      // Resolve type first with ParameterizedType
+      type =
+          TypeManager.getInstance()
+              .getTypeParameter(
+                  this.lang.getScopeManager().getCurrentRecord(),
+                  variable.resolve().getType().describe());
+      if (type == null) {
+        type =
+            TypeParser.createFrom(joinedModifiers + variable.resolve().getType().describe(), true);
+      }
     } catch (UnsolvedSymbolException | UnsupportedOperationException e) {
       String t = this.lang.recoverTypeFromUnsolvedException(e);
       if (t == null) {
