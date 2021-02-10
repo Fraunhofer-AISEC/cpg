@@ -62,6 +62,14 @@ public class TypeManager {
 
   @NonNull private Map<String, RecordDeclaration> typeToRecord = new HashMap<>();
 
+  /**
+   * Stores the relationship between parameterized RecordDeclarations (e.g. Classes using Generics)
+   * to the ParameterizedType to be able to resolve the Type of the fields, since ParameterizedTypes
+   * are unique to the RecordDeclaration and are not merged.
+   */
+  @NonNull
+  private Map<RecordDeclaration, List<ParameterizedType>> recordToTypeParameters = new HashMap<>();
+
   @NonNull
   private Map<Type, List<Type>> typeState =
       new HashMap<>(); // Stores all the unique types ObjectType as Key and Reference-/PointerTypes
@@ -73,6 +81,23 @@ public class TypeManager {
 
   public static void reset() {
     INSTANCE = new TypeManager();
+  }
+
+  public ParameterizedType getTypeParameter(RecordDeclaration recordDeclaration, String name) {
+    if (this.recordToTypeParameters.containsKey(recordDeclaration)) {
+      for (ParameterizedType parameterizedType :
+          this.recordToTypeParameters.get(recordDeclaration)) {
+        if (parameterizedType.getName().equals(name)) {
+          return parameterizedType;
+        }
+      }
+    }
+    return null;
+  }
+
+  public void addTypeParameter(
+      RecordDeclaration recordDeclaration, List<ParameterizedType> typeParameters) {
+    this.recordToTypeParameters.put(recordDeclaration, typeParameters);
   }
 
   @NonNull
