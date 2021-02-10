@@ -421,7 +421,7 @@ public class TypeManager {
     } else if (Util.containsOnOuterLevel(cleaned, ',')) {
       handleMultipleAliases(rawCode, cleaned);
     } else {
-      List<String> parts = Util.splitLeavingParenthesisContents(cleaned, " \r\n");
+      List<String> parts = Util.splitLeavingParenthesisContents(cleaned, " \t\r\n");
       if (parts.size() < 2) {
         log.error("Typedef contains no whitespace to split on: {}", rawCode);
         return;
