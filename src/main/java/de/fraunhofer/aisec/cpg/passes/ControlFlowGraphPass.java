@@ -73,7 +73,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  *     EvaluationOrderGraphPass}.
  * @author kweiss
  */
-@Deprecated
+@Deprecated(since = "3.4", forRemoval = true)
 public class ControlFlowGraphPass extends Pass {
   private List<Statement> remaining = new CopyOnWriteArrayList<>();
   /** For keeping track of nested break/continue scopes. */

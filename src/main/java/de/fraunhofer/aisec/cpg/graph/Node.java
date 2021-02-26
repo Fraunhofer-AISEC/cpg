@@ -91,7 +91,7 @@ public class Node implements IVisitable<Node>, Persistable {
    * outgoing control flow edges.
    * @deprecated  This Edge-Type is deprecated as it is less precise then the {@link Node#nextEOG}
    */
-  @Deprecated
+  @Deprecated(since = "3.4", forRemoval = true)
   @NonNull
   @Relationship(value = "CFG", direction = "OUTGOING")
   protected List<PropertyEdge<Node>> nextCFG = new ArrayList<>();
@@ -250,7 +250,7 @@ public class Node implements IVisitable<Node>, Persistable {
   /**
    * @deprecated  This Edge-Type is deprecated as it is less precise then the {@link Node#nextEOG}
    */
-  @Deprecated
+  @Deprecated(since = "3.4", forRemoval = true)
   public void addNextCFG(Node node) {
     var propertyEdge = new PropertyEdge<>(this, node);
     propertyEdge.addProperty(Properties.INDEX, this.nextCFG.size());
@@ -261,7 +261,7 @@ public class Node implements IVisitable<Node>, Persistable {
    * outgoing control flow edges.
    * @deprecated  This Edge-Type is deprecated as it is less precise then the {@link Node#nextEOG}
    */
-  @Deprecated
+  @Deprecated(since = "3.4", forRemoval = true)
   public void addNextCFG(Collection<? extends Node> collection) {
     for (Node n : collection) {
       addNextCFG(n);
