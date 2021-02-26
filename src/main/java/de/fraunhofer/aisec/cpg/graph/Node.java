@@ -87,7 +87,11 @@ public class Node implements IVisitable<Node>, Persistable {
   @NonNull
   protected List<PropertyEdge<Node>> nextEOG = new ArrayList<>();
 
-  /** outgoing control flow edges. */
+  /**
+   * outgoing control flow edges. This Edge-Type is deprecated as it is less precise then the
+   * EOG-Edges
+   */
+  @Deprecated
   @NonNull
   @Relationship(value = "CFG", direction = "OUTGOING")
   protected List<PropertyEdge<Node>> nextCFG = new ArrayList<>();
@@ -243,12 +247,14 @@ public class Node implements IVisitable<Node>, Persistable {
     return unwrap(this.nextCFG);
   }
 
+  @Deprecated
   public void addNextCFG(Node node) {
     var propertyEdge = new PropertyEdge<>(this, node);
     propertyEdge.addProperty(Properties.INDEX, this.nextCFG.size());
     this.nextCFG.add(propertyEdge);
   }
 
+  @Deprecated
   public void addNextCFG(Collection<? extends Node> collection) {
     for (Node n : collection) {
       addNextCFG(n);

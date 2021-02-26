@@ -68,7 +68,12 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  * </ul>
  *
  * @author julian
+ *     <p>
+ * @deprecated This Edge-Type is deprecated as it is conceptually less precise then the {@link
+ *     EvaluationOrderGraphPass}.
+ * @author kweiss
  */
+@Deprecated
 public class ControlFlowGraphPass extends Pass {
   private List<Statement> remaining = new CopyOnWriteArrayList<>();
   /** For keeping track of nested break/continue scopes. */
