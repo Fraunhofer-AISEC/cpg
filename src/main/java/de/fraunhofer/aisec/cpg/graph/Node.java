@@ -243,6 +243,10 @@ public class Node implements IVisitable<Node>, Persistable {
   }
 
   @NonNull
+  /**
+   * @deprecated  This Edge-Type is deprecated as it is less precise then the {@link Node#nextEOG}
+   */
+  @Deprecated(since = "3.4", forRemoval = true)
   public List<Node> getNextCFG() {
     return unwrap(this.nextCFG);
   }
