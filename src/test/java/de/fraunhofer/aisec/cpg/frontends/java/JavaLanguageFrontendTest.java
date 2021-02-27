@@ -26,44 +26,15 @@
 
 package de.fraunhofer.aisec.cpg.frontends.java;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 import de.fraunhofer.aisec.cpg.BaseTest;
 import de.fraunhofer.aisec.cpg.TestUtils;
 import de.fraunhofer.aisec.cpg.TranslationConfiguration;
 import de.fraunhofer.aisec.cpg.graph.Node;
-import de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDeclaration;
-import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration;
-import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration;
-import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration;
-import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration;
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration;
-import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration;
-import de.fraunhofer.aisec.cpg.graph.statements.CaseStatement;
-import de.fraunhofer.aisec.cpg.graph.statements.CatchClause;
-import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement;
-import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement;
-import de.fraunhofer.aisec.cpg.graph.statements.DefaultStatement;
-import de.fraunhofer.aisec.cpg.graph.statements.ForEachStatement;
-import de.fraunhofer.aisec.cpg.graph.statements.ForStatement;
-import de.fraunhofer.aisec.cpg.graph.statements.Statement;
-import de.fraunhofer.aisec.cpg.graph.statements.SwitchStatement;
-import de.fraunhofer.aisec.cpg.graph.statements.TryStatement;
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.ArrayCreationExpression;
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.ArraySubscriptionExpression;
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CastExpression;
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression;
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.ExpressionList;
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.InitializerListExpression;
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal;
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression;
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression;
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.StaticCallExpression;
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator;
+import de.fraunhofer.aisec.cpg.graph.declarations.*;
+import de.fraunhofer.aisec.cpg.graph.statements.*;
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.*;
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser;
 import de.fraunhofer.aisec.cpg.helpers.NodeComparator;
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker;
@@ -634,5 +605,34 @@ class JavaLanguageFrontendTest extends BaseTest {
     assertNotNull(staticCall);
 
     assertEquals("doSomethingStatic", staticCall.getName());
+  }
+
+  @Test
+  void testSuperFieldUsage() throws Exception {
+    var file1 = new File("src/test/resources/fix-328/Cat.java");
+    var file2 = new File("src/test/resources/fix-328/Animal.java");
+    var tu =
+        TestUtils.analyzeAndGetFirstTU(List.of(file1, file2), file1.getParentFile().toPath(), true);
+    var namespace = tu.getDeclarationAs(0, NamespaceDeclaration.class);
+
+    assertNotNull(namespace);
+
+    var record = namespace.getDeclarationAs(0, RecordDeclaration.class);
+
+    assertNotNull(record);
+
+    var constructor = record.getConstructors().get(0);
+    var op = constructor.getBodyStatementAs(0, BinaryOperator.class);
+
+    assertNotNull(op);
+
+    var lhs = (MemberExpression) op.getLhs();
+
+    var superThisField =
+        (FieldDeclaration) ((DeclaredReferenceExpression) lhs.getBase()).getRefersTo();
+
+    assertNotNull(superThisField);
+    assertEquals("this", superThisField.getName());
+    assertEquals(TypeParser.createFrom("my.Animal", false), superThisField.getType());
   }
 }

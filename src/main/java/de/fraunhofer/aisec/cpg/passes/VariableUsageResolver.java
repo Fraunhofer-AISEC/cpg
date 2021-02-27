@@ -254,8 +254,9 @@ public class VariableUsageResolver extends Pass {
 
             if (superRecord == null) {
               log.error(
-                  "Could not find referring super type {} for {} in the record map. This is a bit odd because they should have been parsed as well. Will set the super type to java.lang.Object",
-                  superType.getTypeName(), curClass.getName());
+                  "Could not find referring super type {} for {} in the record map. Will set the super type to java.lang.Object",
+                  superType.getTypeName(),
+                  curClass.getName());
               base.setType(TypeParser.createFrom(Object.class.getName(), true));
             } else {
               baseTarget = superRecord.getThis();

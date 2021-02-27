@@ -409,8 +409,18 @@ public class JavaLanguageFrontend extends LanguageFrontend {
           return TypeParser.createFrom(importDeclaration.getNameAsString(), true);
         }
       }
-      de.fraunhofer.aisec.cpg.graph.types.Type returnType =
-          TypeParser.createFrom(clazz.asString(), true);
+
+      var name = clazz.asString();
+
+      // no import found, so our last guess is that the type is in the same package
+      // as our current translation unit
+      var o = context.getPackageDeclaration();
+
+      if (o.isPresent()) {
+        name = o.get().getNameAsString() + getNamespaceDelimiter() + name;
+      }
+
+      de.fraunhofer.aisec.cpg.graph.types.Type returnType = TypeParser.createFrom(name, true);
       returnType.setTypeOrigin(de.fraunhofer.aisec.cpg.graph.types.Type.Origin.GUESSED);
       return returnType;
     }
