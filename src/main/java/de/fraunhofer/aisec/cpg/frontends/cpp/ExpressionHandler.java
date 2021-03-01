@@ -310,6 +310,7 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
             base,
             UnknownType.getUnknownType(),
             ctx.getFieldName().toString(),
+            ctx.isPointerDereference() ? "->" : ".",
             ctx.getRawSignature());
 
     this.lang.expressionRefersToDeclaration(memberExpression, ctx);
@@ -407,12 +408,15 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
           NodeBuilder.newDeclaredReferenceExpression(
               reference.getName(), UnknownType.getUnknownType(), reference.getName());
 
+      member.setLocation(lang.getLocationFromRawNode(reference));
+
       callExpression =
           NodeBuilder.newMemberCallExpression(
               member.getName(),
               baseTypename + "." + member.getName(),
               ((MemberExpression) reference).getBase(),
               member,
+              ((MemberExpression) reference).getOperatorCode(),
               ctx.getRawSignature());
     } else if (reference instanceof BinaryOperator
         && ((BinaryOperator) reference).getOperatorCode().equals(".")) {
@@ -424,18 +428,14 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
               "",
               ((BinaryOperator) reference).getLhs(),
               ((BinaryOperator) reference).getRhs(),
+              ((BinaryOperator) reference).getOperatorCode(),
               reference.getCode());
     } else if (reference instanceof UnaryOperator
         && ((UnaryOperator) reference).getOperatorCode().equals("*")) {
-      // Classic C-style function pointer call -> let's extract the target. For easy
-      // compatibility with C++-style function pointer calls, we create a member call without a base
+      // Classic C-style function pointer call -> let's extract the target
       callExpression =
-          NodeBuilder.newMemberCallExpression(
-              reference.getCode(),
-              "",
-              null,
-              ((UnaryOperator) reference).getInput(),
-              reference.getCode());
+          NodeBuilder.newCallExpression(
+              ((UnaryOperator) reference).getInput().getName(), "", reference.getCode());
     } else {
       String fqn = reference.getName();
       String name = fqn;

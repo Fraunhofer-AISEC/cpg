@@ -34,10 +34,12 @@ import com.github.javaparser.ast.expr.*;
 import com.github.javaparser.ast.expr.Expression;
 import com.github.javaparser.resolution.UnsolvedSymbolException;
 import com.github.javaparser.resolution.declarations.ResolvedFieldDeclaration;
+import com.github.javaparser.resolution.declarations.ResolvedMethodDeclaration;
 import com.github.javaparser.resolution.declarations.ResolvedTypeDeclaration;
 import com.github.javaparser.resolution.declarations.ResolvedValueDeclaration;
 import de.fraunhofer.aisec.cpg.frontends.Handler;
 import de.fraunhofer.aisec.cpg.graph.*;
+import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration;
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration;
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement;
 import de.fraunhofer.aisec.cpg.graph.statements.Statement;
@@ -47,6 +49,7 @@ import de.fraunhofer.aisec.cpg.graph.types.Type;
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser;
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
@@ -359,7 +362,14 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
     Type fieldType;
     try {
       ResolvedValueDeclaration symbol = fieldAccessExpr.resolve();
-      fieldType = TypeParser.createFrom(symbol.asField().getType().describe(), true);
+      fieldType =
+          TypeManager.getInstance()
+              .getTypeParameter(
+                  this.lang.getScopeManager().getCurrentRecord(),
+                  symbol.asField().getType().describe());
+      if (fieldType == null) {
+        fieldType = TypeParser.createFrom(symbol.asField().getType().describe(), true);
+      }
     } catch (RuntimeException | NoClassDefFoundError ex) {
       String typeString = this.lang.recoverTypeFromUnsolvedException(ex);
       if (typeString != null) {
@@ -376,6 +386,7 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
               base,
               fieldType,
               fieldAccessExpr.getName().getIdentifier(),
+              ".", // there is only "." in java
               fieldAccessExpr.toString());
       memberExpression.setStaticAccess(true);
       return memberExpression;
@@ -386,7 +397,11 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
     }
 
     return NodeBuilder.newMemberExpression(
-        base, fieldType, fieldAccessExpr.getName().getIdentifier(), fieldAccessExpr.toString());
+        base,
+        fieldType,
+        fieldAccessExpr.getName().getIdentifier(),
+        ".",
+        fieldAccessExpr.toString());
   }
 
   private Literal handleLiteralExpression(Expression expr) {
@@ -522,7 +537,15 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
               handle(fieldAccessExpr);
         }
       } else {
-        Type type = TypeParser.createFrom(symbol.getType().describe(), true);
+        // Resolve type first with ParameterizedType
+        Type type =
+            TypeManager.getInstance()
+                .getTypeParameter(
+                    this.lang.getScopeManager().getCurrentRecord(), symbol.getType().describe());
+
+        if (type == null) {
+          type = TypeParser.createFrom(symbol.getType().describe(), true);
+        }
 
         DeclaredReferenceExpression declaredReferenceExpression =
             NodeBuilder.newDeclaredReferenceExpression(symbol.getName(), type, nameExpr.toString());
@@ -547,11 +570,18 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
         t.setTypeOrigin(Type.Origin.GUESSED);
       }
 
-      DeclaredReferenceExpression declaredReferenceExpression =
-          NodeBuilder.newDeclaredReferenceExpression(
-              nameExpr.getNameAsString(), t, nameExpr.toString());
+      var name = nameExpr.getNameAsString();
 
-      lang.getScopeManager().connectToLocal(declaredReferenceExpression);
+      DeclaredReferenceExpression declaredReferenceExpression =
+          NodeBuilder.newDeclaredReferenceExpression(name, t, nameExpr.toString());
+
+      var record = this.lang.getScopeManager().getCurrentRecord();
+
+      if (record != null && Objects.equals(record.getName(), name)) {
+        declaredReferenceExpression.setRefersTo(record);
+      } else {
+        lang.getScopeManager().connectToLocal(declaredReferenceExpression);
+      }
 
       return declaredReferenceExpression;
     } catch (RuntimeException | NoClassDefFoundError ex) {
@@ -645,45 +675,71 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
     if (name.contains(".")) {
       name = name.substring(name.lastIndexOf('.') + 1);
     }
+
+    var typeString = UnknownType.UNKNOWN_TYPE_STRING;
+    var isStatic = false;
+
+    ResolvedMethodDeclaration resolved = null;
+    try {
+      // try resolving the method to learn more about it
+      resolved = methodCallExpr.resolve();
+      isStatic = resolved.isStatic();
+      typeString = resolved.getReturnType().describe();
+    } catch (NoClassDefFoundError | RuntimeException ignored) {
+      // Unfortunately, JavaParser also throws a simple RuntimeException instead of an
+      // UnsolvedSymbolException within resolve() if it fails to resolve it under certain
+      // circumstances, we catch all that and continue on our own
+      log.debug("Could not resolve method {}", methodCallExpr);
+    }
+
     // the scope could either be a variable or also the class name (static call!)
     // thus, only because the scope is present, this is not automatically a member call
     if (o.isPresent()) {
       Expression scope = o.get();
-      // we need to check if there is a valuedecl corresponding to the base. this cannot easily be
-      // done, but we can try to resolve the Expression, and if the Javaparser does not know about
-      // it, we assume that this is a static call
-      boolean isresolvable = false;
       String scopeName = null;
-      try {
-        if (scope instanceof NameExpr) {
-          scopeName = ((NameExpr) scope).getNameAsString();
-          ((NameExpr) scope).resolve();
-          isresolvable = true;
-        } else if (scope instanceof SuperExpr) {
-          scopeName = scope.toString();
-          isresolvable = true;
-        }
-      } catch (UnsolvedSymbolException ex) {
-        if (!ex.getName()
-            .startsWith("We are unable to find the value declaration corresponding to")) {
-          isresolvable = true;
-        }
-      } catch (RuntimeException | NoClassDefFoundError ex) {
-        isresolvable = true;
+
+      if (scope instanceof NameExpr) {
+        scopeName = ((NameExpr) scope).getNameAsString();
+      } else if (scope instanceof SuperExpr) {
+        scopeName = scope.toString();
       }
-      if (isresolvable) {
-        Statement base = handle(scope);
+
+      Statement base = handle(scope);
+
+      // If the base directly refers to a record, then this is a static call
+      if (base instanceof DeclaredReferenceExpression
+          && ((DeclaredReferenceExpression) base).getRefersTo() instanceof RecordDeclaration) {
+        isStatic = true;
+      }
+
+      // Or if the base is a reference to an import
+      if (base instanceof DeclaredReferenceExpression
+          && this.lang.getQualifiedNameFromImports(base.getName()) != null) {
+        isStatic = true;
+      }
+
+      if (!isStatic) {
         DeclaredReferenceExpression member =
             NodeBuilder.newDeclaredReferenceExpression(name, UnknownType.getUnknownType(), "");
 
+        lang.setCodeAndRegion(
+            member,
+            methodCallExpr); // This will also overwrite the code set to the empty string set above
         callExpression =
             NodeBuilder.newMemberCallExpression(
-                name, qualifiedName, base, member, methodCallExpr.toString());
+                name, qualifiedName, base, member, ".", methodCallExpr.toString());
       } else {
-        String targetClass = this.lang.getQualifiedNameFromImports(scopeName);
+        String targetClass;
+        if (resolved != null) {
+          targetClass = resolved.declaringType().getQualifiedName();
+        } else {
+          targetClass = this.lang.getQualifiedNameFromImports(scopeName);
+        }
+
         if (targetClass == null) {
           targetClass = scopeName;
         }
+
         callExpression =
             NodeBuilder.newStaticCallExpression(
                 name, qualifiedName, methodCallExpr.toString(), targetClass);
@@ -691,13 +747,6 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
     } else {
       callExpression =
           NodeBuilder.newCallExpression(name, qualifiedName, methodCallExpr.toString());
-    }
-
-    String typeString = Type.UNKNOWN_TYPE_STRING;
-    try {
-      typeString = methodCallExpr.resolve().getReturnType().describe();
-    } catch (Throwable e) {
-      log.debug("Could not resolve return type for {}", methodCallExpr);
     }
 
     callExpression.setType(TypeParser.createFrom(typeString, true));

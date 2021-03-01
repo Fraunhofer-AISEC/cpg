@@ -228,4 +228,26 @@ public class TestUtils {
         .filter(Util.distinctByIdentity())
         .collect(Collectors.toList());
   }
+
+  /**
+   * Compare the given parameter {@code toCompare} to the start- or end-line of the given node. If
+   * the node has no location {@code false} is returned. {@code startLine} is used to specify if the
+   * start-line or end-line of a location is supposed to be used.
+   *
+   * @param n
+   * @param startLine
+   * @param toCompare
+   * @return
+   */
+  public static boolean compareLineFromLocationIfExists(Node n, boolean startLine, int toCompare) {
+    PhysicalLocation loc = n.getLocation();
+    if (loc == null) {
+      return false;
+    }
+    if (startLine) {
+      return loc.getRegion().getStartLine() == toCompare;
+    } else {
+      return loc.getRegion().getEndLine() == toCompare;
+    }
+  }
 }

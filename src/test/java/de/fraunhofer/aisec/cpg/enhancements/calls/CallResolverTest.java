@@ -30,10 +30,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import de.fraunhofer.aisec.cpg.BaseTest;
 import de.fraunhofer.aisec.cpg.TestUtils;
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration;
-import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration;
-import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration;
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declarations.*;
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression;
 import de.fraunhofer.aisec.cpg.graph.types.Type;
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser;
@@ -88,6 +85,25 @@ public class CallResolverTest extends BaseTest {
         TestUtils.findByUniqueName(
             TestUtils.subnodesOfType(callsRecord, CallExpression.class), "unknownTarget");
     assertEquals(List.of(), unknownCall.getInvokes());
+  }
+
+  /**
+   * Checks that method calls from a function outside a class are correctly resolved to the
+   * MethodDeclaration
+   *
+   * @param result
+   */
+  private void ensureInvocationOfMethodsInFunction(List<TranslationUnitDeclaration> result) {
+    assertEquals(1, result.size());
+    TranslationUnitDeclaration tu = result.get(0);
+
+    for (Declaration declaration : tu.getDeclarations()) {
+      assertNotEquals("invoke", declaration.getName());
+    }
+    List<CallExpression> callExpressions = TestUtils.subnodesOfType(result, CallExpression.class);
+    CallExpression invoke = TestUtils.findByUniqueName(callExpressions, "invoke");
+    assertEquals(1, invoke.getInvokes().size());
+    assertTrue(invoke.getInvokes().get(0) instanceof MethodDeclaration);
   }
 
   private void checkCalls(
@@ -173,5 +189,6 @@ public class CallResolverTest extends BaseTest {
     checkCalls(intType, stringType, functions, calls);
 
     ensureNoUnknownClassDummies(records);
+    ensureInvocationOfMethodsInFunction(result);
   }
 }

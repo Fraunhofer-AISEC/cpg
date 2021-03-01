@@ -39,10 +39,7 @@ import com.github.javaparser.ast.ImportDeclaration;
 import com.github.javaparser.ast.Node.Parsedness;
 import com.github.javaparser.ast.PackageDeclaration;
 import com.github.javaparser.ast.body.TypeDeclaration;
-import com.github.javaparser.ast.expr.Expression;
-import com.github.javaparser.ast.expr.MemberValuePair;
-import com.github.javaparser.ast.expr.MethodCallExpr;
-import com.github.javaparser.ast.expr.NameExpr;
+import com.github.javaparser.ast.expr.*;
 import com.github.javaparser.ast.nodeTypes.NodeWithAnnotations;
 import com.github.javaparser.ast.nodeTypes.NodeWithType;
 import com.github.javaparser.ast.type.ClassOrInterfaceType;
@@ -84,6 +81,9 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 
 /** Main parser for ONE Java files. */
 public class JavaLanguageFrontend extends LanguageFrontend {
+
+  public static final String THIS = "this";
+  public static final String ANNOTATION_MEMBER_VALUE = "value";
 
   private CompilationUnit context;
 
@@ -277,7 +277,7 @@ public class JavaLanguageFrontend extends LanguageFrontend {
             return fromImport;
           }
         }
-        if (scope.get().toString().equals("this")) {
+        if (scope.get().toString().equals(THIS)) {
           // this is not strictly true. This could also be a function of a superclass,
           // but is the best we can do for now.
           // if the superclass would be known, this would already be resolved by the Javaresolver
@@ -331,16 +331,16 @@ public class JavaLanguageFrontend extends LanguageFrontend {
   public String getQualifiedNameFromImports(String className) {
     if (context != null && className != null) {
       List<String> potentialClassNames = new ArrayList<>();
-      String prefix = "";
+      StringBuilder prefix = new StringBuilder();
       for (String s : className.split("\\.")) {
         potentialClassNames.add(prefix + s);
-        prefix = prefix + s + ".";
+        prefix.append(s).append(".");
       }
       // see if we can make the qualifier more precise using the imports
       for (ImportDeclaration importDeclaration : context.getImports()) {
         for (String cn : potentialClassNames) {
           if (importDeclaration.getName().asString().endsWith("." + cn)) {
-            prefix = importDeclaration.getName().asString();
+            prefix = new StringBuilder(importDeclaration.getName().asString());
             return prefix.substring(0, prefix.lastIndexOf(cn)) + className;
           }
         }
@@ -360,7 +360,15 @@ public class JavaLanguageFrontend extends LanguageFrontend {
   public de.fraunhofer.aisec.cpg.graph.types.Type getReturnTypeAsGoodAsPossible(
       NodeWithType nodeWithType, ResolvedMethodDeclaration resolved) {
     try {
-      return TypeParser.createFrom(resolved.getReturnType().describe(), true);
+      // Resolve type first with ParameterizedType
+      de.fraunhofer.aisec.cpg.graph.types.Type type =
+          TypeManager.getInstance()
+              .getTypeParameter(
+                  scopeManager.getCurrentRecord(), resolved.getReturnType().describe());
+      if (type == null) {
+        type = TypeParser.createFrom(resolved.getReturnType().describe(), true);
+      }
+      return type;
     } catch (RuntimeException | NoClassDefFoundError ex) {
       return getTypeFromImportIfPossible(nodeWithType.getType());
     }
@@ -484,10 +492,9 @@ public class JavaLanguageFrontend extends LanguageFrontend {
 
       var members = new ArrayList<AnnotationMember>();
 
-      for (var child : expr.getChildNodes()) {
-        if (child instanceof MemberValuePair) {
-          var pair = (MemberValuePair) child;
-
+      // annotations can be specified as member / value pairs
+      if (expr.isNormalAnnotationExpr()) {
+        for (var pair : expr.asNormalAnnotationExpr().getPairs()) {
           var member =
               newAnnotationMember(
                   pair.getNameAsString(),
@@ -497,9 +504,23 @@ public class JavaLanguageFrontend extends LanguageFrontend {
 
           members.add(member);
         }
+      } else if (expr.isSingleMemberAnnotationExpr()) {
+        var value = expr.asSingleMemberAnnotationExpr().getMemberValue();
 
-        annotation.setMembers(members);
+        if (value != null) {
+          // or as a literal. in this case it is assigned to the annotation member 'value'
+          var member =
+              newAnnotationMember(
+                  ANNOTATION_MEMBER_VALUE,
+                  (de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression)
+                      expressionHandler.handle(value.asLiteralExpr()),
+                  getCodeFromRawNode(value));
+
+          members.add(member);
+        }
       }
+
+      annotation.setMembers(members);
 
       list.add(annotation);
     }

@@ -47,6 +47,8 @@ public class MemberCallExpression extends CallExpression {
     this.member = member;
   }
 
+  private String operatorCode;
+
   @Override
   public boolean equals(Object o) {
     if (this == o) {
@@ -65,5 +67,13 @@ public class MemberCallExpression extends CallExpression {
   @Override
   public int hashCode() {
     return super.hashCode();
+  }
+
+  public void setOperatorCode(String operatorCode) {
+    this.operatorCode = operatorCode;
+  }
+
+  public String getOperatorCode() {
+    return operatorCode;
   }
 }

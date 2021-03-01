@@ -62,6 +62,14 @@ public class TypeManager {
 
   @NonNull private Map<String, RecordDeclaration> typeToRecord = new HashMap<>();
 
+  /**
+   * Stores the relationship between parameterized RecordDeclarations (e.g. Classes using Generics)
+   * to the ParameterizedType to be able to resolve the Type of the fields, since ParameterizedTypes
+   * are unique to the RecordDeclaration and are not merged.
+   */
+  @NonNull
+  private Map<RecordDeclaration, List<ParameterizedType>> recordToTypeParameters = new HashMap<>();
+
   @NonNull
   private Map<Type, List<Type>> typeState =
       new HashMap<>(); // Stores all the unique types ObjectType as Key and Reference-/PointerTypes
@@ -73,6 +81,23 @@ public class TypeManager {
 
   public static void reset() {
     INSTANCE = new TypeManager();
+  }
+
+  public ParameterizedType getTypeParameter(RecordDeclaration recordDeclaration, String name) {
+    if (this.recordToTypeParameters.containsKey(recordDeclaration)) {
+      for (ParameterizedType parameterizedType :
+          this.recordToTypeParameters.get(recordDeclaration)) {
+        if (parameterizedType.getName().equals(name)) {
+          return parameterizedType;
+        }
+      }
+    }
+    return null;
+  }
+
+  public void addTypeParameter(
+      RecordDeclaration recordDeclaration, List<ParameterizedType> typeParameters) {
+    this.recordToTypeParameters.put(recordDeclaration, typeParameters);
   }
 
   @NonNull
@@ -317,6 +342,11 @@ public class TypeManager {
       return true;
     }
 
+    // ObjectTypes can be passed as ReferenceTypes
+    if (superType instanceof ReferenceType) {
+      return isSupertypeOf(((ReferenceType) superType).getElementType(), subType);
+    }
+
     Optional<Type> commonType = getCommonType(new HashSet<>(List.of(superType, subType)));
     if (commonType.isPresent()) {
       return commonType.get().equals(superType);
@@ -391,7 +421,7 @@ public class TypeManager {
     } else if (Util.containsOnOuterLevel(cleaned, ',')) {
       handleMultipleAliases(rawCode, cleaned);
     } else {
-      List<String> parts = Util.splitLeavingParenthesisContents(cleaned, " \r\n");
+      List<String> parts = Util.splitLeavingParenthesisContents(cleaned, " \t\r\n");
       if (parts.size() < 2) {
         log.error("Typedef contains no whitespace to split on: {}", rawCode);
         return;
