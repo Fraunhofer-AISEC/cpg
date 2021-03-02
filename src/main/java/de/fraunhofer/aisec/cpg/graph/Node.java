@@ -89,7 +89,8 @@ public class Node implements IVisitable<Node>, Persistable {
 
   /**
    * outgoing control flow edges.
-   * @deprecated  This Edge-Type is deprecated as it is less precise then the {@link Node#nextEOG}
+   *
+   * @deprecated This Edge-Type is deprecated as it is less precise then the {@link Node#nextEOG}
    */
   @Deprecated(since = "3.4", forRemoval = true)
   @NonNull
@@ -243,7 +244,7 @@ public class Node implements IVisitable<Node>, Persistable {
   }
 
   /**
-   * @deprecated  This Edge-Type is deprecated as it is less precise then the {@link Node#nextEOG}n
+   * @deprecated This Edge-Type is deprecated as it is less precise then the {@link Node#nextEOG}n
    */
   @NonNull
   @Deprecated(since = "3.4", forRemoval = true)
@@ -252,7 +253,7 @@ public class Node implements IVisitable<Node>, Persistable {
   }
 
   /**
-   * @deprecated  This Edge-Type is deprecated as it is less precise then the {@link Node#nextEOG}
+   * @deprecated This Edge-Type is deprecated as it is less precise then the {@link Node#nextEOG}
    */
   @Deprecated(since = "3.4", forRemoval = true)
   public void addNextCFG(Node node) {
@@ -263,7 +264,8 @@ public class Node implements IVisitable<Node>, Persistable {
 
   /**
    * outgoing control flow edges.
-   * @deprecated  This Edge-Type is deprecated as it is less precise then the {@link Node#nextEOG}
+   *
+   * @deprecated This Edge-Type is deprecated as it is less precise then the {@link Node#nextEOG}
    */
   @Deprecated(since = "3.4", forRemoval = true)
   public void addNextCFG(Collection<? extends Node> collection) {

@@ -17,3 +17,7 @@ logs
 /lsp/*.log
 *.class
 
+*.dylib
+*.so
+*.h
+
