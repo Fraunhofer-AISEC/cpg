@@ -9,6 +9,7 @@ import (
 type Declaration jnigi.ObjectRef
 type TranslationUnitDeclaration Declaration
 type FunctionDeclaration Declaration
+type VariableDeclaration Declaration
 type ParamVariableDeclaration Declaration
 
 func (t *TranslationUnitDeclaration) AddDeclaration(env *jnigi.Env, d *jnigi.ObjectRef) (err error) {
@@ -31,12 +32,27 @@ func (f *FunctionDeclaration) SetBody(env *jnigi.Env, s *Statement) (err error) 
 	return
 }
 
-func (f *ParamVariableDeclaration) SetType(env *jnigi.Env, t *Type) {
-	(*jnigi.ObjectRef)(f).CallMethod(env, "setType", jnigi.Void, (*jnigi.ObjectRef)(t))
+func (p *ParamVariableDeclaration) SetType(env *jnigi.Env, t *Type) {
+	(*HasType)(p).SetType(env, t)
 }
 
 func (p *ParamVariableDeclaration) SetName(env *jnigi.Env, s string) error {
 	return (*Node)(p).SetName(env, s)
+}
+
+func (v *VariableDeclaration) SetType(env *jnigi.Env, t *Type) {
+	(*HasType)(v).SetType(env, t)
+	//(*jnigi.ObjectRef)(v).CallMethod(env, "setType", jnigi.Void, (*jnigi.ObjectRef)(t))
+}
+
+func (v *VariableDeclaration) SetName(env *jnigi.Env, s string) error {
+	return (*Node)(v).SetName(env, s)
+}
+
+func (v *VariableDeclaration) SetInitializer(env *jnigi.Env, e *Expression) (err error) {
+	_, err = (*jnigi.ObjectRef)(v).CallMethod(env, "setInitializer", jnigi.Void, (*jnigi.ObjectRef)(v).Cast("de/fraunhofer/aisec/cpg/graph/statements/expressions/Expression"))
+
+	return
 }
 
 func NewTranslationUnitDeclaration(env *jnigi.Env) *TranslationUnitDeclaration {
@@ -55,6 +71,15 @@ func NewFunctionDeclaration(env *jnigi.Env) *FunctionDeclaration {
 	}
 
 	return (*FunctionDeclaration)(tu)
+}
+
+func NewVariableDeclaration(env *jnigi.Env) *VariableDeclaration {
+	tu, err := env.NewObject("de/fraunhofer/aisec/cpg/graph/declarations/VariableDeclaration")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return (*VariableDeclaration)(tu)
 }
 
 func NewParamVariableDeclaration(env *jnigi.Env) *ParamVariableDeclaration {

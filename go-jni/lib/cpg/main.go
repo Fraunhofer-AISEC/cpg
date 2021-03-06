@@ -60,6 +60,45 @@ func handleFuncDecl(this *cpg.GoLanguageFrontend, fset *token.FileSet, env *jnig
 	return (*jnigi.ObjectRef)(f)
 }
 
+func handleGenDecl(this *cpg.GoLanguageFrontend, fset *token.FileSet, env *jnigi.Env, genDecl *ast.GenDecl) *jnigi.ObjectRef {
+	// TODO: Handle multiple declarations
+	for _, spec := range genDecl.Specs {
+		fmt.Printf("Specs: %+v\n", spec)
+
+		switch v := spec.(type) {
+		case *ast.ValueSpec:
+			// TODO: more names
+			var ident = v.Names[0]
+
+			d := (cpg.NewVariableDeclaration(env))
+			d.SetName(env, ident.Name)
+
+			// add an initializer
+			if len(v.Values) > 0 {
+				fmt.Printf("initializer: %v\n", v.Values[0])
+
+				// TODO: How to deal with multiple values
+				var expr = handleExpr( /*this,*/ fset, env, v.Values[0])
+
+				fmt.Printf("initializer expr: %v\n", expr)
+
+				/*err := d.SetInitializer(env, expr)
+				if err != nil {
+					log.Fatal(err)
+				}
+
+				fmt.Printf("initializer expr: %v\n", v.Values[0])*/
+			}
+
+			fmt.Printf("Decl: %v\n", d)
+
+			return (*jnigi.ObjectRef)(d)
+		}
+	}
+
+	return nil
+}
+
 func handleBlockStmt(this *cpg.GoLanguageFrontend, fset *token.FileSet, env *jnigi.Env, blockStmt *ast.BlockStmt) *cpg.CompoundStatement {
 	c := cpg.NewCompoundStatement(env)
 
@@ -81,7 +120,7 @@ func handleBlockStmt(this *cpg.GoLanguageFrontend, fset *token.FileSet, env *jni
 		}
 
 		if s != nil {
-			// add statement to scope
+			// add statement
 			c.AddStatement(env, s)
 		}
 	}
@@ -140,7 +179,7 @@ func handleBasicLit(fset *token.FileSet, env *jnigi.Env, lit *ast.BasicLit) *cpg
 		break
 	case token.INT:
 		i, _ := strconv.ParseInt(lit.Value, 10, 64)
-		value = int(i)
+		value = cpg.NewInteger(env, int(i))
 		t = cpg.TypeParser_createFrom(env, "int", false)
 		break
 	case token.FLOAT:
@@ -150,7 +189,10 @@ func handleBasicLit(fset *token.FileSet, env *jnigi.Env, lit *ast.BasicLit) *cpg
 		break
 	}
 
-	l.SetType(env, t)
+	if t != nil {
+		l.SetType(env, t)
+	}
+
 	l.SetValue(env, value)
 
 	return l
@@ -175,6 +217,11 @@ func Java_de_fraunhofer_aisec_cpg_frontends_golang_GoLanguageFrontend_parseInter
 
 	tu := cpg.NewTranslationUnitDeclaration(env)
 
+	scope := this.GetScopeManager(env)
+
+	// reset scope
+	scope.ResetToGlobal(env, (*cpg.Node)(tu))
+
 	src, err := srcObject.CallMethod(env, "getBytes", jnigi.Byte|jnigi.Array)
 	if err != nil {
 		log.Fatal(err)
@@ -196,16 +243,17 @@ func Java_de_fraunhofer_aisec_cpg_frontends_golang_GoLanguageFrontend_parseInter
 		case *ast.FuncDecl:
 			d = handleFuncDecl(this, fset, env, v)
 		case *ast.GenDecl:
-			// ignore for now
-			break
+			d = handleGenDecl(this, fset, env, v)
 		default:
 			// no match
 		}
 
+		fmt.Printf("parsed decl: %v\n", d)
+
 		if d != nil {
 			fmt.Printf("%+v\n", d)
 
-			err = tu.AddDeclaration(env, d)
+			err = scope.AddDeclaration(env, (*cpg.Declaration)(d))
 			if err != nil {
 				panic(err)
 			}

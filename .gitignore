@@ -20,4 +20,5 @@ logs
 *.dylib
 *.so
 *.h
+*.log
 

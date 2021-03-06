@@ -5,6 +5,7 @@ import de.fraunhofer.aisec.cpg.TestUtils
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
@@ -20,6 +21,21 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 
 class GoLanguageFrontendTest : BaseTest() {
+
+    @Test
+    fun testLiteral() {
+        val topLevel =Path.of("src", "test", "resources", "golang")
+        val tu = TestUtils.analyzeAndGetFirstTU(listOf(topLevel.resolve("literal.go").toFile()), topLevel, true)
+
+        assertNotNull(tu)
+
+        val a = tu.declarations.first() as? VariableDeclaration
+        assertNotNull(a)
+
+        assertEquals("a", a.name)
+
+
+    }
 
     @Test
     fun testFunctionDeclaration() {

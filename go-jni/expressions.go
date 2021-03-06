@@ -39,7 +39,8 @@ func NewDeclaredReferenceExpression(env *jnigi.Env) *DeclaredReferenceExpression
 }
 
 func (e *Expression) SetType(env *jnigi.Env, t *Type) {
-	(*jnigi.ObjectRef)(e).CallMethod(env, "setType", jnigi.Void, (*jnigi.ObjectRef)(t))
+	(*HasType)(e).SetType(env, t)
+	//(*jnigi.ObjectRef)(e).CallMethod(env, "setType", jnigi.Void, (*jnigi.ObjectRef)(t))
 }
 
 func (c *CallExpression) SetName(env *jnigi.Env, s string) {
