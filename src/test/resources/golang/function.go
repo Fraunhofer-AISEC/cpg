@@ -9,5 +9,7 @@ func main() {
 func myTest(s string) (err error) {
     fmt.Printf("%s", s)
 
+    a := 1 + 2
+
     return nil
 }

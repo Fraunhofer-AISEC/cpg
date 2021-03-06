@@ -7,6 +7,8 @@ import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
+import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
@@ -100,5 +102,28 @@ class GoLanguageFrontendTest : BaseTest() {
 
         assertEquals("s", ref.name)
         assertEquals(s, ref.refersTo)
+
+        val stmt = body.statements[1] as? DeclarationStatement
+        assertNotNull(stmt)
+
+        val a = stmt.singleDeclaration as? VariableDeclaration
+        assertNotNull(a)
+
+        assertEquals("a", a.name)
+
+        val op = a.initializer as? BinaryOperator
+        assertNotNull(op)
+
+        assertEquals("+", op.operatorCode)
+
+        val lhs = op.lhs as? Literal<*>
+        assertNotNull(lhs)
+
+        assertEquals(1, lhs.value)
+
+        val rhs = op.rhs as? Literal<*>
+        assertNotNull(rhs)
+
+        assertEquals(2, rhs.value)
     }
 }

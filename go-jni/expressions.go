@@ -8,6 +8,7 @@ import (
 
 type Expression Statement
 type CallExpression Expression
+type BinaryOperator Expression
 type Literal Expression
 type DeclaredReferenceExpression Expression
 
@@ -18,6 +19,15 @@ func NewCallExpression(env *jnigi.Env) *CallExpression {
 	}
 
 	return (*CallExpression)(c)
+}
+
+func NewBinaryOperator(env *jnigi.Env) *BinaryOperator {
+	c, err := env.NewObject("de/fraunhofer/aisec/cpg/graph/statements/expressions/BinaryOperator")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return (*BinaryOperator)(c)
 }
 
 func NewLiteral(env *jnigi.Env) *Literal {
@@ -49,6 +59,18 @@ func (c *CallExpression) SetName(env *jnigi.Env, s string) {
 
 func (c *CallExpression) AddArgument(env *jnigi.Env, e *Expression) {
 	(*jnigi.ObjectRef)(c).CallMethod(env, "addArgument", jnigi.Void, (*jnigi.ObjectRef)(e).Cast("de/fraunhofer/aisec/cpg/graph/statements/expressions/Expression"))
+}
+
+func (b *BinaryOperator) SetLHS(env *jnigi.Env, e *Expression) {
+	(*jnigi.ObjectRef)(b).CallMethod(env, "setLhs", jnigi.Void, (*jnigi.ObjectRef)(e).Cast("de/fraunhofer/aisec/cpg/graph/statements/expressions/Expression"))
+}
+
+func (b *BinaryOperator) SetRHS(env *jnigi.Env, e *Expression) {
+	(*jnigi.ObjectRef)(b).CallMethod(env, "setRhs", jnigi.Void, (*jnigi.ObjectRef)(e).Cast("de/fraunhofer/aisec/cpg/graph/statements/expressions/Expression"))
+}
+
+func (b *BinaryOperator) SetOperatorCode(env *jnigi.Env, s string) (err error) {
+	return (*jnigi.ObjectRef)(b).SetField(env, "operatorCode", NewString(env, s))
 }
 
 func (l *Literal) SetType(env *jnigi.Env, t *Type) {

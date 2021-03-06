@@ -116,8 +116,11 @@ func handleBlockStmt(this *cpg.GoLanguageFrontend, fset *token.FileSet, env *jni
 			s = (*cpg.Statement)(handleExpr(fset, env, v.X))
 			fmt.Printf("exprStmt: %+v\n", v)
 			fmt.Printf("statement: %+v\n", s)
+		case *ast.AssignStmt:
+			s = (*cpg.Statement)(handleAssignStmt(fset, env, v))
+			fmt.Printf("assignment: %+v\n", v)
 		default:
-			fmt.Printf("%+v\n", stmt)
+			fmt.Printf("%T: %+v\n", stmt, stmt)
 		}
 
 		if s != nil {
@@ -136,14 +139,44 @@ func handleExpr(fset *token.FileSet, env *jnigi.Env, expr ast.Expr) *cpg.Express
 	switch v := expr.(type) {
 	case *ast.CallExpr:
 		return (*cpg.Expression)(handleCallExpr(fset, env, v))
+	case *ast.BinaryExpr:
+		return (*cpg.Expression)(handleBinaryExpr(fset, env, v))
 	case *ast.BasicLit:
 		return (*cpg.Expression)(handleBasicLit(fset, env, v))
 	case *ast.Ident:
 		return (*cpg.Expression)(handleIdent(fset, env, v))
+	default:
+		log.Printf("Could not parse expression of type %T: %+v\n", v, v)
 	}
 
 	// TODO: return an error instead?
 	return nil
+}
+
+func handleAssignStmt(fset *token.FileSet, env *jnigi.Env, assignStmt *ast.AssignStmt) (expr *cpg.Expression) {
+	// TODO: more than one Rhs?!
+	rhs := handleExpr(fset, env, assignStmt.Rhs[0])
+
+	if assignStmt.Tok == token.DEFINE {
+		// lets create a variable declaration (wrapped with a declaration stmt) with this, because we define the variable here
+		stmt := cpg.NewDeclarationStatement(env)
+
+		// TODO: assignment of multiple values
+		d := cpg.NewVariableDeclaration(env)
+
+		var name = assignStmt.Lhs[0].(*ast.Ident).Name
+		d.SetName(env, name)
+
+		if rhs != nil {
+			d.SetInitializer(env, rhs)
+		}
+
+		stmt.SetSingleDeclaration(env, (*cpg.Declaration)(d))
+
+		expr = (*cpg.Expression)(stmt)
+	}
+
+	return
 }
 
 func handleCallExpr(fset *token.FileSet, env *jnigi.Env, callExpr *ast.CallExpr) *cpg.CallExpression {
@@ -164,6 +197,28 @@ func handleCallExpr(fset *token.FileSet, env *jnigi.Env, callExpr *ast.CallExpr)
 	}
 
 	return c
+}
+
+func handleBinaryExpr(fset *token.FileSet, env *jnigi.Env, binaryExpr *ast.BinaryExpr) *cpg.BinaryOperator {
+	b := cpg.NewBinaryOperator(env)
+
+	lhs := handleExpr(fset, env, binaryExpr.X)
+	rhs := handleExpr(fset, env, binaryExpr.Y)
+
+	err := b.SetOperatorCode(env, binaryExpr.Op.String())
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if lhs != nil {
+		b.SetLHS(env, lhs)
+	}
+
+	if rhs != nil {
+		b.SetRHS(env, rhs)
+	}
+
+	return b
 }
 
 func handleBasicLit(fset *token.FileSet, env *jnigi.Env, lit *ast.BasicLit) *cpg.Literal {
