@@ -63,8 +63,7 @@ func handleFuncDecl(this *cpg.GoLanguageFrontend, fset *token.FileSet, env *jnig
 func handleGenDecl(this *cpg.GoLanguageFrontend, fset *token.FileSet, env *jnigi.Env, genDecl *ast.GenDecl) *jnigi.ObjectRef {
 	// TODO: Handle multiple declarations
 	for _, spec := range genDecl.Specs {
-		fmt.Printf("Specs: %+v\n", spec)
-
+		fmt.Printf("Spec: %+v\n", spec)
 		switch v := spec.(type) {
 		case *ast.ValueSpec:
 			// TODO: more names
@@ -73,6 +72,14 @@ func handleGenDecl(this *cpg.GoLanguageFrontend, fset *token.FileSet, env *jnigi
 			d := (cpg.NewVariableDeclaration(env))
 			d.SetName(env, ident.Name)
 
+			if v.Type != nil {
+				var typeNameBuf bytes.Buffer
+				_ = printer.Fprint(&typeNameBuf, fset, v.Type)
+
+				t := cpg.TypeParser_createFrom(env, typeNameBuf.String(), false)
+				d.SetType(env, t)
+			}
+
 			// add an initializer
 			if len(v.Values) > 0 {
 				fmt.Printf("initializer: %v\n", v.Values[0])
@@ -80,17 +87,11 @@ func handleGenDecl(this *cpg.GoLanguageFrontend, fset *token.FileSet, env *jnigi
 				// TODO: How to deal with multiple values
 				var expr = handleExpr( /*this,*/ fset, env, v.Values[0])
 
-				fmt.Printf("initializer expr: %v\n", expr)
-
-				/*err := d.SetInitializer(env, expr)
+				err := d.SetInitializer(env, expr)
 				if err != nil {
 					log.Fatal(err)
 				}
-
-				fmt.Printf("initializer expr: %v\n", v.Values[0])*/
 			}
-
-			fmt.Printf("Decl: %v\n", d)
 
 			return (*jnigi.ObjectRef)(d)
 		}
@@ -176,13 +177,15 @@ func handleBasicLit(fset *token.FileSet, env *jnigi.Env, lit *ast.BasicLit) *cpg
 		// strip the "
 		value = cpg.NewString(env, lit.Value[1:len(lit.Value)-1])
 		t = cpg.TypeParser_createFrom(env, "string", false)
-		break
 	case token.INT:
 		i, _ := strconv.ParseInt(lit.Value, 10, 64)
 		value = cpg.NewInteger(env, int(i))
 		t = cpg.TypeParser_createFrom(env, "int", false)
-		break
 	case token.FLOAT:
+		// default seems to be float64
+		f, _ := strconv.ParseFloat(lit.Value, 64)
+		value = cpg.NewDouble(env, f)
+		t = cpg.TypeParser_createFrom(env, "float64", false)
 	case token.IMAG:
 	case token.CHAR:
 		value = cpg.NewString(env, lit.Value)

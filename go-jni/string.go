@@ -24,3 +24,13 @@ func NewInteger(env *jnigi.Env, i int) *jnigi.ObjectRef {
 
 	return o
 }
+
+func NewDouble(env *jnigi.Env, d float64) *jnigi.ObjectRef {
+	// TODO: Use Integer.valueOf
+	o, err := env.NewObject("java/lang/Double", d)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return o
+}

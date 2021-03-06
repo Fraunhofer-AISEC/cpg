@@ -29,12 +29,26 @@ class GoLanguageFrontendTest : BaseTest() {
 
         assertNotNull(tu)
 
-        val a = tu.declarations.first() as? VariableDeclaration
+        val a = tu.getDeclarationsByName("a", VariableDeclaration::class.java).iterator().next()
         assertNotNull(a)
 
         assertEquals("a", a.name)
+        assertEquals(TypeParser.createFrom("int", false), a.type)
 
+        val s = tu.getDeclarationsByName("s", VariableDeclaration::class.java).iterator().next()
 
+        assertEquals("s", s.name)
+        assertEquals(TypeParser.createFrom("string", false), s.type)
+
+        val f = tu.getDeclarationsByName("f", VariableDeclaration::class.java).iterator().next()
+
+        assertEquals("f", f.name)
+        assertEquals(TypeParser.createFrom("float64", false), f.type)
+
+        val f32 = tu.getDeclarationsByName("f32", VariableDeclaration::class.java).iterator().next()
+
+        assertEquals("f32", f32.name)
+        assertEquals(TypeParser.createFrom("float32", false), f32.type)
     }
 
     @Test

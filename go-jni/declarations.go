@@ -50,7 +50,7 @@ func (v *VariableDeclaration) SetName(env *jnigi.Env, s string) error {
 }
 
 func (v *VariableDeclaration) SetInitializer(env *jnigi.Env, e *Expression) (err error) {
-	_, err = (*jnigi.ObjectRef)(v).CallMethod(env, "setInitializer", jnigi.Void, (*jnigi.ObjectRef)(v).Cast("de/fraunhofer/aisec/cpg/graph/statements/expressions/Expression"))
+	_, err = (*jnigi.ObjectRef)(v).CallMethod(env, "setInitializer", jnigi.Void, (*jnigi.ObjectRef)(e).Cast("de/fraunhofer/aisec/cpg/graph/statements/expressions/Expression"))
 
 	return
 }
