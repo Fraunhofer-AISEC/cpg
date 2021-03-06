@@ -20,5 +20,7 @@ func TypeParser_createFrom(env *jnigi.Env, s string, resolveAlias bool) *Type {
 }
 
 func (h *HasType) SetType(env *jnigi.Env, t *Type) {
-	(*jnigi.ObjectRef)(h).CallMethod(env, "setType", jnigi.Void, (*jnigi.ObjectRef)(t))
+	if t != nil {
+		(*jnigi.ObjectRef)(h).CallMethod(env, "setType", jnigi.Void, (*jnigi.ObjectRef)(t))
+	}
 }

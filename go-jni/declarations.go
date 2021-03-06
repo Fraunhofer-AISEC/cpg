@@ -9,6 +9,9 @@ import (
 type Declaration jnigi.ObjectRef
 type TranslationUnitDeclaration Declaration
 type FunctionDeclaration Declaration
+type MethodDeclaration FunctionDeclaration
+type RecordDeclaration Declaration
+type FieldDeclaration Declaration
 type VariableDeclaration Declaration
 type ParamVariableDeclaration Declaration
 
@@ -22,6 +25,10 @@ func (f *FunctionDeclaration) SetName(env *jnigi.Env, s string) error {
 	return (*Node)(f).SetName(env, s)
 }
 
+func (f *FunctionDeclaration) SetType(env *jnigi.Env, t *Type) {
+	(*HasType)(f).SetType(env, t)
+}
+
 func (f *FunctionDeclaration) AddParameter(env *jnigi.Env, p *ParamVariableDeclaration) {
 	(*jnigi.ObjectRef)(f).CallMethod(env, "addParameter", jnigi.Void, (*jnigi.ObjectRef)(p))
 }
@@ -32,6 +39,14 @@ func (f *FunctionDeclaration) SetBody(env *jnigi.Env, s *Statement) (err error) 
 	return
 }
 
+func (m *MethodDeclaration) SetName(env *jnigi.Env, s string) error {
+	return (*Node)(m).SetName(env, s)
+}
+
+func (m *MethodDeclaration) SetType(env *jnigi.Env, t *Type) {
+	(*HasType)(m).SetType(env, t)
+}
+
 func (p *ParamVariableDeclaration) SetType(env *jnigi.Env, t *Type) {
 	(*HasType)(p).SetType(env, t)
 }
@@ -40,9 +55,16 @@ func (p *ParamVariableDeclaration) SetName(env *jnigi.Env, s string) error {
 	return (*Node)(p).SetName(env, s)
 }
 
+func (f *FieldDeclaration) SetName(env *jnigi.Env, s string) error {
+	return (*Node)(f).SetName(env, s)
+}
+
+func (f *FieldDeclaration) SetType(env *jnigi.Env, t *Type) {
+	(*HasType)(f).SetType(env, t)
+}
+
 func (v *VariableDeclaration) SetType(env *jnigi.Env, t *Type) {
 	(*HasType)(v).SetType(env, t)
-	//(*jnigi.ObjectRef)(v).CallMethod(env, "setType", jnigi.Void, (*jnigi.ObjectRef)(t))
 }
 
 func (v *VariableDeclaration) SetName(env *jnigi.Env, s string) error {
@@ -53,6 +75,14 @@ func (v *VariableDeclaration) SetInitializer(env *jnigi.Env, e *Expression) (err
 	_, err = (*jnigi.ObjectRef)(v).CallMethod(env, "setInitializer", jnigi.Void, (*jnigi.ObjectRef)(e).Cast("de/fraunhofer/aisec/cpg/graph/statements/expressions/Expression"))
 
 	return
+}
+
+func (r *RecordDeclaration) SetName(env *jnigi.Env, s string) error {
+	return (*Node)(r).SetName(env, s)
+}
+
+func (r *RecordDeclaration) SetKind(env *jnigi.Env, s string) error {
+	return (*jnigi.ObjectRef)(r).SetField(env, "kind", NewString(env, s))
 }
 
 func NewTranslationUnitDeclaration(env *jnigi.Env) *TranslationUnitDeclaration {
@@ -73,6 +103,24 @@ func NewFunctionDeclaration(env *jnigi.Env) *FunctionDeclaration {
 	return (*FunctionDeclaration)(tu)
 }
 
+func NewMethodDeclaration(env *jnigi.Env) *MethodDeclaration {
+	tu, err := env.NewObject("de/fraunhofer/aisec/cpg/graph/declarations/MethodDeclaration")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return (*MethodDeclaration)(tu)
+}
+
+func NewRecordDeclaration(env *jnigi.Env) *RecordDeclaration {
+	tu, err := env.NewObject("de/fraunhofer/aisec/cpg/graph/declarations/RecordDeclaration")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return (*RecordDeclaration)(tu)
+}
+
 func NewVariableDeclaration(env *jnigi.Env) *VariableDeclaration {
 	tu, err := env.NewObject("de/fraunhofer/aisec/cpg/graph/declarations/VariableDeclaration")
 	if err != nil {
@@ -89,4 +137,13 @@ func NewParamVariableDeclaration(env *jnigi.Env) *ParamVariableDeclaration {
 	}
 
 	return (*ParamVariableDeclaration)(tu)
+}
+
+func NewFieldDeclaration(env *jnigi.Env) *FieldDeclaration {
+	tu, err := env.NewObject("de/fraunhofer/aisec/cpg/graph/declarations/FieldDeclaration")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return (*FieldDeclaration)(tu)
 }

@@ -1,5 +1,6 @@
 package de.fraunhofer.aisec.cpg.frontends.golang
 
+import de.fraunhofer.aisec.cpg.ExperimentalGolang
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
@@ -9,6 +10,7 @@ import java.io.File
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 
+@ExperimentalGolang
 class GoLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeManager?) : LanguageFrontend(config, scopeManager, ".") {
     companion object {
         init {

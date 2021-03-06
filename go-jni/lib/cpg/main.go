@@ -30,15 +30,12 @@ func handleFuncDecl(this *cpg.GoLanguageFrontend, fset *token.FileSet, env *jnig
 	// enter scope
 	this.GetScopeManager(env).EnterScope(env, (*cpg.Node)(f))
 
-	for _, field := range funcDecl.Type.Params.List {
+	for _, param := range funcDecl.Type.Params.List {
 		p := cpg.NewParamVariableDeclaration(env)
 		// TODO: more than one name?
-		p.SetName(env, field.Names[0].Name)
+		p.SetName(env, param.Names[0].Name)
 
-		var typeNameBuf bytes.Buffer
-		_ = printer.Fprint(&typeNameBuf, fset, field.Type)
-
-		t := cpg.TypeParser_createFrom(env, typeNameBuf.String(), false)
+		t := handleType(env, param.Type)
 
 		p.SetType(env, t)
 
@@ -63,41 +60,118 @@ func handleFuncDecl(this *cpg.GoLanguageFrontend, fset *token.FileSet, env *jnig
 func handleGenDecl(this *cpg.GoLanguageFrontend, fset *token.FileSet, env *jnigi.Env, genDecl *ast.GenDecl) *jnigi.ObjectRef {
 	// TODO: Handle multiple declarations
 	for _, spec := range genDecl.Specs {
-		fmt.Printf("Spec: %+v\n", spec)
+		fmt.Printf("Spec: %T: %+v\n", spec, spec)
 		switch v := spec.(type) {
 		case *ast.ValueSpec:
-			// TODO: more names
-			var ident = v.Names[0]
-
-			d := (cpg.NewVariableDeclaration(env))
-			d.SetName(env, ident.Name)
-
-			if v.Type != nil {
-				var typeNameBuf bytes.Buffer
-				_ = printer.Fprint(&typeNameBuf, fset, v.Type)
-
-				t := cpg.TypeParser_createFrom(env, typeNameBuf.String(), false)
-				d.SetType(env, t)
-			}
-
-			// add an initializer
-			if len(v.Values) > 0 {
-				fmt.Printf("initializer: %v\n", v.Values[0])
-
-				// TODO: How to deal with multiple values
-				var expr = handleExpr( /*this,*/ fset, env, v.Values[0])
-
-				err := d.SetInitializer(env, expr)
-				if err != nil {
-					log.Fatal(err)
-				}
-			}
-
-			return (*jnigi.ObjectRef)(d)
+			return (*jnigi.ObjectRef)(handleValueSpec(this, fset, env, v))
+		case *ast.TypeSpec:
+			return (*jnigi.ObjectRef)(handleTypeSpec(this, fset, env, v))
 		}
 	}
 
 	return nil
+}
+
+func handleValueSpec(this *cpg.GoLanguageFrontend, fset *token.FileSet, env *jnigi.Env, valueDecl *ast.ValueSpec) *cpg.Declaration {
+	// TODO: more names
+	var ident = valueDecl.Names[0]
+
+	d := (cpg.NewVariableDeclaration(env))
+	d.SetName(env, ident.Name)
+
+	if valueDecl.Type != nil {
+		t := handleType(env, valueDecl.Type)
+
+		d.SetType(env, t)
+	}
+
+	// add an initializer
+	if len(valueDecl.Values) > 0 {
+		fmt.Printf("initializer: %v\n", valueDecl.Values[0])
+
+		// TODO: How to deal with multiple values
+		var expr = handleExpr( /*this,*/ fset, env, valueDecl.Values[0])
+
+		err := d.SetInitializer(env, expr)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+
+	return (*cpg.Declaration)(d)
+}
+
+func handleTypeSpec(this *cpg.GoLanguageFrontend, fset *token.FileSet, env *jnigi.Env, typeDecl *ast.TypeSpec) *cpg.Declaration {
+	log.Printf("Type specifier with name %s and type (%T, %+v)", typeDecl.Name.Name, typeDecl.Type, typeDecl.Type)
+
+	switch v := typeDecl.Type.(type) {
+	case *ast.StructType:
+		return (*cpg.Declaration)(handleStructTypeSpec(this, fset, env, typeDecl, v))
+	case *ast.InterfaceType:
+		return (*cpg.Declaration)(handleInterfaceTypeSpec(this, fset, env, typeDecl, v))
+	}
+
+	return nil
+}
+
+func handleStructTypeSpec(this *cpg.GoLanguageFrontend, fset *token.FileSet, env *jnigi.Env, typeDecl *ast.TypeSpec, structType *ast.StructType) *cpg.RecordDeclaration {
+	r := cpg.NewRecordDeclaration(env)
+
+	r.SetKind(env, "struct")
+	r.SetName(env, typeDecl.Name.Name)
+
+	var scope = this.GetScopeManager(env)
+
+	scope.EnterScope(env, (*cpg.Node)(r))
+
+	// TODO: parse members
+
+	if !structType.Incomplete {
+		for _, field := range structType.Fields.List {
+			f := cpg.NewFieldDeclaration(env)
+
+			// TODO: Multiple names?
+			f.SetName(env, field.Names[0].Name)
+
+			t := handleType(env, field.Type)
+
+			f.SetType(env, t)
+
+			scope.AddDeclaration(env, (*cpg.Declaration)(f))
+		}
+	}
+
+	scope.LeaveScope(env, (*cpg.Node)(r))
+
+	return r
+}
+
+func handleInterfaceTypeSpec(this *cpg.GoLanguageFrontend, fset *token.FileSet, env *jnigi.Env, typeDecl *ast.TypeSpec, interfaceType *ast.InterfaceType) *cpg.RecordDeclaration {
+	r := cpg.NewRecordDeclaration(env)
+
+	r.SetKind(env, "interface")
+	r.SetName(env, typeDecl.Name.Name)
+
+	var scope = this.GetScopeManager(env)
+
+	scope.EnterScope(env, (*cpg.Node)(r))
+
+	if !interfaceType.Incomplete {
+		for _, method := range interfaceType.Methods.List {
+			m := cpg.NewMethodDeclaration(env)
+
+			t := handleType(env, method.Type)
+
+			m.SetType(env, t)
+			m.SetName(env, method.Names[0].Name)
+
+			scope.AddDeclaration(env, (*cpg.Declaration)(m))
+		}
+	}
+
+	scope.LeaveScope(env, (*cpg.Node)(r))
+
+	return r
 }
 
 func handleBlockStmt(this *cpg.GoLanguageFrontend, fset *token.FileSet, env *jnigi.Env, blockStmt *ast.BlockStmt) *cpg.CompoundStatement {
@@ -247,10 +321,7 @@ func handleBasicLit(fset *token.FileSet, env *jnigi.Env, lit *ast.BasicLit) *cpg
 		break
 	}
 
-	if t != nil {
-		l.SetType(env, t)
-	}
-
+	l.SetType(env, t)
 	l.SetValue(env, value)
 
 	return l
@@ -262,6 +333,20 @@ func handleIdent(fset *token.FileSet, env *jnigi.Env, ident *ast.Ident) *cpg.Dec
 	ref.SetName(env, ident.Name)
 
 	return ref
+}
+
+func handleType(env *jnigi.Env, typeExpr ast.Expr) *cpg.Type {
+	log.Printf("Parsing type %T: %+v\n", typeExpr, typeExpr)
+
+	switch v := typeExpr.(type) {
+	case *ast.Ident:
+		return cpg.TypeParser_createFrom(env, v.Name, false)
+	case *ast.FuncType:
+		// for now, we are only interested in the return type
+		return handleType(env, v.Results.List[0].Type)
+	}
+
+	return nil
 }
 
 //export Java_de_fraunhofer_aisec_cpg_frontends_golang_GoLanguageFrontend_parseInternal

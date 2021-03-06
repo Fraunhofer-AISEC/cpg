@@ -4,6 +4,7 @@ import de.fraunhofer.aisec.cpg.BaseTest
 import de.fraunhofer.aisec.cpg.TestUtils
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
@@ -125,5 +126,42 @@ class GoLanguageFrontendTest : BaseTest() {
         assertNotNull(rhs)
 
         assertEquals(2, rhs.value)
+    }
+
+    @Test
+    fun testStruct() {
+        val topLevel = Path.of("src", "test", "resources", "golang")
+        val tu = TestUtils.analyzeAndGetFirstTU(listOf(topLevel.resolve("struct.go").toFile()), topLevel, true)
+
+        assertNotNull(tu)
+
+        val myStruct = tu.getDeclarationsByName("MyStruct", RecordDeclaration::class.java).iterator().next()
+
+        assertNotNull(myStruct)
+        assertEquals("struct", myStruct.kind)
+
+        val fields = myStruct.fields
+
+        assertEquals(1, fields.size)
+
+        val myField = fields.first()
+
+        assertEquals("MyField", myField.name)
+        assertEquals(TypeParser.createFrom("int", false), myField.type)
+
+        val myInterface = tu.getDeclarationsByName("MyInterface", RecordDeclaration::class.java).iterator().next()
+
+        assertNotNull(myInterface)
+        assertEquals("interface", myInterface.kind)
+
+        val methods = myInterface.methods
+
+        assertEquals(1, methods.size)
+
+        val myFunc = methods.first()
+
+        assertEquals("MyFunc", myFunc.name)
+        assertEquals(TypeParser.createFrom("string", false), myFunc.type)
+
     }
 }
