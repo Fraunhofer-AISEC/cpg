@@ -23,11 +23,58 @@ func main() {
 }
 
 func handleFuncDecl(this *cpg.GoLanguageFrontend, fset *token.FileSet, env *jnigi.Env, funcDecl *ast.FuncDecl) *jnigi.ObjectRef {
-	f := cpg.NewFunctionDeclaration(env)
+	this.LogDebug(env, "Handling func Decl: %+v", *funcDecl)
+
+	var f *cpg.FunctionDeclaration
+	if funcDecl.Recv != nil {
+		m := cpg.NewMethodDeclaration(env)
+
+		// TODO: why is this a list?
+		var recv = funcDecl.Recv.List[0]
+
+		// TODO: currently, we lose the name of our receiver, not sure how to fix that
+		// and we probably need it for member call expression
+
+		var recordType = handleType(env, recv.Type)
+
+		if recordType != nil {
+			var recordName = (*cpg.Node)(recordType).GetName(env)
+
+			// TODO: this will only find methods within the current translation unit
+			// this is a limitation that we have for C++ as well
+			record, err := this.GetScopeManager(env).GetRecordForName(env,
+				this.GetScopeManager(env).GetCurrentScope(env),
+				recordName)
+
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			if record != nil {
+				// now this gets a little bit hacky, we will add it to the record declaration
+				// this is strictly speaking not 100 % true, since the method property edge is
+				// marked as AST and in Go a method is not part of the struct's AST but is declared
+				// outside. In the future, we need to differentiate between just the associated members
+				// of the class and the pure AST nodes declared in the struct itself
+				err = record.AddMethod(env, m)
+				if err != nil {
+					log.Fatal(err)
+				}
+			}
+		}
+
+		f = (*cpg.FunctionDeclaration)(m)
+	} else {
+		f = cpg.NewFunctionDeclaration(env)
+	}
 
 	f.SetName(env, funcDecl.Name.Name)
 
-	// enter scope
+	// TODO: for other languages, we would enter the record declaration, if
+	// this is a method; however I am not quite sure if this makes sense for
+	// go, since we do not have a 'this', but rather a named receiver
+
+	// enter scope for function body
 	this.GetScopeManager(env).EnterScope(env, (*cpg.Node)(f))
 
 	for _, param := range funcDecl.Type.Params.List {

@@ -84,6 +84,12 @@ func (r *RecordDeclaration) SetKind(env *jnigi.Env, s string) error {
 	return (*jnigi.ObjectRef)(r).SetField(env, "kind", NewString(env, s))
 }
 
+func (r *RecordDeclaration) AddMethod(env *jnigi.Env, m *MethodDeclaration) (err error) {
+	_, err = (*jnigi.ObjectRef)(r).CallMethod(env, "addMethod", jnigi.Void, (*jnigi.ObjectRef)(m))
+
+	return
+}
+
 func NewTranslationUnitDeclaration(env *jnigi.Env) *TranslationUnitDeclaration {
 	tu, err := env.NewObject("de/fraunhofer/aisec/cpg/graph/declarations/TranslationUnitDeclaration")
 	if err != nil {

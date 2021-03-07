@@ -147,6 +147,12 @@ class GoLanguageFrontendTest : BaseTest() {
 
         assertEquals(1, fields.size)
 
+        var methods = myStruct.methods
+
+        var myFunc = methods.first()
+
+        assertEquals("MyFunc", myFunc.name)
+
         val myField = fields.first()
 
         assertEquals("MyField", myField.name)
@@ -157,11 +163,11 @@ class GoLanguageFrontendTest : BaseTest() {
         assertNotNull(myInterface)
         assertEquals("interface", myInterface.kind)
 
-        val methods = myInterface.methods
+        methods = myInterface.methods
 
         assertEquals(1, methods.size)
 
-        val myFunc = methods.first()
+        myFunc = methods.first()
 
         assertEquals("MyFunc", myFunc.name)
         assertEquals(TypeParser.createFrom("string", false), myFunc.type)
