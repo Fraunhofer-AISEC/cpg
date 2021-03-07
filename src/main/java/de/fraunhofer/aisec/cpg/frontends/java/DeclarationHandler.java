@@ -150,12 +150,20 @@ public class DeclarationHandler
       com.github.javaparser.ast.body.MethodDeclaration methodDecl) {
     ResolvedMethodDeclaration resolvedMethod = methodDecl.resolve();
 
+    var record = lang.getScopeManager().getCurrentRecord();
+
     de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration functionDeclaration =
         NodeBuilder.newMethodDeclaration(
             resolvedMethod.getName(),
             methodDecl.toString(),
             methodDecl.isStatic(),
-            lang.getScopeManager().getCurrentRecord());
+            record);
+
+    // create the receiver
+    var receiver = NodeBuilder.newVariableDeclaration("this", TypeParser.createFrom(record.getName(), false), "this", false);
+
+    functionDeclaration.setReceiver(receiver);
+    
     lang.getScopeManager().enterScope(functionDeclaration);
 
     functionDeclaration.addThrowTypes(

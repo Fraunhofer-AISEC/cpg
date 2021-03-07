@@ -1,5 +1,7 @@
 package p
 
+import ("fmt")
+
 type MyStruct struct {
     MyField int
 }
@@ -9,5 +11,11 @@ type MyInterface interface {
 }
 
 func (s MyStruct) MyFunc() string {
+    fmt.Printf(s.myOtherFunc(), s.MyField)
+
 	return "s"
+}
+
+func (s MyStruct) myOtherFunc() string {
+	return "%d"
 }

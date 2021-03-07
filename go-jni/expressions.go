@@ -1,6 +1,8 @@
 package cpg
 
 import (
+	"go/ast"
+	"go/token"
 	"log"
 
 	"tekao.net/jnigi"
@@ -12,38 +14,46 @@ type BinaryOperator Expression
 type Literal Expression
 type DeclaredReferenceExpression Expression
 
-func NewCallExpression(env *jnigi.Env) *CallExpression {
+func NewCallExpression(fset *token.FileSet, env *jnigi.Env, astNode ast.Node) *CallExpression {
 	c, err := env.NewObject("de/fraunhofer/aisec/cpg/graph/statements/expressions/CallExpression")
 	if err != nil {
 		log.Fatal(err)
 	}
 
+	updateCode(fset, env, (*Node)(c), astNode)
+
 	return (*CallExpression)(c)
 }
 
-func NewBinaryOperator(env *jnigi.Env) *BinaryOperator {
+func NewBinaryOperator(fset *token.FileSet, env *jnigi.Env, astNode ast.Node) *BinaryOperator {
 	c, err := env.NewObject("de/fraunhofer/aisec/cpg/graph/statements/expressions/BinaryOperator")
 	if err != nil {
 		log.Fatal(err)
 	}
 
+	updateCode(fset, env, (*Node)(c), astNode)
+
 	return (*BinaryOperator)(c)
 }
 
-func NewLiteral(env *jnigi.Env) *Literal {
+func NewLiteral(fset *token.FileSet, env *jnigi.Env, astNode ast.Node) *Literal {
 	l, err := env.NewObject("de/fraunhofer/aisec/cpg/graph/statements/expressions/Literal")
 	if err != nil {
 		log.Fatal(err)
 	}
 
+	updateCode(fset, env, (*Node)(l), astNode)
+
 	return (*Literal)(l)
 }
 
-func NewDeclaredReferenceExpression(env *jnigi.Env) *DeclaredReferenceExpression {
+func NewDeclaredReferenceExpression(fset *token.FileSet, env *jnigi.Env, astNode ast.Node) *DeclaredReferenceExpression {
 	l, err := env.NewObject("de/fraunhofer/aisec/cpg/graph/statements/expressions/DeclaredReferenceExpression")
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	updateCode(fset, env, (*Node)(l), astNode)
 
 	return (*DeclaredReferenceExpression)(l)
 }

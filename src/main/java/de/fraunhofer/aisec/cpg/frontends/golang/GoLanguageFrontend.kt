@@ -10,6 +10,10 @@ import java.io.File
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 
+class RawGolangNode {
+
+}
+
 @ExperimentalGolang
 class GoLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeManager?) : LanguageFrontend(config, scopeManager, ".") {
     companion object {
@@ -24,10 +28,12 @@ class GoLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeMa
     }
 
     override fun <T> getCodeFromRawNode(astNode: T): String? {
+        // this is handled by native code
         return null
     }
 
     override fun <T> getLocationFromRawNode(astNode: T): PhysicalLocation? {
+        // this is handled by native code
         return null
     }
 

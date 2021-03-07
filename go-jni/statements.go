@@ -1,6 +1,8 @@
 package cpg
 
 import (
+	"go/ast"
+	"go/token"
 	"log"
 
 	"tekao.net/jnigi"
@@ -10,20 +12,24 @@ type Statement Node
 type CompoundStatement Statement
 type DeclarationStatement Statement
 
-func NewCompoundStatement(env *jnigi.Env) *CompoundStatement {
+func NewCompoundStatement(fset *token.FileSet, env *jnigi.Env, astNode ast.Node) *CompoundStatement {
 	s, err := env.NewObject("de/fraunhofer/aisec/cpg/graph/statements/CompoundStatement")
 	if err != nil {
 		log.Fatal(err)
 	}
 
+	updateCode(fset, env, (*Node)(s), astNode)
+
 	return (*CompoundStatement)(s)
 }
 
-func NewDeclarationStatement(env *jnigi.Env) *DeclarationStatement {
+func NewDeclarationStatement(fset *token.FileSet, env *jnigi.Env, astNode ast.Node) *DeclarationStatement {
 	s, err := env.NewObject("de/fraunhofer/aisec/cpg/graph/statements/DeclarationStatement")
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	updateCode(fset, env, (*Node)(s), astNode)
 
 	return (*DeclarationStatement)(s)
 }

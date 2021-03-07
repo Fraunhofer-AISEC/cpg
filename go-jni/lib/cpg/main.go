@@ -27,7 +27,7 @@ func handleFuncDecl(this *cpg.GoLanguageFrontend, fset *token.FileSet, env *jnig
 
 	var f *cpg.FunctionDeclaration
 	if funcDecl.Recv != nil {
-		m := cpg.NewMethodDeclaration(env)
+		m := cpg.NewMethodDeclaration(fset, env, funcDecl)
 
 		// TODO: why is this a list?
 		var recv = funcDecl.Recv.List[0]
@@ -65,7 +65,7 @@ func handleFuncDecl(this *cpg.GoLanguageFrontend, fset *token.FileSet, env *jnig
 
 		f = (*cpg.FunctionDeclaration)(m)
 	} else {
-		f = cpg.NewFunctionDeclaration(env)
+		f = cpg.NewFunctionDeclaration(fset, env, funcDecl)
 	}
 
 	f.SetName(env, funcDecl.Name.Name)
@@ -80,7 +80,8 @@ func handleFuncDecl(this *cpg.GoLanguageFrontend, fset *token.FileSet, env *jnig
 	scope.EnterScope(env, (*cpg.Node)(f))
 
 	for _, param := range funcDecl.Type.Params.List {
-		p := cpg.NewParamVariableDeclaration(env)
+		p := cpg.NewParamVariableDeclaration(fset, env, param)
+
 		// TODO: more than one name?
 		p.SetName(env, param.Names[0].Name)
 
@@ -126,7 +127,8 @@ func handleValueSpec(this *cpg.GoLanguageFrontend, fset *token.FileSet, env *jni
 	// TODO: more names
 	var ident = valueDecl.Names[0]
 
-	d := (cpg.NewVariableDeclaration(env))
+	d := (cpg.NewVariableDeclaration(fset, env, valueDecl))
+
 	d.SetName(env, ident.Name)
 
 	if valueDecl.Type != nil {
@@ -168,7 +170,7 @@ func handleTypeSpec(this *cpg.GoLanguageFrontend, fset *token.FileSet, env *jnig
 }
 
 func handleStructTypeSpec(this *cpg.GoLanguageFrontend, fset *token.FileSet, env *jnigi.Env, typeDecl *ast.TypeSpec, structType *ast.StructType) *cpg.RecordDeclaration {
-	r := cpg.NewRecordDeclaration(env)
+	r := cpg.NewRecordDeclaration(fset, env, typeDecl)
 
 	r.SetKind(env, "struct")
 	r.SetName(env, typeDecl.Name.Name)
@@ -181,7 +183,7 @@ func handleStructTypeSpec(this *cpg.GoLanguageFrontend, fset *token.FileSet, env
 
 	if !structType.Incomplete {
 		for _, field := range structType.Fields.List {
-			f := cpg.NewFieldDeclaration(env)
+			f := cpg.NewFieldDeclaration(fset, env, field)
 
 			// TODO: Multiple names?
 			f.SetName(env, field.Names[0].Name)
@@ -200,7 +202,7 @@ func handleStructTypeSpec(this *cpg.GoLanguageFrontend, fset *token.FileSet, env
 }
 
 func handleInterfaceTypeSpec(this *cpg.GoLanguageFrontend, fset *token.FileSet, env *jnigi.Env, typeDecl *ast.TypeSpec, interfaceType *ast.InterfaceType) *cpg.RecordDeclaration {
-	r := cpg.NewRecordDeclaration(env)
+	r := cpg.NewRecordDeclaration(fset, env, typeDecl)
 
 	r.SetKind(env, "interface")
 	r.SetName(env, typeDecl.Name.Name)
@@ -211,7 +213,7 @@ func handleInterfaceTypeSpec(this *cpg.GoLanguageFrontend, fset *token.FileSet, 
 
 	if !interfaceType.Incomplete {
 		for _, method := range interfaceType.Methods.List {
-			m := cpg.NewMethodDeclaration(env)
+			m := cpg.NewMethodDeclaration(fset, env, method)
 
 			t := handleType(env, method.Type)
 
@@ -228,7 +230,7 @@ func handleInterfaceTypeSpec(this *cpg.GoLanguageFrontend, fset *token.FileSet, 
 }
 
 func handleBlockStmt(this *cpg.GoLanguageFrontend, fset *token.FileSet, env *jnigi.Env, blockStmt *ast.BlockStmt) *cpg.CompoundStatement {
-	c := cpg.NewCompoundStatement(env)
+	c := cpg.NewCompoundStatement(fset, env, blockStmt)
 
 	// enter scope
 	this.GetScopeManager(env).EnterScope(env, (*cpg.Node)(c))
@@ -268,6 +270,8 @@ func handleExpr(fset *token.FileSet, env *jnigi.Env, expr ast.Expr) *cpg.Express
 		return (*cpg.Expression)(handleCallExpr(fset, env, v))
 	case *ast.BinaryExpr:
 		return (*cpg.Expression)(handleBinaryExpr(fset, env, v))
+	case *ast.SelectorExpr:
+		return (*cpg.Expression)(handleSelectorExpr(fset, env, v))
 	case *ast.BasicLit:
 		return (*cpg.Expression)(handleBasicLit(fset, env, v))
 	case *ast.Ident:
@@ -286,10 +290,10 @@ func handleAssignStmt(fset *token.FileSet, env *jnigi.Env, assignStmt *ast.Assig
 
 	if assignStmt.Tok == token.DEFINE {
 		// lets create a variable declaration (wrapped with a declaration stmt) with this, because we define the variable here
-		stmt := cpg.NewDeclarationStatement(env)
+		stmt := cpg.NewDeclarationStatement(fset, env, assignStmt)
 
 		// TODO: assignment of multiple values
-		d := cpg.NewVariableDeclaration(env)
+		d := cpg.NewVariableDeclaration(fset, env, assignStmt)
 
 		var name = assignStmt.Lhs[0].(*ast.Ident).Name
 		d.SetName(env, name)
@@ -307,7 +311,7 @@ func handleAssignStmt(fset *token.FileSet, env *jnigi.Env, assignStmt *ast.Assig
 }
 
 func handleCallExpr(fset *token.FileSet, env *jnigi.Env, callExpr *ast.CallExpr) *cpg.CallExpression {
-	c := cpg.NewCallExpression(env)
+	c := cpg.NewCallExpression(fset, env, callExpr)
 
 	var nameBuf bytes.Buffer
 	_ = printer.Fprint(&nameBuf, fset, callExpr.Fun)
@@ -327,7 +331,7 @@ func handleCallExpr(fset *token.FileSet, env *jnigi.Env, callExpr *ast.CallExpr)
 }
 
 func handleBinaryExpr(fset *token.FileSet, env *jnigi.Env, binaryExpr *ast.BinaryExpr) *cpg.BinaryOperator {
-	b := cpg.NewBinaryOperator(env)
+	b := cpg.NewBinaryOperator(fset, env, binaryExpr)
 
 	lhs := handleExpr(fset, env, binaryExpr.X)
 	rhs := handleExpr(fset, env, binaryExpr.Y)
@@ -347,9 +351,32 @@ func handleBinaryExpr(fset *token.FileSet, env *jnigi.Env, binaryExpr *ast.Binar
 
 	return b
 }
+func handleSelectorExpr(fset *token.FileSet, env *jnigi.Env, selectorExpr *ast.SelectorExpr) *cpg.BinaryOperator {
+	/*
+			var record = lang.getScopeManager().getCurrentRecord();
+
+		      base =
+		          NodeBuilder.newDeclaredReferenceExpression(
+		              "this",
+		              record != null ? record.getThis().getType() : UnknownType.getUnknownType(),
+		              base.getCode());
+		      base.setLocation(location);
+	*/
+
+	/*
+			  MemberExpression memberExpression =
+		        NodeBuilder.newMemberExpression(
+		            base,
+		            UnknownType.getUnknownType(),
+		            ctx.getFieldName().toString(),
+		            ctx.isPointerDereference() ? "->" : ".",
+		            ctx.getRawSignature());
+	*/
+
+}
 
 func handleBasicLit(fset *token.FileSet, env *jnigi.Env, lit *ast.BasicLit) *cpg.Literal {
-	l := cpg.NewLiteral(env)
+	l := cpg.NewLiteral(fset, env, lit)
 
 	var value interface{}
 	var t *cpg.Type
@@ -381,7 +408,7 @@ func handleBasicLit(fset *token.FileSet, env *jnigi.Env, lit *ast.BasicLit) *cpg
 }
 
 func handleIdent(fset *token.FileSet, env *jnigi.Env, ident *ast.Ident) *cpg.DeclaredReferenceExpression {
-	ref := cpg.NewDeclaredReferenceExpression(env)
+	ref := cpg.NewDeclaredReferenceExpression(fset, env, ident)
 
 	ref.SetName(env, ident.Name)
 
@@ -411,13 +438,6 @@ func Java_de_fraunhofer_aisec_cpg_frontends_golang_GoLanguageFrontend_parseInter
 
 	srcObject := jnigi.WrapJObject(uintptr(arg1), "java/lang/String", false)
 
-	tu := cpg.NewTranslationUnitDeclaration(env)
-
-	scope := this.GetScopeManager(env)
-
-	// reset scope
-	scope.ResetToGlobal(env, (*cpg.Node)(tu))
-
 	src, err := srcObject.CallMethod(env, "getBytes", jnigi.Byte|jnigi.Array)
 	if err != nil {
 		log.Fatal(err)
@@ -425,13 +445,19 @@ func Java_de_fraunhofer_aisec_cpg_frontends_golang_GoLanguageFrontend_parseInter
 
 	fset := token.NewFileSet()
 	file, err := parser.ParseFile(fset, "src.go", string(src.([]byte)), 0)
-
 	if err != nil {
 		panic(err)
 	}
 
+	tu := cpg.NewTranslationUnitDeclaration(fset, env, file)
+
+	scope := this.GetScopeManager(env)
+
+	// reset scope
+	scope.ResetToGlobal(env, (*cpg.Node)(tu))
+
 	// create a new namespace declaration, representing the package
-	p := cpg.NewNamespaceDeclaration(env)
+	p := cpg.NewNamespaceDeclaration(fset, env, nil)
 
 	p.SetName(env, file.Name.Name)
 

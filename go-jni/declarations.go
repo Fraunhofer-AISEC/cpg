@@ -1,6 +1,8 @@
 package cpg
 
 import (
+	"go/ast"
+	"go/token"
 	"log"
 
 	"tekao.net/jnigi"
@@ -90,74 +92,90 @@ func (r *RecordDeclaration) AddMethod(env *jnigi.Env, m *MethodDeclaration) (err
 	return
 }
 
-func NewTranslationUnitDeclaration(env *jnigi.Env) *TranslationUnitDeclaration {
+func NewTranslationUnitDeclaration(fset *token.FileSet, env *jnigi.Env, astNode ast.Node) *TranslationUnitDeclaration {
 	tu, err := env.NewObject("de/fraunhofer/aisec/cpg/graph/declarations/TranslationUnitDeclaration")
 	if err != nil {
 		log.Fatal(err)
 	}
 
+	updateCode(fset, env, (*Node)(tu), astNode)
+
 	return (*TranslationUnitDeclaration)(tu)
 }
 
-func NewNamespaceDeclaration(env *jnigi.Env) *NamespaceDeclaration {
+func NewNamespaceDeclaration(fset *token.FileSet, env *jnigi.Env, astNode ast.Node) *NamespaceDeclaration {
 	tu, err := env.NewObject("de/fraunhofer/aisec/cpg/graph/declarations/NamespaceDeclaration")
 	if err != nil {
 		log.Fatal(err)
 	}
 
+	updateCode(fset, env, (*Node)(tu), astNode)
+
 	return (*NamespaceDeclaration)(tu)
 }
 
-func NewFunctionDeclaration(env *jnigi.Env) *FunctionDeclaration {
+func NewFunctionDeclaration(fset *token.FileSet, env *jnigi.Env, astNode ast.Node) *FunctionDeclaration {
 	tu, err := env.NewObject("de/fraunhofer/aisec/cpg/graph/declarations/FunctionDeclaration")
 	if err != nil {
 		log.Fatal(err)
 	}
 
+	updateCode(fset, env, (*Node)(tu), astNode)
+
 	return (*FunctionDeclaration)(tu)
 }
 
-func NewMethodDeclaration(env *jnigi.Env) *MethodDeclaration {
+func NewMethodDeclaration(fset *token.FileSet, env *jnigi.Env, astNode ast.Node) *MethodDeclaration {
 	tu, err := env.NewObject("de/fraunhofer/aisec/cpg/graph/declarations/MethodDeclaration")
 	if err != nil {
 		log.Fatal(err)
 	}
 
+	updateCode(fset, env, (*Node)(tu), astNode)
+
 	return (*MethodDeclaration)(tu)
 }
 
-func NewRecordDeclaration(env *jnigi.Env) *RecordDeclaration {
+func NewRecordDeclaration(fset *token.FileSet, env *jnigi.Env, astNode ast.Node) *RecordDeclaration {
 	tu, err := env.NewObject("de/fraunhofer/aisec/cpg/graph/declarations/RecordDeclaration")
 	if err != nil {
 		log.Fatal(err)
 	}
 
+	updateCode(fset, env, (*Node)(tu), astNode)
+
 	return (*RecordDeclaration)(tu)
 }
 
-func NewVariableDeclaration(env *jnigi.Env) *VariableDeclaration {
+func NewVariableDeclaration(fset *token.FileSet, env *jnigi.Env, astNode ast.Node) *VariableDeclaration {
 	tu, err := env.NewObject("de/fraunhofer/aisec/cpg/graph/declarations/VariableDeclaration")
 	if err != nil {
 		log.Fatal(err)
 	}
 
+	updateCode(fset, env, (*Node)(tu), astNode)
+
 	return (*VariableDeclaration)(tu)
 }
 
-func NewParamVariableDeclaration(env *jnigi.Env) *ParamVariableDeclaration {
+func NewParamVariableDeclaration(fset *token.FileSet, env *jnigi.Env, astNode ast.Node) *ParamVariableDeclaration {
 	tu, err := env.NewObject("de/fraunhofer/aisec/cpg/graph/declarations/ParamVariableDeclaration")
 	if err != nil {
 		log.Fatal(err)
 	}
 
+	updateCode(fset, env, (*Node)(tu), astNode)
+
 	return (*ParamVariableDeclaration)(tu)
 }
 
-func NewFieldDeclaration(env *jnigi.Env) *FieldDeclaration {
+func NewFieldDeclaration(fset *token.FileSet, env *jnigi.Env, astNode ast.Node) *FieldDeclaration {
 	tu, err := env.NewObject("de/fraunhofer/aisec/cpg/graph/declarations/FieldDeclaration")
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	updateCode(fset, env, (*Node)(tu), astNode)
 
 	return (*FieldDeclaration)(tu)
 }
