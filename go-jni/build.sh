@@ -3,9 +3,9 @@ ARCH=`uname -s | tr '[:upper:]' '[:lower:]'`
 
 if [ $ARCH == "darwin" ]
 then
-    EXTENSION=".dylib"
+    EXTENSION="dylib"
 else
-    EXTENSION=".so"
+    EXTENSION="so"
 fi
 
 if [ "$JAVA_HOME" == "" ]
