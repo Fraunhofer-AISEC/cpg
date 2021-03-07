@@ -7,14 +7,7 @@
             "label": "go: build",
             "type": "shell",        
             "problemMatcher": [],
-            "osx": {
-                "command": "go build -buildmode=c-shared -o ../libcpgo.dylib lib/cpg/main.go",
-                "options": {
-                    "env": {
-                        "CGO_CFLAGS": "-I/Library/Java/JavaVirtualMachines/openjdk.jdk/Contents/Home/include -I/Library/Java/JavaVirtualMachines/openjdk.jdk/Contents/Home/include/darwin"
-                    }
-                }
-            },
+            "command": "./build.sh",
             "group": {
                 "kind": "build",
                 "isDefault": true

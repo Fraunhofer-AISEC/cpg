@@ -74,8 +74,10 @@ func handleFuncDecl(this *cpg.GoLanguageFrontend, fset *token.FileSet, env *jnig
 	// this is a method; however I am not quite sure if this makes sense for
 	// go, since we do not have a 'this', but rather a named receiver
 
+	var scope = this.GetScopeManager(env)
+
 	// enter scope for function body
-	this.GetScopeManager(env).EnterScope(env, (*cpg.Node)(f))
+	scope.EnterScope(env, (*cpg.Node)(f))
 
 	for _, param := range funcDecl.Type.Params.List {
 		p := cpg.NewParamVariableDeclaration(env)
@@ -99,7 +101,7 @@ func handleFuncDecl(this *cpg.GoLanguageFrontend, fset *token.FileSet, env *jnig
 	}
 
 	// leave scope
-	this.GetScopeManager(env).LeaveScope(env, (*cpg.Node)(f))
+	scope.LeaveScope(env, (*cpg.Node)(f))
 
 	return (*jnigi.ObjectRef)(f)
 }

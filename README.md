@@ -73,6 +73,14 @@ func.getSignature();
 func.getParameters();
 ```
 
+### Usage of Experimental Languages
+
+Some languages, such as Golang are marked as experimental and depend on other native libraries. These are NOT YET bundled in the release jars, so you need to build them manually.  
+
+#### Golang
+
+In the case of Golang, the necessary native code can be found in the `go-jni` folder. In order to build it you can use the `build.sh` script, which uses `java_home` to automatically find JNI headers and stores the finished library in the cpg root folder. This currently only works for Linux and macOS.
+
 ## Development Setup
 
 ### Code Style

@@ -28,8 +28,7 @@ jobs:
         id: determine_version
       - name: Build cpgo
         run: |
-          export CGO_CFLAGS="-I/${JAVA_HOME}/include -I${JAVA_HOME}/include/linux"
-          cd go-jni && go build -buildmode=c-shared -o libcpgo.so lib/cpg/main.go && sudo cp libcpgo.so /usr/lib/
+          cd go-jni && ./build.sh
       - name: Build ${{ steps.determine_version.outputs.version }}
         run: |
           if [ "$SONAR_TOKEN" != "" ]
