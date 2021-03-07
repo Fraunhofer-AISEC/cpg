@@ -100,7 +100,7 @@ public class TranslationUnitDeclaration extends Declaration implements Declarati
   public <T extends Declaration> Set<T> getDeclarationsByName(
       @NonNull String name, @NonNull Class<T> clazz) {
     return this.declarations.stream()
-        .map(pe -> pe.getEnd())
+        .map(PropertyEdge::getEnd)
         .filter(declaration -> clazz.isAssignableFrom(declaration.getClass()))
         .map(clazz::cast)
         .filter(declaration -> Objects.equals(declaration.getName(), name))

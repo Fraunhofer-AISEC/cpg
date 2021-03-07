@@ -14,11 +14,10 @@ type RecordDeclaration Declaration
 type FieldDeclaration Declaration
 type VariableDeclaration Declaration
 type ParamVariableDeclaration Declaration
+type NamespaceDeclaration Declaration
 
-func (t *TranslationUnitDeclaration) AddDeclaration(env *jnigi.Env, d *jnigi.ObjectRef) (err error) {
-	_, err = (*jnigi.ObjectRef)(t).CallMethod(env, "addDeclaration", jnigi.Void, d.Cast("de/fraunhofer/aisec/cpg/graph/declarations/Declaration"))
-
-	return
+func (n *NamespaceDeclaration) SetName(env *jnigi.Env, s string) error {
+	return (*Node)(n).SetName(env, s)
 }
 
 func (f *FunctionDeclaration) SetName(env *jnigi.Env, s string) error {
@@ -92,6 +91,15 @@ func NewTranslationUnitDeclaration(env *jnigi.Env) *TranslationUnitDeclaration {
 	}
 
 	return (*TranslationUnitDeclaration)(tu)
+}
+
+func NewNamespaceDeclaration(env *jnigi.Env) *NamespaceDeclaration {
+	tu, err := env.NewObject("de/fraunhofer/aisec/cpg/graph/declarations/NamespaceDeclaration")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return (*NamespaceDeclaration)(tu)
 }
 
 func NewFunctionDeclaration(env *jnigi.Env) *FunctionDeclaration {

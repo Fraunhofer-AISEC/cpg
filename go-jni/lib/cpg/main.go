@@ -60,12 +60,13 @@ func handleFuncDecl(this *cpg.GoLanguageFrontend, fset *token.FileSet, env *jnig
 func handleGenDecl(this *cpg.GoLanguageFrontend, fset *token.FileSet, env *jnigi.Env, genDecl *ast.GenDecl) *jnigi.ObjectRef {
 	// TODO: Handle multiple declarations
 	for _, spec := range genDecl.Specs {
-		fmt.Printf("Spec: %T: %+v\n", spec, spec)
 		switch v := spec.(type) {
 		case *ast.ValueSpec:
 			return (*jnigi.ObjectRef)(handleValueSpec(this, fset, env, v))
 		case *ast.TypeSpec:
 			return (*jnigi.ObjectRef)(handleTypeSpec(this, fset, env, v))
+		default:
+			this.LogError(env, "Not parsing specication of type %T yet: %+v", v, v)
 		}
 	}
 
@@ -102,7 +103,10 @@ func handleValueSpec(this *cpg.GoLanguageFrontend, fset *token.FileSet, env *jni
 }
 
 func handleTypeSpec(this *cpg.GoLanguageFrontend, fset *token.FileSet, env *jnigi.Env, typeDecl *ast.TypeSpec) *cpg.Declaration {
-	log.Printf("Type specifier with name %s and type (%T, %+v)", typeDecl.Name.Name, typeDecl.Type, typeDecl.Type)
+	err := this.LogInfo(env, "Type specifier with name %s and type (%T, %+v)", typeDecl.Name.Name, typeDecl.Type, typeDecl.Type)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	switch v := typeDecl.Type.(type) {
 	case *ast.StructType:
@@ -377,6 +381,14 @@ func Java_de_fraunhofer_aisec_cpg_frontends_golang_GoLanguageFrontend_parseInter
 		panic(err)
 	}
 
+	// create a new namespace declaration, representing the package
+	p := cpg.NewNamespaceDeclaration(env)
+
+	p.SetName(env, file.Name.Name)
+
+	// enter scope
+	scope.EnterScope(env, (*cpg.Node)(p))
+
 	for _, decl := range file.Decls {
 		fmt.Printf("%+v\n", decl)
 
@@ -388,6 +400,7 @@ func Java_de_fraunhofer_aisec_cpg_frontends_golang_GoLanguageFrontend_parseInter
 		case *ast.GenDecl:
 			d = handleGenDecl(this, fset, env, v)
 		default:
+			this.LogError(env, "Not parsing declaration of type %T yet: %+v", v, v)
 			// no match
 		}
 
@@ -402,6 +415,12 @@ func Java_de_fraunhofer_aisec_cpg_frontends_golang_GoLanguageFrontend_parseInter
 			}
 		}
 	}
+
+	// leave scope
+	scope.LeaveScope(env, (*cpg.Node)(p))
+
+	// add it
+	scope.AddDeclaration(env, (*cpg.Declaration)(p))
 
 	return C.jobject((*jnigi.ObjectRef)(tu).JObject())
 }
