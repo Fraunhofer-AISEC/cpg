@@ -11,6 +11,7 @@ import (
 type Expression Statement
 type CallExpression Expression
 type MemberCallExpression CallExpression
+type MemberExpression Expression
 type BinaryOperator Expression
 type Literal Expression
 type DeclaredReferenceExpression Expression
@@ -24,6 +25,17 @@ func NewCallExpression(fset *token.FileSet, env *jnigi.Env, astNode ast.Node) *C
 	updateCode(fset, env, (*Node)(c), astNode)
 
 	return (*CallExpression)(c)
+}
+
+func NewMemberExpression(fset *token.FileSet, env *jnigi.Env, astNode ast.Node) *MemberExpression {
+	c, err := env.NewObject("de/fraunhofer/aisec/cpg/graph/statements/expressions/MemberExpression")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	updateCode(fset, env, (*Node)(c), astNode)
+
+	return (*MemberExpression)(c)
 }
 
 func NewMemberCallExpression(fset *token.FileSet, env *jnigi.Env, astNode ast.Node) *MemberCallExpression {
@@ -101,6 +113,10 @@ func (m *MemberCallExpression) SetMember(env *jnigi.Env, n *Node) {
 
 func (m *MemberCallExpression) Expression() *Expression {
 	return (*Expression)(m)
+}
+
+func (m *MemberExpression) SetBase(env *jnigi.Env, e *Expression) {
+	(*jnigi.ObjectRef)(m).SetField(env, "base", (*jnigi.ObjectRef)(e).Cast("de/fraunhofer/aisec/cpg/graph/statements/expressions/Expression"))
 }
 
 func (r *DeclaredReferenceExpression) Expression() *Expression {

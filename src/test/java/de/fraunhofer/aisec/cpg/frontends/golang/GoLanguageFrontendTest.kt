@@ -2,10 +2,7 @@ package de.fraunhofer.aisec.cpg.frontends.golang
 
 import de.fraunhofer.aisec.cpg.BaseTest
 import de.fraunhofer.aisec.cpg.TestUtils
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
@@ -204,5 +201,24 @@ class GoLanguageFrontendTest : BaseTest() {
         assertEquals("s.myOtherFunc", arg1.fqn)
 
         assertEquals(myFunc.receiver, (arg1.base as? DeclaredReferenceExpression)?.refersTo)
+    }
+
+    @Test
+    fun testField() {
+        val topLevel = Path.of("src", "test", "resources", "golang")
+        val tu = TestUtils.analyzeAndGetFirstTU(listOf(topLevel.resolve("field.go").toFile()), topLevel, true)
+
+        assertNotNull(tu)
+
+        val p = tu.getDeclarationsByName("p", NamespaceDeclaration::class.java).iterator().next()
+        assertNotNull(p)
+
+        val myFunc = p.getDeclarationsByName("myFunc", MethodDeclaration::class.java).iterator().next()
+
+        val body = myFunc.body as? CompoundStatement
+
+        assertNotNull(body)
+
+        val binOp = body.statements.first() as? BinaryOperator
     }
 }

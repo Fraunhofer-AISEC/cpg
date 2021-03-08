@@ -84,6 +84,8 @@ func (this *GoLanguageFrontend) handleFuncDecl(fset *token.FileSet, env *jnigi.E
 		v.SetName(env, recv.Names[0].Name)
 		v.SetType(env, recordType)
 
+		this.LogDebug(env, "still here")
+
 		err := m.SetReceiver(env, v)
 		if err != nil {
 			log.Fatal(err)
@@ -102,12 +104,14 @@ func (this *GoLanguageFrontend) handleFuncDecl(fset *token.FileSet, env *jnigi.E
 				log.Fatal(err)
 			}
 
-			if record != nil {
+			if record != nil && !record.IsNil() {
 				// now this gets a little bit hacky, we will add it to the record declaration
 				// this is strictly speaking not 100 % true, since the method property edge is
 				// marked as AST and in Go a method is not part of the struct's AST but is declared
 				// outside. In the future, we need to differentiate between just the associated members
 				// of the class and the pure AST nodes declared in the struct itself
+				this.LogDebug(env, "Record: %+v", record)
+
 				err = record.AddMethod(env, m)
 				if err != nil {
 					log.Fatal(err)
@@ -130,6 +134,8 @@ func (this *GoLanguageFrontend) handleFuncDecl(fset *token.FileSet, env *jnigi.E
 
 	// enter scope for function body
 	scope.EnterScope(env, (*cpg.Node)(f))
+
+	this.LogDebug(env, "Parsing function body")
 
 	for _, param := range funcDecl.Type.Params.List {
 		p := cpg.NewParamVariableDeclaration(fset, env, param)
@@ -317,6 +323,8 @@ func (this *GoLanguageFrontend) handleBlockStmt(fset *token.FileSet, env *jnigi.
 }
 
 func (this *GoLanguageFrontend) handleExpr(fset *token.FileSet, env *jnigi.Env, expr ast.Expr) *cpg.Expression {
+	this.LogDebug(env, "Handling expression (%T): %+v", expr, expr)
+
 	switch v := expr.(type) {
 	case *ast.CallExpr:
 		return (*cpg.Expression)(this.handleCallExpr(fset, env, v))
@@ -337,6 +345,8 @@ func (this *GoLanguageFrontend) handleExpr(fset *token.FileSet, env *jnigi.Env, 
 }
 
 func (this *GoLanguageFrontend) handleAssignStmt(fset *token.FileSet, env *jnigi.Env, assignStmt *ast.AssignStmt) (expr *cpg.Expression) {
+	this.LogDebug(env, "Handling assignment statement: %+v", assignStmt)
+
 	// TODO: more than one Rhs?!
 	rhs := this.handleExpr(fset, env, assignStmt.Rhs[0])
 
@@ -357,6 +367,16 @@ func (this *GoLanguageFrontend) handleAssignStmt(fset *token.FileSet, env *jnigi
 		stmt.SetSingleDeclaration(env, (*cpg.Declaration)(d))
 
 		expr = (*cpg.Expression)(stmt)
+	} else {
+		lhs := this.handleExpr(fset, env, assignStmt.Lhs[0])
+
+		b := cpg.NewBinaryOperator(fset, env, assignStmt)
+
+		b.SetOperatorCode(env, "=")
+		b.SetLHS(env, lhs)
+		b.SetRHS(env, rhs)
+
+		expr = (*cpg.Expression)(b)
 	}
 
 	return
@@ -463,7 +483,36 @@ func (this *GoLanguageFrontend) handleBinaryExpr(fset *token.FileSet, env *jnigi
 
 	return b
 }
-func (this *GoLanguageFrontend) handleSelectorExpr(fset *token.FileSet, env *jnigi.Env, selectorExpr *ast.SelectorExpr) *cpg.BinaryOperator {
+func (this *GoLanguageFrontend) handleSelectorExpr(fset *token.FileSet, env *jnigi.Env, selectorExpr *ast.SelectorExpr) *cpg.MemberExpression {
+	// not sure if this always succeeds
+	/*var method = (*cpg.MethodDeclaration)((*jnigi.ObjectRef)(this.GetScopeManager(env).GetCurrentFunction(env)).Cast("de/fraunhofer/aisec/cpg/graph/declarations/MethodDeclaration"))
+
+	// this is a dot call, either qualified a package or a member call to a struct
+	if method != nil {
+		//recv := method.GetReceiver(env)
+
+		this.LogDebug(env, "Sel is %+v", selectorExpr)
+		this.LogDebug(env, "Sel.X is %T: %+v", selectorExpr.X, selectorExpr.X)*/
+
+	base := this.handleExpr(fset, env, selectorExpr.X)
+
+	m := cpg.NewMemberExpression(fset, env, selectorExpr)
+
+	m.SetBase(env, base)
+
+	return m
+	//m.SetBase(env, base)
+
+	// TODO: sel.X could be another expr and so on...
+	/*if recv != nil && (*cpg.Node)(recv).GetName(env) == selectorExpr.X.(*ast.Ident).Name {
+		receiverName := (*cpg.Node)(recv).GetName(env)
+		fqn := fmt.Sprintf("%s.%s", receiverName, name)
+
+		this.LogDebug(env, "Fun is a member call to %s for receiver %s", name, receiverName)
+
+		m := cpg.NewMemberExpression(fset, env, selectorExpr)
+	}*/
+
 	/*
 			var record = lang.getScopeManager().getCurrentRecord();
 
@@ -484,7 +533,6 @@ func (this *GoLanguageFrontend) handleSelectorExpr(fset *token.FileSet, env *jni
 		            ctx.isPointerDereference() ? "->" : ".",
 		            ctx.getRawSignature());
 	*/
-	return nil
 }
 
 func (this *GoLanguageFrontend) handleBasicLit(fset *token.FileSet, env *jnigi.Env, lit *ast.BasicLit) *cpg.Literal {

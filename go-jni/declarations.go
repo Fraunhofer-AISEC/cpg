@@ -110,6 +110,10 @@ func (r *RecordDeclaration) AddMethod(env *jnigi.Env, m *MethodDeclaration) (err
 	return
 }
 
+func (r *RecordDeclaration) IsNil() bool {
+	return (*jnigi.ObjectRef)(r).IsNil()
+}
+
 func NewTranslationUnitDeclaration(fset *token.FileSet, env *jnigi.Env, astNode ast.Node) *TranslationUnitDeclaration {
 	tu, err := env.NewObject("de/fraunhofer/aisec/cpg/graph/declarations/TranslationUnitDeclaration")
 	if err != nil {
