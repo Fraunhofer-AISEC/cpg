@@ -241,6 +241,8 @@ func (this *GoLanguageFrontend) handleStructTypeSpec(fset *token.FileSet, env *j
 
 	if !structType.Incomplete {
 		for _, field := range structType.Fields.List {
+			this.LogDebug(env, "Handling field %s", field.Names[0].Name)
+
 			f := cpg.NewFieldDeclaration(fset, env, field)
 
 			// TODO: Multiple names?
@@ -485,20 +487,26 @@ func (this *GoLanguageFrontend) handleBinaryExpr(fset *token.FileSet, env *jnigi
 }
 func (this *GoLanguageFrontend) handleSelectorExpr(fset *token.FileSet, env *jnigi.Env, selectorExpr *ast.SelectorExpr) *cpg.MemberExpression {
 	// not sure if this always succeeds
-	/*var method = (*cpg.MethodDeclaration)((*jnigi.ObjectRef)(this.GetScopeManager(env).GetCurrentFunction(env)).Cast("de/fraunhofer/aisec/cpg/graph/declarations/MethodDeclaration"))
-
-	// this is a dot call, either qualified a package or a member call to a struct
-	if method != nil {
-		//recv := method.GetReceiver(env)
-
-		this.LogDebug(env, "Sel is %+v", selectorExpr)
-		this.LogDebug(env, "Sel.X is %T: %+v", selectorExpr.X, selectorExpr.X)*/
 
 	base := this.handleExpr(fset, env, selectorExpr.X)
 
 	m := cpg.NewMemberExpression(fset, env, selectorExpr)
 
 	m.SetBase(env, base)
+
+	// check, if the base relates to a receiver
+	var method = (*cpg.MethodDeclaration)((*jnigi.ObjectRef)(this.GetScopeManager(env).GetCurrentFunction(env)).Cast("de/fraunhofer/aisec/cpg/graph/declarations/MethodDeclaration"))
+
+	if method != nil && !method.IsNil() {
+		recv := method.GetReceiver(env)
+
+		if (*cpg.Node)(recv).GetName(env) == (*cpg.Node)(base).GetName(env) {
+			// this refers to our receiver
+
+			// TODO: should we just let the VariableUsageResolver handle this? this cast can also go wrong
+			(*cpg.DeclaredReferenceExpression)(base).SetRefersTo(env, recv.Declaration())
+		}
+	}
 
 	return m
 	//m.SetBase(env, base)
