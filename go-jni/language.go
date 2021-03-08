@@ -36,7 +36,7 @@ func (g *GoLanguageFrontend) LogInfo(env *jnigi.Env, format string, args ...inte
 		return
 	}
 
-	_, err = logger.CallMethod(env, "info", jnigi.Void, NewString(env, fmt.Sprintf(format, args)))
+	_, err = logger.CallMethod(env, "info", jnigi.Void, NewString(env, fmt.Sprintf(format, args...)))
 
 	return
 }
@@ -48,7 +48,7 @@ func (g *GoLanguageFrontend) LogDebug(env *jnigi.Env, format string, args ...int
 		return
 	}
 
-	_, err = logger.CallMethod(env, "debug", jnigi.Void, NewString(env, fmt.Sprintf(format, args)))
+	_, err = logger.CallMethod(env, "debug", jnigi.Void, NewString(env, fmt.Sprintf(format, args...)))
 
 	return
 }
@@ -60,7 +60,7 @@ func (g *GoLanguageFrontend) LogError(env *jnigi.Env, format string, args ...int
 		return
 	}
 
-	_, err = logger.CallMethod(env, "error", jnigi.Void, NewString(env, fmt.Sprintf(format, args)))
+	_, err = logger.CallMethod(env, "error", jnigi.Void, NewString(env, fmt.Sprintf(format, args...)))
 
 	return
 }

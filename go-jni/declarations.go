@@ -48,6 +48,20 @@ func (m *MethodDeclaration) SetType(env *jnigi.Env, t *Type) {
 	(*HasType)(m).SetType(env, t)
 }
 
+func (m *MethodDeclaration) SetReceiver(env *jnigi.Env, v *VariableDeclaration) error {
+	return (*jnigi.ObjectRef)(m).SetField(env, "receiver", (*jnigi.ObjectRef)(v))
+}
+
+func (m *MethodDeclaration) GetReceiver(env *jnigi.Env) *VariableDeclaration {
+	o, err := (*jnigi.ObjectRef)(m).GetField(env, "receiver", jnigi.ObjectType("de/fraunhofer/aisec/cpg/graph/declarations/VariableDeclaration"))
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return (*VariableDeclaration)(o.(*jnigi.ObjectRef))
+}
+
 func (p *ParamVariableDeclaration) SetType(env *jnigi.Env, t *Type) {
 	(*HasType)(p).SetType(env, t)
 }
@@ -76,6 +90,10 @@ func (v *VariableDeclaration) SetInitializer(env *jnigi.Env, e *Expression) (err
 	_, err = (*jnigi.ObjectRef)(v).CallMethod(env, "setInitializer", jnigi.Void, (*jnigi.ObjectRef)(e).Cast("de/fraunhofer/aisec/cpg/graph/statements/expressions/Expression"))
 
 	return
+}
+
+func (v *VariableDeclaration) Declaration() *Declaration {
+	return (*Declaration)(v)
 }
 
 func (r *RecordDeclaration) SetName(env *jnigi.Env, s string) error {

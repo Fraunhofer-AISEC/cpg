@@ -23,6 +23,10 @@ func (n *Node) SetCode(env *jnigi.Env, s string) error {
 func (n *Node) GetName(env *jnigi.Env) string {
 	o, _ := (*jnigi.ObjectRef)(n).CallMethod(env, "getName", jnigi.ObjectType("java/lang/String"))
 
+	if o == nil {
+		return ""
+	}
+
 	b, err := o.(*jnigi.ObjectRef).CallMethod(env, "getBytes", jnigi.Byte|jnigi.Array)
 	if err != nil {
 		log.Fatal(err)

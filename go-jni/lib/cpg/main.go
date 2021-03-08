@@ -1,12 +1,10 @@
 package main
 
 import (
-	"bytes"
 	"cpg"
 	"fmt"
 	"go/ast"
 	"go/parser"
-	"go/printer"
 	"go/token"
 	"log"
 	"strconv"
@@ -32,10 +30,18 @@ func handleFuncDecl(this *cpg.GoLanguageFrontend, fset *token.FileSet, env *jnig
 		// TODO: why is this a list?
 		var recv = funcDecl.Recv.List[0]
 
-		// TODO: currently, we lose the name of our receiver, not sure how to fix that
-		// and we probably need it for member call expression
-
 		var recordType = handleType(env, recv.Type)
+
+		v := cpg.NewVariableDeclaration(fset, env, nil)
+
+		// TODO: should we use the FQN here? FQNs are a mess in the CPG...
+		v.SetName(env, recv.Names[0].Name)
+		v.SetType(env, recordType)
+
+		err := m.SetReceiver(env, v)
+		if err != nil {
+			log.Fatal(err)
+		}
 
 		if recordType != nil {
 			var recordName = (*cpg.Node)(recordType).GetName(env)
@@ -142,7 +148,7 @@ func handleValueSpec(this *cpg.GoLanguageFrontend, fset *token.FileSet, env *jni
 		fmt.Printf("initializer: %v\n", valueDecl.Values[0])
 
 		// TODO: How to deal with multiple values
-		var expr = handleExpr( /*this,*/ fset, env, valueDecl.Values[0])
+		var expr = handleExpr(this, fset, env, valueDecl.Values[0])
 
 		err := d.SetInitializer(env, expr)
 		if err != nil {
@@ -242,11 +248,11 @@ func handleBlockStmt(this *cpg.GoLanguageFrontend, fset *token.FileSet, env *jni
 		case *ast.ExprStmt:
 			// in our cpg, each expression is also a statement,
 			// so we do not need an expression statement wrapper
-			s = (*cpg.Statement)(handleExpr(fset, env, v.X))
+			s = (*cpg.Statement)(handleExpr(this, fset, env, v.X))
 			fmt.Printf("exprStmt: %+v\n", v)
 			fmt.Printf("statement: %+v\n", s)
 		case *ast.AssignStmt:
-			s = (*cpg.Statement)(handleAssignStmt(fset, env, v))
+			s = (*cpg.Statement)(handleAssignStmt(this, fset, env, v))
 			fmt.Printf("assignment: %+v\n", v)
 		default:
 			fmt.Printf("%T: %+v\n", stmt, stmt)
@@ -264,12 +270,12 @@ func handleBlockStmt(this *cpg.GoLanguageFrontend, fset *token.FileSet, env *jni
 	return c
 }
 
-func handleExpr(fset *token.FileSet, env *jnigi.Env, expr ast.Expr) *cpg.Expression {
+func handleExpr(this *cpg.GoLanguageFrontend, fset *token.FileSet, env *jnigi.Env, expr ast.Expr) *cpg.Expression {
 	switch v := expr.(type) {
 	case *ast.CallExpr:
-		return (*cpg.Expression)(handleCallExpr(fset, env, v))
+		return (*cpg.Expression)(handleCallExpr(this, fset, env, v))
 	case *ast.BinaryExpr:
-		return (*cpg.Expression)(handleBinaryExpr(fset, env, v))
+		return (*cpg.Expression)(handleBinaryExpr(this, fset, env, v))
 	case *ast.SelectorExpr:
 		return (*cpg.Expression)(handleSelectorExpr(fset, env, v))
 	case *ast.BasicLit:
@@ -284,9 +290,9 @@ func handleExpr(fset *token.FileSet, env *jnigi.Env, expr ast.Expr) *cpg.Express
 	return nil
 }
 
-func handleAssignStmt(fset *token.FileSet, env *jnigi.Env, assignStmt *ast.AssignStmt) (expr *cpg.Expression) {
+func handleAssignStmt(this *cpg.GoLanguageFrontend, fset *token.FileSet, env *jnigi.Env, assignStmt *ast.AssignStmt) (expr *cpg.Expression) {
 	// TODO: more than one Rhs?!
-	rhs := handleExpr(fset, env, assignStmt.Rhs[0])
+	rhs := handleExpr(this, fset, env, assignStmt.Rhs[0])
 
 	if assignStmt.Tok == token.DEFINE {
 		// lets create a variable declaration (wrapped with a declaration stmt) with this, because we define the variable here
@@ -310,17 +316,77 @@ func handleAssignStmt(fset *token.FileSet, env *jnigi.Env, assignStmt *ast.Assig
 	return
 }
 
-func handleCallExpr(fset *token.FileSet, env *jnigi.Env, callExpr *ast.CallExpr) *cpg.CallExpression {
-	c := cpg.NewCallExpression(fset, env, callExpr)
+func handleCallExpr(this *cpg.GoLanguageFrontend, fset *token.FileSet, env *jnigi.Env, callExpr *ast.CallExpr) *cpg.CallExpression {
+	var c *cpg.CallExpression
 
-	var nameBuf bytes.Buffer
-	_ = printer.Fprint(&nameBuf, fset, callExpr.Fun)
+	switch v := callExpr.Fun.(type) {
+	case *ast.SelectorExpr:
+		name := v.Sel.Name
 
-	c.SetName(env, nameBuf.String())
+		// not sure if this always succeeds
+		var method = (*cpg.MethodDeclaration)((*jnigi.ObjectRef)(this.GetScopeManager(env).GetCurrentFunction(env)).Cast("de/fraunhofer/aisec/cpg/graph/declarations/MethodDeclaration"))
+
+		// this is a dot call, either qualified a package or a member call to a struct
+		if method != nil {
+			recv := method.GetReceiver(env)
+
+			this.LogDebug(env, "Sel is %+v", v)
+			this.LogDebug(env, "Sel.X is %T: %+v", v.X, v.X)
+
+			// TODO: sel.X could be another expr and so on...
+			if recv != nil && (*cpg.Node)(recv).GetName(env) == v.X.(*ast.Ident).Name {
+				receiverName := (*cpg.Node)(recv).GetName(env)
+				fqn := fmt.Sprintf("%s.%s", receiverName, name)
+
+				this.LogDebug(env, "Fun is a member call to %s for receiver %s", name, receiverName)
+
+				m := cpg.NewMemberCallExpression(fset, env, callExpr)
+				m.SetName(env, name)
+				m.SetFqn(env, fqn)
+
+				// TODO: see above, handle base generically
+				base := cpg.NewDeclaredReferenceExpression(fset, env, v.X)
+				base.SetName(env, receiverName)
+				base.SetRefersTo(env, recv.Declaration())
+
+				member := cpg.NewDeclaredReferenceExpression(fset, env, v.Sel)
+				member.SetName(env, name)
+				// TODO: use Sel.Object, if available?
+
+				m.SetBase(env, base.Node())
+				m.SetMember(env, member.Node())
+
+				c = (*cpg.CallExpression)(m)
+			}
+		}
+
+		if c == nil {
+			packageName := v.X.(*ast.Ident).Name
+			fqn := fmt.Sprintf("%s.%s", packageName, name)
+
+			// dot call using a qualified package name
+
+			this.LogDebug(env, "Handling qualified call expression to %s", fqn)
+
+			c = cpg.NewCallExpression(fset, env, callExpr)
+			c.SetName(env, name)
+			c.SetFqn(env, fqn)
+		}
+	case *ast.Ident:
+		this.LogDebug(env, "Handling regular call expression to %s", v.Name)
+
+		c = cpg.NewCallExpression(fset, env, callExpr)
+		c.SetName(env, v.Name)
+		// TODO: set FQN based on current package
+		//c.SetFqn()
+
+	default:
+		this.LogError(env, "Not sure what we are calling here (%T): %+v", v, v)
+		return nil
+	}
 
 	for _, arg := range callExpr.Args {
-		e := handleExpr(fset, env, arg)
-		fmt.Printf("%+v\n", e)
+		e := handleExpr(this, fset, env, arg)
 
 		if e != nil {
 			c.AddArgument(env, e)
@@ -330,11 +396,11 @@ func handleCallExpr(fset *token.FileSet, env *jnigi.Env, callExpr *ast.CallExpr)
 	return c
 }
 
-func handleBinaryExpr(fset *token.FileSet, env *jnigi.Env, binaryExpr *ast.BinaryExpr) *cpg.BinaryOperator {
+func handleBinaryExpr(this *cpg.GoLanguageFrontend, fset *token.FileSet, env *jnigi.Env, binaryExpr *ast.BinaryExpr) *cpg.BinaryOperator {
 	b := cpg.NewBinaryOperator(fset, env, binaryExpr)
 
-	lhs := handleExpr(fset, env, binaryExpr.X)
-	rhs := handleExpr(fset, env, binaryExpr.Y)
+	lhs := handleExpr(this, fset, env, binaryExpr.X)
+	rhs := handleExpr(this, fset, env, binaryExpr.Y)
 
 	err := b.SetOperatorCode(env, binaryExpr.Op.String())
 	if err != nil {
@@ -372,7 +438,7 @@ func handleSelectorExpr(fset *token.FileSet, env *jnigi.Env, selectorExpr *ast.S
 		            ctx.isPointerDereference() ? "->" : ".",
 		            ctx.getRawSignature());
 	*/
-
+	return nil
 }
 
 func handleBasicLit(fset *token.FileSet, env *jnigi.Env, lit *ast.BasicLit) *cpg.Literal {

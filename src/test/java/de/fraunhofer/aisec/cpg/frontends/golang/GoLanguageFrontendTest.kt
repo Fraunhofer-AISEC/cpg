@@ -8,10 +8,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser
 import org.junit.jupiter.api.Test
 import java.nio.file.Path
@@ -91,7 +88,7 @@ class GoLanguageFrontendTest : BaseTest() {
         callExpression = body.statements.first() as? CallExpression
         assertNotNull(callExpression)
 
-        assertEquals("fmt.Printf", callExpression.name)
+        assertEquals("fmt.Printf", callExpression.fqn)
 
         val literal = callExpression.arguments.first() as? Literal<*>
         assertNotNull(literal)
@@ -171,5 +168,41 @@ class GoLanguageFrontendTest : BaseTest() {
 
         assertEquals("MyFunc", myFunc.name)
         assertEquals(TypeParser.createFrom("string", false), myFunc.type)
+    }
+
+    @Test
+    fun testMemberCalls() {
+        val topLevel = Path.of("src", "test", "resources", "golang")
+        val tu = TestUtils.analyzeAndGetFirstTU(listOf(topLevel.resolve("struct.go").toFile()), topLevel, true)
+
+        assertNotNull(tu)
+
+        val p = tu.getDeclarationsByName("p", NamespaceDeclaration::class.java).iterator().next()
+
+        val myStruct = p.getDeclarationsByName("MyStruct", RecordDeclaration::class.java).iterator().next()
+
+        val methods = myStruct.methods
+
+        val myFunc = methods.first()
+
+        assertEquals("MyFunc", myFunc.name)
+
+        val body = myFunc.body as? CompoundStatement
+
+        assertNotNull(body)
+
+        val printf = body.statements.first() as? CallExpression
+
+        assertNotNull(printf)
+        assertEquals("Printf", printf.name)
+        assertEquals("fmt.Printf", printf.fqn)
+
+        val arg1 = printf.arguments[0] as? MemberCallExpression
+
+        assertNotNull(arg1)
+        assertEquals("myOtherFunc", arg1.name)
+        assertEquals("s.myOtherFunc", arg1.fqn)
+
+        assertEquals(myFunc.receiver, (arg1.base as? DeclaredReferenceExpression)?.refersTo)
     }
 }

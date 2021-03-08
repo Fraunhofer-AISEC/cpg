@@ -45,7 +45,10 @@ public class MethodDeclaration extends FunctionDeclaration {
   /**
    * The receiver variable of this method. In most cases, this variable is called 'this', but in some languages, it
    * is 'self' (e.g. in Rust or Python) or can be freely named (e.g. in Golang).
+   *
+   * It can be empty, i.e., for pure function definitions as part as an interface.
    */
+  @Nullable
   private VariableDeclaration receiver;
 
   public boolean isStatic() {

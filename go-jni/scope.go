@@ -23,6 +23,12 @@ func (s *ScopeManager) GetCurrentScope(env *jnigi.Env) *Scope {
 	return (*Scope)(o.(*jnigi.ObjectRef))
 }
 
+func (s *ScopeManager) GetCurrentFunction(env *jnigi.Env) *FunctionDeclaration {
+	o, _ := (*jnigi.ObjectRef)(s).CallMethod(env, "getCurrentFunction", jnigi.ObjectType("de/fraunhofer/aisec/cpg/graph/declarations/FunctionDeclaration"))
+
+	return (*FunctionDeclaration)(o.(*jnigi.ObjectRef))
+}
+
 func (s *ScopeManager) GetRecordForName(env *jnigi.Env, scope *Scope, recordName string) (record *RecordDeclaration, err error) {
 	var o interface{}
 
