@@ -304,16 +304,7 @@ func (this *GoLanguageFrontend) handleBlockStmt(fset *token.FileSet, env *jnigi.
 	for _, stmt := range blockStmt.List {
 		var s *cpg.Statement
 
-		switch v := stmt.(type) {
-		case *ast.ExprStmt:
-			// in our cpg, each expression is also a statement,
-			// so we do not need an expression statement wrapper
-			s = (*cpg.Statement)(this.handleExpr(fset, env, v.X))
-		case *ast.AssignStmt:
-			s = (*cpg.Statement)(this.handleAssignStmt(fset, env, v))
-		default:
-			this.LogError(env, "Not parsing statement of type %T yet: %+v", v, v)
-		}
+		s = this.handleStmt(fset, env, stmt)
 
 		if s != nil {
 			// add statement
@@ -325,6 +316,27 @@ func (this *GoLanguageFrontend) handleBlockStmt(fset *token.FileSet, env *jnigi.
 	this.GetScopeManager(env).LeaveScope(env, (*cpg.Node)(c))
 
 	return c
+}
+
+func (this *GoLanguageFrontend) handleStmt(fset *token.FileSet, env *jnigi.Env, stmt ast.Stmt) *cpg.Statement {
+	this.LogDebug(env, "Handling statement (%T): %+v", stmt, stmt)
+
+	switch v := stmt.(type) {
+	case *ast.ExprStmt:
+		// in our cpg, each expression is also a statement,
+		// so we do not need an expression statement wrapper
+		return (*cpg.Statement)(this.handleExpr(fset, env, v.X))
+	case *ast.AssignStmt:
+		return (*cpg.Statement)(this.handleAssignStmt(fset, env, v))
+	case *ast.DeclStmt:
+		return (*cpg.Statement)(this.handleDeclStmt(fset, env, v))
+	case *ast.IfStmt:
+		return (*cpg.Statement)(this.handleIfStmt(fset, env, v))
+	default:
+		this.LogError(env, "Not parsing statement of type %T yet: %+v", v, v)
+	}
+
+	return nil
 }
 
 func (this *GoLanguageFrontend) handleExpr(fset *token.FileSet, env *jnigi.Env, expr ast.Expr) *cpg.Expression {
@@ -385,6 +397,47 @@ func (this *GoLanguageFrontend) handleAssignStmt(fset *token.FileSet, env *jnigi
 	}
 
 	return
+}
+
+func (this *GoLanguageFrontend) handleDeclStmt(fset *token.FileSet, env *jnigi.Env, declStmt *ast.DeclStmt) (expr *cpg.Expression) {
+	this.LogDebug(env, "Handling declaration statement: %+v", *declStmt)
+
+	// lets create a variable declaration (wrapped with a declaration stmt) with this,
+	// because we define the variable here
+	stmt := cpg.NewDeclarationStatement(fset, env, declStmt)
+
+	d := this.handleDecl(fset, env, declStmt.Decl)
+
+	stmt.SetSingleDeclaration(env, (*cpg.Declaration)(d))
+
+	return (*cpg.Expression)(stmt)
+}
+
+func (this *GoLanguageFrontend) handleIfStmt(fset *token.FileSet, env *jnigi.Env, ifStmt *ast.IfStmt) (expr *cpg.Expression) {
+	this.LogDebug(env, "Handling if statement: %+v", *ifStmt)
+
+	stmt := cpg.NewIfStatement(fset, env, ifStmt)
+
+	var scope = this.GetScopeManager(env)
+
+	// TODO: initializer
+
+	scope.EnterScope(env, (*cpg.Node)(stmt))
+
+	cond := this.handleExpr(fset, env, ifStmt.Cond)
+	stmt.SetCondition(env, cond)
+
+	then := this.handleBlockStmt(fset, env, ifStmt.Body)
+	stmt.SetThenStatement(env, (*cpg.Statement)(then))
+
+	els := this.handleStmt(fset, env, ifStmt.Else)
+	if els != nil {
+		stmt.SetElseStatement(env, (*cpg.Statement)(els))
+	}
+
+	scope.LeaveScope(env, (*cpg.Node)(stmt))
+
+	return (*cpg.Expression)(stmt)
 }
 
 func (this *GoLanguageFrontend) handleCallExpr(fset *token.FileSet, env *jnigi.Env, callExpr *ast.CallExpr) *cpg.CallExpression {
@@ -491,6 +544,8 @@ func (this *GoLanguageFrontend) handleSelectorExpr(fset *token.FileSet, env *jni
 }
 
 func (this *GoLanguageFrontend) handleBasicLit(fset *token.FileSet, env *jnigi.Env, lit *ast.BasicLit) *cpg.Literal {
+	this.LogDebug(env, "Handling literal %+v", *lit)
+
 	l := cpg.NewLiteral(fset, env, lit)
 
 	var value interface{}

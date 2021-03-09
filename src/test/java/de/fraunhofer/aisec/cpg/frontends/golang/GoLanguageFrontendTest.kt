@@ -5,6 +5,7 @@ import de.fraunhofer.aisec.cpg.TestUtils
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
+import de.fraunhofer.aisec.cpg.graph.statements.IfStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser
 import org.junit.jupiter.api.Test
@@ -235,5 +236,38 @@ class GoLanguageFrontendTest : BaseTest() {
         assertNotNull(rhs)
         assertEquals("otherPackage", (rhs.base as? DeclaredReferenceExpression)?.name)
         assertEquals("OtherField", rhs.name)
+    }
+
+    @Test
+    fun testIf() {
+        val topLevel = Path.of("src", "test", "resources", "golang")
+        val tu = TestUtils.analyzeAndGetFirstTU(listOf(topLevel.resolve("if.go").toFile()), topLevel, true)
+
+        assertNotNull(tu)
+
+        val p = tu.getDeclarationsByName("p", NamespaceDeclaration::class.java).iterator().next()
+
+        val main = p.getDeclarationsByName("main", FunctionDeclaration::class.java).iterator().next()
+
+        assertNotNull(main)
+
+        val body = main.body as? CompoundStatement
+
+        assertNotNull(body)
+
+        val b = (body.statements.first() as? DeclarationStatement)?.singleDeclaration as? VariableDeclaration
+
+        assertNotNull(b)
+        assertEquals("b", b.name)
+        assertEquals(TypeParser.createFrom("bool", false), b.type)
+
+        // true, false are builtin variables, NOT literals in Golang
+        // we might need to parse this special case differently
+        val initializer = b.initializer as? DeclaredReferenceExpression
+
+        assertNotNull(initializer)
+        assertEquals("true", initializer.name)
+
+        val `if` = body.statements[1] as? IfStatement
     }
 }
