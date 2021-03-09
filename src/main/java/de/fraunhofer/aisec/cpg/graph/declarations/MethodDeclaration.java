@@ -68,11 +68,14 @@ public class MethodDeclaration extends FunctionDeclaration {
     this.recordDeclaration = recordDeclaration;
   }
 
+  @Nullable
   public VariableDeclaration getReceiver() {
     return receiver;
   }
 
-  public void setReceiver(VariableDeclaration receiver) {
+  public void setReceiver(@Nullable VariableDeclaration receiver) {
     this.receiver = receiver;
   }
+
+
 }

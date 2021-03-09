@@ -86,6 +86,10 @@ func (v *VariableDeclaration) SetName(env *jnigi.Env, s string) error {
 	return (*Node)(v).SetName(env, s)
 }
 
+func (v *VariableDeclaration) IsNil() bool {
+	return (*jnigi.ObjectRef)(v).IsNil()
+}
+
 func (v *VariableDeclaration) SetInitializer(env *jnigi.Env, e *Expression) (err error) {
 	_, err = (*jnigi.ObjectRef)(v).CallMethod(env, "setInitializer", jnigi.Void, (*jnigi.ObjectRef)(e).Cast("de/fraunhofer/aisec/cpg/graph/statements/expressions/Expression"))
 
@@ -118,26 +122,22 @@ func (r *MethodDeclaration) IsNil() bool {
 	return (*jnigi.ObjectRef)(r).IsNil()
 }
 
-func NewTranslationUnitDeclaration(fset *token.FileSet, env *jnigi.Env, astNode ast.Node) *TranslationUnitDeclaration {
-	tu, err := env.NewObject("de/fraunhofer/aisec/cpg/graph/declarations/TranslationUnitDeclaration")
+func NewTranslationUnitDeclaration(fset *token.FileSet, env *jnigi.Env, astNode ast.Node, name string, code string) *TranslationUnitDeclaration {
+	o, err := env.CallStaticMethod("de/fraunhofer/aisec/cpg/graph/NodeBuilder", "newTranslationUnitDeclaration", jnigi.ObjectType("de/fraunhofer/aisec/cpg/graph/declarations/TranslationUnitDeclaration"), NewString(env, name), NewString(env, code))
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	updateCode(fset, env, (*Node)(tu), astNode)
-
-	return (*TranslationUnitDeclaration)(tu)
+	return (*TranslationUnitDeclaration)(o.(*jnigi.ObjectRef))
 }
 
-func NewNamespaceDeclaration(fset *token.FileSet, env *jnigi.Env, astNode ast.Node) *NamespaceDeclaration {
-	tu, err := env.NewObject("de/fraunhofer/aisec/cpg/graph/declarations/NamespaceDeclaration")
+func NewNamespaceDeclaration(fset *token.FileSet, env *jnigi.Env, astNode ast.Node, name string, code string) *NamespaceDeclaration {
+	o, err := env.CallStaticMethod("de/fraunhofer/aisec/cpg/graph/NodeBuilder", "newNamespaceDeclaration", jnigi.ObjectType("de/fraunhofer/aisec/cpg/graph/declarations/NamespaceDeclaration"), NewString(env, name), NewString(env, code))
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	updateCode(fset, env, (*Node)(tu), astNode)
-
-	return (*NamespaceDeclaration)(tu)
+	return (*NamespaceDeclaration)(o.(*jnigi.ObjectRef))
 }
 
 func NewFunctionDeclaration(fset *token.FileSet, env *jnigi.Env, astNode ast.Node) *FunctionDeclaration {

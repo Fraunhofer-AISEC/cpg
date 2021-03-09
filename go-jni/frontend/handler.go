@@ -12,7 +12,7 @@ import (
 )
 
 func (this *GoLanguageFrontend) HandleFile(fset *token.FileSet, env *jnigi.Env, file *ast.File) (tu *cpg.TranslationUnitDeclaration, err error) {
-	tu = cpg.NewTranslationUnitDeclaration(fset, env, file)
+	tu = cpg.NewTranslationUnitDeclaration(fset, env, file, "src.go", this.GetCodeFromRawNode(fset, file))
 
 	scope := this.GetScopeManager(env)
 
@@ -20,9 +20,7 @@ func (this *GoLanguageFrontend) HandleFile(fset *token.FileSet, env *jnigi.Env, 
 	scope.ResetToGlobal(env, (*cpg.Node)(tu))
 
 	// create a new namespace declaration, representing the package
-	p := cpg.NewNamespaceDeclaration(fset, env, nil)
-
-	p.SetName(env, file.Name.Name)
+	p := cpg.NewNamespaceDeclaration(fset, env, nil, file.Name.Name, fmt.Sprintf("package %s", file.Name.Name))
 
 	// enter scope
 	scope.EnterScope(env, (*cpg.Node)(p))
@@ -69,6 +67,9 @@ func (this *GoLanguageFrontend) handleDecl(fset *token.FileSet, env *jnigi.Env, 
 func (this *GoLanguageFrontend) handleFuncDecl(fset *token.FileSet, env *jnigi.Env, funcDecl *ast.FuncDecl) *jnigi.ObjectRef {
 	this.LogDebug(env, "Handling func Decl: %+v", *funcDecl)
 
+	var scope = this.GetScopeManager(env)
+	var receiver *cpg.VariableDeclaration
+
 	var f *cpg.FunctionDeclaration
 	if funcDecl.Recv != nil {
 		m := cpg.NewMethodDeclaration(fset, env, funcDecl)
@@ -78,15 +79,15 @@ func (this *GoLanguageFrontend) handleFuncDecl(fset *token.FileSet, env *jnigi.E
 
 		var recordType = this.handleType(env, recv.Type)
 
-		v := cpg.NewVariableDeclaration(fset, env, nil)
+		receiver = cpg.NewVariableDeclaration(fset, env, nil)
 
 		// TODO: should we use the FQN here? FQNs are a mess in the CPG...
-		v.SetName(env, recv.Names[0].Name)
-		v.SetType(env, recordType)
+		receiver.SetName(env, recv.Names[0].Name)
+		receiver.SetType(env, recordType)
 
 		this.LogDebug(env, "still here")
 
-		err := m.SetReceiver(env, v)
+		err := m.SetReceiver(env, receiver)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -124,16 +125,22 @@ func (this *GoLanguageFrontend) handleFuncDecl(fset *token.FileSet, env *jnigi.E
 		f = cpg.NewFunctionDeclaration(fset, env, funcDecl)
 	}
 
+	// note, the name must be set BEFORE entering the scope
 	f.SetName(env, funcDecl.Name.Name)
+
+	// enter scope for function
+	scope.EnterScope(env, (*cpg.Node)(f))
+
+	if receiver != nil {
+		this.LogDebug(env, "Adding receiver %s", (*cpg.Node)(receiver).GetName(env))
+
+		// add the receiver do the scope manager, so we can resolve the receiver value
+		this.GetScopeManager(env).AddDeclaration(env, (*cpg.Declaration)(receiver))
+	}
 
 	// TODO: for other languages, we would enter the record declaration, if
 	// this is a method; however I am not quite sure if this makes sense for
 	// go, since we do not have a 'this', but rather a named receiver
-
-	var scope = this.GetScopeManager(env)
-
-	// enter scope for function body
-	scope.EnterScope(env, (*cpg.Node)(f))
 
 	this.LogDebug(env, "Parsing function body")
 
@@ -160,7 +167,10 @@ func (this *GoLanguageFrontend) handleFuncDecl(fset *token.FileSet, env *jnigi.E
 	}
 
 	// leave scope
-	scope.LeaveScope(env, (*cpg.Node)(f))
+	err = scope.LeaveScope(env, (*cpg.Node)(f))
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	return (*jnigi.ObjectRef)(f)
 }
@@ -401,8 +411,10 @@ func (this *GoLanguageFrontend) handleCallExpr(fset *token.FileSet, env *jnigi.E
 			this.LogDebug(env, "Sel is %+v", v)
 			this.LogDebug(env, "Sel.X is %T: %+v", v.X, v.X)
 
+			this.LogDebug(env, "recv: %+v", recv)
+
 			// TODO: sel.X could be another expr and so on...
-			if recv != nil && (*cpg.Node)(recv).GetName(env) == v.X.(*ast.Ident).Name {
+			if recv != nil && !recv.IsNil() && (*cpg.Node)(recv).GetName(env) == v.X.(*ast.Ident).Name {
 				receiverName := (*cpg.Node)(recv).GetName(env)
 				fqn := fmt.Sprintf("%s.%s", receiverName, name)
 
@@ -493,6 +505,7 @@ func (this *GoLanguageFrontend) handleSelectorExpr(fset *token.FileSet, env *jni
 	m := cpg.NewMemberExpression(fset, env, selectorExpr)
 
 	m.SetBase(env, base)
+	(*cpg.Node)(m).SetName(env, selectorExpr.Sel.Name)
 
 	// check, if the base relates to a receiver
 	var method = (*cpg.MethodDeclaration)((*jnigi.ObjectRef)(this.GetScopeManager(env).GetCurrentFunction(env)).Cast("de/fraunhofer/aisec/cpg/graph/declarations/MethodDeclaration"))
@@ -500,11 +513,12 @@ func (this *GoLanguageFrontend) handleSelectorExpr(fset *token.FileSet, env *jni
 	if method != nil && !method.IsNil() {
 		recv := method.GetReceiver(env)
 
+		// this refers to our receiver
 		if (*cpg.Node)(recv).GetName(env) == (*cpg.Node)(base).GetName(env) {
-			// this refers to our receiver
-
-			// TODO: should we just let the VariableUsageResolver handle this? this cast can also go wrong
-			(*cpg.DeclaredReferenceExpression)(base).SetRefersTo(env, recv.Declaration())
+			// For now we just let the VariableUsageResolver handle this. Therefore,
+			// we can not differentiate between field access to a receiver, an object
+			// or a const field within a package at this point.
+			//(*cpg.DeclaredReferenceExpression)(base).SetRefersTo(env, recv.Declaration())
 		}
 	}
 

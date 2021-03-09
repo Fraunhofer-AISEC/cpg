@@ -143,7 +143,7 @@ public class JavaLanguageFrontend extends LanguageFrontend {
       PackageDeclaration packDecl = context.getPackageDeclaration().orElse(null);
       NamespaceDeclaration namespaceDeclaration = null;
       if (packDecl != null) {
-        namespaceDeclaration = NodeBuilder.newNamespaceDeclaration(packDecl.getName().asString());
+        namespaceDeclaration = NodeBuilder.newNamespaceDeclaration(packDecl.getName().asString(), getCodeFromRawNode(packDecl));
         // Todo set region and code and push/pop scope
 
         scopeManager.addDeclaration(namespaceDeclaration);

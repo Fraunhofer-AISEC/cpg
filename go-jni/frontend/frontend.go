@@ -1,14 +1,25 @@
 package frontend
 
 import (
+	"bytes"
 	"cpg"
 	"fmt"
+	"go/ast"
+	"go/printer"
+	"go/token"
 	"log"
 
 	"tekao.net/jnigi"
 )
 
 type GoLanguageFrontend jnigi.ObjectRef
+
+func (g *GoLanguageFrontend) GetCodeFromRawNode(fset *token.FileSet, astNode ast.Node) string {
+	var codeBuf bytes.Buffer
+	_ = printer.Fprint(&codeBuf, fset, astNode)
+
+	return codeBuf.String()
+}
 
 func (g *GoLanguageFrontend) GetScopeManager(env *jnigi.Env) *cpg.ScopeManager {
 	scope, err := (*jnigi.ObjectRef)(g).GetField(env, "scopeManager", jnigi.ObjectType("de/fraunhofer/aisec/cpg/passes/scopes/ScopeManager"))

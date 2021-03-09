@@ -139,8 +139,7 @@ class GoLanguageFrontendTest : BaseTest() {
 
         val fields = myStruct.fields
 
-        // TODO: this should actually be 1, but something creates a dummy field
-        assertEquals(/*1*/2, fields.size)
+        assertEquals(1, fields.size)
 
         var methods = myStruct.methods
 
@@ -228,5 +227,13 @@ class GoLanguageFrontendTest : BaseTest() {
 
         assertNotNull(lhs)
         assertEquals(myFunc.receiver, (lhs.base as? DeclaredReferenceExpression)?.refersTo)
+        assertEquals("Field", lhs.name)
+        assertEquals(TypeParser.createFrom("int", false), lhs.type)
+
+        val rhs = binOp.rhs as? MemberExpression
+
+        assertNotNull(rhs)
+        assertEquals("otherPackage", (rhs.base as? DeclaredReferenceExpression)?.name)
+        assertEquals("OtherField", rhs.name)
     }
 }
