@@ -390,72 +390,44 @@ func (this *GoLanguageFrontend) handleAssignStmt(fset *token.FileSet, env *jnigi
 func (this *GoLanguageFrontend) handleCallExpr(fset *token.FileSet, env *jnigi.Env, callExpr *ast.CallExpr) *cpg.CallExpression {
 	var c *cpg.CallExpression
 
-	switch v := callExpr.Fun.(type) {
-	case *ast.SelectorExpr:
-		name := v.Sel.Name
+	// parse the Fun field, to see which kind of expression it is
+	var reference = this.handleExpr(fset, env, callExpr.Fun)
 
-		// not sure if this always succeeds
-		var method = (*cpg.MethodDeclaration)((*jnigi.ObjectRef)(this.GetScopeManager(env).GetCurrentFunction(env)).Cast("de/fraunhofer/aisec/cpg/graph/declarations/MethodDeclaration"))
+	if reference == nil {
+		return nil
+	}
 
-		// this is a dot call, either qualified a package or a member call to a struct
-		if method != nil {
-			recv := method.GetReceiver(env)
+	name := (*cpg.Node)(reference).GetName(env)
 
-			this.LogDebug(env, "Sel is %+v", v)
-			this.LogDebug(env, "Sel.X is %T: %+v", v.X, v.X)
+	isMemberExpression, err := (*jnigi.ObjectRef)(reference).IsInstanceOf(env, "de/fraunhofer/aisec/cpg/graph/statements/expressions/MemberExpression")
+	if err != nil {
+		log.Fatal(err)
+	}
 
-			this.LogDebug(env, "recv: %+v", recv)
+	if isMemberExpression {
+		baseName := (*cpg.Node)((*cpg.MemberExpression)(reference).GetBase(env)).GetName(env)
+		// this is not 100% accurate since it should be rather the type not the base name
+		// but FQNs are really broken in the CPG so this is ok for now
+		fqn := fmt.Sprintf("%s.%s", baseName, name)
 
-			// TODO: sel.X could be another expr and so on...
-			if recv != nil && !recv.IsNil() && (*cpg.Node)(recv).GetName(env) == v.X.(*ast.Ident).Name {
-				receiverName := (*cpg.Node)(recv).GetName(env)
-				fqn := fmt.Sprintf("%s.%s", receiverName, name)
+		this.LogDebug(env, "Fun is a member call to %s", name)
 
-				this.LogDebug(env, "Fun is a member call to %s for receiver %s", name, receiverName)
+		m := cpg.NewMemberCallExpression(fset, env, callExpr)
+		m.SetName(env, name)
+		m.SetFqn(env, fqn)
 
-				m := cpg.NewMemberCallExpression(fset, env, callExpr)
-				m.SetName(env, name)
-				m.SetFqn(env, fqn)
+		member := cpg.NewDeclaredReferenceExpression(fset, env, nil)
+		member.SetName(env, name)
 
-				// TODO: see above, handle base generically
-				base := cpg.NewDeclaredReferenceExpression(fset, env, v.X)
-				base.SetName(env, receiverName)
-				base.SetRefersTo(env, recv.Declaration())
+		m.SetBase(env, (*cpg.MemberExpression)(reference).GetBase(env))
+		m.SetMember(env, member.Node())
 
-				member := cpg.NewDeclaredReferenceExpression(fset, env, v.Sel)
-				member.SetName(env, name)
-				// TODO: use Sel.Object, if available?
-
-				m.SetBase(env, base.Node())
-				m.SetMember(env, member.Node())
-
-				c = (*cpg.CallExpression)(m)
-			}
-		}
-
-		if c == nil {
-			packageName := v.X.(*ast.Ident).Name
-			fqn := fmt.Sprintf("%s.%s", packageName, name)
-
-			// dot call using a qualified package name
-
-			this.LogDebug(env, "Handling qualified call expression to %s", fqn)
-
-			c = cpg.NewCallExpression(fset, env, callExpr)
-			c.SetName(env, name)
-			c.SetFqn(env, fqn)
-		}
-	case *ast.Ident:
-		this.LogDebug(env, "Handling regular call expression to %s", v.Name)
+		c = (*cpg.CallExpression)(m)
+	} else {
+		this.LogDebug(env, "Handling regular call expression to %s", name)
 
 		c = cpg.NewCallExpression(fset, env, callExpr)
-		c.SetName(env, v.Name)
-		// TODO: set FQN based on current package
-		//c.SetFqn()
-
-	default:
-		this.LogError(env, "Not sure what we are calling here (%T): %+v", v, v)
-		return nil
+		c.SetName(env, name)
 	}
 
 	for _, arg := range callExpr.Args {
@@ -465,6 +437,8 @@ func (this *GoLanguageFrontend) handleCallExpr(fset *token.FileSet, env *jnigi.E
 			c.AddArgument(env, e)
 		}
 	}
+
+	// reference.disconnectFromGraph()
 
 	return c
 }
@@ -491,8 +465,6 @@ func (this *GoLanguageFrontend) handleBinaryExpr(fset *token.FileSet, env *jnigi
 	return b
 }
 func (this *GoLanguageFrontend) handleSelectorExpr(fset *token.FileSet, env *jnigi.Env, selectorExpr *ast.SelectorExpr) *cpg.MemberExpression {
-	// not sure if this always succeeds
-
 	base := this.handleExpr(fset, env, selectorExpr.X)
 
 	m := cpg.NewMemberExpression(fset, env, selectorExpr)
@@ -516,38 +488,6 @@ func (this *GoLanguageFrontend) handleSelectorExpr(fset *token.FileSet, env *jni
 	}
 
 	return m
-	//m.SetBase(env, base)
-
-	// TODO: sel.X could be another expr and so on...
-	/*if recv != nil && (*cpg.Node)(recv).GetName(env) == selectorExpr.X.(*ast.Ident).Name {
-		receiverName := (*cpg.Node)(recv).GetName(env)
-		fqn := fmt.Sprintf("%s.%s", receiverName, name)
-
-		this.LogDebug(env, "Fun is a member call to %s for receiver %s", name, receiverName)
-
-		m := cpg.NewMemberExpression(fset, env, selectorExpr)
-	}*/
-
-	/*
-			var record = lang.getScopeManager().getCurrentRecord();
-
-		      base =
-		          NodeBuilder.newDeclaredReferenceExpression(
-		              "this",
-		              record != null ? record.getThis().getType() : UnknownType.getUnknownType(),
-		              base.getCode());
-		      base.setLocation(location);
-	*/
-
-	/*
-			  MemberExpression memberExpression =
-		        NodeBuilder.newMemberExpression(
-		            base,
-		            UnknownType.getUnknownType(),
-		            ctx.getFieldName().toString(),
-		            ctx.isPointerDereference() ? "->" : ".",
-		            ctx.getRawSignature());
-	*/
 }
 
 func (this *GoLanguageFrontend) handleBasicLit(fset *token.FileSet, env *jnigi.Env, lit *ast.BasicLit) *cpg.Literal {

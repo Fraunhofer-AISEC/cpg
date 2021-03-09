@@ -119,6 +119,15 @@ func (m *MemberExpression) SetBase(env *jnigi.Env, e *Expression) {
 	(*jnigi.ObjectRef)(m).SetField(env, "base", (*jnigi.ObjectRef)(e).Cast("de/fraunhofer/aisec/cpg/graph/statements/expressions/Expression"))
 }
 
+func (m *MemberExpression) GetBase(env *jnigi.Env) *Node {
+	i, err := (*jnigi.ObjectRef)(m).GetField(env, "base", jnigi.ObjectType("de/fraunhofer/aisec/cpg/graph/statements/expressions/Expression"))
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return (*Node)(i.(*jnigi.ObjectRef))
+}
+
 func (r *DeclaredReferenceExpression) Expression() *Expression {
 	return (*Expression)(r)
 }

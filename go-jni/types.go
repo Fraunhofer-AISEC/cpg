@@ -5,6 +5,7 @@ import (
 
 	"tekao.net/jnigi"
 )
+import "log"
 
 type Type jnigi.ObjectRef
 type HasType jnigi.ObjectRef
@@ -23,4 +24,13 @@ func (h *HasType) SetType(env *jnigi.Env, t *Type) {
 	if t != nil {
 		(*jnigi.ObjectRef)(h).CallMethod(env, "setType", jnigi.Void, (*jnigi.ObjectRef)(t))
 	}
+}
+
+func (h *HasType) GetType(env *jnigi.Env) *Type {
+	i, err := (*jnigi.ObjectRef)(h).CallMethod(env, "getType", jnigi.ObjectType("de/fraunhofer/aisec/cpg/graph/types/Type"))
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return (*Type)(i.(*jnigi.ObjectRef))
 }
