@@ -122,6 +122,14 @@ func (r *MethodDeclaration) IsNil() bool {
 	return (*jnigi.ObjectRef)(r).IsNil()
 }
 
+func (r *CompoundStatement) IsNil() bool {
+	return (*jnigi.ObjectRef)(r).IsNil()
+}
+
+func (c *CaseStatement) SetCaseExpression(env *jnigi.Env, e *Expression) error {
+	return (*jnigi.ObjectRef)(c).SetField(env, "caseExpression", (*jnigi.ObjectRef)(e).Cast("de/fraunhofer/aisec/cpg/graph/statements/expressions/Expression"))
+}
+
 func NewTranslationUnitDeclaration(fset *token.FileSet, env *jnigi.Env, astNode ast.Node, name string, code string) *TranslationUnitDeclaration {
 	o, err := env.CallStaticMethod("de/fraunhofer/aisec/cpg/graph/NodeBuilder", "newTranslationUnitDeclaration", jnigi.ObjectType("de/fraunhofer/aisec/cpg/graph/declarations/TranslationUnitDeclaration"), NewString(env, name), NewString(env, code))
 	if err != nil {

@@ -31,6 +31,12 @@ func (s *ScopeManager) GetCurrentFunction(env *jnigi.Env) *FunctionDeclaration {
 	return (*FunctionDeclaration)(o.(*jnigi.ObjectRef))
 }
 
+func (s *ScopeManager) GetCurrentBlock(env *jnigi.Env) *CompoundStatement {
+	o, _ := (*jnigi.ObjectRef)(s).CallMethod(env, "getCurrentBlock", jnigi.ObjectType("de/fraunhofer/aisec/cpg/graph/statements/CompoundStatement"))
+
+	return (*CompoundStatement)(o.(*jnigi.ObjectRef))
+}
+
 func (s *ScopeManager) GetRecordForName(env *jnigi.Env, scope *Scope, recordName string) (record *RecordDeclaration, err error) {
 	var o interface{}
 

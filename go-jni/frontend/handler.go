@@ -296,6 +296,8 @@ func (this *GoLanguageFrontend) handleInterfaceTypeSpec(fset *token.FileSet, env
 }
 
 func (this *GoLanguageFrontend) handleBlockStmt(fset *token.FileSet, env *jnigi.Env, blockStmt *ast.BlockStmt) *cpg.CompoundStatement {
+	this.LogDebug(env, "Handling block statement: %+v", *blockStmt)
+
 	c := cpg.NewCompoundStatement(fset, env, blockStmt)
 
 	// enter scope
@@ -332,6 +334,10 @@ func (this *GoLanguageFrontend) handleStmt(fset *token.FileSet, env *jnigi.Env, 
 		return (*cpg.Statement)(this.handleDeclStmt(fset, env, v))
 	case *ast.IfStmt:
 		return (*cpg.Statement)(this.handleIfStmt(fset, env, v))
+	case *ast.SwitchStmt:
+		return (*cpg.Statement)(this.handleSwitchStmt(fset, env, v))
+	case *ast.CaseClause:
+		return (*cpg.Statement)(this.handleCaseClause(fset, env, v))
 	default:
 		this.LogError(env, "Not parsing statement of type %T yet: %+v", v, v)
 	}
@@ -438,6 +444,60 @@ func (this *GoLanguageFrontend) handleIfStmt(fset *token.FileSet, env *jnigi.Env
 	scope.LeaveScope(env, (*cpg.Node)(stmt))
 
 	return (*cpg.Expression)(stmt)
+}
+
+func (this *GoLanguageFrontend) handleSwitchStmt(fset *token.FileSet, env *jnigi.Env, switchStmt *ast.SwitchStmt) (expr *cpg.Expression) {
+	this.LogDebug(env, "Handling switch statement: %+v", *switchStmt)
+
+	s := cpg.NewSwitchStatement(fset, env, switchStmt)
+
+	if switchStmt.Init != nil {
+		s.SetInitializerStatement(env, this.handleStmt(fset, env, switchStmt.Init))
+	}
+
+	if switchStmt.Tag != nil {
+		s.SetCondition(env, this.handleExpr(fset, env, switchStmt.Tag))
+	}
+
+	s.SetStatement(env, (*cpg.Statement)(this.handleBlockStmt(fset, env, switchStmt.Body))) // should only contain case clauses
+
+	return (*cpg.Expression)(s)
+}
+
+func (this *GoLanguageFrontend) handleCaseClause(fset *token.FileSet, env *jnigi.Env, caseClause *ast.CaseClause) (expr *cpg.Expression) {
+	this.LogDebug(env, "Handling case clause: %+v", *caseClause)
+
+	var s *cpg.Statement
+
+	if caseClause.List == nil {
+		s = (*cpg.Statement)(cpg.NewDefaultStatement(fset, env, nil))
+	} else {
+		c := cpg.NewCaseStatement(fset, env, caseClause)
+		c.SetCaseExpression(env, this.handleExpr(fset, env, caseClause.List[0]))
+
+		s = (*cpg.Statement)(c)
+	}
+
+	// need to find the current block / scope and add the statements to it
+	block := this.GetScopeManager(env).GetCurrentBlock(env)
+
+	// add the case statement
+	if s != nil && block != nil && !block.IsNil() {
+		block.AddStatement(env, (*cpg.Statement)(s))
+	}
+
+	for _, stmt := range caseClause.Body {
+		s = this.handleStmt(fset, env, stmt)
+
+		if s != nil && block != nil && !block.IsNil() {
+			// add statement
+			block.AddStatement(env, s)
+		}
+	}
+
+	// this is a little trick, to not add the case statement in handleStmt because we added it already
+	// otherwise, the order is screwed up.
+	return nil
 }
 
 func (this *GoLanguageFrontend) handleCallExpr(fset *token.FileSet, env *jnigi.Env, callExpr *ast.CallExpr) *cpg.CallExpression {

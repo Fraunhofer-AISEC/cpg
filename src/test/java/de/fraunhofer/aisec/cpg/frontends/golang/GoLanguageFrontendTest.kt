@@ -3,9 +3,7 @@ package de.fraunhofer.aisec.cpg.frontends.golang
 import de.fraunhofer.aisec.cpg.BaseTest
 import de.fraunhofer.aisec.cpg.TestUtils
 import de.fraunhofer.aisec.cpg.graph.declarations.*
-import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
-import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
-import de.fraunhofer.aisec.cpg.graph.statements.IfStatement
+import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser
 import org.junit.jupiter.api.Test
@@ -269,5 +267,61 @@ class GoLanguageFrontendTest : BaseTest() {
         assertEquals("true", initializer.name)
 
         val `if` = body.statements[1] as? IfStatement
+    }
+
+    @Test
+    fun testSwitch() {
+        val topLevel = Path.of("src", "test", "resources", "golang")
+        val tu = TestUtils.analyzeAndGetFirstTU(listOf(topLevel.resolve("switch.go").toFile()), topLevel, true)
+
+        assertNotNull(tu)
+
+        val p = tu.getDeclarationsByName("p", NamespaceDeclaration::class.java).iterator().next()
+
+        val myFunc = p.getDeclarationsByName("myFunc", FunctionDeclaration::class.java).iterator().next()
+
+        assertNotNull(myFunc)
+
+        val body = myFunc.body as? CompoundStatement
+
+        assertNotNull(body)
+
+        val switch = body.statements.first() as? SwitchStatement
+
+        assertNotNull(switch)
+        
+        val list = switch.statement as? CompoundStatement
+
+        assertNotNull(list)
+
+        val case1 = list.statements[0] as? CaseStatement
+
+        assertNotNull(case1)
+        assertEquals(1, (case1.caseExpression as? Literal<*>)?.value)
+
+        val first = list.statements[1] as? CallExpression
+
+        assertNotNull(first)
+        assertEquals("first", first.name)
+
+        val case2 = list.statements[2] as? CaseStatement
+
+        assertNotNull(case2)
+        assertEquals(2, (case2.caseExpression as? Literal<*>)?.value)
+
+        val second = list.statements[3] as? CallExpression
+
+        assertNotNull(second)
+        assertEquals("second", second.name)
+
+        val case3 = list.statements[4] as? CaseStatement
+
+        assertNotNull(case3)
+        assertEquals(3, (case3.caseExpression as? Literal<*>)?.value)
+
+        val third = list.statements[5] as? CallExpression
+
+        assertNotNull(third)
+        assertEquals("third", third.name)
     }
 }
