@@ -26,8 +26,6 @@ func (this *GoLanguageFrontend) HandleFile(fset *token.FileSet, env *jnigi.Env, 
 	scope.EnterScope(env, (*cpg.Node)(p))
 
 	for _, decl := range file.Decls {
-		fmt.Printf("%+v\n", decl)
-
 		var d *cpg.Declaration
 
 		d = this.handleDecl(fset, env, decl)
@@ -163,7 +161,7 @@ func (this *GoLanguageFrontend) handleFuncDecl(fset *token.FileSet, env *jnigi.E
 
 	err := f.SetBody(env, (*cpg.Statement)(s))
 	if err != nil {
-		log.Printf("%s", err)
+		log.Fatal(err)
 	}
 
 	// leave scope
@@ -207,8 +205,6 @@ func (this *GoLanguageFrontend) handleValueSpec(fset *token.FileSet, env *jnigi.
 
 	// add an initializer
 	if len(valueDecl.Values) > 0 {
-		fmt.Printf("initializer: %v\n", valueDecl.Values[0])
-
 		// TODO: How to deal with multiple values
 		var expr = this.handleExpr(fset, env, valueDecl.Values[0])
 
@@ -313,13 +309,10 @@ func (this *GoLanguageFrontend) handleBlockStmt(fset *token.FileSet, env *jnigi.
 			// in our cpg, each expression is also a statement,
 			// so we do not need an expression statement wrapper
 			s = (*cpg.Statement)(this.handleExpr(fset, env, v.X))
-			fmt.Printf("exprStmt: %+v\n", v)
-			fmt.Printf("statement: %+v\n", s)
 		case *ast.AssignStmt:
 			s = (*cpg.Statement)(this.handleAssignStmt(fset, env, v))
-			fmt.Printf("assignment: %+v\n", v)
 		default:
-			fmt.Printf("%T: %+v\n", stmt, stmt)
+			this.LogError(env, "Not parsing statement of type %T yet: %+v", v, v)
 		}
 
 		if s != nil {
@@ -349,7 +342,7 @@ func (this *GoLanguageFrontend) handleExpr(fset *token.FileSet, env *jnigi.Env, 
 	case *ast.Ident:
 		return (*cpg.Expression)(this.handleIdent(fset, env, v))
 	default:
-		log.Printf("Could not parse expression of type %T: %+v\n", v, v)
+		this.LogError(env, "Could not parse expression of type %T: %+v", v, v)
 	}
 
 	// TODO: return an error instead?
@@ -598,7 +591,7 @@ func (this *GoLanguageFrontend) handleIdent(fset *token.FileSet, env *jnigi.Env,
 }
 
 func (this *GoLanguageFrontend) handleType(env *jnigi.Env, typeExpr ast.Expr) *cpg.Type {
-	log.Printf("Parsing type %T: %+v\n", typeExpr, typeExpr)
+	this.LogDebug(env, "Parsing type %T: %+v", typeExpr, typeExpr)
 
 	switch v := typeExpr.(type) {
 	case *ast.Ident:
