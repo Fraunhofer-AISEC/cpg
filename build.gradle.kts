@@ -188,7 +188,6 @@ spotless {
                     include("build/generated-src/**")
                 }
         )
-        // temporarly disabled because of Java 16
-        // googleJavaFormat()
+        googleJavaFormat()
     }
 }
