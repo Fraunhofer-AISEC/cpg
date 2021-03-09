@@ -15,3 +15,5 @@ out
 .data/
 logs
 /lsp/*.log
+*.class
+

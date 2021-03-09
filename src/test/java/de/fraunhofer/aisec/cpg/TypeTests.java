@@ -32,10 +32,7 @@ import static java.util.Collections.emptyList;
 import static org.junit.jupiter.api.Assertions.*;
 
 import de.fraunhofer.aisec.cpg.graph.*;
-import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration;
-import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration;
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration;
-import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declarations.*;
 import de.fraunhofer.aisec.cpg.graph.types.*;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -655,6 +652,37 @@ class TypeTests extends BaseTest {
   }
 
   // Tests on the resulting graph
+
+  @Test
+  void testParameterizedTypes() throws Exception {
+    Path topLevel = Path.of("src", "test", "resources", "types");
+    List<TranslationUnitDeclaration> result = TestUtils.analyze("java", topLevel, true);
+
+    // Check Parameterized
+    List<RecordDeclaration> recordDeclarations = subnodesOfType(result, RecordDeclaration.class);
+    RecordDeclaration recordDeclarationBox = findByUniqueName(recordDeclarations, "Box");
+
+    ParameterizedType typeT = TypeManager.getInstance().getTypeParameter(recordDeclarationBox, "T");
+
+    assertEquals(typeT, TypeManager.getInstance().getTypeParameter(recordDeclarationBox, "T"));
+
+    // Type of field t
+    List<FieldDeclaration> fieldDeclarations = subnodesOfType(result, FieldDeclaration.class);
+    FieldDeclaration fieldDeclarationT = findByUniqueName(fieldDeclarations, "t");
+    assertEquals(typeT, fieldDeclarationT.getType());
+    assertTrue(fieldDeclarationT.getPossibleSubTypes().contains(typeT));
+
+    // Parameter of set Method
+    List<MethodDeclaration> methodDeclarations = subnodesOfType(result, MethodDeclaration.class);
+    MethodDeclaration methodDeclarationSet = findByUniqueName(methodDeclarations, "set");
+    ParamVariableDeclaration t = methodDeclarationSet.getParameters().get(0);
+    assertEquals(typeT, t.getType());
+    assertTrue(t.getPossibleSubTypes().contains(typeT));
+
+    // Return Type of get Method
+    MethodDeclaration methodDeclarationGet = findByUniqueName(methodDeclarations, "get");
+    assertEquals(typeT, methodDeclarationGet.getType());
+  }
 
   @Test
   void graphTest() throws Exception {
