@@ -34,6 +34,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.*;
 import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType;
 import de.fraunhofer.aisec.cpg.graph.types.Type;
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser;
+import de.fraunhofer.aisec.cpg.graph.types.UnknownType;
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.ScopedWalker;
 import de.fraunhofer.aisec.cpg.helpers.Util;
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy;
@@ -278,6 +279,129 @@ public class CallResolver extends Pass {
     }
   }
 
+  /**
+   * @param callSignature Type signature of the CallExpression
+   * @param functionSignature Type signature of the FunctionDeclaration
+   * @return true if the CallExpression signature can be transformed into the FunctionDeclaration
+   *     signature by means of casting
+   */
+  private boolean compatibleSignatures(List<Type> callSignature, List<Type> functionSignature) {
+    if (callSignature.size() == functionSignature.size()) {
+      for (int i = 0; i < callSignature.size(); i++) {
+        if ((callSignature.get(i).isPrimitive() != functionSignature.get(i).isPrimitive())
+            && !TypeManager.getInstance()
+                .isSupertypeOf(functionSignature.get(i), callSignature.get(i))) {
+          return false;
+        }
+      }
+    } else {
+      return false;
+    }
+
+    return true;
+  }
+
+  /**
+   * Computes the implicit casts that are necessary to reach the
+   *
+   * @param call we want to find invocation targets for by performing implicit casts
+   * @param functionSignature Types of the signature of the possible invocation candidate
+   * @return List containing either null on the i-th position (if the type of i-th argument of the
+   *     call equals the type of the i-th argument of the FunctionDeclaration) or a CastExpression
+   *     on the i-th position (if the argument of the call can be casted to match the type of the
+   *     argument at the i-th position of the FunctionDeclaration). If the list is empty the
+   *     signature of the FunctionDeclaration cannot be reached through implicit casts
+   */
+  private List<CastExpression> signatureWithImplicitCastTransformation(
+      CallExpression call, List<Type> functionSignature) {
+    List<Type> callSignature = call.getSignature();
+    if (callSignature.size() == functionSignature.size()) {
+      List<CastExpression> implicitCasts = new ArrayList<>();
+
+      for (int i = 0; i < callSignature.size(); i++) {
+        Type callType = callSignature.get(i);
+        Type funcType = functionSignature.get(i);
+        if (callType.isPrimitive() && callType.isPrimitive() && !(callType.equals(funcType))) {
+          CastExpression implicitCast = new CastExpression();
+          implicitCast.setImplicit(true);
+          implicitCast.setCastType(funcType);
+          implicitCast.setExpression(call.getArguments().get(i));
+          implicitCasts.add(implicitCast);
+        } else {
+          implicitCasts.add(null);
+        }
+      }
+
+      return implicitCasts;
+    }
+    return new ArrayList<>();
+  }
+
+  /**
+   * modifies: call arguments by applying implicit casts
+   *
+   * @param call we want to find invocation targets for by performing implicit casts
+   * @return list of invocation candidates by applying
+   */
+  private List<FunctionDeclaration> resolveWithImplicitCast(CallExpression call) {
+    // Get possible invocation targets based on the function name
+    List<FunctionDeclaration> matchingFunctionName =
+        currentTU.getDeclarations().stream()
+            .filter(FunctionDeclaration.class::isInstance)
+            .map(FunctionDeclaration.class::cast)
+            .filter(f -> f.getName().equals(call.getName()))
+            .collect(Collectors.toList());
+
+    // Output list for invocationTargets obtaining a valid signature by performing implicit casts
+    List<FunctionDeclaration> invocationTargetsWithImplicitCast = new ArrayList<>();
+
+    List<CastExpression> implicitCasts = null;
+    List<Type> callSignature = call.getSignature();
+
+    // Iterate through all possible invocation candidates
+    for (FunctionDeclaration functionDeclaration : matchingFunctionName) {
+      // Check if the signatures match by implicit casts
+      if (compatibleSignatures(callSignature, functionDeclaration.getSignatureTypes())) {
+        List<CastExpression> implicitCastTargets =
+            signatureWithImplicitCastTransformation(call, functionDeclaration.getSignatureTypes());
+        if (implicitCasts == null) {
+          implicitCasts = implicitCastTargets;
+        } else {
+          // Since we can have multiple possible invocation targets the cast must all be to the same
+          // target type
+          for (int i = 0; i < implicitCasts.size(); i++) {
+            CastExpression currentCast = implicitCasts.get(i);
+            CastExpression otherCast = implicitCasts.get(i);
+            if (currentCast == null || otherCast == null) {
+              continue;
+            }
+            if (!(currentCast.equals(otherCast))) {
+              // If we have multiple function targets with different implicit casts we have an
+              // ambiguous call and we can't have a single cast
+              CastExpression contradictoryCast = new CastExpression();
+              contradictoryCast.setImplicit(true);
+              contradictoryCast.setCastType(UnknownType.getUnknownType());
+              contradictoryCast.setExpression(currentCast.getExpression());
+              implicitCasts.set(i, contradictoryCast);
+            }
+          }
+        }
+        invocationTargetsWithImplicitCast.add(functionDeclaration);
+      }
+    }
+
+    // Apply implicit casts to call arguments
+    if (implicitCasts != null) {
+      for (int i = 0; i < implicitCasts.size(); i++) {
+        if (implicitCasts.get(i) != null) {
+          call.setArgument(i, implicitCasts.get(i));
+        }
+      }
+    }
+
+    return invocationTargetsWithImplicitCast;
+  }
+
   private void handleNormalCalls(RecordDeclaration curClass, CallExpression call) {
     if (curClass == null && this.currentTU != null) {
       // Handle function (not method) calls
@@ -289,7 +413,14 @@ public class CallResolver extends Pass {
               .filter(
                   f -> f.getName().equals(call.getName()) && f.hasSignature(call.getSignature()))
               .collect(Collectors.toList());
+
       if (invocationCandidates.isEmpty()) {
+        // If we don't find any candidate we check if there is a candidate with an implicit cast
+        invocationCandidates.addAll(resolveWithImplicitCast(call));
+      }
+
+      if (invocationCandidates.isEmpty()) {
+        // If we still have no candidates we create dummy FunctionDeclaration
         invocationCandidates =
             List.of(createDummy(null, call.getName(), call.getCode(), false, call.getSignature()));
       }

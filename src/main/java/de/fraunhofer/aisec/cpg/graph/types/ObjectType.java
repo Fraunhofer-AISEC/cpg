@@ -52,7 +52,6 @@ public class ObjectType extends Type {
   }
 
   private final Modifier modifier;
-  private final boolean primitive;
   // Reference from the ObjectType to its class (RecordDeclaration) only if the class is available
   private RecordDeclaration recordDeclaration = null;
 
