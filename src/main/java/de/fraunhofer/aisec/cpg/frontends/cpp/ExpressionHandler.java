@@ -31,18 +31,17 @@ import static de.fraunhofer.aisec.cpg.helpers.Util.warnWithFileLocation;
 
 import de.fraunhofer.aisec.cpg.frontends.Handler;
 import de.fraunhofer.aisec.cpg.graph.*;
-import de.fraunhofer.aisec.cpg.graph.type.*;
+import de.fraunhofer.aisec.cpg.graph.declarations.Declaration;
+import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration;
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.*;
+import de.fraunhofer.aisec.cpg.graph.types.*;
+import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation;
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import org.eclipse.cdt.core.dom.ast.*;
 import org.eclipse.cdt.core.dom.ast.IBasicType.Kind;
-import org.eclipse.cdt.core.dom.ast.IBinding;
-import org.eclipse.cdt.core.dom.ast.IProblemType;
-import org.eclipse.cdt.core.dom.ast.IQualifierType;
-import org.eclipse.cdt.core.dom.ast.IType;
-import org.eclipse.cdt.core.dom.ast.IValue;
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTDesignator;
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTExpression;
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTInitializerClause;
@@ -292,16 +291,27 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
 
   private Expression handleFieldReference(CPPASTFieldReference ctx) {
     Expression base = this.handle(ctx.getFieldOwner());
+    // Replace Literal this with a reference pointing to this
+    if (base instanceof Literal && ((Literal<?>) base).getValue().equals("this")) {
+      PhysicalLocation location = base.getLocation();
 
-    // TODO: this should actually be the MemberDeclaration of the defined record
-    // for now we just create a reference declaration
-    String identifierName = ctx.getFieldName().toString();
-    DeclaredReferenceExpression member =
-        NodeBuilder.newDeclaredReferenceExpression(
-            identifierName, UnknownType.getUnknownType(), ctx.getFieldName().getRawSignature());
+      var record = lang.getScopeManager().getCurrentRecord();
+
+      base =
+          NodeBuilder.newDeclaredReferenceExpression(
+              "this",
+              record != null ? record.getThis().getType() : UnknownType.getUnknownType(),
+              base.getCode());
+      base.setLocation(location);
+    }
 
     MemberExpression memberExpression =
-        NodeBuilder.newMemberExpression(base, member, ctx.getRawSignature());
+        NodeBuilder.newMemberExpression(
+            base,
+            UnknownType.getUnknownType(),
+            ctx.getFieldName().toString(),
+            ctx.isPointerDereference() ? "->" : ".",
+            ctx.getRawSignature());
 
     this.lang.expressionRefersToDeclaration(memberExpression, ctx);
 
@@ -391,16 +401,22 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
     if (reference instanceof MemberExpression) {
       String baseTypename;
       // Pointer types contain * or []. We do not want that here.
-      Type baseType = ((Expression) ((MemberExpression) reference).getBase()).getType().getRoot();
+      Type baseType = ((MemberExpression) reference).getBase().getType().getRoot();
       assert !(baseType instanceof SecondOrderType);
       baseTypename = baseType.getTypeName();
+      DeclaredReferenceExpression member =
+          NodeBuilder.newDeclaredReferenceExpression(
+              reference.getName(), UnknownType.getUnknownType(), reference.getName());
+
+      member.setLocation(lang.getLocationFromRawNode(reference));
 
       callExpression =
           NodeBuilder.newMemberCallExpression(
-              ((MemberExpression) reference).getMember().getName(),
-              baseTypename + "." + ((MemberExpression) reference).getMember().getName(),
+              member.getName(),
+              baseTypename + "." + member.getName(),
               ((MemberExpression) reference).getBase(),
-              ((MemberExpression) reference).getMember(),
+              member,
+              ((MemberExpression) reference).getOperatorCode(),
               ctx.getRawSignature());
     } else if (reference instanceof BinaryOperator
         && ((BinaryOperator) reference).getOperatorCode().equals(".")) {
@@ -412,18 +428,14 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
               "",
               ((BinaryOperator) reference).getLhs(),
               ((BinaryOperator) reference).getRhs(),
+              ((BinaryOperator) reference).getOperatorCode(),
               reference.getCode());
     } else if (reference instanceof UnaryOperator
         && ((UnaryOperator) reference).getOperatorCode().equals("*")) {
-      // Classic C-style function pointer call -> let's extract the target. For easy
-      // compatibility with C++-style function pointer calls, we create a member call without a base
+      // Classic C-style function pointer call -> let's extract the target
       callExpression =
-          NodeBuilder.newMemberCallExpression(
-              reference.getCode(),
-              "",
-              null,
-              ((UnaryOperator) reference).getInput(),
-              reference.getCode());
+          NodeBuilder.newCallExpression(
+              ((UnaryOperator) reference).getInput().getName(), "", reference.getCode());
     } else {
       String fqn = reference.getName();
       String name = fqn;
@@ -445,7 +457,7 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
       Expression arg = this.handle(argument);
       arg.setArgumentIndex(i);
 
-      callExpression.getArguments().add(arg);
+      callExpression.addArgument(arg);
 
       i++;
     }
@@ -496,7 +508,7 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
   private ExpressionList handleExpressionList(CPPASTExpressionList exprList) {
     ExpressionList expressionList = NodeBuilder.newExpressionList(exprList.getRawSignature());
     for (IASTExpression expr : exprList.getExpressions()) {
-      expressionList.getExpressions().add(handle(expr));
+      expressionList.addExpression(handle(expr));
     }
 
     return expressionList;

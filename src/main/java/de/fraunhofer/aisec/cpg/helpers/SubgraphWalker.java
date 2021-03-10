@@ -26,14 +26,16 @@
 
 package de.fraunhofer.aisec.cpg.helpers;
 
-import de.fraunhofer.aisec.cpg.graph.CompoundStatement;
-import de.fraunhofer.aisec.cpg.graph.FunctionDeclaration;
-import de.fraunhofer.aisec.cpg.graph.MethodDeclaration;
+import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
 import de.fraunhofer.aisec.cpg.graph.Node;
-import de.fraunhofer.aisec.cpg.graph.RecordDeclaration;
 import de.fraunhofer.aisec.cpg.graph.SubGraph;
-import de.fraunhofer.aisec.cpg.graph.TranslationUnitDeclaration;
-import de.fraunhofer.aisec.cpg.graph.ValueDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration;
+import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
+import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement;
 import java.lang.annotation.AnnotationFormatError;
 import java.lang.reflect.Field;
 import java.util.ArrayDeque;
@@ -43,6 +45,7 @@ import java.util.Collection;
 import java.util.Deque;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -56,6 +59,7 @@ import org.apache.commons.lang3.tuple.MutablePair;
 import org.apache.commons.lang3.tuple.Pair;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
+import org.neo4j.ogm.annotation.Relationship;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -86,7 +90,7 @@ public class SubgraphWalker {
    * @return a set of children from the nodes member variables
    */
   public static Set<Node> getAstChildren(Node node) {
-    HashSet<Node> children = new HashSet<>(); // Set for duplicate elimination
+    LinkedHashSet<Node> children = new LinkedHashSet<>(); // Set for duplicate elimination
     if (node == null) return children;
 
     Class classType = node.getClass();
@@ -95,7 +99,7 @@ public class SubgraphWalker {
       if (subGraph != null && Arrays.asList(subGraph.value()).contains("AST")) {
         try {
           // disable access mechanisms
-          field.setAccessible(true);
+          field.trySetAccessible();
 
           Object obj = field.get(node);
 
@@ -105,6 +109,15 @@ public class SubgraphWalker {
           // skip, if null
           if (obj == null) {
             continue;
+          }
+
+          boolean outgoing = true; // default
+          if (field.getAnnotation(Relationship.class) != null) {
+            outgoing = field.getAnnotation(Relationship.class).direction().equals("OUTGOING");
+          }
+
+          if (PropertyEdge.checkForPropertyEdge(field, obj)) {
+            obj = PropertyEdge.unwrapPropertyEdge(obj, outgoing);
           }
 
           if (obj instanceof Node) {
@@ -251,7 +264,7 @@ public class SubgraphWalker {
     public void iterate(Node root) {
       todo = new ArrayDeque<>();
       backlog = new ArrayDeque<>();
-      Set<Node> seen = new HashSet<>();
+      Set<Node> seen = new LinkedHashSet<>();
 
       todo.push(root);
       while (!todo.isEmpty()) {
@@ -263,7 +276,6 @@ public class SubgraphWalker {
           // re-place the current node as a marker for the above check to find out when we need to
           // exit a scope
           todo.push(current);
-
           onNodeVisit.forEach(c -> c.accept(current));
 
           Set<Node> unseenChildren =
@@ -271,7 +283,7 @@ public class SubgraphWalker {
                   .filter(Predicate.not(seen::contains))
                   .collect(Collectors.toSet());
           seen.addAll(unseenChildren);
-          unseenChildren.forEach(todo::push);
+          Util.reverse(unseenChildren.stream()).forEach(todo::push);
           backlog.push(current);
         }
       }
@@ -316,6 +328,12 @@ public class SubgraphWalker {
     private Deque<RecordDeclaration> currentClass = new ArrayDeque<>();
     private IterativeGraphWalker walker;
 
+    private LanguageFrontend lang;
+
+    public ScopedWalker(LanguageFrontend lang) {
+      this.lang = lang;
+    }
+
     /**
      * Callback function(s) getting three arguments: the type of the class we're currently in, the
      * root node of the current declaration scope, the currently visited node. The declaration scope
@@ -349,6 +367,7 @@ public class SubgraphWalker {
     }
 
     private void handleNode(Node current, TriConsumer<RecordDeclaration, Node, Node> handler) {
+      lang.getScopeManager().enterScopeIfExists(current);
 
       Node parent = walker.getBacklog().peek();
 
@@ -376,6 +395,8 @@ public class SubgraphWalker {
       if (exiting instanceof RecordDeclaration) { // leave a class
         currentClass.pop();
       }
+
+      lang.getScopeManager().leaveScope(exiting);
     }
 
     @Nullable

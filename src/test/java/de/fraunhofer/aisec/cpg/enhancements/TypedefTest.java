@@ -4,10 +4,10 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import de.fraunhofer.aisec.cpg.BaseTest;
 import de.fraunhofer.aisec.cpg.TestUtils;
-import de.fraunhofer.aisec.cpg.graph.RecordDeclaration;
-import de.fraunhofer.aisec.cpg.graph.TranslationUnitDeclaration;
 import de.fraunhofer.aisec.cpg.graph.TypeManager;
-import de.fraunhofer.aisec.cpg.graph.ValueDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration;
 import java.nio.file.Path;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -40,6 +40,16 @@ class TypedefTest extends BaseTest {
     ValueDeclaration uintfp1 = TestUtils.findByUniqueName(variables, "uintfp1");
     ValueDeclaration uintfp2 = TestUtils.findByUniqueName(variables, "uintfp2");
     assertEquals(uintfp1.getType(), uintfp2.getType());
+
+    var frontend = TypeManager.getInstance().getFrontend();
+
+    assertNotNull(frontend);
+
+    var typedefs = frontend.getScopeManager().getCurrentTypedefs();
+    var def =
+        typedefs.stream().filter(d -> d.getAlias().getName().equals("test")).findAny().orElse(null);
+
+    assertNotNull(def);
   }
 
   @Test

@@ -34,6 +34,13 @@ import de.fraunhofer.aisec.cpg.TranslationManager;
 import de.fraunhofer.aisec.cpg.TranslationResult;
 import de.fraunhofer.aisec.cpg.frontends.TranslationException;
 import de.fraunhofer.aisec.cpg.graph.*;
+import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration;
+import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement;
+import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement;
+import de.fraunhofer.aisec.cpg.graph.statements.Statement;
 import de.fraunhofer.aisec.cpg.processing.IVisitor;
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy;
 import java.io.File;
@@ -105,12 +112,12 @@ class VisitorTest extends BaseTest {
           }
         });
 
-    assertEquals(31, nodeList.size());
+    assertEquals(34, nodeList.size());
   }
 
   /** Visits only ReturnStatement nodes. */
   @Test
-  void testReturnStmtVisior() {
+  void testReturnStmtVisitor() {
     List<ReturnStatement> returnStmts = new ArrayList<>();
 
     RecordDeclaration recordDeclaration = namespace.getDeclarationAs(0, RecordDeclaration.class);

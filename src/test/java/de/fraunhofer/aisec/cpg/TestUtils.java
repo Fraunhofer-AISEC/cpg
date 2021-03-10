@@ -26,12 +26,14 @@
 
 package de.fraunhofer.aisec.cpg;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
-import de.fraunhofer.aisec.cpg.graph.CompoundStatement;
 import de.fraunhofer.aisec.cpg.graph.Node;
-import de.fraunhofer.aisec.cpg.graph.TranslationUnitDeclaration;
 import de.fraunhofer.aisec.cpg.graph.TypeManager;
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration;
+import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement;
+import de.fraunhofer.aisec.cpg.graph.statements.Statement;
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker;
 import de.fraunhofer.aisec.cpg.helpers.Util;
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation;
@@ -47,20 +49,24 @@ import org.mockito.Mockito;
 
 public class TestUtils {
 
-  public static <S extends Node> S findByPredicate(Collection<S> nodes, Predicate<S> predicate) {
-    List<S> results = nodes.stream().filter(predicate).collect(Collectors.toList());
-    assertEquals(1, results.size());
+  public static <S extends Node> S findByUniquePredicate(
+      Collection<S> nodes, Predicate<S> predicate) {
+    List<S> results = findByPredicate(nodes, predicate);
+    assertEquals(1, results.size(), "Expected exactly one node matching the predicate");
     return results.get(0);
+  }
+
+  public static <S extends Node> List<S> findByPredicate(
+      Collection<S> nodes, Predicate<S> predicate) {
+    return nodes.stream().filter(predicate).collect(Collectors.toList());
   }
 
   public static <S extends Node> S findByUniqueName(Collection<S> nodes, String name) {
-    List<S> results = findByName(nodes, name);
-    assertEquals(1, results.size());
-    return results.get(0);
+    return findByUniquePredicate(nodes, m -> m.getName().equals(name));
   }
 
   public static <S extends Node> List<S> findByName(Collection<S> nodes, String name) {
-    return nodes.stream().filter(m -> m.getName().equals(name)).collect(Collectors.toList());
+    return findByPredicate(nodes, m -> m.getName().equals(name));
   }
 
   /**
@@ -146,8 +152,8 @@ public class TestUtils {
    * @return Statement at source line or null if not present.
    */
   public static Node getByLineNr(CompoundStatement body, int line) {
-    List<Node> nodes = SubgraphWalker.flattenAST(body);
-    for (Node n : nodes) {
+    List<Statement> nodes = subnodesOfType(body, Statement.class);
+    for (Statement n : nodes) {
       PhysicalLocation location = n.getLocation();
       assertNotNull(location);
 
@@ -155,6 +161,7 @@ public class TestUtils {
         return n;
       }
     }
+
     return null;
   }
 
@@ -173,7 +180,7 @@ public class TestUtils {
   public static <S extends Node> S getOfTypeWithName(
       List<Node> listOfNodes, Class<S> specificClass, String name) {
     List<S> listOfNodesWithName =
-        filterCast(listOfNodes, specificClass).stream()
+        Util.filterCast(listOfNodes, specificClass).stream()
             .filter(s -> s.getName().equals(name))
             .collect(Collectors.toList());
     if (listOfNodesWithName.isEmpty()) {
@@ -181,23 +188,6 @@ public class TestUtils {
     }
     // Here we return the first node, if there are more nodes
     return listOfNodesWithName.get(0);
-  }
-
-  /**
-   * Filters a list of elements with common type T for all elements of instance S, returning a list
-   * of type {@link List}.
-   *
-   * @param genericList List with elements fo type T.
-   * @param specificClass Class type to filter for.
-   * @param <T> Generic List type.
-   * @param <S> Class type to filter for.
-   * @return a specific List as all elements are cast to the specified class type.
-   */
-  public static <T, S extends T> List<S> filterCast(List<T> genericList, Class<S> specificClass) {
-    return genericList.stream()
-        .filter(g -> specificClass.isAssignableFrom(g.getClass()))
-        .map(specificClass::cast)
-        .collect(Collectors.toList());
   }
 
   /**
@@ -221,7 +211,7 @@ public class TestUtils {
    * @return a List of searched types
    */
   public static <S extends Node> List<S> subnodesOfType(Node node, Class<S> specificClass) {
-    return filterCast(SubgraphWalker.flattenAST(node), specificClass).stream()
+    return Util.filterCast(SubgraphWalker.flattenAST(node), specificClass).stream()
         .filter(Util.distinctByIdentity())
         .collect(Collectors.toList());
   }
@@ -237,5 +227,27 @@ public class TestUtils {
         .flatMap(Collection::stream)
         .filter(Util.distinctByIdentity())
         .collect(Collectors.toList());
+  }
+
+  /**
+   * Compare the given parameter {@code toCompare} to the start- or end-line of the given node. If
+   * the node has no location {@code false} is returned. {@code startLine} is used to specify if the
+   * start-line or end-line of a location is supposed to be used.
+   *
+   * @param n
+   * @param startLine
+   * @param toCompare
+   * @return
+   */
+  public static boolean compareLineFromLocationIfExists(Node n, boolean startLine, int toCompare) {
+    PhysicalLocation loc = n.getLocation();
+    if (loc == null) {
+      return false;
+    }
+    if (startLine) {
+      return loc.getRegion().getStartLine() == toCompare;
+    } else {
+      return loc.getRegion().getEndLine() == toCompare;
+    }
   }
 }

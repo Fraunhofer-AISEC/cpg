@@ -17,7 +17,8 @@ package de.fraunhofer.aisec.cpg.frontends.python;
 import de.fraunhofer.aisec.cpg.TranslationConfiguration;
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
 import de.fraunhofer.aisec.cpg.frontends.TranslationException;
-import de.fraunhofer.aisec.cpg.graph.TranslationUnitDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declarations.Declaration;
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration;
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager;
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation;
 import io.github.oxisto.reticulated.ParserResult;
@@ -58,7 +59,8 @@ public class PythonLanguageFrontend extends LanguageFrontend {
       // declarations, but the python parser has an utility class called 'Definition' to distinguish
       // class and function definitions from other statements such as 'if' and 'for'.
       if (ctx instanceof Definition) {
-        tu.add(definitionHandler.handle((Definition) ctx));
+        Declaration d = definitionHandler.handle((Definition) ctx);
+        if (d != null) tu.addDeclaration(d);
       }
 
       // additionally, python allows statement on a global level, something we also do not allow, so

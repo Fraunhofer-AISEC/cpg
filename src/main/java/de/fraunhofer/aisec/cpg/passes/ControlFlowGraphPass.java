@@ -27,21 +27,21 @@
 package de.fraunhofer.aisec.cpg.passes;
 
 import de.fraunhofer.aisec.cpg.TranslationResult;
-import de.fraunhofer.aisec.cpg.graph.BreakStatement;
-import de.fraunhofer.aisec.cpg.graph.CompoundStatement;
-import de.fraunhofer.aisec.cpg.graph.ContinueStatement;
-import de.fraunhofer.aisec.cpg.graph.Declaration;
-import de.fraunhofer.aisec.cpg.graph.DoStatement;
-import de.fraunhofer.aisec.cpg.graph.FunctionDeclaration;
-import de.fraunhofer.aisec.cpg.graph.IfStatement;
-import de.fraunhofer.aisec.cpg.graph.MethodDeclaration;
-import de.fraunhofer.aisec.cpg.graph.NamespaceDeclaration;
 import de.fraunhofer.aisec.cpg.graph.Node;
-import de.fraunhofer.aisec.cpg.graph.RecordDeclaration;
-import de.fraunhofer.aisec.cpg.graph.ReturnStatement;
-import de.fraunhofer.aisec.cpg.graph.Statement;
-import de.fraunhofer.aisec.cpg.graph.TranslationUnitDeclaration;
-import de.fraunhofer.aisec.cpg.graph.WhileStatement;
+import de.fraunhofer.aisec.cpg.graph.declarations.Declaration;
+import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration;
+import de.fraunhofer.aisec.cpg.graph.statements.BreakStatement;
+import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement;
+import de.fraunhofer.aisec.cpg.graph.statements.ContinueStatement;
+import de.fraunhofer.aisec.cpg.graph.statements.DoStatement;
+import de.fraunhofer.aisec.cpg.graph.statements.IfStatement;
+import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement;
+import de.fraunhofer.aisec.cpg.graph.statements.Statement;
+import de.fraunhofer.aisec.cpg.graph.statements.WhileStatement;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -68,7 +68,12 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  * </ul>
  *
  * @author julian
+ *     <p>
+ * @deprecated This Edge-Type is deprecated as it is conceptually less precise then the {@link
+ *     EvaluationOrderGraphPass}.
+ * @author kweiss
  */
+@Deprecated(since = "3.4", forRemoval = true)
 public class ControlFlowGraphPass extends Pass {
   private List<Statement> remaining = new CopyOnWriteArrayList<>();
   /** For keeping track of nested break/continue scopes. */
@@ -112,7 +117,7 @@ public class ControlFlowGraphPass extends Pass {
    */
   private void handleFunctionDeclaration(FunctionDeclaration decl) {
     Statement body = decl.getBody();
-    decl.getNextCFG().add(body);
+    decl.addNextCFG(body);
     if (body != null) handleBody((CompoundStatement) body);
   }
 
@@ -134,7 +139,7 @@ public class ControlFlowGraphPass extends Pass {
 
     // Extend our todo list by all statements in Compound
     List<Statement> containedStmts = body.getStatements();
-    body.getNextCFG().add(containedStmts.get(0));
+    body.addNextCFG(containedStmts.get(0));
 
     handleStatements(body);
   }
@@ -176,7 +181,7 @@ public class ControlFlowGraphPass extends Pass {
         Statement thenStmt = ((IfStatement) stmt).getThenStatement();
         doNotLinkToFollowingStmt.add(lastStatementInCompound(thenStmt));
         if (!isBreakOrContinue(thenStmt)) {
-          thenStmt.getNextCFG().add(this.remaining.get(i + 1));
+          thenStmt.addNextCFG(this.remaining.get(i + 1));
         }
         addTodo(i, thenStmt);
 
@@ -190,7 +195,7 @@ public class ControlFlowGraphPass extends Pass {
         ContinueStatement contStmt = (ContinueStatement) stmt;
         if (!this.breakContinueScopes.isEmpty()) {
           BreakContinueScope scope = this.breakContinueScopes.peek();
-          contStmt.getNextCFG().add(scope.start);
+          contStmt.addNextCFG(scope.start);
         }
 
       } else if (stmt instanceof BreakStatement) {
@@ -198,7 +203,7 @@ public class ControlFlowGraphPass extends Pass {
         BreakStatement breakStmt = (BreakStatement) stmt;
         if (!this.breakContinueScopes.isEmpty()) {
           BreakContinueScope scope = this.breakContinueScopes.peek();
-          breakStmt.getNextCFG().add(scope.breakLocation);
+          breakStmt.addNextCFG(scope.breakLocation);
         }
 
       } else if (isCompoundStmt(stmt)) {
@@ -220,7 +225,7 @@ public class ControlFlowGraphPass extends Pass {
 
         Node lastInBlock = lastStatementInCompound(whileStmt.getStatement());
         if (lastInBlock != null) {
-          lastInBlock.getNextCFG().add(whileStmt);
+          lastInBlock.addNextCFG(whileStmt);
         }
         doNotLinkToFollowingStmt.add(lastStatementInCompound(whileStmt.getStatement()));
 
@@ -232,7 +237,7 @@ public class ControlFlowGraphPass extends Pass {
         targets.add(firstStatementInCompound(doStmt.getStatement()));
 
         // Connect condition to first stmt in compound (when re-iterating the do-while-loop)
-        doStmt.getCondition().getNextCFG().add(firstStatementInCompound(doStmt.getStatement()));
+        doStmt.getCondition().addNextCFG(firstStatementInCompound(doStmt.getStatement()));
         addTodo(i + 1, doStmt.getCondition());
 
       } else if (!(stmt instanceof ReturnStatement)
@@ -247,7 +252,7 @@ public class ControlFlowGraphPass extends Pass {
           targets.add(nextRealStmt);
         }
       }
-      stmt.getNextCFG().addAll(targets);
+      stmt.addNextCFG(targets);
     }
   }
 

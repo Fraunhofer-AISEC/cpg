@@ -1,7 +1,7 @@
 package de.fraunhofer.aisec.cpg;
 
 import de.fraunhofer.aisec.cpg.graph.TypeManager;
-import de.fraunhofer.aisec.cpg.graph.type.TypeParser;
+import de.fraunhofer.aisec.cpg.graph.types.TypeParser;
 import org.junit.jupiter.api.BeforeEach;
 
 public abstract class BaseTest {

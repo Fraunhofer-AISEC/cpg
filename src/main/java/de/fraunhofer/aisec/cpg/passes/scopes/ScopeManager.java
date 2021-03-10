@@ -26,35 +26,33 @@
 
 package de.fraunhofer.aisec.cpg.passes.scopes;
 
+import static de.fraunhofer.aisec.cpg.helpers.Util.errorWithFileLocation;
+
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
-import de.fraunhofer.aisec.cpg.graph.AssertStatement;
-import de.fraunhofer.aisec.cpg.graph.BreakStatement;
-import de.fraunhofer.aisec.cpg.graph.CatchClause;
-import de.fraunhofer.aisec.cpg.graph.CompoundStatement;
-import de.fraunhofer.aisec.cpg.graph.ConstructorDeclaration;
-import de.fraunhofer.aisec.cpg.graph.ContinueStatement;
-import de.fraunhofer.aisec.cpg.graph.Declaration;
-import de.fraunhofer.aisec.cpg.graph.DeclaredReferenceExpression;
-import de.fraunhofer.aisec.cpg.graph.DoStatement;
-import de.fraunhofer.aisec.cpg.graph.FieldDeclaration;
-import de.fraunhofer.aisec.cpg.graph.ForEachStatement;
-import de.fraunhofer.aisec.cpg.graph.ForStatement;
-import de.fraunhofer.aisec.cpg.graph.FunctionDeclaration;
-import de.fraunhofer.aisec.cpg.graph.IfStatement;
-import de.fraunhofer.aisec.cpg.graph.LabelStatement;
-import de.fraunhofer.aisec.cpg.graph.MethodDeclaration;
-import de.fraunhofer.aisec.cpg.graph.NamespaceDeclaration;
 import de.fraunhofer.aisec.cpg.graph.Node;
-import de.fraunhofer.aisec.cpg.graph.ParamVariableDeclaration;
-import de.fraunhofer.aisec.cpg.graph.RecordDeclaration;
-import de.fraunhofer.aisec.cpg.graph.Statement;
-import de.fraunhofer.aisec.cpg.graph.SwitchStatement;
-import de.fraunhofer.aisec.cpg.graph.TryStatement;
-import de.fraunhofer.aisec.cpg.graph.TypedefDeclaration;
-import de.fraunhofer.aisec.cpg.graph.ValueDeclaration;
-import de.fraunhofer.aisec.cpg.graph.VariableDeclaration;
-import de.fraunhofer.aisec.cpg.graph.WhileStatement;
+import de.fraunhofer.aisec.cpg.graph.declarations.*;
+import de.fraunhofer.aisec.cpg.graph.declarations.EnumDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration;
+import de.fraunhofer.aisec.cpg.graph.statements.AssertStatement;
+import de.fraunhofer.aisec.cpg.graph.statements.BreakStatement;
+import de.fraunhofer.aisec.cpg.graph.statements.CatchClause;
+import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement;
+import de.fraunhofer.aisec.cpg.graph.statements.ContinueStatement;
+import de.fraunhofer.aisec.cpg.graph.statements.DoStatement;
+import de.fraunhofer.aisec.cpg.graph.statements.ForEachStatement;
+import de.fraunhofer.aisec.cpg.graph.statements.ForStatement;
+import de.fraunhofer.aisec.cpg.graph.statements.IfStatement;
+import de.fraunhofer.aisec.cpg.graph.statements.LabelStatement;
+import de.fraunhofer.aisec.cpg.graph.statements.Statement;
+import de.fraunhofer.aisec.cpg.graph.statements.SwitchStatement;
+import de.fraunhofer.aisec.cpg.graph.statements.TryStatement;
+import de.fraunhofer.aisec.cpg.graph.statements.WhileStatement;
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression;
+import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -64,7 +62,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Predicate;
-import java.util.stream.Collectors;
+import java.util.regex.Pattern;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.slf4j.Logger;
@@ -82,7 +80,11 @@ public class ScopeManager {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(ScopeManager.class);
 
+  /** Allows to map the AST nodes to the associated scope */
   private final Map<Node, Scope> scopeMap = new HashMap<>();
+
+  private final Map<String, Scope> fqnScopeMap = new HashMap<>();
+
   private Scope currentScope = null;
   private LanguageFrontend lang;
 
@@ -105,6 +107,11 @@ public class ScopeManager {
       return;
     }
     scopeMap.put(scope.astNode, scope);
+
+    if (scope instanceof NameScope || scope instanceof RecordScope) {
+      fqnScopeMap.put(scope.getAstNode().getName(), scope);
+    }
+
     if (currentScope != null) {
       currentScope.getChildren().add(scope);
       scope.setParent(currentScope);
@@ -122,6 +129,10 @@ public class ScopeManager {
 
   public boolean isInRecord() {
     return this.getFirstScopeThat(scope -> scope instanceof RecordScope) != null;
+  }
+
+  public Map<String, Scope> getFqnScopeMap() {
+    return fqnScopeMap;
   }
 
   @Nullable
@@ -160,13 +171,13 @@ public class ScopeManager {
   public RecordDeclaration getCurrentRecord() {
     Scope recordScope = getFirstScopeThat(scope -> scope instanceof RecordScope);
     if (recordScope == null) {
-      LOGGER.error("Cannot get current function. No scope.");
+      LOGGER.error("Cannot get current Record. No scope.");
       return null;
     }
 
     Node node = recordScope.getAstNode();
     if (!(node instanceof RecordDeclaration)) {
-      LOGGER.error("Cannot get current function. No AST node {}", recordScope.toString());
+      LOGGER.error("Cannot get current Record. No AST node {}", recordScope);
       return null;
     }
     return (RecordDeclaration) node;
@@ -190,7 +201,9 @@ public class ScopeManager {
   }
 
   public void enterScopeIfExists(Node nodeToScope) {
-    if (scopeMap.containsKey(nodeToScope)) currentScope = scopeMap.get(nodeToScope);
+    if (scopeMap.containsKey(nodeToScope)) {
+      currentScope = scopeMap.get(nodeToScope);
+    }
   }
 
   @Nullable
@@ -203,26 +216,27 @@ public class ScopeManager {
   }
 
   public void enterScope(Node nodeToScope) {
+    Scope newScope = null;
     if (!scopeMap.containsKey(nodeToScope)) {
-      Scope newScope;
       if (nodeToScope instanceof CompoundStatement) {
         newScope = new BlockScope((CompoundStatement) nodeToScope);
-      } else if (nodeToScope instanceof WhileStatement || nodeToScope instanceof DoStatement) {
+      } else if (nodeToScope instanceof WhileStatement
+          || nodeToScope instanceof DoStatement
+          || nodeToScope instanceof AssertStatement) {
         newScope = new LoopScope((Statement) nodeToScope);
       } else if (nodeToScope instanceof ForStatement || nodeToScope instanceof ForEachStatement) {
         newScope = new LoopScope((Statement) nodeToScope);
       } else if (nodeToScope instanceof SwitchStatement) {
         newScope = new SwitchScope((SwitchStatement) nodeToScope);
-      } else if (nodeToScope instanceof AssertStatement) {
-        newScope = new DeclarationScope(nodeToScope);
       } else if (nodeToScope instanceof FunctionDeclaration) {
         newScope = new FunctionScope((FunctionDeclaration) nodeToScope);
       } else if (nodeToScope instanceof IfStatement) {
-        newScope = new DeclarationScope(nodeToScope);
+        newScope = new ValueDeclarationScope(nodeToScope);
       } else if (nodeToScope instanceof CatchClause) {
-        newScope = new DeclarationScope(nodeToScope);
+        newScope = new ValueDeclarationScope(nodeToScope);
       } else if (nodeToScope instanceof RecordDeclaration) {
-        newScope = new RecordScope(nodeToScope);
+        newScope =
+            new RecordScope(nodeToScope, getCurrentNamePrefix(), lang.getNamespaceDelimiter());
       } else if (nodeToScope instanceof TryStatement) {
         newScope = new TryScope(nodeToScope);
       } else if (nodeToScope instanceof NamespaceDeclaration) {
@@ -234,6 +248,9 @@ public class ScopeManager {
       pushScope(newScope);
     }
     currentScope = scopeMap.get(nodeToScope);
+    if (newScope != null) {
+      newScope.setScopedName(getCurrentNamePrefix());
+    }
   }
 
   public boolean isBreakable(Scope scope) {
@@ -261,16 +278,21 @@ public class ScopeManager {
     Scope leaveScope = getFirstScopeThat(scope -> Objects.equals(scope.astNode, nodeToLeave));
     if (leaveScope == null) {
       if (scopeMap.containsKey(nodeToLeave)) {
-        LOGGER.error(
-            "Node of type {} has a scope but is not active in the moment.", nodeToLeave.getClass());
+        errorWithFileLocation(
+            nodeToLeave,
+            LOGGER,
+            "Node of type {} has a scope but is not active in the moment.",
+            nodeToLeave.getClass());
       } else {
-        LOGGER.error("Node of type {} is not associated with a scope.", nodeToLeave.getClass());
+        errorWithFileLocation(
+            nodeToLeave,
+            LOGGER,
+            "Node of type {} is not associated with a scope.",
+            nodeToLeave.getClass());
       }
       return null;
     }
-
     currentScope = leaveScope.parent;
-
     return leaveScope;
   }
 
@@ -364,80 +386,83 @@ public class ScopeManager {
     return null;
   }
 
-  public void addValueDeclaration(VariableDeclaration variableDeclaration) {
-    DeclarationScope dScope =
-        (DeclarationScope) getFirstScopeThat(scope -> scope instanceof DeclarationScope);
-    if (dScope == null) {
-      LOGGER.error("Cannot add VariableDeclaration. Not in declaration scope.");
-      return;
-    }
-    dScope.addValueDeclaration(variableDeclaration);
-    if (dScope.astNode instanceof Statement) {
-      ((Statement) dScope.astNode).getLocals().add(variableDeclaration);
-    }
-  }
+  /**
+   * TO remove a valueDeclaration in the cases were the declaration gets replaced by something else
+   *
+   * @param declaration
+   */
+  public void removeDeclaration(Declaration declaration) {
+    Scope toIterate = currentScope;
+    do {
 
-  public void addValueDeclaration(ParamVariableDeclaration paramDeclaration) {
-    FunctionScope fScope =
-        (FunctionScope) getFirstScopeThat(scope -> scope instanceof FunctionScope);
-    if (fScope == null) {
-      LOGGER.error("Cannot add ParamVariableDeclaration. Not in function scope.");
-      return;
-    }
-    fScope.addValueDeclaration(paramDeclaration);
-    List<ParamVariableDeclaration> params =
-        ((FunctionDeclaration) fScope.getAstNode()).getParameters();
-    if (!params.contains(paramDeclaration)) {
-      params.add(paramDeclaration);
-    }
-  }
-
-  public void addValueDeclaration(FieldDeclaration fieldDeclaration) {
-    RecordScope rScope = (RecordScope) getFirstScopeThat(scope -> scope instanceof RecordScope);
-    if (rScope == null) {
-      LOGGER.error("Cannot add FieldDeclaration. Not in record scope.");
-      return;
-    }
-    rScope.addValueDeclaration(fieldDeclaration);
-    List<FieldDeclaration> fields = ((RecordDeclaration) rScope.getAstNode()).getFields();
-    if (!fields.contains(fieldDeclaration)) {
-      fields.add(fieldDeclaration);
-    }
-  }
-
-  public void addValueDeclaration(FunctionDeclaration functionDeclaration) {
-    DeclarationScope scopeForFunction =
-        (DeclarationScope) getFirstScopeThat(scope -> scope instanceof RecordScope);
-    if (scopeForFunction == null) {
-      scopeForFunction =
-          (DeclarationScope) getFirstScopeThat(scope -> scope instanceof GlobalScope);
-    }
-    if (scopeForFunction == null) {
-      LOGGER.error("Cannot add FunctionDeclaration. Not in record or global scope.");
-      return;
-    }
-    scopeForFunction.addValueDeclaration(functionDeclaration);
-    if (scopeForFunction.getAstNode() != null) {
-      RecordDeclaration rDecl = (RecordDeclaration) scopeForFunction.getAstNode();
-      List<FunctionDeclaration> functions = new ArrayList<>();
-      if (functionDeclaration instanceof ConstructorDeclaration) {
-        functions =
-            rDecl.getConstructors().stream()
-                .map(m -> (FunctionDeclaration) m)
-                .collect(Collectors.toList());
-      } else if (functionDeclaration instanceof MethodDeclaration) {
-        functions =
-            rDecl.getMethods().stream()
-                .map(m -> (FunctionDeclaration) m)
-                .collect(Collectors.toList());
+      if (toIterate instanceof ValueDeclarationScope) {
+        ValueDeclarationScope declScope = (ValueDeclarationScope) toIterate;
+        if (declScope.getValueDeclarations().contains(declaration)) {
+          declScope.getValueDeclarations().remove(declaration);
+          if (declScope.getAstNode() instanceof RecordDeclaration) {
+            RecordDeclaration rec = (RecordDeclaration) declScope.getAstNode();
+            rec.removeField((FieldDeclaration) declaration);
+            rec.removeMethod((MethodDeclaration) declaration);
+            rec.removeConstructor((ConstructorDeclaration) declaration);
+            rec.removeRecord((RecordDeclaration) declaration);
+          } else if (declScope.getAstNode() instanceof FunctionDeclaration) {
+            ((FunctionDeclaration) declScope.getAstNode())
+                .removeParameter((ParamVariableDeclaration) declaration);
+          } else if (declScope.getAstNode() instanceof Statement) {
+            if (declaration instanceof VariableDeclaration) {
+              ((Statement) declScope.getAstNode()).removeLocal((VariableDeclaration) declaration);
+            }
+          } else if (declScope.getAstNode() instanceof EnumDeclaration) {
+            ((EnumDeclaration) declScope.getAstNode()).getEntries().remove(declaration);
+          }
+        }
       }
-      if (!functions.contains(functionDeclaration)) functions.add(functionDeclaration);
+
+      toIterate = toIterate.getParent();
+    } while (toIterate != null);
+  }
+
+  public void resetToGlobal(TranslationUnitDeclaration declaration) {
+    GlobalScope global = (GlobalScope) getFirstScopeThat(scope -> scope instanceof GlobalScope);
+    if (global != null) {
+      // update the AST node to this translation unit declaration
+      global.astNode = declaration;
+
+      currentScope = global;
+    }
+  }
+
+  /**
+   * Adds a declaration to the CPG by taking into account the currently active scope, and add the
+   * Declaration to the appropriate node. This function will keep the declaration in the Scopes and
+   * allows the ScopeManager by himself to resolve ValueDeclarations through {@link
+   * ScopeManager#resolve(DeclaredReferenceExpression)}.
+   *
+   * @param declaration
+   */
+  public void addDeclaration(Declaration declaration) {
+    if (declaration instanceof ProblemDeclaration) {
+      // directly add problems to the global scope
+      var globalScope = (GlobalScope) getFirstScopeThat(scope -> scope instanceof GlobalScope);
+      globalScope.addDeclaration(declaration);
+    } else if (declaration instanceof ValueDeclaration) {
+      ValueDeclarationScope scopeForValueDeclaration =
+          (ValueDeclarationScope)
+              getFirstScopeThat(scope -> scope instanceof ValueDeclarationScope);
+      scopeForValueDeclaration.addValueDeclaration((ValueDeclaration) declaration);
+    } else if (declaration instanceof RecordDeclaration
+        || declaration instanceof NamespaceDeclaration
+        || declaration instanceof EnumDeclaration) {
+      StructureDeclarationScope scopeForStructureDeclaration =
+          (StructureDeclarationScope)
+              getFirstScopeThat(scope -> scope instanceof StructureDeclarationScope);
+      scopeForStructureDeclaration.addDeclaration(declaration);
     }
   }
 
   public void addTypedef(TypedefDeclaration typedef) {
-    DeclarationScope scope =
-        (DeclarationScope) getFirstScopeThat(DeclarationScope.class::isInstance);
+    ValueDeclarationScope scope =
+        (ValueDeclarationScope) getFirstScopeThat(ValueDeclarationScope.class::isInstance);
     if (scope == null) {
       LOGGER.error("Cannot add typedef. Not in declaration scope.");
       return;
@@ -457,8 +482,8 @@ public class ScopeManager {
   private List<TypedefDeclaration> getCurrentTypedefs(Scope scope) {
     List<TypedefDeclaration> curr = new ArrayList<>();
 
-    if (scope instanceof DeclarationScope) {
-      curr.addAll(((DeclarationScope) scope).getTypedefs());
+    if (scope instanceof ValueDeclarationScope) {
+      curr.addAll(((ValueDeclarationScope) scope).getTypedefs());
     }
 
     if (scope.getParent() != null) {
@@ -489,54 +514,136 @@ public class ScopeManager {
     return namePrefix;
   }
 
-  public String getFullNamePrefix() {
-    Scope searchScope = currentScope;
-    StringBuilder fullname = new StringBuilder();
-    do {
-      if (searchScope instanceof NameScope || searchScope instanceof RecordScope) {
-        if (searchScope instanceof NameScope) {
-          fullname.insert(0, ((NameScope) searchScope).getNamePrefix() + ".");
-        }
-        if (searchScope instanceof RecordScope) {
-          fullname.insert(0, searchScope.getAstNode().getName() + ".");
-        }
-      }
-      searchScope = searchScope.parent;
-    } while (searchScope != null);
-    if (fullname.length() > 0) {
-      return fullname.substring(0, fullname.length() - 1); // remove last .
-    } else {
-      return "";
-    }
-  }
-
   @Nullable
   public ValueDeclaration resolve(DeclaredReferenceExpression ref) {
     return resolve(currentScope, ref);
   }
 
+  /**
+   * Resolves only references to Values in the current scope, static references to other visible
+   * records are not resolved over the ScopeManager.
+   *
+   * @param scope
+   * @param ref
+   * @return
+   */
   @Nullable
   private ValueDeclaration resolve(Scope scope, DeclaredReferenceExpression ref) {
-    if (scope instanceof DeclarationScope) {
-      for (ValueDeclaration valDecl : ((DeclarationScope) scope).getValueDeclarations()) {
-        if (valDecl.getName().equals(ref.getName())) return valDecl;
-        /*
-        if(valDecl instanceof ParamVariableDeclaration){
-          ParamVariableDeclaration param = (ParamVariableDeclaration)valDecl;
-          if(param.getName().equals(ref.getName())) return param;
-        }else if(valDecl instanceof VariableDeclaration){
-          VariableDeclaration variable = (VariableDeclaration) valDecl;
-          if(variable.getName().equals(ref.getName())) return variable;
-        }else if(valDecl instanceof FieldDeclaration){
-          FieldDeclaration field = (FieldDeclaration) valDecl;
+    if (scope instanceof ValueDeclarationScope) {
+      for (ValueDeclaration valDecl : ((ValueDeclarationScope) scope).getValueDeclarations()) {
+        if (valDecl.getName().equals(ref.getName())) {
 
-        }else if(valDecl instanceof FunctionDeclaration){
-          FunctionDeclaration function = (FunctionDeclaration) valDecl;
-
-        }*/
+          // If the reference seems to point to a function the entire signature is checked for
+          // equality
+          if (ref.getType() instanceof FunctionPointerType
+              && valDecl instanceof FunctionDeclaration) {
+            FunctionPointerType fptrType = (FunctionPointerType) ref.getType();
+            FunctionDeclaration d = (FunctionDeclaration) valDecl;
+            if (d.getType().equals(fptrType.getReturnType())
+                && d.hasSignature(fptrType.getParameters())) {
+              return valDecl;
+            }
+          } else {
+            return valDecl;
+          }
+        }
       }
     }
     return scope.getParent() != null ? resolve(scope.getParent(), ref) : null;
+  }
+
+  /**
+   * This function tries to resolve a FQN to a scope. The name is the name of the AST-Node
+   * associated to a scope. The Name may be the FQN-name or a relative name that with the currently
+   * active namespace gives the AST-Nodes, FQN. If the provided name and the current namespace
+   * overlap ,they are merged and the FQN is resolved. If there is no node with the merged FQN-name
+   * null is returned. This is due to the behaviour of C++ when resolving names for AST-elements
+   * that are definitions of exiting declarations.
+   *
+   * @param astNodeName relative (to the current Namespace) or fqn-Name of an entity associated to a
+   *     scope.
+   * @return The scope that the resolved name is associated to.
+   */
+  private Scope resolveScopeWithPath(@Nullable String astNodeName) {
+    if (astNodeName == null || astNodeName.isEmpty()) {
+      return currentScope;
+    }
+    List<String> namePath =
+        Arrays.asList(astNodeName.split(Pattern.quote(lang.getNamespaceDelimiter())));
+    List<String> currentPath =
+        Arrays.asList(getCurrentNamePrefix().split(Pattern.quote(lang.getNamespaceDelimiter())));
+
+    // Last index because the inner name has preference
+    int nameIndexInCurrent = currentPath.lastIndexOf(namePath.get(0));
+
+    if (nameIndexInCurrent >= 0) {
+      // Overlapping relative resolution
+      List<String> mergedPath = currentPath.subList(0, nameIndexInCurrent);
+      mergedPath.addAll(namePath);
+      return this.fqnScopeMap.getOrDefault(
+          String.join(lang.getNamespaceDelimiter(), mergedPath), null);
+    } else {
+      // Absolute name of the node by concatenating the current namespace and the relative name
+      String relativeToAbsolute =
+          getCurrentNamePrefixWithDelimiter()
+              + lang.getNamespaceDelimiter()
+              + String.join(lang.getNamespaceDelimiter(), namePath);
+      // Relative resolution
+      Scope scope = this.fqnScopeMap.getOrDefault(relativeToAbsolute, null);
+      if (scope != null) {
+        return scope;
+      } else {
+        // Absolut resolution: The name is used as absolut name.
+        return this.fqnScopeMap.getOrDefault(astNodeName, null);
+      }
+    }
+  }
+
+  @Nullable
+  private ValueDeclaration resolveInSingleScope(Scope scope, DeclaredReferenceExpression ref) {
+    if (scope instanceof ValueDeclarationScope) {
+      for (ValueDeclaration valDecl : ((ValueDeclarationScope) scope).getValueDeclarations()) {
+        if (valDecl.getName().equals(ref.getName())) return valDecl;
+      }
+    }
+    return null;
+  }
+
+  @Nullable
+  public Declaration resolveInRecord(
+      RecordDeclaration recordDeclaration, DeclaredReferenceExpression ref) {
+    List<Declaration> members = new ArrayList<>();
+    members.addAll(recordDeclaration.getFields());
+    members.addAll(recordDeclaration.getMethods());
+    members.addAll(recordDeclaration.getRecords());
+
+    for (Declaration member : members) {
+      if (member.getName().equals(ref.getName())) {
+        return member;
+      }
+    }
+    return null;
+  }
+
+  @Nullable
+  public Declaration resolveInInheritanceHierarchy(
+      RecordDeclaration recordDeclaration, DeclaredReferenceExpression ref) {
+    Declaration resolved = resolveInRecord(recordDeclaration, ref);
+    if (resolved != null) {
+      return resolved;
+    }
+    // Here we resolve the member in the order the set returns the ancestors. As soon as we support
+    // a Language that
+    // allows diamond pattern style inheritance and member overloading, that would yield a ambiguous
+    // declaration in
+    // C++, algorithms like C3-Linearization have to be implemented
+    for (RecordDeclaration ancestor : recordDeclaration.getSuperTypeDeclarations()) {
+      resolved = resolveInInheritanceHierarchy(ancestor, ref);
+      if (resolved != null) {
+        return resolved;
+      }
+    }
+    return null;
   }
 
   public Scope getScopeOfStatment(Node node) {
@@ -593,58 +700,37 @@ public class ScopeManager {
     return false;
   }
 
-  ///// Copied over for now - not used but maybe necessary at some point ///////
-
+  /**
+   * Retrieves the {@link RecordDeclaration} for the given name in the given scope.
+   *
+   * @param scope the scope
+   * @param name the name
+   * @return the declaration, or null if it does not exist
+   */
   @Nullable
-  public Declaration getDeclarationForName(String name) {
-    // first, check locals
-    Declaration declaration;
-    if (isInBlock()) {
-      CompoundStatement currentBlock = getCurrentBlock();
-      declaration = getForName(currentBlock.getLocals(), name);
+  public RecordDeclaration getRecordForName(Scope scope, String name) {
+    Optional<RecordDeclaration> o = Optional.empty();
 
-      if (declaration != null) {
-        return declaration;
-      }
-    }
-    if (isInFunction()) {
-      FunctionDeclaration currentFunction = getCurrentFunction();
-      declaration = getForName(currentFunction.getParameters(), name);
-
-      if (declaration != null) {
-        return declaration;
-      }
-    }
-    if (isInRecord()) {
-      RecordDeclaration currentRecord = getCurrentRecord();
-      declaration = getForName(currentRecord.getFields(), name);
-
-      if (declaration != null) {
-        return declaration;
-      }
+    // check current scope first
+    if (scope instanceof StructureDeclarationScope) {
+      o =
+          ((StructureDeclarationScope) scope)
+              .getStructureDeclarations().stream()
+                  .filter(d -> d instanceof RecordDeclaration && Objects.equals(d.getName(), name))
+                  .map(d -> (RecordDeclaration) d)
+                  .findFirst();
     }
 
-    // lastly, check globals
-    declaration = getForName(getGlobals(), name);
-
-    return declaration;
-
-    // TODO: also check for function definitions?
-  }
-
-  @Nullable
-  private <T extends ValueDeclaration> Declaration getForName(List<T> variables, String name) {
-    Optional<T> any =
-        variables.stream().filter(param -> Objects.equals(param.getName(), name)).findAny();
-
-    return any.orElse(null);
-  }
-
-  public void resetToGlobal() {
-    GlobalScope global = (GlobalScope) getFirstScopeThat(scope -> scope instanceof GlobalScope);
-    if (global != null) {
-      currentScope = global;
+    if (o.isPresent()) {
+      return o.get();
     }
+
+    // no parent left
+    if (scope.getParent() == null) {
+      return null;
+    }
+
+    return getRecordForName(scope.getParent(), name);
   }
 
   ///// End copied over for now ///////

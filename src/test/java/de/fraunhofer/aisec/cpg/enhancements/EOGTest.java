@@ -39,6 +39,15 @@ import de.fraunhofer.aisec.cpg.BaseTest;
 import de.fraunhofer.aisec.cpg.TestUtils;
 import de.fraunhofer.aisec.cpg.frontends.TranslationException;
 import de.fraunhofer.aisec.cpg.graph.*;
+import de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration;
+import de.fraunhofer.aisec.cpg.graph.edge.Properties;
+import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
+import de.fraunhofer.aisec.cpg.graph.statements.*;
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator;
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression;
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression;
 import de.fraunhofer.aisec.cpg.helpers.NodeComparator;
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker;
 import de.fraunhofer.aisec.cpg.helpers.Util;
@@ -86,13 +95,13 @@ class EOGTest extends BaseTest {
     List<Node> nodes = translateToNodes(relPath);
 
     // All BinaryOperators (including If conditions) have only one successor
-    List<BinaryOperator> binops = TestUtils.filterCast(nodes, BinaryOperator.class);
+    List<BinaryOperator> binops = Util.filterCast(nodes, BinaryOperator.class);
     for (BinaryOperator binop : binops) {
       SubgraphWalker.Border binopEOG = SubgraphWalker.getEOGPathEdges(binop);
       assertEquals(1, binopEOG.getExits().size());
     }
 
-    List<IfStatement> ifs = TestUtils.filterCast(nodes, IfStatement.class);
+    List<IfStatement> ifs = Util.filterCast(nodes, IfStatement.class);
 
     assertEquals(2, ifs.size());
     ifs.forEach(ifnode -> Assertions.assertNotNull(ifnode.getThenStatement()));
@@ -166,7 +175,7 @@ class EOGTest extends BaseTest {
     List<Node> nodes = translateToNodes("src/test/resources/cfg/ShortCircuit.java");
 
     List<BinaryOperator> binaryOperators =
-        TestUtils.filterCast(nodes, BinaryOperator.class).stream()
+        Util.filterCast(nodes, BinaryOperator.class).stream()
             .filter(bo -> bo.getOperatorCode().equals("&&") || bo.getOperatorCode().equals("||"))
             .collect(Collectors.toList());
 
@@ -185,7 +194,7 @@ class EOGTest extends BaseTest {
         nodes.stream()
             .filter(node -> node.getCode().equals(REFNODESTRINGJAVA))
             .collect(Collectors.toList());
-    List<ForStatement> fstat = TestUtils.filterCast(nodes, ForStatement.class);
+    List<ForStatement> fstat = Util.filterCast(nodes, ForStatement.class);
 
     ForStatement fs = fstat.get(0);
     assertTrue(Util.eogConnect(NODE, EXITS, prints.get(0), SUBTREE, fs));
@@ -215,7 +224,7 @@ class EOGTest extends BaseTest {
         nodes.stream()
             .filter(node -> node.getCode().equals(REFNODESTRINGCXX))
             .collect(Collectors.toList());
-    List<ForStatement> fstat = TestUtils.filterCast(nodes, ForStatement.class);
+    List<ForStatement> fstat = Util.filterCast(nodes, ForStatement.class);
 
     ForStatement fs = fstat.get(0);
     assertTrue(Util.eogConnect(NODE, EXITS, prints.get(0), SUBTREE, fs));
@@ -271,7 +280,7 @@ class EOGTest extends BaseTest {
 
     CallExpression third = TestUtils.findByUniqueName(calls, "third");
     target =
-        TestUtils.findByPredicate(
+        TestUtils.findByUniquePredicate(
             functions, f -> f.getName().equals("third") && f.getParameters().size() == 2);
     assertEquals(List.of(target), third.getInvokes());
 
@@ -306,7 +315,7 @@ class EOGTest extends BaseTest {
             .collect(Collectors.toList());
 
     assertEquals(1, nodes.stream().filter(node -> node instanceof WhileStatement).count());
-    WhileStatement wstat = TestUtils.filterCast(nodes, WhileStatement.class).get(0);
+    WhileStatement wstat = Util.filterCast(nodes, WhileStatement.class).get(0);
     SubgraphWalker.Border conditionEOG = SubgraphWalker.getEOGPathEdges(wstat.getCondition());
     SubgraphWalker.Border blockEOG = SubgraphWalker.getEOGPathEdges(wstat.getStatement());
 
@@ -339,7 +348,7 @@ class EOGTest extends BaseTest {
     // condition
     assertTrue(Util.eogConnect(SUBTREE, EXITS, wstat, prints.get(1)));
 
-    DoStatement dostat = TestUtils.filterCast(nodes, DoStatement.class).get(0);
+    DoStatement dostat = Util.filterCast(nodes, DoStatement.class).get(0);
 
     conditionEOG = SubgraphWalker.getEOGPathEdges(dostat.getCondition());
     blockEOG = SubgraphWalker.getEOGPathEdges(dostat.getStatement());
@@ -366,7 +375,7 @@ class EOGTest extends BaseTest {
     List<Node> nodes = translateToNodes(relPath);
 
     List<FunctionDeclaration> functions =
-        TestUtils.filterCast(nodes, FunctionDeclaration.class).stream()
+        Util.filterCast(nodes, FunctionDeclaration.class).stream()
             .filter(f -> !(f instanceof ConstructorDeclaration))
             .collect(Collectors.toList());
 
@@ -440,7 +449,7 @@ class EOGTest extends BaseTest {
     // has a label which connects the break to the  while
     for (BreakStatement b : breaks) {
       if (b.getLabel() != null && b.getLabel().length() > 0) {
-        assertTrue(Util.eogConnect(EXITS, b, NODE, prints.get(2)));
+        assertTrue(Util.eogConnect(EXITS, b, SUBTREE, prints.get(2)));
       } else {
         assertTrue(Util.eogConnect(EXITS, b, SUBTREE, prints.get(1)));
       }
@@ -479,6 +488,86 @@ class EOGTest extends BaseTest {
   }
 
   /**
+   * Tests EOG branch edge property in if/else if/else construct
+   *
+   * @throws Exception
+   */
+  @Test
+  void testBranchProperty() throws Exception {
+    Path topLevel = Path.of("src", "test", "resources", "eog");
+    List<TranslationUnitDeclaration> result =
+        TestUtils.analyze(List.of(topLevel.resolve("EOG.java").toFile()), topLevel, true);
+
+    // Test If-Block
+    IfStatement firstIf =
+        TestUtils.findByPredicate(
+                TestUtils.subnodesOfType(result, IfStatement.class),
+                l -> l.getLocation().getRegion().getStartLine() == 6)
+            .get(0);
+
+    DeclaredReferenceExpression a =
+        TestUtils.findByPredicate(
+                TestUtils.subnodesOfType(result, DeclaredReferenceExpression.class),
+                l -> l.getLocation().getRegion().getStartLine() == 8 && l.getName().equals("a"))
+            .get(0);
+
+    DeclaredReferenceExpression b =
+        TestUtils.findByPredicate(
+                TestUtils.subnodesOfType(result, DeclaredReferenceExpression.class),
+                l -> l.getLocation().getRegion().getStartLine() == 7 && l.getName().equals("b"))
+            .get(0);
+
+    List<PropertyEdge<Node>> nextEOG = firstIf.getNextEOGProperties();
+    assertEquals(2, nextEOG.size());
+    for (PropertyEdge<Node> edge : nextEOG) {
+      assertEquals(firstIf, edge.getStart());
+      if (edge.getEnd().equals(b)) {
+        assertEquals(true, edge.getProperty(Properties.BRANCH));
+        assertEquals(0, edge.getProperty(Properties.INDEX));
+      } else {
+        assertEquals(a, edge.getEnd());
+        assertEquals(false, edge.getProperty(Properties.BRANCH));
+        assertEquals(1, edge.getProperty(Properties.INDEX));
+      }
+    }
+
+    IfStatement elseIf =
+        TestUtils.findByPredicate(
+                TestUtils.subnodesOfType(result, IfStatement.class),
+                l -> l.getLocation().getRegion().getStartLine() == 8)
+            .get(0);
+
+    assertEquals(elseIf, firstIf.getElseStatement());
+
+    DeclaredReferenceExpression b2 =
+        TestUtils.findByPredicate(
+                TestUtils.subnodesOfType(result, DeclaredReferenceExpression.class),
+                l -> l.getLocation().getRegion().getStartLine() == 9 && l.getName().equals("b"))
+            .get(0);
+
+    DeclaredReferenceExpression x =
+        TestUtils.findByPredicate(
+                TestUtils.subnodesOfType(result, DeclaredReferenceExpression.class),
+                l -> l.getLocation().getRegion().getStartLine() == 11 && l.getName().equals("x"))
+            .get(0);
+
+    nextEOG = elseIf.getNextEOGProperties();
+    assertEquals(2, nextEOG.size());
+
+    for (PropertyEdge<Node> edge : nextEOG) {
+      assertEquals(elseIf, edge.getStart());
+      if (edge.getEnd().equals(b2)) {
+        assertEquals(true, edge.getProperty(Properties.BRANCH));
+        assertEquals(0, edge.getProperty(Properties.INDEX));
+      } else {
+        assertEquals(x, edge.getEnd());
+        assertEquals(false, edge.getProperty(Properties.BRANCH));
+        assertEquals(1, edge.getProperty(Properties.INDEX));
+      }
+    }
+  }
+
+  /**
    * Tests EOG building in the presence of break-,continue- statements in loops.
    *
    * @param relPath
@@ -495,10 +584,10 @@ class EOGTest extends BaseTest {
             .collect(Collectors.toList());
 
     assertEquals(1, nodes.stream().filter(node -> node instanceof WhileStatement).count());
-    List<BreakStatement> breaks = TestUtils.filterCast(nodes, BreakStatement.class);
-    List<ContinueStatement> continues = TestUtils.filterCast(nodes, ContinueStatement.class);
+    List<BreakStatement> breaks = Util.filterCast(nodes, BreakStatement.class);
+    List<ContinueStatement> continues = Util.filterCast(nodes, ContinueStatement.class);
 
-    WhileStatement wstat = TestUtils.filterCast(nodes, WhileStatement.class).get(0);
+    WhileStatement wstat = Util.filterCast(nodes, WhileStatement.class).get(0);
 
     SubgraphWalker.Border conditionEOG = SubgraphWalker.getEOGPathEdges(wstat.getCondition());
     SubgraphWalker.Border blockEOG = SubgraphWalker.getEOGPathEdges(wstat.getStatement());
@@ -525,7 +614,7 @@ class EOGTest extends BaseTest {
         Util.eogConnect(NODE, EXITS, wstat, prints.get(1))
             || Util.eogConnect(NODE, EXITS, breaks.get(0), prints.get(1)));
 
-    DoStatement dostat = TestUtils.filterCast(nodes, DoStatement.class).get(0);
+    DoStatement dostat = Util.filterCast(nodes, DoStatement.class).get(0);
 
     conditionEOG = SubgraphWalker.getEOGPathEdges(dostat.getCondition());
 

@@ -15,7 +15,7 @@
 package de.fraunhofer.aisec.cpg.frontends.python;
 
 import de.fraunhofer.aisec.cpg.frontends.Handler;
-import de.fraunhofer.aisec.cpg.graph.CompoundStatement;
+import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement;
 import io.github.oxisto.reticulated.ast.Suite;
 import io.github.oxisto.reticulated.ast.statement.Statement;
 import io.github.oxisto.reticulated.ast.statement.StatementList;
@@ -34,10 +34,10 @@ public class SuiteHandler extends Handler<CompoundStatement, Suite, PythonLangua
     this.map.put(Suite.class, this::handleSuite);
   }
 
-  private de.fraunhofer.aisec.cpg.graph.CompoundStatement handleSuite(Suite suite) {
+  private de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement handleSuite(Suite suite) {
     CompoundStatement statement = new CompoundStatement();
 
-    List<de.fraunhofer.aisec.cpg.graph.Statement> list = new ArrayList<>();
+    List<de.fraunhofer.aisec.cpg.graph.statements.Statement> list = new ArrayList<>();
     // loop through child statements
     for (Statement node : suite) {
       // if it is a statement list, we need to flatten the list

@@ -2,7 +2,9 @@ package de.fraunhofer.aisec.cpg.passes;
 
 import de.fraunhofer.aisec.cpg.TranslationResult;
 import de.fraunhofer.aisec.cpg.graph.*;
-import de.fraunhofer.aisec.cpg.graph.type.*;
+import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration;
+import de.fraunhofer.aisec.cpg.graph.types.*;
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker;
 import java.util.*;
 
@@ -211,7 +213,9 @@ public class TypeResolver extends Pass {
   }
 
   public void ensureUniqueType(Node node) {
-    if (node instanceof HasType) {
+    // Avoid handling of ParameterizedType as they should be unique to each class and not globally
+    // unique
+    if (node instanceof HasType && !(((HasType) node).getType() instanceof ParameterizedType)) {
       Type oldType = ((HasType) node).getType();
       Collection<Type> types;
       if (oldType.isFirstOrderType()) {

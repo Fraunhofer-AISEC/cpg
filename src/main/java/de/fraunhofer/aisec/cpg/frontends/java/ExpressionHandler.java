@@ -34,27 +34,33 @@ import com.github.javaparser.ast.expr.*;
 import com.github.javaparser.ast.expr.Expression;
 import com.github.javaparser.resolution.UnsolvedSymbolException;
 import com.github.javaparser.resolution.declarations.ResolvedFieldDeclaration;
+import com.github.javaparser.resolution.declarations.ResolvedMethodDeclaration;
 import com.github.javaparser.resolution.declarations.ResolvedTypeDeclaration;
 import com.github.javaparser.resolution.declarations.ResolvedValueDeclaration;
 import de.fraunhofer.aisec.cpg.frontends.Handler;
 import de.fraunhofer.aisec.cpg.graph.*;
-import de.fraunhofer.aisec.cpg.graph.type.PointerType;
-import de.fraunhofer.aisec.cpg.graph.type.Type;
-import de.fraunhofer.aisec.cpg.graph.type.TypeParser;
-import de.fraunhofer.aisec.cpg.graph.type.UnknownType;
+import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration;
+import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement;
+import de.fraunhofer.aisec.cpg.graph.statements.Statement;
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.*;
+import de.fraunhofer.aisec.cpg.graph.types.PointerType;
+import de.fraunhofer.aisec.cpg.graph.types.Type;
+import de.fraunhofer.aisec.cpg.graph.types.TypeParser;
+import de.fraunhofer.aisec.cpg.graph.types.UnknownType;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class ExpressionHandler
-    extends Handler<de.fraunhofer.aisec.cpg.graph.Statement, Expression, JavaLanguageFrontend> {
+public class ExpressionHandler extends Handler<Statement, Expression, JavaLanguageFrontend> {
 
   private static final Logger log = LoggerFactory.getLogger(ExpressionHandler.class);
 
   public ExpressionHandler(JavaLanguageFrontend lang) {
-    super(de.fraunhofer.aisec.cpg.graph.Expression::new, lang);
+    super(de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression::new, lang);
 
     map.put(AssignExpr.class, this::handleAssignmentExpression);
     map.put(FieldAccessExpr.class, this::handleFieldAccessExpression);
@@ -83,8 +89,9 @@ public class ExpressionHandler
     CastExpr castExpr = expr.asCastExpr();
     CastExpression castExpression = NodeBuilder.newCastExpression(expr.toString());
 
-    de.fraunhofer.aisec.cpg.graph.Expression expression =
-        (de.fraunhofer.aisec.cpg.graph.Expression) handle(castExpr.getExpression());
+    de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression expression =
+        (de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression)
+            handle(castExpr.getExpression());
 
     castExpression.setExpression(expression);
     castExpression.setCastOperator(2);
@@ -127,9 +134,9 @@ public class ExpressionHandler
       lvl.getDimension()
           .ifPresent(
               expression ->
-                  creationExpression
-                      .getDimensions()
-                      .add((de.fraunhofer.aisec.cpg.graph.Expression) handle(expression)));
+                  creationExpression.addDimension(
+                      (de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression)
+                          handle(expression)));
     }
 
     return creationExpression;
@@ -140,10 +147,10 @@ public class ExpressionHandler
     // ArrayInitializerExpressions are converted into InitializerListExpressions to reduce the
     // syntactic distance a CPP and JAVA CPG
     InitializerListExpression initList = NodeBuilder.newInitializerListExpression(expr.toString());
-    List<de.fraunhofer.aisec.cpg.graph.Expression> initializers =
+    List<de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression> initializers =
         arrayInitializerExpr.getValues().stream()
             .map(this::handle)
-            .map(de.fraunhofer.aisec.cpg.graph.Expression.class::cast)
+            .map(de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression.class::cast)
             .collect(Collectors.toList());
     initList.setInitializers(initializers);
     return initList;
@@ -154,9 +161,11 @@ public class ExpressionHandler
     ArraySubscriptionExpression arraySubsExpression =
         NodeBuilder.newArraySubscriptionExpression(expr.toString());
     arraySubsExpression.setArrayExpression(
-        (de.fraunhofer.aisec.cpg.graph.Expression) handle(arrayAccessExpr.getName()));
+        (de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression)
+            handle(arrayAccessExpr.getName()));
     arraySubsExpression.setSubscriptExpression(
-        (de.fraunhofer.aisec.cpg.graph.Expression) handle(arrayAccessExpr.getIndex()));
+        (de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression)
+            handle(arrayAccessExpr.getIndex()));
     return arraySubsExpression;
   }
 
@@ -178,12 +187,15 @@ public class ExpressionHandler
       }
     }
 
-    de.fraunhofer.aisec.cpg.graph.Expression condition =
-        (de.fraunhofer.aisec.cpg.graph.Expression) handle(conditionalExpr.getCondition());
-    de.fraunhofer.aisec.cpg.graph.Expression thenExpr =
-        (de.fraunhofer.aisec.cpg.graph.Expression) handle(conditionalExpr.getThenExpr());
-    de.fraunhofer.aisec.cpg.graph.Expression elseExpr =
-        (de.fraunhofer.aisec.cpg.graph.Expression) handle(conditionalExpr.getElseExpr());
+    de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression condition =
+        (de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression)
+            handle(conditionalExpr.getCondition());
+    de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression thenExpr =
+        (de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression)
+            handle(conditionalExpr.getThenExpr());
+    de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression elseExpr =
+        (de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression)
+            handle(conditionalExpr.getElseExpr());
     return NodeBuilder.newConditionalExpression(condition, thenExpr, elseExpr, superType);
   }
 
@@ -191,12 +203,14 @@ public class ExpressionHandler
     AssignExpr assignExpr = expr.asAssignExpr();
 
     // first, handle the target. this is the first argument of the operator call
-    de.fraunhofer.aisec.cpg.graph.Expression lhs =
-        (de.fraunhofer.aisec.cpg.graph.Expression) this.handle(assignExpr.getTarget());
+    de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression lhs =
+        (de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression)
+            this.handle(assignExpr.getTarget());
 
     // second, handle the value. this is the second argument of the operator call
-    de.fraunhofer.aisec.cpg.graph.Expression rhs =
-        (de.fraunhofer.aisec.cpg.graph.Expression) handle(assignExpr.getValue());
+    de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression rhs =
+        (de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression)
+            handle(assignExpr.getValue());
 
     BinaryOperator binaryOperator =
         NodeBuilder.newBinaryOperator(assignExpr.getOperator().asString(), assignExpr.toString());
@@ -240,26 +254,32 @@ public class ExpressionHandler
       Optional<Expression> oInitializer = variable.getInitializer();
 
       if (oInitializer.isPresent()) {
-        de.fraunhofer.aisec.cpg.graph.Expression initializer =
-            (de.fraunhofer.aisec.cpg.graph.Expression) handle(oInitializer.get());
+        de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression initializer =
+            (de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression)
+                handle(oInitializer.get());
         if (initializer instanceof ArrayCreationExpression) {
           declaration.setIsArray(true);
         }
         declaration.setInitializer(initializer);
+      } else {
+        de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression uninitialzedInitializer =
+            new UninitializedValue();
+        declaration.setInitializer(uninitialzedInitializer);
+        declaration.getNextEOG();
       }
       lang.setCodeAndRegion(declaration, variable);
-      declarationStatement.getDeclarations().add(declaration);
+      declarationStatement.addToPropertyEdgeDeclaration(declaration);
 
-      lang.getScopeManager().addValueDeclaration(declaration);
+      lang.getScopeManager().addDeclaration(declaration);
     }
 
     return declarationStatement;
   }
 
-  private de.fraunhofer.aisec.cpg.graph.Expression handleFieldAccessExpression(Expression expr) {
+  private de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+      handleFieldAccessExpression(Expression expr) {
     FieldAccessExpr fieldAccessExpr = expr.asFieldAccessExpr();
-    de.fraunhofer.aisec.cpg.graph.Expression member;
-    de.fraunhofer.aisec.cpg.graph.Expression base;
+    de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression base;
     // first, resolve the scope. this adds the necessary nodes, such as IDENTIFIER for the scope.
     // it also acts as the first argument of the operator call
     Expression scope = fieldAccessExpr.getScope();
@@ -297,26 +317,22 @@ public class ExpressionHandler
           }
         }
       }
-      if (isStaticAccess) {
-        base =
-            NodeBuilder.newStaticReferenceExpression(
-                scope.asNameExpr().getNameAsString(), baseType, scope.toString());
-      } else {
-        base =
-            NodeBuilder.newDeclaredReferenceExpression(
-                scope.asNameExpr().getNameAsString(), baseType, scope.toString());
-      }
+      base =
+          NodeBuilder.newDeclaredReferenceExpression(
+              scope.asNameExpr().getNameAsString(), baseType, scope.toString());
+      ((DeclaredReferenceExpression) base).setStaticAccess(isStaticAccess);
 
       lang.setCodeAndRegion(base, fieldAccessExpr.getScope());
     } else if (scope.isFieldAccessExpr()) {
-      base = (de.fraunhofer.aisec.cpg.graph.Expression) handle(scope);
-      de.fraunhofer.aisec.cpg.graph.Expression tester = base;
+      base = (de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression) handle(scope);
+      de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression tester = base;
       while (tester instanceof MemberExpression) {
         // we need to check if any base is only a static access, otherwise, this is a member access
         // to this base
-        tester = (de.fraunhofer.aisec.cpg.graph.Expression) ((MemberExpression) tester).getBase();
+        tester = ((MemberExpression) tester).getBase();
       }
-      if (tester instanceof StaticReferenceExpression) {
+      if (tester instanceof DeclaredReferenceExpression
+          && ((DeclaredReferenceExpression) tester).isStaticAccess()) {
         // try to get the name
         String name;
         Optional<TokenRange> tokenRange = scope.asFieldAccessExpr().getTokenRange();
@@ -334,21 +350,26 @@ public class ExpressionHandler
           baseType = UnknownType.getUnknownType();
         }
         base =
-            NodeBuilder.newStaticReferenceExpression(
+            NodeBuilder.newDeclaredReferenceExpression(
                 scope.asFieldAccessExpr().getNameAsString(), baseType, scope.toString());
+        ((DeclaredReferenceExpression) base).setStaticAccess(true);
       }
       lang.setCodeAndRegion(base, fieldAccessExpr.getScope());
     } else {
-      base = (de.fraunhofer.aisec.cpg.graph.Expression) handle(scope);
+      base = (de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression) handle(scope);
     }
 
     Type fieldType;
     try {
       ResolvedValueDeclaration symbol = fieldAccessExpr.resolve();
-      fieldType = TypeParser.createFrom(symbol.asField().getType().describe(), true);
-      member =
-          NodeBuilder.newDeclaredReferenceExpression(
-              fieldAccessExpr.getName().getIdentifier(), fieldType, fieldAccessExpr.toString());
+      fieldType =
+          TypeManager.getInstance()
+              .getTypeParameter(
+                  this.lang.getScopeManager().getCurrentRecord(),
+                  symbol.asField().getType().describe());
+      if (fieldType == null) {
+        fieldType = TypeParser.createFrom(symbol.asField().getType().describe(), true);
+      }
     } catch (RuntimeException | NoClassDefFoundError ex) {
       String typeString = this.lang.recoverTypeFromUnsolvedException(ex);
       if (typeString != null) {
@@ -359,14 +380,28 @@ public class ExpressionHandler
         log.info("Unknown field type for {}", fieldAccessExpr);
         fieldType = UnknownType.getUnknownType();
       }
-      member =
-          NodeBuilder.newStaticReferenceExpression(
-              fieldAccessExpr.getName().getIdentifier(), fieldType, fieldAccessExpr.toString());
+
+      MemberExpression memberExpression =
+          NodeBuilder.newMemberExpression(
+              base,
+              fieldType,
+              fieldAccessExpr.getName().getIdentifier(),
+              ".", // there is only "." in java
+              fieldAccessExpr.toString());
+      memberExpression.setStaticAccess(true);
+      return memberExpression;
     }
 
-    lang.setCodeAndRegion(member, fieldAccessExpr.getName());
+    if (base.getLocation() == null) {
+      base.setLocation(lang.getLocationFromRawNode(fieldAccessExpr));
+    }
 
-    return NodeBuilder.newMemberExpression(base, member, fieldAccessExpr.toString());
+    return NodeBuilder.newMemberExpression(
+        base,
+        fieldType,
+        fieldAccessExpr.getName().getIdentifier(),
+        ".",
+        fieldAccessExpr.toString());
   }
 
   private Literal handleLiteralExpression(Expression expr) {
@@ -410,10 +445,11 @@ public class ExpressionHandler
     Type type = TypeParser.createFrom(classExpr.getType().asString(), true);
 
     DeclaredReferenceExpression thisExpression =
-        NodeBuilder.newStaticReferenceExpression(
+        NodeBuilder.newDeclaredReferenceExpression(
             classExpr.toString().substring(classExpr.toString().lastIndexOf('.') + 1),
             type,
             classExpr.toString());
+    thisExpression.setStaticAccess(true);
     lang.setCodeAndRegion(thisExpression, classExpr);
 
     return thisExpression;
@@ -446,7 +482,8 @@ public class ExpressionHandler
   }
 
   // TODO: this function needs a MAJOR overhaul!
-  private de.fraunhofer.aisec.cpg.graph.Expression handleNameExpression(Expression expr) {
+  private de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression handleNameExpression(
+      Expression expr) {
     NameExpr nameExpr = expr.asNameExpr();
 
     // TODO this commented code breaks field accesses to fields that don't have a primitive type.
@@ -483,7 +520,8 @@ public class ExpressionHandler
           fieldAccessExpr.getParentNode().ifPresent(expr::setParentNode);
 
           // handle it as a field expression
-          return (de.fraunhofer.aisec.cpg.graph.Expression) handle(fieldAccessExpr);
+          return (de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression)
+              handle(fieldAccessExpr);
         } else {
           FieldAccessExpr fieldAccessExpr =
               new FieldAccessExpr(
@@ -495,10 +533,19 @@ public class ExpressionHandler
           fieldAccessExpr.getParentNode().ifPresent(expr::setParentNode);
 
           // handle it as a field expression
-          return (de.fraunhofer.aisec.cpg.graph.Expression) handle(fieldAccessExpr);
+          return (de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression)
+              handle(fieldAccessExpr);
         }
       } else {
-        Type type = TypeParser.createFrom(symbol.getType().describe(), true);
+        // Resolve type first with ParameterizedType
+        Type type =
+            TypeManager.getInstance()
+                .getTypeParameter(
+                    this.lang.getScopeManager().getCurrentRecord(), symbol.getType().describe());
+
+        if (type == null) {
+          type = TypeParser.createFrom(symbol.getType().describe(), true);
+        }
 
         DeclaredReferenceExpression declaredReferenceExpression =
             NodeBuilder.newDeclaredReferenceExpression(symbol.getName(), type, nameExpr.toString());
@@ -523,11 +570,18 @@ public class ExpressionHandler
         t.setTypeOrigin(Type.Origin.GUESSED);
       }
 
-      DeclaredReferenceExpression declaredReferenceExpression =
-          NodeBuilder.newDeclaredReferenceExpression(
-              nameExpr.getNameAsString(), t, nameExpr.toString());
+      var name = nameExpr.getNameAsString();
 
-      lang.getScopeManager().connectToLocal(declaredReferenceExpression);
+      DeclaredReferenceExpression declaredReferenceExpression =
+          NodeBuilder.newDeclaredReferenceExpression(name, t, nameExpr.toString());
+
+      var record = this.lang.getScopeManager().getCurrentRecord();
+
+      if (record != null && Objects.equals(record.getName(), name)) {
+        declaredReferenceExpression.setRefersTo(record);
+      } else {
+        lang.getScopeManager().connectToLocal(declaredReferenceExpression);
+      }
 
       return declaredReferenceExpression;
     } catch (RuntimeException | NoClassDefFoundError ex) {
@@ -546,13 +600,14 @@ public class ExpressionHandler
     InstanceOfExpr binaryExpr = expr.asInstanceOfExpr();
 
     // first, handle the target. this is the first argument of the operator callUnresolved symbol
-    de.fraunhofer.aisec.cpg.graph.Expression lhs =
-        (de.fraunhofer.aisec.cpg.graph.Expression) handle(binaryExpr.getExpression());
+    de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression lhs =
+        (de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression)
+            handle(binaryExpr.getExpression());
 
     Type typeAsGoodAsPossible = this.lang.getTypeAsGoodAsPossible(binaryExpr.getType());
 
     // second, handle the value. this is the second argument of the operator call
-    de.fraunhofer.aisec.cpg.graph.Expression rhs =
+    de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression rhs =
         NodeBuilder.newLiteral(
             typeAsGoodAsPossible.getTypeName(),
             TypeParser.createFrom("class", true),
@@ -571,8 +626,9 @@ public class ExpressionHandler
     UnaryExpr unaryExpr = expr.asUnaryExpr();
 
     // handle the 'inner' expression, which is affected by the unary expression
-    de.fraunhofer.aisec.cpg.graph.Expression expression =
-        (de.fraunhofer.aisec.cpg.graph.Expression) handle(unaryExpr.getExpression());
+    de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression expression =
+        (de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression)
+            handle(unaryExpr.getExpression());
 
     UnaryOperator unaryOperator =
         NodeBuilder.newUnaryOperator(
@@ -591,12 +647,14 @@ public class ExpressionHandler
     BinaryExpr binaryExpr = expr.asBinaryExpr();
 
     // first, handle the target. this is the first argument of the operator call
-    de.fraunhofer.aisec.cpg.graph.Expression lhs =
-        (de.fraunhofer.aisec.cpg.graph.Expression) handle(binaryExpr.getLeft());
+    de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression lhs =
+        (de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression)
+            handle(binaryExpr.getLeft());
 
     // second, handle the value. this is the second argument of the operator call
-    de.fraunhofer.aisec.cpg.graph.Expression rhs =
-        (de.fraunhofer.aisec.cpg.graph.Expression) handle(binaryExpr.getRight());
+    de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression rhs =
+        (de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression)
+            handle(binaryExpr.getRight());
 
     BinaryOperator binaryOperator =
         NodeBuilder.newBinaryOperator(binaryExpr.getOperator().asString(), binaryExpr.toString());
@@ -617,45 +675,71 @@ public class ExpressionHandler
     if (name.contains(".")) {
       name = name.substring(name.lastIndexOf('.') + 1);
     }
+
+    var typeString = UnknownType.UNKNOWN_TYPE_STRING;
+    var isStatic = false;
+
+    ResolvedMethodDeclaration resolved = null;
+    try {
+      // try resolving the method to learn more about it
+      resolved = methodCallExpr.resolve();
+      isStatic = resolved.isStatic();
+      typeString = resolved.getReturnType().describe();
+    } catch (NoClassDefFoundError | RuntimeException ignored) {
+      // Unfortunately, JavaParser also throws a simple RuntimeException instead of an
+      // UnsolvedSymbolException within resolve() if it fails to resolve it under certain
+      // circumstances, we catch all that and continue on our own
+      log.debug("Could not resolve method {}", methodCallExpr);
+    }
+
     // the scope could either be a variable or also the class name (static call!)
     // thus, only because the scope is present, this is not automatically a member call
     if (o.isPresent()) {
       Expression scope = o.get();
-      // we need to check if there is a valuedecl corresponding to the base. this cannot easily be
-      // done, but we can try to resolve the Expression, and if the Javaparser does not know about
-      // it, we assume that this is a static call
-      boolean isresolvable = false;
       String scopeName = null;
-      try {
-        if (scope instanceof NameExpr) {
-          scopeName = ((NameExpr) scope).getNameAsString();
-          ((NameExpr) scope).resolve();
-          isresolvable = true;
-        } else if (scope instanceof SuperExpr) {
-          scopeName = scope.toString();
-          isresolvable = true;
-        }
-      } catch (UnsolvedSymbolException ex) {
-        if (!ex.getName()
-            .startsWith("We are unable to find the value declaration corresponding to")) {
-          isresolvable = true;
-        }
-      } catch (RuntimeException | NoClassDefFoundError ex) {
-        isresolvable = true;
+
+      if (scope instanceof NameExpr) {
+        scopeName = ((NameExpr) scope).getNameAsString();
+      } else if (scope instanceof SuperExpr) {
+        scopeName = scope.toString();
       }
-      if (isresolvable) {
-        Statement base = handle(scope);
+
+      Statement base = handle(scope);
+
+      // If the base directly refers to a record, then this is a static call
+      if (base instanceof DeclaredReferenceExpression
+          && ((DeclaredReferenceExpression) base).getRefersTo() instanceof RecordDeclaration) {
+        isStatic = true;
+      }
+
+      // Or if the base is a reference to an import
+      if (base instanceof DeclaredReferenceExpression
+          && this.lang.getQualifiedNameFromImports(base.getName()) != null) {
+        isStatic = true;
+      }
+
+      if (!isStatic) {
         DeclaredReferenceExpression member =
             NodeBuilder.newDeclaredReferenceExpression(name, UnknownType.getUnknownType(), "");
 
+        lang.setCodeAndRegion(
+            member,
+            methodCallExpr); // This will also overwrite the code set to the empty string set above
         callExpression =
             NodeBuilder.newMemberCallExpression(
-                name, qualifiedName, base, member, methodCallExpr.toString());
+                name, qualifiedName, base, member, ".", methodCallExpr.toString());
       } else {
-        String targetClass = this.lang.getQualifiedNameFromImports(scopeName);
+        String targetClass;
+        if (resolved != null) {
+          targetClass = resolved.declaringType().getQualifiedName();
+        } else {
+          targetClass = this.lang.getQualifiedNameFromImports(scopeName);
+        }
+
         if (targetClass == null) {
           targetClass = scopeName;
         }
+
         callExpression =
             NodeBuilder.newStaticCallExpression(
                 name, qualifiedName, methodCallExpr.toString(), targetClass);
@@ -665,25 +749,19 @@ public class ExpressionHandler
           NodeBuilder.newCallExpression(name, qualifiedName, methodCallExpr.toString());
     }
 
-    String typeString = Type.UNKNOWN_TYPE_STRING;
-    try {
-      typeString = methodCallExpr.resolve().getReturnType().describe();
-    } catch (Throwable e) {
-      log.debug("Could not resolve return type for {}", methodCallExpr);
-    }
-
     callExpression.setType(TypeParser.createFrom(typeString, true));
 
     NodeList<Expression> arguments = methodCallExpr.getArguments();
 
     // handle the arguments
     for (int i = 0; i < arguments.size(); i++) {
-      de.fraunhofer.aisec.cpg.graph.Expression argument =
-          (de.fraunhofer.aisec.cpg.graph.Expression) handle(arguments.get(i));
+      de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression argument =
+          (de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression)
+              handle(arguments.get(i));
 
       argument.setArgumentIndex(i);
 
-      callExpression.getArguments().add(argument);
+      callExpression.addArgument(argument);
     }
 
     return callExpression;
@@ -717,12 +795,13 @@ public class ExpressionHandler
 
     // handle the arguments
     for (int i = 0; i < arguments.size(); i++) {
-      de.fraunhofer.aisec.cpg.graph.Expression argument =
-          (de.fraunhofer.aisec.cpg.graph.Expression) handle(arguments.get(i));
+      de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression argument =
+          (de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression)
+              handle(arguments.get(i));
 
       argument.setArgumentIndex(i);
 
-      ctor.getArguments().add(argument);
+      ctor.addArgument(argument);
     }
 
     newExpression.setInitializer(ctor);

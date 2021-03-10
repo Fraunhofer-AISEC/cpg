@@ -29,9 +29,15 @@ package de.fraunhofer.aisec.cpg.passes;
 import de.fraunhofer.aisec.cpg.TranslationResult;
 import de.fraunhofer.aisec.cpg.frontends.CallableInterface;
 import de.fraunhofer.aisec.cpg.graph.*;
-import de.fraunhofer.aisec.cpg.graph.type.Type;
-import de.fraunhofer.aisec.cpg.graph.type.TypeParser;
+import de.fraunhofer.aisec.cpg.graph.declarations.*;
+import de.fraunhofer.aisec.cpg.graph.edge.Properties;
+import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
+import de.fraunhofer.aisec.cpg.graph.statements.*;
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.*;
+import de.fraunhofer.aisec.cpg.graph.types.Type;
+import de.fraunhofer.aisec.cpg.graph.types.TypeParser;
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker;
+import de.fraunhofer.aisec.cpg.helpers.Util;
 import de.fraunhofer.aisec.cpg.passes.scopes.*;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -73,6 +79,7 @@ public class EvaluationOrderGraphPass extends Pass {
       new HashMap<>();
 
   private List<Node> currentEOG = new ArrayList<>();
+  private EnumMap<Properties, Object> currentProperties = new EnumMap<>(Properties.class);
 
   // Some nodes will have no incoming nor outgoing edges but still need to be associated to the next
   // eog relevant node.
@@ -80,6 +87,7 @@ public class EvaluationOrderGraphPass extends Pass {
 
   public EvaluationOrderGraphPass() {
     map.put(TranslationUnitDeclaration.class, this::handleTranslationUnitDeclaration);
+    map.put(NamespaceDeclaration.class, this::handleNamespaceDeclaration);
     map.put(RecordDeclaration.class, this::handleRecordDeclaration);
     map.put(FunctionDeclaration.class, this::handleFunctionDeclaration);
     map.put(VariableDeclaration.class, this::handleVariableDeclaration);
@@ -116,6 +124,7 @@ public class EvaluationOrderGraphPass extends Pass {
     map.put(ConstructExpression.class, this::handleConstructExpression);
     map.put(EmptyStatement.class, this::handleDefault);
     map.put(Literal.class, this::handleDefault);
+    map.put(UninitializedValue.class, this::handleDefault);
     map.put(DefaultStatement.class, this::handleDefault);
     map.put(TypeIdExpression.class, this::handleDefault);
     map.put(DeclaredReferenceExpression.class, this::handleDefault);
@@ -174,8 +183,8 @@ public class EvaluationOrderGraphPass extends Pass {
         continue;
       }
       List<Node> nextNodes = new ArrayList<>(eogSourceNode.getNextEOG());
-      eogSourceNode.getNextEOG().clear();
-      nextNodes.forEach(node -> node.getPrevEOG().remove(eogSourceNode));
+      eogSourceNode.clearNextEOG();
+      nextNodes.forEach(node -> node.removePrevEOGEntry(eogSourceNode));
       truncateLooseEdges(
           nextNodes.stream()
               .filter(node -> node.getPrevEOG().isEmpty() && !node.getNextEOG().isEmpty())
@@ -206,13 +215,24 @@ public class EvaluationOrderGraphPass extends Pass {
     }
     // remaining eognodes were not visited and have to be removed from the EOG
     for (Node unvisitedNode : eognodes) {
-      unvisitedNode.getNextEOG().forEach(next -> next.getPrevEOG().remove(unvisitedNode));
-      unvisitedNode.getNextEOG().clear();
+      unvisitedNode
+          .getNextEOGPropertyEdge()
+          .forEach(next -> next.getEnd().removePrevEOGEntry(unvisitedNode));
+      unvisitedNode.getNextEOGPropertyEdge().clear();
     }
   }
 
   private void handleTranslationUnitDeclaration(@NonNull Node node) {
     TranslationUnitDeclaration declaration = (TranslationUnitDeclaration) node;
+    // loop through functions
+    for (Declaration child : declaration.getDeclarations()) {
+      createEOG(child);
+    }
+    lang.clearProcessed();
+  }
+
+  private void handleNamespaceDeclaration(@NonNull Node node) {
+    NamespaceDeclaration declaration = (NamespaceDeclaration) node;
     // loop through functions
     for (Declaration child : declaration.getDeclarations()) {
       createEOG(child);
@@ -309,16 +329,7 @@ public class EvaluationOrderGraphPass extends Pass {
 
   private void handleMemberExpression(@NonNull Node node) {
     MemberExpression memberExpression = (MemberExpression) node;
-    // analyze the base
-    if (memberExpression.getBase() instanceof Statement) {
-      createEOG(memberExpression.getBase());
-    }
-
-    // analyze the member
-    if (memberExpression.getMember() instanceof Statement) {
-      createEOG(memberExpression.getMember());
-    }
-
+    createEOG(memberExpression.getBase());
     pushToEOG(memberExpression);
   }
 
@@ -420,7 +431,7 @@ public class EvaluationOrderGraphPass extends Pass {
         // DeclarationScope here
         Scope decl =
             lang.getScopeManager()
-                .getFirstScopeThat(scope -> scope.getClass().equals(DeclarationScope.class));
+                .getFirstScopeThat(scope -> scope.getClass().equals(ValueDeclarationScope.class));
         if (decl != null
             && decl.getAstNode() instanceof CatchClause
             && ((CatchClause) decl.getAstNode()).getParameter() != null) {
@@ -637,6 +648,7 @@ public class EvaluationOrderGraphPass extends Pass {
     addMultipleIncomingEOGEdges(this.currentEOG, node);
     intermediateNodes.clear();
     this.currentEOG.clear();
+    this.currentProperties.clear();
     this.currentEOG.add(node);
   }
 
@@ -729,8 +741,11 @@ public class EvaluationOrderGraphPass extends Pass {
    * @param next the next node
    */
   public void addEOGEdge(Node prev, Node next) {
-    prev.getNextEOG().add(next);
-    next.getPrevEOG().add(prev);
+    PropertyEdge<Node> propertyEdge = new PropertyEdge<>(prev, next);
+    propertyEdge.addProperties(this.currentProperties);
+    propertyEdge.addProperty(Properties.INDEX, prev.getNextEOG().size());
+    prev.addNextEOG(propertyEdge);
+    next.addPrevEOG(propertyEdge);
   }
 
   public void addMultipleIncomingEOGEdges(List<Node> prevs, Node next) {
@@ -767,7 +782,10 @@ public class EvaluationOrderGraphPass extends Pass {
     createEOG(doStatement.getStatement());
 
     createEOG(doStatement.getCondition());
+
+    doStatement.addPrevDFG(doStatement.getCondition());
     pushToEOG(doStatement); // To have semantic information after the condition evaluation
+
     connectCurrentToLoopStart();
     LoopScope currentLoopScope = (LoopScope) lang.getScopeManager().leaveScope(doStatement);
     if (currentLoopScope != null) {
@@ -784,6 +802,7 @@ public class EvaluationOrderGraphPass extends Pass {
     createEOG(forEachStatement.getIterable());
     createEOG(forEachStatement.getVariable());
 
+    forEachStatement.addPrevDFG(forEachStatement.getVariable());
     pushToEOG(forEachStatement); // To have semantic information after the variable declaration
 
     List<Node> tmpEOGNodes = new ArrayList<>(currentEOG);
@@ -804,6 +823,7 @@ public class EvaluationOrderGraphPass extends Pass {
   }
 
   private void handleForStatement(@NonNull Node node) {
+
     ForStatement forStatement = (ForStatement) node;
     lang.getScopeManager().enterScope(forStatement);
     ForStatement forStmt = forStatement;
@@ -811,6 +831,9 @@ public class EvaluationOrderGraphPass extends Pass {
     createEOG(forStmt.getInitializerStatement());
     createEOG(forStmt.getConditionDeclaration());
     createEOG(forStmt.getCondition());
+
+    Util.addDFGEdgesForMutuallyExclusiveBranchingExpression(
+        forStatement, forStatement.getCondition(), forStatement.getConditionDeclaration());
 
     pushToEOG(forStatement); // To have semantic information after the condition evaluation
 
@@ -839,13 +862,18 @@ public class EvaluationOrderGraphPass extends Pass {
     createEOG(ifStatement.getConditionDeclaration());
     createEOG(ifStatement.getCondition());
 
+    Util.addDFGEdgesForMutuallyExclusiveBranchingExpression(
+        ifStatement, ifStatement.getCondition(), ifStatement.getConditionDeclaration());
+
     pushToEOG(ifStatement); // To have semantic information after the condition evaluation
     List<Node> openConditionEOGs = new ArrayList<>(currentEOG);
+    currentProperties.put(de.fraunhofer.aisec.cpg.graph.edge.Properties.BRANCH, true);
     createEOG(ifStatement.getThenStatement());
     openBranchNodes.addAll(currentEOG);
 
     if (ifStatement.getElseStatement() != null) {
       setCurrentEOGs(openConditionEOGs);
+      currentProperties.put(Properties.BRANCH, false);
       createEOG(ifStatement.getElseStatement());
       openBranchNodes.addAll(currentEOG);
     } else {
@@ -866,6 +894,9 @@ public class EvaluationOrderGraphPass extends Pass {
     createEOG(switchStatement.getSelectorDeclaration());
 
     createEOG(switchStatement.selector);
+
+    Util.addDFGEdgesForMutuallyExclusiveBranchingExpression(
+        switchStatement, switchStatement.getSelector(), switchStatement.getSelectorDeclaration());
 
     pushToEOG(switchStatement); // To have semantic information after the condition evaluation
 
@@ -903,6 +934,9 @@ public class EvaluationOrderGraphPass extends Pass {
     createEOG(whileStatement.getConditionDeclaration());
 
     createEOG(whileStatement.getCondition());
+
+    Util.addDFGEdgesForMutuallyExclusiveBranchingExpression(
+        whileStatement, whileStatement.getCondition(), whileStatement.getConditionDeclaration());
 
     pushToEOG(whileStatement); // To have semantic information after the condition evaluation
 

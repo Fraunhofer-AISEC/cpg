@@ -26,15 +26,15 @@
 
 package de.fraunhofer.aisec.cpg.passes.scopes;
 
-import de.fraunhofer.aisec.cpg.graph.FunctionDeclaration;
 import de.fraunhofer.aisec.cpg.graph.Node;
-import de.fraunhofer.aisec.cpg.graph.type.Type;
+import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration;
+import de.fraunhofer.aisec.cpg.graph.types.Type;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.checkerframework.checker.nullness.qual.NonNull;
 
-public class FunctionScope extends DeclarationScope {
+public class FunctionScope extends ValueDeclarationScope {
   @NonNull private Map<Type, List<Node>> catchesOrRelays = new HashMap<>();
 
   public FunctionScope(FunctionDeclaration astNode) {

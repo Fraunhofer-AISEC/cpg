@@ -26,15 +26,15 @@
 
 package de.fraunhofer.aisec.cpg.passes.scopes;
 
-import de.fraunhofer.aisec.cpg.graph.BreakStatement;
 import de.fraunhofer.aisec.cpg.graph.Node;
-import de.fraunhofer.aisec.cpg.graph.type.Type;
+import de.fraunhofer.aisec.cpg.graph.statements.BreakStatement;
+import de.fraunhofer.aisec.cpg.graph.types.Type;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class TryScope extends DeclarationScope implements IBreakable {
+public class TryScope extends ValueDeclarationScope implements IBreakable {
 
   private final Map<Type, List<Node>> catchesOrRelays = new HashMap<>();
   private final List<BreakStatement> breaks = new ArrayList<>();

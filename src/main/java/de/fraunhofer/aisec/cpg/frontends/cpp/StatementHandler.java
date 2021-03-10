@@ -27,8 +27,33 @@
 package de.fraunhofer.aisec.cpg.frontends.cpp;
 
 import de.fraunhofer.aisec.cpg.frontends.Handler;
-import de.fraunhofer.aisec.cpg.graph.*;
-import de.fraunhofer.aisec.cpg.graph.type.TypeParser;
+import de.fraunhofer.aisec.cpg.graph.NodeBuilder;
+import de.fraunhofer.aisec.cpg.graph.TypeManager;
+import de.fraunhofer.aisec.cpg.graph.declarations.Declaration;
+import de.fraunhofer.aisec.cpg.graph.declarations.DeclarationSequence;
+import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration;
+import de.fraunhofer.aisec.cpg.graph.statements.BreakStatement;
+import de.fraunhofer.aisec.cpg.graph.statements.CaseStatement;
+import de.fraunhofer.aisec.cpg.graph.statements.CatchClause;
+import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement;
+import de.fraunhofer.aisec.cpg.graph.statements.ContinueStatement;
+import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement;
+import de.fraunhofer.aisec.cpg.graph.statements.DefaultStatement;
+import de.fraunhofer.aisec.cpg.graph.statements.DoStatement;
+import de.fraunhofer.aisec.cpg.graph.statements.EmptyStatement;
+import de.fraunhofer.aisec.cpg.graph.statements.ForEachStatement;
+import de.fraunhofer.aisec.cpg.graph.statements.ForStatement;
+import de.fraunhofer.aisec.cpg.graph.statements.GotoStatement;
+import de.fraunhofer.aisec.cpg.graph.statements.IfStatement;
+import de.fraunhofer.aisec.cpg.graph.statements.LabelStatement;
+import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement;
+import de.fraunhofer.aisec.cpg.graph.statements.Statement;
+import de.fraunhofer.aisec.cpg.graph.statements.SwitchStatement;
+import de.fraunhofer.aisec.cpg.graph.statements.TryStatement;
+import de.fraunhofer.aisec.cpg.graph.statements.WhileStatement;
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression;
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal;
+import de.fraunhofer.aisec.cpg.graph.types.TypeParser;
 import java.util.Arrays;
 import java.util.List;
 import java.util.function.BiConsumer;
@@ -37,7 +62,26 @@ import org.eclipse.cdt.core.dom.ast.IASTStatement;
 import org.eclipse.cdt.core.dom.ast.IBinding;
 import org.eclipse.cdt.core.dom.ast.ILabel;
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTCatchHandler;
-import org.eclipse.cdt.internal.core.dom.parser.cpp.*;
+import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTASMDeclaration;
+import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTBreakStatement;
+import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTCaseStatement;
+import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTCatchHandler;
+import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTCompoundStatement;
+import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTContinueStatement;
+import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTDeclarationStatement;
+import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTDefaultStatement;
+import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTDoStatement;
+import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTExpressionStatement;
+import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTForStatement;
+import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTGotoStatement;
+import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTIfStatement;
+import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTLabelStatement;
+import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTNullStatement;
+import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTRangeBasedForStatement;
+import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTReturnStatement;
+import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTSwitchStatement;
+import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTTryBlockStatement;
+import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTWhileStatement;
 
 class StatementHandler extends Handler<Statement, IASTStatement, CXXLanguageFrontend> {
 
@@ -263,8 +307,13 @@ class StatementHandler extends Handler<Statement, IASTStatement, CXXLanguageFron
       DeclarationStatement declarationStatement =
           NodeBuilder.newDeclarationStatement(ctx.getRawSignature());
 
-      declarationStatement.setDeclarations(
-          this.lang.getDeclarationListHandler().handle(ctx.getDeclaration()));
+      Declaration declaration = this.lang.getDeclarationHandler().handle(ctx.getDeclaration());
+
+      if (declaration instanceof DeclarationSequence) {
+        declarationStatement.setDeclarations(((DeclarationSequence) declaration).asList());
+      } else {
+        declarationStatement.setSingleDeclaration(declaration);
+      }
 
       return declarationStatement;
     }
@@ -288,7 +337,7 @@ class StatementHandler extends Handler<Statement, IASTStatement, CXXLanguageFron
     for (IASTStatement statement : ctx.getStatements()) {
       Statement handled = handle(statement);
       if (handled != null) {
-        compoundStatement.getStatements().add(handled);
+        compoundStatement.addStatement(handled);
       }
     }
     lang.getScopeManager().leaveScope(compoundStatement);

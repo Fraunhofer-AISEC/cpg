@@ -30,15 +30,15 @@ import static de.fraunhofer.aisec.cpg.sarif.PhysicalLocation.locationLink;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
-import de.fraunhofer.aisec.cpg.graph.Expression;
-import de.fraunhofer.aisec.cpg.graph.FunctionDeclaration;
 import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder;
-import de.fraunhofer.aisec.cpg.graph.ParamVariableDeclaration;
-import de.fraunhofer.aisec.cpg.graph.type.FunctionPointerType;
-import de.fraunhofer.aisec.cpg.graph.type.PointerType;
-import de.fraunhofer.aisec.cpg.graph.type.ReferenceType;
-import de.fraunhofer.aisec.cpg.graph.type.Type;
+import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declarations.ParamVariableDeclaration;
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression;
+import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType;
+import de.fraunhofer.aisec.cpg.graph.types.PointerType;
+import de.fraunhofer.aisec.cpg.graph.types.ReferenceType;
+import de.fraunhofer.aisec.cpg.graph.types.Type;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
@@ -56,6 +56,8 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+import java.util.stream.Stream;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.slf4j.Logger;
 
@@ -318,19 +320,33 @@ public class Util {
    * @param arguments The call's arguments to be connected to the target's parameters
    */
   public static void attachCallParameters(FunctionDeclaration target, List<Expression> arguments) {
-    target.getParameters().sort(Comparator.comparing(ParamVariableDeclaration::getArgumentIndex));
+    target
+        .getParametersPropertyEdge()
+        .sort(Comparator.comparing(pe -> pe.getEnd().getArgumentIndex()));
+
     for (int j = 0; j < arguments.size(); j++) {
-      ParamVariableDeclaration param = target.getParameters().get(j);
-      if (param.isVariadic()) {
-        for (; j < arguments.size(); j++) {
-          // map all the following arguments to this variadic param
+      var parameters = target.getParameters();
+
+      if (j < parameters.size()) {
+        var param = parameters.get(j);
+        if (param.isVariadic()) {
+          for (; j < arguments.size(); j++) {
+            // map all the following arguments to this variadic param
+            param.addPrevDFG(arguments.get(j));
+          }
+          break;
+        } else {
           param.addPrevDFG(arguments.get(j));
         }
-        break;
-      } else {
-        param.addPrevDFG(arguments.get(j));
       }
     }
+  }
+
+  public static String getSimpleName(String delimiter, String name) {
+    if (name.contains(delimiter)) {
+      name = name.substring(name.lastIndexOf(delimiter) + delimiter.length());
+    }
+    return name;
   }
 
   /**
@@ -399,6 +415,28 @@ public class Util {
     return paramName.toString();
   }
 
+  /**
+   * Filters a list of elements with common type T for all elements of instance S, returning a list
+   * of type {@link List}.
+   *
+   * @param genericList List with elements fo type T.
+   * @param specificClass Class type to filter for.
+   * @param <T> Generic List type.
+   * @param <S> Class type to filter for.
+   * @return a specific List as all elements are cast to the specified class type.
+   */
+  public static <T, S extends T> List<S> filterCast(List<T> genericList, Class<S> specificClass) {
+    return genericList.stream()
+        .filter(g -> specificClass.isAssignableFrom(g.getClass()))
+        .map(specificClass::cast)
+        .collect(Collectors.toList());
+  }
+
+  static <T> Stream<T> reverse(Stream<T> input) {
+    Object[] temp = input.toArray();
+    return (Stream<T>) IntStream.range(0, temp.length).mapToObj(i -> temp[temp.length - i - 1]);
+  }
+
   public enum Connect {
     NODE,
     SUBTREE;
@@ -412,5 +450,52 @@ public class Util {
   public enum Edge {
     ENTRIES,
     EXITS;
+  }
+
+  /**
+   * This function returns the set of adjacent DFG nodes that is contained in the nodes subgraph.
+   *
+   * @param n Node of interest
+   * @param incoming whether the node connected by an incoming or, if false, outgoing DFG edge
+   * @return
+   */
+  public static List<Node> getAdjacentDFGNodes(final Node n, boolean incoming) {
+
+    Set<Node> subnodes = SubgraphWalker.getAstChildren(n);
+    List<Node> adjacentNodes;
+    if (incoming) {
+      adjacentNodes =
+          subnodes.stream()
+              .filter(prevCandidate -> prevCandidate.getNextDFG().contains(n))
+              .collect(Collectors.toList());
+    } else {
+      adjacentNodes =
+          subnodes.stream()
+              .filter(nextCandidate -> nextCandidate.getPrevDFG().contains(n))
+              .collect(Collectors.toList());
+    }
+    return adjacentNodes;
+  }
+
+  /**
+   * Connects the node <code>n</code> with the node <code>branchingExp</code> if present or with the
+   * node <code>branchingDecl</code>. The assumption is that only <code>branchingExp</code> or
+   * <code>branchingDecl</code> are present, e.g. C++.
+   *
+   * @param n
+   * @param branchingExp
+   * @param branchingDecl
+   */
+  public static void addDFGEdgesForMutuallyExclusiveBranchingExpression(
+      Node n, Node branchingExp, Node branchingDecl) {
+    List<Node> conditionNodes = new ArrayList<>();
+
+    if (branchingExp != null) {
+      conditionNodes = new ArrayList<>();
+      conditionNodes.add(branchingExp);
+    } else if (branchingDecl != null) {
+      conditionNodes = getAdjacentDFGNodes(branchingDecl, true);
+    }
+    conditionNodes.forEach(c -> n.addPrevDFG(c));
   }
 }

@@ -32,7 +32,9 @@ import static org.junit.jupiter.api.Assertions.*;
 import de.fraunhofer.aisec.cpg.BaseTest;
 import de.fraunhofer.aisec.cpg.TestUtils;
 import de.fraunhofer.aisec.cpg.TranslationConfiguration;
-import de.fraunhofer.aisec.cpg.graph.*;
+import de.fraunhofer.aisec.cpg.graph.declarations.*;
+import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement;
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression;
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation;
 import de.fraunhofer.aisec.cpg.sarif.Region;
 import java.io.File;
@@ -79,7 +81,7 @@ class CXXIncludeTest extends BaseTest {
     FieldDeclaration someField = someClass.getField("someField");
     assertNotNull(someField);
 
-    assertTrue(ref.getRefersTo().contains(someField));
+    assertEquals(someField, ref.getRefersTo());
   }
 
   @Test
@@ -242,5 +244,25 @@ class CXXIncludeTest extends BaseTest {
                         .getFilename()
                         .equals(
                             new File("src/test/resources/another-include.h").getAbsolutePath())));
+  }
+
+  @Test
+  void testLoadIncludes() throws Exception {
+    File file = new File("src/test/resources/include.cpp");
+    List<TranslationUnitDeclaration> translationUnitDeclarations =
+        analyzeWithBuilder(
+            TranslationConfiguration.builder()
+                .sourceLocations(List.of(file))
+                .topLevel(file.getParentFile())
+                .loadIncludes(false)
+                .debugParser(true)
+                .failOnError(true));
+
+    assertNotNull(translationUnitDeclarations);
+
+    // first one should NOT be a class (since it is defined in the header)
+    RecordDeclaration recordDeclaration =
+        translationUnitDeclarations.get(0).getDeclarationAs(0, RecordDeclaration.class);
+    assertNull(recordDeclaration);
   }
 }

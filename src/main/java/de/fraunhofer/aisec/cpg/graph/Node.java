@@ -26,14 +26,15 @@
 
 package de.fraunhofer.aisec.cpg.graph;
 
+import static de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.unwrap;
+
+import de.fraunhofer.aisec.cpg.graph.declarations.TypedefDeclaration;
+import de.fraunhofer.aisec.cpg.graph.edge.Properties;
+import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import de.fraunhofer.aisec.cpg.helpers.LocationConverter;
 import de.fraunhofer.aisec.cpg.processing.IVisitable;
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;
 import org.checkerframework.checker.nullness.qual.NonNull;
@@ -46,7 +47,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /** The base class for all graph objects that are going to be persisted in the database. */
-public class Node extends IVisitable<Node> {
+public class Node implements IVisitable<Node>, Persistable {
 
   public static final ToStringStyle TO_STRING_STYLE = ToStringStyle.SHORT_PREFIX_STYLE;
   protected static final Logger log = LoggerFactory.getLogger(Node.class);
@@ -70,30 +71,41 @@ public class Node extends IVisitable<Node> {
   @Nullable
   protected PhysicalLocation location;
 
-  /** Name of the containing file */
-  protected String file;
+  /**
+   * Name of the containing file. It can be null for artificially created nodes or if just analyzing
+   * snippets of code without an associated file name.
+   */
+  @Nullable protected String file;
 
   /** Incoming control flow edges. */
+  @NonNull
   @Relationship(value = "EOG", direction = "INCOMING")
-  protected List<Node> prevEOG = new ArrayList<>();
+  protected List<PropertyEdge<Node>> prevEOG = new ArrayList<>();
 
   /** outgoing control flow edges. */
   @Relationship(value = "EOG", direction = "OUTGOING")
   @NonNull
-  protected List<Node> nextEOG = new ArrayList<>();
+  protected List<PropertyEdge<Node>> nextEOG = new ArrayList<>();
 
-  /** outgoing control flow edges. */
+  /**
+   * outgoing control flow edges.
+   *
+   * @deprecated This Edge-Type is deprecated as it is less precise then the {@link Node#nextEOG}
+   */
+  @Deprecated(since = "3.4", forRemoval = true)
   @NonNull
   @Relationship(value = "CFG", direction = "OUTGOING")
-  protected List<Node> nextCFG = new ArrayList<>();
+  protected List<PropertyEdge<Node>> nextCFG = new ArrayList<>();
 
+  @NonNull
   @Relationship(value = "DFG", direction = "INCOMING")
   protected Set<Node> prevDFG = new HashSet<>();
 
+  @NonNull
   @Relationship(value = "DFG")
   protected Set<Node> nextDFG = new HashSet<>();
 
-  protected Set<TypedefDeclaration> typedefs = new HashSet<>();
+  @NonNull protected Set<TypedefDeclaration> typedefs = new HashSet<>();
 
   /**
    * If a node is marked as being a dummy, it means that it was created artificially and does not
@@ -116,7 +128,7 @@ public class Node extends IVisitable<Node> {
 
   /** List of annotations associated with that node. */
   @SubGraph("AST")
-  protected List<Annotation> annotations;
+  protected List<Annotation> annotations = new ArrayList<>();
 
   public Long getId() {
     return id;
@@ -156,33 +168,118 @@ public class Node extends IVisitable<Node> {
     this.location = location;
   }
 
-  public List<Node> getPrevEOG() {
+  @NonNull
+  public List<PropertyEdge<Node>> getPrevEOGProperties() {
     return this.prevEOG;
   }
 
-  public void setPrevEOG(List<Node> prevEOG) {
+  @NonNull
+  public List<PropertyEdge<Node>> getNextEOGProperties() {
+    return this.nextEOG;
+  }
+
+  public void setPrevEOGProperties(@NonNull List<PropertyEdge<Node>> prevEOG) {
     this.prevEOG = prevEOG;
+  }
+
+  public void removePrevEOGEntry(@NonNull Node eog) {
+    removePrevEOGEntries(List.of(eog));
+  }
+
+  public void removePrevEOGEntries(@NonNull List<Node> prevEOGs) {
+    for (Node n : prevEOGs) {
+      List<PropertyEdge<Node>> remove =
+          PropertyEdge.findPropertyEdgesByPredicate(this.prevEOG, e -> e.getStart().equals(n));
+      this.prevEOG.removeAll(remove);
+    }
+  }
+
+  @NonNull
+  public List<Node> getPrevEOG() {
+    List<Node> prevEOGTargets = new ArrayList<>();
+    this.prevEOG.forEach(propertyEdge -> prevEOGTargets.add(propertyEdge.getStart()));
+    return prevEOGTargets;
+  }
+
+  public void setPrevEOG(@NonNull List<Node> prevEOG) {
+    List<PropertyEdge<Node>> propertyEdgesEOG = new ArrayList<>();
+    int idx = 0;
+
+    for (Node prev : prevEOG) {
+      var propertyEdge = new PropertyEdge<>(prev, this);
+      propertyEdge.addProperty(Properties.INDEX, idx);
+      propertyEdgesEOG.add(propertyEdge);
+      idx++;
+    }
+
+    this.prevEOG = propertyEdgesEOG;
+  }
+
+  public void addPrevEOG(@NonNull PropertyEdge<Node> propertyEdge) {
+    this.prevEOG.add(propertyEdge);
+  }
+
+  @NonNull
+  public List<PropertyEdge<Node>> getNextEOGPropertyEdge() {
+    return this.nextEOG;
   }
 
   @NonNull
   public List<Node> getNextEOG() {
-    return this.nextEOG;
+    List<Node> nextEOGTargets = new ArrayList<>();
+    this.nextEOG.forEach(propertyEdge -> nextEOGTargets.add(propertyEdge.getEnd()));
+    return Collections.unmodifiableList(nextEOGTargets);
   }
 
   public void setNextEOG(@NonNull List<Node> nextEOG) {
-    this.nextEOG = nextEOG;
+    this.nextEOG = PropertyEdge.transformIntoOutgoingPropertyEdgeList(nextEOG, this);
+  }
+
+  public void addNextEOG(@NonNull PropertyEdge<Node> propertyEdge) {
+    this.nextEOG.add(propertyEdge);
+  }
+
+  public void clearNextEOG() {
+    this.nextEOG.clear();
+  }
+
+  /**
+   * @deprecated This Edge-Type is deprecated as it is less precise then the {@link Node#nextEOG}n
+   */
+  @NonNull
+  @Deprecated(since = "3.4", forRemoval = true)
+  public List<Node> getNextCFG() {
+    return unwrap(this.nextCFG);
+  }
+
+  /**
+   * @deprecated This Edge-Type is deprecated as it is less precise then the {@link Node#nextEOG}
+   */
+  @Deprecated(since = "3.4", forRemoval = true)
+  public void addNextCFG(Node node) {
+    var propertyEdge = new PropertyEdge<>(this, node);
+    propertyEdge.addProperty(Properties.INDEX, this.nextCFG.size());
+    this.nextCFG.add(propertyEdge);
+  }
+
+  /**
+   * outgoing control flow edges.
+   *
+   * @deprecated This Edge-Type is deprecated as it is less precise then the {@link Node#nextEOG}
+   */
+  @Deprecated(since = "3.4", forRemoval = true)
+  public void addNextCFG(Collection<? extends Node> collection) {
+    for (Node n : collection) {
+      addNextCFG(n);
+    }
   }
 
   @NonNull
-  public List<Node> getNextCFG() {
-    return this.nextCFG;
-  }
-
   public Set<Node> getNextDFG() {
     return nextDFG;
   }
 
-  public void setNextDFG(Set<Node> nextDFG) {
+  public void setNextDFG(@NonNull Set<Node> nextDFG) {
     this.nextDFG = nextDFG;
   }
 
@@ -198,11 +295,12 @@ public class Node extends IVisitable<Node> {
     }
   }
 
+  @NonNull
   public Set<Node> getPrevDFG() {
     return prevDFG;
   }
 
-  public void setPrevDFG(Set<Node> prevDFG) {
+  public void setPrevDFG(@NonNull Set<Node> prevDFG) {
     this.prevDFG = prevDFG;
   }
 
@@ -222,11 +320,12 @@ public class Node extends IVisitable<Node> {
     this.typedefs.add(typedef);
   }
 
+  @NonNull
   public Set<TypedefDeclaration> getTypedefs() {
     return typedefs;
   }
 
-  public void setTypedefs(Set<TypedefDeclaration> typedefs) {
+  public void setTypedefs(@NonNull Set<TypedefDeclaration> typedefs) {
     this.typedefs = typedefs;
   }
 
@@ -238,6 +337,8 @@ public class Node extends IVisitable<Node> {
     this.argumentIndex = argumentIndex;
   }
 
+  /** @deprecated You should rather use {@link #isImplicit()} */
+  @Deprecated(forRemoval = true)
   public boolean isDummy() {
     return dummy;
   }
@@ -259,6 +360,15 @@ public class Node extends IVisitable<Node> {
     return this.implicit;
   }
 
+  @NonNull
+  public List<Annotation> getAnnotations() {
+    return annotations;
+  }
+
+  public void addAnnotations(@NonNull Collection<Annotation> annotations) {
+    this.annotations.addAll(annotations);
+  }
+
   /**
    * If a node should be removed from the graph, just removing it from the AST is not enough (see
    * issue #60). It will most probably be referenced somewhere via DFG or EOG edges. Thus, if it
@@ -277,12 +387,18 @@ public class Node extends IVisitable<Node> {
       n.nextDFG.remove(this);
     }
     prevDFG.clear();
-    for (Node n : nextEOG) {
-      n.prevEOG.remove(this);
+    for (var n : nextEOG) {
+      List<PropertyEdge<Node>> remove =
+          PropertyEdge.findPropertyEdgesByPredicate(
+              n.getEnd().prevEOG, e -> e.getStart().equals(this));
+      n.getEnd().prevEOG.removeAll(remove);
     }
     nextEOG.clear();
-    for (Node n : prevEOG) {
-      n.nextEOG.remove(this);
+    for (var n : prevEOG) {
+      List<PropertyEdge<Node>> remove =
+          PropertyEdge.findPropertyEdgesByPredicate(
+              n.getStart().nextEOG, e -> e.getEnd().equals(this));
+      n.getStart().nextEOG.removeAll(remove);
     }
     prevEOG.clear();
   }
@@ -325,13 +441,5 @@ public class Node extends IVisitable<Node> {
   @Override
   public int hashCode() {
     return Objects.hash(name, this.getClass());
-  }
-
-  public void setAnnotations(List<Annotation> annotations) {
-    this.annotations = annotations;
-  }
-
-  public List<Annotation> getAnnotations() {
-    return annotations;
   }
 }

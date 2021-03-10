@@ -26,8 +26,18 @@
 
 package de.fraunhofer.aisec.cpg.passes.scopes;
 
-public class GlobalScope extends DeclarationScope {
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration;
 
+public class GlobalScope extends StructureDeclarationScope {
+
+  /**
+   * This should ideally only be called once. It constructs a new global scope, which is not
+   * associated to any AST node. However, depending on the language, a language frontend can
+   * explicitly set the ast node using {@link
+   * ScopeManager#resetToGlobal(TranslationUnitDeclaration)} if the language needs a global scope
+   * that is restricted to a translation unit, i.e. C++ while still maintaing a unique list of
+   * global variables.
+   */
   public GlobalScope() {
     super(null);
   }
@@ -46,4 +56,5 @@ public class GlobalScope extends DeclarationScope {
   public void addVariable(VariableDeclaration variable) {
     this.variables.add(variable);
   }*/
+
 }

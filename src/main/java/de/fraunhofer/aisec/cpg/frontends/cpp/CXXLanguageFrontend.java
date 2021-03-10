@@ -27,6 +27,7 @@
 package de.fraunhofer.aisec.cpg.frontends.cpp;
 
 import static de.fraunhofer.aisec.cpg.graph.NodeBuilder.newAnnotation;
+import static de.fraunhofer.aisec.cpg.graph.NodeBuilder.newAnnotationMember;
 import static de.fraunhofer.aisec.cpg.graph.NodeBuilder.newDeclaredReferenceExpression;
 import static de.fraunhofer.aisec.cpg.graph.NodeBuilder.newLiteral;
 
@@ -34,16 +35,16 @@ import de.fraunhofer.aisec.cpg.TranslationConfiguration;
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
 import de.fraunhofer.aisec.cpg.frontends.TranslationException;
 import de.fraunhofer.aisec.cpg.graph.Annotation;
-import de.fraunhofer.aisec.cpg.graph.Declaration;
-import de.fraunhofer.aisec.cpg.graph.DeclaredReferenceExpression;
-import de.fraunhofer.aisec.cpg.graph.Expression;
+import de.fraunhofer.aisec.cpg.graph.AnnotationMember;
 import de.fraunhofer.aisec.cpg.graph.Node;
-import de.fraunhofer.aisec.cpg.graph.TranslationUnitDeclaration;
 import de.fraunhofer.aisec.cpg.graph.TypeManager;
-import de.fraunhofer.aisec.cpg.graph.ValueDeclaration;
-import de.fraunhofer.aisec.cpg.graph.type.Type;
-import de.fraunhofer.aisec.cpg.graph.type.TypeParser;
-import de.fraunhofer.aisec.cpg.graph.type.UnknownType;
+import de.fraunhofer.aisec.cpg.graph.declarations.Declaration;
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration;
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression;
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression;
+import de.fraunhofer.aisec.cpg.graph.types.TypeParser;
+import de.fraunhofer.aisec.cpg.graph.types.UnknownType;
 import de.fraunhofer.aisec.cpg.helpers.Benchmark;
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager;
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation;
@@ -59,7 +60,15 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
-import org.eclipse.cdt.core.dom.ast.*;
+import org.eclipse.cdt.core.dom.ast.IASTAttribute;
+import org.eclipse.cdt.core.dom.ast.IASTAttributeOwner;
+import org.eclipse.cdt.core.dom.ast.IASTComment;
+import org.eclipse.cdt.core.dom.ast.IASTExpression;
+import org.eclipse.cdt.core.dom.ast.IASTFileLocation;
+import org.eclipse.cdt.core.dom.ast.IASTNode;
+import org.eclipse.cdt.core.dom.ast.IASTToken;
+import org.eclipse.cdt.core.dom.ast.IASTTokenList;
+import org.eclipse.cdt.core.dom.ast.IBinding;
 import org.eclipse.cdt.core.dom.ast.gnu.cpp.GPPLanguage;
 import org.eclipse.cdt.core.index.IIndexFileLocation;
 import org.eclipse.cdt.core.model.ILanguage;
@@ -86,13 +95,6 @@ import org.slf4j.LoggerFactory;
  * <p>Frontend for ONE CXX File
  */
 public class CXXLanguageFrontend extends LanguageFrontend {
-
-  public static final Type LONG_TYPE = TypeParser.createFrom("long", true);
-  public static final Type TYPE_UNSIGNED_LONG_LONG =
-      TypeParser.createFrom("unsigned long long", true);
-  public static final Type INT_TYPE = TypeParser.createFrom("int", true);
-  public static final Type LONG_LONG_TYPE = TypeParser.createFrom("long long", true);
-  public static final Type TYPE_UNSIGNED_LONG = TypeParser.createFrom("unsigned long", true);
 
   private static final Logger LOGGER = LoggerFactory.getLogger(CXXLanguageFrontend.class);
   private final IncludeFileContentProvider includeFileContentProvider =
@@ -188,7 +190,6 @@ public class CXXLanguageFrontend extends LanguageFrontend {
         }
       };
   private DeclarationHandler declarationHandler = new DeclarationHandler(this);
-  private DeclarationListHandler declarationListHandler = new DeclarationListHandler(this);
   private DeclaratorHandler declaratorHandler = new DeclaratorHandler(this);
   private ExpressionHandler expressionHandler = new ExpressionHandler(this);
   private InitializerHandler initializerHandler = new InitializerHandler(this);
@@ -268,20 +269,18 @@ public class CXXLanguageFrontend extends LanguageFrontend {
 
     DefaultLogService log = new DefaultLogService();
 
-    IncludeFileContentProvider includeProvider;
-    if (config.loadIncludes) {
-      includeProvider = includeFileContentProvider;
-    } else {
-      includeProvider = IncludeFileContentProvider.getEmptyFilesProvider();
-    }
-
     int opts = ILanguage.OPTION_PARSE_INACTIVE_CODE; // | ILanguage.OPTION_ADD_COMMENTS;
 
     try {
       Benchmark bench = new Benchmark(this.getClass(), "Parsing sourcefile");
-      IASTTranslationUnit translationUnit =
-          GPPLanguage.getDefault()
-              .getASTTranslationUnit(content, scannerInfo, includeProvider, null, opts, log);
+      CPPASTTranslationUnit translationUnit =
+          (CPPASTTranslationUnit)
+              GPPLanguage.getDefault()
+                  .getASTTranslationUnit(
+                      content, scannerInfo, includeFileContentProvider, null, opts, log);
+
+      var length = translationUnit.getLength();
+      LOGGER.info("Parsed {} bytes corresponding roughly to {} LoC", length, length / 50);
       bench.stop();
 
       bench = new Benchmark(this.getClass(), "Transform to CPG");
@@ -291,6 +290,10 @@ public class CXXLanguageFrontend extends LanguageFrontend {
       }
 
       for (IASTComment c : translationUnit.getComments()) {
+        if (c.getFileLocation() == null) {
+          LOGGER.warn("Found comment with null location in {}", translationUnit.getFilePath());
+          continue;
+        }
         comments.put(c.getFileLocation().getStartingLineNumber(), c.getRawSignature());
       }
 
@@ -329,11 +332,11 @@ public class CXXLanguageFrontend extends LanguageFrontend {
         AbstractCharArray translationUnitRawSignature = new CharArray("");
         try {
           Field fLoc = getField(fLocation.getClass(), "fLocationCtx");
-          fLoc.setAccessible(true);
+          fLoc.trySetAccessible();
           Object locCtx = fLoc.get(fLocation);
 
           Field fSource = getField(locCtx.getClass(), "fSource");
-          fSource.setAccessible(true);
+          fSource.trySetAccessible();
           translationUnitRawSignature = (AbstractCharArray) fSource.get(locCtx);
         } catch (ReflectiveOperationException | ClassCastException | NullPointerException e) {
           LOGGER.warn(
@@ -387,7 +390,7 @@ public class CXXLanguageFrontend extends LanguageFrontend {
   public void processAttributes(@NonNull Node node, @NonNull IASTAttributeOwner owner) {
     if (this.config.processAnnotations) {
       // set attributes
-      node.setAnnotations(handleAttributes(owner));
+      node.addAnnotations(handleAttributes(owner));
     }
   }
 
@@ -400,9 +403,10 @@ public class CXXLanguageFrontend extends LanguageFrontend {
 
       // go over the parameters
       if (attribute.getArgumentClause() instanceof IASTTokenList) {
-        List<Expression> values = handleTokenList((IASTTokenList) attribute.getArgumentClause());
+        List<AnnotationMember> members =
+            handleTokenList((IASTTokenList) attribute.getArgumentClause());
 
-        annotation.setValues(values);
+        annotation.setMembers(members);
       }
 
       list.add(annotation);
@@ -411,10 +415,11 @@ public class CXXLanguageFrontend extends LanguageFrontend {
     return list;
   }
 
-  private List<Expression> handleTokenList(IASTTokenList tokenList) {
-    List<Expression> list = new ArrayList<>();
+  private List<AnnotationMember> handleTokenList(IASTTokenList tokenList) {
+    List<AnnotationMember> list = new ArrayList<>();
 
     for (IASTToken token : tokenList.getTokens()) {
+      // skip commas and such
       if (token.getTokenType() == 6) {
         continue;
       }
@@ -425,22 +430,32 @@ public class CXXLanguageFrontend extends LanguageFrontend {
     return list;
   }
 
-  private Expression handleToken(IASTToken token) {
+  private AnnotationMember handleToken(IASTToken token) {
     String code = new String(token.getTokenCharImage());
 
+    Expression expression;
     switch (token.getTokenType()) {
       case 1:
-        return newDeclaredReferenceExpression(code, UnknownType.getUnknownType(), code);
+        // a variable
+        expression = newDeclaredReferenceExpression(code, UnknownType.getUnknownType(), code);
+        break;
       case 2:
-        return newLiteral(Integer.parseInt(code), CXXLanguageFrontend.INT_TYPE, code);
+        // an integer
+        expression = newLiteral(Integer.parseInt(code), TypeParser.createFrom("int", true), code);
+        break;
       case 130:
-        return newLiteral(
-            code.length() >= 2 ? code.substring(1, code.length() - 1) : "",
-            TypeParser.createFrom("const char*", false),
-            code);
+        // a string
+        expression =
+            newLiteral(
+                code.length() >= 2 ? code.substring(1, code.length() - 1) : "",
+                TypeParser.createFrom("const char*", false),
+                code);
+        break;
       default:
-        return newLiteral(code, TypeParser.createFrom("const char*", false), code);
+        expression = newLiteral(code, TypeParser.createFrom("const char*", false), code);
     }
+
+    return newAnnotationMember(null, expression, code);
   }
 
   private Field getField(Class<?> type, String fieldName) throws NoSuchFieldException {
@@ -568,10 +583,6 @@ public class CXXLanguageFrontend extends LanguageFrontend {
 
   public DeclarationHandler getDeclarationHandler() {
     return declarationHandler;
-  }
-
-  public DeclarationListHandler getDeclarationListHandler() {
-    return declarationListHandler;
   }
 
   public DeclaratorHandler getDeclaratorHandler() {

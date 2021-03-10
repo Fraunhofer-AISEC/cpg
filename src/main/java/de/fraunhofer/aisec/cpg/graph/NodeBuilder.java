@@ -26,8 +26,11 @@
 
 package de.fraunhofer.aisec.cpg.graph;
 
-import de.fraunhofer.aisec.cpg.graph.type.Type;
-import de.fraunhofer.aisec.cpg.graph.type.TypeParser;
+import de.fraunhofer.aisec.cpg.graph.declarations.*;
+import de.fraunhofer.aisec.cpg.graph.statements.*;
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.*;
+import de.fraunhofer.aisec.cpg.graph.types.Type;
+import de.fraunhofer.aisec.cpg.graph.types.TypeParser;
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation;
 import java.util.ArrayList;
 import java.util.List;
@@ -158,18 +161,6 @@ public class NodeBuilder {
     return node;
   }
 
-  public static StaticReferenceExpression newStaticReferenceExpression(
-      String name, Type typeFullName, String code) {
-    StaticReferenceExpression node = new StaticReferenceExpression();
-    node.setName(name);
-    node.setType(typeFullName);
-    node.setCode(code);
-
-    log(node);
-
-    return node;
-  }
-
   public static FunctionDeclaration newFunctionDeclaration(String name, String code) {
     FunctionDeclaration node = new FunctionDeclaration();
     node.setName(name);
@@ -248,11 +239,12 @@ public class NodeBuilder {
   }
 
   public static CallExpression newMemberCallExpression(
-      String name, String fqn, Node base, Node member, String code) {
+      String name, String fqn, Node base, Node member, String operatorCode, String code) {
     MemberCallExpression node = new MemberCallExpression();
     node.setName(name);
     node.setBase(base);
     node.setMember(member);
+    node.setOperatorCode(operatorCode);
     node.setCode(code);
     node.setFqn(fqn);
 
@@ -404,7 +396,7 @@ public class NodeBuilder {
     node.setCode(code);
 
     if (kind.equals("class")) {
-      de.fraunhofer.aisec.cpg.graph.FieldDeclaration thisDeclaration =
+      FieldDeclaration thisDeclaration =
           NodeBuilder.newFieldDeclaration(
               "this",
               TypeParser.createFrom(name, true),
@@ -413,7 +405,7 @@ public class NodeBuilder {
               null,
               null,
               true);
-      node.getFields().add(thisDeclaration);
+      node.addField(thisDeclaration);
     }
 
     log(node);
@@ -472,12 +464,14 @@ public class NodeBuilder {
     return node;
   }
 
-  public static MemberExpression newMemberExpression(Expression base, Node member, String code) {
+  public static MemberExpression newMemberExpression(
+      Expression base, Type memberType, String name, String operatorCode, String code) {
     MemberExpression node = new MemberExpression();
     node.setBase(base);
-    node.setMember(member);
+    node.setOperatorCode(operatorCode);
     node.setCode(code);
-    node.setName(code);
+    node.setName(name);
+    node.setType(memberType);
 
     log(node);
 
@@ -702,5 +696,15 @@ public class NodeBuilder {
     annotation.setCode(code);
 
     return annotation;
+  }
+
+  public static AnnotationMember newAnnotationMember(
+      String name, Expression value, @NonNull String code) {
+    var member = new AnnotationMember();
+    member.setName(name);
+    member.setValue(value);
+    member.setCode(code);
+
+    return member;
   }
 }

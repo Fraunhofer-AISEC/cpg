@@ -26,6 +26,7 @@
 
 package de.fraunhofer.aisec.cpg.sarif;
 
+import com.google.common.base.Objects;
 import java.net.URI;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -36,7 +37,11 @@ public class PhysicalLocation {
   @NonNull
   public static String locationLink(@Nullable PhysicalLocation location) {
     if (location != null) {
-      return location.getArtifactLocation().getUri() + ":" + location.getRegion().getStartLine();
+      return location.getArtifactLocation().getUri()
+          + ":"
+          + location.getRegion().getStartLine()
+          + ":"
+          + location.getRegion().getStartColumn();
     }
 
     return "unknown";
@@ -44,7 +49,7 @@ public class PhysicalLocation {
 
   public static class ArtifactLocation {
 
-    @NonNull private URI uri;
+    @NonNull private final URI uri;
 
     public ArtifactLocation(@NonNull URI uri) {
       this.uri = uri;
@@ -59,9 +64,22 @@ public class PhysicalLocation {
     public String toString() {
       return uri.getPath().substring(uri.getPath().lastIndexOf('/') + 1);
     }
+
+    @Override
+    public boolean equals(Object o) {
+      if (this == o) return true;
+      if (!(o instanceof ArtifactLocation)) return false;
+      ArtifactLocation that = (ArtifactLocation) o;
+      return Objects.equal(uri, that.uri);
+    }
+
+    @Override
+    public int hashCode() {
+      return Objects.hashCode(uri);
+    }
   }
 
-  @NonNull private ArtifactLocation artifactLocation;
+  @NonNull private final ArtifactLocation artifactLocation;
 
   @NonNull private Region region;
 
@@ -87,5 +105,19 @@ public class PhysicalLocation {
   @Override
   public String toString() {
     return artifactLocation.toString() + "(" + region.toString() + ")";
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) return true;
+    if (!(o instanceof PhysicalLocation)) return false;
+    PhysicalLocation that = (PhysicalLocation) o;
+    return Objects.equal(artifactLocation, that.artifactLocation)
+        && Objects.equal(region, that.region);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hashCode(artifactLocation, region);
   }
 }

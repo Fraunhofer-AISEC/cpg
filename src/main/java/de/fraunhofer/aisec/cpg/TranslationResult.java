@@ -26,7 +26,9 @@
 
 package de.fraunhofer.aisec.cpg;
 
-import de.fraunhofer.aisec.cpg.graph.TranslationUnitDeclaration;
+import de.fraunhofer.aisec.cpg.graph.Node;
+import de.fraunhofer.aisec.cpg.graph.SubGraph;
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -37,11 +39,13 @@ import java.util.Map;
  * de.fraunhofer.aisec.cpg.frontends.LanguageFrontend} will initially populate it and a {@link
  * de.fraunhofer.aisec.cpg.passes.Pass} can extend it.
  */
-public class TranslationResult {
+public class TranslationResult extends Node {
   public static final String SOURCE_LOCATIONS_TO_FRONTEND = "sourceLocationsToFrontend";
   private final TranslationManager translationManager;
+
   /** Entry points to the CPG: "TranslationUnits" refer to source files. */
-  private List<TranslationUnitDeclaration> translationUnits = new ArrayList<>();
+  @SubGraph("AST")
+  private final List<TranslationUnitDeclaration> translationUnits = new ArrayList<>();
 
   /** A free-for-use HashMap where passes can store whatever they want. */
   private Map<String, Object> scratch = new HashMap<>();

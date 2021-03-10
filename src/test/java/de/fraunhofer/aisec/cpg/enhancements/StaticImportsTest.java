@@ -30,12 +30,12 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import de.fraunhofer.aisec.cpg.BaseTest;
 import de.fraunhofer.aisec.cpg.TestUtils;
-import de.fraunhofer.aisec.cpg.graph.CallExpression;
-import de.fraunhofer.aisec.cpg.graph.FieldDeclaration;
-import de.fraunhofer.aisec.cpg.graph.MemberExpression;
-import de.fraunhofer.aisec.cpg.graph.MethodDeclaration;
-import de.fraunhofer.aisec.cpg.graph.RecordDeclaration;
-import de.fraunhofer.aisec.cpg.graph.TranslationUnitDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration;
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression;
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -66,8 +66,8 @@ class StaticImportsTest extends BaseTest {
 
     List<MemberExpression> memberExpressions =
         TestUtils.subnodesOfType(main, MemberExpression.class);
-    MemberExpression usage = TestUtils.findByUniqueName(memberExpressions, "A.test");
-    assertEquals(staticField, usage.getMember());
+    MemberExpression usage = TestUtils.findByUniqueName(memberExpressions, "test");
+    assertEquals(staticField, usage.getRefersTo());
   }
 
   @Test
@@ -76,6 +76,10 @@ class StaticImportsTest extends BaseTest {
         TestUtils.analyze("java", topLevel.resolve("asterisk"), true);
     List<MethodDeclaration> methods = TestUtils.subnodesOfType(result, MethodDeclaration.class);
     MethodDeclaration main = TestUtils.findByUniqueName(methods, "main");
+    List<RecordDeclaration> records = TestUtils.subnodesOfType(result, RecordDeclaration.class);
+    RecordDeclaration A = TestUtils.findByUniqueName(records, "A");
+    RecordDeclaration B = TestUtils.findByUniqueName(records, "B");
+
     for (CallExpression call : TestUtils.subnodesOfType(main, CallExpression.class)) {
       switch (call.getName()) {
         case "a":
@@ -94,12 +98,12 @@ class StaticImportsTest extends BaseTest {
                   .collect(Collectors.toList()));
           break;
         case "nonStatic":
-          assertTrue(call.getInvokes().isEmpty());
+          MethodDeclaration nonStatic = TestUtils.findByUniqueName(B.getMethods(), "nonStatic");
+          assertTrue(nonStatic.isImplicit());
+          assertEquals(List.of(nonStatic), call.getInvokes());
       }
     }
 
-    List<RecordDeclaration> records = TestUtils.subnodesOfType(result, RecordDeclaration.class);
-    RecordDeclaration A = TestUtils.findByUniqueName(records, "A");
     List<FieldDeclaration> testFields = TestUtils.subnodesOfType(A, FieldDeclaration.class);
     FieldDeclaration staticField = TestUtils.findByUniqueName(testFields, "staticField");
     FieldDeclaration nonStaticField = TestUtils.findByUniqueName(testFields, "nonStaticField");
@@ -108,12 +112,11 @@ class StaticImportsTest extends BaseTest {
 
     List<MemberExpression> declaredReferences =
         TestUtils.subnodesOfType(main, MemberExpression.class);
-    MemberExpression usage = TestUtils.findByUniqueName(declaredReferences, "A.staticField");
-    assertEquals(usage.getMember(), staticField);
+    MemberExpression usage = TestUtils.findByUniqueName(declaredReferences, "staticField");
+    assertEquals(staticField, usage.getRefersTo());
 
-    MemberExpression nonStatic =
-        TestUtils.findByUniqueName(declaredReferences, "this.nonStaticField");
-    assertNotEquals(nonStatic.getMember(), nonStaticField);
-    assertTrue(nonStatic.getMember().isImplicit());
+    MemberExpression nonStatic = TestUtils.findByUniqueName(declaredReferences, "nonStaticField");
+    assertNotEquals(nonStaticField, nonStatic.getRefersTo());
+    assertTrue(nonStatic.getRefersTo().isImplicit());
   }
 }

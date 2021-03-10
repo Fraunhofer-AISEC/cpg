@@ -29,7 +29,8 @@ package de.fraunhofer.aisec.cpg.passes;
 import de.fraunhofer.aisec.cpg.TranslationResult;
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
 import de.fraunhofer.aisec.cpg.graph.*;
-import de.fraunhofer.aisec.cpg.graph.type.Type;
+import de.fraunhofer.aisec.cpg.graph.declarations.*;
+import de.fraunhofer.aisec.cpg.graph.types.Type;
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -142,8 +143,8 @@ public class TypeHierarchyResolver extends Pass {
           declaration.getMethods().stream()
               .filter(superMethod::isOverrideCandidate)
               .collect(Collectors.toList());
-      superMethod.getOverriddenBy().addAll(overrideCandidates);
-      overrideCandidates.forEach(o -> o.getOverrides().add(superMethod));
+      superMethod.addOverriddenBy(overrideCandidates);
+      overrideCandidates.forEach(o -> o.addOverrides(superMethod));
     }
   }
 

@@ -26,9 +26,22 @@
 
 package de.fraunhofer.aisec.cpg;
 
-import de.fraunhofer.aisec.cpg.passes.*;
+import de.fraunhofer.aisec.cpg.passes.CallResolver;
+import de.fraunhofer.aisec.cpg.passes.ControlFlowSensitiveDFGPass;
+import de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass;
+import de.fraunhofer.aisec.cpg.passes.FilenameMapper;
+import de.fraunhofer.aisec.cpg.passes.ImportResolver;
+import de.fraunhofer.aisec.cpg.passes.JavaExternalTypeHierarchyResolver;
+import de.fraunhofer.aisec.cpg.passes.Pass;
+import de.fraunhofer.aisec.cpg.passes.TypeHierarchyResolver;
+import de.fraunhofer.aisec.cpg.passes.TypeResolver;
+import de.fraunhofer.aisec.cpg.passes.VariableUsageResolver;
 import java.io.File;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import org.checkerframework.checker.nullness.qual.NonNull;
 
 /**
@@ -101,6 +114,13 @@ public class TranslationConfiguration {
 
   private final File topLevel;
 
+  /**
+   * Only relevant for C++. A unity build refers to a build that consolidates all translation units
+   * into a single one, which has the advantage that header files are only processed once, adding
+   * far less duplicate nodes to the graph
+   */
+  final boolean useUnityBuild;
+
   @NonNull private final List<Pass> passes;
 
   private TranslationConfiguration(
@@ -116,7 +136,8 @@ public class TranslationConfiguration {
       List<Pass> passes,
       boolean codeInNodes,
       boolean processAnnotations,
-      boolean disableCleanup) {
+      boolean disableCleanup,
+      boolean useUnityBuild) {
     this.symbols = symbols;
     this.sourceLocations = sourceLocations;
     this.topLevel = topLevel;
@@ -131,6 +152,7 @@ public class TranslationConfiguration {
     this.codeInNodes = codeInNodes;
     this.processAnnotations = processAnnotations;
     this.disableCleanup = disableCleanup;
+    this.useUnityBuild = useUnityBuild;
   }
 
   public static Builder builder() {
@@ -182,6 +204,7 @@ public class TranslationConfiguration {
     private boolean codeInNodes = true;
     private boolean processAnnotations = false;
     private boolean disableCleanup = false;
+    private boolean useUnityBuild = false;
 
     public Builder symbols(Map<String, String> symbols) {
       this.symbols = symbols;
@@ -319,7 +342,6 @@ public class TranslationConfiguration {
      * @return
      */
     public Builder defaultPasses() {
-      registerPass(new FilenameMapper());
       registerPass(new TypeHierarchyResolver());
       registerPass(new JavaExternalTypeHierarchyResolver());
       registerPass(new ImportResolver());
@@ -327,6 +349,8 @@ public class TranslationConfiguration {
       registerPass(new CallResolver()); // creates CG
       registerPass(new EvaluationOrderGraphPass()); // creates EOG
       registerPass(new TypeResolver());
+      registerPass(new ControlFlowSensitiveDFGPass());
+      registerPass(new FilenameMapper());
       return this;
     }
 
@@ -347,6 +371,14 @@ public class TranslationConfiguration {
       return this;
     }
 
+    /* Only relevant for C++. A unity build refers to a build that consolidates all translation units
+     * into a single one, which has the advantage that header files are only processed once, adding
+     * far less duplicate nodes to the graph */
+    public Builder useUnityBuild(boolean b) {
+      this.useUnityBuild = b;
+      return this;
+    }
+
     public TranslationConfiguration build() {
       return new TranslationConfiguration(
           symbols,
@@ -361,7 +393,8 @@ public class TranslationConfiguration {
           passes,
           codeInNodes,
           processAnnotations,
-          disableCleanup);
+          disableCleanup,
+          useUnityBuild);
     }
   }
 }

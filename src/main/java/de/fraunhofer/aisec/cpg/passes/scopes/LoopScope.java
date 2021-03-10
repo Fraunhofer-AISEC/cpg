@@ -26,21 +26,21 @@
 
 package de.fraunhofer.aisec.cpg.passes.scopes;
 
-import de.fraunhofer.aisec.cpg.graph.BreakStatement;
-import de.fraunhofer.aisec.cpg.graph.ContinueStatement;
-import de.fraunhofer.aisec.cpg.graph.DoStatement;
-import de.fraunhofer.aisec.cpg.graph.ForEachStatement;
-import de.fraunhofer.aisec.cpg.graph.ForStatement;
 import de.fraunhofer.aisec.cpg.graph.Node;
-import de.fraunhofer.aisec.cpg.graph.Statement;
-import de.fraunhofer.aisec.cpg.graph.WhileStatement;
+import de.fraunhofer.aisec.cpg.graph.statements.BreakStatement;
+import de.fraunhofer.aisec.cpg.graph.statements.ContinueStatement;
+import de.fraunhofer.aisec.cpg.graph.statements.DoStatement;
+import de.fraunhofer.aisec.cpg.graph.statements.ForEachStatement;
+import de.fraunhofer.aisec.cpg.graph.statements.ForStatement;
+import de.fraunhofer.aisec.cpg.graph.statements.Statement;
+import de.fraunhofer.aisec.cpg.graph.statements.WhileStatement;
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker;
 import java.util.ArrayList;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class LoopScope extends DeclarationScope implements IBreakable, IContinuable {
+public class LoopScope extends ValueDeclarationScope implements IBreakable, IContinuable {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(LoopScope.class);
 

@@ -27,12 +27,30 @@
 package de.fraunhofer.aisec.cpg.frontends.cpp;
 
 import static de.fraunhofer.aisec.cpg.helpers.Util.errorWithFileLocation;
+import static de.fraunhofer.aisec.cpg.helpers.Util.warnWithFileLocation;
 
 import de.fraunhofer.aisec.cpg.frontends.Handler;
-import de.fraunhofer.aisec.cpg.graph.*;
+import de.fraunhofer.aisec.cpg.graph.NodeBuilder;
 import de.fraunhofer.aisec.cpg.graph.TypeManager;
-import de.fraunhofer.aisec.cpg.graph.type.TypeParser;
+import de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declarations.Declaration;
+import de.fraunhofer.aisec.cpg.graph.declarations.DeclarationSequence;
+import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declarations.IncludeDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declarations.ProblemDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration;
+import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
+import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement;
+import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement;
+import de.fraunhofer.aisec.cpg.graph.statements.Statement;
+import de.fraunhofer.aisec.cpg.graph.types.Type;
+import de.fraunhofer.aisec.cpg.graph.types.TypeParser;
 import de.fraunhofer.aisec.cpg.helpers.Util;
+import de.fraunhofer.aisec.cpg.passes.scopes.RecordScope;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -46,13 +64,26 @@ import org.eclipse.cdt.core.dom.ast.IASTDeclarator;
 import org.eclipse.cdt.core.dom.ast.IASTNode;
 import org.eclipse.cdt.core.dom.ast.IASTPointerOperator;
 import org.eclipse.cdt.core.dom.ast.IASTTranslationUnit;
-import org.eclipse.cdt.internal.core.dom.parser.cpp.*;
+import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTCompositeTypeSpecifier;
+import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTElaboratedTypeSpecifier;
+import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTFunctionDefinition;
+import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTLinkageSpecification;
+import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTName;
+import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTNamespaceDefinition;
+import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTProblemDeclaration;
+import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTSimpleDeclaration;
+import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTTemplateDeclaration;
+import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTTranslationUnit;
+import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTUsingDirective;
 
 public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CXXLanguageFrontend> {
 
   public DeclarationHandler(CXXLanguageFrontend lang) {
     super(Declaration::new, lang);
 
+    map.put(
+        CPPASTTemplateDeclaration.class,
+        ctx -> handleTemplateDeclaration((CPPASTTemplateDeclaration) ctx));
     map.put(
         CPPASTSimpleDeclaration.class,
         ctx -> handleSimpleDeclaration((CPPASTSimpleDeclaration) ctx));
@@ -76,10 +107,13 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
   private Declaration handleNamespace(CPPASTNamespaceDefinition ctx) {
     NamespaceDeclaration declaration =
         NodeBuilder.newNamespaceDeclaration(ctx.getName().toString());
+
+    lang.getScopeManager().addDeclaration(declaration);
+
     lang.getScopeManager().enterScope(declaration);
     for (IASTNode child : ctx.getChildren()) {
       if (child instanceof IASTDeclaration) {
-        declaration.add(this.lang.getDeclarationHandler().handle((IASTDeclaration) child));
+        handle((IASTDeclaration) child);
       } else if (child instanceof CPPASTName) {
         // this is the name of the namespace. Already parsed outside, skipping.
       } else {
@@ -93,40 +127,43 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
   }
 
   private Declaration handleProblem(CPPASTProblemDeclaration ctx) {
-    return NodeBuilder.newProblemDeclaration(
-        ctx.getContainingFilename(),
-        ctx.getProblem().getMessage(),
-        ctx.getProblem().getFileLocation().toString());
+    var problem =
+        NodeBuilder.newProblemDeclaration(
+            ctx.getContainingFilename(),
+            ctx.getProblem().getMessage(),
+            ctx.getProblem().getFileLocation().toString());
+
+    this.lang.getScopeManager().addDeclaration(problem);
+
+    return problem;
   }
 
   private FunctionDeclaration handleFunctionDefinition(CPPASTFunctionDefinition ctx) {
     // Todo: A problem with cpp functions is that we cannot know if they may throw an exception as
     // throw(...) is not compiler enforced (Problem for TryStatement)
+
     FunctionDeclaration functionDeclaration =
         (FunctionDeclaration) this.lang.getDeclaratorHandler().handle(ctx.getDeclarator());
 
     String typeString = getTypeStringFromDeclarator(ctx.getDeclarator(), ctx.getDeclSpecifier());
 
     functionDeclaration.setIsDefinition(true);
-
-    // It is a constructor
-    if (functionDeclaration instanceof MethodDeclaration && typeString.isEmpty()) {
-      functionDeclaration = ConstructorDeclaration.from((MethodDeclaration) functionDeclaration);
-    }
-
-    functionDeclaration.setType(
-        TypeParser.createFrom(
-            ctx.getRawSignature().split(functionDeclaration.getName())[0].trim(), true));
+    functionDeclaration.setType(TypeParser.createFrom(typeString, true));
 
     // associated record declaration if this is a method or constructor
     RecordDeclaration recordDeclaration =
         functionDeclaration instanceof MethodDeclaration
             ? ((MethodDeclaration) functionDeclaration).getRecordDeclaration()
             : null;
-    if (recordDeclaration != null) {
-      // everything inside the method is within the scope of its record
-      this.lang.getScopeManager().enterScope(recordDeclaration);
+    var outsideOfRecord = !(lang.getScopeManager().getCurrentScope() instanceof RecordScope);
 
+    if (recordDeclaration != null) {
+      if (outsideOfRecord) {
+        // everything inside the method is within the scope of its record
+        this.lang.getScopeManager().enterScope(recordDeclaration);
+      }
+
+      // update the definition
       List<? extends MethodDeclaration> candidates;
 
       if (functionDeclaration instanceof ConstructorDeclaration) {
@@ -168,19 +205,19 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
 
       if (bodyStatement instanceof CompoundStatement) {
         CompoundStatement body = (CompoundStatement) bodyStatement;
-        List<Statement> statements = body.getStatements();
+        List<PropertyEdge<Statement>> statements = body.getStatementEdges();
 
         // get the last statement
         Statement lastStatement = null;
         if (!statements.isEmpty()) {
-          lastStatement = statements.get(statements.size() - 1);
+          lastStatement = statements.get(statements.size() - 1).getEnd();
         }
 
         // add an implicit return statement, if there is none
         if (!(lastStatement instanceof ReturnStatement)) {
           ReturnStatement returnStatement = NodeBuilder.newReturnStatement("return;");
           returnStatement.setImplicit(true);
-          statements.add(returnStatement);
+          body.addStatement(returnStatement);
         }
 
         functionDeclaration.setBody(body);
@@ -191,7 +228,7 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
 
     lang.getScopeManager().leaveScope(functionDeclaration);
 
-    if (recordDeclaration != null) {
+    if (recordDeclaration != null && outsideOfRecord) {
       this.lang.getScopeManager().leaveScope(recordDeclaration);
     }
 
@@ -213,71 +250,35 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
     }
   }
 
+  private Declaration handleTemplateDeclaration(CPPASTTemplateDeclaration ctx) {
+    warnWithFileLocation(
+        lang,
+        ctx,
+        log,
+        "Parsing template declarations is not supported (yet). Will ignore template and parse inner declaration");
+
+    return handle(ctx.getDeclaration());
+  }
+
   private Declaration handleSimpleDeclaration(CPPASTSimpleDeclaration ctx) {
     if (isTypedef(ctx)) {
       TypeManager.getInstance().handleTypedef(ctx.getRawSignature());
-      // if this was a struct typedef, we still need to handle this struct!
-      if (!(ctx.getDeclSpecifier() instanceof CPPASTCompositeTypeSpecifier)) {
-        return null;
-      }
     }
 
-    Declaration declaration;
-    if (ctx.getDeclarators().length == 0) {
-      declaration = handleNoDeclarator(ctx);
-    } else if (ctx.getDeclarators().length == 1) {
-      declaration = handleSingleDeclarator(ctx);
-    } else {
-      declaration = handleMultipleDeclarators(ctx);
-    }
+    DeclarationSequence sequence = new DeclarationSequence();
 
-    if (declaration != null) {
-      this.lang.processAttributes(declaration, ctx);
-    }
+    // check, whether the declaration specifier also contains declarations, i.e. class definitions
+    IASTDeclSpecifier declSpecifier = ctx.getDeclSpecifier();
 
-    return declaration;
-  }
-
-  private Declaration handleNoDeclarator(CPPASTSimpleDeclaration ctx) {
-    if (ctx.getDeclSpecifier() != null) {
-      if (ctx.getDeclSpecifier() instanceof CPPASTCompositeTypeSpecifier) {
-        // probably a class or struct declaration
-        return this.lang
-            .getDeclaratorHandler()
-            .handle((CPPASTCompositeTypeSpecifier) ctx.getDeclSpecifier());
-      } else {
-        errorWithFileLocation(
-            this.lang,
-            ctx,
-            log,
-            "Unknown DeclSpecifier in SimpleDeclaration: {}",
-            ctx.getDeclSpecifier().getClass());
-      }
-    } else {
-      errorWithFileLocation(this.lang, ctx, log, ("DeclSpecifier is null"));
-    }
-    return null;
-  }
-
-  private Declaration handleSingleDeclarator(CPPASTSimpleDeclaration ctx) {
-    List<Declaration> handle = (this.lang).getDeclarationListHandler().handle(ctx);
-    if (handle.size() != 1) {
-      errorWithFileLocation(this.lang, ctx, log, "Invalid declaration generation");
-      return NodeBuilder.newDeclaration("");
-    }
-
-    return handle.get(0);
-  }
-
-  private Declaration handleMultipleDeclarators(CPPASTSimpleDeclaration ctx) {
-    // A legitimate case where this will happen is when multiply typedefing a struct
-    // e.g.: typedef struct {...} S, *pS, s_arr[10], ...;
-    if (ctx.getDeclSpecifier() instanceof CPPASTCompositeTypeSpecifier) {
-      Declaration result =
+    if (declSpecifier instanceof CPPASTCompositeTypeSpecifier) {
+      Declaration declaration =
           this.lang
               .getDeclaratorHandler()
               .handle((CPPASTCompositeTypeSpecifier) ctx.getDeclSpecifier());
-      if (result.getName().isEmpty() && ctx.getRawSignature().strip().startsWith("typedef")) {
+
+      // handle typedef
+      if ((declaration.getName().isEmpty()
+          && ctx.getRawSignature().strip().startsWith("typedef"))) {
         // CDT didn't find out the name due to this thing being a typedef. We need to fix this
         int endOfDeclaration = ctx.getRawSignature().lastIndexOf('}');
         if (endOfDeclaration + 1 < ctx.getRawSignature().length()) {
@@ -286,14 +287,45 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
                   ctx.getRawSignature().substring(endOfDeclaration + 1), ",");
           Optional<String> name =
               parts.stream().filter(p -> !p.contains("*") && !p.contains("[")).findFirst();
-          name.ifPresent(s -> result.setName(s.replace(";", "")));
+          name.ifPresent(s -> declaration.setName(s.replace(";", "")));
         }
       }
-      return result;
+
+      this.lang.processAttributes(declaration, ctx);
+
+      sequence.addDeclaration(declaration);
+    } else if (declSpecifier instanceof CPPASTElaboratedTypeSpecifier) {
+      warnWithFileLocation(
+          lang,
+          ctx,
+          log,
+          "Parsing elaborated type specifiers is not supported (yet)",
+          declSpecifier.getClass());
     }
-    errorWithFileLocation(
-        this.lang, ctx, log, "More than one declaration, this should not happen here.");
-    return null;
+
+    for (IASTDeclarator declarator : ctx.getDeclarators()) {
+      ValueDeclaration declaration =
+          (ValueDeclaration) this.lang.getDeclaratorHandler().handle(declarator);
+
+      String typeString = getTypeStringFromDeclarator(declarator, ctx.getDeclSpecifier());
+
+      Type result = TypeParser.createFrom(typeString, true);
+      declaration.setType(result);
+
+      // cache binding
+      this.lang.cacheDeclaration(declarator.getName().resolveBinding(), declaration);
+
+      // process attributes
+      this.lang.processAttributes(declaration, ctx);
+
+      sequence.addDeclaration(declaration);
+    }
+
+    if (sequence.isSingle()) {
+      return sequence.first();
+    } else {
+      return sequence;
+    }
   }
 
   private void parseInclusions(
@@ -318,7 +350,7 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
     // There might have been errors in the previous translation unit and in any case
     // we need to reset the scope manager scope to global, to avoid spilling scope errors into other
     // translation units
-    lang.getScopeManager().resetToGlobal();
+    lang.getScopeManager().resetToGlobal(node);
 
     lang.setCurrentTU(node);
 
@@ -328,7 +360,7 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
         continue; // do not care about these for now
       }
 
-      Declaration decl = handle(declaration);
+      var decl = handle(declaration);
       if (decl == null) {
         continue;
       }
@@ -338,13 +370,11 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
             problematicIncludes.computeIfAbsent(
                 ((ProblemDeclaration) decl).getFilename(), k -> new HashSet<>());
         problems.add((ProblemDeclaration) decl);
-      } else if (decl instanceof NamespaceDeclaration) {
-        node.add(decl);
-      } else {
-        node.add(decl);
       }
     }
 
+    // TODO: Remark CB: I am not quite sure, what the point of the code beyord this line is.
+    // Probably needs to be refactored
     boolean addIncludesToGraph = true; // todo move to config
     if (addIncludesToGraph) {
 
@@ -373,21 +403,22 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
 
           IncludeDeclaration includeDeclaration = NodeBuilder.newIncludeDeclaration(includeString);
           if (problems != null) {
-            includeDeclaration.getProblems().addAll(problems);
+            includeDeclaration.addProblems(problems);
           }
           includeMap.put(includeString, includeDeclaration);
         }
 
         // attach to root note
         for (String incl : allIncludes.get(translationUnit.getFilePath())) {
-          node.add(includeMap.get(incl));
+          node.addDeclaration(includeMap.get(incl));
         }
+
         allIncludes.remove(translationUnit.getFilePath());
         // attach to remaining nodes
         for (Map.Entry<String, HashSet<String>> entry : allIncludes.entrySet()) {
           IncludeDeclaration includeDeclaration = includeMap.get(entry.getKey());
           for (String s : entry.getValue()) {
-            includeDeclaration.getIncludes().add(includeMap.get(s));
+            includeDeclaration.addInclude(includeMap.get(s));
           }
         }
       }

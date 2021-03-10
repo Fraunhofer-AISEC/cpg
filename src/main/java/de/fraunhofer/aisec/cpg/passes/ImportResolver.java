@@ -29,7 +29,8 @@ package de.fraunhofer.aisec.cpg.passes;
 import de.fraunhofer.aisec.cpg.TranslationResult;
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
 import de.fraunhofer.aisec.cpg.graph.*;
-import de.fraunhofer.aisec.cpg.graph.type.UnknownType;
+import de.fraunhofer.aisec.cpg.graph.declarations.*;
+import de.fraunhofer.aisec.cpg.graph.types.UnknownType;
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker;
 import java.util.*;
 import java.util.regex.Matcher;
@@ -172,8 +173,8 @@ public class ImportResolver extends Pass {
       MethodDeclaration targetMethod = NodeBuilder.newMethodDeclaration(name, "", true, base);
       targetMethod.setImplicit(true);
 
-      base.getFields().add(targetField);
-      base.getMethods().add(targetMethod);
+      base.addField(targetField);
+      base.addMethod(targetMethod);
       result.add(targetField);
       result.add(targetMethod);
     }
