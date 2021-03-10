@@ -321,7 +321,7 @@ public class CallResolver extends Pass {
       for (int i = 0; i < callSignature.size(); i++) {
         Type callType = callSignature.get(i);
         Type funcType = functionSignature.get(i);
-        if (callType.isPrimitive() && callType.isPrimitive() && !(callType.equals(funcType))) {
+        if (callType.isPrimitive() && funcType.isPrimitive() && !(callType.equals(funcType))) {
           CastExpression implicitCast = new CastExpression();
           implicitCast.setImplicit(true);
           implicitCast.setCastType(funcType);
@@ -337,6 +337,7 @@ public class CallResolver extends Pass {
     return new ArrayList<>();
   }
 
+
   /**
    * modifies: call arguments by applying implicit casts
    *
@@ -345,6 +346,7 @@ public class CallResolver extends Pass {
    */
   private List<FunctionDeclaration> resolveWithImplicitCast(CallExpression call) {
     // Get possible invocation targets based on the function name
+    assert currentTU != null;
     List<FunctionDeclaration> matchingFunctionName =
         currentTU.getDeclarations().stream()
             .filter(FunctionDeclaration.class::isInstance)
@@ -369,28 +371,37 @@ public class CallResolver extends Pass {
         } else {
           // Since we can have multiple possible invocation targets the cast must all be to the same
           // target type
-          for (int i = 0; i < implicitCasts.size(); i++) {
-            CastExpression currentCast = implicitCasts.get(i);
-            CastExpression otherCast = implicitCasts.get(i);
-            if (currentCast == null || otherCast == null) {
-              continue;
-            }
-            if (!(currentCast.equals(otherCast))) {
-              // If we have multiple function targets with different implicit casts we have an
-              // ambiguous call and we can't have a single cast
-              CastExpression contradictoryCast = new CastExpression();
-              contradictoryCast.setImplicit(true);
-              contradictoryCast.setCastType(UnknownType.getUnknownType());
-              contradictoryCast.setExpression(currentCast.getExpression());
-              implicitCasts.set(i, contradictoryCast);
-            }
-          }
+          checkMostCommonImplicitCast(implicitCasts, implicitCastTargets);
         }
         invocationTargetsWithImplicitCast.add(functionDeclaration);
       }
     }
 
     // Apply implicit casts to call arguments
+    applyImplicitCastToArguments(call, implicitCasts);
+
+    return invocationTargetsWithImplicitCast;
+  }
+
+  private void checkMostCommonImplicitCast(
+      List<CastExpression> implicitCasts, List<CastExpression> implicitCastTargets) {
+    for (int i = 0; i < implicitCasts.size(); i++) {
+      CastExpression currentCast = implicitCasts.get(i);
+      CastExpression otherCast = implicitCastTargets.get(i);
+      if (currentCast != null && otherCast != null && !(currentCast.equals(otherCast))) {
+        // If we have multiple function targets with different implicit casts we have an
+        // ambiguous call and we can't have a single cast
+        CastExpression contradictoryCast = new CastExpression();
+        contradictoryCast.setImplicit(true);
+        contradictoryCast.setCastType(UnknownType.getUnknownType());
+        contradictoryCast.setExpression(currentCast.getExpression());
+        implicitCasts.set(i, contradictoryCast);
+      }
+    }
+  }
+
+  private void applyImplicitCastToArguments(
+      CallExpression call, List<CastExpression> implicitCasts) {
     if (implicitCasts != null) {
       for (int i = 0; i < implicitCasts.size(); i++) {
         if (implicitCasts.get(i) != null) {
@@ -398,8 +409,6 @@ public class CallResolver extends Pass {
         }
       }
     }
-
-    return invocationTargetsWithImplicitCast;
   }
 
   private void handleNormalCalls(RecordDeclaration curClass, CallExpression call) {
