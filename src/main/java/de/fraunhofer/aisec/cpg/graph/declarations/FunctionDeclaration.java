@@ -101,6 +101,12 @@ public class FunctionDeclaration extends ValueDeclaration implements Declaration
         + Objects.requireNonNullElse(this.type, UnknownType.getUnknownType()).getTypeName();
   }
 
+  public boolean hasSameSignature(FunctionDeclaration targetFunctionDeclaration) {
+    return targetFunctionDeclaration.getName().equals(this.name)
+        && targetFunctionDeclaration.getType().equals(this.type)
+        && targetFunctionDeclaration.getSignatureTypes().equals(this.getSignatureTypes());
+  }
+
   public boolean hasSignature(List<Type> targetSignature) {
     List<ParamVariableDeclaration> signature =
         parameters.stream()

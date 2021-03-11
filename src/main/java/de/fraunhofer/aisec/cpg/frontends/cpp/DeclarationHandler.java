@@ -32,17 +32,7 @@ import static de.fraunhofer.aisec.cpg.helpers.Util.warnWithFileLocation;
 import de.fraunhofer.aisec.cpg.frontends.Handler;
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder;
 import de.fraunhofer.aisec.cpg.graph.TypeManager;
-import de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDeclaration;
-import de.fraunhofer.aisec.cpg.graph.declarations.Declaration;
-import de.fraunhofer.aisec.cpg.graph.declarations.DeclarationSequence;
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration;
-import de.fraunhofer.aisec.cpg.graph.declarations.IncludeDeclaration;
-import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration;
-import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration;
-import de.fraunhofer.aisec.cpg.graph.declarations.ProblemDeclaration;
-import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration;
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration;
-import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declarations.*;
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement;
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement;
@@ -230,6 +220,25 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
 
     if (recordDeclaration != null && outsideOfRecord) {
       this.lang.getScopeManager().leaveScope(recordDeclaration);
+    }
+
+    // Check for declarations of the same function
+    List<FunctionDeclaration> declarationCandidates =
+        lang.getCurrentTU().getDeclarations().stream()
+            .filter(FunctionDeclaration.class::isInstance)
+            .map(FunctionDeclaration.class::cast)
+            .filter(f -> !f.isDefinition() && f.hasSameSignature(functionDeclaration))
+            .collect(Collectors.toList());
+    for (FunctionDeclaration declaration : declarationCandidates) {
+      declaration.setDefinition(functionDeclaration);
+      for (int i = 0; i < functionDeclaration.getParameters().size(); i++) {
+        if (declaration.getParameters().get(i).getDefaultValue() != null) {
+          functionDeclaration
+              .getParameters()
+              .get(i)
+              .setDefaultValue(declaration.getParameters().get(i).getDefaultValue());
+        }
+      }
     }
 
     return functionDeclaration;
