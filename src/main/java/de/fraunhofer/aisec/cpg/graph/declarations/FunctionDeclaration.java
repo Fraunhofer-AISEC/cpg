@@ -35,6 +35,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement;
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement;
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement;
 import de.fraunhofer.aisec.cpg.graph.statements.Statement;
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression;
 import de.fraunhofer.aisec.cpg.graph.types.Type;
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType;
 import java.util.*;
@@ -240,6 +241,26 @@ public class FunctionDeclaration extends ValueDeclaration implements Declaration
 
   public List<ParamVariableDeclaration> getParameters() {
     return unwrap(this.parameters);
+  }
+
+  public List<Expression> getDefaultParameters() {
+    List<Expression> defaultParameters = new ArrayList<>();
+    for (ParamVariableDeclaration param : getParameters()) {
+      defaultParameters.add(param.getDefaultValue());
+    }
+    return defaultParameters;
+  }
+
+  public List<Type> getDefaultParameterSignature() {
+    List<Type> signature = new ArrayList<>();
+    for (ParamVariableDeclaration paramVariableDeclaration : getParameters()) {
+      if (paramVariableDeclaration.getDefaultValue() != null) {
+        signature.add(paramVariableDeclaration.getType());
+      } else {
+        signature.add(UnknownType.getUnknownType());
+      }
+    }
+    return signature;
   }
 
   public List<Type> getSignatureTypes() {

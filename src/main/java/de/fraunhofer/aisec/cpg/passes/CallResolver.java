@@ -294,11 +294,10 @@ public class CallResolver extends Pass {
           return false;
         }
       }
+      return true;
     } else {
       return false;
     }
-
-    return true;
   }
 
   /**
@@ -410,6 +409,34 @@ public class CallResolver extends Pass {
     }
   }
 
+  private List<FunctionDeclaration> resolveWithDefaultArgs(CallExpression call) {
+    assert currentTU != null;
+    List<FunctionDeclaration> invocationCandidates =
+        currentTU.getDeclarations().stream()
+            .filter(FunctionDeclaration.class::isInstance)
+            .map(FunctionDeclaration.class::cast)
+            .filter(
+                f ->
+                    f.getName().equals(call.getName())
+                        && call.getSignature().size() < f.getSignatureTypes().size())
+            .collect(Collectors.toList());
+    List<FunctionDeclaration> invocationCandidatesDefaultArgs = new ArrayList<>();
+
+    for (FunctionDeclaration functionDeclaration : invocationCandidates) {
+      List<Type> callSignature = new ArrayList<>(call.getSignature());
+      callSignature.addAll(
+          functionDeclaration
+              .getDefaultParameterSignature()
+              .subList(
+                  call.getArguments().size(),
+                  functionDeclaration.getDefaultParameterSignature().size()));
+      if (functionDeclaration.hasSignature(callSignature)) {
+        invocationCandidatesDefaultArgs.add(functionDeclaration);
+      }
+    }
+    return invocationCandidatesDefaultArgs;
+  }
+
   private void handleNormalCalls(RecordDeclaration curClass, CallExpression call) {
     if (curClass == null && this.currentTU != null) {
       // Handle function (not method) calls
@@ -421,6 +448,11 @@ public class CallResolver extends Pass {
               .filter(
                   f -> f.getName().equals(call.getName()) && f.hasSignature(call.getSignature()))
               .collect(Collectors.toList());
+
+      if (invocationCandidates.isEmpty()) {
+        // Check for usage of default args
+        invocationCandidates.addAll(resolveWithDefaultArgs(call));
+      }
 
       if (invocationCandidates.isEmpty()) {
         // If we don't find any candidate we check if there is a candidate with an implicit cast
