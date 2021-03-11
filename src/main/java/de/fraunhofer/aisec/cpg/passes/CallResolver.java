@@ -339,12 +339,14 @@ public class CallResolver extends Pass {
   private List<Type> getCallSignatureWithDefaults(
       CallExpression call, FunctionDeclaration functionDeclaration) {
     List<Type> callSignature = new ArrayList<>(call.getSignature());
-    callSignature.addAll(
-        functionDeclaration
-            .getDefaultParameterSignature()
-            .subList(
-                call.getArguments().size(),
-                functionDeclaration.getDefaultParameterSignature().size()));
+    if (call.getSignature().size() < functionDeclaration.getParameters().size()) {
+      callSignature.addAll(
+          functionDeclaration
+              .getDefaultParameterSignature()
+              .subList(
+                  call.getArguments().size(),
+                  functionDeclaration.getDefaultParameterSignature().size()));
+    }
 
     return callSignature;
   }
