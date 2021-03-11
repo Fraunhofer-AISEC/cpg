@@ -26,10 +26,18 @@
 
 package de.fraunhofer.aisec.cpg.graph.declarations;
 
+import de.fraunhofer.aisec.cpg.graph.SubGraph;
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression;
+import org.neo4j.ogm.annotation.Relationship;
+
 /** A declaration of a function parameter. */
 public class ParamVariableDeclaration extends ValueDeclaration {
 
   private boolean variadic = false;
+
+  @Relationship(value = "DEFAULT", direction = "OUTGOING")
+  @SubGraph("AST")
+  private Expression defaultValue;
 
   public boolean isVariadic() {
     return variadic;
@@ -37,5 +45,13 @@ public class ParamVariableDeclaration extends ValueDeclaration {
 
   public void setVariadic(boolean variadic) {
     this.variadic = variadic;
+  }
+
+  public Expression getDefaultValue() {
+    return defaultValue;
+  }
+
+  public void setDefaultValue(Expression defaultValue) {
+    this.defaultValue = defaultValue;
   }
 }
