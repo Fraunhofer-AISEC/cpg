@@ -312,8 +312,8 @@ public class CallResolver extends Pass {
    *     signature of the FunctionDeclaration cannot be reached through implicit casts
    */
   private List<CastExpression> signatureWithImplicitCastTransformation(
-      CallExpression call, List<Type> functionSignature) {
-    List<Type> callSignature = call.getSignature();
+      CallExpression call, FunctionDeclaration functionDeclaration, List<Type> functionSignature) {
+    List<Type> callSignature = getCallSignatureWithDefaults(call, functionDeclaration);
     if (callSignature.size() == functionSignature.size()) {
       List<CastExpression> implicitCasts = new ArrayList<>();
 
@@ -336,6 +336,31 @@ public class CallResolver extends Pass {
     return new ArrayList<>();
   }
 
+  private List<Type> getCallSignatureWithDefaults(
+      CallExpression call, FunctionDeclaration functionDeclaration) {
+    List<Type> callSignature = new ArrayList<>(call.getSignature());
+    callSignature.addAll(
+        functionDeclaration
+            .getDefaultParameterSignature()
+            .subList(
+                call.getArguments().size(),
+                functionDeclaration.getDefaultParameterSignature().size()));
+
+    return callSignature;
+  }
+
+  private void addDefaultArgsToCall(FunctionDeclaration functionDeclaration, CallExpression call) {
+    if (functionDeclaration.hasSignature(getCallSignatureWithDefaults(call, functionDeclaration))) {
+      for (Expression expression :
+          functionDeclaration
+              .getDefaultParameters()
+              .subList(
+                  call.getArguments().size(), functionDeclaration.getDefaultParameters().size())) {
+        call.addArgument(expression);
+      }
+    }
+  }
+
   /**
    * modifies: call arguments by applying implicit casts
    *
@@ -354,16 +379,19 @@ public class CallResolver extends Pass {
 
     // Output list for invocationTargets obtaining a valid signature by performing implicit casts
     List<FunctionDeclaration> invocationTargetsWithImplicitCast = new ArrayList<>();
+    List<FunctionDeclaration> invocationTargetsWithImplicitCastAndDefaults = new ArrayList<>();
 
     List<CastExpression> implicitCasts = null;
     List<Type> callSignature = call.getSignature();
 
     // Iterate through all possible invocation candidates
     for (FunctionDeclaration functionDeclaration : matchingFunctionName) {
+      callSignature = getCallSignatureWithDefaults(call, functionDeclaration);
       // Check if the signatures match by implicit casts
       if (compatibleSignatures(callSignature, functionDeclaration.getSignatureTypes())) {
         List<CastExpression> implicitCastTargets =
-            signatureWithImplicitCastTransformation(call, functionDeclaration.getSignatureTypes());
+            signatureWithImplicitCastTransformation(
+                call, functionDeclaration, functionDeclaration.getSignatureTypes());
         if (implicitCasts == null) {
           implicitCasts = implicitCastTargets;
         } else {
@@ -371,14 +399,28 @@ public class CallResolver extends Pass {
           // target type
           checkMostCommonImplicitCast(implicitCasts, implicitCastTargets);
         }
-        invocationTargetsWithImplicitCast.add(functionDeclaration);
+        if (compatibleSignatures(call.getSignature(), functionDeclaration.getSignatureTypes())) {
+          invocationTargetsWithImplicitCast.add(functionDeclaration);
+        } else {
+          invocationTargetsWithImplicitCastAndDefaults.add(functionDeclaration);
+        }
       }
     }
 
     // Apply implicit casts to call arguments
     applyImplicitCastToArguments(call, implicitCasts);
 
-    return invocationTargetsWithImplicitCast;
+    // Prio implicit casts without defaults
+    if (!invocationTargetsWithImplicitCast.isEmpty()) {
+      return invocationTargetsWithImplicitCast;
+    }
+
+    // Apply default arguments
+    for (FunctionDeclaration functionDecl : invocationTargetsWithImplicitCastAndDefaults) {
+      addDefaultArgsToCall(functionDecl, call);
+    }
+
+    return invocationTargetsWithImplicitCastAndDefaults;
   }
 
   private void checkMostCommonImplicitCast(
@@ -423,14 +465,8 @@ public class CallResolver extends Pass {
     List<FunctionDeclaration> invocationCandidatesDefaultArgs = new ArrayList<>();
 
     for (FunctionDeclaration functionDeclaration : invocationCandidates) {
-      List<Type> callSignature = new ArrayList<>(call.getSignature());
-      callSignature.addAll(
-          functionDeclaration
-              .getDefaultParameterSignature()
-              .subList(
-                  call.getArguments().size(),
-                  functionDeclaration.getDefaultParameterSignature().size()));
-      if (functionDeclaration.hasSignature(callSignature)) {
+      addDefaultArgsToCall(functionDeclaration, call);
+      if (functionDeclaration.hasSignature(call.getSignature())) {
         invocationCandidatesDefaultArgs.add(functionDeclaration);
       }
     }

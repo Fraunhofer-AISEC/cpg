@@ -67,6 +67,7 @@ public class CastExpression extends Expression implements TypeListener {
 
   public void setCastType(Type castType) {
     this.castType = castType;
+    this.type = castType;
   }
 
   @Override
@@ -120,9 +121,9 @@ public class CastExpression extends Expression implements TypeListener {
       return false;
     }
     CastExpression that = (CastExpression) o;
-    return super.equals(that)
-        && Objects.equals(expression, that.expression)
-        && Objects.equals(castType, that.castType);
+    return Objects.equals(expression, that.expression)
+        && Objects.equals(castType, that.castType)
+        && Objects.equals(name, that.name);
   }
 
   @Override
