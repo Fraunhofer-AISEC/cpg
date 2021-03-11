@@ -337,7 +337,6 @@ public class CallResolver extends Pass {
     return new ArrayList<>();
   }
 
-
   /**
    * modifies: call arguments by applying implicit casts
    *
