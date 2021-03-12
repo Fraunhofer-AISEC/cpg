@@ -30,6 +30,7 @@ func (n *Node) GetName() string {
 	b, err := o.(*jnigi.ObjectRef).CallMethod(env, "getBytes", jnigi.Byte|jnigi.Array)
 	if err != nil {
 		log.Fatal(err)
+
 	}
 
 	return string(b.([]byte))

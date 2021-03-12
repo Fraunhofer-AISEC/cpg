@@ -20,6 +20,7 @@ func NewCompoundStatement(fset *token.FileSet, astNode ast.Node) *CompoundStatem
 	s, err := env.NewObject("de/fraunhofer/aisec/cpg/graph/statements/CompoundStatement")
 	if err != nil {
 		log.Fatal(err)
+
 	}
 
 	updateCode(fset, (*Node)(s), astNode)
@@ -31,6 +32,7 @@ func NewDeclarationStatement(fset *token.FileSet, astNode ast.Node) *Declaration
 	s, err := env.NewObject("de/fraunhofer/aisec/cpg/graph/statements/DeclarationStatement")
 	if err != nil {
 		log.Fatal(err)
+
 	}
 
 	updateCode(fset, (*Node)(s), astNode)
@@ -42,6 +44,7 @@ func NewIfStatement(fset *token.FileSet, astNode ast.Node) *IfStatement {
 	s, err := env.NewObject("de/fraunhofer/aisec/cpg/graph/statements/IfStatement")
 	if err != nil {
 		log.Fatal(err)
+
 	}
 
 	updateCode(fset, (*Node)(s), astNode)
@@ -53,6 +56,7 @@ func NewSwitchStatement(fset *token.FileSet, astNode ast.Node) *SwitchStatement 
 	s, err := env.NewObject("de/fraunhofer/aisec/cpg/graph/statements/SwitchStatement")
 	if err != nil {
 		log.Fatal(err)
+
 	}
 
 	updateCode(fset, (*Node)(s), astNode)
@@ -64,6 +68,7 @@ func NewCaseStatement(fset *token.FileSet, astNode ast.Node) *CaseStatement {
 	s, err := env.NewObject("de/fraunhofer/aisec/cpg/graph/statements/CaseStatement")
 	if err != nil {
 		log.Fatal(err)
+
 	}
 
 	updateCode(fset, (*Node)(s), astNode)
@@ -75,6 +80,7 @@ func NewDefaultStatement(fset *token.FileSet, astNode ast.Node) *DefaultStatemen
 	s, err := env.NewObject("de/fraunhofer/aisec/cpg/graph/statements/DefaultStatement")
 	if err != nil {
 		log.Fatal(err)
+
 	}
 
 	updateCode(fset, (*Node)(s), astNode)

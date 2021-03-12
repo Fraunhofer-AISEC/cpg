@@ -8,10 +8,19 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser
 import org.junit.jupiter.api.Test
 import java.nio.file.Path
+import java.nio.file.Paths
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 
 class GoLanguageFrontendTest : BaseTest() {
+
+    /*@Test
+    fun testBla() {
+        val topLevel = Path.of("/Users/oxisto/Repositories/aybaze/backend/service/auth")
+        val tu = TestUtils.analyzeAndGetFirstTU(listOf(topLevel.resolve("auth.go").toFile()), topLevel, true)
+
+        assertNotNull(tu)
+    }*/
 
     @Test
     fun testLiteral() {

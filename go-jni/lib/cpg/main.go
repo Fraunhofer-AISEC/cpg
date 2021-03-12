@@ -33,17 +33,20 @@ func Java_de_fraunhofer_aisec_cpg_frontends_golang_GoLanguageFrontend_parseInter
 	src, err := srcObject.CallMethod(env, "getBytes", jnigi.Byte|jnigi.Array)
 	if err != nil {
 		log.Fatal(err)
+
 	}
 
 	fset := token.NewFileSet()
 	file, err := parser.ParseFile(fset, "src.go", string(src.([]byte)), 0)
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
+
 	}
 
 	tu, err := goFrontend.HandleFile(fset, file)
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
+
 	}
 
 	return C.jobject((*jnigi.ObjectRef)(tu).JObject())

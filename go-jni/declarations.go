@@ -4,6 +4,7 @@ import (
 	"go/ast"
 	"go/token"
 	"log"
+	"runtime/debug"
 
 	"tekao.net/jnigi"
 )
@@ -57,6 +58,7 @@ func (m *MethodDeclaration) GetReceiver() *VariableDeclaration {
 
 	if err != nil {
 		log.Fatal(err)
+		debug.PrintStack()
 	}
 
 	return (*VariableDeclaration)(o.(*jnigi.ObjectRef))
@@ -134,6 +136,7 @@ func NewTranslationUnitDeclaration(fset *token.FileSet, astNode ast.Node, name s
 	o, err := env.CallStaticMethod("de/fraunhofer/aisec/cpg/graph/NodeBuilder", "newTranslationUnitDeclaration", jnigi.ObjectType("de/fraunhofer/aisec/cpg/graph/declarations/TranslationUnitDeclaration"), NewString(name), NewString(code))
 	if err != nil {
 		log.Fatal(err)
+		debug.PrintStack()
 	}
 
 	return (*TranslationUnitDeclaration)(o.(*jnigi.ObjectRef))
@@ -143,6 +146,7 @@ func NewNamespaceDeclaration(fset *token.FileSet, astNode ast.Node, name string,
 	o, err := env.CallStaticMethod("de/fraunhofer/aisec/cpg/graph/NodeBuilder", "newNamespaceDeclaration", jnigi.ObjectType("de/fraunhofer/aisec/cpg/graph/declarations/NamespaceDeclaration"), NewString(name), NewString(code))
 	if err != nil {
 		log.Fatal(err)
+		debug.PrintStack()
 	}
 
 	return (*NamespaceDeclaration)(o.(*jnigi.ObjectRef))
@@ -152,6 +156,7 @@ func NewFunctionDeclaration(fset *token.FileSet, astNode ast.Node) *FunctionDecl
 	tu, err := env.NewObject("de/fraunhofer/aisec/cpg/graph/declarations/FunctionDeclaration")
 	if err != nil {
 		log.Fatal(err)
+		debug.PrintStack()
 	}
 
 	updateCode(fset, (*Node)(tu), astNode)
@@ -163,6 +168,7 @@ func NewMethodDeclaration(fset *token.FileSet, astNode ast.Node) *MethodDeclarat
 	tu, err := env.NewObject("de/fraunhofer/aisec/cpg/graph/declarations/MethodDeclaration")
 	if err != nil {
 		log.Fatal(err)
+		debug.PrintStack()
 	}
 
 	updateCode(fset, (*Node)(tu), astNode)
@@ -174,6 +180,7 @@ func NewRecordDeclaration(fset *token.FileSet, astNode ast.Node) *RecordDeclarat
 	tu, err := env.NewObject("de/fraunhofer/aisec/cpg/graph/declarations/RecordDeclaration")
 	if err != nil {
 		log.Fatal(err)
+		debug.PrintStack()
 	}
 
 	updateCode(fset, (*Node)(tu), astNode)
@@ -185,6 +192,7 @@ func NewVariableDeclaration(fset *token.FileSet, astNode ast.Node) *VariableDecl
 	tu, err := env.NewObject("de/fraunhofer/aisec/cpg/graph/declarations/VariableDeclaration")
 	if err != nil {
 		log.Fatal(err)
+		debug.PrintStack()
 	}
 
 	updateCode(fset, (*Node)(tu), astNode)
@@ -196,6 +204,7 @@ func NewParamVariableDeclaration(fset *token.FileSet, astNode ast.Node) *ParamVa
 	tu, err := env.NewObject("de/fraunhofer/aisec/cpg/graph/declarations/ParamVariableDeclaration")
 	if err != nil {
 		log.Fatal(err)
+		debug.PrintStack()
 	}
 
 	updateCode(fset, (*Node)(tu), astNode)
@@ -207,6 +216,7 @@ func NewFieldDeclaration(fset *token.FileSet, astNode ast.Node) *FieldDeclaratio
 	tu, err := env.NewObject("de/fraunhofer/aisec/cpg/graph/declarations/FieldDeclaration")
 	if err != nil {
 		log.Fatal(err)
+		debug.PrintStack()
 	}
 
 	updateCode(fset, (*Node)(tu), astNode)

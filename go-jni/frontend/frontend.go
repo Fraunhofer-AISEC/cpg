@@ -32,6 +32,7 @@ func (g *GoLanguageFrontend) GetScopeManager() *cpg.ScopeManager {
 
 	if err != nil {
 		log.Fatal(err)
+
 	}
 
 	return (*cpg.ScopeManager)(scope.(*jnigi.ObjectRef))

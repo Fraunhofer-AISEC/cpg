@@ -20,6 +20,7 @@ func NewCallExpression(fset *token.FileSet, astNode ast.Node) *CallExpression {
 	c, err := env.NewObject("de/fraunhofer/aisec/cpg/graph/statements/expressions/CallExpression")
 	if err != nil {
 		log.Fatal(err)
+
 	}
 
 	updateCode(fset, (*Node)(c), astNode)
@@ -31,6 +32,7 @@ func NewMemberExpression(fset *token.FileSet, astNode ast.Node) *MemberExpressio
 	c, err := env.NewObject("de/fraunhofer/aisec/cpg/graph/statements/expressions/MemberExpression")
 	if err != nil {
 		log.Fatal(err)
+
 	}
 
 	updateCode(fset, (*Node)(c), astNode)
@@ -42,6 +44,7 @@ func NewMemberCallExpression(fset *token.FileSet, astNode ast.Node) *MemberCallE
 	c, err := env.NewObject("de/fraunhofer/aisec/cpg/graph/statements/expressions/MemberCallExpression")
 	if err != nil {
 		log.Fatal(err)
+
 	}
 
 	updateCode(fset, (*Node)(c), astNode)
@@ -53,6 +56,7 @@ func NewBinaryOperator(fset *token.FileSet, astNode ast.Node) *BinaryOperator {
 	c, err := env.NewObject("de/fraunhofer/aisec/cpg/graph/statements/expressions/BinaryOperator")
 	if err != nil {
 		log.Fatal(err)
+
 	}
 
 	updateCode(fset, (*Node)(c), astNode)
@@ -64,6 +68,7 @@ func NewLiteral(fset *token.FileSet, astNode ast.Node) *Literal {
 	l, err := env.NewObject("de/fraunhofer/aisec/cpg/graph/statements/expressions/Literal")
 	if err != nil {
 		log.Fatal(err)
+
 	}
 
 	updateCode(fset, (*Node)(l), astNode)
@@ -75,6 +80,7 @@ func NewDeclaredReferenceExpression(fset *token.FileSet, astNode ast.Node) *Decl
 	l, err := env.NewObject("de/fraunhofer/aisec/cpg/graph/statements/expressions/DeclaredReferenceExpression")
 	if err != nil {
 		log.Fatal(err)
+
 	}
 
 	updateCode(fset, (*Node)(l), astNode)
@@ -84,7 +90,6 @@ func NewDeclaredReferenceExpression(fset *token.FileSet, astNode ast.Node) *Decl
 
 func (e *Expression) SetType(t *Type) {
 	(*HasType)(e).SetType(t)
-	//(*jnigi.ObjectRef)(e).CallMethod(env, "setType", jnigi.Void, (*jnigi.ObjectRef)(t))
 }
 
 func (c *CallExpression) SetName(s string) {
@@ -123,6 +128,7 @@ func (m *MemberExpression) GetBase() *Node {
 	i, err := (*jnigi.ObjectRef)(m).GetField(env, "base", jnigi.ObjectType("de/fraunhofer/aisec/cpg/graph/statements/expressions/Expression"))
 	if err != nil {
 		log.Fatal(err)
+
 	}
 
 	return (*Node)(i.(*jnigi.ObjectRef))

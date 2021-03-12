@@ -33,7 +33,8 @@ func (this *GoLanguageFrontend) HandleFile(fset *token.FileSet, file *ast.File) 
 		if d != nil {
 			err = scope.AddDeclaration((*cpg.Declaration)(d))
 			if err != nil {
-				panic(err)
+				log.Fatal(err)
+
 			}
 		}
 	}
@@ -88,6 +89,7 @@ func (this *GoLanguageFrontend) handleFuncDecl(fset *token.FileSet, funcDecl *as
 		err := m.SetReceiver(receiver)
 		if err != nil {
 			log.Fatal(err)
+
 		}
 
 		if recordType != nil {
@@ -101,6 +103,7 @@ func (this *GoLanguageFrontend) handleFuncDecl(fset *token.FileSet, funcDecl *as
 
 			if err != nil {
 				log.Fatal(err)
+
 			}
 
 			if record != nil && !record.IsNil() {
@@ -114,6 +117,7 @@ func (this *GoLanguageFrontend) handleFuncDecl(fset *token.FileSet, funcDecl *as
 				err = record.AddMethod(m)
 				if err != nil {
 					log.Fatal(err)
+
 				}
 			}
 		}
@@ -162,12 +166,14 @@ func (this *GoLanguageFrontend) handleFuncDecl(fset *token.FileSet, funcDecl *as
 	err := f.SetBody((*cpg.Statement)(s))
 	if err != nil {
 		log.Fatal(err)
+
 	}
 
 	// leave scope
 	err = scope.LeaveScope((*cpg.Node)(f))
 	if err != nil {
 		log.Fatal(err)
+
 	}
 
 	return (*jnigi.ObjectRef)(f)
@@ -211,6 +217,7 @@ func (this *GoLanguageFrontend) handleValueSpec(fset *token.FileSet, valueDecl *
 		err := d.SetInitializer(expr)
 		if err != nil {
 			log.Fatal(err)
+
 		}
 	}
 
@@ -221,6 +228,7 @@ func (this *GoLanguageFrontend) handleTypeSpec(fset *token.FileSet, typeDecl *as
 	err := this.LogInfo("Type specifier with name %s and type (%T, %+v)", typeDecl.Name.Name, typeDecl.Type, typeDecl.Type)
 	if err != nil {
 		log.Fatal(err)
+
 	}
 
 	switch v := typeDecl.Type.(type) {
@@ -524,7 +532,6 @@ func (this *GoLanguageFrontend) handleCaseClause(fset *token.FileSet, caseClause
 
 func (this *GoLanguageFrontend) handleCallExpr(fset *token.FileSet, callExpr *ast.CallExpr) *cpg.CallExpression {
 	var c *cpg.CallExpression
-
 	// parse the Fun field, to see which kind of expression it is
 	var reference = this.handleExpr(fset, callExpr.Fun)
 
@@ -537,6 +544,7 @@ func (this *GoLanguageFrontend) handleCallExpr(fset *token.FileSet, callExpr *as
 	isMemberExpression, err := (*jnigi.ObjectRef)(reference).IsInstanceOf(env, "de/fraunhofer/aisec/cpg/graph/statements/expressions/MemberExpression")
 	if err != nil {
 		log.Fatal(err)
+
 	}
 
 	if isMemberExpression {
@@ -587,6 +595,7 @@ func (this *GoLanguageFrontend) handleBinaryExpr(fset *token.FileSet, binaryExpr
 	err := b.SetOperatorCode(binaryExpr.Op.String())
 	if err != nil {
 		log.Fatal(err)
+
 	}
 
 	if lhs != nil {
@@ -607,20 +616,22 @@ func (this *GoLanguageFrontend) handleSelectorExpr(fset *token.FileSet, selector
 	m.SetBase(base)
 	(*cpg.Node)(m).SetName(selectorExpr.Sel.Name)
 
+	// For now we just let the VariableUsageResolver handle this. Therefore,
+	// we can not differentiate between field access to a receiver, an object
+	// or a const field within a package at this point.
+
 	// check, if the base relates to a receiver
-	var method = (*cpg.MethodDeclaration)((*jnigi.ObjectRef)(this.GetScopeManager().GetCurrentFunction()).Cast("de/fraunhofer/aisec/cpg/graph/declarations/MethodDeclaration"))
+	/*var method = (*cpg.MethodDeclaration)((*jnigi.ObjectRef)(this.GetScopeManager().GetCurrentFunction()).Cast("de/fraunhofer/aisec/cpg/graph/declarations/MethodDeclaration"))
 
 	if method != nil && !method.IsNil() {
-		recv := method.GetReceiver()
+		//recv := method.GetReceiver()
 
 		// this refers to our receiver
 		if (*cpg.Node)(recv).GetName() == (*cpg.Node)(base).GetName() {
-			// For now we just let the VariableUsageResolver handle this. Therefore,
-			// we can not differentiate between field access to a receiver, an object
-			// or a const field within a package at this point.
-			//(*cpg.DeclaredReferenceExpression)(base).SetRefersTo(recv.Declaration())
+
+			(*cpg.DeclaredReferenceExpression)(base).SetRefersTo(recv.Declaration())
 		}
-	}
+	}*/
 
 	return m
 }
