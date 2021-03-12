@@ -154,7 +154,7 @@ java {
 dependencies {
     api("org.apache.commons:commons-lang3:3.12.0")
     api("org.neo4j:neo4j-ogm-core:3.2.19")
-    api("org.apache.logging.log4j:log4j-slf4j18-impl:2.14.0")
+    api("org.apache.logging.log4j:log4j-slf4j18-impl:2.14.1")
     api("org.slf4j:jul-to-slf4j:1.8.0-beta4")
     api("com.github.javaparser:javaparser-symbol-solver-core:3.20.0")
 
