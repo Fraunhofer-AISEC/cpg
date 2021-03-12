@@ -15,10 +15,8 @@
 package de.fraunhofer.aisec.cpg.frontends.python;
 
 import de.fraunhofer.aisec.cpg.frontends.Handler;
-<<<<<<< HEAD
 import de.fraunhofer.aisec.cpg.graph.statements.Statement;
-import io.github.oxisto.reticulated.ast.simple.SimpleStatement;
-import io.github.oxisto.reticulated.ast.statement.StatementList;
+import io.github.oxisto.reticulated.ast.statement.Statements;
 import java.util.ArrayList;
 import java.util.List;
 

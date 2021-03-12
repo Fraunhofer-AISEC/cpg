@@ -17,8 +17,6 @@ package de.fraunhofer.aisec.cpg.frontends.python;
 import de.fraunhofer.aisec.cpg.frontends.Handler;
 import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement;
 import io.github.oxisto.reticulated.ast.Suite;
-import io.github.oxisto.reticulated.ast.expression.Expression;
-import io.github.oxisto.reticulated.ast.statement.Statement;
 import io.github.oxisto.reticulated.ast.statement.Statements;
 import java.util.ArrayList;
 import java.util.List;
@@ -40,16 +38,18 @@ public class SuiteHandler extends Handler<CompoundStatement, Suite, PythonLangua
 
     List<de.fraunhofer.aisec.cpg.graph.statements.Statement> list = new ArrayList<>();
     // loop through child statements
-    for (Statement node : suite) {
+    for (var node : suite) {
       // if it is a statement list, we need to flatten the list
       if (node instanceof Statements) {
         list.addAll(this.lang.getStatementListHandler().handle((Statements) node));
+      } else {
+        list.add(this.lang.getStatementHandler().handle(node));
       }
 
-      if (node instanceof Expression) {
+      /*if (node instanceof Expression) {
         ExpressionHandler eh = this.lang.getExpressionHandler();
         list.add(eh.handle((Expression) node));
-      }
+      }*/
     }
     statement.setStatements(list);
 
