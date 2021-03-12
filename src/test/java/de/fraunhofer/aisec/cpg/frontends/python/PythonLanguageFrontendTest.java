@@ -61,7 +61,7 @@ class PythonLanguageFrontendTest {
 
     CompoundStatement body = (CompoundStatement) functionDeclaration.getBody();
     List<Statement> statements = body.getStatements();
-    assertEquals(3, statements.size());
+    assertEquals(4, statements.size());
 
     Statement stmt = statements.get(0);
     assertTrue(stmt instanceof CallExpression);

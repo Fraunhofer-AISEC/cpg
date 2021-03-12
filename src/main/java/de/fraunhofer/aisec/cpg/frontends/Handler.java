@@ -31,6 +31,7 @@ import static de.fraunhofer.aisec.cpg.helpers.Util.errorWithFileLocation;
 import java.lang.reflect.ParameterizedType;
 import java.util.HashMap;
 import java.util.function.Supplier;
+import org.checkerframework.checker.nullness.qual.NonNull;
 import org.eclipse.cdt.internal.core.dom.parser.ASTNode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -49,12 +50,12 @@ public abstract class Handler<S, T, L extends LanguageFrontend> {
 
   protected final HashMap<Class<? extends T>, HandlerInterface<S, T>> map = new HashMap<>();
   private final Supplier<S> configConstructor;
-  protected L lang;
+  protected @NonNull L lang;
   private Class<S> typeOfT =
       (Class<S>)
           ((ParameterizedType) getClass().getGenericSuperclass()).getActualTypeArguments()[1];
 
-  public Handler(Supplier<S> configConstructor, L lang) {
+  public Handler(Supplier<S> configConstructor, @NonNull L lang) {
     this.configConstructor = configConstructor;
     this.lang = lang;
   }
