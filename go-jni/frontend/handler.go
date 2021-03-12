@@ -89,7 +89,6 @@ func (this *GoLanguageFrontend) handleFuncDecl(fset *token.FileSet, funcDecl *as
 		err := m.SetReceiver(receiver)
 		if err != nil {
 			log.Fatal(err)
-
 		}
 
 		if recordType != nil {
@@ -126,6 +125,17 @@ func (this *GoLanguageFrontend) handleFuncDecl(fset *token.FileSet, funcDecl *as
 	} else {
 		f = cpg.NewFunctionDeclaration(fset, funcDecl)
 	}
+
+	var t *cpg.Type
+	// TODO: for now, just the first result type
+	if funcDecl.Type.Results == nil {
+		// its proably void
+		t = cpg.TypeParser_createFrom("void", false)
+	} else {
+		t = this.handleType(funcDecl.Type.Results.List[0].Type)
+	}
+
+	f.SetType(t)
 
 	// note, the name must be set BEFORE entering the scope
 	f.SetName(funcDecl.Name.Name)
