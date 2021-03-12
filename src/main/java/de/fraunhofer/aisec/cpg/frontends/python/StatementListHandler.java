@@ -15,6 +15,7 @@
 package de.fraunhofer.aisec.cpg.frontends.python;
 
 import de.fraunhofer.aisec.cpg.frontends.Handler;
+<<<<<<< HEAD
 import de.fraunhofer.aisec.cpg.graph.statements.Statement;
 import io.github.oxisto.reticulated.ast.simple.SimpleStatement;
 import io.github.oxisto.reticulated.ast.statement.StatementList;
@@ -22,19 +23,19 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class StatementListHandler
-    extends Handler<List<Statement>, StatementList, PythonLanguageFrontend> {
+    extends Handler<List<Statement>, Statements, PythonLanguageFrontend> {
 
   public StatementListHandler(PythonLanguageFrontend lang) {
     super(ArrayList::new, lang);
 
-    this.map.put(StatementList.class, this::handleStatementList);
+    this.map.put(Statements.class, this::handleStatementList);
   }
 
-  private List<Statement> handleStatementList(StatementList statementList) {
+  private List<Statement> handleStatementList(Statements statementList) {
     List<Statement> list = new ArrayList<>();
 
-    for (SimpleStatement node : statementList) {
-      list.add(this.lang.getSimpleStatementHandler().handle(node));
+    for (io.github.oxisto.reticulated.ast.statement.Statement node : statementList) {
+      list.add(this.lang.getStatementHandler().handle(node));
     }
 
     return list;

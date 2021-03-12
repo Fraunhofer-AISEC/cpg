@@ -19,7 +19,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement;
 import io.github.oxisto.reticulated.ast.Suite;
 import io.github.oxisto.reticulated.ast.expression.Expression;
 import io.github.oxisto.reticulated.ast.statement.Statement;
-import io.github.oxisto.reticulated.ast.statement.StatementList;
+import io.github.oxisto.reticulated.ast.statement.Statements;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -42,8 +42,8 @@ public class SuiteHandler extends Handler<CompoundStatement, Suite, PythonLangua
     // loop through child statements
     for (Statement node : suite) {
       // if it is a statement list, we need to flatten the list
-      if (node instanceof StatementList) {
-        list.addAll(this.lang.getStatementListHandler().handle((StatementList) node));
+      if (node instanceof Statements) {
+        list.addAll(this.lang.getStatementListHandler().handle((Statements) node));
       }
 
       if (node instanceof Expression) {
