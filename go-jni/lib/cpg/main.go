@@ -1,6 +1,7 @@
 package main
 
 import (
+	"cpg"
 	"cpg/frontend"
 	"go/parser"
 	"go/token"
@@ -26,6 +27,9 @@ func Java_de_fraunhofer_aisec_cpg_frontends_golang_GoLanguageFrontend_parseInter
 
 	srcObject := jnigi.WrapJObject(uintptr(arg1), "java/lang/String", false)
 
+	frontend.InitEnv(env)
+	cpg.InitEnv(env)
+
 	src, err := srcObject.CallMethod(env, "getBytes", jnigi.Byte|jnigi.Array)
 	if err != nil {
 		log.Fatal(err)
@@ -37,7 +41,7 @@ func Java_de_fraunhofer_aisec_cpg_frontends_golang_GoLanguageFrontend_parseInter
 		panic(err)
 	}
 
-	tu, err := goFrontend.HandleFile(fset, env, file)
+	tu, err := goFrontend.HandleFile(fset, file)
 	if err != nil {
 		panic(err)
 	}

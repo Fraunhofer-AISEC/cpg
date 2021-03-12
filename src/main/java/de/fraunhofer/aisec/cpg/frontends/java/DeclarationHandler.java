@@ -155,15 +155,17 @@ public class DeclarationHandler
 
     de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration functionDeclaration =
         NodeBuilder.newMethodDeclaration(
-            resolvedMethod.getName(),
-            methodDecl.toString(),
-            methodDecl.isStatic(),
-            record);
+            resolvedMethod.getName(), methodDecl.toString(), methodDecl.isStatic(), record);
 
     // create the receiver
-    var receiver = NodeBuilder.newVariableDeclaration("this",
-            record != null ? TypeParser.createFrom(record.getName(), false ) : UnknownType.getUnknownType(),
-            "this", false);
+    var receiver =
+        NodeBuilder.newVariableDeclaration(
+            "this",
+            record != null
+                ? TypeParser.createFrom(record.getName(), false)
+                : UnknownType.getUnknownType(),
+            "this",
+            false);
 
     functionDeclaration.setReceiver(receiver);
 

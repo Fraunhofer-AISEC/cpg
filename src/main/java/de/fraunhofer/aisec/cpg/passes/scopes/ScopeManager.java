@@ -52,13 +52,11 @@ import de.fraunhofer.aisec.cpg.graph.statements.WhileStatement;
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression;
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression;
 import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType;
-
 import java.util.*;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
-
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.slf4j.Logger;
@@ -562,19 +560,24 @@ public class ScopeManager {
   @Nullable
   private List<FunctionDeclaration> resolveFunction(Scope scope, CallExpression call) {
     if (scope instanceof ValueDeclarationScope) {
-      var list = ((ValueDeclarationScope) scope).getValueDeclarations().stream()
-              .filter(FunctionDeclaration.class::isInstance)
-              .map(FunctionDeclaration.class::cast)
-              .filter(
-                      f -> f.getName().equals(call.getName()) && f.hasSignature(call.getSignature()))
-              .collect(Collectors.toList());
+      var list =
+          ((ValueDeclarationScope) scope)
+              .getValueDeclarations().stream()
+                  .filter(FunctionDeclaration.class::isInstance)
+                  .map(FunctionDeclaration.class::cast)
+                  .filter(
+                      f ->
+                          f.getName().equals(call.getName()) && f.hasSignature(call.getSignature()))
+                  .collect(Collectors.toList());
 
-      if(!list.isEmpty()) {
+      if (!list.isEmpty()) {
         return list;
       }
     }
 
-    return scope.getParent() != null ? resolveFunction(scope.getParent(), call) : Collections.emptyList();
+    return scope.getParent() != null
+        ? resolveFunction(scope.getParent(), call)
+        : Collections.emptyList();
   }
 
   /**
@@ -757,8 +760,6 @@ public class ScopeManager {
 
     return getRecordForName(scope.getParent(), name);
   }
-
-
 
   ///// End copied over for now ///////
 

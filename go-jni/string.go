@@ -6,7 +6,7 @@ import (
 	"tekao.net/jnigi"
 )
 
-func NewString(env *jnigi.Env, s string) *jnigi.ObjectRef {
+func NewString(s string) *jnigi.ObjectRef {
 	o, err := env.NewObject("java/lang/String", []byte(s))
 	if err != nil {
 		log.Fatal(err)
@@ -15,7 +15,7 @@ func NewString(env *jnigi.Env, s string) *jnigi.ObjectRef {
 	return o
 }
 
-func NewInteger(env *jnigi.Env, i int) *jnigi.ObjectRef {
+func NewInteger(i int) *jnigi.ObjectRef {
 	// TODO: Use Integer.valueOf
 	o, err := env.NewObject("java/lang/Integer", i)
 	if err != nil {
@@ -25,7 +25,7 @@ func NewInteger(env *jnigi.Env, i int) *jnigi.ObjectRef {
 	return o
 }
 
-func NewDouble(env *jnigi.Env, d float64) *jnigi.ObjectRef {
+func NewDouble(d float64) *jnigi.ObjectRef {
 	// TODO: Use Integer.valueOf
 	o, err := env.NewObject("java/lang/Double", d)
 	if err != nil {
