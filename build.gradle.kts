@@ -166,7 +166,7 @@ dependencies {
     api("org.eclipse.cdt:core:6.11.1.202006011430")
 
     // openCypher
-    api("org.opencypher:parser-9.0:9.0.20190305")
+    api("org.opencypher:parser-9.0:9.0.20210312")
 
     implementation(platform("org.jetbrains.kotlin:kotlin-bom"))
     implementation("org.jetbrains.kotlin:kotlin-stdlib")
