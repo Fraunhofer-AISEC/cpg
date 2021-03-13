@@ -48,6 +48,16 @@ func (h *Type) GetRoot() *Type {
 	return (*Type)(o.(*jnigi.ObjectRef))
 }
 
+func (t *Type) Reference(o *jnigi.ObjectRef) *Type {
+	i, err := (*jnigi.ObjectRef)(t).CallMethod(env, "reference", jnigi.ObjectType("de/fraunhofer/aisec/cpg/graph/types/Type"), (*jnigi.ObjectRef)(o).Cast("de/fraunhofer/aisec/cpg/graph/types/PointerType$PointerOrigin"))
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return (*Type)(i.(*jnigi.ObjectRef))
+}
+
 func (h *HasType) SetType(t *Type) {
 	if t != nil {
 		(*jnigi.ObjectRef)(h).CallMethod(env, "setType", jnigi.Void, (*jnigi.ObjectRef)(t).Cast("de/fraunhofer/aisec/cpg/graph/types/Type"))
@@ -58,7 +68,6 @@ func (h *HasType) GetType() *Type {
 	i, err := (*jnigi.ObjectRef)(h).CallMethod(env, "getType", jnigi.ObjectType("de/fraunhofer/aisec/cpg/graph/types/Type"))
 	if err != nil {
 		log.Fatal(err)
-
 	}
 
 	return (*Type)(i.(*jnigi.ObjectRef))

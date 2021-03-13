@@ -14,7 +14,10 @@ import (
 
 var env *jnigi.Env
 
-type GoLanguageFrontend jnigi.ObjectRef
+type GoLanguageFrontend struct {
+	*jnigi.ObjectRef
+	File *ast.File
+}
 
 func InitEnv(e *jnigi.Env) {
 	env = e
@@ -28,7 +31,7 @@ func (g *GoLanguageFrontend) GetCodeFromRawNode(fset *token.FileSet, astNode ast
 }
 
 func (g *GoLanguageFrontend) GetScopeManager() *cpg.ScopeManager {
-	scope, err := (*jnigi.ObjectRef)(g).GetField(env, "scopeManager", jnigi.ObjectType("de/fraunhofer/aisec/cpg/passes/scopes/ScopeManager"))
+	scope, err := g.GetField(env, "scopeManager", jnigi.ObjectType("de/fraunhofer/aisec/cpg/passes/scopes/ScopeManager"))
 
 	if err != nil {
 		log.Fatal(err)

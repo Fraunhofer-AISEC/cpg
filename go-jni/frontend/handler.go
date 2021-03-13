@@ -135,6 +135,8 @@ func (this *GoLanguageFrontend) handleFuncDecl(fset *token.FileSet, funcDecl *as
 		t = this.handleType(funcDecl.Type.Results.List[0].Type)
 	}
 
+	this.LogDebug("Function has return type %s", (*cpg.Node)(t).GetName())
+
 	f.SetType(t)
 
 	// note, the name must be set BEFORE entering the scope
@@ -693,7 +695,22 @@ func (this *GoLanguageFrontend) handleType(typeExpr ast.Expr) *cpg.Type {
 
 	switch v := typeExpr.(type) {
 	case *ast.Ident:
-		return cpg.TypeParser_createFrom(v.Name, false)
+		// make it a fqn according to the current package to make things easier
+		fqn := fmt.Sprintf("%s.%s", this.File.Name.Name, v.Name)
+		return cpg.TypeParser_createFrom(fqn, false)
+	case *ast.SelectorExpr:
+		// small shortcut
+		fqn := fmt.Sprintf("%s.%s", v.X.(*ast.Ident).Name, v.Sel.Name)
+		return cpg.TypeParser_createFrom(fqn, false)
+	case *ast.StarExpr:
+		t := this.handleType(v.X)
+
+		i, err := env.GetStaticField("de/fraunhofer/aisec/cpg/graph/types/PointerType$PointerOrigin", "POINTER", jnigi.ObjectType("de/fraunhofer/aisec/cpg/graph/types/PointerType$PointerOrigin"))
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		return t.Reference(i.(*jnigi.ObjectRef))
 	case *ast.FuncType:
 		// for now, we are only interested in the return type
 		return this.handleType(v.Results.List[0].Type)

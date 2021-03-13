@@ -23,7 +23,7 @@ func Java_de_fraunhofer_aisec_cpg_frontends_golang_GoLanguageFrontend_parseInter
 	//func Java_de_fraunhofer_aisec_cpg_JNITest_parse(envPointer *C.JNIEnv, clazz C.jclass, arg1 C.jobject) C.jobject {
 	env := jnigi.WrapEnv(unsafe.Pointer(envPointer))
 
-	goFrontend := (*frontend.GoLanguageFrontend)(jnigi.WrapJObject(uintptr(thisPtr), "de/fraunhofer/aisec/cpg/frontends/golang/GoLanguageFrontend", false))
+	goFrontend := &frontend.GoLanguageFrontend{jnigi.WrapJObject(uintptr(thisPtr), "de/fraunhofer/aisec/cpg/frontends/golang/GoLanguageFrontend", false), nil}
 
 	srcObject := jnigi.WrapJObject(uintptr(arg1), "java/lang/String", false)
 
@@ -40,8 +40,9 @@ func Java_de_fraunhofer_aisec_cpg_frontends_golang_GoLanguageFrontend_parseInter
 	file, err := parser.ParseFile(fset, "src.go", string(src.([]byte)), 0)
 	if err != nil {
 		log.Fatal(err)
-
 	}
+
+	goFrontend.File = file
 
 	tu, err := goFrontend.HandleFile(fset, file)
 	if err != nil {
