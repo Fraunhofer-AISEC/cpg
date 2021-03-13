@@ -336,6 +336,12 @@ public class CallResolver extends Pass {
     return new ArrayList<>();
   }
 
+  /**
+   * @param call CallExpression
+   * @param functionDeclaration FunctionDeclaration the CallExpression was resolved to
+   * @return list containing the signature containing all argument types including the default
+   *     arguments
+   */
   private List<Type> getCallSignatureWithDefaults(
       CallExpression call, FunctionDeclaration functionDeclaration) {
     List<Type> callSignature = new ArrayList<>(call.getSignature());
@@ -351,6 +357,14 @@ public class CallResolver extends Pass {
     return callSignature;
   }
 
+  /**
+   * Adds the implicit default arguments to the CallExpression if they were not provided
+   *
+   * @param functionDeclaration the CallExpression has been resolved to containing the default
+   *     arguments
+   * @param call CallExpression which does not contain all necessary arguments and uses the default
+   *     arguments
+   */
   private void addDefaultArgsToCall(FunctionDeclaration functionDeclaration, CallExpression call) {
     if (functionDeclaration.hasSignature(getCallSignatureWithDefaults(call, functionDeclaration))) {
       for (Expression expression :
@@ -425,6 +439,14 @@ public class CallResolver extends Pass {
     return invocationTargetsWithImplicitCastAndDefaults;
   }
 
+  /**
+   * Checks if the current casts are compatible with the casts necessary to match with a new
+   * FunctionDeclaration. If a one argument would need to be casted in two different types it would
+   * be modified to a cast to UnknownType
+   *
+   * @param implicitCasts current Cast
+   * @param implicitCastTargets new Cast
+   */
   private void checkMostCommonImplicitCast(
       List<CastExpression> implicitCasts, List<CastExpression> implicitCastTargets) {
     for (int i = 0; i < implicitCasts.size(); i++) {
@@ -442,6 +464,12 @@ public class CallResolver extends Pass {
     }
   }
 
+  /**
+   * Changes the arguments of the CallExpression to use the implcit casts instead
+   *
+   * @param call CallExpression
+   * @param implicitCasts Casts
+   */
   private void applyImplicitCastToArguments(
       CallExpression call, List<CastExpression> implicitCasts) {
     if (implicitCasts != null) {
@@ -453,6 +481,14 @@ public class CallResolver extends Pass {
     }
   }
 
+  /**
+   * Resolves a CallExpression to the potential target FunctionDeclarations by checking for ommitted
+   * arguments due to previously defined default arguments
+   *
+   * @param call CallExpression
+   * @return List of FunctionDeclarations that are the target of the CallExpression (will be
+   *     connected with an invokes edge)
+   */
   private List<FunctionDeclaration> resolveWithDefaultArgs(CallExpression call) {
     assert currentTU != null;
     List<FunctionDeclaration> invocationCandidates =
