@@ -398,7 +398,7 @@ public class CallResolver extends Pass {
     List<FunctionDeclaration> invocationTargetsWithImplicitCastAndDefaults = new ArrayList<>();
 
     List<CastExpression> implicitCasts = null;
-    List<Type> callSignature = call.getSignature();
+    List<Type> callSignature;
 
     // Iterate through all possible invocation candidates
     for (FunctionDeclaration functionDeclaration : matchingFunctionName) {
