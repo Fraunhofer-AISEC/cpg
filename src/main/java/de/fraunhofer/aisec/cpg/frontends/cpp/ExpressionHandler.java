@@ -442,8 +442,9 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
       if (name.contains("::")) {
         name = name.substring(name.lastIndexOf("::") + 2);
       }
-      if (name.contains("<")){
-        // The characters < and > are not allowed in identifier names, as they denote the usage of a template
+      if (name.contains("<")) {
+        // The characters < and > are not allowed in identifier names, as they denote the usage of a
+        // template
         name = name.substring(0, name.indexOf("<"));
       }
       fqn = fqn.replace("::", ".");
