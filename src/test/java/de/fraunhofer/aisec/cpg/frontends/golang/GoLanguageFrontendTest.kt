@@ -87,6 +87,15 @@ class GoLanguageFrontendTest : BaseTest() {
 
         assertEquals("fmt.Printf", callExpression.fqn)
 
+        val base = callExpression.base as? DeclaredReferenceExpression
+
+        assertNotNull(base)
+
+        val include = base.refersTo as? IncludeDeclaration
+
+        assertNotNull(include)
+        assertEquals("fmt", include.name)
+
         val literal = callExpression.arguments.first() as? Literal<*>
         assertNotNull(literal)
 
@@ -121,6 +130,15 @@ class GoLanguageFrontendTest : BaseTest() {
         assertNotNull(rhs)
 
         assertEquals(2, rhs.value)
+
+        val binOp = body.statements[2] as? BinaryOperator
+
+        assertNotNull(binOp)
+
+        val err = binOp.lhs
+
+        assertNotNull(err)
+        assertEquals(TypeParser.createFrom("error", false), err.type)
     }
 
     @Test

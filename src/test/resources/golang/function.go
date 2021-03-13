@@ -11,5 +11,7 @@ func myTest(s string) (err error) {
 
     a := 1 + 2
 
-    return nil
+    err = nil
+
+    return
 }

@@ -435,8 +435,8 @@ public class ScopeManager {
    * @param declaration
    */
   public void addDeclaration(Declaration declaration) {
-    if (declaration instanceof ProblemDeclaration) {
-      // directly add problems to the global scope
+    if (declaration instanceof ProblemDeclaration || declaration instanceof IncludeDeclaration) {
+      // directly add problems and includes to the global scope
       var globalScope = (GlobalScope) getFirstScopeThat(scope -> scope instanceof GlobalScope);
       globalScope.addDeclaration(declaration);
     } else if (declaration instanceof ValueDeclaration) {

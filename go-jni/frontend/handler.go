@@ -7,9 +7,21 @@ import (
 	"go/token"
 	"log"
 	"strconv"
+	"strings"
 
 	"tekao.net/jnigi"
 )
+
+func getImportName(spec *ast.ImportSpec) string {
+	if spec.Name != nil {
+		return spec.Name.Name
+	}
+
+	var path = spec.Path.Value[1 : len(spec.Path.Value)-1]
+	var paths = strings.Split(path, "/")
+
+	return paths[len(paths)-1]
+}
 
 func (this *GoLanguageFrontend) HandleFile(fset *token.FileSet, file *ast.File) (tu *cpg.TranslationUnitDeclaration, err error) {
 	tu = cpg.NewTranslationUnitDeclaration(fset, file, "src.go", this.GetCodeFromRawNode(fset, file))
@@ -18,6 +30,21 @@ func (this *GoLanguageFrontend) HandleFile(fset *token.FileSet, file *ast.File) 
 
 	// reset scope
 	scope.ResetToGlobal((*cpg.Node)(tu))
+
+	// set current TU
+	this.SetCurrentTU(tu)
+
+	/*for _, imprt := range file.Imports {
+		i := cpg.NewIncludeDeclaration(fset, imprt)
+
+		i.SetName(getImportName(imprt))
+		i.SetFilename(imprt.Path.Value[1 : len(imprt.Path.Value)-1])
+
+		err = scope.AddDeclaration((*cpg.Declaration)(i))
+		if err != nil {
+			log.Fatal(err)
+		}
+	}*/
 
 	// create a new namespace declaration, representing the package
 	p := cpg.NewNamespaceDeclaration(fset, nil, file.Name.Name, fmt.Sprintf("package %s", file.Name.Name))
@@ -126,19 +153,6 @@ func (this *GoLanguageFrontend) handleFuncDecl(fset *token.FileSet, funcDecl *as
 		f = cpg.NewFunctionDeclaration(fset, funcDecl)
 	}
 
-	var t *cpg.Type
-	// TODO: for now, just the first result type
-	if funcDecl.Type.Results == nil {
-		// its proably void
-		t = cpg.TypeParser_createFrom("void", false)
-	} else {
-		t = this.handleType(funcDecl.Type.Results.List[0].Type)
-	}
-
-	this.LogDebug("Function has return type %s", (*cpg.Node)(t).GetName())
-
-	f.SetType(t)
-
 	// note, the name must be set BEFORE entering the scope
 	f.SetName(funcDecl.Name.Name)
 
@@ -152,6 +166,33 @@ func (this *GoLanguageFrontend) handleFuncDecl(fset *token.FileSet, funcDecl *as
 		this.GetScopeManager().AddDeclaration((*cpg.Declaration)(receiver))
 	}
 
+	var t *cpg.Type
+
+	// TODO: for now, just the first result type. Maybe later combine it into a pair?
+	if funcDecl.Type.Results == nil {
+		// its proably void
+		t = cpg.TypeParser_createFrom("void", false)
+	} else {
+		t = this.handleType(funcDecl.Type.Results.List[0].Type)
+
+		// if the function has named return variables, be sure to declare them as well
+		for _, returnVariable := range funcDecl.Type.Results.List {
+			if returnVariable.Names != nil {
+				p := cpg.NewVariableDeclaration(fset, returnVariable)
+
+				p.SetName(returnVariable.Names[0].Name)
+				p.SetType(this.handleType(returnVariable.Type))
+
+				// add parameter to scope
+				this.GetScopeManager().AddDeclaration((*cpg.Declaration)(p))
+			}
+		}
+	}
+
+	this.LogDebug("Function has return type %s", (*cpg.Node)(t).GetName())
+
+	f.SetType(t)
+
 	// TODO: for other languages, we would enter the record declaration, if
 	// this is a method; however I am not quite sure if this makes sense for
 	// go, since we do not have a 'this', but rather a named receiver
@@ -163,10 +204,7 @@ func (this *GoLanguageFrontend) handleFuncDecl(fset *token.FileSet, funcDecl *as
 
 		// TODO: more than one name?
 		p.SetName(param.Names[0].Name)
-
-		t := this.handleType(param.Type)
-
-		p.SetType(t)
+		p.SetType(this.handleType(param.Type))
 
 		// add parameter to scope
 		this.GetScopeManager().AddDeclaration((*cpg.Declaration)(p))
@@ -199,6 +237,8 @@ func (this *GoLanguageFrontend) handleGenDecl(fset *token.FileSet, genDecl *ast.
 			return (*jnigi.ObjectRef)(this.handleValueSpec(fset, v))
 		case *ast.TypeSpec:
 			return (*jnigi.ObjectRef)(this.handleTypeSpec(fset, v))
+		case *ast.ImportSpec:
+			return (*jnigi.ObjectRef)(this.handleImportSpec(fset, v))
 		default:
 			this.LogError("Not parsing specication of type %T yet: %+v", v, v)
 		}
@@ -251,6 +291,24 @@ func (this *GoLanguageFrontend) handleTypeSpec(fset *token.FileSet, typeDecl *as
 	}
 
 	return nil
+}
+
+func (this *GoLanguageFrontend) handleImportSpec(fset *token.FileSet, importSpec *ast.ImportSpec) *cpg.Declaration {
+	this.LogInfo("Import specifier with: %+v)", *importSpec)
+
+	i := cpg.NewIncludeDeclaration(fset, importSpec)
+
+	var scope = this.GetScopeManager()
+
+	i.SetName(getImportName(importSpec))
+	i.SetFilename(importSpec.Path.Value[1 : len(importSpec.Path.Value)-1])
+
+	err := scope.AddDeclaration((*cpg.Declaration)(i))
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return (*cpg.Declaration)(i)
 }
 
 func (this *GoLanguageFrontend) handleIdentAsName(ident *ast.Ident) string {
@@ -692,6 +750,16 @@ func (this *GoLanguageFrontend) handleBasicLit(fset *token.FileSet, lit *ast.Bas
 
 func (this *GoLanguageFrontend) handleIdent(fset *token.FileSet, ident *ast.Ident) *cpg.DeclaredReferenceExpression {
 	ref := cpg.NewDeclaredReferenceExpression(fset, ident)
+
+	tu := this.GetCurrentTU()
+
+	// check, if this refers to a package import
+	i := tu.GetIncludeByName(ident.Name)
+
+	// then set the refersTo, because our regular CPG passes will not resolve them
+	if i != nil && !(*jnigi.ObjectRef)(i).IsNil() {
+		ref.SetRefersTo((*cpg.Declaration)(i))
+	}
 
 	ref.SetName(ident.Name)
 

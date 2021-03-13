@@ -10,6 +10,7 @@ import (
 )
 
 type Declaration jnigi.ObjectRef
+type IncludeDeclaration jnigi.ObjectRef
 type TranslationUnitDeclaration Declaration
 type FunctionDeclaration Declaration
 type MethodDeclaration FunctionDeclaration
@@ -21,6 +22,14 @@ type NamespaceDeclaration Declaration
 
 func (n *NamespaceDeclaration) SetName(s string) error {
 	return (*Node)(n).SetName(s)
+}
+
+func (n *IncludeDeclaration) SetName(s string) error {
+	return (*Node)(n).SetName(s)
+}
+
+func (n *IncludeDeclaration) SetFilename(s string) error {
+	return (*jnigi.ObjectRef)(n).SetField(env, "filename", NewString(s))
 }
 
 func (f *FunctionDeclaration) SetName(s string) error {
@@ -102,6 +111,16 @@ func (v *VariableDeclaration) Declaration() *Declaration {
 	return (*Declaration)(v)
 }
 
+func (t *TranslationUnitDeclaration) GetIncludeByName(s string) *IncludeDeclaration {
+	i, err := (*jnigi.ObjectRef)(t).CallMethod(env, "getIncludeByName", jnigi.ObjectType("de/fraunhofer/aisec/cpg/graph/declarations/IncludeDeclaration"), NewString(s))
+	if err != nil {
+		log.Fatal(err)
+		debug.PrintStack()
+	}
+
+	return (*IncludeDeclaration)(i.(*jnigi.ObjectRef))
+}
+
 func (r *RecordDeclaration) SetName(s string) error {
 	return (*Node)(r).SetName(s)
 }
@@ -150,6 +169,18 @@ func NewNamespaceDeclaration(fset *token.FileSet, astNode ast.Node, name string,
 	}
 
 	return (*NamespaceDeclaration)(o.(*jnigi.ObjectRef))
+}
+
+func NewIncludeDeclaration(fset *token.FileSet, astNode ast.Node) *IncludeDeclaration {
+	tu, err := env.NewObject("de/fraunhofer/aisec/cpg/graph/declarations/IncludeDeclaration")
+	if err != nil {
+		log.Fatal(err)
+		debug.PrintStack()
+	}
+
+	updateCode(fset, (*Node)(tu), astNode)
+
+	return (*IncludeDeclaration)(tu)
 }
 
 func NewFunctionDeclaration(fset *token.FileSet, astNode ast.Node) *FunctionDeclaration {

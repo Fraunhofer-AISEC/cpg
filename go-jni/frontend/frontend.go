@@ -23,6 +23,23 @@ func InitEnv(e *jnigi.Env) {
 	env = e
 }
 
+func (g *GoLanguageFrontend) SetCurrentTU(tu *cpg.TranslationUnitDeclaration) {
+	err := g.SetField(env, "currentTU", (*jnigi.ObjectRef)(tu))
+
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
+func (g *GoLanguageFrontend) GetCurrentTU() *cpg.TranslationUnitDeclaration {
+	i, err := g.GetField(env, "currentTU", jnigi.ObjectType("de/fraunhofer/aisec/cpg/graph/declarations/TranslationUnitDeclaration"))
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return (*cpg.TranslationUnitDeclaration)(i.(*jnigi.ObjectRef))
+}
+
 func (g *GoLanguageFrontend) GetCodeFromRawNode(fset *token.FileSet, astNode ast.Node) string {
 	var codeBuf bytes.Buffer
 	_ = printer.Fprint(&codeBuf, fset, astNode)
