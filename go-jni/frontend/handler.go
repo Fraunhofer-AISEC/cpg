@@ -253,11 +253,19 @@ func (this *GoLanguageFrontend) handleTypeSpec(fset *token.FileSet, typeDecl *as
 	return nil
 }
 
+func (this *GoLanguageFrontend) handleIdentAsName(ident *ast.Ident) string {
+	if this.isBuiltinType(ident.Name) {
+		return ident.Name
+	} else {
+		return fmt.Sprintf("%s.%s", this.File.Name.Name, ident.Name)
+	}
+}
+
 func (this *GoLanguageFrontend) handleStructTypeSpec(fset *token.FileSet, typeDecl *ast.TypeSpec, structType *ast.StructType) *cpg.RecordDeclaration {
 	r := cpg.NewRecordDeclaration(fset, typeDecl)
 
 	r.SetKind("struct")
-	r.SetName(typeDecl.Name.Name)
+	r.SetName(this.handleIdentAsName(typeDecl.Name))
 
 	var scope = this.GetScopeManager()
 
@@ -303,7 +311,7 @@ func (this *GoLanguageFrontend) handleInterfaceTypeSpec(fset *token.FileSet, typ
 	r := cpg.NewRecordDeclaration(fset, typeDecl)
 
 	r.SetKind("interface")
-	r.SetName(typeDecl.Name.Name)
+	r.SetName(this.handleIdentAsName(typeDecl.Name))
 
 	var scope = this.GetScopeManager()
 
@@ -696,11 +704,14 @@ func (this *GoLanguageFrontend) handleType(typeExpr ast.Expr) *cpg.Type {
 	switch v := typeExpr.(type) {
 	case *ast.Ident:
 		// make it a fqn according to the current package to make things easier
-		fqn := fmt.Sprintf("%s.%s", this.File.Name.Name, v.Name)
+		fqn := this.handleIdentAsName(v)
+
+		this.LogDebug("FQN type: %s", fqn)
 		return cpg.TypeParser_createFrom(fqn, false)
 	case *ast.SelectorExpr:
 		// small shortcut
 		fqn := fmt.Sprintf("%s.%s", v.X.(*ast.Ident).Name, v.Sel.Name)
+		this.LogDebug("FQN type: %s", fqn)
 		return cpg.TypeParser_createFrom(fqn, false)
 	case *ast.StarExpr:
 		t := this.handleType(v.X)
@@ -710,6 +721,8 @@ func (this *GoLanguageFrontend) handleType(typeExpr ast.Expr) *cpg.Type {
 			log.Fatal(err)
 		}
 
+		this.LogDebug("Pointer to %s", (*cpg.Node)(t).GetName())
+
 		return t.Reference(i.(*jnigi.ObjectRef))
 	case *ast.FuncType:
 		// for now, we are only interested in the return type
@@ -717,4 +730,51 @@ func (this *GoLanguageFrontend) handleType(typeExpr ast.Expr) *cpg.Type {
 	}
 
 	return cpg.UnknownType_getUnknown()
+}
+
+func (this *GoLanguageFrontend) isBuiltinType(s string) bool {
+	switch s {
+	case "bool":
+		fallthrough
+	case "byte":
+		fallthrough
+	case "complex128":
+		fallthrough
+	case "complex64":
+		fallthrough
+	case "error":
+		fallthrough
+	case "float32":
+		fallthrough
+	case "float64":
+		fallthrough
+	case "int":
+		fallthrough
+	case "int16":
+		fallthrough
+	case "int32":
+		fallthrough
+	case "int64":
+		fallthrough
+	case "int8":
+		fallthrough
+	case "rune":
+		fallthrough
+	case "string":
+		fallthrough
+	case "uint":
+		fallthrough
+	case "uint16":
+		fallthrough
+	case "uint32":
+		fallthrough
+	case "uint64":
+		fallthrough
+	case "uint8":
+		fallthrough
+	case "uintptr":
+		return true
+	default:
+		return false
+	}
 }

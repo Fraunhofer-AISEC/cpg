@@ -14,14 +14,6 @@ import kotlin.test.assertNotNull
 
 class GoLanguageFrontendTest : BaseTest() {
 
-    /*@Test
-    fun testBla() {
-        val topLevel = Path.of("/Users/oxisto/Repositories/aybaze/backend/service/auth")
-        val tu = TestUtils.analyzeAndGetFirstTU(listOf(topLevel.resolve("auth.go").toFile()), topLevel, true)
-
-        assertNotNull(tu)
-    }*/
-
     @Test
     fun testLiteral() {
         val topLevel = Path.of("src", "test", "resources", "golang")
@@ -140,7 +132,7 @@ class GoLanguageFrontendTest : BaseTest() {
 
         val p = tu.getDeclarationsByName("p", NamespaceDeclaration::class.java).iterator().next()
 
-        val myStruct = p.getDeclarationsByName("MyStruct", RecordDeclaration::class.java).iterator().next()
+        val myStruct = p.getDeclarationsByName("p.MyStruct", RecordDeclaration::class.java).iterator().next()
 
         assertNotNull(myStruct)
         assertEquals("struct", myStruct.kind)
@@ -160,7 +152,7 @@ class GoLanguageFrontendTest : BaseTest() {
         assertEquals("MyField", myField.name)
         assertEquals(TypeParser.createFrom("int", false), myField.type)
 
-        val myInterface = p.getDeclarationsByName("MyInterface", RecordDeclaration::class.java).iterator().next()
+        val myInterface = p.getDeclarationsByName("p.MyInterface", RecordDeclaration::class.java).iterator().next()
 
         assertNotNull(myInterface)
         assertEquals("interface", myInterface.kind)
@@ -184,7 +176,7 @@ class GoLanguageFrontendTest : BaseTest() {
 
         val p = tu.getDeclarationsByName("p", NamespaceDeclaration::class.java).iterator().next()
 
-        val myStruct = p.getDeclarationsByName("MyStruct", RecordDeclaration::class.java).iterator().next()
+        val myStruct = p.getDeclarationsByName("p.MyStruct", RecordDeclaration::class.java).iterator().next()
 
         val methods = myStruct.methods
 
