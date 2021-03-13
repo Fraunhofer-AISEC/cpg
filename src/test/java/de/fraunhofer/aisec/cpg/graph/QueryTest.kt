@@ -9,6 +9,7 @@ import de.fraunhofer.aisec.cpg.helpers.Benchmark
 import org.junit.jupiter.api.BeforeAll
 import org.opencypher.v9_0.ast.Query
 import org.opencypher.v9_0.parser.CypherParser
+import scala.Option
 import java.util.stream.Collector
 import java.util.stream.Collectors
 import kotlin.test.Test
@@ -22,7 +23,7 @@ import kotlin.time.milliseconds
 class QueryTest {
     @Test
     fun testQueryExistenceOfEdge() {
-        val query = parser.parse("MATCH (n:FunctionDeclaration)-[:PARAMETERS]->(m:ParamVariableDeclaration) RETURN n", null) as Query
+        val query = parser.parse("MATCH (n:FunctionDeclaration)-[:PARAMETERS]->(m:ParamVariableDeclaration) RETURN n", null, null) as Query
 
         var nodes: List<Node> = db.executeQuery(query)
 
@@ -81,7 +82,7 @@ class QueryTest {
 
     @Test
     fun testQueryExistenceOfEdgeOtherVar() {
-        val query = parser.parse("MATCH (n:FunctionDeclaration)-[:PARAMETERS]->(m:ParamVariableDeclaration) RETURN m", null) as Query
+        val query = parser.parse("MATCH (n:FunctionDeclaration)-[:PARAMETERS]->(m:ParamVariableDeclaration) RETURN m", null, null) as Query
 
         val nodes = db.executeQuery(query)
 
@@ -90,7 +91,7 @@ class QueryTest {
 
     @Test
     fun testQueryExistenceOfEdgeWithEquals() {
-        val query = parser.parse("MATCH (n:FunctionDeclaration)-[:PARAMETERS]->(m:ParamVariableDeclaration) WHERE m.name = 'paramB' RETURN n", null) as Query
+        val query = parser.parse("MATCH (n:FunctionDeclaration)-[:PARAMETERS]->(m:ParamVariableDeclaration) WHERE m.name = 'paramB' RETURN n", null, null) as Query
 
         val nodes = db.executeQuery(query)
 
@@ -100,7 +101,7 @@ class QueryTest {
 
     @Test
     fun testQueryWithSimpleProperty() {
-        val query = parser.parse("MATCH (n:VariableDeclaration) WHERE n.name = 'myVar' RETURN n", null) as Query
+        val query = parser.parse("MATCH (n:VariableDeclaration) WHERE n.name = 'myVar' RETURN n", null, null) as Query
         println(query)
 
         val nodes = db.executeQuery(query)
@@ -111,7 +112,7 @@ class QueryTest {
     @Test
     fun testQueryAllNodes() {
         // should return all nodes
-        val query = parser.parse("MATCH (n) RETURN n", null) as Query
+        val query = parser.parse("MATCH (n) RETURN n", null, null) as Query
         println(query)
 
         val nodes = db.executeQuery(query)
@@ -122,7 +123,7 @@ class QueryTest {
     @Test
     fun testQueryAllNodesWithEquals() {
         // should return all nodes
-        val query = parser.parse("MATCH (n) WHERE 1=1 RETURN n", null) as Query
+        val query = parser.parse("MATCH (n) WHERE 1=1 RETURN n", null, null) as Query
         println(query)
 
         val nodes = db.executeQuery(query)
@@ -133,7 +134,7 @@ class QueryTest {
     @Test
     fun testQueryLimit() {
         // should return all nodes
-        val query = parser.parse("MATCH (n) RETURN n LIMIT 25", null) as Query
+        val query = parser.parse("MATCH (n) RETURN n LIMIT 25", null, null) as Query
         println(query)
 
         val nodes = db.executeQuery(query)
@@ -144,7 +145,7 @@ class QueryTest {
     @Test
     fun testQueryNoResult() {
         // should return no nodes
-        val query = parser.parse("MATCH (n) WHERE 1='a' RETURN n", null) as Query
+        val query = parser.parse("MATCH (n) WHERE 1='a' RETURN n", null, null) as Query
         println(query)
 
         val nodes = db.executeQuery(query)
@@ -156,7 +157,7 @@ class QueryTest {
     @Test
     fun testQueryLesser() {
         // should return no nodes
-        val query = parser.parse("MATCH (n) WHERE 1<0 RETURN n", null) as Query
+        val query = parser.parse("MATCH (n) WHERE 1<0 RETURN n", null, null) as Query
         println(query)
 
         val nodes = db.executeQuery(query)
@@ -168,7 +169,7 @@ class QueryTest {
     @Test
     fun testQueryGreaterThan() {
         // should return no nodes
-        val query = parser.parse("MATCH (n) WHERE 0>1 RETURN n", null) as Query
+        val query = parser.parse("MATCH (n) WHERE 0>1 RETURN n", null, null) as Query
         println(query)
 
         val nodes = db.executeQuery(query)
