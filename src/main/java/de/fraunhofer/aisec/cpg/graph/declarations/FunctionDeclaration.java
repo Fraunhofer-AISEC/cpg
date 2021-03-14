@@ -246,7 +246,7 @@ public class FunctionDeclaration extends ValueDeclaration implements Declaration
   public List<Expression> getDefaultParameters() {
     List<Expression> defaultParameters = new ArrayList<>();
     for (ParamVariableDeclaration param : getParameters()) {
-      defaultParameters.add(param.getDefaultValue());
+      defaultParameters.add(param.getDefault());
     }
     return defaultParameters;
   }
@@ -254,7 +254,7 @@ public class FunctionDeclaration extends ValueDeclaration implements Declaration
   public List<Type> getDefaultParameterSignature() {
     List<Type> signature = new ArrayList<>();
     for (ParamVariableDeclaration paramVariableDeclaration : getParameters()) {
-      if (paramVariableDeclaration.getDefaultValue() != null) {
+      if (paramVariableDeclaration.getDefault() != null) {
         signature.add(paramVariableDeclaration.getType());
       } else {
         signature.add(UnknownType.getUnknownType());

@@ -103,7 +103,7 @@ public class ParameterDeclarationHandler
 
     // Add default values
     if (ctx.getDeclarator().getInitializer() != null) {
-      paramVariableDeclaration.setDefaultValue(
+      paramVariableDeclaration.setDefault(
           lang.getInitializerHandler().handle(ctx.getDeclarator().getInitializer()));
     }
 
