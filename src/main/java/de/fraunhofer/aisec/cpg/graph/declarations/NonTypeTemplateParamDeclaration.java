@@ -6,13 +6,13 @@ import de.fraunhofer.aisec.cpg.graph.SubGraph;
 import de.fraunhofer.aisec.cpg.graph.TemplateParameter;
 import de.fraunhofer.aisec.cpg.graph.edge.Properties;
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression;
 import java.util.ArrayList;
 import java.util.List;
-
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression;
 import org.neo4j.ogm.annotation.Relationship;
 
-public class NonTypeTemplateParamDeclaration extends ParamVariableDeclaration implements TemplateParameter {
+public class NonTypeTemplateParamDeclaration extends ParamVariableDeclaration
+    implements TemplateParameter {
   @Relationship(value = "POSSIBLE_INITIALIZATIONS", direction = "OUTGOING")
   @SubGraph("AST")
   protected List<PropertyEdge<Expression>> possibleInitializations = new ArrayList<>();
