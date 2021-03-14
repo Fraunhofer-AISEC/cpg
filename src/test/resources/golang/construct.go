@@ -8,4 +8,6 @@ func main() {
   a := make([]int, 5)
 
   m := make(map[string]string, 10)
+
+  ch := make(chan int)
 }

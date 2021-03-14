@@ -16,7 +16,7 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 class GoLanguageFrontendTest : BaseTest() {
-    
+
     @Test
     fun testConstruct() {
         val topLevel = Path.of("src", "test", "resources", "golang")
@@ -97,6 +97,22 @@ class GoLanguageFrontendTest : BaseTest() {
         assertNotNull(make)
         assertTrue(make is ConstructExpression)
         assertEquals(TypeParser.createFrom("map<string,string>", false), make.type)
+
+        // make channel
+
+        stmt = body.statements[3] as? DeclarationStatement
+
+        assertNotNull(stmt)
+
+        decl = stmt.singleDeclaration as? VariableDeclaration
+
+        assertNotNull(decl)
+
+        make = decl.initializer
+
+        assertNotNull(make)
+        assertTrue(make is ConstructExpression)
+        assertEquals(TypeParser.createFrom("chan<int>", false), make.type)
     }
 
     @Test

@@ -875,7 +875,14 @@ func (this *GoLanguageFrontend) handleType(typeExpr ast.Expr) *cpg.Type {
 		(*cpg.ObjectType)(t).AddGeneric(valueType)
 
 		return t
+	case *ast.ChanType:
+		// handle them similar to maps
+		t := cpg.TypeParser_createFrom("chan", false)
+		chanType := this.handleType(v.Value)
 
+		(*cpg.ObjectType)(t).AddGeneric(chanType)
+
+		return t
 	case *ast.FuncType:
 		// for now, we are only interested in the return type
 		return this.handleType(v.Results.List[0].Type)
