@@ -237,6 +237,9 @@ public class ScopeManager {
       } else if (nodeToScope instanceof RecordDeclaration) {
         newScope =
             new RecordScope(nodeToScope, getCurrentNamePrefix(), lang.getNamespaceDelimiter());
+      } else if (nodeToScope instanceof TemplateDeclaration) {
+        newScope =
+            new TemplateScope(nodeToScope, getCurrentNamePrefix(), lang.getNamespaceDelimiter());
       } else if (nodeToScope instanceof TryStatement) {
         newScope = new TryScope(nodeToScope);
       } else if (nodeToScope instanceof NamespaceDeclaration) {
@@ -452,7 +455,8 @@ public class ScopeManager {
       scopeForValueDeclaration.addValueDeclaration((ValueDeclaration) declaration);
     } else if (declaration instanceof RecordDeclaration
         || declaration instanceof NamespaceDeclaration
-        || declaration instanceof EnumDeclaration) {
+        || declaration instanceof EnumDeclaration
+        || declaration instanceof TemplateDeclaration) {
       StructureDeclarationScope scopeForStructureDeclaration =
           (StructureDeclarationScope)
               getFirstScopeThat(scope -> scope instanceof StructureDeclarationScope);
