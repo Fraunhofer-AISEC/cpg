@@ -255,19 +255,36 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
     if (ctx.getDeclaration() instanceof CPPASTFunctionDefinition) {
 
       // Handle FunctionTemplate
-      FunctionTemplateDeclaration templateDeclaration =
-          NodeBuilder.newFunctionTemplateDeclaration(
-              this.lang.getCodeFromRawNode(ctx), this.lang.getLocationFromRawNode(ctx), null);
-      lang.getScopeManager().addDeclaration(templateDeclaration);
-      lang.getScopeManager().enterScope(templateDeclaration);
       FunctionDeclaration functionDeclaration =
           (FunctionDeclaration) lang.getDeclarationHandler().handle(ctx.getDeclaration());
-      templateDeclaration.setRealization(functionDeclaration);
+
+      FunctionTemplateDeclaration templateDeclaration =
+          NodeBuilder.newFunctionTemplateDeclaration(
+              this.lang.getCodeFromRawNode(ctx),
+              this.lang.getLocationFromRawNode(ctx),
+              functionDeclaration);
+      lang.getScopeManager().addDeclaration(templateDeclaration);
+      lang.getScopeManager().enterScope(templateDeclaration);
 
       for (ICPPASTTemplateParameter templateParameter : ctx.getTemplateParameters()) {
         if (templateParameter instanceof CPPASTSimpleTypeTemplateParameter) {
-          templateDeclaration.addParameter(new ParameterizedType(templateParameter.toString()));
+          // Handle Types as Parameters
+          TypeTemplateParamDeclaration typeTemplateParamDeclaration =
+              (TypeTemplateParamDeclaration)
+                  this.lang
+                      .getDeclaratorHandler()
+                      .handle((CPPASTSimpleTypeTemplateParameter) templateParameter);
+          ParameterizedType parameterizedType =
+              TypeManager.getInstance()
+                  .createOrGetTypeParameter(
+                      templateDeclaration,
+                      ((CPPASTSimpleTypeTemplateParameter) templateParameter).getName().toString());
+
+          typeTemplateParamDeclaration.setType(parameterizedType);
+
+          templateDeclaration.addParameter(typeTemplateParamDeclaration);
         } else if (templateParameter instanceof CPPASTParameterDeclaration) {
+          // Handle Values as Parameters
           templateDeclaration.addParameter(
               NodeBuilder.newNonTypeTemplateParameter(
                   this.lang

@@ -2,41 +2,50 @@ package de.fraunhofer.aisec.cpg.graph.declarations;
 
 import static de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.unwrap;
 
-import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.SubGraph;
 import de.fraunhofer.aisec.cpg.graph.edge.Properties;
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
-import de.fraunhofer.aisec.cpg.graph.types.ParameterizedType;
 import de.fraunhofer.aisec.cpg.graph.types.Type;
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser;
 import java.util.*;
+import org.checkerframework.checker.nullness.qual.NonNull;
 import org.neo4j.ogm.annotation.Relationship;
 
 public class FunctionTemplateDeclaration extends TemplateDeclaration {
 
   @Relationship(value = "REALIZATION", direction = "OUTGOING")
   @SubGraph("AST")
-  private FunctionDeclaration realization;
+  private List<PropertyEdge<FunctionDeclaration>> realization = new ArrayList<>();
 
   @Relationship(value = "PARAMETERS", direction = "OUTGOING")
   @SubGraph("AST")
-  protected List<PropertyEdge<Node>> parameters = new ArrayList<>();
+  protected List<PropertyEdge<Declaration>> parameters = new ArrayList<>();
 
-  public FunctionDeclaration getRealization() {
-    return realization;
+  public List<FunctionDeclaration> getRealization() {
+    return unwrap(this.realization);
   }
 
-  public void setRealization(FunctionDeclaration realization) {
-    this.realization = realization;
+  public List<PropertyEdge<FunctionDeclaration>> getRealizationPropertyEdge() {
+    return this.realization;
   }
 
-  public List<Node> getParameters() {
+  public void addRealization(FunctionDeclaration realizedFunction) {
+    PropertyEdge<FunctionDeclaration> propertyEdge = new PropertyEdge<>(this, realizedFunction);
+    propertyEdge.addProperty(Properties.INDEX, this.parameters.size());
+    this.realization.add(propertyEdge);
+  }
+
+  public void removeRealization(FunctionDeclaration realizedFunction) {
+    this.realization.removeIf(propertyEdge -> propertyEdge.getEnd().equals(realizedFunction));
+  }
+
+  public List<Declaration> getParameters() {
     return unwrap(this.parameters);
   }
 
-  public List<Node> getParametersOfClazz(Class<? extends Node> clazz) {
-    List<Node> reducedParametersByType = new ArrayList<>();
-    for (Node n : this.getParameters()) {
+  public List<Declaration> getParametersOfClazz(Class<? extends Declaration> clazz) {
+    List<Declaration> reducedParametersByType = new ArrayList<>();
+    for (Declaration n : this.getParameters()) {
       if (clazz.isInstance(n)) {
         reducedParametersByType.add(n);
       }
@@ -44,23 +53,24 @@ public class FunctionTemplateDeclaration extends TemplateDeclaration {
     return reducedParametersByType;
   }
 
-  public List<PropertyEdge<Node>> getParametersPropertyEdge() {
+  public List<PropertyEdge<Declaration>> getParametersPropertyEdge() {
     return this.parameters;
   }
 
-  public void addParameter(ParameterizedType parameterizedType) {
-    PropertyEdge<Node> propertyEdge = new PropertyEdge<>(this, parameterizedType);
+  public void addParameter(TypeTemplateParamDeclaration parameterizedType) {
+    PropertyEdge<Declaration> propertyEdge = new PropertyEdge<>(this, parameterizedType);
     propertyEdge.addProperty(Properties.INDEX, this.parameters.size());
     this.parameters.add(propertyEdge);
   }
 
   public void addParameter(NonTypeTemplateParamDeclaration nonTypeTemplateParamDeclaration) {
-    PropertyEdge<Node> propertyEdge = new PropertyEdge<>(this, nonTypeTemplateParamDeclaration);
+    PropertyEdge<Declaration> propertyEdge =
+        new PropertyEdge<>(this, nonTypeTemplateParamDeclaration);
     propertyEdge.addProperty(Properties.INDEX, this.parameters.size());
     this.parameters.add(propertyEdge);
   }
 
-  public void removeParameter(ParameterizedType parameterizedType) {
+  public void removeParameter(Declaration parameterizedType) {
     this.parameters.removeIf(propertyEdge -> propertyEdge.getEnd().equals(parameterizedType));
   }
 
@@ -73,14 +83,14 @@ public class FunctionTemplateDeclaration extends TemplateDeclaration {
     List<String> singleTemplateParameters = singleTemplateParameters(templateParameters);
     Map<String, Type> map = new HashMap<>();
 
-    List<Node> typeParameters = this.getParameters();
+    List<Declaration> typeParameters = this.getParameters();
     // TODO vfsrfs: Problem with auto typing (no explicit information of type in < >)
     if (singleTemplateParameters.size() != typeParameters.size()) {
       return map;
     }
 
     for (int i = 0; i < typeParameters.size(); i++) {
-      if (typeParameters.get(i) instanceof ParameterizedType) {
+      if (typeParameters.get(i) instanceof TypeTemplateParamDeclaration) {
         map.put(
             typeParameters.get(i).getName(),
             TypeParser.createFrom(singleTemplateParameters.get(i), false));
@@ -92,5 +102,16 @@ public class FunctionTemplateDeclaration extends TemplateDeclaration {
 
   private List<String> singleTemplateParameters(String templateParameters) {
     return Arrays.asList(templateParameters.split(","));
+  }
+
+  @Override
+  public void addDeclaration(@NonNull Declaration declaration) {
+    if (declaration instanceof TypeTemplateParamDeclaration) {
+      addIfNotContains(this.parameters, (TypeTemplateParamDeclaration) declaration);
+    } else if (declaration instanceof NonTypeTemplateParamDeclaration) {
+      addIfNotContains(this.parameters, (NonTypeTemplateParamDeclaration) declaration);
+    } else if (declaration instanceof FunctionDeclaration) {
+      addIfNotContains(this.realization, (FunctionDeclaration) declaration);
+    }
   }
 }
