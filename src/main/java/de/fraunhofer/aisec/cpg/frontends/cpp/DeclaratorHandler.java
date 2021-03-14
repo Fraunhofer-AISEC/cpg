@@ -407,7 +407,7 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
   private TypeTemplateParamDeclaration handleTemplateTypeParameter(
       CPPASTSimpleTypeTemplateParameter ctx) {
     return NodeBuilder.newTypeTemplateParamDeclaration(
-        ctx.getName().toString(), ctx.getRawSignature());
+        ctx.getRawSignature(), ctx.getRawSignature());
   }
 
   private void processMembers(CPPASTCompositeTypeSpecifier ctx) {
