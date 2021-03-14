@@ -231,6 +231,14 @@ public class NodeBuilder {
     return node;
   }
 
+  public static TypeTemplateParamDeclaration newTypeTemplateParamDeclaration(
+      String name, String code) {
+    TypeTemplateParamDeclaration node = new TypeTemplateParamDeclaration();
+    node.setName(name);
+    node.setCode(code);
+    return node;
+  }
+
   public static CompoundStatement newCompoundStatement(String code) {
     CompoundStatement node = new CompoundStatement();
     node.setCode(code);
@@ -442,7 +450,7 @@ public class NodeBuilder {
 
     node.setCode(code);
     node.setLocation(location);
-    node.setRealization(target);
+    node.addRealization(target);
 
     log(node);
     return node;
