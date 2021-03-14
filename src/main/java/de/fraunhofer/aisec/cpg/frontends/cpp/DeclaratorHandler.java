@@ -71,6 +71,9 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
     map.put(
         CPPASTCompositeTypeSpecifier.class,
         ctx -> handleCompositeTypeSpecifier((CPPASTCompositeTypeSpecifier) ctx));
+    map.put(
+        CPPASTSimpleTypeTemplateParameter.class,
+        ctx -> handleTemplateTypeParameter((CPPASTSimpleTypeTemplateParameter) ctx));
   }
 
   private Declaration handleDeclarator(CPPASTDeclarator ctx) {
@@ -407,6 +410,11 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
 
     lang.getScopeManager().leaveScope(recordDeclaration);
     return recordDeclaration;
+  }
+
+  private Declaration handleTemplateTypeParameter(CPPASTSimpleTypeTemplateParameter ctx) {
+    // TODO vfsrfs
+    return null;
   }
 
   private void processMembers(CPPASTCompositeTypeSpecifier ctx) {

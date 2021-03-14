@@ -32,21 +32,12 @@ import static de.fraunhofer.aisec.cpg.helpers.Util.warnWithFileLocation;
 import de.fraunhofer.aisec.cpg.frontends.Handler;
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder;
 import de.fraunhofer.aisec.cpg.graph.TypeManager;
-import de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDeclaration;
-import de.fraunhofer.aisec.cpg.graph.declarations.Declaration;
-import de.fraunhofer.aisec.cpg.graph.declarations.DeclarationSequence;
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration;
-import de.fraunhofer.aisec.cpg.graph.declarations.IncludeDeclaration;
-import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration;
-import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration;
-import de.fraunhofer.aisec.cpg.graph.declarations.ProblemDeclaration;
-import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration;
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration;
-import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declarations.*;
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement;
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement;
 import de.fraunhofer.aisec.cpg.graph.statements.Statement;
+import de.fraunhofer.aisec.cpg.graph.types.ParameterizedType;
 import de.fraunhofer.aisec.cpg.graph.types.Type;
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser;
 import de.fraunhofer.aisec.cpg.helpers.Util;
@@ -57,24 +48,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
-import org.eclipse.cdt.core.dom.ast.IASTArrayModifier;
-import org.eclipse.cdt.core.dom.ast.IASTDeclSpecifier;
-import org.eclipse.cdt.core.dom.ast.IASTDeclaration;
-import org.eclipse.cdt.core.dom.ast.IASTDeclarator;
-import org.eclipse.cdt.core.dom.ast.IASTNode;
-import org.eclipse.cdt.core.dom.ast.IASTPointerOperator;
-import org.eclipse.cdt.core.dom.ast.IASTTranslationUnit;
-import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTCompositeTypeSpecifier;
-import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTElaboratedTypeSpecifier;
-import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTFunctionDefinition;
-import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTLinkageSpecification;
-import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTName;
-import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTNamespaceDefinition;
-import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTProblemDeclaration;
-import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTSimpleDeclaration;
-import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTTemplateDeclaration;
-import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTTranslationUnit;
-import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTUsingDirective;
+import org.eclipse.cdt.core.dom.ast.*;
+import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTTemplateParameter;
+import org.eclipse.cdt.internal.core.dom.parser.cpp.*;
 
 public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CXXLanguageFrontend> {
 
@@ -257,7 +233,40 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
         log,
         "Parsing template declarations is not supported (yet). Will ignore template and parse inner declaration");
 
-    return handle(ctx.getDeclaration());
+    if (ctx.getDeclaration() instanceof CPPASTFunctionDefinition) {
+
+      // Handle FunctionTemplate
+      FunctionTemplateDeclaration templateDeclaration =
+          NodeBuilder.newFunctionTemplateDeclaration(
+              this.lang.getCodeFromRawNode(ctx), this.lang.getLocationFromRawNode(ctx), null);
+      lang.getScopeManager().addDeclaration(templateDeclaration);
+      lang.getScopeManager().enterScope(templateDeclaration);
+      FunctionDeclaration functionDeclaration =
+          (FunctionDeclaration) lang.getDeclarationHandler().handle(ctx.getDeclaration());
+      templateDeclaration.setRealization(functionDeclaration);
+
+      for (ICPPASTTemplateParameter templateParameter : ctx.getTemplateParameters()) {
+        if (templateParameter instanceof CPPASTSimpleTypeTemplateParameter) {
+          templateDeclaration.addParameter(new ParameterizedType(templateParameter.toString()));
+        } else if (templateParameter instanceof CPPASTParameterDeclaration) {
+          templateDeclaration.addParameter(
+              NodeBuilder.newNonTypeTemplateParameter(
+                  this.lang
+                      .getParameterDeclarationHandler()
+                      .handle((IASTParameterDeclaration) templateParameter)));
+        }
+      }
+      lang.getScopeManager().leaveScope(templateDeclaration);
+      return templateDeclaration;
+    } else {
+      // Handle RecordTemplate
+
+    }
+    return null;
+  }
+
+  private Declaration handleTemplateParameter(CPPASTParameterDeclaration ctx) {
+    return null;
   }
 
   private Declaration handleSimpleDeclaration(CPPASTSimpleDeclaration ctx) {
