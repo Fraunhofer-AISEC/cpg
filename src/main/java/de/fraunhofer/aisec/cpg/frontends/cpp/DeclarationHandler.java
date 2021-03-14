@@ -208,6 +208,25 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
       this.lang.getScopeManager().leaveScope(recordDeclaration);
     }
 
+    // Check for declarations of the same function
+    List<FunctionDeclaration> declarationCandidates =
+        lang.getCurrentTU().getDeclarations().stream()
+            .filter(FunctionDeclaration.class::isInstance)
+            .map(FunctionDeclaration.class::cast)
+            .filter(f -> !f.isDefinition() && f.hasSameSignature(functionDeclaration))
+            .collect(Collectors.toList());
+    for (FunctionDeclaration declaration : declarationCandidates) {
+      declaration.setDefinition(functionDeclaration);
+      for (int i = 0; i < functionDeclaration.getParameters().size(); i++) {
+        if (declaration.getParameters().get(i).getDefaultValue() != null) {
+          functionDeclaration
+              .getParameters()
+              .get(i)
+              .setDefaultValue(declaration.getParameters().get(i).getDefaultValue());
+        }
+      }
+    }
+
     return functionDeclaration;
   }
 

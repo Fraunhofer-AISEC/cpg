@@ -84,6 +84,14 @@ public class PropertyEdge<T extends Node> implements Persistable {
     return start;
   }
 
+  public void setEnd(T end) {
+    this.end = end;
+  }
+
+  public void setStart(Node start) {
+    this.start = start;
+  }
+
   /**
    * Add/Update index element of list of PropertyEdges
    *

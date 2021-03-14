@@ -32,8 +32,11 @@ import de.fraunhofer.aisec.cpg.BaseTest;
 import de.fraunhofer.aisec.cpg.TestUtils;
 import de.fraunhofer.aisec.cpg.graph.declarations.*;
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression;
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.CastExpression;
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal;
 import de.fraunhofer.aisec.cpg.graph.types.Type;
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser;
+import de.fraunhofer.aisec.cpg.graph.types.UnknownType;
 import java.nio.file.Path;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -170,7 +173,9 @@ public class CallResolverTest extends BaseTest {
 
   @Test
   void testCpp() throws Exception {
-    List<TranslationUnitDeclaration> result = TestUtils.analyze("cpp", topLevel, true);
+    List<TranslationUnitDeclaration> result =
+        TestUtils.analyze(
+            List.of(Path.of(topLevel.toString(), "calls.cpp").toFile()), topLevel, true);
     List<RecordDeclaration> records = TestUtils.subnodesOfType(result, RecordDeclaration.class);
     Type intType = TypeParser.createFrom("int", true);
     Type stringType = TypeParser.createFrom("char*", true);
@@ -190,5 +195,281 @@ public class CallResolverTest extends BaseTest {
 
     ensureNoUnknownClassDummies(records);
     ensureInvocationOfMethodsInFunction(result);
+  }
+
+  @Test
+  void testImplicitCastCallResolution() throws Exception {
+    Path filePath = Path.of(topLevel.toString(), "implicitcast");
+    List<TranslationUnitDeclaration> result = TestUtils.analyze("cpp", filePath, true);
+    List<CallExpression> callExpressions = TestUtils.subnodesOfType(result, CallExpression.class);
+
+    // Check resolution of implicit cast
+    CallExpression multiply = TestUtils.findByUniqueName(callExpressions, "multiply");
+
+    assertEquals(1, multiply.getInvokes().size());
+    FunctionDeclaration functionDeclaration = multiply.getInvokes().get(0);
+    assertFalse(functionDeclaration.isImplicit());
+    assertEquals("int", functionDeclaration.getSignatureTypes().get(0).getTypeName());
+
+    assertTrue(multiply.getArguments().get(0) instanceof CastExpression);
+    CastExpression implicitCast = (CastExpression) multiply.getArguments().get(0);
+    assertEquals("int", implicitCast.getCastType().getTypeName());
+    assertEquals("10.0", implicitCast.getExpression().getCode());
+
+    // Check implicit cast in case of ambiguous call
+    CallExpression ambiguousCall =
+        TestUtils.findByUniqueName(callExpressions, "ambiguous_multiply");
+
+    // Check invokes
+    List<FunctionDeclaration> functionDeclarations = ambiguousCall.getInvokes();
+    assertEquals(2, functionDeclarations.size());
+    for (FunctionDeclaration func : functionDeclarations) {
+      assertFalse(func.isImplicit());
+      assertTrue(
+          (func.getParameters().get(0).getType().getName().equals("int"))
+              || (func.getParameters().get(0).getType().getName().equals("float")));
+    }
+
+    // Check Cast
+    assertTrue(ambiguousCall.getArguments().get(0) instanceof CastExpression);
+    CastExpression castExpression = (CastExpression) ambiguousCall.getArguments().get(0);
+    assertEquals(UnknownType.getUnknownType(), castExpression.getType());
+    assertEquals("10.0", castExpression.getExpression().getCode());
+  }
+
+  private void testDefaultArgumentsInDeclaration() throws Exception {
+    List<TranslationUnitDeclaration> result =
+        TestUtils.analyze(
+            List.of(
+                Path.of(topLevel.toString(), "defaultargs", "defaultInDeclaration.cpp").toFile()),
+            topLevel,
+            true);
+
+    List<CallExpression> calls = TestUtils.subnodesOfType(result, CallExpression.class);
+    List<FunctionDeclaration> functionDeclarations =
+        TestUtils.subnodesOfType(result, FunctionDeclaration.class);
+    FunctionDeclaration displayDeclaration =
+        TestUtils.findByUniquePredicate(
+            functionDeclarations,
+            f -> f.getName().equals("display") && !f.isDefinition() && !f.isImplicit());
+    FunctionDeclaration displayDefinition =
+        TestUtils.findByUniquePredicate(
+            functionDeclarations,
+            f -> f.getName().equals("display") && f.isDefinition() && !f.isImplicit());
+
+    // Check defines edge
+    assertEquals(displayDefinition, displayDeclaration.getDefinition());
+
+    // Check defaults edge of ParamVariableDeclaration
+    assertEquals(
+        displayDeclaration.getDefaultParameters(), displayDefinition.getDefaultParameters());
+
+    // Check call display(1);
+    CallExpression display1 =
+        TestUtils.findByUniquePredicate(
+            calls,
+            c -> {
+              assert c.getCode() != null;
+              return c.getCode().equals("display(1);");
+            });
+
+    assertEquals(2, display1.getInvokes().size());
+    assertTrue(display1.getInvokes().contains(displayDeclaration));
+    assertTrue(display1.getInvokes().contains(displayDefinition));
+
+    assertEquals("1", display1.getArguments().get(0).getCode());
+    assertEquals(displayDeclaration.getDefaultParameters().get(1), display1.getArguments().get(1));
+
+    CallExpression display =
+        TestUtils.findByUniquePredicate(
+            calls,
+            c -> {
+              assert c.getCode() != null;
+              return c.getCode().equals("display();");
+            });
+
+    assertEquals(2, display.getInvokes().size());
+    assertTrue(display.getInvokes().contains(displayDeclaration));
+    assertTrue(display.getInvokes().contains(displayDefinition));
+
+    assertEquals(displayDeclaration.getDefaultParameters().get(0), display.getArguments().get(0));
+    assertEquals(displayDeclaration.getDefaultParameters().get(1), display.getArguments().get(1));
+
+    CallExpression displayCount$ =
+        TestUtils.findByUniquePredicate(
+            calls,
+            c -> {
+              assert c.getCode() != null;
+              return c.getCode().equals("display(count, '$');");
+            });
+
+    assertEquals(2, display.getInvokes().size());
+    assertTrue(display.getInvokes().contains(displayDeclaration));
+    assertTrue(display.getInvokes().contains(displayDefinition));
+
+    assertEquals("count", displayCount$.getArguments().get(0).getName());
+    assertEquals("'$'", displayCount$.getArguments().get(1).getCode());
+
+    CallExpression display10 =
+        TestUtils.findByUniquePredicate(
+            calls,
+            c -> {
+              assert c.getCode() != null;
+              return c.getCode().equals("display(10.0);");
+            });
+
+    assertEquals(2, display10.getInvokes().size());
+    assertTrue(display.getInvokes().contains(displayDeclaration));
+    assertTrue(display.getInvokes().contains(displayDefinition));
+
+    assertTrue(display10.getArguments().get(0) instanceof CastExpression);
+    assertEquals(
+        "10.0", ((CastExpression) display10.getArguments().get(0)).getExpression().getCode());
+    assertEquals("int", ((CastExpression) display10.getArguments().get(0)).getCastType().getName());
+    assertEquals(displayDeclaration.getDefaultParameters().get(1), display10.getArguments().get(1));
+  }
+
+  private void testDefaultArgumentsInDefinition() throws Exception {
+    List<TranslationUnitDeclaration> result =
+        TestUtils.analyze(
+            List.of(
+                Path.of(topLevel.toString(), "defaultargs", "defaultInDefinition.cpp").toFile()),
+            topLevel,
+            true);
+
+    List<CallExpression> calls = TestUtils.subnodesOfType(result, CallExpression.class);
+    List<FunctionDeclaration> functionDeclarations =
+        TestUtils.subnodesOfType(result, FunctionDeclaration.class);
+    FunctionDeclaration displayFunction =
+        TestUtils.findByUniquePredicate(
+            functionDeclarations, f -> f.getName().equals("display") && !f.isImplicit());
+
+    // Check defaults edge of ParamVariableDeclaration
+    assertTrue(displayFunction.getDefaultParameters().get(0) instanceof Literal);
+    assertTrue(displayFunction.getDefaultParameters().get(1) instanceof Literal);
+    assertEquals("*", ((Literal) displayFunction.getDefaultParameters().get(0)).getValueString());
+    assertEquals("3", ((Literal) displayFunction.getDefaultParameters().get(1)).getValueString());
+
+    // Check call display();
+    CallExpression display =
+        TestUtils.findByUniquePredicate(
+            calls,
+            c -> {
+              assert c.getCode() != null;
+              return c.getCode().equals("display();");
+            });
+    assertEquals(1, display.getInvokes().size());
+    assertEquals(displayFunction, display.getInvokes().get(0));
+
+    assertTrue(display.getArguments().get(0) instanceof Literal);
+    assertTrue(display.getArguments().get(1) instanceof Literal);
+    assertEquals("*", ((Literal) display.getArguments().get(0)).getValueString());
+    assertEquals("3", ((Literal) display.getArguments().get(1)).getValueString());
+
+    // Check call display('#');
+    CallExpression displayHash =
+        TestUtils.findByUniquePredicate(
+            calls,
+            c -> {
+              assert c.getCode() != null;
+              return c.getCode().equals("display('#');");
+            });
+
+    assertEquals(1, displayHash.getInvokes().size());
+    assertEquals(displayFunction, displayHash.getInvokes().get(0));
+
+    assertTrue(displayHash.getArguments().get(0) instanceof Literal);
+    assertTrue(displayHash.getArguments().get(1) instanceof Literal);
+    assertEquals("#", ((Literal) displayHash.getArguments().get(0)).getValueString());
+    assertEquals("3", ((Literal) displayHash.getArguments().get(1)).getValueString());
+
+    // Check call display('#');
+    CallExpression display$Count =
+        TestUtils.findByUniquePredicate(
+            calls,
+            c -> {
+              assert c.getCode() != null;
+              return c.getCode().equals("display('$', count);");
+            });
+
+    assertEquals(1, display$Count.getInvokes().size());
+    assertEquals(displayFunction, display$Count.getInvokes().get(0));
+
+    assertTrue(display$Count.getArguments().get(0) instanceof Literal);
+    assertEquals("$", ((Literal) display$Count.getArguments().get(0)).getValueString());
+    assertEquals("count", display$Count.getArguments().get(1).getName());
+  }
+
+  private void testPartialDefaultArguments() throws Exception {
+    List<TranslationUnitDeclaration> result =
+        TestUtils.analyze(
+            List.of(Path.of(topLevel.toString(), "defaultargs", "partialDefaults.cpp").toFile()),
+            topLevel,
+            true);
+
+    List<CallExpression> calls = TestUtils.subnodesOfType(result, CallExpression.class);
+    List<FunctionDeclaration> functionDeclarations =
+        TestUtils.subnodesOfType(result, FunctionDeclaration.class);
+    FunctionDeclaration addFunction =
+        TestUtils.findByUniquePredicate(
+            functionDeclarations, f -> f.getName().equals("add") && !f.isImplicit());
+    FunctionDeclaration addFunctionImplicit =
+        TestUtils.findByUniquePredicate(
+            functionDeclarations, f -> f.getName().equals("add") && f.isImplicit());
+
+    // Check call add();
+    CallExpression add =
+        TestUtils.findByUniquePredicate(
+            calls,
+            c -> {
+              assert c.getCode() != null;
+              return c.getCode().equals("add();");
+            });
+
+    assertEquals(1, add.getInvokes().size());
+    assertEquals(addFunctionImplicit, add.getInvokes().get(0));
+
+    // Check call add(1, 2);
+    CallExpression add12 =
+        TestUtils.findByUniquePredicate(
+            calls,
+            c -> {
+              assert c.getCode() != null;
+              return c.getCode().equals("add(1,2);");
+            });
+
+    assertEquals(1, add12.getInvokes().size());
+    assertEquals(addFunction, add12.getInvokes().get(0));
+
+    assertEquals(4, add12.getArguments().size());
+    assertEquals("1", add12.getArguments().get(0).getCode());
+    assertEquals("2", add12.getArguments().get(1).getCode());
+    assertEquals(addFunction.getDefaultParameters().get(2), add12.getArguments().get(2));
+    assertEquals(addFunction.getDefaultParameters().get(3), add12.getArguments().get(3));
+
+    // Check call add(1, 2, 5, 6);
+    CallExpression add1256 =
+        TestUtils.findByUniquePredicate(
+            calls,
+            c -> {
+              assert c.getCode() != null;
+              return c.getCode().equals("add(1,2,5,6);");
+            });
+
+    assertEquals(1, add1256.getInvokes().size());
+    assertEquals(addFunction, add1256.getInvokes().get(0));
+
+    assertEquals(4, add1256.getArguments().size());
+    assertEquals("1", add1256.getArguments().get(0).getCode());
+    assertEquals("2", add1256.getArguments().get(1).getCode());
+    assertEquals("5", add1256.getArguments().get(2).getCode());
+    assertEquals("6", add1256.getArguments().get(3).getCode());
+  }
+
+  @Test
+  void testDefaultArgumentsCallResolution() throws Exception {
+    testDefaultArgumentsInDeclaration();
+    testDefaultArgumentsInDefinition();
+    testPartialDefaultArguments();
   }
 }

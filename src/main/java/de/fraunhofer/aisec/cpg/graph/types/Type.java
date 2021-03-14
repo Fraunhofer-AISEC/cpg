@@ -51,6 +51,8 @@ public abstract class Type extends Node {
    */
   @NonNull protected Storage storage = Storage.AUTO;
 
+  protected boolean primitive = false;
+
   @Convert(QualifierConverter.class)
   protected Qualifier qualifier;
 
@@ -133,6 +135,10 @@ public abstract class Type extends Node {
 
   public void setTypeOrigin(Origin origin) {
     this.origin = origin;
+  }
+
+  public boolean isPrimitive() {
+    return primitive;
   }
 
   /** Type Origin describes where the Type information came from */
