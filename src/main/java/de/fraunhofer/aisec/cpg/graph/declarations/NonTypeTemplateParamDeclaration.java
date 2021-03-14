@@ -12,7 +12,7 @@ import java.util.List;
 import org.neo4j.ogm.annotation.Relationship;
 
 public class NonTypeTemplateParamDeclaration extends ParamVariableDeclaration
-    implements TemplateParameter {
+    implements TemplateParameter<Expression> {
   @Relationship(value = "POSSIBLE_INITIALIZATIONS", direction = "OUTGOING")
   @SubGraph("AST")
   protected List<PropertyEdge<Expression>> possibleInitializations = new ArrayList<>();
