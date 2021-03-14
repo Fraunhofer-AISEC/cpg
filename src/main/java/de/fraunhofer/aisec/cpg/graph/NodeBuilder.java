@@ -220,6 +220,17 @@ public class NodeBuilder {
     return node;
   }
 
+  public static NonTypeTemplateParamDeclaration newNonTypeTemplateParameter(
+      ParamVariableDeclaration paramVariableDeclaration) {
+    NonTypeTemplateParamDeclaration node = new NonTypeTemplateParamDeclaration();
+    node.setName(paramVariableDeclaration.getName());
+    node.setType(paramVariableDeclaration.getType());
+    node.setCode(paramVariableDeclaration.getCode());
+    node.setVariadic(paramVariableDeclaration.isVariadic());
+
+    return node;
+  }
+
   public static CompoundStatement newCompoundStatement(String code) {
     CompoundStatement node = new CompoundStatement();
     node.setCode(code);
@@ -422,6 +433,18 @@ public class NodeBuilder {
 
     log(node);
 
+    return node;
+  }
+
+  public static FunctionTemplateDeclaration newFunctionTemplateDeclaration(
+      String code, PhysicalLocation location, FunctionDeclaration target) {
+    FunctionTemplateDeclaration node = new FunctionTemplateDeclaration();
+
+    node.setCode(code);
+    node.setLocation(location);
+    node.setRealization(target);
+
+    log(node);
     return node;
   }
 
