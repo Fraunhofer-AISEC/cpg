@@ -1,3 +1,5 @@
 package de.fraunhofer.aisec.cpg.graph.declarations;
 
-public abstract class TemplateDeclaration extends Declaration {}
+import de.fraunhofer.aisec.cpg.graph.DeclarationHolder;
+
+public abstract class TemplateDeclaration extends Declaration implements DeclarationHolder {}
