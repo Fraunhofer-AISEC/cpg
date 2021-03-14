@@ -5,8 +5,6 @@ import static de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.unwrap;
 import de.fraunhofer.aisec.cpg.graph.SubGraph;
 import de.fraunhofer.aisec.cpg.graph.edge.Properties;
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
-import de.fraunhofer.aisec.cpg.graph.types.Type;
-import de.fraunhofer.aisec.cpg.graph.types.TypeParser;
 import java.util.*;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.neo4j.ogm.annotation.Relationship;
@@ -79,10 +77,6 @@ public class FunctionTemplateDeclaration extends TemplateDeclaration {
         propertyEdge -> propertyEdge.getEnd().equals(nonTypeTemplateParamDeclaration));
   }
 
-
-  private List<String> singleTemplateParameters(String templateParameters) {
-    return Arrays.asList(templateParameters.split(","));
-  }
 
   @Override
   public void addDeclaration(@NonNull Declaration declaration) {
