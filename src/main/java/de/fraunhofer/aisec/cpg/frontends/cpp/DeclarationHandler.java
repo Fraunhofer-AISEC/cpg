@@ -301,10 +301,6 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
     return null;
   }
 
-  private Declaration handleTemplateParameter(CPPASTParameterDeclaration ctx) {
-    return null;
-  }
-
   private Declaration handleSimpleDeclaration(CPPASTSimpleDeclaration ctx) {
     if (isTypedef(ctx)) {
       TypeManager.getInstance().handleTypedef(ctx.getRawSignature());

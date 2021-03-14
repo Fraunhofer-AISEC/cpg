@@ -79,26 +79,6 @@ public class FunctionTemplateDeclaration extends TemplateDeclaration {
         propertyEdge -> propertyEdge.getEnd().equals(nonTypeTemplateParamDeclaration));
   }
 
-  public Map<String, Type> applyParametersToFuncSignature(String templateParameters) {
-    List<String> singleTemplateParameters = singleTemplateParameters(templateParameters);
-    Map<String, Type> map = new HashMap<>();
-
-    List<Declaration> typeParameters = this.getParameters();
-    // TODO vfsrfs: Problem with auto typing (no explicit information of type in < >)
-    if (singleTemplateParameters.size() != typeParameters.size()) {
-      return map;
-    }
-
-    for (int i = 0; i < typeParameters.size(); i++) {
-      if (typeParameters.get(i) instanceof TypeTemplateParamDeclaration) {
-        map.put(
-            typeParameters.get(i).getName(),
-            TypeParser.createFrom(singleTemplateParameters.get(i), false));
-      }
-    }
-
-    return map;
-  }
 
   private List<String> singleTemplateParameters(String templateParameters) {
     return Arrays.asList(templateParameters.split(","));
@@ -107,11 +87,25 @@ public class FunctionTemplateDeclaration extends TemplateDeclaration {
   @Override
   public void addDeclaration(@NonNull Declaration declaration) {
     if (declaration instanceof TypeTemplateParamDeclaration) {
-      addIfNotContains(this.parameters, (TypeTemplateParamDeclaration) declaration);
+      addIfNotContains(this.parameters, declaration);
     } else if (declaration instanceof NonTypeTemplateParamDeclaration) {
-      addIfNotContains(this.parameters, (NonTypeTemplateParamDeclaration) declaration);
+      addIfNotContains(this.parameters, declaration);
     } else if (declaration instanceof FunctionDeclaration) {
       addIfNotContains(this.realization, (FunctionDeclaration) declaration);
     }
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) return true;
+    if (o == null || getClass() != o.getClass()) return false;
+    if (!super.equals(o)) return false;
+    FunctionTemplateDeclaration that = (FunctionTemplateDeclaration) o;
+    return realization.equals(that.realization) && parameters.equals(that.parameters);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(super.hashCode(), realization, parameters);
   }
 }

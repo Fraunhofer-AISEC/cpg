@@ -9,6 +9,8 @@ import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import de.fraunhofer.aisec.cpg.graph.types.ParameterizedType;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
+
 import org.neo4j.ogm.annotation.Relationship;
 
 public class TypeTemplateParamDeclaration extends ValueDeclaration
@@ -42,5 +44,19 @@ public class TypeTemplateParamDeclaration extends ValueDeclaration
 
   public void setDefault(ParameterizedType defaultType) {
     this.defaultType = defaultType;
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) return true;
+    if (o == null || getClass() != o.getClass()) return false;
+    if (!super.equals(o)) return false;
+    TypeTemplateParamDeclaration that = (TypeTemplateParamDeclaration) o;
+    return possibleInitializations.equals(that.possibleInitializations) && Objects.equals(defaultType, that.defaultType);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(super.hashCode(), possibleInitializations, defaultType);
   }
 }
