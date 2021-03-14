@@ -1,9 +1,6 @@
 package de.fraunhofer.aisec.cpg.graph;
 
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression;
-import de.fraunhofer.aisec.cpg.graph.types.ParameterizedType;
-
 import java.util.List;
 
 public interface TemplateParameter<T extends Node> {
