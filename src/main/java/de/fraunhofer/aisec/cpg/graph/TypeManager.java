@@ -29,6 +29,7 @@ package de.fraunhofer.aisec.cpg.graph;
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
 import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguageFrontend;
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declarations.TemplateDeclaration;
 import de.fraunhofer.aisec.cpg.graph.declarations.TypedefDeclaration;
 import de.fraunhofer.aisec.cpg.graph.types.*;
 import de.fraunhofer.aisec.cpg.helpers.Util;
@@ -71,6 +72,10 @@ public class TypeManager {
   private Map<RecordDeclaration, List<ParameterizedType>> recordToTypeParameters = new HashMap<>();
 
   @NonNull
+  private Map<TemplateDeclaration, List<ParameterizedType>> templateToTypeParameters =
+      new HashMap<>();
+
+  @NonNull
   private Map<Type, List<Type>> typeState =
       new HashMap<>(); // Stores all the unique types ObjectType as Key and Reference-/PointerTypes
   // as Values
@@ -98,6 +103,41 @@ public class TypeManager {
   public void addTypeParameter(
       RecordDeclaration recordDeclaration, List<ParameterizedType> typeParameters) {
     this.recordToTypeParameters.put(recordDeclaration, typeParameters);
+  }
+
+  public ParameterizedType getTypeParameter(TemplateDeclaration templateDeclaration, String name) {
+    if (this.templateToTypeParameters.containsKey(templateDeclaration)) {
+      for (ParameterizedType parameterizedType :
+          this.templateToTypeParameters.get(templateDeclaration)) {
+        if (parameterizedType.getName().equals(name)) {
+          return parameterizedType;
+        }
+      }
+    }
+    return null;
+  }
+
+  public void addTypeParameter(
+      TemplateDeclaration templateDeclaration, ParameterizedType typeParameter) {
+    if (this.templateToTypeParameters.containsKey(templateDeclaration)) {
+      this.templateToTypeParameters.get(templateDeclaration).add(typeParameter);
+    } else {
+      List<ParameterizedType> typeParameters = new ArrayList<>();
+      typeParameters.add(typeParameter);
+      this.templateToTypeParameters.put(templateDeclaration, typeParameters);
+    }
+  }
+
+  public ParameterizedType createOrGetTypeParameter(
+      TemplateDeclaration templateDeclaration, String type) {
+    ParameterizedType parameterizedType = getTypeParameter(templateDeclaration, type);
+    if (parameterizedType != null) {
+      return parameterizedType;
+    } else {
+      parameterizedType = new ParameterizedType(type);
+      addTypeParameter(templateDeclaration, parameterizedType);
+      return parameterizedType;
+    }
   }
 
   @NonNull
