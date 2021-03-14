@@ -10,6 +10,8 @@ import (
 
 type Expression Statement
 type CallExpression Expression
+type NewExpression Expression
+type ArrayCreationExpression Expression
 type MemberCallExpression CallExpression
 type MemberExpression Expression
 type BinaryOperator Expression
@@ -50,6 +52,30 @@ func NewMemberCallExpression(fset *token.FileSet, astNode ast.Node) *MemberCallE
 	updateCode(fset, (*Node)(c), astNode)
 
 	return (*MemberCallExpression)(c)
+}
+
+func NewNewExpression(fset *token.FileSet, astNode ast.Node) *NewExpression {
+	c, err := env.NewObject("de/fraunhofer/aisec/cpg/graph/statements/expressions/NewExpression")
+	if err != nil {
+		log.Fatal(err)
+
+	}
+
+	updateCode(fset, (*Node)(c), astNode)
+
+	return (*NewExpression)(c)
+}
+
+func NewArrayCreationExpression(fset *token.FileSet, astNode ast.Node) *ArrayCreationExpression {
+	c, err := env.NewObject("de/fraunhofer/aisec/cpg/graph/statements/expressions/ArrayCreationExpression")
+	if err != nil {
+		log.Fatal(err)
+
+	}
+
+	updateCode(fset, (*Node)(c), astNode)
+
+	return (*ArrayCreationExpression)(c)
 }
 
 func NewBinaryOperator(fset *token.FileSet, astNode ast.Node) *BinaryOperator {
@@ -181,4 +207,8 @@ func (r *DeclaredReferenceExpression) SetName(s string) {
 
 func (r *DeclaredReferenceExpression) SetRefersTo(d *Declaration) {
 	(*jnigi.ObjectRef)(r).CallMethod(env, "setRefersTo", jnigi.Void, (*jnigi.ObjectRef)(d).Cast("de/fraunhofer/aisec/cpg/graph/declarations/Declaration"))
+}
+
+func (r *ArrayCreationExpression) AddDimension(e *Expression) {
+	(*jnigi.ObjectRef)(r).CallMethod(env, "addDimension", jnigi.Void, (*jnigi.ObjectRef)(e).Cast("de/fraunhofer/aisec/cpg/graph/statements/expressions/Expression"))
 }

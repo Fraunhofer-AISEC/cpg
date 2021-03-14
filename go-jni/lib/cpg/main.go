@@ -33,7 +33,6 @@ func Java_de_fraunhofer_aisec_cpg_frontends_golang_GoLanguageFrontend_parseInter
 	src, err := srcObject.CallMethod(env, "getBytes", jnigi.Byte|jnigi.Array)
 	if err != nil {
 		log.Fatal(err)
-
 	}
 
 	fset := token.NewFileSet()

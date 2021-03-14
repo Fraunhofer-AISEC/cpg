@@ -608,7 +608,7 @@ func (this *GoLanguageFrontend) handleCaseClause(fset *token.FileSet, caseClause
 	return nil
 }
 
-func (this *GoLanguageFrontend) handleCallExpr(fset *token.FileSet, callExpr *ast.CallExpr) *cpg.CallExpression {
+func (this *GoLanguageFrontend) handleCallExpr(fset *token.FileSet, callExpr *ast.CallExpr) *cpg.Expression {
 	var c *cpg.CallExpression
 	// parse the Fun field, to see which kind of expression it is
 	var reference = this.handleExpr(fset, callExpr.Fun)
@@ -618,6 +618,12 @@ func (this *GoLanguageFrontend) handleCallExpr(fset *token.FileSet, callExpr *as
 	}
 
 	name := (*cpg.Node)(reference).GetName()
+
+	if name == "new" {
+		return this.handleNewExpr(fset, callExpr)
+	} else if name == "make" {
+		return this.handleMakeExpr(fset, callExpr)
+	}
 
 	isMemberExpression, err := (*jnigi.ObjectRef)(reference).IsInstanceOf(env, "de/fraunhofer/aisec/cpg/graph/statements/expressions/MemberExpression")
 	if err != nil {
@@ -661,7 +667,45 @@ func (this *GoLanguageFrontend) handleCallExpr(fset *token.FileSet, callExpr *as
 
 	// reference.disconnectFromGraph()
 
-	return c
+	return (*cpg.Expression)(c)
+}
+
+func (this *GoLanguageFrontend) handleNewExpr(fset *token.FileSet, callExpr *ast.CallExpr) *cpg.Expression {
+	n := cpg.NewNewExpression(fset, callExpr)
+
+	// first argument is type
+	t := this.handleType(callExpr.Args[0])
+
+	(*cpg.HasType)(n).SetType(t)
+
+	return (*cpg.Expression)(n)
+}
+
+func (this *GoLanguageFrontend) handleMakeExpr(fset *token.FileSet, callExpr *ast.CallExpr) *cpg.Expression {
+	var n *cpg.Expression
+
+	// actually make() can make more than just arrays, i.e. channels and maps
+	if v, isArray := callExpr.Args[0].(*ast.ArrayType); isArray {
+		r := cpg.NewArrayCreationExpression(fset, callExpr)
+
+		// handle type
+		t := this.handleType(v)
+
+		// second argument is a dimension (if this is an array), usually a literal
+		if len(callExpr.Args) > 1 {
+			d := this.handleExpr(fset, callExpr.Args[1])
+
+			r.AddDimension(d)
+		}
+
+		(*cpg.HasType)(r).SetType(t)
+
+		n = (*cpg.Expression)(r)
+	} else {
+		this.LogDebug("Not handling make() expression for non-arrays yet.")
+	}
+
+	return n
 }
 
 func (this *GoLanguageFrontend) handleBinaryExpr(fset *token.FileSet, binaryExpr *ast.BinaryExpr) *cpg.BinaryOperator {
@@ -790,6 +834,17 @@ func (this *GoLanguageFrontend) handleType(typeExpr ast.Expr) *cpg.Type {
 		}
 
 		this.LogDebug("Pointer to %s", (*cpg.Node)(t).GetName())
+
+		return t.Reference(i.(*jnigi.ObjectRef))
+	case *ast.ArrayType:
+		t := this.handleType(v.Elt)
+
+		i, err := env.GetStaticField("de/fraunhofer/aisec/cpg/graph/types/PointerType$PointerOrigin", "ARRAY", jnigi.ObjectType("de/fraunhofer/aisec/cpg/graph/types/PointerType$PointerOrigin"))
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		this.LogDebug("Array of %s", (*cpg.Node)(t).GetName())
 
 		return t.Reference(i.(*jnigi.ObjectRef))
 	case *ast.FuncType:

@@ -15,6 +15,66 @@ import kotlin.test.assertNotNull
 class GoLanguageFrontendTest : BaseTest() {
 
     @Test
+    fun testConstruct() {
+        val topLevel = Path.of("src", "test", "resources", "golang")
+        val tu = TestUtils.analyzeAndGetFirstTU(listOf(topLevel.resolve("construct.go").toFile()), topLevel, true)
+
+        assertNotNull(tu)
+
+        val p = tu.getDeclarationsByName("p", NamespaceDeclaration::class.java).iterator().next()
+
+        assertNotNull(p)
+
+        val myStruct = p.getDeclarationsByName("p.MyStruct", RecordDeclaration::class.java).iterator().next()
+
+        assertNotNull(myStruct)
+
+        val main = p.getDeclarationsByName("main", FunctionDeclaration::class.java).iterator().next()
+
+        assertNotNull(main)
+
+        val body = main.body as? CompoundStatement
+
+        assertNotNull(body)
+
+        var stmt = body.statements.first() as? DeclarationStatement
+
+        assertNotNull(stmt)
+
+        var decl = stmt.singleDeclaration as? VariableDeclaration
+
+        assertNotNull(decl)
+
+        val new = decl.initializer as? NewExpression
+
+        assertNotNull(new)
+
+        val construct = new.initializer as? ConstructExpression
+
+        assertNotNull(construct)
+
+        assertEquals(myStruct, construct.instantiates)
+
+        stmt = body.statements[1] as? DeclarationStatement
+
+        assertNotNull(stmt)
+
+        decl = stmt.singleDeclaration as? VariableDeclaration
+
+        assertNotNull(decl)
+
+        val make = decl.initializer as? ArrayCreationExpression
+
+        assertNotNull(make)
+        assertEquals(TypeParser.createFrom("int[]", false), make.type)
+
+        val dimension = make.dimensions.first() as? Literal<*>
+
+        assertNotNull(dimension)
+        assertEquals(5, dimension.value)
+    }
+
+    @Test
     fun testLiteral() {
         val topLevel = Path.of("src", "test", "resources", "golang")
         val tu = TestUtils.analyzeAndGetFirstTU(listOf(topLevel.resolve("literal.go").toFile()), topLevel, true)
