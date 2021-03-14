@@ -684,12 +684,16 @@ func (this *GoLanguageFrontend) handleNewExpr(fset *token.FileSet, callExpr *ast
 func (this *GoLanguageFrontend) handleMakeExpr(fset *token.FileSet, callExpr *ast.CallExpr) *cpg.Expression {
 	var n *cpg.Expression
 
-	// actually make() can make more than just arrays, i.e. channels and maps
-	if v, isArray := callExpr.Args[0].(*ast.ArrayType); isArray {
-		r := cpg.NewArrayCreationExpression(fset, callExpr)
+	if callExpr.Args == nil || len(callExpr.Args) < 1 {
+		return nil
+	}
 
-		// handle type
-		t := this.handleType(v)
+	// first argument is always the type, handle it
+	t := this.handleType(callExpr.Args[0])
+
+	// actually make() can make more than just arrays, i.e. channels and maps
+	if _, isArray := callExpr.Args[0].(*ast.ArrayType); isArray {
+		r := cpg.NewArrayCreationExpression(fset, callExpr)
 
 		// second argument is a dimension (if this is an array), usually a literal
 		if len(callExpr.Args) > 1 {
@@ -698,12 +702,25 @@ func (this *GoLanguageFrontend) handleMakeExpr(fset *token.FileSet, callExpr *as
 			r.AddDimension(d)
 		}
 
-		(*cpg.HasType)(r).SetType(t)
-
 		n = (*cpg.Expression)(r)
 	} else {
-		this.LogDebug("Not handling make() expression for non-arrays yet.")
+		// create at least a generic construct expression for the given map or channel type
+		// and provide the remaining arguments
+
+		c := cpg.NewConstructExpression(fset, callExpr)
+
+		// pass the remaining arguments
+		for _, arg := range callExpr.Args[1:] {
+			a := this.handleExpr(fset, arg)
+
+			c.AddArgument(a)
+		}
+
+		n = (*cpg.Expression)(c)
 	}
+
+	// set the type, we have parsed earlier
+	(*cpg.HasType)(n).SetType(t)
 
 	return n
 }
@@ -847,6 +864,18 @@ func (this *GoLanguageFrontend) handleType(typeExpr ast.Expr) *cpg.Type {
 		this.LogDebug("Array of %s", (*cpg.Node)(t).GetName())
 
 		return t.Reference(i.(*jnigi.ObjectRef))
+	case *ast.MapType:
+		// we cannot properly represent Golangs built-in map types, yet so we have
+		// to make a shortcut here and represent it as a Java-like map<K, V> type.
+		t := cpg.TypeParser_createFrom("map", false)
+		keyType := this.handleType(v.Key)
+		valueType := this.handleType(v.Value)
+
+		(*cpg.ObjectType)(t).AddGeneric(keyType)
+		(*cpg.ObjectType)(t).AddGeneric(valueType)
+
+		return t
+
 	case *ast.FuncType:
 		// for now, we are only interested in the return type
 		return this.handleType(v.Results.List[0].Type)

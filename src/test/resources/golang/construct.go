@@ -6,4 +6,6 @@ func main() {
   o := new(MyStruct)
 
   a := make([]int, 5)
+
+  m := make(map[string]string, 10)
 }

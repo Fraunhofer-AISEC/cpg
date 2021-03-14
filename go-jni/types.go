@@ -12,6 +12,7 @@ import (
 var env *jnigi.Env
 
 type Type jnigi.ObjectRef
+type ObjectType jnigi.ObjectRef
 type HasType jnigi.ObjectRef
 
 func InitEnv(e *jnigi.Env) {
@@ -71,4 +72,11 @@ func (h *HasType) GetType() *Type {
 	}
 
 	return (*Type)(i.(*jnigi.ObjectRef))
+}
+
+func (t *ObjectType) AddGeneric(g *Type) {
+	_, err := (*jnigi.ObjectRef)(t).Cast("de/fraunhofer/aisec/cpg/graph/types/ObjectType").CallMethod(env, "addGeneric", jnigi.Void, (*jnigi.ObjectRef)(g).Cast("de/fraunhofer/aisec/cpg/graph/types/Type"))
+	if err != nil {
+		log.Fatal(err)
+	}
 }

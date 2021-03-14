@@ -5,15 +5,18 @@ import de.fraunhofer.aisec.cpg.TestUtils
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
+import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser
+import org.checkerframework.checker.nullness.qual.Nullable
 import org.junit.jupiter.api.Test
 import java.nio.file.Path
 import java.nio.file.Paths
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 
 class GoLanguageFrontendTest : BaseTest() {
-
+    
     @Test
     fun testConstruct() {
         val topLevel = Path.of("src", "test", "resources", "golang")
@@ -37,6 +40,8 @@ class GoLanguageFrontendTest : BaseTest() {
 
         assertNotNull(body)
 
+        // new
+
         var stmt = body.statements.first() as? DeclarationStatement
 
         assertNotNull(stmt)
@@ -55,6 +60,8 @@ class GoLanguageFrontendTest : BaseTest() {
 
         assertEquals(myStruct, construct.instantiates)
 
+        // make array
+
         stmt = body.statements[1] as? DeclarationStatement
 
         assertNotNull(stmt)
@@ -63,15 +70,33 @@ class GoLanguageFrontendTest : BaseTest() {
 
         assertNotNull(decl)
 
-        val make = decl.initializer as? ArrayCreationExpression
+        var make = decl.initializer
 
         assertNotNull(make)
         assertEquals(TypeParser.createFrom("int[]", false), make.type)
+
+        assertTrue(make is ArrayCreationExpression)
 
         val dimension = make.dimensions.first() as? Literal<*>
 
         assertNotNull(dimension)
         assertEquals(5, dimension.value)
+
+        // make map
+
+        stmt = body.statements[2] as? DeclarationStatement
+
+        assertNotNull(stmt)
+
+        decl = stmt.singleDeclaration as? VariableDeclaration
+
+        assertNotNull(decl)
+
+        make = decl.initializer
+
+        assertNotNull(make)
+        assertTrue(make is ConstructExpression)
+        assertEquals(TypeParser.createFrom("map<string,string>", false), make.type)
     }
 
     @Test

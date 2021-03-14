@@ -12,6 +12,7 @@ type Expression Statement
 type CallExpression Expression
 type NewExpression Expression
 type ArrayCreationExpression Expression
+type ConstructExpression Expression
 type MemberCallExpression CallExpression
 type MemberExpression Expression
 type BinaryOperator Expression
@@ -76,6 +77,18 @@ func NewArrayCreationExpression(fset *token.FileSet, astNode ast.Node) *ArrayCre
 	updateCode(fset, (*Node)(c), astNode)
 
 	return (*ArrayCreationExpression)(c)
+}
+
+func NewConstructExpression(fset *token.FileSet, astNode ast.Node) *ConstructExpression {
+	c, err := env.NewObject("de/fraunhofer/aisec/cpg/graph/statements/expressions/ConstructExpression")
+	if err != nil {
+		log.Fatal(err)
+
+	}
+
+	updateCode(fset, (*Node)(c), astNode)
+
+	return (*ConstructExpression)(c)
 }
 
 func NewBinaryOperator(fset *token.FileSet, astNode ast.Node) *BinaryOperator {
@@ -211,4 +224,8 @@ func (r *DeclaredReferenceExpression) SetRefersTo(d *Declaration) {
 
 func (r *ArrayCreationExpression) AddDimension(e *Expression) {
 	(*jnigi.ObjectRef)(r).CallMethod(env, "addDimension", jnigi.Void, (*jnigi.ObjectRef)(e).Cast("de/fraunhofer/aisec/cpg/graph/statements/expressions/Expression"))
+}
+
+func (c *ConstructExpression) AddArgument(e *Expression) {
+	(*jnigi.ObjectRef)(c).CallMethod(env, "addArgument", jnigi.Void, (*jnigi.ObjectRef)(e).Cast("de/fraunhofer/aisec/cpg/graph/statements/expressions/Expression"))
 }
