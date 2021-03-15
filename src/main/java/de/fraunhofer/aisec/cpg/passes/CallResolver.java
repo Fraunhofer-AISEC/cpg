@@ -27,6 +27,7 @@
 package de.fraunhofer.aisec.cpg.passes;
 
 import de.fraunhofer.aisec.cpg.TranslationResult;
+import de.fraunhofer.aisec.cpg.frontends.cpp.CXXLanguageFrontend;
 import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguageFrontend;
 import de.fraunhofer.aisec.cpg.graph.*;
 import de.fraunhofer.aisec.cpg.graph.declarations.*;
@@ -327,6 +328,8 @@ public class CallResolver extends Pass {
           implicitCast.setExpression(call.getArguments().get(i));
           implicitCasts.add(implicitCast);
         } else {
+          // If no cast is needed we add null to be able to access the function signature list and
+          // the implicit cast list with the same index.
           implicitCasts.add(null);
         }
       }
@@ -390,7 +393,7 @@ public class CallResolver extends Pass {
         currentTU.getDeclarations().stream()
             .filter(FunctionDeclaration.class::isInstance)
             .map(FunctionDeclaration.class::cast)
-            .filter(f -> f.getName().equals(call.getName()))
+            .filter(f -> f.getName().equals(call.getName()) && !f.isImplicit())
             .collect(Collectors.toList());
 
     // Output list for invocationTargets obtaining a valid signature by performing implicit casts
@@ -498,6 +501,7 @@ public class CallResolver extends Pass {
             .filter(
                 f ->
                     f.getName().equals(call.getName())
+                        && !f.isImplicit()
                         && call.getSignature().size() < f.getSignatureTypes().size())
             .collect(Collectors.toList());
     List<FunctionDeclaration> invocationCandidatesDefaultArgs = new ArrayList<>();
@@ -528,13 +532,15 @@ public class CallResolver extends Pass {
         invocationCandidates.addAll(resolveWithDefaultArgs(call));
       }
 
-      if (invocationCandidates.isEmpty()) {
-        // If we don't find any candidate we check if there is a candidate with an implicit cast
+      if (invocationCandidates.isEmpty() && this.getLang() instanceof CXXLanguageFrontend) {
+        // If we don't find any candidate and our current language is c/c++ we check if there is a
+        // candidate with an implicit cast
         invocationCandidates.addAll(resolveWithImplicitCast(call));
       }
 
-      if (invocationCandidates.isEmpty()) {
-        // If we still have no candidates we create dummy FunctionDeclaration
+      if (invocationCandidates.isEmpty() && this.getLang() instanceof CXXLanguageFrontend) {
+        // If we still have no candidates and our current language is c++ we create dummy
+        // FunctionDeclaration
         invocationCandidates =
             List.of(createDummy(null, call.getName(), call.getCode(), false, call.getSignature()));
       }
