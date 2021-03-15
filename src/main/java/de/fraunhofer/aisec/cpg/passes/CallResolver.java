@@ -498,7 +498,7 @@ public class CallResolver extends Pass {
             .map(FunctionDeclaration.class::cast)
             .filter(
                 f ->
-                    f.getName().equals(call.getName())
+                    f.getName().equals(call.getName()) && !f.isImplicit()
                         && call.getSignature().size() < f.getSignatureTypes().size())
             .collect(Collectors.toList());
     List<FunctionDeclaration> invocationCandidatesDefaultArgs = new ArrayList<>();
@@ -530,7 +530,8 @@ public class CallResolver extends Pass {
       }
 
       if (invocationCandidates.isEmpty() && this.getLang() instanceof CXXLanguageFrontend) {
-        // If we don't find any candidate and our current language is c/c++ we check if there is a candidate with an implicit cast
+        // If we don't find any candidate and our current language is c/c++ we check if there is a
+        // candidate with an implicit cast
         invocationCandidates.addAll(resolveWithImplicitCast(call));
       }
 
