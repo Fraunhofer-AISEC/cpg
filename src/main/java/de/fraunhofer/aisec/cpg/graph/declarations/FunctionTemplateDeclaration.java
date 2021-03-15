@@ -77,7 +77,6 @@ public class FunctionTemplateDeclaration extends TemplateDeclaration {
         propertyEdge -> propertyEdge.getEnd().equals(nonTypeTemplateParamDeclaration));
   }
 
-
   @Override
   public void addDeclaration(@NonNull Declaration declaration) {
     if (declaration instanceof TypeTemplateParamDeclaration) {

@@ -10,6 +10,8 @@ import de.fraunhofer.aisec.cpg.graph.types.ParameterizedType;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+
+import de.fraunhofer.aisec.cpg.graph.types.Type;
 import org.neo4j.ogm.annotation.Relationship;
 
 public class TypeTemplateParamDeclaration extends ValueDeclaration
@@ -21,7 +23,7 @@ public class TypeTemplateParamDeclaration extends ValueDeclaration
 
   @Relationship(value = "DEFAULT", direction = "OUTGOING")
   @SubGraph("AST")
-  private ParameterizedType defaultType;
+  private Type defaultType;
 
   public List<ParameterizedType> getPossibleInitializations() {
     return unwrap(this.possibleInitializations);
@@ -37,11 +39,11 @@ public class TypeTemplateParamDeclaration extends ValueDeclaration
     this.possibleInitializations.add(propertyEdge);
   }
 
-  public ParameterizedType getDefault() {
+  public Type getDefault() {
     return defaultType;
   }
 
-  public void setDefault(ParameterizedType defaultType) {
+  public void setDefault(Type defaultType) {
     this.defaultType = defaultType;
   }
 

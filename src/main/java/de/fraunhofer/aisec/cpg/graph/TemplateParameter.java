@@ -1,6 +1,8 @@
 package de.fraunhofer.aisec.cpg.graph;
 
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
+import de.fraunhofer.aisec.cpg.graph.types.Type;
+
 import java.util.List;
 
 public interface TemplateParameter<T extends Node> {
@@ -10,7 +12,4 @@ public interface TemplateParameter<T extends Node> {
 
   public void addPossibleInitialization(T t);
 
-  public T getDefault();
-
-  public void setDefault(T defaultT);
 }

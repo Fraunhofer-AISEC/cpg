@@ -4,6 +4,7 @@ import de.fraunhofer.aisec.cpg.TranslationResult;
 import de.fraunhofer.aisec.cpg.graph.*;
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration;
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declarations.TypeTemplateParamDeclaration;
 import de.fraunhofer.aisec.cpg.graph.types.*;
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker;
 import java.util.*;
@@ -186,6 +187,7 @@ public class TypeResolver extends Pass {
     SubgraphWalker.IterativeGraphWalker walker = new SubgraphWalker.IterativeGraphWalker();
     walker.registerOnNodeVisit(this::ensureUniqueType);
     walker.registerOnNodeVisit(this::handle);
+    walker.registerOnNodeVisit(this::ensureUniqueSecondaryTypeEdge);
     for (TranslationUnitDeclaration tu : translationResult.getTranslationUnits()) {
       walker.iterate(tu);
     }
@@ -225,15 +227,33 @@ public class TypeResolver extends Pass {
         types = typeState.get(root);
       }
 
-      for (Type t : types) {
-        if (t.equals(oldType)) {
-          ((HasType) node).updateType(t);
-          break;
-        }
-      }
+      updateType(node, types);
 
       ((HasType) node)
           .updatePossibleSubtypes(ensureUniqueSubTypes(((HasType) node).getPossibleSubTypes()));
+    }
+  }
+
+  public void ensureUniqueSecondaryTypeEdge(Node node) {
+    if (node instanceof TypeTemplateParamDeclaration) {
+      Type oldType = ((TypeTemplateParamDeclaration) node).getDefault();
+      Collection<Type> types = typeState.keySet();
+
+      for (Type t : types) {
+        if (t.equals(oldType)){
+          ((TypeTemplateParamDeclaration) node).setDefault(t);
+        }
+      }
+
+    }
+  }
+
+  private void updateType(Node node, Collection<Type> types){
+    for (Type t : types) {
+      if (t.equals(((HasType) node).getType())) {
+        ((HasType) node).updateType(t);
+        break;
+      }
     }
   }
 
