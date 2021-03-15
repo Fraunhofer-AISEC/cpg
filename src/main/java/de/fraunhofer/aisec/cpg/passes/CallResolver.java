@@ -500,7 +500,8 @@ public class CallResolver extends Pass {
             .map(FunctionDeclaration.class::cast)
             .filter(
                 f ->
-                    f.getName().equals(call.getName()) && !f.isImplicit()
+                    f.getName().equals(call.getName())
+                        && !f.isImplicit()
                         && call.getSignature().size() < f.getSignatureTypes().size())
             .collect(Collectors.toList());
     List<FunctionDeclaration> invocationCandidatesDefaultArgs = new ArrayList<>();
@@ -538,7 +539,8 @@ public class CallResolver extends Pass {
       }
 
       if (invocationCandidates.isEmpty() && this.getLang() instanceof CXXLanguageFrontend) {
-        // If we still have no candidates and our current language is c++ we create dummy FunctionDeclaration
+        // If we still have no candidates and our current language is c++ we create dummy
+        // FunctionDeclaration
         invocationCandidates =
             List.of(createDummy(null, call.getName(), call.getCode(), false, call.getSignature()));
       }
