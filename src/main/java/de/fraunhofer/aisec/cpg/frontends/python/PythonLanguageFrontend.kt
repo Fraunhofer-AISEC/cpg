@@ -47,11 +47,14 @@ class PythonLanguageFrontend(config: TranslationConfiguration, scopeManager: Sco
 
             val interp: SharedInterpreter = SharedInterpreter()
 
-            // provide code to python
+            // provide code to python (as global variable)
             interp.set("codeToParse", s)
 
-            // run python
+            // load script
             interp.runScript(entryScript.toString())
+
+            // run python function run()
+            interp.exec("run()")
 
             // get result
             tud = interp.getValue("res") as TranslationUnitDeclaration
