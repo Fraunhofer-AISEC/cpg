@@ -27,6 +27,7 @@
 package de.fraunhofer.aisec.cpg.passes;
 
 import de.fraunhofer.aisec.cpg.TranslationResult;
+import de.fraunhofer.aisec.cpg.frontends.cpp.CXXLanguageFrontend;
 import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguageFrontend;
 import de.fraunhofer.aisec.cpg.graph.*;
 import de.fraunhofer.aisec.cpg.graph.declarations.*;
@@ -423,8 +424,8 @@ public class CallResolver extends Pass {
                   f -> f.getName().equals(call.getName()) && f.hasSignature(call.getSignature()))
               .collect(Collectors.toList());
 
-      if (invocationCandidates.isEmpty()) {
-        // If we don't find any candidate we check if there is a candidate with an implicit cast
+      if (invocationCandidates.isEmpty() && this.getLang() instanceof CXXLanguageFrontend) {
+        // If we don't find any candidate and our current language is c/c++ we check if there is a candidate with an implicit cast
         invocationCandidates.addAll(resolveWithImplicitCast(call));
       }
 
