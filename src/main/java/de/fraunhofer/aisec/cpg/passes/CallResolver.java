@@ -352,7 +352,7 @@ public class CallResolver extends Pass {
         currentTU.getDeclarations().stream()
             .filter(FunctionDeclaration.class::isInstance)
             .map(FunctionDeclaration.class::cast)
-            .filter(f -> f.getName().equals(call.getName()))
+            .filter(f -> f.getName().equals(call.getName()) && !f.isImplicit())
             .collect(Collectors.toList());
 
     // Output list for invocationTargets obtaining a valid signature by performing implicit casts
