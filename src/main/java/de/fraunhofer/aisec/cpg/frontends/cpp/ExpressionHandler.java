@@ -49,6 +49,7 @@ import org.eclipse.cdt.internal.core.dom.parser.CStringValue;
 import org.eclipse.cdt.internal.core.dom.parser.ProblemBinding;
 import org.eclipse.cdt.internal.core.dom.parser.ProblemType;
 import org.eclipse.cdt.internal.core.dom.parser.cpp.*;
+import org.eclipse.cdt.internal.core.dom.parser.cpp.semantics.TypeOfDependentExpression;
 
 class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLanguageFrontend> {
   /*
@@ -436,6 +437,29 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
       callExpression =
           NodeBuilder.newCallExpression(
               ((UnaryOperator) reference).getInput().getName(), "", reference.getCode());
+    } else if (((CPPASTIdExpression) ctx.getFunctionNameExpression()).getName()
+        instanceof CPPASTTemplateId) {
+      String name =
+          ((CPPASTTemplateId) ((CPPASTIdExpression) ctx.getFunctionNameExpression()).getName())
+              .getTemplateName()
+              .toString();
+      callExpression = NodeBuilder.newTemplateCallExpression(name, name, ctx.getRawSignature());
+
+      for (IASTNode argument :
+          ((CPPASTTemplateId) ((CPPASTIdExpression) ctx.getFunctionNameExpression()).getName())
+              .getTemplateArguments()) {
+        if (argument instanceof CPPASTTypeId) {
+          ((TemplateCallExpression) callExpression)
+              .addTemplateParameter(
+                  TypeParser.createFrom(
+                      ((CPPASTTypeId) argument).getDeclSpecifier().toString(), false));
+        } else if (argument instanceof IASTInitializerClause) {
+          ((TemplateCallExpression) callExpression)
+              .addTemplateParameter(
+                  lang.getExpressionHandler().handle((IASTInitializerClause) argument));
+        }
+      }
+
     } else {
       String fqn = reference.getName();
       String name = fqn;
@@ -648,6 +672,8 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
         || expressionType instanceof ProblemType
         || expressionType instanceof ProblemBinding) {
       log.debug("CDT could not deduce type. Type is set to null");
+    } else if (expressionType instanceof TypeOfDependentExpression) {
+      log.debug("Type of Expression depends on the type the template is initialized with");
     } else {
       binaryOperator.setType(TypeParser.createFrom(expressionTypeProxy(ctx).toString(), true));
     }

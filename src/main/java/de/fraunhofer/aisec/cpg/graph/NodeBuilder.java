@@ -69,6 +69,18 @@ public class NodeBuilder {
     return node;
   }
 
+  public static TemplateCallExpression newTemplateCallExpression(
+      String name, String fqn, String code) {
+    TemplateCallExpression node = new TemplateCallExpression();
+    node.setName(name);
+    node.setCode(code);
+    node.setFqn(fqn);
+
+    log(node);
+
+    return node;
+  }
+
   public static StaticCallExpression newStaticCallExpression(
       String name, String fqn, String code, String targetRecord) {
     StaticCallExpression node = new StaticCallExpression();
@@ -228,6 +240,8 @@ public class NodeBuilder {
     node.setCode(paramVariableDeclaration.getCode());
     node.setVariadic(paramVariableDeclaration.isVariadic());
 
+    log(node);
+
     return node;
   }
 
@@ -236,6 +250,9 @@ public class NodeBuilder {
     TypeTemplateParamDeclaration node = new TypeTemplateParamDeclaration();
     node.setName(name);
     node.setCode(code);
+
+    log(node);
+
     return node;
   }
 
