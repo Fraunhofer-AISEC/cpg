@@ -328,6 +328,8 @@ public class CallResolver extends Pass {
           implicitCast.setExpression(call.getArguments().get(i));
           implicitCasts.add(implicitCast);
         } else {
+          // If no cast is needed we add null to be able to access the function signature list and
+          // the implicit cast list with the same index.
           implicitCasts.add(null);
         }
       }
