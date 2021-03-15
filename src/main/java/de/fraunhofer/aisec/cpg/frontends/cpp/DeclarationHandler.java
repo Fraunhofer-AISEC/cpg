@@ -37,6 +37,7 @@ import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement;
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement;
 import de.fraunhofer.aisec.cpg.graph.statements.Statement;
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression;
 import de.fraunhofer.aisec.cpg.graph.types.ParameterizedType;
 import de.fraunhofer.aisec.cpg.graph.types.Type;
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser;
@@ -296,11 +297,25 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
           templateDeclaration.addParameter(typeTemplateParamDeclaration);
         } else if (templateParameter instanceof CPPASTParameterDeclaration) {
           // Handle Values as Parameters
-          templateDeclaration.addParameter(
+          NonTypeTemplateParamDeclaration nonTypeTemplateParamDeclaration =
               NodeBuilder.newNonTypeTemplateParameter(
                   this.lang
                       .getParameterDeclarationHandler()
-                      .handle((IASTParameterDeclaration) templateParameter)));
+                      .handle((IASTParameterDeclaration) templateParameter));
+
+          if (((CPPASTParameterDeclaration) templateParameter).getDeclarator().getInitializer()
+              != null) {
+            Expression defaultExpression =
+                this.lang
+                    .getInitializerHandler()
+                    .handle(
+                        ((CPPASTParameterDeclaration) templateParameter)
+                            .getDeclarator()
+                            .getInitializer());
+            nonTypeTemplateParamDeclaration.setDefault(defaultExpression);
+            nonTypeTemplateParamDeclaration.addPossibleInitialization(defaultExpression);
+          }
+          templateDeclaration.addParameter(nonTypeTemplateParamDeclaration);
         }
       }
       lang.getScopeManager().leaveScope(templateDeclaration);

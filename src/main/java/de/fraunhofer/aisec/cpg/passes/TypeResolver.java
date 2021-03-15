@@ -237,12 +237,14 @@ public class TypeResolver extends Pass {
   public void ensureUniqueSecondaryTypeEdge(Node node) {
     if (node instanceof TypeTemplateParamDeclaration) {
       Type oldType = ((TypeTemplateParamDeclaration) node).getDefault();
-      Collection<Type> types = typeState.keySet();
+      if (oldType != null) {
+        Collection<Type> types = typeState.keySet();
 
-      for (Type t : types) {
-        if (t.equals(oldType)) {
-          ((TypeTemplateParamDeclaration) node).setDefault(t);
-          ((TypeTemplateParamDeclaration) node).addPossibleInitialization(t);
+        for (Type t : types) {
+          if (t.equals(oldType)) {
+            ((TypeTemplateParamDeclaration) node).setDefault(t);
+            ((TypeTemplateParamDeclaration) node).addPossibleInitialization(t);
+          }
         }
       }
     }
