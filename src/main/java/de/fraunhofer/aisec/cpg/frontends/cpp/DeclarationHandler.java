@@ -282,6 +282,17 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
 
           typeTemplateParamDeclaration.setType(parameterizedType);
 
+          if (((CPPASTSimpleTypeTemplateParameter) templateParameter).getDefaultType() != null) {
+            Type defaultType =
+                TypeParser.createFrom(
+                    ((CPPASTSimpleTypeTemplateParameter) templateParameter)
+                        .getDefaultType()
+                        .getDeclSpecifier()
+                        .getRawSignature(),
+                    false);
+            typeTemplateParamDeclaration.setDefault(defaultType);
+          }
+
           templateDeclaration.addParameter(typeTemplateParamDeclaration);
         } else if (templateParameter instanceof CPPASTParameterDeclaration) {
           // Handle Values as Parameters

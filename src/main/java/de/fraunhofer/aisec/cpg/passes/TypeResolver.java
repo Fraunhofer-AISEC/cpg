@@ -240,15 +240,15 @@ public class TypeResolver extends Pass {
       Collection<Type> types = typeState.keySet();
 
       for (Type t : types) {
-        if (t.equals(oldType)){
+        if (t.equals(oldType)) {
           ((TypeTemplateParamDeclaration) node).setDefault(t);
+          ((TypeTemplateParamDeclaration) node).addPossibleInitialization(t);
         }
       }
-
     }
   }
 
-  private void updateType(Node node, Collection<Type> types){
+  private void updateType(Node node, Collection<Type> types) {
     for (Type t : types) {
       if (t.equals(((HasType) node).getType())) {
         ((HasType) node).updateType(t);
