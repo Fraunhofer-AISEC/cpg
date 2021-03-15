@@ -236,6 +236,14 @@ public class FunctionDeclaration extends ValueDeclaration implements Declaration
     return unwrap(this.parameters);
   }
 
+  public List<Type> getSignatureTypes() {
+    List<Type> signatureTypes = new ArrayList<>();
+    for (ParamVariableDeclaration paramVariableDeclaration : unwrap(this.parameters)) {
+      signatureTypes.add(paramVariableDeclaration.getType());
+    }
+    return signatureTypes;
+  }
+
   public List<PropertyEdge<ParamVariableDeclaration>> getParametersPropertyEdge() {
     return this.parameters;
   }
