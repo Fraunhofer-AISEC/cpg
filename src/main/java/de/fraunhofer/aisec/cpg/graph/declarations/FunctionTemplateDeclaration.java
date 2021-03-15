@@ -29,7 +29,7 @@ public class FunctionTemplateDeclaration extends TemplateDeclaration {
 
   public void addRealization(FunctionDeclaration realizedFunction) {
     PropertyEdge<FunctionDeclaration> propertyEdge = new PropertyEdge<>(this, realizedFunction);
-    propertyEdge.addProperty(Properties.INDEX, this.parameters.size());
+    propertyEdge.addProperty(Properties.INDEX, this.realization.size());
     this.realization.add(propertyEdge);
   }
 
@@ -68,7 +68,7 @@ public class FunctionTemplateDeclaration extends TemplateDeclaration {
     this.parameters.add(propertyEdge);
   }
 
-  public void removeParameter(Declaration parameterizedType) {
+  public void removeParameter(TypeTemplateParamDeclaration parameterizedType) {
     this.parameters.removeIf(propertyEdge -> propertyEdge.getEnd().equals(parameterizedType));
   }
 
