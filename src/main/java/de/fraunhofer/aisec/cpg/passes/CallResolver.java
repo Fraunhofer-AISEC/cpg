@@ -329,6 +329,8 @@ public class CallResolver extends Pass {
           implicitCast.setExpression(call.getArguments().get(i));
           implicitCasts.add(implicitCast);
         } else {
+          // If no cast is needed we add null to be able to access the function signature list and
+          // the implicit cast list with the same index.
           implicitCasts.add(null);
         }
       }
@@ -337,7 +339,6 @@ public class CallResolver extends Pass {
     }
     return new ArrayList<>();
   }
-
 
   /**
    * modifies: call arguments by applying implicit casts
@@ -425,7 +426,8 @@ public class CallResolver extends Pass {
               .collect(Collectors.toList());
 
       if (invocationCandidates.isEmpty() && this.getLang() instanceof CXXLanguageFrontend) {
-        // If we don't find any candidate and our current language is c/c++ we check if there is a candidate with an implicit cast
+        // If we don't find any candidate and our current language is c/c++ we check if there is a
+        // candidate with an implicit cast
         invocationCandidates.addAll(resolveWithImplicitCast(call));
       }
 
