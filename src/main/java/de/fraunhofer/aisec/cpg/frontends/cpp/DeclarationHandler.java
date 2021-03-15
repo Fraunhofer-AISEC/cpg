@@ -232,11 +232,11 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
     for (FunctionDeclaration declaration : declarationCandidates) {
       declaration.setDefinition(functionDeclaration);
       for (int i = 0; i < functionDeclaration.getParameters().size(); i++) {
-        if (declaration.getParameters().get(i).getDefaultValue() != null) {
+        if (declaration.getParameters().get(i).getDefault() != null) {
           functionDeclaration
               .getParameters()
               .get(i)
-              .setDefaultValue(declaration.getParameters().get(i).getDefaultValue());
+              .setDefault(declaration.getParameters().get(i).getDefault());
         }
       }
     }

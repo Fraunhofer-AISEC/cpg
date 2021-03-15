@@ -47,11 +47,11 @@ public class ParamVariableDeclaration extends ValueDeclaration {
     this.variadic = variadic;
   }
 
-  public Expression getDefaultValue() {
+  public Expression getDefault() {
     return defaultValue;
   }
 
-  public void setDefaultValue(Expression defaultValue) {
+  public void setDefault(Expression defaultValue) {
     this.defaultValue = defaultValue;
   }
 }
