@@ -71,6 +71,12 @@ public class CastExpression extends Expression implements TypeListener {
   }
 
   @Override
+  public void updateType(Type type) {
+    super.updateType(type);
+    this.castType = type;
+  }
+
+  @Override
   public void typeChanged(HasType src, HasType root, Type oldType) {
     Type previous = this.type;
 
