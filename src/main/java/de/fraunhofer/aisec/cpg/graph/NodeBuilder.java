@@ -445,12 +445,11 @@ public class NodeBuilder {
   }
 
   public static FunctionTemplateDeclaration newFunctionTemplateDeclaration(
-      String code, PhysicalLocation location, FunctionDeclaration target) {
+      String code, PhysicalLocation location) {
     FunctionTemplateDeclaration node = new FunctionTemplateDeclaration();
     node.setName(code);
     node.setCode(code);
     node.setLocation(location);
-    node.addRealization(target);
 
     log(node);
     return node;

@@ -255,17 +255,17 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
 
     if (ctx.getDeclaration() instanceof CPPASTFunctionDefinition) {
 
+      FunctionTemplateDeclaration templateDeclaration =
+          NodeBuilder.newFunctionTemplateDeclaration(
+              this.lang.getCodeFromRawNode(ctx), this.lang.getLocationFromRawNode(ctx));
+      lang.getScopeManager().addDeclaration(templateDeclaration);
+      lang.getScopeManager().enterScope(templateDeclaration);
+
       // Handle FunctionTemplate
       FunctionDeclaration functionDeclaration =
           (FunctionDeclaration) lang.getDeclarationHandler().handle(ctx.getDeclaration());
 
-      FunctionTemplateDeclaration templateDeclaration =
-          NodeBuilder.newFunctionTemplateDeclaration(
-              this.lang.getCodeFromRawNode(ctx),
-              this.lang.getLocationFromRawNode(ctx),
-              functionDeclaration);
-      lang.getScopeManager().addDeclaration(templateDeclaration);
-      lang.getScopeManager().enterScope(templateDeclaration);
+      templateDeclaration.addRealization(functionDeclaration);
 
       for (ICPPASTTemplateParameter templateParameter : ctx.getTemplateParameters()) {
         if (templateParameter instanceof CPPASTSimpleTypeTemplateParameter) {
@@ -316,6 +316,7 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
             nonTypeTemplateParamDeclaration.addPossibleInitialization(defaultExpression);
           }
           templateDeclaration.addParameter(nonTypeTemplateParamDeclaration);
+          lang.getScopeManager().addDeclaration(nonTypeTemplateParamDeclaration);
         }
       }
       lang.getScopeManager().leaveScope(templateDeclaration);

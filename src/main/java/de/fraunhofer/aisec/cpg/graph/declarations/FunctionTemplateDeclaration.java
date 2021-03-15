@@ -99,9 +99,9 @@ public class FunctionTemplateDeclaration extends TemplateDeclaration {
 
   // Do NOT add parameters to hashcode, as they are added incrementally to the list. If the
   // parameters field is added, the ScopeManager is not able to find it anymore and we cannot leave
-  // the TemplateScope
+  // the TemplateScope. Analogous for realization
   @Override
   public int hashCode() {
-    return Objects.hash(super.hashCode(), realization);
+    return Objects.hash(super.hashCode());
   }
 }
