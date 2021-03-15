@@ -536,7 +536,7 @@ public class CallResolver extends Pass {
       }
 
       if (invocationCandidates.isEmpty() && this.getLang() instanceof CXXLanguageFrontend) {
-        // If we still have no candidates and our current language is c/c++ we create dummy FunctionDeclaration
+        // If we still have no candidates and our current language is c++ we create dummy FunctionDeclaration
         invocationCandidates =
             List.of(createDummy(null, call.getName(), call.getCode(), false, call.getSignature()));
       }
