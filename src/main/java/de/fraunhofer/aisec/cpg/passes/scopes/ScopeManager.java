@@ -575,9 +575,7 @@ public class ScopeManager {
       }
     }
 
-    return scope.getParent() != null
-        ? resolveFunction(scope.getParent(), call)
-        : Collections.emptyList();
+    return scope.getParent() != null ? resolveFunction(scope.getParent(), call) : new ArrayList<>();
   }
 
   /**
