@@ -7,7 +7,7 @@ import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
-import jep.SharedInterpreter
+import jep.*
 import java.io.File
 import java.lang.Exception
 import java.nio.file.Path
@@ -42,10 +42,8 @@ class PythonLanguageFrontend(config: TranslationConfiguration, scopeManager: Sco
         val tud: TranslationUnitDeclaration
 
         try {
-            // TODO
-            jep.MainInterpreter.setJepLibraryPath("/home/maximilian/.virtualenvs/jep/lib/python3.9/site-packages/jep/libjep.so")
-
-            val interp: SharedInterpreter = SharedInterpreter()
+            JepSingleton // configure Jep
+            val interp = SubInterpreter(JepConfig().setRedirectOutputStreams(true))
 
             // provide code to python (as global variable)
             interp.set("codeToParse", s)
@@ -63,8 +61,10 @@ class PythonLanguageFrontend(config: TranslationConfiguration, scopeManager: Sco
             interp.exec("del codeToParse")
             interp.exec("del res")
             interp.close()
-        } catch (e: Exception) {
+        } catch (e: JepException) {
             throw TranslationException("Python failed with message: $e")
+        } catch (e: Exception) {
+            throw e
         }
         return tud
     }

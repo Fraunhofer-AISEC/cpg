@@ -247,6 +247,10 @@ public class FunctionDeclaration extends ValueDeclaration implements Declaration
     this.parameters.add(propertyEdge);
   }
 
+  public void addParameterList(List<ParamVariableDeclaration> params) {
+    params.forEach(p -> this.addParameter(p));
+  }
+
   public void removeParameter(ParamVariableDeclaration paramVariableDeclaration) {
     this.parameters.removeIf(
         propertyEdge -> propertyEdge.getEnd().equals(paramVariableDeclaration));

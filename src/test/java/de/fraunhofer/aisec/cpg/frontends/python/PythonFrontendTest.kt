@@ -1,24 +1,86 @@
 package de.fraunhofer.aisec.cpg.frontends.python
 
 import de.fraunhofer.aisec.cpg.BaseTest
+import de.fraunhofer.aisec.cpg.ExperimentalPython
 import de.fraunhofer.aisec.cpg.TestUtils
+import de.fraunhofer.aisec.cpg.TranslationConfiguration
+import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
-import de.fraunhofer.aisec.cpg.graph.types.TypeParser
+import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
+import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import java.io.File
 import java.nio.file.Path
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 
+@ExperimentalPython
 class PythonFrontendTest : BaseTest() {
+    private var config: TranslationConfiguration? = null
+    @BeforeEach
+    fun setUp() {
+        config = TranslationConfiguration.builder().build()
+    }
+
     val topLevel = Path.of("src", "test", "resources", "python")
 
     @Test
+    @Throws(TranslationException::class)
     fun testMax() {
         val tu = TestUtils.analyzeAndGetFirstTU(listOf(topLevel.resolve("main.py").toFile()), topLevel, true)
         assertNotNull(tu)
     }
+
+    @Test
+    @Throws(TranslationException::class)
+    fun testPythonImpl() {
+        val tu = TestUtils.analyzeAndGetFirstTU(listOf(File("python","main.py")), topLevel, true)
+        assertNotNull(tu)
+    }
+
+    @Test
+    @Throws(TranslationException::class)
+    fun testSimple() {
+        val declaration = config?.let {
+            PythonLanguageFrontend(it, ScopeManager())
+                .parse(File(topLevel.resolve("main.py").toString()))
+        }
+        assertNotNull(declaration)
+        val declarations = declaration.declarations
+        assertEquals(1, declarations.size)
+
+        // first declaration is the function declaration
+        assertTrue(declarations[0] is FunctionDeclaration)
+
+        val functionDeclaration = declarations[0] as FunctionDeclaration
+        assertEquals("test", functionDeclaration.name)
+
+        val body = functionDeclaration.body as CompoundStatement
+        val statements = body.statements
+
+        assertEquals(5, statements.size)
+        val stmt = statements[1]
+        assertTrue(stmt is CallExpression)
+
+        val call = stmt as CallExpression
+        assertEquals("print", call.name)
+
+        // k = 3
+        val binOp = statements[0] as? BinaryOperator
+
+        assertNotNull(binOp)
+
+        val lhs = binOp.lhs as? ExpressionList
+        val target = lhs?.expressions?.get(0) as? DeclaredReferenceExpression
+
+        assertNotNull(target)
+
+        assertEquals("k", target?.name)
+    }
+
     /*
     @Test
     fun testLiteral() {
