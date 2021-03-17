@@ -4,7 +4,6 @@ import de.fraunhofer.aisec.cpg.TranslationResult;
 import de.fraunhofer.aisec.cpg.graph.*;
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration;
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration;
-import de.fraunhofer.aisec.cpg.graph.declarations.TypeTemplateParamDeclaration;
 import de.fraunhofer.aisec.cpg.graph.types.*;
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker;
 import java.util.*;
@@ -235,18 +234,8 @@ public class TypeResolver extends Pass {
   }
 
   public void ensureUniqueSecondaryTypeEdge(Node node) {
-    if (node instanceof TypeTemplateParamDeclaration) {
-      Type oldType = ((TypeTemplateParamDeclaration) node).getDefault();
-      if (oldType != null) {
-        Collection<Type> types = typeState.keySet();
-
-        for (Type t : types) {
-          if (t.equals(oldType)) {
-            ((TypeTemplateParamDeclaration) node).setDefault(t);
-            ((TypeTemplateParamDeclaration) node).addPossibleInitialization(t);
-          }
-        }
-      }
+    if (node instanceof HasType.SecondaryTypeEdge) {
+      ((HasType.SecondaryTypeEdge) node).updateType(typeState.keySet());
     }
   }
 

@@ -2,18 +2,20 @@ package de.fraunhofer.aisec.cpg.graph.declarations;
 
 import static de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.unwrap;
 
+import de.fraunhofer.aisec.cpg.graph.HasType;
 import de.fraunhofer.aisec.cpg.graph.SubGraph;
 import de.fraunhofer.aisec.cpg.graph.TemplateParameter;
 import de.fraunhofer.aisec.cpg.graph.edge.Properties;
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import de.fraunhofer.aisec.cpg.graph.types.Type;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
 import org.neo4j.ogm.annotation.Relationship;
 
 public class TypeTemplateParamDeclaration extends ValueDeclaration
-    implements TemplateParameter<Type> {
+    implements TemplateParameter<Type>, HasType.SecondaryTypeEdge {
 
   @Relationship(value = "POSSIBLE_INITIALIZATIONS", direction = "OUTGOING")
   @SubGraph("AST")
@@ -58,5 +60,18 @@ public class TypeTemplateParamDeclaration extends ValueDeclaration
   @Override
   public int hashCode() {
     return Objects.hash(super.hashCode(), possibleInitializations, defaultType);
+  }
+
+  @Override
+  public void updateType(Collection<Type> typeState) {
+    Type oldType = this.getDefault();
+    if (oldType != null) {
+      for (Type t : typeState) {
+        if (t.equals(oldType)) {
+          this.setDefault(t);
+          this.addPossibleInitialization(t);
+        }
+      }
+    }
   }
 }

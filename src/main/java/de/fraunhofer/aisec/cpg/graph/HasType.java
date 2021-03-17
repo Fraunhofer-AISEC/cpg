@@ -27,6 +27,7 @@
 package de.fraunhofer.aisec.cpg.graph;
 
 import de.fraunhofer.aisec.cpg.graph.types.Type;
+import java.util.Collection;
 import java.util.Set;
 
 public interface HasType {
@@ -98,5 +99,9 @@ public interface HasType {
     void typeChanged(HasType src, HasType root, Type oldType);
 
     void possibleSubTypesChanged(HasType src, HasType root, Set<Type> oldSubTypes);
+  }
+
+  interface SecondaryTypeEdge {
+    void updateType(Collection<Type> typeState);
   }
 }
