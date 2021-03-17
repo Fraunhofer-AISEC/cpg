@@ -70,7 +70,6 @@ public class ControlFlowSensitiveDFGPass extends Pass {
    */
   public void handle(Node node) {
     if (node instanceof FunctionDeclaration) {
-
       ControlFlowSensitiveDFGPass.FunctionLevelFixpointIterator flfIterator =
           new ControlFlowSensitiveDFGPass.FunctionLevelFixpointIterator();
       flfIterator.handle(node);
@@ -311,9 +310,9 @@ public class ControlFlowSensitiveDFGPass extends Pass {
           modifyDFGEdges(currNode, variables);
 
           // Update values of DFG Pass until the end of the assignment
-          return binaryOperator
-              .getPrevEOG()
-              .get(0); // Still has to compute the joinPoints at the assignment, we take one of its
+          return binaryOperator;
+          // .getPrevEOG()
+          // .get(0); // Still has to compute the joinPoints at the assignment, we take one of its
           // predecessors to ensure it running through the loop once
         }
       }
