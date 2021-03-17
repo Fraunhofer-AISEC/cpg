@@ -16,7 +16,7 @@ import java.nio.file.Path
 class PythonLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeManager?) : LanguageFrontend(config, scopeManager, ".") {
     @Throws(TranslationException::class)
     override fun parse(file: File): TranslationUnitDeclaration {
-        return parseInternal(file.readText(Charsets.UTF_8))
+        return parseInternal(file.readText(Charsets.UTF_8), file.path)
     }
 
     // TODO
@@ -32,7 +32,7 @@ class PythonLanguageFrontend(config: TranslationConfiguration, scopeManager: Sco
     // TODO
     override fun <S, T> setComment(s: S, ctx: T) {}
 
-    private fun parseInternal(s: String?): TranslationUnitDeclaration {
+    private fun parseInternal(s: String?, path: String): TranslationUnitDeclaration {
         if(s.isNullOrEmpty())
             throw TranslationException("No code provided.")
 
@@ -46,7 +46,8 @@ class PythonLanguageFrontend(config: TranslationConfiguration, scopeManager: Sco
             val interp = SubInterpreter(JepConfig().setRedirectOutputStreams(true))
 
             // provide code to python (as global variable)
-            interp.set("codeToParse", s)
+            interp.set("global_codeToParse", s)
+            interp.set("global_fname", path)
 
             // load script
             interp.runScript(entryScript.toString())
@@ -55,11 +56,12 @@ class PythonLanguageFrontend(config: TranslationConfiguration, scopeManager: Sco
             interp.exec("run()")
 
             // get result
-            tud = interp.getValue("res") as TranslationUnitDeclaration
+            tud = interp.getValue("global_res") as TranslationUnitDeclaration
             
             // clean up
-            interp.exec("del codeToParse")
-            interp.exec("del res")
+            interp.exec("del global_codeToParse")
+            interp.exec("del global_fname")
+            interp.exec("del global_res")
             interp.close()
         } catch (e: JepException) {
             throw TranslationException("Python failed with message: $e")

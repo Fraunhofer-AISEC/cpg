@@ -1,21 +1,44 @@
+#from de.fraunhofer.aisec.cpg.graph.types import Type
 from de.fraunhofer.aisec.cpg.graph.declarations import Declaration
 from de.fraunhofer.aisec.cpg.graph.declarations import FunctionDeclaration
+from de.fraunhofer.aisec.cpg.graph.declarations import IncludeDeclaration
+from de.fraunhofer.aisec.cpg.graph.declarations import MethodDeclaration
 from de.fraunhofer.aisec.cpg.graph.declarations import ParamVariableDeclaration
+from de.fraunhofer.aisec.cpg.graph.declarations import RecordDeclaration
 from de.fraunhofer.aisec.cpg.graph.declarations import TranslationUnitDeclaration
 from de.fraunhofer.aisec.cpg.graph.statements import CompoundStatement
+from de.fraunhofer.aisec.cpg.graph.statements import IfStatement
+from de.fraunhofer.aisec.cpg.graph.statements import ReturnStatement
 from de.fraunhofer.aisec.cpg.graph.statements import Statement
+from de.fraunhofer.aisec.cpg.graph.statements.expressions import ArrayCreationExpression
+from de.fraunhofer.aisec.cpg.graph.statements.expressions import ArraySubscriptionExpression
 from de.fraunhofer.aisec.cpg.graph.statements.expressions import BinaryOperator
 from de.fraunhofer.aisec.cpg.graph.statements.expressions import CallExpression
 from de.fraunhofer.aisec.cpg.graph.statements.expressions import DeclaredReferenceExpression
 from de.fraunhofer.aisec.cpg.graph.statements.expressions import ExpressionList
 from de.fraunhofer.aisec.cpg.graph.statements.expressions import Literal
+from de.fraunhofer.aisec.cpg.graph.statements.expressions import MemberCallExpression
+from de.fraunhofer.aisec.cpg.graph.statements.expressions import MemberExpression
+from de.fraunhofer.aisec.cpg.graph.types import Type
+from de.fraunhofer.aisec.cpg.graph.types import TypeParser
+from java.net import URI
 from java.util import List as JavaList
 import ast
 import inspect
 
+#############################
+# PROBLEMS / OPEN QUESTIONS #
+#############################
+# 1. Wie gehen wir mit Expression außerhalb von Funktionen um? Für Funktionen gibt es die FunctionDeclaration. Was gibt es für Expressions?
+# 2. File Info kaputt
+# 3. import == include???
+# 4. Import from??? Import alias???
+# 5. default args
+# 6. Exceptions
+
 def run():
-    global res
-    res = parseCode(codeToParse)
+    global global_res
+    global_res = parseCode(global_codeToParse, global_fname)
 
 def debug_print(string):
     callerframerecord = inspect.stack()[1]
@@ -24,18 +47,33 @@ def debug_print(string):
     print("%s\t%d:\t%s" % (info.function, info.lineno, string))
 
 class MyWalker(ast.NodeVisitor):
-    def __init__(self):
+    def __init__(self, fname = ""):
         self.tud = TranslationUnitDeclaration()
+        self.fname = fname
+    
+    def add_loc_info(self, node, obj):
+        ''' Adds location information of node to obj '''
+        # TODO cannot import sarif PhysicalLocation and Region -> ???
+        obj.setFile(self.fname)
+        if False:
+            uri = URI("file://" + self.fname)
+            obj.setLocation(PhysicalLocation(uri, Region(node.lineno,
+                node.col_offset, node.end_lineno, node.end_col_offset)))
+            
+
 
     ### LITERALS ###
     def visit_Constant(self, node):
         debug_print(ast.dump(node))
         if isinstance(node.value, str):
             lit = Literal()
+            self.add_loc_info(node, lit)
             lit.setValue(node.value)
+            #lit.setType(Type("str"))
             return lit
         elif isinstance(node.value, int):
             lit = Literal()
+            self.add_loc_info(node, lit)
             lit.setValue(node.value)
             return lit
         else:
@@ -52,7 +90,11 @@ class MyWalker(ast.NodeVisitor):
         raise NotImplementedError
     def visit_Tuple(self, node):
         debug_print(ast.dump(node))
-        raise NotImplementedError
+        # TODO ist this good?
+        arr = ArrayCreationExpression()
+        self.add_loc_info(node, arr)
+        pass
+
     def visit_Set(self, node):
         debug_print(ast.dump(node))
         raise NotImplementedError
@@ -64,6 +106,7 @@ class MyWalker(ast.NodeVisitor):
     def visit_Name(self, node):
         debug_print(ast.dump(node))
         ref = DeclaredReferenceExpression()
+        self.add_loc_info(node, ref)
         ref.setName(node.id)
         return ref
 
@@ -83,6 +126,7 @@ class MyWalker(ast.NodeVisitor):
     ### EXORESSIONS ###
     def visit_Expr(self, node):
         debug_print(ast.dump(node))
+        # TODO? self.add_loc_info(node, ref)
         return self.visit(node.value)
 
     def visit_UnaryOp(self, node):
@@ -102,7 +146,13 @@ class MyWalker(ast.NodeVisitor):
         raise NotImplementedError
     def visit_BinOp(self, node):
         debug_print(ast.dump(node))
-        raise NotImplementedError
+        binop = BinaryOperator()
+        self.add_loc_info(node, binop)
+        binop.setOperatorCode(node.op)
+        binop.setLhs(self.visit(node.left))
+        binop.setRhs(self.visit(node.right))
+        return binop
+
     def visit_Add(self, node):
         debug_print(ast.dump(node))
         raise NotImplementedError
@@ -186,14 +236,23 @@ class MyWalker(ast.NodeVisitor):
         raise NotImplementedError
     def visit_Call(self, node):
         # TODO what???
+        # TODO keywords starargs kwargs
         debug_print(ast.dump(node))
-        callStmt = CallExpression()
+        if isinstance(node.func, ast.Name):
+            call = CallExpression()
+            call.setName(node.func.id)
+        elif isinstance(node.func, ast.Attribute):
+            call = MemberCallExpression()
+            call.setName(node.func.value)
+        else:
+            raise NotImplementedError
+        self.add_loc_info(node, call)
         call_args = []
         for a in node.args:
             call_args.append(self.visit(a))
-        callStmt.setArguments(call_args)
-        callStmt.setName(node.func.id)
-        return callStmt
+        call.setArguments(call_args)
+        return call
+
 
     def visit_keyword(self, node):
         debug_print(ast.dump(node))
@@ -201,9 +260,19 @@ class MyWalker(ast.NodeVisitor):
     def visit_IfExpr(self, node):
         debug_print(ast.dump(node))
         raise NotImplementedError
+
     def visit_Attribute(self, node):
         debug_print(ast.dump(node))
-        raise NotImplementedError
+        mem = MemberExpression()
+        self.add_loc_info(node, mem)
+        if isinstance(node.value, ast.Name):
+            exp = self.visit(node.value)
+            mem.setBase(exp)
+        else:
+            raise NotImplementedError
+        mem.setOperatorCode(node.attr)
+        return mem
+
     def visit_NamedExpr(self, node):
         debug_print(ast.dump(node))
         raise NotImplementedError
@@ -211,7 +280,13 @@ class MyWalker(ast.NodeVisitor):
     ### SUBSCRIPTING ###
     def visit_Subscript(self, node):
         debug_print(ast.dump(node))
-        raise NotImplementedError
+        s = ArraySubscriptionExpression()
+        self.add_loc_info(node, s)
+        s.setArrayExpression(self.visit(node.value))
+        s.setSubscriptExpression(self.visit(node.slice))
+        debug_print(s)
+        return s
+
     def visit_Slice(self, node):
         debug_print(ast.dump(node))
         raise NotImplementedError
@@ -238,6 +313,7 @@ class MyWalker(ast.NodeVisitor):
         debug_print(ast.dump(node))
         # binary operator
         binop = BinaryOperator()
+        self.add_loc_info(node, binop)
         binop.setOperatorCode("=")
         lhs = ExpressionList()
         for n in node.targets:
@@ -254,7 +330,8 @@ class MyWalker(ast.NodeVisitor):
         raise NotImplementedError
     def visit_Raise(self, node):
         debug_print(ast.dump(node))
-        raise NotImplementedError
+        pass # TODO no cpg support?
+
     def visit_Assert(self, node):
         debug_print(ast.dump(node))
         raise NotImplementedError
@@ -268,10 +345,23 @@ class MyWalker(ast.NodeVisitor):
     ### IMPORTS ###
     def visit_Import(self, node):
         debug_print(ast.dump(node))
-        raise NotImplementedError
+        imp = IncludeDeclaration()
+        self.add_loc_info(node, imp)
+        if len(node.names) != 1:
+            raise NotImplementedError
+        imp.setFilename(self.fname + node.names[0].name)
+        return imp
+
     def visit_ImportFrom(self, node):
         debug_print(ast.dump(node))
-        raise NotImplementedError
+        # TODO cpg fixen
+        imp = IncludeDeclaration()
+        self.add_loc_info(node, imp)
+        if node.level != 0:
+            raise NotImplementedError
+        imp.setFilename(self.fname + node.module)
+        return imp
+
     def visit_alias(self, node):
         debug_print(ast.dump(node))
         raise NotImplementedError
@@ -280,7 +370,27 @@ class MyWalker(ast.NodeVisitor):
     ### CONTROL FLOW ###
     def visit_If(self, node):
         debug_print(ast.dump(node))
-        raise NotImplementedError
+        stmt = IfStatement()
+        self.add_loc_info(node, stmt)
+        stmt.setCondition(self.visit(node.test))
+        if isinstance(node.body, list):
+            body = CompoundStatement()
+            self.add_loc_info(node.body, body)
+            for n in node.body:
+                body.addStatement(self.visit(n))
+            stmt.setThenStatement(body)
+        else:
+            raise NotImplementedError
+        if isinstance(node.orelse, list):
+            orelse = CompoundStatement()
+            self.add_loc_info(node.orelse, orelse)
+            for n in node.orelse:
+                orelse.addStatement(self.visit(n))
+            stmt.setElseStatement(orelse)
+        else:
+            raise NotImplementedError
+        return stmt
+
     def visit_For(self, node):
         debug_print(ast.dump(node))
         raise NotImplementedError
@@ -307,9 +417,13 @@ class MyWalker(ast.NodeVisitor):
         raise NotImplementedError
 
     ### FUNCTION AND CLASS DEFINITIONS ###
-    def visit_FunctionDef(self, node):
+    def visit_FunctionDef(self, node, returnMethod=False):
         debug_print(ast.dump(node))
-        fd = FunctionDeclaration()
+        if returnMethod:
+            fd = MethodDeclaration()
+        else:
+            fd = FunctionDeclaration()
+        self.add_loc_info(node, fd)
         
         # handle name
         fd.setName(node.name)
@@ -319,10 +433,10 @@ class MyWalker(ast.NodeVisitor):
 
         # handle body
         body = CompoundStatement()
+        self.add_loc_info(node, body)
         fd.setBody(body)
         for stmt in node.body:
             body.addStatement(self.visit(stmt))
-            debug_print(fd.getBody())
 
         # handle decorator_list
 
@@ -330,9 +444,7 @@ class MyWalker(ast.NodeVisitor):
 
         # handle type_comment
 
-        # store result
-        # TODO
-        self.tud.addDeclaration(fd)
+        return fd
 
     def visit_Lambda(self, node):
         debug_print(ast.dump(node))
@@ -354,19 +466,26 @@ class MyWalker(ast.NodeVisitor):
         if node.kwarg is not None:
             raise NotImplementedError
         for p in node.defaults:
-            raise NotImplementedError
+            pass
+            # raise NotImplementedError
+            # no cpg support???
         return plist
 
     def visit_arg(self, node):
         debug_print(ast.dump(node))
         pvd = ParamVariableDeclaration()
+        self.add_loc_info(node, pvd)
         pvd.setName(node.arg)
         # TODO handle annotation
         return pvd
 
     def visit_Return(self, node):
         debug_print(ast.dump(node))
-        raise NotImplementedError
+        r = ReturnStatement()
+        self.add_loc_info(node, r)
+        r.setReturnValue(self.visit(node.value))
+        return r
+
     def visit_Yield(self, node):
         debug_print(ast.dump(node))
         raise NotImplementedError
@@ -375,13 +494,57 @@ class MyWalker(ast.NodeVisitor):
         raise NotImplementedError
     def visit_Global(self, node):
         debug_print(ast.dump(node))
-        raise NotImplementedError
+        if len(node.names) != 1:
+            raise NotImplementedError
+        ref = DeclaredReferenceExpression()
+        self.add_loc_info(node, ref)
+        ref.setName(node.names[0])
+        return ref
+
     def visit_Nonlocal(self, node):
         debug_print(ast.dump(node))
         raise NotImplementedError
+
     def visit_ClassDef(self, node):
         debug_print(ast.dump(node))
-        raise NotImplementedError
+        rec = RecordDeclaration()
+        self.add_loc_info(node, rec)
+        # name
+        rec.setName(node.name)
+        # bases
+        if len(node.bases) == 0:
+            pass
+        elif len(node.bases) == 1:
+            b = node.bases[0]
+            if isinstance(b, ast.Attribute):
+                tname = "%s.%s" % (b.value.id, b.attr)
+                t = TypeParser.createFrom(tname, True)
+            else:
+                raise NotImplementedError
+        else:
+            raise NotImplementedError
+        rec.setSuperClasses([t])
+        if len(node.keywords) != 0:
+            raise NotImplementedError
+        #if node.starargs is not None:
+        #    raise NotImplementedError
+        #if node.kwargs is not None:
+        #    raise NotImplementedError
+        # body
+        for b in node.body:
+            if isinstance(b, ast.FunctionDef):
+                fd = self.visit_FunctionDef(b, returnMethod=True)
+                rec.addMethod(fd)
+            else:
+                raise NotImplementedError
+
+        if len(node.decorator_list) != 0:
+            raise NotImplementedError
+
+
+        debug_print(rec)
+
+        return rec
 
     ### ASYNC AND AWAIT ###
     def visit_AsyncFunctionDef(self, node):
@@ -402,7 +565,7 @@ class MyWalker(ast.NodeVisitor):
         debug_print(ast.dump(node))
         '''The AST is wrapped in a 'Module' with 'body' list. Visit the body.'''
         for n in node.body:
-            self.visit(n)
+            self.tud.addDeclaration(self.visit(n))
 
     ### CATCH ALL ###
     def generic_visit(self, node):
@@ -410,11 +573,11 @@ class MyWalker(ast.NodeVisitor):
         raise NotImplementedError
 
 
-def parseCode(code):
-    a = ast.parse(code)
-    print(ast.dump(a, indent = 2))
+def parseCode(code, fname):
+    root = ast.parse(code, filename = fname, type_comments = True)
+    #debug_print(ast.dump(root, indent = 2))
 
-    walker = MyWalker()
-    walker.visit(a)
+    walker = MyWalker(fname)
+    walker.visit(root)
 
     return walker.tud
