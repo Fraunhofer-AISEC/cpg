@@ -73,8 +73,8 @@ class PythonFrontendTest : BaseTest() {
 
         assertNotNull(binOp)
 
-        val lhs = binOp.lhs as? ExpressionList
-        val target = lhs?.expressions?.get(0) as? DeclaredReferenceExpression
+        val lhs = binOp.lhs as? Expression
+        val target = lhs as? DeclaredReferenceExpression
 
         assertNotNull(target)
 

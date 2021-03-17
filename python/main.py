@@ -82,7 +82,13 @@ class MyWalker(ast.NodeVisitor):
             self.add_loc_info(node, lit)
             lit.setValue(node.value)
             return lit
+        elif isinstance(node.value, type(None)):
+            lit = Literal()
+            self.add_loc_info(node, lit)
+            lit.setValue(node.value)
+            return lit
         else:
+            debug_print(type(node.value))
             raise NotImplementedError
 
     def visit_FormattedValue(self, node):
@@ -91,6 +97,7 @@ class MyWalker(ast.NodeVisitor):
     def visit_JoinedStr(self, node):
         debug_print(ast.dump(node))
         raise NotImplementedError
+
     def visit_List(self, node):
         debug_print(ast.dump(node))
         lit = Literal()
@@ -232,7 +239,17 @@ class MyWalker(ast.NodeVisitor):
         raise NotImplementedError
     def visit_Compare(self, node):
         debug_print(ast.dump(node))
-        raise NotImplementedError
+        comp = BinaryOperator()
+        self.add_loc_info(node, comp)
+        if len(node.ops) != 1:
+            raise NotImplementedError
+        comp.setOperatorCode(node.ops[0])
+        comp.setLhs(self.visit(node.left))
+        if len(node.comparators) != 1:
+            raise NotImplementedError
+        comp.setRhs(self.visit(node.comparators[0]))
+        return comp
+
     def visit_Eq(self, node):
         debug_print(ast.dump(node))
         raise NotImplementedError
@@ -297,6 +314,8 @@ class MyWalker(ast.NodeVisitor):
         if isinstance(node.value, ast.Name):
             exp = self.visit(node.value)
         elif isinstance(node.value, ast.Attribute):
+            exp = self.visit(node.value)
+        elif isinstance(node.value, ast.Subscript):
             exp = self.visit(node.value)
         else:
             debug_print(type(node.value))
@@ -390,6 +409,12 @@ class MyWalker(ast.NodeVisitor):
         if len(node.names) != 1:
             raise NotImplementedError
         imp.setFilename(self.fname + node.names[0].name)
+       
+       # make scopmanager aware of import
+        vd = VariableDeclaration()
+        self.add_loc_info(node, vd)
+        vd.setName(node.names[0].name)
+        self.scopemanager.addGlobal(vd)
         return imp
 
     def visit_ImportFrom(self, node):
@@ -445,7 +470,11 @@ class MyWalker(ast.NodeVisitor):
         else:
             raise NotImplementedError # what???
         stmt.setIterable(self.visit(node.iter))
-        stmt.setStatement(self.visit(node.body))
+        body = CompoundStatement()
+        self.add_loc_info(node.body, body)
+        for b in node.body:
+            body.addStatement(self.visit(b))
+        stmt.setStatement(body)
         return stmt
 
     def visit_While(self, node):
@@ -569,6 +598,7 @@ class MyWalker(ast.NodeVisitor):
         self.add_loc_info(node, rec)
         # name
         rec.setName(node.name)
+        self.scopemanager.addDeclaration(rec)
         # bases
         if len(node.bases) == 0:
             pass
