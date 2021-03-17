@@ -48,6 +48,7 @@ class PythonLanguageFrontend(config: TranslationConfiguration, scopeManager: Sco
             // provide code to python (as global variable)
             interp.set("global_codeToParse", s)
             interp.set("global_fname", path)
+            interp.set("global_scopemanager", this.getScopeManager())
 
             // load script
             interp.runScript(entryScript.toString())
@@ -62,6 +63,7 @@ class PythonLanguageFrontend(config: TranslationConfiguration, scopeManager: Sco
             interp.exec("del global_codeToParse")
             interp.exec("del global_fname")
             interp.exec("del global_res")
+            interp.exec("del global_scopemanager")
             interp.close()
         } catch (e: JepException) {
             throw TranslationException("Python failed with message: $e")

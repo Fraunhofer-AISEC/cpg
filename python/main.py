@@ -1,5 +1,6 @@
 #from de.fraunhofer.aisec.cpg.graph.types import Type
 from de.fraunhofer.aisec.cpg.graph.declarations import Declaration
+from de.fraunhofer.aisec.cpg.graph.declarations import VariableDeclaration
 from de.fraunhofer.aisec.cpg.graph.declarations import FunctionDeclaration
 from de.fraunhofer.aisec.cpg.graph.declarations import IncludeDeclaration
 from de.fraunhofer.aisec.cpg.graph.declarations import MethodDeclaration
@@ -7,11 +8,14 @@ from de.fraunhofer.aisec.cpg.graph.declarations import ParamVariableDeclaration
 from de.fraunhofer.aisec.cpg.graph.declarations import RecordDeclaration
 from de.fraunhofer.aisec.cpg.graph.declarations import TranslationUnitDeclaration
 from de.fraunhofer.aisec.cpg.graph.statements import CompoundStatement
+from de.fraunhofer.aisec.cpg.graph.statements import EmptyStatement
+from de.fraunhofer.aisec.cpg.graph.statements import ForEachStatement
 from de.fraunhofer.aisec.cpg.graph.statements import IfStatement
 from de.fraunhofer.aisec.cpg.graph.statements import ReturnStatement
 from de.fraunhofer.aisec.cpg.graph.statements import Statement
 from de.fraunhofer.aisec.cpg.graph.statements.expressions import ArrayCreationExpression
 from de.fraunhofer.aisec.cpg.graph.statements.expressions import ArraySubscriptionExpression
+from de.fraunhofer.aisec.cpg.graph.statements.expressions import UnaryOperator
 from de.fraunhofer.aisec.cpg.graph.statements.expressions import BinaryOperator
 from de.fraunhofer.aisec.cpg.graph.statements.expressions import CallExpression
 from de.fraunhofer.aisec.cpg.graph.statements.expressions import DeclaredReferenceExpression
@@ -33,12 +37,13 @@ import inspect
 # 2. File Info kaputt
 # 3. import == include???
 # 4. Import from??? Import alias???
-# 5. default args
-# 6. Exceptions
+# 5. default args: wip für cpp
+# 6. Exceptions -> unary op
+# 7. listen / tupel?
 
 def run():
     global global_res
-    global_res = parseCode(global_codeToParse, global_fname)
+    global_res = parseCode(global_codeToParse, global_fname, global_scopemanager)
 
 def debug_print(string):
     callerframerecord = inspect.stack()[1]
@@ -47,9 +52,10 @@ def debug_print(string):
     print("%s\t%d:\t%s" % (info.function, info.lineno, string))
 
 class MyWalker(ast.NodeVisitor):
-    def __init__(self, fname = ""):
+    def __init__(self, fname, scopemanager):
         self.tud = TranslationUnitDeclaration()
         self.fname = fname
+        self.scopemanager = scopemanager
     
     def add_loc_info(self, node, obj):
         ''' Adds location information of node to obj '''
@@ -87,13 +93,25 @@ class MyWalker(ast.NodeVisitor):
         raise NotImplementedError
     def visit_List(self, node):
         debug_print(ast.dump(node))
-        raise NotImplementedError
+        lit = Literal()
+        self.add_loc_info(node, lit)
+        lit.setType(TypeParser.createFrom("List", True))
+        elts = []
+        for e in node.elts:
+            elts.append(self.visit(e))
+        lit.setValue(elts)
+        return lit
+
     def visit_Tuple(self, node):
         debug_print(ast.dump(node))
-        # TODO ist this good?
-        arr = ArrayCreationExpression()
-        self.add_loc_info(node, arr)
-        pass
+        lit = Literal()
+        self.add_loc_info(node, lit)
+        lit.setType(TypeParser.createFrom("Tuple", True))
+        elts = []
+        for e in node.elts:
+            elts.append(self.visit(e))
+        lit.setValue(elts)
+        return lit
 
     def visit_Set(self, node):
         debug_print(ast.dump(node))
@@ -103,11 +121,22 @@ class MyWalker(ast.NodeVisitor):
         raise NotImplementedError
     
     ### VARIABLES ###
-    def visit_Name(self, node):
+    def visit_Name(self, node, get_declaration = False):
         debug_print(ast.dump(node))
+        record = self.scopemanager.getRecordForName(self.scopemanager.getCurrentScope(),
+                node.id)
+        if record is None:
+            ref = VariableDeclaration()
+            self.add_loc_info(node, ref)
+            ref.setName(node.id)
+            self.scopemanager.addDeclaration(ref)
+            if get_declaration == True:
+                return ref
+        # otherwise -> return reference (default case)
         ref = DeclaredReferenceExpression()
         self.add_loc_info(node, ref)
         ref.setName(node.id)
+        ref.setRefersTo(record)
         return ref
 
     def visit_Load(self, node):
@@ -267,9 +296,12 @@ class MyWalker(ast.NodeVisitor):
         self.add_loc_info(node, mem)
         if isinstance(node.value, ast.Name):
             exp = self.visit(node.value)
-            mem.setBase(exp)
+        elif isinstance(node.value, ast.Attribute):
+            exp = self.visit(node.value)
         else:
+            debug_print(type(node.value))
             raise NotImplementedError
+        mem.setBase(exp)
         mem.setOperatorCode(node.attr)
         return mem
 
@@ -315,10 +347,10 @@ class MyWalker(ast.NodeVisitor):
         binop = BinaryOperator()
         self.add_loc_info(node, binop)
         binop.setOperatorCode("=")
-        lhs = ExpressionList()
-        for n in node.targets:
-            lhs.addExpression(self.visit(n))
-        binop.setLhs(lhs)
+        if len(node.targets) != 1:
+            raise NotImplementedError
+        target = node.targets[0]
+        binop.setLhs(self.visit(target))
         binop.setRhs(self.visit(node.value))
         return binop
 
@@ -330,7 +362,12 @@ class MyWalker(ast.NodeVisitor):
         raise NotImplementedError
     def visit_Raise(self, node):
         debug_print(ast.dump(node))
-        pass # TODO no cpg support?
+        op = UnaryOperator()
+        self.add_loc_info(node, op)
+        op.setOperatorCode("raise")
+        op.setInput(self.visit(node.exc)) # TODO or setCode???
+        debug_print(op)
+        return op
 
     def visit_Assert(self, node):
         debug_print(ast.dump(node))
@@ -338,9 +375,12 @@ class MyWalker(ast.NodeVisitor):
     def visit_Delete(self, node):
         debug_print(ast.dump(node))
         raise NotImplementedError
+
     def visit_Pass(self, node):
         debug_print(ast.dump(node))
-        raise NotImplementedError
+        stmt = EmptyStatement()
+        self.add_loc_info(node, stmt)
+        return stmt
 
     ### IMPORTS ###
     def visit_Import(self, node):
@@ -354,12 +394,17 @@ class MyWalker(ast.NodeVisitor):
 
     def visit_ImportFrom(self, node):
         debug_print(ast.dump(node))
-        # TODO cpg fixen
         imp = IncludeDeclaration()
         self.add_loc_info(node, imp)
         if node.level != 0:
             raise NotImplementedError
         imp.setFilename(self.fname + node.module)
+
+        # make scopmanager aware of import
+        vd = VariableDeclaration()
+        self.add_loc_info(node, vd)
+        vd.setName(node.module)
+        self.scopemanager.addGlobal(vd)
         return imp
 
     def visit_alias(self, node):
@@ -393,7 +438,16 @@ class MyWalker(ast.NodeVisitor):
 
     def visit_For(self, node):
         debug_print(ast.dump(node))
-        raise NotImplementedError
+        stmt = ForEachStatement()
+        self.add_loc_info(node, stmt)
+        if isinstance(node.target, ast.Name):
+            stmt.setVariable(self.visit_Name(node.target, get_declaration = True))
+        else:
+            raise NotImplementedError # what???
+        stmt.setIterable(self.visit(node.iter))
+        stmt.setStatement(self.visit(node.body))
+        return stmt
+
     def visit_While(self, node):
         debug_print(ast.dump(node))
         raise NotImplementedError
@@ -423,6 +477,7 @@ class MyWalker(ast.NodeVisitor):
             fd = MethodDeclaration()
         else:
             fd = FunctionDeclaration()
+        self.scopemanager.enterScope(fd)
         self.add_loc_info(node, fd)
         
         # handle name
@@ -443,6 +498,8 @@ class MyWalker(ast.NodeVisitor):
         # handle returns
 
         # handle type_comment
+
+        self.scopemanager.leaveScope(fd)
 
         return fd
 
@@ -474,6 +531,7 @@ class MyWalker(ast.NodeVisitor):
     def visit_arg(self, node):
         debug_print(ast.dump(node))
         pvd = ParamVariableDeclaration()
+        self.scopemanager.addDeclaration(pvd)
         self.add_loc_info(node, pvd)
         pvd.setName(node.arg)
         # TODO handle annotation
@@ -573,11 +631,11 @@ class MyWalker(ast.NodeVisitor):
         raise NotImplementedError
 
 
-def parseCode(code, fname):
+def parseCode(code, fname, scopemanager):
     root = ast.parse(code, filename = fname, type_comments = True)
     #debug_print(ast.dump(root, indent = 2))
 
-    walker = MyWalker(fname)
+    walker = MyWalker(fname, scopemanager)
     walker.visit(root)
 
     return walker.tud
