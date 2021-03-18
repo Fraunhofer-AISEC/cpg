@@ -26,6 +26,9 @@ jobs:
           fi
           echo "##[set-output name=version;]$VERSION"
         id: determine_version
+      - name: Build cpgo
+        run: |
+          cd go-jni && ./build.sh && sudo cp ../libcpgo.so /usr/lib/
       - name: Build ${{ steps.determine_version.outputs.version }}
         run: |
           if [ "$SONAR_TOKEN" != "" ]
@@ -43,6 +46,12 @@ jobs:
           VERSION: ${{ steps.determine_version.outputs.version }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Archive test reports
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v2
+        with:
+          name: test
+          path: build/reports/tests/test
       - name: JavaDoc
         if: startsWith(github.ref, 'refs/tags/v')
         uses: JamesIves/github-pages-deploy-action@releases/v3

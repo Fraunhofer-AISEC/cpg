@@ -2,7 +2,7 @@
 [![Actions Status](https://github.com/Fraunhofer-AISEC/cpg/workflows/build/badge.svg)](https://github.com/Fraunhofer-AISEC/cpg/actions)
  [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=Fraunhofer-AISEC_cpg&metric=alert_status)](https://sonarcloud.io/dashboard?id=Fraunhofer-AISEC_cpg) [![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=Fraunhofer-AISEC_cpg&metric=security_rating)](https://sonarcloud.io/dashboard?id=Fraunhofer-AISEC_cpg) [![Coverage](https://sonarcloud.io/api/project_badges/measure?project=Fraunhofer-AISEC_cpg&metric=coverage)](https://sonarcloud.io/dashboard?id=Fraunhofer-AISEC_cpg)
 
-A simple library to extract a *code property graph* out of source code. It has support for multiple passes that can extend the analysis after the graph is constructed. It currently supports C/C++ (C17) and Java (Java 13).
+A simple library to extract a *code property graph* out of source code. It has support for multiple passes that can extend the analysis after the graph is constructed. It currently supports C/C++ (C17), Java (Java 13) and has experimental support for Golang.
 
 ## What is this?
 
@@ -72,6 +72,14 @@ func.getName();
 func.getSignature();
 func.getParameters();
 ```
+
+### Usage of Experimental Languages
+
+Some languages, such as Golang are marked as experimental and depend on other native libraries. These are NOT YET bundled in the release jars, so you need to build them manually.  
+
+#### Golang
+
+In the case of Golang, the necessary native code can be found in the `go-jni` folder. In order to build it you can use the `build.sh` script, which uses `java_home` to automatically find JNI headers and stores the finished library in the cpg root folder. This currently only works for Linux and macOS.
 
 ## Development Setup
 

@@ -129,6 +129,12 @@ public class ObjectType extends Type {
     this.generics = PropertyEdge.transformIntoOutgoingPropertyEdgeList(generics, this);
   }
 
+  public void addGeneric(Type generic) {
+    var propertyEdge = new PropertyEdge<>(this, generic);
+    // propertyEdge.addProperty(Properties.INDEX, this.generics.size());
+    this.generics.add(propertyEdge);
+  }
+
   @Override
   public boolean isSimilar(Type t) {
     return t instanceof ObjectType
