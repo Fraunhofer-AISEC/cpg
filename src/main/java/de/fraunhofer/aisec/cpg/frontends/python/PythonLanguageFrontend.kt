@@ -33,7 +33,7 @@ class PythonLanguageFrontend(config: TranslationConfiguration, scopeManager: Sco
     override fun <S, T> setComment(s: S, ctx: T) {}
 
     private fun parseInternal(s: String?, path: String): TranslationUnitDeclaration {
-        if(s.isNullOrEmpty())
+        if(s == null)
             throw TranslationException("No code provided.")
 
         val topLevel = Path.of("python")

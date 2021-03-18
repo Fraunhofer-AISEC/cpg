@@ -1,5 +1,6 @@
-#from de.fraunhofer.aisec.cpg.graph.types import Type
 from de.fraunhofer.aisec.cpg.graph.declarations import Declaration
+#from de.fraunhofer.aisec.cpg.sarif import Region
+#from de.fraunhofer.aisec.cpg.sarif import PhysicalLocation
 from de.fraunhofer.aisec.cpg.graph.declarations import VariableDeclaration
 from de.fraunhofer.aisec.cpg.graph.declarations import FunctionDeclaration
 from de.fraunhofer.aisec.cpg.graph.declarations import IncludeDeclaration
@@ -61,12 +62,13 @@ class MyWalker(ast.NodeVisitor):
         ''' Adds location information of node to obj '''
         # TODO cannot import sarif PhysicalLocation and Region -> ???
         obj.setFile(self.fname)
-        if False:
-            uri = URI("file://" + self.fname)
-            obj.setLocation(PhysicalLocation(uri, Region(node.lineno,
-                node.col_offset, node.end_lineno, node.end_col_offset)))
+        uri = URI("file://" + self.fname)
+        #obj.setLocation(PhysicalLocation(uri, Region(node.lineno,
+        #        node.col_offset, node.end_lineno, node.end_col_offset)))
+        # TODO better extract code from file than to use expensive/not accurate
+        # unparse
+        obj.setCode(ast.unparse(node))
             
-
 
     ### LITERALS ###
     def visit_Constant(self, node):
@@ -75,17 +77,19 @@ class MyWalker(ast.NodeVisitor):
             lit = Literal()
             self.add_loc_info(node, lit)
             lit.setValue(node.value)
-            #lit.setType(Type("str"))
+            lit.setType(TypeParser.createFrom("str", False))
             return lit
         elif isinstance(node.value, int):
             lit = Literal()
             self.add_loc_info(node, lit)
             lit.setValue(node.value)
+            lit.setType(TypeParser.createFrom("int", False))
             return lit
         elif isinstance(node.value, type(None)):
             lit = Literal()
             self.add_loc_info(node, lit)
             lit.setValue(node.value)
+            lit.setType(TypeParser.createFrom("None", False))
             return lit
         else:
             debug_print(type(node.value))
@@ -102,7 +106,7 @@ class MyWalker(ast.NodeVisitor):
         debug_print(ast.dump(node))
         lit = Literal()
         self.add_loc_info(node, lit)
-        lit.setType(TypeParser.createFrom("List", True))
+        lit.setType(TypeParser.createFrom("List", False))
         elts = []
         for e in node.elts:
             elts.append(self.visit(e))
@@ -113,7 +117,7 @@ class MyWalker(ast.NodeVisitor):
         debug_print(ast.dump(node))
         lit = Literal()
         self.add_loc_info(node, lit)
-        lit.setType(TypeParser.createFrom("Tuple", True))
+        lit.setType(TypeParser.createFrom("Tuple", False))
         elts = []
         for e in node.elts:
             elts.append(self.visit(e))

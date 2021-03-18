@@ -6,9 +6,11 @@ import de.fraunhofer.aisec.cpg.TestUtils
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.declarations.*
+import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
+import net.bytebuddy.pool.TypePool
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -27,6 +29,7 @@ class PythonFrontendTest : BaseTest() {
 
     val topLevel = Path.of("src", "test", "resources", "python")
 
+
     @Test
     @Throws(TranslationException::class)
     fun testMax() {
@@ -39,6 +42,29 @@ class PythonFrontendTest : BaseTest() {
     fun testPythonImpl() {
         val tu = TestUtils.analyzeAndGetFirstTU(listOf(File("python","main.py")), topLevel, true)
         assertNotNull(tu)
+    }
+
+    @Test
+    @Throws(TranslationException::class)
+    fun testEmpty() { // parse an empty file
+        val tu = TestUtils.analyzeAndGetFirstTU(listOf(topLevel.resolve("test_empty.py").toFile()), topLevel, true)
+        assertNotNull(tu)
+        assert(tu.declarations.isEmpty())
+    }
+
+    @Test
+    @Throws(TranslationException::class)
+    fun testSimple01() { // parse a trivial file
+        val tu = TestUtils.analyzeAndGetFirstTU(listOf(topLevel.resolve("test_simple_func_01.py").toFile()), topLevel, true)
+        assertNotNull(tu)
+        assert(tu.declarations.isNotEmpty())
+        assert(tu.declarations.size == 1)
+        val decl = tu.declarations.get(0) as? FunctionDeclaration
+        assert(decl?.parameters?.size == 0)
+        assert(decl?.name.equals("funcname"))
+        val body = decl?.body as? CompoundStatement
+        assert(body?.statements?.size == 1)
+        // TODO? val stmt = body?.statements?.get(0)?.end as? EmptyStatement
     }
 
     @Test
