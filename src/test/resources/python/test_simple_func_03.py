@@ -1,3 +1,3 @@
 def someFunc(someParam):
     a = someParam
-    return a
+    return a + someParam

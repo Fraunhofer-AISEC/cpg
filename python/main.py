@@ -1,6 +1,6 @@
 from de.fraunhofer.aisec.cpg.graph.declarations import Declaration
-#from de.fraunhofer.aisec.cpg.sarif import Region
-#from de.fraunhofer.aisec.cpg.sarif import PhysicalLocation
+from de.fraunhofer.aisec.cpg.sarif import Region
+from de.fraunhofer.aisec.cpg.sarif import PhysicalLocation
 from de.fraunhofer.aisec.cpg.graph.declarations import VariableDeclaration
 from de.fraunhofer.aisec.cpg.graph.declarations import FunctionDeclaration
 from de.fraunhofer.aisec.cpg.graph.declarations import IncludeDeclaration
@@ -41,13 +41,16 @@ import inspect
 # 5. default args: wip für cpp
 # 6. Exceptions -> unary op
 # 7. listen / tupel?
+# 8. 2 edges func -> pvd (scopemanager addDeclaration zu oft?)
+# 9. self -> go receiver vom christian angucken
+#10. assign -> neue decl mit initializer (statt in visit_Name)
 
 def run():
     global global_res
     global_res = parseCode(global_codeToParse, global_fname, global_scopemanager)
 
-def debug_print(string):
-    callerframerecord = inspect.stack()[1]
+def debug_print(string, level = 1):
+    callerframerecord = inspect.stack()[level]
     frame = callerframerecord[0]
     info = inspect.getframeinfo(frame)
     print("%s\t%d:\t%s" % (info.function, info.lineno, string))
@@ -55,16 +58,23 @@ def debug_print(string):
 class MyWalker(ast.NodeVisitor):
     def __init__(self, fname, scopemanager):
         self.tud = TranslationUnitDeclaration()
+        self.tud.setName(fname)
         self.fname = fname
         self.scopemanager = scopemanager
     
     def add_loc_info(self, node, obj):
         ''' Adds location information of node to obj '''
-        # TODO cannot import sarif PhysicalLocation and Region -> ???
+        debug_print(obj)
+        debug_print(node)
+        if not isinstance(node, ast.AST):
+            debug_print(type(node))
+            debug_print(node[0].lineno)
+            debug_print("<--- CALLER", level = 2)
+            raise NotImplementedError
         obj.setFile(self.fname)
         uri = URI("file://" + self.fname)
-        #obj.setLocation(PhysicalLocation(uri, Region(node.lineno,
-        #        node.col_offset, node.end_lineno, node.end_col_offset)))
+        obj.setLocation(PhysicalLocation(uri, Region(node.lineno,
+                node.col_offset, node.end_lineno, node.end_col_offset)))
         # TODO better extract code from file than to use expensive/not accurate
         # unparse
         obj.setCode(ast.unparse(node))
@@ -78,22 +88,23 @@ class MyWalker(ast.NodeVisitor):
             self.add_loc_info(node, lit)
             lit.setValue(node.value)
             lit.setType(TypeParser.createFrom("str", False))
-            return lit
+            lit.setName("str[%s]" % node.value)
         elif isinstance(node.value, int):
             lit = Literal()
             self.add_loc_info(node, lit)
             lit.setValue(node.value)
             lit.setType(TypeParser.createFrom("int", False))
-            return lit
+            lit.setName("int[%d]" % node.value)
         elif isinstance(node.value, type(None)):
             lit = Literal()
             self.add_loc_info(node, lit)
             lit.setValue(node.value)
             lit.setType(TypeParser.createFrom("None", False))
-            return lit
+            lit.setName("None")
         else:
             debug_print(type(node.value))
             raise NotImplementedError
+        return lit
 
     def visit_FormattedValue(self, node):
         debug_print(ast.dump(node))
@@ -138,6 +149,7 @@ class MyWalker(ast.NodeVisitor):
                 node.id)
         if record is None:
             ref = VariableDeclaration()
+            record = ref
             self.add_loc_info(node, ref)
             ref.setName(node.id)
             self.scopemanager.addDeclaration(ref)
@@ -171,7 +183,22 @@ class MyWalker(ast.NodeVisitor):
 
     def visit_UnaryOp(self, node):
         debug_print(ast.dump(node))
-        raise NotImplementedError
+        unop = UnaryOperator()
+        self.add_loc_info(node, unop)
+        unop.setOperatorCode(node.op)
+        unop.setInput(self.visit(node.operand))
+        if isinstance(node.op, ast.UAdd):
+            unop.setName("UAdd")
+        elif isinstance(node.op, ast.USub):
+            unop.setName("USub")
+        elif isinstance(node.op, ast.Not):
+            unop.setName("Not")
+        elif isinstance(node.op, ast.Invert):
+            unop.setName("Invert")
+        else:
+            raise NotImplementedError
+        return unop
+
     def visit_UAdd(self, node):
         debug_print(ast.dump(node))
         raise NotImplementedError
@@ -191,6 +218,34 @@ class MyWalker(ast.NodeVisitor):
         binop.setOperatorCode(node.op)
         binop.setLhs(self.visit(node.left))
         binop.setRhs(self.visit(node.right))
+        if isinstance(node.op, ast.Add):
+            binop.setName("Add")
+        elif isinstance(node.op, ast.Sub):
+            binop.setName("Sub")
+        elif isinstance(node.op, ast.Mult):
+            binop.setName("Mult")
+        elif isinstance(node.op, ast.Div):
+            binop.setName("Div")
+        elif isinstance(node.op, ast.FloorDiv):
+            binop.setName("FloorDiv")
+        elif isinstance(node.op, ast.Mod):
+            binop.setName("Mod")
+        elif isinstance(node.op, ast.Pow):
+            binop.setName("Pow")
+        elif isinstance(node.op, ast.LShift):
+            binop.setName("LShift")
+        elif isinstance(node.op, ast.RShift):
+            binop.setName("RShift")
+        elif isinstance(node.op, ast.BitOr):
+            binop.setName("BitOr")
+        elif isinstance(node.op, ast.BitXor):
+            binop.setName("BitXor")
+        elif isinstance(node.op, ast.BitAnd):
+            binop.setName("BitAnd")
+        elif isinstance(node.op, ast.MatMult):
+            binop.setName("MatMult")
+        else:
+            raise NotImplementedError
         return binop
 
     def visit_Add(self, node):
@@ -314,7 +369,7 @@ class MyWalker(ast.NodeVisitor):
     def visit_Attribute(self, node):
         debug_print(ast.dump(node))
         mem = MemberExpression()
-        self.add_loc_info(node, mem)
+        #self.add_loc_info(node, mem)
         if isinstance(node.value, ast.Name):
             exp = self.visit(node.value)
         elif isinstance(node.value, ast.Attribute):
@@ -375,6 +430,7 @@ class MyWalker(ast.NodeVisitor):
         target = node.targets[0]
         binop.setLhs(self.visit(target))
         binop.setRhs(self.visit(node.value))
+        binop.setName("=")
         return binop
 
     def visit_AnnAssign(self, node):
@@ -388,8 +444,8 @@ class MyWalker(ast.NodeVisitor):
         op = UnaryOperator()
         self.add_loc_info(node, op)
         op.setOperatorCode("raise")
-        op.setInput(self.visit(node.exc)) # TODO or setCode???
-        debug_print(op)
+        if node.exc != None:
+            op.setInput(self.visit(node.exc))
         return op
 
     def visit_Assert(self, node):
@@ -403,6 +459,7 @@ class MyWalker(ast.NodeVisitor):
         debug_print(ast.dump(node))
         stmt = EmptyStatement()
         self.add_loc_info(node, stmt)
+        stmt.setName("pass")
         return stmt
 
     ### IMPORTS ###
@@ -449,7 +506,7 @@ class MyWalker(ast.NodeVisitor):
         stmt.setCondition(self.visit(node.test))
         if isinstance(node.body, list):
             body = CompoundStatement()
-            self.add_loc_info(node.body, body)
+            self.add_loc_info(node, body)
             for n in node.body:
                 body.addStatement(self.visit(n))
             stmt.setThenStatement(body)
@@ -457,7 +514,7 @@ class MyWalker(ast.NodeVisitor):
             raise NotImplementedError
         if isinstance(node.orelse, list):
             orelse = CompoundStatement()
-            self.add_loc_info(node.orelse, orelse)
+            self.add_loc_info(node, orelse)
             for n in node.orelse:
                 orelse.addStatement(self.visit(n))
             stmt.setElseStatement(orelse)
@@ -475,7 +532,7 @@ class MyWalker(ast.NodeVisitor):
             raise NotImplementedError # what???
         stmt.setIterable(self.visit(node.iter))
         body = CompoundStatement()
-        self.add_loc_info(node.body, body)
+        self.add_loc_info(node, body)
         for b in node.body:
             body.addStatement(self.visit(b))
         stmt.setStatement(body)
@@ -517,10 +574,12 @@ class MyWalker(ast.NodeVisitor):
         fd.setName(node.name)
 
         # handle args
-        fd.addParameterList(self.visit(node.args))
+        # scopeManager adds them to fd
+        self.visit(node.args)
 
         # handle body
         body = CompoundStatement()
+        body.setName("body")
         self.add_loc_info(node, body)
         fd.setBody(body)
         for stmt in node.body:
@@ -575,6 +634,7 @@ class MyWalker(ast.NodeVisitor):
         r = ReturnStatement()
         self.add_loc_info(node, r)
         r.setReturnValue(self.visit(node.value))
+        r.setName("return")
         return r
 
     def visit_Yield(self, node):
