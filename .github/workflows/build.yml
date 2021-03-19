@@ -11,6 +11,9 @@ jobs:
       - uses: actions/setup-java@v1
         with:
           java-version: "11"
+      - uses: actions/setup-python@v2
+        with:
+          python-version: "3.9"
       - name: Determine Version
         run: |
           # determine version from tag
@@ -29,7 +32,7 @@ jobs:
       - name: Install JEP
         run: |
           pip3 install jep
-          sudo cp /home/runner/.local/lib/python3.8/site-packages/jep/libjep.so /usr/lib/
+          sudo cp /opt/hostedtoolcache/Python/3.9.2/x64/lib/python3.9/site-packages/jep/libjep.so /usr/lib/
       - name: Build cpgo
         run: |
           cd go-jni && ./build.sh && sudo cp ../libcpgo.so /usr/lib/
