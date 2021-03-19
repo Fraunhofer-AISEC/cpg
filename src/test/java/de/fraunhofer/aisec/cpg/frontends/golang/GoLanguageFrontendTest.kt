@@ -387,6 +387,8 @@ class GoLanguageFrontendTest : BaseTest() {
         assertEquals("true", initializer.name)
 
         val `if` = body.statements[1] as? IfStatement
+
+        assertNotNull(`if`)
     }
 
     @Test
