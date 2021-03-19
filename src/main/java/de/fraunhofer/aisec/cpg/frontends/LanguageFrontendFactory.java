@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.frontends;
 
 import de.fraunhofer.aisec.cpg.TranslationConfiguration;
 import de.fraunhofer.aisec.cpg.frontends.cpp.CXXLanguageFrontend;
+import de.fraunhofer.aisec.cpg.frontends.golang.GoLanguageFrontend;
 import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguageFrontend;
 import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguageFrontend;
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager;
@@ -40,6 +41,7 @@ public class LanguageFrontendFactory {
   public static final List<String> CXX_EXTENSIONS = List.of(".c", ".cpp", ".cc");
   private static final List<String> CXX_HEADER_EXTENSIONS = List.of(".h", ".hpp");
   private static final List<String> PYTHON_EXTENSIONS = List.of(".py");
+  private static final List<String> GOLANG_EXTENSIONS = List.of(".go");
 
   // hide ctor
   private LanguageFrontendFactory() {}
@@ -54,6 +56,8 @@ public class LanguageFrontendFactory {
       return new CXXLanguageFrontend(config, scopeManager);
     } else if (PYTHON_EXTENSIONS.contains(fileType)) {
       return new PythonLanguageFrontend(config, scopeManager);
+    } else if (GOLANG_EXTENSIONS.contains(fileType)) {
+      return new GoLanguageFrontend(config, scopeManager);
     } else {
       return null;
     }

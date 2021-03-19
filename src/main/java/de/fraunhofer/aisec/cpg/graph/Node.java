@@ -143,11 +143,12 @@ public class Node implements IVisitable<Node>, Persistable {
     this.name = name;
   }
 
+  @Nullable
   public String getFile() {
     return file;
   }
 
-  public void setFile(String file) {
+  public void setFile(@Nullable String file) {
     this.file = file;
   }
 
