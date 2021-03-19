@@ -191,3 +191,21 @@ spotless {
         googleJavaFormat()
     }
 }
+
+tasks.register("compileGolang") {
+    doLast {
+        project.exec {
+            commandLine("./build.sh")
+                .setStandardOutput(System.out)
+                .workingDir("src/main/golang")
+        }
+    }
+}
+
+tasks.named("compileJava") {
+    dependsOn(":compileGolang")
+}
+
+tasks.withType<Test> {
+    systemProperty("java.library.path", project.projectDir.resolve("src/main/golang"))
+}
