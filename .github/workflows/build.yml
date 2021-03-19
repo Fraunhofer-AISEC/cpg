@@ -26,6 +26,10 @@ jobs:
           fi
           echo "##[set-output name=version;]$VERSION"
         id: determine_version
+      - name: Install JEP
+        run: |
+          pip3 install jep
+          sudo cp /home/runner/.local/lib/python3.8/site-packages/jep/libjep.so /usr/lib/
       - name: Build cpgo
         run: |
           cd go-jni && ./build.sh && sudo cp ../libcpgo.so /usr/lib/
