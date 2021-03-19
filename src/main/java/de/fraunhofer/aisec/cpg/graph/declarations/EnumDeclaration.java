@@ -26,39 +26,49 @@
 
 package de.fraunhofer.aisec.cpg.graph.declarations;
 
+import static de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.unwrap;
+
 import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.SubGraph;
+import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import de.fraunhofer.aisec.cpg.graph.types.Type;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.neo4j.ogm.annotation.Relationship;
 
 public class EnumDeclaration extends Declaration {
 
+  @Relationship(value = "ENTRIES", direction = "OUTGOING")
   @SubGraph("AST")
-  private List<EnumConstantDeclaration> entries = new ArrayList<>();
+  private List<PropertyEdge<EnumConstantDeclaration>> entries = new ArrayList<>();
 
-  private List<Type> superTypes = new ArrayList<>();
+  @Relationship(value = "SUPER_TYPES", direction = "OUTGOING")
+  private List<PropertyEdge<Type>> superTypes = new ArrayList<>();
 
   @Relationship private Set<RecordDeclaration> superTypeDeclarations = new HashSet<>();
 
+  public List<PropertyEdge<EnumConstantDeclaration>> getEntriesPropertyEdge() {
+    return this.entries;
+  }
+
   public List<EnumConstantDeclaration> getEntries() {
-    return entries;
+    return unwrap(this.entries);
   }
 
   public void setEntries(List<EnumConstantDeclaration> entries) {
-    this.entries = entries;
+    this.entries = PropertyEdge.transformIntoOutgoingPropertyEdgeList(entries, this);
   }
 
   public List<Type> getSuperTypes() {
-    return superTypes;
+    return unwrap(this.superTypes);
+  }
+
+  public List<PropertyEdge<Type>> getSuperTypesPropertyEdge() {
+    return this.superTypes;
   }
 
   public void setSuperTypes(List<Type> superTypes) {
-    this.superTypes = superTypes;
+    this.superTypes = PropertyEdge.transformIntoOutgoingPropertyEdgeList(superTypes, this);
   }
 
   public Set<RecordDeclaration> getSuperTypeDeclarations() {

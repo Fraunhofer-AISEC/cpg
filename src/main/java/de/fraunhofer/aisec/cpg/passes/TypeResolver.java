@@ -213,7 +213,9 @@ public class TypeResolver extends Pass {
   }
 
   public void ensureUniqueType(Node node) {
-    if (node instanceof HasType) {
+    // Avoid handling of ParameterizedType as they should be unique to each class and not globally
+    // unique
+    if (node instanceof HasType && !(((HasType) node).getType() instanceof ParameterizedType)) {
       Type oldType = ((HasType) node).getType();
       Collection<Type> types;
       if (oldType.isFirstOrderType()) {

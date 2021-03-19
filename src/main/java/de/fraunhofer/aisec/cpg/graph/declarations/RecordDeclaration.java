@@ -26,21 +26,20 @@
 
 package de.fraunhofer.aisec.cpg.graph.declarations;
 
+import static de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.unwrap;
+
 import de.fraunhofer.aisec.cpg.graph.DeclarationHolder;
 import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.SubGraph;
+import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import de.fraunhofer.aisec.cpg.graph.types.Type;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
+import org.neo4j.ogm.annotation.Relationship;
 import org.neo4j.ogm.annotation.Transient;
 
 /** Represents a C++ union/struct/class or Java class */
@@ -49,17 +48,21 @@ public class RecordDeclaration extends Declaration implements DeclarationHolder 
   /** The kind, i.e. struct, class, union or enum. */
   private String kind;
 
+  @Relationship(value = "FIELDS", direction = "OUTGOING")
   @SubGraph("AST")
-  private List<FieldDeclaration> fields = new ArrayList<>();
+  private List<PropertyEdge<FieldDeclaration>> fields = new ArrayList<>();
 
+  @Relationship(value = "METHODS", direction = "OUTGOING")
   @SubGraph("AST")
-  private List<MethodDeclaration> methods = new ArrayList<>();
+  private List<PropertyEdge<MethodDeclaration>> methods = new ArrayList<>();
 
+  @Relationship(value = "CONSTRUCTORS", direction = "OUTGOING")
   @SubGraph("AST")
-  private List<ConstructorDeclaration> constructors = new ArrayList<>();
+  private List<PropertyEdge<ConstructorDeclaration>> constructors = new ArrayList<>();
 
+  @Relationship(value = "RECORDS", direction = "OUTGOING")
   @SubGraph("AST")
-  private List<RecordDeclaration> records = new ArrayList<>();
+  private List<PropertyEdge<RecordDeclaration>> records = new ArrayList<>();
 
   @Transient private List<Type> superClasses = new ArrayList<>();
   @Transient private List<Type> implementedInterfaces = new ArrayList<>();
@@ -79,8 +82,8 @@ public class RecordDeclaration extends Declaration implements DeclarationHolder 
   public void setName(@NonNull String name) {
     // special case for record declarations! Constructor names need to match
     super.setName(name);
-    for (ConstructorDeclaration constructor : constructors) {
-      constructor.setName(name);
+    for (PropertyEdge<ConstructorDeclaration> constructorEdge : constructors) {
+      constructorEdge.getEnd().setName(name);
     }
   }
 
@@ -93,44 +96,97 @@ public class RecordDeclaration extends Declaration implements DeclarationHolder 
   }
 
   public List<FieldDeclaration> getFields() {
-    return fields;
+    return unwrap(this.fields);
+  }
+
+  public List<PropertyEdge<FieldDeclaration>> getFieldsPropertyEdge() {
+    return this.fields;
+  }
+
+  public void addField(FieldDeclaration fieldDeclaration) {
+    addIfNotContains(this.fields, fieldDeclaration);
+  }
+
+  public void removeField(FieldDeclaration fieldDeclaration) {
+    this.fields.removeIf(propertyEdge -> propertyEdge.getEnd().equals(fieldDeclaration));
   }
 
   @Nullable
   public FieldDeclaration getField(String name) {
-    return fields.stream().filter(f -> f.getName().equals(name)).findFirst().orElse(null);
+    return fields.stream()
+        .map(PropertyEdge::getEnd)
+        .filter(f -> f.getName().equals(name))
+        .findFirst()
+        .orElse(null);
   }
 
   public void setFields(List<FieldDeclaration> fields) {
-    this.fields = fields;
+    this.fields = PropertyEdge.transformIntoOutgoingPropertyEdgeList(fields, this);
   }
 
   public FieldDeclaration getThis() {
-    return fields.stream().filter(f -> f.getName().equals("this")).findFirst().orElse(null);
+    return fields.stream()
+        .map(PropertyEdge::getEnd)
+        .filter(f -> f.getName().equals("this"))
+        .findFirst()
+        .orElse(null);
   }
 
   public List<MethodDeclaration> getMethods() {
-    return methods;
+    return unwrap(this.methods);
+  }
+
+  public List<PropertyEdge<MethodDeclaration>> getMethodsPropertyEdge() {
+    return this.methods;
+  }
+
+  public void addMethod(MethodDeclaration methodDeclaration) {
+    addIfNotContains(this.methods, methodDeclaration);
+  }
+
+  public void removeMethod(MethodDeclaration methodDeclaration) {
+    this.methods.removeIf(propertyEdge -> propertyEdge.getEnd().equals(methodDeclaration));
   }
 
   public void setMethods(List<MethodDeclaration> methods) {
-    this.methods = methods;
+    this.methods = PropertyEdge.transformIntoOutgoingPropertyEdgeList(methods, this);
   }
 
   public List<ConstructorDeclaration> getConstructors() {
-    return constructors;
+    return unwrap(this.constructors);
+  }
+
+  public List<PropertyEdge<ConstructorDeclaration>> getConstructorsPropertyEdge() {
+    return this.constructors;
   }
 
   public void setConstructors(List<ConstructorDeclaration> constructors) {
-    this.constructors = constructors;
+    this.constructors = PropertyEdge.transformIntoOutgoingPropertyEdgeList(constructors, this);
+  }
+
+  public void addConstructor(ConstructorDeclaration constructorDeclaration) {
+    addIfNotContains(this.constructors, constructorDeclaration);
+  }
+
+  public void removeConstructor(ConstructorDeclaration constructorDeclaration) {
+    this.constructors.removeIf(
+        propertyEdge -> propertyEdge.getEnd().equals(constructorDeclaration));
   }
 
   public List<RecordDeclaration> getRecords() {
-    return records;
+    return unwrap(this.records);
+  }
+
+  public List<PropertyEdge<RecordDeclaration>> getRecordsPropertyEdge() {
+    return this.records;
   }
 
   public void setRecords(List<RecordDeclaration> records) {
-    this.records = records;
+    this.records = PropertyEdge.transformIntoOutgoingPropertyEdgeList(records, this);
+  }
+
+  public void removeRecord(RecordDeclaration recordDeclaration) {
+    this.records.removeIf(propertyEdge -> propertyEdge.getEnd().equals(recordDeclaration));
   }
 
   /**
@@ -238,9 +294,13 @@ public class RecordDeclaration extends Declaration implements DeclarationHolder 
     return super.equals(that)
         && Objects.equals(kind, that.kind)
         && Objects.equals(fields, that.fields)
+        && Objects.equals(this.getFields(), that.getFields())
         && Objects.equals(methods, that.methods)
+        && Objects.equals(this.getMethods(), that.getMethods())
         && Objects.equals(constructors, that.constructors)
+        && Objects.equals(this.getConstructors(), that.getConstructors())
         && Objects.equals(records, that.records)
+        && Objects.equals(this.getRecords(), that.getRecords())
         && Objects.equals(superClasses, that.superClasses)
         && Objects.equals(implementedInterfaces, that.implementedInterfaces)
         && Objects.equals(superTypeDeclarations, that.superTypeDeclarations);

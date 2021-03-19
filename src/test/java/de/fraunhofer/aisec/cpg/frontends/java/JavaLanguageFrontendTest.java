@@ -30,7 +30,8 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import de.fraunhofer.aisec.cpg.BaseTest;
 import de.fraunhofer.aisec.cpg.TestUtils;
-import de.fraunhofer.aisec.cpg.graph.*;
+import de.fraunhofer.aisec.cpg.TranslationConfiguration;
+import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.declarations.*;
 import de.fraunhofer.aisec.cpg.graph.statements.*;
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*;
@@ -143,11 +144,9 @@ class JavaLanguageFrontendTest extends BaseTest {
     assertEquals(TypeParser.createFrom("java.lang.String", true), s.getType());
 
     // should contain a single statement
-    StaticCallExpression sce = (StaticCallExpression) forEachStatement.getStatement();
+    var sce = (MemberCallExpression) forEachStatement.getStatement();
     assertNotNull(sce);
     assertEquals("println", sce.getName());
-    // TODO: this FQN looks weird but it seems that we resolve it like this all over the place
-    // this will fail once we chance the FQN to something real
     assertEquals("java.io.PrintStream.println", sce.getFqn());
   }
 
@@ -517,5 +516,123 @@ class JavaLanguageFrontendTest extends BaseTest {
     Path path = Path.of(location.getArtifactLocation().getUri());
     assertEquals("FieldAccess.java", path.getFileName().toString());
     assertEquals(new Region(7, 3, 10, 4), location.getRegion());
+  }
+
+  @Test
+  void testAnnotations() throws Exception {
+    File file = new File("src/test/resources/Annotation.java");
+    List<TranslationUnitDeclaration> declarations =
+        TestUtils.analyzeWithBuilder(
+            TranslationConfiguration.builder()
+                .sourceLocations(List.of(file))
+                .topLevel(file.getParentFile())
+                .defaultPasses()
+                .processAnnotations(true));
+    assertFalse(declarations.isEmpty());
+
+    TranslationUnitDeclaration tu = declarations.get(0);
+    assertNotNull(tu);
+
+    var record = tu.getDeclarationAs(0, RecordDeclaration.class);
+    assertNotNull(record);
+
+    var annotations = record.getAnnotations();
+    assertEquals(1, annotations.size());
+
+    var forClass = annotations.get(0);
+    assertEquals("AnnotationForClass", forClass.getName());
+
+    var value = forClass.getMembers().get(0);
+    assertEquals("value", value.getName());
+    assertEquals(2, ((Literal<Integer>) value.getValue()).getValue());
+
+    var field = record.getField("field");
+    assertNotNull(field);
+
+    annotations = field.getAnnotations();
+    assertEquals(1, annotations.size());
+
+    var forField = annotations.get(0);
+    assertEquals("AnnotatedField", forField.getName());
+
+    field = record.getField("anotherField");
+    assertNotNull(field);
+
+    annotations = field.getAnnotations();
+    assertEquals(1, annotations.size());
+
+    forField = annotations.get(0);
+    assertEquals("AnnotatedField", forField.getName());
+
+    value = forField.getMembers().get(0);
+    assertEquals(JavaLanguageFrontend.ANNOTATION_MEMBER_VALUE, value.getName());
+    assertEquals("myString", ((Literal<String>) value.getValue()).getValue());
+  }
+
+  @Test
+  void testChainedCalls() throws Exception {
+    var file = new File("src/test/resources/Issue285.java");
+    var tu = TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true);
+    var record = (RecordDeclaration) tu.getDeclarationAs(0, RecordDeclaration.class);
+    assertNotNull(record);
+
+    var nodes = SubgraphWalker.flattenAST(record);
+
+    var request =
+        nodes.stream()
+            .filter(
+                node ->
+                    node instanceof VariableDeclaration
+                        && Objects.equals("request", node.getName()))
+            .map(node -> (VariableDeclaration) node)
+            .findFirst()
+            .orElse(null);
+    assertNotNull(request);
+
+    var initializer = request.getInitializer();
+    assertNotNull(initializer);
+
+    assertTrue(initializer instanceof MemberCallExpression);
+    var call = (MemberCallExpression) initializer;
+    assertEquals("get", call.getName());
+
+    var staticCall =
+        nodes.stream()
+            .filter(node -> node instanceof StaticCallExpression)
+            .map(node -> (StaticCallExpression) node)
+            .findFirst()
+            .orElse(null);
+    assertNotNull(staticCall);
+
+    assertEquals("doSomethingStatic", staticCall.getName());
+  }
+
+  @Test
+  void testSuperFieldUsage() throws Exception {
+    var file1 = new File("src/test/resources/fix-328/Cat.java");
+    var file2 = new File("src/test/resources/fix-328/Animal.java");
+    var tu =
+        TestUtils.analyzeAndGetFirstTU(List.of(file1, file2), file1.getParentFile().toPath(), true);
+    var namespace = tu.getDeclarationAs(0, NamespaceDeclaration.class);
+
+    assertNotNull(namespace);
+
+    var record = namespace.getDeclarationAs(0, RecordDeclaration.class);
+
+    assertNotNull(record);
+
+    var constructor = record.getConstructors().get(0);
+    var op = constructor.getBodyStatementAs(0, BinaryOperator.class);
+
+    assertNotNull(op);
+
+    var lhs = (MemberExpression) op.getLhs();
+
+    var superThisField =
+        (FieldDeclaration) ((DeclaredReferenceExpression) lhs.getBase()).getRefersTo();
+
+    assertNotNull(superThisField);
+    assertEquals("this", superThisField.getName());
+    assertEquals(TypeParser.createFrom("my.Animal", false), superThisField.getType());
   }
 }

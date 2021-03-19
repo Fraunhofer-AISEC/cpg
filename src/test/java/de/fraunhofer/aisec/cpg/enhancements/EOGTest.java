@@ -42,9 +42,12 @@ import de.fraunhofer.aisec.cpg.graph.*;
 import de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDeclaration;
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration;
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration;
+import de.fraunhofer.aisec.cpg.graph.edge.Properties;
+import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import de.fraunhofer.aisec.cpg.graph.statements.*;
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator;
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression;
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression;
 import de.fraunhofer.aisec.cpg.helpers.NodeComparator;
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker;
 import de.fraunhofer.aisec.cpg.helpers.Util;
@@ -446,7 +449,7 @@ class EOGTest extends BaseTest {
     // has a label which connects the break to the  while
     for (BreakStatement b : breaks) {
       if (b.getLabel() != null && b.getLabel().length() > 0) {
-        assertTrue(Util.eogConnect(EXITS, b, NODE, prints.get(2)));
+        assertTrue(Util.eogConnect(EXITS, b, SUBTREE, prints.get(2)));
       } else {
         assertTrue(Util.eogConnect(EXITS, b, SUBTREE, prints.get(1)));
       }
@@ -482,6 +485,86 @@ class EOGTest extends BaseTest {
   @Test
   void testCppBreakContinue() throws Exception {
     testBreakContinue("src/test/resources/cfg/break_continue.cpp", "printf(\"\\n\");");
+  }
+
+  /**
+   * Tests EOG branch edge property in if/else if/else construct
+   *
+   * @throws Exception
+   */
+  @Test
+  void testBranchProperty() throws Exception {
+    Path topLevel = Path.of("src", "test", "resources", "eog");
+    List<TranslationUnitDeclaration> result =
+        TestUtils.analyze(List.of(topLevel.resolve("EOG.java").toFile()), topLevel, true);
+
+    // Test If-Block
+    IfStatement firstIf =
+        TestUtils.findByPredicate(
+                TestUtils.subnodesOfType(result, IfStatement.class),
+                l -> l.getLocation().getRegion().getStartLine() == 6)
+            .get(0);
+
+    DeclaredReferenceExpression a =
+        TestUtils.findByPredicate(
+                TestUtils.subnodesOfType(result, DeclaredReferenceExpression.class),
+                l -> l.getLocation().getRegion().getStartLine() == 8 && l.getName().equals("a"))
+            .get(0);
+
+    DeclaredReferenceExpression b =
+        TestUtils.findByPredicate(
+                TestUtils.subnodesOfType(result, DeclaredReferenceExpression.class),
+                l -> l.getLocation().getRegion().getStartLine() == 7 && l.getName().equals("b"))
+            .get(0);
+
+    List<PropertyEdge<Node>> nextEOG = firstIf.getNextEOGProperties();
+    assertEquals(2, nextEOG.size());
+    for (PropertyEdge<Node> edge : nextEOG) {
+      assertEquals(firstIf, edge.getStart());
+      if (edge.getEnd().equals(b)) {
+        assertEquals(true, edge.getProperty(Properties.BRANCH));
+        assertEquals(0, edge.getProperty(Properties.INDEX));
+      } else {
+        assertEquals(a, edge.getEnd());
+        assertEquals(false, edge.getProperty(Properties.BRANCH));
+        assertEquals(1, edge.getProperty(Properties.INDEX));
+      }
+    }
+
+    IfStatement elseIf =
+        TestUtils.findByPredicate(
+                TestUtils.subnodesOfType(result, IfStatement.class),
+                l -> l.getLocation().getRegion().getStartLine() == 8)
+            .get(0);
+
+    assertEquals(elseIf, firstIf.getElseStatement());
+
+    DeclaredReferenceExpression b2 =
+        TestUtils.findByPredicate(
+                TestUtils.subnodesOfType(result, DeclaredReferenceExpression.class),
+                l -> l.getLocation().getRegion().getStartLine() == 9 && l.getName().equals("b"))
+            .get(0);
+
+    DeclaredReferenceExpression x =
+        TestUtils.findByPredicate(
+                TestUtils.subnodesOfType(result, DeclaredReferenceExpression.class),
+                l -> l.getLocation().getRegion().getStartLine() == 11 && l.getName().equals("x"))
+            .get(0);
+
+    nextEOG = elseIf.getNextEOGProperties();
+    assertEquals(2, nextEOG.size());
+
+    for (PropertyEdge<Node> edge : nextEOG) {
+      assertEquals(elseIf, edge.getStart());
+      if (edge.getEnd().equals(b2)) {
+        assertEquals(true, edge.getProperty(Properties.BRANCH));
+        assertEquals(0, edge.getProperty(Properties.INDEX));
+      } else {
+        assertEquals(x, edge.getEnd());
+        assertEquals(false, edge.getProperty(Properties.BRANCH));
+        assertEquals(1, edge.getProperty(Properties.INDEX));
+      }
+    }
   }
 
   /**

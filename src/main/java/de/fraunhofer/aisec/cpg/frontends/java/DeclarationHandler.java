@@ -39,8 +39,10 @@ import de.fraunhofer.aisec.cpg.frontends.Handler;
 import de.fraunhofer.aisec.cpg.graph.*;
 import de.fraunhofer.aisec.cpg.graph.declarations.*;
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression;
+import de.fraunhofer.aisec.cpg.graph.types.ParameterizedType;
 import de.fraunhofer.aisec.cpg.graph.types.Type;
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser;
+import de.fraunhofer.aisec.cpg.graph.types.UnknownType;
 import de.fraunhofer.aisec.cpg.passes.scopes.RecordScope;
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation;
 import java.util.*;
@@ -104,12 +106,10 @@ public class DeclarationHandler
     lang.getScopeManager().addDeclaration(declaration);
 
     lang.getScopeManager().enterScope(declaration);
-    declaration
-        .getThrowsTypes()
-        .addAll(
-            constructorDecl.getThrownExceptions().stream()
-                .map(type -> TypeParser.createFrom(type.asString(), true))
-                .collect(Collectors.toList()));
+    declaration.addThrowTypes(
+        constructorDecl.getThrownExceptions().stream()
+            .map(type -> TypeParser.createFrom(type.asString(), true))
+            .collect(Collectors.toList()));
 
     for (Parameter parameter : constructorDecl.getParameters()) {
       ParamVariableDeclaration param =
@@ -119,7 +119,7 @@ public class DeclarationHandler
               parameter.isVarArgs(),
               parameter.toString());
 
-      declaration.getParameters().add(param);
+      declaration.addParameter(param);
 
       lang.setCodeAndRegion(param, parameter);
       lang.getScopeManager().addDeclaration(param);
@@ -140,6 +140,9 @@ public class DeclarationHandler
     addImplicitReturn(body);
 
     declaration.setBody(this.lang.getStatementHandler().handle(body));
+
+    lang.processAnnotations(declaration, constructorDecl);
+
     lang.getScopeManager().leaveScope(declaration);
     return declaration;
   }
@@ -148,30 +151,48 @@ public class DeclarationHandler
       com.github.javaparser.ast.body.MethodDeclaration methodDecl) {
     ResolvedMethodDeclaration resolvedMethod = methodDecl.resolve();
 
+    var record = lang.getScopeManager().getCurrentRecord();
+
     de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration functionDeclaration =
         NodeBuilder.newMethodDeclaration(
-            resolvedMethod.getName(),
-            methodDecl.toString(),
-            methodDecl.isStatic(),
-            lang.getScopeManager().getCurrentRecord());
+            resolvedMethod.getName(), methodDecl.toString(), methodDecl.isStatic(), record);
+
+    // create the receiver
+    var receiver =
+        NodeBuilder.newVariableDeclaration(
+            "this",
+            record != null
+                ? TypeParser.createFrom(record.getName(), false)
+                : UnknownType.getUnknownType(),
+            "this",
+            false);
+
+    functionDeclaration.setReceiver(receiver);
+
     lang.getScopeManager().enterScope(functionDeclaration);
 
-    functionDeclaration
-        .getThrowsTypes()
-        .addAll(
-            methodDecl.getThrownExceptions().stream()
-                .map(type -> TypeParser.createFrom(type.asString(), true))
-                .collect(Collectors.toList()));
+    functionDeclaration.addThrowTypes(
+        methodDecl.getThrownExceptions().stream()
+            .map(type -> TypeParser.createFrom(type.asString(), true))
+            .collect(Collectors.toList()));
 
     for (Parameter parameter : methodDecl.getParameters()) {
+      Type resolvedType =
+          TypeManager.getInstance()
+              .getTypeParameter(
+                  functionDeclaration.getRecordDeclaration(), parameter.getType().toString());
+      if (resolvedType == null) {
+        resolvedType = this.lang.getTypeAsGoodAsPossible(parameter, parameter.resolve());
+      }
+
       ParamVariableDeclaration param =
           NodeBuilder.newMethodParameterIn(
               parameter.getNameAsString(),
-              this.lang.getTypeAsGoodAsPossible(parameter, parameter.resolve()),
+              resolvedType,
               parameter.isVarArgs(),
               parameter.toString());
 
-      functionDeclaration.getParameters().add(param);
+      functionDeclaration.addParameter(param);
       lang.setCodeAndRegion(param, parameter);
       lang.getScopeManager().addDeclaration(param);
     }
@@ -192,6 +213,9 @@ public class DeclarationHandler
     addImplicitReturn(body);
 
     functionDeclaration.setBody(this.lang.getStatementHandler().handle(body));
+
+    lang.processAnnotations(functionDeclaration, methodDecl);
+
     lang.getScopeManager().leaveScope(functionDeclaration);
     return functionDeclaration;
   }
@@ -218,6 +242,13 @@ public class DeclarationHandler
         classInterDecl.getImplementedTypes().stream()
             .map(this.lang::getTypeAsGoodAsPossible)
             .collect(Collectors.toList()));
+
+    TypeManager.getInstance()
+        .addTypeParameter(
+            recordDeclaration,
+            classInterDecl.getTypeParameters().stream()
+                .map(t -> new ParameterizedType(t.getNameAsString()))
+                .collect(Collectors.toList()));
 
     Map<Boolean, List<String>> partitioned =
         this.lang.getContext().getImports().stream()
@@ -249,13 +280,13 @@ public class DeclarationHandler
       } else if (decl instanceof com.github.javaparser.ast.body.MethodDeclaration) {
         de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration md =
             (de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration) handle(decl);
-        recordDeclaration.getMethods().add(md);
+        recordDeclaration.addMethod(md);
       } else if (decl instanceof com.github.javaparser.ast.body.ConstructorDeclaration) {
         de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDeclaration c =
             (de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDeclaration) handle(decl);
-        recordDeclaration.getConstructors().add(c);
+        recordDeclaration.addConstructor(c);
       } else if (decl instanceof com.github.javaparser.ast.body.ClassOrInterfaceDeclaration) {
-        recordDeclaration.getRecords().add((RecordDeclaration) handle(decl));
+        recordDeclaration.addDeclaration(handle(decl));
       } else {
         log.debug(
             "Member {} of type {} is something that we do not parse yet: {}",
@@ -269,9 +300,12 @@ public class DeclarationHandler
       de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDeclaration constructorDeclaration =
           NodeBuilder.newConstructorDeclaration(
               recordDeclaration.getName(), recordDeclaration.getName(), recordDeclaration);
-      recordDeclaration.getConstructors().add(constructorDeclaration);
+      recordDeclaration.addConstructor(constructorDeclaration);
       lang.getScopeManager().addDeclaration(constructorDeclaration);
     }
+
+    lang.processAnnotations(recordDeclaration, classInterDecl);
+
     lang.getScopeManager().leaveScope(recordDeclaration);
     return recordDeclaration;
   }
@@ -295,7 +329,16 @@ public class DeclarationHandler
             variable.getInitializer().map(this.lang.getExpressionHandler()::handle).orElse(null);
     Type type;
     try {
-      type = TypeParser.createFrom(joinedModifiers + variable.resolve().getType().describe(), true);
+      // Resolve type first with ParameterizedType
+      type =
+          TypeManager.getInstance()
+              .getTypeParameter(
+                  this.lang.getScopeManager().getCurrentRecord(),
+                  variable.resolve().getType().describe());
+      if (type == null) {
+        type =
+            TypeParser.createFrom(joinedModifiers + variable.resolve().getType().describe(), true);
+      }
     } catch (UnsolvedSymbolException | UnsupportedOperationException e) {
       String t = this.lang.recoverTypeFromUnsolvedException(e);
       if (t == null) {
@@ -316,6 +359,8 @@ public class DeclarationHandler
             initializer,
             false);
     lang.getScopeManager().addDeclaration(fieldDeclaration);
+
+    this.lang.processAnnotations(fieldDeclaration, fieldDecl);
 
     return fieldDeclaration;
   }

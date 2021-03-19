@@ -23,6 +23,7 @@
  *                    \______/ \__|       \______/
  *
  */
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 import com.google.protobuf.gradle.*
 
@@ -34,10 +35,11 @@ plugins {
     signing
     `maven-publish`
 
-    id("org.sonarqube") version "3.0"
-    id("com.diffplug.spotless") version "5.6.1"
+    id("org.sonarqube") version "3.1.1"
+    id("com.diffplug.spotless") version "5.11.0"
     id("com.github.johnrengelman.shadow") version "6.1.0"
     id("com.google.protobuf") version "0.8.8"
+    kotlin("jvm") version "1.4.20"
 }
 
 tasks.jacocoTestReport {
@@ -128,6 +130,18 @@ tasks.named("compileJava") {
     dependsOn(":spotlessApply")
 }
 
+val compileKotlin: KotlinCompile by tasks
+compileKotlin.kotlinOptions {
+    jvmTarget = "11"
+    freeCompilerArgs = listOf("-Xopt-in=kotlin.RequiresOptIn")
+}
+
+val compileTestKotlin: KotlinCompile by tasks
+compileTestKotlin.kotlinOptions {
+    jvmTarget = "11"
+    freeCompilerArgs = listOf("-Xopt-in=kotlin.RequiresOptIn")
+}
+
 tasks.named("sonarqube") {
     dependsOn(":jacocoTestReport")
 }
@@ -141,11 +155,11 @@ java {
 }
 
 dependencies {
-    api("org.apache.commons:commons-lang3:3.11")
-    api("org.neo4j:neo4j-ogm-core:3.1.7")
-    api("org.apache.logging.log4j:log4j-slf4j18-impl:2.13.3")
+    api("org.apache.commons:commons-lang3:3.12.0")
+    api("org.neo4j:neo4j-ogm-core:3.2.19")
+    api("org.apache.logging.log4j:log4j-slf4j18-impl:2.14.1")
     api("org.slf4j:jul-to-slf4j:1.8.0-beta4")
-    api("com.github.javaparser:javaparser-symbol-solver-core:3.16.1")
+    api("com.github.javaparser:javaparser-symbol-solver-core:3.20.0")
 
     // Eclipse dependencies
     api("org.eclipse.platform:org.eclipse.core.runtime:3.18.0")
@@ -154,11 +168,20 @@ dependencies {
     // CDT
     api("org.eclipse.cdt:core:6.11.1.202006011430")
 
+    // openCypher
+    api("org.opencypher:parser-9.0:9.0.20210312")
+
+    implementation(platform("org.jetbrains.kotlin:kotlin-bom"))
+    implementation("org.jetbrains.kotlin:kotlin-stdlib")
+
     // JUnit
-    testImplementation("org.junit.jupiter:junit-jupiter-api:5.7.0")
-    testImplementation("org.junit.jupiter:junit-jupiter-params:5.7.0")
-    testImplementation("org.mockito:mockito-core:3.5.13")
-    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.7.0")
+    testImplementation("org.jetbrains.kotlin:kotlin-test")
+    testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
+    testImplementation("org.junit.jupiter:junit-jupiter-api:5.7.1")
+    testImplementation("org.junit.jupiter:junit-jupiter-params:5.7.1")
+
+    testImplementation("org.mockito:mockito-core:3.8.0")
+    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.7.1")
 
     // Protobuf
     api("com.google.protobuf:protobuf-java:3.13.0")
@@ -170,14 +193,12 @@ dependencies {
 }
 
 sourceSets {
-
     main {
         java {
             srcDir("build/generated/source/proto/main/java")
             srcDir("build/generated/source/proto/main/grpc")
         }
     }
-
 }
 
 spotless {

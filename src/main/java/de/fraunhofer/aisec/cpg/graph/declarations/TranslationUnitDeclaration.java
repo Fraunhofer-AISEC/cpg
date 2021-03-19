@@ -26,36 +26,39 @@
 
 package de.fraunhofer.aisec.cpg.graph.declarations;
 
+import static de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.unwrap;
+
 import de.fraunhofer.aisec.cpg.graph.DeclarationHolder;
 import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.SubGraph;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Objects;
-import java.util.Set;
+import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
+import java.util.*;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
+import org.neo4j.ogm.annotation.Relationship;
 
 /** The top most declaration, representing a translation unit, for example a file. */
 public class TranslationUnitDeclaration extends Declaration implements DeclarationHolder {
 
   /** A list of declarations within this unit. */
+  @Relationship(value = "DECLARATIONS", direction = "OUTGOING")
   @SubGraph("AST")
   @NonNull
-  private List<Declaration> declarations = new ArrayList<>();
+  private List<PropertyEdge<Declaration>> declarations = new ArrayList<>();
 
   /** A list of includes within this unit. */
+  @Relationship(value = "INCLUDES", direction = "OUTGOING")
   @SubGraph("AST")
   @NonNull
-  private List<Declaration> includes = new ArrayList<>();
+  private List<PropertyEdge<IncludeDeclaration>> includes = new ArrayList<>();
 
   /** A list of namespaces within this unit. */
+  @Relationship(value = "NAMESPACES", direction = "OUTGOING")
   @SubGraph("AST")
   @NonNull
-  private List<Declaration> namespaces = new ArrayList<>();
+  private List<PropertyEdge<Declaration>> namespaces = new ArrayList<>();
 
   /**
    * Returns the i-th declaration as a specific class, if it can be cast
@@ -67,14 +70,14 @@ public class TranslationUnitDeclaration extends Declaration implements Declarati
    */
   @Nullable
   public <T extends Declaration> T getDeclarationAs(int i, Class<T> clazz) {
-    Declaration declaration = this.declarations.get(i);
+    Declaration declaration = this.declarations.get(i).getEnd();
 
     if (declaration == null) {
       return null;
     }
 
     return declaration.getClass().isAssignableFrom(clazz)
-        ? clazz.cast(this.declarations.get(i))
+        ? clazz.cast(this.declarations.get(i).getEnd())
         : null;
   }
 
@@ -94,32 +97,57 @@ public class TranslationUnitDeclaration extends Declaration implements Declarati
   public <T extends Declaration> Set<T> getDeclarationsByName(
       @NonNull String name, @NonNull Class<T> clazz) {
     return this.declarations.stream()
+        .map(PropertyEdge::getEnd)
         .filter(declaration -> clazz.isAssignableFrom(declaration.getClass()))
         .map(clazz::cast)
         .filter(declaration -> Objects.equals(declaration.getName(), name))
         .collect(Collectors.toSet());
   }
 
-  @NonNull
-  public List<Declaration> getDeclarations() {
-    return declarations;
+  @Nullable
+  public IncludeDeclaration getIncludeByName(@NonNull String name) {
+    return this.includes.stream()
+        .map(PropertyEdge::getEnd)
+        .filter(declaration -> Objects.equals(declaration.getName(), name))
+        .findFirst()
+        .orElse(null);
   }
 
   @NonNull
-  public List<Declaration> getIncludes() {
-    return Collections.unmodifiableList(includes);
+  public List<Declaration> getDeclarations() {
+    return unwrap(this.declarations);
+  }
+
+  @NonNull
+  public List<PropertyEdge<Declaration>> getDeclarationsPropertyEdge() {
+    return this.declarations;
+  }
+
+  @NonNull
+  public List<IncludeDeclaration> getIncludes() {
+    return unwrap(this.includes);
+  }
+
+  @NonNull
+  public List<PropertyEdge<IncludeDeclaration>> getIncludesPropertyEdge() {
+    return this.includes;
   }
 
   @NonNull
   public List<Declaration> getNamespaces() {
-    return Collections.unmodifiableList(namespaces);
+    return unwrap(this.namespaces);
+  }
+
+  @NonNull
+  public List<PropertyEdge<Declaration>> getNamespacesPropertyEdge() {
+    return this.namespaces;
   }
 
   public void addDeclaration(@NonNull Declaration declaration) {
     if (declaration instanceof IncludeDeclaration) {
-      includes.add(declaration);
+      addIfNotContains(includes, (IncludeDeclaration) declaration);
     } else if (declaration instanceof NamespaceDeclaration) {
-      namespaces.add(declaration);
+      addIfNotContains(namespaces, declaration);
     }
 
     addIfNotContains(declarations, declaration);
@@ -145,8 +173,11 @@ public class TranslationUnitDeclaration extends Declaration implements Declarati
     TranslationUnitDeclaration that = (TranslationUnitDeclaration) o;
     return super.equals(that)
         && Objects.equals(declarations, that.declarations)
+        && Objects.equals(this.getDeclarations(), that.getDeclarations())
         && Objects.equals(includes, that.includes)
-        && Objects.equals(namespaces, that.namespaces);
+        && Objects.equals(this.getIncludes(), that.getIncludes())
+        && Objects.equals(namespaces, that.namespaces)
+        && Objects.equals(this.getNamespaces(), that.getNamespaces());
   }
 
   @Override

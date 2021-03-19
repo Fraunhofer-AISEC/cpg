@@ -68,7 +68,12 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  * </ul>
  *
  * @author julian
+ *     <p>
+ * @deprecated This Edge-Type is deprecated as it is conceptually less precise then the {@link
+ *     EvaluationOrderGraphPass}.
+ * @author kweiss
  */
+@Deprecated(since = "3.4", forRemoval = true)
 public class ControlFlowGraphPass extends Pass {
   private List<Statement> remaining = new CopyOnWriteArrayList<>();
   /** For keeping track of nested break/continue scopes. */
@@ -112,7 +117,7 @@ public class ControlFlowGraphPass extends Pass {
    */
   private void handleFunctionDeclaration(FunctionDeclaration decl) {
     Statement body = decl.getBody();
-    decl.getNextCFG().add(body);
+    decl.addNextCFG(body);
     if (body != null) handleBody((CompoundStatement) body);
   }
 
@@ -134,7 +139,7 @@ public class ControlFlowGraphPass extends Pass {
 
     // Extend our todo list by all statements in Compound
     List<Statement> containedStmts = body.getStatements();
-    body.getNextCFG().add(containedStmts.get(0));
+    body.addNextCFG(containedStmts.get(0));
 
     handleStatements(body);
   }
@@ -176,7 +181,7 @@ public class ControlFlowGraphPass extends Pass {
         Statement thenStmt = ((IfStatement) stmt).getThenStatement();
         doNotLinkToFollowingStmt.add(lastStatementInCompound(thenStmt));
         if (!isBreakOrContinue(thenStmt)) {
-          thenStmt.getNextCFG().add(this.remaining.get(i + 1));
+          thenStmt.addNextCFG(this.remaining.get(i + 1));
         }
         addTodo(i, thenStmt);
 
@@ -190,7 +195,7 @@ public class ControlFlowGraphPass extends Pass {
         ContinueStatement contStmt = (ContinueStatement) stmt;
         if (!this.breakContinueScopes.isEmpty()) {
           BreakContinueScope scope = this.breakContinueScopes.peek();
-          contStmt.getNextCFG().add(scope.start);
+          contStmt.addNextCFG(scope.start);
         }
 
       } else if (stmt instanceof BreakStatement) {
@@ -198,7 +203,7 @@ public class ControlFlowGraphPass extends Pass {
         BreakStatement breakStmt = (BreakStatement) stmt;
         if (!this.breakContinueScopes.isEmpty()) {
           BreakContinueScope scope = this.breakContinueScopes.peek();
-          breakStmt.getNextCFG().add(scope.breakLocation);
+          breakStmt.addNextCFG(scope.breakLocation);
         }
 
       } else if (isCompoundStmt(stmt)) {
@@ -220,7 +225,7 @@ public class ControlFlowGraphPass extends Pass {
 
         Node lastInBlock = lastStatementInCompound(whileStmt.getStatement());
         if (lastInBlock != null) {
-          lastInBlock.getNextCFG().add(whileStmt);
+          lastInBlock.addNextCFG(whileStmt);
         }
         doNotLinkToFollowingStmt.add(lastStatementInCompound(whileStmt.getStatement()));
 
@@ -232,7 +237,7 @@ public class ControlFlowGraphPass extends Pass {
         targets.add(firstStatementInCompound(doStmt.getStatement()));
 
         // Connect condition to first stmt in compound (when re-iterating the do-while-loop)
-        doStmt.getCondition().getNextCFG().add(firstStatementInCompound(doStmt.getStatement()));
+        doStmt.getCondition().addNextCFG(firstStatementInCompound(doStmt.getStatement()));
         addTodo(i + 1, doStmt.getCondition());
 
       } else if (!(stmt instanceof ReturnStatement)
@@ -247,7 +252,7 @@ public class ControlFlowGraphPass extends Pass {
           targets.add(nextRealStmt);
         }
       }
-      stmt.getNextCFG().addAll(targets);
+      stmt.addNextCFG(targets);
     }
   }
 

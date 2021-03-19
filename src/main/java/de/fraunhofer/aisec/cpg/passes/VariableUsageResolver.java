@@ -249,8 +249,19 @@ public class VariableUsageResolver extends Pass {
         DeclaredReferenceExpression base = (DeclaredReferenceExpression) memberExpression.getBase();
         if (lang instanceof JavaLanguageFrontend && base.getName().equals("super")) {
           if (curClass != null && !curClass.getSuperClasses().isEmpty()) {
-            baseTarget = recordMap.get(curClass.getSuperClasses().get(0)).getThis();
-            base.setRefersTo(baseTarget);
+            var superType = curClass.getSuperClasses().get(0);
+            var superRecord = recordMap.get(superType);
+
+            if (superRecord == null) {
+              log.error(
+                  "Could not find referring super type {} for {} in the record map. Will set the super type to java.lang.Object",
+                  superType.getTypeName(),
+                  curClass.getName());
+              base.setType(TypeParser.createFrom(Object.class.getName(), true));
+            } else {
+              baseTarget = superRecord.getThis();
+              base.setRefersTo(baseTarget);
+            }
           } else {
             // no explicit super type -> java.lang.Object
             Type objectType = TypeParser.createFrom(Object.class.getName(), true);
@@ -380,7 +391,7 @@ public class VariableUsageResolver extends Pass {
       FieldDeclaration declaration =
           NodeBuilder.newFieldDeclaration(
               name, type, Collections.emptyList(), "", null, null, false);
-      declarations.add(declaration);
+      recordMap.get(base).addField(declaration);
       declaration.setImplicit(true);
       // lang.getScopeManager().addValueDeclaration(declaration);
       return declaration;
@@ -395,9 +406,9 @@ public class VariableUsageResolver extends Pass {
       return null;
     }
     RecordDeclaration containingRecord = recordMap.get(base);
-    List<MethodDeclaration> declarations = containingRecord.getMethods();
+
     Optional<MethodDeclaration> target =
-        declarations.stream()
+        containingRecord.getMethods().stream()
             .filter(f -> f.getName().equals(name))
             .filter(f -> f.getType().equals(returnType))
             .filter(f -> f.hasSignature(signature))
@@ -407,7 +418,7 @@ public class VariableUsageResolver extends Pass {
           NodeBuilder.newMethodDeclaration(name, "", false, containingRecord);
       declaration.setType(returnType);
       declaration.setParameters(Util.createParameters(signature));
-      declarations.add(declaration);
+      containingRecord.addMethod(declaration);
       declaration.setImplicit(true);
       return declaration;
     } else {

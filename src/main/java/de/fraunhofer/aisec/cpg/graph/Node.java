@@ -26,16 +26,15 @@
 
 package de.fraunhofer.aisec.cpg.graph;
 
+import static de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.unwrap;
+
 import de.fraunhofer.aisec.cpg.graph.declarations.TypedefDeclaration;
+import de.fraunhofer.aisec.cpg.graph.edge.Properties;
+import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import de.fraunhofer.aisec.cpg.helpers.LocationConverter;
 import de.fraunhofer.aisec.cpg.processing.IVisitable;
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;
 import org.checkerframework.checker.nullness.qual.NonNull;
@@ -48,7 +47,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /** The base class for all graph objects that are going to be persisted in the database. */
-public class Node implements IVisitable<Node> {
+public class Node implements IVisitable<Node>, Persistable {
 
   public static final ToStringStyle TO_STRING_STYLE = ToStringStyle.SHORT_PREFIX_STYLE;
   protected static final Logger log = LoggerFactory.getLogger(Node.class);
@@ -81,17 +80,22 @@ public class Node implements IVisitable<Node> {
   /** Incoming control flow edges. */
   @NonNull
   @Relationship(value = "EOG", direction = "INCOMING")
-  protected List<Node> prevEOG = new ArrayList<>();
+  protected List<PropertyEdge<Node>> prevEOG = new ArrayList<>();
 
   /** outgoing control flow edges. */
   @Relationship(value = "EOG", direction = "OUTGOING")
   @NonNull
-  protected List<Node> nextEOG = new ArrayList<>();
+  protected List<PropertyEdge<Node>> nextEOG = new ArrayList<>();
 
-  /** outgoing control flow edges. */
+  /**
+   * outgoing control flow edges.
+   *
+   * @deprecated This Edge-Type is deprecated as it is less precise then the {@link Node#nextEOG}
+   */
+  @Deprecated(since = "3.4", forRemoval = true)
   @NonNull
   @Relationship(value = "CFG", direction = "OUTGOING")
-  protected List<Node> nextCFG = new ArrayList<>();
+  protected List<PropertyEdge<Node>> nextCFG = new ArrayList<>();
 
   @NonNull
   @Relationship(value = "DFG", direction = "INCOMING")
@@ -139,11 +143,12 @@ public class Node implements IVisitable<Node> {
     this.name = name;
   }
 
+  @Nullable
   public String getFile() {
     return file;
   }
 
-  public void setFile(String file) {
+  public void setFile(@Nullable String file) {
     this.file = file;
   }
 
@@ -165,26 +170,109 @@ public class Node implements IVisitable<Node> {
   }
 
   @NonNull
-  public List<Node> getPrevEOG() {
+  public List<PropertyEdge<Node>> getPrevEOGProperties() {
     return this.prevEOG;
   }
 
-  public void setPrevEOG(@NonNull List<Node> prevEOG) {
+  @NonNull
+  public List<PropertyEdge<Node>> getNextEOGProperties() {
+    return this.nextEOG;
+  }
+
+  public void setPrevEOGProperties(@NonNull List<PropertyEdge<Node>> prevEOG) {
     this.prevEOG = prevEOG;
+  }
+
+  public void removePrevEOGEntry(@NonNull Node eog) {
+    removePrevEOGEntries(List.of(eog));
+  }
+
+  public void removePrevEOGEntries(@NonNull List<Node> prevEOGs) {
+    for (Node n : prevEOGs) {
+      List<PropertyEdge<Node>> remove =
+          PropertyEdge.findPropertyEdgesByPredicate(this.prevEOG, e -> e.getStart().equals(n));
+      this.prevEOG.removeAll(remove);
+    }
+  }
+
+  @NonNull
+  public List<Node> getPrevEOG() {
+    List<Node> prevEOGTargets = new ArrayList<>();
+    this.prevEOG.forEach(propertyEdge -> prevEOGTargets.add(propertyEdge.getStart()));
+    return prevEOGTargets;
+  }
+
+  public void setPrevEOG(@NonNull List<Node> prevEOG) {
+    List<PropertyEdge<Node>> propertyEdgesEOG = new ArrayList<>();
+    int idx = 0;
+
+    for (Node prev : prevEOG) {
+      var propertyEdge = new PropertyEdge<>(prev, this);
+      propertyEdge.addProperty(Properties.INDEX, idx);
+      propertyEdgesEOG.add(propertyEdge);
+      idx++;
+    }
+
+    this.prevEOG = propertyEdgesEOG;
+  }
+
+  public void addPrevEOG(@NonNull PropertyEdge<Node> propertyEdge) {
+    this.prevEOG.add(propertyEdge);
+  }
+
+  @NonNull
+  public List<PropertyEdge<Node>> getNextEOGPropertyEdge() {
+    return this.nextEOG;
   }
 
   @NonNull
   public List<Node> getNextEOG() {
-    return this.nextEOG;
+    List<Node> nextEOGTargets = new ArrayList<>();
+    this.nextEOG.forEach(propertyEdge -> nextEOGTargets.add(propertyEdge.getEnd()));
+    return Collections.unmodifiableList(nextEOGTargets);
   }
 
   public void setNextEOG(@NonNull List<Node> nextEOG) {
-    this.nextEOG = nextEOG;
+    this.nextEOG = PropertyEdge.transformIntoOutgoingPropertyEdgeList(nextEOG, this);
   }
 
+  public void addNextEOG(@NonNull PropertyEdge<Node> propertyEdge) {
+    this.nextEOG.add(propertyEdge);
+  }
+
+  public void clearNextEOG() {
+    this.nextEOG.clear();
+  }
+
+  /**
+   * @deprecated This Edge-Type is deprecated as it is less precise then the {@link Node#nextEOG}n
+   */
   @NonNull
+  @Deprecated(since = "3.4", forRemoval = true)
   public List<Node> getNextCFG() {
-    return this.nextCFG;
+    return unwrap(this.nextCFG);
+  }
+
+  /**
+   * @deprecated This Edge-Type is deprecated as it is less precise then the {@link Node#nextEOG}
+   */
+  @Deprecated(since = "3.4", forRemoval = true)
+  public void addNextCFG(Node node) {
+    var propertyEdge = new PropertyEdge<>(this, node);
+    propertyEdge.addProperty(Properties.INDEX, this.nextCFG.size());
+    this.nextCFG.add(propertyEdge);
+  }
+
+  /**
+   * outgoing control flow edges.
+   *
+   * @deprecated This Edge-Type is deprecated as it is less precise then the {@link Node#nextEOG}
+   */
+  @Deprecated(since = "3.4", forRemoval = true)
+  public void addNextCFG(Collection<? extends Node> collection) {
+    for (Node n : collection) {
+      addNextCFG(n);
+    }
   }
 
   @NonNull
@@ -300,12 +388,18 @@ public class Node implements IVisitable<Node> {
       n.nextDFG.remove(this);
     }
     prevDFG.clear();
-    for (Node n : nextEOG) {
-      n.prevEOG.remove(this);
+    for (var n : nextEOG) {
+      List<PropertyEdge<Node>> remove =
+          PropertyEdge.findPropertyEdgesByPredicate(
+              n.getEnd().prevEOG, e -> e.getStart().equals(this));
+      n.getEnd().prevEOG.removeAll(remove);
     }
     nextEOG.clear();
-    for (Node n : prevEOG) {
-      n.nextEOG.remove(this);
+    for (var n : prevEOG) {
+      List<PropertyEdge<Node>> remove =
+          PropertyEdge.findPropertyEdgesByPredicate(
+              n.getStart().nextEOG, e -> e.getEnd().equals(this));
+      n.getStart().nextEOG.removeAll(remove);
     }
     prevEOG.clear();
   }

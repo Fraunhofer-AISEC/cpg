@@ -29,15 +29,15 @@ package de.fraunhofer.aisec.cpg.graph.statements.expressions;
 import de.fraunhofer.aisec.cpg.graph.*;
 import de.fraunhofer.aisec.cpg.graph.HasType.TypeListener;
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration;
+import de.fraunhofer.aisec.cpg.graph.edge.Properties;
+import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import de.fraunhofer.aisec.cpg.graph.types.Type;
 import de.fraunhofer.aisec.cpg.helpers.Util;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.builder.ToStringBuilder;
+import org.checkerframework.checker.nullness.qual.NonNull;
+import org.neo4j.ogm.annotation.Relationship;
 
 /**
  * An expression, which calls another function. It has a list of arguments (list of {@link
@@ -49,10 +49,14 @@ public class CallExpression extends Expression implements TypeListener {
    * Connection to its {@link FunctionDeclaration}. This will be populated by the {@link
    * de.fraunhofer.aisec.cpg.passes.CallResolver}.
    */
-  protected List<FunctionDeclaration> invokes = new ArrayList<>();
+  @Relationship(value = "INVOKES", direction = "OUTGOING")
+  protected List<PropertyEdge<FunctionDeclaration>> invokes = new ArrayList<>();
+
   /** The list of arguments. */
+  @Relationship(value = "ARGUMENTS", direction = "OUTGOING")
   @SubGraph("AST")
-  private List<Expression> arguments = new ArrayList<>();
+  private List<PropertyEdge<Expression>> arguments = new ArrayList<>();
+
   /**
    * The base object. This is marked as an AST child, because this is required for {@link
    * MemberCallExpression}. Be aware that for simple calls the implicit "this" base is not part of
@@ -77,30 +81,60 @@ public class CallExpression extends Expression implements TypeListener {
     }
   }
 
+  @NonNull
   public List<Expression> getArguments() {
-    return arguments;
+    List<Expression> targets = new ArrayList<>();
+    for (PropertyEdge<Expression> propertyEdge : this.arguments) {
+      targets.add(propertyEdge.getEnd());
+    }
+    return Collections.unmodifiableList(targets);
+  }
+
+  public void setArgument(int index, Expression argument) {
+    this.arguments.get(index).setEnd(argument);
+  }
+
+  @NonNull
+  public List<PropertyEdge<Expression>> getArgumentsPropertyEdge() {
+    return this.arguments;
+  }
+
+  public void addArgument(Expression expression) {
+    PropertyEdge<Expression> propertyEdge = new PropertyEdge<>(this, expression);
+    propertyEdge.addProperty(Properties.INDEX, this.arguments.size());
+    this.arguments.add(propertyEdge);
   }
 
   public void setArguments(List<Expression> arguments) {
-    this.arguments = arguments;
+    this.arguments = PropertyEdge.transformIntoOutgoingPropertyEdgeList(arguments, this);
   }
 
+  @NonNull
   public List<FunctionDeclaration> getInvokes() {
-    return invokes;
+    List<FunctionDeclaration> targets = new ArrayList<>();
+    for (PropertyEdge<FunctionDeclaration> propertyEdge : this.invokes) {
+      targets.add(propertyEdge.getEnd());
+    }
+    return Collections.unmodifiableList(targets);
+  }
+
+  public List<PropertyEdge<FunctionDeclaration>> getInvokesPropertyEdge() {
+    return this.invokes;
   }
 
   public void setInvokes(List<FunctionDeclaration> invokes) {
-    this.invokes.forEach(
-        i -> {
-          i.unregisterTypeListener(this);
-          Util.detachCallParameters(i, arguments);
-          this.removePrevDFG(i);
-        });
-    this.invokes = invokes;
+    PropertyEdge.getTarget(this.invokes)
+        .forEach(
+            i -> {
+              i.unregisterTypeListener(this);
+              Util.detachCallParameters(i, this.getArguments());
+              this.removePrevDFG(i);
+            });
+    this.invokes = PropertyEdge.transformIntoOutgoingPropertyEdgeList(invokes, this);
     invokes.forEach(
         i -> {
           i.registerTypeListener(this);
-          Util.attachCallParameters(i, arguments);
+          Util.attachCallParameters(i, this.getArguments());
           this.addPrevDFG(i);
         });
   }
@@ -117,6 +151,7 @@ public class CallExpression extends Expression implements TypeListener {
       Type previous = this.type;
       List<Type> types =
           invokes.stream()
+              .map(pe -> pe.getEnd())
               .map(FunctionDeclaration::getType)
               .filter(Objects::nonNull)
               .collect(Collectors.toList());
@@ -171,7 +206,9 @@ public class CallExpression extends Expression implements TypeListener {
     CallExpression that = (CallExpression) o;
     return super.equals(that)
         && Objects.equals(arguments, that.arguments)
+        && Objects.equals(this.getArguments(), that.getArguments())
         && Objects.equals(invokes, that.invokes)
+        && Objects.equals(this.getInvokes(), that.getInvokes())
         && Objects.equals(base, that.base);
   }
 

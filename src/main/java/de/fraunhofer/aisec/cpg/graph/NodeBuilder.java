@@ -239,11 +239,12 @@ public class NodeBuilder {
   }
 
   public static CallExpression newMemberCallExpression(
-      String name, String fqn, Node base, Node member, String code) {
+      String name, String fqn, Node base, Node member, String operatorCode, String code) {
     MemberCallExpression node = new MemberCallExpression();
     node.setName(name);
     node.setBase(base);
     node.setMember(member);
+    node.setOperatorCode(operatorCode);
     node.setCode(code);
     node.setFqn(fqn);
 
@@ -404,7 +405,7 @@ public class NodeBuilder {
               null,
               null,
               true);
-      node.getFields().add(thisDeclaration);
+      node.addField(thisDeclaration);
     }
 
     log(node);
@@ -464,9 +465,10 @@ public class NodeBuilder {
   }
 
   public static MemberExpression newMemberExpression(
-      Expression base, Type memberType, String name, String code) {
+      Expression base, Type memberType, String name, String operatorCode, String code) {
     MemberExpression node = new MemberExpression();
     node.setBase(base);
+    node.setOperatorCode(operatorCode);
     node.setCode(code);
     node.setName(name);
     node.setType(memberType);
@@ -649,9 +651,10 @@ public class NodeBuilder {
     return node;
   }
 
-  public static NamespaceDeclaration newNamespaceDeclaration(@NonNull String name) {
+  public static NamespaceDeclaration newNamespaceDeclaration(@NonNull String name, String code) {
     NamespaceDeclaration node = new NamespaceDeclaration();
     node.setName(name);
+    node.setCode(code);
 
     log(node);
     return node;
@@ -694,5 +697,15 @@ public class NodeBuilder {
     annotation.setCode(code);
 
     return annotation;
+  }
+
+  public static AnnotationMember newAnnotationMember(
+      String name, Expression value, @NonNull String code) {
+    var member = new AnnotationMember();
+    member.setName(name);
+    member.setValue(value);
+    member.setCode(code);
+
+    return member;
   }
 }

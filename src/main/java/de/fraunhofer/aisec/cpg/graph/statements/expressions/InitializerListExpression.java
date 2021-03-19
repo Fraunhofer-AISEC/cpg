@@ -26,38 +26,47 @@
 
 package de.fraunhofer.aisec.cpg.graph.statements.expressions;
 
+import static de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.unwrap;
+
 import de.fraunhofer.aisec.cpg.graph.HasType;
 import de.fraunhofer.aisec.cpg.graph.HasType.TypeListener;
 import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.SubGraph;
 import de.fraunhofer.aisec.cpg.graph.TypeManager;
+import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import de.fraunhofer.aisec.cpg.graph.types.PointerType.PointerOrigin;
 import de.fraunhofer.aisec.cpg.graph.types.Type;
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType;
 import java.util.*;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.builder.ToStringBuilder;
+import org.neo4j.ogm.annotation.Relationship;
 
 /** A list of initializer expressions. */
 public class InitializerListExpression extends Expression implements TypeListener {
 
   /** The list of initializers. */
+  @Relationship(value = "INITIALIZERS", direction = "OUTGOING")
   @SubGraph("AST")
-  private List<Expression> initializers = new ArrayList<>();
+  private List<PropertyEdge<Expression>> initializers = new ArrayList<>();
 
   public List<Expression> getInitializers() {
-    return initializers;
+    return unwrap(this.initializers);
+  }
+
+  public List<PropertyEdge<Expression>> getInitializersPropertyEdge() {
+    return this.initializers;
   }
 
   public void setInitializers(List<Expression> initializers) {
     if (this.initializers != null) {
       this.initializers.forEach(
           i -> {
-            i.unregisterTypeListener(this);
-            this.removePrevDFG(i);
+            i.getEnd().unregisterTypeListener(this);
+            this.removePrevDFG(i.getEnd());
           });
     }
-    this.initializers = initializers;
+    this.initializers = PropertyEdge.transformIntoOutgoingPropertyEdgeList(initializers, this);
     if (initializers != null) {
       initializers.forEach(
           i -> {
@@ -78,9 +87,10 @@ public class InitializerListExpression extends Expression implements TypeListene
     Type newType;
     Set<Type> subTypes;
 
-    if (this.initializers.contains(src)) {
+    if (this.getInitializers().contains(src)) {
       Set<Type> types =
           this.initializers.parallelStream()
+              .map(PropertyEdge::getEnd)
               .map(Expression::getType)
               .filter(Objects::nonNull)
               .map(t -> TypeManager.getInstance().registerType(t.reference(PointerOrigin.ARRAY)))
@@ -129,7 +139,9 @@ public class InitializerListExpression extends Expression implements TypeListene
       return false;
     }
     InitializerListExpression that = (InitializerListExpression) o;
-    return super.equals(that) && Objects.equals(initializers, that.initializers);
+    return super.equals(that)
+        && Objects.equals(initializers, that.initializers)
+        && Objects.equals(this.getInitializers(), that.getInitializers());
   }
 
   @Override

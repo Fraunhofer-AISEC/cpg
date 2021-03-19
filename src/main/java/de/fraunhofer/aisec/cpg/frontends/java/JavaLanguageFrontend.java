@@ -26,6 +26,9 @@
 
 package de.fraunhofer.aisec.cpg.frontends.java;
 
+import static de.fraunhofer.aisec.cpg.graph.NodeBuilder.newAnnotation;
+import static de.fraunhofer.aisec.cpg.graph.NodeBuilder.newAnnotationMember;
+
 import com.github.javaparser.JavaParser;
 import com.github.javaparser.ParseResult;
 import com.github.javaparser.ParserConfiguration;
@@ -33,13 +36,11 @@ import com.github.javaparser.Range;
 import com.github.javaparser.TokenRange;
 import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.ImportDeclaration;
-import com.github.javaparser.ast.Node;
 import com.github.javaparser.ast.Node.Parsedness;
 import com.github.javaparser.ast.PackageDeclaration;
 import com.github.javaparser.ast.body.TypeDeclaration;
-import com.github.javaparser.ast.expr.Expression;
-import com.github.javaparser.ast.expr.MethodCallExpr;
-import com.github.javaparser.ast.expr.NameExpr;
+import com.github.javaparser.ast.expr.*;
+import com.github.javaparser.ast.nodeTypes.NodeWithAnnotations;
 import com.github.javaparser.ast.nodeTypes.NodeWithType;
 import com.github.javaparser.ast.type.ClassOrInterfaceType;
 import com.github.javaparser.ast.type.Type;
@@ -54,6 +55,9 @@ import com.github.javaparser.symbolsolver.resolution.typesolvers.ReflectionTypeS
 import de.fraunhofer.aisec.cpg.TranslationConfiguration;
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
 import de.fraunhofer.aisec.cpg.frontends.TranslationException;
+import de.fraunhofer.aisec.cpg.graph.Annotation;
+import de.fraunhofer.aisec.cpg.graph.AnnotationMember;
+import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder;
 import de.fraunhofer.aisec.cpg.graph.TypeManager;
 import de.fraunhofer.aisec.cpg.graph.declarations.IncludeDeclaration;
@@ -77,6 +81,9 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 
 /** Main parser for ONE Java files. */
 public class JavaLanguageFrontend extends LanguageFrontend {
+
+  public static final String THIS = "this";
+  public static final String ANNOTATION_MEMBER_VALUE = "value";
 
   private CompilationUnit context;
 
@@ -136,7 +143,9 @@ public class JavaLanguageFrontend extends LanguageFrontend {
       PackageDeclaration packDecl = context.getPackageDeclaration().orElse(null);
       NamespaceDeclaration namespaceDeclaration = null;
       if (packDecl != null) {
-        namespaceDeclaration = NodeBuilder.newNamespaceDeclaration(packDecl.getName().asString());
+        namespaceDeclaration =
+            NodeBuilder.newNamespaceDeclaration(
+                packDecl.getName().asString(), getCodeFromRawNode(packDecl));
         // Todo set region and code and push/pop scope
 
         scopeManager.addDeclaration(namespaceDeclaration);
@@ -200,8 +209,8 @@ public class JavaLanguageFrontend extends LanguageFrontend {
 
   @Override
   public <T> String getCodeFromRawNode(T astNode) {
-    if (astNode instanceof Node) {
-      Node node = (Node) astNode;
+    if (astNode instanceof com.github.javaparser.ast.Node) {
+      var node = (com.github.javaparser.ast.Node) astNode;
       Optional<TokenRange> optional = node.getTokenRange();
       if (optional.isPresent()) {
         return optional.get().toString();
@@ -213,8 +222,8 @@ public class JavaLanguageFrontend extends LanguageFrontend {
   @Override
   @Nullable
   public <T> PhysicalLocation getLocationFromRawNode(T astNode) {
-    if (astNode instanceof Node) {
-      Node node = (Node) astNode;
+    if (astNode instanceof com.github.javaparser.ast.Node) {
+      var node = (com.github.javaparser.ast.Node) astNode;
 
       // find compilation unit of node
       CompilationUnit cu = node.findCompilationUnit().orElse(null);
@@ -270,7 +279,7 @@ public class JavaLanguageFrontend extends LanguageFrontend {
             return fromImport;
           }
         }
-        if (scope.get().toString().equals("this")) {
+        if (scope.get().toString().equals(THIS)) {
           // this is not strictly true. This could also be a function of a superclass,
           // but is the best we can do for now.
           // if the superclass would be known, this would already be resolved by the Javaresolver
@@ -324,16 +333,16 @@ public class JavaLanguageFrontend extends LanguageFrontend {
   public String getQualifiedNameFromImports(String className) {
     if (context != null && className != null) {
       List<String> potentialClassNames = new ArrayList<>();
-      String prefix = "";
+      StringBuilder prefix = new StringBuilder();
       for (String s : className.split("\\.")) {
         potentialClassNames.add(prefix + s);
-        prefix = prefix + s + ".";
+        prefix.append(s).append(".");
       }
       // see if we can make the qualifier more precise using the imports
       for (ImportDeclaration importDeclaration : context.getImports()) {
         for (String cn : potentialClassNames) {
           if (importDeclaration.getName().asString().endsWith("." + cn)) {
-            prefix = importDeclaration.getName().asString();
+            prefix = new StringBuilder(importDeclaration.getName().asString());
             return prefix.substring(0, prefix.lastIndexOf(cn)) + className;
           }
         }
@@ -353,7 +362,15 @@ public class JavaLanguageFrontend extends LanguageFrontend {
   public de.fraunhofer.aisec.cpg.graph.types.Type getReturnTypeAsGoodAsPossible(
       NodeWithType nodeWithType, ResolvedMethodDeclaration resolved) {
     try {
-      return TypeParser.createFrom(resolved.getReturnType().describe(), true);
+      // Resolve type first with ParameterizedType
+      de.fraunhofer.aisec.cpg.graph.types.Type type =
+          TypeManager.getInstance()
+              .getTypeParameter(
+                  scopeManager.getCurrentRecord(), resolved.getReturnType().describe());
+      if (type == null) {
+        type = TypeParser.createFrom(resolved.getReturnType().describe(), true);
+      }
+      return type;
     } catch (RuntimeException | NoClassDefFoundError ex) {
       return getTypeFromImportIfPossible(nodeWithType.getType());
     }
@@ -402,8 +419,18 @@ public class JavaLanguageFrontend extends LanguageFrontend {
           return TypeParser.createFrom(importDeclaration.getNameAsString(), true);
         }
       }
-      de.fraunhofer.aisec.cpg.graph.types.Type returnType =
-          TypeParser.createFrom(clazz.asString(), true);
+
+      var name = clazz.asString();
+
+      // no import found, so our last guess is that the type is in the same package
+      // as our current translation unit
+      var o = context.getPackageDeclaration();
+
+      if (o.isPresent()) {
+        name = o.get().getNameAsString() + getNamespaceDelimiter() + name;
+      }
+
+      de.fraunhofer.aisec.cpg.graph.types.Type returnType = TypeParser.createFrom(name, true);
       returnType.setTypeOrigin(de.fraunhofer.aisec.cpg.graph.types.Type.Origin.GUESSED);
       return returnType;
     }
@@ -430,7 +457,7 @@ public class JavaLanguageFrontend extends LanguageFrontend {
   @Override
   public <S, T> void setComment(S s, T ctx) {
     if (ctx instanceof Node && s instanceof de.fraunhofer.aisec.cpg.graph.Node) {
-      Node node = (Node) ctx;
+      var node = (com.github.javaparser.ast.Node) ctx;
       de.fraunhofer.aisec.cpg.graph.Node cpgNode = (de.fraunhofer.aisec.cpg.graph.Node) s;
       node.getComment().ifPresent(comment -> cpgNode.setComment(comment.getContent()));
       // TODO: handle orphanComments?
@@ -455,5 +482,61 @@ public class JavaLanguageFrontend extends LanguageFrontend {
 
   public CombinedTypeSolver getNativeTypeResolver() {
     return this.internalTypeSolver;
+  }
+
+  /**
+   * Processes Java annotations.
+   *
+   * @param node the node
+   * @param owner the AST owner node
+   */
+  public void processAnnotations(@NonNull Node node, NodeWithAnnotations<?> owner) {
+    if (this.config.processAnnotations) {
+      node.addAnnotations(handleAnnotations(owner));
+    }
+  }
+
+  private List<Annotation> handleAnnotations(NodeWithAnnotations<?> owner) {
+    var list = new ArrayList<Annotation>();
+
+    for (var expr : owner.getAnnotations()) {
+      var annotation = newAnnotation(expr.getNameAsString(), getCodeFromRawNode(expr));
+
+      var members = new ArrayList<AnnotationMember>();
+
+      // annotations can be specified as member / value pairs
+      if (expr.isNormalAnnotationExpr()) {
+        for (var pair : expr.asNormalAnnotationExpr().getPairs()) {
+          var member =
+              newAnnotationMember(
+                  pair.getNameAsString(),
+                  (de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression)
+                      expressionHandler.handle(pair.getValue()),
+                  getCodeFromRawNode(pair));
+
+          members.add(member);
+        }
+      } else if (expr.isSingleMemberAnnotationExpr()) {
+        var value = expr.asSingleMemberAnnotationExpr().getMemberValue();
+
+        if (value != null) {
+          // or as a literal. in this case it is assigned to the annotation member 'value'
+          var member =
+              newAnnotationMember(
+                  ANNOTATION_MEMBER_VALUE,
+                  (de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression)
+                      expressionHandler.handle(value.asLiteralExpr()),
+                  getCodeFromRawNode(value));
+
+          members.add(member);
+        }
+      }
+
+      annotation.setMembers(members);
+
+      list.add(annotation);
+    }
+
+    return list;
   }
 }

@@ -173,8 +173,8 @@ public class ImportResolver extends Pass {
       MethodDeclaration targetMethod = NodeBuilder.newMethodDeclaration(name, "", true, base);
       targetMethod.setImplicit(true);
 
-      base.getFields().add(targetField);
-      base.getMethods().add(targetMethod);
+      base.addField(targetField);
+      base.addMethod(targetMethod);
       result.add(targetField);
       result.add(targetMethod);
     }

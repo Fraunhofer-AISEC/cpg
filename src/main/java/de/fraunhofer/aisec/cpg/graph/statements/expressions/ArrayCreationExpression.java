@@ -26,12 +26,17 @@
 
 package de.fraunhofer.aisec.cpg.graph.statements.expressions;
 
+import static de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.unwrap;
+
 import de.fraunhofer.aisec.cpg.graph.HasType;
 import de.fraunhofer.aisec.cpg.graph.HasType.TypeListener;
 import de.fraunhofer.aisec.cpg.graph.SubGraph;
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration;
+import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import de.fraunhofer.aisec.cpg.graph.types.Type;
 import java.util.*;
+import org.checkerframework.checker.nullness.qual.NonNull;
+import org.neo4j.ogm.annotation.Relationship;
 
 /**
  * Expressions of the form <code>new Type[]</code> that represents the creation of an array, mostly
@@ -51,8 +56,9 @@ public class ArrayCreationExpression extends Expression implements TypeListener 
    * either explicitly specify dimensions or an {@link #initializer}, which is used to calculate
    * dimensions. In the graph, this will NOT be done.
    */
+  @Relationship(value = "DIMENSIONS", direction = "OUTGOING")
   @SubGraph("AST")
-  private List<Expression> dimensions = new ArrayList<>();
+  private List<PropertyEdge<Expression>> dimensions = new ArrayList<>();
 
   public InitializerListExpression getInitializer() {
     return initializer;
@@ -70,12 +76,22 @@ public class ArrayCreationExpression extends Expression implements TypeListener 
     }
   }
 
+  @NonNull
   public List<Expression> getDimensions() {
-    return dimensions;
+    return unwrap(this.dimensions);
+  }
+
+  public void addDimension(Expression expression) {
+    addIfNotContains(this.dimensions, expression);
+  }
+
+  @NonNull
+  public List<PropertyEdge<Expression>> getDimensionsPropertyEdge() {
+    return this.dimensions;
   }
 
   public void setDimensions(List<Expression> dimensions) {
-    this.dimensions = dimensions;
+    this.dimensions = PropertyEdge.transformIntoOutgoingPropertyEdgeList(dimensions, this);
   }
 
   @Override
@@ -89,7 +105,8 @@ public class ArrayCreationExpression extends Expression implements TypeListener 
     ArrayCreationExpression that = (ArrayCreationExpression) o;
     return super.equals(that)
         && Objects.equals(initializer, that.initializer)
-        && Objects.equals(dimensions, that.dimensions);
+        && Objects.equals(dimensions, that.dimensions)
+        && Objects.equals(this.getDimensions(), that.getDimensions());
   }
 
   @Override

@@ -29,18 +29,27 @@ package de.fraunhofer.aisec.cpg.graph;
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression;
 import java.util.List;
 import java.util.Objects;
+import javax.annotation.Nullable;
 
 public class Annotation extends Node {
 
-  // should be extended later into annotation members
-  private List<Expression> values;
+  private List<AnnotationMember> members;
 
-  public List<Expression> getValues() {
-    return values;
+  public List<AnnotationMember> getMembers() {
+    return members;
   }
 
-  public void setValues(List<Expression> values) {
-    this.values = values;
+  public void setMembers(List<AnnotationMember> members) {
+    this.members = members;
+  }
+
+  @Nullable
+  public Expression getValueForName(String name) {
+    return members.stream()
+        .filter(member -> Objects.equals(member.name, name))
+        .map(AnnotationMember::getValue)
+        .findAny()
+        .orElse(null);
   }
 
   @Override
@@ -53,7 +62,7 @@ public class Annotation extends Node {
     }
 
     Annotation that = (Annotation) o;
-    return super.equals(that) && Objects.equals(values, that.values);
+    return super.equals(that) && Objects.equals(members, that.members);
   }
 
   @Override

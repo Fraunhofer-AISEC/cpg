@@ -26,9 +26,13 @@
 
 package de.fraunhofer.aisec.cpg.graph.declarations;
 
+import de.fraunhofer.aisec.cpg.graph.DeclarationHolder;
+import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import org.checkerframework.checker.nullness.qual.NonNull;
+import org.neo4j.ogm.annotation.Relationship;
 
 /**
  * This represents a sequence of one or more declaration(s). The purpose of this node is primarily
@@ -36,20 +40,35 @@ import org.checkerframework.checker.nullness.qual.NonNull;
  * will be converted into a list-structure and all its children will be added to the parent, i.e.
  * the translation unit. It should not end up in the final graph.
  */
-public class DeclarationSequence extends Declaration {
+public class DeclarationSequence extends Declaration implements DeclarationHolder {
 
-  private final List<Declaration> children = new ArrayList<>();
+  @Relationship(value = "CHILDREN", direction = "OUTGOING")
+  private final List<PropertyEdge<Declaration>> children = new ArrayList<>();
 
-  public void add(@NonNull Declaration declaration) {
+  public List<PropertyEdge<Declaration>> getChildrenPropertyEdge() {
+    return this.children;
+  }
+
+  public List<Declaration> getChildren() {
+    List<Declaration> target = new ArrayList<>();
+    for (PropertyEdge<Declaration> propertyEdge : this.children) {
+      target.add(propertyEdge.getEnd());
+    }
+    return Collections.unmodifiableList(target);
+  }
+
+  public void addDeclaration(@NonNull Declaration declaration) {
     if (declaration instanceof DeclarationSequence) {
-      children.addAll(((DeclarationSequence) declaration).asList());
+      for (Declaration declarationChild : ((DeclarationSequence) declaration).getChildren()) {
+        addIfNotContains(this.children, declarationChild);
+      }
     }
 
-    children.add(declaration);
+    addIfNotContains(this.children, declaration);
   }
 
   public List<Declaration> asList() {
-    return children;
+    return getChildren();
   }
 
   public boolean isSingle() {
@@ -57,6 +76,6 @@ public class DeclarationSequence extends Declaration {
   }
 
   public Declaration first() {
-    return children.get(0);
+    return children.get(0).getEnd();
   }
 }

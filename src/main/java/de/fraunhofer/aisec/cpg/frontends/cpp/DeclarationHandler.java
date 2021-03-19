@@ -43,7 +43,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.ProblemDeclaration;
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration;
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration;
 import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration;
-import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration;
+import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement;
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement;
 import de.fraunhofer.aisec.cpg.graph.statements.Statement;
@@ -106,7 +106,7 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
 
   private Declaration handleNamespace(CPPASTNamespaceDefinition ctx) {
     NamespaceDeclaration declaration =
-        NodeBuilder.newNamespaceDeclaration(ctx.getName().toString());
+        NodeBuilder.newNamespaceDeclaration(ctx.getName().toString(), lang.getCodeFromRawNode(ctx));
 
     lang.getScopeManager().addDeclaration(declaration);
 
@@ -205,19 +205,19 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
 
       if (bodyStatement instanceof CompoundStatement) {
         CompoundStatement body = (CompoundStatement) bodyStatement;
-        List<Statement> statements = body.getStatements();
+        List<PropertyEdge<Statement>> statements = body.getStatementEdges();
 
         // get the last statement
         Statement lastStatement = null;
         if (!statements.isEmpty()) {
-          lastStatement = statements.get(statements.size() - 1);
+          lastStatement = statements.get(statements.size() - 1).getEnd();
         }
 
         // add an implicit return statement, if there is none
         if (!(lastStatement instanceof ReturnStatement)) {
           ReturnStatement returnStatement = NodeBuilder.newReturnStatement("return;");
           returnStatement.setImplicit(true);
-          statements.add(returnStatement);
+          body.addStatement(returnStatement);
         }
 
         functionDeclaration.setBody(body);
@@ -293,7 +293,7 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
 
       this.lang.processAttributes(declaration, ctx);
 
-      sequence.add(declaration);
+      sequence.addDeclaration(declaration);
     } else if (declSpecifier instanceof CPPASTElaboratedTypeSpecifier) {
       warnWithFileLocation(
           lang,
@@ -307,14 +307,8 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
       ValueDeclaration declaration =
           (ValueDeclaration) this.lang.getDeclaratorHandler().handle(declarator);
 
-      String typeString;
-      if (declaration instanceof FunctionDeclaration
-          || declaration instanceof VariableDeclaration) {
-        typeString = getTypeStringFromDeclarator(declarator, ctx.getDeclSpecifier());
-      } else {
-        // otherwise, use the complete raw code and let the type parser handle it
-        typeString = ctx.getRawSignature();
-      }
+      String typeString = getTypeStringFromDeclarator(declarator, ctx.getDeclSpecifier());
+
       Type result = TypeParser.createFrom(typeString, true);
       declaration.setType(result);
 
@@ -324,7 +318,7 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
       // process attributes
       this.lang.processAttributes(declaration, ctx);
 
-      sequence.add(declaration);
+      sequence.addDeclaration(declaration);
     }
 
     if (sequence.isSingle()) {
@@ -409,7 +403,7 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
 
           IncludeDeclaration includeDeclaration = NodeBuilder.newIncludeDeclaration(includeString);
           if (problems != null) {
-            includeDeclaration.getProblems().addAll(problems);
+            includeDeclaration.addProblems(problems);
           }
           includeMap.put(includeString, includeDeclaration);
         }
@@ -424,7 +418,7 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
         for (Map.Entry<String, HashSet<String>> entry : allIncludes.entrySet()) {
           IncludeDeclaration includeDeclaration = includeMap.get(entry.getKey());
           for (String s : entry.getValue()) {
-            includeDeclaration.getIncludes().add(includeMap.get(s));
+            includeDeclaration.addInclude(includeMap.get(s));
           }
         }
       }
