@@ -28,8 +28,8 @@ package de.fraunhofer.aisec.cpg.frontends;
 
 import de.fraunhofer.aisec.cpg.TranslationConfiguration;
 import de.fraunhofer.aisec.cpg.frontends.cpp.CXXLanguageFrontend;
-import de.fraunhofer.aisec.cpg.frontends.grpc.GrpcLanguageFrontend;
 import de.fraunhofer.aisec.cpg.frontends.golang.GoLanguageFrontend;
+import de.fraunhofer.aisec.cpg.frontends.grpc.GrpcLanguageFrontend;
 import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguageFrontend;
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager;
 import java.util.List;

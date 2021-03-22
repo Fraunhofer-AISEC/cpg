@@ -26,9 +26,6 @@ jobs:
           fi
           echo "##[set-output name=version;]$VERSION"
         id: determine_version
-      - name: Build cpgo
-        run: |
-          cd go-jni && ./build.sh && sudo cp ../libcpgo.so /usr/lib/
       - name: Build ${{ steps.determine_version.outputs.version }}
         run: |
           if [ "$SONAR_TOKEN" != "" ]

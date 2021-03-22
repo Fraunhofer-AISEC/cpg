@@ -159,7 +159,7 @@ dependencies {
     api("org.neo4j:neo4j-ogm-core:3.2.19")
     api("org.apache.logging.log4j:log4j-slf4j18-impl:2.14.1")
     api("org.slf4j:jul-to-slf4j:1.8.0-beta4")
-    api("com.github.javaparser:javaparser-symbol-solver-core:3.20.0")
+    api("com.github.javaparser:javaparser-symbol-solver-core:3.20.2")
 
     // Eclipse dependencies
     api("org.eclipse.platform:org.eclipse.core.runtime:3.18.0")
@@ -228,4 +228,21 @@ protobuf {
             }
         }
     }
+}
+tasks.register("compileGolang") {
+    doLast {
+        project.exec {
+            commandLine("./build.sh")
+                .setStandardOutput(System.out)
+                .workingDir("src/main/golang")
+        }
+    }
+}
+
+tasks.named("compileJava") {
+    dependsOn(":compileGolang")
+}
+
+tasks.withType<Test> {
+    systemProperty("java.library.path", project.projectDir.resolve("src/main/golang"))
 }
