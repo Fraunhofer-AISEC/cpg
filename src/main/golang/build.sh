@@ -15,4 +15,4 @@ fi
 
 export CGO_CFLAGS="-I${JAVA_HOME}/include -I/${JAVA_HOME}/include/${ARCH}"
 
-go build -buildmode=c-shared -o ../libcpgo.${EXTENSION} lib/cpg/main.go
+go build -buildmode=c-shared -o libcpgo.${EXTENSION} lib/cpg/main.go
