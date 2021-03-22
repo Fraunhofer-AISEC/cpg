@@ -3,6 +3,7 @@ from de.fraunhofer.aisec.cpg.sarif import Region
 from de.fraunhofer.aisec.cpg.sarif import PhysicalLocation
 from de.fraunhofer.aisec.cpg.graph.declarations import VariableDeclaration
 from de.fraunhofer.aisec.cpg.graph.declarations import FunctionDeclaration
+from de.fraunhofer.aisec.cpg.graph.declarations import NamespaceDeclaration
 from de.fraunhofer.aisec.cpg.graph.declarations import IncludeDeclaration
 from de.fraunhofer.aisec.cpg.graph.declarations import MethodDeclaration
 from de.fraunhofer.aisec.cpg.graph.declarations import ParamVariableDeclaration
@@ -55,12 +56,37 @@ def debug_print(string, level = 1):
     info = inspect.getframeinfo(frame)
     print("%s\t%d:\t%s" % (info.function, info.lineno, string))
 
+class CodeExtractor:
+    """ Simple/ugly class to extrace code snippets given a region """
+    def __init__(self, fname):
+        with open(fname) as f:
+                self.lines = f.read().splitlines()
+    def get_snippet(self, lineno, col_offset, end_lineno, end_col_offset):
+        if lineno == end_lineno:
+            return self.lines[lineno][col_offset:end_col_offset]
+        else:
+            # first line is partially read
+            res = list(self.lines[lineno][col_offset:])
+            lineno += 1
+            
+            # fill with compelte lines
+            while lineno + 1 < end_lineno:
+                res.append(self.lines[lineno])
+                lineno += 1
+
+            # last line is partially read
+            res.append(self.lines[end_lineno][:end_col_offset])
+            
+            return "\n".join(res)
+
 class MyWalker(ast.NodeVisitor):
     def __init__(self, fname, scopemanager):
+        self.sourcecode = CodeExtractor(fname)
         self.tud = TranslationUnitDeclaration()
         self.tud.setName(fname)
         self.fname = fname
         self.scopemanager = scopemanager
+        self.scopemanager.resetToGlobal(self.tud)
     
     def add_loc_info(self, node, obj):
         ''' Adds location information of node to obj '''
@@ -77,7 +103,8 @@ class MyWalker(ast.NodeVisitor):
                 node.col_offset, node.end_lineno, node.end_col_offset)))
         # TODO better extract code from file than to use expensive/not accurate
         # unparse
-        obj.setCode(ast.unparse(node))
+        obj.setCode(self.sourcecode.get_snippet(node.lineno,
+            node.col_offset, node.end_lineno, node.end_col_offset))
             
 
     ### LITERALS ###
@@ -339,6 +366,7 @@ class MyWalker(ast.NodeVisitor):
     def visit_NotIn(self, node):
         debug_print(ast.dump(node))
         raise NotImplementedError
+
     def visit_Call(self, node):
         # TODO what???
         # TODO keywords starargs kwargs
@@ -352,12 +380,9 @@ class MyWalker(ast.NodeVisitor):
         else:
             raise NotImplementedError
         self.add_loc_info(node, call)
-        call_args = []
         for a in node.args:
-            call_args.append(self.visit(a))
-        call.setArguments(call_args)
+            call.addArgument(self.visit(a))
         return call
-
 
     def visit_keyword(self, node):
         debug_print(ast.dump(node))
@@ -716,8 +741,14 @@ class MyWalker(ast.NodeVisitor):
     def visit_Module(self, node):
         debug_print(ast.dump(node))
         '''The AST is wrapped in a 'Module' with 'body' list. Visit the body.'''
+        nsd = NamespaceDeclaration()
+        nsd.setName(self.fname)
+
+        self.scopemanager.enterScope(nsd)
         for n in node.body:
-            self.tud.addDeclaration(self.visit(n))
+            self.scopemanager.addDeclaration(self.visit(n))
+        self.scopemanager.leaveScope(nsd)
+        self.scopemanager.addDeclaration(nsd)
 
     ### CATCH ALL ###
     def generic_visit(self, node):

@@ -57,7 +57,10 @@ class PythonFrontendTest : BaseTest() {
     fun testEmpty() { // parse an empty file
         val tu = TestUtils.analyzeAndGetFirstTU(listOf(topLevel.resolve("test_empty.py").toFile()), topLevel, true)
         assertNotNull(tu)
-        assert(tu.declarations.isEmpty())
+        assert(tu.declarations.isNotEmpty())
+        assert(tu.declarations.size == 1)
+        assert(tu.name == "src/test/resources/python/test_empty.py")
+        val nsd = tu.declarations.get(0) as? NamespaceDeclaration
     }
 
     @Test
