@@ -49,20 +49,14 @@ import de.fraunhofer.aisec.cpg.graph.statements.Statement;
 import de.fraunhofer.aisec.cpg.graph.statements.SwitchStatement;
 import de.fraunhofer.aisec.cpg.graph.statements.TryStatement;
 import de.fraunhofer.aisec.cpg.graph.statements.WhileStatement;
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression;
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression;
 import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.slf4j.Logger;
@@ -441,8 +435,8 @@ public class ScopeManager {
    * @param declaration
    */
   public void addDeclaration(Declaration declaration) {
-    if (declaration instanceof ProblemDeclaration) {
-      // directly add problems to the global scope
+    if (declaration instanceof ProblemDeclaration || declaration instanceof IncludeDeclaration) {
+      // directly add problems and includes to the global scope
       var globalScope = (GlobalScope) getFirstScopeThat(scope -> scope instanceof GlobalScope);
       globalScope.addDeclaration(declaration);
     } else if (declaration instanceof ValueDeclaration) {
@@ -519,6 +513,10 @@ public class ScopeManager {
     return resolve(currentScope, ref);
   }
 
+  public List<FunctionDeclaration> resolveFunction(CallExpression call) {
+    return resolveFunction(currentScope, call);
+  }
+
   /**
    * Resolves only references to Values in the current scope, static references to other visible
    * records are not resolved over the ScopeManager.
@@ -550,6 +548,34 @@ public class ScopeManager {
       }
     }
     return scope.getParent() != null ? resolve(scope.getParent(), ref) : null;
+  }
+
+  /**
+   * Resolves a function reference of a call expression.
+   *
+   * @param scope
+   * @param call
+   * @return
+   */
+  @Nullable
+  private List<FunctionDeclaration> resolveFunction(Scope scope, CallExpression call) {
+    if (scope instanceof ValueDeclarationScope) {
+      var list =
+          ((ValueDeclarationScope) scope)
+              .getValueDeclarations().stream()
+                  .filter(FunctionDeclaration.class::isInstance)
+                  .map(FunctionDeclaration.class::cast)
+                  .filter(
+                      f ->
+                          f.getName().equals(call.getName()) && f.hasSignature(call.getSignature()))
+                  .collect(Collectors.toList());
+
+      if (!list.isEmpty()) {
+        return list;
+      }
+    }
+
+    return scope.getParent() != null ? resolveFunction(scope.getParent(), call) : new ArrayList<>();
   }
 
   /**

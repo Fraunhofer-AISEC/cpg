@@ -651,9 +651,10 @@ public class NodeBuilder {
     return node;
   }
 
-  public static NamespaceDeclaration newNamespaceDeclaration(@NonNull String name) {
+  public static NamespaceDeclaration newNamespaceDeclaration(@NonNull String name, String code) {
     NamespaceDeclaration node = new NamespaceDeclaration();
     node.setName(name);
+    node.setCode(code);
 
     log(node);
     return node;

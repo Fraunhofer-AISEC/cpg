@@ -52,7 +52,6 @@ public class ObjectType extends Type {
   }
 
   private final Modifier modifier;
-  private final boolean primitive;
   // Reference from the ObjectType to its class (RecordDeclaration) only if the class is available
   private RecordDeclaration recordDeclaration = null;
 
@@ -128,6 +127,12 @@ public class ObjectType extends Type {
 
   public void setGenerics(List<Type> generics) {
     this.generics = PropertyEdge.transformIntoOutgoingPropertyEdgeList(generics, this);
+  }
+
+  public void addGeneric(Type generic) {
+    var propertyEdge = new PropertyEdge<>(this, generic);
+    // propertyEdge.addProperty(Properties.INDEX, this.generics.size());
+    this.generics.add(propertyEdge);
   }
 
   @Override
