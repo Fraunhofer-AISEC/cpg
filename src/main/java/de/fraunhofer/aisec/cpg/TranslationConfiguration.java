@@ -26,7 +26,16 @@
 
 package de.fraunhofer.aisec.cpg;
 
+import de.fraunhofer.aisec.cpg.passes.CallResolver;
+import de.fraunhofer.aisec.cpg.passes.ControlFlowSensitiveDFGPass;
+import de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass;
+import de.fraunhofer.aisec.cpg.passes.FilenameMapper;
+import de.fraunhofer.aisec.cpg.passes.ImportResolver;
+import de.fraunhofer.aisec.cpg.passes.JavaExternalTypeHierarchyResolver;
 import de.fraunhofer.aisec.cpg.passes.Pass;
+import de.fraunhofer.aisec.cpg.passes.TypeHierarchyResolver;
+import de.fraunhofer.aisec.cpg.passes.TypeResolver;
+import de.fraunhofer.aisec.cpg.passes.VariableUsageResolver;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -333,15 +342,15 @@ public class TranslationConfiguration {
      * @return
      */
     public Builder defaultPasses() {
-      // registerPass(new TypeHierarchyResolver());
-      // registerPass(new JavaExternalTypeHierarchyResolver());
-      // registerPass(new ImportResolver());
-      // registerPass(new VariableUsageResolver());
-      // registerPass(new CallResolver()); // creates CG
-      // registerPass(new EvaluationOrderGraphPass()); // creates EOG
-      // registerPass(new TypeResolver());
-      // registerPass(new ControlFlowSensitiveDFGPass());
-      // registerPass(new FilenameMapper());
+      registerPass(new TypeHierarchyResolver());
+      registerPass(new JavaExternalTypeHierarchyResolver());
+      registerPass(new ImportResolver());
+      registerPass(new VariableUsageResolver());
+      registerPass(new CallResolver()); // creates CG
+      registerPass(new EvaluationOrderGraphPass()); // creates EOG
+      registerPass(new TypeResolver());
+      registerPass(new ControlFlowSensitiveDFGPass());
+      registerPass(new FilenameMapper());
       return this;
     }
 
