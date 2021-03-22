@@ -1,14 +1,12 @@
 from de.fraunhofer.aisec.cpg.graph.declarations import Declaration
-from de.fraunhofer.aisec.cpg.sarif import Region
-from de.fraunhofer.aisec.cpg.sarif import PhysicalLocation
-from de.fraunhofer.aisec.cpg.graph.declarations import VariableDeclaration
 from de.fraunhofer.aisec.cpg.graph.declarations import FunctionDeclaration
-from de.fraunhofer.aisec.cpg.graph.declarations import NamespaceDeclaration
 from de.fraunhofer.aisec.cpg.graph.declarations import IncludeDeclaration
 from de.fraunhofer.aisec.cpg.graph.declarations import MethodDeclaration
+from de.fraunhofer.aisec.cpg.graph.declarations import NamespaceDeclaration
 from de.fraunhofer.aisec.cpg.graph.declarations import ParamVariableDeclaration
 from de.fraunhofer.aisec.cpg.graph.declarations import RecordDeclaration
 from de.fraunhofer.aisec.cpg.graph.declarations import TranslationUnitDeclaration
+from de.fraunhofer.aisec.cpg.graph.declarations import VariableDeclaration
 from de.fraunhofer.aisec.cpg.graph.statements import CompoundStatement
 from de.fraunhofer.aisec.cpg.graph.statements import EmptyStatement
 from de.fraunhofer.aisec.cpg.graph.statements import ForEachStatement
@@ -17,7 +15,6 @@ from de.fraunhofer.aisec.cpg.graph.statements import ReturnStatement
 from de.fraunhofer.aisec.cpg.graph.statements import Statement
 from de.fraunhofer.aisec.cpg.graph.statements.expressions import ArrayCreationExpression
 from de.fraunhofer.aisec.cpg.graph.statements.expressions import ArraySubscriptionExpression
-from de.fraunhofer.aisec.cpg.graph.statements.expressions import UnaryOperator
 from de.fraunhofer.aisec.cpg.graph.statements.expressions import BinaryOperator
 from de.fraunhofer.aisec.cpg.graph.statements.expressions import CallExpression
 from de.fraunhofer.aisec.cpg.graph.statements.expressions import DeclaredReferenceExpression
@@ -25,8 +22,11 @@ from de.fraunhofer.aisec.cpg.graph.statements.expressions import ExpressionList
 from de.fraunhofer.aisec.cpg.graph.statements.expressions import Literal
 from de.fraunhofer.aisec.cpg.graph.statements.expressions import MemberCallExpression
 from de.fraunhofer.aisec.cpg.graph.statements.expressions import MemberExpression
+from de.fraunhofer.aisec.cpg.graph.statements.expressions import UnaryOperator
 from de.fraunhofer.aisec.cpg.graph.types import Type
 from de.fraunhofer.aisec.cpg.graph.types import TypeParser
+from de.fraunhofer.aisec.cpg.sarif import PhysicalLocation
+from de.fraunhofer.aisec.cpg.sarif import Region
 from java.net import URI
 from java.util import List as JavaList
 import ast
@@ -90,8 +90,6 @@ class MyWalker(ast.NodeVisitor):
     
     def add_loc_info(self, node, obj):
         ''' Adds location information of node to obj '''
-        debug_print(obj)
-        debug_print(node)
         if not isinstance(node, ast.AST):
             debug_print(type(node))
             debug_print(node[0].lineno)
@@ -172,21 +170,18 @@ class MyWalker(ast.NodeVisitor):
     ### VARIABLES ###
     def visit_Name(self, node, get_declaration = False):
         debug_print(ast.dump(node))
-        record = self.scopemanager.getRecordForName(self.scopemanager.getCurrentScope(),
-                node.id)
-        if record is None:
-            ref = VariableDeclaration()
-            record = ref
-            self.add_loc_info(node, ref)
-            ref.setName(node.id)
-            self.scopemanager.addDeclaration(ref)
-            if get_declaration == True:
-                return ref
-        # otherwise -> return reference (default case)
         ref = DeclaredReferenceExpression()
         self.add_loc_info(node, ref)
         ref.setName(node.id)
-        ref.setRefersTo(record)
+        resolved_ref = self.scopemanager.resolve(ref)
+        if resolved_ref != None:
+            ref.setRefersTo(resolved_ref)
+        else:
+            # new var decl
+            v = VariableDeclaration()
+            self.add_loc_info(node, v)
+            v.setName(node.id)
+            ref.setRefersTo(v)
         return ref
 
     def visit_Load(self, node):
@@ -419,7 +414,6 @@ class MyWalker(ast.NodeVisitor):
         self.add_loc_info(node, s)
         s.setArrayExpression(self.visit(node.value))
         s.setSubscriptExpression(self.visit(node.slice))
-        debug_print(s)
         return s
 
     def visit_Slice(self, node):
@@ -648,9 +642,9 @@ class MyWalker(ast.NodeVisitor):
     def visit_arg(self, node):
         debug_print(ast.dump(node))
         pvd = ParamVariableDeclaration()
-        self.scopemanager.addDeclaration(pvd)
         self.add_loc_info(node, pvd)
         pvd.setName(node.arg)
+        self.scopemanager.addDeclaration(pvd)
         # TODO handle annotation
         return pvd
 
@@ -718,9 +712,6 @@ class MyWalker(ast.NodeVisitor):
         if len(node.decorator_list) != 0:
             raise NotImplementedError
 
-
-        debug_print(rec)
-
         return rec
 
     ### ASYNC AND AWAIT ###
@@ -746,7 +737,7 @@ class MyWalker(ast.NodeVisitor):
 
         self.scopemanager.enterScope(nsd)
         for n in node.body:
-            self.scopemanager.addDeclaration(self.visit(n))
+            nsd.addDeclaration(self.visit(n))
         self.scopemanager.leaveScope(nsd)
         self.scopemanager.addDeclaration(nsd)
 
