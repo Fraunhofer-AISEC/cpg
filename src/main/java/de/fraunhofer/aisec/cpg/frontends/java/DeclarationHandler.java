@@ -42,6 +42,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression;
 import de.fraunhofer.aisec.cpg.graph.types.ParameterizedType;
 import de.fraunhofer.aisec.cpg.graph.types.Type;
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser;
+import de.fraunhofer.aisec.cpg.graph.types.UnknownType;
 import de.fraunhofer.aisec.cpg.passes.scopes.RecordScope;
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation;
 import java.util.*;
@@ -150,12 +151,24 @@ public class DeclarationHandler
       com.github.javaparser.ast.body.MethodDeclaration methodDecl) {
     ResolvedMethodDeclaration resolvedMethod = methodDecl.resolve();
 
+    var record = lang.getScopeManager().getCurrentRecord();
+
     de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration functionDeclaration =
         NodeBuilder.newMethodDeclaration(
-            resolvedMethod.getName(),
-            methodDecl.toString(),
-            methodDecl.isStatic(),
-            lang.getScopeManager().getCurrentRecord());
+            resolvedMethod.getName(), methodDecl.toString(), methodDecl.isStatic(), record);
+
+    // create the receiver
+    var receiver =
+        NodeBuilder.newVariableDeclaration(
+            "this",
+            record != null
+                ? TypeParser.createFrom(record.getName(), false)
+                : UnknownType.getUnknownType(),
+            "this",
+            false);
+
+    functionDeclaration.setReceiver(receiver);
+
     lang.getScopeManager().enterScope(functionDeclaration);
 
     functionDeclaration.addThrowTypes(

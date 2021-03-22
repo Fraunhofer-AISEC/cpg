@@ -90,6 +90,10 @@ public class CallExpression extends Expression implements TypeListener {
     return Collections.unmodifiableList(targets);
   }
 
+  public void setArgument(int index, Expression argument) {
+    this.arguments.get(index).setEnd(argument);
+  }
+
   @NonNull
   public List<PropertyEdge<Expression>> getArgumentsPropertyEdge() {
     return this.arguments;

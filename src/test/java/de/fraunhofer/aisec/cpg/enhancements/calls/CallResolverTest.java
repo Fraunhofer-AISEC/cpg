@@ -32,8 +32,10 @@ import de.fraunhofer.aisec.cpg.BaseTest;
 import de.fraunhofer.aisec.cpg.TestUtils;
 import de.fraunhofer.aisec.cpg.graph.declarations.*;
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression;
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.CastExpression;
 import de.fraunhofer.aisec.cpg.graph.types.Type;
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser;
+import de.fraunhofer.aisec.cpg.graph.types.UnknownType;
 import java.nio.file.Path;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -170,7 +172,9 @@ public class CallResolverTest extends BaseTest {
 
   @Test
   void testCpp() throws Exception {
-    List<TranslationUnitDeclaration> result = TestUtils.analyze("cpp", topLevel, true);
+    List<TranslationUnitDeclaration> result =
+        TestUtils.analyze(
+            List.of(Path.of(topLevel.toString(), "calls.cpp").toFile()), topLevel, true);
     List<RecordDeclaration> records = TestUtils.subnodesOfType(result, RecordDeclaration.class);
     Type intType = TypeParser.createFrom("int", true);
     Type stringType = TypeParser.createFrom("char*", true);
@@ -190,5 +194,45 @@ public class CallResolverTest extends BaseTest {
 
     ensureNoUnknownClassDummies(records);
     ensureInvocationOfMethodsInFunction(result);
+  }
+
+  @Test
+  void testImplicitCastCallResolution() throws Exception {
+    Path filePath = Path.of(topLevel.toString(), "implicitcast");
+    List<TranslationUnitDeclaration> result = TestUtils.analyze("cpp", filePath, true);
+    List<CallExpression> callExpressions = TestUtils.subnodesOfType(result, CallExpression.class);
+
+    // Check resolution of implicit cast
+    CallExpression multiply = TestUtils.findByUniqueName(callExpressions, "multiply");
+
+    assertEquals(1, multiply.getInvokes().size());
+    FunctionDeclaration functionDeclaration = multiply.getInvokes().get(0);
+    assertFalse(functionDeclaration.isImplicit());
+    assertEquals("int", functionDeclaration.getSignatureTypes().get(0).getTypeName());
+
+    assertTrue(multiply.getArguments().get(0) instanceof CastExpression);
+    CastExpression implicitCast = (CastExpression) multiply.getArguments().get(0);
+    assertEquals("int", implicitCast.getCastType().getTypeName());
+    assertEquals("10.0", implicitCast.getExpression().getCode());
+
+    // Check implicit cast in case of ambiguous call
+    CallExpression ambiguousCall =
+        TestUtils.findByUniqueName(callExpressions, "ambiguous_multiply");
+
+    // Check invokes
+    List<FunctionDeclaration> functionDeclarations = ambiguousCall.getInvokes();
+    assertEquals(2, functionDeclarations.size());
+    for (FunctionDeclaration func : functionDeclarations) {
+      assertFalse(func.isImplicit());
+      assertTrue(
+          (func.getParameters().get(0).getType().getName().equals("int"))
+              || (func.getParameters().get(0).getType().getName().equals("float")));
+    }
+
+    // Check Cast
+    assertTrue(ambiguousCall.getArguments().get(0) instanceof CastExpression);
+    CastExpression castExpression = (CastExpression) ambiguousCall.getArguments().get(0);
+    assertEquals(UnknownType.getUnknownType(), castExpression.getType());
+    assertEquals("10.0", castExpression.getExpression().getCode());
   }
 }
