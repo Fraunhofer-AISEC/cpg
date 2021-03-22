@@ -122,6 +122,40 @@ class DFGTest {
     assertEquals(1, ab.getPrevDFG().size());
   }
 
+  /**
+   * To test assignments of different value in an expression that then has a joinPoint. a = a == b ?
+   * b = 2: b = 3;
+   *
+   * @throws Exception
+   */
+  @Test
+  void testConditionalExpression() throws Exception {
+    Path topLevel = Path.of("src", "test", "resources", "dfg");
+    List<TranslationUnitDeclaration> result =
+        TestUtils.analyze(
+            List.of(topLevel.resolve("conditional_expression.cpp").toFile()), topLevel, true);
+
+    DeclaredReferenceExpression b =
+        TestUtils.findByPredicate(
+                TestUtils.subnodesOfType(result, DeclaredReferenceExpression.class),
+                v -> v.getName().equals("b") && v.getLocation().getRegion().getStartLine() == 6)
+            .get(0);
+
+    Literal val2 =
+        TestUtils.findByPredicate(
+                TestUtils.subnodesOfType(result, Literal.class), v -> v.getValue().equals(2))
+            .get(0);
+
+    Literal val3 =
+        TestUtils.findByPredicate(
+                TestUtils.subnodesOfType(result, Literal.class), v -> v.getValue().equals(3))
+            .get(0);
+
+    assertEquals(2, b.getPrevDFG().size());
+    assertTrue(b.getPrevDFG().contains(val2));
+    assertTrue(b.getPrevDFG().contains(val3));
+  }
+
   @Test
   void testControlSensitiveDFGPassSwitch() throws Exception {
     Path topLevel = Path.of("src", "test", "resources", "dfg");
@@ -178,13 +212,13 @@ class DFGTest {
                 TestUtils.subnodesOfType(result, Literal.class), l -> l.getValue().equals(12))
             .get(0);
 
-    assertEquals(2, literal10.getNextDFG().size());
+    assertEquals(3, literal10.getNextDFG().size());
     assertTrue(literal10.getNextDFG().contains(a10));
 
-    assertEquals(2, literal11.getNextDFG().size());
+    assertEquals(3, literal11.getNextDFG().size());
     assertTrue(literal11.getNextDFG().contains(a11));
 
-    assertEquals(3, literal12.getNextDFG().size());
+    assertEquals(4, literal12.getNextDFG().size());
     assertTrue(literal12.getNextDFG().contains(a12));
 
     assertEquals(4, a.getPrevDFG().size());
@@ -334,7 +368,7 @@ class DFGTest {
 
     // Check outgoing dfg edges from a of a = a + b and into
     // VariableDeclaration a)
-    assertEquals(1, binaryOperatorAddition.getNextDFG().size());
+    assertEquals(2, binaryOperatorAddition.getNextDFG().size());
     assertTrue(binaryOperatorAddition.getNextDFG().contains(lhsA));
 
     // Check outgoing dfg edges of literal1 (VariableDeclaration b and DeclaredReferenceExpression
