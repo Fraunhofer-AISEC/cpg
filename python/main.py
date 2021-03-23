@@ -17,6 +17,8 @@ from de.fraunhofer.aisec.cpg.graph.statements.expressions import ArrayCreationEx
 from de.fraunhofer.aisec.cpg.graph.statements.expressions import ArraySubscriptionExpression
 from de.fraunhofer.aisec.cpg.graph.statements.expressions import BinaryOperator
 from de.fraunhofer.aisec.cpg.graph.statements.expressions import CallExpression
+from de.fraunhofer.aisec.cpg.graph.statements import WhileStatement
+from de.fraunhofer.aisec.cpg.graph.statements.expressions import ArrayRangeExpression
 from de.fraunhofer.aisec.cpg.graph.statements.expressions import DeclaredReferenceExpression
 from de.fraunhofer.aisec.cpg.graph.statements.expressions import ExpressionList
 from de.fraunhofer.aisec.cpg.graph.statements.expressions import Literal
@@ -57,21 +59,27 @@ def debug_print(string, level = 1):
     print("%s\t%d:\t%s" % (info.function, info.lineno, string))
 
 class CodeExtractor:
-    """ Simple/ugly class to extrace code snippets given a region """
+    # Simple/ugly class to extrace code snippets given a region
     def __init__(self, fname):
         with open(fname) as f:
                 self.lines = f.read().splitlines()
     def get_snippet(self, lineno, col_offset, end_lineno, end_col_offset):
+        # 1 vs 0-based indexing
+        lineno -= 1
+        #col_offset -= 1
+        end_lineno -= 1
+        #end_col_offset -= 1
         if lineno == end_lineno:
             return self.lines[lineno][col_offset:end_col_offset]
         else:
+            res = []
             # first line is partially read
-            res = list(self.lines[lineno][col_offset:])
+            res.append(self.lines[lineno][col_offset:])
             lineno += 1
             
             # fill with compelte lines
             while lineno + 1 < end_lineno:
-                res.append(self.lines[lineno])
+                res.append(self.lines[lineno][:])
                 lineno += 1
 
             # last line is partially read
@@ -103,6 +111,7 @@ class MyWalker(ast.NodeVisitor):
         # unparse
         obj.setCode(self.sourcecode.get_snippet(node.lineno,
             node.col_offset, node.end_lineno, node.end_col_offset))
+        #obj.setCode(ast.unparse(node))
             
 
     ### LITERALS ###
@@ -182,6 +191,8 @@ class MyWalker(ast.NodeVisitor):
             self.add_loc_info(node, v)
             v.setName(node.id)
             ref.setRefersTo(v)
+            self.scopemanager.addDeclaration(v)
+        debug_print("DONE")
         return ref
 
     def visit_Load(self, node):
@@ -324,7 +335,40 @@ class MyWalker(ast.NodeVisitor):
         self.add_loc_info(node, comp)
         if len(node.ops) != 1:
             raise NotImplementedError
-        comp.setOperatorCode(node.ops[0])
+        op = node.ops[0]
+        if isinstance(op, ast.Eq):
+            comp.setOperatorCode("Eq")
+            comp.setName("Eq")
+        elif isinstance(op, ast.NotEq):
+            comp.setOperatorCode("NotEq")
+            comp.setName("NotEq")
+        elif isinstance(op, ast.Lt):
+            comp.setOperatorCode("Lt")
+            comp.setName("Lt")
+        elif isinstance(op, ast.LtE):
+            comp.setOperatorCode("LtE")
+            comp.setName("LtE")
+        elif isinstance(op, ast.Gt):
+            comp.setOperatorCode("Gt")
+            comp.setName("Gt")
+        elif isinstance(op, ast.GtE):
+            comp.setOperatorCode("GtE")
+            comp.setName("GtE")
+        elif isinstance(op, ast.Is):
+            comp.setOperatorCode("Is")
+            comp.setName("Is")
+        elif isinstance(op, ast.IsNot):
+            comp.setOperatorCode("IsNot")
+            comp.setName("IsNot")
+        elif isinstance(op, ast.In):
+            comp.setOperatorCode("In")
+            comp.setName("In")
+        elif isinstance(op, ast.NotIn):
+            comp.setOperatorCode("NotIn")
+            comp.setName("NotIn")
+        else:
+            debug_print(op)
+            raise NotImplementedError
         comp.setLhs(self.visit(node.left))
         if len(node.comparators) != 1:
             raise NotImplementedError
@@ -418,7 +462,16 @@ class MyWalker(ast.NodeVisitor):
 
     def visit_Slice(self, node):
         debug_print(ast.dump(node))
-        raise NotImplementedError
+        slc = ArrayRangeExpression()
+        self.add_loc_info(node, slc)
+        if node.lower != None:
+            slc.setFloor(self.visit(node.lower))
+        if node.upper != None:
+            slc.setCeiling(self.visit(node.upper))
+        if node.step != None:
+            debug_print("Step not yet supported.")
+            raise NotImplementedError
+        return slc
 
     ### COMPREHENSIONS ###
     def visit_ListComp(self, node):
@@ -455,9 +508,17 @@ class MyWalker(ast.NodeVisitor):
     def visit_AnnAssign(self, node):
         debug_print(ast.dump(node))
         raise NotImplementedError
+
     def visit_AugAssign(self, node):
         debug_print(ast.dump(node))
-        raise NotImplementedError
+        binop = BinaryOperator()
+        self.add_loc_info(node, binop)
+        binop.setOperatorCode(node.op)
+        binop.setLhs(self.visit(node.target))
+        binop.setRhs(self.visit(node.value))
+        binop.setName(node.op)
+        return binop
+
     def visit_Raise(self, node):
         debug_print(ast.dump(node))
         op = UnaryOperator()
@@ -523,22 +584,22 @@ class MyWalker(ast.NodeVisitor):
         stmt = IfStatement()
         self.add_loc_info(node, stmt)
         stmt.setCondition(self.visit(node.test))
-        if isinstance(node.body, list):
+        if len(node.body) == 1:
+            stmt.setThenStatement(self.visit(node.body[0]))
+        else:
             body = CompoundStatement()
             self.add_loc_info(node, body)
             for n in node.body:
                 body.addStatement(self.visit(n))
             stmt.setThenStatement(body)
+        if len(node.orelse) == 1:
+            stmt.setElseStatement(self.visit(node.orelse[0]))
         else:
-            raise NotImplementedError
-        if isinstance(node.orelse, list):
             orelse = CompoundStatement()
             self.add_loc_info(node, orelse)
             for n in node.orelse:
                 orelse.addStatement(self.visit(n))
             stmt.setElseStatement(orelse)
-        else:
-            raise NotImplementedError
         return stmt
 
     def visit_For(self, node):
@@ -546,20 +607,41 @@ class MyWalker(ast.NodeVisitor):
         stmt = ForEachStatement()
         self.add_loc_info(node, stmt)
         if isinstance(node.target, ast.Name):
-            stmt.setVariable(self.visit_Name(node.target, get_declaration = True))
+            debug_print("A")
+            stmt.setVariable(self.visit(node.target))
+            debug_print("B")
         else:
             raise NotImplementedError # what???
         stmt.setIterable(self.visit(node.iter))
-        body = CompoundStatement()
-        self.add_loc_info(node, body)
-        for b in node.body:
-            body.addStatement(self.visit(b))
-        stmt.setStatement(body)
+        if len(node.body) == 1:
+            stmt.setStatement(self.visit(node.body))
+        else:
+            body = CompoundStatement()
+            self.add_loc_info(node, body)
+            for b in node.body:
+                body.addStatement(self.visit(b))
+            stmt.setStatement(body)
+        debug_print("DONE")
         return stmt
 
     def visit_While(self, node):
         debug_print(ast.dump(node))
-        raise NotImplementedError
+        w = WhileStatement()
+        self.add_loc_info(node, w)
+        debug_print("A")
+        w.setCondition(self.visit(node.test))
+        debug_print("B")
+        body = CompoundStatement()
+        self.add_loc_info(node, body)
+        for n in node.body:
+            body.addStatement(self.visit(n))
+        w.setStatement(body)
+        debug_print("C")
+        if node.orelse != None and len(node.orelse) != 0:
+            debug_print("while -> orelse not implemented, yet")
+            raise NotImplementedError
+        return w
+
     def visit_Break(self, node):
         debug_print(ast.dump(node))
         raise NotImplementedError
@@ -574,6 +656,7 @@ class MyWalker(ast.NodeVisitor):
         raise NotImplementedError
     def visit_With(self, node):
         debug_print(ast.dump(node))
+        return # TODO LATER -> new cpg node or foreach + try/catch?
         raise NotImplementedError
     def visit_withitem(self, node):
         debug_print(ast.dump(node))
@@ -663,12 +746,15 @@ class MyWalker(ast.NodeVisitor):
         debug_print(ast.dump(node))
         raise NotImplementedError
     def visit_Global(self, node):
+        return # TODO: no support for global vars, yet. how to model them as CPG
+    # nodes?
         debug_print(ast.dump(node))
         if len(node.names) != 1:
             raise NotImplementedError
         ref = DeclaredReferenceExpression()
         self.add_loc_info(node, ref)
         ref.setName(node.names[0])
+        self.scopemanager.addDeclaration(ref)
         return ref
 
     def visit_Nonlocal(self, node):
@@ -682,6 +768,7 @@ class MyWalker(ast.NodeVisitor):
         # name
         rec.setName(node.name)
         self.scopemanager.addDeclaration(rec)
+        t = None
         # bases
         if len(node.bases) == 0:
             pass
@@ -694,8 +781,10 @@ class MyWalker(ast.NodeVisitor):
                 raise NotImplementedError
         else:
             raise NotImplementedError
-        rec.setSuperClasses([t])
+        if t != None:
+            rec.setSuperClasses([t])
         if len(node.keywords) != 0:
+            debug_print(node.keywords)
             raise NotImplementedError
         #if node.starargs is not None:
         #    raise NotImplementedError
@@ -704,9 +793,15 @@ class MyWalker(ast.NodeVisitor):
         # body
         for b in node.body:
             if isinstance(b, ast.FunctionDef):
+                # TODO __init__ -> ctor
                 fd = self.visit_FunctionDef(b, returnMethod=True)
                 rec.addMethod(fd)
+            elif isinstance(b, ast.Expr):
+                # TODO what to do about expressions inside a class?
+                self.visit(b)
             else:
+                debug_print(type(b))
+                debug_print(b)
                 raise NotImplementedError
 
         if len(node.decorator_list) != 0:
