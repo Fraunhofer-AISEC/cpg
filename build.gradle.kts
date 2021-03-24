@@ -209,6 +209,8 @@ tasks.named("compileJava") {
     dependsOn(":compileGolang")
 }
 
+/*
 tasks.withType<Test> {
     systemProperty("java.library.path", project.projectDir.resolve("src/main/golang"))
 }
+*/
