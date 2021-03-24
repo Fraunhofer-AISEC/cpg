@@ -6,6 +6,7 @@ from de.fraunhofer.aisec.cpg.graph.declarations import NamespaceDeclaration
 from de.fraunhofer.aisec.cpg.graph.declarations import ParamVariableDeclaration
 from de.fraunhofer.aisec.cpg.graph.declarations import RecordDeclaration
 from de.fraunhofer.aisec.cpg.graph.declarations import TranslationUnitDeclaration
+import re
 from de.fraunhofer.aisec.cpg.graph.declarations import VariableDeclaration
 from de.fraunhofer.aisec.cpg.graph.statements import CompoundStatement
 from de.fraunhofer.aisec.cpg.graph.statements import EmptyStatement
@@ -97,7 +98,7 @@ class MyWalker(ast.NodeVisitor):
         self.scopemanager.resetToGlobal(self.tud)
     
     def add_loc_info(self, node, obj):
-        ''' Adds location information of node to obj '''
+        # Adds location information of node to obj
         if not isinstance(node, ast.AST):
             debug_print(type(node))
             debug_print(node[0].lineno)
@@ -107,34 +108,30 @@ class MyWalker(ast.NodeVisitor):
         uri = URI("file://" + self.fname)
         obj.setLocation(PhysicalLocation(uri, Region(node.lineno,
                 node.col_offset, node.end_lineno, node.end_col_offset)))
-        # TODO better extract code from file than to use expensive/not accurate
-        # unparse
         obj.setCode(self.sourcecode.get_snippet(node.lineno,
             node.col_offset, node.end_lineno, node.end_col_offset))
-        #obj.setCode(ast.unparse(node))
+        #obj.setCode(ast.unparse(node)) # alternative to CodeExtractor class
             
 
     ### LITERALS ###
     def visit_Constant(self, node):
         debug_print(ast.dump(node))
-        if isinstance(node.value, str):
-            lit = Literal()
-            self.add_loc_info(node, lit)
-            lit.setValue(node.value)
+        lit = Literal()
+        self.add_loc_info(node, lit)
+        lit.setValue(node.value)
+        lit.setName(str(node.value))
+        if type(node.value) is str:
             lit.setType(TypeParser.createFrom("str", False))
-            lit.setName("str[%s]" % node.value)
-        elif isinstance(node.value, int):
-            lit = Literal()
-            self.add_loc_info(node, lit)
-            lit.setValue(node.value)
+        elif type(node.value) is int:
             lit.setType(TypeParser.createFrom("int", False))
-            lit.setName("int[%d]" % node.value)
-        elif isinstance(node.value, type(None)):
-            lit = Literal()
-            self.add_loc_info(node, lit)
-            lit.setValue(node.value)
+        elif type(node.value) is float:
+            lit.setType(TypeParser.createFrom("float", False))
+        elif type(node.value) is complex:
+            lit.setType(TypeParser.createFrom("complex", False))
+        elif type(node.value) is bool:
+            lit.setType(TypeParser.createFrom("bool", False))
+        elif type(node.value) is type(None):
             lit.setType(TypeParser.createFrom("None", False))
-            lit.setName("None")
         else:
             debug_print(type(node.value))
             raise NotImplementedError
@@ -177,7 +174,7 @@ class MyWalker(ast.NodeVisitor):
         raise NotImplementedError
     
     ### VARIABLES ###
-    def visit_Name(self, node, get_declaration = False):
+    def visit_Name(self, node):
         debug_print(ast.dump(node))
         ref = DeclaredReferenceExpression()
         self.add_loc_info(node, ref)
@@ -186,13 +183,8 @@ class MyWalker(ast.NodeVisitor):
         if resolved_ref != None:
             ref.setRefersTo(resolved_ref)
         else:
-            # new var decl
-            v = VariableDeclaration()
-            self.add_loc_info(node, v)
-            v.setName(node.id)
-            ref.setRefersTo(v)
-            self.scopemanager.addDeclaration(v)
-        debug_print("DONE")
+            debug_print("Failed to resovlve name.")
+            raise RuntimeError
         return ref
 
     def visit_Load(self, node):
@@ -493,17 +485,36 @@ class MyWalker(ast.NodeVisitor):
     ### STATEMENTS ###
     def visit_Assign(self, node):
         debug_print(ast.dump(node))
-        # binary operator
-        binop = BinaryOperator()
-        self.add_loc_info(node, binop)
-        binop.setOperatorCode("=")
         if len(node.targets) != 1:
             raise NotImplementedError
         target = node.targets[0]
-        binop.setLhs(self.visit(target))
-        binop.setRhs(self.visit(node.value))
-        binop.setName("=")
-        return binop
+        if not isinstance(target, ast.Name):
+            debug_print(target)
+            raise NotImplementedError
+        
+        # Check whether this assigns to a declared var or to a new var
+        ref = DeclaredReferenceExpression()
+        self.add_loc_info(node, ref)
+        ref.setName(target.id)
+        resolved_ref = self.scopemanager.resolve(ref)
+        if resolved_ref != None:
+            # found var => BinaryOperator "="
+            binop = BinaryOperator()
+            self.add_loc_info(node, binop)
+            binop.setOperatorCode("=")
+            ref.setRefersTo(resolved_ref)
+            binop.setLhs(ref)
+            binop.setRhs(self.visit(node.value))
+            binop.setName("=")
+            return binop
+        else:
+            # new var -> variable declaration + initializer list
+            v = VariableDeclaration()
+            self.add_loc_info(node, v)
+            v.setName(target.id)
+            self.scopemanager.addDeclaration(v)
+            v.setInitializer(self.visit(node.value))
+            return v
 
     def visit_AnnAssign(self, node):
         debug_print(ast.dump(node))
@@ -828,7 +839,11 @@ class MyWalker(ast.NodeVisitor):
         debug_print(ast.dump(node))
         '''The AST is wrapped in a 'Module' with 'body' list. Visit the body.'''
         nsd = NamespaceDeclaration()
-        nsd.setName(self.fname)
+
+        # TODO how to name the namespace?
+        # TODO improve readability
+        nsd_name = ".".join(self.fname.split("/")[-1].split(".")[:-1])
+        nsd.setName(nsd_name)
 
         self.scopemanager.enterScope(nsd)
         for n in node.body:
