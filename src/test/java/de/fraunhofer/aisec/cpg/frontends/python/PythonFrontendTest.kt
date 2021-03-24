@@ -48,7 +48,7 @@ class PythonFrontendTest : BaseTest() {
     @Test
     @Throws(TranslationException::class)
     fun testPythonImpl() {
-        val tu = TestUtils.analyzeAndGetFirstTU(listOf(File("python","main.py")), topLevel, true)
+        val tu = TestUtils.analyzeAndGetFirstTU(listOf(Path.of("src", "main" , "resources", "python").resolve("main.py").toFile()), topLevel, true)
         assertNotNull(tu)
     }
 

@@ -51,7 +51,8 @@ class PythonLanguageFrontend(config: TranslationConfiguration, scopeManager: Sco
             interp.set("global_scopemanager", this.getScopeManager())
 
             // load script
-            interp.runScript(entryScript.toString())
+            //interp.runScript(entryScript.toString())
+            interp.exec(this::class.java.classLoader.getResource("python/main.py").readText())
 
             // run python function run()
             interp.exec("run()")
