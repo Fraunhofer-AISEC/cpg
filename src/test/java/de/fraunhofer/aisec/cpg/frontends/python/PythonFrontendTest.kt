@@ -71,6 +71,38 @@ class PythonFrontendTest : BaseTest() {
         assertNotNull(n)
         assertEquals("n", n.name)
         assertEquals(TypeParser.createFrom("None", false), n.type)
+    }
 
+    @Test
+    fun testIf() {
+        val topLevel = Path.of("src", "test", "resources", "python")
+        val tu = TestUtils.analyzeAndGetFirstTU(listOf(topLevel.resolve("if.py").toFile()), topLevel, true)
+
+        assertNotNull(tu)
+
+        val p = tu.getDeclarationsByName("if", NamespaceDeclaration::class.java).iterator().next()
+
+        val main = p.getDeclarationsByName("foo", FunctionDeclaration::class.java).iterator().next()
+
+        assertNotNull(main)
+
+        val body = main.body as? CompoundStatement
+
+        assertNotNull(body)
+
+        val sel = (body.statements.first() as? DeclarationStatement)?.singleDeclaration as? VariableDeclaration
+
+        assertNotNull(sel)
+        assertEquals("sel", sel.name)
+        assertEquals(TypeParser.createFrom("bool", false), sel.type)
+
+        val initializer = sel.initializer as? Literal<*>
+
+        assertNotNull(initializer)
+        assertEquals(TypeParser.createFrom("bool", false), initializer.type)
+        assertEquals("True", initializer.name)
+
+        val `if` = body.statements[1] as? IfStatement
+        assertNotNull(`if`)
     }
 }

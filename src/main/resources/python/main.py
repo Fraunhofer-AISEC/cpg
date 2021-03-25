@@ -6,20 +6,20 @@ from de.fraunhofer.aisec.cpg.graph.declarations import NamespaceDeclaration
 from de.fraunhofer.aisec.cpg.graph.declarations import ParamVariableDeclaration
 from de.fraunhofer.aisec.cpg.graph.declarations import RecordDeclaration
 from de.fraunhofer.aisec.cpg.graph.declarations import TranslationUnitDeclaration
-import re
 from de.fraunhofer.aisec.cpg.graph.declarations import VariableDeclaration
 from de.fraunhofer.aisec.cpg.graph.statements import CompoundStatement
+from de.fraunhofer.aisec.cpg.graph.statements import DeclarationStatement
 from de.fraunhofer.aisec.cpg.graph.statements import EmptyStatement
 from de.fraunhofer.aisec.cpg.graph.statements import ForEachStatement
 from de.fraunhofer.aisec.cpg.graph.statements import IfStatement
 from de.fraunhofer.aisec.cpg.graph.statements import ReturnStatement
 from de.fraunhofer.aisec.cpg.graph.statements import Statement
+from de.fraunhofer.aisec.cpg.graph.statements import WhileStatement
 from de.fraunhofer.aisec.cpg.graph.statements.expressions import ArrayCreationExpression
+from de.fraunhofer.aisec.cpg.graph.statements.expressions import ArrayRangeExpression
 from de.fraunhofer.aisec.cpg.graph.statements.expressions import ArraySubscriptionExpression
 from de.fraunhofer.aisec.cpg.graph.statements.expressions import BinaryOperator
 from de.fraunhofer.aisec.cpg.graph.statements.expressions import CallExpression
-from de.fraunhofer.aisec.cpg.graph.statements import WhileStatement
-from de.fraunhofer.aisec.cpg.graph.statements.expressions import ArrayRangeExpression
 from de.fraunhofer.aisec.cpg.graph.statements.expressions import DeclaredReferenceExpression
 from de.fraunhofer.aisec.cpg.graph.statements.expressions import ExpressionList
 from de.fraunhofer.aisec.cpg.graph.statements.expressions import Literal
@@ -34,6 +34,7 @@ from java.net import URI
 from java.util import List as JavaList
 import ast
 import inspect
+import re
 
 #############################
 # PROBLEMS / OPEN QUESTIONS #
@@ -48,6 +49,7 @@ import inspect
 # 8. 2 edges func -> pvd (scopemanager addDeclaration zu oft?)
 # 9. self -> go receiver vom christian angucken
 #10. assign -> neue decl mit initializer (statt in visit_Name)
+#11. test Java isinstance aktuell mit java_name startswith -> :(
 
 def run():
     global global_res
@@ -618,9 +620,7 @@ class MyWalker(ast.NodeVisitor):
         stmt = ForEachStatement()
         self.add_loc_info(node, stmt)
         if isinstance(node.target, ast.Name):
-            debug_print("A")
             stmt.setVariable(self.visit(node.target))
-            debug_print("B")
         else:
             raise NotImplementedError # what???
         stmt.setIterable(self.visit(node.iter))
@@ -632,22 +632,18 @@ class MyWalker(ast.NodeVisitor):
             for b in node.body:
                 body.addStatement(self.visit(b))
             stmt.setStatement(body)
-        debug_print("DONE")
         return stmt
 
     def visit_While(self, node):
         debug_print(ast.dump(node))
         w = WhileStatement()
         self.add_loc_info(node, w)
-        debug_print("A")
         w.setCondition(self.visit(node.test))
-        debug_print("B")
         body = CompoundStatement()
         self.add_loc_info(node, body)
         for n in node.body:
             body.addStatement(self.visit(n))
         w.setStatement(body)
-        debug_print("C")
         if node.orelse != None and len(node.orelse) != 0:
             debug_print("while -> orelse not implemented, yet")
             raise NotImplementedError
@@ -680,11 +676,11 @@ class MyWalker(ast.NodeVisitor):
             fd = MethodDeclaration()
         else:
             fd = FunctionDeclaration()
-        self.scopemanager.enterScope(fd)
         self.add_loc_info(node, fd)
         
         # handle name
         fd.setName(node.name)
+        self.scopemanager.enterScope(fd)
 
         # handle args
         # scopeManager adds them to fd
@@ -696,7 +692,24 @@ class MyWalker(ast.NodeVisitor):
         self.add_loc_info(node, body)
         fd.setBody(body)
         for stmt in node.body:
-            body.addStatement(self.visit(stmt))
+            debug_print(stmt)
+            s = self.visit(stmt)
+            debug_print(s)
+            debug_print(type(s))
+            debug_print(s.getClass())
+            debug_print(s.java_name)
+            if s.java_name.startswith('de.fraunhofer.aisec.cpg.graph.statements.'):
+                body.addStatement(self.visit(stmt))
+            elif s.java_name.startswith('de.fraunhofer.aisec.cpg.graph.declarations.'):
+                # wrap the statement
+                d = DeclarationStatement()
+                self.add_loc_info(node, d)
+                d.setSingleDeclaration(s)
+                body.addStatement(d)
+            else:
+                debug_print(s)
+                debug_print(s.java_name)
+                raise RuntimeError
 
         # handle decorator_list
 
