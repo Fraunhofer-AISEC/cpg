@@ -1,0 +1,29 @@
+package de.fraunhofer.aisec.cpg
+
+entity ScopeManager {
+
+	var node;
+
+	op instantiate {
+		de.fraunhofer.aisec.cpg.frontends.LanguageFrontend.getScopeManager();
+	}
+
+	op enterScope {
+	    de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager.enterScope(node);
+    }
+
+    op leaveScope {
+        de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager.leaveScope(node);
+    }
+
+}
+
+rule ScopeLeaving {
+    using
+        ScopeManager as s
+    ensure
+        order s.enterScope(),
+            s.leaveScope()
+    onfail
+        ORDER_FAIL
+}
