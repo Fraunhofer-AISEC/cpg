@@ -34,17 +34,14 @@ func (this *GoLanguageFrontend) HandleFile(fset *token.FileSet, file *ast.File) 
 	// set current TU
 	this.SetCurrentTU(tu)
 
-	/*for _, imprt := range file.Imports {
-		i := cpg.NewIncludeDeclaration(fset, imprt)
-
-		i.SetName(getImportName(imprt))
-		i.SetFilename(imprt.Path.Value[1 : len(imprt.Path.Value)-1])
+	for _, imprt := range file.Imports {
+		i := this.handleImportSpec(fset, imprt)
 
 		err = scope.AddDeclaration((*cpg.Declaration)(i))
 		if err != nil {
 			log.Fatal(err)
 		}
-	}*/
+	}
 
 	// create a new namespace declaration, representing the package
 	p := cpg.NewNamespaceDeclaration(fset, nil, file.Name.Name, fmt.Sprintf("package %s", file.Name.Name))
@@ -238,7 +235,9 @@ func (this *GoLanguageFrontend) handleGenDecl(fset *token.FileSet, genDecl *ast.
 		case *ast.TypeSpec:
 			return (*jnigi.ObjectRef)(this.handleTypeSpec(fset, v))
 		case *ast.ImportSpec:
-			return (*jnigi.ObjectRef)(this.handleImportSpec(fset, v))
+			// somehow these end up duplicate in the AST, so do not handle them here
+			return nil
+			/*return (*jnigi.ObjectRef)(this.handleImportSpec(fset, v))*/
 		default:
 			this.LogError("Not parsing specication of type %T yet: %+v", v, v)
 		}
