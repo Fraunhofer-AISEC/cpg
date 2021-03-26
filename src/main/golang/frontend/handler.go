@@ -485,6 +485,8 @@ func (this *GoLanguageFrontend) handleAssignStmt(fset *token.FileSet, assignStmt
 			d.SetInitializer(rhs)
 		}
 
+		this.GetScopeManager().AddDeclaration((*cpg.Declaration)(d))
+
 		stmt.SetSingleDeclaration((*cpg.Declaration)(d))
 
 		expr = (*cpg.Expression)(stmt)
@@ -519,6 +521,8 @@ func (this *GoLanguageFrontend) handleDeclStmt(fset *token.FileSet, declStmt *as
 	d := this.handleDecl(fset, declStmt.Decl)
 
 	stmt.SetSingleDeclaration((*cpg.Declaration)(d))
+
+	this.GetScopeManager().AddDeclaration(d)
 
 	return (*cpg.Expression)(stmt)
 }
@@ -755,6 +759,8 @@ func (this *GoLanguageFrontend) handleSelectorExpr(fset *token.FileSet, selector
 	m.SetBase(base)
 	(*cpg.Node)(m).SetName(selectorExpr.Sel.Name)
 
+	this.LogDebug("Object is %+v", selectorExpr.Sel.Obj)
+
 	// For now we just let the VariableUsageResolver handle this. Therefore,
 	// we can not differentiate between field access to a receiver, an object
 	// or a const field within a package at this point.
@@ -820,6 +826,8 @@ func (this *GoLanguageFrontend) handleIdent(fset *token.FileSet, ident *ast.Iden
 	// then set the refersTo, because our regular CPG passes will not resolve them
 	if i != nil && !(*jnigi.ObjectRef)(i).IsNil() {
 		ref.SetRefersTo((*cpg.Declaration)(i))
+	} else {
+		this.GetScopeManager().ConnectToLocal(ref)
 	}
 
 	ref.SetName(ident.Name)
@@ -884,8 +892,12 @@ func (this *GoLanguageFrontend) handleType(typeExpr ast.Expr) *cpg.Type {
 
 		return t
 	case *ast.FuncType:
-		// for now, we are only interested in the return type
-		return this.handleType(v.Results.List[0].Type)
+		if v.Results == nil {
+			return cpg.TypeParser_createFrom("void", false)
+		} else {
+			// for now, we are only interested in the return type
+			return this.handleType(v.Results.List[0].Type)
+		}
 	}
 
 	return cpg.UnknownType_getUnknown()

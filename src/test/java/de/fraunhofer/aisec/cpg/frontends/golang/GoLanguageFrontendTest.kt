@@ -446,4 +446,36 @@ class GoLanguageFrontendTest : BaseTest() {
         assertNotNull(third)
         assertEquals("third", third.name)
     }
+
+    @Test
+    fun testMemberCall() {
+        val topLevel = Path.of("src", "test", "resources", "golang")
+        val tu = TestUtils.analyzeAndGetFirstTU(listOf(topLevel.resolve("call.go").toFile()), topLevel, true)
+
+        assertNotNull(tu)
+
+        val p = tu.getDeclarationsByName("p", NamespaceDeclaration::class.java).iterator().next()
+
+        val main = p.getDeclarationsByName("main", FunctionDeclaration::class.java).iterator().next()
+
+        assertNotNull(main)
+
+        val body = main.body as? CompoundStatement
+
+        assertNotNull(body)
+
+        val c = (body.statements[0] as? DeclarationStatement)?.singleDeclaration
+
+        assertNotNull(c)
+
+        val call = body.statements[1] as? MemberCallExpression
+
+        assertNotNull(call)
+
+        val base = call.base as? DeclaredReferenceExpression
+
+        assertNotNull(base)
+        assertEquals(c, base.refersTo)
+    }
+
 }
