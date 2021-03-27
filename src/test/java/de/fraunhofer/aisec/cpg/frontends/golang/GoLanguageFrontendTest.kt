@@ -5,13 +5,11 @@ import de.fraunhofer.aisec.cpg.TestUtils
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
-import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser
-import org.checkerframework.checker.nullness.qual.Nullable
 import org.junit.jupiter.api.Test
 import java.nio.file.Path
-import java.nio.file.Paths
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
@@ -411,7 +409,7 @@ class GoLanguageFrontendTest : BaseTest() {
         val switch = body.statements.first() as? SwitchStatement
 
         assertNotNull(switch)
-        
+
         val list = switch.statement as? CompoundStatement
 
         assertNotNull(list)
@@ -450,7 +448,12 @@ class GoLanguageFrontendTest : BaseTest() {
     @Test
     fun testMemberCall() {
         val topLevel = Path.of("src", "test", "resources", "golang")
-        val tu = TestUtils.analyzeAndGetFirstTU(listOf(topLevel.resolve("call.go").toFile()), topLevel, true)
+        val tu = TestUtils.analyzeAndGetFirstTU(
+            listOf(
+                topLevel.resolve("call.go").toFile(),
+                topLevel.resolve("struct.go").toFile()
+            ), topLevel, true
+        )
 
         assertNotNull(tu)
 
@@ -464,9 +467,14 @@ class GoLanguageFrontendTest : BaseTest() {
 
         assertNotNull(body)
 
-        val c = (body.statements[0] as? DeclarationStatement)?.singleDeclaration
+        val c = (body.statements[0] as? DeclarationStatement)?.singleDeclaration as? VariableDeclaration
 
         assertNotNull(c)
+
+        val newMyStruct = c.initializer as? CallExpression
+
+        assertNotNull(newMyStruct)
+        assertFalse(newMyStruct.invokes[0].isImplicit)
 
         val call = body.statements[1] as? MemberCallExpression
 

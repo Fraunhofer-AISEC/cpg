@@ -29,6 +29,7 @@ package de.fraunhofer.aisec.cpg.passes.scopes;
 import static de.fraunhofer.aisec.cpg.helpers.Util.errorWithFileLocation;
 
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
+import de.fraunhofer.aisec.cpg.graph.HasType;
 import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.declarations.*;
 import de.fraunhofer.aisec.cpg.graph.declarations.EnumDeclaration;
@@ -234,7 +235,30 @@ public class ScopeManager {
       } else if (nodeToScope instanceof TryStatement) {
         newScope = new TryScope(nodeToScope);
       } else if (nodeToScope instanceof NamespaceDeclaration) {
-        newScope = new NameScope(nodeToScope, getCurrentNamePrefix(), lang.getNamespaceDelimiter());
+        // this is a little workaround to solve issues around namespaces
+        // the challenge is, that if we have two files that have functions
+        // belonging to the same namespace, they need to end up in the same NameScope,
+        // otherwise the call resolver will not find them. But we still need to be able
+        // to treat the namespace declaration as an AST node unique to each file. So in
+        // the example we want to up with two namespace declaration that point to the same
+        // name scope in the end.
+
+        // First, check if the namespace already exists in our scope
+        // TODO: proper resolving of the namespace according to the syntax?
+        Node finalNodeToScope = nodeToScope;
+        var existing =
+            ((StructureDeclarationScope) currentScope)
+                .getStructureDeclarations().stream()
+                    .filter(x -> Objects.equals(x.getName(), finalNodeToScope.getName()))
+                    .findFirst();
+
+        if (existing.isPresent()) {
+          nodeToScope = existing.get();
+          newScope = scopeMap.get(nodeToScope);
+        } else {
+          newScope =
+              new NameScope(nodeToScope, getCurrentNamePrefix(), lang.getNamespaceDelimiter());
+        }
       } else {
         LOGGER.error("No known scope for AST-nodes of type {}", nodeToScope.getClass());
         return;
@@ -526,16 +550,17 @@ public class ScopeManager {
    * @return
    */
   @Nullable
-  private ValueDeclaration resolve(Scope scope, DeclaredReferenceExpression ref) {
+  private ValueDeclaration resolve(Scope scope, Node ref) {
     if (scope instanceof ValueDeclarationScope) {
       for (ValueDeclaration valDecl : ((ValueDeclarationScope) scope).getValueDeclarations()) {
         if (valDecl.getName().equals(ref.getName())) {
 
-          // If the reference seems to point to a function the entire signature is checked for
+          // If the reference qseems to point to a function the entire signature is checked for
           // equality
-          if (ref.getType() instanceof FunctionPointerType
+          if (ref instanceof HasType
+              && ((HasType) ref).getType() instanceof FunctionPointerType
               && valDecl instanceof FunctionDeclaration) {
-            FunctionPointerType fptrType = (FunctionPointerType) ref.getType();
+            FunctionPointerType fptrType = (FunctionPointerType) ((HasType) ref).getType();
             FunctionDeclaration d = (FunctionDeclaration) valDecl;
             if (d.getType().equals(fptrType.getReturnType())
                 && d.hasSignature(fptrType.getParameters())) {
