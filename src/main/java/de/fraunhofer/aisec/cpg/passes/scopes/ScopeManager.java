@@ -253,9 +253,16 @@ public class ScopeManager {
                     .findFirst();
 
         if (existing.isPresent()) {
-          nodeToScope = existing.get();
-          newScope = scopeMap.get(nodeToScope);
-        } else {
+          var oldNode = existing.get();
+          newScope = scopeMap.get(oldNode);
+
+          // might still be non-existing in some cases because this is hacky
+          if (newScope != null) {
+            nodeToScope = oldNode;
+          }
+        }
+
+        if (newScope == null) {
           newScope =
               new NameScope(nodeToScope, getCurrentNamePrefix(), lang.getNamespaceDelimiter());
         }
