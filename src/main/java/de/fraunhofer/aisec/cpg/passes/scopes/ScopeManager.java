@@ -32,24 +32,7 @@ import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
 import de.fraunhofer.aisec.cpg.graph.HasType;
 import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.declarations.*;
-import de.fraunhofer.aisec.cpg.graph.declarations.EnumDeclaration;
-import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration;
-import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration;
-import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration;
-import de.fraunhofer.aisec.cpg.graph.statements.AssertStatement;
-import de.fraunhofer.aisec.cpg.graph.statements.BreakStatement;
-import de.fraunhofer.aisec.cpg.graph.statements.CatchClause;
-import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement;
-import de.fraunhofer.aisec.cpg.graph.statements.ContinueStatement;
-import de.fraunhofer.aisec.cpg.graph.statements.DoStatement;
-import de.fraunhofer.aisec.cpg.graph.statements.ForEachStatement;
-import de.fraunhofer.aisec.cpg.graph.statements.ForStatement;
-import de.fraunhofer.aisec.cpg.graph.statements.IfStatement;
-import de.fraunhofer.aisec.cpg.graph.statements.LabelStatement;
-import de.fraunhofer.aisec.cpg.graph.statements.Statement;
-import de.fraunhofer.aisec.cpg.graph.statements.SwitchStatement;
-import de.fraunhofer.aisec.cpg.graph.statements.TryStatement;
-import de.fraunhofer.aisec.cpg.graph.statements.WhileStatement;
+import de.fraunhofer.aisec.cpg.graph.statements.*;
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression;
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression;
 import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType;
@@ -245,24 +228,31 @@ public class ScopeManager {
 
         // First, check if the namespace already exists in our scope
         // TODO: proper resolving of the namespace according to the syntax?
-        Node finalNodeToScope = nodeToScope;
         var existing =
             ((StructureDeclarationScope) currentScope)
                 .getStructureDeclarations().stream()
-                    .filter(x -> Objects.equals(x.getName(), finalNodeToScope.getName()))
+                    .filter(x -> Objects.equals(x.getName(), nodeToScope.getName()))
                     .findFirst();
 
         if (existing.isPresent()) {
           var oldNode = existing.get();
-          newScope = scopeMap.get(oldNode);
+          var oldScope = scopeMap.get(oldNode);
 
           // might still be non-existing in some cases because this is hacky
-          if (newScope != null) {
-            nodeToScope = oldNode;
-          }
-        }
+          if (oldScope != null) {
+            // update the AST node to this translation unit declaration
+            oldScope.astNode = nodeToScope;
 
-        if (newScope == null) {
+            // set current scope
+            currentScope = oldScope;
+
+            // make it also available in the scope map, otherwise, we cannot leave the scope
+            scopeMap.put(oldScope.astNode, oldScope);
+          } else {
+            newScope =
+                new NameScope(nodeToScope, getCurrentNamePrefix(), lang.getNamespaceDelimiter());
+          }
+        } else {
           newScope =
               new NameScope(nodeToScope, getCurrentNamePrefix(), lang.getNamespaceDelimiter());
         }
@@ -270,11 +260,13 @@ public class ScopeManager {
         LOGGER.error("No known scope for AST-nodes of type {}", nodeToScope.getClass());
         return;
       }
-      pushScope(newScope);
     }
-    currentScope = scopeMap.get(nodeToScope);
+
     if (newScope != null) {
+      pushScope(newScope);
       newScope.setScopedName(getCurrentNamePrefix());
+    } else {
+      currentScope = scopeMap.get(nodeToScope);
     }
   }
 
@@ -552,6 +544,8 @@ public class ScopeManager {
    * Resolves only references to Values in the current scope, static references to other visible
    * records are not resolved over the ScopeManager.
    *
+   * <p>TODO: We should merge this function with {@link #resolveFunction(Scope, CallExpression)}
+   *
    * @param scope
    * @param ref
    * @return
@@ -562,7 +556,7 @@ public class ScopeManager {
       for (ValueDeclaration valDecl : ((ValueDeclarationScope) scope).getValueDeclarations()) {
         if (valDecl.getName().equals(ref.getName())) {
 
-          // If the reference qseems to point to a function the entire signature is checked for
+          // If the reference seems to point to a function the entire signature is checked for
           // equality
           if (ref instanceof HasType
               && ((HasType) ref).getType() instanceof FunctionPointerType

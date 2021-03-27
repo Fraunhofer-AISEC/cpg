@@ -448,14 +448,16 @@ class GoLanguageFrontendTest : BaseTest() {
     @Test
     fun testMemberCall() {
         val topLevel = Path.of("src", "test", "resources", "golang")
-        val tu = TestUtils.analyzeAndGetFirstTU(
+        val tus = TestUtils.analyze(
             listOf(
                 topLevel.resolve("call.go").toFile(),
                 topLevel.resolve("struct.go").toFile()
             ), topLevel, true
         )
 
-        assertNotNull(tu)
+        assertNotNull(tus)
+
+        val tu = tus.first()
 
         val p = tu.getDeclarationsByName("p", NamespaceDeclaration::class.java).iterator().next()
 
@@ -473,8 +475,14 @@ class GoLanguageFrontendTest : BaseTest() {
 
         val newMyStruct = c.initializer as? CallExpression
 
+        // fetch the function declaration from the other TU
+        val tu2 = tus[1]
+
+        val p2 = tu2.getDeclarationsByName("p", NamespaceDeclaration::class.java).iterator().next()
+        val newMyStructDef = p2.getDeclarationsByName("NewMyStruct", FunctionDeclaration::class.java).iterator().next()
+
         assertNotNull(newMyStruct)
-        assertFalse(newMyStruct.invokes[0].isImplicit)
+        assertTrue(newMyStruct.invokes.contains(newMyStructDef))
 
         val call = body.statements[1] as? MemberCallExpression
 
