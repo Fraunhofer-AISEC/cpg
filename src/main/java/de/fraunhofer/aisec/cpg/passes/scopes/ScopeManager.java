@@ -219,6 +219,7 @@ public class ScopeManager {
         newScope = new TryScope(nodeToScope);
       } else if (nodeToScope instanceof NamespaceDeclaration) {
         // this is a little workaround to solve issues around namespaces
+
         // the challenge is, that if we have two files that have functions
         // belonging to the same namespace, they need to end up in the same NameScope,
         // otherwise the call resolver will not find them. But we still need to be able
@@ -240,7 +241,7 @@ public class ScopeManager {
 
           // might still be non-existing in some cases because this is hacky
           if (oldScope != null) {
-            // update the AST node to this translation unit declaration
+            // update the AST node to this namespace declaration
             oldScope.astNode = nodeToScope;
 
             // set current scope

@@ -472,6 +472,8 @@ class GoLanguageFrontendTest : BaseTest() {
         val c = (body.statements[0] as? DeclarationStatement)?.singleDeclaration as? VariableDeclaration
 
         assertNotNull(c)
+        // type will be inferred from the function declaration
+        assertEquals(TypeParser.createFrom("p.MyStruct*", false), c.type)
 
         val newMyStruct = c.initializer as? CallExpression
 
