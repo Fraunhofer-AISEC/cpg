@@ -1,29 +1,28 @@
 package de.fraunhofer.aisec.cpg
 
-entity ScopeManager {
-
-	var node;
+entity Declaration {
 
 	op instantiate {
-		de.fraunhofer.aisec.cpg.frontends.LanguageFrontend.getScopeManager();
+		de.fraunhofer.aisec.cpg.graph.NodeBuilder.newRecordDeclaration(_, _, _);
 	}
 
 	op enterScope {
-	    de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager.enterScope(node);
+	    de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager.enterScope(this);
     }
 
     op leaveScope {
-        de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager.leaveScope(node);
+        de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager.leaveScope(this);
     }
 
 }
 
 rule ScopeLeaving {
     using
-        ScopeManager as s
+        Declaration as d
     ensure
-        order s.enterScope(),
-            s.leaveScope()
+        order d.instantiate(),
+            d.enterScope(),
+            d.leaveScope()
     onfail
         ORDER_FAIL
 }
