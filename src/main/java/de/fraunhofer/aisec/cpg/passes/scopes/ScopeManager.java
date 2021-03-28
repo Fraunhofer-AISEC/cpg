@@ -180,7 +180,16 @@ public class ScopeManager {
 
   public void enterScopeIfExists(Node nodeToScope) {
     if (scopeMap.containsKey(nodeToScope)) {
-      currentScope = scopeMap.get(nodeToScope);
+      var scope = scopeMap.get(nodeToScope);
+
+      // we need a special handling of name spaces, because
+      // thy are associated to more than one AST node
+      if (scope instanceof NameScope) {
+        // update AST (see enterScope for an explanation)
+        scope.astNode = nodeToScope;
+      }
+
+      currentScope = scope;
     }
   }
 

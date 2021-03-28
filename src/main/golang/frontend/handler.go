@@ -108,8 +108,6 @@ func (this *GoLanguageFrontend) handleFuncDecl(fset *token.FileSet, funcDecl *as
 		receiver.SetName(recv.Names[0].Name)
 		receiver.SetType(recordType)
 
-		this.LogDebug("still here")
-
 		err := m.SetReceiver(receiver)
 		if err != nil {
 			log.Fatal(err)
@@ -759,8 +757,6 @@ func (this *GoLanguageFrontend) handleSelectorExpr(fset *token.FileSet, selector
 
 	m.SetBase(base)
 	(*cpg.Node)(m).SetName(selectorExpr.Sel.Name)
-
-	this.LogDebug("Object is %+v", selectorExpr.Sel.Obj)
 
 	// For now we just let the VariableUsageResolver handle this. Therefore,
 	// we can not differentiate between field access to a receiver, an object
