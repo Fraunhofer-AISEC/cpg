@@ -435,6 +435,8 @@ func (this *GoLanguageFrontend) handleStmt(fset *token.FileSet, stmt ast.Stmt) *
 		return (*cpg.Statement)(this.handleSwitchStmt(fset, v))
 	case *ast.CaseClause:
 		return (*cpg.Statement)(this.handleCaseClause(fset, v))
+	case *ast.BlockStmt:
+		return (*cpg.Statement)(this.handleBlockStmt(fset, v))
 	default:
 		this.LogError("Not parsing statement of type %T yet: %+v", v, v)
 	}
