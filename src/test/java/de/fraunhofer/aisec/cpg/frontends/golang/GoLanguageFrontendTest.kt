@@ -286,6 +286,18 @@ class GoLanguageFrontendTest : BaseTest() {
         val newMyStruct = p.getDeclarationsByName("NewMyStruct", FunctionDeclaration::class.java).iterator().next()
 
         assertNotNull(newMyStruct)
+
+        val body = newMyStruct.body as? CompoundStatement
+
+        assertNotNull(body)
+
+        val `return` = body.statements.first() as? ReturnStatement
+
+        assertNotNull(`return`)
+
+        val returnValue = `return`.returnValue as? UnaryOperator
+
+        assertNotNull(returnValue)
     }
 
     @Test

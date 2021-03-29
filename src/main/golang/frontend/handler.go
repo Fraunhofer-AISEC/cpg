@@ -472,6 +472,8 @@ func (this *GoLanguageFrontend) handleExpr(fset *token.FileSet, expr ast.Expr) *
 		return (*cpg.Expression)(this.handleCallExpr(fset, v))
 	case *ast.BinaryExpr:
 		return (*cpg.Expression)(this.handleBinaryExpr(fset, v))
+	case *ast.UnaryExpr:
+		return (*cpg.Expression)(this.handleUnaryExpr(fset, v))
 	case *ast.SelectorExpr:
 		return (*cpg.Expression)(this.handleSelectorExpr(fset, v))
 	case *ast.BasicLit:
@@ -772,6 +774,24 @@ func (this *GoLanguageFrontend) handleBinaryExpr(fset *token.FileSet, binaryExpr
 
 	return b
 }
+
+func (this *GoLanguageFrontend) handleUnaryExpr(fset *token.FileSet, unaryExpr *ast.UnaryExpr) *cpg.UnaryOperator {
+	u := cpg.NewUnaryOperator(fset, unaryExpr)
+
+	input := this.handleExpr(fset, unaryExpr.X)
+
+	err := u.SetOperatorCode(unaryExpr.Op.String())
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if input != nil {
+		u.SetInput(input)
+	}
+
+	return u
+}
+
 func (this *GoLanguageFrontend) handleSelectorExpr(fset *token.FileSet, selectorExpr *ast.SelectorExpr) *cpg.MemberExpression {
 	base := this.handleExpr(fset, selectorExpr.X)
 
