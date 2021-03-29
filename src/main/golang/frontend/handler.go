@@ -606,7 +606,7 @@ func (this *GoLanguageFrontend) handleCaseClause(fset *token.FileSet, caseClause
 		}
 	}
 
-	// this is a little trick, to not add the case statement in handleStmt because we added it already
+	// this is a little trick, to not add the case statement in handleStmt because we added it already.
 	// otherwise, the order is screwed up.
 	return nil
 }
