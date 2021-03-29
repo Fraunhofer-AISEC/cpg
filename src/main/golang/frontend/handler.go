@@ -415,6 +415,26 @@ func (this *GoLanguageFrontend) handleBlockStmt(fset *token.FileSet, blockStmt *
 	return c
 }
 
+func (this *GoLanguageFrontend) handleReturnStmt(fset *token.FileSet, returnStmt *ast.ReturnStmt) *cpg.ReturnStatement {
+	this.LogDebug("Handling return statement: %+v", *returnStmt)
+
+	r := cpg.NewReturnStatement(fset, returnStmt)
+
+	if returnStmt.Results != nil && len(returnStmt.Results) > 0 {
+		e := this.handleExpr(fset, returnStmt.Results[0])
+
+		// TODO: parse more than one result expression
+
+		if e != nil {
+			r.SetReturnValue(e)
+		}
+	} else {
+		// TODO: connect result statement to result variables
+	}
+
+	return r
+}
+
 func (this *GoLanguageFrontend) handleStmt(fset *token.FileSet, stmt ast.Stmt) *cpg.Statement {
 	this.LogDebug("Handling statement (%T): %+v", stmt, stmt)
 
@@ -435,6 +455,8 @@ func (this *GoLanguageFrontend) handleStmt(fset *token.FileSet, stmt ast.Stmt) *
 		return (*cpg.Statement)(this.handleCaseClause(fset, v))
 	case *ast.BlockStmt:
 		return (*cpg.Statement)(this.handleBlockStmt(fset, v))
+	case *ast.ReturnStmt:
+		return (*cpg.Statement)(this.handleReturnStmt(fset, v))
 	default:
 		this.LogError("Not parsing statement of type %T yet: %+v", v, v)
 	}

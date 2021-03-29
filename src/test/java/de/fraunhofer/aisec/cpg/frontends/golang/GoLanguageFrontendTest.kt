@@ -282,6 +282,10 @@ class GoLanguageFrontendTest : BaseTest() {
 
         assertEquals("MyFunc", myFunc.name)
         assertEquals(TypeParser.createFrom("string", false), myFunc.type)
+
+        val newMyStruct = p.getDeclarationsByName("NewMyStruct", FunctionDeclaration::class.java).iterator().next()
+
+        assertNotNull(newMyStruct)
     }
 
     @Test
