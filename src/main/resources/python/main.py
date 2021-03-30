@@ -242,37 +242,49 @@ class MyWalker(ast.NodeVisitor):
         debug_print(ast.dump(node))
         binop = BinaryOperator()
         self.add_loc_info(node, binop)
-        binop.setOperatorCode(node.op)
-        binop.setLhs(self.visit(node.left))
-        binop.setRhs(self.visit(node.right))
         if isinstance(node.op, ast.Add):
-            binop.setName("Add")
+            binop.setOperatorCode("+")
+            binop.setName("+")
         elif isinstance(node.op, ast.Sub):
-            binop.setName("Sub")
+            binop.setOperatorCode("-")
+            binop.setName("-")
         elif isinstance(node.op, ast.Mult):
-            binop.setName("Mult")
+            binop.setOperatorCode("*")
+            binop.setName("*")
         elif isinstance(node.op, ast.Div):
-            binop.setName("Div")
+            binop.setOperatorCode("/")
+            binop.setName("/")
         elif isinstance(node.op, ast.FloorDiv):
+            binop.setOperatorCode("FloorDiv")
             binop.setName("FloorDiv")
         elif isinstance(node.op, ast.Mod):
-            binop.setName("Mod")
+            binop.setOperatorCode("%")
+            binop.setName("%")
         elif isinstance(node.op, ast.Pow):
+            binop.setOperatorCode("Pow")
             binop.setName("Pow")
         elif isinstance(node.op, ast.LShift):
+            binop.setOperatorCode("LShift")
             binop.setName("LShift")
         elif isinstance(node.op, ast.RShift):
+            binop.setOperatorCode("RShift")
             binop.setName("RShift")
         elif isinstance(node.op, ast.BitOr):
+            binop.setOperatorCode("BitOr")
             binop.setName("BitOr")
         elif isinstance(node.op, ast.BitXor):
+            binop.setOperatorCode("BitXor")
             binop.setName("BitXor")
         elif isinstance(node.op, ast.BitAnd):
+            binop.setOperatorCode("BitAnd")
             binop.setName("BitAnd")
         elif isinstance(node.op, ast.MatMult):
+            binop.setOperatorCode("MatMult")
             binop.setName("MatMult")
         else:
             raise NotImplementedError
+        binop.setLhs(self.visit(node.left))
+        binop.setRhs(self.visit(node.right))
         return binop
 
     def visit_Add(self, node):
@@ -407,6 +419,7 @@ class MyWalker(ast.NodeVisitor):
         if isinstance(node.func, ast.Name):
             call = CallExpression()
             call.setName(node.func.id)
+            call.setFqn(node.func.id)
         elif isinstance(node.func, ast.Attribute):
             call = MemberCallExpression()
             call.setName(node.func.value)
@@ -514,8 +527,8 @@ class MyWalker(ast.NodeVisitor):
             v = VariableDeclaration()
             self.add_loc_info(node, v)
             v.setName(target.id)
-            self.scopemanager.addDeclaration(v)
             v.setInitializer(self.visit(node.value))
+            self.scopemanager.addDeclaration(v)
             return v
 
     def visit_AnnAssign(self, node):
@@ -597,6 +610,7 @@ class MyWalker(ast.NodeVisitor):
         stmt = IfStatement()
         self.add_loc_info(node, stmt)
         stmt.setCondition(self.visit(node.test))
+        stmt.setName("If")
         if len(node.body) == 1:
             stmt.setThenStatement(self.visit(node.body[0]))
         else:
@@ -684,7 +698,7 @@ class MyWalker(ast.NodeVisitor):
 
         # handle args
         # scopeManager adds them to fd
-        self.visit(node.args)
+        self.visit_arguments(node.args, fd)
 
         # handle body
         body = CompoundStatement()
@@ -692,12 +706,9 @@ class MyWalker(ast.NodeVisitor):
         self.add_loc_info(node, body)
         fd.setBody(body)
         for stmt in node.body:
-            debug_print(stmt)
             s = self.visit(stmt)
-            debug_print(s)
-            debug_print(type(s))
-            debug_print(s.getClass())
-            debug_print(s.java_name)
+
+            #TODO
             if s.java_name.startswith('de.fraunhofer.aisec.cpg.graph.statements.'):
                 body.addStatement(self.visit(stmt))
             elif s.java_name.startswith('de.fraunhofer.aisec.cpg.graph.declarations.'):
@@ -713,11 +724,12 @@ class MyWalker(ast.NodeVisitor):
 
         # handle decorator_list
 
-        # handle returns
+        # handle return annotation
 
         # handle type_comment
 
         self.scopemanager.leaveScope(fd)
+        self.scopemanager.addDeclaration(fd)
 
         return fd
 
@@ -725,13 +737,17 @@ class MyWalker(ast.NodeVisitor):
         debug_print(ast.dump(node))
         raise NotImplementedError
 
-    def visit_arguments(self, node):
+    def visit_arguments(self, node, fd = None):
         debug_print(ast.dump(node))
-        plist = []
+        if fd != None:
+            debug_print("visit_arguments with FunctionDeclaration")
         for p in node.posonlyargs:
             raise NotImplementedError
         for p in node.args:
-            plist.append(self.visit(p))
+            x = self.visit(p)
+            if fd != None:
+                #fd.addParameter(x)
+                pass # PVD -> automagically handled by cpg
         if node.vararg is not None:
             raise NotImplementedError
         for p in node.kwonlyargs:
@@ -744,22 +760,24 @@ class MyWalker(ast.NodeVisitor):
             pass
             # raise NotImplementedError
             # no cpg support???
-        return plist
+        return
 
     def visit_arg(self, node):
         debug_print(ast.dump(node))
         pvd = ParamVariableDeclaration()
         self.add_loc_info(node, pvd)
         pvd.setName(node.arg)
+        if node.annotation != None:
+            pvd.setType(TypeParser.createFrom(node.annotation.id, False))
         self.scopemanager.addDeclaration(pvd)
-        # TODO handle annotation
         return pvd
 
     def visit_Return(self, node):
         debug_print(ast.dump(node))
         r = ReturnStatement()
         self.add_loc_info(node, r)
-        r.setReturnValue(self.visit(node.value))
+        if node.value != None:
+            r.setReturnValue(self.visit(node.value))
         r.setName("return")
         return r
 

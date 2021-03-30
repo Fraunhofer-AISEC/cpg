@@ -74,6 +74,88 @@ class PythonFrontendTest : BaseTest() {
     }
 
     @Test
+    fun testFunctionDeclaration() {
+        val topLevel = Path.of("src", "test", "resources", "python")
+        val tu = TestUtils.analyzeAndGetFirstTU(listOf(topLevel.resolve("function.py").toFile()), topLevel, true)
+
+        assertNotNull(tu)
+
+        val p = tu.getDeclarationsByName("function", NamespaceDeclaration::class.java).iterator().next()
+        assertNotNull(p)
+
+        val foo = p.declarations.first() as? FunctionDeclaration
+        assertNotNull(foo)
+
+        val bar = p.declarations[1] as? FunctionDeclaration
+        assertNotNull(bar)
+        assertEquals(1, bar.parameters.size)
+
+        var body = foo.body as? CompoundStatement
+        assertNotNull(body)
+
+        var callExpression = body.statements.first() as? CallExpression
+        assertNotNull(callExpression)
+
+        assertEquals("bar", callExpression.name)
+        assertEquals(bar, callExpression.invokes.iterator().next())
+
+        val s = bar.parameters.first()
+        assertNotNull(s)
+        assertEquals("s", s.name)
+        assertEquals(TypeParser.createFrom("str", false), s.type)
+
+        assertEquals("bar", bar.name)
+
+        body = bar.body as? CompoundStatement
+        assertNotNull(body)
+
+        callExpression = body.statements.first() as? CallExpression
+        assertNotNull(callExpression)
+
+        assertEquals("print", callExpression.fqn)
+
+        val literal = callExpression.arguments.first() as? Literal<*>
+        assertNotNull(literal)
+
+        assertEquals("bar(s) here: ", literal.value)
+        assertEquals(TypeParser.createFrom("str", false), literal.type)
+
+        val ref = callExpression.arguments[1] as? DeclaredReferenceExpression
+        assertNotNull(ref)
+
+        assertEquals("s", ref.name)
+        assertEquals(s, ref.refersTo)
+
+        val stmt = body.statements[1] as? DeclarationStatement
+        assertNotNull(stmt)
+
+        val a = stmt.singleDeclaration as? VariableDeclaration
+        assertNotNull(a)
+
+        assertEquals("a", a.name)
+
+        val op = a.initializer as? BinaryOperator
+        assertNotNull(op)
+
+        assertEquals("+", op.operatorCode)
+
+        val lhs = op.lhs as? Literal<*>
+        assertNotNull(lhs)
+
+        assertEquals(1, (lhs.value as? Long)?.toInt())
+
+        val rhs = op.rhs as? Literal<*>
+        assertNotNull(rhs)
+
+        assertEquals(2, (rhs.value as? Long)?.toInt())
+
+        val r = body.statements[2] as? ReturnStatement
+
+        assertNotNull(r)
+
+    }
+
+    @Test
     fun testIf() {
         val topLevel = Path.of("src", "test", "resources", "python")
         val tu = TestUtils.analyzeAndGetFirstTU(listOf(topLevel.resolve("if.py").toFile()), topLevel, true)
