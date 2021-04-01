@@ -36,7 +36,7 @@ jobs:
             -Dsonar.host.url=https://sonarcloud.io \
             -Dsonar.login=$SONAR_TOKEN
           else
-            ./gradlew --parallel -Pversion=$VERSION spotlessCheck build buildExperimental
+            ./gradlew --parallel -Pversion=$VERSION -Pexperimental build
           fi
         id: build
         env:
