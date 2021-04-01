@@ -70,7 +70,6 @@ public class ControlFlowSensitiveDFGPass extends Pass {
    */
   public void handle(Node node) {
     if (node instanceof FunctionDeclaration) {
-
       ControlFlowSensitiveDFGPass.FunctionLevelFixpointIterator flfIterator =
           new ControlFlowSensitiveDFGPass.FunctionLevelFixpointIterator();
       flfIterator.handle(node);
@@ -265,13 +264,16 @@ public class ControlFlowSensitiveDFGPass extends Pass {
         // We use recursion when a eog path splits, if we can find a non-recursive variation of this
         // algorithm it may avoid some problems with scaling
         if (node.getNextEOG().size() > 1) {
+          Map<VariableDeclaration, Set<Node>> updatedVariables = new HashMap<>();
           for (Node next : node.getNextEOG()) {
             if (next instanceof VariableDeclaration) {
               addDFGToMap((VariableDeclaration) next, node, variables);
             }
-            iterateTillFixpoint(next, createShallowCopy(variables), endNode, stopBefore);
+            mergeStates(
+                updatedVariables,
+                iterateTillFixpoint(next, createShallowCopy(variables), endNode, stopBefore));
           }
-          return variables;
+          return updatedVariables;
         } else if (node.getNextEOG().isEmpty()) {
           return variables;
         } else {
@@ -305,16 +307,20 @@ public class ControlFlowSensitiveDFGPass extends Pass {
           Node nextEOG =
               currNode.getNextEOG().get(0); // Only one outgoing eog edge from an assignment
           // DeclaredReferenceExpression
-          iterationFunction.iterate(nextEOG, variables, binaryOperator, true);
+          Map<VariableDeclaration, Set<Node>> updatedVariables =
+              iterationFunction.iterate(
+                  nextEOG, createShallowCopy(variables), binaryOperator, false);
+
+          // necessary to return the updated variables state to the calling function as the return
+          // value returns the next node
+          variables.clear();
+          variables.putAll(updatedVariables);
 
           // Perform Delayed DFG modifications (after having processed the entire assignment)
           modifyDFGEdges(currNode, variables);
 
           // Update values of DFG Pass until the end of the assignment
-          return binaryOperator
-              .getPrevEOG()
-              .get(0); // Still has to compute the joinPoints at the assignment, we take one of its
-          // predecessors to ensure it running through the loop once
+          return binaryOperator;
         }
       }
       // Other DeclaredReferenceExpression that do not have a write assignment we do not have to
@@ -372,6 +378,7 @@ public class ControlFlowSensitiveDFGPass extends Pass {
         // We use recursion when a eog path splits, if we can find a non-recursive variation of this
         // algorithm it may avoid some problems with scaling
         if (node.getNextEOG().size() > 1) {
+          Map<VariableDeclaration, Set<Node>> updatedVariables = new HashMap<>();
           for (Node next : node.getNextEOG()) {
             if (next instanceof VariableDeclaration) {
               addDFGToMap((VariableDeclaration) next, node, variables);
@@ -379,10 +386,12 @@ public class ControlFlowSensitiveDFGPass extends Pass {
             if (!joinPoints.containsKey(
                 next)) { // As we are propagating from joinpoints we stop when we reach the next
               // joinpoint
-              propagateFromJoinPoints(next, createShallowCopy(variables), endNode, stopBefore);
+              mergeStates(
+                  updatedVariables,
+                  iterateTillFixpoint(next, createShallowCopy(variables), endNode, stopBefore));
             }
           }
-          return variables;
+          return updatedVariables;
         } else if (node.getNextEOG().isEmpty()) {
           return variables;
         } else {

@@ -26,8 +26,6 @@
 
 package de.fraunhofer.aisec.cpg.graph;
 
-import static de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.unwrap;
-
 import de.fraunhofer.aisec.cpg.graph.declarations.TypedefDeclaration;
 import de.fraunhofer.aisec.cpg.graph.edge.Properties;
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
@@ -86,16 +84,6 @@ public class Node implements IVisitable<Node>, Persistable {
   @Relationship(value = "EOG", direction = "OUTGOING")
   @NonNull
   protected List<PropertyEdge<Node>> nextEOG = new ArrayList<>();
-
-  /**
-   * outgoing control flow edges.
-   *
-   * @deprecated This Edge-Type is deprecated as it is less precise then the {@link Node#nextEOG}
-   */
-  @Deprecated(since = "3.4", forRemoval = true)
-  @NonNull
-  @Relationship(value = "CFG", direction = "OUTGOING")
-  protected List<PropertyEdge<Node>> nextCFG = new ArrayList<>();
 
   @NonNull
   @Relationship(value = "DFG", direction = "INCOMING")
@@ -242,37 +230,6 @@ public class Node implements IVisitable<Node>, Persistable {
 
   public void clearNextEOG() {
     this.nextEOG.clear();
-  }
-
-  /**
-   * @deprecated This Edge-Type is deprecated as it is less precise then the {@link Node#nextEOG}n
-   */
-  @NonNull
-  @Deprecated(since = "3.4", forRemoval = true)
-  public List<Node> getNextCFG() {
-    return unwrap(this.nextCFG);
-  }
-
-  /**
-   * @deprecated This Edge-Type is deprecated as it is less precise then the {@link Node#nextEOG}
-   */
-  @Deprecated(since = "3.4", forRemoval = true)
-  public void addNextCFG(Node node) {
-    var propertyEdge = new PropertyEdge<>(this, node);
-    propertyEdge.addProperty(Properties.INDEX, this.nextCFG.size());
-    this.nextCFG.add(propertyEdge);
-  }
-
-  /**
-   * outgoing control flow edges.
-   *
-   * @deprecated This Edge-Type is deprecated as it is less precise then the {@link Node#nextEOG}
-   */
-  @Deprecated(since = "3.4", forRemoval = true)
-  public void addNextCFG(Collection<? extends Node> collection) {
-    for (Node n : collection) {
-      addNextCFG(n);
-    }
   }
 
   @NonNull
