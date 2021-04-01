@@ -119,7 +119,9 @@ signing {
 }
 
 tasks.named<Test>("test") {
-    useJUnitPlatform()
+    useJUnitPlatform() {
+        excludeTags("experimental")
+    }
     maxHeapSize = "4048m"
 }
 
@@ -202,10 +204,15 @@ tasks.register("compileGolang") {
     }
 }
 
-tasks.named("compileJava") {
+tasks.register("buildExperimental") {
     dependsOn(":compileGolang")
+    dependsOn("testExperimental")
 }
 
-tasks.withType<Test> {
+tasks.register("testExperimental", Test::class.java) {
+    useJUnitPlatform {
+        includeTags("experimental")
+    }
+
     systemProperty("java.library.path", project.projectDir.resolve("src/main/golang"))
 }

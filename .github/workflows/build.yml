@@ -36,7 +36,7 @@ jobs:
             -Dsonar.host.url=https://sonarcloud.io \
             -Dsonar.login=$SONAR_TOKEN
           else
-            ./gradlew --parallel -Pversion=$VERSION spotlessCheck build
+            ./gradlew --parallel -Pversion=$VERSION spotlessCheck build buildExperimental
           fi
         id: build
         env:
@@ -48,7 +48,7 @@ jobs:
         uses: actions/upload-artifact@v2
         with:
           name: test
-          path: build/reports/tests/test
+          path: build/reports/tests
       - name: JavaDoc
         if: startsWith(github.ref, 'refs/tags/v')
         uses: JamesIves/github-pages-deploy-action@releases/v3
