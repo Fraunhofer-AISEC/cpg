@@ -168,7 +168,42 @@ public class EvaluationOrderGraphPass extends Pass {
     for (TranslationUnitDeclaration tu : result.getTranslationUnits()) {
       createEOG(tu);
       removeUnreachableEOGEdges(tu);
+      // checkEOGInvariant(tu); To insert when trying to check if the invariant holds
     }
+  }
+
+  /**
+   * Checks if every node that has another node in its next or previous EOG List is also contained
+   * in that nodes previous or next EOG list to ensure the bidirectionality of the relation in both
+   * lists.
+   *
+   * @param n
+   * @return
+   */
+  public boolean checkEOGInvariant(Node n) {
+    List<Node> allNodes = SubgraphWalker.flattenAST(n);
+    boolean ret = true;
+    for (Node node : allNodes) {
+      for (Node next : node.getNextEOG()) {
+        if (!next.getPrevEOG().contains(node)) {
+          LOGGER.warn(
+              "Violation to EOG invariant found: Node {} does not have a backreference to his EOG-redecesor {}.",
+              node,
+              next);
+          ret = false;
+        }
+      }
+      for (Node prev : node.getPrevEOG()) {
+        if (!prev.getNextEOG().contains(node)) {
+          LOGGER.warn(
+              "Violation to EOG invariant found: Node {} does not have a reference to his EOG-successor {}.",
+              node,
+              prev);
+          ret = false;
+        }
+      }
+    }
+    return ret;
   }
 
   /**

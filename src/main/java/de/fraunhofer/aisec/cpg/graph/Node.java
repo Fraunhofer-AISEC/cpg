@@ -178,7 +178,7 @@ public class Node implements IVisitable<Node>, Persistable {
   public void removePrevEOGEntries(@NonNull List<Node> prevEOGs) {
     for (Node n : prevEOGs) {
       List<PropertyEdge<Node>> remove =
-          PropertyEdge.findPropertyEdgesByPredicate(this.prevEOG, e -> e.getStart().equals(n));
+          PropertyEdge.findPropertyEdgesByPredicate(this.prevEOG, e -> e.getStart() == n);
       this.prevEOG.removeAll(remove);
     }
   }

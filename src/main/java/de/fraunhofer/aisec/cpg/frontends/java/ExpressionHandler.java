@@ -265,7 +265,6 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
         de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression uninitialzedInitializer =
             new UninitializedValue();
         declaration.setInitializer(uninitialzedInitializer);
-        declaration.getNextEOG();
       }
       lang.setCodeAndRegion(declaration, variable);
       declarationStatement.addToPropertyEdgeDeclaration(declaration);

@@ -295,7 +295,9 @@ public class PropertyEdge<T extends Node> implements Persistable {
     if (this == obj) return true;
     if (!(obj instanceof PropertyEdge)) return false;
     var propertyEdge = (PropertyEdge<?>) obj;
-    return Objects.equals(this.properties, propertyEdge.properties);
+    return Objects.equals(this.properties, propertyEdge.properties)
+        && this.start == propertyEdge.start
+        && this.end == propertyEdge.end;
   }
 
   @Override
