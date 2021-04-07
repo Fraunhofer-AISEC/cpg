@@ -119,7 +119,13 @@ signing {
 }
 
 tasks.named<Test>("test") {
-    useJUnitPlatform()
+    useJUnitPlatform {
+        if (!project.hasProperty("experimental")) {
+            excludeTags("experimental")
+        } else {
+            systemProperty("java.library.path", project.projectDir.resolve("src/main/golang"))
+        }
+    }
     maxHeapSize = "4048m"
 }
 
@@ -192,20 +198,18 @@ spotless {
     }
 }
 
-tasks.register("compileGolang") {
-    doLast {
-        project.exec {
-            commandLine("./build.sh")
-                .setStandardOutput(System.out)
-                .workingDir("src/main/golang")
+if (project.hasProperty("experimental")) {
+    tasks.register("compileGolang") {
+        doLast {
+            project.exec {
+                commandLine("./build.sh")
+                        .setStandardOutput(System.out)
+                        .workingDir("src/main/golang")
+            }
         }
     }
-}
 
-tasks.named("compileJava") {
-    dependsOn(":compileGolang")
-}
-
-tasks.withType<Test> {
-    systemProperty("java.library.path", project.projectDir.resolve("src/main/golang"))
+    tasks.named("compileJava") {
+        dependsOn(":compileGolang")
+    }
 }
