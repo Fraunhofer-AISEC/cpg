@@ -75,7 +75,7 @@ func.getParameters();
 
 ### Usage of Experimental Languages
 
-Some languages, such as Golang are marked as experimental and depend on other native libraries. These are NOT YET bundled in the release jars, so you need to build them manually.  
+Some languages, such as Golang are marked as experimental and depend on other native libraries. These are NOT YET bundled in the release jars, so you need to build them manually using the property `-Pexperimental` when using tasks such as `build` or `test`.
 
 #### Golang
 
