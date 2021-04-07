@@ -97,7 +97,7 @@ repositories {
     mavenCentral()
 
     ivy {
-        setUrl("https://download.eclipse.org/tools/cdt/releases/9.11/cdt-9.11.1/plugins")
+        setUrl("https://download.eclipse.org/tools/cdt/releases/10.2/cdt-10.2.0/plugins")
         metadataSources {
             artifact()
         }
@@ -165,11 +165,11 @@ dependencies {
     api("com.github.javaparser:javaparser-symbol-solver-core:3.20.2")
 
     // Eclipse dependencies
-    api("org.eclipse.platform:org.eclipse.core.runtime:3.18.0")
-    api("com.ibm.icu:icu4j:67.1")
+    api("org.eclipse.platform:org.eclipse.core.runtime:3.20.100")
+    api("com.ibm.icu:icu4j:68.2")
 
     // CDT
-    api("org.eclipse.cdt:core:6.11.1.202006011430")
+    api("org.eclipse.cdt:core:7.2.0.202102251239")
 
     // openCypher
     api("org.opencypher:parser-9.0:9.0.20210312")

@@ -23,7 +23,7 @@ The most recent version is being published to Maven central and can be used as a
 ```
 repositories {
     ivy {
-        setUrl("https://download.eclipse.org/tools/cdt/releases/9.11/cdt-9.11.1/plugins")
+        setUrl("https://download.eclipse.org/tools/cdt/releases/10.2/cdt-10.2.0/plugins")
         metadataSources {
             artifact()
         }
