@@ -576,6 +576,13 @@ class JavaLanguageFrontendTest extends BaseTest {
     var record = (RecordDeclaration) tu.getDeclarationAs(0, RecordDeclaration.class);
     assertNotNull(record);
 
+    var func = record.getMethods().stream().findFirst().orElse(null);
+    assertNotNull(func);
+    assertNotNull(func.getReceiver());
+
+    // make sure, that the type system correctly cleans up these duplicate types
+    assertSame(record.getThis().getType(), func.getReceiver().getType());
+
     var nodes = SubgraphWalker.flattenAST(record);
 
     var request =
