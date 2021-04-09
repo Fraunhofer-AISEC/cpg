@@ -35,6 +35,7 @@ import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import de.fraunhofer.aisec.cpg.graph.types.Type;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.checkerframework.checker.nullness.qual.NonNull;
@@ -293,14 +294,26 @@ public class RecordDeclaration extends Declaration implements DeclarationHolder 
     RecordDeclaration that = (RecordDeclaration) o;
     return super.equals(that)
         && Objects.equals(kind, that.kind)
-        && Objects.equals(fields, that.fields)
         && Objects.equals(this.getFields(), that.getFields())
-        && Objects.equals(methods, that.methods)
+        && fields.size() == that.fields.size()
+        && IntStream.range(0, fields.size())
+            .mapToObj(i -> fields.get(i).propertyEquals(that.fields.get(i)))
+            .allMatch(e -> e)
         && Objects.equals(this.getMethods(), that.getMethods())
-        && Objects.equals(constructors, that.constructors)
+        && methods.size() == that.methods.size()
+        && IntStream.range(0, methods.size())
+            .mapToObj(i -> methods.get(i).propertyEquals(that.methods.get(i)))
+            .allMatch(e -> e)
         && Objects.equals(this.getConstructors(), that.getConstructors())
-        && Objects.equals(records, that.records)
+        && constructors.size() == that.constructors.size()
+        && IntStream.range(0, constructors.size())
+            .mapToObj(i -> constructors.get(i).propertyEquals(that.constructors.get(i)))
+            .allMatch(e -> e)
         && Objects.equals(this.getRecords(), that.getRecords())
+        && records.size() == that.records.size()
+        && IntStream.range(0, records.size())
+            .mapToObj(i -> records.get(i).propertyEquals(that.records.get(i)))
+            .allMatch(e -> e)
         && Objects.equals(superClasses, that.superClasses)
         && Objects.equals(implementedInterfaces, that.implementedInterfaces)
         && Objects.equals(superTypeDeclarations, that.superTypeDeclarations);

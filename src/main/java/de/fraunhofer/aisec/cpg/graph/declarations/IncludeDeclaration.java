@@ -33,6 +33,7 @@ import de.fraunhofer.aisec.cpg.graph.SubGraph;
 import de.fraunhofer.aisec.cpg.graph.edge.Properties;
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import java.util.*;
+import java.util.stream.IntStream;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.neo4j.ogm.annotation.Relationship;
 
@@ -111,10 +112,16 @@ public class IncludeDeclaration extends Declaration {
     }
     IncludeDeclaration that = (IncludeDeclaration) o;
     return super.equals(that)
-        && Objects.equals(includes, that.includes)
         && Objects.equals(this.getIncludes(), that.getIncludes())
-        && Objects.equals(problems, that.problems)
+        && includes.size() == that.includes.size()
+        && IntStream.range(0, includes.size())
+            .mapToObj(i -> includes.get(i).propertyEquals(that.includes.get(i)))
+            .allMatch(e -> e)
         && Objects.equals(this.getProblems(), that.getProblems())
+        && problems.size() == that.problems.size()
+        && IntStream.range(0, problems.size())
+            .mapToObj(i -> problems.get(i).propertyEquals(that.problems.get(i)))
+            .allMatch(e -> e)
         && Objects.equals(filename, that.filename);
   }
 

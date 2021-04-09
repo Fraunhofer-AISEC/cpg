@@ -286,18 +286,21 @@ public class PropertyEdge<T extends Node> implements Persistable {
     return applyIndexProperty(newPropertyEdges);
   }
 
-  /**
-   * Note that the start and end node cannot be checked for equality here, as it would create an
-   * endless loop. Check of start and end node must be done separately.
-   */
   @Override
   public boolean equals(Object obj) {
     if (this == obj) return true;
     if (!(obj instanceof PropertyEdge)) return false;
     var propertyEdge = (PropertyEdge<?>) obj;
     return Objects.equals(this.properties, propertyEdge.properties)
-        && this.start == propertyEdge.start
-        && this.end == propertyEdge.end;
+        && this.start.equals(propertyEdge.getStart())
+        && this.end.equals(propertyEdge.getEnd());
+  }
+
+  public boolean propertyEquals(Object obj) {
+    if (this == obj) return true;
+    if (!(obj instanceof PropertyEdge)) return false;
+    var propertyEdge = (PropertyEdge<?>) obj;
+    return Objects.equals(this.properties, propertyEdge.properties);
   }
 
   @Override

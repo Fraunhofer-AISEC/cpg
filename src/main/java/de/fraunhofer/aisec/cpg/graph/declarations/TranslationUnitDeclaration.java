@@ -34,6 +34,7 @@ import de.fraunhofer.aisec.cpg.graph.SubGraph;
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -172,12 +173,21 @@ public class TranslationUnitDeclaration extends Declaration implements Declarati
     }
     TranslationUnitDeclaration that = (TranslationUnitDeclaration) o;
     return super.equals(that)
-        && Objects.equals(declarations, that.declarations)
         && Objects.equals(this.getDeclarations(), that.getDeclarations())
-        && Objects.equals(includes, that.includes)
+        && declarations.size() == that.declarations.size()
+        && IntStream.range(0, declarations.size())
+            .mapToObj(i -> declarations.get(i).propertyEquals(that.declarations.get(i)))
+            .allMatch(e -> e)
         && Objects.equals(this.getIncludes(), that.getIncludes())
-        && Objects.equals(namespaces, that.namespaces)
-        && Objects.equals(this.getNamespaces(), that.getNamespaces());
+        && includes.size() == that.includes.size()
+        && IntStream.range(0, includes.size())
+            .mapToObj(i -> includes.get(i).propertyEquals(that.includes.get(i)))
+            .allMatch(e -> e)
+        && Objects.equals(this.getNamespaces(), that.getNamespaces())
+        && namespaces.size() == that.namespaces.size()
+        && IntStream.range(0, namespaces.size())
+            .mapToObj(i -> namespaces.get(i).propertyEquals(that.namespaces.get(i)))
+            .allMatch(e -> e);
   }
 
   @Override

@@ -35,6 +35,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+import java.util.stream.IntStream;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.neo4j.ogm.annotation.Relationship;
@@ -94,8 +95,11 @@ public class CompoundStatement extends Statement {
     }
     CompoundStatement that = (CompoundStatement) o;
     return super.equals(that)
-        && Objects.equals(statements, that.statements)
-        && Objects.equals(this.getStatements(), that.getStatements());
+        && Objects.equals(this.getStatements(), that.getStatements())
+        && statements.size() == that.statements.size()
+        && IntStream.range(0, statements.size())
+            .mapToObj(i -> statements.get(i).propertyEquals(that.statements.get(i)))
+            .allMatch(e -> e);
   }
 
   @Override

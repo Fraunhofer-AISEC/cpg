@@ -40,6 +40,7 @@ import de.fraunhofer.aisec.cpg.helpers.Util;
 import de.fraunhofer.aisec.cpg.passes.CallResolver;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.neo4j.ogm.annotation.Relationship;
 
@@ -159,8 +160,11 @@ public class ConstructExpression extends Expression implements TypeListener {
     ConstructExpression that = (ConstructExpression) o;
     return super.equals(that)
         && Objects.equals(constructor, that.constructor)
-        && Objects.equals(arguments, that.arguments)
-        && Objects.equals(this.getArguments(), that.getArguments());
+        && Objects.equals(this.getArguments(), that.getArguments())
+        && arguments.size() == that.arguments.size()
+        && IntStream.range(0, arguments.size())
+            .mapToObj(i -> arguments.get(i).propertyEquals(that.arguments.get(i)))
+            .allMatch(e -> e);
   }
 
   @Override

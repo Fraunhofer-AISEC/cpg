@@ -39,6 +39,7 @@ import de.fraunhofer.aisec.cpg.graph.types.Type;
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -319,14 +320,26 @@ public class FunctionDeclaration extends ValueDeclaration implements Declaration
     FunctionDeclaration that = (FunctionDeclaration) o;
     return super.equals(that)
         && Objects.equals(body, that.body)
-        && Objects.equals(parameters, that.parameters)
         && Objects.equals(this.getParameters(), that.getParameters())
-        && Objects.equals(throwsTypes, that.throwsTypes)
+        && parameters.size() == that.parameters.size()
+        && IntStream.range(0, parameters.size())
+            .mapToObj(i -> parameters.get(i).propertyEquals(that.parameters.get(i)))
+            .allMatch(e -> e)
         && Objects.equals(this.getThrowsTypes(), that.getThrowsTypes())
-        && Objects.equals(overriddenBy, that.overriddenBy)
+        && throwsTypes.size() == that.throwsTypes.size()
+        && IntStream.range(0, throwsTypes.size())
+            .mapToObj(i -> throwsTypes.get(i).propertyEquals(that.throwsTypes.get(i)))
+            .allMatch(e -> e)
         && Objects.equals(this.getOverriddenBy(), that.getOverriddenBy())
-        && Objects.equals(overrides, that.overrides)
-        && Objects.equals(this.getOverrides(), that.getOverrides());
+        && overriddenBy.size() == that.overriddenBy.size()
+        && IntStream.range(0, overriddenBy.size())
+            .mapToObj(i -> overriddenBy.get(i).propertyEquals(that.overriddenBy.get(i)))
+            .allMatch(e -> e)
+        && Objects.equals(this.getOverrides(), that.getOverrides())
+        && overrides.size() == that.overrides.size()
+        && IntStream.range(0, overrides.size())
+            .mapToObj(i -> overrides.get(i).propertyEquals(that.overrides.get(i)))
+            .allMatch(e -> e);
   }
 
   @Override
