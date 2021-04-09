@@ -19,6 +19,7 @@ from de.fraunhofer.aisec.cpg.graph.statements.expressions import ArrayCreationEx
 from de.fraunhofer.aisec.cpg.graph.statements.expressions import ArrayRangeExpression
 from de.fraunhofer.aisec.cpg.graph.statements.expressions import ArraySubscriptionExpression
 from de.fraunhofer.aisec.cpg.graph.statements.expressions import BinaryOperator
+from de.fraunhofer.aisec.cpg.graph.statements.expressions import ConstructExpression
 from de.fraunhofer.aisec.cpg.graph.statements.expressions import CallExpression
 from de.fraunhofer.aisec.cpg.graph.statements.expressions import DeclaredReferenceExpression
 from de.fraunhofer.aisec.cpg.graph.statements.expressions import ExpressionList
@@ -49,7 +50,8 @@ import re
 # 8. 2 edges func -> pvd (scopemanager addDeclaration zu oft?)
 # 9. self -> go receiver vom christian angucken
 #10. assign -> neue decl mit initializer (statt in visit_Name)
-#11. test Java isinstance aktuell mit java_name startswith -> :(
+#11. test Java isinstance aktuell mit java_name startswith -> :( -> chrisitan
+#12. function.py -> visit_return 2* ???
 
 def run():
     global global_res
@@ -185,7 +187,7 @@ class MyWalker(ast.NodeVisitor):
         if resolved_ref != None:
             ref.setRefersTo(resolved_ref)
         else:
-            debug_print("Failed to resovlve name.")
+            debug_print("Failed to resolve name.")
             raise RuntimeError
         return ref
 
@@ -205,7 +207,6 @@ class MyWalker(ast.NodeVisitor):
     ### EXORESSIONS ###
     def visit_Expr(self, node):
         debug_print(ast.dump(node))
-        # TODO? self.add_loc_info(node, ref)
         return self.visit(node.value)
 
     def visit_UnaryOp(self, node):
@@ -255,8 +256,8 @@ class MyWalker(ast.NodeVisitor):
             binop.setOperatorCode("/")
             binop.setName("/")
         elif isinstance(node.op, ast.FloorDiv):
-            binop.setOperatorCode("FloorDiv")
-            binop.setName("FloorDiv")
+            binop.setOperatorCode("//")
+            binop.setName("//")
         elif isinstance(node.op, ast.Mod):
             binop.setOperatorCode("%")
             binop.setName("%")
@@ -411,19 +412,46 @@ class MyWalker(ast.NodeVisitor):
     def visit_NotIn(self, node):
         debug_print(ast.dump(node))
         raise NotImplementedError
-
+    
     def visit_Call(self, node):
-        # TODO what???
         # TODO keywords starargs kwargs
         debug_print(ast.dump(node))
+        # a call can be one of
+        # simple function call
+        # member call
+        # constructor call
+        
         if isinstance(node.func, ast.Name):
-            call = CallExpression()
-            call.setName(node.func.id)
-            call.setFqn(node.func.id)
+            # this can be a simple function call or a ctor
+            r = self.scopemanager.getRecordForName(self.scopemanager.getCurrentScope(),
+                    node.func.id)
+            if r != None:
+                call = ConstructExpression()
+                call.setName(node.func.id)
+                call.setType(TypeParser.createFrom(r.getName(), False))
+            else:
+                call = CallExpression()
+                call.setName(node.func.id)
+                call.setFqn(node.func.id)
         elif isinstance(node.func, ast.Attribute):
+            ref = DeclaredReferenceExpression()
+            ref.setName(node.func.value.id)
+            r = self.scopemanager.resolve(ref)
+            name = node.func.attr
+            baseName = r.getType().getTypeName()
+            fqn = "%s.%s" % (baseName, name)
             call = MemberCallExpression()
-            call.setName(node.func.value)
+            call.setName(fqn)
+            call.setFqn(fqn)
+            call.setOperatorCode(".")
+
+            member = DeclaredReferenceExpression()
+            member.setName(name)
+
+            call.setBase(r)
+            call.setMember(member)
         else:
+            debug_print(type(node.func))
             raise NotImplementedError
         self.add_loc_info(node, call)
         for a in node.args:
@@ -503,6 +531,8 @@ class MyWalker(ast.NodeVisitor):
         if len(node.targets) != 1:
             raise NotImplementedError
         target = node.targets[0]
+        #if isinstance(target, ast.Attribute):
+        #    debug_print("HERE")
         if not isinstance(target, ast.Name):
             debug_print(target)
             raise NotImplementedError
@@ -809,7 +839,7 @@ class MyWalker(ast.NodeVisitor):
         self.add_loc_info(node, rec)
         # name
         rec.setName(node.name)
-        self.scopemanager.addDeclaration(rec)
+        self.scopemanager.enterScope(rec)
         t = None
         # bases
         if len(node.bases) == 0:
@@ -849,6 +879,8 @@ class MyWalker(ast.NodeVisitor):
         if len(node.decorator_list) != 0:
             raise NotImplementedError
 
+        self.scopemanager.leaveScope(rec)
+        self.scopemanager.addDeclaration(rec)
         return rec
 
     ### ASYNC AND AWAIT ###
