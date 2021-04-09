@@ -4,10 +4,10 @@ import de.fraunhofer.aisec.cpg.BaseTest
 import de.fraunhofer.aisec.cpg.ExperimentalGraph
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationManager
-import org.junit.jupiter.api.Test
 import java.io.File
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
+import org.junit.jupiter.api.Test
 
 @ExperimentalGraph
 class TranslationResultTest : BaseTest() {
@@ -15,11 +15,13 @@ class TranslationResultTest : BaseTest() {
     fun testFromTranslationUnit() {
         val file = File("src/test/resources/compiling/RecordDeclaration.java")
 
-        val config = TranslationConfiguration.builder()
+        val config =
+            TranslationConfiguration.builder()
                 .sourceLocations(listOf(file))
                 .topLevel(file.parentFile)
                 .defaultPasses()
                 .debugParser(true)
+                .defaultLanguages()
                 .failOnError(true)
                 .build()
 

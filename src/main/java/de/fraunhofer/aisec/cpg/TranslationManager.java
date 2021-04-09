@@ -26,10 +26,9 @@
 
 package de.fraunhofer.aisec.cpg;
 
-import static de.fraunhofer.aisec.cpg.frontends.LanguageFrontendFactory.CXX_EXTENSIONS;
+import static de.fraunhofer.aisec.cpg.frontends.cpp.CXXLanguageFrontend.CXX_EXTENSIONS;
 
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
-import de.fraunhofer.aisec.cpg.frontends.LanguageFrontendFactory;
 import de.fraunhofer.aisec.cpg.frontends.TranslationException;
 import de.fraunhofer.aisec.cpg.graph.TypeManager;
 import de.fraunhofer.aisec.cpg.helpers.Benchmark;
@@ -39,6 +38,7 @@ import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.lang.reflect.InvocationTargetException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -53,6 +53,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.checkerframework.checker.nullness.qual.NonNull;
+import org.checkerframework.checker.nullness.qual.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -208,9 +209,7 @@ public class TranslationManager {
       log.info("Parsing {}", sourceLocation.getAbsolutePath());
       LanguageFrontend frontend = null;
       try {
-        frontend =
-            LanguageFrontendFactory.getFrontend(
-                Util.getExtension(sourceLocation), config, scopeManager);
+        frontend = getFrontend(Util.getExtension(sourceLocation), scopeManager);
         if (frontend == null) {
           log.error("Found no parser frontend for {}", sourceLocation.getName());
 
@@ -256,6 +255,32 @@ public class TranslationManager {
       }
     }
     return usedFrontends;
+  }
+
+  @Nullable
+  private LanguageFrontend getFrontend(String extension, ScopeManager scopeManager) {
+    var clazz =
+        this.config.getFrontends().entrySet().stream()
+            .filter(entry -> entry.getValue().contains(extension))
+            .map(entry -> entry.getKey())
+            .findAny()
+            .orElse(null);
+
+    if (clazz != null) {
+      try {
+        return clazz
+            .getConstructor(TranslationConfiguration.class, ScopeManager.class)
+            .newInstance(this.config, scopeManager);
+      } catch (InstantiationException
+          | IllegalAccessException
+          | InvocationTargetException
+          | NoSuchMethodException e) {
+        log.error("Could not instantiate language frontend {}", clazz.getName(), e);
+        return null;
+      }
+    }
+
+    return null;
   }
 
   /**

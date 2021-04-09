@@ -50,7 +50,7 @@ import org.slf4j.LoggerFactory;
 public abstract class LanguageFrontend {
 
   protected static final Logger log = LoggerFactory.getLogger(LanguageFrontend.class);
-  protected final TranslationConfiguration config;
+  protected TranslationConfiguration config;
   protected ScopeManager scopeManager;
   /**
    * Two data structures used to associate Objects input to a pass to results of a pass, e.g.

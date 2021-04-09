@@ -42,9 +42,11 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Collection;
 import java.util.List;
+import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.reflect.FieldUtils;
+import org.checkerframework.checker.nullness.qual.Nullable;
 import org.mockito.Mockito;
 
 public class TestUtils {
@@ -70,8 +72,8 @@ public class TestUtils {
   }
 
   /**
-   * Like {@link #analyze(List, Path, boolean)}, but for all files in a directory tree having a
-   * specific file extension
+   * Like {@link #analyze(List, Path, boolean, Consumer)}, but for all files in a directory tree
+   * having a specific file extension
    *
    * @param fileExtension All files found in the directory must end on this String. An empty string
    *     matches all files
@@ -89,7 +91,7 @@ public class TestUtils {
             .filter(f -> f.getName().endsWith(fileExtension))
             .sorted()
             .collect(Collectors.toList());
-    return analyze(files, topLevel, usePasses);
+    return analyze(files, topLevel, usePasses, null);
   }
 
   /**
@@ -102,6 +104,24 @@ public class TestUtils {
    */
   public static List<TranslationUnitDeclaration> analyze(
       List<File> files, Path topLevel, boolean usePasses) throws Exception {
+    return analyze(files, topLevel, usePasses, null);
+  }
+
+  /**
+   * Default way of parsing a list of files into a full CPG. All default passes are applied
+   *
+   * @param topLevel The directory to traverse while looking for files to parse
+   * @param usePasses Whether the analysis should run passes after the initial phase
+   * @param configModifier An optional modifier for the config
+   * @return A list of {@link TranslationUnitDeclaration} nodes, representing the CPG roots
+   * @throws Exception Any exception thrown during the parsing process
+   */
+  public static List<TranslationUnitDeclaration> analyze(
+      List<File> files,
+      Path topLevel,
+      boolean usePasses,
+      @Nullable Consumer<TranslationConfiguration.Builder> configModifier)
+      throws Exception {
     TranslationConfiguration.Builder builder =
         TranslationConfiguration.builder()
             .sourceLocations(files)
@@ -109,10 +129,16 @@ public class TestUtils {
             .loadIncludes(true)
             .disableCleanup()
             .debugParser(true)
-            .failOnError(true);
+            .failOnError(true)
+            .defaultLanguages();
     if (usePasses) {
       builder.defaultPasses();
     }
+
+    if (configModifier != null) {
+      configModifier.accept(builder);
+    }
+
     TranslationConfiguration config = builder.build();
 
     TranslationManager analyzer = TranslationManager.builder().config(config).build();
@@ -138,7 +164,17 @@ public class TestUtils {
 
   public static TranslationUnitDeclaration analyzeAndGetFirstTU(
       List<File> files, Path topLevel, boolean usePasses) throws Exception {
-    List<TranslationUnitDeclaration> translationUnits = analyze(files, topLevel, usePasses);
+    return analyzeAndGetFirstTU(files, topLevel, usePasses, null);
+  }
+
+  public static TranslationUnitDeclaration analyzeAndGetFirstTU(
+      List<File> files,
+      Path topLevel,
+      boolean usePasses,
+      @Nullable Consumer<TranslationConfiguration.Builder> configModifier)
+      throws Exception {
+    List<TranslationUnitDeclaration> translationUnits =
+        analyze(files, topLevel, usePasses, configModifier);
     return translationUnits.stream().findFirst().orElseThrow();
   }
 

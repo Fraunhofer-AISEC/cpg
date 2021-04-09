@@ -527,6 +527,7 @@ class JavaLanguageFrontendTest extends BaseTest {
                 .sourceLocations(List.of(file))
                 .topLevel(file.getParentFile())
                 .defaultPasses()
+                .defaultLanguages()
                 .processAnnotations(true));
     assertFalse(declarations.isEmpty());
 

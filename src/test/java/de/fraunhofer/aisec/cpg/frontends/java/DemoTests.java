@@ -58,6 +58,7 @@ class DemoTests extends BaseTest {
             .sourceLocations(files)
             .topLevel(topLevel.toFile())
             .defaultPasses()
+            .defaultLanguages()
             .debugParser(true)
             .failOnError(true)
             .build();
@@ -84,6 +85,7 @@ class DemoTests extends BaseTest {
             .sourceLocations(files)
             .topLevel(topLevel.toFile())
             .defaultPasses()
+            .defaultLanguages()
             .debugParser(true)
             .failOnError(true)
             .build();

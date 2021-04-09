@@ -1197,6 +1197,7 @@ class CXXLanguageFrontendTest extends BaseTest {
                 .sourceLocations(List.of(file))
                 .topLevel(file.getParentFile())
                 .defaultPasses()
+                .defaultLanguages()
                 .processAnnotations(true)
                 .symbols(
                     Map.of("PROPERTY_ATTRIBUTE(...)", "[[property_attribute(#__VA_ARGS__)]]")));
@@ -1252,7 +1253,8 @@ class CXXLanguageFrontendTest extends BaseTest {
                 .topLevel(file.getParentFile())
                 .useUnityBuild(true)
                 .loadIncludes(true)
-                .defaultPasses());
+                .defaultPasses()
+                .defaultLanguages());
 
     assertEquals(1, declarations.size());
 

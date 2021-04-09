@@ -196,6 +196,9 @@ spotless {
         )
         googleJavaFormat()
     }
+    kotlin {
+        ktfmt().kotlinlangStyle()
+    }
 }
 
 if (project.hasProperty("experimental")) {
