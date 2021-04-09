@@ -50,7 +50,8 @@ public class MethodDeclaration extends FunctionDeclaration {
    * <p>It can be empty, i.e., for pure function definitions as part as an interface.
    */
   @SubGraph("AST")
-  @Nullable private VariableDeclaration receiver;
+  @Nullable
+  private VariableDeclaration receiver;
 
   public boolean isStatic() {
     return isStatic;
