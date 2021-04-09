@@ -30,13 +30,13 @@ jobs:
         run: |
           if [ "$SONAR_TOKEN" != "" ]
           then
-            ./gradlew --parallel -Pversion=$VERSION -Pexperimental build sonarqube \
+            ./gradlew --parallel -Pversion=$VERSION -Pexperimental clean build sonarqube \
             -Dsonar.projectKey=Fraunhofer-AISEC_cpg \
             -Dsonar.organization=fraunhofer-aisec \
             -Dsonar.host.url=https://sonarcloud.io \
             -Dsonar.login=$SONAR_TOKEN
           else
-            ./gradlew --parallel -Pversion=$VERSION -Pexperimental build
+            ./gradlew --parallel -Pversion=$VERSION -Pexperimental clean build
           fi
         id: build
         env:
