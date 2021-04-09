@@ -23,7 +23,7 @@ The most recent version is being published to Maven central and can be used as a
 ```
 repositories {
     ivy {
-        setUrl("https://download.eclipse.org/tools/cdt/releases/10.2/cdt-10.2.0/plugins")
+        setUrl("https://download.eclipse.org/tools/cdt/releases/9.11/cdt-9.11.1/plugins")
         metadataSources {
             artifact()
         }
@@ -75,7 +75,7 @@ func.getParameters();
 
 ### Usage of Experimental Languages
 
-Some languages, such as Golang are marked as experimental and depend on other native libraries. These are NOT YET bundled in the release jars, so you need to build them manually using the property `-Pexperimental` when using tasks such as `build` or `test`.
+Some languages, such as Golang are marked as experimental and depend on other native libraries. These are NOT YET bundled in the release jars, so you need to build them manually.  
 
 #### Golang
 

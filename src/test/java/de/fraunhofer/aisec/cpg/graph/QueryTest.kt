@@ -25,9 +25,59 @@ class QueryTest {
     fun testQueryExistenceOfEdge() {
         val query = parser.parse("MATCH (n:FunctionDeclaration)-[:PARAMETERS]->(m:ParamVariableDeclaration) RETURN n", null, null) as Query
 
-        val nodes: List<Node> = db.executeQuery(query)
+        var nodes: List<Node> = db.executeQuery(query)
 
         assertEquals(2, nodes.size)
+
+        var b: Benchmark = Benchmark(QueryTest::class.java, "something else - stream version")
+        val variables: MutableMap<String, MutableList<Node>> = mutableMapOf()
+        variables["n"] = mutableListOf()
+        variables["m"] = mutableListOf()
+
+        variables["n"] = db.nodes.parallelStream()
+                .filter { it is FunctionDeclaration }
+                .filter {
+                    val parameters = PropertyEdge.unwrap(it["parameters", "OUTGOING"] as List<PropertyEdge<Node>>)
+
+                    val params = parameters.parallelStream().filter { it is ParamVariableDeclaration }.collect(Collectors.toList())
+
+                    variables["m"]?.addAll(params)
+                    params.isNotEmpty()
+                }
+                .collect(Collectors.toList())
+
+        nodes = variables["n"]!!
+        assertEquals(2, nodes.size)
+
+        b.stop()
+        println("Experimental query2 took: ${b.duration.milliseconds}")
+
+        b = Benchmark(QueryTest::class.java, "something else")
+        variables["n"] = mutableListOf()
+        variables["m"] = mutableListOf()
+
+        for(node in db.nodes) {
+            if(node is FunctionDeclaration) {
+                val parameters = PropertyEdge.unwrap(node["parameters", "OUTGOING"] as List<PropertyEdge<Node>>)
+
+                for(parameter in parameters) {
+                    if(parameter is ParamVariableDeclaration) {
+                        variables["m"]?.plusAssign(parameter)
+                    }
+                }
+
+                if(parameters.isNotEmpty()) {
+                    variables["n"]?.plusAssign(node)
+                }
+
+            }
+        }
+
+        nodes = variables["n"]!!
+        assertEquals(2, nodes.size)
+
+        b.stop()
+        println("Experimental query2 took: ${b.duration.milliseconds}")
     }
 
     @Test

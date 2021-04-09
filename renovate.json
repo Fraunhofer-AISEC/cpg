@@ -3,8 +3,5 @@
   "extends": [
     "config:base"
   ],
-  "patch": {
-    "enabled": false
-  },
   "ignoreDeps": ["org.eclipse.platform:org.eclipse.core.runtime", "org.eclipse.cdt:core", "com.ibm.icu:icu4j", "org.neo4j:neo4j-ogm-core"]
 }
