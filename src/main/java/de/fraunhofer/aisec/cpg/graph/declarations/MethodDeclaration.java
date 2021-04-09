@@ -26,6 +26,7 @@
 
 package de.fraunhofer.aisec.cpg.graph.declarations;
 
+import de.fraunhofer.aisec.cpg.graph.SubGraph;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
@@ -48,7 +49,9 @@ public class MethodDeclaration extends FunctionDeclaration {
    *
    * <p>It can be empty, i.e., for pure function definitions as part as an interface.
    */
-  @Nullable private VariableDeclaration receiver;
+  @SubGraph("AST")
+  @Nullable
+  private VariableDeclaration receiver;
 
   public boolean isStatic() {
     return isStatic;
