@@ -28,11 +28,13 @@ from de.fraunhofer.aisec.cpg.graph.statements.expressions import MemberCallExpre
 from de.fraunhofer.aisec.cpg.graph.statements.expressions import MemberExpression
 from de.fraunhofer.aisec.cpg.graph.statements.expressions import UnaryOperator
 from de.fraunhofer.aisec.cpg.graph.types import Type
+from de.fraunhofer.aisec.cpg.graph import Annotation
+from de.fraunhofer.aisec.cpg.graph import AnnotationMember
 from de.fraunhofer.aisec.cpg.graph.types import TypeParser
 from de.fraunhofer.aisec.cpg.sarif import PhysicalLocation
 from de.fraunhofer.aisec.cpg.sarif import Region
 from java.net import URI
-from java.util import List as JavaList
+from java.util import ArrayList
 import ast
 import inspect
 import re
@@ -153,25 +155,25 @@ class MyWalker(ast.NodeVisitor):
 
     def visit_List(self, node):
         debug_print(ast.dump(node))
-        lit = Literal()
-        self.add_loc_info(node, lit)
-        lit.setType(TypeParser.createFrom("List", False))
-        elts = []
-        for e in node.elts:
-            elts.append(self.visit(e))
-        lit.setValue(elts)
-        return lit
+        #lit = Literal()
+        #self.add_loc_info(node, lit)
+        #lit.setType(TypeParser.createFrom("List", False))
+        #elts = []
+        #for e in node.elts:
+        #    elts.append(self.visit(e))
+        #lit.setValue(elts)
+        return Expression()
 
     def visit_Tuple(self, node):
-        debug_print(ast.dump(node))
-        lit = Literal()
-        self.add_loc_info(node, lit)
-        lit.setType(TypeParser.createFrom("Tuple", False))
-        elts = []
-        for e in node.elts:
-            elts.append(self.visit(e))
-        lit.setValue(elts)
-        return lit
+        #debug_print(ast.dump(node))
+        #lit = Literal()
+        #self.add_loc_info(node, lit)
+        #lit.setType(TypeParser.createFrom("Tuple", False))
+        #elts = []
+        #for e in node.elts:
+        #    elts.append(self.visit(e))
+        #lit.setValue(elts)
+        return Expression()
 
     def visit_Set(self, node):
         debug_print(ast.dump(node))
@@ -839,6 +841,54 @@ class MyWalker(ast.NodeVisitor):
         fd.setName(node.name)
         self.scopemanager.enterScope(fd)
 
+        annotations = ArrayList()
+
+        for decorator in node.decorator_list:
+            expr = self.visit(decorator)
+
+            if expr.java_name == "de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression":
+                members = ArrayList()
+
+                annotation = Annotation()
+                annotation.setName(expr.getName())
+                annotations.add(annotation)
+
+                if len(expr.getArguments()):
+                    # take the first argument as annotation member
+                    member = AnnotationMember()
+                    member.setName("value")
+                    member.setValue(expr.getArguments().get(0))
+
+                    members.add(member)
+                annotation.setMembers(members)
+            elif expr.java_name == "de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression":
+                members = ArrayList()
+
+                annotation = Annotation()
+                annotation.setName(expr.getName())
+                annotations.add(annotation)
+
+                if len(expr.getArguments()):
+                    # take the first argument as annotation member
+                    member = AnnotationMember()
+                    member.setName("value")
+                    member.setValue(expr.getArguments().get(0))
+
+                    members.add(member)
+
+                # add the base as a receiver annotation
+                member = AnnotationMember()
+                member.setName("receiver")
+                member.setValue(expr.getBase())
+
+                members.add(member)
+
+                annotation.setMembers(members)
+
+        fd.addAnnotations(annotations)
+
+        #debug_print(node.de)
+
         # handle args
         # scopeManager adds them to fd
         self.visit_arguments(node.args, fd)
@@ -918,8 +968,8 @@ class MyWalker(ast.NodeVisitor):
         debug_print(ast.dump(node))
         r = ReturnStatement()
         self.add_loc_info(node, r)
-        if node.value != None:
-            r.setReturnValue(self.visit(node.value))
+        #if node.value != None:
+        #    r.setReturnValue(self.visit(node.value))
         r.setName("return")
         return r
 
@@ -940,7 +990,8 @@ class MyWalker(ast.NodeVisitor):
         ref = DeclaredReferenceExpression()
         self.add_loc_info(node, ref)
         ref.setName(node.names[0])
-        self.scopemanager.addDeclaration(ref)
+        #self.scopemanager.addDeclaration(ref)
+
         return ref
 
     def visit_Nonlocal(self, node):
