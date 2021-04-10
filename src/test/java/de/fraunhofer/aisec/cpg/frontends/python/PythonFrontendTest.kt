@@ -215,7 +215,7 @@ class PythonFrontendTest : BaseTest() {
         assertEquals(ctor, cls.constructors.first())
         assertEquals(TypeParser.createFrom("SomeClass", false), c1?.type)
 
-        assertEquals(c1, s2?.base)
+        assertEquals(c1, (s2?.base as? DeclaredReferenceExpression)?.refersTo)
         assertEquals(1, s2?.invokes?.size)
         assertEquals(clsfunc, s2?.invokes?.first())
 

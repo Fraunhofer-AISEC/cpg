@@ -36,7 +36,7 @@ class PythonLanguageFrontend(config: TranslationConfiguration, scopeManager: Sco
         if(s == null)
             throw TranslationException("No code provided.")
 
-        val topLevel = Path.of("python")
+        val topLevel = Path.of("src/main/python")
         val entryScript = topLevel.resolve("main.py").toAbsolutePath()
 
         val tud: TranslationUnitDeclaration
@@ -50,9 +50,10 @@ class PythonLanguageFrontend(config: TranslationConfiguration, scopeManager: Sco
             interp.set("global_fname", path)
             interp.set("global_scopemanager", this.getScopeManager())
 
+            // TODO: extract into an actual python module and call it
+
             // load script
-            //interp.runScript(entryScript.toString())
-            interp.exec(this::class.java.classLoader.getResource("python/main.py").readText())
+            interp.runScript(entryScript.toString())
 
             // run python function run()
             interp.exec("run()")
@@ -67,6 +68,7 @@ class PythonLanguageFrontend(config: TranslationConfiguration, scopeManager: Sco
             interp.exec("del global_scopemanager")
             interp.close()
         } catch (e: JepException) {
+            e.printStackTrace()
             throw TranslationException("Python failed with message: $e")
         } catch (e: Exception) {
             throw e
