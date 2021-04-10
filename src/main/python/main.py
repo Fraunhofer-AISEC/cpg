@@ -54,11 +54,6 @@ import re
 # 11. test Java isinstance aktuell mit java_name startswith -> :( -> chrisitan
 # 12. function.py -> visit_return 2* ???
 
-def run():
-    global global_res
-    global_res = parseCode(global_codeToParse, global_fname, global_scopemanager)
-
-
 def debug_print(string, level=1):
     callerframerecord = inspect.stack()[level]
     frame = callerframerecord[0]
@@ -98,12 +93,13 @@ class CodeExtractor:
 
 
 class MyWalker(ast.NodeVisitor):
-    def __init__(self, fname, scopemanager):
+    def __init__(self, fname, frontend):
         self.sourcecode = CodeExtractor(fname)
         self.tud = TranslationUnitDeclaration()
         self.tud.setName(fname)
         self.fname = fname
-        self.scopemanager = scopemanager
+        self.frontend = frontend
+        self.scopemanager = frontend.getScopeManager()
         self.scopemanager.resetToGlobal(self.tud)
 
     def add_loc_info(self, node, obj):
@@ -1059,11 +1055,11 @@ class MyWalker(ast.NodeVisitor):
         raise NotImplementedError
 
 
-def parseCode(code, fname, scopemanager):
+def parseCode(code, fname, frontend):
     root = ast.parse(code, filename=fname, type_comments=True)
     # debug_print(ast.dump(root, indent = 2))
 
-    walker = MyWalker(fname, scopemanager)
+    walker = MyWalker(fname, frontend)
     walker.visit(root)
 
     return walker.tud
