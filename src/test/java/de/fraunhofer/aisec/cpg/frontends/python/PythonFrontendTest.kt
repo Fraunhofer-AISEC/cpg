@@ -13,9 +13,11 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import de.fraunhofer.aisec.cpg.sarif.Region
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
+import org.junit.jupiter.api.Tag
 import java.net.URI
 
 @ExperimentalPython
+@Tag("experimental")
 class PythonFrontendTest : BaseTest() {
     // TODO ensure gradle doesn't remove those classes
     val dummyRegion = Region()

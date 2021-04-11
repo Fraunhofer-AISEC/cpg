@@ -2,7 +2,7 @@
 [![Actions Status](https://github.com/Fraunhofer-AISEC/cpg/workflows/build/badge.svg)](https://github.com/Fraunhofer-AISEC/cpg/actions)
  [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=Fraunhofer-AISEC_cpg&metric=alert_status)](https://sonarcloud.io/dashboard?id=Fraunhofer-AISEC_cpg) [![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=Fraunhofer-AISEC_cpg&metric=security_rating)](https://sonarcloud.io/dashboard?id=Fraunhofer-AISEC_cpg) [![Coverage](https://sonarcloud.io/api/project_badges/measure?project=Fraunhofer-AISEC_cpg&metric=coverage)](https://sonarcloud.io/dashboard?id=Fraunhofer-AISEC_cpg)
 
-A simple library to extract a *code property graph* out of source code. It has support for multiple passes that can extend the analysis after the graph is constructed. It currently supports C/C++ (C17), Java (Java 13) and has experimental support for Golang.
+A simple library to extract a *code property graph* out of source code. It has support for multiple passes that can extend the analysis after the graph is constructed. It currently supports C/C++ (C17), Java (Java 13) and has experimental support for Golang and Python.
 
 ## What is this?
 
@@ -80,6 +80,22 @@ Some languages, such as Golang are marked as experimental and depend on other na
 #### Golang
 
 In the case of Golang, the necessary native code can be found in the `src/main/golang` folder. Gradle should automatically find JNI headers and stores the finished library in the `src/main/golang` folder. This currently only works for Linux and macOS. In order to use it in an external project, the resulting library needs to be placed somewhere in `java.library.path`. 
+
+#### Python
+
+You need to install [jep](https://github.com/ninia/jep/). This can either be system wide or in a virtual environment. Furthermore, the python source, which are located in `src/main/python` need to be present in a directory with that name relative to where you execute or use CPG. We are working on extracting this into an actual python module, similar to jep. Currently, only Python 3.9 is supported.
+
+Through the `JepSingleton`, the CPG library will look for well known paths on Linux and OS X. `JepSingleton` will prefer a virtualenv with the name `cpg`, this can be adjusted with the environment variable `CPG_PYTHON_VIRTUALENV`.
+
+## System Wide
+
+Follow the instructions at https://github.com/ninia/jep/wiki/Getting-Started#installing-jep.
+
+## Virtual Env
+
+- `python3 -m venv ~/.virtualenvs/cpg`
+- `source ~/.virtualenvs/cpg/bin/activate`
+- `pip3 install jep`
 
 ## Development Setup
 
