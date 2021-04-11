@@ -830,7 +830,7 @@ class MyWalker(ast.NodeVisitor):
         raise NotImplementedError
 
     ### FUNCTION AND CLASS DEFINITIONS ###
-    def visit_FunctionDef(self, node, returnMethod=False):
+    def visit_FunctionDef(self, node: ast.FunctionDef, returnMethod=False):
         debug_print(ast.dump(node))
         if returnMethod:
             fd = MethodDeclaration()
@@ -854,9 +854,6 @@ class MyWalker(ast.NodeVisitor):
 
             if isinstance(decorator.func, ast.Attribute):
                 ref = self.visit(decorator.func)
-
-                debug_print("DECORATOR")
-                debug_print(ast.dump(decorator.func))
 
                 annotation.setName(ref.getName())
 
@@ -941,13 +938,13 @@ class MyWalker(ast.NodeVisitor):
 
     def visit_arguments(self, node, fd=None):
         debug_print(ast.dump(node))
-        if fd != None:
+        if fd is not None:
             debug_print("visit_arguments with FunctionDeclaration")
         for p in node.posonlyargs:
             raise NotImplementedError
         for p in node.args:
             x = self.visit(p)
-            if fd != None:
+            if fd is not None:
                 # fd.addParameter(x)
                 pass  # PVD -> automagically handled by cpg
         # if node.vararg is not None:
@@ -1116,11 +1113,11 @@ class MyWalker(ast.NodeVisitor):
         raise NotImplementedError
 
 
-def parseCode(code, fname, frontend):
-    root = ast.parse(code, filename=fname, type_comments=True)
+def parse_code(code, filename, frontend):
+    root = ast.parse(code, filename=filename, type_comments=True)
     # debug_print(ast.dump(root, indent = 2))
 
-    walker = MyWalker(fname, frontend)
+    walker = MyWalker(filename, frontend)
     walker.visit(root)
 
     return walker.tud

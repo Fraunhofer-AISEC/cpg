@@ -15,27 +15,27 @@ import jep.*
 @ExperimentalPython
 class PythonLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeManager?) :
     LanguageFrontend(config, scopeManager, ".") {
+
     @Throws(TranslationException::class)
     override fun parse(file: File): TranslationUnitDeclaration {
         return parseInternal(file.readText(Charsets.UTF_8), file.path)
     }
 
-    // TODO
     override fun <T> getCodeFromRawNode(astNode: T): String? {
+        // will be invoked by native function
         return null
     }
 
-    // TODO
     override fun <T> getLocationFromRawNode(astNode: T): PhysicalLocation? {
+        // will be invoked by native function
         return null
     }
 
-    // TODO
-    override fun <S, T> setComment(s: S, ctx: T) {}
+    override fun <S, T> setComment(s: S, ctx: T) {
+        // will be invoked by native function
+    }
 
-    private fun parseInternal(s: String?, path: String): TranslationUnitDeclaration {
-        if (s == null) throw TranslationException("No code provided.")
-
+    private fun parseInternal(code: String, path: String): TranslationUnitDeclaration {
         val topLevel = Path.of("src/main/python")
         val entryScript = topLevel.resolve("main.py").toAbsolutePath()
 
@@ -45,13 +45,13 @@ class PythonLanguageFrontend(config: TranslationConfiguration, scopeManager: Sco
             JepSingleton // configure Jep
             val interp = SubInterpreter(JepConfig().setRedirectOutputStreams(true))
 
-            // TODO: extract into an actual python module and call it
+            // TODO: extract main.py in a real python module with multiple files
 
             // load script
             interp.runScript(entryScript.toString())
 
-            // run python function run()
-            tu = interp.invoke("parseCode", s, path, this) as TranslationUnitDeclaration
+            // run python function parse_code()
+            tu = interp.invoke("parse_code", code, path, this) as TranslationUnitDeclaration
             interp.close()
         } catch (e: JepException) {
             e.printStackTrace()
