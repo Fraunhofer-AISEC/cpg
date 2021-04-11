@@ -10,16 +10,21 @@ object JepSingleton {
     init {
         var virtualEnv = "cpg"
 
-        if(System.getenv("CPG_PYTHON_VIRTUALENV") != null) {
+        if (System.getenv("CPG_PYTHON_VIRTUALENV") != null) {
             virtualEnv = System.getenv("CPG_PYTHON_VIRTUALENV")
         }
 
         val wellKnownPaths =
             listOf(
-                File("${System.getProperty("user.home")}/.virtualenvs/${virtualEnv}/lib/python3.9/site-packages/jep/libjep.so"),
-                File("${System.getProperty("user.home")}/.virtualenvs/${virtualEnv}/lib/python3.9/site-packages/jep/libjep.jnilib"),
+                File(
+                    "${System.getProperty("user.home")}/.virtualenvs/${virtualEnv}/lib/python3.9/site-packages/jep/libjep.so"
+                ),
+                File(
+                    "${System.getProperty("user.home")}/.virtualenvs/${virtualEnv}/lib/python3.9/site-packages/jep/libjep.jnilib"
+                ),
                 File("/usr/lib/libjep.so"),
-                File("/Library/Java/Extensions/libjep.jnilib"))
+                File("/Library/Java/Extensions/libjep.jnilib")
+            )
 
         wellKnownPaths.forEach {
             if (it.exists()) {

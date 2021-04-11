@@ -181,7 +181,7 @@ class MyWalker(ast.NodeVisitor):
         debug_print(ast.dump(node))
         raise NotImplementedError
 
-    def visit_Dict(self, node):
+    def visit_Dict(self, node: ast.Dict):
         debug_print(ast.dump(node))
         # TODO implement it
         # raise NotImplementedError
@@ -809,10 +809,14 @@ class MyWalker(ast.NodeVisitor):
 
     def visit_Try(self, node: ast.Try):
         debug_print(ast.dump(node))
-        # TODO parse body of try statement
+
         t = TryStatement()
 
-        # node.body
+        t.setTryBlock(self.make_compound_statement(node, node.body))
+
+        # TODO: parse catch handlers
+
+        t.setFinallyBlock(self.make_compound_statement(node, node.finalbody))
 
         return t
 
