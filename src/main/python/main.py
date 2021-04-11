@@ -1,3 +1,7 @@
+import ast
+import inspect
+from de.fraunhofer.aisec.cpg.graph import Annotation
+from de.fraunhofer.aisec.cpg.graph import AnnotationMember
 from de.fraunhofer.aisec.cpg.graph.declarations import Declaration
 from de.fraunhofer.aisec.cpg.graph.declarations import FunctionDeclaration
 from de.fraunhofer.aisec.cpg.graph.declarations import IncludeDeclaration
@@ -13,29 +17,24 @@ from de.fraunhofer.aisec.cpg.graph.statements import EmptyStatement
 from de.fraunhofer.aisec.cpg.graph.statements import ForEachStatement
 from de.fraunhofer.aisec.cpg.graph.statements import IfStatement
 from de.fraunhofer.aisec.cpg.graph.statements import ReturnStatement
-from de.fraunhofer.aisec.cpg.graph.statements import Statement
 from de.fraunhofer.aisec.cpg.graph.statements import WhileStatement
-from de.fraunhofer.aisec.cpg.graph.statements.expressions import ArrayCreationExpression
 from de.fraunhofer.aisec.cpg.graph.statements.expressions import ArrayRangeExpression
 from de.fraunhofer.aisec.cpg.graph.statements.expressions import ArraySubscriptionExpression
 from de.fraunhofer.aisec.cpg.graph.statements.expressions import BinaryOperator
-from de.fraunhofer.aisec.cpg.graph.statements.expressions import ConstructExpression
 from de.fraunhofer.aisec.cpg.graph.statements.expressions import CallExpression
+from de.fraunhofer.aisec.cpg.graph.statements.expressions import ConstructExpression
 from de.fraunhofer.aisec.cpg.graph.statements.expressions import DeclaredReferenceExpression
 from de.fraunhofer.aisec.cpg.graph.statements.expressions import Expression
 from de.fraunhofer.aisec.cpg.graph.statements.expressions import Literal
 from de.fraunhofer.aisec.cpg.graph.statements.expressions import MemberCallExpression
 from de.fraunhofer.aisec.cpg.graph.statements.expressions import MemberExpression
 from de.fraunhofer.aisec.cpg.graph.statements.expressions import UnaryOperator
-from de.fraunhofer.aisec.cpg.graph.types import Type
+from de.fraunhofer.aisec.cpg.graph.statements.expressions import InitializerListExpression
 from de.fraunhofer.aisec.cpg.graph.types import TypeParser
 from de.fraunhofer.aisec.cpg.sarif import PhysicalLocation
 from de.fraunhofer.aisec.cpg.sarif import Region
 from java.net import URI
-from java.util import List as JavaList
-import ast
-import inspect
-import re
+from java.util import ArrayList
 
 
 #############################
@@ -153,25 +152,30 @@ class MyWalker(ast.NodeVisitor):
 
     def visit_List(self, node):
         debug_print(ast.dump(node))
-        lit = Literal()
-        self.add_loc_info(node, lit)
-        lit.setType(TypeParser.createFrom("List", False))
-        elts = []
-        for e in node.elts:
-            elts.append(self.visit(e))
-        lit.setValue(elts)
-        return lit
+
+        ile = InitializerListExpression()
+        self.add_loc_info(node, ile)
+
+        list = ArrayList()
+
+        for el in node.elts:
+            expr = self.visit(el)
+            list.add(expr)
+
+        ile.setInitializers(list)
+
+        return ile
 
     def visit_Tuple(self, node):
-        debug_print(ast.dump(node))
-        lit = Literal()
-        self.add_loc_info(node, lit)
-        lit.setType(TypeParser.createFrom("Tuple", False))
-        elts = []
-        for e in node.elts:
-            elts.append(self.visit(e))
-        lit.setValue(elts)
-        return lit
+        # debug_print(ast.dump(node))
+        # lit = Literal()
+        # self.add_loc_info(node, lit)
+        # lit.setType(TypeParser.createFrom("Tuple", False))
+        # elts = []
+        # for e in node.elts:
+        #    elts.append(self.visit(e))
+        # lit.setValue(elts)
+        return Expression()
 
     def visit_Set(self, node):
         debug_print(ast.dump(node))
@@ -180,7 +184,7 @@ class MyWalker(ast.NodeVisitor):
     def visit_Dict(self, node):
         debug_print(ast.dump(node))
         # TODO implement it
-        #raise NotImplementedError
+        # raise NotImplementedError
         return Expression()
 
     ### VARIABLES ###
@@ -527,7 +531,7 @@ class MyWalker(ast.NodeVisitor):
     def visit_IfExp(self, node):
         debug_print(ast.dump(node))
         # TODO: implement this - how?
-        #raise NotImplementedError
+        # raise NotImplementedError
         return Expression()
 
     def visit_Attribute(self, node):
@@ -751,7 +755,6 @@ class MyWalker(ast.NodeVisitor):
 
         return body
 
-
     def visit_For(self, node: ast.For):
         debug_print(ast.dump(node))
 
@@ -839,6 +842,63 @@ class MyWalker(ast.NodeVisitor):
         fd.setName(node.name)
         self.scopemanager.enterScope(fd)
 
+        annotations = ArrayList()
+
+        for decorator in node.decorator_list:
+            # cannot do this because kw arguments are not properly handled yet in functions
+            # expr = self.visit(decorator)
+
+            members = ArrayList()
+            annotation = Annotation()
+            self.add_loc_info(decorator, annotation)
+
+            if isinstance(decorator.func, ast.Attribute):
+                ref = self.visit(decorator.func)
+
+                debug_print("DECORATOR")
+                debug_print(ast.dump(decorator.func))
+
+                annotation.setName(ref.getName())
+
+                # add the base as a receiver annotation
+                member = AnnotationMember()
+                self.add_loc_info(decorator.func, member)
+                member.setName("receiver")
+                member.setValue(ref.getBase())
+
+                members.add(member)
+            elif isinstance(decorator, ast.Name):
+                ref = self.visit(decorator.func)
+
+                annotation.setName(ref.getName())
+
+            # add first arg as value
+            if len(decorator.args) > 0:
+                arg0 = decorator.args[0]
+                value = self.visit(arg0)
+
+                member = AnnotationMember()
+                self.add_loc_info(arg0, value)
+                member.setName("value")
+                member.setValue(value)
+
+                members.add(member)
+
+            # loop through keywords args
+            for kw in decorator.keywords:
+                member = AnnotationMember()
+                member.setName(kw.arg)
+                member.setValue(self.visit(kw.value))
+
+                members.add(member)
+
+            annotation.setMembers(members)
+            annotations.add(annotation)
+
+        fd.addAnnotations(annotations)
+
+        # debug_print(node.de)
+
         # handle args
         # scopeManager adds them to fd
         self.visit_arguments(node.args, fd)
@@ -890,13 +950,13 @@ class MyWalker(ast.NodeVisitor):
             if fd != None:
                 # fd.addParameter(x)
                 pass  # PVD -> automagically handled by cpg
-        #if node.vararg is not None:
+        # if node.vararg is not None:
         #    raise NotImplementedError
         for p in node.kwonlyargs:
             raise NotImplementedError
         for p in node.kw_defaults:
             raise NotImplementedError
-        #if node.kwarg is not None:
+        # if node.kwarg is not None:
         #    raise NotImplementedError
         for p in node.defaults:
             pass
@@ -918,8 +978,8 @@ class MyWalker(ast.NodeVisitor):
         debug_print(ast.dump(node))
         r = ReturnStatement()
         self.add_loc_info(node, r)
-        if node.value != None:
-            r.setReturnValue(self.visit(node.value))
+        # if node.value != None:
+        #    r.setReturnValue(self.visit(node.value))
         r.setName("return")
         return r
 
@@ -940,7 +1000,8 @@ class MyWalker(ast.NodeVisitor):
         ref = DeclaredReferenceExpression()
         self.add_loc_info(node, ref)
         ref.setName(node.names[0])
-        self.scopemanager.addDeclaration(ref)
+        # self.scopemanager.addDeclaration(ref)
+
         return ref
 
     def visit_Nonlocal(self, node):
@@ -1008,13 +1069,13 @@ class MyWalker(ast.NodeVisitor):
         debug_print(ast.dump(node))
         # TODO: async modifier
         return self.visit_FunctionDef(node)
-        #raise NotImplementedError
+        # raise NotImplementedError
 
     def visit_Await(self, node):
         debug_print(ast.dump(node))
         # TODO: implement
         return Expression()
-        #raise NotImplementedError
+        # raise NotImplementedError
 
     def visit_AsyncFor(self, node):
         debug_print(ast.dump(node))
