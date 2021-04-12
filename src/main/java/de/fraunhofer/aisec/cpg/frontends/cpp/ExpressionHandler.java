@@ -457,7 +457,7 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
       Expression arg = this.handle(argument);
       arg.setArgumentIndex(i);
 
-      callExpression.addArgument(arg);
+      callExpression.addArgument(arg, false);
 
       i++;
     }

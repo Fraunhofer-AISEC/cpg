@@ -761,7 +761,7 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
 
       argument.setArgumentIndex(i);
 
-      callExpression.addArgument(argument);
+      callExpression.addArgument(argument, false);
     }
 
     return callExpression;

@@ -375,7 +375,7 @@ public class CallResolver extends Pass {
               .getDefaultParameters()
               .subList(
                   call.getArguments().size(), functionDeclaration.getDefaultParameters().size())) {
-        call.addArgument(expression);
+        call.addArgument(expression, true);
       }
     }
   }
