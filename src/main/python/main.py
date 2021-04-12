@@ -30,6 +30,7 @@ from de.fraunhofer.aisec.cpg.graph.statements.expressions import MemberCallExpre
 from de.fraunhofer.aisec.cpg.graph.statements.expressions import MemberExpression
 from de.fraunhofer.aisec.cpg.graph.statements.expressions import UnaryOperator
 from de.fraunhofer.aisec.cpg.graph.statements.expressions import InitializerListExpression
+from de.fraunhofer.aisec.cpg.graph.statements.expressions import KeyValueExpression
 from de.fraunhofer.aisec.cpg.graph.types import TypeParser
 from de.fraunhofer.aisec.cpg.sarif import PhysicalLocation
 from de.fraunhofer.aisec.cpg.sarif import Region
@@ -183,9 +184,32 @@ class MyWalker(ast.NodeVisitor):
 
     def visit_Dict(self, node: ast.Dict):
         debug_print(ast.dump(node))
-        # TODO implement it
-        # raise NotImplementedError
-        return Expression()
+
+        ile = InitializerListExpression()
+        self.add_loc_info(node, ile)
+
+        list = ArrayList()
+
+        # loop through keys and get values
+        for i in range(0, len(node.keys)):
+            key = node.keys[i]
+            value = node.values[i]
+
+            # construct a key value expression
+            key_value = KeyValueExpression()
+
+            key_expr = self.visit(key)
+            value_expr = self.visit(value)
+
+            # _should_ always be a literal
+            key_value.setKey(key_expr)
+            key_value.setValue(value_expr)
+
+            list.add(key_value)
+
+        ile.setInitializers(list)
+
+        return ile
 
     ### VARIABLES ###
     def visit_Name(self, node):
@@ -538,20 +562,12 @@ class MyWalker(ast.NodeVisitor):
         debug_print(ast.dump(node))
 
         mem = MemberExpression()
-        # self.add_loc_info(node, mem)
+        self.add_loc_info(node, mem)
 
-        if isinstance(node.value, ast.Name):
-            exp = self.visit(node.value)
-        elif isinstance(node.value, ast.Attribute):
-            exp = self.visit(node.value)
-        elif isinstance(node.value, ast.Subscript):
-            exp = self.visit(node.value)
-        else:
-            debug_print(type(node.value))
-            raise NotImplementedError
+        base = self.visit(node.value)
 
         mem.setName(node.attr)
-        mem.setBase(exp)
+        mem.setBase(base)
         mem.setOperatorCode(node.attr)
 
         return mem
