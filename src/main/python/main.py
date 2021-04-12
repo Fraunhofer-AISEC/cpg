@@ -554,9 +554,8 @@ class MyWalker(ast.NodeVisitor):
 
     def visit_IfExp(self, node):
         debug_print(ast.dump(node))
-        # TODO: implement this - how?
-        # raise NotImplementedError
-        return Expression()
+        # just return body for now - highly inaccurate
+        return self.visit(node.body)
 
     def visit_Attribute(self, node):
         debug_print(ast.dump(node))
@@ -1122,9 +1121,10 @@ class MyWalker(ast.NodeVisitor):
             # so for now we only add declarations
 
             if d is Declaration:
-                self.scopemanager.addDeclaration(self.visit(n))
+                self.scopemanager.addDeclaration(d)
 
         self.scopemanager.leaveScope(nsd)
+
         self.scopemanager.addDeclaration(nsd)
 
     ### CATCH ALL ###
