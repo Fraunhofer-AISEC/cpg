@@ -36,7 +36,6 @@ import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import de.fraunhofer.aisec.cpg.graph.statements.Statement;
 import de.fraunhofer.aisec.cpg.graph.types.Type;
 import java.util.*;
-import java.util.stream.IntStream;
 import org.neo4j.ogm.annotation.Relationship;
 
 public class ExpressionList extends Expression implements TypeListener {
@@ -110,10 +109,7 @@ public class ExpressionList extends Expression implements TypeListener {
     ExpressionList that = (ExpressionList) o;
     return super.equals(that)
         && Objects.equals(this.getExpressions(), that.getExpressions())
-        && expressions.size() == that.expressions.size()
-        && IntStream.range(0, expressions.size())
-            .mapToObj(i -> expressions.get(i).propertyEquals(that.expressions.get(i)))
-            .allMatch(e -> e);
+        && PropertyEdge.propertyEqualsList(expressions, that.expressions);
   }
 
   @Override

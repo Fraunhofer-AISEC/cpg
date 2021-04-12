@@ -35,7 +35,6 @@ import de.fraunhofer.aisec.cpg.graph.types.Type;
 import de.fraunhofer.aisec.cpg.helpers.Util;
 import java.util.*;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.neo4j.ogm.annotation.Relationship;
@@ -207,15 +206,9 @@ public class CallExpression extends Expression implements TypeListener {
     CallExpression that = (CallExpression) o;
     return super.equals(that)
         && Objects.equals(this.getArguments(), that.getArguments())
-        && arguments.size() == that.arguments.size()
-        && IntStream.range(0, arguments.size())
-            .mapToObj(i -> arguments.get(i).propertyEquals(that.arguments.get(i)))
-            .allMatch(e -> e)
+        && PropertyEdge.propertyEqualsList(arguments, that.arguments)
         && Objects.equals(this.getInvokes(), that.getInvokes())
-        && invokes.size() == that.invokes.size()
-        && IntStream.range(0, invokes.size())
-            .mapToObj(i -> invokes.get(i).propertyEquals(that.invokes.get(i)))
-            .allMatch(e -> e)
+        && PropertyEdge.propertyEqualsList(invokes, that.invokes)
         && Objects.equals(base, that.base);
   }
 

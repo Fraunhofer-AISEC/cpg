@@ -32,7 +32,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
-import java.util.stream.IntStream;
 import org.neo4j.ogm.annotation.Relationship;
 
 /**
@@ -150,10 +149,7 @@ public class ObjectType extends Type {
     if (!super.equals(o)) return false;
     ObjectType that = (ObjectType) o;
     return Objects.equals(this.getGenerics(), that.getGenerics())
-        && generics.size() == that.generics.size()
-        && IntStream.range(0, generics.size())
-            .mapToObj(i -> generics.get(i).propertyEquals(that.generics.get(i)))
-            .allMatch(e -> e)
+        && PropertyEdge.propertyEqualsList(generics, that.generics)
         && this.primitive == that.primitive
         && this.modifier.equals(that.modifier);
   }

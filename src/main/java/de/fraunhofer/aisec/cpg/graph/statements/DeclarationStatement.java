@@ -36,7 +36,6 @@ import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import java.util.stream.IntStream;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.neo4j.ogm.annotation.Relationship;
@@ -114,10 +113,7 @@ public class DeclarationStatement extends Statement {
     DeclarationStatement that = (DeclarationStatement) o;
     return super.equals(that)
         && Objects.equals(this.getDeclarations(), that.getDeclarations())
-        && declarations.size() == that.declarations.size()
-        && IntStream.range(0, declarations.size())
-            .mapToObj(i -> declarations.get(i).propertyEquals(that.declarations.get(i)))
-            .allMatch(e -> e);
+        && PropertyEdge.propertyEqualsList(declarations, that.declarations);
   }
 
   @Override

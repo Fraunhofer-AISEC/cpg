@@ -6,7 +6,6 @@ import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import java.util.stream.IntStream;
 import org.neo4j.ogm.annotation.Relationship;
 
 /**
@@ -95,10 +94,7 @@ public class FunctionPointerType extends Type {
     if (!super.equals(o)) return false;
     FunctionPointerType that = (FunctionPointerType) o;
     return Objects.equals(this.getParameters(), that.getParameters())
-        && parameters.size() == that.parameters.size()
-        && IntStream.range(0, parameters.size())
-            .mapToObj(i -> parameters.get(i).propertyEquals(that.parameters.get(i)))
-            .allMatch(e -> e)
+        && PropertyEdge.propertyEqualsList(parameters, that.parameters)
         && Objects.equals(returnType, that.returnType);
   }
 

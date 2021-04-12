@@ -32,7 +32,6 @@ import de.fraunhofer.aisec.cpg.graph.SubGraph;
 import de.fraunhofer.aisec.cpg.graph.edge.Properties;
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import java.util.*;
-import java.util.stream.IntStream;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.neo4j.ogm.annotation.Relationship;
 
@@ -120,17 +119,11 @@ public class TryStatement extends Statement {
     TryStatement that = (TryStatement) o;
     return super.equals(that)
         && Objects.equals(this.getResources(), that.getResources())
-        && resources.size() == that.resources.size()
-        && IntStream.range(0, resources.size())
-            .mapToObj(i -> resources.get(i).propertyEquals(that.resources.get(i)))
-            .allMatch(e -> e)
+        && PropertyEdge.propertyEqualsList(resources, that.resources)
         && Objects.equals(tryBlock, that.tryBlock)
         && Objects.equals(finallyBlock, that.finallyBlock)
         && Objects.equals(this.getCatchClauses(), that.getCatchClauses())
-        && catchClauses.size() == that.catchClauses.size()
-        && IntStream.range(0, catchClauses.size())
-            .mapToObj(i -> catchClauses.get(i).propertyEquals(that.catchClauses.get(i)))
-            .allMatch(e -> e);
+        && PropertyEdge.propertyEqualsList(catchClauses, that.catchClauses);
   }
 
   @Override
