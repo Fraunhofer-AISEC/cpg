@@ -661,7 +661,7 @@ func (this *GoLanguageFrontend) handleCallExpr(fset *token.FileSet, callExpr *as
 		e := this.handleExpr(fset, arg)
 
 		if e != nil {
-			c.AddArgument(e)
+			c.AddArgument(e, false)
 		}
 	}
 

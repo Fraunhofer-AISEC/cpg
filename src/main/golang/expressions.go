@@ -181,8 +181,8 @@ func (r *DeclaredReferenceExpression) Node() *Node {
 	return (*Node)(r)
 }
 
-func (c *CallExpression) AddArgument(e *Expression) {
-	(*jnigi.ObjectRef)(c).CallMethod(env, "addArgument", jnigi.Void, (*jnigi.ObjectRef)(e).Cast("de/fraunhofer/aisec/cpg/graph/statements/expressions/Expression"))
+func (c *CallExpression) AddArgument(e *Expression, def bool) {
+	(*jnigi.ObjectRef)(c).CallMethod(env, "addArgument", jnigi.Void, (*jnigi.ObjectRef)(e).Cast("de/fraunhofer/aisec/cpg/graph/statements/expressions/Expression"), def)
 }
 
 func (b *BinaryOperator) SetLHS(e *Expression) {
