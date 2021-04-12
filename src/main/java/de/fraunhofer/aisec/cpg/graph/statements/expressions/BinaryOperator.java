@@ -161,9 +161,10 @@ public class BinaryOperator extends Expression implements TypeListener {
       if (this.lhs != null) {
         this.lhs.addPrevDFG(rhs);
       }
-    } else {
-      this.addPrevDFG(rhs);
     }
+    this.addPrevDFG(
+        rhs); // in C++ we can have a + (b = 1) so the rhs has to connected to the BinOp in all
+    // cases
   }
 
   private void disconnectOldRhs() {
@@ -175,9 +176,10 @@ public class BinaryOperator extends Expression implements TypeListener {
       if (this.lhs != null) {
         this.lhs.removePrevDFG(this.rhs);
       }
-    } else {
-      this.removePrevDFG(this.rhs);
     }
+    this.removePrevDFG(
+        this.rhs); // in C++ we can have a + (b = 1) so the rhs has to connected to the BinOp in all
+    // cases
   }
 
   public String getOperatorCode() {

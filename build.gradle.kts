@@ -34,7 +34,7 @@ plugins {
     `maven-publish`
 
     id("org.sonarqube") version "3.1.1"
-    id("com.diffplug.spotless") version "5.11.0"
+    id("com.diffplug.spotless") version "5.11.1"
     id("com.github.johnrengelman.shadow") version "6.1.0"
     kotlin("jvm") version "1.4.20"
 }
@@ -97,7 +97,7 @@ repositories {
     mavenCentral()
 
     ivy {
-        setUrl("https://download.eclipse.org/tools/cdt/releases/9.11/cdt-9.11.1/plugins")
+        setUrl("https://download.eclipse.org/tools/cdt/releases/10.2/cdt-10.2.0/plugins")
         metadataSources {
             artifact()
         }
@@ -119,7 +119,13 @@ signing {
 }
 
 tasks.named<Test>("test") {
-    useJUnitPlatform()
+    useJUnitPlatform {
+        if (!project.hasProperty("experimental")) {
+            excludeTags("experimental")
+        } else {
+            systemProperty("java.library.path", project.projectDir.resolve("src/main/golang"))
+        }
+    }
     maxHeapSize = "4048m"
 }
 
@@ -156,14 +162,14 @@ dependencies {
     api("org.neo4j:neo4j-ogm-core:3.2.19")
     api("org.apache.logging.log4j:log4j-slf4j18-impl:2.14.1")
     api("org.slf4j:jul-to-slf4j:1.8.0-beta4")
-    api("com.github.javaparser:javaparser-symbol-solver-core:3.20.0")
+    api("com.github.javaparser:javaparser-symbol-solver-core:3.20.2")
 
     // Eclipse dependencies
-    api("org.eclipse.platform:org.eclipse.core.runtime:3.18.0")
-    api("com.ibm.icu:icu4j:67.1")
+    api("org.eclipse.platform:org.eclipse.core.runtime:3.20.100")
+    api("com.ibm.icu:icu4j:68.2")
 
     // CDT
-    api("org.eclipse.cdt:core:6.11.1.202006011430")
+    api("org.eclipse.cdt:core:7.2.0.202102251239")
 
     // openCypher
     api("org.opencypher:parser-9.0:9.0.20210312")
@@ -177,7 +183,7 @@ dependencies {
     testImplementation("org.junit.jupiter:junit-jupiter-api:5.7.1")
     testImplementation("org.junit.jupiter:junit-jupiter-params:5.7.1")
 
-    testImplementation("org.mockito:mockito-core:3.8.0")
+    testImplementation("org.mockito:mockito-core:3.9.0")
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.7.1")
 }
 
@@ -189,5 +195,21 @@ spotless {
                 }
         )
         googleJavaFormat()
+    }
+}
+
+if (project.hasProperty("experimental")) {
+    tasks.register("compileGolang") {
+        doLast {
+            project.exec {
+                commandLine("./build.sh")
+                        .setStandardOutput(System.out)
+                        .workingDir("src/main/golang")
+            }
+        }
+    }
+
+    tasks.named("compileJava") {
+        dependsOn(":compileGolang")
     }
 }

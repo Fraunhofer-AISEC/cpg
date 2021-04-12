@@ -519,13 +519,8 @@ public class CallResolver extends Pass {
     if (curClass == null && this.currentTU != null) {
       // Handle function (not method) calls
       // C++ allows function overloading. Make sure we have at least the same number of arguments
-      List<FunctionDeclaration> invocationCandidates =
-          currentTU.getDeclarations().stream()
-              .filter(FunctionDeclaration.class::isInstance)
-              .map(FunctionDeclaration.class::cast)
-              .filter(
-                  f -> f.getName().equals(call.getName()) && f.hasSignature(call.getSignature()))
-              .collect(Collectors.toList());
+
+      var invocationCandidates = lang.getScopeManager().resolveFunction(call);
 
       if (invocationCandidates.isEmpty()) {
         // Check for usage of default args

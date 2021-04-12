@@ -30,19 +30,25 @@ jobs:
         run: |
           if [ "$SONAR_TOKEN" != "" ]
           then
-            ./gradlew --parallel -Pversion=$VERSION spotlessCheck build sonarqube \
+            ./gradlew --parallel -Pversion=$VERSION -Pexperimental build sonarqube \
             -Dsonar.projectKey=Fraunhofer-AISEC_cpg \
             -Dsonar.organization=fraunhofer-aisec \
             -Dsonar.host.url=https://sonarcloud.io \
             -Dsonar.login=$SONAR_TOKEN
           else
-            ./gradlew --parallel -Pversion=$VERSION spotlessCheck build
+            ./gradlew --parallel -Pversion=$VERSION -Pexperimental build
           fi
         id: build
         env:
           VERSION: ${{ steps.determine_version.outputs.version }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Archive test reports
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v2
+        with:
+          name: test
+          path: build/reports/tests
       - name: JavaDoc
         if: startsWith(github.ref, 'refs/tags/v')
         uses: JamesIves/github-pages-deploy-action@releases/v3

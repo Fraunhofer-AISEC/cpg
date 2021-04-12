@@ -26,6 +26,7 @@
 
 package de.fraunhofer.aisec.cpg.graph.declarations;
 
+import de.fraunhofer.aisec.cpg.graph.SubGraph;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
@@ -42,6 +43,16 @@ public class MethodDeclaration extends FunctionDeclaration {
    */
   @Nullable private RecordDeclaration recordDeclaration;
 
+  /**
+   * The receiver variable of this method. In most cases, this variable is called 'this', but in
+   * some languages, it is 'self' (e.g. in Rust or Python) or can be freely named (e.g. in Golang).
+   *
+   * <p>It can be empty, i.e., for pure function definitions as part as an interface.
+   */
+  @SubGraph("AST")
+  @Nullable
+  private VariableDeclaration receiver;
+
   public boolean isStatic() {
     return isStatic;
   }
@@ -57,5 +68,14 @@ public class MethodDeclaration extends FunctionDeclaration {
 
   public void setRecordDeclaration(@Nullable RecordDeclaration recordDeclaration) {
     this.recordDeclaration = recordDeclaration;
+  }
+
+  @Nullable
+  public VariableDeclaration getReceiver() {
+    return receiver;
+  }
+
+  public void setReceiver(@Nullable VariableDeclaration receiver) {
+    this.receiver = receiver;
   }
 }
