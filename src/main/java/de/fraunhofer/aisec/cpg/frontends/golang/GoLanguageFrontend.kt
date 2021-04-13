@@ -2,20 +2,19 @@ package de.fraunhofer.aisec.cpg.frontends.golang
 
 import de.fraunhofer.aisec.cpg.ExperimentalGolang
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
-import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
-import kotlin.Throws
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
-import java.io.File
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
+import java.io.File
+import kotlin.Throws
 
-class RawGolangNode {
-
-}
+class RawGolangNode {}
 
 @ExperimentalGolang
-class GoLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeManager?) : LanguageFrontend(config, scopeManager, ".") {
+class GoLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeManager?) :
+    LanguageFrontend(config, scopeManager, ".") {
     companion object {
         init {
             System.loadLibrary("cpgo")
@@ -38,6 +37,6 @@ class GoLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeMa
     }
 
     override fun <S, T> setComment(s: S, ctx: T) {}
-    
+
     private external fun parseInternal(s: String?): TranslationUnitDeclaration
 }

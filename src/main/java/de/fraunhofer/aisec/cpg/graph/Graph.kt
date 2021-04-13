@@ -5,33 +5,30 @@ import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
-import org.neo4j.ogm.annotation.Relationship
-import org.opencypher.v9_0.ast.*
-import org.opencypher.v9_0.expressions.*
-import org.opencypher.v9_0.parser.CypherParser
-import org.slf4j.LoggerFactory
-import scala.Option
 import java.io.Closeable
 import java.util.function.Predicate
 import java.util.stream.Collectors
 import java.util.stream.Stream
 import kotlin.time.ExperimentalTime
 import kotlin.time.milliseconds
+import org.neo4j.ogm.annotation.Relationship
+import org.opencypher.v9_0.ast.*
+import org.opencypher.v9_0.expressions.*
+import org.opencypher.v9_0.parser.CypherParser
+import org.slf4j.LoggerFactory
+import scala.Option
 
 @ExperimentalGraph
 class QueryBenchmark constructor(db: Graph, query: Query) :
-    Benchmark(
-        db.javaClass,
-        "totalNodes: " + db.size() + " query: " + query.toString()
-    ), AutoCloseable, Closeable {
+    Benchmark(db.javaClass, "totalNodes: " + db.size() + " query: " + query.toString()),
+    AutoCloseable,
+    Closeable {
     override fun close() {
         stop()
     }
 }
 
-/**
- * Returns a {@link Graph} object starting from this translation result.
- */
+/** Returns a {@link Graph} object starting from this translation result. */
 @ExperimentalGraph
 val TranslationResult.graph: Graph
     get() {
@@ -42,10 +39,10 @@ val TranslationResult.graph: Graph
     }
 
 /**
- * A query context represents an interface between an openCypher query and the actual graph.
- * It contains of different handler functions, belonging to different language constructs in
- * the openCypher language, such as MATCH or RETURN. These handler functions basically execute
- * the query on the graph.
+ * A query context represents an interface between an openCypher query and the actual graph. It
+ * contains of different handler functions, belonging to different language constructs in the
+ * openCypher language, such as MATCH or RETURN. These handler functions basically execute the query
+ * on the graph.
  *
  * Please see https://github.com/Fraunhofer-AISEC/cpg/pull/276 for an overview of currently
  * supported openCypher features.
@@ -96,7 +93,11 @@ class QueryContext constructor(val graph: Graph) {
         }
     }
 
-    private fun handleRelationshipChain(chain: RelationshipChain, nodes: List<Node>, where: Option<Where>) {
+    private fun handleRelationshipChain(
+        chain: RelationshipChain,
+        nodes: List<Node>,
+        where: Option<Where>
+    ) {
         // relationship = we need the label for now
         val relationship = chain.relationship()
 
@@ -111,15 +112,19 @@ class QueryContext constructor(val graph: Graph) {
 
             // creating a predicate that checks for the existence of a relationship
             val predicate: (Node) -> Boolean = {
-                var relationshipProperty = it[type.name().toLowerCase(), relationship.direction().toString()]
+                var relationshipProperty =
+                    it[type.name().toLowerCase(), relationship.direction().toString()]
 
                 // check for the existence of the edge
                 if (relationshipProperty is Collection<*>) {
-                    // TODO: check if it really needs unwrapping, not all our nodes are modelled this way
-                    relationshipProperty = PropertyEdge.unwrap(relationshipProperty as MutableList<PropertyEdge<Node>>)
+                    // TODO: check if it really needs unwrapping, not all our nodes are modelled
+                    // this way
+                    relationshipProperty =
+                        PropertyEdge.unwrap(relationshipProperty as MutableList<PropertyEdge<Node>>)
 
                     if (chain.rightNode() is NodePattern) {
-                        val list = handleNodePattern(chain.rightNode(), relationshipProperty, where, null)
+                        val list =
+                            handleNodePattern(chain.rightNode(), relationshipProperty, where, null)
                         list.isNotEmpty()
                     } else {
                         TODO()
@@ -148,9 +153,7 @@ class QueryContext constructor(val graph: Graph) {
         if (!labels.isEmpty) {
             val label = labels.head()
 
-            stream = stream.filter {
-                it.labels.contains(label.name())
-            }
+            stream = stream.filter { it.labels.contains(label.name()) }
         }
 
         // variable seems optional
@@ -175,16 +178,18 @@ class QueryContext constructor(val graph: Graph) {
                 }
             }*/
 
-            // only select it, if contains a variable bound for this node pattern; or no variables are present
+            // only select it, if contains a variable bound for this node pattern; or no variables
+            // are present
             if (list.isEmpty() || list.contains(variable)) {
-                stream = when (expression) {
-                    is Equals -> handleEquals(expression, stream)
-                    is LessThan -> handleLessThan(expression, stream)
-                    is GreaterThan -> handleGreaterThan(expression, stream)
-                    else -> {
-                        TODO()
+                stream =
+                    when (expression) {
+                        is Equals -> handleEquals(expression, stream)
+                        is LessThan -> handleLessThan(expression, stream)
+                        is GreaterThan -> handleGreaterThan(expression, stream)
+                        else -> {
+                            TODO()
+                        }
                     }
-                }
             }
         }
 
@@ -194,8 +199,10 @@ class QueryContext constructor(val graph: Graph) {
 
         val list = stream.collect(Collectors.toList())
 
-        // we could do a little optimization and just return a stream and let the caller handle the collection, this would be an optimization
-        // if no variable is used and thus just the existence is needed, i.e. for filter, but we do not need the result
+        // we could do a little optimization and just return a stream and let the caller handle the
+        // collection, this would be an optimization
+        // if no variable is used and thus just the existence is needed, i.e. for filter, but we do
+        // not need the result
         variable?.let {
             // collect the results and put it into the variable list
             if (!results.containsKey(it)) {
@@ -346,9 +353,9 @@ class Graph(var nodes: List<Node>) {
 }
 
 /**
- * Returns the node's label based on its class hierarchy. It might seem like a good idea to cache this somehow
- * but for some reason, it is faster to do it this way. An example query run almost twice as fast this way.
- * So it looks like Kotlin optimizes the heck out of this.
+ * Returns the node's label based on its class hierarchy. It might seem like a good idea to cache
+ * this somehow but for some reason, it is faster to do it this way. An example query run almost
+ * twice as fast this way. So it looks like Kotlin optimizes the heck out of this.
  */
 val Node.labels: List<String>
     get() {
@@ -415,6 +422,3 @@ private fun Node.getProperty(clazz: Class<*>, key: String): Any? {
         }
     }
 }
-
-
-
