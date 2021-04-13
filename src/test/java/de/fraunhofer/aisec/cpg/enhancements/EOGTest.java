@@ -647,7 +647,7 @@ class EOGTest extends BaseTest {
     TranslationUnitDeclaration tu =
         TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true);
 
-    assert (EvaluationOrderGraphPass.checkEOGInvariant(tu));
+    assertTrue(EvaluationOrderGraphPass.checkEOGInvariant(tu));
   }
 
   /**
