@@ -13,7 +13,6 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
-
 @Tag("experimental")
 @ExperimentalGolang
 class GoLanguageFrontendTest : BaseTest() {
@@ -331,6 +330,25 @@ class GoLanguageFrontendTest : BaseTest() {
 
         assertEquals("MyFunc", myFunc.name)
         assertEquals(TypeParser.createFrom("string", false), myFunc.type)
+
+        val newMyStruct =
+            p.getDeclarationsByName("NewMyStruct", FunctionDeclaration::class.java)
+                .iterator()
+                .next()
+
+        assertNotNull(newMyStruct)
+
+        val body = newMyStruct.body as? CompoundStatement
+
+        assertNotNull(body)
+
+        val `return` = body.statements.first() as? ReturnStatement
+
+        assertNotNull(`return`)
+
+        val returnValue = `return`.returnValue as? UnaryOperator
+
+        assertNotNull(returnValue)
     }
 
     @Test
@@ -538,5 +556,64 @@ class GoLanguageFrontendTest : BaseTest() {
 
         assertNotNull(third)
         assertEquals("third", third.name)
+    }
+
+    @Test
+    fun testMemberCall() {
+        val topLevel = Path.of("src", "test", "resources", "golang")
+        val tus =
+            TestUtils.analyze(
+                listOf(
+                    topLevel.resolve("call.go").toFile(),
+                    topLevel.resolve("struct.go").toFile()
+                ),
+                topLevel,
+                true
+            )
+
+        assertNotNull(tus)
+
+        val tu = tus.first()
+
+        val p = tu.getDeclarationsByName("p", NamespaceDeclaration::class.java).iterator().next()
+
+        val main =
+            p.getDeclarationsByName("main", FunctionDeclaration::class.java).iterator().next()
+
+        assertNotNull(main)
+
+        val body = main.body as? CompoundStatement
+
+        assertNotNull(body)
+
+        val c =
+            (body.statements[0] as? DeclarationStatement)?.singleDeclaration as? VariableDeclaration
+
+        assertNotNull(c)
+        // type will be inferred from the function declaration
+        assertEquals(TypeParser.createFrom("p.MyStruct*", false), c.type)
+
+        val newMyStruct = c.initializer as? CallExpression
+
+        // fetch the function declaration from the other TU
+        val tu2 = tus[1]
+
+        val p2 = tu2.getDeclarationsByName("p", NamespaceDeclaration::class.java).iterator().next()
+        val newMyStructDef =
+            p2.getDeclarationsByName("NewMyStruct", FunctionDeclaration::class.java)
+                .iterator()
+                .next()
+
+        assertNotNull(newMyStruct)
+        assertTrue(newMyStruct.invokes.contains(newMyStructDef))
+
+        val call = body.statements[1] as? MemberCallExpression
+
+        assertNotNull(call)
+
+        val base = call.base as? DeclaredReferenceExpression
+
+        assertNotNull(base)
+        assertEquals(c, base.refersTo)
     }
 }

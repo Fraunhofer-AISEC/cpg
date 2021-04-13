@@ -16,6 +16,7 @@ type ConstructExpression Expression
 type MemberCallExpression CallExpression
 type MemberExpression Expression
 type BinaryOperator Expression
+type UnaryOperator Expression
 type Literal Expression
 type DeclaredReferenceExpression Expression
 
@@ -101,6 +102,18 @@ func NewBinaryOperator(fset *token.FileSet, astNode ast.Node) *BinaryOperator {
 	updateCode(fset, (*Node)(c), astNode)
 
 	return (*BinaryOperator)(c)
+}
+
+func NewUnaryOperator(fset *token.FileSet, astNode ast.Node) *UnaryOperator {
+	c, err := env.NewObject("de/fraunhofer/aisec/cpg/graph/statements/expressions/UnaryOperator")
+	if err != nil {
+		log.Fatal(err)
+
+	}
+
+	updateCode(fset, (*Node)(c), astNode)
+
+	return (*UnaryOperator)(c)
 }
 
 func NewLiteral(fset *token.FileSet, astNode ast.Node) *Literal {
@@ -195,6 +208,14 @@ func (b *BinaryOperator) SetRHS(e *Expression) {
 
 func (b *BinaryOperator) SetOperatorCode(s string) (err error) {
 	return (*jnigi.ObjectRef)(b).SetField(env, "operatorCode", NewString(s))
+}
+
+func (u *UnaryOperator) SetInput(e *Expression) {
+	(*jnigi.ObjectRef)(u).CallMethod(env, "setInput", jnigi.Void, (*jnigi.ObjectRef)(e).Cast("de/fraunhofer/aisec/cpg/graph/statements/expressions/Expression"))
+}
+
+func (u *UnaryOperator) SetOperatorCode(s string) (err error) {
+	return (*jnigi.ObjectRef)(u).SetField(env, "operatorCode", NewString(s))
 }
 
 func (l *Literal) SetType(t *Type) {

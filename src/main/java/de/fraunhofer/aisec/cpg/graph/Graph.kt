@@ -179,8 +179,7 @@ class QueryContext constructor(val graph: Graph) {
             }*/
 
             // only select it, if contains a variable bound for this node pattern; or no variables
-            // are
-            // present
+            // are present
             if (list.isEmpty() || list.contains(variable)) {
                 stream =
                     when (expression) {
@@ -203,8 +202,7 @@ class QueryContext constructor(val graph: Graph) {
         // we could do a little optimization and just return a stream and let the caller handle the
         // collection, this would be an optimization
         // if no variable is used and thus just the existence is needed, i.e. for filter, but we do
-        // not
-        // need the result
+        // not need the result
         variable?.let {
             // collect the results and put it into the variable list
             if (!results.containsKey(it)) {
