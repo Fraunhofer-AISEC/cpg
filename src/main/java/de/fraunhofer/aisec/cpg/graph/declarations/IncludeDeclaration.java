@@ -111,10 +111,10 @@ public class IncludeDeclaration extends Declaration {
     }
     IncludeDeclaration that = (IncludeDeclaration) o;
     return super.equals(that)
-        && Objects.equals(includes, that.includes)
         && Objects.equals(this.getIncludes(), that.getIncludes())
-        && Objects.equals(problems, that.problems)
+        && PropertyEdge.propertyEqualsList(includes, that.includes)
         && Objects.equals(this.getProblems(), that.getProblems())
+        && PropertyEdge.propertyEqualsList(problems, that.problems)
         && Objects.equals(filename, that.filename);
   }
 

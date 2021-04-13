@@ -94,8 +94,8 @@ public class CompoundStatement extends Statement {
     }
     CompoundStatement that = (CompoundStatement) o;
     return super.equals(that)
-        && Objects.equals(statements, that.statements)
-        && Objects.equals(this.getStatements(), that.getStatements());
+        && Objects.equals(this.getStatements(), that.getStatements())
+        && PropertyEdge.propertyEqualsList(statements, that.statements);
   }
 
   @Override
