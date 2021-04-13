@@ -205,10 +205,10 @@ public class CallExpression extends Expression implements TypeListener {
     }
     CallExpression that = (CallExpression) o;
     return super.equals(that)
-        && Objects.equals(arguments, that.arguments)
         && Objects.equals(this.getArguments(), that.getArguments())
-        && Objects.equals(invokes, that.invokes)
+        && PropertyEdge.propertyEqualsList(arguments, that.arguments)
         && Objects.equals(this.getInvokes(), that.getInvokes())
+        && PropertyEdge.propertyEqualsList(invokes, that.invokes)
         && Objects.equals(base, that.base);
   }
 

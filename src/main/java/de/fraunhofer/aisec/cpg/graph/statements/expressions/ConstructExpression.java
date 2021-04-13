@@ -159,8 +159,8 @@ public class ConstructExpression extends Expression implements TypeListener {
     ConstructExpression that = (ConstructExpression) o;
     return super.equals(that)
         && Objects.equals(constructor, that.constructor)
-        && Objects.equals(arguments, that.arguments)
-        && Objects.equals(this.getArguments(), that.getArguments());
+        && Objects.equals(this.getArguments(), that.getArguments())
+        && PropertyEdge.propertyEqualsList(arguments, that.arguments);
   }
 
   @Override
