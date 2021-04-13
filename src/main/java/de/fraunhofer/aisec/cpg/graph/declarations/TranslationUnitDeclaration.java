@@ -172,12 +172,12 @@ public class TranslationUnitDeclaration extends Declaration implements Declarati
     }
     TranslationUnitDeclaration that = (TranslationUnitDeclaration) o;
     return super.equals(that)
-        && Objects.equals(declarations, that.declarations)
         && Objects.equals(this.getDeclarations(), that.getDeclarations())
-        && Objects.equals(includes, that.includes)
+        && PropertyEdge.propertyEqualsList(declarations, that.declarations)
         && Objects.equals(this.getIncludes(), that.getIncludes())
-        && Objects.equals(namespaces, that.namespaces)
-        && Objects.equals(this.getNamespaces(), that.getNamespaces());
+        && PropertyEdge.propertyEqualsList(includes, that.includes)
+        && Objects.equals(this.getNamespaces(), that.getNamespaces())
+        && PropertyEdge.propertyEqualsList(namespaces, that.namespaces);
   }
 
   @Override

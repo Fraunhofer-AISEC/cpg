@@ -93,8 +93,8 @@ public class FunctionPointerType extends Type {
     if (!(o instanceof FunctionPointerType)) return false;
     if (!super.equals(o)) return false;
     FunctionPointerType that = (FunctionPointerType) o;
-    return Objects.equals(parameters, that.parameters)
-        && Objects.equals(this.getParameters(), that.getParameters())
+    return Objects.equals(this.getParameters(), that.getParameters())
+        && PropertyEdge.propertyEqualsList(parameters, that.parameters)
         && Objects.equals(returnType, that.returnType);
   }
 
