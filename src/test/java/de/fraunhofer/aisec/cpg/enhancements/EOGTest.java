@@ -51,6 +51,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExp
 import de.fraunhofer.aisec.cpg.helpers.NodeComparator;
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker;
 import de.fraunhofer.aisec.cpg.helpers.Util;
+import de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass;
 import de.fraunhofer.aisec.cpg.processing.IVisitor;
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy;
 import java.io.File;
@@ -638,6 +639,15 @@ class EOGTest extends BaseTest {
 
     // Assert: The EOGs going into the third print come  from the loop root
     assertTrue(Util.eogConnect(NODE, EXITS, dostat, prints.get(2)));
+  }
+
+  @Test
+  void testEOGInvariant() throws Exception {
+    File file = new File("src/main/java/de/fraunhofer/aisec/cpg/passes/scopes/ScopeManager.java");
+    TranslationUnitDeclaration tu =
+        TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true);
+
+    assert (EvaluationOrderGraphPass.checkEOGInvariant(tu));
   }
 
   /**

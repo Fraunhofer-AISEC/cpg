@@ -180,7 +180,7 @@ public class EvaluationOrderGraphPass extends Pass {
    * @param n
    * @return
    */
-  public boolean checkEOGInvariant(Node n) {
+  public static boolean checkEOGInvariant(Node n) {
     List<Node> allNodes = SubgraphWalker.flattenAST(n);
     boolean ret = true;
     for (Node node : allNodes) {
