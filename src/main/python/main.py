@@ -37,6 +37,7 @@ from de.fraunhofer.aisec.cpg.sarif import Region
 from java.net import URI
 from java.util import ArrayList
 
+NOT_IMPLEMENTED_MSG = "This is not (yet) implemented."
 
 #############################
 # PROBLEMS / OPEN QUESTIONS #
@@ -53,13 +54,6 @@ from java.util import ArrayList
 # 10. assign -> neue decl mit initializer (statt in visit_Name)
 # 11. test Java isinstance aktuell mit java_name startswith -> :( -> chrisitan
 # 12. function.py -> visit_return 2* ???
-
-def debug_print(string, level=1):
-    callerframerecord = inspect.stack()[level]
-    frame = callerframerecord[0]
-    info = inspect.getframeinfo(frame)
-    print("%s\t%d:\t%s" % (info.function, info.lineno, string))
-
 
 class CodeExtractor:
     # Simple/ugly class to extrace code snippets given a region
@@ -101,14 +95,34 @@ class MyWalker(ast.NodeVisitor):
         self.frontend = frontend
         self.scopemanager = frontend.getScopeManager()
         self.scopemanager.resetToGlobal(self.tud)
+        self.logger = self.frontend.getLog()
+
+    def log_with_loc(self, string, level=1, loglevel = "DEBUG"):
+        callerframerecord = inspect.stack()[level]
+        frame = callerframerecord[0]
+        info = inspect.getframeinfo(frame)
+        msg = "%s\t%d:\t%s" % (info.function, info.lineno, string)
+
+        if loglevel == "DEBUG":
+            self.logger.debug(msg)
+        elif loglevel == "INFO":
+            self.logger.info(msg)
+        elif loglevel == "WARN":
+            self.logger.warn(msg)
+        elif loglevel == "ERROR":
+            self.logger.error(msg)
+        else:
+            # catch all
+            self.logger.error(msg)
 
     def add_loc_info(self, node, obj):
         # Adds location information of node to obj
         if not isinstance(node, ast.AST):
-            debug_print(type(node))
-            debug_print(node[0].lineno)
-            debug_print("<--- CALLER", level=2)
-            raise NotImplementedError
+            self.log_with_loc(type(node))
+            self.log_with_loc(node[0].lineno)
+            self.log_with_loc("<--- CALLER", level=2)
+            self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel =  "ERROR")
+            return
         obj.setFile(self.fname)
         uri = URI("file://" + self.fname)
         obj.setLocation(PhysicalLocation(uri, Region(node.lineno,
@@ -119,7 +133,7 @@ class MyWalker(ast.NodeVisitor):
 
     ### LITERALS ###
     def visit_Constant(self, node):
-        debug_print(ast.dump(node))
+        self.log_with_loc(ast.dump(node))
         lit = Literal()
         self.add_loc_info(node, lit)
         lit.setValue(node.value)
@@ -139,20 +153,22 @@ class MyWalker(ast.NodeVisitor):
         elif type(node.value) is bytes:
             lit.setType(TypeParser.createFrom("byte[]", False))
         else:
-            debug_print(type(node.value))
-            raise NotImplementedError
+            self.log_with_loc(type(node.value))
+            self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
         return lit
 
     def visit_FormattedValue(self, node):
-        debug_print(ast.dump(node))
-        raise NotImplementedError
+        self.log_with_loc(ast.dump(node))
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+        return
 
     def visit_JoinedStr(self, node):
-        debug_print(ast.dump(node))
-        raise NotImplementedError
+        self.log_with_loc(ast.dump(node))
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+        return
 
     def visit_List(self, node):
-        debug_print(ast.dump(node))
+        self.log_with_loc(ast.dump(node))
 
         ile = InitializerListExpression()
         self.add_loc_info(node, ile)
@@ -168,7 +184,7 @@ class MyWalker(ast.NodeVisitor):
         return ile
 
     def visit_Tuple(self, node):
-        # debug_print(ast.dump(node))
+        # self.log_with_loc(ast.dump(node))
         # lit = Literal()
         # self.add_loc_info(node, lit)
         # lit.setType(TypeParser.createFrom("Tuple", False))
@@ -179,11 +195,12 @@ class MyWalker(ast.NodeVisitor):
         return Expression()
 
     def visit_Set(self, node):
-        debug_print(ast.dump(node))
-        raise NotImplementedError
+        self.log_with_loc(ast.dump(node))
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+        return
 
     def visit_Dict(self, node: ast.Dict):
-        debug_print(ast.dump(node))
+        self.log_with_loc(ast.dump(node))
 
         ile = InitializerListExpression()
         self.add_loc_info(node, ile)
@@ -213,7 +230,7 @@ class MyWalker(ast.NodeVisitor):
 
     ### VARIABLES ###
     def visit_Name(self, node):
-        debug_print(ast.dump(node))
+        self.log_with_loc(ast.dump(node))
         ref = DeclaredReferenceExpression()
         self.add_loc_info(node, ref)
         ref.setName(node.id)
@@ -222,33 +239,37 @@ class MyWalker(ast.NodeVisitor):
         # if resolved_ref != None:
         #    ref.setRefersTo(resolved_ref)
         # else:
-        #    debug_print("Failed to resolve name.")
+        #    self.log_with_loc("Failed to resolve name.")
         #    raise RuntimeError
         return ref
 
     def visit_Load(self, node):
-        debug_print(ast.dump(node))
-        raise NotImplementedError
+        self.log_with_loc(ast.dump(node))
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+        return
 
     def visit_Store(self, node):
-        debug_print(ast.dump(node))
-        raise NotImplementedError
+        self.log_with_loc(ast.dump(node))
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+        return
 
     def visit_Del(self, node):
-        debug_print(ast.dump(node))
-        raise NotImplementedError
+        self.log_with_loc(ast.dump(node))
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+        return
 
     def visit_Starred(self, node):
-        debug_print(ast.dump(node))
-        raise NotImplementedError
+        self.log_with_loc(ast.dump(node))
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+        return
 
     ### EXORESSIONS ###
     def visit_Expr(self, node):
-        debug_print(ast.dump(node))
+        self.log_with_loc(ast.dump(node))
         return self.visit(node.value)
 
     def visit_UnaryOp(self, node):
-        debug_print(ast.dump(node))
+        self.log_with_loc(ast.dump(node))
         unop = UnaryOperator()
         self.add_loc_info(node, unop)
         unop.setOperatorCode(node.op)
@@ -262,27 +283,31 @@ class MyWalker(ast.NodeVisitor):
         elif isinstance(node.op, ast.Invert):
             unop.setName("Invert")
         else:
-            raise NotImplementedError
+            self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
         return unop
 
     def visit_UAdd(self, node):
-        debug_print(ast.dump(node))
-        raise NotImplementedError
+        self.log_with_loc(ast.dump(node))
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+        return
 
     def visit_USub(self, node):
-        debug_print(ast.dump(node))
-        raise NotImplementedError
+        self.log_with_loc(ast.dump(node))
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+        return
 
     def visit_Not(self, node):
-        debug_print(ast.dump(node))
-        raise NotImplementedError
+        self.log_with_loc(ast.dump(node))
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+        return
 
     def visit_Invert(self, node):
-        debug_print(ast.dump(node))
-        raise NotImplementedError
+        self.log_with_loc(ast.dump(node))
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+        return
 
     def visit_BinOp(self, node):
-        debug_print(ast.dump(node))
+        self.log_with_loc(ast.dump(node))
         binop = BinaryOperator()
         self.add_loc_info(node, binop)
         if isinstance(node.op, ast.Add):
@@ -325,65 +350,78 @@ class MyWalker(ast.NodeVisitor):
             binop.setOperatorCode("MatMult")
             binop.setName("MatMult")
         else:
-            raise NotImplementedError
+            self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
         binop.setLhs(self.visit(node.left))
         binop.setRhs(self.visit(node.right))
         return binop
 
     def visit_Add(self, node):
-        debug_print(ast.dump(node))
-        raise NotImplementedError
+        self.log_with_loc(ast.dump(node))
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+        return
 
     def visit_Sub(self, node):
-        debug_print(ast.dump(node))
-        raise NotImplementedError
+        self.log_with_loc(ast.dump(node))
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+        return
 
     def visit_Mult(self, node):
-        debug_print(ast.dump(node))
-        raise NotImplementedError
+        self.log_with_loc(ast.dump(node))
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+        return
 
     def visit_Div(self, node):
-        debug_print(ast.dump(node))
-        raise NotImplementedError
+        self.log_with_loc(ast.dump(node))
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+        return
 
     def visit_FloorDiv(self, node):
-        debug_print(ast.dump(node))
-        raise NotImplementedError
+        self.log_with_loc(ast.dump(node))
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+        return
 
     def visit_Mod(self, node):
-        debug_print(ast.dump(node))
-        raise NotImplementedError
+        self.log_with_loc(ast.dump(node))
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+        return
 
     def visit_Pow(self, node):
-        debug_print(ast.dump(node))
-        raise NotImplementedError
+        self.log_with_loc(ast.dump(node))
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+        return
 
     def visit_LShift(self, node):
-        debug_print(ast.dump(node))
-        raise NotImplementedError
+        self.log_with_loc(ast.dump(node))
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+        return
 
     def visit_RShift(self, node):
-        debug_print(ast.dump(node))
-        raise NotImplementedError
+        self.log_with_loc(ast.dump(node))
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+        return
 
     def visit_BitOr(self, node):
-        debug_print(ast.dump(node))
-        raise NotImplementedError
+        self.log_with_loc(ast.dump(node))
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+        return
 
     def visit_BitXor(self, node):
-        debug_print(ast.dump(node))
-        raise NotImplementedError
+        self.log_with_loc(ast.dump(node))
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+        return
 
     def visit_BitAnd(self, node):
-        debug_print(ast.dump(node))
-        raise NotImplementedError
+        self.log_with_loc(ast.dump(node))
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+        return
 
     def visit_MatMult(self, node):
-        debug_print(ast.dump(node))
-        raise NotImplementedError
+        self.log_with_loc(ast.dump(node))
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+        return
 
     def visit_BoolOp(self, node: ast.BoolOp):
-        debug_print(ast.dump(node))
+        self.log_with_loc(ast.dump(node))
         binOp = BinaryOperator()
 
         if isinstance(node.op, ast.And):
@@ -391,7 +429,8 @@ class MyWalker(ast.NodeVisitor):
         elif isinstance(node.op, ast.Or):
             binOp.setOperatorCode("||")
         else:
-            raise NotImplementedError
+            self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+            return
 
         # TODO: split into multiple binary operators, python supports many values
 
@@ -399,24 +438,26 @@ class MyWalker(ast.NodeVisitor):
             lhs = self.visit(node.values[0])
             rhs = self.visit(node.values[1])
         else:
-            raise NotImplementedError
+            self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
 
         return binOp
 
     def visit_And(self, node):
-        debug_print(ast.dump(node))
-        raise NotImplementedError
+        self.log_with_loc(ast.dump(node))
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+        return
 
     def visit_Or(self, node):
-        debug_print(ast.dump(node))
-        raise NotImplementedError
+        self.log_with_loc(ast.dump(node))
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+        return
 
     def visit_Compare(self, node):
-        debug_print(ast.dump(node))
+        self.log_with_loc(ast.dump(node))
         comp = BinaryOperator()
         self.add_loc_info(node, comp)
         if len(node.ops) != 1:
-            raise NotImplementedError
+            self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
         op = node.ops[0]
         if isinstance(op, ast.Eq):
             comp.setOperatorCode("Eq")
@@ -449,57 +490,67 @@ class MyWalker(ast.NodeVisitor):
             comp.setOperatorCode("NotIn")
             comp.setName("NotIn")
         else:
-            debug_print(op)
-            raise NotImplementedError
+            self.log_with_loc(op)
+            self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
         comp.setLhs(self.visit(node.left))
         if len(node.comparators) != 1:
-            raise NotImplementedError
+            self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
         comp.setRhs(self.visit(node.comparators[0]))
         return comp
 
     def visit_Eq(self, node):
-        debug_print(ast.dump(node))
-        raise NotImplementedError
+        self.log_with_loc(ast.dump(node))
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+        return
 
     def visit_NotEq(self, node):
-        debug_print(ast.dump(node))
-        raise NotImplementedError
+        self.log_with_loc(ast.dump(node))
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+        return
 
     def visit_Lt(self, node):
-        debug_print(ast.dump(node))
-        raise NotImplementedError
+        self.log_with_loc(ast.dump(node))
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+        return
 
     def visit_LtE(self, node):
-        debug_print(ast.dump(node))
-        raise NotImplementedError
+        self.log_with_loc(ast.dump(node))
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+        return
 
     def visit_Gt(self, node):
-        debug_print(ast.dump(node))
-        raise NotImplementedError
+        self.log_with_loc(ast.dump(node))
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+        return
 
     def visit_GtE(self, node):
-        debug_print(ast.dump(node))
-        raise NotImplementedError
+        self.log_with_loc(ast.dump(node))
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+        return
 
     def visit_Is(self, node):
-        debug_print(ast.dump(node))
-        raise NotImplementedError
+        self.log_with_loc(ast.dump(node))
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+        return
 
     def visit_IsNot(self, node):
-        debug_print(ast.dump(node))
-        raise NotImplementedError
+        self.log_with_loc(ast.dump(node))
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+        return
 
     def visit_In(self, node):
-        debug_print(ast.dump(node))
-        raise NotImplementedError
+        self.log_with_loc(ast.dump(node))
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+        return
 
     def visit_NotIn(self, node):
-        debug_print(ast.dump(node))
-        raise NotImplementedError
+        self.log_with_loc(ast.dump(node))
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+        return
 
     def visit_Call(self, node):
         # TODO keywords starargs kwargs
-        debug_print(ast.dump(node))
+        self.log_with_loc(ast.dump(node))
 
         # a call can be one of
         # - simple function call
@@ -549,16 +600,18 @@ class MyWalker(ast.NodeVisitor):
         return call
 
     def visit_keyword(self, node):
-        debug_print(ast.dump(node))
-        raise NotImplementedError
+        self.log_with_loc(ast.dump(node))
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+        return
 
     def visit_IfExp(self, node):
-        debug_print(ast.dump(node))
+        self.log_with_loc(ast.dump(node))
         # just return body for now - highly inaccurate
+        # TODO
         return self.visit(node.body)
 
     def visit_Attribute(self, node):
-        debug_print(ast.dump(node))
+        self.log_with_loc(ast.dump(node))
 
         mem = MemberExpression()
         self.add_loc_info(node, mem)
@@ -572,12 +625,13 @@ class MyWalker(ast.NodeVisitor):
         return mem
 
     def visit_NamedExpr(self, node):
-        debug_print(ast.dump(node))
-        raise NotImplementedError
+        self.log_with_loc(ast.dump(node))
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+        return
 
     ### SUBSCRIPTING ###
     def visit_Subscript(self, node):
-        debug_print(ast.dump(node))
+        self.log_with_loc(ast.dump(node))
         s = ArraySubscriptionExpression()
         self.add_loc_info(node, s)
         s.setArrayExpression(self.visit(node.value))
@@ -585,7 +639,7 @@ class MyWalker(ast.NodeVisitor):
         return s
 
     def visit_Slice(self, node):
-        debug_print(ast.dump(node))
+        self.log_with_loc(ast.dump(node))
         slc = ArrayRangeExpression()
         self.add_loc_info(node, slc)
         if node.lower != None:
@@ -593,42 +647,47 @@ class MyWalker(ast.NodeVisitor):
         if node.upper != None:
             slc.setCeiling(self.visit(node.upper))
         if node.step != None:
-            debug_print("Step not yet supported.")
-            raise NotImplementedError
+            self.log_with_loc("Step not yet supported.", loglevel = "ERROR")
         return slc
 
     ### COMPREHENSIONS ###
     def visit_ListComp(self, node):
-        debug_print(ast.dump(node))
-        raise NotImplementedError
+        self.log_with_loc(ast.dump(node))
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+        return
 
     def visit_SetComp(self, node):
-        debug_print(ast.dump(node))
-        raise NotImplementedError
+        self.log_with_loc(ast.dump(node))
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+        return
 
     def visit_GeneratorExp(self, node):
-        debug_print(ast.dump(node))
-        raise NotImplementedError
+        self.log_with_loc(ast.dump(node))
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+        return
 
     def visit_DictComp(self, node):
-        debug_print(ast.dump(node))
-        raise NotImplementedError
+        self.log_with_loc(ast.dump(node))
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+        return
 
     def visit_comprehension(self, node):
-        debug_print(ast.dump(node))
-        raise NotImplementedError
+        self.log_with_loc(ast.dump(node))
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+        return
 
     ### STATEMENTS ###
     def visit_Assign(self, node: ast.Assign):
-        debug_print(ast.dump(node))
+        self.log_with_loc(ast.dump(node))
 
         if len(node.targets) != 1:
-            raise NotImplementedError
+            self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+            return
 
         target = node.targets[0]
 
         # if isinstance(target, ast.Attribute):
-        #    debug_print("HERE")
+        #    self.log_with_loc("HERE")
 
         # parse LHS and RHS as expressions
         lhs = self.visit(target)
@@ -658,11 +717,12 @@ class MyWalker(ast.NodeVisitor):
         return binop
 
     def visit_AnnAssign(self, node):
-        debug_print(ast.dump(node))
-        raise NotImplementedError
+        self.log_with_loc(ast.dump(node))
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+        return
 
     def visit_AugAssign(self, node):
-        debug_print(ast.dump(node))
+        self.log_with_loc(ast.dump(node))
         binop = BinaryOperator()
         self.add_loc_info(node, binop)
         binop.setOperatorCode(node.op)
@@ -672,7 +732,7 @@ class MyWalker(ast.NodeVisitor):
         return binop
 
     def visit_Raise(self, node):
-        debug_print(ast.dump(node))
+        self.log_with_loc(ast.dump(node))
         op = UnaryOperator()
         self.add_loc_info(node, op)
         op.setOperatorCode("raise")
@@ -681,15 +741,17 @@ class MyWalker(ast.NodeVisitor):
         return op
 
     def visit_Assert(self, node):
-        debug_print(ast.dump(node))
-        raise NotImplementedError
+        self.log_with_loc(ast.dump(node))
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+        return
 
     def visit_Delete(self, node):
-        debug_print(ast.dump(node))
-        raise NotImplementedError
+        self.log_with_loc(ast.dump(node))
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+        return
 
     def visit_Pass(self, node):
-        debug_print(ast.dump(node))
+        self.log_with_loc(ast.dump(node))
         stmt = EmptyStatement()
         self.add_loc_info(node, stmt)
         stmt.setName("pass")
@@ -697,11 +759,11 @@ class MyWalker(ast.NodeVisitor):
 
     ### IMPORTS ###
     def visit_Import(self, node):
-        debug_print(ast.dump(node))
+        self.log_with_loc(ast.dump(node))
         imp = IncludeDeclaration()
         self.add_loc_info(node, imp)
         if len(node.names) != 1:
-            raise NotImplementedError
+            self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
         imp.setFilename(self.fname + node.names[0].name)
 
         # make scopmanager aware of import
@@ -712,11 +774,11 @@ class MyWalker(ast.NodeVisitor):
         return imp
 
     def visit_ImportFrom(self, node):
-        debug_print(ast.dump(node))
+        self.log_with_loc(ast.dump(node))
         imp = IncludeDeclaration()
         self.add_loc_info(node, imp)
         if node.level != 0:
-            raise NotImplementedError
+            self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
         imp.setFilename(self.fname + node.module)
 
         # make scopmanager aware of import
@@ -727,12 +789,13 @@ class MyWalker(ast.NodeVisitor):
         return imp
 
     def visit_alias(self, node):
-        debug_print(ast.dump(node))
-        raise NotImplementedError
+        self.log_with_loc(ast.dump(node))
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+        return
 
     ### CONTROL FLOW ###
     def visit_If(self, node):
-        debug_print(ast.dump(node))
+        self.log_with_loc(ast.dump(node))
         stmt = IfStatement()
         self.add_loc_info(node, stmt)
         stmt.setCondition(self.visit(node.test))
@@ -771,7 +834,7 @@ class MyWalker(ast.NodeVisitor):
         return body
 
     def visit_For(self, node: ast.For):
-        debug_print(ast.dump(node))
+        self.log_with_loc(ast.dump(node))
 
         stmt = ForEachStatement()
         self.add_loc_info(node, stmt)
@@ -786,9 +849,10 @@ class MyWalker(ast.NodeVisitor):
 
             stmt.setVariable(var)
         else:
-            debug_print(ref.java_name)
+            self.log_with_loc(ref.java_name)
             # tuple or list
-            raise NotImplementedError  # what???
+            self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+            return
 
         stmt.setIterable(self.visit(node.iter))
         if len(node.body) == 1:
@@ -800,7 +864,7 @@ class MyWalker(ast.NodeVisitor):
         return stmt
 
     def visit_While(self, node):
-        debug_print(ast.dump(node))
+        self.log_with_loc(ast.dump(node))
         w = WhileStatement()
         self.add_loc_info(node, w)
         w.setCondition(self.visit(node.test))
@@ -810,20 +874,22 @@ class MyWalker(ast.NodeVisitor):
             body.addStatement(self.visit(n))
         w.setStatement(body)
         if node.orelse != None and len(node.orelse) != 0:
-            debug_print("while -> orelse not implemented, yet")
-            raise NotImplementedError
+            self.log_with_loc("while -> orelse not implemented, yet",
+                    loglevel = "ERROR")
         return w
 
     def visit_Break(self, node):
-        debug_print(ast.dump(node))
-        raise NotImplementedError
+        self.log_with_loc(ast.dump(node))
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+        return
 
     def visit_Continue(self, node):
-        debug_print(ast.dump(node))
-        raise NotImplementedError
+        self.log_with_loc(ast.dump(node))
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+        return
 
     def visit_Try(self, node: ast.Try):
-        debug_print(ast.dump(node))
+        self.log_with_loc(ast.dump(node))
 
         t = TryStatement()
 
@@ -836,21 +902,24 @@ class MyWalker(ast.NodeVisitor):
         return t
 
     def visit_ExceptHandler(self, node):
-        debug_print(ast.dump(node))
-        raise NotImplementedError
+        self.log_with_loc(ast.dump(node))
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+        return
 
     def visit_With(self, node):
-        debug_print(ast.dump(node))
-        return  # TODO LATER -> new cpg node or foreach + try/catch?
-        raise NotImplementedError
+        self.log_with_loc(ast.dump(node))
+        # TODO LATER -> new cpg node or foreach + try/catch?
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+        return
 
     def visit_withitem(self, node):
-        debug_print(ast.dump(node))
-        raise NotImplementedError
+        self.log_with_loc(ast.dump(node))
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+        return
 
     ### FUNCTION AND CLASS DEFINITIONS ###
     def visit_FunctionDef(self, node: ast.FunctionDef, returnMethod=False):
-        debug_print(ast.dump(node))
+        self.log_with_loc(ast.dump(node))
         if returnMethod:
             fd = MethodDeclaration()
         else:
@@ -913,7 +982,7 @@ class MyWalker(ast.NodeVisitor):
 
         fd.addAnnotations(annotations)
 
-        # debug_print(node.de)
+        # self.log_with_loc(node.de)
 
         # handle args
         # scopeManager adds them to fd
@@ -952,15 +1021,16 @@ class MyWalker(ast.NodeVisitor):
         return fd
 
     def visit_Lambda(self, node):
-        debug_print(ast.dump(node))
-        raise NotImplementedError
+        self.log_with_loc(ast.dump(node))
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+        return
 
     def visit_arguments(self, node, fd=None):
-        debug_print(ast.dump(node))
+        self.log_with_loc(ast.dump(node))
         if fd is not None:
-            debug_print("visit_arguments with FunctionDeclaration")
+            self.log_with_loc("visit_arguments with FunctionDeclaration")
         for p in node.posonlyargs:
-            raise NotImplementedError
+            self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
         for p in node.args:
             x = self.visit(p)
             if fd is not None:
@@ -969,19 +1039,20 @@ class MyWalker(ast.NodeVisitor):
         # if node.vararg is not None:
         #    raise NotImplementedError
         for p in node.kwonlyargs:
-            raise NotImplementedError
+            self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
         for p in node.kw_defaults:
-            raise NotImplementedError
+            self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
         # if node.kwarg is not None:
         #    raise NotImplementedError
         for p in node.defaults:
+            self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
             pass
             # raise NotImplementedError
             # no cpg support???
         return
 
     def visit_arg(self, node):
-        debug_print(ast.dump(node))
+        self.log_with_loc(ast.dump(node))
         pvd = ParamVariableDeclaration()
         self.add_loc_info(node, pvd)
         pvd.setName(node.arg)
@@ -991,7 +1062,7 @@ class MyWalker(ast.NodeVisitor):
         return pvd
 
     def visit_Return(self, node):
-        debug_print(ast.dump(node))
+        self.log_with_loc(ast.dump(node))
         r = ReturnStatement()
         self.add_loc_info(node, r)
         # if node.value != None:
@@ -1000,19 +1071,22 @@ class MyWalker(ast.NodeVisitor):
         return r
 
     def visit_Yield(self, node):
-        debug_print(ast.dump(node))
-        raise NotImplementedError
+        self.log_with_loc(ast.dump(node))
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+        return
 
     def visit_YieldFrom(self, node):
-        debug_print(ast.dump(node))
-        raise NotImplementedError
+        self.log_with_loc(ast.dump(node))
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+        return
 
     def visit_Global(self, node):
+        self.log_with_loc(ast.dump(node))
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
         return  # TODO: no support for global vars, yet. how to model them as CPG
         # nodes?
-        debug_print(ast.dump(node))
         if len(node.names) != 1:
-            raise NotImplementedError
+            self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
         ref = DeclaredReferenceExpression()
         self.add_loc_info(node, ref)
         ref.setName(node.names[0])
@@ -1021,11 +1095,12 @@ class MyWalker(ast.NodeVisitor):
         return ref
 
     def visit_Nonlocal(self, node):
-        debug_print(ast.dump(node))
-        raise NotImplementedError
+        self.log_with_loc(ast.dump(node))
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+        return
 
     def visit_ClassDef(self, node):
-        debug_print(ast.dump(node))
+        self.log_with_loc(ast.dump(node))
         rec = RecordDeclaration()
         self.add_loc_info(node, rec)
         # name
@@ -1046,15 +1121,15 @@ class MyWalker(ast.NodeVisitor):
                 tname = "%s" % (b.id)
                 t = TypeParser.createFrom(tname, True)
             else:
-                raise NotImplementedError
+                self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
         else:
-            raise NotImplementedError
+            self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
 
         if t != None:
             rec.setSuperClasses([t])
         if len(node.keywords) != 0:
-            debug_print(node.keywords)
-            raise NotImplementedError
+            self.log_with_loc(node.keywords)
+            self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
         # if node.starargs is not None:
         #    raise NotImplementedError
         # if node.kwargs is not None:
@@ -1069,12 +1144,11 @@ class MyWalker(ast.NodeVisitor):
                 # TODO what to do about expressions inside a class?
                 self.visit(b)
             else:
-                debug_print(type(b))
-                debug_print(b)
-                raise NotImplementedError
+                self.log_with_loc(b)
+                self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
 
         if len(node.decorator_list) != 0:
-            raise NotImplementedError
+            self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
 
         self.scopemanager.leaveScope(rec)
         self.scopemanager.addDeclaration(rec)
@@ -1082,28 +1156,32 @@ class MyWalker(ast.NodeVisitor):
 
     ### ASYNC AND AWAIT ###
     def visit_AsyncFunctionDef(self, node):
-        debug_print(ast.dump(node))
+        self.log_with_loc(ast.dump(node))
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
         # TODO: async modifier
         return self.visit_FunctionDef(node)
         # raise NotImplementedError
 
     def visit_Await(self, node):
-        debug_print(ast.dump(node))
+        self.log_with_loc(ast.dump(node))
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
         # TODO: implement
         return Expression()
         # raise NotImplementedError
 
     def visit_AsyncFor(self, node):
-        debug_print(ast.dump(node))
-        raise NotImplementedError
+        self.log_with_loc(ast.dump(node))
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+        return
 
     def visit_AsyncWith(self, node):
-        debug_print(ast.dump(node))
-        raise NotImplementedError
+        self.log_with_loc(ast.dump(node))
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+        return
 
     ### MISC ###
     def visit_Module(self, node):
-        debug_print(ast.dump(node))
+        self.log_with_loc(ast.dump(node))
         '''The AST is wrapped in a 'Module' with 'body' list. Visit the body.'''
         nsd = NamespaceDeclaration()
 
@@ -1129,13 +1207,13 @@ class MyWalker(ast.NodeVisitor):
 
     ### CATCH ALL ###
     def generic_visit(self, node):
-        debug_print(ast.dump(node))
-        raise NotImplementedError
+        self.log_with_loc(ast.dump(node))
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+        return
 
 
 def parse_code(code, filename, frontend):
     root = ast.parse(code, filename=filename, type_comments=True)
-    # debug_print(ast.dump(root, indent = 2))
 
     walker = MyWalker(filename, frontend)
     walker.visit(root)

@@ -287,4 +287,8 @@ public abstract class LanguageFrontend {
   }
 
   public abstract <S, T> void setComment(S s, T ctx);
+
+  public Logger getLog() {
+    return this.log;
+  }
 }
