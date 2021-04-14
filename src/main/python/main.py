@@ -20,6 +20,7 @@ from de.fraunhofer.aisec.cpg.graph.statements.expressions import ArrayRangeExpre
 from de.fraunhofer.aisec.cpg.graph.statements.expressions import ArraySubscriptionExpression
 from de.fraunhofer.aisec.cpg.graph.statements.expressions import BinaryOperator
 from de.fraunhofer.aisec.cpg.graph.statements.expressions import CallExpression
+from de.fraunhofer.aisec.cpg.graph.statements.expressions import CastExpression
 from de.fraunhofer.aisec.cpg.graph.statements.expressions import ConstructExpression
 from de.fraunhofer.aisec.cpg.graph.statements.expressions import DeclaredReferenceExpression
 from de.fraunhofer.aisec.cpg.graph.statements.expressions import Expression
@@ -577,9 +578,18 @@ class PythonASTToCPG(ast.NodeVisitor):
                 call.setName(node.func.id)
                 call.setType(TypeParser.createFrom(record.getName(), False))
             else:
-                call = CallExpression()
-                call.setName(name)
-                call.setFqn(name)
+                if name == "str" and len(node.args) == 1:
+                    cast = CastExpression()
+                    self.add_loc_info(node, cast)
+                    cast.setCastType(TypeParser.createFrom("str", False))
+                    cast.setExpression(self.visit(node.args[0]))
+
+                    return cast
+
+                else:
+                    call = CallExpression()
+                    call.setName(name)
+                    call.setFqn(name)
 
         self.add_loc_info(node, call)
 
@@ -810,7 +820,7 @@ class PythonASTToCPG(ast.NodeVisitor):
         for b in node_list:
             s = self.visit(b)
 
-            if s.java_name.startswith('de.fraunhofer.aisec.cpg.graph.declarations.'):
+            if s is not None and s.java_name.startswith('de.fraunhofer.aisec.cpg.graph.declarations.'):
                 # wrap the statement
                 d = DeclarationStatement()
                 self.add_loc_info(node, d)
