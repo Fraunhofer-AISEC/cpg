@@ -1,5 +1,3 @@
-import ast
-import inspect
 from de.fraunhofer.aisec.cpg.graph import Annotation
 from de.fraunhofer.aisec.cpg.graph import AnnotationMember
 from de.fraunhofer.aisec.cpg.graph.declarations import Declaration
@@ -25,35 +23,21 @@ from de.fraunhofer.aisec.cpg.graph.statements.expressions import CallExpression
 from de.fraunhofer.aisec.cpg.graph.statements.expressions import ConstructExpression
 from de.fraunhofer.aisec.cpg.graph.statements.expressions import DeclaredReferenceExpression
 from de.fraunhofer.aisec.cpg.graph.statements.expressions import Expression
+from de.fraunhofer.aisec.cpg.graph.statements.expressions import InitializerListExpression
+from de.fraunhofer.aisec.cpg.graph.statements.expressions import KeyValueExpression
 from de.fraunhofer.aisec.cpg.graph.statements.expressions import Literal
 from de.fraunhofer.aisec.cpg.graph.statements.expressions import MemberCallExpression
 from de.fraunhofer.aisec.cpg.graph.statements.expressions import MemberExpression
 from de.fraunhofer.aisec.cpg.graph.statements.expressions import UnaryOperator
-from de.fraunhofer.aisec.cpg.graph.statements.expressions import InitializerListExpression
-from de.fraunhofer.aisec.cpg.graph.statements.expressions import KeyValueExpression
 from de.fraunhofer.aisec.cpg.graph.types import TypeParser
 from de.fraunhofer.aisec.cpg.sarif import PhysicalLocation
 from de.fraunhofer.aisec.cpg.sarif import Region
 from java.net import URI
 from java.util import ArrayList
+import ast
+import inspect
 
 NOT_IMPLEMENTED_MSG = "This is not (yet) implemented."
-
-#############################
-# PROBLEMS / OPEN QUESTIONS #
-#############################
-# 1. Wie gehen wir mit Expression außerhalb von Funktionen um? Für Funktionen gibt es die FunctionDeclaration. Was gibt es für Expressions?
-# 2. File Info kaputt
-# 3. import == include???
-# 4. Import from??? Import alias???
-# 5. default args: wip für cpp
-# 6. Exceptions -> unary op
-# 7. listen / tupel?
-# 8. 2 edges func -> pvd (scopemanager addDeclaration zu oft?)
-# 9. self -> go receiver vom christian angucken
-# 10. assign -> neue decl mit initializer (statt in visit_Name)
-# 11. test Java isinstance aktuell mit java_name startswith -> :( -> chrisitan
-# 12. function.py -> visit_return 2* ???
 
 class CodeExtractor:
     # Simple/ugly class to extrace code snippets given a region
@@ -86,7 +70,7 @@ class CodeExtractor:
             return "\n".join(res)
 
 
-class MyWalker(ast.NodeVisitor):
+class PythonASTToCPG(ast.NodeVisitor):
     def __init__(self, fname, frontend):
         self.sourcecode = CodeExtractor(fname)
         self.tud = TranslationUnitDeclaration()
@@ -686,9 +670,6 @@ class MyWalker(ast.NodeVisitor):
 
         target = node.targets[0]
 
-        # if isinstance(target, ast.Attribute):
-        #    self.log_with_loc("HERE")
-
         # parse LHS and RHS as expressions
         lhs = self.visit(target)
         rhs = self.visit(node.value)
@@ -868,11 +849,7 @@ class MyWalker(ast.NodeVisitor):
         w = WhileStatement()
         self.add_loc_info(node, w)
         w.setCondition(self.visit(node.test))
-        body = CompoundStatement()
-        self.add_loc_info(node, body)
-        for n in node.body:
-            body.addStatement(self.visit(n))
-        w.setStatement(body)
+        w.setStatement(self.make_compound_statement(node, node.body))
         if node.orelse != None and len(node.orelse) != 0:
             self.log_with_loc("while -> orelse not implemented, yet",
                     loglevel = "ERROR")
@@ -989,25 +966,7 @@ class MyWalker(ast.NodeVisitor):
         self.visit_arguments(node.args, fd)
 
         # handle body
-        body = CompoundStatement()
-        body.setName("body")
-        self.add_loc_info(node, body)
-        fd.setBody(body)
-        for stmt in node.body:
-            s = self.visit(stmt)
-
-            if s is None:
-                continue
-
-            # TODO
-            if s.java_name.startswith('de.fraunhofer.aisec.cpg.graph.declarations.'):
-                # wrap the statement
-                d = DeclarationStatement()
-                self.add_loc_info(node, d)
-                d.setSingleDeclaration(s)
-                body.addStatement(d)
-            else:
-                body.addStatement(s)
+        fd.setBody(self.make_compound_statement(node, node.body))
 
         # handle decorator_list
 
@@ -1215,7 +1174,7 @@ class MyWalker(ast.NodeVisitor):
 def parse_code(code, filename, frontend):
     root = ast.parse(code, filename=filename, type_comments=True)
 
-    walker = MyWalker(filename, frontend)
+    walker = PythonASTToCPG(filename, frontend)
     walker.visit(root)
 
     return walker.tud
