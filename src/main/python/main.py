@@ -176,6 +176,8 @@ class PythonASTToCPG(ast.NodeVisitor):
         # for e in node.elts:
         #    elts.append(self.visit(e))
         # lit.setValue(elts)
+        # TODO
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
         return Expression()
 
     def visit_Set(self, node):
@@ -259,13 +261,17 @@ class PythonASTToCPG(ast.NodeVisitor):
         unop.setOperatorCode(node.op)
         unop.setInput(self.visit(node.operand))
         if isinstance(node.op, ast.UAdd):
-            unop.setName("UAdd")
+            unop.setOperatorCode("+")
+            unop.setName("+")
         elif isinstance(node.op, ast.USub):
-            unop.setName("USub")
+            unop.setOperatorCode("-")
+            unop.setName("-")
         elif isinstance(node.op, ast.Not):
-            unop.setName("Not")
+            unop.setOperatorCode("!")
+            unop.setName("!")
         elif isinstance(node.op, ast.Invert):
-            unop.setName("Invert")
+            unop.setOperatorCode("~")
+            unop.setName("~")
         else:
             self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
         return unop
@@ -313,26 +319,26 @@ class PythonASTToCPG(ast.NodeVisitor):
             binop.setOperatorCode("%")
             binop.setName("%")
         elif isinstance(node.op, ast.Pow):
-            binop.setOperatorCode("Pow")
-            binop.setName("Pow")
+            binop.setOperatorCode("**")
+            binop.setName("**")
         elif isinstance(node.op, ast.LShift):
-            binop.setOperatorCode("LShift")
-            binop.setName("LShift")
+            binop.setOperatorCode("<<")
+            binop.setName("<<")
         elif isinstance(node.op, ast.RShift):
-            binop.setOperatorCode("RShift")
-            binop.setName("RShift")
+            binop.setOperatorCode(">>")
+            binop.setName(">>")
         elif isinstance(node.op, ast.BitOr):
-            binop.setOperatorCode("BitOr")
-            binop.setName("BitOr")
+            binop.setOperatorCode("|")
+            binop.setName("|")
         elif isinstance(node.op, ast.BitXor):
-            binop.setOperatorCode("BitXor")
-            binop.setName("BitXor")
+            binop.setOperatorCode("^")
+            binop.setName("^")
         elif isinstance(node.op, ast.BitAnd):
-            binop.setOperatorCode("BitAnd")
-            binop.setName("BitAnd")
+            binop.setOperatorCode("&")
+            binop.setName("&")
         elif isinstance(node.op, ast.MatMult):
-            binop.setOperatorCode("MatMult")
-            binop.setName("MatMult")
+            binop.setOperatorCode("*")
+            binop.setName("*")
         else:
             self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
         binop.setLhs(self.visit(node.left))
@@ -444,35 +450,35 @@ class PythonASTToCPG(ast.NodeVisitor):
             self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
         op = node.ops[0]
         if isinstance(op, ast.Eq):
-            comp.setOperatorCode("Eq")
-            comp.setName("Eq")
+            comp.setOperatorCode("==")
+            comp.setName("==")
         elif isinstance(op, ast.NotEq):
-            comp.setOperatorCode("NotEq")
-            comp.setName("NotEq")
+            comp.setOperatorCode("!=")
+            comp.setName("!=")
         elif isinstance(op, ast.Lt):
-            comp.setOperatorCode("Lt")
-            comp.setName("Lt")
+            comp.setOperatorCode("<")
+            comp.setName("<")
         elif isinstance(op, ast.LtE):
-            comp.setOperatorCode("LtE")
-            comp.setName("LtE")
+            comp.setOperatorCode("<=")
+            comp.setName("<=")
         elif isinstance(op, ast.Gt):
-            comp.setOperatorCode("Gt")
-            comp.setName("Gt")
+            comp.setOperatorCode(">")
+            comp.setName(">")
         elif isinstance(op, ast.GtE):
-            comp.setOperatorCode("GtE")
-            comp.setName("GtE")
+            comp.setOperatorCode(">=")
+            comp.setName(">=")
         elif isinstance(op, ast.Is):
-            comp.setOperatorCode("Is")
-            comp.setName("Is")
+            comp.setOperatorCode("is")
+            comp.setName("is")
         elif isinstance(op, ast.IsNot):
-            comp.setOperatorCode("IsNot")
-            comp.setName("IsNot")
+            comp.setOperatorCode("is not")
+            comp.setName("is not")
         elif isinstance(op, ast.In):
-            comp.setOperatorCode("In")
-            comp.setName("In")
+            comp.setOperatorCode("in")
+            comp.setName("in")
         elif isinstance(op, ast.NotIn):
-            comp.setOperatorCode("NotIn")
-            comp.setName("NotIn")
+            comp.setOperatorCode("not in")
+            comp.setName("not in")
         else:
             self.log_with_loc(op)
             self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
@@ -592,6 +598,7 @@ class PythonASTToCPG(ast.NodeVisitor):
         self.log_with_loc(ast.dump(node))
         # just return body for now - highly inaccurate
         # TODO
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
         return self.visit(node.body)
 
     def visit_Attribute(self, node):
