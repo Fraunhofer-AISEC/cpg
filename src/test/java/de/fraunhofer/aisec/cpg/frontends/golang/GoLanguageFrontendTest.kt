@@ -5,16 +5,13 @@ import de.fraunhofer.aisec.cpg.TestUtils
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
-import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser
-import org.checkerframework.checker.nullness.qual.Nullable
-import org.junit.jupiter.api.Tag
-import org.junit.jupiter.api.Test
 import java.nio.file.Path
-import java.nio.file.Paths
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
+import org.junit.jupiter.api.Tag
+import org.junit.jupiter.api.Test
 
 @Tag("experimental")
 class GoLanguageFrontendTest : BaseTest() {
@@ -22,7 +19,12 @@ class GoLanguageFrontendTest : BaseTest() {
     @Test
     fun testConstruct() {
         val topLevel = Path.of("src", "test", "resources", "golang")
-        val tu = TestUtils.analyzeAndGetFirstTU(listOf(topLevel.resolve("construct.go").toFile()), topLevel, true)
+        val tu =
+            TestUtils.analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("construct.go").toFile()),
+                topLevel,
+                true
+            )
 
         assertNotNull(tu)
 
@@ -30,11 +32,13 @@ class GoLanguageFrontendTest : BaseTest() {
 
         assertNotNull(p)
 
-        val myStruct = p.getDeclarationsByName("p.MyStruct", RecordDeclaration::class.java).iterator().next()
+        val myStruct =
+            p.getDeclarationsByName("p.MyStruct", RecordDeclaration::class.java).iterator().next()
 
         assertNotNull(myStruct)
 
-        val main = p.getDeclarationsByName("main", FunctionDeclaration::class.java).iterator().next()
+        val main =
+            p.getDeclarationsByName("main", FunctionDeclaration::class.java).iterator().next()
 
         assertNotNull(main)
 
@@ -120,7 +124,12 @@ class GoLanguageFrontendTest : BaseTest() {
     @Test
     fun testLiteral() {
         val topLevel = Path.of("src", "test", "resources", "golang")
-        val tu = TestUtils.analyzeAndGetFirstTU(listOf(topLevel.resolve("literal.go").toFile()), topLevel, true)
+        val tu =
+            TestUtils.analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("literal.go").toFile()),
+                topLevel,
+                true
+            )
 
         assertNotNull(tu)
 
@@ -152,7 +161,12 @@ class GoLanguageFrontendTest : BaseTest() {
     @Test
     fun testFunctionDeclaration() {
         val topLevel = Path.of("src", "test", "resources", "golang")
-        val tu = TestUtils.analyzeAndGetFirstTU(listOf(topLevel.resolve("function.go").toFile()), topLevel, true)
+        val tu =
+            TestUtils.analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("function.go").toFile()),
+                topLevel,
+                true
+            )
 
         assertNotNull(tu)
 
@@ -247,13 +261,19 @@ class GoLanguageFrontendTest : BaseTest() {
     @Test
     fun testStruct() {
         val topLevel = Path.of("src", "test", "resources", "golang")
-        val tu = TestUtils.analyzeAndGetFirstTU(listOf(topLevel.resolve("struct.go").toFile()), topLevel, true)
+        val tu =
+            TestUtils.analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("struct.go").toFile()),
+                topLevel,
+                true
+            )
 
         assertNotNull(tu)
 
         val p = tu.getDeclarationsByName("p", NamespaceDeclaration::class.java).iterator().next()
 
-        val myStruct = p.getDeclarationsByName("p.MyStruct", RecordDeclaration::class.java).iterator().next()
+        val myStruct =
+            p.getDeclarationsByName("p.MyStruct", RecordDeclaration::class.java).iterator().next()
 
         assertNotNull(myStruct)
         assertEquals("struct", myStruct.kind)
@@ -273,7 +293,10 @@ class GoLanguageFrontendTest : BaseTest() {
         assertEquals("MyField", myField.name)
         assertEquals(TypeParser.createFrom("int", false), myField.type)
 
-        val myInterface = p.getDeclarationsByName("p.MyInterface", RecordDeclaration::class.java).iterator().next()
+        val myInterface =
+            p.getDeclarationsByName("p.MyInterface", RecordDeclaration::class.java)
+                .iterator()
+                .next()
 
         assertNotNull(myInterface)
         assertEquals("interface", myInterface.kind)
@@ -286,18 +309,43 @@ class GoLanguageFrontendTest : BaseTest() {
 
         assertEquals("MyFunc", myFunc.name)
         assertEquals(TypeParser.createFrom("string", false), myFunc.type)
+
+        val newMyStruct =
+            p.getDeclarationsByName("NewMyStruct", FunctionDeclaration::class.java)
+                .iterator()
+                .next()
+
+        assertNotNull(newMyStruct)
+
+        val body = newMyStruct.body as? CompoundStatement
+
+        assertNotNull(body)
+
+        val `return` = body.statements.first() as? ReturnStatement
+
+        assertNotNull(`return`)
+
+        val returnValue = `return`.returnValue as? UnaryOperator
+
+        assertNotNull(returnValue)
     }
 
     @Test
     fun testMemberCalls() {
         val topLevel = Path.of("src", "test", "resources", "golang")
-        val tu = TestUtils.analyzeAndGetFirstTU(listOf(topLevel.resolve("struct.go").toFile()), topLevel, true)
+        val tu =
+            TestUtils.analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("struct.go").toFile()),
+                topLevel,
+                true
+            )
 
         assertNotNull(tu)
 
         val p = tu.getDeclarationsByName("p", NamespaceDeclaration::class.java).iterator().next()
 
-        val myStruct = p.getDeclarationsByName("p.MyStruct", RecordDeclaration::class.java).iterator().next()
+        val myStruct =
+            p.getDeclarationsByName("p.MyStruct", RecordDeclaration::class.java).iterator().next()
 
         val methods = myStruct.methods
 
@@ -327,14 +375,20 @@ class GoLanguageFrontendTest : BaseTest() {
     @Test
     fun testField() {
         val topLevel = Path.of("src", "test", "resources", "golang")
-        val tu = TestUtils.analyzeAndGetFirstTU(listOf(topLevel.resolve("field.go").toFile()), topLevel, true)
+        val tu =
+            TestUtils.analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("field.go").toFile()),
+                topLevel,
+                true
+            )
 
         assertNotNull(tu)
 
         val p = tu.getDeclarationsByName("p", NamespaceDeclaration::class.java).iterator().next()
         assertNotNull(p)
 
-        val myFunc = p.getDeclarationsByName("myFunc", MethodDeclaration::class.java).iterator().next()
+        val myFunc =
+            p.getDeclarationsByName("myFunc", MethodDeclaration::class.java).iterator().next()
 
         val body = myFunc.body as? CompoundStatement
 
@@ -361,13 +415,19 @@ class GoLanguageFrontendTest : BaseTest() {
     @Test
     fun testIf() {
         val topLevel = Path.of("src", "test", "resources", "golang")
-        val tu = TestUtils.analyzeAndGetFirstTU(listOf(topLevel.resolve("if.go").toFile()), topLevel, true)
+        val tu =
+            TestUtils.analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("if.go").toFile()),
+                topLevel,
+                true
+            )
 
         assertNotNull(tu)
 
         val p = tu.getDeclarationsByName("p", NamespaceDeclaration::class.java).iterator().next()
 
-        val main = p.getDeclarationsByName("main", FunctionDeclaration::class.java).iterator().next()
+        val main =
+            p.getDeclarationsByName("main", FunctionDeclaration::class.java).iterator().next()
 
         assertNotNull(main)
 
@@ -375,7 +435,9 @@ class GoLanguageFrontendTest : BaseTest() {
 
         assertNotNull(body)
 
-        val b = (body.statements.first() as? DeclarationStatement)?.singleDeclaration as? VariableDeclaration
+        val b =
+            (body.statements.first() as? DeclarationStatement)?.singleDeclaration as?
+                VariableDeclaration
 
         assertNotNull(b)
         assertEquals("b", b.name)
@@ -396,13 +458,19 @@ class GoLanguageFrontendTest : BaseTest() {
     @Test
     fun testSwitch() {
         val topLevel = Path.of("src", "test", "resources", "golang")
-        val tu = TestUtils.analyzeAndGetFirstTU(listOf(topLevel.resolve("switch.go").toFile()), topLevel, true)
+        val tu =
+            TestUtils.analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("switch.go").toFile()),
+                topLevel,
+                true
+            )
 
         assertNotNull(tu)
 
         val p = tu.getDeclarationsByName("p", NamespaceDeclaration::class.java).iterator().next()
 
-        val myFunc = p.getDeclarationsByName("myFunc", FunctionDeclaration::class.java).iterator().next()
+        val myFunc =
+            p.getDeclarationsByName("myFunc", FunctionDeclaration::class.java).iterator().next()
 
         assertNotNull(myFunc)
 
@@ -413,7 +481,7 @@ class GoLanguageFrontendTest : BaseTest() {
         val switch = body.statements.first() as? SwitchStatement
 
         assertNotNull(switch)
-        
+
         val list = switch.statement as? CompoundStatement
 
         assertNotNull(list)
@@ -447,5 +515,64 @@ class GoLanguageFrontendTest : BaseTest() {
 
         assertNotNull(third)
         assertEquals("third", third.name)
+    }
+
+    @Test
+    fun testMemberCall() {
+        val topLevel = Path.of("src", "test", "resources", "golang")
+        val tus =
+            TestUtils.analyze(
+                listOf(
+                    topLevel.resolve("call.go").toFile(),
+                    topLevel.resolve("struct.go").toFile()
+                ),
+                topLevel,
+                true
+            )
+
+        assertNotNull(tus)
+
+        val tu = tus.first()
+
+        val p = tu.getDeclarationsByName("p", NamespaceDeclaration::class.java).iterator().next()
+
+        val main =
+            p.getDeclarationsByName("main", FunctionDeclaration::class.java).iterator().next()
+
+        assertNotNull(main)
+
+        val body = main.body as? CompoundStatement
+
+        assertNotNull(body)
+
+        val c =
+            (body.statements[0] as? DeclarationStatement)?.singleDeclaration as? VariableDeclaration
+
+        assertNotNull(c)
+        // type will be inferred from the function declaration
+        assertEquals(TypeParser.createFrom("p.MyStruct*", false), c.type)
+
+        val newMyStruct = c.initializer as? CallExpression
+
+        // fetch the function declaration from the other TU
+        val tu2 = tus[1]
+
+        val p2 = tu2.getDeclarationsByName("p", NamespaceDeclaration::class.java).iterator().next()
+        val newMyStructDef =
+            p2.getDeclarationsByName("NewMyStruct", FunctionDeclaration::class.java)
+                .iterator()
+                .next()
+
+        assertNotNull(newMyStruct)
+        assertTrue(newMyStruct.invokes.contains(newMyStructDef))
+
+        val call = body.statements[1] as? MemberCallExpression
+
+        assertNotNull(call)
+
+        val base = call.base as? DeclaredReferenceExpression
+
+        assertNotNull(base)
+        assertEquals(c, base.refersTo)
     }
 }
