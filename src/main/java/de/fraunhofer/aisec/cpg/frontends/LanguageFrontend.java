@@ -49,7 +49,8 @@ import org.slf4j.LoggerFactory;
 
 public abstract class LanguageFrontend {
 
-  protected static final Logger log = LoggerFactory.getLogger(LanguageFrontend.class);
+  // Allow non-Java frontends to access the logger (i.e. jep)
+  public static final Logger log = LoggerFactory.getLogger(LanguageFrontend.class);
   protected final TranslationConfiguration config;
   protected ScopeManager scopeManager;
   /**
@@ -287,8 +288,4 @@ public abstract class LanguageFrontend {
   }
 
   public abstract <S, T> void setComment(S s, T ctx);
-
-  public Logger getLog() {
-    return this.log;
-  }
 }

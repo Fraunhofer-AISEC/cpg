@@ -79,7 +79,7 @@ class PythonASTToCPG(ast.NodeVisitor):
         self.frontend = frontend
         self.scopemanager = frontend.getScopeManager()
         self.scopemanager.resetToGlobal(self.tud)
-        self.logger = self.frontend.getLog()
+        self.logger = self.frontend.log
 
     def log_with_loc(self, string, level=1, loglevel = "DEBUG"):
         callerframerecord = inspect.stack()[level]
