@@ -13,6 +13,7 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
+
 @Tag("experimental")
 @ExperimentalGolang
 class GoLanguageFrontendTest : BaseTest() {
@@ -569,7 +570,12 @@ class GoLanguageFrontendTest : BaseTest() {
                 ),
                 topLevel,
                 true
-            )
+            ) {
+                it.registerLanguage(
+                    GoLanguageFrontend::class.java,
+                    GoLanguageFrontend.GOLANG_EXTENSIONS
+                )
+            }
 
         assertNotNull(tus)
 
