@@ -15,6 +15,9 @@ import jep.*
 @ExperimentalPython
 class PythonLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeManager?) :
     LanguageFrontend(config, scopeManager, ".") {
+    companion object {
+        @kotlin.jvm.JvmField var PY_EXTENSIONS: List<String> = listOf(".py")
+    }
 
     @Throws(TranslationException::class)
     override fun parse(file: File): TranslationUnitDeclaration {
