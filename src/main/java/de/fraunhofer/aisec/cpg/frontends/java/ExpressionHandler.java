@@ -801,7 +801,7 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
 
       argument.setArgumentIndex(i);
 
-      ctor.addArgument(argument);
+      ctor.addArgument(argument, false);
     }
 
     newExpression.setInitializer(ctor);
