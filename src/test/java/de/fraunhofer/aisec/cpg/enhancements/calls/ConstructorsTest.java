@@ -7,7 +7,9 @@ import de.fraunhofer.aisec.cpg.TestUtils;
 import de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDeclaration;
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration;
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration;
+import de.fraunhofer.aisec.cpg.graph.edge.Properties;
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ConstructExpression;
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal;
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.NewExpression;
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.UninitializedValue;
 import java.nio.file.Path;
@@ -67,11 +69,14 @@ class ConstructorsTest extends BaseTest {
     List<ConstructorDeclaration> constructors =
         TestUtils.subnodesOfType(result, ConstructorDeclaration.class);
     ConstructorDeclaration noArg =
-        TestUtils.findByUniquePredicate(constructors, c -> c.getParameters().size() == 0);
+        TestUtils.findByUniquePredicate(
+            constructors, c -> c.getParameters().size() == 0 && c.getName().equals("A"));
     ConstructorDeclaration singleArg =
-        TestUtils.findByUniquePredicate(constructors, c -> c.getParameters().size() == 1);
+        TestUtils.findByUniquePredicate(
+            constructors, c -> c.getParameters().size() == 1 && c.getName().equals("A"));
     ConstructorDeclaration twoArgs =
-        TestUtils.findByUniquePredicate(constructors, c -> c.getParameters().size() == 2);
+        TestUtils.findByUniquePredicate(
+            constructors, c -> c.getParameters().size() == 2 && c.getName().equals("A"));
 
     List<VariableDeclaration> variables =
         TestUtils.subnodesOfType(result, VariableDeclaration.class);
@@ -137,5 +142,79 @@ class ConstructorsTest extends BaseTest {
     ConstructExpression a10Initializer =
         (ConstructExpression) ((NewExpression) a10.getInitializer()).getInitializer();
     assertEquals(twoArgs, a10Initializer.getConstructor());
+
+    ConstructorDeclaration twoDefaultArg =
+        TestUtils.findByUniquePredicate(
+            constructors, c -> c.getDefaultParameters().size() == 2 && c.getName().equals("D"));
+
+    VariableDeclaration d1 = TestUtils.findByUniqueName(variables, "d1");
+    assertTrue(d1.getInitializer() instanceof ConstructExpression);
+    ConstructExpression d1Initializer = (ConstructExpression) d1.getInitializer();
+    assertEquals(twoDefaultArg, d1Initializer.getConstructor());
+    assertEquals(2, d1Initializer.getArguments().size());
+    assertTrue(
+        (Boolean) d1Initializer.getArgumentsPropertyEdge().get(0).getProperty(Properties.DEFAULT));
+    assertEquals(0, ((Literal) d1Initializer.getArguments().get(0)).getValue());
+    assertTrue(
+        (Boolean) d1Initializer.getArgumentsPropertyEdge().get(1).getProperty(Properties.DEFAULT));
+    assertEquals(1, ((Literal) d1Initializer.getArguments().get(1)).getValue());
+
+    VariableDeclaration d2 = TestUtils.findByUniqueName(variables, "d2");
+    assertTrue(d2.getInitializer() instanceof ConstructExpression);
+    ConstructExpression d2Initializer = (ConstructExpression) d2.getInitializer();
+    assertEquals(twoDefaultArg, d2Initializer.getConstructor());
+    assertEquals(2, d2Initializer.getArguments().size());
+    assertFalse(
+        (Boolean) d2Initializer.getArgumentsPropertyEdge().get(0).getProperty(Properties.DEFAULT));
+    assertEquals(2, ((Literal) d2Initializer.getArguments().get(0)).getValue());
+    assertTrue(
+        (Boolean) d2Initializer.getArgumentsPropertyEdge().get(1).getProperty(Properties.DEFAULT));
+    assertEquals(1, ((Literal) d2Initializer.getArguments().get(1)).getValue());
+
+    VariableDeclaration d3 = TestUtils.findByUniqueName(variables, "d3");
+    assertTrue(d3.getInitializer() instanceof ConstructExpression);
+    ConstructExpression d3Initializer = (ConstructExpression) d3.getInitializer();
+    assertEquals(twoDefaultArg, d3Initializer.getConstructor());
+    assertEquals(2, d3Initializer.getArguments().size());
+    assertFalse(
+        (Boolean) d3Initializer.getArgumentsPropertyEdge().get(0).getProperty(Properties.DEFAULT));
+    assertEquals(3, ((Literal) d3Initializer.getArguments().get(0)).getValue());
+    assertFalse(
+        (Boolean) d3Initializer.getArgumentsPropertyEdge().get(1).getProperty(Properties.DEFAULT));
+    assertEquals(4, ((Literal) d3Initializer.getArguments().get(1)).getValue());
+
+    ConstructorDeclaration singleDefaultArg =
+        TestUtils.findByUniquePredicate(
+            constructors, c -> c.getParameters().size() == 2 && c.getName().equals("E"));
+
+    VariableDeclaration e1 = TestUtils.findByUniqueName(variables, "e1");
+    assertTrue(e1.getInitializer() instanceof ConstructExpression);
+    ConstructExpression e1Initializer = (ConstructExpression) e1.getInitializer();
+    assertTrue(e1Initializer.getConstructor().isImplicit());
+    assertEquals(0, e1Initializer.getArguments().size());
+
+    VariableDeclaration e2 = TestUtils.findByUniqueName(variables, "e2");
+    assertTrue(e2.getInitializer() instanceof ConstructExpression);
+    ConstructExpression e2Initializer = (ConstructExpression) e2.getInitializer();
+    assertEquals(singleDefaultArg, e2Initializer.getConstructor());
+    assertEquals(2, e2Initializer.getArguments().size());
+    assertFalse(
+        (Boolean) e2Initializer.getArgumentsPropertyEdge().get(0).getProperty(Properties.DEFAULT));
+    assertEquals(5, ((Literal) e2Initializer.getArguments().get(0)).getValue());
+    assertTrue(
+        (Boolean) e2Initializer.getArgumentsPropertyEdge().get(1).getProperty(Properties.DEFAULT));
+    assertEquals(10, ((Literal) e2Initializer.getArguments().get(1)).getValue());
+
+    VariableDeclaration e3 = TestUtils.findByUniqueName(variables, "e3");
+    assertTrue(e3.getInitializer() instanceof ConstructExpression);
+    ConstructExpression e3Initializer = (ConstructExpression) e3.getInitializer();
+    assertEquals(singleDefaultArg, e3Initializer.getConstructor());
+    assertEquals(2, e3Initializer.getArguments().size());
+    assertFalse(
+        (Boolean) e3Initializer.getArgumentsPropertyEdge().get(0).getProperty(Properties.DEFAULT));
+    assertEquals(6, ((Literal) e3Initializer.getArguments().get(0)).getValue());
+    assertFalse(
+        (Boolean) e3Initializer.getArgumentsPropertyEdge().get(1).getProperty(Properties.DEFAULT));
+    assertEquals(7, ((Literal) e3Initializer.getArguments().get(1)).getValue());
   }
 }
