@@ -604,7 +604,8 @@ public class CallResolver extends Pass {
     constructExpression.setInstantiates(record);
 
     if (record != null && record.getCode() != null && !record.getCode().isEmpty()) {
-      ConstructorDeclaration constructor = getConstructorDeclaration(signature, record);
+      ConstructorDeclaration constructor =
+          getConstructorDeclarationCXX(constructExpression, record);
       constructExpression.setConstructor(constructor);
     }
   }
@@ -649,7 +650,8 @@ public class CallResolver extends Pass {
       List<Type> signature =
           eci.getArguments().stream().map(Expression::getType).collect(Collectors.toList());
       if (record != null) {
-        ConstructorDeclaration constructor = getConstructorDeclaration(signature, record);
+        ConstructorDeclaration constructor =
+            getConstructorDeclarationForExplicitInvocation(signature, record);
         ArrayList<FunctionDeclaration> invokes = new ArrayList<>();
         invokes.add(constructor);
         eci.setInvokes(invokes);
@@ -820,8 +822,64 @@ public class CallResolver extends Pass {
         .collect(Collectors.toSet());
   }
 
+  private ConstructorDeclaration getConstructorDeclarationDirectMatch(
+      List<Type> signature, RecordDeclaration recordDeclaration) {
+    for (ConstructorDeclaration constructor : recordDeclaration.getConstructors()) {
+      if (constructor.hasSignature(signature)) {
+        return constructor;
+      }
+    }
+    return null;
+  }
+
+  private ConstructorDeclaration resolveConstructorWithDefaults(
+      ConstructExpression constructExpression, List<Type> signature, RecordDeclaration record) {
+    for (ConstructorDeclaration constructor : record.getConstructors()) {
+      List<Type> workingSignature = new ArrayList<>(signature);
+      if (signature.size() < constructor.getSignatureTypes().size()
+          && signature.size() + constructor.getDefaultParameterSignature().size()
+              >= constructor.getSignatureTypes().size()) {
+        List<Type> defaultTypes = constructor.getDefaultParameterSignature();
+        workingSignature.addAll(defaultTypes.subList(signature.size(), defaultTypes.size()));
+        if (constructor.hasSignature(workingSignature)) {
+          for (Expression argument :
+              constructor.getDefaultParameters().subList(signature.size(), defaultTypes.size())) {
+            constructExpression.addArgument(argument, true);
+          }
+          return constructor;
+        }
+      }
+    }
+    return null;
+  }
+
   @NonNull
-  private ConstructorDeclaration getConstructorDeclaration(
+  private ConstructorDeclaration getConstructorDeclarationCXX(
+      ConstructExpression constructExpression, RecordDeclaration record) {
+    List<Type> signature = constructExpression.getSignature();
+    ConstructorDeclaration constructorCandidate =
+        getConstructorDeclarationDirectMatch(signature, record);
+    if (constructorCandidate == null && this.getLang() instanceof CXXLanguageFrontend) {
+      // Check for usage of default args
+      constructorCandidate = resolveConstructorWithDefaults(constructExpression, signature, record);
+    }
+
+    if (constructorCandidate == null && this.getLang() instanceof CXXLanguageFrontend) {
+      // If we don't find any candidate and our current language is c/c++ we check if there is a
+      // candidate with an implicit cast
+      // TODO
+    }
+
+    if (constructorCandidate == null) {
+      // Create Dummy
+      constructorCandidate = createConstructorDummy(record, signature);
+    }
+
+    return constructorCandidate;
+  }
+
+  @NonNull
+  private ConstructorDeclaration getConstructorDeclarationForExplicitInvocation(
       List<Type> signature, RecordDeclaration record) {
     return record.getConstructors().stream()
         .filter(f -> f.hasSignature(signature))
