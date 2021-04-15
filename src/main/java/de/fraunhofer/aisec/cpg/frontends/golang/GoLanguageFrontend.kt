@@ -10,12 +10,12 @@ import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.io.File
 import kotlin.Throws
 
-class RawGolangNode {}
-
 @ExperimentalGolang
 class GoLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeManager?) :
     LanguageFrontend(config, scopeManager, ".") {
     companion object {
+        @kotlin.jvm.JvmField var GOLANG_EXTENSIONS: List<String> = listOf(".go")
+
         init {
             System.loadLibrary("cpgo")
         }

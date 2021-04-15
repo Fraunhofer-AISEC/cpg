@@ -21,6 +21,7 @@ class TranslationResultTest : BaseTest() {
                 .topLevel(file.parentFile)
                 .defaultPasses()
                 .debugParser(true)
+                .defaultLanguages()
                 .failOnError(true)
                 .build()
 

@@ -31,7 +31,12 @@ class PythonFrontendTest : BaseTest() {
                 listOf(topLevel.resolve("literal.py").toFile()),
                 topLevel,
                 true
-            )
+            ) {
+                it.registerLanguage(
+                    PythonLanguageFrontend::class.java,
+                    PythonLanguageFrontend.PY_EXTENSIONS
+                )
+            }
 
         assertNotNull(tu)
 
@@ -81,7 +86,12 @@ class PythonFrontendTest : BaseTest() {
                 listOf(topLevel.resolve("function.py").toFile()),
                 topLevel,
                 true
-            )
+            ) {
+                it.registerLanguage(
+                    PythonLanguageFrontend::class.java,
+                    PythonLanguageFrontend.PY_EXTENSIONS
+                )
+            }
 
         assertNotNull(tu)
 
@@ -168,7 +178,12 @@ class PythonFrontendTest : BaseTest() {
                 listOf(topLevel.resolve("if.py").toFile()),
                 topLevel,
                 true
-            )
+            ) {
+                it.registerLanguage(
+                    PythonLanguageFrontend::class.java,
+                    PythonLanguageFrontend.PY_EXTENSIONS
+                )
+            }
 
         assertNotNull(tu)
 
@@ -208,7 +223,12 @@ class PythonFrontendTest : BaseTest() {
                 listOf(topLevel.resolve("simple_class.py").toFile()),
                 topLevel,
                 true
-            )
+            ) {
+                it.registerLanguage(
+                    PythonLanguageFrontend::class.java,
+                    PythonLanguageFrontend.PY_EXTENSIONS
+                )
+            }
 
         assertNotNull(tu)
         val p =

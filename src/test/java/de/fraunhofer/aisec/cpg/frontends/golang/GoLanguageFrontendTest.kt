@@ -1,6 +1,7 @@
 package de.fraunhofer.aisec.cpg.frontends.golang
 
 import de.fraunhofer.aisec.cpg.BaseTest
+import de.fraunhofer.aisec.cpg.ExperimentalGolang
 import de.fraunhofer.aisec.cpg.TestUtils
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.statements.*
@@ -14,6 +15,7 @@ import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 
 @Tag("experimental")
+@ExperimentalGolang
 class GoLanguageFrontendTest : BaseTest() {
 
     @Test
@@ -24,7 +26,12 @@ class GoLanguageFrontendTest : BaseTest() {
                 listOf(topLevel.resolve("construct.go").toFile()),
                 topLevel,
                 true
-            )
+            ) {
+                it.registerLanguage(
+                    GoLanguageFrontend::class.java,
+                    GoLanguageFrontend.GOLANG_EXTENSIONS
+                )
+            }
 
         assertNotNull(tu)
 
@@ -129,7 +136,12 @@ class GoLanguageFrontendTest : BaseTest() {
                 listOf(topLevel.resolve("literal.go").toFile()),
                 topLevel,
                 true
-            )
+            ) {
+                it.registerLanguage(
+                    GoLanguageFrontend::class.java,
+                    GoLanguageFrontend.GOLANG_EXTENSIONS
+                )
+            }
 
         assertNotNull(tu)
 
@@ -166,7 +178,12 @@ class GoLanguageFrontendTest : BaseTest() {
                 listOf(topLevel.resolve("function.go").toFile()),
                 topLevel,
                 true
-            )
+            ) {
+                it.registerLanguage(
+                    GoLanguageFrontend::class.java,
+                    GoLanguageFrontend.GOLANG_EXTENSIONS
+                )
+            }
 
         assertNotNull(tu)
 
@@ -266,7 +283,12 @@ class GoLanguageFrontendTest : BaseTest() {
                 listOf(topLevel.resolve("struct.go").toFile()),
                 topLevel,
                 true
-            )
+            ) {
+                it.registerLanguage(
+                    GoLanguageFrontend::class.java,
+                    GoLanguageFrontend.GOLANG_EXTENSIONS
+                )
+            }
 
         assertNotNull(tu)
 
@@ -338,7 +360,12 @@ class GoLanguageFrontendTest : BaseTest() {
                 listOf(topLevel.resolve("struct.go").toFile()),
                 topLevel,
                 true
-            )
+            ) {
+                it.registerLanguage(
+                    GoLanguageFrontend::class.java,
+                    GoLanguageFrontend.GOLANG_EXTENSIONS
+                )
+            }
 
         assertNotNull(tu)
 
@@ -380,7 +407,12 @@ class GoLanguageFrontendTest : BaseTest() {
                 listOf(topLevel.resolve("field.go").toFile()),
                 topLevel,
                 true
-            )
+            ) {
+                it.registerLanguage(
+                    GoLanguageFrontend::class.java,
+                    GoLanguageFrontend.GOLANG_EXTENSIONS
+                )
+            }
 
         assertNotNull(tu)
 
@@ -420,7 +452,12 @@ class GoLanguageFrontendTest : BaseTest() {
                 listOf(topLevel.resolve("if.go").toFile()),
                 topLevel,
                 true
-            )
+            ) {
+                it.registerLanguage(
+                    GoLanguageFrontend::class.java,
+                    GoLanguageFrontend.GOLANG_EXTENSIONS
+                )
+            }
 
         assertNotNull(tu)
 
@@ -463,7 +500,12 @@ class GoLanguageFrontendTest : BaseTest() {
                 listOf(topLevel.resolve("switch.go").toFile()),
                 topLevel,
                 true
-            )
+            ) {
+                it.registerLanguage(
+                    GoLanguageFrontend::class.java,
+                    GoLanguageFrontend.GOLANG_EXTENSIONS
+                )
+            }
 
         assertNotNull(tu)
 
@@ -528,7 +570,12 @@ class GoLanguageFrontendTest : BaseTest() {
                 ),
                 topLevel,
                 true
-            )
+            ) {
+                it.registerLanguage(
+                    GoLanguageFrontend::class.java,
+                    GoLanguageFrontend.GOLANG_EXTENSIONS
+                )
+            }
 
         assertNotNull(tus)
 

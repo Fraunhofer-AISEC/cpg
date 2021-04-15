@@ -356,8 +356,8 @@ public class TypeManager {
         Class superCls = Class.forName(superType.getTypeName());
         Class subCls = Class.forName(subType.getTypeName());
         return superCls.isAssignableFrom(subCls);
-      } catch (ClassNotFoundException e) {
-        // Not in the class path, can't help here
+      } catch (ClassNotFoundException | NoClassDefFoundError e) {
+        // Not in the class path or other linkage exception, can't help here
         return false;
       }
     }

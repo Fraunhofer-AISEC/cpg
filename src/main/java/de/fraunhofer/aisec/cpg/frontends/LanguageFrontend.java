@@ -52,7 +52,9 @@ public abstract class LanguageFrontend {
   // Allow non-Java frontends to access the logger (i.e. jep)
   public static final Logger log = LoggerFactory.getLogger(LanguageFrontend.class);
   protected final TranslationConfiguration config;
+
   protected ScopeManager scopeManager;
+
   /**
    * Two data structures used to associate Objects input to a pass to results of a pass, e.g.
    * Javaparser AST-Nodes to CPG-Nodes. The "Listeners" in processedListener are called after the

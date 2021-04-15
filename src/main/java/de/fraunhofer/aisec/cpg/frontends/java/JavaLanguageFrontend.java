@@ -82,6 +82,8 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 /** Main parser for ONE Java files. */
 public class JavaLanguageFrontend extends LanguageFrontend {
 
+  public static final List<String> JAVA_EXTENSIONS = List.of(".java");
+
   public static final String THIS = "this";
   public static final String ANNOTATION_MEMBER_VALUE = "value";
 

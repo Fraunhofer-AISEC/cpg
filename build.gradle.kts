@@ -36,7 +36,7 @@ plugins {
     id("org.sonarqube") version "3.1.1"
     id("com.diffplug.spotless") version "5.12.1"
     id("com.github.johnrengelman.shadow") version "6.1.0"
-    kotlin("jvm") version "1.4.20"
+    kotlin("jvm") version "1.4.32"
 }
 
 tasks.jacocoTestReport {

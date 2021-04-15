@@ -83,6 +83,7 @@ class VariableResolverCppTest extends BaseTest {
             .topLevel(new File(topLevelPath))
             .defaultPasses()
             .debugParser(true)
+            .defaultLanguages()
             .failOnError(true)
             .loadIncludes(true)
             .build();

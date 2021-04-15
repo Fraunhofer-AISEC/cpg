@@ -96,6 +96,9 @@ import org.slf4j.LoggerFactory;
  */
 public class CXXLanguageFrontend extends LanguageFrontend {
 
+  public static final List<String> CXX_EXTENSIONS = List.of(".c", ".cpp", ".cc");
+  public static final List<String> CXX_HEADER_EXTENSIONS = List.of(".h", ".hpp");
+
   private static final Logger LOGGER = LoggerFactory.getLogger(CXXLanguageFrontend.class);
   private final IncludeFileContentProvider includeFileContentProvider =
       new InternalFileContentProvider() {

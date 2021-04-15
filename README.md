@@ -52,7 +52,7 @@ import de.fraunhofer.aisec.cpg.TranslationManager;
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration;
 
 var path = Paths.get("src/test/resources/openssl/client.cpp");
-var config = TranslationConfiguration.builder().sourceLocations(path.toFile()).defaultPasses().debugParser(true).build();
+var config = TranslationConfiguration.builder().sourceLocations(path.toFile()).defaultPasses().defaultLanguages().debugParser(true).build();
 var analyzer = TranslationManager.builder().config(config).build();
 var result = analyzer.analyze().get();
 var tu = result.getTranslationUnits().get(0);
