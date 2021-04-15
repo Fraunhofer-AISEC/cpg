@@ -133,6 +133,7 @@ The following authors have contributed to this project (in alphabetical order):
 * [JulianSchuette](https://github.com/JulianSchuette)
 * [konradweiss](https://github.com/konradweiss)
 * [Masrepus](https://github.com/Masrepus)
+* [maximiliankaul](https://github.com/maximiliankaul)
 * [obraunsdorf](https://github.com/obraunsdorf)
 * [oxisto](https://github.com/oxisto)
 * [titze](https://github.com/titze)
