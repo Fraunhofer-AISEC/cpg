@@ -522,7 +522,7 @@ public class CallResolver extends Pass {
 
       var invocationCandidates = lang.getScopeManager().resolveFunction(call);
 
-      if (invocationCandidates.isEmpty()) {
+      if (invocationCandidates.isEmpty() && this.getLang() instanceof CXXLanguageFrontend) {
         // Check for usage of default args
         invocationCandidates.addAll(resolveWithDefaultArgs(call));
       }
@@ -533,7 +533,7 @@ public class CallResolver extends Pass {
         invocationCandidates.addAll(resolveWithImplicitCast(call));
       }
 
-      if (invocationCandidates.isEmpty() && this.getLang() instanceof CXXLanguageFrontend) {
+      if (invocationCandidates.isEmpty()) {
         // If we still have no candidates and our current language is c++ we create dummy
         // FunctionDeclaration
         invocationCandidates =
@@ -868,6 +868,7 @@ public class CallResolver extends Pass {
       // If we don't find any candidate and our current language is c/c++ we check if there is a
       // candidate with an implicit cast
       // TODO
+
     }
 
     if (constructorCandidate == null) {
