@@ -46,7 +46,7 @@ public class ExplicitConstructorInvocation extends CallExpression {
   public String toString() {
     return new ToStringBuilder(this, Node.TO_STRING_STYLE)
         .appendSuper(super.toString())
-        .append("invokes", invokes)
+        .append("invokes", getInvokes())
         .toString();
   }
 
