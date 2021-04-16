@@ -20,6 +20,7 @@ from de.fraunhofer.aisec.cpg.graph.statements.expressions import ArrayRangeExpre
 from de.fraunhofer.aisec.cpg.graph.statements.expressions import ArraySubscriptionExpression
 from de.fraunhofer.aisec.cpg.graph.statements.expressions import BinaryOperator
 from de.fraunhofer.aisec.cpg.graph.statements.expressions import CallExpression
+from de.fraunhofer.aisec.cpg.graph.statements.expressions import ConditionalExpression
 from de.fraunhofer.aisec.cpg.graph.statements.expressions import CastExpression
 from de.fraunhofer.aisec.cpg.graph.statements.expressions import ConstructExpression
 from de.fraunhofer.aisec.cpg.graph.statements.expressions import DeclaredReferenceExpression
@@ -606,10 +607,13 @@ class PythonASTToCPG(ast.NodeVisitor):
 
     def visit_IfExp(self, node):
         self.log_with_loc(ast.dump(node))
-        # just return body for now - highly inaccurate
-        # TODO
-        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
-        return self.visit(node.body)
+
+        expr = ConditionalExpression()
+        expr.setCondition(self.visit(node.test))
+        expr.setThenExpr(self.visit(node.body))
+        expr.setElseExpr(self.visit(node.orelse))
+
+        return expr
 
     def visit_Attribute(self, node):
         self.log_with_loc(ast.dump(node))
@@ -826,7 +830,7 @@ class PythonASTToCPG(ast.NodeVisitor):
                 self.add_loc_info(node, d)
                 d.setSingleDeclaration(s)
                 body.addStatement(d)
-            else:
+            elif s is not None:
                 body.addStatement(s)
 
         return body
