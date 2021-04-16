@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2020-2021, Fraunhofer AISEC. All rights reserved.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -34,6 +34,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.types.Type
+import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import de.fraunhofer.aisec.cpg.helpers.Util
 import java.util.*
 import java.util.function.Consumer
@@ -41,8 +42,8 @@ import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
 
 /**
- * An expression, which calls another function. It has a list of arguments (list of [ ]s) and is
- * connected via the INVOKES edge to its [FunctionDeclaration].
+ * An expression, which calls another function. It has a list of arguments (list of [Expression] s)
+ * and is connected via the INVOKES edge to its [FunctionDeclaration].
  */
 open class CallExpression : Expression(), TypeListener {
 
@@ -53,12 +54,14 @@ open class CallExpression : Expression(), TypeListener {
      * [de.fraunhofer.aisec.cpg.passes.CallResolver].
      */
     @field:Relationship(value = "INVOKES", direction = "OUTGOING")
-    protected var invokesEdges: List<PropertyEdge<FunctionDeclaration>> = ArrayList()
+    var invokesEdges: List<PropertyEdge<FunctionDeclaration>> = ArrayList()
+        protected set
 
     /** The list of arguments. */
     @field:Relationship(value = "ARGUMENTS", direction = "OUTGOING")
     @field:SubGraph("AST")
-    protected var argumentsEdges: MutableList<PropertyEdge<Expression>> = ArrayList()
+    var argumentsEdges: MutableList<PropertyEdge<Expression>> = ArrayList()
+        protected set
 
     /** A virtual property to access [argumentsEdges] without property edges. */
     var arguments: List<Expression>
@@ -117,9 +120,12 @@ open class CallExpression : Expression(), TypeListener {
      * Adds an argument to this call.
      *
      * To make this work properly, language frontends must consider the following:
-     * - First, all indexed properties need to be added using this function, in the order they appear, according to the language's AST rules
-     * - Afterwards, all named arguments can be added in the order they appear, according to the language's AST rules
-     * - They must NOT added default arguments. Those are added later by the [de.fraunhofer.aisec.cpg.passes.CallResolver].
+     * - First, all indexed properties need to be added using this function, in the order they
+     * appear, according to the language's AST rules
+     * - Afterwards, all named arguments can be added in the order they appear, according to the
+     * language's AST rules
+     * - They must NOT added default arguments. Those are added later by the
+     * [de.fraunhofer.aisec.cpg.passes.CallResolver].
      *
      * @param expression the expression representing the argument
      * @param isDefault whether, this is a default argument, defaults to false
@@ -147,7 +153,7 @@ open class CallExpression : Expression(), TypeListener {
         } else {
             val previous = type
             val types = invokes.mapNotNull { it.type }
-            val alternative = types.firstOrNull()
+            val alternative = types.firstOrNull() ?: UnknownType.getUnknownType()
             val commonType = TypeManager.getInstance().getCommonType(types).orElse(alternative)
             val subTypes: MutableSet<Type> = HashSet(possibleSubTypes)
 

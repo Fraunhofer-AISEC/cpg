@@ -49,6 +49,7 @@ public class UnknownType extends Type {
    *
    * @return UnknownType instance
    */
+  @NonNull
   public static UnknownType getUnknownType() {
     return unknownType;
   }

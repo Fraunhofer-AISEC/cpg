@@ -539,8 +539,8 @@ class PythonASTToCPG(ast.NodeVisitor):
         self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
         return
 
-    def visit_Call(self, node):
-        # TODO keywords starargs kwargs
+    def visit_Call(self, node: ast.Call):
+        # TODO keywords starargs
         self.log_with_loc(ast.dump(node))
 
         # a call can be one of
@@ -596,6 +596,13 @@ class PythonASTToCPG(ast.NodeVisitor):
         # add arguments
         for a in node.args:
             call.addArgument(self.visit(a))
+
+        for keyword in node.keywords:
+            if keyword.arg is not None:
+                call.addArgument(self.visit(keyword.value), False, keyword.arg)
+            else:
+                # TODO: keywords without args, aka **arg
+                self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
 
         return call
 
