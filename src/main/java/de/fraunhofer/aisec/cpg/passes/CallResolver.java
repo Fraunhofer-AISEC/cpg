@@ -836,7 +836,7 @@ public class CallResolver extends Pass {
       ConstructExpression constructExpression, List<Type> signature, RecordDeclaration record) {
     for (ConstructorDeclaration constructor : record.getConstructors()) {
       List<Type> workingSignature = new ArrayList<>(signature);
-      if (signature.size() < constructor.getSignatureTypes().size()
+      if (!constructor.isImplicit() && signature.size() < constructor.getSignatureTypes().size()
           && signature.size() + constructor.getDefaultParameterSignature().size()
               >= constructor.getSignatureTypes().size()) {
         List<Type> defaultTypes = constructor.getDefaultParameterSignature();
