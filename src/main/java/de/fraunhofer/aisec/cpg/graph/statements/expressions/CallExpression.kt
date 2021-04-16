@@ -116,6 +116,11 @@ open class CallExpression : Expression(), TypeListener {
     /**
      * Adds an argument to this call.
      *
+     * To make this work properly, language frontends must consider the following:
+     * - First, all indexed properties need to be added using this function, in the order they appear, according to the language's AST rules
+     * - Afterwards, all named arguments can be added in the order they appear, according to the language's AST rules
+     * - They must NOT added default arguments. Those are added later by the [de.fraunhofer.aisec.cpg.passes.CallResolver].
+     *
      * @param expression the expression representing the argument
      * @param isDefault whether, this is a default argument, defaults to false
      * @param name an optional name for the arguments, used in languages that have keywords
