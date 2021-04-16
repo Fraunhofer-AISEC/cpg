@@ -151,7 +151,7 @@ class GoLanguageFrontendTest : BaseTest() {
         val a = p.getDeclarationsByName("a", VariableDeclaration::class.java).iterator().next()
         assertNotNull(a)
         assertNotNull(a.location)
-        
+
         assertEquals("a", a.name)
         assertEquals(TypeParser.createFrom("int", false), a.type)
 

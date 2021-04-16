@@ -47,6 +47,10 @@ func updateCode(fset *token.FileSet, node *Node, astNode ast.Node) {
 }
 
 func updateLocation(fset *token.FileSet, node *Node, astNode ast.Node) {
+	if astNode == nil {
+		return
+	}
+
 	file := fset.File(astNode.Pos())
 	if file == nil {
 		return
