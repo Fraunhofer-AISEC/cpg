@@ -65,18 +65,14 @@ open class CallExpression : Expression(), TypeListener {
 
     /** A virtual property to access [argumentsEdges] without property edges. */
     var arguments: List<Expression>
-        get() {
-            return PropertyEdge.unwrap(this.argumentsEdges)
-        }
+        get() = PropertyEdge.unwrap(this.argumentsEdges)
         set(value) {
             this.argumentsEdges = PropertyEdge.transformIntoOutgoingPropertyEdgeList(value, this)
         }
 
     /** A virtual property to access [invokesEdges] without property edges. */
     var invokes: List<FunctionDeclaration>
-        get() {
-            return PropertyEdge.unwrap(this.invokesEdges)
-        }
+        get() = PropertyEdge.unwrap(this.invokesEdges)
         set(value) {
             PropertyEdge.getTarget(invokesEdges)
                 .forEach(
@@ -193,9 +189,9 @@ open class CallExpression : Expression(), TypeListener {
 
         return (super.equals(other) &&
             arguments == other.arguments &&
-            arguments == other.arguments &&
-            invokesEdges == other.invokesEdges &&
+            PropertyEdge.propertyEqualsList(argumentsEdges, other.argumentsEdges) &&
             invokes == other.invokes &&
+            PropertyEdge.propertyEqualsList(invokesEdges, other.invokesEdges) &&
             base == other.base)
     }
 
