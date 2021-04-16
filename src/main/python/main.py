@@ -41,6 +41,7 @@ import inspect
 
 NOT_IMPLEMENTED_MSG = "This is not (yet) implemented."
 
+
 class CodeExtractor:
     # Simple/ugly class to extrace code snippets given a region
     def __init__(self, fname):
@@ -83,7 +84,7 @@ class PythonASTToCPG(ast.NodeVisitor):
         self.scopemanager.resetToGlobal(self.tud)
         self.logger = self.frontend.log
 
-    def log_with_loc(self, string, level=1, loglevel = "DEBUG"):
+    def log_with_loc(self, string, level=1, loglevel="DEBUG"):
         callerframerecord = inspect.stack()[level]
         frame = callerframerecord[0]
         info = inspect.getframeinfo(frame)
@@ -107,7 +108,7 @@ class PythonASTToCPG(ast.NodeVisitor):
             self.log_with_loc(type(node))
             self.log_with_loc(node[0].lineno)
             self.log_with_loc("<--- CALLER", level=2)
-            self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel =  "ERROR")
+            self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
             return
         obj.setFile(self.fname)
         uri = URI("file://" + self.fname)
@@ -140,17 +141,17 @@ class PythonASTToCPG(ast.NodeVisitor):
             lit.setType(TypeParser.createFrom("byte[]", False))
         else:
             self.log_with_loc(type(node.value))
-            self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+            self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         return lit
 
     def visit_FormattedValue(self, node):
         self.log_with_loc(ast.dump(node))
-        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         return
 
     def visit_JoinedStr(self, node):
         self.log_with_loc(ast.dump(node))
-        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         return
 
     def visit_List(self, node):
@@ -179,12 +180,12 @@ class PythonASTToCPG(ast.NodeVisitor):
         #    elts.append(self.visit(e))
         # lit.setValue(elts)
         # TODO
-        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         return Expression()
 
     def visit_Set(self, node):
         self.log_with_loc(ast.dump(node))
-        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         return
 
     def visit_Dict(self, node: ast.Dict):
@@ -233,22 +234,22 @@ class PythonASTToCPG(ast.NodeVisitor):
 
     def visit_Load(self, node):
         self.log_with_loc(ast.dump(node))
-        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         return
 
     def visit_Store(self, node):
         self.log_with_loc(ast.dump(node))
-        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         return
 
     def visit_Del(self, node):
         self.log_with_loc(ast.dump(node))
-        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         return
 
     def visit_Starred(self, node):
         self.log_with_loc(ast.dump(node))
-        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         return
 
     ### EXORESSIONS ###
@@ -275,27 +276,27 @@ class PythonASTToCPG(ast.NodeVisitor):
             unop.setOperatorCode("~")
             unop.setName("~")
         else:
-            self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+            self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         return unop
 
     def visit_UAdd(self, node):
         self.log_with_loc(ast.dump(node))
-        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         return
 
     def visit_USub(self, node):
         self.log_with_loc(ast.dump(node))
-        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         return
 
     def visit_Not(self, node):
         self.log_with_loc(ast.dump(node))
-        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         return
 
     def visit_Invert(self, node):
         self.log_with_loc(ast.dump(node))
-        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         return
 
     def visit_BinOp(self, node):
@@ -342,74 +343,74 @@ class PythonASTToCPG(ast.NodeVisitor):
             binop.setOperatorCode("*")
             binop.setName("*")
         else:
-            self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+            self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         binop.setLhs(self.visit(node.left))
         binop.setRhs(self.visit(node.right))
         return binop
 
     def visit_Add(self, node):
         self.log_with_loc(ast.dump(node))
-        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         return
 
     def visit_Sub(self, node):
         self.log_with_loc(ast.dump(node))
-        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         return
 
     def visit_Mult(self, node):
         self.log_with_loc(ast.dump(node))
-        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         return
 
     def visit_Div(self, node):
         self.log_with_loc(ast.dump(node))
-        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         return
 
     def visit_FloorDiv(self, node):
         self.log_with_loc(ast.dump(node))
-        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         return
 
     def visit_Mod(self, node):
         self.log_with_loc(ast.dump(node))
-        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         return
 
     def visit_Pow(self, node):
         self.log_with_loc(ast.dump(node))
-        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         return
 
     def visit_LShift(self, node):
         self.log_with_loc(ast.dump(node))
-        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         return
 
     def visit_RShift(self, node):
         self.log_with_loc(ast.dump(node))
-        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         return
 
     def visit_BitOr(self, node):
         self.log_with_loc(ast.dump(node))
-        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         return
 
     def visit_BitXor(self, node):
         self.log_with_loc(ast.dump(node))
-        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         return
 
     def visit_BitAnd(self, node):
         self.log_with_loc(ast.dump(node))
-        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         return
 
     def visit_MatMult(self, node):
         self.log_with_loc(ast.dump(node))
-        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         return
 
     def visit_BoolOp(self, node: ast.BoolOp):
@@ -421,7 +422,7 @@ class PythonASTToCPG(ast.NodeVisitor):
         elif isinstance(node.op, ast.Or):
             binOp.setOperatorCode("||")
         else:
-            self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+            self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
             return
 
         # TODO: split into multiple binary operators, python supports many values
@@ -430,18 +431,18 @@ class PythonASTToCPG(ast.NodeVisitor):
             lhs = self.visit(node.values[0])
             rhs = self.visit(node.values[1])
         else:
-            self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+            self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
 
         return binOp
 
     def visit_And(self, node):
         self.log_with_loc(ast.dump(node))
-        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         return
 
     def visit_Or(self, node):
         self.log_with_loc(ast.dump(node))
-        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         return
 
     def visit_Compare(self, node):
@@ -449,7 +450,7 @@ class PythonASTToCPG(ast.NodeVisitor):
         comp = BinaryOperator()
         self.add_loc_info(node, comp)
         if len(node.ops) != 1:
-            self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+            self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         op = node.ops[0]
         if isinstance(op, ast.Eq):
             comp.setOperatorCode("==")
@@ -483,61 +484,61 @@ class PythonASTToCPG(ast.NodeVisitor):
             comp.setName("not in")
         else:
             self.log_with_loc(op)
-            self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+            self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         comp.setLhs(self.visit(node.left))
         if len(node.comparators) != 1:
-            self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+            self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         comp.setRhs(self.visit(node.comparators[0]))
         return comp
 
     def visit_Eq(self, node):
         self.log_with_loc(ast.dump(node))
-        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         return
 
     def visit_NotEq(self, node):
         self.log_with_loc(ast.dump(node))
-        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         return
 
     def visit_Lt(self, node):
         self.log_with_loc(ast.dump(node))
-        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         return
 
     def visit_LtE(self, node):
         self.log_with_loc(ast.dump(node))
-        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         return
 
     def visit_Gt(self, node):
         self.log_with_loc(ast.dump(node))
-        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         return
 
     def visit_GtE(self, node):
         self.log_with_loc(ast.dump(node))
-        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         return
 
     def visit_Is(self, node):
         self.log_with_loc(ast.dump(node))
-        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         return
 
     def visit_IsNot(self, node):
         self.log_with_loc(ast.dump(node))
-        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         return
 
     def visit_In(self, node):
         self.log_with_loc(ast.dump(node))
-        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         return
 
     def visit_NotIn(self, node):
         self.log_with_loc(ast.dump(node))
-        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         return
 
     def visit_Call(self, node):
@@ -602,7 +603,7 @@ class PythonASTToCPG(ast.NodeVisitor):
 
     def visit_keyword(self, node):
         self.log_with_loc(ast.dump(node))
-        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         return
 
     def visit_IfExp(self, node):
@@ -631,7 +632,7 @@ class PythonASTToCPG(ast.NodeVisitor):
 
     def visit_NamedExpr(self, node):
         self.log_with_loc(ast.dump(node))
-        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         return
 
     ### SUBSCRIPTING ###
@@ -652,33 +653,33 @@ class PythonASTToCPG(ast.NodeVisitor):
         if node.upper != None:
             slc.setCeiling(self.visit(node.upper))
         if node.step != None:
-            self.log_with_loc("Step not yet supported.", loglevel = "ERROR")
+            self.log_with_loc("Step not yet supported.", loglevel="ERROR")
         return slc
 
     ### COMPREHENSIONS ###
     def visit_ListComp(self, node):
         self.log_with_loc(ast.dump(node))
-        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         return
 
     def visit_SetComp(self, node):
         self.log_with_loc(ast.dump(node))
-        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         return
 
     def visit_GeneratorExp(self, node):
         self.log_with_loc(ast.dump(node))
-        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         return
 
     def visit_DictComp(self, node):
         self.log_with_loc(ast.dump(node))
-        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         return
 
     def visit_comprehension(self, node):
         self.log_with_loc(ast.dump(node))
-        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         return
 
     ### STATEMENTS ###
@@ -686,7 +687,7 @@ class PythonASTToCPG(ast.NodeVisitor):
         self.log_with_loc(ast.dump(node))
 
         if len(node.targets) != 1:
-            self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+            self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
             return
 
         target = node.targets[0]
@@ -720,7 +721,7 @@ class PythonASTToCPG(ast.NodeVisitor):
 
     def visit_AnnAssign(self, node):
         self.log_with_loc(ast.dump(node))
-        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         return
 
     def visit_AugAssign(self, node):
@@ -744,12 +745,12 @@ class PythonASTToCPG(ast.NodeVisitor):
 
     def visit_Assert(self, node):
         self.log_with_loc(ast.dump(node))
-        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         return
 
     def visit_Delete(self, node):
         self.log_with_loc(ast.dump(node))
-        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         return
 
     def visit_Pass(self, node):
@@ -765,7 +766,7 @@ class PythonASTToCPG(ast.NodeVisitor):
         imp = IncludeDeclaration()
         self.add_loc_info(node, imp)
         if len(node.names) != 1:
-            self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+            self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         imp.setFilename(self.fname + node.names[0].name)
 
         # make scopmanager aware of import
@@ -780,7 +781,7 @@ class PythonASTToCPG(ast.NodeVisitor):
         imp = IncludeDeclaration()
         self.add_loc_info(node, imp)
         if node.level != 0:
-            self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+            self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         imp.setFilename(self.fname + node.module)
 
         # make scopmanager aware of import
@@ -792,7 +793,7 @@ class PythonASTToCPG(ast.NodeVisitor):
 
     def visit_alias(self, node):
         self.log_with_loc(ast.dump(node))
-        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         return
 
     ### CONTROL FLOW ###
@@ -853,7 +854,7 @@ class PythonASTToCPG(ast.NodeVisitor):
         else:
             self.log_with_loc(ref.java_name)
             # tuple or list
-            self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+            self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
             return
 
         stmt.setIterable(self.visit(node.iter))
@@ -873,17 +874,17 @@ class PythonASTToCPG(ast.NodeVisitor):
         w.setStatement(self.make_compound_statement(node, node.body))
         if node.orelse != None and len(node.orelse) != 0:
             self.log_with_loc("while -> orelse not implemented, yet",
-                    loglevel = "ERROR")
+                              loglevel="ERROR")
         return w
 
     def visit_Break(self, node):
         self.log_with_loc(ast.dump(node))
-        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         return
 
     def visit_Continue(self, node):
         self.log_with_loc(ast.dump(node))
-        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         return
 
     def visit_Try(self, node: ast.Try):
@@ -901,18 +902,18 @@ class PythonASTToCPG(ast.NodeVisitor):
 
     def visit_ExceptHandler(self, node):
         self.log_with_loc(ast.dump(node))
-        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         return
 
     def visit_With(self, node):
         self.log_with_loc(ast.dump(node))
         # TODO LATER -> new cpg node or foreach + try/catch?
-        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         return
 
     def visit_withitem(self, node):
         self.log_with_loc(ast.dump(node))
-        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         return
 
     ### FUNCTION AND CLASS DEFINITIONS ###
@@ -1002,7 +1003,7 @@ class PythonASTToCPG(ast.NodeVisitor):
 
     def visit_Lambda(self, node):
         self.log_with_loc(ast.dump(node))
-        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         return
 
     def visit_arguments(self, node, fd=None):
@@ -1010,7 +1011,7 @@ class PythonASTToCPG(ast.NodeVisitor):
         if fd is not None:
             self.log_with_loc("visit_arguments with FunctionDeclaration")
         for p in node.posonlyargs:
-            self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+            self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         for p in node.args:
             x = self.visit(p)
             if fd is not None:
@@ -1019,13 +1020,13 @@ class PythonASTToCPG(ast.NodeVisitor):
         # if node.vararg is not None:
         #    raise NotImplementedError
         for p in node.kwonlyargs:
-            self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+            self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         for p in node.kw_defaults:
-            self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+            self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         # if node.kwarg is not None:
         #    raise NotImplementedError
         for p in node.defaults:
-            self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+            self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
             pass
             # raise NotImplementedError
             # no cpg support???
@@ -1052,21 +1053,21 @@ class PythonASTToCPG(ast.NodeVisitor):
 
     def visit_Yield(self, node):
         self.log_with_loc(ast.dump(node))
-        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         return
 
     def visit_YieldFrom(self, node):
         self.log_with_loc(ast.dump(node))
-        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         return
 
     def visit_Global(self, node):
         self.log_with_loc(ast.dump(node))
-        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         return  # TODO: no support for global vars, yet. how to model them as CPG
         # nodes?
         if len(node.names) != 1:
-            self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+            self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         ref = DeclaredReferenceExpression()
         self.add_loc_info(node, ref)
         ref.setName(node.names[0])
@@ -1076,7 +1077,7 @@ class PythonASTToCPG(ast.NodeVisitor):
 
     def visit_Nonlocal(self, node):
         self.log_with_loc(ast.dump(node))
-        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         return
 
     def visit_ClassDef(self, node):
@@ -1101,15 +1102,15 @@ class PythonASTToCPG(ast.NodeVisitor):
                 tname = "%s" % (b.id)
                 t = TypeParser.createFrom(tname, True)
             else:
-                self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+                self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         else:
-            self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+            self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
 
         if t != None:
             rec.setSuperClasses([t])
         if len(node.keywords) != 0:
             self.log_with_loc(node.keywords)
-            self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+            self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         # if node.starargs is not None:
         #    raise NotImplementedError
         # if node.kwargs is not None:
@@ -1125,10 +1126,10 @@ class PythonASTToCPG(ast.NodeVisitor):
                 self.visit(b)
             else:
                 self.log_with_loc(b)
-                self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+                self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
 
         if len(node.decorator_list) != 0:
-            self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+            self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
 
         self.scopemanager.leaveScope(rec)
         self.scopemanager.addDeclaration(rec)
@@ -1137,26 +1138,26 @@ class PythonASTToCPG(ast.NodeVisitor):
     ### ASYNC AND AWAIT ###
     def visit_AsyncFunctionDef(self, node):
         self.log_with_loc(ast.dump(node))
-        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         # TODO: async modifier
         return self.visit_FunctionDef(node)
         # raise NotImplementedError
 
     def visit_Await(self, node):
         self.log_with_loc(ast.dump(node))
-        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         # TODO: implement
         return Expression()
         # raise NotImplementedError
 
     def visit_AsyncFor(self, node):
         self.log_with_loc(ast.dump(node))
-        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         return
 
     def visit_AsyncWith(self, node):
         self.log_with_loc(ast.dump(node))
-        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         return
 
     ### MISC ###
@@ -1188,7 +1189,7 @@ class PythonASTToCPG(ast.NodeVisitor):
     ### CATCH ALL ###
     def generic_visit(self, node):
         self.log_with_loc(ast.dump(node))
-        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         return
 
 
