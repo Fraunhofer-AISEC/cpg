@@ -179,6 +179,7 @@ func NewIncludeDeclaration(fset *token.FileSet, astNode ast.Node) *IncludeDeclar
 	}
 
 	updateCode(fset, (*Node)(tu), astNode)
+	updateLocation(fset, (*Node)(tu), astNode)
 
 	return (*IncludeDeclaration)(tu)
 }
@@ -191,6 +192,7 @@ func NewFunctionDeclaration(fset *token.FileSet, astNode ast.Node) *FunctionDecl
 	}
 
 	updateCode(fset, (*Node)(tu), astNode)
+	updateLocation(fset, (*Node)(tu), astNode)
 
 	return (*FunctionDeclaration)(tu)
 }
@@ -203,6 +205,7 @@ func NewMethodDeclaration(fset *token.FileSet, astNode ast.Node) *MethodDeclarat
 	}
 
 	updateCode(fset, (*Node)(tu), astNode)
+	updateLocation(fset, (*Node)(tu), astNode)
 
 	return (*MethodDeclaration)(tu)
 }
@@ -215,6 +218,7 @@ func NewRecordDeclaration(fset *token.FileSet, astNode ast.Node) *RecordDeclarat
 	}
 
 	updateCode(fset, (*Node)(tu), astNode)
+	updateLocation(fset, (*Node)(tu), astNode)
 
 	return (*RecordDeclaration)(tu)
 }
@@ -227,6 +231,7 @@ func NewVariableDeclaration(fset *token.FileSet, astNode ast.Node) *VariableDecl
 	}
 
 	updateCode(fset, (*Node)(tu), astNode)
+	updateLocation(fset, (*Node)(tu), astNode)
 
 	return (*VariableDeclaration)(tu)
 }
@@ -239,6 +244,7 @@ func NewParamVariableDeclaration(fset *token.FileSet, astNode ast.Node) *ParamVa
 	}
 
 	updateCode(fset, (*Node)(tu), astNode)
+	updateLocation(fset, (*Node)(tu), astNode)
 
 	return (*ParamVariableDeclaration)(tu)
 }
@@ -251,6 +257,7 @@ func NewFieldDeclaration(fset *token.FileSet, astNode ast.Node) *FieldDeclaratio
 	}
 
 	updateCode(fset, (*Node)(tu), astNode)
+	updateLocation(fset, (*Node)(tu), astNode)
 
 	return (*FieldDeclaration)(tu)
 }

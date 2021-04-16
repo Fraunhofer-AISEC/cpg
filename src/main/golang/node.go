@@ -20,6 +20,10 @@ func (n *Node) SetCode(s string) error {
 	return (*jnigi.ObjectRef)(n).SetField(env, "code", NewString(s))
 }
 
+func (n *Node) SetLocation(location *PhysicalLocation) error {
+	return (*jnigi.ObjectRef)(n).SetField(env, "location", (*jnigi.ObjectRef)(location))
+}
+
 func (n *Node) GetName() string {
 	o, _ := (*jnigi.ObjectRef)(n).CallMethod(env, "getName", jnigi.ObjectType("java/lang/String"))
 
@@ -30,7 +34,6 @@ func (n *Node) GetName() string {
 	b, err := o.(*jnigi.ObjectRef).CallMethod(env, "getBytes", jnigi.Byte|jnigi.Array)
 	if err != nil {
 		log.Fatal(err)
-
 	}
 
 	return string(b.([]byte))
@@ -41,4 +44,30 @@ func updateCode(fset *token.FileSet, node *Node, astNode ast.Node) {
 	_ = printer.Fprint(&codeBuf, fset, astNode)
 
 	node.SetCode(codeBuf.String())
+}
+
+func updateLocation(fset *token.FileSet, node *Node, astNode ast.Node) {
+	file := fset.File(astNode.Pos())
+	if file == nil {
+		return
+	}
+
+	uri, err := env.NewObject("java/net/URI", NewString(file.Name()))
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	region := NewRegion(fset, astNode,
+		fset.Position(astNode.Pos()).Line,
+		fset.Position(astNode.Pos()).Column,
+		fset.Position(astNode.End()).Line,
+		fset.Position(astNode.End()).Column,
+	)
+
+	location := NewPhysicalLocation(fset, astNode, uri, region)
+
+	err = node.SetLocation(location)
+	if err != nil {
+		log.Fatal(err)
+	}
 }
