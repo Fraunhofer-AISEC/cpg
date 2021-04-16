@@ -142,6 +142,20 @@ class ConstructorsTest extends BaseTest {
     ConstructExpression a10Initializer =
         (ConstructExpression) ((NewExpression) a10.getInitializer()).getInitializer();
     assertEquals(twoArgs, a10Initializer.getConstructor());
+  }
+
+  @Test
+  void testCPPFullDefault() throws Exception {
+    List<TranslationUnitDeclaration> result =
+        TestUtils.analyze(
+            List.of(Path.of(topLevel.toString(), "defaultarg", "constructorDefault.cpp").toFile()),
+            topLevel,
+            true);
+    List<ConstructorDeclaration> constructors =
+        TestUtils.subnodesOfType(result, ConstructorDeclaration.class);
+
+    List<VariableDeclaration> variables =
+        TestUtils.subnodesOfType(result, VariableDeclaration.class);
 
     ConstructorDeclaration twoDefaultArg =
         TestUtils.findByUniquePredicate(
@@ -182,6 +196,20 @@ class ConstructorsTest extends BaseTest {
     assertFalse(
         (Boolean) d3Initializer.getArgumentsPropertyEdge().get(1).getProperty(Properties.DEFAULT));
     assertEquals(4, ((Literal) d3Initializer.getArguments().get(1)).getValue());
+  }
+
+  @Test
+  void testCPPPartialDefault() throws Exception {
+    List<TranslationUnitDeclaration> result =
+        TestUtils.analyze(
+            List.of(Path.of(topLevel.toString(), "defaultarg", "constructorDefault.cpp").toFile()),
+            topLevel,
+            true);
+    List<ConstructorDeclaration> constructors =
+        TestUtils.subnodesOfType(result, ConstructorDeclaration.class);
+
+    List<VariableDeclaration> variables =
+        TestUtils.subnodesOfType(result, VariableDeclaration.class);
 
     ConstructorDeclaration singleDefaultArg =
         TestUtils.findByUniquePredicate(
