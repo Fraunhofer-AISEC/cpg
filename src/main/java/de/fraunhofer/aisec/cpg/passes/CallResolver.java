@@ -929,7 +929,7 @@ public class CallResolver extends Pass {
           constructExpression.getSignature(), constructorDeclaration.getSignatureTypes())) {
         List<CastExpression> implicitCasts =
             signatureWithImplicitCastTransformation(
-                getCallSignatureWithDefaults(constructExpression, constructorDeclaration),
+                constructExpression.getSignature(),
                 constructExpression.getArguments(),
                 constructorDeclaration.getSignatureTypes());
         applyImplicitCastToArguments(constructExpression, implicitCasts);
@@ -938,7 +938,7 @@ public class CallResolver extends Pass {
           workingSignature, constructorDeclaration.getSignatureTypes())) {
         List<CastExpression> implicitCasts =
             signatureWithImplicitCastTransformation(
-                constructExpression.getSignature(),
+                getCallSignatureWithDefaults(constructExpression, constructorDeclaration),
                 constructExpression.getArguments(),
                 constructorDeclaration.getSignatureTypes());
         applyImplicitCastToArguments(constructExpression, implicitCasts);
@@ -963,7 +963,7 @@ public class CallResolver extends Pass {
     if (constructorCandidate == null && this.getLang() instanceof CXXLanguageFrontend) {
       // If we don't find any candidate and our current language is c/c++ we check if there is a
       // candidate with an implicit cast
-      resolveConstructorWithImplicitCast(constructExpression, record);
+      constructorCandidate = resolveConstructorWithImplicitCast(constructExpression, record);
     }
 
     if (constructorCandidate == null) {
