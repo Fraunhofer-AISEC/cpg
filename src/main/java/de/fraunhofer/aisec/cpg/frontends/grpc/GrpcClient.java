@@ -45,7 +45,7 @@ public class GrpcClient {
   public CpgResponse sendMessage(String filename) throws TranslationException {
     CpgRequest request = CpgRequest.newBuilder().setFilename(filename).build();
     try {
-      CpgResponse response = blockingStub.getCpg(request);
+      CpgResponse response = blockingStub.transferCpg(request);
       return response;
     } catch (Exception e) {
       throw new TranslationException("Error in GrpcClient: " + e.getMessage());

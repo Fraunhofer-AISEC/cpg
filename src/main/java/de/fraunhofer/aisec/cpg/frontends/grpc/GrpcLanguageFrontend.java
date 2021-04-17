@@ -69,13 +69,10 @@ public class GrpcLanguageFrontend extends LanguageFrontend {
       //    b. It will then iterate over its parts and check if they have been initialized
       //    c. If they have, it will use these references. If not, it will call the methods
 
-      List<Node> cpgNodes =
-          new ArrayList<>(Collections.nCopies(response.getNodesList().size(), null));
+      List<Node> cpgNodes = Collections.nCopies(response.getNodesList().size(), null);
       Node node =
           NodeFactory.createNode(
-              response.getTranslationUnitDeclaration().getIndex(),
-              response.getNodesList(),
-              cpgNodes);
+              response.getRoot().getNodeIndex(), response.getNodesList(), cpgNodes);
 
       if (node instanceof TranslationUnitDeclaration) {
         return (TranslationUnitDeclaration) node;
