@@ -304,7 +304,9 @@ public class CallResolver extends Pass {
   /**
    * Computes the implicit casts that are necessary to reach the
    *
-   * @param call we want to find invocation targets for by performing implicit casts
+   * @param callSignature signature of the call we want to find invocation targets for by performing
+   *     implicit casts
+   * @param arguments arguments of the call
    * @param functionSignature Types of the signature of the possible invocation candidate
    * @return List containing either null on the i-th position (if the type of i-th argument of the
    *     call equals the type of the i-th argument of the FunctionDeclaration) or a CastExpression
@@ -313,8 +315,7 @@ public class CallResolver extends Pass {
    *     signature of the FunctionDeclaration cannot be reached through implicit casts
    */
   private List<CastExpression> signatureWithImplicitCastTransformation(
-      CallExpression call, FunctionDeclaration functionDeclaration, List<Type> functionSignature) {
-    List<Type> callSignature = getCallSignatureWithDefaults(call, functionDeclaration);
+      List<Type> callSignature, List<Expression> arguments, List<Type> functionSignature) {
     if (callSignature.size() == functionSignature.size()) {
       List<CastExpression> implicitCasts = new ArrayList<>();
 
@@ -325,7 +326,7 @@ public class CallResolver extends Pass {
           CastExpression implicitCast = new CastExpression();
           implicitCast.setImplicit(true);
           implicitCast.setCastType(funcType);
-          implicitCast.setExpression(call.getArguments().get(i));
+          implicitCast.setExpression(arguments.get(i));
           implicitCasts.add(implicitCast);
         } else {
           // If no cast is needed we add null to be able to access the function signature list and
@@ -361,6 +362,27 @@ public class CallResolver extends Pass {
   }
 
   /**
+   * @param constructExpression ConstructExpression
+   * @param constructorDeclaration ConstructorDeclaration the ConstructExpression was resolved to
+   * @return list containing the signature containing all argument types including the default
+   *     arguments
+   */
+  private List<Type> getCallSignatureWithDefaults(
+      ConstructExpression constructExpression, ConstructorDeclaration constructorDeclaration) {
+    List<Type> callSignature = new ArrayList<>(constructExpression.getSignature());
+    if (constructExpression.getSignature().size() < constructorDeclaration.getParameters().size()) {
+      callSignature.addAll(
+          constructorDeclaration
+              .getDefaultParameterSignature()
+              .subList(
+                  constructExpression.getArguments().size(),
+                  constructorDeclaration.getDefaultParameterSignature().size()));
+    }
+
+    return callSignature;
+  }
+
+  /**
    * Adds the implicit default arguments to the CallExpression if they were not provided
    *
    * @param functionDeclaration the CallExpression has been resolved to containing the default
@@ -376,6 +398,29 @@ public class CallResolver extends Pass {
               .subList(
                   call.getArguments().size(), functionDeclaration.getDefaultParameters().size())) {
         call.addArgument(expression, true);
+      }
+    }
+  }
+
+  /**
+   * Adds the implicit default arguments to the CallExpression if they were not provided
+   *
+   * @param constructorDeclaration the ConstructExpression has been resolved to containing the
+   *     default arguments
+   * @param constructExpression ConstructExpression which does not contain all necessary arguments
+   *     and uses the default arguments
+   */
+  private void addDefaultArgsToCall(
+      ConstructorDeclaration constructorDeclaration, ConstructExpression constructExpression) {
+    if (constructorDeclaration.hasSignature(
+        getCallSignatureWithDefaults(constructExpression, constructorDeclaration))) {
+      for (Expression expression :
+          constructorDeclaration
+              .getDefaultParameters()
+              .subList(
+                  constructExpression.getArguments().size(),
+                  constructorDeclaration.getDefaultParameters().size())) {
+        constructExpression.addArgument(expression, true);
       }
     }
   }
@@ -410,7 +455,9 @@ public class CallResolver extends Pass {
       if (compatibleSignatures(callSignature, functionDeclaration.getSignatureTypes())) {
         List<CastExpression> implicitCastTargets =
             signatureWithImplicitCastTransformation(
-                call, functionDeclaration, functionDeclaration.getSignatureTypes());
+                getCallSignatureWithDefaults(call, functionDeclaration),
+                call.getArguments(),
+                functionDeclaration.getSignatureTypes());
         if (implicitCasts == null) {
           implicitCasts = implicitCastTargets;
         } else {
@@ -479,6 +526,23 @@ public class CallResolver extends Pass {
       for (int i = 0; i < implicitCasts.size(); i++) {
         if (implicitCasts.get(i) != null) {
           call.setArgument(i, implicitCasts.get(i));
+        }
+      }
+    }
+  }
+
+  /**
+   * Changes the arguments of the ConstructExpression to use the implcit casts instead
+   *
+   * @param constructExpression ConstructExpression
+   * @param implicitCasts Casts
+   */
+  private void applyImplicitCastToArguments(
+      ConstructExpression constructExpression, List<CastExpression> implicitCasts) {
+    if (implicitCasts != null) {
+      for (int i = 0; i < implicitCasts.size(); i++) {
+        if (implicitCasts.get(i) != null) {
+          constructExpression.setArgument(i, implicitCasts.get(i));
         }
       }
     }
@@ -834,20 +898,52 @@ public class CallResolver extends Pass {
   private ConstructorDeclaration resolveConstructorWithDefaults(
       ConstructExpression constructExpression, List<Type> signature, RecordDeclaration record) {
     for (ConstructorDeclaration constructor : record.getConstructors()) {
-      List<Type> workingSignature = new ArrayList<>(signature);
-      if (!constructor.isImplicit()
-          && signature.size() < constructor.getSignatureTypes().size()
-          && signature.size() + constructor.getDefaultParameterSignature().size()
-              >= constructor.getSignatureTypes().size()) {
-        List<Type> defaultTypes = constructor.getDefaultParameterSignature();
-        workingSignature.addAll(defaultTypes.subList(signature.size(), defaultTypes.size()));
+      if (!constructor.isImplicit() && signature.size() < constructor.getSignatureTypes().size()) {
+        List<Type> workingSignature =
+            getCallSignatureWithDefaults(constructExpression, constructor);
         if (constructor.hasSignature(workingSignature)) {
           for (Expression argument :
-              constructor.getDefaultParameters().subList(signature.size(), defaultTypes.size())) {
+              constructor
+                  .getDefaultParameters()
+                  .subList(signature.size(), constructor.getDefaultParameterSignature().size())) {
             constructExpression.addArgument(argument, true);
           }
           return constructor;
         }
+      }
+    }
+    return null;
+  }
+
+  private ConstructorDeclaration resolveConstructorWithImplicitCast(
+      ConstructExpression constructExpression, RecordDeclaration recordDeclaration) {
+    for (ConstructorDeclaration constructorDeclaration : recordDeclaration.getConstructors()) {
+      List<Type> workingSignature = new ArrayList<>(constructExpression.getSignature());
+      workingSignature.addAll(
+          constructorDeclaration
+              .getDefaultParameterSignature()
+              .subList(
+                  constructExpression.getArguments().size(),
+                  constructorDeclaration.getDefaultParameterSignature().size()));
+      if (compatibleSignatures(
+          constructExpression.getSignature(), constructorDeclaration.getSignatureTypes())) {
+        List<CastExpression> implicitCasts =
+            signatureWithImplicitCastTransformation(
+                getCallSignatureWithDefaults(constructExpression, constructorDeclaration),
+                constructExpression.getArguments(),
+                constructorDeclaration.getSignatureTypes());
+        applyImplicitCastToArguments(constructExpression, implicitCasts);
+        return constructorDeclaration;
+      } else if (compatibleSignatures(
+          workingSignature, constructorDeclaration.getSignatureTypes())) {
+        List<CastExpression> implicitCasts =
+            signatureWithImplicitCastTransformation(
+                constructExpression.getSignature(),
+                constructExpression.getArguments(),
+                constructorDeclaration.getSignatureTypes());
+        applyImplicitCastToArguments(constructExpression, implicitCasts);
+        addDefaultArgsToCall(constructorDeclaration, constructExpression);
+        return constructorDeclaration;
       }
     }
     return null;
@@ -867,8 +963,7 @@ public class CallResolver extends Pass {
     if (constructorCandidate == null && this.getLang() instanceof CXXLanguageFrontend) {
       // If we don't find any candidate and our current language is c/c++ we check if there is a
       // candidate with an implicit cast
-      // TODO
-
+      resolveConstructorWithImplicitCast(constructExpression, record);
     }
 
     if (constructorCandidate == null) {
