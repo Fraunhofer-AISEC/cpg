@@ -114,7 +114,13 @@ tasks.withType<GenerateModuleMetadata> {
 signing {
     val signingKey: String? by project
     val signingPassword: String? by project
+
     useInMemoryPgpKeys(signingKey, signingPassword)
+
+    setRequired({
+        gradle.taskGraph.hasTask("publish")
+    })
+
     sign(publishing.publications["maven"])
 }
 
