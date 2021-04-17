@@ -25,6 +25,7 @@ func NewCompoundStatement(fset *token.FileSet, astNode ast.Node) *CompoundStatem
 	}
 
 	updateCode(fset, (*Node)(s), astNode)
+	updateLocation(fset, (*Node)(s), astNode)
 
 	return (*CompoundStatement)(s)
 }
@@ -37,6 +38,7 @@ func NewReturnStatement(fset *token.FileSet, astNode ast.Node) *ReturnStatement 
 	}
 
 	updateCode(fset, (*Node)(s), astNode)
+	updateLocation(fset, (*Node)(s), astNode)
 
 	return (*ReturnStatement)(s)
 }
@@ -49,6 +51,7 @@ func NewDeclarationStatement(fset *token.FileSet, astNode ast.Node) *Declaration
 	}
 
 	updateCode(fset, (*Node)(s), astNode)
+	updateLocation(fset, (*Node)(s), astNode)
 
 	return (*DeclarationStatement)(s)
 }
@@ -61,6 +64,7 @@ func NewIfStatement(fset *token.FileSet, astNode ast.Node) *IfStatement {
 	}
 
 	updateCode(fset, (*Node)(s), astNode)
+	updateLocation(fset, (*Node)(s), astNode)
 
 	return (*IfStatement)(s)
 }
@@ -73,6 +77,7 @@ func NewSwitchStatement(fset *token.FileSet, astNode ast.Node) *SwitchStatement 
 	}
 
 	updateCode(fset, (*Node)(s), astNode)
+	updateLocation(fset, (*Node)(s), astNode)
 
 	return (*SwitchStatement)(s)
 }
@@ -85,6 +90,7 @@ func NewCaseStatement(fset *token.FileSet, astNode ast.Node) *CaseStatement {
 	}
 
 	updateCode(fset, (*Node)(s), astNode)
+	updateLocation(fset, (*Node)(s), astNode)
 
 	return (*CaseStatement)(s)
 }
@@ -97,6 +103,7 @@ func NewDefaultStatement(fset *token.FileSet, astNode ast.Node) *DefaultStatemen
 	}
 
 	updateCode(fset, (*Node)(s), astNode)
+	updateLocation(fset, (*Node)(s), astNode)
 
 	return (*DefaultStatement)(s)
 }

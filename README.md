@@ -1,6 +1,6 @@
 # Code Property Graph 
 [![Actions Status](https://github.com/Fraunhofer-AISEC/cpg/workflows/build/badge.svg)](https://github.com/Fraunhofer-AISEC/cpg/actions)
- [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=Fraunhofer-AISEC_cpg&metric=alert_status)](https://sonarcloud.io/dashboard?id=Fraunhofer-AISEC_cpg) [![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=Fraunhofer-AISEC_cpg&metric=security_rating)](https://sonarcloud.io/dashboard?id=Fraunhofer-AISEC_cpg) [![Coverage](https://sonarcloud.io/api/project_badges/measure?project=Fraunhofer-AISEC_cpg&metric=coverage)](https://sonarcloud.io/dashboard?id=Fraunhofer-AISEC_cpg)
+ [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=Fraunhofer-AISEC_cpg&metric=alert_status)](https://sonarcloud.io/dashboard?id=Fraunhofer-AISEC_cpg) [![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=Fraunhofer-AISEC_cpg&metric=security_rating)](https://sonarcloud.io/dashboard?id=Fraunhofer-AISEC_cpg) [![Coverage](https://sonarcloud.io/api/project_badges/measure?project=Fraunhofer-AISEC_cpg&metric=coverage)](https://sonarcloud.io/dashboard?id=Fraunhofer-AISEC_cpg) [![](https://jitpack.io/v/Fraunhofer-AISEC/cpg.svg)](https://jitpack.io/#Fraunhofer-AISEC/cpg)
 
 A simple library to extract a *code property graph* out of source code. It has support for multiple passes that can extend the analysis after the graph is constructed. It currently supports C/C++ (C17), Java (Java 13) and has experimental support for Golang and Python.
 
@@ -37,6 +37,10 @@ dependencies {
     api("de.fraunhofer.aisec", "cpg", "3.3.1")
 }
 ```
+
+#### Development Builds
+
+A published artifact of every commit can be requested through [JitPack](https://jitpack.io/com/github/Fraunhofer-AISEC/cpg). This is especially useful, if your external project makes use of a specific feature that is not yet merged in yet or not published as a version yet. Please follow the instructions on the JitPack page. Please be aware, that similar to release builds, the CDT repository needs to be added as well (see above).
 
 ### On Command Line
 
@@ -87,11 +91,11 @@ You need to install [jep](https://github.com/ninia/jep/). This can either be sys
 
 Through the `JepSingleton`, the CPG library will look for well known paths on Linux and OS X. `JepSingleton` will prefer a virtualenv with the name `cpg`, this can be adjusted with the environment variable `CPG_PYTHON_VIRTUALENV`.
 
-## System Wide
+##### System Wide
 
 Follow the instructions at https://github.com/ninia/jep/wiki/Getting-Started#installing-jep.
 
-## Virtual Env
+##### Virtual Env
 
 - `python3 -m venv ~/.virtualenvs/cpg`
 - `source ~/.virtualenvs/cpg/bin/activate`

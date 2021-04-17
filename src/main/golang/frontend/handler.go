@@ -23,8 +23,8 @@ func getImportName(spec *ast.ImportSpec) string {
 	return paths[len(paths)-1]
 }
 
-func (this *GoLanguageFrontend) HandleFile(fset *token.FileSet, file *ast.File) (tu *cpg.TranslationUnitDeclaration, err error) {
-	tu = cpg.NewTranslationUnitDeclaration(fset, file, "src.go", this.GetCodeFromRawNode(fset, file))
+func (this *GoLanguageFrontend) HandleFile(fset *token.FileSet, file *ast.File, path string) (tu *cpg.TranslationUnitDeclaration, err error) {
+	tu = cpg.NewTranslationUnitDeclaration(fset, file, path, this.GetCodeFromRawNode(fset, file))
 
 	scope := this.GetScopeManager()
 
