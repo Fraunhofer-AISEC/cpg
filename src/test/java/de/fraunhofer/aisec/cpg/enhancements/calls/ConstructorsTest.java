@@ -8,10 +8,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDeclaration;
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration;
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration;
 import de.fraunhofer.aisec.cpg.graph.edge.Properties;
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.ConstructExpression;
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal;
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.NewExpression;
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.UninitializedValue;
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.*;
 import java.nio.file.Path;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -244,5 +241,58 @@ class ConstructorsTest extends BaseTest {
     assertFalse(
         (Boolean) e3Initializer.getArgumentsPropertyEdge().get(1).getProperty(Properties.DEFAULT));
     assertEquals(7, ((Literal) e3Initializer.getArguments().get(1)).getValue());
+  }
+
+  @Test
+  void testCPPImplicitCast() throws Exception {
+    List<TranslationUnitDeclaration> result =
+        TestUtils.analyze(
+            List.of(
+                Path.of(topLevel.toString(), "implicitcastarg", "constructorImplicit.cpp")
+                    .toFile()),
+            topLevel,
+            true);
+    List<ConstructorDeclaration> constructors =
+        TestUtils.subnodesOfType(result, ConstructorDeclaration.class);
+
+    List<VariableDeclaration> variables =
+        TestUtils.subnodesOfType(result, VariableDeclaration.class);
+
+    ConstructorDeclaration implicitConstructor =
+        TestUtils.findByUniquePredicate(constructors, c -> c.getName().equals("I"));
+
+    VariableDeclaration i1 = TestUtils.findByUniqueName(variables, "i1");
+    assertTrue(i1.getInitializer() instanceof ConstructExpression);
+    ConstructExpression i1Constructor = (ConstructExpression) i1.getInitializer();
+    assertFalse(i1Constructor.isImplicit());
+
+    assertEquals(implicitConstructor, i1Constructor.getConstructor());
+    assertEquals(1, i1Constructor.getArguments().size());
+    assertTrue(i1Constructor.getArguments().get(0) instanceof CastExpression);
+    CastExpression i1ConstructorArgument = (CastExpression) i1Constructor.getArguments().get(0);
+    assertEquals("int", i1ConstructorArgument.getCastType().getName());
+    assertEquals("1.0", i1ConstructorArgument.getExpression().getCode());
+    assertEquals("double", i1ConstructorArgument.getExpression().getType().getName());
+
+    ConstructorDeclaration implicitConstructorWithDefault =
+        TestUtils.findByUniquePredicate(constructors, c -> c.getName().equals("H"));
+
+    VariableDeclaration h1 = TestUtils.findByUniqueName(variables, "h1");
+    assertTrue(h1.getInitializer() instanceof ConstructExpression);
+    ConstructExpression h1Constructor = (ConstructExpression) h1.getInitializer();
+    assertFalse(h1Constructor.isImplicit());
+
+    assertEquals(implicitConstructorWithDefault, h1Constructor.getConstructor());
+    assertEquals(2, h1Constructor.getArguments().size());
+
+    assertTrue(h1Constructor.getArguments().get(0) instanceof CastExpression);
+    CastExpression h1ConstructorArgument1 = (CastExpression) h1Constructor.getArguments().get(0);
+    assertEquals("int", h1ConstructorArgument1.getCastType().getName());
+    assertEquals("2.0", h1ConstructorArgument1.getExpression().getCode());
+    assertEquals("double", h1ConstructorArgument1.getExpression().getType().getName());
+
+    assertEquals(10, ((Literal) h1Constructor.getArguments().get(1)).getValue());
+    assertTrue(
+        (Boolean) h1Constructor.getArgumentsPropertyEdge().get(1).getProperty(Properties.DEFAULT));
   }
 }
