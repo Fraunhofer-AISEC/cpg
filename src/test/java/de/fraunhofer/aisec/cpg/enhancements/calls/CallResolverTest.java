@@ -31,6 +31,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import de.fraunhofer.aisec.cpg.BaseTest;
 import de.fraunhofer.aisec.cpg.TestUtils;
 import de.fraunhofer.aisec.cpg.graph.declarations.*;
+import de.fraunhofer.aisec.cpg.graph.edge.Properties;
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression;
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CastExpression;
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal;
@@ -508,5 +509,66 @@ public class CallResolverTest extends BaseTest {
     assertEquals(1, calls.get(0).getInvokes().size());
     assertFalse(calls.get(0).getInvokes().get(0).isImplicit());
     assertEquals("g", calls.get(0).getInvokes().get(0).getName());
+  }
+
+  @Test
+  void testScopedFunctionResolutionWithDefaults() throws Exception {
+    List<TranslationUnitDeclaration> result =
+        TestUtils.analyze(
+            List.of(
+                Path.of(topLevel.toString(), "scopedresolution", "scopedResolutionWithDefaults.cpp")
+                    .toFile()),
+            topLevel,
+            true);
+    List<CallExpression> calls = TestUtils.subnodesOfType(result, CallExpression.class);
+
+    CallExpression fh =
+        TestUtils.findByUniquePredicate(
+            calls, c -> c.getLocation().getRegion().getStartLine() == 4);
+
+    assertEquals(1, fh.getInvokes().size());
+    assertFalse(fh.getInvokes().get(0).isImplicit());
+    assertEquals(2, fh.getInvokes().get(0).getLocation().getRegion().getStartLine());
+    assertEquals(2, fh.getArguments().size());
+    assertEquals(3, ((Literal) fh.getArguments().get(0)).getValue());
+    assertEquals(7, ((Literal) fh.getArguments().get(1)).getValue());
+    assertFalse((Boolean) fh.getArgumentsPropertyEdge().get(0).getProperty(Properties.DEFAULT));
+    assertTrue((Boolean) fh.getArgumentsPropertyEdge().get(1).getProperty(Properties.DEFAULT));
+
+    CallExpression fm1 =
+        TestUtils.findByUniquePredicate(
+            calls, c -> c.getLocation().getRegion().getStartLine() == 8);
+
+    assertEquals(1, fm1.getInvokes().size());
+    assertTrue(fm1.getInvokes().get(0).isImplicit());
+    assertEquals(1, fm1.getArguments().size());
+    assertEquals(4, ((Literal) fm1.getArguments().get(0)).getValue());
+    assertFalse((Boolean) fm1.getArgumentsPropertyEdge().get(0).getProperty(Properties.DEFAULT));
+
+    CallExpression fm2 =
+        TestUtils.findByUniquePredicate(
+            calls, c -> c.getLocation().getRegion().getStartLine() == 10);
+
+    assertEquals(1, fm2.getInvokes().size());
+    assertFalse(fm2.getInvokes().get(0).isImplicit());
+    assertEquals(9, fm2.getInvokes().get(0).getLocation().getRegion().getStartLine());
+    assertEquals(2, fm2.getArguments().size());
+    assertEquals(4, ((Literal) fm2.getArguments().get(0)).getValue());
+    assertEquals(5, ((Literal) fm2.getArguments().get(1)).getValue());
+    assertFalse((Boolean) fm2.getArgumentsPropertyEdge().get(0).getProperty(Properties.DEFAULT));
+    assertTrue((Boolean) fm2.getArgumentsPropertyEdge().get(1).getProperty(Properties.DEFAULT));
+
+    CallExpression fn =
+        TestUtils.findByUniquePredicate(
+            calls, c -> c.getLocation().getRegion().getStartLine() == 13);
+
+    assertEquals(1, fn.getInvokes().size());
+    assertFalse(fn.getInvokes().get(0).isImplicit());
+    assertEquals(2, fn.getInvokes().get(0).getLocation().getRegion().getStartLine());
+    assertEquals(2, fn.getArguments().size());
+    assertEquals(6, ((Literal) fn.getArguments().get(0)).getValue());
+    assertEquals(7, ((Literal) fn.getArguments().get(1)).getValue());
+    assertFalse((Boolean) fn.getArgumentsPropertyEdge().get(0).getProperty(Properties.DEFAULT));
+    assertTrue((Boolean) fn.getArgumentsPropertyEdge().get(1).getProperty(Properties.DEFAULT));
   }
 }
