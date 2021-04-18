@@ -472,4 +472,41 @@ public class CallResolverTest extends BaseTest {
     testDefaultArgumentsInDefinition();
     testPartialDefaultArguments();
   }
+
+  @Test
+  void testScopedFunctionResolutionUndefined() throws Exception {
+    List<TranslationUnitDeclaration> result =
+        TestUtils.analyze(
+            List.of(Path.of(topLevel.toString(), "scopedresolution", "undefined.cpp").toFile()),
+            topLevel,
+            true);
+
+    List<CallExpression> calls = TestUtils.subnodesOfType(result, CallExpression.class);
+    assertEquals(1, calls.size());
+    List<FunctionDeclaration> functionDeclarations =
+        TestUtils.subnodesOfType(result, FunctionDeclaration.class);
+    assertEquals(3, functionDeclarations.size());
+
+    assertEquals(1, calls.get(0).getInvokes().size());
+    assertTrue(calls.get(0).getInvokes().get(0).isImplicit());
+    assertEquals("f", calls.get(0).getInvokes().get(0).getName());
+  }
+
+  @Test
+  void testScopedFunctionResolutionDefined() throws Exception {
+    List<TranslationUnitDeclaration> result =
+        TestUtils.analyze(
+            List.of(Path.of(topLevel.toString(), "scopedresolution", "defined.cpp").toFile()),
+            topLevel,
+            true);
+    List<CallExpression> calls = TestUtils.subnodesOfType(result, CallExpression.class);
+    assertEquals(1, calls.size());
+    List<FunctionDeclaration> functionDeclarations =
+        TestUtils.subnodesOfType(result, FunctionDeclaration.class);
+    assertEquals(2, functionDeclarations.size());
+
+    assertEquals(1, calls.get(0).getInvokes().size());
+    assertFalse(calls.get(0).getInvokes().get(0).isImplicit());
+    assertEquals("g", calls.get(0).getInvokes().get(0).getName());
+  }
 }

@@ -52,6 +52,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.WhileStatement;
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression;
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression;
 import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType;
+import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation;
 import java.util.*;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -600,7 +601,10 @@ public class ScopeManager {
               .getValueDeclarations().stream()
                   .filter(FunctionDeclaration.class::isInstance)
                   .map(FunctionDeclaration.class::cast)
-                  .filter(f -> f.getName().equals(call.getName()))
+                  .filter(
+                      f ->
+                          f.getName().equals(call.getName())
+                              && definedBefore(f.getLocation(), call.getLocation()))
                   .collect(Collectors.toList());
       if (!list.isEmpty()) {
         return list;
@@ -611,6 +615,12 @@ public class ScopeManager {
         : new ArrayList<>();
   }
 
+  private boolean definedBefore(PhysicalLocation definition, PhysicalLocation usage) {
+    if (definition.getArtifactLocation().equals(usage.getArtifactLocation())) {
+      return usage.getRegion().compareTo(definition.getRegion()) > 0;
+    }
+    return true;
+  }
 
   /**
    * This function tries to resolve a FQN to a scope. The name is the name of the AST-Node
