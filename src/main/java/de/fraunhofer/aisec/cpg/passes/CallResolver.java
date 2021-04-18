@@ -433,11 +433,9 @@ public class CallResolver extends Pass {
    */
   private List<FunctionDeclaration> resolveWithImplicitCast(CallExpression call) {
     // Get possible invocation targets based on the function name
-    assert currentTU != null;
+    assert lang != null;
     List<FunctionDeclaration> matchingFunctionName =
-        currentTU.getDeclarations().stream()
-            .filter(FunctionDeclaration.class::isInstance)
-            .map(FunctionDeclaration.class::cast)
+        lang.getScopeManager().resolveFunctionStopScopeTraversalOnDefinition(call).stream()
             .filter(f -> f.getName().equals(call.getName()) && !f.isImplicit())
             .collect(Collectors.toList());
 
@@ -557,11 +555,9 @@ public class CallResolver extends Pass {
    *     connected with an invokes edge)
    */
   private List<FunctionDeclaration> resolveWithDefaultArgs(CallExpression call) {
-    assert currentTU != null;
+    assert lang != null;
     List<FunctionDeclaration> invocationCandidates =
-        currentTU.getDeclarations().stream()
-            .filter(FunctionDeclaration.class::isInstance)
-            .map(FunctionDeclaration.class::cast)
+        lang.getScopeManager().resolveFunctionStopScopeTraversalOnDefinition(call).stream()
             .filter(
                 f ->
                     f.getName().equals(call.getName())
@@ -580,11 +576,18 @@ public class CallResolver extends Pass {
   }
 
   private void handleNormalCalls(RecordDeclaration curClass, CallExpression call) {
-    if (curClass == null && this.currentTU != null) {
+    if (curClass == null && lang != null) {
       // Handle function (not method) calls
       // C++ allows function overloading. Make sure we have at least the same number of arguments
-
-      var invocationCandidates = lang.getScopeManager().resolveFunction(call);
+      List<FunctionDeclaration> invocationCandidates = null;
+      if (this.getLang() instanceof CXXLanguageFrontend) {
+        invocationCandidates =
+            lang.getScopeManager().resolveFunctionStopScopeTraversalOnDefinition(call).stream()
+                .filter(f -> f.hasSignature(call.getSignature()))
+                .collect(Collectors.toList());
+      } else {
+        invocationCandidates = lang.getScopeManager().resolveFunction(call);
+      }
 
       if (invocationCandidates.isEmpty() && this.getLang() instanceof CXXLanguageFrontend) {
         // Check for usage of default args
