@@ -4,6 +4,7 @@ from de.fraunhofer.aisec.cpg.graph.declarations import Declaration
 from de.fraunhofer.aisec.cpg.graph.declarations import FunctionDeclaration
 from de.fraunhofer.aisec.cpg.graph.declarations import IncludeDeclaration
 from de.fraunhofer.aisec.cpg.graph.declarations import MethodDeclaration
+from de.fraunhofer.aisec.cpg.graph.declarations import ConstructorDeclaration
 from de.fraunhofer.aisec.cpg.graph.declarations import NamespaceDeclaration
 from de.fraunhofer.aisec.cpg.graph.declarations import ParamVariableDeclaration
 from de.fraunhofer.aisec.cpg.graph.declarations import RecordDeclaration
@@ -112,10 +113,18 @@ class PythonASTToCPG(ast.NodeVisitor):
             return
         obj.setFile(self.fname)
         uri = URI("file://" + self.fname)
-        obj.setLocation(PhysicalLocation(uri, Region(node.lineno,
-                                                     node.col_offset, node.end_lineno, node.end_col_offset)))
+        obj.setLocation(PhysicalLocation(uri,
+            Region(node.lineno,
+                node.col_offset,
+                node.end_lineno,
+                node.end_col_offset)
+            )
+            )
         obj.setCode(self.sourcecode.get_snippet(node.lineno,
-                                                node.col_offset, node.end_lineno, node.end_col_offset))
+            node.col_offset,
+            node.end_lineno,
+            node.end_col_offset)
+            )
         # obj.setCode(ast.unparse(node)) # alternative to CodeExtractor class
 
     ### LITERALS ###
@@ -918,10 +927,14 @@ class PythonASTToCPG(ast.NodeVisitor):
         return
 
     ### FUNCTION AND CLASS DEFINITIONS ###
-    def visit_FunctionDef(self, node: ast.FunctionDef, returnMethod=False):
+    def visit_FunctionDef(self, node: ast.FunctionDef, recordDec=None):
         self.log_with_loc(ast.dump(node))
-        if returnMethod:
-            fd = MethodDeclaration()
+        if recordDec is not None:
+            if node.name == "__init__":
+                fd = ConstructorDeclaration()
+            else:
+                fd = MethodDeclaration()
+            fd.setRecordDeclaration(recordDec)
         else:
             fd = FunctionDeclaration()
         self.add_loc_info(node, fd)
@@ -1009,15 +1022,23 @@ class PythonASTToCPG(ast.NodeVisitor):
 
     def visit_arguments(self, node, fd=None):
         self.log_with_loc(ast.dump(node))
-        if fd is not None:
-            self.log_with_loc("visit_arguments with FunctionDeclaration")
         for p in node.posonlyargs:
             self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
-        for p in node.args:
-            x = self.visit(p)
-            if fd is not None:
-                # fd.addParameter(x)
-                pass  # PVD -> automagically handled by cpg
+
+        if self.isMethodOrCtor(fd):
+            # first argument is "self" (or any other name for "self")
+            slf = VariableDeclaration()
+            self.add_loc_info(node.args[0], slf)
+            slf.setName(node.args[0].arg)
+            slf.setType(TypeParser.createFrom(fd.getRecordDeclaration().getName(),
+                    False))
+            fd.setReceiver(slf)
+            self.scopemanager.addDeclaration(slf)
+            for p in node.args[1:]:
+                x = self.visit(p)
+        else:
+            for p in node.args:
+                x = self.visit(p)
         # if node.vararg is not None:
         #    raise NotImplementedError
         for p in node.kwonlyargs:
@@ -1120,7 +1141,7 @@ class PythonASTToCPG(ast.NodeVisitor):
         for b in node.body:
             if isinstance(b, ast.FunctionDef):
                 # TODO __init__ -> ctor
-                fd = self.visit_FunctionDef(b, returnMethod=True)
+                fd = self.visit_FunctionDef(b, recordDec=rec)
                 rec.addMethod(fd)
             elif isinstance(b, ast.Expr):
                 # TODO what to do about expressions inside a class?
@@ -1192,6 +1213,14 @@ class PythonASTToCPG(ast.NodeVisitor):
         self.log_with_loc(ast.dump(node))
         self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         return
+
+    def isMethodOrCtor(self, f):
+        if f.java_name == "de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration":
+            return True
+        elif f.java_name == "de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDeclaration":
+            return True
+        else:
+            return False
 
 
 def parse_code(code, filename, frontend):

@@ -325,4 +325,63 @@ class PythonFrontendTest : BaseTest() {
         assertEquals(TypeParser.createFrom("int", false), elseExpr?.type)
         assertEquals(42, (elseExpr?.value as? Long)?.toInt())
     }
+
+    @Test
+    fun testSelf() {
+        val topLevel = Path.of("src", "test", "resources", "python")
+        val tu =
+            TestUtils.analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("class_self.py").toFile()),
+                topLevel,
+                true
+            ) {
+                it.registerLanguage(
+                    PythonLanguageFrontend::class.java,
+                    PythonLanguageFrontend.PY_EXTENSIONS
+                )
+            }
+
+        assertNotNull(tu)
+
+        val p =
+            tu.getDeclarationsByName("class_self", NamespaceDeclaration::class.java)
+                .iterator()
+                .next()
+
+        val Foo = p.getDeclarationsByName("Foo", RecordDeclaration::class.java).iterator().next()
+
+        assertNotNull(Foo)
+        assertEquals("Foo", Foo.name)
+
+        assertEquals(1, Foo.fields.size)
+        val somevar = Foo.fields[0] as? FieldDeclaration
+        assertEquals("somevar", somevar?.name)
+        assertEquals(TypeParser.createFrom("int", false), somevar?.type)
+
+        assertEquals(1, Foo.methods.size)
+        val bar = Foo.methods[0] as? MethodDeclaration
+        assertEquals("bar", bar?.name)
+        assertEquals(Foo, bar?.recordDeclaration)
+
+        val recv = bar?.receiver as? VariableDeclaration
+        assertEquals("self", recv?.name)
+        assertEquals(TypeParser.createFrom("Foo", false), recv?.type)
+
+        assertEquals(1, bar?.parameters?.size)
+        val i = bar?.parameters?.get(0)
+        assertEquals("i", i?.name)
+
+        val body = bar?.body as? CompoundStatement
+        val assign = body?.statements?.get(0) as? BinaryOperator
+        val lhs = assign?.lhs as? MemberExpression
+        val rhs = assign?.rhs as? DeclaredReferenceExpression
+        assertEquals(somevar, lhs?.refersTo)
+        val base = lhs?.base as? DeclaredReferenceExpression
+        assertEquals("self", base?.name)
+        assertEquals(TypeParser.createFrom("Foo", false), base?.type)
+        assertEquals(recv, base?.refersTo)
+
+        assertEquals(i, rhs?.refersTo)
+        assertEquals("=", assign?.operatorCode)
+    }
 }
