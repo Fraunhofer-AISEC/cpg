@@ -301,20 +301,20 @@ public class TypeManager {
         wrapState.getReferenceType());
   }
 
-  private Set<Ancestor> getAncestors(RecordDeclaration record, int depth) {
-    if (record.getSuperTypes().isEmpty()) {
+  private Set<Ancestor> getAncestors(RecordDeclaration recordDeclaration, int depth) {
+    if (recordDeclaration.getSuperTypes().isEmpty()) {
       HashSet<Ancestor> ret = new HashSet<>();
-      ret.add(new Ancestor(record, depth));
+      ret.add(new Ancestor(recordDeclaration, depth));
       return ret;
     }
     Set<Ancestor> ancestors =
-        record.getSuperTypes().stream()
+        recordDeclaration.getSuperTypes().stream()
             .map(s -> typeToRecord.getOrDefault(s.getTypeName(), null))
             .filter(Objects::nonNull)
             .map(s -> getAncestors(s, depth + 1))
             .flatMap(Collection::stream)
             .collect(Collectors.toSet());
-    ancestors.add(new Ancestor(record, depth));
+    ancestors.add(new Ancestor(recordDeclaration, depth));
     return ancestors;
   }
 
@@ -514,16 +514,16 @@ public class TypeManager {
 
   private static class Ancestor {
 
-    private RecordDeclaration record;
+    private RecordDeclaration recordDeclaration;
     private int depth;
 
-    public Ancestor(RecordDeclaration record, int depth) {
-      this.record = record;
+    public Ancestor(RecordDeclaration recordDeclaration, int depth) {
+      this.recordDeclaration = recordDeclaration;
       this.depth = depth;
     }
 
     public RecordDeclaration getRecord() {
-      return record;
+      return recordDeclaration;
     }
 
     public int getDepth() {
@@ -536,7 +536,7 @@ public class TypeManager {
 
     @Override
     public int hashCode() {
-      return Objects.hash(record);
+      return Objects.hash(recordDeclaration);
     }
 
     @Override
@@ -548,13 +548,13 @@ public class TypeManager {
         return false;
       }
       Ancestor ancestor = (Ancestor) o;
-      return Objects.equals(record, ancestor.record);
+      return Objects.equals(recordDeclaration, ancestor.recordDeclaration);
     }
 
     @Override
     public String toString() {
       return new ToStringBuilder(this, Node.TO_STRING_STYLE)
-          .append("record", record.getName())
+          .append("record", recordDeclaration.getName())
           .append("depth", depth)
           .toString();
     }

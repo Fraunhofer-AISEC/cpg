@@ -295,12 +295,14 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
     if (base instanceof Literal && ((Literal<?>) base).getValue().equals("this")) {
       PhysicalLocation location = base.getLocation();
 
-      var record = lang.getScopeManager().getCurrentRecord();
+      var recordDeclaration = lang.getScopeManager().getCurrentRecord();
 
       base =
           NodeBuilder.newDeclaredReferenceExpression(
               "this",
-              record != null ? record.getThis().getType() : UnknownType.getUnknownType(),
+              recordDeclaration != null
+                  ? recordDeclaration.getThis().getType()
+                  : UnknownType.getUnknownType(),
               base.getCode());
       base.setLocation(location);
     }

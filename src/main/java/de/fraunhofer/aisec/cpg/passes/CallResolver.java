@@ -666,12 +666,14 @@ public class CallResolver extends Pass {
 
   private void resolveConstructExpression(ConstructExpression constructExpression) {
     String typeName = constructExpression.getType().getTypeName();
-    RecordDeclaration record = recordMap.get(typeName);
-    constructExpression.setInstantiates(record);
+    RecordDeclaration recordDeclaration = recordMap.get(typeName);
+    constructExpression.setInstantiates(recordDeclaration);
 
-    if (record != null && record.getCode() != null && !record.getCode().isEmpty()) {
+    if (recordDeclaration != null
+        && recordDeclaration.getCode() != null
+        && !recordDeclaration.getCode().isEmpty()) {
       ConstructorDeclaration constructor =
-          getConstructorDeclarationCXX(constructExpression, record);
+          getConstructorDeclarationCXX(constructExpression, recordDeclaration);
       constructExpression.setConstructor(constructor);
     }
   }
@@ -712,12 +714,12 @@ public class CallResolver extends Pass {
 
   private void resolveExplicitConstructorInvocation(ExplicitConstructorInvocation eci) {
     if (eci.getContainingClass() != null) {
-      RecordDeclaration record = recordMap.get(eci.getContainingClass());
+      RecordDeclaration recordDeclaration = recordMap.get(eci.getContainingClass());
       List<Type> signature =
           eci.getArguments().stream().map(Expression::getType).collect(Collectors.toList());
-      if (record != null) {
+      if (recordDeclaration != null) {
         ConstructorDeclaration constructor =
-            getConstructorDeclarationForExplicitInvocation(signature, record);
+            getConstructorDeclarationForExplicitInvocation(signature, recordDeclaration);
         ArrayList<FunctionDeclaration> invokes = new ArrayList<>();
         invokes.add(constructor);
         eci.setInvokes(invokes);
@@ -775,12 +777,12 @@ public class CallResolver extends Pass {
             .map(c -> recordMap.getOrDefault(c, null))
             .filter(Objects::nonNull)
             .collect(Collectors.toList());
-    for (RecordDeclaration record : containingRecords) {
-      MethodDeclaration dummy = NodeBuilder.newMethodDeclaration(name, "", true, record);
+    for (RecordDeclaration recordDeclaration : containingRecords) {
+      MethodDeclaration dummy = NodeBuilder.newMethodDeclaration(name, "", true, recordDeclaration);
       dummy.setImplicit(true);
       List<ParamVariableDeclaration> params = Util.createParameters(call.getSignature());
       dummy.setParameters(params);
-      record.addMethod(dummy);
+      recordDeclaration.addMethod(dummy);
       curClass.getStaticImports().add(dummy);
       invokes.add(dummy);
     }
@@ -850,10 +852,11 @@ public class CallResolver extends Pass {
   }
 
   private List<FunctionDeclaration> getInvocationCandidatesFromRecord(
-      RecordDeclaration record, String name, List<Type> signature) {
+      RecordDeclaration recordDeclaration, String name, List<Type> signature) {
     Pattern namePattern =
-        Pattern.compile("(" + Pattern.quote(record.getName()) + "\\.)?" + Pattern.quote(name));
-    return record.getMethods().stream()
+        Pattern.compile(
+            "(" + Pattern.quote(recordDeclaration.getName()) + "\\.)?" + Pattern.quote(name));
+    return recordDeclaration.getMethods().stream()
         .filter(m -> namePattern.matcher(m.getName()).matches() && m.hasSignature(signature))
         .map(FunctionDeclaration.class::cast)
         .collect(Collectors.toList());
@@ -899,8 +902,10 @@ public class CallResolver extends Pass {
   }
 
   private ConstructorDeclaration resolveConstructorWithDefaults(
-      ConstructExpression constructExpression, List<Type> signature, RecordDeclaration record) {
-    for (ConstructorDeclaration constructor : record.getConstructors()) {
+      ConstructExpression constructExpression,
+      List<Type> signature,
+      RecordDeclaration recordDeclaration) {
+    for (ConstructorDeclaration constructor : recordDeclaration.getConstructors()) {
       if (!constructor.isImplicit() && signature.size() < constructor.getSignatureTypes().size()) {
         List<Type> workingSignature =
             getCallSignatureWithDefaults(constructExpression, constructor);
@@ -954,24 +959,26 @@ public class CallResolver extends Pass {
 
   @NonNull
   private ConstructorDeclaration getConstructorDeclarationCXX(
-      ConstructExpression constructExpression, RecordDeclaration record) {
+      ConstructExpression constructExpression, RecordDeclaration recordDeclaration) {
     List<Type> signature = constructExpression.getSignature();
     ConstructorDeclaration constructorCandidate =
-        getConstructorDeclarationDirectMatch(signature, record);
+        getConstructorDeclarationDirectMatch(signature, recordDeclaration);
     if (constructorCandidate == null && this.getLang() instanceof CXXLanguageFrontend) {
       // Check for usage of default args
-      constructorCandidate = resolveConstructorWithDefaults(constructExpression, signature, record);
+      constructorCandidate =
+          resolveConstructorWithDefaults(constructExpression, signature, recordDeclaration);
     }
 
     if (constructorCandidate == null && this.getLang() instanceof CXXLanguageFrontend) {
       // If we don't find any candidate and our current language is c/c++ we check if there is a
       // candidate with an implicit cast
-      constructorCandidate = resolveConstructorWithImplicitCast(constructExpression, record);
+      constructorCandidate =
+          resolveConstructorWithImplicitCast(constructExpression, recordDeclaration);
     }
 
     if (constructorCandidate == null) {
       // Create Dummy
-      constructorCandidate = createConstructorDummy(record, signature);
+      constructorCandidate = createConstructorDummy(recordDeclaration, signature);
     }
 
     return constructorCandidate;
@@ -979,10 +986,10 @@ public class CallResolver extends Pass {
 
   @NonNull
   private ConstructorDeclaration getConstructorDeclarationForExplicitInvocation(
-      List<Type> signature, RecordDeclaration record) {
-    return record.getConstructors().stream()
+      List<Type> signature, RecordDeclaration recordDeclaration) {
+    return recordDeclaration.getConstructors().stream()
         .filter(f -> f.hasSignature(signature))
         .findFirst()
-        .orElseGet(() -> createConstructorDummy(record, signature));
+        .orElseGet(() -> createConstructorDummy(recordDeclaration, signature));
   }
 }
