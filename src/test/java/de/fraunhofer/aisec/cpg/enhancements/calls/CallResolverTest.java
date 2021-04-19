@@ -288,9 +288,8 @@ public class CallResolverTest extends BaseTest {
               return c.getCode().equals("display();");
             });
 
-    assertEquals(2, display.getInvokes().size());
+    assertEquals(1, display.getInvokes().size());
     assertTrue(display.getInvokes().contains(displayDeclaration));
-    assertTrue(display.getInvokes().contains(displayDefinition));
 
     assertEquals(displayDeclaration.getDefaultParameters().get(0), display.getArguments().get(0));
     assertEquals(displayDeclaration.getDefaultParameters().get(1), display.getArguments().get(1));
@@ -303,9 +302,8 @@ public class CallResolverTest extends BaseTest {
               return c.getCode().equals("display(count, '$');");
             });
 
-    assertEquals(2, display.getInvokes().size());
+    assertEquals(1, display.getInvokes().size());
     assertTrue(display.getInvokes().contains(displayDeclaration));
-    assertTrue(display.getInvokes().contains(displayDefinition));
 
     assertEquals("count", displayCount$.getArguments().get(0).getName());
     assertEquals("'$'", displayCount$.getArguments().get(1).getCode());
@@ -318,9 +316,8 @@ public class CallResolverTest extends BaseTest {
               return c.getCode().equals("display(10.0);");
             });
 
-    assertEquals(2, display10.getInvokes().size());
+    assertEquals(1, display10.getInvokes().size());
     assertTrue(display.getInvokes().contains(displayDeclaration));
-    assertTrue(display.getInvokes().contains(displayDefinition));
 
     assertTrue(display10.getArguments().get(0) instanceof CastExpression);
     assertEquals(
