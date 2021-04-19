@@ -270,4 +270,59 @@ class PythonFrontendTest : BaseTest() {
 
         // member
     }
+
+    @Test
+    fun testIfExpr() {
+        val topLevel = Path.of("src", "test", "resources", "python")
+        val tu =
+            TestUtils.analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("ifexpr.py").toFile()),
+                topLevel,
+                true
+            ) {
+                it.registerLanguage(
+                    PythonLanguageFrontend::class.java,
+                    PythonLanguageFrontend.PY_EXTENSIONS
+                )
+            }
+
+        assertNotNull(tu)
+
+        val p =
+            tu.getDeclarationsByName("ifexpr", NamespaceDeclaration::class.java).iterator().next()
+
+        val main = p.getDeclarationsByName("foo", FunctionDeclaration::class.java).iterator().next()
+
+        assertNotNull(main)
+
+        val body = main.body as? CompoundStatement
+
+        assertNotNull(body)
+
+        val foo =
+            (body.statements.first() as? DeclarationStatement)?.singleDeclaration as?
+                VariableDeclaration
+
+        assertNotNull(foo)
+        assertEquals("foo", foo.name)
+        assertEquals(TypeParser.createFrom("int", false), foo.type)
+
+        val initializer = foo.initializer as? ConditionalExpression
+
+        assertNotNull(initializer)
+        assertEquals(TypeParser.createFrom("int", false), initializer.type)
+
+        val ifCond = initializer.condition as? Literal<*>
+        val thenExpr = initializer.thenExpr as? Literal<*>
+        val elseExpr = initializer.elseExpr as? Literal<*>
+
+        assertEquals(TypeParser.createFrom("bool", false), ifCond?.type)
+        assertEquals(false, ifCond?.value)
+
+        assertEquals(TypeParser.createFrom("int", false), thenExpr?.type)
+        assertEquals(21, (thenExpr?.value as? Long)?.toInt())
+
+        assertEquals(TypeParser.createFrom("int", false), elseExpr?.type)
+        assertEquals(42, (elseExpr?.value as? Long)?.toInt())
+    }
 }

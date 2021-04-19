@@ -610,6 +610,7 @@ class PythonASTToCPG(ast.NodeVisitor):
         self.log_with_loc(ast.dump(node))
 
         expr = ConditionalExpression()
+        self.add_loc_info(node, expr)
         expr.setCondition(self.visit(node.test))
         expr.setThenExpr(self.visit(node.body))
         expr.setElseExpr(self.visit(node.orelse))
