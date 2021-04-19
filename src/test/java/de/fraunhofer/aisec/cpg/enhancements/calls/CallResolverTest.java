@@ -276,7 +276,6 @@ public class CallResolverTest extends BaseTest {
 
     assertEquals(1, display1.getInvokes().size());
     assertTrue(display1.getInvokes().contains(displayDeclaration));
-    assertTrue(display1.getInvokes().contains(displayDefinition));
 
     assertEquals("1", display1.getArguments().get(0).getCode());
     assertEquals(displayDeclaration.getDefaultParameters().get(1), display1.getArguments().get(1));
