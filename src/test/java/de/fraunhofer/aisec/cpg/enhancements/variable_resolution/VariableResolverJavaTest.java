@@ -79,6 +79,7 @@ class VariableResolverJavaTest extends BaseTest {
             .sourceLocations(fileLocations.toArray(new File[fileNames.size()]))
             .topLevel(new File(topLevelPath))
             .defaultPasses()
+            .defaultLanguages()
             .debugParser(true)
             .failOnError(true)
             .build();

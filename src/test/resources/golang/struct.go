@@ -19,3 +19,7 @@ func (s MyStruct) MyFunc() string {
 func (s MyStruct) myOtherFunc() string {
 	return "%d"
 }
+
+func NewMyStruct() *MyStruct {
+    return &MyStruct{}
+}

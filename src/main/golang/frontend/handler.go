@@ -23,8 +23,8 @@ func getImportName(spec *ast.ImportSpec) string {
 	return paths[len(paths)-1]
 }
 
-func (this *GoLanguageFrontend) HandleFile(fset *token.FileSet, file *ast.File) (tu *cpg.TranslationUnitDeclaration, err error) {
-	tu = cpg.NewTranslationUnitDeclaration(fset, file, "src.go", this.GetCodeFromRawNode(fset, file))
+func (this *GoLanguageFrontend) HandleFile(fset *token.FileSet, file *ast.File, path string) (tu *cpg.TranslationUnitDeclaration, err error) {
+	tu = cpg.NewTranslationUnitDeclaration(fset, file, path, this.GetCodeFromRawNode(fset, file))
 
 	scope := this.GetScopeManager()
 
@@ -34,17 +34,14 @@ func (this *GoLanguageFrontend) HandleFile(fset *token.FileSet, file *ast.File) 
 	// set current TU
 	this.SetCurrentTU(tu)
 
-	/*for _, imprt := range file.Imports {
-		i := cpg.NewIncludeDeclaration(fset, imprt)
-
-		i.SetName(getImportName(imprt))
-		i.SetFilename(imprt.Path.Value[1 : len(imprt.Path.Value)-1])
+	for _, imprt := range file.Imports {
+		i := this.handleImportSpec(fset, imprt)
 
 		err = scope.AddDeclaration((*cpg.Declaration)(i))
 		if err != nil {
 			log.Fatal(err)
 		}
-	}*/
+	}
 
 	// create a new namespace declaration, representing the package
 	p := cpg.NewNamespaceDeclaration(fset, nil, file.Name.Name, fmt.Sprintf("package %s", file.Name.Name))
@@ -110,8 +107,6 @@ func (this *GoLanguageFrontend) handleFuncDecl(fset *token.FileSet, funcDecl *as
 		// TODO: should we use the FQN here? FQNs are a mess in the CPG...
 		receiver.SetName(recv.Names[0].Name)
 		receiver.SetType(recordType)
-
-		this.LogDebug("still here")
 
 		err := m.SetReceiver(receiver)
 		if err != nil {
@@ -238,7 +233,9 @@ func (this *GoLanguageFrontend) handleGenDecl(fset *token.FileSet, genDecl *ast.
 		case *ast.TypeSpec:
 			return (*jnigi.ObjectRef)(this.handleTypeSpec(fset, v))
 		case *ast.ImportSpec:
-			return (*jnigi.ObjectRef)(this.handleImportSpec(fset, v))
+			// somehow these end up duplicate in the AST, so do not handle them here
+			return nil
+			/*return (*jnigi.ObjectRef)(this.handleImportSpec(fset, v))*/
 		default:
 			this.LogError("Not parsing specication of type %T yet: %+v", v, v)
 		}
@@ -418,6 +415,26 @@ func (this *GoLanguageFrontend) handleBlockStmt(fset *token.FileSet, blockStmt *
 	return c
 }
 
+func (this *GoLanguageFrontend) handleReturnStmt(fset *token.FileSet, returnStmt *ast.ReturnStmt) *cpg.ReturnStatement {
+	this.LogDebug("Handling return statement: %+v", *returnStmt)
+
+	r := cpg.NewReturnStatement(fset, returnStmt)
+
+	if returnStmt.Results != nil && len(returnStmt.Results) > 0 {
+		e := this.handleExpr(fset, returnStmt.Results[0])
+
+		// TODO: parse more than one result expression
+
+		if e != nil {
+			r.SetReturnValue(e)
+		}
+	} else {
+		// TODO: connect result statement to result variables
+	}
+
+	return r
+}
+
 func (this *GoLanguageFrontend) handleStmt(fset *token.FileSet, stmt ast.Stmt) *cpg.Statement {
 	this.LogDebug("Handling statement (%T): %+v", stmt, stmt)
 
@@ -436,6 +453,10 @@ func (this *GoLanguageFrontend) handleStmt(fset *token.FileSet, stmt ast.Stmt) *
 		return (*cpg.Statement)(this.handleSwitchStmt(fset, v))
 	case *ast.CaseClause:
 		return (*cpg.Statement)(this.handleCaseClause(fset, v))
+	case *ast.BlockStmt:
+		return (*cpg.Statement)(this.handleBlockStmt(fset, v))
+	case *ast.ReturnStmt:
+		return (*cpg.Statement)(this.handleReturnStmt(fset, v))
 	default:
 		this.LogError("Not parsing statement of type %T yet: %+v", v, v)
 	}
@@ -451,6 +472,8 @@ func (this *GoLanguageFrontend) handleExpr(fset *token.FileSet, expr ast.Expr) *
 		return (*cpg.Expression)(this.handleCallExpr(fset, v))
 	case *ast.BinaryExpr:
 		return (*cpg.Expression)(this.handleBinaryExpr(fset, v))
+	case *ast.UnaryExpr:
+		return (*cpg.Expression)(this.handleUnaryExpr(fset, v))
 	case *ast.SelectorExpr:
 		return (*cpg.Expression)(this.handleSelectorExpr(fset, v))
 	case *ast.BasicLit:
@@ -484,6 +507,8 @@ func (this *GoLanguageFrontend) handleAssignStmt(fset *token.FileSet, assignStmt
 		if rhs != nil {
 			d.SetInitializer(rhs)
 		}
+
+		this.GetScopeManager().AddDeclaration((*cpg.Declaration)(d))
 
 		stmt.SetSingleDeclaration((*cpg.Declaration)(d))
 
@@ -519,6 +544,8 @@ func (this *GoLanguageFrontend) handleDeclStmt(fset *token.FileSet, declStmt *as
 	d := this.handleDecl(fset, declStmt.Decl)
 
 	stmt.SetSingleDeclaration((*cpg.Declaration)(d))
+
+	this.GetScopeManager().AddDeclaration(d)
 
 	return (*cpg.Expression)(stmt)
 }
@@ -603,7 +630,7 @@ func (this *GoLanguageFrontend) handleCaseClause(fset *token.FileSet, caseClause
 		}
 	}
 
-	// this is a little trick, to not add the case statement in handleStmt because we added it already
+	// this is a little trick, to not add the case statement in handleStmt because we added it already.
 	// otherwise, the order is screwed up.
 	return nil
 }
@@ -747,6 +774,24 @@ func (this *GoLanguageFrontend) handleBinaryExpr(fset *token.FileSet, binaryExpr
 
 	return b
 }
+
+func (this *GoLanguageFrontend) handleUnaryExpr(fset *token.FileSet, unaryExpr *ast.UnaryExpr) *cpg.UnaryOperator {
+	u := cpg.NewUnaryOperator(fset, unaryExpr)
+
+	input := this.handleExpr(fset, unaryExpr.X)
+
+	err := u.SetOperatorCode(unaryExpr.Op.String())
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if input != nil {
+		u.SetInput(input)
+	}
+
+	return u
+}
+
 func (this *GoLanguageFrontend) handleSelectorExpr(fset *token.FileSet, selectorExpr *ast.SelectorExpr) *cpg.MemberExpression {
 	base := this.handleExpr(fset, selectorExpr.X)
 
@@ -820,6 +865,8 @@ func (this *GoLanguageFrontend) handleIdent(fset *token.FileSet, ident *ast.Iden
 	// then set the refersTo, because our regular CPG passes will not resolve them
 	if i != nil && !(*jnigi.ObjectRef)(i).IsNil() {
 		ref.SetRefersTo((*cpg.Declaration)(i))
+	} else {
+		this.GetScopeManager().ConnectToLocal(ref)
 	}
 
 	ref.SetName(ident.Name)
@@ -884,8 +931,12 @@ func (this *GoLanguageFrontend) handleType(typeExpr ast.Expr) *cpg.Type {
 
 		return t
 	case *ast.FuncType:
-		// for now, we are only interested in the return type
-		return this.handleType(v.Results.List[0].Type)
+		if v.Results == nil {
+			return cpg.TypeParser_createFrom("void", false)
+		} else {
+			// for now, we are only interested in the return type
+			return this.handleType(v.Results.List[0].Type)
+		}
 	}
 
 	return cpg.UnknownType_getUnknown()

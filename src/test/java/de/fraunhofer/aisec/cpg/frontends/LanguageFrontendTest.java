@@ -46,6 +46,7 @@ class LanguageFrontendTest extends BaseTest {
                 TranslationConfiguration.builder()
                     .sourceLocations(new File("src/test/resources/botan"))
                     .debugParser(true)
+                    .defaultLanguages()
                     .build())
             .build();
     TranslationResult res = analyzer.analyze().get();

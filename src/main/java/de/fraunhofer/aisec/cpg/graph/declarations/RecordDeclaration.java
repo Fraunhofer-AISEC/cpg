@@ -293,14 +293,14 @@ public class RecordDeclaration extends Declaration implements DeclarationHolder 
     RecordDeclaration that = (RecordDeclaration) o;
     return super.equals(that)
         && Objects.equals(kind, that.kind)
-        && Objects.equals(fields, that.fields)
         && Objects.equals(this.getFields(), that.getFields())
-        && Objects.equals(methods, that.methods)
+        && PropertyEdge.propertyEqualsList(fields, that.fields)
         && Objects.equals(this.getMethods(), that.getMethods())
-        && Objects.equals(constructors, that.constructors)
+        && PropertyEdge.propertyEqualsList(methods, that.methods)
         && Objects.equals(this.getConstructors(), that.getConstructors())
-        && Objects.equals(records, that.records)
+        && PropertyEdge.propertyEqualsList(constructors, that.constructors)
         && Objects.equals(this.getRecords(), that.getRecords())
+        && PropertyEdge.propertyEqualsList(records, that.records)
         && Objects.equals(superClasses, that.superClasses)
         && Objects.equals(implementedInterfaces, that.implementedInterfaces)
         && Objects.equals(superTypeDeclarations, that.superTypeDeclarations);

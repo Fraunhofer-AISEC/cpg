@@ -10,6 +10,7 @@ import (
 
 type Statement Node
 type CompoundStatement Statement
+type ReturnStatement Statement
 type DeclarationStatement Statement
 type IfStatement Statement
 type SwitchStatement Statement
@@ -24,8 +25,22 @@ func NewCompoundStatement(fset *token.FileSet, astNode ast.Node) *CompoundStatem
 	}
 
 	updateCode(fset, (*Node)(s), astNode)
+	updateLocation(fset, (*Node)(s), astNode)
 
 	return (*CompoundStatement)(s)
+}
+
+func NewReturnStatement(fset *token.FileSet, astNode ast.Node) *ReturnStatement {
+	s, err := env.NewObject("de/fraunhofer/aisec/cpg/graph/statements/ReturnStatement")
+	if err != nil {
+		log.Fatal(err)
+
+	}
+
+	updateCode(fset, (*Node)(s), astNode)
+	updateLocation(fset, (*Node)(s), astNode)
+
+	return (*ReturnStatement)(s)
 }
 
 func NewDeclarationStatement(fset *token.FileSet, astNode ast.Node) *DeclarationStatement {
@@ -36,6 +51,7 @@ func NewDeclarationStatement(fset *token.FileSet, astNode ast.Node) *Declaration
 	}
 
 	updateCode(fset, (*Node)(s), astNode)
+	updateLocation(fset, (*Node)(s), astNode)
 
 	return (*DeclarationStatement)(s)
 }
@@ -48,6 +64,7 @@ func NewIfStatement(fset *token.FileSet, astNode ast.Node) *IfStatement {
 	}
 
 	updateCode(fset, (*Node)(s), astNode)
+	updateLocation(fset, (*Node)(s), astNode)
 
 	return (*IfStatement)(s)
 }
@@ -60,6 +77,7 @@ func NewSwitchStatement(fset *token.FileSet, astNode ast.Node) *SwitchStatement 
 	}
 
 	updateCode(fset, (*Node)(s), astNode)
+	updateLocation(fset, (*Node)(s), astNode)
 
 	return (*SwitchStatement)(s)
 }
@@ -72,6 +90,7 @@ func NewCaseStatement(fset *token.FileSet, astNode ast.Node) *CaseStatement {
 	}
 
 	updateCode(fset, (*Node)(s), astNode)
+	updateLocation(fset, (*Node)(s), astNode)
 
 	return (*CaseStatement)(s)
 }
@@ -84,6 +103,7 @@ func NewDefaultStatement(fset *token.FileSet, astNode ast.Node) *DefaultStatemen
 	}
 
 	updateCode(fset, (*Node)(s), astNode)
+	updateLocation(fset, (*Node)(s), astNode)
 
 	return (*DefaultStatement)(s)
 }
@@ -118,4 +138,8 @@ func (sw *SwitchStatement) SetStatement(s *Statement) {
 
 func (sw *SwitchStatement) SetInitializerStatement(s *Statement) {
 	(*jnigi.ObjectRef)(sw).SetField(env, "initializerStatement", (*jnigi.ObjectRef)(s).Cast("de/fraunhofer/aisec/cpg/graph/statements/Statement"))
+}
+
+func (r *ReturnStatement) SetReturnValue(e *Expression) {
+	(*jnigi.ObjectRef)(r).CallMethod(env, "setReturnValue", jnigi.Void, (*jnigi.ObjectRef)(e).Cast("de/fraunhofer/aisec/cpg/graph/statements/expressions/Expression"))
 }

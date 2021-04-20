@@ -114,6 +114,7 @@ class CXXIncludeTest extends BaseTest {
                 .topLevel(file.getParentFile())
                 .loadIncludes(true)
                 .debugParser(true)
+                .defaultLanguages()
                 .includeBlacklist(new File("src/test/resources/include.h").getAbsolutePath())
                 .failOnError(true));
 
@@ -142,6 +143,7 @@ class CXXIncludeTest extends BaseTest {
                 .topLevel(file.getParentFile())
                 .loadIncludes(true)
                 .debugParser(true)
+                .defaultLanguages()
                 .includeBlacklist("include.h")
                 .failOnError(true));
 
@@ -170,6 +172,7 @@ class CXXIncludeTest extends BaseTest {
                 .topLevel(file.getParentFile())
                 .loadIncludes(true)
                 .debugParser(true)
+                .defaultLanguages()
                 .includeWhitelist(new File("src/test/resources/include.h").getAbsolutePath())
                 .failOnError(true));
 
@@ -197,6 +200,7 @@ class CXXIncludeTest extends BaseTest {
                 .topLevel(file.getParentFile())
                 .loadIncludes(true)
                 .debugParser(true)
+                .defaultLanguages()
                 .includeWhitelist("include.h")
                 .failOnError(true));
 
@@ -224,6 +228,7 @@ class CXXIncludeTest extends BaseTest {
                 .topLevel(file.getParentFile())
                 .loadIncludes(true)
                 .debugParser(true)
+                .defaultLanguages()
                 .includeBlacklist("include.h") // blacklist entries take priority
                 .includeWhitelist("include.h")
                 .includeWhitelist("another-include.h")
@@ -256,6 +261,7 @@ class CXXIncludeTest extends BaseTest {
                 .topLevel(file.getParentFile())
                 .loadIncludes(false)
                 .debugParser(true)
+                .defaultLanguages()
                 .failOnError(true));
 
     assertNotNull(translationUnitDeclarations);

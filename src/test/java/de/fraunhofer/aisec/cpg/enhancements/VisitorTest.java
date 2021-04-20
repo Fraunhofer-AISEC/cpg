@@ -61,7 +61,11 @@ class VisitorTest extends BaseTest {
       throws TranslationException, InterruptedException, ExecutionException, TimeoutException {
     File file = new File("src/test/resources/compiling/RecordDeclaration.java");
     TranslationConfiguration config =
-        TranslationConfiguration.builder().sourceLocations(file).defaultPasses().build();
+        TranslationConfiguration.builder()
+            .sourceLocations(file)
+            .defaultPasses()
+            .defaultLanguages()
+            .build();
     TranslationResult result =
         TranslationManager.builder().config(config).build().analyze().get(20, TimeUnit.SECONDS);
     TranslationUnitDeclaration tu = result.getTranslationUnits().get(0);
@@ -112,7 +116,7 @@ class VisitorTest extends BaseTest {
           }
         });
 
-    assertEquals(34, nodeList.size());
+    assertEquals(35, nodeList.size());
   }
 
   /** Visits only ReturnStatement nodes. */
