@@ -28,6 +28,7 @@ func NewCallExpression(fset *token.FileSet, astNode ast.Node) *CallExpression {
 	}
 
 	updateCode(fset, (*Node)(c), astNode)
+	updateLocation(fset, (*Node)(c), astNode)
 
 	return (*CallExpression)(c)
 }
@@ -40,6 +41,7 @@ func NewMemberExpression(fset *token.FileSet, astNode ast.Node) *MemberExpressio
 	}
 
 	updateCode(fset, (*Node)(c), astNode)
+	updateLocation(fset, (*Node)(c), astNode)
 
 	return (*MemberExpression)(c)
 }
@@ -52,6 +54,7 @@ func NewMemberCallExpression(fset *token.FileSet, astNode ast.Node) *MemberCallE
 	}
 
 	updateCode(fset, (*Node)(c), astNode)
+	updateLocation(fset, (*Node)(c), astNode)
 
 	return (*MemberCallExpression)(c)
 }
@@ -64,6 +67,7 @@ func NewNewExpression(fset *token.FileSet, astNode ast.Node) *NewExpression {
 	}
 
 	updateCode(fset, (*Node)(c), astNode)
+	updateLocation(fset, (*Node)(c), astNode)
 
 	return (*NewExpression)(c)
 }
@@ -76,6 +80,7 @@ func NewArrayCreationExpression(fset *token.FileSet, astNode ast.Node) *ArrayCre
 	}
 
 	updateCode(fset, (*Node)(c), astNode)
+	updateLocation(fset, (*Node)(c), astNode)
 
 	return (*ArrayCreationExpression)(c)
 }
@@ -88,6 +93,7 @@ func NewConstructExpression(fset *token.FileSet, astNode ast.Node) *ConstructExp
 	}
 
 	updateCode(fset, (*Node)(c), astNode)
+	updateLocation(fset, (*Node)(c), astNode)
 
 	return (*ConstructExpression)(c)
 }
@@ -100,6 +106,7 @@ func NewBinaryOperator(fset *token.FileSet, astNode ast.Node) *BinaryOperator {
 	}
 
 	updateCode(fset, (*Node)(c), astNode)
+	updateLocation(fset, (*Node)(c), astNode)
 
 	return (*BinaryOperator)(c)
 }
@@ -112,6 +119,7 @@ func NewUnaryOperator(fset *token.FileSet, astNode ast.Node) *UnaryOperator {
 	}
 
 	updateCode(fset, (*Node)(c), astNode)
+	updateLocation(fset, (*Node)(c), astNode)
 
 	return (*UnaryOperator)(c)
 }
@@ -124,6 +132,7 @@ func NewLiteral(fset *token.FileSet, astNode ast.Node) *Literal {
 	}
 
 	updateCode(fset, (*Node)(l), astNode)
+	updateLocation(fset, (*Node)(l), astNode)
 
 	return (*Literal)(l)
 }
@@ -136,6 +145,7 @@ func NewDeclaredReferenceExpression(fset *token.FileSet, astNode ast.Node) *Decl
 	}
 
 	updateCode(fset, (*Node)(l), astNode)
+	updateLocation(fset, (*Node)(l), astNode)
 
 	return (*DeclaredReferenceExpression)(l)
 }
