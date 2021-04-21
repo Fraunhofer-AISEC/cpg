@@ -358,10 +358,13 @@ class PythonFrontendTest : BaseTest() {
         assertEquals("somevar", somevar?.name)
         assertEquals(TypeParser.createFrom("int", false), somevar?.type)
 
-        assertEquals(1, Foo.methods.size)
+        assertEquals(2, Foo.methods.size)
         val bar = Foo.methods[0] as? MethodDeclaration
+        val foo = Foo.methods[1] as? MethodDeclaration
         assertEquals("bar", bar?.name)
         assertEquals(Foo, bar?.recordDeclaration)
+        assertEquals("foo", foo?.name)
+        assertEquals(Foo, foo?.recordDeclaration)
 
         val recv = bar?.receiver as? VariableDeclaration
         assertEquals("self", recv?.name)
@@ -383,5 +386,15 @@ class PythonFrontendTest : BaseTest() {
 
         assertEquals(i, rhs?.refersTo)
         assertEquals("=", assign?.operatorCode)
+
+        val fooBody = foo?.body as? CompoundStatement
+        val fooMemCall = fooBody?.statements?.get(0) as? MemberCallExpression
+        val mem = fooMemCall?.member as? DeclaredReferenceExpression
+        assertEquals("bar", mem?.name)
+        assertEquals(".", fooMemCall?.operatorCode)
+        assertEquals("Foo.bar", fooMemCall?.fqn)
+        assertEquals(1, fooMemCall?.invokes?.size)
+        assertEquals(bar, fooMemCall?.invokes?.get(0))
+        assertEquals("self", fooMemCall?.base?.name)
     }
 }
