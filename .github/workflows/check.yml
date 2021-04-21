@@ -5,6 +5,12 @@ on:
     types: [labeled, opened, synchronize, reopened]
 
 jobs:
+  code_check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: Fraunhofer-AISEC/codyze-action@v2.2
+        with:
+          markDirectory: src/main/mark
   check_codyze:
     runs-on: ubuntu-latest
     if: contains(github.event.pull_request.labels.*.name, 'codyze-check')
