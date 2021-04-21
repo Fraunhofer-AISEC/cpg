@@ -4,6 +4,13 @@ on:
   - push
 
 jobs:
+  code-compliance:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2    
+      - uses: Fraunhofer-AISEC/codyze-action@v2.3
+        with:
+          markDirectory: src/main/mark
   build:
     runs-on: ubuntu-latest
     steps:
