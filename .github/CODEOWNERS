@@ -3,3 +3,5 @@
 *.go  @oxisto
 
 *.py  @maximiliankaul
+
+build.gradle.kts @oxisto
