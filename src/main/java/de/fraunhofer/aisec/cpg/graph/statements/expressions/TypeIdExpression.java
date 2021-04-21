@@ -31,6 +31,10 @@ import java.util.Objects;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Modells C++ operations that inspect types. These are <code>typeof</code>, <code>sizeof</code>,
+ * <code>typeid</code>, <code>alignof</code>and are stored as string in ther operator code.
+ */
 public class TypeIdExpression extends Expression {
 
   private static final Logger log = LoggerFactory.getLogger(TypeIdExpression.class);
