@@ -8,6 +8,7 @@ jobs:
   code_check:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v2    
       - uses: Fraunhofer-AISEC/codyze-action@v2.2
         with:
           markDirectory: src/main/mark
