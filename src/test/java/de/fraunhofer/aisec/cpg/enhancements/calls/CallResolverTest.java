@@ -691,18 +691,20 @@ public class CallResolverTest extends BaseTest {
                         topLevel.toString(),
                         "cxxprioresolution",
                         "methodresolution",
-                        "overloadedresolution",
-                        ".cpp")
+                        "overloadedresolution.cpp")
                     .toFile()),
             topLevel,
             true);
     List<CallExpression> calls = TestUtils.subnodesOfType(result, CallExpression.class);
-    List<FunctionDeclaration> functionDeclarations =
-        TestUtils.subnodesOfType(result, FunctionDeclaration.class);
+    List<MethodDeclaration> methodDeclarations =
+        TestUtils.subnodesOfType(result, MethodDeclaration.class);
 
     FunctionDeclaration calcOverload =
         TestUtils.findByUniquePredicate(
-            functionDeclarations, c -> c.getRecords().get(0).getName().equals("Overload"));
+            methodDeclarations,
+            c ->
+                c.getRecordDeclaration().getName().equals("Overload")
+                    && !(c instanceof ConstructorDeclaration));
 
     // This call must resolve to implicit cast of the overloaded class and not to the base class
     CallExpression calcInt =
@@ -733,18 +735,17 @@ public class CallResolverTest extends BaseTest {
                         topLevel.toString(),
                         "cxxprioresolution",
                         "methodresolution",
-                        "overloadnoresolution",
-                        ".cpp")
+                        "overloadnoresolution.cpp")
                     .toFile()),
             topLevel,
             true);
     List<CallExpression> calls = TestUtils.subnodesOfType(result, CallExpression.class);
 
     /*
-      This call cannot be resolved to the overloaded calc because the signature doesn't match.
-      However it also cannot be resolved to the base because due to the overloaded matching name it
-      stops searching for an invocation
-     */
+     This call cannot be resolved to the overloaded calc because the signature doesn't match.
+     However it also cannot be resolved to the base because due to the overloaded matching name it
+     stops searching for an invocation
+    */
     CallExpression calcCall =
         TestUtils.findByUniquePredicate(
             calls, c -> c.getLocation().getRegion().getStartLine() == 22);
