@@ -1,17 +1,17 @@
 /*
  * Copyright (c) 2020, Fraunhofer AISEC. All rights reserved.
  *
- *  Licensed under the Apache License, Version 2.0 (the "License");
- *  you may not use this file except in compliance with the License.
- *  You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- *       http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  *
  *                    $$$$$$\  $$$$$$$\   $$$$$$\
  *                   $$  __$$\ $$  __$$\ $$  __$$\
@@ -23,7 +23,6 @@
  *                    \______/ \__|       \______/
  *
  */
-
 package de.fraunhofer.aisec.cpg.graph.statements.expressions;
 
 import de.fraunhofer.aisec.cpg.graph.*;
@@ -206,10 +205,10 @@ public class CallExpression extends Expression implements TypeListener {
     }
     CallExpression that = (CallExpression) o;
     return super.equals(that)
-        && Objects.equals(arguments, that.arguments)
         && Objects.equals(this.getArguments(), that.getArguments())
-        && Objects.equals(invokes, that.invokes)
+        && PropertyEdge.propertyEqualsList(arguments, that.arguments)
         && Objects.equals(this.getInvokes(), that.getInvokes())
+        && PropertyEdge.propertyEqualsList(invokes, that.invokes)
         && Objects.equals(base, that.base);
   }
 

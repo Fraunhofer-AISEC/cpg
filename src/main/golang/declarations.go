@@ -1,3 +1,28 @@
+/*
+ * Copyright (c) 2021, Fraunhofer AISEC. All rights reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ *                    $$$$$$\  $$$$$$$\   $$$$$$\
+ *                   $$  __$$\ $$  __$$\ $$  __$$\
+ *                   $$ /  \__|$$ |  $$ |$$ /  \__|
+ *                   $$ |      $$$$$$$  |$$ |$$$$\
+ *                   $$ |      $$  ____/ $$ |\_$$ |
+ *                   $$ |  $$\ $$ |      $$ |  $$ |
+ *                   \$$$$$   |$$ |      \$$$$$   |
+ *                    \______/ \__|       \______/
+ *
+ */
 package cpg
 
 import (
@@ -179,6 +204,7 @@ func NewIncludeDeclaration(fset *token.FileSet, astNode ast.Node) *IncludeDeclar
 	}
 
 	updateCode(fset, (*Node)(tu), astNode)
+	updateLocation(fset, (*Node)(tu), astNode)
 
 	return (*IncludeDeclaration)(tu)
 }
@@ -191,6 +217,7 @@ func NewFunctionDeclaration(fset *token.FileSet, astNode ast.Node) *FunctionDecl
 	}
 
 	updateCode(fset, (*Node)(tu), astNode)
+	updateLocation(fset, (*Node)(tu), astNode)
 
 	return (*FunctionDeclaration)(tu)
 }
@@ -203,6 +230,7 @@ func NewMethodDeclaration(fset *token.FileSet, astNode ast.Node) *MethodDeclarat
 	}
 
 	updateCode(fset, (*Node)(tu), astNode)
+	updateLocation(fset, (*Node)(tu), astNode)
 
 	return (*MethodDeclaration)(tu)
 }
@@ -215,6 +243,7 @@ func NewRecordDeclaration(fset *token.FileSet, astNode ast.Node) *RecordDeclarat
 	}
 
 	updateCode(fset, (*Node)(tu), astNode)
+	updateLocation(fset, (*Node)(tu), astNode)
 
 	return (*RecordDeclaration)(tu)
 }
@@ -227,6 +256,7 @@ func NewVariableDeclaration(fset *token.FileSet, astNode ast.Node) *VariableDecl
 	}
 
 	updateCode(fset, (*Node)(tu), astNode)
+	updateLocation(fset, (*Node)(tu), astNode)
 
 	return (*VariableDeclaration)(tu)
 }
@@ -239,6 +269,7 @@ func NewParamVariableDeclaration(fset *token.FileSet, astNode ast.Node) *ParamVa
 	}
 
 	updateCode(fset, (*Node)(tu), astNode)
+	updateLocation(fset, (*Node)(tu), astNode)
 
 	return (*ParamVariableDeclaration)(tu)
 }
@@ -251,6 +282,7 @@ func NewFieldDeclaration(fset *token.FileSet, astNode ast.Node) *FieldDeclaratio
 	}
 
 	updateCode(fset, (*Node)(tu), astNode)
+	updateLocation(fset, (*Node)(tu), astNode)
 
 	return (*FieldDeclaration)(tu)
 }

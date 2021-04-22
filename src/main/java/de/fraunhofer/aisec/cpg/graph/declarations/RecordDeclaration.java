@@ -1,17 +1,17 @@
 /*
  * Copyright (c) 2020, Fraunhofer AISEC. All rights reserved.
  *
- *  Licensed under the Apache License, Version 2.0 (the "License");
- *  you may not use this file except in compliance with the License.
- *  You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- *       http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  *
  *                    $$$$$$\  $$$$$$$\   $$$$$$\
  *                   $$  __$$\ $$  __$$\ $$  __$$\
@@ -23,7 +23,6 @@
  *                    \______/ \__|       \______/
  *
  */
-
 package de.fraunhofer.aisec.cpg.graph.declarations;
 
 import static de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.unwrap;
@@ -293,14 +292,14 @@ public class RecordDeclaration extends Declaration implements DeclarationHolder 
     RecordDeclaration that = (RecordDeclaration) o;
     return super.equals(that)
         && Objects.equals(kind, that.kind)
-        && Objects.equals(fields, that.fields)
         && Objects.equals(this.getFields(), that.getFields())
-        && Objects.equals(methods, that.methods)
+        && PropertyEdge.propertyEqualsList(fields, that.fields)
         && Objects.equals(this.getMethods(), that.getMethods())
-        && Objects.equals(constructors, that.constructors)
+        && PropertyEdge.propertyEqualsList(methods, that.methods)
         && Objects.equals(this.getConstructors(), that.getConstructors())
-        && Objects.equals(records, that.records)
+        && PropertyEdge.propertyEqualsList(constructors, that.constructors)
         && Objects.equals(this.getRecords(), that.getRecords())
+        && PropertyEdge.propertyEqualsList(records, that.records)
         && Objects.equals(superClasses, that.superClasses)
         && Objects.equals(implementedInterfaces, that.implementedInterfaces)
         && Objects.equals(superTypeDeclarations, that.superTypeDeclarations);

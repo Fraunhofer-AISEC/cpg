@@ -1,3 +1,28 @@
+/*
+ * Copyright (c) 2021, Fraunhofer AISEC. All rights reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ *                    $$$$$$\  $$$$$$$\   $$$$$$\
+ *                   $$  __$$\ $$  __$$\ $$  __$$\
+ *                   $$ /  \__|$$ |  $$ |$$ /  \__|
+ *                   $$ |      $$$$$$$  |$$ |$$$$\
+ *                   $$ |      $$  ____/ $$ |\_$$ |
+ *                   $$ |  $$\ $$ |      $$ |  $$ |
+ *                   \$$$$$   |$$ |      \$$$$$   |
+ *                    \______/ \__|       \______/
+ *
+ */
 package cpg
 
 import (
@@ -16,6 +41,7 @@ type ConstructExpression Expression
 type MemberCallExpression CallExpression
 type MemberExpression Expression
 type BinaryOperator Expression
+type UnaryOperator Expression
 type Literal Expression
 type DeclaredReferenceExpression Expression
 
@@ -27,6 +53,7 @@ func NewCallExpression(fset *token.FileSet, astNode ast.Node) *CallExpression {
 	}
 
 	updateCode(fset, (*Node)(c), astNode)
+	updateLocation(fset, (*Node)(c), astNode)
 
 	return (*CallExpression)(c)
 }
@@ -39,6 +66,7 @@ func NewMemberExpression(fset *token.FileSet, astNode ast.Node) *MemberExpressio
 	}
 
 	updateCode(fset, (*Node)(c), astNode)
+	updateLocation(fset, (*Node)(c), astNode)
 
 	return (*MemberExpression)(c)
 }
@@ -51,6 +79,7 @@ func NewMemberCallExpression(fset *token.FileSet, astNode ast.Node) *MemberCallE
 	}
 
 	updateCode(fset, (*Node)(c), astNode)
+	updateLocation(fset, (*Node)(c), astNode)
 
 	return (*MemberCallExpression)(c)
 }
@@ -63,6 +92,7 @@ func NewNewExpression(fset *token.FileSet, astNode ast.Node) *NewExpression {
 	}
 
 	updateCode(fset, (*Node)(c), astNode)
+	updateLocation(fset, (*Node)(c), astNode)
 
 	return (*NewExpression)(c)
 }
@@ -75,6 +105,7 @@ func NewArrayCreationExpression(fset *token.FileSet, astNode ast.Node) *ArrayCre
 	}
 
 	updateCode(fset, (*Node)(c), astNode)
+	updateLocation(fset, (*Node)(c), astNode)
 
 	return (*ArrayCreationExpression)(c)
 }
@@ -87,6 +118,7 @@ func NewConstructExpression(fset *token.FileSet, astNode ast.Node) *ConstructExp
 	}
 
 	updateCode(fset, (*Node)(c), astNode)
+	updateLocation(fset, (*Node)(c), astNode)
 
 	return (*ConstructExpression)(c)
 }
@@ -99,8 +131,22 @@ func NewBinaryOperator(fset *token.FileSet, astNode ast.Node) *BinaryOperator {
 	}
 
 	updateCode(fset, (*Node)(c), astNode)
+	updateLocation(fset, (*Node)(c), astNode)
 
 	return (*BinaryOperator)(c)
+}
+
+func NewUnaryOperator(fset *token.FileSet, astNode ast.Node) *UnaryOperator {
+	c, err := env.NewObject("de/fraunhofer/aisec/cpg/graph/statements/expressions/UnaryOperator")
+	if err != nil {
+		log.Fatal(err)
+
+	}
+
+	updateCode(fset, (*Node)(c), astNode)
+	updateLocation(fset, (*Node)(c), astNode)
+
+	return (*UnaryOperator)(c)
 }
 
 func NewLiteral(fset *token.FileSet, astNode ast.Node) *Literal {
@@ -111,6 +157,7 @@ func NewLiteral(fset *token.FileSet, astNode ast.Node) *Literal {
 	}
 
 	updateCode(fset, (*Node)(l), astNode)
+	updateLocation(fset, (*Node)(l), astNode)
 
 	return (*Literal)(l)
 }
@@ -123,6 +170,7 @@ func NewDeclaredReferenceExpression(fset *token.FileSet, astNode ast.Node) *Decl
 	}
 
 	updateCode(fset, (*Node)(l), astNode)
+	updateLocation(fset, (*Node)(l), astNode)
 
 	return (*DeclaredReferenceExpression)(l)
 }
@@ -195,6 +243,14 @@ func (b *BinaryOperator) SetRHS(e *Expression) {
 
 func (b *BinaryOperator) SetOperatorCode(s string) (err error) {
 	return (*jnigi.ObjectRef)(b).SetField(env, "operatorCode", NewString(s))
+}
+
+func (u *UnaryOperator) SetInput(e *Expression) {
+	(*jnigi.ObjectRef)(u).CallMethod(env, "setInput", jnigi.Void, (*jnigi.ObjectRef)(e).Cast("de/fraunhofer/aisec/cpg/graph/statements/expressions/Expression"))
+}
+
+func (u *UnaryOperator) SetOperatorCode(s string) (err error) {
+	return (*jnigi.ObjectRef)(u).SetField(env, "operatorCode", NewString(s))
 }
 
 func (l *Literal) SetType(t *Type) {

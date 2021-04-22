@@ -1,3 +1,28 @@
+/*
+ * Copyright (c) 2021, Fraunhofer AISEC. All rights reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ *                    $$$$$$\  $$$$$$$\   $$$$$$\
+ *                   $$  __$$\ $$  __$$\ $$  __$$\
+ *                   $$ /  \__|$$ |  $$ |$$ /  \__|
+ *                   $$ |      $$$$$$$  |$$ |$$$$\
+ *                   $$ |      $$  ____/ $$ |\_$$ |
+ *                   $$ |  $$\ $$ |      $$ |  $$ |
+ *                   \$$$$$   |$$ |      \$$$$$   |
+ *                    \______/ \__|       \______/
+ *
+ */
 package de.fraunhofer.aisec.cpg.graph.edge;
 
 import de.fraunhofer.aisec.cpg.graph.Node;
@@ -286,16 +311,34 @@ public class PropertyEdge<T extends Node> implements Persistable {
     return applyIndexProperty(newPropertyEdges);
   }
 
-  /**
-   * Note that the start and end node cannot be checked for equality here, as it would create an
-   * endless loop. Check of start and end node must be done separately.
-   */
   @Override
   public boolean equals(Object obj) {
     if (this == obj) return true;
     if (!(obj instanceof PropertyEdge)) return false;
     var propertyEdge = (PropertyEdge<?>) obj;
+    return Objects.equals(this.properties, propertyEdge.properties)
+        && this.start.equals(propertyEdge.getStart())
+        && this.end.equals(propertyEdge.getEnd());
+  }
+
+  public boolean propertyEquals(Object obj) {
+    if (this == obj) return true;
+    if (!(obj instanceof PropertyEdge)) return false;
+    var propertyEdge = (PropertyEdge<?>) obj;
     return Objects.equals(this.properties, propertyEdge.properties);
+  }
+
+  public static <E extends Node> boolean propertyEqualsList(
+      List<PropertyEdge<E>> propertyEdges, List<PropertyEdge<E>> propertyEdges2) {
+    if (propertyEdges.size() == propertyEdges2.size()) {
+      for (int i = 0; i < propertyEdges.size(); i++) {
+        if (!propertyEdges.get(i).propertyEquals(propertyEdges2.get(i))) {
+          return false;
+        }
+      }
+      return true;
+    }
+    return false;
   }
 
   @Override

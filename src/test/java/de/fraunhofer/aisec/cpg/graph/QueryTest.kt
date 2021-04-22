@@ -1,29 +1,53 @@
+/*
+ * Copyright (c) 2021, Fraunhofer AISEC. All rights reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ *                    $$$$$$\  $$$$$$$\   $$$$$$\
+ *                   $$  __$$\ $$  __$$\ $$  __$$\
+ *                   $$ /  \__|$$ |  $$ |$$ /  \__|
+ *                   $$ |      $$$$$$$  |$$ |$$$$\
+ *                   $$ |      $$  ____/ $$ |\_$$ |
+ *                   $$ |  $$\ $$ |      $$ |  $$ |
+ *                   \$$$$$   |$$ |      \$$$$$   |
+ *                    \______/ \__|       \______/
+ *
+ */
 package de.fraunhofer.aisec.cpg.graph
 
 import de.fraunhofer.aisec.cpg.ExperimentalGraph
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.ParamVariableDeclaration
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
-import de.fraunhofer.aisec.cpg.helpers.Benchmark
-import org.junit.jupiter.api.BeforeAll
-import org.opencypher.v9_0.ast.Query
-import org.opencypher.v9_0.parser.CypherParser
-import scala.Option
-import java.util.stream.Collector
-import java.util.stream.Collectors
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 import kotlin.time.ExperimentalTime
-import kotlin.time.milliseconds
+import org.junit.jupiter.api.BeforeAll
+import org.opencypher.v9_0.ast.Query
+import org.opencypher.v9_0.parser.CypherParser
 
 @ExperimentalGraph
 @ExperimentalTime
 class QueryTest {
     @Test
     fun testQueryExistenceOfEdge() {
-        val query = parser.parse("MATCH (n:FunctionDeclaration)-[:PARAMETERS]->(m:ParamVariableDeclaration) RETURN n", null, null) as Query
+        val query =
+            parser.parse(
+                "MATCH (n:FunctionDeclaration)-[:PARAMETERS]->(m:ParamVariableDeclaration) RETURN n",
+                null,
+                null
+            ) as
+                Query
 
         val nodes: List<Node> = db.executeQuery(query)
 
@@ -32,7 +56,13 @@ class QueryTest {
 
     @Test
     fun testQueryExistenceOfEdgeOtherVar() {
-        val query = parser.parse("MATCH (n:FunctionDeclaration)-[:PARAMETERS]->(m:ParamVariableDeclaration) RETURN m", null, null) as Query
+        val query =
+            parser.parse(
+                "MATCH (n:FunctionDeclaration)-[:PARAMETERS]->(m:ParamVariableDeclaration) RETURN m",
+                null,
+                null
+            ) as
+                Query
 
         val nodes = db.executeQuery(query)
 
@@ -41,7 +71,13 @@ class QueryTest {
 
     @Test
     fun testQueryExistenceOfEdgeWithEquals() {
-        val query = parser.parse("MATCH (n:FunctionDeclaration)-[:PARAMETERS]->(m:ParamVariableDeclaration) WHERE m.name = 'paramB' RETURN n", null, null) as Query
+        val query =
+            parser.parse(
+                "MATCH (n:FunctionDeclaration)-[:PARAMETERS]->(m:ParamVariableDeclaration) WHERE m.name = 'paramB' RETURN n",
+                null,
+                null
+            ) as
+                Query
 
         val nodes = db.executeQuery(query)
 
@@ -51,7 +87,13 @@ class QueryTest {
 
     @Test
     fun testQueryWithSimpleProperty() {
-        val query = parser.parse("MATCH (n:VariableDeclaration) WHERE n.name = 'myVar' RETURN n", null, null) as Query
+        val query =
+            parser.parse(
+                "MATCH (n:VariableDeclaration) WHERE n.name = 'myVar' RETURN n",
+                null,
+                null
+            ) as
+                Query
         println(query)
 
         val nodes = db.executeQuery(query)
@@ -141,19 +183,43 @@ class QueryTest {
         @JvmStatic
         fun before() {
             db = Graph(mutableListOf())
-            db += NodeBuilder.newVariableDeclaration("myVar", UnknownType.getUnknownType(), "myVar", false)
+            db +=
+                NodeBuilder.newVariableDeclaration(
+                    "myVar",
+                    UnknownType.getUnknownType(),
+                    "myVar",
+                    false
+                )
 
             func1 = NodeBuilder.newFunctionDeclaration("func1", "private int func1() { return 1; }")
             func2 = NodeBuilder.newFunctionDeclaration("func2", "private int func2() { return 1; }")
             func3 = NodeBuilder.newFunctionDeclaration("func3", "private int func2() { return 1; }")
-            val paramA = NodeBuilder.newMethodParameterIn("paramA", UnknownType.getUnknownType(), false, "paramA");
-            val paramB = NodeBuilder.newMethodParameterIn("paramB", UnknownType.getUnknownType(), false, "paramB");
+            val paramA =
+                NodeBuilder.newMethodParameterIn(
+                    "paramA",
+                    UnknownType.getUnknownType(),
+                    false,
+                    "paramA"
+                )
+            val paramB =
+                NodeBuilder.newMethodParameterIn(
+                    "paramB",
+                    UnknownType.getUnknownType(),
+                    false,
+                    "paramB"
+                )
             func1.addParameter(paramA)
             func2.addParameter(paramB)
 
             // create some dummy nodes to make queries a little bit slower
             for (i in 0..10000) {
-                db += NodeBuilder.newVariableDeclaration("var${i}", UnknownType.getUnknownType(), "var${i}", true)
+                db +=
+                    NodeBuilder.newVariableDeclaration(
+                        "var${i}",
+                        UnknownType.getUnknownType(),
+                        "var${i}",
+                        true
+                    )
             }
 
             db += func1
@@ -163,5 +229,4 @@ class QueryTest {
             db += paramB
         }
     }
-
 }

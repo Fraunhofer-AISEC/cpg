@@ -1,17 +1,17 @@
 /*
  * Copyright (c) 2020, Fraunhofer AISEC. All rights reserved.
  *
- *  Licensed under the Apache License, Version 2.0 (the "License");
- *  you may not use this file except in compliance with the License.
- *  You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- *       http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  *
  *                    $$$$$$\  $$$$$$$\   $$$$$$\
  *                   $$  __$$\ $$  __$$\ $$  __$$\
@@ -23,7 +23,6 @@
  *                    \______/ \__|       \______/
  *
  */
-
 package de.fraunhofer.aisec.cpg.graph.statements;
 
 import static de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.unwrap;
@@ -118,12 +117,12 @@ public class TryStatement extends Statement {
     }
     TryStatement that = (TryStatement) o;
     return super.equals(that)
-        && Objects.equals(resources, that.resources)
         && Objects.equals(this.getResources(), that.getResources())
+        && PropertyEdge.propertyEqualsList(resources, that.resources)
         && Objects.equals(tryBlock, that.tryBlock)
         && Objects.equals(finallyBlock, that.finallyBlock)
-        && Objects.equals(catchClauses, that.catchClauses)
-        && Objects.equals(this.getCatchClauses(), that.getCatchClauses());
+        && Objects.equals(this.getCatchClauses(), that.getCatchClauses())
+        && PropertyEdge.propertyEqualsList(catchClauses, that.catchClauses);
   }
 
   @Override
