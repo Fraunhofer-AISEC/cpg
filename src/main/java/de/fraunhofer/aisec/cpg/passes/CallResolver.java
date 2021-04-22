@@ -39,6 +39,7 @@ import de.fraunhofer.aisec.cpg.graph.types.UnknownType;
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.ScopedWalker;
 import de.fraunhofer.aisec.cpg.helpers.Util;
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy;
+import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation;
 import java.util.*;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -436,7 +437,7 @@ public class CallResolver extends Pass {
     assert lang != null;
     List<FunctionDeclaration> matchingFunctionName =
         lang.getScopeManager().resolveFunctionStopScopeTraversalOnDefinition(call).stream()
-            .filter(f -> f.getName().equals(call.getName()) && !f.isImplicit())
+            .filter(f -> !f.isImplicit() && definedBefore(f.getLocation(), call.getLocation()))
             .collect(Collectors.toList());
 
     // Output list for invocationTargets obtaining a valid signature by performing implicit casts
@@ -560,8 +561,8 @@ public class CallResolver extends Pass {
         lang.getScopeManager().resolveFunctionStopScopeTraversalOnDefinition(call).stream()
             .filter(
                 f ->
-                    f.getName().equals(call.getName())
-                        && !f.isImplicit()
+                    !f.isImplicit()
+                        && definedBefore(f.getLocation(), call.getLocation())
                         && call.getSignature().size() < f.getSignatureTypes().size())
             .collect(Collectors.toList());
     List<FunctionDeclaration> invocationCandidatesDefaultArgs = new ArrayList<>();
@@ -575,6 +576,17 @@ public class CallResolver extends Pass {
     return invocationCandidatesDefaultArgs;
   }
 
+  private boolean definedBefore(
+      @Nullable PhysicalLocation definition, @Nullable PhysicalLocation usage) {
+    if (definition == null || usage == null) {
+      return true; // No comparison possible -> return default value
+    }
+    if (definition.getArtifactLocation().equals(usage.getArtifactLocation())) {
+      return usage.getRegion().compareTo(definition.getRegion()) > 0;
+    }
+    return true;
+  }
+
   private void handleNormalCalls(RecordDeclaration curClass, CallExpression call) {
     if (curClass == null && lang != null) {
       // Handle function (not method) calls
@@ -583,7 +595,10 @@ public class CallResolver extends Pass {
       if (this.getLang() instanceof CXXLanguageFrontend) {
         invocationCandidates =
             lang.getScopeManager().resolveFunctionStopScopeTraversalOnDefinition(call).stream()
-                .filter(f -> f.hasSignature(call.getSignature()))
+                .filter(
+                    f ->
+                        f.hasSignature(call.getSignature())
+                            && definedBefore(f.getLocation(), call.getLocation()))
                 .collect(Collectors.toList());
       } else {
         invocationCandidates = lang.getScopeManager().resolveFunction(call);
@@ -624,18 +639,34 @@ public class CallResolver extends Pass {
             .collect(Collectors.toList());
 
     // Find function targets
-    if (invocationCandidates.isEmpty() && currentTU != null) {
-      invocationCandidates =
-          currentTU.getDeclarations().stream()
-              .filter(FunctionDeclaration.class::isInstance)
-              .map(FunctionDeclaration.class::cast)
-              .filter(
-                  f -> f.getName().equals(call.getName()) && f.hasSignature(call.getSignature()))
-              .collect(Collectors.toList());
+    if (invocationCandidates.isEmpty() && lang != null) {
+      if (lang instanceof CXXLanguageFrontend) {
+        invocationCandidates =
+            lang.getScopeManager().resolveFunctionStopScopeTraversalOnDefinition(call).stream()
+                .filter(
+                    f ->
+                        f.hasSignature(call.getSignature())
+                            && definedBefore(f.getLocation(), call.getLocation()))
+                .collect(Collectors.toList());
+
+        if (invocationCandidates.isEmpty()) {
+          // Check for usage of default args
+          invocationCandidates.addAll(resolveWithDefaultArgs(call));
+        }
+
+        if (invocationCandidates.isEmpty()) {
+          // Check for usage of implicit cast
+          invocationCandidates.addAll(resolveWithImplicitCast(call));
+        }
+
+      } else {
+        invocationCandidates = lang.getScopeManager().resolveFunction(call);
+      }
     }
 
     // Find invokes by supertypes
-    if (invocationCandidates.isEmpty()) {
+    if (invocationCandidates.isEmpty()
+        && (!(lang instanceof CXXLanguageFrontend) || shouldSearchForInvokesInParent(call))) {
       String[] nameParts = call.getName().split("\\.");
       if (nameParts.length > 0) {
         List<Type> signature = call.getSignature();
@@ -662,6 +693,10 @@ public class CallResolver extends Pass {
           .forEach(invocationCandidates::add);
     }
     call.setInvokes(invocationCandidates);
+  }
+
+  private boolean shouldSearchForInvokesInParent(CallExpression call) {
+    return lang.getScopeManager().resolveFunctionStopScopeTraversalOnDefinition(call).isEmpty();
   }
 
   private void resolveConstructExpression(ConstructExpression constructExpression) {
