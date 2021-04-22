@@ -631,19 +631,20 @@ public class CallResolver extends Pass {
                         f.hasSignature(call.getSignature())
                             && definedBefore(f.getLocation(), call.getLocation()))
                 .collect(Collectors.toList());
+
+        if (invocationCandidates.isEmpty()) {
+          // Check for usage of default args
+          invocationCandidates.addAll(resolveWithDefaultArgsFunc(call));
+        }
+
+        if (invocationCandidates.isEmpty()) {
+          // If we don't find any candidate and our current language is c/c++ we check if there is a
+          // candidate with an implicit cast
+          invocationCandidates.addAll(resolveWithImplicitCastFunc(call));
+        }
+
       } else {
         invocationCandidates = lang.getScopeManager().resolveFunction(call);
-      }
-
-      if (invocationCandidates.isEmpty() && this.getLang() instanceof CXXLanguageFrontend) {
-        // Check for usage of default args
-        invocationCandidates.addAll(resolveWithDefaultArgsFunc(call));
-      }
-
-      if (invocationCandidates.isEmpty() && this.getLang() instanceof CXXLanguageFrontend) {
-        // If we don't find any candidate and our current language is c/c++ we check if there is a
-        // candidate with an implicit cast
-        invocationCandidates.addAll(resolveWithImplicitCastFunc(call));
       }
 
       if (invocationCandidates.isEmpty()) {
