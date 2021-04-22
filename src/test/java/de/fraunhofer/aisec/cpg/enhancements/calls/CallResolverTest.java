@@ -34,6 +34,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.*;
 import de.fraunhofer.aisec.cpg.graph.edge.Properties;
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression;
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CastExpression;
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression;
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal;
 import de.fraunhofer.aisec.cpg.graph.types.Type;
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser;
@@ -199,9 +200,55 @@ public class CallResolverTest extends BaseTest {
   }
 
   @Test
+  void testImplicitCastMethodCallResolution() throws Exception {
+    List<TranslationUnitDeclaration> result =
+        TestUtils.analyze(
+            List.of(
+                Path.of(topLevel.toString(), "implicitcast", "implicitCastInMethod.cpp").toFile()),
+            topLevel,
+            true);
+    List<FunctionDeclaration> functionDeclarations =
+        TestUtils.subnodesOfType(result, FunctionDeclaration.class);
+    List<CallExpression> callExpressions = TestUtils.subnodesOfType(result, CallExpression.class);
+
+    // Check resolution of calc
+    CallExpression calc = TestUtils.findByUniqueName(callExpressions, "calc");
+    FunctionDeclaration calcFunctionDeclaration =
+        TestUtils.findByUniquePredicate(
+            functionDeclarations, f -> f.getName().equals("calc") && !f.isImplicit());
+
+    assertEquals(1, calc.getInvokes().size());
+    assertEquals(calcFunctionDeclaration, calc.getInvokes().get(0));
+    assertTrue(calc.getArguments().get(0) instanceof CastExpression);
+    assertEquals(
+        2.0, ((Literal) ((CastExpression) calc.getArguments().get(0)).getExpression()).getValue());
+    assertEquals("int", ((CastExpression) calc.getArguments().get(0)).getCastType().getName());
+
+    // Check resolution of doSmth
+    CallExpression doSmth = TestUtils.findByUniqueName(callExpressions, "doSmth");
+    FunctionDeclaration doSmthFunctionDeclaration =
+        TestUtils.findByUniquePredicate(
+            functionDeclarations, f -> f.getName().equals("doSmth") && !f.isImplicit());
+
+    assertEquals(1, doSmth.getInvokes().size());
+    assertEquals(doSmthFunctionDeclaration, doSmth.getInvokes().get(0));
+    assertTrue(doSmth.getArguments().get(0) instanceof CastExpression);
+    assertEquals(
+        10.0,
+        ((Literal) ((CastExpression) doSmth.getArguments().get(0)).getExpression()).getValue());
+    assertEquals("int", ((CastExpression) doSmth.getArguments().get(0)).getCastType().getName());
+  }
+
+  @Test
   void testImplicitCastCallResolution() throws Exception {
-    Path filePath = Path.of(topLevel.toString(), "implicitcast");
-    List<TranslationUnitDeclaration> result = TestUtils.analyze("cpp", filePath, true);
+    List<TranslationUnitDeclaration> result =
+        TestUtils.analyze(
+            List.of(
+                Path.of(topLevel.toString(), "implicitcast", "ambiguouscall.cpp").toFile(),
+                Path.of(topLevel.toString(), "implicitcast", "implicitcast.cpp").toFile()),
+            topLevel,
+            true);
+
     List<CallExpression> callExpressions = TestUtils.subnodesOfType(result, CallExpression.class);
 
     // Check resolution of implicit cast
@@ -464,6 +511,58 @@ public class CallResolverTest extends BaseTest {
   }
 
   @Test
+  void testDefaultArgumentsMethodResolution() throws Exception {
+    List<TranslationUnitDeclaration> result =
+        TestUtils.analyze(
+            List.of(Path.of(topLevel.toString(), "defaultargs", "defaultInMethod.cpp").toFile()),
+            topLevel,
+            true);
+
+    List<CallExpression> calls = TestUtils.subnodesOfType(result, CallExpression.class);
+    List<FunctionDeclaration> functionDeclarations =
+        TestUtils.subnodesOfType(result, FunctionDeclaration.class);
+    List<DeclaredReferenceExpression> declaredReferenceExpressions =
+        TestUtils.subnodesOfType(result, DeclaredReferenceExpression.class);
+
+    // Check calc call
+    FunctionDeclaration calc =
+        TestUtils.findByUniquePredicate(
+            functionDeclarations, f -> f.getName().equals("calc") && !f.isImplicit());
+
+    CallExpression callCalc =
+        TestUtils.findByUniquePredicate(calls, f -> f.getName().equals("calc"));
+
+    DeclaredReferenceExpression x =
+        TestUtils.findByUniquePredicate(declaredReferenceExpressions, f -> f.getName().equals("x"));
+
+    assertEquals(1, callCalc.getInvokes().size());
+    assertEquals(calc, callCalc.getInvokes().get(0));
+    assertEquals(x, callCalc.getArguments().get(0));
+    assertEquals(5, ((Literal) callCalc.getArguments().get(1)).getValue());
+    assertFalse(
+        (Boolean) callCalc.getArgumentsPropertyEdge().get(0).getProperty(Properties.DEFAULT));
+    assertTrue(
+        (Boolean) callCalc.getArgumentsPropertyEdge().get(1).getProperty(Properties.DEFAULT));
+
+    // Check doSmth call
+    FunctionDeclaration doSmth =
+        TestUtils.findByUniquePredicate(
+            functionDeclarations, f -> f.getName().equals("doSmth") && !f.isImplicit());
+
+    CallExpression callDoSmth =
+        TestUtils.findByUniquePredicate(calls, f -> f.getName().equals("doSmth"));
+
+    assertEquals(1, callDoSmth.getInvokes().size());
+    assertEquals(doSmth, callDoSmth.getInvokes().get(0));
+    assertEquals(1, ((Literal) callDoSmth.getArguments().get(0)).getValue());
+    assertEquals(2, ((Literal) callDoSmth.getArguments().get(1)).getValue());
+    assertTrue(
+        (Boolean) callDoSmth.getArgumentsPropertyEdge().get(0).getProperty(Properties.DEFAULT));
+    assertTrue(
+        (Boolean) callDoSmth.getArgumentsPropertyEdge().get(1).getProperty(Properties.DEFAULT));
+  }
+
+  @Test
   void testDefaultArgumentsCallResolution() throws Exception {
     testDefaultArgumentsInDeclaration();
     testDefaultArgumentsInDefinition();
@@ -474,7 +573,7 @@ public class CallResolverTest extends BaseTest {
   void testScopedFunctionResolutionUndefined() throws Exception {
     List<TranslationUnitDeclaration> result =
         TestUtils.analyze(
-            List.of(Path.of(topLevel.toString(), "scopedresolution", "undefined.cpp").toFile()),
+            List.of(Path.of(topLevel.toString(), "cxxprioresolution", "undefined.cpp").toFile()),
             topLevel,
             true);
 
@@ -493,7 +592,7 @@ public class CallResolverTest extends BaseTest {
   void testScopedFunctionResolutionDefined() throws Exception {
     List<TranslationUnitDeclaration> result =
         TestUtils.analyze(
-            List.of(Path.of(topLevel.toString(), "scopedresolution", "defined.cpp").toFile()),
+            List.of(Path.of(topLevel.toString(), "cxxprioresolution", "defined.cpp").toFile()),
             topLevel,
             true);
     List<CallExpression> calls = TestUtils.subnodesOfType(result, CallExpression.class);
@@ -509,8 +608,8 @@ public class CallResolverTest extends BaseTest {
 
   void testScopedFunctionResolutionFunctionGlobal(List<CallExpression> calls) {
     CallExpression fh =
-            TestUtils.findByUniquePredicate(
-                    calls, c -> c.getLocation().getRegion().getStartLine() == 4);
+        TestUtils.findByUniquePredicate(
+            calls, c -> c.getLocation().getRegion().getStartLine() == 4);
 
     assertEquals(1, fh.getInvokes().size());
     assertFalse(fh.getInvokes().get(0).isImplicit());
@@ -524,8 +623,8 @@ public class CallResolverTest extends BaseTest {
 
   void testScopedFunctionResolutionRedeclaration(List<CallExpression> calls) {
     CallExpression fm1 =
-            TestUtils.findByUniquePredicate(
-                    calls, c -> c.getLocation().getRegion().getStartLine() == 8);
+        TestUtils.findByUniquePredicate(
+            calls, c -> c.getLocation().getRegion().getStartLine() == 8);
 
     assertEquals(1, fm1.getInvokes().size());
     assertTrue(fm1.getInvokes().get(0).isImplicit());
@@ -534,8 +633,8 @@ public class CallResolverTest extends BaseTest {
     assertFalse((Boolean) fm1.getArgumentsPropertyEdge().get(0).getProperty(Properties.DEFAULT));
 
     CallExpression fm2 =
-            TestUtils.findByUniquePredicate(
-                    calls, c -> c.getLocation().getRegion().getStartLine() == 10);
+        TestUtils.findByUniquePredicate(
+            calls, c -> c.getLocation().getRegion().getStartLine() == 10);
 
     assertEquals(1, fm2.getInvokes().size());
     assertFalse(fm2.getInvokes().get(0).isImplicit());
@@ -549,8 +648,8 @@ public class CallResolverTest extends BaseTest {
 
   void testScopedFunctionResolutionAfterRedeclaration(List<CallExpression> calls) {
     CallExpression fn =
-            TestUtils.findByUniquePredicate(
-                    calls, c -> c.getLocation().getRegion().getStartLine() == 13);
+        TestUtils.findByUniquePredicate(
+            calls, c -> c.getLocation().getRegion().getStartLine() == 13);
 
     assertEquals(1, fn.getInvokes().size());
     assertFalse(fn.getInvokes().get(0).isImplicit());
@@ -567,7 +666,10 @@ public class CallResolverTest extends BaseTest {
     List<TranslationUnitDeclaration> result =
         TestUtils.analyze(
             List.of(
-                Path.of(topLevel.toString(), "scopedresolution", "scopedResolutionWithDefaults.cpp")
+                Path.of(
+                        topLevel.toString(),
+                        "cxxprioresolution",
+                        "scopedResolutionWithDefaults.cpp")
                     .toFile()),
             topLevel,
             true);
@@ -578,5 +680,76 @@ public class CallResolverTest extends BaseTest {
     testScopedFunctionResolutionRedeclaration(calls);
 
     testScopedFunctionResolutionAfterRedeclaration(calls);
+  }
+
+  @Test
+  void testCxxPrioResolutionWithMethods() throws Exception {
+    List<TranslationUnitDeclaration> result =
+        TestUtils.analyze(
+            List.of(
+                Path.of(
+                        topLevel.toString(),
+                        "cxxprioresolution",
+                        "methodresolution",
+                        "overloadedresolution",
+                        ".cpp")
+                    .toFile()),
+            topLevel,
+            true);
+    List<CallExpression> calls = TestUtils.subnodesOfType(result, CallExpression.class);
+    List<FunctionDeclaration> functionDeclarations =
+        TestUtils.subnodesOfType(result, FunctionDeclaration.class);
+
+    FunctionDeclaration calcOverload =
+        TestUtils.findByUniquePredicate(
+            functionDeclarations, c -> c.getRecords().get(0).getName().equals("Overload"));
+
+    // This call must resolve to implicit cast of the overloaded class and not to the base class
+    CallExpression calcInt =
+        TestUtils.findByUniquePredicate(
+            calls, c -> c.getLocation().getRegion().getStartLine() == 24);
+
+    assertEquals(1, calcInt.getInvokes().size());
+    assertEquals(calcOverload, calcInt.getInvokes().get(0));
+    assertTrue(calcInt.getArguments().get(0) instanceof CastExpression);
+    assertEquals(
+        "double", ((CastExpression) calcInt.getArguments().get(0)).getCastType().getName());
+
+    CallExpression calcDouble =
+        TestUtils.findByUniquePredicate(
+            calls, c -> c.getLocation().getRegion().getStartLine() == 25);
+
+    assertEquals(1, calcDouble.getInvokes().size());
+    assertEquals(calcOverload, calcDouble.getInvokes().get(0));
+    assertEquals(1.1, ((Literal) calcDouble.getArguments().get(0)).getValue());
+  }
+
+  @Test
+  void testCXXMethodResolutionStopOnFirstOccurence() throws Exception {
+    List<TranslationUnitDeclaration> result =
+        TestUtils.analyze(
+            List.of(
+                Path.of(
+                        topLevel.toString(),
+                        "cxxprioresolution",
+                        "methodresolution",
+                        "overloadnoresolution",
+                        ".cpp")
+                    .toFile()),
+            topLevel,
+            true);
+    List<CallExpression> calls = TestUtils.subnodesOfType(result, CallExpression.class);
+
+    /*
+      This call cannot be resolved to the overloaded calc because the signature doesn't match.
+      However it also cannot be resolved to the base because due to the overloaded matching name it
+      stops searching for an invocation
+     */
+    CallExpression calcCall =
+        TestUtils.findByUniquePredicate(
+            calls, c -> c.getLocation().getRegion().getStartLine() == 22);
+
+    assertEquals(1, calcCall.getInvokes().size());
+    assertTrue(calcCall.getInvokes().get(0).isImplicit());
   }
 }
