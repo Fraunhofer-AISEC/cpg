@@ -20,8 +20,8 @@ import org.junit.jupiter.api.Test
 @Tag("experimental")
 class PythonFrontendTest : BaseTest() {
     // TODO ensure gradle doesn't remove those classes
-    val dummyRegion = Region()
-    val dummyPhysicalLocation = PhysicalLocation(URI(""), dummyRegion)
+    private val dummyRegion = Region()
+    private val dummyPhysicalLocation = PhysicalLocation(URI(""), dummyRegion)
 
     @Test
     fun testLiteral() {
@@ -256,12 +256,12 @@ class PythonFrontendTest : BaseTest() {
         assertNotNull(body.statements)
         assertEquals(2, body.statements.size)
 
-        val s1 = body.statements.get(0) as? DeclarationStatement
+        val s1 = body.statements[0] as? DeclarationStatement
         assertNotNull(s1)
-        val s2 = body.statements.get(1) as? MemberCallExpression
+        val s2 = body.statements[1] as? MemberCallExpression
         assertNotNull(s2)
 
-        val c1 = s1.declarations.get(0) as? VariableDeclaration
+        val c1 = s1.declarations[0] as? VariableDeclaration
         assertNotNull(c1)
         assertEquals("c1", c1.name)
         val ctor = (c1.initializer as? ConstructExpression)?.constructor
@@ -354,26 +354,27 @@ class PythonFrontendTest : BaseTest() {
                 .iterator()
                 .next()
 
-        val Foo = p.getDeclarationsByName("Foo", RecordDeclaration::class.java).iterator().next()
+        val recordFoo =
+            p.getDeclarationsByName("Foo", RecordDeclaration::class.java).iterator().next()
 
-        assertNotNull(Foo)
-        assertEquals("Foo", Foo.name)
+        assertNotNull(recordFoo)
+        assertEquals("Foo", recordFoo.name)
 
-        assertEquals(1, Foo.fields.size)
-        val somevar = Foo.fields[0]
+        assertEquals(1, recordFoo.fields.size)
+        val somevar = recordFoo.fields[0]
         assertNotNull(somevar)
         assertEquals("somevar", somevar.name)
         assertEquals(TypeParser.createFrom("int", false), somevar.type)
 
-        assertEquals(2, Foo.methods.size)
-        val bar = Foo.methods[0]
-        val foo = Foo.methods[1]
+        assertEquals(2, recordFoo.methods.size)
+        val bar = recordFoo.methods[0]
+        val foo = recordFoo.methods[1]
         assertNotNull(bar)
         assertNotNull(foo)
         assertEquals("bar", bar.name)
-        assertEquals(Foo, bar.recordDeclaration)
+        assertEquals(recordFoo, bar.recordDeclaration)
         assertEquals("foo", foo.name)
-        assertEquals(Foo, foo.recordDeclaration)
+        assertEquals(recordFoo, foo.recordDeclaration)
 
         val recv = bar.receiver
         assertNotNull(recv)
@@ -382,11 +383,12 @@ class PythonFrontendTest : BaseTest() {
 
         assertEquals(1, bar.parameters?.size)
         val i = bar.parameters?.get(0)
+
         assertEquals("i", i?.name)
 
         val body = bar.body as? CompoundStatement
         assertNotNull(body)
-        val assign = body.statements.get(0) as? BinaryOperator
+        val assign = body.statements[0] as? BinaryOperator
         assertNotNull(assign)
         val lhs = assign.lhs as? MemberExpression
         assertNotNull(lhs)
@@ -404,7 +406,7 @@ class PythonFrontendTest : BaseTest() {
 
         val fooBody = foo.body as? CompoundStatement
         assertNotNull(fooBody)
-        val fooMemCall = fooBody.statements.get(0) as? MemberCallExpression
+        val fooMemCall = fooBody.statements[0] as? MemberCallExpression
         assertNotNull(fooMemCall)
         val mem = fooMemCall.member as? DeclaredReferenceExpression
         assertNotNull(mem)
@@ -412,7 +414,66 @@ class PythonFrontendTest : BaseTest() {
         assertEquals(".", fooMemCall.operatorCode)
         assertEquals("Foo.bar", fooMemCall.fqn)
         assertEquals(1, fooMemCall.invokes.size)
-        assertEquals(bar, fooMemCall.invokes.get(0))
+        assertEquals(bar, fooMemCall.invokes[0])
         assertEquals("self", fooMemCall.base?.name)
+    }
+
+    @Test
+    fun testCtor() {
+        val topLevel = Path.of("src", "test", "resources", "python")
+        val tu =
+            TestUtils.analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("class_ctor.py").toFile()),
+                topLevel,
+                true
+            ) {
+                it.registerLanguage(
+                    PythonLanguageFrontend::class.java,
+                    PythonLanguageFrontend.PY_EXTENSIONS
+                )
+            }
+
+        assertNotNull(tu)
+
+        val p =
+            tu.getDeclarationsByName("class_ctor", NamespaceDeclaration::class.java)
+                .iterator()
+                .next()
+
+        val recordFoo =
+            p.getDeclarationsByName("Foo", RecordDeclaration::class.java).iterator().next()
+
+        assertNotNull(recordFoo)
+        assertEquals("Foo", recordFoo.name)
+
+        assertEquals(2, recordFoo.methods.size)
+        val fooCtor = recordFoo.methods[0] as? ConstructorDeclaration
+        assertNotNull(fooCtor)
+        val foobar = recordFoo.methods[1]
+        assertNotNull(foobar)
+
+        assertEquals("__init__", fooCtor.name)
+        assertEquals("foobar", foobar.name)
+
+        val bar = p.getDeclarationsByName("bar", FunctionDeclaration::class.java).iterator().next()
+        assertNotNull(bar)
+        assertEquals("bar", bar.name)
+
+        assertEquals(2, (bar.body as? CompoundStatement)?.statements?.size)
+        val line1 = (bar.body as? CompoundStatement)?.statements?.get(0) as? DeclarationStatement
+        assertNotNull(line1)
+        val line2 = (bar.body as? CompoundStatement)?.statements?.get(1) as? MemberCallExpression
+        assertNotNull(line2)
+
+        assertEquals(1, line1.declarations.size)
+        val fooDecl = line1.declarations[0] as? VariableDeclaration
+        assertNotNull(fooDecl)
+        assertEquals("foo", fooDecl.name)
+        assertEquals(TypeParser.createFrom("Foo", false), fooDecl.type)
+        val initializer = fooDecl.initializer as? ConstructExpression
+        assertEquals(fooCtor, initializer?.constructor)
+
+        assertEquals(fooDecl, (line2.base as? DeclaredReferenceExpression)?.refersTo)
+        assertEquals(foobar, line2.invokes[0])
     }
 }
