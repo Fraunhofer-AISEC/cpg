@@ -1,5 +1,5 @@
 class SomeClass:
-    def someFunc():
+    def someFunc(self):
         pass
 
 def foo():
