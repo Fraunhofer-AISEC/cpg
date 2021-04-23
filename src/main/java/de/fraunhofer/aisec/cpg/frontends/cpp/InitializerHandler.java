@@ -64,7 +64,7 @@ public class InitializerHandler extends Handler<Expression, IASTInitializer, CXX
       Expression arg = lang.getExpressionHandler().handle(argument);
 
       arg.setArgumentIndex(i);
-      constructExpression.addArgument(arg, false);
+      constructExpression.addArgument(arg);
 
       i++;
     }

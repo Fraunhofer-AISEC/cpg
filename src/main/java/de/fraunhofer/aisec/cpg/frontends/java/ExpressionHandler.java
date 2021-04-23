@@ -759,7 +759,7 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
 
       argument.setArgumentIndex(i);
 
-      callExpression.addArgument(argument, false);
+      callExpression.addArgument(argument);
     }
 
     return callExpression;
@@ -799,7 +799,7 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
 
       argument.setArgumentIndex(i);
 
-      ctor.addArgument(argument, false);
+      ctor.addArgument(argument);
     }
 
     newExpression.setInitializer(ctor);
