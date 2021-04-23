@@ -29,7 +29,6 @@ import static de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.applyIndexProperty
 import static de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.unwrap;
 
 import de.fraunhofer.aisec.cpg.graph.DeclarationHolder;
-import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.StatementHolder;
 import de.fraunhofer.aisec.cpg.graph.SubGraph;
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
@@ -38,7 +37,6 @@ import de.fraunhofer.aisec.cpg.graph.types.Type;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.jetbrains.annotations.NotNull;
@@ -320,20 +318,6 @@ public class RecordDeclaration extends Declaration implements DeclarationHolder,
   @Override
   public void setStatementEdges(@NonNull List<PropertyEdge<Statement>> statements) {
     this.statements = statements;
-  }
-
-  @Override
-  public String toString() {
-    return new ToStringBuilder(this, Node.TO_STRING_STYLE)
-        .appendSuper(super.toString())
-        .append("name", getName())
-        .append("kind", kind)
-        .append("superTypeDeclarations", superTypeDeclarations)
-        .append("fields", fields)
-        .append("methods", methods)
-        .append("constructors", constructors)
-        .append("records", records)
-        .toString();
   }
 
   @Override

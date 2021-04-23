@@ -31,6 +31,7 @@ import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.stream.Collectors;
 import org.neo4j.ogm.annotation.Relationship;
 
 /**
@@ -127,20 +128,12 @@ public class FunctionPointerType extends Type {
 
   @Override
   public String toString() {
-    return "FunctionPointerType{"
-        + "parameters="
-        + parameters
-        + ", returnType="
-        + returnType
-        + ", typeName='"
-        + getName()
-        + '\''
-        + ", storage="
-        + this.getStorage()
-        + ", qualifier="
-        + this.getQualifier()
-        + ", origin="
-        + this.getTypeOrigin()
-        + '}';
+    return "["
+        + getClass().getSimpleName()
+        + (isImplicit() ? "*" : "")
+        + "] ("
+        + getParameters().stream().map(Type::getName).collect(Collectors.joining(", "))
+        + ") -> "
+        + returnType.getName();
   }
 }

@@ -27,12 +27,13 @@ package de.fraunhofer.aisec.cpg.graph.declarations;
 
 import static de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.unwrap;
 
-import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.SubGraph;
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import de.fraunhofer.aisec.cpg.graph.types.Type;
-import java.util.*;
-import org.apache.commons.lang3.builder.ToStringBuilder;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 import org.neo4j.ogm.annotation.Relationship;
 
 public class EnumDeclaration extends Declaration {
@@ -76,13 +77,5 @@ public class EnumDeclaration extends Declaration {
 
   public void setSuperTypeDeclarations(Set<RecordDeclaration> superTypeDeclarations) {
     this.superTypeDeclarations = superTypeDeclarations;
-  }
-
-  @Override
-  public String toString() {
-    return new ToStringBuilder(this, Node.TO_STRING_STYLE)
-        .appendSuper(super.toString())
-        .append("entries", entries)
-        .toString();
   }
 }

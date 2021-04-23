@@ -105,6 +105,11 @@ open class PropertyEdge<T : Node> : Persistable {
         return Objects.hash(end, properties)
     }
 
+    override fun toString(): String {
+        val propertyString: String = properties.entries.joinToString { "${it.key}: ${it.value}" }
+        return "{$start} --[$propertyString]-> {$end}"
+    }
+
     companion object {
         protected val log = LoggerFactory.getLogger(PropertyEdge::class.java)
         fun <S : PropertyEdge<*>?> findPropertyEdgesByPredicate(

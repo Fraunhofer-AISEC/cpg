@@ -30,14 +30,15 @@ import static de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.unwrap;
 
 import com.google.common.hash.HashCode;
 import de.fraunhofer.aisec.cpg.graph.DeclarationHolder;
-import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.StatementHolder;
 import de.fraunhofer.aisec.cpg.graph.SubGraph;
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import de.fraunhofer.aisec.cpg.graph.statements.Statement;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
-import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.jetbrains.annotations.NotNull;
@@ -184,15 +185,6 @@ public class TranslationUnitDeclaration extends Declaration
   @Override
   public void setStatementEdges(@NonNull List<PropertyEdge<Statement>> statements) {
     this.statements = statements;
-  }
-
-  @Override
-  public String toString() {
-    return new ToStringBuilder(this, Node.TO_STRING_STYLE)
-        .append("declarations", declarations)
-        .append("includes", includes)
-        .append("namespaces", namespaces)
-        .toString();
   }
 
   @Override

@@ -25,12 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements.expressions;
 
-import de.fraunhofer.aisec.cpg.graph.HasInitializer;
-import de.fraunhofer.aisec.cpg.graph.HasType;
+import de.fraunhofer.aisec.cpg.graph.*;
 import de.fraunhofer.aisec.cpg.graph.HasType.TypeListener;
-import de.fraunhofer.aisec.cpg.graph.Node;
-import de.fraunhofer.aisec.cpg.graph.SubGraph;
-import de.fraunhofer.aisec.cpg.graph.TypeManager;
 import de.fraunhofer.aisec.cpg.graph.TypeManager.Language;
 import de.fraunhofer.aisec.cpg.graph.types.PointerType.PointerOrigin;
 import de.fraunhofer.aisec.cpg.graph.types.Type;
@@ -39,7 +35,6 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
-import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.neo4j.ogm.annotation.Relationship;
 
@@ -132,13 +127,6 @@ public class NewExpression extends Expression implements HasInitializer, TypeLis
                 })
             .collect(Collectors.toSet()));
     setPossibleSubTypes(subTypes, root);
-  }
-
-  public String toString() {
-    return new ToStringBuilder(this, Node.TO_STRING_STYLE)
-        .appendSuper(super.toString())
-        .append("initializer", initializer)
-        .toString();
   }
 
   @Override

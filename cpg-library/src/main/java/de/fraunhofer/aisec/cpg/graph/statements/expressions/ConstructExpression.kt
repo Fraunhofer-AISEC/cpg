@@ -26,7 +26,6 @@
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
 import de.fraunhofer.aisec.cpg.graph.HasType
-import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.PopulatedByPass
 import de.fraunhofer.aisec.cpg.graph.TypeManager
 import de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDeclaration
@@ -38,7 +37,6 @@ import de.fraunhofer.aisec.cpg.graph.types.TypeParser
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import de.fraunhofer.aisec.cpg.passes.CallResolver
 import java.util.stream.Collectors
-import org.apache.commons.lang3.builder.ToStringBuilder
 
 /**
  * Represents a call to a constructor, usually as an initializer.
@@ -115,15 +113,6 @@ class ConstructExpression : CallExpression(), HasType.TypeListener {
                 .collect(Collectors.toSet())
         )
         setPossibleSubTypes(subTypes, root)
-    }
-
-    override fun toString(): String {
-        return ToStringBuilder(this, Node.TO_STRING_STYLE)
-            .appendSuper(super.toString())
-            .append("constructor", constructor)
-            .append("instantiates", instantiates)
-            .append("arguments", arguments)
-            .toString()
     }
 
     override fun equals(other: Any?): Boolean {

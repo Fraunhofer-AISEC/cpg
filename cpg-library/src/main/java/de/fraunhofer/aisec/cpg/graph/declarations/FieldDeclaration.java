@@ -28,14 +28,12 @@ package de.fraunhofer.aisec.cpg.graph.declarations;
 import de.fraunhofer.aisec.cpg.graph.HasInitializer;
 import de.fraunhofer.aisec.cpg.graph.HasType;
 import de.fraunhofer.aisec.cpg.graph.HasType.TypeListener;
-import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.SubGraph;
 import de.fraunhofer.aisec.cpg.graph.TypeManager;
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression;
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.InitializerListExpression;
 import de.fraunhofer.aisec.cpg.graph.types.Type;
 import java.util.*;
-import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.jetbrains.annotations.Nullable;
 import org.neo4j.ogm.annotation.Relationship;
 
@@ -170,15 +168,6 @@ public class FieldDeclaration extends ValueDeclaration implements TypeListener, 
     Set<Type> subTypes = new HashSet<>(getPossibleSubTypes());
     subTypes.addAll(src.getPossibleSubTypes());
     setPossibleSubTypes(subTypes, root);
-  }
-
-  @Override
-  public String toString() {
-    return new ToStringBuilder(this, Node.TO_STRING_STYLE)
-        .appendSuper(super.toString())
-        .append("initializer", initializer)
-        .append("modifiers", modifiers)
-        .toString();
   }
 
   @Override

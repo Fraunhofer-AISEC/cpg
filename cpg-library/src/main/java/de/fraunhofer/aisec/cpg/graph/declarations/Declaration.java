@@ -91,4 +91,9 @@ public class Declaration extends Node {
   public Set<ConstructExpression> getIncomingConstructorCalls() {
     return new HashSet<>(incomingConstructorCalls);
   }
+
+  @Override
+  public String toString() {
+    return "[" + getClass().getSimpleName() + (isImplicit() ? "*" : "") + "] " + getName();
+  }
 }

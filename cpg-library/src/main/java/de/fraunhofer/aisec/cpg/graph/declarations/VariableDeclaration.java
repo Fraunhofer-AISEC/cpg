@@ -25,17 +25,15 @@
  */
 package de.fraunhofer.aisec.cpg.graph.declarations;
 
-import de.fraunhofer.aisec.cpg.graph.HasInitializer;
-import de.fraunhofer.aisec.cpg.graph.HasType;
+import de.fraunhofer.aisec.cpg.graph.*;
 import de.fraunhofer.aisec.cpg.graph.HasType.TypeListener;
-import de.fraunhofer.aisec.cpg.graph.Node;
-import de.fraunhofer.aisec.cpg.graph.SubGraph;
-import de.fraunhofer.aisec.cpg.graph.TypeManager;
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression;
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.InitializerListExpression;
 import de.fraunhofer.aisec.cpg.graph.types.Type;
-import java.util.*;
-import org.apache.commons.lang3.builder.ToStringBuilder;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Objects;
+import java.util.Set;
 import org.jetbrains.annotations.Nullable;
 import org.neo4j.ogm.annotation.Relationship;
 
@@ -169,15 +167,6 @@ public class VariableDeclaration extends ValueDeclaration implements TypeListene
     Set<Type> subTypes = new HashSet<>(getPossibleSubTypes());
     subTypes.addAll(src.getPossibleSubTypes());
     setPossibleSubTypes(subTypes, root);
-  }
-
-  @Override
-  public String toString() {
-    return new ToStringBuilder(this, Node.TO_STRING_STYLE)
-        .append("name", getName())
-        .append("location", getLocation())
-        .append("initializer", initializer)
-        .toString();
   }
 
   @Override

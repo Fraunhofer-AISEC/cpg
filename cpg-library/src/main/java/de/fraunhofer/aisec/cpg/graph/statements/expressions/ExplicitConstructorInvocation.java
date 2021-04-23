@@ -25,10 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements.expressions;
 
-import de.fraunhofer.aisec.cpg.graph.Node;
 import java.util.Objects;
-import org.apache.commons.lang3.builder.ToStringBuilder;
-import org.jetbrains.annotations.NotNull;
 
 public class ExplicitConstructorInvocation extends CallExpression {
 
@@ -40,15 +37,6 @@ public class ExplicitConstructorInvocation extends CallExpression {
 
   public void setContainingClass(String containingClass) {
     this.containingClass = containingClass;
-  }
-
-  @NotNull
-  @Override
-  public String toString() {
-    return new ToStringBuilder(this, Node.TO_STRING_STYLE)
-        .appendSuper(super.toString())
-        .append("invokes", getInvokes())
-        .toString();
   }
 
   @Override
