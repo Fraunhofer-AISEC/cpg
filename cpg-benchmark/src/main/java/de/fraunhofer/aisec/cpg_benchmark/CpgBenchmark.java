@@ -38,6 +38,7 @@ import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.function.BiFunction;
 import java.util.stream.Collectors;
 import kotlin.Pair;
 import org.apache.commons.cli.*;
@@ -52,7 +53,7 @@ public class CpgBenchmark {
   private static final Logger log = LoggerFactory.getLogger(CpgBenchmark.class);
   private final Path outputPath;
   private final ExecutorService executor;
-  private int timeout;
+  private int timeout, numCommits;
 
   public CpgBenchmark(CommandLine cmd) throws IOException {
     executor = Executors.newSingleThreadExecutor();
@@ -66,6 +67,14 @@ public class CpgBenchmark {
       }
     }
 
+    try {
+      numCommits = Integer.parseInt(cmd.getOptionValue("commits"));
+    } catch (NumberFormatException e) {
+      log.error(
+          "Number of commits to analyze ({}) can't be parsed!", cmd.getOptionValue("commits"));
+      System.exit(1);
+    }
+
     outputPath = cmd.hasOption("output") ? Paths.get(cmd.getOptionValue("output")) : null;
 
     File done = new File("done-repos");
@@ -76,14 +85,37 @@ public class CpgBenchmark {
     reader.close();
 
     for (Option option : cmd.getOptions()) {
-      if ("remote".equals(option.getLongOpt())) {
-        for (String url : option.getValues()) {
-          if (doneRepos.contains(url)) {
-            log.info("Repo {} has already been analyzed, skipping.", url);
-            continue;
+      switch (option.getLongOpt()) {
+        case "remote":
+          for (String url : option.getValues()) {
+            if (doneRepos.contains(url)) {
+              log.info("Repo {} has already been analyzed, skipping.", url);
+              continue;
+            }
+            try (Git git = getRemote(url)) {
+              output(url);
+
+              handleRepo(git, cmd.hasOption("verify-equivalence"));
+
+              output("");
+              markDone(url);
+              FileUtils.deleteRecursive(git.getRepository().getWorkTree());
+            } catch (Exception e) {
+              log.error("Error during analysis", e);
+            }
           }
-          handleRemote(url);
-        }
+          break;
+        case "local":
+          for (String path : option.getValues()) {
+            try (Git git = Git.open(new File(path))) {
+              output(path);
+              handleRepo(git, cmd.hasOption("verify-equivalence"));
+              output("");
+            } catch (Exception e) {
+              log.error("Error during analysis", e);
+            }
+          }
+          break;
       }
     }
 
@@ -107,35 +139,67 @@ public class CpgBenchmark {
     }
   }
 
-  private void handleRemote(String url) {
-    try (Git git = getRemote(url)) {
-      File root = git.getRepository().getWorkTree();
-      if (root != null && root.isDirectory()) {
-        File newRoot = Files.createTempDirectory("cpg-benchmark-grouped-").toFile();
-        newRoot.deleteOnExit();
-        Map<String, TranslationResult> previousResults = null;
-        git.branchCreate().setName("cpg-benchmark");
+  private void handleRepo(Git git, boolean verifyEquivalence) throws Exception {
+    File root = git.getRepository().getWorkTree();
+    if (root != null && root.isDirectory()) {
+      File newRoot = Files.createTempDirectory("cpg-benchmark-grouped-").toFile();
+      newRoot.deleteOnExit();
+      Map<String, TranslationResult> previousResults = null;
+      git.branchCreate().setName("cpg-benchmark");
 
-        output(url);
+      List<RevCommit> commits = new ArrayList<>();
+      git.log().setMaxCount(numCommits).call().forEach(commits::add);
+      Collections.reverse(commits);
 
-        for (RevCommit commit : git.log().setMaxCount(100).call()) {
-          git.checkout().setName(commit.getName()).call();
-          output("\tHEAD: " + git.getRepository().resolve(Constants.HEAD).getName());
+      for (RevCommit commit : commits) {
+        git.checkout().setName(commit.getName()).call();
+        output("\tHEAD: " + git.getRepository().resolve(Constants.HEAD).getName());
 
-          // Conventional result
-          long startTime = System.nanoTime();
-          Map<String, TranslationResult> conventionalResults = handle(root, newRoot, null);
-          output("\t\tConventional time: " + (System.nanoTime() - startTime) / 1_000_000 + " ms");
+        // Conventional result
+        long startTime = System.nanoTime();
+        Map<String, TranslationResult> conventionalResults =
+            handle(
+                root,
+                newRoot,
+                (module, files) -> {
+                  try {
+                    return new Pair<>(true, generateConventionalCPG(newRoot, files));
+                  } catch (Exception e) {
+                    log.error("Error during analysis", e);
+                  }
+                  return new Pair<>(false, null);
+                });
+        output("\t\tConventional time: " + (System.nanoTime() - startTime) / 1_000_000 + " ms");
 
-          // Clear persistent state
-          TypeParser.reset();
-          TypeManager.reset();
+        // Clear persistent state
+        TypeParser.reset();
+        TypeManager.reset();
 
-          // Incremental result
-          startTime = System.nanoTime();
-          previousResults = handle(root, newRoot, previousResults);
-          output("\t\tIncremental time: " + (System.nanoTime() - startTime) / 1_000_000 + " ms");
+        // Incremental result
+        startTime = System.nanoTime();
+        Map<String, TranslationResult> finalPreviousResults = previousResults;
+        previousResults =
+            handle(
+                root,
+                newRoot,
+                (module, files) -> {
+                  try {
+                    return new Pair<>(
+                        true,
+                        generateIncrementalCPG(
+                            newRoot,
+                            files,
+                            finalPreviousResults == null
+                                ? null
+                                : finalPreviousResults.get(module)));
+                  } catch (Exception e) {
+                    log.error("Error during incremental analysis", e);
+                  }
+                  return new Pair<>(false, null);
+                });
+        output("\t\tIncremental time: " + (System.nanoTime() - startTime) / 1_000_000 + " ms");
 
+        if (verifyEquivalence) {
           log.info("Checking if both graphs are equal");
           for (String module : conventionalResults.keySet()) {
             assert previousResults.containsKey(module);
@@ -144,24 +208,19 @@ public class CpgBenchmark {
                 previousResults.get(module).getTranslationUnits());
           }
         }
-
-        output("");
-
-        markDone(url);
-        FileUtils.deleteRecursive(root);
-        FileUtils.deleteRecursive(newRoot);
-      } else {
-        log.error("Repository {} could not be checked out, skipping", root);
       }
-    } catch (IOException e) {
-      log.error("Repository {} could not be downloaded, skipping", url);
-    } catch (Exception e) {
-      log.error("Error during analysis!", e);
+
+      FileUtils.deleteRecursive(newRoot);
+    } else {
+      log.error("Repository {} could not be checked out, skipping", root);
     }
   }
 
   private Map<String, TranslationResult> handle(
-      File root, File newRoot, Map<String, TranslationResult> previousResults) throws Exception {
+      File root,
+      File newRoot,
+      BiFunction<String, List<JavaFile>, Pair<Boolean, TranslationResult>> futureFactory)
+      throws Exception {
     log.info("Collecting Java files");
     List<JavaFile> javaFiles = findJavaFiles(root);
     Map<String, List<JavaFile>> modules = groupFilesByModule(javaFiles);
@@ -172,26 +231,17 @@ public class CpgBenchmark {
       String moduleName = module.replace(File.separator, ".");
       log.info("Module {}: {} Java files. Grouping into packages", module, moduleFiles.size());
       File modulePath = new File(newRoot, moduleName);
+      if (modulePath.exists()) {
+        FileUtils.deleteRecursive(modulePath);
+      }
       moduleFiles = moveFilesToPackage(moduleFiles, modulePath);
 
       log.info("Creating CPG for module {}", moduleName);
       long startTime = System.nanoTime();
       List<JavaFile> finalModuleFiles = moduleFiles;
       Future<Pair<Boolean, TranslationResult>> future =
-          executor.submit(
-              () -> {
-                try {
-                  return new Pair<>(
-                      true,
-                      generateCPG(
-                          newRoot,
-                          finalModuleFiles,
-                          previousResults == null ? null : previousResults.get(module)));
-                } catch (Exception e) {
-                  log.error("Error during analysis", e);
-                }
-                return new Pair<>(false, null);
-              });
+          executor.submit(() -> futureFactory.apply(module, finalModuleFiles));
+
       boolean complete = false;
       try {
         Pair<Boolean, TranslationResult> futureResult = future.get(timeout, TimeUnit.SECONDS);
@@ -211,20 +261,42 @@ public class CpgBenchmark {
     return resultMap;
   }
 
-  private TranslationResult generateCPG(
+  private TranslationResult generateConventionalCPG(File root, List<JavaFile> javaFiles)
+      throws ExecutionException, InterruptedException {
+    File[] files =
+        javaFiles.stream().map(JavaFile::getPath).collect(Collectors.toList()).toArray(File[]::new);
+    TranslationConfiguration config =
+        TranslationConfiguration.builder()
+            .defaultLanguages()
+            .sourceLocations(files)
+            .topLevel(root)
+            .defaultPasses()
+            .typeSystemActiveInFrontend(true)
+            .useParallelFrontends(false)
+            .debugParser(true)
+            .failOnError(true)
+            .build();
+
+    TranslationManager analyzer = TranslationManager.builder().config(config).build();
+
+    return analyzer.analyze().get();
+  }
+
+  private TranslationResult generateIncrementalCPG(
       File root, List<JavaFile> javaFiles, TranslationResult previousResult)
       throws ExecutionException, InterruptedException {
     File[] files =
         javaFiles.stream().map(JavaFile::getPath).collect(Collectors.toList()).toArray(File[]::new);
     TranslationConfiguration config =
         TranslationConfiguration.builder()
+            .defaultLanguages()
             .sourceLocations(files)
             .topLevel(root)
             .defaultPasses()
-            .typeSystemActiveInFrontend(false)
-            .useParallelFrontends(true)
+            .typeSystemActiveInFrontend(true)
+            .useParallelFrontends(false)
             .debugParser(true)
-            .failOnError(false)
+            .failOnError(true)
             .build();
 
     TranslationManager analyzer = TranslationManager.builder().config(config).build();
@@ -232,7 +304,6 @@ public class CpgBenchmark {
     if (previousResult == null) {
       return analyzer.analyze().get();
     }
-
     return analyzer.analyze(previousResult);
   }
 
@@ -302,9 +373,16 @@ public class CpgBenchmark {
 
   public static void main(String[] args) throws Exception {
     Options options = new Options();
+    options.addOption("l", "local", true, "Local repository");
     options.addOption("r", "remote", true, "Remote repository");
     options.addOption("o", "output", true, "Report output file");
     options.addOption("t", "timeout", true, "Timeout per repository in seconds");
+    options.addOption(
+        "v",
+        "verify-equivalence",
+        false,
+        "Check whether the conventional and incremental graphs are equal");
+    options.addRequiredOption("n", "commits", true, "Number of commits to analyze");
     CommandLineParser parser = new DefaultParser();
     CommandLine cmd = parser.parse(options, args);
 

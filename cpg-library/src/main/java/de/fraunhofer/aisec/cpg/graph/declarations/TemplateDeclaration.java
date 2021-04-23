@@ -34,7 +34,6 @@ import de.fraunhofer.aisec.cpg.graph.edge.Properties;
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.neo4j.ogm.annotation.Relationship;
 
@@ -134,8 +133,7 @@ public abstract class TemplateDeclaration extends Declaration implements Declara
     if (o == null || getClass() != o.getClass()) return false;
     if (!super.equals(o)) return false;
     TemplateDeclaration that = (TemplateDeclaration) o;
-    return Objects.equals(parameters, that.parameters)
-        && PropertyEdge.propertyEqualsList(parameters, that.parameters);
+    return PropertyEdge.propertyEqualsList(parameters, that.parameters);
   }
 
   @Override

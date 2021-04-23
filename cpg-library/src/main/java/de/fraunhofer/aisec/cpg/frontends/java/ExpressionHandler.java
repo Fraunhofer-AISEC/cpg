@@ -173,15 +173,13 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
 
   private ConditionalExpression handleConditionalExpression(Expression expr) {
     ConditionalExpr conditionalExpr = expr.asConditionalExpr();
-    Type superType;
+    Type superType = UnknownType.getUnknownType();
     try {
       superType = TypeParser.createFrom(conditionalExpr.calculateResolvedType().describe(), true);
     } catch (RuntimeException | NoClassDefFoundError e) {
       String s = this.lang.recoverTypeFromUnsolvedException(e);
       if (s != null) {
         superType = TypeParser.createFrom(s, true);
-      } else {
-        superType = null;
       }
     }
 

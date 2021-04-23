@@ -294,6 +294,10 @@ public class SubgraphWalker {
 
       todo.push(root);
       while (!todo.isEmpty()) {
+        if (Thread.interrupted()) {
+          Thread.currentThread().interrupt();
+          throw new RuntimeException("Interrupted!");
+        }
         Node current = todo.pop();
         if (!backlog.isEmpty() && backlog.peek() == current) {
           Node exiting = backlog.pop();

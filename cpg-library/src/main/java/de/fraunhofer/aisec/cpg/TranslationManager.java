@@ -383,7 +383,8 @@ public class TranslationManager {
   private Set<LanguageFrontend> parseParallel(
       @NonNull TranslationResult result,
       @NonNull ScopeManager originalScopeManager,
-      Collection<File> sourceLocations) {
+      Collection<File> sourceLocations)
+      throws TranslationException {
     Set<LanguageFrontend> usedFrontends = new HashSet<>();
 
     log.info("Parallel parsing started");
@@ -405,9 +406,11 @@ public class TranslationManager {
         future
             .get()
             .ifPresent(f -> handleCompletion(result, usedFrontends, futureToFile.get(future), f));
-      } catch (InterruptedException | ExecutionException e) {
+      } catch (ExecutionException e) {
         log.error("Error parsing " + futureToFile.get(future), e);
+      } catch (InterruptedException e) {
         Thread.currentThread().interrupt();
+        throw new RuntimeException("Interrupted!");
       }
     }
     originalScopeManager.mergeFrom(parallelScopeManagers);
@@ -477,6 +480,10 @@ public class TranslationManager {
   private Optional<LanguageFrontend> parse(
       @NotNull TranslationResult result, @NotNull ScopeManager scopeManager, File sourceLocation)
       throws TranslationException {
+    if (Thread.interrupted()) {
+      Thread.currentThread().interrupt();
+      throw new RuntimeException("Interrupted!");
+    }
     LanguageFrontend frontend = null;
     try {
       frontend = getFrontend(Util.getExtension(sourceLocation), scopeManager);

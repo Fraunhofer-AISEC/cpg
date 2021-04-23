@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.frontends;
 
 import static de.fraunhofer.aisec.cpg.helpers.Util.errorWithFileLocation;
+import static de.fraunhofer.aisec.cpg.helpers.Util.warnWithFileLocation;
 
 import java.lang.reflect.ParameterizedType;
 import java.util.HashMap;
@@ -67,6 +68,10 @@ public abstract class Handler<S, T, L extends LanguageFrontend> {
    * @return most specific handler.
    */
   public S handle(T ctx) {
+    if (Thread.interrupted()) {
+      Thread.currentThread().interrupt();
+      throw new RuntimeException("Interrupted!");
+    }
     S ret;
     if (ctx == null) {
       log.error(
@@ -112,7 +117,7 @@ public abstract class Handler<S, T, L extends LanguageFrontend> {
       lang.setComment(s, ctx);
       ret = s;
     } else {
-      errorWithFileLocation(
+      warnWithFileLocation(
           lang, ctx, log, "Parsing of type {} is not supported (yet)", ctx.getClass());
       ret = this.configConstructor.get();
     }

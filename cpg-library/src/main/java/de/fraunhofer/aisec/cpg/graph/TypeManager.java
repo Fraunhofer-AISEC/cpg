@@ -273,8 +273,8 @@ public class TypeManager {
     return typeCache;
   }
 
-  public synchronized void cacheType(HasType node, Type type) {
-    if (!isUnknown(type)) {
+  public void cacheType(HasType node, Type type) {
+    if (type != null && !isUnknown(type)) {
       typeCache.computeIfAbsent(node, n -> new HashSet<>()).add(type);
     }
   }
