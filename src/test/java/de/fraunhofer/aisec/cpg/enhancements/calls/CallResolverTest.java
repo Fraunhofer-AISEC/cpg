@@ -538,10 +538,8 @@ public class CallResolverTest extends BaseTest {
     assertEquals(calc, callCalc.getInvokes().get(0));
     assertEquals(x, callCalc.getArguments().get(0));
     assertEquals(5, ((Literal) callCalc.getArguments().get(1)).getValue());
-    assertFalse(
-        (Boolean) callCalc.getArgumentsPropertyEdge().get(0).getProperty(Properties.DEFAULT));
-    assertTrue(
-        (Boolean) callCalc.getArgumentsPropertyEdge().get(1).getProperty(Properties.DEFAULT));
+    assertFalse((Boolean) callCalc.getArgumentsEdges().get(0).getProperty(Properties.DEFAULT));
+    assertTrue((Boolean) callCalc.getArgumentsEdges().get(1).getProperty(Properties.DEFAULT));
 
     // Check doSmth call
     FunctionDeclaration doSmth =
@@ -555,10 +553,8 @@ public class CallResolverTest extends BaseTest {
     assertEquals(doSmth, callDoSmth.getInvokes().get(0));
     assertEquals(1, ((Literal) callDoSmth.getArguments().get(0)).getValue());
     assertEquals(2, ((Literal) callDoSmth.getArguments().get(1)).getValue());
-    assertTrue(
-        (Boolean) callDoSmth.getArgumentsPropertyEdge().get(0).getProperty(Properties.DEFAULT));
-    assertTrue(
-        (Boolean) callDoSmth.getArgumentsPropertyEdge().get(1).getProperty(Properties.DEFAULT));
+    assertTrue((Boolean) callDoSmth.getArgumentsEdges().get(0).getProperty(Properties.DEFAULT));
+    assertTrue((Boolean) callDoSmth.getArgumentsEdges().get(1).getProperty(Properties.DEFAULT));
   }
 
   @Test
@@ -616,8 +612,8 @@ public class CallResolverTest extends BaseTest {
     assertEquals(2, fh.getArguments().size());
     assertEquals(3, ((Literal) fh.getArguments().get(0)).getValue());
     assertEquals(7, ((Literal) fh.getArguments().get(1)).getValue());
-    assertFalse((Boolean) fh.getArgumentsPropertyEdge().get(0).getProperty(Properties.DEFAULT));
-    assertTrue((Boolean) fh.getArgumentsPropertyEdge().get(1).getProperty(Properties.DEFAULT));
+    assertFalse((Boolean) fh.getArgumentsEdges().get(0).getProperty(Properties.DEFAULT));
+    assertTrue((Boolean) fh.getArgumentsEdges().get(1).getProperty(Properties.DEFAULT));
   }
 
   void testScopedFunctionResolutionRedeclaration(List<CallExpression> calls) {
@@ -629,7 +625,7 @@ public class CallResolverTest extends BaseTest {
     assertTrue(fm1.getInvokes().get(0).isImplicit());
     assertEquals(1, fm1.getArguments().size());
     assertEquals(4, ((Literal) fm1.getArguments().get(0)).getValue());
-    assertFalse((Boolean) fm1.getArgumentsPropertyEdge().get(0).getProperty(Properties.DEFAULT));
+    assertFalse((Boolean) fm1.getArgumentsEdges().get(0).getProperty(Properties.DEFAULT));
 
     CallExpression fm2 =
         TestUtils.findByUniquePredicate(
@@ -641,8 +637,8 @@ public class CallResolverTest extends BaseTest {
     assertEquals(2, fm2.getArguments().size());
     assertEquals(4, ((Literal) fm2.getArguments().get(0)).getValue());
     assertEquals(5, ((Literal) fm2.getArguments().get(1)).getValue());
-    assertFalse((Boolean) fm2.getArgumentsPropertyEdge().get(0).getProperty(Properties.DEFAULT));
-    assertTrue((Boolean) fm2.getArgumentsPropertyEdge().get(1).getProperty(Properties.DEFAULT));
+    assertFalse((Boolean) fm2.getArgumentsEdges().get(0).getProperty(Properties.DEFAULT));
+    assertTrue((Boolean) fm2.getArgumentsEdges().get(1).getProperty(Properties.DEFAULT));
   }
 
   void testScopedFunctionResolutionAfterRedeclaration(List<CallExpression> calls) {
@@ -656,8 +652,8 @@ public class CallResolverTest extends BaseTest {
     assertEquals(2, fn.getArguments().size());
     assertEquals(6, ((Literal) fn.getArguments().get(0)).getValue());
     assertEquals(7, ((Literal) fn.getArguments().get(1)).getValue());
-    assertFalse((Boolean) fn.getArgumentsPropertyEdge().get(0).getProperty(Properties.DEFAULT));
-    assertTrue((Boolean) fn.getArgumentsPropertyEdge().get(1).getProperty(Properties.DEFAULT));
+    assertFalse((Boolean) fn.getArgumentsEdges().get(0).getProperty(Properties.DEFAULT));
+    assertTrue((Boolean) fn.getArgumentsEdges().get(1).getProperty(Properties.DEFAULT));
   }
 
   @Test
