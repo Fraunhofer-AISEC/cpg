@@ -27,7 +27,6 @@
 package de.fraunhofer.aisec.cpg.graph.declarations;
 
 import de.fraunhofer.aisec.cpg.graph.Node;
-import org.apache.commons.lang3.builder.ToStringBuilder;
 
 /**
  * Represents a single declaration or definition, i.e. of a variable ({@link VariableDeclaration})
@@ -45,6 +44,6 @@ public class Declaration extends Node {
 
   @Override
   public String toString() {
-    return new ToStringBuilder(this, Node.TO_STRING_STYLE).toString();
+    return "[" + getClass().getSimpleName() + (isImplicit() ? "*" : "") + "] " + getName();
   }
 }

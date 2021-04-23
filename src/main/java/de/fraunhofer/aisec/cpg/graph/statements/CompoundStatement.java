@@ -26,7 +26,6 @@
 
 package de.fraunhofer.aisec.cpg.graph.statements;
 
-import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.SubGraph;
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration;
 import de.fraunhofer.aisec.cpg.graph.edge.Properties;
@@ -35,7 +34,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
-import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.neo4j.ogm.annotation.Relationship;
 
@@ -77,11 +75,6 @@ public class CompoundStatement extends Statement {
     PropertyEdge<Statement> propertyEdge = new PropertyEdge<>(this, s);
     propertyEdge.addProperty(Properties.INDEX, this.statements.size());
     this.statements.add(propertyEdge);
-  }
-
-  @Override
-  public String toString() {
-    return new ToStringBuilder(this, Node.TO_STRING_STYLE).appendSuper(super.toString()).toString();
   }
 
   @Override

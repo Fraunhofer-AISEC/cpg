@@ -40,7 +40,6 @@ import de.fraunhofer.aisec.cpg.helpers.Util;
 import de.fraunhofer.aisec.cpg.passes.CallResolver;
 import java.util.*;
 import java.util.stream.Collectors;
-import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.neo4j.ogm.annotation.Relationship;
 
 /**
@@ -136,16 +135,6 @@ public class ConstructExpression extends Expression implements TypeListener {
     Set<Type> subTypes = new HashSet<>(getPossibleSubTypes());
     subTypes.addAll(src.getPossibleSubTypes());
     setPossibleSubTypes(subTypes, root);
-  }
-
-  @Override
-  public String toString() {
-    return new ToStringBuilder(this, Node.TO_STRING_STYLE)
-        .appendSuper(super.toString())
-        .append("constructor", constructor)
-        .append("instantiates", instantiates)
-        .append("arguments", arguments)
-        .toString();
   }
 
   @Override

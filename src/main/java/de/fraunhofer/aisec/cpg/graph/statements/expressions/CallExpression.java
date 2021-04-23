@@ -26,8 +26,11 @@
 
 package de.fraunhofer.aisec.cpg.graph.statements.expressions;
 
-import de.fraunhofer.aisec.cpg.graph.*;
+import de.fraunhofer.aisec.cpg.graph.HasType;
 import de.fraunhofer.aisec.cpg.graph.HasType.TypeListener;
+import de.fraunhofer.aisec.cpg.graph.Node;
+import de.fraunhofer.aisec.cpg.graph.SubGraph;
+import de.fraunhofer.aisec.cpg.graph.TypeManager;
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration;
 import de.fraunhofer.aisec.cpg.graph.edge.Properties;
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
@@ -35,7 +38,6 @@ import de.fraunhofer.aisec.cpg.graph.types.Type;
 import de.fraunhofer.aisec.cpg.helpers.Util;
 import java.util.*;
 import java.util.stream.Collectors;
-import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.neo4j.ogm.annotation.Relationship;
 
@@ -90,6 +92,10 @@ public class CallExpression extends Expression implements TypeListener {
     return Collections.unmodifiableList(targets);
   }
 
+  public void setArguments(List<Expression> arguments) {
+    this.arguments = PropertyEdge.transformIntoOutgoingPropertyEdgeList(arguments, this);
+  }
+
   public void setArgument(int index, Expression argument) {
     this.arguments.get(index).setEnd(argument);
   }
@@ -105,10 +111,6 @@ public class CallExpression extends Expression implements TypeListener {
     this.arguments.add(propertyEdge);
   }
 
-  public void setArguments(List<Expression> arguments) {
-    this.arguments = PropertyEdge.transformIntoOutgoingPropertyEdgeList(arguments, this);
-  }
-
   @NonNull
   public List<FunctionDeclaration> getInvokes() {
     List<FunctionDeclaration> targets = new ArrayList<>();
@@ -116,10 +118,6 @@ public class CallExpression extends Expression implements TypeListener {
       targets.add(propertyEdge.getEnd());
     }
     return Collections.unmodifiableList(targets);
-  }
-
-  public List<PropertyEdge<FunctionDeclaration>> getInvokesPropertyEdge() {
-    return this.invokes;
   }
 
   public void setInvokes(List<FunctionDeclaration> invokes) {
@@ -137,6 +135,10 @@ public class CallExpression extends Expression implements TypeListener {
           Util.attachCallParameters(i, this.getArguments());
           this.addPrevDFG(i);
         });
+  }
+
+  public List<PropertyEdge<FunctionDeclaration>> getInvokesPropertyEdge() {
+    return this.invokes;
   }
 
   public List<Type> getSignature() {
@@ -181,10 +183,16 @@ public class CallExpression extends Expression implements TypeListener {
 
   @Override
   public String toString() {
-    return new ToStringBuilder(this, Node.TO_STRING_STYLE)
-        .appendSuper(super.toString())
-        .append("base", base)
-        .toString();
+    return "["
+        + getClass().getSimpleName()
+        + (isImplicit() ? "*" : "")
+        + "]"
+        + (base == null ? "" : base.getName() + ".")
+        + getName()
+        + "("
+        + getSignature().stream().map(Type::getName).collect(Collectors.joining(", "))
+        + ") -> "
+        + getType().getName();
   }
 
   public String getFqn() {

@@ -26,10 +26,8 @@
 
 package de.fraunhofer.aisec.cpg.graph.statements.expressions;
 
-import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.SubGraph;
 import java.util.Objects;
-import org.apache.commons.lang3.builder.ToStringBuilder;
 
 /** Represents the creation of a new object through the <code>new</code> keyword. */
 public class NewExpression extends Expression {
@@ -57,14 +55,6 @@ public class NewExpression extends Expression {
     if (initializer instanceof TypeListener) {
       this.registerTypeListener((TypeListener) initializer);
     }
-  }
-
-  @Override
-  public String toString() {
-    return new ToStringBuilder(this, Node.TO_STRING_STYLE)
-        .appendSuper(super.toString())
-        .append("initializer", initializer)
-        .toString();
   }
 
   @Override

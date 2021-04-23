@@ -47,19 +47,4 @@ public class IncompleteType extends Type {
 
     return Objects.hash(super.hashCode());
   }
-
-  @Override
-  public String toString() {
-    return "IncompleteType{"
-        + "typeName='"
-        + name
-        + '\''
-        + ", storage="
-        + this.getStorage()
-        + ", qualifier="
-        + this.getQualifier()
-        + ", origin="
-        + this.getTypeOrigin()
-        + '}';
-  }
 }

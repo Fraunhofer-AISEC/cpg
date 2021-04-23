@@ -26,11 +26,9 @@
 
 package de.fraunhofer.aisec.cpg.graph.statements.expressions;
 
-import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.SubGraph;
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration;
 import java.util.Objects;
-import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.checkerframework.checker.nullness.qual.NonNull;
 
 /**
@@ -52,14 +50,6 @@ public class MemberExpression extends DeclaredReferenceExpression {
   }
 
   private String operatorCode;
-
-  @Override
-  public String toString() {
-    return new ToStringBuilder(this, Node.TO_STRING_STYLE)
-        .appendSuper(super.toString())
-        .append("base", base.getName())
-        .toString();
-  }
 
   @Override
   public boolean equals(Object o) {

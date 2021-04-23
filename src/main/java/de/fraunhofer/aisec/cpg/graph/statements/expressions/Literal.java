@@ -26,9 +26,7 @@
 
 package de.fraunhofer.aisec.cpg.graph.statements.expressions;
 
-import de.fraunhofer.aisec.cpg.graph.Node;
 import java.util.Objects;
-import org.apache.commons.lang3.builder.ToStringBuilder;
 
 /**
  * Represents a literal value, meaning the value is fixed and not depending on the runtime
@@ -46,11 +44,6 @@ public class Literal<T> extends Expression {
 
   public void setValue(T value) {
     this.value = value;
-  }
-
-  @Override
-  public String toString() {
-    return new ToStringBuilder(this, Node.TO_STRING_STYLE).append("value", value).toString();
   }
 
   @Override

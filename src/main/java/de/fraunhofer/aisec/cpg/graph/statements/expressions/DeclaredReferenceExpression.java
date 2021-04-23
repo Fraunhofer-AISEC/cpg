@@ -35,7 +35,6 @@ import de.fraunhofer.aisec.cpg.graph.types.Type;
 import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
-import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.neo4j.ogm.annotation.Relationship;
 
@@ -151,16 +150,6 @@ public class DeclaredReferenceExpression extends Expression implements TypeListe
     Set<Type> subTypes = new HashSet<>(getPossibleSubTypes());
     subTypes.addAll(src.getPossibleSubTypes());
     setPossibleSubTypes(subTypes, root);
-  }
-
-  @Override
-  public String toString() {
-    return new ToStringBuilder(this, Node.TO_STRING_STYLE)
-        .append("name", name)
-        .append("type", type)
-        .append("location", location)
-        .append("refersTo", refersTo)
-        .toString();
   }
 
   public void setAccess(AccessValues access) {

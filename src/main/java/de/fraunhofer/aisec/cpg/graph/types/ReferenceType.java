@@ -108,21 +108,4 @@ public class ReferenceType extends Type implements SecondOrderType {
   public int hashCode() {
     return Objects.hash(super.hashCode(), reference);
   }
-
-  @Override
-  public String toString() {
-    return "ReferenceType{"
-        + "reference="
-        + reference
-        + ", typeName='"
-        + name
-        + '\''
-        + ", storage="
-        + this.getStorage()
-        + ", qualifier="
-        + this.getQualifier()
-        + ", origin="
-        + this.getTypeOrigin()
-        + '}';
-  }
 }

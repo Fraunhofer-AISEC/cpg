@@ -26,11 +26,9 @@
 
 package de.fraunhofer.aisec.cpg.graph.statements;
 
-import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.SubGraph;
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression;
 import java.util.Objects;
-import org.apache.commons.lang3.builder.ToStringBuilder;
 
 /** Represents a conditional loop statement of the form: <code>do{...}while(...)</code>. */
 public class DoStatement extends Statement {
@@ -60,15 +58,6 @@ public class DoStatement extends Statement {
 
   public void setStatement(Statement thenStatement) {
     this.statement = thenStatement;
-  }
-
-  @Override
-  public String toString() {
-    return new ToStringBuilder(this, Node.TO_STRING_STYLE)
-        .appendSuper(super.toString())
-        .append("condition", condition)
-        .append("statement", statement)
-        .toString();
   }
 
   @Override

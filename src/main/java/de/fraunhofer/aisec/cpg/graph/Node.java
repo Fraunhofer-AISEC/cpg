@@ -33,7 +33,6 @@ import de.fraunhofer.aisec.cpg.helpers.LocationConverter;
 import de.fraunhofer.aisec.cpg.processing.IVisitable;
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation;
 import java.util.*;
-import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -363,12 +362,7 @@ public class Node implements IVisitable<Node>, Persistable {
 
   @Override
   public String toString() {
-    return new ToStringBuilder(this, Node.TO_STRING_STYLE)
-        .append("id", id)
-        .append("name", name)
-        .append("location", location)
-        .append("argumentIndex", argumentIndex)
-        .toString();
+    return "[" + getClass().getSimpleName() + (isImplicit() ? "*" : "") + "] " + getCode();
   }
 
   public void setComment(@NonNull String comment) {

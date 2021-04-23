@@ -350,16 +350,6 @@ public abstract class Type extends Node {
 
   @Override
   public String toString() {
-    return "Type{"
-        + "typeName='"
-        + name
-        + '\''
-        + ", storage="
-        + storage
-        + ", qualifier="
-        + qualifier
-        + ", origin="
-        + origin
-        + '}';
+    return "[" + getClass().getSimpleName() + (isImplicit() ? "*" : "") + "] " + getName();
   }
 }
