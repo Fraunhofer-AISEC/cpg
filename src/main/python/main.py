@@ -1140,7 +1140,7 @@ class PythonASTToCPG(ast.NodeVisitor):
         # body
         for b in node.body:
             if isinstance(b, ast.FunctionDef):
-                # TODO __init__ -> ctor
+                # Method or Constructor
                 fd = self.visit_FunctionDef(b, recordDec=rec)
                 rec.addMethod(fd)
             elif isinstance(b, ast.Expr):
