@@ -33,6 +33,7 @@ import de.fraunhofer.aisec.cpg.helpers.Util
 import java.io.File
 import java.nio.file.Files
 import java.nio.file.Path
+import java.util.*
 import java.util.function.Consumer
 import java.util.function.Predicate
 import java.util.stream.Collectors
@@ -256,6 +257,102 @@ object TestUtils {
             loc.region.startLine == toCompare
         } else {
             loc.region.endLine == toCompare
+        }
+    }
+
+    private fun Node.getAllProperties(): Map<Any, Any> {
+        return GraphConversion.getAllProperties(this)
+    }
+
+    private fun Node.getNeighbors(): Set<GraphConversion.Neighbor> {
+        return GraphConversion.getNeighbors(this)
+    }
+
+    data class Edge(
+        val label: String,
+        val properties: Map<String, Any>,
+        val from: Edge?,
+        val to: Node
+    ) {
+        override fun toString(): String {
+            return "$from --{$label}-> $to"
+        }
+
+        fun isLoop(seen: Set<Node> = emptySet()): Boolean {
+            return if (to in seen) {
+                true
+            } else {
+                from?.isLoop(seen + to) ?: false
+            }
+        }
+    }
+
+    @JvmStatic
+    fun assertGraphsAreEqual(
+        original: List<TranslationUnitDeclaration>,
+        other: List<TranslationUnitDeclaration>
+    ) {
+
+        val mapping = IdentityHashMap<Node, Node>().toMutableMap()
+        fun Edge.fromMatches(other: Edge): Boolean {
+            if (this.from == null) {
+                return other.from == null
+            } else if (other.from == null) {
+                return false
+            }
+
+            return mapping[this.from.to] == other.from.to &&
+                this.from.label == other.from.label &&
+                this.from.fromMatches(other.from)
+        }
+
+        var currOriginal = original.map { Edge("", emptyMap(), null, it) }
+        var currOther = other.map { Edge("", emptyMap(), null, it) }
+
+        while (currOriginal.isNotEmpty() || currOther.isNotEmpty()) {
+            assert(currOriginal.size == currOther.size) {
+                "Original size: ${currOriginal.size}, other size: ${currOther.size}"
+            }
+
+            val currOtherCopy = currOther.toMutableList()
+            for (edge in currOriginal) {
+                val matches =
+                    currOtherCopy.filter { otherEdge ->
+                        edge.fromMatches(otherEdge) &&
+                            edge.label == otherEdge.label &&
+                            edge.properties == otherEdge.properties &&
+                            edge.to.getAllProperties() == otherEdge.to.getAllProperties()
+                    }
+                assert(matches.size == 1) {
+                    "Original edge $edge has ${matches.size} match${if (matches.size == 1) "" else "es"} in other graph"
+                }
+
+                currOtherCopy.remove(matches[0])
+                mapping[edge.to] = matches[0].to
+            }
+
+            assert(currOtherCopy.isEmpty()) {
+                "Edges in other graph without match in original: $currOtherCopy"
+            }
+
+            val nextCurrOriginal =
+                currOriginal.flatMap { edge ->
+                    edge
+                        .to
+                        .getNeighbors()
+                        .map { n -> Edge(n.edgeLabel, n.edgeProperties, edge, n.node) }
+                        .filter { !it.isLoop() }
+                }
+            val nextCurrOther =
+                currOther.flatMap { edge ->
+                    edge
+                        .to
+                        .getNeighbors()
+                        .map { n -> Edge(n.edgeLabel, n.edgeProperties, edge, n.node) }
+                        .filter { !it.isLoop() }
+                }
+            currOriginal = nextCurrOriginal
+            currOther = nextCurrOther
         }
     }
 }
