@@ -672,23 +672,7 @@ public class CallResolver extends Pass {
     // Find function targets
     if (invocationCandidates.isEmpty() && lang != null) {
       if (lang instanceof CXXLanguageFrontend) {
-        invocationCandidates =
-            lang.getScopeManager().resolveFunctionStopScopeTraversalOnDefinition(call).stream()
-                .filter(
-                    f ->
-                        f.hasSignature(call.getSignature())
-                            && definedBefore(f.getLocation(), call.getLocation()))
-                .collect(Collectors.toList());
-
-        if (invocationCandidates.isEmpty()) {
-          // Check for usage of default args
-          invocationCandidates.addAll(resolveWithDefaultArgsMethod(call));
-        }
-
-        if (invocationCandidates.isEmpty()) {
-          // Check for usage of implicit cast
-          invocationCandidates.addAll(resolveWithImplicitCastMethod(call));
-        }
+        invocationCandidates = handleCXXMethodCall(call);
 
       } else {
         invocationCandidates = lang.getScopeManager().resolveFunction(call);
@@ -715,6 +699,35 @@ public class CallResolver extends Pass {
       call.setBase(curClass.getThis());
     }
 
+    createMethodDummies(invocationCandidates, possibleContainingTypes, call);
+    call.setInvokes(invocationCandidates);
+  }
+
+  private List<FunctionDeclaration> handleCXXMethodCall(CallExpression call) {
+    List<FunctionDeclaration> invocationCandidates =
+        lang.getScopeManager().resolveFunctionStopScopeTraversalOnDefinition(call).stream()
+            .filter(
+                f ->
+                    f.hasSignature(call.getSignature())
+                        && definedBefore(f.getLocation(), call.getLocation()))
+            .collect(Collectors.toList());
+
+    if (invocationCandidates.isEmpty()) {
+      // Check for usage of default args
+      invocationCandidates.addAll(resolveWithDefaultArgsMethod(call));
+    }
+
+    if (invocationCandidates.isEmpty()) {
+      // Check for usage of implicit cast
+      invocationCandidates.addAll(resolveWithImplicitCastMethod(call));
+    }
+    return invocationCandidates;
+  }
+
+  private void createMethodDummies(
+      List<FunctionDeclaration> invocationCandidates,
+      Set<Type> possibleContainingTypes,
+      CallExpression call) {
     if (invocationCandidates.isEmpty()) {
       possibleContainingTypes.stream()
           .map(t -> recordMap.get(t.getTypeName()))
@@ -722,7 +735,6 @@ public class CallResolver extends Pass {
           .map(r -> createDummy(r, call.getName(), call.getCode(), false, call.getSignature()))
           .forEach(invocationCandidates::add);
     }
-    call.setInvokes(invocationCandidates);
   }
 
   private boolean shouldSearchForInvokesInParent(CallExpression call) {
@@ -981,7 +993,7 @@ public class CallResolver extends Pass {
 
       if (lang instanceof CXXLanguageFrontend) {
         workingPossibleTypes.removeIf(
-            recordDeclaration -> !shouldContinueSearchInParent(recordDeclaration, name, call));
+            recordDeclaration -> !shouldContinueSearchInParent(recordDeclaration, name));
       }
 
       if (firstLevelCandidates.isEmpty() && !possibleTypes.isEmpty()) {
@@ -996,8 +1008,7 @@ public class CallResolver extends Pass {
     }
   }
 
-  private boolean shouldContinueSearchInParent(
-      RecordDeclaration recordDeclaration, String name, CallExpression call) {
+  private boolean shouldContinueSearchInParent(RecordDeclaration recordDeclaration, String name) {
     Pattern namePattern =
         Pattern.compile(
             "(" + Pattern.quote(recordDeclaration.getName()) + "\\.)?" + Pattern.quote(name));
@@ -1009,11 +1020,7 @@ public class CallResolver extends Pass {
                 .map(FunctionDeclaration.class::cast)
                 .collect(Collectors.toList()));
 
-    if (invocationCandidate.isEmpty()) {
-      return true;
-    }
-
-    return false;
+    return invocationCandidate.isEmpty();
   }
 
   private Set<FunctionDeclaration> getOverridingCandidates(
