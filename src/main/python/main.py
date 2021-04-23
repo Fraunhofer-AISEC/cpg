@@ -621,7 +621,7 @@ class PythonASTToCPG(ast.NodeVisitor):
 
         # add arguments
         for a in node.args:
-            call.addArgument(self.visit(a))
+            call.addArgument(self.visit(a), False)
 
         return call
 
