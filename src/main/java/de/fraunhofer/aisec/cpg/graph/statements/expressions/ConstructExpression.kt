@@ -39,12 +39,15 @@ import org.apache.commons.lang3.builder.ToStringBuilder
 /**
  * Represents a call to a constructor, usually as an initializer.
  *
- * * In C++ this can be part of a variable declaration plus initialization, such as ` int a(5);` or
+ * * In C++ this can be part of a variable declaration plus initialization, such as `int a(5);` or
  * as part of a [NewExpression].
  * * In Java, it is the initializer of a [NewExpression].
  */
 class ConstructExpression : CallExpression(), HasType.TypeListener {
-    /** The link to the [ConstructorDeclaration]. This is populated by the [ ] later. */
+    /**
+     * The link to the [ConstructorDeclaration]. This is populated by the
+     * [de.fraunhofer.aisec.cpg.passes.CallResolver] later.
+     */
     @PopulatedByPass(CallResolver::class)
     var constructor: ConstructorDeclaration? = null
         set(value) {
@@ -62,15 +65,15 @@ class ConstructExpression : CallExpression(), HasType.TypeListener {
         set(value) {
             field = value
             if (value != null) {
-                setType(TypeParser.createFrom(value.getName(), true))
+                setType(TypeParser.createFrom(value.name, true))
             }
         }
 
     override fun typeChanged(src: HasType, root: HasType, oldType: Type) {
         val previous: Type = this.type
-        setType(src.getPropagationType(), root)
+        setType(src.propagationType, root)
         if (previous != this.type) {
-            this.type.setTypeOrigin(Type.Origin.DATAFLOW)
+            this.type.typeOrigin = Type.Origin.DATAFLOW
         }
     }
 
@@ -91,10 +94,10 @@ class ConstructExpression : CallExpression(), HasType.TypeListener {
             return false
         }
 
-        return (super.equals(other) &&
+        return super.equals(other) &&
             constructor == other.constructor &&
             arguments == other.arguments &&
-            PropertyEdge.propertyEqualsList(argumentsEdges, other.argumentsEdges))
+            PropertyEdge.propertyEqualsList(argumentsEdges, other.argumentsEdges)
     }
 
     override fun hashCode(): Int {

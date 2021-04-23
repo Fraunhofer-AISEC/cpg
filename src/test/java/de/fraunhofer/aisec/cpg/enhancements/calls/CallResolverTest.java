@@ -390,8 +390,8 @@ public class CallResolverTest extends BaseTest {
     // Check defaults edge of ParamVariableDeclaration
     assertTrue(displayFunction.getDefaultParameters().get(0) instanceof Literal);
     assertTrue(displayFunction.getDefaultParameters().get(1) instanceof Literal);
-    assertEquals("*", ((Literal) displayFunction.getDefaultParameters().get(0)).getValueString());
-    assertEquals("3", ((Literal) displayFunction.getDefaultParameters().get(1)).getValueString());
+    assertEquals("*", ((Literal) displayFunction.getDefaultParameters().get(0)).getValue());
+    assertEquals("3", ((Literal) displayFunction.getDefaultParameters().get(1)).getValue());
 
     // Check call display();
     CallExpression display =
@@ -406,8 +406,8 @@ public class CallResolverTest extends BaseTest {
 
     assertTrue(display.getArguments().get(0) instanceof Literal);
     assertTrue(display.getArguments().get(1) instanceof Literal);
-    assertEquals("*", ((Literal) display.getArguments().get(0)).getValueString());
-    assertEquals("3", ((Literal) display.getArguments().get(1)).getValueString());
+    assertEquals("*", ((Literal) display.getArguments().get(0)).getValue());
+    assertEquals("3", ((Literal) display.getArguments().get(1)).getValue());
 
     // Check call display('#');
     CallExpression displayHash =
@@ -423,8 +423,8 @@ public class CallResolverTest extends BaseTest {
 
     assertTrue(displayHash.getArguments().get(0) instanceof Literal);
     assertTrue(displayHash.getArguments().get(1) instanceof Literal);
-    assertEquals("#", ((Literal) displayHash.getArguments().get(0)).getValueString());
-    assertEquals("3", ((Literal) displayHash.getArguments().get(1)).getValueString());
+    assertEquals("#", ((Literal) displayHash.getArguments().get(0)).getValue());
+    assertEquals("3", ((Literal) displayHash.getArguments().get(1)).getValue());
 
     // Check call display('#');
     CallExpression display$Count =
@@ -439,7 +439,7 @@ public class CallResolverTest extends BaseTest {
     assertEquals(displayFunction, display$Count.getInvokes().get(0));
 
     assertTrue(display$Count.getArguments().get(0) instanceof Literal);
-    assertEquals("$", ((Literal) display$Count.getArguments().get(0)).getValueString());
+    assertEquals("$", ((Literal) display$Count.getArguments().get(0)).getValue());
     assertEquals("count", display$Count.getArguments().get(1).getName());
   }
 
