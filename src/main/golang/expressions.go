@@ -229,8 +229,8 @@ func (r *DeclaredReferenceExpression) Node() *Node {
 	return (*Node)(r)
 }
 
-func (c *CallExpression) AddArgument(e *Expression, def bool) {
-	(*jnigi.ObjectRef)(c).CallMethod(env, "addArgument", jnigi.Void, (*jnigi.ObjectRef)(e).Cast("de/fraunhofer/aisec/cpg/graph/statements/expressions/Expression"), def)
+func (c *CallExpression) AddArgument(e *Expression) {
+	(*jnigi.ObjectRef)(c).CallMethod(env, "addArgument", jnigi.Void, (*jnigi.ObjectRef)(e).Cast("de/fraunhofer/aisec/cpg/graph/statements/expressions/Expression"))
 }
 
 func (b *BinaryOperator) SetLHS(e *Expression) {
@@ -282,6 +282,6 @@ func (r *ArrayCreationExpression) AddDimension(e *Expression) {
 	(*jnigi.ObjectRef)(r).CallMethod(env, "addDimension", jnigi.Void, (*jnigi.ObjectRef)(e).Cast("de/fraunhofer/aisec/cpg/graph/statements/expressions/Expression"))
 }
 
-func (c *ConstructExpression) AddArgument(e *Expression, def bool) {
-	(*jnigi.ObjectRef)(c).CallMethod(env, "addArgument", jnigi.Void, (*jnigi.ObjectRef)(e).Cast("de/fraunhofer/aisec/cpg/graph/statements/expressions/Expression"), def)
+func (c *ConstructExpression) AddArgument(e *Expression) {
+	(*jnigi.ObjectRef)(c).CallMethod(env, "addArgument", jnigi.Void, (*jnigi.ObjectRef)(e).Cast("de/fraunhofer/aisec/cpg/graph/statements/expressions/Expression"))
 }

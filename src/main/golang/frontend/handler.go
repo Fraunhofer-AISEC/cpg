@@ -713,7 +713,7 @@ func (this *GoLanguageFrontend) handleCallExpr(fset *token.FileSet, callExpr *as
 		e := this.handleExpr(fset, arg)
 
 		if e != nil {
-			c.AddArgument(e, false)
+			c.AddArgument(e)
 		}
 	}
 
@@ -765,7 +765,7 @@ func (this *GoLanguageFrontend) handleMakeExpr(fset *token.FileSet, callExpr *as
 		for _, arg := range callExpr.Args[1:] {
 			a := this.handleExpr(fset, arg)
 
-			c.AddArgument(a, false)
+			c.AddArgument(a)
 		}
 
 		n = (*cpg.Expression)(c)
