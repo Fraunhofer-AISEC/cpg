@@ -704,7 +704,14 @@ public class CallResolverTest extends BaseTest {
     // This call must resolve to implicit cast of the overloaded class and not to the base class
     CallExpression calcInt =
         TestUtils.findByUniquePredicate(
-            calls, c -> c.getLocation().getRegion().getStartLine() == 24);
+            calls,
+            c -> {
+              if (c.getLocation() != null) {
+                return c.getLocation().getRegion().getStartLine() == 24;
+              }
+
+              return false;
+            });
 
     assertEquals(1, calcInt.getInvokes().size());
     assertEquals(calcOverload, calcInt.getInvokes().get(0));
@@ -714,7 +721,14 @@ public class CallResolverTest extends BaseTest {
 
     CallExpression calcDouble =
         TestUtils.findByUniquePredicate(
-            calls, c -> c.getLocation().getRegion().getStartLine() == 25);
+            calls,
+            c -> {
+              if (c.getLocation() != null) {
+                return c.getLocation().getRegion().getStartLine() == 25;
+              }
+
+              return false;
+            });
 
     assertEquals(1, calcDouble.getInvokes().size());
     assertEquals(calcOverload, calcDouble.getInvokes().get(0));
@@ -743,7 +757,14 @@ public class CallResolverTest extends BaseTest {
     */
     CallExpression calcCall =
         TestUtils.findByUniquePredicate(
-            calls, c -> c.getLocation().getRegion().getStartLine() == 22);
+            calls,
+            c -> {
+              if (c.getLocation() != null) {
+                return c.getLocation().getRegion().getStartLine() == 22;
+              }
+
+              return false;
+            });
 
     assertEquals(1, calcCall.getInvokes().size());
     assertTrue(calcCall.getInvokes().get(0).isImplicit());

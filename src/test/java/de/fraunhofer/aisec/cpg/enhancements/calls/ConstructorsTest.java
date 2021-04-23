@@ -188,11 +188,9 @@ class ConstructorsTest extends BaseTest {
     ConstructExpression d1Initializer = (ConstructExpression) d1.getInitializer();
     assertEquals(twoDefaultArg, d1Initializer.getConstructor());
     assertEquals(2, d1Initializer.getArguments().size());
-    assertTrue(
-        (Boolean) d1Initializer.getArgumentsPropertyEdge().get(0).getProperty(Properties.DEFAULT));
+    assertTrue((Boolean) d1Initializer.getArgumentsEdges().get(0).getProperty(Properties.DEFAULT));
     assertEquals(0, ((Literal) d1Initializer.getArguments().get(0)).getValue());
-    assertTrue(
-        (Boolean) d1Initializer.getArgumentsPropertyEdge().get(1).getProperty(Properties.DEFAULT));
+    assertTrue((Boolean) d1Initializer.getArgumentsEdges().get(1).getProperty(Properties.DEFAULT));
     assertEquals(1, ((Literal) d1Initializer.getArguments().get(1)).getValue());
 
     VariableDeclaration d2 = TestUtils.findByUniqueName(variables, "d2");
@@ -200,11 +198,9 @@ class ConstructorsTest extends BaseTest {
     ConstructExpression d2Initializer = (ConstructExpression) d2.getInitializer();
     assertEquals(twoDefaultArg, d2Initializer.getConstructor());
     assertEquals(2, d2Initializer.getArguments().size());
-    assertFalse(
-        (Boolean) d2Initializer.getArgumentsPropertyEdge().get(0).getProperty(Properties.DEFAULT));
+    assertFalse((Boolean) d2Initializer.getArgumentsEdges().get(0).getProperty(Properties.DEFAULT));
     assertEquals(2, ((Literal) d2Initializer.getArguments().get(0)).getValue());
-    assertTrue(
-        (Boolean) d2Initializer.getArgumentsPropertyEdge().get(1).getProperty(Properties.DEFAULT));
+    assertTrue((Boolean) d2Initializer.getArgumentsEdges().get(1).getProperty(Properties.DEFAULT));
     assertEquals(1, ((Literal) d2Initializer.getArguments().get(1)).getValue());
 
     VariableDeclaration d3 = TestUtils.findByUniqueName(variables, "d3");
@@ -212,11 +208,9 @@ class ConstructorsTest extends BaseTest {
     ConstructExpression d3Initializer = (ConstructExpression) d3.getInitializer();
     assertEquals(twoDefaultArg, d3Initializer.getConstructor());
     assertEquals(2, d3Initializer.getArguments().size());
-    assertFalse(
-        (Boolean) d3Initializer.getArgumentsPropertyEdge().get(0).getProperty(Properties.DEFAULT));
+    assertFalse((Boolean) d3Initializer.getArgumentsEdges().get(0).getProperty(Properties.DEFAULT));
     assertEquals(3, ((Literal) d3Initializer.getArguments().get(0)).getValue());
-    assertFalse(
-        (Boolean) d3Initializer.getArgumentsPropertyEdge().get(1).getProperty(Properties.DEFAULT));
+    assertFalse((Boolean) d3Initializer.getArgumentsEdges().get(1).getProperty(Properties.DEFAULT));
     assertEquals(4, ((Literal) d3Initializer.getArguments().get(1)).getValue());
   }
 
@@ -248,11 +242,9 @@ class ConstructorsTest extends BaseTest {
     ConstructExpression e2Initializer = (ConstructExpression) e2.getInitializer();
     assertEquals(singleDefaultArg, e2Initializer.getConstructor());
     assertEquals(2, e2Initializer.getArguments().size());
-    assertFalse(
-        (Boolean) e2Initializer.getArgumentsPropertyEdge().get(0).getProperty(Properties.DEFAULT));
+    assertFalse((Boolean) e2Initializer.getArgumentsEdges().get(0).getProperty(Properties.DEFAULT));
     assertEquals(5, ((Literal) e2Initializer.getArguments().get(0)).getValue());
-    assertTrue(
-        (Boolean) e2Initializer.getArgumentsPropertyEdge().get(1).getProperty(Properties.DEFAULT));
+    assertTrue((Boolean) e2Initializer.getArgumentsEdges().get(1).getProperty(Properties.DEFAULT));
     assertEquals(10, ((Literal) e2Initializer.getArguments().get(1)).getValue());
 
     VariableDeclaration e3 = TestUtils.findByUniqueName(variables, "e3");
@@ -260,11 +252,9 @@ class ConstructorsTest extends BaseTest {
     ConstructExpression e3Initializer = (ConstructExpression) e3.getInitializer();
     assertEquals(singleDefaultArg, e3Initializer.getConstructor());
     assertEquals(2, e3Initializer.getArguments().size());
-    assertFalse(
-        (Boolean) e3Initializer.getArgumentsPropertyEdge().get(0).getProperty(Properties.DEFAULT));
+    assertFalse((Boolean) e3Initializer.getArgumentsEdges().get(0).getProperty(Properties.DEFAULT));
     assertEquals(6, ((Literal) e3Initializer.getArguments().get(0)).getValue());
-    assertFalse(
-        (Boolean) e3Initializer.getArgumentsPropertyEdge().get(1).getProperty(Properties.DEFAULT));
+    assertFalse((Boolean) e3Initializer.getArgumentsEdges().get(1).getProperty(Properties.DEFAULT));
     assertEquals(7, ((Literal) e3Initializer.getArguments().get(1)).getValue());
   }
 
@@ -317,7 +307,6 @@ class ConstructorsTest extends BaseTest {
     assertEquals("double", h1ConstructorArgument1.getExpression().getType().getName());
 
     assertEquals(10, ((Literal) h1Constructor.getArguments().get(1)).getValue());
-    assertTrue(
-        (Boolean) h1Constructor.getArgumentsPropertyEdge().get(1).getProperty(Properties.DEFAULT));
+    assertTrue((Boolean) h1Constructor.getArgumentsEdges().get(1).getProperty(Properties.DEFAULT));
   }
 }

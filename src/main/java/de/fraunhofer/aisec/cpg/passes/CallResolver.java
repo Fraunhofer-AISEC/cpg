@@ -215,6 +215,8 @@ public class CallResolver extends Pass {
       this.currentTU = (TranslationUnitDeclaration) node;
     } else if (node instanceof ExplicitConstructorInvocation) {
       resolveExplicitConstructorInvocation((ExplicitConstructorInvocation) node);
+    } else if (node instanceof ConstructExpression) {
+      resolveConstructExpression((ConstructExpression) node);
     } else if (node instanceof CallExpression) {
       CallExpression call = (CallExpression) node;
       // We might have call expressions inside our arguments, so in order to correctly resolve
@@ -222,8 +224,6 @@ public class CallResolver extends Pass {
       // resolved
       resolveArguments(call, curClass);
       handleCallExpression(curClass, call);
-    } else if (node instanceof ConstructExpression) {
-      resolveConstructExpression((ConstructExpression) node);
     }
   }
 
