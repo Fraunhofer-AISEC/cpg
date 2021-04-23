@@ -33,29 +33,38 @@ import jep.MainInterpreter
  */
 object JepSingleton {
     init {
-        var virtualEnv = "cpg"
+        if (System.getenv("CPG_JEP_LIBRARY") != null) {
+            val library = File(System.getenv("CPG_JEP_LIBRARY"))
+            if (library.exists()) {
+                MainInterpreter.setJepLibraryPath(library.path)
+            }
+        } else {
 
-        if (System.getenv("CPG_PYTHON_VIRTUALENV") != null) {
-            virtualEnv = System.getenv("CPG_PYTHON_VIRTUALENV")
-        }
+            var virtualEnv = "cpg"
 
-        val wellKnownPaths =
-            listOf(
-                File(
-                    "${System.getProperty("user.home")}/.virtualenvs/${virtualEnv}/lib/python3.9/site-packages/jep/libjep.so"
-                ),
-                File(
-                    "${System.getProperty("user.home")}/.virtualenvs/${virtualEnv}/lib/python3.9/site-packages/jep/libjep.jnilib"
-                ),
-                File("/usr/lib/libjep.so"),
-                File("/Library/Java/Extensions/libjep.jnilib")
-            )
+            if (System.getenv("CPG_PYTHON_VIRTUALENV") != null) {
+                virtualEnv = System.getenv("CPG_PYTHON_VIRTUALENV")
+            }
 
-        wellKnownPaths.forEach {
-            if (it.exists()) {
-                // Jep's configuration must be set before the first instance is created. Later calls
-                // to setJepLibraryPath and co result in failures.
-                MainInterpreter.setJepLibraryPath(it.path)
+            val wellKnownPaths =
+                listOf(
+                    File(
+                        "${System.getProperty("user.home")}/.virtualenvs/${virtualEnv}/lib/python3.9/site-packages/jep/libjep.so"
+                    ),
+                    File(
+                        "${System.getProperty("user.home")}/.virtualenvs/${virtualEnv}/lib/python3.9/site-packages/jep/libjep.jnilib"
+                    ),
+                    File("/usr/lib/libjep.so"),
+                    File("/Library/Java/Extensions/libjep.jnilib")
+                )
+
+            wellKnownPaths.forEach {
+                if (it.exists()) {
+                    // Jep's configuration must be set before the first instance is created. Later
+                    // calls
+                    // to setJepLibraryPath and co result in failures.
+                    MainInterpreter.setJepLibraryPath(it.path)
+                }
             }
         }
     }
