@@ -26,17 +26,20 @@
 package de.fraunhofer.aisec.cpg.graph.edge;
 
 /**
- * INDEX:(int) Indicates the position in a list of edges
+ * <p>INDEX:(int) Indicates the position in a list of edges</p>
  *
  * <p>BRANCH:(boolean) If we have multiple EOG edges the branch property indicates which EOG edge
  * leads to true branch (expression evaluated to true) or the false branch (e.g. with an if/else
- * contidion)
+ * condition)</p>
  *
  * <p>DEFAULT:(boolean) Indicates which arguments edge of a CallExpression leads to a default
- * argument
+ * argument</p>
+ *
+ * <p>NAME:(string) An optional name for the property edge</p>
  */
 public enum Properties {
   INDEX,
   BRANCH,
   DEFAULT,
+  NAME
 }
