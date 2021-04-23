@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.BaseTest
 import de.fraunhofer.aisec.cpg.ExperimentalPython
 import de.fraunhofer.aisec.cpg.TestUtils
 import de.fraunhofer.aisec.cpg.graph.declarations.*
+import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser
@@ -129,7 +130,7 @@ class PythonFrontendTest : BaseTest() {
 
         val bar = p.declarations[1] as? FunctionDeclaration
         assertNotNull(bar)
-        assertEquals(1, bar.parameters.size)
+        assertEquals(2, bar.parameters.size)
 
         var body = foo.body as? CompoundStatement
         assertNotNull(body)
@@ -139,6 +140,10 @@ class PythonFrontendTest : BaseTest() {
 
         assertEquals("bar", callExpression.name)
         assertEquals(bar, callExpression.invokes.iterator().next())
+
+        val edge = callExpression.argumentsEdges[1]
+
+        assertEquals("s2", edge.getProperty(Properties.NAME))
 
         val s = bar.parameters.first()
         assertNotNull(s)
