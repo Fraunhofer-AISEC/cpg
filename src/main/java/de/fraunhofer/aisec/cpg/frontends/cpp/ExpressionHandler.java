@@ -504,7 +504,8 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
 
     if (expressionTypeProxy(ctx) instanceof ProblemType
         || (expressionTypeProxy(ctx) instanceof IQualifierType
-            && ((IQualifierType) expressionTypeProxy(ctx)).getType() instanceof ProblemType)) {
+            && ((IQualifierType) expressionTypeProxy(ctx)).getType() instanceof ProblemType)
+        || expressionTypeProxy(ctx) instanceof TypeOfDependentExpression) {
       log.debug("CDT could not deduce type. Trying manually");
 
       IBinding binding = ctx.getName().resolveBinding();
@@ -674,6 +675,7 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
       log.debug("CDT could not deduce type. Type is set to null");
     } else if (expressionType instanceof TypeOfDependentExpression) {
       log.debug("Type of Expression depends on the type the template is initialized with");
+      binaryOperator.setType(UnknownType.getUnknownType());
     } else {
       binaryOperator.setType(TypeParser.createFrom(expressionTypeProxy(ctx).toString(), true));
     }
