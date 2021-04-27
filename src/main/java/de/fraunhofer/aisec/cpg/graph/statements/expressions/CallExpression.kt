@@ -75,7 +75,7 @@ open class CallExpression : Expression(), TypeListener {
     var invokes: List<FunctionDeclaration>
         get() = PropertyEdge.unwrap(this.invokesEdges)
         set(value) {
-            PropertyEdge.getTarget(invokesEdges)
+            PropertyEdge.unwrap(invokesEdges)
                 .forEach(
                     Consumer { i: FunctionDeclaration ->
                         i.unregisterTypeListener(this)

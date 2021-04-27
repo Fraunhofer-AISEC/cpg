@@ -38,7 +38,7 @@ import org.neo4j.ogm.annotation.typeconversion.Convert
 import org.slf4j.LoggerFactory
 
 @RelationshipEntity
-class PropertyEdge<T : Node?> : Persistable {
+open class PropertyEdge<T : Node> : Persistable {
     /** Required field for object graph mapping. It contains the node id. */
     @field:Id @field:GeneratedValue private val id: Long? = null
 
@@ -120,7 +120,7 @@ class PropertyEdge<T : Node?> : Persistable {
          * @param propertyEdges propertyEdge list
          * @return new PropertyEdge list with updated index property
          */
-        fun <T : Node?> applyIndexProperty(
+        fun <T : Node> applyIndexProperty(
             propertyEdges: List<PropertyEdge<T>>
         ): List<PropertyEdge<T>> {
             for ((counter, propertyEdge) in propertyEdges.withIndex()) {
@@ -150,25 +150,6 @@ class PropertyEdge<T : Node?> : Persistable {
         }
 
         /**
-         * Transforms a List of Nodes into sources of PropertyEdges. Include Index Property as Lists
-         * are indexed
-         *
-         * @param nodes List of nodes that should be transformed into PropertyEdges
-         * @param commonRelationshipNode node where all the Edges should end.
-         * @return List of PropertyEdges with the nodes as sources and index property.
-         */
-        fun <T : Node?> transformIntoIncomingPropertyEdgeList(
-            nodes: List<Node>,
-            commonRelationshipNode: T
-        ): List<PropertyEdge<T>> {
-            val propertyEdges: MutableList<PropertyEdge<T>> = ArrayList()
-            for (n in nodes) {
-                propertyEdges.add(PropertyEdge(n, commonRelationshipNode))
-            }
-            return propertyEdges
-        }
-
-        /**
          * Unwraps this property edge into a list of its target nodes.
          *
          * @param collection the collection of edges
@@ -178,14 +159,12 @@ class PropertyEdge<T : Node?> : Persistable {
          */
         @JvmStatic
         @JvmOverloads
-        fun <T : Node?> unwrap(
+        fun <T : Node> unwrap(
             collection: List<PropertyEdge<T>>,
             outgoing: Boolean = true
         ): List<T> {
             return collection
-                .stream()
-                .map { edge: PropertyEdge<T> -> if (outgoing) edge.end else edge.start as T }
-                .collect(Collectors.toUnmodifiableList())
+                .map { if (outgoing) it.end else it.start as T }
         }
 
         /**
@@ -209,11 +188,10 @@ class PropertyEdge<T : Node?> : Persistable {
                             MutableCollection<Node>
                     for (obj in collection) {
                         if (obj is PropertyEdge<*>) {
-                            val propertyEdge = obj
                             if (outgoing) {
-                                outputCollection.add(propertyEdge.end!!)
+                                outputCollection.add(obj.end)
                             } else {
-                                outputCollection.add(propertyEdge.start)
+                                outputCollection.add(obj.start)
                             }
                         }
                     }
@@ -240,7 +218,7 @@ class PropertyEdge<T : Node?> : Persistable {
         fun unwrapPropertyEdge(obj: Any, outgoing: Boolean): Any {
             if (obj is PropertyEdge<*>) {
                 return if (outgoing) {
-                    obj.end!!
+                    obj.end
                 } else {
                     obj.start
                 }
@@ -275,33 +253,8 @@ class PropertyEdge<T : Node?> : Persistable {
             return false
         }
 
-        /**
-         * @param propertyEdges List of PropertyEdges
-         * @return List of nodes corresponding to the targets of the edges
-         */
         @JvmStatic
-        fun <T : Node?> getTarget(propertyEdges: List<PropertyEdge<T>>): List<T> {
-            val targets: MutableList<T> = ArrayList()
-            for (propertyEdge in propertyEdges) {
-                targets.add(propertyEdge.end)
-            }
-            return targets
-        }
-
-        /**
-         * @param propertyEdges List of PropertyEdges
-         * @return List of nodes corresponding to the targets of the edges
-         */
-        fun <T : Node?> getSource(propertyEdges: List<PropertyEdge<T>>): List<Node> {
-            val targets: MutableList<Node> = ArrayList()
-            for (propertyEdge in propertyEdges) {
-                targets.add(propertyEdge.start)
-            }
-            return targets
-        }
-
-        @JvmStatic
-        fun <T : Node?> removeElementFromList(
+        fun <T : Node> removeElementFromList(
             propertyEdges: List<PropertyEdge<T>>,
             element: T,
             end: Boolean
@@ -319,7 +272,7 @@ class PropertyEdge<T : Node?> : Persistable {
         }
 
         @JvmStatic
-        fun <E : Node?> propertyEqualsList(
+        fun <E : Node> propertyEqualsList(
             propertyEdges: List<PropertyEdge<E>>,
             propertyEdges2: List<PropertyEdge<E>?>
         ): Boolean {
