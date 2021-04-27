@@ -88,13 +88,11 @@ class PropertyEdge<T : Node?> : Persistable {
         properties.putAll(propertyMap!!)
     }
 
-    override fun equals(obj: Any?): Boolean {
-        if (this === obj) return true
-        if (obj !is PropertyEdge<*>) return false
-        val propertyEdge = obj
-        return (properties == propertyEdge.properties &&
-            start.equals(propertyEdge.start) &&
-            end!!.equals(propertyEdge.end))
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is PropertyEdge<*>) return false
+
+        return (properties == other.properties && start == other.start && end == other.end)
     }
 
     fun propertyEquals(obj: Any): Boolean {
@@ -125,10 +123,8 @@ class PropertyEdge<T : Node?> : Persistable {
         fun <T : Node?> applyIndexProperty(
             propertyEdges: List<PropertyEdge<T>>
         ): List<PropertyEdge<T>> {
-            var counter = 0
-            for (propertyEdge in propertyEdges) {
+            for ((counter, propertyEdge) in propertyEdges.withIndex()) {
                 propertyEdge.addProperty(Properties.INDEX, counter)
-                counter++
             }
             return propertyEdges
         }

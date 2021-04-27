@@ -32,13 +32,13 @@ import de.fraunhofer.aisec.cpg.helpers.LocationConverter
 import de.fraunhofer.aisec.cpg.processing.IVisitable
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.util.*
-import java.util.function.Consumer
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.apache.commons.lang3.builder.ToStringStyle
 import org.neo4j.ogm.annotation.GeneratedValue
 import org.neo4j.ogm.annotation.Id
 import org.neo4j.ogm.annotation.Relationship
 import org.neo4j.ogm.annotation.typeconversion.Convert
+import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
 /** The base class for all graph objects that are going to be persisted in the database. */
@@ -66,11 +66,35 @@ open class Node : IVisitable<Node>, Persistable {
 
     /** Incoming control flow edges. */
     @field:Relationship(value = "EOG", direction = "INCOMING")
-    protected var prevEOGEdges: MutableList<PropertyEdge<Node>> = ArrayList()
+    var prevEOGEdges: MutableList<PropertyEdge<Node>> = ArrayList()
+        protected set
 
     /** outgoing control flow edges. */
     @field:Relationship(value = "EOG", direction = "OUTGOING")
     var nextEOGEdges: MutableList<PropertyEdge<Node>> = ArrayList()
+        protected set
+
+    /** Virtual property for accessing [prevEOGEdges] without property edges. */
+    var prevEOG: List<Node>
+        get() = PropertyEdge.unwrap(prevEOGEdges, false)
+        set(value) {
+            val propertyEdgesEOG: MutableList<PropertyEdge<Node>> = ArrayList()
+
+            for ((idx, prev) in value.withIndex()) {
+                val propertyEdge = PropertyEdge(prev, this)
+                propertyEdge.addProperty(Properties.INDEX, idx)
+                propertyEdgesEOG.add(propertyEdge)
+            }
+
+            this.prevEOGEdges = propertyEdgesEOG
+        }
+
+    /** Virtual property for accessing [nextEOGEdges] without property edges. */
+    var nextEOG: List<Node>
+        get() = PropertyEdge.unwrap(nextEOGEdges)
+        set(value) {
+            this.nextEOGEdges = PropertyEdge.transformIntoOutgoingPropertyEdgeList(value, this)
+        }
 
     @field:Relationship(value = "DFG", direction = "INCOMING")
     var prevDFG: MutableSet<Node> = HashSet()
@@ -112,51 +136,13 @@ open class Node : IVisitable<Node>, Persistable {
 
     private fun removePrevEOGEntries(prevEOGs: List<Node>) {
         for (n in prevEOGs) {
-            val remove =
-                PropertyEdge.findPropertyEdgesByPredicate(prevEOGEdges) { e: PropertyEdge<Node> ->
-                    e.start === n
-                }
+            val remove = PropertyEdge.findPropertyEdgesByPredicate(prevEOGEdges) { it.start === n }
             prevEOGEdges.removeAll(remove)
         }
     }
 
-    fun getPrevEOG(): List<Node> {
-        val prevEOGTargets: MutableList<Node> = ArrayList()
-        prevEOGEdges.forEach(
-            Consumer { propertyEdge: PropertyEdge<Node> -> prevEOGTargets.add(propertyEdge.start) }
-        )
-        return prevEOGTargets
-    }
-
-    fun setPrevEOG(prevEOG: List<Node>) {
-        val propertyEdgesEOG: MutableList<PropertyEdge<Node>> = ArrayList()
-        var idx = 0
-        for (prev in prevEOG) {
-            val propertyEdge = PropertyEdge(prev, this)
-            propertyEdge.addProperty(Properties.INDEX, idx)
-            propertyEdgesEOG.add(propertyEdge)
-            idx++
-        }
-        this.prevEOGEdges = propertyEdgesEOG
-    }
-
     fun addPrevEOG(propertyEdge: PropertyEdge<Node>) {
         prevEOGEdges.add(propertyEdge)
-    }
-
-    val nextEOGPropertyEdge: List<PropertyEdge<Node>>
-        get() = nextEOGEdges
-
-    fun getNextEOG(): List<Node> {
-        val nextEOGTargets: MutableList<Node> = ArrayList()
-        nextEOGEdges.forEach(
-            Consumer { propertyEdge: PropertyEdge<Node> -> nextEOGTargets.add(propertyEdge.end) }
-        )
-        return Collections.unmodifiableList(nextEOGTargets)
-    }
-
-    fun setNextEOG(nextEOG: List<Node>) {
-        this.nextEOGEdges = PropertyEdge.transformIntoOutgoingPropertyEdgeList(nextEOG, this)
     }
 
     fun addNextEOG(propertyEdge: PropertyEdge<Node>) {
@@ -213,25 +199,22 @@ open class Node : IVisitable<Node>, Persistable {
             n.prevDFG.remove(this)
         }
         nextDFG.clear()
+
         for (n in prevDFG) {
             n.nextDFG.remove(this)
         }
         prevDFG.clear()
+
         for (n in nextEOGEdges) {
             val remove =
-                PropertyEdge.findPropertyEdgesByPredicate(n.end.prevEOGEdges) {
-                    e: PropertyEdge<Node> ->
-                    e.start == this
-                }
+                PropertyEdge.findPropertyEdgesByPredicate(n.end.prevEOGEdges) { it.start == this }
             n.end.prevEOGEdges.removeAll(remove)
         }
         nextEOGEdges.clear()
+
         for (n in prevEOGEdges) {
             val remove =
-                PropertyEdge.findPropertyEdgesByPredicate(n.start.nextEOGEdges) {
-                    e: PropertyEdge<Node> ->
-                    e.end == this
-                }
+                PropertyEdge.findPropertyEdgesByPredicate(n.start.nextEOGEdges) { it.end == this }
             n.start.nextEOGEdges.removeAll(remove)
         }
         prevEOGEdges.clear()
@@ -246,24 +229,23 @@ open class Node : IVisitable<Node>, Persistable {
             .toString()
     }
 
-    override fun equals(o: Any?): Boolean {
-        if (this === o) {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) {
             return true
         }
-        if (o !is Node) {
+        if (other !is Node) {
             return false
         }
-        val node = o
-        return if (location == null || node.location == null) {
+        return if (location == null || other.location == null) {
             // we do not know the exact region. Need to rely on Object equalness,
             // as a different LOC can have the same name/code/comment/file
             false
         } else
-            name == node.name &&
-                code == node.code &&
-                comment == node.comment &&
-                location == node.location &&
-                file == node.file
+            name == other.name &&
+                code == other.code &&
+                comment == other.comment &&
+                location == other.location &&
+                file == other.file
     }
 
     override fun hashCode(): Int {
@@ -271,9 +253,10 @@ open class Node : IVisitable<Node>, Persistable {
     }
 
     companion object {
-        @kotlin.jvm.JvmField
-        public val TO_STRING_STYLE: ToStringStyle = ToStringStyle.SHORT_PREFIX_STYLE
-        protected val log = LoggerFactory.getLogger(Node::class.java)
+        @JvmField val TO_STRING_STYLE: ToStringStyle = ToStringStyle.SHORT_PREFIX_STYLE
+
+        protected val log: Logger = LoggerFactory.getLogger(Node::class.java)
+
         const val EMPTY_NAME = ""
     }
 }
