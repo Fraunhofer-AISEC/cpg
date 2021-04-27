@@ -1023,6 +1023,14 @@ public class CallResolver extends Pass {
     return null;
   }
 
+  /**
+   * @param constructExpression we want to find an invocation target for
+   * @param signature of the ConstructExpression (without defaults)
+   * @param recordDeclaration associated with the Object the ConstructExpression constructs
+   * @return a ConstructDeclaration that matches with the signature of the ConstructExpression with
+   *     added default arguments. The default arguments are added to the arguments edge of the
+   *     ConstructExpression
+   */
   private ConstructorDeclaration resolveConstructorWithDefaults(
       ConstructExpression constructExpression,
       List<Type> signature,
@@ -1045,6 +1053,14 @@ public class CallResolver extends Pass {
     return null;
   }
 
+  /**
+   * @param constructExpression we want to find an invocation target for
+   * @param recordDeclaration associated with the Object the ConstructExpression constructs
+   * @return a ConstructDeclaration that matches the signature of the ConstructExpression by
+   *     applying one or more implicit casts to the primitive type arguments of the
+   *     ConstructExpressions. The arguments are proxied through a CastExpression to the type
+   *     required by the ConstructDeclaration.
+   */
   private ConstructorDeclaration resolveConstructorWithImplicitCast(
       ConstructExpression constructExpression, RecordDeclaration recordDeclaration) {
     for (ConstructorDeclaration constructorDeclaration : recordDeclaration.getConstructors()) {
