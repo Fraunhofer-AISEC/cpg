@@ -362,27 +362,6 @@ public class CallResolver extends Pass {
   }
 
   /**
-   * @param constructExpression ConstructExpression
-   * @param constructorDeclaration ConstructorDeclaration the ConstructExpression was resolved to
-   * @return list containing the signature containing all argument types including the default
-   *     arguments
-   */
-  private List<Type> getCallSignatureWithDefaults(
-      ConstructExpression constructExpression, ConstructorDeclaration constructorDeclaration) {
-    List<Type> callSignature = new ArrayList<>(constructExpression.getSignature());
-    if (constructExpression.getSignature().size() < constructorDeclaration.getParameters().size()) {
-      callSignature.addAll(
-          constructorDeclaration
-              .getDefaultParameterSignature()
-              .subList(
-                  constructExpression.getArguments().size(),
-                  constructorDeclaration.getDefaultParameterSignature().size()));
-    }
-
-    return callSignature;
-  }
-
-  /**
    * Adds the implicit default arguments to the CallExpression if they were not provided
    *
    * @param functionDeclaration the CallExpression has been resolved to containing the default
