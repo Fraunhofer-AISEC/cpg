@@ -98,7 +98,7 @@ open class Node : IVisitable<Node>, Persistable {
     var isImplicit = false
 
     /** Required field for object graph mapping. It contains the node id. */
-    @Id @GeneratedValue val id: Long? = null
+    @field:Id @field:GeneratedValue val id: Long? = null
 
     /** Index of the argument if this node is used in a function call or parameter list. */
     var argumentIndex = 0
@@ -107,10 +107,10 @@ open class Node : IVisitable<Node>, Persistable {
     @field:SubGraph("AST") var annotations: MutableList<Annotation> = ArrayList()
 
     fun removePrevEOGEntry(eog: Node) {
-        removePrevEOGEntries(java.util.List.of(eog))
+        removePrevEOGEntries(listOf(eog))
     }
 
-    fun removePrevEOGEntries(prevEOGs: List<Node>) {
+    private fun removePrevEOGEntries(prevEOGs: List<Node>) {
         for (n in prevEOGs) {
             val remove =
                 PropertyEdge.findPropertyEdgesByPredicate(prevEOGEdges) { e: PropertyEdge<Node> ->
@@ -128,7 +128,7 @@ open class Node : IVisitable<Node>, Persistable {
         return prevEOGTargets
     }
 
-    fun setPrevEOG(prevEOG: List<Node?>) {
+    fun setPrevEOG(prevEOG: List<Node>) {
         val propertyEdgesEOG: MutableList<PropertyEdge<Node>> = ArrayList()
         var idx = 0
         for (prev in prevEOG) {

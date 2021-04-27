@@ -67,7 +67,8 @@ open class CallExpression : Expression(), TypeListener {
     var arguments: List<Expression>
         get() = PropertyEdge.unwrap(this.argumentsEdges)
         set(value) {
-            this.argumentsEdges = PropertyEdge.transformIntoOutgoingPropertyEdgeList(value, this)
+            this.argumentsEdges =
+                PropertyEdge.transformIntoOutgoingPropertyEdgeList(value, this).toMutableList()
         }
 
     /** A virtual property to access [invokesEdges] without property edges. */
