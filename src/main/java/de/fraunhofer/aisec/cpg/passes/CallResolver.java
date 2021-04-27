@@ -991,6 +991,10 @@ public class CallResolver extends Pass {
               .flatMap(Collection::stream)
               .collect(Collectors.toList());
 
+      // C++ does not allow overloading at different hierarchy levels. If we find a
+      // FunctionDeclaration with the same name as the function in the CallExpression we have to
+      // stop the search in the parent even if the FunctionDelcaration does not match with the
+      // signature of the CallExpression
       if (lang instanceof CXXLanguageFrontend) {
         workingPossibleTypes.removeIf(
             recordDeclaration -> !shouldContinueSearchInParent(recordDeclaration, name));
