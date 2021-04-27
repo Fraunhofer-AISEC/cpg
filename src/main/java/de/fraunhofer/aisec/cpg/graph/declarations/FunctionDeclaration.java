@@ -90,7 +90,7 @@ public class FunctionDeclaration extends ValueDeclaration implements Declaration
   }
 
   public String getSignature() {
-    return this.name
+    return this.getName()
         + BRACKET_LEFT
         + this.parameters.stream()
             .map(PropertyEdge::getEnd)
@@ -131,7 +131,7 @@ public class FunctionDeclaration extends ValueDeclaration implements Declaration
   }
 
   public boolean isOverrideCandidate(FunctionDeclaration other) {
-    return other.getName().equals(name)
+    return other.getName().equals(getName())
         && other.getType().equals(type)
         && other.getSignature().equals(getSignature());
   }

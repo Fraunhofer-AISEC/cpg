@@ -145,7 +145,7 @@ open class CallExpression : Expression(), TypeListener {
 
     override fun typeChanged(src: HasType, root: HasType, oldType: Type) {
         if (src === base) {
-            fqn = src.type.root.typeName + "." + getName()
+            fqn = src.type.root.typeName + "." + name
         } else {
             val previous = type
             val types = invokes.mapNotNull { it.type }
