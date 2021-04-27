@@ -462,9 +462,9 @@ public class NodeBuilder {
   }
 
   public static FunctionTemplateDeclaration newFunctionTemplateDeclaration(
-      String code, PhysicalLocation location) {
+      String name, String code, PhysicalLocation location) {
     FunctionTemplateDeclaration node = new FunctionTemplateDeclaration();
-    node.setName(code);
+    node.setName(name);
     node.setCode(code);
     node.setLocation(location);
 

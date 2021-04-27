@@ -257,15 +257,14 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
 
       FunctionTemplateDeclaration templateDeclaration =
           NodeBuilder.newFunctionTemplateDeclaration(
-              this.lang.getCodeFromRawNode(ctx), this.lang.getLocationFromRawNode(ctx));
+              ctx.getRawSignature().split("\\{")[0].replace('\n', ' ').trim(),
+              this.lang.getCodeFromRawNode(ctx),
+              this.lang.getLocationFromRawNode(ctx));
       lang.getScopeManager().addDeclaration(templateDeclaration);
       lang.getScopeManager().enterScope(templateDeclaration);
 
       // Handle FunctionTemplate
-      FunctionDeclaration functionDeclaration =
-          (FunctionDeclaration) lang.getDeclarationHandler().handle(ctx.getDeclaration());
-
-      templateDeclaration.addRealization(functionDeclaration);
+      lang.getDeclarationHandler().handle(ctx.getDeclaration());
 
       for (ICPPASTTemplateParameter templateParameter : ctx.getTemplateParameters()) {
         if (templateParameter instanceof CPPASTSimpleTypeTemplateParameter) {
