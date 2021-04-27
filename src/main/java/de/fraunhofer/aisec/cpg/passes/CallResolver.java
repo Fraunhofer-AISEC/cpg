@@ -729,7 +729,7 @@ public class CallResolver extends Pass {
         && recordDeclaration.getCode() != null
         && !recordDeclaration.getCode().isEmpty()) {
       ConstructorDeclaration constructor =
-          getConstructorDeclarationCXX(constructExpression, recordDeclaration);
+          getConstructorDeclaration(constructExpression, recordDeclaration);
       constructExpression.setConstructor(constructor);
     }
   }
@@ -1095,8 +1095,14 @@ public class CallResolver extends Pass {
     return null;
   }
 
+  /**
+   *
+   * @param constructExpression we want to find an invocation target for
+   * @param recordDeclaration associated with the Object the ConstructExpression constructs
+   * @return a ConstructDeclaration that is an invocation of the given ConstructExpression. If there is no valid ConstructDeclaration we will create an implicit ConstructDeclaration that matches the ConstructExpression.
+   */
   @NonNull
-  private ConstructorDeclaration getConstructorDeclarationCXX(
+  private ConstructorDeclaration getConstructorDeclaration (
       ConstructExpression constructExpression, RecordDeclaration recordDeclaration) {
     List<Type> signature = constructExpression.getSignature();
     ConstructorDeclaration constructorCandidate =
