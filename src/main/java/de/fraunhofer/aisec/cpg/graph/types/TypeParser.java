@@ -26,6 +26,7 @@
 
 package de.fraunhofer.aisec.cpg.graph.types;
 
+import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
 import de.fraunhofer.aisec.cpg.graph.TypeManager;
 import java.util.ArrayList;
 import java.util.List;
@@ -845,6 +846,17 @@ public class TypeParser {
     }
 
     return finalType;
+  }
+
+  public static Type createFrom(@NonNull String type, boolean resolveAlias, LanguageFrontend lang) {
+    Type templateType =
+        TypeManager.getInstance()
+            .searchTemplateScopeForDefinedParameterizedTypes(
+                lang.getScopeManager().getCurrentScope(), type);
+    if (templateType != null) {
+      return templateType;
+    }
+    return createFrom(type, resolveAlias);
   }
 
   /**

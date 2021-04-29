@@ -341,7 +341,7 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
     }
 
     if (parent != null) {
-      result.setType(TypeParser.createFrom(parent.getRawSignature(), true));
+      result.setType(TypeParser.createFrom(parent.getRawSignature(), true, lang));
       result.refreshType();
     } else {
       log.warn("Could not find suitable parent ast node for function pointer node: {}", this);
@@ -374,7 +374,7 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
             ctx.getRawSignature());
     recordDeclaration.setSuperClasses(
         Arrays.stream(ctx.getBaseSpecifiers())
-            .map(b -> TypeParser.createFrom(b.getNameSpecifier().toString(), true))
+            .map(b -> TypeParser.createFrom(b.getNameSpecifier().toString(), true, lang))
             .collect(Collectors.toList()));
 
     lang.getScopeManager().addDeclaration(recordDeclaration);
@@ -393,7 +393,8 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
       constructorDeclaration.setImplicit(true);
 
       // and set the type, constructors always have implicitly the return type of their class
-      constructorDeclaration.setType(TypeParser.createFrom(recordDeclaration.getName(), true));
+      constructorDeclaration.setType(
+          TypeParser.createFrom(recordDeclaration.getName(), true, lang));
 
       recordDeclaration.addConstructor(constructorDeclaration);
 

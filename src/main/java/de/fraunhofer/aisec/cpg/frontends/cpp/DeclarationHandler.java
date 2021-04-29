@@ -125,7 +125,7 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
     String typeString = getTypeStringFromDeclarator(ctx.getDeclarator(), ctx.getDeclSpecifier());
 
     functionDeclaration.setIsDefinition(true);
-    functionDeclaration.setType(TypeParser.createFrom(typeString, true));
+    functionDeclaration.setType(TypeParser.createFrom(typeString, true, lang));
 
     // associated record declaration if this is a method or constructor
     RecordDeclaration recordDeclaration =
@@ -175,7 +175,7 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
 
     lang.getScopeManager().enterScope(functionDeclaration);
 
-    functionDeclaration.setType(TypeParser.createFrom(typeString, true));
+    functionDeclaration.setType(TypeParser.createFrom(typeString, true, lang));
 
     if (ctx.getBody() != null) {
       Statement bodyStatement = this.lang.getStatementHandler().handle(ctx.getBody());
@@ -263,9 +263,6 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
       lang.getScopeManager().addDeclaration(templateDeclaration);
       lang.getScopeManager().enterScope(templateDeclaration);
 
-      // Handle FunctionTemplate
-      lang.getDeclarationHandler().handle(ctx.getDeclaration());
-
       for (ICPPASTTemplateParameter templateParameter : ctx.getTemplateParameters()) {
         if (templateParameter instanceof CPPASTSimpleTypeTemplateParameter) {
           // Handle Types as Parameters
@@ -289,7 +286,8 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
                         .getDefaultType()
                         .getDeclSpecifier()
                         .getRawSignature(),
-                    false);
+                    false,
+                    lang);
             typeTemplateParamDeclaration.setDefault(defaultType);
           }
 
@@ -318,6 +316,9 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
           lang.getScopeManager().addDeclaration(nonTypeTemplateParamDeclaration);
         }
       }
+
+      // Handle FunctionTemplate
+      lang.getDeclarationHandler().handle(ctx.getDeclaration());
       lang.getScopeManager().leaveScope(templateDeclaration);
       return templateDeclaration;
     } else {
@@ -376,7 +377,7 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
 
       String typeString = getTypeStringFromDeclarator(declarator, ctx.getDeclSpecifier());
 
-      Type result = TypeParser.createFrom(typeString, true);
+      Type result = TypeParser.createFrom(typeString, true, lang);
       declaration.setType(result);
 
       // cache binding

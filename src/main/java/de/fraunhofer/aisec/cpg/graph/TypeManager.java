@@ -34,6 +34,8 @@ import de.fraunhofer.aisec.cpg.graph.declarations.TypedefDeclaration;
 import de.fraunhofer.aisec.cpg.graph.types.*;
 import de.fraunhofer.aisec.cpg.helpers.Util;
 import de.fraunhofer.aisec.cpg.passes.scopes.RecordScope;
+import de.fraunhofer.aisec.cpg.passes.scopes.Scope;
+import de.fraunhofer.aisec.cpg.passes.scopes.TemplateScope;
 import java.util.*;
 import java.util.function.Function;
 import java.util.regex.Matcher;
@@ -115,6 +117,21 @@ public class TypeManager {
       }
     }
     return null;
+  }
+
+  public ParameterizedType searchTemplateScopeForDefinedParameterizedTypes(
+      Scope scope, String name) {
+    if (scope instanceof TemplateScope) {
+      TemplateDeclaration template = (TemplateDeclaration) scope.getAstNode();
+      ParameterizedType parameterizedType = getTypeParameter(template, name);
+      if (parameterizedType != null) {
+        return parameterizedType;
+      }
+    }
+
+    return scope.getParent() != null
+        ? searchTemplateScopeForDefinedParameterizedTypes(scope.getParent(), name)
+        : null;
   }
 
   public void addTypeParameter(

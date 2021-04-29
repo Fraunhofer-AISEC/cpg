@@ -95,10 +95,10 @@ public class ParameterDeclarationHandler
 
     if (!typeAdjustment.isEmpty()) {
       paramVariableDeclaration.setType(
-          TypeParser.createFrom(ctx.getDeclSpecifier().toString() + typeAdjustment, true));
+          TypeParser.createFrom(ctx.getDeclSpecifier().toString() + typeAdjustment, true, lang));
     } else {
       paramVariableDeclaration.setType(
-          TypeParser.createFrom(ctx.getDeclSpecifier().toString(), true));
+          TypeParser.createFrom(ctx.getDeclSpecifier().toString(), true, lang));
     }
 
     // Add default values

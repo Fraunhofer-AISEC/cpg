@@ -160,7 +160,7 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
 
     // TODO: proper type resolve
     Type referencedType =
-        TypeParser.createFrom(ctx.getTypeId().getDeclSpecifier().toString(), true);
+        TypeParser.createFrom(ctx.getTypeId().getDeclSpecifier().toString(), true, lang);
 
     return NodeBuilder.newTypeIdExpression(
         operatorCode, type, referencedType, ctx.getRawSignature());
@@ -179,7 +179,7 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
     String code = ctx.getRawSignature();
 
     // TODO: obsolete?
-    Type t = TypeParser.createFrom(expressionTypeProxy(ctx).toString(), true);
+    Type t = TypeParser.createFrom(expressionTypeProxy(ctx).toString(), true, lang);
     t.reference(PointerType.PointerOrigin.ARRAY);
 
     NewExpression newExpression = NodeBuilder.newNewExpression(code, t);
@@ -192,7 +192,7 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
 
       if (binding != null && !(binding instanceof CPPScope.CPPScopeProblem)) {
         // update the type
-        newExpression.setType(TypeParser.createFrom(binding.getName(), true));
+        newExpression.setType(TypeParser.createFrom(binding.getName(), true, lang));
       } else {
         log.debug(
             "Could not resolve binding of type {} for {}, it is probably defined somewhere externally",
@@ -218,7 +218,7 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
             ? handle(ctx.getPositiveResultExpression())
             : condition,
         handle(ctx.getNegativeResultExpression()),
-        TypeParser.createFrom(expressionTypeProxy(ctx).toString(), true));
+        TypeParser.createFrom(expressionTypeProxy(ctx).toString(), true, lang));
   }
 
   private DeleteExpression handleDeleteExpression(CPPASTDeleteExpression ctx) {
@@ -241,17 +241,18 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
       CPPPointerType pointerType = (CPPPointerType) iType;
       if (pointerType.getType() instanceof IProblemType) {
         // fall back to fTypeId
-        castType = TypeParser.createFrom(ctx.getTypeId().getDeclSpecifier().toString() + "*", true);
+        castType =
+            TypeParser.createFrom(ctx.getTypeId().getDeclSpecifier().toString() + "*", true, lang);
       } else {
-        castType = TypeParser.createFrom(pointerType.getType().toString() + "*", true);
+        castType = TypeParser.createFrom(pointerType.getType().toString() + "*", true, lang);
       }
     } else if (iType instanceof IProblemType) {
       // fall back to fTypeId
-      castType = TypeParser.createFrom(ctx.getTypeId().getDeclSpecifier().toString(), true);
+      castType = TypeParser.createFrom(ctx.getTypeId().getDeclSpecifier().toString(), true, lang);
       // TODO: try to actually resolve the type (similar to NewExpression) using
       // ((CPPASTNamedTypeSpecifier) declSpecifier).getName().resolveBinding()
     } else {
-      castType = TypeParser.createFrom(expressionTypeProxy(ctx).toString(), true);
+      castType = TypeParser.createFrom(expressionTypeProxy(ctx).toString(), true, lang);
     }
 
     castExpression.setCastType(castType);
@@ -275,9 +276,9 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
     Type castType;
     if (expressionTypeProxy(ctx) instanceof CPPPointerType) {
       CPPPointerType pointerType = (CPPPointerType) expressionTypeProxy(ctx);
-      castType = TypeParser.createFrom(pointerType.getType().toString() + "*", true);
+      castType = TypeParser.createFrom(pointerType.getType().toString() + "*", true, lang);
     } else {
-      castType = TypeParser.createFrom(expressionTypeProxy(ctx).toString(), true);
+      castType = TypeParser.createFrom(expressionTypeProxy(ctx).toString(), true, lang);
     }
 
     castExpression.setCastType(castType);
@@ -452,7 +453,7 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
           ((TemplateCallExpression) callExpression)
               .addTemplateParameter(
                   TypeParser.createFrom(
-                      ((CPPASTTypeId) argument).getDeclSpecifier().toString(), false));
+                      ((CPPASTTypeId) argument).getDeclSpecifier().toString(), false, lang));
         } else if (argument instanceof IASTInitializerClause) {
           ((TemplateCallExpression) callExpression)
               .addTemplateParameter(
@@ -523,7 +524,7 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
       }
     } else {
       declaredReferenceExpression.setType(
-          TypeParser.createFrom(expressionTypeProxy(ctx).toString(), true));
+          TypeParser.createFrom(expressionTypeProxy(ctx).toString(), true, lang));
     }
 
     /* this expression could actually be a field / member expression, but somehow CDT only recognizes them as a member expression if it has an explicit 'this'
@@ -677,7 +678,8 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
       log.debug("Type of Expression depends on the type the template is initialized with");
       binaryOperator.setType(UnknownType.getUnknownType());
     } else {
-      binaryOperator.setType(TypeParser.createFrom(expressionTypeProxy(ctx).toString(), true));
+      binaryOperator.setType(
+          TypeParser.createFrom(expressionTypeProxy(ctx).toString(), true, lang));
     }
 
     return binaryOperator;
@@ -687,7 +689,7 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
     IType type = expressionTypeProxy(ctx);
     IValue value = ctx.getEvaluation().getValue();
 
-    Type generatedType = TypeParser.createFrom(type.toString(), true);
+    Type generatedType = TypeParser.createFrom(type.toString(), true, lang);
     if (value.numberValue() == null // e.g. for 0x1p-52
         && !(value instanceof CStringValue)) {
       return NodeBuilder.newLiteral(value.toString(), generatedType, ctx.getRawSignature());
