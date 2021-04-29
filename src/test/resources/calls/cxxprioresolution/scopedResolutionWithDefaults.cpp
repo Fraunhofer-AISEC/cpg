@@ -5,7 +5,7 @@ void h() {
 }
 void m() {
     void f(int, int);
-    f(4); // Error
+    f(8); // Error
     void f(int, int = 5);
     f(4); // OK calls f(4,5);
 }

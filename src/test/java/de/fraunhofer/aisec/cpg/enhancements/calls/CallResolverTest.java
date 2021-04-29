@@ -29,6 +29,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import de.fraunhofer.aisec.cpg.BaseTest;
 import de.fraunhofer.aisec.cpg.TestUtils;
+import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.declarations.*;
 import de.fraunhofer.aisec.cpg.graph.edge.Properties;
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression;
@@ -324,7 +325,22 @@ public class CallResolverTest extends BaseTest {
     assertTrue(display1.getInvokes().contains(displayDeclaration));
 
     assertEquals("1", display1.getArguments().get(0).getCode());
-    assertEquals(displayDeclaration.getDefaultParameters().get(1), display1.getArguments().get(1));
+    assertTrue(
+        displayDeclaration.getNextEOG().contains(displayDeclaration.getDefaultParameters().get(1)));
+    assertTrue(
+        displayDeclaration.getNextEOG().contains(displayDeclaration.getDefaultParameters().get(0)));
+    assertTrue(
+        displayDeclaration
+            .getDefaultParameters()
+            .get(0)
+            .getNextEOG()
+            .contains(displayDeclaration.getDefaultParameters().get(1)));
+    for (Node node : displayDeclaration.getNextEOG()) {
+      assertTrue(
+          node.equals(displayDeclaration.getDefaultParameters().get(0))
+              || node.equals(displayDeclaration.getDefaultParameters().get(1))
+              || displayDeclaration.getDefaultParameters().get(1).getNextEOG().contains(node));
+    }
 
     CallExpression display =
         TestUtils.findByUniquePredicate(
@@ -337,8 +353,7 @@ public class CallResolverTest extends BaseTest {
     assertEquals(1, display.getInvokes().size());
     assertTrue(display.getInvokes().contains(displayDeclaration));
 
-    assertEquals(displayDeclaration.getDefaultParameters().get(0), display.getArguments().get(0));
-    assertEquals(displayDeclaration.getDefaultParameters().get(1), display.getArguments().get(1));
+    assertEquals(0, display.getArguments().size());
 
     CallExpression displayCount$ =
         TestUtils.findByUniquePredicate(
@@ -365,11 +380,11 @@ public class CallResolverTest extends BaseTest {
     assertEquals(1, display10.getInvokes().size());
     assertTrue(display.getInvokes().contains(displayDeclaration));
 
+    assertEquals(1, display10.getArguments().size());
     assertTrue(display10.getArguments().get(0) instanceof CastExpression);
     assertEquals(
         "10.0", ((CastExpression) display10.getArguments().get(0)).getExpression().getCode());
     assertEquals("int", ((CastExpression) display10.getArguments().get(0)).getCastType().getName());
-    assertEquals(displayDeclaration.getDefaultParameters().get(1), display10.getArguments().get(1));
   }
 
   private void testDefaultArgumentsInDefinition() throws Exception {
@@ -386,6 +401,13 @@ public class CallResolverTest extends BaseTest {
     FunctionDeclaration displayFunction =
         TestUtils.findByUniquePredicate(
             functionDeclarations, f -> f.getName().equals("display") && !f.isImplicit());
+
+    Literal<?> literalStar =
+        TestUtils.findByUniquePredicate(
+            TestUtils.subnodesOfType(result, Literal.class), l -> l.getValue().equals('*'));
+    Literal<?> literal3 =
+        TestUtils.findByUniquePredicate(
+            TestUtils.subnodesOfType(result, Literal.class), l -> l.getValue().equals(3));
 
     // Check defaults edge of ParamVariableDeclaration
     assertTrue(displayFunction.getDefaultParameters().get(0) instanceof Literal);
@@ -404,10 +426,16 @@ public class CallResolverTest extends BaseTest {
     assertEquals(1, display.getInvokes().size());
     assertEquals(displayFunction, display.getInvokes().get(0));
 
-    assertTrue(display.getArguments().get(0) instanceof Literal);
-    assertTrue(display.getArguments().get(1) instanceof Literal);
-    assertEquals('*', ((Literal) display.getArguments().get(0)).getValue());
-    assertEquals(3, ((Literal) display.getArguments().get(1)).getValue());
+    assertEquals(0, display.getArguments().size());
+    assertTrue(displayFunction.getNextEOG().contains(literalStar));
+    assertTrue(displayFunction.getNextEOG().contains(literal3));
+    assertTrue(literalStar.getNextEOG().contains(literal3));
+    for (Node node : displayFunction.getNextEOG()) {
+      assertTrue(
+          node.equals(literal3)
+              || node.equals(literalStar)
+              || literal3.getNextEOG().contains(node));
+    }
 
     // Check call display('#');
     CallExpression displayHash =
@@ -421,10 +449,9 @@ public class CallResolverTest extends BaseTest {
     assertEquals(1, displayHash.getInvokes().size());
     assertEquals(displayFunction, displayHash.getInvokes().get(0));
 
+    assertEquals(1, displayHash.getArguments().size());
     assertTrue(displayHash.getArguments().get(0) instanceof Literal);
-    assertTrue(displayHash.getArguments().get(1) instanceof Literal);
     assertEquals('#', ((Literal) displayHash.getArguments().get(0)).getValue());
-    assertEquals(3, ((Literal) displayHash.getArguments().get(1)).getValue());
 
     // Check call display('#');
     CallExpression display$Count =
@@ -484,11 +511,24 @@ public class CallResolverTest extends BaseTest {
     assertEquals(1, add12.getInvokes().size());
     assertEquals(addFunction, add12.getInvokes().get(0));
 
-    assertEquals(4, add12.getArguments().size());
+    assertEquals(2, add12.getArguments().size());
     assertEquals("1", add12.getArguments().get(0).getCode());
     assertEquals("2", add12.getArguments().get(1).getCode());
-    assertEquals(addFunction.getDefaultParameters().get(2), add12.getArguments().get(2));
-    assertEquals(addFunction.getDefaultParameters().get(3), add12.getArguments().get(3));
+
+    assertTrue(addFunction.getNextEOG().contains(addFunction.getDefaultParameters().get(2)));
+    assertTrue(addFunction.getNextEOG().contains(addFunction.getDefaultParameters().get(3)));
+    assertTrue(
+        addFunction
+            .getDefaultParameters()
+            .get(2)
+            .getNextEOG()
+            .contains(addFunction.getDefaultParameters().get(3)));
+    for (Node node : addFunction.getNextEOG()) {
+      assertTrue(
+          node.equals(addFunction.getDefaultParameters().get(2))
+              || node.equals(addFunction.getDefaultParameters().get(3))
+              || addFunction.getDefaultParameters().get(3).getNextEOG().contains(node));
+    }
 
     // Check call add(1, 2, 5, 6);
     CallExpression add1256 =
@@ -534,12 +574,15 @@ public class CallResolverTest extends BaseTest {
     DeclaredReferenceExpression x =
         TestUtils.findByUniquePredicate(declaredReferenceExpressions, f -> f.getName().equals("x"));
 
+    Literal<?> literal5 =
+        TestUtils.findByUniquePredicate(
+            TestUtils.subnodesOfType(result, Literal.class), l -> l.getValue().equals(5));
+
     assertEquals(1, callCalc.getInvokes().size());
     assertEquals(calc, callCalc.getInvokes().get(0));
     assertEquals(x, callCalc.getArguments().get(0));
-    assertEquals(5, ((Literal) callCalc.getArguments().get(1)).getValue());
+    assertTrue(calc.getNextEOG().contains(literal5));
     assertFalse((Boolean) callCalc.getArgumentsEdges().get(0).getProperty(Properties.DEFAULT));
-    assertTrue((Boolean) callCalc.getArgumentsEdges().get(1).getProperty(Properties.DEFAULT));
 
     // Check doSmth call
     FunctionDeclaration doSmth =
@@ -549,12 +592,19 @@ public class CallResolverTest extends BaseTest {
     CallExpression callDoSmth =
         TestUtils.findByUniquePredicate(calls, f -> f.getName().equals("doSmth"));
 
+    Literal<?> literal1 =
+        TestUtils.findByUniquePredicate(
+            TestUtils.subnodesOfType(result, Literal.class), l -> l.getValue().equals(1));
+
+    Literal<?> literal2 =
+        TestUtils.findByUniquePredicate(
+            TestUtils.subnodesOfType(result, Literal.class), l -> l.getValue().equals(2));
+
     assertEquals(1, callDoSmth.getInvokes().size());
     assertEquals(doSmth, callDoSmth.getInvokes().get(0));
-    assertEquals(1, ((Literal) callDoSmth.getArguments().get(0)).getValue());
-    assertEquals(2, ((Literal) callDoSmth.getArguments().get(1)).getValue());
-    assertTrue((Boolean) callDoSmth.getArgumentsEdges().get(0).getProperty(Properties.DEFAULT));
-    assertTrue((Boolean) callDoSmth.getArgumentsEdges().get(1).getProperty(Properties.DEFAULT));
+    assertTrue(doSmth.getNextEOG().contains(literal1));
+    assertTrue(doSmth.getNextEOG().contains(literal2));
+    assertTrue(literal1.getNextEOG().contains(literal2));
   }
 
   @Test
@@ -601,22 +651,30 @@ public class CallResolverTest extends BaseTest {
     assertEquals("g", calls.get(0).getInvokes().get(0).getName());
   }
 
-  void testScopedFunctionResolutionFunctionGlobal(List<CallExpression> calls) {
+  void testScopedFunctionResolutionFunctionGlobal(
+      List<TranslationUnitDeclaration> result, List<CallExpression> calls) {
     CallExpression fh =
         TestUtils.findByUniquePredicate(
             calls, c -> c.getLocation().getRegion().getStartLine() == 4);
 
+    Literal<?> literal7 =
+        TestUtils.findByUniquePredicate(
+            TestUtils.subnodesOfType(result, Literal.class), l -> l.getValue().equals(7));
+
     assertEquals(1, fh.getInvokes().size());
     assertFalse(fh.getInvokes().get(0).isImplicit());
     assertEquals(2, fh.getInvokes().get(0).getLocation().getRegion().getStartLine());
-    assertEquals(2, fh.getArguments().size());
+    assertEquals(1, fh.getArguments().size());
     assertEquals(3, ((Literal) fh.getArguments().get(0)).getValue());
-    assertEquals(7, ((Literal) fh.getArguments().get(1)).getValue());
     assertFalse((Boolean) fh.getArgumentsEdges().get(0).getProperty(Properties.DEFAULT));
-    assertTrue((Boolean) fh.getArgumentsEdges().get(1).getProperty(Properties.DEFAULT));
+    assertTrue(fh.getInvokes().get(0).getNextEOG().contains(literal7));
+    for (Node node : fh.getInvokes().get(0).getNextEOG()) {
+      assertTrue(node.equals(literal7) || literal7.getNextEOG().contains(node));
+    }
   }
 
-  void testScopedFunctionResolutionRedeclaration(List<CallExpression> calls) {
+  void testScopedFunctionResolutionRedeclaration(
+      List<TranslationUnitDeclaration> result, List<CallExpression> calls) {
     CallExpression fm1 =
         TestUtils.findByUniquePredicate(
             calls, c -> c.getLocation().getRegion().getStartLine() == 8);
@@ -624,36 +682,49 @@ public class CallResolverTest extends BaseTest {
     assertEquals(1, fm1.getInvokes().size());
     assertTrue(fm1.getInvokes().get(0).isImplicit());
     assertEquals(1, fm1.getArguments().size());
-    assertEquals(4, ((Literal) fm1.getArguments().get(0)).getValue());
+    assertEquals(8, ((Literal) fm1.getArguments().get(0)).getValue());
     assertFalse((Boolean) fm1.getArgumentsEdges().get(0).getProperty(Properties.DEFAULT));
 
     CallExpression fm2 =
         TestUtils.findByUniquePredicate(
             calls, c -> c.getLocation().getRegion().getStartLine() == 10);
 
+    Literal<?> literal5 =
+        TestUtils.findByUniquePredicate(
+            TestUtils.subnodesOfType(result, Literal.class), l -> l.getValue().equals(5));
+
     assertEquals(1, fm2.getInvokes().size());
     assertFalse(fm2.getInvokes().get(0).isImplicit());
     assertEquals(9, fm2.getInvokes().get(0).getLocation().getRegion().getStartLine());
-    assertEquals(2, fm2.getArguments().size());
+    assertEquals(1, fm2.getArguments().size());
     assertEquals(4, ((Literal) fm2.getArguments().get(0)).getValue());
-    assertEquals(5, ((Literal) fm2.getArguments().get(1)).getValue());
     assertFalse((Boolean) fm2.getArgumentsEdges().get(0).getProperty(Properties.DEFAULT));
-    assertTrue((Boolean) fm2.getArgumentsEdges().get(1).getProperty(Properties.DEFAULT));
+    assertTrue(fm2.getInvokes().get(0).getNextEOG().contains(literal5));
+    for (Node node : fm2.getInvokes().get(0).getNextEOG()) {
+      assertTrue(node.equals(literal5) || literal5.getNextEOG().contains(node));
+    }
   }
 
-  void testScopedFunctionResolutionAfterRedeclaration(List<CallExpression> calls) {
+  void testScopedFunctionResolutionAfterRedeclaration(
+      List<TranslationUnitDeclaration> result, List<CallExpression> calls) {
     CallExpression fn =
         TestUtils.findByUniquePredicate(
             calls, c -> c.getLocation().getRegion().getStartLine() == 13);
 
+    Literal<?> literal7 =
+        TestUtils.findByUniquePredicate(
+            TestUtils.subnodesOfType(result, Literal.class), l -> l.getValue().equals(7));
+
     assertEquals(1, fn.getInvokes().size());
     assertFalse(fn.getInvokes().get(0).isImplicit());
     assertEquals(2, fn.getInvokes().get(0).getLocation().getRegion().getStartLine());
-    assertEquals(2, fn.getArguments().size());
+    assertEquals(1, fn.getArguments().size());
     assertEquals(6, ((Literal) fn.getArguments().get(0)).getValue());
-    assertEquals(7, ((Literal) fn.getArguments().get(1)).getValue());
     assertFalse((Boolean) fn.getArgumentsEdges().get(0).getProperty(Properties.DEFAULT));
-    assertTrue((Boolean) fn.getArgumentsEdges().get(1).getProperty(Properties.DEFAULT));
+    assertTrue(fn.getInvokes().get(0).getNextEOG().contains(literal7));
+    for (Node node : fn.getInvokes().get(0).getNextEOG()) {
+      assertTrue(node.equals(literal7) || literal7.getNextEOG().contains(node));
+    }
   }
 
   @Test
@@ -670,11 +741,11 @@ public class CallResolverTest extends BaseTest {
             true);
     List<CallExpression> calls = TestUtils.subnodesOfType(result, CallExpression.class);
 
-    testScopedFunctionResolutionFunctionGlobal(calls);
+    testScopedFunctionResolutionFunctionGlobal(result, calls);
 
-    testScopedFunctionResolutionRedeclaration(calls);
+    testScopedFunctionResolutionRedeclaration(result, calls);
 
-    testScopedFunctionResolutionAfterRedeclaration(calls);
+    testScopedFunctionResolutionAfterRedeclaration(result, calls);
   }
 
   @Test

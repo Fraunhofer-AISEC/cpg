@@ -29,6 +29,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import de.fraunhofer.aisec.cpg.BaseTest;
 import de.fraunhofer.aisec.cpg.TestUtils;
+import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDeclaration;
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration;
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration;
@@ -183,25 +184,34 @@ class ConstructorsTest extends BaseTest {
         TestUtils.findByUniquePredicate(
             constructors, c -> c.getDefaultParameters().size() == 2 && c.getName().equals("D"));
 
+    Literal<?> literal0 =
+        TestUtils.findByUniquePredicate(
+            TestUtils.subnodesOfType(result, Literal.class), l -> l.getValue().equals(0));
+    Literal<?> literal1 =
+        TestUtils.findByUniquePredicate(
+            TestUtils.subnodesOfType(result, Literal.class), l -> l.getValue().equals(1));
+
     VariableDeclaration d1 = TestUtils.findByUniqueName(variables, "d1");
     assertTrue(d1.getInitializer() instanceof ConstructExpression);
     ConstructExpression d1Initializer = (ConstructExpression) d1.getInitializer();
     assertEquals(twoDefaultArg, d1Initializer.getConstructor());
-    assertEquals(2, d1Initializer.getArguments().size());
-    assertTrue((Boolean) d1Initializer.getArgumentsEdges().get(0).getProperty(Properties.DEFAULT));
-    assertEquals(0, ((Literal) d1Initializer.getArguments().get(0)).getValue());
-    assertTrue((Boolean) d1Initializer.getArgumentsEdges().get(1).getProperty(Properties.DEFAULT));
-    assertEquals(1, ((Literal) d1Initializer.getArguments().get(1)).getValue());
+    assertEquals(0, d1Initializer.getArguments().size());
+    assertTrue(twoDefaultArg.getNextEOG().contains(literal0));
+    assertTrue(twoDefaultArg.getNextEOG().contains(literal1));
+    assertTrue(literal0.getNextEOG().contains(literal1));
+    for (Node node : twoDefaultArg.getNextEOG()) {
+      if (!(node.equals(literal0) || node.equals(literal1))) {
+        assertTrue(literal1.getNextEOG().contains(node));
+      }
+    }
 
     VariableDeclaration d2 = TestUtils.findByUniqueName(variables, "d2");
     assertTrue(d2.getInitializer() instanceof ConstructExpression);
     ConstructExpression d2Initializer = (ConstructExpression) d2.getInitializer();
     assertEquals(twoDefaultArg, d2Initializer.getConstructor());
-    assertEquals(2, d2Initializer.getArguments().size());
+    assertEquals(1, d2Initializer.getArguments().size());
     assertFalse((Boolean) d2Initializer.getArgumentsEdges().get(0).getProperty(Properties.DEFAULT));
     assertEquals(2, ((Literal) d2Initializer.getArguments().get(0)).getValue());
-    assertTrue((Boolean) d2Initializer.getArgumentsEdges().get(1).getProperty(Properties.DEFAULT));
-    assertEquals(1, ((Literal) d2Initializer.getArguments().get(1)).getValue());
 
     VariableDeclaration d3 = TestUtils.findByUniqueName(variables, "d3");
     assertTrue(d3.getInitializer() instanceof ConstructExpression);
@@ -231,6 +241,10 @@ class ConstructorsTest extends BaseTest {
         TestUtils.findByUniquePredicate(
             constructors, c -> c.getParameters().size() == 2 && c.getName().equals("E"));
 
+    Literal<?> literal10 =
+        TestUtils.findByUniquePredicate(
+            TestUtils.subnodesOfType(result, Literal.class), l -> l.getValue().equals(10));
+
     VariableDeclaration e1 = TestUtils.findByUniqueName(variables, "e1");
     assertTrue(e1.getInitializer() instanceof ConstructExpression);
     ConstructExpression e1Initializer = (ConstructExpression) e1.getInitializer();
@@ -241,11 +255,15 @@ class ConstructorsTest extends BaseTest {
     assertTrue(e2.getInitializer() instanceof ConstructExpression);
     ConstructExpression e2Initializer = (ConstructExpression) e2.getInitializer();
     assertEquals(singleDefaultArg, e2Initializer.getConstructor());
-    assertEquals(2, e2Initializer.getArguments().size());
+    assertEquals(1, e2Initializer.getArguments().size());
     assertFalse((Boolean) e2Initializer.getArgumentsEdges().get(0).getProperty(Properties.DEFAULT));
     assertEquals(5, ((Literal) e2Initializer.getArguments().get(0)).getValue());
-    assertTrue((Boolean) e2Initializer.getArgumentsEdges().get(1).getProperty(Properties.DEFAULT));
-    assertEquals(10, ((Literal) e2Initializer.getArguments().get(1)).getValue());
+    assertTrue(singleDefaultArg.getNextEOG().contains(literal10));
+    for (Node node : singleDefaultArg.getNextEOG()) {
+      if (!node.equals(literal10)) {
+        assertTrue(literal10.getNextEOG().contains(node));
+      }
+    }
 
     VariableDeclaration e3 = TestUtils.findByUniqueName(variables, "e3");
     assertTrue(e3.getInitializer() instanceof ConstructExpression);
@@ -276,6 +294,10 @@ class ConstructorsTest extends BaseTest {
     ConstructorDeclaration implicitConstructor =
         TestUtils.findByUniquePredicate(constructors, c -> c.getName().equals("I"));
 
+    Literal<?> literal10 =
+        TestUtils.findByUniquePredicate(
+            TestUtils.subnodesOfType(result, Literal.class), l -> l.getValue().equals(10));
+
     VariableDeclaration i1 = TestUtils.findByUniqueName(variables, "i1");
     assertTrue(i1.getInitializer() instanceof ConstructExpression);
     ConstructExpression i1Constructor = (ConstructExpression) i1.getInitializer();
@@ -298,7 +320,7 @@ class ConstructorsTest extends BaseTest {
     assertFalse(h1Constructor.isImplicit());
 
     assertEquals(implicitConstructorWithDefault, h1Constructor.getConstructor());
-    assertEquals(2, h1Constructor.getArguments().size());
+    assertEquals(1, h1Constructor.getArguments().size());
 
     assertTrue(h1Constructor.getArguments().get(0) instanceof CastExpression);
     CastExpression h1ConstructorArgument1 = (CastExpression) h1Constructor.getArguments().get(0);
@@ -306,7 +328,11 @@ class ConstructorsTest extends BaseTest {
     assertEquals("2.0", h1ConstructorArgument1.getExpression().getCode());
     assertEquals("double", h1ConstructorArgument1.getExpression().getType().getName());
 
-    assertEquals(10, ((Literal) h1Constructor.getArguments().get(1)).getValue());
-    assertTrue((Boolean) h1Constructor.getArgumentsEdges().get(1).getProperty(Properties.DEFAULT));
+    assertTrue(implicitConstructorWithDefault.getNextEOG().contains(literal10));
+    for (Node node : implicitConstructorWithDefault.getNextEOG()) {
+      if (!node.equals(literal10)) {
+        assertTrue(literal10.getNextEOG().contains(node));
+      }
+    }
   }
 }
