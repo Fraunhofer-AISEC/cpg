@@ -361,48 +361,6 @@ public class CallResolver extends Pass {
     return callSignature;
   }
 
-  /**
-   * Adds the implicit default arguments to the CallExpression if they were not provided
-   *
-   * @param functionDeclaration the CallExpression has been resolved to containing the default
-   *     arguments
-   * @param call CallExpression which does not contain all necessary arguments and uses the default
-   *     arguments
-   */
-  private void addDefaultArgsToCall(FunctionDeclaration functionDeclaration, CallExpression call) {
-    if (functionDeclaration.hasSignature(getCallSignatureWithDefaults(call, functionDeclaration))) {
-      for (Expression expression :
-          functionDeclaration
-              .getDefaultParameters()
-              .subList(
-                  call.getArguments().size(), functionDeclaration.getDefaultParameters().size())) {
-        call.addArgument(expression, true);
-      }
-    }
-  }
-
-  /**
-   * Adds the implicit default arguments to the CallExpression if they were not provided
-   *
-   * @param constructorDeclaration the ConstructExpression has been resolved to containing the
-   *     default arguments
-   * @param constructExpression ConstructExpression which does not contain all necessary arguments
-   *     and uses the default arguments
-   */
-  private void addDefaultArgsToCall(
-      ConstructorDeclaration constructorDeclaration, ConstructExpression constructExpression) {
-    if (constructorDeclaration.hasSignature(
-        getCallSignatureWithDefaults(constructExpression, constructorDeclaration))) {
-      for (Expression expression :
-          constructorDeclaration
-              .getDefaultParameters()
-              .subList(
-                  constructExpression.getArguments().size(),
-                  constructorDeclaration.getDefaultParameters().size())) {
-        constructExpression.addArgument(expression, true);
-      }
-    }
-  }
 
   /**
    * modifies: call arguments by applying implicit casts
