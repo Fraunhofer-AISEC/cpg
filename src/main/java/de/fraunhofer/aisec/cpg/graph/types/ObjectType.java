@@ -164,7 +164,7 @@ public class ObjectType extends Type {
         + "generics="
         + generics
         + ", typeName='"
-        + name
+        + getName()
         + '\''
         + ", storage="
         + this.getStorage()
