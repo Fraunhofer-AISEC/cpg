@@ -33,7 +33,6 @@ import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDeclaration;
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration;
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration;
-import de.fraunhofer.aisec.cpg.graph.edge.Properties;
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*;
 import java.nio.file.Path;
 import java.util.List;
@@ -210,7 +209,6 @@ class ConstructorsTest extends BaseTest {
     ConstructExpression d2Initializer = (ConstructExpression) d2.getInitializer();
     assertEquals(twoDefaultArg, d2Initializer.getConstructor());
     assertEquals(1, d2Initializer.getArguments().size());
-    assertFalse((Boolean) d2Initializer.getArgumentsEdges().get(0).getProperty(Properties.DEFAULT));
     assertEquals(2, ((Literal) d2Initializer.getArguments().get(0)).getValue());
 
     VariableDeclaration d3 = TestUtils.findByUniqueName(variables, "d3");
@@ -218,9 +216,7 @@ class ConstructorsTest extends BaseTest {
     ConstructExpression d3Initializer = (ConstructExpression) d3.getInitializer();
     assertEquals(twoDefaultArg, d3Initializer.getConstructor());
     assertEquals(2, d3Initializer.getArguments().size());
-    assertFalse((Boolean) d3Initializer.getArgumentsEdges().get(0).getProperty(Properties.DEFAULT));
     assertEquals(3, ((Literal) d3Initializer.getArguments().get(0)).getValue());
-    assertFalse((Boolean) d3Initializer.getArgumentsEdges().get(1).getProperty(Properties.DEFAULT));
     assertEquals(4, ((Literal) d3Initializer.getArguments().get(1)).getValue());
   }
 
@@ -256,7 +252,6 @@ class ConstructorsTest extends BaseTest {
     ConstructExpression e2Initializer = (ConstructExpression) e2.getInitializer();
     assertEquals(singleDefaultArg, e2Initializer.getConstructor());
     assertEquals(1, e2Initializer.getArguments().size());
-    assertFalse((Boolean) e2Initializer.getArgumentsEdges().get(0).getProperty(Properties.DEFAULT));
     assertEquals(5, ((Literal) e2Initializer.getArguments().get(0)).getValue());
     assertTrue(singleDefaultArg.getNextEOG().contains(literal10));
     for (Node node : singleDefaultArg.getNextEOG()) {
@@ -270,9 +265,7 @@ class ConstructorsTest extends BaseTest {
     ConstructExpression e3Initializer = (ConstructExpression) e3.getInitializer();
     assertEquals(singleDefaultArg, e3Initializer.getConstructor());
     assertEquals(2, e3Initializer.getArguments().size());
-    assertFalse((Boolean) e3Initializer.getArgumentsEdges().get(0).getProperty(Properties.DEFAULT));
     assertEquals(6, ((Literal) e3Initializer.getArguments().get(0)).getValue());
-    assertFalse((Boolean) e3Initializer.getArgumentsEdges().get(1).getProperty(Properties.DEFAULT));
     assertEquals(7, ((Literal) e3Initializer.getArguments().get(1)).getValue());
   }
 

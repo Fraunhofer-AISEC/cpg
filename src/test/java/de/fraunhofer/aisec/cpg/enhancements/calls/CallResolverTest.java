@@ -31,7 +31,6 @@ import de.fraunhofer.aisec.cpg.BaseTest;
 import de.fraunhofer.aisec.cpg.TestUtils;
 import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.declarations.*;
-import de.fraunhofer.aisec.cpg.graph.edge.Properties;
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression;
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CastExpression;
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression;
@@ -582,7 +581,6 @@ public class CallResolverTest extends BaseTest {
     assertEquals(calc, callCalc.getInvokes().get(0));
     assertEquals(x, callCalc.getArguments().get(0));
     assertTrue(calc.getNextEOG().contains(literal5));
-    assertFalse((Boolean) callCalc.getArgumentsEdges().get(0).getProperty(Properties.DEFAULT));
 
     // Check doSmth call
     FunctionDeclaration doSmth =
@@ -666,7 +664,6 @@ public class CallResolverTest extends BaseTest {
     assertEquals(2, fh.getInvokes().get(0).getLocation().getRegion().getStartLine());
     assertEquals(1, fh.getArguments().size());
     assertEquals(3, ((Literal) fh.getArguments().get(0)).getValue());
-    assertFalse((Boolean) fh.getArgumentsEdges().get(0).getProperty(Properties.DEFAULT));
     assertTrue(fh.getInvokes().get(0).getNextEOG().contains(literal7));
     for (Node node : fh.getInvokes().get(0).getNextEOG()) {
       assertTrue(node.equals(literal7) || literal7.getNextEOG().contains(node));
@@ -683,7 +680,6 @@ public class CallResolverTest extends BaseTest {
     assertTrue(fm1.getInvokes().get(0).isImplicit());
     assertEquals(1, fm1.getArguments().size());
     assertEquals(8, ((Literal) fm1.getArguments().get(0)).getValue());
-    assertFalse((Boolean) fm1.getArgumentsEdges().get(0).getProperty(Properties.DEFAULT));
 
     CallExpression fm2 =
         TestUtils.findByUniquePredicate(
@@ -698,7 +694,6 @@ public class CallResolverTest extends BaseTest {
     assertEquals(9, fm2.getInvokes().get(0).getLocation().getRegion().getStartLine());
     assertEquals(1, fm2.getArguments().size());
     assertEquals(4, ((Literal) fm2.getArguments().get(0)).getValue());
-    assertFalse((Boolean) fm2.getArgumentsEdges().get(0).getProperty(Properties.DEFAULT));
     assertTrue(fm2.getInvokes().get(0).getNextEOG().contains(literal5));
     for (Node node : fm2.getInvokes().get(0).getNextEOG()) {
       assertTrue(node.equals(literal5) || literal5.getNextEOG().contains(node));
@@ -720,7 +715,6 @@ public class CallResolverTest extends BaseTest {
     assertEquals(2, fn.getInvokes().get(0).getLocation().getRegion().getStartLine());
     assertEquals(1, fn.getArguments().size());
     assertEquals(6, ((Literal) fn.getArguments().get(0)).getValue());
-    assertFalse((Boolean) fn.getArgumentsEdges().get(0).getProperty(Properties.DEFAULT));
     assertTrue(fn.getInvokes().get(0).getNextEOG().contains(literal7));
     for (Node node : fn.getInvokes().get(0).getNextEOG()) {
       assertTrue(node.equals(literal7) || literal7.getNextEOG().contains(node));
