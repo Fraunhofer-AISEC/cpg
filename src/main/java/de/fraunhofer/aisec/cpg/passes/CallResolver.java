@@ -361,12 +361,11 @@ public class CallResolver extends Pass {
     return callSignature;
   }
 
-
   /**
    * modifies: call arguments by applying implicit casts
    *
    * @param call we want to find invocation targets for by performing implicit casts
-   * @return list of invocation candidates by applying
+   * @return list of invocation candidates by applying implicit casts
    */
   private List<FunctionDeclaration> resolveWithImplicitCast(
       CallExpression call, List<FunctionDeclaration> initialInvocationCandidates) {
@@ -414,6 +413,13 @@ public class CallResolver extends Pass {
     return invocationTargetsWithImplicitCastAndDefaults;
   }
 
+  /**
+   * In C++ FunctionCalls must be declared before they are used to be valid invocation candidates.
+   * Therefore we have the additional requirement of <code>definedBefore()</code>
+   *
+   * @param call we want to find invocation targets for by performing implicit casts
+   * @return list of invocation candidates by applying implicit casts
+   */
   private List<FunctionDeclaration> resolveWithImplicitCastFunc(CallExpression call) {
     assert lang != null;
     List<FunctionDeclaration> initialInvocationCandidates =
@@ -423,6 +429,14 @@ public class CallResolver extends Pass {
     return resolveWithImplicitCast(call, initialInvocationCandidates);
   }
 
+  /**
+   * <p>Methods can be defined inline and then they can be used even if they are declared below.
+   * Currently we cannot distinguish between inline methods and method definitions outside of the
+   * class block. This will be considered when we have a language dependent call resolver</p>
+   *
+   * @param call we want to find invocation targets for by performing implicit casts
+   * @return list of invocation candidates by applying implicit casts
+   */
   private List<FunctionDeclaration> resolveWithImplicitCastMethod(CallExpression call) {
     assert lang != null;
     List<FunctionDeclaration> initialInvocationCandidates =
@@ -514,6 +528,12 @@ public class CallResolver extends Pass {
     return invocationCandidatesDefaultArgs;
   }
 
+  /**
+   * In C++ FunctionCalls must be declared before they are used to be valid invocation candidates.
+   * Therefore we have the additional requirement of <code>definedBefore()</code>
+   * @param call we want to find invocation targets for by adding the default arguments to the signature
+   * @return list of invocation candidates that have matching signature when considering default arguments
+   */
   private List<FunctionDeclaration> resolveWithDefaultArgsFunc(CallExpression call) {
     assert lang != null;
     List<FunctionDeclaration> invocationCandidates =
@@ -527,6 +547,16 @@ public class CallResolver extends Pass {
     return resolveWithDefaultArgs(call, invocationCandidates);
   }
 
+  /**
+   * <p>Methods can be defined inline and then they can be used even if they are declared below.
+   * Currently we cannot distinguish between inline methods and method definitions outside of the
+   * class block. This will be considered when we have a language dependent call resolver</p>
+   *
+   * @param call we want to find invocation targets for by adding the default arguments to the
+   *     signature
+   * @return list of invocation candidates that have matching signature when considering default
+   *     arguments
+   */
   private List<FunctionDeclaration> resolveWithDefaultArgsMethod(CallExpression call) {
     assert lang != null;
     List<FunctionDeclaration> invocationCandidates =
@@ -538,13 +568,19 @@ public class CallResolver extends Pass {
     return resolveWithDefaultArgs(call, invocationCandidates);
   }
 
+  /**
+   * Checks if a declaration is located before the usage
+   * @param declaration
+   * @param usage
+   * @return false if the declaration is below the usage, true if the declaration is above the usage or there are no locations (cannot compare)
+   */
   private boolean definedBefore(
-      @Nullable PhysicalLocation definition, @Nullable PhysicalLocation usage) {
-    if (definition == null || usage == null) {
+      @Nullable PhysicalLocation declaration, @Nullable PhysicalLocation usage) {
+    if (declaration == null || usage == null) {
       return true; // No comparison possible -> return default value
     }
-    if (definition.getArtifactLocation().equals(usage.getArtifactLocation())) {
-      return usage.getRegion().compareTo(definition.getRegion()) > 0;
+    if (declaration.getArtifactLocation().equals(usage.getArtifactLocation())) {
+      return usage.getRegion().compareTo(declaration.getRegion()) > 0;
     }
     return true;
   }
@@ -635,6 +671,11 @@ public class CallResolver extends Pass {
     call.setInvokes(invocationCandidates);
   }
 
+  /**
+   *
+   * @param call
+   * @return FunctionDeclarations that are invocation candidates for the MethodCall call using C++ resolution techniques
+   */
   private List<FunctionDeclaration> handleCXXMethodCall(CallExpression call) {
     List<FunctionDeclaration> invocationCandidates =
         lang.getScopeManager().resolveFunctionStopScopeTraversalOnDefinition(call).stream()
@@ -656,6 +697,12 @@ public class CallResolver extends Pass {
     return invocationCandidates;
   }
 
+  /**
+   * Creates a dummy element for each RecordDeclaration if the invocationCandidates are empty
+   * @param invocationCandidates
+   * @param possibleContainingTypes
+   * @param call
+   */
   private void createMethodDummies(
       List<FunctionDeclaration> invocationCandidates,
       Set<Type> possibleContainingTypes,
@@ -669,6 +716,11 @@ public class CallResolver extends Pass {
     }
   }
 
+  /**
+   * In C++ search we don't search in the parent if there is a potential candidate with matching name
+   * @param call
+   * @return true if we should stop searching parent, false otherwise
+   */
   private boolean shouldSearchForInvokesInParent(CallExpression call) {
     return lang.getScopeManager().resolveFunctionStopScopeTraversalOnDefinition(call).isEmpty();
   }
@@ -944,6 +996,12 @@ public class CallResolver extends Pass {
     }
   }
 
+  /**
+   * In C++ if there is a method that matches the name we are looking for, we have to stop searching in the parents even if the signature of the method does not match
+   * @param recordDeclaration
+   * @param name
+   * @return true if there is no method in the recordDeclaration where the name of the method matches with the provided name. false otherwise
+   */
   private boolean shouldContinueSearchInParent(RecordDeclaration recordDeclaration, String name) {
     Pattern namePattern =
         Pattern.compile(
@@ -966,6 +1024,12 @@ public class CallResolver extends Pass {
         .collect(Collectors.toSet());
   }
 
+  /**
+   *
+   * @param signature of the ConstructExpression
+   * @param recordDeclaration matching the class the ConstructExpression wants to construct
+   * @return ConstructorDeclaration that matches the provided signature
+   */
   private ConstructorDeclaration getConstructorDeclarationDirectMatch(
       List<Type> signature, RecordDeclaration recordDeclaration) {
     for (ConstructorDeclaration constructor : recordDeclaration.getConstructors()) {
