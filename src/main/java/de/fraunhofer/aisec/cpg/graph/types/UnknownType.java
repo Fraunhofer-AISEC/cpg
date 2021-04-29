@@ -40,7 +40,7 @@ public class UnknownType extends Type {
 
   private UnknownType() {
     super();
-    this.name = "UNKNOWN";
+    this.setName("UNKNOWN");
   }
 
   /**

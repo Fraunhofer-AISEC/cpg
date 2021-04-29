@@ -457,7 +457,7 @@ public class CXXLanguageFrontend extends LanguageFrontend {
         expression = newLiteral(code, TypeParser.createFrom("const char*", false), code);
     }
 
-    return newAnnotationMember(null, expression, code);
+    return newAnnotationMember("", expression, code);
   }
 
   private Field getField(Class<?> type, String fieldName) throws NoSuchFieldException {

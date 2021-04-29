@@ -155,9 +155,9 @@ public class DeclaredReferenceExpression extends Expression implements TypeListe
   @Override
   public String toString() {
     return new ToStringBuilder(this, Node.TO_STRING_STYLE)
-        .append("name", name)
+        .append("name", getName())
         .append("type", type)
-        .append("location", location)
+        .append("location", getLocation())
         .append("refersTo", refersTo)
         .toString();
   }

@@ -71,10 +71,6 @@ public class TranslationUnitDeclaration extends Declaration implements Declarati
   public <T extends Declaration> T getDeclarationAs(int i, Class<T> clazz) {
     Declaration declaration = this.declarations.get(i).getEnd();
 
-    if (declaration == null) {
-      return null;
-    }
-
     return declaration.getClass().isAssignableFrom(clazz)
         ? clazz.cast(this.declarations.get(i).getEnd())
         : null;
