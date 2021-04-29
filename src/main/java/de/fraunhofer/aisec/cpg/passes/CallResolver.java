@@ -453,11 +453,6 @@ public class CallResolver extends Pass {
       return invocationTargetsWithImplicitCast;
     }
 
-    // Apply default arguments
-    for (FunctionDeclaration functionDecl : invocationTargetsWithImplicitCastAndDefaults) {
-      addDefaultArgsToCall(functionDecl, call);
-    }
-
     return invocationTargetsWithImplicitCastAndDefaults;
   }
 
@@ -553,8 +548,8 @@ public class CallResolver extends Pass {
     List<FunctionDeclaration> invocationCandidatesDefaultArgs = new ArrayList<>();
 
     for (FunctionDeclaration functionDeclaration : initialInvocationCandidates) {
-      addDefaultArgsToCall(functionDeclaration, call);
-      if (functionDeclaration.hasSignature(call.getSignature())) {
+      if (functionDeclaration.hasSignature(
+          getCallSignatureWithDefaults(call, functionDeclaration))) {
         invocationCandidatesDefaultArgs.add(functionDeclaration);
       }
     }
@@ -1040,12 +1035,6 @@ public class CallResolver extends Pass {
         List<Type> workingSignature =
             getCallSignatureWithDefaults(constructExpression, constructor);
         if (constructor.hasSignature(workingSignature)) {
-          for (Expression argument :
-              constructor
-                  .getDefaultParameters()
-                  .subList(signature.size(), constructor.getDefaultParameterSignature().size())) {
-            constructExpression.addArgument(argument, true);
-          }
           return constructor;
         }
       }
@@ -1088,7 +1077,7 @@ public class CallResolver extends Pass {
                 constructExpression.getArguments(),
                 constructorDeclaration.getSignatureTypes());
         applyImplicitCastToArguments(constructExpression, implicitCasts);
-        addDefaultArgsToCall(constructorDeclaration, constructExpression);
+
         return constructorDeclaration;
       }
     }
