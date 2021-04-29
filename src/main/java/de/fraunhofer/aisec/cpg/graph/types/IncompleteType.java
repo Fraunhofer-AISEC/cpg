@@ -77,7 +77,7 @@ public class IncompleteType extends Type {
   public String toString() {
     return "IncompleteType{"
         + "typeName='"
-        + name
+        + getName()
         + '\''
         + ", storage="
         + this.getStorage()

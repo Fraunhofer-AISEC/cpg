@@ -92,19 +92,19 @@ public class CastExpression extends Expression implements TypeListener {
   public void setCastOperator(int operatorCode) {
     switch (operatorCode) {
       case 0:
-        name = "cast";
+        setName("cast");
         break;
       case 1:
-        name = "dynamic_cast";
+        setName("dynamic_cast");
         break;
       case 2:
-        name = "static_cast";
+        setName("static_cast");
         break;
       case 3:
-        name = "reinterpret_cast";
+        setName("reinterpret_cast");
         break;
       case 4:
-        name = "const_cast";
+        setName("const_cast");
         break;
       default:
         log.error("unknown operator {}", operatorCode);

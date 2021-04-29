@@ -98,7 +98,7 @@ public class NodeBuilder {
     node.setOperatorCode(operatorCode);
     node.setName(operatorCode);
     node.setType(type);
-    node.setReferencedType(type);
+    node.setReferencedType(referencedType);
 
     log(node);
 
