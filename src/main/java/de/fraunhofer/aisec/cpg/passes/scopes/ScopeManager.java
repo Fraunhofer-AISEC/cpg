@@ -1,17 +1,17 @@
 /*
  * Copyright (c) 2019, Fraunhofer AISEC. All rights reserved.
  *
- *  Licensed under the Apache License, Version 2.0 (the "License");
- *  you may not use this file except in compliance with the License.
- *  You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- *       http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  *
  *                    $$$$$$\  $$$$$$$\   $$$$$$\
  *                   $$  __$$\ $$  __$$\ $$  __$$\
@@ -23,46 +23,23 @@
  *                    \______/ \__|       \______/
  *
  */
-
 package de.fraunhofer.aisec.cpg.passes.scopes;
 
 import static de.fraunhofer.aisec.cpg.helpers.Util.errorWithFileLocation;
 
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
+import de.fraunhofer.aisec.cpg.graph.HasType;
 import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.declarations.*;
-import de.fraunhofer.aisec.cpg.graph.declarations.EnumDeclaration;
-import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration;
-import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration;
-import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration;
-import de.fraunhofer.aisec.cpg.graph.statements.AssertStatement;
-import de.fraunhofer.aisec.cpg.graph.statements.BreakStatement;
-import de.fraunhofer.aisec.cpg.graph.statements.CatchClause;
-import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement;
-import de.fraunhofer.aisec.cpg.graph.statements.ContinueStatement;
-import de.fraunhofer.aisec.cpg.graph.statements.DoStatement;
-import de.fraunhofer.aisec.cpg.graph.statements.ForEachStatement;
-import de.fraunhofer.aisec.cpg.graph.statements.ForStatement;
-import de.fraunhofer.aisec.cpg.graph.statements.IfStatement;
-import de.fraunhofer.aisec.cpg.graph.statements.LabelStatement;
-import de.fraunhofer.aisec.cpg.graph.statements.Statement;
-import de.fraunhofer.aisec.cpg.graph.statements.SwitchStatement;
-import de.fraunhofer.aisec.cpg.graph.statements.TryStatement;
-import de.fraunhofer.aisec.cpg.graph.statements.WhileStatement;
+import de.fraunhofer.aisec.cpg.graph.statements.*;
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression;
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression;
 import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.slf4j.Logger;
@@ -202,7 +179,16 @@ public class ScopeManager {
 
   public void enterScopeIfExists(Node nodeToScope) {
     if (scopeMap.containsKey(nodeToScope)) {
-      currentScope = scopeMap.get(nodeToScope);
+      var scope = scopeMap.get(nodeToScope);
+
+      // we need a special handling of name spaces, because
+      // thy are associated to more than one AST node
+      if (scope instanceof NameScope) {
+        // update AST (see enterScope for an explanation)
+        scope.astNode = nodeToScope;
+      }
+
+      currentScope = scope;
     }
   }
 
@@ -243,16 +229,56 @@ public class ScopeManager {
       } else if (nodeToScope instanceof TryStatement) {
         newScope = new TryScope(nodeToScope);
       } else if (nodeToScope instanceof NamespaceDeclaration) {
-        newScope = new NameScope(nodeToScope, getCurrentNamePrefix(), lang.getNamespaceDelimiter());
+        // this is a little workaround to solve issues around namespaces
+
+        // the challenge is, that if we have two files that have functions
+        // belonging to the same namespace, they need to end up in the same NameScope,
+        // otherwise the call resolver will not find them. But we still need to be able
+        // to treat the namespace declaration as an AST node unique to each file. So in
+        // the example we want to up with two namespace declaration that point to the same
+        // name scope in the end.
+
+        // First, check if the namespace already exists in our scope
+        // TODO: proper resolving of the namespace according to the syntax?
+        var existing =
+            ((StructureDeclarationScope) currentScope)
+                .getStructureDeclarations().stream()
+                    .filter(x -> Objects.equals(x.getName(), nodeToScope.getName()))
+                    .findFirst();
+
+        if (existing.isPresent()) {
+          var oldNode = existing.get();
+          var oldScope = scopeMap.get(oldNode);
+
+          // might still be non-existing in some cases because this is hacky
+          if (oldScope != null) {
+            // update the AST node to this namespace declaration
+            oldScope.astNode = nodeToScope;
+
+            // set current scope
+            currentScope = oldScope;
+
+            // make it also available in the scope map, otherwise, we cannot leave the scope
+            scopeMap.put(oldScope.astNode, oldScope);
+          } else {
+            newScope =
+                new NameScope(nodeToScope, getCurrentNamePrefix(), lang.getNamespaceDelimiter());
+          }
+        } else {
+          newScope =
+              new NameScope(nodeToScope, getCurrentNamePrefix(), lang.getNamespaceDelimiter());
+        }
       } else {
         LOGGER.error("No known scope for AST-nodes of type {}", nodeToScope.getClass());
         return;
       }
-      pushScope(newScope);
     }
-    currentScope = scopeMap.get(nodeToScope);
+
     if (newScope != null) {
+      pushScope(newScope);
       newScope.setScopedName(getCurrentNamePrefix());
+    } else {
+      currentScope = scopeMap.get(nodeToScope);
     }
   }
 
@@ -444,8 +470,8 @@ public class ScopeManager {
    * @param declaration
    */
   public void addDeclaration(Declaration declaration) {
-    if (declaration instanceof ProblemDeclaration) {
-      // directly add problems to the global scope
+    if (declaration instanceof ProblemDeclaration || declaration instanceof IncludeDeclaration) {
+      // directly add problems and includes to the global scope
       var globalScope = (GlobalScope) getFirstScopeThat(scope -> scope instanceof GlobalScope);
       globalScope.addDeclaration(declaration);
     } else if (declaration instanceof ValueDeclaration) {
@@ -523,25 +549,37 @@ public class ScopeManager {
     return resolve(currentScope, ref);
   }
 
+  public List<FunctionDeclaration> resolveFunction(CallExpression call) {
+    return resolveFunction(currentScope, call);
+  }
+
+  public List<FunctionDeclaration> resolveFunctionStopScopeTraversalOnDefinition(
+      CallExpression call) {
+    return resolveFunctionStopScopeTraversalOnDefinition(currentScope, call);
+  }
+
   /**
    * Resolves only references to Values in the current scope, static references to other visible
    * records are not resolved over the ScopeManager.
+   *
+   * <p>TODO: We should merge this function with {@link #resolveFunction(Scope, CallExpression)}
    *
    * @param scope
    * @param ref
    * @return
    */
   @Nullable
-  private ValueDeclaration resolve(Scope scope, DeclaredReferenceExpression ref) {
+  private ValueDeclaration resolve(Scope scope, Node ref) {
     if (scope instanceof ValueDeclarationScope) {
       for (ValueDeclaration valDecl : ((ValueDeclarationScope) scope).getValueDeclarations()) {
         if (valDecl.getName().equals(ref.getName())) {
 
           // If the reference seems to point to a function the entire signature is checked for
           // equality
-          if (ref.getType() instanceof FunctionPointerType
+          if (ref instanceof HasType
+              && ((HasType) ref).getType() instanceof FunctionPointerType
               && valDecl instanceof FunctionDeclaration) {
-            FunctionPointerType fptrType = (FunctionPointerType) ref.getType();
+            FunctionPointerType fptrType = (FunctionPointerType) ((HasType) ref).getType();
             FunctionDeclaration d = (FunctionDeclaration) valDecl;
             if (d.getType().equals(fptrType.getReturnType())
                 && d.hasSignature(fptrType.getParameters())) {
@@ -554,6 +592,62 @@ public class ScopeManager {
       }
     }
     return scope.getParent() != null ? resolve(scope.getParent(), ref) : null;
+  }
+
+  /**
+   * Resolves a function reference of a call expression.
+   *
+   * @param scope
+   * @param call
+   * @return
+   */
+  @NonNull
+  private List<FunctionDeclaration> resolveFunction(Scope scope, CallExpression call) {
+    if (scope instanceof ValueDeclarationScope) {
+      var list =
+          ((ValueDeclarationScope) scope)
+              .getValueDeclarations().stream()
+                  .filter(FunctionDeclaration.class::isInstance)
+                  .map(FunctionDeclaration.class::cast)
+                  .filter(
+                      f ->
+                          f.getName().equals(call.getName()) && f.hasSignature(call.getSignature()))
+                  .collect(Collectors.toList());
+
+      if (!list.isEmpty()) {
+        return list;
+      }
+    }
+
+    return scope.getParent() != null ? resolveFunction(scope.getParent(), call) : new ArrayList<>();
+  }
+
+  /**
+   * Resolves a function reference of a call expression, but stops the scope traversal when a
+   * FunctionDeclaration with matching name has been found
+   *
+   * @param scope
+   * @param call
+   * @return
+   */
+  @NonNull
+  private List<FunctionDeclaration> resolveFunctionStopScopeTraversalOnDefinition(
+      Scope scope, CallExpression call) {
+    if (scope instanceof ValueDeclarationScope) {
+      var list =
+          ((ValueDeclarationScope) scope)
+              .getValueDeclarations().stream()
+                  .filter(FunctionDeclaration.class::isInstance)
+                  .map(FunctionDeclaration.class::cast)
+                  .filter(f -> f.getName().equals(call.getName()))
+                  .collect(Collectors.toList());
+      if (!list.isEmpty()) {
+        return list;
+      }
+    }
+    return scope.getParent() != null
+        ? resolveFunctionStopScopeTraversalOnDefinition(scope.getParent(), call)
+        : new ArrayList<>();
   }
 
   /**

@@ -1,17 +1,17 @@
 /*
  * Copyright (c) 2019, Fraunhofer AISEC. All rights reserved.
  *
- *  Licensed under the Apache License, Version 2.0 (the "License");
- *  you may not use this file except in compliance with the License.
- *  You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- *       http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  *
  *                    $$$$$$\  $$$$$$$\   $$$$$$\
  *                   $$  __$$\ $$  __$$\ $$  __$$\
@@ -23,7 +23,6 @@
  *                    \______/ \__|       \______/
  *
  */
-
 package de.fraunhofer.aisec.cpg.frontends;
 
 import de.fraunhofer.aisec.cpg.TranslationConfiguration;
@@ -49,9 +48,12 @@ import org.slf4j.LoggerFactory;
 
 public abstract class LanguageFrontend {
 
-  protected static final Logger log = LoggerFactory.getLogger(LanguageFrontend.class);
+  // Allow non-Java frontends to access the logger (i.e. jep)
+  public static final Logger log = LoggerFactory.getLogger(LanguageFrontend.class);
   protected final TranslationConfiguration config;
+
   protected ScopeManager scopeManager;
+
   /**
    * Two data structures used to associate Objects input to a pass to results of a pass, e.g.
    * Javaparser AST-Nodes to CPG-Nodes. The "Listeners" in processedListener are called after the

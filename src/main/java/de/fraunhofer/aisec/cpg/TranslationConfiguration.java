@@ -1,17 +1,17 @@
 /*
  * Copyright (c) 2019, Fraunhofer AISEC. All rights reserved.
  *
- *  Licensed under the Apache License, Version 2.0 (the "License");
- *  you may not use this file except in compliance with the License.
- *  You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- *       http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  *
  *                    $$$$$$\  $$$$$$$\   $$$$$$\
  *                   $$  __$$\ $$  __$$\ $$  __$$\
@@ -23,9 +23,16 @@
  *                    \______/ \__|       \______/
  *
  */
-
 package de.fraunhofer.aisec.cpg;
 
+import static de.fraunhofer.aisec.cpg.frontends.cpp.CXXLanguageFrontend.CXX_EXTENSIONS;
+import static de.fraunhofer.aisec.cpg.frontends.cpp.CXXLanguageFrontend.CXX_HEADER_EXTENSIONS;
+
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
+import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
+import de.fraunhofer.aisec.cpg.frontends.cpp.CXXLanguageFrontend;
+import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguageFrontend;
 import de.fraunhofer.aisec.cpg.passes.CallResolver;
 import de.fraunhofer.aisec.cpg.passes.ControlFlowSensitiveDFGPass;
 import de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass;
@@ -88,6 +95,12 @@ public class TranslationConfiguration {
   public final List<String> includeBlacklist;
 
   /**
+   * This map contains a list of language frontends classes and the file types they are registered
+   * for.
+   */
+  private Map<Class<? extends LanguageFrontend>, List<String>> frontends;
+
+  /**
    * Switch off cleaning up TypeManager memory after analysis.
    *
    * <p>Set this to {@code true} only for testing.
@@ -134,6 +147,7 @@ public class TranslationConfiguration {
       List<String> includeWhitelist,
       List<String> includeBlacklist,
       List<Pass> passes,
+      Map<Class<? extends LanguageFrontend>, List<String>> frontends,
       boolean codeInNodes,
       boolean processAnnotations,
       boolean disableCleanup,
@@ -148,6 +162,7 @@ public class TranslationConfiguration {
     this.includeWhitelist = includeWhitelist;
     this.includeBlacklist = includeBlacklist;
     this.passes = passes != null ? passes : new ArrayList<>();
+    this.frontends = frontends;
     // Make sure to init this AFTER sourceLocations has been set
     this.codeInNodes = codeInNodes;
     this.processAnnotations = processAnnotations;
@@ -175,6 +190,10 @@ public class TranslationConfiguration {
     return this.passes;
   }
 
+  public Map<Class<? extends LanguageFrontend>, List<String>> getFrontends() {
+    return this.frontends;
+  }
+
   /**
    * Builds a {@link TranslationConfiguration}.
    *
@@ -192,6 +211,7 @@ public class TranslationConfiguration {
    */
   public static class Builder {
     private List<File> sourceLocations = new ArrayList<>();
+    private Map<Class<? extends LanguageFrontend>, List<String>> frontends = new HashMap<>();
     private File topLevel = null;
     private boolean debugParser = false;
     private boolean failOnError = false;
@@ -322,6 +342,13 @@ public class TranslationConfiguration {
       return this;
     }
 
+    /** Registers an additional {@link de.fraunhofer.aisec.cpg.frontends.LanguageFrontend}. */
+    public Builder registerLanguage(
+        @NonNull Class<? extends LanguageFrontend> frontend, List<String> fileTypes) {
+      this.frontends.put(frontend, fileTypes);
+      return this;
+    }
+
     /**
      * Register all default {@link Pass}es.
      *
@@ -351,6 +378,22 @@ public class TranslationConfiguration {
       registerPass(new TypeResolver());
       registerPass(new ControlFlowSensitiveDFGPass());
       registerPass(new FilenameMapper());
+      return this;
+    }
+
+    /**
+     * Register all default languages.
+     *
+     * @return
+     */
+    public Builder defaultLanguages() {
+      registerLanguage(
+          CXXLanguageFrontend.class,
+          Lists.newArrayList(Iterables.concat(CXX_EXTENSIONS, CXX_HEADER_EXTENSIONS)));
+      registerLanguage(JavaLanguageFrontend.class, JavaLanguageFrontend.JAVA_EXTENSIONS);
+
+      // do not register experimental languages by default until we have a release strategy
+      // registerLanguage(GoLanguageFrontend.class, GoLanguageFrontend.GOLANG_EXTENSIONS);
       return this;
     }
 
@@ -391,6 +434,7 @@ public class TranslationConfiguration {
           includeWhitelist,
           includeBlacklist,
           passes,
+          frontends,
           codeInNodes,
           processAnnotations,
           disableCleanup,

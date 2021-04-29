@@ -1,17 +1,17 @@
 /*
  * Copyright (c) 2019, Fraunhofer AISEC. All rights reserved.
  *
- *  Licensed under the Apache License, Version 2.0 (the "License");
- *  you may not use this file except in compliance with the License.
- *  You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- *       http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  *
  *                    $$$$$$\  $$$$$$$\   $$$$$$\
  *                   $$  __$$\ $$  __$$\ $$  __$$\
@@ -23,7 +23,6 @@
  *                    \______/ \__|       \______/
  *
  */
-
 package de.fraunhofer.aisec.cpg.passes;
 
 import de.fraunhofer.aisec.cpg.TranslationResult;
@@ -39,6 +38,7 @@ import de.fraunhofer.aisec.cpg.graph.types.UnknownType;
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.ScopedWalker;
 import de.fraunhofer.aisec.cpg.helpers.Util;
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy;
+import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation;
 import java.util.*;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -215,6 +215,8 @@ public class CallResolver extends Pass {
       this.currentTU = (TranslationUnitDeclaration) node;
     } else if (node instanceof ExplicitConstructorInvocation) {
       resolveExplicitConstructorInvocation((ExplicitConstructorInvocation) node);
+    } else if (node instanceof ConstructExpression) {
+      resolveConstructExpression((ConstructExpression) node);
     } else if (node instanceof CallExpression) {
       CallExpression call = (CallExpression) node;
       // We might have call expressions inside our arguments, so in order to correctly resolve
@@ -222,8 +224,6 @@ public class CallResolver extends Pass {
       // resolved
       resolveArguments(call, curClass);
       handleCallExpression(curClass, call);
-    } else if (node instanceof ConstructExpression) {
-      resolveConstructExpression((ConstructExpression) node);
     }
   }
 
@@ -304,7 +304,9 @@ public class CallResolver extends Pass {
   /**
    * Computes the implicit casts that are necessary to reach the
    *
-   * @param call we want to find invocation targets for by performing implicit casts
+   * @param callSignature signature of the call we want to find invocation targets for by performing
+   *     implicit casts
+   * @param arguments arguments of the call
    * @param functionSignature Types of the signature of the possible invocation candidate
    * @return List containing either null on the i-th position (if the type of i-th argument of the
    *     call equals the type of the i-th argument of the FunctionDeclaration) or a CastExpression
@@ -313,8 +315,7 @@ public class CallResolver extends Pass {
    *     signature of the FunctionDeclaration cannot be reached through implicit casts
    */
   private List<CastExpression> signatureWithImplicitCastTransformation(
-      CallExpression call, FunctionDeclaration functionDeclaration, List<Type> functionSignature) {
-    List<Type> callSignature = getCallSignatureWithDefaults(call, functionDeclaration);
+      List<Type> callSignature, List<Expression> arguments, List<Type> functionSignature) {
     if (callSignature.size() == functionSignature.size()) {
       List<CastExpression> implicitCasts = new ArrayList<>();
 
@@ -325,7 +326,7 @@ public class CallResolver extends Pass {
           CastExpression implicitCast = new CastExpression();
           implicitCast.setImplicit(true);
           implicitCast.setCastType(funcType);
-          implicitCast.setExpression(call.getArguments().get(i));
+          implicitCast.setExpression(arguments.get(i));
           implicitCasts.add(implicitCast);
         } else {
           // If no cast is needed we add null to be able to access the function signature list and
@@ -361,40 +362,13 @@ public class CallResolver extends Pass {
   }
 
   /**
-   * Adds the implicit default arguments to the CallExpression if they were not provided
-   *
-   * @param functionDeclaration the CallExpression has been resolved to containing the default
-   *     arguments
-   * @param call CallExpression which does not contain all necessary arguments and uses the default
-   *     arguments
-   */
-  private void addDefaultArgsToCall(FunctionDeclaration functionDeclaration, CallExpression call) {
-    if (functionDeclaration.hasSignature(getCallSignatureWithDefaults(call, functionDeclaration))) {
-      for (Expression expression :
-          functionDeclaration
-              .getDefaultParameters()
-              .subList(
-                  call.getArguments().size(), functionDeclaration.getDefaultParameters().size())) {
-        call.addArgument(expression);
-      }
-    }
-  }
-
-  /**
    * modifies: call arguments by applying implicit casts
    *
    * @param call we want to find invocation targets for by performing implicit casts
-   * @return list of invocation candidates by applying
+   * @return list of invocation candidates by applying implicit casts
    */
-  private List<FunctionDeclaration> resolveWithImplicitCast(CallExpression call) {
-    // Get possible invocation targets based on the function name
-    assert currentTU != null;
-    List<FunctionDeclaration> matchingFunctionName =
-        currentTU.getDeclarations().stream()
-            .filter(FunctionDeclaration.class::isInstance)
-            .map(FunctionDeclaration.class::cast)
-            .filter(f -> f.getName().equals(call.getName()) && !f.isImplicit())
-            .collect(Collectors.toList());
+  private List<FunctionDeclaration> resolveWithImplicitCast(
+      CallExpression call, List<FunctionDeclaration> initialInvocationCandidates) {
 
     // Output list for invocationTargets obtaining a valid signature by performing implicit casts
     List<FunctionDeclaration> invocationTargetsWithImplicitCast = new ArrayList<>();
@@ -404,13 +378,15 @@ public class CallResolver extends Pass {
     List<Type> callSignature;
 
     // Iterate through all possible invocation candidates
-    for (FunctionDeclaration functionDeclaration : matchingFunctionName) {
+    for (FunctionDeclaration functionDeclaration : initialInvocationCandidates) {
       callSignature = getCallSignatureWithDefaults(call, functionDeclaration);
       // Check if the signatures match by implicit casts
       if (compatibleSignatures(callSignature, functionDeclaration.getSignatureTypes())) {
         List<CastExpression> implicitCastTargets =
             signatureWithImplicitCastTransformation(
-                call, functionDeclaration, functionDeclaration.getSignatureTypes());
+                getCallSignatureWithDefaults(call, functionDeclaration),
+                call.getArguments(),
+                functionDeclaration.getSignatureTypes());
         if (implicitCasts == null) {
           implicitCasts = implicitCastTargets;
         } else {
@@ -434,12 +410,41 @@ public class CallResolver extends Pass {
       return invocationTargetsWithImplicitCast;
     }
 
-    // Apply default arguments
-    for (FunctionDeclaration functionDecl : invocationTargetsWithImplicitCastAndDefaults) {
-      addDefaultArgsToCall(functionDecl, call);
-    }
-
     return invocationTargetsWithImplicitCastAndDefaults;
+  }
+
+  /**
+   * In C++ FunctionCalls must be declared before they are used to be valid invocation candidates.
+   * Therefore we have the additional requirement of <code>definedBefore()</code>
+   *
+   * @param call we want to find invocation targets for by performing implicit casts
+   * @return list of invocation candidates by applying implicit casts
+   */
+  private List<FunctionDeclaration> resolveWithImplicitCastFunc(CallExpression call) {
+    assert lang != null;
+    List<FunctionDeclaration> initialInvocationCandidates =
+        lang.getScopeManager().resolveFunctionStopScopeTraversalOnDefinition(call).stream()
+            .filter(f -> !f.isImplicit() && definedBefore(f.getLocation(), call.getLocation()))
+            .collect(Collectors.toList());
+    return resolveWithImplicitCast(call, initialInvocationCandidates);
+  }
+
+  /**
+   * Methods can be defined inline and then they can be used even if they are declared below.
+   * Currently we cannot distinguish between inline methods and method definitions outside of the
+   * class block. This will be considered when we have a language dependent call resolver
+   *
+   * @param call we want to find invocation targets for by performing implicit casts
+   * @return list of invocation candidates by applying implicit casts
+   */
+  private List<FunctionDeclaration> resolveWithImplicitCastMethod(CallExpression call) {
+    assert lang != null;
+    List<FunctionDeclaration> initialInvocationCandidates =
+        lang.getScopeManager().resolveFunctionStopScopeTraversalOnDefinition(call).stream()
+            .filter(f -> !f.isImplicit())
+            .collect(Collectors.toList());
+
+    return resolveWithImplicitCast(call, initialInvocationCandidates);
   }
 
   /**
@@ -485,6 +490,23 @@ public class CallResolver extends Pass {
   }
 
   /**
+   * Changes the arguments of the ConstructExpression to use the implcit casts instead
+   *
+   * @param constructExpression ConstructExpression
+   * @param implicitCasts Casts
+   */
+  private void applyImplicitCastToArguments(
+      ConstructExpression constructExpression, List<CastExpression> implicitCasts) {
+    if (implicitCasts != null) {
+      for (int i = 0; i < implicitCasts.size(); i++) {
+        if (implicitCasts.get(i) != null) {
+          constructExpression.setArgument(i, implicitCasts.get(i));
+        }
+      }
+    }
+  }
+
+  /**
    * Resolves a CallExpression to the potential target FunctionDeclarations by checking for ommitted
    * arguments due to previously defined default arguments
    *
@@ -492,53 +514,112 @@ public class CallResolver extends Pass {
    * @return List of FunctionDeclarations that are the target of the CallExpression (will be
    *     connected with an invokes edge)
    */
-  private List<FunctionDeclaration> resolveWithDefaultArgs(CallExpression call) {
-    assert currentTU != null;
-    List<FunctionDeclaration> invocationCandidates =
-        currentTU.getDeclarations().stream()
-            .filter(FunctionDeclaration.class::isInstance)
-            .map(FunctionDeclaration.class::cast)
-            .filter(
-                f ->
-                    f.getName().equals(call.getName())
-                        && !f.isImplicit()
-                        && call.getSignature().size() < f.getSignatureTypes().size())
-            .collect(Collectors.toList());
+  private List<FunctionDeclaration> resolveWithDefaultArgs(
+      CallExpression call, List<FunctionDeclaration> initialInvocationCandidates) {
+
     List<FunctionDeclaration> invocationCandidatesDefaultArgs = new ArrayList<>();
 
-    for (FunctionDeclaration functionDeclaration : invocationCandidates) {
-      addDefaultArgsToCall(functionDeclaration, call);
-      if (functionDeclaration.hasSignature(call.getSignature())) {
+    for (FunctionDeclaration functionDeclaration : initialInvocationCandidates) {
+      if (functionDeclaration.hasSignature(
+          getCallSignatureWithDefaults(call, functionDeclaration))) {
         invocationCandidatesDefaultArgs.add(functionDeclaration);
       }
     }
     return invocationCandidatesDefaultArgs;
   }
 
+  /**
+   * In C++ FunctionCalls must be declared before they are used to be valid invocation candidates.
+   * Therefore we have the additional requirement of <code>definedBefore()</code>
+   *
+   * @param call we want to find invocation targets for by adding the default arguments to the
+   *     signature
+   * @return list of invocation candidates that have matching signature when considering default
+   *     arguments
+   */
+  private List<FunctionDeclaration> resolveWithDefaultArgsFunc(CallExpression call) {
+    assert lang != null;
+    List<FunctionDeclaration> invocationCandidates =
+        lang.getScopeManager().resolveFunctionStopScopeTraversalOnDefinition(call).stream()
+            .filter(
+                f ->
+                    !f.isImplicit()
+                        && definedBefore(f.getLocation(), call.getLocation())
+                        && call.getSignature().size() < f.getSignatureTypes().size())
+            .collect(Collectors.toList());
+    return resolveWithDefaultArgs(call, invocationCandidates);
+  }
+
+  /**
+   * Methods can be defined inline and then they can be used even if they are declared below.
+   * Currently we cannot distinguish between inline methods and method definitions outside of the
+   * class block. This will be considered when we have a language dependent call resolver
+   *
+   * @param call we want to find invocation targets for by adding the default arguments to the
+   *     signature
+   * @return list of invocation candidates that have matching signature when considering default
+   *     arguments
+   */
+  private List<FunctionDeclaration> resolveWithDefaultArgsMethod(CallExpression call) {
+    assert lang != null;
+    List<FunctionDeclaration> invocationCandidates =
+        lang.getScopeManager().resolveFunctionStopScopeTraversalOnDefinition(call).stream()
+            .filter(
+                f -> !f.isImplicit() && call.getSignature().size() < f.getSignatureTypes().size())
+            .collect(Collectors.toList());
+
+    return resolveWithDefaultArgs(call, invocationCandidates);
+  }
+
+  /**
+   * Checks if a declaration is located before the usage
+   *
+   * @param declaration
+   * @param usage
+   * @return false if the declaration is below the usage, true if the declaration is above the usage
+   *     or there are no locations (cannot compare)
+   */
+  private boolean definedBefore(
+      @Nullable PhysicalLocation declaration, @Nullable PhysicalLocation usage) {
+    if (declaration == null || usage == null) {
+      return true; // No comparison possible -> return default value
+    }
+    if (declaration.getArtifactLocation().equals(usage.getArtifactLocation())) {
+      return usage.getRegion().compareTo(declaration.getRegion()) > 0;
+    }
+    return true;
+  }
+
   private void handleNormalCalls(RecordDeclaration curClass, CallExpression call) {
-    if (curClass == null && this.currentTU != null) {
+    if (curClass == null && lang != null) {
       // Handle function (not method) calls
       // C++ allows function overloading. Make sure we have at least the same number of arguments
-      List<FunctionDeclaration> invocationCandidates =
-          currentTU.getDeclarations().stream()
-              .filter(FunctionDeclaration.class::isInstance)
-              .map(FunctionDeclaration.class::cast)
-              .filter(
-                  f -> f.getName().equals(call.getName()) && f.hasSignature(call.getSignature()))
-              .collect(Collectors.toList());
+      List<FunctionDeclaration> invocationCandidates = null;
+      if (this.getLang() instanceof CXXLanguageFrontend) {
+        invocationCandidates =
+            lang.getScopeManager().resolveFunctionStopScopeTraversalOnDefinition(call).stream()
+                .filter(
+                    f ->
+                        f.hasSignature(call.getSignature())
+                            && definedBefore(f.getLocation(), call.getLocation()))
+                .collect(Collectors.toList());
+
+        if (invocationCandidates.isEmpty()) {
+          // Check for usage of default args
+          invocationCandidates.addAll(resolveWithDefaultArgsFunc(call));
+        }
+
+        if (invocationCandidates.isEmpty()) {
+          // If we don't find any candidate and our current language is c/c++ we check if there is a
+          // candidate with an implicit cast
+          invocationCandidates.addAll(resolveWithImplicitCastFunc(call));
+        }
+
+      } else {
+        invocationCandidates = lang.getScopeManager().resolveFunction(call);
+      }
 
       if (invocationCandidates.isEmpty()) {
-        // Check for usage of default args
-        invocationCandidates.addAll(resolveWithDefaultArgs(call));
-      }
-
-      if (invocationCandidates.isEmpty() && this.getLang() instanceof CXXLanguageFrontend) {
-        // If we don't find any candidate and our current language is c/c++ we check if there is a
-        // candidate with an implicit cast
-        invocationCandidates.addAll(resolveWithImplicitCast(call));
-      }
-
-      if (invocationCandidates.isEmpty() && this.getLang() instanceof CXXLanguageFrontend) {
         // If we still have no candidates and our current language is c++ we create dummy
         // FunctionDeclaration
         invocationCandidates =
@@ -562,28 +643,27 @@ public class CallResolver extends Pass {
             .collect(Collectors.toList());
 
     // Find function targets
-    if (invocationCandidates.isEmpty() && currentTU != null) {
-      invocationCandidates =
-          currentTU.getDeclarations().stream()
-              .filter(FunctionDeclaration.class::isInstance)
-              .map(FunctionDeclaration.class::cast)
-              .filter(
-                  f -> f.getName().equals(call.getName()) && f.hasSignature(call.getSignature()))
-              .collect(Collectors.toList());
+    if (invocationCandidates.isEmpty() && lang != null) {
+      if (lang instanceof CXXLanguageFrontend) {
+        invocationCandidates = handleCXXMethodCall(call);
+
+      } else {
+        invocationCandidates = lang.getScopeManager().resolveFunction(call);
+      }
     }
 
     // Find invokes by supertypes
-    if (invocationCandidates.isEmpty()) {
+    if (invocationCandidates.isEmpty()
+        && (!(lang instanceof CXXLanguageFrontend) || shouldSearchForInvokesInParent(call))) {
       String[] nameParts = call.getName().split("\\.");
       if (nameParts.length > 0) {
-        List<Type> signature = call.getSignature();
         Set<RecordDeclaration> records =
             possibleContainingTypes.stream()
                 .map(t -> recordMap.get(t.getTypeName()))
                 .filter(Objects::nonNull)
                 .collect(Collectors.toSet());
         invocationCandidates =
-            getInvocationCandidatesFromParents(nameParts[nameParts.length - 1], signature, records);
+            getInvocationCandidatesFromParents(nameParts[nameParts.length - 1], call, records);
       }
     }
 
@@ -592,6 +672,47 @@ public class CallResolver extends Pass {
       call.setBase(curClass.getThis());
     }
 
+    createMethodDummies(invocationCandidates, possibleContainingTypes, call);
+    call.setInvokes(invocationCandidates);
+  }
+
+  /**
+   * @param call
+   * @return FunctionDeclarations that are invocation candidates for the MethodCall call using C++
+   *     resolution techniques
+   */
+  private List<FunctionDeclaration> handleCXXMethodCall(CallExpression call) {
+    List<FunctionDeclaration> invocationCandidates =
+        lang.getScopeManager().resolveFunctionStopScopeTraversalOnDefinition(call).stream()
+            .filter(
+                f ->
+                    f.hasSignature(call.getSignature())
+                        && definedBefore(f.getLocation(), call.getLocation()))
+            .collect(Collectors.toList());
+
+    if (invocationCandidates.isEmpty()) {
+      // Check for usage of default args
+      invocationCandidates.addAll(resolveWithDefaultArgsMethod(call));
+    }
+
+    if (invocationCandidates.isEmpty()) {
+      // Check for usage of implicit cast
+      invocationCandidates.addAll(resolveWithImplicitCastMethod(call));
+    }
+    return invocationCandidates;
+  }
+
+  /**
+   * Creates a dummy element for each RecordDeclaration if the invocationCandidates are empty
+   *
+   * @param invocationCandidates
+   * @param possibleContainingTypes
+   * @param call
+   */
+  private void createMethodDummies(
+      List<FunctionDeclaration> invocationCandidates,
+      Set<Type> possibleContainingTypes,
+      CallExpression call) {
     if (invocationCandidates.isEmpty()) {
       possibleContainingTypes.stream()
           .map(t -> recordMap.get(t.getTypeName()))
@@ -599,17 +720,29 @@ public class CallResolver extends Pass {
           .map(r -> createDummy(r, call.getName(), call.getCode(), false, call.getSignature()))
           .forEach(invocationCandidates::add);
     }
-    call.setInvokes(invocationCandidates);
+  }
+
+  /**
+   * In C++ search we don't search in the parent if there is a potential candidate with matching
+   * name
+   *
+   * @param call
+   * @return true if we should stop searching parent, false otherwise
+   */
+  private boolean shouldSearchForInvokesInParent(CallExpression call) {
+    return lang.getScopeManager().resolveFunctionStopScopeTraversalOnDefinition(call).isEmpty();
   }
 
   private void resolveConstructExpression(ConstructExpression constructExpression) {
-    List<Type> signature = constructExpression.getSignature();
     String typeName = constructExpression.getType().getTypeName();
-    RecordDeclaration record = recordMap.get(typeName);
-    constructExpression.setInstantiates(record);
+    RecordDeclaration recordDeclaration = recordMap.get(typeName);
+    constructExpression.setInstantiates(recordDeclaration);
 
-    if (record != null && record.getCode() != null && !record.getCode().isEmpty()) {
-      ConstructorDeclaration constructor = getConstructorDeclaration(signature, record);
+    if (recordDeclaration != null
+        && recordDeclaration.getCode() != null
+        && !recordDeclaration.getCode().isEmpty()) {
+      ConstructorDeclaration constructor =
+          getConstructorDeclaration(constructExpression, recordDeclaration);
       constructExpression.setConstructor(constructor);
     }
   }
@@ -650,11 +783,12 @@ public class CallResolver extends Pass {
 
   private void resolveExplicitConstructorInvocation(ExplicitConstructorInvocation eci) {
     if (eci.getContainingClass() != null) {
-      RecordDeclaration record = recordMap.get(eci.getContainingClass());
+      RecordDeclaration recordDeclaration = recordMap.get(eci.getContainingClass());
       List<Type> signature =
           eci.getArguments().stream().map(Expression::getType).collect(Collectors.toList());
-      if (record != null) {
-        ConstructorDeclaration constructor = getConstructorDeclaration(signature, record);
+      if (recordDeclaration != null) {
+        ConstructorDeclaration constructor =
+            getConstructorDeclarationForExplicitInvocation(signature, recordDeclaration);
         ArrayList<FunctionDeclaration> invokes = new ArrayList<>();
         invokes.add(constructor);
         eci.setInvokes(invokes);
@@ -712,12 +846,12 @@ public class CallResolver extends Pass {
             .map(c -> recordMap.getOrDefault(c, null))
             .filter(Objects::nonNull)
             .collect(Collectors.toList());
-    for (RecordDeclaration record : containingRecords) {
-      MethodDeclaration dummy = NodeBuilder.newMethodDeclaration(name, "", true, record);
+    for (RecordDeclaration recordDeclaration : containingRecords) {
+      MethodDeclaration dummy = NodeBuilder.newMethodDeclaration(name, "", true, recordDeclaration);
       dummy.setImplicit(true);
       List<ParamVariableDeclaration> params = Util.createParameters(call.getSignature());
       dummy.setParameters(params);
-      record.addMethod(dummy);
+      recordDeclaration.addMethod(dummy);
       curClass.getStaticImports().add(dummy);
       invokes.add(dummy);
     }
@@ -787,35 +921,111 @@ public class CallResolver extends Pass {
   }
 
   private List<FunctionDeclaration> getInvocationCandidatesFromRecord(
-      RecordDeclaration record, String name, List<Type> signature) {
+      RecordDeclaration recordDeclaration, String name, CallExpression call) {
+    List<Type> signature = call.getSignature();
     Pattern namePattern =
-        Pattern.compile("(" + Pattern.quote(record.getName()) + "\\.)?" + Pattern.quote(name));
-    return record.getMethods().stream()
-        .filter(m -> namePattern.matcher(m.getName()).matches() && m.hasSignature(signature))
-        .map(FunctionDeclaration.class::cast)
-        .collect(Collectors.toList());
+        Pattern.compile(
+            "(" + Pattern.quote(recordDeclaration.getName()) + "\\.)?" + Pattern.quote(name));
+
+    if (lang instanceof CXXLanguageFrontend) {
+      List<FunctionDeclaration> invocationCandidate =
+          new ArrayList<>(
+              recordDeclaration.getMethods().stream()
+                  .filter(
+                      m -> namePattern.matcher(m.getName()).matches() && m.hasSignature(signature))
+                  .map(FunctionDeclaration.class::cast)
+                  .collect(Collectors.toList()));
+
+      if (invocationCandidate.isEmpty()) {
+        // Search for possible invocation with defaults args
+        invocationCandidate.addAll(
+            resolveWithDefaultArgs(
+                call,
+                recordDeclaration.getMethods().stream()
+                    .filter(
+                        m ->
+                            namePattern.matcher(m.getName()).matches()
+                                && !m.isImplicit()
+                                && call.getSignature().size() < m.getSignatureTypes().size())
+                    .map(FunctionDeclaration.class::cast)
+                    .collect(Collectors.toList())));
+      }
+
+      if (invocationCandidate.isEmpty()) {
+        // Search for possible invocation with implicit cast
+        invocationCandidate.addAll(
+            resolveWithImplicitCast(
+                call,
+                recordDeclaration.getMethods().stream()
+                    .filter(m -> namePattern.matcher(m.getName()).matches() && !m.isImplicit())
+                    .map(FunctionDeclaration.class::cast)
+                    .collect(Collectors.toList())));
+      }
+
+      return invocationCandidate;
+    } else {
+      return recordDeclaration.getMethods().stream()
+          .filter(m -> namePattern.matcher(m.getName()).matches() && m.hasSignature(signature))
+          .map(FunctionDeclaration.class::cast)
+          .collect(Collectors.toList());
+    }
   }
 
   private List<FunctionDeclaration> getInvocationCandidatesFromParents(
-      String name, List<Type> signature, Set<RecordDeclaration> possibleTypes) {
+      String name, CallExpression call, Set<RecordDeclaration> possibleTypes) {
+    Set<RecordDeclaration> workingPossibleTypes = new HashSet<>(possibleTypes);
     if (possibleTypes.isEmpty()) {
       return new ArrayList<>();
     } else {
       List<FunctionDeclaration> firstLevelCandidates =
           possibleTypes.stream()
-              .map(r -> getInvocationCandidatesFromRecord(r, name, signature))
+              .map(r -> getInvocationCandidatesFromRecord(r, name, call))
               .flatMap(Collection::stream)
               .collect(Collectors.toList());
-      if (firstLevelCandidates.isEmpty()) {
-        return possibleTypes.stream()
+
+      // C++ does not allow overloading at different hierarchy levels. If we find a
+      // FunctionDeclaration with the same name as the function in the CallExpression we have to
+      // stop the search in the parent even if the FunctionDelcaration does not match with the
+      // signature of the CallExpression
+      if (lang instanceof CXXLanguageFrontend) {
+        workingPossibleTypes.removeIf(
+            recordDeclaration -> !shouldContinueSearchInParent(recordDeclaration, name));
+      }
+
+      if (firstLevelCandidates.isEmpty() && !possibleTypes.isEmpty()) {
+        return workingPossibleTypes.stream()
             .map(RecordDeclaration::getSuperTypeDeclarations)
-            .map(superTypes -> getInvocationCandidatesFromParents(name, signature, superTypes))
+            .map(superTypes -> getInvocationCandidatesFromParents(name, call, superTypes))
             .flatMap(Collection::stream)
             .collect(Collectors.toList());
       } else {
         return firstLevelCandidates;
       }
     }
+  }
+
+  /**
+   * In C++ if there is a method that matches the name we are looking for, we have to stop searching
+   * in the parents even if the signature of the method does not match
+   *
+   * @param recordDeclaration
+   * @param name
+   * @return true if there is no method in the recordDeclaration where the name of the method
+   *     matches with the provided name. false otherwise
+   */
+  private boolean shouldContinueSearchInParent(RecordDeclaration recordDeclaration, String name) {
+    Pattern namePattern =
+        Pattern.compile(
+            "(" + Pattern.quote(recordDeclaration.getName()) + "\\.)?" + Pattern.quote(name));
+
+    List<FunctionDeclaration> invocationCandidate =
+        new ArrayList<>(
+            recordDeclaration.getMethods().stream()
+                .filter(m -> namePattern.matcher(m.getName()).matches())
+                .map(FunctionDeclaration.class::cast)
+                .collect(Collectors.toList()));
+
+    return invocationCandidate.isEmpty();
   }
 
   private Set<FunctionDeclaration> getOverridingCandidates(
@@ -825,12 +1035,127 @@ public class CallResolver extends Pass {
         .collect(Collectors.toSet());
   }
 
+  /**
+   * @param signature of the ConstructExpression
+   * @param recordDeclaration matching the class the ConstructExpression wants to construct
+   * @return ConstructorDeclaration that matches the provided signature
+   */
+  private ConstructorDeclaration getConstructorDeclarationDirectMatch(
+      List<Type> signature, RecordDeclaration recordDeclaration) {
+    for (ConstructorDeclaration constructor : recordDeclaration.getConstructors()) {
+      if (constructor.hasSignature(signature)) {
+        return constructor;
+      }
+    }
+    return null;
+  }
+
+  /**
+   * @param constructExpression we want to find an invocation target for
+   * @param signature of the ConstructExpression (without defaults)
+   * @param recordDeclaration associated with the Object the ConstructExpression constructs
+   * @return a ConstructDeclaration that matches with the signature of the ConstructExpression with
+   *     added default arguments. The default arguments are added to the arguments edge of the
+   *     ConstructExpression
+   */
+  private ConstructorDeclaration resolveConstructorWithDefaults(
+      ConstructExpression constructExpression,
+      List<Type> signature,
+      RecordDeclaration recordDeclaration) {
+    for (ConstructorDeclaration constructor : recordDeclaration.getConstructors()) {
+      if (!constructor.isImplicit() && signature.size() < constructor.getSignatureTypes().size()) {
+        List<Type> workingSignature =
+            getCallSignatureWithDefaults(constructExpression, constructor);
+        if (constructor.hasSignature(workingSignature)) {
+          return constructor;
+        }
+      }
+    }
+    return null;
+  }
+
+  /**
+   * @param constructExpression we want to find an invocation target for
+   * @param recordDeclaration associated with the Object the ConstructExpression constructs
+   * @return a ConstructDeclaration that matches the signature of the ConstructExpression by
+   *     applying one or more implicit casts to the primitive type arguments of the
+   *     ConstructExpressions. The arguments are proxied through a CastExpression to the type
+   *     required by the ConstructDeclaration.
+   */
+  private ConstructorDeclaration resolveConstructorWithImplicitCast(
+      ConstructExpression constructExpression, RecordDeclaration recordDeclaration) {
+    for (ConstructorDeclaration constructorDeclaration : recordDeclaration.getConstructors()) {
+      List<Type> workingSignature = new ArrayList<>(constructExpression.getSignature());
+      workingSignature.addAll(
+          constructorDeclaration
+              .getDefaultParameterSignature()
+              .subList(
+                  constructExpression.getArguments().size(),
+                  constructorDeclaration.getDefaultParameterSignature().size()));
+      if (compatibleSignatures(
+          constructExpression.getSignature(), constructorDeclaration.getSignatureTypes())) {
+        List<CastExpression> implicitCasts =
+            signatureWithImplicitCastTransformation(
+                constructExpression.getSignature(),
+                constructExpression.getArguments(),
+                constructorDeclaration.getSignatureTypes());
+        applyImplicitCastToArguments(constructExpression, implicitCasts);
+        return constructorDeclaration;
+      } else if (compatibleSignatures(
+          workingSignature, constructorDeclaration.getSignatureTypes())) {
+        List<CastExpression> implicitCasts =
+            signatureWithImplicitCastTransformation(
+                getCallSignatureWithDefaults(constructExpression, constructorDeclaration),
+                constructExpression.getArguments(),
+                constructorDeclaration.getSignatureTypes());
+        applyImplicitCastToArguments(constructExpression, implicitCasts);
+
+        return constructorDeclaration;
+      }
+    }
+    return null;
+  }
+
+  /**
+   * @param constructExpression we want to find an invocation target for
+   * @param recordDeclaration associated with the Object the ConstructExpression constructs
+   * @return a ConstructDeclaration that is an invocation of the given ConstructExpression. If there
+   *     is no valid ConstructDeclaration we will create an implicit ConstructDeclaration that
+   *     matches the ConstructExpression.
+   */
   @NonNull
   private ConstructorDeclaration getConstructorDeclaration(
-      List<Type> signature, RecordDeclaration record) {
-    return record.getConstructors().stream()
+      ConstructExpression constructExpression, RecordDeclaration recordDeclaration) {
+    List<Type> signature = constructExpression.getSignature();
+    ConstructorDeclaration constructorCandidate =
+        getConstructorDeclarationDirectMatch(signature, recordDeclaration);
+    if (constructorCandidate == null && this.getLang() instanceof CXXLanguageFrontend) {
+      // Check for usage of default args
+      constructorCandidate =
+          resolveConstructorWithDefaults(constructExpression, signature, recordDeclaration);
+    }
+
+    if (constructorCandidate == null && this.getLang() instanceof CXXLanguageFrontend) {
+      // If we don't find any candidate and our current language is c/c++ we check if there is a
+      // candidate with an implicit cast
+      constructorCandidate =
+          resolveConstructorWithImplicitCast(constructExpression, recordDeclaration);
+    }
+
+    if (constructorCandidate == null) {
+      // Create Dummy
+      constructorCandidate = createConstructorDummy(recordDeclaration, signature);
+    }
+
+    return constructorCandidate;
+  }
+
+  @NonNull
+  private ConstructorDeclaration getConstructorDeclarationForExplicitInvocation(
+      List<Type> signature, RecordDeclaration recordDeclaration) {
+    return recordDeclaration.getConstructors().stream()
         .filter(f -> f.hasSignature(signature))
         .findFirst()
-        .orElseGet(() -> createConstructorDummy(record, signature));
+        .orElseGet(() -> createConstructorDummy(recordDeclaration, signature));
   }
 }

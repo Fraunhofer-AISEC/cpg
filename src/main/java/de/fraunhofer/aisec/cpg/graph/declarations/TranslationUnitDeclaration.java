@@ -1,17 +1,17 @@
 /*
  * Copyright (c) 2020, Fraunhofer AISEC. All rights reserved.
  *
- *  Licensed under the Apache License, Version 2.0 (the "License");
- *  you may not use this file except in compliance with the License.
- *  You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- *       http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  *
  *                    $$$$$$\  $$$$$$$\   $$$$$$\
  *                   $$  __$$\ $$  __$$\ $$  __$$\
@@ -23,7 +23,6 @@
  *                    \______/ \__|       \______/
  *
  */
-
 package de.fraunhofer.aisec.cpg.graph.declarations;
 
 import static de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.unwrap;
@@ -32,10 +31,7 @@ import de.fraunhofer.aisec.cpg.graph.DeclarationHolder;
 import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.SubGraph;
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.checkerframework.checker.nullness.qual.NonNull;
@@ -55,7 +51,7 @@ public class TranslationUnitDeclaration extends Declaration implements Declarati
   @Relationship(value = "INCLUDES", direction = "OUTGOING")
   @SubGraph("AST")
   @NonNull
-  private List<PropertyEdge<Declaration>> includes = new ArrayList<>();
+  private List<PropertyEdge<IncludeDeclaration>> includes = new ArrayList<>();
 
   /** A list of namespaces within this unit. */
   @Relationship(value = "NAMESPACES", direction = "OUTGOING")
@@ -74,10 +70,6 @@ public class TranslationUnitDeclaration extends Declaration implements Declarati
   @Nullable
   public <T extends Declaration> T getDeclarationAs(int i, Class<T> clazz) {
     Declaration declaration = this.declarations.get(i).getEnd();
-
-    if (declaration == null) {
-      return null;
-    }
 
     return declaration.getClass().isAssignableFrom(clazz)
         ? clazz.cast(this.declarations.get(i).getEnd())
@@ -100,11 +92,20 @@ public class TranslationUnitDeclaration extends Declaration implements Declarati
   public <T extends Declaration> Set<T> getDeclarationsByName(
       @NonNull String name, @NonNull Class<T> clazz) {
     return this.declarations.stream()
-        .map(pe -> pe.getEnd())
+        .map(PropertyEdge::getEnd)
         .filter(declaration -> clazz.isAssignableFrom(declaration.getClass()))
         .map(clazz::cast)
         .filter(declaration -> Objects.equals(declaration.getName(), name))
         .collect(Collectors.toSet());
+  }
+
+  @Nullable
+  public IncludeDeclaration getIncludeByName(@NonNull String name) {
+    return this.includes.stream()
+        .map(PropertyEdge::getEnd)
+        .filter(declaration -> Objects.equals(declaration.getName(), name))
+        .findFirst()
+        .orElse(null);
   }
 
   @NonNull
@@ -118,12 +119,12 @@ public class TranslationUnitDeclaration extends Declaration implements Declarati
   }
 
   @NonNull
-  public List<Declaration> getIncludes() {
+  public List<IncludeDeclaration> getIncludes() {
     return unwrap(this.includes);
   }
 
   @NonNull
-  public List<PropertyEdge<Declaration>> getIncludesPropertyEdge() {
+  public List<PropertyEdge<IncludeDeclaration>> getIncludesPropertyEdge() {
     return this.includes;
   }
 
@@ -139,7 +140,7 @@ public class TranslationUnitDeclaration extends Declaration implements Declarati
 
   public void addDeclaration(@NonNull Declaration declaration) {
     if (declaration instanceof IncludeDeclaration) {
-      addIfNotContains(includes, declaration);
+      addIfNotContains(includes, (IncludeDeclaration) declaration);
     } else if (declaration instanceof NamespaceDeclaration) {
       addIfNotContains(namespaces, declaration);
     }
@@ -166,12 +167,12 @@ public class TranslationUnitDeclaration extends Declaration implements Declarati
     }
     TranslationUnitDeclaration that = (TranslationUnitDeclaration) o;
     return super.equals(that)
-        && Objects.equals(declarations, that.declarations)
         && Objects.equals(this.getDeclarations(), that.getDeclarations())
-        && Objects.equals(includes, that.includes)
+        && PropertyEdge.propertyEqualsList(declarations, that.declarations)
         && Objects.equals(this.getIncludes(), that.getIncludes())
-        && Objects.equals(namespaces, that.namespaces)
-        && Objects.equals(this.getNamespaces(), that.getNamespaces());
+        && PropertyEdge.propertyEqualsList(includes, that.includes)
+        && Objects.equals(this.getNamespaces(), that.getNamespaces())
+        && PropertyEdge.propertyEqualsList(namespaces, that.namespaces);
   }
 
   @Override

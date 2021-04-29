@@ -1,17 +1,17 @@
 /*
  * Copyright (c) 2019, Fraunhofer AISEC. All rights reserved.
  *
- *  Licensed under the Apache License, Version 2.0 (the "License");
- *  you may not use this file except in compliance with the License.
- *  You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- *       http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  *
  *                    $$$$$$\  $$$$$$$\   $$$$$$\
  *                   $$  __$$\ $$  __$$\ $$  __$$\
@@ -23,7 +23,6 @@
  *                    \______/ \__|       \______/
  *
  */
-
 package de.fraunhofer.aisec.cpg.graph.types;
 
 import de.fraunhofer.aisec.cpg.graph.Node;
@@ -59,13 +58,13 @@ public abstract class Type extends Node {
   protected Origin origin;
 
   public Type() {
-    this.name = "";
+    this.setName("");
     this.storage = Storage.AUTO;
     this.qualifier = new Qualifier(false, false, false, false);
   }
 
   public Type(String typeName) {
-    this.name = typeName;
+    this.setName(typeName);
     this.storage = Storage.AUTO;
     this.qualifier = new Qualifier();
     this.origin = Origin.UNRESOLVED;
@@ -73,7 +72,7 @@ public abstract class Type extends Node {
 
   public Type(Type type) {
     this.storage = type.storage;
-    this.name = type.name;
+    this.setName(type.getName());
     this.qualifier =
         new Qualifier(
             type.qualifier.isConst,
@@ -84,7 +83,7 @@ public abstract class Type extends Node {
   }
 
   public Type(String typeName, @Nullable Storage storage, Qualifier qualifier) {
-    this.name = typeName;
+    this.setName(typeName);
     this.storage = storage != null ? storage : Storage.AUTO;
     this.qualifier = qualifier;
     this.origin = Origin.UNRESOLVED;
@@ -279,7 +278,7 @@ public abstract class Type extends Node {
   public abstract Type duplicate();
 
   public String getTypeName() {
-    return name;
+    return getName();
   }
 
   /**
@@ -338,21 +337,21 @@ public abstract class Type extends Node {
     if (this == o) return true;
     if (!(o instanceof Type)) return false;
     Type type = (Type) o;
-    return Objects.equals(name, type.name)
+    return Objects.equals(getName(), type.getName())
         && storage == type.storage
         && Objects.equals(qualifier, type.qualifier);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(name, storage, qualifier);
+    return Objects.hash(getName(), storage, qualifier);
   }
 
   @Override
   public String toString() {
     return "Type{"
         + "typeName='"
-        + name
+        + getName()
         + '\''
         + ", storage="
         + storage

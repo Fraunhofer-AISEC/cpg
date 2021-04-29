@@ -1,17 +1,17 @@
 /*
  * Copyright (c) 2019, Fraunhofer AISEC. All rights reserved.
  *
- *  Licensed under the Apache License, Version 2.0 (the "License");
- *  you may not use this file except in compliance with the License.
- *  You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- *       http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  *
  *                    $$$$$$\  $$$$$$$\   $$$$$$\
  *                   $$  __$$\ $$  __$$\ $$  __$$\
@@ -23,7 +23,6 @@
  *                    \______/ \__|       \______/
  *
  */
-
 package de.fraunhofer.aisec.cpg.enhancements;
 
 import static de.fraunhofer.aisec.cpg.helpers.Util.Connect.NODE;
@@ -51,6 +50,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExp
 import de.fraunhofer.aisec.cpg.helpers.NodeComparator;
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker;
 import de.fraunhofer.aisec.cpg.helpers.Util;
+import de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass;
 import de.fraunhofer.aisec.cpg.processing.IVisitor;
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy;
 import java.io.File;
@@ -517,7 +517,7 @@ class EOGTest extends BaseTest {
                 l -> l.getLocation().getRegion().getStartLine() == 7 && l.getName().equals("b"))
             .get(0);
 
-    List<PropertyEdge<Node>> nextEOG = firstIf.getNextEOGProperties();
+    List<PropertyEdge<Node>> nextEOG = firstIf.getNextEOGEdges();
     assertEquals(2, nextEOG.size());
     for (PropertyEdge<Node> edge : nextEOG) {
       assertEquals(firstIf, edge.getStart());
@@ -551,7 +551,7 @@ class EOGTest extends BaseTest {
                 l -> l.getLocation().getRegion().getStartLine() == 11 && l.getName().equals("x"))
             .get(0);
 
-    nextEOG = elseIf.getNextEOGProperties();
+    nextEOG = elseIf.getNextEOGEdges();
     assertEquals(2, nextEOG.size());
 
     for (PropertyEdge<Node> edge : nextEOG) {
@@ -638,6 +638,15 @@ class EOGTest extends BaseTest {
 
     // Assert: The EOGs going into the third print come  from the loop root
     assertTrue(Util.eogConnect(NODE, EXITS, dostat, prints.get(2)));
+  }
+
+  @Test
+  void testEOGInvariant() throws Exception {
+    File file = new File("src/main/java/de/fraunhofer/aisec/cpg/passes/scopes/ScopeManager.java");
+    TranslationUnitDeclaration tu =
+        TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true);
+
+    assertTrue(EvaluationOrderGraphPass.checkEOGInvariant(tu));
   }
 
   /**

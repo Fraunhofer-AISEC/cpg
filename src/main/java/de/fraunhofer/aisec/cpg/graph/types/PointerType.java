@@ -1,17 +1,17 @@
 /*
  * Copyright (c) 2019, Fraunhofer AISEC. All rights reserved.
  *
- *  Licensed under the Apache License, Version 2.0 (the "License");
- *  you may not use this file except in compliance with the License.
- *  You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- *       http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  *
  *                    $$$$$$\  $$$$$$$\   $$$$$$\
  *                   $$  __$$\ $$  __$$\ $$  __$$\
@@ -23,7 +23,6 @@
  *                    \______/ \__|       \______/
  *
  */
-
 package de.fraunhofer.aisec.cpg.graph.types;
 
 import java.util.Objects;
@@ -51,10 +50,10 @@ public class PointerType extends Type implements SecondOrderType {
   public PointerType(Type elementType, PointerOrigin pointerOrigin) {
     super();
     if (pointerOrigin == PointerOrigin.ARRAY) {
-      this.name = elementType.getName() + "[]";
+      this.setName(elementType.getName() + "[]");
       this.pointerOrigin = PointerOrigin.ARRAY;
     } else {
-      this.name = elementType.getName() + "*";
+      this.setName(elementType.getName() + "*");
       this.pointerOrigin = PointerOrigin.POINTER;
     }
     this.elementType = elementType;
@@ -63,9 +62,9 @@ public class PointerType extends Type implements SecondOrderType {
   public PointerType(Type type, Type elementType, PointerOrigin pointerOrigin) {
     super(type);
     if (pointerOrigin == PointerOrigin.ARRAY) {
-      this.name = elementType.getName() + "[]";
+      this.setName(elementType.getName() + "[]");
     } else {
-      this.name = elementType.getName() + "*";
+      this.setName(elementType.getName() + "*");
     }
     this.elementType = elementType;
     this.pointerOrigin = pointerOrigin;
@@ -95,9 +94,9 @@ public class PointerType extends Type implements SecondOrderType {
       ((PointerType) this.getElementType()).refreshNames();
     }
     if (this.pointerOrigin == PointerOrigin.ARRAY) {
-      this.name = this.getElementType().getName() + "[]";
+      this.setName(this.getElementType().getName() + "[]");
     } else {
-      this.name = this.getElementType().getName() + "*";
+      this.setName(this.getElementType().getName() + "*");
     }
   }
 
@@ -166,7 +165,7 @@ public class PointerType extends Type implements SecondOrderType {
         + "elementType="
         + elementType
         + ", typeName='"
-        + name
+        + getName()
         + '\''
         + ", storage="
         + this.getStorage()

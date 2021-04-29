@@ -1,17 +1,17 @@
 /*
  * Copyright (c) 2019, Fraunhofer AISEC. All rights reserved.
  *
- *  Licensed under the Apache License, Version 2.0 (the "License");
- *  you may not use this file except in compliance with the License.
- *  You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- *       http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  *
  *                    $$$$$$\  $$$$$$$\   $$$$$$\
  *                   $$  __$$\ $$  __$$\ $$  __$$\
@@ -23,7 +23,6 @@
  *                    \______/ \__|       \______/
  *
  */
-
 package de.fraunhofer.aisec.cpg.frontends.cpp;
 
 import static de.fraunhofer.aisec.cpg.TestUtils.analyzeWithBuilder;
@@ -114,6 +113,7 @@ class CXXIncludeTest extends BaseTest {
                 .topLevel(file.getParentFile())
                 .loadIncludes(true)
                 .debugParser(true)
+                .defaultLanguages()
                 .includeBlacklist(new File("src/test/resources/include.h").getAbsolutePath())
                 .failOnError(true));
 
@@ -142,6 +142,7 @@ class CXXIncludeTest extends BaseTest {
                 .topLevel(file.getParentFile())
                 .loadIncludes(true)
                 .debugParser(true)
+                .defaultLanguages()
                 .includeBlacklist("include.h")
                 .failOnError(true));
 
@@ -170,6 +171,7 @@ class CXXIncludeTest extends BaseTest {
                 .topLevel(file.getParentFile())
                 .loadIncludes(true)
                 .debugParser(true)
+                .defaultLanguages()
                 .includeWhitelist(new File("src/test/resources/include.h").getAbsolutePath())
                 .failOnError(true));
 
@@ -197,6 +199,7 @@ class CXXIncludeTest extends BaseTest {
                 .topLevel(file.getParentFile())
                 .loadIncludes(true)
                 .debugParser(true)
+                .defaultLanguages()
                 .includeWhitelist("include.h")
                 .failOnError(true));
 
@@ -224,6 +227,7 @@ class CXXIncludeTest extends BaseTest {
                 .topLevel(file.getParentFile())
                 .loadIncludes(true)
                 .debugParser(true)
+                .defaultLanguages()
                 .includeBlacklist("include.h") // blacklist entries take priority
                 .includeWhitelist("include.h")
                 .includeWhitelist("another-include.h")
@@ -256,6 +260,7 @@ class CXXIncludeTest extends BaseTest {
                 .topLevel(file.getParentFile())
                 .loadIncludes(false)
                 .debugParser(true)
+                .defaultLanguages()
                 .failOnError(true));
 
     assertNotNull(translationUnitDeclarations);

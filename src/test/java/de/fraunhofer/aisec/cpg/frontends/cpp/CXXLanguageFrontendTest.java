@@ -1,17 +1,17 @@
 /*
  * Copyright (c) 2019, Fraunhofer AISEC. All rights reserved.
  *
- *  Licensed under the Apache License, Version 2.0 (the "License");
- *  you may not use this file except in compliance with the License.
- *  You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- *       http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  *
  *                    $$$$$$\  $$$$$$$\   $$$$$$\
  *                   $$  __$$\ $$  __$$\ $$  __$$\
@@ -23,7 +23,6 @@
  *                    \______/ \__|       \______/
  *
  */
-
 package de.fraunhofer.aisec.cpg.frontends.cpp;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -287,7 +286,7 @@ class CXXLanguageFrontendTest extends BaseTest {
         TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true);
 
     // should be six function nodes
-    assertEquals(7, declaration.getDeclarations().size());
+    assertEquals(8, declaration.getDeclarations().size());
 
     FunctionDeclaration method = declaration.getDeclarationAs(0, FunctionDeclaration.class);
     assertEquals("function0(int)void", method.getSignature());
@@ -1197,6 +1196,7 @@ class CXXLanguageFrontendTest extends BaseTest {
                 .sourceLocations(List.of(file))
                 .topLevel(file.getParentFile())
                 .defaultPasses()
+                .defaultLanguages()
                 .processAnnotations(true)
                 .symbols(
                     Map.of("PROPERTY_ATTRIBUTE(...)", "[[property_attribute(#__VA_ARGS__)]]")));
@@ -1252,7 +1252,8 @@ class CXXLanguageFrontendTest extends BaseTest {
                 .topLevel(file.getParentFile())
                 .useUnityBuild(true)
                 .loadIncludes(true)
-                .defaultPasses());
+                .defaultPasses()
+                .defaultLanguages());
 
     assertEquals(1, declarations.size());
 

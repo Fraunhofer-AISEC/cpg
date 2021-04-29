@@ -1,17 +1,17 @@
 /*
  * Copyright (c) 2019, Fraunhofer AISEC. All rights reserved.
  *
- *  Licensed under the Apache License, Version 2.0 (the "License");
- *  you may not use this file except in compliance with the License.
- *  You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- *       http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  *
  *                    $$$$$$\  $$$$$$$\   $$$$$$\
  *                   $$  __$$\ $$  __$$\ $$  __$$\
@@ -23,7 +23,6 @@
  *                    \______/ \__|       \______/
  *
  */
-
 package de.fraunhofer.aisec.cpg.graph.types;
 
 import java.util.Objects;
@@ -42,13 +41,13 @@ public class ReferenceType extends Type implements SecondOrderType {
 
   public ReferenceType(Type reference) {
     super();
-    this.name = reference.getName() + "&";
+    this.setName(reference.getName() + "&");
     this.reference = reference;
   }
 
   public ReferenceType(Type type, Type reference) {
     super(type);
-    this.name = reference.getName() + "&";
+    this.setName(reference.getName() + "&");
     this.reference = reference;
   }
 
@@ -92,7 +91,7 @@ public class ReferenceType extends Type implements SecondOrderType {
   }
 
   public void refreshName() {
-    this.name = this.getElementType().getName() + "&";
+    this.setName(this.getElementType().getName() + "&");
   }
 
   @Override
@@ -115,7 +114,7 @@ public class ReferenceType extends Type implements SecondOrderType {
         + "reference="
         + reference
         + ", typeName='"
-        + name
+        + this.getName()
         + '\''
         + ", storage="
         + this.getStorage()

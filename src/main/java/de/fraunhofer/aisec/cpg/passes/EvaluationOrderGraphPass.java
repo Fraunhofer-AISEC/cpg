@@ -1,17 +1,17 @@
 /*
  * Copyright (c) 2019, Fraunhofer AISEC. All rights reserved.
  *
- *  Licensed under the Apache License, Version 2.0 (the "License");
- *  you may not use this file except in compliance with the License.
- *  You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- *       http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  *
  *                    $$$$$$\  $$$$$$$\   $$$$$$\
  *                   $$  __$$\ $$  __$$\ $$  __$$\
@@ -23,7 +23,6 @@
  *                    \______/ \__|       \______/
  *
  */
-
 package de.fraunhofer.aisec.cpg.passes;
 
 import de.fraunhofer.aisec.cpg.TranslationResult;
@@ -168,7 +167,42 @@ public class EvaluationOrderGraphPass extends Pass {
     for (TranslationUnitDeclaration tu : result.getTranslationUnits()) {
       createEOG(tu);
       removeUnreachableEOGEdges(tu);
+      // checkEOGInvariant(tu); To insert when trying to check if the invariant holds
     }
+  }
+
+  /**
+   * Checks if every node that has another node in its next or previous EOG List is also contained
+   * in that nodes previous or next EOG list to ensure the bidirectionality of the relation in both
+   * lists.
+   *
+   * @param n
+   * @return
+   */
+  public static boolean checkEOGInvariant(Node n) {
+    List<Node> allNodes = SubgraphWalker.flattenAST(n);
+    boolean ret = true;
+    for (Node node : allNodes) {
+      for (Node next : node.getNextEOG()) {
+        if (!next.getPrevEOG().contains(node)) {
+          LOGGER.warn(
+              "Violation to EOG invariant found: Node {} does not have a backreference to his EOG-redecesor {}.",
+              node,
+              next);
+          ret = false;
+        }
+      }
+      for (Node prev : node.getPrevEOG()) {
+        if (!prev.getNextEOG().contains(node)) {
+          LOGGER.warn(
+              "Violation to EOG invariant found: Node {} does not have a reference to his EOG-successor {}.",
+              node,
+              prev);
+          ret = false;
+        }
+      }
+    }
+    return ret;
   }
 
   /**
@@ -216,9 +250,9 @@ public class EvaluationOrderGraphPass extends Pass {
     // remaining eognodes were not visited and have to be removed from the EOG
     for (Node unvisitedNode : eognodes) {
       unvisitedNode
-          .getNextEOGPropertyEdge()
+          .getNextEOGEdges()
           .forEach(next -> next.getEnd().removePrevEOGEntry(unvisitedNode));
-      unvisitedNode.getNextEOGPropertyEdge().clear();
+      unvisitedNode.getNextEOGEdges().clear();
     }
   }
 
@@ -282,6 +316,32 @@ public class EvaluationOrderGraphPass extends Pass {
     // Connect uncaught throws to block node
     addMultipleIncomingEOGEdges(uncaughtEOGThrows, funcDecl.getBody());
     lang.getScopeManager().leaveScope(funcDecl);
+
+    // Set default argument evaluation nodes
+    List<Node> funcDeclNextEOG = funcDecl.getNextEOG();
+    this.currentEOG.clear();
+    this.currentEOG.add(funcDecl);
+    Expression defaultArg = null;
+
+    for (ParamVariableDeclaration paramVariableDeclaration : funcDecl.getParameters()) {
+      if (paramVariableDeclaration.getDefault() != null) {
+        defaultArg = paramVariableDeclaration.getDefault();
+        pushToEOG(defaultArg);
+        this.currentEOG.clear();
+        this.currentEOG.add(defaultArg);
+        this.currentEOG.add(funcDecl);
+      }
+    }
+
+    if (defaultArg != null) {
+      for (Node nextEOG : funcDeclNextEOG) {
+        this.currentEOG.clear();
+        this.currentEOG.add(defaultArg);
+        pushToEOG(nextEOG);
+      }
+    }
+
+    this.currentEOG.clear();
   }
 
   public void createEOG(@Nullable Node node) {
@@ -360,7 +420,8 @@ public class EvaluationOrderGraphPass extends Pass {
     DeclarationStatement declarationStatement = (DeclarationStatement) node;
     // loop through declarations
     for (Declaration declaration : declarationStatement.getDeclarations()) {
-      if (declaration instanceof VariableDeclaration) {
+      if (declaration instanceof VariableDeclaration
+          || declaration instanceof FunctionDeclaration) {
         // analyze the initializers if there is one
         createEOG(declaration);
       }
