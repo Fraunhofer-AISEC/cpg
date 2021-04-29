@@ -102,7 +102,7 @@ public class FunctionDeclaration extends ValueDeclaration implements Declaration
   }
 
   public boolean hasSameSignature(FunctionDeclaration targetFunctionDeclaration) {
-    return targetFunctionDeclaration.getName().equals(this.name)
+    return targetFunctionDeclaration.getName().equals(this.getName())
         && targetFunctionDeclaration.getSignatureTypes().equals(this.getSignatureTypes());
   }
 

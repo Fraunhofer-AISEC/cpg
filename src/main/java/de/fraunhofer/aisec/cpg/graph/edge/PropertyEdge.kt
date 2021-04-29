@@ -163,8 +163,7 @@ open class PropertyEdge<T : Node> : Persistable {
             collection: List<PropertyEdge<T>>,
             outgoing: Boolean = true
         ): List<T> {
-            return collection
-                .map { if (outgoing) it.end else it.start as T }
+            return collection.map { if (outgoing) it.end else it.start as T }
         }
 
         /**
