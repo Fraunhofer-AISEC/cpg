@@ -27,176 +27,69 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
     // built-in
-    java
-    `java-library`
+    //java
+    //`java-library`
     jacoco
     signing
-    `maven-publish`
 
     id("org.sonarqube") version "3.1.1"
     id("com.diffplug.spotless") version "5.12.4"
-    id("com.github.johnrengelman.shadow") version "7.0.0"
-    kotlin("jvm") version "1.4.32"
-}
-
-tasks.jacocoTestReport {
-    reports {
-        xml.isEnabled = true
-    }
+    id("com.github.johnrengelman.shadow") version "7.0.0" apply false
+    kotlin("jvm") version "1.4.32" apply false
 }
 
 group = "de.fraunhofer.aisec"
-
-publishing {
-    publications {
-        create<MavenPublication>("maven") {
-            from(components["java"])
-
-            pom {
-                name.set("Code Property Graph")
-                description.set("A simple library to extract a code property graph out of source code. It has support for multiple passes that can extend the analysis after the graph is constructed.")
-                url.set("https://github.com/Fraunhofer-AISEC/cpg")
-                licenses {
-                    license {
-                        name.set("The Apache License, Version 2.0")
-                        url.set("http://www.apache.org/licenses/LICENSE-2.0.txt")
-                    }
-                }
-                developers {
-                    developer {
-                        id.set("oxisto")
-                        organization.set("Fraunhofer AISEC")
-                        organizationUrl.set("https://www.aisec.fraunhofer.de")
-                    }
-                }
-                scm {
-                    connection.set("scm:git:git://github.com:Fraunhofer-AISEC/cpg.git")
-                    developerConnection.set("scm:git:ssh://github.com:Fraunhofer-AISEC/cpg.git")
-                    url.set("https://github.com/Fraunhofer-AISEC/cpg")
-                }
-            }
-        }
-    }
-
-    repositories {
-        maven {
-            url = uri("https://oss.sonatype.org/service/local/staging/deploy/maven2")
-
-            credentials {
-                val mavenCentralUsername: String? by project
-                val mavenCentralPassword: String? by project
-
-                username = mavenCentralUsername
-                password = mavenCentralPassword
-            }
-        }
-    }
-}
-
-repositories {
-    mavenCentral()
-
-    ivy {
-        setUrl("https://download.eclipse.org/tools/cdt/releases/10.2/cdt-10.2.0/plugins")
-        metadataSources {
-            artifact()
-        }
-        patternLayout {
-            artifact("/[organisation].[module]_[revision].[ext]")
-        }
-    }
-}
-
-tasks.withType<GenerateModuleMetadata> {
-    enabled = false
-}
-
-signing {
-    val signingKey: String? by project
-    val signingPassword: String? by project
-
-    useInMemoryPgpKeys(signingKey, signingPassword)
-
-    setRequired({
-        gradle.taskGraph.hasTask("publish")
-    })
-
-    sign(publishing.publications["maven"])
-}
-
-tasks.named<Test>("test") {
-    useJUnitPlatform {
-        if (!project.hasProperty("experimental")) {
-            excludeTags("experimental")
-        } else {
-            systemProperty("java.library.path", project.projectDir.resolve("src/main/golang"))
-        }
-    }
-    maxHeapSize = "4048m"
-}
-
-tasks.named("compileJava") {
-    dependsOn(":spotlessApply")
-}
-
-val compileKotlin: KotlinCompile by tasks
-compileKotlin.kotlinOptions {
-    jvmTarget = "11"
-    freeCompilerArgs = listOf("-Xopt-in=kotlin.RequiresOptIn")
-}
-
-val compileTestKotlin: KotlinCompile by tasks
-compileTestKotlin.kotlinOptions {
-    jvmTarget = "11"
-    freeCompilerArgs = listOf("-Xopt-in=kotlin.RequiresOptIn")
-}
 
 tasks.named("sonarqube") {
     dependsOn(":jacocoTestReport")
 }
 
-java {
-    sourceCompatibility = JavaVersion.VERSION_11
-    targetCompatibility = JavaVersion.VERSION_11
+subprojects {
+    apply(plugin = "java")
+    apply(plugin = "jacoco")
+    apply(plugin = "org.jetbrains.kotlin.jvm")
+    apply(plugin = "com.diffplug.spotless")
 
-    withSourcesJar()
-    withJavadocJar()
-}
+    repositories {
+        mavenCentral()
 
-dependencies {
-    api("org.apache.commons:commons-lang3:3.12.0")
-    api("org.neo4j:neo4j-ogm-core:3.2.19")
-    api("org.apache.logging.log4j:log4j-slf4j18-impl:2.14.1")
-    api("org.slf4j:jul-to-slf4j:1.8.0-beta4")
-    api("com.github.javaparser:javaparser-symbol-solver-core:3.20.2")
+        ivy {
+            setUrl("https://download.eclipse.org/tools/cdt/releases/10.2/cdt-10.2.0/plugins")
+            metadataSources {
+                artifact()
+            }
+            patternLayout {
+                artifact("/[organisation].[module]_[revision].[ext]")
+            }
+        }
+    }
 
-    // Eclipse dependencies
-    api("org.eclipse.platform:org.eclipse.core.runtime:3.20.100")
-    api("com.ibm.icu:icu4j:68.2")
+    tasks.withType<JavaCompile> {
+        sourceCompatibility = "11"
+        targetCompatibility = "11"
 
-    // CDT
-    api("org.eclipse.cdt:core:7.2.0.202102251239")
+        //withSourcesJar()
+        //withJavadocJar()
+    }
 
-    // openCypher
-    api("org.opencypher:parser-9.0:9.0.20210312")
+    tasks.withType<JacocoReport> {
+        reports {
+            xml.isEnabled = true
+        }
+    }
 
-    implementation(platform("org.jetbrains.kotlin:kotlin-bom"))
-    implementation("org.jetbrains.kotlin:kotlin-stdlib")
+    tasks.withType<JavaCompile> {
+        dependsOn("spotlessApply")
+    }
 
-    // jep for python support
-    api("black.ninia:jep:3.9.1")
+    tasks.withType<KotlinCompile> {
+        kotlinOptions {
+            jvmTarget = "11"
+            freeCompilerArgs = listOf("-Xopt-in=kotlin.RequiresOptIn")
+        }
+    }
 
-    // JUnit
-    testImplementation("org.jetbrains.kotlin:kotlin-test")
-    testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
-    testImplementation("org.junit.jupiter:junit-jupiter-api:5.7.1")
-    testImplementation("org.junit.jupiter:junit-jupiter-params:5.7.1")
-
-    testImplementation("org.mockito:mockito-core:3.9.0")
-    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.7.1")
-}
-
-var headerWithStars = """/*
+    var headerWithStars = """/*
  * Copyright (c) ${"$"}YEAR, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -223,7 +116,7 @@ var headerWithStars = """/*
  */
 """
 
-var headerWithHashes = """#
+    var headerWithHashes = """#
 # Copyright (c) ${"$"}YEAR, Fraunhofer AISEC. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -249,44 +142,45 @@ var headerWithHashes = """#
 #
 """
 
-spotless {
-    java {
-        targetExclude(
-                fileTree(project.projectDir) {
-                    include("build/generated-src/**")
-                }
-        )
-        googleJavaFormat()
-        licenseHeader(headerWithStars).yearSeparator(" - ")
-    }
-    kotlin {
-        ktfmt().kotlinlangStyle()
-        licenseHeader(headerWithStars).yearSeparator(" - ")
-    }
+    spotless {
+        java {
+            targetExclude(
+                    fileTree(project.projectDir) {
+                        include("build/generated-src/**")
+                    }
+            )
+            googleJavaFormat()
+            licenseHeader(headerWithStars).yearSeparator(" - ")
+        }
+        kotlin {
+            ktfmt().kotlinlangStyle()
+            licenseHeader(headerWithStars).yearSeparator(" - ")
+        }
 
-    python {
-        target("src/main/**/*.py")
-        licenseHeader(headerWithHashes, "from").yearSeparator(" - ")
-    }
+        python {
+            target("src/main/**/*.py")
+            licenseHeader(headerWithHashes, "from").yearSeparator(" - ")
+        }
 
-    format("golang") {
-        target("src/main/golang/**/*.go")
-        licenseHeader(headerWithStars, "package").yearSeparator(" - ")
-    }
-}
-
-if (project.hasProperty("experimental")) {
-    tasks.register("compileGolang") {
-        doLast {
-            project.exec {
-                commandLine("./build.sh")
-                        .setStandardOutput(System.out)
-                        .workingDir("src/main/golang")
-            }
+        format("golang") {
+            target("src/main/golang/**/*.go")
+            licenseHeader(headerWithStars, "package").yearSeparator(" - ")
         }
     }
 
-    tasks.named("compileJava") {
-        dependsOn(":compileGolang")
+    if (project.hasProperty("experimental")) {
+        tasks.register("compileGolang") {
+            doLast {
+                project.exec {
+                    commandLine("./build.sh")
+                            .setStandardOutput(System.out)
+                            .workingDir("src/main/golang")
+                }
+            }
+        }
+
+        tasks.named("compileJava") {
+            dependsOn(":compileGolang")
+        }
     }
 }
