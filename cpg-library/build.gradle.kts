@@ -91,6 +91,22 @@ tasks.named<Test>("test") {
     maxHeapSize = "4048m"
 }
 
+if (project.hasProperty("experimental")) {
+    val compileGolang = tasks.register("compileGolang") {
+        doLast {
+            project.exec {
+                commandLine("./build.sh")
+                    .setStandardOutput(System.out)
+                    .workingDir("src/main/golang")
+            }
+        }
+    }
+
+    tasks.named("compileJava") {
+        dependsOn(compileGolang)
+    }
+}
+
 signing {
     val signingKey: String? by project
     val signingPassword: String? by project

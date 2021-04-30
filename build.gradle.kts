@@ -169,20 +169,4 @@ subprojects {
             licenseHeader(headerWithStars, "package").yearSeparator(" - ")
         }
     }
-
-    if (project.hasProperty("experimental")) {
-        val compileGolang = tasks.register("compileGolang") {
-            doLast {
-                project.exec {
-                    commandLine("./build.sh")
-                            .setStandardOutput(System.out)
-                            .workingDir("src/main/golang")
-                }
-            }
-        }
-
-        tasks.named("compileJava") {
-            dependsOn(compileGolang)
-        }
-    }
 }
