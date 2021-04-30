@@ -8,6 +8,15 @@ on:
     types: [opened, synchronize, reopened]
 
 jobs:
+  code-compliance:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysis
+      - uses: Fraunhofer-AISEC/codyze-action@v2.3
+        with:
+          markDirectory: src/main/mark
   build:
     runs-on: ubuntu-latest
     steps:
