@@ -41,7 +41,9 @@ plugins {
 group = "de.fraunhofer.aisec"
 
 tasks.named("sonarqube") {
-    dependsOn(":jacocoTestReport")
+    subprojects.forEach {
+        dependsOn(it.tasks.withType<JacocoReport>())
+    }
 }
 
 subprojects {
