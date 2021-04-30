@@ -271,19 +271,33 @@ object TestUtils {
     data class Edge(
         val label: String,
         val properties: Map<String, Any>,
-        val from: Edge?,
+        val from: Node,
         val to: Node
     ) {
         override fun toString(): String {
             return "$from --{$label}-> $to"
         }
 
-        fun isLoop(seen: Set<Node> = emptySet()): Boolean {
-            return if (to in seen) {
-                true
-            } else {
-                from?.isLoop(seen + to) ?: false
-            }
+        override fun equals(other: Any?): Boolean {
+            if (this === other) return true
+            if (javaClass != other?.javaClass) return false
+
+            other as Edge
+
+            if (label != other.label) return false
+            if (properties != other.properties) return false
+            if (from !== other.from) return false
+            if (to !== other.to) return false
+
+            return true
+        }
+
+        override fun hashCode(): Int {
+            var result = label.hashCode()
+            result = 31 * result + properties.hashCode()
+            result = 31 * result + from.hashCode()
+            result = 31 * result + to.hashCode()
+            return result
         }
     }
 
@@ -293,66 +307,91 @@ object TestUtils {
         other: List<TranslationUnitDeclaration>
     ) {
 
-        val mapping = IdentityHashMap<Node, Node>().toMutableMap()
-        fun Edge.fromMatches(other: Edge): Boolean {
-            if (this.from == null) {
-                return other.from == null
-            } else if (other.from == null) {
-                return false
-            }
+        val originalNodes = getAllNodes(original)
+        val originalEdges = getAllEdges(originalNodes)
 
-            return mapping[this.from.to] == other.from.to &&
-                this.from.label == other.from.label &&
-                this.from.fromMatches(other.from)
+        val otherNodes = getAllNodes(other)
+        val otherEdges = getAllEdges(otherNodes).toMutableSet()
+
+        val originalToOtherNode = getMapping(originalNodes, otherNodes)
+        var missing = originalNodes.filter { it !in originalToOtherNode }
+        assert(missing.isEmpty()) {
+            "There are nodes in the original graph that have no analog in the other graph: $missing"
+        }
+        val otherToOriginalNode = getMapping(otherNodes, originalNodes)
+        missing = otherNodes.filter { it !in otherToOriginalNode }
+        assert(missing.isEmpty()) {
+            "There are nodes in the other graph that have no analog in the original graph: $missing"
         }
 
-        var currOriginal = original.map { Edge("", emptyMap(), null, it) }
-        var currOther = other.map { Edge("", emptyMap(), null, it) }
-
-        while (currOriginal.isNotEmpty() || currOther.isNotEmpty()) {
-            assert(currOriginal.size == currOther.size) {
-                "Original size: ${currOriginal.size}, other size: ${currOther.size}"
-            }
-
-            val currOtherCopy = currOther.toMutableList()
-            for (edge in currOriginal) {
-                val matches =
-                    currOtherCopy.filter { otherEdge ->
-                        edge.fromMatches(otherEdge) &&
-                            edge.label == otherEdge.label &&
-                            edge.properties == otherEdge.properties &&
-                            edge.to.getAllProperties() == otherEdge.to.getAllProperties()
-                    }
-                assert(matches.size == 1) {
-                    "Original edge $edge has ${matches.size} match${if (matches.size == 1) "" else "es"} in other graph"
+        for (originalEdge in originalEdges) {
+            assert(
+                otherEdges.any {
+                    it.label == originalEdge.label &&
+                        it.properties == originalEdge.properties &&
+                        originalToOtherNode[originalEdge.from]?.contains(it.from) ?: false &&
+                        originalToOtherNode[originalEdge.to]?.contains(it.to) ?: false
                 }
-
-                currOtherCopy.remove(matches[0])
-                mapping[edge.to] = matches[0].to
-            }
-
-            assert(currOtherCopy.isEmpty()) {
-                "Edges in other graph without match in original: $currOtherCopy"
-            }
-
-            val nextCurrOriginal =
-                currOriginal.flatMap { edge ->
-                    edge
-                        .to
-                        .getNeighbors()
-                        .map { n -> Edge(n.edgeLabel, n.edgeProperties, edge, n.node) }
-                        .filter { !it.isLoop() }
-                }
-            val nextCurrOther =
-                currOther.flatMap { edge ->
-                    edge
-                        .to
-                        .getNeighbors()
-                        .map { n -> Edge(n.edgeLabel, n.edgeProperties, edge, n.node) }
-                        .filter { !it.isLoop() }
-                }
-            currOriginal = nextCurrOriginal
-            currOther = nextCurrOther
+            ) { "Edge in original graph $originalEdge not present in other graph!" }
         }
+
+        for (otherEdge in otherEdges) {
+            assert(
+                originalEdges.any {
+                    it.label == otherEdge.label &&
+                        it.properties == otherEdge.properties &&
+                        otherToOriginalNode[otherEdge.from]?.contains(it.from) ?: false &&
+                        otherToOriginalNode[otherEdge.to]?.contains(it.to) ?: false
+                }
+            ) { "Edge in other graph $otherEdge not present in original graph!" }
+        }
+    }
+
+    private fun getMapping(
+        originNodes: Set<Node>,
+        targetNodes: Set<Node>
+    ): MutableMap<Node, MutableSet<Node>> {
+        val mapping = IdentityHashMap<Node, MutableSet<Node>>().toMutableMap()
+        for (originalNode in originNodes) {
+            val matches =
+                targetNodes.filter {
+                    it.javaClass == originalNode.javaClass &&
+                        it.getAllProperties() == originalNode.getAllProperties()
+                }
+            val set: MutableSet<Node> = Collections.newSetFromMap(IdentityHashMap())
+            set.addAll(matches)
+            mapping[originalNode] = set
+        }
+        return mapping
+    }
+
+    @JvmStatic
+    fun getAllNodes(translationUnits: Collection<TranslationUnitDeclaration>): Set<Node> {
+        val nodes: MutableSet<Node> = Collections.newSetFromMap(IdentityHashMap())
+        val workset: MutableSet<Node> = Collections.newSetFromMap(IdentityHashMap())
+        nodes.addAll(translationUnits)
+        workset.addAll(translationUnits)
+
+        while (workset.isNotEmpty()) {
+            val curr = workset.first().also { workset.remove(it) }
+            val neighbors = curr.getNeighbors().map { it.node }.filter { it !in nodes }
+            nodes.addAll(neighbors)
+            workset.addAll(neighbors)
+        }
+
+        return nodes
+    }
+
+    @JvmStatic
+    fun getAllEdges(nodes: Collection<Node>): Set<Edge> {
+        val edges = mutableSetOf<Edge>()
+
+        for (node in nodes) {
+            edges.addAll(
+                node.getNeighbors().map { Edge(it.edgeLabel, it.edgeProperties, node, it.node) }
+            )
+        }
+
+        return edges
     }
 }
