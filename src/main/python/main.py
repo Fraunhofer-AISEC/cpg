@@ -634,7 +634,7 @@ class PythonASTToCPG(ast.NodeVisitor):
 
         for keyword in node.keywords:
             if keyword.arg is not None:
-                call.addArgument(self.visit(keyword.value), False, keyword.arg)
+                call.addArgument(self.visit(keyword.value), keyword.arg)
             else:
                 # TODO: keywords without args, aka **arg
                 self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")

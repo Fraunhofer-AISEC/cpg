@@ -130,10 +130,9 @@ open class CallExpression : Expression(), TypeListener {
      * arguments that follow indexed arguments
      */
     @JvmOverloads
-    fun addArgument(expression: Expression, isDefault: Boolean = false, name: String? = null) {
+    fun addArgument(expression: Expression, name: String? = null) {
         val propertyEdge = PropertyEdge(this, expression)
         propertyEdge.addProperty(Properties.INDEX, arguments.size)
-        propertyEdge.addProperty(Properties.DEFAULT, isDefault)
 
         name?.let { propertyEdge.addProperty(Properties.NAME, it) }
 

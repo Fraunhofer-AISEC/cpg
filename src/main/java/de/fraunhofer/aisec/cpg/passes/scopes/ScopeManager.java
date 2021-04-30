@@ -549,6 +549,11 @@ public class ScopeManager {
     return resolveFunction(currentScope, call);
   }
 
+  public List<FunctionDeclaration> resolveFunctionStopScopeTraversalOnDefinition(
+      CallExpression call) {
+    return resolveFunctionStopScopeTraversalOnDefinition(currentScope, call);
+  }
+
   /**
    * Resolves only references to Values in the current scope, static references to other visible
    * records are not resolved over the ScopeManager.
@@ -592,7 +597,7 @@ public class ScopeManager {
    * @param call
    * @return
    */
-  @Nullable
+  @NonNull
   private List<FunctionDeclaration> resolveFunction(Scope scope, CallExpression call) {
     if (scope instanceof ValueDeclarationScope) {
       var list =
@@ -611,6 +616,34 @@ public class ScopeManager {
     }
 
     return scope.getParent() != null ? resolveFunction(scope.getParent(), call) : new ArrayList<>();
+  }
+
+  /**
+   * Resolves a function reference of a call expression, but stops the scope traversal when a
+   * FunctionDeclaration with matching name has been found
+   *
+   * @param scope
+   * @param call
+   * @return
+   */
+  @NonNull
+  private List<FunctionDeclaration> resolveFunctionStopScopeTraversalOnDefinition(
+      Scope scope, CallExpression call) {
+    if (scope instanceof ValueDeclarationScope) {
+      var list =
+          ((ValueDeclarationScope) scope)
+              .getValueDeclarations().stream()
+                  .filter(FunctionDeclaration.class::isInstance)
+                  .map(FunctionDeclaration.class::cast)
+                  .filter(f -> f.getName().equals(call.getName()))
+                  .collect(Collectors.toList());
+      if (!list.isEmpty()) {
+        return list;
+      }
+    }
+    return scope.getParent() != null
+        ? resolveFunctionStopScopeTraversalOnDefinition(scope.getParent(), call)
+        : new ArrayList<>();
   }
 
   /**

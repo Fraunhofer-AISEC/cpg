@@ -316,6 +316,32 @@ public class EvaluationOrderGraphPass extends Pass {
     // Connect uncaught throws to block node
     addMultipleIncomingEOGEdges(uncaughtEOGThrows, funcDecl.getBody());
     lang.getScopeManager().leaveScope(funcDecl);
+
+    // Set default argument evaluation nodes
+    List<Node> funcDeclNextEOG = funcDecl.getNextEOG();
+    this.currentEOG.clear();
+    this.currentEOG.add(funcDecl);
+    Expression defaultArg = null;
+
+    for (ParamVariableDeclaration paramVariableDeclaration : funcDecl.getParameters()) {
+      if (paramVariableDeclaration.getDefault() != null) {
+        defaultArg = paramVariableDeclaration.getDefault();
+        pushToEOG(defaultArg);
+        this.currentEOG.clear();
+        this.currentEOG.add(defaultArg);
+        this.currentEOG.add(funcDecl);
+      }
+    }
+
+    if (defaultArg != null) {
+      for (Node nextEOG : funcDeclNextEOG) {
+        this.currentEOG.clear();
+        this.currentEOG.add(defaultArg);
+        pushToEOG(nextEOG);
+      }
+    }
+
+    this.currentEOG.clear();
   }
 
   public void createEOG(@Nullable Node node) {
@@ -394,7 +420,8 @@ public class EvaluationOrderGraphPass extends Pass {
     DeclarationStatement declarationStatement = (DeclarationStatement) node;
     // loop through declarations
     for (Declaration declaration : declarationStatement.getDeclarations()) {
-      if (declaration instanceof VariableDeclaration) {
+      if (declaration instanceof VariableDeclaration
+          || declaration instanceof FunctionDeclaration) {
         // analyze the initializers if there is one
         createEOG(declaration);
       }
