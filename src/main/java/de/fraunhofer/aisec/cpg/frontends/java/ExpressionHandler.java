@@ -573,10 +573,10 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
       DeclaredReferenceExpression declaredReferenceExpression =
           NodeBuilder.newDeclaredReferenceExpression(name, t, nameExpr.toString());
 
-      var record = this.lang.getScopeManager().getCurrentRecord();
+      var recordDeclaration = this.lang.getScopeManager().getCurrentRecord();
 
-      if (record != null && Objects.equals(record.getName(), name)) {
-        declaredReferenceExpression.setRefersTo(record);
+      if (recordDeclaration != null && Objects.equals(recordDeclaration.getName(), name)) {
+        declaredReferenceExpression.setRefersTo(recordDeclaration);
       } else {
         lang.getScopeManager().connectToLocal(declaredReferenceExpression);
       }

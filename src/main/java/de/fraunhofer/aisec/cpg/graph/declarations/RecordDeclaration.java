@@ -271,7 +271,7 @@ public class RecordDeclaration extends Declaration implements DeclarationHolder 
   public String toString() {
     return new ToStringBuilder(this, Node.TO_STRING_STYLE)
         .appendSuper(super.toString())
-        .append("name", name)
+        .append("name", getName())
         .append("kind", kind)
         .append("superTypeDeclarations", superTypeDeclarations)
         .append("fields", fields)

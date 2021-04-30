@@ -41,13 +41,13 @@ public class ReferenceType extends Type implements SecondOrderType {
 
   public ReferenceType(Type reference) {
     super();
-    this.name = reference.getName() + "&";
+    this.setName(reference.getName() + "&");
     this.reference = reference;
   }
 
   public ReferenceType(Type type, Type reference) {
     super(type);
-    this.name = reference.getName() + "&";
+    this.setName(reference.getName() + "&");
     this.reference = reference;
   }
 
@@ -91,7 +91,7 @@ public class ReferenceType extends Type implements SecondOrderType {
   }
 
   public void refreshName() {
-    this.name = this.getElementType().getName() + "&";
+    this.setName(this.getElementType().getName() + "&");
   }
 
   @Override
@@ -114,7 +114,7 @@ public class ReferenceType extends Type implements SecondOrderType {
         + "reference="
         + reference
         + ", typeName='"
-        + name
+        + this.getName()
         + '\''
         + ", storage="
         + this.getStorage()

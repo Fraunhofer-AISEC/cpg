@@ -36,6 +36,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration;
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration;
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration;
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression;
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.ConstructExpression;
 import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -92,6 +93,10 @@ class FunctionPointerTest extends BaseTest {
             functions, f -> f.getName().equals("fun") && f.getParameters().size() == 1);
     Pattern pattern = Pattern.compile("\\((?<member>.+)?\\*(?<obj>.+\\.)?(?<func>.+)\\)");
     for (CallExpression call : calls) {
+      if (call instanceof ConstructExpression) {
+        continue;
+      }
+
       String func;
       if (!call.getName().contains("(")) {
         func = call.getName();

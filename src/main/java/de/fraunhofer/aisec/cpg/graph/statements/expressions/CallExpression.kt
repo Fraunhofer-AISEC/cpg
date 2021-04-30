@@ -67,14 +67,15 @@ open class CallExpression : Expression(), TypeListener {
     var arguments: List<Expression>
         get() = PropertyEdge.unwrap(this.argumentsEdges)
         set(value) {
-            this.argumentsEdges = PropertyEdge.transformIntoOutgoingPropertyEdgeList(value, this)
+            this.argumentsEdges =
+                PropertyEdge.transformIntoOutgoingPropertyEdgeList(value, this).toMutableList()
         }
 
     /** A virtual property to access [invokesEdges] without property edges. */
     var invokes: List<FunctionDeclaration>
         get() = PropertyEdge.unwrap(this.invokesEdges)
         set(value) {
-            PropertyEdge.getTarget(invokesEdges)
+            PropertyEdge.unwrap(invokesEdges)
                 .forEach(
                     Consumer { i: FunctionDeclaration ->
                         i.unregisterTypeListener(this)
@@ -129,10 +130,9 @@ open class CallExpression : Expression(), TypeListener {
      * arguments that follow indexed arguments
      */
     @JvmOverloads
-    fun addArgument(expression: Expression, isDefault: Boolean = false, name: String? = null) {
+    fun addArgument(expression: Expression, name: String? = null) {
         val propertyEdge = PropertyEdge(this, expression)
         propertyEdge.addProperty(Properties.INDEX, arguments.size)
-        propertyEdge.addProperty(Properties.DEFAULT, isDefault)
 
         name?.let { propertyEdge.addProperty(Properties.NAME, it) }
 
@@ -145,7 +145,7 @@ open class CallExpression : Expression(), TypeListener {
 
     override fun typeChanged(src: HasType, root: HasType, oldType: Type) {
         if (src === base) {
-            fqn = src.type.root.typeName + "." + getName()
+            fqn = src.type.root.typeName + "." + name
         } else {
             val previous = type
             val types = invokes.mapNotNull { it.type }

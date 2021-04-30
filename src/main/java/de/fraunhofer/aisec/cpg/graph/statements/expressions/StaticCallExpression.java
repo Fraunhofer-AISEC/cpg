@@ -52,8 +52,11 @@ public class StaticCallExpression extends CallExpression {
   }
 
   private void updateFqn() {
-    if (targetRecord != null && !targetRecord.isEmpty() && name != null && !name.isEmpty()) {
-      setFqn(targetRecord + "." + name);
+    if (targetRecord != null
+        && !targetRecord.isEmpty()
+        && getName() != null
+        && !getName().isEmpty()) {
+      setFqn(targetRecord + "." + getName());
     }
   }
 }
