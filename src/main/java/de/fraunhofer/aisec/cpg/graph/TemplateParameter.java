@@ -34,4 +34,10 @@ public interface TemplateParameter<T extends Node> {
   public List<PropertyEdge<T>> getPossibleInitializationsPropertyEdge();
 
   public void addPossibleInitialization(T t);
+
+  public boolean canBeInstantiated(T t);
+
+  public T getDefault();
+
+  public void setDefault(T t);
 }

@@ -29,6 +29,7 @@ import static de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.unwrap;
 
 import de.fraunhofer.aisec.cpg.graph.SubGraph;
 import de.fraunhofer.aisec.cpg.graph.TemplateParameter;
+import de.fraunhofer.aisec.cpg.graph.TypeManager;
 import de.fraunhofer.aisec.cpg.graph.edge.Properties;
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression;
@@ -55,6 +56,10 @@ public class NonTypeTemplateParamDeclaration extends ParamVariableDeclaration
     PropertyEdge<Expression> propertyEdge = new PropertyEdge<>(this, expression);
     propertyEdge.addProperty(Properties.INDEX, this.possibleInitializations.size());
     this.possibleInitializations.add(propertyEdge);
+  }
+
+  public boolean canBeInstantiated(Expression expression) {
+    return expression.getType().equals(this.getType()) || TypeManager.getInstance().isSupertypeOf(this.getType(), expression.getType());
   }
 
   @Override

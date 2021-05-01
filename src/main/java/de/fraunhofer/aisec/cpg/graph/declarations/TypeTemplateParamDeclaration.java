@@ -32,6 +32,7 @@ import de.fraunhofer.aisec.cpg.graph.SubGraph;
 import de.fraunhofer.aisec.cpg.graph.TemplateParameter;
 import de.fraunhofer.aisec.cpg.graph.edge.Properties;
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
+import de.fraunhofer.aisec.cpg.graph.types.ObjectType;
 import de.fraunhofer.aisec.cpg.graph.types.Type;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -62,6 +63,10 @@ public class TypeTemplateParamDeclaration extends ValueDeclaration
     PropertyEdge<Type> propertyEdge = new PropertyEdge<>(this, parameterizedType);
     propertyEdge.addProperty(Properties.INDEX, this.possibleInitializations.size());
     this.possibleInitializations.add(propertyEdge);
+  }
+
+  public boolean canBeInstantiated(Type type) {
+    return type instanceof ObjectType;
   }
 
   public Type getDefault() {
