@@ -318,8 +318,8 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
 
       // Handle FunctionTemplate
       lang.getDeclarationHandler().handle(ctx.getDeclaration());
-      templateDeclaration.setName(templateDeclaration.getRealization().get(0).getName());
       lang.getScopeManager().leaveScope(templateDeclaration);
+      templateDeclaration.setName(templateDeclaration.getRealization().get(0).getName());
       return templateDeclaration;
     } else {
       // Handle RecordTemplate
