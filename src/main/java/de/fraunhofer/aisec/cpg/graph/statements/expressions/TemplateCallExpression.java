@@ -32,9 +32,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.FunctionTemplateDeclaration;
 import de.fraunhofer.aisec.cpg.graph.edge.Properties;
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import de.fraunhofer.aisec.cpg.graph.types.Type;
-
 import java.util.*;
-
 import org.neo4j.ogm.annotation.Relationship;
 
 public class TemplateCallExpression extends CallExpression implements HasType.SecondaryTypeEdge {
@@ -43,7 +41,6 @@ public class TemplateCallExpression extends CallExpression implements HasType.Se
   private List<PropertyEdge<Node>> templateParameters = new ArrayList<>();
 
   @Relationship(value = "INSTANTIATION", direction = "OUTGOING")
-  @SubGraph("AST")
   private FunctionTemplateDeclaration instantiation;
 
   public List<PropertyEdge<Node>> getTemplateParametersPropertyEdge() {
