@@ -25,17 +25,11 @@
  */
 package de.fraunhofer.aisec.cpg.graph.declarations;
 
-import static de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.unwrap;
-
 import de.fraunhofer.aisec.cpg.graph.SubGraph;
 import de.fraunhofer.aisec.cpg.graph.TemplateParameter;
 import de.fraunhofer.aisec.cpg.graph.TypeManager;
-import de.fraunhofer.aisec.cpg.graph.edge.Properties;
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression;
-
 import java.util.*;
-
 import org.neo4j.ogm.annotation.Relationship;
 
 public class NonTypeTemplateParamDeclaration extends ParamVariableDeclaration
@@ -48,13 +42,13 @@ public class NonTypeTemplateParamDeclaration extends ParamVariableDeclaration
     return this.possibleInitializations;
   }
 
-
   public void addPossibleInitialization(Expression expression) {
     this.possibleInitializations.add(expression);
   }
 
   public boolean canBeInstantiated(Expression expression) {
-    return expression.getType().equals(this.getType()) || TypeManager.getInstance().isSupertypeOf(this.getType(), expression.getType());
+    return expression.getType().equals(this.getType())
+        || TypeManager.getInstance().isSupertypeOf(this.getType(), expression.getType());
   }
 
   @Override

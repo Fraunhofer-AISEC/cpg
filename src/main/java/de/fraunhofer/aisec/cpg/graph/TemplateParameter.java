@@ -25,8 +25,6 @@
  */
 package de.fraunhofer.aisec.cpg.graph;
 
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
-import java.util.List;
 import java.util.Set;
 
 public interface TemplateParameter<T extends Node> {
