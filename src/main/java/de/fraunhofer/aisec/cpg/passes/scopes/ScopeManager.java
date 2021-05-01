@@ -34,6 +34,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.*;
 import de.fraunhofer.aisec.cpg.graph.statements.*;
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression;
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression;
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.TemplateCallExpression;
 import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType;
 import java.util.*;
 import java.util.function.Function;
@@ -553,6 +554,11 @@ public class ScopeManager {
     return resolveFunction(currentScope, call);
   }
 
+  public List<FunctionTemplateDeclaration> resolveFunctionTemplateDeclaration(
+      TemplateCallExpression call) {
+    return resolveFunctionTemplateDeclaration(currentScope, call);
+  }
+
   public List<FunctionDeclaration> resolveFunctionStopScopeTraversalOnDefinition(
       CallExpression call) {
     return resolveFunctionStopScopeTraversalOnDefinition(currentScope, call);
@@ -595,6 +601,72 @@ public class ScopeManager {
   }
 
   /**
+   * Traverses the scope and looks for Declarations of type c which matches f
+   *
+   * @param scope
+   * @param p predicate the element must match to
+   * @param c class of the object we want to find by traversing
+   * @param <T>
+   * @return
+   */
+  @NonNull
+  private <T> List<T> resolveValueDeclaration(Scope scope, Predicate<T> p, Class<T> c) {
+    if (scope instanceof ValueDeclarationScope) {
+      var list =
+          ((ValueDeclarationScope) scope)
+              .getValueDeclarations().stream()
+                  .filter(c::isInstance)
+                  .map(c::cast)
+                  .filter(p)
+                  .collect(Collectors.toList());
+
+      if (!list.isEmpty()) {
+        return list;
+      }
+    }
+
+    return scope.getParent() != null
+        ? resolveValueDeclaration(scope.getParent(), p, c)
+        : new ArrayList<>();
+  }
+
+  /**
+   * Traverses the scope and looks for Declarations of type c which matches f
+   *
+   * @param scope
+   * @param p predicate the element must match to
+   * @param c class of the object we want to find by traversing
+   * @param <T>
+   * @return
+   */
+  @NonNull
+  private <T> List<T> resolveStructureDeclaration(Scope scope, Predicate<T> p, Class<T> c) {
+    if (scope instanceof StructureDeclarationScope) {
+      var list =
+          ((StructureDeclarationScope) scope)
+              .getStructureDeclarations().stream()
+                  .filter(c::isInstance)
+                  .map(c::cast)
+                  .filter(p)
+                  .collect(Collectors.toList());
+
+      if (!list.isEmpty()) {
+        return list;
+      }
+    }
+
+    return scope.getParent() != null
+        ? resolveStructureDeclaration(scope.getParent(), p, c)
+        : new ArrayList<>();
+  }
+
+  private List<FunctionTemplateDeclaration> resolveFunctionTemplateDeclaration(
+      Scope scope, TemplateCallExpression call) {
+    return resolveStructureDeclaration(
+        scope, c -> c.getName().equals(call.getName()), FunctionTemplateDeclaration.class);
+  }
+
+  /**
    * Resolves a function reference of a call expression.
    *
    * @param scope
@@ -603,23 +675,10 @@ public class ScopeManager {
    */
   @NonNull
   private List<FunctionDeclaration> resolveFunction(Scope scope, CallExpression call) {
-    if (scope instanceof ValueDeclarationScope) {
-      var list =
-          ((ValueDeclarationScope) scope)
-              .getValueDeclarations().stream()
-                  .filter(FunctionDeclaration.class::isInstance)
-                  .map(FunctionDeclaration.class::cast)
-                  .filter(
-                      f ->
-                          f.getName().equals(call.getName()) && f.hasSignature(call.getSignature()))
-                  .collect(Collectors.toList());
-
-      if (!list.isEmpty()) {
-        return list;
-      }
-    }
-
-    return scope.getParent() != null ? resolveFunction(scope.getParent(), call) : new ArrayList<>();
+    return resolveValueDeclaration(
+        scope,
+        f -> f.getName().equals(call.getName()) && f.hasSignature(call.getSignature()),
+        FunctionDeclaration.class);
   }
 
   /**
@@ -633,21 +692,8 @@ public class ScopeManager {
   @NonNull
   private List<FunctionDeclaration> resolveFunctionStopScopeTraversalOnDefinition(
       Scope scope, CallExpression call) {
-    if (scope instanceof ValueDeclarationScope) {
-      var list =
-          ((ValueDeclarationScope) scope)
-              .getValueDeclarations().stream()
-                  .filter(FunctionDeclaration.class::isInstance)
-                  .map(FunctionDeclaration.class::cast)
-                  .filter(f -> f.getName().equals(call.getName()))
-                  .collect(Collectors.toList());
-      if (!list.isEmpty()) {
-        return list;
-      }
-    }
-    return scope.getParent() != null
-        ? resolveFunctionStopScopeTraversalOnDefinition(scope.getParent(), call)
-        : new ArrayList<>();
+    return resolveValueDeclaration(
+        scope, f -> f.getName().equals(call.getName()), FunctionDeclaration.class);
   }
 
   /**
