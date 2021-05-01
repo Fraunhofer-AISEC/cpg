@@ -34,10 +34,9 @@ import de.fraunhofer.aisec.cpg.graph.edge.Properties;
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType;
 import de.fraunhofer.aisec.cpg.graph.types.Type;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.Objects;
+
+import java.util.*;
+
 import org.neo4j.ogm.annotation.Relationship;
 
 public class TypeTemplateParamDeclaration extends ValueDeclaration
@@ -45,24 +44,18 @@ public class TypeTemplateParamDeclaration extends ValueDeclaration
 
   @Relationship(value = "POSSIBLE_INITIALIZATIONS", direction = "OUTGOING")
   @SubGraph("AST")
-  protected List<PropertyEdge<Type>> possibleInitializations = new ArrayList<>();
+  protected Set<Type> possibleInitializations = new HashSet<>();
 
   @Relationship(value = "DEFAULT", direction = "OUTGOING")
   @SubGraph("AST")
   private Type defaultType;
 
-  public List<Type> getPossibleInitializations() {
-    return unwrap(this.possibleInitializations);
-  }
-
-  public List<PropertyEdge<Type>> getPossibleInitializationsPropertyEdge() {
+  public Set<Type> getPossibleInitializations() {
     return this.possibleInitializations;
   }
 
   public void addPossibleInitialization(Type parameterizedType) {
-    PropertyEdge<Type> propertyEdge = new PropertyEdge<>(this, parameterizedType);
-    propertyEdge.addProperty(Properties.INDEX, this.possibleInitializations.size());
-    this.possibleInitializations.add(propertyEdge);
+    this.possibleInitializations.add(parameterizedType);
   }
 
   public boolean canBeInstantiated(Type type) {

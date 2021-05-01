@@ -42,9 +42,9 @@ public class TemplateCallExpression extends CallExpression implements HasType.Se
   @SubGraph("AST")
   private List<PropertyEdge<Node>> templateParameters = new ArrayList<>();
 
-  @Relationship(value = "INITIALIZATION", direction = "OUTGOING")
+  @Relationship(value = "INSTANTIATION", direction = "OUTGOING")
   @SubGraph("AST")
-  private FunctionTemplateDeclaration initialization;
+  private FunctionTemplateDeclaration instantiation;
 
   public List<PropertyEdge<Node>> getTemplateParametersPropertyEdge() {
     return templateParameters;
@@ -95,12 +95,12 @@ public class TemplateCallExpression extends CallExpression implements HasType.Se
     this.templateParameters = templateParameters;
   }
 
-  public FunctionTemplateDeclaration getInitialization() {
-    return initialization;
+  public FunctionTemplateDeclaration getInstantiation() {
+    return instantiation;
   }
 
-  public void setInitialization(FunctionTemplateDeclaration initialization) {
-    this.initialization = initialization;
+  public void setInstantiation(FunctionTemplateDeclaration instantiation) {
+    this.instantiation = instantiation;
   }
 
   @Override
