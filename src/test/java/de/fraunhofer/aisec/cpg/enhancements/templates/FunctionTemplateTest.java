@@ -39,6 +39,8 @@ import de.fraunhofer.aisec.cpg.graph.types.UnknownType;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 public class FunctionTemplateTest extends BaseTest {
@@ -187,14 +189,11 @@ public class FunctionTemplateTest extends BaseTest {
     assertEquals(1, call.getInvokes().size());
     assertEquals(doubleFixedMultiply, call.getInvokes().get(0));
 
-    ObjectType doubleType =
-        TestUtils.findByUniquePredicate(
-            TestUtils.subnodesOfType(result, ObjectType.class), t -> t.getName().equals("double"));
-
     // Check return value
-    assertEquals(doubleType, call.getType());
+    assertEquals("double", call.getType().getName());
   }
 
+  @Disabled
   @Test
   void testInvocationWithoutCallTarget() throws Exception {
     // Check if a CallExpression is converted to a TemplateCallExpression if a compatible target
