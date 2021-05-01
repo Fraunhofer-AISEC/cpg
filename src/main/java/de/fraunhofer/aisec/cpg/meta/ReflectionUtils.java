@@ -1,6 +1,4 @@
-package de.fraunhofer.aisec.cpg;
-
-import static org.junit.jupiter.api.Assertions.*;
+package de.fraunhofer.aisec.cpg.meta;
 
 import com.google.common.base.CaseFormat;
 import de.fraunhofer.aisec.cpg.graph.EdgeProperty;
@@ -16,9 +14,13 @@ import org.neo4j.ogm.annotation.Transient;
 import org.neo4j.ogm.annotation.typeconversion.Convert;
 import org.neo4j.ogm.typeconversion.AttributeConverter;
 import org.neo4j.ogm.typeconversion.CompositeAttributeConverter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-public class GraphConversion {
+public class ReflectionUtils {
 
+  public static boolean FAIL_ON_ERROR = false;
+  private static final Logger LOGGER = LoggerFactory.getLogger(ReflectionUtils.class);
   private static final String PRIMITIVES =
       "char,byte,short,int,long,float,double,boolean,char[],byte[],short[],int[],long[],float[],double[],boolean[]";
   private static final String AUTOBOXERS =
@@ -47,10 +49,23 @@ public class GraphConversion {
   private static Map<String, Boolean> mapsToRelationship = new HashMap<>();
   private static Map<String, List<Field>> fieldsIncludingSuperclasses = new HashMap<>();
 
-  public static Map<Object, Object> getAllProperties(Node n)
-      throws IllegalAccessException, InvocationTargetException, NoSuchMethodException,
-          InstantiationException {
-    HashMap<Object, Object> properties = new HashMap<>();
+  public enum Direction {
+    IN,
+    OUT,
+    BOTH
+  }
+
+  /**
+   * Get all properties of a node as a map from property name to value.
+   *
+   * @param n The node whose properties are to be collected
+   * @return The map of all properties
+   * @throws RuntimeException If {@link ReflectionUtils#FAIL_ON_ERROR} is set to true and anything
+   *     goes wrong while trying to reflectively collect properties. Otherwise the errors are only
+   *     logged.
+   */
+  public static Map<String, Object> getAllProperties(Node n) {
+    HashMap<String, Object> properties = new HashMap<>();
 
     // Set node label (from its class)
     properties.put("label", n.getClass().getSimpleName());
@@ -60,12 +75,33 @@ public class GraphConversion {
     for (Field f : fields) {
       if (!mapsToRelationship(f) && mapsToProperty(f)) {
         f.setAccessible(true);
-        Object x = f.get(n);
+        Object x = null;
+        try {
+          x = f.get(n);
+        } catch (IllegalAccessException e) {
+          String msg =
+              "Failed to retrieve value for field "
+                  + n.getClass().getSimpleName()
+                  + "."
+                  + f.getName();
+          if (FAIL_ON_ERROR) {
+            throw new RuntimeException(msg);
+          }
+          LOGGER.error(msg);
+        }
         if (x == null) {
           continue;
         }
         if (hasAnnotation(f, Convert.class)) {
-          properties.putAll(convertProperties(f, x));
+          try {
+            properties.putAll(convertProperties(f, x));
+          } catch (Exception e) {
+            String msg =
+                "Error converting property " + n.getClass().getSimpleName() + "." + f.getName();
+            if (FAIL_ON_ERROR) {
+              throw new RuntimeException(msg, e);
+            }
+          }
         } else if (mapsToProperty(f)) {
           properties.put(f.getName(), x);
         }
@@ -73,6 +109,83 @@ public class GraphConversion {
     }
 
     return properties;
+  }
+
+  /**
+   * Get all outgoing edges from a node.
+   *
+   * @param n The node whose outgoing edges are to be determined
+   * @return Outgoing edges modeled as {@link Edge} objects
+   * @throws RuntimeException If {@link ReflectionUtils#FAIL_ON_ERROR} is set to true and anything
+   *     goes wrong while trying to reflectively collect outgoing edges. Otherwise the errors are
+   *     only logged.
+   */
+  public static Set<Edge> getOutgoingEdges(Node n) {
+    Set<Edge> edges = new HashSet<>();
+
+    for (Field f : getFieldsIncludingSuperclasses(n.getClass())) {
+      if (mapsToRelationship(f)) {
+
+        if (getRelationshipDirection(f) != Direction.OUT) {
+          continue;
+        }
+        String relName = getRelationshipLabel(f);
+        Map<String, Object> edgePropertiesForField = getEdgeProperties(f);
+
+        f.setAccessible(true);
+        Object x = null;
+        try {
+          x = f.get(n);
+        } catch (IllegalAccessException e) {
+          String msg =
+              "Failed to retrieve value for field "
+                  + n.getClass().getSimpleName()
+                  + "."
+                  + f.getName();
+          if (FAIL_ON_ERROR) {
+            throw new RuntimeException(msg);
+          }
+          LOGGER.error(msg);
+        }
+        if (x == null) {
+          continue;
+        }
+
+        // Create an edge from a field value
+        if (Collection.class.isAssignableFrom(x.getClass())) {
+          // Add multiple edges for collections
+          for (var entry : (Collection) x) {
+            if (PropertyEdge.class.isAssignableFrom(entry.getClass())) {
+              Node target = ((PropertyEdge<?>) entry).getEnd();
+              edges.add(new Edge(n, relName, edgePropertiesForField, target));
+            } else if (Node.class.isAssignableFrom(entry.getClass())) {
+              edges.add(new Edge(n, relName, edgePropertiesForField, (Node) entry));
+            }
+          }
+        } else if (Persistable[].class.isAssignableFrom(x.getClass())) {
+          for (Object entry : Collections.singletonList(x)) {
+            if (getGenericStrippedType(entry.getClass())
+                .getTypeName()
+                .equals(PropertyEdge.class.getName())) {
+              Node target = ((PropertyEdge<?>) entry).getEnd();
+              edges.add(new Edge(n, relName, edgePropertiesForField, target));
+            } else if (Node.class.isAssignableFrom(entry.getClass())) {
+              edges.add(new Edge(n, relName, edgePropertiesForField, (Node) entry));
+            }
+          }
+        } else {
+          // Add single edge for non-collections
+          if (PropertyEdge.class.isAssignableFrom(x.getClass())) {
+            Node target = ((PropertyEdge<?>) x).getEnd();
+            edges.add(new Edge(n, relName, edgePropertiesForField, target));
+          } else if (Node.class.isAssignableFrom(x.getClass())) {
+            edges.add(new Edge(n, relName, edgePropertiesForField, (Node) x));
+          }
+        }
+      }
+    }
+
+    return edges;
   }
 
   private static Map<String, Object> getEdgeProperties(Field f) {
@@ -105,10 +218,14 @@ public class GraphConversion {
                       } catch (NoSuchMethodException
                           | IllegalAccessException
                           | InvocationTargetException e) {
-                        fail(
+                        String msg =
                             "Edge property annotation "
                                 + a.getClass().getName()
-                                + " does not provide a 'value' method of type String");
+                                + " does not provide a 'value' method of type String";
+                        if (FAIL_ON_ERROR) {
+                          throw new RuntimeException(msg);
+                        }
+                        LOGGER.error(msg);
                         return "UNKNOWN_PROPERTY";
                       }
                     }));
@@ -126,7 +243,16 @@ public class GraphConversion {
                   .filter(a -> a.annotationType().equals(Relationship.class))
                   .findFirst()
                   .orElse(null);
-      assertNotNull(rel, "Relation direction is null");
+
+      if (rel == null) {
+        String msg = "Relation direction is null, defaulting to 'OUT'";
+        if (FAIL_ON_ERROR) {
+          throw new RuntimeException(msg);
+        }
+        LOGGER.error(msg);
+        return Direction.OUT;
+      }
+
       switch (rel.direction()) {
         case Relationship.INCOMING:
           direction = Direction.IN;
@@ -252,7 +378,7 @@ public class GraphConversion {
         .anyMatch(a -> a.annotationType().equals(annotationClass));
   }
 
-  private static Map<Object, Object> convertProperties(Field f, Object content)
+  private static Map<String, Object> convertProperties(Field f, Object content)
       throws NoSuchMethodException, InvocationTargetException, InstantiationException,
           IllegalAccessException {
     Object converter =
@@ -266,90 +392,5 @@ public class GraphConversion {
     }
 
     return Collections.emptyMap();
-  }
-
-  public static Set<Neighbor> getNeighbors(Node n) throws IllegalAccessException {
-    Set<Neighbor> neighbors = new HashSet<>();
-
-    for (Field f : getFieldsIncludingSuperclasses(n.getClass())) {
-      if (mapsToRelationship(f)) {
-
-        if (getRelationshipDirection(f) != Direction.OUT) {
-          continue;
-        }
-        String relName = getRelationshipLabel(f);
-        Map<String, Object> edgePropertiesForField = getEdgeProperties(f);
-
-        f.setAccessible(true);
-        Object x = f.get(n);
-        if (x == null) {
-          continue;
-        }
-
-        // Create an edge from a field value
-        if (Collection.class.isAssignableFrom(x.getClass())) {
-          // Add multiple edges for collections
-          for (var entry : (Collection) x) {
-            if (PropertyEdge.class.isAssignableFrom(entry.getClass())) {
-              Node target = ((PropertyEdge<?>) entry).getEnd();
-              neighbors.add(new Neighbor(relName, edgePropertiesForField, target));
-            } else if (Node.class.isAssignableFrom(entry.getClass())) {
-              neighbors.add(new Neighbor(relName, edgePropertiesForField, (Node) entry));
-            }
-          }
-        } else if (Persistable[].class.isAssignableFrom(x.getClass())) {
-          for (Object entry : Collections.singletonList(x)) {
-            if (getGenericStrippedType(entry.getClass())
-                .getTypeName()
-                .equals(PropertyEdge.class.getName())) {
-              Node target = ((PropertyEdge<?>) entry).getEnd();
-              neighbors.add(new Neighbor(relName, edgePropertiesForField, target));
-            } else if (Node.class.isAssignableFrom(entry.getClass())) {
-              neighbors.add(new Neighbor(relName, edgePropertiesForField, (Node) entry));
-            }
-          }
-        } else {
-          // Add single edge for non-collections
-          if (PropertyEdge.class.isAssignableFrom(x.getClass())) {
-            Node target = ((PropertyEdge<?>) x).getEnd();
-            neighbors.add(new Neighbor(relName, edgePropertiesForField, target));
-          } else if (Node.class.isAssignableFrom(x.getClass())) {
-            neighbors.add(new Neighbor(relName, edgePropertiesForField, (Node) x));
-          }
-        }
-      }
-    }
-
-    return neighbors;
-  }
-
-  public enum Direction {
-    IN,
-    OUT,
-    BOTH
-  }
-
-  public static class Neighbor {
-    private final String edgeLabel;
-    private final Map<String, Object> edgeProperties;
-    private final Node node;
-
-    public Neighbor(String edgeLabel, Map<String, Object> edgeProperties, Node node) {
-      this.edgeLabel = edgeLabel;
-      this.edgeProperties = edgeProperties;
-      this.node = node;
-    }
-
-    public String getEdgeLabel() {
-      return edgeLabel;
-    }
-
-    public Map<String, Object> getEdgeProperties() {
-      return edgeProperties;
-    }
-
-    public Node getNode() {
-      return node;
-    }
   }
 }

@@ -260,47 +260,6 @@ object TestUtils {
         }
     }
 
-    private fun Node.getAllProperties(): Map<Any, Any> {
-        return GraphConversion.getAllProperties(this)
-    }
-
-    private fun Node.getNeighbors(): Set<GraphConversion.Neighbor> {
-        return GraphConversion.getNeighbors(this)
-    }
-
-    data class Edge(
-        val label: String,
-        val properties: Map<String, Any>,
-        val from: Node,
-        val to: Node
-    ) {
-        override fun toString(): String {
-            return "$from --{$label}-> $to"
-        }
-
-        override fun equals(other: Any?): Boolean {
-            if (this === other) return true
-            if (javaClass != other?.javaClass) return false
-
-            other as Edge
-
-            if (label != other.label) return false
-            if (properties != other.properties) return false
-            if (from !== other.from) return false
-            if (to !== other.to) return false
-
-            return true
-        }
-
-        override fun hashCode(): Int {
-            var result = label.hashCode()
-            result = 31 * result + properties.hashCode()
-            result = 31 * result + from.hashCode()
-            result = 31 * result + to.hashCode()
-            return result
-        }
-    }
-
     @JvmStatic
     fun assertGraphsAreEqual(
         original: List<TranslationUnitDeclaration>,
@@ -308,10 +267,10 @@ object TestUtils {
     ) {
 
         val originalNodes = getAllNodes(original)
-        val originalEdges = getAllEdges(originalNodes)
+        val originalEdges = originalNodes.flatMap { it.getOutgoingEdges() }.toMutableSet()
 
         val otherNodes = getAllNodes(other)
-        val otherEdges = getAllEdges(otherNodes).toMutableSet()
+        val otherEdges = otherNodes.flatMap { it.getOutgoingEdges() }.toMutableSet()
 
         val originalToOtherNode = getMapping(originalNodes, otherNodes)
         var missing = originalNodes.filter { it !in originalToOtherNode }
@@ -356,7 +315,7 @@ object TestUtils {
             val matches =
                 targetNodes.filter {
                     it.javaClass == originalNode.javaClass &&
-                        it.getAllProperties() == originalNode.getAllProperties()
+                        it.allProperties == originalNode.allProperties
                 }
             val set: MutableSet<Node> = Collections.newSetFromMap(IdentityHashMap())
             set.addAll(matches)
@@ -374,24 +333,11 @@ object TestUtils {
 
         while (workset.isNotEmpty()) {
             val curr = workset.first().also { workset.remove(it) }
-            val neighbors = curr.getNeighbors().map { it.node }.filter { it !in nodes }
+            val neighbors = curr.outgoingEdges.map { it.to }.filter { it !in nodes }
             nodes.addAll(neighbors)
             workset.addAll(neighbors)
         }
 
         return nodes
-    }
-
-    @JvmStatic
-    fun getAllEdges(nodes: Collection<Node>): Set<Edge> {
-        val edges = mutableSetOf<Edge>()
-
-        for (node in nodes) {
-            edges.addAll(
-                node.getNeighbors().map { Edge(it.edgeLabel, it.edgeProperties, node, it.node) }
-            )
-        }
-
-        return edges
     }
 }

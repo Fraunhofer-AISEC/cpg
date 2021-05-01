@@ -34,6 +34,7 @@ import com.google.common.collect.Lists;
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
 import de.fraunhofer.aisec.cpg.frontends.cpp.CXXLanguageFrontend;
 import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguageFrontend;
+import de.fraunhofer.aisec.cpg.meta.ReflectionUtils;
 import de.fraunhofer.aisec.cpg.passes.CallResolver;
 import de.fraunhofer.aisec.cpg.passes.ControlFlowSensitiveDFGPass;
 import de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass;
@@ -158,6 +159,7 @@ public class TranslationConfiguration {
     this.topLevel = topLevel;
     this.debugParser = debugParser;
     this.failOnError = failOnError;
+    ReflectionUtils.FAIL_ON_ERROR = failOnError;
     this.loadIncludes = loadIncludes;
     this.includePaths = includePaths;
     this.includeWhitelist = includeWhitelist;

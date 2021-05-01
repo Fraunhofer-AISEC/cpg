@@ -30,6 +30,8 @@ import de.fraunhofer.aisec.cpg.graph.declarations.TypedefDeclaration;
 import de.fraunhofer.aisec.cpg.graph.edge.Properties;
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import de.fraunhofer.aisec.cpg.helpers.LocationConverter;
+import de.fraunhofer.aisec.cpg.meta.Edge;
+import de.fraunhofer.aisec.cpg.meta.ReflectionUtils;
 import de.fraunhofer.aisec.cpg.processing.IVisitable;
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation;
 import java.util.*;
@@ -324,6 +326,33 @@ public class Node implements IVisitable<Node>, Persistable {
 
   public void addAnnotations(@NonNull Collection<Annotation> annotations) {
     this.annotations.addAll(annotations);
+  }
+
+  /**
+   * Get all properties of this node. <b>NOTE: Performs heavyweight reflection, so handle with
+   * care!</b>
+   *
+   * @return All properties that would be persisted by database OGMs, as a map from property name to
+   *     value
+   * @throws RuntimeException If {@link ReflectionUtils#FAIL_ON_ERROR} is set to true and anything
+   *     goes wrong while trying to reflectively collect properties. Otherwise the errors are only
+   *     logged.
+   */
+  public Map<String, Object> getAllProperties() {
+    return ReflectionUtils.getAllProperties(this);
+  }
+
+  /**
+   * Get all outgoing edges from this node. <b>NOTE: Performs heavyweight reflection, so handle with
+   * care!</b>
+   *
+   * @return All outgoing edges, modeled as {@link Edge} objects
+   * @throws RuntimeException If {@link ReflectionUtils#FAIL_ON_ERROR} is set to true and anything
+   *     goes wrong while trying to reflectively collect outgoing edges. Otherwise the errors are
+   *     only logged.
+   */
+  public Set<Edge> getOutgoingEdges() {
+    return ReflectionUtils.getOutgoingEdges(this);
   }
 
   /**
