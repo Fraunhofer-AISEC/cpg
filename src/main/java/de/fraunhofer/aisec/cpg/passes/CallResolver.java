@@ -31,10 +31,7 @@ import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguageFrontend;
 import de.fraunhofer.aisec.cpg.graph.*;
 import de.fraunhofer.aisec.cpg.graph.declarations.*;
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*;
-import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType;
-import de.fraunhofer.aisec.cpg.graph.types.Type;
-import de.fraunhofer.aisec.cpg.graph.types.TypeParser;
-import de.fraunhofer.aisec.cpg.graph.types.UnknownType;
+import de.fraunhofer.aisec.cpg.graph.types.*;
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.ScopedWalker;
 import de.fraunhofer.aisec.cpg.helpers.Util;
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy;
@@ -216,6 +213,11 @@ public class CallResolver extends Pass {
     } else if (node instanceof ExplicitConstructorInvocation) {
       resolveExplicitConstructorInvocation((ExplicitConstructorInvocation) node);
     } else if (node instanceof ConstructExpression) {
+      ConstructExpression constructExpression = (ConstructExpression) node;
+      // We might have call expressions inside our arguments, so in order to correctly resolve
+      // this call's signature, we need to make sure any call expression arguments are fully
+      // resolved
+      resolveArguments(constructExpression, curClass);
       resolveConstructExpression((ConstructExpression) node);
     } else if (node instanceof CallExpression) {
       CallExpression call = (CallExpression) node;
@@ -247,6 +249,11 @@ public class CallResolver extends Pass {
       }
     }
 
+    if (call instanceof TemplateCallExpression && lang instanceof CXXLanguageFrontend) {
+      handleTemplateFunctionCalls(curClass, (TemplateCallExpression) call);
+      return;
+    }
+
     // we could be referring to a function pointer even though it is not a member call if the
     // usual function pointer syntax (*fp)() has been omitted: fp(). Looks like a normal call,
     // but it isn't
@@ -259,6 +266,152 @@ public class CallResolver extends Pass {
     } else {
       handleNormalCalls(curClass, call);
     }
+  }
+
+  private boolean isInstantiated(Node callParameter, Declaration functionParameter) {
+    if (callParameter instanceof Type
+        && functionParameter instanceof TypeTemplateParamDeclaration) {
+      return ((TypeTemplateParamDeclaration) functionParameter)
+          .canBeInstantiated((Type) callParameter);
+    } else if (callParameter instanceof Expression
+        && functionParameter instanceof NonTypeTemplateParamDeclaration) {
+      return ((NonTypeTemplateParamDeclaration) functionParameter)
+          .canBeInstantiated((Expression) callParameter);
+    }
+    return false;
+  }
+
+  private Map<ParameterizedType, TypeTemplateParamDeclaration>
+      getParameterizedSignaturesFromInitialization(Map<Declaration, Node> intialization) {
+    Map<ParameterizedType, TypeTemplateParamDeclaration> parameterizedSignature = new HashMap<>();
+    for (Declaration templateParam : intialization.keySet()) {
+      if (templateParam instanceof TypeTemplateParamDeclaration) {
+        parameterizedSignature.put(
+            (ParameterizedType) ((TypeTemplateParamDeclaration) templateParam).getType(),
+            (TypeTemplateParamDeclaration) templateParam);
+      }
+    }
+    return parameterizedSignature;
+  }
+
+  private Map<Declaration, Node> constructTemplateInitializationSignatureFromTemplateParameters(
+      FunctionTemplateDeclaration functionTemplateDeclaration,
+      TemplateCallExpression templateCall) {
+    Map<Declaration, Node> instantiationSignature = new HashMap<>();
+    for (int i = 0; i < functionTemplateDeclaration.getParameters().size(); i++) {
+      if (i < templateCall.getTemplateParameters().size()) {
+        Node callParameter = templateCall.getTemplateParameters().get(i);
+        Declaration templateParameter = functionTemplateDeclaration.getParameters().get(i);
+        if (isInstantiated(callParameter, templateParameter)) {
+          instantiationSignature.put(templateParameter, callParameter);
+        } else {
+          // If both parameters do not match, we cannot instantiate the template
+          return null;
+        }
+      } else {
+        if (((TemplateParameter) functionTemplateDeclaration.getParameters().get(i)).getDefault()
+            != null) {
+          // If we have a default we fill it in
+          instantiationSignature.put(
+              (functionTemplateDeclaration.getParameters().get(i)),
+              ((TemplateParameter) functionTemplateDeclaration.getParameters().get(i))
+                  .getDefault());
+        } else {
+          // If there is no default, we don't have information on the parameter -> check
+          // autodeduction
+          instantiationSignature.put(functionTemplateDeclaration.getParameters().get(i), null);
+        }
+      }
+    }
+    return instantiationSignature;
+  }
+
+  private Map<Declaration, Node> getTemplateInitializationSignature(
+      FunctionTemplateDeclaration functionTemplateDeclaration,
+      TemplateCallExpression templateCall) {
+    // Construct Signature
+    Map<Declaration, Node> signature =
+        constructTemplateInitializationSignatureFromTemplateParameters(
+            functionTemplateDeclaration, templateCall);
+    if (signature == null) return null;
+
+    Map<ParameterizedType, TypeTemplateParamDeclaration> parameterizedTypeResolution =
+        getParameterizedSignaturesFromInitialization(signature);
+
+    // Check for unresolved Parameters and try to deduce Type by looking at call arguments
+    for (int i = 0; i < templateCall.getArguments().size(); i++) {
+      FunctionDeclaration functionDeclaration = functionTemplateDeclaration.getRealization().get(0);
+      Type currentArgumentType = functionDeclaration.getParameters().get(i).getType();
+
+      if (currentArgumentType instanceof ParameterizedType
+          && signature.get(parameterizedTypeResolution.get(currentArgumentType)) == null) {
+        signature.put(parameterizedTypeResolution.get(currentArgumentType), currentArgumentType);
+      }
+    }
+    return signature;
+  }
+
+  private void handleTemplateFunctionCalls(
+      RecordDeclaration curClass, TemplateCallExpression templateCall) {
+
+    List<FunctionTemplateDeclaration> instantiationCandidates =
+        lang.getScopeManager().resolveFunctionTemplateDeclaration(templateCall);
+
+    List<FunctionTemplateDeclaration> invokes = new ArrayList<>();
+    Map<FunctionTemplateDeclaration, Map<Declaration, Node>> initialization = new HashMap<>();
+
+    for (FunctionTemplateDeclaration functionTemplateDeclaration : instantiationCandidates) {
+      if (templateCall.getTemplateParameters().size()
+              <= functionTemplateDeclaration.getParameters().size()
+          && templateCall.getArguments().size()
+              <= functionTemplateDeclaration.getRealization().get(0).getParameters().size()) {
+
+        Map<Declaration, Node> initializationSignature =
+            getTemplateInitializationSignature(functionTemplateDeclaration, templateCall);
+        FunctionDeclaration function = functionTemplateDeclaration.getRealization().get(0);
+
+        if (initializationSignature != null
+            && checkArgumentValidity(initializationSignature, function, templateCall)) {
+          // Valid Target -> Apply invocation
+          templateCall.setInstantiation(functionTemplateDeclaration);
+          templateCall.setInvokes(List.of(function));
+
+          // Set return Value of call if resolved
+          Type returnType = function.getType();
+          if (function.getType() instanceof ParameterizedType) {
+            returnType =
+                (Type)
+                    initializationSignature.get(
+                        getParameterizedSignaturesFromInitialization(initializationSignature)
+                            .get((ParameterizedType) returnType));
+          }
+          templateCall.setType(returnType);
+
+          // Add possible initializations to
+          for (Declaration declaration : initializationSignature.keySet()) {
+            if (declaration instanceof TypeTemplateParamDeclaration) {
+              ((TypeTemplateParamDeclaration) declaration)
+                  .addPossibleInitialization((Type) initializationSignature.get(declaration));
+            } else if (declaration instanceof NonTypeTemplateParamDeclaration) {
+              ((NonTypeTemplateParamDeclaration) declaration)
+                  .addPossibleInitialization((Expression) initializationSignature.get(declaration));
+            }
+          }
+          return;
+        }
+      }
+    }
+
+    // TODO CPS Create Dummy
+
+  }
+
+  private boolean checkArgumentValidity(
+      Map<Declaration, Node> signature,
+      FunctionDeclaration declaration,
+      TemplateCallExpression call) {
+    // TODO
+    return true;
   }
 
   private void resolveArguments(CallExpression call, RecordDeclaration curClass) {
