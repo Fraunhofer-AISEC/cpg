@@ -36,6 +36,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.checkerframework.checker.nullness.qual.NonNull;
+import org.checkerframework.checker.nullness.qual.Nullable;
 import org.neo4j.ogm.annotation.Relationship;
 
 /**
@@ -99,8 +100,17 @@ public class CallExpression extends Expression implements TypeListener {
   }
 
   public void addArgument(Expression expression) {
+    addArgument(expression, null);
+  }
+
+  public void addArgument(Expression expression, @Nullable String name) {
     PropertyEdge<Expression> propertyEdge = new PropertyEdge<>(this, expression);
     propertyEdge.addProperty(Properties.INDEX, this.arguments.size());
+
+    if(name != null) {
+      propertyEdge.addProperty(Properties.NAME, name);
+    }
+
     this.arguments.add(propertyEdge);
   }
 
