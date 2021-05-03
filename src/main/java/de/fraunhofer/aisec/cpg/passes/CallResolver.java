@@ -67,6 +67,12 @@ public class CallResolver extends Pass {
   @Nullable private TranslationUnitDeclaration currentTU;
   private ScopedWalker walker;
 
+  public enum TemplateResolution {
+    AUTO_DEDUCTION,
+    DEFAULT,
+    EXPLICIT
+  }
+
   @Override
   public void cleanup() {
     this.containingType.clear();
