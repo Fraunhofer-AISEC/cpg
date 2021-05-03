@@ -17,6 +17,7 @@ jobs:
       - uses: Fraunhofer-AISEC/codyze-action@v2.3
         with:
           markDirectory: src/main/mark
+          directory: cpg-library/src/main/java
   build:
     runs-on: ubuntu-latest
     steps:
