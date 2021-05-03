@@ -39,7 +39,6 @@ import de.fraunhofer.aisec.cpg.graph.types.UnknownType;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
-
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
@@ -260,7 +259,7 @@ public class FunctionTemplateTest extends BaseTest {
     FunctionTemplateDeclaration templateDeclaration =
         TestUtils.findByUniquePredicate(
             TestUtils.subnodesOfType(result, FunctionTemplateDeclaration.class),
-            t -> t.getName().equals("template <class T=int, int N=5> T fixed_multiply (T val)"));
+            t -> t.getName().equals("fixed_multiply"));
 
     FunctionDeclaration fixedMultiply =
         TestUtils.findByUniquePredicate(
@@ -281,19 +280,16 @@ public class FunctionTemplateTest extends BaseTest {
     assertEquals(fixedMultiply, call.getInvokes().get(0));
 
     // Check template parameters
-    ObjectType doubleType =
-        TestUtils.findByUniquePredicate(
-            TestUtils.subnodesOfType(result, ObjectType.class), t -> t.getName().equals("double"));
     Literal<?> literal5 =
         TestUtils.findByUniquePredicate(
             TestUtils.subnodesOfType(result, Literal.class), l -> l.getValue().equals(5));
 
     assertEquals(2, call.getTemplateParameters().size());
-    assertEquals(doubleType, call.getTemplateParameters().get(0));
+    assertEquals("double", call.getTemplateParameters().get(0).getName());
     assertEquals(literal5, call.getTemplateParameters().get(1));
 
     // Check return value
-    assertEquals(doubleType, call.getType());
+    assertEquals("double", call.getType().getName());
   }
 
   @Test
