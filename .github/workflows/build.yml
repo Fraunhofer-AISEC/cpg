@@ -13,7 +13,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
         with:
-          fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysis
+          fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of SonarQube analysis
       - uses: Fraunhofer-AISEC/codyze-action@v2.3
         with:
           markDirectory: src/main/mark
