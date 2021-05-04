@@ -44,7 +44,8 @@ import org.junit.jupiter.api.Test;
 
 public class FunctionTemplateTest extends BaseTest {
 
-  private final Path topLevel = Path.of("src", "test", "resources", "templates");
+  private final Path topLevel =
+      Path.of("src", "test", "resources", "templates", "functiontemplates");
 
   @Test
   void testDependentType() throws Exception {
@@ -76,10 +77,7 @@ public class FunctionTemplateTest extends BaseTest {
   void testFunctionTemplateStructure() throws Exception {
     List<TranslationUnitDeclaration> result =
         TestUtils.analyze(
-            List.of(
-                Path.of(topLevel.toString(), "functiontemplates", "functionTemplate.cpp").toFile()),
-            topLevel,
-            true);
+            List.of(Path.of(topLevel.toString(), "functionTemplate.cpp").toFile()), topLevel, true);
     // This test checks the structure of FunctionTemplates without the TemplateExpansionPass
     FunctionTemplateDeclaration functionTemplateDeclaration =
         TestUtils.subnodesOfType(result, FunctionTemplateDeclaration.class).get(0);
@@ -168,9 +166,7 @@ public class FunctionTemplateTest extends BaseTest {
     // Check invocation target with specialized function alongside template with same name
     List<TranslationUnitDeclaration> result =
         TestUtils.analyze(
-            List.of(
-                Path.of(topLevel.toString(), "functiontemplates", "functionTemplateInvocation1.cpp")
-                    .toFile()),
+            List.of(Path.of(topLevel.toString(), "functionTemplateInvocation1.cpp").toFile()),
             topLevel,
             true);
 
@@ -199,9 +195,7 @@ public class FunctionTemplateTest extends BaseTest {
     // exists
     List<TranslationUnitDeclaration> result =
         TestUtils.analyze(
-            List.of(
-                Path.of(topLevel.toString(), "functiontemplates", "functionTemplateInvocation2.cpp")
-                    .toFile()),
+            List.of(Path.of(topLevel.toString(), "functionTemplateInvocation2.cpp").toFile()),
             topLevel,
             true);
 
@@ -250,9 +244,7 @@ public class FunctionTemplateTest extends BaseTest {
     // Check if a TemplateCallExpression without template parameters performs autodeduction
     List<TranslationUnitDeclaration> result =
         TestUtils.analyze(
-            List.of(
-                Path.of(topLevel.toString(), "functiontemplates", "functionTemplateInvocation3.cpp")
-                    .toFile()),
+            List.of(Path.of(topLevel.toString(), "functionTemplateInvocation3.cpp").toFile()),
             topLevel,
             true);
 
@@ -297,16 +289,14 @@ public class FunctionTemplateTest extends BaseTest {
     // test invocation target when no autodeduction is possible, but defaults are provided
     List<TranslationUnitDeclaration> result =
         TestUtils.analyze(
-            List.of(
-                Path.of(topLevel.toString(), "functiontemplates", "functionTemplateInvocation4.cpp")
-                    .toFile()),
+            List.of(Path.of(topLevel.toString(), "functionTemplateInvocation4.cpp").toFile()),
             topLevel,
             true);
 
     FunctionTemplateDeclaration templateDeclaration =
         TestUtils.findByUniquePredicate(
             TestUtils.subnodesOfType(result, FunctionTemplateDeclaration.class),
-            t -> t.getName().equals("template <class T=int, int N=5> T fixed_multiply ()"));
+            t -> t.getName().equals("fixed_multiply"));
 
     FunctionDeclaration fixedMultiply =
         TestUtils.findByUniquePredicate(
@@ -347,16 +337,14 @@ public class FunctionTemplateTest extends BaseTest {
     // test invocation target when no autodeduction is possible, but defaults are partially used
     List<TranslationUnitDeclaration> result =
         TestUtils.analyze(
-            List.of(
-                Path.of(topLevel.toString(), "functiontemplates", "functionTemplateInvocation5.cpp")
-                    .toFile()),
+            List.of(Path.of(topLevel.toString(), "functionTemplateInvocation5.cpp").toFile()),
             topLevel,
             true);
 
     FunctionTemplateDeclaration templateDeclaration =
         TestUtils.findByUniquePredicate(
             TestUtils.subnodesOfType(result, FunctionTemplateDeclaration.class),
-            t -> t.getName().equals("template <class T=int, int N=5> T fixed_multiply ()"));
+            t -> t.getName().equals("fixed_multiply"));
 
     FunctionDeclaration fixedMultiply =
         TestUtils.findByUniquePredicate(
@@ -397,16 +385,14 @@ public class FunctionTemplateTest extends BaseTest {
     // test invocation target when template parameter produces a cast in an argument
     List<TranslationUnitDeclaration> result =
         TestUtils.analyze(
-            List.of(
-                Path.of(topLevel.toString(), "functiontemplates", "functionTemplateInvocation6.cpp")
-                    .toFile()),
+            List.of(Path.of(topLevel.toString(), "functionTemplateInvocation6.cpp").toFile()),
             topLevel,
             true);
 
     FunctionTemplateDeclaration templateDeclaration =
         TestUtils.findByUniquePredicate(
             TestUtils.subnodesOfType(result, FunctionTemplateDeclaration.class),
-            t -> t.getName().equals("template <class T=int, int N=5> T fixed_multiply ()"));
+            t -> t.getName().equals("fixed_multiply"));
 
     FunctionDeclaration fixedMultiply =
         TestUtils.findByUniquePredicate(
@@ -449,21 +435,20 @@ public class FunctionTemplateTest extends BaseTest {
     assertEquals(20.3, ((Literal) arg.getExpression()).getValue());
   }
 
+  @Disabled
   @Test
   void testInvocationWithImplicitCast() throws Exception {
     // test invocation target when signature does not match but implicitcast can be applied
     List<TranslationUnitDeclaration> result =
         TestUtils.analyze(
-            List.of(
-                Path.of(topLevel.toString(), "functiontemplates", "functionTemplateInvocation7.cpp")
-                    .toFile()),
+            List.of(Path.of(topLevel.toString(), "functionTemplateInvocation7.cpp").toFile()),
             topLevel,
             true);
 
     FunctionTemplateDeclaration templateDeclaration =
         TestUtils.findByUniquePredicate(
             TestUtils.subnodesOfType(result, FunctionTemplateDeclaration.class),
-            t -> t.getName().equals("template<class T> void f(T x, T y)"));
+            t -> t.getName().equals("f"));
 
     FunctionDeclaration f =
         TestUtils.findByUniquePredicate(
@@ -510,14 +495,13 @@ public class FunctionTemplateTest extends BaseTest {
     assertTrue(f4.getInvokes().get(0).isImplicit());
   }
 
+  @Disabled
   @Test
   void testCreateDummy() throws Exception {
     // test invocation target when template parameter produces a cast in an argument
     List<TranslationUnitDeclaration> result =
         TestUtils.analyze(
-            List.of(
-                Path.of(topLevel.toString(), "functiontemplates", "functionTemplateInvocation8.cpp")
-                    .toFile()),
+            List.of(Path.of(topLevel.toString(), "functionTemplateInvocation8.cpp").toFile()),
             topLevel,
             true);
 
