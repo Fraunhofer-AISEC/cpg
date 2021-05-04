@@ -56,7 +56,7 @@ class ConstructExpression : CallExpression(), HasType.TypeListener {
 
             // Forward to CallExpression. This will also take care of DFG edges.
             if (value != null) {
-                invokes = listOf(value)
+                setInvokes(listOf(value as FunctionDeclaration))
             }
         }
 
@@ -98,7 +98,10 @@ class ConstructExpression : CallExpression(), HasType.TypeListener {
         return super.equals(other) &&
             constructor == other.constructor &&
             arguments == other.arguments &&
-            PropertyEdge.propertyEqualsList(argumentsEdges, other.argumentsEdges)
+            PropertyEdge.propertyEqualsList(
+                getArgumentsPropertyEdge(),
+                other.getArgumentsPropertyEdge()
+            )
     }
 
     override fun hashCode(): Int {
