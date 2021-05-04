@@ -396,7 +396,13 @@ public class CallResolver extends Pass {
         FunctionDeclaration function = functionTemplateDeclaration.getRealization().get(0);
 
         if (initializationSignature != null
-            && checkArgumentValidity(initializationSignature, function, templateCall)) {
+            && checkArgumentValidity(
+                function,
+                getCallSignature(
+                    function,
+                    getParameterizedSignaturesFromInitialization(initializationSignature),
+                    initializationSignature),
+                templateCall)) {
           // Valid Target -> Apply invocation
           applyTemplateInstantiation(
               templateCall,
@@ -449,8 +455,7 @@ public class CallResolver extends Pass {
 
     // Apply changes to the call signature
     List<Type> templateFunctionSignature =
-        getCallSignature(
-            templateCall, function, parameterizedTypeResolution, initializationSignature);
+        getCallSignature(function, parameterizedTypeResolution, initializationSignature);
     List<Type> templateCallSignature = templateCall.getSignature();
     List<CastExpression> callSignatureImplicit =
         signatureWithImplicitCastTransformation(
@@ -476,8 +481,36 @@ public class CallResolver extends Pass {
     }
   }
 
+  private boolean checkArgumentValidity(
+      FunctionDeclaration functionDeclaration,
+      List<Type> functionDeclarationSignature,
+      TemplateCallExpression templateCallExpression) {
+    if (templateCallExpression.getArguments().size()
+        <= functionDeclaration.getParameters().size()) {
+      List<Expression> callArguments =
+          new ArrayList<>(templateCallExpression.getArguments()); // Use provided arguments
+      callArguments.addAll(
+          functionDeclaration
+              .getDefaultParameters()
+              .subList(
+                  callArguments.size(),
+                  functionDeclaration.getDefaultParameters().size())); // Extend by defaults
+      for (int i = 0; i < callArguments.size(); i++) {
+        Expression callArgument = callArguments.get(i);
+        if (callArgument == null
+            || (!(callArgument.getType().equals(functionDeclarationSignature.get(i)))
+                && (!callArgument.getType().isPrimitive()
+                    || !functionDeclarationSignature.get(i).isPrimitive()))) {
+          return false;
+        }
+      }
+      return true;
+    }
+    // TODO
+    return false;
+  }
+
   private List<Type> getCallSignature(
-      TemplateCallExpression templateCall,
       FunctionDeclaration function,
       Map<ParameterizedType, TypeTemplateParamDeclaration> parameterizedTypeResolution,
       Map<Declaration, Node> initializationSignature) {
@@ -492,14 +525,6 @@ public class CallResolver extends Pass {
       }
     }
     return templateCallSignature;
-  }
-
-  private boolean checkArgumentValidity(
-      Map<Declaration, Node> signature,
-      FunctionDeclaration declaration,
-      TemplateCallExpression call) {
-    // TODO
-    return true;
   }
 
   private void resolveArguments(CallExpression call, RecordDeclaration curClass) {

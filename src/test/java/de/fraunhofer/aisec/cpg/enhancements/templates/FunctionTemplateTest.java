@@ -525,7 +525,8 @@ public class FunctionTemplateTest extends BaseTest {
 
     assertEquals(1, fixedDivision.getParameters().size());
     assertEquals(
-        templateDeclaration.getParameters().get(0), fixedDivision.getParameters().get(0).getType());
+        ((TypeTemplateParamDeclaration) templateDeclaration.getParameters().get(0)).getType(),
+        fixedDivision.getParameters().get(0).getType());
 
     // Check invocation targets
 
