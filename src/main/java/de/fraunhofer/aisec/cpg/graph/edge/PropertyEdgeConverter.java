@@ -29,9 +29,6 @@ import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Function;
-
-import de.fraunhofer.aisec.cpg.graph.TypeManager;
-import org.checkerframework.checker.nullness.qual.NonNull;
 import org.neo4j.ogm.typeconversion.CompositeAttributeConverter;
 
 public class PropertyEdgeConverter implements CompositeAttributeConverter<Map<Properties, Object>> {
@@ -49,19 +46,16 @@ public class PropertyEdgeConverter implements CompositeAttributeConverter<Map<Pr
    * java.lang.Double[], java.lang.Boolean[], java.lang.String[]
    */
 
-  @NonNull private static PropertyEdgeConverter INSTANCE = new PropertyEdgeConverter();
-
-  private PropertyEdgeConverter() {}
-
-  public static PropertyEdgeConverter getInstance() {
-    return INSTANCE;
-  }
-
   // Maps a class to a function that serialized the object from the given class
-  private Map<Class<?>, Function<Object, String>> serializer = new HashMap<>();
+  private Map<Class<?>, Function<Object, String>> serializer;
 
   // Maps a string (key of the property) to a function that deserializes the property
-  private Map<String, Function<Object, String>> deserializer = new HashMap<>();
+  private Map<String, Function<Object, Object>> deserializer;
+
+  public PropertyEdgeConverter() {
+    serializer = PropertyEdgeConverterManager.getInstance().getSerializer();
+    deserializer = PropertyEdgeConverterManager.getInstance().getDeserializer();
+  }
 
   @Override
   public Map<String, Object> toGraphProperties(Map<Properties, Object> value) {
