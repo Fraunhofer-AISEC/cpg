@@ -67,12 +67,6 @@ public class CallResolver extends Pass {
   @Nullable private TranslationUnitDeclaration currentTU;
   private ScopedWalker walker;
 
-  public enum TemplateResolution {
-    AUTO_DEDUCTION,
-    DEFAULT,
-    EXPLICIT
-  }
-
   @Override
   public void cleanup() {
     this.containingType.clear();
@@ -302,7 +296,9 @@ public class CallResolver extends Pass {
 
   private Map<Declaration, Node> constructTemplateInitializationSignatureFromTemplateParameters(
       FunctionTemplateDeclaration functionTemplateDeclaration,
-      TemplateCallExpression templateCall) {
+      TemplateCallExpression templateCall,
+      Map<Node, TemplateDeclaration.TemplateInitialization> instantiationType,
+      Map<Declaration, Integer> orderedInitializationSignature) {
     Map<Declaration, Node> instantiationSignature = new HashMap<>();
     for (int i = 0; i < functionTemplateDeclaration.getParameters().size(); i++) {
       if (i < templateCall.getTemplateParameters().size()) {
@@ -310,6 +306,8 @@ public class CallResolver extends Pass {
         Declaration templateParameter = functionTemplateDeclaration.getParameters().get(i);
         if (isInstantiated(callParameter, templateParameter)) {
           instantiationSignature.put(templateParameter, callParameter);
+          instantiationType.put(callParameter, TemplateDeclaration.TemplateInitialization.EXPLICIT);
+          orderedInitializationSignature.put(templateParameter, i);
         } else {
           // If both parameters do not match, we cannot instantiate the template
           return null;
@@ -318,14 +316,18 @@ public class CallResolver extends Pass {
         if (((TemplateParameter) functionTemplateDeclaration.getParameters().get(i)).getDefault()
             != null) {
           // If we have a default we fill it in
+          Node defaultNode =
+              ((TemplateParameter) functionTemplateDeclaration.getParameters().get(i)).getDefault();
           instantiationSignature.put(
-              (functionTemplateDeclaration.getParameters().get(i)),
-              ((TemplateParameter) functionTemplateDeclaration.getParameters().get(i))
-                  .getDefault());
+              functionTemplateDeclaration.getParameters().get(i), defaultNode);
+          instantiationType.put(defaultNode, TemplateDeclaration.TemplateInitialization.DEFAULT);
+          orderedInitializationSignature.put(functionTemplateDeclaration.getParameters().get(i), i);
         } else {
           // If there is no default, we don't have information on the parameter -> check
           // autodeduction
           instantiationSignature.put(functionTemplateDeclaration.getParameters().get(i), null);
+          instantiationType.put(null, TemplateDeclaration.TemplateInitialization.UNKNOWN);
+          orderedInitializationSignature.put(functionTemplateDeclaration.getParameters().get(i), i);
         }
       }
     }
@@ -334,11 +336,16 @@ public class CallResolver extends Pass {
 
   private Map<Declaration, Node> getTemplateInitializationSignature(
       FunctionTemplateDeclaration functionTemplateDeclaration,
-      TemplateCallExpression templateCall) {
+      TemplateCallExpression templateCall,
+      Map<Node, TemplateDeclaration.TemplateInitialization> instantiationType,
+      Map<Declaration, Integer> orderedInitializationSignature) {
     // Construct Signature
     Map<Declaration, Node> signature =
         constructTemplateInitializationSignatureFromTemplateParameters(
-            functionTemplateDeclaration, templateCall);
+            functionTemplateDeclaration,
+            templateCall,
+            instantiationType,
+            orderedInitializationSignature);
     if (signature == null) return null;
 
     Map<ParameterizedType, TypeTemplateParamDeclaration> parameterizedTypeResolution =
@@ -348,10 +355,16 @@ public class CallResolver extends Pass {
     for (int i = 0; i < templateCall.getArguments().size(); i++) {
       FunctionDeclaration functionDeclaration = functionTemplateDeclaration.getRealization().get(0);
       Type currentArgumentType = functionDeclaration.getParameters().get(i).getType();
+      Type deductedType = templateCall.getArguments().get(i).getType();
 
       if (currentArgumentType instanceof ParameterizedType
-          && signature.get(parameterizedTypeResolution.get(currentArgumentType)) == null) {
-        signature.put(parameterizedTypeResolution.get(currentArgumentType), currentArgumentType);
+          && (signature.get(parameterizedTypeResolution.get(currentArgumentType)) == null
+              || instantiationType
+                  .get(signature.get(parameterizedTypeResolution.get(currentArgumentType)))
+                  .equals(TemplateDeclaration.TemplateInitialization.DEFAULT))) {
+        signature.put(parameterizedTypeResolution.get(currentArgumentType), deductedType);
+        instantiationType.put(
+            deductedType, TemplateDeclaration.TemplateInitialization.AUTO_DEDUCTION);
       }
     }
     return signature;
@@ -367,42 +380,31 @@ public class CallResolver extends Pass {
     Map<FunctionTemplateDeclaration, Map<Declaration, Node>> initialization = new HashMap<>();
 
     for (FunctionTemplateDeclaration functionTemplateDeclaration : instantiationCandidates) {
+      Map<Node, TemplateDeclaration.TemplateInitialization> initializationType = new HashMap<>();
+      Map<Declaration, Integer> orderedInitializationSignature = new HashMap<>();
       if (templateCall.getTemplateParameters().size()
               <= functionTemplateDeclaration.getParameters().size()
           && templateCall.getArguments().size()
               <= functionTemplateDeclaration.getRealization().get(0).getParameters().size()) {
 
         Map<Declaration, Node> initializationSignature =
-            getTemplateInitializationSignature(functionTemplateDeclaration, templateCall);
+            getTemplateInitializationSignature(
+                functionTemplateDeclaration,
+                templateCall,
+                initializationType,
+                orderedInitializationSignature);
         FunctionDeclaration function = functionTemplateDeclaration.getRealization().get(0);
 
         if (initializationSignature != null
             && checkArgumentValidity(initializationSignature, function, templateCall)) {
           // Valid Target -> Apply invocation
-          templateCall.setInstantiation(functionTemplateDeclaration);
-          templateCall.setInvokes(List.of(function));
-
-          // Set return Value of call if resolved
-          Type returnType = function.getType();
-          if (function.getType() instanceof ParameterizedType) {
-            returnType =
-                (Type)
-                    initializationSignature.get(
-                        getParameterizedSignaturesFromInitialization(initializationSignature)
-                            .get((ParameterizedType) returnType));
-          }
-          templateCall.setType(returnType);
-
-          // Add possible initializations to
-          for (Declaration declaration : initializationSignature.keySet()) {
-            if (declaration instanceof TypeTemplateParamDeclaration) {
-              ((TypeTemplateParamDeclaration) declaration)
-                  .addPossibleInitialization((Type) initializationSignature.get(declaration));
-            } else if (declaration instanceof NonTypeTemplateParamDeclaration) {
-              ((NonTypeTemplateParamDeclaration) declaration)
-                  .addPossibleInitialization((Expression) initializationSignature.get(declaration));
-            }
-          }
+          applyTemplateInstantiation(
+              templateCall,
+              functionTemplateDeclaration,
+              function,
+              initializationSignature,
+              initializationType,
+              orderedInitializationSignature);
           return;
         }
       }
@@ -410,6 +412,86 @@ public class CallResolver extends Pass {
 
     // TODO CPS Create Dummy
 
+  }
+
+  private void applyTemplateInstantiation(
+      TemplateCallExpression templateCall,
+      FunctionTemplateDeclaration functionTemplateDeclaration,
+      FunctionDeclaration function,
+      Map<Declaration, Node> initializationSignature,
+      Map<Node, TemplateDeclaration.TemplateInitialization> initializationType,
+      Map<Declaration, Integer> orderedInitializationSignature) {
+
+    List<Node> templateInstantiationParameters =
+        new ArrayList<>(orderedInitializationSignature.keySet());
+    for (Map.Entry<Declaration, Integer> entry : orderedInitializationSignature.entrySet()) {
+
+      templateInstantiationParameters.set(
+          entry.getValue(), initializationSignature.get(entry.getKey()));
+    }
+
+    templateCall.setInstantiation(functionTemplateDeclaration);
+    templateCall.setInvokes(List.of(function));
+
+    // Set return Value of call if resolved
+    Type returnType = function.getType();
+    Map<ParameterizedType, TypeTemplateParamDeclaration> parameterizedTypeResolution =
+        getParameterizedSignaturesFromInitialization(initializationSignature);
+    if (function.getType() instanceof ParameterizedType) {
+      returnType =
+          (Type)
+              initializationSignature.get(
+                  parameterizedTypeResolution.get((ParameterizedType) returnType));
+    }
+    templateCall.setType(returnType);
+
+    templateCall.updateTemplateParameters(initializationType, templateInstantiationParameters);
+
+    // Apply changes to the call signature
+    List<Type> templateFunctionSignature =
+        getCallSignature(
+            templateCall, function, parameterizedTypeResolution, initializationSignature);
+    List<Type> templateCallSignature = templateCall.getSignature();
+    List<CastExpression> callSignatureImplicit =
+        signatureWithImplicitCastTransformation(
+            templateCallSignature, templateCall.getArguments(), templateFunctionSignature);
+
+    for (int i = 0; i < callSignatureImplicit.size(); i++) {
+      CastExpression cast = callSignatureImplicit.get(i);
+      if (cast != null) {
+        templateCall.setArgument(i, cast);
+      }
+    }
+
+    // Add possible initializations to TemplateParamVariableDeclarations. Do this as a last step,
+    // otherwise the initializationSignature Map stops working
+    for (Declaration declaration : initializationSignature.keySet()) {
+      if (declaration instanceof TypeTemplateParamDeclaration) {
+        ((TypeTemplateParamDeclaration) declaration)
+            .addPossibleInitialization((Type) initializationSignature.get(declaration));
+      } else if (declaration instanceof NonTypeTemplateParamDeclaration) {
+        ((NonTypeTemplateParamDeclaration) declaration)
+            .addPossibleInitialization((Expression) initializationSignature.get(declaration));
+      }
+    }
+  }
+
+  private List<Type> getCallSignature(
+      TemplateCallExpression templateCall,
+      FunctionDeclaration function,
+      Map<ParameterizedType, TypeTemplateParamDeclaration> parameterizedTypeResolution,
+      Map<Declaration, Node> initializationSignature) {
+    List<Type> templateCallSignature = new ArrayList<>();
+    for (ParamVariableDeclaration argument : function.getParameters()) {
+      if (argument.getType() instanceof ParameterizedType) {
+        templateCallSignature.add(
+            (Type)
+                initializationSignature.get(parameterizedTypeResolution.get(argument.getType())));
+      } else {
+        templateCallSignature.add(argument.getType());
+      }
+    }
+    return templateCallSignature;
   }
 
   private boolean checkArgumentValidity(
