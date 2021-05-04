@@ -506,7 +506,6 @@ public class CallResolver extends Pass {
       }
       return true;
     }
-    // TODO
     return false;
   }
 
