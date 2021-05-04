@@ -31,6 +31,7 @@ import static de.fraunhofer.aisec.cpg.helpers.Util.warnWithFileLocation;
 import de.fraunhofer.aisec.cpg.frontends.Handler;
 import de.fraunhofer.aisec.cpg.graph.*;
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration;
+import de.fraunhofer.aisec.cpg.graph.declarations.TemplateDeclaration;
 import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration;
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*;
 import de.fraunhofer.aisec.cpg.graph.types.*;
@@ -454,11 +455,13 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
           ((TemplateCallExpression) callExpression)
               .addTemplateParameter(
                   TypeParser.createFrom(
-                      ((CPPASTTypeId) argument).getDeclSpecifier().toString(), false, lang));
+                      ((CPPASTTypeId) argument).getDeclSpecifier().toString(), false, lang),
+                  TemplateDeclaration.TemplateInitialization.EXPLICIT);
         } else if (argument instanceof IASTInitializerClause) {
           ((TemplateCallExpression) callExpression)
               .addTemplateParameter(
-                  lang.getExpressionHandler().handle((IASTInitializerClause) argument));
+                  lang.getExpressionHandler().handle((IASTInitializerClause) argument),
+                  TemplateDeclaration.TemplateInitialization.EXPLICIT);
         }
       }
 

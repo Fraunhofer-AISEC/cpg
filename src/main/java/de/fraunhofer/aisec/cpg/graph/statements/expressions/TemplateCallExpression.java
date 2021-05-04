@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.graph.HasType;
 import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.SubGraph;
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionTemplateDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declarations.TemplateDeclaration;
 import de.fraunhofer.aisec.cpg.graph.edge.Properties;
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import de.fraunhofer.aisec.cpg.graph.types.Type;
@@ -61,9 +62,11 @@ public class TemplateCallExpression extends CallExpression implements HasType.Se
     return types;
   }
 
-  public void addTemplateParameter(Type typeTemplateParam) {
+  public void addTemplateParameter(
+      Type typeTemplateParam, TemplateDeclaration.TemplateInitialization templateInitialization) {
     PropertyEdge<Node> propertyEdge = new PropertyEdge<>(this, typeTemplateParam);
     propertyEdge.addProperty(Properties.INDEX, this.templateParameters.size());
+    propertyEdge.addProperty(Properties.INSTANTIATION, templateInitialization);
     this.templateParameters.add(propertyEdge);
   }
 
@@ -78,9 +81,12 @@ public class TemplateCallExpression extends CallExpression implements HasType.Se
     }
   }
 
-  public void addTemplateParameter(Expression expressionTemplateParam) {
+  public void addTemplateParameter(
+      Expression expressionTemplateParam,
+      TemplateDeclaration.TemplateInitialization templateInitialization) {
     PropertyEdge<Node> propertyEdge = new PropertyEdge<>(this, expressionTemplateParam);
     propertyEdge.addProperty(Properties.INDEX, this.templateParameters.size());
+    propertyEdge.addProperty(Properties.INSTANTIATION, templateInitialization);
     this.templateParameters.add(propertyEdge);
   }
 
@@ -100,13 +106,40 @@ public class TemplateCallExpression extends CallExpression implements HasType.Se
     this.instantiation = instantiation;
   }
 
+  public void updateTemplateParameters(
+      Map<Node, TemplateDeclaration.TemplateInitialization> initializationType,
+      List<Node> orderedInitializationSignature) {
+    for (PropertyEdge<Node> edge : this.templateParameters) {
+      if (edge.getProperty(Properties.INSTANTIATION) != null
+          && edge.getProperty(Properties.INSTANTIATION)
+              .equals(TemplateDeclaration.TemplateInitialization.UNKNOWN)
+          && initializationType.containsKey(edge.getEnd())) {
+        edge.addProperty(Properties.INSTANTIATION, initializationType.get(edge.getEnd()));
+      }
+    }
+
+    for (int i = this.templateParameters.size(); i < orderedInitializationSignature.size(); i++) {
+      PropertyEdge<Node> propertyEdge =
+          new PropertyEdge<>(this, orderedInitializationSignature.get(i));
+      propertyEdge.addProperty(Properties.INDEX, this.templateParameters.size());
+      propertyEdge.addProperty(
+          Properties.INSTANTIATION,
+          initializationType.getOrDefault(
+              orderedInitializationSignature.get(i),
+              TemplateDeclaration.TemplateInitialization.UNKNOWN));
+      this.templateParameters.add(propertyEdge);
+    }
+  }
+
   @Override
   public boolean equals(Object o) {
     if (this == o) return true;
     if (o == null || getClass() != o.getClass()) return false;
     if (!super.equals(o)) return false;
     TemplateCallExpression that = (TemplateCallExpression) o;
-    return templateParameters.equals(that.templateParameters);
+    return templateParameters.equals(that.templateParameters)
+        && instantiation.equals(that.instantiation)
+        && PropertyEdge.propertyEqualsList(templateParameters, that.templateParameters);
   }
 
   @Override
