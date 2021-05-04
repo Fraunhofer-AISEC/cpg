@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.PopulatedByPass
 import de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
+import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser
@@ -82,7 +83,7 @@ class ConstructExpression : CallExpression(), HasType.TypeListener {
             .appendSuper(super.toString())
             .append("constructor", constructor)
             .append("instantiates", instantiates)
-            .append("arguments", argumentsEdges)
+            .append("arguments", arguments)
             .toString()
     }
 

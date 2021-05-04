@@ -697,6 +697,34 @@ public class ScopeManager {
   }
 
   /**
+   * Resolves a function reference of a call expression, but stops the scope traversal when a
+   * FunctionDeclaration with matching name has been found
+   *
+   * @param scope
+   * @param call
+   * @return
+   */
+  @NonNull
+  private List<FunctionDeclaration> resolveFunctionStopScopeTraversalOnDefinition(
+      Scope scope, CallExpression call) {
+    if (scope instanceof ValueDeclarationScope) {
+      var list =
+          ((ValueDeclarationScope) scope)
+              .getValueDeclarations().stream()
+                  .filter(FunctionDeclaration.class::isInstance)
+                  .map(FunctionDeclaration.class::cast)
+                  .filter(f -> f.getName().equals(call.getName()))
+                  .collect(Collectors.toList());
+      if (!list.isEmpty()) {
+        return list;
+      }
+    }
+    return scope.getParent() != null
+        ? resolveFunctionStopScopeTraversalOnDefinition(scope.getParent(), call)
+        : new ArrayList<>();
+  }
+
+  /**
    * This function tries to resolve a FQN to a scope. The name is the name of the AST-Node
    * associated to a scope. The Name may be the FQN-name or a relative name that with the currently
    * active namespace gives the AST-Nodes, FQN. If the provided name and the current namespace
