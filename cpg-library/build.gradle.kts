@@ -27,6 +27,8 @@ plugins {
     `java-library`
     `maven-publish`
     signing
+
+    id("com.github.johnrengelman.shadow")
 }
 
 publishing {
@@ -35,6 +37,7 @@ publishing {
             from(components["java"])
 
             pom {
+                artifactId = "cpg" // for legacy reasons
                 name.set("Code Property Graph")
                 description.set("A simple library to extract a code property graph out of source code. It has support for multiple passes that can extend the analysis after the graph is constructed.")
                 url.set("https://github.com/Fraunhofer-AISEC/cpg")
