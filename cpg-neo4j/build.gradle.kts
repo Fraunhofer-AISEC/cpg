@@ -67,6 +67,15 @@ tasks.withType<Sign>().configureEach {
     onlyIf { project.extra["isReleaseVersion"] as Boolean }
 }
 
+tasks.named<Test>("test") {
+    useJUnitPlatform {
+
+        if (!project.hasProperty("integration")) {
+            excludeTags("integration")
+        }
+    }
+}
+
 val versions = mapOf(
         "neo4j-ogm" to "4.0.0",
         "neo4j-ogm-old" to "3.2.8",
