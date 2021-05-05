@@ -60,7 +60,7 @@ jobs:
       - name: Install JEP
         run: |
           pip3 install jep
-          sudo cp /opt/hostedtoolcache/Python/3.9.4/x64/lib/python3.9/site-packages/jep/libjep.so /usr/lib/
+          sudo cp /opt/hostedtoolcache/Python/3.9*/x64/lib/python3.9/site-packages/jep/libjep.so /usr/lib/
       - name: Build ${{ steps.determine_version.outputs.version }}
         run: |
           if [ "$SONAR_TOKEN" != "" ]
