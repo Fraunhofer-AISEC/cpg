@@ -25,51 +25,14 @@
  */
 plugins {
     application
-
-    id("net.researchgate.release") version "2.6.0"
-    kotlin("jvm")
 }
 
 application {
-    mainClassName = "de.fraunhofer.aisec.cpg_vis_neo4j.ApplicationKt"
+    mainClass.set("de.fraunhofer.aisec.cpg_vis_neo4j.ApplicationKt")
 }
 
-group = "de.fraunhofer.aisec"
-
-extra["isReleaseVersion"] = !version.toString().endsWith("SNAPSHOT")
-
-val mavenCentralUri: String
-    get() {
-        val releasesRepoUrl = "https://oss.sonatype.org/service/local/staging/deploy/maven2"
-        val snapshotsRepoUrl = "https://oss.sonatype.org/content/repositories/snapshots"
-        return if (project.extra["isReleaseVersion"] as Boolean) releasesRepoUrl else snapshotsRepoUrl
-    }
-
-repositories {
-    mavenCentral()
-
-    ivy {
-        setUrl("https://download.eclipse.org/tools/cdt/releases/10.2/cdt-10.2.0/plugins")
-        metadataSources {
-            artifact()
-        }
-        patternLayout {
-            artifact("/[organisation].[module]_[revision].[ext]")
-        }
-    }
-}
-
-tasks.withType<GenerateModuleMetadata> {
-    enabled = false
-}
-
-tasks.withType<Sign>().configureEach {
-    onlyIf { project.extra["isReleaseVersion"] as Boolean }
-}
-
-tasks.named<Test>("test") {
+tasks.withType<Test> {
     useJUnitPlatform {
-
         if (!project.hasProperty("integration")) {
             excludeTags("integration")
         }
@@ -77,10 +40,8 @@ tasks.named<Test>("test") {
 }
 
 val versions = mapOf(
-        "neo4j-ogm" to "4.0.0",
-        "neo4j-ogm-old" to "3.2.8",
-        "junit5" to "5.6.0",
-        "cpg" to "3.5.1"
+    "neo4j-ogm" to "3.2.8",
+    "junit5" to "5.6.0"
 )
 
 dependencies {
@@ -88,16 +49,14 @@ dependencies {
     api(project(":cpg-library"))
 
     // neo4j
-    api("org.neo4j", "neo4j-ogm-core", versions["neo4j-ogm-old"])
-    api("org.neo4j", "neo4j-ogm", versions["neo4j-ogm-old"])
-    api("org.neo4j", "neo4j-ogm-bolt-driver", versions["neo4j-ogm-old"])
+    api("org.neo4j", "neo4j-ogm-core", versions["neo4j-ogm"])
+    api("org.neo4j", "neo4j-ogm", versions["neo4j-ogm"])
+    api("org.neo4j", "neo4j-ogm-bolt-driver", versions["neo4j-ogm"])
 
     // JUnit
     testImplementation("org.junit.jupiter", "junit-jupiter-api", versions["junit5"])
     testImplementation("org.junit.jupiter", "junit-jupiter-params", versions["junit5"])
     testRuntimeOnly("org.junit.jupiter", "junit-jupiter-engine", versions["junit5"])
-
-    implementation(kotlin("stdlib-jdk8"))
 
     // Command line interface support
     api("info.picocli:picocli:4.1.4")
