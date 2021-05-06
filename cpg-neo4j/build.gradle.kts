@@ -59,6 +59,6 @@ dependencies {
     testRuntimeOnly("org.junit.jupiter", "junit-jupiter-engine", versions["junit5"])
 
     // Command line interface support
-    api("info.picocli:picocli:4.1.4")
+    api("info.picocli:picocli:4.6.1")
     annotationProcessor("info.picocli:picocli-codegen:4.1.4")
 }
