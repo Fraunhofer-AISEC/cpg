@@ -86,8 +86,7 @@ public class FunctionTemplateTest extends BaseTest {
     List<TypeParamDeclaration> typeParamDeclarations =
         TestUtils.subnodesOfType(result, TypeParamDeclaration.class);
     assertEquals(1, typeParamDeclarations.size());
-    TypeParamDeclaration typeParamDeclaration =
-        typeParamDeclarations.get(0);
+    TypeParamDeclaration typeParamDeclaration = typeParamDeclarations.get(0);
     assertEquals(typeParamDeclaration, functionTemplateDeclaration.getParameters().get(0));
 
     ParameterizedType T = new ParameterizedType("T");
@@ -110,12 +109,10 @@ public class FunctionTemplateTest extends BaseTest {
 
     assertEquals(T, typeParamDeclaration.getType());
     assertEquals(intType, typeParamDeclaration.getDefault());
-    assertTrue(typeParamDeclaration.getPossibleInitializations().contains(intType));
-    assertTrue(typeParamDeclaration.getPossibleInitializations().contains(floatType));
 
-    NonTypeTemplateParamDeclaration N =
+    ParamVariableDeclaration N =
         TestUtils.findByUniqueName(
-            TestUtils.subnodesOfType(result, NonTypeTemplateParamDeclaration.class), "N");
+            TestUtils.subnodesOfType(result, ParamVariableDeclaration.class), "N");
     Literal<Integer> int2 =
         TestUtils.findByUniquePredicate(
             TestUtils.subnodesOfType(result, Literal.class), l -> l.getValue().equals(2));
@@ -128,9 +125,9 @@ public class FunctionTemplateTest extends BaseTest {
     assertEquals(N, functionTemplateDeclaration.getParameters().get(1));
     assertEquals(intType, N.getType());
     assertEquals(5, ((Literal) N.getDefault()).getValue());
-    assertTrue(N.getPossibleInitializations().contains(int5));
-    assertTrue(N.getPossibleInitializations().contains(int3));
-    assertTrue(N.getPossibleInitializations().contains(int2));
+    assertTrue(N.getPrevDFG().contains(int5));
+    assertTrue(N.getPrevDFG().contains(int3));
+    assertTrue(N.getPrevDFG().contains(int2));
 
     // Check the realization
     assertEquals(1, functionTemplateDeclaration.getRealization().size());
@@ -520,8 +517,7 @@ public class FunctionTemplateTest extends BaseTest {
 
     assertEquals(2, templateDeclaration.getParameters().size());
     assertTrue(templateDeclaration.getParameters().get(0) instanceof TypeParamDeclaration);
-    assertTrue(
-        templateDeclaration.getParameters().get(1) instanceof NonTypeTemplateParamDeclaration);
+    assertTrue(templateDeclaration.getParameters().get(1) instanceof ParamVariableDeclaration);
 
     assertEquals(1, fixedDivision.getParameters().size());
     assertEquals(
