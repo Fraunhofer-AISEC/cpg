@@ -244,9 +244,9 @@ public class NodeBuilder {
     return node;
   }
 
-  public static TypeTemplateParamDeclaration newTypeTemplateParamDeclaration(
+  public static TypeParamDeclaration newTypeParamDeclaration(
       String name, String code) {
-    TypeTemplateParamDeclaration node = new TypeTemplateParamDeclaration();
+    TypeParamDeclaration node = new TypeParamDeclaration();
     node.setName(name);
     node.setCode(code);
 

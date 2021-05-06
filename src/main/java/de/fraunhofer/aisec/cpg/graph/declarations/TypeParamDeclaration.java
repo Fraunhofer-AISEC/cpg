@@ -33,7 +33,7 @@ import de.fraunhofer.aisec.cpg.graph.types.Type;
 import java.util.*;
 import org.neo4j.ogm.annotation.Relationship;
 
-public class TypeTemplateParamDeclaration extends ValueDeclaration
+public class TypeParamDeclaration extends ValueDeclaration
     implements TemplateParameter<Type>, HasType.SecondaryTypeEdge {
 
   @Relationship(value = "POSSIBLE_INITIALIZATIONS", direction = "OUTGOING")
@@ -69,7 +69,7 @@ public class TypeTemplateParamDeclaration extends ValueDeclaration
     if (this == o) return true;
     if (o == null || getClass() != o.getClass()) return false;
     if (!super.equals(o)) return false;
-    TypeTemplateParamDeclaration that = (TypeTemplateParamDeclaration) o;
+    TypeParamDeclaration that = (TypeParamDeclaration) o;
     return possibleInitializations.equals(that.possibleInitializations)
         && Objects.equals(defaultType, that.defaultType);
   }

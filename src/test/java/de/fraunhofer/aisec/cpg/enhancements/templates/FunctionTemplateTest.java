@@ -83,12 +83,12 @@ public class FunctionTemplateTest extends BaseTest {
         TestUtils.subnodesOfType(result, FunctionTemplateDeclaration.class).get(0);
 
     // Check FunctionTemplate Parameters
-    List<TypeTemplateParamDeclaration> typeTemplateParamDeclarations =
-        TestUtils.subnodesOfType(result, TypeTemplateParamDeclaration.class);
-    assertEquals(1, typeTemplateParamDeclarations.size());
-    TypeTemplateParamDeclaration typeTemplateParamDeclaration =
-        typeTemplateParamDeclarations.get(0);
-    assertEquals(typeTemplateParamDeclaration, functionTemplateDeclaration.getParameters().get(0));
+    List<TypeParamDeclaration> typeParamDeclarations =
+        TestUtils.subnodesOfType(result, TypeParamDeclaration.class);
+    assertEquals(1, typeParamDeclarations.size());
+    TypeParamDeclaration typeParamDeclaration =
+        typeParamDeclarations.get(0);
+    assertEquals(typeParamDeclaration, functionTemplateDeclaration.getParameters().get(0));
 
     ParameterizedType T = new ParameterizedType("T");
     ObjectType intType =
@@ -108,10 +108,10 @@ public class FunctionTemplateTest extends BaseTest {
             ObjectType.Modifier.SIGNED,
             true);
 
-    assertEquals(T, typeTemplateParamDeclaration.getType());
-    assertEquals(intType, typeTemplateParamDeclaration.getDefault());
-    assertTrue(typeTemplateParamDeclaration.getPossibleInitializations().contains(intType));
-    assertTrue(typeTemplateParamDeclaration.getPossibleInitializations().contains(floatType));
+    assertEquals(T, typeParamDeclaration.getType());
+    assertEquals(intType, typeParamDeclaration.getDefault());
+    assertTrue(typeParamDeclaration.getPossibleInitializations().contains(intType));
+    assertTrue(typeParamDeclaration.getPossibleInitializations().contains(floatType));
 
     NonTypeTemplateParamDeclaration N =
         TestUtils.findByUniqueName(
@@ -519,13 +519,13 @@ public class FunctionTemplateTest extends BaseTest {
     assertEquals(fixedDivision, templateDeclaration.getRealization().get(0));
 
     assertEquals(2, templateDeclaration.getParameters().size());
-    assertTrue(templateDeclaration.getParameters().get(0) instanceof TypeTemplateParamDeclaration);
+    assertTrue(templateDeclaration.getParameters().get(0) instanceof TypeParamDeclaration);
     assertTrue(
         templateDeclaration.getParameters().get(1) instanceof NonTypeTemplateParamDeclaration);
 
     assertEquals(1, fixedDivision.getParameters().size());
     assertEquals(
-        ((TypeTemplateParamDeclaration) templateDeclaration.getParameters().get(0)).getType(),
+        ((TypeParamDeclaration) templateDeclaration.getParameters().get(0)).getType(),
         fixedDivision.getParameters().get(0).getType());
 
     // Check invocation targets

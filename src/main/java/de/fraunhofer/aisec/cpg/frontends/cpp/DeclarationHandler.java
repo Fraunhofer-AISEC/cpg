@@ -265,8 +265,8 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
       for (ICPPASTTemplateParameter templateParameter : ctx.getTemplateParameters()) {
         if (templateParameter instanceof CPPASTSimpleTypeTemplateParameter) {
           // Handle Types as Parameters
-          TypeTemplateParamDeclaration typeTemplateParamDeclaration =
-              (TypeTemplateParamDeclaration)
+          TypeParamDeclaration typeParamDeclaration =
+              (TypeParamDeclaration)
                   this.lang
                       .getDeclaratorHandler()
                       .handle((CPPASTSimpleTypeTemplateParameter) templateParameter);
@@ -276,7 +276,7 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
                       templateDeclaration,
                       ((CPPASTSimpleTypeTemplateParameter) templateParameter).getName().toString());
 
-          typeTemplateParamDeclaration.setType(parameterizedType);
+          typeParamDeclaration.setType(parameterizedType);
 
           if (((CPPASTSimpleTypeTemplateParameter) templateParameter).getDefaultType() != null) {
             Type defaultType =
@@ -287,10 +287,10 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
                         .getRawSignature(),
                     false,
                     lang);
-            typeTemplateParamDeclaration.setDefault(defaultType);
+            typeParamDeclaration.setDefault(defaultType);
           }
 
-          templateDeclaration.addParameter(typeTemplateParamDeclaration);
+          templateDeclaration.addParameter(typeParamDeclaration);
         } else if (templateParameter instanceof CPPASTParameterDeclaration) {
           // Handle Values as Parameters
           NonTypeTemplateParamDeclaration nonTypeTemplateParamDeclaration =

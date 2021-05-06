@@ -270,8 +270,8 @@ public class CallResolver extends Pass {
 
   private boolean isInstantiated(Node callParameter, Declaration functionParameter) {
     if (callParameter instanceof Type
-        && functionParameter instanceof TypeTemplateParamDeclaration) {
-      return ((TypeTemplateParamDeclaration) functionParameter)
+        && functionParameter instanceof TypeParamDeclaration) {
+      return ((TypeParamDeclaration) functionParameter)
           .canBeInstantiated((Type) callParameter);
     } else if (callParameter instanceof Expression
         && functionParameter instanceof NonTypeTemplateParamDeclaration) {
@@ -281,14 +281,14 @@ public class CallResolver extends Pass {
     return false;
   }
 
-  private Map<ParameterizedType, TypeTemplateParamDeclaration>
+  private Map<ParameterizedType, TypeParamDeclaration>
       getParameterizedSignaturesFromInitialization(Map<Declaration, Node> intialization) {
-    Map<ParameterizedType, TypeTemplateParamDeclaration> parameterizedSignature = new HashMap<>();
+    Map<ParameterizedType, TypeParamDeclaration> parameterizedSignature = new HashMap<>();
     for (Declaration templateParam : intialization.keySet()) {
-      if (templateParam instanceof TypeTemplateParamDeclaration) {
+      if (templateParam instanceof TypeParamDeclaration) {
         parameterizedSignature.put(
-            (ParameterizedType) ((TypeTemplateParamDeclaration) templateParam).getType(),
-            (TypeTemplateParamDeclaration) templateParam);
+            (ParameterizedType) ((TypeParamDeclaration) templateParam).getType(),
+            (TypeParamDeclaration) templateParam);
       }
     }
     return parameterizedSignature;
@@ -348,7 +348,7 @@ public class CallResolver extends Pass {
             orderedInitializationSignature);
     if (signature == null) return null;
 
-    Map<ParameterizedType, TypeTemplateParamDeclaration> parameterizedTypeResolution =
+    Map<ParameterizedType, TypeParamDeclaration> parameterizedTypeResolution =
         getParameterizedSignaturesFromInitialization(signature);
 
     // Check for unresolved Parameters and try to deduce Type by looking at call arguments
@@ -441,7 +441,7 @@ public class CallResolver extends Pass {
 
     // Set return Value of call if resolved
     Type returnType = function.getType();
-    Map<ParameterizedType, TypeTemplateParamDeclaration> parameterizedTypeResolution =
+    Map<ParameterizedType, TypeParamDeclaration> parameterizedTypeResolution =
         getParameterizedSignaturesFromInitialization(initializationSignature);
     if (function.getType() instanceof ParameterizedType) {
       returnType =
@@ -471,8 +471,8 @@ public class CallResolver extends Pass {
     // Add possible initializations to TemplateParamVariableDeclarations. Do this as a last step,
     // otherwise the initializationSignature Map stops working
     for (Declaration declaration : initializationSignature.keySet()) {
-      if (declaration instanceof TypeTemplateParamDeclaration) {
-        ((TypeTemplateParamDeclaration) declaration)
+      if (declaration instanceof TypeParamDeclaration) {
+        ((TypeParamDeclaration) declaration)
             .addPossibleInitialization((Type) initializationSignature.get(declaration));
       } else if (declaration instanceof NonTypeTemplateParamDeclaration) {
         ((NonTypeTemplateParamDeclaration) declaration)
@@ -511,7 +511,7 @@ public class CallResolver extends Pass {
 
   private List<Type> getCallSignature(
       FunctionDeclaration function,
-      Map<ParameterizedType, TypeTemplateParamDeclaration> parameterizedTypeResolution,
+      Map<ParameterizedType, TypeParamDeclaration> parameterizedTypeResolution,
       Map<Declaration, Node> initializationSignature) {
     List<Type> templateCallSignature = new ArrayList<>();
     for (ParamVariableDeclaration argument : function.getParameters()) {
