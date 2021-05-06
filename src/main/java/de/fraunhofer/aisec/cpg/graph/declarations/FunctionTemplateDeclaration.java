@@ -32,6 +32,7 @@ import de.fraunhofer.aisec.cpg.graph.edge.Properties;
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import java.util.*;
 import org.checkerframework.checker.nullness.qual.NonNull;
+import org.checkerframework.checker.nullness.qual.Nullable;
 import org.neo4j.ogm.annotation.Relationship;
 
 /** Node representing a declaration of a FunctionTemplate */
@@ -45,6 +46,19 @@ public class FunctionTemplateDeclaration extends TemplateDeclaration {
   @Relationship(value = "REALIZATION", direction = "OUTGOING")
   @SubGraph("AST")
   private List<PropertyEdge<FunctionDeclaration>> realization = new ArrayList<>();
+
+  /** FunctionTemplates can also be contained within a record declaration */
+  @Relationship(value = "RECORD_DECLARATION", direction = "OUTGOING")
+  @Nullable
+  private RecordDeclaration recordDeclaration;
+
+  public RecordDeclaration getRecordDeclaration() {
+    return recordDeclaration;
+  }
+
+  public void setRecordDeclaration(RecordDeclaration recordDeclaration) {
+    this.recordDeclaration = recordDeclaration;
+  }
 
   public List<FunctionDeclaration> getRealization() {
     return unwrap(this.realization);

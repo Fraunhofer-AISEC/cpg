@@ -35,9 +35,7 @@ import java.util.ArrayList;
 import java.util.List;
 import org.neo4j.ogm.annotation.Relationship;
 
-/**
- * Abstract class representing the template concept
- */
+/** Abstract class representing the template concept */
 public abstract class TemplateDeclaration extends Declaration implements DeclarationHolder {
   public enum TemplateInitialization {
     AUTO_DEDUCTION,

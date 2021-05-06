@@ -30,6 +30,8 @@ import de.fraunhofer.aisec.cpg.frontends.cpp.CXXLanguageFrontend;
 import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguageFrontend;
 import de.fraunhofer.aisec.cpg.graph.*;
 import de.fraunhofer.aisec.cpg.graph.declarations.*;
+import de.fraunhofer.aisec.cpg.graph.edge.Properties;
+import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*;
 import de.fraunhofer.aisec.cpg.graph.types.*;
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.ScopedWalker;
@@ -250,7 +252,7 @@ public class CallResolver extends Pass {
     }
 
     if (call instanceof TemplateCallExpression && lang instanceof CXXLanguageFrontend) {
-      handleTemplateFunctionCalls(curClass, (TemplateCallExpression) call);
+      handleTemplateFunctionCalls(curClass, (TemplateCallExpression) call, true);
       return;
     }
 
@@ -383,8 +385,17 @@ public class CallResolver extends Pass {
     return signature;
   }
 
-  private void handleTemplateFunctionCalls(
-      RecordDeclaration curClass, TemplateCallExpression templateCall) {
+  /**
+   * @param curClass class the invoked method must be part of.
+   * @param templateCall call to instantiate and invoke a function temaplte
+   * @param applyDummy if the resolution was unsuccessful and applyDummy is true the call will
+   *     resolve to a instantiation/invocation of a dummy template
+   * @return true if resolution was successful, false if not
+   */
+  private boolean handleTemplateFunctionCalls(
+      @Nullable RecordDeclaration curClass,
+      @NonNull TemplateCallExpression templateCall,
+      boolean applyDummy) {
 
     List<FunctionTemplateDeclaration> instantiationCandidates =
         lang.getScopeManager().resolveFunctionTemplateDeclaration(templateCall);
@@ -424,13 +435,27 @@ public class CallResolver extends Pass {
               initializationSignature,
               initializationType,
               orderedInitializationSignature);
-          return;
+          return true;
         }
       }
     }
 
-    // TODO CPS Create Dummy
-
+    if (applyDummy) {
+      // If we want to use a functionTemplateDeclaration as dummy, this needs to be provided.
+      // Otherwise we could not resolve to a template and no modifications are made
+      FunctionTemplateDeclaration functionTemplateDeclaration =
+          createFunctionTemplateDummy(curClass, templateCall);
+      templateCall.setInstantiation(functionTemplateDeclaration);
+      templateCall.setInvokes(functionTemplateDeclaration.getRealization());
+      // Set instantiation propertyEdges
+      for (PropertyEdge<Node> instantiationParameter :
+          templateCall.getTemplateParametersPropertyEdge()) {
+        instantiationParameter.addProperty(
+            Properties.INSTANTIATION, TemplateDeclaration.TemplateInitialization.EXPLICIT);
+      }
+      return true;
+    }
+    return false;
   }
 
   private void applyTemplateInstantiation(
@@ -1132,9 +1157,61 @@ public class CallResolver extends Pass {
     }
   }
 
-  /*private FunctionTemplateDeclaration createFunctionTemplateDummy(RecordDeclaration containingRecord, FunctionDeclaration dummyRealization, ) {
-  //TODO CPS
-  }*/
+  private FunctionTemplateDeclaration createFunctionTemplateDummy(
+      RecordDeclaration containingRecord, TemplateCallExpression call) {
+    String name = call.getName();
+    String code = call.getCode();
+    FunctionTemplateDeclaration dummy =
+        NodeBuilder.newFunctionTemplateDeclaration(name, code, containingRecord);
+    dummy.setImplicit(true);
+    if (containingRecord != null) {
+      containingRecord.addDeclaration(dummy);
+    } else {
+      if (currentTU == null) {
+        LOGGER.error(
+            "No current translation unit when trying to generate function template dummy {}",
+            dummy.getName());
+      } else {
+        currentTU.addDeclaration(dummy);
+      }
+    }
+    FunctionDeclaration dummyRealization =
+        createDummy(containingRecord, name, code, false, call.getSignature());
+    dummy.addRealization(dummyRealization);
+
+    int typeCounter = 0;
+    int nonTypeCounter = 0;
+    for (Node node : call.getTemplateParameters()) {
+      if (node instanceof Type) {
+        // Template Parameter
+        String dummyTypeIdentifier = "T" + typeCounter;
+        TypeParamDeclaration typeParamDeclaration =
+            NodeBuilder.newTypeParamDeclaration(dummyTypeIdentifier, dummyTypeIdentifier);
+        typeParamDeclaration.setImplicit(true);
+        ParameterizedType parameterizedType = new ParameterizedType(dummyTypeIdentifier);
+        parameterizedType.setImplicit(true);
+        typeParamDeclaration.setType(parameterizedType);
+        TypeManager.getInstance().addTypeParameter(dummy, parameterizedType);
+        typeCounter++;
+        dummy.addParameter(typeParamDeclaration);
+      } else if (node instanceof Expression) {
+        // Non-Type Template Parameter
+        String dummyNonTypeIdentifier = "N" + nonTypeCounter;
+        ParamVariableDeclaration paramVariableDeclaration =
+            NodeBuilder.newMethodParameterIn(
+                dummyNonTypeIdentifier,
+                ((Expression) node).getType(),
+                false,
+                dummyNonTypeIdentifier);
+        paramVariableDeclaration.setImplicit(true);
+        paramVariableDeclaration.addPrevDFG(node);
+        node.addNextDFG(paramVariableDeclaration);
+        nonTypeCounter++;
+        dummy.addParameter(paramVariableDeclaration);
+      }
+    }
+    return dummy;
+  }
 
   @NonNull
   private FunctionDeclaration createDummy(

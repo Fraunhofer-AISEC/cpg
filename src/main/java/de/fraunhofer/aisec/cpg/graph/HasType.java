@@ -26,7 +26,6 @@
 package de.fraunhofer.aisec.cpg.graph;
 
 import de.fraunhofer.aisec.cpg.graph.types.Type;
-
 import java.util.Collection;
 import java.util.Set;
 

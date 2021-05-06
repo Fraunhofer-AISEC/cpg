@@ -258,7 +258,8 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
           NodeBuilder.newFunctionTemplateDeclaration(
               ctx.getRawSignature().split("\\{")[0].replace('\n', ' ').trim(),
               this.lang.getCodeFromRawNode(ctx),
-              this.lang.getLocationFromRawNode(ctx));
+              null);
+      templateDeclaration.setLocation(this.lang.getLocationFromRawNode(ctx));
       lang.getScopeManager().addDeclaration(templateDeclaration);
       lang.getScopeManager().enterScope(templateDeclaration);
 

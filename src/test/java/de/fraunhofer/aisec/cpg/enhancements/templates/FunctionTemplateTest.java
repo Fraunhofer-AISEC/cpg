@@ -492,7 +492,6 @@ public class FunctionTemplateTest extends BaseTest {
     assertTrue(f4.getInvokes().get(0).isImplicit());
   }
 
-  @Disabled
   @Test
   void testCreateDummy() throws Exception {
     // test invocation target when template parameter produces a cast in an argument
@@ -502,15 +501,17 @@ public class FunctionTemplateTest extends BaseTest {
             topLevel,
             true);
 
+    // Check dummy for first fixed_division call
+
     FunctionTemplateDeclaration templateDeclaration =
         TestUtils.findByUniquePredicate(
             TestUtils.subnodesOfType(result, FunctionTemplateDeclaration.class),
-            t -> t.isImplicit());
+            t -> t.getCode().equals("fixed_division<int,2>(10)"));
 
     FunctionDeclaration fixedDivision =
         TestUtils.findByUniquePredicate(
             TestUtils.subnodesOfType(result, FunctionDeclaration.class),
-            f -> f.getName().equals("fixed_division") && f.isImplicit());
+            f -> f.getCode().equals("fixed_division<int,2>(10)") && f.isImplicit());
 
     assertEquals(1, templateDeclaration.getRealization().size());
     assertEquals(fixedDivision, templateDeclaration.getRealization().get(0));
@@ -520,11 +521,6 @@ public class FunctionTemplateTest extends BaseTest {
     assertTrue(templateDeclaration.getParameters().get(1) instanceof ParamVariableDeclaration);
 
     assertEquals(1, fixedDivision.getParameters().size());
-    assertEquals(
-        ((TypeParamDeclaration) templateDeclaration.getParameters().get(0)).getType(),
-        fixedDivision.getParameters().get(0).getType());
-
-    // Check invocation targets
 
     CallExpression callInt2 =
         TestUtils.findByUniquePredicate(
@@ -533,6 +529,33 @@ public class FunctionTemplateTest extends BaseTest {
 
     assertEquals(1, callInt2.getInvokes().size());
     assertEquals(fixedDivision, callInt2.getInvokes().get(0));
+    assertTrue(
+        ((TemplateCallExpression) callInt2)
+            .getTemplateParameters()
+            .get(1)
+            .getNextDFG()
+            .contains(templateDeclaration.getParameters().get(1)));
+
+    // Check dummy for second fixed_division call
+
+    templateDeclaration =
+        TestUtils.findByUniquePredicate(
+            TestUtils.subnodesOfType(result, FunctionTemplateDeclaration.class),
+            t -> t.getCode().equals("fixed_division<double,3>(10.0)"));
+
+    fixedDivision =
+        TestUtils.findByUniquePredicate(
+            TestUtils.subnodesOfType(result, FunctionDeclaration.class),
+            f -> f.getCode().equals("fixed_division<double,3>(10.0)") && f.isImplicit());
+
+    assertEquals(1, templateDeclaration.getRealization().size());
+    assertEquals(fixedDivision, templateDeclaration.getRealization().get(0));
+
+    assertEquals(2, templateDeclaration.getParameters().size());
+    assertTrue(templateDeclaration.getParameters().get(0) instanceof TypeParamDeclaration);
+    assertTrue(templateDeclaration.getParameters().get(1) instanceof ParamVariableDeclaration);
+
+    assertEquals(1, fixedDivision.getParameters().size());
 
     CallExpression callDouble3 =
         TestUtils.findByUniquePredicate(
@@ -541,6 +564,12 @@ public class FunctionTemplateTest extends BaseTest {
 
     assertEquals(1, callDouble3.getInvokes().size());
     assertEquals(fixedDivision, callDouble3.getInvokes().get(0));
+    assertTrue(
+        ((TemplateCallExpression) callDouble3)
+            .getTemplateParameters()
+            .get(1)
+            .getNextDFG()
+            .contains(templateDeclaration.getParameters().get(1)));
 
     // Check return values
     assertEquals(UnknownType.getUnknownType(), callInt2.getType());
