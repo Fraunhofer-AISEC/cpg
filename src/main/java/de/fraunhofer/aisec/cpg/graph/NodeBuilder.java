@@ -57,24 +57,13 @@ public class NodeBuilder {
     return using;
   }
 
-  public static CallExpression newCallExpression(String name, String fqn, String code) {
+  public static CallExpression newCallExpression(
+      String name, String fqn, String code, boolean template) {
     CallExpression node = new CallExpression();
     node.setName(name);
     node.setCode(code);
     node.setFqn(fqn);
-
-    log(node);
-
-    return node;
-  }
-
-  public static TemplateCallExpression newTemplateCallExpression(
-      String name, String fqn, String code) {
-    TemplateCallExpression node = new TemplateCallExpression();
-    node.setName(name);
-    node.setCode(code);
-    node.setFqn(fqn);
-
+    node.setTemplate(template);
     log(node);
 
     return node;

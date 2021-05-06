@@ -216,7 +216,6 @@ public class FunctionTemplateTest extends BaseTest {
             c -> c.getName().equals("fixed_multiply"));
 
     // Check invocation target
-    assertTrue(call instanceof TemplateCallExpression);
     assertEquals(1, call.getInvokes().size());
     assertEquals(fixedMultiply, call.getInvokes().get(0));
 
@@ -228,12 +227,12 @@ public class FunctionTemplateTest extends BaseTest {
         TestUtils.findByUniquePredicate(
             TestUtils.subnodesOfType(result, Literal.class), l -> l.getValue().equals(5));
 
-    assertEquals(2, ((TemplateCallExpression) call).getTemplateParameters().size());
-    assertEquals(doubleType, ((TemplateCallExpression) call).getTemplateParameters().get(0));
-    assertEquals(literal5, ((TemplateCallExpression) call).getTemplateParameters().get(1));
+    assertEquals(2, call.getTemplateParameters().size());
+    assertEquals(doubleType, call.getTemplateParameters().get(0));
+    assertEquals(literal5, call.getTemplateParameters().get(1));
 
     // Check return value
-    assertEquals(doubleType, ((TemplateCallExpression) call).getType());
+    assertEquals(doubleType, call.getType());
   }
 
   @Test
@@ -259,9 +258,9 @@ public class FunctionTemplateTest extends BaseTest {
     assertEquals(1, templateDeclaration.getRealization().size());
     assertEquals(fixedMultiply, templateDeclaration.getRealization().get(0));
 
-    TemplateCallExpression call =
+    CallExpression call =
         TestUtils.findByUniquePredicate(
-            TestUtils.subnodesOfType(result, TemplateCallExpression.class),
+            TestUtils.subnodesOfType(result, CallExpression.class),
             c -> c.getName().equals("fixed_multiply"));
 
     // Check invocation target
@@ -304,9 +303,9 @@ public class FunctionTemplateTest extends BaseTest {
     assertEquals(1, templateDeclaration.getRealization().size());
     assertEquals(fixedMultiply, templateDeclaration.getRealization().get(0));
 
-    TemplateCallExpression call =
+    CallExpression call =
         TestUtils.findByUniquePredicate(
-            TestUtils.subnodesOfType(result, TemplateCallExpression.class),
+            TestUtils.subnodesOfType(result, CallExpression.class),
             c -> c.getName().equals("fixed_multiply"));
 
     // Check invocation target
@@ -352,9 +351,9 @@ public class FunctionTemplateTest extends BaseTest {
     assertEquals(1, templateDeclaration.getRealization().size());
     assertEquals(fixedMultiply, templateDeclaration.getRealization().get(0));
 
-    TemplateCallExpression call =
+    CallExpression call =
         TestUtils.findByUniquePredicate(
-            TestUtils.subnodesOfType(result, TemplateCallExpression.class),
+            TestUtils.subnodesOfType(result, CallExpression.class),
             c -> c.getName().equals("fixed_multiply"));
 
     // Check invocation target
@@ -400,9 +399,9 @@ public class FunctionTemplateTest extends BaseTest {
     assertEquals(1, templateDeclaration.getRealization().size());
     assertEquals(fixedMultiply, templateDeclaration.getRealization().get(0));
 
-    TemplateCallExpression call =
+    CallExpression call =
         TestUtils.findByUniquePredicate(
-            TestUtils.subnodesOfType(result, TemplateCallExpression.class),
+            TestUtils.subnodesOfType(result, CallExpression.class),
             c -> c.getName().equals("fixed_multiply"));
 
     // Check invocation target
@@ -530,7 +529,7 @@ public class FunctionTemplateTest extends BaseTest {
     assertEquals(1, callInt2.getInvokes().size());
     assertEquals(fixedDivision, callInt2.getInvokes().get(0));
     assertTrue(
-        ((TemplateCallExpression) callInt2)
+        callInt2
             .getTemplateParameters()
             .get(1)
             .getNextDFG()
@@ -565,7 +564,7 @@ public class FunctionTemplateTest extends BaseTest {
     assertEquals(1, callDouble3.getInvokes().size());
     assertEquals(fixedDivision, callDouble3.getInvokes().get(0));
     assertTrue(
-        ((TemplateCallExpression) callDouble3)
+        callDouble3
             .getTemplateParameters()
             .get(1)
             .getNextDFG()

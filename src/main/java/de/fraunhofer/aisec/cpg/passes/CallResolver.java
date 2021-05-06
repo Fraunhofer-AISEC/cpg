@@ -251,8 +251,8 @@ public class CallResolver extends Pass {
       }
     }
 
-    if (call instanceof TemplateCallExpression && lang instanceof CXXLanguageFrontend) {
-      handleTemplateFunctionCalls(curClass, (TemplateCallExpression) call, true);
+    if (call.instantiatesTemplate() && lang instanceof CXXLanguageFrontend) {
+      handleTemplateFunctionCalls(curClass, call, true);
       return;
     }
 
@@ -311,7 +311,7 @@ public class CallResolver extends Pass {
 
   private Map<Declaration, Node> constructTemplateInitializationSignatureFromTemplateParameters(
       FunctionTemplateDeclaration functionTemplateDeclaration,
-      TemplateCallExpression templateCall,
+      CallExpression templateCall,
       Map<Node, TemplateDeclaration.TemplateInitialization> instantiationType,
       Map<Declaration, Integer> orderedInitializationSignature) {
     Map<Declaration, Node> instantiationSignature = new HashMap<>();
@@ -351,7 +351,7 @@ public class CallResolver extends Pass {
 
   private Map<Declaration, Node> getTemplateInitializationSignature(
       FunctionTemplateDeclaration functionTemplateDeclaration,
-      TemplateCallExpression templateCall,
+      CallExpression templateCall,
       Map<Node, TemplateDeclaration.TemplateInitialization> instantiationType,
       Map<Declaration, Integer> orderedInitializationSignature) {
     // Construct Signature
@@ -394,7 +394,7 @@ public class CallResolver extends Pass {
    */
   private boolean handleTemplateFunctionCalls(
       @Nullable RecordDeclaration curClass,
-      @NonNull TemplateCallExpression templateCall,
+      @NonNull CallExpression templateCall,
       boolean applyDummy) {
 
     List<FunctionTemplateDeclaration> instantiationCandidates =
@@ -406,7 +406,8 @@ public class CallResolver extends Pass {
     for (FunctionTemplateDeclaration functionTemplateDeclaration : instantiationCandidates) {
       Map<Node, TemplateDeclaration.TemplateInitialization> initializationType = new HashMap<>();
       Map<Declaration, Integer> orderedInitializationSignature = new HashMap<>();
-      if (templateCall.getTemplateParameters().size()
+      if (templateCall.getTemplateParameters() != null
+          && templateCall.getTemplateParameters().size()
               <= functionTemplateDeclaration.getParameters().size()
           && templateCall.getArguments().size()
               <= functionTemplateDeclaration.getRealization().get(0).getParameters().size()) {
@@ -459,7 +460,7 @@ public class CallResolver extends Pass {
   }
 
   private void applyTemplateInstantiation(
-      TemplateCallExpression templateCall,
+      CallExpression templateCall,
       FunctionTemplateDeclaration functionTemplateDeclaration,
       FunctionDeclaration function,
       Map<Declaration, Node> initializationSignature,
@@ -519,7 +520,7 @@ public class CallResolver extends Pass {
   private boolean checkArgumentValidity(
       FunctionDeclaration functionDeclaration,
       List<Type> functionDeclarationSignature,
-      TemplateCallExpression templateCallExpression) {
+      CallExpression templateCallExpression) {
     if (templateCallExpression.getArguments().size()
         <= functionDeclaration.getParameters().size()) {
       List<Expression> callArguments =
@@ -1158,7 +1159,7 @@ public class CallResolver extends Pass {
   }
 
   private FunctionTemplateDeclaration createFunctionTemplateDummy(
-      RecordDeclaration containingRecord, TemplateCallExpression call) {
+      RecordDeclaration containingRecord, CallExpression call) {
     String name = call.getName();
     String code = call.getCode();
     FunctionTemplateDeclaration dummy =
