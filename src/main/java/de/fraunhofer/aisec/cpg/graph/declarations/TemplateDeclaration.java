@@ -25,13 +25,69 @@
  */
 package de.fraunhofer.aisec.cpg.graph.declarations;
 
-import de.fraunhofer.aisec.cpg.graph.DeclarationHolder;
+import static de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.unwrap;
 
+import de.fraunhofer.aisec.cpg.graph.DeclarationHolder;
+import de.fraunhofer.aisec.cpg.graph.SubGraph;
+import de.fraunhofer.aisec.cpg.graph.edge.Properties;
+import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
+import java.util.ArrayList;
+import java.util.List;
+import org.neo4j.ogm.annotation.Relationship;
+
+/**
+ * Abstract class representing the template concept
+ */
 public abstract class TemplateDeclaration extends Declaration implements DeclarationHolder {
   public enum TemplateInitialization {
     AUTO_DEDUCTION,
     DEFAULT,
     EXPLICIT,
     UNKNOWN
+  }
+
+  /** Parameters the Template requires for instantiation */
+  @Relationship(value = "PARAMETERS", direction = "OUTGOING")
+  @SubGraph("AST")
+  protected List<PropertyEdge<Declaration>> parameters = new ArrayList<>();
+
+  public List<Declaration> getParameters() {
+    return unwrap(this.parameters);
+  }
+
+  public List<Declaration> getParametersOfClazz(Class<? extends Declaration> clazz) {
+    List<Declaration> reducedParametersByType = new ArrayList<>();
+    for (Declaration n : this.getParameters()) {
+      if (clazz.isInstance(n)) {
+        reducedParametersByType.add(n);
+      }
+    }
+    return reducedParametersByType;
+  }
+
+  public List<PropertyEdge<Declaration>> getParametersPropertyEdge() {
+    return this.parameters;
+  }
+
+  public void addParameter(TypeParamDeclaration parameterizedType) {
+    PropertyEdge<Declaration> propertyEdge = new PropertyEdge<>(this, parameterizedType);
+    propertyEdge.addProperty(Properties.INDEX, this.parameters.size());
+    this.parameters.add(propertyEdge);
+  }
+
+  public void addParameter(ParamVariableDeclaration nonTypeTemplateParamDeclaration) {
+    PropertyEdge<Declaration> propertyEdge =
+        new PropertyEdge<>(this, nonTypeTemplateParamDeclaration);
+    propertyEdge.addProperty(Properties.INDEX, this.parameters.size());
+    this.parameters.add(propertyEdge);
+  }
+
+  public void removeParameter(TypeParamDeclaration parameterizedType) {
+    this.parameters.removeIf(propertyEdge -> propertyEdge.getEnd().equals(parameterizedType));
+  }
+
+  public void removeParameter(ParamVariableDeclaration nonTypeTemplateParamDeclaration) {
+    this.parameters.removeIf(
+        propertyEdge -> propertyEdge.getEnd().equals(nonTypeTemplateParamDeclaration));
   }
 }

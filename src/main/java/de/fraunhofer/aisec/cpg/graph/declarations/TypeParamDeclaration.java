@@ -31,15 +31,25 @@ import de.fraunhofer.aisec.cpg.graph.SubGraph;
 import de.fraunhofer.aisec.cpg.graph.types.Type;
 import java.util.Collection;
 import java.util.Objects;
+import org.checkerframework.checker.nullness.qual.Nullable;
 import org.neo4j.ogm.annotation.Relationship;
 
+/** A declaration of a type template parameter */
 public class TypeParamDeclaration extends ValueDeclaration
     implements HasType.SecondaryTypeEdge, HasDefault<Type> {
 
+  /**
+   * TemplateParameters can define a default for the type parameter Since the primary type edge
+   * points to the ParameterizedType, the default edge is a secondary type edge. Therefore the
+   * TypeResolver requires to implement the {@link HasType.SecondaryTypeEdge} to be aware of the
+   * edge to be able to merge the type nodes.
+   */
   @Relationship(value = "DEFAULT", direction = "OUTGOING")
   @SubGraph("AST")
+  @Nullable
   private Type defaultType;
 
+  @Nullable
   public Type getDefault() {
     return defaultType;
   }

@@ -34,15 +34,17 @@ import java.util.*;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.neo4j.ogm.annotation.Relationship;
 
+/** Node representing a declaration of a FunctionTemplate */
 public class FunctionTemplateDeclaration extends TemplateDeclaration {
 
+  /**
+   * Edges pointing to all FunctionDeclarations that are realized by the FunctionTemplate. Before
+   * the expansion pass there is only a single FunctionDeclaration which is instantiated After the
+   * expansion pass for each instantiation of the FunctionTemplate there will be a realization
+   */
   @Relationship(value = "REALIZATION", direction = "OUTGOING")
   @SubGraph("AST")
   private List<PropertyEdge<FunctionDeclaration>> realization = new ArrayList<>();
-
-  @Relationship(value = "PARAMETERS", direction = "OUTGOING")
-  @SubGraph("AST")
-  protected List<PropertyEdge<Declaration>> parameters = new ArrayList<>();
 
   public List<FunctionDeclaration> getRealization() {
     return unwrap(this.realization);
@@ -60,46 +62,6 @@ public class FunctionTemplateDeclaration extends TemplateDeclaration {
 
   public void removeRealization(FunctionDeclaration realizedFunction) {
     this.realization.removeIf(propertyEdge -> propertyEdge.getEnd().equals(realizedFunction));
-  }
-
-  public List<Declaration> getParameters() {
-    return unwrap(this.parameters);
-  }
-
-  public List<Declaration> getParametersOfClazz(Class<? extends Declaration> clazz) {
-    List<Declaration> reducedParametersByType = new ArrayList<>();
-    for (Declaration n : this.getParameters()) {
-      if (clazz.isInstance(n)) {
-        reducedParametersByType.add(n);
-      }
-    }
-    return reducedParametersByType;
-  }
-
-  public List<PropertyEdge<Declaration>> getParametersPropertyEdge() {
-    return this.parameters;
-  }
-
-  public void addParameter(TypeParamDeclaration parameterizedType) {
-    PropertyEdge<Declaration> propertyEdge = new PropertyEdge<>(this, parameterizedType);
-    propertyEdge.addProperty(Properties.INDEX, this.parameters.size());
-    this.parameters.add(propertyEdge);
-  }
-
-  public void addParameter(ParamVariableDeclaration nonTypeTemplateParamDeclaration) {
-    PropertyEdge<Declaration> propertyEdge =
-        new PropertyEdge<>(this, nonTypeTemplateParamDeclaration);
-    propertyEdge.addProperty(Properties.INDEX, this.parameters.size());
-    this.parameters.add(propertyEdge);
-  }
-
-  public void removeParameter(TypeParamDeclaration parameterizedType) {
-    this.parameters.removeIf(propertyEdge -> propertyEdge.getEnd().equals(parameterizedType));
-  }
-
-  public void removeParameter(ParamVariableDeclaration nonTypeTemplateParamDeclaration) {
-    this.parameters.removeIf(
-        propertyEdge -> propertyEdge.getEnd().equals(nonTypeTemplateParamDeclaration));
   }
 
   @Override

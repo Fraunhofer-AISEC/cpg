@@ -30,7 +30,7 @@ import de.fraunhofer.aisec.cpg.graph.SubGraph;
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression;
 import org.neo4j.ogm.annotation.Relationship;
 
-/** A declaration of a function parameter. */
+/** A declaration of a function or nontype template parameter. */
 public class ParamVariableDeclaration extends ValueDeclaration implements HasDefault<Expression> {
 
   private boolean variadic = false;
