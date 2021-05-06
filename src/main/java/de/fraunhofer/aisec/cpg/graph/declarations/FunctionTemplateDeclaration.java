@@ -86,7 +86,7 @@ public class FunctionTemplateDeclaration extends TemplateDeclaration {
     this.parameters.add(propertyEdge);
   }
 
-  public void addParameter(NonTypeTemplateParamDeclaration nonTypeTemplateParamDeclaration) {
+  public void addParameter(ParamVariableDeclaration nonTypeTemplateParamDeclaration) {
     PropertyEdge<Declaration> propertyEdge =
         new PropertyEdge<>(this, nonTypeTemplateParamDeclaration);
     propertyEdge.addProperty(Properties.INDEX, this.parameters.size());
@@ -97,16 +97,15 @@ public class FunctionTemplateDeclaration extends TemplateDeclaration {
     this.parameters.removeIf(propertyEdge -> propertyEdge.getEnd().equals(parameterizedType));
   }
 
-  public void removeParameter(NonTypeTemplateParamDeclaration nonTypeTemplateParamDeclaration) {
+  public void removeParameter(ParamVariableDeclaration nonTypeTemplateParamDeclaration) {
     this.parameters.removeIf(
         propertyEdge -> propertyEdge.getEnd().equals(nonTypeTemplateParamDeclaration));
   }
 
   @Override
   public void addDeclaration(@NonNull Declaration declaration) {
-    if (declaration instanceof TypeParamDeclaration) {
-      addIfNotContains(this.parameters, declaration);
-    } else if (declaration instanceof NonTypeTemplateParamDeclaration) {
+    if (declaration instanceof TypeParamDeclaration
+        || declaration instanceof ParamVariableDeclaration) {
       addIfNotContains(this.parameters, declaration);
     } else if (declaration instanceof FunctionDeclaration) {
       addIfNotContains(this.realization, (FunctionDeclaration) declaration);

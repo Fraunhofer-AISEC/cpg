@@ -25,36 +25,20 @@
  */
 package de.fraunhofer.aisec.cpg.graph.declarations;
 
+import de.fraunhofer.aisec.cpg.graph.HasDefault;
 import de.fraunhofer.aisec.cpg.graph.HasType;
 import de.fraunhofer.aisec.cpg.graph.SubGraph;
-import de.fraunhofer.aisec.cpg.graph.TemplateParameter;
-import de.fraunhofer.aisec.cpg.graph.types.ObjectType;
 import de.fraunhofer.aisec.cpg.graph.types.Type;
-import java.util.*;
+import java.util.Collection;
+import java.util.Objects;
 import org.neo4j.ogm.annotation.Relationship;
 
 public class TypeParamDeclaration extends ValueDeclaration
-    implements TemplateParameter<Type>, HasType.SecondaryTypeEdge {
-
-  @Relationship(value = "POSSIBLE_INITIALIZATIONS", direction = "OUTGOING")
-  @SubGraph("AST")
-  protected Set<Type> possibleInitializations = new HashSet<>();
+    implements HasType.SecondaryTypeEdge, HasDefault<Type> {
 
   @Relationship(value = "DEFAULT", direction = "OUTGOING")
   @SubGraph("AST")
   private Type defaultType;
-
-  public Set<Type> getPossibleInitializations() {
-    return this.possibleInitializations;
-  }
-
-  public void addPossibleInitialization(Type parameterizedType) {
-    this.possibleInitializations.add(parameterizedType);
-  }
-
-  public boolean canBeInstantiated(Type type) {
-    return type instanceof ObjectType;
-  }
 
   public Type getDefault() {
     return defaultType;
@@ -70,13 +54,12 @@ public class TypeParamDeclaration extends ValueDeclaration
     if (o == null || getClass() != o.getClass()) return false;
     if (!super.equals(o)) return false;
     TypeParamDeclaration that = (TypeParamDeclaration) o;
-    return possibleInitializations.equals(that.possibleInitializations)
-        && Objects.equals(defaultType, that.defaultType);
+    return Objects.equals(defaultType, that.defaultType);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(super.hashCode(), possibleInitializations, defaultType);
+    return Objects.hash(super.hashCode(), defaultType);
   }
 
   @Override
@@ -86,7 +69,6 @@ public class TypeParamDeclaration extends ValueDeclaration
       for (Type t : typeState) {
         if (t.equals(oldType)) {
           this.setDefault(t);
-          this.addPossibleInitialization(t);
         }
       }
     }

@@ -231,21 +231,7 @@ public class NodeBuilder {
     return node;
   }
 
-  public static NonTypeTemplateParamDeclaration newNonTypeTemplateParameter(
-      ParamVariableDeclaration paramVariableDeclaration) {
-    NonTypeTemplateParamDeclaration node = new NonTypeTemplateParamDeclaration();
-    node.setName(paramVariableDeclaration.getName());
-    node.setType(paramVariableDeclaration.getType());
-    node.setCode(paramVariableDeclaration.getCode());
-    node.setVariadic(paramVariableDeclaration.isVariadic());
-
-    log(node);
-
-    return node;
-  }
-
-  public static TypeParamDeclaration newTypeParamDeclaration(
-      String name, String code) {
+  public static TypeParamDeclaration newTypeParamDeclaration(String name, String code) {
     TypeParamDeclaration node = new TypeParamDeclaration();
     node.setName(name);
     node.setCode(code);

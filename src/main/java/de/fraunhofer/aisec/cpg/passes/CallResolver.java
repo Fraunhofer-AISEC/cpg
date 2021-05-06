@@ -268,21 +268,34 @@ public class CallResolver extends Pass {
     }
   }
 
-  private boolean isInstantiated(Node callParameter, Declaration functionParameter) {
-    if (callParameter instanceof Type
-        && functionParameter instanceof TypeParamDeclaration) {
-      return ((TypeParamDeclaration) functionParameter)
-          .canBeInstantiated((Type) callParameter);
+  /**
+   * Checks if the provided call parameter can instantiate the required template parameter
+   *
+   * @param callParameter
+   * @param templateParameter
+   * @return If the TemplateParameter is an TypeParamDeclaration, the callParameter must be an
+   *     ObjectType => returns true If the TemplateParameter is a ParamVariableDeclaration, the
+   *     callParamerter must be an Expression and its type must match the type of the
+   *     ParamVariableDeclaration (same type or subtype) => returns true Otherwise return false
+   */
+  private boolean isInstantiated(Node callParameter, Declaration templateParameter) {
+    if (callParameter instanceof Type && templateParameter instanceof TypeParamDeclaration) {
+      Type type = (Type) callParameter;
+      return type instanceof ObjectType;
     } else if (callParameter instanceof Expression
-        && functionParameter instanceof NonTypeTemplateParamDeclaration) {
-      return ((NonTypeTemplateParamDeclaration) functionParameter)
-          .canBeInstantiated((Expression) callParameter);
+        && templateParameter instanceof ParamVariableDeclaration) {
+      Expression expression = (Expression) callParameter;
+      ParamVariableDeclaration paramVariableDeclaration =
+          (ParamVariableDeclaration) templateParameter;
+      return expression.getType().equals(paramVariableDeclaration.getType())
+          || TypeManager.getInstance()
+              .isSupertypeOf(paramVariableDeclaration.getType(), expression.getType());
     }
     return false;
   }
 
-  private Map<ParameterizedType, TypeParamDeclaration>
-      getParameterizedSignaturesFromInitialization(Map<Declaration, Node> intialization) {
+  private Map<ParameterizedType, TypeParamDeclaration> getParameterizedSignaturesFromInitialization(
+      Map<Declaration, Node> intialization) {
     Map<ParameterizedType, TypeParamDeclaration> parameterizedSignature = new HashMap<>();
     for (Declaration templateParam : intialization.keySet()) {
       if (templateParam instanceof TypeParamDeclaration) {
@@ -313,11 +326,11 @@ public class CallResolver extends Pass {
           return null;
         }
       } else {
-        if (((TemplateParameter) functionTemplateDeclaration.getParameters().get(i)).getDefault()
+        if (((HasDefault) functionTemplateDeclaration.getParameters().get(i)).getDefault()
             != null) {
           // If we have a default we fill it in
           Node defaultNode =
-              ((TemplateParameter) functionTemplateDeclaration.getParameters().get(i)).getDefault();
+              ((HasDefault) functionTemplateDeclaration.getParameters().get(i)).getDefault();
           instantiationSignature.put(
               functionTemplateDeclaration.getParameters().get(i), defaultNode);
           instantiationType.put(defaultNode, TemplateDeclaration.TemplateInitialization.DEFAULT);
@@ -468,15 +481,12 @@ public class CallResolver extends Pass {
       }
     }
 
-    // Add possible initializations to TemplateParamVariableDeclarations. Do this as a last step,
-    // otherwise the initializationSignature Map stops working
+    // Add DFG edges from the instantiation Expression to the ParamVariableDeclaration in the
+    // Template.
     for (Declaration declaration : initializationSignature.keySet()) {
-      if (declaration instanceof TypeParamDeclaration) {
-        ((TypeParamDeclaration) declaration)
-            .addPossibleInitialization((Type) initializationSignature.get(declaration));
-      } else if (declaration instanceof NonTypeTemplateParamDeclaration) {
-        ((NonTypeTemplateParamDeclaration) declaration)
-            .addPossibleInitialization((Expression) initializationSignature.get(declaration));
+      if (declaration instanceof ParamVariableDeclaration) {
+        declaration.addPrevDFG(initializationSignature.get(declaration));
+        initializationSignature.get(declaration).addNextDFG(declaration);
       }
     }
   }
@@ -1121,6 +1131,10 @@ public class CallResolver extends Pass {
       invokes.add(dummy);
     }
   }
+
+  /*private FunctionTemplateDeclaration createFunctionTemplateDummy(RecordDeclaration containingRecord, FunctionDeclaration dummyRealization, ) {
+  //TODO CPS
+  }*/
 
   @NonNull
   private FunctionDeclaration createDummy(

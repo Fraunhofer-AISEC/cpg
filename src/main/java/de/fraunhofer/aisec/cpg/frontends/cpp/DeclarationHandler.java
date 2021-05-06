@@ -293,11 +293,10 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
           templateDeclaration.addParameter(typeParamDeclaration);
         } else if (templateParameter instanceof CPPASTParameterDeclaration) {
           // Handle Values as Parameters
-          NonTypeTemplateParamDeclaration nonTypeTemplateParamDeclaration =
-              NodeBuilder.newNonTypeTemplateParameter(
-                  this.lang
-                      .getParameterDeclarationHandler()
-                      .handle((IASTParameterDeclaration) templateParameter));
+          ParamVariableDeclaration nonTypeTemplateParamDeclaration =
+              this.lang
+                  .getParameterDeclarationHandler()
+                  .handle((IASTParameterDeclaration) templateParameter);
 
           if (((CPPASTParameterDeclaration) templateParameter).getDeclarator().getInitializer()
               != null) {
@@ -309,7 +308,8 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
                             .getDeclarator()
                             .getInitializer());
             nonTypeTemplateParamDeclaration.setDefault(defaultExpression);
-            nonTypeTemplateParamDeclaration.addPossibleInitialization(defaultExpression);
+            nonTypeTemplateParamDeclaration.addPrevDFG(defaultExpression);
+            defaultExpression.addNextDFG(nonTypeTemplateParamDeclaration);
           }
           templateDeclaration.addParameter(nonTypeTemplateParamDeclaration);
           lang.getScopeManager().addDeclaration(nonTypeTemplateParamDeclaration);
