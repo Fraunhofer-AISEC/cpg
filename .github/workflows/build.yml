@@ -12,15 +12,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-        with:
-          fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysis
       - uses: Fraunhofer-AISEC/codyze-action@v2.3
         with:
-          markDirectory: src/main/mark
+          markDirectory: cpg-library/src/main/mark
+          directory: cpg-library/src/main/java
+
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of SonarQube analysis
       - uses: actions/setup-java@v2
         with:
           distribution: "zulu"
@@ -28,6 +30,9 @@ jobs:
       - uses: actions/setup-python@v2
         with:
           python-version: "3.9"
+      - name: Setup neo4j
+        run: |
+          docker run -d --env NEO4J_AUTH=neo4j/password -p7474:7474 -p7687:7687 neo4j
       - name: Cache SonarCloud packages
         uses: actions/cache@v2
         with:
@@ -57,7 +62,7 @@ jobs:
       - name: Install JEP
         run: |
           pip3 install jep
-          sudo cp /opt/hostedtoolcache/Python/3.9.4/x64/lib/python3.9/site-packages/jep/libjep.so /usr/lib/
+          sudo cp /opt/hostedtoolcache/Python/3.9*/x64/lib/python3.9/site-packages/jep/libjep.so /usr/lib/
       - name: Build ${{ steps.determine_version.outputs.version }}
         run: |
           if [ "$SONAR_TOKEN" != "" ]
@@ -68,7 +73,7 @@ jobs:
             -Dsonar.host.url=https://sonarcloud.io \
             -Dsonar.login=$SONAR_TOKEN
           else
-            ./gradlew --parallel -Pversion=$VERSION -Pexperimental build
+            ./gradlew --parallel -Pversion=$VERSION -Pexperimental -Pintegration build
           fi
         id: build
         env:
@@ -80,7 +85,7 @@ jobs:
         uses: actions/upload-artifact@v2
         with:
           name: test
-          path: build/reports/tests
+          path: "**/build/reports/tests"
       - name: JavaDoc
         if: startsWith(github.ref, 'refs/tags/v')
         uses: JamesIves/github-pages-deploy-action@releases/v3
