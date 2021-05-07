@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.edge;
 
+import de.fraunhofer.aisec.cpg.graph.declarations.TemplateDeclaration;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Function;
@@ -34,19 +35,26 @@ public class PropertyEdgeConverterManager {
   @NonNull
   private static PropertyEdgeConverterManager INSTANCE = new PropertyEdgeConverterManager();
 
-  private PropertyEdgeConverterManager() {}
+  private PropertyEdgeConverterManager() {
+    // Add here converters for PropertyEdges
+    this.addSerializer(
+        TemplateDeclaration.TemplateInitialization.class.getName(), Object::toString);
+
+    this.addDeserializer(
+        "INSTANTIATION", (s -> TemplateDeclaration.TemplateInitialization.valueOf(s.toString())));
+  }
 
   public static PropertyEdgeConverterManager getInstance() {
     return INSTANCE;
   }
 
   // Maps a class to a function that serialized the object from the given class
-  private Map<Class<?>, Function<Object, String>> serializer = new HashMap<>();
+  private Map<String, Function<Object, String>> serializer = new HashMap<>();
 
   // Maps a string (key of the property) to a function that deserializes the property
   private Map<String, Function<Object, Object>> deserializer = new HashMap<>();
 
-  public void addSerializer(Class<?> clazz, Function<Object, String> func) {
+  public void addSerializer(String clazz, Function<Object, String> func) {
     serializer.put(clazz, func);
   }
 
@@ -54,7 +62,7 @@ public class PropertyEdgeConverterManager {
     deserializer.put(name, func);
   }
 
-  public Map<Class<?>, Function<Object, String>> getSerializer() {
+  public Map<String, Function<Object, String>> getSerializer() {
     return serializer;
   }
 

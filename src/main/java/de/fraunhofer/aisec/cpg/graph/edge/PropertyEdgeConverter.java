@@ -47,7 +47,7 @@ public class PropertyEdgeConverter implements CompositeAttributeConverter<Map<Pr
    */
 
   // Maps a class to a function that serialized the object from the given class
-  private Map<Class<?>, Function<Object, String>> serializer;
+  private Map<String, Function<Object, String>> serializer;
 
   // Maps a string (key of the property) to a function that deserializes the property
   private Map<String, Function<Object, Object>> deserializer;
@@ -62,8 +62,9 @@ public class PropertyEdgeConverter implements CompositeAttributeConverter<Map<Pr
     Map<String, Object> result = new HashMap<>();
     for (Map.Entry<Properties, Object> entry : value.entrySet()) {
       Object propertyValue = entry.getValue();
-      if (serializer.containsKey(propertyValue.getClass())) {
-        Object serializedProperty = serializer.get(propertyValue.getClass()).apply(propertyValue);
+      if (serializer.containsKey(propertyValue.getClass().getName())) {
+        Object serializedProperty =
+            serializer.get(propertyValue.getClass().getName()).apply(propertyValue);
         result.put(entry.getKey().name(), serializedProperty);
       } else {
         result.put(entry.getKey().name(), propertyValue);
