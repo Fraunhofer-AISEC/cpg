@@ -39,7 +39,6 @@ import de.fraunhofer.aisec.cpg.graph.types.UnknownType;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 public class FunctionTemplateTest extends BaseTest {
@@ -185,7 +184,6 @@ public class FunctionTemplateTest extends BaseTest {
     assertEquals("double", call.getType().getName());
   }
 
-  @Disabled
   @Test
   void testInvocationWithoutCallTarget() throws Exception {
     // Check if a CallExpression is converted to a TemplateCallExpression if a compatible target
@@ -199,7 +197,7 @@ public class FunctionTemplateTest extends BaseTest {
     FunctionTemplateDeclaration templateDeclaration =
         TestUtils.findByUniquePredicate(
             TestUtils.subnodesOfType(result, FunctionTemplateDeclaration.class),
-            t -> t.getName().equals("template <class T=int, int N=5> T fixed_multiply (T val)"));
+            t -> t.getName().equals("fixed_multiply"));
 
     FunctionDeclaration fixedMultiply =
         TestUtils.findByUniquePredicate(
@@ -431,7 +429,6 @@ public class FunctionTemplateTest extends BaseTest {
     assertEquals(20.3, ((Literal) arg.getExpression()).getValue());
   }
 
-  @Disabled
   @Test
   void testInvocationWithImplicitCast() throws Exception {
     // test invocation target when signature does not match but implicitcast can be applied
@@ -444,13 +441,15 @@ public class FunctionTemplateTest extends BaseTest {
     FunctionTemplateDeclaration templateDeclaration =
         TestUtils.findByUniquePredicate(
             TestUtils.subnodesOfType(result, FunctionTemplateDeclaration.class),
-            t -> t.getName().equals("f"));
+            t -> t.getName().equals("f") && !t.isImplicit());
 
     FunctionDeclaration f =
         TestUtils.findByUniquePredicate(
             TestUtils.subnodesOfType(result, FunctionDeclaration.class),
             func ->
-                func.getName().equals("f") && !templateDeclaration.getRealization().contains(func));
+                func.getName().equals("f")
+                    && !templateDeclaration.getRealization().contains(func)
+                    && !func.isImplicit());
 
     CallExpression f1 =
         TestUtils.findByUniquePredicate(

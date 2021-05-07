@@ -256,7 +256,7 @@ public class CallExpression extends Expression implements TypeListener, HasType.
 
   public void setTemplateParameters(List<PropertyEdge<Node>> templateParameters) {
     this.templateParameters = templateParameters;
-    template = instantiation != null;
+    template = templateParameters != null;
   }
 
   @Nullable
