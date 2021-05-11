@@ -55,7 +55,8 @@ public class FunctionDeclaration extends ValueDeclaration implements Declaration
 
   /** The function body. Usually a {@link CompoundStatement}. */
   @SubGraph("AST")
-  protected Statement body;
+  @Nullable
+  protected AstPropertyEdge<Statement> body;
 
   /**
    * Classes and Structs can be declared inside a function and are only valid within the function.
@@ -198,13 +199,13 @@ public class FunctionDeclaration extends ValueDeclaration implements Declaration
   }
 
   public Statement getBody() {
-    return body;
+    return body != null ? body.getEnd() : null;
   }
 
   @Nullable
   public <T> T getBodyStatementAs(int i, Class<T> clazz) {
-    if (this.body instanceof CompoundStatement) {
-      Statement statement = ((CompoundStatement) this.body).getStatements().get(i);
+    if (this.getBody() instanceof CompoundStatement) {
+      Statement statement = ((CompoundStatement) this.getBody()).getStatements().get(i);
 
       if (statement == null) {
         return null;
@@ -217,16 +218,16 @@ public class FunctionDeclaration extends ValueDeclaration implements Declaration
   }
 
   public void setBody(Statement body) {
-    if (this.body instanceof ReturnStatement) {
-      this.removePrevDFG(this.body);
-    } else if (this.body instanceof CompoundStatement) {
-      ((CompoundStatement) this.body)
+    if (this.getBody() instanceof ReturnStatement) {
+      this.removePrevDFG(this.getBody());
+    } else if (this.getBody() instanceof CompoundStatement) {
+      ((CompoundStatement) this.getBody())
           .getStatements().stream()
               .filter(ReturnStatement.class::isInstance)
               .forEach(this::removePrevDFG);
     }
 
-    this.body = body;
+    this.body = new AstPropertyEdge<>(this, body);
 
     if (body instanceof ReturnStatement) {
       this.addPrevDFG(body);
@@ -299,8 +300,8 @@ public class FunctionDeclaration extends ValueDeclaration implements Declaration
    * @return an optional value containing the variable declaration if found
    */
   public Optional<VariableDeclaration> getVariableDeclarationByName(String name) {
-    if (body instanceof CompoundStatement) {
-      return ((CompoundStatement) body)
+    if (getBody() instanceof CompoundStatement) {
+      return ((CompoundStatement) getBody())
           .getStatements().stream()
               // only declaration statements
               .filter(statement -> statement instanceof DeclarationStatement)
@@ -394,7 +395,7 @@ public class FunctionDeclaration extends ValueDeclaration implements Declaration
   public void addDeclaration(@NonNull Declaration declaration) {
     if (declaration instanceof ParamVariableDeclaration) {
       // TODO: make addIfNotContains support the subclass
-      
+
       // addIfNotContains(parameters, (ParamVariableDeclaration) declaration);
       var edge = new AstPropertyEdge<>(this, (ParamVariableDeclaration) declaration);
 

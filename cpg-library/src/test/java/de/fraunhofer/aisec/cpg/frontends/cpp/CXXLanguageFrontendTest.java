@@ -302,7 +302,11 @@ class CXXLanguageFrontendTest extends BaseTest {
     method = declaration.getDeclarationAs(2, FunctionDeclaration.class);
     assertEquals("function0(int)void", method.getSignature());
 
-    List<Statement> statements = ((CompoundStatement) method.getBody()).getStatements();
+    var body = method.getBody();
+
+    assertSame(method, body.getParent());
+
+    List<Statement> statements = ((CompoundStatement) body).getStatements();
     assertFalse(statements.isEmpty());
     assertEquals(2, statements.size());
 
