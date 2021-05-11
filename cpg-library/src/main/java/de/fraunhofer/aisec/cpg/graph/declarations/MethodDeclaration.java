@@ -26,7 +26,7 @@
 package de.fraunhofer.aisec.cpg.graph.declarations;
 
 import de.fraunhofer.aisec.cpg.graph.SubGraph;
-import de.fraunhofer.aisec.cpg.graph.edge.AstPropertyEdge;
+import de.fraunhofer.aisec.cpg.graph.edge.AstChild;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
@@ -51,7 +51,7 @@ public class MethodDeclaration extends FunctionDeclaration {
    */
   @SubGraph("AST")
   @Nullable
-  private AstPropertyEdge<VariableDeclaration> receiver;
+  private AstChild<VariableDeclaration> receiver;
 
   public boolean isStatic() {
     return isStatic;
@@ -77,7 +77,7 @@ public class MethodDeclaration extends FunctionDeclaration {
 
   public void setReceiver(@Nullable VariableDeclaration receiver) {
     if (receiver != null) {
-      this.receiver = new AstPropertyEdge<>(this, receiver);
+      this.receiver = new AstChild<>(this, receiver);
     }
   }
 }

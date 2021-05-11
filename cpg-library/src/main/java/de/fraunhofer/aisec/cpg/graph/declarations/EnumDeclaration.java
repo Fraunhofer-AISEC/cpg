@@ -29,7 +29,7 @@ import static de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.unwrap;
 
 import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.SubGraph;
-import de.fraunhofer.aisec.cpg.graph.edge.AstPropertyEdge;
+import de.fraunhofer.aisec.cpg.graph.edge.AstChild;
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import de.fraunhofer.aisec.cpg.graph.types.Type;
 import java.util.*;
@@ -40,14 +40,14 @@ public class EnumDeclaration extends Declaration {
 
   @Relationship(value = "ENTRIES", direction = "OUTGOING")
   @SubGraph("AST")
-  private List<AstPropertyEdge<EnumConstantDeclaration>> entries = new ArrayList<>();
+  private List<AstChild<EnumConstantDeclaration>> entries = new ArrayList<>();
 
   @Relationship(value = "SUPER_TYPES", direction = "OUTGOING")
   private List<PropertyEdge<Type>> superTypes = new ArrayList<>();
 
   @Relationship private Set<RecordDeclaration> superTypeDeclarations = new HashSet<>();
 
-  public List<AstPropertyEdge<EnumConstantDeclaration>> getEntriesPropertyEdge() {
+  public List<AstChild<EnumConstantDeclaration>> getEntriesPropertyEdge() {
     return this.entries;
   }
 
@@ -58,8 +58,8 @@ public class EnumDeclaration extends Declaration {
   public void setEntries(List<EnumConstantDeclaration> entries) {
     this.entries =
         PropertyEdge
-            .<EnumConstantDeclaration, AstPropertyEdge<EnumConstantDeclaration>>
-                transformIntoOutgoingPropertyEdgeList(entries, this, AstPropertyEdge.class);
+            .<EnumConstantDeclaration, AstChild<EnumConstantDeclaration>>
+                transformIntoOutgoingPropertyEdgeList(entries, this, AstChild.class);
   }
 
   public List<Type> getSuperTypes() {

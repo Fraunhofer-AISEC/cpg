@@ -32,7 +32,6 @@ import de.fraunhofer.aisec.cpg.frontends.Handler;
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder;
 import de.fraunhofer.aisec.cpg.graph.TypeManager;
 import de.fraunhofer.aisec.cpg.graph.declarations.*;
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement;
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement;
 import de.fraunhofer.aisec.cpg.graph.statements.Statement;
@@ -194,12 +193,12 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
 
       if (bodyStatement instanceof CompoundStatement) {
         CompoundStatement body = (CompoundStatement) bodyStatement;
-        List<PropertyEdge<Statement>> statements = body.getStatementEdges();
+        var statements = body.getStatements();
 
         // get the last statement
         Statement lastStatement = null;
         if (!statements.isEmpty()) {
-          lastStatement = statements.get(statements.size() - 1).getEnd();
+          lastStatement = statements.get(statements.size() - 1);
         }
 
         // add an implicit return statement, if there is none

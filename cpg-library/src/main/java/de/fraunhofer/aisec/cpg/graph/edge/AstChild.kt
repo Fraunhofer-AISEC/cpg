@@ -26,22 +26,27 @@
 package de.fraunhofer.aisec.cpg.graph.edge
 
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
+import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import org.neo4j.ogm.annotation.RelationshipEntity
 
+/** Represents a child node in the Abstract Syntax Tree. */
 @RelationshipEntity(type = "AST")
-open class AstPropertyEdge<T : Node>(start: Node, end: T) : PropertyEdge<T>(start, end) {
+open class AstChild<T : Node>(start: Node, end: T) : PropertyEdge<T>(start, end) {
 
     init {
         // Since this is an AST property FROM <start> to <end>, we can set <start> as the parent of
-        // <end>
+        // <end>. This will allow for easier traversal of the in-memory structures.
         end.parent = start
     }
 }
 
+/** Represents the body, e.g. of a function. */
 @RelationshipEntity
-class Body(start: Node, end: Statement) : AstPropertyEdge<Statement>(start, end)
+class Body(start: FunctionDeclaration, end: Statement) : AstChild<Statement>(start, end)
 
+/** Represents an expression used as an initializer, used in field and variable declarations. */
 @RelationshipEntity
-class Initializer(start: Node, end: Expression) : AstPropertyEdge<Expression>(start, end)
+class Initializer(start: Declaration, end: Expression) : AstChild<Expression>(start, end)
