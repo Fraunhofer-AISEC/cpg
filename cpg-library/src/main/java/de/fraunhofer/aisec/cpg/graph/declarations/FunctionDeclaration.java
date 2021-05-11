@@ -393,13 +393,24 @@ public class FunctionDeclaration extends ValueDeclaration implements Declaration
   @Override
   public void addDeclaration(@NonNull Declaration declaration) {
     if (declaration instanceof ParamVariableDeclaration) {
+      // TODO: make addIfNotContains support the subclass
+      
       // addIfNotContains(parameters, (ParamVariableDeclaration) declaration);
       var edge = new AstPropertyEdge<>(this, (ParamVariableDeclaration) declaration);
 
       // set the index property
       edge.addProperty(Properties.INDEX, parameters.size());
 
-      parameters.add(edge);
+      boolean contains = false;
+      for (var element : parameters) {
+        if (element.getEnd().equals(edge.getEnd())) {
+          contains = true;
+          break;
+        }
+      }
+      if (!contains) {
+        parameters.add(edge);
+      }
     }
 
     if (declaration instanceof RecordDeclaration) {
