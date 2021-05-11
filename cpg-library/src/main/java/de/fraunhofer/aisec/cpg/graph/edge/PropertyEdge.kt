@@ -51,19 +51,15 @@ open class PropertyEdge<T : Node> : Persistable {
     constructor(start: Node, end: T) {
         this.start = start
         this.end = end
+
         properties = EnumMap(Properties::class.java)
     }
 
-    constructor(propertyEdge: PropertyEdge<T>) {
-        start = propertyEdge.start
-        end = propertyEdge.end
-        properties = EnumMap(Properties::class.java)
+    constructor(propertyEdge: PropertyEdge<T>) : this(propertyEdge.start, propertyEdge.end) {
         properties.putAll(propertyEdge.properties)
     }
 
-    constructor(start: Node, end: T, properties: MutableMap<Properties, Any?>) {
-        this.start = start
-        this.end = end
+    constructor(start: Node, end: T, properties: MutableMap<Properties, Any?>) : this(start, end) {
         this.properties = properties
     }
 
@@ -138,14 +134,22 @@ open class PropertyEdge<T : Node> : Persistable {
          * @return List of PropertyEdges with the targets of the nodes and index property.
          */
         @JvmStatic
-        fun <T : Node> transformIntoOutgoingPropertyEdgeList(
+        @JvmOverloads
+        fun <T : Node, P : PropertyEdge<T>> transformIntoOutgoingPropertyEdgeList(
             nodes: List<T>,
-            commonRelationshipNode: Node
-        ): MutableList<PropertyEdge<T>> {
-            val propertyEdges: MutableList<PropertyEdge<T>> = ArrayList()
+            commonRelationshipNode: Node,
+            clazz: Class<in P> = PropertyEdge::class.java
+        ): MutableList<P> {
+            val propertyEdges: MutableList<P> = ArrayList()
             for (n in nodes) {
-                propertyEdges.add(PropertyEdge(commonRelationshipNode, n))
+                val edge =
+                    clazz
+                        .getConstructor(Node::class.java, Node::class.java)
+                        .newInstance(commonRelationshipNode, n)
+
+                propertyEdges.add(edge as P)
             }
+
             return propertyEdges
         }
 
@@ -240,10 +244,10 @@ open class PropertyEdge<T : Node> : Persistable {
                 return true
             } else if (obj is Collection<*>) {
                 val collectionTypes =
-                    java.util.List.of(*(f.genericType as ParameterizedType).actualTypeArguments)
+                    listOf(*(f.genericType as ParameterizedType).actualTypeArguments)
                 for (t in collectionTypes) {
                     if (t is ParameterizedType) {
-                        return t.rawType == PropertyEdge::class.java
+                        return PropertyEdge::class.java.isAssignableFrom(t.rawType as Class<*>)
                     } else if (PropertyEdge::class.java == t) {
                         return true
                     }

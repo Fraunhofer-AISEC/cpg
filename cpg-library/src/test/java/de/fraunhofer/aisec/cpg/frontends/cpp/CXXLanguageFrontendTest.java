@@ -29,6 +29,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -330,6 +331,11 @@ class CXXLanguageFrontendTest extends BaseTest {
     method = declaration.getDeclarationAs(5, FunctionDeclaration.class);
     assertNotNull(method);
     assertEquals("function4(int)void", method.getSignature());
+
+    var parameters = method.getParameters();
+    var param = parameters.get(0);
+
+    assertSame(method, param.getParent());
 
     method = declaration.getDeclarationAs(6, FunctionDeclaration.class);
     assertNotNull(method);

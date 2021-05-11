@@ -58,6 +58,9 @@ open class Node : IVisitable<Node>, Persistable {
     /** Location of the finding in source code. */
     @Convert(LocationConverter::class) var location: PhysicalLocation? = null
 
+    /** The parent node. */
+    @Relationship(type = "AST", direction = "INCOMING") var parent: Node? = null
+
     /**
      * Name of the containing file. It can be null for artificially created nodes or if just
      * analyzing snippets of code without an associated file name.

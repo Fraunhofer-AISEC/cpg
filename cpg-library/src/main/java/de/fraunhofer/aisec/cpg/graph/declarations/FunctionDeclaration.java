@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.graph.declarations;
 import static de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.unwrap;
 
 import de.fraunhofer.aisec.cpg.graph.*;
+import de.fraunhofer.aisec.cpg.graph.edge.AstPropertyEdge;
 import de.fraunhofer.aisec.cpg.graph.edge.Properties;
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement;
@@ -65,7 +66,7 @@ public class FunctionDeclaration extends ValueDeclaration implements Declaration
   /** The list of function parameters. */
   @Relationship(value = "PARAMETERS", direction = "OUTGOING")
   @SubGraph("AST")
-  protected List<PropertyEdge<ParamVariableDeclaration>> parameters = new ArrayList<>();
+  protected List<AstPropertyEdge<ParamVariableDeclaration>> parameters = new ArrayList<>();
 
   @Relationship(value = "THROWS_TYPES", direction = "OUTGOING")
   protected List<PropertyEdge<Type>> throwsTypes = new ArrayList<>();
@@ -269,13 +270,12 @@ public class FunctionDeclaration extends ValueDeclaration implements Declaration
     return signatureTypes;
   }
 
-  public List<PropertyEdge<ParamVariableDeclaration>> getParametersPropertyEdge() {
+  public List<AstPropertyEdge<ParamVariableDeclaration>> getParametersPropertyEdge() {
     return this.parameters;
   }
 
   public void addParameter(ParamVariableDeclaration paramVariableDeclaration) {
-    PropertyEdge<ParamVariableDeclaration> propertyEdge =
-        new PropertyEdge<>(this, paramVariableDeclaration);
+    var propertyEdge = new AstPropertyEdge<>(this, paramVariableDeclaration);
     propertyEdge.addProperty(Properties.INDEX, this.parameters.size());
     this.parameters.add(propertyEdge);
   }
@@ -286,7 +286,10 @@ public class FunctionDeclaration extends ValueDeclaration implements Declaration
   }
 
   public void setParameters(List<ParamVariableDeclaration> parameters) {
-    this.parameters = PropertyEdge.transformIntoOutgoingPropertyEdgeList(parameters, this);
+    this.parameters =
+        PropertyEdge
+            .<ParamVariableDeclaration, AstPropertyEdge<ParamVariableDeclaration>>
+                transformIntoOutgoingPropertyEdgeList(parameters, this, AstPropertyEdge.class);
   }
 
   /**
@@ -390,7 +393,13 @@ public class FunctionDeclaration extends ValueDeclaration implements Declaration
   @Override
   public void addDeclaration(@NonNull Declaration declaration) {
     if (declaration instanceof ParamVariableDeclaration) {
-      addIfNotContains(parameters, (ParamVariableDeclaration) declaration);
+      // addIfNotContains(parameters, (ParamVariableDeclaration) declaration);
+      var edge = new AstPropertyEdge<>(this, (ParamVariableDeclaration) declaration);
+
+      // set the index property
+      edge.addProperty(Properties.INDEX, parameters.size());
+
+      parameters.add(edge);
     }
 
     if (declaration instanceof RecordDeclaration) {
