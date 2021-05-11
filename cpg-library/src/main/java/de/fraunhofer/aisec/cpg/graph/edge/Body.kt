@@ -24,24 +24,3 @@
  *
  */
 package de.fraunhofer.aisec.cpg.graph.edge
-
-import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.statements.Statement
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
-import org.neo4j.ogm.annotation.RelationshipEntity
-
-@RelationshipEntity(type = "AST")
-open class AstPropertyEdge<T : Node>(start: Node, end: T) : PropertyEdge<T>(start, end) {
-
-    init {
-        // Since this is an AST property FROM <start> to <end>, we can set <start> as the parent of
-        // <end>
-        end.parent = start
-    }
-}
-
-@RelationshipEntity
-class Body(start: Node, end: Statement) : AstPropertyEdge<Statement>(start, end)
-
-@RelationshipEntity
-class Initializer(start: Node, end: Expression) : AstPropertyEdge<Expression>(start, end)

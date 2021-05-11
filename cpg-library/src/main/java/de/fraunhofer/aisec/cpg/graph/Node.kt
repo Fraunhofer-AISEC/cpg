@@ -36,12 +36,14 @@ import org.apache.commons.lang3.builder.ToStringBuilder
 import org.apache.commons.lang3.builder.ToStringStyle
 import org.neo4j.ogm.annotation.GeneratedValue
 import org.neo4j.ogm.annotation.Id
+import org.neo4j.ogm.annotation.NodeEntity
 import org.neo4j.ogm.annotation.Relationship
 import org.neo4j.ogm.annotation.typeconversion.Convert
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
 /** The base class for all graph objects that are going to be persisted in the database. */
+@NodeEntity
 open class Node : IVisitable<Node>, Persistable {
     /** A human readable name. */
     open var name = EMPTY_NAME // initialize it with an empty string

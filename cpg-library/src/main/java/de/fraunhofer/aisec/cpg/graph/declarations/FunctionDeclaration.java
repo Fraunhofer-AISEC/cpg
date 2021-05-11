@@ -29,6 +29,7 @@ import static de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.unwrap;
 
 import de.fraunhofer.aisec.cpg.graph.*;
 import de.fraunhofer.aisec.cpg.graph.edge.AstPropertyEdge;
+import de.fraunhofer.aisec.cpg.graph.edge.Body;
 import de.fraunhofer.aisec.cpg.graph.edge.Properties;
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement;
@@ -56,7 +57,8 @@ public class FunctionDeclaration extends ValueDeclaration implements Declaration
   /** The function body. Usually a {@link CompoundStatement}. */
   @SubGraph("AST")
   @Nullable
-  protected AstPropertyEdge<Statement> body;
+  @Relationship(type = "BODY")
+  protected Body body;
 
   /**
    * Classes and Structs can be declared inside a function and are only valid within the function.
@@ -227,7 +229,7 @@ public class FunctionDeclaration extends ValueDeclaration implements Declaration
               .forEach(this::removePrevDFG);
     }
 
-    this.body = new AstPropertyEdge<>(this, body);
+    this.body = new Body(this, body);
 
     if (body instanceof ReturnStatement) {
       this.addPrevDFG(body);

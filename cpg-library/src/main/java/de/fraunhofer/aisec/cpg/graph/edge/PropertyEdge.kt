@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.edge
 
+import com.fasterxml.jackson.annotation.JsonIgnore
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.Persistable
 import java.lang.reflect.Field
@@ -43,7 +44,7 @@ open class PropertyEdge<T : Node> : Persistable {
     @field:Id @field:GeneratedValue private val id: Long? = null
 
     // Node where the edge is outgoing
-    @field:StartNode var start: Node
+    @JsonIgnore @field:StartNode var start: Node
 
     // Node where the edge is ingoing
     @field:EndNode var end: T
@@ -65,6 +66,7 @@ open class PropertyEdge<T : Node> : Persistable {
 
     /** Map containing all properties of an edge */
     @Convert(PropertyEdgeConverter::class) private var properties: MutableMap<Properties, Any?>
+
     fun getProperty(property: Properties): Any? {
         return properties.getOrDefault(property, null)
     }
