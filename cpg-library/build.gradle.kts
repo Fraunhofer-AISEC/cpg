@@ -152,6 +152,6 @@ dependencies {
     testImplementation("org.junit.jupiter:junit-jupiter-api:5.7.1")
     testImplementation("org.junit.jupiter:junit-jupiter-params:5.7.1")
 
-    testImplementation("org.mockito:mockito-core:3.9.0")
+    testImplementation("org.mockito:mockito-core:3.10.0")
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.7.1")
 }
