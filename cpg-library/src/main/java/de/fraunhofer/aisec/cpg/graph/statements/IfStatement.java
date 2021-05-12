@@ -25,9 +25,12 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements;
 
+import static de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.unwrap;
+
 import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.SubGraph;
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration;
+import de.fraunhofer.aisec.cpg.graph.edge.Condition;
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression;
 import java.util.Objects;
 import org.apache.commons.lang3.builder.ToStringBuilder;
@@ -45,7 +48,7 @@ public class IfStatement extends Statement {
 
   /** The condition to be evaluated. */
   @SubGraph("AST")
-  private Expression condition;
+  private Condition condition;
 
   /** C++ constexpr construct */
   private boolean isConstExpression = false;
@@ -65,11 +68,11 @@ public class IfStatement extends Statement {
   private Statement elseStatement;
 
   public Expression getCondition() {
-    return condition;
+    return unwrap(condition);
   }
 
-  public void setCondition(Expression condition) {
-    this.condition = condition;
+  public void setCondition(Expression expression) {
+    this.condition = new Condition(this, expression);
   }
 
   public Statement getInitializerStatement() {

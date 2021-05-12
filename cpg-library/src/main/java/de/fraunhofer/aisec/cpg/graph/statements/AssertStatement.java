@@ -25,7 +25,10 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements;
 
+import static de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.unwrap;
+
 import de.fraunhofer.aisec.cpg.graph.SubGraph;
+import de.fraunhofer.aisec.cpg.graph.edge.Condition;
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression;
 import java.util.Objects;
 import org.checkerframework.checker.nullness.qual.NonNull;
@@ -36,7 +39,7 @@ public class AssertStatement extends Statement {
 
   /** The condition to be evaluated. */
   @SubGraph("AST")
-  private Expression condition;
+  private Condition condition;
 
   /** The _optional_ message that is shown, if the assert is evaluated as true */
   @SubGraph("AST")
@@ -44,11 +47,11 @@ public class AssertStatement extends Statement {
   private Statement message;
 
   public Expression getCondition() {
-    return condition;
+    return unwrap(condition);
   }
 
-  public void setCondition(Expression condition) {
-    this.condition = condition;
+  public void setCondition(Expression expression) {
+    this.condition = new Condition(this, expression);
   }
 
   @Nullable

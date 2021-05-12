@@ -156,7 +156,7 @@ open class PropertyEdge<T : Node> : Persistable {
         }
 
         /**
-         * Unwraps this property edge into a list of its target nodes.
+         * Unwraps this list-based property edge into a list of its target nodes.
          *
          * @param collection the collection of edges
          * @param outgoing whether it is outgoing or not
@@ -170,6 +170,20 @@ open class PropertyEdge<T : Node> : Persistable {
             outgoing: Boolean = true
         ): List<T> {
             return collection.map { if (outgoing) it.end else it.start as T }
+        }
+
+        /**
+         * Unwraps this property edge into its target node.
+         *
+         * @param edge the collection of edges
+         * @param outgoing whether it is outgoing or not
+         * @param <T> the type of the edges
+         * @return the list of target nodes </T>
+         */
+        @JvmStatic
+        @JvmOverloads
+        fun <T : Node> unwrap(edge: PropertyEdge<T>, outgoing: Boolean = true): T {
+            return if (outgoing) edge.end else edge.start as T
         }
 
         /**
@@ -220,13 +234,10 @@ open class PropertyEdge<T : Node> : Persistable {
          * @return node or collection representing target of edge
          */
         @JvmStatic
-        fun unwrapPropertyEdge(obj: Any, outgoing: Boolean): Any {
+        @JvmOverloads
+        fun unwrapPropertyEdge(obj: Any, outgoing: Boolean = true): Any {
             if (obj is PropertyEdge<*>) {
-                return if (outgoing) {
-                    obj.end
-                } else {
-                    obj.start
-                }
+                return unwrap(obj, outgoing)
             } else if (obj is Collection<*> && !obj.isEmpty()) {
                 return unwrapPropertyEdgeCollection(obj, outgoing)
             }

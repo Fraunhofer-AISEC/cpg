@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.graph
 
 import de.fraunhofer.aisec.cpg.graph.declarations.TypedefDeclaration
+import de.fraunhofer.aisec.cpg.graph.edge.AstChild
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.helpers.LocationConverter
@@ -60,8 +61,17 @@ open class Node : IVisitable<Node>, Persistable {
     /** Location of the finding in source code. */
     @Convert(LocationConverter::class) var location: PhysicalLocation? = null
 
-    /** The parent node. */
-    @Relationship(type = "AST", direction = "INCOMING") var parent: Node? = null
+    /**
+     * The parent edge. This is intentionally set to be transient, because, while it is an incoming
+     * edge in the graph, the type of edge is not known, since we have specific edges for different
+     * AST types.
+     */
+    @Transient var parent: AstChild<*>? = null
+
+    val parentNode: Node?
+        get() {
+            return parent?.start
+        }
 
     /**
      * Name of the containing file. It can be null for artificially created nodes or if just

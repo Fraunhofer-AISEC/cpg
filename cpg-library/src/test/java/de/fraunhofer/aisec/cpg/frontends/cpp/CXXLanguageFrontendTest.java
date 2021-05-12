@@ -304,7 +304,7 @@ class CXXLanguageFrontendTest extends BaseTest {
 
     var body = method.getBody();
 
-    assertSame(method, body.getParent());
+    assertSame(method, body.getParentNode());
 
     List<Statement> statements = ((CompoundStatement) body).getStatements();
     assertFalse(statements.isEmpty());
@@ -339,7 +339,7 @@ class CXXLanguageFrontendTest extends BaseTest {
     var parameters = method.getParameters();
     var param = parameters.get(0);
 
-    assertSame(method, param.getParent());
+    assertSame(method, param.getParentNode());
 
     method = declaration.getDeclarationAs(6, FunctionDeclaration.class);
     assertNotNull(method);

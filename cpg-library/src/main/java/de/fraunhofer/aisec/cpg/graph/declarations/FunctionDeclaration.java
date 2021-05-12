@@ -57,7 +57,6 @@ public class FunctionDeclaration extends ValueDeclaration implements Declaration
   /** The function body. Usually a {@link CompoundStatement}. */
   @SubGraph("AST")
   @Nullable
-  @Relationship(type = "BODY")
   protected Body body;
 
   /**

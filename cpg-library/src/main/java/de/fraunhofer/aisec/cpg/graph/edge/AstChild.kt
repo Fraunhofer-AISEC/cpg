@@ -27,26 +27,51 @@ package de.fraunhofer.aisec.cpg.graph.edge
 
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
+import org.neo4j.ogm.annotation.Property
 import org.neo4j.ogm.annotation.RelationshipEntity
 
 /** Represents a child node in the Abstract Syntax Tree. */
 @RelationshipEntity(type = "AST")
 open class AstChild<T : Node>(start: Node, end: T) : PropertyEdge<T>(start, end) {
 
+    /** Specifies, that this edge is a relation related to the Abstract Syntax Tree (AST). */
+    @Property val ast: Boolean = true
+
     init {
         // Since this is an AST property FROM <start> to <end>, we can set <start> as the parent of
         // <end>. This will allow for easier traversal of the in-memory structures.
-        end.parent = start
+        end.parent = this
     }
 }
 
 /** Represents the body, e.g. of a function. */
 @RelationshipEntity
-class Body(start: FunctionDeclaration, end: Statement) : AstChild<Statement>(start, end)
+class Body(start: Node, statement: Statement) : AstChild<Statement>(start, statement)
 
 /** Represents an expression used as an initializer, used in field and variable declarations. */
 @RelationshipEntity
-class Initializer(start: Declaration, end: Expression) : AstChild<Expression>(start, end)
+class Initializer(start: Declaration, expression: Expression) :
+    AstChild<Expression>(start, expression)
+
+/**
+ * Represents an relationship to an expression used as condition, e.g. in asserts, if-statements or
+ * other conditional statements
+ */
+class Condition(start: Node, expression: Expression) : AstChild<Expression>(start, expression) {
+
+    /**
+     * Returns a constant value of this condition, if it is possible. This could be extended with a
+     * proper constant resolver
+     */
+    val constantValue: Boolean?
+        get() {
+            if (end is Literal<*>) {
+                return (end as Literal<*>).value as? Boolean
+            }
+
+            return null
+        }
+}
