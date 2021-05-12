@@ -49,7 +49,7 @@ open class AstChild<T : Node>(start: Node, end: T) : PropertyEdge<T>(start, end)
 
 /** Represents the body, e.g. of a function. */
 @RelationshipEntity
-class Body(start: Node, statement: Statement) : AstChild<Statement>(start, statement)
+open class Body(start: Node, statement: Statement) : AstChild<Statement>(start, statement)
 
 /** Represents an expression used as an initializer, used in field and variable declarations. */
 @RelationshipEntity
