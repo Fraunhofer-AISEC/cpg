@@ -60,6 +60,7 @@ class Initializer(start: Declaration, expression: Expression) :
  * Represents an relationship to an expression used as condition, e.g. in asserts, if-statements or
  * other conditional statements
  */
+@RelationshipEntity
 class Condition(start: Node, expression: Expression) : AstChild<Expression>(start, expression) {
 
     /**
