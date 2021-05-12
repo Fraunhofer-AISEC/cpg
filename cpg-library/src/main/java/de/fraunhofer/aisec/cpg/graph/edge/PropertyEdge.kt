@@ -277,7 +277,7 @@ open class PropertyEdge<T : Node> : Persistable {
         ): List<PropertyEdge<T>> {
             val newPropertyEdges: MutableList<PropertyEdge<T>> = ArrayList()
             for (propertyEdge in propertyEdges) {
-                if (end && !propertyEdge.end!!.equals(element)) {
+                if (end && !propertyEdge.end.equals(element)) {
                     newPropertyEdges.add(propertyEdge)
                 }
                 if (!end && !propertyEdge.start.equals(element)) {

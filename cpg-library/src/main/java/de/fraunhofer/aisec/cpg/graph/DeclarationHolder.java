@@ -69,6 +69,18 @@ public interface DeclarationHolder {
             ? new PropertyEdge<>((Node) this, declaration)
             : new PropertyEdge<>(declaration, (T) this);
 
+    addIfNotContains(collection, propertyEdge);
+  }
+
+  /**
+   * Adds an edge to a collection of property edges, which contain the declarations
+   *
+   * @param collection the collection
+   * @param propertyEdge the edge
+   * @param <T> the type of the declaration
+   */
+  default <T extends Node, P extends PropertyEdge<T>> void addIfNotContains(
+      Collection<P> collection, P propertyEdge) {
     // set the index property
     propertyEdge.addProperty(Properties.INDEX, collection.size());
 

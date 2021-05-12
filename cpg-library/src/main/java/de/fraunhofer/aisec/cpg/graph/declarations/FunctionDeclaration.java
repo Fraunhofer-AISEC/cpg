@@ -206,7 +206,7 @@ public class FunctionDeclaration extends ValueDeclaration implements Declaration
   @Nullable
   public <T> T getBodyStatementAs(int i, Class<T> clazz) {
     if (this.getBody() instanceof CompoundStatement) {
-      Statement statement = ((CompoundStatement) this.getBody()).getStatements().get(i);
+      var statement = ((CompoundStatement) this.getBody()).getStatements().get(i);
 
       if (statement == null) {
         return null;
@@ -395,24 +395,7 @@ public class FunctionDeclaration extends ValueDeclaration implements Declaration
   @Override
   public void addDeclaration(@NonNull Declaration declaration) {
     if (declaration instanceof ParamVariableDeclaration) {
-      // TODO: make addIfNotContains support the subclass
-
-      // addIfNotContains(parameters, (ParamVariableDeclaration) declaration);
-      var edge = new AstChild<>(this, (ParamVariableDeclaration) declaration);
-
-      // set the index property
-      edge.addProperty(Properties.INDEX, parameters.size());
-
-      boolean contains = false;
-      for (var element : parameters) {
-        if (element.getEnd().equals(edge.getEnd())) {
-          contains = true;
-          break;
-        }
-      }
-      if (!contains) {
-        parameters.add(edge);
-      }
+      addIfNotContains(parameters, new AstChild<>(this, (ParamVariableDeclaration) declaration));
     }
 
     if (declaration instanceof RecordDeclaration) {
