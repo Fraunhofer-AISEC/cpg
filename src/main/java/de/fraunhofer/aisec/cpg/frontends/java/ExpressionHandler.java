@@ -217,7 +217,6 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
 
     binaryOperator.setLhs(lhs);
     binaryOperator.setRhs(rhs);
-    binaryOperator.setType(lhs.getType());
 
     return binaryOperator;
   }
@@ -232,24 +231,19 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
     for (VariableDeclarator variable : variableDeclarationExpr.getVariables()) {
       ResolvedValueDeclaration resolved = variable.resolve();
 
+      Type declarationType = this.lang.getTypeAsGoodAsPossible(variable, resolved);
+      declarationType.setAdditionalTypeKeywords(
+          variableDeclarationExpr.getModifiers().stream()
+              .map(m -> m.getKeyword().asString())
+              .collect(Collectors.joining(" ")));
+
       VariableDeclaration declaration =
           NodeBuilder.newVariableDeclaration(
-              resolved.getName(),
-              this.lang.getTypeAsGoodAsPossible(variable, resolved),
-              variable.toString(),
-              false);
+              resolved.getName(), declarationType, variable.toString(), false);
 
-      if (declaration.getType() instanceof PointerType
-          && ((PointerType) declaration.getType()).isArray()) {
+      if (declarationType instanceof PointerType && ((PointerType) declarationType).isArray()) {
         declaration.setIsArray(true);
       }
-
-      declaration
-          .getType()
-          .setAdditionalTypeKeywords(
-              variableDeclarationExpr.getModifiers().stream()
-                  .map(m -> m.getKeyword().asString())
-                  .collect(Collectors.joining(" ")));
 
       Optional<Expression> oInitializer = variable.getInitializer();
 
@@ -637,7 +631,6 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
             unaryExpr.toString());
 
     unaryOperator.setInput(expression);
-    unaryOperator.setType(expression.getType());
 
     return unaryOperator;
   }

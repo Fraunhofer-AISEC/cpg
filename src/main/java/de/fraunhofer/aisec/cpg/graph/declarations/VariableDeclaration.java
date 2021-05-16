@@ -111,6 +111,9 @@ public class VariableDeclaration extends ValueDeclaration implements TypeListene
 
   @Override
   public void typeChanged(HasType src, HasType root, Type oldType) {
+    if (!TypeManager.getInstance().isTypeSystemActive()) {
+      return;
+    }
     if (!TypeManager.getInstance().isUnknown(this.type)
         && src.getPropagationType().equals(oldType)) {
       return;
@@ -142,6 +145,9 @@ public class VariableDeclaration extends ValueDeclaration implements TypeListene
 
   @Override
   public void possibleSubTypesChanged(HasType src, HasType root, Set<Type> oldSubTypes) {
+    if (!TypeManager.getInstance().isTypeSystemActive()) {
+      return;
+    }
     Set<Type> subTypes = new HashSet<>(getPossibleSubTypes());
     subTypes.addAll(src.getPossibleSubTypes());
     setPossibleSubTypes(subTypes, root);

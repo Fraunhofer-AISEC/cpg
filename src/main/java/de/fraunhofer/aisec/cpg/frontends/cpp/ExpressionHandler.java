@@ -31,8 +31,6 @@ import static de.fraunhofer.aisec.cpg.helpers.Util.warnWithFileLocation;
 
 import de.fraunhofer.aisec.cpg.frontends.Handler;
 import de.fraunhofer.aisec.cpg.graph.*;
-import de.fraunhofer.aisec.cpg.graph.declarations.Declaration;
-import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration;
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*;
 import de.fraunhofer.aisec.cpg.graph.types.*;
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation;
@@ -473,28 +471,8 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
         NodeBuilder.newDeclaredReferenceExpression(
             ctx.getName().toString(), UnknownType.getUnknownType(), ctx.getRawSignature());
 
-    if (expressionTypeProxy(ctx) instanceof ProblemType
-        || (expressionTypeProxy(ctx) instanceof IQualifierType
-            && ((IQualifierType) expressionTypeProxy(ctx)).getType() instanceof ProblemType)) {
-      log.debug("CDT could not deduce type. Trying manually");
-
-      IBinding binding = ctx.getName().resolveBinding();
-      Declaration declaration = this.lang.getCachedDeclaration(binding);
-      if (declaration != null) {
-        if (declaration instanceof ValueDeclaration) {
-          declaredReferenceExpression.setType(((ValueDeclaration) declaration).getType());
-        } else {
-          log.debug("Unknown declaration type, setting to UNKNOWN");
-          declaredReferenceExpression.setType(UnknownType.getUnknownType());
-        }
-      } else {
-        log.debug("Could not deduce type manually, setting to UNKNOWN");
-        declaredReferenceExpression.setType(UnknownType.getUnknownType());
-      }
-    } else {
-      declaredReferenceExpression.setType(
-          TypeParser.createFrom(expressionTypeProxy(ctx).toString(), true));
-    }
+    declaredReferenceExpression.setType(
+        TypeParser.createFrom(expressionTypeProxy(ctx).toString(), true));
 
     /* this expression could actually be a field / member expression, but somehow CDT only recognizes them as a member expression if it has an explicit 'this'
      */

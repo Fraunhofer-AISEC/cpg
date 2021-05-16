@@ -283,26 +283,33 @@ object TestUtils {
             "There are nodes in the other graph that have no analog in the original graph: $missing"
         }
 
+        val missingEdges = mutableListOf<String>()
         for (originalEdge in originalEdges) {
-            assert(
-                otherEdges.any {
+            if (otherEdges.none {
                     it.label == originalEdge.label &&
                         it.properties == originalEdge.properties &&
                         originalToOtherNode[originalEdge.from]?.contains(it.from) ?: false &&
                         originalToOtherNode[originalEdge.to]?.contains(it.to) ?: false
                 }
-            ) { "Edge in original graph $originalEdge not present in other graph!" }
+            ) {
+                missingEdges.add("Edge in original graph $originalEdge not present in other graph!")
+            }
         }
 
         for (otherEdge in otherEdges) {
-            assert(
-                originalEdges.any {
+            if (originalEdges.none {
                     it.label == otherEdge.label &&
                         it.properties == otherEdge.properties &&
                         otherToOriginalNode[otherEdge.from]?.contains(it.from) ?: false &&
                         otherToOriginalNode[otherEdge.to]?.contains(it.to) ?: false
                 }
-            ) { "Edge in other graph $otherEdge not present in original graph!" }
+            ) {
+                missingEdges.add("Edge in other graph $otherEdge not present in original graph!")
+            }
+        }
+
+        assert(missingEdges.isEmpty()) {
+            "${missingEdges.size} edge mismatches:\n ${missingEdges.joinToString(separator = "\n") { it }}"
         }
     }
 
@@ -317,6 +324,9 @@ object TestUtils {
                     it.javaClass == originalNode.javaClass &&
                         it.allProperties == originalNode.allProperties
                 }
+            if (matches.isEmpty()) {
+                continue
+            }
             val set: MutableSet<Node> = Collections.newSetFromMap(IdentityHashMap())
             set.addAll(matches)
             mapping[originalNode] = set

@@ -35,22 +35,9 @@ import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
 import de.fraunhofer.aisec.cpg.frontends.cpp.CXXLanguageFrontend;
 import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguageFrontend;
 import de.fraunhofer.aisec.cpg.meta.ReflectionUtils;
-import de.fraunhofer.aisec.cpg.passes.CallResolver;
-import de.fraunhofer.aisec.cpg.passes.ControlFlowSensitiveDFGPass;
-import de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass;
-import de.fraunhofer.aisec.cpg.passes.FilenameMapper;
-import de.fraunhofer.aisec.cpg.passes.ImportResolver;
-import de.fraunhofer.aisec.cpg.passes.JavaExternalTypeHierarchyResolver;
-import de.fraunhofer.aisec.cpg.passes.Pass;
-import de.fraunhofer.aisec.cpg.passes.TypeHierarchyResolver;
-import de.fraunhofer.aisec.cpg.passes.TypeResolver;
-import de.fraunhofer.aisec.cpg.passes.VariableUsageResolver;
+import de.fraunhofer.aisec.cpg.passes.*;
 import java.io.File;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import org.checkerframework.checker.nullness.qual.NonNull;
 
 /**
@@ -136,6 +123,20 @@ public class TranslationConfiguration {
    */
   final boolean useUnityBuild;
 
+  /**
+   * If true, the ASTs for the source files are parsed in parallel, but the passes afterwards will
+   * still run in a single thread. This speeds up initial parsing but makes sure that further graph
+   * enrichment algorithms remain correct.
+   */
+  final boolean useParallelFrontends;
+
+  /**
+   * If false, the type listener system is only activated once the frontends are done building the
+   * initial AST structure. This avoids errors where the type of a node may depend on the order in
+   * which the source files have been parsed.
+   */
+  final boolean typeSystemActiveInFrontend;
+
   @NonNull private final List<Pass> passes;
 
   private TranslationConfiguration(
@@ -153,7 +154,9 @@ public class TranslationConfiguration {
       boolean codeInNodes,
       boolean processAnnotations,
       boolean disableCleanup,
-      boolean useUnityBuild) {
+      boolean useUnityBuild,
+      boolean useParallelFrontends,
+      boolean typeSystemActiveInFrontend) {
     this.symbols = symbols;
     this.sourceLocations = sourceLocations;
     this.topLevel = topLevel;
@@ -171,6 +174,8 @@ public class TranslationConfiguration {
     this.processAnnotations = processAnnotations;
     this.disableCleanup = disableCleanup;
     this.useUnityBuild = useUnityBuild;
+    this.useParallelFrontends = useParallelFrontends;
+    this.typeSystemActiveInFrontend = typeSystemActiveInFrontend;
   }
 
   public static Builder builder() {
@@ -228,6 +233,8 @@ public class TranslationConfiguration {
     private boolean processAnnotations = false;
     private boolean disableCleanup = false;
     private boolean useUnityBuild = false;
+    private boolean useParallelFrontends = false;
+    private boolean typeSystemActiveInFrontend = true;
 
     public Builder symbols(Map<String, String> symbols) {
       this.symbols = symbols;
@@ -417,11 +424,42 @@ public class TranslationConfiguration {
       return this;
     }
 
-    /* Only relevant for C++. A unity build refers to a build that consolidates all translation units
-     * into a single one, which has the advantage that header files are only processed once, adding
-     * far less duplicate nodes to the graph */
+    /**
+     * Only relevant for C++. A unity build refers to a build that consolidates all translation
+     * units into a single one, which has the advantage that header files are only processed once,
+     * adding far less duplicate nodes to the graph
+     *
+     * @param b the new value
+     * @return
+     */
     public Builder useUnityBuild(boolean b) {
       this.useUnityBuild = b;
+      return this;
+    }
+
+    /**
+     * If true, the ASTs for the source files are parsed in parallel, but the passes afterwards will
+     * still run in a single thread. This speeds up initial parsing but makes sure that further
+     * graph enrichment algorithms remain correct.
+     *
+     * @param b the new value
+     * @return
+     */
+    public Builder useParallelFrontends(boolean b) {
+      this.useParallelFrontends = b;
+      return this;
+    }
+
+    /**
+     * If false, the type system is only activated once the frontends are done building the initial
+     * AST structure. This avoids errors where the type of a node may depend on the order in which
+     * the source files have been parsed.
+     *
+     * @param b the new value
+     * @return
+     */
+    public Builder typeSystemActiveInFrontend(boolean b) {
+      this.typeSystemActiveInFrontend = b;
       return this;
     }
 
@@ -441,7 +479,9 @@ public class TranslationConfiguration {
           codeInNodes,
           processAnnotations,
           disableCleanup,
-          useUnityBuild);
+          useUnityBuild,
+          useParallelFrontends,
+          typeSystemActiveInFrontend);
     }
   }
 }

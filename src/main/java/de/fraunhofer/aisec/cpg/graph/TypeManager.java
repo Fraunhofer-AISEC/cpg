@@ -54,13 +54,19 @@ public class TypeManager {
   private static final Pattern funPointerPattern =
       Pattern.compile("\\(?\\*(?<alias>[^()]+)\\)?\\(.*\\)");
   @NonNull private static TypeManager INSTANCE = new TypeManager();
+  private static boolean typeSystemActive = true;
 
   public enum Language {
     JAVA,
     CXX
   }
 
-  @NonNull private Map<String, RecordDeclaration> typeToRecord = new HashMap<>();
+  @NonNull
+  private Map<Node, Set<Type>> typeCache = Collections.synchronizedMap(new IdentityHashMap<>());
+
+  @NonNull
+  private Map<String, RecordDeclaration> typeToRecord =
+      Collections.synchronizedMap(new HashMap<>());
 
   /**
    * Stores the relationship between parameterized RecordDeclarations (e.g. Classes using Generics)
@@ -68,14 +74,14 @@ public class TypeManager {
    * are unique to the RecordDeclaration and are not merged.
    */
   @NonNull
-  private Map<RecordDeclaration, List<ParameterizedType>> recordToTypeParameters = new HashMap<>();
+  private Map<RecordDeclaration, List<ParameterizedType>> recordToTypeParameters =
+      Collections.synchronizedMap(new HashMap<>());
 
-  @NonNull
-  private Map<Type, List<Type>> typeState =
-      new HashMap<>(); // Stores all the unique types ObjectType as Key and Reference-/PointerTypes
+  /** Stores all the unique types ObjectType as Key and Reference-/PointerTypes */
+  @NonNull private Map<Type, List<Type>> typeState = Collections.synchronizedMap(new HashMap<>());
   // as Values
-  private Set<Type> firstOrderTypes = new HashSet<>();
-  private Set<Type> secondOrderTypes = new HashSet<>();
+  private Set<Type> firstOrderTypes = Collections.synchronizedSet(new HashSet<>());
+  private Set<Type> secondOrderTypes = Collections.synchronizedSet(new HashSet<>());
   private LanguageFrontend frontend;
   private boolean noFrontendWarningIssued = false;
 
@@ -127,6 +133,24 @@ public class TypeManager {
 
   public static TypeManager getInstance() {
     return INSTANCE;
+  }
+
+  public static boolean isTypeSystemActive() {
+    return typeSystemActive;
+  }
+
+  public static void setTypeSystemActive(boolean active) {
+    typeSystemActive = active;
+  }
+
+  public Map<Node, Set<Type>> getTypeCache() {
+    return typeCache;
+  }
+
+  public synchronized void cacheType(Node node, Type type) {
+    if (!isUnknown(type)) {
+      typeCache.computeIfAbsent(node, n -> new HashSet<>()).add(type);
+    }
   }
 
   public void setLanguageFrontend(@NonNull LanguageFrontend frontend) {

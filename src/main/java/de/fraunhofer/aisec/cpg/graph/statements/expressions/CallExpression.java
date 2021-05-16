@@ -147,6 +147,9 @@ public class CallExpression extends Expression implements TypeListener {
 
   @Override
   public void typeChanged(HasType src, HasType root, Type oldType) {
+    if (!TypeManager.isTypeSystemActive()) {
+      return;
+    }
     if (src == base) {
       setFqn(src.getType().getRoot().getTypeName() + "." + this.getName());
     } else {
@@ -174,6 +177,9 @@ public class CallExpression extends Expression implements TypeListener {
 
   @Override
   public void possibleSubTypesChanged(HasType src, HasType root, Set<Type> oldSubTypes) {
+    if (!TypeManager.isTypeSystemActive()) {
+      return;
+    }
     if (src != base) {
       Set<Type> subTypes = new HashSet<>(getPossibleSubTypes());
       subTypes.addAll(src.getPossibleSubTypes());

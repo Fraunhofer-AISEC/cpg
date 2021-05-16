@@ -31,6 +31,7 @@ import static de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.unwrap;
 import de.fraunhofer.aisec.cpg.graph.HasType;
 import de.fraunhofer.aisec.cpg.graph.HasType.TypeListener;
 import de.fraunhofer.aisec.cpg.graph.SubGraph;
+import de.fraunhofer.aisec.cpg.graph.TypeManager;
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration;
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import de.fraunhofer.aisec.cpg.graph.types.Type;
@@ -111,6 +112,9 @@ public class ArrayCreationExpression extends Expression implements TypeListener 
 
   @Override
   public void typeChanged(HasType src, HasType root, Type oldType) {
+    if (!TypeManager.isTypeSystemActive()) {
+      return;
+    }
     Type previous = this.type;
     setType(src.getPropagationType(), root);
 
@@ -121,6 +125,9 @@ public class ArrayCreationExpression extends Expression implements TypeListener 
 
   @Override
   public void possibleSubTypesChanged(HasType src, HasType root, Set<Type> oldSubTypes) {
+    if (!TypeManager.isTypeSystemActive()) {
+      return;
+    }
     Set<Type> subTypes = new HashSet<>(getPossibleSubTypes());
     subTypes.addAll(src.getPossibleSubTypes());
     setPossibleSubTypes(subTypes, root);

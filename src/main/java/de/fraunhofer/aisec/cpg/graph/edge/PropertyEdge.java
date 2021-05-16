@@ -303,6 +303,15 @@ public class PropertyEdge<T extends Node> implements Persistable {
     return Objects.equals(this.properties, propertyEdge.properties);
   }
 
+  @Override
+  public String toString() {
+    String propertyString =
+        properties.entrySet().stream()
+            .map(e -> e.getKey() + ": " + e.getValue())
+            .collect(Collectors.joining(", "));
+    return "{" + start + "} --[" + propertyString + "]-> {" + end + "}";
+  }
+
   public static <E extends Node> boolean propertyEqualsList(
       List<PropertyEdge<E>> propertyEdges, List<PropertyEdge<E>> propertyEdges2) {
     if (propertyEdges.size() == propertyEdges2.size()) {

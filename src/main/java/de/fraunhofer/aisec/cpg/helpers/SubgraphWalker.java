@@ -27,30 +27,17 @@
 package de.fraunhofer.aisec.cpg.helpers;
 
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
+import de.fraunhofer.aisec.cpg.graph.HasType;
 import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.SubGraph;
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration;
-import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration;
-import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration;
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration;
-import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration;
+import de.fraunhofer.aisec.cpg.graph.TypeManager;
+import de.fraunhofer.aisec.cpg.graph.declarations.*;
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement;
+import de.fraunhofer.aisec.cpg.graph.types.Type;
 import java.lang.annotation.AnnotationFormatError;
 import java.lang.reflect.Field;
-import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Deque;
-import java.util.HashSet;
-import java.util.IdentityHashMap;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
@@ -200,6 +187,27 @@ public class SubgraphWalker {
             .filter(node -> node.getNextEOG().stream().anyMatch(next -> !eogNodes.contains(next)))
             .collect(Collectors.toList());
     return border;
+  }
+
+  public static void refreshType(Node node) {
+    for (Node child : getAstChildren(node)) {
+      refreshType(child);
+    }
+    if (node instanceof HasType) {
+      ((HasType) node).refreshType();
+    }
+  }
+
+  public static void activateTypes(Node node) {
+    Map<Node, Set<Type>> typeCache = TypeManager.getInstance().getTypeCache();
+    IterativeGraphWalker walker = new IterativeGraphWalker();
+    walker.registerOnNodeVisit(
+        n -> {
+          if (n instanceof HasType) {
+            typeCache.getOrDefault(n, Collections.emptySet()).forEach(((HasType) n)::setType);
+          }
+        });
+    walker.iterate(node);
   }
 
   /**
