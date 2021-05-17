@@ -106,6 +106,12 @@ public class ParameterDeclarationHandler
           lang.getInitializerHandler().handle(ctx.getDeclarator().getInitializer()));
     }
 
+    // Add default values
+    if (ctx.getDeclarator().getInitializer() != null) {
+      paramVariableDeclaration.setDefault(
+          lang.getInitializerHandler().handle(ctx.getDeclarator().getInitializer()));
+    }
+
     return paramVariableDeclaration;
   }
 }

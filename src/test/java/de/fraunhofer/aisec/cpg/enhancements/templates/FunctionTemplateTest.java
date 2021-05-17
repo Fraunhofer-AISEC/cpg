@@ -39,7 +39,6 @@ import de.fraunhofer.aisec.cpg.graph.types.UnknownType;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 public class FunctionTemplateTest extends BaseTest {
@@ -83,12 +82,11 @@ public class FunctionTemplateTest extends BaseTest {
         TestUtils.subnodesOfType(result, FunctionTemplateDeclaration.class).get(0);
 
     // Check FunctionTemplate Parameters
-    List<TypeTemplateParamDeclaration> typeTemplateParamDeclarations =
-        TestUtils.subnodesOfType(result, TypeTemplateParamDeclaration.class);
-    assertEquals(1, typeTemplateParamDeclarations.size());
-    TypeTemplateParamDeclaration typeTemplateParamDeclaration =
-        typeTemplateParamDeclarations.get(0);
-    assertEquals(typeTemplateParamDeclaration, functionTemplateDeclaration.getParameters().get(0));
+    List<TypeParamDeclaration> typeParamDeclarations =
+        TestUtils.subnodesOfType(result, TypeParamDeclaration.class);
+    assertEquals(1, typeParamDeclarations.size());
+    TypeParamDeclaration typeParamDeclaration = typeParamDeclarations.get(0);
+    assertEquals(typeParamDeclaration, functionTemplateDeclaration.getParameters().get(0));
 
     ParameterizedType T = new ParameterizedType("T");
     ObjectType intType =
@@ -108,14 +106,12 @@ public class FunctionTemplateTest extends BaseTest {
             ObjectType.Modifier.SIGNED,
             true);
 
-    assertEquals(T, typeTemplateParamDeclaration.getType());
-    assertEquals(intType, typeTemplateParamDeclaration.getDefault());
-    assertTrue(typeTemplateParamDeclaration.getPossibleInitializations().contains(intType));
-    assertTrue(typeTemplateParamDeclaration.getPossibleInitializations().contains(floatType));
+    assertEquals(T, typeParamDeclaration.getType());
+    assertEquals(intType, typeParamDeclaration.getDefault());
 
-    NonTypeTemplateParamDeclaration N =
+    ParamVariableDeclaration N =
         TestUtils.findByUniqueName(
-            TestUtils.subnodesOfType(result, NonTypeTemplateParamDeclaration.class), "N");
+            TestUtils.subnodesOfType(result, ParamVariableDeclaration.class), "N");
     Literal<Integer> int2 =
         TestUtils.findByUniquePredicate(
             TestUtils.subnodesOfType(result, Literal.class), l -> l.getValue().equals(2));
@@ -128,9 +124,9 @@ public class FunctionTemplateTest extends BaseTest {
     assertEquals(N, functionTemplateDeclaration.getParameters().get(1));
     assertEquals(intType, N.getType());
     assertEquals(5, ((Literal) N.getDefault()).getValue());
-    assertTrue(N.getPossibleInitializations().contains(int5));
-    assertTrue(N.getPossibleInitializations().contains(int3));
-    assertTrue(N.getPossibleInitializations().contains(int2));
+    assertTrue(N.getPrevDFG().contains(int5));
+    assertTrue(N.getPrevDFG().contains(int3));
+    assertTrue(N.getPrevDFG().contains(int2));
 
     // Check the realization
     assertEquals(1, functionTemplateDeclaration.getRealization().size());
@@ -188,7 +184,6 @@ public class FunctionTemplateTest extends BaseTest {
     assertEquals("double", call.getType().getName());
   }
 
-  @Disabled
   @Test
   void testInvocationWithoutCallTarget() throws Exception {
     // Check if a CallExpression is converted to a TemplateCallExpression if a compatible target
@@ -202,7 +197,7 @@ public class FunctionTemplateTest extends BaseTest {
     FunctionTemplateDeclaration templateDeclaration =
         TestUtils.findByUniquePredicate(
             TestUtils.subnodesOfType(result, FunctionTemplateDeclaration.class),
-            t -> t.getName().equals("template <class T=int, int N=5> T fixed_multiply (T val)"));
+            t -> t.getName().equals("fixed_multiply"));
 
     FunctionDeclaration fixedMultiply =
         TestUtils.findByUniquePredicate(
@@ -219,7 +214,6 @@ public class FunctionTemplateTest extends BaseTest {
             c -> c.getName().equals("fixed_multiply"));
 
     // Check invocation target
-    assertTrue(call instanceof TemplateCallExpression);
     assertEquals(1, call.getInvokes().size());
     assertEquals(fixedMultiply, call.getInvokes().get(0));
 
@@ -231,12 +225,12 @@ public class FunctionTemplateTest extends BaseTest {
         TestUtils.findByUniquePredicate(
             TestUtils.subnodesOfType(result, Literal.class), l -> l.getValue().equals(5));
 
-    assertEquals(2, ((TemplateCallExpression) call).getTemplateParameters().size());
-    assertEquals(doubleType, ((TemplateCallExpression) call).getTemplateParameters().get(0));
-    assertEquals(literal5, ((TemplateCallExpression) call).getTemplateParameters().get(1));
+    assertEquals(2, call.getTemplateParameters().size());
+    assertEquals(doubleType, call.getTemplateParameters().get(0));
+    assertEquals(literal5, call.getTemplateParameters().get(1));
 
     // Check return value
-    assertEquals(doubleType, ((TemplateCallExpression) call).getType());
+    assertEquals(doubleType, call.getType());
   }
 
   @Test
@@ -262,9 +256,9 @@ public class FunctionTemplateTest extends BaseTest {
     assertEquals(1, templateDeclaration.getRealization().size());
     assertEquals(fixedMultiply, templateDeclaration.getRealization().get(0));
 
-    TemplateCallExpression call =
+    CallExpression call =
         TestUtils.findByUniquePredicate(
-            TestUtils.subnodesOfType(result, TemplateCallExpression.class),
+            TestUtils.subnodesOfType(result, CallExpression.class),
             c -> c.getName().equals("fixed_multiply"));
 
     // Check invocation target
@@ -307,9 +301,9 @@ public class FunctionTemplateTest extends BaseTest {
     assertEquals(1, templateDeclaration.getRealization().size());
     assertEquals(fixedMultiply, templateDeclaration.getRealization().get(0));
 
-    TemplateCallExpression call =
+    CallExpression call =
         TestUtils.findByUniquePredicate(
-            TestUtils.subnodesOfType(result, TemplateCallExpression.class),
+            TestUtils.subnodesOfType(result, CallExpression.class),
             c -> c.getName().equals("fixed_multiply"));
 
     // Check invocation target
@@ -355,9 +349,9 @@ public class FunctionTemplateTest extends BaseTest {
     assertEquals(1, templateDeclaration.getRealization().size());
     assertEquals(fixedMultiply, templateDeclaration.getRealization().get(0));
 
-    TemplateCallExpression call =
+    CallExpression call =
         TestUtils.findByUniquePredicate(
-            TestUtils.subnodesOfType(result, TemplateCallExpression.class),
+            TestUtils.subnodesOfType(result, CallExpression.class),
             c -> c.getName().equals("fixed_multiply"));
 
     // Check invocation target
@@ -403,9 +397,9 @@ public class FunctionTemplateTest extends BaseTest {
     assertEquals(1, templateDeclaration.getRealization().size());
     assertEquals(fixedMultiply, templateDeclaration.getRealization().get(0));
 
-    TemplateCallExpression call =
+    CallExpression call =
         TestUtils.findByUniquePredicate(
-            TestUtils.subnodesOfType(result, TemplateCallExpression.class),
+            TestUtils.subnodesOfType(result, CallExpression.class),
             c -> c.getName().equals("fixed_multiply"));
 
     // Check invocation target
@@ -435,7 +429,6 @@ public class FunctionTemplateTest extends BaseTest {
     assertEquals(20.3, ((Literal) arg.getExpression()).getValue());
   }
 
-  @Disabled
   @Test
   void testInvocationWithImplicitCast() throws Exception {
     // test invocation target when signature does not match but implicitcast can be applied
@@ -448,13 +441,15 @@ public class FunctionTemplateTest extends BaseTest {
     FunctionTemplateDeclaration templateDeclaration =
         TestUtils.findByUniquePredicate(
             TestUtils.subnodesOfType(result, FunctionTemplateDeclaration.class),
-            t -> t.getName().equals("f"));
+            t -> t.getName().equals("f") && !t.isImplicit());
 
     FunctionDeclaration f =
         TestUtils.findByUniquePredicate(
             TestUtils.subnodesOfType(result, FunctionDeclaration.class),
             func ->
-                func.getName().equals("f") && !templateDeclaration.getRealization().contains(func));
+                func.getName().equals("f")
+                    && !templateDeclaration.getRealization().contains(func)
+                    && !func.isImplicit());
 
     CallExpression f1 =
         TestUtils.findByUniquePredicate(
@@ -495,7 +490,6 @@ public class FunctionTemplateTest extends BaseTest {
     assertTrue(f4.getInvokes().get(0).isImplicit());
   }
 
-  @Disabled
   @Test
   void testCreateDummy() throws Exception {
     // test invocation target when template parameter produces a cast in an argument
@@ -505,29 +499,26 @@ public class FunctionTemplateTest extends BaseTest {
             topLevel,
             true);
 
+    // Check dummy for first fixed_division call
+
     FunctionTemplateDeclaration templateDeclaration =
         TestUtils.findByUniquePredicate(
             TestUtils.subnodesOfType(result, FunctionTemplateDeclaration.class),
-            t -> t.isImplicit());
+            t -> t.getCode().equals("fixed_division<int,2>(10)"));
 
     FunctionDeclaration fixedDivision =
         TestUtils.findByUniquePredicate(
             TestUtils.subnodesOfType(result, FunctionDeclaration.class),
-            f -> f.getName().equals("fixed_division") && f.isImplicit());
+            f -> f.getCode().equals("fixed_division<int,2>(10)") && f.isImplicit());
 
     assertEquals(1, templateDeclaration.getRealization().size());
     assertEquals(fixedDivision, templateDeclaration.getRealization().get(0));
 
     assertEquals(2, templateDeclaration.getParameters().size());
-    assertTrue(templateDeclaration.getParameters().get(0) instanceof TypeTemplateParamDeclaration);
-    assertTrue(
-        templateDeclaration.getParameters().get(1) instanceof NonTypeTemplateParamDeclaration);
+    assertTrue(templateDeclaration.getParameters().get(0) instanceof TypeParamDeclaration);
+    assertTrue(templateDeclaration.getParameters().get(1) instanceof ParamVariableDeclaration);
 
     assertEquals(1, fixedDivision.getParameters().size());
-    assertEquals(
-        templateDeclaration.getParameters().get(0), fixedDivision.getParameters().get(0).getType());
-
-    // Check invocation targets
 
     CallExpression callInt2 =
         TestUtils.findByUniquePredicate(
@@ -536,6 +527,33 @@ public class FunctionTemplateTest extends BaseTest {
 
     assertEquals(1, callInt2.getInvokes().size());
     assertEquals(fixedDivision, callInt2.getInvokes().get(0));
+    assertTrue(
+        callInt2
+            .getTemplateParameters()
+            .get(1)
+            .getNextDFG()
+            .contains(templateDeclaration.getParameters().get(1)));
+
+    // Check dummy for second fixed_division call
+
+    templateDeclaration =
+        TestUtils.findByUniquePredicate(
+            TestUtils.subnodesOfType(result, FunctionTemplateDeclaration.class),
+            t -> t.getCode().equals("fixed_division<double,3>(10.0)"));
+
+    fixedDivision =
+        TestUtils.findByUniquePredicate(
+            TestUtils.subnodesOfType(result, FunctionDeclaration.class),
+            f -> f.getCode().equals("fixed_division<double,3>(10.0)") && f.isImplicit());
+
+    assertEquals(1, templateDeclaration.getRealization().size());
+    assertEquals(fixedDivision, templateDeclaration.getRealization().get(0));
+
+    assertEquals(2, templateDeclaration.getParameters().size());
+    assertTrue(templateDeclaration.getParameters().get(0) instanceof TypeParamDeclaration);
+    assertTrue(templateDeclaration.getParameters().get(1) instanceof ParamVariableDeclaration);
+
+    assertEquals(1, fixedDivision.getParameters().size());
 
     CallExpression callDouble3 =
         TestUtils.findByUniquePredicate(
@@ -544,6 +562,12 @@ public class FunctionTemplateTest extends BaseTest {
 
     assertEquals(1, callDouble3.getInvokes().size());
     assertEquals(fixedDivision, callDouble3.getInvokes().get(0));
+    assertTrue(
+        callDouble3
+            .getTemplateParameters()
+            .get(1)
+            .getNextDFG()
+            .contains(templateDeclaration.getParameters().get(1)));
 
     // Check return values
     assertEquals(UnknownType.getUnknownType(), callInt2.getType());

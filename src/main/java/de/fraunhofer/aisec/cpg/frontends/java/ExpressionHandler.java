@@ -744,7 +744,7 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
       }
     } else {
       callExpression =
-          NodeBuilder.newCallExpression(name, qualifiedName, methodCallExpr.toString());
+          NodeBuilder.newCallExpression(name, qualifiedName, methodCallExpr.toString(), false);
     }
 
     callExpression.setType(TypeParser.createFrom(typeString, true));

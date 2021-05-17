@@ -404,10 +404,8 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
     return recordDeclaration;
   }
 
-  private TypeTemplateParamDeclaration handleTemplateTypeParameter(
-      CPPASTSimpleTypeTemplateParameter ctx) {
-    return NodeBuilder.newTypeTemplateParamDeclaration(
-        ctx.getRawSignature(), ctx.getRawSignature());
+  private TypeParamDeclaration handleTemplateTypeParameter(CPPASTSimpleTypeTemplateParameter ctx) {
+    return NodeBuilder.newTypeParamDeclaration(ctx.getRawSignature(), ctx.getRawSignature());
   }
 
   private void processMembers(CPPASTCompositeTypeSpecifier ctx) {

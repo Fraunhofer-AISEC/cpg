@@ -25,37 +25,31 @@
  */
 package de.fraunhofer.aisec.cpg.graph.declarations;
 
+import de.fraunhofer.aisec.cpg.graph.HasDefault;
 import de.fraunhofer.aisec.cpg.graph.HasType;
 import de.fraunhofer.aisec.cpg.graph.SubGraph;
-import de.fraunhofer.aisec.cpg.graph.TemplateParameter;
-import de.fraunhofer.aisec.cpg.graph.types.ObjectType;
 import de.fraunhofer.aisec.cpg.graph.types.Type;
-import java.util.*;
+import java.util.Collection;
+import java.util.Objects;
+import org.checkerframework.checker.nullness.qual.Nullable;
 import org.neo4j.ogm.annotation.Relationship;
 
-public class TypeTemplateParamDeclaration extends ValueDeclaration
-    implements TemplateParameter<Type>, HasType.SecondaryTypeEdge {
+/** A declaration of a type template parameter */
+public class TypeParamDeclaration extends ValueDeclaration
+    implements HasType.SecondaryTypeEdge, HasDefault<Type> {
 
-  @Relationship(value = "POSSIBLE_INITIALIZATIONS", direction = "OUTGOING")
-  @SubGraph("AST")
-  protected Set<Type> possibleInitializations = new HashSet<>();
-
+  /**
+   * TemplateParameters can define a default for the type parameter Since the primary type edge
+   * points to the ParameterizedType, the default edge is a secondary type edge. Therefore the
+   * TypeResolver requires to implement the {@link HasType.SecondaryTypeEdge} to be aware of the
+   * edge to be able to merge the type nodes.
+   */
   @Relationship(value = "DEFAULT", direction = "OUTGOING")
   @SubGraph("AST")
+  @Nullable
   private Type defaultType;
 
-  public Set<Type> getPossibleInitializations() {
-    return this.possibleInitializations;
-  }
-
-  public void addPossibleInitialization(Type parameterizedType) {
-    this.possibleInitializations.add(parameterizedType);
-  }
-
-  public boolean canBeInstantiated(Type type) {
-    return type instanceof ObjectType;
-  }
-
+  @Nullable
   public Type getDefault() {
     return defaultType;
   }
@@ -69,14 +63,13 @@ public class TypeTemplateParamDeclaration extends ValueDeclaration
     if (this == o) return true;
     if (o == null || getClass() != o.getClass()) return false;
     if (!super.equals(o)) return false;
-    TypeTemplateParamDeclaration that = (TypeTemplateParamDeclaration) o;
-    return possibleInitializations.equals(that.possibleInitializations)
-        && Objects.equals(defaultType, that.defaultType);
+    TypeParamDeclaration that = (TypeParamDeclaration) o;
+    return Objects.equals(defaultType, that.defaultType);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(super.hashCode(), possibleInitializations, defaultType);
+    return Objects.hash(super.hashCode(), defaultType);
   }
 
   @Override
@@ -86,7 +79,6 @@ public class TypeTemplateParamDeclaration extends ValueDeclaration
       for (Type t : typeState) {
         if (t.equals(oldType)) {
           this.setDefault(t);
-          this.addPossibleInitialization(t);
         }
       }
     }

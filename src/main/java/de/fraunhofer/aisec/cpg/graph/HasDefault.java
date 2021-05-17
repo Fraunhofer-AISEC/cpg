@@ -25,14 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph;
 
-import java.util.Set;
-
-public interface TemplateParameter<T extends Node> {
-  public Set<T> getPossibleInitializations();
-
-  public void addPossibleInitialization(T t);
-
-  public boolean canBeInstantiated(T t);
+public interface HasDefault<T extends Node> {
 
   public T getDefault();
 

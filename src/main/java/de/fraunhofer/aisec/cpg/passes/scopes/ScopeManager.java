@@ -34,7 +34,6 @@ import de.fraunhofer.aisec.cpg.graph.declarations.*;
 import de.fraunhofer.aisec.cpg.graph.statements.*;
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression;
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression;
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.TemplateCallExpression;
 import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType;
 import java.util.*;
 import java.util.function.Function;
@@ -554,8 +553,7 @@ public class ScopeManager {
     return resolveFunction(currentScope, call);
   }
 
-  public List<FunctionTemplateDeclaration> resolveFunctionTemplateDeclaration(
-      TemplateCallExpression call) {
+  public List<FunctionTemplateDeclaration> resolveFunctionTemplateDeclaration(CallExpression call) {
     return resolveFunctionTemplateDeclaration(currentScope, call);
   }
 
@@ -661,7 +659,7 @@ public class ScopeManager {
   }
 
   private List<FunctionTemplateDeclaration> resolveFunctionTemplateDeclaration(
-      Scope scope, TemplateCallExpression call) {
+      Scope scope, CallExpression call) {
     return resolveStructureDeclaration(
         scope, c -> c.getName().equals(call.getName()), FunctionTemplateDeclaration.class);
   }

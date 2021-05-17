@@ -57,24 +57,13 @@ public class NodeBuilder {
     return using;
   }
 
-  public static CallExpression newCallExpression(String name, String fqn, String code) {
+  public static CallExpression newCallExpression(
+      String name, String fqn, String code, boolean template) {
     CallExpression node = new CallExpression();
     node.setName(name);
     node.setCode(code);
     node.setFqn(fqn);
-
-    log(node);
-
-    return node;
-  }
-
-  public static TemplateCallExpression newTemplateCallExpression(
-      String name, String fqn, String code) {
-    TemplateCallExpression node = new TemplateCallExpression();
-    node.setName(name);
-    node.setCode(code);
-    node.setFqn(fqn);
-
+    node.setTemplate(template);
     log(node);
 
     return node;
@@ -231,22 +220,8 @@ public class NodeBuilder {
     return node;
   }
 
-  public static NonTypeTemplateParamDeclaration newNonTypeTemplateParameter(
-      ParamVariableDeclaration paramVariableDeclaration) {
-    NonTypeTemplateParamDeclaration node = new NonTypeTemplateParamDeclaration();
-    node.setName(paramVariableDeclaration.getName());
-    node.setType(paramVariableDeclaration.getType());
-    node.setCode(paramVariableDeclaration.getCode());
-    node.setVariadic(paramVariableDeclaration.isVariadic());
-
-    log(node);
-
-    return node;
-  }
-
-  public static TypeTemplateParamDeclaration newTypeTemplateParamDeclaration(
-      String name, String code) {
-    TypeTemplateParamDeclaration node = new TypeTemplateParamDeclaration();
+  public static TypeParamDeclaration newTypeParamDeclaration(String name, String code) {
+    TypeParamDeclaration node = new TypeParamDeclaration();
     node.setName(name);
     node.setCode(code);
 
@@ -461,11 +436,11 @@ public class NodeBuilder {
   }
 
   public static FunctionTemplateDeclaration newFunctionTemplateDeclaration(
-      String name, String code, PhysicalLocation location) {
+      String name, String code, RecordDeclaration recordDeclaration) {
     FunctionTemplateDeclaration node = new FunctionTemplateDeclaration();
     node.setName(name);
     node.setCode(code);
-    node.setLocation(location);
+    node.setRecordDeclaration(recordDeclaration);
 
     log(node);
     return node;

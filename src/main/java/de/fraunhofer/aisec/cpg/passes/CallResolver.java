@@ -30,6 +30,8 @@ import de.fraunhofer.aisec.cpg.frontends.cpp.CXXLanguageFrontend;
 import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguageFrontend;
 import de.fraunhofer.aisec.cpg.graph.*;
 import de.fraunhofer.aisec.cpg.graph.declarations.*;
+import de.fraunhofer.aisec.cpg.graph.edge.Properties;
+import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*;
 import de.fraunhofer.aisec.cpg.graph.types.*;
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.ScopedWalker;
@@ -249,8 +251,8 @@ public class CallResolver extends Pass {
       }
     }
 
-    if (call instanceof TemplateCallExpression && lang instanceof CXXLanguageFrontend) {
-      handleTemplateFunctionCalls(curClass, (TemplateCallExpression) call);
+    if (call.instantiatesTemplate() && lang instanceof CXXLanguageFrontend) {
+      handleTemplateFunctionCalls(curClass, call, true);
       return;
     }
 
@@ -268,27 +270,40 @@ public class CallResolver extends Pass {
     }
   }
 
-  private boolean isInstantiated(Node callParameter, Declaration functionParameter) {
-    if (callParameter instanceof Type
-        && functionParameter instanceof TypeTemplateParamDeclaration) {
-      return ((TypeTemplateParamDeclaration) functionParameter)
-          .canBeInstantiated((Type) callParameter);
+  /**
+   * Checks if the provided call parameter can instantiate the required template parameter
+   *
+   * @param callParameter
+   * @param templateParameter
+   * @return If the TemplateParameter is an TypeParamDeclaration, the callParameter must be an
+   *     ObjectType => returns true If the TemplateParameter is a ParamVariableDeclaration, the
+   *     callParamerter must be an Expression and its type must match the type of the
+   *     ParamVariableDeclaration (same type or subtype) => returns true Otherwise return false
+   */
+  private boolean isInstantiated(Node callParameter, Declaration templateParameter) {
+    if (callParameter instanceof Type && templateParameter instanceof TypeParamDeclaration) {
+      Type type = (Type) callParameter;
+      return type instanceof ObjectType;
     } else if (callParameter instanceof Expression
-        && functionParameter instanceof NonTypeTemplateParamDeclaration) {
-      return ((NonTypeTemplateParamDeclaration) functionParameter)
-          .canBeInstantiated((Expression) callParameter);
+        && templateParameter instanceof ParamVariableDeclaration) {
+      Expression expression = (Expression) callParameter;
+      ParamVariableDeclaration paramVariableDeclaration =
+          (ParamVariableDeclaration) templateParameter;
+      return expression.getType().equals(paramVariableDeclaration.getType())
+          || TypeManager.getInstance()
+              .isSupertypeOf(paramVariableDeclaration.getType(), expression.getType());
     }
     return false;
   }
 
-  private Map<ParameterizedType, TypeTemplateParamDeclaration>
-      getParameterizedSignaturesFromInitialization(Map<Declaration, Node> intialization) {
-    Map<ParameterizedType, TypeTemplateParamDeclaration> parameterizedSignature = new HashMap<>();
+  private Map<ParameterizedType, TypeParamDeclaration> getParameterizedSignaturesFromInitialization(
+      Map<Declaration, Node> intialization) {
+    Map<ParameterizedType, TypeParamDeclaration> parameterizedSignature = new HashMap<>();
     for (Declaration templateParam : intialization.keySet()) {
-      if (templateParam instanceof TypeTemplateParamDeclaration) {
+      if (templateParam instanceof TypeParamDeclaration) {
         parameterizedSignature.put(
-            (ParameterizedType) ((TypeTemplateParamDeclaration) templateParam).getType(),
-            (TypeTemplateParamDeclaration) templateParam);
+            (ParameterizedType) ((TypeParamDeclaration) templateParam).getType(),
+            (TypeParamDeclaration) templateParam);
       }
     }
     return parameterizedSignature;
@@ -296,9 +311,10 @@ public class CallResolver extends Pass {
 
   private Map<Declaration, Node> constructTemplateInitializationSignatureFromTemplateParameters(
       FunctionTemplateDeclaration functionTemplateDeclaration,
-      TemplateCallExpression templateCall,
+      CallExpression templateCall,
       Map<Node, TemplateDeclaration.TemplateInitialization> instantiationType,
-      Map<Declaration, Integer> orderedInitializationSignature) {
+      Map<Declaration, Integer> orderedInitializationSignature,
+      List<ParameterizedType> explicitInstantiated) {
     Map<Declaration, Node> instantiationSignature = new HashMap<>();
     for (int i = 0; i < functionTemplateDeclaration.getParameters().size(); i++) {
       if (i < templateCall.getTemplateParameters().size()) {
@@ -307,17 +323,21 @@ public class CallResolver extends Pass {
         if (isInstantiated(callParameter, templateParameter)) {
           instantiationSignature.put(templateParameter, callParameter);
           instantiationType.put(callParameter, TemplateDeclaration.TemplateInitialization.EXPLICIT);
+          if (templateParameter instanceof TypeParamDeclaration) {
+            explicitInstantiated.add(
+                (ParameterizedType) ((TypeParamDeclaration) templateParameter).getType());
+          }
           orderedInitializationSignature.put(templateParameter, i);
         } else {
           // If both parameters do not match, we cannot instantiate the template
           return null;
         }
       } else {
-        if (((TemplateParameter) functionTemplateDeclaration.getParameters().get(i)).getDefault()
+        if (((HasDefault) functionTemplateDeclaration.getParameters().get(i)).getDefault()
             != null) {
           // If we have a default we fill it in
           Node defaultNode =
-              ((TemplateParameter) functionTemplateDeclaration.getParameters().get(i)).getDefault();
+              ((HasDefault) functionTemplateDeclaration.getParameters().get(i)).getDefault();
           instantiationSignature.put(
               functionTemplateDeclaration.getParameters().get(i), defaultNode);
           instantiationType.put(defaultNode, TemplateDeclaration.TemplateInitialization.DEFAULT);
@@ -336,19 +356,21 @@ public class CallResolver extends Pass {
 
   private Map<Declaration, Node> getTemplateInitializationSignature(
       FunctionTemplateDeclaration functionTemplateDeclaration,
-      TemplateCallExpression templateCall,
+      CallExpression templateCall,
       Map<Node, TemplateDeclaration.TemplateInitialization> instantiationType,
-      Map<Declaration, Integer> orderedInitializationSignature) {
+      Map<Declaration, Integer> orderedInitializationSignature,
+      List<ParameterizedType> explicitInstantiated) {
     // Construct Signature
     Map<Declaration, Node> signature =
         constructTemplateInitializationSignatureFromTemplateParameters(
             functionTemplateDeclaration,
             templateCall,
             instantiationType,
-            orderedInitializationSignature);
+            orderedInitializationSignature,
+            explicitInstantiated);
     if (signature == null) return null;
 
-    Map<ParameterizedType, TypeTemplateParamDeclaration> parameterizedTypeResolution =
+    Map<ParameterizedType, TypeParamDeclaration> parameterizedTypeResolution =
         getParameterizedSignaturesFromInitialization(signature);
 
     // Check for unresolved Parameters and try to deduce Type by looking at call arguments
@@ -370,8 +392,17 @@ public class CallResolver extends Pass {
     return signature;
   }
 
-  private void handleTemplateFunctionCalls(
-      RecordDeclaration curClass, TemplateCallExpression templateCall) {
+  /**
+   * @param curClass class the invoked method must be part of.
+   * @param templateCall call to instantiate and invoke a function temaplte
+   * @param applyDummy if the resolution was unsuccessful and applyDummy is true the call will
+   *     resolve to a instantiation/invocation of a dummy template
+   * @return true if resolution was successful, false if not
+   */
+  private boolean handleTemplateFunctionCalls(
+      @Nullable RecordDeclaration curClass,
+      @NonNull CallExpression templateCall,
+      boolean applyDummy) {
 
     List<FunctionTemplateDeclaration> instantiationCandidates =
         lang.getScopeManager().resolveFunctionTemplateDeclaration(templateCall);
@@ -382,7 +413,9 @@ public class CallResolver extends Pass {
     for (FunctionTemplateDeclaration functionTemplateDeclaration : instantiationCandidates) {
       Map<Node, TemplateDeclaration.TemplateInitialization> initializationType = new HashMap<>();
       Map<Declaration, Integer> orderedInitializationSignature = new HashMap<>();
-      if (templateCall.getTemplateParameters().size()
+      List<ParameterizedType> explicitInstantiation = new ArrayList<>();
+      if (templateCall.getTemplateParameters() != null
+          && templateCall.getTemplateParameters().size()
               <= functionTemplateDeclaration.getParameters().size()
           && templateCall.getArguments().size()
               <= functionTemplateDeclaration.getRealization().get(0).getParameters().size()) {
@@ -392,11 +425,19 @@ public class CallResolver extends Pass {
                 functionTemplateDeclaration,
                 templateCall,
                 initializationType,
-                orderedInitializationSignature);
+                orderedInitializationSignature,
+                explicitInstantiation);
         FunctionDeclaration function = functionTemplateDeclaration.getRealization().get(0);
 
         if (initializationSignature != null
-            && checkArgumentValidity(initializationSignature, function, templateCall)) {
+            && checkArgumentValidity(
+                function,
+                getCallSignature(
+                    function,
+                    getParameterizedSignaturesFromInitialization(initializationSignature),
+                    initializationSignature),
+                templateCall,
+                explicitInstantiation)) {
           // Valid Target -> Apply invocation
           applyTemplateInstantiation(
               templateCall,
@@ -405,17 +446,31 @@ public class CallResolver extends Pass {
               initializationSignature,
               initializationType,
               orderedInitializationSignature);
-          return;
+          return true;
         }
       }
     }
 
-    // TODO CPS Create Dummy
-
+    if (applyDummy) {
+      // If we want to use a functionTemplateDeclaration as dummy, this needs to be provided.
+      // Otherwise we could not resolve to a template and no modifications are made
+      FunctionTemplateDeclaration functionTemplateDeclaration =
+          createFunctionTemplateDummy(curClass, templateCall);
+      templateCall.setInstantiation(functionTemplateDeclaration);
+      templateCall.setInvokes(functionTemplateDeclaration.getRealization());
+      // Set instantiation propertyEdges
+      for (PropertyEdge<Node> instantiationParameter :
+          templateCall.getTemplateParametersPropertyEdge()) {
+        instantiationParameter.addProperty(
+            Properties.INSTANTIATION, TemplateDeclaration.TemplateInitialization.EXPLICIT);
+      }
+      return true;
+    }
+    return false;
   }
 
   private void applyTemplateInstantiation(
-      TemplateCallExpression templateCall,
+      CallExpression templateCall,
       FunctionTemplateDeclaration functionTemplateDeclaration,
       FunctionDeclaration function,
       Map<Declaration, Node> initializationSignature,
@@ -435,7 +490,7 @@ public class CallResolver extends Pass {
 
     // Set return Value of call if resolved
     Type returnType = function.getType();
-    Map<ParameterizedType, TypeTemplateParamDeclaration> parameterizedTypeResolution =
+    Map<ParameterizedType, TypeParamDeclaration> parameterizedTypeResolution =
         getParameterizedSignaturesFromInitialization(initializationSignature);
     if (function.getType() instanceof ParameterizedType) {
       returnType =
@@ -449,8 +504,7 @@ public class CallResolver extends Pass {
 
     // Apply changes to the call signature
     List<Type> templateFunctionSignature =
-        getCallSignature(
-            templateCall, function, parameterizedTypeResolution, initializationSignature);
+        getCallSignature(function, parameterizedTypeResolution, initializationSignature);
     List<Type> templateCallSignature = templateCall.getSignature();
     List<CastExpression> callSignatureImplicit =
         signatureWithImplicitCastTransformation(
@@ -463,23 +517,52 @@ public class CallResolver extends Pass {
       }
     }
 
-    // Add possible initializations to TemplateParamVariableDeclarations. Do this as a last step,
-    // otherwise the initializationSignature Map stops working
+    // Add DFG edges from the instantiation Expression to the ParamVariableDeclaration in the
+    // Template.
     for (Declaration declaration : initializationSignature.keySet()) {
-      if (declaration instanceof TypeTemplateParamDeclaration) {
-        ((TypeTemplateParamDeclaration) declaration)
-            .addPossibleInitialization((Type) initializationSignature.get(declaration));
-      } else if (declaration instanceof NonTypeTemplateParamDeclaration) {
-        ((NonTypeTemplateParamDeclaration) declaration)
-            .addPossibleInitialization((Expression) initializationSignature.get(declaration));
+      if (declaration instanceof ParamVariableDeclaration) {
+        declaration.addPrevDFG(initializationSignature.get(declaration));
+        initializationSignature.get(declaration).addNextDFG(declaration);
       }
     }
   }
 
+  private boolean checkArgumentValidity(
+      FunctionDeclaration functionDeclaration,
+      List<Type> functionDeclarationSignature,
+      CallExpression templateCallExpression,
+      List<ParameterizedType> explicitInstantiation) {
+    if (templateCallExpression.getArguments().size()
+        <= functionDeclaration.getParameters().size()) {
+      List<Expression> callArguments =
+          new ArrayList<>(templateCallExpression.getArguments()); // Use provided arguments
+      callArguments.addAll(
+          functionDeclaration
+              .getDefaultParameters()
+              .subList(
+                  callArguments.size(),
+                  functionDeclaration.getDefaultParameters().size())); // Extend by defaults
+      for (int i = 0; i < callArguments.size(); i++) {
+        Expression callArgument = callArguments.get(i);
+        if (callArgument == null) return false;
+
+        if (!(callArgument.getType().equals(functionDeclarationSignature.get(i)))) {
+          if (!(callArgument.getType().isPrimitive()
+              && functionDeclarationSignature.get(i).isPrimitive()
+              && explicitInstantiation.contains(
+                  functionDeclaration.getParameters().get(i).getType()))) {
+            return false;
+          }
+        }
+      }
+      return true;
+    }
+    return false;
+  }
+
   private List<Type> getCallSignature(
-      TemplateCallExpression templateCall,
       FunctionDeclaration function,
-      Map<ParameterizedType, TypeTemplateParamDeclaration> parameterizedTypeResolution,
+      Map<ParameterizedType, TypeParamDeclaration> parameterizedTypeResolution,
       Map<Declaration, Node> initializationSignature) {
     List<Type> templateCallSignature = new ArrayList<>();
     for (ParamVariableDeclaration argument : function.getParameters()) {
@@ -492,14 +575,6 @@ public class CallResolver extends Pass {
       }
     }
     return templateCallSignature;
-  }
-
-  private boolean checkArgumentValidity(
-      Map<Declaration, Node> signature,
-      FunctionDeclaration declaration,
-      TemplateCallExpression call) {
-    // TODO
-    return true;
   }
 
   private void resolveArguments(CallExpression call, RecordDeclaration curClass) {
@@ -851,6 +926,20 @@ public class CallResolver extends Pass {
         }
 
         if (invocationCandidates.isEmpty()) {
+          /*
+           check if the call can be resolved to a function template instantiation. If yes we
+           resolved the call, if no there won't be a template dummy, we will do a
+           unctionDeclaration dummy instead
+          */
+          call.setTemplateParameters(new ArrayList<>());
+          if (handleTemplateFunctionCalls(curClass, call, false)) {
+            return;
+          } else {
+            call.setTemplateParameters(null);
+          }
+        }
+
+        if (invocationCandidates.isEmpty()) {
           // If we don't find any candidate and our current language is c/c++ we check if there is a
           // candidate with an implicit cast
           invocationCandidates.addAll(resolveWithImplicitCastFunc(call));
@@ -1096,6 +1185,62 @@ public class CallResolver extends Pass {
       curClass.getStaticImports().add(dummy);
       invokes.add(dummy);
     }
+  }
+
+  private FunctionTemplateDeclaration createFunctionTemplateDummy(
+      RecordDeclaration containingRecord, CallExpression call) {
+    String name = call.getName();
+    String code = call.getCode();
+    FunctionTemplateDeclaration dummy =
+        NodeBuilder.newFunctionTemplateDeclaration(name, code, containingRecord);
+    dummy.setImplicit(true);
+    if (containingRecord != null) {
+      containingRecord.addDeclaration(dummy);
+    } else {
+      if (currentTU == null) {
+        LOGGER.error(
+            "No current translation unit when trying to generate function template dummy {}",
+            dummy.getName());
+      } else {
+        currentTU.addDeclaration(dummy);
+      }
+    }
+    FunctionDeclaration dummyRealization =
+        createDummy(containingRecord, name, code, false, call.getSignature());
+    dummy.addRealization(dummyRealization);
+
+    int typeCounter = 0;
+    int nonTypeCounter = 0;
+    for (Node node : call.getTemplateParameters()) {
+      if (node instanceof Type) {
+        // Template Parameter
+        String dummyTypeIdentifier = "T" + typeCounter;
+        TypeParamDeclaration typeParamDeclaration =
+            NodeBuilder.newTypeParamDeclaration(dummyTypeIdentifier, dummyTypeIdentifier);
+        typeParamDeclaration.setImplicit(true);
+        ParameterizedType parameterizedType = new ParameterizedType(dummyTypeIdentifier);
+        parameterizedType.setImplicit(true);
+        typeParamDeclaration.setType(parameterizedType);
+        TypeManager.getInstance().addTypeParameter(dummy, parameterizedType);
+        typeCounter++;
+        dummy.addParameter(typeParamDeclaration);
+      } else if (node instanceof Expression) {
+        // Non-Type Template Parameter
+        String dummyNonTypeIdentifier = "N" + nonTypeCounter;
+        ParamVariableDeclaration paramVariableDeclaration =
+            NodeBuilder.newMethodParameterIn(
+                dummyNonTypeIdentifier,
+                ((Expression) node).getType(),
+                false,
+                dummyNonTypeIdentifier);
+        paramVariableDeclaration.setImplicit(true);
+        paramVariableDeclaration.addPrevDFG(node);
+        node.addNextDFG(paramVariableDeclaration);
+        nonTypeCounter++;
+        dummy.addParameter(paramVariableDeclaration);
+      }
+    }
+    return dummy;
   }
 
   @NonNull

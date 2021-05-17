@@ -439,29 +439,27 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
       // Classic C-style function pointer call -> let's extract the target
       callExpression =
           NodeBuilder.newCallExpression(
-              ((UnaryOperator) reference).getInput().getName(), "", reference.getCode());
+              ((UnaryOperator) reference).getInput().getName(), "", reference.getCode(), false);
     } else if (((CPPASTIdExpression) ctx.getFunctionNameExpression()).getName()
         instanceof CPPASTTemplateId) {
       String name =
           ((CPPASTTemplateId) ((CPPASTIdExpression) ctx.getFunctionNameExpression()).getName())
               .getTemplateName()
               .toString();
-      callExpression = NodeBuilder.newTemplateCallExpression(name, name, ctx.getRawSignature());
+      callExpression = NodeBuilder.newCallExpression(name, name, ctx.getRawSignature(), true);
 
       for (IASTNode argument :
           ((CPPASTTemplateId) ((CPPASTIdExpression) ctx.getFunctionNameExpression()).getName())
               .getTemplateArguments()) {
         if (argument instanceof CPPASTTypeId) {
-          ((TemplateCallExpression) callExpression)
-              .addTemplateParameter(
-                  TypeParser.createFrom(
-                      ((CPPASTTypeId) argument).getDeclSpecifier().toString(), false, lang),
-                  TemplateDeclaration.TemplateInitialization.EXPLICIT);
+          callExpression.addTemplateParameter(
+              TypeParser.createFrom(
+                  ((CPPASTTypeId) argument).getDeclSpecifier().toString(), false, lang),
+              TemplateDeclaration.TemplateInitialization.EXPLICIT);
         } else if (argument instanceof IASTInitializerClause) {
-          ((TemplateCallExpression) callExpression)
-              .addTemplateParameter(
-                  lang.getExpressionHandler().handle((IASTInitializerClause) argument),
-                  TemplateDeclaration.TemplateInitialization.EXPLICIT);
+          callExpression.addTemplateParameter(
+              lang.getExpressionHandler().handle((IASTInitializerClause) argument),
+              TemplateDeclaration.TemplateInitialization.EXPLICIT);
         }
       }
 
@@ -483,7 +481,7 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
       // if (!fullNamePrefix.isEmpty()) {
       //  fqn = fullNamePrefix + "." + fqn;
       // }
-      callExpression = NodeBuilder.newCallExpression(name, fqn, ctx.getRawSignature());
+      callExpression = NodeBuilder.newCallExpression(name, fqn, ctx.getRawSignature(), false);
     }
 
     int i = 0;
