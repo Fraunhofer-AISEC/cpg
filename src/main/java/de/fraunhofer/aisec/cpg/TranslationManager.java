@@ -30,6 +30,7 @@ import static de.fraunhofer.aisec.cpg.frontends.cpp.CXXLanguageFrontend.CXX_EXTE
 
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
 import de.fraunhofer.aisec.cpg.frontends.TranslationException;
+import de.fraunhofer.aisec.cpg.frontends.golang.GoLanguageFrontend;
 import de.fraunhofer.aisec.cpg.graph.TypeManager;
 import de.fraunhofer.aisec.cpg.helpers.Benchmark;
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker;
@@ -190,6 +191,8 @@ public class TranslationManager {
       }
     }
 
+    boolean useParallelFrontends = config.useParallelFrontends;
+
     for (int i = 0; i < sourceLocations.size(); i++) {
       File sourceLocation = sourceLocations.get(i);
 
@@ -202,13 +205,19 @@ public class TranslationManager {
         } catch (IOException e) {
           log.error(e.getMessage(), e);
         }
+      } else {
+        if (useParallelFrontends
+            && getFrontendClass(Util.getExtension(sourceLocation)) == GoLanguageFrontend.class) {
+          log.warn("Parallel frontends are not yet supported for Go");
+          useParallelFrontends = false;
+        }
       }
     }
 
     TypeManager.setTypeSystemActive(config.typeSystemActiveInFrontend);
 
     Set<LanguageFrontend> usedFrontends;
-    if (config.useParallelFrontends) {
+    if (useParallelFrontends) {
       usedFrontends = parseParallel(result, scopeManager, sourceLocations);
     } else {
       usedFrontends = parseSequentially(result, scopeManager, sourceLocations);
@@ -346,12 +355,7 @@ public class TranslationManager {
 
   @Nullable
   private LanguageFrontend getFrontend(String extension, ScopeManager scopeManager) {
-    var clazz =
-        this.config.getFrontends().entrySet().stream()
-            .filter(entry -> entry.getValue().contains(extension))
-            .map(Entry::getKey)
-            .findAny()
-            .orElse(null);
+    Class<? extends LanguageFrontend> clazz = getFrontendClass(extension);
 
     if (clazz != null) {
       try {
@@ -368,6 +372,17 @@ public class TranslationManager {
     }
 
     return null;
+  }
+
+  @Nullable
+  private Class<? extends LanguageFrontend> getFrontendClass(String extension) {
+    var clazz =
+        this.config.getFrontends().entrySet().stream()
+            .filter(entry -> entry.getValue().contains(extension))
+            .map(Entry::getKey)
+            .findAny()
+            .orElse(null);
+    return clazz;
   }
 
   /**

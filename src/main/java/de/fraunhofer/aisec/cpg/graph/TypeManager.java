@@ -27,7 +27,10 @@
 package de.fraunhofer.aisec.cpg.graph;
 
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
+import de.fraunhofer.aisec.cpg.frontends.cpp.CXXLanguageFrontend;
+import de.fraunhofer.aisec.cpg.frontends.golang.GoLanguageFrontend;
 import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguageFrontend;
+import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguageFrontend;
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration;
 import de.fraunhofer.aisec.cpg.graph.declarations.TypedefDeclaration;
 import de.fraunhofer.aisec.cpg.graph.types.*;
@@ -58,11 +61,14 @@ public class TypeManager {
 
   public enum Language {
     JAVA,
-    CXX
+    CXX,
+    GO,
+    PYTHON,
+    UNKNOWN
   }
 
   @NonNull
-  private Map<Node, Set<Type>> typeCache = Collections.synchronizedMap(new IdentityHashMap<>());
+  private Map<HasType, Set<Type>> typeCache = Collections.synchronizedMap(new IdentityHashMap<>());
 
   @NonNull
   private Map<String, RecordDeclaration> typeToRecord =
@@ -143,11 +149,11 @@ public class TypeManager {
     typeSystemActive = active;
   }
 
-  public Map<Node, Set<Type>> getTypeCache() {
+  public Map<HasType, Set<Type>> getTypeCache() {
     return typeCache;
   }
 
-  public synchronized void cacheType(Node node, Type type) {
+  public synchronized void cacheType(HasType node, Type type) {
     if (!isUnknown(type)) {
       typeCache.computeIfAbsent(node, n -> new HashSet<>()).add(type);
     }
@@ -346,9 +352,16 @@ public class TypeManager {
   public Language getLanguage() {
     if (frontend instanceof JavaLanguageFrontend) {
       return Language.JAVA;
-    } else {
+    } else if (frontend instanceof CXXLanguageFrontend) {
       return Language.CXX;
+    } else if (frontend instanceof GoLanguageFrontend) {
+      return Language.GO;
+    } else if (frontend instanceof PythonLanguageFrontend) {
+      return Language.PYTHON;
     }
+
+    log.error("Unknown language (frontend: {})", frontend.getClass().getSimpleName());
+    return Language.UNKNOWN;
   }
 
   @Nullable

@@ -200,7 +200,7 @@ public class SubgraphWalker {
   }
 
   public static void activateTypes(Node node, ScopeManager scopeManager) {
-    Map<Node, Set<Type>> typeCache = TypeManager.getInstance().getTypeCache();
+    Map<HasType, Set<Type>> typeCache = TypeManager.getInstance().getTypeCache();
     IterativeGraphWalker walker = new IterativeGraphWalker();
     walker.registerOnNodeVisit(scopeManager::enterScopeIfExists);
     walker.registerOnScopeExit(
@@ -213,9 +213,20 @@ public class SubgraphWalker {
                       t = TypeManager.getInstance().resolvePossibleTypedef(t);
                       ((HasType) n).setType(t);
                     });
+            typeCache.remove(n);
           }
         });
     walker.iterate(node);
+
+    // For some nodes it may happen that they are not reachable via AST, but we still need to set
+    // their type to the requested value
+    typeCache.forEach(
+        (n, types) ->
+            types.forEach(
+                t -> {
+                  t = TypeManager.getInstance().resolvePossibleTypedef(t);
+                  n.setType(t);
+                }));
   }
 
   /**
