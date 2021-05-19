@@ -207,13 +207,13 @@ public class SubgraphWalker {
         n -> {
           if (n instanceof HasType) {
             typeCache
-                .getOrDefault(n, Collections.emptySet())
+                .getOrDefault((HasType) n, Collections.emptySet())
                 .forEach(
                     t -> {
                       t = TypeManager.getInstance().resolvePossibleTypedef(t);
                       ((HasType) n).setType(t);
                     });
-            typeCache.remove(n);
+            typeCache.remove((HasType) n);
           }
         });
     walker.iterate(node);

@@ -258,6 +258,7 @@ public class TranslationManager {
             .ifPresent(f -> handleCompletion(result, usedFrontends, futureToFile.get(future), f));
       } catch (InterruptedException | ExecutionException e) {
         log.error("Error parsing " + futureToFile.get(future), e);
+        Thread.currentThread().interrupt();
       }
     }
     originalScopeManager.mergeFrom(parallelScopeManagers);
