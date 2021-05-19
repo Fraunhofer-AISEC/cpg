@@ -269,10 +269,10 @@ object TestUtils {
     ) {
 
         val originalNodes = getAllNodes(original)
-        val originalEdges = originalNodes.flatMap { it.getOutgoingEdges() }.toMutableSet()
+        val originalEdges = originalNodes.flatMap { it.outgoingEdges }.toMutableSet()
 
         val otherNodes = getAllNodes(other)
-        val otherEdges = otherNodes.flatMap { it.getOutgoingEdges() }.toMutableSet()
+        val otherEdges = otherNodes.flatMap { it.outgoingEdges }.toMutableSet()
 
         val originalToOtherNode = getMapping(originalNodes, otherNodes)
         var missing = originalNodes.filter { it !in originalToOtherNode }
@@ -290,8 +290,8 @@ object TestUtils {
             if (otherEdges.none {
                     it.label == originalEdge.label &&
                         it.properties == originalEdge.properties &&
-                        originalToOtherNode[originalEdge.from]?.contains(it.from) ?: false &&
-                        originalToOtherNode[originalEdge.to]?.contains(it.to) ?: false
+                        originalToOtherNode[originalEdge.from]?.contains(it.from) == true &&
+                        originalToOtherNode[originalEdge.to]?.contains(it.to) == true
                 }
             ) {
                 missingEdges.add("Edge in original graph $originalEdge not present in other graph!")
@@ -302,8 +302,8 @@ object TestUtils {
             if (originalEdges.none {
                     it.label == otherEdge.label &&
                         it.properties == otherEdge.properties &&
-                        otherToOriginalNode[otherEdge.from]?.contains(it.from) ?: false &&
-                        otherToOriginalNode[otherEdge.to]?.contains(it.to) ?: false
+                        otherToOriginalNode[otherEdge.from]?.contains(it.from) == true &&
+                        otherToOriginalNode[otherEdge.to]?.contains(it.to) == true
                 }
             ) {
                 missingEdges.add("Edge in other graph $otherEdge not present in original graph!")

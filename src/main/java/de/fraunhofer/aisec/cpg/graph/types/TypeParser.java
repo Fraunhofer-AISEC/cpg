@@ -51,7 +51,7 @@ public class TypeParser {
       List.of("byte", "short", "int", "long", "float", "double", "boolean", "char");
   private static final Pattern functionPtrRegex =
       Pattern.compile(
-          "(?:(?<functionptr>(\\h|\\()+[a-zA-Z0-9_$.<>:]*\\*\\h*[a-zA-Z0-9_$.<>:]*(\\h|\\))+)\\h*)(?<args>\\(+[a-zA-Z0-9_$.<>,\\*\\&\\h]*\\))");
+          "(?:(?<functionptr>[\\h(]+[a-zA-Z0-9_$.<>:]*\\*\\h*[a-zA-Z0-9_$.<>:]*[\\h)]+)\\h*)(?<args>\\(+[a-zA-Z0-9_$.<>,\\*\\&\\h]*\\))");
 
   private static Supplier<TypeManager.Language> languageSupplier =
       () -> TypeManager.getInstance().getLanguage();
