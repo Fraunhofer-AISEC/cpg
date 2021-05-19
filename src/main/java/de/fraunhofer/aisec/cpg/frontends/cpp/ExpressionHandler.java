@@ -33,6 +33,7 @@ import de.fraunhofer.aisec.cpg.frontends.Handler;
 import de.fraunhofer.aisec.cpg.graph.*;
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*;
 import de.fraunhofer.aisec.cpg.graph.types.*;
+import de.fraunhofer.aisec.cpg.graph.types.PointerType.PointerOrigin;
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation;
 import java.math.BigInteger;
 import java.util.ArrayList;
@@ -176,32 +177,17 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
     String code = ctx.getRawSignature();
 
     // TODO: obsolete?
-    Type t = TypeParser.createFrom(expressionTypeProxy(ctx).toString(), true);
-    t.reference(PointerType.PointerOrigin.ARRAY);
+    Type t = TypeParser.createFrom(name, true);
 
-    NewExpression newExpression = NodeBuilder.newNewExpression(code, t);
-
-    // try to actually resolve the type
-    IASTDeclSpecifier declSpecifier = ctx.getTypeId().getDeclSpecifier();
-
-    if (declSpecifier instanceof CPPASTNamedTypeSpecifier) {
-      IBinding binding = ((CPPASTNamedTypeSpecifier) declSpecifier).getName().resolveBinding();
-
-      if (binding != null && !(binding instanceof CPPScope.CPPScopeProblem)) {
-        // update the type
-        newExpression.setType(TypeParser.createFrom(binding.getName(), true));
-      } else {
-        log.debug(
-            "Could not resolve binding of type {} for {}, it is probably defined somewhere externally",
-            name,
-            newExpression);
-      }
-    }
+    NewExpression newExpression =
+        NodeBuilder.newNewExpression(code, t.reference(PointerOrigin.POINTER));
 
     IASTInitializer init = ctx.getInitializer();
 
     if (init != null) {
-      newExpression.setInitializer(this.lang.getInitializerHandler().handle(init));
+      Expression initializer = this.lang.getInitializerHandler().handle(init);
+      initializer.setType(t);
+      newExpression.setInitializer(initializer);
     }
 
     return newExpression;

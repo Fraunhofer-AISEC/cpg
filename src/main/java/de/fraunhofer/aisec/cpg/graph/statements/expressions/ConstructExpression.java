@@ -30,6 +30,7 @@ import static de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.unwrap;
 
 import de.fraunhofer.aisec.cpg.graph.*;
 import de.fraunhofer.aisec.cpg.graph.HasType.TypeListener;
+import de.fraunhofer.aisec.cpg.graph.TypeManager.Language;
 import de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDeclaration;
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration;
 import de.fraunhofer.aisec.cpg.graph.edge.Properties;
@@ -126,8 +127,15 @@ public class ConstructExpression extends Expression implements TypeListener {
       return;
     }
 
+    Type newType;
+    if (TypeManager.getInstance().getLanguage() == Language.CXX && src instanceof NewExpression) {
+      newType = src.getPropagationType().dereference();
+    } else {
+      newType = src.getPropagationType();
+    }
+
     Type previous = this.type;
-    setType(src.getPropagationType(), root);
+    setType(newType, root);
     if (!previous.equals(this.type)) {
       this.type.setTypeOrigin(Type.Origin.DATAFLOW);
     }
@@ -139,7 +147,17 @@ public class ConstructExpression extends Expression implements TypeListener {
       return;
     }
     Set<Type> subTypes = new HashSet<>(getPossibleSubTypes());
-    subTypes.addAll(src.getPossibleSubTypes());
+    subTypes.addAll(
+        src.getPossibleSubTypes().stream()
+            .map(
+                t -> {
+                  if (TypeManager.getInstance().getLanguage() == Language.CXX
+                      && src instanceof NewExpression) {
+                    return t.dereference();
+                  }
+                  return t;
+                })
+            .collect(Collectors.toSet()));
     setPossibleSubTypes(subTypes, root);
   }
 

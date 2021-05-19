@@ -84,10 +84,25 @@ public class ScopeManager {
    * @param toMerge The scope managers to merge into this one
    */
   public void mergeFrom(Collection<ScopeManager> toMerge) {
+    List<GlobalScope> globalScopes =
+        toMerge.stream()
+            .map(s -> s.scopeMap.get(null))
+            .filter(GlobalScope.class::isInstance)
+            .map(GlobalScope.class::cast)
+            .collect(Collectors.toList());
+    Scope currGlobalScope = this.scopeMap.get(null);
+    if (!(currGlobalScope instanceof GlobalScope)) {
+      LOGGER.error("Scope for null node is not a GlobalScope!");
+    } else {
+      ((GlobalScope) currGlobalScope).mergeFrom(globalScopes);
+    }
+
     for (ScopeManager manager : toMerge) {
       this.scopeMap.putAll(manager.scopeMap);
       this.fqnScopeMap.putAll(manager.fqnScopeMap);
     }
+
+    this.scopeMap.put(null, currGlobalScope);
   }
 
   private void pushScope(Scope scope) {

@@ -39,12 +39,16 @@ import de.fraunhofer.aisec.cpg.passes.*;
 import java.io.File;
 import java.util.*;
 import org.checkerframework.checker.nullness.qual.NonNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * The configuration for the {@link TranslationManager} holds all information that is used during
  * the translation.
  */
 public class TranslationConfiguration {
+
+  private static final Logger log = LoggerFactory.getLogger(TranslationConfiguration.class);
 
   /** Set to true to generate debug output for the parser. */
   public final boolean debugParser;
@@ -440,7 +444,9 @@ public class TranslationConfiguration {
     /**
      * If true, the ASTs for the source files are parsed in parallel, but the passes afterwards will
      * still run in a single thread. This speeds up initial parsing but makes sure that further
-     * graph enrichment algorithms remain correct.
+     * graph enrichment algorithms remain correct. Please make sure to also set {@link
+     * #typeSystemActiveInFrontend(boolean)} to true to avoid probabilistic errors that appear
+     * depending on the parsing order.
      *
      * @param b the new value
      * @return
@@ -464,6 +470,12 @@ public class TranslationConfiguration {
     }
 
     public TranslationConfiguration build() {
+      if (useParallelFrontends && typeSystemActiveInFrontend) {
+        log.warn(
+            "Not disabling the type system during the frontend "
+                + "phase is not recommended when using the parallel frontends feature! "
+                + "This may result in erroneous results.");
+      }
       return new TranslationConfiguration(
           symbols,
           sourceLocations,

@@ -123,6 +123,8 @@ object TestUtils {
                 .disableCleanup()
                 .debugParser(true)
                 .failOnError(true)
+                .typeSystemActiveInFrontend(false)
+                .useParallelFrontends(true)
                 .defaultLanguages()
         if (usePasses) {
             builder.defaultPasses()

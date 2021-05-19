@@ -216,7 +216,7 @@ public class TranslationManager {
 
     if (!config.typeSystemActiveInFrontend) {
       TypeManager.setTypeSystemActive(true);
-      result.getTranslationUnits().forEach(SubgraphWalker::activateTypes);
+      result.getTranslationUnits().forEach(tu -> SubgraphWalker.activateTypes(tu, scopeManager));
     }
 
     return usedFrontends;

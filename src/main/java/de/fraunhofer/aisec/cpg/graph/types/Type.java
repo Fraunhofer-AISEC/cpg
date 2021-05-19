@@ -205,6 +205,14 @@ public abstract class Type extends Node {
       isAtomic = atomic;
     }
 
+    public Qualifier merge(Qualifier other) {
+      return new Qualifier(
+          this.isConst | other.isConst,
+          this.isVolatile | other.isVolatile,
+          this.isRestrict | other.isRestrict,
+          this.isAtomic | other.isAtomic);
+    }
+
     @Override
     public boolean equals(Object o) {
       if (this == o) return true;
