@@ -25,9 +25,12 @@
  */
 package de.fraunhofer.aisec.cpg_vis_neo4j
 
+import de.fraunhofer.aisec.cpg.ExperimentalPython
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationManager
 import de.fraunhofer.aisec.cpg.TranslationResult
+import de.fraunhofer.aisec.cpg.frontends.golang.GoLanguageFrontend
+import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguageFrontend
 import java.io.File
 import java.net.ConnectException
 import java.nio.file.Paths
@@ -120,6 +123,14 @@ class Application : Callable<Int> {
     @CommandLine.Option(names = ["--includes-file"], description = ["Load includes from file"])
     private var includesFile: File? = null
 
+    @CommandLine.Option(
+        names = ["--enable-experimental-languages"],
+        description =
+            [
+                "Enables the experimental languages Python and Go. Be aware, that further steps might be necessary to install native libraries such as jep or libcpgo"]
+    )
+    private var enableExperimentalLanguages: Boolean = false
+
     /**
      * Pushes the whole translationResult to the neo4j db.
      *
@@ -200,6 +211,7 @@ class Application : Callable<Int> {
      * point to a file, is a directory or point to a hidden file or the paths does not have the same
      * top level path.
      */
+    @OptIn(ExperimentalPython::class, de.fraunhofer.aisec.cpg.ExperimentalGolang::class)
     private fun setupTranslationConfiguration(): TranslationConfiguration {
         assert(files.isNotEmpty())
         val filePaths = arrayOfNulls<File>(files.size)
@@ -227,6 +239,18 @@ class Application : Callable<Int> {
                 .defaultLanguages()
                 .loadIncludes(loadIncludes)
                 .debugParser(DEBUG_PARSER)
+
+        if (enableExperimentalLanguages) {
+            translationConfiguration.registerLanguage(
+                PythonLanguageFrontend::class.java,
+                PythonLanguageFrontend.PY_EXTENSIONS
+            )
+
+            translationConfiguration.registerLanguage(
+                GoLanguageFrontend::class.java,
+                GoLanguageFrontend.GOLANG_EXTENSIONS
+            )
+        }
 
         includesFile?.let { theFile ->
             log.info("Load includes form file: $theFile")
