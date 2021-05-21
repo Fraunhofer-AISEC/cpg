@@ -124,12 +124,20 @@ class Application : Callable<Int> {
     private var includesFile: File? = null
 
     @CommandLine.Option(
-        names = ["--enable-experimental-languages"],
+        names = ["--enable-experimental-python"],
         description =
             [
-                "Enables the experimental languages Python and Go. Be aware, that further steps might be necessary to install native libraries such as jep or libcpgo"]
+                "Enables the experimental language frontend for Python. Be aware, that further steps might be necessary to install native libraries such as jep"]
     )
-    private var enableExperimentalLanguages: Boolean = false
+    private var enableExperimentalPython: Boolean = false
+
+    @CommandLine.Option(
+        names = ["--enable-experimental-go"],
+        description =
+            [
+                "Enables the experimental language frontend for Go. Be aware, that further steps might be necessary to install native libraries such as cpgo"]
+    )
+    private var enableExperimentalGo: Boolean = false
 
     /**
      * Pushes the whole translationResult to the neo4j db.
@@ -240,12 +248,14 @@ class Application : Callable<Int> {
                 .loadIncludes(loadIncludes)
                 .debugParser(DEBUG_PARSER)
 
-        if (enableExperimentalLanguages) {
+        if (enableExperimentalPython) {
             translationConfiguration.registerLanguage(
                 PythonLanguageFrontend::class.java,
                 PythonLanguageFrontend.PY_EXTENSIONS
             )
+        }
 
+        if (enableExperimentalGo) {
             translationConfiguration.registerLanguage(
                 GoLanguageFrontend::class.java,
                 GoLanguageFrontend.GOLANG_EXTENSIONS

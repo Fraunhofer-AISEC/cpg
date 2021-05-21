@@ -57,7 +57,7 @@ the distribution (see above), use the following steps to analyse a python file.
 
 ```
 cd ./build/install/cpg-neo4j
-bin/cpg-neo4j --enable-experimental-languages ../../../src/test/resources/test.py
+bin/cpg-neo4j --enable-experimental-python ../../../src/test/resources/test.py
 ```
 
 It is important to change into the directory where the distribution is installed, otherwise the `cpg.py` will not be found.
