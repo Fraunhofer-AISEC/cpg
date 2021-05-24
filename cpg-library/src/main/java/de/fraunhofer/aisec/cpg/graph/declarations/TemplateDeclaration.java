@@ -33,6 +33,7 @@ import de.fraunhofer.aisec.cpg.graph.edge.Properties;
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import org.neo4j.ogm.annotation.Relationship;
 
 /** Abstract class representing the template concept */
@@ -87,5 +88,20 @@ public abstract class TemplateDeclaration extends Declaration implements Declara
   public void removeParameter(ParamVariableDeclaration nonTypeTemplateParamDeclaration) {
     this.parameters.removeIf(
         propertyEdge -> propertyEdge.getEnd().equals(nonTypeTemplateParamDeclaration));
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) return true;
+    if (o == null || getClass() != o.getClass()) return false;
+    if (!super.equals(o)) return false;
+    TemplateDeclaration that = (TemplateDeclaration) o;
+    return Objects.equals(parameters, that.parameters)
+        && PropertyEdge.propertyEqualsList(parameters, that.parameters);
+  }
+
+  @Override
+  public int hashCode() {
+    return super.hashCode();
   }
 }

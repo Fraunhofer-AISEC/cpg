@@ -161,7 +161,7 @@ public class CallExpression extends Expression implements TypeListener, HasType.
 
   public void setTemplate(boolean template) {
     this.template = template;
-    if (template == true) {
+    if (template) {
       this.templateParameters = new ArrayList<>();
     }
   }

@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.graph.declarations;
 import de.fraunhofer.aisec.cpg.graph.HasDefault;
 import de.fraunhofer.aisec.cpg.graph.SubGraph;
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression;
+import java.util.Objects;
 import org.neo4j.ogm.annotation.Relationship;
 
 /** A declaration of a function or nontype template parameter. */
@@ -53,5 +54,19 @@ public class ParamVariableDeclaration extends ValueDeclaration implements HasDef
 
   public void setDefault(Expression defaultValue) {
     this.defaultValue = defaultValue;
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) return true;
+    if (o == null || getClass() != o.getClass()) return false;
+    if (!super.equals(o)) return false;
+    ParamVariableDeclaration that = (ParamVariableDeclaration) o;
+    return variadic == that.variadic && Objects.equals(defaultValue, that.defaultValue);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(super.hashCode(), variadic, defaultValue);
   }
 }
