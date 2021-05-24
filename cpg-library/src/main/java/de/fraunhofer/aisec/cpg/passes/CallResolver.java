@@ -309,6 +309,28 @@ public class CallResolver extends Pass {
     return parameterizedSignature;
   }
 
+  private void handleImplicitTemplateParameter(
+      FunctionTemplateDeclaration functionTemplateDeclaration,
+      int i,
+      Map<Declaration, Node> instantiationSignature,
+      Map<Node, TemplateDeclaration.TemplateInitialization> instantiationType,
+      Map<Declaration, Integer> orderedInitializationSignature) {
+    if (((HasDefault) functionTemplateDeclaration.getParameters().get(i)).getDefault() != null) {
+      // If we have a default we fill it in
+      Node defaultNode =
+          ((HasDefault) functionTemplateDeclaration.getParameters().get(i)).getDefault();
+      instantiationSignature.put(functionTemplateDeclaration.getParameters().get(i), defaultNode);
+      instantiationType.put(defaultNode, TemplateDeclaration.TemplateInitialization.DEFAULT);
+      orderedInitializationSignature.put(functionTemplateDeclaration.getParameters().get(i), i);
+    } else {
+      // If there is no default, we don't have information on the parameter -> check
+      // autodeduction
+      instantiationSignature.put(functionTemplateDeclaration.getParameters().get(i), null);
+      instantiationType.put(null, TemplateDeclaration.TemplateInitialization.UNKNOWN);
+      orderedInitializationSignature.put(functionTemplateDeclaration.getParameters().get(i), i);
+    }
+  }
+
   private Map<Declaration, Node> constructTemplateInitializationSignatureFromTemplateParameters(
       FunctionTemplateDeclaration functionTemplateDeclaration,
       CallExpression templateCall,
@@ -333,22 +355,12 @@ public class CallResolver extends Pass {
           return null;
         }
       } else {
-        if (((HasDefault) functionTemplateDeclaration.getParameters().get(i)).getDefault()
-            != null) {
-          // If we have a default we fill it in
-          Node defaultNode =
-              ((HasDefault) functionTemplateDeclaration.getParameters().get(i)).getDefault();
-          instantiationSignature.put(
-              functionTemplateDeclaration.getParameters().get(i), defaultNode);
-          instantiationType.put(defaultNode, TemplateDeclaration.TemplateInitialization.DEFAULT);
-          orderedInitializationSignature.put(functionTemplateDeclaration.getParameters().get(i), i);
-        } else {
-          // If there is no default, we don't have information on the parameter -> check
-          // autodeduction
-          instantiationSignature.put(functionTemplateDeclaration.getParameters().get(i), null);
-          instantiationType.put(null, TemplateDeclaration.TemplateInitialization.UNKNOWN);
-          orderedInitializationSignature.put(functionTemplateDeclaration.getParameters().get(i), i);
-        }
+        handleImplicitTemplateParameter(
+            functionTemplateDeclaration,
+            i,
+            instantiationSignature,
+            instantiationType,
+            orderedInitializationSignature);
       }
     }
     return instantiationSignature;
@@ -406,9 +418,6 @@ public class CallResolver extends Pass {
 
     List<FunctionTemplateDeclaration> instantiationCandidates =
         lang.getScopeManager().resolveFunctionTemplateDeclaration(templateCall);
-
-    List<FunctionTemplateDeclaration> invokes = new ArrayList<>();
-    Map<FunctionTemplateDeclaration, Map<Declaration, Node>> initialization = new HashMap<>();
 
     for (FunctionTemplateDeclaration functionTemplateDeclaration : instantiationCandidates) {
       Map<Node, TemplateDeclaration.TemplateInitialization> initializationType = new HashMap<>();
@@ -519,7 +528,8 @@ public class CallResolver extends Pass {
 
     // Add DFG edges from the instantiation Expression to the ParamVariableDeclaration in the
     // Template.
-    for (Declaration declaration : initializationSignature.keySet()) {
+    for (Map.Entry<Declaration, Node> entry : initializationSignature.entrySet()) {
+      Declaration declaration = entry.getKey();
       if (declaration instanceof ParamVariableDeclaration) {
         declaration.addPrevDFG(initializationSignature.get(declaration));
         initializationSignature.get(declaration).addNextDFG(declaration);
@@ -546,13 +556,12 @@ public class CallResolver extends Pass {
         Expression callArgument = callArguments.get(i);
         if (callArgument == null) return false;
 
-        if (!(callArgument.getType().equals(functionDeclarationSignature.get(i)))) {
-          if (!(callArgument.getType().isPrimitive()
-              && functionDeclarationSignature.get(i).isPrimitive()
-              && explicitInstantiation.contains(
-                  functionDeclaration.getParameters().get(i).getType()))) {
-            return false;
-          }
+        if (!(callArgument.getType().equals(functionDeclarationSignature.get(i)))
+            && !(callArgument.getType().isPrimitive()
+                && functionDeclarationSignature.get(i).isPrimitive()
+                && explicitInstantiation.contains(
+                    functionDeclaration.getParameters().get(i).getType()))) {
+          return false;
         }
       }
       return true;
@@ -912,53 +921,63 @@ public class CallResolver extends Pass {
       // C++ allows function overloading. Make sure we have at least the same number of arguments
       List<FunctionDeclaration> invocationCandidates = null;
       if (this.getLang() instanceof CXXLanguageFrontend) {
-        invocationCandidates =
-            lang.getScopeManager().resolveFunctionStopScopeTraversalOnDefinition(call).stream()
-                .filter(
-                    f ->
-                        f.hasSignature(call.getSignature())
-                            && definedBefore(f.getLocation(), call.getLocation()))
-                .collect(Collectors.toList());
-
-        if (invocationCandidates.isEmpty()) {
-          // Check for usage of default args
-          invocationCandidates.addAll(resolveWithDefaultArgsFunc(call));
-        }
-
-        if (invocationCandidates.isEmpty()) {
-          /*
-           check if the call can be resolved to a function template instantiation. If yes we
-           resolved the call, if no there won't be a template dummy, we will do a
-           unctionDeclaration dummy instead
-          */
-          call.setTemplateParameters(new ArrayList<>());
-          if (handleTemplateFunctionCalls(curClass, call, false)) {
-            return;
-          } else {
-            call.setTemplateParameters(null);
-          }
-        }
-
-        if (invocationCandidates.isEmpty()) {
-          // If we don't find any candidate and our current language is c/c++ we check if there is a
-          // candidate with an implicit cast
-          invocationCandidates.addAll(resolveWithImplicitCastFunc(call));
-        }
-
+        handleNormalCallCXX(curClass, call);
       } else {
         invocationCandidates = lang.getScopeManager().resolveFunction(call);
+
+        createFunctionDummy(invocationCandidates, call);
+        call.setInvokes(invocationCandidates);
       }
 
-      if (invocationCandidates.isEmpty()) {
-        // If we still have no candidates and our current language is c++ we create dummy
-        // FunctionDeclaration
-        invocationCandidates =
-            List.of(createDummy(null, call.getName(), call.getCode(), false, call.getSignature()));
-      }
-
-      call.setInvokes(invocationCandidates);
     } else if (!handlePossibleStaticImport(call, curClass)) {
       handleMethodCall(curClass, call);
+    }
+  }
+
+  private void handleNormalCallCXX(RecordDeclaration curClass, CallExpression call) {
+    List<FunctionDeclaration> invocationCandidates =
+        lang.getScopeManager().resolveFunctionStopScopeTraversalOnDefinition(call).stream()
+            .filter(
+                f ->
+                    f.hasSignature(call.getSignature())
+                        && definedBefore(f.getLocation(), call.getLocation()))
+            .collect(Collectors.toList());
+
+    if (invocationCandidates.isEmpty()) {
+      // Check for usage of default args
+      invocationCandidates.addAll(resolveWithDefaultArgsFunc(call));
+    }
+
+    if (invocationCandidates.isEmpty()) {
+      /*
+       Check if the call can be resolved to a function template instantiation. If it can be resolver, we
+       resolve the call. Otherwise there won't be a template dummy, we will do a
+       FunctionDeclaration dummy instead.
+      */
+      call.setTemplateParameters(new ArrayList<>());
+      if (handleTemplateFunctionCalls(curClass, call, false)) {
+        return;
+      } else {
+        call.setTemplateParameters(null);
+      }
+    }
+
+    if (invocationCandidates.isEmpty()) {
+      // If we don't find any candidate and our current language is c/c++ we check if there is a
+      // candidate with an implicit cast
+      invocationCandidates.addAll(resolveWithImplicitCastFunc(call));
+    }
+    createFunctionDummy(invocationCandidates, call);
+    call.setInvokes(invocationCandidates);
+  }
+
+  private void createFunctionDummy(
+      List<FunctionDeclaration> invocationCandidates, CallExpression call) {
+    if (invocationCandidates.isEmpty()) {
+      // If we still have no candidates and our current language is c++ we create dummy
+      // FunctionDeclaration
+      invocationCandidates.add(
+          createDummy(null, call.getName(), call.getCode(), false, call.getSignature()));
     }
   }
 

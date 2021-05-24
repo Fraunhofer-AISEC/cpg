@@ -245,6 +245,78 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
     }
   }
 
+  private FunctionTemplateDeclaration handleFunctionTemplateDeclaration(
+      CPPASTTemplateDeclaration ctx) {
+    FunctionTemplateDeclaration templateDeclaration =
+        NodeBuilder.newFunctionTemplateDeclaration(
+            ctx.getRawSignature().split("\\{")[0].replace('\n', ' ').trim(),
+            this.lang.getCodeFromRawNode(ctx),
+            null);
+    templateDeclaration.setLocation(this.lang.getLocationFromRawNode(ctx));
+    lang.getScopeManager().addDeclaration(templateDeclaration);
+    lang.getScopeManager().enterScope(templateDeclaration);
+
+    for (ICPPASTTemplateParameter templateParameter : ctx.getTemplateParameters()) {
+      if (templateParameter instanceof CPPASTSimpleTypeTemplateParameter) {
+        // Handle Types as Parameters
+        TypeParamDeclaration typeParamDeclaration =
+            (TypeParamDeclaration)
+                this.lang
+                    .getDeclaratorHandler()
+                    .handle((CPPASTSimpleTypeTemplateParameter) templateParameter);
+        ParameterizedType parameterizedType =
+            TypeManager.getInstance()
+                .createOrGetTypeParameter(
+                    templateDeclaration,
+                    ((CPPASTSimpleTypeTemplateParameter) templateParameter).getName().toString());
+
+        typeParamDeclaration.setType(parameterizedType);
+
+        if (((CPPASTSimpleTypeTemplateParameter) templateParameter).getDefaultType() != null) {
+          Type defaultType =
+              TypeParser.createFrom(
+                  ((CPPASTSimpleTypeTemplateParameter) templateParameter)
+                      .getDefaultType()
+                      .getDeclSpecifier()
+                      .getRawSignature(),
+                  false,
+                  lang);
+          typeParamDeclaration.setDefault(defaultType);
+        }
+
+        templateDeclaration.addParameter(typeParamDeclaration);
+      } else if (templateParameter instanceof CPPASTParameterDeclaration) {
+        // Handle Values as Parameters
+        ParamVariableDeclaration nonTypeTemplateParamDeclaration =
+            this.lang
+                .getParameterDeclarationHandler()
+                .handle((IASTParameterDeclaration) templateParameter);
+
+        if (((CPPASTParameterDeclaration) templateParameter).getDeclarator().getInitializer()
+            != null) {
+          Expression defaultExpression =
+              this.lang
+                  .getInitializerHandler()
+                  .handle(
+                      ((CPPASTParameterDeclaration) templateParameter)
+                          .getDeclarator()
+                          .getInitializer());
+          nonTypeTemplateParamDeclaration.setDefault(defaultExpression);
+          nonTypeTemplateParamDeclaration.addPrevDFG(defaultExpression);
+          defaultExpression.addNextDFG(nonTypeTemplateParamDeclaration);
+        }
+        templateDeclaration.addParameter(nonTypeTemplateParamDeclaration);
+        lang.getScopeManager().addDeclaration(nonTypeTemplateParamDeclaration);
+      }
+    }
+
+    // Handle FunctionTemplate
+    lang.getDeclarationHandler().handle(ctx.getDeclaration());
+    lang.getScopeManager().leaveScope(templateDeclaration);
+    templateDeclaration.setName(templateDeclaration.getRealization().get(0).getName());
+    return templateDeclaration;
+  }
+
   private Declaration handleTemplateDeclaration(CPPASTTemplateDeclaration ctx) {
     warnWithFileLocation(
         lang,
@@ -253,75 +325,7 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
         "Parsing template declarations is not supported (yet). Will ignore template and parse inner declaration");
 
     if (ctx.getDeclaration() instanceof CPPASTFunctionDefinition) {
-
-      FunctionTemplateDeclaration templateDeclaration =
-          NodeBuilder.newFunctionTemplateDeclaration(
-              ctx.getRawSignature().split("\\{")[0].replace('\n', ' ').trim(),
-              this.lang.getCodeFromRawNode(ctx),
-              null);
-      templateDeclaration.setLocation(this.lang.getLocationFromRawNode(ctx));
-      lang.getScopeManager().addDeclaration(templateDeclaration);
-      lang.getScopeManager().enterScope(templateDeclaration);
-
-      for (ICPPASTTemplateParameter templateParameter : ctx.getTemplateParameters()) {
-        if (templateParameter instanceof CPPASTSimpleTypeTemplateParameter) {
-          // Handle Types as Parameters
-          TypeParamDeclaration typeParamDeclaration =
-              (TypeParamDeclaration)
-                  this.lang
-                      .getDeclaratorHandler()
-                      .handle((CPPASTSimpleTypeTemplateParameter) templateParameter);
-          ParameterizedType parameterizedType =
-              TypeManager.getInstance()
-                  .createOrGetTypeParameter(
-                      templateDeclaration,
-                      ((CPPASTSimpleTypeTemplateParameter) templateParameter).getName().toString());
-
-          typeParamDeclaration.setType(parameterizedType);
-
-          if (((CPPASTSimpleTypeTemplateParameter) templateParameter).getDefaultType() != null) {
-            Type defaultType =
-                TypeParser.createFrom(
-                    ((CPPASTSimpleTypeTemplateParameter) templateParameter)
-                        .getDefaultType()
-                        .getDeclSpecifier()
-                        .getRawSignature(),
-                    false,
-                    lang);
-            typeParamDeclaration.setDefault(defaultType);
-          }
-
-          templateDeclaration.addParameter(typeParamDeclaration);
-        } else if (templateParameter instanceof CPPASTParameterDeclaration) {
-          // Handle Values as Parameters
-          ParamVariableDeclaration nonTypeTemplateParamDeclaration =
-              this.lang
-                  .getParameterDeclarationHandler()
-                  .handle((IASTParameterDeclaration) templateParameter);
-
-          if (((CPPASTParameterDeclaration) templateParameter).getDeclarator().getInitializer()
-              != null) {
-            Expression defaultExpression =
-                this.lang
-                    .getInitializerHandler()
-                    .handle(
-                        ((CPPASTParameterDeclaration) templateParameter)
-                            .getDeclarator()
-                            .getInitializer());
-            nonTypeTemplateParamDeclaration.setDefault(defaultExpression);
-            nonTypeTemplateParamDeclaration.addPrevDFG(defaultExpression);
-            defaultExpression.addNextDFG(nonTypeTemplateParamDeclaration);
-          }
-          templateDeclaration.addParameter(nonTypeTemplateParamDeclaration);
-          lang.getScopeManager().addDeclaration(nonTypeTemplateParamDeclaration);
-        }
-      }
-
-      // Handle FunctionTemplate
-      lang.getDeclarationHandler().handle(ctx.getDeclaration());
-      lang.getScopeManager().leaveScope(templateDeclaration);
-      templateDeclaration.setName(templateDeclaration.getRealization().get(0).getName());
-      return templateDeclaration;
+      handleFunctionTemplateDeclaration(ctx);
     } else {
       // Handle RecordTemplate
 

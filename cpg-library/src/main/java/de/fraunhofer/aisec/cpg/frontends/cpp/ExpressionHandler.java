@@ -398,6 +398,24 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
     return unaryOperator;
   }
 
+  private void handleTemplateArguments(
+      CPPASTFunctionCallExpression ctx, CallExpression callExpression) {
+    for (IASTNode argument :
+        ((CPPASTTemplateId) ((CPPASTIdExpression) ctx.getFunctionNameExpression()).getName())
+            .getTemplateArguments()) {
+      if (argument instanceof CPPASTTypeId) {
+        callExpression.addTemplateParameter(
+            TypeParser.createFrom(
+                ((CPPASTTypeId) argument).getDeclSpecifier().toString(), false, lang),
+            TemplateDeclaration.TemplateInitialization.EXPLICIT);
+      } else if (argument instanceof IASTInitializerClause) {
+        callExpression.addTemplateParameter(
+            lang.getExpressionHandler().handle((IASTInitializerClause) argument),
+            TemplateDeclaration.TemplateInitialization.EXPLICIT);
+      }
+    }
+  }
+
   private CallExpression handleFunctionCallExpression(CPPASTFunctionCallExpression ctx) {
     Expression reference = this.handle(ctx.getFunctionNameExpression());
 
@@ -448,20 +466,7 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
               .toString();
       callExpression = NodeBuilder.newCallExpression(name, name, ctx.getRawSignature(), true);
 
-      for (IASTNode argument :
-          ((CPPASTTemplateId) ((CPPASTIdExpression) ctx.getFunctionNameExpression()).getName())
-              .getTemplateArguments()) {
-        if (argument instanceof CPPASTTypeId) {
-          callExpression.addTemplateParameter(
-              TypeParser.createFrom(
-                  ((CPPASTTypeId) argument).getDeclSpecifier().toString(), false, lang),
-              TemplateDeclaration.TemplateInitialization.EXPLICIT);
-        } else if (argument instanceof IASTInitializerClause) {
-          callExpression.addTemplateParameter(
-              lang.getExpressionHandler().handle((IASTInitializerClause) argument),
-              TemplateDeclaration.TemplateInitialization.EXPLICIT);
-        }
-      }
+      handleTemplateArguments(ctx, callExpression);
 
     } else {
       String fqn = reference.getName();
