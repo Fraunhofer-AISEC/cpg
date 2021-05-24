@@ -15,7 +15,7 @@ This library uses [Eclipse CDT](https://www.eclipse.org/cdt/) for parsing C/C++ 
 
 ### For Visualization Purposes
 
-In order to get familiar with the graph itself, you can take a look at our companion project [cpg-vis-neo4j](https://github.com/Fraunhofer-AISEC/cpg-vis-neo4j). It uses this library to generate the CPG for a set of user-provided code files. The graph is then persisted to a [Neo4j](https://neo4j.com/) graph database. The advantage this has for the user, is that Neo4j's visualization software [Neo4j Browser](https://neo4j.com/developer/neo4j-browser/) can be used to graphically look at the CPG nodes and edges, instead of their Java representations.
+In order to get familiar with the graph itself, you can use the subproject [cpg-neo4j](https://github.com/Fraunhofer-AISEC/cpg/tree/master/cpg-neo4j). It uses this library to generate the CPG for a set of user-provided code files. The graph is then persisted to a [Neo4j](https://neo4j.com/) graph database. The advantage this has for the user, is that Neo4j's visualization software [Neo4j Browser](https://neo4j.com/developer/neo4j-browser/) can be used to graphically look at the CPG nodes and edges, instead of their Java representations.
 
 ### As Library
 
@@ -34,7 +34,7 @@ repositories {
 }
 
 dependencies {
-    api("de.fraunhofer.aisec", "cpg", "3.3.1")
+    api("de.fraunhofer.aisec", "cpg", "3.5.1")
 }
 ```
 
@@ -46,7 +46,7 @@ A published artifact of every commit can be requested through [JitPack](https://
 
 The library can be used on the command line using `jshell`, the Java shell to try out some basic queries.
 
-First, a jar consisting all the necessary dependencies should be created with `./gradlew shadowJar`. Afterwards, the shell can be launched using `jshell --class-path build/libs/cpg-all.jar`.
+First, a jar consisting all the necessary dependencies should be created with `./gradlew shadowJar`. Afterwards, the shell can be launched using `jshell --class-path cpg-library/build/libs/cpg-library-all.jar`.
 
 The following snippet creates a basic `TranslationManager` with default settings to analyze a sample file in `src/test/resources/openssl/client.cpp`:
 
@@ -149,11 +149,9 @@ A preliminary version of this cpg has been used to analyze ARM binaries of iOS a
 
 [1] Julian Schütte, Dennis Titze. _liOS: Lifting iOS Apps for Fun and Profit._ Proceedings of the ESORICS International Workshop on Secure Internet of Things (SIoT), Luxembourg, 2019
 
-
 An initial publication on the concept of using code property graphs for static analysis:
 
 [2] Yamaguchi et al. - Modeling and Discovering Vulnerabilities with Code Property Graphs https://www.sec.cs.tu-bs.de/pubs/2014-ieeesp.pdf
-
 
 [3] is an unrelated, yet similar project by the authors of the above publication, that is used by the open source software Joern [4] for analysing C/C++ code. While [3] is a specification and implementation of the data structure, this project here includes various _Language frontends_ (currently C/C++ and Java, Python to com) and allows creating custom graphs by configuring _Passes_ which extend the graph as necessary for a specific analysis:
 
