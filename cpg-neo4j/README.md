@@ -17,10 +17,10 @@ Build using Gradle
 ## Usage
 
 ```
-./build/install/cpg-vis-neo4j/bin/cpg-vis-neo4j [--host=<host>] [--port=<port>]
-                                                [--user=<neo4jUsername>] [--password=<neo4jPassword>]
-                                                [--includes-file=<includesFile>] [--save-depth=<depth>] 
-                                                <files>...
+./build/install/cpg-neo4j/bin/cpg-neo4j [--host=<host>] [--port=<port>]
+                                        [--user=<neo4jUsername>] [--password=<neo4jPassword>]
+                                        [--includes-file=<includesFile>] [--save-depth=<depth>] 
+                                        <files>...
 
       <files>...             The paths to analyze. If module support is
                                enabled, the paths will be looked at if they
