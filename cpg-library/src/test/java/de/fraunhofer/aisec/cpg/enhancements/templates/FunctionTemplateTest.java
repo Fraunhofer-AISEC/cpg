@@ -31,6 +31,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import de.fraunhofer.aisec.cpg.BaseTest;
 import de.fraunhofer.aisec.cpg.TestUtils;
 import de.fraunhofer.aisec.cpg.graph.declarations.*;
+import de.fraunhofer.aisec.cpg.graph.edge.Properties;
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*;
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType;
 import de.fraunhofer.aisec.cpg.graph.types.ParameterizedType;
@@ -488,6 +489,73 @@ public class FunctionTemplateTest extends BaseTest {
 
     assertEquals(1, f4.getInvokes().size());
     assertTrue(f4.getInvokes().get(0).isImplicit());
+  }
+
+  @Test
+  void testFunctionTemplateInMethod() throws Exception {
+    List<TranslationUnitDeclaration> result =
+        TestUtils.analyze(
+            List.of(Path.of(topLevel.toString(), "functionTemplateInvocation7.cpp").toFile()),
+            topLevel,
+            true);
+
+    RecordDeclaration recordDeclaration =
+        TestUtils.findByUniquePredicate(
+            TestUtils.subnodesOfType(result, RecordDeclaration.class),
+            c -> c.getName().equals("MyClass"));
+
+    FunctionTemplateDeclaration templateDeclaration =
+        TestUtils.findByUniquePredicate(
+            TestUtils.subnodesOfType(result, FunctionTemplateDeclaration.class),
+            t -> t.getName().equals("f") && !t.isImplicit());
+
+    assertEquals(2, templateDeclaration.getParameters().size());
+
+    assertEquals(1, recordDeclaration.getTemplates().size());
+    assertTrue(recordDeclaration.getTemplates().contains(templateDeclaration));
+
+    MethodDeclaration methodDeclaration =
+        TestUtils.findByUniquePredicate(
+            TestUtils.subnodesOfType(result, MethodDeclaration.class),
+            m -> !(m.isImplicit()) && m.getName().equals("fixed_multiply"));
+    assertEquals(1, templateDeclaration.getRealization().size());
+    assertTrue(templateDeclaration.getRealization().contains(methodDeclaration));
+
+    // Test callexpression to invoke the realization
+    CallExpression callExpression =
+        TestUtils.findByUniquePredicate(
+            TestUtils.subnodesOfType(result, CallExpression.class),
+            c -> c.getCode() != null && c.getCode().equals("myObj.fixed_multiply<int>(3)"));
+    assertEquals(1, callExpression.getInvokes().size());
+    assertEquals(methodDeclaration, callExpression.getInvokes().get(0));
+
+    assertEquals(templateDeclaration, callExpression.getInstantiation());
+
+    assertEquals(2, callExpression.getTemplateParameters().size());
+
+    assertEquals("int", callExpression.getTemplateParameters().get(0).getName());
+    assertEquals(
+        TemplateDeclaration.TemplateInitialization.EXPLICIT,
+        callExpression
+            .getTemplateParametersPropertyEdge()
+            .get(0)
+            .getProperty(Properties.INSTANTIATION));
+    assertEquals(
+            0,
+            callExpression
+                    .getTemplateParametersPropertyEdge()
+                    .get(0)
+                    .getProperty(Properties.INDEX));
+
+    Literal<Integer> int5 =
+            TestUtils.findByUniquePredicate(
+                    TestUtils.subnodesOfType(result, Literal.class), l -> l.getValue().equals(5));
+
+
+    assertEquals(int5, callExpression.getTemplateParameters().get(1));
+    assertEquals(1, callExpression.getTemplateParametersPropertyEdge().get(1).getProperty(Properties.INDEX));
+    assertEquals(TemplateDeclaration.TemplateInitialization.DEFAULT, callExpression.getTemplateParametersPropertyEdge().get(1).getProperty(Properties.INSTANTIATION));
+
   }
 
   @Test
