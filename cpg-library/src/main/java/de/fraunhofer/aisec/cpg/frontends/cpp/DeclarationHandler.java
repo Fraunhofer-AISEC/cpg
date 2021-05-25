@@ -42,6 +42,7 @@ import de.fraunhofer.aisec.cpg.graph.types.Type;
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser;
 import de.fraunhofer.aisec.cpg.helpers.Util;
 import de.fraunhofer.aisec.cpg.passes.scopes.RecordScope;
+import de.fraunhofer.aisec.cpg.passes.scopes.TemplateScope;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -131,7 +132,9 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
         functionDeclaration instanceof MethodDeclaration
             ? ((MethodDeclaration) functionDeclaration).getRecordDeclaration()
             : null;
-    var outsideOfRecord = !(lang.getScopeManager().getCurrentScope() instanceof RecordScope);
+    var outsideOfRecord =
+        !(lang.getScopeManager().getCurrentScope() instanceof RecordScope
+            || lang.getScopeManager().getCurrentScope() instanceof TemplateScope);
 
     if (recordDeclaration != null) {
       if (outsideOfRecord) {
@@ -155,7 +158,8 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
               .filter(m -> m.getSignature().equals(finalFunctionDeclaration.getSignature()))
               .collect(Collectors.toList());
 
-      if (candidates.isEmpty()) {
+      if (candidates.isEmpty()
+          && !(lang.getScopeManager().getCurrentScope() instanceof TemplateScope)) {
         log.warn(
             "Could not find declaration of method {} in record {}",
             functionDeclaration.getName(),
@@ -313,6 +317,11 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
     // Handle FunctionTemplate
     lang.getDeclarationHandler().handle(ctx.getDeclaration());
     lang.getScopeManager().leaveScope(templateDeclaration);
+
+    for (FunctionDeclaration functionDeclaration : templateDeclaration.getRealization()) {
+      lang.getScopeManager().addDeclaration(functionDeclaration);
+    }
+
     templateDeclaration.setName(templateDeclaration.getRealization().get(0).getName());
     return templateDeclaration;
   }

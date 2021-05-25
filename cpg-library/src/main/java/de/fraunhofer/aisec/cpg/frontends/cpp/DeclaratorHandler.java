@@ -38,6 +38,7 @@ import de.fraunhofer.aisec.cpg.graph.types.IncompleteType;
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser;
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType;
 import de.fraunhofer.aisec.cpg.passes.scopes.RecordScope;
+import de.fraunhofer.aisec.cpg.passes.scopes.TemplateScope;
 import java.util.Arrays;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -195,7 +196,9 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
     RecordDeclaration recordDeclaration = null;
 
     // remember, if this is a method declaration outside of the record
-    var outsideOfRecord = !(lang.getScopeManager().getCurrentScope() instanceof RecordScope);
+    var outsideOfRecord =
+        !(lang.getScopeManager().getCurrentScope() instanceof RecordScope
+            || lang.getScopeManager().getCurrentScope() instanceof TemplateScope);
 
     // check for function definitions that are really methods and constructors, i.e. if they contain
     // a scope operator
