@@ -156,6 +156,29 @@ public class FunctionTemplateTest extends BaseTest {
     // Check return values
     assertEquals(intType, callInt2.getType());
     assertEquals(floatType, callFloat3.getType());
+
+    // Check template arguments
+    assertEquals(2, callFloat3.getTemplateParameters().size());
+
+    assertEquals(floatType, callFloat3.getTemplateParameters().get(0));
+    assertEquals(
+        0, callFloat3.getTemplateParametersPropertyEdge().get(0).getProperty(Properties.INDEX));
+    assertEquals(
+        TemplateDeclaration.TemplateInitialization.EXPLICIT,
+        callFloat3
+            .getTemplateParametersPropertyEdge()
+            .get(0)
+            .getProperty(Properties.INSTANTIATION));
+
+    assertEquals(int3, callFloat3.getTemplateParameters().get(1));
+    assertEquals(
+        1, callFloat3.getTemplateParametersPropertyEdge().get(1).getProperty(Properties.INDEX));
+    assertEquals(
+        TemplateDeclaration.TemplateInitialization.EXPLICIT,
+        callFloat3
+            .getTemplateParametersPropertyEdge()
+            .get(1)
+            .getProperty(Properties.INSTANTIATION));
   }
 
   @Test
@@ -495,7 +518,7 @@ public class FunctionTemplateTest extends BaseTest {
   void testFunctionTemplateInMethod() throws Exception {
     List<TranslationUnitDeclaration> result =
         TestUtils.analyze(
-            List.of(Path.of(topLevel.toString(), "functionTemplateInvocation7.cpp").toFile()),
+            List.of(Path.of(topLevel.toString(), "functionTemplateMethod.cpp").toFile()),
             topLevel,
             true);
 
@@ -507,7 +530,7 @@ public class FunctionTemplateTest extends BaseTest {
     FunctionTemplateDeclaration templateDeclaration =
         TestUtils.findByUniquePredicate(
             TestUtils.subnodesOfType(result, FunctionTemplateDeclaration.class),
-            t -> t.getName().equals("f") && !t.isImplicit());
+            t -> t.getName().equals("fixed_multiply") && !t.isImplicit());
 
     assertEquals(2, templateDeclaration.getParameters().size());
 
@@ -541,21 +564,21 @@ public class FunctionTemplateTest extends BaseTest {
             .get(0)
             .getProperty(Properties.INSTANTIATION));
     assertEquals(
-            0,
-            callExpression
-                    .getTemplateParametersPropertyEdge()
-                    .get(0)
-                    .getProperty(Properties.INDEX));
+        0, callExpression.getTemplateParametersPropertyEdge().get(0).getProperty(Properties.INDEX));
 
     Literal<Integer> int5 =
-            TestUtils.findByUniquePredicate(
-                    TestUtils.subnodesOfType(result, Literal.class), l -> l.getValue().equals(5));
-
+        TestUtils.findByUniquePredicate(
+            TestUtils.subnodesOfType(result, Literal.class), l -> l.getValue().equals(5));
 
     assertEquals(int5, callExpression.getTemplateParameters().get(1));
-    assertEquals(1, callExpression.getTemplateParametersPropertyEdge().get(1).getProperty(Properties.INDEX));
-    assertEquals(TemplateDeclaration.TemplateInitialization.DEFAULT, callExpression.getTemplateParametersPropertyEdge().get(1).getProperty(Properties.INSTANTIATION));
-
+    assertEquals(
+        1, callExpression.getTemplateParametersPropertyEdge().get(1).getProperty(Properties.INDEX));
+    assertEquals(
+        TemplateDeclaration.TemplateInitialization.DEFAULT,
+        callExpression
+            .getTemplateParametersPropertyEdge()
+            .get(1)
+            .getProperty(Properties.INSTANTIATION));
   }
 
   @Test

@@ -227,9 +227,7 @@ public class CallExpression extends Expression implements TypeListener, HasType.
     for (int i = 0; i < this.templateParameters.size(); i++) {
       PropertyEdge<Node> propertyEdge = this.templateParameters.get(i);
       if (propertyEdge.getEnd().equals(oldType)) {
-        PropertyEdge<Node> replacement = new PropertyEdge<>(this, newType);
-        propertyEdge.addProperty(Properties.INDEX, i);
-        this.templateParameters.set(i, replacement);
+        propertyEdge.setEnd(oldType);
       }
     }
   }
