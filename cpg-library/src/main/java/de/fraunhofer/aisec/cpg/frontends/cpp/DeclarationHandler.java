@@ -332,13 +332,15 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
         log,
         "Parsing template declarations is not supported (yet). Will ignore template and parse inner declaration");
 
+    TemplateDeclaration templateDeclaration = null;
+
     if (ctx.getDeclaration() instanceof CPPASTFunctionDefinition) {
-      handleFunctionTemplateDeclaration(ctx);
+      templateDeclaration = handleFunctionTemplateDeclaration(ctx);
     } else {
       // Handle RecordTemplate
 
     }
-    return null;
+    return templateDeclaration;
   }
 
   private Declaration handleSimpleDeclaration(CPPASTSimpleDeclaration ctx) {
