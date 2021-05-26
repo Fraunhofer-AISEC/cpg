@@ -1210,8 +1210,7 @@ public class CallResolver extends Pass {
       RecordDeclaration containingRecord, CallExpression call) {
     String name = call.getName();
     String code = call.getCode();
-    FunctionTemplateDeclaration dummy =
-        NodeBuilder.newFunctionTemplateDeclaration(name, code, containingRecord);
+    FunctionTemplateDeclaration dummy = NodeBuilder.newFunctionTemplateDeclaration(name, code);
     dummy.setImplicit(true);
     if (containingRecord != null) {
       containingRecord.addDeclaration(dummy);

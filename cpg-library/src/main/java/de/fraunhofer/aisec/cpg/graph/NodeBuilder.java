@@ -436,11 +436,10 @@ public class NodeBuilder {
   }
 
   public static FunctionTemplateDeclaration newFunctionTemplateDeclaration(
-      String name, String code, RecordDeclaration recordDeclaration) {
+      String name, String code) {
     FunctionTemplateDeclaration node = new FunctionTemplateDeclaration();
     node.setName(name);
     node.setCode(code);
-    node.setRecordDeclaration(recordDeclaration);
 
     log(node);
     return node;
