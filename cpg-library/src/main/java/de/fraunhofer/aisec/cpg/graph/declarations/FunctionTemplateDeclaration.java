@@ -32,7 +32,6 @@ import de.fraunhofer.aisec.cpg.graph.edge.Properties;
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import java.util.*;
 import org.checkerframework.checker.nullness.qual.NonNull;
-import org.checkerframework.checker.nullness.qual.Nullable;
 import org.neo4j.ogm.annotation.Relationship;
 
 /** Node representing a declaration of a FunctionTemplate */
@@ -49,6 +48,10 @@ public class FunctionTemplateDeclaration extends TemplateDeclaration {
 
   public List<FunctionDeclaration> getRealization() {
     return unwrap(this.realization);
+  }
+
+  public List<Declaration> getRealizationDeclarations() {
+    return new ArrayList<>(getRealization());
   }
 
   public List<PropertyEdge<FunctionDeclaration>> getRealizationPropertyEdge() {

@@ -90,6 +90,8 @@ public abstract class TemplateDeclaration extends Declaration implements Declara
         propertyEdge -> propertyEdge.getEnd().equals(nonTypeTemplateParamDeclaration));
   }
 
+  public abstract List<Declaration> getRealizationDeclarations();
+
   @Override
   public boolean equals(Object o) {
     if (this == o) return true;

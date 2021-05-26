@@ -445,6 +445,15 @@ public class NodeBuilder {
     return node;
   }
 
+  public static ClassTemplateDeclaration newClassTemplateDeclaration(String name, String code) {
+    ClassTemplateDeclaration node = new ClassTemplateDeclaration();
+    node.setName(name);
+    node.setCode(code);
+
+    log(node);
+    return node;
+  }
+
   public static EnumConstantDeclaration newEnumConstantDeclaration(
       String name, String code, PhysicalLocation location) {
     EnumConstantDeclaration node = new EnumConstantDeclaration();

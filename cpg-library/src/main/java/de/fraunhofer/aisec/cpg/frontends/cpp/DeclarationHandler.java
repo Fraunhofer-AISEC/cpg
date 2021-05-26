@@ -249,12 +249,25 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
     }
   }
 
-  private FunctionTemplateDeclaration handleFunctionTemplateDeclaration(
-      CPPASTTemplateDeclaration ctx) {
-    FunctionTemplateDeclaration templateDeclaration =
-        NodeBuilder.newFunctionTemplateDeclaration(
-            ctx.getRawSignature().split("\\{")[0].replace('\n', ' ').trim(),
-            this.lang.getCodeFromRawNode(ctx));
+  private Declaration handleTemplateDeclaration(CPPASTTemplateDeclaration ctx) {
+    warnWithFileLocation(
+        lang,
+        ctx,
+        log,
+        "Parsing template declarations is not supported (yet). Will ignore template and parse inner declaration");
+
+    TemplateDeclaration templateDeclaration;
+    if (ctx.getDeclaration() instanceof CPPASTFunctionDefinition) {
+      templateDeclaration =
+          NodeBuilder.newFunctionTemplateDeclaration(
+              ctx.getRawSignature().split("\\{")[0].replace('\n', ' ').trim(),
+              this.lang.getCodeFromRawNode(ctx));
+    } else {
+      templateDeclaration =
+          NodeBuilder.newClassTemplateDeclaration(
+              ctx.getRawSignature().split("\\{")[0].replace('\n', ' ').trim(),
+              this.lang.getCodeFromRawNode(ctx));
+    }
     templateDeclaration.setLocation(this.lang.getLocationFromRawNode(ctx));
     lang.getScopeManager().addDeclaration(templateDeclaration);
     lang.getScopeManager().enterScope(templateDeclaration);
@@ -313,33 +326,17 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
       }
     }
 
-    // Handle FunctionTemplate
+    // Handle Template
     lang.getDeclarationHandler().handle(ctx.getDeclaration());
     lang.getScopeManager().leaveScope(templateDeclaration);
+    /*
+    if (templateDeclaration instanceof FunctionTemplateDeclaration) {
+      for (FunctionDeclaration functionDeclaration : templateDeclaration.getRealization()) {
+        lang.getScopeManager().addDeclaration(functionDeclaration);
+      }
+    }*/
 
-    for (FunctionDeclaration functionDeclaration : templateDeclaration.getRealization()) {
-      lang.getScopeManager().addDeclaration(functionDeclaration);
-    }
-
-    templateDeclaration.setName(templateDeclaration.getRealization().get(0).getName());
-    return templateDeclaration;
-  }
-
-  private Declaration handleTemplateDeclaration(CPPASTTemplateDeclaration ctx) {
-    warnWithFileLocation(
-        lang,
-        ctx,
-        log,
-        "Parsing template declarations is not supported (yet). Will ignore template and parse inner declaration");
-
-    TemplateDeclaration templateDeclaration = null;
-
-    if (ctx.getDeclaration() instanceof CPPASTFunctionDefinition) {
-      templateDeclaration = handleFunctionTemplateDeclaration(ctx);
-    } else {
-      // Handle RecordTemplate
-
-    }
+    templateDeclaration.setName(templateDeclaration.getRealizationDeclarations().get(0).getName());
     return templateDeclaration;
   }
 
