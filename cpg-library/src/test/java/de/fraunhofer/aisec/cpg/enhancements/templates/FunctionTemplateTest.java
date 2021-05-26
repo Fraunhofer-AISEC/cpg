@@ -40,6 +40,8 @@ import de.fraunhofer.aisec.cpg.graph.types.UnknownType;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 public class FunctionTemplateTest extends BaseTest {
@@ -514,6 +516,7 @@ public class FunctionTemplateTest extends BaseTest {
     assertTrue(f4.getInvokes().get(0).isImplicit());
   }
 
+  @Disabled // TODO
   @Test
   void testFunctionTemplateInMethod() throws Exception {
     List<TranslationUnitDeclaration> result =
