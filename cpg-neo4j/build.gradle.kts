@@ -44,6 +44,15 @@ val versions = mapOf(
     "junit5" to "5.6.0"
 )
 
+distributions {
+    main {
+        contents {
+            // add the src/main/python folder to the distribution, so that our python CPG module is available
+            from("../cpg-library/src/main/python")
+        }
+    }
+}
+
 dependencies {
     // CPG
     api(project(":cpg-library"))
