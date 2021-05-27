@@ -65,8 +65,8 @@ public class ClassTemplateDeclaration extends TemplateDeclaration {
     this.realization.add(propertyEdge);
   }
 
-  public void removeRealization(FunctionDeclaration realizedFunction) {
-    this.realization.removeIf(propertyEdge -> propertyEdge.getEnd().equals(realizedFunction));
+  public void removeRealization(RecordDeclaration realizedRecordDeclaration) {
+    this.realization.removeIf(propertyEdge -> propertyEdge.getEnd().equals(realizedRecordDeclaration));
   }
 
   @Override
