@@ -37,6 +37,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement;
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement;
 import de.fraunhofer.aisec.cpg.graph.statements.Statement;
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression;
+import de.fraunhofer.aisec.cpg.graph.types.ObjectType;
 import de.fraunhofer.aisec.cpg.graph.types.ParameterizedType;
 import de.fraunhofer.aisec.cpg.graph.types.Type;
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser;
@@ -327,17 +328,41 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
     }
 
     // Handle Template
-    lang.getDeclarationHandler().handle(ctx.getDeclaration());
+    Declaration innerDeclaration = lang.getDeclarationHandler().handle(ctx.getDeclaration());
     lang.getScopeManager().leaveScope(templateDeclaration);
-    /*
+
     if (templateDeclaration instanceof FunctionTemplateDeclaration) {
-      for (FunctionDeclaration functionDeclaration : templateDeclaration.getRealization()) {
+      templateDeclaration.setName(
+          templateDeclaration.getRealizationDeclarations().get(0).getName());
+      for (Declaration functionDeclaration : templateDeclaration.getRealizationDeclarations()) {
         lang.getScopeManager().addDeclaration(functionDeclaration);
       }
-    }*/
+    } else {
+      if (innerDeclaration instanceof RecordDeclaration) {
+        // Add
+        Type type = ((RecordDeclaration) innerDeclaration).getThis().getType();
+        List<ParameterizedType> parameterizedTypes =
+            TypeManager.getInstance().getAllParameterizedType(templateDeclaration);
+        addParameterizedTypesToType(type, parameterizedTypes);
 
-    templateDeclaration.setName(templateDeclaration.getRealizationDeclarations().get(0).getName());
+        for (ConstructorDeclaration constructorDeclaration :
+            ((RecordDeclaration) innerDeclaration).getConstructors()) {
+          type = constructorDeclaration.getType();
+          addParameterizedTypesToType(type, parameterizedTypes);
+        }
+      }
+      // templateDeclaration.setName(ctx.getRawSignature().split("\\{")[0].replace('\n', '
+      // ').trim());
+    }
     return templateDeclaration;
+  }
+
+  private void addParameterizedTypesToType(Type type, List<ParameterizedType> parameterizedTypes) {
+    if (type instanceof ObjectType) {
+      for (ParameterizedType parameterizedType : parameterizedTypes) {
+        ((ObjectType) type).addGeneric(parameterizedType);
+      }
+    }
   }
 
   private Declaration handleSimpleDeclaration(CPPASTSimpleDeclaration ctx) {

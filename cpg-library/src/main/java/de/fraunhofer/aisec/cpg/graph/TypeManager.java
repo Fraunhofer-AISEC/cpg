@@ -118,6 +118,13 @@ public class TypeManager {
     return null;
   }
 
+  public List<ParameterizedType> getAllParameterizedType(TemplateDeclaration templateDeclaration) {
+    if (this.templateToTypeParameters.containsKey(templateDeclaration)) {
+      return this.templateToTypeParameters.get(templateDeclaration);
+    }
+    return new ArrayList<>();
+  }
+
   public ParameterizedType searchTemplateScopeForDefinedParameterizedTypes(
       Scope scope, String name) {
     if (scope instanceof TemplateScope) {

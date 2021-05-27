@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.graph.types;
 
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration;
+import de.fraunhofer.aisec.cpg.graph.edge.Properties;
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -130,7 +131,7 @@ public class ObjectType extends Type {
 
   public void addGeneric(Type generic) {
     var propertyEdge = new PropertyEdge<>(this, generic);
-    // propertyEdge.addProperty(Properties.INDEX, this.generics.size());
+    propertyEdge.addProperty(Properties.INDEX, this.generics.size());
     this.generics.add(propertyEdge);
   }
 
