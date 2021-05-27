@@ -261,6 +261,14 @@ public class TypeResolver extends Pass {
   public void ensureUniqueSecondaryTypeEdge(Node node) {
     if (node instanceof HasType.SecondaryTypeEdge) {
       ((HasType.SecondaryTypeEdge) node).updateType(typeState.keySet());
+    } else if (node instanceof HasType
+        && ((HasType) node).getType() instanceof HasType.SecondaryTypeEdge) {
+      ((HasType.SecondaryTypeEdge) ((HasType) node).getType()).updateType(typeState.keySet());
+      for (Type possibleSubType : ((HasType) node).getPossibleSubTypes()) {
+        if (possibleSubType instanceof HasType.SecondaryTypeEdge) {
+          ((HasType.SecondaryTypeEdge) possibleSubType).updateType(typeState.keySet());
+        }
+      }
     }
   }
 

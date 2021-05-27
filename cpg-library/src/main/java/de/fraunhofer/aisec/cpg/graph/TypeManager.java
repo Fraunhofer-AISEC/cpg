@@ -204,6 +204,37 @@ public class TypeManager {
     return type instanceof UnknownType;
   }
 
+  /**
+   * @param generics
+   * @return true if the generics contain parameterized Types
+   */
+  public boolean containsParameterizedType(List<Type> generics) {
+    for (Type t : generics) {
+      if (t instanceof ParameterizedType) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * @param type oldType that we want to replace
+   * @param newType newType
+   * @return true if an objectType with instantiated generics is replaced by the same objectType
+   *     with parameterizedTypes as generics false otherwise
+   */
+  public boolean stopPropagation(Type type, Type newType) {
+    if (type instanceof ObjectType && newType instanceof ObjectType) {
+      if (((ObjectType) type).getGenerics() != null
+          && ((ObjectType) newType).getGenerics() != null
+          && type.getName().equals(newType.getName())) {
+        return containsParameterizedType(((ObjectType) newType).getGenerics())
+            && !(containsParameterizedType(((ObjectType) type).getGenerics()));
+      }
+    }
+    return false;
+  }
+
   private Optional<Type> rewrapType(
       Type type,
       int depth,

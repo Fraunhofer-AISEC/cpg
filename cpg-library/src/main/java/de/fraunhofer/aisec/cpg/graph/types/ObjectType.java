@@ -25,20 +25,44 @@
  */
 package de.fraunhofer.aisec.cpg.graph.types;
 
+import de.fraunhofer.aisec.cpg.graph.HasType;
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration;
 import de.fraunhofer.aisec.cpg.graph.edge.Properties;
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 import org.neo4j.ogm.annotation.Relationship;
 
 /**
  * This is the main type in the Type system. ObjectTypes describe objects, as instances of a class.
  * This also includes primitive data types.
  */
-public class ObjectType extends Type {
+public class ObjectType extends Type implements HasType.SecondaryTypeEdge {
+
+  @Override
+  public void updateType(Collection<Type> typeState) {
+    if (this.generics == null) {
+      return;
+    }
+    for (Type t : this.getGenerics()) {
+      for (Type t2 : typeState) {
+        if (t2.equals(t)) {
+          this.replaceGenerics(t, t2);
+        }
+      }
+    }
+  }
+
+  public void replaceGenerics(Type oldType, Type newType) {
+    if (this.generics == null) {
+      return;
+    }
+    for (int i = 0; i < this.generics.size(); i++) {
+      PropertyEdge<Type> propertyEdge = this.generics.get(i);
+      if (propertyEdge.getEnd().equals(oldType)) {
+        propertyEdge.setEnd(newType);
+      }
+    }
+  }
 
   /**
    * ObjectTypes can have a modifier if they are primitive datatypes. The default is signed for
