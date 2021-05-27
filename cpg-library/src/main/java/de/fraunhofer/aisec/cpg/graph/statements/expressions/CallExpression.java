@@ -31,7 +31,6 @@ import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.SubGraph;
 import de.fraunhofer.aisec.cpg.graph.TypeManager;
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration;
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionTemplateDeclaration;
 import de.fraunhofer.aisec.cpg.graph.declarations.TemplateDeclaration;
 import de.fraunhofer.aisec.cpg.graph.edge.Properties;
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
@@ -177,9 +176,9 @@ public class CallExpression extends Expression implements TypeListener, HasType.
    * which is instantiated. This is required by the expansion pass to access the Template directly.
    * The invokes edge will still point to the realization of the template.
    */
-  @Relationship(value = "INSTANTIATION", direction = "OUTGOING")
+  @Relationship(value = "TEMPLATE_INSTANTIATION", direction = "OUTGOING")
   @Nullable
-  private FunctionTemplateDeclaration instantiation;
+  private TemplateDeclaration templateInstantiation;
 
   @Nullable
   public List<PropertyEdge<Node>> getTemplateParametersPropertyEdge() {
@@ -258,13 +257,13 @@ public class CallExpression extends Expression implements TypeListener, HasType.
   }
 
   @Nullable
-  public FunctionTemplateDeclaration getInstantiation() {
-    return instantiation;
+  public TemplateDeclaration getTemplateInstantiation() {
+    return templateInstantiation;
   }
 
-  public void setInstantiation(FunctionTemplateDeclaration instantiation) {
-    this.instantiation = instantiation;
-    template = instantiation != null;
+  public void setTemplateInstantiation(TemplateDeclaration templateInstantiation) {
+    this.templateInstantiation = templateInstantiation;
+    template = templateInstantiation != null;
   }
 
   public void updateTemplateParameters(
@@ -296,7 +295,7 @@ public class CallExpression extends Expression implements TypeListener, HasType.
   }
 
   public boolean instantiatesTemplate() {
-    return instantiation != null || templateParameters != null || template;
+    return templateInstantiation != null || templateParameters != null || template;
   }
 
   @Override
@@ -369,7 +368,8 @@ public class CallExpression extends Expression implements TypeListener, HasType.
         && ((templateParameters == that.templateParameters)
             || (templateParameters.equals(that.templateParameters)
                 && PropertyEdge.propertyEqualsList(templateParameters, that.templateParameters)))
-        && ((instantiation == that.instantiation) || (instantiation.equals(that.instantiation)))
+        && ((templateInstantiation == that.templateInstantiation)
+            || (templateInstantiation.equals(that.templateInstantiation)))
         && template == that.template;
   }
 

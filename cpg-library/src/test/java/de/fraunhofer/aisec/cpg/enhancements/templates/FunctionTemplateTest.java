@@ -554,7 +554,7 @@ public class FunctionTemplateTest extends BaseTest {
     assertEquals(1, callExpression.getInvokes().size());
     assertEquals(methodDeclaration, callExpression.getInvokes().get(0));
 
-    assertEquals(templateDeclaration, callExpression.getInstantiation());
+    assertEquals(templateDeclaration, callExpression.getTemplateInstantiation());
 
     assertEquals(2, callExpression.getTemplateParameters().size());
 
