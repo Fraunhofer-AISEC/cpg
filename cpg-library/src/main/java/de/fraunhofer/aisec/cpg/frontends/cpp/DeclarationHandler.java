@@ -29,6 +29,7 @@ import static de.fraunhofer.aisec.cpg.helpers.Util.errorWithFileLocation;
 import static de.fraunhofer.aisec.cpg.helpers.Util.warnWithFileLocation;
 
 import de.fraunhofer.aisec.cpg.frontends.Handler;
+import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder;
 import de.fraunhofer.aisec.cpg.graph.TypeManager;
 import de.fraunhofer.aisec.cpg.graph.declarations.*;
@@ -44,11 +45,7 @@ import de.fraunhofer.aisec.cpg.graph.types.TypeParser;
 import de.fraunhofer.aisec.cpg.helpers.Util;
 import de.fraunhofer.aisec.cpg.passes.scopes.RecordScope;
 import de.fraunhofer.aisec.cpg.passes.scopes.TemplateScope;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
 import org.eclipse.cdt.core.dom.ast.*;
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTTemplateParameter;
@@ -408,22 +405,67 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
           declSpecifier.getClass());
     }
 
-    for (IASTDeclarator declarator : ctx.getDeclarators()) {
-      ValueDeclaration declaration =
-          (ValueDeclaration) this.lang.getDeclaratorHandler().handle(declarator);
+    if (declSpecifier instanceof CPPASTNamedTypeSpecifier
+        && ((CPPASTNamedTypeSpecifier) declSpecifier).getName() instanceof CPPASTTemplateId) {
+      CPPASTTemplateId templateId =
+          (CPPASTTemplateId) ((CPPASTNamedTypeSpecifier) declSpecifier).getName();
+      Type type = TypeParser.createFrom(templateId.getTemplateName().getRawSignature(), true);
+      assert type instanceof ObjectType; // TODO CPS check ptrs?
+      ObjectType objectType = (ObjectType) type;
+      List<Node> templateParams = new ArrayList<>();
 
-      String typeString = getTypeStringFromDeclarator(declarator, ctx.getDeclSpecifier());
+      for (IASTNode templateArgument : templateId.getTemplateArguments()) {
+        if (templateArgument instanceof CPPASTTypeId) {
+          Type genericInstantiation =
+              TypeParser.createFrom(templateArgument.getRawSignature(), true);
+          objectType.addGeneric(genericInstantiation);
+          templateParams.add(genericInstantiation);
+        } else if (templateArgument instanceof IASTExpression) {
+          Expression expression =
+              this.lang.getExpressionHandler().handle((IASTExpression) templateArgument);
+          templateParams.add(expression);
+        }
+      }
 
-      Type result = TypeParser.createFrom(typeString, true, lang);
-      declaration.setType(result);
+      for (IASTDeclarator declarator : ctx.getDeclarators()) {
+        ValueDeclaration declaration =
+            (ValueDeclaration) this.lang.getDeclaratorHandler().handle(declarator);
 
-      // cache binding
-      this.lang.cacheDeclaration(declarator.getName().resolveBinding(), declaration);
+        // Update Type
+        declaration.setType(type);
 
-      // process attributes
-      this.lang.processAttributes(declaration, ctx);
+        // Set TemplateParameters into VariableDeclaration
+        if (declaration instanceof VariableDeclaration) {
+          List<Node> templateParamsPropertyEdge = new ArrayList<>(templateParams);
+          ((VariableDeclaration) declaration).setTemplateParameters(templateParamsPropertyEdge);
+        }
 
-      sequence.addDeclaration(declaration);
+        // cache binding
+        this.lang.cacheDeclaration(declarator.getName().resolveBinding(), declaration);
+
+        // process attributes
+        this.lang.processAttributes(declaration, ctx);
+
+        sequence.addDeclaration(declaration);
+      }
+    } else {
+      for (IASTDeclarator declarator : ctx.getDeclarators()) {
+        ValueDeclaration declaration =
+            (ValueDeclaration) this.lang.getDeclaratorHandler().handle(declarator);
+
+        String typeString = getTypeStringFromDeclarator(declarator, ctx.getDeclSpecifier());
+
+        Type result = TypeParser.createFrom(typeString, true, lang);
+        declaration.setType(result);
+
+        // cache binding
+        this.lang.cacheDeclaration(declarator.getName().resolveBinding(), declaration);
+
+        // process attributes
+        this.lang.processAttributes(declaration, ctx);
+
+        sequence.addDeclaration(declaration);
+      }
     }
 
     if (sequence.isSingle()) {

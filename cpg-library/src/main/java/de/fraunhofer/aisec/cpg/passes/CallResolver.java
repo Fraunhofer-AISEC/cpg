@@ -65,6 +65,7 @@ public class CallResolver extends Pass {
   private static final Logger LOGGER = LoggerFactory.getLogger(CallResolver.class);
 
   private Map<String, RecordDeclaration> recordMap = new HashMap<>();
+  private List<TemplateDeclaration> templateList = new ArrayList<>();
   private Map<FunctionDeclaration, Type> containingType = new HashMap<>();
   @Nullable private TranslationUnitDeclaration currentTU;
   private ScopedWalker walker;
@@ -80,6 +81,7 @@ public class CallResolver extends Pass {
     walker = new ScopedWalker(lang);
     walker.registerHandler((currClass, parent, currNode) -> walker.collectDeclarations(currNode));
     walker.registerHandler(this::findRecords);
+    walker.registerHandler(this::findTemplates);
     walker.registerHandler(this::registerMethods);
 
     for (TranslationUnitDeclaration tu : translationResult.getTranslationUnits()) {
@@ -107,6 +109,12 @@ public class CallResolver extends Pass {
     }
   }
 
+  private void findTemplates(@NonNull Node node, RecordDeclaration curClass) {
+    if (node instanceof TemplateDeclaration) {
+      templateList.add((TemplateDeclaration) node);
+    }
+  }
+
   private void registerMethods(
       RecordDeclaration currentClass, Node parent, @NonNull Node currentNode) {
     if (currentNode instanceof MethodDeclaration && currentClass != null) {
@@ -128,6 +136,7 @@ public class CallResolver extends Pass {
           ConstructExpression initializer = NodeBuilder.newConstructExpression("()");
           initializer.setImplicit(true);
           declaration.setInitializer(initializer);
+          addTemplateArgumentsToCall(declaration, declaration.getTemplateParameters(), initializer);
         } else if (currInitializer instanceof CallExpression
             && currInitializer.getName().equals(typeString)) {
           // This should actually be a construct expression, not a call!
@@ -150,6 +159,24 @@ public class CallResolver extends Pass {
         initializer.setImplicit(true);
         newExpression.setInitializer(initializer);
       }
+    }
+  }
+
+  private void addTemplateArgumentsToCall(
+      VariableDeclaration variableDeclaration,
+      List<Node> templateParams,
+      ConstructExpression constructExpression) {
+    if (templateParams != null) {
+      for (Node templateParam : templateParams) {
+        if (templateParam instanceof Type) {
+          constructExpression.addTemplateParameter(
+              (Type) templateParam, TemplateDeclaration.TemplateInitialization.EXPLICIT);
+        } else if (templateParam instanceof Expression) {
+          constructExpression.addTemplateParameter(
+              (Expression) templateParam, TemplateDeclaration.TemplateInitialization.EXPLICIT);
+        }
+      }
+      variableDeclaration.setTemplateParameters(null);
     }
   }
 
@@ -465,7 +492,7 @@ public class CallResolver extends Pass {
       // Otherwise we could not resolve to a template and no modifications are made
       FunctionTemplateDeclaration functionTemplateDeclaration =
           createFunctionTemplateDummy(curClass, templateCall);
-      templateCall.setInstantiation(functionTemplateDeclaration);
+      templateCall.setTemplateInstantiation(functionTemplateDeclaration);
       templateCall.setInvokes(functionTemplateDeclaration.getRealization());
       // Set instantiation propertyEdges
       for (PropertyEdge<Node> instantiationParameter :
@@ -494,7 +521,7 @@ public class CallResolver extends Pass {
           entry.getValue(), initializationSignature.get(entry.getKey()));
     }
 
-    templateCall.setInstantiation(functionTemplateDeclaration);
+    templateCall.setTemplateInstantiation(functionTemplateDeclaration);
     templateCall.setInvokes(List.of(function));
 
     // Set return Value of call if resolved
@@ -1086,6 +1113,14 @@ public class CallResolver extends Pass {
     String typeName = constructExpression.getType().getTypeName();
     RecordDeclaration recordDeclaration = recordMap.get(typeName);
     constructExpression.setInstantiates(recordDeclaration);
+
+    for (TemplateDeclaration template : templateList) {
+      if (template instanceof ClassTemplateDeclaration
+          && ((ClassTemplateDeclaration) template).getRealization().contains(recordDeclaration)) {
+        constructExpression.setTemplateInstantiation(template);
+        break;
+      }
+    }
 
     if (recordDeclaration != null
         && recordDeclaration.getCode() != null
