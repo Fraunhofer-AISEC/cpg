@@ -27,7 +27,6 @@ package de.fraunhofer.aisec.cpg.graph.declarations;
 
 import static de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.unwrap;
 
-import de.fraunhofer.aisec.cpg.graph.SubGraph;
 import de.fraunhofer.aisec.cpg.graph.edge.Properties;
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import java.util.*;
@@ -43,7 +42,6 @@ public class FunctionTemplateDeclaration extends TemplateDeclaration {
    * expansion pass for each instantiation of the FunctionTemplate there will be a realization
    */
   @Relationship(value = "REALIZATION", direction = "OUTGOING")
-  @SubGraph("AST")
   private List<PropertyEdge<FunctionDeclaration>> realization = new ArrayList<>();
 
   public List<FunctionDeclaration> getRealization() {
