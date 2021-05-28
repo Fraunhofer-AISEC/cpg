@@ -14,10 +14,6 @@ public:
 
 int main()
 {
-	Array<int>* array = new Array<int>;
+	Array<int, 5>* array = new Array<int, 5>;
 	std::cout << array->GetSize() << std::endl;
-
-	std::cin.get();
-
-
 }
