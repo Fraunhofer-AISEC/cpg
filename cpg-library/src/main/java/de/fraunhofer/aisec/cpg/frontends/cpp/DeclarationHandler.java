@@ -337,7 +337,12 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
     } else {
       if (innerDeclaration instanceof RecordDeclaration) {
         // Add
-        Type type = TypeParser.createFrom(innerDeclaration.getName(), true);
+        Type type;
+        if (((RecordDeclaration) innerDeclaration).getThis() == null) {
+          type = TypeParser.createFrom(innerDeclaration.getName(), true);
+        } else {
+          type = ((RecordDeclaration) innerDeclaration).getThis().getType();
+        }
         List<ParameterizedType> parameterizedTypes =
             TypeManager.getInstance().getAllParameterizedType(templateDeclaration);
         addParameterizedTypesToType(type, parameterizedTypes);
