@@ -45,6 +45,7 @@ import org.eclipse.cdt.core.dom.ast.IBasicType.Kind;
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTDesignator;
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTExpression;
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTInitializerClause;
+import org.eclipse.cdt.core.dom.ast.cpp.ICPPTemplateArgument;
 import org.eclipse.cdt.internal.core.dom.parser.CStringValue;
 import org.eclipse.cdt.internal.core.dom.parser.ProblemBinding;
 import org.eclipse.cdt.internal.core.dom.parser.ProblemType;
@@ -530,8 +531,24 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
         declaredReferenceExpression.setType(UnknownType.getUnknownType());
       }
     } else {
-      declaredReferenceExpression.setType(
-          TypeParser.createFrom(expressionTypeProxy(ctx).toString(), true, lang));
+      IType proxy = expressionTypeProxy(ctx);
+      if (proxy instanceof CPPClassInstance) {
+        // Handle Template Types separately
+        ObjectType type =
+            (ObjectType)
+                TypeParser.createFrom(
+                    ((CPPClassInstance) proxy).getTemplateDefinition().toString(), true);
+        for (ICPPTemplateArgument templateArgument :
+            ((CPPClassInstance) proxy).getTemplateArguments()) {
+          if (templateArgument instanceof CPPTemplateTypeArgument) {
+            type.addGeneric(TypeParser.createFrom(templateArgument.toString(), true));
+          }
+        }
+        declaredReferenceExpression.setType(type);
+      } else {
+        declaredReferenceExpression.setType(
+            TypeParser.createFrom(expressionTypeProxy(ctx).toString(), true, lang));
+      }
     }
 
     /* this expression could actually be a field / member expression, but somehow CDT only recognizes them as a member expression if it has an explicit 'this'
