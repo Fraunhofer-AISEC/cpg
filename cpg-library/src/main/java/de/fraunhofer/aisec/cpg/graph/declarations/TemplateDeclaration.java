@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.graph.declarations;
 import static de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.unwrap;
 
 import de.fraunhofer.aisec.cpg.graph.DeclarationHolder;
+import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.SubGraph;
 import de.fraunhofer.aisec.cpg.graph.edge.Properties;
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
@@ -66,6 +67,33 @@ public abstract class TemplateDeclaration extends Declaration implements Declara
 
   public List<PropertyEdge<Declaration>> getParametersPropertyEdge() {
     return this.parameters;
+  }
+
+  public List<Declaration> getParametersWithDefaults() {
+    List<Declaration> parametersWithDefaults = new ArrayList<>();
+    for (Declaration declaration : getParameters()) {
+      if (declaration instanceof TypeParamDeclaration
+          && ((TypeParamDeclaration) declaration).getDefault() != null) {
+        parametersWithDefaults.add(declaration);
+      } else if (declaration instanceof ParamVariableDeclaration
+          && ((ParamVariableDeclaration) declaration).getDefault() != null) {
+        parametersWithDefaults.add(declaration);
+      }
+    }
+    return parametersWithDefaults;
+  }
+
+  public List<Node> getParameterDefaults() {
+    List<Node> defaults = new ArrayList<>();
+
+    for (Declaration declaration : getParameters()) {
+      if (declaration instanceof TypeParamDeclaration) {
+        defaults.add(((TypeParamDeclaration) declaration).getDefault());
+      } else if (declaration instanceof ParamVariableDeclaration) {
+        defaults.add(((ParamVariableDeclaration) declaration).getDefault());
+      }
+    }
+    return defaults;
   }
 
   public void addParameter(TypeParamDeclaration parameterizedType) {
