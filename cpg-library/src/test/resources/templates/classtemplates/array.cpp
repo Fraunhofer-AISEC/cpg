@@ -15,9 +15,5 @@ public:
 int main()
 {
 	Array<int> array;
-	std::cout << array.GetSize() << std::endl;
-
-	std::cin.get();
-
-
+	array.GetSize();
 }

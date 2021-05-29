@@ -15,5 +15,5 @@ public:
 int main()
 {
 	Array<int, 5>* array = new Array<int, 5>;
-	std::cout << array->GetSize() << std::endl;
+	array->GetSize()
 }
