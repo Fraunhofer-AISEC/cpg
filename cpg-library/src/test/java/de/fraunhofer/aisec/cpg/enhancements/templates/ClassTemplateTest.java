@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.enhancements.templates;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import de.fraunhofer.aisec.cpg.BaseTest;
 import de.fraunhofer.aisec.cpg.TestUtils;
 import de.fraunhofer.aisec.cpg.graph.TypeManager;
 import de.fraunhofer.aisec.cpg.graph.declarations.*;
@@ -34,13 +35,15 @@ import de.fraunhofer.aisec.cpg.graph.edge.Properties;
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ConstructExpression;
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression;
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal;
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.NewExpression;
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType;
 import de.fraunhofer.aisec.cpg.graph.types.ParameterizedType;
+import de.fraunhofer.aisec.cpg.graph.types.PointerType;
 import java.nio.file.Path;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
-public class ClassTemplateTest {
+public class ClassTemplateTest extends BaseTest {
   private final Path topLevel = Path.of("src", "test", "resources", "templates", "classtemplates");
 
   @Test
@@ -500,5 +503,136 @@ public class ClassTemplateTest {
     assertEquals(2, type.getGenerics().size());
     assertEquals("int", type.getGenerics().get(0).getName());
     assertEquals("int", type.getGenerics().get(1).getName());
+  }
+
+  @Test
+  void testReferenceInTemplates() throws Exception {
+    // Test array.cpp: checks usage of referencetype of parameterized type (T[])
+    TypeManager.reset();
+    List<TranslationUnitDeclaration> result =
+        TestUtils.analyze(
+            List.of(Path.of(topLevel.toString(), "array.cpp").toFile()), topLevel, true);
+
+    ClassTemplateDeclaration template =
+        TestUtils.findByUniqueName(
+            TestUtils.subnodesOfType(result, ClassTemplateDeclaration.class),
+            "template<typename T, int N=10> class Array");
+
+    RecordDeclaration array =
+        TestUtils.findByUniqueName(
+            TestUtils.subnodesOfType(result, RecordDeclaration.class), "Array");
+
+    ParamVariableDeclaration N =
+        TestUtils.findByUniqueName(
+            TestUtils.subnodesOfType(result, ParamVariableDeclaration.class), "N");
+
+    TypeParamDeclaration T =
+        TestUtils.findByUniqueName(
+            TestUtils.subnodesOfType(result, TypeParamDeclaration.class), "typename T");
+
+    Literal<?> literal10 =
+        TestUtils.findByUniquePredicate(
+            TestUtils.subnodesOfType(result, Literal.class), l -> l.getValue().equals(10));
+
+    FieldDeclaration thisField =
+        TestUtils.findByUniqueName(
+            TestUtils.subnodesOfType(result, FieldDeclaration.class), "this");
+    FieldDeclaration m_Array =
+        TestUtils.findByUniqueName(
+            TestUtils.subnodesOfType(result, FieldDeclaration.class), "m_Array");
+
+    assertEquals(2, template.getParameters().size());
+    assertEquals(T, template.getParameters().get(0));
+    assertEquals(N, template.getParameters().get(1));
+    assertEquals(literal10, N.getDefault());
+
+    assertEquals(2, array.getFields().size());
+    assertEquals(thisField, array.getFields().get(0));
+    assertEquals(m_Array, array.getFields().get(1));
+
+    ObjectType arrayType = (ObjectType) thisField.getType();
+
+    assertEquals(1, arrayType.getGenerics().size());
+    assertEquals("T", arrayType.getGenerics().get(0).getName());
+
+    ParameterizedType typeT = (ParameterizedType) arrayType.getGenerics().get(0);
+
+    assertEquals(typeT, T.getType());
+
+    assertTrue(m_Array.getType() instanceof PointerType);
+    PointerType tArray = (PointerType) m_Array.getType();
+
+    assertEquals(typeT, tArray.getElementType());
+
+    ConstructExpression constructExpression =
+        TestUtils.findByUniquePredicate(
+            TestUtils.subnodesOfType(result, ConstructExpression.class),
+            c -> c.getCode().equals("()"));
+
+    assertEquals(template, constructExpression.getTemplateInstantiation());
+    assertEquals(array, constructExpression.getInstantiates());
+
+    assertEquals("int", constructExpression.getTemplateParameters().get(0).getName());
+    assertEquals(literal10, constructExpression.getTemplateParameters().get(1));
+
+    assertEquals("Array", constructExpression.getType().getName());
+
+    ObjectType instantiatedType = (ObjectType) constructExpression.getType();
+
+    assertEquals(1, instantiatedType.getGenerics().size());
+    assertEquals("int", instantiatedType.getGenerics().get(0).getName());
+  }
+
+  @Test
+  void testTemplateInstantiationWithNew() throws Exception {
+    // Test array2.cpp: Test template usage with new keyword
+    TypeManager.reset();
+
+    List<TranslationUnitDeclaration> result =
+        TestUtils.analyze(
+            List.of(Path.of(topLevel.toString(), "array2.cpp").toFile()), topLevel, true);
+
+    ClassTemplateDeclaration template =
+        TestUtils.findByUniqueName(
+            TestUtils.subnodesOfType(result, ClassTemplateDeclaration.class),
+            "template<typename T, int N=10> class Array");
+
+    RecordDeclaration array =
+        TestUtils.findByUniqueName(
+            TestUtils.subnodesOfType(result, RecordDeclaration.class), "Array");
+
+    ConstructExpression constructExpression =
+        TestUtils.findByUniquePredicate(
+            TestUtils.subnodesOfType(result, ConstructExpression.class),
+            c -> c.getCode().equals("()"));
+
+    Literal<?> literal5 =
+        TestUtils.findByUniquePredicate(
+            TestUtils.subnodesOfType(result, Literal.class),
+            l -> l.getValue().equals(5) && l.getLocation().getRegion().getEndColumn() == 41);
+
+    VariableDeclaration arrayVariable =
+        TestUtils.findByUniqueName(
+            TestUtils.subnodesOfType(result, VariableDeclaration.class), "array");
+    NewExpression newExpression =
+        TestUtils.findByUniqueName(TestUtils.subnodesOfType(result, NewExpression.class), "");
+
+    assertEquals(array, constructExpression.getInstantiates());
+    assertEquals(template, constructExpression.getTemplateInstantiation());
+
+    assertEquals(2, constructExpression.getTemplateParameters().size());
+    assertEquals("int", constructExpression.getTemplateParameters().get(0).getName());
+    assertEquals(literal5, constructExpression.getTemplateParameters().get(1));
+
+    assertEquals("Array", constructExpression.getType().getName());
+
+    ObjectType arrayType = (ObjectType) constructExpression.getType();
+
+    assertEquals(1, arrayType.getGenerics().size());
+    assertEquals("int", arrayType.getGenerics().get(0).getName());
+    assertEquals(array, arrayType.getRecordDeclaration());
+
+    assertEquals(arrayType, arrayVariable.getType());
+    assertEquals(arrayType, newExpression.getType());
   }
 }
