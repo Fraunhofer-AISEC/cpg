@@ -1222,10 +1222,18 @@ public class CallResolver extends Pass {
           constructExpression.addTemplateParameter(
               templateParametersExplicitInitialization.get(missingParam),
               TemplateDeclaration.TemplateInitialization.DEFAULT);
+          if (templateParametersExplicitInitialization.get(missingParam) instanceof Type) {
+            ((ObjectType) constructExpression.getType())
+                .addGeneric((Type) templateParametersExplicitInitialization.get(missingParam));
+          }
         } else if (templateParameterRealDefaultInitialization.containsKey(missingParam)) {
           constructExpression.addTemplateParameter(
               templateParameterRealDefaultInitialization.get(missingParam),
               TemplateDeclaration.TemplateInitialization.DEFAULT);
+          if (templateParametersExplicitInitialization.get(missingParam) instanceof Type) {
+            ((ObjectType) constructExpression.getType())
+                .addGeneric((Type) templateParametersExplicitInitialization.get(missingParam));
+          }
         }
       }
     } while (templateParameters != constructExpression.getTemplateParameters().size());
