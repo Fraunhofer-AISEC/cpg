@@ -136,7 +136,8 @@ public class CallResolver extends Pass {
           ConstructExpression initializer = NodeBuilder.newConstructExpression("()");
           initializer.setImplicit(true);
           declaration.setInitializer(initializer);
-          addTemplateArgumentsToCall(declaration, declaration.getTemplateParameters(), initializer);
+          addTemplateArgumentsToCall(declaration.getTemplateParameters(), initializer);
+          declaration.setTemplateParameters(null);
         } else if (currInitializer instanceof CallExpression
             && currInitializer.getName().equals(typeString)) {
           // This should actually be a construct expression, not a call!
@@ -157,26 +158,17 @@ public class CallResolver extends Pass {
       if (newExpression.getInitializer() == null) {
         ConstructExpression initializer = NodeBuilder.newConstructExpression("()");
         initializer.setImplicit(true);
+        addTemplateArgumentsToCall(newExpression.getTemplateParameters(), initializer);
+        newExpression.setTemplateParameters(null);
         newExpression.setInitializer(initializer);
       }
     }
   }
 
   private void addTemplateArgumentsToCall(
-      VariableDeclaration variableDeclaration,
-      List<Node> templateParams,
-      ConstructExpression constructExpression) {
+      List<Node> templateParams, ConstructExpression constructExpression) {
     if (templateParams != null) {
-      for (Node templateParam : templateParams) {
-        if (templateParam instanceof Type) {
-          constructExpression.addTemplateParameter(
-              (Type) templateParam, TemplateDeclaration.TemplateInitialization.EXPLICIT);
-        } else if (templateParam instanceof Expression) {
-          constructExpression.addTemplateParameter(
-              (Expression) templateParam, TemplateDeclaration.TemplateInitialization.EXPLICIT);
-        }
-      }
-      variableDeclaration.setTemplateParameters(null);
+      constructExpression.addExplicitTemplateParameter(templateParams);
     }
   }
 
@@ -1117,6 +1109,7 @@ public class CallResolver extends Pass {
     for (TemplateDeclaration template : templateList) {
       if (template instanceof ClassTemplateDeclaration
           && ((ClassTemplateDeclaration) template).getRealization().contains(recordDeclaration)
+          && constructExpression.getTemplateParameters() != null
           && constructExpression.getTemplateParameters().size()
               <= template.getParameters().size()) {
         int defaultDifference =

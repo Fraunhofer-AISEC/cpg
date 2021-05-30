@@ -441,8 +441,7 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
 
         // Set TemplateParameters into VariableDeclaration
         if (declaration instanceof VariableDeclaration) {
-          List<Node> templateParamsPropertyEdge = new ArrayList<>(templateParams);
-          ((VariableDeclaration) declaration).setTemplateParameters(templateParamsPropertyEdge);
+          ((VariableDeclaration) declaration).setTemplateParameters(templateParams);
         }
 
         // cache binding

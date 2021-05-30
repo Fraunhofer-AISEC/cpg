@@ -50,7 +50,7 @@ public class VariableDeclaration extends ValueDeclaration implements TypeListene
    * We need a way to store the templateParameters that a VariableDeclaration might have before the
    * ConstructExpression is created
    */
-  @Transient private List<Node> templateParameters = null;
+  @Nullable @Transient private List<Node> templateParameters = null;
 
   public List<Node> getTemplateParameters() {
     return templateParameters;

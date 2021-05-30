@@ -31,7 +31,6 @@ import static de.fraunhofer.aisec.cpg.helpers.Util.warnWithFileLocation;
 import de.fraunhofer.aisec.cpg.frontends.Handler;
 import de.fraunhofer.aisec.cpg.graph.*;
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration;
-import de.fraunhofer.aisec.cpg.graph.declarations.TemplateDeclaration;
 import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration;
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*;
 import de.fraunhofer.aisec.cpg.graph.types.*;
@@ -193,7 +192,15 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
 
       if (binding != null && !(binding instanceof CPPScope.CPPScopeProblem)) {
         // update the type
-        newExpression.setType(TypeParser.createFrom(binding.getName(), true, lang));
+        Type type = TypeParser.createFrom(binding.getName(), true, lang);
+        if (((CPPASTNamedTypeSpecifier) declSpecifier).getName() instanceof CPPASTTemplateId
+            && type instanceof ObjectType) {
+          ((ObjectType) type)
+              .addGenerics(
+                  getTemplateTypeArguments(
+                      (CPPASTTemplateId) ((CPPASTNamedTypeSpecifier) declSpecifier).getName()));
+        }
+        newExpression.setType(type);
       } else {
         log.debug(
             "Could not resolve binding of type {} for {}, it is probably defined somewhere externally",
@@ -202,13 +209,44 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
       }
     }
 
+    if (((CPPASTNamedTypeSpecifier) declSpecifier).getName() instanceof CPPASTTemplateId) {
+      List<Node> templateParameters =
+          getTemplateArguments(
+              (CPPASTTemplateId) ((CPPASTNamedTypeSpecifier) declSpecifier).getName());
+      newExpression.setTemplateParameters(templateParameters);
+    }
+
     IASTInitializer init = ctx.getInitializer();
 
     if (init != null) {
-      newExpression.setInitializer(this.lang.getInitializerHandler().handle(init));
+      Expression initializer = this.lang.getInitializerHandler().handle(init);
+      newExpression.setInitializer(initializer);
     }
 
     return newExpression;
+  }
+
+  private List<Type> getTemplateTypeArguments(CPPASTTemplateId template) {
+    List<Type> typeArguments = new ArrayList<>();
+    for (Node argument : getTemplateArguments(template)) {
+      if (argument instanceof Type) {
+        typeArguments.add((Type) argument);
+      }
+    }
+    return typeArguments;
+  }
+
+  private List<Node> getTemplateArguments(CPPASTTemplateId template) {
+    List<Node> templateArguments = new ArrayList<>();
+    for (IASTNode argument : template.getTemplateArguments()) {
+      if (argument instanceof CPPASTTypeId) {
+        templateArguments.add(
+            TypeParser.createFrom(((CPPASTTypeId) argument).getDeclSpecifier().toString(), true));
+      } else if (argument instanceof CPPASTLiteralExpression) {
+        templateArguments.add(lang.getExpressionHandler().handle((IASTInitializerClause) argument));
+      }
+    }
+    return templateArguments;
   }
 
   private ConditionalExpression handleConditionalExpression(CPPASTConditionalExpression ctx) {
@@ -399,24 +437,6 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
     return unaryOperator;
   }
 
-  private void handleTemplateArguments(
-      CPPASTFunctionCallExpression ctx, CallExpression callExpression) {
-    for (IASTNode argument :
-        ((CPPASTTemplateId) ((CPPASTIdExpression) ctx.getFunctionNameExpression()).getName())
-            .getTemplateArguments()) {
-      if (argument instanceof CPPASTTypeId) {
-        callExpression.addTemplateParameter(
-            TypeParser.createFrom(
-                ((CPPASTTypeId) argument).getDeclSpecifier().toString(), false, lang),
-            TemplateDeclaration.TemplateInitialization.EXPLICIT);
-      } else if (argument instanceof IASTInitializerClause) {
-        callExpression.addTemplateParameter(
-            lang.getExpressionHandler().handle((IASTInitializerClause) argument),
-            TemplateDeclaration.TemplateInitialization.EXPLICIT);
-      }
-    }
-  }
-
   private CallExpression handleFunctionCallExpression(CPPASTFunctionCallExpression ctx) {
     Expression reference = this.handle(ctx.getFunctionNameExpression());
 
@@ -467,7 +487,10 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
               .toString();
       callExpression = NodeBuilder.newCallExpression(name, name, ctx.getRawSignature(), true);
 
-      handleTemplateArguments(ctx, callExpression);
+      callExpression.addExplicitTemplateParameter(
+          getTemplateArguments(
+              (CPPASTTemplateId) ((CPPASTIdExpression) ctx.getFunctionNameExpression()).getName()));
+      // handleTemplateArguments(ctx, callExpression);
 
     } else {
       String fqn = reference.getName();

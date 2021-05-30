@@ -159,6 +159,12 @@ public class ObjectType extends Type implements HasType.SecondaryTypeEdge {
     this.generics.add(propertyEdge);
   }
 
+  public void addGenerics(List<Type> generics) {
+    for (Type generic : generics) {
+      addGeneric(generic);
+    }
+  }
+
   @Override
   public boolean isSimilar(Type t) {
     return t instanceof ObjectType

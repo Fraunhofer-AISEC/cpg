@@ -253,6 +253,12 @@ public class CallExpression extends Expression implements TypeListener, HasType.
     }
   }
 
+  public void addExplicitTemplateParameter(List<Node> templateParameters) {
+    for (Node node : templateParameters) {
+      addTemplateParameter(node, TemplateDeclaration.TemplateInitialization.EXPLICIT);
+    }
+  }
+
   public void removeRealization(Node templateParam) {
     if (this.templateParameters == null) {
       return;
