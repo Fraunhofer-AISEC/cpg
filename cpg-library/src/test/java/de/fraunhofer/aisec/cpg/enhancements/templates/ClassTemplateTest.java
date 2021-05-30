@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.enhancements.templates;
 import static org.junit.jupiter.api.Assertions.*;
 
 import de.fraunhofer.aisec.cpg.TestUtils;
+import de.fraunhofer.aisec.cpg.graph.TypeManager;
 import de.fraunhofer.aisec.cpg.graph.declarations.*;
 import de.fraunhofer.aisec.cpg.graph.edge.Properties;
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ConstructExpression;
@@ -44,6 +45,7 @@ public class ClassTemplateTest {
 
   @Test
   void testClassTemplateStructure() throws Exception {
+    TypeManager.reset();
     List<TranslationUnitDeclaration> result =
         TestUtils.analyze(
             List.of(Path.of(topLevel.toString(), "pair.cpp").toFile()), topLevel, true);
@@ -138,7 +140,7 @@ public class ClassTemplateTest {
   @Test
   void testClassTemplateWithValueParameter() throws Exception {
     // Test pair2.cpp: Add Value Parameter to Template Instantiation
-
+    TypeManager.reset();
     List<TranslationUnitDeclaration> result =
         TestUtils.analyze(
             List.of(Path.of(topLevel.toString(), "pair2.cpp").toFile()), topLevel, true);
@@ -220,6 +222,7 @@ public class ClassTemplateTest {
   @Test
   void testStructTemplateWithSameDefaultType() throws Exception {
     // Test pair3.cpp: Template a struct instead of a class and use a Type1 as default of Type2
+    TypeManager.reset();
     List<TranslationUnitDeclaration> result =
         TestUtils.analyze(
             List.of(Path.of(topLevel.toString(), "pair3.cpp").toFile()), topLevel, true);
@@ -321,7 +324,7 @@ public class ClassTemplateTest {
   @Test
   void testTemplateOverrindingDefaults() throws Exception {
     // Test pair3-1.cpp: Override defaults of template
-
+    TypeManager.reset();
     List<TranslationUnitDeclaration> result =
         TestUtils.analyze(
             List.of(Path.of(topLevel.toString(), "pair3-1.cpp").toFile()), topLevel, true);
@@ -393,6 +396,7 @@ public class ClassTemplateTest {
   @Test
   void testTemplateRecursiveDefaults() throws Exception {
     // Test pair3-2.cpp: Use recursive template parameters using defaults
+    TypeManager.reset();
     List<TranslationUnitDeclaration> result =
         TestUtils.analyze(
             List.of(Path.of(topLevel.toString(), "pair3-2.cpp").toFile()), topLevel, true);
