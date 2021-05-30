@@ -353,8 +353,6 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
           addParameterizedTypesToType(type, parameterizedTypes);
         }
       }
-      // templateDeclaration.setName(ctx.getRawSignature().split("\\{")[0].replace('\n', '
-      // ').trim());
     }
     return templateDeclaration;
   }

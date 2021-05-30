@@ -72,11 +72,10 @@ public abstract class TemplateDeclaration extends Declaration implements Declara
   public List<Declaration> getParametersWithDefaults() {
     List<Declaration> parametersWithDefaults = new ArrayList<>();
     for (Declaration declaration : getParameters()) {
-      if (declaration instanceof TypeParamDeclaration
-          && ((TypeParamDeclaration) declaration).getDefault() != null) {
-        parametersWithDefaults.add(declaration);
-      } else if (declaration instanceof ParamVariableDeclaration
-          && ((ParamVariableDeclaration) declaration).getDefault() != null) {
+      if ((declaration instanceof TypeParamDeclaration
+              && ((TypeParamDeclaration) declaration).getDefault() != null)
+          || (declaration instanceof ParamVariableDeclaration
+              && ((ParamVariableDeclaration) declaration).getDefault() != null)) {
         parametersWithDefaults.add(declaration);
       }
     }

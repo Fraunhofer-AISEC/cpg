@@ -490,7 +490,6 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
       callExpression.addExplicitTemplateParameter(
           getTemplateArguments(
               (CPPASTTemplateId) ((CPPASTIdExpression) ctx.getFunctionNameExpression()).getName()));
-      // handleTemplateArguments(ctx, callExpression);
 
     } else {
       String fqn = reference.getName();
