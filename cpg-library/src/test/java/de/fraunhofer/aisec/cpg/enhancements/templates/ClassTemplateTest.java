@@ -43,7 +43,7 @@ import java.nio.file.Path;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
-public class ClassTemplateTest extends BaseTest {
+class ClassTemplateTest extends BaseTest {
   private final Path topLevel = Path.of("src", "test", "resources", "templates", "classtemplates");
 
   void testTemplateStructure(

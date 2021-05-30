@@ -43,7 +43,7 @@ import java.util.List;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
-public class FunctionTemplateTest extends BaseTest {
+class FunctionTemplateTest extends BaseTest {
 
   private final Path topLevel =
       Path.of("src", "test", "resources", "templates", "functiontemplates");
