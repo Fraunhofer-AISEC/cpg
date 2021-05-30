@@ -74,28 +74,29 @@ public class FunctionTemplateTest extends BaseTest {
     assertEquals(UnknownType.getUnknownType(), dependetOperation.getType());
   }
 
-  void testFunctionTemplateArguments(CallExpression callFloat3, ObjectType floatType, Literal<Integer> int3) {
+  void testFunctionTemplateArguments(
+      CallExpression callFloat3, ObjectType floatType, Literal<Integer> int3) {
     assertEquals(2, callFloat3.getTemplateParameters().size());
 
     assertEquals(floatType, callFloat3.getTemplateParameters().get(0));
     assertEquals(
-            0, callFloat3.getTemplateParametersPropertyEdge().get(0).getProperty(Properties.INDEX));
+        0, callFloat3.getTemplateParametersPropertyEdge().get(0).getProperty(Properties.INDEX));
     assertEquals(
-            TemplateDeclaration.TemplateInitialization.EXPLICIT,
-            callFloat3
-                    .getTemplateParametersPropertyEdge()
-                    .get(0)
-                    .getProperty(Properties.INSTANTIATION));
+        TemplateDeclaration.TemplateInitialization.EXPLICIT,
+        callFloat3
+            .getTemplateParametersPropertyEdge()
+            .get(0)
+            .getProperty(Properties.INSTANTIATION));
 
     assertEquals(int3, callFloat3.getTemplateParameters().get(1));
     assertEquals(
-            1, callFloat3.getTemplateParametersPropertyEdge().get(1).getProperty(Properties.INDEX));
+        1, callFloat3.getTemplateParametersPropertyEdge().get(1).getProperty(Properties.INDEX));
     assertEquals(
-            TemplateDeclaration.TemplateInitialization.EXPLICIT,
-            callFloat3
-                    .getTemplateParametersPropertyEdge()
-                    .get(1)
-                    .getProperty(Properties.INSTANTIATION));
+        TemplateDeclaration.TemplateInitialization.EXPLICIT,
+        callFloat3
+            .getTemplateParametersPropertyEdge()
+            .get(1)
+            .getProperty(Properties.INSTANTIATION));
   }
 
   @Test

@@ -46,7 +46,11 @@ import org.junit.jupiter.api.Test;
 public class ClassTemplateTest extends BaseTest {
   private final Path topLevel = Path.of("src", "test", "resources", "templates", "classtemplates");
 
-  void testTemplateStructure(ClassTemplateDeclaration template, RecordDeclaration pair, TypeParamDeclaration type1, TypeParamDeclaration type2) {
+  void testTemplateStructure(
+      ClassTemplateDeclaration template,
+      RecordDeclaration pair,
+      TypeParamDeclaration type1,
+      TypeParamDeclaration type2) {
     assertEquals(2, template.getParameters().size());
     assertEquals(type1, template.getParameters().get(0));
     assertEquals(type2, template.getParameters().get(1));
@@ -55,13 +59,21 @@ public class ClassTemplateTest extends BaseTest {
     assertEquals(pair, template.getRealization().get(0));
   }
 
-  void testClassTemplateFields(RecordDeclaration pair, FieldDeclaration thisField, FieldDeclaration first, FieldDeclaration second) {
+  void testClassTemplateFields(
+      RecordDeclaration pair,
+      FieldDeclaration thisField,
+      FieldDeclaration first,
+      FieldDeclaration second) {
     assertTrue(pair.getFields().contains(thisField));
     assertTrue(pair.getFields().contains(first));
     assertTrue(pair.getFields().contains(second));
   }
 
-  ObjectType testClassTemplatesTypes(RecordDeclaration pair, FieldDeclaration thisField, TypeParamDeclaration type1, TypeParamDeclaration type2) {
+  ObjectType testClassTemplatesTypes(
+      RecordDeclaration pair,
+      FieldDeclaration thisField,
+      TypeParamDeclaration type1,
+      TypeParamDeclaration type2) {
     assertEquals("Pair", thisField.getType().getName());
     assertTrue(thisField.getType() instanceof ObjectType);
     ObjectType pairType = (ObjectType) thisField.getType();
@@ -76,13 +88,21 @@ public class ClassTemplateTest extends BaseTest {
     return pairType;
   }
 
-  void testClassTemplateConstructor(RecordDeclaration pair, ObjectType pairType, ConstructorDeclaration pairConstructorDeclaration) {
+  void testClassTemplateConstructor(
+      RecordDeclaration pair,
+      ObjectType pairType,
+      ConstructorDeclaration pairConstructorDeclaration) {
     assertEquals(pair, pairConstructorDeclaration.getRecordDeclaration());
     assertTrue(pair.getConstructors().contains(pairConstructorDeclaration));
     assertEquals(pairType, pairConstructorDeclaration.getType());
   }
 
-  void testClassTemplateInvocation(ConstructorDeclaration pairConstructorDeclaration, ConstructExpression constructExpression, RecordDeclaration pair, ObjectType pairType, ClassTemplateDeclaration template) {
+  void testClassTemplateInvocation(
+      ConstructorDeclaration pairConstructorDeclaration,
+      ConstructExpression constructExpression,
+      RecordDeclaration pair,
+      ObjectType pairType,
+      ClassTemplateDeclaration template) {
     assertEquals(pairConstructorDeclaration, constructExpression.getConstructor());
     assertTrue(constructExpression.getInvokes().contains(pairConstructorDeclaration));
     assertEquals(pair, constructExpression.getInstantiates());
@@ -158,7 +178,8 @@ public class ClassTemplateTest extends BaseTest {
     testClassTemplateConstructor(pair, pairType, pairConstructorDeclaration);
 
     // Test Invocation
-    testClassTemplateInvocation(pairConstructorDeclaration, constructExpression, pair, pairType, template);
+    testClassTemplateInvocation(
+        pairConstructorDeclaration, constructExpression, pair, pairType, template);
   }
 
   @Test
@@ -243,7 +264,12 @@ public class ClassTemplateTest extends BaseTest {
     assertEquals(template, constructExpression.getTemplateInstantiation());
   }
 
-  void testStructTemplateWithSameDefaultTypeInvocation(ClassTemplateDeclaration template, RecordDeclaration pair, ConstructorDeclaration pairConstructorDeclaration, ConstructExpression constructExpression,  VariableDeclaration point1) {
+  void testStructTemplateWithSameDefaultTypeInvocation(
+      ClassTemplateDeclaration template,
+      RecordDeclaration pair,
+      ConstructorDeclaration pairConstructorDeclaration,
+      ConstructExpression constructExpression,
+      VariableDeclaration point1) {
     assertEquals(pair, constructExpression.getInstantiates());
     assertEquals(template, constructExpression.getTemplateInstantiation());
     assertEquals(pairConstructorDeclaration, constructExpression.getConstructor());
@@ -251,18 +277,18 @@ public class ClassTemplateTest extends BaseTest {
     assertEquals(2, constructExpression.getTemplateParameters().size());
     assertEquals("int", constructExpression.getTemplateParameters().get(0).getName());
     assertEquals(
-            TemplateDeclaration.TemplateInitialization.EXPLICIT,
-            constructExpression
-                    .getTemplateParametersPropertyEdge()
-                    .get(0)
-                    .getProperty(Properties.INSTANTIATION));
+        TemplateDeclaration.TemplateInitialization.EXPLICIT,
+        constructExpression
+            .getTemplateParametersPropertyEdge()
+            .get(0)
+            .getProperty(Properties.INSTANTIATION));
     assertEquals("int", constructExpression.getTemplateParameters().get(1).getName());
     assertEquals(
-            TemplateDeclaration.TemplateInitialization.EXPLICIT,
-            constructExpression
-                    .getTemplateParametersPropertyEdge()
-                    .get(1)
-                    .getProperty(Properties.INSTANTIATION));
+        TemplateDeclaration.TemplateInitialization.EXPLICIT,
+        constructExpression
+            .getTemplateParametersPropertyEdge()
+            .get(1)
+            .getProperty(Properties.INSTANTIATION));
 
     ObjectType pairTypeInstantiated = (ObjectType) constructExpression.getType();
 
@@ -272,7 +298,6 @@ public class ClassTemplateTest extends BaseTest {
     assertEquals("int", pairTypeInstantiated.getGenerics().get(1).getName());
 
     assertEquals(pairTypeInstantiated, point1.getType());
-
   }
 
   @Test
@@ -315,9 +340,9 @@ public class ClassTemplateTest extends BaseTest {
             TestUtils.subnodesOfType(result, VariableDeclaration.class), "point1");
 
     ConstructExpression constructExpression =
-            TestUtils.findByUniquePredicate(
-                    TestUtils.subnodesOfType(result, ConstructExpression.class),
-                    c -> c.getCode().equals("()"));
+        TestUtils.findByUniquePredicate(
+            TestUtils.subnodesOfType(result, ConstructExpression.class),
+            c -> c.getCode().equals("()"));
 
     assertEquals(1, template.getRealization().size());
     assertEquals(pair, template.getRealization().get(0));
@@ -347,8 +372,8 @@ public class ClassTemplateTest extends BaseTest {
     assertEquals(type1ParameterizedType, first.getType());
     assertEquals(type2ParameterizedType, second.getType());
 
-    testStructTemplateWithSameDefaultTypeInvocation(template, pair, pairConstructorDeclaration, constructExpression, point1);
-
+    testStructTemplateWithSameDefaultTypeInvocation(
+        template, pair, pairConstructorDeclaration, constructExpression, point1);
   }
 
   @Test
