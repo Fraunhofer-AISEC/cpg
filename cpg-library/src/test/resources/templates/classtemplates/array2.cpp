@@ -15,5 +15,4 @@ public:
 int main()
 {
 	Array<int, 5>* array = new Array<int, 5>;
-	array->GetSize()
 }
