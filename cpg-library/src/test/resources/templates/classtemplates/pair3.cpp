@@ -12,6 +12,6 @@ int main()
 {
     Pair<int,int> point1;
 
-    point1.first = 10;
-    point1.second = 20;
+    //point1.first = 10;
+    //point1.second = 20;
 }

@@ -34,6 +34,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.ConstructExpression;
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression;
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal;
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType;
+import de.fraunhofer.aisec.cpg.graph.types.ParameterizedType;
 import java.nio.file.Path;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -219,6 +220,281 @@ public class ClassTemplateTest {
   @Test
   void testStructTemplateWithSameDefaultType() throws Exception {
     // Test pair3.cpp: Template a struct instead of a class and use a Type1 as default of Type2
+    List<TranslationUnitDeclaration> result =
+        TestUtils.analyze(
+            List.of(Path.of(topLevel.toString(), "pair3.cpp").toFile()), topLevel, true);
 
+    ClassTemplateDeclaration template =
+        TestUtils.findByUniqueName(
+            TestUtils.subnodesOfType(result, ClassTemplateDeclaration.class),
+            "template<class Type1, class Type2 = Type1> struct Pair");
+
+    RecordDeclaration pair =
+        TestUtils.findByUniqueName(
+            TestUtils.subnodesOfType(result, RecordDeclaration.class), "Pair");
+
+    ConstructorDeclaration pairConstructorDeclaration =
+        TestUtils.findByUniqueName(
+            TestUtils.subnodesOfType(result, ConstructorDeclaration.class), "Pair");
+
+    TypeParamDeclaration type1 =
+        TestUtils.findByUniqueName(
+            TestUtils.subnodesOfType(result, TypeParamDeclaration.class), "class Type1");
+    TypeParamDeclaration type2 =
+        TestUtils.findByUniqueName(
+            TestUtils.subnodesOfType(result, TypeParamDeclaration.class), "class Type2 = Type1");
+
+    FieldDeclaration first =
+        TestUtils.findByUniqueName(
+            TestUtils.subnodesOfType(result, FieldDeclaration.class), "first");
+    FieldDeclaration second =
+        TestUtils.findByUniqueName(
+            TestUtils.subnodesOfType(result, FieldDeclaration.class), "second");
+
+    VariableDeclaration point1 =
+        TestUtils.findByUniqueName(
+            TestUtils.subnodesOfType(result, VariableDeclaration.class), "point1");
+
+    assertEquals(1, template.getRealization().size());
+    assertEquals(pair, template.getRealization().get(0));
+
+    assertEquals(2, template.getParameters().size());
+    assertEquals(type1, template.getParameters().get(0));
+    assertEquals(type2, template.getParameters().get(1));
+
+    assertEquals("Type1", type1.getType().getName());
+    ParameterizedType type1ParameterizedType = (ParameterizedType) type1.getType();
+
+    assertEquals("Type2", type2.getType().getName());
+    ParameterizedType type2ParameterizedType = (ParameterizedType) type2.getType();
+
+    assertEquals(type1ParameterizedType, type2.getDefault());
+
+    ObjectType pairType = (ObjectType) pairConstructorDeclaration.getType();
+
+    assertEquals(2, pairType.getGenerics().size());
+    assertEquals(type1ParameterizedType, pairType.getGenerics().get(0));
+    assertEquals(type2ParameterizedType, pairType.getGenerics().get(1));
+
+    assertEquals(2, pair.getFields().size());
+    assertEquals(first, pair.getFields().get(0));
+    assertEquals(second, pair.getFields().get(1));
+
+    assertEquals(type1ParameterizedType, first.getType());
+    assertEquals(type2ParameterizedType, second.getType());
+
+    ConstructExpression constructExpression =
+        TestUtils.findByUniquePredicate(
+            TestUtils.subnodesOfType(result, ConstructExpression.class),
+            c -> c.getCode().equals("()"));
+
+    assertEquals(pair, constructExpression.getInstantiates());
+    assertEquals(template, constructExpression.getTemplateInstantiation());
+    assertEquals(pairConstructorDeclaration, constructExpression.getConstructor());
+
+    assertEquals(2, constructExpression.getTemplateParameters().size());
+    assertEquals("int", constructExpression.getTemplateParameters().get(0).getName());
+    assertEquals(
+        TemplateDeclaration.TemplateInitialization.EXPLICIT,
+        constructExpression
+            .getTemplateParametersPropertyEdge()
+            .get(0)
+            .getProperty(Properties.INSTANTIATION));
+    assertEquals("int", constructExpression.getTemplateParameters().get(1).getName());
+    assertEquals(
+        TemplateDeclaration.TemplateInitialization.EXPLICIT,
+        constructExpression
+            .getTemplateParametersPropertyEdge()
+            .get(1)
+            .getProperty(Properties.INSTANTIATION));
+
+    ObjectType pairTypeInstantiated = (ObjectType) constructExpression.getType();
+
+    assertEquals(pair, pairTypeInstantiated.getRecordDeclaration());
+    assertEquals(2, pairTypeInstantiated.getGenerics().size());
+    assertEquals("int", pairTypeInstantiated.getGenerics().get(0).getName());
+    assertEquals("int", pairTypeInstantiated.getGenerics().get(1).getName());
+
+    assertEquals(pairTypeInstantiated, point1.getType());
+  }
+
+  @Test
+  void testTemplateOverrindingDefaults() throws Exception {
+    // Test pair3-1.cpp: Override defaults of template
+
+    List<TranslationUnitDeclaration> result =
+        TestUtils.analyze(
+            List.of(Path.of(topLevel.toString(), "pair3-1.cpp").toFile()), topLevel, true);
+
+    ClassTemplateDeclaration template =
+        TestUtils.findByUniqueName(
+            TestUtils.subnodesOfType(result, ClassTemplateDeclaration.class),
+            "template<class Type1, class Type2 = Type1, int A=1, int B=A> struct Pair");
+
+    RecordDeclaration pair =
+        TestUtils.findByUniqueName(
+            TestUtils.subnodesOfType(result, RecordDeclaration.class), "Pair");
+
+    ConstructExpression constructExpression =
+        TestUtils.findByUniquePredicate(
+            TestUtils.subnodesOfType(result, ConstructExpression.class),
+            c -> c.getCode().equals("()"));
+
+    Literal<?> literal2 =
+        TestUtils.findByUniquePredicate(
+            TestUtils.subnodesOfType(result, Literal.class), l -> l.getValue().equals(2));
+
+    assertEquals(pair, constructExpression.getInstantiates());
+    assertEquals(template, constructExpression.getTemplateInstantiation());
+
+    assertEquals(4, constructExpression.getTemplateParameters().size());
+
+    assertEquals("int", constructExpression.getTemplateParameters().get(0).getName());
+    assertEquals(
+        TemplateDeclaration.TemplateInitialization.EXPLICIT,
+        constructExpression
+            .getTemplateParametersPropertyEdge()
+            .get(0)
+            .getProperty(Properties.INSTANTIATION));
+
+    assertEquals("int", constructExpression.getTemplateParameters().get(1).getName());
+    assertEquals(
+        TemplateDeclaration.TemplateInitialization.EXPLICIT,
+        constructExpression
+            .getTemplateParametersPropertyEdge()
+            .get(1)
+            .getProperty(Properties.INSTANTIATION));
+
+    assertEquals(literal2, constructExpression.getTemplateParameters().get(2));
+    assertEquals(
+        TemplateDeclaration.TemplateInitialization.EXPLICIT,
+        constructExpression
+            .getTemplateParametersPropertyEdge()
+            .get(2)
+            .getProperty(Properties.INSTANTIATION));
+
+    assertEquals(literal2, constructExpression.getTemplateParameters().get(3));
+    assertEquals(
+        TemplateDeclaration.TemplateInitialization.DEFAULT,
+        constructExpression
+            .getTemplateParametersPropertyEdge()
+            .get(3)
+            .getProperty(Properties.INSTANTIATION));
+
+    ObjectType type = (ObjectType) constructExpression.getType();
+
+    assertEquals(pair, type.getRecordDeclaration());
+
+    assertEquals(2, type.getGenerics().size());
+    assertEquals("int", type.getGenerics().get(0).getName());
+    assertEquals("int", type.getGenerics().get(1).getName());
+  }
+
+  @Test
+  void testTemplateRecursiveDefaults() throws Exception {
+    // Test pair3-2.cpp: Use recursive template parameters using defaults
+    List<TranslationUnitDeclaration> result =
+        TestUtils.analyze(
+            List.of(Path.of(topLevel.toString(), "pair3-2.cpp").toFile()), topLevel, true);
+
+    ClassTemplateDeclaration template =
+        TestUtils.findByUniqueName(
+            TestUtils.subnodesOfType(result, ClassTemplateDeclaration.class),
+            "template<class Type1, class Type2 = Type1, int A=1, int B=A> struct Pair");
+
+    RecordDeclaration pair =
+        TestUtils.findByUniqueName(
+            TestUtils.subnodesOfType(result, RecordDeclaration.class), "Pair");
+
+    ParamVariableDeclaration A =
+        TestUtils.findByUniqueName(
+            TestUtils.subnodesOfType(result, ParamVariableDeclaration.class), "A");
+    ParamVariableDeclaration B =
+        TestUtils.findByUniqueName(
+            TestUtils.subnodesOfType(result, ParamVariableDeclaration.class), "B");
+
+    ConstructExpression constructExpression =
+        TestUtils.findByUniquePredicate(
+            TestUtils.subnodesOfType(result, ConstructExpression.class),
+            c -> c.getCode().equals("()"));
+
+    Literal<?> literal1 =
+        TestUtils.findByUniquePredicate(
+            TestUtils.subnodesOfType(result, Literal.class), l -> l.getValue().equals(1));
+
+    assertEquals(4, template.getParameters().size());
+
+    assertEquals(A, template.getParameters().get(2));
+    assertEquals(literal1, A.getDefault());
+
+    assertEquals(B, template.getParameters().get(3));
+    assertEquals(A, ((DeclaredReferenceExpression) B.getDefault()).getRefersTo());
+
+    assertEquals(pair, constructExpression.getInstantiates());
+    assertEquals(template, constructExpression.getTemplateInstantiation());
+
+    assertEquals(4, constructExpression.getTemplateParameters().size());
+
+    assertEquals("int", constructExpression.getTemplateParameters().get(0).getName());
+    assertEquals(
+        TemplateDeclaration.TemplateInitialization.EXPLICIT,
+        constructExpression
+            .getTemplateParametersPropertyEdge()
+            .get(0)
+            .getProperty(Properties.INSTANTIATION));
+    assertEquals(
+        0,
+        constructExpression
+            .getTemplateParametersPropertyEdge()
+            .get(0)
+            .getProperty(Properties.INDEX));
+
+    assertEquals("int", constructExpression.getTemplateParameters().get(1).getName());
+    assertEquals(
+        TemplateDeclaration.TemplateInitialization.DEFAULT,
+        constructExpression
+            .getTemplateParametersPropertyEdge()
+            .get(1)
+            .getProperty(Properties.INSTANTIATION));
+    assertEquals(
+        1,
+        constructExpression
+            .getTemplateParametersPropertyEdge()
+            .get(1)
+            .getProperty(Properties.INDEX));
+
+    assertEquals(literal1, constructExpression.getTemplateParameters().get(2));
+    assertEquals(
+        TemplateDeclaration.TemplateInitialization.DEFAULT,
+        constructExpression
+            .getTemplateParametersPropertyEdge()
+            .get(2)
+            .getProperty(Properties.INSTANTIATION));
+    assertEquals(
+        2,
+        constructExpression
+            .getTemplateParametersPropertyEdge()
+            .get(2)
+            .getProperty(Properties.INDEX));
+
+    assertEquals(literal1, constructExpression.getTemplateParameters().get(3));
+    assertEquals(
+        TemplateDeclaration.TemplateInitialization.DEFAULT,
+        constructExpression
+            .getTemplateParametersPropertyEdge()
+            .get(3)
+            .getProperty(Properties.INSTANTIATION));
+    assertEquals(
+        3,
+        constructExpression
+            .getTemplateParametersPropertyEdge()
+            .get(3)
+            .getProperty(Properties.INDEX));
+
+    // Test Type
+    ObjectType type = (ObjectType) constructExpression.getType();
+    assertEquals(2, type.getGenerics().size());
+    assertEquals("int", type.getGenerics().get(0).getName());
+    assertEquals("int", type.getGenerics().get(1).getName());
   }
 }
