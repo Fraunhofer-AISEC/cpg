@@ -848,14 +848,26 @@ public class TypeParser {
   }
 
   public static Type createFrom(@NonNull String type, boolean resolveAlias, LanguageFrontend lang) {
-    Type templateType =
-        TypeManager.getInstance()
-            .searchTemplateScopeForDefinedParameterizedTypes(
-                lang.getScopeManager().getCurrentScope(), type);
+    Type templateType = searchForTemplateTypes(type, lang);
     if (templateType != null) {
       return templateType;
     }
-    return createFrom(type, resolveAlias);
+    Type createdType = createFrom(type, resolveAlias);
+
+    if (createdType instanceof SecondOrderType) {
+      templateType = searchForTemplateTypes(createdType.getRoot().getName(), lang);
+      if (templateType != null) {
+        createdType.setRoot(templateType);
+      }
+    }
+
+    return createdType;
+  }
+
+  private static Type searchForTemplateTypes(@NonNull String type, LanguageFrontend lang) {
+    return TypeManager.getInstance()
+        .searchTemplateScopeForDefinedParameterizedTypes(
+            lang.getScopeManager().getCurrentScope(), type);
   }
 
   /**

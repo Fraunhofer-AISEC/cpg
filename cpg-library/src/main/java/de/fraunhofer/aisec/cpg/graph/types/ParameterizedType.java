@@ -41,7 +41,7 @@ public class ParameterizedType extends Type {
 
   @Override
   public Type reference(PointerType.PointerOrigin pointer) {
-    return this;
+    return new PointerType(this, pointer);
   }
 
   @Override
