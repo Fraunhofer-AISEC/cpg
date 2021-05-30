@@ -413,7 +413,7 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
       CPPASTTemplateId templateId =
           (CPPASTTemplateId) ((CPPASTNamedTypeSpecifier) declSpecifier).getName();
       Type type = TypeParser.createFrom(templateId.getTemplateName().getRawSignature(), true);
-      assert type instanceof ObjectType; // TODO CPS check ptrs?
+      assert type instanceof ObjectType;
       ObjectType objectType = (ObjectType) type;
       List<Node> templateParams = new ArrayList<>();
 
