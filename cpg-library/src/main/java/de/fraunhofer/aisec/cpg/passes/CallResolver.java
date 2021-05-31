@@ -1168,36 +1168,57 @@ public class CallResolver extends Pass {
       // Handle defaults of parameters
       handleDefaultTemplateParameters(template, templateParameterRealDefaultInitialization);
 
-      List<Node> missingParams =
-          template
-              .getParameterDefaults()
-              .subList(
-                  constructExpression.getTemplateParameters().size(),
-                  template.getParameterDefaults().size());
-      for (Node missingParam : missingParams) {
-        if (missingParam instanceof DeclaredReferenceExpression) {
-          missingParam = ((DeclaredReferenceExpression) missingParam).getRefersTo();
-        }
 
-        if (templateParametersExplicitInitialization.containsKey(missingParam)) {
-          constructExpression.addTemplateParameter(
-              templateParametersExplicitInitialization.get(missingParam),
-              TemplateDeclaration.TemplateInitialization.DEFAULT);
-          if (templateParametersExplicitInitialization.get(missingParam) instanceof Type) {
-            ((ObjectType) constructExpression.getType())
-                .addGeneric((Type) templateParametersExplicitInitialization.get(missingParam));
-          }
-        } else if (templateParameterRealDefaultInitialization.containsKey(missingParam)) {
-          constructExpression.addTemplateParameter(
-              templateParameterRealDefaultInitialization.get(missingParam),
-              TemplateDeclaration.TemplateInitialization.DEFAULT);
-          if (templateParametersExplicitInitialization.get(missingParam) instanceof Type) {
-            ((ObjectType) constructExpression.getType())
-                .addGeneric((Type) templateParametersExplicitInitialization.get(missingParam));
-          }
+      // Add defaults to ConstructDeclaration
+
+    } while (templateParameters != constructExpression.getTemplateParameters().size());
+  }
+
+  /**
+   * Apply missingParameters (either explicit or defaults) to the ConstructExpression and its type
+   * @param template Template which is instantiated by the ConstructExpression
+   * @param constructExpression
+   * @param templateParametersExplicitInitialization mapping of the template parameter to the explicit instantiation
+   * @param templateParameterRealDefaultInitialization mapping of template parameter to its real default (no recursive)
+   */
+  private void applyMissingParams(
+      ClassTemplateDeclaration template,
+      ConstructExpression constructExpression,
+      Map<Node, Node> templateParametersExplicitInitialization,
+      Map<Node, Node> templateParameterRealDefaultInitialization) {
+    List<Node> missingParams =
+            template
+                    .getParameterDefaults()
+                    .subList(
+                            constructExpression.getTemplateParameters().size(),
+                            template.getParameterDefaults().size());
+
+    for (Node missingParam : missingParams) {
+      if (missingParam instanceof DeclaredReferenceExpression) {
+        missingParam = ((DeclaredReferenceExpression) missingParam).getRefersTo();
+      }
+
+      if (templateParametersExplicitInitialization.containsKey(missingParam)) {
+        // Add explicit template argument to construct declaration
+        constructExpression.addTemplateParameter(
+                templateParametersExplicitInitialization.get(missingParam),
+                TemplateDeclaration.TemplateInitialization.DEFAULT);
+        // If template argument is a type add it as a generic to the type as well
+        if (templateParametersExplicitInitialization.get(missingParam) instanceof Type) {
+          ((ObjectType) constructExpression.getType())
+                  .addGeneric((Type) templateParametersExplicitInitialization.get(missingParam));
+        }
+      } else if (templateParameterRealDefaultInitialization.containsKey(missingParam)) {
+        // Add default of template parameter to construct declaration
+        constructExpression.addTemplateParameter(
+                templateParameterRealDefaultInitialization.get(missingParam),
+                TemplateDeclaration.TemplateInitialization.DEFAULT);
+        if (templateParametersExplicitInitialization.get(missingParam) instanceof Type) {
+          ((ObjectType) constructExpression.getType())
+                  .addGeneric((Type) templateParametersExplicitInitialization.get(missingParam));
         }
       }
-    } while (templateParameters != constructExpression.getTemplateParameters().size());
+    }
   }
 
   /**
@@ -1228,7 +1249,7 @@ public class CallResolver extends Pass {
    * template argument)
    *
    * @param template containing template argumetns
-   * @param templateParameterRealDefaultInitialization mapping of template parameter to the default
+   * @param templateParameterRealDefaultInitialization mapping of template parameter to its real default (no recursive)
    */
   private void handleDefaultTemplateParameters(
       ClassTemplateDeclaration template,
