@@ -467,6 +467,7 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
 
   /**
    * Handles usage of Templates in SimpleDeclarations
+   *
    * @param declSpecifier
    * @param ctx
    * @param sequence
@@ -475,8 +476,7 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
       CPPASTNamedTypeSpecifier declSpecifier,
       CPPASTSimpleDeclaration ctx,
       DeclarationSequence sequence) {
-    CPPASTTemplateId templateId =
-        (CPPASTTemplateId) (declSpecifier).getName();
+    CPPASTTemplateId templateId = (CPPASTTemplateId) (declSpecifier).getName();
     Type type = TypeParser.createFrom(templateId.getTemplateName().getRawSignature(), true);
     assert type instanceof ObjectType;
     ObjectType objectType = (ObjectType) type;

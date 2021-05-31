@@ -533,40 +533,17 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
         NodeBuilder.newDeclaredReferenceExpression(
             ctx.getName().toString(), UnknownType.getUnknownType(), ctx.getRawSignature());
 
-    if (expressionTypeProxy(ctx) instanceof ProblemType
-        || (expressionTypeProxy(ctx) instanceof IQualifierType
-            && ((IQualifierType) expressionTypeProxy(ctx)).getType() instanceof ProblemType)
-        || expressionTypeProxy(ctx) instanceof TypeOfDependentExpression) {
-      log.debug("CDT could not deduce type. Trying manually");
+    IType proxy = expressionTypeProxy(ctx);
 
-      IBinding binding = ctx.getName().resolveBinding();
-      Declaration declaration = this.lang.getCachedDeclaration(binding);
-      if (declaration != null) {
-        if (declaration instanceof ValueDeclaration) {
-          declaredReferenceExpression.setType(((ValueDeclaration) declaration).getType());
-        } else {
-          log.debug("Unknown declaration type, setting to UNKNOWN");
-          declaredReferenceExpression.setType(UnknownType.getUnknownType());
-        }
-      } else {
-        log.debug("Could not deduce type manually, setting to UNKNOWN");
-        declaredReferenceExpression.setType(UnknownType.getUnknownType());
-      }
+    if (proxy instanceof ProblemType
+        || (proxy instanceof IQualifierType
+            && ((IQualifierType) proxy).getType() instanceof ProblemType)
+        || proxy instanceof TypeOfDependentExpression) {
+      deduceTypeManually(ctx, declaredReferenceExpression);
     } else {
-      IType proxy = expressionTypeProxy(ctx);
       if (proxy instanceof CPPClassInstance) {
         // Handle Template Types separately
-        ObjectType type =
-            (ObjectType)
-                TypeParser.createFrom(
-                    ((CPPClassInstance) proxy).getTemplateDefinition().toString(), true);
-        for (ICPPTemplateArgument templateArgument :
-            ((CPPClassInstance) proxy).getTemplateArguments()) {
-          if (templateArgument instanceof CPPTemplateTypeArgument) {
-            type.addGeneric(TypeParser.createFrom(templateArgument.toString(), true));
-          }
-        }
-        declaredReferenceExpression.setType(type);
+        handleTemplateTypeOfDeclaredReferenceExpression(proxy, declaredReferenceExpression);
       } else {
         declaredReferenceExpression.setType(
             TypeParser.createFrom(expressionTypeProxy(ctx).toString(), true, lang));
@@ -580,6 +557,52 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
     this.lang.expressionRefersToDeclaration(declaredReferenceExpression, ctx);
 
     return declaredReferenceExpression;
+  }
+
+  /**
+   * Sets the type of the DeclaredReferenceExpression
+   *
+   * @param ctx
+   * @param declaredReferenceExpression
+   */
+  private void deduceTypeManually(
+      CPPASTIdExpression ctx, DeclaredReferenceExpression declaredReferenceExpression) {
+    log.debug("CDT could not deduce type. Trying manually");
+
+    IBinding binding = ctx.getName().resolveBinding();
+    Declaration declaration = this.lang.getCachedDeclaration(binding);
+    if (declaration != null) {
+      if (declaration instanceof ValueDeclaration) {
+        declaredReferenceExpression.setType(((ValueDeclaration) declaration).getType());
+      } else {
+        log.debug("Unknown declaration type, setting to UNKNOWN");
+        declaredReferenceExpression.setType(UnknownType.getUnknownType());
+      }
+    } else {
+      log.debug("Could not deduce type manually, setting to UNKNOWN");
+      declaredReferenceExpression.setType(UnknownType.getUnknownType());
+    }
+  }
+
+  /**
+   * Sets type of DeclaredReferenceExpression if type represents a template
+   *
+   * @param proxy
+   * @param declaredReferenceExpression
+   */
+  private void handleTemplateTypeOfDeclaredReferenceExpression(
+      IType proxy, DeclaredReferenceExpression declaredReferenceExpression) {
+    ObjectType type =
+        (ObjectType)
+            TypeParser.createFrom(
+                ((CPPClassInstance) proxy).getTemplateDefinition().toString(), true);
+    for (ICPPTemplateArgument templateArgument :
+        ((CPPClassInstance) proxy).getTemplateArguments()) {
+      if (templateArgument instanceof CPPTemplateTypeArgument) {
+        type.addGeneric(TypeParser.createFrom(templateArgument.toString(), true));
+      }
+    }
+    declaredReferenceExpression.setType(type);
   }
 
   private ExpressionList handleExpressionList(CPPASTExpressionList exprList) {
