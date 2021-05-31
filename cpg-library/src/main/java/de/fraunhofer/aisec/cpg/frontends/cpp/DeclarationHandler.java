@@ -248,11 +248,6 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
   }
 
   private Declaration handleTemplateDeclaration(CPPASTTemplateDeclaration ctx) {
-    warnWithFileLocation(
-        lang,
-        ctx,
-        log,
-        "Parsing template declarations is not supported (yet). Will ignore template and parse inner declaration");
 
     TemplateDeclaration templateDeclaration;
     if (ctx.getDeclaration() instanceof CPPASTFunctionDefinition) {
@@ -270,9 +265,34 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
     lang.getScopeManager().addDeclaration(templateDeclaration);
     lang.getScopeManager().enterScope(templateDeclaration);
 
+    addTemplateParameters(ctx, templateDeclaration);
+
+    // Handle Template
+    Declaration innerDeclaration = lang.getDeclarationHandler().handle(ctx.getDeclaration());
+    lang.getScopeManager().leaveScope(templateDeclaration);
+
+    if (templateDeclaration instanceof FunctionTemplateDeclaration) {
+      // Fix typeName
+      templateDeclaration.setName(
+          templateDeclaration.getRealizationDeclarations().get(0).getName());
+    } else if (innerDeclaration instanceof RecordDeclaration) {
+      fixTypeOfInnerDeclaration(templateDeclaration, innerDeclaration);
+    }
+    addRealizationToScope(templateDeclaration);
+    return templateDeclaration;
+  }
+
+  /**
+   * Add Template Parameters to the TemplateDeclaration
+   *
+   * @param ctx
+   * @param templateDeclaration
+   */
+  private void addTemplateParameters(
+      CPPASTTemplateDeclaration ctx, TemplateDeclaration templateDeclaration) {
     for (ICPPASTTemplateParameter templateParameter : ctx.getTemplateParameters()) {
       if (templateParameter instanceof CPPASTSimpleTypeTemplateParameter) {
-        // Handle Types as Parameters
+        // Handle Type Parameters
         TypeParamDeclaration typeParamDeclaration =
             (TypeParamDeclaration)
                 this.lang
@@ -300,7 +320,7 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
 
         templateDeclaration.addParameter(typeParamDeclaration);
       } else if (templateParameter instanceof CPPASTParameterDeclaration) {
-        // Handle Values as Parameters
+        // Handle Value Parameters
         ParamVariableDeclaration nonTypeTemplateParamDeclaration =
             this.lang
                 .getParameterDeclarationHandler()
@@ -323,38 +343,45 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
         lang.getScopeManager().addDeclaration(nonTypeTemplateParamDeclaration);
       }
     }
+  }
 
-    // Handle Template
-    Declaration innerDeclaration = lang.getDeclarationHandler().handle(ctx.getDeclaration());
-    lang.getScopeManager().leaveScope(templateDeclaration);
-
-    if (templateDeclaration instanceof FunctionTemplateDeclaration) {
-      templateDeclaration.setName(
-          templateDeclaration.getRealizationDeclarations().get(0).getName());
-      for (Declaration functionDeclaration : templateDeclaration.getRealizationDeclarations()) {
-        lang.getScopeManager().addDeclaration(functionDeclaration);
-      }
-    } else {
-      if (innerDeclaration instanceof RecordDeclaration) {
-        // Add
-        Type type;
-        if (((RecordDeclaration) innerDeclaration).getThis() == null) {
-          type = TypeParser.createFrom(innerDeclaration.getName(), true);
-        } else {
-          type = ((RecordDeclaration) innerDeclaration).getThis().getType();
-        }
-        List<ParameterizedType> parameterizedTypes =
-            TypeManager.getInstance().getAllParameterizedType(templateDeclaration);
-        addParameterizedTypesToType(type, parameterizedTypes);
-
-        for (ConstructorDeclaration constructorDeclaration :
-            ((RecordDeclaration) innerDeclaration).getConstructors()) {
-          type = constructorDeclaration.getType();
-          addParameterizedTypesToType(type, parameterizedTypes);
-        }
-      }
+  /**
+   * Adds the generic realization of the template to the scope
+   *
+   * @param templateDeclaration
+   */
+  private void addRealizationToScope(TemplateDeclaration templateDeclaration) {
+    for (Declaration declaration : templateDeclaration.getRealizationDeclarations()) {
+      lang.getScopeManager().addDeclaration(declaration);
     }
-    return templateDeclaration;
+  }
+
+  /**
+   * Fixed the Types created by the innerDeclaration with the ParameterizedTypes of the
+   * TemplateDeclaration
+   *
+   * @param templateDeclaration
+   * @param innerDeclaration If RecordDeclaration
+   */
+  private void fixTypeOfInnerDeclaration(
+      TemplateDeclaration templateDeclaration, Declaration innerDeclaration) {
+    Type type;
+    if (((RecordDeclaration) innerDeclaration).getThis() == null) {
+      type = TypeParser.createFrom(innerDeclaration.getName(), true);
+    } else {
+      type = ((RecordDeclaration) innerDeclaration).getThis().getType();
+    }
+    List<ParameterizedType> parameterizedTypes =
+        TypeManager.getInstance().getAllParameterizedType(templateDeclaration);
+    // Add ParameterizedTypes to type
+    addParameterizedTypesToType(type, parameterizedTypes);
+
+    // Add ParameterizedTypes to ConstructorDeclaration Type
+    for (ConstructorDeclaration constructorDeclaration :
+        ((RecordDeclaration) innerDeclaration).getConstructors()) {
+      type = constructorDeclaration.getType();
+      addParameterizedTypesToType(type, parameterizedTypes);
+    }
   }
 
   private void addParameterizedTypesToType(Type type, List<ParameterizedType> parameterizedTypes) {
