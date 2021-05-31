@@ -1157,48 +1157,16 @@ public class CallResolver extends Pass {
       ConstructExpression constructExpression, ClassTemplateDeclaration template) {
     int templateParameters;
     do {
+      // Handle Explicit Template Arguments
       templateParameters = constructExpression.getTemplateParameters().size();
       Map<Node, Node> templateParametersExplicitInitialization = new HashMap<>();
-      for (int i = 0; i < constructExpression.getTemplateParameters().size(); i++) {
-        Node explicit = constructExpression.getTemplateParameters().get(i);
-        if (template.getParameters().get(i) instanceof TypeParamDeclaration) {
-          templateParametersExplicitInitialization.put(
-              ((TypeParamDeclaration) template.getParameters().get(i)).getType(), explicit);
-        } else if (template.getParameters().get(i) instanceof ParamVariableDeclaration) {
-          templateParametersExplicitInitialization.put(template.getParameters().get(i), explicit);
-        }
-      }
+      handleExplicitTemplateParameters(
+          constructExpression, template, templateParametersExplicitInitialization);
 
       Map<Node, Node> templateParameterRealDefaultInitialization = new HashMap<>();
-      List<Type> declaredTemplateTypes = new ArrayList<>();
-      List<ParamVariableDeclaration> declaredNonTypeTemplate = new ArrayList<>();
-      List<Declaration> parametersWithDefaults = template.getParametersWithDefaults();
 
-      for (Declaration declaration : template.getParameters()) {
-        if (declaration instanceof TypeParamDeclaration) {
-          declaredTemplateTypes.add(((TypeParamDeclaration) declaration).getType());
-          if (!declaredTemplateTypes.contains(((TypeParamDeclaration) declaration).getDefault())
-              && parametersWithDefaults.contains(declaration)) {
-            templateParameterRealDefaultInitialization.put(
-                ((TypeParamDeclaration) declaration).getType(),
-                ((TypeParamDeclaration) declaration).getDefault());
-          }
-        } else if (declaration instanceof ParamVariableDeclaration) {
-          declaredNonTypeTemplate.add((ParamVariableDeclaration) declaration);
-          if (parametersWithDefaults.contains(declaration)
-              && (((ParamVariableDeclaration) declaration).getDefault()
-                          instanceof DeclaredReferenceExpression
-                      && !declaredNonTypeTemplate.contains(
-                          ((DeclaredReferenceExpression)
-                                  ((ParamVariableDeclaration) declaration).getDefault())
-                              .getRefersTo())
-                  || !(((ParamVariableDeclaration) declaration).getDefault()
-                      instanceof DeclaredReferenceExpression))) {
-            templateParameterRealDefaultInitialization.put(
-                declaration, ((ParamVariableDeclaration) declaration).getDefault());
-          }
-        }
-      }
+      // Handle defaults of parameters
+      handleDefaultTemplateParameters(template, templateParameterRealDefaultInitialization);
 
       List<Node> missingParams =
           template
@@ -1230,6 +1198,70 @@ public class CallResolver extends Pass {
         }
       }
     } while (templateParameters != constructExpression.getTemplateParameters().size());
+  }
+
+  /**
+   * Matches declared template arguments to the explicit instantiation
+   *
+   * @param constructExpression containing the explicit instantiation
+   * @param template containing declared template arguments
+   * @param templateParametersExplicitInitialization mapping of the template parameter to the
+   *     explicit instantiation
+   */
+  private void handleExplicitTemplateParameters(
+      ConstructExpression constructExpression,
+      ClassTemplateDeclaration template,
+      Map<Node, Node> templateParametersExplicitInitialization) {
+    for (int i = 0; i < constructExpression.getTemplateParameters().size(); i++) {
+      Node explicit = constructExpression.getTemplateParameters().get(i);
+      if (template.getParameters().get(i) instanceof TypeParamDeclaration) {
+        templateParametersExplicitInitialization.put(
+            ((TypeParamDeclaration) template.getParameters().get(i)).getType(), explicit);
+      } else if (template.getParameters().get(i) instanceof ParamVariableDeclaration) {
+        templateParametersExplicitInitialization.put(template.getParameters().get(i), explicit);
+      }
+    }
+  }
+
+  /**
+   * Matches declared template arguments to their defaults (without defaults of a previously defined
+   * template argument)
+   *
+   * @param template containing template argumetns
+   * @param templateParameterRealDefaultInitialization mapping of template parameter to the default
+   */
+  private void handleDefaultTemplateParameters(
+      ClassTemplateDeclaration template,
+      Map<Node, Node> templateParameterRealDefaultInitialization) {
+    List<Type> declaredTemplateTypes = new ArrayList<>();
+    List<ParamVariableDeclaration> declaredNonTypeTemplate = new ArrayList<>();
+    List<Declaration> parametersWithDefaults = template.getParametersWithDefaults();
+
+    for (Declaration declaration : template.getParameters()) {
+      if (declaration instanceof TypeParamDeclaration) {
+        declaredTemplateTypes.add(((TypeParamDeclaration) declaration).getType());
+        if (!declaredTemplateTypes.contains(((TypeParamDeclaration) declaration).getDefault())
+            && parametersWithDefaults.contains(declaration)) {
+          templateParameterRealDefaultInitialization.put(
+              ((TypeParamDeclaration) declaration).getType(),
+              ((TypeParamDeclaration) declaration).getDefault());
+        }
+      } else if (declaration instanceof ParamVariableDeclaration) {
+        declaredNonTypeTemplate.add((ParamVariableDeclaration) declaration);
+        if (parametersWithDefaults.contains(declaration)
+            && (((ParamVariableDeclaration) declaration).getDefault()
+                        instanceof DeclaredReferenceExpression
+                    && !declaredNonTypeTemplate.contains(
+                        ((DeclaredReferenceExpression)
+                                ((ParamVariableDeclaration) declaration).getDefault())
+                            .getRefersTo())
+                || !(((ParamVariableDeclaration) declaration).getDefault()
+                    instanceof DeclaredReferenceExpression))) {
+          templateParameterRealDefaultInitialization.put(
+              declaration, ((ParamVariableDeclaration) declaration).getDefault());
+        }
+      }
+    }
   }
 
   private void handleFunctionPointerCall(CallExpression call, Node pointer) {
