@@ -437,46 +437,7 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
 
     if (declSpecifier instanceof CPPASTNamedTypeSpecifier
         && ((CPPASTNamedTypeSpecifier) declSpecifier).getName() instanceof CPPASTTemplateId) {
-      CPPASTTemplateId templateId =
-          (CPPASTTemplateId) ((CPPASTNamedTypeSpecifier) declSpecifier).getName();
-      Type type = TypeParser.createFrom(templateId.getTemplateName().getRawSignature(), true);
-      assert type instanceof ObjectType;
-      ObjectType objectType = (ObjectType) type;
-      List<Node> templateParams = new ArrayList<>();
-
-      for (IASTNode templateArgument : templateId.getTemplateArguments()) {
-        if (templateArgument instanceof CPPASTTypeId) {
-          Type genericInstantiation =
-              TypeParser.createFrom(templateArgument.getRawSignature(), true);
-          objectType.addGeneric(genericInstantiation);
-          templateParams.add(genericInstantiation);
-        } else if (templateArgument instanceof IASTExpression) {
-          Expression expression =
-              this.lang.getExpressionHandler().handle((IASTExpression) templateArgument);
-          templateParams.add(expression);
-        }
-      }
-
-      for (IASTDeclarator declarator : ctx.getDeclarators()) {
-        ValueDeclaration declaration =
-            (ValueDeclaration) this.lang.getDeclaratorHandler().handle(declarator);
-
-        // Update Type
-        declaration.setType(type);
-
-        // Set TemplateParameters into VariableDeclaration
-        if (declaration instanceof VariableDeclaration) {
-          ((VariableDeclaration) declaration).setTemplateParameters(templateParams);
-        }
-
-        // cache binding
-        this.lang.cacheDeclaration(declarator.getName().resolveBinding(), declaration);
-
-        // process attributes
-        this.lang.processAttributes(declaration, ctx);
-
-        sequence.addDeclaration(declaration);
-      }
+      handleTemplateUsage((CPPASTNamedTypeSpecifier) declSpecifier, ctx, sequence);
     } else {
       for (IASTDeclarator declarator : ctx.getDeclarators()) {
         ValueDeclaration declaration =
@@ -501,6 +462,57 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
       return sequence.first();
     } else {
       return sequence;
+    }
+  }
+
+  /**
+   * Handles usage of Templates in SimpleDeclarations
+   * @param declSpecifier
+   * @param ctx
+   * @param sequence
+   */
+  private void handleTemplateUsage(
+      CPPASTNamedTypeSpecifier declSpecifier,
+      CPPASTSimpleDeclaration ctx,
+      DeclarationSequence sequence) {
+    CPPASTTemplateId templateId =
+        (CPPASTTemplateId) (declSpecifier).getName();
+    Type type = TypeParser.createFrom(templateId.getTemplateName().getRawSignature(), true);
+    assert type instanceof ObjectType;
+    ObjectType objectType = (ObjectType) type;
+    List<Node> templateParams = new ArrayList<>();
+
+    for (IASTNode templateArgument : templateId.getTemplateArguments()) {
+      if (templateArgument instanceof CPPASTTypeId) {
+        Type genericInstantiation = TypeParser.createFrom(templateArgument.getRawSignature(), true);
+        objectType.addGeneric(genericInstantiation);
+        templateParams.add(genericInstantiation);
+      } else if (templateArgument instanceof IASTExpression) {
+        Expression expression =
+            this.lang.getExpressionHandler().handle((IASTExpression) templateArgument);
+        templateParams.add(expression);
+      }
+    }
+
+    for (IASTDeclarator declarator : ctx.getDeclarators()) {
+      ValueDeclaration declaration =
+          (ValueDeclaration) this.lang.getDeclaratorHandler().handle(declarator);
+
+      // Update Type
+      declaration.setType(type);
+
+      // Set TemplateParameters into VariableDeclaration
+      if (declaration instanceof VariableDeclaration) {
+        ((VariableDeclaration) declaration).setTemplateParameters(templateParams);
+      }
+
+      // cache binding
+      this.lang.cacheDeclaration(declarator.getName().resolveBinding(), declaration);
+
+      // process attributes
+      this.lang.processAttributes(declaration, ctx);
+
+      sequence.addDeclaration(declaration);
     }
   }
 
