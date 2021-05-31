@@ -13,6 +13,5 @@ class MyClass {
 
 int main() {
   MyClass myObj;
-  cout << myObj.fixed_multiply<int>(3) << endl;
-  return 0;
+  myObj.fixed_multiply<int>(3);
 }
