@@ -458,6 +458,15 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
       }
     }
 
+    return simplifySequence(sequence);
+  }
+
+  /**
+   *
+   * @param sequence
+   * @return First Element of DeclarationSequence if the Sequence consist of only one element, full sequence if it contains more than one element
+   */
+  private Declaration simplifySequence(DeclarationSequence sequence) {
     if (sequence.isSingle()) {
       return sequence.first();
     } else {
