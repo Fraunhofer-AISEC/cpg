@@ -648,6 +648,21 @@ public class ScopeManager {
                   .filter(p)
                   .collect(Collectors.toList());
 
+      if (list.isEmpty()) {
+        for (Declaration declaration :
+            ((StructureDeclarationScope) scope).getStructureDeclarations()) {
+          if (declaration instanceof RecordDeclaration) {
+            list =
+                ((RecordDeclaration) declaration)
+                    .getTemplates().stream()
+                        .filter(c::isInstance)
+                        .map(c::cast)
+                        .filter(p)
+                        .collect(Collectors.toList());
+          }
+        }
+      }
+
       if (!list.isEmpty()) {
         return list;
       }

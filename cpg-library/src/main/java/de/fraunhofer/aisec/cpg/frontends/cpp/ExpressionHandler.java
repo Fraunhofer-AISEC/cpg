@@ -461,6 +461,23 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
               member,
               ((MemberExpression) reference).getOperatorCode(),
               ctx.getRawSignature());
+
+      if (((CPPASTFieldReference) ctx.getFunctionNameExpression()).getFieldName()
+          instanceof CPPASTTemplateId) {
+        // Make necessary adjustments if we are handling a function template
+        String name =
+            ((CPPASTTemplateId)
+                    ((CPPASTFieldReference) ctx.getFunctionNameExpression()).getFieldName())
+                .getTemplateName()
+                .toString();
+
+        callExpression.setName(name);
+        callExpression.addExplicitTemplateParameter(
+            getTemplateArguments(
+                (CPPASTTemplateId)
+                    ((CPPASTFieldReference) ctx.getFunctionNameExpression()).getFieldName()));
+      }
+
     } else if (reference instanceof BinaryOperator
         && ((BinaryOperator) reference).getOperatorCode().equals(".")) {
       // We have a dot operator that was not classified as a member expression. This happens when

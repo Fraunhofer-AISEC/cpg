@@ -40,8 +40,6 @@ import de.fraunhofer.aisec.cpg.graph.types.UnknownType;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
-
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 class FunctionTemplateTest extends BaseTest {
@@ -521,7 +519,6 @@ class FunctionTemplateTest extends BaseTest {
     assertTrue(f4.getInvokes().get(0).isImplicit());
   }
 
-  @Disabled // TODO
   @Test
   void testFunctionTemplateInMethod() throws Exception {
     List<TranslationUnitDeclaration> result =
@@ -556,7 +553,7 @@ class FunctionTemplateTest extends BaseTest {
     CallExpression callExpression =
         TestUtils.findByUniquePredicate(
             TestUtils.subnodesOfType(result, CallExpression.class),
-            c -> c.getCode() != null && c.getCode().equals("myObj.fixed_multiply<int>(3)"));
+            c -> c.getCode() != null && c.getCode().equals("myObj.fixed_multiply<int>(3);"));
     assertEquals(1, callExpression.getInvokes().size());
     assertEquals(methodDeclaration, callExpression.getInvokes().get(0));
 
