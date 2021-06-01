@@ -28,7 +28,7 @@ plugins {
 }
 
 application {
-    mainClass.set("de.fraunhofer.aisec.cpg_vis_neo4j.ApplicationKt")
+    mainClass.set("de.fraunhofer.aisec.cpg.console.CpgConsole")
 }
 
 tasks.withType<Test> {
@@ -42,6 +42,7 @@ tasks.withType<Test> {
 dependencies {
     // CPG
     api(project(":cpg-library"))
+    api(project(":cpg-neo4j"))
 
     implementation("org.jetbrains.kotlinx:ki-shell:0.3.3")
 }

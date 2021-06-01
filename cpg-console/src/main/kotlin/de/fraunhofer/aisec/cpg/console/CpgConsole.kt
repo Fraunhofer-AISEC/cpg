@@ -23,7 +23,7 @@
  *                    \______/ \__|       \______/
  *
  */
-package org.jetbrains.kotlinx.ki.shell
+package de.fraunhofer.aisec.cpg.console
 
 import kotlin.script.experimental.api.ScriptCompilationConfiguration
 import kotlin.script.experimental.api.ScriptEvaluationConfiguration
@@ -31,6 +31,9 @@ import kotlin.script.experimental.jvm.baseClassLoader
 import kotlin.script.experimental.jvm.defaultJvmScriptingHostConfiguration
 import kotlin.script.experimental.jvm.dependenciesFromClassloader
 import kotlin.script.experimental.jvm.jvm
+import org.jetbrains.kotlinx.ki.shell.KotlinShell
+import org.jetbrains.kotlinx.ki.shell.Plugin
+import org.jetbrains.kotlinx.ki.shell.Shell
 import org.jetbrains.kotlinx.ki.shell.configuration.CachedInstance
 import org.jetbrains.kotlinx.ki.shell.configuration.ReplConfiguration
 import org.jetbrains.kotlinx.ki.shell.configuration.ReplConfigurationBase
@@ -66,14 +69,24 @@ object CpgConsole {
         repl.doRun()
     }
 
-    fun configuration(): ReplConfiguration {
+    private fun configuration(): ReplConfiguration {
         val instance = CachedInstance<ReplConfiguration>()
         val klassName: String? = System.getProperty("config.class")
 
         return if (klassName != null) {
             instance.load(klassName, ReplConfiguration::class)
         } else {
-            instance.get { object : ReplConfigurationBase() {} }
+            instance.get {
+                object : ReplConfigurationBase() {
+                    override fun plugins(): Iterator<Plugin> {
+                        val list = super.plugins().asSequence().toList().toMutableList()
+                        list += AnalyzePlugin()
+                        list += Neo4jPlugin()
+
+                        return list.listIterator()
+                    }
+                }
+            }
         }
     }
 }
