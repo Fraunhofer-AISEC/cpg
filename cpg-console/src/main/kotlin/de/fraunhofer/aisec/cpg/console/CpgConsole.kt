@@ -82,6 +82,7 @@ object CpgConsole {
                         val list = super.plugins().asSequence().toList().toMutableList()
                         list += AnalyzePlugin()
                         list += Neo4jPlugin()
+                        list += ShowCodePlugin()
 
                         return list.listIterator()
                     }

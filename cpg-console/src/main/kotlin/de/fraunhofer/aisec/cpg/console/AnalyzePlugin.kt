@@ -45,10 +45,21 @@ class AnalyzePlugin : Plugin {
 
             return Command.Result.RunSnippets(
                 listOf(
+                    // basics
                     "import de.fraunhofer.aisec.cpg.TranslationConfiguration",
                     "import de.fraunhofer.aisec.cpg.TranslationManager",
+                    // all the graph nodes
                     "import de.fraunhofer.aisec.cpg.graph.*",
+                    "import de.fraunhofer.aisec.cpg.graph.declarations.*",
+                    "import de.fraunhofer.aisec.cpg.graph.statements.*",
+                    // helper builtins
+                    "import de.fraunhofer.aisec.cpg.analysis.resolve",
+                    "import de.fraunhofer.aisec.cpg.analysis.byName",
+                    "import de.fraunhofer.aisec.cpg.analysis.body",
+                    "import de.fraunhofer.aisec.cpg.analysis.printCode",
+                    // some basic java stuff
                     "import java.io.File",
+                    // lets build and analyze
                     "val config =\n" +
                         "                TranslationConfiguration.builder()\n" +
                         "                    .sourceLocations(File(\"" +
