@@ -495,7 +495,8 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
       if (templateArgument instanceof CPPASTTypeId) {
         Type genericInstantiation = TypeParser.createFrom(templateArgument.getRawSignature(), true);
         objectType.addGeneric(genericInstantiation);
-        templateParams.add(genericInstantiation);
+        templateParams.add(
+            NodeBuilder.newTypeExpression(genericInstantiation.getName(), genericInstantiation));
       } else if (templateArgument instanceof IASTExpression) {
         Expression expression =
             this.lang.getExpressionHandler().handle((IASTExpression) templateArgument);

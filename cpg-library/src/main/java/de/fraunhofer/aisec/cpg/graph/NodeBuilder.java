@@ -137,6 +137,26 @@ public class NodeBuilder {
     return node;
   }
 
+  public static <T> Literal<T> duplicateLiteral(Literal<T> original, boolean implicit) {
+    Literal<T> duplicate =
+        NodeBuilder.newLiteral(original.getValue(), original.getType(), original.getCode());
+    duplicate.setLocation(original.getLocation());
+    duplicate.setLocals(original.getLocals());
+    duplicate.setPossibleSubTypes(original.getPossibleSubTypes());
+    duplicate.setArgumentIndex(original.getArgumentIndex());
+    duplicate.setAnnotations(original.getAnnotations());
+    duplicate.setComment(original.getComment());
+    duplicate.setFile(original.getFile());
+    duplicate.setName(original.getName());
+    duplicate.setNextDFG(original.getNextDFG());
+    duplicate.setPrevDFG(original.getPrevDFG());
+    duplicate.setNextEOG(original.getNextEOG());
+    duplicate.setPrevEOG(original.getPrevEOG());
+
+    duplicate.setImplicit(implicit);
+    return duplicate;
+  }
+
   public static DeclaredReferenceExpression newDeclaredReferenceExpression(
       String name, Type typeFullName, String code) {
     DeclaredReferenceExpression node = new DeclaredReferenceExpression();
@@ -261,6 +281,23 @@ public class NodeBuilder {
     log(node);
 
     return node;
+  }
+
+  public static TypeExpression newTypeExpression(String name, Type type) {
+    TypeExpression node = new TypeExpression();
+    node.setName(name);
+    node.setType(type);
+
+    log(node);
+
+    return node;
+  }
+
+  public static TypeExpression duplicateTypeExpression(TypeExpression original, boolean implicit) {
+    TypeExpression duplicate =
+        NodeBuilder.newTypeExpression(original.getName(), original.getType());
+    duplicate.setImplicit(implicit);
+    return duplicate;
   }
 
   public static UnaryOperator newUnaryOperator(

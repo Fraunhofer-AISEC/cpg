@@ -136,8 +136,7 @@ public class CallResolver extends Pass {
           ConstructExpression initializer = NodeBuilder.newConstructExpression("()");
           initializer.setImplicit(true);
           declaration.setInitializer(initializer);
-          addTemplateArgumentsToCall(declaration.getTemplateParameters(), initializer);
-          declaration.setTemplateParameters(null);
+          addDummyTemplateParametersToCall(declaration.getTemplateParameters(), initializer);
         } else if (currInitializer instanceof CallExpression
             && currInitializer.getName().equals(typeString)) {
           // This should actually be a construct expression, not a call!
@@ -158,17 +157,35 @@ public class CallResolver extends Pass {
       if (newExpression.getInitializer() == null) {
         ConstructExpression initializer = NodeBuilder.newConstructExpression("()");
         initializer.setImplicit(true);
-        addTemplateArgumentsToCall(newExpression.getTemplateParameters(), initializer);
-        newExpression.setTemplateParameters(null);
+        addDummyTemplateParametersToCall(newExpression.getTemplateParameters(), initializer);
         newExpression.setInitializer(initializer);
       }
     }
   }
 
-  private void addTemplateArgumentsToCall(
+  /**
+   * Adds implicit duplicates of the TemplateParams to the implicit ConstructExpression
+   *
+   * @param templateParams of the VariableDeclaration/NewExpression
+   * @param constructExpression duplicate TemplateParameters (implicit) to preserve AST, as
+   *     ConstructExpression uses AST as well as the VariableDeclaration/NewExpression
+   */
+  private void addDummyTemplateParametersToCall(
       List<Node> templateParams, ConstructExpression constructExpression) {
     if (templateParams != null) {
-      constructExpression.addExplicitTemplateParameter(templateParams);
+      for (Node node : templateParams) {
+        if (node instanceof TypeExpression) {
+          constructExpression.addExplicitTemplateParameter(
+              NodeBuilder.duplicateTypeExpression((TypeExpression) node, true));
+          if (constructExpression.getType() instanceof ObjectType) {
+            ((ObjectType) constructExpression.getType())
+                .addGeneric(((TypeExpression) node).getType());
+          }
+        } else if (node instanceof Literal<?>) {
+          constructExpression.addExplicitTemplateParameter(
+              NodeBuilder.duplicateLiteral((Literal<?>) node, true));
+        }
+      }
     }
   }
 
@@ -1215,7 +1232,7 @@ public class CallResolver extends Pass {
       }
 
       if (templateParametersExplicitInitialization.containsKey(missingParam)) {
-        // Add explicit template argument to construct declaration
+        // If default is a previously defined template argument that has been explicitely passed
         constructExpression.addTemplateParameter(
             templateParametersExplicitInitialization.get(missingParam),
             TemplateDeclaration.TemplateInitialization.DEFAULT);

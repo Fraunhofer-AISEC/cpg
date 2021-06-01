@@ -36,7 +36,7 @@ import de.fraunhofer.aisec.cpg.graph.types.Type;
 import java.util.*;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.checkerframework.checker.nullness.qual.Nullable;
-import org.neo4j.ogm.annotation.Transient;
+import org.neo4j.ogm.annotation.Relationship;
 
 /** Represents the declaration of a variable. */
 public class VariableDeclaration extends ValueDeclaration implements TypeListener {
@@ -50,7 +50,10 @@ public class VariableDeclaration extends ValueDeclaration implements TypeListene
    * We need a way to store the templateParameters that a VariableDeclaration might have before the
    * ConstructExpression is created
    */
-  @Nullable @Transient private List<Node> templateParameters = null;
+  @Relationship(value = "TEMPLATE_PARAMETERS", direction = "OUTGOING")
+  @SubGraph("AST")
+  @Nullable
+  private List<Node> templateParameters = null;
 
   public List<Node> getTemplateParameters() {
     return templateParameters;

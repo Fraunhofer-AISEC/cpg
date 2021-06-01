@@ -31,7 +31,7 @@ import java.util.List;
 import java.util.Objects;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.checkerframework.checker.nullness.qual.Nullable;
-import org.neo4j.ogm.annotation.Transient;
+import org.neo4j.ogm.annotation.Relationship;
 
 /** Represents the creation of a new object through the <code>new</code> keyword. */
 public class NewExpression extends Expression {
@@ -65,7 +65,10 @@ public class NewExpression extends Expression {
    * We need a way to store the templateParameters that a NewExpression might have before the
    * ConstructExpression is created
    */
-  @Nullable @Transient private List<Node> templateParameters = null;
+  @Relationship(value = "TEMPLATE_PARAMETERS", direction = "OUTGOING")
+  @SubGraph("AST")
+  @Nullable
+  private List<Node> templateParameters = null;
 
   public List<Node> getTemplateParameters() {
     return templateParameters;

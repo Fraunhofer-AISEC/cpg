@@ -229,8 +229,8 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
   private List<Type> getTemplateTypeArguments(CPPASTTemplateId template) {
     List<Type> typeArguments = new ArrayList<>();
     for (Node argument : getTemplateArguments(template)) {
-      if (argument instanceof Type) {
-        typeArguments.add((Type) argument);
+      if (argument instanceof TypeExpression) {
+        typeArguments.add(((TypeExpression) argument).getType());
       }
     }
     return typeArguments;
@@ -240,8 +240,9 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
     List<Node> templateArguments = new ArrayList<>();
     for (IASTNode argument : template.getTemplateArguments()) {
       if (argument instanceof CPPASTTypeId) {
-        templateArguments.add(
-            TypeParser.createFrom(((CPPASTTypeId) argument).getDeclSpecifier().toString(), true));
+        Type type =
+            TypeParser.createFrom(((CPPASTTypeId) argument).getDeclSpecifier().toString(), true);
+        templateArguments.add(NodeBuilder.newTypeExpression(type.getName(), type));
       } else if (argument instanceof CPPASTLiteralExpression) {
         templateArguments.add(lang.getExpressionHandler().handle((IASTInitializerClause) argument));
       }
@@ -472,7 +473,7 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
                 .toString();
 
         callExpression.setName(name);
-        callExpression.addExplicitTemplateParameter(
+        callExpression.addExplicitTemplateParameters(
             getTemplateArguments(
                 (CPPASTTemplateId)
                     ((CPPASTFieldReference) ctx.getFunctionNameExpression()).getFieldName()));
@@ -504,7 +505,7 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
               .toString();
       callExpression = NodeBuilder.newCallExpression(name, name, ctx.getRawSignature(), true);
 
-      callExpression.addExplicitTemplateParameter(
+      callExpression.addExplicitTemplateParameters(
           getTemplateArguments(
               (CPPASTTemplateId) ((CPPASTIdExpression) ctx.getFunctionNameExpression()).getName()));
 
