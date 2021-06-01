@@ -1247,9 +1247,11 @@ public class CallResolver extends Pass {
             templateParametersExplicitInitialization.get(missingParam),
             TemplateDeclaration.TemplateInitialization.DEFAULT);
         // If template argument is a type add it as a generic to the type as well
-        if (templateParametersExplicitInitialization.get(missingParam) instanceof Type) {
+        if (templateParametersExplicitInitialization.get(missingParam) instanceof TypeExpression) {
           ((ObjectType) constructExpression.getType())
-              .addGeneric((Type) templateParametersExplicitInitialization.get(missingParam));
+              .addGeneric(
+                  ((TypeExpression) templateParametersExplicitInitialization.get(missingParam))
+                      .getType());
         }
       } else if (templateParameterRealDefaultInitialization.containsKey(missingParam)) {
         // Add default of template parameter to construct declaration
@@ -1258,7 +1260,9 @@ public class CallResolver extends Pass {
             TemplateDeclaration.TemplateInitialization.DEFAULT);
         if (templateParametersExplicitInitialization.get(missingParam) instanceof Type) {
           ((ObjectType) constructExpression.getType())
-              .addGeneric((Type) templateParametersExplicitInitialization.get(missingParam));
+              .addGeneric(
+                  ((TypeExpression) templateParametersExplicitInitialization.get(missingParam))
+                      .getType());
         }
       }
     }
