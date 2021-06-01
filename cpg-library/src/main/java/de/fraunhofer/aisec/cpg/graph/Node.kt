@@ -245,7 +245,8 @@ open class Node : IVisitable<Node>, Persistable {
                 code == other.code &&
                 comment == other.comment &&
                 location == other.location &&
-                file == other.file
+                file == other.file &&
+                isImplicit == other.isImplicit
     }
 
     override fun hashCode(): Int {
