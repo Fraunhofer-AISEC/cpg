@@ -64,8 +64,33 @@ class PythonLanguageFrontend(config: TranslationConfiguration, scopeManager: Sco
     }
 
     private fun parseInternal(code: String, path: String): TranslationUnitDeclaration {
-        val topLevel = Path.of("src/main/python")
-        val entryScript = topLevel.resolve("main.py").toAbsolutePath()
+        // check, if the cpg.py is either directly available in the current directory or in the
+        // src/main/python folder
+        var modulePath = Path.of("cpg.py")
+
+        var possibleLocations =
+            listOf(
+                Path.of(".").resolve(modulePath),
+                Path.of("src/main/python").resolve(modulePath),
+                Path.of("cpg-library/src/main/python").resolve(modulePath)
+            )
+
+        var found = false
+
+        var entryScript: Path? = null
+        possibleLocations.forEach {
+            if (it.toFile().exists()) {
+                found = true
+                entryScript = it.toAbsolutePath()
+            }
+        }
+
+        if (!found) {
+            log.error("Could not find cpg.py")
+            throw TranslationException(
+                "Could not find cpg.py. We expect it to be either in the current working directory, in src/main/python/cpg.py or in cpg-library/src/main/python/cpg.py."
+            )
+        }
 
         val tu: TranslationUnitDeclaration
 
@@ -73,7 +98,7 @@ class PythonLanguageFrontend(config: TranslationConfiguration, scopeManager: Sco
             JepSingleton // configure Jep
             val interp = SubInterpreter(JepConfig().setRedirectOutputStreams(true))
 
-            // TODO: extract main.py in a real python module with multiple files
+            // TODO: extract cpg.py in a real python module with multiple files
 
             // load script
             interp.runScript(entryScript.toString())
