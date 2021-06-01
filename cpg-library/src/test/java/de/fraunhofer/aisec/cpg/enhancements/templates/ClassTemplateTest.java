@@ -32,10 +32,7 @@ import de.fraunhofer.aisec.cpg.TestUtils;
 import de.fraunhofer.aisec.cpg.graph.TypeManager;
 import de.fraunhofer.aisec.cpg.graph.declarations.*;
 import de.fraunhofer.aisec.cpg.graph.edge.Properties;
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.ConstructExpression;
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression;
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal;
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.NewExpression;
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.*;
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType;
 import de.fraunhofer.aisec.cpg.graph.types.ParameterizedType;
 import de.fraunhofer.aisec.cpg.graph.types.PointerType;
@@ -102,13 +99,15 @@ class ClassTemplateTest extends BaseTest {
       ConstructExpression constructExpression,
       RecordDeclaration pair,
       ObjectType pairType,
-      ClassTemplateDeclaration template) {
+      ClassTemplateDeclaration template,
+      VariableDeclaration point1) {
     assertEquals(pairConstructorDeclaration, constructExpression.getConstructor());
     assertTrue(constructExpression.getInvokes().contains(pairConstructorDeclaration));
     assertEquals(pair, constructExpression.getInstantiates());
     assertEquals(template, constructExpression.getTemplateInstantiation());
 
     assertEquals("Pair", constructExpression.getType().getName());
+    assertEquals(constructExpression.getType(), point1.getType());
     assertNotEquals(pairType, constructExpression.getType());
 
     ObjectType instantiatedType = (ObjectType) constructExpression.getType();
@@ -118,8 +117,22 @@ class ClassTemplateTest extends BaseTest {
     assertEquals("int", instantiatedType.getGenerics().get(1).getName());
 
     assertEquals(2, constructExpression.getTemplateParameters().size());
-    assertEquals("int", constructExpression.getTemplateParameters().get(0).getName());
-    assertEquals("int", constructExpression.getTemplateParameters().get(1).getName());
+    assertEquals(
+        "int",
+        ((TypeExpression) constructExpression.getTemplateParameters().get(0)).getType().getName());
+    assertEquals(
+        "int",
+        ((TypeExpression) constructExpression.getTemplateParameters().get(1)).getType().getName());
+    assertTrue(constructExpression.getTemplateParameters().get(0).isImplicit());
+    assertTrue(constructExpression.getTemplateParameters().get(1).isImplicit());
+
+    assertEquals(2, point1.getTemplateParameters().size());
+    assertEquals(
+        "int", ((TypeExpression) point1.getTemplateParameters().get(0)).getType().getName());
+    assertEquals(
+        "int", ((TypeExpression) point1.getTemplateParameters().get(1)).getType().getName());
+    assertFalse(point1.getTemplateParameters().get(0).isImplicit());
+    assertFalse(point1.getTemplateParameters().get(1).isImplicit());
   }
 
   @Test
@@ -165,6 +178,10 @@ class ClassTemplateTest extends BaseTest {
             TestUtils.subnodesOfType(result, ConstructExpression.class),
             c -> c.getCode().equals("()"));
 
+    VariableDeclaration point1 =
+        TestUtils.findByUniqueName(
+            TestUtils.subnodesOfType(result, VariableDeclaration.class), "point1");
+
     // Test Template Structure
     testTemplateStructure(template, pair, type1, type2);
 
@@ -179,7 +196,7 @@ class ClassTemplateTest extends BaseTest {
 
     // Test Invocation
     testClassTemplateInvocation(
-        pairConstructorDeclaration, constructExpression, pair, pairType, template);
+        pairConstructorDeclaration, constructExpression, pair, pairType, template, point1);
   }
 
   @Test
@@ -222,7 +239,13 @@ class ClassTemplateTest extends BaseTest {
 
     Literal<?> literal3 =
         TestUtils.findByUniquePredicate(
-            TestUtils.subnodesOfType(result, Literal.class), l -> l.getValue().equals(3));
+            TestUtils.subnodesOfType(result, Literal.class),
+            l -> l.getValue().equals(3) && !l.isImplicit());
+
+    Literal<?> literal3Implicit =
+        TestUtils.findByUniquePredicate(
+            TestUtils.subnodesOfType(result, Literal.class),
+            l -> l.getValue().equals(3) && l.isImplicit());
 
     VariableDeclaration point1 =
         TestUtils.findByUniqueName(
@@ -250,9 +273,13 @@ class ClassTemplateTest extends BaseTest {
     assertEquals("int", instantiatedType.getGenerics().get(0).getName());
     assertEquals("int", instantiatedType.getGenerics().get(1).getName());
 
+    // Test TemplateParameter of VariableDeclaration
+    assertEquals(3, point1.getTemplateParameters().size());
+    assertEquals(literal3, point1.getTemplateParameters().get(2));
+
     // Test Invocation
     assertEquals(3, constructExpression.getTemplateParameters().size());
-    assertEquals(literal3, constructExpression.getTemplateParameters().get(2));
+    assertEquals(literal3Implicit, constructExpression.getTemplateParameters().get(2));
     assertEquals(
         TemplateDeclaration.TemplateInitialization.EXPLICIT,
         constructExpression
@@ -400,7 +427,13 @@ class ClassTemplateTest extends BaseTest {
 
     Literal<?> literal2 =
         TestUtils.findByUniquePredicate(
-            TestUtils.subnodesOfType(result, Literal.class), l -> l.getValue().equals(2));
+            TestUtils.subnodesOfType(result, Literal.class),
+            l -> l.getValue().equals(2) && !l.isImplicit());
+
+    Literal<?> literal2Implicit =
+        TestUtils.findByUniquePredicate(
+            TestUtils.subnodesOfType(result, Literal.class),
+            l -> l.getValue().equals(2) && l.isImplicit());
 
     assertEquals(pair, constructExpression.getInstantiates());
     assertEquals(template, constructExpression.getTemplateInstantiation());
@@ -423,7 +456,7 @@ class ClassTemplateTest extends BaseTest {
             .get(1)
             .getProperty(Properties.INSTANTIATION));
 
-    assertEquals(literal2, constructExpression.getTemplateParameters().get(2));
+    assertEquals(literal2Implicit, constructExpression.getTemplateParameters().get(2));
     assertEquals(
         TemplateDeclaration.TemplateInitialization.EXPLICIT,
         constructExpression
@@ -431,7 +464,7 @@ class ClassTemplateTest extends BaseTest {
             .get(2)
             .getProperty(Properties.INSTANTIATION));
 
-    assertEquals(literal2, constructExpression.getTemplateParameters().get(3));
+    assertEquals(literal2Implicit, constructExpression.getTemplateParameters().get(3));
     assertEquals(
         TemplateDeclaration.TemplateInitialization.DEFAULT,
         constructExpression
@@ -494,7 +527,9 @@ class ClassTemplateTest extends BaseTest {
 
     assertEquals(4, constructExpression.getTemplateParameters().size());
 
-    assertEquals("int", constructExpression.getTemplateParameters().get(0).getName());
+    assertEquals(
+        "int",
+        ((TypeExpression) constructExpression.getTemplateParameters().get(0)).getType().getName());
     assertEquals(
         TemplateDeclaration.TemplateInitialization.EXPLICIT,
         constructExpression
@@ -508,7 +543,9 @@ class ClassTemplateTest extends BaseTest {
             .get(0)
             .getProperty(Properties.INDEX));
 
-    assertEquals("int", constructExpression.getTemplateParameters().get(1).getName());
+    assertEquals(
+        "int",
+        ((TypeExpression) constructExpression.getTemplateParameters().get(1)).getType().getName());
     assertEquals(
         TemplateDeclaration.TemplateInitialization.DEFAULT,
         constructExpression
@@ -661,7 +698,26 @@ class ClassTemplateTest extends BaseTest {
     Literal<?> literal5 =
         TestUtils.findByUniquePredicate(
             TestUtils.subnodesOfType(result, Literal.class),
-            l -> l.getValue().equals(5) && l.getLocation().getRegion().getEndColumn() == 41);
+            l ->
+                l.getValue().equals(5)
+                    && l.getLocation().getRegion().getEndColumn() == 41
+                    && !l.isImplicit());
+
+    Literal<?> literal5Declaration =
+        TestUtils.findByUniquePredicate(
+            TestUtils.subnodesOfType(result, Literal.class),
+            l ->
+                l.getValue().equals(5)
+                    && l.getLocation().getRegion().getEndColumn() == 14
+                    && !l.isImplicit());
+
+    Literal<?> literal5Implicit =
+        TestUtils.findByUniquePredicate(
+            TestUtils.subnodesOfType(result, Literal.class),
+            l ->
+                l.getValue().equals(5)
+                    && l.getLocation().getRegion().getEndColumn() == 41
+                    && l.isImplicit());
 
     VariableDeclaration arrayVariable =
         TestUtils.findByUniqueName(
@@ -673,8 +729,17 @@ class ClassTemplateTest extends BaseTest {
     assertEquals(template, constructExpression.getTemplateInstantiation());
 
     assertEquals(2, constructExpression.getTemplateParameters().size());
-    assertEquals("int", constructExpression.getTemplateParameters().get(0).getName());
-    assertEquals(literal5, constructExpression.getTemplateParameters().get(1));
+    assertEquals(
+        "int",
+        ((TypeExpression) constructExpression.getTemplateParameters().get(0)).getType().getName());
+    assertTrue(constructExpression.getTemplateParameters().get(0).isImplicit());
+    assertEquals(literal5Implicit, constructExpression.getTemplateParameters().get(1));
+
+    assertEquals(2, arrayVariable.getTemplateParameters().size());
+    assertEquals(
+        "int", ((TypeExpression) arrayVariable.getTemplateParameters().get(0)).getType().getName());
+    assertFalse(arrayVariable.getTemplateParameters().get(0).isImplicit());
+    assertEquals(literal5Declaration, arrayVariable.getTemplateParameters().get(1));
 
     assertEquals("Array", constructExpression.getType().getName());
 
