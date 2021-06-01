@@ -43,10 +43,20 @@ tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
     kotlinOptions.jvmTarget = "1.8" // important, since ki is 1.8 and otherwise inlining wont work
 }
 
+val versions = mapOf(
+    "junit5" to "5.6.0"
+)
+
 dependencies {
     // CPG
     api(project(":cpg-library"))
     api(project(":cpg-neo4j"))
+
+    // JUnit
+    testImplementation("org.junit.jupiter", "junit-jupiter-api", versions["junit5"])
+    testImplementation("org.junit.jupiter", "junit-jupiter-params", versions["junit5"])
+    testRuntimeOnly("org.junit.jupiter", "junit-jupiter-engine", versions["junit5"])
+
 
     implementation("org.jetbrains.kotlinx:ki-shell:0.3.3")
 }
