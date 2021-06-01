@@ -313,6 +313,10 @@ public class CallResolver extends Pass {
    *     ParamVariableDeclaration (same type or subtype) => returns true Otherwise return false
    */
   private boolean isInstantiated(Node callParameter, Declaration templateParameter) {
+    if (callParameter instanceof TypeExpression) {
+      callParameter = ((TypeExpression) callParameter).getType();
+    }
+
     if (callParameter instanceof Type && templateParameter instanceof TypeParamDeclaration) {
       Type type = (Type) callParameter;
       return type instanceof ObjectType;
@@ -351,6 +355,11 @@ public class CallResolver extends Pass {
       // If we have a default we fill it in
       Node defaultNode =
           ((HasDefault) functionTemplateDeclaration.getParameters().get(i)).getDefault();
+
+      if (defaultNode instanceof Type) {
+        defaultNode = NodeBuilder.newTypeExpression(defaultNode.getName(), (Type) defaultNode);
+      }
+
       instantiationSignature.put(functionTemplateDeclaration.getParameters().get(i), defaultNode);
       instantiationType.put(defaultNode, TemplateDeclaration.TemplateInitialization.DEFAULT);
       orderedInitializationSignature.put(functionTemplateDeclaration.getParameters().get(i), i);
@@ -421,16 +430,18 @@ public class CallResolver extends Pass {
     for (int i = 0; i < templateCall.getArguments().size(); i++) {
       FunctionDeclaration functionDeclaration = functionTemplateDeclaration.getRealization().get(0);
       Type currentArgumentType = functionDeclaration.getParameters().get(i).getType();
-      Type deductedType = templateCall.getArguments().get(i).getType();
+      Type deducedType = templateCall.getArguments().get(i).getType();
+      TypeExpression typeExpression =
+          NodeBuilder.newTypeExpression(deducedType.getName(), deducedType);
 
       if (currentArgumentType instanceof ParameterizedType
           && (signature.get(parameterizedTypeResolution.get(currentArgumentType)) == null
               || instantiationType
                   .get(signature.get(parameterizedTypeResolution.get(currentArgumentType)))
                   .equals(TemplateDeclaration.TemplateInitialization.DEFAULT))) {
-        signature.put(parameterizedTypeResolution.get(currentArgumentType), deductedType);
+        signature.put(parameterizedTypeResolution.get(currentArgumentType), typeExpression);
         instantiationType.put(
-            deductedType, TemplateDeclaration.TemplateInitialization.AUTO_DEDUCTION);
+            typeExpression, TemplateDeclaration.TemplateInitialization.AUTO_DEDUCTION);
       }
     }
     return signature;
@@ -535,9 +546,10 @@ public class CallResolver extends Pass {
         getParameterizedSignaturesFromInitialization(initializationSignature);
     if (function.getType() instanceof ParameterizedType) {
       returnType =
-          (Type)
-              initializationSignature.get(
-                  parameterizedTypeResolution.get((ParameterizedType) returnType));
+          ((TypeExpression)
+                  initializationSignature.get(
+                      parameterizedTypeResolution.get((ParameterizedType) returnType)))
+              .getType();
     }
     templateCall.setType(returnType);
 
@@ -609,8 +621,10 @@ public class CallResolver extends Pass {
     for (ParamVariableDeclaration argument : function.getParameters()) {
       if (argument.getType() instanceof ParameterizedType) {
         templateCallSignature.add(
-            (Type)
-                initializationSignature.get(parameterizedTypeResolution.get(argument.getType())));
+            ((TypeExpression)
+                    initializationSignature.get(
+                        parameterizedTypeResolution.get(argument.getType())))
+                .getType());
       } else {
         templateCallSignature.add(argument.getType());
       }
@@ -1449,7 +1463,7 @@ public class CallResolver extends Pass {
     int typeCounter = 0;
     int nonTypeCounter = 0;
     for (Node node : call.getTemplateParameters()) {
-      if (node instanceof Type) {
+      if (node instanceof TypeExpression) {
         // Template Parameter
         String dummyTypeIdentifier = "T" + typeCounter;
         TypeParamDeclaration typeParamDeclaration =

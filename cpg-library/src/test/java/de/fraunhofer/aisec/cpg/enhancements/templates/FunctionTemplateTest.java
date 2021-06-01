@@ -77,7 +77,7 @@ class FunctionTemplateTest extends BaseTest {
       CallExpression callFloat3, ObjectType floatType, Literal<Integer> int3) {
     assertEquals(2, callFloat3.getTemplateParameters().size());
 
-    assertEquals(floatType, callFloat3.getTemplateParameters().get(0));
+    assertEquals(floatType, ((TypeExpression) callFloat3.getTemplateParameters().get(0)).getType());
     assertEquals(
         0, callFloat3.getTemplateParametersPropertyEdge().get(0).getProperty(Properties.INDEX));
     assertEquals(
@@ -248,14 +248,19 @@ class FunctionTemplateTest extends BaseTest {
 
     // Check template parameters
     ObjectType doubleType =
-        TestUtils.findByUniquePredicate(
-            TestUtils.subnodesOfType(result, ObjectType.class), t -> t.getName().equals("double"));
+        new ObjectType(
+            "double",
+            Type.Storage.AUTO,
+            new Type.Qualifier(),
+            new ArrayList<>(),
+            ObjectType.Modifier.SIGNED,
+            true);
     Literal<?> literal5 =
         TestUtils.findByUniquePredicate(
             TestUtils.subnodesOfType(result, Literal.class), l -> l.getValue().equals(5));
 
     assertEquals(2, call.getTemplateParameters().size());
-    assertEquals(doubleType, call.getTemplateParameters().get(0));
+    assertEquals(doubleType, ((TypeExpression) call.getTemplateParameters().get(0)).getType());
     assertEquals(literal5, call.getTemplateParameters().get(1));
 
     // Check return value
@@ -348,7 +353,7 @@ class FunctionTemplateTest extends BaseTest {
             TestUtils.subnodesOfType(result, Literal.class), l -> l.getValue().equals(5));
 
     assertEquals(2, call.getTemplateParameters().size());
-    assertEquals(intType, call.getTemplateParameters().get(0));
+    assertEquals(intType, ((TypeExpression) call.getTemplateParameters().get(0)).getType());
     assertEquals(literal5, call.getTemplateParameters().get(1));
 
     // Check return value
@@ -389,14 +394,19 @@ class FunctionTemplateTest extends BaseTest {
 
     // Check template parameters
     ObjectType doubleType =
-        TestUtils.findByUniquePredicate(
-            TestUtils.subnodesOfType(result, ObjectType.class), t -> t.getName().equals("double"));
+        new ObjectType(
+            "double",
+            Type.Storage.AUTO,
+            new Type.Qualifier(),
+            new ArrayList<>(),
+            ObjectType.Modifier.SIGNED,
+            true);
     Literal<?> literal5 =
         TestUtils.findByUniquePredicate(
             TestUtils.subnodesOfType(result, Literal.class), l -> l.getValue().equals(5));
 
     assertEquals(2, call.getTemplateParameters().size());
-    assertEquals(doubleType, call.getTemplateParameters().get(0));
+    assertEquals(doubleType, ((TypeExpression) call.getTemplateParameters().get(0)).getType());
     assertEquals(literal5, call.getTemplateParameters().get(1));
 
     // Check return value
@@ -444,7 +454,7 @@ class FunctionTemplateTest extends BaseTest {
             TestUtils.subnodesOfType(result, Literal.class), l -> l.getValue().equals(5));
 
     assertEquals(2, call.getTemplateParameters().size());
-    assertEquals(intType, call.getTemplateParameters().get(0));
+    assertEquals(intType, ((TypeExpression) call.getTemplateParameters().get(0)).getType());
     assertEquals(literal5, call.getTemplateParameters().get(1));
 
     // Check return value
