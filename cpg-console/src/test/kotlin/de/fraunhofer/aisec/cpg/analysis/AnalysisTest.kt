@@ -45,4 +45,19 @@ class AnalysisTest {
 
         OutOfBoundsCheck().run(result)
     }
+
+    @Test
+    fun testNullPointer() {
+        val config =
+            TranslationConfiguration.builder()
+                .sourceLocations(File("src/test/resources/Array.java"))
+                .defaultPasses()
+                .defaultLanguages()
+                .build()
+
+        val analyzer = TranslationManager.builder().config(config).build()
+        val result = analyzer.analyze().get()
+
+        NullPointerCheck().run(result)
+    }
 }

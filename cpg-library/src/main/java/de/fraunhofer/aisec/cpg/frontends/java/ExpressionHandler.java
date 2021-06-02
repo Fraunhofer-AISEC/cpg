@@ -702,7 +702,8 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
         scopeName = scope.toString();
       }
 
-      Statement base = handle(scope);
+      de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression base =
+          (de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression) handle(scope);
 
       // If the base directly refers to a record, then this is a static call
       if (base instanceof DeclaredReferenceExpression

@@ -221,10 +221,13 @@ open class Node : IVisitable<Node>, Persistable {
     }
 
     override fun toString(): String {
-        return ToStringBuilder(this, TO_STRING_STYLE)
-            .append("name", name)
-            .append("location", location)
-            .toString()
+        val builder = ToStringBuilder(this, TO_STRING_STYLE)
+
+        if (name != "") {
+            builder.append("name", name)
+        }
+
+        return builder.append("location", location).toString()
     }
 
     override fun equals(other: Any?): Boolean {

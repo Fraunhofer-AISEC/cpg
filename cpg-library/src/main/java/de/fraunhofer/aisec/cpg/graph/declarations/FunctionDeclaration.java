@@ -325,14 +325,7 @@ public class FunctionDeclaration extends ValueDeclaration implements Declaration
   public String toString() {
     return new ToStringBuilder(this, Node.TO_STRING_STYLE)
         .appendSuper(super.toString())
-        // .append("type", type)
-        .append(
-            "parameters",
-            parameters.stream()
-                .map(PropertyEdge::getEnd)
-                /*.map(ParamVariableDeclaration::toString)
-                .collect(Collectors.joining(", ")))*/
-                .collect(Collectors.toList()))
+        .append("parameters", this.getParameters())
         .toString();
   }
 

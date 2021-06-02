@@ -95,11 +95,12 @@ public class DeclarationStatement extends Statement {
     this.declarations.add(propertyEdge);
   }
 
+  @NotNull
   @Override
   public String toString() {
     return new ToStringBuilder(this, Node.TO_STRING_STYLE)
         .appendSuper(super.toString())
-        .append("declarations", declarations)
+        .append("declarations", this.getDeclarations())
         .toString();
   }
 

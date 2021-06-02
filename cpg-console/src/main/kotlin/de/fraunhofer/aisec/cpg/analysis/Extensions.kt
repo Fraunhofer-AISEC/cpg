@@ -32,10 +32,25 @@ import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation.locationLink
 import kotlin.jvm.Throws
 
 fun Node?.printCode(): Unit {
+    val header = "--- ${locationLink(this?.location)} ---"
+
+    println(header)
     println(this?.code)
+    println("-".repeat(header.length))
+}
+
+fun MutableSet<Node>.printCode(): Unit {
+    val it = this.iterator()
+
+    while (it.hasNext()) {
+        val next = it.next()
+        next.printCode()
+        println("")
+    }
 }
 
 fun Expression.resolve(): Any? {

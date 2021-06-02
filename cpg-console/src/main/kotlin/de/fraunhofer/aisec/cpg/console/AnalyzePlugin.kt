@@ -52,6 +52,7 @@ class AnalyzePlugin : Plugin {
                     "import de.fraunhofer.aisec.cpg.graph.*",
                     "import de.fraunhofer.aisec.cpg.graph.declarations.*",
                     "import de.fraunhofer.aisec.cpg.graph.statements.*",
+                    "import de.fraunhofer.aisec.cpg.graph.statements.expressions.*",
                     // helper builtins
                     "import de.fraunhofer.aisec.cpg.analysis.resolve",
                     "import de.fraunhofer.aisec.cpg.analysis.byName",

@@ -43,7 +43,7 @@ import org.neo4j.ogm.annotation.Relationship;
  * An expression, which calls another function. It has a list of arguments (list of {@link
  * Expression}s) and is connected via the INVOKES edge to its {@link FunctionDeclaration}.
  */
-public class CallExpression extends Expression implements TypeListener {
+public class CallExpression extends Expression implements TypeListener, HasBase {
 
   /**
    * Connection to its {@link FunctionDeclaration}. This will be populated by the {@link
@@ -63,15 +63,15 @@ public class CallExpression extends Expression implements TypeListener {
    * the original AST, but we treat it as such for better consistency
    */
   @SubGraph("AST")
-  private Node base;
+  private Expression base;
 
   private String fqn;
 
-  public Node getBase() {
-    return base;
+  public Expression getBase() {
+    return (Expression) base;
   }
 
-  public void setBase(Node base) {
+  public void setBase(Expression base) {
     if (this.base instanceof HasType) {
       ((HasType) this.base).unregisterTypeListener(this);
     }
