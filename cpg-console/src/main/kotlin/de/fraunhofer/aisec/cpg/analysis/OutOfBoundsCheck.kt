@@ -31,9 +31,13 @@ import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ArrayCreationExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ArraySubscriptionExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
-import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.processing.IVisitor
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
+import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
+import org.jline.utils.AttributedString
+import org.jline.utils.AttributedStringBuilder
+import org.jline.utils.AttributedStyle
+import org.jline.utils.AttributedStyle.DEFAULT
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
@@ -48,11 +52,10 @@ class OutOfBoundsCheck {
                 Strategy::AST_FORWARD,
                 object : IVisitor<Node?>() {
                     fun visit(v: ArraySubscriptionExpression) {
-                        val resolvedIndex = v.subscriptExpression.resolve()
+                        val resolver = ValueResolver()
+                        val resolvedIndex = resolver.resolve(v.subscriptExpression)
 
                         if (resolvedIndex is Int) {
-                            println("Index: $resolvedIndex")
-
                             // check, if we know that the array was initialized with a fixed length
                             // TODO(oxisto): it would be nice to have a helper that follows the expr
                             val decl =
@@ -64,11 +67,44 @@ class OutOfBoundsCheck {
                                 val dimension = it.dimensions.first().resolve()
 
                                 if (resolvedIndex >= dimension as Int) {
-                                    Util.errorWithFileLocation(
-                                        v,
-                                        log,
-                                        "Error: this expression will run out of bounds $resolvedIndex >= $dimension"
+                                    println("")
+                                    val sb = AttributedStringBuilder()
+                                    sb.append("--- FINDING: Out of bounds access in ")
+                                    sb.append(
+                                        it.javaClass.simpleName,
+                                        DEFAULT.foreground(AttributedStyle.GREEN)
                                     )
+                                    sb.append(
+                                        " when accessing index ${AttributedString(""+resolvedIndex, DEFAULT.foreground(AttributedStyle.CYAN)).toAnsi()} of "
+                                    )
+                                    sb.append(decl.name, DEFAULT.foreground(AttributedStyle.YELLOW))
+                                    sb.append(
+                                        ", an array of length ${AttributedString(""+dimension, DEFAULT.foreground(AttributedStyle.CYAN)).toAnsi()} ---"
+                                    )
+
+                                    val header = sb.toAnsi()
+
+                                    println(header)
+                                    println(
+                                        "${
+                                            AttributedString(
+                                                PhysicalLocation.locationLink(v.location), DEFAULT.foreground(
+                                                    AttributedStyle.BLUE or AttributedStyle.BRIGHT
+                                                )).toAnsi()}: ${v.fancyCode()}"
+                                    )
+                                    println("")
+                                    println(
+                                        "The following path was discovered that leads to ${v.subscriptExpression.fancyCode()} being ${AttributedString(""+resolvedIndex, DEFAULT.foreground(AttributedStyle.CYAN)).toAnsi()}:"
+                                    )
+                                    for (p in resolver.path) {
+
+                                        println(
+                                            "${AttributedString(
+                                                PhysicalLocation.locationLink(p.location), DEFAULT.foreground(
+                                                    AttributedStyle.BLUE or AttributedStyle.BRIGHT
+                                                )).toAnsi()}: ${p.fancyCode()}"
+                                        )
+                                    }
                                 }
                             }
                         } else {

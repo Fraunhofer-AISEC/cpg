@@ -216,11 +216,18 @@ fun getFanciesFor(original: Node, node: Node): List<Pair<AttributedStyle, Region
 
             return list
         }
-        /*is DeclaredReferenceExpression -> {
-            node.location?.let { list += Pair(DEFAULT.foreground(CYAN), it.region) }
+        is DeclaredReferenceExpression -> {
+            if ((original as? MemberCallExpression)?.member == node) {
+                node.location?.let { list += Pair(styles.identifier!!, it.region) }
+            }
+
+            // also color it, if its on its own
+            if (original == node) {
+                node.location?.let { list += Pair(styles.identifier!!, it.region) }
+            }
 
             return list
-        }*/
+        }
         is DeclarationStatement -> {
             fancyType(node, (node.singleDeclaration as? HasType)!!, list)
 
@@ -258,15 +265,10 @@ fun getFanciesFor(original: Node, node: Node): List<Pair<AttributedStyle, Region
         }
         is Literal<*> -> {
             when (node.value) {
-                is Number ->
-                    node.location?.let {
-                        list += Pair(DEFAULT.foreground(BLUE or BRIGHT), it.region)
-                    }
-                null -> node.location?.let { list += Pair(DEFAULT.foreground(CYAN), it.region) }
-                is Boolean ->
-                    node.location?.let { list += Pair(DEFAULT.foreground(CYAN), it.region) }
-                is String ->
-                    node.location?.let { list += Pair(DEFAULT.foreground(GREEN), it.region) }
+                is Number -> node.location?.let { list += Pair(styles.number, it.region) }
+                null -> node.location?.let { list += Pair(styles.number, it.region) }
+                is Boolean -> node.location?.let { list += Pair(styles.number, it.region) }
+                is String -> node.location?.let { list += Pair(styles.string, it.region) }
             }
 
             return list
@@ -293,7 +295,7 @@ fun getFanciesFor(original: Node, node: Node): List<Pair<AttributedStyle, Region
             // color some keywords
             val keywords = listOf("public", "private", "static")
             for (keyword in keywords) {
-                fancyWord(node.name, node, list, styles.keyword)
+                fancyWord(keyword, node, list, styles.keyword)
             }
 
             // color the name
