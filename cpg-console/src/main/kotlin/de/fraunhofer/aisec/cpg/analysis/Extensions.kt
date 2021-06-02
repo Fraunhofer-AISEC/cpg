@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.graph.DeclarationHolder
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
@@ -112,3 +113,26 @@ inline fun <reified T : Statement> FunctionDeclaration.body(n: Int = 0): T {
 class StatementNotFound : Exception()
 
 class DeclarationNotFound(message: String) : Exception(message)
+
+fun Node.followPrevEOG(predicate: (PropertyEdge<*>) -> Boolean): List<PropertyEdge<*>>? {
+    val path = mutableListOf<PropertyEdge<*>>()
+
+    for (edge in this.prevEOGEdges) {
+        val source = edge.start
+
+        path.add(edge)
+
+        if (predicate(edge)) {
+            return path
+        }
+
+        val subPath = source.followPrevEOG(predicate)
+        if (subPath != null) {
+            path.addAll(subPath)
+
+            return path
+        }
+    }
+
+    return null
+}

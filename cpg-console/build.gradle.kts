@@ -57,6 +57,7 @@ dependencies {
     testImplementation("org.junit.jupiter", "junit-jupiter-params", versions["junit5"])
     testRuntimeOnly("org.junit.jupiter", "junit-jupiter-engine", versions["junit5"])
 
+    implementation("org.jline:jline:3.20.0")
 
     implementation("org.jetbrains.kotlinx:ki-shell:0.3.3")
 }

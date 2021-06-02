@@ -56,8 +56,10 @@ class ValueResolver(
         }
     }
 ) {
+    val path: MutableList<Node> = mutableListOf<Node>()
 
     fun resolveDeclaration(decl: Declaration?): Any? {
+        decl?.let { this.path += it }
         when (decl) {
             is VariableDeclaration -> return resolve(decl.initializer)
             is FieldDeclaration -> {
@@ -70,6 +72,8 @@ class ValueResolver(
 
     /** Tries to resolve this expression. Anything can happen. */
     fun resolve(expr: Expression?): Any? {
+        expr?.let { this.path += it }
+
         when (expr) {
             is Literal<*> -> {
                 return expr.value

@@ -23,17 +23,23 @@
  *                    \______/ \__|       \______/
  *
  */
+@file:Suppress("JAVA_MODULE_DOES_NOT_EXPORT_PACKAGE")
+
 package de.fraunhofer.aisec.cpg.analysis
 
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.HasBase
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
+import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.statements.IfStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
-import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.processing.IVisitor
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation.locationLink
+import org.jline.utils.AttributedString
+import org.jline.utils.AttributedStringBuilder
+import org.jline.utils.AttributedStyle.*
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
@@ -67,25 +73,72 @@ class NullPointerCheck {
     }
 
     fun handleHasBase(node: HasBase) {
-        // check for all incoming DFG branches
-        node.base.prevDFG.forEach {
-            var resolved: Any? = CouldNotResolve()
-            if (it is Expression) {
-                // try to resolve them
-                resolved = it.resolve()
-            } else if (it is Declaration) {
-                // try to resolve them
-                resolved = it.resolve()
-            }
+        try {
+            // check for all incoming DFG branches
+            node.base.prevDFG.forEach {
+                var resolved: Any? = CouldNotResolve()
+                val resolver = ValueResolver()
+                if (it is Expression) {
+                    // try to resolve them
+                    resolved = resolver.resolve(it)
+                } else if (it is Declaration) {
+                    // try to resolve them
+                    resolved = resolver.resolveDeclaration(it)
+                }
 
-            if (resolved == null) {
-                // TODO(oxisto): would be nice to have the complete resolution path
-                Util.errorWithFileLocation(
-                    node as Node,
-                    log,
-                    "Null pointer detected in branch. Relevant point that set it was here: ${locationLink(it.location)}"
-                )
+                if (resolved == null) {
+                    println("")
+                    val sb = AttributedStringBuilder()
+                    sb.append("--- FINDING: Null pointer detected in ")
+                    sb.append(node.javaClass.simpleName, DEFAULT.foreground(GREEN))
+                    sb.append(" when accessing base ")
+                    sb.append(node.base.name, DEFAULT.foreground(CYAN))
+                    sb.append(" ---")
+
+                    val header = sb.toAnsi()
+
+                    println(header)
+                    println(
+                        "${AttributedString(locationLink((node as Node).location), DEFAULT.foreground(BLUE or BRIGHT)).toAnsi()}: ${(node as Node).code}"
+                    )
+                    println("")
+                    println(
+                        "The following path was discovered that leads to ${AttributedString(node.base.name, DEFAULT.foreground(CYAN)).toAnsi()} being null:"
+                    )
+                    for (p in resolver.path) {
+
+                        println(
+                            "${AttributedString(locationLink(p.location), DEFAULT.foreground(BLUE or BRIGHT)).toAnsi()}: ${p.code}"
+                        )
+                    }
+
+                    val path =
+                        it.followPrevEOG { edge ->
+                            return@followPrevEOG when (edge.start) {
+                                is IfStatement -> {
+                                    true
+                                }
+                                is FunctionDeclaration -> {
+                                    true
+                                }
+                                else -> false
+                            }
+                        }
+
+                    val last = path?.last()?.start
+
+                    if (last is IfStatement) {
+                        println()
+                        println(
+                            "Branch depends on ${AttributedString("IfStatement", DEFAULT.foreground(GREEN)).toAnsi()} with condition ${AttributedString(last.condition.code, DEFAULT.foreground(CYAN)).toAnsi()} in ${AttributedString(locationLink(last.location), DEFAULT.foreground(BLUE or BRIGHT)).toAnsi()}"
+                        )
+                    }
+
+                    println("-".repeat(sb.toString().length))
+                }
             }
+        } catch (ex: Throwable) {
+            log.error("Exception while running check: {}", ex)
         }
     }
 }
