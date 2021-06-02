@@ -419,7 +419,7 @@ class JavaLanguageFrontendTest extends BaseTest {
     assertNotNull(ace);
 
     // which has a initializer list (1 entry)
-    InitializerListExpression ile = ace.getInitializer();
+    InitializerListExpression ile = (InitializerListExpression) ace.getInitializer();
     assertNotNull(ile);
     assertEquals(1, ile.getInitializers().size());
 
