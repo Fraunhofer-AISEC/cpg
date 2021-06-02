@@ -38,6 +38,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.builder.ToStringBuilder;
+import org.jetbrains.annotations.NotNull;
 import org.neo4j.ogm.annotation.Transient;
 
 /** A declaration who has a type. */
@@ -182,12 +183,13 @@ public abstract class ValueDeclaration extends Declaration implements HasType {
         });
   }
 
+  @NotNull
   @Override
   public String toString() {
     return new ToStringBuilder(this, Node.TO_STRING_STYLE)
         .appendSuper(super.toString())
         .append("type", type)
-        .append("possibleSubTypes", possibleSubTypes)
+        // .append("possibleSubTypes", possibleSubTypes)
         .toString();
   }
 

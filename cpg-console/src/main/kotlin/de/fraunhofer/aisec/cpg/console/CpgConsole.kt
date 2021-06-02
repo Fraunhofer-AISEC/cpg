@@ -25,12 +25,14 @@
  */
 package de.fraunhofer.aisec.cpg.console
 
+import de.fraunhofer.aisec.cpg.graph.Node
 import kotlin.script.experimental.api.ScriptCompilationConfiguration
 import kotlin.script.experimental.api.ScriptEvaluationConfiguration
 import kotlin.script.experimental.jvm.baseClassLoader
 import kotlin.script.experimental.jvm.defaultJvmScriptingHostConfiguration
 import kotlin.script.experimental.jvm.dependenciesFromClassloader
 import kotlin.script.experimental.jvm.jvm
+import org.apache.commons.lang3.builder.ToStringStyle
 import org.jetbrains.kotlinx.ki.shell.KotlinShell
 import org.jetbrains.kotlinx.ki.shell.Plugin
 import org.jetbrains.kotlinx.ki.shell.Shell
@@ -41,6 +43,8 @@ import org.jetbrains.kotlinx.ki.shell.configuration.ReplConfigurationBase
 object CpgConsole {
     @JvmStatic
     fun main(args: Array<String>) {
+        Node.TO_STRING_STYLE = ToStringStyle.JSON_STYLE
+
         val repl =
             Shell(
                 configuration(),

@@ -320,17 +320,19 @@ public class FunctionDeclaration extends ValueDeclaration implements Declaration
     return Optional.empty();
   }
 
+  @NotNull
   @Override
   public String toString() {
     return new ToStringBuilder(this, Node.TO_STRING_STYLE)
         .appendSuper(super.toString())
-        .append("type", type)
+        // .append("type", type)
         .append(
             "parameters",
             parameters.stream()
                 .map(PropertyEdge::getEnd)
-                .map(ParamVariableDeclaration::getName)
-                .collect(Collectors.joining(", ")))
+                /*.map(ParamVariableDeclaration::toString)
+                .collect(Collectors.joining(", ")))*/
+                .collect(Collectors.toList()))
         .toString();
   }
 
