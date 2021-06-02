@@ -27,11 +27,20 @@ package de.fraunhofer.aisec.cpg.analysis
 
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.ArrayCreationExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ArraySubscriptionExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
+import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.processing.IVisitor
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 
 class OutOfBoundsCheck {
+
+    private val log: Logger
+        get() = LoggerFactory.getLogger(OutOfBoundsCheck::class.java)
 
     fun run(result: TranslationResult) {
         for (tu in result.translationUnits) {
@@ -43,7 +52,25 @@ class OutOfBoundsCheck {
 
                         if (resolvedIndex is Int) {
                             println("Index: $resolvedIndex")
-                            println(v)
+
+                            // check, if we know that the array was initialized with a fixed length
+                            // TODO(oxisto): it would be nice to have a helper that follows the expr
+                            val decl =
+                                (v.arrayExpression as? DeclaredReferenceExpression)?.refersTo as?
+                                    VariableDeclaration
+                            (decl?.initializer as? ArrayCreationExpression)?.let {
+                                println("Found a ArrayCreationExpression")
+
+                                val dimension = it.dimensions.first().resolve()
+
+                                if (resolvedIndex >= dimension as Int) {
+                                    Util.errorWithFileLocation(
+                                        v,
+                                        log,
+                                        "Error: this expression will run out of bounds $resolvedIndex >= $dimension"
+                                    )
+                                }
+                            }
                         } else {
                             println("Could not resolved ${v.subscriptExpression}")
                         }

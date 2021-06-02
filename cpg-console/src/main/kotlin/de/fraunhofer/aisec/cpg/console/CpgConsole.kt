@@ -83,6 +83,7 @@ object CpgConsole {
                         list += AnalyzePlugin()
                         list += Neo4jPlugin()
                         list += ShowCodePlugin()
+                        list += RunPlugin()
 
                         return list.listIterator()
                     }

@@ -31,13 +31,13 @@ import org.jetbrains.kotlinx.ki.shell.Plugin
 import org.jetbrains.kotlinx.ki.shell.Shell
 import org.jetbrains.kotlinx.ki.shell.configuration.ReplConfiguration
 
-class AnalyzePlugin : Plugin {
+class RunPlugin : Plugin {
     inner class Load(conf: ReplConfiguration) : BaseCommand() {
-        override val name: String by conf.get(default = "analyze")
-        override val short: String by conf.get(default = "a")
-        override val description: String = "analyzes the path"
+        override val name: String by conf.get(default = "run")
+        override val short: String by conf.get(default = "r")
+        override val description: String = "runs an analyzer"
 
-        override val params = "<path>"
+        override val params = "<analyzer>"
 
         override fun execute(line: String): Command.Result {
             val p = line.indexOf(' ')
@@ -45,33 +45,10 @@ class AnalyzePlugin : Plugin {
 
             return Command.Result.RunSnippets(
                 listOf(
-                    // basics
-                    "import de.fraunhofer.aisec.cpg.TranslationConfiguration",
-                    "import de.fraunhofer.aisec.cpg.TranslationManager",
-                    // all the graph nodes
-                    "import de.fraunhofer.aisec.cpg.graph.*",
-                    "import de.fraunhofer.aisec.cpg.graph.declarations.*",
-                    "import de.fraunhofer.aisec.cpg.graph.statements.*",
-                    // helper builtins
-                    "import de.fraunhofer.aisec.cpg.analysis.resolve",
-                    "import de.fraunhofer.aisec.cpg.analysis.byName",
-                    "import de.fraunhofer.aisec.cpg.analysis.body",
-                    "import de.fraunhofer.aisec.cpg.analysis.printCode",
-                    // some basic java stuff
-                    "import java.io.File",
-                    // lets build and analyze
-                    "val config =\n" +
-                        "                TranslationConfiguration.builder()\n" +
-                        "                    .sourceLocations(File(\"" +
-                        path +
-                        "\"))\n" +
-                        "                    .defaultLanguages()\n" +
-                        "                    .defaultPasses()\n" +
-                        "                    .build()",
-                    "val analyzer = TranslationManager.builder().config(config).build()",
-                    "val result = analyzer.analyze().get()",
-                    // for convenience
-                    "val tu = result.translationUnits.first()"
+                    // import
+                    "import de.fraunhofer.aisec.cpg.analysis.OutOfBoundsCheck",
+                    // run it
+                    "OutOfBoundsCheck().run(result)"
                 )
             )
 

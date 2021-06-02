@@ -25,13 +25,14 @@
  */
 package de.fraunhofer.aisec.cpg.analysis
 
+import de.fraunhofer.aisec.cpg.graph.DeclarationHolder
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+import kotlin.jvm.Throws
 
 fun Node?.printCode(): Unit {
     println(this?.code)
@@ -45,18 +46,54 @@ fun Declaration.resolve(): Any? {
     return ValueResolver().resolveDeclaration(this)
 }
 
-inline fun <reified T : Declaration> TranslationUnitDeclaration.byName(name: String): T? {
-    return this.declarations.filterIsInstance<T>().firstOrNull { it.name == name }
+@Throws(DeclarationNotFound::class)
+inline fun <reified T : Declaration> DeclarationHolder.byName(name: String): T {
+    var base = this
+    var lookup = name
+
+    // lets do a _very_ simple FQN lookup (TODO(oxisto): we could do this with a for-loop for
+    // multiple nested levels)
+    if (name.contains(".")) {
+        // take the most left one
+        val baseName = name.split(".")[0]
+
+        base =
+            this.declarations.filterIsInstance<DeclarationHolder>().firstOrNull {
+                (it as? Node)?.name == baseName
+            }
+                ?: throw DeclarationNotFound("base not found")
+        lookup = name.split(".")[1]
+    }
+
+    val o = base.declarations.filterIsInstance<T>().firstOrNull() { it.name == lookup }
+
+    return o ?: throw DeclarationNotFound("declaration with name not found or incorrect type")
 }
 
-inline fun <reified T : Statement> FunctionDeclaration.body(i: Int): T? {
+/**
+ * This inline function returns the n'th statement (in AST order) as specified in T.
+ *
+ * For convenience, n defaults to zero, so that the first statement is always easy to fetch.
+ */
+@Throws(StatementNotFound::class)
+inline fun <reified T : Statement> FunctionDeclaration.body(n: Int = 0): T {
     return if (this.body is CompoundStatement) {
-        (this.body as? CompoundStatement)?.statements?.get(i) as? T
-    } else {
-        return if (i == 0) {
-            this.body as? T
+        val o = (this.body as? CompoundStatement)?.statements?.filterIsInstance<T>()?.get(n)
+
+        if (o == null) {
+            throw StatementNotFound()
         } else {
-            null
+            return o
+        }
+    } else {
+        if (n == 0 && this.body is T) {
+            this.body as T
+        } else {
+            throw StatementNotFound()
         }
     }
 }
+
+class StatementNotFound : Exception()
+
+class DeclarationNotFound(message: String) : Exception(message)

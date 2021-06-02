@@ -1,6 +1,7 @@
 int main() {
-    char c[4];
-    int a = 4 + 1;
+    char* c = new char[4];
+    int a = 4;
+    int b = a + 1;
 
-    char b = c[a]; // out of bounds
+    char d = c[b];
 }

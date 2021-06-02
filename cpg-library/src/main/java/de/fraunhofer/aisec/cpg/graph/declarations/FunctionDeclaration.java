@@ -42,6 +42,7 @@ import java.util.stream.Collectors;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
+import org.jetbrains.annotations.NotNull;
 import org.neo4j.ogm.annotation.Relationship;
 
 /** Represents the declaration or definition of a function. */
@@ -396,5 +397,14 @@ public class FunctionDeclaration extends ValueDeclaration implements Declaration
     if (declaration instanceof RecordDeclaration) {
       addIfNotContains(records, (RecordDeclaration) declaration);
     }
+  }
+
+  @NotNull
+  public List<Declaration> getDeclarations() {
+    var list = new ArrayList<Declaration>();
+    list.addAll(this.getParameters());
+    list.addAll(this.getRecords());
+
+    return list;
   }
 }
