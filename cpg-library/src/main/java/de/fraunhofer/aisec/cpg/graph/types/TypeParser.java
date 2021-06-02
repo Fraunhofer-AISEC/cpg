@@ -45,7 +45,7 @@ public class TypeParser {
   private static final Logger log = LoggerFactory.getLogger(TypeParser.class);
 
   public static final String UNKNOWN_TYPE_STRING = "UNKNOWN";
-  private static final List<String> primitives =
+  public static final List<String> PRIMITIVES =
       List.of("byte", "short", "int", "long", "float", "double", "boolean", "char");
   private static final Pattern functionPtrRegex =
       Pattern.compile(
@@ -547,7 +547,7 @@ public class TypeParser {
    */
   private static boolean isPrimitiveType(@NonNull List<String> stringList) {
     for (String s : stringList) {
-      if (primitives.contains(s)) {
+      if (PRIMITIVES.contains(s)) {
         return true;
       }
     }
@@ -568,7 +568,7 @@ public class TypeParser {
     boolean foundPrimitive = false;
 
     for (String s : typeBlocks) {
-      if (primitives.contains(s)) {
+      if (PRIMITIVES.contains(s)) {
         if (primitiveType.length() > 0) {
           primitiveType.append(" ");
         }
@@ -577,11 +577,11 @@ public class TypeParser {
     }
 
     for (String s : typeBlocks) {
-      if (primitives.contains(s) && !foundPrimitive) {
+      if (PRIMITIVES.contains(s) && !foundPrimitive) {
         joinedTypeBlocks.add(primitiveType.toString());
         foundPrimitive = true;
       } else {
-        if (!primitives.contains(s)) {
+        if (!PRIMITIVES.contains(s)) {
           joinedTypeBlocks.add(s);
         }
       }

@@ -13,7 +13,7 @@ class Array {
         // lets make it a little bit tricky at least
         obj = something;
 
-        if(something) {
+        if (something) {
             AnotherObject yetAnotherObject = null;
 
             // whoops, overriden with null again
@@ -21,5 +21,7 @@ class Array {
         }
 
         obj.doSomething();
+
+        String s = "some string";
     }
 }

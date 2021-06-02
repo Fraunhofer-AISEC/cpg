@@ -130,7 +130,7 @@ class NullPointerCheck {
                     if (last is IfStatement) {
                         println()
                         println(
-                            "Branch depends on ${AttributedString("IfStatement", DEFAULT.foreground(GREEN)).toAnsi()} with condition ${AttributedString(last.condition.code, DEFAULT.foreground(CYAN)).toAnsi()} in ${AttributedString(locationLink(last.location), DEFAULT.foreground(BLUE or BRIGHT)).toAnsi()}"
+                            "Branch depends on ${AttributedString("IfStatement", DEFAULT.foreground(GREEN)).toAnsi()} with condition ${AttributedString(last.condition.code, DEFAULT.foreground(CYAN)).toAnsi()} in ${last.fancyLocationLink()}"
                         )
                     }
 
