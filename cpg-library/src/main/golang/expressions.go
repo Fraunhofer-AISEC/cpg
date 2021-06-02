@@ -195,8 +195,8 @@ func (c *MemberCallExpression) SetFqn(s string) {
 	(*CallExpression)(c).SetFqn(s)
 }
 
-func (m *MemberCallExpression) SetBase(n *Node) {
-	(*jnigi.ObjectRef)(m).SetField(env, "base", (*jnigi.ObjectRef)(n).Cast("de/fraunhofer/aisec/cpg/graph/Node"))
+func (m *MemberCallExpression) SetBase(e *Expression) {
+	(*jnigi.ObjectRef)(m).SetField(env, "base", (*jnigi.ObjectRef)(e).Cast("de/fraunhofer/aisec/cpg/graph/statements/expressions/Expression"))
 }
 
 func (m *MemberCallExpression) SetMember(n *Node) {
@@ -211,14 +211,13 @@ func (m *MemberExpression) SetBase(e *Expression) {
 	(*jnigi.ObjectRef)(m).SetField(env, "base", (*jnigi.ObjectRef)(e).Cast("de/fraunhofer/aisec/cpg/graph/statements/expressions/Expression"))
 }
 
-func (m *MemberExpression) GetBase() *Node {
+func (m *MemberExpression) GetBase() *Expression {
 	i, err := (*jnigi.ObjectRef)(m).GetField(env, "base", jnigi.ObjectType("de/fraunhofer/aisec/cpg/graph/statements/expressions/Expression"))
 	if err != nil {
 		log.Fatal(err)
-
 	}
 
-	return (*Node)(i.(*jnigi.ObjectRef))
+	return (*Expression)(i.(*jnigi.ObjectRef))
 }
 
 func (r *DeclaredReferenceExpression) Expression() *Expression {
