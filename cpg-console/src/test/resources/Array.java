@@ -11,11 +11,13 @@ class Array {
         AnotherObject obj = null;
 
         // lets make it a little bit tricky at least
-        obj = AnotherObject();
+        obj = something;
 
         if(something) {
+            AnotherObject yetAnotherObject = null;
+
             // whoops, overriden with null again
-            obj = null;
+            obj = yetAnotherObject;
         }
 
         obj.doSomething();

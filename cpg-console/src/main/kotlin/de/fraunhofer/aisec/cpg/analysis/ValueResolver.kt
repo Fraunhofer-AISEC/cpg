@@ -31,6 +31,8 @@ import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 
+class CouldNotResolve
+
 /**
  * The value resolver tries to resolve the value of an [Expression] basically by following edges
  * until we reach a [Literal].
@@ -50,7 +52,7 @@ class ValueResolver(
         if (node != null) {
             "{${node.name}}"
         } else {
-            null
+            CouldNotResolve()
         }
     }
 ) {
@@ -58,7 +60,9 @@ class ValueResolver(
     fun resolveDeclaration(decl: Declaration?): Any? {
         when (decl) {
             is VariableDeclaration -> return resolve(decl.initializer)
-            is FieldDeclaration -> return resolve(decl.initializer)
+            is FieldDeclaration -> {
+                return resolve(decl.initializer)
+            }
         }
 
         return cannotResolve(decl, this)

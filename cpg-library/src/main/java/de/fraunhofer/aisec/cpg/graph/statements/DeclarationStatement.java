@@ -96,6 +96,7 @@ public class DeclarationStatement extends Statement {
   }
 
   @NotNull
+  @NonNull
   @Override
   public String toString() {
     return new ToStringBuilder(this, Node.TO_STRING_STYLE)

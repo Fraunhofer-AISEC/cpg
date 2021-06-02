@@ -37,6 +37,7 @@ import java.util.stream.Collectors;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
+import org.jetbrains.annotations.NotNull;
 import org.neo4j.ogm.annotation.Relationship;
 
 /**
@@ -67,17 +68,18 @@ public class CallExpression extends Expression implements TypeListener, HasBase 
 
   private String fqn;
 
+  @NotNull
   public Expression getBase() {
-    return (Expression) base;
+    return base;
   }
 
   public void setBase(Expression base) {
-    if (this.base instanceof HasType) {
-      ((HasType) this.base).unregisterTypeListener(this);
+    if (this.base != null) {
+      this.base.unregisterTypeListener(this);
     }
     this.base = base;
-    if (base instanceof HasType) {
-      ((HasType) base).registerTypeListener(this);
+    if (base != null) {
+      base.registerTypeListener(this);
     }
   }
 
@@ -160,7 +162,7 @@ public class CallExpression extends Expression implements TypeListener, HasBase 
       Type previous = this.type;
       List<Type> types =
           invokes.stream()
-              .map(pe -> pe.getEnd())
+              .map(PropertyEdge<FunctionDeclaration>::getEnd)
               .map(FunctionDeclaration::getType)
               .filter(Objects::nonNull)
               .collect(Collectors.toList());
@@ -188,6 +190,7 @@ public class CallExpression extends Expression implements TypeListener, HasBase 
     }
   }
 
+  @NotNull
   @Override
   public String toString() {
     return new ToStringBuilder(this, Node.TO_STRING_STYLE)

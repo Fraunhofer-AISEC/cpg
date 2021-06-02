@@ -69,9 +69,7 @@ class NullPointerCheck {
     fun handleHasBase(node: HasBase) {
         // check for all incoming DFG branches
         node.base.prevDFG.forEach {
-            it
-            var resolved: Any? =
-                null // TODO(oxisto): make sure that we distinguish between null and not-resolved
+            var resolved: Any? = CouldNotResolve()
             if (it is Expression) {
                 // try to resolve them
                 resolved = it.resolve()

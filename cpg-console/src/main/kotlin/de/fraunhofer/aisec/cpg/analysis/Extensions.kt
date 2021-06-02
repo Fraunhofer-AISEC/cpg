@@ -66,8 +66,8 @@ inline fun <reified T : Declaration> DeclarationHolder.byName(name: String): T {
     var base = this
     var lookup = name
 
-    // lets do a _very_ simple FQN lookup (TODO(oxisto): we could do this with a for-loop for
-    // multiple nested levels)
+    // lets do a _very_ simple FQN lookup
+    // TODO(oxisto): we could do this with a for-loop for multiple nested levels
     if (name.contains(".")) {
         // take the most left one
         val baseName = name.split(".")[0]
@@ -80,7 +80,7 @@ inline fun <reified T : Declaration> DeclarationHolder.byName(name: String): T {
         lookup = name.split(".")[1]
     }
 
-    val o = base.declarations.filterIsInstance<T>().firstOrNull() { it.name == lookup }
+    val o = base.declarations.filterIsInstance<T>().firstOrNull { it.name == lookup }
 
     return o ?: throw DeclarationNotFound("declaration with name not found or incorrect type")
 }
