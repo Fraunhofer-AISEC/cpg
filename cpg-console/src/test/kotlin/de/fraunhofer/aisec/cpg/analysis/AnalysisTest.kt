@@ -86,10 +86,15 @@ class AnalysisTest {
         assertEquals("obj.\u001B[36mdoSomething\u001B[0m();", code)
         println(code)
 
-        val decl = main.body<DeclarationStatement>(0)
-
+        var decl = main.body<DeclarationStatement>(0)
         code = decl.fancyCode()
+        println(code)
 
+        decl = main.body(1)
+        code = decl.fancyCode()
+        println(code)
+
+        code = main.fancyCode()
         println(code)
     }
 }

@@ -34,22 +34,20 @@ import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation.locationLink
 import de.fraunhofer.aisec.cpg.sarif.Region
 import kotlin.jvm.Throws
 import org.jline.utils.AttributedString
-import org.jline.utils.AttributedStyle.CYAN
-import org.jline.utils.AttributedStyle.DEFAULT
+import org.jline.utils.AttributedStyle
+import org.jline.utils.AttributedStyle.*
 
 fun Node?.printCode(): Unit {
     val header = "--- ${locationLink(this?.location)} ---"
 
     println(header)
-    println(this?.code)
+    println(this?.fancyCode())
     println("-".repeat(header.length))
 }
 
@@ -162,26 +160,35 @@ fun Node.fancyCode(): String {
 
     for (fancy in fancies) {
         if (fancy.first) {
-            val region = fancy.third
+            val region = getRelativeLocation(this, fancy.third)
 
             fancy.second.let {
-                val ansi = it.toAnsi()
-
-                var extraCharsInLine = extraCharsInLines.getOrDefault(region.startLine, 0)
-
-                // the amount of extra chars introduced by the ANSI control chars
-                val extraChars = ansi.length - it.length
-
                 // the current line we want to tackle
                 val line = lines[region.startLine]
+
+                // the already accumulated extra chars on this line
+                var extraCharsInLine = extraCharsInLines.getOrDefault(region.startLine, 0)
 
                 // everything before the thing we want to replace. add the extra chars in line to
                 // correct for ANSI chars introduced before us
                 val before = line.substring(0, region.startColumn + extraCharsInLine)
 
+                // the actual content we want to fancy
+                val content =
+                    line.substring(
+                        region.startColumn + extraCharsInLine,
+                        region.endColumn + extraCharsInLine
+                    )
+
                 // everything after the thing we want to replace. add the extra chars in line to
                 // correct for ANSI chars introduced before us
                 val after = line.substring(region.endColumn + extraCharsInLine)
+
+                // fancy it
+                val ansi = AttributedString(content, fancy.second).toAnsi()
+
+                // the amount of extra chars introduced by the ANSI control chars
+                val extraChars = ansi.length - content.length
 
                 // reconstruct the line
                 lines[region.startLine] = before + ansi + after
@@ -198,8 +205,8 @@ fun Node.fancyCode(): String {
     return lines.joinToString("\n")
 }
 
-fun getFanciesFor(parent: Node, node: Node): List<Triple<Boolean, AttributedString, Region>> {
-    val list = mutableListOf<Triple<Boolean, AttributedString, Region>>()
+fun getFanciesFor(original: Node, node: Node): List<Triple<Boolean, AttributedStyle, Region>> {
+    val list = mutableListOf<Triple<Boolean, AttributedStyle, Region>>()
 
     when (node) {
         is MemberCallExpression -> {
@@ -209,37 +216,105 @@ fun getFanciesFor(parent: Node, node: Node): List<Triple<Boolean, AttributedStri
             return list
         }
         is DeclaredReferenceExpression -> {
-            val region = getRelativeLocation(parent, node)
-
-            list += Triple(true, AttributedString(node.name, DEFAULT.foreground(CYAN)), region)
+            node.location?.let { list += Triple(true, DEFAULT.foreground(CYAN), it.region) }
 
             return list
         }
-        /*is DeclarationStatement -> {
-            // lets assume, that everything left of the variable name is some sort of type
-            var typeRegion = Region(
-                node.location?.region?.startLine,
-                node.location?.region?.startColumn,
-                node.location?.region?.endLine,
-                node.singleDeclaration?.location?.region?.startColumn
-            )
+        is DeclarationStatement -> {
+            node.location?.let {
+                // lets assume, that everything left of the variable name is some sort of type
+                val typeRegion =
+                    Region(
+                        it.region.startLine,
+                        it.region.startColumn,
+                        it.region.endLine,
+                        node.singleDeclaration.location?.region?.startColumn ?: it.region.startLine
+                    )
 
-            list += Triple(true, AttributedString(node.name, DEFAULT.foreground(CYAN)), region)
+                list += Triple(true, DEFAULT.foreground(RED or BRIGHT), typeRegion)
+            }
+
+            for (declaration in node.declarations) {
+                list.addAll(getFanciesFor(original, declaration))
+            }
 
             return list
-        }*/
+        }
+        is VariableDeclaration -> {
+            // only color initializer, if any
+            node.initializer?.let { list.addAll(getFanciesFor(original, it)) }
+
+            return list
+        }
+        is CompoundStatement -> {
+            // loop through statements
+            for (statement in node.statements) {
+                list.addAll(getFanciesFor(original, statement))
+            }
+
+            return list
+        }
+        is Literal<*> -> {
+            if (node.value is Number) {
+                node.location?.let {
+                    list += Triple(true, DEFAULT.foreground(BLUE or BRIGHT), it.region)
+                }
+            }
+
+            return list
+        }
+        is ArrayCreationExpression -> {
+            // color the whole expression
+            node.location?.let { list += Triple(true, DEFAULT.foreground(YELLOW), it.region) }
+
+            return list
+        }
+        is FunctionDeclaration -> {
+            // color the name
+            node.location?.let {
+                // look for the name in code; this assumes that it is on the first line for now
+                val offset = node.code?.indexOf(node.name) ?: -1
+
+                if (offset != -1) {
+                    val region =
+                        Region(
+                            it.region.startLine,
+                            it.region.startColumn + offset,
+                            it.region.startLine,
+                            it.region.startColumn + offset + node.name.length
+                        )
+
+                    list += Triple(true, DEFAULT.foreground(YELLOW or BRIGHT), region)
+                }
+            }
+
+            // forward it to the body
+            list.addAll(getFanciesFor(original, node.body))
+
+            return list
+        }
     }
 
     return list
 }
 
-fun getRelativeLocation(parent: Node, node: Node): Region {
-    val columnOffset = (parent.location?.region?.startColumn ?: 0)
+fun getRelativeLocation(parent: Node, region: Region): Region {
+    var columnOffset = 0
+
+    // we only need a column offset, if the start line is the same
+    columnOffset =
+        if (region.startLine == (parent.location?.region?.startLine ?: 0)) {
+            (parent.location?.region?.startColumn ?: 0)
+        } else {
+            1 // not sure why
+        }
+
     val lineOffset = (parent.location?.region?.startLine ?: 0)
+
     return Region(
-        (node.location?.region?.startLine ?: 0) - lineOffset,
-        (node.location?.region?.startColumn ?: 0) - columnOffset,
-        (node.location?.region?.endLine ?: 0) - lineOffset,
-        (node.location?.region?.endColumn ?: 0) - columnOffset
+        region.startLine - lineOffset,
+        region.startColumn - columnOffset,
+        region.endLine - lineOffset,
+        region.endColumn - columnOffset
     )
 }
