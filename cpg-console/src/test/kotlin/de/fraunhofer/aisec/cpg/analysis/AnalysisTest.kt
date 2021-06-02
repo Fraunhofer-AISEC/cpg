@@ -27,7 +27,11 @@ package de.fraunhofer.aisec.cpg.analysis
 
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationManager
+import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import java.io.File
+import junit.framework.Assert.assertEquals
 import org.junit.jupiter.api.Test
 
 class AnalysisTest {
@@ -59,5 +63,33 @@ class AnalysisTest {
         val result = analyzer.analyze().get()
 
         NullPointerCheck().run(result)
+    }
+
+    @Test
+    fun testAttribute() {
+        val config =
+            TranslationConfiguration.builder()
+                .sourceLocations(File("src/test/resources/Array.java"))
+                .defaultPasses()
+                .defaultLanguages()
+                .build()
+
+        val analyzer = TranslationManager.builder().config(config).build()
+        val result = analyzer.analyze().get()
+        val tu = result.translationUnits.first()
+
+        val main = tu.byName<FunctionDeclaration>("Array.main")
+        val call = main.body<CallExpression>(0)
+
+        var code = call.fancyCode()
+
+        assertEquals("obj.\u001B[36mdoSomething\u001B[0m();", code)
+        println(code)
+
+        val decl = main.body<DeclarationStatement>(0)
+
+        code = decl.fancyCode()
+
+        println(code)
     }
 }
