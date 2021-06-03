@@ -31,11 +31,12 @@ import org.jetbrains.kotlinx.ki.shell.Plugin
 import org.jetbrains.kotlinx.ki.shell.Shell
 import org.jetbrains.kotlinx.ki.shell.configuration.ReplConfiguration
 
-class AnalyzePlugin : Plugin {
+class TranslatePlugin : Plugin {
     inner class Load(conf: ReplConfiguration) : BaseCommand() {
-        override val name: String by conf.get(default = "analyze")
-        override val short: String by conf.get(default = "a")
-        override val description: String = "analyzes the path"
+        override val name: String by conf.get(default = "translate")
+        override val short: String by conf.get(default = "tr")
+        override val description: String =
+            "translates the source code files at the path into the CPG"
 
         override val params = "<path>"
 
@@ -55,6 +56,8 @@ class AnalyzePlugin : Plugin {
                     "import de.fraunhofer.aisec.cpg.graph.statements.expressions.*",
                     // helper builtins
                     "import de.fraunhofer.aisec.cpg.analysis.resolve",
+                    "import de.fraunhofer.aisec.cpg.analysis.all",
+                    "import de.fraunhofer.aisec.cpg.analysis.ast",
                     "import de.fraunhofer.aisec.cpg.analysis.byName",
                     "import de.fraunhofer.aisec.cpg.analysis.body",
                     "import de.fraunhofer.aisec.cpg.analysis.printCode",

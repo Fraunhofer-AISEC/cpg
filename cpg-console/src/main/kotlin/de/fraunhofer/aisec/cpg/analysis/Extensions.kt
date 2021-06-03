@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.analysis
 
+import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.DeclarationHolder
 import de.fraunhofer.aisec.cpg.graph.HasType
 import de.fraunhofer.aisec.cpg.graph.Node
@@ -38,6 +39,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.IfStatement
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser
+import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation.locationLink
 import de.fraunhofer.aisec.cpg.sarif.Region
 import kotlin.jvm.Throws
@@ -47,15 +49,17 @@ import org.jline.utils.AttributedString
 import org.jline.utils.AttributedStyle
 import org.jline.utils.AttributedStyle.*
 
-fun Node?.printCode(): Unit {
+fun Node.printCode(): Node {
     val header = "--- ${this.fancyLocationLink()} ---"
 
     println(header)
-    println(this?.fancyCode())
+    println(this.fancyCode())
     println("-".repeat(header.length))
+
+    return this
 }
 
-fun MutableSet<Node>.printCode(): Unit {
+fun Collection<Node>.printCode(): Collection<Node> {
     val it = this.iterator()
 
     while (it.hasNext()) {
@@ -63,6 +67,8 @@ fun MutableSet<Node>.printCode(): Unit {
         next.printCode()
         println("")
     }
+
+    return this
 }
 
 fun Expression.resolve(): Any? {
@@ -71,6 +77,39 @@ fun Expression.resolve(): Any? {
 
 fun Declaration.resolve(): Any? {
     return ValueResolver().resolveDeclaration(this)
+}
+
+@JvmName("allNodes")
+fun TranslationResult.all(): List<Node> {
+    return this.all<Node>()
+}
+
+inline fun <reified T : Node> TranslationResult.all(): List<T> {
+    val children = SubgraphWalker.flattenAST(this)
+
+    return children.filterIsInstance<T>()
+}
+
+@JvmName("allNodes")
+fun Node.all(): List<Node> {
+    return this.all<Node>()
+}
+
+inline fun <reified T : Node> Node.all(): List<T> {
+    val children = SubgraphWalker.flattenAST(this)
+
+    return children.filterIsInstance<T>()
+}
+
+@JvmName("astNodes")
+fun Node.ast(): List<Node> {
+    return this.ast<Node>()
+}
+
+inline fun <reified T : Node> Node.ast(): List<T> {
+    val children = SubgraphWalker.getAstChildren(this)
+
+    return children.filterIsInstance<T>()
 }
 
 @Throws(DeclarationNotFound::class)

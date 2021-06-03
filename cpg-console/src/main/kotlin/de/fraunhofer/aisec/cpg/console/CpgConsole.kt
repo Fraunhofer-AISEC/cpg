@@ -84,7 +84,7 @@ object CpgConsole {
                 object : ReplConfigurationBase() {
                     override fun plugins(): Iterator<Plugin> {
                         val list = super.plugins().asSequence().toList().toMutableList()
-                        list += AnalyzePlugin()
+                        list += TranslatePlugin()
                         list += Neo4jPlugin()
                         list += ShowCodePlugin()
                         list += RunPlugin()

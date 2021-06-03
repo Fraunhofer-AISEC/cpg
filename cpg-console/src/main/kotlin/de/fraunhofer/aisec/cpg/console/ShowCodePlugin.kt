@@ -25,7 +25,6 @@
  */
 package de.fraunhofer.aisec.cpg.console
 
-import de.fraunhofer.aisec.cpg.graph.Node
 import org.jetbrains.kotlinx.ki.shell.BaseCommand
 import org.jetbrains.kotlinx.ki.shell.Command
 import org.jetbrains.kotlinx.ki.shell.Plugin
@@ -59,8 +58,4 @@ class ShowCodePlugin : Plugin {
     }
 
     override fun cleanUp() {}
-}
-
-fun Node.printNode() {
-    println(this.code)
 }
