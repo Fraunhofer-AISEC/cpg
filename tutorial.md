@@ -66,11 +66,14 @@ In the following, we will use the aforementioned objects to query the source cod
 res3: List<de.fraunhofer.aisec.cpg.graph.Node> = ...
 ```
 
-The output here can be quite huge, so additional filtering is needed. The `all` function takes additional type parameter, which can be used to further filter nodes of a particular type. In this case, we are interested in all `ArraySubscriptionExpression` nodes, i.e. those that represent access to an element of an array. These operations are often prone to out of bounds errors and we want to explore, whether our code is also affected by that.
+The output here can be quite huge, so additional filtering is needed. The `all` function takes an additional type parameter, which can be used to further filter nodes of a particular type. In this case, we are interested in all `ArraySubscriptionExpression` nodes, i.e. those that represent access to an element of an array. These operations are often prone to out of bounds errors and we want to explore, whether our code is also affected by that.
 
 ```kotlin
 [4] result.all<ArraySubscriptionExpression>()
-res4: List<de.fraunhofer.aisec.cpg.graph.statements.expressions.ArraySubscriptionExpression> = [{"location":"array.cpp(6:12-6:18)","type":{"name":"char"},"possibleSubTypes":[{"name":"char"},"UNKNOWN"]}, {"location":"Array.java(8:18-8:22)","type":{"name":"char"},"possibleSubTypes":[{"name":"char"},"UNKNOWN"]}]
+res4: List<de.fraunhofer.aisec.cpg.graph.statements.expressions.ArraySubscriptionExpression> = [
+    {"location":"array.cpp(6:12-6:18)","type":{"name":"char"}}, 
+    {"location":"Array.java(8:18-8:22)","type":{"name":"char"}}
+]
 ```
 
 Much better. We have found two nodes that represent an array access. To see the corresponding source code of our result, we can prefix our previous command with `:code` or `:c`. This shows the raw source code as well as the location of the file where the code is located.
@@ -89,3 +92,45 @@ res5: Collection<de.fraunhofer.aisec.cpg.graph.Node> = [{"location":"array.cpp(6
 ```
 
 This also demonstrates quite nicely, that queries on the CPG work independently of the programming language. Our test folder contains both Java as well as C++ files and we can analyse them simultaneously.
+
+```kotlin
+[24] result.all<ArraySubscriptionExpression>().map { it.subscriptExpression.resolve() }
+res21: List<Any?> = [5, 5]
+```
+
+TODO: make it simpler to query prev DFG with type
+```kotlin
+[30] result.all<ArraySubscriptionExpression>().map { 
+    Triple(
+        it.subscriptExpression.resolve() as Int,
+        (it.arrayExpression.prevDFG.first() as? ArrayCreationExpression)?.dimensions?.first()?.resolve() as Int,
+        it
+    ) }
+res29: List<Triple<Int, Int, de.fraunhofer.aisec.cpg.graph.statements.expressions.ArraySubscriptionExpression>> = [(5, 4, {"location":"array.cpp(6:12-6:18)","type":{"name":"char"},"possibleSubTypes":["UNKNOWN",{"name":"char"}]}), (5, 4, {"location":"Array.java(8:18-8:22)","type":{"name":"char"},"possibleSubTypes":["UNKNOWN",{"name":"char"}]})]
+```
+
+We use that result to filter those where the resolved index is greater or equal to our dimension.
+
+```kotlin
+[31] res39.filter { it.first >= it.second }
+res41: List<Triple<Int, Int, de.fraunhofer.aisec.cpg.graph.statements.expressions.ArraySubscriptionExpression>> = [(5, 4, {"location":"array.cpp(6:12-6:18)","type":{"name":"char"},"possibleSubTypes":["UNKNOWN",{"name":"char"}]}), (5, 4, {"location":"Array.java(8:18-8:22)","type":{"name":"char"},"possibleSubTypes":["UNKNOWN",{"name":"char"}]})]
+```
+
+```kotlin
+[31] :code res39.filter { it.first >= it.second }.map { it.third }
+--- /Users/chr55316/Repositories/cpg/cpg-console/src/test/resources/array.cpp:6:12 ---
+= c[b]
+-----------------------------------------------------------------------------------------------
+
+--- /Users/chr55316/Repositories/cpg/cpg-console/src/test/resources/Array.java:8:18 ---
+c[b]
+------------------------------------------------------------------------------------------------
+```
+Of course the same can also be achieved in one, slightly larger query.
+
+```kotlin
+[6] result.all<ArraySubscriptionExpression>().filter {
+    (it.subscriptExpression.resolve() as Int) >= 
+    ((it.arrayExpression.prevDFG.first() as? ArrayCreationExpression)?.dimensions?.first()?.resolve() as Int)
+}
+```
