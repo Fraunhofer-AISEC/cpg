@@ -80,20 +80,23 @@ class AnalysisTest {
         val main = tu.byName<FunctionDeclaration>("Array.main")
         val call = main.body<CallExpression>(0)
 
-        var code = call.fancyCode()
+        var code = call.fancyCode(showNumbers = false)
 
         // assertEquals("obj.\u001B[36mdoSomething\u001B[0m();", code)
         println(code)
 
         var decl = main.body<DeclarationStatement>(0)
-        code = decl.fancyCode()
+        code = decl.fancyCode(showNumbers = false)
         println(code)
 
         decl = main.body(1)
-        code = decl.fancyCode()
+        code = decl.fancyCode(showNumbers = false)
         println(code)
 
-        code = main.fancyCode()
+        code = main.fancyCode(showNumbers = false)
+        println(code)
+
+        code = call.fancyCode(3, true)
         println(code)
     }
 }

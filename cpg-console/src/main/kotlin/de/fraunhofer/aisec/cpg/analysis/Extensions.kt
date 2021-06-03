@@ -42,6 +42,7 @@ import de.fraunhofer.aisec.cpg.graph.types.TypeParser
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation.locationLink
 import de.fraunhofer.aisec.cpg.sarif.Region
+import java.io.File
 import kotlin.jvm.Throws
 import org.jetbrains.kotlinx.ki.shell.configuration.ReplConfigurationBase
 import org.jetbrains.kotlinx.ki.shell.plugins.SyntaxPlugin
@@ -49,22 +50,25 @@ import org.jline.utils.AttributedString
 import org.jline.utils.AttributedStyle
 import org.jline.utils.AttributedStyle.*
 
-fun Node.printCode(): Node {
+fun Node.printCode(linesAhead: Int = 0, showNumbers: Boolean = false): Node {
     val header = "--- ${this.fancyLocationLink()} ---"
 
     println(header)
-    println(this.fancyCode())
+    println(this.fancyCode(linesAhead, showNumbers))
     println("-".repeat(header.length))
 
     return this
 }
 
-fun Collection<Node>.printCode(): Collection<Node> {
+fun Collection<Node>.printCode(
+    linesAhead: Int = 0,
+    showNumbers: Boolean = false
+): Collection<Node> {
     val it = this.iterator()
 
     while (it.hasNext()) {
         val next = it.next()
-        next.printCode()
+        next.printCode(linesAhead, showNumbers)
         println("")
     }
 
@@ -110,6 +114,10 @@ inline fun <reified T : Node> Node.ast(): List<T> {
     val children = SubgraphWalker.getAstChildren(this)
 
     return children.filterIsInstance<T>()
+}
+
+inline fun <reified T : Node> Node.dfgFrom(): List<T> {
+    return this.prevDFG.toList().filterIsInstance<T>()
 }
 
 @Throws(DeclarationNotFound::class)
@@ -187,60 +195,116 @@ fun Node.followPrevEOG(predicate: (PropertyEdge<*>) -> Boolean): List<PropertyEd
     return null
 }
 
-fun Node.fancyCode(): String {
+fun Node.fancyCode(linesAhead: Int = 0, showNumbers: Boolean): String? {
     // start with the code
-    val code = this.code
+    var code = this.code
 
-    // split it into lines
-    val lines = (code?.split("\n") ?: listOf()).toMutableList()
+    this.location?.region?.let {
+        // we need this later for number formatting
+        var startLine = it.startLine
 
-    val extraCharsInLines = mutableMapOf<Int, Int>()
+        if (linesAhead != 0) {
+            // we need to fetch the lines from the original code
+            val region =
+                Region(1.coerceAtLeast(it.startLine - linesAhead), 1, it.endLine, it.endColumn)
 
-    val fancies = getFanciesFor(this, this)
+            // update the start line
+            startLine = region.startLine
 
-    for (fancy in fancies) {
-        val region = getRelativeLocation(this, fancy.second)
-
-        fancy.first.let {
-            // the current line we want to tackle
-            val line = lines[region.startLine]
-
-            // the already accumulated extra chars on this line
-            var extraCharsInLine = extraCharsInLines.getOrDefault(region.startLine, 0)
-
-            // everything before the thing we want to replace. add the extra chars in line to
-            // correct for ANSI chars introduced before us
-            val before = line.substring(0, region.startColumn + extraCharsInLine)
-
-            // the actual content we want to fancy
-            val content =
-                line.substring(
-                    region.startColumn + extraCharsInLine,
-                    region.endColumn + extraCharsInLine
-                )
-
-            // everything after the thing we want to replace. add the extra chars in line to
-            // correct for ANSI chars introduced before us
-            val after = line.substring(region.endColumn + extraCharsInLine)
-
-            // fancy it
-            val ansi = AttributedString(content, fancy.first).toAnsi()
-
-            // the amount of extra chars introduced by the ANSI control chars
-            val extraChars = ansi.length - content.length
-
-            // reconstruct the line
-            lines[region.startLine] = before + ansi + after
-
-            // update extra chars in line
-            extraCharsInLine += extraChars
-
-            // store it
-            extraCharsInLines.put(region.startLine, extraCharsInLine)
+            this.file?.let { file -> code = getCode(file, region) }
         }
+
+        // split it into lines
+        val lines = (code?.split("\n") ?: listOf()).toMutableList()
+
+        val extraCharsInLines = mutableMapOf<Int, Int>()
+
+        val fancies = getFanciesFor(this, this)
+
+        for (fancy in fancies) {
+            val region = getRelativeLocation(it, fancy.second)
+
+            fancy.first.let {
+                // the current line we want to tackle
+                val line = lines[region.startLine]
+
+                // the already accumulated extra chars on this line
+                var extraCharsInLine = extraCharsInLines.getOrDefault(region.startLine, 0)
+
+                // everything before the thing we want to replace. add the extra chars in line to
+                // correct for ANSI chars introduced before us
+                val before = line.substring(0, region.startColumn + extraCharsInLine)
+
+                // the actual content we want to fancy
+                val content =
+                    line.substring(
+                        region.startColumn + extraCharsInLine,
+                        region.endColumn + extraCharsInLine
+                    )
+
+                // everything after the thing we want to replace. add the extra chars in line to
+                // correct for ANSI chars introduced before us
+                val after = line.substring(region.endColumn + extraCharsInLine)
+
+                // fancy it
+                val ansi = AttributedString(content, fancy.first).toAnsi()
+
+                // the amount of extra chars introduced by the ANSI control chars
+                val extraChars = ansi.length - content.length
+
+                // reconstruct the line
+                lines[region.startLine] = before + ansi + after
+
+                // update extra chars in line
+                extraCharsInLine += extraChars
+
+                // store it
+                extraCharsInLines.put(region.startLine, extraCharsInLine)
+            }
+        }
+
+        if (showNumbers) {
+            var output = ""
+
+            // display line numbers
+            for (i in 0 until lines.size) {
+                var line = ((i + startLine).toString() + ": ").padStart(5) + lines[i]
+                if (i != lines.size - 1) {
+                    line += "\n"
+                }
+
+                /*if (i >= linesAhead) {
+                    output += AttributedString(line, DEFAULT.background(128, 128, 128)).toAnsi()
+                } else {*/
+                output += line
+                // }
+            }
+
+            return output
+        }
+
+        return lines.joinToString("\n")
     }
 
-    return lines.joinToString("\n")
+    // no location, no fancy
+    return this.code
+}
+
+fun getCode(file: String, region: Region): String {
+    var code = ""
+
+    val lines = File(file).readLines()
+
+    for (i in region.startLine - 1 until region.endLine) {
+        code +=
+            when (i) {
+                region.startLine - 1 -> lines[i].substring(region.startColumn - 1) + "\n"
+                region.endLine - 1 -> lines[i].substring(0, region.endColumn - 1)
+                else -> lines[i] + "\n"
+            }
+    }
+
+    return code
 }
 
 val styles = SyntaxPlugin.HighlightStylesFromConfiguration(object : ReplConfigurationBase() {})
@@ -388,18 +452,18 @@ private fun fancyWord(
     }
 }
 
-fun getRelativeLocation(parent: Node, region: Region): Region {
+fun getRelativeLocation(parentRegion: Region, region: Region): Region {
     var columnOffset = 0
 
     // we only need a column offset, if the start line is the same
     columnOffset =
-        if (region.startLine == (parent.location?.region?.startLine ?: 0)) {
-            (parent.location?.region?.startColumn ?: 0)
+        if (region.startLine == (parentRegion.startLine ?: 0)) {
+            (parentRegion.startColumn ?: 0)
         } else {
             1 // not sure why
         }
 
-    val lineOffset = (parent.location?.region?.startLine ?: 0)
+    val lineOffset = (parentRegion.startLine ?: 0)
 
     return Region(
         region.startLine - lineOffset,

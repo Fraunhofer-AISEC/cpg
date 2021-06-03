@@ -58,6 +58,7 @@ class TranslatePlugin : Plugin {
                     "import de.fraunhofer.aisec.cpg.analysis.resolve",
                     "import de.fraunhofer.aisec.cpg.analysis.all",
                     "import de.fraunhofer.aisec.cpg.analysis.ast",
+                    "import de.fraunhofer.aisec.cpg.analysis.dfgFrom",
                     "import de.fraunhofer.aisec.cpg.analysis.byName",
                     "import de.fraunhofer.aisec.cpg.analysis.body",
                     "import de.fraunhofer.aisec.cpg.analysis.printCode",

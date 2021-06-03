@@ -99,7 +99,10 @@ class NullPointerCheck {
 
                     println(header)
                     println(
-                        "${AttributedString(locationLink((node as Node).location), DEFAULT.foreground(BLUE or BRIGHT)).toAnsi()}: ${(node as Node).fancyCode()}"
+                        "${AttributedString(locationLink((node as Node).location), DEFAULT.foreground(BLUE or BRIGHT)).toAnsi()}: ${(node as Node).fancyCode(
+                            showNumbers = false
+                        )
+                        }"
                     )
                     println("")
                     println(
@@ -108,7 +111,10 @@ class NullPointerCheck {
                     for (p in resolver.path) {
 
                         println(
-                            "${AttributedString(locationLink(p.location), DEFAULT.foreground(BLUE or BRIGHT)).toAnsi()}: ${p.fancyCode()}"
+                            "${AttributedString(locationLink(p.location), DEFAULT.foreground(BLUE or BRIGHT)).toAnsi()}: ${p.fancyCode(
+                                showNumbers = false
+                            )
+                            }"
                         )
                     }
 

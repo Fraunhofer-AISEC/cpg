@@ -43,7 +43,7 @@ class ShowCodePlugin : Plugin {
             val p = line.indexOf(' ')
             val node = line.substring(p + 1).trim()
 
-            return Command.Result.RunSnippets(listOf("${node}.printCode()"))
+            return Command.Result.RunSnippets(listOf("${node}.printCode(0, true)"))
 
             // return Command.Result.RunSnippets(listOf(content))
         }

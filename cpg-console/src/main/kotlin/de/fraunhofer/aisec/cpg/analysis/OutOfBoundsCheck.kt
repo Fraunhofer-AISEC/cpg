@@ -90,11 +90,14 @@ class OutOfBoundsCheck {
                                             AttributedString(
                                                 PhysicalLocation.locationLink(v.location), DEFAULT.foreground(
                                                     AttributedStyle.BLUE or AttributedStyle.BRIGHT
-                                                )).toAnsi()}: ${v.fancyCode()}"
+                                                )).toAnsi()}: ${v.fancyCode(showNumbers = false)}"
                                     )
                                     println("")
                                     println(
-                                        "The following path was discovered that leads to ${v.subscriptExpression.fancyCode()} being ${AttributedString(""+resolvedIndex, DEFAULT.foreground(AttributedStyle.CYAN)).toAnsi()}:"
+                                        "The following path was discovered that leads to ${v.subscriptExpression.fancyCode(
+                                            showNumbers = false
+                                        )
+                                        } being ${AttributedString(""+resolvedIndex, DEFAULT.foreground(AttributedStyle.CYAN)).toAnsi()}:"
                                     )
                                     for (p in resolver.path) {
 
@@ -102,7 +105,7 @@ class OutOfBoundsCheck {
                                             "${AttributedString(
                                                 PhysicalLocation.locationLink(p.location), DEFAULT.foreground(
                                                     AttributedStyle.BLUE or AttributedStyle.BRIGHT
-                                                )).toAnsi()}: ${p.fancyCode()}"
+                                                )).toAnsi()}: ${p.fancyCode(showNumbers = false)}"
                                         )
                                     }
                                 }

@@ -95,18 +95,21 @@ This also demonstrates quite nicely, that queries on the CPG work independently 
 
 ```kotlin
 [24] result.all<ArraySubscriptionExpression>().map { it.subscriptExpression.resolve() }
-res21: List<Any?> = [5, 5]
+res21: List<Any?> = [5, 5, 0]
 ```
 
 TODO: make it simpler to query prev DFG with type
 ```kotlin
-[30] result.all<ArraySubscriptionExpression>().map { 
-    Triple(
+[30] result.all<ArraySubscriptionExpression>().map { Triple(
         it.subscriptExpression.resolve() as Int,
-        (it.arrayExpression.prevDFG.first() as? ArrayCreationExpression)?.dimensions?.first()?.resolve() as Int,
+        it.arrayExpression.dfgFrom<ArrayCreationExpression>().first().dimensions.first().resolve() as Int,
         it
     ) }
-res29: List<Triple<Int, Int, de.fraunhofer.aisec.cpg.graph.statements.expressions.ArraySubscriptionExpression>> = [(5, 4, {"location":"array.cpp(6:12-6:18)","type":{"name":"char"},"possibleSubTypes":["UNKNOWN",{"name":"char"}]}), (5, 4, {"location":"Array.java(8:18-8:22)","type":{"name":"char"},"possibleSubTypes":["UNKNOWN",{"name":"char"}]})]
+res21: List<Triple<Int, Int, de.fraunhofer.aisec.cpg.graph.statements.expressions.ArraySubscriptionExpression>> = [
+    (5, 4, {"location":"array.cpp(6:12-6:18)","type":{"name":"char"},"possibleSubTypes":["UNKNOWN",{"name":"char"}]}), 
+    (5, 4, {"location":"Array.java(8:18-8:22)","type":{"name":"char"},"possibleSubTypes":["UNKNOWN",{"name":"char"}]}),
+    (0, 100, {"location":"array.cpp(12:12-12:16)","type":{"name":"char"},"possibleSubTypes":[{"name":"char"}]})
+]
 ```
 
 We use that result to filter those where the resolved index is greater or equal to our dimension.

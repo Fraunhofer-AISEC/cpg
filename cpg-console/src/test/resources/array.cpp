@@ -5,3 +5,9 @@ int main() {
 
     char d = c[b];
 }
+
+void some_other_function() {
+    char* c = new char[100];
+
+    return c[0];
+}
