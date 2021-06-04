@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.graph.declarations;
 
 import static de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.unwrap;
 
+import com.google.common.hash.HashCode;
 import de.fraunhofer.aisec.cpg.graph.DeclarationHolder;
 import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.StatementHolder;
@@ -40,6 +41,7 @@ import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.jetbrains.annotations.NotNull;
 import org.neo4j.ogm.annotation.Relationship;
+import org.neo4j.ogm.annotation.Transient;
 
 /** The top most declaration, representing a translation unit, for example a file. */
 public class TranslationUnitDeclaration extends Declaration
@@ -67,6 +69,16 @@ public class TranslationUnitDeclaration extends Declaration
   @Relationship(value = "STATEMENTS", direction = "OUTGOING")
   @NonNull
   private @SubGraph("AST") List<PropertyEdge<Statement>> statements = new ArrayList<>();
+
+  @Transient private HashCode sha256;
+
+  public HashCode getSha256() {
+    return sha256;
+  }
+
+  public void setSha256(HashCode sha256) {
+    this.sha256 = sha256;
+  }
 
   /**
    * Returns the i-th declaration as a specific class, if it can be cast

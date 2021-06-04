@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg;
 import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.SubGraph;
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration;
+import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -42,6 +43,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class TranslationResult extends Node {
   public static final String SOURCE_LOCATIONS_TO_FRONTEND = "sourceLocationsToFrontend";
   private final TranslationManager translationManager;
+  private ScopeManager scopeManager;
 
   /** Entry points to the CPG: "TranslationUnits" refer to source files. */
   @SubGraph("AST")
@@ -56,6 +58,14 @@ public class TranslationResult extends Node {
 
   public boolean isCancelled() {
     return translationManager.isCancelled();
+  }
+
+  public ScopeManager getScopeManager() {
+    return scopeManager;
+  }
+
+  public void setScopeManager(ScopeManager scopeManager) {
+    this.scopeManager = scopeManager;
   }
 
   /**

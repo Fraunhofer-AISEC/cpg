@@ -27,10 +27,13 @@ package de.fraunhofer.aisec.cpg;
 
 import static de.fraunhofer.aisec.cpg.frontends.cpp.CXXLanguageFrontend.CXX_EXTENSIONS;
 
+import com.google.common.hash.HashCode;
+import com.google.common.hash.Hashing;
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
 import de.fraunhofer.aisec.cpg.frontends.TranslationException;
 import de.fraunhofer.aisec.cpg.frontends.golang.GoLanguageFrontend;
 import de.fraunhofer.aisec.cpg.graph.TypeManager;
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration;
 import de.fraunhofer.aisec.cpg.helpers.Benchmark;
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker;
 import de.fraunhofer.aisec.cpg.helpers.Util;
@@ -126,8 +129,106 @@ public class TranslationManager {
               TypeManager.getInstance().cleanup();
             }
           }
+          result.setScopeManager(scopesBuildForAnalysis);
           return result;
         });
+  }
+
+  /**
+   * Like {@link #analyze()} but allows the user to pass a previous {@link TranslationResult} that
+   * is used to incrementally construct the current result whenever possible. This may speed up the
+   * analysis in case there have only been small changes to the analyzed source code.
+   *
+   * @param previousResult The result of a previous run of {@link #analyze()}
+   * @return The updated result that matches the current state of the source code
+   */
+  public TranslationResult analyze(TranslationResult previousResult) throws TranslationException {
+    Benchmark outerBench =
+        new Benchmark(TranslationManager.class, "Incremental graph construction");
+    TranslationResult result = new TranslationResult(this);
+
+    Set<File> sourceLocations = new HashSet<>();
+
+    for (File sourceLocation : config.getSourceLocations()) {
+      // Recursively add files in directories
+      if (sourceLocation.isDirectory()) {
+        try (Stream<Path> stream =
+            Files.find(sourceLocation.toPath(), 999, (p, fileAttr) -> fileAttr.isRegularFile())) {
+          sourceLocations.addAll(stream.map(Path::toFile).collect(Collectors.toSet()));
+          sourceLocations.remove(sourceLocation);
+        } catch (IOException e) {
+          log.error(e.getMessage(), e);
+        }
+      } else if (sourceLocation.isFile()) {
+        sourceLocations.add(sourceLocation);
+      }
+    }
+
+    List<File> changed = new ArrayList<>();
+
+    for (File file : sourceLocations) {
+      Optional<TranslationUnitDeclaration> previousTU =
+          previousResult.getTranslationUnits().stream()
+              .filter(tu -> tu.getName().equals(file.toString()))
+              .findAny();
+      if (previousTU.isEmpty()) {
+        changed.add(file);
+        continue;
+      }
+
+      try {
+        HashCode sha256 = com.google.common.io.Files.asByteSource(file).hash(Hashing.sha256());
+        if (sha256.equals(previousTU.get().getSha256())) {
+          result.addTranslationUnit(previousTU.get());
+        } else {
+          changed.add(file);
+        }
+      } catch (IOException e) {
+        String message = "Could not calculate file hash of " + file.getName();
+        log.error("{}: {}", message, e.getMessage());
+
+        if (config.failOnError) {
+          throw new TranslationException(message, e);
+        }
+
+        changed.add(file);
+      }
+    }
+
+    Benchmark bench = new Benchmark(TranslationManager.class, "Frontends");
+    config.setSourceLocations(changed);
+    Set<LanguageFrontend> frontendsNeedCleanup =
+        runFrontends(result, config, previousResult.getScopeManager());
+    bench.stop();
+
+    Set<Pass> passesNeedCleanup = new HashSet<>();
+    for (Pass pass : config.getRegisteredPasses()) {
+      passesNeedCleanup.add(pass);
+      bench = new Benchmark(pass.getClass(), "Executing Pass");
+      pass.accept(result);
+      bench.stop();
+      if (result.isCancelled()) {
+        log.warn("Analysis interrupted, stopping Pass evaluation");
+      }
+    }
+
+    if (!this.config.disableCleanup) {
+      log.debug("Cleaning up {} Passes", passesNeedCleanup.size());
+      passesNeedCleanup.forEach(Pass::cleanup);
+
+      if (frontendsNeedCleanup != null) {
+        log.debug("Cleaning up {} Frontends", frontendsNeedCleanup.size());
+        frontendsNeedCleanup.forEach(LanguageFrontend::cleanup);
+      }
+
+      TypeManager.getInstance().cleanup();
+    }
+
+    result.setScopeManager(previousResult.getScopeManager());
+
+    outerBench.stop();
+
+    return result;
   }
 
   public List<Pass> getPasses() {
@@ -340,13 +441,22 @@ public class TranslationManager {
         return Optional.empty();
       }
 
-      result.addTranslationUnit(frontend.parse(sourceLocation));
+      TranslationUnitDeclaration tu = frontend.parse(sourceLocation);
+      tu.setSha256(com.google.common.io.Files.asByteSource(sourceLocation).hash(Hashing.sha256()));
+      result.addTranslationUnit(tu);
     } catch (TranslationException ex) {
       log.error(
           "An error occurred during parsing of {}: {}", sourceLocation.getName(), ex.getMessage());
 
       if (config.failOnError) {
         throw ex;
+      }
+    } catch (IOException ex) {
+      String message = "Could not calculate file hash of " + sourceLocation.getName();
+      log.error("{}: {}", message, ex.getMessage());
+
+      if (config.failOnError) {
+        throw new TranslationException(message, ex);
       }
     }
 

@@ -115,7 +115,7 @@ public class TranslationConfiguration {
   public final Map<String, String> symbols;
 
   /** Source code files to parse. */
-  private final List<File> sourceLocations;
+  private List<File> sourceLocations;
 
   private final File topLevel;
 
@@ -191,6 +191,10 @@ public class TranslationConfiguration {
 
   public List<File> getSourceLocations() {
     return this.sourceLocations;
+  }
+
+  public void setSourceLocations(List<File> sourceLocations) {
+    this.sourceLocations = sourceLocations;
   }
 
   public File getTopLevel() {
