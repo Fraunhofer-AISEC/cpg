@@ -67,27 +67,6 @@ class AnalysisTest {
         NullPointerCheck().run(result)
     }
 
-    @OptIn(ExperimentalGolang::class)
-    @Test
-    fun testResolve() {
-        val config =
-            TranslationConfiguration.builder()
-                .sourceLocations(File("src/test/resources/struct.go"))
-                .defaultPasses()
-                .defaultLanguages()
-                .registerLanguage(
-                    GoLanguageFrontend::class.java,
-                    GoLanguageFrontend.GOLANG_EXTENSIONS
-                )
-                .build()
-
-        val analyzer = TranslationManager.builder().config(config).build()
-        val result = analyzer.analyze().get()
-
-        var resolved = result.all<MemberCallExpression>().map { it.base.resolve() }
-        println(resolved)
-    }
-
     @Test
     fun testAttribute() {
         val config =

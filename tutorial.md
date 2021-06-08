@@ -12,7 +12,7 @@ A code property graph (CPG) is a representation of source code in form of a labe
 
 While the CPG tool is mostly used as a libary in external tools, such as [Codyze](http://github.com/Fraunhofer-AISEC/codyze), we decided to showcase its functionalities with a simple CLI based console that can be used to query the graph and run simple analysis steps.
 
-To launch the console, built it according to the instructions in our `README.md` and then run `bin/cpg-console`. You will be greeted by the interactive prompt of our CPG console, which is implemented by the kotlin `ki` interactive shell. The commands on this shell follow the Kotlin language. For more information please see the [Kotlin documentation](https://kotlinlang.org/docs/home.html).
+To launch the console, first build it according to the instructions in our `README.md` and then run `bin/cpg-console`. You will be greeted by the interactive prompt of our console, which is implemented by the kotlin `ki` interactive shell. The commands on this shell follow the syntax of the Kotlin language. For more information please see the [Kotlin documentation](https://kotlinlang.org/docs/home.html). 
 
 In addition to that, commands prefixed by a `:` are plugin commands. To get a list of all available plugins use the `:h` or `:help` command.
 
@@ -66,7 +66,7 @@ One such a plugin is the `:translate` command, or `:tr` for short. It allows the
 18:29:01,533 INFO  Benchmark TranslationManager Translation into full graph done in 399 ms
 ```
 
-After the translation is done, several symbols are available on the console, to query and analyse the result. You can use the `:ls` command to get a quick overview. 
+After the translation is done, several symbols are available on the console, to query and analyse the translation result. You can use the `:ls` command to get a quick overview. 
 
 ```kotlin
 [2] :ls
@@ -76,7 +76,7 @@ val result: de.fraunhofer.aisec.cpg.TranslationResult!
 val tu: de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration!
 ```
 
-Most interesting for the user are the `result` object which holds the complete translation result, as well as the `tu` object, which is a shortcut to the first translation unit, i.e. the first file that was translated. It is of type `TranslationUnitDeclaration`, which is one of our node type in the graph; the most basic one being a `Node` itself.
+Most interesting for the user is the `result` object which holds the complete translation result, as well as the `tu` object, which is a shortcut to the first translation unit, i.e. the first file that was translated. It is of type `TranslationUnitDeclaration`, which is one of our node types in the graph; the most basic one being a `Node` itself.
 
 ### Querying the translation result
 
@@ -124,14 +124,16 @@ This also demonstrates quite nicely, that queries on the CPG work independently 
 
 ### Looking for software errors
 
-In a next step, we want to identify, which of those expression are accessing an array index that is greater than its capacity, thus leading to an error. From the code output before we can already see that two expressions are using a static value of `0` and `11`, but the other two are using a variable `b`. Using the `resolve` function, we can try to resolve the `b` variable, to check if it has a constant value. In this case we are in luck and we see that, next to the `0` and `11` we already know, the other two expression were resolved to `5`.
+In a next step, we want to identify, which of those expression are accessing an array index that is greater than its capacity, thus leading to an error. From the code output we have seen before we can already identify two array indicies: `0` and `11`. But the other two are using a variable `b` as the index. Using the `resolve` function, we can try to resolve the variable `b`, to check if it has a constant value.
 
 ```kotlin
 [6] result.all<ArraySubscriptionExpression>().map { it.subscriptExpression.resolve() }
 res6: List<Any?> = [11, 5, 5, 0]
 ```
 
-In a next step, we want to check to capacity of the array the expression is referring to. We can make use of two helper functions `dfgFrom` and `capacity` to quickly check this. 
+In this case we are in luck and we see that, next to the `0` and `11` we already know, the other two expression were resolved to `5`.
+
+In a next step, we want to check to capacity of the array the access is referring to. We can make use of two helper functions `dfgFrom` and `capacity` to quickly check this, using the built-in data flow analysis.
 
 ```kotlin
 [7] var expr = result.all<ArraySubscriptionExpression>().map { Triple(
@@ -148,7 +150,9 @@ res8: List<Triple<Int, Int, de.fraunhofer.aisec.cpg.graph.statements.expressions
 ]
 ```
 
-Lastly, we can make use of the `filter` function to return only those expressions where the resolved index is greater or equal to the capacity, leading to an out of bounds error and a possible program crash. Using the alredy known `:code` command, we can also show the relevant code locations.
+This gives us a triple of the array index, the array capacity and a reference to the node in the graph.
+
+Lastly, we can make use of the `filter` function to return only those nodes where the resolved index is greater or equal to the capacity, leading to an out of bounds error, and a possible program crash.
 
 ```kotlin
 [9] expr.filter { it.first >= it.second }
@@ -157,7 +161,11 @@ res8: List<Triple<Int, Int, de.fraunhofer.aisec.cpg.graph.statements.expressions
     (5, 4, {"@type":"ArraySubscriptionExpression","location":"array.cpp(6:12-6:18)","type":{"@type":"ObjectType","name":"char"}}), 
     (5, 4, {"@type":"ArraySubscriptionExpression","location":"Array.java(8:18-8:22)","type":{"@type":"ObjectType","name":"char"}})
 ]
+```
 
+Using the already known `:code` command, we can also show the relevant code locations.
+
+```kotlin
 [10] :code expr.filter { it.first >= it.second }.map { it.third }
 --- src/test/resources/array.go:6:2 ---
   6: a[11]
@@ -174,7 +182,7 @@ res8: List<Triple<Int, Int, de.fraunhofer.aisec.cpg.graph.statements.expressions
 
 ### Futher analysis
 
-Because the way we have shown can be quite tedious, we already included several example analyis steps that can be perfomed on the currently loaded graph simply by executing the `:run` command. This includes the aforementioned check for out of bounds as well as check for null pointers and will be extended in the future.
+Because the manual analyis we have shown can be quite tedious, we already included several example analyis steps that can be performed on the currently loaded graph. They can be executed by running the `:run` command. This includes the aforementioned check for out of bounds as well as check for null pointers and will be extended in the future.
 
 ```kotlin
 [11] :run
@@ -223,4 +231,4 @@ Then, additional tools, such as the Neo4j browser can be used to further explore
 
 ## Conclusion
 
-In conclusion, the CPG tool can be used to 
+In conclusion, the CPG tool can be used to translate source code of different programming languages to a uniform, language-independed represetation in the form of a code property graph. It can either be used as a library, in which it forms the underlying basis of the [Codyze](http://github.com/Fraunhofer-AISEC/codyze) analyizer or it it's console can be used to quickly explore source code and find weaknesses.
