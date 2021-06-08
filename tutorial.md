@@ -139,7 +139,8 @@ In a next step, we want to check to capacity of the array the expression is refe
         it.arrayExpression.dfgFrom<ArrayCreationExpression>().first().capacity,
         it
     ) }
-res7: List<Triple<Int, Int, de.fraunhofer.aisec.cpg.graph.statements.expressions.ArraySubscriptionExpression>> = [
+[8]: expr    
+res8: List<Triple<Int, Int, de.fraunhofer.aisec.cpg.graph.statements.expressions.ArraySubscriptionExpression>> = [
     (11, 10, {"@type":"ArraySubscriptionExpression","location":"array.go(6:2-6:7)","type":{"@type":"ObjectType","name":"int"}}),
     (5, 4, {"@type":"ArraySubscriptionExpression","location":"array.cpp(6:12-6:18)","type":{"@type":"ObjectType","name":"char"}}),
     (5, 4, {"@type":"ArraySubscriptionExpression","location":"Array.java(8:18-8:22)","type":{"@type":"ObjectType","name":"char"}}),
@@ -150,25 +151,33 @@ res7: List<Triple<Int, Int, de.fraunhofer.aisec.cpg.graph.statements.expressions
 Lastly, we can make use of the `filter` function to return only those expressions where the resolved index is greater or equal to the capacity, leading to an out of bounds error and a possible program crash. Using the alredy known `:code` command, we can also show the relevant code locations.
 
 ```kotlin
-[8] expr.filter { it.first >= it.second }
-res8: List<Triple<Int, Int, de.fraunhofer.aisec.cpg.graph.statements.expressions.ArraySubscriptionExpression>> = [(5, 4, {"location":"array.cpp(6:12-6:18)","type":{"name":"char"},"possibleSubTypes":["UNKNOWN",{"name":"char"}]}), (5, 4, {"location":"Array.java(8:18-8:22)","type":{"name":"char"},"possibleSubTypes":["UNKNOWN",{"name":"char"}]})]
+[9] expr.filter { it.first >= it.second }
+res8: List<Triple<Int, Int, de.fraunhofer.aisec.cpg.graph.statements.expressions.ArraySubscriptionExpression>> = [
+    (11, 10, {"@type":"ArraySubscriptionExpression","location":"array.go(6:2-6:7)","type":{"@type":"ObjectType","name":"int"}}), 
+    (5, 4, {"@type":"ArraySubscriptionExpression","location":"array.cpp(6:12-6:18)","type":{"@type":"ObjectType","name":"char"}}), 
+    (5, 4, {"@type":"ArraySubscriptionExpression","location":"Array.java(8:18-8:22)","type":{"@type":"ObjectType","name":"char"}})
+]
 
-[9] :code expr.filter { it.first >= it.second }.map { it.third }
+[10] :code expr.filter { it.first >= it.second }.map { it.third }
+--- src/test/resources/array.go:6:2 ---
+  6: a[11]
+------------------------------------------------
+
 --- src/test/resources/array.cpp:6:12 ---
-= c[b]
+  6: = c[b]
 -----------------------------------------------------------------------------------------------
 
 --- src/test/resources/Array.java:8:18 ---
-c[b]
+  8: c[b]
 ------------------------------------------------------------------------------------------------
 ```
 
 ### Futher analysis
 
-Because the way we have shown can be quite tedious, we already included several example analyis steps that can be perfomed on the currently loaded graph simply by executing the `:run` command. This includes the aforementioned check for out of bounds as well as check for null pointers.
+Because the way we have shown can be quite tedious, we already included several example analyis steps that can be perfomed on the currently loaded graph simply by executing the `:run` command. This includes the aforementioned check for out of bounds as well as check for null pointers and will be extended in the future.
 
 ```kotlin
-[10] :run
+[11] :run
 
 --- FINDING: Out of bounds access in ArrayCreationExpression when accessing index 11 of a, an array of length 10 ---
 src/test/resources/array.go:6:2: a[11]
@@ -192,7 +201,7 @@ src/test/resources/array.cpp:4:17: 1
 Lastly, it is also possible to export the complete graph structure to a graph database, such as Neo4J with a simple `:export` command.
 
 ```kotlin
-[11] :export neo4j
+[12] :export neo4j
 19:26:41,642 INFO  Application Using import depth: -1
 19:26:41,643 INFO  Application Count base nodes to save: 4
 Jun 08, 2021 7:26:41 PM org.neo4j.driver.internal.logging.JULogger info
