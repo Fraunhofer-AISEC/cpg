@@ -231,4 +231,4 @@ Then, additional tools, such as the Neo4j browser can be used to further explore
 
 ## Conclusion
 
-In conclusion, the CPG tool can be used to translate source code of different programming languages to a uniform, language-independed represetation in the form of a code property graph. It can either be used as a library, in which it forms the underlying basis of the [Codyze](http://github.com/Fraunhofer-AISEC/codyze) analyizer or it it's console can be used to quickly explore source code and find weaknesses.
+In conclusion, the CPG tool can be used to translate source code of different programming languages to a uniform, language-independed represetation in the form of a code property graph. It can either be used as a library, in which it forms the underlying basis of the [Codyze](http://github.com/Fraunhofer-AISEC/codyze) analyizer or it's console can be used to quickly explore source code and find weaknesses.
