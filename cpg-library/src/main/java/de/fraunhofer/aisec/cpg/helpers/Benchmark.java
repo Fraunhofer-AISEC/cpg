@@ -28,7 +28,9 @@ package de.fraunhofer.aisec.cpg.helpers;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -70,5 +72,20 @@ public class Benchmark {
 
   public long getDuration() {
     return duration;
+  }
+
+  /**
+   * Durations have the associated caller as key. Other Metrics have a predefined static key
+   *
+   * @return
+   */
+  public Map<String, Object> getMetricMap() {
+    Map<String, Object> ret = new HashMap<>();
+    for (Benchmark child : this.childBenchmark) {
+      Map<String, Object> tmp = child.getMetricMap();
+      tmp.putAll(tmp);
+    }
+    ret.put(caller, duration);
+    return ret;
   }
 }

@@ -36,6 +36,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator;
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression;
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression;
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal;
+import de.fraunhofer.aisec.cpg.helpers.Benchmark;
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager;
 import java.io.File;
 import java.util.Map;
@@ -49,7 +50,9 @@ class CXXSymbolConfigurationTest extends BaseTest {
     TranslationUnitDeclaration tu =
         new CXXLanguageFrontend(
                 TranslationConfiguration.builder().defaultPasses().build(), new ScopeManager())
-            .parse(new File("src/test/resources/symbols.cpp"));
+            .parse(
+                new File("src/test/resources/symbols.cpp"),
+                new Benchmark(CXXSymbolConfigurationTest.class, "Test Benchmark"));
 
     Set<FunctionDeclaration> main = tu.getDeclarationsByName("main", FunctionDeclaration.class);
     assertFalse(main.isEmpty());
@@ -87,7 +90,9 @@ class CXXSymbolConfigurationTest extends BaseTest {
                     .defaultPasses()
                     .build(),
                 new ScopeManager())
-            .parse(new File("src/test/resources/symbols.cpp"));
+            .parse(
+                new File("src/test/resources/symbols.cpp"),
+                new Benchmark(CXXSymbolConfigurationTest.class, "Test Benchmark"));
 
     Set<FunctionDeclaration> main = tu.getDeclarationsByName("main", FunctionDeclaration.class);
     assertFalse(main.isEmpty());

@@ -117,7 +117,8 @@ public class JavaLanguageFrontend extends LanguageFrontend {
   }
 
   @Override
-  public TranslationUnitDeclaration parse(File file) throws TranslationException {
+  public TranslationUnitDeclaration parse(File file, Benchmark benchmark)
+      throws TranslationException {
     TypeManager.getInstance().setLanguageFrontend(this);
 
     // load in the file

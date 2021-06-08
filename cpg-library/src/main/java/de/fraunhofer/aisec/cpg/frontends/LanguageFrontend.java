@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.frontends;
 import de.fraunhofer.aisec.cpg.TranslationConfiguration;
 import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration;
+import de.fraunhofer.aisec.cpg.helpers.Benchmark;
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager;
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation;
 import de.fraunhofer.aisec.cpg.sarif.Region;
@@ -133,10 +134,11 @@ public abstract class LanguageFrontend {
     this.processedMapping.clear();
   }
 
-  public List<TranslationUnitDeclaration> parseAll() throws TranslationException {
+  public List<TranslationUnitDeclaration> parseAll(Benchmark benchmark)
+      throws TranslationException {
     ArrayList<TranslationUnitDeclaration> units = new ArrayList<>();
     for (File sourceFile : this.config.getSourceLocations()) {
-      units.add(parse(sourceFile));
+      units.add(parse(sourceFile, benchmark));
     }
 
     return units;
@@ -160,7 +162,8 @@ public abstract class LanguageFrontend {
     this.currentTU = currentTU;
   }
 
-  public abstract TranslationUnitDeclaration parse(File file) throws TranslationException;
+  public abstract TranslationUnitDeclaration parse(File file, Benchmark benchmark)
+      throws TranslationException;
 
   /**
    * Returns the raw code of the ast node, generic for java or c++ ast nodes.

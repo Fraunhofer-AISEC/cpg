@@ -31,6 +31,7 @@ import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
 import de.fraunhofer.aisec.cpg.frontends.TranslationException;
 import de.fraunhofer.aisec.cpg.graph.TypeManager;
 import de.fraunhofer.aisec.cpg.helpers.Benchmark;
+import de.fraunhofer.aisec.cpg.helpers.FileBenchmark;
 import de.fraunhofer.aisec.cpg.helpers.Util;
 import de.fraunhofer.aisec.cpg.passes.Pass;
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager;
@@ -94,8 +95,8 @@ public class TranslationManager {
 
           try {
             // Parse Java/C/CPP files
-            Benchmark bench = new Benchmark(this.getClass(), "Frontend");
-            frontendsNeedCleanup = runFrontends(result, this.config, scopesBuildForAnalysis);
+            Benchmark bench = new Benchmark(this.getClass(), "Frontends", outerBench);
+            frontendsNeedCleanup = runFrontends(result, this.config, scopesBuildForAnalysis, bench);
             bench.stop();
 
             // TODO: Find a way to identify the right language during the execution of a pass (and
@@ -103,7 +104,7 @@ public class TranslationManager {
             // Apply passes
             for (Pass pass : config.getRegisteredPasses()) {
               passesNeedCleanup.add(pass);
-              bench = new Benchmark(pass.getClass(), "Executing Pass");
+              bench = new Benchmark(pass.getClass(), "Executing Pass", outerBench);
               pass.accept(result);
               bench.stop();
               if (result.isCancelled()) {
@@ -114,6 +115,13 @@ public class TranslationManager {
             throw new CompletionException(ex);
           } finally {
             outerBench.stop();
+
+            String metric = "Analysis metrics: ";
+            Map<String, Object> metricMap = outerBench.getMetricMap();
+            for (Map.Entry<String, Object> entry : metricMap.entrySet()) {
+              metric += ", {" + entry.getKey() + ", " + entry.getValue().toString() + "}";
+            }
+            log.info(metric);
             if (!this.config.disableCleanup) {
               log.debug("Cleaning up {} Passes", passesNeedCleanup.size());
               passesNeedCleanup.forEach(Pass::cleanup);
@@ -150,7 +158,8 @@ public class TranslationManager {
   private HashSet<LanguageFrontend> runFrontends(
       @NonNull TranslationResult result,
       @NonNull TranslationConfiguration config,
-      @NonNull ScopeManager scopeManager)
+      @NonNull ScopeManager scopeManager,
+      @NonNull Benchmark benchmark)
       throws TranslationException {
 
     List<File> sourceLocations = new ArrayList<>(this.config.getSourceLocations());
@@ -235,8 +244,10 @@ public class TranslationManager {
                         TranslationResult.SOURCE_LOCATIONS_TO_FRONTEND,
                         x -> new HashMap<String, String>());
         sfToFe.put(sourceLocation.getName(), frontend.getClass().getSimpleName());
-
-        result.getTranslationUnits().add(frontend.parse(sourceLocation));
+        FileBenchmark fileBenchmark =
+            new FileBenchmark(frontend.getClass(), "Executing frontend for file", benchmark);
+        result.getTranslationUnits().add(frontend.parse(sourceLocation, fileBenchmark));
+        fileBenchmark.stop();
       } catch (TranslationException ex) {
         log.error(
             "An error occurred during parsing of {}: {}",
