@@ -221,7 +221,8 @@ open class Node : IVisitable<Node>, Persistable {
     }
 
     override fun toString(): String {
-        val builder = ToStringBuilder(this, TO_STRING_STYLE)
+        val builder =
+            ToStringBuilder(this, TO_STRING_STYLE).append("@type", this.javaClass.simpleName)
 
         if (name != "") {
             builder.append("name", name)

@@ -62,11 +62,9 @@ class OutOfBoundsCheck {
                                 (v.arrayExpression as? DeclaredReferenceExpression)?.refersTo as?
                                     VariableDeclaration
                             (decl?.initializer as? ArrayCreationExpression)?.let {
-                                println("Found a ArrayCreationExpression")
+                                val capacity = it.capacity
 
-                                val dimension = it.dimensions.first().resolve()
-
-                                if (resolvedIndex >= dimension as Int) {
+                                if (resolvedIndex >= capacity) {
                                     println("")
                                     val sb = AttributedStringBuilder()
                                     sb.append("--- FINDING: Out of bounds access in ")
@@ -79,7 +77,7 @@ class OutOfBoundsCheck {
                                     )
                                     sb.append(decl.name, DEFAULT.foreground(AttributedStyle.YELLOW))
                                     sb.append(
-                                        ", an array of length ${AttributedString(""+dimension, DEFAULT.foreground(AttributedStyle.CYAN)).toAnsi()} ---"
+                                        ", an array of length ${AttributedString(""+capacity, DEFAULT.foreground(AttributedStyle.CYAN)).toAnsi()} ---"
                                     )
 
                                     val header = sb.toAnsi()

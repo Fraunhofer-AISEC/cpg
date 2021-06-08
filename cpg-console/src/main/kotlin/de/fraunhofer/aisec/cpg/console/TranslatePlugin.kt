@@ -49,6 +49,8 @@ class TranslatePlugin : Plugin {
                     // basics
                     "import de.fraunhofer.aisec.cpg.TranslationConfiguration",
                     "import de.fraunhofer.aisec.cpg.TranslationManager",
+                    // go
+                    "import de.fraunhofer.aisec.cpg.frontends.golang.GoLanguageFrontend",
                     // all the graph nodes
                     "import de.fraunhofer.aisec.cpg.graph.*",
                     "import de.fraunhofer.aisec.cpg.graph.declarations.*",
@@ -62,15 +64,17 @@ class TranslatePlugin : Plugin {
                     "import de.fraunhofer.aisec.cpg.analysis.byName",
                     "import de.fraunhofer.aisec.cpg.analysis.body",
                     "import de.fraunhofer.aisec.cpg.analysis.printCode",
+                    "import de.fraunhofer.aisec.cpg.analysis.capacity",
                     // some basic java stuff
                     "import java.io.File",
                     // lets build and analyze
-                    "val config =\n" +
+                    "@OptIn(de.fraunhofer.aisec.cpg.ExperimentalGolang::class) val config =\n" +
                         "                TranslationConfiguration.builder()\n" +
                         "                    .sourceLocations(File(\"" +
                         path +
                         "\"))\n" +
                         "                    .defaultLanguages()\n" +
+                        "                    .registerLanguage(GoLanguageFrontend::class.java, GoLanguageFrontend.GOLANG_EXTENSIONS)" +
                         "                    .defaultPasses()\n" +
                         "                    .build()",
                     "val analyzer = TranslationManager.builder().config(config).build()",

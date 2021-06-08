@@ -352,6 +352,9 @@ public abstract class Type extends Node {
   @NotNull
   @Override
   public String toString() {
-    return new ToStringBuilder(this, TO_STRING_STYLE).append("name", getName()).toString();
+    return new ToStringBuilder(this, TO_STRING_STYLE)
+        .append("@type", this.getClass().getSimpleName())
+        .append("name", getName())
+        .toString();
   }
 }

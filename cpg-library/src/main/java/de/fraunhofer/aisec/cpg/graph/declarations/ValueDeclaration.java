@@ -186,11 +186,7 @@ public abstract class ValueDeclaration extends Declaration implements HasType {
   @NotNull
   @Override
   public String toString() {
-    return new ToStringBuilder(this, Node.TO_STRING_STYLE)
-        .appendSuper(super.toString())
-        .append("type", type)
-        // .append("possibleSubTypes", possibleSubTypes)
-        .toString();
+    return new ToStringBuilder(this, Node.TO_STRING_STYLE).appendSuper(super.toString()).toString();
   }
 
   @Override

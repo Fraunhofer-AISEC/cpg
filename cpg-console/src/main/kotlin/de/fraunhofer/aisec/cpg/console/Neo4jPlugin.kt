@@ -33,11 +33,11 @@ import org.jetbrains.kotlinx.ki.shell.configuration.ReplConfiguration
 
 class Neo4jPlugin : Plugin {
     inner class Load(conf: ReplConfiguration) : BaseCommand() {
-        override val name: String by conf.get(default = "neo4j")
-        override val short: String by conf.get(default = "n")
-        override val description: String = "persists the graph into neo4j"
+        override val name: String by conf.get(default = "export")
+        override val short: String by conf.get(default = "e")
+        override val description: String = "exports the graph into neo4j"
 
-        override val params = "<host>"
+        override val params = "neo4j"
 
         override fun execute(line: String): Command.Result {
             val p = line.indexOf(' ')

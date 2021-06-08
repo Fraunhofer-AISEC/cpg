@@ -37,6 +37,7 @@ type Expression Statement
 type CallExpression Expression
 type NewExpression Expression
 type ArrayCreationExpression Expression
+type ArraySubscriptionExpression Expression
 type ConstructExpression Expression
 type MemberCallExpression CallExpression
 type MemberExpression Expression
@@ -108,6 +109,19 @@ func NewArrayCreationExpression(fset *token.FileSet, astNode ast.Node) *ArrayCre
 	updateLocation(fset, (*Node)(c), astNode)
 
 	return (*ArrayCreationExpression)(c)
+}
+
+func NewArraySubscriptionExpression(fset *token.FileSet, astNode ast.Node) *ArraySubscriptionExpression {
+	c, err := env.NewObject("de/fraunhofer/aisec/cpg/graph/statements/expressions/ArraySubscriptionExpression")
+	if err != nil {
+		log.Fatal(err)
+
+	}
+
+	updateCode(fset, (*Node)(c), astNode)
+	updateLocation(fset, (*Node)(c), astNode)
+
+	return (*ArraySubscriptionExpression)(c)
 }
 
 func NewConstructExpression(fset *token.FileSet, astNode ast.Node) *ConstructExpression {
@@ -279,6 +293,14 @@ func (r *DeclaredReferenceExpression) SetRefersTo(d *Declaration) {
 
 func (r *ArrayCreationExpression) AddDimension(e *Expression) {
 	(*jnigi.ObjectRef)(r).CallMethod(env, "addDimension", jnigi.Void, (*jnigi.ObjectRef)(e).Cast("de/fraunhofer/aisec/cpg/graph/statements/expressions/Expression"))
+}
+
+func (r *ArraySubscriptionExpression) SetArrayExpression(e *Expression) {
+	(*jnigi.ObjectRef)(r).CallMethod(env, "setArrayExpression", jnigi.Void, (*jnigi.ObjectRef)(e).Cast("de/fraunhofer/aisec/cpg/graph/statements/expressions/Expression"))
+}
+
+func (r *ArraySubscriptionExpression) SetSubscriptExpression(e *Expression) {
+	(*jnigi.ObjectRef)(r).CallMethod(env, "setSubscriptExpression", jnigi.Void, (*jnigi.ObjectRef)(e).Cast("de/fraunhofer/aisec/cpg/graph/statements/expressions/Expression"))
 }
 
 func (c *ConstructExpression) AddArgument(e *Expression) {

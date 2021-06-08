@@ -495,6 +495,8 @@ func (this *GoLanguageFrontend) handleExpr(fset *token.FileSet, expr ast.Expr) *
 	switch v := expr.(type) {
 	case *ast.CallExpr:
 		return (*cpg.Expression)(this.handleCallExpr(fset, v))
+	case *ast.IndexExpr:
+		return (*cpg.Expression)(this.handleIndexExpr(fset, v))
 	case *ast.BinaryExpr:
 		return (*cpg.Expression)(this.handleBinaryExpr(fset, v))
 	case *ast.UnaryExpr:
@@ -720,6 +722,15 @@ func (this *GoLanguageFrontend) handleCallExpr(fset *token.FileSet, callExpr *as
 	// reference.disconnectFromGraph()
 
 	return (*cpg.Expression)(c)
+}
+
+func (this *GoLanguageFrontend) handleIndexExpr(fset *token.FileSet, indexExpr *ast.IndexExpr) *cpg.Expression {
+	a := cpg.NewArraySubscriptionExpression(fset, indexExpr)
+
+	a.SetArrayExpression(this.handleExpr(fset, indexExpr.X))
+	a.SetSubscriptExpression(this.handleExpr(fset, indexExpr.Index))
+
+	return (*cpg.Expression)(a)
 }
 
 func (this *GoLanguageFrontend) handleNewExpr(fset *token.FileSet, callExpr *ast.CallExpr) *cpg.Expression {

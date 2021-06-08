@@ -25,11 +25,14 @@
  */
 package de.fraunhofer.aisec.cpg.analysis
 
+import de.fraunhofer.aisec.cpg.ExperimentalGolang
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationManager
+import de.fraunhofer.aisec.cpg.frontends.golang.GoLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
 import java.io.File
 import org.junit.jupiter.api.Test
 
@@ -62,6 +65,27 @@ class AnalysisTest {
         val result = analyzer.analyze().get()
 
         NullPointerCheck().run(result)
+    }
+
+    @OptIn(ExperimentalGolang::class)
+    @Test
+    fun testResolve() {
+        val config =
+            TranslationConfiguration.builder()
+                .sourceLocations(File("src/test/resources/struct.go"))
+                .defaultPasses()
+                .defaultLanguages()
+                .registerLanguage(
+                    GoLanguageFrontend::class.java,
+                    GoLanguageFrontend.GOLANG_EXTENSIONS
+                )
+                .build()
+
+        val analyzer = TranslationManager.builder().config(config).build()
+        val result = analyzer.analyze().get()
+
+        var resolved = result.all<MemberCallExpression>().map { it.base.resolve() }
+        println(resolved)
     }
 
     @Test

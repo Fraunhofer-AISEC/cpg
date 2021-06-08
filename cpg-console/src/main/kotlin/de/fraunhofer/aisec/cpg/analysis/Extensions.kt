@@ -83,6 +83,11 @@ fun Declaration.resolve(): Any? {
     return ValueResolver().resolveDeclaration(this)
 }
 
+val ArrayCreationExpression.capacity: Int
+    get() {
+        return dimensions.first().resolve() as Int
+    }
+
 @JvmName("allNodes")
 fun TranslationResult.all(): List<Node> {
     return this.all<Node>()

@@ -1,8 +1,18 @@
-# CPG Console
+# Code Propery Graph
 
-While the CPG is mostly used as a libary in external tools, we decided to showcase its functionalities with a simple CLI based console that can be used to query the graph and run simple analysis steps.
+Ensuring the correct behavior of software is crucial to avoid security issues stemming from incorrect implementations. In this video, we present our CPG tool, a language-independent analysis platform for source code based on an adaption of a code property graph. Our platform has support for multiple passes that can extend the analysis after the graph is constructed and it currently supports C/C++, Java and has experimental support for Golang and Python.
 
-To launch the console, built it and then run `bin/cpg-console`. You will be greeted by the interactive prompt of our CPG console, which is implemented by the kotlin `ki` interactive shell. The commands on this shell follow the Kotlin language. For more information please see the [Kotlin documentation](https://kotlinlang.org/docs/home.html).
+(TODO: Insert slides here)
+
+## What is a Code Property Graph?
+
+A code property graph (CPG) is a representation of source code in form of a labelled directed multigraph. Think of it as a graph where each node and edge is assigned a set of key-value pairs, called properties. This representation is supported by a range of graph databases and can be used to store source code of a program in a searchable data structure. Thus, the code property graph allows to use existing graph query languages in order to either manually navigate through interesting parts of the source code or to automatically find "interesting" patterns.
+
+## CPG Console
+
+While the CPG tool is mostly used as a libary in external tools, such as [Codyze](http://github.com/Fraunhofer-AISEC/codyze), we decided to showcase its functionalities with a simple CLI based console that can be used to query the graph and run simple analysis steps.
+
+To launch the console, built it according to the instructions in our `README.md` and then run `bin/cpg-console`. You will be greeted by the interactive prompt of our CPG console, which is implemented by the kotlin `ki` interactive shell. The commands on this shell follow the Kotlin language. For more information please see the [Kotlin documentation](https://kotlinlang.org/docs/home.html).
 
 In addition to that, commands prefixed by a `:` are plugin commands. To get a list of all available plugins use the `:h` or `:help` command.
 
@@ -17,32 +27,43 @@ type :h for help
 :help or h [command]                 print this summary or command-specific help
 ```
 
-## Launching the translation plugin
+### Launching the translation plugin
 
 One such a plugin is the `:translate` command, or `:tr` for short. It allows the translation of source code files into the code property graph. In this example, we will use all files in `src/test/resources` and translate them.
 
-```log
+```kotlin
 [1] :tr src/test/resources
-10:15:27,086 INFO  TranslationManager Parsing /Users/cpg/Repositories/cpg/cpg-console/src/test/resources/array.cpp
-10:15:27,231 INFO  CXXLanguageFrontend Parsed 96 bytes corresponding roughly to 1 LoC
-10:15:27,231 INFO  Benchmark CXXLanguageFrontend Parsing sourcefile done in 94 ms
-10:15:27,273 INFO  Benchmark CXXLanguageFrontend Transform to CPG done in 41 ms
-10:15:27,273 INFO  TranslationManager Parsing /Users/cpg/Repositories/cpg/cpg-console/src/test/resources/Array.java
-10:15:27,312 INFO  JavaLanguageFrontend Source file root used for type solver: /Users/cpg/Repositories/cpg/cpg-console/src/test/resources
-10:15:27,343 ERROR TranslationManager Different frontends are used for multiple files. This will very likely break the following passes.
-10:15:27,395 INFO  Benchmark JavaLanguageFrontend Parsing source file done in 51 ms
-10:15:27,452 INFO  Benchmark JavaLanguageFrontend Transform to CPG done in 57 ms
-10:15:27,452 INFO  Benchmark TranslationManager Frontend done in 373 ms
-10:15:27,465 INFO  Benchmark TypeHierarchyResolver Executing Pass done in 12 ms
-10:15:27,467 INFO  Benchmark JavaExternalTypeHierarchyResolver Executing Pass done in 2 ms
-10:15:27,470 INFO  Benchmark ImportResolver Executing Pass done in 2 ms
-10:15:27,482 INFO  Benchmark VariableUsageResolver Executing Pass done in 11 ms
-10:15:27,490 INFO  Benchmark CallResolver Executing Pass done in 8 ms
-10:15:27,493 INFO  Benchmark EvaluationOrderGraphPass Executing Pass done in 2 ms
-10:15:27,495 INFO  Benchmark TypeResolver Executing Pass done in 1 ms
-10:15:27,498 INFO  Benchmark ControlFlowSensitiveDFGPass Executing Pass done in 2 ms
-10:15:27,499 INFO  Benchmark FilenameMapper Executing Pass done in 1 ms
-10:15:27,499 INFO  Benchmark TranslationManager Translation into full graph done in 420 ms
+18:29:01,138 INFO  TranslationManager Parsing src/test/resources/array.go
+18:29:01,151 INFO  TranslationManager Parsing src/test/resources/nullptr.cpp
+18:29:01,183 ERROR TranslationManager Different frontends are used for multiple files. This will very likely break the following passes.
+18:29:01,284 INFO  CXXLanguageFrontend Parsed 114 bytes corresponding roughly to 2 LoC
+18:29:01,284 INFO  Benchmark CXXLanguageFrontend Parsing sourcefile done in 98 ms
+18:29:01,307 INFO  Benchmark CXXLanguageFrontend Transform to CPG done in 22 ms
+18:29:01,307 INFO  TranslationManager Parsing src/test/resources/array.cpp
+18:29:01,308 ERROR TranslationManager Different frontends are used for multiple files. This will very likely break the following passes.
+18:29:01,310 INFO  CXXLanguageFrontend Parsed 174 bytes corresponding roughly to 3 LoC
+18:29:01,310 INFO  Benchmark CXXLanguageFrontend Parsing sourcefile done in 2 ms
+18:29:01,326 INFO  Benchmark CXXLanguageFrontend Transform to CPG done in 16 ms
+18:29:01,327 INFO  TranslationManager Parsing src/test/resources/Array.java
+18:29:01,347 INFO  JavaLanguageFrontend Source file root used for type solver: src/test/resources
+18:29:01,373 ERROR TranslationManager Different frontends are used for multiple files. This will very likely break the following passes.
+18:29:01,373 ERROR TranslationManager Different frontends are used for multiple files. This will very likely break the following passes.
+18:29:01,373 ERROR TranslationManager Different frontends are used for multiple files. This will very likely break the following passes.
+18:29:01,421 INFO  Benchmark JavaLanguageFrontend Parsing source file done in 47 ms
+18:29:01,472 INFO  Benchmark JavaLanguageFrontend Transform to CPG done in 50 ms
+18:29:01,472 INFO  Benchmark TranslationManager Frontend done in 338 ms
+18:29:01,486 INFO  Benchmark TypeHierarchyResolver Executing Pass done in 13 ms
+18:29:01,488 INFO  Benchmark JavaExternalTypeHierarchyResolver Executing Pass done in 1 ms
+18:29:01,490 INFO  Benchmark ImportResolver Executing Pass done in 1 ms
+18:29:01,508 WARN  Util src/test/resources/struct.go:6:6: Did not find a declaration for nil
+18:29:01,509 WARN  Util src/test/resources/nullptr.cpp:5:9: Did not find a declaration for null
+18:29:01,513 INFO  Benchmark VariableUsageResolver Executing Pass done in 22 ms
+18:29:01,521 INFO  Benchmark CallResolver Executing Pass done in 7 ms
+18:29:01,525 INFO  Benchmark EvaluationOrderGraphPass Executing Pass done in 3 ms
+18:29:01,527 INFO  Benchmark TypeResolver Executing Pass done in 2 ms
+18:29:01,531 INFO  Benchmark ControlFlowSensitiveDFGPass Executing Pass done in 4 ms
+18:29:01,533 INFO  Benchmark FilenameMapper Executing Pass done in 1 ms
+18:29:01,533 INFO  Benchmark TranslationManager Translation into full graph done in 399 ms
 ```
 
 After the translation is done, several symbols are available on the console, to query and analyse the result. You can use the `:ls` command to get a quick overview. 
@@ -57,7 +78,7 @@ val tu: de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration!
 
 Most interesting for the user are the `result` object which holds the complete translation result, as well as the `tu` object, which is a shortcut to the first translation unit, i.e. the first file that was translated. It is of type `TranslationUnitDeclaration`, which is one of our node type in the graph; the most basic one being a `Node` itself.
 
-## Querying the translation result
+### Querying the translation result
 
 In the following, we will use the aforementioned objects to query the source code for interesting patterns. To do so, we will explore several built-in functions that can be used in exploring the graph. The first of these, is the `all` function, it returns a list of all nodes that are direct descendents of a particular node, basicically flattening the hierarchy.
 
@@ -66,20 +87,73 @@ In the following, we will use the aforementioned objects to query the source cod
 res3: List<de.fraunhofer.aisec.cpg.graph.Node> = ...
 ```
 
-The output here can be quite huge, so additional filtering is needed. The `all` function takes an additional type parameter, which can be used to further filter nodes of a particular type. In this case, we are interested in all `ArraySubscriptionExpression` nodes, i.e. those that represent access to an element of an array. These operations are often prone to out of bounds errors and we want to explore, whether our code is also affected by that.
+The output here can be quite verbose, so additional filtering is needed. The `all` function takes an additional type parameter, which can be used to further filter nodes of a particular type. In this case, we are interested in all `ArraySubscriptionExpression` nodes, i.e. those that represent access to an element of an array. These operations are often prone to out of bounds errors and we want to explore, whether our code is also affected by that.
 
 ```kotlin
 [4] result.all<ArraySubscriptionExpression>()
 res4: List<de.fraunhofer.aisec.cpg.graph.statements.expressions.ArraySubscriptionExpression> = [
-    {"location":"array.cpp(6:12-6:18)","type":{"name":"char"}}, 
-    {"location":"Array.java(8:18-8:22)","type":{"name":"char"}}
+    {"@type":"ArraySubscriptionExpression","location":"array.go(6:2-6:7)","type":{"@type":"ObjectType","name":"int"}},
+    {"@type":"ArraySubscriptionExpression","location":"array.cpp(6:12-6:18)","type":{"@type":"ObjectType","name":"char"}},
+    {"@type":"ArraySubscriptionExpression","location":"Array.java(8:18-8:22)","type":{"@type":"ObjectType","name":"char"}}, 
+    {"@type":"ArraySubscriptionExpression","location":"array.cpp(12:12-12:16)","type":{"@type":"ObjectType","name":"char"}}
 ]
 ```
 
-Much better. We have found two nodes that represent an array access. To see the corresponding source code of our result, we can prefix our previous command with `:code` or `:c`. This shows the raw source code as well as the location of the file where the code is located.
+Much better. We have found four nodes that represent an array access. To see the corresponding source code of our result, we can prefix our previous command with `:code` or `:c`. This shows the raw source code as well as the location of the file where the code is located.
 
 ```kotlin
 [5] :code result.all<ArraySubscriptionExpression>()
+--- src/test/resources/array.go:6:2 ---
+  6: a[11]
+------------------------------------------------
+
+--- array.cpp:6:12 ---
+  6: = c[b]
+-----------------------------------------------------------------------------------------------
+
+--- Array.java:8:18 ---
+  8: c[b]
+------------------------------------------------------------------------------------------------
+
+--- array.cpp:12:12 ---
+ 12: c[0]
+------------------------------------------------------------------------------------------------
+```
+
+This also demonstrates quite nicely, that queries on the CPG work independently of the programming language. Our test folder contains Java, Go and C++ files and we can analyse all of them simultaneously.
+
+### Looking for software errors
+
+In a next step, we want to identify, which of those expression are accessing an array index that is greater than its capacity, thus leading to an error. From the code output before we can already see that two expressions are using a static value of `0` and `11`, but the other two are using a variable `b`. Using the `resolve` function, we can try to resolve the `b` variable, to check if it has a constant value. In this case we are in luck and we see that, next to the `0` and `11` we already know, the other two expression were resolved to `5`.
+
+```kotlin
+[6] result.all<ArraySubscriptionExpression>().map { it.subscriptExpression.resolve() }
+res6: List<Any?> = [11, 5, 5, 0]
+```
+
+In a next step, we want to check to capacity of the array the expression is referring to. We can make use of two helper functions `dfgFrom` and `capacity` to quickly check this. 
+
+```kotlin
+[7] var expr = result.all<ArraySubscriptionExpression>().map { Triple(
+        it.subscriptExpression.resolve() as Int,
+        it.arrayExpression.dfgFrom<ArrayCreationExpression>().first().capacity,
+        it
+    ) }
+res7: List<Triple<Int, Int, de.fraunhofer.aisec.cpg.graph.statements.expressions.ArraySubscriptionExpression>> = [
+    (11, 10, {"@type":"ArraySubscriptionExpression","location":"array.go(6:2-6:7)","type":{"@type":"ObjectType","name":"int"}}),
+    (5, 4, {"@type":"ArraySubscriptionExpression","location":"array.cpp(6:12-6:18)","type":{"@type":"ObjectType","name":"char"}}),
+    (5, 4, {"@type":"ArraySubscriptionExpression","location":"Array.java(8:18-8:22)","type":{"@type":"ObjectType","name":"char"}}),
+    (0, 100, {"@type":"ArraySubscriptionExpression","location":"array.cpp(12:12-12:16)","type":{"@type":"ObjectType","name":"char"}})
+]
+```
+
+Lastly, we can make use of the `filter` function to return only those expressions where the resolved index is greater or equal to the capacity, leading to an out of bounds error and a possible program crash. Using the alredy known `:code` command, we can also show the relevant code locations.
+
+```kotlin
+[8] expr.filter { it.first >= it.second }
+res8: List<Triple<Int, Int, de.fraunhofer.aisec.cpg.graph.statements.expressions.ArraySubscriptionExpression>> = [(5, 4, {"location":"array.cpp(6:12-6:18)","type":{"name":"char"},"possibleSubTypes":["UNKNOWN",{"name":"char"}]}), (5, 4, {"location":"Array.java(8:18-8:22)","type":{"name":"char"},"possibleSubTypes":["UNKNOWN",{"name":"char"}]})]
+
+[9] :code expr.filter { it.first >= it.second }.map { it.third }
 --- src/test/resources/array.cpp:6:12 ---
 = c[b]
 -----------------------------------------------------------------------------------------------
@@ -87,53 +161,57 @@ Much better. We have found two nodes that represent an array access. To see the 
 --- src/test/resources/Array.java:8:18 ---
 c[b]
 ------------------------------------------------------------------------------------------------
-
-res5: Collection<de.fraunhofer.aisec.cpg.graph.Node> = [{"location":"array.cpp(6:12-6:18)","type":{"name":"char"},"possibleSubTypes":["UNKNOWN",{"name":"char"}]}, {"location":"Array.java(8:18-8:22)","type":{"name":"char"},"possibleSubTypes":["UNKNOWN",{"name":"char"}]}]
 ```
 
-This also demonstrates quite nicely, that queries on the CPG work independently of the programming language. Our test folder contains both Java as well as C++ files and we can analyse them simultaneously.
+### Futher analysis
+
+Because the way we have shown can be quite tedious, we already included several example analyis steps that can be perfomed on the currently loaded graph simply by executing the `:run` command. This includes the aforementioned check for out of bounds as well as check for null pointers.
 
 ```kotlin
-[24] result.all<ArraySubscriptionExpression>().map { it.subscriptExpression.resolve() }
-res21: List<Any?> = [5, 5, 0]
+[10] :run
+
+--- FINDING: Out of bounds access in ArrayCreationExpression when accessing index 11 of a, an array of length 10 ---
+src/test/resources/array.go:6:2: a[11]
+
+The following path was discovered that leads to 11 being 11:
+src/test/resources/array.go:6:4: 11
+
+--- FINDING: Out of bounds access in ArrayCreationExpression when accessing index 5 of c, an array of length 4 ---
+src/test/resources/array.cpp:6:12: = c[b]
+
+The following path was discovered that leads to b being 5:
+src/test/resources/array.cpp:6:16: b
+src/test/resources/array.cpp:4:5: int b = a + 1;
+src/test/resources/array.cpp:4:11: = a + 1
+src/test/resources/array.cpp:4:13: a
+src/test/resources/array.cpp:3:5: int a = 4;
+src/test/resources/array.cpp:3:11: = 4
+src/test/resources/array.cpp:4:17: 1
 ```
 
-TODO: make it simpler to query prev DFG with type
-```kotlin
-[30] result.all<ArraySubscriptionExpression>().map { Triple(
-        it.subscriptExpression.resolve() as Int,
-        it.arrayExpression.dfgFrom<ArrayCreationExpression>().first().dimensions.first().resolve() as Int,
-        it
-    ) }
-res21: List<Triple<Int, Int, de.fraunhofer.aisec.cpg.graph.statements.expressions.ArraySubscriptionExpression>> = [
-    (5, 4, {"location":"array.cpp(6:12-6:18)","type":{"name":"char"},"possibleSubTypes":["UNKNOWN",{"name":"char"}]}), 
-    (5, 4, {"location":"Array.java(8:18-8:22)","type":{"name":"char"},"possibleSubTypes":["UNKNOWN",{"name":"char"}]}),
-    (0, 100, {"location":"array.cpp(12:12-12:16)","type":{"name":"char"},"possibleSubTypes":[{"name":"char"}]})
-]
-```
-
-We use that result to filter those where the resolved index is greater or equal to our dimension.
-
-```kotlin
-[31] res39.filter { it.first >= it.second }
-res41: List<Triple<Int, Int, de.fraunhofer.aisec.cpg.graph.statements.expressions.ArraySubscriptionExpression>> = [(5, 4, {"location":"array.cpp(6:12-6:18)","type":{"name":"char"},"possibleSubTypes":["UNKNOWN",{"name":"char"}]}), (5, 4, {"location":"Array.java(8:18-8:22)","type":{"name":"char"},"possibleSubTypes":["UNKNOWN",{"name":"char"}]})]
-```
+Lastly, it is also possible to export the complete graph structure to a graph database, such as Neo4J with a simple `:export` command.
 
 ```kotlin
-[31] :code res39.filter { it.first >= it.second }.map { it.third }
---- /Users/chr55316/Repositories/cpg/cpg-console/src/test/resources/array.cpp:6:12 ---
-= c[b]
------------------------------------------------------------------------------------------------
-
---- /Users/chr55316/Repositories/cpg/cpg-console/src/test/resources/Array.java:8:18 ---
-c[b]
-------------------------------------------------------------------------------------------------
+[11] :export neo4j
+19:26:41,642 INFO  Application Using import depth: -1
+19:26:41,643 INFO  Application Count base nodes to save: 4
+Jun 08, 2021 7:26:41 PM org.neo4j.driver.internal.logging.JULogger info
+INFO: Direct driver instance 1156771703 created for server address localhost:7687
+19:26:42,006 INFO  DomainInfo Starting Post-processing phase
+19:26:42,006 INFO  DomainInfo Building byLabel lookup maps
+19:26:42,006 INFO  DomainInfo Building interface class map for 106 classes
+19:26:42,027 INFO  DomainInfo Post-processing complete
+19:26:44,471 INFO  BoltDriver Shutting down Bolt driver org.neo4j.driver.internal.InternalDriver@44f2ef77
+Jun 08, 2021 7:26:44 PM org.neo4j.driver.internal.logging.JULogger info
+INFO: Closing driver instance 1156771703
+Jun 08, 2021 7:26:44 PM org.neo4j.driver.internal.logging.JULogger info
+INFO: Closing connection pool towards localhost:7687
 ```
-Of course the same can also be achieved in one, slightly larger query.
 
-```kotlin
-[6] result.all<ArraySubscriptionExpression>().filter {
-    (it.subscriptExpression.resolve() as Int) >= 
-    ((it.arrayExpression.prevDFG.first() as? ArrayCreationExpression)?.dimensions?.first()?.resolve() as Int)
-}
-```
+Then, additional tools, such as the Neo4j browser can be used to further explore the graph.
+
+(TODO: screenshot of neo4j browser)
+
+## Conclusion
+
+In conclusion, the CPG tool can be used to 
