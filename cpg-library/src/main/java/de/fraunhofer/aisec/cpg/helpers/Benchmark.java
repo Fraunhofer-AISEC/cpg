@@ -27,6 +27,8 @@ package de.fraunhofer.aisec.cpg.helpers;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -34,9 +36,13 @@ public class Benchmark {
 
   private static final Logger log = LoggerFactory.getLogger(Benchmark.class);
   private final String message;
+  private boolean stoped = false;
   private final String caller;
   private final Instant start;
   private long duration = -1;
+
+  private Benchmark parentBenchmark = null;
+  private List<Benchmark> childBenchmark = new ArrayList<>();
 
   public Benchmark(Class c, String message) {
     this.message = message;
@@ -44,9 +50,21 @@ public class Benchmark {
     this.start = Instant.now();
   }
 
+  public Benchmark(Class c, String message, Benchmark parentBenchmark) {
+    this.message = message;
+    this.caller = c.getSimpleName();
+    this.start = Instant.now();
+    this.parentBenchmark = parentBenchmark;
+    parentBenchmark.childBenchmark.add(this);
+  }
+
   public long stop() {
-    duration = Duration.between(start, Instant.now()).toMillis();
-    log.info("{} {} done in {} ms", caller, message, duration);
+    if (!this.stoped) {
+      childBenchmark.stream().forEach(benchm -> benchm.stop());
+      duration = Duration.between(start, Instant.now()).toNanos() / 1000;
+      log.info("{} {} done in {} mics", caller, message, duration);
+      this.stoped = true;
+    }
     return duration;
   }
 
