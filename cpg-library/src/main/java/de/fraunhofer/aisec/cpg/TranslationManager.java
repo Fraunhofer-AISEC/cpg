@@ -119,7 +119,10 @@ public class TranslationManager {
             String metric = "Analysis metrics: ";
             Map<String, Object> metricMap = outerBench.getMetricMap();
             for (Map.Entry<String, Object> entry : metricMap.entrySet()) {
-              metric += ", {" + entry.getKey() + ", " + entry.getValue().toString() + "}";
+              if (metric.endsWith("}")) {
+                metric += ", ";
+              }
+              metric += "{" + entry.getKey() + ", " + entry.getValue().toString() + "}";
             }
             log.info(metric);
             if (!this.config.disableCleanup) {

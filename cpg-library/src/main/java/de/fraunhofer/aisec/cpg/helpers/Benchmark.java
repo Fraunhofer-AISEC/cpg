@@ -83,7 +83,7 @@ public class Benchmark {
     Map<String, Object> ret = new HashMap<>();
     for (Benchmark child : this.childBenchmark) {
       Map<String, Object> tmp = child.getMetricMap();
-      tmp.putAll(tmp);
+      ret.putAll(tmp);
     }
     ret.put(caller, duration);
     return ret;

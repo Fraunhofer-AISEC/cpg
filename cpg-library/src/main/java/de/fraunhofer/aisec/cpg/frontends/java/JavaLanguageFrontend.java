@@ -75,8 +75,10 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import org.apache.commons.lang3.StringUtils;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
+import org.jetbrains.annotations.NotNull;
 
 /** Main parser for ONE Java files. */
 public class JavaLanguageFrontend extends LanguageFrontend {
@@ -129,6 +131,7 @@ public class JavaLanguageFrontend extends LanguageFrontend {
 
       // parse the file
       Benchmark bench = new Benchmark(this.getClass(), "Parsing source file");
+      computeSLoc(file, benchmark);
       context = parse(file, parser);
       bench.stop();
 
@@ -207,6 +210,44 @@ public class JavaLanguageFrontend extends LanguageFrontend {
       log.error("Could not parse the file {} correctly! AST may be empty", file);
     }
     return optional.get();
+  }
+
+  /** Only a dummy for languages that are not supporting Benchmarking */
+  protected String stripComments(String fileContent) {
+
+    String lineComment = "(//[^\n]*)";
+    String blockComment = "(?s)/\\*.*?\\*/";
+
+    fileContent = replaceWithWhitespaces(fileContent, lineComment);
+    fileContent = replaceWithWhitespaces(fileContent, blockComment);
+
+    return fileContent;
+  }
+
+  @NotNull
+  private String replaceWithWhitespaces(String fileContent, String lineComment) {
+    String old = fileContent + "";
+    String stringWithoutOneComment =
+        fileContent.replaceFirst(
+            lineComment, " "); // Space is used to guarantee that the strings will be different here
+    int lengthDiff = fileContent.length() - stringWithoutOneComment.length();
+    while (lengthDiff != 0) {
+      int index = StringUtils.indexOfDifference(fileContent, stringWithoutOneComment);
+      fileContent =
+          stringWithoutOneComment.substring(0, index)
+              + " ".repeat(lengthDiff)
+              + stringWithoutOneComment.substring(index);
+
+      stringWithoutOneComment = fileContent.replaceFirst(lineComment, " ");
+      lengthDiff = fileContent.length() - stringWithoutOneComment.length();
+    }
+
+    // In doing this we put newlines back where we removed them with the previous method
+    for (int pos = old.indexOf("\n"); pos != -1; pos = old.indexOf("\n", pos + 1)) {
+      fileContent = fileContent.substring(0, pos) + "\n" + fileContent.substring(pos + 1);
+    }
+
+    return fileContent;
   }
 
   @Override

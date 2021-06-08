@@ -276,6 +276,7 @@ public class CXXLanguageFrontend extends LanguageFrontend {
 
     try {
       Benchmark bench = new Benchmark(this.getClass(), "Parsing sourcefile");
+      computeSLoc(file, benchmark);
       CPPASTTranslationUnit translationUnit =
           (CPPASTTranslationUnit)
               GPPLanguage.getDefault()

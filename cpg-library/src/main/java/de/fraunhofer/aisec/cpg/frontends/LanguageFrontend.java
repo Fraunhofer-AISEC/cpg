@@ -29,18 +29,24 @@ import de.fraunhofer.aisec.cpg.TranslationConfiguration;
 import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration;
 import de.fraunhofer.aisec.cpg.helpers.Benchmark;
+import de.fraunhofer.aisec.cpg.helpers.FileBenchmark;
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager;
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation;
 import de.fraunhofer.aisec.cpg.sarif.Region;
 import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.SortedSet;
+import java.util.TreeSet;
 import java.util.function.BiConsumer;
 import java.util.function.BiPredicate;
+import java.util.stream.IntStream;
 import org.apache.commons.lang3.StringUtils;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -102,6 +108,38 @@ public abstract class LanguageFrontend {
         predicateListeners.remove(pListener.getKey());
       }
     }
+  }
+
+  public void computeSLoc(File file, Benchmark benchmark) {
+    FileBenchmark fBench = (FileBenchmark) benchmark;
+    String fileContent = "";
+    try {
+      fileContent = Files.readString(file.toPath());
+    } catch (IOException ioException) {
+      log.error("Filecontent was not read and therefore the SLoc computation is off.");
+    }
+    String commentless = stripComments(fileContent);
+
+    String[] lines = commentless.split(System.getProperty("line.separator"));
+    SortedSet<Integer> emptyLines = new TreeSet<>();
+    for (int i :
+        IntStream.range(0, lines.length).filter(index -> lines[index].isBlank()).toArray()) {
+      emptyLines.add(i + 1);
+    }
+    SortedSet<Integer> sLoc = new TreeSet();
+    for (int i = 0; i < lines.length; i++) {
+      if (!emptyLines.contains(i)) {
+        sLoc.add(i + 1);
+      }
+    }
+    fBench.setEmptyLines(emptyLines);
+    fBench.setCodeLines(sLoc);
+    fBench.setLoc(lines.length);
+  }
+
+  /** Only a dummy for languages that are not supporting Benchmarking */
+  protected String stripComments(String fileContent) {
+    return fileContent;
   }
 
   public void registerObjectListener(Object from, BiConsumer<Object, Object> biConsumer) {

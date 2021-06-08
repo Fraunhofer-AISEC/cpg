@@ -27,9 +27,16 @@ package de.fraunhofer.aisec.cpg.frontends;
 
 import static de.fraunhofer.aisec.cpg.helpers.Util.errorWithFileLocation;
 
+import de.fraunhofer.aisec.cpg.graph.Node;
+import de.fraunhofer.aisec.cpg.graph.declarations.Declaration;
+import de.fraunhofer.aisec.cpg.graph.statements.Statement;
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression;
 import java.lang.reflect.ParameterizedType;
 import java.util.HashMap;
+import java.util.SortedSet;
 import java.util.function.Supplier;
+
+import de.fraunhofer.aisec.cpg.helpers.FileBenchmark;
 import org.eclipse.cdt.internal.core.dom.parser.ASTNode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -67,6 +74,7 @@ public abstract class Handler<S, T, L extends LanguageFrontend> {
    * @return most specific handler.
    */
   public S handle(T ctx) {
+    boolean handledSpecifically = false;
     S ret;
     if (ctx == null) {
       log.error(
@@ -108,6 +116,7 @@ public abstract class Handler<S, T, L extends LanguageFrontend> {
     }
     if (handler != null) {
       S s = handler.handle(ctx);
+      handledSpecifically = ! (s.getClass().equals(Expression.class) || s.getClass().equals(Statement.class) || s.getClass().equals(Declaration.class) || s.getClass().equals(Node.class))
       lang.setCodeAndRegion(s, ctx);
       lang.setComment(s, ctx);
       ret = s;
@@ -116,7 +125,12 @@ public abstract class Handler<S, T, L extends LanguageFrontend> {
           lang, ctx, log, "Parsing of type {} is not supported (yet)", ctx.getClass());
       ret = this.configConstructor.get();
     }
-
+    SortedSet<Integer> lines = FileBenchmark.getLinesfromRegion(((Node)ret).getLocation().getRegion());
+    if(handledSpecifically){
+      // Todo The covered case
+    }else{
+      // Todo The not covered case
+    }
     lang.process(ctx, ret);
     return ret;
   }

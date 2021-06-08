@@ -28,6 +28,8 @@ package de.fraunhofer.aisec.cpg.helpers;
 import java.util.Map;
 import java.util.SortedSet;
 import java.util.TreeSet;
+
+import de.fraunhofer.aisec.cpg.sarif.Region;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -37,10 +39,11 @@ public class FileBenchmark extends Benchmark {
   public static final String KEY_SOURCE_LOC = "SLOC";
 
   private int loc = 0;
-  private int sLoc = 0;
 
   /** Contains the linenumbers of the file analysis that only contains whitespace or comments. */
   private SortedSet<Integer> emptyLines = new TreeSet<Integer>();
+
+  private SortedSet<Integer> codeLines = new TreeSet<Integer>();
 
   private static final Logger log = LoggerFactory.getLogger(FileBenchmark.class);
 
@@ -68,8 +71,16 @@ public class FileBenchmark extends Benchmark {
     return emptyLines;
   }
 
-  public void addEmptyLines(int emptyLine) {
-    this.emptyLines.add(emptyLine);
+  public void setEmptyLines(SortedSet<Integer> emptyLines) {
+    this.emptyLines = emptyLines;
+  }
+
+  public SortedSet<Integer> getCodeLines() {
+    return codeLines;
+  }
+
+  public void setCodeLines(SortedSet<Integer> codeLines) {
+    this.codeLines = codeLines;
   }
 
   /**
@@ -82,5 +93,13 @@ public class FileBenchmark extends Benchmark {
     ret.put(KEY_LOC, this.loc);
     ret.put(KEY_SOURCE_LOC, getSLoc());
     return ret;
+  }
+
+  public static SortedSet<Integer> getLinesfromRegion(Region region){
+    SortedSet<Integer> lines = new TreeSet<>();
+    for(int i = region.getStartLine(); i <= region.getEndLine(); i++){
+      lines.add(i);
+    }
+    return lines;
   }
 }
