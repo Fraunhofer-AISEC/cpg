@@ -57,6 +57,7 @@ class TranslatePlugin : Plugin {
                     "import de.fraunhofer.aisec.cpg.graph.statements.*",
                     "import de.fraunhofer.aisec.cpg.graph.statements.expressions.*",
                     // helper builtins
+                    "import de.fraunhofer.aisec.cpg.analysis.NodeList",
                     "import de.fraunhofer.aisec.cpg.analysis.resolve",
                     "import de.fraunhofer.aisec.cpg.analysis.all",
                     "import de.fraunhofer.aisec.cpg.analysis.ast",

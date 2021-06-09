@@ -60,13 +60,6 @@ fun Node.printCode(linesAhead: Int = 0, showNumbers: Boolean = false): Node {
     return this
 }
 
-class NodeList<N : Node>(list: Collection<N>) : ArrayList<N>(list) {
-
-    override fun toString(): String {
-        return this.joinToString(", \n  ", "[\n  ", "\n]")
-    }
-}
-
 fun Collection<Node>.printCode(
     linesAhead: Int = 0,
     showNumbers: Boolean = false
@@ -96,40 +89,40 @@ val ArrayCreationExpression.capacity: Int
     }
 
 @JvmName("allNodes")
-fun TranslationResult.all(): NodeList<Node> {
+fun TranslationResult.all(): List<Node> {
     return this.all<Node>()
 }
 
-inline fun <reified T : Node> TranslationResult.all(): NodeList<T> {
+inline fun <reified T : Node> TranslationResult.all(): List<T> {
     val children = SubgraphWalker.flattenAST(this)
 
-    return NodeList(children.filterIsInstance<T>())
+    return children.filterIsInstance<T>()
 }
 
 @JvmName("allNodes")
-fun Node.all(): NodeList<Node> {
+fun Node.all(): List<Node> {
     return this.all<Node>()
 }
 
-inline fun <reified T : Node> Node.all(): NodeList<T> {
+inline fun <reified T : Node> Node.all(): List<T> {
     val children = SubgraphWalker.flattenAST(this)
 
-    return NodeList<T>(children.filterIsInstance<T>())
+    return children.filterIsInstance<T>()
 }
 
 @JvmName("astNodes")
-fun Node.ast(): NodeList<Node> {
+fun Node.ast(): List<Node> {
     return this.ast<Node>()
 }
 
-inline fun <reified T : Node> Node.ast(): NodeList<T> {
+inline fun <reified T : Node> Node.ast(): List<T> {
     val children = SubgraphWalker.getAstChildren(this)
 
-    return NodeList(children.filterIsInstance<T>())
+    return children.filterIsInstance<T>()
 }
 
-inline fun <reified T : Node> Node.dfgFrom(): NodeList<T> {
-    return NodeList(this.prevDFG.toList().filterIsInstance<T>())
+inline fun <reified T : Node> Node.dfgFrom(): List<T> {
+    return this.prevDFG.toList().filterIsInstance<T>()
 }
 
 @Throws(DeclarationNotFound::class)
