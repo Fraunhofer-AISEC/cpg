@@ -40,6 +40,9 @@ public class FileBenchmark extends Benchmark {
 
   public static final String KEY_LOC = "LOC";
   public static final String KEY_SOURCE_LOC = "SLOC";
+  public static final String COVERED = "COVERED";
+  public static final String UNCOVERED = "UNCOVERED";
+  public static final String PARTIAL = "PARTIAL";
 
   private Stack<LineCoverageFrame> lineCoverageStack = new Stack<>();
 
@@ -53,6 +56,7 @@ public class FileBenchmark extends Benchmark {
   private int covered = -1;
   private int uncovered = -1;
   private int partial = -1;
+  private int sloc = -1;
 
   private PhysicalLocation rootLocation = null;
 
@@ -64,6 +68,30 @@ public class FileBenchmark extends Benchmark {
 
   public FileBenchmark(Class c, String message, Benchmark parentBenchmark) {
     super(c, message, parentBenchmark);
+  }
+
+  public int getCovered() {
+    return covered;
+  }
+
+  public void setCovered(int covered) {
+    this.covered = covered;
+  }
+
+  public int getUncovered() {
+    return uncovered;
+  }
+
+  public void setUncovered(int uncovered) {
+    this.uncovered = uncovered;
+  }
+
+  public int getPartial() {
+    return partial;
+  }
+
+  public void setPartial(int partial) {
+    this.partial = partial;
   }
 
   public int getLoc() {
@@ -101,8 +129,10 @@ public class FileBenchmark extends Benchmark {
    */
   public Map<String, Object> getMetricMap() {
     Map<String, Object> ret = super.getMetricMap();
-    ret.put(KEY_LOC, this.loc);
-    ret.put(KEY_SOURCE_LOC, getSLoc());
+    ret.put(KEY_SOURCE_LOC, this.sloc);
+    ret.put(COVERED, this.covered);
+    ret.put(UNCOVERED, this.uncovered);
+    ret.put(PARTIAL, this.partial);
     return ret;
   }
 
@@ -133,8 +163,19 @@ public class FileBenchmark extends Benchmark {
       this.uncovered = uncoveredLines.size();
       this.partial = partialLines.size();
 
-      int sloc = this.getSLoc();
-      System.out.println(
+      this.sloc = this.getSLoc();
+
+      for (Benchmark childBench : childBenchmark) {
+        if (childBench instanceof FileBenchmark) {
+          FileBenchmark cfb = (FileBenchmark) childBench;
+          this.covered += cfb.covered;
+          this.uncovered += cfb.uncovered;
+          this.partial += cfb.partial;
+          this.sloc += cfb.sloc;
+        }
+      }
+
+      log.info(
           "Filebench at:"
               + node.getClass().getSimpleName()
               + "Total SLoc: "
@@ -151,7 +192,7 @@ public class FileBenchmark extends Benchmark {
               + (1.0 * this.uncovered / sloc)
               + " PartialRelative: "
               + (1.0 * this.partial / sloc));
-      if (this.covered > sloc || this.uncovered > sloc || this.partial > sloc || sloc > loc) {
+      if (this.covered > sloc || this.uncovered > sloc || this.partial > sloc) {
         throw new RuntimeException("Computation of Source code lines and coverage faulty");
       }
 

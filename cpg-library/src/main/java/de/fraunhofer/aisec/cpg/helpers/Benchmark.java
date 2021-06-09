@@ -44,7 +44,7 @@ public class Benchmark {
   private long duration = -1;
 
   private Benchmark parentBenchmark = null;
-  private List<Benchmark> childBenchmark = new ArrayList<>();
+  protected List<Benchmark> childBenchmark = new ArrayList<>();
 
   public Benchmark(Class c, String message) {
     this.message = message;

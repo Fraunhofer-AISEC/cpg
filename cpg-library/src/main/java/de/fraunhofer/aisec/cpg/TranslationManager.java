@@ -30,6 +30,7 @@ import static de.fraunhofer.aisec.cpg.frontends.cpp.CXXLanguageFrontend.CXX_EXTE
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
 import de.fraunhofer.aisec.cpg.frontends.TranslationException;
 import de.fraunhofer.aisec.cpg.graph.TypeManager;
+import de.fraunhofer.aisec.cpg.helpers.AnalysisBenchmark;
 import de.fraunhofer.aisec.cpg.helpers.Benchmark;
 import de.fraunhofer.aisec.cpg.helpers.FileBenchmark;
 import de.fraunhofer.aisec.cpg.helpers.Util;
@@ -95,7 +96,7 @@ public class TranslationManager {
 
           try {
             // Parse Java/C/CPP files
-            Benchmark bench = new Benchmark(this.getClass(), "Frontends", outerBench);
+            Benchmark bench = new AnalysisBenchmark(this.getClass(), "Frontends", outerBench);
             frontendsNeedCleanup = runFrontends(result, this.config, scopesBuildForAnalysis, bench);
             bench.stop();
 

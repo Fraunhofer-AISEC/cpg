@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.helpers;
 
+import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -38,5 +39,26 @@ public class AnalysisBenchmark extends Benchmark {
 
   public AnalysisBenchmark(Class c, String message, Benchmark parentBenchmark) {
     super(c, message, parentBenchmark);
+  }
+
+  /**
+   * Durations have the associated caller as key. Other Metrics have a predefined static key
+   *
+   * @return
+   */
+  public Map<String, Object> getMetricMap() {
+    Map<String, Object> ret = super.getMetricMap();
+
+    for (Benchmark child : this.childBenchmark) {
+      if (child instanceof FileBenchmark) {
+        FileBenchmark fileb = (FileBenchmark) child;
+        Map<String, Object> childMetric = fileb.getMetricMap();
+        ret.put(
+            FileBenchmark.KEY_SOURCE_LOC,
+            ((Integer) ret.get(FileBenchmark.KEY_SOURCE_LOC))
+                + ((Integer) childMetric.get(FileBenchmark.KEY_SOURCE_LOC)));
+      }
+    }
+    return ret;
   }
 }
