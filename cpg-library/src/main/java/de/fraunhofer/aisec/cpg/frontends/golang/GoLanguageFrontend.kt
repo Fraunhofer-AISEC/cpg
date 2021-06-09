@@ -30,7 +30,7 @@ import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
-import de.fraunhofer.aisec.cpg.helpers.Benchmark
+import de.fraunhofer.aisec.cpg.helpers.FileBenchmark
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.io.File
@@ -48,7 +48,7 @@ class GoLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeMa
     }
 
     @Throws(TranslationException::class)
-    override fun parse(file: File, benchmark: Benchmark): TranslationUnitDeclaration {
+    override fun parse(file: File, benchmark: FileBenchmark): TranslationUnitDeclaration {
         return parseInternal(file.readText(Charsets.UTF_8), file.path)
     }
 

@@ -65,6 +65,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration;
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser;
 import de.fraunhofer.aisec.cpg.helpers.Benchmark;
 import de.fraunhofer.aisec.cpg.helpers.CommonPath;
+import de.fraunhofer.aisec.cpg.helpers.FileBenchmark;
 import de.fraunhofer.aisec.cpg.passes.scopes.Scope;
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager;
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation;
@@ -75,10 +76,8 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import org.apache.commons.lang3.StringUtils;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
-import org.jetbrains.annotations.NotNull;
 
 /** Main parser for ONE Java files. */
 public class JavaLanguageFrontend extends LanguageFrontend {
@@ -119,7 +118,7 @@ public class JavaLanguageFrontend extends LanguageFrontend {
   }
 
   @Override
-  public TranslationUnitDeclaration parse(File file, Benchmark benchmark)
+  public TranslationUnitDeclaration parse(File file, FileBenchmark benchmark)
       throws TranslationException {
     TypeManager.getInstance().setLanguageFrontend(this);
 
@@ -137,10 +136,13 @@ public class JavaLanguageFrontend extends LanguageFrontend {
 
       bench = new Benchmark(this.getClass(), "Transform to CPG");
       context.setData(com.github.javaparser.ast.Node.SYMBOL_RESOLVER_KEY, this.javaSymbolResolver);
-
+      if (this.getFileBenchmark() != null) {
+        getFileBenchmark().pushNewLoCFrame(getLocationFromRawNode(context));
+      }
       // starting point is always a translation declaration
       TranslationUnitDeclaration fileDeclaration =
           NodeBuilder.newTranslationUnitDeclaration(file.toString(), context.toString());
+      setCodeAndRegion(fileDeclaration, context);
       setCurrentTU(fileDeclaration);
 
       scopeManager.resetToGlobal(fileDeclaration);
@@ -171,6 +173,10 @@ public class JavaLanguageFrontend extends LanguageFrontend {
 
       if (packDecl != null) {
         scopeManager.leaveScope(namespaceDeclaration);
+      }
+
+      if (this.getFileBenchmark() != null) {
+        this.getFileBenchmark().handleCovered(fileDeclaration, true);
       }
 
       bench.stop();
@@ -220,32 +226,6 @@ public class JavaLanguageFrontend extends LanguageFrontend {
 
     fileContent = replaceWithWhitespaces(fileContent, lineComment);
     fileContent = replaceWithWhitespaces(fileContent, blockComment);
-
-    return fileContent;
-  }
-
-  @NotNull
-  private String replaceWithWhitespaces(String fileContent, String lineComment) {
-    String old = fileContent + "";
-    String stringWithoutOneComment =
-        fileContent.replaceFirst(
-            lineComment, " "); // Space is used to guarantee that the strings will be different here
-    int lengthDiff = fileContent.length() - stringWithoutOneComment.length();
-    while (lengthDiff != 0) {
-      int index = StringUtils.indexOfDifference(fileContent, stringWithoutOneComment);
-      fileContent =
-          stringWithoutOneComment.substring(0, index)
-              + " ".repeat(lengthDiff)
-              + stringWithoutOneComment.substring(index);
-
-      stringWithoutOneComment = fileContent.replaceFirst(lineComment, " ");
-      lengthDiff = fileContent.length() - stringWithoutOneComment.length();
-    }
-
-    // In doing this we put newlines back where we removed them with the previous method
-    for (int pos = old.indexOf("\n"); pos != -1; pos = old.indexOf("\n", pos + 1)) {
-      fileContent = fileContent.substring(0, pos) + "\n" + fileContent.substring(pos + 1);
-    }
 
     return fileContent;
   }

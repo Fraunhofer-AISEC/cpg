@@ -50,6 +50,7 @@ import java.util.stream.IntStream;
 import org.apache.commons.lang3.StringUtils;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
+import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -58,6 +59,8 @@ public abstract class LanguageFrontend {
   // Allow non-Java frontends to access the logger (i.e. jep)
   public static final Logger log = LoggerFactory.getLogger(LanguageFrontend.class);
   protected final TranslationConfiguration config;
+
+  protected FileBenchmark fileBenchmark; // Must be created newly for every files
 
   protected ScopeManager scopeManager;
 
@@ -110,6 +113,14 @@ public abstract class LanguageFrontend {
     }
   }
 
+  public FileBenchmark getFileBenchmark() {
+    return fileBenchmark;
+  }
+
+  public void setFileBenchmark(FileBenchmark fileBenchmark) {
+    this.fileBenchmark = fileBenchmark;
+  }
+
   public void computeSLoc(File file, Benchmark benchmark) {
     FileBenchmark fBench = (FileBenchmark) benchmark;
     String fileContent = "";
@@ -120,7 +131,7 @@ public abstract class LanguageFrontend {
     }
     String commentless = stripComments(fileContent);
 
-    String[] lines = commentless.split(System.getProperty("line.separator"));
+    String[] lines = commentless.split(System.getProperty("line.separator"), -1);
     SortedSet<Integer> emptyLines = new TreeSet<>();
     for (int i :
         IntStream.range(0, lines.length).filter(index -> lines[index].isBlank()).toArray()) {
@@ -139,6 +150,32 @@ public abstract class LanguageFrontend {
 
   /** Only a dummy for languages that are not supporting Benchmarking */
   protected String stripComments(String fileContent) {
+    return fileContent;
+  }
+
+  @NotNull
+  protected String replaceWithWhitespaces(String fileContent, String lineComment) {
+    String old = fileContent + "";
+    String stringWithoutOneComment =
+        fileContent.replaceFirst(
+            lineComment, " "); // Space is used to guarantee that the strings will be different here
+    int lengthDiff = fileContent.length() - stringWithoutOneComment.length();
+    while (lengthDiff != 0) {
+      int index = StringUtils.indexOfDifference(fileContent, stringWithoutOneComment);
+      fileContent =
+          stringWithoutOneComment.substring(0, index)
+              + " ".repeat(lengthDiff)
+              + stringWithoutOneComment.substring(index);
+
+      stringWithoutOneComment = fileContent.replaceFirst(lineComment, " ");
+      lengthDiff = fileContent.length() - stringWithoutOneComment.length();
+    }
+
+    // In doing this we put newlines back where we removed them with the previous method
+    for (int pos = old.indexOf("\n"); pos != -1; pos = old.indexOf("\n", pos + 1)) {
+      fileContent = fileContent.substring(0, pos) + "\n" + fileContent.substring(pos + 1);
+    }
+
     return fileContent;
   }
 
@@ -172,7 +209,7 @@ public abstract class LanguageFrontend {
     this.processedMapping.clear();
   }
 
-  public List<TranslationUnitDeclaration> parseAll(Benchmark benchmark)
+  public List<TranslationUnitDeclaration> parseAll(FileBenchmark benchmark)
       throws TranslationException {
     ArrayList<TranslationUnitDeclaration> units = new ArrayList<>();
     for (File sourceFile : this.config.getSourceLocations()) {
@@ -200,7 +237,7 @@ public abstract class LanguageFrontend {
     this.currentTU = currentTU;
   }
 
-  public abstract TranslationUnitDeclaration parse(File file, Benchmark benchmark)
+  public abstract TranslationUnitDeclaration parse(File file, FileBenchmark benchmark)
       throws TranslationException;
 
   /**

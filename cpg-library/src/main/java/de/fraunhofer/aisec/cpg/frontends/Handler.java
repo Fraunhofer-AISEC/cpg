@@ -33,10 +33,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.Statement;
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression;
 import java.lang.reflect.ParameterizedType;
 import java.util.HashMap;
-import java.util.SortedSet;
 import java.util.function.Supplier;
-
-import de.fraunhofer.aisec.cpg.helpers.FileBenchmark;
 import org.eclipse.cdt.internal.core.dom.parser.ASTNode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -114,24 +111,31 @@ public abstract class Handler<S, T, L extends LanguageFrontend> {
       }
       if (toHandle == typeOfT || !typeOfT.isAssignableFrom(toHandle)) break;
     }
+    if (lang.getFileBenchmark() != null) {
+      lang.getFileBenchmark().pushNewLoCFrame(lang.getLocationFromRawNode(ctx));
+    }
     if (handler != null) {
       S s = handler.handle(ctx);
-      handledSpecifically = ! (s.getClass().equals(Expression.class) || s.getClass().equals(Statement.class) || s.getClass().equals(Declaration.class) || s.getClass().equals(Node.class))
-      lang.setCodeAndRegion(s, ctx);
-      lang.setComment(s, ctx);
+      // TOdo pop LocFrame
+      handledSpecifically =
+          !(s == null
+              || s.getClass().equals(Expression.class)
+              || s.getClass().equals(Statement.class)
+              || s.getClass().equals(Declaration.class)
+              || s.getClass().equals(Node.class));
       ret = s;
     } else {
       errorWithFileLocation(
           lang, ctx, log, "Parsing of type {} is not supported (yet)", ctx.getClass());
       ret = this.configConstructor.get();
     }
-    SortedSet<Integer> lines = FileBenchmark.getLinesfromRegion(((Node)ret).getLocation().getRegion());
-    if(handledSpecifically){
-      // Todo The covered case
-    }else{
-      // Todo The not covered case
-    }
+    lang.setCodeAndRegion(ret, ctx);
+    lang.setComment(ret, ctx);
     lang.process(ctx, ret);
+
+    if (lang.getFileBenchmark() != null) {
+      lang.getFileBenchmark().handleCovered(ret, handledSpecifically);
+    }
     return ret;
   }
 }

@@ -249,6 +249,7 @@ public class TranslationManager {
         sfToFe.put(sourceLocation.getName(), frontend.getClass().getSimpleName());
         FileBenchmark fileBenchmark =
             new FileBenchmark(frontend.getClass(), "Executing frontend for file", benchmark);
+        frontend.setFileBenchmark(fileBenchmark);
         result.getTranslationUnits().add(frontend.parse(sourceLocation, fileBenchmark));
         fileBenchmark.stop();
       } catch (TranslationException ex) {

@@ -25,11 +25,14 @@
  */
 package de.fraunhofer.aisec.cpg.helpers;
 
+import de.fraunhofer.aisec.cpg.graph.Node;
+import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation;
+import de.fraunhofer.aisec.cpg.sarif.Region;
 import java.util.Map;
 import java.util.SortedSet;
+import java.util.Stack;
 import java.util.TreeSet;
-
-import de.fraunhofer.aisec.cpg.sarif.Region;
+import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -38,12 +41,20 @@ public class FileBenchmark extends Benchmark {
   public static final String KEY_LOC = "LOC";
   public static final String KEY_SOURCE_LOC = "SLOC";
 
+  private Stack<LineCoverageFrame> lineCoverageStack = new Stack<>();
+
   private int loc = 0;
 
   /** Contains the linenumbers of the file analysis that only contains whitespace or comments. */
   private SortedSet<Integer> emptyLines = new TreeSet<Integer>();
 
   private SortedSet<Integer> codeLines = new TreeSet<Integer>();
+
+  private int covered = -1;
+  private int uncovered = -1;
+  private int partial = -1;
+
+  private PhysicalLocation rootLocation = null;
 
   private static final Logger log = LoggerFactory.getLogger(FileBenchmark.class);
 
@@ -95,11 +106,136 @@ public class FileBenchmark extends Benchmark {
     return ret;
   }
 
-  public static SortedSet<Integer> getLinesfromRegion(Region region){
+  public static SortedSet<Integer> getLinesfromRegion(Region region) {
     SortedSet<Integer> lines = new TreeSet<>();
-    for(int i = region.getStartLine(); i <= region.getEndLine(); i++){
+    for (int i = region.getStartLine(); i <= region.getEndLine(); i++) {
       lines.add(i);
     }
     return lines;
+  }
+
+  public void pushNewLoCFrame(PhysicalLocation location) {
+    this.lineCoverageStack.push(new LineCoverageFrame());
+  }
+
+  public void popLoCFrame(Node node) {
+    LineCoverageFrame child = this.lineCoverageStack.pop();
+    if (this.lineCoverageStack.empty()) {
+      child.removeEmptyLines(this.emptyLines);
+      SortedSet<Integer> coveredLines = child.covered;
+      SortedSet<Integer> uncoveredLines = child.uncovered;
+      SortedSet<Integer> partialLines = child.partial;
+      coveredLines.removeAll(emptyLines);
+      uncoveredLines.removeAll(emptyLines);
+      partialLines.removeAll(emptyLines);
+
+      this.covered = coveredLines.size();
+      this.uncovered = uncoveredLines.size();
+      this.partial = partialLines.size();
+
+      int sloc = this.getSLoc();
+      System.out.println(
+          "Filebench at:"
+              + node.getClass().getSimpleName()
+              + "Total SLoc: "
+              + sloc
+              + " Covered: "
+              + this.covered
+              + " Uncovered: "
+              + this.uncovered
+              + " Partial: "
+              + this.partial
+              + " CoveredRelative: "
+              + (1.0 * this.covered / sloc)
+              + " UncoveredRelative: "
+              + (1.0 * this.uncovered / sloc)
+              + " PartialRelative: "
+              + (1.0 * this.partial / sloc));
+      if (this.covered > sloc || this.uncovered > sloc || this.partial > sloc || sloc > loc) {
+        throw new RuntimeException("Computation of Source code lines and coverage faulty");
+      }
+
+    } else {
+      this.lineCoverageStack.peek().mergeChildFrame(child);
+    }
+  }
+
+  public void handleCovered(Object ret, boolean handledSpecifically) {
+    if (ret != null && ((Node) ret).getLocation() != null) {
+      SortedSet<Integer> lines =
+          FileBenchmark.getLinesfromRegion(((Node) ret).getLocation().getRegion());
+      if (handledSpecifically) {
+        this.wrapUpTop(((Node) ret).getLocation().getRegion());
+      } else {
+        this.lineCoverageStack.peek().addUncoverdLines(lines);
+      }
+    }
+    this.popLoCFrame((Node) ret);
+  }
+
+  public void wrapUpTop(Region region) {
+    this.lineCoverageStack.peek().wrapUp(region);
+  }
+
+  public static class LineCoverageFrame {
+    private SortedSet<Integer> covered = new TreeSet<Integer>();
+
+    private SortedSet<Integer> uncovered = new TreeSet<Integer>();
+    private SortedSet<Integer> partial = new TreeSet<Integer>();
+
+    public void addCoveredLines(SortedSet<Integer> covered) {
+      SortedSet<Integer> intersection = intesect(covered, this.uncovered);
+
+      this.covered.addAll(covered);
+
+      this.covered.removeAll(intersection);
+      this.uncovered.removeAll(intersection);
+
+      this.partial.addAll(intersection);
+    }
+
+    public void addUncoverdLines(SortedSet<Integer> uncovered) {
+      SortedSet<Integer> intersection = intesect(uncovered, this.covered);
+
+      this.uncovered.addAll(uncovered);
+
+      this.covered.removeAll(intersection);
+      this.uncovered.removeAll(intersection);
+
+      this.partial.addAll(intersection);
+    }
+
+    /**
+     * Adds all lines that are not covered, uncovered, partial by its children to the covered list.
+     *
+     * @param region
+     */
+    public void wrapUp(Region region) {
+      SortedSet<Integer> nodeLines = FileBenchmark.getLinesfromRegion(region);
+
+      nodeLines.removeAll(this.uncovered);
+      nodeLines.removeAll(this.partial);
+
+      this.covered.addAll(nodeLines);
+    }
+
+    public void removeEmptyLines(SortedSet<Integer> emptyLines) {
+      this.covered.removeAll(emptyLines);
+      this.uncovered.removeAll(emptyLines);
+      this.partial.removeAll(emptyLines);
+    }
+
+    public static SortedSet<Integer> intesect(SortedSet<Integer> a, SortedSet<Integer> b) {
+      return new TreeSet<>(a.stream().filter(b::contains).collect(Collectors.toSet()));
+    }
+
+    public void mergeChildFrame(LineCoverageFrame child) {
+      this.addCoveredLines(child.covered);
+      this.addUncoverdLines(child.uncovered);
+
+      this.partial.addAll(child.partial);
+      this.covered.removeAll(child.partial);
+      this.uncovered.removeAll(child.partial);
+    }
   }
 }

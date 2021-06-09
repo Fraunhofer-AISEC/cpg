@@ -45,6 +45,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression;
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser;
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType;
 import de.fraunhofer.aisec.cpg.helpers.Benchmark;
+import de.fraunhofer.aisec.cpg.helpers.FileBenchmark;
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager;
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation;
 import de.fraunhofer.aisec.cpg.sarif.Region;
@@ -255,7 +256,7 @@ public class CXXLanguageFrontend extends LanguageFrontend {
   }
 
   @Override
-  public TranslationUnitDeclaration parse(File file, Benchmark benchmark)
+  public TranslationUnitDeclaration parse(File file, FileBenchmark benchmark)
       throws TranslationException {
     TypeManager.getInstance().setLanguageFrontend(this);
     FileContent content = FileContent.createForExternalFileLocation(file.getAbsolutePath());
@@ -301,8 +302,17 @@ public class CXXLanguageFrontend extends LanguageFrontend {
         comments.put(c.getFileLocation().getStartingLineNumber(), c.getRawSignature());
       }
 
+      if (this.getFileBenchmark() != null) {
+        getFileBenchmark().pushNewLoCFrame(getLocationFromRawNode(translationUnit));
+      }
+
       TranslationUnitDeclaration translationUnitDeclaration =
           declarationHandler.handleTranslationUnit((CPPASTTranslationUnit) translationUnit);
+      setCodeAndRegion(translationUnitDeclaration, translationUnit);
+      if (this.getFileBenchmark() != null) {
+        this.getFileBenchmark().handleCovered(translationUnitDeclaration, true);
+      }
+
       bench.stop();
       return translationUnitDeclaration;
     } catch (CoreException ex) {
@@ -396,6 +406,18 @@ public class CXXLanguageFrontend extends LanguageFrontend {
       // set attributes
       node.addAnnotations(handleAttributes(owner));
     }
+  }
+
+  /** Only a dummy for languages that are not supporting Benchmarking */
+  protected String stripComments(String fileContent) {
+
+    String lineComment = "(//[^\n]*)";
+    String blockComment = "(?s)/\\*.*?\\*/";
+
+    fileContent = replaceWithWhitespaces(fileContent, lineComment);
+    fileContent = replaceWithWhitespaces(fileContent, blockComment);
+
+    return fileContent;
   }
 
   private List<Annotation> handleAttributes(IASTAttributeOwner owner) {

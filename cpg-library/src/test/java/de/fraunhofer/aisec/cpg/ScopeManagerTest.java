@@ -35,7 +35,7 @@ import de.fraunhofer.aisec.cpg.frontends.cpp.CXXLanguageFrontend;
 import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguageFrontend;
 import de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDeclaration;
 import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration;
-import de.fraunhofer.aisec.cpg.helpers.Benchmark;
+import de.fraunhofer.aisec.cpg.helpers.FileBenchmark;
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager;
 import java.io.File;
 import java.util.stream.Collectors;
@@ -68,7 +68,7 @@ class ScopeManagerTest extends BaseTest {
     var tu =
         frontend.parse(
             new File("src/test/resources/recordstmt.cpp"),
-            new Benchmark(ScopeManagerTest.class, "Test Benchmark"));
+            new FileBenchmark(ScopeManagerTest.class, "Test Benchmark"));
 
     var methods =
         subnodesOfType(tu.getDeclarations(), MethodDeclaration.class).stream()

@@ -38,8 +38,11 @@ import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement;
 import de.fraunhofer.aisec.cpg.graph.statements.Statement;
 import de.fraunhofer.aisec.cpg.graph.types.Type;
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser;
+import de.fraunhofer.aisec.cpg.helpers.FileBenchmark;
 import de.fraunhofer.aisec.cpg.helpers.Util;
 import de.fraunhofer.aisec.cpg.passes.scopes.RecordScope;
+import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation;
+import java.io.File;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -361,9 +364,38 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
     lang.getScopeManager().resetToGlobal(node);
 
     lang.setCurrentTU(node);
-
+    PhysicalLocation.ArtifactLocation fileLoc =
+        lang.getLocationFromRawNode(translationUnit).getArtifactLocation();
+    PhysicalLocation.ArtifactLocation current = fileLoc;
+    PhysicalLocation locTranslation = lang.getLocationFromRawNode(translationUnit);
+    FileBenchmark translationBench = lang.getFileBenchmark();
     HashMap<String, HashSet<ProblemDeclaration>> problematicIncludes = new HashMap<>();
     for (IASTDeclaration declaration : translationUnit.getDeclarations()) {
+      PhysicalLocation locDeclaration = lang.getLocationFromRawNode(declaration);
+      if (!current.getUri().equals(locDeclaration.getArtifactLocation().getUri())) {
+        if (lang.getFileBenchmark()
+            != translationBench) { // Stop previous bench if it is not the initial translation unit
+          // benchmark
+          lang.getFileBenchmark().stop();
+        }
+        if (locDeclaration
+            .getArtifactLocation()
+            .getUri()
+            .equals(locTranslation.getArtifactLocation().getUri())) { // Restore
+          lang.setFileBenchmark(translationBench);
+          current = locTranslation.getArtifactLocation();
+        } else { // In new file
+          File includedFile = new File(locDeclaration.getArtifactLocation().getUri());
+          lang.setFileBenchmark(
+              new FileBenchmark(
+                  lang.getClass(),
+                  locDeclaration.getArtifactLocation().getUri().toString(),
+                  translationBench));
+          lang.computeSLoc(includedFile, lang.getFileBenchmark());
+          current = locDeclaration.getArtifactLocation();
+        }
+      }
+
       if (declaration instanceof CPPASTLinkageSpecification) {
         continue; // do not care about these for now
       }
