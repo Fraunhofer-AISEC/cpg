@@ -57,6 +57,18 @@ public class AnalysisBenchmark extends Benchmark {
             FileBenchmark.KEY_SOURCE_LOC,
             ((Integer) ret.get(FileBenchmark.KEY_SOURCE_LOC))
                 + ((Integer) childMetric.get(FileBenchmark.KEY_SOURCE_LOC)));
+        ret.put(
+                FileBenchmark.COVERED,
+                ((Integer) ret.get(FileBenchmark.COVERED))
+                        + ((Integer) childMetric.get(FileBenchmark.COVERED)));
+        ret.put(
+                FileBenchmark.UNCOVERED,
+                ((Integer) ret.get(FileBenchmark.UNCOVERED))
+                        + ((Integer) childMetric.get(FileBenchmark.UNCOVERED)));
+        ret.put(
+                FileBenchmark.PARTIAL,
+                ((Integer) ret.get(FileBenchmark.PARTIAL))
+                        + ((Integer) childMetric.get(FileBenchmark.PARTIAL)));
       }
     }
     return ret;
