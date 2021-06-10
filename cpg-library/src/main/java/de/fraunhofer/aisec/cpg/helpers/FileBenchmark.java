@@ -174,26 +174,9 @@ public class FileBenchmark extends Benchmark {
           this.sloc += cfb.sloc;
         }
       }
-
-      log.info(
-          "Filebench at:"
-              + node.getClass().getSimpleName()
-              + "Total SLoc: "
-              + sloc
-              + " Covered: "
-              + this.covered
-              + " Uncovered: "
-              + this.uncovered
-              + " Partial: "
-              + this.partial
-              + " CoveredRelative: "
-              + (1.0 * this.covered / sloc)
-              + " UncoveredRelative: "
-              + (1.0 * this.uncovered / sloc)
-              + " PartialRelative: "
-              + (1.0 * this.partial / sloc));
       if (this.covered > sloc || this.uncovered > sloc || this.partial > sloc) {
-        throw new RuntimeException("Computation of Source code lines and coverage faulty");
+        this.sloc = this.covered + this.uncovered + this.partial;
+        // throw new RuntimeException("Computation of Source code lines and coverage faulty");
       }
 
     } else {
