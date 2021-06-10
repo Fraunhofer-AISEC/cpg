@@ -307,8 +307,8 @@ public class TranslationManager {
     return null;
   }
 
-  public Benchmark getMainBench() {
-    return mainBench;
+  public Map<String, Object> getMetricMap() {
+    return metricMap;
   }
 
   /**
