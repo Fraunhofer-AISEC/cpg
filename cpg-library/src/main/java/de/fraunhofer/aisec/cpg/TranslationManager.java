@@ -66,6 +66,9 @@ public class TranslationManager {
   @NonNull private TranslationConfiguration config;
   private AtomicBoolean isCancelled = new AtomicBoolean(false);
 
+  private Benchmark mainBench;
+  private Map<String, Object> metricMap;
+
   private TranslationManager(@NonNull TranslationConfiguration config) {
     this.config = config;
   }
@@ -88,7 +91,7 @@ public class TranslationManager {
     return CompletableFuture.supplyAsync(
         () -> {
           ScopeManager scopesBuildForAnalysis = new ScopeManager();
-          Benchmark outerBench =
+          this.mainBench =
               new Benchmark(TranslationManager.class, "Translation into full graph");
 
           Set<Pass> passesNeedCleanup = new HashSet<>();
@@ -96,7 +99,7 @@ public class TranslationManager {
 
           try {
             // Parse Java/C/CPP files
-            Benchmark bench = new AnalysisBenchmark(this.getClass(), "Frontends", outerBench);
+            Benchmark bench = new AnalysisBenchmark(this.getClass(), "Frontends", mainBench);
             frontendsNeedCleanup = runFrontends(result, this.config, scopesBuildForAnalysis, bench);
             bench.stop();
 
@@ -105,7 +108,7 @@ public class TranslationManager {
             // Apply passes
             for (Pass pass : config.getRegisteredPasses()) {
               passesNeedCleanup.add(pass);
-              bench = new Benchmark(pass.getClass(), "Executing Pass", outerBench);
+              bench = new Benchmark(pass.getClass(), "Executing Pass", mainBench);
               pass.accept(result);
               bench.stop();
               if (result.isCancelled()) {
@@ -115,10 +118,16 @@ public class TranslationManager {
           } catch (TranslationException ex) {
             throw new CompletionException(ex);
           } finally {
-            outerBench.stop();
+            mainBench.stop();
 
             String metric = "Analysis metrics: ";
-            Map<String, Object> metricMap = outerBench.getMetricMap();
+            Map<String, Object> metricMap = mainBench.getMetricMap();
+            Object sloc =metricMap.get(FileBenchmark.KEY_SOURCE_LOC);
+            Object absolutTime = metricMap.get(TranslationManager.class.getSimpleName());
+            if(sloc != null && absolutTime != null){
+              metricMap.put("Time_PER_SLOC", 1.0 * ((Integer)absolutTime)/((Integer)sloc));
+            }
+            this.metricMap = metricMap;
             for (Map.Entry<String, Object> entry : metricMap.entrySet()) {
               if (metric.endsWith("}")) {
                 metric += ", ";
@@ -296,6 +305,10 @@ public class TranslationManager {
     }
 
     return null;
+  }
+
+  public Benchmark getMainBench() {
+    return mainBench;
   }
 
   /**
