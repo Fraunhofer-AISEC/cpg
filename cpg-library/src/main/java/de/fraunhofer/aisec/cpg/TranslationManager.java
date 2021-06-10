@@ -50,6 +50,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -119,22 +120,7 @@ public class TranslationManager {
             throw new CompletionException(ex);
           } finally {
             mainBench.stop();
-
-            String metric = "Analysis metrics: ";
-            Map<String, Object> metricMap = mainBench.getMetricMap();
-            Object sloc =metricMap.get(FileBenchmark.KEY_SOURCE_LOC);
-            Object absolutTime = metricMap.get(TranslationManager.class.getSimpleName());
-            if(sloc != null && absolutTime != null){
-              metricMap.put("Time_PER_SLOC", 1.0 * ((Number)absolutTime).longValue()/((Number)sloc).longValue());
-            }
-            this.metricMap = metricMap;
-            for (Map.Entry<String, Object> entry : metricMap.entrySet()) {
-              if (metric.endsWith("}")) {
-                metric += ", ";
-              }
-              metric += "{" + entry.getKey() + ", " + entry.getValue().toString() + "}";
-            }
-            log.info(metric);
+            this.metricMap = mainBench.getMetricMap();
             if (!this.config.disableCleanup) {
               log.debug("Cleaning up {} Passes", passesNeedCleanup.size());
               passesNeedCleanup.forEach(Pass::cleanup);
@@ -148,7 +134,7 @@ public class TranslationManager {
             }
           }
           return result;
-        });
+        }).orTimeout(5, TimeUnit.MINUTES);
   }
 
   public List<Pass> getPasses() {
