@@ -125,7 +125,7 @@ public class TranslationManager {
             Object sloc =metricMap.get(FileBenchmark.KEY_SOURCE_LOC);
             Object absolutTime = metricMap.get(TranslationManager.class.getSimpleName());
             if(sloc != null && absolutTime != null){
-              metricMap.put("Time_PER_SLOC", 1.0 * ((Long)absolutTime)/((Long)sloc));
+              metricMap.put("Time_PER_SLOC", 1.0 * ((Number)absolutTime).longValue()/((Number)sloc).longValue());
             }
             this.metricMap = metricMap;
             for (Map.Entry<String, Object> entry : metricMap.entrySet()) {
