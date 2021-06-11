@@ -32,7 +32,7 @@ plugins {
     jacoco
     signing
 
-    id("org.sonarqube") version "3.2.0"
+    id("org.sonarqube") version "3.3"
     id("com.diffplug.spotless") version "5.12.4"
     id("com.github.johnrengelman.shadow") version "7.0.0" apply false
     kotlin("jvm") version "1.4.32" apply false
