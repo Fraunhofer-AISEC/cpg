@@ -407,6 +407,12 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
     return recordDeclaration;
   }
 
+  /**
+   * Handles template parameters that are types
+   *
+   * @param ctx
+   * @return TypeParamDeclaration with its name
+   */
   private TypeParamDeclaration handleTemplateTypeParameter(CPPASTSimpleTypeTemplateParameter ctx) {
     return NodeBuilder.newTypeParamDeclaration(ctx.getRawSignature(), ctx.getRawSignature());
   }

@@ -384,6 +384,12 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
     }
   }
 
+  /**
+   * Connects the ObjectType node to the ParameterizedType nodes with the generics edge
+   *
+   * @param type
+   * @param parameterizedTypes
+   */
   private void addParameterizedTypesToType(Type type, List<ParameterizedType> parameterizedTypes) {
     if (type instanceof ObjectType) {
       for (ParameterizedType parameterizedType : parameterizedTypes) {

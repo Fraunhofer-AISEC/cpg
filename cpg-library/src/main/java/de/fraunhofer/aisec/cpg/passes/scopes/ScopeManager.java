@@ -673,6 +673,12 @@ public class ScopeManager {
         : new ArrayList<>();
   }
 
+  /**
+   * @param scope where we are searching for the FunctionTemplateDeclarations
+   * @param call CallExpression we want to resolve an invocation target for
+   * @return List of FunctionTemplateDeclaration that match the name provided in the CallExpression
+   *     and therefore are invocation candidates
+   */
   private List<FunctionTemplateDeclaration> resolveFunctionTemplateDeclaration(
       Scope scope, CallExpression call) {
     return resolveStructureDeclaration(

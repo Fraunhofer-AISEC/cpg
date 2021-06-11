@@ -109,6 +109,12 @@ public class CallResolver extends Pass {
     }
   }
 
+  /**
+   * Caches all TemplateDeclarations in {@link CallResolver#templateList}
+   *
+   * @param node
+   * @param curClass
+   */
   private void findTemplates(@NonNull Node node, RecordDeclaration curClass) {
     if (node instanceof TemplateDeclaration) {
       templateList.add((TemplateDeclaration) node);
@@ -332,6 +338,14 @@ public class CallResolver extends Pass {
     return false;
   }
 
+  /**
+   * Gets all ParameterizedTypes from the initialization signature
+   *
+   * @param intialization mapping of the declaration of the template parameters to the explicit
+   *     values the template is instantiated with
+   * @return mapping of the parameterizedtypes to the corresponding TypeParamDeclaration in the
+   *     template
+   */
   private Map<ParameterizedType, TypeParamDeclaration> getParameterizedSignaturesFromInitialization(
       Map<Declaration, Node> intialization) {
     Map<ParameterizedType, TypeParamDeclaration> parameterizedSignature = new HashMap<>();
@@ -345,33 +359,67 @@ public class CallResolver extends Pass {
     return parameterizedSignature;
   }
 
+  /**
+   * Check if we are handling an implicit template parameter, if so set instantiationSignature,
+   * instantiationType and orderedInitializationSignature maps accordningly
+   *
+   * @param functionTemplateDeclaration functionTemplate we have identified
+   * @param index position of the templateParameter we are currently handling
+   * @param instantiationSignature mapping of the Declaration represeting a template parameter to
+   *     the value that initializes that template parameter
+   * @param instantiationType mapping of the instantiation value to the instantiation type (depends
+   *     on resolution {@link TemplateDeclaration.TemplateInitialization}
+   * @param orderedInitializationSignature mapping of the ordering of the template parameters
+   */
   private void handleImplicitTemplateParameter(
       FunctionTemplateDeclaration functionTemplateDeclaration,
-      int i,
+      int index,
       Map<Declaration, Node> instantiationSignature,
       Map<Node, TemplateDeclaration.TemplateInitialization> instantiationType,
       Map<Declaration, Integer> orderedInitializationSignature) {
-    if (((HasDefault) functionTemplateDeclaration.getParameters().get(i)).getDefault() != null) {
+    if (((HasDefault) functionTemplateDeclaration.getParameters().get(index)).getDefault()
+        != null) {
       // If we have a default we fill it in
       Node defaultNode =
-          ((HasDefault) functionTemplateDeclaration.getParameters().get(i)).getDefault();
+          ((HasDefault) functionTemplateDeclaration.getParameters().get(index)).getDefault();
 
       if (defaultNode instanceof Type) {
         defaultNode = NodeBuilder.newTypeExpression(defaultNode.getName(), (Type) defaultNode);
       }
 
-      instantiationSignature.put(functionTemplateDeclaration.getParameters().get(i), defaultNode);
+      instantiationSignature.put(
+          functionTemplateDeclaration.getParameters().get(index), defaultNode);
       instantiationType.put(defaultNode, TemplateDeclaration.TemplateInitialization.DEFAULT);
-      orderedInitializationSignature.put(functionTemplateDeclaration.getParameters().get(i), i);
+      orderedInitializationSignature.put(
+          functionTemplateDeclaration.getParameters().get(index), index);
     } else {
       // If there is no default, we don't have information on the parameter -> check
       // autodeduction
-      instantiationSignature.put(functionTemplateDeclaration.getParameters().get(i), null);
+      instantiationSignature.put(functionTemplateDeclaration.getParameters().get(index), null);
       instantiationType.put(null, TemplateDeclaration.TemplateInitialization.UNKNOWN);
-      orderedInitializationSignature.put(functionTemplateDeclaration.getParameters().get(i), i);
+      orderedInitializationSignature.put(
+          functionTemplateDeclaration.getParameters().get(index), index);
     }
   }
 
+  /**
+   * Creates a Mapping between the Paramerters of the TemplateDeclaration and the Values provided
+   * for the instantiation of the template (Only the ones that are in defined in the instantiation
+   * -> no defaults or implicit). Additionally, it fills the maps and lists mentioned below:
+   *
+   * @param functionTemplateDeclaration functionTemplate we have identified that should be
+   *     instantiated
+   * @param templateCall callExpression that instantiates the template
+   * @param instantiationType mapping of the instantiation value to the instantiation type (depends
+   *     * on resolution {@link TemplateDeclaration.TemplateInitialization}
+   * @param orderedInitializationSignature mapping of the ordering of the template parameters
+   * @param explicitInstantiated list of all ParameterizedTypes which are explicitly instantiated
+   * @return mapping containing the all elements of the signature of the TemplateDeclaration as key
+   *     and the Type/Expression the Parameter is initialized with. This function returns null if
+   *     the {ParamVariableDeclaration, TypeParamDeclaration} do not match the provided value for
+   *     initialization -> initialization not possible
+   */
+  @Nullable
   private Map<Declaration, Node> constructTemplateInitializationSignatureFromTemplateParameters(
       FunctionTemplateDeclaration functionTemplateDeclaration,
       CallExpression templateCall,
@@ -407,6 +455,28 @@ public class CallResolver extends Pass {
     return instantiationSignature;
   }
 
+  /**
+   * Creates a Mapping between the Paramerters of the TemplateDeclaration and the Values provided *
+   * for the instantiation of the template.
+   *
+   * <p>The difference to {@link
+   * CallResolver#constructTemplateInitializationSignatureFromTemplateParameters} is that this one
+   * also takes into account defaults and auto deductions
+   *
+   * <p>Additionally, it fills the maps and lists mentioned below:
+   *
+   * @param functionTemplateDeclaration functionTemplate we have identified that should be
+   *     instantiated
+   * @param templateCall callExpression that instantiates the template
+   * @param instantiationType mapping of the instantiation value to the instantiation type (depends
+   *     on resolution {@link TemplateDeclaration.TemplateInitialization}
+   * @param orderedInitializationSignature mapping of the ordering of the template parameters
+   * @param explicitInstantiated list of all ParameterizedTypes which are explicitly instantiated
+   * @return mapping containing the all elements of the signature of the TemplateDeclaration as key
+   *     and the Type/Expression the Parameter is initialized with. This function returns null if
+   *     the {ParamVariableDeclaration, TypeParamDeclaration} do not match the provided value for
+   *     initialization -> initialization not possible
+   */
   private Map<Declaration, Node> getTemplateInitializationSignature(
       FunctionTemplateDeclaration functionTemplateDeclaration,
       CallExpression templateCall,
@@ -449,7 +519,7 @@ public class CallResolver extends Pass {
 
   /**
    * @param curClass class the invoked method must be part of.
-   * @param templateCall call to instantiate and invoke a function temaplte
+   * @param templateCall call to instantiate and invoke a function template
    * @param applyDummy if the resolution was unsuccessful and applyDummy is true the call will
    *     resolve to a instantiation/invocation of a dummy template
    * @return true if resolution was successful, false if not
@@ -521,6 +591,24 @@ public class CallResolver extends Pass {
     return false;
   }
 
+  /**
+   * Performs all necessary steps to make a CallExpression instantiate a template: 1. Set
+   * TemplateInstantiation Edge from CallExpression to Template 2. Set Invokes Edge to all
+   * realizations of the Tempalte 3. Set return type of the CallExpression and checks if it uses a
+   * ParameterizedType and therefore has to be instantiated 4. Set Template Parameters Edge from the
+   * CallExpression to all Instantiation Values 5. Set DFG Edges from instantiation to
+   * ParamVariableDeclaration in TemplateDeclaration
+   *
+   * @param templateCall call to instantiate and invoke a function template
+   * @param functionTemplateDeclaration functionTemplate we have identified that should be
+   *     instantiated
+   * @param function FunctionDeclaration representing the realization of the template
+   * @param initializationSignature mapping containing the all elements of the signature of the
+   *     TemplateDeclaration as key and the Type/Expression the Parameter is initialized with.
+   * @param initializationType mapping of the instantiation value to the instantiation type (depends
+   *     on resolution {@link TemplateDeclaration.TemplateInitialization}
+   * @param orderedInitializationSignature mapping of the ordering of the template parameters
+   */
   private void applyTemplateInstantiation(
       CallExpression templateCall,
       FunctionTemplateDeclaration functionTemplateDeclaration,
@@ -581,6 +669,15 @@ public class CallResolver extends Pass {
     }
   }
 
+  /**
+   * @param functionDeclaration FunctionDeclaration realization of the template
+   * @param functionDeclarationSignature Signature of the realization FunctionDeclaration, but
+   *     replacing the ParameterizedTypes with the ones provided in the instantiation
+   * @param templateCallExpression CallExpression that instantiates the template
+   * @param explicitInstantiation list of the explicitly instantiated type paramters
+   * @return true if the instantiation of the template is compatible with the templatedeclaration,
+   *     false otherwise
+   */
   private boolean checkArgumentValidity(
       FunctionDeclaration functionDeclaration,
       List<Type> functionDeclarationSignature,
@@ -613,6 +710,16 @@ public class CallResolver extends Pass {
     return false;
   }
 
+  /**
+   * @param function FunctionDeclaration realization of the template
+   * @param parameterizedTypeResolution mapping of ParameterizedTypes to the TypeParamDeclarations
+   *     that define them, used to backwards resolve
+   * @param initializationSignature mapping between the ParamDeclaration of the template and the
+   *     corresponding instantiations
+   * @return List of Types representing the Signature of the FunctionDeclaration, but
+   *     ParameterizedTypes (which depend on the specific instantiation of the template) are
+   *     resolved to the values the Template is instantiated with.
+   */
   private List<Type> getCallSignature(
       FunctionDeclaration function,
       Map<ParameterizedType, TypeParamDeclaration> parameterizedTypeResolution,
@@ -967,6 +1074,7 @@ public class CallResolver extends Pass {
       // C++ allows function overloading. Make sure we have at least the same number of arguments
       List<FunctionDeclaration> invocationCandidates = null;
       if (this.getLang() instanceof CXXLanguageFrontend) {
+        // Handle CXX normal call resolution externally, otherwise it leads to increased complexity
         handleNormalCallCXX(curClass, call);
       } else {
         invocationCandidates = lang.getScopeManager().resolveFunction(call);
@@ -1443,6 +1551,14 @@ public class CallResolver extends Pass {
     }
   }
 
+  /**
+   * Create a dummy FunctionTemplateDeclaration if a call to an FunctionTemplate could not be
+   * resolved
+   *
+   * @param containingRecord
+   * @param call
+   * @return dummy FunctionTemplateDeclaration which can be invoked by the call
+   */
   private FunctionTemplateDeclaration createFunctionTemplateDummy(
       RecordDeclaration containingRecord, CallExpression call) {
     String name = call.getName();

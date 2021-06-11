@@ -40,9 +40,10 @@ import org.neo4j.ogm.annotation.Relationship;
 /** Abstract class representing the template concept */
 public abstract class TemplateDeclaration extends Declaration implements DeclarationHolder {
   public enum TemplateInitialization {
-    AUTO_DEDUCTION,
-    DEFAULT,
-    EXPLICIT,
+    AUTO_DEDUCTION, // Template Parameter is deduced automatically due to matching type provided in
+    // the function signature
+    DEFAULT, // Template Parameter uses the default value for instantiation
+    EXPLICIT, // Template Parameter is provided explicitly
     UNKNOWN
   }
 

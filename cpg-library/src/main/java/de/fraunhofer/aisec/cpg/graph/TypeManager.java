@@ -89,6 +89,13 @@ public class TypeManager {
     INSTANCE = new TypeManager();
   }
 
+  /**
+   * @param recordDeclaration that is instantiated by a template containing parameterizedtypes
+   * @param name of the ParameterizedType we want to get
+   * @return ParameterizedType if there is a parameterized type defined in the recordDeclaration
+   *     with matching name, null instead
+   */
+  @Nullable
   public ParameterizedType getTypeParameter(RecordDeclaration recordDeclaration, String name) {
     if (this.recordToTypeParameters.containsKey(recordDeclaration)) {
       for (ParameterizedType parameterizedType :
@@ -101,11 +108,27 @@ public class TypeManager {
     return null;
   }
 
+  /**
+   * Adds a List of ParameterizedType to {@link TypeManager#recordToTypeParameters}
+   *
+   * @param recordDeclaration will be stored as key for the map
+   * @param typeParameters List containing all ParameterizedTypes used by the recordDeclaration and
+   *     will be stored as value in the map
+   */
   public void addTypeParameter(
       RecordDeclaration recordDeclaration, List<ParameterizedType> typeParameters) {
     this.recordToTypeParameters.put(recordDeclaration, typeParameters);
   }
 
+  /**
+   * Searches {@link TypeManager#templateToTypeParameters} for ParameterizedTypes that were defined
+   * in a template matching the provided name
+   *
+   * @param templateDeclaration that includes the ParameterizedType we are looking for
+   * @param name name of the ParameterizedType we are looking for
+   * @return
+   */
+  @Nullable
   public ParameterizedType getTypeParameter(TemplateDeclaration templateDeclaration, String name) {
     if (this.templateToTypeParameters.containsKey(templateDeclaration)) {
       for (ParameterizedType parameterizedType :
@@ -118,6 +141,12 @@ public class TypeManager {
     return null;
   }
 
+  /**
+   * @param templateDeclaration
+   * @return List containing all ParameterizedTypes the templateDeclaration defines. If the
+   *     templateDeclaration is not registered, an empty list is returned.
+   */
+  @NonNull
   public List<ParameterizedType> getAllParameterizedType(TemplateDeclaration templateDeclaration) {
     if (this.templateToTypeParameters.containsKey(templateDeclaration)) {
       return this.templateToTypeParameters.get(templateDeclaration);
@@ -125,6 +154,16 @@ public class TypeManager {
     return new ArrayList<>();
   }
 
+  /**
+   * Searches for ParameterizedType if the scope is a TemplateScope. If not we search the parent
+   * scope until we reach the top.
+   *
+   * @param scope in which we are searching for the defined ParameterizedTypes
+   * @param name of the ParameterizedType
+   * @return ParameterizedType that is found within the scope (or any parent scope) and matches the
+   *     provided name. Null if we reach the top of the scope without finding a matching
+   *     ParameterizedType
+   */
   public ParameterizedType searchTemplateScopeForDefinedParameterizedTypes(
       Scope scope, String name) {
     if (scope instanceof TemplateScope) {
@@ -140,6 +179,13 @@ public class TypeManager {
         : null;
   }
 
+  /**
+   * Adds ParameterizedType to the {@link TypeManager#templateToTypeParameters} to be able to
+   * resolve this type when it is used
+   *
+   * @param templateDeclaration key for {@link TypeManager#templateToTypeParameters}
+   * @param typeParameter ParameterizedType we want to register
+   */
   public void addTypeParameter(
       TemplateDeclaration templateDeclaration, ParameterizedType typeParameter) {
     if (this.templateToTypeParameters.containsKey(templateDeclaration)) {
@@ -151,13 +197,21 @@ public class TypeManager {
     }
   }
 
+  /**
+   * Check if a ParameterizedType with name typeName is already registered. If so we return the
+   * already created ParameterizedType. If not, we create and return a new ParameterizedType
+   *
+   * @param templateDeclaration in which the ParameterizedType is defined
+   * @param typeName name of the ParameterizedType
+   * @return
+   */
   public ParameterizedType createOrGetTypeParameter(
-      TemplateDeclaration templateDeclaration, String type) {
-    ParameterizedType parameterizedType = getTypeParameter(templateDeclaration, type);
+      TemplateDeclaration templateDeclaration, String typeName) {
+    ParameterizedType parameterizedType = getTypeParameter(templateDeclaration, typeName);
     if (parameterizedType != null) {
       return parameterizedType;
     } else {
-      parameterizedType = new ParameterizedType(type);
+      parameterizedType = new ParameterizedType(typeName);
       addTypeParameter(templateDeclaration, parameterizedType);
       return parameterizedType;
     }

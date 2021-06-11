@@ -25,6 +25,11 @@
  */
 package de.fraunhofer.aisec.cpg.graph;
 
+/**
+ * Interface that allows us to mark nodes that contain a default value
+ *
+ * @param <T> type of the default node
+ */
 public interface HasDefault<T extends Node> {
 
   public T getDefault();

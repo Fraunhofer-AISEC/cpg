@@ -258,6 +258,12 @@ public class TypeResolver extends Pass {
     }
   }
 
+  /**
+   * ensures that the if a nodes contains secondary type edges, those types are also merged and no
+   * duplicate is left
+   *
+   * @param node implementing {@link HasType.SecondaryTypeEdge}
+   */
   public void ensureUniqueSecondaryTypeEdge(Node node) {
     if (node instanceof HasType.SecondaryTypeEdge) {
       ((HasType.SecondaryTypeEdge) node).updateType(typeState.keySet());

@@ -226,6 +226,12 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
     return newExpression;
   }
 
+  /**
+   * Gets all the types from the provided TypeExpressions that were used to instantiate the template
+   *
+   * @param template
+   * @return List of Types declared by the TypeExpressions included in the template instantiation
+   */
   private List<Type> getTemplateTypeArguments(CPPASTTemplateId template) {
     List<Type> typeArguments = new ArrayList<>();
     for (Node argument : getTemplateArguments(template)) {
@@ -236,6 +242,13 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
     return typeArguments;
   }
 
+  /**
+   * Gets all arguments a template was instantiated with. Note, that the arguments can either be
+   * Expressions referring to a value ot TypeExpressions referring to a type.
+   *
+   * @param template
+   * @return List of Nodes containing the all the arguments the template was instantiated with.
+   */
   private List<Node> getTemplateArguments(CPPASTTemplateId template) {
     List<Node> templateArguments = new ArrayList<>();
     for (IASTNode argument : template.getTemplateArguments()) {

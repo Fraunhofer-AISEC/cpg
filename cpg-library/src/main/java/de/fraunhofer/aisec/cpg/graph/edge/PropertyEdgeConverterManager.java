@@ -31,6 +31,14 @@ import java.util.Map;
 import java.util.function.Function;
 import org.checkerframework.checker.nullness.qual.NonNull;
 
+/**
+ * Since Neo4J uses the PropertyEdgeConverter (as it implements the CompositeAttributeConverter
+ * interface), we cannot define it as a singleton, as it requires to have a constructor. We want to
+ * be able to dynamically define converters for PropertyEdges that have more complex structures such
+ * as enums or custom classes, we need a singleton to be able to add the converters. Refer to the
+ * documentation of {@link PropertyEdgeConverter} to see which primitives are supported by default,
+ * and which require a custom converter.
+ */
 public class PropertyEdgeConverterManager {
   @NonNull
   private static PropertyEdgeConverterManager INSTANCE = new PropertyEdgeConverterManager();
