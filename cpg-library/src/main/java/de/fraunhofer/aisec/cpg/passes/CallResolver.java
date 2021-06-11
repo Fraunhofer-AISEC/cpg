@@ -632,11 +632,11 @@ public class CallResolver extends Pass {
     Type returnType = function.getType();
     Map<ParameterizedType, TypeParamDeclaration> parameterizedTypeResolution =
         getParameterizedSignaturesFromInitialization(initializationSignature);
-    if (function.getType() instanceof ParameterizedType) {
+    if (returnType instanceof ParameterizedType) {
       returnType =
           ((TypeExpression)
                   initializationSignature.get(
-                      parameterizedTypeResolution.get((ParameterizedType) returnType)))
+                      parameterizedTypeResolution.get(returnType)))
               .getType();
     }
     templateCall.setType(returnType);
