@@ -134,7 +134,7 @@ public class TranslationManager {
             }
           }
           return result;
-        }).orTimeout(5, TimeUnit.MINUTES);
+        });
   }
 
   public List<Pass> getPasses() {
