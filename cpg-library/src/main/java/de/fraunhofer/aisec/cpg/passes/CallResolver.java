@@ -635,8 +635,7 @@ public class CallResolver extends Pass {
     if (returnType instanceof ParameterizedType) {
       returnType =
           ((TypeExpression)
-                  initializationSignature.get(
-                      parameterizedTypeResolution.get(returnType)))
+                  initializationSignature.get(parameterizedTypeResolution.get(returnType)))
               .getType();
     }
     templateCall.setType(returnType);
