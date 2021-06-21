@@ -41,7 +41,6 @@ class Neo4jPlugin : Plugin {
 
         override fun execute(line: String): Command.Result {
             val p = line.indexOf(' ')
-            val host = line.substring(p + 1).trim()
 
             return Command.Result.RunSnippets(
                 listOf(
@@ -50,8 +49,6 @@ class Neo4jPlugin : Plugin {
                     "neo4j.pushToNeo4j(result)"
                 )
             )
-
-            // return Command.Result.RunSnippets(listOf(content))
         }
     }
 
@@ -63,5 +60,7 @@ class Neo4jPlugin : Plugin {
         repl.registerCommand(Load(config))
     }
 
-    override fun cleanUp() {}
+    override fun cleanUp() {
+        // nothing to do
+    }
 }

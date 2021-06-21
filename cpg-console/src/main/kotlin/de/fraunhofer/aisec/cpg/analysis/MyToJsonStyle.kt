@@ -29,26 +29,14 @@ import org.apache.commons.lang3.builder.ToStringStyle
 
 // ----------------------------------------------------------------------------
 class MultiLineToStringStyle internal constructor() : ToStringStyle() {
-    /**
-     *
-     * Ensure `Singleton` after serialization.
-     *
-     * @return the singleton
-     */
     private fun readResolve(): Any {
-        return MULTI_LINE_STYLE
+        return this
     }
 
     companion object {
         private const val serialVersionUID = 1L
     }
 
-    /**
-     *
-     * Constructor.
-     *
-     * Use the static constant rather than instantiating.
-     */
     init {
         this.isUseIdentityHashCode = false
         this.isUseShortClassName = true

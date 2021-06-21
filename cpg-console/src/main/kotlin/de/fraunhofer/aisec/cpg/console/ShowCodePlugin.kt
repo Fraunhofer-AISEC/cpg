@@ -44,8 +44,6 @@ class ShowCodePlugin : Plugin {
             val node = line.substring(p + 1).trim()
 
             return Command.Result.RunSnippets(listOf("${node}.printCode(0, true)"))
-
-            // return Command.Result.RunSnippets(listOf(content))
         }
     }
 
@@ -57,5 +55,7 @@ class ShowCodePlugin : Plugin {
         repl.registerCommand(Load(config))
     }
 
-    override fun cleanUp() {}
+    override fun cleanUp() {
+        // nothing to do
+    }
 }
