@@ -131,7 +131,7 @@ dependencies {
     api("com.github.javaparser:javaparser-symbol-solver-core:3.22.0")
 
     // Eclipse dependencies
-    api("org.eclipse.platform:org.eclipse.core.runtime:3.20.100")
+    api("org.eclipse.platform:org.eclipse.core.runtime:3.22.0")
     api("com.ibm.icu:icu4j:68.2")
 
     // CDT
