@@ -75,7 +75,7 @@ class TranslatePlugin : Plugin {
                         path +
                         "\"))\n" +
                         "                    .defaultLanguages()\n" +
-                        "                    .registerLanguage(GoLanguageFrontend::class.java, GoLanguageFrontend.GOLANG_EXTENSIONS)" +
+//                      "                    .registerLanguage(GoLanguageFrontend::class.java, GoLanguageFrontend.GOLANG_EXTENSIONS)" +
                         "                    .defaultPasses()\n" +
                         "                    .build()",
                     "val analyzer = TranslationManager.builder().config(config).build()",
@@ -97,7 +97,5 @@ class TranslatePlugin : Plugin {
         repl.registerCommand(Load(config))
     }
 
-    override fun cleanUp() {
-        // nothing to do
-    }
+    override fun cleanUp() {}
 }
