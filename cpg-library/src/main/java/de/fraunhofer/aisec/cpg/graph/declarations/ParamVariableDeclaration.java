@@ -27,12 +27,13 @@ package de.fraunhofer.aisec.cpg.graph.declarations;
 
 import de.fraunhofer.aisec.cpg.graph.SubGraph;
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression;
+import org.jetbrains.annotations.NotNull;
 import org.neo4j.ogm.annotation.Relationship;
 
 /** A declaration of a function parameter. */
 public class ParamVariableDeclaration extends ValueDeclaration {
 
-  private boolean variadic = false;
+  @NotNull private boolean variadic = false;
 
   @Relationship(value = "DEFAULT", direction = "OUTGOING")
   @SubGraph("AST")

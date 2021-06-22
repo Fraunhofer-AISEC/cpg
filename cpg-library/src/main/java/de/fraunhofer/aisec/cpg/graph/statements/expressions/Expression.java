@@ -64,7 +64,8 @@ public class Expression extends Statement implements HasType {
 
   @Override
   public Type getType() {
-    // just to make sure that we REALLY always return a valid type in case this somehow gets set to
+    // just to make sure that we REALLY always return a valid type in case this
+    // somehow gets set to
     // null
     return type != null ? type : UnknownType.getUnknownType();
   }
@@ -89,7 +90,8 @@ public class Expression extends Statement implements HasType {
 
   @Override
   public void setType(Type type, HasType root) {
-    // TODO Document this method. It is called very often (potentially for each AST node) and
+    // TODO Document this method. It is called very often (potentially for each AST
+    // node) and
     // performs less than optimal.
     if (type == null || root == this) {
       return;
@@ -215,7 +217,6 @@ public class Expression extends Statement implements HasType {
     return new ToStringBuilder(this, Node.TO_STRING_STYLE)
         .appendSuper(super.toString())
         .append("type", type)
-        .append("possibleSubTypes", possibleSubTypes)
         .toString();
   }
 

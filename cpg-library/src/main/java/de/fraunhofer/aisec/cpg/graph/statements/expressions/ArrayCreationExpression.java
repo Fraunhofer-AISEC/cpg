@@ -48,7 +48,7 @@ public class ArrayCreationExpression extends Expression implements TypeListener 
    * {@link #dimensions} or an initializer.
    */
   @SubGraph("AST")
-  private InitializerListExpression initializer;
+  private Expression initializer;
 
   /**
    * Specifies the dimensions of the array that is to be created. Many languages, such as Java,
@@ -59,11 +59,11 @@ public class ArrayCreationExpression extends Expression implements TypeListener 
   @SubGraph("AST")
   private List<PropertyEdge<Expression>> dimensions = new ArrayList<>();
 
-  public InitializerListExpression getInitializer() {
+  public Expression getInitializer() {
     return initializer;
   }
 
-  public void setInitializer(InitializerListExpression initializer) {
+  public void setInitializer(Expression initializer) {
     if (this.initializer != null) {
       this.initializer.unregisterTypeListener(this);
       this.removePrevDFG(initializer);

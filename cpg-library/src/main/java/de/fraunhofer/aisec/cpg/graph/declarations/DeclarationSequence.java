@@ -31,6 +31,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import org.checkerframework.checker.nullness.qual.NonNull;
+import org.jetbrains.annotations.NotNull;
 import org.neo4j.ogm.annotation.Relationship;
 
 /**
@@ -76,5 +77,10 @@ public class DeclarationSequence extends Declaration implements DeclarationHolde
 
   public Declaration first() {
     return children.get(0).getEnd();
+  }
+
+  @NotNull
+  public List<Declaration> getDeclarations() {
+    return getChildren();
   }
 }
