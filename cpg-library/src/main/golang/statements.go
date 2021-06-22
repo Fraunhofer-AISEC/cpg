@@ -150,7 +150,7 @@ func (m *IfStatement) SetElseStatement(s *Statement) {
 }
 
 func (m *IfStatement) SetCondition(e *Expression) {
-	(*jnigi.ObjectRef)(m).SetField(env, "condition", (*jnigi.ObjectRef)(e).Cast("de/fraunhofer/aisec/cpg/graph/statements/expressions/Expression"))
+	(*jnigi.ObjectRef)(m).CallMethod(env, "setCondition", jnigi.Void, (*jnigi.ObjectRef)(e).Cast("de/fraunhofer/aisec/cpg/graph/statements/expressions/Expression"))
 }
 
 func (s *SwitchStatement) SetCondition(e *Expression) {

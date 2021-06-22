@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.edge
 
+import com.fasterxml.jackson.annotation.JsonIgnore
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.Persistable
 import java.lang.reflect.Field
@@ -43,7 +44,7 @@ open class PropertyEdge<T : Node> : Persistable {
     @field:Id @field:GeneratedValue private val id: Long? = null
 
     // Node where the edge is outgoing
-    @field:StartNode var start: Node
+    @JsonIgnore @field:StartNode var start: Node
 
     // Node where the edge is ingoing
     @field:EndNode var end: T
@@ -51,24 +52,21 @@ open class PropertyEdge<T : Node> : Persistable {
     constructor(start: Node, end: T) {
         this.start = start
         this.end = end
+
         properties = EnumMap(Properties::class.java)
     }
 
-    constructor(propertyEdge: PropertyEdge<T>) {
-        start = propertyEdge.start
-        end = propertyEdge.end
-        properties = EnumMap(Properties::class.java)
+    constructor(propertyEdge: PropertyEdge<T>) : this(propertyEdge.start, propertyEdge.end) {
         properties.putAll(propertyEdge.properties)
     }
 
-    constructor(start: Node, end: T, properties: MutableMap<Properties, Any?>) {
-        this.start = start
-        this.end = end
+    constructor(start: Node, end: T, properties: MutableMap<Properties, Any?>) : this(start, end) {
         this.properties = properties
     }
 
     /** Map containing all properties of an edge */
     @Convert(PropertyEdgeConverter::class) private var properties: MutableMap<Properties, Any?>
+
     fun getProperty(property: Properties): Any? {
         return properties.getOrDefault(property, null)
     }
@@ -138,19 +136,27 @@ open class PropertyEdge<T : Node> : Persistable {
          * @return List of PropertyEdges with the targets of the nodes and index property.
          */
         @JvmStatic
-        fun <T : Node> transformIntoOutgoingPropertyEdgeList(
+        @JvmOverloads
+        fun <T : Node, P : PropertyEdge<T>> transformIntoOutgoingPropertyEdgeList(
             nodes: List<T>,
-            commonRelationshipNode: Node
-        ): MutableList<PropertyEdge<T>> {
-            val propertyEdges: MutableList<PropertyEdge<T>> = ArrayList()
+            commonRelationshipNode: Node,
+            clazz: Class<in P> = PropertyEdge::class.java
+        ): MutableList<P> {
+            val propertyEdges: MutableList<P> = ArrayList()
             for (n in nodes) {
-                propertyEdges.add(PropertyEdge(commonRelationshipNode, n))
+                val edge =
+                    clazz
+                        .getConstructor(Node::class.java, Node::class.java)
+                        .newInstance(commonRelationshipNode, n)
+
+                propertyEdges.add(edge as P)
             }
+
             return propertyEdges
         }
 
         /**
-         * Unwraps this property edge into a list of its target nodes.
+         * Unwraps this list-based property edge into a list of its target nodes.
          *
          * @param collection the collection of edges
          * @param outgoing whether it is outgoing or not
@@ -164,6 +170,20 @@ open class PropertyEdge<T : Node> : Persistable {
             outgoing: Boolean = true
         ): List<T> {
             return collection.map { if (outgoing) it.end else it.start as T }
+        }
+
+        /**
+         * Unwraps this property edge into its target node.
+         *
+         * @param edge the collection of edges
+         * @param outgoing whether it is outgoing or not
+         * @param <T> the type of the edges
+         * @return the list of target nodes </T>
+         */
+        @JvmStatic
+        @JvmOverloads
+        fun <T : Node> unwrap(edge: PropertyEdge<T>, outgoing: Boolean = true): T {
+            return if (outgoing) edge.end else edge.start as T
         }
 
         /**
@@ -214,13 +234,10 @@ open class PropertyEdge<T : Node> : Persistable {
          * @return node or collection representing target of edge
          */
         @JvmStatic
-        fun unwrapPropertyEdge(obj: Any, outgoing: Boolean): Any {
+        @JvmOverloads
+        fun unwrapPropertyEdge(obj: Any, outgoing: Boolean = true): Any {
             if (obj is PropertyEdge<*>) {
-                return if (outgoing) {
-                    obj.end
-                } else {
-                    obj.start
-                }
+                return unwrap(obj, outgoing)
             } else if (obj is Collection<*> && !obj.isEmpty()) {
                 return unwrapPropertyEdgeCollection(obj, outgoing)
             }
@@ -240,10 +257,10 @@ open class PropertyEdge<T : Node> : Persistable {
                 return true
             } else if (obj is Collection<*>) {
                 val collectionTypes =
-                    java.util.List.of(*(f.genericType as ParameterizedType).actualTypeArguments)
+                    listOf(*(f.genericType as ParameterizedType).actualTypeArguments)
                 for (t in collectionTypes) {
                     if (t is ParameterizedType) {
-                        return t.rawType == PropertyEdge::class.java
+                        return PropertyEdge::class.java.isAssignableFrom(t.rawType as Class<*>)
                     } else if (PropertyEdge::class.java == t) {
                         return true
                     }
@@ -260,7 +277,7 @@ open class PropertyEdge<T : Node> : Persistable {
         ): List<PropertyEdge<T>> {
             val newPropertyEdges: MutableList<PropertyEdge<T>> = ArrayList()
             for (propertyEdge in propertyEdges) {
-                if (end && !propertyEdge.end!!.equals(element)) {
+                if (end && !propertyEdge.end.equals(element)) {
                     newPropertyEdges.add(propertyEdge)
                 }
                 if (!end && !propertyEdge.start.equals(element)) {

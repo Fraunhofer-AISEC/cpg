@@ -1,3 +1,5 @@
+import org.jetbrains.kotlin.noarg.gradle.NoArgExtension
+
 /*
  * Copyright (c) 2021, Fraunhofer AISEC. All rights reserved.
  *
@@ -29,6 +31,11 @@ plugins {
     signing
 
     id("com.github.johnrengelman.shadow")
+    id("org.jetbrains.kotlin.plugin.noarg") version "1.5.0"
+}
+
+configure<NoArgExtension> {
+    annotation("org.neo4j.ogm.annotation.RelationshipEntity")
 }
 
 publishing {

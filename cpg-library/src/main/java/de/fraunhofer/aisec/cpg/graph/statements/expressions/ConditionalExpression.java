@@ -25,11 +25,14 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements.expressions;
 
+import static de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.unwrap;
+
 import de.fraunhofer.aisec.cpg.graph.HasType;
 import de.fraunhofer.aisec.cpg.graph.HasType.TypeListener;
 import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.SubGraph;
 import de.fraunhofer.aisec.cpg.graph.TypeManager;
+import de.fraunhofer.aisec.cpg.graph.edge.Condition;
 import de.fraunhofer.aisec.cpg.graph.types.Type;
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType;
 import java.util.*;
@@ -42,7 +45,7 @@ import org.apache.commons.lang3.builder.ToStringBuilder;
 public class ConditionalExpression extends Expression implements TypeListener {
 
   @SubGraph("AST")
-  private Expression condition;
+  private Condition condition;
 
   @SubGraph("AST")
   private Expression thenExpr;
@@ -51,11 +54,11 @@ public class ConditionalExpression extends Expression implements TypeListener {
   private Expression elseExpr;
 
   public Expression getCondition() {
-    return condition;
+    return unwrap(condition);
   }
 
-  public void setCondition(Expression condition) {
-    this.condition = condition;
+  public void setCondition(Expression expression) {
+    this.condition = new Condition(this, expression);
   }
 
   public Expression getThenExpr() {

@@ -25,9 +25,12 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements;
 
+import static de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.unwrap;
+
 import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.SubGraph;
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration;
+import de.fraunhofer.aisec.cpg.graph.edge.Condition;
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression;
 import java.util.Objects;
 import org.apache.commons.lang3.builder.ToStringBuilder;
@@ -41,7 +44,7 @@ public class WhileStatement extends Statement {
 
   /** The condition that decides if the block is executed. */
   @SubGraph("AST")
-  private Expression condition;
+  private Condition condition;
 
   /**
    * The statement that is going to be executed, until the condition evaluates to false for the
@@ -59,11 +62,11 @@ public class WhileStatement extends Statement {
   }
 
   public Expression getCondition() {
-    return condition;
+    return unwrap(condition);
   }
 
   public void setCondition(Expression condition) {
-    this.condition = condition;
+    this.condition = new Condition(this, condition);
   }
 
   public Statement getStatement() {

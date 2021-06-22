@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.graph.HasType.TypeListener;
 import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.SubGraph;
 import de.fraunhofer.aisec.cpg.graph.TypeManager;
+import de.fraunhofer.aisec.cpg.graph.edge.Initializer;
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression;
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.InitializerListExpression;
 import de.fraunhofer.aisec.cpg.graph.types.Type;
@@ -47,7 +48,8 @@ public class FieldDeclaration extends ValueDeclaration implements TypeListener {
 
   @SubGraph("AST")
   @Nullable
-  private Expression initializer;
+  @Relationship
+  private Initializer initializer;
 
   /** Specifies, whether this field declaration is also a definition, i.e. has an initializer. */
   private boolean isDefinition = false;
@@ -81,24 +83,26 @@ public class FieldDeclaration extends ValueDeclaration implements TypeListener {
 
   @Nullable
   public Expression getInitializer() {
-    return initializer;
+    return initializer != null ? initializer.getEnd() : null;
   }
 
-  public void setInitializer(Expression initializer) {
+  public void setInitializer(Expression expression) {
     if (this.initializer != null) {
       setIsDefinition(true);
-      this.initializer.unregisterTypeListener(this);
-      this.removePrevDFG(this.initializer);
-      if (this.initializer instanceof TypeListener) {
-        this.unregisterTypeListener((TypeListener) this.initializer);
+      this.initializer.getEnd().unregisterTypeListener(this);
+      this.removePrevDFG(this.initializer.getEnd());
+      if (this.initializer.getEnd() instanceof TypeListener) {
+        this.unregisterTypeListener((TypeListener) this.initializer.getEnd());
       }
     }
-    this.initializer = initializer;
-    if (initializer != null) {
-      initializer.registerTypeListener(this);
-      this.addPrevDFG(initializer);
-      if (initializer instanceof TypeListener) {
-        this.registerTypeListener((TypeListener) initializer);
+
+    this.initializer = new Initializer(this, expression);
+
+    if (expression != null) {
+      expression.registerTypeListener(this);
+      this.addPrevDFG(expression);
+      if (expression instanceof TypeListener) {
+        this.registerTypeListener((TypeListener) expression);
       }
     }
   }
@@ -136,7 +140,7 @@ public class FieldDeclaration extends ValueDeclaration implements TypeListener {
 
     Type previous = this.type;
     Type newType;
-    if (src == initializer && initializer instanceof InitializerListExpression) {
+    if (src == getInitializer() && getInitializer() instanceof InitializerListExpression) {
       // Init list is seen as having an array type, but can be used ambiguously. It can be either
       // used to initialize an array, or to initialize some objects. If it is used as an
       // array initializer, we need to remove the array/pointer layer from the type, otherwise it

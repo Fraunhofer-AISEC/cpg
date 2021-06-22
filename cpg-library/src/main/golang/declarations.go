@@ -84,11 +84,13 @@ func (m *MethodDeclaration) SetType(t *Type) {
 }
 
 func (m *MethodDeclaration) SetReceiver(v *VariableDeclaration) error {
-	return (*jnigi.ObjectRef)(m).SetField(env, "receiver", (*jnigi.ObjectRef)(v))
+	_, err := (*jnigi.ObjectRef)(m).CallMethod(env, "setReceiver", jnigi.Void, (*jnigi.ObjectRef)(v))
+
+	return err
 }
 
 func (m *MethodDeclaration) GetReceiver() *VariableDeclaration {
-	o, err := (*jnigi.ObjectRef)(m).GetField(env, "receiver", jnigi.ObjectType("de/fraunhofer/aisec/cpg/graph/declarations/VariableDeclaration"))
+	o, err := (*jnigi.ObjectRef)(m).CallMethod(env, "getReceiver", jnigi.ObjectType("de/fraunhofer/aisec/cpg/graph/declarations/VariableDeclaration"))
 
 	if err != nil {
 		log.Fatal(err)

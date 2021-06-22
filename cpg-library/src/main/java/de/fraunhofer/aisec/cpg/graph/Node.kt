@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.graph
 
 import de.fraunhofer.aisec.cpg.graph.declarations.TypedefDeclaration
+import de.fraunhofer.aisec.cpg.graph.edge.AstChild
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.helpers.LocationConverter
@@ -36,12 +37,14 @@ import org.apache.commons.lang3.builder.ToStringBuilder
 import org.apache.commons.lang3.builder.ToStringStyle
 import org.neo4j.ogm.annotation.GeneratedValue
 import org.neo4j.ogm.annotation.Id
+import org.neo4j.ogm.annotation.NodeEntity
 import org.neo4j.ogm.annotation.Relationship
 import org.neo4j.ogm.annotation.typeconversion.Convert
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
 /** The base class for all graph objects that are going to be persisted in the database. */
+@NodeEntity
 open class Node : IVisitable<Node>, Persistable {
     /** A human readable name. */
     open var name = EMPTY_NAME // initialize it with an empty string
@@ -57,6 +60,18 @@ open class Node : IVisitable<Node>, Persistable {
 
     /** Location of the finding in source code. */
     @Convert(LocationConverter::class) var location: PhysicalLocation? = null
+
+    /**
+     * The parent edge. This is intentionally set to be transient, because, while it is an incoming
+     * edge in the graph, the type of edge is not known, since we have specific edges for different
+     * AST types.
+     */
+    @Transient var parent: AstChild<*>? = null
+
+    val parentNode: Node?
+        get() {
+            return parent?.start
+        }
 
     /**
      * Name of the containing file. It can be null for artificially created nodes or if just

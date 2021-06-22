@@ -25,8 +25,11 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements;
 
+import static de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.unwrap;
+
 import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.SubGraph;
+import de.fraunhofer.aisec.cpg.graph.edge.Condition;
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression;
 import java.util.Objects;
 import org.apache.commons.lang3.builder.ToStringBuilder;
@@ -36,7 +39,7 @@ public class DoStatement extends Statement {
 
   /** The loop condition that is evaluated after the loop statement and may trigger reevaluation. */
   @SubGraph("AST")
-  private Expression condition;
+  private Condition condition;
 
   /**
    * The statement that is going to be executed and reexecuted, until the condition evaluates to
@@ -46,11 +49,11 @@ public class DoStatement extends Statement {
   private Statement statement;
 
   public Expression getCondition() {
-    return condition;
+    return unwrap(condition);
   }
 
-  public void setCondition(Expression condition) {
-    this.condition = condition;
+  public void setCondition(Expression expression) {
+    this.condition = new Condition(this, expression);
   }
 
   public Statement getStatement() {

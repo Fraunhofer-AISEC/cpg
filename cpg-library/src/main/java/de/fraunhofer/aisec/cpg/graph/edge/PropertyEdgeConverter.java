@@ -57,11 +57,13 @@ public class PropertyEdgeConverter implements CompositeAttributeConverter<Map<Pr
     Map<String, Object> result = new HashMap<>();
     for (Map.Entry<Properties, Object> entry : value.entrySet()) {
       Object propertyValue = entry.getValue();
-      if (serializer.containsKey(propertyValue.getClass())) {
-        Object serializedProperty = serializer.get(propertyValue.getClass()).apply(propertyValue);
-        result.put(entry.getKey().name(), serializedProperty);
-      } else {
-        result.put(entry.getKey().name(), propertyValue);
+      if (propertyValue != null) {
+        if (serializer.containsKey(propertyValue.getClass())) {
+          Object serializedProperty = serializer.get(propertyValue.getClass()).apply(propertyValue);
+          result.put(entry.getKey().name(), serializedProperty);
+        } else {
+          result.put(entry.getKey().name(), propertyValue);
+        }
       }
     }
 

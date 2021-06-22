@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.graph.HasType.TypeListener;
 import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.SubGraph;
 import de.fraunhofer.aisec.cpg.graph.TypeManager;
+import de.fraunhofer.aisec.cpg.graph.edge.Initializer;
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression;
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.InitializerListExpression;
 import de.fraunhofer.aisec.cpg.graph.types.Type;
@@ -45,7 +46,7 @@ public class VariableDeclaration extends ValueDeclaration implements TypeListene
   /** The (optional) initializer of the declaration. */
   @SubGraph("AST")
   @Nullable
-  protected Expression initializer;
+  protected Initializer initializer;
 
   /**
    * C++ uses implicit constructor calls for statements like <code>A a;</code> but this only applies
@@ -77,7 +78,7 @@ public class VariableDeclaration extends ValueDeclaration implements TypeListene
 
   @Nullable
   public Expression getInitializer() {
-    return initializer;
+    return initializer != null ? initializer.getEnd() : null;
   }
 
   @Nullable
@@ -85,27 +86,27 @@ public class VariableDeclaration extends ValueDeclaration implements TypeListene
     return clazz.cast(getInitializer());
   }
 
-  public void setInitializer(@Nullable Expression initializer) {
+  public void setInitializer(@Nullable Expression expression) {
     if (this.initializer != null) {
-      this.removePrevDFG(this.initializer);
-      this.initializer.unregisterTypeListener(this);
+      this.removePrevDFG(this.initializer.getEnd());
+      this.initializer.getEnd().unregisterTypeListener(this);
 
-      if (this.initializer instanceof TypeListener) {
-        this.unregisterTypeListener((TypeListener) this.initializer);
+      if (this.initializer.getEnd() instanceof TypeListener) {
+        this.unregisterTypeListener((TypeListener) this.initializer.getEnd());
       }
     }
 
-    this.initializer = initializer;
+    if (expression != null) {
+      this.initializer = new Initializer(this, expression);
 
-    if (initializer != null) {
-      this.addPrevDFG(initializer);
-      initializer.registerTypeListener(this);
+      this.addPrevDFG(expression);
+      expression.registerTypeListener(this);
 
       // if the initializer implements a type listener, inform it about our type changes
       // since the type is tied to the declaration but it is convenient to have the type
       // information in the initializer, i.e. in a ConstructExpression.
-      if (initializer instanceof TypeListener) {
-        this.registerTypeListener((TypeListener) initializer);
+      if (expression instanceof TypeListener) {
+        this.registerTypeListener((TypeListener) expression);
       }
     }
   }
@@ -119,7 +120,7 @@ public class VariableDeclaration extends ValueDeclaration implements TypeListene
 
     Type previous = this.type;
     Type newType;
-    if (src == initializer && initializer instanceof InitializerListExpression) {
+    if (src == getInitializer() && getInitializer() instanceof InitializerListExpression) {
       // Init list is seen as having an array type, but can be used ambiguously. It can be either
       // used to initialize an array, or to initialize some objects. If it is used as an
       // array initializer, we need to remove the array/pointer layer from the type, otherwise it

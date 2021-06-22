@@ -28,6 +28,8 @@ package de.fraunhofer.aisec.cpg.graph.declarations;
 import static de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.unwrap;
 
 import de.fraunhofer.aisec.cpg.graph.*;
+import de.fraunhofer.aisec.cpg.graph.edge.AstChild;
+import de.fraunhofer.aisec.cpg.graph.edge.Body;
 import de.fraunhofer.aisec.cpg.graph.edge.Properties;
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement;
@@ -55,7 +57,8 @@ public class FunctionDeclaration extends ValueDeclaration implements Declaration
 
   /** The function body. Usually a {@link CompoundStatement}. */
   @SubGraph("AST")
-  protected Statement body;
+  @Nullable
+  protected Body body;
 
   /**
    * Classes and Structs can be declared inside a function and are only valid within the function.
@@ -66,7 +69,7 @@ public class FunctionDeclaration extends ValueDeclaration implements Declaration
   /** The list of function parameters. */
   @Relationship(value = "PARAMETERS", direction = "OUTGOING")
   @SubGraph("AST")
-  protected List<PropertyEdge<ParamVariableDeclaration>> parameters = new ArrayList<>();
+  protected List<AstChild<ParamVariableDeclaration>> parameters = new ArrayList<>();
 
   @Relationship(value = "THROWS_TYPES", direction = "OUTGOING")
   protected List<PropertyEdge<Type>> throwsTypes = new ArrayList<>();
@@ -198,13 +201,13 @@ public class FunctionDeclaration extends ValueDeclaration implements Declaration
   }
 
   public Statement getBody() {
-    return body;
+    return body != null ? body.getEnd() : null;
   }
 
   @Nullable
   public <T> T getBodyStatementAs(int i, Class<T> clazz) {
-    if (this.body instanceof CompoundStatement) {
-      Statement statement = ((CompoundStatement) this.body).getStatements().get(i);
+    if (this.getBody() instanceof CompoundStatement) {
+      var statement = ((CompoundStatement) this.getBody()).getStatements().get(i);
 
       if (statement == null) {
         return null;
@@ -217,16 +220,16 @@ public class FunctionDeclaration extends ValueDeclaration implements Declaration
   }
 
   public void setBody(Statement body) {
-    if (this.body instanceof ReturnStatement) {
-      this.removePrevDFG(this.body);
-    } else if (this.body instanceof CompoundStatement) {
-      ((CompoundStatement) this.body)
+    if (this.getBody() instanceof ReturnStatement) {
+      this.removePrevDFG(this.getBody());
+    } else if (this.getBody() instanceof CompoundStatement) {
+      ((CompoundStatement) this.getBody())
           .getStatements().stream()
               .filter(ReturnStatement.class::isInstance)
               .forEach(this::removePrevDFG);
     }
 
-    this.body = body;
+    this.body = new Body(this, body);
 
     if (body instanceof ReturnStatement) {
       this.addPrevDFG(body);
@@ -270,13 +273,12 @@ public class FunctionDeclaration extends ValueDeclaration implements Declaration
     return signatureTypes;
   }
 
-  public List<PropertyEdge<ParamVariableDeclaration>> getParametersPropertyEdge() {
+  public List<AstChild<ParamVariableDeclaration>> getParametersPropertyEdge() {
     return this.parameters;
   }
 
   public void addParameter(ParamVariableDeclaration paramVariableDeclaration) {
-    PropertyEdge<ParamVariableDeclaration> propertyEdge =
-        new PropertyEdge<>(this, paramVariableDeclaration);
+    var propertyEdge = new AstChild<>(this, paramVariableDeclaration);
     propertyEdge.addProperty(Properties.INDEX, this.parameters.size());
     this.parameters.add(propertyEdge);
   }
@@ -287,7 +289,10 @@ public class FunctionDeclaration extends ValueDeclaration implements Declaration
   }
 
   public void setParameters(List<ParamVariableDeclaration> parameters) {
-    this.parameters = PropertyEdge.transformIntoOutgoingPropertyEdgeList(parameters, this);
+    this.parameters =
+        PropertyEdge
+            .<ParamVariableDeclaration, AstChild<ParamVariableDeclaration>>
+                transformIntoOutgoingPropertyEdgeList(parameters, this, AstChild.class);
   }
 
   /**
@@ -297,8 +302,8 @@ public class FunctionDeclaration extends ValueDeclaration implements Declaration
    * @return an optional value containing the variable declaration if found
    */
   public Optional<VariableDeclaration> getVariableDeclarationByName(String name) {
-    if (body instanceof CompoundStatement) {
-      return ((CompoundStatement) body)
+    if (getBody() instanceof CompoundStatement) {
+      return ((CompoundStatement) getBody())
           .getStatements().stream()
               // only declaration statements
               .filter(statement -> statement instanceof DeclarationStatement)
@@ -386,7 +391,7 @@ public class FunctionDeclaration extends ValueDeclaration implements Declaration
   @Override
   public void addDeclaration(@NonNull Declaration declaration) {
     if (declaration instanceof ParamVariableDeclaration) {
-      addIfNotContains(parameters, (ParamVariableDeclaration) declaration);
+      addIfNotContains(parameters, new AstChild<>(this, (ParamVariableDeclaration) declaration));
     }
 
     if (declaration instanceof RecordDeclaration) {

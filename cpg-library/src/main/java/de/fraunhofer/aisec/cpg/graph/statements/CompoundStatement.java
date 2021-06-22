@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.graph.statements;
 import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.SubGraph;
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration;
+import de.fraunhofer.aisec.cpg.graph.edge.AstChild;
 import de.fraunhofer.aisec.cpg.graph.edge.Properties;
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import java.util.ArrayList;
@@ -47,7 +48,7 @@ public class CompoundStatement extends Statement {
   /** The list of statements. */
   @Relationship(value = "STATEMENTS", direction = "OUTGOING")
   @NonNull
-  private @SubGraph("AST") List<PropertyEdge<Statement>> statements = new ArrayList<>();
+  private @SubGraph("AST") List<AstChild<Statement>> statements = new ArrayList<>();
 
   @NonNull
   public List<Statement> getStatements() {
@@ -59,21 +60,23 @@ public class CompoundStatement extends Statement {
   }
 
   @NonNull
-  public List<PropertyEdge<Statement>> getStatementsPropertyEdge() {
+  public List<AstChild<Statement>> getStatementsPropertyEdge() {
     return this.statements;
   }
 
   public void setStatements(@NonNull List<Statement> statements) {
-    this.statements = PropertyEdge.transformIntoOutgoingPropertyEdgeList(statements, this);
+    this.statements =
+        PropertyEdge.<Statement, AstChild<Statement>>transformIntoOutgoingPropertyEdgeList(
+            statements, this, AstChild.class);
   }
 
   @NonNull
-  public List<PropertyEdge<Statement>> getStatementEdges() {
+  public List<AstChild<Statement>> getStatementEdges() {
     return this.statements;
   }
 
   public void addStatement(Statement s) {
-    PropertyEdge<Statement> propertyEdge = new PropertyEdge<>(this, s);
+    var propertyEdge = new AstChild<>(this, s);
     propertyEdge.addProperty(Properties.INDEX, this.statements.size());
     this.statements.add(propertyEdge);
   }
