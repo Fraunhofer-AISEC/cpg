@@ -1171,7 +1171,12 @@ public class CallResolver extends Pass {
 
     if (curClass != null
         && !(call instanceof MemberCallExpression || call instanceof StaticCallExpression)) {
-      call.setBase(curClass.getThis());
+      // COMMENT(oxisto) if we run into this condition, parsing has gone wrong on some other parts.
+      // not sure if we
+      // can heal this here, so I deactivated this line.
+
+      // TODO(oxisto): this should anyway be replaced by the new receiver field
+      // call.setBase(curClass.getThis());
     }
 
     createMethodDummies(invocationCandidates, possibleContainingTypes, call);

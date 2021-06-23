@@ -188,25 +188,4 @@ public class ObjectType extends Type implements HasType.SecondaryTypeEdge {
   public int hashCode() {
     return Objects.hash(super.hashCode(), generics, modifier, primitive);
   }
-
-  @Override
-  public String toString() {
-    return "ObjectType{"
-        + "generics="
-        + generics
-        + ", typeName='"
-        + getName()
-        + '\''
-        + ", storage="
-        + this.getStorage()
-        + ", qualifier="
-        + this.getQualifier()
-        + ", modifier="
-        + modifier
-        + ", primitive="
-        + primitive
-        + ", origin="
-        + this.getTypeOrigin()
-        + '}';
-  }
 }

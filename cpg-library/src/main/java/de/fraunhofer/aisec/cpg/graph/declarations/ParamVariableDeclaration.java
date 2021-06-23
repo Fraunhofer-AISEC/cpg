@@ -29,12 +29,13 @@ import de.fraunhofer.aisec.cpg.graph.HasDefault;
 import de.fraunhofer.aisec.cpg.graph.SubGraph;
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression;
 import java.util.Objects;
+import org.jetbrains.annotations.NotNull;
 import org.neo4j.ogm.annotation.Relationship;
 
 /** A declaration of a function or nontype template parameter. */
 public class ParamVariableDeclaration extends ValueDeclaration implements HasDefault<Expression> {
 
-  private boolean variadic = false;
+  @NotNull private boolean variadic = false;
 
   @Relationship(value = "DEFAULT", direction = "OUTGOING")
   @SubGraph("AST")

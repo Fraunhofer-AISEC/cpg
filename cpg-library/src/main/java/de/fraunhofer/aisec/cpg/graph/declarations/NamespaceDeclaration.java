@@ -34,6 +34,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 import org.checkerframework.checker.nullness.qual.NonNull;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * Declares the scope of a namespace and appends its own name to the current namespace-prefix to
@@ -69,6 +70,7 @@ public class NamespaceDeclaration extends Declaration implements DeclarationHold
     return Util.filterCast(declarations, NamespaceDeclaration.class);
   }
 
+  @NotNull
   public List<Declaration> getDeclarations() {
     return declarations;
   }

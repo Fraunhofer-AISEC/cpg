@@ -36,6 +36,7 @@ import java.util.stream.Collectors;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
+import org.jetbrains.annotations.NotNull;
 import org.neo4j.ogm.annotation.Relationship;
 
 /** The top most declaration, representing a translation unit, for example a file. */
@@ -108,6 +109,7 @@ public class TranslationUnitDeclaration extends Declaration implements Declarati
         .orElse(null);
   }
 
+  @NotNull
   @NonNull
   public List<Declaration> getDeclarations() {
     return unwrap(this.declarations);

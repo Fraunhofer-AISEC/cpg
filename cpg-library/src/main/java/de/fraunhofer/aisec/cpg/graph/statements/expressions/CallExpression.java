@@ -41,13 +41,15 @@ import java.util.stream.Collectors;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
+import org.jetbrains.annotations.NotNull;
 import org.neo4j.ogm.annotation.Relationship;
 
 /**
  * An expression, which calls another function. It has a list of arguments (list of {@link
  * Expression}s) and is connected via the INVOKES edge to its {@link FunctionDeclaration}.
  */
-public class CallExpression extends Expression implements TypeListener, HasType.SecondaryTypeEdge {
+public class CallExpression extends Expression implements TypeListener, HasBase, HasType.SecondaryTypeEdge {
+
 
   /**
    * Connection to its {@link FunctionDeclaration}. This will be populated by the {@link
@@ -67,21 +69,22 @@ public class CallExpression extends Expression implements TypeListener, HasType.
    * the original AST, but we treat it as such for better consistency
    */
   @SubGraph("AST")
-  private Node base;
+  private Expression base;
 
   private String fqn;
 
-  public Node getBase() {
+  @NotNull
+  public Expression getBase() {
     return base;
   }
 
-  public void setBase(Node base) {
-    if (this.base instanceof HasType) {
-      ((HasType) this.base).unregisterTypeListener(this);
+  public void setBase(Expression base) {
+    if (this.base != null) {
+      this.base.unregisterTypeListener(this);
     }
     this.base = base;
-    if (base instanceof HasType) {
-      ((HasType) base).registerTypeListener(this);
+    if (base != null) {
+      base.registerTypeListener(this);
     }
   }
 
@@ -325,7 +328,7 @@ public class CallExpression extends Expression implements TypeListener, HasType.
       Type previous = this.type;
       List<Type> types =
           invokes.stream()
-              .map(pe -> pe.getEnd())
+              .map(PropertyEdge<FunctionDeclaration>::getEnd)
               .map(FunctionDeclaration::getType)
               .filter(Objects::nonNull)
               .collect(Collectors.toList());
@@ -353,6 +356,7 @@ public class CallExpression extends Expression implements TypeListener, HasType.
     }
   }
 
+  @NotNull
   @Override
   public String toString() {
     return new ToStringBuilder(this, Node.TO_STRING_STYLE)

@@ -131,7 +131,7 @@ dependencies {
     api("com.github.javaparser:javaparser-symbol-solver-core:3.22.0")
 
     // Eclipse dependencies
-    api("org.eclipse.platform:org.eclipse.core.runtime:3.20.100")
+    api("org.eclipse.platform:org.eclipse.core.runtime:3.22.0")
     api("com.ibm.icu:icu4j:68.2")
 
     // CDT
@@ -149,9 +149,9 @@ dependencies {
     // JUnit
     testImplementation("org.jetbrains.kotlin:kotlin-test")
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
-    testImplementation("org.junit.jupiter:junit-jupiter-api:5.7.1")
-    testImplementation("org.junit.jupiter:junit-jupiter-params:5.7.1")
+    testImplementation("org.junit.jupiter:junit-jupiter-api:5.7.2")
+    testImplementation("org.junit.jupiter:junit-jupiter-params:5.7.2")
 
     testImplementation("org.mockito:mockito-core:3.11.1")
-    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.7.1")
+    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.7.2")
 }

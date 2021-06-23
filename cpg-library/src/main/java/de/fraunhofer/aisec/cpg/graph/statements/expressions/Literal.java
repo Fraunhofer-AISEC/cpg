@@ -49,7 +49,10 @@ public class Literal<T> extends Expression {
 
   @Override
   public String toString() {
-    return new ToStringBuilder(this, Node.TO_STRING_STYLE).append("value", value).toString();
+    return new ToStringBuilder(this, Node.TO_STRING_STYLE)
+        .appendSuper(super.toString())
+        .append("value", value)
+        .toString();
   }
 
   @Override

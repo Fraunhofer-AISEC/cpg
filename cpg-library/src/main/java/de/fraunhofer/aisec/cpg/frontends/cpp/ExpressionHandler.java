@@ -174,7 +174,7 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
     return arraySubsExpression;
   }
 
-  private NewExpression handleNewExpression(CPPASTNewExpression ctx) {
+  private Expression handleNewExpression(CPPASTNewExpression ctx) {
     String name = ctx.getTypeId().getDeclSpecifier().toString();
     String code = ctx.getRawSignature();
 
@@ -182,7 +182,41 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
     Type t = TypeParser.createFrom(expressionTypeProxy(ctx).toString(), true, lang);
     t.reference(PointerType.PointerOrigin.ARRAY);
 
-    NewExpression newExpression = NodeBuilder.newNewExpression(code, t);
+    Expression expr;
+
+    IASTInitializer init = ctx.getInitializer();
+
+    // we need to check, whether this is an array initialization or a single new expression
+    if (ctx.isArrayAllocation()) {
+      t.reference(PointerType.PointerOrigin.ARRAY);
+
+      var arrayMods =
+          ((IASTArrayDeclarator) ctx.getTypeId().getAbstractDeclarator()).getArrayModifiers();
+
+      var arrayCreate = NodeBuilder.newArrayCreationExpression(code);
+
+      arrayCreate.setType(t);
+
+      for (var arrayMod : arrayMods) {
+        arrayCreate.addDimension(this.handle(arrayMod.getConstantExpression()));
+      }
+
+      if (init != null) {
+        arrayCreate.setInitializer(this.lang.getInitializerHandler().handle(init));
+      }
+
+      expr = arrayCreate;
+    } else {
+      t.reference(PointerType.PointerOrigin.POINTER);
+
+      var newExpression = NodeBuilder.newNewExpression(code, t);
+
+      if (init != null) {
+        newExpression.setInitializer(this.lang.getInitializerHandler().handle(init));
+      }
+
+      expr = newExpression;
+    }
 
     // try to actually resolve the type
     IASTDeclSpecifier declSpecifier = ctx.getTypeId().getDeclSpecifier();
@@ -205,10 +239,9 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
         log.debug(
             "Could not resolve binding of type {} for {}, it is probably defined somewhere externally",
             name,
-            newExpression);
+            expr);
       }
     }
-
     if (((CPPASTNamedTypeSpecifier) declSpecifier).getName() instanceof CPPASTTemplateId) {
       List<Node> templateParameters =
           getTemplateArguments(

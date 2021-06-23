@@ -27,8 +27,10 @@ package de.fraunhofer.aisec.cpg.graph.types;
 
 import de.fraunhofer.aisec.cpg.graph.Node;
 import java.util.*;
+import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
+import org.jetbrains.annotations.NotNull;
 import org.neo4j.ogm.annotation.Relationship;
 import org.neo4j.ogm.annotation.typeconversion.Convert;
 
@@ -347,18 +349,9 @@ public abstract class Type extends Node {
     return Objects.hash(getName(), storage, qualifier);
   }
 
+  @NotNull
   @Override
   public String toString() {
-    return "Type{"
-        + "typeName='"
-        + getName()
-        + '\''
-        + ", storage="
-        + storage
-        + ", qualifier="
-        + qualifier
-        + ", origin="
-        + origin
-        + '}';
+    return new ToStringBuilder(this, TO_STRING_STYLE).append("name", getName()).toString();
   }
 }

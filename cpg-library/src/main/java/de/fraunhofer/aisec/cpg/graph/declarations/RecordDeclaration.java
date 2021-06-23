@@ -38,6 +38,7 @@ import java.util.stream.Stream;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
+import org.jetbrains.annotations.NotNull;
 import org.neo4j.ogm.annotation.Relationship;
 import org.neo4j.ogm.annotation.Transient;
 
@@ -206,6 +207,17 @@ public class RecordDeclaration extends Declaration implements DeclarationHolder 
 
   public void removeTemplate(TemplateDeclaration templateDeclaration) {
     this.templates.removeIf(propertyEdge -> propertyEdge.getEnd().equals(templateDeclaration));
+
+  @NotNull
+  public List<Declaration> getDeclarations() {
+    var list = new ArrayList<Declaration>();
+    list.addAll(this.getFields());
+    list.addAll(this.getMethods());
+    list.addAll(this.getConstructors());
+    list.addAll(this.getRecords());
+    list.addAll(this.getTemplates());
+
+    return list;
   }
 
   /**

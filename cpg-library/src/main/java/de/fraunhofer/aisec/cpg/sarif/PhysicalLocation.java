@@ -36,7 +36,7 @@ public class PhysicalLocation {
   @NonNull
   public static String locationLink(@Nullable PhysicalLocation location) {
     if (location != null) {
-      return location.getArtifactLocation().getUri()
+      return location.getArtifactLocation().getUri().getPath()
           + ":"
           + location.getRegion().getStartLine()
           + ":"

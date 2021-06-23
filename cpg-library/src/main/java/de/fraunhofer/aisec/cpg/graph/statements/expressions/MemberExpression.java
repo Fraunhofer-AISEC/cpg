@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements.expressions;
 
+import de.fraunhofer.aisec.cpg.graph.HasBase;
 import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.SubGraph;
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration;
@@ -35,7 +36,7 @@ import org.checkerframework.checker.nullness.qual.NonNull;
 /**
  * Represents access to a field of a {@link RecordDeclaration}, such as <code>obj.property</code>.
  */
-public class MemberExpression extends DeclaredReferenceExpression {
+public class MemberExpression extends DeclaredReferenceExpression implements HasBase {
 
   @SubGraph("AST")
   @NonNull
