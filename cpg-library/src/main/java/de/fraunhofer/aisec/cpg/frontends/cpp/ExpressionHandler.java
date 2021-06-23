@@ -241,13 +241,14 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
             name,
             expr);
       }
-    }
-    if (((CPPASTNamedTypeSpecifier) declSpecifier).getName() instanceof CPPASTTemplateId) {
-      List<Node> templateParameters =
-          getTemplateArguments(
-              (CPPASTTemplateId) ((CPPASTNamedTypeSpecifier) declSpecifier).getName());
-      if (expr instanceof NewExpression) {
-        ((NewExpression) expr).setTemplateParameters(templateParameters);
+
+      if (((CPPASTNamedTypeSpecifier) declSpecifier).getName() instanceof CPPASTTemplateId) {
+        List<Node> templateParameters =
+            getTemplateArguments(
+                (CPPASTTemplateId) ((CPPASTNamedTypeSpecifier) declSpecifier).getName());
+        if (expr instanceof NewExpression) {
+          ((NewExpression) expr).setTemplateParameters(templateParameters);
+        }
       }
     }
 
