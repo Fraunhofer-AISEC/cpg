@@ -35,6 +35,7 @@ import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import org.checkerframework.checker.nullness.qual.NonNull;
 import org.neo4j.ogm.annotation.Relationship;
 
 /** Abstract class representing the template concept */
@@ -107,6 +108,13 @@ public abstract class TemplateDeclaration extends Declaration implements Declara
         new PropertyEdge<>(this, nonTypeTemplateParamDeclaration);
     propertyEdge.addProperty(Properties.INDEX, this.parameters.size());
     this.parameters.add(propertyEdge);
+  }
+
+  @NonNull
+  public List<Declaration> getDeclarations() {
+    var list = new ArrayList<Declaration>();
+    list.addAll(this.getRealizationDeclarations());
+    return list;
   }
 
   public void removeParameter(TypeParamDeclaration parameterizedType) {

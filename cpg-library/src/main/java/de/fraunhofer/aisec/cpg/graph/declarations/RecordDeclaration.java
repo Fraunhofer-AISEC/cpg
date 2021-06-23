@@ -207,6 +207,7 @@ public class RecordDeclaration extends Declaration implements DeclarationHolder 
 
   public void removeTemplate(TemplateDeclaration templateDeclaration) {
     this.templates.removeIf(propertyEdge -> propertyEdge.getEnd().equals(templateDeclaration));
+  }
 
   @NotNull
   public List<Declaration> getDeclarations() {

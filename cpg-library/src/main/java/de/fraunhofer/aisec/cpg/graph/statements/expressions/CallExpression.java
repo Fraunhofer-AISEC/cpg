@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements.expressions;
 
+import de.fraunhofer.aisec.cpg.graph.HasBase;
 import de.fraunhofer.aisec.cpg.graph.HasType;
 import de.fraunhofer.aisec.cpg.graph.HasType.TypeListener;
 import de.fraunhofer.aisec.cpg.graph.Node;
@@ -48,8 +49,8 @@ import org.neo4j.ogm.annotation.Relationship;
  * An expression, which calls another function. It has a list of arguments (list of {@link
  * Expression}s) and is connected via the INVOKES edge to its {@link FunctionDeclaration}.
  */
-public class CallExpression extends Expression implements TypeListener, HasBase, HasType.SecondaryTypeEdge {
-
+public class CallExpression extends Expression
+    implements TypeListener, HasBase, HasType.SecondaryTypeEdge {
 
   /**
    * Connection to its {@link FunctionDeclaration}. This will be populated by the {@link

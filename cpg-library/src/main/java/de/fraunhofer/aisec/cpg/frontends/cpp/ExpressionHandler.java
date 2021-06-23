@@ -234,7 +234,7 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
                   getTemplateTypeArguments(
                       (CPPASTTemplateId) ((CPPASTNamedTypeSpecifier) declSpecifier).getName()));
         }
-        newExpression.setType(type);
+        expr.setType(type);
       } else {
         log.debug(
             "Could not resolve binding of type {} for {}, it is probably defined somewhere externally",
@@ -246,17 +246,12 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
       List<Node> templateParameters =
           getTemplateArguments(
               (CPPASTTemplateId) ((CPPASTNamedTypeSpecifier) declSpecifier).getName());
-      newExpression.setTemplateParameters(templateParameters);
+      if (expr instanceof NewExpression) {
+        ((NewExpression) expr).setTemplateParameters(templateParameters);
+      }
     }
 
-    IASTInitializer init = ctx.getInitializer();
-
-    if (init != null) {
-      Expression initializer = this.lang.getInitializerHandler().handle(init);
-      newExpression.setInitializer(initializer);
-    }
-
-    return newExpression;
+    return expr;
   }
 
   /**
