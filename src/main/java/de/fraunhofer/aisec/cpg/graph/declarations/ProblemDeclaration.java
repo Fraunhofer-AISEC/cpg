@@ -26,12 +26,24 @@
 
 package de.fraunhofer.aisec.cpg.graph.declarations;
 
+import de.fraunhofer.aisec.cpg.graph.Node;
 import java.util.Objects;
+import org.apache.commons.lang3.builder.ToStringBuilder;
 
 public class ProblemDeclaration extends Declaration {
   private String filename;
   private String problem;
   private String problemLocation;
+
+  @Override
+  public String toString() {
+    return new ToStringBuilder(this, Node.TO_STRING_STYLE)
+        .appendSuper(super.toString())
+        .append("filename", filename)
+        .append("problem", problem)
+        .append("problemLocation", problemLocation)
+        .toString();
+  }
 
   public String getFilename() {
     return filename;

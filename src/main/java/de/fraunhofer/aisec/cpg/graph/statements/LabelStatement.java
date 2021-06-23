@@ -26,8 +26,10 @@
 
 package de.fraunhofer.aisec.cpg.graph.statements;
 
+import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.SubGraph;
 import java.util.Objects;
+import org.apache.commons.lang3.builder.ToStringBuilder;
 
 /**
  * A label attached to a statement that is used to change control flow by labeled continue and
@@ -56,6 +58,15 @@ public class LabelStatement extends Statement {
 
   public void setLabel(String label) {
     this.label = label;
+  }
+
+  @Override
+  public String toString() {
+    return new ToStringBuilder(this, Node.TO_STRING_STYLE)
+        .appendSuper(super.toString())
+        .append("subStatement", subStatement)
+        .append("label", label)
+        .toString();
   }
 
   @Override

@@ -26,9 +26,11 @@
 
 package de.fraunhofer.aisec.cpg.graph.statements;
 
+import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.SubGraph;
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression;
 import java.util.Objects;
+import org.apache.commons.lang3.builder.ToStringBuilder;
 
 /** Represents a statement that returns out of the current function. */
 public class ReturnStatement extends Statement {
@@ -51,6 +53,14 @@ public class ReturnStatement extends Statement {
     if (returnValue != null) {
       this.addPrevDFG(returnValue);
     }
+  }
+
+  @Override
+  public String toString() {
+    return new ToStringBuilder(this, Node.TO_STRING_STYLE)
+        .appendSuper(super.toString())
+        .append("returnValue", returnValue)
+        .toString();
   }
 
   @Override

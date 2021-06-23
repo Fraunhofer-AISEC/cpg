@@ -26,8 +26,7 @@
 
 package de.fraunhofer.aisec.cpg.graph.statements.expressions;
 
-import de.fraunhofer.aisec.cpg.graph.HasType;
-import de.fraunhofer.aisec.cpg.graph.TypeManager;
+import de.fraunhofer.aisec.cpg.graph.*;
 import de.fraunhofer.aisec.cpg.graph.statements.Statement;
 import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType;
 import de.fraunhofer.aisec.cpg.graph.types.ReferenceType;
@@ -39,6 +38,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
+import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.neo4j.ogm.annotation.Transient;
 
 /**
@@ -249,17 +249,11 @@ public class Expression extends Statement implements HasType {
 
   @Override
   public String toString() {
-    return "["
-        + getClass().getSimpleName()
-        + (isImplicit() ? "*" : "")
-        + "] "
-        + getName()
-        + " "
-        + "(["
-        + getType().getClass().getSimpleName()
-        + "] "
-        + getType().getName()
-        + ")";
+    return new ToStringBuilder(this, Node.TO_STRING_STYLE)
+        .appendSuper(super.toString())
+        .append("type", type)
+        .append("possibleSubTypes", possibleSubTypes)
+        .toString();
   }
 
   @Override

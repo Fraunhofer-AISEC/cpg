@@ -159,4 +159,21 @@ public class PointerType extends Type implements SecondOrderType {
   public int hashCode() {
     return Objects.hash(super.hashCode(), elementType);
   }
+
+  @Override
+  public String toString() {
+    return "PointerType{"
+        + "elementType="
+        + elementType
+        + ", typeName='"
+        + name
+        + '\''
+        + ", storage="
+        + this.getStorage()
+        + ", qualifier="
+        + this.getQualifier()
+        + ", origin="
+        + this.getTypeOrigin()
+        + '}';
+  }
 }

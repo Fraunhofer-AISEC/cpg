@@ -29,6 +29,7 @@ package de.fraunhofer.aisec.cpg.graph.statements.expressions;
 import de.fraunhofer.aisec.cpg.graph.AccessValues;
 import de.fraunhofer.aisec.cpg.graph.HasType;
 import de.fraunhofer.aisec.cpg.graph.HasType.TypeListener;
+import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.SubGraph;
 import de.fraunhofer.aisec.cpg.graph.TypeManager;
 import de.fraunhofer.aisec.cpg.graph.types.Type;
@@ -37,6 +38,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
+import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.neo4j.ogm.annotation.Transient;
 
 /**
@@ -221,17 +223,11 @@ public class BinaryOperator extends Expression implements TypeListener {
 
   @Override
   public String toString() {
-    return "["
-        + getClass().getSimpleName()
-        + (isImplicit() ? "*" : "")
-        + "] "
-        + getCode()
-        + " "
-        + "(["
-        + getType().getClass().getSimpleName()
-        + "] "
-        + getType().getName()
-        + ")";
+    return new ToStringBuilder(this, Node.TO_STRING_STYLE)
+        .append("lhs", (lhs == null ? "null" : lhs.getName()))
+        .append("rhs", (rhs == null ? "null" : rhs.getName()))
+        .append("operatorCode", operatorCode)
+        .toString();
   }
 
   @Override

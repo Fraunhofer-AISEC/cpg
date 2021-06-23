@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.graph.statements.expressions;
 
 import de.fraunhofer.aisec.cpg.graph.HasType;
 import de.fraunhofer.aisec.cpg.graph.HasType.TypeListener;
+import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.SubGraph;
 import de.fraunhofer.aisec.cpg.graph.TypeManager;
 import de.fraunhofer.aisec.cpg.graph.TypeManager.Language;
@@ -37,6 +38,7 @@ import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
+import org.apache.commons.lang3.builder.ToStringBuilder;
 
 /** Represents the creation of a new object through the <code>new</code> keyword. */
 public class NewExpression extends Expression implements TypeListener {
@@ -99,17 +101,23 @@ public class NewExpression extends Expression implements TypeListener {
 
     Set<Type> subTypes = new HashSet<>(getPossibleSubTypes());
     subTypes.addAll(
-        src.getPossibleSubTypes().stream()
-            .map(
-                t -> {
-                  if (TypeManager.getInstance().getLanguage() == Language.CXX
-                      && src == initializer) {
-                    return t.reference(PointerOrigin.POINTER);
-                  }
-                  return t;
-                })
-            .collect(Collectors.toSet()));
+            src.getPossibleSubTypes().stream()
+                    .map(
+                            t -> {
+                              if (TypeManager.getInstance().getLanguage() == Language.CXX
+                                      && src == initializer) {
+                                return t.reference(PointerOrigin.POINTER);
+                              }
+                              return t;
+                            })
+                    .collect(Collectors.toSet()));
     setPossibleSubTypes(subTypes, root);
+  }
+  public String toString() {
+    return new ToStringBuilder(this, Node.TO_STRING_STYLE)
+        .appendSuper(super.toString())
+        .append("initializer", initializer)
+        .toString();
   }
 
   @Override

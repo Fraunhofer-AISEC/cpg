@@ -28,11 +28,13 @@ package de.fraunhofer.aisec.cpg.graph.statements.expressions;
 
 import de.fraunhofer.aisec.cpg.graph.HasType;
 import de.fraunhofer.aisec.cpg.graph.HasType.TypeListener;
+import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.SubGraph;
 import de.fraunhofer.aisec.cpg.graph.TypeManager;
 import de.fraunhofer.aisec.cpg.graph.types.Type;
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType;
 import java.util.*;
+import org.apache.commons.lang3.builder.ToStringBuilder;
 
 /**
  * Represents an expression containing a ternary operator: var x = condition ? valueIfTrue :
@@ -124,6 +126,16 @@ public class ConditionalExpression extends Expression implements TypeListener {
     Set<Type> subTypes = new HashSet<>(getPossibleSubTypes());
     subTypes.addAll(src.getPossibleSubTypes());
     setPossibleSubTypes(subTypes);
+  }
+
+  @Override
+  public String toString() {
+    return new ToStringBuilder(this, Node.TO_STRING_STYLE)
+        .appendSuper(super.toString())
+        .append("condition", condition)
+        .append("thenExpr", thenExpr)
+        .append("elseExpr", elseExpr)
+        .build();
   }
 
   @Override

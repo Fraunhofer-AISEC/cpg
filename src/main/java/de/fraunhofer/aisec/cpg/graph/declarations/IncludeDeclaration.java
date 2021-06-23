@@ -28,10 +28,12 @@ package de.fraunhofer.aisec.cpg.graph.declarations;
 
 import static de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.unwrap;
 
+import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.SubGraph;
 import de.fraunhofer.aisec.cpg.graph.edge.Properties;
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import java.util.*;
+import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.neo4j.ogm.annotation.Relationship;
 
 public class IncludeDeclaration extends Declaration {
@@ -78,6 +80,17 @@ public class IncludeDeclaration extends Declaration {
     PropertyEdge<ProblemDeclaration> propertyEdge = new PropertyEdge<>(this, problemDeclaration);
     propertyEdge.addProperty(Properties.INDEX, this.problems.size());
     this.problems.add(propertyEdge);
+  }
+
+  @Override
+  public String toString() {
+    return new ToStringBuilder(this, Node.TO_STRING_STYLE)
+        .appendSuper(super.toString())
+        .append("name", name)
+        .append("filename", filename)
+        .append("includes", includes)
+        .append("problems", problems)
+        .toString();
   }
 
   public String getFilename() {

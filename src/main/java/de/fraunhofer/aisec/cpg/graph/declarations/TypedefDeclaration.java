@@ -29,6 +29,7 @@ package de.fraunhofer.aisec.cpg.graph.declarations;
 import de.fraunhofer.aisec.cpg.graph.types.Type;
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType;
 import java.util.Objects;
+import org.apache.commons.lang3.builder.ToStringBuilder;
 
 /**
  * Represents a type alias definition as found in C/C++: <code>typedef unsigned long ulong;</code>
@@ -72,5 +73,10 @@ public class TypedefDeclaration extends Declaration {
   @Override
   public int hashCode() {
     return Objects.hash(type, alias);
+  }
+
+  @Override
+  public String toString() {
+    return new ToStringBuilder(this).append("type", type).append("alias", alias).toString();
   }
 }

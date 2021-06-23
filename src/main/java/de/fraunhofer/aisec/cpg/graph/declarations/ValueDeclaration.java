@@ -27,6 +27,7 @@
 package de.fraunhofer.aisec.cpg.graph.declarations;
 
 import de.fraunhofer.aisec.cpg.graph.HasType;
+import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.TypeManager;
 import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType;
 import de.fraunhofer.aisec.cpg.graph.types.ReferenceType;
@@ -35,6 +36,7 @@ import de.fraunhofer.aisec.cpg.graph.types.UnknownType;
 import java.util.*;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
+import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.neo4j.ogm.annotation.Transient;
 
 /** A declaration who has a type. */
@@ -217,17 +219,11 @@ public abstract class ValueDeclaration extends Declaration implements HasType {
 
   @Override
   public String toString() {
-    return "["
-        + getClass().getSimpleName()
-        + (isImplicit() ? "*" : "")
-        + "] "
-        + getName()
-        + " "
-        + "(["
-        + getType().getClass().getSimpleName()
-        + "] "
-        + getType().getName()
-        + ")";
+    return new ToStringBuilder(this, Node.TO_STRING_STYLE)
+        .appendSuper(super.toString())
+        .append("type", type)
+        .append("possibleSubTypes", possibleSubTypes)
+        .toString();
   }
 
   @Override

@@ -29,6 +29,7 @@ package de.fraunhofer.aisec.cpg.graph.statements.expressions;
 import de.fraunhofer.aisec.cpg.graph.AccessValues;
 import de.fraunhofer.aisec.cpg.graph.HasType;
 import de.fraunhofer.aisec.cpg.graph.HasType.TypeListener;
+import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.SubGraph;
 import de.fraunhofer.aisec.cpg.graph.TypeManager;
 import de.fraunhofer.aisec.cpg.graph.types.PointerType;
@@ -38,6 +39,7 @@ import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
+import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.neo4j.ogm.annotation.Transient;
 
 /**
@@ -208,6 +210,16 @@ public class UnaryOperator extends Expression implements TypeListener {
 
     getPossibleSubTypes().clear();
     setPossibleSubTypes(currSubTypes, root); // notify about the new type
+  }
+
+  @Override
+  public String toString() {
+    return new ToStringBuilder(this, Node.TO_STRING_STYLE)
+        .appendSuper(super.toString())
+        .append("operatorCode", operatorCode)
+        .append("postfix", postfix)
+        .append("prefix", prefix)
+        .toString();
   }
 
   @Override

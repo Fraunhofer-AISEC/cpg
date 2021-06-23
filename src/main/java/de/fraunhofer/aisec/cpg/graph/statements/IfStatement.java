@@ -26,10 +26,12 @@
 
 package de.fraunhofer.aisec.cpg.graph.statements;
 
+import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.SubGraph;
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration;
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression;
 import java.util.Objects;
+import org.apache.commons.lang3.builder.ToStringBuilder;
 
 /** Represents a condition control flow statement, usually indicating by <code>If</code>. */
 public class IfStatement extends Statement {
@@ -109,6 +111,16 @@ public class IfStatement extends Statement {
 
   public void setElseStatement(Statement elseStatement) {
     this.elseStatement = elseStatement;
+  }
+
+  @Override
+  public String toString() {
+    return new ToStringBuilder(this, Node.TO_STRING_STYLE)
+        .appendSuper(super.toString())
+        .append("condition", condition)
+        .append("thenStatement", thenStatement)
+        .append("elseStatement", elseStatement)
+        .toString();
   }
 
   @Override

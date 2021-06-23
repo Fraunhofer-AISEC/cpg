@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.graph.statements;
 
 import static de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.unwrap;
 
+import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.SubGraph;
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration;
 import de.fraunhofer.aisec.cpg.graph.edge.Properties;
@@ -35,6 +36,7 @@ import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.neo4j.ogm.annotation.Relationship;
 
@@ -90,6 +92,14 @@ public class DeclarationStatement extends Statement {
     PropertyEdge<Declaration> propertyEdge = new PropertyEdge<>(this, declaration);
     propertyEdge.addProperty(Properties.INDEX, this.declarations.size());
     this.declarations.add(propertyEdge);
+  }
+
+  @Override
+  public String toString() {
+    return new ToStringBuilder(this, Node.TO_STRING_STYLE)
+        .appendSuper(super.toString())
+        .append("declarations", declarations)
+        .toString();
   }
 
   @Override

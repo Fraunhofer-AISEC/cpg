@@ -6,7 +6,6 @@ import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import java.util.stream.Collectors;
 import org.neo4j.ogm.annotation.Relationship;
 
 /**
@@ -18,6 +17,14 @@ public class FunctionPointerType extends Type {
   private List<PropertyEdge<Type>> parameters;
 
   private Type returnType;
+
+  public void setParameters(List<Type> parameters) {
+    this.parameters = PropertyEdge.transformIntoOutgoingPropertyEdgeList(parameters, this);
+  }
+
+  public void setReturnType(Type returnType) {
+    this.returnType = returnType;
+  }
 
   private FunctionPointerType() {}
 
@@ -42,16 +49,8 @@ public class FunctionPointerType extends Type {
     return unwrap(this.parameters);
   }
 
-  public void setParameters(List<Type> parameters) {
-    this.parameters = PropertyEdge.transformIntoOutgoingPropertyEdgeList(parameters, this);
-  }
-
   public Type getReturnType() {
     return returnType;
-  }
-
-  public void setReturnType(Type returnType) {
-    this.returnType = returnType;
   }
 
   @Override
@@ -106,12 +105,20 @@ public class FunctionPointerType extends Type {
 
   @Override
   public String toString() {
-    return "["
-        + getClass().getSimpleName()
-        + (isImplicit() ? "*" : "")
-        + "] ("
-        + getParameters().stream().map(Type::getName).collect(Collectors.joining(", "))
-        + ") -> "
-        + returnType.getName();
+    return "FunctionPointerType{"
+        + "parameters="
+        + parameters
+        + ", returnType="
+        + returnType
+        + ", typeName='"
+        + name
+        + '\''
+        + ", storage="
+        + this.getStorage()
+        + ", qualifier="
+        + this.getQualifier()
+        + ", origin="
+        + this.getTypeOrigin()
+        + '}';
   }
 }

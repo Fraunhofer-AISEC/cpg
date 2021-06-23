@@ -28,10 +28,12 @@ package de.fraunhofer.aisec.cpg.graph.statements.expressions;
 
 import static de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.unwrap;
 
+import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.SubGraph;
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import java.util.List;
 import java.util.Objects;
+import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.neo4j.ogm.annotation.Relationship;
 
 public class DesignatedInitializerExpression extends Expression {
@@ -61,6 +63,15 @@ public class DesignatedInitializerExpression extends Expression {
 
   public void setLhs(List<Expression> lhs) {
     this.lhs = PropertyEdge.transformIntoOutgoingPropertyEdgeList(lhs, this);
+  }
+
+  @Override
+  public String toString() {
+    return new ToStringBuilder(this, Node.TO_STRING_STYLE)
+        .appendSuper(super.toString())
+        .append("lhr", lhs)
+        .append("rhs", rhs)
+        .toString();
   }
 
   @Override
