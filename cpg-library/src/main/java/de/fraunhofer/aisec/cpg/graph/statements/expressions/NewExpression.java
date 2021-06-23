@@ -100,18 +100,19 @@ public class NewExpression extends Expression implements TypeListener {
 
     Set<Type> subTypes = new HashSet<>(getPossibleSubTypes());
     subTypes.addAll(
-            src.getPossibleSubTypes().stream()
-                    .map(
-                            t -> {
-                              if (TypeManager.getInstance().getLanguage() == Language.CXX
-                                      && src == initializer) {
-                                return t.reference(PointerOrigin.POINTER);
-                              }
-                              return t;
-                            })
-                    .collect(Collectors.toSet()));
+        src.getPossibleSubTypes().stream()
+            .map(
+                t -> {
+                  if (TypeManager.getInstance().getLanguage() == Language.CXX
+                      && src == initializer) {
+                    return t.reference(PointerOrigin.POINTER);
+                  }
+                  return t;
+                })
+            .collect(Collectors.toSet()));
     setPossibleSubTypes(subTypes, root);
   }
+
   public String toString() {
     return new ToStringBuilder(this, Node.TO_STRING_STYLE)
         .appendSuper(super.toString())
