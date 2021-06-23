@@ -36,6 +36,12 @@ import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser
 import de.fraunhofer.aisec.cpg.passes.CallResolver
 import org.apache.commons.lang3.builder.ToStringBuilder
+import java.util.stream.Collectors
+
+import org.junit.platform.engine.UniqueId.root
+
+
+
 
 /**
  * Represents a call to a constructor, usually as an initializer.
@@ -71,11 +77,34 @@ class ConstructExpression : CallExpression(), HasType.TypeListener {
         }
 
     override fun typeChanged(src: HasType, root: HasType, oldType: Type) {
+        if (!TypeManager.isTypeSystemActive()) {
+            return;
+        }
+
         val previous: Type = this.type
         setType(src.propagationType, root)
         if (previous != this.type) {
             this.type.typeOrigin = Type.Origin.DATAFLOW
         }
+    }
+
+    fun possibleSubTypesChanged(src: HasType, root: HasType?, oldSubTypes: Set<Type?>?) {
+        if (!TypeManager.isTypeSystemActive()) {
+            return
+        }
+        val subTypes: MutableSet<Type> = HashSet(getPossibleSubTypes())
+        subTypes.addAll(
+            src.getPossibleSubTypes().stream()
+                .map { t ->
+                    if (TypeManager.getInstance().getLanguage() === Language.CXX
+                        && src is NewExpression
+                    ) {
+                        return@map t.dereference()
+                    }
+                    t
+                }
+                .collect(Collectors.toSet()))
+        setPossibleSubTypes(subTypes, root)
     }
 
     override fun toString(): String {
