@@ -1,0 +1,6 @@
+package cpg
+
+entity ScopeManager {
+
+}
+
