@@ -26,6 +26,8 @@
 
 package de.fraunhofer.aisec.cpg.frontends.grpc;
 
+import static java.util.Collections.nCopies;
+
 import de.fraunhofer.aisec.cpg.TranslationConfiguration;
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
 import de.fraunhofer.aisec.cpg.frontends.TranslationException;
@@ -61,6 +63,11 @@ public class GrpcLanguageFrontend extends LanguageFrontend {
 
       GrpcClient client = new GrpcClient(host, port);
       CpgResponse response = client.sendMessage(filename);
+      System.out.println(
+          "Got a response with "
+              + response.getNodesList().size()
+              + " nodes of the following type: ");
+      response.getNodesList().stream().forEach(n -> System.out.println(n.getClass()));
 
       // 1. Create a list of Nodes with the same length as response.getNodesList()
       // 2. Everything in the list is set to null
@@ -69,10 +76,13 @@ public class GrpcLanguageFrontend extends LanguageFrontend {
       //    b. It will then iterate over its parts and check if they have been initialized
       //    c. If they have, it will use these references. If not, it will call the methods
 
-      List<Node> cpgNodes = Collections.nCopies(response.getNodesList().size(), null);
+      List<Node> cpgNodes = new ArrayList<>();
+      cpgNodes.addAll(nCopies(response.getNodesList().size(), null));
       Node node =
           NodeFactory.createNode(
               response.getRoot().getNodeIndex(), response.getNodesList(), cpgNodes);
+
+      System.out.println("Got it: " + cpgNodes.size());
 
       if (node instanceof TranslationUnitDeclaration) {
         return (TranslationUnitDeclaration) node;

@@ -30,9 +30,15 @@ import de.fraunhofer.aisec.cpg.frontends.TranslationException;
 import de.fraunhofer.aisec.cpg.graph.Annotation;
 import de.fraunhofer.aisec.cpg.graph.AnnotationMember;
 import de.fraunhofer.aisec.cpg.graph.Node;
+import de.fraunhofer.aisec.cpg.graph.declarations.*;
+import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
+import de.fraunhofer.aisec.cpg.graph.statements.Statement;
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression;
+import de.fraunhofer.aisec.cpg.graph.types.IncompleteType;
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType;
 import de.fraunhofer.aisec.cpg.graph.types.Type;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 
 public class NodeFactory {
@@ -49,6 +55,11 @@ public class NodeFactory {
     // Sanity check
     if (index >= grpcNodes.size() || grpcNodes.size() != cpgNodes.size()) {
       throw new TranslationException("Wrong size of node list.");
+    }
+
+    // Index 0 is the default index for "no node", so we return null
+    if (index == 0) {
+      return null;
     }
 
     // Check if node already has been initialized
@@ -77,6 +88,69 @@ public class NodeFactory {
     cpgNode.setComment(grpcNode.getComment());
     cpgNode.setFile(grpcNode.getFile());
 
+    cpgNode.setImplicit(grpcNode.getImplicit());
+    cpgNode.setArgumentIndex(grpcNode.getArgumentIndex());
+
+    // id (GeneratedValue) and dummy (deprecated) are not set
+
+    // PrevDFG
+    for (var prevDFGIndex : grpcNode.getPrevDFGList()) {
+      var prevDFG = createNode(prevDFGIndex.getNodeIndex(), grpcNodes, cpgNodes);
+      if (prevDFG != null) {
+        cpgNode.addPrevDFG(prevDFG);
+      }
+    }
+
+    // NextDFG
+    for (var nextDFGIndex : grpcNode.getNextDFGList()) {
+      var nextDFG = createNode(nextDFGIndex.getNodeIndex(), grpcNodes, cpgNodes);
+      if (nextDFG != null) {
+        cpgNode.addNextDFG(nextDFG);
+      }
+    }
+
+    // Typedefs
+    for (var typedefIndex : grpcNode.getTypedefsList()) {
+      var typedef = createNode(typedefIndex.getNodeIndex(), grpcNodes, cpgNodes);
+      if (typedef == null) {
+        if (!(typedef instanceof TypedefDeclaration)) {
+          throw new TranslationException(
+              "node " + typedefIndex.getNodeIndex() + " not of type typedef (in createNode");
+        }
+        cpgNode.addTypedef((TypedefDeclaration) typedef);
+      }
+    }
+
+    // Annotations
+    var annotations = new HashSet<Annotation>();
+    for (var annotationIndex : grpcNode.getAnnotationsList()) {
+      var annotation = createNode(annotationIndex.getNodeIndex(), grpcNodes, cpgNodes);
+      if (annotation != null) {
+        if (!(annotation instanceof Annotation)) {
+          throw new TranslationException(
+              "node " + annotationIndex.getNodeIndex() + " not of type annotation (in createNode");
+        }
+        annotations.add((Annotation) annotation);
+      }
+    }
+    cpgNode.addAnnotations(annotations);
+
+    for (var a : grpcNode.getPrevEOGList()) {
+      var pe = NodeFactory.<Node>createPropertyEdgeNode(a, grpcNodes, cpgNodes);
+      cpgNode.getPrevEOGProperties().add(pe);
+    }
+
+    for (var a : grpcNode.getNextEOGList()) {
+      var pe = NodeFactory.<Node>createPropertyEdgeNode(a, grpcNodes, cpgNodes);
+      cpgNode.getNextEOGProperties().add(pe);
+    }
+
+    // Deprecated
+    // for (var a : grpcNode.getNextCFGList()) {
+    //  var pe = NodeFactory.<Node>createPropertyEdgeNode(a, grpcNodes, cpgNodes);
+    //  cpgNode.getNextCFG().add(pe);
+    // }
+
     /*
     There are 2 different Functions: leaf and no-leaf
     A leaf will create the Node itself and will add it to the list.
@@ -94,8 +168,6 @@ public class NodeFactory {
     5. return created node
     */
 
-    // TODO: Iterate over the declarations, namespaces etc. to create the new nodes
-
     return cpgNode;
   }
 
@@ -109,10 +181,12 @@ public class NodeFactory {
     List<AnnotationMember> members = new ArrayList<>();
     for (var m : a.getMembersList()) {
       Node n = createNode(m.getNodeIndex(), grpcNodes, cpgNodes);
-      if (!(n instanceof AnnotationMember)) {
-        throw new TranslationException("No annotationMember");
+      if (n != null) {
+        if (!(n instanceof AnnotationMember)) {
+          throw new TranslationException("No annotationMember");
+        }
+        members.add((AnnotationMember) n);
       }
-      members.add((AnnotationMember) n);
     }
     annotation.setMembers(members);
     return annotation;
@@ -165,6 +239,7 @@ public class NodeFactory {
           List<Node> cpgNodes)
           throws TranslationException {
     var declarationSequence = new de.fraunhofer.aisec.cpg.graph.declarations.DeclarationSequence();
+
     cpgNodes.set((int) index, declarationSequence);
 
     return declarationSequence;
@@ -206,6 +281,21 @@ public class NodeFactory {
     var translationUnitDeclaration =
         new de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration();
     cpgNodes.set((int) index, translationUnitDeclaration);
+
+    for (var a : d.getDeclarationsList()) {
+      var pe = NodeFactory.<Declaration>createPropertyEdgeNode(a, grpcNodes, cpgNodes);
+      translationUnitDeclaration.getDeclarationsPropertyEdge().add(pe);
+    }
+
+    for (var a : d.getIncludesList()) {
+      var pe = NodeFactory.<IncludeDeclaration>createPropertyEdgeNode(a, grpcNodes, cpgNodes);
+      translationUnitDeclaration.getIncludesPropertyEdge().add(pe);
+    }
+
+    for (var a : d.getNamespacesList()) {
+      var pe = NodeFactory.<Declaration>createPropertyEdgeNode(a, grpcNodes, cpgNodes);
+      translationUnitDeclaration.getNamespacesPropertyEdge().add(pe);
+    }
 
     return translationUnitDeclaration;
   }
@@ -288,6 +378,34 @@ public class NodeFactory {
       throw new TranslationException("Error in createValueDeclaration");
     }
 
+    // Type
+    var type = createNode(d.getType().getNodeIndex(), grpcNodes, cpgNodes);
+    if (type != null) {
+      if (!(type instanceof Type)) {
+        throw new TranslationException(
+            "node " + d.getType().getNodeIndex() + " not of type type (in createValueDeclaration");
+      }
+      valueDeclaration.setType((Type) type);
+    }
+
+    // PossibleSubTypes
+    var possibleSubTypes = new HashSet<Type>();
+    for (var possibleSubTypeIndex : d.getPossibleSubTypesList()) {
+      var possibleSubType = createNode(possibleSubTypeIndex.getNodeIndex(), grpcNodes, cpgNodes);
+      if (possibleSubType != null) {
+        if (!(possibleSubType instanceof Type)) {
+          throw new TranslationException(
+              "node "
+                  + d.getType().getNodeIndex()
+                  + " not of type type (in createValueDeclaration");
+        }
+        possibleSubTypes.add((Type) possibleSubType);
+      }
+    }
+    valueDeclaration.setPossibleSubTypes(possibleSubTypes);
+
+    // TODO typeListener
+
     return valueDeclaration;
   }
 
@@ -301,6 +419,20 @@ public class NodeFactory {
     var namespaceDeclaration =
         new de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration();
     cpgNodes.set((int) index, namespaceDeclaration);
+
+    // Declarations
+    for (var declarationIndex : d.getDeclarationsList()) {
+      var declaration = createNode(declarationIndex.getNodeIndex(), grpcNodes, cpgNodes);
+      if (declaration != null) {
+        if (!(declaration instanceof Declaration)) {
+          throw new TranslationException(
+              "node "
+                  + declarationIndex.getNodeIndex()
+                  + " not of type type (in createValueDeclaration");
+        }
+        namespaceDeclaration.addDeclaration((Declaration) declaration);
+      }
+    }
 
     return namespaceDeclaration;
   }
@@ -330,6 +462,21 @@ public class NodeFactory {
     var variableDeclaration = new de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration();
 
     cpgNodes.set((int) index, variableDeclaration);
+
+    // initializer
+    var initializer = createNode(v.getInitializer().getNodeIndex(), grpcNodes, cpgNodes);
+    if (initializer != null) {
+      if (!(initializer instanceof Expression)) {
+        throw new TranslationException(
+            "node "
+                + v.getInitializer().getNodeIndex()
+                + " not of type Expression (in createVariableDeclaration");
+      }
+      variableDeclaration.setInitializer((Expression) initializer);
+    }
+
+    variableDeclaration.setIsArray(v.getIsArray());
+    variableDeclaration.setImplicitInitializerAllowed(v.getImplicitInitializerAllowed());
 
     return variableDeclaration;
   }
@@ -370,8 +517,56 @@ public class NodeFactory {
           List<Node> cpgNodes)
           throws TranslationException {
     var functionDeclaration = new de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration();
-
     cpgNodes.set((int) index, functionDeclaration);
+
+    // PropertyEdge
+    // TODO
+
+    for (var a : v.getRecordsList()) {
+      var pe = NodeFactory.<RecordDeclaration>createPropertyEdgeNode(a, grpcNodes, cpgNodes);
+      functionDeclaration.getRecordsPropertyEdge().add(pe);
+    }
+    for (var a : v.getParametersList()) {
+      var pe = NodeFactory.<ParamVariableDeclaration>createPropertyEdgeNode(a, grpcNodes, cpgNodes);
+      functionDeclaration.getParametersPropertyEdge().add(pe);
+    }
+    for (var a : v.getThrowsTypesList()) {
+      var pe = NodeFactory.<Type>createPropertyEdgeNode(a, grpcNodes, cpgNodes);
+      functionDeclaration.getThrowsTypesPropertyEdge().add(pe);
+    }
+    for (var a : v.getOverriddenByList()) {
+      var pe = NodeFactory.<FunctionDeclaration>createPropertyEdgeNode(a, grpcNodes, cpgNodes);
+      functionDeclaration.getOverriddenByPropertyEdge().add(pe);
+    }
+    for (var a : v.getOverridesList()) {
+      var pe = NodeFactory.<FunctionDeclaration>createPropertyEdgeNode(a, grpcNodes, cpgNodes);
+      functionDeclaration.getOverridesPropertyEdge().add(pe);
+    }
+
+    // isDefinition
+    functionDeclaration.setIsDefinition(v.getIsDefinition());
+
+    // Definition
+    var definition = createNode(v.getDefinition().getNodeIndex(), grpcNodes, cpgNodes);
+    if (definition != null) {
+      if (!(definition instanceof FunctionDeclaration)) {
+        throw new TranslationException(
+            "node "
+                + v.getDefinition().getNodeIndex()
+                + " not of type funcDecl (in createfunDecl1");
+      }
+      functionDeclaration.setDefinition((FunctionDeclaration) definition);
+    }
+
+    // Body
+    var body = createNode(v.getBody().getNodeIndex(), grpcNodes, cpgNodes);
+    if (body != null) {
+      if (!(body instanceof Statement)) {
+        throw new TranslationException(
+            "node " + v.getBody().getNodeIndex() + " not of type statement (in createfunDecl2");
+      }
+      functionDeclaration.setBody((Statement) body);
+    }
 
     return functionDeclaration;
   }
@@ -432,6 +627,11 @@ public class NodeFactory {
       throw new TranslationException("Error in createStatement");
     }
 
+    for (var a : s.getLocalsList()) {
+      var pe = NodeFactory.<VariableDeclaration>createPropertyEdgeNode(a, grpcNodes, cpgNodes);
+      statement.getLocalsPropertyEdge().add(pe);
+    }
+
     return statement;
   }
 
@@ -457,6 +657,11 @@ public class NodeFactory {
     var compoundStatement = new de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement();
 
     cpgNodes.set((int) index, compoundStatement);
+
+    for (var a : s.getStatementsList()) {
+      var pe = NodeFactory.<Statement>createPropertyEdgeNode(a, grpcNodes, cpgNodes);
+      compoundStatement.getStatementEdges().add(pe);
+    }
 
     return compoundStatement;
   }
@@ -552,6 +757,13 @@ public class NodeFactory {
 
     cpgNodes.set((int) index, declarationStatement);
 
+    // TODO add declarations
+
+    for (var a : s.getDeclarationsList()) {
+      var pe = NodeFactory.<Declaration>createPropertyEdgeNode(a, grpcNodes, cpgNodes);
+      declarationStatement.getDeclarationsPropertyEdge().add(pe);
+    }
+
     return declarationStatement;
   }
 
@@ -590,6 +802,18 @@ public class NodeFactory {
     var returnStatement = new de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement();
 
     cpgNodes.set((int) index, returnStatement);
+
+    // Definition
+    var returnValue = createNode(s.getReturnValue().getNodeIndex(), grpcNodes, cpgNodes);
+    if (returnValue != null) {
+      if (!(returnValue instanceof Expression)) {
+        throw new TranslationException(
+            "node "
+                + s.getReturnValue().getNodeIndex()
+                + " not of type funcDecl (in createReturnStmt");
+      }
+      returnStatement.setReturnValue((Expression) returnValue);
+    }
 
     return returnStatement;
   }
@@ -762,6 +986,34 @@ public class NodeFactory {
       throw new TranslationException("Error in createExpression");
     }
 
+    // Type
+    var type = createNode(e.getType().getNodeIndex(), grpcNodes, cpgNodes);
+    if (type != null) {
+      if (!(type instanceof Type)) {
+        throw new TranslationException(
+            "node " + e.getType().getNodeIndex() + " not of type type (in createExpression");
+      }
+      expression.setType((Type) type);
+    }
+
+    // PossibleSubTypes
+    var possibleSubTypes = new HashSet<Type>();
+    for (var possibleSubTypeIndex : e.getPossibleSubTypesList()) {
+      var possibleSubType = createNode(possibleSubTypeIndex.getNodeIndex(), grpcNodes, cpgNodes);
+      if (possibleSubType != null) {
+        if (!(possibleSubType instanceof Type)) {
+          throw new TranslationException(
+              "node "
+                  + possibleSubTypeIndex.getNodeIndex()
+                  + " not of type type (in createExpression");
+        }
+        possibleSubTypes.add((Type) possibleSubType);
+      }
+    }
+    expression.setPossibleSubTypes(possibleSubTypes);
+
+    // TODO typeListener
+
     return expression;
   }
 
@@ -829,11 +1081,13 @@ public class NodeFactory {
       List<de.fraunhofer.aisec.cpg.frontends.grpc.messages.Node> grpcNodes,
       List<Node> cpgNodes)
       throws TranslationException {
-    var Literal = new de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal();
+    var literal = new de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal();
 
-    cpgNodes.set((int) index, Literal);
+    cpgNodes.set((int) index, literal);
 
-    return Literal;
+    // TODO generics currently not supported by protobuf
+
+    return literal;
   }
 
   private static de.fraunhofer.aisec.cpg.graph.statements.expressions.ConstructExpression
@@ -1051,10 +1305,66 @@ public class NodeFactory {
       throws TranslationException {
     Type type;
 
+    // TODO: isPrimitive must be handled
+
     if (t.hasObjectType()) {
       type = createObjectType(t.getObjectType(), index, grpcNodes, cpgNodes);
+    } else if (t.hasIncompleteType()) {
+      type = createIncompleteType(t.getIncompleteType(), index, grpcNodes, cpgNodes);
     } else {
       throw new TranslationException("Error in createType");
+    }
+
+    type.getQualifier().setConst(t.getQualifier().getIsConst());
+    type.getQualifier().setVolatile(t.getQualifier().getIsVolatile());
+    type.getQualifier().setRestrict(t.getQualifier().getIsRestrict());
+    type.getQualifier().setAtomic(t.getQualifier().getIsAtomic());
+
+    switch (t.getOrigin()) {
+      case DATAFLOW:
+        type.setTypeOrigin(Type.Origin.DATAFLOW);
+        break;
+      case GUESSED:
+        type.setTypeOrigin(Type.Origin.GUESSED);
+        break;
+      case RESOLVED:
+        type.setTypeOrigin(Type.Origin.RESOLVED);
+        break;
+      case UNRESOLVED:
+        type.setTypeOrigin(Type.Origin.UNRESOLVED);
+        break;
+      default:
+        System.out.println("Error in createType: Unknown origin.");
+        break;
+    }
+
+    switch (t.getStorage()) {
+      case AUTO:
+        type.setStorage(Type.Storage.AUTO);
+        break;
+      case EXTERN:
+        type.setStorage(Type.Storage.EXTERN);
+        break;
+      case STATIC:
+        type.setStorage(Type.Storage.STATIC);
+        break;
+      case REGISTER:
+        type.setStorage(Type.Storage.REGISTER);
+        break;
+      default:
+        System.out.println("Error in createType: Unknown storage.");
+        break;
+    }
+
+    for (var superTypeIndex : t.getSuperTypesList()) {
+      var superType = createNode(superTypeIndex.getNodeIndex(), grpcNodes, cpgNodes);
+      if (superType != null) {
+        if (!(superType instanceof Type)) {
+          throw new TranslationException(
+              "node " + superTypeIndex.getNodeIndex() + " not of type type (in createType");
+        }
+        type.getSuperTypes().add((Type) superType);
+      }
     }
 
     return type;
@@ -1064,8 +1374,64 @@ public class NodeFactory {
       de.fraunhofer.aisec.cpg.frontends.grpc.messages.ObjectType t,
       long index,
       List<de.fraunhofer.aisec.cpg.frontends.grpc.messages.Node> grpcNodes,
-      List<Node> cpgNodes) {
-    ObjectType objectType = new ObjectType();
+      List<Node> cpgNodes)
+      throws TranslationException {
+    var objectType = new ObjectType();
+
+    for (var ignored : t.getGenericsList()) {
+      var pe = NodeFactory.<Type>createPropertyEdgeNode(ignored, grpcNodes, cpgNodes);
+
+      objectType.getGenericPropertyEdges().add(pe);
+    }
+
+    // recordDeclaration
+    var recordDeclaration =
+        createNode(t.getRecordDeclaration().getNodeIndex(), grpcNodes, cpgNodes);
+    if (recordDeclaration != null) {
+      if (!(recordDeclaration instanceof RecordDeclaration)) {
+        throw new TranslationException(
+            "node "
+                + t.getRecordDeclaration().getNodeIndex()
+                + " not of type funcDecl (in createObjectType");
+      }
+      objectType.setRecordDeclaration((RecordDeclaration) recordDeclaration);
+    }
+
+    // Modifier
+    // TODO (can only be set in the constructor together with many other attributes)
+
     return objectType;
+  }
+
+  private static IncompleteType createIncompleteType(
+      de.fraunhofer.aisec.cpg.frontends.grpc.messages.IncompleteType t,
+      long index,
+      List<de.fraunhofer.aisec.cpg.frontends.grpc.messages.Node> grpcNodes,
+      List<Node> cpgNodes)
+      throws TranslationException {
+
+    return new IncompleteType();
+  }
+
+  private static <T extends Node> PropertyEdge<T> createPropertyEdgeNode(
+      de.fraunhofer.aisec.cpg.frontends.grpc.messages.PropertyEdge p,
+      List<de.fraunhofer.aisec.cpg.frontends.grpc.messages.Node> grpcNodes,
+      List<Node> cpgNodes)
+      throws TranslationException {
+    Node start = createNode(p.getStart().getNodeIndex(), grpcNodes, cpgNodes);
+    Node end = createNode(p.getEnd().getNodeIndex(), grpcNodes, cpgNodes);
+
+    if (end == null || start == null) {
+      throw new TranslationException("Error in createPropertyEdgeNode");
+    }
+
+    // TODO Add PropertyEdgeProperties
+    // TODO How can the cast be checked? "end instanceof T" does not work
+
+    try {
+      return new PropertyEdge<T>(start, (T) end);
+    } catch (ClassCastException e) {
+      throw new TranslationException("No correct type.");
+    }
   }
 }

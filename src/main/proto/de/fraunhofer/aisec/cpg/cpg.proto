@@ -297,8 +297,8 @@ message PropertyEdgeProperties {
 }
 
 message PropertyEdge {
-  int64 id = 1;
-  NodeIndex start = 2;
+  NodeIndex start = 1;
+  NodeIndex end = 2;
   repeated PropertyEdgeProperties properties = 3;
 }
 
@@ -333,9 +333,8 @@ message Node {
   repeated NodeIndex typedefs = 17;
   bool dummy = 18;
   bool implicit = 19;
-  int64 id = 20;
-  int32 argumentIndex = 21;
-  repeated NodeIndex annotations = 22;
+  int32 argumentIndex = 20;
+  repeated NodeIndex annotations = 21;
 }
 
 message Statement {
@@ -916,3 +915,5 @@ message CpgResponse {
   NodeIndex root = 1;
   repeated Node nodes = 2;
 }
+
+
