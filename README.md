@@ -1,8 +1,8 @@
 # Code Property Graph 
 [![Actions Status](https://github.com/Fraunhofer-AISEC/cpg/workflows/build/badge.svg)](https://github.com/Fraunhofer-AISEC/cpg/actions)
- [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=Fraunhofer-AISEC_cpg&metric=alert_status)](https://sonarcloud.io/dashboard?id=Fraunhofer-AISEC_cpg) [![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=Fraunhofer-AISEC_cpg&metric=security_rating)](https://sonarcloud.io/dashboard?id=Fraunhofer-AISEC_cpg) [![Coverage](https://sonarcloud.io/api/project_badges/measure?project=Fraunhofer-AISEC_cpg&metric=coverage)](https://sonarcloud.io/dashboard?id=Fraunhofer-AISEC_cpg)
+ [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=Fraunhofer-AISEC_cpg&metric=alert_status)](https://sonarcloud.io/dashboard?id=Fraunhofer-AISEC_cpg) [![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=Fraunhofer-AISEC_cpg&metric=security_rating)](https://sonarcloud.io/dashboard?id=Fraunhofer-AISEC_cpg) [![Coverage](https://sonarcloud.io/api/project_badges/measure?project=Fraunhofer-AISEC_cpg&metric=coverage)](https://sonarcloud.io/dashboard?id=Fraunhofer-AISEC_cpg) [![](https://jitpack.io/v/Fraunhofer-AISEC/cpg.svg)](https://jitpack.io/#Fraunhofer-AISEC/cpg)
 
-A simple library to extract a *code property graph* out of source code. It has support for multiple passes that can extend the analysis after the graph is constructed. It currently supports C/C++ (C17), Java (Java 13) and has experimental support for Golang.
+A simple library to extract a *code property graph* out of source code. It has support for multiple passes that can extend the analysis after the graph is constructed. It currently supports C/C++ (C17), Java (Java 13) and has experimental support for Golang and Python.
 
 ## What is this?
 
@@ -15,7 +15,7 @@ This library uses [Eclipse CDT](https://www.eclipse.org/cdt/) for parsing C/C++ 
 
 ### For Visualization Purposes
 
-In order to get familiar with the graph itself, you can take a look at our companion project [cpg-vis-neo4j](https://github.com/Fraunhofer-AISEC/cpg-vis-neo4j). It uses this library to generate the CPG for a set of user-provided code files. The graph is then persisted to a [Neo4j](https://neo4j.com/) graph database. The advantage this has for the user, is that Neo4j's visualization software [Neo4j Browser](https://neo4j.com/developer/neo4j-browser/) can be used to graphically look at the CPG nodes and edges, instead of their Java representations.
+In order to get familiar with the graph itself, you can use the subproject [cpg-neo4j](https://github.com/Fraunhofer-AISEC/cpg/tree/master/cpg-neo4j). It uses this library to generate the CPG for a set of user-provided code files. The graph is then persisted to a [Neo4j](https://neo4j.com/) graph database. The advantage this has for the user, is that Neo4j's visualization software [Neo4j Browser](https://neo4j.com/developer/neo4j-browser/) can be used to graphically look at the CPG nodes and edges, instead of their Java representations.
 
 ### As Library
 
@@ -23,7 +23,7 @@ The most recent version is being published to Maven central and can be used as a
 ```
 repositories {
     ivy {
-        setUrl("https://download.eclipse.org/tools/cdt/releases/9.11/cdt-9.11.1/plugins")
+        setUrl("https://download.eclipse.org/tools/cdt/releases/10.2/cdt-10.2.0/plugins")
         metadataSources {
             artifact()
         }
@@ -34,15 +34,19 @@ repositories {
 }
 
 dependencies {
-    api("de.fraunhofer.aisec", "cpg", "3.3.1")
+    api("de.fraunhofer.aisec", "cpg", "3.5.1")
 }
 ```
+
+#### Development Builds
+
+A published artifact of every commit can be requested through [JitPack](https://jitpack.io/#Fraunhofer-AISEC/cpg). This is especially useful, if your external project makes use of a specific feature that is not yet merged in yet or not published as a version yet. Please follow the instructions on the JitPack page. Please be aware, that similar to release builds, the CDT repository needs to be added as well (see above).
 
 ### On Command Line
 
 The library can be used on the command line using `jshell`, the Java shell to try out some basic queries.
 
-First, a jar consisting all the necessary dependencies should be created with `./gradlew shadowJar`. Afterwards, the shell can be launched using `jshell --class-path build/libs/cpg-all.jar`.
+First, a jar consisting all the necessary dependencies should be created with `./gradlew shadowJar`. Afterwards, the shell can be launched using `jshell --class-path cpg-library/build/libs/cpg-library-all.jar`.
 
 The following snippet creates a basic `TranslationManager` with default settings to analyze a sample file in `src/test/resources/openssl/client.cpp`:
 
@@ -52,7 +56,7 @@ import de.fraunhofer.aisec.cpg.TranslationManager;
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration;
 
 var path = Paths.get("src/test/resources/openssl/client.cpp");
-var config = TranslationConfiguration.builder().sourceLocations(path.toFile()).defaultPasses().debugParser(true).build();
+var config = TranslationConfiguration.builder().sourceLocations(path.toFile()).defaultPasses().defaultLanguages().debugParser(true).build();
 var analyzer = TranslationManager.builder().config(config).build();
 var result = analyzer.analyze().get();
 var tu = result.getTranslationUnits().get(0);
@@ -75,11 +79,27 @@ func.getParameters();
 
 ### Usage of Experimental Languages
 
-Some languages, such as Golang are marked as experimental and depend on other native libraries. These are NOT YET bundled in the release jars, so you need to build them manually.  
+Some languages, such as Golang are marked as experimental and depend on other native libraries. These are NOT YET bundled in the release jars, so you need to build them manually using the property `-Pexperimental` when using tasks such as `build` or `test`.
 
 #### Golang
 
 In the case of Golang, the necessary native code can be found in the `src/main/golang` folder. Gradle should automatically find JNI headers and stores the finished library in the `src/main/golang` folder. This currently only works for Linux and macOS. In order to use it in an external project, the resulting library needs to be placed somewhere in `java.library.path`. 
+
+#### Python
+
+You need to install [jep](https://github.com/ninia/jep/). This can either be system wide or in a virtual environment. Furthermore, the python source, which are located in `src/main/python` need to be present in a directory with that name relative to where you execute or use CPG. We are working on extracting this into an actual python module, similar to jep. Currently, only Python 3.9 is supported.
+
+Through the `JepSingleton`, the CPG library will look for well known paths on Linux and OS X. `JepSingleton` will prefer a virtualenv with the name `cpg`, this can be adjusted with the environment variable `CPG_PYTHON_VIRTUALENV`.
+
+##### System Wide
+
+Follow the instructions at https://github.com/ninia/jep/wiki/Getting-Started#installing-jep.
+
+##### Virtual Env
+
+- `python3 -m venv ~/.virtualenvs/cpg`
+- `source ~/.virtualenvs/cpg/bin/activate`
+- `pip3 install jep`
 
 ## Development Setup
 
@@ -117,6 +137,7 @@ The following authors have contributed to this project (in alphabetical order):
 * [JulianSchuette](https://github.com/JulianSchuette)
 * [konradweiss](https://github.com/konradweiss)
 * [Masrepus](https://github.com/Masrepus)
+* [maximiliankaul](https://github.com/maximiliankaul)
 * [obraunsdorf](https://github.com/obraunsdorf)
 * [oxisto](https://github.com/oxisto)
 * [titze](https://github.com/titze)
@@ -128,11 +149,9 @@ A preliminary version of this cpg has been used to analyze ARM binaries of iOS a
 
 [1] Julian Schütte, Dennis Titze. _liOS: Lifting iOS Apps for Fun and Profit._ Proceedings of the ESORICS International Workshop on Secure Internet of Things (SIoT), Luxembourg, 2019
 
-
 An initial publication on the concept of using code property graphs for static analysis:
 
 [2] Yamaguchi et al. - Modeling and Discovering Vulnerabilities with Code Property Graphs https://www.sec.cs.tu-bs.de/pubs/2014-ieeesp.pdf
-
 
 [3] is an unrelated, yet similar project by the authors of the above publication, that is used by the open source software Joern [4] for analysing C/C++ code. While [3] is a specification and implementation of the data structure, this project here includes various _Language frontends_ (currently C/C++ and Java, Python to com) and allows creating custom graphs by configuring _Passes_ which extend the graph as necessary for a specific analysis:
 
