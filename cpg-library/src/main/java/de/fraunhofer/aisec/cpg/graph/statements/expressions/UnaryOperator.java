@@ -169,7 +169,11 @@ public class UnaryOperator extends Expression implements TypeListener {
       } else if (operatorCode.equals("&")) {
         newType = src.getPropagationType().dereference();
       }
-      input.setType(newType, this);
+
+      // We are a fuzzy parser, so while this should not happen, there is no garuantee that input is not null
+      if(input != null) {
+        input.setType(newType, this);
+      }
     }
 
     if (!previous.equals(this.type)) {
