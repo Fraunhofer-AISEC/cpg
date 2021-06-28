@@ -68,6 +68,7 @@ public class CallResolver extends Pass {
   private Map<FunctionDeclaration, Type> containingType = new HashMap<>();
   @Nullable private TranslationUnitDeclaration currentTU;
   private ScopedWalker walker;
+  private TranslationResult result;
 
   @Override
   public boolean canBeSkippedIncremental() {
@@ -82,6 +83,7 @@ public class CallResolver extends Pass {
 
   @Override
   public void accept(@NonNull TranslationResult translationResult) {
+    this.result = translationResult;
     walker = new ScopedWalker(lang);
     walker.registerHandler((currClass, parent, currNode) -> walker.collectDeclarations(currNode));
     walker.registerHandler(this::findRecords);
@@ -1482,6 +1484,7 @@ public class CallResolver extends Pass {
     for (RecordDeclaration recordDeclaration : containingRecords) {
       MethodDeclaration dummy = NodeBuilder.newMethodDeclaration(name, "", true, recordDeclaration);
       dummy.setImplicit(true);
+      result.getImplicitDeclarations().computeIfAbsent(recordDeclaration, r -> new ArrayList<>()).add(dummy);
       List<ParamVariableDeclaration> params = Util.createParameters(call.getSignature());
       dummy.setParameters(params);
       recordDeclaration.addMethod(dummy);
@@ -1506,6 +1509,10 @@ public class CallResolver extends Pass {
     dummy.setImplicit(true);
     if (containingRecord != null) {
       containingRecord.addDeclaration(dummy);
+      result
+          .getImplicitDeclarations()
+          .computeIfAbsent(containingRecord, r -> new ArrayList<>())
+          .add(dummy);
     } else {
       if (currentTU == null) {
         LOGGER.error(
@@ -1513,6 +1520,10 @@ public class CallResolver extends Pass {
             dummy.getName());
       } else {
         currentTU.addDeclaration(dummy);
+        result
+            .getImplicitDeclarations()
+            .computeIfAbsent(currentTU, r -> new ArrayList<>())
+            .add(dummy);
       }
     }
     FunctionDeclaration dummyRealization =
@@ -1566,6 +1577,10 @@ public class CallResolver extends Pass {
       MethodDeclaration dummy =
           NodeBuilder.newMethodDeclaration(name, code, isStatic, containingRecord);
       dummy.setImplicit(true);
+      result
+          .getImplicitDeclarations()
+          .computeIfAbsent(containingRecord, r -> new ArrayList<>())
+          .add(dummy);
       dummy.setParameters(parameters);
 
       containingRecord.addMethod(dummy);
@@ -1575,6 +1590,10 @@ public class CallResolver extends Pass {
       FunctionDeclaration dummy = NodeBuilder.newFunctionDeclaration(name, code);
       dummy.setParameters(parameters);
       dummy.setImplicit(true);
+      result
+          .getImplicitDeclarations()
+          .computeIfAbsent(currentTU, r -> new ArrayList<>())
+          .add(dummy);
       if (currentTU == null) {
         LOGGER.error(
             "No current translation unit when trying to generate function dummy {}",
@@ -1591,6 +1610,10 @@ public class CallResolver extends Pass {
     ConstructorDeclaration dummy =
         NodeBuilder.newConstructorDeclaration(containingRecord.getName(), "", containingRecord);
     dummy.setImplicit(true);
+    result
+        .getImplicitDeclarations()
+        .computeIfAbsent(containingRecord, r -> new ArrayList<>())
+        .add(dummy);
     dummy.setParameters(Util.createParameters(signature));
     containingRecord.addConstructor(dummy);
     return dummy;

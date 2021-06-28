@@ -32,8 +32,9 @@ import com.google.common.hash.Hashing;
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
 import de.fraunhofer.aisec.cpg.frontends.TranslationException;
 import de.fraunhofer.aisec.cpg.frontends.golang.GoLanguageFrontend;
+import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.TypeManager;
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declarations.*;
 import de.fraunhofer.aisec.cpg.helpers.Benchmark;
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker;
 import de.fraunhofer.aisec.cpg.helpers.Util;
@@ -164,6 +165,76 @@ public class TranslationManager {
       }
     }
 
+    List<File> changed = getChangedFiles(previousResult, result, sourceLocations);
+
+    Benchmark bench = new Benchmark(TranslationManager.class, "Frontends");
+    config.setSourceLocations(changed);
+    Set<LanguageFrontend> frontendsNeedCleanup =
+        runFrontends(result, config, previousResult.getScopeManager());
+    bench.stop();
+
+    removeImplicitDeclarations(previousResult.getImplicitDeclarations());
+    runPasses(result, frontendsNeedCleanup);
+
+    result.setScopeManager(previousResult.getScopeManager());
+
+    outerBench.stop();
+
+    return result;
+  }
+
+  private void removeImplicitDeclarations(Map<Node, List<Declaration>> implicitDeclarations) {
+    for (Entry<Node, List<Declaration>> entry : implicitDeclarations.entrySet()) {
+      if (entry.getKey() instanceof TranslationUnitDeclaration) {
+        entry.getValue().forEach(((TranslationUnitDeclaration) entry.getKey())::removeDeclaration);
+      } else if (entry.getKey() instanceof RecordDeclaration) {
+        RecordDeclaration record = (RecordDeclaration) entry.getKey();
+        for (Declaration implicitDeclaration : entry.getValue()) {
+          if (implicitDeclaration instanceof FieldDeclaration) {
+            record.removeField((FieldDeclaration) implicitDeclaration);
+          } else if (implicitDeclaration instanceof ConstructorDeclaration) {
+            record.removeConstructor((ConstructorDeclaration) implicitDeclaration);
+          } else if (implicitDeclaration instanceof MethodDeclaration) {
+            record.removeMethod((MethodDeclaration) implicitDeclaration);
+          } else if (implicitDeclaration instanceof TemplateDeclaration) {
+            record.removeTemplate((TemplateDeclaration) implicitDeclaration);
+          }
+        }
+      }
+      entry.getValue().forEach(Node::disconnectFromGraph);
+    }
+  }
+
+  private void runPasses(TranslationResult result, Set<LanguageFrontend> frontendsNeedCleanup) {
+    Benchmark bench;
+    Set<Pass> passesNeedCleanup = new HashSet<>();
+    for (Pass pass : config.getRegisteredPasses()) {
+      passesNeedCleanup.add(pass);
+      bench = new Benchmark(pass.getClass(), "Executing Pass");
+      pass.accept(result);
+      bench.stop();
+      if (result.isCancelled()) {
+        log.warn("Analysis interrupted, stopping Pass evaluation");
+      }
+    }
+
+    if (!this.config.disableCleanup) {
+      log.debug("Cleaning up {} Passes", passesNeedCleanup.size());
+      passesNeedCleanup.forEach(Pass::cleanup);
+
+      if (frontendsNeedCleanup != null) {
+        log.debug("Cleaning up {} Frontends", frontendsNeedCleanup.size());
+        frontendsNeedCleanup.forEach(LanguageFrontend::cleanup);
+      }
+
+      TypeManager.getInstance().cleanup();
+    }
+  }
+
+  @NotNull
+  private List<File> getChangedFiles(
+      TranslationResult previousResult, TranslationResult result, Set<File> sourceLocations)
+      throws TranslationException {
     List<File> changed = new ArrayList<>();
 
     for (File file : sourceLocations) {
@@ -194,41 +265,7 @@ public class TranslationManager {
         changed.add(file);
       }
     }
-
-    Benchmark bench = new Benchmark(TranslationManager.class, "Frontends");
-    config.setSourceLocations(changed);
-    Set<LanguageFrontend> frontendsNeedCleanup =
-        runFrontends(result, config, previousResult.getScopeManager());
-    bench.stop();
-
-    Set<Pass> passesNeedCleanup = new HashSet<>();
-    for (Pass pass : config.getRegisteredPasses()) {
-      passesNeedCleanup.add(pass);
-      bench = new Benchmark(pass.getClass(), "Executing Pass");
-      pass.accept(result);
-      bench.stop();
-      if (result.isCancelled()) {
-        log.warn("Analysis interrupted, stopping Pass evaluation");
-      }
-    }
-
-    if (!this.config.disableCleanup) {
-      log.debug("Cleaning up {} Passes", passesNeedCleanup.size());
-      passesNeedCleanup.forEach(Pass::cleanup);
-
-      if (frontendsNeedCleanup != null) {
-        log.debug("Cleaning up {} Frontends", frontendsNeedCleanup.size());
-        frontendsNeedCleanup.forEach(LanguageFrontend::cleanup);
-      }
-
-      TypeManager.getInstance().cleanup();
-    }
-
-    result.setScopeManager(previousResult.getScopeManager());
-
-    outerBench.stop();
-
-    return result;
+    return changed;
   }
 
   public List<Pass> getPasses() {

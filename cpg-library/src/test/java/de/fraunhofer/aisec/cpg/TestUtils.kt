@@ -337,15 +337,22 @@ object TestUtils {
     }
 
     @JvmStatic
-    fun getAllNodes(translationUnits: Collection<TranslationUnitDeclaration>): Set<Node> {
+    fun getAllNodes(
+        roots: Collection<Node>,
+        disallowedNodes: Collection<Node> = emptySet()
+    ): Set<Node> {
         val nodes: MutableSet<Node> = Collections.newSetFromMap(IdentityHashMap())
         val workset: MutableSet<Node> = Collections.newSetFromMap(IdentityHashMap())
-        nodes.addAll(translationUnits)
-        workset.addAll(translationUnits)
+        nodes.addAll(roots)
+        workset.addAll(roots)
 
         while (workset.isNotEmpty()) {
             val curr = workset.first().also { workset.remove(it) }
             val neighbors = curr.outgoingEdges.map { it.to }.filter { it !in nodes }
+            val disallowedNeighbors = neighbors.filter { n -> disallowedNodes.any { it === n } }
+            assert(disallowedNeighbors.isEmpty()) {
+                "$curr has disallowed neighbors $disallowedNeighbors"
+            }
             nodes.addAll(neighbors)
             workset.addAll(neighbors)
         }

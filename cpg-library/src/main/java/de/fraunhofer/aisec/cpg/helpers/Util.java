@@ -357,7 +357,11 @@ public class Util {
   public static void detachCallParameters(FunctionDeclaration target, List<Expression> arguments) {
     for (ParamVariableDeclaration param : target.getParameters()) {
       // A param could be variadic, so multiple arguments could be set as incoming DFG
-      param.getPrevDFG().stream().filter(arguments::contains).forEach(param::removeNextDFG);
+      Set<Node> toRemove =
+          param.getPrevDFG().stream()
+              .filter(p -> arguments.stream().anyMatch(a -> a == p))
+              .collect(Collectors.toSet());
+      toRemove.forEach(param::removePrevDFG);
     }
   }
 

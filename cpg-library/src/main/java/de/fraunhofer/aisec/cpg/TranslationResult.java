@@ -27,7 +27,9 @@ package de.fraunhofer.aisec.cpg;
 
 import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.SubGraph;
+import de.fraunhofer.aisec.cpg.graph.declarations.Declaration;
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration;
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -51,6 +53,8 @@ public class TranslationResult extends Node {
 
   /** A free-for-use HashMap where passes can store whatever they want. */
   private Map<String, Object> scratch = new ConcurrentHashMap<>();
+
+  private final Map<Node, List<Declaration>> implicitDeclarations = new ConcurrentHashMap<>();
 
   public TranslationResult(TranslationManager translationManager) {
     this.translationManager = translationManager;
@@ -85,6 +89,10 @@ public class TranslationResult extends Node {
    */
   public synchronized void addTranslationUnit(TranslationUnitDeclaration tu) {
     translationUnits.add(tu);
+  }
+
+  public Map<Node, List<Declaration>> getImplicitDeclarations() {
+    return implicitDeclarations;
   }
 
   /**

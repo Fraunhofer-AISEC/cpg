@@ -53,6 +53,12 @@ public class JavaExternalTypeHierarchyResolver extends Pass {
 
       // Iterate over all known types and add their (direct) supertypes.
       for (Type t : new HashSet<>(tm.getFirstOrderTypes())) {
+        if (!t.getSuperTypes().isEmpty()) {
+          continue;
+        }
+        if (tm.getFirstOrderTypes().stream().anyMatch(x -> x.getSuperTypes().contains(t))) {
+          continue;
+        }
         SymbolReference<ResolvedReferenceTypeDeclaration> symbol =
             resolver.tryToSolveType(t.getTypeName());
         if (symbol.isSolved()) {

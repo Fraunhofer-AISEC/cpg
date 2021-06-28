@@ -29,7 +29,8 @@ import static de.fraunhofer.aisec.cpg.helpers.Util.warnWithFileLocation;
 
 import de.fraunhofer.aisec.cpg.TranslationResult;
 import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguageFrontend;
-import de.fraunhofer.aisec.cpg.graph.*;
+import de.fraunhofer.aisec.cpg.graph.Node;
+import de.fraunhofer.aisec.cpg.graph.NodeBuilder;
 import de.fraunhofer.aisec.cpg.graph.declarations.*;
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression;
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression;
@@ -75,6 +76,7 @@ public class VariableUsageResolver extends Pass {
   private Map<Type, EnumDeclaration> enumMap = new HashMap<>();
   private TranslationUnitDeclaration currTu;
   private ScopedWalker walker;
+  private TranslationResult result;
 
   @Override
   public boolean canBeSkippedIncremental() {
@@ -92,6 +94,7 @@ public class VariableUsageResolver extends Pass {
 
   @Override
   public void accept(TranslationResult result) {
+    this.result = result;
     walker = new ScopedWalker(lang);
 
     for (TranslationUnitDeclaration tu : result.getTranslationUnits()) {
@@ -335,6 +338,12 @@ public class VariableUsageResolver extends Pass {
       RecordDeclaration recordDeclaration = recordMap.get(reference.getType());
       if (reference.isStaticAccess()) {
         return recordDeclaration;
+      } else if (lang instanceof JavaLanguageFrontend
+          && ((JavaLanguageFrontend) lang)
+              .getFQNInCurrentPackage(reference.getName())
+              .equals(recordDeclaration.getName())) {
+        reference.setStaticAccess(true);
+        return recordDeclaration;
       } else {
         // check if we have this type as a class in our graph. If so, we can refer to its "this"
         // field
@@ -388,15 +397,20 @@ public class VariableUsageResolver extends Pass {
       return null;
     }
     // fields.putIfAbsent(base, new ArrayList<>());
-    List<FieldDeclaration> declarations = recordMap.get(base).getFields();
+    RecordDeclaration targetRecord = recordMap.get(base);
+    List<FieldDeclaration> declarations = targetRecord.getFields();
     Optional<FieldDeclaration> target =
         declarations.stream().filter(f -> f.getName().equals(name)).findFirst();
     if (target.isEmpty()) {
       FieldDeclaration declaration =
           NodeBuilder.newFieldDeclaration(
               name, type, Collections.emptyList(), "", null, null, false);
-      recordMap.get(base).addField(declaration);
+      targetRecord.addField(declaration);
       declaration.setImplicit(true);
+      result
+          .getImplicitDeclarations()
+          .computeIfAbsent(targetRecord, r -> new ArrayList<>())
+          .add(declaration);
       // lang.getScopeManager().addValueDeclaration(declaration);
       return declaration;
     } else {
@@ -423,6 +437,10 @@ public class VariableUsageResolver extends Pass {
       declaration.setType(returnType);
       declaration.setParameters(Util.createParameters(signature));
       containingRecord.addMethod(declaration);
+      result
+          .getImplicitDeclarations()
+          .computeIfAbsent(containingRecord, r -> new ArrayList<>())
+          .add(declaration);
       declaration.setImplicit(true);
       return declaration;
     } else {
@@ -446,6 +464,10 @@ public class VariableUsageResolver extends Pass {
       declaration.setParameters(Util.createParameters(signature));
 
       currTu.addDeclaration(declaration);
+      result
+          .getImplicitDeclarations()
+          .computeIfAbsent(currTu, r -> new ArrayList<>())
+          .add(declaration);
       declaration.setImplicit(true);
       return declaration;
     } else {

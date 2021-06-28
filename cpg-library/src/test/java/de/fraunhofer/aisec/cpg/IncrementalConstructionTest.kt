@@ -29,14 +29,27 @@ package de.fraunhofer.aisec.cpg
 import java.io.File
 import java.nio.file.Files
 import java.nio.file.Path
-import java.nio.file.Paths
 import java.time.Duration
 import java.time.Instant
 import java.util.stream.Collectors
+import java.util.stream.Stream
+import kotlin.test.assertTrue
 import org.apache.commons.io.FileUtils
-import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.Arguments
+import org.junit.jupiter.params.provider.MethodSource
 
 class IncrementalConstructionTest : BaseTest() {
+
+    companion object {
+        @JvmStatic
+        private fun getIncrementalExamples(): Stream<Arguments> {
+            val start = Path.of("src/test/resources/incremental")
+            return Files.walk(start, 1).filter { it != start && it.toFile().isDirectory }.map {
+                Arguments.of(it)
+            }
+        }
+    }
 
     fun analyze(
         fileExtension: String,
@@ -75,19 +88,24 @@ class IncrementalConstructionTest : BaseTest() {
         }
     }
 
-    @Test
-    fun testChangedFiles() {
-        val original = Paths.get("src/test/resources/incremental/original")
-        val changed = Paths.get("src/test/resources/incremental/changed")
+    @ParameterizedTest
+    @MethodSource("getIncrementalExamples")
+    fun testChangedFiles(exampleDir: Path) {
+        assertTrue { Database.getInstance().connect() }
+        Database.getInstance().purgeDatabase()
+
+        val original = exampleDir.resolve("original")
+        val changed = exampleDir.resolve("changed")
         val tempDir = Files.createTempDirectory("incrementalCPG_")
         val topLevel = tempDir.resolve("topLevel")
 
         FileUtils.copyDirectory(changed.toFile(), topLevel.toFile())
-
         var start = Instant.now()
         val conventionalResult = analyze("java", topLevel, true)
         val conventionalTime = Duration.between(start, Instant.now()).toMillis()
         FileUtils.deleteDirectory(topLevel.toFile())
+
+        resetPersistentState()
 
         FileUtils.copyDirectory(original.toFile(), topLevel.toFile())
         start = Instant.now()
@@ -103,6 +121,7 @@ class IncrementalConstructionTest : BaseTest() {
 
         println("Conventional time: $conventionalTime ms, incremental time: $incrementalTime ms")
 
+        Database.getInstance().saveAll(incrementalResult.translationUnits)
         TestUtils.assertGraphsAreEqual(
             conventionalResult.translationUnits,
             incrementalResult.translationUnits

@@ -33,7 +33,6 @@ import com.github.javaparser.ast.expr.*;
 import com.github.javaparser.ast.expr.Expression;
 import com.github.javaparser.resolution.UnsolvedSymbolException;
 import com.github.javaparser.resolution.declarations.ResolvedFieldDeclaration;
-import com.github.javaparser.resolution.declarations.ResolvedMethodDeclaration;
 import com.github.javaparser.resolution.declarations.ResolvedTypeDeclaration;
 import com.github.javaparser.resolution.declarations.ResolvedValueDeclaration;
 import de.fraunhofer.aisec.cpg.frontends.Handler;
@@ -287,7 +286,6 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
             TypeParser.createFrom(resolve.asField().declaringType().getQualifiedName(), true);
 
       } catch (RuntimeException | NoClassDefFoundError ex) {
-        isStaticAccess = true;
         String typeString = this.lang.recoverTypeFromUnsolvedException(ex);
         if (typeString != null) {
           baseType = TypeParser.createFrom(typeString, true);
@@ -373,15 +371,12 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
         fieldType = UnknownType.getUnknownType();
       }
 
-      MemberExpression memberExpression =
-          NodeBuilder.newMemberExpression(
-              base,
-              fieldType,
-              fieldAccessExpr.getName().getIdentifier(),
-              ".", // there is only "." in java
-              fieldAccessExpr.toString());
-      memberExpression.setStaticAccess(true);
-      return memberExpression;
+      return NodeBuilder.newMemberExpression(
+          base,
+          fieldType,
+          fieldAccessExpr.getName().getIdentifier(),
+          ".", // there is only "." in java
+          fieldAccessExpr.toString());
     }
 
     if (base.getLocation() == null) {
@@ -666,19 +661,6 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
     var typeString = UnknownType.UNKNOWN_TYPE_STRING;
     var isStatic = false;
 
-    ResolvedMethodDeclaration resolved = null;
-    try {
-      // try resolving the method to learn more about it
-      resolved = methodCallExpr.resolve();
-      isStatic = resolved.isStatic();
-      typeString = resolved.getReturnType().describe();
-    } catch (NoClassDefFoundError | RuntimeException ignored) {
-      // Unfortunately, JavaParser also throws a simple RuntimeException instead of an
-      // UnsolvedSymbolException within resolve() if it fails to resolve it under certain
-      // circumstances, we catch all that and continue on our own
-      log.debug("Could not resolve method {}", methodCallExpr);
-    }
-
     // the scope could either be a variable or also the class name (static call!)
     // thus, only because the scope is present, this is not automatically a member call
     if (o.isPresent()) {
@@ -718,12 +700,7 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
             NodeBuilder.newMemberCallExpression(
                 name, qualifiedName, base, member, ".", methodCallExpr.toString());
       } else {
-        String targetClass;
-        if (resolved != null) {
-          targetClass = resolved.declaringType().getQualifiedName();
-        } else {
-          targetClass = this.lang.getQualifiedNameFromImports(scopeName);
-        }
+        String targetClass = this.lang.getQualifiedNameFromImports(scopeName);
 
         if (targetClass == null) {
           targetClass = scopeName;

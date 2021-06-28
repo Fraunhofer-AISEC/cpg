@@ -384,7 +384,7 @@ public class JavaLanguageFrontend extends LanguageFrontend {
    * @param simpleName
    * @return
    */
-  private String getFQNInCurrentPackage(String simpleName) {
+  public String getFQNInCurrentPackage(String simpleName) {
     Scope theScope =
         getScopeManager()
             .getFirstScopeThat(scope -> scope.getAstNode() instanceof NamespaceDeclaration);

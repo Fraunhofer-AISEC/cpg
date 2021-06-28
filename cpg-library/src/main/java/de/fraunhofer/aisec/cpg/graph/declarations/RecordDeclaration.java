@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.declarations;
 
+import static de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.applyIndexProperty;
 import static de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.unwrap;
 
 import de.fraunhofer.aisec.cpg.graph.DeclarationHolder;
@@ -120,6 +121,7 @@ public class RecordDeclaration extends Declaration implements DeclarationHolder,
 
   public void removeField(FieldDeclaration fieldDeclaration) {
     this.fields.removeIf(propertyEdge -> propertyEdge.getEnd().equals(fieldDeclaration));
+    applyIndexProperty(this.fields);
   }
 
   @Nullable
@@ -157,6 +159,7 @@ public class RecordDeclaration extends Declaration implements DeclarationHolder,
 
   public void removeMethod(MethodDeclaration methodDeclaration) {
     this.methods.removeIf(propertyEdge -> propertyEdge.getEnd().equals(methodDeclaration));
+    applyIndexProperty(this.methods);
   }
 
   public void setMethods(List<MethodDeclaration> methods) {
@@ -182,6 +185,7 @@ public class RecordDeclaration extends Declaration implements DeclarationHolder,
   public void removeConstructor(ConstructorDeclaration constructorDeclaration) {
     this.constructors.removeIf(
         propertyEdge -> propertyEdge.getEnd().equals(constructorDeclaration));
+    applyIndexProperty(this.constructors);
   }
 
   public List<RecordDeclaration> getRecords() {
@@ -198,6 +202,7 @@ public class RecordDeclaration extends Declaration implements DeclarationHolder,
 
   public void removeRecord(RecordDeclaration recordDeclaration) {
     this.records.removeIf(propertyEdge -> propertyEdge.getEnd().equals(recordDeclaration));
+    applyIndexProperty(this.records);
   }
 
   public List<TemplateDeclaration> getTemplates() {

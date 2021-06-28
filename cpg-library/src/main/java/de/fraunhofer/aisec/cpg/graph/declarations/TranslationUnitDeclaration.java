@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.declarations;
 
+import static de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.applyIndexProperty;
 import static de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.unwrap;
 
 import com.google.common.hash.HashCode;
@@ -168,6 +169,11 @@ public class TranslationUnitDeclaration extends Declaration
     }
 
     addIfNotContains(declarations, declaration);
+  }
+
+  public void removeDeclaration(Declaration toRemove) {
+    declarations.removeIf(d -> d.getEnd() == toRemove);
+    applyIndexProperty(declarations);
   }
 
   @Override

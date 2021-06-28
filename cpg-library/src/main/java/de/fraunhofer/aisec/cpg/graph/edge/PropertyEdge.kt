@@ -120,6 +120,7 @@ open class PropertyEdge<T : Node> : Persistable {
          * @param propertyEdges propertyEdge list
          * @return new PropertyEdge list with updated index property
          */
+        @JvmStatic
         fun <T : Node> applyIndexProperty(
             propertyEdges: List<PropertyEdge<T>>
         ): List<PropertyEdge<T>> {
