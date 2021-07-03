@@ -297,6 +297,7 @@ public class EvaluationOrderGraphPass extends Pass {
 
   private void handleFunctionDeclaration(@NonNull Node node) {
     FunctionDeclaration funcDecl = (FunctionDeclaration) node;
+
     // reset EOG
     this.currentEOG.clear();
 
@@ -422,8 +423,16 @@ public class EvaluationOrderGraphPass extends Pass {
     for (Declaration declaration : declarationStatement.getDeclarations()) {
       if (declaration instanceof VariableDeclaration
           || declaration instanceof FunctionDeclaration) {
+        // save the current EOG stack, because we can have a function declaration within an
+        // existing function and the EOG handler for handling function declarations will reset the
+        // stack
+        var oldEOG = new ArrayList<>(this.currentEOG);
+
         // analyze the initializers if there is one
         createEOG(declaration);
+
+        // reset the oldEOG stack
+        this.currentEOG = oldEOG;
       }
     }
 
