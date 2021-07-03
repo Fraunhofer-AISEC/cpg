@@ -38,8 +38,10 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal;
 import de.fraunhofer.aisec.cpg.graph.types.Type;
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser;
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType;
+import java.io.File;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
 
 public class CallResolverTest extends BaseTest {
@@ -833,5 +835,25 @@ public class CallResolverTest extends BaseTest {
 
     assertEquals(1, calcCall.getInvokes().size());
     assertTrue(calcCall.getInvokes().get(0).isImplicit());
+  }
+
+  @Test
+  void testCallWithIgnoredResult() throws Exception {
+    var file = new File("src/test/resources/calls/ignore-return.cpp");
+    var tu = TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true);
+
+    // check for function declarations, we only want two: main and someFunction
+    // we do NOT want any dummy/implicit function declarations that could exist, if
+    // the call resolver would incorrectly assume that the call to someFunction is to another
+    // function because of the missing return assignment
+
+    var declarations =
+        tu.getDeclarations().stream()
+            .filter(x -> x instanceof FunctionDeclaration)
+            .map(x -> (FunctionDeclaration) x)
+            .collect(Collectors.toList());
+    assertNotNull(declarations);
+
+    assertEquals(2, declarations.size());
   }
 }

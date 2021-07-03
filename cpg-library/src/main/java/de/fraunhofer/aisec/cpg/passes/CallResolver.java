@@ -891,9 +891,6 @@ public class CallResolver extends Pass {
   }
 
   /**
-   * In C++ FunctionCalls must be declared before they are used to be valid invocation candidates.
-   * Therefore we have the additional requirement of <code>definedBefore()</code>
-   *
    * @param call we want to find invocation targets for by performing implicit casts
    * @return list of invocation candidates by applying implicit casts
    */
@@ -901,7 +898,7 @@ public class CallResolver extends Pass {
     assert lang != null;
     List<FunctionDeclaration> initialInvocationCandidates =
         lang.getScopeManager().resolveFunctionStopScopeTraversalOnDefinition(call).stream()
-            .filter(f -> !f.isImplicit() && definedBefore(f.getLocation(), call.getLocation()))
+            .filter(f -> !f.isImplicit())
             .collect(Collectors.toList());
     return resolveWithImplicitCast(call, initialInvocationCandidates);
   }
@@ -1006,9 +1003,6 @@ public class CallResolver extends Pass {
   }
 
   /**
-   * In C++ FunctionCalls must be declared before they are used to be valid invocation candidates.
-   * Therefore we have the additional requirement of <code>definedBefore()</code>
-   *
    * @param call we want to find invocation targets for by adding the default arguments to the
    *     signature
    * @return list of invocation candidates that have matching signature when considering default
@@ -1019,10 +1013,7 @@ public class CallResolver extends Pass {
     List<FunctionDeclaration> invocationCandidates =
         lang.getScopeManager().resolveFunctionStopScopeTraversalOnDefinition(call).stream()
             .filter(
-                f ->
-                    !f.isImplicit()
-                        && definedBefore(f.getLocation(), call.getLocation())
-                        && call.getSignature().size() < f.getSignatureTypes().size())
+                f -> !f.isImplicit() && call.getSignature().size() < f.getSignatureTypes().size())
             .collect(Collectors.toList());
     return resolveWithDefaultArgs(call, invocationCandidates);
   }
@@ -1048,25 +1039,6 @@ public class CallResolver extends Pass {
     return resolveWithDefaultArgs(call, invocationCandidates);
   }
 
-  /**
-   * Checks if a declaration is located before the usage
-   *
-   * @param declaration
-   * @param usage
-   * @return false if the declaration is below the usage, true if the declaration is above the usage
-   *     or there are no locations (cannot compare)
-   */
-  private boolean definedBefore(
-      @Nullable PhysicalLocation declaration, @Nullable PhysicalLocation usage) {
-    if (declaration == null || usage == null) {
-      return true; // No comparison possible -> return default value
-    }
-    if (declaration.getArtifactLocation().equals(usage.getArtifactLocation())) {
-      return usage.getRegion().compareTo(declaration.getRegion()) > 0;
-    }
-    return true;
-  }
-
   private void handleNormalCalls(RecordDeclaration curClass, CallExpression call) {
     if (curClass == null && lang != null) {
       // Handle function (not method) calls
@@ -1090,10 +1062,7 @@ public class CallResolver extends Pass {
   private void handleNormalCallCXX(RecordDeclaration curClass, CallExpression call) {
     List<FunctionDeclaration> invocationCandidates =
         lang.getScopeManager().resolveFunctionStopScopeTraversalOnDefinition(call).stream()
-            .filter(
-                f ->
-                    f.hasSignature(call.getSignature())
-                        && definedBefore(f.getLocation(), call.getLocation()))
+            .filter(f -> f.hasSignature(call.getSignature()))
             .collect(Collectors.toList());
 
     if (invocationCandidates.isEmpty()) {
@@ -1192,10 +1161,7 @@ public class CallResolver extends Pass {
       RecordDeclaration curClass, CallExpression call) {
     List<FunctionDeclaration> invocationCandidates =
         lang.getScopeManager().resolveFunctionStopScopeTraversalOnDefinition(call).stream()
-            .filter(
-                f ->
-                    f.hasSignature(call.getSignature())
-                        && definedBefore(f.getLocation(), call.getLocation()))
+            .filter(f -> f.hasSignature(call.getSignature()))
             .collect(Collectors.toList());
 
     if (invocationCandidates.isEmpty()) {
