@@ -903,24 +903,6 @@ public class CallResolver extends Pass {
   }
 
   /**
-   * Methods can be defined inline and then they can be used even if they are declared below.
-   * Currently we cannot distinguish between inline methods and method definitions outside of the
-   * class block. This will be considered when we have a language dependent call resolver
-   *
-   * @param call we want to find invocation targets for by performing implicit casts
-   * @return list of invocation candidates by applying implicit casts
-   */
-  private List<FunctionDeclaration> resolveWithImplicitCastMethod(CallExpression call) {
-    assert lang != null;
-    List<FunctionDeclaration> initialInvocationCandidates =
-        lang.getScopeManager().resolveFunctionStopScopeTraversalOnDefinition(call).stream()
-            .filter(f -> !f.isImplicit())
-            .collect(Collectors.toList());
-
-    return resolveWithImplicitCast(call, initialInvocationCandidates);
-  }
-
-  /**
    * Checks if the current casts are compatible with the casts necessary to match with a new
    * FunctionDeclaration. If a one argument would need to be casted in two different types it would
    * be modified to a cast to UnknownType
@@ -1178,7 +1160,7 @@ public class CallResolver extends Pass {
 
     if (invocationCandidates.isEmpty()) {
       // Check for usage of implicit cast
-      invocationCandidates.addAll(resolveWithImplicitCastMethod(call));
+      invocationCandidates.addAll(resolveWithImplicitCastFunc(call));
     }
     return invocationCandidates;
   }
