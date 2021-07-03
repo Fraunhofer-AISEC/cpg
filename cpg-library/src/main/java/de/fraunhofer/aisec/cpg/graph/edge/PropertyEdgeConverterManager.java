@@ -40,8 +40,9 @@ import org.checkerframework.checker.nullness.qual.NonNull;
  * and which require a custom converter.
  */
 public class PropertyEdgeConverterManager {
+
   @NonNull
-  private static PropertyEdgeConverterManager INSTANCE = new PropertyEdgeConverterManager();
+  private static final PropertyEdgeConverterManager INSTANCE = new PropertyEdgeConverterManager();
 
   private PropertyEdgeConverterManager() {
     // Add here converters for PropertyEdges
@@ -49,7 +50,7 @@ public class PropertyEdgeConverterManager {
         TemplateDeclaration.TemplateInitialization.class.getName(), Object::toString);
 
     this.addDeserializer(
-        "INSTANTIATION", (s -> TemplateDeclaration.TemplateInitialization.valueOf(s.toString())));
+        "INSTANTIATION", (s -> s != null ? TemplateDeclaration.TemplateInitialization.valueOf(s.toString()) : null));
   }
 
   public static PropertyEdgeConverterManager getInstance() {
@@ -57,10 +58,10 @@ public class PropertyEdgeConverterManager {
   }
 
   // Maps a class to a function that serialized the object from the given class
-  private Map<String, Function<Object, String>> serializer = new HashMap<>();
+  private final Map<String, Function<Object, String>> serializer = new HashMap<>();
 
   // Maps a string (key of the property) to a function that deserializes the property
-  private Map<String, Function<Object, Object>> deserializer = new HashMap<>();
+  private final Map<String, Function<Object, Object>> deserializer = new HashMap<>();
 
   public void addSerializer(String clazz, Function<Object, String> func) {
     serializer.put(clazz, func);
