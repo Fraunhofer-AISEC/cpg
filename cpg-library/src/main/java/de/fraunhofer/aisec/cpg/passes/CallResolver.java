@@ -999,27 +999,6 @@ public class CallResolver extends Pass {
     return resolveWithDefaultArgs(call, invocationCandidates);
   }
 
-  /**
-   * Methods can be defined inline and then they can be used even if they are declared below.
-   * Currently we cannot distinguish between inline methods and method definitions outside of the
-   * class block. This will be considered when we have a language dependent call resolver
-   *
-   * @param call we want to find invocation targets for by adding the default arguments to the
-   *     signature
-   * @return list of invocation candidates that have matching signature when considering default
-   *     arguments
-   */
-  private List<FunctionDeclaration> resolveWithDefaultArgsMethod(CallExpression call) {
-    assert lang != null;
-    List<FunctionDeclaration> invocationCandidates =
-        lang.getScopeManager().resolveFunctionStopScopeTraversalOnDefinition(call).stream()
-            .filter(
-                f -> !f.isImplicit() && call.getSignature().size() < f.getSignatureTypes().size())
-            .collect(Collectors.toList());
-
-    return resolveWithDefaultArgs(call, invocationCandidates);
-  }
-
   private void handleNormalCalls(RecordDeclaration curClass, CallExpression call) {
     if (curClass == null && lang != null) {
       // Handle function (not method) calls
@@ -1147,7 +1126,7 @@ public class CallResolver extends Pass {
 
     if (invocationCandidates.isEmpty()) {
       // Check for usage of default args
-      invocationCandidates.addAll(resolveWithDefaultArgsMethod(call));
+      invocationCandidates.addAll(resolveWithDefaultArgsFunc(call));
     }
 
     if (invocationCandidates.isEmpty()) {
