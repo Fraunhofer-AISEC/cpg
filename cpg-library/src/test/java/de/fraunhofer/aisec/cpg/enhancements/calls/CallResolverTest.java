@@ -286,7 +286,8 @@ public class CallResolverTest extends BaseTest {
     assertEquals("10.0", castExpression.getExpression().getCode());
   }
 
-  private void testDefaultArgumentsInDeclaration() throws Exception {
+  @Test
+  void testDefaultArgumentsInDeclaration() throws Exception {
     List<TranslationUnitDeclaration> result =
         TestUtils.analyze(
             List.of(
@@ -388,7 +389,8 @@ public class CallResolverTest extends BaseTest {
     assertEquals("int", ((CastExpression) display10.getArguments().get(0)).getCastType().getName());
   }
 
-  private void testDefaultArgumentsInDefinition() throws Exception {
+  @Test
+  void testDefaultArgumentsInDefinition() throws Exception {
     List<TranslationUnitDeclaration> result =
         TestUtils.analyze(
             List.of(
@@ -471,7 +473,8 @@ public class CallResolverTest extends BaseTest {
     assertEquals("count", display$Count.getArguments().get(1).getName());
   }
 
-  private void testPartialDefaultArguments() throws Exception {
+  @Test
+  void testPartialDefaultArguments() throws Exception {
     List<TranslationUnitDeclaration> result =
         TestUtils.analyze(
             List.of(Path.of(topLevel.toString(), "defaultargs", "partialDefaults.cpp").toFile()),
@@ -608,13 +611,6 @@ public class CallResolverTest extends BaseTest {
   }
 
   @Test
-  void testDefaultArgumentsCallResolution() throws Exception {
-    testDefaultArgumentsInDeclaration();
-    testDefaultArgumentsInDefinition();
-    testPartialDefaultArguments();
-  }
-
-  @Test
   void testScopedFunctionResolutionUndefined() throws Exception {
     List<TranslationUnitDeclaration> result =
         TestUtils.analyze(
@@ -679,7 +675,7 @@ public class CallResolverTest extends BaseTest {
             calls, c -> c.getLocation().getRegion().getStartLine() == 8);
 
     assertEquals(1, fm1.getInvokes().size());
-    assertTrue(fm1.getInvokes().get(0).isImplicit());
+
     assertEquals(1, fm1.getArguments().size());
     assertEquals(8, ((Literal) fm1.getArguments().get(0)).getValue());
 
@@ -692,7 +688,7 @@ public class CallResolverTest extends BaseTest {
             TestUtils.subnodesOfType(result, Literal.class), l -> l.getValue().equals(5));
 
     assertEquals(1, fm2.getInvokes().size());
-    assertFalse(fm2.getInvokes().get(0).isImplicit());
+
     assertEquals(9, fm2.getInvokes().get(0).getLocation().getRegion().getStartLine());
     assertEquals(1, fm2.getArguments().size());
     assertEquals(4, ((Literal) fm2.getArguments().get(0)).getValue());

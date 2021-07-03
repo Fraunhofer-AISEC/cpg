@@ -37,7 +37,6 @@ import de.fraunhofer.aisec.cpg.graph.types.*;
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.ScopedWalker;
 import de.fraunhofer.aisec.cpg.helpers.Util;
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy;
-import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation;
 import java.util.*;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
