@@ -323,7 +323,10 @@ public class CallResolverTest extends BaseTest {
               return c.getCode().equals("display(1);");
             });
 
-    assertEquals(1, display1.getInvokes().size());
+    // it will contain two nodes: the definition and the declaration. this is a general
+    // problem, that we need to tackle in the future, how to combine those two. See
+    // https://github.com/Fraunhofer-AISEC/cpg/issues/194
+    assertEquals(2, display1.getInvokes().size());
     assertTrue(display1.getInvokes().contains(displayDeclaration));
 
     assertEquals("1", display1.getArguments().get(0).getCode());
@@ -352,7 +355,7 @@ public class CallResolverTest extends BaseTest {
               return c.getCode().equals("display();");
             });
 
-    assertEquals(1, display.getInvokes().size());
+    assertEquals(2, display.getInvokes().size());
     assertTrue(display.getInvokes().contains(displayDeclaration));
 
     assertEquals(0, display.getArguments().size());
@@ -365,7 +368,7 @@ public class CallResolverTest extends BaseTest {
               return c.getCode().equals("display(count, '$');");
             });
 
-    assertEquals(1, display.getInvokes().size());
+    assertEquals(2, display.getInvokes().size());
     assertTrue(display.getInvokes().contains(displayDeclaration));
 
     assertEquals("count", displayCount$.getArguments().get(0).getName());
@@ -379,7 +382,7 @@ public class CallResolverTest extends BaseTest {
               return c.getCode().equals("display(10.0);");
             });
 
-    assertEquals(1, display10.getInvokes().size());
+    assertEquals(2, display10.getInvokes().size());
     assertTrue(display.getInvokes().contains(displayDeclaration));
 
     assertEquals(1, display10.getArguments().size());
@@ -622,10 +625,10 @@ public class CallResolverTest extends BaseTest {
     assertEquals(1, calls.size());
     List<FunctionDeclaration> functionDeclarations =
         TestUtils.subnodesOfType(result, FunctionDeclaration.class);
-    assertEquals(3, functionDeclarations.size());
+    assertEquals(2, functionDeclarations.size());
 
     assertEquals(1, calls.get(0).getInvokes().size());
-    assertTrue(calls.get(0).getInvokes().get(0).isImplicit());
+
     assertEquals("f", calls.get(0).getInvokes().get(0).getName());
   }
 
