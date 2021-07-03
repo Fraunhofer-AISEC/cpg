@@ -421,14 +421,16 @@ public class EvaluationOrderGraphPass extends Pass {
     DeclarationStatement declarationStatement = (DeclarationStatement) node;
     // loop through declarations
     for (Declaration declaration : declarationStatement.getDeclarations()) {
-      if (declaration instanceof VariableDeclaration
-          || declaration instanceof FunctionDeclaration) {
+      if (declaration instanceof VariableDeclaration) {
+        // analyze the initializers if there is one
+        createEOG(declaration);
+      } else if (declaration instanceof FunctionDeclaration) {
         // save the current EOG stack, because we can have a function declaration within an
         // existing function and the EOG handler for handling function declarations will reset the
         // stack
         var oldEOG = new ArrayList<>(this.currentEOG);
 
-        // analyze the initializers if there is one
+        // analyze the defaults
         createEOG(declaration);
 
         // reset the oldEOG stack
