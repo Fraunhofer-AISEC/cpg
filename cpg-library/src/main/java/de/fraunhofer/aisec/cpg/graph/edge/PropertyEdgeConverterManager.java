@@ -50,7 +50,8 @@ public class PropertyEdgeConverterManager {
         TemplateDeclaration.TemplateInitialization.class.getName(), Object::toString);
 
     this.addDeserializer(
-        "INSTANTIATION", (s -> s != null ? TemplateDeclaration.TemplateInitialization.valueOf(s.toString()) : null));
+        "INSTANTIATION",
+        (s -> s != null ? TemplateDeclaration.TemplateInitialization.valueOf(s.toString()) : null));
   }
 
   public static PropertyEdgeConverterManager getInstance() {
