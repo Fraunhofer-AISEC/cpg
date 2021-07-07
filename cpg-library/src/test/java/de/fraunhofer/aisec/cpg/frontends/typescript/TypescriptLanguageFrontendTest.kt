@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.frontends.typescript
 
 import de.fraunhofer.aisec.cpg.TestUtils
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.types.TypeParser
 import java.nio.file.Path
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -35,7 +36,7 @@ import org.junit.jupiter.api.Test
 class TypescriptLanguageFrontendTest {
 
     @Test
-    fun testParse() {
+    fun testFunction() {
         val topLevel = Path.of("src", "test", "resources", "typescript")
         val tu =
             TestUtils.analyzeAndGetFirstTU(
@@ -53,6 +54,24 @@ class TypescriptLanguageFrontendTest {
 
         val functions = tu.declarations.filterIsInstance<FunctionDeclaration>()
         assertNotNull(functions)
+
         assertEquals(2, functions.size)
+
+        val someFunction = functions.first()
+        assertEquals("someFunction", someFunction.name)
+        assertEquals(TypeParser.createFrom("Number", false), someFunction.type)
+
+        val someOtherFunction = functions.last()
+        assertEquals("someOtherFunction", someOtherFunction.name)
+        assertEquals(TypeParser.createFrom("Number", false), someOtherFunction.type)
+
+        val parameters = someOtherFunction.parameters
+        assertNotNull(parameters)
+
+        assertEquals(1, parameters.size)
+
+        val parameter = parameters.first()
+        assertEquals("s", parameter.name)
+        assertEquals(TypeParser.createFrom("String", false), parameter.type)
     }
 }

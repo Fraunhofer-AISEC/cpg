@@ -43,10 +43,21 @@ class DeclarationHandler(lang: TypeScriptLanguageFrontend) :
         when (node.type) {
             "SourceFile" -> return handleSourceFile(node)
             "FunctionDeclaration" -> return handleFunctionDeclaration(node)
+            "Parameter" -> return handleParameter(node)
             "VariableDeclaration" -> return handleVariableDeclaration(node)
         }
 
         return Declaration()
+    }
+
+    private fun handleParameter(node: TypeScriptNode): Declaration {
+        val name = getIdentifierName(node)
+        val type = this.lang.typeHandler.handle(node.firstChild("TypeReference"))
+
+        val param =
+            NodeBuilder.newMethodParameterIn(name, type, false, this.lang.getCodeFromRawNode(node))
+
+        return param
     }
 
     fun handleSourceFile(node: TypeScriptNode): TranslationUnitDeclaration {
@@ -70,15 +81,24 @@ class DeclarationHandler(lang: TypeScriptLanguageFrontend) :
     }
 
     private fun handleFunctionDeclaration(node: TypeScriptNode): FunctionDeclaration {
-        val name = this.lang.getCodeFromRawNode(node.firstChild("Identifier"))
+        val name = getIdentifierName(node)
 
         val func =
             NodeBuilder.newFunctionDeclaration(name ?: "", this.lang.getCodeFromRawNode(node))
 
+        func.type = this.lang.typeHandler.handle(node.firstChild("TypeReference"))
+
         this.lang.scopeManager.enterScope(func)
 
-        // parse body
-        val body = this.lang.statementHandler.handle(node.firstChild("Block"))
+        // gather parameters
+        node.children?.filter { it.type == "Parameter" }?.forEach {
+            val param = this.lang.declarationHandler.handleNode(it)
+
+            this.lang.scopeManager.addDeclaration(param)
+        }
+
+        // parse body, if it exists
+        node.firstChild("Block")?.let { func.body = this.lang.statementHandler.handle(it) }
 
         this.lang.scopeManager.leaveScope(func)
 
@@ -86,7 +106,7 @@ class DeclarationHandler(lang: TypeScriptLanguageFrontend) :
     }
 
     private fun handleVariableDeclaration(node: TypeScriptNode): VariableDeclaration {
-        val name = this.lang.getCodeFromRawNode(node.firstChild("Identifier"))
+        val name = getIdentifierName(node)
 
         val `var` =
             NodeBuilder.newVariableDeclaration(
@@ -103,4 +123,7 @@ class DeclarationHandler(lang: TypeScriptLanguageFrontend) :
 
         return `var`
     }
+
+    private fun getIdentifierName(node: TypeScriptNode) =
+        this.lang.getCodeFromRawNode(node.firstChild("Identifier"))?.trim()
 }

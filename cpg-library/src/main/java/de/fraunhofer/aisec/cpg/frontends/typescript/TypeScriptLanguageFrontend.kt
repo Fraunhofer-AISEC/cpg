@@ -44,6 +44,7 @@ class TypeScriptLanguageFrontend(
     val declarationHandler = DeclarationHandler(this)
     val statementHandler = StatementHandler(this)
     val expressionHandler = ExpressionHandler(this)
+    val typeHandler = TypeHandler(this)
 
     companion object {
         @kotlin.jvm.JvmField var TYPESCRIPT_EXTENSIONS: List<String> = listOf(".ts", ".tsx")
