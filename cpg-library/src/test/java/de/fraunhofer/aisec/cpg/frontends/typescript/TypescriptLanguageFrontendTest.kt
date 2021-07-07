@@ -28,11 +28,17 @@ package de.fraunhofer.aisec.cpg.frontends.typescript
 import de.fraunhofer.aisec.cpg.ExperimentalTypeScript
 import de.fraunhofer.aisec.cpg.TestUtils
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser
 import java.nio.file.Path
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
+import kotlin.test.assertSame
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 
@@ -108,5 +114,44 @@ class TypescriptLanguageFrontendTest {
 
         assertEquals("preventDefault", preventDefault.name)
         assertEquals("event", preventDefault.base.name)
+
+        val apiUrl =
+            function.getBodyStatementAs(1, DeclarationStatement::class.java)?.singleDeclaration as?
+                VariableDeclaration
+        assertNotNull(apiUrl)
+
+        assertNotNull("apiUrl", apiUrl.name)
+
+        val literalInitializer = apiUrl.initializer as? Literal<*>
+        assertNotNull(literalInitializer)
+
+        assertEquals("/api/v1/groups", literalInitializer.value)
+
+        val token =
+            function.getBodyStatementAs(2, DeclarationStatement::class.java)?.singleDeclaration as?
+                VariableDeclaration
+        assertNotNull(token)
+
+        assertNotNull("token", token.name)
+
+        val callInitializer = token.initializer as? CallExpression
+        assertNotNull(callInitializer)
+
+        val stringArg = callInitializer.arguments.first() as? Literal<*>
+        assertNotNull(stringArg)
+
+        assertEquals("access_token", stringArg.value)
+
+        val chainedCall = function.getBodyStatementAs(3, MemberCallExpression::class.java)
+        assertNotNull(chainedCall)
+
+        val fetch = chainedCall.base as? CallExpression
+        assertNotNull(fetch)
+
+        val refArg = fetch.arguments.first() as? DeclaredReferenceExpression
+        assertNotNull(refArg)
+
+        assertEquals("apiUrl", refArg.name)
+        assertSame(apiUrl, refArg.refersTo)
     }
 }

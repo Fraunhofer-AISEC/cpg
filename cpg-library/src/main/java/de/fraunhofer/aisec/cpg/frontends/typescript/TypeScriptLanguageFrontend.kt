@@ -71,6 +71,7 @@ class TypeScriptLanguageFrontend(
 
     override fun <T : Any?> getCodeFromRawNode(astNode: T): String? {
         return if (astNode is TypeScriptNode) {
+            // TODO: position seems to be off by +1
             return cachedSource?.substring(astNode.location.pos, astNode.location.end)
         } else {
             null

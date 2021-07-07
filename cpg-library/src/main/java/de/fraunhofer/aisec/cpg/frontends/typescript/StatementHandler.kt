@@ -75,6 +75,8 @@ class StatementHandler(lang: TypeScriptLanguageFrontend) :
         for (variableNode in nodes ?: emptyList()) {
             val decl = this.lang.declarationHandler.handleNode(variableNode)
 
+            statement.addToPropertyEdgeDeclaration(decl)
+
             this.lang.scopeManager.addDeclaration(decl)
         }
 

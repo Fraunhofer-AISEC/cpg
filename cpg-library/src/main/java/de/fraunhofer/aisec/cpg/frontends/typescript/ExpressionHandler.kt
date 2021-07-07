@@ -47,6 +47,8 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
             "CallExpression" -> return handleCallExpression(node)
             "PropertyAccessExpression" -> return handlePropertyAccessExpression(node)
             "Identifier" -> return handleIdentifier(node)
+            "FirstTemplateToken" -> return handleStringLiteral(node)
+            "NoSubstitutionTemplateLiteral" -> return handleStringLiteral(node)
             "StringLiteral" -> return handleStringLiteral(node)
         }
 
@@ -54,7 +56,10 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
     }
 
     private fun handleStringLiteral(node: TypeScriptNode): Literal<String> {
-        val value = this.lang.getCodeFromRawNode(node)?.trim()?.replace("\"", "")
+        // for now, we also simply parse template expressions as string literals. we
+        // might need a special literal type for that in the future. See
+        // https://github.com/Fraunhofer-AISEC/cpg/issues/463
+        val value = this.lang.getCodeFromRawNode(node)?.trim()?.replace("\"", "")?.replace("`", "")
 
         return NodeBuilder.newLiteral(
             value,
