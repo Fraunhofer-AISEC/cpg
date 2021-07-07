@@ -702,7 +702,8 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
         scopeName = scope.toString();
       }
 
-      Statement base = handle(scope);
+      de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression base =
+          (de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression) handle(scope);
 
       // If the base directly refers to a record, then this is a static call
       if (base instanceof DeclaredReferenceExpression
@@ -722,7 +723,8 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
 
         lang.setCodeAndRegion(
             member,
-            methodCallExpr); // This will also overwrite the code set to the empty string set above
+            methodCallExpr
+                .getName()); // This will also overwrite the code set to the empty string set above
         callExpression =
             NodeBuilder.newMemberCallExpression(
                 name, qualifiedName, base, member, ".", methodCallExpr.toString());
@@ -744,7 +746,7 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
       }
     } else {
       callExpression =
-          NodeBuilder.newCallExpression(name, qualifiedName, methodCallExpr.toString());
+          NodeBuilder.newCallExpression(name, qualifiedName, methodCallExpr.toString(), false);
     }
 
     callExpression.setType(TypeParser.createFrom(typeString, true));

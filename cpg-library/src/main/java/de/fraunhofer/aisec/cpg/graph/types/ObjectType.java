@@ -25,19 +25,44 @@
  */
 package de.fraunhofer.aisec.cpg.graph.types;
 
+import de.fraunhofer.aisec.cpg.graph.HasType;
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration;
+import de.fraunhofer.aisec.cpg.graph.edge.Properties;
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 import org.neo4j.ogm.annotation.Relationship;
 
 /**
  * This is the main type in the Type system. ObjectTypes describe objects, as instances of a class.
  * This also includes primitive data types.
  */
-public class ObjectType extends Type {
+public class ObjectType extends Type implements HasType.SecondaryTypeEdge {
+
+  @Override
+  public void updateType(Collection<Type> typeState) {
+    if (this.generics == null) {
+      return;
+    }
+    for (Type t : this.getGenerics()) {
+      for (Type t2 : typeState) {
+        if (t2.equals(t)) {
+          this.replaceGenerics(t, t2);
+        }
+      }
+    }
+  }
+
+  public void replaceGenerics(Type oldType, Type newType) {
+    if (this.generics == null) {
+      return;
+    }
+    for (int i = 0; i < this.generics.size(); i++) {
+      PropertyEdge<Type> propertyEdge = this.generics.get(i);
+      if (propertyEdge.getEnd().equals(oldType)) {
+        propertyEdge.setEnd(newType);
+      }
+    }
+  }
 
   /**
    * ObjectTypes can have a modifier if they are primitive datatypes. The default is signed for
@@ -130,8 +155,14 @@ public class ObjectType extends Type {
 
   public void addGeneric(Type generic) {
     var propertyEdge = new PropertyEdge<>(this, generic);
-    // propertyEdge.addProperty(Properties.INDEX, this.generics.size());
+    propertyEdge.addProperty(Properties.INDEX, this.generics.size());
     this.generics.add(propertyEdge);
+  }
+
+  public void addGenerics(List<Type> generics) {
+    for (Type generic : generics) {
+      addGeneric(generic);
+    }
   }
 
   @Override
@@ -156,26 +187,5 @@ public class ObjectType extends Type {
   @Override
   public int hashCode() {
     return Objects.hash(super.hashCode(), generics, modifier, primitive);
-  }
-
-  @Override
-  public String toString() {
-    return "ObjectType{"
-        + "generics="
-        + generics
-        + ", typeName='"
-        + getName()
-        + '\''
-        + ", storage="
-        + this.getStorage()
-        + ", qualifier="
-        + this.getQualifier()
-        + ", modifier="
-        + modifier
-        + ", primitive="
-        + primitive
-        + ", origin="
-        + this.getTypeOrigin()
-        + '}';
   }
 }

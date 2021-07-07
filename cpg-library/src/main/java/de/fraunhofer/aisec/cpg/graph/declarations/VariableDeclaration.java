@@ -33,11 +33,10 @@ import de.fraunhofer.aisec.cpg.graph.TypeManager;
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression;
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.InitializerListExpression;
 import de.fraunhofer.aisec.cpg.graph.types.Type;
-import java.util.HashSet;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.checkerframework.checker.nullness.qual.Nullable;
+import org.neo4j.ogm.annotation.Relationship;
 
 /** Represents the declaration of a variable. */
 public class VariableDeclaration extends ValueDeclaration implements TypeListener {
@@ -46,6 +45,23 @@ public class VariableDeclaration extends ValueDeclaration implements TypeListene
   @SubGraph("AST")
   @Nullable
   protected Expression initializer;
+
+  /**
+   * We need a way to store the templateParameters that a VariableDeclaration might have before the
+   * ConstructExpression is created
+   */
+  @Relationship(value = "TEMPLATE_PARAMETERS", direction = "OUTGOING")
+  @SubGraph("AST")
+  @Nullable
+  private List<Node> templateParameters = null;
+
+  public List<Node> getTemplateParameters() {
+    return templateParameters;
+  }
+
+  public void setTemplateParameters(List<Node> templateParameters) {
+    this.templateParameters = templateParameters;
+  }
 
   /**
    * C++ uses implicit constructor calls for statements like <code>A a;</code> but this only applies

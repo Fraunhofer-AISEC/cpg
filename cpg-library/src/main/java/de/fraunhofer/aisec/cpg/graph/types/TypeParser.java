@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.types;
 
+import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
 import de.fraunhofer.aisec.cpg.graph.TypeManager;
 import java.util.ArrayList;
 import java.util.List;
@@ -45,7 +46,7 @@ public class TypeParser {
   private static final Logger log = LoggerFactory.getLogger(TypeParser.class);
 
   public static final String UNKNOWN_TYPE_STRING = "UNKNOWN";
-  private static final List<String> primitives =
+  public static final List<String> PRIMITIVES =
       List.of("byte", "short", "int", "long", "float", "double", "boolean", "char");
   private static final Pattern functionPtrRegex =
       Pattern.compile(
@@ -547,7 +548,7 @@ public class TypeParser {
    */
   private static boolean isPrimitiveType(@NonNull List<String> stringList) {
     for (String s : stringList) {
-      if (primitives.contains(s)) {
+      if (PRIMITIVES.contains(s)) {
         return true;
       }
     }
@@ -568,7 +569,7 @@ public class TypeParser {
     boolean foundPrimitive = false;
 
     for (String s : typeBlocks) {
-      if (primitives.contains(s)) {
+      if (PRIMITIVES.contains(s)) {
         if (primitiveType.length() > 0) {
           primitiveType.append(" ");
         }
@@ -577,11 +578,11 @@ public class TypeParser {
     }
 
     for (String s : typeBlocks) {
-      if (primitives.contains(s) && !foundPrimitive) {
+      if (PRIMITIVES.contains(s) && !foundPrimitive) {
         joinedTypeBlocks.add(primitiveType.toString());
         foundPrimitive = true;
       } else {
-        if (!primitives.contains(s)) {
+        if (!PRIMITIVES.contains(s)) {
           joinedTypeBlocks.add(s);
         }
       }
@@ -844,6 +845,29 @@ public class TypeParser {
     }
 
     return finalType;
+  }
+
+  public static Type createFrom(@NonNull String type, boolean resolveAlias, LanguageFrontend lang) {
+    Type templateType = searchForTemplateTypes(type, lang);
+    if (templateType != null) {
+      return templateType;
+    }
+    Type createdType = createFrom(type, resolveAlias);
+
+    if (createdType instanceof SecondOrderType) {
+      templateType = searchForTemplateTypes(createdType.getRoot().getName(), lang);
+      if (templateType != null) {
+        createdType.setRoot(templateType);
+      }
+    }
+
+    return createdType;
+  }
+
+  private static Type searchForTemplateTypes(@NonNull String type, LanguageFrontend lang) {
+    return TypeManager.getInstance()
+        .searchTemplateScopeForDefinedParameterizedTypes(
+            lang.getScopeManager().getCurrentScope(), type);
   }
 
   /**

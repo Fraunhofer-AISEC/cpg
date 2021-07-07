@@ -57,12 +57,13 @@ public class NodeBuilder {
     return using;
   }
 
-  public static CallExpression newCallExpression(String name, String fqn, String code) {
+  public static CallExpression newCallExpression(
+      String name, String fqn, String code, boolean template) {
     CallExpression node = new CallExpression();
     node.setName(name);
     node.setCode(code);
     node.setFqn(fqn);
-
+    node.setTemplate(template);
     log(node);
 
     return node;
@@ -134,6 +135,26 @@ public class NodeBuilder {
     log(node);
 
     return node;
+  }
+
+  public static <T> Literal<T> duplicateLiteral(Literal<T> original, boolean implicit) {
+    Literal<T> duplicate =
+        NodeBuilder.newLiteral(original.getValue(), original.getType(), original.getCode());
+    duplicate.setLocation(original.getLocation());
+    duplicate.setLocals(original.getLocals());
+    duplicate.setPossibleSubTypes(original.getPossibleSubTypes());
+    duplicate.setArgumentIndex(original.getArgumentIndex());
+    duplicate.setAnnotations(original.getAnnotations());
+    duplicate.setComment(original.getComment());
+    duplicate.setFile(original.getFile());
+    duplicate.setName(original.getName());
+    duplicate.setNextDFG(original.getNextDFG());
+    duplicate.setPrevDFG(original.getPrevDFG());
+    duplicate.setNextEOG(original.getNextEOG());
+    duplicate.setPrevEOG(original.getPrevEOG());
+
+    duplicate.setImplicit(implicit);
+    return duplicate;
   }
 
   public static DeclaredReferenceExpression newDeclaredReferenceExpression(
@@ -219,6 +240,16 @@ public class NodeBuilder {
     return node;
   }
 
+  public static TypeParamDeclaration newTypeParamDeclaration(String name, String code) {
+    TypeParamDeclaration node = new TypeParamDeclaration();
+    node.setName(name);
+    node.setCode(code);
+
+    log(node);
+
+    return node;
+  }
+
   public static CompoundStatement newCompoundStatement(String code) {
     CompoundStatement node = new CompoundStatement();
     node.setCode(code);
@@ -238,7 +269,7 @@ public class NodeBuilder {
   }
 
   public static CallExpression newMemberCallExpression(
-      String name, String fqn, Node base, Node member, String operatorCode, String code) {
+      String name, String fqn, Expression base, Node member, String operatorCode, String code) {
     MemberCallExpression node = new MemberCallExpression();
     node.setName(name);
     node.setBase(base);
@@ -250,6 +281,23 @@ public class NodeBuilder {
     log(node);
 
     return node;
+  }
+
+  public static TypeExpression newTypeExpression(String name, Type type) {
+    TypeExpression node = new TypeExpression();
+    node.setName(name);
+    node.setType(type);
+
+    log(node);
+
+    return node;
+  }
+
+  public static TypeExpression duplicateTypeExpression(TypeExpression original, boolean implicit) {
+    TypeExpression duplicate =
+        NodeBuilder.newTypeExpression(original.getName(), original.getType());
+    duplicate.setImplicit(implicit);
+    return duplicate;
   }
 
   public static UnaryOperator newUnaryOperator(
@@ -421,6 +469,25 @@ public class NodeBuilder {
 
     log(node);
 
+    return node;
+  }
+
+  public static FunctionTemplateDeclaration newFunctionTemplateDeclaration(
+      String name, String code) {
+    FunctionTemplateDeclaration node = new FunctionTemplateDeclaration();
+    node.setName(name);
+    node.setCode(code);
+
+    log(node);
+    return node;
+  }
+
+  public static ClassTemplateDeclaration newClassTemplateDeclaration(String name, String code) {
+    ClassTemplateDeclaration node = new ClassTemplateDeclaration();
+    node.setName(name);
+    node.setCode(code);
+
+    log(node);
     return node;
   }
 

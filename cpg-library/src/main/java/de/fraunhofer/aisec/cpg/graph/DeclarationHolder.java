@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Declaration;
 import de.fraunhofer.aisec.cpg.graph.edge.Properties;
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import java.util.Collection;
+import java.util.List;
 import org.checkerframework.checker.nullness.qual.NonNull;
 
 public interface DeclarationHolder {
@@ -83,4 +84,7 @@ public interface DeclarationHolder {
       collection.add(propertyEdge);
     }
   }
+
+  @NonNull
+  List<Declaration> getDeclarations();
 }
