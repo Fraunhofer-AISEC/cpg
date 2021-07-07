@@ -31,6 +31,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
+import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser
 import java.nio.file.Path
@@ -233,5 +234,27 @@ class TypescriptLanguageFrontendTest {
         assertNotNull(users)
         assertEquals("users", users.name)
         assertEquals(TypeParser.createFrom("User[]", false), users.type)
+
+        val usersComponent =
+            tu.getDeclarationsByName("Users", RecordDeclaration::class.java).iterator().next()
+        assertNotNull(usersComponent)
+        assertEquals("Users", usersComponent.name)
+        assertEquals(1, usersComponent.constructors.size)
+        assertEquals(/*2*/ 3 /* because of a dummy node */, usersComponent.methods.size)
+        assertEquals(/*0*/ 2 /* because of dummy nodes */, usersComponent.fields.size)
+
+        val render = usersComponent.methods.firstOrNull { it.name == "render" }
+        assertNotNull(render)
+
+        val returnStmt = render.getBodyStatementAs(1, ReturnStatement::class.java)
+        assertNotNull(returnStmt)
+
+        // check the return statement for the TSX statements
+        val jsx = returnStmt.returnValue as? ExpressionList
+        assertNotNull(jsx)
+
+        val tag = jsx.expressions.firstOrNull()
+        assertNotNull(tag)
+        assertEquals("<div>", tag.name)
     }
 }

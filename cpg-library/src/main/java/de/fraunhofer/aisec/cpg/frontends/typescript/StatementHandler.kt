@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder
 import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
+import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 
@@ -46,9 +47,20 @@ class StatementHandler(lang: TypeScriptLanguageFrontend) :
             "FirstStatement" -> return handleVariableStatement(node)
             "VariableStatement" -> return handleVariableStatement(node)
             "ExpressionStatement" -> return handleExpressionStatement(node)
+            "ReturnStatement" -> return handleReturnStatement(node)
         }
 
         return Statement()
+    }
+
+    private fun handleReturnStatement(node: TypeScriptNode): ReturnStatement {
+        val returnStmt = NodeBuilder.newReturnStatement(this.lang.getCodeFromRawNode(node))
+
+        node.children?.first()?.let {
+            returnStmt.returnValue = this.lang.expressionHandler.handleNode(it)
+        }
+
+        return returnStmt
     }
 
     private fun handleBlock(node: TypeScriptNode): CompoundStatement {

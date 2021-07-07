@@ -51,9 +51,51 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
             "ObjectLiteralExpression" -> return handleObjectLiteralExpression(node)
             "PropertyAssignment" -> return handlePropertyAssignment(node)
             "ArrowFunction" -> return handleArrowFunction(node)
+            "JsxElement" -> return handeJsxElement(node)
+            "JsxOpeningElement" -> return handleJsxOpeningElement(node)
+            "JsxText" -> return handleStringLiteral(node)
+            "JsxExpression" -> return handleJsxExpression(node)
+            "JsxClosingElement" -> return handleJsxClosingElement(node)
         }
 
         return Expression()
+    }
+
+    private fun handleJsxClosingElement(node: TypeScriptNode): Expression {
+        // this basically represents an HTML tag with attributes
+        val tag = NodeBuilder.newExpressionList(this.lang.getCodeFromRawNode(node))
+
+        // it contains an Identifier node, we map this into the name
+        this.lang.getIdentifierName(node)?.let { tag.name = "</$it>" }
+
+        return tag
+    }
+
+    private fun handleJsxExpression(node: TypeScriptNode): Expression {
+        // for now, we just treat this as a wrapper and directly return the first node
+        return this.handle(node.children?.first())
+    }
+
+    private fun handleJsxOpeningElement(node: TypeScriptNode): ExpressionList {
+        // this basically represents an HTML tag with attributes
+        val tag = NodeBuilder.newExpressionList(this.lang.getCodeFromRawNode(node))
+
+        // it contains an Identifier node, we map this into the name
+        this.lang.getIdentifierName(node)?.let { tag.name = "<$it>" }
+
+        // and a container named JsxAttributes, with JsxAttribute nodes
+        tag.expressions =
+            node.firstChild("JsxAttributes")?.children?.map { this.handle(it) } ?: emptyList()
+
+        return tag
+    }
+
+    private fun handeJsxElement(node: TypeScriptNode): ExpressionList {
+        var jsx = NodeBuilder.newExpressionList(this.lang.getCodeFromRawNode(node))
+
+        jsx.expressions = node.children?.map { this.handle(it) }
+
+        return jsx
     }
 
     private fun handleArrowFunction(node: TypeScriptNode): Expression {
