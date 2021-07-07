@@ -176,5 +176,18 @@ class TypescriptLanguageFrontendTest {
 
         assertEquals("Authorization", (keyValue.key as? Literal<*>)?.value)
         assertEquals("Bearer \${token}", (keyValue.value as? Literal<*>)?.value)
+
+        assertEquals("then", chainedCall.name)
+
+        val funcArg = chainedCall.arguments.firstOrNull() as? DeclaredReferenceExpression
+        assertNotNull(funcArg)
+
+        val arrowFunction = funcArg.refersTo as? FunctionDeclaration
+        assertNotNull(arrowFunction)
+        assertNotNull(arrowFunction.body)
+
+        val param = arrowFunction.parameters.firstOrNull()
+        assertNotNull(param)
+        assertNotNull("res", param.name)
     }
 }

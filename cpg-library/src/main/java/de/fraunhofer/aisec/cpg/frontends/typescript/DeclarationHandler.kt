@@ -45,6 +45,7 @@ class DeclarationHandler(lang: TypeScriptLanguageFrontend) :
         when (node.type) {
             "SourceFile" -> return handleSourceFile(node)
             "FunctionDeclaration" -> return handleFunctionDeclaration(node)
+            "ArrowFunction" -> return handleFunctionDeclaration(node)
             "Parameter" -> return handleParameter(node)
             "VariableDeclaration" -> return handleVariableDeclaration(node)
         }
@@ -88,9 +89,7 @@ class DeclarationHandler(lang: TypeScriptLanguageFrontend) :
         val func =
             NodeBuilder.newFunctionDeclaration(name ?: "", this.lang.getCodeFromRawNode(node))
 
-        node.typeChildNode?.let {
-            func.type = this.lang.typeHandler.handle(it)
-        }
+        node.typeChildNode?.let { func.type = this.lang.typeHandler.handle(it) }
 
         this.lang.scopeManager.enterScope(func)
 
