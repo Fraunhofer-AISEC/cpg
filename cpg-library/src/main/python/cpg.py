@@ -842,24 +842,40 @@ class PythonASTToCPG(ast.NodeVisitor):
         self.log_with_loc(ast.dump(node))
         stmt = IfStatement()
         self.add_loc_info(node, stmt)
-        stmt.setCondition(self.visit(node.test))
         stmt.setName("If")
-        if len(node.body) == 1:
-            stmt.setThenStatement(self.visit(node.body[0]))
-        else:
-            body = self.make_compound_statement(node, node.body)
-
-            stmt.setThenStatement(body)
-        if len(node.orelse) == 1:
-            stmt.setElseStatement(self.visit(node.orelse[0]))
-        else:
+        # Condition
+        stmt.setCondition(self.visit(node.test))
+        # Then
+        body = self.make_compound_statement(node, node.body)
+        stmt.setThenStatement(body)
+        # Else
+        if node.orelse != None and len(node.orelse) != 0:
             orelse = self.make_compound_statement(node, node.orelse)
-
             stmt.setElseStatement(orelse)
+
         return stmt
 
     def make_compound_statement(self, node, node_list) -> CompoundStatement:
         # TODO: generalize this, because this code repeats
+
+        if node_list is None or len(node_list) == 0:
+            self.log_with_loc("Expected at least one node", loglevel = "ERROR")
+            dummy = CompoundStatement()
+            self.add_loc_info(node, dummy)
+            return dummy
+        
+        # do not wrap a single statement as CompoundStatement
+        if len(node_list) == 1:
+            s = self.visit(node_list[0])
+            # TODO move to a new function. it repeats
+            if s is not None and s.java_name.startswith('de.fraunhofer.aisec.cpg.graph.declarations.'):
+                d = DeclarationStatement()
+                self.add_loc_info(node, d)
+                d.setSingleDeclaration(s)
+                return d
+            else:
+                return s
+
         body = CompoundStatement()
         self.add_loc_info(node, body)
 
@@ -1099,8 +1115,8 @@ class PythonASTToCPG(ast.NodeVisitor):
         self.log_with_loc(ast.dump(node))
         r = ReturnStatement()
         self.add_loc_info(node, r)
-        # if node.value != None:
-        #    r.setReturnValue(self.visit(node.value))
+        if node.value != None:
+            r.setReturnValue(self.visit(node.value))
         r.setName("return")
         return r
 
@@ -1178,6 +1194,7 @@ class PythonASTToCPG(ast.NodeVisitor):
                 # TODO what to do about expressions inside a class?
                 self.visit(b)
             else:
+                print(b)
                 self.log_with_loc(b)
                 self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
 
