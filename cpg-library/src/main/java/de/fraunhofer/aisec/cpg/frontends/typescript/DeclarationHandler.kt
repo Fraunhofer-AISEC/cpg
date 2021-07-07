@@ -178,6 +178,9 @@ class DeclarationHandler(lang: TypeScriptLanguageFrontend) :
         // parse body, if it exists
         node.firstChild("Block")?.let { func.body = this.lang.statementHandler.handle(it) }
 
+        // it can also be a JSX element (can it be any expression?)
+        node.firstChild("JsxElement")?.let { func.body = this.lang.expressionHandler.handle(it) }
+
         this.lang.scopeManager.leaveScope(func)
 
         return func

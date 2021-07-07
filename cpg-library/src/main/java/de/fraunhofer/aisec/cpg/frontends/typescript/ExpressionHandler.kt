@@ -53,12 +53,23 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
             "ArrowFunction" -> return handleArrowFunction(node)
             "JsxElement" -> return handeJsxElement(node)
             "JsxOpeningElement" -> return handleJsxOpeningElement(node)
+            "JsxAttribute" -> return handleJsxAttribute(node)
             "JsxText" -> return handleStringLiteral(node)
             "JsxExpression" -> return handleJsxExpression(node)
             "JsxClosingElement" -> return handleJsxClosingElement(node)
         }
 
         return Expression()
+    }
+
+    private fun handleJsxAttribute(node: TypeScriptNode): KeyValueExpression {
+        val key = this.handle(node.children?.first())
+        val value = this.handle(node.children?.last())
+
+        val keyValue =
+            NodeBuilder.newKeyValueExpression(key, value, this.lang.getCodeFromRawNode(node))
+
+        return keyValue
     }
 
     private fun handleJsxClosingElement(node: TypeScriptNode): Expression {
@@ -91,7 +102,7 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
     }
 
     private fun handeJsxElement(node: TypeScriptNode): ExpressionList {
-        var jsx = NodeBuilder.newExpressionList(this.lang.getCodeFromRawNode(node))
+        val jsx = NodeBuilder.newExpressionList(this.lang.getCodeFromRawNode(node))
 
         jsx.expressions = node.children?.map { this.handle(it) }
 
