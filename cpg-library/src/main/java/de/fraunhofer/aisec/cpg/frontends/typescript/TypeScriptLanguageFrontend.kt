@@ -106,7 +106,10 @@ class TypeScriptNode(
     val typeChildNode: TypeScriptNode?
         get() {
             return this.children?.firstOrNull {
-                it.type == "TypeReference" || it.type == "AnyKeyword"
+                it.type == "TypeReference" ||
+                    it.type == "AnyKeyword" ||
+                    it.type == "StringKeyword" ||
+                    it.type == "NumberKeyword"
             }
         }
 

@@ -103,7 +103,7 @@ Follow the instructions at https://github.com/ninia/jep/wiki/Getting-Started#ins
 
 #### TypeScript
 
-For parsing TypeScript, the necessary NodeJS-based code can be found in the `src/main/nodejs` directory of the `cpg-library` folder. Gradle should build the script automatically, provided NodeJS (>=16) is installed. In order to use it in an external project, the resulting `parser.js` as well as its dependencies needs to be placed in a relative path named `src/main/nodejs`. We will explore other distribution options in the future.
+For parsing TypeScript, the necessary NodeJS-based code can be found in the `src/main/nodejs` directory of the `cpg-library` folder. Gradle should build the script automatically, provided NodeJS (>=16) is installed. In order to use it in an external project, the resulting `parser.js` as well as its dependencies needs to be placed in a relative path named `src/main/nodejs`. We will explore other distribution options such as `npm` in the future.
 
 ## Development Setup
 

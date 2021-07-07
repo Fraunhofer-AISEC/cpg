@@ -45,18 +45,28 @@ class TypeHandler(lang: TypeScriptLanguageFrontend?) :
     fun handleNode(node: TypeScriptNode): Type {
         when (node.type) {
             "TypeReference" -> return handleTypeReference(node)
-            "AnyKeyword" -> return handleAnyKeyword(node)
+            "AnyKeyword" -> return handleAnyKeyword()
+            "NumberKeyword" -> return handleNumberKeyword()
+            "StringKeyword" -> return handleStringKeyword()
         }
 
         return UnknownType.getUnknownType()
     }
 
-    private fun handleAnyKeyword(node: TypeScriptNode): Type {
+    private fun handleStringKeyword(): Type {
+        return TypeParser.createFrom("string", false)
+    }
+
+    private fun handleNumberKeyword(): Type {
+        return TypeParser.createFrom("number", false)
+    }
+
+    private fun handleAnyKeyword(): Type {
         return TypeParser.createFrom("any", false)
     }
 
     private fun handleTypeReference(node: TypeScriptNode): Type {
-        this.lang.getCodeFromRawNode(node.firstChild("Identifier"))?.let {
+        this.lang.getIdentifierName(node)?.let {
             return TypeParser.createFrom(it, false)
         }
 

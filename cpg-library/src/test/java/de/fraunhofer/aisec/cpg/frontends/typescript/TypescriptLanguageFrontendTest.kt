@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.frontends.typescript
 import de.fraunhofer.aisec.cpg.ExperimentalTypeScript
 import de.fraunhofer.aisec.cpg.TestUtils
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
@@ -189,5 +190,35 @@ class TypescriptLanguageFrontendTest {
         val param = arrowFunction.parameters.firstOrNull()
         assertNotNull(param)
         assertNotNull("res", param.name)
+    }
+
+    @Test
+    fun testReact() {
+        val topLevel = Path.of("src", "test", "resources", "typescript")
+        val tu =
+            TestUtils.analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("component.tsx").toFile()),
+                topLevel,
+                true
+            ) {
+                it.registerLanguage(
+                    TypeScriptLanguageFrontend::class.java,
+                    TypeScriptLanguageFrontend.TYPESCRIPT_EXTENSIONS
+                )
+            }
+
+        assertNotNull(tu)
+
+        val user = tu.getDeclarationsByName("User", RecordDeclaration::class.java).iterator().next()
+        assertNotNull(user)
+        assertEquals("interface", user.kind)
+        assertEquals("User", user.name)
+
+        assertEquals(4, user.fields.size)
+
+        val lastName = user.fields.lastOrNull()
+        assertNotNull(lastName)
+        assertEquals("lastName", lastName.name)
+        assertEquals(TypeParser.createFrom("string", false), lastName.type)
     }
 }

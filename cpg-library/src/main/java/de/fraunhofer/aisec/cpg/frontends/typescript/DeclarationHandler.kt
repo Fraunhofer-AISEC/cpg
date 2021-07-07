@@ -28,10 +28,7 @@ package de.fraunhofer.aisec.cpg.frontends.typescript
 import de.fraunhofer.aisec.cpg.ExperimentalTypeScript
 import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder
-import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 
 @ExperimentalTypeScript
@@ -47,10 +44,45 @@ class DeclarationHandler(lang: TypeScriptLanguageFrontend) :
             "FunctionDeclaration" -> return handleFunctionDeclaration(node)
             "ArrowFunction" -> return handleFunctionDeclaration(node)
             "Parameter" -> return handleParameter(node)
+            "PropertySignature" -> return handlePropertySignature(node)
             "VariableDeclaration" -> return handleVariableDeclaration(node)
+            "InterfaceDeclaration" -> return handleInterfaceDeclaration(node)
         }
 
         return Declaration()
+    }
+
+    private fun handlePropertySignature(node: TypeScriptNode): FieldDeclaration {
+        val name = this.lang.getIdentifierName(node)
+        val type = this.lang.typeHandler.handle(node.typeChildNode)
+
+        val field =
+            NodeBuilder.newFieldDeclaration(
+                name,
+                type,
+                listOf(),
+                this.lang.getCodeFromRawNode(node),
+                this.lang.getLocationFromRawNode(node),
+                null,
+                false
+            )
+
+        return field
+    }
+
+    private fun handleInterfaceDeclaration(node: TypeScriptNode): RecordDeclaration {
+        val name = this.lang.getIdentifierName(node)
+
+        val record =
+            NodeBuilder.newRecordDeclaration(name, "interface", this.lang.getCodeFromRawNode(node))
+
+        // loop through property signatures aka fields
+        record.fields =
+            node.children?.filter { it.type == "PropertySignature" }?.map {
+                this.handle(it) as FieldDeclaration?
+            }
+
+        return record
     }
 
     private fun handleParameter(node: TypeScriptNode): Declaration {
