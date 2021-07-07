@@ -1194,7 +1194,6 @@ class PythonASTToCPG(ast.NodeVisitor):
                 # TODO what to do about expressions inside a class?
                 self.visit(b)
             else:
-                print(b)
                 self.log_with_loc(b)
                 self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
 

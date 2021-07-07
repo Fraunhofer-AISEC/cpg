@@ -524,31 +524,39 @@ class PythonFrontendTest : BaseTest() {
         val clsCounter =
             p.getDeclarationsByName("counter", RecordDeclaration::class.java).iterator().next()
         assertNotNull(clsCounter)
+
         val methCount =
             p.getDeclarationsByName("count", FunctionDeclaration::class.java).iterator().next()
         assertNotNull(methCount)
+
         val clsC1 = p.getDeclarationsByName("c1", RecordDeclaration::class.java).iterator().next()
         assertNotNull(clsC1)
 
         // class counter
         assertEquals(clsCounter.name, "counter")
+
         // TODO missing check for "pass"
 
         // def count(c)
         assertEquals(methCount.name, "count")
         assertEquals(methCount.parameters.size, 1)
+
         val countParam = methCount.parameters[0]
         assertNotNull(countParam)
         assertEquals(countParam.name, "c")
+
         val countStmt = methCount.body as? IfStatement
         assertNotNull(countStmt)
+
         val ifCond = countStmt.condition as? BinaryOperator
         assertNotNull(ifCond)
+
         val lhs = ifCond.lhs as? MemberCallExpression
         assertNotNull(lhs)
         assertEquals((lhs.base as? DeclaredReferenceExpression)?.refersTo, countParam)
         assertEquals(lhs.name, "inc")
         assertEquals(lhs.arguments.size, 0)
+
         val ifThen = countStmt.thenStatement as? CallExpression
         assertNotNull(ifThen)
         assertEquals(ifThen.invokes.first(), methCount)
@@ -562,22 +570,29 @@ class PythonFrontendTest : BaseTest() {
         assertEquals(clsC1.name, "c1")
         assertEquals((clsC1.superClasses.first() as? ObjectType)?.recordDeclaration, clsCounter)
         assertEquals(clsC1.fields.size, 1)
+
         val field = clsC1.fields[0]
         assertNotNull(field)
         assertEquals(field.name, "total")
+
         // TODO assert initializer "total = 0"
+
         val meth = clsC1.methods[0]
         assertNotNull(meth)
         assertEquals(meth.name, "inc")
         assertEquals(meth.recordDeclaration, clsC1)
+
         val selfReceiver = meth.receiver
         assertNotNull(selfReceiver)
         assertEquals(selfReceiver.name, "self")
         assertEquals(meth.parameters.size, 0) // self is receiver and not a parameter
+
         val methBody = meth.body as? CompoundStatement
         assertNotNull(methBody)
+
         val assign = methBody.statements[0] as? BinaryOperator
         assertNotNull(assign)
+
         val assignLhs = assign.lhs as? MemberExpression
         val assignRhs = assign.rhs as? BinaryOperator
         assertEquals(assign.operatorCode, "=")
@@ -585,11 +600,13 @@ class PythonFrontendTest : BaseTest() {
         assertNotNull(assignRhs)
         assertEquals((assignLhs.base as? DeclaredReferenceExpression)?.refersTo, selfReceiver)
         assertEquals(assignRhs.operatorCode, "+")
+
         val assignRhsLhs =
             assignRhs.lhs as?
                 MemberExpression // the second "self.total" in "self.total = self.total + 1"
         assertNotNull(assignRhsLhs)
         assertEquals((assignRhsLhs.base as? DeclaredReferenceExpression)?.refersTo, selfReceiver)
+
         val r = methBody.statements[1] as? ReturnStatement
         assertNotNull(r)
         assertEquals(
@@ -597,6 +614,6 @@ class PythonFrontendTest : BaseTest() {
             selfReceiver
         )
 
-        // TODO last line "count(c1())
+        // TODO last line "count(c1())"
     }
 }
