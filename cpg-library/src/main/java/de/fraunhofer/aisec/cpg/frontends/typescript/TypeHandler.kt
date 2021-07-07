@@ -45,9 +45,14 @@ class TypeHandler(lang: TypeScriptLanguageFrontend?) :
     fun handleNode(node: TypeScriptNode): Type {
         when (node.type) {
             "TypeReference" -> return handleTypeReference(node)
+            "AnyKeyword" -> return handleAnyKeyword(node)
         }
 
         return UnknownType.getUnknownType()
+    }
+
+    private fun handleAnyKeyword(node: TypeScriptNode): Type {
+        return TypeParser.createFrom("any", false)
     }
 
     private fun handleTypeReference(node: TypeScriptNode): Type {

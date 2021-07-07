@@ -57,17 +57,18 @@ class TypeScriptLanguageFrontend(
     override fun parse(file: File): TranslationUnitDeclaration {
         cachedSource = file.readText()
 
-        var p =
+        val p =
             Runtime.getRuntime()
                 .exec(arrayOf("node", "src/main/nodejs/parser.js", file.absolutePath))
 
-        var teeOutput = TeeInputStream(p.inputStream, System.out)
+        val teeOutput = TeeInputStream(p.inputStream, System.out)
 
         val mapper = jacksonObjectMapper()
-        var node = mapper.readValue(teeOutput, TypeScriptNode::class.java)
+        val node = mapper.readValue(teeOutput, TypeScriptNode::class.java)
 
         return this.declarationHandler.handle(node) as TranslationUnitDeclaration
     }
+
     override fun <T : Any?> getCodeFromRawNode(astNode: T): String? {
         return if (astNode is TypeScriptNode) {
             return cachedSource?.substring(astNode.location.pos, astNode.location.end)
@@ -88,6 +89,9 @@ class TypeScriptLanguageFrontend(
     }
 
     override fun <S : Any?, T : Any?> setComment(s: S, ctx: T) {}
+
+    internal fun getIdentifierName(node: TypeScriptNode) =
+        this.getCodeFromRawNode(node.firstChild("Identifier"))?.trim()
 }
 
 class Location(var file: String, var pos: Int, var end: Int)
@@ -97,7 +101,15 @@ class TypeScriptNode(
     var children: List<TypeScriptNode>?,
     var location: Location
 ) {
+    /** Returns the first child node, that represent a type, if it exists. */
+    val typeChildNode: TypeScriptNode?
+        get() {
+            return this.children?.firstOrNull {
+                it.type == "TypeReference" || it.type == "AnyKeyword"
+            }
+        }
+
     fun firstChild(type: String): TypeScriptNode? {
-        return this.children?.first { it.type == type }
+        return this.children?.firstOrNull { it.type == type }
     }
 }

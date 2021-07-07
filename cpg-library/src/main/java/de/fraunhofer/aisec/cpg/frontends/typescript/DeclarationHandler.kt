@@ -53,8 +53,8 @@ class DeclarationHandler(lang: TypeScriptLanguageFrontend) :
     }
 
     private fun handleParameter(node: TypeScriptNode): Declaration {
-        val name = getIdentifierName(node)
-        val type = this.lang.typeHandler.handle(node.firstChild("TypeReference"))
+        val name = this.lang.getIdentifierName(node)
+        val type = this.lang.typeHandler.handle(node.typeChildNode)
 
         val param =
             NodeBuilder.newMethodParameterIn(name, type, false, this.lang.getCodeFromRawNode(node))
@@ -83,12 +83,12 @@ class DeclarationHandler(lang: TypeScriptLanguageFrontend) :
     }
 
     private fun handleFunctionDeclaration(node: TypeScriptNode): FunctionDeclaration {
-        val name = getIdentifierName(node)
+        val name = this.lang.getIdentifierName(node)
 
         val func =
             NodeBuilder.newFunctionDeclaration(name ?: "", this.lang.getCodeFromRawNode(node))
 
-        func.type = this.lang.typeHandler.handle(node.firstChild("TypeReference"))
+        func.type = this.lang.typeHandler.handle(node.typeChildNode)
 
         this.lang.scopeManager.enterScope(func)
 
@@ -108,7 +108,7 @@ class DeclarationHandler(lang: TypeScriptLanguageFrontend) :
     }
 
     private fun handleVariableDeclaration(node: TypeScriptNode): VariableDeclaration {
-        val name = getIdentifierName(node)
+        val name = this.lang.getIdentifierName(node)
 
         val `var` =
             NodeBuilder.newVariableDeclaration(
@@ -125,7 +125,4 @@ class DeclarationHandler(lang: TypeScriptLanguageFrontend) :
 
         return `var`
     }
-
-    private fun getIdentifierName(node: TypeScriptNode) =
-        this.lang.getCodeFromRawNode(node.firstChild("Identifier"))?.trim()
 }

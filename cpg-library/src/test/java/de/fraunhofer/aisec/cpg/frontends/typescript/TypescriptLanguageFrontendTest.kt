@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.frontends.typescript
 import de.fraunhofer.aisec.cpg.ExperimentalTypeScript
 import de.fraunhofer.aisec.cpg.TestUtils
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser
 import java.nio.file.Path
 import kotlin.test.assertEquals
@@ -77,5 +78,35 @@ class TypescriptLanguageFrontendTest {
         val parameter = parameters.first()
         assertEquals("s", parameter.name)
         assertEquals(TypeParser.createFrom("String", false), parameter.type)
+    }
+
+    @Test
+    fun testComplexCall() {
+        val topLevel = Path.of("src", "test", "resources", "typescript")
+        val tu =
+            TestUtils.analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("fetch.ts").toFile()),
+                topLevel,
+                true
+            ) {
+                it.registerLanguage(
+                    TypeScriptLanguageFrontend::class.java,
+                    TypeScriptLanguageFrontend.TYPESCRIPT_EXTENSIONS
+                )
+            }
+
+        assertNotNull(tu)
+
+        val function =
+            tu.getDeclarationsByName("handleSubmit", FunctionDeclaration::class.java)
+                .iterator()
+                .next()
+        assertNotNull(function)
+
+        val preventDefault = function.getBodyStatementAs(0, MemberCallExpression::class.java)
+        assertNotNull(preventDefault)
+
+        assertEquals("preventDefault", preventDefault.name)
+        assertEquals("event", preventDefault.base.name)
     }
 }

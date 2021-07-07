@@ -28,8 +28,10 @@ package de.fraunhofer.aisec.cpg.frontends.typescript
 import de.fraunhofer.aisec.cpg.ExperimentalTypeScript
 import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder
+import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 
 @ExperimentalTypeScript
 class StatementHandler(lang: TypeScriptLanguageFrontend) :
@@ -40,18 +42,35 @@ class StatementHandler(lang: TypeScriptLanguageFrontend) :
 
     fun handleNode(node: TypeScriptNode): Statement {
         when (node.type) {
+            "Block" -> return handleBlock(node)
             "FirstStatement" -> return handleVariableStatement(node)
             "VariableStatement" -> return handleVariableStatement(node)
+            "ExpressionStatement" -> return handleExpressionStatement(node)
         }
 
         return Statement()
+    }
+
+    private fun handleBlock(node: TypeScriptNode): CompoundStatement {
+        val block = NodeBuilder.newCompoundStatement(this.lang.getCodeFromRawNode(node))
+
+        node.children?.forEach { block.addStatement(this.handle(it)) }
+
+        return block
+    }
+
+    private fun handleExpressionStatement(node: TypeScriptNode): Expression {
+        // unwrap it and directly forward it to the expression handler
+        // this is possible because in our CPG, expression inherit from statements
+        // and can be directly added to a compound statement
+        return this.lang.expressionHandler.handle(node.children?.first())
     }
 
     private fun handleVariableStatement(node: TypeScriptNode): DeclarationStatement {
         val statement = NodeBuilder.newDeclarationStatement(this.lang.getCodeFromRawNode(node))
 
         // the declarations are contained in a VariableDeclarationList
-        var nodes = node.firstChild("VariableDeclarationList")?.children
+        val nodes = node.firstChild("VariableDeclarationList")?.children
 
         for (variableNode in nodes ?: emptyList()) {
             val decl = this.lang.declarationHandler.handleNode(variableNode)
