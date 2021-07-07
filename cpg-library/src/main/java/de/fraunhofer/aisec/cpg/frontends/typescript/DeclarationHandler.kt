@@ -42,11 +42,14 @@ class DeclarationHandler(lang: TypeScriptLanguageFrontend) :
         when (node.type) {
             "SourceFile" -> return handleSourceFile(node)
             "FunctionDeclaration" -> return handleFunctionDeclaration(node)
+            "MethodDeclaration" -> return handleFunctionDeclaration(node)
+            "Constructor" -> return handleFunctionDeclaration(node)
             "ArrowFunction" -> return handleFunctionDeclaration(node)
             "Parameter" -> return handleParameter(node)
             "PropertySignature" -> return handlePropertySignature(node)
             "VariableDeclaration" -> return handleVariableDeclaration(node)
-            "InterfaceDeclaration" -> return handleInterfaceDeclaration(node)
+            "InterfaceDeclaration" -> return handleClassDeclaration(node)
+            "ClassDeclaration" -> return handleClassDeclaration(node)
         }
 
         return Declaration()
@@ -70,17 +73,32 @@ class DeclarationHandler(lang: TypeScriptLanguageFrontend) :
         return field
     }
 
-    private fun handleInterfaceDeclaration(node: TypeScriptNode): RecordDeclaration {
+    private fun handleClassDeclaration(node: TypeScriptNode): RecordDeclaration {
         val name = this.lang.getIdentifierName(node)
 
         val record =
-            NodeBuilder.newRecordDeclaration(name, "interface", this.lang.getCodeFromRawNode(node))
+            NodeBuilder.newRecordDeclaration(
+                name,
+                if (node.type == "InterfaceDeclaration") {
+                    "interface"
+                } else {
+                    "class"
+                },
+                this.lang.getCodeFromRawNode(node)
+            )
 
-        // loop through property signatures aka fields
-        record.fields =
-            node.children?.filter { it.type == "PropertySignature" }?.map {
-                this.handle(it) as FieldDeclaration?
+        this.lang.scopeManager.enterScope(record)
+
+        // loop through property signatures aka fields, constructors and methods
+        node.children
+            ?.filter {
+                it.type == "PropertySignature" ||
+                    it.type == "Constructor" ||
+                    it.type == "MethodDeclaration"
             }
+            ?.map { this.lang.scopeManager.addDeclaration(this.handle(it)) }
+
+        this.lang.scopeManager.leaveScope(record)
 
         return record
     }
@@ -118,8 +136,33 @@ class DeclarationHandler(lang: TypeScriptLanguageFrontend) :
     private fun handleFunctionDeclaration(node: TypeScriptNode): FunctionDeclaration {
         val name = this.lang.getIdentifierName(node)
 
-        val func =
-            NodeBuilder.newFunctionDeclaration(name ?: "", this.lang.getCodeFromRawNode(node))
+        val func: FunctionDeclaration =
+            when (node.type) {
+                "MethodDeclaration" -> {
+                    val record = this.lang.scopeManager.currentRecord
+
+                    NodeBuilder.newMethodDeclaration(
+                        name ?: "",
+                        this.lang.getCodeFromRawNode(node),
+                        false,
+                        record
+                    )
+                }
+                "Constructor" -> {
+                    val record = this.lang.scopeManager.currentRecord
+
+                    NodeBuilder.newConstructorDeclaration(
+                        record?.name ?: "",
+                        this.lang.getCodeFromRawNode(node),
+                        record
+                    )
+                }
+                else ->
+                    NodeBuilder.newFunctionDeclaration(
+                        name ?: "",
+                        this.lang.getCodeFromRawNode(node)
+                    )
+            }
 
         node.typeChildNode?.let { func.type = this.lang.typeHandler.handle(it) }
 
@@ -143,18 +186,22 @@ class DeclarationHandler(lang: TypeScriptLanguageFrontend) :
     private fun handleVariableDeclaration(node: TypeScriptNode): VariableDeclaration {
         val name = this.lang.getIdentifierName(node)
 
+        // TODO: support ObjectBindingPattern (whatever it is). seems to be multiple assignment
+
         val `var` =
             NodeBuilder.newVariableDeclaration(
-                name,
+                name ?: "",
                 UnknownType.getUnknownType(),
                 this.lang.getCodeFromRawNode(node),
                 false
             )
         `var`.location = this.lang.getLocationFromRawNode(node)
 
-        // the last node that is not an identifier is an initializer
+        // the last node that is not an identifier or an object binding pattern is an initializer
         `var`.initializer =
-            this.lang.expressionHandler.handle(node.children?.last { it.type != "Identifier" })
+            this.lang.expressionHandler.handle(
+                node.children?.last { it.type != "Identifier" && it.type != "ObjectBindingPattern" }
+            )
 
         return `var`
     }

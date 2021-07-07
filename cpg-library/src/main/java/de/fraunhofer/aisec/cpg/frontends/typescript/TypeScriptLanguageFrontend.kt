@@ -110,7 +110,8 @@ class TypeScriptNode(
                     it.type == "AnyKeyword" ||
                     it.type == "StringKeyword" ||
                     it.type == "NumberKeyword" ||
-                    it.type == "ArrayType"
+                    it.type == "ArrayType" ||
+                    it.type == "TypeLiteral"
             }
         }
 
