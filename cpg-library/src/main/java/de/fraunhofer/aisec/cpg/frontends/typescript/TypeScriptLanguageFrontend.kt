@@ -109,7 +109,8 @@ class TypeScriptNode(
                 it.type == "TypeReference" ||
                     it.type == "AnyKeyword" ||
                     it.type == "StringKeyword" ||
-                    it.type == "NumberKeyword"
+                    it.type == "NumberKeyword" ||
+                    it.type == "ArrayType"
             }
         }
 

@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.frontends.typescript
 
 import de.fraunhofer.aisec.cpg.ExperimentalTypeScript
 import de.fraunhofer.aisec.cpg.frontends.Handler
+import de.fraunhofer.aisec.cpg.graph.types.PointerType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
@@ -48,9 +49,16 @@ class TypeHandler(lang: TypeScriptLanguageFrontend?) :
             "AnyKeyword" -> return handleAnyKeyword()
             "NumberKeyword" -> return handleNumberKeyword()
             "StringKeyword" -> return handleStringKeyword()
+            "ArrayType" -> return handleArrayType(node)
         }
 
         return UnknownType.getUnknownType()
+    }
+
+    private fun handleArrayType(node: TypeScriptNode): Type {
+        val type = this.handle(node.firstChild("TypeReference"))
+
+        return type.reference(PointerType.PointerOrigin.ARRAY)
     }
 
     private fun handleStringKeyword(): Type {

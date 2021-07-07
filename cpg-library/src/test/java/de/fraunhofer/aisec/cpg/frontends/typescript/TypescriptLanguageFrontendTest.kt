@@ -220,5 +220,18 @@ class TypescriptLanguageFrontendTest {
         assertNotNull(lastName)
         assertEquals("lastName", lastName.name)
         assertEquals(TypeParser.createFrom("string", false), lastName.type)
+
+        val usersState =
+            tu.getDeclarationsByName("UsersState", RecordDeclaration::class.java).iterator().next()
+        assertNotNull(user)
+        assertEquals("interface", usersState.kind)
+        assertEquals("UsersState", usersState.name)
+
+        assertEquals(1, usersState.fields.size)
+
+        val users = usersState.fields.firstOrNull()
+        assertNotNull(users)
+        assertEquals("users", users.name)
+        assertEquals(TypeParser.createFrom("User[]", false), users.type)
     }
 }
