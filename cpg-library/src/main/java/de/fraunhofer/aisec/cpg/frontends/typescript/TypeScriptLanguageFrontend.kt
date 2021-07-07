@@ -34,9 +34,19 @@ import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
 import java.io.*
-import org.apache.commons.io.input.TeeInputStream
 import org.checkerframework.checker.nullness.qual.NonNull
 
+/**
+ * This language frontend adds experimental support for TypeScript. It is definitely not feature
+ * complete, but can be used to parse simple typescript snippets through the official typescript
+ * parser written in TypeScript / nodejs. It includes a simple nodejs script that invokes this
+ * parser in `src/main/nodejs`. It basically dumps the AST in a JSON structure on stdout and this
+ * input is parsed by this frontend.
+ *
+ * Because TypeScript is a strict super-set of JavaScript, this frontend can also be used to parse
+ * JavaScript. However, this is not properly tested. Furthermore, the official TypeScript parser
+ * also has built-in support for React dialects TSX and JSX.
+ */
 @ExperimentalTypeScript
 class TypeScriptLanguageFrontend(
     config: @NonNull TranslationConfiguration,
@@ -48,31 +58,27 @@ class TypeScriptLanguageFrontend(
     val expressionHandler = ExpressionHandler(this)
     val typeHandler = TypeHandler(this)
 
+    val mapper = jacksonObjectMapper()
+
     companion object {
         @kotlin.jvm.JvmField var TYPESCRIPT_EXTENSIONS: List<String> = listOf(".ts", ".tsx")
+
+        @kotlin.jvm.JvmField var JAVASCRIPT_EXTENSIONS: List<String> = listOf(".js", ".jsx")
     }
 
-    var cachedSource: String? = null
-
     override fun parse(file: File): TranslationUnitDeclaration {
-        cachedSource = file.readText()
-
         val p =
             Runtime.getRuntime()
                 .exec(arrayOf("node", "src/main/nodejs/parser.js", file.absolutePath))
 
-        val teeOutput = TeeInputStream(p.inputStream, System.out)
-
-        val mapper = jacksonObjectMapper()
-        val node = mapper.readValue(teeOutput, TypeScriptNode::class.java)
+        val node = mapper.readValue(p.inputStream, TypeScriptNode::class.java)
 
         return this.declarationHandler.handle(node) as TranslationUnitDeclaration
     }
 
     override fun <T : Any?> getCodeFromRawNode(astNode: T): String? {
         return if (astNode is TypeScriptNode) {
-            // TODO: position seems to be off by +1
-            return cachedSource?.substring(astNode.location.pos, astNode.location.end)
+            return astNode.code
         } else {
             null
         }
@@ -81,7 +87,7 @@ class TypeScriptLanguageFrontend(
     override fun <T : Any?> getLocationFromRawNode(astNode: T): PhysicalLocation? {
         return if (astNode is TypeScriptNode) {
             // TODO: LSP region
-            var location = PhysicalLocation(File(astNode.location.file).toURI(), Region())
+            val location = PhysicalLocation(File(astNode.location.file).toURI(), Region())
 
             return location
         } else {
@@ -89,10 +95,12 @@ class TypeScriptLanguageFrontend(
         }
     }
 
-    override fun <S : Any?, T : Any?> setComment(s: S, ctx: T) {}
+    override fun <S : Any?, T : Any?> setComment(s: S, ctx: T) {
+        // not implemented
+    }
 
     internal fun getIdentifierName(node: TypeScriptNode) =
-        this.getCodeFromRawNode(node.firstChild("Identifier"))?.trim()
+        this.getCodeFromRawNode(node.firstChild("Identifier"))
 }
 
 class Location(var file: String, var pos: Int, var end: Int)
@@ -100,7 +108,8 @@ class Location(var file: String, var pos: Int, var end: Int)
 class TypeScriptNode(
     var type: String,
     var children: List<TypeScriptNode>?,
-    var location: Location
+    var location: Location,
+    var code: String?
 ) {
     /** Returns the first child node, that represent a type, if it exists. */
     val typeChildNode: TypeScriptNode?

@@ -86,6 +86,79 @@ class TypescriptLanguageFrontendTest {
     }
 
     @Test
+    fun testJSFunction() {
+        val topLevel = Path.of("src", "test", "resources", "typescript")
+        val tu =
+            TestUtils.analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("function.js").toFile()),
+                topLevel,
+                true
+            ) {
+                it.registerLanguage(
+                    TypeScriptLanguageFrontend::class.java,
+                    TypeScriptLanguageFrontend.JAVASCRIPT_EXTENSIONS
+                )
+            }
+
+        assertNotNull(tu)
+
+        val functions =
+            tu.declarations.filterIsInstance<FunctionDeclaration>().filter { !it.isImplicit }
+        assertNotNull(functions)
+
+        // actually, our frontend returns 3 functions (1 dummy), because our function inference
+        // cannot handle non-typed languages very well
+        assertEquals(2, functions.size)
+
+        val someFunction = functions.first()
+        assertEquals("someFunction", someFunction.name)
+
+        val someOtherFunction = functions.last()
+        assertEquals("someOtherFunction", someOtherFunction.name)
+
+        val parameters = someOtherFunction.parameters
+        assertNotNull(parameters)
+
+        assertEquals(1, parameters.size)
+
+        val parameter = parameters.first()
+        assertEquals("s", parameter.name)
+    }
+
+    @Test
+    fun testJSX() {
+        val topLevel = Path.of("src", "test", "resources", "typescript")
+        val tu =
+            TestUtils.analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("simple.jsx").toFile()),
+                topLevel,
+                true
+            ) {
+                it.registerLanguage(
+                    TypeScriptLanguageFrontend::class.java,
+                    TypeScriptLanguageFrontend.JAVASCRIPT_EXTENSIONS
+                )
+            }
+
+        assertNotNull(tu)
+
+        val doJsx =
+            tu.getDeclarationsByName("doJsx", FunctionDeclaration::class.java).iterator().next()
+        assertNotNull(doJsx)
+
+        val returnStmt = doJsx.getBodyStatementAs(0, ReturnStatement::class.java)
+        assertNotNull(returnStmt)
+
+        // check the return statement for the TSX statements
+        val jsx = returnStmt.returnValue as? ExpressionList
+        assertNotNull(jsx)
+
+        val tag = jsx.expressions.firstOrNull()
+        assertNotNull(tag)
+        assertEquals("<div>", tag.name)
+    }
+
+    @Test
     fun testComplexCall() {
         val topLevel = Path.of("src", "test", "resources", "typescript")
         val tu =

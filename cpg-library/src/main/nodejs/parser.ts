@@ -1,15 +1,26 @@
 import * as ts from 'typescript';
 
 const file = process.argv[2];
-const program = ts.createProgram([file], {});
-var sourceFile = program.getSourceFile(file)
+
+
+
+const program = ts.createProgram([file], {
+    allowJs: true,
+});
+
+var sources = program.getSourceFiles()
 
 let indent = 0;
 
-console.log(printTree(sourceFile, false));
+sources.filter(sf => sf.fileName.endsWith(file)).forEach(sf => {
+    console.log(printTree(sf, sf, false));
+})
 
-function printTree(node: ts.Node, needsComma: boolean): string {
+function printTree(sf: ts.SourceFile, node: ts.Node, needsComma: boolean): string {
     var output = " ".repeat(indent) + `{ "type": "${ts.SyntaxKind[node.kind]}"`
+
+    //output += `, "code": "${node.getText(sf).replace(/"/g, "\\\"").replace(/\n/g, "\\n")}"`
+    output += `, "code": ${JSON.stringify(node.getText(sf))}`
 
     indent++;
 
@@ -22,7 +33,7 @@ function printTree(node: ts.Node, needsComma: boolean): string {
     if (numChildren == 1) {
         output += `, "children": [`;
         ts.forEachChild(node, x => {
-            output += printTree(x, false);
+            output += printTree(sf, x, false);
         });
         output += "]";
     } else if (numChildren > 0) {
@@ -31,7 +42,7 @@ function printTree(node: ts.Node, needsComma: boolean): string {
         var i = 0;
         ts.forEachChild(node, x => {
             //console.log(`${i} == ${numChildren}`)
-            output += printTree(x, i < numChildren - 1)
+            output += printTree(sf, x, i < numChildren - 1)
             i++;
         });
 
