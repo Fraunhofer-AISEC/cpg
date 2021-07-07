@@ -30,10 +30,7 @@ import de.fraunhofer.aisec.cpg.TestUtils
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser
 import java.nio.file.Path
 import kotlin.test.assertEquals
@@ -153,5 +150,31 @@ class TypescriptLanguageFrontendTest {
 
         assertEquals("apiUrl", refArg.name)
         assertSame(apiUrl, refArg.refersTo)
+
+        var objectArg = fetch.arguments.last() as? InitializerListExpression
+        assertNotNull(objectArg)
+
+        assertEquals(3, objectArg.initializers.size)
+
+        var keyValue = objectArg.initializers.first() as? KeyValueExpression
+        assertNotNull(keyValue)
+
+        assertEquals("method", (keyValue.key as? DeclaredReferenceExpression)?.name)
+        assertEquals("POST", (keyValue.value as? Literal<*>)?.value)
+
+        keyValue = objectArg.initializers.last() as? KeyValueExpression
+        assertNotNull(keyValue)
+
+        // nested object creation
+        objectArg = keyValue.value as? InitializerListExpression
+        assertNotNull(objectArg)
+
+        assertEquals(2, objectArg.initializers.size)
+
+        keyValue = objectArg.initializers.first() as? KeyValueExpression
+        assertNotNull(keyValue)
+
+        assertEquals("Authorization", (keyValue.key as? Literal<*>)?.value)
+        assertEquals("Bearer \${token}", (keyValue.value as? Literal<*>)?.value)
     }
 }

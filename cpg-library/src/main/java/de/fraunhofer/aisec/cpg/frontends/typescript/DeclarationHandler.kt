@@ -88,7 +88,9 @@ class DeclarationHandler(lang: TypeScriptLanguageFrontend) :
         val func =
             NodeBuilder.newFunctionDeclaration(name ?: "", this.lang.getCodeFromRawNode(node))
 
-        func.type = this.lang.typeHandler.handle(node.typeChildNode)
+        node.typeChildNode?.let {
+            func.type = this.lang.typeHandler.handle(it)
+        }
 
         this.lang.scopeManager.enterScope(func)
 

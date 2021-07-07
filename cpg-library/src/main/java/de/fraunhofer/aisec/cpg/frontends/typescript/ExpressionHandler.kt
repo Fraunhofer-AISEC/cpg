@@ -28,10 +28,7 @@ package de.fraunhofer.aisec.cpg.frontends.typescript
 import de.fraunhofer.aisec.cpg.ExperimentalTypeScript
 import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 
@@ -48,18 +45,45 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
             "PropertyAccessExpression" -> return handlePropertyAccessExpression(node)
             "Identifier" -> return handleIdentifier(node)
             "FirstTemplateToken" -> return handleStringLiteral(node)
+            "TemplateExpression" -> return handleStringLiteral(node)
             "NoSubstitutionTemplateLiteral" -> return handleStringLiteral(node)
             "StringLiteral" -> return handleStringLiteral(node)
+            "ObjectLiteralExpression" -> return handleObjectLiteralExpression(node)
+            "PropertyAssignment" -> return handlePropertyAssignment(node)
         }
 
         return Expression()
+    }
+
+    private fun handlePropertyAssignment(node: TypeScriptNode): KeyValueExpression {
+        val key = this.handle(node.children?.first())
+        val value = this.handle(node.children?.last())
+
+        val keyValue =
+            NodeBuilder.newKeyValueExpression(key, value, this.lang.getCodeFromRawNode(node))
+
+        return keyValue
+    }
+
+    private fun handleObjectLiteralExpression(node: TypeScriptNode): InitializerListExpression {
+        val ile = NodeBuilder.newInitializerListExpression(this.lang.getCodeFromRawNode(node))
+
+        ile.initializers = node.children?.map { this.handle(it) }
+
+        return ile
     }
 
     private fun handleStringLiteral(node: TypeScriptNode): Literal<String> {
         // for now, we also simply parse template expressions as string literals. we
         // might need a special literal type for that in the future. See
         // https://github.com/Fraunhofer-AISEC/cpg/issues/463
-        val value = this.lang.getCodeFromRawNode(node)?.trim()?.replace("\"", "")?.replace("`", "")
+        val value =
+            this.lang
+                .getCodeFromRawNode(node)
+                ?.trim()
+                ?.replace("\"", "")
+                ?.replace("`", "")
+                ?.replace("'", "")
 
         return NodeBuilder.newLiteral(
             value,
