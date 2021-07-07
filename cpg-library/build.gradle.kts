@@ -105,8 +105,19 @@ if (project.hasProperty("experimental")) {
         }
     }
 
+    val compileNodeJs = tasks.register("compileNodeJs") {
+        doLast {
+            project.exec {
+                commandLine("./build.sh")
+                    .setStandardOutput(System.out)
+                    .workingDir("src/main/nodejs")
+            }
+        }
+    }
+
     tasks.named("compileJava") {
         dependsOn(compileGolang)
+        dependsOn(compileNodeJs)
     }
 }
 

@@ -30,12 +30,14 @@ import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
+import de.fraunhofer.aisec.cpg.ExperimentalTypeScript
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
 import java.io.*
 import org.apache.commons.io.input.TeeInputStream
 import org.checkerframework.checker.nullness.qual.NonNull
 
+@ExperimentalTypeScript
 class TypeScriptLanguageFrontend(
     config: @NonNull TranslationConfiguration,
     scopeManager: ScopeManager?
