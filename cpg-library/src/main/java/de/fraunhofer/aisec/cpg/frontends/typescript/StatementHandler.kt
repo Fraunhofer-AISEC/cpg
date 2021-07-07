@@ -25,11 +25,13 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.typescript
 
+import de.fraunhofer.aisec.cpg.ExperimentalTypeScript
 import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
 
+@ExperimentalTypeScript
 class StatementHandler(lang: TypeScriptLanguageFrontend) :
     Handler<Statement, TypeScriptNode, TypeScriptLanguageFrontend>(::Statement, lang) {
     init {

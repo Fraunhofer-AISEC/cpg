@@ -25,8 +25,10 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.typescript
 
+import de.fraunhofer.aisec.cpg.ExperimentalTypeScript
 import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 
+@ExperimentalTypeScript
 class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
     Handler<Expression, TypeScriptNode, TypeScriptLanguageFrontend>(::Expression, lang) {}

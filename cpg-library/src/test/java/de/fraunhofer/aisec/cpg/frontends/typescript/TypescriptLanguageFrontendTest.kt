@@ -25,15 +25,15 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.typescript
 
+import de.fraunhofer.aisec.cpg.ExperimentalTypeScript
 import de.fraunhofer.aisec.cpg.TestUtils
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser
-import de.fraunhofer.aisec.cpg.ExperimentalTypeScript
-import org.junit.jupiter.api.Tag
-import org.junit.jupiter.api.Test
 import java.nio.file.Path
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
+import org.junit.jupiter.api.Tag
+import org.junit.jupiter.api.Test
 
 @Tag("experimental")
 @ExperimentalTypeScript
