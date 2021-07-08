@@ -399,8 +399,6 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
             ctx.isPointerDereference() ? "->" : ".",
             ctx.getRawSignature());
 
-    this.lang.expressionRefersToDeclaration(memberExpression, ctx);
-
     return memberExpression;
   }
 
@@ -613,8 +611,6 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
     /* this expression could actually be a field / member expression, but somehow CDT only recognizes them as a member expression if it has an explicit 'this'
      */
     // TODO: handle this? convert the declared reference expression into a member expression?
-
-    this.lang.expressionRefersToDeclaration(declaredReferenceExpression, ctx);
 
     return declaredReferenceExpression;
   }

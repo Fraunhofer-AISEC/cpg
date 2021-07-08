@@ -62,7 +62,6 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 import org.eclipse.cdt.core.dom.ast.IASTAttribute;
 import org.eclipse.cdt.core.dom.ast.IASTAttributeOwner;
 import org.eclipse.cdt.core.dom.ast.IASTComment;
-import org.eclipse.cdt.core.dom.ast.IASTExpression;
 import org.eclipse.cdt.core.dom.ast.IASTFileLocation;
 import org.eclipse.cdt.core.dom.ast.IASTNode;
 import org.eclipse.cdt.core.dom.ast.IASTToken;
@@ -76,7 +75,6 @@ import org.eclipse.cdt.core.parser.FileContent;
 import org.eclipse.cdt.core.parser.IncludeFileContentProvider;
 import org.eclipse.cdt.core.parser.ScannerInfo;
 import org.eclipse.cdt.internal.core.dom.parser.ASTNode;
-import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTIdExpression;
 import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTTranslationUnit;
 import org.eclipse.cdt.internal.core.parser.IMacroDictionary;
 import org.eclipse.cdt.internal.core.parser.scanner.AbstractCharArray;
@@ -509,32 +507,6 @@ public class CXXLanguageFrontend extends LanguageFrontend {
     if (binding != null) {
       cachedDeclarations.remove(binding);
       cachedDeclarations.put(binding, newDeclaration);
-    }
-  }
-
-  public void expressionRefersToDeclaration(Expression expression, IASTExpression iastExpression) {
-    if (expression instanceof DeclaredReferenceExpression
-        && iastExpression instanceof CPPASTIdExpression) {
-      IBinding binding = ((CPPASTIdExpression) iastExpression).getName().resolveBinding();
-      Declaration declaration = cachedDeclarations.get(binding);
-      //      String name = ((CPPASTIdExpression) iastExpression).getName().toString();
-      //      Declaration declaration = currentDeclarations.get(name);
-
-      if (declaration != null) {
-        LOGGER.debug("Connecting {} to {}", expression, declaration);
-        ((DeclaredReferenceExpression) expression).setRefersTo((ValueDeclaration) declaration);
-      }
-      addCachedExpression(binding, expression);
-    } else {
-      if (expression == null) {
-        LOGGER.warn(
-            "Cannot connect, from is NULL, to is {}", iastExpression.getClass().toGenericString());
-      } else if (iastExpression == null) {
-        LOGGER.warn(
-            "Cannot connect, to is NULL, from is {}", expression.getClass().toGenericString());
-      } else {
-        LOGGER.debug("Cannot connect {} to {}", expression.getClass(), iastExpression.getClass());
-      }
     }
   }
 
