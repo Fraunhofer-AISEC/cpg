@@ -39,8 +39,6 @@ import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.TypeManager;
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration;
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration;
-import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration;
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression;
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression;
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser;
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType;
@@ -189,16 +187,16 @@ public class CXXLanguageFrontend extends LanguageFrontend {
           return getContentUncached(astPath);
         }
       };
-  private DeclarationHandler declarationHandler = new DeclarationHandler(this);
-  private DeclaratorHandler declaratorHandler = new DeclaratorHandler(this);
-  private ExpressionHandler expressionHandler = new ExpressionHandler(this);
-  private InitializerHandler initializerHandler = new InitializerHandler(this);
-  private ParameterDeclarationHandler parameterDeclarationHandler =
+  private final DeclarationHandler declarationHandler = new DeclarationHandler(this);
+  private final DeclaratorHandler declaratorHandler = new DeclaratorHandler(this);
+  private final ExpressionHandler expressionHandler = new ExpressionHandler(this);
+  private final InitializerHandler initializerHandler = new InitializerHandler(this);
+  private final ParameterDeclarationHandler parameterDeclarationHandler =
       new ParameterDeclarationHandler(this);
-  private StatementHandler statementHandler = new StatementHandler(this);
-  private HashMap<IBinding, Declaration> cachedDeclarations = new HashMap<>();
-  private HashMap<IBinding, List<Expression>> cachedExpressions = new HashMap<>();
-  private HashMap<Integer, String> comments = new HashMap<>();
+  private final StatementHandler statementHandler = new StatementHandler(this);
+  private final HashMap<IBinding, Declaration> cachedDeclarations = new HashMap<>();
+  private final HashMap<IBinding, List<Expression>> cachedExpressions = new HashMap<>();
+  private final HashMap<Integer, String> comments = new HashMap<>();
 
   public CXXLanguageFrontend(@NonNull TranslationConfiguration config, ScopeManager scopeManager) {
     super(config, scopeManager, "::");
@@ -298,7 +296,7 @@ public class CXXLanguageFrontend extends LanguageFrontend {
       }
 
       TranslationUnitDeclaration translationUnitDeclaration =
-          declarationHandler.handleTranslationUnit((CPPASTTranslationUnit) translationUnit);
+          declarationHandler.handleTranslationUnit(translationUnit);
       bench.stop();
       return translationUnitDeclaration;
     } catch (CoreException ex) {
@@ -469,67 +467,13 @@ public class CXXLanguageFrontend extends LanguageFrontend {
     }
   }
 
-  private void addCachedExpression(IBinding binding, Expression expression) {
-    if (cachedExpressions.containsKey(binding)) {
-      cachedExpressions.get(binding).add(expression);
-    } else {
-      List<Expression> expressions = new ArrayList<>();
-      expressions.add(expression);
-      cachedExpressions.put(binding, expressions);
-    }
-  }
-
-  /**
-   * Updates Expressions Refers-To Edge and cachedDeclaration from an old Declaration to new
-   * Declaration by using cachedExpressions. E.g. VariableDeclaration is replaced by
-   * FieldDeclaration and the refersTo Edge from the Expression must point to the new
-   * FieldExpression
-   *
-   * @param newDeclaration replaces the old target of the refersTo Edge (e.g. FieldDeclaration)
-   * @param oldDeclaration current target of the refersTo Edge and will be replaced (e.g.
-   *     VariableDeclaration)
-   */
-  public void replaceDeclarationInExpression(
-      Declaration newDeclaration, Declaration oldDeclaration) {
-    IBinding binding =
-        cachedDeclarations.entrySet().stream()
-            .filter(d -> d.getValue().equals(oldDeclaration))
-            .map(Map.Entry::getKey)
-            .findFirst()
-            .orElse(null);
-    if (binding != null && cachedExpressions.containsKey(binding)) {
-      List<Expression> expressions = cachedExpressions.get(binding);
-      for (Expression expression : expressions) {
-        ((DeclaredReferenceExpression) expression).setRefersTo((ValueDeclaration) newDeclaration);
-      }
-    }
-
-    if (binding != null) {
-      cachedDeclarations.remove(binding);
-      cachedDeclarations.put(binding, newDeclaration);
-    }
-  }
-
   @Nullable
   public Declaration cacheDeclaration(IBinding binding, Declaration declaration) {
-    if (cachedExpressions.containsKey(binding)) {
-      List<Expression> expressionList = cachedExpressions.get(binding);
-      for (Expression expression : expressionList) {
-        ((DeclaredReferenceExpression) expression).setRefersTo((ValueDeclaration) declaration);
-      }
-    }
     return cachedDeclarations.put(binding, declaration);
   }
 
   public Declaration getCachedDeclaration(IBinding binding) {
     return cachedDeclarations.get(binding);
-  }
-
-  public List<Expression> getCachedExpression(IBinding binding) {
-    if (cachedExpressions.containsKey(binding)) {
-      return cachedExpressions.get(binding);
-    }
-    return new ArrayList<>();
   }
 
   public Map<IBinding, Declaration> getCachedDeclarations() {
