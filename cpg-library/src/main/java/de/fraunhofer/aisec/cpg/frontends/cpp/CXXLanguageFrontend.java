@@ -195,7 +195,6 @@ public class CXXLanguageFrontend extends LanguageFrontend {
       new ParameterDeclarationHandler(this);
   private final StatementHandler statementHandler = new StatementHandler(this);
   private final HashMap<IBinding, Declaration> cachedDeclarations = new HashMap<>();
-  private final HashMap<IBinding, List<Expression>> cachedExpressions = new HashMap<>();
   private final HashMap<Integer, String> comments = new HashMap<>();
 
   public CXXLanguageFrontend(@NonNull TranslationConfiguration config, ScopeManager scopeManager) {
