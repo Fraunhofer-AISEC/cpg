@@ -119,6 +119,10 @@ if (project.hasProperty("experimental")) {
         dependsOn(compileGolang)
         dependsOn(compileNodeJs)
     }
+
+    tasks.processResources {
+        dependsOn(compileNodeJs)
+    }
 }
 
 signing {
