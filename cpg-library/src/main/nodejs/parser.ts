@@ -1,15 +1,13 @@
 import * as ts from 'typescript';
+import path = require('path');
 
-const file = process.argv[2];
-
-
+const file = path.normalize(process.argv[2]);
 
 const program = ts.createProgram([file], {
     allowJs: true,
 });
 
 var sources = program.getSourceFiles()
-
 let indent = 0;
 
 sources.filter(sf => sf.fileName.endsWith(file)).forEach(sf => {
