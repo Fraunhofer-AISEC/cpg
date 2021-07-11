@@ -1,11 +1,16 @@
 {
   "scripts": {
     "build": "tsc --build tsconfig.json",
+    "bundle": "webpack --mode=production",
     "start": "node parser.js"
   },
   "dependencies": {
     "@types/node": "^16.0.0",
     "typescript": "^4.3.5"
   },
-  "license": "Apache-2.0"
+  "license": "Apache-2.0",
+  "devDependencies": {
+    "webpack": "^5.44.0",
+    "webpack-cli": "^4.7.2"
+  }
 }
