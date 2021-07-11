@@ -33,7 +33,10 @@ import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
-import java.io.*
+import java.io.File
+import java.io.File.createTempFile
+import java.nio.file.Files
+import java.nio.file.StandardCopyOption
 import org.checkerframework.checker.nullness.qual.NonNull
 
 /**
@@ -66,10 +69,18 @@ class TypeScriptLanguageFrontend(
         @kotlin.jvm.JvmField var JAVASCRIPT_EXTENSIONS: List<String> = listOf(".js", ".jsx")
     }
 
+    val parserFile: File = createTempFile("parser", ".js")
+
+    init {
+        val link = this.javaClass.getResourceAsStream("/nodejs/parser.js")
+        link?.use {
+            Files.copy(it, parserFile.absoluteFile.toPath(), StandardCopyOption.REPLACE_EXISTING)
+        }
+    }
+
     override fun parse(file: File): TranslationUnitDeclaration {
         val p =
-            Runtime.getRuntime()
-                .exec(arrayOf("node", "src/main/nodejs/parser.js", file.absolutePath))
+            Runtime.getRuntime().exec(arrayOf("node", parserFile.absolutePath, file.absolutePath))
 
         val node = mapper.readValue(p.inputStream, TypeScriptNode::class.java)
 
