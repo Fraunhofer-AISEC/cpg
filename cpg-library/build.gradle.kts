@@ -136,6 +136,7 @@ dependencies {
 
     // CDT
     api("org.eclipse.cdt:core:7.2.0.202102251239")
+    api("org.neo4j:neo4j-ogm-bolt-driver:3.2.10")
 
     // openCypher
     api("org.opencypher:parser-9.0:9.0.20210312")

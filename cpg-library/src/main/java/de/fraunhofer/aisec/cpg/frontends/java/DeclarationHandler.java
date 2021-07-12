@@ -382,7 +382,6 @@ public class DeclarationHandler
     return fieldDeclaration;
   }
 
-
   public de.fraunhofer.aisec.cpg.graph.declarations.EnumDeclaration handleEnumDeclaration(
       com.github.javaparser.ast.body.EnumDeclaration enumDecl) {
     String name = getAbsoluteName(enumDecl.getNameAsString());
