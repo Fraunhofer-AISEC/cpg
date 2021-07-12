@@ -68,18 +68,22 @@ class TypeScriptLanguageFrontend(
         @kotlin.jvm.JvmField var TYPESCRIPT_EXTENSIONS: List<String> = listOf(".ts", ".tsx")
 
         @kotlin.jvm.JvmField var JAVASCRIPT_EXTENSIONS: List<String> = listOf(".js", ".jsx")
-    }
 
-    private val parserFile: File = createTempFile("parser", ".js")
+        private val parserFile: File = createTempFile("parser", ".js")
 
-    init {
-        val link = this.javaClass.getResourceAsStream("/nodejs/parser.js")
-        link?.use {
-            log.info(
-                "Extracting parser.js out of resources to {}",
-                parserFile.absoluteFile.toPath()
-            )
-            Files.copy(it, parserFile.absoluteFile.toPath(), StandardCopyOption.REPLACE_EXISTING)
+        init {
+            val link = this::class.java.getResourceAsStream("/nodejs/parser.js")
+            link?.use {
+                log.info(
+                    "Extracting parser.js out of resources to {}",
+                    parserFile.absoluteFile.toPath()
+                )
+                Files.copy(
+                    it,
+                    parserFile.absoluteFile.toPath(),
+                    StandardCopyOption.REPLACE_EXISTING
+                )
+            }
         }
     }
 
