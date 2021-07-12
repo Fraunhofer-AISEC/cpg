@@ -92,6 +92,10 @@ tasks.named<Test>("test") {
         } else {
             systemProperty("java.library.path", project.projectDir.resolve("src/main/golang"))
         }
+        
+        if (!project.hasProperty("experimentalTypeScript")) {
+            excludeTags("experimentalTypeScript")
+        }
     }
     maxHeapSize = "4048m"
 }
