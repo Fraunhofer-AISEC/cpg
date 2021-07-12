@@ -41,7 +41,7 @@ import kotlin.test.assertSame
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 
-@Tag("experimental")
+@Tag("experimentalTypeScript")
 @ExperimentalTypeScript
 class TypescriptLanguageFrontendTest {
 
