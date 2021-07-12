@@ -91,12 +91,6 @@ subprojects {
         }
     }
 
-    tasks.withType<Test> {
-        this.testLogging {
-            this.showStandardStreams = true
-        }
-    }
-
     var headerWithStars = """/*
  * Copyright (c) ${"$"}YEAR, Fraunhofer AISEC. All rights reserved.
  *
