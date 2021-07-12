@@ -1,8 +1,9 @@
 {
   "scripts": {
     "build": "tsc --build tsconfig.json",
+    "prebundle": "tsc --build tsconfig.json",
     "bundle": "webpack --mode=production",
-    "start": "node parser.js"
+    "start": "node src/parser.js"
   },
   "dependencies": {
     "@types/node": "^16.0.0",

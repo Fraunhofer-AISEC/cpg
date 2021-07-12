@@ -23,12 +23,14 @@
  *                    \______/ \__|       \______/
  *
  */
+import com.github.gradle.node.yarn.task.YarnTask
+
 plugins {
     `java-library`
     `maven-publish`
     signing
 
-    id("com.github.johnrengelman.shadow")
+    id("com.github.node-gradle.node") version "3.1.0"
 }
 
 publishing {
@@ -94,6 +96,33 @@ tasks.named<Test>("test") {
     maxHeapSize = "4048m"
 }
 
+node {
+    download.set(false)
+}
+
+val yarnInstall by tasks.registering(YarnTask::class) {
+    inputs.file("src/main/nodejs/package.json").withPathSensitivity(PathSensitivity.RELATIVE)
+    inputs.file("src/main/nodejs/yarn.lock").withPathSensitivity(PathSensitivity.RELATIVE)
+    outputs.dir("src/main/nodejs/node_modules")
+    outputs.cacheIf { true }
+
+    workingDir.set(file("src/main/nodejs"))
+    yarnCommand.set(listOf("install", "--ignore-optional"))
+}
+
+val yarnBuild by tasks.registering(YarnTask::class) {
+    inputs.file("src/main/nodejs/package.json").withPathSensitivity(PathSensitivity.RELATIVE)
+    inputs.file("src/main/nodejs/yarn.lock").withPathSensitivity(PathSensitivity.RELATIVE)
+    inputs.dir("src/main/nodejs/src").withPathSensitivity(PathSensitivity.RELATIVE)
+    outputs.dir("build/resources/main/nodejs")
+    outputs.cacheIf { true }
+
+    workingDir.set(file("src/main/nodejs"))
+    yarnCommand.set(listOf("bundle"))
+
+    dependsOn(yarnInstall)
+}
+
 if (project.hasProperty("experimental")) {
     val compileGolang = tasks.register("compileGolang") {
         doLast {
@@ -104,24 +133,13 @@ if (project.hasProperty("experimental")) {
             }
         }
     }
-
-    val compileNodeJs = tasks.register("compileNodeJs") {
-        doLast {
-            project.exec {
-                commandLine("./build.sh")
-                    .setStandardOutput(System.out)
-                    .workingDir("src/main/nodejs")
-            }
-        }
-    }
-
+    
     tasks.named("compileJava") {
         dependsOn(compileGolang)
-        dependsOn(compileNodeJs)
     }
 
     tasks.processResources {
-        dependsOn(compileNodeJs)
+        dependsOn(yarnBuild)
     }
 }
 
