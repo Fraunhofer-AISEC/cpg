@@ -29,6 +29,7 @@ import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import de.fraunhofer.aisec.cpg.ExperimentalTypeScript
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
+import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
@@ -69,16 +70,24 @@ class TypeScriptLanguageFrontend(
         @kotlin.jvm.JvmField var JAVASCRIPT_EXTENSIONS: List<String> = listOf(".js", ".jsx")
     }
 
-    val parserFile: File = createTempFile("parser", ".js")
+    private val parserFile: File = createTempFile("parser", ".js")
 
     init {
         val link = this.javaClass.getResourceAsStream("/nodejs/parser.js")
         link?.use {
+            log.info(
+                "Extracting parser.js out of resources to {}",
+                parserFile.absoluteFile.toPath()
+            )
             Files.copy(it, parserFile.absoluteFile.toPath(), StandardCopyOption.REPLACE_EXISTING)
         }
     }
 
     override fun parse(file: File): TranslationUnitDeclaration {
+        if (!parserFile.exists()) {
+            throw TranslationException("parser.js not found @ ${parserFile.absolutePath}")
+        }
+
         val p =
             Runtime.getRuntime().exec(arrayOf("node", parserFile.absolutePath, file.absolutePath))
 
