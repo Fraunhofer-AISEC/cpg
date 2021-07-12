@@ -76,7 +76,7 @@ jobs:
             -Dsonar.host.url=https://sonarcloud.io \
             -Dsonar.login=$SONAR_TOKEN
           else
-            ./gradlew --parallel -Pversion=$VERSION -Pexperimental -Pintegration build
+            ./gradlew --parallel -Pversion=$VERSION -Pexperimental -PexperimentalTypeScript -Pintegration build
           fi
         id: build
         env:

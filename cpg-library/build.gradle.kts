@@ -97,7 +97,8 @@ tasks.named<Test>("test") {
 }
 
 node {
-    download.set(false)
+    download.set(findProperty("nodeDownload")?.toString()?.toBoolean() ?: false)
+    version.set("16.4.2")
 }
 
 val yarnInstall by tasks.registering(YarnTask::class) {
@@ -133,11 +134,13 @@ if (project.hasProperty("experimental")) {
             }
         }
     }
-    
+
     tasks.named("compileJava") {
         dependsOn(compileGolang)
     }
+}
 
+if (project.hasProperty("experimentalTypeScript")) {
     tasks.processResources {
         dependsOn(yarnBuild)
     }
