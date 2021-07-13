@@ -103,7 +103,8 @@ public class Expression extends Statement implements HasType {
 
     Type oldType = this.type;
 
-    if (TypeManager.getInstance().isUnknown(type)) {
+    if (TypeManager.getInstance().isUnknown(type)
+        || TypeManager.getInstance().stopPropagation(oldType, type)) {
       return;
     }
 

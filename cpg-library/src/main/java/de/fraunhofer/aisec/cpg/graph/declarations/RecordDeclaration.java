@@ -66,10 +66,15 @@ public class RecordDeclaration extends Declaration implements DeclarationHolder,
   @SubGraph("AST")
   private List<PropertyEdge<RecordDeclaration>> records = new ArrayList<>();
 
+  @Relationship(value = "TEMPLATES", direction = "OUTGOING")
+  @SubGraph("AST")
+  private List<PropertyEdge<TemplateDeclaration>> templates = new ArrayList<>();
+
   /** The list of statements. */
   @Relationship(value = "STATEMENTS", direction = "OUTGOING")
   @NonNull
   private @SubGraph("AST") List<PropertyEdge<Statement>> statements = new ArrayList<>();
+
 
   @Transient private List<Type> superClasses = new ArrayList<>();
   @Transient private List<Type> implementedInterfaces = new ArrayList<>();
@@ -196,6 +201,22 @@ public class RecordDeclaration extends Declaration implements DeclarationHolder,
     this.records.removeIf(propertyEdge -> propertyEdge.getEnd().equals(recordDeclaration));
   }
 
+  public List<TemplateDeclaration> getTemplates() {
+    return unwrap(this.templates);
+  }
+
+  public List<PropertyEdge<TemplateDeclaration>> getTemplatesPropertyEdge() {
+    return this.templates;
+  }
+
+  public void setTemplates(List<TemplateDeclaration> templates) {
+    this.templates = PropertyEdge.transformIntoOutgoingPropertyEdgeList(templates, this);
+  }
+
+  public void removeTemplate(TemplateDeclaration templateDeclaration) {
+    this.templates.removeIf(propertyEdge -> propertyEdge.getEnd().equals(templateDeclaration));
+  }
+
   @NotNull
   public List<Declaration> getDeclarations() {
     var list = new ArrayList<Declaration>();
@@ -203,6 +224,7 @@ public class RecordDeclaration extends Declaration implements DeclarationHolder,
     list.addAll(this.getMethods());
     list.addAll(this.getConstructors());
     list.addAll(this.getRecords());
+    list.addAll(this.getTemplates());
 
     return list;
   }
@@ -349,6 +371,8 @@ public class RecordDeclaration extends Declaration implements DeclarationHolder,
       addIfNotContains(this.fields, (FieldDeclaration) declaration);
     } else if (declaration instanceof RecordDeclaration) {
       addIfNotContains(this.records, (RecordDeclaration) declaration);
+    } else if (declaration instanceof TemplateDeclaration) {
+      addIfNotContains(this.templates, (TemplateDeclaration) declaration);
     }
   }
 }

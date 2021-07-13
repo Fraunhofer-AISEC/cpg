@@ -116,7 +116,7 @@ public class UnaryOperator extends Expression implements TypeListener {
 
   private boolean getsDataFromInput(TypeListener listener) {
     checked.clear();
-    return input.getTypeListeners().stream().anyMatch(l -> getsDataFromInput(l, listener));
+    return input != null && input.getTypeListeners().stream().anyMatch(l -> getsDataFromInput(l, listener));
   }
 
   public String getOperatorCode() {
@@ -169,7 +169,11 @@ public class UnaryOperator extends Expression implements TypeListener {
       } else if (operatorCode.equals("&")) {
         newType = src.getPropagationType().dereference();
       }
-      input.setType(newType, this);
+
+      // We are a fuzzy parser, so while this should not happen, there is no guarantee that input is not null
+      if(input != null) {
+        input.setType(newType, this);
+      }
     }
 
     if (!previous.equals(this.type)) {

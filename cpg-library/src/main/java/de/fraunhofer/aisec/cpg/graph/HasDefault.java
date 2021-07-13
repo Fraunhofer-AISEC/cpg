@@ -23,34 +23,16 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.graph.types;
+package de.fraunhofer.aisec.cpg.graph;
 
 /**
- * ParameterizedTypes describe types, that are passed as Paramters to Classes E.g. uninitialized
- * generics in the graph are represented as ParameterizedTypes
+ * Interface that allows us to mark nodes that contain a default value
+ *
+ * @param <T> type of the default node
  */
-public class ParameterizedType extends Type {
+public interface HasDefault<T extends Node> {
 
-  public ParameterizedType(Type type) {
-    super(type);
-  }
+  public T getDefault();
 
-  public ParameterizedType(String typeName) {
-    super(typeName);
-  }
-
-  @Override
-  public Type reference(PointerType.PointerOrigin pointer) {
-    return new PointerType(this, pointer);
-  }
-
-  @Override
-  public Type dereference() {
-    return this;
-  }
-
-  @Override
-  public Type duplicate() {
-    return new ParameterizedType(this);
-  }
+  public void setDefault(T t);
 }

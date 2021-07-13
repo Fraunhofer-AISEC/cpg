@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.graph;
 
 import de.fraunhofer.aisec.cpg.graph.types.Type;
+import java.util.Collection;
 import java.util.Set;
 
 public interface HasType {
@@ -97,5 +98,16 @@ public interface HasType {
     void typeChanged(HasType src, HasType root, Type oldType);
 
     void possibleSubTypesChanged(HasType src, HasType root, Set<Type> oldSubTypes);
+  }
+
+  /**
+   * The Typeresolver needs to be aware of all outgoing edges to types in order to merge equal types
+   * to the same node. For the primary type edge, this is achieved through the hasType interface. If
+   * a node has additional type edges (e.g. default type in {@link
+   * de.fraunhofer.aisec.cpg.graph.declarations.TypeParamDeclaration}) the node must implement the
+   * updateType method, so that the current type is always replaced with the merged one
+   */
+  interface SecondaryTypeEdge {
+    void updateType(Collection<Type> typeState);
   }
 }
