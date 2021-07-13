@@ -77,10 +77,13 @@ import de.fraunhofer.aisec.cpg.graph.types.UnknownType;
 import de.fraunhofer.aisec.cpg.helpers.NodeComparator;
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker;
 import de.fraunhofer.aisec.cpg.helpers.Util;
+import de.fraunhofer.aisec.cpg.processing.IVisitor;
+import de.fraunhofer.aisec.cpg.processing.strategy.Strategy;
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation;
 import de.fraunhofer.aisec.cpg.sarif.Region;
 import java.io.File;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -1259,5 +1262,35 @@ class CXXLanguageFrontendTest extends BaseTest {
 
     // should contain 3 declarations (2 include and 1 function decl from the include)
     assertEquals(3, declarations.get(0).getDeclarations().size());
+  }
+
+  @Test
+  void testEOGCompleteness() throws Exception {
+    var file = new File("src/test/resources/fix-455/main.cpp");
+    var tu = TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true);
+
+    var main = tu.getDeclarationsByName("main", FunctionDeclaration.class).iterator().next();
+    assertNotNull(main);
+
+    var body = (CompoundStatement) main.getBody();
+    assertNotNull(body);
+
+    var returnStatement = body.getStatements().get(body.getStatements().size() - 1);
+    assertNotNull(returnStatement);
+
+    // we need to assert, that we have a consistent chain of EOG edges from the first statement to
+    // the return statement. otherwise, the EOG chain is somehow broken
+    var eogEdges = new ArrayList<Node>();
+
+    main.accept(
+        Strategy::EOG_FORWARD,
+        new IVisitor<>() {
+          public void visit(Node n) {
+            System.out.println(n);
+            eogEdges.add(n);
+          }
+        });
+
+    assertTrue(eogEdges.contains(returnStatement));
   }
 }
