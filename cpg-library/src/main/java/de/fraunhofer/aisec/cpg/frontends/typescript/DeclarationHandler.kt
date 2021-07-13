@@ -142,7 +142,7 @@ class DeclarationHandler(lang: TypeScriptLanguageFrontend) :
                     val record = this.lang.scopeManager.currentRecord
 
                     NodeBuilder.newMethodDeclaration(
-                        name ?: "",
+                        name,
                         this.lang.getCodeFromRawNode(node),
                         false,
                         record
@@ -193,7 +193,7 @@ class DeclarationHandler(lang: TypeScriptLanguageFrontend) :
 
         val `var` =
             NodeBuilder.newVariableDeclaration(
-                name ?: "",
+                name,
                 UnknownType.getUnknownType(),
                 this.lang.getCodeFromRawNode(node),
                 false

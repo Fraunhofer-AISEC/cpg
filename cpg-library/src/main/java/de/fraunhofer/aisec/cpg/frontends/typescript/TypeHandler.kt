@@ -74,8 +74,8 @@ class TypeHandler(lang: TypeScriptLanguageFrontend?) :
     }
 
     private fun handleTypeReference(node: TypeScriptNode): Type {
-        this.lang.getIdentifierName(node)?.let {
-            return TypeParser.createFrom(it, false)
+        node.firstChild("Identifier")?.let {
+            return TypeParser.createFrom(this.lang.getIdentifierName(node), false)
         }
 
         return UnknownType.getUnknownType()

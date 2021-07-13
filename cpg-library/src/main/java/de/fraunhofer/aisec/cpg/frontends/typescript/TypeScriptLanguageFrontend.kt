@@ -124,7 +124,7 @@ class TypeScriptLanguageFrontend(
     }
 
     internal fun getIdentifierName(node: TypeScriptNode) =
-        this.getCodeFromRawNode(node.firstChild("Identifier"))
+        this.getCodeFromRawNode(node.firstChild("Identifier")) ?: ""
 }
 
 class Location(var file: String, var pos: Int, var end: Int)
