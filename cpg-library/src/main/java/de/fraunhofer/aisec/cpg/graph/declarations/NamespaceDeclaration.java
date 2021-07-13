@@ -26,7 +26,10 @@
 package de.fraunhofer.aisec.cpg.graph.declarations;
 
 import de.fraunhofer.aisec.cpg.graph.DeclarationHolder;
+import de.fraunhofer.aisec.cpg.graph.StatementHolder;
 import de.fraunhofer.aisec.cpg.graph.SubGraph;
+import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
+import de.fraunhofer.aisec.cpg.graph.statements.Statement;
 import de.fraunhofer.aisec.cpg.helpers.Util;
 import java.util.ArrayList;
 import java.util.List;
@@ -35,6 +38,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.jetbrains.annotations.NotNull;
+import org.neo4j.ogm.annotation.Relationship;
 
 /**
  * Declares the scope of a namespace and appends its own name to the current namespace-prefix to
@@ -46,13 +50,19 @@ import org.jetbrains.annotations.NotNull;
  * semantical difference between NamespaceDeclaration and {@link RecordDeclaration} lies in the
  * non-instantiabillity of a namespace.
  */
-public class NamespaceDeclaration extends Declaration implements DeclarationHolder {
+public class NamespaceDeclaration extends Declaration
+    implements DeclarationHolder, StatementHolder {
 
   /**
    * Edges to nested namespaces, records, functions, fields etc. contained in the current namespace.
    */
   @SubGraph("AST")
   private List<Declaration> declarations = new ArrayList<>();
+
+  /** The list of statements. */
+  @Relationship(value = "STATEMENTS", direction = "OUTGOING")
+  @NonNull
+  private @SubGraph("AST") List<PropertyEdge<Statement>> statements = new ArrayList<>();
 
   public List<FieldDeclaration> getFields() {
     return Util.filterCast(declarations, FieldDeclaration.class);
@@ -96,6 +106,16 @@ public class NamespaceDeclaration extends Declaration implements DeclarationHold
 
   public <T> T getDeclarationAs(int i, Class<T> clazz) {
     return clazz.cast(getDeclarations().get(i));
+  }
+
+  @Override
+  public @NonNull List<PropertyEdge<Statement>> getStatementEdges() {
+    return this.statements;
+  }
+
+  @Override
+  public void setStatementEdges(@NonNull List<PropertyEdge<Statement>> statements) {
+    this.statements = statements;
   }
 
   @Override
