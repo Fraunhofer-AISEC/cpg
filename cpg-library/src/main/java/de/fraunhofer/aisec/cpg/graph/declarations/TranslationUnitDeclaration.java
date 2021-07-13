@@ -29,8 +29,10 @@ import static de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.unwrap;
 
 import de.fraunhofer.aisec.cpg.graph.DeclarationHolder;
 import de.fraunhofer.aisec.cpg.graph.Node;
+import de.fraunhofer.aisec.cpg.graph.StatementHolder;
 import de.fraunhofer.aisec.cpg.graph.SubGraph;
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
+import de.fraunhofer.aisec.cpg.graph.statements.Statement;
 import java.util.*;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.builder.ToStringBuilder;
@@ -40,7 +42,8 @@ import org.jetbrains.annotations.NotNull;
 import org.neo4j.ogm.annotation.Relationship;
 
 /** The top most declaration, representing a translation unit, for example a file. */
-public class TranslationUnitDeclaration extends Declaration implements DeclarationHolder {
+public class TranslationUnitDeclaration extends Declaration
+    implements DeclarationHolder, StatementHolder {
 
   /** A list of declarations within this unit. */
   @Relationship(value = "DECLARATIONS", direction = "OUTGOING")
@@ -59,6 +62,11 @@ public class TranslationUnitDeclaration extends Declaration implements Declarati
   @SubGraph("AST")
   @NonNull
   private List<PropertyEdge<Declaration>> namespaces = new ArrayList<>();
+
+  /** The list of statements. */
+  @Relationship(value = "STATEMENTS", direction = "OUTGOING")
+  @NonNull
+  private @SubGraph("AST") List<PropertyEdge<Statement>> statements = new ArrayList<>();
 
   /**
    * Returns the i-th declaration as a specific class, if it can be cast
@@ -148,6 +156,16 @@ public class TranslationUnitDeclaration extends Declaration implements Declarati
     }
 
     addIfNotContains(declarations, declaration);
+  }
+
+  @Override
+  public @NonNull List<PropertyEdge<Statement>> getStatementEdges() {
+    return this.statements;
+  }
+
+  @Override
+  public void setStatementEdges(@NonNull List<PropertyEdge<Statement>> statements) {
+    this.statements = statements;
   }
 
   @Override
