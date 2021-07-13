@@ -30,7 +30,11 @@ import de.fraunhofer.aisec.cpg.ExperimentalTypeScript
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
+import de.fraunhofer.aisec.cpg.graph.Annotation
+import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.NodeBuilder
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
@@ -125,6 +129,38 @@ class TypeScriptLanguageFrontend(
 
     internal fun getIdentifierName(node: TypeScriptNode) =
         this.getCodeFromRawNode(node.firstChild("Identifier")) ?: ""
+
+    fun processAnnotations(node: Node, astNode: TypeScriptNode) {
+        // filter for decorators
+        astNode.children?.filter { it.type == "Decorator" }?.map { handleDecorator(it) }?.let {
+            node.addAnnotations(it)
+        }
+    }
+
+    private fun handleDecorator(node: TypeScriptNode): Annotation {
+        // a decorator can contain a call expression with additional arguments
+        val call = node.firstChild("CallExpression")
+        if (call != null) {
+            val call = this.expressionHandler.handle(call) as CallExpression
+
+            val annotation =
+                NodeBuilder.newAnnotation(call.name, this.getCodeFromRawNode(node) ?: "")
+
+            annotation.members =
+                call.arguments.map { NodeBuilder.newAnnotationMember("", it, it.code ?: "") }
+
+            call.disconnectFromGraph()
+
+            return annotation
+        } else {
+            // or a decorator just has a simple identifier
+            val name = this.getIdentifierName(node)
+
+            val annotation = NodeBuilder.newAnnotation(name, this.getCodeFromRawNode(node) ?: "")
+
+            return annotation
+        }
+    }
 }
 
 class Location(var file: String, var pos: Int, var end: Int)

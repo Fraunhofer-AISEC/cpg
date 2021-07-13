@@ -72,7 +72,7 @@ class StatementHandler(lang: TypeScriptLanguageFrontend) :
         val returnStmt = NodeBuilder.newReturnStatement(this.lang.getCodeFromRawNode(node))
 
         node.children?.first()?.let {
-            returnStmt.returnValue = this.lang.expressionHandler.handleNode(it)
+            returnStmt.returnValue = this.lang.expressionHandler.handle(it)
         }
 
         return returnStmt

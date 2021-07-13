@@ -47,6 +47,7 @@ class DeclarationHandler(lang: TypeScriptLanguageFrontend) :
             "ArrowFunction" -> return handleFunctionDeclaration(node)
             "Parameter" -> return handleParameter(node)
             "PropertySignature" -> return handlePropertySignature(node)
+            "PropertyDeclaration" -> return handlePropertySignature(node)
             "VariableDeclaration" -> return handleVariableDeclaration(node)
             "InterfaceDeclaration" -> return handleClassDeclaration(node)
             "ClassDeclaration" -> return handleClassDeclaration(node)
@@ -69,6 +70,8 @@ class DeclarationHandler(lang: TypeScriptLanguageFrontend) :
                 null,
                 false
             )
+
+        this.lang.processAnnotations(field, node)
 
         return field
     }
@@ -93,12 +96,15 @@ class DeclarationHandler(lang: TypeScriptLanguageFrontend) :
         node.children
             ?.filter {
                 it.type == "PropertySignature" ||
+                    it.type == "PropertyDeclaration" ||
                     it.type == "Constructor" ||
                     it.type == "MethodDeclaration"
             }
             ?.map { this.lang.scopeManager.addDeclaration(this.handle(it)) }
 
         this.lang.scopeManager.leaveScope(record)
+
+        this.lang.processAnnotations(record, node)
 
         return record
     }
@@ -178,6 +184,10 @@ class DeclarationHandler(lang: TypeScriptLanguageFrontend) :
         node.children?.filter { it.type == "Parameter" }?.forEach {
             val param = this.lang.declarationHandler.handleNode(it)
 
+            if (func is MethodDeclaration) {
+                this.lang.processAnnotations(param, it)
+            }
+
             this.lang.scopeManager.addDeclaration(param)
         }
 
@@ -188,6 +198,10 @@ class DeclarationHandler(lang: TypeScriptLanguageFrontend) :
         node.firstChild("JsxElement")?.let { func.body = this.lang.expressionHandler.handle(it) }
 
         this.lang.scopeManager.leaveScope(func)
+
+        if (func is MethodDeclaration) {
+            this.lang.processAnnotations(func, node)
+        }
 
         return func
     }

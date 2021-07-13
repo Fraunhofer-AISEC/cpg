@@ -39,7 +39,7 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
         map.put(TypeScriptNode::class.java, ::handleNode)
     }
 
-    fun handleNode(node: TypeScriptNode): Expression {
+    private fun handleNode(node: TypeScriptNode): Expression {
         when (node.type) {
             "CallExpression" -> return handleCallExpression(node)
             "PropertyAccessExpression" -> return handlePropertyAccessExpression(node)

@@ -364,4 +364,42 @@ class TypescriptLanguageFrontendTest {
         assertNotNull(validateForm)
         assertEquals("validateForm", validateForm.name)
     }
+
+    @Test
+    fun testDecorators() {
+        val topLevel = Path.of("src", "test", "resources", "typescript")
+        val tu =
+            TestUtils.analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("decorator.ts").toFile()),
+                topLevel,
+                true
+            ) {
+                it.registerLanguage(
+                    TypeScriptLanguageFrontend::class.java,
+                    TypeScriptLanguageFrontend.TYPESCRIPT_EXTENSIONS
+                )
+            }
+
+        assertNotNull(tu)
+
+        val myClass =
+            tu.getDeclarationsByName("MyClass", RecordDeclaration::class.java).iterator().next()
+        assertNotNull(myClass)
+        assertEquals("awesome", myClass.annotations.firstOrNull()?.name)
+
+        val method = myClass.methods.firstOrNull()
+        assertNotNull(method)
+        assertEquals("dontcall", method.annotations.firstOrNull()?.name)
+
+        val field = myClass.getField("something")
+        assertNotNull(field)
+
+        val annotation = field.annotations.firstOrNull()
+        assertNotNull(annotation)
+        assertEquals("sensitive", annotation.name)
+
+        val member = annotation.members.firstOrNull()
+        assertNotNull(member)
+        assertEquals("very", (member.value as? Literal<*>)?.value)
+    }
 }
