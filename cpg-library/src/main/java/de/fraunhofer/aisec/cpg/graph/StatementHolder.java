@@ -28,8 +28,6 @@ package de.fraunhofer.aisec.cpg.graph;
 import de.fraunhofer.aisec.cpg.graph.edge.Properties;
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import de.fraunhofer.aisec.cpg.graph.statements.Statement;
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import org.checkerframework.checker.nullness.qual.NonNull;
 
@@ -61,11 +59,7 @@ public interface StatementHolder {
    */
   @NonNull
   default List<Statement> getStatements() {
-    List<Statement> targets = new ArrayList<>();
-    for (PropertyEdge<Statement> propertyEdge : getStatementEdges()) {
-      targets.add(propertyEdge.getEnd());
-    }
-    return Collections.unmodifiableList(targets);
+    return (List<Statement>) PropertyEdge.unwrapPropertyEdge(getStatementEdges(), true);
   }
 
   @NonNull
