@@ -46,6 +46,7 @@ import de.fraunhofer.aisec.cpg.graph.TypeManager;
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration;
 import de.fraunhofer.aisec.cpg.graph.declarations.ParamVariableDeclaration;
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration;
+import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement;
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression;
 import de.fraunhofer.aisec.cpg.graph.types.ParameterizedType;
 import de.fraunhofer.aisec.cpg.graph.types.Type;
@@ -297,6 +298,12 @@ public class DeclarationHandler
         recordDeclaration.addConstructor(c);
       } else if (decl instanceof com.github.javaparser.ast.body.ClassOrInterfaceDeclaration) {
         recordDeclaration.addDeclaration(handle(decl));
+      } else if (decl instanceof com.github.javaparser.ast.body.InitializerDeclaration) {
+        InitializerDeclaration id = (InitializerDeclaration) decl;
+        CompoundStatement initializerBlock =
+            lang.getStatementHandler().handleBlockStatement(id.getBody());
+        initializerBlock.setStaticBlock(id.isStatic());
+        recordDeclaration.addStatement(initializerBlock);
       } else {
         log.debug(
             "Member {} of type {} is something that we do not parse yet: {}",
@@ -373,11 +380,6 @@ public class DeclarationHandler
     this.lang.processAnnotations(fieldDeclaration, fieldDecl);
 
     return fieldDeclaration;
-  }
-
-  public Declaration /* TODO refine return type*/ handleInitializerDeclaration(
-      InitializerDeclaration initializerDecl) {
-    return new Declaration();
   }
 
   public de.fraunhofer.aisec.cpg.graph.declarations.EnumDeclaration handleEnumDeclaration(

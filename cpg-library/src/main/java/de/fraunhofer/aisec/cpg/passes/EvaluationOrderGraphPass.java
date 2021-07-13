@@ -237,7 +237,12 @@ public class EvaluationOrderGraphPass extends Pass {
             .collect(Collectors.toList());
     Set<Node> validStarts =
         eognodes.stream()
-            .filter(node -> node instanceof FunctionDeclaration)
+            .filter(
+                node ->
+                    node instanceof FunctionDeclaration
+                        || node instanceof RecordDeclaration
+                        || node instanceof NamespaceDeclaration
+                        || node instanceof TranslationUnitDeclaration)
             .collect(Collectors.toSet());
     while (!validStarts.isEmpty()) {
       eognodes.removeAll(validStarts);
@@ -258,6 +263,9 @@ public class EvaluationOrderGraphPass extends Pass {
 
   private void handleTranslationUnitDeclaration(@NonNull Node node) {
     TranslationUnitDeclaration declaration = (TranslationUnitDeclaration) node;
+
+    handleStatementHolder((StatementHolder) node);
+
     // loop through functions
     for (Declaration child : declaration.getDeclarations()) {
       createEOG(child);
@@ -267,6 +275,9 @@ public class EvaluationOrderGraphPass extends Pass {
 
   private void handleNamespaceDeclaration(@NonNull Node node) {
     NamespaceDeclaration declaration = (NamespaceDeclaration) node;
+
+    handleStatementHolder(declaration);
+
     // loop through functions
     for (Declaration child : declaration.getDeclarations()) {
       createEOG(child);
@@ -282,17 +293,60 @@ public class EvaluationOrderGraphPass extends Pass {
   }
 
   private void handleRecordDeclaration(@NonNull Node node) {
-    Declaration declaration = (Declaration) node;
+    RecordDeclaration declaration = (RecordDeclaration) node;
     lang.getScopeManager().enterScope(declaration);
+
+    handleStatementHolder(declaration);
+
     this.currentEOG.clear();
-    for (ConstructorDeclaration constructor : ((RecordDeclaration) declaration).getConstructors()) {
+
+    for (ConstructorDeclaration constructor : declaration.getConstructors()) {
       createEOG(constructor);
     }
 
-    for (MethodDeclaration method : ((RecordDeclaration) declaration).getMethods()) {
+    for (MethodDeclaration method : declaration.getMethods()) {
       createEOG(method);
     }
+
+    for (RecordDeclaration records : declaration.getRecords()) {
+      createEOG(records);
+    }
     lang.getScopeManager().leaveScope(declaration);
+  }
+
+  private void handleStatementHolder(StatementHolder statementHolder) {
+    // separate code into static and non-static parts as they are executed in different moments
+    // although they can be
+    // be placed in the same enclosing declaration.
+    List<Statement> code =
+        statementHolder.getStatementsPropertyEdge().stream()
+            .map(PropertyEdge.class::cast)
+            .map(PropertyEdge::getEnd)
+            .map(Statement.class::cast)
+            .collect(Collectors.toList());
+
+    List<Statement> nonStaticCode =
+        code.stream()
+            .filter(CompoundStatement.class::isInstance)
+            .map(CompoundStatement.class::cast)
+            .filter(block -> !block.isStaticBlock())
+            .collect(Collectors.toList());
+    List<Statement> staticCode =
+        code.stream().filter(node -> !nonStaticCode.contains(node)).collect(Collectors.toList());
+
+    pushToEOG((Node) statementHolder);
+    for (Statement staticStatement : staticCode) {
+      createEOG(staticStatement);
+    }
+
+    currentEOG.clear();
+    pushToEOG((Node) statementHolder);
+
+    for (Statement nonStaticStatement : nonStaticCode) {
+      createEOG(nonStaticStatement);
+    }
+
+    currentEOG.clear();
   }
 
   private void handleFunctionDeclaration(@NonNull Node node) {

@@ -122,7 +122,7 @@ open class Node : IVisitable<Node>, Persistable {
     var isImplicit = false
 
     /** Required field for object graph mapping. It contains the node id. */
-    @field:Id @field:GeneratedValue val id: Long? = null
+    @field:Id @field:GeneratedValue var id: Long? = null
 
     /** Index of the argument if this node is used in a function call or parameter list. */
     var argumentIndex = 0

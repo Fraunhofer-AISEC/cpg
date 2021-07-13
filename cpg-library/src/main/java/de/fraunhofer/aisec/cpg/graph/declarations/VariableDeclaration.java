@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.declarations;
 
+import de.fraunhofer.aisec.cpg.graph.HasInitializer;
 import de.fraunhofer.aisec.cpg.graph.HasType;
 import de.fraunhofer.aisec.cpg.graph.HasType.TypeListener;
 import de.fraunhofer.aisec.cpg.graph.Node;
@@ -35,11 +36,11 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.InitializerListExpre
 import de.fraunhofer.aisec.cpg.graph.types.Type;
 import java.util.*;
 import org.apache.commons.lang3.builder.ToStringBuilder;
-import org.checkerframework.checker.nullness.qual.Nullable;
+import org.jetbrains.annotations.Nullable;
 import org.neo4j.ogm.annotation.Relationship;
 
 /** Represents the declaration of a variable. */
-public class VariableDeclaration extends ValueDeclaration implements TypeListener {
+public class VariableDeclaration extends ValueDeclaration implements TypeListener, HasInitializer {
 
   /** The (optional) initializer of the declaration. */
   @SubGraph("AST")
