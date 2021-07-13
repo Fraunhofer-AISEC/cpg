@@ -37,7 +37,6 @@ import de.fraunhofer.aisec.cpg.graph.types.*;
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.ScopedWalker;
 import de.fraunhofer.aisec.cpg.helpers.Util;
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy;
-import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation;
 import java.util.*;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -891,9 +890,6 @@ public class CallResolver extends Pass {
   }
 
   /**
-   * In C++ FunctionCalls must be declared before they are used to be valid invocation candidates.
-   * Therefore we have the additional requirement of <code>definedBefore()</code>
-   *
    * @param call we want to find invocation targets for by performing implicit casts
    * @return list of invocation candidates by applying implicit casts
    */
@@ -901,26 +897,8 @@ public class CallResolver extends Pass {
     assert lang != null;
     List<FunctionDeclaration> initialInvocationCandidates =
         lang.getScopeManager().resolveFunctionStopScopeTraversalOnDefinition(call).stream()
-            .filter(f -> !f.isImplicit() && definedBefore(f.getLocation(), call.getLocation()))
-            .collect(Collectors.toList());
-    return resolveWithImplicitCast(call, initialInvocationCandidates);
-  }
-
-  /**
-   * Methods can be defined inline and then they can be used even if they are declared below.
-   * Currently we cannot distinguish between inline methods and method definitions outside of the
-   * class block. This will be considered when we have a language dependent call resolver
-   *
-   * @param call we want to find invocation targets for by performing implicit casts
-   * @return list of invocation candidates by applying implicit casts
-   */
-  private List<FunctionDeclaration> resolveWithImplicitCastMethod(CallExpression call) {
-    assert lang != null;
-    List<FunctionDeclaration> initialInvocationCandidates =
-        lang.getScopeManager().resolveFunctionStopScopeTraversalOnDefinition(call).stream()
             .filter(f -> !f.isImplicit())
             .collect(Collectors.toList());
-
     return resolveWithImplicitCast(call, initialInvocationCandidates);
   }
 
@@ -1006,9 +984,6 @@ public class CallResolver extends Pass {
   }
 
   /**
-   * In C++ FunctionCalls must be declared before they are used to be valid invocation candidates.
-   * Therefore we have the additional requirement of <code>definedBefore()</code>
-   *
    * @param call we want to find invocation targets for by adding the default arguments to the
    *     signature
    * @return list of invocation candidates that have matching signature when considering default
@@ -1019,52 +994,9 @@ public class CallResolver extends Pass {
     List<FunctionDeclaration> invocationCandidates =
         lang.getScopeManager().resolveFunctionStopScopeTraversalOnDefinition(call).stream()
             .filter(
-                f ->
-                    !f.isImplicit()
-                        && definedBefore(f.getLocation(), call.getLocation())
-                        && call.getSignature().size() < f.getSignatureTypes().size())
-            .collect(Collectors.toList());
-    return resolveWithDefaultArgs(call, invocationCandidates);
-  }
-
-  /**
-   * Methods can be defined inline and then they can be used even if they are declared below.
-   * Currently we cannot distinguish between inline methods and method definitions outside of the
-   * class block. This will be considered when we have a language dependent call resolver
-   *
-   * @param call we want to find invocation targets for by adding the default arguments to the
-   *     signature
-   * @return list of invocation candidates that have matching signature when considering default
-   *     arguments
-   */
-  private List<FunctionDeclaration> resolveWithDefaultArgsMethod(CallExpression call) {
-    assert lang != null;
-    List<FunctionDeclaration> invocationCandidates =
-        lang.getScopeManager().resolveFunctionStopScopeTraversalOnDefinition(call).stream()
-            .filter(
                 f -> !f.isImplicit() && call.getSignature().size() < f.getSignatureTypes().size())
             .collect(Collectors.toList());
-
     return resolveWithDefaultArgs(call, invocationCandidates);
-  }
-
-  /**
-   * Checks if a declaration is located before the usage
-   *
-   * @param declaration
-   * @param usage
-   * @return false if the declaration is below the usage, true if the declaration is above the usage
-   *     or there are no locations (cannot compare)
-   */
-  private boolean definedBefore(
-      @Nullable PhysicalLocation declaration, @Nullable PhysicalLocation usage) {
-    if (declaration == null || usage == null) {
-      return true; // No comparison possible -> return default value
-    }
-    if (declaration.getArtifactLocation().equals(usage.getArtifactLocation())) {
-      return usage.getRegion().compareTo(declaration.getRegion()) > 0;
-    }
-    return true;
   }
 
   private void handleNormalCalls(RecordDeclaration curClass, CallExpression call) {
@@ -1090,10 +1022,7 @@ public class CallResolver extends Pass {
   private void handleNormalCallCXX(RecordDeclaration curClass, CallExpression call) {
     List<FunctionDeclaration> invocationCandidates =
         lang.getScopeManager().resolveFunctionStopScopeTraversalOnDefinition(call).stream()
-            .filter(
-                f ->
-                    f.hasSignature(call.getSignature())
-                        && definedBefore(f.getLocation(), call.getLocation()))
+            .filter(f -> f.hasSignature(call.getSignature()))
             .collect(Collectors.toList());
 
     if (invocationCandidates.isEmpty()) {
@@ -1192,15 +1121,12 @@ public class CallResolver extends Pass {
       RecordDeclaration curClass, CallExpression call) {
     List<FunctionDeclaration> invocationCandidates =
         lang.getScopeManager().resolveFunctionStopScopeTraversalOnDefinition(call).stream()
-            .filter(
-                f ->
-                    f.hasSignature(call.getSignature())
-                        && definedBefore(f.getLocation(), call.getLocation()))
+            .filter(f -> f.hasSignature(call.getSignature()))
             .collect(Collectors.toList());
 
     if (invocationCandidates.isEmpty()) {
       // Check for usage of default args
-      invocationCandidates.addAll(resolveWithDefaultArgsMethod(call));
+      invocationCandidates.addAll(resolveWithDefaultArgsFunc(call));
     }
 
     if (invocationCandidates.isEmpty()) {
@@ -1213,7 +1139,7 @@ public class CallResolver extends Pass {
 
     if (invocationCandidates.isEmpty()) {
       // Check for usage of implicit cast
-      invocationCandidates.addAll(resolveWithImplicitCastMethod(call));
+      invocationCandidates.addAll(resolveWithImplicitCastFunc(call));
     }
     return invocationCandidates;
   }
