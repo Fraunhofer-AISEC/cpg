@@ -83,7 +83,7 @@ public interface StatementHolder {
    * statements as we try to avoid adding new AST-nodes that do not exist, e.g. a code body to hold
    * statements
    *
-   * @param s the declaration
+   * @param s the statement
    */
   default void addStatement(Statement s) {
     PropertyEdge<Statement> propertyEdge = new PropertyEdge<>((Node) this, s);
