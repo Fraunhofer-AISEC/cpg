@@ -315,9 +315,9 @@ public class EvaluationOrderGraphPass extends Pass {
   }
 
   private void handleStatementHolder(StatementHolder statementHolder) {
-    // separate code into static and non static parts as they are executed in different moments
+    // separate code into static and non-static parts as they are executed in different moments
     // although they can be
-    // be placed int the same enclosing declaration.
+    // be placed in the same enclosing declaration.
     List<Statement> code =
         statementHolder.getStatementsPropertyEdge().stream()
             .map(PropertyEdge.class::cast)
