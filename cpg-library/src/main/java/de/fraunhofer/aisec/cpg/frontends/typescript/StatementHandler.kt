@@ -41,16 +41,31 @@ class StatementHandler(lang: TypeScriptLanguageFrontend) :
         map.put(TypeScriptNode::class.java, ::handleNode)
     }
 
-    fun handleNode(node: TypeScriptNode): Statement {
+    private fun handleNode(node: TypeScriptNode): Statement {
         when (node.type) {
             "Block" -> return handleBlock(node)
             "FirstStatement" -> return handleVariableStatement(node)
             "VariableStatement" -> return handleVariableStatement(node)
             "ExpressionStatement" -> return handleExpressionStatement(node)
             "ReturnStatement" -> return handleReturnStatement(node)
+            "FunctionDeclaration" -> return handleFunctionDeclaration(node)
         }
 
         return Statement()
+    }
+
+    private fun handleFunctionDeclaration(node: TypeScriptNode): Statement {
+        // typescript allows to declare function on a statement level, e.g. within a compound
+        // statement. We can wrap it into a declaration statement
+        val statement = NodeBuilder.newDeclarationStatement(this.lang.getCodeFromRawNode(node))
+
+        val decl = this.lang.declarationHandler.handle(node)
+
+        statement.addToPropertyEdgeDeclaration(decl)
+
+        this.lang.scopeManager.addDeclaration(decl)
+
+        return statement
     }
 
     private fun handleReturnStatement(node: TypeScriptNode): ReturnStatement {
@@ -85,7 +100,7 @@ class StatementHandler(lang: TypeScriptLanguageFrontend) :
         val nodes = node.firstChild("VariableDeclarationList")?.children
 
         for (variableNode in nodes ?: emptyList()) {
-            val decl = this.lang.declarationHandler.handleNode(variableNode)
+            val decl = this.lang.declarationHandler.handle(variableNode)
 
             statement.addToPropertyEdgeDeclaration(decl)
 

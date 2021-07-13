@@ -350,7 +350,18 @@ class TypescriptLanguageFrontendTest {
 
         val loginForm =
             tu.getDeclarationsByName("LoginForm", VariableDeclaration::class.java).iterator().next()
-
         assertNotNull(loginForm)
+
+        val arrowFunction =
+            (loginForm.initializer as? DeclaredReferenceExpression)?.refersTo as?
+                FunctionDeclaration
+        assertNotNull(arrowFunction)
+
+        val declStatement = arrowFunction.getBodyStatementAs(3, DeclarationStatement::class.java)
+        assertNotNull(declStatement)
+
+        val validateForm = declStatement.singleDeclaration as? FunctionDeclaration
+        assertNotNull(validateForm)
+        assertEquals("validateForm", validateForm.name)
     }
 }

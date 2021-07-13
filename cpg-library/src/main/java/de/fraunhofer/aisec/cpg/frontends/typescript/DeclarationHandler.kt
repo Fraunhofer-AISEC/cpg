@@ -38,7 +38,7 @@ class DeclarationHandler(lang: TypeScriptLanguageFrontend) :
         map.put(TypeScriptNode::class.java, ::handleNode)
     }
 
-    fun handleNode(node: TypeScriptNode): Declaration {
+    private fun handleNode(node: TypeScriptNode): Declaration {
         when (node.type) {
             "SourceFile" -> return handleSourceFile(node)
             "FunctionDeclaration" -> return handleFunctionDeclaration(node)
@@ -122,12 +122,18 @@ class DeclarationHandler(lang: TypeScriptLanguageFrontend) :
 
         this.lang.scopeManager.resetToGlobal(tu)
 
-        // loop through children (for now only look at declarations, but in JS/TS all statements are
-        // allowed on global level
+        // loop through children
         for (childNode in node.children ?: emptyList()) {
-            val decl = this.handle(childNode)
+            // filter for statements (not sure if this is really sufficient)
+            if (childNode.type.endsWith("Statement")) {
+                val statement = this.lang.statementHandler.handle(childNode)
 
-            this.lang.scopeManager.addDeclaration(decl)
+                tu.addStatement(statement)
+            } else {
+                val decl = this.handle(childNode)
+
+                this.lang.scopeManager.addDeclaration(decl)
+            }
         }
 
         return tu
