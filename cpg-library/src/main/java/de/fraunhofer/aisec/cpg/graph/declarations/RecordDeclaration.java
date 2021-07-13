@@ -313,7 +313,7 @@ public class RecordDeclaration extends Declaration implements DeclarationHolder,
   }
 
   @Override
-  public void setStatementEdgeList(@NonNull List<PropertyEdge<Statement>> statements) {
+  public void setStatementEdges(@NonNull List<PropertyEdge<Statement>> statements) {
     this.statements = statements;
   }
 

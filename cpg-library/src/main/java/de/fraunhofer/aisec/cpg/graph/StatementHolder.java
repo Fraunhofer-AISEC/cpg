@@ -35,8 +35,8 @@ import org.checkerframework.checker.nullness.qual.NonNull;
 
 /**
  * This interface denotes an AST-Node that can contain code. This code is stored as statements. This
- * includes Translation units namespaces and classes as some languages, mainly scripting
- * languages allow code placement outside of explicit functions.
+ * includes Translation units namespaces and classes as some languages, mainly scripting languages
+ * allow code placement outside of explicit functions.
  *
  * <p>The reason for not only using a statement property that encapsulates all code in a dummy
  * compound statements is that code can be distributed between functions and an encapsulating
@@ -52,7 +52,7 @@ public interface StatementHolder {
   @NonNull
   List<PropertyEdge<Statement>> getStatementEdges();
 
-  void setStatementEdgeList(@NonNull List<PropertyEdge<Statement>> statements);
+  void setStatementEdges(@NonNull List<PropertyEdge<Statement>> statements);
 
   /**
    * Returns the list of contained statements.
@@ -74,14 +74,13 @@ public interface StatementHolder {
   }
 
   default void setStatements(@NonNull List<Statement> statements) {
-    setStatementEdgeList(
-        PropertyEdge.transformIntoOutgoingPropertyEdgeList(statements, (Node) this));
+    setStatementEdges(PropertyEdge.transformIntoOutgoingPropertyEdgeList(statements, (Node) this));
   }
 
   /**
-   * Adds the specified statement to this statement holder. The statements have to be stored as a list of
-   * statements as we try to avoid adding new AST-nodes that do not exist, e.g. a code body to hold
-   * statements
+   * Adds the specified statement to this statement holder. The statements have to be stored as a
+   * list of statements as we try to avoid adding new AST-nodes that do not exist, e.g. a code body
+   * to hold statements
    *
    * @param s the statement
    */

@@ -114,7 +114,7 @@ public class NamespaceDeclaration extends Declaration
   }
 
   @Override
-  public void setStatementEdgeList(@NonNull List<PropertyEdge<Statement>> statements) {
+  public void setStatementEdges(@NonNull List<PropertyEdge<Statement>> statements) {
     this.statements = statements;
   }
 
