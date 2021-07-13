@@ -330,4 +330,27 @@ class TypescriptLanguageFrontendTest {
         assertNotNull(tag)
         assertEquals("<div>", tag.name)
     }
+
+    @Test
+    fun testReactFunctionComponent() {
+        val topLevel = Path.of("src", "test", "resources", "typescript")
+        val tu =
+            TestUtils.analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("function-component.tsx").toFile()),
+                topLevel,
+                true
+            ) {
+                it.registerLanguage(
+                    TypeScriptLanguageFrontend::class.java,
+                    TypeScriptLanguageFrontend.TYPESCRIPT_EXTENSIONS
+                )
+            }
+
+        assertNotNull(tu)
+
+        val loginForm =
+            tu.getDeclarationsByName("LoginForm", VariableDeclaration::class.java).iterator().next()
+
+        assertNotNull(loginForm)
+    }
 }
