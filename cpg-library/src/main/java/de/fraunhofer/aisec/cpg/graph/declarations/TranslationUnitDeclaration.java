@@ -27,9 +27,9 @@ package de.fraunhofer.aisec.cpg.graph.declarations;
 
 import static de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.unwrap;
 
-import de.fraunhofer.aisec.cpg.graph.CodeHolder;
 import de.fraunhofer.aisec.cpg.graph.DeclarationHolder;
 import de.fraunhofer.aisec.cpg.graph.Node;
+import de.fraunhofer.aisec.cpg.graph.StatementHolder;
 import de.fraunhofer.aisec.cpg.graph.SubGraph;
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import de.fraunhofer.aisec.cpg.graph.statements.Statement;
@@ -43,7 +43,7 @@ import org.neo4j.ogm.annotation.Relationship;
 
 /** The top most declaration, representing a translation unit, for example a file. */
 public class TranslationUnitDeclaration extends Declaration
-    implements DeclarationHolder, CodeHolder {
+    implements DeclarationHolder, StatementHolder {
 
   /** A list of declarations within this unit. */
   @Relationship(value = "DECLARATIONS", direction = "OUTGOING")

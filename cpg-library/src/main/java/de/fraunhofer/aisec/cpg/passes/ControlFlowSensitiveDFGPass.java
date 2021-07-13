@@ -94,7 +94,7 @@ public class ControlFlowSensitiveDFGPass extends Pass {
    * @param node every node in the TranslationResult
    */
   public void handle(Node node) {
-    if (node instanceof FunctionDeclaration || node instanceof CodeHolder) {
+    if (node instanceof FunctionDeclaration || node instanceof StatementHolder) {
       ControlFlowSensitiveDFGPass.FunctionLevelFixpointIterator flfIterator =
           new ControlFlowSensitiveDFGPass.FunctionLevelFixpointIterator();
       flfIterator.handle(node);

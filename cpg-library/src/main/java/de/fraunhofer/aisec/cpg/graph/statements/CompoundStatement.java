@@ -25,8 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements;
 
-import de.fraunhofer.aisec.cpg.graph.CodeHolder;
 import de.fraunhofer.aisec.cpg.graph.Node;
+import de.fraunhofer.aisec.cpg.graph.StatementHolder;
 import de.fraunhofer.aisec.cpg.graph.SubGraph;
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration;
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
@@ -41,7 +41,7 @@ import org.neo4j.ogm.annotation.Relationship;
  * A statement which contains a list of statements. A common example is a function body within a
  * {@link FunctionDeclaration}.
  */
-public class CompoundStatement extends Statement implements CodeHolder {
+public class CompoundStatement extends Statement implements StatementHolder {
 
   /** The list of statements. */
   @Relationship(value = "STATEMENTS", direction = "OUTGOING")

@@ -27,9 +27,9 @@ package de.fraunhofer.aisec.cpg.graph.declarations;
 
 import static de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.unwrap;
 
-import de.fraunhofer.aisec.cpg.graph.CodeHolder;
 import de.fraunhofer.aisec.cpg.graph.DeclarationHolder;
 import de.fraunhofer.aisec.cpg.graph.Node;
+import de.fraunhofer.aisec.cpg.graph.StatementHolder;
 import de.fraunhofer.aisec.cpg.graph.SubGraph;
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import de.fraunhofer.aisec.cpg.graph.statements.Statement;
@@ -45,7 +45,7 @@ import org.neo4j.ogm.annotation.Relationship;
 import org.neo4j.ogm.annotation.Transient;
 
 /** Represents a C++ union/struct/class or Java class */
-public class RecordDeclaration extends Declaration implements DeclarationHolder, CodeHolder {
+public class RecordDeclaration extends Declaration implements DeclarationHolder, StatementHolder {
 
   /** The kind, i.e. struct, class, union or enum. */
   private String kind;
@@ -74,7 +74,6 @@ public class RecordDeclaration extends Declaration implements DeclarationHolder,
   @Relationship(value = "STATEMENTS", direction = "OUTGOING")
   @NonNull
   private @SubGraph("AST") List<PropertyEdge<Statement>> statements = new ArrayList<>();
-
 
   @Transient private List<Type> superClasses = new ArrayList<>();
   @Transient private List<Type> implementedInterfaces = new ArrayList<>();

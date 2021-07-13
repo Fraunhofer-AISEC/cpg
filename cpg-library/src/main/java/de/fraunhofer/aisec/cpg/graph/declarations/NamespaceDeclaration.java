@@ -25,8 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.graph.declarations;
 
-import de.fraunhofer.aisec.cpg.graph.CodeHolder;
 import de.fraunhofer.aisec.cpg.graph.DeclarationHolder;
+import de.fraunhofer.aisec.cpg.graph.StatementHolder;
 import de.fraunhofer.aisec.cpg.graph.SubGraph;
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import de.fraunhofer.aisec.cpg.graph.statements.Statement;
@@ -50,7 +50,8 @@ import org.neo4j.ogm.annotation.Relationship;
  * semantical difference between NamespaceDeclaration and {@link RecordDeclaration} lies in the
  * non-instantiabillity of a namespace.
  */
-public class NamespaceDeclaration extends Declaration implements DeclarationHolder, CodeHolder {
+public class NamespaceDeclaration extends Declaration
+    implements DeclarationHolder, StatementHolder {
 
   /**
    * Edges to nested namespaces, records, functions, fields etc. contained in the current namespace.

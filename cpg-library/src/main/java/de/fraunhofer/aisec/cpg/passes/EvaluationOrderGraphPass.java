@@ -264,7 +264,7 @@ public class EvaluationOrderGraphPass extends Pass {
   private void handleTranslationUnitDeclaration(@NonNull Node node) {
     TranslationUnitDeclaration declaration = (TranslationUnitDeclaration) node;
 
-    handleCodeHolder((CodeHolder) node);
+    handleStatementHolder((StatementHolder) node);
 
     // loop through functions
     for (Declaration child : declaration.getDeclarations()) {
@@ -276,7 +276,7 @@ public class EvaluationOrderGraphPass extends Pass {
   private void handleNamespaceDeclaration(@NonNull Node node) {
     NamespaceDeclaration declaration = (NamespaceDeclaration) node;
 
-    handleCodeHolder(declaration);
+    handleStatementHolder(declaration);
 
     // loop through functions
     for (Declaration child : declaration.getDeclarations()) {
@@ -296,7 +296,7 @@ public class EvaluationOrderGraphPass extends Pass {
     RecordDeclaration declaration = (RecordDeclaration) node;
     lang.getScopeManager().enterScope(declaration);
 
-    handleCodeHolder(declaration);
+    handleStatementHolder(declaration);
 
     this.currentEOG.clear();
 
@@ -314,12 +314,12 @@ public class EvaluationOrderGraphPass extends Pass {
     lang.getScopeManager().leaveScope(declaration);
   }
 
-  private void handleCodeHolder(CodeHolder codeHolder) {
+  private void handleStatementHolder(StatementHolder statementHolder) {
     // separate code into static and non static parts as they are executed in different moments
     // although they can be
     // be placed int the same enclosing declaration.
     List<Statement> code =
-        codeHolder.getStatementsPropertyEdge().stream()
+        statementHolder.getStatementsPropertyEdge().stream()
             .map(PropertyEdge.class::cast)
             .map(PropertyEdge::getEnd)
             .map(Statement.class::cast)
@@ -334,13 +334,13 @@ public class EvaluationOrderGraphPass extends Pass {
     List<Statement> staticCode =
         code.stream().filter(node -> !nonStaticCode.contains(node)).collect(Collectors.toList());
 
-    pushToEOG((Node) codeHolder);
+    pushToEOG((Node) statementHolder);
     for (Statement staticStatement : staticCode) {
       createEOG(staticStatement);
     }
 
     currentEOG.clear();
-    pushToEOG((Node) codeHolder);
+    pushToEOG((Node) statementHolder);
 
     for (Statement nonStaticStatement : nonStaticCode) {
       createEOG(nonStaticStatement);
