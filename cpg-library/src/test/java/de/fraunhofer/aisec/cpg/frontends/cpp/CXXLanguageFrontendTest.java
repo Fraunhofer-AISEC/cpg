@@ -1293,4 +1293,22 @@ class CXXLanguageFrontendTest extends BaseTest {
 
     assertTrue(eogEdges.contains(returnStatement));
   }
+
+  @Test
+  void testParenthesis() throws Exception {
+    var file = new File("src/test/resources/parenthesis.cpp");
+    var tu = TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true);
+
+    var main = tu.getDeclarationsByName("main", FunctionDeclaration.class).iterator().next();
+    assertNotNull(main);
+
+    var declStatement = main.getBodyStatementAs(0, DeclarationStatement.class);
+    assertNotNull(declStatement);
+
+    var decl = (VariableDeclaration) declStatement.getSingleDeclaration();
+    assertNotNull(decl);
+
+    var initializer = decl.getInitializer();
+    assertNotNull(initializer);
+  }
 }
