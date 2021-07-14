@@ -539,8 +539,9 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
       callExpression =
           NodeBuilder.newCallExpression(
               ((UnaryOperator) reference).getInput().getName(), "", reference.getCode(), false);
-    } else if (((CPPASTIdExpression) ctx.getFunctionNameExpression()).getName()
-        instanceof CPPASTTemplateId) {
+    } else if (ctx.getFunctionNameExpression() instanceof CPPASTIdExpression
+        && ((CPPASTIdExpression) ctx.getFunctionNameExpression()).getName()
+            instanceof CPPASTTemplateId) {
       String name =
           ((CPPASTTemplateId) ((CPPASTIdExpression) ctx.getFunctionNameExpression()).getName())
               .getTemplateName()
