@@ -54,7 +54,7 @@ import org.eclipse.cdt.internal.core.dom.parser.cpp.semantics.TypeOfDependentExp
 class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLanguageFrontend> {
   /*
    Note: CDT expresses hierarchies in Interfaces to allow to have multi-inheritance in java. Because some Expressions
-   have subelements of type IASTInitalizerClause and in the hierarchy IASTExpression extends IASTInitializerClause.
+   have sub elements of type IASTInitializerClause and in the hierarchy IASTExpression extends IASTInitializerClause.
    The later is the appropriate Interface type for the handler.
   */
 
@@ -391,17 +391,12 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
       base.setLocation(location);
     }
 
-    MemberExpression memberExpression =
-        NodeBuilder.newMemberExpression(
-            base,
-            UnknownType.getUnknownType(),
-            ctx.getFieldName().toString(),
-            ctx.isPointerDereference() ? "->" : ".",
-            ctx.getRawSignature());
-
-    this.lang.expressionRefersToDeclaration(memberExpression, ctx);
-
-    return memberExpression;
+    return NodeBuilder.newMemberExpression(
+        base,
+        UnknownType.getUnknownType(),
+        ctx.getFieldName().toString(),
+        ctx.isPointerDereference() ? "->" : ".",
+        ctx.getRawSignature());
   }
 
   private Expression handleUnaryExpression(CPPASTUnaryExpression ctx) {
@@ -614,8 +609,6 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
     /* this expression could actually be a field / member expression, but somehow CDT only recognizes them as a member expression if it has an explicit 'this'
      */
     // TODO: handle this? convert the declared reference expression into a member expression?
-
-    this.lang.expressionRefersToDeclaration(declaredReferenceExpression, ctx);
 
     return declaredReferenceExpression;
   }
