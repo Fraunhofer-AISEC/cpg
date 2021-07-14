@@ -1305,5 +1305,7 @@ class CXXLanguageFrontendTest extends BaseTest {
 
     var initializer = decl.getInitializer();
     assertNotNull(initializer);
+    assertTrue(initializer instanceof CastExpression);
+    assertEquals("size_t", ((CastExpression) initializer).getCastType().getName());
   }
 }

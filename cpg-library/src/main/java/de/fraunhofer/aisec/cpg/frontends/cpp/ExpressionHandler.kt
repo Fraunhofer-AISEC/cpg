@@ -34,11 +34,6 @@ import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.graph.types.PointerType.PointerOrigin
 import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.passes.CallResolver
-import java.math.BigInteger
-import java.util.*
-import java.util.function.Supplier
-import java.util.stream.Collectors
-import kotlin.math.max
 import org.eclipse.cdt.core.dom.ast.*
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTExpression
 import org.eclipse.cdt.internal.core.dom.parser.CStringValue
@@ -46,6 +41,12 @@ import org.eclipse.cdt.internal.core.dom.parser.ProblemBinding
 import org.eclipse.cdt.internal.core.dom.parser.ProblemType
 import org.eclipse.cdt.internal.core.dom.parser.cpp.*
 import org.eclipse.cdt.internal.core.dom.parser.cpp.semantics.TypeOfDependentExpression
+import java.math.BigInteger
+import java.util.*
+import java.util.function.Supplier
+import java.util.stream.Collectors
+import kotlin.math.max
+
 
 class ExpressionHandler(lang: CXXLanguageFrontend) :
     Handler<Expression?, IASTInitializerClause, CXXLanguageFrontend>(
@@ -418,11 +419,22 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             IASTUnaryExpression.op_not -> operatorCode = "!"
             IASTUnaryExpression.op_sizeof -> operatorCode = "sizeof"
             IASTUnaryExpression
-                .op_bracketedPrimary -> // ignore this kind of expression and return the input
-                // directly
-                // operatorCode = "()";
-                // break;
+                .op_bracketedPrimary -> {
+                // this can either be just a meaningless bracket or it can be a cast expression
+                if (ctx.operand is CPPASTIdExpression) {
+                    val typeName = (ctx.operand as CPPASTIdExpression).name.toString()
+                    if (TypeManager.getInstance().typeExists(typeName)) {
+                        val cast = NodeBuilder.newCastExpression(lang.getCodeFromRawNode<Any>(ctx))
+                        cast.castType = TypeParser.createFrom(typeName, false)
+                        cast.expression = input
+                        cast.location = lang.getLocationFromRawNode<Any>(ctx)
+                        return cast
+                    }
+                }
+
+                // otherwise, ignore this kind of expression and return the input directly
                 return input
+                }
             IASTUnaryExpression.op_throw -> operatorCode = "throw"
             IASTUnaryExpression.op_typeid -> operatorCode = "typeid"
             IASTUnaryExpression.op_alignOf -> operatorCode = "alignof"
@@ -444,7 +456,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
         return unaryOperator
     }
 
-    private fun handleFunctionCallExpression(ctx: CPPASTFunctionCallExpression): CallExpression {
+    private fun handleFunctionCallExpression(ctx: CPPASTFunctionCallExpression): Expression {
         val reference = handle(ctx.functionNameExpression)
         val callExpression: CallExpression
         if (reference is MemberExpression) {
@@ -513,6 +525,9 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                     (ctx.functionNameExpression as CPPASTIdExpression).name as CPPASTTemplateId
                 )
             )
+        } else if (reference is CastExpression) {
+            // this really is a cast expression in disguise
+            return reference;
         } else {
             var fqn = reference!!.name
             var name = fqn
