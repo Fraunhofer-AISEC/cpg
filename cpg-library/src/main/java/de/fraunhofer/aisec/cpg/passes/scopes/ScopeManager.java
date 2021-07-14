@@ -160,21 +160,8 @@ public class ScopeManager {
     return (RecordDeclaration) node;
   }
 
-  public List<ValueDeclaration> getGlobals() {
-    GlobalScope globalS = (GlobalScope) getFirstScopeThat(scope -> scope instanceof GlobalScope);
-    if (globalS != null) {
-      return globalS.getValueDeclarations();
-    } else {
-      return new ArrayList<>();
-    }
-  }
-
   public Scope getCurrentScope() {
     return this.currentScope;
-  }
-
-  public void addGlobal(VariableDeclaration global) {
-    getGlobals().add(global);
   }
 
   public void enterScopeIfExists(Node nodeToScope) {
@@ -372,7 +359,7 @@ public class ScopeManager {
     } else {
       LabelStatement labelStatement = getLabelStatement(breakStatement.getLabel());
       if (labelStatement != null) {
-        Scope scope = getScopeOfStatment(labelStatement.getSubStatement());
+        Scope scope = getScopeOfStatement(labelStatement.getSubStatement());
         ((IBreakable) scope).addBreakStatement(breakStatement);
       }
     }
@@ -391,7 +378,7 @@ public class ScopeManager {
     } else {
       LabelStatement labelStatement = getLabelStatement(continueStatement.getLabel());
       if (labelStatement != null) {
-        Scope scope = getScopeOfStatment(labelStatement.getSubStatement());
+        Scope scope = getScopeOfStatement(labelStatement.getSubStatement());
         ((IContinuable) scope).addContinueStatement(continueStatement);
       }
     }
@@ -772,95 +759,8 @@ public class ScopeManager {
     return null;
   }
 
-  @Nullable
-  public Declaration resolveInRecord(
-      RecordDeclaration recordDeclaration, DeclaredReferenceExpression ref) {
-    List<Declaration> members = new ArrayList<>();
-    members.addAll(recordDeclaration.getFields());
-    members.addAll(recordDeclaration.getMethods());
-    members.addAll(recordDeclaration.getRecords());
-
-    for (Declaration member : members) {
-      if (member.getName().equals(ref.getName())) {
-        return member;
-      }
-    }
-    return null;
-  }
-
-  @Nullable
-  public Declaration resolveInInheritanceHierarchy(
-      RecordDeclaration recordDeclaration, DeclaredReferenceExpression ref) {
-    Declaration resolved = resolveInRecord(recordDeclaration, ref);
-    if (resolved != null) {
-      return resolved;
-    }
-    // Here we resolve the member in the order the set returns the ancestors. As soon as we support
-    // a Language that
-    // allows diamond pattern style inheritance and member overloading, that would yield a ambiguous
-    // declaration in
-    // C++, algorithms like C3-Linearization have to be implemented
-    for (RecordDeclaration ancestor : recordDeclaration.getSuperTypeDeclarations()) {
-      resolved = resolveInInheritanceHierarchy(ancestor, ref);
-      if (resolved != null) {
-        return resolved;
-      }
-    }
-    return null;
-  }
-
-  public Scope getScopeOfStatment(Node node) {
+  public Scope getScopeOfStatement(Node node) {
     return scopeMap.getOrDefault(node, null);
-  }
-
-  public void connectToLocal(DeclaredReferenceExpression referenceExpression) {
-    if (isInBlock()) {
-      CompoundStatement currentBlock = getCurrentBlock();
-      if (expressionRefersToDeclaration(referenceExpression, currentBlock.getLocals())) {
-        return;
-      }
-    }
-
-    if (isInFunction()) {
-      FunctionDeclaration currentFunction = getCurrentFunction();
-      if (currentFunction != null
-          && expressionRefersToDeclaration(referenceExpression, currentFunction.getParameters())) {
-        return;
-      }
-    }
-
-    if (isInRecord()) {
-      RecordDeclaration currentRecord = getCurrentRecord();
-      if (expressionRefersToDeclaration(referenceExpression, currentRecord.getFields())) {
-        return;
-      }
-    }
-    expressionRefersToDeclaration(referenceExpression, getGlobals());
-  }
-
-  private <T extends ValueDeclaration> boolean expressionRefersToDeclaration(
-      DeclaredReferenceExpression referenceExpression, List<T> variables) {
-    // look for a LOCAL with the same name
-    Optional<T> any =
-        variables.stream()
-            .filter(param -> Objects.equals(param.getName(), referenceExpression.getName()))
-            .findAny();
-
-    if (any.isPresent()) {
-      T declaration = any.get();
-
-      referenceExpression.setRefersTo(declaration);
-      referenceExpression.setType(declaration.getType());
-      LOGGER.debug(
-          "Connecting {} to method parameter {} of type {}",
-          referenceExpression,
-          declaration,
-          declaration.getType());
-
-      return true;
-    }
-
-    return false;
   }
 
   /**
