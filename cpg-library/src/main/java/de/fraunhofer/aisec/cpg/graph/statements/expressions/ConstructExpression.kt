@@ -77,8 +77,17 @@ class ConstructExpression : CallExpression(), HasType.TypeListener {
             return
         }
 
+        val newType =
+            if (TypeManager.getInstance().language == TypeManager.Language.CXX &&
+                    src is NewExpression
+            ) {
+                src.propagationType.dereference()
+            } else {
+                src.propagationType
+            }
+
         val previous: Type = this.type
-        setType(src.propagationType, root)
+        setType(newType, root)
         if (previous != this.type) {
             this.type.typeOrigin = Type.Origin.DATAFLOW
         }

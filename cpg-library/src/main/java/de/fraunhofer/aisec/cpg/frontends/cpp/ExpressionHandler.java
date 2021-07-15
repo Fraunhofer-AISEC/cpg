@@ -174,7 +174,7 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
     String name = ctx.getTypeId().getDeclSpecifier().toString();
     String code = ctx.getRawSignature();
 
-    Type t = TypeParser.createFrom(expressionTypeProxy(ctx).toString(), true);
+    Type t = TypeParser.createFrom(name, true);
 
     Expression expr;
 
@@ -199,37 +199,18 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
         arrayCreate.setInitializer(this.lang.getInitializerHandler().handle(init));
       }
 
-      expr = arrayCreate;
+      return arrayCreate;
     } else {
-      t.reference(PointerType.PointerOrigin.POINTER);
-
       var newExpression = NodeBuilder.newNewExpression(code, t);
 
       if (init != null) {
-        newExpression.setInitializer(this.lang.getInitializerHandler().handle(init));
+        Expression initializer = this.lang.getInitializerHandler().handle(init);
+        initializer.setType(t);
+        newExpression.setInitializer(initializer);
       }
 
-      expr = newExpression;
+      return newExpression;
     }
-
-    // try to actually resolve the type
-    IASTDeclSpecifier declSpecifier = ctx.getTypeId().getDeclSpecifier();
-
-    if (declSpecifier instanceof CPPASTNamedTypeSpecifier) {
-      IBinding binding = ((CPPASTNamedTypeSpecifier) declSpecifier).getName().resolveBinding();
-
-      if (binding != null && !(binding instanceof CPPScope.CPPScopeProblem)) {
-        // update the type
-        expr.setType(TypeParser.createFrom(binding.getName(), true));
-      } else {
-        log.debug(
-            "Could not resolve binding of type {} for {}, it is probably defined somewhere externally",
-            name,
-            expr);
-      }
-    }
-
-    return expr;
   }
 
   private ConditionalExpression handleConditionalExpression(CPPASTConditionalExpression ctx) {
