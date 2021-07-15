@@ -29,14 +29,19 @@ import static de.fraunhofer.aisec.cpg.helpers.Util.errorWithFileLocation;
 import static de.fraunhofer.aisec.cpg.helpers.Util.warnWithFileLocation;
 
 import de.fraunhofer.aisec.cpg.frontends.Handler;
-import de.fraunhofer.aisec.cpg.graph.*;
+import de.fraunhofer.aisec.cpg.graph.Node;
+import de.fraunhofer.aisec.cpg.graph.NodeBuilder;
+import de.fraunhofer.aisec.cpg.graph.TypeManager;
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*;
 import de.fraunhofer.aisec.cpg.graph.types.*;
+import de.fraunhofer.aisec.cpg.graph.types.PointerType.PointerOrigin;
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation;
 import java.math.BigInteger;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+import java.util.stream.Collectors;
 import org.eclipse.cdt.core.dom.ast.*;
 import org.eclipse.cdt.core.dom.ast.IBasicType.Kind;
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTDesignator;
@@ -178,8 +183,6 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
 
     Type t = TypeParser.createFrom(name, true, lang);
 
-    Expression expr;
-
     IASTInitializer init = ctx.getInitializer();
 
     // we need to check, whether this is an array initialization or a single new expression
@@ -203,7 +206,29 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
 
       return arrayCreate;
     } else {
+      t = t.reference(PointerOrigin.POINTER);
+
+      // Resolve possible templates
+      List<Node> templateParameters = Collections.emptyList();
+      IASTDeclSpecifier declSpecifier = ctx.getTypeId().getDeclSpecifier();
+      if (((CPPASTNamedTypeSpecifier) declSpecifier).getName() instanceof CPPASTTemplateId) {
+        templateParameters =
+            getTemplateArguments(
+                (CPPASTTemplateId) ((CPPASTNamedTypeSpecifier) declSpecifier).getName());
+
+        // Attach generics
+        assert t.getRoot() instanceof ObjectType;
+        ObjectType objectType = (ObjectType) t.getRoot();
+        List<Type> generics =
+            templateParameters.stream()
+                .filter(TypeExpression.class::isInstance)
+                .map(e -> ((TypeExpression) e).getType())
+                .collect(Collectors.toList());
+        objectType.setGenerics(generics);
+      }
+
       var newExpression = NodeBuilder.newNewExpression(code, t);
+      newExpression.setTemplateParameters(templateParameters);
 
       if (init != null) {
         Expression initializer = this.lang.getInitializerHandler().handle(init);
@@ -549,14 +574,19 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
         NodeBuilder.newDeclaredReferenceExpression(
             ctx.getName().toString(), UnknownType.getUnknownType(), ctx.getRawSignature());
 
-    declaredReferenceExpression.setType(
-        TypeParser.createFrom(expressionTypeProxy(ctx).toString(), true));
+    IType proxy = expressionTypeProxy(ctx);
+
+    if (proxy instanceof CPPClassInstance) {
+      // Handle Template Types separately
+      handleTemplateTypeOfDeclaredReferenceExpression(proxy, declaredReferenceExpression);
+    } else if (!(proxy instanceof TypeOfDependentExpression)) {
+      declaredReferenceExpression.setType(
+          TypeParser.createFrom(expressionTypeProxy(ctx).toString(), true, lang));
+    }
 
     /* this expression could actually be a field / member expression, but somehow CDT only recognizes them as a member expression if it has an explicit 'this'
      */
     // TODO: handle this? convert the declared reference expression into a member expression?
-
-    this.lang.expressionRefersToDeclaration(declaredReferenceExpression, ctx);
 
     return declaredReferenceExpression;
   }
