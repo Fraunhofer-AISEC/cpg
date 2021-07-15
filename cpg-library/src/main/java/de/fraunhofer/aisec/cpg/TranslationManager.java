@@ -38,6 +38,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.*;
 import de.fraunhofer.aisec.cpg.helpers.Benchmark;
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker;
 import de.fraunhofer.aisec.cpg.helpers.Util;
+import de.fraunhofer.aisec.cpg.helpers.incremental.ChangeMapping;
 import de.fraunhofer.aisec.cpg.passes.Pass;
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager;
 import java.io.File;
@@ -118,17 +119,7 @@ public class TranslationManager {
             throw new CompletionException(ex);
           } finally {
             outerBench.stop();
-            if (!this.config.disableCleanup) {
-              log.debug("Cleaning up {} Passes", passesNeedCleanup.size());
-              passesNeedCleanup.forEach(Pass::cleanup);
-
-              if (frontendsNeedCleanup != null) {
-                log.debug("Cleaning up {} Frontends", frontendsNeedCleanup.size());
-                frontendsNeedCleanup.forEach(LanguageFrontend::cleanup);
-              }
-
-              TypeManager.getInstance().cleanup();
-            }
+            doCleanup(frontendsNeedCleanup, passesNeedCleanup);
           }
           result.setScopeManager(scopesBuildForAnalysis);
           return result;
@@ -174,7 +165,15 @@ public class TranslationManager {
     bench.stop();
 
     removeImplicitDeclarations(previousResult.getImplicitDeclarations());
-    runPasses(result, frontendsNeedCleanup);
+
+    bench = new Benchmark(TranslationManager.class, "Incremental change processing");
+    boolean passesNotNeeded =
+        ChangeMapping.processChanges(
+            previousResult.getTranslationUnits(), result.getTranslationUnits());
+    bench.stop();
+
+    Set<Pass> passesNeedCleanup = runPasses(result, passesNotNeeded);
+    doCleanup(frontendsNeedCleanup, passesNeedCleanup);
 
     result.setScopeManager(previousResult.getScopeManager());
 
@@ -205,10 +204,13 @@ public class TranslationManager {
     }
   }
 
-  private void runPasses(TranslationResult result, Set<LanguageFrontend> frontendsNeedCleanup) {
+  private Set<Pass> runPasses(TranslationResult result, boolean skipIfPossible) {
     Benchmark bench;
     Set<Pass> passesNeedCleanup = new HashSet<>();
     for (Pass pass : config.getRegisteredPasses()) {
+      if (skipIfPossible && pass.canBeSkippedIncremental()) {
+        continue;
+      }
       passesNeedCleanup.add(pass);
       bench = new Benchmark(pass.getClass(), "Executing Pass");
       pass.accept(result);
@@ -217,7 +219,10 @@ public class TranslationManager {
         log.warn("Analysis interrupted, stopping Pass evaluation");
       }
     }
+    return passesNeedCleanup;
+  }
 
+  private void doCleanup(Set<LanguageFrontend> frontendsNeedCleanup, Set<Pass> passesNeedCleanup) {
     if (!this.config.disableCleanup) {
       log.debug("Cleaning up {} Passes", passesNeedCleanup.size());
       passesNeedCleanup.forEach(Pass::cleanup);

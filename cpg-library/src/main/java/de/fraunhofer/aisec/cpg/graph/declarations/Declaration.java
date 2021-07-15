@@ -79,4 +79,16 @@ public class Declaration extends Node {
   public Set<CallExpression> getIncomingInvokes() {
     return new HashSet<>(incomingInvokes);
   }
+
+  public void addIncomingConstructorCall(ConstructExpression caller) {
+    incomingConstructorCalls.add(caller);
+  }
+
+  public void removeIncomingConstructorCall(ConstructExpression caller) {
+    incomingConstructorCalls.remove(caller);
+  }
+
+  public Set<ConstructExpression> getIncomingConstructorCalls() {
+    return new HashSet<>(incomingConstructorCalls);
+  }
 }

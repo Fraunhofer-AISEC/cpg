@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.passes;
 
 import de.fraunhofer.aisec.cpg.TranslationResult;
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
+import de.fraunhofer.aisec.cpg.helpers.incremental.ChangeMapping;
 import java.util.function.Consumer;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.slf4j.Logger;
@@ -75,8 +76,8 @@ public abstract class Pass implements Consumer<TranslationResult> {
   }
 
   /**
-   * If this returns true, the pass can be skipped when performing incremental construction,
-   * as all required changes are processed by incremental preprocessing handlers.
+   * If this returns true, the pass can be skipped when performing incremental construction, as all
+   * required changes are processed by {@link ChangeMapping} handlers.
    *
    * @return true if the pass can be skipped, false otherwise
    */

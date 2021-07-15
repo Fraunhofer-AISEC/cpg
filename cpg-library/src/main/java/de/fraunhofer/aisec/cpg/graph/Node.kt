@@ -26,9 +26,11 @@
 package de.fraunhofer.aisec.cpg.graph
 
 import de.fraunhofer.aisec.cpg.graph.declarations.TypedefDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.helpers.LocationConverter
+import de.fraunhofer.aisec.cpg.meta.DontCompare
 import de.fraunhofer.aisec.cpg.meta.Edge
 import de.fraunhofer.aisec.cpg.meta.ReflectionUtils
 import de.fraunhofer.aisec.cpg.processing.IVisitable
@@ -52,19 +54,19 @@ open class Node : IVisitable<Node>, Persistable {
      * Original code snippet of this node. Most nodes will have a corresponding "code", but in cases
      * where nodes are created artificially, it may be null.
      */
-    var code: String? = null
+    @field:DontCompare var code: String? = null
 
     /** Optional comment of this node. */
     var comment: String? = null
 
     /** Location of the finding in source code. */
-    @Convert(LocationConverter::class) var location: PhysicalLocation? = null
+    @field:DontCompare @Convert(LocationConverter::class) var location: PhysicalLocation? = null
 
     /**
      * Name of the containing file. It can be null for artificially created nodes or if just
      * analyzing snippets of code without an associated file name.
      */
-    var file: String? = null
+    @field:DontCompare var file: String? = null
 
     /** Incoming control flow edges. */
     @field:Relationship(value = "EOG", direction = "INCOMING")
@@ -198,7 +200,22 @@ open class Node : IVisitable<Node>, Persistable {
      */
     val allProperties: Map<String, Any>
         get() {
-            return ReflectionUtils.getAllProperties(this)
+            return ReflectionUtils.getAllProperties(this, false)
+        }
+
+    /**
+     * Get a map of all properties excluding those annotated with {@link DontCompare}. In addition
+     * to regular graph properties this map includes the type string, if applicable.
+     *
+     * @return All properties that can be used to reliably compare two nodes
+     */
+    val allPropertiesToCompare: Map<String, Any>
+        get() {
+            val result = ReflectionUtils.getAllProperties(this, true)
+            if (this is ValueDeclaration) {
+                result["type"] = this.type
+            }
+            return result
         }
 
     /**

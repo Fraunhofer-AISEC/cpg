@@ -295,7 +295,7 @@ public class SubgraphWalker {
       todo.push(root);
       while (!todo.isEmpty()) {
         Node current = todo.pop();
-        if (!backlog.isEmpty() && backlog.peek().equals(current)) {
+        if (!backlog.isEmpty() && backlog.peek() == current) {
           Node exiting = backlog.pop();
           onScopeExit.forEach(c -> c.accept(exiting));
         } else {

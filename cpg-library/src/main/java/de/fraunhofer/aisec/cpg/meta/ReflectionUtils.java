@@ -89,7 +89,7 @@ public class ReflectionUtils {
    *     goes wrong while trying to reflectively collect properties. Otherwise the errors are only
    *     logged.
    */
-  public static Map<String, Object> getAllProperties(Node n) {
+  public static Map<String, Object> getAllProperties(Node n, boolean skipDontCompare) {
     HashMap<String, Object> properties = new HashMap<>();
 
     // Set node label (from its class)
@@ -99,6 +99,9 @@ public class ReflectionUtils {
     List<Field> fields = getFieldsIncludingSuperclasses(n.getClass());
     for (Field f : fields) {
       if (!mapsToRelationship(f) && mapsToProperty(f)) {
+        if (skipDontCompare && hasAnnotation(f, DontCompare.class)) {
+          continue;
+        }
         f.setAccessible(true);
         Object x = null;
         try {

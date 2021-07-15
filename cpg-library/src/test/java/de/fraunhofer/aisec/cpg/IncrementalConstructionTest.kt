@@ -1,17 +1,17 @@
 /*
  * Copyright (c) 2021, Fraunhofer AISEC. All rights reserved.
  *
- *  Licensed under the Apache License, Version 2.0 (the "License");
- *  you may not use this file except in compliance with the License.
- *  You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- *       http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  *
  *                    $$$$$$\  $$$$$$$\   $$$$$$\
  *                   $$  __$$\ $$  __$$\ $$  __$$\
@@ -23,7 +23,6 @@
  *                    \______/ \__|       \______/
  *
  */
-
 package de.fraunhofer.aisec.cpg
 
 import java.io.File
@@ -33,7 +32,6 @@ import java.time.Duration
 import java.time.Instant
 import java.util.stream.Collectors
 import java.util.stream.Stream
-import kotlin.test.assertTrue
 import org.apache.commons.io.FileUtils
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
@@ -43,7 +41,7 @@ class IncrementalConstructionTest : BaseTest() {
 
     companion object {
         @JvmStatic
-        private fun getIncrementalExamples(): Stream<Arguments> {
+        fun getIncrementalExamples(): Stream<Arguments> {
             val start = Path.of("src/test/resources/incremental")
             return Files.walk(start, 1).filter { it != start && it.toFile().isDirectory }.map {
                 Arguments.of(it)
@@ -91,9 +89,6 @@ class IncrementalConstructionTest : BaseTest() {
     @ParameterizedTest
     @MethodSource("getIncrementalExamples")
     fun testChangedFiles(exampleDir: Path) {
-        assertTrue { Database.getInstance().connect() }
-        Database.getInstance().purgeDatabase()
-
         val original = exampleDir.resolve("original")
         val changed = exampleDir.resolve("changed")
         val tempDir = Files.createTempDirectory("incrementalCPG_")
@@ -121,7 +116,6 @@ class IncrementalConstructionTest : BaseTest() {
 
         println("Conventional time: $conventionalTime ms, incremental time: $incrementalTime ms")
 
-        Database.getInstance().saveAll(incrementalResult.translationUnits)
         TestUtils.assertGraphsAreEqual(
             conventionalResult.translationUnits,
             incrementalResult.translationUnits

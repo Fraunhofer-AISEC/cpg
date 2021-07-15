@@ -29,7 +29,6 @@ import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.SubGraph;
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration;
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration;
-import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration;
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager;
 import java.util.ArrayList;
 import java.util.Collections;

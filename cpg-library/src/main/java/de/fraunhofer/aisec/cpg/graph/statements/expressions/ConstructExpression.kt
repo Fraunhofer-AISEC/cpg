@@ -55,10 +55,12 @@ class ConstructExpression : CallExpression(), HasType.TypeListener {
     @PopulatedByPass(CallResolver::class)
     var constructor: ConstructorDeclaration? = null
         set(value) {
+            field?.removeIncomingConstructorCall(this)
             field = value
 
             // Forward to CallExpression. This will also take care of DFG edges.
             if (value != null) {
+                value.addIncomingConstructorCall(this)
                 setInvokes(listOf(value as FunctionDeclaration))
             }
         }

@@ -1484,7 +1484,10 @@ public class CallResolver extends Pass {
     for (RecordDeclaration recordDeclaration : containingRecords) {
       MethodDeclaration dummy = NodeBuilder.newMethodDeclaration(name, "", true, recordDeclaration);
       dummy.setImplicit(true);
-      result.getImplicitDeclarations().computeIfAbsent(recordDeclaration, r -> new ArrayList<>()).add(dummy);
+      result
+          .getImplicitDeclarations()
+          .computeIfAbsent(recordDeclaration, r -> new ArrayList<>())
+          .add(dummy);
       List<ParamVariableDeclaration> params = Util.createParameters(call.getSignature());
       dummy.setParameters(params);
       recordDeclaration.addMethod(dummy);
