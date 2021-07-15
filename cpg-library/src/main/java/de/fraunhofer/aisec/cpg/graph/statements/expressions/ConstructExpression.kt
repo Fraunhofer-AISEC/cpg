@@ -35,6 +35,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser
+import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import de.fraunhofer.aisec.cpg.passes.CallResolver
 import java.util.stream.Collectors
 import org.apache.commons.lang3.builder.ToStringBuilder
@@ -67,7 +68,7 @@ class ConstructExpression : CallExpression(), HasType.TypeListener {
     var instantiates: Declaration? = null
         set(value) {
             field = value
-            if (value != null) {
+            if (value != null && this.type is UnknownType) {
                 setType(TypeParser.createFrom(value.name, true))
             }
         }

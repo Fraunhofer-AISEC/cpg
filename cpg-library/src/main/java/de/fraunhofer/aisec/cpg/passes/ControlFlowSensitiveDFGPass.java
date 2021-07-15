@@ -94,7 +94,7 @@ public class ControlFlowSensitiveDFGPass extends Pass {
    * @param node every node in the TranslationResult
    */
   public void handle(Node node) {
-    if (node instanceof FunctionDeclaration) {
+    if (node instanceof FunctionDeclaration || node instanceof StatementHolder) {
       ControlFlowSensitiveDFGPass.FunctionLevelFixpointIterator flfIterator =
           new ControlFlowSensitiveDFGPass.FunctionLevelFixpointIterator();
       flfIterator.handle(node);
@@ -205,7 +205,10 @@ public class ControlFlowSensitiveDFGPass extends Pass {
       }
 
       return rechableEOGs.stream()
-          .filter(n -> n instanceof BinaryOperator && ((BinaryOperator) n).getLhs().equals(node))
+          .filter(
+              n ->
+                  n instanceof BinaryOperator
+                      && Objects.equals(((BinaryOperator) n).getLhs(), node))
           .findAny()
           .orElse(null);
     }

@@ -901,8 +901,6 @@ func (this *GoLanguageFrontend) handleIdent(fset *token.FileSet, ident *ast.Iden
 	// then set the refersTo, because our regular CPG passes will not resolve them
 	if i != nil && !(*jnigi.ObjectRef)(i).IsNil() {
 		ref.SetRefersTo((*cpg.Declaration)(i))
-	} else {
-		this.GetScopeManager().ConnectToLocal(ref)
 	}
 
 	ref.SetName(ident.Name)

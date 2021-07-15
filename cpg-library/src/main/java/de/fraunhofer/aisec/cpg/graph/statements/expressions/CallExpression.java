@@ -25,9 +25,14 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements.expressions;
 
-import de.fraunhofer.aisec.cpg.graph.*;
+import de.fraunhofer.aisec.cpg.graph.HasBase;
+import de.fraunhofer.aisec.cpg.graph.HasType;
 import de.fraunhofer.aisec.cpg.graph.HasType.TypeListener;
+import de.fraunhofer.aisec.cpg.graph.Node;
+import de.fraunhofer.aisec.cpg.graph.SubGraph;
+import de.fraunhofer.aisec.cpg.graph.TypeManager;
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declarations.TemplateDeclaration;
 import de.fraunhofer.aisec.cpg.graph.edge.Properties;
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import de.fraunhofer.aisec.cpg.graph.types.Type;
@@ -44,7 +49,8 @@ import org.neo4j.ogm.annotation.Relationship;
  * An expression, which calls another function. It has a list of arguments (list of {@link
  * Expression}s) and is connected via the INVOKES edge to its {@link FunctionDeclaration}.
  */
-public class CallExpression extends Expression implements TypeListener, HasBase {
+public class CallExpression extends Expression
+    implements TypeListener, HasBase, HasType.SecondaryTypeEdge {
 
   /**
    * Connection to its {@link FunctionDeclaration}. This will be populated by the {@link
@@ -154,6 +160,167 @@ public class CallExpression extends Expression implements TypeListener, HasBase 
     return getArguments().stream().map(Expression::getType).collect(Collectors.toList());
   }
 
+  boolean template;
+
+  public void setTemplate(boolean template) {
+    this.template = template;
+    if (template) {
+      this.templateParameters = new ArrayList<>();
+    }
+  }
+
+  /** If the CallExpression instantiates a Template, the call can provide template parameters */
+  @Relationship(value = "TEMPLATE_PARAMETERS", direction = "OUTGOING")
+  @SubGraph("AST")
+  @Nullable
+  private List<PropertyEdge<Node>> templateParameters;
+
+  /**
+   * If the CallExpression instantiates a Template the CallExpression is connected to the template
+   * which is instantiated. This is required by the expansion pass to access the Template directly.
+   * The invokes edge will still point to the realization of the template.
+   */
+  @Relationship(value = "TEMPLATE_INSTANTIATION", direction = "OUTGOING")
+  @Nullable
+  private TemplateDeclaration templateInstantiation;
+
+  @Nullable
+  public List<PropertyEdge<Node>> getTemplateParametersPropertyEdge() {
+    return templateParameters;
+  }
+
+  @Nullable
+  public List<Node> getTemplateParameters() {
+    if (this.templateParameters == null) {
+      return null;
+    }
+    return PropertyEdge.unwrap(this.templateParameters);
+  }
+
+  @Nullable
+  public List<Type> getTypeTemplateParameters() {
+    if (this.templateParameters == null) {
+      return null;
+    }
+    List<Type> types = new ArrayList<>();
+    for (Node n : getTemplateParameters()) {
+      if (n instanceof Type) {
+        types.add((Type) n);
+      }
+    }
+    return types;
+  }
+
+  public void addTemplateParameter(
+      Type typeTemplateParam, TemplateDeclaration.TemplateInitialization templateInitialization) {
+    if (this.templateParameters == null) {
+      this.templateParameters = new ArrayList<>();
+    }
+    PropertyEdge<Node> propertyEdge = new PropertyEdge<>(this, typeTemplateParam);
+    propertyEdge.addProperty(Properties.INDEX, this.templateParameters.size());
+    propertyEdge.addProperty(Properties.INSTANTIATION, templateInitialization);
+    this.templateParameters.add(propertyEdge);
+    this.template = true;
+  }
+
+  public void replaceTypeTemplateParameter(Type oldType, Type newType) {
+    if (this.templateParameters == null) {
+      return;
+    }
+    for (int i = 0; i < this.templateParameters.size(); i++) {
+      PropertyEdge<Node> propertyEdge = this.templateParameters.get(i);
+      if (propertyEdge.getEnd().equals(oldType)) {
+        propertyEdge.setEnd(newType);
+      }
+    }
+  }
+
+  public void addTemplateParameter(
+      Expression expressionTemplateParam,
+      TemplateDeclaration.TemplateInitialization templateInitialization) {
+    if (this.templateParameters == null) {
+      this.templateParameters = new ArrayList<>();
+    }
+    PropertyEdge<Node> propertyEdge = new PropertyEdge<>(this, expressionTemplateParam);
+    propertyEdge.addProperty(Properties.INDEX, this.templateParameters.size());
+    propertyEdge.addProperty(Properties.INSTANTIATION, templateInitialization);
+    this.templateParameters.add(propertyEdge);
+    this.template = true;
+  }
+
+  public void addTemplateParameter(
+      Node templateParam, TemplateDeclaration.TemplateInitialization templateInitialization) {
+    if (templateParam instanceof Expression) {
+      addTemplateParameter((Expression) templateParam, templateInitialization);
+    } else if (templateParam instanceof Type) {
+      addTemplateParameter((Type) templateParam, templateInitialization);
+    }
+  }
+
+  public void addExplicitTemplateParameter(Node templateParameter) {
+    addTemplateParameter(templateParameter, TemplateDeclaration.TemplateInitialization.EXPLICIT);
+  }
+
+  public void addExplicitTemplateParameters(List<Node> templateParameters) {
+    for (Node node : templateParameters) {
+      addTemplateParameter(node, TemplateDeclaration.TemplateInitialization.EXPLICIT);
+    }
+  }
+
+  public void removeRealization(Node templateParam) {
+    if (this.templateParameters == null) {
+      return;
+    }
+    this.templateParameters.removeIf(propertyEdge -> propertyEdge.getEnd().equals(templateParam));
+  }
+
+  public void setTemplateParameters(List<PropertyEdge<Node>> templateParameters) {
+    this.templateParameters = templateParameters;
+    template = templateParameters != null;
+  }
+
+  @Nullable
+  public TemplateDeclaration getTemplateInstantiation() {
+    return templateInstantiation;
+  }
+
+  public void setTemplateInstantiation(TemplateDeclaration templateInstantiation) {
+    this.templateInstantiation = templateInstantiation;
+    template = templateInstantiation != null;
+  }
+
+  public void updateTemplateParameters(
+      Map<Node, TemplateDeclaration.TemplateInitialization> initializationType,
+      List<Node> orderedInitializationSignature) {
+    if (this.templateParameters == null) {
+      return;
+    }
+    for (PropertyEdge<Node> edge : this.templateParameters) {
+      if (edge.getProperty(Properties.INSTANTIATION) != null
+          && edge.getProperty(Properties.INSTANTIATION)
+              .equals(TemplateDeclaration.TemplateInitialization.UNKNOWN)
+          && initializationType.containsKey(edge.getEnd())) {
+        edge.addProperty(Properties.INSTANTIATION, initializationType.get(edge.getEnd()));
+      }
+    }
+
+    for (int i = this.templateParameters.size(); i < orderedInitializationSignature.size(); i++) {
+      PropertyEdge<Node> propertyEdge =
+          new PropertyEdge<>(this, orderedInitializationSignature.get(i));
+      propertyEdge.addProperty(Properties.INDEX, this.templateParameters.size());
+      propertyEdge.addProperty(
+          Properties.INSTANTIATION,
+          initializationType.getOrDefault(
+              orderedInitializationSignature.get(i),
+              TemplateDeclaration.TemplateInitialization.UNKNOWN));
+      this.templateParameters.add(propertyEdge);
+    }
+  }
+
+  public boolean instantiatesTemplate() {
+    return templateInstantiation != null || templateParameters != null || template;
+  }
+
   @Override
   public void typeChanged(HasType src, HasType root, Type oldType) {
     if (!TypeManager.isTypeSystemActive()) {
@@ -227,11 +394,31 @@ public class CallExpression extends Expression implements TypeListener, HasBase 
         && PropertyEdge.propertyEqualsList(arguments, that.arguments)
         && Objects.equals(this.getInvokes(), that.getInvokes())
         && PropertyEdge.propertyEqualsList(invokes, that.invokes)
-        && Objects.equals(base, that.base);
+        && Objects.equals(base, that.base)
+        && ((templateParameters == that.templateParameters)
+            || (templateParameters.equals(that.templateParameters)
+                && PropertyEdge.propertyEqualsList(templateParameters, that.templateParameters)))
+        && ((templateInstantiation == that.templateInstantiation)
+            || (templateInstantiation.equals(that.templateInstantiation)))
+        && template == that.template;
   }
 
   @Override
   public int hashCode() {
     return super.hashCode();
+  }
+
+  @Override
+  public void updateType(Collection<Type> typeState) {
+    if (this.templateParameters == null) {
+      return;
+    }
+    for (Type t : this.getTypeTemplateParameters()) {
+      for (Type t2 : typeState) {
+        if (t2.equals(t)) {
+          this.replaceTypeTemplateParameter(t, t2);
+        }
+      }
+    }
   }
 }

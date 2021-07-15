@@ -187,21 +187,8 @@ public class ScopeManager {
     return (RecordDeclaration) node;
   }
 
-  public List<ValueDeclaration> getGlobals() {
-    GlobalScope globalS = (GlobalScope) getFirstScopeThat(scope -> scope instanceof GlobalScope);
-    if (globalS != null) {
-      return globalS.getValueDeclarations();
-    } else {
-      return new ArrayList<>();
-    }
-  }
-
   public Scope getCurrentScope() {
     return this.currentScope;
-  }
-
-  public void addGlobal(VariableDeclaration global) {
-    getGlobals().add(global);
   }
 
   public void enterScopeIfExists(Node nodeToScope) {
@@ -250,6 +237,9 @@ public class ScopeManager {
       } else if (nodeToScope instanceof RecordDeclaration) {
         newScope =
             new RecordScope(nodeToScope, getCurrentNamePrefix(), lang.getNamespaceDelimiter());
+      } else if (nodeToScope instanceof TemplateDeclaration) {
+        newScope =
+            new TemplateScope(nodeToScope, getCurrentNamePrefix(), lang.getNamespaceDelimiter());
       } else if (nodeToScope instanceof TryStatement) {
         newScope = new TryScope(nodeToScope);
       } else if (nodeToScope instanceof NamespaceDeclaration) {
@@ -396,7 +386,7 @@ public class ScopeManager {
     } else {
       LabelStatement labelStatement = getLabelStatement(breakStatement.getLabel());
       if (labelStatement != null) {
-        Scope scope = getScopeOfStatment(labelStatement.getSubStatement());
+        Scope scope = getScopeOfStatement(labelStatement.getSubStatement());
         ((IBreakable) scope).addBreakStatement(breakStatement);
       }
     }
@@ -415,7 +405,7 @@ public class ScopeManager {
     } else {
       LabelStatement labelStatement = getLabelStatement(continueStatement.getLabel());
       if (labelStatement != null) {
-        Scope scope = getScopeOfStatment(labelStatement.getSubStatement());
+        Scope scope = getScopeOfStatement(labelStatement.getSubStatement());
         ((IContinuable) scope).addContinueStatement(continueStatement);
       }
     }
@@ -505,7 +495,8 @@ public class ScopeManager {
       scopeForValueDeclaration.addValueDeclaration((ValueDeclaration) declaration);
     } else if (declaration instanceof RecordDeclaration
         || declaration instanceof NamespaceDeclaration
-        || declaration instanceof EnumDeclaration) {
+        || declaration instanceof EnumDeclaration
+        || declaration instanceof TemplateDeclaration) {
       StructureDeclarationScope scopeForStructureDeclaration =
           (StructureDeclarationScope)
               getFirstScopeThat(scope -> scope instanceof StructureDeclarationScope);
@@ -576,6 +567,10 @@ public class ScopeManager {
     return resolveFunction(currentScope, call);
   }
 
+  public List<FunctionTemplateDeclaration> resolveFunctionTemplateDeclaration(CallExpression call) {
+    return resolveFunctionTemplateDeclaration(currentScope, call);
+  }
+
   public List<FunctionDeclaration> resolveFunctionStopScopeTraversalOnDefinition(
       CallExpression call) {
     return resolveFunctionStopScopeTraversalOnDefinition(currentScope, call);
@@ -618,6 +613,93 @@ public class ScopeManager {
   }
 
   /**
+   * Traverses the scope and looks for Declarations of type c which matches f
+   *
+   * @param scope
+   * @param p predicate the element must match to
+   * @param c class of the object we want to find by traversing
+   * @param <T>
+   * @return
+   */
+  @NonNull
+  private <T> List<T> resolveValueDeclaration(Scope scope, Predicate<T> p, Class<T> c) {
+    if (scope instanceof ValueDeclarationScope) {
+      var list =
+          ((ValueDeclarationScope) scope)
+              .getValueDeclarations().stream()
+                  .filter(c::isInstance)
+                  .map(c::cast)
+                  .filter(p)
+                  .collect(Collectors.toList());
+
+      if (!list.isEmpty()) {
+        return list;
+      }
+    }
+
+    return scope.getParent() != null
+        ? resolveValueDeclaration(scope.getParent(), p, c)
+        : new ArrayList<>();
+  }
+
+  /**
+   * Traverses the scope and looks for Declarations of type c which matches f
+   *
+   * @param scope
+   * @param p predicate the element must match to
+   * @param c class of the object we want to find by traversing
+   * @param <T>
+   * @return
+   */
+  @NonNull
+  private <T> List<T> resolveStructureDeclaration(Scope scope, Predicate<T> p, Class<T> c) {
+    if (scope instanceof StructureDeclarationScope) {
+      var list =
+          ((StructureDeclarationScope) scope)
+              .getStructureDeclarations().stream()
+                  .filter(c::isInstance)
+                  .map(c::cast)
+                  .filter(p)
+                  .collect(Collectors.toList());
+
+      if (list.isEmpty()) {
+        for (Declaration declaration :
+            ((StructureDeclarationScope) scope).getStructureDeclarations()) {
+          if (declaration instanceof RecordDeclaration) {
+            list =
+                ((RecordDeclaration) declaration)
+                    .getTemplates().stream()
+                        .filter(c::isInstance)
+                        .map(c::cast)
+                        .filter(p)
+                        .collect(Collectors.toList());
+          }
+        }
+      }
+
+      if (!list.isEmpty()) {
+        return list;
+      }
+    }
+
+    return scope.getParent() != null
+        ? resolveStructureDeclaration(scope.getParent(), p, c)
+        : new ArrayList<>();
+  }
+
+  /**
+   * @param scope where we are searching for the FunctionTemplateDeclarations
+   * @param call CallExpression we want to resolve an invocation target for
+   * @return List of FunctionTemplateDeclaration that match the name provided in the CallExpression
+   *     and therefore are invocation candidates
+   */
+  private List<FunctionTemplateDeclaration> resolveFunctionTemplateDeclaration(
+      Scope scope, CallExpression call) {
+    return resolveStructureDeclaration(
+        scope, c -> c.getName().equals(call.getName()), FunctionTemplateDeclaration.class);
+  }
+
+  /**
    * Resolves a function reference of a call expression.
    *
    * @param scope
@@ -626,23 +708,10 @@ public class ScopeManager {
    */
   @NonNull
   private List<FunctionDeclaration> resolveFunction(Scope scope, CallExpression call) {
-    if (scope instanceof ValueDeclarationScope) {
-      var list =
-          ((ValueDeclarationScope) scope)
-              .getValueDeclarations().stream()
-                  .filter(FunctionDeclaration.class::isInstance)
-                  .map(FunctionDeclaration.class::cast)
-                  .filter(
-                      f ->
-                          f.getName().equals(call.getName()) && f.hasSignature(call.getSignature()))
-                  .collect(Collectors.toList());
-
-      if (!list.isEmpty()) {
-        return list;
-      }
-    }
-
-    return scope.getParent() != null ? resolveFunction(scope.getParent(), call) : new ArrayList<>();
+    return resolveValueDeclaration(
+        scope,
+        f -> f.getName().equals(call.getName()) && f.hasSignature(call.getSignature()),
+        FunctionDeclaration.class);
   }
 
   /**
@@ -656,21 +725,8 @@ public class ScopeManager {
   @NonNull
   private List<FunctionDeclaration> resolveFunctionStopScopeTraversalOnDefinition(
       Scope scope, CallExpression call) {
-    if (scope instanceof ValueDeclarationScope) {
-      var list =
-          ((ValueDeclarationScope) scope)
-              .getValueDeclarations().stream()
-                  .filter(FunctionDeclaration.class::isInstance)
-                  .map(FunctionDeclaration.class::cast)
-                  .filter(f -> f.getName().equals(call.getName()))
-                  .collect(Collectors.toList());
-      if (!list.isEmpty()) {
-        return list;
-      }
-    }
-    return scope.getParent() != null
-        ? resolveFunctionStopScopeTraversalOnDefinition(scope.getParent(), call)
-        : new ArrayList<>();
+    return resolveValueDeclaration(
+        scope, f -> f.getName().equals(call.getName()), FunctionDeclaration.class);
   }
 
   /**
@@ -730,95 +786,8 @@ public class ScopeManager {
     return null;
   }
 
-  @Nullable
-  public Declaration resolveInRecord(
-      RecordDeclaration recordDeclaration, DeclaredReferenceExpression ref) {
-    List<Declaration> members = new ArrayList<>();
-    members.addAll(recordDeclaration.getFields());
-    members.addAll(recordDeclaration.getMethods());
-    members.addAll(recordDeclaration.getRecords());
-
-    for (Declaration member : members) {
-      if (member.getName().equals(ref.getName())) {
-        return member;
-      }
-    }
-    return null;
-  }
-
-  @Nullable
-  public Declaration resolveInInheritanceHierarchy(
-      RecordDeclaration recordDeclaration, DeclaredReferenceExpression ref) {
-    Declaration resolved = resolveInRecord(recordDeclaration, ref);
-    if (resolved != null) {
-      return resolved;
-    }
-    // Here we resolve the member in the order the set returns the ancestors. As soon as we support
-    // a Language that
-    // allows diamond pattern style inheritance and member overloading, that would yield a ambiguous
-    // declaration in
-    // C++, algorithms like C3-Linearization have to be implemented
-    for (RecordDeclaration ancestor : recordDeclaration.getSuperTypeDeclarations()) {
-      resolved = resolveInInheritanceHierarchy(ancestor, ref);
-      if (resolved != null) {
-        return resolved;
-      }
-    }
-    return null;
-  }
-
-  public Scope getScopeOfStatment(Node node) {
+  public Scope getScopeOfStatement(Node node) {
     return scopeMap.getOrDefault(node, null);
-  }
-
-  public void connectToLocal(DeclaredReferenceExpression referenceExpression) {
-    if (isInBlock()) {
-      CompoundStatement currentBlock = getCurrentBlock();
-      if (expressionRefersToDeclaration(referenceExpression, currentBlock.getLocals())) {
-        return;
-      }
-    }
-
-    if (isInFunction()) {
-      FunctionDeclaration currentFunction = getCurrentFunction();
-      if (currentFunction != null
-          && expressionRefersToDeclaration(referenceExpression, currentFunction.getParameters())) {
-        return;
-      }
-    }
-
-    if (isInRecord()) {
-      RecordDeclaration currentRecord = getCurrentRecord();
-      if (expressionRefersToDeclaration(referenceExpression, currentRecord.getFields())) {
-        return;
-      }
-    }
-    expressionRefersToDeclaration(referenceExpression, getGlobals());
-  }
-
-  private <T extends ValueDeclaration> boolean expressionRefersToDeclaration(
-      DeclaredReferenceExpression referenceExpression, List<T> variables) {
-    // look for a LOCAL with the same name
-    Optional<T> any =
-        variables.stream()
-            .filter(param -> Objects.equals(param.getName(), referenceExpression.getName()))
-            .findAny();
-
-    if (any.isPresent()) {
-      T declaration = any.get();
-
-      referenceExpression.setRefersTo(declaration);
-      referenceExpression.setType(declaration.getType());
-      LOGGER.debug(
-          "Connecting {} to method parameter {} of type {}",
-          referenceExpression,
-          declaration,
-          declaration.getType());
-
-      return true;
-    }
-
-    return false;
   }
 
   /**
