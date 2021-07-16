@@ -77,6 +77,11 @@ public class VariableUsageResolver extends Pass {
   private ScopedWalker walker;
 
   @Override
+  public boolean canBeSkippedIncremental() {
+    return true;
+  }
+
+  @Override
   public void cleanup() {
     this.superTypesMap.clear();
     if (this.recordMap != null) {

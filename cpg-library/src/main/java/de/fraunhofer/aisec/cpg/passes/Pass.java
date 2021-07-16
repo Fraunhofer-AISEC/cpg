@@ -73,4 +73,14 @@ public abstract class Pass implements Consumer<TranslationResult> {
   public boolean supportsLanguageFrontend(LanguageFrontend lang) {
     return true;
   }
+
+  /**
+   * If this returns true, the pass can be skipped when performing incremental construction,
+   * as all required changes are processed by incremental preprocessing handlers.
+   *
+   * @return true if the pass can be skipped, false otherwise
+   */
+  public boolean canBeSkippedIncremental() {
+    return false;
+  }
 }

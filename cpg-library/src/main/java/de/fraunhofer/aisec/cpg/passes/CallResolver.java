@@ -70,6 +70,11 @@ public class CallResolver extends Pass {
   private ScopedWalker walker;
 
   @Override
+  public boolean canBeSkippedIncremental() {
+    return true;
+  }
+
+  @Override
   public void cleanup() {
     this.containingType.clear();
     this.currentTU = null;
