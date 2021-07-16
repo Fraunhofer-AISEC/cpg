@@ -205,7 +205,10 @@ public class ControlFlowSensitiveDFGPass extends Pass {
       }
 
       return rechableEOGs.stream()
-          .filter(n -> n instanceof BinaryOperator && ((BinaryOperator) n).getLhs().equals(node))
+          .filter(
+              n ->
+                  n instanceof BinaryOperator
+                      && Objects.equals(((BinaryOperator) n).getLhs(), node))
           .findAny()
           .orElse(null);
     }

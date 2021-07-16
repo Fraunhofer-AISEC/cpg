@@ -40,10 +40,6 @@ func (s *ScopeManager) LeaveScope(n *Node) (err error) {
 	return err
 }
 
-func (s *ScopeManager) ConnectToLocal(d *DeclaredReferenceExpression) {
-	(*jnigi.ObjectRef)(s).CallMethod(env, "connectToLocal", jnigi.Void, (*jnigi.ObjectRef)(d))
-}
-
 func (s *ScopeManager) ResetToGlobal(n *Node) {
 	(*jnigi.ObjectRef)(s).CallMethod(env, "resetToGlobal", jnigi.Void, (*jnigi.ObjectRef)(n).Cast("de/fraunhofer/aisec/cpg/graph/declarations/TranslationUnitDeclaration"))
 }

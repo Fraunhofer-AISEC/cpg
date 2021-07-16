@@ -39,8 +39,6 @@ import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.TypeManager;
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration;
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration;
-import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration;
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression;
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression;
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser;
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType;
@@ -62,7 +60,6 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 import org.eclipse.cdt.core.dom.ast.IASTAttribute;
 import org.eclipse.cdt.core.dom.ast.IASTAttributeOwner;
 import org.eclipse.cdt.core.dom.ast.IASTComment;
-import org.eclipse.cdt.core.dom.ast.IASTExpression;
 import org.eclipse.cdt.core.dom.ast.IASTFileLocation;
 import org.eclipse.cdt.core.dom.ast.IASTNode;
 import org.eclipse.cdt.core.dom.ast.IASTToken;
@@ -76,7 +73,6 @@ import org.eclipse.cdt.core.parser.FileContent;
 import org.eclipse.cdt.core.parser.IncludeFileContentProvider;
 import org.eclipse.cdt.core.parser.ScannerInfo;
 import org.eclipse.cdt.internal.core.dom.parser.ASTNode;
-import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTIdExpression;
 import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTTranslationUnit;
 import org.eclipse.cdt.internal.core.parser.IMacroDictionary;
 import org.eclipse.cdt.internal.core.parser.scanner.AbstractCharArray;
@@ -191,16 +187,15 @@ public class CXXLanguageFrontend extends LanguageFrontend {
           return getContentUncached(astPath);
         }
       };
-  private DeclarationHandler declarationHandler = new DeclarationHandler(this);
-  private DeclaratorHandler declaratorHandler = new DeclaratorHandler(this);
-  private ExpressionHandler expressionHandler = new ExpressionHandler(this);
-  private InitializerHandler initializerHandler = new InitializerHandler(this);
-  private ParameterDeclarationHandler parameterDeclarationHandler =
+  private final DeclarationHandler declarationHandler = new DeclarationHandler(this);
+  private final DeclaratorHandler declaratorHandler = new DeclaratorHandler(this);
+  private final ExpressionHandler expressionHandler = new ExpressionHandler(this);
+  private final InitializerHandler initializerHandler = new InitializerHandler(this);
+  private final ParameterDeclarationHandler parameterDeclarationHandler =
       new ParameterDeclarationHandler(this);
-  private StatementHandler statementHandler = new StatementHandler(this);
-  private HashMap<IBinding, Declaration> cachedDeclarations = new HashMap<>();
-  private HashMap<IBinding, List<Expression>> cachedExpressions = new HashMap<>();
-  private HashMap<Integer, String> comments = new HashMap<>();
+  private final StatementHandler statementHandler = new StatementHandler(this);
+  private final HashMap<IBinding, Declaration> cachedDeclarations = new HashMap<>();
+  private final HashMap<Integer, String> comments = new HashMap<>();
 
   public CXXLanguageFrontend(@NonNull TranslationConfiguration config, ScopeManager scopeManager) {
     super(config, scopeManager, "::");
@@ -300,7 +295,7 @@ public class CXXLanguageFrontend extends LanguageFrontend {
       }
 
       TranslationUnitDeclaration translationUnitDeclaration =
-          declarationHandler.handleTranslationUnit((CPPASTTranslationUnit) translationUnit);
+          declarationHandler.handleTranslationUnit(translationUnit);
       bench.stop();
       return translationUnitDeclaration;
     } catch (CoreException ex) {
@@ -471,93 +466,13 @@ public class CXXLanguageFrontend extends LanguageFrontend {
     }
   }
 
-  private void addCachedExpression(IBinding binding, Expression expression) {
-    if (cachedExpressions.containsKey(binding)) {
-      cachedExpressions.get(binding).add(expression);
-    } else {
-      List<Expression> expressions = new ArrayList<>();
-      expressions.add(expression);
-      cachedExpressions.put(binding, expressions);
-    }
-  }
-
-  /**
-   * Updates Expressions Refers-To Edge and cachedDeclaration from an old Declaration to new
-   * Declaration by using cachedExpressions. E.g. VariableDeclaration is replaced by
-   * FieldDeclaration and the refersTo Edge from the Expression must point to the new
-   * FieldExpression
-   *
-   * @param newDeclaration replaces the old target of the refersTo Edge (e.g. FieldDeclaration)
-   * @param oldDeclaration current target of the refersTo Edge and will be replaced (e.g.
-   *     VariableDeclaration)
-   */
-  public void replaceDeclarationInExpression(
-      Declaration newDeclaration, Declaration oldDeclaration) {
-    IBinding binding =
-        cachedDeclarations.entrySet().stream()
-            .filter(d -> d.getValue().equals(oldDeclaration))
-            .map(Map.Entry::getKey)
-            .findFirst()
-            .orElse(null);
-    if (binding != null && cachedExpressions.containsKey(binding)) {
-      List<Expression> expressions = cachedExpressions.get(binding);
-      for (Expression expression : expressions) {
-        ((DeclaredReferenceExpression) expression).setRefersTo((ValueDeclaration) newDeclaration);
-      }
-    }
-
-    if (binding != null) {
-      cachedDeclarations.remove(binding);
-      cachedDeclarations.put(binding, newDeclaration);
-    }
-  }
-
-  public void expressionRefersToDeclaration(Expression expression, IASTExpression iastExpression) {
-    if (expression instanceof DeclaredReferenceExpression
-        && iastExpression instanceof CPPASTIdExpression) {
-      IBinding binding = ((CPPASTIdExpression) iastExpression).getName().resolveBinding();
-      Declaration declaration = cachedDeclarations.get(binding);
-      //      String name = ((CPPASTIdExpression) iastExpression).getName().toString();
-      //      Declaration declaration = currentDeclarations.get(name);
-
-      if (declaration != null) {
-        LOGGER.debug("Connecting {} to {}", expression, declaration);
-        ((DeclaredReferenceExpression) expression).setRefersTo((ValueDeclaration) declaration);
-      }
-      addCachedExpression(binding, expression);
-    } else {
-      if (expression == null) {
-        LOGGER.warn(
-            "Cannot connect, from is NULL, to is {}", iastExpression.getClass().toGenericString());
-      } else if (iastExpression == null) {
-        LOGGER.warn(
-            "Cannot connect, to is NULL, from is {}", expression.getClass().toGenericString());
-      } else {
-        LOGGER.debug("Cannot connect {} to {}", expression.getClass(), iastExpression.getClass());
-      }
-    }
-  }
-
   @Nullable
   public Declaration cacheDeclaration(IBinding binding, Declaration declaration) {
-    if (cachedExpressions.containsKey(binding)) {
-      List<Expression> expressionList = cachedExpressions.get(binding);
-      for (Expression expression : expressionList) {
-        ((DeclaredReferenceExpression) expression).setRefersTo((ValueDeclaration) declaration);
-      }
-    }
     return cachedDeclarations.put(binding, declaration);
   }
 
   public Declaration getCachedDeclaration(IBinding binding) {
     return cachedDeclarations.get(binding);
-  }
-
-  public List<Expression> getCachedExpression(IBinding binding) {
-    if (cachedExpressions.containsKey(binding)) {
-      return cachedExpressions.get(binding);
-    }
-    return new ArrayList<>();
   }
 
   public Map<IBinding, Declaration> getCachedDeclarations() {
