@@ -221,6 +221,21 @@ public class BinaryOperator extends Expression implements TypeListener {
   }
 
   @Override
+  public void typeChangedToUnknown(HasType src, HasType root) {
+    if (this.operatorCode.equals("=")) {
+      setUnknownType(root);
+    } else {
+      if (this.lhs != null && "java.lang.String".equals(this.lhs.getType().toString())
+          || this.rhs != null && "java.lang.String".equals(this.rhs.getType().toString())) {
+        getPossibleSubTypes().clear();
+        setType(TypeParser.createFrom("java.lang.String", true), root);
+      } else {
+        setUnknownType(root);
+      }
+    }
+  }
+
+  @Override
   public String toString() {
     return new ToStringBuilder(this, Node.TO_STRING_STYLE)
         .append("lhs", (lhs == null ? "null" : lhs.getName()))

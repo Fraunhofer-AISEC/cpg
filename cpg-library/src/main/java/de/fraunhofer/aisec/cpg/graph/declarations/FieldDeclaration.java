@@ -57,7 +57,7 @@ public class FieldDeclaration extends ValueDeclaration implements TypeListener, 
   @Relationship(value = "DEFINES")
   private FieldDeclaration definition = this;
 
-  /** @see VariableDeclaration#implicitInitializerAllowed */
+  /** @see VariableDeclaration#isImplicitInitializerAllowed() */
   private boolean implicitInitializerAllowed = false;
 
   public boolean isImplicitInitializerAllowed() {

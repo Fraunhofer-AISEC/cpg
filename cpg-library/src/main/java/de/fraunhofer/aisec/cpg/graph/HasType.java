@@ -42,6 +42,12 @@ public interface HasType {
     setType(type, null);
   }
 
+  default void setUnknownType() {
+    setUnknownType(null);
+  }
+
+  void setUnknownType(HasType root);
+
   /**
    * Sideeffect free type modification WARNING: This should only be used by the TypeSystem Pass
    *
@@ -98,6 +104,12 @@ public interface HasType {
     void typeChanged(HasType src, HasType root, Type oldType);
 
     void possibleSubTypesChanged(HasType src, HasType root, Set<Type> oldSubTypes);
+
+    default void typeChangedToUnknown(HasType src, HasType root) {
+      if (this instanceof HasType) {
+        ((HasType) this).setUnknownType(root);
+      }
+    }
   }
 
   /**

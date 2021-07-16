@@ -84,6 +84,18 @@ public abstract class ValueDeclaration extends Declaration implements HasType {
   }
 
   @Override
+  public void setUnknownType(HasType root) {
+    if (root == this || TypeManager.getInstance().isUnknown(this.type)) {
+      return;
+    }
+
+    this.type = UnknownType.getUnknownType();
+    this.possibleSubTypes = new HashSet<>();
+
+    this.typeListeners.forEach(l -> l.typeChangedToUnknown(this, root == null ? this : root));
+  }
+
+  @Override
   public void setType(Type type, HasType root) {
     if (!TypeManager.isTypeSystemActive()) {
       TypeManager.getInstance().cacheType(this, type);
