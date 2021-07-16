@@ -29,8 +29,6 @@ import de.fraunhofer.aisec.cpg.graph.declarations.TypedefDeclaration
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.helpers.LocationConverter
-import de.fraunhofer.aisec.cpg.meta.Edge
-import de.fraunhofer.aisec.cpg.meta.ReflectionUtils
 import de.fraunhofer.aisec.cpg.processing.IVisitable
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.util.*
@@ -186,34 +184,6 @@ open class Node : IVisitable<Node>, Persistable {
     fun addAnnotations(annotations: Collection<Annotation>) {
         this.annotations.addAll(annotations)
     }
-
-    /**
-     * Get all properties of this node. **NOTE: Performs heavyweight reflection, so handle with
-     * care!**
-     *
-     * @return All properties that would be persisted by database OGMs, as a map from property name
-     * to value
-     * @throws RuntimeException If [ReflectionUtils.FAIL_ON_ERROR] is set to true and anything goes
-     * wrong while trying to reflectively collect properties. Otherwise the errors are only logged.
-     */
-    val allProperties: Map<String, Any>
-        get() {
-            return ReflectionUtils.getAllProperties(this)
-        }
-
-    /**
-     * Get all outgoing edges from this node. **NOTE: Performs heavyweight reflection, so handle
-     * with care!**
-     *
-     * @return All outgoing edges, modeled as [Edge] objects
-     * @throws RuntimeException If [ReflectionUtils.FAIL_ON_ERROR] is set to true and anything goes
-     * wrong while trying to reflectively collect outgoing edges. Otherwise the errors are only
-     * logged.
-     */
-    val outgoingEdges: Set<Edge>
-        get() {
-            return ReflectionUtils.getOutgoingEdges(this)
-        }
 
     /**
      * If a node should be removed from the graph, just removing it from the AST is not enough (see

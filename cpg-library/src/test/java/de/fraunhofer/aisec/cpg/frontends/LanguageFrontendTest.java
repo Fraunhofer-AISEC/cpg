@@ -29,7 +29,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import de.fraunhofer.aisec.cpg.*;
 import java.io.File;
-import java.nio.file.Paths;
 import java.util.concurrent.ExecutionException;
 import org.junit.jupiter.api.Test;
 
@@ -48,47 +47,5 @@ class LanguageFrontendTest extends BaseTest {
             .build();
     TranslationResult res = analyzer.analyze().get();
     assertEquals(3, res.getTranslationUnits().size());
-  }
-
-  @Test
-  void testTypeSystemInactiveDuringFrontends() throws Exception {
-    var topLevel = Paths.get("src/test/resources/compiling/hierarchy");
-
-    var result1 =
-        TestUtils.analyze(
-            "java",
-            topLevel,
-            true,
-            b -> b.typeSystemActiveInFrontend(true).useParallelFrontends(false));
-    resetPersistentState();
-    var result2 =
-        TestUtils.analyze(
-            "java",
-            topLevel,
-            true,
-            b -> b.typeSystemActiveInFrontend(false).useParallelFrontends(false));
-
-    TestUtils.assertGraphsAreEqual(result1, result2);
-  }
-
-  @Test
-  void testParallelFrontends() throws Exception {
-    var topLevel = Paths.get("src/test/resources/compiling/hierarchy");
-
-    var result1 =
-        TestUtils.analyze(
-            "java",
-            topLevel,
-            true,
-            b -> b.typeSystemActiveInFrontend(false).useParallelFrontends(false));
-    resetPersistentState();
-    var result2 =
-        TestUtils.analyze(
-            "java",
-            topLevel,
-            true,
-            b -> b.typeSystemActiveInFrontend(false).useParallelFrontends(true));
-
-    TestUtils.assertGraphsAreEqual(result1, result2);
   }
 }
