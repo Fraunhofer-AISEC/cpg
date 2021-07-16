@@ -30,6 +30,7 @@ from de.fraunhofer.aisec.cpg.graph.declarations import IncludeDeclaration
 from de.fraunhofer.aisec.cpg.graph.declarations import MethodDeclaration
 from de.fraunhofer.aisec.cpg.graph.declarations import ConstructorDeclaration
 from de.fraunhofer.aisec.cpg.graph.declarations import NamespaceDeclaration
+from de.fraunhofer.aisec.cpg.graph.declarations import FieldDeclaration
 from de.fraunhofer.aisec.cpg.graph.declarations import ParamVariableDeclaration
 from de.fraunhofer.aisec.cpg.graph.declarations import RecordDeclaration
 from de.fraunhofer.aisec.cpg.graph.declarations import TranslationUnitDeclaration
@@ -150,6 +151,15 @@ class PythonASTToCPG(ast.NodeVisitor):
             node.end_col_offset)
             )
         # obj.setCode(ast.unparse(node)) # alternative to CodeExtractor class
+    
+    def is_variable_declaration(self, target):
+        return target.java_name == "de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration"
+    
+    def is_declared_reference(self, target):
+        return target.java_name == "de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression"
+    
+    def is_field_declaration(self, target):
+        return target.java_name == "de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration"
 
     ### LITERALS ###
     def visit_Constant(self, node):
@@ -256,14 +266,27 @@ class PythonASTToCPG(ast.NodeVisitor):
         ref = DeclaredReferenceExpression()
         self.add_loc_info(node, ref)
         ref.setName(node.id)
+        
+        resolved_ref = self.scopemanager.resolve(ref)
+        self.log_with_loc("Resolving node yields: %s" % (resolved_ref))
 
-        # resolved_ref = self.scopemanager.resolve(ref)
-        # if resolved_ref != None:
-        #    ref.setRefersTo(resolved_ref)
-        # else:
-        #    self.log_with_loc("Failed to resolve name.")
-        #    raise RuntimeError
-        return ref
+        if resolved_ref is None:
+            if self.scopemanager.isInRecord():
+                self.log_with_loc("Creating a new FieldDeclaration")
+                # TODO is this always correct?
+                v = FieldDeclaration()
+            else:
+                self.log_with_loc("Creating a new VariableDeclaration")
+                v = VariableDeclaration()
+            self.add_loc_info(node, v)
+            v.setName(node.id)
+            self.scopemanager.addDeclaration(v)
+            return v
+        else:
+            self.log_with_loc("Returning a DeclaredReferenceExpression: %s" %
+                    (ref))
+            #ref.setRefersTo(resolved_ref)
+            return ref
 
     def visit_Load(self, node):
         self.log_with_loc(ast.dump(node))
@@ -660,10 +683,27 @@ class PythonASTToCPG(ast.NodeVisitor):
     def visit_Attribute(self, node):
         self.log_with_loc(ast.dump(node))
 
+        base = self.visit(node.value)
+        if self.scopemanager.isInRecord():
+            methodreceiver = self.scopemanager.getCurrentFunction().getReceiver()
+
+            if self.is_declared_reference(base) and base.getName() == methodreceiver.getName():
+                # this might be a new class field
+                d = DeclaredReferenceExpression()
+                d.setName(node.attr)
+                resolved_ref = self.scopemanager.resolveInRecord(self.scopemanager.getCurrentRecord(), d)
+                if resolved_ref == None:
+                    self.log_with_loc("Found a new class field: %s" % (node.attr))
+                    v = FieldDeclaration()
+                    self.add_loc_info(node, v)
+                    v.setName(node.attr)
+                    self.scopemanager.getCurrentRecord().addDeclaration(v) # Add to the class and not to current function
+                    return v
+                else:
+                    self.log_with_loc("Found a known node: %s" % (resolved_ref))
+
         mem = MemberExpression()
         self.add_loc_info(node, mem)
-
-        base = self.visit(node.value)
 
         mem.setName(node.attr)
         mem.setBase(base)
@@ -735,30 +775,26 @@ class PythonASTToCPG(ast.NodeVisitor):
 
         # parse LHS and RHS as expressions
         lhs = self.visit(target)
+        self.log_with_loc("Parsed lhs as: %s" % (lhs))
         rhs = self.visit(node.value)
+        self.log_with_loc("Parsed rhs as: %s" % (rhs))
 
-        if lhs.java_name == "de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression":
-            # Check whether this assigns to a declared var or to a new var
-            resolved_ref = self.scopemanager.resolve(lhs)
-
-            if resolved_ref is None:
-                # new var -> variable declaration + initializer list
-                v = VariableDeclaration()
-                self.add_loc_info(node, v)
-                v.setName(lhs.getName())
-                v.setInitializer(rhs)
-
-                self.scopemanager.addDeclaration(v)
-                return v
-
-        # found var => BinaryOperator "="
-        binop = BinaryOperator()
-        self.add_loc_info(node, binop)
-        binop.setOperatorCode("=")
-        binop.setLhs(lhs)
-        binop.setRhs(rhs)
-        binop.setName("=")
-        return binop
+        if self.is_variable_declaration(lhs):
+            lhs.setInitializer(rhs)
+            return lhs
+        elif self.is_field_declaration(lhs):
+            lhs.setInitializer(rhs)
+            return lhs
+        elif self.is_declared_reference(lhs):
+            binop = BinaryOperator()
+            self.add_loc_info(node, binop)
+            binop.setOperatorCode("=")
+            binop.setLhs(lhs)
+            binop.setRhs(rhs)
+            binop.setName("=")
+            return binop
+        else:
+            self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
 
     def visit_AnnAssign(self, node):
         self.log_with_loc(ast.dump(node))
@@ -899,28 +935,19 @@ class PythonASTToCPG(ast.NodeVisitor):
         stmt = ForEachStatement()
         self.add_loc_info(node, stmt)
 
-        ref = self.visit(node.target)
-
-        if ref.java_name == "de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression":
-            # create a new variable
-            var = VariableDeclaration()
-            self.add_loc_info(node.target, var)
-            var.setName(ref.getName())
-
-            stmt.setVariable(var)
+        target = self.visit(node.target)
+        if self.is_declared_reference(target):
+            stmt.setTarget(target)
+        elif self.is_variable_declaration(target):
+            stmt.setVariable(target)
         else:
-            self.log_with_loc(ref.java_name)
-            # tuple or list
-            self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
-            return
+            self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
+
 
         stmt.setIterable(self.visit(node.iter))
-        if len(node.body) == 1:
-            stmt.setStatement(self.visit(node.body))
-        else:
-            body = self.make_compound_statement(node, node.body)
+        body = self.make_compound_statement(node, node.body)
+        stmt.setStatement(body)
 
-            stmt.setStatement(body)
         return stmt
 
     def visit_While(self, node):
@@ -1191,8 +1218,21 @@ class PythonASTToCPG(ast.NodeVisitor):
                 fd = self.visit_FunctionDef(b, recordDec=rec)
                 rec.addMethod(fd)
             elif isinstance(b, ast.Expr):
-                # TODO what to do about expressions inside a class?
-                self.visit(b)
+                stmt = self.visit(b)
+                if self.is_field_declaration(stmt):
+                    d_stmt = DeclarationStatement()
+                    self.add_loc_info(b, d_stmt)
+                    d_stmt.setSingleDeclaration(stmt)
+                    stmt = d_stmt
+                rec.addStatement(stmt)
+            elif isinstance(b, ast.stmt):
+                stmt = self.visit(b)
+                if self.is_field_declaration(stmt):
+                    d_stmt = DeclarationStatement()
+                    self.add_loc_info(b, d_stmt)
+                    d_stmt.setSingleDeclaration(stmt)
+                    stmt = d_stmt
+                rec.addStatement(stmt)
             else:
                 self.log_with_loc(b)
                 self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
