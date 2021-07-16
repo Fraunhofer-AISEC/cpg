@@ -145,6 +145,7 @@ public class CallExpression extends Expression
             i -> {
               i.unregisterTypeListener(this);
               Util.detachCallParameters(i, this.getArguments());
+              i.removeIncomingInvokes(this);
               this.removePrevDFG(i);
             });
     this.invokes = PropertyEdge.transformIntoOutgoingPropertyEdgeList(invokes, this);
@@ -152,6 +153,7 @@ public class CallExpression extends Expression
         i -> {
           i.registerTypeListener(this);
           Util.attachCallParameters(i, this.getArguments());
+          i.addIncomingInvokes(this);
           this.addPrevDFG(i);
         });
   }

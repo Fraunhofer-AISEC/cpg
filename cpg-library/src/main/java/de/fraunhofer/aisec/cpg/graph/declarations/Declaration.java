@@ -26,6 +26,12 @@
 package de.fraunhofer.aisec.cpg.graph.declarations;
 
 import de.fraunhofer.aisec.cpg.graph.Node;
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression;
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.ConstructExpression;
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression;
+import java.util.HashSet;
+import java.util.Set;
+import org.neo4j.ogm.annotation.Relationship;
 
 /**
  * Represents a single declaration or definition, i.e. of a variable ({@link VariableDeclaration})
@@ -39,4 +45,38 @@ import de.fraunhofer.aisec.cpg.graph.Node;
  */
 // TODO: expressionRefersToDeclaration definition and declaration nodes and introduce a field if its
 // declaration only
-public class Declaration extends Node {}
+public class Declaration extends Node {
+
+  @Relationship(value = "REFERS_TO", direction = "INCOMING")
+  private Set<DeclaredReferenceExpression> incomingReferences = new HashSet<>();
+
+  @Relationship(value = "INVOKES", direction = "INCOMING")
+  private Set<CallExpression> incomingInvokes = new HashSet<>();
+
+  @Relationship(value = "CONSTRUCTOR", direction = "INCOMING")
+  private Set<ConstructExpression> incomingConstructorCalls = new HashSet<>();
+
+  public void addIncomingReference(DeclaredReferenceExpression user) {
+    incomingReferences.add(user);
+  }
+
+  public void removeIncomingReference(DeclaredReferenceExpression user) {
+    incomingReferences.remove(user);
+  }
+
+  public Set<DeclaredReferenceExpression> getIncomingReferences() {
+    return new HashSet<>(incomingReferences);
+  }
+
+  public void addIncomingInvokes(CallExpression caller) {
+    incomingInvokes.add(caller);
+  }
+
+  public void removeIncomingInvokes(CallExpression caller) {
+    incomingInvokes.remove(caller);
+  }
+
+  public Set<CallExpression> getIncomingInvokes() {
+    return new HashSet<>(incomingInvokes);
+  }
+}

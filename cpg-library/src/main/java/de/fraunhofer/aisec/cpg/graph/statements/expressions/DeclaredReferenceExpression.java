@@ -92,13 +92,11 @@ public class DeclaredReferenceExpression extends Expression implements TypeListe
   }
 
   public void setRefersTo(@Nullable Declaration refersTo) {
-    if (refersTo == null) {
-      return;
-    }
     var current = this.refersTo;
 
-    // unregister type listeners for current declaration
+    // unregister current declaration
     if (current != null) {
+      // DFG
       if (access == AccessValues.WRITE) {
         this.removeNextDFG(current);
       } else if (access == AccessValues.READ) {
@@ -108,31 +106,42 @@ public class DeclaredReferenceExpression extends Expression implements TypeListe
         this.removePrevDFG(current);
       }
 
+      // type listeners
       if (current instanceof ValueDeclaration) {
         ((ValueDeclaration) current).unregisterTypeListener(this);
       }
       if (current instanceof TypeListener) {
         this.unregisterTypeListener((TypeListener) current);
       }
+
+      // refersTo
+      current.removeIncomingReference(this);
     }
 
     // set it
     this.refersTo = refersTo;
 
-    // update type listeners
-    if (access == AccessValues.WRITE) {
-      this.addNextDFG(this.refersTo);
-    } else if (access == AccessValues.READ) {
-      this.addPrevDFG(this.refersTo);
-    } else {
-      this.addNextDFG(this.refersTo);
-      this.addPrevDFG(this.refersTo);
-    }
-    if (this.refersTo instanceof ValueDeclaration) {
-      ((ValueDeclaration) this.refersTo).registerTypeListener(this);
-    }
-    if (this.refersTo instanceof TypeListener) {
-      this.registerTypeListener((TypeListener) this.refersTo);
+    if (this.refersTo != null) {
+      // DFG
+      if (access == AccessValues.WRITE) {
+        this.addNextDFG(this.refersTo);
+      } else if (access == AccessValues.READ) {
+        this.addPrevDFG(this.refersTo);
+      } else {
+        this.addNextDFG(this.refersTo);
+        this.addPrevDFG(this.refersTo);
+      }
+
+      // refersTo
+      this.refersTo.addIncomingReference(this);
+
+      // type listeners
+      if (this.refersTo instanceof ValueDeclaration) {
+        ((ValueDeclaration) this.refersTo).registerTypeListener(this);
+      }
+      if (this.refersTo instanceof TypeListener) {
+        this.registerTypeListener((TypeListener) this.refersTo);
+      }
     }
   }
 
