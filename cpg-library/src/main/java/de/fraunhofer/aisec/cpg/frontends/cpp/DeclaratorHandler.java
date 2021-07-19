@@ -32,20 +32,13 @@ import static java.util.Collections.emptyList;
 
 import de.fraunhofer.aisec.cpg.frontends.Handler;
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder;
-import de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDeclaration;
-import de.fraunhofer.aisec.cpg.graph.declarations.Declaration;
-import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration;
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration;
-import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration;
-import de.fraunhofer.aisec.cpg.graph.declarations.ParamVariableDeclaration;
-import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration;
-import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration;
-import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declarations.*;
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression;
 import de.fraunhofer.aisec.cpg.graph.types.IncompleteType;
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser;
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType;
 import de.fraunhofer.aisec.cpg.passes.scopes.RecordScope;
+import de.fraunhofer.aisec.cpg.passes.scopes.TemplateScope;
 import java.util.Arrays;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -70,6 +63,9 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
     map.put(
         CPPASTCompositeTypeSpecifier.class,
         ctx -> handleCompositeTypeSpecifier((CPPASTCompositeTypeSpecifier) ctx));
+    map.put(
+        CPPASTSimpleTypeTemplateParameter.class,
+        ctx -> handleTemplateTypeParameter((CPPASTSimpleTypeTemplateParameter) ctx));
   }
 
   private Declaration handleDeclarator(CPPASTDeclarator ctx) {
@@ -200,7 +196,9 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
     RecordDeclaration recordDeclaration = null;
 
     // remember, if this is a method declaration outside of the record
-    var outsideOfRecord = !(lang.getScopeManager().getCurrentScope() instanceof RecordScope);
+    var outsideOfRecord =
+        !(lang.getScopeManager().getCurrentScope() instanceof RecordScope
+            || lang.getScopeManager().getCurrentScope() instanceof TemplateScope);
 
     // check for function definitions that are really methods and constructors, i.e. if they contain
     // a scope operator
@@ -345,7 +343,7 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
     }
 
     if (parent != null) {
-      result.setType(TypeParser.createFrom(parent.getRawSignature(), true));
+      result.setType(TypeParser.createFrom(parent.getRawSignature(), true, lang));
       result.refreshType();
     } else {
       log.warn("Could not find suitable parent ast node for function pointer node: {}", this);
@@ -378,7 +376,7 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
             ctx.getRawSignature());
     recordDeclaration.setSuperClasses(
         Arrays.stream(ctx.getBaseSpecifiers())
-            .map(b -> TypeParser.createFrom(b.getNameSpecifier().toString(), true))
+            .map(b -> TypeParser.createFrom(b.getNameSpecifier().toString(), true, lang))
             .collect(Collectors.toList()));
 
     lang.getScopeManager().addDeclaration(recordDeclaration);
@@ -397,7 +395,8 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
       constructorDeclaration.setImplicit(true);
 
       // and set the type, constructors always have implicitly the return type of their class
-      constructorDeclaration.setType(TypeParser.createFrom(recordDeclaration.getName(), true));
+      constructorDeclaration.setType(
+          TypeParser.createFrom(recordDeclaration.getName(), true, lang));
 
       recordDeclaration.addConstructor(constructorDeclaration);
 
@@ -406,6 +405,16 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
 
     lang.getScopeManager().leaveScope(recordDeclaration);
     return recordDeclaration;
+  }
+
+  /**
+   * Handles template parameters that are types
+   *
+   * @param ctx
+   * @return TypeParamDeclaration with its name
+   */
+  private TypeParamDeclaration handleTemplateTypeParameter(CPPASTSimpleTypeTemplateParameter ctx) {
+    return NodeBuilder.newTypeParamDeclaration(ctx.getRawSignature(), ctx.getRawSignature());
   }
 
   private void processMembers(CPPASTCompositeTypeSpecifier ctx) {

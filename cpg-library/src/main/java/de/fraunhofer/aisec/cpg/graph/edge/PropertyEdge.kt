@@ -144,7 +144,9 @@ open class PropertyEdge<T : Node> : Persistable {
         ): MutableList<PropertyEdge<T>> {
             val propertyEdges: MutableList<PropertyEdge<T>> = ArrayList()
             for (n in nodes) {
-                propertyEdges.add(PropertyEdge(commonRelationshipNode, n))
+                var propertyEdge = PropertyEdge(commonRelationshipNode, n)
+                propertyEdge.addProperty(Properties.INDEX, propertyEdges.size)
+                propertyEdges.add(propertyEdge)
             }
             return propertyEdges
         }

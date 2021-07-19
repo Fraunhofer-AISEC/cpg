@@ -29,8 +29,10 @@ import static de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.unwrap;
 
 import de.fraunhofer.aisec.cpg.graph.DeclarationHolder;
 import de.fraunhofer.aisec.cpg.graph.Node;
+import de.fraunhofer.aisec.cpg.graph.StatementHolder;
 import de.fraunhofer.aisec.cpg.graph.SubGraph;
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
+import de.fraunhofer.aisec.cpg.graph.statements.Statement;
 import de.fraunhofer.aisec.cpg.graph.types.Type;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -43,7 +45,7 @@ import org.neo4j.ogm.annotation.Relationship;
 import org.neo4j.ogm.annotation.Transient;
 
 /** Represents a C++ union/struct/class or Java class */
-public class RecordDeclaration extends Declaration implements DeclarationHolder {
+public class RecordDeclaration extends Declaration implements DeclarationHolder, StatementHolder {
 
   /** The kind, i.e. struct, class, union or enum. */
   private String kind;
@@ -63,6 +65,15 @@ public class RecordDeclaration extends Declaration implements DeclarationHolder 
   @Relationship(value = "RECORDS", direction = "OUTGOING")
   @SubGraph("AST")
   private List<PropertyEdge<RecordDeclaration>> records = new ArrayList<>();
+
+  @Relationship(value = "TEMPLATES", direction = "OUTGOING")
+  @SubGraph("AST")
+  private List<PropertyEdge<TemplateDeclaration>> templates = new ArrayList<>();
+
+  /** The list of statements. */
+  @Relationship(value = "STATEMENTS", direction = "OUTGOING")
+  @NonNull
+  private @SubGraph("AST") List<PropertyEdge<Statement>> statements = new ArrayList<>();
 
   @Transient private List<Type> superClasses = new ArrayList<>();
   @Transient private List<Type> implementedInterfaces = new ArrayList<>();
@@ -189,6 +200,22 @@ public class RecordDeclaration extends Declaration implements DeclarationHolder 
     this.records.removeIf(propertyEdge -> propertyEdge.getEnd().equals(recordDeclaration));
   }
 
+  public List<TemplateDeclaration> getTemplates() {
+    return unwrap(this.templates);
+  }
+
+  public List<PropertyEdge<TemplateDeclaration>> getTemplatesPropertyEdge() {
+    return this.templates;
+  }
+
+  public void setTemplates(List<TemplateDeclaration> templates) {
+    this.templates = PropertyEdge.transformIntoOutgoingPropertyEdgeList(templates, this);
+  }
+
+  public void removeTemplate(TemplateDeclaration templateDeclaration) {
+    this.templates.removeIf(propertyEdge -> propertyEdge.getEnd().equals(templateDeclaration));
+  }
+
   @NotNull
   public List<Declaration> getDeclarations() {
     var list = new ArrayList<Declaration>();
@@ -196,6 +223,7 @@ public class RecordDeclaration extends Declaration implements DeclarationHolder 
     list.addAll(this.getMethods());
     list.addAll(this.getConstructors());
     list.addAll(this.getRecords());
+    list.addAll(this.getTemplates());
 
     return list;
   }
@@ -280,6 +308,16 @@ public class RecordDeclaration extends Declaration implements DeclarationHolder 
   }
 
   @Override
+  public @NonNull List<PropertyEdge<Statement>> getStatementEdges() {
+    return this.statements;
+  }
+
+  @Override
+  public void setStatementEdges(@NonNull List<PropertyEdge<Statement>> statements) {
+    this.statements = statements;
+  }
+
+  @Override
   public String toString() {
     return new ToStringBuilder(this, Node.TO_STRING_STYLE)
         .appendSuper(super.toString())
@@ -332,6 +370,8 @@ public class RecordDeclaration extends Declaration implements DeclarationHolder 
       addIfNotContains(this.fields, (FieldDeclaration) declaration);
     } else if (declaration instanceof RecordDeclaration) {
       addIfNotContains(this.records, (RecordDeclaration) declaration);
+    } else if (declaration instanceof TemplateDeclaration) {
+      addIfNotContains(this.templates, (TemplateDeclaration) declaration);
     }
   }
 }

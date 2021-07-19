@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements.expressions;
 
+import de.fraunhofer.aisec.cpg.graph.HasInitializer;
 import de.fraunhofer.aisec.cpg.graph.HasType;
 import de.fraunhofer.aisec.cpg.graph.HasType.TypeListener;
 import de.fraunhofer.aisec.cpg.graph.Node;
@@ -34,13 +35,16 @@ import de.fraunhofer.aisec.cpg.graph.TypeManager.Language;
 import de.fraunhofer.aisec.cpg.graph.types.PointerType.PointerOrigin;
 import de.fraunhofer.aisec.cpg.graph.types.Type;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.builder.ToStringBuilder;
+import org.checkerframework.checker.nullness.qual.Nullable;
+import org.neo4j.ogm.annotation.Relationship;
 
 /** Represents the creation of a new object through the <code>new</code> keyword. */
-public class NewExpression extends Expression implements TypeListener {
+public class NewExpression extends Expression implements HasInitializer, TypeListener {
 
   /** The initializer expression. */
   @SubGraph("AST")
@@ -70,6 +74,23 @@ public class NewExpression extends Expression implements TypeListener {
     if (initializer instanceof TypeListener) {
       this.registerTypeListener((TypeListener) initializer);
     }
+  }
+
+  /**
+   * We need a way to store the templateParameters that a NewExpression might have before the
+   * ConstructExpression is created
+   */
+  @Relationship(value = "TEMPLATE_PARAMETERS", direction = "OUTGOING")
+  @SubGraph("AST")
+  @Nullable
+  private List<Node> templateParameters = null;
+
+  public List<Node> getTemplateParameters() {
+    return templateParameters;
+  }
+
+  public void setTemplateParameters(List<Node> templateParameters) {
+    this.templateParameters = templateParameters;
   }
 
   @Override

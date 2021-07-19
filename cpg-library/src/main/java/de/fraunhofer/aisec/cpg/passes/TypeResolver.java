@@ -211,6 +211,7 @@ public class TypeResolver extends Pass {
     SubgraphWalker.IterativeGraphWalker walker = new SubgraphWalker.IterativeGraphWalker();
     walker.registerOnNodeVisit(this::ensureUniqueType);
     walker.registerOnNodeVisit(this::handle);
+    walker.registerOnNodeVisit(this::ensureUniqueSecondaryTypeEdge);
     for (TranslationUnitDeclaration tu : translationResult.getTranslationUnits()) {
       walker.iterate(tu);
     }
@@ -250,15 +251,39 @@ public class TypeResolver extends Pass {
         types = typeState.get(root);
       }
 
-      for (Type t : types) {
-        if (t.equals(oldType)) {
-          ((HasType) node).updateType(t);
-          break;
-        }
-      }
+      updateType(node, types);
 
       ((HasType) node)
           .updatePossibleSubtypes(ensureUniqueSubTypes(((HasType) node).getPossibleSubTypes()));
+    }
+  }
+
+  /**
+   * ensures that the if a nodes contains secondary type edges, those types are also merged and no
+   * duplicate is left
+   *
+   * @param node implementing {@link HasType.SecondaryTypeEdge}
+   */
+  public void ensureUniqueSecondaryTypeEdge(Node node) {
+    if (node instanceof HasType.SecondaryTypeEdge) {
+      ((HasType.SecondaryTypeEdge) node).updateType(typeState.keySet());
+    } else if (node instanceof HasType
+        && ((HasType) node).getType() instanceof HasType.SecondaryTypeEdge) {
+      ((HasType.SecondaryTypeEdge) ((HasType) node).getType()).updateType(typeState.keySet());
+      for (Type possibleSubType : ((HasType) node).getPossibleSubTypes()) {
+        if (possibleSubType instanceof HasType.SecondaryTypeEdge) {
+          ((HasType.SecondaryTypeEdge) possibleSubType).updateType(typeState.keySet());
+        }
+      }
+    }
+  }
+
+  private void updateType(Node node, Collection<Type> types) {
+    for (Type t : types) {
+      if (t.equals(((HasType) node).getType())) {
+        ((HasType) node).updateType(t);
+        break;
+      }
     }
   }
 

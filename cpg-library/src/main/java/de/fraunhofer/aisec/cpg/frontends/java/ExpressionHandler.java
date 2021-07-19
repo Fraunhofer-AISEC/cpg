@@ -542,8 +542,6 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
         DeclaredReferenceExpression declaredReferenceExpression =
             NodeBuilder.newDeclaredReferenceExpression(symbol.getName(), type, nameExpr.toString());
 
-        lang.getScopeManager().connectToLocal(declaredReferenceExpression);
-
         return declaredReferenceExpression;
       }
     } catch (UnsolvedSymbolException ex) {
@@ -571,8 +569,6 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
 
       if (recordDeclaration != null && Objects.equals(recordDeclaration.getName(), name)) {
         declaredReferenceExpression.setRefersTo(recordDeclaration);
-      } else {
-        lang.getScopeManager().connectToLocal(declaredReferenceExpression);
       }
 
       return declaredReferenceExpression;
@@ -739,7 +735,7 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
       }
     } else {
       callExpression =
-          NodeBuilder.newCallExpression(name, qualifiedName, methodCallExpr.toString());
+          NodeBuilder.newCallExpression(name, qualifiedName, methodCallExpr.toString(), false);
     }
 
     callExpression.setType(TypeParser.createFrom(typeString, true));

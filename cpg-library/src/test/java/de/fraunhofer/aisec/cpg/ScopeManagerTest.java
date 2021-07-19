@@ -74,7 +74,7 @@ class ScopeManagerTest extends BaseTest {
 
     methods.forEach(
         m -> {
-          var scope = scopeManager.getScopeOfStatment(m);
+          var scope = scopeManager.getScopeOfStatement(m);
           assertSame(m, scope.getAstNode());
         });
 
@@ -88,7 +88,7 @@ class ScopeManagerTest extends BaseTest {
     */
     constructors.forEach(
         c -> {
-          var scope = scopeManager.getScopeOfStatment(c);
+          var scope = scopeManager.getScopeOfStatement(c);
           assertSame(c, scope.getAstNode());
         });
   }

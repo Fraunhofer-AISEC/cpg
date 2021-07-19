@@ -29,8 +29,6 @@ import de.fraunhofer.aisec.cpg.graph.declarations.TypedefDeclaration
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.helpers.LocationConverter
-import de.fraunhofer.aisec.cpg.meta.Edge
-import de.fraunhofer.aisec.cpg.meta.ReflectionUtils
 import de.fraunhofer.aisec.cpg.processing.IVisitable
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.util.*
@@ -124,7 +122,7 @@ open class Node : IVisitable<Node>, Persistable {
     var isImplicit = false
 
     /** Required field for object graph mapping. It contains the node id. */
-    @field:Id @field:GeneratedValue val id: Long? = null
+    @field:Id @field:GeneratedValue var id: Long? = null
 
     /** Index of the argument if this node is used in a function call or parameter list. */
     var argumentIndex = 0
@@ -188,34 +186,6 @@ open class Node : IVisitable<Node>, Persistable {
     }
 
     /**
-     * Get all properties of this node. **NOTE: Performs heavyweight reflection, so handle with
-     * care!**
-     *
-     * @return All properties that would be persisted by database OGMs, as a map from property name
-     * to value
-     * @throws RuntimeException If [ReflectionUtils.FAIL_ON_ERROR] is set to true and anything goes
-     * wrong while trying to reflectively collect properties. Otherwise the errors are only logged.
-     */
-    val allProperties: Map<String, Any>
-        get() {
-            return ReflectionUtils.getAllProperties(this)
-        }
-
-    /**
-     * Get all outgoing edges from this node. **NOTE: Performs heavyweight reflection, so handle
-     * with care!**
-     *
-     * @return All outgoing edges, modeled as [Edge] objects
-     * @throws RuntimeException If [ReflectionUtils.FAIL_ON_ERROR] is set to true and anything goes
-     * wrong while trying to reflectively collect outgoing edges. Otherwise the errors are only
-     * logged.
-     */
-    val outgoingEdges: Set<Edge>
-        get() {
-            return ReflectionUtils.getOutgoingEdges(this)
-        }
-
-    /**
      * If a node should be removed from the graph, just removing it from the AST is not enough (see
      * issue #60). It will most probably be referenced somewhere via DFG or EOG edges. Thus, if it
      * needs to be disconnected completely, we will have to take care of correctly disconnecting
@@ -276,7 +246,8 @@ open class Node : IVisitable<Node>, Persistable {
                 code == other.code &&
                 comment == other.comment &&
                 location == other.location &&
-                file == other.file
+                file == other.file &&
+                isImplicit == other.isImplicit
     }
 
     override fun hashCode(): Int {

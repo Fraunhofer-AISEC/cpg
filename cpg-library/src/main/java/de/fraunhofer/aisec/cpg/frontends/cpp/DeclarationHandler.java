@@ -29,6 +29,7 @@ import static de.fraunhofer.aisec.cpg.helpers.Util.errorWithFileLocation;
 import static de.fraunhofer.aisec.cpg.helpers.Util.warnWithFileLocation;
 
 import de.fraunhofer.aisec.cpg.frontends.Handler;
+import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder;
 import de.fraunhofer.aisec.cpg.graph.TypeManager;
 import de.fraunhofer.aisec.cpg.graph.declarations.*;
@@ -36,34 +37,19 @@ import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement;
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement;
 import de.fraunhofer.aisec.cpg.graph.statements.Statement;
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression;
+import de.fraunhofer.aisec.cpg.graph.types.ObjectType;
+import de.fraunhofer.aisec.cpg.graph.types.ParameterizedType;
 import de.fraunhofer.aisec.cpg.graph.types.Type;
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser;
 import de.fraunhofer.aisec.cpg.helpers.Util;
 import de.fraunhofer.aisec.cpg.passes.scopes.RecordScope;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import de.fraunhofer.aisec.cpg.passes.scopes.TemplateScope;
+import java.util.*;
 import java.util.stream.Collectors;
-import org.eclipse.cdt.core.dom.ast.IASTArrayModifier;
-import org.eclipse.cdt.core.dom.ast.IASTDeclSpecifier;
-import org.eclipse.cdt.core.dom.ast.IASTDeclaration;
-import org.eclipse.cdt.core.dom.ast.IASTDeclarator;
-import org.eclipse.cdt.core.dom.ast.IASTNode;
-import org.eclipse.cdt.core.dom.ast.IASTPointerOperator;
-import org.eclipse.cdt.core.dom.ast.IASTTranslationUnit;
-import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTCompositeTypeSpecifier;
-import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTElaboratedTypeSpecifier;
-import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTFunctionDefinition;
-import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTLinkageSpecification;
-import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTName;
-import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTNamespaceDefinition;
-import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTProblemDeclaration;
-import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTSimpleDeclaration;
-import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTTemplateDeclaration;
-import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTTranslationUnit;
-import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTUsingDirective;
+import org.eclipse.cdt.core.dom.ast.*;
+import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTTemplateParameter;
+import org.eclipse.cdt.internal.core.dom.parser.cpp.*;
 
 public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CXXLanguageFrontend> {
 
@@ -137,14 +123,16 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
     String typeString = getTypeStringFromDeclarator(ctx.getDeclarator(), ctx.getDeclSpecifier());
 
     functionDeclaration.setIsDefinition(true);
-    functionDeclaration.setType(TypeParser.createFrom(typeString, true));
+    functionDeclaration.setType(TypeParser.createFrom(typeString, true, lang));
 
     // associated record declaration if this is a method or constructor
     RecordDeclaration recordDeclaration =
         functionDeclaration instanceof MethodDeclaration
             ? ((MethodDeclaration) functionDeclaration).getRecordDeclaration()
             : null;
-    var outsideOfRecord = !(lang.getScopeManager().getCurrentScope() instanceof RecordScope);
+    var outsideOfRecord =
+        !(lang.getScopeManager().getCurrentScope() instanceof RecordScope
+            || lang.getScopeManager().getCurrentScope() instanceof TemplateScope);
 
     if (recordDeclaration != null) {
       if (outsideOfRecord) {
@@ -168,7 +156,8 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
               .filter(m -> m.getSignature().equals(finalFunctionDeclaration.getSignature()))
               .collect(Collectors.toList());
 
-      if (candidates.isEmpty()) {
+      if (candidates.isEmpty()
+          && !(lang.getScopeManager().getCurrentScope() instanceof TemplateScope)) {
         log.warn(
             "Could not find declaration of method {} in record {}",
             functionDeclaration.getName(),
@@ -187,7 +176,7 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
 
     lang.getScopeManager().enterScope(functionDeclaration);
 
-    functionDeclaration.setType(TypeParser.createFrom(typeString, true));
+    functionDeclaration.setType(TypeParser.createFrom(typeString, true, lang));
 
     if (ctx.getBody() != null) {
       Statement bodyStatement = this.lang.getStatementHandler().handle(ctx.getBody());
@@ -259,13 +248,154 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
   }
 
   private Declaration handleTemplateDeclaration(CPPASTTemplateDeclaration ctx) {
-    warnWithFileLocation(
-        lang,
-        ctx,
-        log,
-        "Parsing template declarations is not supported (yet). Will ignore template and parse inner declaration");
 
-    return handle(ctx.getDeclaration());
+    TemplateDeclaration templateDeclaration;
+    if (ctx.getDeclaration() instanceof CPPASTFunctionDefinition) {
+      templateDeclaration =
+          NodeBuilder.newFunctionTemplateDeclaration(
+              ctx.getRawSignature().split("\\{")[0].replace('\n', ' ').trim(),
+              this.lang.getCodeFromRawNode(ctx));
+    } else {
+      templateDeclaration =
+          NodeBuilder.newClassTemplateDeclaration(
+              ctx.getRawSignature().split("\\{")[0].replace('\n', ' ').trim(),
+              this.lang.getCodeFromRawNode(ctx));
+    }
+    templateDeclaration.setLocation(this.lang.getLocationFromRawNode(ctx));
+    lang.getScopeManager().addDeclaration(templateDeclaration);
+    lang.getScopeManager().enterScope(templateDeclaration);
+
+    addTemplateParameters(ctx, templateDeclaration);
+
+    // Handle Template
+    Declaration innerDeclaration = lang.getDeclarationHandler().handle(ctx.getDeclaration());
+    lang.getScopeManager().leaveScope(templateDeclaration);
+
+    if (templateDeclaration instanceof FunctionTemplateDeclaration) {
+      // Fix typeName
+      templateDeclaration.setName(
+          templateDeclaration.getRealizationDeclarations().get(0).getName());
+    } else if (innerDeclaration instanceof RecordDeclaration) {
+      fixTypeOfInnerDeclaration(templateDeclaration, innerDeclaration);
+    }
+    addRealizationToScope(templateDeclaration);
+    return templateDeclaration;
+  }
+
+  /**
+   * Add Template Parameters to the TemplateDeclaration
+   *
+   * @param ctx
+   * @param templateDeclaration
+   */
+  private void addTemplateParameters(
+      CPPASTTemplateDeclaration ctx, TemplateDeclaration templateDeclaration) {
+    for (ICPPASTTemplateParameter templateParameter : ctx.getTemplateParameters()) {
+      if (templateParameter instanceof CPPASTSimpleTypeTemplateParameter) {
+        // Handle Type Parameters
+        TypeParamDeclaration typeParamDeclaration =
+            (TypeParamDeclaration)
+                this.lang
+                    .getDeclaratorHandler()
+                    .handle((CPPASTSimpleTypeTemplateParameter) templateParameter);
+        ParameterizedType parameterizedType =
+            TypeManager.getInstance()
+                .createOrGetTypeParameter(
+                    templateDeclaration,
+                    ((CPPASTSimpleTypeTemplateParameter) templateParameter).getName().toString());
+
+        typeParamDeclaration.setType(parameterizedType);
+
+        if (((CPPASTSimpleTypeTemplateParameter) templateParameter).getDefaultType() != null) {
+          Type defaultType =
+              TypeParser.createFrom(
+                  ((CPPASTSimpleTypeTemplateParameter) templateParameter)
+                      .getDefaultType()
+                      .getDeclSpecifier()
+                      .getRawSignature(),
+                  false,
+                  lang);
+          typeParamDeclaration.setDefault(defaultType);
+        }
+
+        templateDeclaration.addParameter(typeParamDeclaration);
+      } else if (templateParameter instanceof CPPASTParameterDeclaration) {
+        // Handle Value Parameters
+        ParamVariableDeclaration nonTypeTemplateParamDeclaration =
+            this.lang
+                .getParameterDeclarationHandler()
+                .handle((IASTParameterDeclaration) templateParameter);
+
+        if (((CPPASTParameterDeclaration) templateParameter).getDeclarator().getInitializer()
+            != null) {
+          Expression defaultExpression =
+              this.lang
+                  .getInitializerHandler()
+                  .handle(
+                      ((CPPASTParameterDeclaration) templateParameter)
+                          .getDeclarator()
+                          .getInitializer());
+          nonTypeTemplateParamDeclaration.setDefault(defaultExpression);
+          nonTypeTemplateParamDeclaration.addPrevDFG(defaultExpression);
+          defaultExpression.addNextDFG(nonTypeTemplateParamDeclaration);
+        }
+        templateDeclaration.addParameter(nonTypeTemplateParamDeclaration);
+        lang.getScopeManager().addDeclaration(nonTypeTemplateParamDeclaration);
+      }
+    }
+  }
+
+  /**
+   * Adds the generic realization of the template to the scope
+   *
+   * @param templateDeclaration
+   */
+  private void addRealizationToScope(TemplateDeclaration templateDeclaration) {
+    for (Declaration declaration : templateDeclaration.getRealizationDeclarations()) {
+      lang.getScopeManager().addDeclaration(declaration);
+    }
+  }
+
+  /**
+   * Fixed the Types created by the innerDeclaration with the ParameterizedTypes of the
+   * TemplateDeclaration
+   *
+   * @param templateDeclaration
+   * @param innerDeclaration If RecordDeclaration
+   */
+  private void fixTypeOfInnerDeclaration(
+      TemplateDeclaration templateDeclaration, Declaration innerDeclaration) {
+    Type type;
+    if (((RecordDeclaration) innerDeclaration).getThis() == null) {
+      type = TypeParser.createFrom(innerDeclaration.getName(), true);
+    } else {
+      type = ((RecordDeclaration) innerDeclaration).getThis().getType();
+    }
+    List<ParameterizedType> parameterizedTypes =
+        TypeManager.getInstance().getAllParameterizedType(templateDeclaration);
+    // Add ParameterizedTypes to type
+    addParameterizedTypesToType(type, parameterizedTypes);
+
+    // Add ParameterizedTypes to ConstructorDeclaration Type
+    for (ConstructorDeclaration constructorDeclaration :
+        ((RecordDeclaration) innerDeclaration).getConstructors()) {
+      type = constructorDeclaration.getType();
+      addParameterizedTypesToType(type, parameterizedTypes);
+    }
+  }
+
+  /**
+   * Connects the ObjectType node to the ParameterizedType nodes with the generics edge
+   *
+   * @param type
+   * @param parameterizedTypes
+   */
+  private void addParameterizedTypesToType(Type type, List<ParameterizedType> parameterizedTypes) {
+    if (type instanceof ObjectType) {
+      for (ParameterizedType parameterizedType : parameterizedTypes) {
+        ((ObjectType) type).addGeneric(parameterizedType);
+      }
+    }
   }
 
   private Declaration handleSimpleDeclaration(CPPASTSimpleDeclaration ctx) {
@@ -311,14 +441,87 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
           declSpecifier.getClass());
     }
 
+    if (declSpecifier instanceof CPPASTNamedTypeSpecifier
+        && ((CPPASTNamedTypeSpecifier) declSpecifier).getName() instanceof CPPASTTemplateId) {
+      handleTemplateUsage((CPPASTNamedTypeSpecifier) declSpecifier, ctx, sequence);
+    } else {
+      for (IASTDeclarator declarator : ctx.getDeclarators()) {
+        ValueDeclaration declaration =
+            (ValueDeclaration) this.lang.getDeclaratorHandler().handle(declarator);
+
+        String typeString = getTypeStringFromDeclarator(declarator, ctx.getDeclSpecifier());
+
+        Type result = TypeParser.createFrom(typeString, true, lang);
+        declaration.setType(result);
+
+        // cache binding
+        this.lang.cacheDeclaration(declarator.getName().resolveBinding(), declaration);
+
+        // process attributes
+        this.lang.processAttributes(declaration, ctx);
+
+        sequence.addDeclaration(declaration);
+      }
+    }
+
+    return simplifySequence(sequence);
+  }
+
+  /**
+   * @param sequence
+   * @return First Element of DeclarationSequence if the Sequence consist of only one element, full
+   *     sequence if it contains more than one element
+   */
+  private Declaration simplifySequence(DeclarationSequence sequence) {
+    if (sequence.isSingle()) {
+      return sequence.first();
+    } else {
+      return sequence;
+    }
+  }
+
+  /**
+   * Handles usage of Templates in SimpleDeclarations
+   *
+   * @param declSpecifier
+   * @param ctx
+   * @param sequence
+   */
+  private void handleTemplateUsage(
+      CPPASTNamedTypeSpecifier declSpecifier,
+      CPPASTSimpleDeclaration ctx,
+      DeclarationSequence sequence) {
+    CPPASTTemplateId templateId = (CPPASTTemplateId) (declSpecifier).getName();
+    Type type = TypeParser.createFrom(ctx.getRawSignature(), true);
+    List<Node> templateParams = new ArrayList<>();
+    assert type.getRoot() instanceof ObjectType;
+    ObjectType objectType = (ObjectType) type.getRoot();
+    objectType.setGenerics(Collections.emptyList());
+
+    for (IASTNode templateArgument : templateId.getTemplateArguments()) {
+      if (templateArgument instanceof CPPASTTypeId) {
+        Type genericInstantiation = TypeParser.createFrom(templateArgument.getRawSignature(), true);
+        objectType.addGeneric(genericInstantiation);
+        templateParams.add(
+            NodeBuilder.newTypeExpression(genericInstantiation.getName(), genericInstantiation));
+      } else if (templateArgument instanceof IASTExpression) {
+        Expression expression =
+            this.lang.getExpressionHandler().handle((IASTExpression) templateArgument);
+        templateParams.add(expression);
+      }
+    }
+
     for (IASTDeclarator declarator : ctx.getDeclarators()) {
       ValueDeclaration declaration =
           (ValueDeclaration) this.lang.getDeclaratorHandler().handle(declarator);
 
-      String typeString = getTypeStringFromDeclarator(declarator, ctx.getDeclSpecifier());
+      // Update Type
+      declaration.setType(type);
 
-      Type result = TypeParser.createFrom(typeString, true);
-      declaration.setType(result);
+      // Set TemplateParameters into VariableDeclaration
+      if (declaration instanceof VariableDeclaration) {
+        ((VariableDeclaration) declaration).setTemplateParameters(templateParams);
+      }
 
       // cache binding
       this.lang.cacheDeclaration(declarator.getName().resolveBinding(), declaration);
@@ -327,12 +530,6 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
       this.lang.processAttributes(declaration, ctx);
 
       sequence.addDeclaration(declaration);
-    }
-
-    if (sequence.isSingle()) {
-      return sequence.first();
-    } else {
-      return sequence;
     }
   }
 

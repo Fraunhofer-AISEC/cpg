@@ -68,9 +68,9 @@ class PythonLanguageFrontend(config: TranslationConfiguration, scopeManager: Sco
     private fun parseInternal(code: String, path: String): TranslationUnitDeclaration {
         // check, if the cpg.py is either directly available in the current directory or in the
         // src/main/python folder
-        var modulePath = Path.of("cpg.py")
+        val modulePath = Path.of("cpg.py")
 
-        var possibleLocations =
+        val possibleLocations =
             listOf(
                 Path.of(".").resolve(modulePath),
                 Path.of("src/main/python").resolve(modulePath),
@@ -95,10 +95,10 @@ class PythonLanguageFrontend(config: TranslationConfiguration, scopeManager: Sco
         }
 
         val tu: TranslationUnitDeclaration
-
+        var interp: SubInterpreter? = null
         try {
             JepSingleton // configure Jep
-            val interp = SubInterpreter(JepConfig().setRedirectOutputStreams(true))
+            interp = SubInterpreter(JepConfig().setRedirectOutputStreams(true))
 
             // TODO: extract cpg.py in a real python module with multiple files
 
@@ -107,12 +107,13 @@ class PythonLanguageFrontend(config: TranslationConfiguration, scopeManager: Sco
 
             // run python function parse_code()
             tu = interp.invoke("parse_code", code, path, this) as TranslationUnitDeclaration
-            interp.close()
         } catch (e: JepException) {
             e.printStackTrace()
             throw TranslationException("Python failed with message: $e")
         } catch (e: Exception) {
             throw e
+        } finally {
+            interp?.close()
         }
 
         return tu

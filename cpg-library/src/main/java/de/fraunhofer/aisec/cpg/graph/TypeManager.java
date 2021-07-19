@@ -31,10 +31,13 @@ import de.fraunhofer.aisec.cpg.frontends.golang.GoLanguageFrontend;
 import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguageFrontend;
 import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguageFrontend;
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declarations.TemplateDeclaration;
 import de.fraunhofer.aisec.cpg.graph.declarations.TypedefDeclaration;
 import de.fraunhofer.aisec.cpg.graph.types.*;
 import de.fraunhofer.aisec.cpg.helpers.Util;
 import de.fraunhofer.aisec.cpg.passes.scopes.RecordScope;
+import de.fraunhofer.aisec.cpg.passes.scopes.Scope;
+import de.fraunhofer.aisec.cpg.passes.scopes.TemplateScope;
 import java.util.*;
 import java.util.function.Function;
 import java.util.regex.Matcher;
@@ -82,8 +85,15 @@ public class TypeManager {
   private Map<RecordDeclaration, List<ParameterizedType>> recordToTypeParameters =
       Collections.synchronizedMap(new HashMap<>());
 
-  /** Stores all the unique types ObjectType as Key and Reference-/PointerTypes */
-  @NonNull private Map<Type, List<Type>> typeState = Collections.synchronizedMap(new HashMap<>());
+  @NonNull
+  private Map<TemplateDeclaration, List<ParameterizedType>> templateToTypeParameters =
+      Collections.synchronizedMap(new HashMap<>());
+
+  @NonNull
+  private Map<Type, List<Type>> typeState =
+      Collections.synchronizedMap(new HashMap<>()); // Stores all the unique types ObjectType as
+  // Key and
+  // Reference-/PointerTypes
   // as Values
   private Set<Type> firstOrderTypes = Collections.synchronizedSet(new HashSet<>());
   private Set<Type> secondOrderTypes = Collections.synchronizedSet(new HashSet<>());
@@ -94,6 +104,13 @@ public class TypeManager {
     INSTANCE = new TypeManager();
   }
 
+  /**
+   * @param recordDeclaration that is instantiated by a template containing parameterizedtypes
+   * @param name of the ParameterizedType we want to get
+   * @return ParameterizedType if there is a parameterized type defined in the recordDeclaration
+   *     with matching name, null instead
+   */
+  @Nullable
   public ParameterizedType getTypeParameter(RecordDeclaration recordDeclaration, String name) {
     if (this.recordToTypeParameters.containsKey(recordDeclaration)) {
       for (ParameterizedType parameterizedType :
@@ -106,9 +123,113 @@ public class TypeManager {
     return null;
   }
 
+  /**
+   * Adds a List of ParameterizedType to {@link TypeManager#recordToTypeParameters}
+   *
+   * @param recordDeclaration will be stored as key for the map
+   * @param typeParameters List containing all ParameterizedTypes used by the recordDeclaration and
+   *     will be stored as value in the map
+   */
   public void addTypeParameter(
       RecordDeclaration recordDeclaration, List<ParameterizedType> typeParameters) {
     this.recordToTypeParameters.put(recordDeclaration, typeParameters);
+  }
+
+  /**
+   * Searches {@link TypeManager#templateToTypeParameters} for ParameterizedTypes that were defined
+   * in a template matching the provided name
+   *
+   * @param templateDeclaration that includes the ParameterizedType we are looking for
+   * @param name name of the ParameterizedType we are looking for
+   * @return
+   */
+  @Nullable
+  public ParameterizedType getTypeParameter(TemplateDeclaration templateDeclaration, String name) {
+    if (this.templateToTypeParameters.containsKey(templateDeclaration)) {
+      for (ParameterizedType parameterizedType :
+          this.templateToTypeParameters.get(templateDeclaration)) {
+        if (parameterizedType.getName().equals(name)) {
+          return parameterizedType;
+        }
+      }
+    }
+    return null;
+  }
+
+  /**
+   * @param templateDeclaration
+   * @return List containing all ParameterizedTypes the templateDeclaration defines. If the
+   *     templateDeclaration is not registered, an empty list is returned.
+   */
+  @NonNull
+  public List<ParameterizedType> getAllParameterizedType(TemplateDeclaration templateDeclaration) {
+    if (this.templateToTypeParameters.containsKey(templateDeclaration)) {
+      return this.templateToTypeParameters.get(templateDeclaration);
+    }
+    return new ArrayList<>();
+  }
+
+  /**
+   * Searches for ParameterizedType if the scope is a TemplateScope. If not we search the parent
+   * scope until we reach the top.
+   *
+   * @param scope in which we are searching for the defined ParameterizedTypes
+   * @param name of the ParameterizedType
+   * @return ParameterizedType that is found within the scope (or any parent scope) and matches the
+   *     provided name. Null if we reach the top of the scope without finding a matching
+   *     ParameterizedType
+   */
+  public ParameterizedType searchTemplateScopeForDefinedParameterizedTypes(
+      Scope scope, String name) {
+    if (scope instanceof TemplateScope) {
+      TemplateDeclaration template = (TemplateDeclaration) scope.getAstNode();
+      ParameterizedType parameterizedType = getTypeParameter(template, name);
+      if (parameterizedType != null) {
+        return parameterizedType;
+      }
+    }
+
+    return scope.getParent() != null
+        ? searchTemplateScopeForDefinedParameterizedTypes(scope.getParent(), name)
+        : null;
+  }
+
+  /**
+   * Adds ParameterizedType to the {@link TypeManager#templateToTypeParameters} to be able to
+   * resolve this type when it is used
+   *
+   * @param templateDeclaration key for {@link TypeManager#templateToTypeParameters}
+   * @param typeParameter ParameterizedType we want to register
+   */
+  public void addTypeParameter(
+      TemplateDeclaration templateDeclaration, ParameterizedType typeParameter) {
+    if (this.templateToTypeParameters.containsKey(templateDeclaration)) {
+      this.templateToTypeParameters.get(templateDeclaration).add(typeParameter);
+    } else {
+      List<ParameterizedType> typeParameters = new ArrayList<>();
+      typeParameters.add(typeParameter);
+      this.templateToTypeParameters.put(templateDeclaration, typeParameters);
+    }
+  }
+
+  /**
+   * Check if a ParameterizedType with name typeName is already registered. If so we return the
+   * already created ParameterizedType. If not, we create and return a new ParameterizedType
+   *
+   * @param templateDeclaration in which the ParameterizedType is defined
+   * @param typeName name of the ParameterizedType
+   * @return
+   */
+  public ParameterizedType createOrGetTypeParameter(
+      TemplateDeclaration templateDeclaration, String typeName) {
+    ParameterizedType parameterizedType = getTypeParameter(templateDeclaration, typeName);
+    if (parameterizedType != null) {
+      return parameterizedType;
+    } else {
+      parameterizedType = new ParameterizedType(typeName);
+      addTypeParameter(templateDeclaration, parameterizedType);
+      return parameterizedType;
+    }
   }
 
   @NonNull
@@ -168,6 +289,37 @@ public class TypeManager {
 
   public boolean isUnknown(Type type) {
     return type instanceof UnknownType;
+  }
+
+  /**
+   * @param generics
+   * @return true if the generics contain parameterized Types
+   */
+  public boolean containsParameterizedType(List<Type> generics) {
+    for (Type t : generics) {
+      if (t instanceof ParameterizedType) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * @param type oldType that we want to replace
+   * @param newType newType
+   * @return true if an objectType with instantiated generics is replaced by the same objectType
+   *     with parameterizedTypes as generics false otherwise
+   */
+  public boolean stopPropagation(Type type, Type newType) {
+    if (type instanceof ObjectType
+        && newType instanceof ObjectType
+        && ((ObjectType) type).getGenerics() != null
+        && ((ObjectType) newType).getGenerics() != null
+        && type.getName().equals(newType.getName())) {
+      return containsParameterizedType(((ObjectType) newType).getGenerics())
+          && !(containsParameterizedType(((ObjectType) type).getGenerics()));
+    }
+    return false;
   }
 
   private Optional<Type> rewrapType(
