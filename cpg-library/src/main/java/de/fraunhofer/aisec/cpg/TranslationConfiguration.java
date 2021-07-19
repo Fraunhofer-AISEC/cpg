@@ -444,7 +444,7 @@ public class TranslationConfiguration {
      * If true, the ASTs for the source files are parsed in parallel, but the passes afterwards will
      * still run in a single thread. This speeds up initial parsing but makes sure that further
      * graph enrichment algorithms remain correct. Please make sure to also set {@link
-     * #typeSystemActiveInFrontend(boolean)} to true to avoid probabilistic errors that appear
+     * #typeSystemActiveInFrontend(boolean)} to false to avoid probabilistic errors that appear
      * depending on the parsing order.
      *
      * @param b the new value
