@@ -35,6 +35,7 @@ import java.util.ArrayList;
 import java.util.List;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
+import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -773,5 +774,18 @@ public class NodeBuilder {
     member.setCode(code);
 
     return member;
+  }
+
+  @NotNull
+  public static KeyValueExpression newKeyValueExpression(
+      @org.jetbrains.annotations.Nullable Expression key,
+      @org.jetbrains.annotations.Nullable Expression value,
+      @org.jetbrains.annotations.Nullable String code) {
+    var keyValue = new KeyValueExpression();
+    keyValue.setKey(key);
+    keyValue.setValue(value);
+    keyValue.setCode(code);
+
+    return keyValue;
   }
 }

@@ -23,12 +23,14 @@
  *                    \______/ \__|       \______/
  *
  */
+import com.github.gradle.node.yarn.task.YarnTask
+
 plugins {
     `java-library`
     `maven-publish`
     signing
 
-    id("com.github.johnrengelman.shadow")
+    id("com.github.node-gradle.node") version "3.1.0"
 }
 
 publishing {
@@ -90,8 +92,40 @@ tasks.named<Test>("test") {
         } else {
             systemProperty("java.library.path", project.projectDir.resolve("src/main/golang"))
         }
+        
+        if (!project.hasProperty("experimentalTypeScript")) {
+            excludeTags("experimentalTypeScript")
+        }
     }
     maxHeapSize = "4048m"
+}
+
+node {
+    download.set(findProperty("nodeDownload")?.toString()?.toBoolean() ?: false)
+    version.set("16.4.2")
+}
+
+val yarnInstall by tasks.registering(YarnTask::class) {
+    inputs.file("src/main/nodejs/package.json").withPathSensitivity(PathSensitivity.RELATIVE)
+    inputs.file("src/main/nodejs/yarn.lock").withPathSensitivity(PathSensitivity.RELATIVE)
+    outputs.dir("src/main/nodejs/node_modules")
+    outputs.cacheIf { true }
+
+    workingDir.set(file("src/main/nodejs"))
+    yarnCommand.set(listOf("install", "--ignore-optional"))
+}
+
+val yarnBuild by tasks.registering(YarnTask::class) {
+    inputs.file("src/main/nodejs/package.json").withPathSensitivity(PathSensitivity.RELATIVE)
+    inputs.file("src/main/nodejs/yarn.lock").withPathSensitivity(PathSensitivity.RELATIVE)
+    inputs.dir("src/main/nodejs/src").withPathSensitivity(PathSensitivity.RELATIVE)
+    outputs.dir("build/resources/main/nodejs")
+    outputs.cacheIf { true }
+
+    workingDir.set(file("src/main/nodejs"))
+    yarnCommand.set(listOf("bundle"))
+
+    dependsOn(yarnInstall)
 }
 
 if (project.hasProperty("experimental")) {
@@ -107,6 +141,12 @@ if (project.hasProperty("experimental")) {
 
     tasks.named("compileJava") {
         dependsOn(compileGolang)
+    }
+}
+
+if (project.hasProperty("experimentalTypeScript")) {
+    tasks.processResources {
+        dependsOn(yarnBuild)
     }
 }
 
@@ -130,6 +170,8 @@ dependencies {
     api("org.slf4j:jul-to-slf4j:1.8.0-beta4")
     api("com.github.javaparser:javaparser-symbol-solver-core:3.22.0")
 
+    api("com.fasterxml.jackson.module:jackson-module-kotlin:2.12.3")
+
     // Eclipse dependencies
     api("org.eclipse.platform:org.eclipse.core.runtime:3.22.0")
     api("com.ibm.icu:icu4j:68.2")
@@ -139,6 +181,8 @@ dependencies {
 
     // openCypher
     api("org.opencypher:parser-9.0:9.0.20210312")
+
+    api("commons-io:commons-io:2.10.0")
 
     implementation(platform("org.jetbrains.kotlin:kotlin-bom"))
     implementation("org.jetbrains.kotlin:kotlin-stdlib")
