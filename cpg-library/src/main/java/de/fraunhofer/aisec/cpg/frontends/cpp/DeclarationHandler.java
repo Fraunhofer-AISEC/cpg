@@ -446,12 +446,14 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
       handleTemplateUsage((CPPASTNamedTypeSpecifier) declSpecifier, ctx, sequence);
     } else {
       for (IASTDeclarator declarator : ctx.getDeclarators()) {
+        String typeString = getTypeStringFromDeclarator(declarator, ctx.getDeclSpecifier());
+
+        // make sure, the type manager knows about this type before parsing the declarator
+        Type result = TypeParser.createFrom(typeString, true, lang);
+
         ValueDeclaration declaration =
             (ValueDeclaration) this.lang.getDeclaratorHandler().handle(declarator);
 
-        String typeString = getTypeStringFromDeclarator(declarator, ctx.getDeclSpecifier());
-
-        Type result = TypeParser.createFrom(typeString, true, lang);
         declaration.setType(result);
 
         // cache binding

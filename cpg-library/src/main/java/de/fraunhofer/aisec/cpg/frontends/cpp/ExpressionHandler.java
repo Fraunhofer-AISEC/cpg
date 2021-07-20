@@ -438,7 +438,22 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
         operatorCode = "sizeof";
         break;
       case IASTUnaryExpression.op_bracketedPrimary:
-        // ignore this kind of expression and return the input directly
+        // this can either be just a meaningless bracket or it can be a cast expression
+        if (ctx.getOperand() instanceof CPPASTIdExpression) {
+          var typeName = ((CPPASTIdExpression) ctx.getOperand()).getName().toString();
+          if (TypeManager.getInstance().typeExists(typeName)) {
+            var cast = NodeBuilder.newCastExpression(this.lang.getCodeFromRawNode(ctx));
+            cast.setCastType(TypeParser.createFrom(typeName, false));
+            cast.setExpression(input);
+
+            cast.setLocation(this.lang.getLocationFromRawNode(ctx));
+
+            return cast;
+          }
+        }
+
+        // otherwise, ignore this kind of expression and return the input directly
+
         // operatorCode = "()";
         // break;
         return input;
@@ -475,7 +490,7 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
     return unaryOperator;
   }
 
-  private CallExpression handleFunctionCallExpression(CPPASTFunctionCallExpression ctx) {
+  private Expression handleFunctionCallExpression(CPPASTFunctionCallExpression ctx) {
     Expression reference = this.handle(ctx.getFunctionNameExpression());
 
     CallExpression callExpression;
@@ -547,6 +562,9 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
           getTemplateArguments(
               (CPPASTTemplateId) ((CPPASTIdExpression) ctx.getFunctionNameExpression()).getName()));
 
+    } else if (reference instanceof CastExpression) {
+      // this really is a cast expression in disguise
+      return reference;
     } else {
       String fqn = reference.getName();
       String name = fqn;
