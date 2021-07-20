@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.graph.types;
 
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
 import de.fraunhofer.aisec.cpg.graph.TypeManager;
+import de.fraunhofer.aisec.cpg.graph.TypeManager.Language;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Supplier;
@@ -50,7 +51,7 @@ public class TypeParser {
       List.of("byte", "short", "int", "long", "float", "double", "boolean", "char");
   private static final Pattern functionPtrRegex =
       Pattern.compile(
-          "(?<functionptr>[\\h|(]+[a-zA-Z0-9_$.<>:]*\\*\\h*[a-zA-Z0-9_$.<>:]*[\\h|)]+)\\h*(?<args>\\(+[a-zA-Z0-9_$.<>,*&\\h]*\\))");
+          "(?:(?<functionptr>[\\h(]+[a-zA-Z0-9_$.<>:]*\\*\\h*[a-zA-Z0-9_$.<>:]*[\\h)]+)\\h*)(?<args>\\(+[a-zA-Z0-9_$.<>,\\*\\&\\h]*\\))");
 
   private static Supplier<TypeManager.Language> languageSupplier =
       () -> TypeManager.getInstance().getLanguage();
@@ -268,7 +269,8 @@ public class TypeParser {
   }
 
   private static boolean isUnknownType(String typeName) {
-    return typeName.equals(UNKNOWN_TYPE_STRING);
+    return typeName.equals(UNKNOWN_TYPE_STRING)
+        || (languageSupplier.get() == Language.JAVA && typeName.equals("var"));
   }
 
   /**
@@ -809,7 +811,7 @@ public class TypeParser {
       finalType = new IncompleteType();
     } else if (isUnknownType(typeName)) {
       // UnknownType -> no information on how to process this type
-      finalType = new UnknownType(typeName);
+      finalType = new UnknownType(UNKNOWN_TYPE_STRING);
     } else {
       // ObjectType
       // Obtain possible generic List from TypeString

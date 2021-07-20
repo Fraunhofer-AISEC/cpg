@@ -31,9 +31,11 @@ import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType;
 import de.fraunhofer.aisec.cpg.graph.types.ReferenceType;
 import de.fraunhofer.aisec.cpg.graph.types.Type;
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.neo4j.ogm.annotation.Transient;
@@ -64,10 +66,22 @@ public class Expression extends Statement implements HasType {
 
   @Override
   public Type getType() {
-    // just to make sure that we REALLY always return a valid type in case this
-    // somehow gets set to
-    // null
-    return type != null ? type : UnknownType.getUnknownType();
+    Type result;
+    if (TypeManager.isTypeSystemActive()) {
+      // just to make sure that we REALLY always return a valid type in case this somehow gets set
+      // to null
+      result = type != null ? type : UnknownType.getUnknownType();
+    } else {
+      result =
+          TypeManager.getInstance()
+              .getTypeCache()
+              .computeIfAbsent(this, n -> Collections.emptySet())
+              .stream()
+              .findAny()
+              .orElse(UnknownType.getUnknownType());
+    }
+
+    return result;
   }
 
   @Override
@@ -90,8 +104,11 @@ public class Expression extends Statement implements HasType {
 
   @Override
   public void setType(Type type, HasType root) {
-    // TODO Document this method. It is called very often (potentially for each AST
-    // node) and
+    if (!TypeManager.isTypeSystemActive()) {
+      TypeManager.getInstance().cacheType(this, type);
+      return;
+    }
+    // TODO Document this method. It is called very often (potentially for each AST node) and
     // performs less than optimal.
     if (type == null || root == this) {
       return;
@@ -107,6 +124,9 @@ public class Expression extends Statement implements HasType {
         || TypeManager.getInstance().stopPropagation(oldType, type)) {
       return;
     }
+
+    type = type.duplicate();
+    type.setQualifier(this.type.getQualifier().merge(type.getQualifier()));
 
     Set<Type> subTypes = new HashSet<>();
 
@@ -143,11 +163,24 @@ public class Expression extends Statement implements HasType {
 
   @Override
   public Set<Type> getPossibleSubTypes() {
+    if (!TypeManager.isTypeSystemActive()) {
+      return TypeManager.getInstance().getTypeCache().getOrDefault(this, Collections.emptySet());
+    }
     return possibleSubTypes;
   }
 
   @Override
   public void setPossibleSubTypes(Set<Type> possibleSubTypes, HasType root) {
+    possibleSubTypes =
+        possibleSubTypes.stream()
+            .filter(Predicate.not(TypeManager.getInstance()::isUnknown))
+            .collect(Collectors.toSet());
+
+    if (!TypeManager.isTypeSystemActive()) {
+      possibleSubTypes.forEach(t -> TypeManager.getInstance().cacheType(this, t));
+      return;
+    }
+
     if (root == this) {
       return;
     }

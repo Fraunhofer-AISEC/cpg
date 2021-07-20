@@ -492,10 +492,11 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
       CPPASTSimpleDeclaration ctx,
       DeclarationSequence sequence) {
     CPPASTTemplateId templateId = (CPPASTTemplateId) (declSpecifier).getName();
-    Type type = TypeParser.createFrom(templateId.getTemplateName().getRawSignature(), true);
-    assert type instanceof ObjectType;
-    ObjectType objectType = (ObjectType) type;
+    Type type = TypeParser.createFrom(ctx.getRawSignature(), true);
     List<Node> templateParams = new ArrayList<>();
+    assert type.getRoot() instanceof ObjectType;
+    ObjectType objectType = (ObjectType) type.getRoot();
+    objectType.setGenerics(Collections.emptyList());
 
     for (IASTNode templateArgument : templateId.getTemplateArguments()) {
       if (templateArgument instanceof CPPASTTypeId) {
