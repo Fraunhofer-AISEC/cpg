@@ -182,7 +182,7 @@ dependencies {
     // openCypher
     api("org.opencypher:parser-9.0:9.0.20210312")
 
-    api("commons-io:commons-io:2.10.0")
+    api("commons-io:commons-io:2.11.0")
 
     implementation(platform("org.jetbrains.kotlin:kotlin-bom"))
     implementation("org.jetbrains.kotlin:kotlin-stdlib")
