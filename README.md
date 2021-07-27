@@ -162,3 +162,7 @@ An initial publication on the concept of using code property graphs for static a
 [3] https://github.com/ShiftLeftSecurity/codepropertygraph
 
 [4] https://github.com/ShiftLeftSecurity/joern/
+
+Additional extensions of the CPG into the field of Cloud security:
+
+[5] Christian Banse, Immanuel Kunz, Angelika Schneider and Konrad Weiss. Cloud Property Graph: Connecting Cloud Security Assessments with Static Code Analysis. To appear in: IEEE CLOUD 2021 https://conferences.computer.org/cloud/2021/program/
