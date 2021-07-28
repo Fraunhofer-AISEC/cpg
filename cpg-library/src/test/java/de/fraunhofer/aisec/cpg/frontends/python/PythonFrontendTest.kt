@@ -389,13 +389,13 @@ class PythonFrontendTest : BaseTest() {
         assertEquals(recordFoo.fields.size, 4)
         assertEquals(recordFoo.methods.size, 1)
 
-        val varX = recordFoo.fields[0] as? FieldDeclaration
+        val varX = recordFoo.fields[0]
         assertNotNull(varX)
-        val varY = recordFoo.fields[1] as? FieldDeclaration
+        val varY = recordFoo.fields[1]
         assertNotNull(varY)
-        val varZ = recordFoo.fields[2] as? FieldDeclaration
+        val varZ = recordFoo.fields[2]
         assertNotNull(varZ)
-        val varBaz = recordFoo.fields[3] as? FieldDeclaration
+        val varBaz = recordFoo.fields[3]
         assertNotNull(varBaz)
 
         assertEquals(varX.name, "x")
@@ -477,7 +477,7 @@ class PythonFrontendTest : BaseTest() {
         assertEquals(TypeParser.createFrom("Foo", false), recv.type)
 
         assertEquals(1, bar.parameters?.size)
-        val i = bar.parameters?.get(0) as? ParamVariableDeclaration
+        val i = bar.parameters?.get(0)
         assertNotNull(i)
 
         assertEquals("i", i.name)
