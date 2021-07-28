@@ -393,9 +393,9 @@ class PythonFrontendTest : BaseTest() {
         assertNotNull(varX)
         val varY = recordFoo.fields[1] as? FieldDeclaration
         assertNotNull(varY)
-        val varZ = recordFoo.fields[2] as? FieldDeclaration
+        val varZ = recordFoo.fields[3] as? FieldDeclaration
         assertNotNull(varZ)
-        val varBaz = recordFoo.fields[3] as? FieldDeclaration
+        val varBaz = recordFoo.fields[2] as? FieldDeclaration
         assertNotNull(varBaz)
 
         assertEquals(varX.name, "x")
@@ -406,26 +406,25 @@ class PythonFrontendTest : BaseTest() {
         assertNull(varX.initializer)
         assertNotNull(varY.initializer)
         assertNull(varZ.initializer)
-        assertNotNull(varBaz.initializer)
+        assertNull(varBaz.initializer)
 
         val methBar = recordFoo.methods[0]
         assertNotNull(methBar)
         assertEquals(methBar.name, "bar")
 
-        val declareZ =
-            (methBar.body as? CompoundStatement)?.statements?.get(0) as? DeclarationStatement
-        assertNotNull(declareZ)
-        val declareBaz =
-            (methBar.body as? CompoundStatement)?.statements?.get(1) as? DeclarationStatement
-        assertNotNull(declareBaz)
+        val barZ = (methBar.body as? CompoundStatement)?.statements?.get(0) as? MemberExpression
+        assertNotNull(barZ)
+        val barBaz = (methBar.body as? CompoundStatement)?.statements?.get(1) as? BinaryOperator
+        assertNotNull(barBaz)
 
-        val fieldDeclarationZ = declareZ.declarations[0] as? FieldDeclaration
-        val fieldDeclarationBaz = declareBaz.declarations[0] as? FieldDeclaration
-        assertNotNull(fieldDeclarationZ)
-        assertNotNull(fieldDeclarationBaz)
+        assertEquals(barZ.refersTo, varZ)
 
-        assertEquals(fieldDeclarationZ, varZ)
-        assertEquals(fieldDeclarationBaz, varBaz)
+        val lhs = barBaz.lhs as? DeclaredReferenceExpression
+        val rhs = barBaz.rhs as? Literal<*>
+        assertNotNull(lhs)
+        assertNotNull(rhs)
+        assertEquals(barBaz.operatorCode, "=")
+        assertEquals(lhs.refersTo, varBaz)
     }
 
     @Test
@@ -456,7 +455,7 @@ class PythonFrontendTest : BaseTest() {
         assertNotNull(recordFoo)
         assertEquals("Foo", recordFoo.name)
 
-        assertEquals(2, recordFoo.fields.size)
+        assertEquals(1, recordFoo.fields.size)
         val somevar = recordFoo.fields[0]
         assertNotNull(somevar)
         assertEquals("somevar", somevar.name)
@@ -484,11 +483,22 @@ class PythonFrontendTest : BaseTest() {
         assertEquals("i", i.name)
         assertEquals(TypeParser.createFrom("int", false), i.type)
 
-        val declareSomevar =
-            (bar.body as? DeclarationStatement)?.declarations?.get(0) as? FieldDeclaration
-        assertNotNull(declareSomevar)
-        val somevarInitializer = declareSomevar.initializer as? DeclaredReferenceExpression
-        assertEquals(somevarInitializer?.refersTo, i)
+        val barBodyAssign = bar.body as? BinaryOperator
+        assertNotNull(barBodyAssign)
+        val assignLhs = barBodyAssign.lhs as? MemberExpression
+        val assignRhs = barBodyAssign.rhs as? DeclaredReferenceExpression
+        assertNotNull(assignLhs)
+        assertNotNull(assignRhs)
+
+        val lhsRefTo = assignLhs.refersTo as? FieldDeclaration
+        assertNotNull(lhsRefTo)
+        assertEquals(lhsRefTo, somevar)
+
+        val rhsRefTo = assignRhs.refersTo as? ParamVariableDeclaration
+        assertNotNull(rhsRefTo)
+        assertEquals(rhsRefTo, i)
+
+        assertEquals(barBodyAssign.operatorCode, "=")
 
         val fooMemCall = foo.body as? MemberCallExpression
         assertNotNull(fooMemCall)
@@ -676,125 +686,5 @@ class PythonFrontendTest : BaseTest() {
         )
 
         // TODO last line "count(c1())"
-    }
-
-    @Test
-    fun testLoopsA() {
-        val topLevel = Path.of("src", "test", "resources", "python")
-        val tu =
-            TestUtils.analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("loops_a.py").toFile()),
-                topLevel,
-                true
-            ) {
-                it.registerLanguage(
-                    PythonLanguageFrontend::class.java,
-                    PythonLanguageFrontend.PY_EXTENSIONS
-                )
-            }
-
-        assertNotNull(tu)
-
-        val p =
-            tu.getDeclarationsByName("loops_a", NamespaceDeclaration::class.java).iterator().next()
-
-        val foo = p.getDeclarationsByName("foo", FunctionDeclaration::class.java).iterator().next()
-
-        assertNotNull(foo)
-
-        val loop = foo.body as? ForEachStatement
-        assertNotNull(loop)
-
-        val loopVariable = loop.variable as? VariableDeclaration
-        assertNotNull(loopVariable)
-        assertEquals(loopVariable.name, "row")
-
-        val loopIterable = loop.iterable as? DeclaredReferenceExpression
-        assertNotNull(loopIterable)
-        assertEquals(loopIterable.name, "rows")
-
-        val loopStmt = loop.statement as? MemberCallExpression
-        assertNotNull(loopStmt)
-        assertEquals((loopStmt.base as? DeclaredReferenceExpression)?.name, "some_list")
-        assertEquals((loopStmt.member as? DeclaredReferenceExpression)?.name, "append")
-        assertEquals(
-            ((loopStmt.arguments.first() as? ArraySubscriptionExpression)?.arrayExpression as?
-                    DeclaredReferenceExpression)
-                ?.name,
-            "row"
-        )
-        assertEquals(
-            (((loopStmt.arguments.first() as? ArraySubscriptionExpression)?.subscriptExpression as?
-                        Literal<*>)
-                    ?.value as?
-                    Long)
-                ?.toInt(),
-            0
-        )
-    }
-
-    @Test
-    fun testLoopsB() {
-        val topLevel = Path.of("src", "test", "resources", "python")
-        val tu =
-            TestUtils.analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("loops_b.py").toFile()),
-                topLevel,
-                true
-            ) {
-                it.registerLanguage(
-                    PythonLanguageFrontend::class.java,
-                    PythonLanguageFrontend.PY_EXTENSIONS
-                )
-            }
-
-        assertNotNull(tu)
-
-        val p =
-            tu.getDeclarationsByName("loops_b", NamespaceDeclaration::class.java).iterator().next()
-
-        val foo = p.getDeclarationsByName("foo", FunctionDeclaration::class.java).iterator().next()
-
-        assertNotNull(foo)
-
-        val loop = foo.body as? ForEachStatement
-        assertNotNull(loop)
-
-        val loopVariable = loop.variable as? VariableDeclaration
-        assertNotNull(loopVariable)
-        assertEquals(loopVariable.name, "item")
-
-        val loopIterable = loop.iterable as? DeclaredReferenceExpression
-        assertNotNull(loopIterable)
-        assertEquals(loopIterable.name, "items")
-
-        val loopStmt = loop.statement as? BinaryOperator
-        assertNotNull(loopStmt)
-        assertEquals(loopStmt.operatorCode, "=")
-
-        val lhs = loopStmt.lhs as? ArraySubscriptionExpression
-        val rhs = loopStmt.rhs as? MemberCallExpression
-        assertNotNull(lhs)
-        assertNotNull(rhs)
-
-        assertEquals((lhs.arrayExpression as? DeclaredReferenceExpression)?.refersTo, loopVariable)
-        assertEquals(((lhs.subscriptExpression as? Literal<*>)?.value as? String), "a")
-
-        val base = rhs.base as? ArraySubscriptionExpression
-        assertNotNull(base)
-        assertEquals((base.arrayExpression as? DeclaredReferenceExpression)?.refersTo, loopVariable)
-        assertEquals(((base.subscriptExpression as? Literal<*>)?.value as? String), "a")
-
-        val member = rhs.member as? DeclaredReferenceExpression
-        assertNotNull(member)
-        assertEquals(member.name, "replace")
-
-        val arg1 = rhs.arguments[0] as? DeclaredReferenceExpression
-        val arg2 = rhs.arguments[1] as? CallExpression
-        assertNotNull(arg1)
-        assertNotNull(arg2)
-        assertEquals(arg1.name, "a")
-        assertEquals(arg2.name, "bar")
-        assertEquals((arg2.arguments[0] as? DeclaredReferenceExpression)?.name, "a")
     }
 }

@@ -160,6 +160,12 @@ class PythonASTToCPG(ast.NodeVisitor):
     
     def is_field_declaration(self, target):
         return target.java_name == "de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration"
+    
+    def is_member_expression(self, target):
+        return target.java_name == "de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression"
+    
+    def is_declaration(self, target):
+        return target.java_name.startswith('de.fraunhofer.aisec.cpg.graph.declarations.')
 
     ### LITERALS ###
     def visit_Constant(self, node):
@@ -266,7 +272,7 @@ class PythonASTToCPG(ast.NodeVisitor):
         ref = DeclaredReferenceExpression()
         self.add_loc_info(node, ref)
         ref.setName(node.id)
-        
+
         resolved_ref = self.scopemanager.resolve(ref)
         self.log_with_loc("Resolving node yields: %s" % (resolved_ref))
 
@@ -281,6 +287,7 @@ class PythonASTToCPG(ast.NodeVisitor):
             self.add_loc_info(node, v)
             v.setName(node.id)
             self.scopemanager.addDeclaration(v)
+            self.log_with_loc("Returning a declaration: %s" % (v))
             return v
         else:
             self.log_with_loc("Returning a DeclaredReferenceExpression: %s" %
@@ -608,10 +615,12 @@ class PythonASTToCPG(ast.NodeVisitor):
         #
         # We parse node.func regularly using a visitor and decide what it is
         ref = self.visit(node.func)
+        self.log_with_loc("Evaluated ref as: %s" % (ref))
 
         name = ref.getName()
 
-        if ref.java_name == "de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression":
+        if self.is_member_expression(ref):
+            self.log_with_loc("Visiting a MemberExpression")
             base_name = ref.getBase().getName()
 
             fqn = "%s.%s" % (base_name, name)
@@ -662,6 +671,7 @@ class PythonASTToCPG(ast.NodeVisitor):
                 # TODO: keywords without args, aka **arg
                 self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
 
+        self.log_with_loc("Returning call as: %s" % (call))
         return call
 
     def visit_keyword(self, node):
@@ -682,26 +692,29 @@ class PythonASTToCPG(ast.NodeVisitor):
 
     def visit_Attribute(self, node):
         self.log_with_loc(ast.dump(node))
+        return self.handle_attribute_simple_case(node)
 
-        base = self.visit(node.value)
-        if self.scopemanager.isInRecord():
+        if self.scopemanager.isInRecord() and self.scopemanager.isInFunction():
+            # We first distinguish between class level and function level code.
+            self.log_with_loc("Visiting an attribute inside a class function.")
+
             methodreceiver = self.scopemanager.getCurrentFunction().getReceiver()
-
+            base = self.visit(node.value)
             if self.is_declared_reference(base) and base.getName() == methodreceiver.getName():
                 # this might be a new class field
                 d = DeclaredReferenceExpression()
                 d.setName(node.attr)
-                resolved_ref = self.scopemanager.resolveInRecord(self.scopemanager.getCurrentRecord(), d)
-                if resolved_ref == None:
-                    self.log_with_loc("Found a new class field: %s" % (node.attr))
-                    v = FieldDeclaration()
-                    self.add_loc_info(node, v)
-                    v.setName(node.attr)
-                    self.scopemanager.getCurrentRecord().addDeclaration(v) # Add to the class and not to current function
-                    return v
-                else:
-                    self.log_with_loc("Found a known node: %s" % (resolved_ref))
+                self.add_loc_info(node, d)
+                return d
+        else:
+            return self.handle_attribute_simple_case(node)
 
+    def handle_attribute_simple_case(self, node):
+        self.log_with_loc(ast.dump(node))
+        # Simply create a MemberExpression with resolved base and node.attr. No
+        # FiledDeclaration etc...
+
+        base = self.visit(node.value)
         mem = MemberExpression()
         self.add_loc_info(node, mem)
 
@@ -709,6 +722,7 @@ class PythonASTToCPG(ast.NodeVisitor):
         mem.setBase(base)
         mem.setOperatorCode(node.attr)
 
+        self.log_with_loc("Returning a MemberExpression: %s" % (mem))
         return mem
 
     def visit_NamedExpr(self, node):
@@ -785,7 +799,7 @@ class PythonASTToCPG(ast.NodeVisitor):
         elif self.is_field_declaration(lhs):
             lhs.setInitializer(rhs)
             return lhs
-        elif self.is_declared_reference(lhs):
+        elif self.is_declared_reference(lhs) or self.is_member_expression(lhs):
             binop = BinaryOperator()
             self.add_loc_info(node, binop)
             binop.setOperatorCode("=")
@@ -918,7 +932,7 @@ class PythonASTToCPG(ast.NodeVisitor):
         for b in node_list:
             s = self.visit(b)
 
-            if s is not None and s.java_name.startswith('de.fraunhofer.aisec.cpg.graph.declarations.'):
+            if s is not None and self.is_declaration(s):
                 # wrap the statement
                 d = DeclarationStatement()
                 self.add_loc_info(node, d)
@@ -941,10 +955,12 @@ class PythonASTToCPG(ast.NodeVisitor):
         elif self.is_variable_declaration(target):
             stmt.setVariable(target)
         else:
+            self.log_with_loc("Parsed target as: %s" % (target))
             self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel = "ERROR")
 
-
-        stmt.setIterable(self.visit(node.iter))
+        it = self.visit(node.iter)
+        self.log_with_loc("Parsed iterabele as: %s" % (it))
+        stmt.setIterable(it)
         body = self.make_compound_statement(node, node.body)
         stmt.setStatement(body)
 
