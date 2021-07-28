@@ -393,9 +393,9 @@ class PythonFrontendTest : BaseTest() {
         assertNotNull(varX)
         val varY = recordFoo.fields[1] as? FieldDeclaration
         assertNotNull(varY)
-        val varZ = recordFoo.fields[3] as? FieldDeclaration
+        val varZ = recordFoo.fields[2] as? FieldDeclaration
         assertNotNull(varZ)
-        val varBaz = recordFoo.fields[2] as? FieldDeclaration
+        val varBaz = recordFoo.fields[3] as? FieldDeclaration
         assertNotNull(varBaz)
 
         assertEquals(varX.name, "x")
