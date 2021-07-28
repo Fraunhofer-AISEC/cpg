@@ -167,6 +167,12 @@ class PythonASTToCPG(ast.NodeVisitor):
     def is_declaration(self, target):
         return target.java_name.startswith('de.fraunhofer.aisec.cpg.graph.declarations.')
 
+    def is_method_declaration(self, target):
+        return target.java_name == "de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration"
+
+    def is_ctor_declaration(self, target):
+        return target.java_name == "de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDeclaration"
+
     ### LITERALS ###
     def visit_Constant(self, node):
         self.log_with_loc(ast.dump(node))
@@ -918,7 +924,7 @@ class PythonASTToCPG(ast.NodeVisitor):
         if len(node_list) == 1:
             s = self.visit(node_list[0])
             # TODO move to a new function. it repeats
-            if s is not None and s.java_name.startswith('de.fraunhofer.aisec.cpg.graph.declarations.'):
+            if s is not None and self.is_declaration(s):
                 d = DeclarationStatement()
                 self.add_loc_info(node, d)
                 d.setSingleDeclaration(s)
@@ -1318,9 +1324,9 @@ class PythonASTToCPG(ast.NodeVisitor):
         return
 
     def isMethodOrCtor(self, f):
-        if f.java_name == "de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration":
+        if self.is_method_declaration(f):
             return True
-        elif f.java_name == "de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDeclaration":
+        elif self.is_ctor_declaration(f):
             return True
         else:
             return False
