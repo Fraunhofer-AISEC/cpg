@@ -440,6 +440,36 @@ func (this *GoLanguageFrontend) handleBlockStmt(fset *token.FileSet, blockStmt *
 	return c
 }
 
+func (this *GoLanguageFrontend) handleForStmt(fset *token.FileSet, forStmt *ast.ForStmt) *cpg.ForStatement {
+	this.LogDebug("Handling for statement: %+v", *forStmt)
+
+	f := cpg.NewForStatement(fset, forStmt)
+
+	if statement := this.handleStmt(fset, forStmt.Init); statement != nil {
+		f.SetInitializerStatement(statement)
+	}
+
+	if condition := this.handleExpr(fset, forStmt.Cond); condition != nil {
+		f.SetCondition(condition)
+	}
+
+	var scope = this.GetScopeManager()
+
+	scope.EnterScope((*cpg.Node)(f))
+
+	if body := this.handleStmt(fset, forStmt.Body); body != nil {
+		f.SetStatement(body)
+	}
+
+	if iter := this.handleStmt(fset, forStmt.Post); iter != nil {
+		f.SetIterationStatement(iter)
+	}
+
+	scope.LeaveScope((*cpg.Node)(f))
+
+	return f
+}
+
 func (this *GoLanguageFrontend) handleReturnStmt(fset *token.FileSet, returnStmt *ast.ReturnStmt) *cpg.ReturnStatement {
 	this.LogDebug("Handling return statement: %+v", *returnStmt)
 
@@ -458,6 +488,26 @@ func (this *GoLanguageFrontend) handleReturnStmt(fset *token.FileSet, returnStmt
 	}
 
 	return r
+}
+
+func (this *GoLanguageFrontend) handleIncDecStmt(fset *token.FileSet, incDecStmt *ast.IncDecStmt) *cpg.UnaryOperator {
+	this.LogDebug("Handling decimal increment statement: %+v", *incDecStmt)
+
+	u := cpg.NewUnaryOperator(fset, incDecStmt)
+
+	if incDecStmt.Tok == token.INC {
+		u.SetOperatorCode("++")
+	}
+
+	if incDecStmt.Tok == token.DEC {
+		u.SetOperatorCode("--")
+	}
+
+	if input := this.handleExpr(fset, incDecStmt.X); input != nil {
+		u.SetInput(input)
+	}
+
+	return u
 }
 
 func (this *GoLanguageFrontend) handleStmt(fset *token.FileSet, stmt ast.Stmt) *cpg.Statement {
@@ -480,8 +530,12 @@ func (this *GoLanguageFrontend) handleStmt(fset *token.FileSet, stmt ast.Stmt) *
 		return (*cpg.Statement)(this.handleCaseClause(fset, v))
 	case *ast.BlockStmt:
 		return (*cpg.Statement)(this.handleBlockStmt(fset, v))
+	case *ast.ForStmt:
+		return (*cpg.Statement)(this.handleForStmt(fset, v))
 	case *ast.ReturnStmt:
 		return (*cpg.Statement)(this.handleReturnStmt(fset, v))
+	case *ast.IncDecStmt:
+		return (*cpg.Statement)(this.handleIncDecStmt(fset, v))
 	default:
 		this.LogError("Not parsing statement of type %T yet: %+v", v, v)
 	}

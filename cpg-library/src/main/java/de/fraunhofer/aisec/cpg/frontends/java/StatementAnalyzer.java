@@ -302,9 +302,9 @@ public class StatementAnalyzer
         iterationExprList.setLocation(ofExprList);
         iterationExprList.setCode(updateCode);
       }
-      statement.setIterationExpression(iterationExprList);
+      statement.setIterationStatement(iterationExprList);
     } else if (forStmt.getUpdate().size() == 1) {
-      statement.setIterationExpression(
+      statement.setIterationStatement(
           (Expression) lang.getExpressionHandler().handle(forStmt.getUpdate().get(0)));
     }
 

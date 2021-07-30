@@ -648,4 +648,41 @@ class GoLanguageFrontendTest : BaseTest() {
         assertNotNull(base)
         assertEquals(c, base.refersTo)
     }
+
+    @Test
+    fun testFor() {
+        val topLevel = Path.of("src", "test", "resources", "golang")
+        val tus =
+            TestUtils.analyze(
+                listOf(
+                    topLevel.resolve("for.go").toFile(),
+                ),
+                topLevel,
+                true
+            ) {
+                it.registerLanguage(
+                    GoLanguageFrontend::class.java,
+                    GoLanguageFrontend.GOLANG_EXTENSIONS
+                )
+            }
+
+        assertNotNull(tus)
+
+        val tu = tus.first()
+
+        val p = tu.getDeclarationsByName("p", NamespaceDeclaration::class.java).iterator().next()
+
+        val main =
+            p.getDeclarationsByName("main", FunctionDeclaration::class.java).iterator().next()
+
+        assertNotNull(main)
+
+        val f = main.getBodyStatementAs(0, ForStatement::class.java)
+
+        assertNotNull(f)
+        assertTrue(f.condition is BinaryOperator)
+        assertTrue(f.statement is CompoundStatement)
+        assertTrue(f.initializerStatement is DeclarationStatement)
+        assertTrue(f.iterationStatement is UnaryOperator)
+    }
 }
