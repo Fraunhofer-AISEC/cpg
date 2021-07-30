@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.frontends.cpp.CXXLanguageFrontend;
 import de.fraunhofer.aisec.cpg.frontends.golang.GoLanguageFrontend;
 import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguageFrontend;
 import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguageFrontend;
+import de.fraunhofer.aisec.cpg.frontends.typescript.TypeScriptLanguageFrontend;
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration;
 import de.fraunhofer.aisec.cpg.graph.declarations.TemplateDeclaration;
 import de.fraunhofer.aisec.cpg.graph.declarations.TypedefDeclaration;
@@ -66,6 +67,7 @@ public class TypeManager {
     CXX,
     GO,
     PYTHON,
+    TYPESCRIPT,
     UNKNOWN
   }
 
@@ -509,6 +511,8 @@ public class TypeManager {
       return Language.GO;
     } else if (frontend instanceof PythonLanguageFrontend) {
       return Language.PYTHON;
+    } else if (frontend instanceof TypeScriptLanguageFrontend) {
+      return Language.TYPESCRIPT;
     }
 
     log.error("Unknown language (frontend: {})", frontend.getClass().getSimpleName());
