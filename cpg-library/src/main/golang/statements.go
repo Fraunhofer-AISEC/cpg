@@ -167,6 +167,10 @@ func (m *IfStatement) SetCondition(e *Expression) {
 	(*jnigi.ObjectRef)(m).SetField(env, "condition", (*jnigi.ObjectRef)(e).Cast("de/fraunhofer/aisec/cpg/graph/statements/expressions/Expression"))
 }
 
+func (i *IfStatement) SetInitializerStatement(s *Statement) {
+	(*jnigi.ObjectRef)(i).SetField(env, "initializerStatement", (*jnigi.ObjectRef)(s).Cast("de/fraunhofer/aisec/cpg/graph/statements/Statement"))
+}
+
 func (s *SwitchStatement) SetCondition(e *Expression) {
 	(*jnigi.ObjectRef)(s).SetField(env, "selector", (*jnigi.ObjectRef)(e).Cast("de/fraunhofer/aisec/cpg/graph/statements/expressions/Expression"))
 }

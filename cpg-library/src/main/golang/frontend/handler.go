@@ -638,9 +638,12 @@ func (this *GoLanguageFrontend) handleIfStmt(fset *token.FileSet, ifStmt *ast.If
 
 	var scope = this.GetScopeManager()
 
-	// TODO: initializer
-
 	scope.EnterScope((*cpg.Node)(stmt))
+
+	init := this.handleStmt(fset, ifStmt.Init)
+	if init != nil {
+		stmt.SetInitializerStatement(init)
+	}
 
 	cond := this.handleExpr(fset, ifStmt.Cond)
 	if cond != nil {
