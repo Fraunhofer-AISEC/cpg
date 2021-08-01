@@ -30,10 +30,14 @@ import (
 	"fmt"
 	"go/ast"
 	"go/token"
+	"io/ioutil"
 	"log"
+	"os"
+	"path"
 	"strconv"
 	"strings"
 
+	"golang.org/x/mod/modfile"
 	"tekao.net/jnigi"
 )
 
@@ -46,6 +50,36 @@ func getImportName(spec *ast.ImportSpec) string {
 	var paths = strings.Split(path, "/")
 
 	return paths[len(paths)-1]
+}
+
+func (frontend *GoLanguageFrontend) ParseModule(topLevel string) (exists bool, err error) {
+	frontend.LogInfo("Looking for a go.mod file in %s", topLevel)
+
+	mod := path.Join(topLevel, "go.mod")
+
+	if _, err := os.Stat(mod); err != nil {
+		if os.IsNotExist(err) {
+			frontend.LogInfo("%s does not exist", mod)
+
+			return false, nil
+		}
+	}
+
+	b, err := ioutil.ReadFile(mod)
+	if err != nil {
+		return true, fmt.Errorf("could not read go.mod: %w", err)
+	}
+
+	module, err := modfile.Parse(mod, b, nil)
+	if err != nil {
+		return true, fmt.Errorf("could not parse mod file: %w", err)
+	}
+
+	frontend.Module = module
+
+	frontend.LogInfo("Go application has module support with path %s", module.Module.Mod.Path)
+
+	return true, nil
 }
 
 func (this *GoLanguageFrontend) HandleFile(fset *token.FileSet, file *ast.File, path string) (tu *cpg.TranslationUnitDeclaration, err error) {

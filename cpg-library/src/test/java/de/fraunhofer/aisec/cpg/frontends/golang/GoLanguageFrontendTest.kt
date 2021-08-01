@@ -685,4 +685,26 @@ class GoLanguageFrontendTest : BaseTest() {
         assertTrue(f.initializerStatement is DeclarationStatement)
         assertTrue(f.iterationStatement is UnaryOperator)
     }
+
+    @Test
+    fun testModules() {
+        val topLevel = Path.of("src", "test", "resources", "golang-modules")
+        val tus =
+            TestUtils.analyze(
+                listOf(
+                    topLevel.resolve("awesome.go").toFile(),
+                    topLevel.resolve("cmd/awesome/main.go").toFile(),
+                    topLevel.resolve("util/stuff.go").toFile(),
+                ),
+                topLevel,
+                true
+            ) {
+                it.registerLanguage(
+                    GoLanguageFrontend::class.java,
+                    GoLanguageFrontend.GOLANG_EXTENSIONS
+                )
+            }
+
+        assertNotNull(tus)
+    }
 }
