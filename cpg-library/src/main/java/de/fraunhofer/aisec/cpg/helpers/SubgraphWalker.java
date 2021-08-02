@@ -205,8 +205,9 @@ public class SubgraphWalker {
     walker.registerOnScopeExit(
         n -> {
           if (n instanceof HasType) {
+            HasType typeNode = (HasType) n;
             typeCache
-                .getOrDefault(n, Collections.emptySet())
+                .getOrDefault(typeNode, Collections.emptySet())
                 .forEach(
                     t -> {
                       t = TypeManager.getInstance().resolvePossibleTypedef(t);
