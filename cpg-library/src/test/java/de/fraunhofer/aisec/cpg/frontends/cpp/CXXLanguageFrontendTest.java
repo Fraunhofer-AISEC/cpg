@@ -963,19 +963,19 @@ class CXXLanguageFrontendTest extends BaseTest {
         (VariableDeclaration)
             ((DeclarationStatement) statement.getStatements().get(6)).getSingleDeclaration();
 
-    // type should be Integer
-    assertEquals(TypeParser.createFrom("Integer", true), m.getType());
+    // type should be Integer*
+    assertEquals(TypeParser.createFrom("Integer*", true), m.getType());
 
     // initializer should be a new expression
     NewExpression newExpression = (NewExpression) m.getInitializer();
 
-    // type of the new expression should also be Integer
-    assertEquals(TypeParser.createFrom("Integer", true), newExpression.getType());
+    // type of the new expression should also be Integer*
+    assertEquals(TypeParser.createFrom("Integer*", true), newExpression.getType());
 
     // initializer should be a construct expression
     constructExpression = (ConstructExpression) newExpression.getInitializer();
 
-    // type of the construct expression should also be Integer
+    // type of the construct expression should be Integer
     assertEquals(TypeParser.createFrom("Integer", true), constructExpression.getType());
 
     // argument should be named k and of type m
