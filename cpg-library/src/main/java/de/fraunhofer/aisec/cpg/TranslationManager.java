@@ -376,13 +376,11 @@ public class TranslationManager {
 
   @Nullable
   private Class<? extends LanguageFrontend> getFrontendClass(String extension) {
-    var clazz =
-        this.config.getFrontends().entrySet().stream()
-            .filter(entry -> entry.getValue().contains(extension))
-            .map(Entry::getKey)
-            .findAny()
-            .orElse(null);
-    return clazz;
+    return this.config.getFrontends().entrySet().stream()
+        .filter(entry -> entry.getValue().contains(extension))
+        .map(Entry::getKey)
+        .findAny()
+        .orElse(null);
   }
 
   /**

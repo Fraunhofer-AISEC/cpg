@@ -1176,10 +1176,6 @@ public class CallResolver extends Pass {
   }
 
   private void resolveConstructExpression(ConstructExpression constructExpression) {
-    /*List<Type> signature = constructExpression.getSignature();
-    String typeName = constructExpression.getType().getRoot().getTypeName();
-    RecordDeclaration record = recordMap.get(typeName);
-    constructExpression.setInstantiates(record);*/
     String typeName = constructExpression.getType().getTypeName();
     RecordDeclaration recordDeclaration = recordMap.get(typeName);
     constructExpression.setInstantiates(recordDeclaration);

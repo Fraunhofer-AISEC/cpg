@@ -206,7 +206,7 @@ public class SubgraphWalker {
         n -> {
           if (n instanceof HasType) {
             typeCache
-                .getOrDefault((HasType) n, Collections.emptySet())
+                .getOrDefault(n, Collections.emptySet())
                 .forEach(
                     t -> {
                       t = TypeManager.getInstance().resolvePossibleTypedef(t);

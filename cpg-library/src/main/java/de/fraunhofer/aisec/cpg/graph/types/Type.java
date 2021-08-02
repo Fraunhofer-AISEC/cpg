@@ -208,10 +208,10 @@ public abstract class Type extends Node {
 
     public Qualifier merge(Qualifier other) {
       return new Qualifier(
-          this.isConst | other.isConst,
-          this.isVolatile | other.isVolatile,
-          this.isRestrict | other.isRestrict,
-          this.isAtomic | other.isAtomic);
+          this.isConst || other.isConst,
+          this.isVolatile || other.isVolatile,
+          this.isRestrict || other.isRestrict,
+          this.isAtomic || other.isAtomic);
     }
 
     @Override

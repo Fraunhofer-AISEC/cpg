@@ -134,6 +134,7 @@ public class NewExpression extends Expression implements HasInitializer, TypeLis
     setPossibleSubTypes(subTypes, root);
   }
 
+  @Override
   public String toString() {
     return new ToStringBuilder(this, Node.TO_STRING_STYLE)
         .appendSuper(super.toString())
