@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.ExperimentalPython
 import de.fraunhofer.aisec.cpg.TestUtils
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
+import de.fraunhofer.aisec.cpg.graph.get
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
@@ -389,24 +390,24 @@ class PythonFrontendTest : BaseTest() {
         assertEquals(recordFoo.fields.size, 4)
         assertEquals(recordFoo.methods.size, 1)
 
-        val varX = recordFoo.fields[0]
-        assertNotNull(varX)
-        val varY = recordFoo.fields[1]
-        assertNotNull(varY)
-        val varZ = recordFoo.fields[2]
-        assertNotNull(varZ)
-        val varBaz = recordFoo.fields[3]
-        assertNotNull(varBaz)
+        val fieldX = recordFoo.getField("x")
+        assertNotNull(fieldX)
+        val fieldY = recordFoo.getField("y")
+        assertNotNull(fieldY)
+        val fieldZ = recordFoo.getField("z")
+        assertNotNull(fieldZ)
+        val fieldBaz = recordFoo.getField("baz")
+        assertNotNull(fieldBaz)
 
-        assertEquals(varX.name, "x")
-        assertEquals(varY.name, "y")
-        assertEquals(varZ.name, "z")
-        assertEquals(varBaz.name, "baz")
+        assertEquals(fieldX.name, "x")
+        assertEquals(fieldY.name, "y")
+        assertEquals(fieldZ.name, "z")
+        assertEquals(fieldBaz.name, "baz")
 
-        assertNull(varX.initializer)
-        assertNotNull(varY.initializer)
-        assertNull(varZ.initializer)
-        assertNull(varBaz.initializer)
+        assertNull(fieldX.initializer)
+        assertNotNull(fieldY.initializer)
+        assertNull(fieldZ.initializer)
+        assertNull(fieldBaz.initializer)
 
         val methBar = recordFoo.methods[0]
         assertNotNull(methBar)
@@ -417,14 +418,14 @@ class PythonFrontendTest : BaseTest() {
         val barBaz = (methBar.body as? CompoundStatement)?.statements?.get(1) as? BinaryOperator
         assertNotNull(barBaz)
 
-        assertEquals(barZ.refersTo, varZ)
+        assertEquals(barZ.refersTo, fieldZ)
 
         val lhs = barBaz.lhs as? DeclaredReferenceExpression
         val rhs = barBaz.rhs as? Literal<*>
         assertNotNull(lhs)
         assertNotNull(rhs)
         assertEquals(barBaz.operatorCode, "=")
-        assertEquals(lhs.refersTo, varBaz)
+        assertEquals(lhs.refersTo, fieldBaz)
     }
 
     @Test
@@ -686,5 +687,84 @@ class PythonFrontendTest : BaseTest() {
         )
 
         // TODO last line "count(c1())"
+    }
+
+    @Test
+    fun testVarsAndFields() {
+        val topLevel = Path.of("src", "test", "resources", "python")
+        val tu =
+            TestUtils.analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("vars.py").toFile()),
+                topLevel,
+                true
+            ) {
+                it.registerLanguage(
+                    PythonLanguageFrontend::class.java,
+                    PythonLanguageFrontend.PY_EXTENSIONS
+                )
+            }
+
+        assertNotNull(tu)
+
+        val p = tu.getDeclarationsByName("vars", NamespaceDeclaration::class.java).iterator().next()
+        assertNotNull(p)
+
+        val clsFoo = p.getDeclarationsByName("Foo", RecordDeclaration::class.java).iterator().next()
+        assertNotNull(clsFoo)
+
+        val methBar = clsFoo.methods[0]
+        assertNotNull(methBar)
+
+        // val stmtsOutsideCls TODO
+        val classFieldNoInitializer = clsFoo.getField("classFieldNoInitializer")
+        assertNotNull(classFieldNoInitializer)
+        val classFieldWithInit = clsFoo.getField("classFieldWithInit")
+        assertNotNull(classFieldWithInit)
+        val classFieldDeclaredInFunction = clsFoo.getField("classFieldDeclaredInFunction")
+        assertNotNull(classFieldDeclaredInFunction)
+        assertEquals(3, clsFoo.fields.size)
+
+        assertNull(classFieldNoInitializer.initializer)
+        assertNotNull(classFieldWithInit)
+
+        // classFieldNoInitializer = classFieldWithInit
+        val assignClsFieldOutsideFunc = clsFoo.statements[2] as? BinaryOperator
+        assertNotNull(assignClsFieldOutsideFunc)
+        assertEquals(
+            (assignClsFieldOutsideFunc.lhs as? DeclaredReferenceExpression)?.refersTo,
+            classFieldNoInitializer
+        )
+        assertEquals(
+            (assignClsFieldOutsideFunc.rhs as? DeclaredReferenceExpression)?.refersTo,
+            classFieldWithInit
+        )
+        assertEquals(assignClsFieldOutsideFunc.operatorCode, "=")
+
+        val barBody = methBar.body as? CompoundStatement
+        assertNotNull(barBody)
+
+        val barStmt0 = barBody.statements[0] as? BinaryOperator
+        assertNotNull(barStmt0)
+        assertEquals((barStmt0.lhs as? MemberExpression)?.refersTo, classFieldDeclaredInFunction)
+
+        val barStmt1 = barBody.statements[1] as? BinaryOperator
+        assertNotNull(barStmt1)
+        assertEquals((barStmt1.lhs as? MemberExpression)?.refersTo, classFieldNoInitializer)
+
+        val barStmt2 = barBody.statements[2] as? BinaryOperator
+        assertNotNull(barStmt2)
+        assertEquals((barStmt2.lhs as? MemberExpression)?.refersTo, classFieldWithInit)
+
+        val barStmt3 = barBody.statements[3] as? DeclarationStatement
+        assertNotNull(barStmt3)
+        assertNotNull((barStmt3.declarations[0] as? VariableDeclaration)?.initializer)
+
+        val barStmt4 = barBody.statements[4] as? DeclarationStatement
+        assertNotNull(barStmt4)
+        assertNotNull((barStmt4.declarations[0] as? VariableDeclaration)?.initializer)
+
+        val barStmt5 = barBody.statements[5] as? DeclarationStatement
+        assertNotNull(barStmt5)
+        assertNotNull((barStmt5.declarations[0] as? VariableDeclaration)?.initializer)
     }
 }

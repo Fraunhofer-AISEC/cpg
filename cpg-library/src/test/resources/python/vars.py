@@ -1,5 +1,17 @@
 class Foo:
+    classFieldNoInitializer
+    classFieldWithInit = 123
+    classFieldNoInitializer = classFieldWithInit
+
     def bar(self):
-        self.foo = 123
-        self.foo = 456
-        self.foo = 789
+        self.classFieldDeclaredInFunction = 456
+        self.classFieldNoInitializer = 789
+        self.classFieldWithInit = 12
+        classFieldNoInitializer = "shadowed"
+        classFieldWithInit = "shadowed"
+        classFieldDeclaredInFunction = "shadowed"
+
+foo = Foo()
+foo.classFieldNoInitializer = 345
+foo.classFieldWithInit = 678
+foo.self.classFieldDeclaredInFunction = 901

@@ -283,13 +283,8 @@ class PythonASTToCPG(ast.NodeVisitor):
         self.log_with_loc("Resolving node yields: %s" % (resolved_ref))
 
         if resolved_ref is None:
-            if self.scopemanager.isInRecord():
-                self.log_with_loc("Creating a new FieldDeclaration")
-                # TODO is this always correct?
-                v = FieldDeclaration()
-            else:
-                self.log_with_loc("Creating a new VariableDeclaration")
-                v = VariableDeclaration()
+            self.log_with_loc("Creating a new VariableDeclaration")
+            v = VariableDeclaration()
             self.add_loc_info(node, v)
             v.setName(node.id)
             self.scopemanager.addDeclaration(v)
