@@ -104,15 +104,17 @@ open class Node : IVisitable<Node>, Persistable {
     var typedefs: MutableSet<TypedefDeclaration> = HashSet()
 
     /**
-     * If a node is marked as being a dummy, it means that it was created artificially and does not
-     * necessarily have a real counterpart in the actual source code
+     * If a node is marked as being inferred, it means that it was created artificially and does not
+     * necessarily have a real counterpart in the scanned source code. However, the nodes
+     * represented should have been part of parser output and represents missing code that is
+     * inferred by the cpg construction, e.g. Missed functions, records, files etc.
      */
     @get:Deprecated("You should rather use {@link #isImplicit()} ")
     @set:Deprecated(
         """You should rather use {@link #setImplicit(boolean)}, if it is an implicit
         expression"""
     )
-    var isDummy = false
+    var isInferred = false
 
     /**
      * Specifies, whether this node is implicit, i.e. is not really existing in source code but only
