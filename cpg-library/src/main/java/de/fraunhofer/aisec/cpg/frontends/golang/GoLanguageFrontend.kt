@@ -33,7 +33,6 @@ import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.io.File
-import java.nio.file.Paths
 import kotlin.Throws
 
 @ExperimentalGolang
