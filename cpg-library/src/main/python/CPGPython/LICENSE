@@ -22,14 +22,3 @@
 #                   \$$$$$   |$$ |      \$$$$$   |
 #                    \______/ \__|       \______/
 #
-from CPGPython import PythonASTToCPG
-
-def parse_code(code, filename, frontend):
-    try:
-        walker = PythonASTToCPG(filename, frontend, code)
-        walker.walk()
-
-        return walker.tud
-    except Exception as e:
-        frontend.log.error("Buidling the CPG failed with exception: %s" % (e))
-        raise e
