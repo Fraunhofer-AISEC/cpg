@@ -29,10 +29,8 @@ import static de.fraunhofer.aisec.cpg.frontends.cpp.CXXLanguageFrontend.CXX_EXTE
 
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
 import de.fraunhofer.aisec.cpg.frontends.TranslationException;
-import de.fraunhofer.aisec.cpg.frontends.golang.GoLanguageFrontend;
 import de.fraunhofer.aisec.cpg.graph.TypeManager;
 import de.fraunhofer.aisec.cpg.helpers.Benchmark;
-import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker;
 import de.fraunhofer.aisec.cpg.helpers.Util;
 import de.fraunhofer.aisec.cpg.passes.Pass;
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager;
@@ -42,17 +40,19 @@ import java.io.PrintWriter;
 import java.lang.reflect.InvocationTargetException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.*;
-import java.util.Map.Entry;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
-import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -147,13 +147,14 @@ public class TranslationManager {
    * @throws TranslationException if the language front-end runs into an error and <code>failOnError
    * </code> is <code>true</code>.
    */
-  private Set<LanguageFrontend> runFrontends(
+  private HashSet<LanguageFrontend> runFrontends(
       @NonNull TranslationResult result,
       @NonNull TranslationConfiguration config,
       @NonNull ScopeManager scopeManager)
       throws TranslationException {
 
     List<File> sourceLocations = new ArrayList<>(this.config.getSourceLocations());
+    HashSet<LanguageFrontend> usedFrontends = new HashSet<>();
 
     if (config.useUnityBuild) {
       try {
@@ -190,8 +191,6 @@ public class TranslationManager {
       }
     }
 
-    boolean useParallelFrontends = config.useParallelFrontends;
-
     for (int i = 0; i < sourceLocations.size(); i++) {
       File sourceLocation = sourceLocations.get(i);
 
@@ -200,162 +199,71 @@ public class TranslationManager {
         try (Stream<Path> stream =
             Files.find(sourceLocation.toPath(), 999, (p, fileAttr) -> fileAttr.isRegularFile())) {
           sourceLocations.addAll(stream.map(Path::toFile).collect(Collectors.toSet()));
-          sourceLocations.remove(sourceLocation);
+          continue;
         } catch (IOException e) {
           log.error(e.getMessage(), e);
         }
-      } else {
-        if (useParallelFrontends
-            && getFrontendClass(Util.getExtension(sourceLocation)) == GoLanguageFrontend.class) {
-          log.warn("Parallel frontends are not yet supported for Go");
-          useParallelFrontends = false;
-        }
       }
-    }
-
-    TypeManager.setTypeSystemActive(config.typeSystemActiveInFrontend);
-
-    Set<LanguageFrontend> usedFrontends;
-    if (useParallelFrontends) {
-      usedFrontends = parseParallel(result, scopeManager, sourceLocations);
-    } else {
-      usedFrontends = parseSequentially(result, scopeManager, sourceLocations);
-    }
-
-    if (!config.typeSystemActiveInFrontend) {
-      TypeManager.setTypeSystemActive(true);
-      result.getTranslationUnits().forEach(tu -> SubgraphWalker.activateTypes(tu, scopeManager));
-    }
-
-    return usedFrontends;
-  }
-
-  private Set<LanguageFrontend> parseParallel(
-      @NonNull TranslationResult result,
-      @NonNull ScopeManager originalScopeManager,
-      Collection<File> sourceLocations) {
-    Set<LanguageFrontend> usedFrontends = new HashSet<>();
-
-    log.info("Parallel parsing started");
-    List<CompletableFuture<Optional<LanguageFrontend>>> futures = new ArrayList<>();
-    List<ScopeManager> parallelScopeManagers = new ArrayList<>();
-    Map<CompletableFuture<Optional<LanguageFrontend>>, File> futureToFile = new IdentityHashMap<>();
-
-    for (File sourceLocation : sourceLocations) {
-      ScopeManager scopeManager = new ScopeManager();
-      parallelScopeManagers.add(scopeManager);
-      CompletableFuture<Optional<LanguageFrontend>> future =
-          getParsingFuture(result, scopeManager, sourceLocation);
-      futures.add(future);
-      futureToFile.put(future, sourceLocation);
-    }
-
-    for (CompletableFuture<Optional<LanguageFrontend>> future : futures) {
-      try {
-        future
-            .get()
-            .ifPresent(f -> handleCompletion(result, usedFrontends, futureToFile.get(future), f));
-      } catch (InterruptedException | ExecutionException e) {
-        log.error("Error parsing " + futureToFile.get(future), e);
-        Thread.currentThread().interrupt();
-      }
-    }
-    originalScopeManager.mergeFrom(parallelScopeManagers);
-    usedFrontends.forEach(f -> f.setScopeManager(originalScopeManager));
-
-    log.info("Parallel parsing completed");
-
-    return usedFrontends;
-  }
-
-  private CompletableFuture<Optional<LanguageFrontend>> getParsingFuture(
-      @NonNull TranslationResult result, @NonNull ScopeManager scopeManager, File sourceLocation) {
-    return CompletableFuture.supplyAsync(
-        () -> {
-          try {
-            return parse(result, scopeManager, sourceLocation);
-          } catch (TranslationException e) {
-            throw new RuntimeException("Error parsing " + sourceLocation, e);
-          }
-        });
-  }
-
-  private Set<LanguageFrontend> parseSequentially(
-      @NonNull TranslationResult result,
-      @NonNull ScopeManager scopeManager,
-      Collection<File> sourceLocations)
-      throws TranslationException {
-    Set<LanguageFrontend> usedFrontends = new HashSet<>();
-
-    for (File sourceLocation : sourceLocations) {
 
       log.info("Parsing {}", sourceLocation.getAbsolutePath());
-      parse(result, scopeManager, sourceLocation)
-          .ifPresent(f -> handleCompletion(result, usedFrontends, sourceLocation, f));
-    }
+      LanguageFrontend frontend = null;
+      try {
+        frontend = getFrontend(Util.getExtension(sourceLocation), scopeManager);
+        if (frontend == null) {
+          log.error("Found no parser frontend for {}", sourceLocation.getName());
 
-    return usedFrontends;
-  }
+          if (config.failOnError) {
+            throw new TranslationException(
+                "Found no parser frontend for " + sourceLocation.getName());
+          }
+          continue;
+        }
+        for (LanguageFrontend previous : usedFrontends) {
+          if (!previous.getClass().equals(frontend.getClass())) {
+            log.error(
+                "Different frontends are used for multiple files. This will very likely break the following passes.");
+          }
+        }
+        usedFrontends.add(frontend);
 
-  private void handleCompletion(
-      @NonNull TranslationResult result,
-      Set<LanguageFrontend> usedFrontends,
-      File sourceLocation,
-      LanguageFrontend f) {
-    usedFrontends.add(f);
-    if (usedFrontends.stream().map(Object::getClass).distinct().count() > 1) {
-      log.error(
-          "Different frontends are used for multiple files. This will very likely break the following passes.");
-    }
+        // remember which frontend parsed each file
+        Map<String, String> sfToFe =
+            (Map<String, String>)
+                result
+                    .getScratch()
+                    .computeIfAbsent(
+                        TranslationResult.SOURCE_LOCATIONS_TO_FRONTEND,
+                        x -> new HashMap<String, String>());
+        sfToFe.put(sourceLocation.getName(), frontend.getClass().getSimpleName());
 
-    // remember which frontend parsed each file
-    Map<String, String> sfToFe =
-        (Map<String, String>)
-            result
-                .getScratch()
-                .computeIfAbsent(
-                    TranslationResult.SOURCE_LOCATIONS_TO_FRONTEND,
-                    x -> new HashMap<String, String>());
-    sfToFe.put(sourceLocation.getName(), f.getClass().getSimpleName());
-
-    // Set frontend so passes know what language they are working on.
-    for (Pass pass : config.getRegisteredPasses()) {
-      pass.setLang(f);
-    }
-  }
-
-  private Optional<LanguageFrontend> parse(
-      @NotNull TranslationResult result, @NotNull ScopeManager scopeManager, File sourceLocation)
-      throws TranslationException {
-    LanguageFrontend frontend = null;
-    try {
-      frontend = getFrontend(Util.getExtension(sourceLocation), scopeManager);
-      if (frontend == null) {
-        log.error("Found no parser frontend for {}", sourceLocation.getName());
+        result.getTranslationUnits().add(frontend.parse(sourceLocation));
+      } catch (TranslationException ex) {
+        log.error(
+            "An error occurred during parsing of {}: {}",
+            sourceLocation.getName(),
+            ex.getMessage());
 
         if (config.failOnError) {
-          throw new TranslationException(
-              "Found no parser frontend for " + sourceLocation.getName());
+          throw ex;
         }
-        return Optional.empty();
       }
 
-      result.addTranslationUnit(frontend.parse(sourceLocation));
-    } catch (TranslationException ex) {
-      log.error(
-          "An error occurred during parsing of {}: {}", sourceLocation.getName(), ex.getMessage());
-
-      if (config.failOnError) {
-        throw ex;
+      // Set frontend so passes know what language they are working on.
+      for (Pass pass : config.getRegisteredPasses()) {
+        pass.setLang(frontend);
       }
     }
-
-    return Optional.ofNullable(frontend);
+    return usedFrontends;
   }
 
   @Nullable
   private LanguageFrontend getFrontend(String extension, ScopeManager scopeManager) {
-    Class<? extends LanguageFrontend> clazz = getFrontendClass(extension);
+    var clazz =
+        this.config.getFrontends().entrySet().stream()
+            .filter(entry -> entry.getValue().contains(extension))
+            .map(entry -> entry.getKey())
+            .findAny()
+            .orElse(null);
 
     if (clazz != null) {
       try {
@@ -372,15 +280,6 @@ public class TranslationManager {
     }
 
     return null;
-  }
-
-  @Nullable
-  private Class<? extends LanguageFrontend> getFrontendClass(String extension) {
-    return this.config.getFrontends().entrySet().stream()
-        .filter(entry -> entry.getValue().contains(extension))
-        .map(Entry::getKey)
-        .findAny()
-        .orElse(null);
   }
 
   /**

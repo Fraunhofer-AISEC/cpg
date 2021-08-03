@@ -36,7 +36,6 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.*;
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType;
 import de.fraunhofer.aisec.cpg.graph.types.ParameterizedType;
 import de.fraunhofer.aisec.cpg.graph.types.PointerType;
-import de.fraunhofer.aisec.cpg.graph.types.PointerType.PointerOrigin;
 import java.nio.file.Path;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -750,7 +749,7 @@ class ClassTemplateTest extends BaseTest {
     assertEquals("int", arrayType.getGenerics().get(0).getName());
     assertEquals(array, arrayType.getRecordDeclaration());
 
-    assertEquals(arrayType.reference(PointerOrigin.POINTER), arrayVariable.getType());
-    assertEquals(arrayType.reference(PointerOrigin.POINTER), newExpression.getType());
+    assertEquals(arrayType, arrayVariable.getType());
+    assertEquals(arrayType, newExpression.getType());
   }
 }

@@ -618,8 +618,8 @@ class JavaLanguageFrontendTest extends BaseTest {
   void testSuperFieldUsage() throws Exception {
     var file1 = new File("src/test/resources/fix-328/Cat.java");
     var file2 = new File("src/test/resources/fix-328/Animal.java");
-    var result = TestUtils.analyze(List.of(file1, file2), file1.getParentFile().toPath(), true);
-    var tu = TestUtils.findByUniqueName(result, "src/test/resources/fix-328/Cat.java");
+    var tu =
+        TestUtils.analyzeAndGetFirstTU(List.of(file1, file2), file1.getParentFile().toPath(), true);
     var namespace = tu.getDeclarationAs(0, NamespaceDeclaration.class);
 
     assertNotNull(namespace);

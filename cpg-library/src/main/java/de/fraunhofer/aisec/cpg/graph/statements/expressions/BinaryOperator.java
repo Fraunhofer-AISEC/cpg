@@ -30,7 +30,6 @@ import de.fraunhofer.aisec.cpg.graph.HasType;
 import de.fraunhofer.aisec.cpg.graph.HasType.TypeListener;
 import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.SubGraph;
-import de.fraunhofer.aisec.cpg.graph.TypeManager;
 import de.fraunhofer.aisec.cpg.graph.types.Type;
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser;
 import java.util.HashSet;
@@ -192,9 +191,6 @@ public class BinaryOperator extends Expression implements TypeListener {
 
   @Override
   public void typeChanged(HasType src, HasType root, Type oldType) {
-    if (!TypeManager.isTypeSystemActive()) {
-      return;
-    }
     Type previous = this.type;
     if (this.operatorCode.equals("=")) {
       setType(src.getPropagationType(), root);
@@ -212,9 +208,6 @@ public class BinaryOperator extends Expression implements TypeListener {
 
   @Override
   public void possibleSubTypesChanged(HasType src, HasType root, Set<Type> oldSubTypes) {
-    if (!TypeManager.isTypeSystemActive()) {
-      return;
-    }
     Set<Type> subTypes = new HashSet<>(getPossibleSubTypes());
     subTypes.addAll(src.getPossibleSubTypes());
     setPossibleSubTypes(subTypes, root);

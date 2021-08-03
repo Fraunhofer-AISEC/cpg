@@ -26,11 +26,7 @@
 package de.fraunhofer.aisec.cpg.graph;
 
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
-import de.fraunhofer.aisec.cpg.frontends.cpp.CXXLanguageFrontend;
-import de.fraunhofer.aisec.cpg.frontends.golang.GoLanguageFrontend;
 import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguageFrontend;
-import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguageFrontend;
-import de.fraunhofer.aisec.cpg.frontends.typescript.TypeScriptLanguageFrontend;
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration;
 import de.fraunhofer.aisec.cpg.graph.declarations.TemplateDeclaration;
 import de.fraunhofer.aisec.cpg.graph.declarations.TypedefDeclaration;
@@ -60,23 +56,13 @@ public class TypeManager {
   private static final Pattern funPointerPattern =
       Pattern.compile("\\(?\\*(?<alias>[^()]+)\\)?\\(.*\\)");
   @NonNull private static TypeManager INSTANCE = new TypeManager();
-  private static boolean typeSystemActive = true;
 
   public enum Language {
     JAVA,
-    CXX,
-    GO,
-    PYTHON,
-    TYPESCRIPT,
-    UNKNOWN
+    CXX
   }
 
-  @NonNull
-  private Map<HasType, Set<Type>> typeCache = Collections.synchronizedMap(new IdentityHashMap<>());
-
-  @NonNull
-  private Map<String, RecordDeclaration> typeToRecord =
-      Collections.synchronizedMap(new HashMap<>());
+  @NonNull private Map<String, RecordDeclaration> typeToRecord = new HashMap<>();
 
   /**
    * Stores the relationship between parameterized RecordDeclarations (e.g. Classes using Generics)
@@ -84,21 +70,18 @@ public class TypeManager {
    * are unique to the RecordDeclaration and are not merged.
    */
   @NonNull
-  private Map<RecordDeclaration, List<ParameterizedType>> recordToTypeParameters =
-      Collections.synchronizedMap(new HashMap<>());
+  private Map<RecordDeclaration, List<ParameterizedType>> recordToTypeParameters = new HashMap<>();
 
   @NonNull
   private Map<TemplateDeclaration, List<ParameterizedType>> templateToTypeParameters =
-      Collections.synchronizedMap(new HashMap<>());
+      new HashMap<>();
 
   @NonNull
   private Map<Type, List<Type>> typeState =
-      Collections.synchronizedMap(new HashMap<>()); // Stores all the unique types ObjectType as
-  // Key and
-  // Reference-/PointerTypes
+      new HashMap<>(); // Stores all the unique types ObjectType as Key and Reference-/PointerTypes
   // as Values
-  private Set<Type> firstOrderTypes = Collections.synchronizedSet(new HashSet<>());
-  private Set<Type> secondOrderTypes = Collections.synchronizedSet(new HashSet<>());
+  private Set<Type> firstOrderTypes = new HashSet<>();
+  private Set<Type> secondOrderTypes = new HashSet<>();
   private LanguageFrontend frontend;
   private boolean noFrontendWarningIssued = false;
 
@@ -261,24 +244,6 @@ public class TypeManager {
 
   public static TypeManager getInstance() {
     return INSTANCE;
-  }
-
-  public static boolean isTypeSystemActive() {
-    return typeSystemActive;
-  }
-
-  public static void setTypeSystemActive(boolean active) {
-    typeSystemActive = active;
-  }
-
-  public Map<HasType, Set<Type>> getTypeCache() {
-    return typeCache;
-  }
-
-  public synchronized void cacheType(HasType node, Type type) {
-    if (!isUnknown(type)) {
-      typeCache.computeIfAbsent(node, n -> new HashSet<>()).add(type);
-    }
   }
 
   public void setLanguageFrontend(@NonNull LanguageFrontend frontend) {
@@ -505,18 +470,9 @@ public class TypeManager {
   public Language getLanguage() {
     if (frontend instanceof JavaLanguageFrontend) {
       return Language.JAVA;
-    } else if (frontend instanceof CXXLanguageFrontend) {
+    } else {
       return Language.CXX;
-    } else if (frontend instanceof GoLanguageFrontend) {
-      return Language.GO;
-    } else if (frontend instanceof PythonLanguageFrontend) {
-      return Language.PYTHON;
-    } else if (frontend instanceof TypeScriptLanguageFrontend) {
-      return Language.TYPESCRIPT;
     }
-
-    log.error("Unknown language (frontend: {})", frontend.getClass().getSimpleName());
-    return Language.UNKNOWN;
   }
 
   @Nullable

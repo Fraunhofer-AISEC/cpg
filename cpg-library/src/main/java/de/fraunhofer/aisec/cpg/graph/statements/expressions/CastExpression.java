@@ -77,9 +77,6 @@ public class CastExpression extends Expression implements TypeListener {
 
   @Override
   public void typeChanged(HasType src, HasType root, Type oldType) {
-    if (!TypeManager.isTypeSystemActive()) {
-      return;
-    }
     Type previous = this.type;
 
     if (TypeManager.getInstance().isSupertypeOf(this.castType, src.getPropagationType())) {
@@ -95,9 +92,6 @@ public class CastExpression extends Expression implements TypeListener {
 
   @Override
   public void possibleSubTypesChanged(HasType src, HasType root, Set<Type> oldSubTypes) {
-    if (!TypeManager.isTypeSystemActive()) {
-      return;
-    }
     setPossibleSubTypes(src.getPossibleSubTypes(), root);
   }
 

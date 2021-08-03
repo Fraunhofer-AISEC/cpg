@@ -33,7 +33,6 @@ import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.Annotation
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder
-import de.fraunhofer.aisec.cpg.graph.TypeManager
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
@@ -101,8 +100,6 @@ class TypeScriptLanguageFrontend(
             Runtime.getRuntime().exec(arrayOf("node", parserFile.absolutePath, file.absolutePath))
 
         val node = mapper.readValue(p.inputStream, TypeScriptNode::class.java)
-
-        TypeManager.getInstance().setLanguageFrontend(this)
 
         return this.declarationHandler.handle(node) as TranslationUnitDeclaration
     }

@@ -29,10 +29,9 @@ import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.SubGraph;
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration;
 import java.util.ArrayList;
-import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * The global (intermediate) result of the translation. A {@link
@@ -48,7 +47,7 @@ public class TranslationResult extends Node {
   private final List<TranslationUnitDeclaration> translationUnits = new ArrayList<>();
 
   /** A free-for-use HashMap where passes can store whatever they want. */
-  private Map<String, Object> scratch = new ConcurrentHashMap<>();
+  private Map<String, Object> scratch = new HashMap<>();
 
   public TranslationResult(TranslationManager translationManager) {
     this.translationManager = translationManager;
@@ -59,22 +58,12 @@ public class TranslationResult extends Node {
   }
 
   /**
-   * List of translation units. Note that this list is immutable. Use {@link
-   * #addTranslationUnit(TranslationUnitDeclaration)} if you wish to modify it.
+   * List of translation units.
    *
    * @return the list of translation units
    */
   public List<TranslationUnitDeclaration> getTranslationUnits() {
-    return Collections.unmodifiableList(this.translationUnits);
-  }
-
-  /**
-   * Add a {@link TranslationUnitDeclaration} to this translation result in a thread safe way.
-   *
-   * @param tu The translation unit to add
-   */
-  public synchronized void addTranslationUnit(TranslationUnitDeclaration tu) {
-    translationUnits.add(tu);
+    return this.translationUnits;
   }
 
   /**

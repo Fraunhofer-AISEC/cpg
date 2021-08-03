@@ -36,7 +36,7 @@ public abstract class BaseTest {
    * all tests in order to avoid strange errors
    */
   @BeforeEach
-  protected void resetPersistentState() {
+  void resetPersistentState() {
     TypeParser.reset();
     TypeManager.reset();
   }

@@ -58,7 +58,7 @@ class DeclarationHandler(lang: TypeScriptLanguageFrontend) :
 
     private fun handlePropertySignature(node: TypeScriptNode): FieldDeclaration {
         val name = this.lang.getIdentifierName(node)
-        val type = node.typeChildNode?.let { this.lang.typeHandler.handle(it) } ?: UnknownType.getUnknownType()
+        val type = this.lang.typeHandler.handle(node.typeChildNode)
 
         val field =
             NodeBuilder.newFieldDeclaration(
@@ -111,7 +111,7 @@ class DeclarationHandler(lang: TypeScriptLanguageFrontend) :
 
     private fun handleParameter(node: TypeScriptNode): Declaration {
         val name = this.lang.getIdentifierName(node)
-        val type = node.typeChildNode?.let { this.lang.typeHandler.handle(it) } ?: UnknownType.getUnknownType()
+        val type = this.lang.typeHandler.handle(node.typeChildNode)
 
         val param =
             NodeBuilder.newMethodParameterIn(name, type, false, this.lang.getCodeFromRawNode(node))

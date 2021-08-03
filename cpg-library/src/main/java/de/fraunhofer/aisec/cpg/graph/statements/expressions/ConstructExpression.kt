@@ -28,7 +28,6 @@ package de.fraunhofer.aisec.cpg.graph.statements.expressions
 import de.fraunhofer.aisec.cpg.graph.HasType
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.PopulatedByPass
-import de.fraunhofer.aisec.cpg.graph.TypeManager
 import de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
@@ -37,7 +36,6 @@ import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import de.fraunhofer.aisec.cpg.passes.CallResolver
-import java.util.stream.Collectors
 import org.apache.commons.lang3.builder.ToStringBuilder
 
 /**
@@ -74,45 +72,11 @@ class ConstructExpression : CallExpression(), HasType.TypeListener {
         }
 
     override fun typeChanged(src: HasType, root: HasType, oldType: Type) {
-        if (!TypeManager.isTypeSystemActive()) {
-            return
-        }
-
-        val newType =
-            if (TypeManager.getInstance().language == TypeManager.Language.CXX &&
-                    src is NewExpression
-            ) {
-                src.propagationType.dereference()
-            } else {
-                src.propagationType
-            }
-
         val previous: Type = this.type
-        setType(newType, root)
+        setType(src.propagationType, root)
         if (previous != this.type) {
             this.type.typeOrigin = Type.Origin.DATAFLOW
         }
-    }
-
-    override fun possibleSubTypesChanged(src: HasType, root: HasType?, oldSubTypes: Set<Type?>?) {
-        if (!TypeManager.isTypeSystemActive()) {
-            return
-        }
-        val subTypes: MutableSet<Type> = HashSet(getPossibleSubTypes())
-        subTypes.addAll(
-            src.possibleSubTypes
-                .stream()
-                .map { t ->
-                    if (TypeManager.getInstance().language === TypeManager.Language.CXX &&
-                            src is NewExpression
-                    ) {
-                        return@map t.dereference()
-                    }
-                    t
-                }
-                .collect(Collectors.toSet())
-        )
-        setPossibleSubTypes(subTypes, root)
     }
 
     override fun toString(): String {

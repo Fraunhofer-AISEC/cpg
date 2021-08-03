@@ -26,7 +26,6 @@
 package de.fraunhofer.aisec.cpg.passes.scopes;
 
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration;
-import java.util.Collection;
 
 public class GlobalScope extends StructureDeclarationScope {
 
@@ -40,19 +39,6 @@ public class GlobalScope extends StructureDeclarationScope {
    */
   public GlobalScope() {
     super(null);
-  }
-
-  public void mergeFrom(Collection<GlobalScope> others) {
-    for (GlobalScope other : others) {
-      this.getStructureDeclarations().addAll(other.getStructureDeclarations());
-      this.getValueDeclarations().addAll(other.getValueDeclarations());
-      this.getTypedefs().addAll(other.getTypedefs());
-      // TODO what to do with astNode?
-      for (Scope child : other.getChildren()) {
-        child.setParent(this);
-        this.children.add(child);
-      }
-    }
   }
   /*
 
