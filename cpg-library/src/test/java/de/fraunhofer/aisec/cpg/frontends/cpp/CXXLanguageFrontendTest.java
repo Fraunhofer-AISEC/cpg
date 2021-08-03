@@ -25,12 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.cpp;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assertions.*;
 
 import de.fraunhofer.aisec.cpg.BaseTest;
 import de.fraunhofer.aisec.cpg.TestUtils;
@@ -57,20 +52,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement;
 import de.fraunhofer.aisec.cpg.graph.statements.Statement;
 import de.fraunhofer.aisec.cpg.graph.statements.SwitchStatement;
 import de.fraunhofer.aisec.cpg.graph.statements.TryStatement;
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.ArraySubscriptionExpression;
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator;
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression;
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CastExpression;
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.ConstructExpression;
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression;
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.DesignatedInitializerExpression;
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression;
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.InitializerListExpression;
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal;
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression;
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.NewExpression;
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.TypeIdExpression;
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator;
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.*;
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType;
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser;
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType;
@@ -761,13 +743,13 @@ class CXXLanguageFrontendTest extends BaseTest {
 
     assertEquals("SomeClass", recordDeclaration.getName());
     assertEquals("class", recordDeclaration.getKind());
-    assertEquals(2, recordDeclaration.getFields().size());
+    assertEquals(3, recordDeclaration.getFields().size());
 
-    FieldDeclaration field =
-        recordDeclaration.getFields().stream()
-            .filter(f -> f.getName().equals("field"))
-            .findFirst()
-            .get();
+    var field = recordDeclaration.getField("field");
+    assertNotNull(field);
+
+    var constant = recordDeclaration.getField("CONSTANT");
+    assertNotNull(constant);
 
     assertEquals(TypeParser.createFrom("void*", true), field.getType());
 
@@ -828,6 +810,16 @@ class CXXLanguageFrontendTest extends BaseTest {
     assertNotNull(constructorDeclaration);
     assertFalse(constructorDeclaration.isDefinition());
     assertEquals(constructorDefinition, constructorDeclaration.getDefinition());
+
+    var main =
+        declaration.getDeclarationsByName("main", FunctionDeclaration.class).iterator().next();
+    assertNotNull(main);
+
+    var methodCallWithConstant = main.getBodyStatementAs(2, CallExpression.class);
+    assertNotNull(methodCallWithConstant);
+
+    var arg = methodCallWithConstant.getArguments().get(0);
+    assertSame(constant, ((DeclaredReferenceExpression) arg).getRefersTo());
   }
 
   @Test
