@@ -202,7 +202,7 @@ public class CallResolver extends Pass {
     if (call.getBase().getName().equals("super")) {
       // direct superclass, either defined explicitly or java.lang.Object by default
       if (!curClass.getSuperClasses().isEmpty()) {
-        target = recordMap.get(curClass.getSuperClasses().get(0).getTypeName());
+        target = recordMap.get(curClass.getSuperClasses().get(0).getRoot().getTypeName());
       } else {
         Util.warnWithFileLocation(
             call,
@@ -233,7 +233,7 @@ public class CallResolver extends Pass {
       RecordDeclaration base = recordMap.get(baseName);
       if (base != null) {
         if (!base.getSuperClasses().isEmpty()) {
-          return recordMap.get(base.getSuperClasses().get(0).getTypeName());
+          return recordMap.get(base.getSuperClasses().get(0).getRoot().getTypeName());
         } else {
           Util.warnWithFileLocation(
               call,
@@ -1090,7 +1090,7 @@ public class CallResolver extends Pass {
       if (nameParts.length > 0) {
         Set<RecordDeclaration> records =
             possibleContainingTypes.stream()
-                .map(t -> recordMap.get(t.getTypeName()))
+                .map(t -> recordMap.get(t.getRoot().getTypeName()))
                 .filter(Objects::nonNull)
                 .collect(Collectors.toSet());
         invocationCandidates =
@@ -1157,7 +1157,7 @@ public class CallResolver extends Pass {
       CallExpression call) {
     if (invocationCandidates.isEmpty()) {
       possibleContainingTypes.stream()
-          .map(t -> recordMap.get(t.getTypeName()))
+          .map(t -> recordMap.get(t.getRoot().getTypeName()))
           .filter(Objects::nonNull)
           .map(r -> createDummy(r, call.getName(), call.getCode(), false, call.getSignature()))
           .forEach(invocationCandidates::add);

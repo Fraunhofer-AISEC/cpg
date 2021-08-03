@@ -33,6 +33,7 @@ import de.fraunhofer.aisec.cpg.helpers.Util
 import java.io.File
 import java.nio.file.Files
 import java.nio.file.Path
+import java.util.*
 import java.util.function.Consumer
 import java.util.function.Predicate
 import java.util.stream.Collectors
@@ -122,6 +123,8 @@ object TestUtils {
                 .disableCleanup()
                 .debugParser(true)
                 .failOnError(true)
+                .typeSystemActiveInFrontend(false)
+                .useParallelFrontends(true)
                 .defaultLanguages()
         if (usePasses) {
             builder.defaultPasses()
