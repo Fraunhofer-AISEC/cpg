@@ -186,6 +186,8 @@ public class StatementAnalyzer
 
     if (!(var instanceof DeclarationStatement))
       log.error("Expected a DeclarationStatement but received: {}", var.getName());
+    else if (!((DeclarationStatement) var).isSingleDeclaration())
+      log.error("Expected a single DeclarationStatement.");
     else statement.setVariable(var);
 
     statement.setIterable(iterable);
