@@ -184,7 +184,9 @@ public class StatementAnalyzer
     de.fraunhofer.aisec.cpg.graph.statements.Statement iterable =
         lang.getExpressionHandler().handle(forEachStmt.getIterable());
 
-    statement.setVariable(var);
+    if (!(var instanceof DeclarationStatement))
+      log.error("Expected a DeclarationStatement but received: {}", var.getName());
+    else statement.setVariable(var);
 
     statement.setIterable(iterable);
     statement.setStatement(handle(forEachStmt.getBody()));

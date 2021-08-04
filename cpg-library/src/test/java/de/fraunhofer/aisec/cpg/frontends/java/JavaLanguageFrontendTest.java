@@ -140,8 +140,10 @@ class JavaLanguageFrontendTest extends BaseTest {
     Statement s = forEachStatement.getVariable();
     assertNotNull(s);
     assertTrue(s instanceof DeclarationStatement);
+    assertTrue(((DeclarationStatement) s).isSingleDeclaration());
     VariableDeclaration sDecl =
         (VariableDeclaration) ((DeclarationStatement) s).getSingleDeclaration();
+    assertNotNull(sDecl);
     assertEquals("s", sDecl.getName());
     assertEquals(TypeParser.createFrom("java.lang.String", true), sDecl.getType());
 

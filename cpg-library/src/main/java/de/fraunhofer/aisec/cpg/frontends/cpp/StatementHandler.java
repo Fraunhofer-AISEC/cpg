@@ -25,6 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.cpp;
 
+import static de.fraunhofer.aisec.cpg.graph.NodeBuilder.newDeclarationStatement;
+
 import de.fraunhofer.aisec.cpg.frontends.Handler;
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder;
 import de.fraunhofer.aisec.cpg.graph.TypeManager;
@@ -272,7 +274,7 @@ class StatementHandler extends Handler<Statement, IASTStatement, CXXLanguageFron
     lang.getScopeManager().enterScope(statement);
 
     Declaration decl = this.lang.getDeclarationHandler().handle(ctx.getDeclaration());
-    DeclarationStatement var = new DeclarationStatement();
+    DeclarationStatement var = newDeclarationStatement(decl.getCode());
     var.setSingleDeclaration(decl);
     Statement iterable = this.lang.getExpressionHandler().handle(ctx.getInitializerClause());
 
@@ -305,8 +307,7 @@ class StatementHandler extends Handler<Statement, IASTStatement, CXXLanguageFron
       TypeManager.getInstance().handleTypedef(ctx.getRawSignature());
       return null;
     } else {
-      DeclarationStatement declarationStatement =
-          NodeBuilder.newDeclarationStatement(ctx.getRawSignature());
+      DeclarationStatement declarationStatement = newDeclarationStatement(ctx.getRawSignature());
 
       Declaration declaration = this.lang.getDeclarationHandler().handle(ctx.getDeclaration());
 
