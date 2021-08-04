@@ -37,7 +37,7 @@ import kotlin.Throws
 
 @ExperimentalGolang
 class GoLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeManager?) :
-    LanguageFrontend(config, scopeManager, "/") {
+    LanguageFrontend(config, scopeManager, ".") {
     companion object {
         @kotlin.jvm.JvmField var GOLANG_EXTENSIONS: List<String> = listOf(".go")
 

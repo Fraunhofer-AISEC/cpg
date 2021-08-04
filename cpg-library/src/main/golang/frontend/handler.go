@@ -762,7 +762,7 @@ func (this *GoLanguageFrontend) handleCallExpr(fset *token.FileSet, callExpr *as
 		return nil
 	}
 
-	name := (*cpg.Node)(reference).GetName()
+	name := reference.GetName()
 
 	if name == "new" {
 		return this.handleNewExpr(fset, callExpr)
@@ -799,7 +799,20 @@ func (this *GoLanguageFrontend) handleCallExpr(fset *token.FileSet, callExpr *as
 		this.LogDebug("Handling regular call expression to %s", name)
 
 		c = cpg.NewCallExpression(fset, callExpr)
-		c.SetName(name)
+
+		// the name is already a FQN if it contains a dot
+		pos := strings.LastIndex(name, ".")
+		if pos != -1 {
+			fqn := name
+
+			c.SetFqn(fqn)
+
+			// need to have the short name
+			c.SetName(name[pos+1:])
+		} else {
+			c.SetName(name)
+		}
+
 	}
 
 	for _, arg := range callExpr.Args {
@@ -919,13 +932,32 @@ func (this *GoLanguageFrontend) handleUnaryExpr(fset *token.FileSet, unaryExpr *
 	return u
 }
 
-func (this *GoLanguageFrontend) handleSelectorExpr(fset *token.FileSet, selectorExpr *ast.SelectorExpr) *cpg.MemberExpression {
+func (this *GoLanguageFrontend) handleSelectorExpr(fset *token.FileSet, selectorExpr *ast.SelectorExpr) *cpg.DeclaredReferenceExpression {
 	base := this.handleExpr(fset, selectorExpr.X)
 
-	m := cpg.NewMemberExpression(fset, selectorExpr)
+	// check, if this just a regular reference to a variable with a package scope and not a member expression
+	var isMemberExpression bool = true
+	for _, imp := range this.File.Imports {
+		if base.GetName() == getImportName(imp) {
+			// found a package name, so this is NOT a member expression
+			isMemberExpression = false
+		}
+	}
 
-	m.SetBase(base)
-	(*cpg.Node)(m).SetName(selectorExpr.Sel.Name)
+	var decl *cpg.DeclaredReferenceExpression
+	if isMemberExpression {
+		m := cpg.NewMemberExpression(fset, selectorExpr)
+		m.SetBase(base)
+		(*cpg.Node)(m).SetName(selectorExpr.Sel.Name)
+
+		decl = (*cpg.DeclaredReferenceExpression)(m)
+	} else {
+		decl = cpg.NewDeclaredReferenceExpression(fset, selectorExpr)
+
+		// we need to set the name to a FQN-style, including the package scope. the call resolver will then resolve this
+		fqn := fmt.Sprintf("%s.%s", base.GetName(), selectorExpr.Sel.Name)
+		decl.SetName(fqn)
+	}
 
 	// For now we just let the VariableUsageResolver handle this. Therefore,
 	// we can not differentiate between field access to a receiver, an object
@@ -944,7 +976,7 @@ func (this *GoLanguageFrontend) handleSelectorExpr(fset *token.FileSet, selector
 		}
 	}*/
 
-	return m
+	return decl
 }
 
 func (this *GoLanguageFrontend) handleBasicLit(fset *token.FileSet, lit *ast.BasicLit) *cpg.Literal {
