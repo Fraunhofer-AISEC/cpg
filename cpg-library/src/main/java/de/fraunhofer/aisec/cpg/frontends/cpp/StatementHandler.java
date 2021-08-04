@@ -271,7 +271,9 @@ class StatementHandler extends Handler<Statement, IASTStatement, CXXLanguageFron
     ForEachStatement statement = NodeBuilder.newForEachStatement(ctx.getRawSignature());
     lang.getScopeManager().enterScope(statement);
 
-    Declaration var = this.lang.getDeclarationHandler().handle(ctx.getDeclaration());
+    Declaration decl = this.lang.getDeclarationHandler().handle(ctx.getDeclaration());
+    DeclarationStatement var = new DeclarationStatement();
+    var.setSingleDeclaration(decl);
     Statement iterable = this.lang.getExpressionHandler().handle(ctx.getInitializerClause());
 
     statement.setVariable(var);

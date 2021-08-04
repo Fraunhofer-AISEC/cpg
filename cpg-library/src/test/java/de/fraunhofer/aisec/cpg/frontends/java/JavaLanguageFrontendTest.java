@@ -137,10 +137,13 @@ class JavaLanguageFrontendTest extends BaseTest {
     assertEquals(ls, ((DeclaredReferenceExpression) forEachStatement.getIterable()).getRefersTo());
 
     // should declare String s
-    VariableDeclaration s = (VariableDeclaration) forEachStatement.getVariable();
+    Statement s = forEachStatement.getVariable();
     assertNotNull(s);
-    assertEquals("s", s.getName());
-    assertEquals(TypeParser.createFrom("java.lang.String", true), s.getType());
+    assertTrue(s instanceof DeclarationStatement);
+    VariableDeclaration sDecl =
+        (VariableDeclaration) ((DeclarationStatement) s).getSingleDeclaration();
+    assertEquals("s", sDecl.getName());
+    assertEquals(TypeParser.createFrom("java.lang.String", true), sDecl.getType());
 
     // should contain a single statement
     var sce = (MemberCallExpression) forEachStatement.getStatement();

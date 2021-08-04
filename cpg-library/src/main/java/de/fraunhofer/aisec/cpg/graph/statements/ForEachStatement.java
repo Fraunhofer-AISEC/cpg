@@ -26,13 +26,12 @@
 package de.fraunhofer.aisec.cpg.graph.statements;
 
 import de.fraunhofer.aisec.cpg.graph.SubGraph;
-import de.fraunhofer.aisec.cpg.graph.declarations.Declaration;
 import java.util.Objects;
 
 public class ForEachStatement extends Statement {
 
   @SubGraph("AST")
-  private Declaration variable;
+  private Statement variable;
 
   @SubGraph("AST")
   private Statement iterable;
@@ -48,11 +47,11 @@ public class ForEachStatement extends Statement {
     this.statement = statement;
   }
 
-  public Declaration getVariable() {
+  public Statement getVariable() {
     return variable;
   }
 
-  public void setVariable(Declaration variable) {
+  public void setVariable(Statement variable) {
     this.variable = variable;
   }
 

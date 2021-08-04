@@ -184,12 +184,7 @@ public class StatementAnalyzer
     de.fraunhofer.aisec.cpg.graph.statements.Statement iterable =
         lang.getExpressionHandler().handle(forEachStmt.getIterable());
 
-    if (!(var instanceof DeclarationStatement
-        && ((DeclarationStatement) var).isSingleDeclaration())) {
-      log.error("more or unknown decl in foreach");
-    } else {
-      statement.setVariable(((DeclarationStatement) var).getSingleDeclaration());
-    }
+    statement.setVariable(var);
 
     statement.setIterable(iterable);
     statement.setStatement(handle(forEachStmt.getBody()));
