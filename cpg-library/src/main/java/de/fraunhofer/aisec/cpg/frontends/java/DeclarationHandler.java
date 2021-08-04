@@ -205,6 +205,9 @@ public class DeclarationHandler
 
       functionDeclaration.addParameter(param);
       lang.setCodeAndRegion(param, parameter);
+
+      lang.processAnnotations(param, parameter);
+
       lang.getScopeManager().addDeclaration(param);
     }
 
@@ -418,7 +421,7 @@ public class DeclarationHandler
   }
 
   public Declaration /* TODO refine return type*/ handleAnnotationDeclaration(
-      AnnotationDeclaration annotationConstDecl) {
+          AnnotationDeclaration annotationConstDecl) {
     return new Declaration();
   }
 
