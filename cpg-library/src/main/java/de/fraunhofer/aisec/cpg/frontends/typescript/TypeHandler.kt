@@ -56,8 +56,8 @@ class TypeHandler(lang: TypeScriptLanguageFrontend?) :
     }
 
     private fun handleArrayType(node: TypeScriptNode): Type {
-        val type = this.handle(node.firstChild("TypeReference"))
-
+        val type = node.firstChild("TypeReference")?.let { this.handle(it)  } ?: UnknownType.getUnknownType()
+        
         return type.reference(PointerType.PointerOrigin.ARRAY)
     }
 
