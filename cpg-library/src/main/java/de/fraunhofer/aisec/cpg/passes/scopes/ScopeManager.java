@@ -59,9 +59,9 @@ public class ScopeManager {
   private static final Logger LOGGER = LoggerFactory.getLogger(ScopeManager.class);
 
   /** Allows to map the AST nodes to the associated scope */
-  private final Map<Node, Scope> scopeMap = new HashMap<>();
+  private final Map<Node, Scope> scopeMap = new IdentityHashMap<>();
 
-  private final Map<String, Scope> fqnScopeMap = new HashMap<>();
+  private final Map<String, Scope> fqnScopeMap = new IdentityHashMap<>();
 
   private Scope currentScope = null;
   private LanguageFrontend lang;
@@ -76,6 +76,33 @@ public class ScopeManager {
 
   public void setLang(LanguageFrontend lang) {
     this.lang = lang;
+  }
+
+  /**
+   * Combine the state of several scope managers into this one.
+   *
+   * @param toMerge The scope managers to merge into this one
+   */
+  public void mergeFrom(Collection<ScopeManager> toMerge) {
+    List<GlobalScope> globalScopes =
+        toMerge.stream()
+            .map(s -> s.scopeMap.get(null))
+            .filter(GlobalScope.class::isInstance)
+            .map(GlobalScope.class::cast)
+            .collect(Collectors.toList());
+    Scope currGlobalScope = this.scopeMap.get(null);
+    if (!(currGlobalScope instanceof GlobalScope)) {
+      LOGGER.error("Scope for null node is not a GlobalScope!");
+    } else {
+      ((GlobalScope) currGlobalScope).mergeFrom(globalScopes);
+    }
+
+    for (ScopeManager manager : toMerge) {
+      this.scopeMap.putAll(manager.scopeMap);
+      this.fqnScopeMap.putAll(manager.fqnScopeMap);
+    }
+
+    this.scopeMap.put(null, currGlobalScope);
   }
 
   private void pushScope(Scope scope) {

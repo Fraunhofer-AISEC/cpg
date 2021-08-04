@@ -210,7 +210,7 @@ public class FunctionDeclaration extends ValueDeclaration implements Declaration
         return null;
       }
 
-      return statement.getClass().isAssignableFrom(clazz) ? clazz.cast(statement) : null;
+      return clazz.isAssignableFrom(statement.getClass()) ? clazz.cast(statement) : null;
     }
 
     return null;

@@ -232,6 +232,20 @@ public class VariableUsageResolver extends Pass {
         }
       }
 
+      // TODO: we need to do proper scoping (and merge it with the code above), but for now this
+      // just enables CXX static fields
+      if (refersTo.isEmpty() && current.getName().contains(lang.getNamespaceDelimiter())) {
+        var path =
+            Arrays.asList(current.getName().split(Pattern.quote(lang.getNamespaceDelimiter())));
+        recordDeclType =
+            TypeParser.createFrom(
+                String.join(lang.getNamespaceDelimiter(), path.subList(0, path.size() - 1)), true);
+        var field = resolveMember(recordDeclType, (DeclaredReferenceExpression) current);
+        if (field != null) {
+          refersTo = Optional.of(field);
+        }
+      }
+
       if (refersTo.isPresent()) {
         ref.setRefersTo(refersTo.get());
       } else {

@@ -92,7 +92,7 @@ public class TypeHierarchyResolver extends Pass {
       enumDecl.setSuperTypeDeclarations(allSupertypes);
     }
 
-    translationResult.getTranslationUnits().forEach(this::refreshType);
+    translationResult.getTranslationUnits().forEach(SubgraphWalker::refreshType);
   }
 
   private void findRecordsAndEnums(Node node) {
@@ -103,15 +103,6 @@ public class TypeHierarchyResolver extends Pass {
     }
     for (Node child : SubgraphWalker.getAstChildren(node)) {
       findRecordsAndEnums(child);
-    }
-  }
-
-  private void refreshType(Node node) {
-    for (Node child : SubgraphWalker.getAstChildren(node)) {
-      refreshType(child);
-    }
-    if (node instanceof HasType) {
-      ((HasType) node).refreshType();
     }
   }
 

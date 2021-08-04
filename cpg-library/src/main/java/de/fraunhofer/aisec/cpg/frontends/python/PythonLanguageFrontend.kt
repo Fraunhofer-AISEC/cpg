@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.ExperimentalPython
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
+import de.fraunhofer.aisec.cpg.graph.TypeManager
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
@@ -46,6 +47,7 @@ class PythonLanguageFrontend(config: TranslationConfiguration, scopeManager: Sco
 
     @Throws(TranslationException::class)
     override fun parse(file: File): TranslationUnitDeclaration {
+        TypeManager.getInstance().setLanguageFrontend(this)
         return parseInternal(file.readText(Charsets.UTF_8), file.path)
     }
 
