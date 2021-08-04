@@ -305,7 +305,7 @@ public class StatementAnalyzer
       statement.setIterationStatement(iterationExprList);
     } else if (forStmt.getUpdate().size() == 1) {
       statement.setIterationStatement(
-          (Expression) lang.getExpressionHandler().handle(forStmt.getUpdate().get(0)));
+          lang.getExpressionHandler().handle(forStmt.getUpdate().get(0)));
     }
 
     statement.setStatement(handle(forStmt.getBody()));

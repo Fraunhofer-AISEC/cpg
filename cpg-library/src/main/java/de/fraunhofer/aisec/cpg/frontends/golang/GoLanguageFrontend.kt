@@ -50,7 +50,7 @@ class GoLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeMa
     @Throws(TranslationException::class)
     override fun parse(file: File): TranslationUnitDeclaration {
         TypeManager.getInstance().setLanguageFrontend(this)
-        
+
         return parseInternal(file.readText(Charsets.UTF_8), file.path, config.topLevel.absolutePath)
     }
 

@@ -576,31 +576,29 @@ public class ScopeManager {
     // First, we need to check, whether we have some kind of scoping. this is currently only limited
     // to the Go frontend,
     // but should work for other languages as well - but is not tested.
-    if (lang instanceof GoLanguageFrontend) {
-      if (call.getFqn() != null && call.getFqn().contains(lang.getNamespaceDelimiter())) {
-        // extract the scope name, it is usually a name space, but could probably be something else
-        // as well in other languages
-        var scopeName =
-            call.getFqn().substring(0, call.getFqn().lastIndexOf(lang.getNamespaceDelimiter()));
+    if (lang instanceof GoLanguageFrontend
+        && call.getFqn() != null
+        && call.getFqn().contains(lang.getNamespaceDelimiter())) {
+      // extract the scope name, it is usually a name space, but could probably be something else
+      // as well in other languages
+      var scopeName =
+          call.getFqn().substring(0, call.getFqn().lastIndexOf(lang.getNamespaceDelimiter()));
 
-        var globalScope =
-            (GlobalScope) getFirstScopeThat(predicate -> predicate instanceof GlobalScope);
-        // this is a scoped call. we need to explicitly jump to that particular scope
-        var scopes =
-            this.getScopesThat(
-                (predicate) ->
-                    (predicate instanceof NameScope)
-                        && Objects.equals(predicate.scopedName, scopeName));
+      // this is a scoped call. we need to explicitly jump to that particular scope
+      var scopes =
+          this.getScopesThat(
+              predicate ->
+                  (predicate instanceof NameScope)
+                      && Objects.equals(predicate.scopedName, scopeName));
 
-        if (scopes == null || scopes.isEmpty()) {
-          LOGGER.error(
-              "Could not find the scope {} needed to resolve the call {}. Falling back to the current scope",
-              scopeName,
-              call.getFqn());
-          scope = currentScope;
-        } else {
-          scope = scopes.get(0);
-        }
+      if (scopes == null || scopes.isEmpty()) {
+        LOGGER.error(
+            "Could not find the scope {} needed to resolve the call {}. Falling back to the current scope",
+            scopeName,
+            call.getFqn());
+        scope = currentScope;
+      } else {
+        scope = scopes.get(0);
       }
     }
 
