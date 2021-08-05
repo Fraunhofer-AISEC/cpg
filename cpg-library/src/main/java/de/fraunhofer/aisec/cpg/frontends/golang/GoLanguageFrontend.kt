@@ -50,7 +50,8 @@ class GoLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeMa
     @Throws(TranslationException::class)
     override fun parse(file: File): TranslationUnitDeclaration {
         TypeManager.getInstance().setLanguageFrontend(this)
-        return parseInternal(file.readText(Charsets.UTF_8), file.path)
+
+        return parseInternal(file.readText(Charsets.UTF_8), file.path, config.topLevel.absolutePath)
     }
 
     override fun <T> getCodeFromRawNode(astNode: T): String? {
@@ -65,5 +66,9 @@ class GoLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeMa
 
     override fun <S, T> setComment(s: S, ctx: T) {}
 
-    private external fun parseInternal(s: String?, path: String): TranslationUnitDeclaration
+    private external fun parseInternal(
+        s: String?,
+        path: String,
+        topLevel: String
+    ): TranslationUnitDeclaration
 }

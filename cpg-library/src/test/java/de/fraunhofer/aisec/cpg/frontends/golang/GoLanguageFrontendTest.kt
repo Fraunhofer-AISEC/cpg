@@ -246,15 +246,7 @@ class GoLanguageFrontendTest : BaseTest() {
         assertNotNull(callExpression)
 
         assertEquals("fmt.Printf", callExpression.fqn)
-
-        val base = callExpression.base as? DeclaredReferenceExpression
-
-        assertNotNull(base)
-
-        val include = base.refersTo as? IncludeDeclaration
-
-        assertNotNull(include)
-        assertEquals("fmt", include.name)
+        assertEquals("Printf", callExpression.name)
 
         val literal = callExpression.arguments.first() as? Literal<*>
         assertNotNull(literal)
@@ -463,11 +455,10 @@ class GoLanguageFrontendTest : BaseTest() {
         assertEquals("Field", lhs.name)
         assertEquals(TypeParser.createFrom("int", false), lhs.type)
 
-        val rhs = binOp.rhs as? MemberExpression
+        val rhs = binOp.rhs as? DeclaredReferenceExpression
 
         assertNotNull(rhs)
-        assertEquals("otherPackage", (rhs.base as? DeclaredReferenceExpression)?.name)
-        assertEquals("OtherField", rhs.name)
+        assertEquals("otherPackage.OtherField", rhs.name)
     }
 
     @Test
@@ -647,5 +638,99 @@ class GoLanguageFrontendTest : BaseTest() {
 
         assertNotNull(base)
         assertEquals(c, base.refersTo)
+    }
+
+    @Test
+    fun testFor() {
+        val topLevel = Path.of("src", "test", "resources", "golang")
+        val tus =
+            TestUtils.analyze(
+                listOf(
+                    topLevel.resolve("for.go").toFile(),
+                ),
+                topLevel,
+                true
+            ) {
+                it.registerLanguage(
+                    GoLanguageFrontend::class.java,
+                    GoLanguageFrontend.GOLANG_EXTENSIONS
+                )
+            }
+
+        assertNotNull(tus)
+
+        val tu = tus.first()
+
+        val p = tu.getDeclarationsByName("p", NamespaceDeclaration::class.java).iterator().next()
+
+        val main =
+            p.getDeclarationsByName("main", FunctionDeclaration::class.java).iterator().next()
+
+        assertNotNull(main)
+
+        val f = main.getBodyStatementAs(0, ForStatement::class.java)
+
+        assertNotNull(f)
+        assertTrue(f.condition is BinaryOperator)
+        assertTrue(f.statement is CompoundStatement)
+        assertTrue(f.initializerStatement is DeclarationStatement)
+        assertTrue(f.iterationStatement is UnaryOperator)
+    }
+
+    @Test
+    fun testModules() {
+        val topLevel = Path.of("src", "test", "resources", "golang-modules")
+        val tus =
+            TestUtils.analyze(
+                listOf(
+                    topLevel.resolve("awesome.go").toFile(),
+                    topLevel.resolve("cmd/awesome/main.go").toFile(),
+                    topLevel.resolve("util/stuff.go").toFile(),
+                ),
+                topLevel,
+                true
+            ) {
+                it.registerLanguage(
+                    GoLanguageFrontend::class.java,
+                    GoLanguageFrontend.GOLANG_EXTENSIONS
+                )
+            }
+
+        assertNotNull(tus)
+
+        val tu0 = tus.get(0)
+        assertNotNull(tu0)
+
+        val awesome =
+            tu0.getDeclarationsByName("awesome", NamespaceDeclaration::class.java).iterator().next()
+        assertNotNull(awesome)
+
+        val newAwesome =
+            awesome
+                .getDeclarationsByName("NewAwesome", FunctionDeclaration::class.java)
+                .iterator()
+                .next()
+        assertNotNull(newAwesome)
+
+        val tu1 = tus.get(1)
+        assertNotNull(tu1)
+
+        val mainNamespace =
+            tu1.getDeclarationsByName("main", NamespaceDeclaration::class.java).iterator().next()
+        assertNotNull(mainNamespace)
+
+        val main =
+            mainNamespace
+                .getDeclarationsByName("main", FunctionDeclaration::class.java)
+                .iterator()
+                .next()
+        assertNotNull(main)
+
+        val a = main.getBodyStatementAs(0, DeclarationStatement::class.java)
+        assertNotNull(a)
+
+        val call = (a.singleDeclaration as? VariableDeclaration)?.initializer as? CallExpression
+        assertNotNull(call)
+        assertTrue(call.invokes.contains(newAwesome))
     }
 }

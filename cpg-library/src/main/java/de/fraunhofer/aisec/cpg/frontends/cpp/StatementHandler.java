@@ -261,7 +261,7 @@ class StatementHandler extends Handler<Statement, IASTStatement, CXXLanguageFron
       statement.setCondition(literal);
     }
     if (ctx.getIterationExpression() != null)
-      statement.setIterationExpression(
+      statement.setIterationStatement(
           this.lang.getExpressionHandler().handle(ctx.getIterationExpression()));
     statement.setStatement(handle(ctx.getBody()));
     lang.getScopeManager().leaveScope(statement);
