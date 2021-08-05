@@ -104,7 +104,12 @@ class CXXLanguageFrontendTest extends BaseTest {
     assertEquals(ls, ((DeclaredReferenceExpression) forEachStatement.getIterable()).getRefersTo());
 
     // should declare auto i (so far no concrete type inferrable)
-    VariableDeclaration i = (VariableDeclaration) forEachStatement.getVariable();
+    Statement stmt = forEachStatement.getVariable();
+    assertNotNull(stmt);
+    assertTrue(stmt instanceof DeclarationStatement);
+    assertTrue(((DeclarationStatement) stmt).isSingleDeclaration());
+    VariableDeclaration i =
+        (VariableDeclaration) ((DeclarationStatement) stmt).getSingleDeclaration();
     assertNotNull(i);
     assertEquals("i", i.getName());
     assertEquals(UnknownType.getUnknownType(), i.getType());
