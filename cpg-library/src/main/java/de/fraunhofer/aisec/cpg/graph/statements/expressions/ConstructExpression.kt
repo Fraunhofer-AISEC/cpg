@@ -37,7 +37,6 @@ import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import de.fraunhofer.aisec.cpg.passes.CallResolver
-import java.util.stream.Collectors
 import org.apache.commons.lang3.builder.ToStringBuilder
 
 /**
@@ -78,17 +77,8 @@ class ConstructExpression : CallExpression(), HasType.TypeListener {
             return
         }
 
-        val newType =
-            if (TypeManager.getInstance().language == TypeManager.Language.CXX &&
-                    src is NewExpression
-            ) {
-                src.propagationType.dereference()
-            } else {
-                src.propagationType
-            }
-
         val previous: Type = this.type
-        setType(newType, root)
+        setType(src.propagationType, root)
         if (previous != this.type) {
             this.type.typeOrigin = Type.Origin.DATAFLOW
         }
@@ -98,7 +88,7 @@ class ConstructExpression : CallExpression(), HasType.TypeListener {
         if (!TypeManager.isTypeSystemActive()) {
             return
         }
-        val subTypes: MutableSet<Type> = HashSet(getPossibleSubTypes())
+        /*val subTypes: MutableSet<Type> = HashSet(getPossibleSubTypes())
         subTypes.addAll(
             src.possibleSubTypes
                 .stream()
@@ -112,7 +102,7 @@ class ConstructExpression : CallExpression(), HasType.TypeListener {
                 }
                 .collect(Collectors.toSet())
         )
-        setPossibleSubTypes(subTypes, root)
+        setPossibleSubTypes(subTypes, root)*/
     }
 
     override fun toString(): String {

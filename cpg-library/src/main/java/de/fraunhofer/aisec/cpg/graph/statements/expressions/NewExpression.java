@@ -26,25 +26,17 @@
 package de.fraunhofer.aisec.cpg.graph.statements.expressions;
 
 import de.fraunhofer.aisec.cpg.graph.HasInitializer;
-import de.fraunhofer.aisec.cpg.graph.HasType;
 import de.fraunhofer.aisec.cpg.graph.HasType.TypeListener;
 import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.SubGraph;
-import de.fraunhofer.aisec.cpg.graph.TypeManager;
-import de.fraunhofer.aisec.cpg.graph.TypeManager.Language;
-import de.fraunhofer.aisec.cpg.graph.types.PointerType.PointerOrigin;
-import de.fraunhofer.aisec.cpg.graph.types.Type;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
-import java.util.Set;
-import java.util.stream.Collectors;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.neo4j.ogm.annotation.Relationship;
 
 /** Represents the creation of a new object through the <code>new</code> keyword. */
-public class NewExpression extends Expression implements HasInitializer, TypeListener {
+public class NewExpression extends Expression implements HasInitializer /*, TypeListener*/ {
 
   /** The initializer expression. */
   @SubGraph("AST")
@@ -56,18 +48,18 @@ public class NewExpression extends Expression implements HasInitializer, TypeLis
 
   public void setInitializer(Expression initializer) {
     // TODO: The VariableDeclaration::setInitializer does some DFG stuff. Needed here aswell?
-    if (this.initializer != null) {
+    /*if (this.initializer != null) {
       this.initializer.unregisterTypeListener(this);
-    }
+    }*/
     if (this.initializer instanceof TypeListener) {
       this.unregisterTypeListener((TypeListener) this.initializer);
     }
 
     this.initializer = initializer;
 
-    if (initializer != null) {
+    /*if (initializer != null) {
       initializer.registerTypeListener(this);
-    }
+    }*/
     // if the initializer implements a type listener, inform it about our type changes
     // since the type is tied to the declaration but it is convenient to have the type
     // information in the initializer, i.e. in a ConstructExpression.
@@ -93,7 +85,7 @@ public class NewExpression extends Expression implements HasInitializer, TypeLis
     this.templateParameters = templateParameters;
   }
 
-  @Override
+  /*@Override
   public void typeChanged(HasType src, HasType root, Type oldType) {
     if (!TypeManager.isTypeSystemActive()) {
       return;
@@ -132,7 +124,7 @@ public class NewExpression extends Expression implements HasInitializer, TypeLis
                 })
             .collect(Collectors.toSet()));
     setPossibleSubTypes(subTypes, root);
-  }
+  }*/
 
   @Override
   public String toString() {
