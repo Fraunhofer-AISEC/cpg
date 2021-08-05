@@ -157,14 +157,6 @@ public class CallResolver extends Pass {
           currInitializer.disconnectFromGraph();
         }
       }
-    } else if (node instanceof NewExpression) {
-      NewExpression newExpression = (NewExpression) node;
-      if (newExpression.getInitializer() == null) {
-        ConstructExpression initializer = NodeBuilder.newConstructExpression("()");
-        initializer.setImplicit(true);
-        addDummyTemplateParametersToCall(newExpression.getTemplateParameters(), initializer);
-        newExpression.setInitializer(initializer);
-      }
     }
   }
 
