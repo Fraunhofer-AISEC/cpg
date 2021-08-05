@@ -179,16 +179,16 @@ public class StatementAnalyzer
     lang.getScopeManager().enterScope(statement);
 
     ForEachStmt forEachStmt = stmt.asForEachStmt();
-    de.fraunhofer.aisec.cpg.graph.statements.Statement var =
+    de.fraunhofer.aisec.cpg.graph.statements.Statement variable =
         lang.getExpressionHandler().handle(forEachStmt.getVariable());
     de.fraunhofer.aisec.cpg.graph.statements.Statement iterable =
         lang.getExpressionHandler().handle(forEachStmt.getIterable());
 
-    if (!(var instanceof DeclarationStatement))
-      log.error("Expected a DeclarationStatement but received: {}", var.getName());
-    else if (!((DeclarationStatement) var).isSingleDeclaration())
-      log.error("Expected a single DeclarationStatement.");
-    else statement.setVariable(var);
+    if (!(variable instanceof DeclarationStatement)) {
+      log.error("Expected a DeclarationStatement but received: {}", variable.getName());
+    } else {
+      statement.setVariable(variable);
+    }
 
     statement.setIterable(iterable);
     statement.setStatement(handle(forEachStmt.getBody()));

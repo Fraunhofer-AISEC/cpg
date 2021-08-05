@@ -137,7 +137,7 @@ class JavaLanguageFrontendTest extends BaseTest {
     assertEquals(ls, ((DeclaredReferenceExpression) forEachStatement.getIterable()).getRefersTo());
 
     // should declare String s
-    Statement s = forEachStatement.getVariable();
+    var s = forEachStatement.getVariable();
     assertNotNull(s);
     assertTrue(s instanceof DeclarationStatement);
     assertTrue(((DeclarationStatement) s).isSingleDeclaration());
