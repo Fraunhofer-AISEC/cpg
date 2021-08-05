@@ -35,7 +35,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 import org.neo4j.ogm.annotation.Relationship;
 
 /** Represents the creation of a new object through the <code>new</code> keyword. */
-public class NewExpression extends Expression implements HasInitializer /*, TypeListener*/ {
+public class NewExpression extends Expression implements HasInitializer {
 
   /** The initializer expression. */
   @SubGraph("AST")
@@ -65,47 +65,6 @@ public class NewExpression extends Expression implements HasInitializer /*, Type
   public void setTemplateParameters(List<Node> templateParameters) {
     this.templateParameters = templateParameters;
   }
-
-  /*@Override
-  public void typeChanged(HasType src, HasType root, Type oldType) {
-    if (!TypeManager.isTypeSystemActive()) {
-      return;
-    }
-
-    Type newType;
-    if (TypeManager.getInstance().getLanguage() == Language.CXX && src == initializer) {
-      newType = src.getPropagationType().reference(PointerOrigin.POINTER);
-    } else {
-      newType = src.getPropagationType();
-    }
-
-    Type previous = this.type;
-    setType(newType, root);
-    if (!previous.equals(this.type)) {
-      this.type.setTypeOrigin(Type.Origin.DATAFLOW);
-    }
-  }
-
-  @Override
-  public void possibleSubTypesChanged(HasType src, HasType root, Set<Type> oldSubTypes) {
-    if (!TypeManager.isTypeSystemActive()) {
-      return;
-    }
-
-    Set<Type> subTypes = new HashSet<>(getPossibleSubTypes());
-    subTypes.addAll(
-        src.getPossibleSubTypes().stream()
-            .map(
-                t -> {
-                  if (TypeManager.getInstance().getLanguage() == Language.CXX
-                      && src == initializer) {
-                    return t.reference(PointerOrigin.POINTER);
-                  }
-                  return t;
-                })
-            .collect(Collectors.toSet()));
-    setPossibleSubTypes(subTypes, root);
-  }*/
 
   @Override
   public String toString() {
