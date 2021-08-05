@@ -26,7 +26,6 @@
 package de.fraunhofer.aisec.cpg.graph.statements.expressions;
 
 import de.fraunhofer.aisec.cpg.graph.HasInitializer;
-import de.fraunhofer.aisec.cpg.graph.HasType.TypeListener;
 import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.SubGraph;
 import java.util.List;
@@ -47,25 +46,7 @@ public class NewExpression extends Expression implements HasInitializer /*, Type
   }
 
   public void setInitializer(Expression initializer) {
-    // TODO: The VariableDeclaration::setInitializer does some DFG stuff. Needed here aswell?
-    /*if (this.initializer != null) {
-      this.initializer.unregisterTypeListener(this);
-    }*/
-    if (this.initializer instanceof TypeListener) {
-      this.unregisterTypeListener((TypeListener) this.initializer);
-    }
-
     this.initializer = initializer;
-
-    /*if (initializer != null) {
-      initializer.registerTypeListener(this);
-    }*/
-    // if the initializer implements a type listener, inform it about our type changes
-    // since the type is tied to the declaration but it is convenient to have the type
-    // information in the initializer, i.e. in a ConstructExpression.
-    if (initializer instanceof TypeListener) {
-      this.registerTypeListener((TypeListener) initializer);
-    }
   }
 
   /**

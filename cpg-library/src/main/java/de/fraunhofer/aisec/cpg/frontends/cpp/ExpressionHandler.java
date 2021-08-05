@@ -206,8 +206,6 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
 
       return arrayCreate;
     } else {
-      t = t.reference(PointerOrigin.POINTER);
-
       // Resolve possible templates
       List<Node> templateParameters = Collections.emptyList();
       IASTDeclSpecifier declSpecifier = ctx.getTypeId().getDeclSpecifier();
@@ -230,11 +228,23 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
       var newExpression = NodeBuilder.newNewExpression(code, t);
       newExpression.setTemplateParameters(templateParameters);
 
+      Expression initializer;
       if (init != null) {
-        Expression initializer = this.lang.getInitializerHandler().handle(init);
-        initializer.setType(t);
-        newExpression.setInitializer(initializer);
+        initializer = this.lang.getInitializerHandler().handle(init);
+      } else {
+        // in C++, it is possible to omit the `()` part, when creating an object, such as `new A`.
+        // Therefore CDT does not have an explicit construct expression, so we need create an
+        // implicit one
+        initializer = NodeBuilder.newConstructExpression("()");
+        initializer.setImplicit(true);
       }
+
+      // our initializer, such as a construct expression, will have the non-pointer type
+      initializer.setType(t);
+      newExpression.setInitializer(initializer);
+
+      // new returns a pointer, so we need to reference the type
+      newExpression.setType(t.reference(PointerOrigin.POINTER));
 
       return newExpression;
     }
