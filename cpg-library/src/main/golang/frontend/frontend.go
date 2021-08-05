@@ -34,6 +34,7 @@ import (
 	"go/token"
 	"log"
 
+	"golang.org/x/mod/modfile"
 	"tekao.net/jnigi"
 )
 
@@ -41,7 +42,8 @@ var env *jnigi.Env
 
 type GoLanguageFrontend struct {
 	*jnigi.ObjectRef
-	File *ast.File
+	File   *ast.File
+	Module *modfile.File
 }
 
 func InitEnv(e *jnigi.Env) {

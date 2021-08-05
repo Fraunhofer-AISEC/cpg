@@ -234,6 +234,10 @@ func (m *MemberExpression) GetBase() *Expression {
 	return (*Expression)(i.(*jnigi.ObjectRef))
 }
 
+func (e *Expression) GetName() string {
+	return (*Node)(e).GetName()
+}
+
 func (r *DeclaredReferenceExpression) Expression() *Expression {
 	return (*Expression)(r)
 }

@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.passes.scopes;
 import static de.fraunhofer.aisec.cpg.helpers.Util.errorWithFileLocation;
 
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
+import de.fraunhofer.aisec.cpg.frontends.golang.GoLanguageFrontend;
 import de.fraunhofer.aisec.cpg.graph.HasType;
 import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.declarations.*;
@@ -563,8 +564,45 @@ public class ScopeManager {
     return resolve(currentScope, ref);
   }
 
+  /**
+   * Tries to resolve a function in a call expression.
+   *
+   * @param call the call expression
+   * @return a list of possible functions
+   */
   public List<FunctionDeclaration> resolveFunction(CallExpression call) {
-    return resolveFunction(currentScope, call);
+    var scope = currentScope;
+
+    // First, we need to check, whether we have some kind of scoping. this is currently only limited
+    // to the Go frontend,
+    // but should work for other languages as well - but is not tested.
+    if (lang instanceof GoLanguageFrontend
+        && call.getFqn() != null
+        && call.getFqn().contains(lang.getNamespaceDelimiter())) {
+      // extract the scope name, it is usually a name space, but could probably be something else
+      // as well in other languages
+      var scopeName =
+          call.getFqn().substring(0, call.getFqn().lastIndexOf(lang.getNamespaceDelimiter()));
+
+      // this is a scoped call. we need to explicitly jump to that particular scope
+      var scopes =
+          this.getScopesThat(
+              predicate ->
+                  (predicate instanceof NameScope)
+                      && Objects.equals(predicate.scopedName, scopeName));
+
+      if (scopes == null || scopes.isEmpty()) {
+        LOGGER.error(
+            "Could not find the scope {} needed to resolve the call {}. Falling back to the current scope",
+            scopeName,
+            call.getFqn());
+        scope = currentScope;
+      } else {
+        scope = scopes.get(0);
+      }
+    }
+
+    return resolveFunction(scope, call);
   }
 
   public List<FunctionTemplateDeclaration> resolveFunctionTemplateDeclaration(CallExpression call) {
