@@ -1,4 +1,6 @@
 class SomeClass {
+  static const int CONSTANT = 8;
+
 private:
   void* field = 0;
 
@@ -32,4 +34,5 @@ SomeClass::SomeClass(int a) {
 int main() {
   SomeClass s;
   s.method();
+  s.method(SomeClass::CONSTANT);
 }

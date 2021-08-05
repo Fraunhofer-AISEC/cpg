@@ -137,10 +137,15 @@ class JavaLanguageFrontendTest extends BaseTest {
     assertEquals(ls, ((DeclaredReferenceExpression) forEachStatement.getIterable()).getRefersTo());
 
     // should declare String s
-    VariableDeclaration s = (VariableDeclaration) forEachStatement.getVariable();
+    var s = forEachStatement.getVariable();
     assertNotNull(s);
-    assertEquals("s", s.getName());
-    assertEquals(TypeParser.createFrom("java.lang.String", true), s.getType());
+    assertTrue(s instanceof DeclarationStatement);
+    assertTrue(((DeclarationStatement) s).isSingleDeclaration());
+    VariableDeclaration sDecl =
+        (VariableDeclaration) ((DeclarationStatement) s).getSingleDeclaration();
+    assertNotNull(sDecl);
+    assertEquals("s", sDecl.getName());
+    assertEquals(TypeParser.createFrom("java.lang.String", true), sDecl.getType());
 
     // should contain a single statement
     var sce = (MemberCallExpression) forEachStatement.getStatement();
@@ -618,8 +623,8 @@ class JavaLanguageFrontendTest extends BaseTest {
   void testSuperFieldUsage() throws Exception {
     var file1 = new File("src/test/resources/fix-328/Cat.java");
     var file2 = new File("src/test/resources/fix-328/Animal.java");
-    var tu =
-        TestUtils.analyzeAndGetFirstTU(List.of(file1, file2), file1.getParentFile().toPath(), true);
+    var result = TestUtils.analyze(List.of(file1, file2), file1.getParentFile().toPath(), true);
+    var tu = TestUtils.findByUniqueName(result, "src/test/resources/fix-328/Cat.java");
     var namespace = tu.getDeclarationAs(0, NamespaceDeclaration.class);
 
     assertNotNull(namespace);
