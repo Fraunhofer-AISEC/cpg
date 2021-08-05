@@ -479,24 +479,24 @@ func (this *GoLanguageFrontend) handleForStmt(fset *token.FileSet, forStmt *ast.
 
 	f := cpg.NewForStatement(fset, forStmt)
 
-	if statement := this.handleStmt(fset, forStmt.Init); statement != nil {
-		f.SetInitializerStatement(statement)
+	var scope = this.GetScopeManager()
+
+	scope.EnterScope((*cpg.Node)(f))
+
+	if initStatement := this.handleStmt(fset, forStmt.Init); initStatement != nil {
+		f.SetInitializerStatement(initStatement)
 	}
 
 	if condition := this.handleExpr(fset, forStmt.Cond); condition != nil {
 		f.SetCondition(condition)
 	}
 
-	var scope = this.GetScopeManager()
-
-	scope.EnterScope((*cpg.Node)(f))
+	if iter := this.handleStmt(fset, forStmt.Post); iter != nil {
+		f.SetIterationStatement(iter)
+	}
 
 	if body := this.handleStmt(fset, forStmt.Body); body != nil {
 		f.SetStatement(body)
-	}
-
-	if iter := this.handleStmt(fset, forStmt.Post); iter != nil {
-		f.SetIterationStatement(iter)
 	}
 
 	scope.LeaveScope((*cpg.Node)(f))
