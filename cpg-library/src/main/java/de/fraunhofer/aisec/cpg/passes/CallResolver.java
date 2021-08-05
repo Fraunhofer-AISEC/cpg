@@ -175,7 +175,7 @@ public class CallResolver extends Pass {
    * @param constructExpression duplicate TemplateParameters (implicit) to preserve AST, as
    *     ConstructExpression uses AST as well as the VariableDeclaration/NewExpression
    */
-  private void addDummyTemplateParametersToCall(
+  public static void addDummyTemplateParametersToCall(
       List<Node> templateParams, ConstructExpression constructExpression) {
     if (templateParams != null) {
       for (Node node : templateParams) {
