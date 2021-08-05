@@ -26,17 +26,22 @@
 package de.fraunhofer.aisec.cpg.graph.statements;
 
 import de.fraunhofer.aisec.cpg.graph.SubGraph;
-import de.fraunhofer.aisec.cpg.graph.declarations.Declaration;
 import java.util.Objects;
 
 public class ForEachStatement extends Statement {
 
+  /**
+   * This field contains the iteration variable of the loop. It can be either a new variable
+   * declaration or a reference to an existing variable.
+   */
   @SubGraph("AST")
-  private Declaration variable;
+  private Statement variable;
 
+  /** This field contains the iteration subject of the loop. */
   @SubGraph("AST")
   private Statement iterable;
 
+  /** This field contains the body of the loop. */
   @SubGraph("AST")
   private Statement statement;
 
@@ -48,11 +53,11 @@ public class ForEachStatement extends Statement {
     this.statement = statement;
   }
 
-  public Declaration getVariable() {
+  public Statement getVariable() {
     return variable;
   }
 
-  public void setVariable(Declaration variable) {
+  public void setVariable(Statement variable) {
     this.variable = variable;
   }
 

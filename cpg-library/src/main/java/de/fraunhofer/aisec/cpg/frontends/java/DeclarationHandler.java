@@ -421,7 +421,7 @@ public class DeclarationHandler
   }
 
   public Declaration /* TODO refine return type*/ handleAnnotationDeclaration(
-          AnnotationDeclaration annotationConstDecl) {
+      AnnotationDeclaration annotationConstDecl) {
     return new Declaration();
   }
 
