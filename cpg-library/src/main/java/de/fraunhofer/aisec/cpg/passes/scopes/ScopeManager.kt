@@ -61,7 +61,7 @@ class ScopeManager {
     private val scopeMap: MutableMap<Node?, Scope> = IdentityHashMap()
 
     /** A lookup map for each scope and its associated FQN. */
-    private val fqnScopeMap: MutableMap<String, Scope?> = IdentityHashMap()
+    private val fqnScopeMap: MutableMap<String, Scope> = IdentityHashMap()
 
     /** The currently active scope. */
     var currentScope: Scope? = null
@@ -126,7 +126,11 @@ class ScopeManager {
         }
     }
 
-    /** Pushes the scope on the current scope stack. */
+    /**
+     * Pushes the scope on the current scope stack. Used internally by [enterScope].
+     *
+     * @param scope the scope
+     */
     private fun pushScope(scope: Scope) {
         if (scopeMap.containsKey(scope.astNode)) {
             LOGGER.error(
@@ -136,90 +140,108 @@ class ScopeManager {
         }
         scopeMap[scope.astNode] = scope
         if (scope is NameScope || scope is RecordScope) {
-            fqnScopeMap[scope.getAstNode().name] = scope
+            fqnScopeMap[scope.astNode.name] = scope
         }
-        if (currentScope != null) {
-            currentScope!!.getChildren().add(scope)
-            scope.setParent(currentScope)
+        currentScope?.let {
+            it.getChildren().add(scope)
+            scope.setParent(it)
         }
         currentScope = scope
     }
 
+    /**
+     * This function, in combination with [leaveScope] is the main interaction point with the scope
+     * manager for language frontends. Every time a language frontend handles a node that begins a
+     * new scope, this function needs to be called.
+     *
+     * Afterwards, all calls to [addDeclaration] will be distributed to the
+     * [de.fraunhofer.aisec.cpg.graph.DeclarationHolder] that is currently in-scope.
+     *
+     * The scope manager has an internal association between the type of scope, e.g. a [BlockScope]
+     * and the CPG node it represents, e.g. a [CompoundStatement].
+     */
     fun enterScope(nodeToScope: Node) {
         var newScope: Scope? = null
+
+        // check, if the node does not have an entry in the scope map
         if (!scopeMap.containsKey(nodeToScope)) {
-            if (nodeToScope is CompoundStatement) {
-                newScope = BlockScope(nodeToScope)
-            } else if (nodeToScope is WhileStatement ||
-                    nodeToScope is DoStatement ||
-                    nodeToScope is AssertStatement
-            ) {
-                newScope = LoopScope(nodeToScope as Statement)
-            } else if (nodeToScope is ForStatement || nodeToScope is ForEachStatement) {
-                newScope = LoopScope(nodeToScope as Statement)
-            } else if (nodeToScope is SwitchStatement) {
-                newScope = SwitchScope(nodeToScope)
-            } else if (nodeToScope is FunctionDeclaration) {
-                newScope = FunctionScope(nodeToScope)
-            } else if (nodeToScope is IfStatement) {
-                newScope = ValueDeclarationScope(nodeToScope)
-            } else if (nodeToScope is CatchClause) {
-                newScope = ValueDeclarationScope(nodeToScope)
-            } else if (nodeToScope is RecordDeclaration) {
-                newScope = RecordScope(nodeToScope, currentNamePrefix, lang!!.namespaceDelimiter)
-            } else if (nodeToScope is TemplateDeclaration) {
-                newScope = TemplateScope(nodeToScope, currentNamePrefix, lang!!.namespaceDelimiter)
-            } else if (nodeToScope is TryStatement) {
-                newScope = TryScope(nodeToScope)
-            } else if (nodeToScope is NamespaceDeclaration) {
-                // this is a little workaround to solve issues around namespaces
-
-                // the challenge is, that if we have two files that have functions
-                // belonging to the same namespace, they need to end up in the same NameScope,
-                // otherwise the call resolver will not find them. But we still need to be able
-                // to treat the namespace declaration as an AST node unique to each file. So in
-                // the example we want to up with two namespace declaration that point to the same
-                // name scope in the end.
-
-                // First, check if the namespace already exists in our scope
-                // TODO: proper resolving of the namespace according to the syntax?
-                val existing =
-                    (currentScope as StructureDeclarationScope?)
-                        ?.structureDeclarations
-                        ?.filter { x: Declaration -> x.name == nodeToScope.name }
-                        ?.firstOrNull()
-                if (existing != null) {
-                    val oldNode = existing
-                    val oldScope = scopeMap[oldNode]
-
-                    // might still be non-existing in some cases because this is hacky
-                    if (oldScope != null) {
-                        // update the AST node to this namespace declaration
-                        oldScope.astNode = nodeToScope
-
-                        // set current scope
-                        currentScope = oldScope
-
-                        // make it also available in the scope map, otherwise, we cannot leave the
-                        // scope
-                        scopeMap[oldScope.astNode] = oldScope
-                    } else {
-                        newScope =
-                            NameScope(nodeToScope, currentNamePrefix, lang!!.namespaceDelimiter)
+            newScope =
+                when (nodeToScope) {
+                    is CompoundStatement -> BlockScope(nodeToScope)
+                    is WhileStatement, is DoStatement, is AssertStatement ->
+                        LoopScope(nodeToScope as Statement)
+                    is ForStatement, is ForEachStatement -> LoopScope(nodeToScope as Statement)
+                    is SwitchStatement -> SwitchScope(nodeToScope)
+                    is FunctionDeclaration -> FunctionScope(nodeToScope)
+                    is IfStatement -> ValueDeclarationScope(nodeToScope)
+                    is CatchClause -> ValueDeclarationScope(nodeToScope)
+                    is RecordDeclaration ->
+                        RecordScope(nodeToScope, currentNamePrefix, lang!!.namespaceDelimiter)
+                    is TemplateDeclaration ->
+                        TemplateScope(nodeToScope, currentNamePrefix, lang!!.namespaceDelimiter)
+                    is TryStatement -> TryScope(nodeToScope)
+                    is NamespaceDeclaration -> newNameScopeIfNecessary(nodeToScope)
+                    else -> {
+                        LOGGER.error(
+                            "No known scope for AST node of type {}",
+                            nodeToScope.javaClass
+                        )
+                        return
                     }
-                } else {
-                    newScope = NameScope(nodeToScope, currentNamePrefix, lang!!.namespaceDelimiter)
                 }
-            } else {
-                LOGGER.error("No known scope for AST-nodes of type {}", nodeToScope.javaClass)
-                return
-            }
         }
+
+        // push the new scope
         if (newScope != null) {
             pushScope(newScope)
             newScope.setScopedName(currentNamePrefix)
         } else {
             currentScope = scopeMap[nodeToScope]
+        }
+    }
+
+    /**
+     * A small internal helper function used by [enterScope] to create a [NameScope].
+     *
+     * The issue with name scopes, such as a namespace, is that it can exist across several files,
+     * i.e. translation units, represented by different [NamespaceDeclaration] nodes. But, in order
+     * to make namespace resolution work across files, only one [NameScope] must exist that holds
+     * all declarations, such as classes, independently of the translation units. Therefore, we need
+     * to check, whether such as node already exists. If it does already exist:
+     * - we update the scope map so that the current [NamespaceDeclaration] points to the existing
+     * [NameScope]
+     * - we return null, indicating to [enterScope], that no new scope needs to be pushed by
+     * [enterScope].
+     *
+     * Otherwise, we return a new name scope.
+     */
+    private fun newNameScopeIfNecessary(nodeToScope: Node): NameScope? {
+        val existing =
+            (currentScope as? StructureDeclarationScope)?.structureDeclarations?.firstOrNull {
+                x: Declaration ->
+                x.name == nodeToScope.name
+            }
+
+        return if (existing != null) {
+            val oldScope = scopeMap[existing]
+
+            // might still be non-existing in some cases because this is hacky
+            if (oldScope != null) {
+                // update the AST node to this namespace declaration
+                oldScope.astNode = nodeToScope
+
+                // set current scope
+                currentScope = oldScope
+
+                // make it also available in the scope map, otherwise, we cannot leave the
+                // scope
+                scopeMap[oldScope.astNode] = oldScope
+                null
+            } else {
+                NameScope(nodeToScope, currentNamePrefix, lang!!.namespaceDelimiter)
+            }
+        } else {
+            NameScope(nodeToScope, currentNamePrefix, lang!!.namespaceDelimiter)
         }
     }
 
@@ -538,15 +560,14 @@ class ScopeManager {
         var s = scope
 
         // First, we need to check, whether we have some kind of scoping. this is currently only
-        // limited
-        // to the Go frontend, but should work for other languages as well - but is not tested.
+        // limited to the Go frontend, but should work for other languages as well - but is not
+        // tested.
         if (lang is GoLanguageFrontend &&
                 call.fqn != null &&
                 call.fqn.contains((lang as GoLanguageFrontend).namespaceDelimiter)
         ) {
             // extract the scope name, it is usually a name space, but could probably be something
-            // else
-            // as well in other languages
+            // else as well in other languages
             val scopeName =
                 call.fqn.substring(
                     0,
@@ -571,7 +592,7 @@ class ScopeManager {
         }
 
         return resolveValueDeclaration(
-            scope,
+            s,
             { f: FunctionDeclaration -> f.name == call.name && f.hasSignature(call.signature) },
             FunctionDeclaration::class.java
         )
@@ -764,9 +785,8 @@ class ScopeManager {
             // Overlapping relative resolution
             val mergedPath = currentPath.subList(0, nameIndexInCurrent)
             mergedPath.addAll(namePath)
-            fqnScopeMap.getOrDefault(
+            fqnScopeMap.get(
                 java.lang.String.join(lang!!.namespaceDelimiter, mergedPath),
-                null
             )
         } else {
             // Absolute name of the node by concatenating the current namespace and the relative
@@ -776,9 +796,9 @@ class ScopeManager {
                     lang!!.namespaceDelimiter +
                     java.lang.String.join(lang!!.namespaceDelimiter, namePath))
             // Relative resolution
-            val scope = fqnScopeMap.getOrDefault(relativeToAbsolute, null)
+            val scope = fqnScopeMap.get(relativeToAbsolute)
             scope ?: // Absolut resolution: The name is used as absolut name.
-            fqnScopeMap.getOrDefault(astNodeName, null)
+            fqnScopeMap.get(astNodeName)
         }
     }
 
