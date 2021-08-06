@@ -540,8 +540,40 @@ class ScopeManager {
         return curr
     }
 
-    fun resolve(ref: DeclaredReferenceExpression): ValueDeclaration? {
-        return resolve(currentScope, ref)
+    /**
+     * Resolves only references to Values in the current scope, static references to other visible
+     * records are not resolved over the ScopeManager.
+     *
+     * TODO: We should merge this function with [.resolveFunction]
+     *
+     * @param scope
+     * @param ref
+     * @return
+     */
+    @JvmOverloads
+    fun resolve(ref: Node, scope: Scope? = currentScope): ValueDeclaration? {
+        if (scope is ValueDeclarationScope) {
+            for (valDecl in scope.valueDeclarations) {
+                if (valDecl.name == ref.name) {
+                    // If the reference seems to point to a function the entire signature is checked
+                    // for equality
+                    if (ref is HasType &&
+                            (ref as HasType).type is FunctionPointerType &&
+                            valDecl is FunctionDeclaration
+                    ) {
+                        val fptrType = (ref as HasType).type as FunctionPointerType
+                        val d = valDecl
+                        if (d.type == fptrType.returnType && d.hasSignature(fptrType.parameters)) {
+                            return valDecl
+                        }
+                    } else {
+                        return valDecl
+                    }
+                }
+            }
+        }
+
+        return if (scope!!.getParent() != null) resolve(ref, scope.getParent()) else null
     }
 
     /**
@@ -607,42 +639,6 @@ class ScopeManager {
         call: CallExpression
     ): List<FunctionDeclaration> {
         return resolveFunctionStopScopeTraversalOnDefinition(currentScope, call)
-    }
-
-    /**
-     * Resolves only references to Values in the current scope, static references to other visible
-     * records are not resolved over the ScopeManager.
-     *
-     * TODO: We should merge this function with [.resolveFunction]
-     *
-     * @param scope
-     * @param ref
-     * @return
-     */
-    private fun resolve(scope: Scope?, ref: Node): ValueDeclaration? {
-        if (scope is ValueDeclarationScope) {
-            for (valDecl in scope.valueDeclarations) {
-                if (valDecl.name == ref.name) {
-
-                    // If the reference seems to point to a function the entire signature is checked
-                    // for
-                    // equality
-                    if (ref is HasType &&
-                            (ref as HasType).type is FunctionPointerType &&
-                            valDecl is FunctionDeclaration
-                    ) {
-                        val fptrType = (ref as HasType).type as FunctionPointerType
-                        val d = valDecl
-                        if (d.type == fptrType.returnType && d.hasSignature(fptrType.parameters)) {
-                            return valDecl
-                        }
-                    } else {
-                        return valDecl
-                    }
-                }
-            }
-        }
-        return if (scope!!.getParent() != null) resolve(scope.getParent(), ref) else null
     }
 
     /**
