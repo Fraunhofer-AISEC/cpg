@@ -33,14 +33,12 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
 import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.helpers.Util
 import java.util.*
 import java.util.function.Function
 import java.util.function.Predicate
-import java.util.regex.Pattern
 import java.util.stream.Collectors
 import org.slf4j.LoggerFactory
 
@@ -552,7 +550,7 @@ class ScopeManager {
      */
     @JvmOverloads
     fun resolve(ref: Node, scope: Scope? = currentScope): ValueDeclaration? {
-        return resolveValueDeclaration(scope, ValueDeclaration::class.java) {
+        return resolveWithPredicate<ValueDeclaration>(scope) {
                 if (it.name == ref.name) {
                     // If the reference seems to point to a function the entire signature is checked
                     // for equality
@@ -563,14 +561,14 @@ class ScopeManager {
                         val fptrType = (ref as HasType).type as FunctionPointerType
                         val d = it
                         if (d.type == fptrType.returnType && d.hasSignature(fptrType.parameters)) {
-                            return@resolveValueDeclaration true
+                            return@resolveWithPredicate true
                         }
                     } else {
-                        return@resolveValueDeclaration true
+                        return@resolveWithPredicate true
                     }
                 }
 
-                return@resolveValueDeclaration false
+                return@resolveWithPredicate false
             }
             .firstOrNull()
     }
@@ -588,6 +586,8 @@ class ScopeManager {
         scope: Scope? = currentScope
     ): List<FunctionDeclaration> {
         var s = scope
+
+        // TODO: check for occurences of something like "::f" -> immed. go to global scope
 
         // First, we need to check, whether we have some kind of scoping. this is currently only
         // limited to the Go frontend, but should work for other languages as well - but is not
@@ -621,8 +621,7 @@ class ScopeManager {
                 }
         }
 
-        return resolveValueDeclaration(s, FunctionDeclaration::class.java) { f: FunctionDeclaration
-            ->
+        return resolveWithPredicate(s) { f: FunctionDeclaration ->
             f.name == call.name && f.hasSignature(call.signature)
         }
     }
@@ -636,38 +635,54 @@ class ScopeManager {
     fun resolveFunctionStopScopeTraversalOnDefinition(
         call: CallExpression
     ): List<FunctionDeclaration> {
-        return resolveFunctionStopScopeTraversalOnDefinition(currentScope, call)
+        return resolveWithPredicate(currentScope, true) { f: FunctionDeclaration ->
+            f.name == call.name
+        }
     }
 
     /**
-     * Traverses the scope up-wards and looks for declarations of type [c] which matches the
+     * Traverses the scope up-wards and looks for declarations of type [T] which matches the
      * condition [predicate].
      *
-     * @param scope
-     * @param p predicate the element must match to
-     * @param c class of the object we want to find by traversing
+     * It returns a list of all declarations that match the predicate, ordered by reachability in
+     * the scope stack. This means that "local" declarations will be in the list first, global items
+     * will be last.
+     *
+     * @param searchScope the scope to start the search in
+     * @param predicate predicate the element must match to
      * @param <T>
      * @return </T>
      */
-    private fun <T> resolveValueDeclaration(
-        scope: Scope?,
-        clazz: Class<T>,
+    inline fun <reified T : Declaration> resolveWithPredicate(
+        searchScope: Scope?,
+        stopIfFound: Boolean = false,
         predicate: (T) -> Boolean
     ): List<T> {
-        if (scope is ValueDeclarationScope) {
-            val list =
-                scope
-                    .valueDeclarations
-                    .filter { obj: ValueDeclaration? -> clazz.isInstance(obj) }
-                    .map { obj: ValueDeclaration? -> clazz.cast(obj) }
-                    .filter(predicate)
-            if (list.isNotEmpty()) {
-                return list
+        var scope = searchScope
+        val declarations = mutableListOf<T>()
+
+        while (scope != null) {
+            if (scope is ValueDeclarationScope) {
+                declarations.addAll(scope.valueDeclarations.filterIsInstance<T>().filter(predicate))
             }
+
+            if (scope is StructureDeclarationScope) {
+                declarations.addAll(
+                    scope.structureDeclarations.filterIsInstance<T>().filter(predicate)
+                )
+            }
+
+            // some (all?) languages require us to stop immediately if we found something on this
+            // scope. This is the case where function overloading is allowed, but only within the same scope
+            if (stopIfFound && declarations.isNotEmpty()) {
+                return declarations
+            }
+
+            // go up-wards in the scope tree
+            scope = scope.getParent()
         }
-        return if (scope!!.getParent() != null)
-            resolveValueDeclaration(scope.getParent(), clazz, predicate)
-        else ArrayList()
+
+        return declarations
     }
 
     /**
@@ -733,7 +748,7 @@ class ScopeManager {
     }
 
     /**
-     * Resolves a function reference of a call expression, but stops the scope traversal when a
+     * Resolves a function reference of a call expression, but s the scope traversal when a
      * FunctionDeclaration with matching name has been found
      *
      * @param scope
@@ -744,70 +759,7 @@ class ScopeManager {
         scope: Scope?,
         call: CallExpression
     ): List<FunctionDeclaration> {
-        return resolveValueDeclaration(scope, FunctionDeclaration::class.java) {
-            f: FunctionDeclaration ->
-            f.name == call.name
-        }
-    }
-
-    /**
-     * This function tries to resolve a FQN to a scope. The name is the name of the AST-Node
-     * associated to a scope. The Name may be the FQN-name or a relative name that with the
-     * currently active namespace gives the AST-Nodes, FQN. If the provided name and the current
-     * namespace overlap ,they are merged and the FQN is resolved. If there is no node with the
-     * merged FQN-name null is returned. This is due to the behaviour of C++ when resolving names
-     * for AST-elements that are definitions of exiting declarations.
-     *
-     * @param astNodeName relative (to the current Namespace) or fqn-Name of an entity associated to
-     * a scope.
-     * @return The scope that the resolved name is associated to.
-     */
-    private fun resolveScopeWithPath(astNodeName: String?): Scope? {
-        if (astNodeName == null || astNodeName.isEmpty()) {
-            return currentScope
-        }
-        val namePath =
-            Arrays.asList(
-                *astNodeName.split(Pattern.quote(lang!!.namespaceDelimiter)).toTypedArray()
-            )
-        val currentPath =
-            Arrays.asList(
-                *currentNamePrefix.split(Pattern.quote(lang!!.namespaceDelimiter)).toTypedArray()
-            )
-
-        // Last index because the inner name has preference
-        val nameIndexInCurrent = currentPath.lastIndexOf(namePath[0])
-        return if (nameIndexInCurrent >= 0) {
-            // Overlapping relative resolution
-            val mergedPath = currentPath.subList(0, nameIndexInCurrent)
-            mergedPath.addAll(namePath)
-            fqnScopeMap.get(
-                java.lang.String.join(lang!!.namespaceDelimiter, mergedPath),
-            )
-        } else {
-            // Absolute name of the node by concatenating the current namespace and the relative
-            // name
-            val relativeToAbsolute =
-                (currentNamePrefixWithDelimiter +
-                    lang!!.namespaceDelimiter +
-                    java.lang.String.join(lang!!.namespaceDelimiter, namePath))
-            // Relative resolution
-            val scope = fqnScopeMap.get(relativeToAbsolute)
-            scope ?: // Absolut resolution: The name is used as absolut name.
-            fqnScopeMap.get(astNodeName)
-        }
-    }
-
-    private fun resolveInSingleScope(
-        scope: Scope,
-        ref: DeclaredReferenceExpression
-    ): ValueDeclaration? {
-        if (scope is ValueDeclarationScope) {
-            for (valDecl in scope.valueDeclarations) {
-                if (valDecl.name == ref.name) return valDecl
-            }
-        }
-        return null
+        return resolveWithPredicate(scope, true) { f: FunctionDeclaration -> f.name == call.name }
     }
 
     fun getScopeOfStatement(node: Node?): Scope? {
