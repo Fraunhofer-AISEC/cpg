@@ -45,12 +45,17 @@ import java.util.stream.Collectors
 import org.slf4j.LoggerFactory
 
 /**
- * The scope manager builds a multitree-structure of scopes associated to a scope. These Scopes
- * capture the validity of certain (Variable-, Field-, Record-)declarations but are also used to
- * identify outer scopes that should be the target of a jump (continue, break, throw).
+ * The scope manager builds a multi-tree structure of (declaration) nodes associated to a scope.
+ * These scopes capture the validity of certain (Variable-, Field-, Record-)declarations but are
+ * also used to identify outer scopes that should be the target of a jump (continue, break, throw).
  *
- * [enterScope] and [leaveScope] can be used to enter the tree of scopes and then sitting at a path,
- * access the currently valid "stack" of scopes.
+ * Language frontends MUST call [enterScope] and [leaveScope] when they encounter nodes that modify
+ * the scope and [resetToGlobal] when they first handle a new [TranslationUnitDeclaration].
+ * Afterwards the currently valid "stack" of scopes within the tree can be accessed.
+ *
+ * If a language frontend encounters a [Declaration] node, it MUST call [addDeclaration], rather
+ * then adding the declaration to the node itself. This ensures that all declarations are properly
+ * registred in the scope map and can be resolved later.
  */
 class ScopeManager {
     /**
@@ -83,8 +88,8 @@ class ScopeManager {
     val isInRecord: Boolean
         get() = this.firstScopeOrNull { it is RecordScope } != null
 
-    val globalScope: GlobalScope
-        get() = this.firstScopeOrNull { it is GlobalScope } as GlobalScope
+    val globalScope: GlobalScope?
+        get() = this.firstScopeIsInstanceOrNull<GlobalScope>()
 
     /** The current block, according to the scope that is currently active. */
     val currentBlock: CompoundStatement?
@@ -95,6 +100,27 @@ class ScopeManager {
     /** The current record, according to the scope that is currently active. */
     val currentRecord: RecordDeclaration?
         get() = this.firstScopeOrNull { it is RecordScope }?.astNode as? RecordDeclaration
+
+    val currentTypedefs: List<TypedefDeclaration>
+        get() = getCurrentTypedefs(currentScope)
+
+    val currentNamePrefix: String
+        get() {
+            val namedScope = firstScopeOrNull { scope: Scope? ->
+                scope is NameScope || scope is RecordScope
+            }
+            // TODO (oxisto): This may be broken, since RecordScope inherits from NameScope
+            return if (namedScope is NameScope) namedScope.namePrefix
+            else (namedScope as? RecordScope)?.getAstNode()?.name ?: ""
+        }
+    val currentNamePrefixWithDelimiter: String
+        get() {
+            var namePrefix = currentNamePrefix
+            if (namePrefix.isNotEmpty()) {
+                namePrefix += lang!!.namespaceDelimiter
+            }
+            return namePrefix
+        }
 
     /**
      * Combines the state of several scope managers into this one. Primarily used in combination
@@ -321,6 +347,18 @@ class ScopeManager {
     }
 
     /**
+     * Tries to find the first scope that is an instance of the scope type [T]. Calls
+     * [firstScopeOrNull] internally.
+     *
+     * @param searchScope the scope to start the search in
+     */
+    inline fun <reified T : Scope> firstScopeIsInstanceOrNull(
+        searchScope: Scope? = currentScope
+    ): T? {
+        return this.firstScopeOrNull(searchScope) { it is T } as? T
+    }
+
+    /**
      * Retrieves all scopes that satisfy the condition specified in [predicate], independently of
      * their hierarchy.
      *
@@ -412,7 +450,7 @@ class ScopeManager {
         var labelStatement: LabelStatement?
         var searchScope = currentScope
         while (searchScope != null) {
-            labelStatement = searchScope.getLabelStatements().get(labelString)
+            labelStatement = searchScope.getLabelStatements()[labelString]
             if (labelStatement != null) {
                 return labelStatement
             }
@@ -422,45 +460,11 @@ class ScopeManager {
     }
 
     /**
-     * TO remove a valueDeclaration in the cases were the declaration gets replaced by something
-     * else
-     *
-     * @param declaration
+     * This function MUST be called when a language frontend first enters a translation unit. It
+     * sets the [GlobalScope] to the current translation unit specified in [declaration].
      */
-    fun removeDeclaration(declaration: Declaration?) {
-        var toIterate = currentScope
-        do {
-            if (toIterate is ValueDeclarationScope) {
-                val declScope = toIterate
-                if (declScope.valueDeclarations.contains(declaration)) {
-                    declScope.valueDeclarations.remove(declaration)
-                    if (declScope.getAstNode() is RecordDeclaration) {
-                        val rec = declScope.getAstNode() as RecordDeclaration
-                        rec.removeField(declaration as FieldDeclaration?)
-                        rec.removeMethod(declaration as MethodDeclaration?)
-                        rec.removeConstructor(declaration as ConstructorDeclaration?)
-                        rec.removeRecord(declaration as RecordDeclaration?)
-                    } else if (declScope.getAstNode() is FunctionDeclaration) {
-                        (declScope.getAstNode() as FunctionDeclaration).removeParameter(
-                            declaration as ParamVariableDeclaration?
-                        )
-                    } else if (declScope.getAstNode() is Statement) {
-                        if (declaration is VariableDeclaration) {
-                            (declScope.getAstNode() as Statement).removeLocal(
-                                declaration as VariableDeclaration?
-                            )
-                        }
-                    } else if (declScope.getAstNode() is EnumDeclaration) {
-                        (declScope.getAstNode() as EnumDeclaration).entries.remove(declaration)
-                    }
-                }
-            }
-            toIterate = toIterate!!.getParent()
-        } while (toIterate != null)
-    }
-
     fun resetToGlobal(declaration: TranslationUnitDeclaration?) {
-        val global = firstScopeOrNull { scope: Scope? -> scope is GlobalScope } as GlobalScope?
+        val global = this.globalScope
         if (global != null) {
             // update the AST node to this translation unit declaration
             global.astNode = declaration
@@ -469,10 +473,11 @@ class ScopeManager {
     }
 
     /**
-     * Adds a declaration to the CPG by taking into account the currently active scope, and add the
-     * Declaration to the appropriate node. This function will keep the declaration in the Scopes
-     * and allows the ScopeManager by himself to resolve ValueDeclarations through
-     * [ScopeManager.resolve].
+     * This function MUST be called when a language frontend first handles a [Declaration]. It adds
+     * a declaration to the scope manager, taking into account the currently active scope.
+     * Furthermore it adds the declaration to the [de.fraunhofer.aisec.cpg.graph.DeclarationHolder]
+     * that is associated with the current scope through [ValueDeclarationScope.addValueDeclaration]
+     * and [StructureDeclarationScope.addStructureDeclaration].
      *
      * @param declaration
      */
@@ -480,46 +485,41 @@ class ScopeManager {
         when (declaration) {
             is ProblemDeclaration, is IncludeDeclaration -> {
                 // directly add problems and includes to the global scope
-                val globalScope =
-                    firstScopeOrNull { scope: Scope? -> scope is GlobalScope } as GlobalScope?
-                globalScope!!.addDeclaration(declaration)
+                this.globalScope?.addDeclaration(declaration)
             }
             is ValueDeclaration -> {
-                val scopeForValueDeclaration =
-                    firstScopeOrNull { scope: Scope? -> scope is ValueDeclarationScope } as
-                        ValueDeclarationScope?
-                scopeForValueDeclaration!!.addValueDeclaration(declaration as ValueDeclaration?)
+                val scope = this.firstScopeIsInstanceOrNull<ValueDeclarationScope>()
+                scope?.addValueDeclaration(declaration)
             }
             is RecordDeclaration,
             is NamespaceDeclaration,
             is EnumDeclaration,
             is TemplateDeclaration -> {
-                val scopeForStructureDeclaration =
-                    firstScopeOrNull { scope: Scope? -> scope is StructureDeclarationScope } as
-                        StructureDeclarationScope?
-                scopeForStructureDeclaration!!.addDeclaration(declaration)
+                val scope = this.firstScopeIsInstanceOrNull<StructureDeclarationScope>()
+                scope?.addDeclaration(declaration)
             }
         }
     }
 
+    /**
+     * Soley used by the [de.fraunhofer.aisec.cpg.graph.TypeManager], adds typedefs to the current
+     * [ValueDeclarationScope].
+     */
     fun addTypedef(typedef: TypedefDeclaration?) {
-        val scope =
-            firstScopeOrNull { obj: Scope? -> ValueDeclarationScope::class.java.isInstance(obj) } as
-                ValueDeclarationScope?
+        val scope = this.firstScopeIsInstanceOrNull<ValueDeclarationScope>()
         if (scope == null) {
             LOGGER.error("Cannot add typedef. Not in declaration scope.")
             return
         }
+
         scope.addTypedef(typedef)
+
         if (scope.astNode == null) {
             lang!!.currentTU.addTypedef(typedef!!)
         } else {
             scope.astNode.addTypedef(typedef!!)
         }
     }
-
-    val currentTypedefs: List<TypedefDeclaration>
-        get() = getCurrentTypedefs(currentScope)
 
     private fun getCurrentTypedefs(scope: Scope?): List<TypedefDeclaration> {
         val curr: MutableList<TypedefDeclaration> = ArrayList()
@@ -539,23 +539,6 @@ class ScopeManager {
         }
         return curr
     }
-
-    val currentNamePrefix: String
-        get() {
-            val namedScope = firstScopeOrNull { scope: Scope? ->
-                scope is NameScope || scope is RecordScope
-            }
-            return if (namedScope is NameScope) namedScope.namePrefix
-            else (namedScope as? RecordScope)?.getAstNode()?.name ?: ""
-        }
-    val currentNamePrefixWithDelimiter: String
-        get() {
-            var namePrefix = currentNamePrefix
-            if (!namePrefix.isEmpty()) {
-                namePrefix += lang!!.namespaceDelimiter
-            }
-            return namePrefix
-        }
 
     fun resolve(ref: DeclaredReferenceExpression): ValueDeclaration? {
         return resolve(currentScope, ref)
