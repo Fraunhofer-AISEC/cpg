@@ -33,4 +33,13 @@ package de.fraunhofer.aisec.cpg.frontends
  * language/frontend-specific code for the particular trait. This could help to fine-tune the
  * [de.fraunhofer.aisec.cpg.passes.CallResolver] for specific languages.
  */
-interface LanguageTrait {}
+interface LanguageTrait
+
+/** A language trait, that specifies that this language has support for templates or generics. */
+interface HasTemplates : LanguageTrait
+
+/**
+ * A language trait that specifies, that this language has support for default arguments, e.g. in
+ * functions.
+ */
+interface HasDefaultArguments : LanguageTrait
