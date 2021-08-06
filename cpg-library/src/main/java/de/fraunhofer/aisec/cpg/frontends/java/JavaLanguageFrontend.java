@@ -387,7 +387,7 @@ public class JavaLanguageFrontend extends LanguageFrontend {
   private String getFQNInCurrentPackage(String simpleName) {
     Scope theScope =
         getScopeManager()
-            .getFirstScopeThat(scope -> scope.getAstNode() instanceof NamespaceDeclaration);
+            .firstScopeOrNull(scope -> scope.getAstNode() instanceof NamespaceDeclaration);
     // If scope is null we are in a default package
     if (theScope == null) {
       return simpleName;

@@ -139,7 +139,7 @@ public class DeclarationHandler
     Type type =
         TypeParser.createFrom(
             lang.getScopeManager()
-                .getFirstScopeThat(RecordScope.class::isInstance)
+                .firstScopeOrNull(RecordScope.class::isInstance)
                 .getAstNode()
                 .getName(),
             true);
