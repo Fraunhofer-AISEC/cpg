@@ -75,26 +75,26 @@ class ScopeManager {
 
     /** True, if the scope manager is currently in a [BlockScope]. */
     val isInBlock: Boolean
-        get() = this.getFirstScopeThat { it is BlockScope } != null
+        get() = this.firstScopeOrNull { it is BlockScope } != null
     /** True, if the scope manager is currently in a [FunctionScope]. */
     val isInFunction: Boolean
-        get() = this.getFirstScopeThat { it is FunctionScope } != null
+        get() = this.firstScopeOrNull { it is FunctionScope } != null
     /** True, if the scope manager is currently in a [RecordScope], e.g. a class. */
     val isInRecord: Boolean
-        get() = this.getFirstScopeThat { it is RecordScope } != null
+        get() = this.firstScopeOrNull { it is RecordScope } != null
 
     val globalScope: GlobalScope
-        get() = this.getFirstScopeThat { it is GlobalScope } as GlobalScope
+        get() = this.firstScopeOrNull { it is GlobalScope } as GlobalScope
 
     /** The current block, according to the scope that is currently active. */
     val currentBlock: CompoundStatement?
-        get() = this.getFirstScopeThat { it is BlockScope }?.astNode as? CompoundStatement
+        get() = this.firstScopeOrNull { it is BlockScope }?.astNode as? CompoundStatement
     /** The current function, according to the scope that is currently active. */
     val currentFunction: FunctionDeclaration?
-        get() = this.getFirstScopeThat { it is FunctionScope }?.astNode as? FunctionDeclaration
+        get() = this.firstScopeOrNull { it is FunctionScope }?.astNode as? FunctionDeclaration
     /** The current record, according to the scope that is currently active. */
     val currentRecord: RecordDeclaration?
-        get() = this.getFirstScopeThat { it is RecordScope }?.astNode as? RecordDeclaration
+        get() = this.firstScopeOrNull { it is RecordScope }?.astNode as? RecordDeclaration
 
     /**
      * Combines the state of several scope managers into this one. Primarily used in combination
@@ -147,13 +147,14 @@ class ScopeManager {
     /**
      * This function, in combination with [leaveScope] is the main interaction point with the scope
      * manager for language frontends. Every time a language frontend handles a node that begins a
-     * new scope, this function needs to be called.
-     *
-     * Afterwards, all calls to [addDeclaration] will be distributed to the
-     * [de.fraunhofer.aisec.cpg.graph.DeclarationHolder] that is currently in-scope.
+     * new scope, this function needs to be called. Appropriate scopes will then be created
+     * on-the-fly, if they do not exist.
      *
      * The scope manager has an internal association between the type of scope, e.g. a [BlockScope]
      * and the CPG node it represents, e.g. a [CompoundStatement].
+     *
+     * Afterwards, all calls to [addDeclaration] will be distributed to the
+     * [de.fraunhofer.aisec.cpg.graph.DeclarationHolder] that is currently in-scope.
      */
     fun enterScope(nodeToScope: Node) {
         var newScope: Scope? = null
@@ -214,7 +215,7 @@ class ScopeManager {
         val existingScope =
             currentScope?.children?.firstOrNull() {
                 // TODO(oxisto): double-check if this works with nested namespaces
-                // TODO(oxisto): this might not work with concurrent frontends
+                // TODO(oxisto): this might not work properly with concurrent frontends
                 it is NameScope && it.scopedName == nodeToScope.name
             }
 
@@ -222,11 +223,11 @@ class ScopeManager {
             // update the AST node to this namespace declaration
             existingScope.astNode = nodeToScope
 
-            // make it also available in the scope map, otherwise, we cannot leave the
+            // make it also available in the scope map. Otherwise, we cannot leave the
             // scope
             scopeMap[nodeToScope] = existingScope
 
-            // do NOT return a new name scope, but null, so enter scope nodes that it
+            // do NOT return a new name scope, but rather return null, so enterScope knows that it
             // does not need to push a new scope
             null
         } else {
@@ -234,12 +235,16 @@ class ScopeManager {
         }
     }
 
+    /**
+     * Similar to [enterScope], but does so in a "read-only" mode, e.g. it does not modify the scope
+     * tree and does not create new scopes on the fly, as [enterScope] does.
+     */
     fun enterScopeIfExists(nodeToScope: Node?) {
         if (scopeMap.containsKey(nodeToScope)) {
             val scope = scopeMap[nodeToScope]
 
             // we need a special handling of name spaces, because
-            // thy are associated to more than one AST node
+            // they are associated to more than one AST node
             if (scope is NameScope) {
                 // update AST (see enterScope for an explanation)
                 scope.astNode = nodeToScope
@@ -249,20 +254,22 @@ class ScopeManager {
     }
 
     /**
-     * Remove all scopes above the specified one including the specified one.
+     * The counter-part of [enterScope]. Language frontends need to call this function, when the
+     * scope of the currently processed AST node ends. There MUST have been a corresponding
+     * [enterScope] call with the same [nodeToLeave], otherwise the scope-tree might be corrupted.
      *
-     * @param nodeToLeave
-     * - The scope is defined by its astNode
-     * @return the scope is returned for processing
+     * @param nodeToLeave the AST node
+     *
+     * @return the scope that was just left
      */
     fun leaveScope(nodeToLeave: Node): Scope? {
-        // Check to return as soon as we know that there is no associated scope, this check could be
-        // omitted
-        // but will increase runtime if leaving a node without scope will happen often.
+        // Check to return as soon as we know that there is no associated scope. This check could be
+        // omitted but will increase runtime if leaving a node without scope will happen often.
         if (!scopeMap.containsKey(nodeToLeave)) {
             return null
         }
-        val leaveScope = getFirstScopeThat { scope: Scope? -> scope?.astNode == nodeToLeave }
+
+        val leaveScope = firstScopeOrNull { it.astNode == nodeToLeave }
         if (leaveScope == null) {
             if (scopeMap.containsKey(nodeToLeave)) {
                 Util.errorWithFileLocation(
@@ -279,17 +286,12 @@ class ScopeManager {
                     nodeToLeave.javaClass
                 )
             }
+
             return null
         }
-        currentScope = leaveScope.parent
-        return leaveScope
-    }
 
-    fun leaveScopeIfExists(nodeToLeave: Node?): Scope? {
-        val leaveScope = scopeMap.get(nodeToLeave)
-        if (leaveScope != null) {
-            currentScope = leaveScope.parent
-        }
+        // go back to the parent of the scope we just left
+        currentScope = leaveScope.parent
         return leaveScope
     }
 
@@ -297,9 +299,12 @@ class ScopeManager {
      * This function tries to find the first scope that satisfies the condition specified in
      * [predicate]. It starts searching in the [searchScope], moving up-wards using the
      * [Scope.parent] attribute.
+     *
+     * @param searchScope the scope to start the search in
+     * @param predicate the search predicate
      */
     @JvmOverloads
-    fun getFirstScopeThat(searchScope: Scope? = currentScope, predicate: Predicate<Scope>): Scope? {
+    fun firstScopeOrNull(searchScope: Scope? = currentScope, predicate: Predicate<Scope>): Scope? {
         // start at searchScope
         var scope = searchScope
 
@@ -315,12 +320,17 @@ class ScopeManager {
         return null
     }
 
-    fun getScopesThat(predicate: Predicate<Scope?>): List<Scope?> {
-        val scopes: MutableList<Scope?> = ArrayList()
-        for (scope in scopeMap.values) if (predicate.test(scope)) scopes.add(scope)
-        return scopes
+    /**
+     * Retrieves all scopes that satisfy the condition specified in [predicate], independently of
+     * their hierarchy.
+     *
+     * @param predicate the search predicate
+     */
+    fun filterScopes(predicate: (Scope) -> Boolean): List<Scope> {
+        return scopeMap.values.filter(predicate)
     }
 
+    // TODO: only the TypeManager uses that, can we somehow combine this with filterScopes?
     fun <T> getUniqueScopesThat(
         predicate: Predicate<Scope?>,
         uniqueProperty: Function<Scope?, T>
@@ -335,9 +345,14 @@ class ScopeManager {
         return scopes
     }
 
+    /**
+     * This function SHOULD only be used by the
+     * [de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass] while building up the EOG. It adds
+     * a [BreakStatement] to the list of break statements of the current "breakable" scope.
+     */
     fun addBreakStatement(breakStatement: BreakStatement) {
         if (breakStatement.label == null) {
-            val scope = getFirstScopeThat { scope: Scope? -> scope?.isBreakable() == true }
+            val scope = firstScopeOrNull { scope: Scope? -> scope?.isBreakable() == true }
             if (scope == null) {
                 LOGGER.error(
                     "Break inside of unbreakable scope. The break will be ignored, but may lead " +
@@ -355,9 +370,14 @@ class ScopeManager {
         }
     }
 
+    /**
+     * This function SHOULD only be used by the
+     * [de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass] while building up the EOG. It adds
+     * a [ContinueStatement] to the list of continue statements of the current "continuable" scope.
+     */
     fun addContinueStatement(continueStatement: ContinueStatement) {
         if (continueStatement.label == null) {
-            val scope = getFirstScopeThat { scope: Scope? -> scope?.isContinuable() == true }
+            val scope = firstScopeOrNull { scope: Scope? -> scope?.isContinuable() == true }
             if (scope == null) {
                 LOGGER.error(
                     "Continue inside of not continuable scope. The continue will be ignored, but may lead " +
@@ -375,11 +395,20 @@ class ScopeManager {
         }
     }
 
-    fun addLabelStatement(labelStatement: LabelStatement?) {
-        currentScope!!.addLabelStatement(labelStatement)
+    /**
+     * This function SHOULD only be used by the
+     * [de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass] while building up the EOG. It adds
+     * a [LabelStatement] to the list of label statements of the current scope.
+     */
+    fun addLabelStatement(labelStatement: LabelStatement) {
+        currentScope?.addLabelStatement(labelStatement)
     }
 
-    fun getLabelStatement(labelString: String?): LabelStatement? {
+    /**
+     * This function is internal to the scoep manager and primarily used by [addBreakStatement] and
+     * [addContinueStatement]. It retrieves the [LabelStatement] associated with the [labelString].
+     */
+    private fun getLabelStatement(labelString: String): LabelStatement? {
         var labelStatement: LabelStatement?
         var searchScope = currentScope
         while (searchScope != null) {
@@ -431,7 +460,7 @@ class ScopeManager {
     }
 
     fun resetToGlobal(declaration: TranslationUnitDeclaration?) {
-        val global = getFirstScopeThat { scope: Scope? -> scope is GlobalScope } as GlobalScope?
+        val global = firstScopeOrNull { scope: Scope? -> scope is GlobalScope } as GlobalScope?
         if (global != null) {
             // update the AST node to this translation unit declaration
             global.astNode = declaration
@@ -452,12 +481,12 @@ class ScopeManager {
             is ProblemDeclaration, is IncludeDeclaration -> {
                 // directly add problems and includes to the global scope
                 val globalScope =
-                    getFirstScopeThat { scope: Scope? -> scope is GlobalScope } as GlobalScope?
+                    firstScopeOrNull { scope: Scope? -> scope is GlobalScope } as GlobalScope?
                 globalScope!!.addDeclaration(declaration)
             }
             is ValueDeclaration -> {
                 val scopeForValueDeclaration =
-                    getFirstScopeThat { scope: Scope? -> scope is ValueDeclarationScope } as
+                    firstScopeOrNull { scope: Scope? -> scope is ValueDeclarationScope } as
                         ValueDeclarationScope?
                 scopeForValueDeclaration!!.addValueDeclaration(declaration as ValueDeclaration?)
             }
@@ -466,7 +495,7 @@ class ScopeManager {
             is EnumDeclaration,
             is TemplateDeclaration -> {
                 val scopeForStructureDeclaration =
-                    getFirstScopeThat { scope: Scope? -> scope is StructureDeclarationScope } as
+                    firstScopeOrNull { scope: Scope? -> scope is StructureDeclarationScope } as
                         StructureDeclarationScope?
                 scopeForStructureDeclaration!!.addDeclaration(declaration)
             }
@@ -475,9 +504,7 @@ class ScopeManager {
 
     fun addTypedef(typedef: TypedefDeclaration?) {
         val scope =
-            getFirstScopeThat { obj: Scope? ->
-                ValueDeclarationScope::class.java.isInstance(obj)
-            } as
+            firstScopeOrNull { obj: Scope? -> ValueDeclarationScope::class.java.isInstance(obj) } as
                 ValueDeclarationScope?
         if (scope == null) {
             LOGGER.error("Cannot add typedef. Not in declaration scope.")
@@ -515,7 +542,7 @@ class ScopeManager {
 
     val currentNamePrefix: String
         get() {
-            val namedScope = getFirstScopeThat { scope: Scope? ->
+            val namedScope = firstScopeOrNull { scope: Scope? ->
                 scope is NameScope || scope is RecordScope
             }
             return if (namedScope is NameScope) namedScope.namePrefix
@@ -564,11 +591,11 @@ class ScopeManager {
                 )
 
             // this is a scoped call. we need to explicitly jump to that particular scope
-            val scopes = getScopesThat { predicate: Scope? ->
+            val scopes = filterScopes { predicate: Scope? ->
                 (predicate is NameScope && predicate.scopedName == scopeName)
             }
             s =
-                if (scopes == null || scopes.isEmpty()) {
+                if (scopes.isEmpty()) {
                     LOGGER.error(
                         "Could not find the scope {} needed to resolve the call {}. Falling back to the current scope",
                         scopeName,

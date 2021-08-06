@@ -547,7 +547,7 @@ public class EvaluationOrderGraphPass extends Pass {
       Type throwType;
       Scope catchingScope =
           lang.getScopeManager()
-              .getFirstScopeThat(
+              .firstScopeOrNull(
                   scope -> scope instanceof TryScope || scope instanceof FunctionScope);
 
       if (input != null) {
@@ -557,7 +557,7 @@ public class EvaluationOrderGraphPass extends Pass {
         // DeclarationScope here
         Scope decl =
             lang.getScopeManager()
-                .getFirstScopeThat(scope -> scope.getClass().equals(ValueDeclarationScope.class));
+                .firstScopeOrNull(scope -> scope.getClass().equals(ValueDeclarationScope.class));
         if (decl != null
             && decl.getAstNode() instanceof CatchClause
             && ((CatchClause) decl.getAstNode()).getParameter() != null) {
@@ -657,7 +657,7 @@ public class EvaluationOrderGraphPass extends Pass {
     // Forwards all open and uncaught throwing nodes to the outer scope that may handle them
     Scope outerScope =
         lang.getScopeManager()
-            .getFirstScopeThat(
+            .firstScopeOrNull(
                 lang.getScopeManager().getCurrentScope().getParent(),
                 scope -> scope instanceof TryScope || scope instanceof FunctionScope);
     if (outerScope != null) {
@@ -848,7 +848,7 @@ public class EvaluationOrderGraphPass extends Pass {
     }
 
     LoopScope loopScope =
-        (LoopScope) lang.getScopeManager().getFirstScopeThat(scope -> scope instanceof LoopScope);
+        (LoopScope) lang.getScopeManager().firstScopeOrNull(scope -> scope instanceof LoopScope);
     if (loopScope == null) {
       LOGGER.error("I am unexpectedly not in a loop, cannot add edge to loop start");
       return;
