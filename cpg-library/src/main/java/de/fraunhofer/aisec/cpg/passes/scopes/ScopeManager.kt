@@ -75,29 +75,26 @@ class ScopeManager {
 
     /** True, if the scope manager is currently in a [BlockScope]. */
     val isInBlock: Boolean
-        get() = this.getFirstScopeThat { scope: Scope? -> scope is BlockScope } != null
+        get() = this.getFirstScopeThat { it is BlockScope } != null
     /** True, if the scope manager is currently in a [FunctionScope]. */
     val isInFunction: Boolean
-        get() = this.getFirstScopeThat { scope: Scope? -> scope is FunctionScope } != null
+        get() = this.getFirstScopeThat { it is FunctionScope } != null
     /** True, if the scope manager is currently in a [RecordScope], e.g. a class. */
     val isInRecord: Boolean
-        get() = this.getFirstScopeThat { scope: Scope? -> scope is RecordScope } != null
+        get() = this.getFirstScopeThat { it is RecordScope } != null
+
+    val globalScope: GlobalScope
+        get() = this.getFirstScopeThat { it is GlobalScope } as GlobalScope
 
     /** The current block, according to the scope that is currently active. */
     val currentBlock: CompoundStatement?
-        get() =
-            this.getFirstScopeThat { scope: Scope? -> scope is BlockScope }?.astNode as?
-                CompoundStatement
+        get() = this.getFirstScopeThat { it is BlockScope }?.astNode as? CompoundStatement
     /** The current function, according to the scope that is currently active. */
     val currentFunction: FunctionDeclaration?
-        get() =
-            this.getFirstScopeThat { scope: Scope? -> scope is FunctionScope }?.astNode as?
-                FunctionDeclaration
+        get() = this.getFirstScopeThat { it is FunctionScope }?.astNode as? FunctionDeclaration
     /** The current record, according to the scope that is currently active. */
     val currentRecord: RecordDeclaration?
-        get() =
-            this.getFirstScopeThat { scope: Scope? -> scope is RecordScope }?.astNode as?
-                RecordDeclaration
+        get() = this.getFirstScopeThat { it is RecordScope }?.astNode as? RecordDeclaration
 
     /**
      * Combines the state of several scope managers into this one. Primarily used in combination
@@ -108,11 +105,9 @@ class ScopeManager {
     fun mergeFrom(toMerge: Collection<ScopeManager>) {
         val globalScopes =
             toMerge
-                .stream()
                 .map { s: ScopeManager -> s.scopeMap[null] }
                 .filter { obj: Scope? -> GlobalScope::class.java.isInstance(obj) }
                 .map { obj: Scope? -> GlobalScope::class.java.cast(obj) }
-                .collect(Collectors.toList())
         val currGlobalScope = scopeMap[null]
         if (currGlobalScope !is GlobalScope) {
             LOGGER.error("Scope for null node is not a GlobalScope or is null")
@@ -215,31 +210,25 @@ class ScopeManager {
      *
      * Otherwise, we return a new name scope.
      */
-    private fun newNameScopeIfNecessary(nodeToScope: Node): NameScope? {
-        val existing =
-            (currentScope as? StructureDeclarationScope)?.structureDeclarations?.firstOrNull {
-                x: Declaration ->
-                x.name == nodeToScope.name
+    private fun newNameScopeIfNecessary(nodeToScope: NamespaceDeclaration): NameScope? {
+        val existingScope =
+            currentScope?.children?.firstOrNull() {
+                // TODO(oxisto): double-check if this works with nested namespaces
+                // TODO(oxisto): this might not work with concurrent frontends
+                it is NameScope && it.scopedName == nodeToScope.name
             }
 
-        return if (existing != null) {
-            val oldScope = scopeMap[existing]
+        return if (existingScope != null) {
+            // update the AST node to this namespace declaration
+            existingScope.astNode = nodeToScope
 
-            // might still be non-existing in some cases because this is hacky
-            if (oldScope != null) {
-                // update the AST node to this namespace declaration
-                oldScope.astNode = nodeToScope
+            // make it also available in the scope map, otherwise, we cannot leave the
+            // scope
+            scopeMap[nodeToScope] = existingScope
 
-                // set current scope
-                currentScope = oldScope
-
-                // make it also available in the scope map, otherwise, we cannot leave the
-                // scope
-                scopeMap[oldScope.astNode] = oldScope
-                null
-            } else {
-                NameScope(nodeToScope, currentNamePrefix, lang!!.namespaceDelimiter)
-            }
+            // do NOT return a new name scope, but null, so enter scope nodes that it
+            // does not need to push a new scope
+            null
         } else {
             NameScope(nodeToScope, currentNamePrefix, lang!!.namespaceDelimiter)
         }
