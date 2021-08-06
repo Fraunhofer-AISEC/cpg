@@ -552,28 +552,27 @@ class ScopeManager {
      */
     @JvmOverloads
     fun resolve(ref: Node, scope: Scope? = currentScope): ValueDeclaration? {
-        if (scope is ValueDeclarationScope) {
-            for (valDecl in scope.valueDeclarations) {
-                if (valDecl.name == ref.name) {
+        return resolveValueDeclaration(scope, ValueDeclaration::class.java) {
+                if (it.name == ref.name) {
                     // If the reference seems to point to a function the entire signature is checked
                     // for equality
                     if (ref is HasType &&
                             (ref as HasType).type is FunctionPointerType &&
-                            valDecl is FunctionDeclaration
+                            it is FunctionDeclaration
                     ) {
                         val fptrType = (ref as HasType).type as FunctionPointerType
-                        val d = valDecl
+                        val d = it
                         if (d.type == fptrType.returnType && d.hasSignature(fptrType.parameters)) {
-                            return valDecl
+                            return@resolveValueDeclaration true
                         }
                     } else {
-                        return valDecl
+                        return@resolveValueDeclaration true
                     }
                 }
-            }
-        }
 
-        return if (scope!!.getParent() != null) resolve(ref, scope.getParent()) else null
+                return@resolveValueDeclaration false
+            }
+            .firstOrNull()
     }
 
     /**
@@ -622,11 +621,10 @@ class ScopeManager {
                 }
         }
 
-        return resolveValueDeclaration(
-            s,
-            { f: FunctionDeclaration -> f.name == call.name && f.hasSignature(call.signature) },
-            FunctionDeclaration::class.java
-        )
+        return resolveValueDeclaration(s, FunctionDeclaration::class.java) { f: FunctionDeclaration
+            ->
+            f.name == call.name && f.hasSignature(call.signature)
+        }
     }
 
     fun resolveFunctionTemplateDeclaration(
@@ -642,7 +640,8 @@ class ScopeManager {
     }
 
     /**
-     * Traverses the scope and looks for Declarations of type c which matches f
+     * Traverses the scope up-wards and looks for declarations of type [c] which matches the
+     * condition [predicate].
      *
      * @param scope
      * @param p predicate the element must match to
@@ -650,21 +649,24 @@ class ScopeManager {
      * @param <T>
      * @return </T>
      */
-    private fun <T> resolveValueDeclaration(scope: Scope?, p: Predicate<T>, c: Class<T>): List<T> {
+    private fun <T> resolveValueDeclaration(
+        scope: Scope?,
+        clazz: Class<T>,
+        predicate: (T) -> Boolean
+    ): List<T> {
         if (scope is ValueDeclarationScope) {
             val list =
                 scope
                     .valueDeclarations
-                    .stream()
-                    .filter { obj: ValueDeclaration? -> c.isInstance(obj) }
-                    .map { obj: ValueDeclaration? -> c.cast(obj) }
-                    .filter(p)
-                    .collect(Collectors.toList())
-            if (!list.isEmpty()) {
+                    .filter { obj: ValueDeclaration? -> clazz.isInstance(obj) }
+                    .map { obj: ValueDeclaration? -> clazz.cast(obj) }
+                    .filter(predicate)
+            if (list.isNotEmpty()) {
                 return list
             }
         }
-        return if (scope!!.getParent() != null) resolveValueDeclaration(scope.getParent(), p, c)
+        return if (scope!!.getParent() != null)
+            resolveValueDeclaration(scope.getParent(), clazz, predicate)
         else ArrayList()
     }
 
@@ -742,11 +744,10 @@ class ScopeManager {
         scope: Scope?,
         call: CallExpression
     ): List<FunctionDeclaration> {
-        return resolveValueDeclaration(
-            scope,
-            { f: FunctionDeclaration -> f.name == call.name },
-            FunctionDeclaration::class.java
-        )
+        return resolveValueDeclaration(scope, FunctionDeclaration::class.java) {
+            f: FunctionDeclaration ->
+            f.name == call.name
+        }
     }
 
     /**
