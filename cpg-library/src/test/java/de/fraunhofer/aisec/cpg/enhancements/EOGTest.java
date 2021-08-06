@@ -642,7 +642,7 @@ class EOGTest extends BaseTest {
 
   @Test
   void testEOGInvariant() throws Exception {
-    File file = new File("src/main/java/de/fraunhofer/aisec/cpg/passes/scopes/ScopeManager.java");
+    File file = new File("src/main/java/de/fraunhofer/aisec/cpg/passes/CallResolver.java");
     TranslationUnitDeclaration tu =
         TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true);
 

@@ -31,6 +31,8 @@ import static de.fraunhofer.aisec.cpg.graph.NodeBuilder.newDeclaredReferenceExpr
 import static de.fraunhofer.aisec.cpg.graph.NodeBuilder.newLiteral;
 
 import de.fraunhofer.aisec.cpg.TranslationConfiguration;
+import de.fraunhofer.aisec.cpg.frontends.HasDefaultArguments;
+import de.fraunhofer.aisec.cpg.frontends.HasTemplates;
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
 import de.fraunhofer.aisec.cpg.frontends.TranslationException;
 import de.fraunhofer.aisec.cpg.graph.Annotation;
@@ -89,7 +91,8 @@ import org.slf4j.LoggerFactory;
  *
  * <p>Frontend for ONE CXX File
  */
-public class CXXLanguageFrontend extends LanguageFrontend {
+public class CXXLanguageFrontend extends LanguageFrontend
+    implements HasDefaultArguments, HasTemplates {
 
   public static final List<String> CXX_EXTENSIONS = List.of(".c", ".cpp", ".cc");
   public static final List<String> CXX_HEADER_EXTENSIONS = List.of(".h", ".hpp");
