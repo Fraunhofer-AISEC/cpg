@@ -39,13 +39,12 @@ import de.fraunhofer.aisec.cpg.helpers.Util
 import java.util.*
 import java.util.function.Function
 import java.util.function.Predicate
-import java.util.stream.Collectors
 import org.slf4j.LoggerFactory
 
 /**
- * The scope manager builds a multi-tree structure of (declaration) nodes associated to a scope.
- * These scopes capture the validity of certain (Variable-, Field-, Record-)declarations but are
- * also used to identify outer scopes that should be the target of a jump (continue, break, throw).
+ * The scope manager builds a multi-tree structure of nodes associated to a scope. These scopes
+ * capture the validity of certain (Variable-, Field-, Record-)declarations but are also used to
+ * identify outer scopes that should be the target of a jump (continue, break, throw).
  *
  * Language frontends MUST call [enterScope] and [leaveScope] when they encounter nodes that modify
  * the scope and [resetToGlobal] when they first handle a new [TranslationUnitDeclaration].
@@ -87,7 +86,7 @@ class ScopeManager {
         get() = this.firstScopeOrNull { it is RecordScope } != null
 
     val globalScope: GlobalScope?
-        get() = this.firstScopeIsInstanceOrNull<GlobalScope>()
+        get() = this.firstScopeIsInstanceOrNull()
 
     /** The current block, according to the scope that is currently active. */
     val currentBlock: CompoundStatement?
@@ -320,6 +319,35 @@ class ScopeManager {
     }
 
     /**
+     * This function MUST be called when a language frontend first handles a [Declaration]. It adds
+     * a declaration to the scope manager, taking into account the currently active scope.
+     * Furthermore it adds the declaration to the [de.fraunhofer.aisec.cpg.graph.DeclarationHolder]
+     * that is associated with the current scope through [ValueDeclarationScope.addValueDeclaration]
+     * and [StructureDeclarationScope.addStructureDeclaration].
+     *
+     * @param declaration
+     */
+    fun addDeclaration(declaration: Declaration?) {
+        when (declaration) {
+            is ProblemDeclaration, is IncludeDeclaration -> {
+                // directly add problems and includes to the global scope
+                this.globalScope?.addDeclaration(declaration)
+            }
+            is ValueDeclaration -> {
+                val scope = this.firstScopeIsInstanceOrNull<ValueDeclarationScope>()
+                scope?.addValueDeclaration(declaration)
+            }
+            is RecordDeclaration,
+            is NamespaceDeclaration,
+            is EnumDeclaration,
+            is TemplateDeclaration -> {
+                val scope = this.firstScopeIsInstanceOrNull<StructureDeclarationScope>()
+                scope?.addDeclaration(declaration)
+            }
+        }
+    }
+
+    /**
      * This function tries to find the first scope that satisfies the condition specified in
      * [predicate]. It starts searching in the [searchScope], moving up-wards using the
      * [Scope.parent] attribute.
@@ -381,6 +409,11 @@ class ScopeManager {
         return scopes
     }
 
+    /** This function returns the [Scope] associated with a node. */
+    fun lookupScope(node: Node): Scope? {
+        return scopeMap[node]
+    }
+
     /**
      * This function SHOULD only be used by the
      * [de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass] while building up the EOG. It adds
@@ -400,7 +433,7 @@ class ScopeManager {
         } else {
             val labelStatement = getLabelStatement(breakStatement.label)
             if (labelStatement != null) {
-                val scope = getScopeOfStatement(labelStatement.subStatement)
+                val scope = lookupScope(labelStatement.subStatement)
                 (scope as IBreakable?)!!.addBreakStatement(breakStatement)
             }
         }
@@ -425,7 +458,7 @@ class ScopeManager {
         } else {
             val labelStatement = getLabelStatement(continueStatement.label)
             if (labelStatement != null) {
-                val scope = getScopeOfStatement(labelStatement.subStatement)
+                val scope = lookupScope(labelStatement.subStatement)
                 (scope as IContinuable?)!!.addContinueStatement(continueStatement)
             }
         }
@@ -467,35 +500,6 @@ class ScopeManager {
             // update the AST node to this translation unit declaration
             global.astNode = declaration
             currentScope = global
-        }
-    }
-
-    /**
-     * This function MUST be called when a language frontend first handles a [Declaration]. It adds
-     * a declaration to the scope manager, taking into account the currently active scope.
-     * Furthermore it adds the declaration to the [de.fraunhofer.aisec.cpg.graph.DeclarationHolder]
-     * that is associated with the current scope through [ValueDeclarationScope.addValueDeclaration]
-     * and [StructureDeclarationScope.addStructureDeclaration].
-     *
-     * @param declaration
-     */
-    fun addDeclaration(declaration: Declaration?) {
-        when (declaration) {
-            is ProblemDeclaration, is IncludeDeclaration -> {
-                // directly add problems and includes to the global scope
-                this.globalScope?.addDeclaration(declaration)
-            }
-            is ValueDeclaration -> {
-                val scope = this.firstScopeIsInstanceOrNull<ValueDeclarationScope>()
-                scope?.addValueDeclaration(declaration)
-            }
-            is RecordDeclaration,
-            is NamespaceDeclaration,
-            is EnumDeclaration,
-            is TemplateDeclaration -> {
-                val scope = this.firstScopeIsInstanceOrNull<StructureDeclarationScope>()
-                scope?.addDeclaration(declaration)
-            }
         }
     }
 
@@ -667,13 +671,24 @@ class ScopeManager {
             }
 
             if (scope is StructureDeclarationScope) {
-                declarations.addAll(
-                    scope.structureDeclarations.filterIsInstance<T>().filter(predicate)
-                )
+                var list = scope.structureDeclarations.filterIsInstance<T>().filter(predicate)
+
+                // this was taken over from the old resolveStructureDeclaration.
+                // TODO(oxisto): why is this only when the list is empty?
+                if (list.isEmpty()) {
+                    for (declaration in scope.structureDeclarations) {
+                        if (declaration is RecordDeclaration) {
+                            list = declaration.templates.filterIsInstance<T>().filter(predicate)
+                        }
+                    }
+                }
+
+                declarations.addAll(list)
             }
 
             // some (all?) languages require us to stop immediately if we found something on this
-            // scope. This is the case where function overloading is allowed, but only within the same scope
+            // scope. This is the case where function overloading is allowed, but only within the
+            // same scope
             if (stopIfFound && declarations.isNotEmpty()) {
                 return declarations
             }
@@ -686,51 +701,6 @@ class ScopeManager {
     }
 
     /**
-     * Traverses the scope and looks for Declarations of type c which matches f
-     *
-     * @param scope
-     * @param p predicate the element must match to
-     * @param c class of the object we want to find by traversing
-     * @param <T>
-     * @return </T>
-     */
-    private fun <T> resolveStructureDeclaration(
-        scope: Scope?,
-        p: Predicate<T>,
-        c: Class<T>
-    ): List<T> {
-        if (scope is StructureDeclarationScope) {
-            var list =
-                scope
-                    .structureDeclarations
-                    .stream()
-                    .filter { obj: Declaration? -> c.isInstance(obj) }
-                    .map { obj: Declaration? -> c.cast(obj) }
-                    .filter(p)
-                    .collect(Collectors.toList())
-            if (list.isEmpty()) {
-                for (declaration in scope.structureDeclarations) {
-                    if (declaration is RecordDeclaration) {
-                        list =
-                            declaration
-                                .templates
-                                .stream()
-                                .filter { obj: TemplateDeclaration? -> c.isInstance(obj) }
-                                .map { obj: TemplateDeclaration? -> c.cast(obj) }
-                                .filter(p)
-                                .collect(Collectors.toList())
-                    }
-                }
-            }
-            if (!list.isEmpty()) {
-                return list
-            }
-        }
-        return if (scope!!.getParent() != null) resolveStructureDeclaration(scope.getParent(), p, c)
-        else ArrayList()
-    }
-
-    /**
      * @param scope where we are searching for the FunctionTemplateDeclarations
      * @param call CallExpression we want to resolve an invocation target for
      * @return List of FunctionTemplateDeclaration that match the name provided in the
@@ -740,30 +710,9 @@ class ScopeManager {
         scope: Scope?,
         call: CallExpression
     ): List<FunctionTemplateDeclaration> {
-        return resolveStructureDeclaration(
-            scope,
-            { c: FunctionTemplateDeclaration -> c.name == call.name },
-            FunctionTemplateDeclaration::class.java
-        )
-    }
-
-    /**
-     * Resolves a function reference of a call expression, but s the scope traversal when a
-     * FunctionDeclaration with matching name has been found
-     *
-     * @param scope
-     * @param call
-     * @return
-     */
-    private fun resolveFunctionStopScopeTraversalOnDefinition(
-        scope: Scope?,
-        call: CallExpression
-    ): List<FunctionDeclaration> {
-        return resolveWithPredicate(scope, true) { f: FunctionDeclaration -> f.name == call.name }
-    }
-
-    fun getScopeOfStatement(node: Node?): Scope? {
-        return scopeMap.get(node)
+        return resolveWithPredicate(scope, true) { c: FunctionTemplateDeclaration ->
+            c.name == call.name
+        }
     }
 
     /**
