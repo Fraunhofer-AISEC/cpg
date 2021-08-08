@@ -25,7 +25,6 @@
  */
 package de.fraunhofer.aisec.cpg.passes.scopes
 
-import de.fraunhofer.aisec.cpg.ExperimentalGolang
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.HasType
 import de.fraunhofer.aisec.cpg.graph.Node
@@ -637,7 +636,6 @@ class ScopeManager {
      * @param call the call expression
      * @return a list of possible functions
      */
-    @OptIn(ExperimentalGolang::class)
     @JvmOverloads
     fun resolveFunction(
         call: CallExpression,
@@ -645,18 +643,16 @@ class ScopeManager {
     ): List<FunctionDeclaration> {
         var s = scope
 
-        // TODO: check for occurences of something like "::f" -> immed. go to global scope
-
         // First, we need to check, whether we have some kind of scoping.
         if (lang != null && call.fqn != null && call.fqn.contains(lang!!.namespaceDelimiter)) {
             // extract the scope name, it is usually a name space, but could probably be something
             // else as well in other languages
             val scopeName = call.fqn.substring(0, call.fqn.lastIndexOf(lang!!.namespaceDelimiter))
 
+            // TODO: proper scope selection
+
             // this is a scoped call. we need to explicitly jump to that particular scope
-            val scopes = filterScopes { predicate: Scope? ->
-                (predicate is NameScope && predicate.scopedName == scopeName)
-            }
+            val scopes = filterScopes { (it is NameScope && it.scopedName == scopeName) }
             s =
                 if (scopes.isEmpty()) {
                     LOGGER.error(
