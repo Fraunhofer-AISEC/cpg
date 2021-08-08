@@ -91,7 +91,7 @@ internal class ScopeManagerTest : BaseTest() {
     @Test
     fun testMerge() {
         val s1 = ScopeManager()
-        val f1 = CXXLanguageFrontend(TranslationConfiguration.builder().build(), s1)
+        CXXLanguageFrontend(TranslationConfiguration.builder().build(), s1)
         s1.resetToGlobal(NodeBuilder.newTranslationUnitDeclaration("f1.cpp", null))
 
         // build a namespace declaration in f1.cpp with the namespace A
@@ -102,7 +102,7 @@ internal class ScopeManagerTest : BaseTest() {
         s1.leaveScope(namespaceA1)
 
         val s2 = ScopeManager()
-        val f2 = CXXLanguageFrontend(TranslationConfiguration.builder().build(), s2)
+        CXXLanguageFrontend(TranslationConfiguration.builder().build(), s2)
         s2.resetToGlobal(NodeBuilder.newTranslationUnitDeclaration("f1.cpp", null))
 
         // and do the same in the other file
@@ -113,6 +113,7 @@ internal class ScopeManagerTest : BaseTest() {
         s2.leaveScope(namespaceA2)
 
         val final = ScopeManager()
+        CXXLanguageFrontend(TranslationConfiguration.builder().build(), final)
         final.mergeFrom(listOf(s1, s2))
 
         // in the final scope manager, the should only be one NameScope "A"
@@ -132,5 +133,11 @@ internal class ScopeManagerTest : BaseTest() {
         // finally, test whether our two namespace declarations are pointing to the same NameScope
         assertEquals(scopeA, final.lookupScope(namespaceA1))
         assertEquals(scopeA, final.lookupScope(namespaceA2))
+
+        // resolve symbol
+        val call = NodeBuilder.newCallExpression("func1", "A::func1", null, false)
+        val func = final.resolveFunction(call).firstOrNull()
+
+        assertEquals(func1, func)
     }
 }
