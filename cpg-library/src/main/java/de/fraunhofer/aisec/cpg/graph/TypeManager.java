@@ -422,7 +422,7 @@ public class TypeManager {
     typeToRecord =
         frontend
             .getScopeManager()
-            .getUniqueScopesThat(RecordScope.class::isInstance, s -> s.getAstNode().getName())
+            .filterScopesDistinctBy(RecordScope.class::isInstance, s -> s.getAstNode().getName())
             .stream()
             .map(s -> (RecordDeclaration) s.getAstNode())
             .collect(Collectors.toMap(RecordDeclaration::getName, Function.identity()));

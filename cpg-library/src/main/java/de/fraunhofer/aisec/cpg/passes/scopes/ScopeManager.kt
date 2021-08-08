@@ -37,7 +37,6 @@ import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.helpers.Util
 import java.util.*
-import java.util.function.Function
 import java.util.function.Predicate
 import org.slf4j.LoggerFactory
 
@@ -90,22 +89,23 @@ class ScopeManager {
 
     /** The current block, according to the scope that is currently active. */
     val currentBlock: CompoundStatement?
-        get() = this.firstScopeOrNull { it is BlockScope }?.astNode as? CompoundStatement
+        get() = this.firstScopeIsInstanceOrNull<BlockScope>()?.astNode as? CompoundStatement
     /** The current function, according to the scope that is currently active. */
     val currentFunction: FunctionDeclaration?
-        get() = this.firstScopeOrNull { it is FunctionScope }?.astNode as? FunctionDeclaration
+        get() = this.firstScopeIsInstanceOrNull<FunctionScope>()?.astNode as? FunctionDeclaration
     /** The current record, according to the scope that is currently active. */
     val currentRecord: RecordDeclaration?
-        get() = this.firstScopeOrNull { it is RecordScope }?.astNode as? RecordDeclaration
+        get() = this.firstScopeIsInstanceOrNull<RecordScope>()?.astNode as? RecordDeclaration
 
     val currentTypedefs: List<TypedefDeclaration>
-        get() = getCurrentTypedefs(currentScope)
+        get() = this.getCurrentTypedefs(currentScope)
 
     val currentNamePrefix: String
         get() {
-            val namedScope = firstScopeOrNull { scope: Scope? ->
-                scope is NameScope || scope is RecordScope
-            }
+            val namedScope =
+                this.firstScopeOrNull { scope: Scope? ->
+                    scope is NameScope || scope is RecordScope
+                }
             // TODO (oxisto): This may be broken, since RecordScope inherits from NameScope
             return if (namedScope is NameScope) namedScope.namePrefix
             else (namedScope as? RecordScope)?.getAstNode()?.name ?: ""
@@ -118,6 +118,14 @@ class ScopeManager {
             }
             return namePrefix
         }
+
+    init {
+        pushScope(GlobalScope())
+    }
+
+    companion object {
+        private val LOGGER = LoggerFactory.getLogger(ScopeManager::class.java)
+    }
 
     /**
      * Combines the state of several scope managers into this one. Primarily used in combination
@@ -394,19 +402,18 @@ class ScopeManager {
         return scopeMap.values.filter(predicate)
     }
 
-    // TODO: only the TypeManager uses that, can we somehow combine this with filterScopes?
-    fun <T> getUniqueScopesThat(
-        predicate: Predicate<Scope?>,
-        uniqueProperty: Function<Scope?, T>
-    ): List<Scope?> {
-        val scopes: MutableList<Scope?> = ArrayList()
-        val seen: MutableSet<T> = HashSet()
-        for (scope in scopeMap.values) {
-            if (predicate.test(scope) && seen.add(uniqueProperty.apply(scope))) {
-                scopes.add(scope)
-            }
-        }
-        return scopes
+    /**
+     * This function filters scopes according to [predicate] and makes them unique according to
+     * [uniqueProperty].
+     *
+     * @param predicate the search predicate
+     * @param uniqueProperty the unique property to run a distinct filter on
+     */
+    fun <T> filterScopesDistinctBy(
+        predicate: (Scope) -> Boolean,
+        uniqueProperty: (Scope) -> T
+    ): List<Scope> {
+        return scopeMap.values.filter(predicate).distinctBy(uniqueProperty)
     }
 
     /** This function returns the [Scope] associated with a node. */
@@ -429,12 +436,12 @@ class ScopeManager {
                 )
                 return
             }
-            (scope as IBreakable).addBreakStatement(breakStatement)
+            (scope as Breakable).addBreakStatement(breakStatement)
         } else {
             val labelStatement = getLabelStatement(breakStatement.label)
             if (labelStatement != null) {
                 val scope = lookupScope(labelStatement.subStatement)
-                (scope as IBreakable?)!!.addBreakStatement(breakStatement)
+                (scope as Breakable?)!!.addBreakStatement(breakStatement)
             }
         }
     }
@@ -454,12 +461,12 @@ class ScopeManager {
                 )
                 return
             }
-            (scope as IContinuable).addContinueStatement(continueStatement)
+            (scope as Continuable).addContinueStatement(continueStatement)
         } else {
             val labelStatement = getLabelStatement(continueStatement.label)
             if (labelStatement != null) {
                 val scope = lookupScope(labelStatement.subStatement)
-                (scope as IContinuable?)!!.addContinueStatement(continueStatement)
+                (scope as Continuable?)!!.addContinueStatement(continueStatement)
             }
         }
     }
@@ -742,21 +749,5 @@ class ScopeManager {
         return if (scope.getParent() == null) {
             null
         } else getRecordForName(scope.getParent(), name)
-    } ///// End copied over for now ///////
-
-    companion object {
-        private val LOGGER = LoggerFactory.getLogger(ScopeManager::class.java)
     }
-
-    init {
-        pushScope(GlobalScope())
-    }
-}
-
-fun Scope.isBreakable(): Boolean {
-    return this is LoopScope || this is SwitchScope
-}
-
-fun Scope.isContinuable(): Boolean {
-    return this is LoopScope
 }
