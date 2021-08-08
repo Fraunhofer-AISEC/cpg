@@ -237,17 +237,17 @@ public class DeclarationHandler
   public RecordDeclaration handleClassOrInterfaceDeclaration(
       ClassOrInterfaceDeclaration classInterDecl) {
     // TODO: support other kinds, such as interfaces
-    String name = classInterDecl.getNameAsString();
+    String fqn = classInterDecl.getNameAsString();
 
     // Todo adapt name using a new type of scope "Namespace/Package scope"
     // if (packageDeclaration != null) {
     //  name = packageDeclaration.getNameAsString() + "." + name;
     // }
-    name = getAbsoluteName(name);
+    fqn = getAbsoluteName(fqn);
 
     // add a type declaration
     RecordDeclaration recordDeclaration =
-        NodeBuilder.newRecordDeclaration(name, "class", classInterDecl.toString());
+        NodeBuilder.newRecordDeclaration(fqn, "class", classInterDecl.toString());
     recordDeclaration.setSuperClasses(
         classInterDecl.getExtendedTypes().stream()
             .map(this.lang::getTypeAsGoodAsPossible)
@@ -432,8 +432,7 @@ public class DeclarationHandler
 
   private String getAbsoluteName(String name) {
     String prefix = lang.getScopeManager().getCurrentNamePrefix();
-    name =
-        (prefix != null && prefix.length() > 0 ? prefix + lang.getNamespaceDelimiter() : "") + name;
+    name = (prefix.length() > 0 ? prefix + lang.getNamespaceDelimiter() : "") + name;
     return name;
   }
 }
