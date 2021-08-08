@@ -47,8 +47,10 @@ import org.neo4j.ogm.annotation.Relationship;
  * namespace declaration is used to represent the package name as namespace. In its explicit
  * appearance a namespace declaration can contain {@link FunctionDeclaration}, {@link
  * FieldDeclaration} and {@link RecordDeclaration} similar to a {@link RecordDeclaration} and the
- * semantical difference between NamespaceDeclaration and {@link RecordDeclaration} lies in the
+ * semantic difference between NamespaceDeclaration and {@link RecordDeclaration} lies in the
  * non-instantiabillity of a namespace.
+ *
+ * <p>The name property of this node need to be a FQN for propery resolution.
  */
 public class NamespaceDeclaration extends Declaration
     implements DeclarationHolder, StatementHolder {

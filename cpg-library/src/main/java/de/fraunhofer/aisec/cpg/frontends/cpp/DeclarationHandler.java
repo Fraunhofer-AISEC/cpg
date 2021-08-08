@@ -80,8 +80,9 @@ public class DeclarationHandler extends Handler<Declaration, IASTDeclaration, CX
   }
 
   private Declaration handleNamespace(CPPASTNamespaceDefinition ctx) {
-    NamespaceDeclaration declaration =
-        NodeBuilder.newNamespaceDeclaration(ctx.getName().toString(), lang.getCodeFromRawNode(ctx));
+    var fqn = lang.getScopeManager().getCurrentNamePrefixWithDelimiter() + ctx.getName().toString();
+
+    var declaration = NodeBuilder.newNamespaceDeclaration(fqn, lang.getCodeFromRawNode(ctx));
 
     lang.getScopeManager().addDeclaration(declaration);
 

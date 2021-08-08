@@ -718,9 +718,16 @@ public class NodeBuilder {
     return node;
   }
 
-  public static NamespaceDeclaration newNamespaceDeclaration(@NonNull String name, String code) {
+  /**
+   * Creates a new namespace declaration.
+   *
+   * @param fqn the FQN
+   * @param code
+   * @return
+   */
+  public static NamespaceDeclaration newNamespaceDeclaration(@NonNull String fqn, String code) {
     NamespaceDeclaration node = new NamespaceDeclaration();
-    node.setName(name);
+    node.setName(fqn);
     node.setCode(code);
 
     log(node);

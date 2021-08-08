@@ -112,6 +112,7 @@ internal class ScopeManagerTest : BaseTest() {
         s2.addDeclaration(func2)
         s2.leaveScope(namespaceA2)
 
+        // merge the two scopes. this replicates the behaviour of parseParallel
         val final = ScopeManager()
         CXXLanguageFrontend(TranslationConfiguration.builder().build(), final)
         final.mergeFrom(listOf(s1, s2))
@@ -139,5 +140,29 @@ internal class ScopeManagerTest : BaseTest() {
         val func = final.resolveFunction(call).firstOrNull()
 
         assertEquals(func1, func)
+    }
+
+    @Test
+    fun testScopeFQN() {
+        val s = ScopeManager()
+        CXXLanguageFrontend(TranslationConfiguration.builder().build(), s)
+        s.resetToGlobal(NodeBuilder.newTranslationUnitDeclaration("file.cpp", null))
+
+        val namespaceA = NodeBuilder.newNamespaceDeclaration("A", null)
+        s.enterScope(namespaceA)
+
+        // nested namespace A::B. the name needs to be a FQN
+        val namespaceB = NodeBuilder.newNamespaceDeclaration("A::B", null)
+        s.enterScope(namespaceB)
+
+        val func = NodeBuilder.newFunctionDeclaration("func", null)
+        s.addDeclaration(func)
+
+        s.leaveScope(namespaceB)
+        s.addDeclaration(namespaceB)
+        s.leaveScope(namespaceA)
+
+        val scope = s.lookupScope("A::B")
+        assertNotNull(scope)
     }
 }
