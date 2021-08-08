@@ -602,26 +602,26 @@ class ScopeManager {
      * @return
      */
     @JvmOverloads
-    fun resolve(ref: DeclaredReferenceExpression, scope: Scope? = currentScope): ValueDeclaration? {
-        return resolveWithPredicate<ValueDeclaration>(scope) {
+    fun resolveReference(
+        ref: DeclaredReferenceExpression,
+        scope: Scope? = currentScope
+    ): ValueDeclaration? {
+        return resolve<ValueDeclaration>(scope) {
                 if (it.name == ref.name) {
                     // If the reference seems to point to a function the entire signature is checked
                     // for equality
-                    if (ref is HasType &&
-                            (ref as HasType).type is FunctionPointerType &&
-                            it is FunctionDeclaration
-                    ) {
+                    if (ref.type is FunctionPointerType && it is FunctionDeclaration) {
                         val fptrType = (ref as HasType).type as FunctionPointerType
                         val d = it
                         if (d.type == fptrType.returnType && d.hasSignature(fptrType.parameters)) {
-                            return@resolveWithPredicate true
+                            return@resolve true
                         }
                     } else {
-                        return@resolveWithPredicate true
+                        return@resolve true
                     }
                 }
 
-                return@resolveWithPredicate false
+                return@resolve false
             }
             .firstOrNull()
     }
@@ -662,23 +662,13 @@ class ScopeManager {
                 }
         }
 
-        return resolveWithPredicate(s) { f: FunctionDeclaration ->
-            f.name == call.name && f.hasSignature(call.signature)
-        }
-    }
-
-    fun resolveFunctionTemplateDeclaration(
-        call: CallExpression
-    ): List<FunctionTemplateDeclaration> {
-        return resolveFunctionTemplateDeclaration(currentScope, call)
+        return resolve(s) { it.name == call.name && it.hasSignature(call.signature) }
     }
 
     fun resolveFunctionStopScopeTraversalOnDefinition(
         call: CallExpression
     ): List<FunctionDeclaration> {
-        return resolveWithPredicate(currentScope, true) { f: FunctionDeclaration ->
-            f.name == call.name
-        }
+        return resolve(currentScope, true) { f: FunctionDeclaration -> f.name == call.name }
     }
 
     /**
@@ -692,9 +682,8 @@ class ScopeManager {
      * @param searchScope the scope to start the search in
      * @param predicate predicate the element must match to
      * @param <T>
-     * @return </T>
      */
-    inline fun <reified T : Declaration> resolveWithPredicate(
+    inline fun <reified T : Declaration> resolve(
         searchScope: Scope?,
         stopIfFound: Boolean = false,
         predicate: (T) -> Boolean
@@ -738,18 +727,19 @@ class ScopeManager {
     }
 
     /**
+     * Resolves function templates of the given [CallExpression].
+     *
      * @param scope where we are searching for the FunctionTemplateDeclarations
      * @param call CallExpression we want to resolve an invocation target for
      * @return List of FunctionTemplateDeclaration that match the name provided in the
      * CallExpression and therefore are invocation candidates
      */
-    private fun resolveFunctionTemplateDeclaration(
-        scope: Scope?,
-        call: CallExpression
+    @JvmOverloads
+    fun resolveFunctionTemplateDeclaration(
+        call: CallExpression,
+        scope: Scope? = currentScope
     ): List<FunctionTemplateDeclaration> {
-        return resolveWithPredicate(scope, true) { c: FunctionTemplateDeclaration ->
-            c.name == call.name
-        }
+        return resolve(scope, true) { c: FunctionTemplateDeclaration -> c.name == call.name }
     }
 
     /**
@@ -759,25 +749,7 @@ class ScopeManager {
      * @param name the name
      * @return the declaration, or null if it does not exist
      */
-    fun getRecordForName(scope: Scope, name: String?): RecordDeclaration? {
-        var o: RecordDeclaration? = null
-
-        // check current scope first
-        if (scope is StructureDeclarationScope) {
-            o =
-                scope
-                    .structureDeclarations
-                    .filter { d: Declaration -> d is RecordDeclaration && d.name == name }
-                    .map { d: Declaration? -> d as RecordDeclaration? }
-                    .firstOrNull()
-        }
-        if (o != null) {
-            return o
-        }
-
-        // no parent left
-        return if (scope.getParent() == null) {
-            null
-        } else getRecordForName(scope.getParent(), name)
+    fun getRecordForName(scope: Scope, name: String): RecordDeclaration? {
+        return resolve<RecordDeclaration>(scope, true) { it.name == name }.firstOrNull()
     }
 }
