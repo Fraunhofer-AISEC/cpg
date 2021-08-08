@@ -31,6 +31,7 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
 import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.helpers.Util
@@ -100,13 +101,8 @@ class ScopeManager {
 
     val currentNamePrefix: String
         get() {
-            val namedScope =
-                this.firstScopeOrNull { scope: Scope? ->
-                    scope is NameScope || scope is RecordScope
-                }
-            // TODO (oxisto): This may be broken, since RecordScope inherits from NameScope
-            return if (namedScope is NameScope) namedScope.namePrefix
-            else (namedScope as? RecordScope)?.getAstNode()?.name ?: ""
+            val namedScope = this.firstScopeIsInstanceOrNull<NameScope>()
+            return if (namedScope is NameScope) namedScope.namePrefix else ""
         }
     val currentNamePrefixWithDelimiter: String
         get() {
@@ -207,6 +203,8 @@ class ScopeManager {
         }
         scopeMap[scope.astNode] = scope
         if (scope is NameScope) {
+            // for this to work, it is essential that RecordDeclaration and NamespaceDeclaration
+            // nodes have a FQN as their name.
             fqnScopeMap[scope.astNode.name] = scope
         }
         currentScope?.let {
@@ -285,9 +283,7 @@ class ScopeManager {
      */
     private fun newNameScopeIfNecessary(nodeToScope: NamespaceDeclaration): NameScope? {
         val existingScope =
-            currentScope?.children?.firstOrNull() {
-                // TODO(oxisto): double-check if this works with nested namespaces
-                // TODO(oxisto): this might not work properly with concurrent frontends
+            currentScope?.children?.firstOrNull {
                 it is NameScope && it.scopedName == nodeToScope.name
             }
 
@@ -606,7 +602,7 @@ class ScopeManager {
      * @return
      */
     @JvmOverloads
-    fun resolve(ref: Node, scope: Scope? = currentScope): ValueDeclaration? {
+    fun resolve(ref: DeclaredReferenceExpression, scope: Scope? = currentScope): ValueDeclaration? {
         return resolveWithPredicate<ValueDeclaration>(scope) {
                 if (it.name == ref.name) {
                     // If the reference seems to point to a function the entire signature is checked
