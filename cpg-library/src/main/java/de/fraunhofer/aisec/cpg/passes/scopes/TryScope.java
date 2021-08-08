@@ -33,7 +33,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class TryScope extends ValueDeclarationScope implements IBreakable {
+public class TryScope extends ValueDeclarationScope implements Breakable {
 
   private final Map<Type, List<Node>> catchesOrRelays = new HashMap<>();
   private final List<BreakStatement> breaks = new ArrayList<>();

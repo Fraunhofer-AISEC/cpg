@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2021, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,19 +23,30 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.passes.scopes;
+package de.fraunhofer.aisec.cpg.passes.scopes
 
-import de.fraunhofer.aisec.cpg.graph.statements.BreakStatement;
-import java.util.List;
+import de.fraunhofer.aisec.cpg.graph.statements.BreakStatement
+import de.fraunhofer.aisec.cpg.graph.statements.ContinueStatement
 
-/**
- * Represents a class that enhances the graph before it is persisted.
- *
- * <p>Passes are expected to mutate the {@code TranslationResult}.
- */
-public interface IBreakable {
+interface ScopeTraits
 
-  void addBreakStatement(BreakStatement breakStatement);
+/** Represents scopes that can be interrupted by a [BreakStatement]. */
+interface Breakable : ScopeTraits {
+    fun addBreakStatement(breakStatement: BreakStatement?)
+    val breakStatements: List<BreakStatement?>?
+}
 
-  List<BreakStatement> getBreakStatements();
+/** Represents scopes that can be interrupted by a [ContinueStatement]. */
+interface Continuable : ScopeTraits {
+    fun addContinueStatement(continueStatement: ContinueStatement)
+
+    val continueStatements: List<ContinueStatement>
+}
+
+fun Scope.isBreakable(): Boolean {
+    return this is LoopScope || this is SwitchScope
+}
+
+fun Scope.isContinuable(): Boolean {
+    return this is LoopScope
 }

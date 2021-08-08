@@ -123,8 +123,6 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
               this.lang.getLocationFromRawNode(ctx),
               initializer,
               true);
-
-      // prepared for PR #223 - to set the definition here
     } else {
       declaration =
           NodeBuilder.newFieldDeclaration(

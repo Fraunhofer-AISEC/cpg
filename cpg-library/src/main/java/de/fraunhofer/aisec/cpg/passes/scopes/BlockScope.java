@@ -31,8 +31,8 @@ import java.util.ArrayList;
 import java.util.List;
 import org.checkerframework.checker.nullness.qual.NonNull;
 
-public class BlockScope extends ValueDeclarationScope implements IBreakable {
-  @NonNull private List<BreakStatement> breaks = new ArrayList<>();
+public class BlockScope extends ValueDeclarationScope implements Breakable {
+  @NonNull private final List<BreakStatement> breaks = new ArrayList<>();
 
   public BlockScope(CompoundStatement blockStatement) {
     super(blockStatement);
