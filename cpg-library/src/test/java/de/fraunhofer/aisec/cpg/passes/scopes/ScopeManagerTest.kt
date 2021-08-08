@@ -32,12 +32,11 @@ import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.frontends.cpp.CXXLanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguageFrontend
+import de.fraunhofer.aisec.cpg.graph.NodeBuilder
 import de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
 import java.io.File
-import kotlin.test.assertEquals
-import kotlin.test.assertFalse
-import kotlin.test.assertSame
+import kotlin.test.*
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -87,5 +86,51 @@ internal class ScopeManagerTest : BaseTest() {
             val scope = scopeManager.lookupScope(it)
             Assertions.assertSame(it, scope!!.getAstNode())
         }
+    }
+
+    @Test
+    fun testMerge() {
+        val s1 = ScopeManager()
+        val f1 = CXXLanguageFrontend(TranslationConfiguration.builder().build(), s1)
+        s1.resetToGlobal(NodeBuilder.newTranslationUnitDeclaration("f1.cpp", null))
+
+        // build a namespace declaration in f1.cpp with the namespace A
+        val namespaceA1 = NodeBuilder.newNamespaceDeclaration("A", null)
+        s1.enterScope(namespaceA1)
+        val func1 = NodeBuilder.newFunctionDeclaration("func1", null)
+        s1.addDeclaration(func1)
+        s1.leaveScope(namespaceA1)
+
+        val s2 = ScopeManager()
+        val f2 = CXXLanguageFrontend(TranslationConfiguration.builder().build(), s2)
+        s2.resetToGlobal(NodeBuilder.newTranslationUnitDeclaration("f1.cpp", null))
+
+        // and do the same in the other file
+        val namespaceA2 = NodeBuilder.newNamespaceDeclaration("A", null)
+        s2.enterScope(namespaceA2)
+        val func2 = NodeBuilder.newFunctionDeclaration("func2", null)
+        s2.addDeclaration(func2)
+        s2.leaveScope(namespaceA2)
+
+        val final = ScopeManager()
+        final.mergeFrom(listOf(s1, s2))
+
+        // in the final scope manager, the should only be one NameScope "A"
+        val scopes = final.filterScopes { it.scopedName == "A" }
+        assertEquals(1, scopes.size)
+
+        val scopeA = scopes.firstOrNull() as? NameScope
+        assertNotNull(scopeA)
+
+        // should also be able to look-up via the FQN
+        assertEquals(scopeA, final.lookupScope("A"))
+
+        // and it should contain both functions from the different file in the same namespace
+        assertTrue(scopeA.valueDeclarations.contains(func1))
+        assertTrue(scopeA.valueDeclarations.contains(func2))
+
+        // finally, test whether our two namespace declarations are pointing to the same NameScope
+        assertEquals(scopeA, final.lookupScope(namespaceA1))
+        assertEquals(scopeA, final.lookupScope(namespaceA2))
     }
 }

@@ -62,7 +62,7 @@ class ScopeManager {
     private val scopeMap: MutableMap<Node?, Scope> = IdentityHashMap()
 
     /** A lookup map for each scope and its associated FQN. */
-    private val fqnScopeMap: MutableMap<String, Scope> = IdentityHashMap()
+    private val fqnScopeMap: MutableMap<String, NameScope> = IdentityHashMap()
 
     /** The currently active scope. */
     var currentScope: Scope? = null
@@ -147,8 +147,51 @@ class ScopeManager {
             scopeMap[null] = currGlobalScope
         }
         for (manager in toMerge) {
+            // loop through all scopes in the FQN map to check for potential duplicates we need to
+            // merge
+            for (entry in manager.fqnScopeMap.entries) {
+                val existing = fqnScopeMap[entry.key]
+                if (existing != null) {
+                    // a name scope with an identical FQN already exist. we transfer all
+                    // declarations over to it. We are NOT using [addValueDeclaration] because this
+                    // will add it to the underlying AST node as well. This was already done by the
+                    // respective sub-scope manager. We add it directly to the declarations array
+                    // instead.
+                    existing.valueDeclarations.addAll(entry.value.valueDeclarations)
+                    existing.structureDeclarations.addAll(entry.value.structureDeclarations)
+
+                    // copy over the typedefs as well just to be sure
+                    existing.typedefs.addAll(entry.value.typedefs)
+
+                    // also update the AST node of the existing scope to the "latest" we have seen
+                    existing.astNode = entry.value.astNode
+
+                    // now it gets more tricky. we also need to "redirect" the AST nodes in the sub
+                    // scope manager to our
+                    // existing NameScope (currently, they point to their own, invalid copy of the
+                    // NameScope).
+                    //
+                    // The only way to do this, is to filter for the particular
+                    // scope (the value of the map) and return the keys (the nodes)
+                    val keys =
+                        manager.scopeMap.filter { it.value.astNode == entry.value.astNode }.map {
+                            it.key
+                        }
+
+                    // now, we redirect it to the existing scope
+                    keys.forEach { manager.scopeMap[it] = existing }
+                } else {
+                    // this is the first we see for this particular FQN, so we add it to our map
+                    fqnScopeMap[entry.key] = entry.value
+                }
+            }
+
             scopeMap.putAll(manager.scopeMap)
-            fqnScopeMap.putAll(manager.fqnScopeMap)
+
+            // free the maps, just to clear up some things. this scope manager will not be used
+            // anymore
+            manager.fqnScopeMap.clear()
+            manager.scopeMap.clear()
         }
     }
 
@@ -165,7 +208,7 @@ class ScopeManager {
             return
         }
         scopeMap[scope.astNode] = scope
-        if (scope is NameScope || scope is RecordScope) {
+        if (scope is NameScope) {
             fqnScopeMap[scope.astNode.name] = scope
         }
         currentScope?.let {
@@ -393,13 +436,13 @@ class ScopeManager {
     }
 
     /**
-     * Retrieves all scopes that satisfy the condition specified in [predicate], independently of
-     * their hierarchy.
+     * Retrieves all unique scopes that satisfy the condition specified in [predicate],
+     * independently of their hierarchy.
      *
      * @param predicate the search predicate
      */
     fun filterScopes(predicate: (Scope) -> Boolean): List<Scope> {
-        return scopeMap.values.filter(predicate)
+        return scopeMap.values.filter(predicate).distinct()
     }
 
     /**
@@ -419,6 +462,11 @@ class ScopeManager {
     /** This function returns the [Scope] associated with a node. */
     fun lookupScope(node: Node): Scope? {
         return scopeMap[node]
+    }
+
+    /** This function looks up scope by its FQN. This only works for [NameScope]s */
+    fun lookupScope(fqn: String): NameScope? {
+        return this.fqnScopeMap[fqn]
     }
 
     /**
