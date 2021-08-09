@@ -84,27 +84,6 @@ class ConstructExpression : CallExpression(), HasType.TypeListener {
         }
     }
 
-    override fun possibleSubTypesChanged(src: HasType, root: HasType?, oldSubTypes: Set<Type?>?) {
-        if (!TypeManager.isTypeSystemActive()) {
-            return
-        }
-        /*val subTypes: MutableSet<Type> = HashSet(getPossibleSubTypes())
-        subTypes.addAll(
-            src.possibleSubTypes
-                .stream()
-                .map { t ->
-                    if (TypeManager.getInstance().language === TypeManager.Language.CXX &&
-                            src is NewExpression
-                    ) {
-                        return@map t.dereference()
-                    }
-                    t
-                }
-                .collect(Collectors.toSet())
-        )
-        setPossibleSubTypes(subTypes, root)*/
-    }
-
     override fun toString(): String {
         return ToStringBuilder(this, Node.TO_STRING_STYLE)
             .appendSuper(super.toString())
@@ -125,10 +104,7 @@ class ConstructExpression : CallExpression(), HasType.TypeListener {
         return super.equals(other) &&
             constructor == other.constructor &&
             arguments == other.arguments &&
-            PropertyEdge.propertyEqualsList(
-                getArgumentsPropertyEdge(),
-                other.getArgumentsPropertyEdge()
-            )
+            PropertyEdge.propertyEqualsList(argumentsPropertyEdge, other.argumentsPropertyEdge)
     }
 
     override fun hashCode(): Int {
