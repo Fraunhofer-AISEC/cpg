@@ -35,6 +35,7 @@ import de.fraunhofer.aisec.cpg.graph.TypeManager;
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*;
 import de.fraunhofer.aisec.cpg.graph.types.*;
 import de.fraunhofer.aisec.cpg.graph.types.PointerType.PointerOrigin;
+import de.fraunhofer.aisec.cpg.passes.CallResolver;
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation;
 import java.math.BigInteger;
 import java.util.ArrayList;
@@ -206,8 +207,6 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
 
       return arrayCreate;
     } else {
-      t = t.reference(PointerOrigin.POINTER);
-
       // Resolve possible templates
       List<Node> templateParameters = Collections.emptyList();
       IASTDeclSpecifier declSpecifier = ctx.getTypeId().getDeclSpecifier();
@@ -227,14 +226,33 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
         objectType.setGenerics(generics);
       }
 
-      var newExpression = NodeBuilder.newNewExpression(code, t);
+      // new returns a pointer, so we need to reference the type by pointer
+      var newExpression = NodeBuilder.newNewExpression(code, t.reference(PointerOrigin.POINTER));
       newExpression.setTemplateParameters(templateParameters);
 
+      Expression initializer;
       if (init != null) {
-        Expression initializer = this.lang.getInitializerHandler().handle(init);
-        initializer.setType(t);
-        newExpression.setInitializer(initializer);
+        initializer = this.lang.getInitializerHandler().handle(init);
+      } else {
+        // in C++, it is possible to omit the `()` part, when creating an object, such as `new A`.
+        // Therefore CDT does not have an explicit construct expression, so we need create an
+        // implicit one
+        initializer = NodeBuilder.newConstructExpression("()");
+
+        initializer.setImplicit(true);
       }
+
+      // we also need to "forward" our template parameters (if we have any) to the construct
+      // expression since the construct expression will do the actual template instantiation
+      if (newExpression.getTemplateParameters() != null
+          && !newExpression.getTemplateParameters().isEmpty()) {
+        CallResolver.addDummyTemplateParametersToCall(
+            newExpression.getTemplateParameters(), (ConstructExpression) initializer);
+      }
+
+      // our initializer, such as a construct expression, will have the non-pointer type
+      initializer.setType(t);
+      newExpression.setInitializer(initializer);
 
       return newExpression;
     }
