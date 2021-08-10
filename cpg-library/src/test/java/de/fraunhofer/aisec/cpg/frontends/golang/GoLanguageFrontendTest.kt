@@ -91,11 +91,11 @@ class GoLanguageFrontendTest : BaseTest() {
         val new = decl.initializer as? NewExpression
 
         assertNotNull(new)
+        assertEquals(TypeParser.createFrom("p.MyStruct*", false), new.type)
 
         val construct = new.initializer as? ConstructExpression
 
         assertNotNull(construct)
-
         assertEquals(myStruct, construct.instantiates)
 
         // make array
