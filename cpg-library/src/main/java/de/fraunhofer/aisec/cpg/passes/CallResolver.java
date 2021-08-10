@@ -897,7 +897,7 @@ public class CallResolver extends Pass {
     assert lang != null;
     List<FunctionDeclaration> initialInvocationCandidates =
         lang.getScopeManager().resolveFunctionStopScopeTraversalOnDefinition(call).stream()
-            .filter(f -> !f.isImplicit())
+            // .filter(f -> !f.isImplicit())
             .collect(Collectors.toList());
     return resolveWithImplicitCast(call, initialInvocationCandidates);
   }
@@ -994,7 +994,8 @@ public class CallResolver extends Pass {
     List<FunctionDeclaration> invocationCandidates =
         lang.getScopeManager().resolveFunctionStopScopeTraversalOnDefinition(call).stream()
             .filter(
-                f -> !f.isImplicit() && call.getSignature().size() < f.getSignatureTypes().size())
+                f -> /*!f.isImplicit() &&*/
+                    call.getSignature().size() < f.getSignatureTypes().size())
             .collect(Collectors.toList());
     return resolveWithDefaultArgs(call, invocationCandidates);
   }
@@ -1632,7 +1633,7 @@ public class CallResolver extends Pass {
                     .filter(
                         m ->
                             namePattern.matcher(m.getName()).matches()
-                                && !m.isImplicit()
+                                /*&& !m.isImplicit()*/
                                 && call.getSignature().size() < m.getSignatureTypes().size())
                     .map(FunctionDeclaration.class::cast)
                     .collect(Collectors.toList())));
@@ -1644,7 +1645,7 @@ public class CallResolver extends Pass {
             resolveWithImplicitCast(
                 call,
                 recordDeclaration.getMethods().stream()
-                    .filter(m -> namePattern.matcher(m.getName()).matches() && !m.isImplicit())
+                    .filter(m -> namePattern.matcher(m.getName()).matches() /*&& !m.isImplicit()*/)
                     .map(FunctionDeclaration.class::cast)
                     .collect(Collectors.toList())));
       }
@@ -1750,7 +1751,8 @@ public class CallResolver extends Pass {
       List<Type> signature,
       RecordDeclaration recordDeclaration) {
     for (ConstructorDeclaration constructor : recordDeclaration.getConstructors()) {
-      if (!constructor.isImplicit() && signature.size() < constructor.getSignatureTypes().size()) {
+      if (
+      /*!constructor.isImplicit() &&*/ signature.size() < constructor.getSignatureTypes().size()) {
         List<Type> workingSignature =
             getCallSignatureWithDefaults(constructExpression, constructor);
         if (constructor.hasSignature(workingSignature)) {
