@@ -205,6 +205,9 @@ public class DeclarationHandler
 
       functionDeclaration.addParameter(param);
       lang.setCodeAndRegion(param, parameter);
+
+      lang.processAnnotations(param, parameter);
+
       lang.getScopeManager().addDeclaration(param);
     }
 

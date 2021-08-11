@@ -966,7 +966,7 @@ public class EvaluationOrderGraphPass extends Pass {
     List<Node> tmpEOGNodes = new ArrayList<>(currentEOG);
 
     createEOG(forStmt.getStatement());
-    createEOG(forStmt.getIterationExpression());
+    createEOG(forStmt.getIterationStatement());
 
     connectCurrentToLoopStart();
     currentEOG.clear();

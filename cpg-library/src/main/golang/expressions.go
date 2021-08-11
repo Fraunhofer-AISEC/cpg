@@ -234,6 +234,10 @@ func (m *MemberExpression) GetBase() *Expression {
 	return (*Expression)(i.(*jnigi.ObjectRef))
 }
 
+func (e *Expression) GetName() string {
+	return (*Node)(e).GetName()
+}
+
 func (r *DeclaredReferenceExpression) Expression() *Expression {
 	return (*Expression)(r)
 }
@@ -305,4 +309,10 @@ func (r *ArraySubscriptionExpression) SetSubscriptExpression(e *Expression) {
 
 func (c *ConstructExpression) AddArgument(e *Expression) {
 	(*jnigi.ObjectRef)(c).CallMethod(env, "addArgument", jnigi.Void, (*jnigi.ObjectRef)(e).Cast("de/fraunhofer/aisec/cpg/graph/statements/expressions/Expression"))
+}
+
+func (n *NewExpression) SetInitializer(e *Expression) (err error) {
+	_, err = (*jnigi.ObjectRef)(n).CallMethod(env, "setInitializer", jnigi.Void, (*jnigi.ObjectRef)(e).Cast("de/fraunhofer/aisec/cpg/graph/statements/expressions/Expression"))
+
+	return
 }

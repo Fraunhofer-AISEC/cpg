@@ -41,6 +41,7 @@ type IfStatement Statement
 type SwitchStatement Statement
 type CaseStatement Statement
 type DefaultStatement Statement
+type ForStatement Statement
 
 func NewCompoundStatement(fset *token.FileSet, astNode ast.Node) *CompoundStatement {
 	s, err := env.NewObject("de/fraunhofer/aisec/cpg/graph/statements/CompoundStatement")
@@ -92,6 +93,19 @@ func NewIfStatement(fset *token.FileSet, astNode ast.Node) *IfStatement {
 	updateLocation(fset, (*Node)(s), astNode)
 
 	return (*IfStatement)(s)
+}
+
+func NewForStatement(fset *token.FileSet, astNode ast.Node) *ForStatement {
+	s, err := env.NewObject("de/fraunhofer/aisec/cpg/graph/statements/ForStatement")
+	if err != nil {
+		log.Fatal(err)
+
+	}
+
+	updateCode(fset, (*Node)(s), astNode)
+	updateLocation(fset, (*Node)(s), astNode)
+
+	return (*ForStatement)(s)
 }
 
 func NewSwitchStatement(fset *token.FileSet, astNode ast.Node) *SwitchStatement {
@@ -153,6 +167,10 @@ func (m *IfStatement) SetCondition(e *Expression) {
 	(*jnigi.ObjectRef)(m).SetField(env, "condition", (*jnigi.ObjectRef)(e).Cast("de/fraunhofer/aisec/cpg/graph/statements/expressions/Expression"))
 }
 
+func (i *IfStatement) SetInitializerStatement(s *Statement) {
+	(*jnigi.ObjectRef)(i).SetField(env, "initializerStatement", (*jnigi.ObjectRef)(s).Cast("de/fraunhofer/aisec/cpg/graph/statements/Statement"))
+}
+
 func (s *SwitchStatement) SetCondition(e *Expression) {
 	(*jnigi.ObjectRef)(s).SetField(env, "selector", (*jnigi.ObjectRef)(e).Cast("de/fraunhofer/aisec/cpg/graph/statements/expressions/Expression"))
 }
@@ -163,6 +181,22 @@ func (sw *SwitchStatement) SetStatement(s *Statement) {
 
 func (sw *SwitchStatement) SetInitializerStatement(s *Statement) {
 	(*jnigi.ObjectRef)(sw).SetField(env, "initializerStatement", (*jnigi.ObjectRef)(s).Cast("de/fraunhofer/aisec/cpg/graph/statements/Statement"))
+}
+
+func (fw *ForStatement) SetInitializerStatement(s *Statement) {
+	(*jnigi.ObjectRef)(fw).SetField(env, "initializerStatement", (*jnigi.ObjectRef)(s).Cast("de/fraunhofer/aisec/cpg/graph/statements/Statement"))
+}
+
+func (fw *ForStatement) SetCondition(e *Expression) {
+	(*jnigi.ObjectRef)(fw).SetField(env, "condition", (*jnigi.ObjectRef)(e).Cast("de/fraunhofer/aisec/cpg/graph/statements/expressions/Expression"))
+}
+
+func (fw *ForStatement) SetStatement(s *Statement) {
+	(*jnigi.ObjectRef)(fw).SetField(env, "statement", (*jnigi.ObjectRef)(s).Cast("de/fraunhofer/aisec/cpg/graph/statements/Statement"))
+}
+
+func (fw *ForStatement) SetIterationStatement(s *Statement) {
+	(*jnigi.ObjectRef)(fw).SetField(env, "iterationStatement", (*jnigi.ObjectRef)(s).Cast("de/fraunhofer/aisec/cpg/graph/statements/Statement"))
 }
 
 func (r *ReturnStatement) SetReturnValue(e *Expression) {

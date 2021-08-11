@@ -30,10 +30,14 @@ import (
 	"fmt"
 	"go/ast"
 	"go/token"
+	"io/ioutil"
 	"log"
+	"os"
+	"path"
 	"strconv"
 	"strings"
 
+	"golang.org/x/mod/modfile"
 	"tekao.net/jnigi"
 )
 
@@ -46,6 +50,36 @@ func getImportName(spec *ast.ImportSpec) string {
 	var paths = strings.Split(path, "/")
 
 	return paths[len(paths)-1]
+}
+
+func (frontend *GoLanguageFrontend) ParseModule(topLevel string) (exists bool, err error) {
+	frontend.LogInfo("Looking for a go.mod file in %s", topLevel)
+
+	mod := path.Join(topLevel, "go.mod")
+
+	if _, err := os.Stat(mod); err != nil {
+		if os.IsNotExist(err) {
+			frontend.LogInfo("%s does not exist", mod)
+
+			return false, nil
+		}
+	}
+
+	b, err := ioutil.ReadFile(mod)
+	if err != nil {
+		return true, fmt.Errorf("could not read go.mod: %w", err)
+	}
+
+	module, err := modfile.Parse(mod, b, nil)
+	if err != nil {
+		return true, fmt.Errorf("could not parse mod file: %w", err)
+	}
+
+	frontend.Module = module
+
+	frontend.LogInfo("Go application has module support with path %s", module.Module.Mod.Path)
+
+	return true, nil
 }
 
 func (this *GoLanguageFrontend) HandleFile(fset *token.FileSet, file *ast.File, path string) (tu *cpg.TranslationUnitDeclaration, err error) {
@@ -291,7 +325,6 @@ func (this *GoLanguageFrontend) handleValueSpec(fset *token.FileSet, valueDecl *
 		err := d.SetInitializer(expr)
 		if err != nil {
 			log.Fatal(err)
-
 		}
 	}
 
@@ -440,6 +473,36 @@ func (this *GoLanguageFrontend) handleBlockStmt(fset *token.FileSet, blockStmt *
 	return c
 }
 
+func (this *GoLanguageFrontend) handleForStmt(fset *token.FileSet, forStmt *ast.ForStmt) *cpg.ForStatement {
+	this.LogDebug("Handling for statement: %+v", *forStmt)
+
+	f := cpg.NewForStatement(fset, forStmt)
+
+	var scope = this.GetScopeManager()
+
+	scope.EnterScope((*cpg.Node)(f))
+
+	if initStatement := this.handleStmt(fset, forStmt.Init); initStatement != nil {
+		f.SetInitializerStatement(initStatement)
+	}
+
+	if condition := this.handleExpr(fset, forStmt.Cond); condition != nil {
+		f.SetCondition(condition)
+	}
+
+	if iter := this.handleStmt(fset, forStmt.Post); iter != nil {
+		f.SetIterationStatement(iter)
+	}
+
+	if body := this.handleStmt(fset, forStmt.Body); body != nil {
+		f.SetStatement(body)
+	}
+
+	scope.LeaveScope((*cpg.Node)(f))
+
+	return f
+}
+
 func (this *GoLanguageFrontend) handleReturnStmt(fset *token.FileSet, returnStmt *ast.ReturnStmt) *cpg.ReturnStatement {
 	this.LogDebug("Handling return statement: %+v", *returnStmt)
 
@@ -458,6 +521,26 @@ func (this *GoLanguageFrontend) handleReturnStmt(fset *token.FileSet, returnStmt
 	}
 
 	return r
+}
+
+func (this *GoLanguageFrontend) handleIncDecStmt(fset *token.FileSet, incDecStmt *ast.IncDecStmt) *cpg.UnaryOperator {
+	this.LogDebug("Handling decimal increment statement: %+v", *incDecStmt)
+
+	u := cpg.NewUnaryOperator(fset, incDecStmt)
+
+	if incDecStmt.Tok == token.INC {
+		u.SetOperatorCode("++")
+	}
+
+	if incDecStmt.Tok == token.DEC {
+		u.SetOperatorCode("--")
+	}
+
+	if input := this.handleExpr(fset, incDecStmt.X); input != nil {
+		u.SetInput(input)
+	}
+
+	return u
 }
 
 func (this *GoLanguageFrontend) handleStmt(fset *token.FileSet, stmt ast.Stmt) *cpg.Statement {
@@ -480,8 +563,12 @@ func (this *GoLanguageFrontend) handleStmt(fset *token.FileSet, stmt ast.Stmt) *
 		return (*cpg.Statement)(this.handleCaseClause(fset, v))
 	case *ast.BlockStmt:
 		return (*cpg.Statement)(this.handleBlockStmt(fset, v))
+	case *ast.ForStmt:
+		return (*cpg.Statement)(this.handleForStmt(fset, v))
 	case *ast.ReturnStmt:
 		return (*cpg.Statement)(this.handleReturnStmt(fset, v))
+	case *ast.IncDecStmt:
+		return (*cpg.Statement)(this.handleIncDecStmt(fset, v))
 	default:
 		this.LogError("Not parsing statement of type %T yet: %+v", v, v)
 	}
@@ -584,9 +671,12 @@ func (this *GoLanguageFrontend) handleIfStmt(fset *token.FileSet, ifStmt *ast.If
 
 	var scope = this.GetScopeManager()
 
-	// TODO: initializer
-
 	scope.EnterScope((*cpg.Node)(stmt))
+
+	init := this.handleStmt(fset, ifStmt.Init)
+	if init != nil {
+		stmt.SetInitializerStatement(init)
+	}
 
 	cond := this.handleExpr(fset, ifStmt.Cond)
 	if cond != nil {
@@ -671,7 +761,7 @@ func (this *GoLanguageFrontend) handleCallExpr(fset *token.FileSet, callExpr *as
 		return nil
 	}
 
-	name := (*cpg.Node)(reference).GetName()
+	name := reference.GetName()
 
 	if name == "new" {
 		return this.handleNewExpr(fset, callExpr)
@@ -708,7 +798,20 @@ func (this *GoLanguageFrontend) handleCallExpr(fset *token.FileSet, callExpr *as
 		this.LogDebug("Handling regular call expression to %s", name)
 
 		c = cpg.NewCallExpression(fset, callExpr)
-		c.SetName(name)
+
+		// the name is already a FQN if it contains a dot
+		pos := strings.LastIndex(name, ".")
+		if pos != -1 {
+			fqn := name
+
+			c.SetFqn(fqn)
+
+			// need to have the short name
+			c.SetName(name[pos+1:])
+		} else {
+			c.SetName(name)
+		}
+
 	}
 
 	for _, arg := range callExpr.Args {
@@ -739,7 +842,19 @@ func (this *GoLanguageFrontend) handleNewExpr(fset *token.FileSet, callExpr *ast
 	// first argument is type
 	t := this.handleType(callExpr.Args[0])
 
-	(*cpg.HasType)(n).SetType(t)
+	// new is a pointer, so need to reference the type with a pointer
+	pointer, err := env.GetStaticField("de/fraunhofer/aisec/cpg/graph/types/PointerType$PointerOrigin", "POINTER", jnigi.ObjectType("de/fraunhofer/aisec/cpg/graph/types/PointerType$PointerOrigin"))
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	(*cpg.HasType)(n).SetType(t.Reference(pointer.(*jnigi.ObjectRef)))
+
+	// a new expression also needs an initializer, which is usually a constructexpression
+	c := cpg.NewConstructExpression(fset, callExpr)
+	(*cpg.HasType)(c).SetType(t)
+
+	n.SetInitializer((*cpg.Expression)(c))
 
 	return (*cpg.Expression)(n)
 }
@@ -828,13 +943,32 @@ func (this *GoLanguageFrontend) handleUnaryExpr(fset *token.FileSet, unaryExpr *
 	return u
 }
 
-func (this *GoLanguageFrontend) handleSelectorExpr(fset *token.FileSet, selectorExpr *ast.SelectorExpr) *cpg.MemberExpression {
+func (this *GoLanguageFrontend) handleSelectorExpr(fset *token.FileSet, selectorExpr *ast.SelectorExpr) *cpg.DeclaredReferenceExpression {
 	base := this.handleExpr(fset, selectorExpr.X)
 
-	m := cpg.NewMemberExpression(fset, selectorExpr)
+	// check, if this just a regular reference to a variable with a package scope and not a member expression
+	var isMemberExpression bool = true
+	for _, imp := range this.File.Imports {
+		if base.GetName() == getImportName(imp) {
+			// found a package name, so this is NOT a member expression
+			isMemberExpression = false
+		}
+	}
 
-	m.SetBase(base)
-	(*cpg.Node)(m).SetName(selectorExpr.Sel.Name)
+	var decl *cpg.DeclaredReferenceExpression
+	if isMemberExpression {
+		m := cpg.NewMemberExpression(fset, selectorExpr)
+		m.SetBase(base)
+		(*cpg.Node)(m).SetName(selectorExpr.Sel.Name)
+
+		decl = (*cpg.DeclaredReferenceExpression)(m)
+	} else {
+		decl = cpg.NewDeclaredReferenceExpression(fset, selectorExpr)
+
+		// we need to set the name to a FQN-style, including the package scope. the call resolver will then resolve this
+		fqn := fmt.Sprintf("%s.%s", base.GetName(), selectorExpr.Sel.Name)
+		decl.SetName(fqn)
+	}
 
 	// For now we just let the VariableUsageResolver handle this. Therefore,
 	// we can not differentiate between field access to a receiver, an object
@@ -853,7 +987,7 @@ func (this *GoLanguageFrontend) handleSelectorExpr(fset *token.FileSet, selector
 		}
 	}*/
 
-	return m
+	return decl
 }
 
 func (this *GoLanguageFrontend) handleBasicLit(fset *token.FileSet, lit *ast.BasicLit) *cpg.Literal {

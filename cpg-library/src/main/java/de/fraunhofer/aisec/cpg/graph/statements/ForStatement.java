@@ -45,7 +45,7 @@ public class ForStatement extends Statement {
   private Expression condition;
 
   @SubGraph("AST")
-  private Expression iterationExpression;
+  private Statement iterationStatement;
 
   public Statement getStatement() {
     return statement;
@@ -79,12 +79,12 @@ public class ForStatement extends Statement {
     this.condition = condition;
   }
 
-  public Expression getIterationExpression() {
-    return iterationExpression;
+  public Statement getIterationStatement() {
+    return iterationStatement;
   }
 
-  public void setIterationExpression(Expression iterationExpression) {
-    this.iterationExpression = iterationExpression;
+  public void setIterationStatement(Statement iterationStatement) {
+    this.iterationStatement = iterationStatement;
   }
 
   @Override
@@ -101,7 +101,7 @@ public class ForStatement extends Statement {
         && Objects.equals(initializerStatement, that.initializerStatement)
         && Objects.equals(conditionDeclaration, that.conditionDeclaration)
         && Objects.equals(condition, that.condition)
-        && Objects.equals(iterationExpression, that.iterationExpression);
+        && Objects.equals(iterationStatement, that.iterationStatement);
   }
 
   @Override

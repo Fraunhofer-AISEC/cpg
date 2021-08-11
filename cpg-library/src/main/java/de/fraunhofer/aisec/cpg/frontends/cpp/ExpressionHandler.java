@@ -29,16 +29,20 @@ import static de.fraunhofer.aisec.cpg.helpers.Util.errorWithFileLocation;
 import static de.fraunhofer.aisec.cpg.helpers.Util.warnWithFileLocation;
 
 import de.fraunhofer.aisec.cpg.frontends.Handler;
-import de.fraunhofer.aisec.cpg.graph.*;
-import de.fraunhofer.aisec.cpg.graph.declarations.Declaration;
-import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration;
+import de.fraunhofer.aisec.cpg.graph.Node;
+import de.fraunhofer.aisec.cpg.graph.NodeBuilder;
+import de.fraunhofer.aisec.cpg.graph.TypeManager;
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*;
 import de.fraunhofer.aisec.cpg.graph.types.*;
+import de.fraunhofer.aisec.cpg.graph.types.PointerType.PointerOrigin;
+import de.fraunhofer.aisec.cpg.passes.CallResolver;
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation;
 import java.math.BigInteger;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+import java.util.stream.Collectors;
 import org.eclipse.cdt.core.dom.ast.*;
 import org.eclipse.cdt.core.dom.ast.IBasicType.Kind;
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTDesignator;
@@ -178,11 +182,7 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
     String name = ctx.getTypeId().getDeclSpecifier().toString();
     String code = ctx.getRawSignature();
 
-    // TODO: obsolete?
-    Type t = TypeParser.createFrom(expressionTypeProxy(ctx).toString(), true, lang);
-    t.reference(PointerType.PointerOrigin.ARRAY);
-
-    Expression expr;
+    Type t = TypeParser.createFrom(name, true, lang);
 
     IASTInitializer init = ctx.getInitializer();
 
@@ -205,70 +205,57 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
         arrayCreate.setInitializer(this.lang.getInitializerHandler().handle(init));
       }
 
-      expr = arrayCreate;
+      return arrayCreate;
     } else {
-      t.reference(PointerType.PointerOrigin.POINTER);
-
-      var newExpression = NodeBuilder.newNewExpression(code, t);
-
-      if (init != null) {
-        newExpression.setInitializer(this.lang.getInitializerHandler().handle(init));
-      }
-
-      expr = newExpression;
-    }
-
-    // try to actually resolve the type
-    IASTDeclSpecifier declSpecifier = ctx.getTypeId().getDeclSpecifier();
-
-    if (declSpecifier instanceof CPPASTNamedTypeSpecifier) {
-      IBinding binding = ((CPPASTNamedTypeSpecifier) declSpecifier).getName().resolveBinding();
-
-      if (binding != null && !(binding instanceof CPPScope.CPPScopeProblem)) {
-        // update the type
-        Type type = TypeParser.createFrom(binding.getName(), true, lang);
-        if (((CPPASTNamedTypeSpecifier) declSpecifier).getName() instanceof CPPASTTemplateId
-            && type instanceof ObjectType) {
-          ((ObjectType) type)
-              .addGenerics(
-                  getTemplateTypeArguments(
-                      (CPPASTTemplateId) ((CPPASTNamedTypeSpecifier) declSpecifier).getName()));
-        }
-        expr.setType(type);
-      } else {
-        log.debug(
-            "Could not resolve binding of type {} for {}, it is probably defined somewhere externally",
-            name,
-            expr);
-      }
-
+      // Resolve possible templates
+      List<Node> templateParameters = Collections.emptyList();
+      IASTDeclSpecifier declSpecifier = ctx.getTypeId().getDeclSpecifier();
       if (((CPPASTNamedTypeSpecifier) declSpecifier).getName() instanceof CPPASTTemplateId) {
-        List<Node> templateParameters =
+        templateParameters =
             getTemplateArguments(
                 (CPPASTTemplateId) ((CPPASTNamedTypeSpecifier) declSpecifier).getName());
-        if (expr instanceof NewExpression) {
-          ((NewExpression) expr).setTemplateParameters(templateParameters);
-        }
-      }
-    }
 
-    return expr;
-  }
-
-  /**
-   * Gets all the types from the provided TypeExpressions that were used to instantiate the template
-   *
-   * @param template
-   * @return List of Types declared by the TypeExpressions included in the template instantiation
-   */
-  private List<Type> getTemplateTypeArguments(CPPASTTemplateId template) {
-    List<Type> typeArguments = new ArrayList<>();
-    for (Node argument : getTemplateArguments(template)) {
-      if (argument instanceof TypeExpression) {
-        typeArguments.add(((TypeExpression) argument).getType());
+        // Attach generics
+        assert t.getRoot() instanceof ObjectType;
+        ObjectType objectType = (ObjectType) t.getRoot();
+        List<Type> generics =
+            templateParameters.stream()
+                .filter(TypeExpression.class::isInstance)
+                .map(e -> ((TypeExpression) e).getType())
+                .collect(Collectors.toList());
+        objectType.setGenerics(generics);
       }
+
+      // new returns a pointer, so we need to reference the type by pointer
+      var newExpression = NodeBuilder.newNewExpression(code, t.reference(PointerOrigin.POINTER));
+      newExpression.setTemplateParameters(templateParameters);
+
+      Expression initializer;
+      if (init != null) {
+        initializer = this.lang.getInitializerHandler().handle(init);
+      } else {
+        // in C++, it is possible to omit the `()` part, when creating an object, such as `new A`.
+        // Therefore CDT does not have an explicit construct expression, so we need create an
+        // implicit one
+        initializer = NodeBuilder.newConstructExpression("()");
+
+        initializer.setImplicit(true);
+      }
+
+      // we also need to "forward" our template parameters (if we have any) to the construct
+      // expression since the construct expression will do the actual template instantiation
+      if (newExpression.getTemplateParameters() != null
+          && !newExpression.getTemplateParameters().isEmpty()) {
+        CallResolver.addDummyTemplateParametersToCall(
+            newExpression.getTemplateParameters(), (ConstructExpression) initializer);
+      }
+
+      // our initializer, such as a construct expression, will have the non-pointer type
+      initializer.setType(t);
+      newExpression.setInitializer(initializer);
+
+      return newExpression;
     }
-    return typeArguments;
   }
 
   /**
@@ -591,19 +578,12 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
 
     IType proxy = expressionTypeProxy(ctx);
 
-    if (proxy instanceof ProblemType
-        || (proxy instanceof IQualifierType
-            && ((IQualifierType) proxy).getType() instanceof ProblemType)
-        || proxy instanceof TypeOfDependentExpression) {
-      deduceTypeManually(ctx, declaredReferenceExpression);
-    } else {
-      if (proxy instanceof CPPClassInstance) {
-        // Handle Template Types separately
-        handleTemplateTypeOfDeclaredReferenceExpression(proxy, declaredReferenceExpression);
-      } else {
-        declaredReferenceExpression.setType(
-            TypeParser.createFrom(expressionTypeProxy(ctx).toString(), true, lang));
-      }
+    if (proxy instanceof CPPClassInstance) {
+      // Handle Template Types separately
+      handleTemplateTypeOfDeclaredReferenceExpression(proxy, declaredReferenceExpression);
+    } else if (!(proxy instanceof TypeOfDependentExpression)) {
+      declaredReferenceExpression.setType(
+          TypeParser.createFrom(expressionTypeProxy(ctx).toString(), true, lang));
     }
 
     /* this expression could actually be a field / member expression, but somehow CDT only recognizes them as a member expression if it has an explicit 'this'
@@ -611,31 +591,6 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
     // TODO: handle this? convert the declared reference expression into a member expression?
 
     return declaredReferenceExpression;
-  }
-
-  /**
-   * Sets the type of the DeclaredReferenceExpression
-   *
-   * @param ctx
-   * @param declaredReferenceExpression
-   */
-  private void deduceTypeManually(
-      CPPASTIdExpression ctx, DeclaredReferenceExpression declaredReferenceExpression) {
-    log.debug("CDT could not deduce type. Trying manually");
-
-    IBinding binding = ctx.getName().resolveBinding();
-    Declaration declaration = this.lang.getCachedDeclaration(binding);
-    if (declaration != null) {
-      if (declaration instanceof ValueDeclaration) {
-        declaredReferenceExpression.setType(((ValueDeclaration) declaration).getType());
-      } else {
-        log.debug("Unknown declaration type, setting to UNKNOWN");
-        declaredReferenceExpression.setType(UnknownType.getUnknownType());
-      }
-    } else {
-      log.debug("Could not deduce type manually, setting to UNKNOWN");
-      declaredReferenceExpression.setType(UnknownType.getUnknownType());
-    }
   }
 
   /**

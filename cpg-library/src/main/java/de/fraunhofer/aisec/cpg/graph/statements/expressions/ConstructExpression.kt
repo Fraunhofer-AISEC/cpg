@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.graph.statements.expressions
 import de.fraunhofer.aisec.cpg.graph.HasType
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.PopulatedByPass
+import de.fraunhofer.aisec.cpg.graph.TypeManager
 import de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
@@ -72,6 +73,10 @@ class ConstructExpression : CallExpression(), HasType.TypeListener {
         }
 
     override fun typeChanged(src: HasType, root: HasType, oldType: Type) {
+        if (!TypeManager.isTypeSystemActive()) {
+            return
+        }
+
         val previous: Type = this.type
         setType(src.propagationType, root)
         if (previous != this.type) {
@@ -99,10 +104,7 @@ class ConstructExpression : CallExpression(), HasType.TypeListener {
         return super.equals(other) &&
             constructor == other.constructor &&
             arguments == other.arguments &&
-            PropertyEdge.propertyEqualsList(
-                getArgumentsPropertyEdge(),
-                other.getArgumentsPropertyEdge()
-            )
+            PropertyEdge.propertyEqualsList(argumentsPropertyEdge, other.argumentsPropertyEdge)
     }
 
     override fun hashCode(): Int {

@@ -204,16 +204,16 @@ class EOGTest extends BaseTest {
     assertTrue(Util.eogConnect(EXITS, fs.getCondition(), NODE, fs));
     assertTrue(Util.eogConnect(NODE, EXITS, fs, SUBTREE, fs.getStatement(), prints.get(1)));
 
-    assertTrue(Util.eogConnect(EXITS, fs.getStatement(), SUBTREE, fs.getIterationExpression()));
-    assertTrue(Util.eogConnect(EXITS, fs.getIterationExpression(), SUBTREE, fs.getCondition()));
+    assertTrue(Util.eogConnect(EXITS, fs.getStatement(), SUBTREE, fs.getIterationStatement()));
+    assertTrue(Util.eogConnect(EXITS, fs.getIterationStatement(), SUBTREE, fs.getCondition()));
 
     fs = fstat.get(1);
     assertTrue(Util.eogConnect(NODE, EXITS, prints.get(1), SUBTREE, fs));
     assertTrue(Util.eogConnect(NODE, EXITS, prints.get(1), SUBTREE, fs.getInitializerStatement()));
     assertTrue(Util.eogConnect(EXITS, fs.getInitializerStatement(), SUBTREE, fs.getCondition()));
     assertTrue(Util.eogConnect(EXITS, fs.getCondition(), NODE, fs));
-    assertTrue(Util.eogConnect(EXITS, fs.getStatement(), SUBTREE, fs.getIterationExpression()));
-    assertTrue(Util.eogConnect(EXITS, fs.getIterationExpression(), SUBTREE, fs.getCondition()));
+    assertTrue(Util.eogConnect(EXITS, fs.getStatement(), SUBTREE, fs.getIterationStatement()));
+    assertTrue(Util.eogConnect(EXITS, fs.getIterationStatement(), SUBTREE, fs.getCondition()));
     assertTrue(Util.eogConnect(SUBTREE, EXITS, fs, SUBTREE, prints.get(2)));
   }
 
@@ -233,9 +233,9 @@ class EOGTest extends BaseTest {
         Util.eogConnect(
             EXITS, fs.getInitializerStatement(), SUBTREE, fs.getConditionDeclaration()));
     assertTrue(Util.eogConnect(EXITS, fs.getConditionDeclaration(), NODE, fs));
-    assertTrue(Util.eogConnect(EXITS, fs.getStatement(), SUBTREE, fs.getIterationExpression()));
+    assertTrue(Util.eogConnect(EXITS, fs.getStatement(), SUBTREE, fs.getIterationStatement()));
     assertTrue(
-        Util.eogConnect(EXITS, fs.getIterationExpression(), SUBTREE, fs.getConditionDeclaration()));
+        Util.eogConnect(EXITS, fs.getIterationStatement(), SUBTREE, fs.getConditionDeclaration()));
     assertTrue(Util.eogConnect(SUBTREE, EXITS, fs, SUBTREE, prints.get(1)));
 
     fs = fstat.get(1);
@@ -243,8 +243,8 @@ class EOGTest extends BaseTest {
     assertTrue(Util.eogConnect(NODE, EXITS, prints.get(1), SUBTREE, fs.getInitializerStatement()));
     assertTrue(Util.eogConnect(EXITS, fs.getInitializerStatement(), SUBTREE, fs.getCondition()));
     assertTrue(Util.eogConnect(EXITS, fs.getCondition(), NODE, fs));
-    assertTrue(Util.eogConnect(EXITS, fs.getStatement(), SUBTREE, fs.getIterationExpression()));
-    assertTrue(Util.eogConnect(EXITS, fs.getIterationExpression(), SUBTREE, fs.getCondition()));
+    assertTrue(Util.eogConnect(EXITS, fs.getStatement(), SUBTREE, fs.getIterationStatement()));
+    assertTrue(Util.eogConnect(EXITS, fs.getIterationStatement(), SUBTREE, fs.getCondition()));
     assertTrue(Util.eogConnect(SUBTREE, EXITS, fs, SUBTREE, prints.get(2)));
 
     fs = fstat.get(2);
@@ -252,8 +252,8 @@ class EOGTest extends BaseTest {
     assertTrue(Util.eogConnect(NODE, EXITS, prints.get(3), SUBTREE, fs.getInitializerStatement()));
     assertTrue(Util.eogConnect(EXITS, fs.getInitializerStatement(), SUBTREE, fs.getCondition()));
     assertTrue(Util.eogConnect(EXITS, fs.getCondition(), NODE, fs));
-    assertTrue(Util.eogConnect(EXITS, fs.getStatement(), SUBTREE, fs.getIterationExpression()));
-    assertTrue(Util.eogConnect(EXITS, fs.getIterationExpression(), SUBTREE, fs.getCondition()));
+    assertTrue(Util.eogConnect(EXITS, fs.getStatement(), SUBTREE, fs.getIterationStatement()));
+    assertTrue(Util.eogConnect(EXITS, fs.getIterationStatement(), SUBTREE, fs.getCondition()));
     assertTrue(Util.eogConnect(SUBTREE, EXITS, fs, SUBTREE, prints.get(4)));
   }
 
