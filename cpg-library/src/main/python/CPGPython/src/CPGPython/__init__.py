@@ -43,7 +43,7 @@ class PythonASTToCPG(ast.NodeVisitor):
     from ._statements import handle_statement
 
     def execute(self):
-        if type(self.rootNode) is ast.Module:
+        if isinstance(self.rootNode, ast.Module):
             self.log_with_loc("Handling tree root: %s" %
                               (ast.dump(self.rootNode)))
             # Module(stmt* body, type_ignore* type_ignores)

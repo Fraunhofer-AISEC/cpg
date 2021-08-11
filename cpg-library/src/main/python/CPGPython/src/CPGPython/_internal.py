@@ -127,7 +127,8 @@ def is_member_expression(self, target):
 
 
 def is_declaration(self, target):
-    return target.java_name.startswith('de.fraunhofer.aisec.cpg.graph.declarations.')
+    return target.java_name.startswith(
+        'de.fraunhofer.aisec.cpg.graph.declarations.')
 
 
 def is_method_declaration(self, target):
@@ -146,19 +147,19 @@ def visit_Constant(self, node):
     self.add_loc_info(node, lit)
     lit.setValue(node.value)
     lit.setName(str(node.value))
-    if type(node.value) is str:
+    if isinstance(node.value, str):
         lit.setType(TypeParser.createFrom("str", False))
-    elif type(node.value) is int:
+    elif isinstance(node.value, int):
         lit.setType(TypeParser.createFrom("int", False))
-    elif type(node.value) is float:
+    elif isinstance(node.value, float):
         lit.setType(TypeParser.createFrom("float", False))
-    elif type(node.value) is complex:
+    elif isinstance(node.value, complex):
         lit.setType(TypeParser.createFrom("complex", False))
-    elif type(node.value) is bool:
+    elif isinstance(node.value, bool):
         lit.setType(TypeParser.createFrom("bool", False))
-    elif type(node.value) is type(None):
+    elif isinstance(node.value, type(None)):
         lit.setType(TypeParser.createFrom("None", False))
-    elif type(node.value) is bytes:
+    elif isinstance(node.value, bytes):
         lit.setType(TypeParser.createFrom("byte[]", False))
     else:
         self.log_with_loc(type(node.value))
@@ -718,7 +719,8 @@ def visit_Attribute(self, node):
 
         methodreceiver = self.scopemanager.getCurrentFunction().getReceiver()
         base = self.visit(node.value)
-        if self.is_declared_reference(base) and base.getName() == methodreceiver.getName():
+        if self.is_declared_reference(
+                base) and base.getName() == methodreceiver.getName():
             # this might be a new class field
             d = DeclaredReferenceExpression()
             d.setName(node.attr)
@@ -766,11 +768,11 @@ def visit_Slice(self, node):
     self.log_with_loc(ast.dump(node))
     slc = ArrayRangeExpression()
     self.add_loc_info(node, slc)
-    if node.lower != None:
+    if node.lower is not None:
         slc.setFloor(self.visit(node.lower))
-    if node.upper != None:
+    if node.upper is not None:
         slc.setCeiling(self.visit(node.upper))
-    if node.step != None:
+    if node.step is not None:
         self.log_with_loc("Step not yet supported.", loglevel="ERROR")
     return slc
 
@@ -864,7 +866,7 @@ def visit_Raise(self, node):
     op = UnaryOperator()
     self.add_loc_info(node, op)
     op.setOperatorCode("raise")
-    if node.exc != None:
+    if node.exc is not None:
         op.setInput(self.visit(node.exc))
     return op
 
@@ -942,7 +944,7 @@ def visit_If(self, node):
     body = self.make_compound_statement(node, node.body)
     stmt.setThenStatement(body)
     # Else
-    if node.orelse != None and len(node.orelse) != 0:
+    if node.orelse is not None and len(node.orelse) != 0:
         orelse = self.make_compound_statement(node, node.orelse)
         stmt.setElseStatement(orelse)
 
@@ -1018,7 +1020,7 @@ def visit_While(self, node):
     self.add_loc_info(node, w)
     w.setCondition(self.visit(node.test))
     w.setStatement(self.make_compound_statement(node, node.body))
-    if node.orelse != None and len(node.orelse) != 0:
+    if node.orelse is not None and len(node.orelse) != 0:
         self.log_with_loc("while -> orelse not implemented, yet",
                           loglevel="ERROR")
     return w
@@ -1206,7 +1208,7 @@ def visit_arg(self, node):
     pvd = ParamVariableDeclaration()
     self.add_loc_info(node, pvd)
     pvd.setName(node.arg)
-    if node.annotation != None:
+    if node.annotation is not None:
         pvd.setType(TypeParser.createFrom(node.annotation.id, False))
     self.scopemanager.addDeclaration(pvd)
     return pvd
@@ -1216,7 +1218,7 @@ def visit_Return(self, node):
     self.log_with_loc(ast.dump(node))
     r = ReturnStatement()
     self.add_loc_info(node, r)
-    if node.value != None:
+    if node.value is not None:
         r.setReturnValue(self.visit(node.value))
     r.setName("return")
     return r
@@ -1281,7 +1283,7 @@ def visit_ClassDef(self, node):
     else:
         self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
 
-    if t != None:
+    if t is not None:
         rec.setSuperClasses([t])
     if len(node.keywords) != 0:
         self.log_with_loc(node.keywords)

@@ -24,6 +24,7 @@
 #
 from CPGPython import PythonASTToCPG
 
+
 def parse_code(code, filename, frontend):
     try:
         converter = PythonASTToCPG(filename, frontend, code)
