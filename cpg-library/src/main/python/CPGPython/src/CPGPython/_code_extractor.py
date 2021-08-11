@@ -22,7 +22,7 @@
 #                   \$$$$$   |$$ |      \$$$$$   |
 #                    \______/ \__|       \______/
 #
-from ._internal import * # TODO remove / fix spotless dependency on "from"
+from ._spotless_dummy import *
 
 class CodeExtractor:
     # Simple/ugly class to extrace code snippets given a region

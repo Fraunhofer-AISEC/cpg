@@ -22,14 +22,9 @@
 #                   \$$$$$   |$$ |      \$$$$$   |
 #                    \______/ \__|       \______/
 #
-from CPGPython import PythonASTToCPG
+from os import name
 
-def parse_code(code, filename, frontend):
-    try:
-        converter = PythonASTToCPG(filename, frontend, code)
-        converter.execute()
-
-        return converter.tud
-    except Exception as e:
-        frontend.log.error("Buidling the CPG failed with exception: %s" % (e))
-        raise e
+# this is just a dummy file to make spotless python happy that currently expects
+# all *.py files to start with a license header followed by the "from" keyword
+# :(
+# TODO FIXME

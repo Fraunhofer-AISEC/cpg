@@ -22,14 +22,6 @@
 #                   \$$$$$   |$$ |      \$$$$$   |
 #                    \______/ \__|       \______/
 #
-from CPGPython import PythonASTToCPG
+from ._spotless_dummy import *
 
-def parse_code(code, filename, frontend):
-    try:
-        converter = PythonASTToCPG(filename, frontend, code)
-        converter.execute()
-
-        return converter.tud
-    except Exception as e:
-        frontend.log.error("Buidling the CPG failed with exception: %s" % (e))
-        raise e
+NOT_IMPLEMENTED_MSG = "This has not been implemented, yet. Using a dummy."
