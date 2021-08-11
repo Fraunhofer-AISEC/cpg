@@ -28,6 +28,7 @@ from ._misc import NOT_IMPLEMENTED_MSG
 
 import ast
 
+
 def handle_statement(self, stmt):
     self.log_with_loc("Handling statement: %s" % (ast.dump(stmt)))
 

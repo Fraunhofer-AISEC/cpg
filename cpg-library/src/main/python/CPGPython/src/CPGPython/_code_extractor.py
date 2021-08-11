@@ -24,6 +24,7 @@
 #
 from ._spotless_dummy import *
 
+
 class CodeExtractor:
     # Simple/ugly class to extrace code snippets given a region
     def __init__(self, fname):
