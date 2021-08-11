@@ -39,6 +39,8 @@ class PythonASTToCPG(ast.NodeVisitor):
         self.logger = self.frontend.log
         self.rootNode = ast.parse(code, filename=fname, type_comments=True)
 
+    from ._misc import is_declaration
+    from ._misc import log_with_loc
     from ._statements import handle_statement
 
     def execute(self):
@@ -63,11 +65,11 @@ class PythonASTToCPG(ast.NodeVisitor):
                     nsd.addDeclaration(r)
                 else:
                     self.log_with_loc("Don't know what to do with this: %s" %
-                                      (r))
+                                      (r), loglevel="ERROR")
 
             self.scopemanager.leaveScope(nsd)
             self.scopemanager.addDeclaration(nsd)
         else:
-            self.logger.error("Expected an ast.Module node but recieved %s." %
-                              (type(self.rootNode)))
+            self.log_with_loc("Expected an ast.Module node but recieved %s." %
+                              (type(self.rootNode)), level="ERROR")
             raise RuntimeError
