@@ -325,7 +325,6 @@ func (this *GoLanguageFrontend) handleValueSpec(fset *token.FileSet, valueDecl *
 		err := d.SetInitializer(expr)
 		if err != nil {
 			log.Fatal(err)
-
 		}
 	}
 
@@ -843,7 +842,19 @@ func (this *GoLanguageFrontend) handleNewExpr(fset *token.FileSet, callExpr *ast
 	// first argument is type
 	t := this.handleType(callExpr.Args[0])
 
-	(*cpg.HasType)(n).SetType(t)
+	// new is a pointer, so need to reference the type with a pointer
+	pointer, err := env.GetStaticField("de/fraunhofer/aisec/cpg/graph/types/PointerType$PointerOrigin", "POINTER", jnigi.ObjectType("de/fraunhofer/aisec/cpg/graph/types/PointerType$PointerOrigin"))
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	(*cpg.HasType)(n).SetType(t.Reference(pointer.(*jnigi.ObjectRef)))
+
+	// a new expression also needs an initializer, which is usually a constructexpression
+	c := cpg.NewConstructExpression(fset, callExpr)
+	(*cpg.HasType)(c).SetType(t)
+
+	n.SetInitializer((*cpg.Expression)(c))
 
 	return (*cpg.Expression)(n)
 }
