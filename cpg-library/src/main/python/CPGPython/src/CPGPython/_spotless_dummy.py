@@ -24,7 +24,8 @@
 #
 from os import name
 
-# this is just a dummy file to make spotless python happy that currently expects
-# all *.py files to start with a license header followed by the "from" keyword
+# this is just a dummy file to make spotless python license checker happy that
+# currently expects all *.py files to start with a license header followed by
+# the "from" keyword
 # :(
 # TODO FIXME
