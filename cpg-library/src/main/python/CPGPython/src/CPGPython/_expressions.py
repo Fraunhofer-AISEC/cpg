@@ -84,8 +84,63 @@ def handle_expression(self, expr):
         self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         return NodeBuilder.newExpression("")
     elif isinstance(expr, ast.Call):
-        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
-        return NodeBuilder.newExpression("")
+        # Call(expr func, expr* args, keyword* keywords)
+        # TODO copy & paste -> improve
+
+        # a call can be one of
+        # - simple function call
+        # - member call
+        # - constructor call
+        #
+        # We parse node.func regularly using a visitor and decide what it is
+        ref = self.handle_expression(expr.func)
+
+        name = ref.getName()
+
+        if self.is_member_expression(ref):
+            base_name = ref.getBase().getName()
+
+            fqn = "%s.%s" % (base_name, name)
+
+            member = NodeBuilder.newDeclaredReferenceExpression(
+                name, TypeParser.createFrom(base_name, False), DUMMY_CODE)
+            call = NodeBuilder.newMemberCallExpression(
+                name, fqn, ref.getBase(), member, ".", DUMMY_CODE)
+        else:
+            # this can be a simple function call or a ctor
+            record = self.scopemanager.getRecordForName(
+                self.scopemanager.getCurrentScope(), name)
+            if record is not None:
+                self.log_with_loc("Found a record: %s" % (record))
+                call = NodeBuilder.newConstructExpression(DUMMY_CODE)
+                call.setName(expr.func.id)
+                tpe = TypeParser.createFrom(record.getName(), False)
+                self.log_with_loc("Type is: %s" % (tpe))
+                call.setType(tpe)
+                self.log_with_loc("Call is now: %s" % (call))
+            else:
+                # TODO int, float, ...
+                if name == "str" and len(expr.args) == 1:
+                    cast = newCastExpression(DUMMY_CODE)
+                    cast.setCastType(TypeParser.createFrom("str", False))
+                    cast.setExpression(self.handle_expression(expr.args[0])
+                                       )
+                    return cast
+                else:
+                    call = NodeBuilder.newCallExpression(
+                        name, name, DUMMY_CODE, False)
+        for a in expr.args:
+            call.addArgument(self.handle_expression(a))
+        for keyword in expr.keywords:
+            if keyword.arg is not None:
+                call.addArgument(self.handle_expression(keyword.value),
+                                 keyword.arg)
+            else:
+                # TODO: keywords without args, aka **arg
+                self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
+        self.log_with_loc("Parsed call: %s" % (call))
+        return call
+
     elif isinstance(expr, ast.FormattedValue):
         self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         return NodeBuilder.newExpression("")
@@ -96,8 +151,11 @@ def handle_expression(self, expr):
         self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         return NodeBuilder.newExpression("")
     elif isinstance(expr, ast.Attribute):
-        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
-        return NodeBuilder.newExpression("")
+        value = self.handle_expression(expr.value)
+        self.log_with_loc("Parsed base as: %s" % (value))
+        mem = NodeBuilder.newMemberExpression(value, None, expr.attr, ".",
+                                              DUMMY_CODE)
+        return mem
     elif isinstance(expr, ast.Subscript):
         self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         return NodeBuilder.newExpression("")
@@ -105,8 +163,17 @@ def handle_expression(self, expr):
         self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         return NodeBuilder.newExpression("")
     elif isinstance(expr, ast.Name):
-        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
-        return NodeBuilder.newExpression("")
+        ref = NodeBuilder.newDeclaredReferenceExpression(expr.id, None,
+                                                         DUMMY_CODE)
+        self.log_with_loc("REF IS: %s" % (ref))
+        resolved = self.scopemanager.resolve(ref)
+        if resolved is None:
+            v = NodeBuilder.newVariableDeclaration(expr.id, None, DUMMY_CODE,
+                                                   False)
+            self.scopemanager.addDeclaration(v)
+            return v
+        else:
+            return ref
     elif isinstance(expr, ast.List):
         self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         return NodeBuilder.newExpression("")

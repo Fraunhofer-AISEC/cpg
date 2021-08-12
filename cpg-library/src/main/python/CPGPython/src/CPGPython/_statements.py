@@ -87,22 +87,20 @@ def handle_statement(self, stmt):
         lhs = self.handle_expression(target)
         rhs = self.handle_expression(stmt.value)
 
-        if self.is_declared_reference(lhs):
-            # Check whether this assigns to a declared var or to a new var
-            resolved_ref = self.scopemanager.resolve(lhs)
-            if resolved_ref is None:
-                # new var -> variable declaration + initializer list
-                v = NodeBuilder.newVariableDeclaration(
-                    lhs.getName(), lhs.getType(), DUMMY_CODE, False)
-                v.setInitializer(rhs)
-                self.scopemanager.addDeclaration(v)
-                return v
-
-        # found var => BinaryOperator "="
-        binop = NodeBuilder.newBinaryOperator("=", DUMMY_CODE)
-        binop.setLhs(lhs)
-        binop.setRhs(rhs)
-        return binop
+        if self.is_variable_declaration(lhs):
+            # new var => set initializer
+            lhs.setInitializer(rhs)
+            lhs.setType(rhs.getType())
+            self.log_with_loc(
+                "Parsed as new VariableDeclaration with initializer: %s" %
+                (lhs))
+            return lhs
+        else:
+            # found var => BinaryOperator "="
+            binop = NodeBuilder.newBinaryOperator("=", DUMMY_CODE)
+            binop.setLhs(lhs)
+            binop.setRhs(rhs)
+            return binop
 
     elif isinstance(stmt, ast.AugAssign):
         self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
@@ -147,8 +145,10 @@ def handle_statement(self, stmt):
         self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         return NodeBuilder.newStatement("")
     elif isinstance(stmt, ast.Expr):
-        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
-        return NodeBuilder.newStatement("")
+        self.log_with_loc("AST.EXPR: %s" % (ast.dump(stmt)))
+        r = self.handle_expression(stmt.value)
+        self.log_with_loc("RES: %s" % (r))
+        return r
     elif isinstance(stmt, ast.Pass):
         p = NodeBuilder.newEmptyStatement("pass")
         return p
@@ -242,9 +242,22 @@ def make_compound_statement(self, stmts) -> CompoundStatement:
         return NodeBuilder.newCompoundStatement("")
 
     if len(stmts) == 1:
-        return self.handle_statement(stmts[0])
+        s = self.handle_statement(stmts[0])
+        if self.is_declaration(s):
+            decl_stmt = NodeBuilder.newDeclarationStatement(DUMMY_CODE)
+            decl_stmt.setSingleDeclaration(s)
+            return decl_stmt
+        else:
+            return s
     else:
         compound_statement = NodeBuilder.newCompoundStatement(DUMMY_CODE)
         for s in stmts:
-            compound_statement.addStatement(self.handle_statement(s))
+            s = self.handle_statement(s)
+            if self.is_declaration(s):
+                decl_stmt = NodeBuilder.newDeclarationStatement(DUMMY_CODE)
+                decl_stmt.setSingleDeclaration(s)
+                compound_statement.addStatement(decl_stmt)
+            else:
+                compound_statement.addStatement(s)
+
         return compound_statement
