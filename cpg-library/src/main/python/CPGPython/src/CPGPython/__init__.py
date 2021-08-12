@@ -39,9 +39,11 @@ class PythonASTToCPG(ast.NodeVisitor):
         self.logger = self.frontend.log
         self.rootNode = ast.parse(code, filename=fname, type_comments=True)
 
+    # import methods from other files
     from ._misc import is_declaration
     from ._misc import log_with_loc
     from ._statements import handle_statement
+    from ._statements import handle_function_or_method
 
     def execute(self):
         if isinstance(self.rootNode, ast.Module):

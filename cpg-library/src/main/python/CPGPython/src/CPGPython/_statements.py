@@ -28,6 +28,8 @@ from ._misc import NOT_IMPLEMENTED_MSG
 
 import ast
 
+DUMMY_CODE = ""  # Currently, I cannot access the source code...
+
 
 def handle_statement(self, stmt):
     self.log_with_loc("Handling statement: %s" % (ast.dump(stmt)))
@@ -39,8 +41,35 @@ def handle_statement(self, stmt):
         self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         return NodeBuilder.newStatement("")
     elif isinstance(stmt, ast.ClassDef):
-        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
-        return NodeBuilder.newStatement("")
+        # TODO: NodeBuilder requires a "kind" parameters. Setting this to
+        # "class" would automagically create a "this" receiver field.
+        # However, the receiver can have any name in python (and even different
+        # names per method).
+        cls = NodeBuilder.newRecordDeclaration(stmt.name, "", DUMMY_CODE)
+        bases = []
+        for base in stmt.bases:
+            if not isinstance(base, ast.Name):
+                self.log_with_loc(
+                    "Expected a name, but got: %s" %
+                    (type(base)), loglevel="ERROR")
+            else:
+                tname = "%s" % (base.id)
+                t = TypeParser.createFrom(tname, True)
+                bases.append(t)
+        cls.setSuperClasses(bases)
+        for keyword in stmt.keywords:
+            self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
+        for s in stmt. body:
+            if isinstance(s, ast.FunctionDef):
+                cls.addMethod(self.handle_function_or_method(s, cls))
+            elif isinstance(s, ast.stmt):
+                # TODO
+                self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
+            else:
+                self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
+        for decorator in stmt.decorator_list:
+            self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
+        return cls
     elif isinstance(stmt, ast.Return):
         self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         return NodeBuilder.newStatement("")
@@ -107,3 +136,19 @@ def handle_statement(self, stmt):
     else:
         self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         return NodeBuilder.newStatement("")
+
+
+def handle_function_or_method(self, node, record=None):
+    self.log_with_loc("Handling a function/method: %s" % (ast.dump(node)))
+
+    if isinstance(node.name, ast.Name):
+        name = node.name
+    else:
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
+        name = ""
+
+    if record is not None:
+        f = NodeBuilder.newMethodDeclaration(name, DUMMY_CODE, False, record)
+    else:
+        f = NodeBuilder.newFunctionDeclaration(name, DUMMY_CODE)
+    return f
