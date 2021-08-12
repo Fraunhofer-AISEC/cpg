@@ -24,19 +24,20 @@
 #
 from ._spotless_dummy import *
 from de.fraunhofer.aisec.cpg.graph import NodeBuilder
+from de.fraunhofer.aisec.cpg.graph.types import TypeParser
+from de.fraunhofer.aisec.cpg.graph.statements import CompoundStatement
 from ._misc import NOT_IMPLEMENTED_MSG
 
 import ast
 
-DUMMY_CODE = ""  # Currently, I cannot access the source code...
+DUMMY_CODE = ""  # TODO: Currently, I cannot access the source code...
 
 
 def handle_statement(self, stmt):
     self.log_with_loc("Handling statement: %s" % (ast.dump(stmt)))
 
     if isinstance(stmt, ast.FunctionDef):
-        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
-        return NodeBuilder.newStatement("")
+        return self.handle_function_or_method(stmt)
     elif isinstance(stmt, ast.AsyncFunctionDef):
         self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         return NodeBuilder.newStatement("")
@@ -77,8 +78,32 @@ def handle_statement(self, stmt):
         self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         return NodeBuilder.newStatement("")
     elif isinstance(stmt, ast.Assign):
-        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
-        return NodeBuilder.newStatement("")
+        if len(stmt.targets) != 1:
+            self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
+            return NodeBuilder.newBinaryOperator("=", DUMMY_CODE)
+        target = stmt.targets[0]
+
+        # parse LHS and RHS as expressions
+        lhs = self.handle_expression(target)
+        rhs = self.handle_expression(stmt.value)
+
+        if self.is_declared_reference(lhs):
+            # Check whether this assigns to a declared var or to a new var
+            resolved_ref = self.scopemanager.resolve(lhs)
+            if resolved_ref is None:
+                # new var -> variable declaration + initializer list
+                v = NodeBuilder.newVariableDeclaration(
+                    lhs.getName(), lhs.getType(), DUMMY_CODE, False)
+                v.setInitializer(rhs)
+                self.scopemanager.addDeclaration(v)
+                return v
+
+        # found var => BinaryOperator "="
+        binop = NodeBuilder.newBinaryOperator("=", DUMMY_CODE)
+        binop.setLhs(lhs)
+        binop.setRhs(rhs)
+        return binop
+
     elif isinstance(stmt, ast.AugAssign):
         self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         return NodeBuilder.newStatement("")
@@ -125,8 +150,8 @@ def handle_statement(self, stmt):
         self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         return NodeBuilder.newStatement("")
     elif isinstance(stmt, ast.Pass):
-        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
-        return NodeBuilder.newStatement("")
+        p = NodeBuilder.newEmptyStatement("pass")
+        return p
     elif isinstance(stmt, ast.Break):
         self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         return NodeBuilder.newStatement("")
@@ -139,16 +164,87 @@ def handle_statement(self, stmt):
 
 
 def handle_function_or_method(self, node, record=None):
+    # FunctionDef(identifier name, arguments args, stmt* body, expr*
+    # decorator_list, expr? returns, string? type_comment)
     self.log_with_loc("Handling a function/method: %s" % (ast.dump(node)))
 
-    if isinstance(node.name, ast.Name):
+    if isinstance(node.name, str):
         name = node.name
     else:
         self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         name = ""
 
     if record is not None:
-        f = NodeBuilder.newMethodDeclaration(name, DUMMY_CODE, False, record)
+        if name == "__init__":
+            f = NodeBuilder.newConstructorDeclaration(name, DUMMY_CODE, record)
+        else:
+            # TODO handle static
+            f = NodeBuilder.newMethodDeclaration(
+                name, DUMMY_CODE, False, record)
     else:
         f = NodeBuilder.newFunctionDeclaration(name, DUMMY_CODE)
+
+    self.scopemanager.enterScope(f)
+
+    for arg in node.args.posonlyargs:
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
+
+    # First argument is the reciver in case of a method
+    if record is not None:
+        if len(node.args.args) > 0:
+            tpe = TypeParser.createFrom(record.getName(), False)
+            recv = NodeBuilder.newVariableDeclaration(
+                node.args.args[0].arg, tpe, DUMMY_CODE, False)
+            f.setReceiver(recv)
+        else:
+            self.log_with_loc(
+                "Expected to find the receiver but got nothing...",
+                loglevel="ERROR")
+        for arg in node.args.args[1:]:
+            self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
+    else:
+        for arg in node.args.args:
+            self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
+
+    if node.args.vararg is not None:
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
+    for arg in node.args.kwonlyargs:
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
+    for arg in node.args.kw_defaults:
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
+    if node.args.kwarg is not None:
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
+    for arg in node.args.defaults:
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
+
+    if len(node.body) > 0:
+        f.setBody(self.make_compound_statement(node.body))
+
+    for decorator in node.decorator_list:
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
+
+    if node.returns is not None:
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
+
+    self.scopemanager.leaveScope(f)
+    self.scopemanager.addDeclaration(f)
+
     return f
+
+
+def make_compound_statement(self, stmts) -> CompoundStatement:
+    self.log_with_loc("Making a CompoundStatement")
+
+    if stmts is None or len(stmts) == 0:
+        self.log_with_loc(
+            "Expected at least one statement. Returning a dummy.",
+            loglevel="WARN")
+        return NodeBuilder.newCompoundStatement("")
+
+    if len(stmts) == 1:
+        return self.handle_statement(stmts[0])
+    else:
+        compound_statement = NodeBuilder.newCompoundStatement(DUMMY_CODE)
+        for s in stmts:
+            compound_statement.addStatement(self.handle_statement(s))
+        return compound_statement

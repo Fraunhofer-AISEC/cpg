@@ -41,9 +41,12 @@ class PythonASTToCPG(ast.NodeVisitor):
 
     # import methods from other files
     from ._misc import is_declaration
+    from ._misc import is_declared_reference
     from ._misc import log_with_loc
     from ._statements import handle_statement
+    from ._expressions import handle_expression
     from ._statements import handle_function_or_method
+    from ._statements import make_compound_statement
 
     def execute(self):
         if isinstance(self.rootNode, ast.Module):
