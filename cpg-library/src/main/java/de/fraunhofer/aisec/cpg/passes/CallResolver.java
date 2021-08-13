@@ -1203,9 +1203,7 @@ public class CallResolver extends Pass {
       }
     }
 
-    if (recordDeclaration != null
-        && recordDeclaration.getCode() != null
-        && !recordDeclaration.getCode().isEmpty()) {
+    if (recordDeclaration != null) {
       ConstructorDeclaration constructor =
           getConstructorDeclaration(constructExpression, recordDeclaration);
       constructExpression.setConstructor(constructor);

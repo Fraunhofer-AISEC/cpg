@@ -47,6 +47,7 @@ def handle_statement(self, stmt):
         # However, the receiver can have any name in python (and even different
         # names per method).
         cls = NodeBuilder.newRecordDeclaration(stmt.name, "", DUMMY_CODE)
+        self.scopemanager.enterScope(cls)
         bases = []
         for base in stmt.bases:
             if not isinstance(base, ast.Name):
@@ -70,6 +71,8 @@ def handle_statement(self, stmt):
                 self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         for decorator in stmt.decorator_list:
             self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
+        self.scopemanager.leaveScope(cls)
+        self.scopemanager.addDeclaration(cls)
         return cls
     elif isinstance(stmt, ast.Return):
         self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
@@ -90,7 +93,7 @@ def handle_statement(self, stmt):
         if self.is_variable_declaration(lhs):
             # new var => set initializer
             lhs.setInitializer(rhs)
-            lhs.setType(rhs.getType())
+            # lhs.setType(rhs.getType())
             self.log_with_loc(
                 "Parsed as new VariableDeclaration with initializer: %s" %
                 (lhs))
@@ -145,10 +148,7 @@ def handle_statement(self, stmt):
         self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         return NodeBuilder.newStatement("")
     elif isinstance(stmt, ast.Expr):
-        self.log_with_loc("AST.EXPR: %s" % (ast.dump(stmt)))
-        r = self.handle_expression(stmt.value)
-        self.log_with_loc("RES: %s" % (r))
-        return r
+        return self.handle_expression(stmt.value)
     elif isinstance(stmt, ast.Pass):
         p = NodeBuilder.newEmptyStatement("pass")
         return p

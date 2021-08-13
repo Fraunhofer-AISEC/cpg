@@ -25,6 +25,7 @@
 from ._spotless_dummy import *
 from de.fraunhofer.aisec.cpg.graph import NodeBuilder
 from de.fraunhofer.aisec.cpg.graph.types import TypeParser
+from de.fraunhofer.aisec.cpg.graph.types import UnknownType
 from ._misc import NOT_IMPLEMENTED_MSG
 
 import ast
@@ -103,7 +104,7 @@ def handle_expression(self, expr):
             fqn = "%s.%s" % (base_name, name)
 
             member = NodeBuilder.newDeclaredReferenceExpression(
-                name, TypeParser.createFrom(base_name, False), DUMMY_CODE)
+                name, UnknownType.getUnknownType(), DUMMY_CODE)
             call = NodeBuilder.newMemberCallExpression(
                 name, fqn, ref.getBase(), member, ".", DUMMY_CODE)
         else:
@@ -111,13 +112,11 @@ def handle_expression(self, expr):
             record = self.scopemanager.getRecordForName(
                 self.scopemanager.getCurrentScope(), name)
             if record is not None:
-                self.log_with_loc("Found a record: %s" % (record))
+                self.log_with_loc("Received a record: %s" % (record))
                 call = NodeBuilder.newConstructExpression(DUMMY_CODE)
                 call.setName(expr.func.id)
                 tpe = TypeParser.createFrom(record.getName(), False)
-                self.log_with_loc("Type is: %s" % (tpe))
                 call.setType(tpe)
-                self.log_with_loc("Call is now: %s" % (call))
             else:
                 # TODO int, float, ...
                 if name == "str" and len(expr.args) == 1:
@@ -153,8 +152,8 @@ def handle_expression(self, expr):
     elif isinstance(expr, ast.Attribute):
         value = self.handle_expression(expr.value)
         self.log_with_loc("Parsed base as: %s" % (value))
-        mem = NodeBuilder.newMemberExpression(value, None, expr.attr, ".",
-                                              DUMMY_CODE)
+        mem = NodeBuilder.newMemberExpression(
+            value, UnknownType.getUnknownType(), expr.attr, ".", DUMMY_CODE)
         return mem
     elif isinstance(expr, ast.Subscript):
         self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
@@ -163,13 +162,12 @@ def handle_expression(self, expr):
         self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         return NodeBuilder.newExpression("")
     elif isinstance(expr, ast.Name):
-        ref = NodeBuilder.newDeclaredReferenceExpression(expr.id, None,
-                                                         DUMMY_CODE)
-        self.log_with_loc("REF IS: %s" % (ref))
+        ref = NodeBuilder.newDeclaredReferenceExpression(
+            expr.id, UnknownType.getUnknownType(), DUMMY_CODE)
         resolved = self.scopemanager.resolve(ref)
         if resolved is None:
-            v = NodeBuilder.newVariableDeclaration(expr.id, None, DUMMY_CODE,
-                                                   False)
+            v = NodeBuilder.newVariableDeclaration(
+                expr.id, UnknownType.getUnknownType(), DUMMY_CODE, False)
             self.scopemanager.addDeclaration(v)
             return v
         else:
