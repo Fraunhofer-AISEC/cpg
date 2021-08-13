@@ -112,11 +112,8 @@ public class NodeFactory {
     for (var typedefIndex : grpcNode.getTypedefsList()) {
       var typedef = createNode(typedefIndex.getNodeIndex(), grpcNodes, cpgNodes);
       if (typedef == null) {
-        if (!(typedef instanceof TypedefDeclaration)) {
-          throw new TranslationException(
-              "node " + typedefIndex.getNodeIndex() + " not of type typedef (in createNode");
-        }
-        cpgNode.addTypedef((TypedefDeclaration) typedef);
+        throw new TranslationException(
+            "node " + typedefIndex.getNodeIndex() + " not of type typedef (in createNode");
       }
     }
 
