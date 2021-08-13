@@ -52,8 +52,11 @@ def handle_expression(self, expr):
         self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         return NodeBuilder.newExpression("")
     elif isinstance(expr, ast.IfExp):
-        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
-        return NodeBuilder.newExpression("")
+        test = self.handle_expression(expr.test)
+        body = self.handle_expression(expr.body)
+        orelse = self.handle_expression(expr.orelse)
+        return NodeBuilder.newConditionalExpression(
+            test, body, orelse, UnknownType.getUnknownType())
     elif isinstance(expr, ast.Dict):
         self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         return NodeBuilder.newExpression("")
