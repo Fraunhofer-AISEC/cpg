@@ -121,8 +121,18 @@ def handle_statement(self, stmt):
         self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         return NodeBuilder.newStatement("")
     elif isinstance(stmt, ast.If):
-        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
-        return NodeBuilder.newStatement("")
+        if_stmt = NodeBuilder.newIfStatement(DUMMY_CODE)
+        # Condition
+        if_stmt.setCondition(self.handle_expression(stmt.test))
+        # Then
+        body = self.make_compound_statement(stmt.body)
+        if_stmt.setThenStatement(body)
+        # Else
+        if stmt.orelse is not None and len(stmt.orelse) != 0:
+            orelse = self.make_compound_statement(stmt.orelse)
+            if_stmt.setElseStatement(orelse)
+        return if_stmt
+
     elif isinstance(stmt, ast.With):
         self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         return NodeBuilder.newStatement("")
@@ -267,6 +277,7 @@ def make_compound_statement(self, stmts) -> CompoundStatement:
         compound_statement = NodeBuilder.newCompoundStatement(DUMMY_CODE)
         for s in stmts:
             s = self.handle_statement(s)
+            self.log_with_loc("IF: %s" % (s))
             if self.is_declaration(s):
                 decl_stmt = NodeBuilder.newDeclarationStatement(DUMMY_CODE)
                 decl_stmt.setSingleDeclaration(s)
