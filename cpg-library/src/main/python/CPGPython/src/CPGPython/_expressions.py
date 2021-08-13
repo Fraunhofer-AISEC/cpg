@@ -147,8 +147,27 @@ def handle_expression(self, expr):
         self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         return NodeBuilder.newExpression("")
     elif isinstance(expr, ast.Constant):
-        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
-        return NodeBuilder.newExpression("")
+        if isinstance(expr.value, str):
+            tpe = TypeParser.createFrom("str", False)
+        elif isinstance(expr.value, int):
+            tpe = TypeParser.createFrom("int", False)
+        elif isinstance(expr.value, float):
+            tpe = TypeParser.createFrom("float", False)
+        elif isinstance(expr.value, complex):
+            tpe = TypeParser.createFrom("complex", False)
+        elif isinstance(expr.value, bool):
+            tpe = TypeParser.createFrom("bool", False)
+        elif isinstance(expr.value, type(None)):
+            tpe = TypeParser.createFrom("None", False)
+        elif isinstance(expr.value, bytes):
+            tpe = TypeParser.createFrom("byte[]", False)
+        else:
+            self.log_with_loc("Found unexpected type - using a dummy: %s" %
+                              (type(expr.value)), loglevel="ERROR")
+            tpe = UnknownType.getUnknownType()
+        lit = NodeBuilder.newLiteral(expr.value, tpe, DUMMY_CODE)
+        lit.setName(str(expr.value))
+        return lit
     elif isinstance(expr, ast.Attribute):
         value = self.handle_expression(expr.value)
         self.log_with_loc("Parsed base as: %s" % (value))

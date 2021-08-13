@@ -163,7 +163,7 @@ def handle_statement(self, stmt):
         return NodeBuilder.newStatement("")
 
 
-def handle_function_or_method(self, node, record=None):
+def handle_function_or_method(self, node: ast.FunctionDef, record=None):
     # FunctionDef(identifier name, arguments args, stmt* body, expr*
     # decorator_list, expr? returns, string? type_comment)
     self.log_with_loc("Handling a function/method: %s" % (ast.dump(node)))
@@ -196,15 +196,16 @@ def handle_function_or_method(self, node, record=None):
             recv = NodeBuilder.newVariableDeclaration(
                 node.args.args[0].arg, tpe, DUMMY_CODE, False)
             f.setReceiver(recv)
+            self.scopemanager.addDeclaration(recv)
         else:
             self.log_with_loc(
                 "Expected to find the receiver but got nothing...",
                 loglevel="ERROR")
         for arg in node.args.args[1:]:
-            self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
+            self.handle_argument(arg)
     else:
         for arg in node.args.args:
-            self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
+            self.handle_argument(arg)
 
     if node.args.vararg is not None:
         self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
@@ -230,6 +231,19 @@ def handle_function_or_method(self, node, record=None):
     self.scopemanager.addDeclaration(f)
 
     return f
+
+
+def handle_argument(self, arg: ast.arg):
+    self.log_with_loc("Handling an argument: %s" % (ast.dump(arg)))
+    if arg.annotation is not None:
+        tpe = TypeParser.createFrom(arg.annotation.id, False)
+    else:
+        tpe = UnkownType.getUnkownType()
+    # TODO variadic
+    pvd = NodeBuilder.newMethodParameterIn(arg.arg,
+                                           tpe, False, DUMMY_CODE)
+    self.scopemanager.addDeclaration(pvd)
+    return pvd
 
 
 def make_compound_statement(self, stmts) -> CompoundStatement:
