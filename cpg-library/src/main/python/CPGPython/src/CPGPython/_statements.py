@@ -75,8 +75,11 @@ def handle_statement(self, stmt):
         self.scopemanager.addDeclaration(cls)
         return cls
     elif isinstance(stmt, ast.Return):
-        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
-        return NodeBuilder.newStatement("")
+        r = NodeBuilder.newReturnStatement(DUMMY_CODE)
+        if stmt.value is not None:
+            r.setReturnValue(self.handle_expression(stmt.value)
+                             )
+        return r
     elif isinstance(stmt, ast.Delete):
         self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         return NodeBuilder.newStatement("")

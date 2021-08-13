@@ -43,8 +43,39 @@ def handle_expression(self, expr):
         self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         return NodeBuilder.newExpression("")
     elif isinstance(expr, ast.BinOp):
-        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
-        return NodeBuilder.newExpression("")
+        if isinstance(expr.op, ast.Add):
+            opcode = "+"
+        elif isinstance(expr.op, ast.Sub):
+            opcode = "-"
+        elif isinstance(expr.op, ast.Mult):
+            opcode = "*"
+        elif isinstance(expr.op, ast.Div):
+            opcode = "/"
+        elif isinstance(expr.op, ast.FloorDiv):
+            opcode = "//"
+        elif isinstance(expr.op, ast.Mod):
+            opcode = "%"
+        elif isinstance(expr.op, ast.Pow):
+            opcode = "**"
+        elif isinstance(expr.op, ast.LShift):
+            opcode = "<<"
+        elif isinstance(expr.op, ast.RShift):
+            opcode = ">>"
+        elif isinstance(expr.op, ast.BitOr):
+            opcode = "|"
+        elif isinstance(expr.op, ast.BitXor):
+            opcode = "^"
+        elif isinstance(expr.op, ast.BitAnd):
+            opcode = "&"
+        elif isinstance(expr.op, ast.MatMult):
+            opcode = "*"
+        else:
+            self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
+            opcode = "DUMMY"
+        binop = NodeBuilder.newBinaryOperator(opcode, DUMMY_CODE)
+        binop.setLhs(self.handle_expression(expr.left))
+        binop.setRhs(self.handle_expression(expr.right))
+        return binop
     elif isinstance(expr, ast.UnaryOp):
         self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         return NodeBuilder.newExpression("")
