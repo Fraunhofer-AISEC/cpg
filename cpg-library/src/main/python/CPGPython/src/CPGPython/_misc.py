@@ -107,3 +107,9 @@ def is_method_declaration(self, target):
 def is_ctor_declaration(self, target):
     n = CPG_JAVA + ".graph.declarations.ConstructorDeclaration"
     return target is not None and target.java_name == n
+
+
+def is_statement(self, target):
+    n = CPG_JAVA + ".graph.statements."
+    return target is not None and target.java_name.startswith(
+        n)

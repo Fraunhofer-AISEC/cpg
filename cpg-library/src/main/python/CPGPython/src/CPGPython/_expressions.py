@@ -115,8 +115,38 @@ def handle_expression(self, expr):
         self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         return NodeBuilder.newExpression("")
     elif isinstance(expr, ast.Compare):
-        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
-        return NodeBuilder.newExpression("")
+        # Compare(expr left, cmpop* ops, expr* comparators)
+        if len(expr.ops) != 1 or len(expr.comparators) != 1:
+            self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
+            return NodeBuilder.newBinaryOperator("DUMMY", DUMMY_CODE)
+        op = expr.ops[0]
+        if isinstance(op, ast.Eq):
+            op_code = "=="
+        elif isinstance(op, ast.NotEq):
+            op_code = "!="
+        elif isinstance(op, ast.Lt):
+            op_code = "<"
+        elif isinstance(op, ast.LtE):
+            op_code = "<="
+        elif isinstance(op, ast.Gt):
+            op_code = ">"
+        elif isinstance(op, ast.GtE):
+            op_code = ">="
+        elif isinstance(op, ast.Is):
+            op_code = "is"
+        elif isinstance(op, ast.IsNot):
+            op_code = "is not"
+        elif isinstance(op, ast.In):
+            op_code = "in"
+        elif isinstance(op, ast.NotIn):
+            op_code = "not in"
+        else:
+            self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
+            return NodeBuilder.newBinaryOperator("DUMMY", DUMMY_CODE)
+        comp = NodeBuilder.newBinaryOperator(op_code, DUMMY_CODE)
+        comp.setLhs(self.handle_expression(expr.left))
+        comp.setRhs(self.handle_expression(expr.comparators[0]))
+        return comp
     elif isinstance(expr, ast.Call):
         # Call(expr func, expr* args, keyword* keywords)
         # TODO copy & paste -> improve

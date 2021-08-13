@@ -27,6 +27,7 @@ from ._spotless_dummy import *
 from de.fraunhofer.aisec.cpg.graph import NodeBuilder
 from de.fraunhofer.aisec.cpg.graph.statements import CompoundStatement
 from de.fraunhofer.aisec.cpg.graph.types import TypeParser
+from de.fraunhofer.aisec.cpg.graph.types import UnknownType
 import ast
 
 DUMMY_CODE = ""  # TODO: Currently, I cannot access the source code...
@@ -68,7 +69,7 @@ def handle_statement(self, stmt):
                 if self.is_declaration(handled_stmt):
                     # TODO wrap this in a function...
                     decl_stmt = NodeBuilder.newDeclarationStatement(DUMMY_CODE)
-                    decl_stmt.setSingleDeclaration(s)
+                    decl_stmt.setSingleDeclaration(handled_stmt)
                     cls.addStatement(decl_stmt)
                 elif self.is_statement(handled_stmt):
                     cls.addStatement(handled_stmt)
@@ -260,7 +261,7 @@ def handle_argument(self, arg: ast.arg):
     if arg.annotation is not None:
         tpe = TypeParser.createFrom(arg.annotation.id, False)
     else:
-        tpe = UnkownType.getUnkownType()
+        tpe = UnknownType.getUnknownType()
     # TODO variadic
     pvd = NodeBuilder.newMethodParameterIn(arg.arg,
                                            tpe, False, DUMMY_CODE)

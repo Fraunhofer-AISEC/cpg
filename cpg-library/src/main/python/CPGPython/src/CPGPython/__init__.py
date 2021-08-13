@@ -69,9 +69,9 @@ class PythonASTToCPG(ast.NodeVisitor):
                 r = self.handle_statement(stmt)
                 self.log_with_loc("Handling statement result is: %s" % (r))
                 if self.is_declaration(r):
-                    # TODO do we need both???
-                    self.scopemanager.addDeclaration(r)
                     nsd.addDeclaration(r)
+                elif self.is_statement(r):
+                    nsd.addStatement(r)
                 else:
                     self.log_with_loc("Don't know what to do with this: %s" %
                                       (r), loglevel="ERROR")
