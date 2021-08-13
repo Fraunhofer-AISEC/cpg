@@ -22,12 +22,12 @@
 #                   \$$$$$   |$$ |      \$$$$$   |
 #                    \______/ \__|       \______/
 #
+
+from ._misc import NOT_IMPLEMENTED_MSG
 from ._spotless_dummy import *
 from de.fraunhofer.aisec.cpg.graph import NodeBuilder
-from de.fraunhofer.aisec.cpg.graph.types import TypeParser
 from de.fraunhofer.aisec.cpg.graph.statements import CompoundStatement
-from ._misc import NOT_IMPLEMENTED_MSG
-
+from de.fraunhofer.aisec.cpg.graph.types import TypeParser
 import ast
 
 DUMMY_CODE = ""  # TODO: Currently, I cannot access the source code...
@@ -65,8 +65,18 @@ def handle_statement(self, stmt):
             if isinstance(s, ast.FunctionDef):
                 cls.addMethod(self.handle_function_or_method(s, cls))
             elif isinstance(s, ast.stmt):
-                # TODO
-                self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
+                handled_stmt = self.handle_statement(s)
+                if self.is_declaration(handled_stmt):
+                    # TODO wrap this in a function...
+                    decl_stmt = NodeBuilder.newDeclarationStatement(DUMMY_CODE)
+                    decl_stmt.setSingleDeclaration(s)
+                    cls.addStatement(decl_stmt)
+                elif self.is_statement(handled_stmt):
+                    cls.addStatement(handled_stmt)
+                else:
+                    self.log_with_loc(
+                        "Expected a statement or a declaration. Received %s" %
+                        (type(handled_stmt)), loglevel="ERROR")
             else:
                 self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         for decorator in stmt.decorator_list:

@@ -44,6 +44,7 @@ class PythonASTToCPG(ast.NodeVisitor):
     from ._misc import is_declaration
     from ._misc import is_declared_reference
     from ._misc import is_member_expression
+    from ._misc import is_statement
     from ._misc import is_variable_declaration
     from ._misc import log_with_loc
     from ._statements import handle_argument
