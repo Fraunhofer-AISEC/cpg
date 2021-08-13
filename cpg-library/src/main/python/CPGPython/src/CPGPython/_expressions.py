@@ -244,16 +244,33 @@ def handle_expression(self, expr):
         self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         return NodeBuilder.newExpression("")
     elif isinstance(expr, ast.Name):
+        """
+        The following logic applies here:
+        - not in a class & no prior declaration -> variable declaration
+        - not in a class & prior declaration found -> reference
+        - in a class & in a method -> reference
+        - in a class & not in a method & no prior declaration -> field decl
+        - in a class & not in a method & prior declaration -> reference
+        """
         ref = NodeBuilder.newDeclaredReferenceExpression(
             expr.id, UnknownType.getUnknownType(), DUMMY_CODE)
         resolved = self.scopemanager.resolve(ref)
-        if resolved is None:
-            v = NodeBuilder.newVariableDeclaration(
-                expr.id, UnknownType.getUnknownType(), DUMMY_CODE, False)
+        if resolved is not None:
+            return ref
+        else:
+            inRecord = self.scopemanager.isInRecord()
+            inFunction = self.scopemanager.isInFunction()
+            if inRecord and not inFunction:
+                v = NodeBuilder.newFieldDeclaration(
+                    expr.id, UnknownType.getUnknownType(), None,
+                    DUMMY_CODE, None, None, False)
+            elif inRecord and inFunction
+            return ref
+            else:
+                v = NodeBuilder.newVariableDeclaration(
+                    expr.id, UnknownType.getUnknownType(), DUMMY_CODE, False)
             self.scopemanager.addDeclaration(v)
             return v
-        else:
-            return ref
     elif isinstance(expr, ast.List):
         self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         return NodeBuilder.newExpression("")

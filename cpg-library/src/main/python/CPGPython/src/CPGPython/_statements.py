@@ -103,12 +103,12 @@ def handle_statement(self, stmt):
         lhs = self.handle_expression(target)
         rhs = self.handle_expression(stmt.value)
 
-        if self.is_variable_declaration(lhs):
+        if self.is_variable_declaration(lhs) or self.is_field_declaration(lhs):
             # new var => set initializer
             lhs.setInitializer(rhs)
             # lhs.setType(rhs.getType())
             self.log_with_loc(
-                "Parsed as new VariableDeclaration with initializer: %s" %
+                "Parsed as Variable/FieldDeclaration with initializer: %s" %
                 (lhs))
             return lhs
         else:
