@@ -51,7 +51,7 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
             "ObjectLiteralExpression" -> return handleObjectLiteralExpression(node)
             "PropertyAssignment" -> return handlePropertyAssignment(node)
             "ArrowFunction" -> return handleArrowFunction(node)
-            "FunctionExpression" -> return handleFunctionExpression(node)
+            "FunctionExpression" -> return handleArrowFunction(node)
             "JsxElement" -> return handeJsxElement(node)
             "JsxOpeningElement" -> return handleJsxOpeningElement(node)
             "JsxAttribute" -> return handleJsxAttribute(node)
@@ -127,23 +127,6 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
         return ref
     }
 
-    private fun handleFunctionExpression(node: TypeScriptNode): Expression {
-        // parse as a function
-        val func = lang.declarationHandler.handle(node)
-
-        // we cannot directly return a function declaration as an expression, so we
-        // wrap it into a reference expression
-        val ref =
-            NodeBuilder.newDeclaredReferenceExpression(
-                "",
-                UnknownType.getUnknownType(),
-                lang.getCodeFromRawNode(node)
-            )
-        ref.refersTo = func
-
-        return ref
-    }
-
     private fun handlePropertyAssignment(node: TypeScriptNode): KeyValueExpression {
         val key = this.handle(node.children?.first())
         val value = this.handle(node.children?.last())
@@ -157,7 +140,7 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
     private fun handleObjectLiteralExpression(node: TypeScriptNode): InitializerListExpression {
         val ile = NodeBuilder.newInitializerListExpression(this.lang.getCodeFromRawNode(node))
 
-        ile.initializers = node.children?.map { this.handle(it) }
+        ile.initializers = node.children?.map { this.handle(it) } ?: emptyList()
 
         return ile
     }
