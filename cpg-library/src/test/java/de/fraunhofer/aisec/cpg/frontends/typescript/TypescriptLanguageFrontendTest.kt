@@ -402,4 +402,37 @@ class TypescriptLanguageFrontendTest {
         assertNotNull(member)
         assertEquals("very", (member.value as? Literal<*>)?.value)
     }
+
+    @Test
+    fun testLambda() {
+        val topLevel = Path.of("src", "test", "resources", "typescript")
+        val tu =
+            TestUtils.analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("lambda.js").toFile()),
+                topLevel,
+                true
+            ) {
+                it.registerLanguage(
+                    TypeScriptLanguageFrontend::class.java,
+                    TypeScriptLanguageFrontend.JAVASCRIPT_EXTENSIONS
+                )
+            }
+
+        assertNotNull(tu)
+
+        val onPost =
+            tu.statements.firstOrNull() { it is MemberCallExpression && it.name == "onPost" } as?
+                MemberCallExpression
+        assertNotNull(onPost)
+
+        val stmt = onPost.arguments.drop(1).firstOrNull() as? DeclaredReferenceExpression
+        assertNotNull(stmt)
+
+        val func = stmt.refersTo as? FunctionDeclaration
+        assertNotNull(func)
+
+        assertEquals(2, func.parameters.size)
+        assertEquals("req", func.parameters.firstOrNull()?.name)
+        assertEquals("res", func.parameters[1].name)
+    }
 }

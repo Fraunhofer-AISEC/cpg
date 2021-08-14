@@ -51,6 +51,7 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
             "ObjectLiteralExpression" -> return handleObjectLiteralExpression(node)
             "PropertyAssignment" -> return handlePropertyAssignment(node)
             "ArrowFunction" -> return handleArrowFunction(node)
+            "FunctionExpression" -> return handleArrowFunction(node)
             "JsxElement" -> return handeJsxElement(node)
             "JsxOpeningElement" -> return handleJsxOpeningElement(node)
             "JsxAttribute" -> return handleJsxAttribute(node)
@@ -139,7 +140,7 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
     private fun handleObjectLiteralExpression(node: TypeScriptNode): InitializerListExpression {
         val ile = NodeBuilder.newInitializerListExpression(this.lang.getCodeFromRawNode(node))
 
-        ile.initializers = node.children?.map { this.handle(it) }
+        ile.initializers = node.children?.map { this.handle(it) } ?: emptyList()
 
         return ile
     }
