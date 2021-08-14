@@ -25,8 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.sarif;
 
-import com.google.common.base.Objects;
 import java.net.URI;
+import java.util.Objects;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
@@ -69,7 +69,7 @@ public class PhysicalLocation {
       if (this == o) return true;
       if (!(o instanceof ArtifactLocation)) return false;
       ArtifactLocation that = (ArtifactLocation) o;
-      return Objects.equal(uri, that.uri);
+      return Objects.equals(uri, that.uri);
     }
 
     @Override
@@ -111,12 +111,12 @@ public class PhysicalLocation {
     if (this == o) return true;
     if (!(o instanceof PhysicalLocation)) return false;
     PhysicalLocation that = (PhysicalLocation) o;
-    return Objects.equal(artifactLocation, that.artifactLocation)
-        && Objects.equal(region, that.region);
+    return Objects.equals(artifactLocation, that.artifactLocation)
+        && Objects.equals(region, that.region);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hashCode(artifactLocation, region);
+    return Objects.hash(artifactLocation, region);
   }
 }
