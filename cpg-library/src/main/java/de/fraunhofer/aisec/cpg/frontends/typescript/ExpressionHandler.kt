@@ -51,6 +51,7 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
             "ObjectLiteralExpression" -> return handleObjectLiteralExpression(node)
             "PropertyAssignment" -> return handlePropertyAssignment(node)
             "ArrowFunction" -> return handleArrowFunction(node)
+            "FunctionExpression" -> return handleFunctionExpression(node)
             "JsxElement" -> return handeJsxElement(node)
             "JsxOpeningElement" -> return handleJsxOpeningElement(node)
             "JsxAttribute" -> return handleJsxAttribute(node)
@@ -110,6 +111,23 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
     }
 
     private fun handleArrowFunction(node: TypeScriptNode): Expression {
+        // parse as a function
+        val func = lang.declarationHandler.handle(node)
+
+        // we cannot directly return a function declaration as an expression, so we
+        // wrap it into a reference expression
+        val ref =
+            NodeBuilder.newDeclaredReferenceExpression(
+                "",
+                UnknownType.getUnknownType(),
+                lang.getCodeFromRawNode(node)
+            )
+        ref.refersTo = func
+
+        return ref
+    }
+
+    private fun handleFunctionExpression(node: TypeScriptNode): Expression {
         // parse as a function
         val func = lang.declarationHandler.handle(node)
 

@@ -45,6 +45,7 @@ class DeclarationHandler(lang: TypeScriptLanguageFrontend) :
             "MethodDeclaration" -> return handleFunctionDeclaration(node)
             "Constructor" -> return handleFunctionDeclaration(node)
             "ArrowFunction" -> return handleFunctionDeclaration(node)
+            "FunctionExpression" -> return handleFunctionDeclaration(node)
             "Parameter" -> return handleParameter(node)
             "PropertySignature" -> return handlePropertySignature(node)
             "PropertyDeclaration" -> return handlePropertySignature(node)
