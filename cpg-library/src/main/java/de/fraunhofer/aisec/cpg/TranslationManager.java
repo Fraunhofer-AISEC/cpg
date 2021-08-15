@@ -153,7 +153,7 @@ public class TranslationManager {
       @NonNull ScopeManager scopeManager)
       throws TranslationException {
 
-    List<File> sourceLocations = new ArrayList<>(this.config.getSourceLocations());
+    var sourceLocations = new ArrayList<>(this.config.getSourceLocations());
 
     if (config.useUnityBuild) {
       try {
@@ -173,7 +173,11 @@ public class TranslationManager {
               try (Stream<Path> stream =
                   Files.find(
                       sourceLocation.toPath(), 999, (p, fileAttr) -> fileAttr.isRegularFile())) {
-                sourceLocations.addAll(stream.map(Path::toFile).collect(Collectors.toSet()));
+                sourceLocations.addAll(
+                    stream
+                        .map(Path::toFile)
+                        .filter(file -> !config.excludeFiles.contains(file.getName()))
+                        .collect(Collectors.toSet()));
               }
             } else {
               if (CXX_EXTENSIONS.contains(Util.getExtension(sourceLocation))) {
@@ -189,7 +193,8 @@ public class TranslationManager {
           }
         }
 
-        sourceLocations = List.of(tmpFile);
+        sourceLocations.clear();
+        sourceLocations.add(tmpFile);
       } catch (IOException e) {
         throw new TranslationException(e);
       }
@@ -208,7 +213,11 @@ public class TranslationManager {
       if (sourceLocation.isDirectory()) {
         try (Stream<Path> stream =
             Files.find(sourceLocation.toPath(), 999, (p, fileAttr) -> fileAttr.isRegularFile())) {
-          sourceLocations.addAll(stream.map(Path::toFile).collect(Collectors.toSet()));
+          sourceLocations.addAll(
+              stream
+                  .map(Path::toFile)
+                  .filter(file -> !config.excludeFiles.contains(file.getName()))
+                  .collect(Collectors.toSet()));
           sourceLocations.remove(sourceLocation);
         } catch (IOException e) {
           log.error(e.getMessage(), e);
