@@ -29,9 +29,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.*;
 import de.fraunhofer.aisec.cpg.graph.statements.*;
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*;
 import de.fraunhofer.aisec.cpg.graph.types.Type;
-import de.fraunhofer.aisec.cpg.graph.types.TypeParser;
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation;
-import java.util.ArrayList;
 import java.util.List;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -450,19 +448,6 @@ public class NodeBuilder {
     node.setName(fqn);
     node.setKind(kind);
     node.setCode(code);
-
-    if (kind.equals("class")) {
-      FieldDeclaration thisDeclaration =
-          NodeBuilder.newFieldDeclaration(
-              "this",
-              TypeParser.createFrom(fqn, true),
-              new ArrayList<>(),
-              "this",
-              null,
-              null,
-              true);
-      node.addField(thisDeclaration);
-    }
 
     log(node);
 
