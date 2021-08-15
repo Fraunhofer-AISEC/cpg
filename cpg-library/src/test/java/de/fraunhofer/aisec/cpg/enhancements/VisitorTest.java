@@ -108,14 +108,14 @@ class VisitorTest extends BaseTest {
     List<Node> nodeList = new ArrayList<>();
     recordDeclaration.accept(
         Strategy::AST_FORWARD,
-        new IVisitor<Node>() {
+        new IVisitor<>() {
           public void visit(Node r) {
             System.out.println(r);
             nodeList.add(r);
           }
         });
 
-    assertEquals(35, nodeList.size());
+    assertEquals(34, nodeList.size());
   }
 
   /** Visits only ReturnStatement nodes. */
