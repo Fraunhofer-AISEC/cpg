@@ -162,7 +162,12 @@ public class TranslationManager {
 
         try (var writer = new PrintWriter(tmpFile)) {
           for (int i = 0; i < sourceLocations.size(); i++) {
-            File sourceLocation = sourceLocations.get(i);
+            var sourceLocation = sourceLocations.get(i);
+
+            if (config.excludeFiles.contains(sourceLocation.getName())) {
+              continue;
+            }
+
             // Recursively add files in directories
             if (sourceLocation.isDirectory()) {
               try (Stream<Path> stream =
@@ -193,7 +198,11 @@ public class TranslationManager {
     boolean useParallelFrontends = config.useParallelFrontends;
 
     for (int i = 0; i < sourceLocations.size(); i++) {
-      File sourceLocation = sourceLocations.get(i);
+      var sourceLocation = sourceLocations.get(i);
+
+      if (config.excludeFiles.contains(sourceLocation.getName())) {
+        continue;
+      }
 
       // Recursively add files in directories
       if (sourceLocation.isDirectory()) {

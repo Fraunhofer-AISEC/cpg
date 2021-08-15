@@ -116,6 +116,9 @@ public class TranslationConfiguration {
   /** Source code files to parse. */
   private final List<File> sourceLocations;
 
+  /** A list of file names to exclude. */
+  final List<String> excludeFiles;
+
   private final File topLevel;
 
   /**
@@ -144,6 +147,7 @@ public class TranslationConfiguration {
   private TranslationConfiguration(
       Map<String, String> symbols,
       List<File> sourceLocations,
+      List<String> excludeFiles,
       File topLevel,
       boolean debugParser,
       boolean failOnError,
@@ -165,6 +169,7 @@ public class TranslationConfiguration {
     this.debugParser = debugParser;
     this.failOnError = failOnError;
     this.loadIncludes = loadIncludes;
+    this.excludeFiles = excludeFiles;
     this.includePaths = includePaths;
     this.includeWhitelist = includeWhitelist;
     this.includeBlacklist = includeBlacklist;
@@ -220,6 +225,7 @@ public class TranslationConfiguration {
    */
   public static class Builder {
     private List<File> sourceLocations = new ArrayList<>();
+    private List<String> excludeFiles = new ArrayList<>();
     private Map<Class<? extends LanguageFrontend>, List<String>> frontends = new HashMap<>();
     private File topLevel = null;
     private boolean debugParser = false;
@@ -250,6 +256,17 @@ public class TranslationConfiguration {
      */
     public Builder sourceLocations(File... sourceLocations) {
       this.sourceLocations = Arrays.asList(sourceLocations);
+      return this;
+    }
+
+    /**
+     * File names that should be excluded.
+     *
+     * @param excludeFiles
+     * @return
+     */
+    public Builder excludeFiles(String... excludeFiles) {
+      this.excludeFiles = Arrays.asList(excludeFiles);
       return this;
     }
 
@@ -476,6 +493,7 @@ public class TranslationConfiguration {
       return new TranslationConfiguration(
           symbols,
           sourceLocations,
+          excludeFiles,
           topLevel,
           debugParser,
           failOnError,
