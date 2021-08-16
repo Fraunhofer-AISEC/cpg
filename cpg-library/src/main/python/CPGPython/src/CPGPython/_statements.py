@@ -290,7 +290,6 @@ def make_compound_statement(self, stmts) -> CompoundStatement:
         compound_statement = NodeBuilder.newCompoundStatement(DUMMY_CODE)
         for s in stmts:
             s = self.handle_statement(s)
-            self.log_with_loc("IF: %s" % (s))
             if self.is_declaration(s):
                 decl_stmt = NodeBuilder.newDeclarationStatement(DUMMY_CODE)
                 decl_stmt.setSingleDeclaration(s)

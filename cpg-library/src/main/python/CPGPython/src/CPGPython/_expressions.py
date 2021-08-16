@@ -244,6 +244,7 @@ def handle_expression(self, expr):
         self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         return NodeBuilder.newExpression("")
     elif isinstance(expr, ast.Name):
+        # TODO FIXME!!! This ugly mess has to be refactored!!!
         """
         The following logic applies here:
         - not in a class & no prior declaration -> variable declaration
@@ -255,18 +256,36 @@ def handle_expression(self, expr):
         ref = NodeBuilder.newDeclaredReferenceExpression(
             expr.id, UnknownType.getUnknownType(), DUMMY_CODE)
         resolved = self.scopemanager.resolve(ref)
+        inRecord = self.scopemanager.isInRecord()
+        inFunction = self.scopemanager.isInFunction()
         if resolved is not None:
-            return ref
+            if inRecord and inFunction and self.is_field_declaration(resolved):
+                # python has no implicit "this" / "self"
+                v = NodeBuilder.newVariableDeclaration(
+                    expr.id, UnknownType.getUnknownType(), DUMMY_CODE, False)
+                self.scopemanager.addDeclaration(v)
+                return v
+            else:  # VariableDeclaration
+                self.log_with_loc("Resolved. Returning a reference to: %s" %
+                                  (resolved))
+                # return the reference and not the resolved declaration
+                return ref
         else:
-            inRecord = self.scopemanager.isInRecord()
-            inFunction = self.scopemanager.isInFunction()
+            # if inRecord and inFunction:
+            # return ref # do not create a FieldDeclaration for fields declared
+            # inside a function -> simply use a DeclaredReferenceExpression and
+            # let the CPG handle the rest
             if inRecord and not inFunction:
+                self.log_with_loc(
+                    "Could not resolve -> creating a new field for: %s" %
+                    (expr.id))
                 v = NodeBuilder.newFieldDeclaration(
                     expr.id, UnknownType.getUnknownType(), None,
                     DUMMY_CODE, None, None, False)
-            elif inRecord and inFunction
-            return ref
             else:
+                self.log_with_loc(
+                    "Could not resolve -> creating a new variable for: %s" %
+                    (expr.id))
                 v = NodeBuilder.newVariableDeclaration(
                     expr.id, UnknownType.getUnknownType(), DUMMY_CODE, False)
             self.scopemanager.addDeclaration(v)
