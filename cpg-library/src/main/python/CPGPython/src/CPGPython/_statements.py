@@ -125,8 +125,22 @@ def handle_statement(self, stmt):
         self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         return NodeBuilder.newStatement("")
     elif isinstance(stmt, ast.For):
-        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
-        return NodeBuilder.newStatement("")
+        for_stmt = NodeBuilder.newForEachStatement(DUMMY_CODE)
+        target = self.handle_expression(stmt.target)
+        if self.is_variable_declaration(target):
+            decl_stmt = NodeBuilder.newDeclarationStatement(DUMMY_CODE)
+            decl_stmt.setSingleDeclaration(target)
+            target = decl_stmt
+        for_stmt.setVariable(target)
+        it = self.handle_expression(stmt.iter)
+        for_stmt.setIterable(it)
+        body = self.make_compound_statement(stmt.body)
+        for_stmt.setStatement(body)
+
+        if len(stmt.orelse) != 0:
+            self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
+
+        return for_stmt
     elif isinstance(stmt, ast.AsyncFor):
         self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         return NodeBuilder.newStatement("")
@@ -160,38 +174,38 @@ def handle_statement(self, stmt):
         return NodeBuilder.newStatement("")
     elif isinstance(stmt, ast.Import):
         # TODO IncludeDeclaration does not fit well for python's import
-        if len(stmt.names) != 1:
+        if len(stmt.names) == 0:
             self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
             return NodeBuilder.newStatement("")
-        alias = stmt.names[0]
-        if alias.asname is not None:
-            name = alias.asname
-        else:
-            name = alias.name
-        v = NodeBuilder.newVariableDeclaration(
-            name, UnknownType.getUnknownType(), DUMMY_CODE, False)
-        self.scopemanager.addDeclaration(v)
         decl_stmt = NodeBuilder.newDeclarationStatement(DUMMY_CODE)
-        decl_stmt.setSingleDeclaration(v)
-        return v
+        for s in stmt.names:
+            if s.asname is not None:
+                name = s.asname
+            else:
+                name = s.name
+            v = NodeBuilder.newVariableDeclaration(
+                name, UnknownType.getUnknownType(), DUMMY_CODE, False)
+            self.scopemanager.addDeclaration(v)
+            decl_stmt.addDeclaration(v)
+        return decl_stmt
     elif isinstance(stmt, ast.ImportFrom):
         # TODO IncludeDeclaration does not fit well for python's import
-        if len(stmt.names) != 1:
+        if len(stmt.names) == 0:
             self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
             return NodeBuilder.newStatement("")
         self.log_with_loc(
             "Cannot correctly handle \"import from\". Using an approximation.",
             loglevel="ERROR")
-        alias = stmt.names[0]
-        if alias.asname is not None:
-            name = alias.asname
-        else:
-            name = alias.name
-        v = NodeBuilder.newVariableDeclaration(
-            name, UnknownType.getUnknownType(), DUMMY_CODE, False)
-        self.scopemanager.addDeclaration(v)
         decl_stmt = NodeBuilder.newDeclarationStatement(DUMMY_CODE)
-        decl_stmt.setSingleDeclaration(v)
+        for s in stmt.names:
+            if s.asname is not None:
+                name = s.asname
+            else:
+                name = s.name
+            v = NodeBuilder.newVariableDeclaration(
+                name, UnknownType.getUnknownType(), DUMMY_CODE, False)
+            self.scopemanager.addDeclaration(v)
+            decl_stmt.addDeclaration(v)
         return v
     elif isinstance(stmt, ast.Global):
         self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
@@ -217,7 +231,10 @@ def handle_statement(self, stmt):
         if len(stmt.orelse) != 0:
             self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         if len(stmt.handlers) != 0:
-            self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
+            self.log_with_loc(
+                "Try handlers. " +
+                NOT_IMPLEMENTED_MSG,
+                loglevel="ERROR")
         s.setTryBlock(try_block)
         s.setFinallyBlock(finally_block)
         return s
@@ -282,7 +299,10 @@ def handle_function_or_method(self, node: ast.FunctionDef, record=None):
     if node.args.kwarg is not None:
         self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
     for arg in node.args.defaults:
-        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
+        self.log_with_loc(
+            "Default args. " +
+            NOT_IMPLEMENTED_MSG,
+            loglevel="ERROR")
 
     if len(node.body) > 0:
         f.setBody(self.make_compound_statement(node.body))
@@ -304,7 +324,7 @@ def handle_function_or_method(self, node: ast.FunctionDef, record=None):
                                                      DUMMY_CODE)
 
             members.append(member)
-        elif isinstance(decorator, ast.Name):
+        elif isinstance(decorator.func, ast.Name):
             ref = self.handle_expression(decorator.func)
             annotation = NodeBuilder.newAnnotation(ref.getName(), DUMMY_CODE)
 
