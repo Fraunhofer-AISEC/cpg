@@ -457,7 +457,7 @@ public class JavaLanguageFrontend extends LanguageFrontend {
 
   @Override
   public <S, T> void setComment(S s, T ctx) {
-    if (ctx instanceof Node && s instanceof de.fraunhofer.aisec.cpg.graph.Node) {
+    if (ctx instanceof com.github.javaparser.ast.Node && s instanceof de.fraunhofer.aisec.cpg.graph.Node) {
       var node = (com.github.javaparser.ast.Node) ctx;
       de.fraunhofer.aisec.cpg.graph.Node cpgNode = (de.fraunhofer.aisec.cpg.graph.Node) s;
       node.getComment().ifPresent(comment -> cpgNode.setComment(comment.getContent()));
