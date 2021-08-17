@@ -273,8 +273,51 @@ def handle_function_or_method(self, node: ast.FunctionDef, record=None):
     if len(node.body) > 0:
         f.setBody(self.make_compound_statement(node.body))
 
+    annotations = []
     for decorator in node.decorator_list:
-        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
+        # cannot do this because kw arguments are not properly handled yet in
+        # functions
+        # expr = self.visit(decorator)
+
+        members = []
+
+        if isinstance(decorator.func, ast.Attribute):
+            ref = self.handle_expression(decorator.func)
+            annotation = NodeBuilder.newAnnotation(ref.getName(), DUMMY_CODE)
+
+            # add the base as a receiver annotation
+            member = NodeBuilder.newAnnotationMember("receiver", ref.getBase(),
+                                                     DUMMY_CODE)
+
+            members.append(member)
+        elif isinstance(decorator, ast.Name):
+            ref = self.handle_expression(decorator.func)
+            annotation = NodeBuilder.newAnnotation(ref.getName(), DUMMY_CODE)
+
+        else:
+            self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
+
+        # add first arg as value
+        if len(decorator.args) > 0:
+            arg0 = decorator.args[0]
+            value = self.visit(arg0)
+
+            member = NodeBuilder.newAnnotationMember(
+                "value", value, DUMMY_CODE)
+
+            members.append(member)
+
+        # loop through keywords args
+        for kw in decorator.keywords:
+            member = NodeBuilder.newAnnotationMember(
+                kw.arg, self.handle_expression(kw.value), DUMMY_CODE)
+
+            members.append(member)
+
+        annotation.setMembers(members)
+        annotations.append(annotation)
+
+    f.addAnnotations(annotations)
 
     if node.returns is not None:
         self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
