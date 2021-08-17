@@ -210,8 +210,22 @@ def handle_statement(self, stmt):
     elif isinstance(stmt, ast.Continue):
         self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         return NodeBuilder.newStatement("")
+    elif isinstance(stmt, ast.Try):
+        s = NodeBuilder.newTryStatement(DUMMY_CODE)
+        try_block = self.make_compound_statement(stmt.body)
+        finally_block = self.make_compound_statement(stmt.finalbody)
+        if len(stmt.orelse) != 0:
+            self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
+        if len(stmt.handlers) != 0:
+            self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
+        s.setTryBlock(try_block)
+        s.setFinallyBlock(finally_block)
+        return s
     else:
         self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
+        self.log_with_loc(
+            "Received unepxected stmt: %s with type %s" %
+            (stmt, type(stmt)))
         return NodeBuilder.newStatement("")
 
 

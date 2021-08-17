@@ -88,8 +88,27 @@ def handle_expression(self, expr):
         return NodeBuilder.newConditionalExpression(
             test, body, orelse, UnknownType.getUnknownType())
     elif isinstance(expr, ast.Dict):
-        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
-        return NodeBuilder.newExpression("")
+        ile = NodeBuilder.newInitializerListExpression(DUMMY_CODE)
+
+        lst = []
+
+        # loop through keys and get values
+        for i in range(0, len(expr.keys)):
+            key = expr.keys[i]
+            value = expr.values[i]
+
+            key_expr = self.handle_expression(key)
+            value_expr = self.handle_expression(value)
+
+            # construct a key value expression
+            key_value = NodeBuilder.newKeyValueExpression(
+                key_expr, value_expr, DUMMY_CODE)
+
+            lst.append(key_value)
+
+        ile.setInitializers(lst)
+
+        return ile
     elif isinstance(expr, ast.Set):
         self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         return NodeBuilder.newExpression("")
@@ -300,11 +319,29 @@ def handle_expression(self, expr):
             self.scopemanager.addDeclaration(v)
             return v
     elif isinstance(expr, ast.List):
-        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
-        return NodeBuilder.newExpression("")
+        ile = NodeBuilder.newInitializerListExpression(DUMMY_CODE)
+
+        lst = []
+
+        for el in expr.elts:
+            expr = self.handle_expression(el)
+            lst.append(expr)
+
+        ile.setInitializers(lst)
+
+        return ile
     elif isinstance(expr, ast.Tuple):
-        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
-        return NodeBuilder.newExpression("")
+        ile = NodeBuilder.newInitializerListExpression(DUMMY_CODE)
+
+        lst = []
+
+        for el in expr.elts:
+            expr = self.handle_expression(el)
+            lst.append(expr)
+
+        ile.setInitializers(lst)
+
+        return ile
     elif isinstance(expr, ast.Slice):
         self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         return NodeBuilder.newExpression("")
