@@ -238,8 +238,12 @@ def handle_expression(self, expr):
             value, UnknownType.getUnknownType(), expr.attr, ".", DUMMY_CODE)
         return mem
     elif isinstance(expr, ast.Subscript):
-        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
-        return NodeBuilder.newExpression("")
+        value = self.handle_expression(expr.value)
+        slc = self.handle_expression(expr.slice)
+        exp = NodeBuilder.newArraySubscriptionExpression(DUMMY_CODE)
+        exp.setArrayExpression(value)
+        exp.setSubscriptExpression(slc)
+        return exp
     elif isinstance(expr, ast.Starred):
         self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         return NodeBuilder.newExpression("")
@@ -253,6 +257,11 @@ def handle_expression(self, expr):
         - in a class & not in a method & no prior declaration -> field decl
         - in a class & not in a method & prior declaration -> reference
         """
+
+        # handle special cases
+        if expr.id == "__name__":
+            return NodeBuilder.newDeclaredReferenceExpression(
+                expr.id, UnknownType.getUnknownType(), DUMMY_CODE)
         ref = NodeBuilder.newDeclaredReferenceExpression(
             expr.id, UnknownType.getUnknownType(), DUMMY_CODE)
         resolved = self.scopemanager.resolve(ref)

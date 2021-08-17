@@ -159,11 +159,40 @@ def handle_statement(self, stmt):
         self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         return NodeBuilder.newStatement("")
     elif isinstance(stmt, ast.Import):
-        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
-        return NodeBuilder.newStatement("")
+        # TODO IncludeDeclaration does not fit well for python's import
+        if len(stmt.names) != 1:
+            self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
+            return NodeBuilder.newStatement("")
+        alias = stmt.names[0]
+        if alias.asname is not None:
+            name = alias.asname
+        else:
+            name = alias.name
+        v = NodeBuilder.newVariableDeclaration(
+            name, UnknownType.getUnknownType(), DUMMY_CODE, False)
+        self.scopemanager.addDeclaration(v)
+        decl_stmt = NodeBuilder.newDeclarationStatement(DUMMY_CODE)
+        decl_stmt.setSingleDeclaration(v)
+        return v
     elif isinstance(stmt, ast.ImportFrom):
-        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
-        return NodeBuilder.newStatement("")
+        # TODO IncludeDeclaration does not fit well for python's import
+        if len(stmt.names) != 1:
+            self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
+            return NodeBuilder.newStatement("")
+        self.log_with_loc(
+            "Cannot correctly handle \"import from\". Using an approximation.",
+            loglevel="ERROR")
+        alias = stmt.names[0]
+        if alias.asname is not None:
+            name = alias.asname
+        else:
+            name = alias.name
+        v = NodeBuilder.newVariableDeclaration(
+            name, UnknownType.getUnknownType(), DUMMY_CODE, False)
+        self.scopemanager.addDeclaration(v)
+        decl_stmt = NodeBuilder.newDeclarationStatement(DUMMY_CODE)
+        decl_stmt.setSingleDeclaration(v)
+        return v
     elif isinstance(stmt, ast.Global):
         self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         return NodeBuilder.newStatement("")
