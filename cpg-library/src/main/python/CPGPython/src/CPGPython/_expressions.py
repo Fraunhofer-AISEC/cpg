@@ -88,6 +88,7 @@ def handle_expression(self, expr):
         return NodeBuilder.newConditionalExpression(
             test, body, orelse, UnknownType.getUnknownType())
     elif isinstance(expr, ast.Dict):
+        self.log_with_loc("Handling a \"dict\": %s" % (ast.dump(expr)))
         ile = NodeBuilder.newInitializerListExpression(DUMMY_CODE)
 
         lst = []
@@ -97,8 +98,14 @@ def handle_expression(self, expr):
             key = expr.keys[i]
             value = expr.values[i]
 
-            key_expr = self.handle_expression(key)
-            value_expr = self.handle_expression(value)
+            if key is not None:
+                key_expr = self.handle_expression(key)
+            else:
+                key_expr = None
+            if value is not None:
+                value_expr = self.handle_expression(value)
+            else:
+                value_expr = None
 
             # construct a key value expression
             key_value = NodeBuilder.newKeyValueExpression(
