@@ -37,20 +37,20 @@ class Calls: SuperClass {
       innerTarget();
       innerTarget(1, 2);
       innerTarget(1, "2");
-      // dummy
+      // inferred
       innerTarget(1, 2, 3);
 
       superTarget();
       superTarget(1, 2);
       superTarget(1, "2");
-      // dummy
+      // inferred
       superTarget(1, 2, 3);
 
       External e;
       e.externalTarget();
       e.externalTarget(1, 2);
       e.externalTarget(1, "2");
-      // dummy
+      // inferred
       e.externalTarget(1, 2, 3);
 
       e.superTarget();
@@ -61,7 +61,7 @@ class Calls: SuperClass {
       s->overridingTarget();
 
       Unknown u;
-      // don't create dummy for methods of unknown classes!
+      // don't create inference for methods of unknown classes!
       u.unknownTarget();
     }
 };
@@ -70,6 +70,6 @@ void main() {
   // Invocation of method from function (main function not in a class)
   Invocation i;
   i.invoke();
-  // dummy
+  // inferred
   functionTarget(1, 2, 3);
 }

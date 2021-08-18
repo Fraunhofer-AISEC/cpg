@@ -246,7 +246,7 @@ class ExpressionHandler extends Handler<Expression, IASTInitializerClause, CXXLa
       // expression since the construct expression will do the actual template instantiation
       if (newExpression.getTemplateParameters() != null
           && !newExpression.getTemplateParameters().isEmpty()) {
-        CallResolver.addDummyTemplateParametersToCall(
+        CallResolver.addImplicitTemplateParametersToCall(
             newExpression.getTemplateParameters(), (ConstructExpression) initializer);
       }
 

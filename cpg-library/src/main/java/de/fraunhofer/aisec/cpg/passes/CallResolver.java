@@ -142,7 +142,7 @@ public class CallResolver extends Pass {
           ConstructExpression initializer = NodeBuilder.newConstructExpression("()");
           initializer.setImplicit(true);
           declaration.setInitializer(initializer);
-          addDummyTemplateParametersToCall(declaration.getTemplateParameters(), initializer);
+          addImplicitTemplateParametersToCall(declaration.getTemplateParameters(), initializer);
         } else if (currInitializer instanceof CallExpression
             && currInitializer.getName().equals(typeString)) {
           // This should actually be a construct expression, not a call!
@@ -168,7 +168,7 @@ public class CallResolver extends Pass {
    * @param constructExpression duplicate TemplateParameters (implicit) to preserve AST, as
    *     ConstructExpression uses AST as well as the VariableDeclaration/NewExpression
    */
-  public static void addDummyTemplateParametersToCall(
+  public static void addImplicitTemplateParametersToCall(
       List<Node> templateParams, ConstructExpression constructExpression) {
     if (templateParams != null) {
       for (Node node : templateParams) {
@@ -377,6 +377,7 @@ public class CallResolver extends Pass {
 
       if (defaultNode instanceof Type) {
         defaultNode = NodeBuilder.newTypeExpression(defaultNode.getName(), (Type) defaultNode);
+        defaultNode.setImplicit(true);
       }
 
       instantiationSignature.put(
@@ -495,6 +496,7 @@ public class CallResolver extends Pass {
       Type deducedType = templateCall.getArguments().get(i).getType();
       TypeExpression typeExpression =
           NodeBuilder.newTypeExpression(deducedType.getName(), deducedType);
+      typeExpression.setImplicit(true);
 
       if (currentArgumentType instanceof ParameterizedType
           && (signature.get(parameterizedTypeResolution.get(currentArgumentType)) == null
@@ -512,14 +514,14 @@ public class CallResolver extends Pass {
   /**
    * @param curClass class the invoked method must be part of.
    * @param templateCall call to instantiate and invoke a function template
-   * @param applyDummy if the resolution was unsuccessful and applyDummy is true the call will
-   *     resolve to a instantiation/invocation of a dummy template
+   * @param applyInference if the resolution was unsuccessful and applyInference is true the call
+   *     will resolve to a instantiation/invocation of an inferred template
    * @return true if resolution was successful, false if not
    */
   private boolean handleTemplateFunctionCalls(
       @Nullable RecordDeclaration curClass,
       @NonNull CallExpression templateCall,
-      boolean applyDummy) {
+      boolean applyInference) {
 
     List<FunctionTemplateDeclaration> instantiationCandidates =
         lang.getScopeManager().resolveFunctionTemplateDeclaration(templateCall);
@@ -565,11 +567,11 @@ public class CallResolver extends Pass {
       }
     }
 
-    if (applyDummy) {
-      // If we want to use a functionTemplateDeclaration as dummy, this needs to be provided.
+    if (applyInference) {
+      // If we want to use an inferred functionTemplateDeclaration, this needs to be provided.
       // Otherwise we could not resolve to a template and no modifications are made
       FunctionTemplateDeclaration functionTemplateDeclaration =
-          createFunctionTemplateDummy(curClass, templateCall);
+          createInferredFunctionTemplate(curClass, templateCall);
       templateCall.setTemplateInstantiation(functionTemplateDeclaration);
       templateCall.setInvokes(functionTemplateDeclaration.getRealization());
       // Set instantiation propertyEdges
@@ -890,7 +892,7 @@ public class CallResolver extends Pass {
     assert lang != null;
     List<FunctionDeclaration> initialInvocationCandidates =
         lang.getScopeManager().resolveFunctionStopScopeTraversalOnDefinition(call).stream()
-            .filter(f -> !f.isImplicit())
+            // .filter(f -> !f.isImplicit())
             .collect(Collectors.toList());
     return resolveWithImplicitCast(call, initialInvocationCandidates);
   }
@@ -987,7 +989,8 @@ public class CallResolver extends Pass {
     List<FunctionDeclaration> invocationCandidates =
         lang.getScopeManager().resolveFunctionStopScopeTraversalOnDefinition(call).stream()
             .filter(
-                f -> !f.isImplicit() && call.getSignature().size() < f.getSignatureTypes().size())
+                f -> /*!f.isImplicit() &&*/
+                    call.getSignature().size() < f.getSignatureTypes().size())
             .collect(Collectors.toList());
     return resolveWithDefaultArgs(call, invocationCandidates);
   }
@@ -1003,7 +1006,7 @@ public class CallResolver extends Pass {
       } else {
         invocationCandidates = lang.getScopeManager().resolveFunction(call);
 
-        createFunctionDummy(invocationCandidates, call);
+        createInferredFunction(invocationCandidates, call);
         call.setInvokes(invocationCandidates);
       }
 
@@ -1026,8 +1029,8 @@ public class CallResolver extends Pass {
     if (invocationCandidates.isEmpty()) {
       /*
        Check if the call can be resolved to a function template instantiation. If it can be resolver, we
-       resolve the call. Otherwise there won't be a template dummy, we will do a
-       FunctionDeclaration dummy instead.
+       resolve the call. Otherwise there won't be an inferred template, we will do an inferred
+       FunctionDeclaration instead.
       */
       call.setTemplateParameters(new ArrayList<>());
       if (handleTemplateFunctionCalls(curClass, call, false)) {
@@ -1042,17 +1045,18 @@ public class CallResolver extends Pass {
       // candidate with an implicit cast
       invocationCandidates.addAll(resolveWithImplicitCastFunc(call));
     }
-    createFunctionDummy(invocationCandidates, call);
+    createInferredFunction(invocationCandidates, call);
     call.setInvokes(invocationCandidates);
   }
 
-  private void createFunctionDummy(
+  private void createInferredFunction(
       List<FunctionDeclaration> invocationCandidates, CallExpression call) {
     if (invocationCandidates.isEmpty()) {
-      // If we still have no candidates and our current language is c++ we create dummy
+      // If we still have no candidates and our current language is c++ we create an inferred
       // FunctionDeclaration
       invocationCandidates.add(
-          createDummy(null, call.getName(), call.getCode(), false, call.getSignature()));
+          createInferredFunctionDeclaration(
+              null, call.getName(), call.getCode(), false, call.getSignature()));
     }
   }
 
@@ -1138,7 +1142,7 @@ public class CallResolver extends Pass {
   }
 
   /**
-   * Creates a dummy element for each RecordDeclaration if the invocationCandidates are empty
+   * Creates an inferred element for each RecordDeclaration if the invocationCandidates are empty
    *
    * @param invocationCandidates
    * @param possibleContainingTypes
@@ -1152,7 +1156,10 @@ public class CallResolver extends Pass {
       possibleContainingTypes.stream()
           .map(t -> recordMap.get(t.getRoot().getTypeName()))
           .filter(Objects::nonNull)
-          .map(r -> createDummy(r, call.getName(), call.getCode(), false, call.getSignature()))
+          .map(
+              r ->
+                  createInferredFunctionDeclaration(
+                      r, call.getName(), call.getCode(), false, call.getSignature()))
           .forEach(invocationCandidates::add);
     }
   }
@@ -1433,7 +1440,7 @@ public class CallResolver extends Pass {
               .findFirst()
               .orElse(null);
       if (target == null) {
-        generateStaticImportDummies(call, name, invokes, curClass);
+        generateInferredStaticallyImportedMethods(call, name, invokes, curClass);
       } else {
         invokes.add(target);
       }
@@ -1443,15 +1450,16 @@ public class CallResolver extends Pass {
     }
   }
 
-  private void generateStaticImportDummies(
+  private void generateInferredStaticallyImportedMethods(
       @NonNull CallExpression call,
       @NonNull String name,
       @NonNull List<FunctionDeclaration> invokes,
       RecordDeclaration curClass) {
     // We had an import for this method name, just not the correct signature. Let's just add
-    // a dummy to any class that might be affected
+    // an inferred node to any class that might be affected
     if (curClass == null) {
-      LOGGER.warn("Cannot generate dummies for imports of a null class: {}", call.toString());
+      LOGGER.warn(
+          "Cannot generate inferred nodes for imports of a null class: {}", call.toString());
       return;
     }
     List<RecordDeclaration> containingRecords =
@@ -1462,120 +1470,121 @@ public class CallResolver extends Pass {
             .filter(Objects::nonNull)
             .collect(Collectors.toList());
     for (RecordDeclaration recordDeclaration : containingRecords) {
-      MethodDeclaration dummy = NodeBuilder.newMethodDeclaration(name, "", true, recordDeclaration);
-      dummy.setImplicit(true);
-      List<ParamVariableDeclaration> params = Util.createParameters(call.getSignature());
-      dummy.setParameters(params);
-      recordDeclaration.addMethod(dummy);
-      curClass.getStaticImports().add(dummy);
-      invokes.add(dummy);
+      MethodDeclaration inferredMethod =
+          NodeBuilder.newMethodDeclaration(name, "", true, recordDeclaration);
+      inferredMethod.setInferred(true);
+      List<ParamVariableDeclaration> params = Util.createInferredParameters(call.getSignature());
+      inferredMethod.setParameters(params);
+      recordDeclaration.addMethod(inferredMethod);
+      curClass.getStaticImports().add(inferredMethod);
+      invokes.add(inferredMethod);
     }
   }
 
   /**
-   * Create a dummy FunctionTemplateDeclaration if a call to an FunctionTemplate could not be
+   * Create an inferred FunctionTemplateDeclaration if a call to an FunctionTemplate could not be
    * resolved
    *
    * @param containingRecord
    * @param call
-   * @return dummy FunctionTemplateDeclaration which can be invoked by the call
+   * @return inferred FunctionTemplateDeclaration which can be invoked by the call
    */
-  private FunctionTemplateDeclaration createFunctionTemplateDummy(
+  private FunctionTemplateDeclaration createInferredFunctionTemplate(
       RecordDeclaration containingRecord, CallExpression call) {
     String name = call.getName();
     String code = call.getCode();
-    FunctionTemplateDeclaration dummy = NodeBuilder.newFunctionTemplateDeclaration(name, code);
-    dummy.setImplicit(true);
+    FunctionTemplateDeclaration inferred = NodeBuilder.newFunctionTemplateDeclaration(name, code);
+    inferred.setInferred(true);
     if (containingRecord != null) {
-      containingRecord.addDeclaration(dummy);
+      containingRecord.addDeclaration(inferred);
     } else {
       if (currentTU == null) {
         LOGGER.error(
-            "No current translation unit when trying to generate function template dummy {}",
-            dummy.getName());
+            "No current translation unit when trying to generate inferred function template {}",
+            inferred.getName());
       } else {
-        currentTU.addDeclaration(dummy);
+        currentTU.addDeclaration(inferred);
       }
     }
-    FunctionDeclaration dummyRealization =
-        createDummy(containingRecord, name, code, false, call.getSignature());
-    dummy.addRealization(dummyRealization);
+    FunctionDeclaration inferredRealization =
+        createInferredFunctionDeclaration(containingRecord, name, code, false, call.getSignature());
+    inferred.addRealization(inferredRealization);
 
     int typeCounter = 0;
     int nonTypeCounter = 0;
     for (Node node : call.getTemplateParameters()) {
       if (node instanceof TypeExpression) {
         // Template Parameter
-        String dummyTypeIdentifier = "T" + typeCounter;
+        String inferredTypeIdentifier = "T" + typeCounter;
         TypeParamDeclaration typeParamDeclaration =
-            NodeBuilder.newTypeParamDeclaration(dummyTypeIdentifier, dummyTypeIdentifier);
-        typeParamDeclaration.setImplicit(true);
-        ParameterizedType parameterizedType = new ParameterizedType(dummyTypeIdentifier);
-        parameterizedType.setImplicit(true);
+            NodeBuilder.newTypeParamDeclaration(inferredTypeIdentifier, inferredTypeIdentifier);
+        typeParamDeclaration.setInferred(true);
+        ParameterizedType parameterizedType = new ParameterizedType(inferredTypeIdentifier);
+        parameterizedType.setInferred(true);
         typeParamDeclaration.setType(parameterizedType);
-        TypeManager.getInstance().addTypeParameter(dummy, parameterizedType);
+        TypeManager.getInstance().addTypeParameter(inferred, parameterizedType);
         typeCounter++;
-        dummy.addParameter(typeParamDeclaration);
+        inferred.addParameter(typeParamDeclaration);
       } else if (node instanceof Expression) {
         // Non-Type Template Parameter
-        String dummyNonTypeIdentifier = "N" + nonTypeCounter;
+        String inferredNonTypeIdentifier = "N" + nonTypeCounter;
         ParamVariableDeclaration paramVariableDeclaration =
             NodeBuilder.newMethodParameterIn(
-                dummyNonTypeIdentifier,
+                inferredNonTypeIdentifier,
                 ((Expression) node).getType(),
                 false,
-                dummyNonTypeIdentifier);
-        paramVariableDeclaration.setImplicit(true);
+                inferredNonTypeIdentifier);
+        paramVariableDeclaration.setInferred(true);
         paramVariableDeclaration.addPrevDFG(node);
         node.addNextDFG(paramVariableDeclaration);
         nonTypeCounter++;
-        dummy.addParameter(paramVariableDeclaration);
+        inferred.addParameter(paramVariableDeclaration);
       }
     }
-    return dummy;
+    return inferred;
   }
 
   @NonNull
-  private FunctionDeclaration createDummy(
+  private FunctionDeclaration createInferredFunctionDeclaration(
       RecordDeclaration containingRecord,
       String name,
       String code,
       boolean isStatic,
       List<Type> signature) {
 
-    List<ParamVariableDeclaration> parameters = Util.createParameters(signature);
+    List<ParamVariableDeclaration> parameters = Util.createInferredParameters(signature);
     if (containingRecord != null) {
-      MethodDeclaration dummy =
+      MethodDeclaration inferred =
           NodeBuilder.newMethodDeclaration(name, code, isStatic, containingRecord);
-      dummy.setImplicit(true);
-      dummy.setParameters(parameters);
+      inferred.setInferred(true);
+      inferred.setParameters(parameters);
 
-      containingRecord.addMethod(dummy);
-      return dummy;
+      containingRecord.addMethod(inferred);
+      return inferred;
     } else {
       // function declaration, not inside a class
-      FunctionDeclaration dummy = NodeBuilder.newFunctionDeclaration(name, code);
-      dummy.setParameters(parameters);
-      dummy.setImplicit(true);
+      FunctionDeclaration inferred = NodeBuilder.newFunctionDeclaration(name, code);
+      inferred.setParameters(parameters);
+      inferred.setInferred(true);
       if (currentTU == null) {
         LOGGER.error(
-            "No current translation unit when trying to generate function dummy {}",
-            dummy.getName());
+            "No current translation unit when trying to generate  inferred function {}",
+            inferred.getName());
       } else {
-        currentTU.addDeclaration(dummy);
+        currentTU.addDeclaration(inferred);
       }
-      return dummy;
+      return inferred;
     }
   }
 
-  private ConstructorDeclaration createConstructorDummy(
+  private ConstructorDeclaration createInferredConstructor(
       @NonNull RecordDeclaration containingRecord, List<Type> signature) {
-    ConstructorDeclaration dummy =
+    ConstructorDeclaration inferred =
         NodeBuilder.newConstructorDeclaration(containingRecord.getName(), "", containingRecord);
-    dummy.setImplicit(true);
-    dummy.setParameters(Util.createParameters(signature));
-    containingRecord.addConstructor(dummy);
-    return dummy;
+    inferred.setInferred(true);
+    inferred.setParameters(Util.createInferredParameters(signature));
+    containingRecord.addConstructor(inferred);
+    return inferred;
   }
 
   private Set<Type> getPossibleContainingTypes(Node node, RecordDeclaration curClass) {
@@ -1623,7 +1632,7 @@ public class CallResolver extends Pass {
                     .filter(
                         m ->
                             namePattern.matcher(m.getName()).matches()
-                                && !m.isImplicit()
+                                /*&& !m.isImplicit()*/
                                 && call.getSignature().size() < m.getSignatureTypes().size())
                     .map(FunctionDeclaration.class::cast)
                     .collect(Collectors.toList())));
@@ -1635,7 +1644,7 @@ public class CallResolver extends Pass {
             resolveWithImplicitCast(
                 call,
                 recordDeclaration.getMethods().stream()
-                    .filter(m -> namePattern.matcher(m.getName()).matches() && !m.isImplicit())
+                    .filter(m -> namePattern.matcher(m.getName()).matches() /*&& !m.isImplicit()*/)
                     .map(FunctionDeclaration.class::cast)
                     .collect(Collectors.toList())));
       }
@@ -1741,7 +1750,8 @@ public class CallResolver extends Pass {
       List<Type> signature,
       RecordDeclaration recordDeclaration) {
     for (ConstructorDeclaration constructor : recordDeclaration.getConstructors()) {
-      if (!constructor.isImplicit() && signature.size() < constructor.getSignatureTypes().size()) {
+      if (
+      /*!constructor.isImplicit() &&*/ signature.size() < constructor.getSignatureTypes().size()) {
         List<Type> workingSignature =
             getCallSignatureWithDefaults(constructExpression, constructor);
         if (constructor.hasSignature(workingSignature)) {
@@ -1821,8 +1831,8 @@ public class CallResolver extends Pass {
     }
 
     if (constructorCandidate == null) {
-      // Create Dummy
-      constructorCandidate = createConstructorDummy(recordDeclaration, signature);
+      // Create inferred node
+      constructorCandidate = createInferredConstructor(recordDeclaration, signature);
     }
 
     return constructorCandidate;
@@ -1834,6 +1844,6 @@ public class CallResolver extends Pass {
     return recordDeclaration.getConstructors().stream()
         .filter(f -> f.hasSignature(signature))
         .findFirst()
-        .orElseGet(() -> createConstructorDummy(recordDeclaration, signature));
+        .orElseGet(() -> createInferredConstructor(recordDeclaration, signature));
   }
 }

@@ -168,9 +168,9 @@ public class ImportResolver extends Pass {
       FieldDeclaration targetField =
           NodeBuilder.newFieldDeclaration(
               name, UnknownType.getUnknownType(), new ArrayList<>(), "", null, null, false);
-      targetField.setImplicit(true);
+      targetField.setInferred(true);
       MethodDeclaration targetMethod = NodeBuilder.newMethodDeclaration(name, "", true, base);
-      targetMethod.setImplicit(true);
+      targetMethod.setInferred(true);
 
       base.addField(targetField);
       base.addMethod(targetMethod);
