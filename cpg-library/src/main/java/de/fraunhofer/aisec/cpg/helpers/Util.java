@@ -361,14 +361,14 @@ public class Util {
     }
   }
 
-  public static List<ParamVariableDeclaration> createParameters(List<Type> signature) {
+  public static List<ParamVariableDeclaration> createInferredParameters(List<Type> signature) {
     List<ParamVariableDeclaration> params = new ArrayList<>();
     for (int i = 0; i < signature.size(); i++) {
       Type targetType = signature.get(i);
       String paramName = generateParamName(i, targetType);
       ParamVariableDeclaration param =
           NodeBuilder.newMethodParameterIn(paramName, targetType, false, "");
-      param.setImplicit(true);
+      param.setInferred(true);
       param.setArgumentIndex(i);
       params.add(param);
     }
