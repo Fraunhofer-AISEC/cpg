@@ -125,14 +125,14 @@ class FunctionPointerTest extends BaseTest {
         case "no_param_unknown_field":
         case "no_param_unknown_field_uninitialized":
           assertEquals(List.of(noParamUnknown), call.getInvokes());
-          assertTrue(noParamUnknown.isImplicit());
+          assertTrue(noParamUnknown.isInferred());
           break;
         case "single_param_unknown":
         case "single_param_unknown_uninitialized":
         case "single_param_unknown_field":
         case "single_param_unknown_field_uninitialized":
           assertEquals(List.of(singleParamUnknown), call.getInvokes());
-          assertTrue(singleParamUnknown.isImplicit());
+          assertTrue(singleParamUnknown.isInferred());
           break;
         default:
           fail("Unexpected call " + call.getName());

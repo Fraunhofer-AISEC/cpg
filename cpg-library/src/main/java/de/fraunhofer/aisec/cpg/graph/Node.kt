@@ -109,11 +109,6 @@ open class Node : IVisitable<Node>, Persistable {
      * represented should have been part of parser output and represents missing code that is
      * inferred by the cpg construction, e.g. Missed functions, records, files etc.
      */
-    @get:Deprecated("You should rather use {@link #isImplicit()} ")
-    @set:Deprecated(
-        """You should rather use {@link #setImplicit(boolean)}, if it is an implicit
-        expression"""
-    )
     var isInferred = false
 
     /**
