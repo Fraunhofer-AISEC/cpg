@@ -128,14 +128,14 @@ public class CallResolverTest extends BaseTest {
       }
     }
 
-    // Check for dummies
-    List<Type> dummySignature = List.of(intType, intType, intType);
-    for (CallExpression dummyCall :
-        TestUtils.findByPredicate(calls, c -> c.getSignature().equals(dummySignature))) {
-      FunctionDeclaration dummyTarget =
-          TestUtils.findByUniquePredicate(methods, m -> m.hasSignature(dummySignature));
-      assertEquals(List.of(dummyTarget), dummyCall.getInvokes());
-      assertTrue(dummyTarget.isImplicit());
+    // Check for inferred nodes
+    List<Type> inferenceSignature = List.of(intType, intType, intType);
+    for (CallExpression inferredCall :
+        TestUtils.findByPredicate(calls, c -> c.getSignature().equals(inferenceSignature))) {
+      FunctionDeclaration inferredTarget =
+          TestUtils.findByUniquePredicate(methods, m -> m.hasSignature(inferenceSignature));
+      assertEquals(List.of(inferredTarget), inferredCall.getInvokes());
+      assertTrue(inferredTarget.isInferred());
     }
   }
 
@@ -216,7 +216,7 @@ public class CallResolverTest extends BaseTest {
     CallExpression calc = TestUtils.findByUniqueName(callExpressions, "calc");
     FunctionDeclaration calcFunctionDeclaration =
         TestUtils.findByUniquePredicate(
-            functionDeclarations, f -> f.getName().equals("calc") && !f.isImplicit());
+            functionDeclarations, f -> f.getName().equals("calc") && !f.isInferred());
 
     assertEquals(1, calc.getInvokes().size());
     assertEquals(calcFunctionDeclaration, calc.getInvokes().get(0));
@@ -229,7 +229,7 @@ public class CallResolverTest extends BaseTest {
     CallExpression doSmth = TestUtils.findByUniqueName(callExpressions, "doSmth");
     FunctionDeclaration doSmthFunctionDeclaration =
         TestUtils.findByUniquePredicate(
-            functionDeclarations, f -> f.getName().equals("doSmth") && !f.isImplicit());
+            functionDeclarations, f -> f.getName().equals("doSmth") && !f.isInferred());
 
     assertEquals(1, doSmth.getInvokes().size());
     assertEquals(doSmthFunctionDeclaration, doSmth.getInvokes().get(0));
@@ -257,7 +257,7 @@ public class CallResolverTest extends BaseTest {
 
     assertEquals(1, multiply.getInvokes().size());
     FunctionDeclaration functionDeclaration = multiply.getInvokes().get(0);
-    assertFalse(functionDeclaration.isImplicit());
+    assertFalse(functionDeclaration.isInferred());
     assertEquals("int", functionDeclaration.getSignatureTypes().get(0).getTypeName());
 
     assertTrue(multiply.getArguments().get(0) instanceof CastExpression);
@@ -489,10 +489,10 @@ public class CallResolverTest extends BaseTest {
         TestUtils.subnodesOfType(result, FunctionDeclaration.class);
     FunctionDeclaration addFunction =
         TestUtils.findByUniquePredicate(
-            functionDeclarations, f -> f.getName().equals("add") && !f.isImplicit());
-    FunctionDeclaration addFunctionImplicit =
+            functionDeclarations, f -> f.getName().equals("add") && !f.isInferred());
+    FunctionDeclaration addFunctionInferred =
         TestUtils.findByUniquePredicate(
-            functionDeclarations, f -> f.getName().equals("add") && f.isImplicit());
+            functionDeclarations, f -> f.getName().equals("add") && f.isInferred());
 
     // Check call add();
     CallExpression add =
@@ -504,7 +504,7 @@ public class CallResolverTest extends BaseTest {
             });
 
     assertEquals(1, add.getInvokes().size());
-    assertEquals(addFunctionImplicit, add.getInvokes().get(0));
+    assertEquals(addFunctionInferred, add.getInvokes().get(0));
 
     // Check call add(1, 2);
     CallExpression add12 =
@@ -833,7 +833,7 @@ public class CallResolverTest extends BaseTest {
             });
 
     assertEquals(1, calcCall.getInvokes().size());
-    assertTrue(calcCall.getInvokes().get(0).isImplicit());
+    assertTrue(calcCall.getInvokes().get(0).isInferred());
   }
 
   @Test
@@ -842,7 +842,7 @@ public class CallResolverTest extends BaseTest {
     var tu = TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true);
 
     // check for function declarations, we only want two: main and someFunction
-    // we do NOT want any dummy/implicit function declarations that could exist, if
+    // we do NOT want any inferred/implicit function declarations that could exist, if
     // the call resolver would incorrectly assume that the call to someFunction is to another
     // function because of the missing return assignment
 

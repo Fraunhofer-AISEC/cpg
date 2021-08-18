@@ -56,7 +56,7 @@ import org.slf4j.LoggerFactory;
  * references and makes the member point to the appropriate {@link FieldDeclaration} and the base to
  * the "this" {@link FieldDeclaration} of the containing class. It is also capable of resolving
  * references to fields that are inherited from a superclass and thus not declared in the actual
- * base class. When base or member declarations are not found in the graph, a new "dummy" {@link
+ * base class. When base or member declarations are not found in the graph, a new "inferred" {@link
  * FieldDeclaration} is being created that is then used to collect all usages to the same unknown
  * declaration. {@link DeclaredReferenceExpression} stubs are removed from the graph after being
  * resolved.
@@ -405,7 +405,7 @@ public class VariableUsageResolver extends Pass {
           NodeBuilder.newFieldDeclaration(
               name, type, Collections.emptyList(), "", null, null, false);
       recordMap.get(base).addField(declaration);
-      declaration.setImplicit(true);
+      declaration.setInferred(true);
       // lang.getScopeManager().addValueDeclaration(declaration);
       return declaration;
     } else {
@@ -430,9 +430,9 @@ public class VariableUsageResolver extends Pass {
       MethodDeclaration declaration =
           NodeBuilder.newMethodDeclaration(name, "", false, containingRecord);
       declaration.setType(returnType);
-      declaration.setParameters(Util.createParameters(signature));
+      declaration.setParameters(Util.createInferredParameters(signature));
       containingRecord.addMethod(declaration);
-      declaration.setImplicit(true);
+      declaration.setInferred(true);
       return declaration;
     } else {
       return target.get();
@@ -452,10 +452,10 @@ public class VariableUsageResolver extends Pass {
     if (target.isEmpty()) {
       FunctionDeclaration declaration = NodeBuilder.newFunctionDeclaration(name, "");
       declaration.setType(returnType);
-      declaration.setParameters(Util.createParameters(signature));
+      declaration.setParameters(Util.createInferredParameters(signature));
 
       currTu.addDeclaration(declaration);
-      declaration.setImplicit(true);
+      declaration.setInferred(true);
       return declaration;
     } else {
       return target.get();

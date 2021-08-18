@@ -271,11 +271,13 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
 
     // Check for varargs. Note the difference to Java: here, we don't have a named array
     // containing the varargs, but they are rather treated as kind of an invisible arg list that is
-    // appended to the original ones. For coherent graph behaviour, we introduce a dummy that
+    // appended to the original ones. For coherent graph behaviour, we introduce an implicit
+    // declaration that
     // wraps this list
     if (ctx.takesVarArgs()) {
       ParamVariableDeclaration varargs =
           NodeBuilder.newMethodParameterIn("va_args", UnknownType.getUnknownType(), true, "");
+      varargs.setImplicit(true);
       varargs.setArgumentIndex(i);
       lang.getScopeManager().addDeclaration(varargs);
     }

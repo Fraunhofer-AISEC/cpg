@@ -98,7 +98,7 @@ class StaticImportsTest extends BaseTest {
           break;
         case "nonStatic":
           MethodDeclaration nonStatic = TestUtils.findByUniqueName(B.getMethods(), "nonStatic");
-          assertTrue(nonStatic.isImplicit());
+          assertTrue(nonStatic.isInferred());
           assertEquals(List.of(nonStatic), call.getInvokes());
       }
     }
@@ -116,6 +116,6 @@ class StaticImportsTest extends BaseTest {
 
     MemberExpression nonStatic = TestUtils.findByUniqueName(declaredReferences, "nonStaticField");
     assertNotEquals(nonStaticField, nonStatic.getRefersTo());
-    assertTrue(nonStatic.getRefersTo().isImplicit());
+    assertTrue(nonStatic.getRefersTo().isInferred());
   }
 }
