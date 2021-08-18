@@ -145,7 +145,7 @@ public class InitializerListExpression extends Expression implements TypeListene
     }
     InitializerListExpression that = (InitializerListExpression) o;
     return super.equals(that)
-        && Objects.equals(initializers, that.initializers)
+        && PropertyEdge.propertyEqualsList(initializers, that.initializers)
         && Objects.equals(this.getInitializers(), that.getInitializers());
   }
 

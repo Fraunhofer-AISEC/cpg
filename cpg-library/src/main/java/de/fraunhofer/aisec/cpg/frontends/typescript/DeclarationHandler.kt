@@ -45,6 +45,7 @@ class DeclarationHandler(lang: TypeScriptLanguageFrontend) :
             "MethodDeclaration" -> return handleFunctionDeclaration(node)
             "Constructor" -> return handleFunctionDeclaration(node)
             "ArrowFunction" -> return handleFunctionDeclaration(node)
+            "FunctionExpression" -> return handleFunctionDeclaration(node)
             "Parameter" -> return handleParameter(node)
             "PropertySignature" -> return handlePropertySignature(node)
             "PropertyDeclaration" -> return handlePropertySignature(node)
@@ -173,11 +174,7 @@ class DeclarationHandler(lang: TypeScriptLanguageFrontend) :
                         record
                     )
                 }
-                else ->
-                    NodeBuilder.newFunctionDeclaration(
-                        name ?: "",
-                        this.lang.getCodeFromRawNode(node)
-                    )
+                else -> NodeBuilder.newFunctionDeclaration(name, this.lang.getCodeFromRawNode(node))
             }
 
         node.typeChildNode?.let { func.type = this.lang.typeHandler.handle(it) }
@@ -225,10 +222,9 @@ class DeclarationHandler(lang: TypeScriptLanguageFrontend) :
         `var`.location = this.lang.getLocationFromRawNode(node)
 
         // the last node that is not an identifier or an object binding pattern is an initializer
-        `var`.initializer =
-            this.lang.expressionHandler.handle(
-                node.children?.last { it.type != "Identifier" && it.type != "ObjectBindingPattern" }
-            )
+        node.children
+            ?.lastOrNull { it.type != "Identifier" && it.type != "ObjectBindingPattern" }
+            ?.let { `var`.initializer = this.lang.expressionHandler.handle(it) }
 
         return `var`
     }
