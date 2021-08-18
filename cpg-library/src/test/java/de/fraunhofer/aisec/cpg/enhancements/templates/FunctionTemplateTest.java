@@ -480,7 +480,7 @@ class FunctionTemplateTest extends BaseTest {
     FunctionTemplateDeclaration templateDeclaration =
         TestUtils.findByUniquePredicate(
             TestUtils.subnodesOfType(result, FunctionTemplateDeclaration.class),
-            t -> t.getName().equals("f") && !t.isImplicit());
+            t -> t.getName().equals("f") && !t.isInferred());
 
     FunctionDeclaration f =
         TestUtils.findByUniquePredicate(
@@ -488,7 +488,7 @@ class FunctionTemplateTest extends BaseTest {
             func ->
                 func.getName().equals("f")
                     && !templateDeclaration.getRealization().contains(func)
-                    && !func.isImplicit());
+                    && !func.isInferred());
 
     CallExpression f1 =
         TestUtils.findByUniquePredicate(
@@ -526,7 +526,7 @@ class FunctionTemplateTest extends BaseTest {
     assertEquals('b', ((Literal) castExpression.getExpression()).getValue());
 
     assertEquals(1, f4.getInvokes().size());
-    assertTrue(f4.getInvokes().get(0).isImplicit());
+    assertTrue(f4.getInvokes().get(0).isInferred());
   }
 
   @Test
@@ -597,7 +597,7 @@ class FunctionTemplateTest extends BaseTest {
   }
 
   @Test
-  void testCreateDummy() throws Exception {
+  void testCreateInferred() throws Exception {
     // test invocation target when template parameter produces a cast in an argument
     List<TranslationUnitDeclaration> result =
         TestUtils.analyze(
@@ -605,7 +605,7 @@ class FunctionTemplateTest extends BaseTest {
             topLevel,
             true);
 
-    // Check dummy for first fixed_division call
+    // Check inferred for first fixed_division call
 
     FunctionTemplateDeclaration templateDeclaration =
         TestUtils.findByUniquePredicate(
@@ -615,7 +615,7 @@ class FunctionTemplateTest extends BaseTest {
     FunctionDeclaration fixedDivision =
         TestUtils.findByUniquePredicate(
             TestUtils.subnodesOfType(result, FunctionDeclaration.class),
-            f -> f.getCode().equals("fixed_division<int,2>(10)") && f.isImplicit());
+            f -> f.getCode().equals("fixed_division<int,2>(10)") && f.isInferred());
 
     assertEquals(1, templateDeclaration.getRealization().size());
     assertEquals(fixedDivision, templateDeclaration.getRealization().get(0));
@@ -640,7 +640,7 @@ class FunctionTemplateTest extends BaseTest {
             .getNextDFG()
             .contains(templateDeclaration.getParameters().get(1)));
 
-    // Check dummy for second fixed_division call
+    // Check inferred for second fixed_division call
 
     templateDeclaration =
         TestUtils.findByUniquePredicate(
@@ -650,7 +650,7 @@ class FunctionTemplateTest extends BaseTest {
     fixedDivision =
         TestUtils.findByUniquePredicate(
             TestUtils.subnodesOfType(result, FunctionDeclaration.class),
-            f -> f.getCode().equals("fixed_division<double,3>(10.0)") && f.isImplicit());
+            f -> f.getCode().equals("fixed_division<double,3>(10.0)") && f.isInferred());
 
     assertEquals(1, templateDeclaration.getRealization().size());
     assertEquals(fixedDivision, templateDeclaration.getRealization().get(0));
