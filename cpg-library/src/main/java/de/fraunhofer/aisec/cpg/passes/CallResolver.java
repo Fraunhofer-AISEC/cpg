@@ -1459,7 +1459,8 @@ public class CallResolver extends Pass {
     // We had an import for this method name, just not the correct signature. Let's just add
     // an inferred node to any class that might be affected
     if (curClass == null) {
-      LOGGER.warn("Cannot generate inferred nodes for imports of a null class: {}", call.toString());
+      LOGGER.warn(
+          "Cannot generate inferred nodes for imports of a null class: {}", call.toString());
       return;
     }
     List<RecordDeclaration> containingRecords =
