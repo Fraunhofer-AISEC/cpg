@@ -35,6 +35,7 @@ import com.github.javaparser.Range;
 import com.github.javaparser.TokenRange;
 import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.ImportDeclaration;
+import com.github.javaparser.ast.Node;
 import com.github.javaparser.ast.Node.Parsedness;
 import com.github.javaparser.ast.PackageDeclaration;
 import com.github.javaparser.ast.body.TypeDeclaration;
@@ -56,7 +57,6 @@ import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
 import de.fraunhofer.aisec.cpg.frontends.TranslationException;
 import de.fraunhofer.aisec.cpg.graph.Annotation;
 import de.fraunhofer.aisec.cpg.graph.AnnotationMember;
-import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder;
 import de.fraunhofer.aisec.cpg.graph.TypeManager;
 import de.fraunhofer.aisec.cpg.graph.declarations.IncludeDeclaration;
@@ -93,7 +93,7 @@ public class JavaLanguageFrontend extends LanguageFrontend {
   private DeclarationHandler declarationHandler = new DeclarationHandler(this);
 
   private JavaSymbolSolver javaSymbolResolver;
-  private CombinedTypeSolver internalTypeSolver = new CombinedTypeSolver();
+  private final CombinedTypeSolver internalTypeSolver = new CombinedTypeSolver();
 
   public JavaLanguageFrontend(@NonNull TranslationConfiguration config, ScopeManager scopeManager) {
     super(config, scopeManager, ".");
@@ -132,7 +132,7 @@ public class JavaLanguageFrontend extends LanguageFrontend {
       bench.stop();
 
       bench = new Benchmark(this.getClass(), "Transform to CPG");
-      context.setData(com.github.javaparser.ast.Node.SYMBOL_RESOLVER_KEY, this.javaSymbolResolver);
+      context.setData(Node.SYMBOL_RESOLVER_KEY, this.javaSymbolResolver);
 
       // starting point is always a translation declaration
       TranslationUnitDeclaration fileDeclaration =
@@ -147,10 +147,9 @@ public class JavaLanguageFrontend extends LanguageFrontend {
         namespaceDeclaration =
             NodeBuilder.newNamespaceDeclaration(
                 packDecl.getName().asString(), getCodeFromRawNode(packDecl));
-        // Todo set region and code and push/pop scope
+        this.setCodeAndRegion(namespaceDeclaration, packDecl);
 
         scopeManager.addDeclaration(namespaceDeclaration);
-
         scopeManager.enterScope(namespaceDeclaration);
       }
 
@@ -210,8 +209,8 @@ public class JavaLanguageFrontend extends LanguageFrontend {
 
   @Override
   public <T> String getCodeFromRawNode(T astNode) {
-    if (astNode instanceof com.github.javaparser.ast.Node) {
-      var node = (com.github.javaparser.ast.Node) astNode;
+    if (astNode instanceof Node) {
+      var node = (Node) astNode;
       Optional<TokenRange> optional = node.getTokenRange();
       if (optional.isPresent()) {
         return optional.get().toString();
@@ -223,8 +222,8 @@ public class JavaLanguageFrontend extends LanguageFrontend {
   @Override
   @Nullable
   public <T> PhysicalLocation getLocationFromRawNode(T astNode) {
-    if (astNode instanceof com.github.javaparser.ast.Node) {
-      var node = (com.github.javaparser.ast.Node) astNode;
+    if (astNode instanceof Node) {
+      var node = (Node) astNode;
 
       // find compilation unit of node
       CompilationUnit cu = node.findCompilationUnit().orElse(null);
@@ -256,8 +255,9 @@ public class JavaLanguageFrontend extends LanguageFrontend {
     return null;
   }
 
-  public de.fraunhofer.aisec.cpg.graph.types.Type getTypeAsGoodAsPossible(
-      NodeWithType nodeWithType, ResolvedValueDeclaration resolved) {
+  public <N extends Node, T extends Type>
+      de.fraunhofer.aisec.cpg.graph.types.Type getTypeAsGoodAsPossible(
+          NodeWithType<N, T> nodeWithType, ResolvedValueDeclaration resolved) {
     try {
       return TypeParser.createFrom(resolved.getType().describe(), true);
     } catch (RuntimeException | NoClassDefFoundError ex) {
@@ -282,14 +282,14 @@ public class JavaLanguageFrontend extends LanguageFrontend {
         }
         if (scope.get().toString().equals(THIS)) {
           // this is not strictly true. This could also be a function of a superclass,
-          // but is the best we can do for now.
-          // if the superclass would be known, this would already be resolved by the Javaresolver
+          // but is the best we can do for now. If the superclass would be known,
+          // this would already be resolved by the Java resolver
           return this.getScopeManager().getCurrentNamePrefix() + "." + callExpr.getNameAsString();
         } else {
-          return scope.get().toString() + "." + callExpr.getNameAsString();
+          return scope.get() + "." + callExpr.getNameAsString();
         }
       } else {
-        // if the method is a static method of a resolveable class, the .resolve() would have
+        // if the method is a static method of a resolvable class, the .resolve() would have
         // worked.
         // but, the following can still be false, if the superclass implements callExpr, but is not
         // available for analysis
@@ -360,8 +360,9 @@ public class JavaLanguageFrontend extends LanguageFrontend {
     }
   }
 
-  public de.fraunhofer.aisec.cpg.graph.types.Type getReturnTypeAsGoodAsPossible(
-      NodeWithType nodeWithType, ResolvedMethodDeclaration resolved) {
+  public <N extends Node, T extends Type>
+      de.fraunhofer.aisec.cpg.graph.types.Type getReturnTypeAsGoodAsPossible(
+          NodeWithType<N, T> nodeWithType, ResolvedMethodDeclaration resolved) {
     try {
       // Resolve type first with ParameterizedType
       de.fraunhofer.aisec.cpg.graph.types.Type type =
@@ -381,8 +382,8 @@ public class JavaLanguageFrontend extends LanguageFrontend {
    * Returns the FQN of the given parameter assuming that is declared somewhere in the same package.
    * Names declared in a package are automatically imported.
    *
-   * @param simpleName
-   * @return
+   * @param simpleName the simple name
+   * @return the FQN
    */
   private String getFQNInCurrentPackage(String simpleName) {
     Scope theScope =
@@ -412,7 +413,6 @@ public class JavaLanguageFrontend extends LanguageFrontend {
     ClassOrInterfaceType clazz = searchType.asClassOrInterfaceType();
 
     if (clazz != null) {
-
       // try to look for imports matching the name
       for (ImportDeclaration importDeclaration : context.getImports()) {
         if (importDeclaration.getName().getIdentifier().endsWith(clazz.getName().getIdentifier())) {
@@ -458,7 +458,7 @@ public class JavaLanguageFrontend extends LanguageFrontend {
   @Override
   public <S, T> void setComment(S s, T ctx) {
     if (ctx instanceof Node && s instanceof de.fraunhofer.aisec.cpg.graph.Node) {
-      var node = (com.github.javaparser.ast.Node) ctx;
+      var node = (Node) ctx;
       de.fraunhofer.aisec.cpg.graph.Node cpgNode = (de.fraunhofer.aisec.cpg.graph.Node) s;
       node.getComment().ifPresent(comment -> cpgNode.setComment(comment.getContent()));
       // TODO: handle orphanComments?
@@ -491,7 +491,8 @@ public class JavaLanguageFrontend extends LanguageFrontend {
    * @param node the node
    * @param owner the AST owner node
    */
-  public void processAnnotations(@NonNull Node node, NodeWithAnnotations<?> owner) {
+  public void processAnnotations(
+      de.fraunhofer.aisec.cpg.graph.Node node, NodeWithAnnotations<?> owner) {
     if (this.config.processAnnotations) {
       node.addAnnotations(handleAnnotations(owner));
     }
