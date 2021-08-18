@@ -141,7 +141,7 @@ public class CallResolver extends Pass {
           ConstructExpression initializer = NodeBuilder.newConstructExpression("()");
           initializer.setImplicit(true);
           declaration.setInitializer(initializer);
-          addImplizitTemplateParametersToCall(declaration.getTemplateParameters(), initializer);
+          addImplicitTemplateParametersToCall(declaration.getTemplateParameters(), initializer);
         } else if (currInitializer instanceof CallExpression
             && currInitializer.getName().equals(typeString)) {
           // This should actually be a construct expression, not a call!
@@ -167,7 +167,7 @@ public class CallResolver extends Pass {
    * @param constructExpression duplicate TemplateParameters (implicit) to preserve AST, as
    *     ConstructExpression uses AST as well as the VariableDeclaration/NewExpression
    */
-  public static void addImplizitTemplateParametersToCall(
+  public static void addImplicitTemplateParametersToCall(
       List<Node> templateParams, ConstructExpression constructExpression) {
     if (templateParams != null) {
       for (Node node : templateParams) {
