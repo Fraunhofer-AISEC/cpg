@@ -102,12 +102,12 @@ class TypescriptLanguageFrontendTest {
 
         assertNotNull(tu)
 
+        // actually, our frontend returns 3 functions (1 inferred), because our function inference
+        // cannot handle non-typed languages very well
         val functions =
-            tu.declarations.filterIsInstance<FunctionDeclaration>().filter { !it.isImplicit }
+            tu.declarations.filterIsInstance<FunctionDeclaration>().filter { !it.isInferred }
         assertNotNull(functions)
 
-        // actually, our frontend returns 3 functions (1 dummy), because our function inference
-        // cannot handle non-typed languages very well
         assertEquals(2, functions.size)
 
         val someFunction = functions.first()

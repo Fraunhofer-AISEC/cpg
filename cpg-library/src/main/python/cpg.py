@@ -814,7 +814,7 @@ class PythonASTToCPG(ast.NodeVisitor):
         vd = VariableDeclaration()
         self.add_loc_info(node, vd)
         vd.setName(node.names[0].name)
-        self.scopemanager.addGlobal(vd)
+        self.scopemanager.addDeclaration(vd)
         return imp
 
     def visit_ImportFrom(self, node):
@@ -829,7 +829,7 @@ class PythonASTToCPG(ast.NodeVisitor):
         vd = VariableDeclaration()
         self.add_loc_info(node, vd)
         vd.setName(node.module)
-        self.scopemanager.addGlobal(vd)
+        self.scopemanager.addDeclaration(vd)
         return imp
 
     def visit_alias(self, node):
@@ -865,16 +865,16 @@ class PythonASTToCPG(ast.NodeVisitor):
             return dummy
         
         # do not wrap a single statement as CompoundStatement
-        if len(node_list) == 1:
-            s = self.visit(node_list[0])
-            # TODO move to a new function. it repeats
-            if s is not None and s.java_name.startswith('de.fraunhofer.aisec.cpg.graph.declarations.'):
-                d = DeclarationStatement()
-                self.add_loc_info(node, d)
-                d.setSingleDeclaration(s)
-                return d
-            else:
-                return s
+       # if len(node_list) == 1:
+       #     s = self.visit(node_list[0])
+       #     # TODO move to a new function. it repeats
+       #     if s is not None and s.java_name.startswith('de.fraunhofer.aisec.cpg.graph.declarations.'):
+       #         d = DeclarationStatement()
+       #         self.add_loc_info(node, d)
+       #         d.setSingleDeclaration(s)
+       #         return d
+       #     else:
+       #         return s
 
         body = CompoundStatement()
         self.add_loc_info(node, body)
@@ -903,11 +903,15 @@ class PythonASTToCPG(ast.NodeVisitor):
 
         if ref.java_name == "de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression":
             # create a new variable
+            declStatement = DeclarationStatement()
+
             var = VariableDeclaration()
             self.add_loc_info(node.target, var)
             var.setName(ref.getName())
 
-            stmt.setVariable(var)
+            declStatement.setSingleDeclaration(var)
+
+            stmt.setVariable(declStatement)
         else:
             self.log_with_loc(ref.java_name)
             # tuple or list
@@ -1257,8 +1261,10 @@ class PythonASTToCPG(ast.NodeVisitor):
 
     ### CATCH ALL ###
     def generic_visit(self, node):
-        self.log_with_loc(ast.dump(node))
-        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
+        if node is not None:
+            if isinstance(node, ast.AST):
+                self.log_with_loc(ast.dump(node))
+                self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         return
 
     def isMethodOrCtor(self, f):

@@ -36,7 +36,7 @@ import org.checkerframework.checker.nullness.qual.NonNull;
  * includes Translation units namespaces and classes as some languages, mainly scripting languages
  * allow code placement outside of explicit functions.
  *
- * <p>The reason for not only using a statement property that encapsulates all code in a dummy
+ * <p>The reason for not only using a statement property that encapsulates all code in an implicit
  * compound statements is that code can be distributed between functions and an encapsulating
  * compound statement would imply a block of code with a code region containing only the statements.
  */
