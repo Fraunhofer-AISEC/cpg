@@ -437,9 +437,17 @@ public class NodeBuilder {
     return node;
   }
 
-  public static RecordDeclaration newRecordDeclaration(String name, String kind, String code) {
+  /**
+   * Creates a new record declaration.
+   *
+   * @param fqn the name of the record as FQN.
+   * @param kind
+   * @param code
+   * @return
+   */
+  public static RecordDeclaration newRecordDeclaration(String fqn, String kind, String code) {
     RecordDeclaration node = new RecordDeclaration();
-    node.setName(name);
+    node.setName(fqn);
     node.setKind(kind);
     node.setCode(code);
 
@@ -447,7 +455,7 @@ public class NodeBuilder {
       FieldDeclaration thisDeclaration =
           NodeBuilder.newFieldDeclaration(
               "this",
-              TypeParser.createFrom(name, true),
+              TypeParser.createFrom(fqn, true),
               new ArrayList<>(),
               "this",
               null,
@@ -718,9 +726,16 @@ public class NodeBuilder {
     return node;
   }
 
-  public static NamespaceDeclaration newNamespaceDeclaration(@NonNull String name, String code) {
+  /**
+   * Creates a new namespace declaration.
+   *
+   * @param fqn the FQN
+   * @param code
+   * @return
+   */
+  public static NamespaceDeclaration newNamespaceDeclaration(@NonNull String fqn, String code) {
     NamespaceDeclaration node = new NamespaceDeclaration();
-    node.setName(name);
+    node.setName(fqn);
     node.setCode(code);
 
     log(node);

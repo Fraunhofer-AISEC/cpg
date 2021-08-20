@@ -39,7 +39,7 @@ import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class LoopScope extends ValueDeclarationScope implements IBreakable, IContinuable {
+public class LoopScope extends ValueDeclarationScope implements Breakable, Continuable {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(LoopScope.class);
 

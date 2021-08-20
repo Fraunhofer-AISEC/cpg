@@ -112,9 +112,6 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
 
     if (name.contains(lang.getNamespaceDelimiter())) {
       String[] rr = name.split(lang.getNamespaceDelimiter());
-
-      String recordName =
-          String.join(lang.getNamespaceDelimiter(), Arrays.asList(rr).subList(0, rr.length - 1));
       String fieldName = rr[rr.length - 1];
 
       declaration =
@@ -126,13 +123,6 @@ class DeclaratorHandler extends Handler<Declaration, IASTNameOwner, CXXLanguageF
               this.lang.getLocationFromRawNode(ctx),
               initializer,
               true);
-
-      var recordDeclaration =
-          this.lang
-              .getScopeManager()
-              .getRecordForName(this.lang.getScopeManager().getCurrentScope(), recordName);
-
-      // prepared for PR #223 - to set the definition here
     } else {
       declaration =
           NodeBuilder.newFieldDeclaration(

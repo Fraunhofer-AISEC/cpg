@@ -739,7 +739,7 @@ class PythonASTToCPG(ast.NodeVisitor):
 
         if lhs.java_name == "de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression":
             # Check whether this assigns to a declared var or to a new var
-            resolved_ref = self.scopemanager.resolve(lhs)
+            resolved_ref = self.scopemanager.resolveReference(lhs)
 
             if resolved_ref is None:
                 # new var -> variable declaration + initializer list

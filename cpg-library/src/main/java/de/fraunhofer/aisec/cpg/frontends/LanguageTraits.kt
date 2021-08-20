@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2021, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,19 +23,23 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.passes.scopes;
-
-import de.fraunhofer.aisec.cpg.graph.statements.BreakStatement;
-import java.util.List;
+package de.fraunhofer.aisec.cpg.frontends
 
 /**
- * Represents a class that enhances the graph before it is persisted.
+ * A language trait is a feature or trait that is common to a group of programming languages.
+ * Examples could be the support of pointers, support for templates or generics.
  *
- * <p>Passes are expected to mutate the {@code TranslationResult}.
+ * Currently, this interface has no methods. However, in the future, this could be used to execute
+ * language/frontend-specific code for the particular trait. This could help to fine-tune the
+ * [de.fraunhofer.aisec.cpg.passes.CallResolver] for specific languages.
  */
-public interface IBreakable {
+interface LanguageTrait
 
-  void addBreakStatement(BreakStatement breakStatement);
+/** A language trait, that specifies that this language has support for templates or generics. */
+interface HasTemplates : LanguageTrait
 
-  List<BreakStatement> getBreakStatements();
-}
+/**
+ * A language trait that specifies, that this language has support for default arguments, e.g. in
+ * functions.
+ */
+interface HasDefaultArguments : LanguageTrait
