@@ -244,7 +244,7 @@ class ConstructorsTest extends BaseTest {
     VariableDeclaration e1 = TestUtils.findByUniqueName(variables, "e1");
     assertTrue(e1.getInitializer() instanceof ConstructExpression);
     ConstructExpression e1Initializer = (ConstructExpression) e1.getInitializer();
-    assertTrue(e1Initializer.getConstructor().isImplicit());
+    assertTrue(e1Initializer.getConstructor().isInferred());
     assertEquals(0, e1Initializer.getArguments().size());
 
     VariableDeclaration e2 = TestUtils.findByUniqueName(variables, "e2");
