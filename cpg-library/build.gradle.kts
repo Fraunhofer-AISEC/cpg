@@ -177,7 +177,7 @@ dependencies {
     api("com.ibm.icu:icu4j:68.2")
 
     // CDT
-    api("org.eclipse.cdt:core:7.2.0.202102251239")
+    api("org.eclipse.cdt:core:7.2.100.202105180159")
 
     // openCypher
     api("org.opencypher:parser-9.0:9.0.20210312")
