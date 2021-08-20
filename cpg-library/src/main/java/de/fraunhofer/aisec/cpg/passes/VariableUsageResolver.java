@@ -200,7 +200,7 @@ public class VariableUsageResolver extends Pass {
       }
 
       Optional<? extends ValueDeclaration> refersTo =
-          Optional.ofNullable(lang.getScopeManager().resolve(ref));
+          Optional.ofNullable(lang.getScopeManager().resolveReference(ref));
 
       Type recordDeclType = null;
       if (currentClass != null) {
@@ -330,7 +330,7 @@ public class VariableUsageResolver extends Pass {
   @Nullable
   private Declaration resolveBase(DeclaredReferenceExpression reference) {
 
-    Declaration declaration = lang.getScopeManager().resolve(reference);
+    Declaration declaration = lang.getScopeManager().resolveReference(reference);
     if (declaration != null) {
       return declaration;
     }
