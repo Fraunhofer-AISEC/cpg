@@ -290,7 +290,7 @@ def handle_expression(self, expr):
                 expr.id, UnknownType.getUnknownType(), DUMMY_CODE)
         ref = NodeBuilder.newDeclaredReferenceExpression(
             expr.id, UnknownType.getUnknownType(), DUMMY_CODE)
-        resolved = self.scopemanager.resolve(ref)
+        resolved = self.scopemanager.resolveReference(ref)
         inRecord = self.scopemanager.isInRecord()
         inFunction = self.scopemanager.isInFunction()
         if resolved is not None:
