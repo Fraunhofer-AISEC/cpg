@@ -134,7 +134,7 @@ public class TranslationManager {
    * @param previousResult The result of a previous run of {@link #analyze()}
    * @return The updated result that matches the current state of the source code
    */
-  public TranslationResult analyze(TranslationResult previousResult) throws TranslationException {
+  public TranslationResult analyze(TranslationResult previousResult) {
     Benchmark outerBench =
         new Benchmark(TranslationManager.class, "Incremental graph construction");
     TranslationResult result = new TranslationResult(this);
@@ -156,28 +156,35 @@ public class TranslationManager {
       }
     }
 
-    List<File> changed = getChangedFiles(previousResult, result, sourceLocations);
+    try {
+      List<File> changed = getChangedFiles(previousResult, result, sourceLocations);
+      if (changed.isEmpty()) {
+        return previousResult;
+      }
 
-    Benchmark bench = new Benchmark(TranslationManager.class, "Frontends");
-    config.setSourceLocations(changed);
-    Set<LanguageFrontend> frontendsNeedCleanup =
-        runFrontends(result, config, previousResult.getScopeManager());
-    bench.stop();
+      Benchmark bench = new Benchmark(TranslationManager.class, "Frontends");
+      config.setSourceLocations(changed);
+      Set<LanguageFrontend> frontendsNeedCleanup =
+          runFrontends(result, config, previousResult.getScopeManager());
+      bench.stop();
 
-    removeImplicitDeclarations(previousResult.getImplicitDeclarations());
+      removeImplicitDeclarations(previousResult.getImplicitDeclarations());
 
-    bench = new Benchmark(TranslationManager.class, "Incremental change processing");
-    boolean passesNotNeeded =
-        ChangeMapping.processChanges(
-            previousResult.getTranslationUnits(), result.getTranslationUnits());
-    bench.stop();
+      bench = new Benchmark(TranslationManager.class, "Incremental change processing");
+      boolean passesNotNeeded =
+          ChangeMapping.processChanges(
+              previousResult.getTranslationUnits(), result.getTranslationUnits());
+      bench.stop();
 
-    Set<Pass> passesNeedCleanup = runPasses(result, passesNotNeeded);
-    doCleanup(frontendsNeedCleanup, passesNeedCleanup);
+      Set<Pass> passesNeedCleanup = runPasses(result, passesNotNeeded);
+      doCleanup(frontendsNeedCleanup, passesNeedCleanup);
 
-    result.setScopeManager(previousResult.getScopeManager());
+      result.setScopeManager(previousResult.getScopeManager());
 
-    outerBench.stop();
+      outerBench.stop();
+    } catch (TranslationException e) {
+      throw new CompletionException(e);
+    }
 
     return result;
   }
