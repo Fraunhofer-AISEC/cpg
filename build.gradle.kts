@@ -38,7 +38,9 @@ plugins {
     kotlin("jvm") version "1.5.10" apply false
 }
 
-group = "de.fraunhofer.aisec"
+allprojects {
+    group = "de.fraunhofer.aisec"
+}
 
 tasks.named("sonarqube") {
     subprojects.forEach {
