@@ -71,9 +71,6 @@ subprojects {
     tasks.withType<JavaCompile> {
         sourceCompatibility = "11"
         targetCompatibility = "11"
-
-        //withSourcesJar()
-        //withJavadocJar()
     }
 
     tasks.withType<JacocoReport> {

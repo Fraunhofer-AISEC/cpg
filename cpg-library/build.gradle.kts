@@ -105,6 +105,11 @@ node {
     version.set("16.4.2")
 }
 
+java {
+    withJavadocJar()
+    withSourcesJar()
+}
+
 val yarnInstall by tasks.registering(YarnTask::class) {
     inputs.file("src/main/nodejs/package.json").withPathSensitivity(PathSensitivity.RELATIVE)
     inputs.file("src/main/nodejs/yarn.lock").withPathSensitivity(PathSensitivity.RELATIVE)
