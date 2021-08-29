@@ -31,11 +31,12 @@ import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import java.io.Closeable
+import java.util.*
 import java.util.function.Predicate
 import java.util.stream.Collectors
 import java.util.stream.Stream
+import kotlin.time.Duration
 import kotlin.time.ExperimentalTime
-import kotlin.time.milliseconds
 import org.neo4j.ogm.annotation.Relationship
 import org.opencypher.v9_0.ast.*
 import org.opencypher.v9_0.expressions.*
@@ -138,7 +139,9 @@ class QueryContext constructor(val graph: Graph) {
             // creating a predicate that checks for the existence of a relationship
             val predicate: (Node) -> Boolean = {
                 var relationshipProperty =
-                    it[type.name().toLowerCase(), relationship.direction().toString()]
+                    it[
+                        type.name().lowercase(Locale.getDefault()),
+                        relationship.direction().toString()]
 
                 // check for the existence of the edge
                 if (relationshipProperty is Collection<*>) {
@@ -371,7 +374,7 @@ class Graph(var nodes: List<Node>) {
             }
         }
 
-        logger.info("Query took ${b.duration.milliseconds}")
+        logger.info("Query took ${Duration.milliseconds(b.duration)}")
 
         return list
     }

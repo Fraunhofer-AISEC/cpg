@@ -422,7 +422,7 @@ public class TypeParser {
 
         default:
           // everything else
-          substr = type.substring(lastSplit, type.length());
+          substr = type.substring(lastSplit);
           if (substr.length() != 0 && i == type.length() - 1) {
             typeBlocks.add(substr);
           }

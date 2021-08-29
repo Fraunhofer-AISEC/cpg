@@ -61,8 +61,8 @@ public class TranslationManager {
 
   private static final Logger log = LoggerFactory.getLogger(TranslationManager.class);
 
-  @NonNull private TranslationConfiguration config;
-  private AtomicBoolean isCancelled = new AtomicBoolean(false);
+  @NonNull private final TranslationConfiguration config;
+  private final AtomicBoolean isCancelled = new AtomicBoolean(false);
 
   private TranslationManager(@NonNull TranslationConfiguration config) {
     this.config = config;

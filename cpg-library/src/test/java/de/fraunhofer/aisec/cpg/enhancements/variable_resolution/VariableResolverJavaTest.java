@@ -89,7 +89,7 @@ class VariableResolverJavaTest extends BaseTest {
   private MethodDeclaration innerFunction2;
   private MethodDeclaration innerFunction3;
 
-  private Map<String, Expression> callParamMap = new HashMap<>();
+  private final Map<String, Expression> callParamMap = new HashMap<>();
 
   @BeforeAll
   void initTests() throws ExecutionException, InterruptedException {

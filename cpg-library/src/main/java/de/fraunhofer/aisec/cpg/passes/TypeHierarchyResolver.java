@@ -54,8 +54,8 @@ import java.util.stream.Collectors;
  */
 public class TypeHierarchyResolver extends Pass {
 
-  private Map<String, RecordDeclaration> recordMap = new HashMap<>();
-  private List<EnumDeclaration> enums = new ArrayList<>();
+  private final Map<String, RecordDeclaration> recordMap = new HashMap<>();
+  private final List<EnumDeclaration> enums = new ArrayList<>();
 
   @Override
   public LanguageFrontend getLang() {

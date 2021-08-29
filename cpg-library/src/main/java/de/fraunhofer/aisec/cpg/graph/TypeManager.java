@@ -72,7 +72,8 @@ public class TypeManager {
   }
 
   @NonNull
-  private Map<HasType, Set<Type>> typeCache = Collections.synchronizedMap(new IdentityHashMap<>());
+  private final Map<HasType, Set<Type>> typeCache =
+      Collections.synchronizedMap(new IdentityHashMap<>());
 
   @NonNull
   private Map<String, RecordDeclaration> typeToRecord =
@@ -84,21 +85,21 @@ public class TypeManager {
    * are unique to the RecordDeclaration and are not merged.
    */
   @NonNull
-  private Map<RecordDeclaration, List<ParameterizedType>> recordToTypeParameters =
+  private final Map<RecordDeclaration, List<ParameterizedType>> recordToTypeParameters =
       Collections.synchronizedMap(new HashMap<>());
 
   @NonNull
-  private Map<TemplateDeclaration, List<ParameterizedType>> templateToTypeParameters =
+  private final Map<TemplateDeclaration, List<ParameterizedType>> templateToTypeParameters =
       Collections.synchronizedMap(new HashMap<>());
 
   @NonNull
-  private Map<Type, List<Type>> typeState =
+  private final Map<Type, List<Type>> typeState =
       Collections.synchronizedMap(new HashMap<>()); // Stores all the unique types ObjectType as
   // Key and
   // Reference-/PointerTypes
   // as Values
-  private Set<Type> firstOrderTypes = Collections.synchronizedSet(new HashSet<>());
-  private Set<Type> secondOrderTypes = Collections.synchronizedSet(new HashSet<>());
+  private final Set<Type> firstOrderTypes = Collections.synchronizedSet(new HashSet<>());
+  private final Set<Type> secondOrderTypes = Collections.synchronizedSet(new HashSet<>());
   private LanguageFrontend frontend;
   private boolean noFrontendWarningIssued = false;
 
@@ -706,7 +707,7 @@ public class TypeManager {
 
   private static class Ancestor {
 
-    private RecordDeclaration recordDeclaration;
+    private final RecordDeclaration recordDeclaration;
     private int depth;
 
     public Ancestor(RecordDeclaration recordDeclaration, int depth) {

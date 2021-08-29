@@ -42,7 +42,7 @@ public class FunctionTemplateDeclaration extends TemplateDeclaration {
    * expansion pass for each instantiation of the FunctionTemplate there will be a realization
    */
   @Relationship(value = "REALIZATION", direction = "OUTGOING")
-  private List<PropertyEdge<FunctionDeclaration>> realization = new ArrayList<>();
+  private final List<PropertyEdge<FunctionDeclaration>> realization = new ArrayList<>();
 
   public List<FunctionDeclaration> getRealization() {
     return unwrap(this.realization);

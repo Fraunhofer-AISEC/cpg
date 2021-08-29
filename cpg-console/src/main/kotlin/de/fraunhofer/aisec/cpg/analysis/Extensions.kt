@@ -462,13 +462,13 @@ fun getRelativeLocation(parentRegion: Region, region: Region): Region {
 
     // we only need a column offset, if the start line is the same
     columnOffset =
-        if (region.startLine == (parentRegion.startLine ?: 0)) {
-            (parentRegion.startColumn ?: 0)
+        if (region.startLine == parentRegion.startLine) {
+            parentRegion.startColumn
         } else {
             1 // not sure why
         }
 
-    val lineOffset = (parentRegion.startLine ?: 0)
+    val lineOffset = parentRegion.startLine
 
     return Region(
         region.startLine - lineOffset,

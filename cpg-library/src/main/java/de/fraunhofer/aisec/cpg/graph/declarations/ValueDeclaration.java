@@ -46,7 +46,7 @@ public abstract class ValueDeclaration extends Declaration implements HasType {
 
   protected Set<Type> possibleSubTypes = new HashSet<>();
 
-  @Transient private Set<TypeListener> typeListeners = new HashSet<>();
+  @Transient private final Set<TypeListener> typeListeners = new HashSet<>();
 
   @Override
   public Type getType() {

@@ -44,11 +44,11 @@ public abstract class IVisitor<V extends IVisitable> {
 
   public void visit(V t) {
     try {
-      Method mostSpecificVisit = this.getClass().getMethod("visit", new Class[] {t.getClass()});
+      Method mostSpecificVisit = this.getClass().getMethod("visit", t.getClass());
 
       if (mostSpecificVisit != null) {
         mostSpecificVisit.setAccessible(true);
-        mostSpecificVisit.invoke(this, new Object[] {t});
+        mostSpecificVisit.invoke(this, t);
       }
     } catch (NoSuchMethodException | InvocationTargetException | IllegalAccessException e) {
       // Nothing to do here

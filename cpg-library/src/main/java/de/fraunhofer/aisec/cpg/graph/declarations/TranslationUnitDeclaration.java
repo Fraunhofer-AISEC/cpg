@@ -49,19 +49,19 @@ public class TranslationUnitDeclaration extends Declaration
   @Relationship(value = "DECLARATIONS", direction = "OUTGOING")
   @SubGraph("AST")
   @NonNull
-  private List<PropertyEdge<Declaration>> declarations = new ArrayList<>();
+  private final List<PropertyEdge<Declaration>> declarations = new ArrayList<>();
 
   /** A list of includes within this unit. */
   @Relationship(value = "INCLUDES", direction = "OUTGOING")
   @SubGraph("AST")
   @NonNull
-  private List<PropertyEdge<IncludeDeclaration>> includes = new ArrayList<>();
+  private final List<PropertyEdge<IncludeDeclaration>> includes = new ArrayList<>();
 
   /** A list of namespaces within this unit. */
   @Relationship(value = "NAMESPACES", direction = "OUTGOING")
   @SubGraph("AST")
   @NonNull
-  private List<PropertyEdge<Declaration>> namespaces = new ArrayList<>();
+  private final List<PropertyEdge<Declaration>> namespaces = new ArrayList<>();
 
   /** The list of statements. */
   @Relationship(value = "STATEMENTS", direction = "OUTGOING")

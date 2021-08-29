@@ -421,7 +421,7 @@ class TypescriptLanguageFrontendTest {
         assertNotNull(tu)
 
         val onPost =
-            tu.statements.firstOrNull() { it is MemberCallExpression && it.name == "onPost" } as?
+            tu.statements.firstOrNull { it is MemberCallExpression && it.name == "onPost" } as?
                 MemberCallExpression
         assertNotNull(onPost)
 

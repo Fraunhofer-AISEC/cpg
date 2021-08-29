@@ -126,8 +126,7 @@ class CXXIncludeTest extends BaseTest {
         next.getIncludes().stream()
             .anyMatch(
                 d ->
-                    ((IncludeDeclaration) d)
-                        .getFilename()
+                    d.getFilename()
                         .equals(
                             new File("src/test/resources/another-include.h").getAbsolutePath())));
   }
@@ -155,8 +154,7 @@ class CXXIncludeTest extends BaseTest {
         next.getIncludes().stream()
             .anyMatch(
                 d ->
-                    ((IncludeDeclaration) d)
-                        .getFilename()
+                    d.getFilename()
                         .equals(
                             new File("src/test/resources/another-include.h").getAbsolutePath())));
   }
@@ -184,8 +182,7 @@ class CXXIncludeTest extends BaseTest {
         next.getIncludes().stream()
             .anyMatch(
                 d ->
-                    ((IncludeDeclaration) d)
-                        .getFilename()
+                    d.getFilename()
                         .equals(new File("src/test/resources/include.h").getAbsolutePath())));
   }
 
@@ -212,8 +209,7 @@ class CXXIncludeTest extends BaseTest {
         next.getIncludes().stream()
             .anyMatch(
                 d ->
-                    ((IncludeDeclaration) d)
-                        .getFilename()
+                    d.getFilename()
                         .equals(new File("src/test/resources/include.h").getAbsolutePath())));
   }
 
@@ -244,8 +240,7 @@ class CXXIncludeTest extends BaseTest {
         next.getIncludes().stream()
             .anyMatch(
                 d ->
-                    ((IncludeDeclaration) d)
-                        .getFilename()
+                    d.getFilename()
                         .equals(
                             new File("src/test/resources/another-include.h").getAbsolutePath())));
   }
