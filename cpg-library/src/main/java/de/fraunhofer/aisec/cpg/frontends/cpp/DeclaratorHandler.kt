@@ -29,7 +29,6 @@ import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.frontends.HandlerInterface
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder
 import de.fraunhofer.aisec.cpg.graph.declarations.*
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.types.IncompleteType
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
@@ -48,28 +47,22 @@ import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTCompositeTypeSpecifier.ICPPASTBas
 import org.eclipse.cdt.internal.core.dom.parser.cpp.*
 
 class DeclaratorHandler(lang: CXXLanguageFrontend) :
-    Handler<Declaration?, IASTNameOwner?, CXXLanguageFrontend?>(Supplier { Declaration() }, lang) {
+    Handler<Declaration?, IASTNameOwner, CXXLanguageFrontend?>(Supplier { Declaration() }, lang) {
 
     init {
         map[CPPASTDeclarator::class.java] =
-            HandlerInterface { ctx: IASTNameOwner -> handleDeclarator(ctx as CPPASTDeclarator) }
+            HandlerInterface { handleDeclarator(it as CPPASTDeclarator) }
         map[CPPASTArrayDeclarator::class.java] =
-            HandlerInterface { ctx: IASTNameOwner -> handleDeclarator(ctx as CPPASTDeclarator) }
+            HandlerInterface { handleDeclarator(it as CPPASTDeclarator) }
         map[CPPASTFieldDeclarator::class.java] =
-            HandlerInterface { ctx: IASTNameOwner ->
-                handleFieldDeclarator(ctx as CPPASTDeclarator)
-            }
+            HandlerInterface { handleFieldDeclarator(it as CPPASTDeclarator) }
         map[CPPASTFunctionDeclarator::class.java] =
-            HandlerInterface { ctx: IASTNameOwner ->
-                handleFunctionDeclarator(ctx as CPPASTFunctionDeclarator)
-            }
+            HandlerInterface { handleFunctionDeclarator(it as CPPASTFunctionDeclarator) }
         map[CPPASTCompositeTypeSpecifier::class.java] =
-            HandlerInterface { ctx: IASTNameOwner ->
-                handleCompositeTypeSpecifier(ctx as CPPASTCompositeTypeSpecifier)
-            }
+            HandlerInterface { handleCompositeTypeSpecifier(it as CPPASTCompositeTypeSpecifier) }
         map[CPPASTSimpleTypeTemplateParameter::class.java] =
-            HandlerInterface { ctx: IASTNameOwner ->
-                handleTemplateTypeParameter(ctx as CPPASTSimpleTypeTemplateParameter)
+            HandlerInterface {
+                handleTemplateTypeParameter(it as CPPASTSimpleTypeTemplateParameter)
             }
     }
 
@@ -79,11 +72,12 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
             return handle(ctx.nestedDeclarator)
         }
         val name = ctx.name.toString()
+
         return if (lang.scopeManager.currentScope is RecordScope ||
                 name.contains(lang.namespaceDelimiter)
         ) {
             // forward it to handleFieldDeclarator
-            handleFieldDeclarator(ctx)
+            this.handleFieldDeclarator(ctx)
         } else {
             // type will be filled out later
             val declaration =
@@ -103,14 +97,11 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
     }
 
     private fun handleFieldDeclarator(ctx: CPPASTDeclarator): FieldDeclaration {
-        val init = ctx.initializer
-        var initializer: Expression? = null
-        if (init != null) {
-            initializer = lang.initializerHandler.handle(init)
-        }
+        val initializer = ctx.initializer?.let { lang.initializerHandler.handle(it) }
+
         val name = ctx.name.toString()
-        val declaration: FieldDeclaration
-        declaration =
+
+        val declaration =
             if (name.contains(lang.namespaceDelimiter)) {
                 val rr = name.split(lang.namespaceDelimiter).toTypedArray()
                 val fieldName = rr[rr.size - 1]
@@ -134,7 +125,9 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
                     true
                 )
             }
+
         lang.scopeManager.addDeclaration(declaration)
+
         return declaration
     }
 
@@ -222,7 +215,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
 
             // check for void type parameters
             if (arg!!.type is IncompleteType) {
-                if (!arg!!.name.isEmpty()) {
+                if (arg.name.isNotEmpty()) {
                     Util.warnWithFileLocation(
                         declaration,
                         log,
@@ -246,7 +239,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
             if (binding != null) {
                 lang.cacheDeclaration(binding, arg)
             }
-            arg!!.argumentIndex = i
+            arg.argumentIndex = i
             // Note that this .addValueDeclaration call already adds arg to the function's
             // parameters.
             // This is why the following line has been commented out by @KW
@@ -345,14 +338,14 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
     }
 
     private fun handleCompositeTypeSpecifier(ctx: CPPASTCompositeTypeSpecifier): RecordDeclaration {
-        val kind: String
-        kind =
+        val kind: String =
             when (ctx.key) {
                 IASTCompositeTypeSpecifier.k_struct -> "struct"
                 IASTCompositeTypeSpecifier.k_union -> "union"
                 ICPPASTCompositeTypeSpecifier.k_class -> "class"
                 else -> "struct"
             }
+
         val recordDeclaration =
             NodeBuilder.newRecordDeclaration(
                 lang.scopeManager.currentNamePrefixWithDelimiter + ctx.name.toString(),
@@ -365,9 +358,13 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
                     TypeParser.createFrom(b.nameSpecifier.toString(), true, lang)
                 }
                 .collect(Collectors.toList())
+
         lang.scopeManager.addDeclaration(recordDeclaration)
+
         lang.scopeManager.enterScope(recordDeclaration)
+
         lang.scopeManager.addDeclaration(recordDeclaration.getThis())
+
         processMembers(ctx)
         if (recordDeclaration.constructors.isEmpty()) {
             val constructorDeclaration =
@@ -385,7 +382,9 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
             recordDeclaration.addConstructor(constructorDeclaration)
             lang.scopeManager.addDeclaration(constructorDeclaration)
         }
+
         lang.scopeManager.leaveScope(recordDeclaration)
+
         return recordDeclaration
     }
 

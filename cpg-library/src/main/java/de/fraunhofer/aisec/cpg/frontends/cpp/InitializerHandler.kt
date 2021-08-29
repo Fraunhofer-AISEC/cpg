@@ -36,7 +36,7 @@ import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTEqualsInitializer
 import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTInitializerList
 
 class InitializerHandler(lang: CXXLanguageFrontend) :
-    Handler<Expression?, IASTInitializer?, CXXLanguageFrontend?>(Supplier { Expression() }, lang) {
+    Handler<Expression?, IASTInitializer, CXXLanguageFrontend?>(Supplier { Expression() }, lang) {
 
     init {
         map[CPPASTConstructorInitializer::class.java] =

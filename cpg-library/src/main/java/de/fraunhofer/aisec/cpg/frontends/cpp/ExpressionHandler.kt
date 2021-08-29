@@ -47,7 +47,7 @@ import org.eclipse.cdt.internal.core.dom.parser.cpp.*
 import org.eclipse.cdt.internal.core.dom.parser.cpp.semantics.TypeOfDependentExpression
 
 class ExpressionHandler(lang: CXXLanguageFrontend) :
-    Handler<Expression?, IASTInitializerClause?, CXXLanguageFrontend>(
+    Handler<Expression?, IASTInitializerClause, CXXLanguageFrontend>(
         Supplier { Expression() },
         lang
     ) {

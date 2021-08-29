@@ -23,11 +23,8 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.frontends;
+package de.fraunhofer.aisec.cpg.frontends
 
-import org.jetbrains.annotations.NotNull;
-
-@FunctionalInterface
-public interface HandlerInterface<S, T> {
-  S handle(@NotNull T expr);
+fun interface HandlerInterface<S, T> {
+    fun handle(expr: T): S?
 }

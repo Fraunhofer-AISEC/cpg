@@ -42,7 +42,7 @@ import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTArrayDeclarator
 import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTParameterDeclaration
 
 class ParameterDeclarationHandler(lang: CXXLanguageFrontend) :
-    Handler<ParamVariableDeclaration?, IASTParameterDeclaration?, CXXLanguageFrontend?>(
+    Handler<ParamVariableDeclaration?, IASTParameterDeclaration, CXXLanguageFrontend?>(
         Supplier { ParamVariableDeclaration() },
         lang
     ) {

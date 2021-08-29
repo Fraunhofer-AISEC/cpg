@@ -43,79 +43,47 @@ import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTCatchHandler
 import org.eclipse.cdt.internal.core.dom.parser.cpp.*
 
 class StatementHandler(lang: CXXLanguageFrontend) :
-    Handler<Statement?, IASTStatement?, CXXLanguageFrontend?>(Supplier { Statement() }, lang) {
+    Handler<Statement?, IASTStatement, CXXLanguageFrontend>(Supplier { Statement() }, lang) {
 
     init {
         map[CPPASTCompoundStatement::class.java] =
-            HandlerInterface { ctx: IASTStatement ->
-                handleCompoundStatement(ctx as CPPASTCompoundStatement)
-            }
+            HandlerInterface { handleCompoundStatement(it as CPPASTCompoundStatement) }
         map[CPPASTReturnStatement::class.java] =
-            HandlerInterface { ctx: IASTStatement ->
-                handleReturnStatement(ctx as CPPASTReturnStatement)
-            }
+            HandlerInterface { handleReturnStatement(it as CPPASTReturnStatement) }
         map[CPPASTDeclarationStatement::class.java] =
-            HandlerInterface { ctx: IASTStatement ->
-                handleDeclarationStatement(ctx as CPPASTDeclarationStatement)
-            }
+            HandlerInterface { handleDeclarationStatement(it as CPPASTDeclarationStatement) }
         map[CPPASTExpressionStatement::class.java] =
-            HandlerInterface { ctx: IASTStatement ->
-                handleExpressionStatement(ctx as CPPASTExpressionStatement)
-            }
+            HandlerInterface { handleExpressionStatement(it as CPPASTExpressionStatement) }
         map[CPPASTIfStatement::class.java] =
-            HandlerInterface { ctx: IASTStatement -> handleIfStatement(ctx as CPPASTIfStatement) }
+            HandlerInterface { handleIfStatement(it as CPPASTIfStatement) }
         map[CPPASTWhileStatement::class.java] =
-            HandlerInterface { ctx: IASTStatement ->
-                handleWhileStatement(ctx as CPPASTWhileStatement)
-            }
+            HandlerInterface { handleWhileStatement(it as CPPASTWhileStatement) }
         map[CPPASTDoStatement::class.java] =
-            HandlerInterface { ctx: IASTStatement -> handleDoStatement(ctx as CPPASTDoStatement) }
+            HandlerInterface { handleDoStatement(it as CPPASTDoStatement) }
         map[CPPASTForStatement::class.java] =
-            HandlerInterface { ctx: IASTStatement -> handleForStatement(ctx as CPPASTForStatement) }
+            HandlerInterface { handleForStatement(it as CPPASTForStatement) }
         map[CPPASTRangeBasedForStatement::class.java] =
-            HandlerInterface { ctx: IASTStatement ->
-                handleForEachStatement(ctx as CPPASTRangeBasedForStatement)
-            }
+            HandlerInterface { handleForEachStatement(it as CPPASTRangeBasedForStatement) }
         map[CPPASTContinueStatement::class.java] =
-            HandlerInterface { ctx: IASTStatement ->
-                handleContinueStatement(ctx as CPPASTContinueStatement)
-            }
+            HandlerInterface { handleContinueStatement(it as CPPASTContinueStatement) }
         map[CPPASTBreakStatement::class.java] =
-            HandlerInterface { ctx: IASTStatement ->
-                handleBreakStatement(ctx as CPPASTBreakStatement)
-            }
+            HandlerInterface { handleBreakStatement(it as CPPASTBreakStatement) }
         map[CPPASTLabelStatement::class.java] =
-            HandlerInterface { ctx: IASTStatement ->
-                handleLabelStatement(ctx as CPPASTLabelStatement)
-            }
+            HandlerInterface { handleLabelStatement(it as CPPASTLabelStatement) }
         map[CPPASTSwitchStatement::class.java] =
-            HandlerInterface { ctx: IASTStatement ->
-                handleSwitchStatement(ctx as CPPASTSwitchStatement)
-            }
+            HandlerInterface { handleSwitchStatement(it as CPPASTSwitchStatement) }
         map[CPPASTCaseStatement::class.java] =
-            HandlerInterface { ctx: IASTStatement ->
-                handleCaseStatement(ctx as CPPASTCaseStatement)
-            }
+            HandlerInterface { handleCaseStatement(it as CPPASTCaseStatement) }
         map[CPPASTDefaultStatement::class.java] =
-            HandlerInterface { ctx: IASTStatement ->
-                handleDefaultStatement(ctx as CPPASTDefaultStatement)
-            }
+            HandlerInterface { handleDefaultStatement(it as CPPASTDefaultStatement) }
         map[CPPASTNullStatement::class.java] =
-            HandlerInterface { ctx: IASTStatement ->
-                handleEmptyStatement(ctx as CPPASTNullStatement)
-            }
+            HandlerInterface { handleEmptyStatement(it as CPPASTNullStatement) }
         map[CPPASTGotoStatement::class.java] =
-            HandlerInterface { ctx: IASTStatement ->
-                handleGotoStatement(ctx as CPPASTGotoStatement)
-            }
+            HandlerInterface { handleGotoStatement(it as CPPASTGotoStatement) }
         map[CPPASTTryBlockStatement::class.java] =
-            HandlerInterface { ctx: IASTStatement ->
-                handleTryBlockStatement(ctx as CPPASTTryBlockStatement)
-            }
+            HandlerInterface { handleTryBlockStatement(it as CPPASTTryBlockStatement) }
         map[CPPASTCatchHandler::class.java] =
-            HandlerInterface { ctx: IASTStatement ->
-                handleCatchHandler(ctx as ICPPASTCatchHandler)
-            }
+            HandlerInterface { handleCatchHandler(it as ICPPASTCatchHandler) }
     }
 
     private fun handleEmptyStatement(emptyStmt: CPPASTNullStatement): EmptyStatement {

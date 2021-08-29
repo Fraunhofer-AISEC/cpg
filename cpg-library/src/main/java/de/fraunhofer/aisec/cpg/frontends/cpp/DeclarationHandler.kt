@@ -49,16 +49,11 @@ import org.eclipse.cdt.core.dom.ast.IASTTranslationUnit.IDependencyTree.IASTIncl
 import org.eclipse.cdt.internal.core.dom.parser.cpp.*
 
 class DeclarationHandler(lang: CXXLanguageFrontend) :
-    Handler<Declaration?, IASTDeclaration?, CXXLanguageFrontend?>(
-        Supplier { Declaration() },
-        lang
-    ) {
+    Handler<Declaration?, IASTDeclaration, CXXLanguageFrontend?>(Supplier { Declaration() }, lang) {
 
     init {
         map[CPPASTTemplateDeclaration::class.java] =
-            HandlerInterface { ctx: IASTDeclaration ->
-                handleTemplateDeclaration(ctx as CPPASTTemplateDeclaration)
-            }
+            HandlerInterface { handleTemplateDeclaration(it as CPPASTTemplateDeclaration) }
         map[CPPASTSimpleDeclaration::class.java] =
             HandlerInterface { ctx: IASTDeclaration ->
                 handleSimpleDeclaration(ctx as CPPASTSimpleDeclaration)
