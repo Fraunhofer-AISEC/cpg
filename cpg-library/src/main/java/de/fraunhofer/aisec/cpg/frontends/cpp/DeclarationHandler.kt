@@ -223,22 +223,15 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
     }
 
     private fun handleTemplateDeclaration(ctx: CPPASTTemplateDeclaration): Declaration {
+        val name = ctx.rawSignature.split("{").toTypedArray()[0].replace('\n', ' ').trim()
+
         val templateDeclaration: TemplateDeclaration =
             if (ctx.declaration is CPPASTFunctionDefinition) {
-                NodeBuilder.newFunctionTemplateDeclaration(
-                    ctx.rawSignature.split("\\{").toTypedArray()[0].replace('\n', ' ').trim {
-                        it <= ' '
-                    },
-                    lang.getCodeFromRawNode(ctx)
-                )
+                NodeBuilder.newFunctionTemplateDeclaration(name, lang.getCodeFromRawNode(ctx))
             } else {
-                NodeBuilder.newClassTemplateDeclaration(
-                    ctx.rawSignature.split("\\{").toTypedArray()[0].replace('\n', ' ').trim {
-                        it <= ' '
-                    },
-                    lang.getCodeFromRawNode(ctx)
-                )
+                NodeBuilder.newClassTemplateDeclaration(name, lang.getCodeFromRawNode(ctx))
             }
+
         templateDeclaration.location = lang.getLocationFromRawNode(ctx)
         lang.scopeManager.addDeclaration(templateDeclaration)
         lang.scopeManager.enterScope(templateDeclaration)
@@ -254,7 +247,9 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
             (innerDeclaration as? RecordDeclaration)?.let {
                 fixTypeOfInnerDeclaration(templateDeclaration, it)
             }
+
         addRealizationToScope(templateDeclaration)
+
         return templateDeclaration
     }
 

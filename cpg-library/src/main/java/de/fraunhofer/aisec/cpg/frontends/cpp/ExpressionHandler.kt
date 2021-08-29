@@ -857,23 +857,23 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
     }
 
     private val String.suffix: String
-    get() {
-        var suffix = ""
+        get() {
+            var suffix = ""
 
-        // maximum suffix length is 3
-        for (i in 1..3) {
-            val digit = this.substring(max(0, this.length - i))
-            suffix =
-                if (digit.chars().allMatch { character: Int ->
-                        character == 'u'.code || character == 'l'.code
+            // maximum suffix length is 3
+            for (i in 1..3) {
+                val digit = this.substring(max(0, this.length - i))
+                suffix =
+                    if (digit.chars().allMatch { character: Int ->
+                            character == 'u'.code || character == 'l'.code
+                        }
+                    ) {
+                        digit
+                    } else {
+                        break
                     }
-                ) {
-                    digit
-                } else {
-                    break
-                }
-        }
+            }
 
-        return suffix
-    }
+            return suffix
+        }
 }
