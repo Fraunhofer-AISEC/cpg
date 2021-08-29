@@ -33,9 +33,9 @@ plugins {
     signing
 
     id("org.sonarqube") version "3.3"
-    id("com.diffplug.spotless") version "5.14.0"
+    id("com.diffplug.spotless") version "5.14.3"
     id("com.github.johnrengelman.shadow") version "7.0.0" apply false
-    kotlin("jvm") version "1.5.10" apply false
+    kotlin("jvm") version "1.5.30" apply false
 }
 
 allprojects {
