@@ -58,12 +58,10 @@ class InitializerHandler(lang: CXXLanguageFrontend) :
 
     private fun handleConstructorInitializer(ctx: CPPASTConstructorInitializer): Expression {
         val constructExpression = NodeBuilder.newConstructExpression(ctx.rawSignature)
-        var i = 0
-        for (argument in ctx.arguments) {
+        for ((i, argument) in ctx.arguments.withIndex()) {
             val arg = lang.expressionHandler.handle(argument)
             arg!!.argumentIndex = i
             constructExpression.addArgument(arg)
-            i++
         }
         return constructExpression
     }

@@ -49,34 +49,21 @@ import org.eclipse.cdt.core.dom.ast.IASTTranslationUnit.IDependencyTree.IASTIncl
 import org.eclipse.cdt.internal.core.dom.parser.cpp.*
 
 class DeclarationHandler(lang: CXXLanguageFrontend) :
-    Handler<Declaration?, IASTDeclaration, CXXLanguageFrontend?>(Supplier { Declaration() }, lang) {
+    Handler<Declaration?, IASTDeclaration, CXXLanguageFrontend>(Supplier { Declaration() }, lang) {
 
     init {
         map[CPPASTTemplateDeclaration::class.java] =
             HandlerInterface { handleTemplateDeclaration(it as CPPASTTemplateDeclaration) }
         map[CPPASTSimpleDeclaration::class.java] =
-            HandlerInterface { ctx: IASTDeclaration ->
-                handleSimpleDeclaration(ctx as CPPASTSimpleDeclaration)
-            }
+            HandlerInterface { handleSimpleDeclaration(it as CPPASTSimpleDeclaration) }
         map[CPPASTFunctionDefinition::class.java] =
-            HandlerInterface { ctx: IASTDeclaration ->
-                handleFunctionDefinition(ctx as CPPASTFunctionDefinition)
-            }
-        //    map.put(
-        //        CPPASTLinkageSpecification.class,
-        //        ctx -> handleInclude((CPPASTLinkageSpecification) ctx));
+            HandlerInterface { handleFunctionDefinition(it as CPPASTFunctionDefinition) }
         map[CPPASTProblemDeclaration::class.java] =
-            HandlerInterface { ctx: IASTDeclaration ->
-                handleProblem(ctx as CPPASTProblemDeclaration)
-            }
+            HandlerInterface { handleProblem(it as CPPASTProblemDeclaration) }
         map[CPPASTNamespaceDefinition::class.java] =
-            HandlerInterface { ctx: IASTDeclaration ->
-                handleNamespace(ctx as CPPASTNamespaceDefinition)
-            }
+            HandlerInterface { handleNamespace(it as CPPASTNamespaceDefinition) }
         map[CPPASTUsingDirective::class.java] =
-            HandlerInterface { ctx: IASTDeclaration ->
-                handleUsingDirective(ctx as CPPASTUsingDirective)
-            }
+            HandlerInterface { handleUsingDirective(it as CPPASTUsingDirective) }
     }
 
     private fun handleUsingDirective(using: CPPASTUsingDirective): Declaration {
@@ -89,18 +76,22 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
         lang.scopeManager.addDeclaration(declaration)
         lang.scopeManager.enterScope(declaration)
         for (child in ctx.children) {
-            if (child is IASTDeclaration) {
-                handle(child)
-            } else if (child is CPPASTName) {
-                // this is the name of the namespace. Already parsed outside, skipping.
-            } else {
-                Util.errorWithFileLocation(
-                    lang,
-                    ctx,
-                    log,
-                    "Unknown child in namespace: {}",
-                    child.javaClass
-                )
+            when (child) {
+                is IASTDeclaration -> {
+                    handle(child)
+                }
+                is CPPASTName -> {
+                    // this is the name of the namespace. Already parsed outside, skipping.
+                }
+                else -> {
+                    Util.errorWithFileLocation(
+                        lang,
+                        ctx,
+                        log,
+                        "Unknown child in namespace: {}",
+                        child.javaClass
+                    )
+                }
             }
         }
         lang.scopeManager.leaveScope(declaration)
@@ -118,7 +109,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
         return problem
     }
 
-    private fun handleFunctionDefinition(ctx: CPPASTFunctionDefinition): FunctionDeclaration? {
+    private fun handleFunctionDefinition(ctx: CPPASTFunctionDefinition): FunctionDeclaration {
         // Todo: A problem with cpp functions is that we cannot know if they may throw an exception
         // as
         // throw(...) is not compiler enforced (Problem for TryStatement)
@@ -142,8 +133,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
             }
 
             // update the definition
-            var candidates: List<MethodDeclaration>
-            candidates =
+            var candidates: List<MethodDeclaration> =
                 if (functionDeclaration is ConstructorDeclaration) {
                     recordDeclaration.constructors
                 } else {
@@ -178,12 +168,11 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
         if (ctx.body != null) {
             val bodyStatement = lang.statementHandler.handle(ctx.body)
             if (bodyStatement is CompoundStatement) {
-                val body = bodyStatement as CompoundStatement
-                val statements = body.statementEdges
+                val statements = bodyStatement.statementEdges
 
                 // get the last statement
                 var lastStatement: Statement? = null
-                if (!statements.isEmpty()) {
+                if (statements.isNotEmpty()) {
                     lastStatement = statements[statements.size - 1].end
                 }
 
@@ -191,9 +180,9 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
                 if (lastStatement !is ReturnStatement) {
                     val returnStatement = NodeBuilder.newReturnStatement("return;")
                     returnStatement.isImplicit = true
-                    body.addStatement(returnStatement)
+                    bodyStatement.addStatement(returnStatement)
                 }
-                functionDeclaration.body = body
+                functionDeclaration.body = bodyStatement
             }
         }
         lang.processAttributes(functionDeclaration, ctx)
@@ -231,7 +220,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
                 // are
                 // typedefs themselves
                 ctx.declSpecifier.toString() == "struct" &&
-                    ctx.rawSignature.strip().startsWith("typedef")
+                    ctx.rawSignature.trim().startsWith("typedef")
             } else {
                 true
             }
@@ -318,8 +307,8 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
                     val defaultExpression =
                         lang.initializerHandler.handle(templateParameter.declarator.initializer)
                     nonTypeTemplateParamDeclaration!!.default = defaultExpression
-                    nonTypeTemplateParamDeclaration!!.addPrevDFG(defaultExpression!!)
-                    defaultExpression!!.addNextDFG(nonTypeTemplateParamDeclaration!!)
+                    nonTypeTemplateParamDeclaration.addPrevDFG(defaultExpression!!)
+                    defaultExpression.addNextDFG(nonTypeTemplateParamDeclaration)
                 }
                 templateDeclaration.addParameter(nonTypeTemplateParamDeclaration)
                 lang.scopeManager.addDeclaration(nonTypeTemplateParamDeclaration)
@@ -399,7 +388,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
                 lang.declaratorHandler.handle(ctx.declSpecifier as CPPASTCompositeTypeSpecifier)
 
             // handle typedef
-            if (declaration!!.name.isEmpty() && ctx.rawSignature.strip().startsWith("typedef")) {
+            if (declaration!!.name.isEmpty() && ctx.rawSignature.trim().startsWith("typedef")) {
                 // CDT didn't find out the name due to this thing being a typedef. We need to fix
                 // this
                 val endOfDeclaration = ctx.rawSignature.lastIndexOf('}')
@@ -414,11 +403,11 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
                             .stream()
                             .filter { p: String -> !p.contains("*") && !p.contains("[") }
                             .findFirst()
-                    name.ifPresent { s: String -> declaration!!.name = s.replace(";", "") }
+                    name.ifPresent { s: String -> declaration.name = s.replace(";", "") }
                 }
             }
-            lang.processAttributes(declaration!!, ctx)
-            sequence.addDeclaration(declaration!!)
+            lang.processAttributes(declaration, ctx)
+            sequence.addDeclaration(declaration)
         } else if (declSpecifier is CPPASTElaboratedTypeSpecifier) {
             Util.warnWithFileLocation(
                 lang,
@@ -519,10 +508,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
         if (includes != null) {
             for (n in includes) {
                 val strings =
-                    allIncludes.computeIfAbsent(n.includeDirective.containingFilename) { k: String?
-                        ->
-                        HashSet()
-                    }
+                    allIncludes.computeIfAbsent(n.includeDirective.containingFilename) { HashSet() }
                 strings.add(n.includeDirective.path)
                 parseInclusions(n.nestedInclusions, allIncludes)
             }
@@ -549,8 +535,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
             }
             val decl = handle(declaration) ?: continue
             if (decl is ProblemDeclaration) {
-                val problems =
-                    problematicIncludes.computeIfAbsent(decl.filename) { k: String? -> HashSet() }
+                val problems = problematicIncludes.computeIfAbsent(decl.filename) { HashSet() }
                 problems.add(decl)
             }
         }

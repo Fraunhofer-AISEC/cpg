@@ -46,6 +46,7 @@ import java.lang.reflect.Field
 import java.nio.file.Path
 import java.util.*
 import java.util.stream.Collectors
+import kotlin.math.min
 import org.eclipse.cdt.core.dom.ast.*
 import org.eclipse.cdt.core.dom.ast.gnu.cpp.GPPLanguage
 import org.eclipse.cdt.core.index.IIndexFileLocation
@@ -58,7 +59,6 @@ import org.eclipse.cdt.internal.core.dom.parser.ASTNode
 import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTTranslationUnit
 import org.eclipse.cdt.internal.core.parser.IMacroDictionary
 import org.eclipse.cdt.internal.core.parser.scanner.AbstractCharArray
-import org.eclipse.cdt.internal.core.parser.scanner.CharArray
 import org.eclipse.cdt.internal.core.parser.scanner.InternalFileContent
 import org.eclipse.cdt.internal.core.parser.scanner.InternalFileContentProvider
 import org.eclipse.core.runtime.CoreException
@@ -72,6 +72,7 @@ import org.slf4j.LoggerFactory
  */
 class CXXLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeManager?) :
     LanguageFrontend(config, scopeManager, "::"), HasDefaultArguments, HasTemplates {
+
     private val includeFileContentProvider: IncludeFileContentProvider =
         object : InternalFileContentProvider() {
             private fun getContentUncached(path: String): InternalFileContent? {
@@ -99,7 +100,7 @@ class CXXLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeM
             }
 
             private fun hasIncludeWhitelist(): Boolean {
-                return config.includeWhitelist != null && !config.includeWhitelist.isEmpty()
+                return config.includeWhitelist != null && config.includeWhitelist.isNotEmpty()
             }
 
             /**
@@ -130,7 +131,7 @@ class CXXLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeM
                 }
                 includeLocations.addAll(
                     Arrays.stream(config.includePaths)
-                        .map { s: String? -> Path.of(s).toAbsolutePath() }
+                        .map { Path.of(it).toAbsolutePath() }
                         .collect(Collectors.toList())
                 )
                 for (includeLocation in includeLocations) {
@@ -158,6 +159,7 @@ class CXXLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeM
                 return getContentUncached(astPath)
             }
         }
+
     val declarationHandler = DeclarationHandler(this)
     val declaratorHandler = DeclaratorHandler(this)
     val expressionHandler = ExpressionHandler(this)
@@ -176,7 +178,7 @@ class CXXLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeM
         if (config.topLevel != null) {
             includePaths.add(config.topLevel.toPath().toAbsolutePath().toString())
         }
-        includePaths.addAll(Arrays.asList(*config.includePaths))
+        includePaths.addAll(listOf(*config.includePaths))
         val scannerInfo = ScannerInfo(config.symbols, includePaths.toTypedArray())
         val log = DefaultLogService()
         val opts = ILanguage.OPTION_PARSE_INACTIVE_CODE // | ILanguage.OPTION_ADD_COMMENTS;
@@ -221,6 +223,7 @@ class CXXLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeM
             val node = astNode as ASTNode
             return node.rawSignature
         }
+
         return null
     }
 
@@ -234,8 +237,7 @@ class CXXLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeM
                  * This may break in future versions of CDT parser, when fields are renamed (which is unlikely). In this case, we will go the standard route.
                  * Note, the only reason we are doing this is to compute the start and end columns of the current node.
                  */
-                var translationUnitRawSignature: AbstractCharArray = CharArray("")
-                translationUnitRawSignature =
+                val translationUnitRawSignature: AbstractCharArray =
                     try {
                         val fLoc = getField(fLocation.javaClass, "fLocationCtx")
                         fLoc.trySetAccessible()
@@ -339,8 +341,7 @@ class CXXLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeM
 
     private fun handleToken(token: IASTToken): AnnotationMember {
         val code = String(token.tokenCharImage)
-        val expression: Expression
-        expression =
+        val expression: Expression =
             when (token.tokenType) {
                 1 -> // a variable
                 NodeBuilder.newDeclaredReferenceExpression(code, UnknownType.getUnknownType(), code)
@@ -396,8 +397,8 @@ class CXXLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeM
     }
 
     companion object {
-        @JvmField val CXX_EXTENSIONS = java.util.List.of(".c", ".cpp", ".cc")
-        @JvmField val CXX_HEADER_EXTENSIONS = java.util.List.of(".h", ".hpp")
+        @JvmField val CXX_EXTENSIONS = mutableListOf(".c", ".cpp", ".cc")
+        @JvmField val CXX_HEADER_EXTENSIONS = mutableListOf(".h", ".hpp")
         private val LOGGER = LoggerFactory.getLogger(CXXLanguageFrontend::class.java)
 
         /**
@@ -411,18 +412,18 @@ class CXXLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeM
          * defining newline.
          */
         private fun getEndColumnIndex(posPrefix: AbstractCharArray, end: Int): Int {
-            var end = end
+            var mutableEnd = end
             var column = 1
 
             // In case the current element goes until EOF, we need to back up "end" by one.
             try {
-                if (end - 1 >= posPrefix.length || posPrefix[end - 1] == '\n') {
-                    end = Math.min(end - 1, posPrefix.length - 1)
+                if (mutableEnd - 1 >= posPrefix.length || posPrefix[mutableEnd - 1] == '\n') {
+                    mutableEnd = min(mutableEnd - 1, posPrefix.length - 1)
                 }
             } catch (e: ArrayIndexOutOfBoundsException) {
                 log.error("could not update end ", e)
             }
-            for (i in end - 1 downTo 2) {
+            for (i in mutableEnd - 1 downTo 2) {
                 if (posPrefix[i] == '\n') {
                     break
                 }
@@ -434,15 +435,19 @@ class CXXLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeM
         private fun explore(node: IASTNode, indent: Int) {
             val children = node.children
             val s = StringBuilder()
+
             s.append(" ".repeat(indent))
-            log.trace(
-                "{}{} -> {}",
-                s,
-                node.javaClass.simpleName,
-                node.rawSignature.replace('\n', '\\').replace('\t', ' ')
-            )
-            for (iastNode in children) {
-                explore(iastNode, indent + 2)
+            if (log.isTraceEnabled) {
+                log.trace(
+                    "{}{} -> {}",
+                    s,
+                    node.javaClass.simpleName,
+                    node.rawSignature.replace('\n', '\\').replace('\t', ' ')
+                )
+            }
+
+            for (astNode in children) {
+                explore(astNode, indent + 2)
             }
         }
     }

@@ -99,7 +99,7 @@ class StatementHandler(lang: CXXLanguageFrontend) :
                 .map { catchHandler: ICPPASTCatchHandler -> handleCatchHandler(catchHandler) }
                 .collect(Collectors.toList())
         tryStatement.tryBlock = statement
-        tryStatement.setCatchClauses(catchClauses)
+        tryStatement.catchClauses = catchClauses
         lang.scopeManager.leaveScope(tryStatement)
         return tryStatement
     }
@@ -158,16 +158,15 @@ class StatementHandler(lang: CXXLanguageFrontend) :
         val assigneeTargetLabel = BiConsumer { _: Any, to: Any? ->
             statement.targetLabel = to as LabelStatement?
         }
-        var b: IBinding? = null
+        val b: IBinding?
         try {
             b = ctx.name.resolveBinding()
             if (b is ILabel) {
-                val label = b
-                label.labelStatement
+                b.labelStatement
                 // If the bound AST node is/or was transformed into a CPG node the cpg node is bound
                 // to the
                 // CPG goto statement
-                lang.registerObjectListener(label.labelStatement, assigneeTargetLabel)
+                lang.registerObjectListener(b.labelStatement, assigneeTargetLabel)
             }
         } catch (e: Exception) {
             // If the Label AST node was could not be resolved, the matchign is done based on label
@@ -266,7 +265,7 @@ class StatementHandler(lang: CXXLanguageFrontend) :
             val declarationStatement = NodeBuilder.newDeclarationStatement(ctx.rawSignature)
             val declaration = lang.declarationHandler.handle(ctx.declaration)
             if (declaration is DeclarationSequence) {
-                declarationStatement.setDeclarations(declaration.asList())
+                declarationStatement.declarations = declaration.asList()
             } else {
                 declarationStatement.singleDeclaration = declaration
             }

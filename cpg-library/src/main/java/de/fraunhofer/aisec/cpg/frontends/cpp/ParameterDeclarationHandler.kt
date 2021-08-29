@@ -97,7 +97,7 @@ class ParameterDeclarationHandler(lang: CXXLanguageFrontend) :
                 false,
                 ctx.rawSignature
             )
-        if (!typeAdjustment.isEmpty()) {
+        if (typeAdjustment.isNotEmpty()) {
             paramVariableDeclaration.type =
                 TypeParser.createFrom(ctx.declSpecifier.toString() + typeAdjustment, true, lang)
         } else {

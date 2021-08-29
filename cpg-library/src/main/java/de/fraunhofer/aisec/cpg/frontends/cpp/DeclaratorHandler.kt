@@ -150,7 +150,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
         var hasPointer = false
         while (nameDecl.nestedDeclarator != null) {
             nameDecl = nameDecl.nestedDeclarator
-            if (nameDecl.pointerOperators.size > 0) {
+            if (nameDecl.pointerOperators.isNotEmpty()) {
                 hasPointer = true
             }
         }
@@ -184,10 +184,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
         if (name.contains(lang.namespaceDelimiter)) {
             val rr = name.split(lang.namespaceDelimiter).toTypedArray()
             val recordName =
-                java.lang.String.join(
-                    lang.namespaceDelimiter,
-                    Arrays.asList(*rr).subList(0, rr.size - 1)
-                )
+                java.lang.String.join(lang.namespaceDelimiter, listOf(*rr).subList(0, rr.size - 1))
             val methodName = rr[rr.size - 1]
             recordDeclaration =
                 lang.scopeManager.getRecordForName(lang.scopeManager.currentScope!!, recordName)
@@ -298,7 +295,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
             val matcher = namePattern.matcher(code)
             var fieldName: String? = ""
             if (matcher.find()) {
-                fieldName = matcher.group("name").strip()
+                fieldName = matcher.group("name").trim()
             }
             result =
                 NodeBuilder.newFieldDeclaration(
@@ -327,7 +324,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
             parent = parent.parent
         }
         if (parent != null) {
-            result.setType(TypeParser.createFrom(parent.rawSignature, true, lang))
+            result.type = TypeParser.createFrom(parent.rawSignature, true, lang)
             result.refreshType()
         } else {
             log.warn("Could not find suitable parent ast node for function pointer node: {}", this)

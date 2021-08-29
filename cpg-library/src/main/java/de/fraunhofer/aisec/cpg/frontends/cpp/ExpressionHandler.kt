@@ -38,6 +38,7 @@ import java.math.BigInteger
 import java.util.*
 import java.util.function.Supplier
 import java.util.stream.Collectors
+import kotlin.math.max
 import org.eclipse.cdt.core.dom.ast.*
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTExpression
 import org.eclipse.cdt.internal.core.dom.parser.CStringValue
@@ -260,7 +261,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             // we also need to "forward" our template parameters (if we have any) to the construct
             // expression since the construct expression will do the actual template instantiation
             if (newExpression.templateParameters != null &&
-                    !newExpression.templateParameters.isEmpty()
+                    newExpression.templateParameters.isNotEmpty()
             ) {
                 CallResolver.addImplicitTemplateParametersToCall(
                     newExpression.templateParameters,
@@ -327,12 +328,11 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
         val iType = expressionTypeProxy(ctx)
         castType =
             if (iType is CPPPointerType) {
-                val pointerType = iType
-                if (pointerType.type is IProblemType) {
+                if (iType.type is IProblemType) {
                     // fall back to fTypeId
                     TypeParser.createFrom(ctx.typeId.declSpecifier.toString() + "*", true, lang)
                 } else {
-                    TypeParser.createFrom(pointerType.type.toString() + "*", true, lang)
+                    TypeParser.createFrom(iType.type.toString() + "*", true, lang)
                 }
             } else if (iType is IProblemType) {
                 // fall back to fTypeId
@@ -535,12 +535,11 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             // }
             callExpression = NodeBuilder.newCallExpression(name, fqn, ctx.rawSignature, false)
         }
-        var i = 0
-        for (argument in ctx.arguments) {
+
+        for ((i, argument) in ctx.arguments.withIndex()) {
             val arg = handle(argument)
             arg!!.argumentIndex = i
             callExpression.addArgument(arg)
-            i++
         }
 
         // Important: we don't really need the reference node, but even its temporary creation might
@@ -644,8 +643,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
         }
         val binaryOperator = NodeBuilder.newBinaryOperator(operatorCode, ctx.rawSignature)
         val lhs = handle(ctx.operand1)
-        val rhs: Expression?
-        rhs =
+        val rhs =
             if (ctx.operand2 != null) {
                 handle(ctx.operand2)
             } else {
@@ -653,18 +651,18 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             }
         binaryOperator.lhs = lhs
         binaryOperator.rhs = rhs
-        val expressionType = expressionTypeProxy(ctx)
-        if (expressionType == null ||
-                expressionType is ProblemType ||
-                expressionType is ProblemBinding
-        ) {
-            log.debug("CDT could not deduce type. Type is set to null")
-        } else if (expressionType is TypeOfDependentExpression) {
-            log.debug("Type of Expression depends on the type the template is initialized with")
-            binaryOperator.type = UnknownType.getUnknownType()
-        } else {
-            binaryOperator.type =
-                TypeParser.createFrom(expressionTypeProxy(ctx).toString(), true, lang)
+        when (expressionTypeProxy(ctx)) {
+            is ProblemType, is ProblemBinding -> {
+                log.debug("CDT could not deduce type. Type is set to null")
+            }
+            is TypeOfDependentExpression -> {
+                log.debug("Type of Expression depends on the type the template is initialized with")
+                binaryOperator.type = UnknownType.getUnknownType()
+            }
+            else -> {
+                binaryOperator.type =
+                    TypeParser.createFrom(expressionTypeProxy(ctx).toString(), true, lang)
+            }
         }
         return binaryOperator
     }
@@ -725,35 +723,40 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
     ): DesignatedInitializerExpression {
         val rhs = handle(ctx.operand)
         val lhs = ArrayList<Expression>()
-        if (ctx.designators.size == 0) {
+        if (ctx.designators.isEmpty()) {
             Util.errorWithFileLocation(lang, ctx, log, "no designator found")
         } else {
             for (des in ctx.designators) {
                 var oneLhs: Expression? = null
-                if (des is CPPASTArrayDesignator) {
-                    oneLhs = handle(des.subscriptExpression)
-                } else if (des is CPPASTFieldDesignator) {
-                    oneLhs =
-                        NodeBuilder.newDeclaredReferenceExpression(
-                            des.name.toString(),
-                            UnknownType.getUnknownType(),
-                            des.getRawSignature()
+                when (des) {
+                    is CPPASTArrayDesignator -> {
+                        oneLhs = handle(des.subscriptExpression)
+                    }
+                    is CPPASTFieldDesignator -> {
+                        oneLhs =
+                            NodeBuilder.newDeclaredReferenceExpression(
+                                des.name.toString(),
+                                UnknownType.getUnknownType(),
+                                des.getRawSignature()
+                            )
+                    }
+                    is CPPASTArrayRangeDesignator -> {
+                        oneLhs =
+                            NodeBuilder.newArrayRangeExpression(
+                                handle(des.rangeFloor),
+                                handle(des.rangeCeiling),
+                                des.getRawSignature()
+                            )
+                    }
+                    else -> {
+                        Util.errorWithFileLocation(
+                            lang,
+                            ctx,
+                            log,
+                            "Unknown designated lhs {}",
+                            des.javaClass.toGenericString()
                         )
-                } else if (des is CPPASTArrayRangeDesignator) {
-                    oneLhs =
-                        NodeBuilder.newArrayRangeExpression(
-                            handle(des.rangeFloor),
-                            handle(des.rangeCeiling),
-                            des.getRawSignature()
-                        )
-                } else {
-                    Util.errorWithFileLocation(
-                        lang,
-                        ctx,
-                        log,
-                        "Unknown designated lhs {}",
-                        des.javaClass.toGenericString()
-                    )
+                    }
                 }
                 if (oneLhs != null) {
                     lhs.add(oneLhs)
@@ -794,14 +797,13 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
         // basically we parse everything as BigInteger and then decide what to do
         bigValue = BigInteger(strippedValue, radix)
         val numberValue: Number
-        val type: Type
         if ("ull" == suffix || "ul" == suffix) {
             // unsigned long (long) will always be represented as BigInteger
             numberValue = bigValue
         } else if ("ll" == suffix || "l" == suffix) {
             // both long and long long can be represented in Java long, but only within
             // Long.MAX_VALUE
-            if (bigValue.compareTo(BigInteger.valueOf(Long.MAX_VALUE)) > 0) {
+            if (bigValue > BigInteger.valueOf(Long.MAX_VALUE)) {
                 // keep it as BigInteger
                 numberValue = bigValue
                 Util.warnWithFileLocation(
@@ -815,10 +817,9 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                 numberValue = bigValue.toLong()
             }
         } else {
-            // no suffix, we just cast it to the appropriate signed type that is required, but only
-            // within
-            // Long.MAX_VALUE
-            if (bigValue.compareTo(BigInteger.valueOf(Long.MAX_VALUE)) > 0) {
+            // No suffix, we just cast it to the appropriate signed type that is required, but only
+            // within Long.MAX_VALUE
+            if (bigValue > BigInteger.valueOf(Long.MAX_VALUE)) {
                 // keep it as BigInteger
                 numberValue = bigValue
                 Util.warnWithFileLocation(
@@ -836,7 +837,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
         }
 
         // retrieve type based on stored Java number
-        type =
+        val type =
             if (numberValue is BigInteger) {
                 // we follow the way clang/llvm handles this and this seems to always
                 // be an unsigned long long, except if it is explicitly specified as ul
@@ -849,6 +850,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             } else {
                 TypeParser.createFrom("int", true)
             }
+
         return NodeBuilder.newLiteral(numberValue, type, ctx.rawSignature)
     }
 
@@ -857,7 +859,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
 
         // maximum suffix length is 3
         for (i in 1..3) {
-            val digit = value.substring(Math.max(0, value.length - i))
+            val digit = value.substring(max(0, value.length - i))
             suffix =
                 if (digit.chars().allMatch { character: Int ->
                         character == 'u'.code || character == 'l'.code
