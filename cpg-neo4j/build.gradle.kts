@@ -62,6 +62,8 @@ dependencies {
     api("org.neo4j", "neo4j-ogm", versions["neo4j-ogm"])
     api("org.neo4j", "neo4j-ogm-bolt-driver", versions["neo4j-ogm"])
 
+    implementation("org.jetbrains.kotlin:kotlin-reflect")
+
     // JUnit
     testImplementation("org.junit.jupiter", "junit-jupiter-api", versions["junit5"])
     testImplementation("org.junit.jupiter", "junit-jupiter-params", versions["junit5"])
