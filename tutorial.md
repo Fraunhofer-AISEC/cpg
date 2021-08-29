@@ -187,23 +187,23 @@ Because the manual analyis we have shown can be quite tedious, we already includ
 ```kotlin
 [11] :run
 
----FINDING: Out of bounds access in ArrayCreationExpression when accessing index 11 of a, an array of length 10-- -
-        src / test / resources / array.go:6:2: a[11]
+--- FINDING: Out of bounds access in ArrayCreationExpression when accessing index 11 of a, an array of length 10 ---
+src/test/resources/array.go:6:2: a[11]
 
 The following path was discovered that leads to 11 being 11:
-src / test / resources / array.go:6:4: 11
+src/test/resources/array.go:6:4: 11
 
----FINDING: Out of bounds access in ArrayCreationExpression when accessing index 5 of c, an array of length 4-- -
-        src / test / resources / array.cpp:6:12: = c[b]
+--- FINDING: Out of bounds access in ArrayCreationExpression when accessing index 5 of c, an array of length 4 ---
+src/test/resources/array.cpp:6:12: = c[b]
 
 The following path was discovered that leads to b being 5:
-src / test / resources / array.cpp:6:16: b
-src / test / resources / array.cpp:4:5: int b = a +1
-src / test / resources / array.cpp:4:11: = a + 1
-src / test / resources / array.cpp:4:13: a
-src / test / resources / array.cpp:3:5: int a = 4
-src / test / resources / array.cpp:3:11: = 4
-src / test / resources / array.cpp:4:17: 1
+src/test/resources/array.cpp:6:16: b
+src/test/resources/array.cpp:4:5: int b = a + 1;
+src/test/resources/array.cpp:4:11: = a + 1
+src/test/resources/array.cpp:4:13: a
+src/test/resources/array.cpp:3:5: int a = 4;
+src/test/resources/array.cpp:3:11: = 4
+src/test/resources/array.cpp:4:17: 1
 ```
 
 Lastly, it is also possible to export the complete graph structure to a graph database, such as Neo4J with a simple `:export` command.
