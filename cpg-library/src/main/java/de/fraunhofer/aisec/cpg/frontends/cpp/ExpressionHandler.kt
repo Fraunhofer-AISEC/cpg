@@ -763,16 +763,18 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                 }
             }
         }
+
         val die = NodeBuilder.newDesignatedInitializerExpression(ctx.rawSignature)
         die.lhs = lhs
         die.rhs = rhs
+
         return die
     }
 
     private fun handleIntegerLiteral(ctx: CPPASTLiteralExpression): Literal<*> {
         val value = String(ctx.value).lowercase(Locale.getDefault())
         val bigValue: BigInteger
-        val suffix = getSuffix(value)
+        val suffix = value.suffix
 
         // first, strip the suffix from the value
         var strippedValue = value.substring(0, value.length - suffix.length)
@@ -854,12 +856,13 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
         return NodeBuilder.newLiteral(numberValue, type, ctx.rawSignature)
     }
 
-    private fun getSuffix(value: String): String {
+    private val String.suffix: String
+    get() {
         var suffix = ""
 
         // maximum suffix length is 3
         for (i in 1..3) {
-            val digit = value.substring(max(0, value.length - i))
+            val digit = this.substring(max(0, this.length - i))
             suffix =
                 if (digit.chars().allMatch { character: Int ->
                         character == 'u'.code || character == 'l'.code
@@ -870,6 +873,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                     break
                 }
         }
+
         return suffix
     }
 }

@@ -73,28 +73,19 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
     private fun handleNamespace(ctx: CPPASTNamespaceDefinition): Declaration {
         val fqn = lang.scopeManager.currentNamePrefixWithDelimiter + ctx.name.toString()
         val declaration = NodeBuilder.newNamespaceDeclaration(fqn, lang.getCodeFromRawNode(ctx))
+
         lang.scopeManager.addDeclaration(declaration)
+
+        // enter the namespace scope
         lang.scopeManager.enterScope(declaration)
-        for (child in ctx.children) {
-            when (child) {
-                is IASTDeclaration -> {
-                    handle(child)
-                }
-                is CPPASTName -> {
-                    // this is the name of the namespace. Already parsed outside, skipping.
-                }
-                else -> {
-                    Util.errorWithFileLocation(
-                        lang,
-                        ctx,
-                        log,
-                        "Unknown child in namespace: {}",
-                        child.javaClass
-                    )
-                }
-            }
+
+        // finally, handle all namespace declarations
+        for (child in ctx.declarations) {
+            handle(child)
         }
+
         lang.scopeManager.leaveScope(declaration)
+
         return declaration
     }
 
@@ -105,7 +96,9 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
                 ctx.problem.message,
                 ctx.problem.fileLocation.toString()
             )
+
         lang.scopeManager.addDeclaration(problem)
+
         return problem
     }
 
@@ -115,7 +108,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
         // throw(...) is not compiler enforced (Problem for TryStatement)
         val functionDeclaration =
             lang.declaratorHandler.handle(ctx.declarator) as FunctionDeclaration
-        val typeString = getTypeStringFromDeclarator(ctx.declarator, ctx.declSpecifier)
+        val typeString = ctx.declarator.getTypeString(ctx.declSpecifier)
         functionDeclaration.setIsDefinition(true)
         functionDeclaration.type = TypeParser.createFrom(typeString, true, lang)
 
@@ -422,7 +415,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
         } else {
             for (declarator in ctx.declarators) {
                 val declaration = lang.declaratorHandler.handle(declarator) as ValueDeclaration
-                val typeString = getTypeStringFromDeclarator(declarator, ctx.declSpecifier)
+                val typeString = declarator.getTypeString(ctx.declSpecifier)
                 val result = TypeParser.createFrom(typeString, true, lang)
                 declaration.type = result
 
@@ -434,6 +427,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
                 sequence.addDeclaration(declaration)
             }
         }
+
         return simplifySequence(sequence)
     }
 
@@ -453,16 +447,16 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
     /**
      * Handles usage of Templates in SimpleDeclarations
      *
-     * @param declSpecifier
+     * @param typeSpecifier
      * @param ctx
      * @param sequence
      */
     private fun handleTemplateUsage(
-        declSpecifier: CPPASTNamedTypeSpecifier,
+        typeSpecifier: CPPASTNamedTypeSpecifier,
         ctx: CPPASTSimpleDeclaration,
         sequence: DeclarationSequence
     ) {
-        val templateId = declSpecifier.name as CPPASTTemplateId
+        val templateId = typeSpecifier.name as CPPASTTemplateId
         val type = TypeParser.createFrom(ctx.rawSignature, true)
         val templateParams: MutableList<Node?> = ArrayList()
         assert(type.root is ObjectType)
@@ -599,19 +593,15 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
          * Returns a raw type string (that can be parsed by the [TypeParser] out of a cpp declarator
          * and associated declaration specifiers.
          *
-         * @param declarator the declarator
          * @param declSpecifier the declaration specifier
          * @return the type string
          */
-        fun getTypeStringFromDeclarator(
-            declarator: IASTDeclarator,
-            declSpecifier: IASTDeclSpecifier
-        ): String {
+        fun IASTDeclarator.getTypeString(declSpecifier: IASTDeclSpecifier): String {
             // use the declaration specifier as basis
             val typeString = StringBuilder(declSpecifier.toString())
 
             // append names, pointer operators and array modifiers and such
-            for (node in declarator.children) {
+            for (node in this.children) {
                 if (node is IASTPointerOperator || node is IASTArrayModifier) {
                     typeString.append(node.rawSignature)
                 }
