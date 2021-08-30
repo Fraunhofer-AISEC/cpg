@@ -2,143 +2,12 @@
 syntax = "proto3";
 package cpg_tree;
 
-option java_package = "de.fraunhofer.aisec.cpg.frontends.grpc.messages";;
-option java_multiple_files = true;;
-
-message GrpcLanguageFrontend {
-}
-
-message LanguageFrontend {
-  oneof languageFrontend {
-    GrpcLanguageFrontend grpcLanguageFrontend = 1;
-    CXXLanguageFrontend cXXLanguageFrontend = 2;
-    JavaLanguageFrontend javaLanguageFrontend = 3;
-  }
-  TranslationConfiguration config = 4;
-  ScopeManager scopeManager = 5;
-  repeated LanguageFrontendObjectListeners objectListeners = 6;
-  repeated LanguageFrontendPredicateListeners predicateListeners = 7;
-  repeated LanguageFrontendProcessedMapping processedMapping = 8;
-  string namespaceDelimiter = 9;
-  NodeIndex currentTU = 10;
-}
-
-message LanguageFrontendObjectListeners {
-}
-
-message LanguageFrontendPredicateListeners {
-}
-
-message LanguageFrontendProcessedMapping {
-}
-
-message CallableInterface {
-}
-
-message DeclaratorHandler {
-}
-
-message Cpp_ExpressionHandler {
-}
-
-message InitializerHandler {
-}
-
-message CXXLanguageFrontend {
-  Cpp_DeclarationHandler declarationHandler = 1;
-  DeclaratorHandler declaratorHandler = 2;
-  Cpp_ExpressionHandler expressionHandler = 3;
-  InitializerHandler initializerHandler = 4;
-  ParameterDeclarationHandler parameterDeclarationHandler = 5;
-  StatementHandler statementHandler = 6;
-  map<int32, string> comments = 7;
-}
-
-message Cpp_DeclarationHandler {
-}
-
-message StatementHandler {
-}
-
-message ParameterDeclarationHandler {
-}
-
-message Java_ExpressionHandler {
-}
-
-message JavaLanguageFrontend {
-  Java_ExpressionHandler expressionHandler = 1;
-  StatementAnalyzer statementHandler = 2;
-  Java_DeclarationHandler declarationHandler = 3;
-}
-
-message StatementAnalyzer {
-}
-
-message Java_DeclarationHandler {
-}
-
-message BreakContinueScope {
-  NodeIndex start = 1;
-  NodeIndex end = 2;
-  string label = 3;
-  NodeIndex breakLocation = 4;
-}
-
-message ControlFlowGraphPass {
-  repeated NodeIndex remaining = 1;
-  repeated BreakContinueScope breakContinueScopes = 2;
-}
-
-message Pass {
-  oneof pass {
-    ControlFlowGraphPass controlFlowGraphPass = 1;
-    TypeHierarchyResolver typeHierarchyResolver = 2;
-    ControlFlowSensitiveDFGPass controlFlowSensitiveDFGPass = 3;
-    ImportResolver importResolver = 4;
-    EvaluationOrderGraphPass evaluationOrderGraphPass = 5;
-    JavaExternalTypeHierarchyResolver javaExternalTypeHierarchyResolver = 6;
-    TypeResolver typeResolver = 7;
-    VariableUsageResolver variableUsageResolver = 8;
-    CallResolver callResolver = 9;
-    FilenameMapper filenameMapper = 10;
-  }
-  LanguageFrontend lang = 11;
-}
-
-message TypeHierarchyResolver {
-  map<string, NodeIndex> recordMap = 1;
-  repeated NodeIndex enums = 2;
-}
-
-message ControlFlowSensitiveDFGPass {
-}
-
-message ImportResolver {
-  repeated NodeIndex records = 1;
-  map<string, NodeIndex> importables = 2;
-}
-
-message EvaluationOrderGraphPassMap {
-  CallableInterface value = 1;
-}
-
-message EvaluationOrderGraphPassCurrentProperties {
-  Properties key = 1;
-}
-
-message EvaluationOrderGraphPass {
-  repeated EvaluationOrderGraphPassMap map = 1;
-  repeated NodeIndex currentEOG = 2;
-  repeated EvaluationOrderGraphPassCurrentProperties currentProperties = 3;
-  repeated NodeIndex intermediateNodes = 4;
-}
-
-message JavaExternalTypeHierarchyResolver {
-}
+option java_package = "de.fraunhofer.aisec.cpg.frontends.grpc.messages";
+option java_multiple_files = true;
+option go_package = "github.com/Fraunhofer-AISEC/cpg-rpc/proto;proto";
 
 message TypeResolverTypeStateValue {
-  repeated NodeIndex element = 1;
+  repeated NodeIndex TypeResolverTypeStateValue = 1;
 }
 
 message TypeResolverTypeState {
@@ -151,8 +20,54 @@ message TypeResolver {
   repeated TypeResolverTypeState typeState = 2;
 }
 
+message Pass {
+  oneof Pass {
+    TypeResolver TypeResolver = 1;
+    TypeHierarchyResolver TypeHierarchyResolver = 2;
+    FilenameMapper FilenameMapper = 3;
+    CallResolver CallResolver = 4;
+    ControlFlowSensitiveDFGPass ControlFlowSensitiveDFGPass = 5;
+    ImportResolver ImportResolver = 6;
+    JavaExternalTypeHierarchyResolver JavaExternalTypeHierarchyResolver = 7;
+    VariableUsageResolver VariableUsageResolver = 8;
+    EvaluationOrderGraphPass EvaluationOrderGraphPass = 9;
+  }
+}
+
+message TypeHierarchyResolver {
+  map<string, NodeIndex> recordMap = 1;
+  repeated NodeIndex enums = 2;
+}
+
+message FilenameMapper {
+}
+
+message CallResolverContainingType {
+  NodeIndex key = 1;
+  NodeIndex value = 2;
+}
+
+message CallResolver {
+  map<string, NodeIndex> recordMap = 1;
+  repeated NodeIndex templateList = 2;
+  repeated CallResolverContainingType containingType = 3;
+  NodeIndex currentTU = 4;
+  ScopedWalker walker = 5;
+}
+
+message ControlFlowSensitiveDFGPass {
+}
+
+message ImportResolver {
+  repeated NodeIndex records = 1;
+  map<string, NodeIndex> importables = 2;
+}
+
+message JavaExternalTypeHierarchyResolver {
+}
+
 message VariableUsageResolverSuperTypesMapValue {
-  repeated NodeIndex element = 1;
+  repeated NodeIndex VariableUsageResolverSuperTypesMapValue = 1;
 }
 
 message VariableUsageResolverSuperTypesMap {
@@ -178,190 +93,167 @@ message VariableUsageResolver {
   ScopedWalker walker = 5;
 }
 
-message FunctionScopeCatchesOrRelaysValue {
-  repeated NodeIndex element = 1;
+message EvaluationOrderGraphPassMap {
+  CallableInterface value = 1;
 }
 
-message FunctionScopeCatchesOrRelays {
-  NodeIndex key = 1;
-  FunctionScopeCatchesOrRelaysValue value = 2;
+message EvaluationOrderGraphPass {
+  repeated EvaluationOrderGraphPassMap map = 1;
+  repeated NodeIndex currentEOG = 2;
+  repeated NodeIndex intermediateNodes = 3;
 }
 
-message FunctionScope {
-  repeated FunctionScopeCatchesOrRelays catchesOrRelays = 1;
-}
-
-message ValueDeclarationScope {
-  oneof valueDeclarationScope {
-    FunctionScope functionScope = 1;
-    BlockScope blockScope = 2;
-    TryScope tryScope = 3;
-    SwitchScope switchScope = 4;
-    StructureDeclarationScope structureDeclarationScope = 5;
-    LoopScope loopScope = 6;
-  }
-  repeated NodeIndex valueDeclarations = 7;
-  repeated NodeIndex typedefs = 8;
-}
-
-message BlockScope {
-  repeated NodeIndex breaks = 1;
-}
-
-message TryScopeCatchesOrRelaysValue {
-  repeated NodeIndex element = 1;
-}
-
-message TryScopeCatchesOrRelays {
-  NodeIndex key = 1;
-  TryScopeCatchesOrRelaysValue value = 2;
-}
-
-message TryScope {
-  repeated TryScopeCatchesOrRelays catchesOrRelays = 1;
-  repeated NodeIndex breaks = 2;
-}
-
-message SwitchScope {
-  repeated NodeIndex breaks = 1;
-}
-
-message Scope {
-  oneof scope {
-    ValueDeclarationScope valueDeclarationScope = 1;
-  }
-  NodeIndex astNode = 2;
-  string scopedName = 3;
-  Scope parent = 4;
-  repeated Scope children = 5;
-  map<string, NodeIndex> labelStatements = 6;
-}
-
-message ScopeManagerScopeMap {
-  NodeIndex key = 1;
-  Scope value = 2;
-}
-
-message ScopeManager {
-  repeated ScopeManagerScopeMap scopeMap = 1;
-  map<string, Scope> fqnScopeMap = 2;
-  Scope currentScope = 3;
-  LanguageFrontend lang = 4;
-}
-
-message NameScope {
-  oneof nameScope {
-    RecordScope recordScope = 1;
-  }
-  string namePrefix = 2;
-}
-
-message StructureDeclarationScope {
-  oneof structureDeclarationScope {
-    NameScope nameScope = 1;
-    GlobalScope globalScope = 2;
-  }
-  repeated NodeIndex structureDeclarations = 3;
-}
-
-message GlobalScope {
-}
-
-message LoopScope {
-  repeated NodeIndex starts = 1;
-  repeated NodeIndex conditions = 2;
-  repeated NodeIndex breaks = 3;
-  repeated NodeIndex continues = 4;
-}
-
-message RecordScope {
-}
-
-message CallResolverContainingType {
-  NodeIndex key = 1;
-  NodeIndex value = 2;
-}
-
-message CallResolver {
-  map<string, NodeIndex> recordMap = 1;
-  repeated CallResolverContainingType containingType = 2;
-  NodeIndex currentTU = 3;
-  ScopedWalker walker = 4;
-}
-
-message FilenameMapper {
-}
-
-message PropertyEdgeProperties {
-  Properties key = 1;
-}
-
-message PropertyEdge {
-  NodeIndex start = 1;
-  NodeIndex end = 2;
-  repeated PropertyEdgeProperties properties = 3;
-}
-
-enum Properties {
-  INDEX = 0;
-  BRANCH = 1;
-}
-
-message AnnotationMember {
-  NodeIndex value = 1;
+message TranslationResult {
+  TranslationManager translationManager = 1;
+  repeated NodeIndex translationUnits = 2;
 }
 
 message Node {
-  oneof node {
-    AnnotationMember annotationMember = 1;
-    Statement statement = 2;
-    Annotation annotation = 3;
-    Declaration declaration = 4;
-    Type type = 5;
-    TranslationResult translationResult = 6;
+  oneof Node {
+    TranslationResult TranslationResult = 1;
+    Annotation Annotation = 2;
+    Statement Statement = 3;
+    AnnotationMember AnnotationMember = 4;
+    Declaration Declaration = 5;
+    Type Type = 6;
   }
   string name = 7;
   string code = 8;
   string comment = 9;
   PhysicalLocation location = 10;
   string file = 11;
-  repeated PropertyEdge prevEOG = 12;
-  repeated PropertyEdge nextEOG = 13;
-  repeated PropertyEdge nextCFG = 14;
-  repeated NodeIndex prevDFG = 15;
-  repeated NodeIndex nextDFG = 16;
-  repeated NodeIndex typedefs = 17;
-  bool dummy = 18;
-  bool implicit = 19;
-  int32 argumentIndex = 20;
-  repeated NodeIndex annotations = 21;
+  repeated PropertyEdge prevEOGEdges = 12;
+  repeated PropertyEdge nextEOGEdges = 13;
+  repeated NodeIndex prevEOG = 14;
+  repeated NodeIndex nextEOG = 15;
+  repeated NodeIndex prevDFG = 16;
+  repeated NodeIndex nextDFG = 17;
+  repeated NodeIndex typedefs = 18;
+  bool isDummy = 19;
+  bool isImplicit = 20;
+  int32 argumentIndex = 21;
+  repeated NodeIndex annotations = 22;
+}
+
+message Region {
+  int32 startLine = 1;
+  int32 startColumn = 2;
+  int32 endLine = 3;
+  int32 endColumn = 4;
+}
+
+message ArtifactLocation {
+}
+
+message PhysicalLocation {
+  ArtifactLocation artifactLocation = 1;
+  Region region = 2;
+}
+
+message CallableInterface {
+}
+
+message TranslationManager {
+  TranslationConfiguration config = 1;
+}
+
+message TranslationConfigurationFrontendsValue {
+  repeated string TranslationConfigurationFrontendsValue = 1;
+}
+
+message TranslationConfigurationFrontends {
+  TranslationConfigurationFrontendsValue value = 1;
+}
+
+message TranslationConfiguration {
+  bool debugParser = 1;
+  bool loadIncludes = 2;
+  repeated string includePaths = 3;
+  repeated string includeWhitelist = 4;
+  repeated string includeBlacklist = 5;
+  repeated TranslationConfigurationFrontends frontends = 6;
+  bool disableCleanup = 7;
+  bool codeInNodes = 8;
+  bool processAnnotations = 9;
+  bool failOnError = 10;
+  map<string, string> symbols = 11;
+  bool useUnityBuild = 12;
+  repeated Pass passes = 13;
+}
+
+message TriConsumer {
+}
+
+message IterativeGraphWalker {
+  repeated NodeIndex todo = 1;
+  repeated NodeIndex backlog = 2;
+}
+
+message ScopedWalkerNodeToParentBlockAndContainedValueDeclarations {
+  NodeIndex key = 1;
+}
+
+message ScopedWalker {
+  repeated ScopedWalkerNodeToParentBlockAndContainedValueDeclarations nodeToParentBlockAndContainedValueDeclarations = 1;
+  repeated NodeIndex currentClass = 2;
+  IterativeGraphWalker walker = 3;
+  repeated TriConsumer handlers = 4;
+}
+
+message TypeListener {
+  oneof TypeListener {
+    ConstructExpression ConstructExpression = 1;
+  }
+}
+
+enum AccessValues {
+  READ = 0;
+  WRITE = 1;
+  READWRITE = 2;
+}
+
+message Annotation {
+  repeated NodeIndex members = 1;
+}
+
+message CatchClause {
+  NodeIndex parameter = 1;
+  NodeIndex body = 2;
 }
 
 message Statement {
-  oneof statement {
-    IfStatement ifStatement = 1;
-    CompoundStatement compoundStatement = 2;
-    ForStatement forStatement = 3;
-    LabelStatement labelStatement = 4;
-    CatchClause catchClause = 5;
-    DefaultStatement defaultStatement = 6;
-    Expression expression = 7;
-    BreakStatement breakStatement = 8;
-    SynchronizedStatement synchronizedStatement = 9;
-    DeclarationStatement declarationStatement = 10;
-    ForEachStatement forEachStatement = 11;
-    DoStatement doStatement = 12;
-    ReturnStatement returnStatement = 13;
-    CaseStatement caseStatement = 14;
-    EmptyStatement emptyStatement = 15;
-    TryStatement tryStatement = 16;
-    AssertStatement assertStatement = 17;
-    ContinueStatement continueStatement = 18;
-    GotoStatement gotoStatement = 19;
-    WhileStatement whileStatement = 20;
-    SwitchStatement switchStatement = 21;
+  oneof Statement {
+    CatchClause CatchClause = 1;
+    ForStatement ForStatement = 2;
+    IfStatement IfStatement = 3;
+    CaseStatement CaseStatement = 4;
+    SwitchStatement SwitchStatement = 5;
+    DeclarationStatement DeclarationStatement = 6;
+    LabelStatement LabelStatement = 7;
+    Expression Expression = 8;
+    EmptyStatement EmptyStatement = 9;
+    ContinueStatement ContinueStatement = 10;
+    BreakStatement BreakStatement = 11;
+    DoStatement DoStatement = 12;
+    DefaultStatement DefaultStatement = 13;
+    AssertStatement AssertStatement = 14;
+    CompoundStatement CompoundStatement = 15;
+    ReturnStatement ReturnStatement = 16;
+    ForEachStatement ForEachStatement = 17;
+    TryStatement TryStatement = 18;
+    SynchronizedStatement SynchronizedStatement = 19;
+    GotoStatement GotoStatement = 20;
+    WhileStatement WhileStatement = 21;
   }
   repeated PropertyEdge locals = 22;
+}
+
+message ForStatement {
+  NodeIndex statement = 1;
+  NodeIndex initializerStatement = 2;
+  NodeIndex conditionDeclaration = 3;
+  NodeIndex condition = 4;
+  NodeIndex iterationExpression = 5;
 }
 
 message IfStatement {
@@ -373,16 +265,22 @@ message IfStatement {
   NodeIndex elseStatement = 6;
 }
 
-message CompoundStatement {
-  repeated PropertyEdge statements = 1;
+message CaseStatement {
+  NodeIndex caseExpression = 1;
 }
 
-message ForStatement {
-  NodeIndex statement = 1;
+message SwitchStatement {
+  NodeIndex selector = 1;
   NodeIndex initializerStatement = 2;
-  NodeIndex conditionDeclaration = 3;
-  NodeIndex condition = 4;
-  NodeIndex iterationExpression = 5;
+  NodeIndex selectorDeclaration = 3;
+  NodeIndex statement = 4;
+}
+
+message DeclarationStatement {
+  oneof DeclarationStatement {
+    ASMDeclarationStatement ASMDeclarationStatement = 1;
+  }
+  repeated PropertyEdge declarations = 2;
 }
 
 message LabelStatement {
@@ -390,67 +288,42 @@ message LabelStatement {
   string label = 2;
 }
 
-message CatchClause {
-  NodeIndex parameter = 1;
-  NodeIndex body = 2;
-}
-
-message DefaultStatement {
-}
-
-message MemberExpression {
-  NodeIndex base = 1;
-  string operatorCode = 2;
-}
-
-message DeclaredReferenceExpression {
-  oneof declaredReferenceExpression {
-    MemberExpression memberExpression = 1;
-  }
-  NodeIndex refersTo = 2;
-  AccessValues access = 3;
-  bool staticAccess = 4;
+message NewExpression {
+  NodeIndex initializer = 1;
+  repeated NodeIndex templateParameters = 2;
 }
 
 message Expression {
-  oneof expression {
-    ExpressionList expressionList = 1;
-    NewExpression newExpression = 2;
-    ConditionalExpression conditionalExpression = 3;
-    CompoundStatementExpression compoundStatementExpression = 4;
-    Literal literal = 5;
-    ConstructExpression constructExpression = 6;
-    DesignatedInitializerExpression designatedInitializerExpression = 7;
-    UnaryOperator unaryOperator = 8;
-    CallExpression callExpression = 9;
-    DeclaredReferenceExpression declaredReferenceExpression = 10;
-    CastExpression castExpression = 11;
-    UninitializedValue uninitializedValue = 12;
-    TypeIdExpression typeIdExpression = 13;
-    ArrayCreationExpression arrayCreationExpression = 14;
-    InitializerListExpression initializerListExpression = 15;
-    DeleteExpression deleteExpression = 16;
-    ArrayRangeExpression arrayRangeExpression = 17;
-    BinaryOperator binaryOperator = 18;
-    ArraySubscriptionExpression arraySubscriptionExpression = 19;
+  oneof Expression {
+    NewExpression NewExpression = 1;
+    TypeIdExpression TypeIdExpression = 2;
+    UninitializedValue UninitializedValue = 3;
+    DesignatedInitializerExpression DesignatedInitializerExpression = 4;
+    CastExpression CastExpression = 5;
+    InitializerListExpression InitializerListExpression = 6;
+    ArrayCreationExpression ArrayCreationExpression = 7;
+    ConditionalExpression ConditionalExpression = 8;
+    BinaryOperator BinaryOperator = 9;
+    ArrayRangeExpression ArrayRangeExpression = 10;
+    ArraySubscriptionExpression ArraySubscriptionExpression = 11;
+    ExpressionList ExpressionList = 12;
+    DeclaredReferenceExpression DeclaredReferenceExpression = 13;
+    Literal Literal = 14;
+    TypeExpression TypeExpression = 15;
+    CallExpression CallExpression = 16;
+    KeyValueExpression KeyValueExpression = 17;
+    DeleteExpression DeleteExpression = 18;
+    CompoundStatementExpression CompoundStatementExpression = 19;
+    UnaryOperator UnaryOperator = 20;
   }
-  NodeIndex type = 20;
-  repeated TypeListener typeListeners = 21;
-  repeated NodeIndex possibleSubTypes = 22;
+  NodeIndex type = 21;
+  repeated TypeListener typeListeners = 22;
+  repeated NodeIndex possibleSubTypes = 23;
 }
 
-message ExpressionList {
-  repeated PropertyEdge expressions = 1;
-}
-
-message NewExpression {
-  NodeIndex initializer = 1;
-}
-
-message ConditionalExpression {
-  NodeIndex condition = 1;
-  NodeIndex thenExpr = 2;
-  NodeIndex elseExpr = 3;
+message TypeIdExpression {
+  NodeIndex referencedType = 1;
+  string operatorCode = 2;
 }
 
 message MemberCallExpression {
@@ -459,33 +332,112 @@ message MemberCallExpression {
 }
 
 message CallExpression {
-  oneof callExpression {
-    MemberCallExpression memberCallExpression = 1;
-    ExplicitConstructorInvocation explicitConstructorInvocation = 2;
-    StaticCallExpression staticCallExpression = 3;
+  oneof CallExpression {
+    MemberCallExpression MemberCallExpression = 1;
+    StaticCallExpression StaticCallExpression = 2;
+    ConstructExpression ConstructExpression = 3;
+    ExplicitConstructorInvocation ExplicitConstructorInvocation = 4;
   }
-  repeated PropertyEdge invokes = 4;
-  repeated PropertyEdge arguments = 5;
-  NodeIndex base = 6;
-  string fqn = 7;
+  repeated PropertyEdge invokes = 5;
+  repeated PropertyEdge arguments = 6;
+  NodeIndex base = 7;
+  string fqn = 8;
+  bool template = 9;
+  repeated PropertyEdge templateParameters = 10;
+  NodeIndex templateInstantiation = 11;
 }
 
-message CompoundStatementExpression {
-  NodeIndex statement = 1;
-}
-
-message Literal {
+message StaticCallExpression {
+  string targetRecord = 1;
 }
 
 message ConstructExpression {
-  NodeIndex constructor = 1;
-  NodeIndex instantiates = 2;
-  repeated PropertyEdge arguments = 3;
+}
+
+message UninitializedValue {
 }
 
 message DesignatedInitializerExpression {
   NodeIndex rhs = 1;
   repeated PropertyEdge lhs = 2;
+}
+
+message CastExpression {
+  NodeIndex expression = 1;
+  NodeIndex castType = 2;
+}
+
+message InitializerListExpression {
+  repeated PropertyEdge initializers = 1;
+}
+
+message ArrayCreationExpression {
+  NodeIndex initializer = 1;
+  repeated PropertyEdge dimensions = 2;
+}
+
+message ConditionalExpression {
+  NodeIndex condition = 1;
+  NodeIndex thenExpr = 2;
+  NodeIndex elseExpr = 3;
+}
+
+message BinaryOperator {
+  NodeIndex lhs = 1;
+  NodeIndex rhs = 2;
+  string operatorCode = 3;
+  repeated string compoundOperators = 4;
+}
+
+message ArrayRangeExpression {
+  NodeIndex floor = 1;
+  NodeIndex ceiling = 2;
+}
+
+message ArraySubscriptionExpression {
+  NodeIndex arrayExpression = 1;
+  NodeIndex subscriptExpression = 2;
+}
+
+message ExpressionList {
+  repeated PropertyEdge expressions = 1;
+}
+
+message MemberExpression {
+  NodeIndex base = 1;
+  string operatorCode = 2;
+}
+
+message DeclaredReferenceExpression {
+  oneof DeclaredReferenceExpression {
+    MemberExpression MemberExpression = 1;
+  }
+  NodeIndex refersTo = 2;
+  AccessValues access = 3;
+  bool staticAccess = 4;
+}
+
+message ExplicitConstructorInvocation {
+  string containingClass = 1;
+}
+
+message Literal {
+}
+
+message TypeExpression {
+}
+
+message KeyValueExpression {
+  NodeIndex key = 1;
+  NodeIndex value = 2;
+}
+
+message DeleteExpression {
+  NodeIndex operand = 1;
+}
+
+message CompoundStatementExpression {
+  NodeIndex statement = 1;
 }
 
 message UnaryOperator {
@@ -496,77 +448,15 @@ message UnaryOperator {
   repeated TypeListener checked = 5;
 }
 
-message ExplicitConstructorInvocation {
-  string containingClass = 1;
+message EmptyStatement {
 }
 
-message CastExpression {
-  NodeIndex expression = 1;
-  NodeIndex castType = 2;
-}
-
-message UninitializedValue {
-}
-
-message TypeIdExpression {
-  NodeIndex referencedType = 1;
-  string operatorCode = 2;
-}
-
-message ArrayCreationExpression {
-  NodeIndex initializer = 1;
-  repeated PropertyEdge dimensions = 2;
-}
-
-message InitializerListExpression {
-  repeated PropertyEdge initializers = 1;
-}
-
-message DeleteExpression {
-  NodeIndex operand = 1;
-}
-
-message StaticCallExpression {
-  string targetRecord = 1;
-}
-
-message ArrayRangeExpression {
-  NodeIndex floor = 1;
-  NodeIndex ceiling = 2;
-}
-
-message BinaryOperator {
-  NodeIndex lhs = 1;
-  NodeIndex rhs = 2;
-  string operatorCode = 3;
-  repeated string compoundOperators = 4;
-}
-
-message ArraySubscriptionExpression {
-  NodeIndex arrayExpression = 1;
-  NodeIndex subscriptExpression = 2;
+message ContinueStatement {
+  string label = 1;
 }
 
 message BreakStatement {
   string label = 1;
-}
-
-message SynchronizedStatement {
-  NodeIndex expression = 1;
-  NodeIndex blockStatement = 2;
-}
-
-message DeclarationStatement {
-  oneof declarationStatement {
-    ASMDeclarationStatement aSMDeclarationStatement = 1;
-  }
-  repeated PropertyEdge declarations = 2;
-}
-
-message ForEachStatement {
-  NodeIndex variable = 1;
-  NodeIndex iterable = 2;
-  NodeIndex statement = 3;
 }
 
 message DoStatement {
@@ -574,15 +464,29 @@ message DoStatement {
   NodeIndex statement = 2;
 }
 
+message DefaultStatement {
+}
+
+message ASMDeclarationStatement {
+}
+
+message AssertStatement {
+  NodeIndex condition = 1;
+  NodeIndex message = 2;
+}
+
+message CompoundStatement {
+  repeated PropertyEdge statements = 1;
+}
+
 message ReturnStatement {
   NodeIndex returnValue = 1;
 }
 
-message CaseStatement {
-  NodeIndex caseExpression = 1;
-}
-
-message EmptyStatement {
+message ForEachStatement {
+  NodeIndex variable = 1;
+  NodeIndex iterable = 2;
+  NodeIndex statement = 3;
 }
 
 message TryStatement {
@@ -592,16 +496,9 @@ message TryStatement {
   repeated PropertyEdge catchClauses = 4;
 }
 
-message AssertStatement {
-  NodeIndex condition = 1;
-  NodeIndex message = 2;
-}
-
-message ContinueStatement {
-  string label = 1;
-}
-
-message ASMDeclarationStatement {
+message SynchronizedStatement {
+  NodeIndex expression = 1;
+  NodeIndex blockStatement = 2;
 }
 
 message GotoStatement {
@@ -615,96 +512,25 @@ message WhileStatement {
   NodeIndex statement = 3;
 }
 
-message SwitchStatement {
-  NodeIndex selector = 1;
-  NodeIndex initializerStatement = 2;
-  NodeIndex selectorDeclaration = 3;
-  NodeIndex statement = 4;
+message AnnotationMember {
+  NodeIndex value = 1;
 }
 
-message TypeListener {
+enum Properties {
+  INDEX = 0;
+  BRANCH = 1;
+  NAME = 2;
+  INSTANTIATION = 3;
 }
 
-message Annotation {
-  repeated NodeIndex members = 1;
+message PropertyEdgeProperties {
+  Properties key = 1;
 }
 
-message ConstructorDeclaration {
-}
-
-message MethodDeclaration {
-  oneof methodDeclaration {
-    ConstructorDeclaration constructorDeclaration = 1;
-  }
-  bool isStatic = 2;
-  NodeIndex recordDeclaration = 3;
-  NodeIndex receiver = 4;
-}
-
-message DeclarationSequence {
-  repeated PropertyEdge children = 1;
-}
-
-message Declaration {
-  oneof declaration {
-    DeclarationSequence declarationSequence = 1;
-    ProblemDeclaration problemDeclaration = 2;
-    RecordDeclaration recordDeclaration = 3;
-    TranslationUnitDeclaration translationUnitDeclaration = 4;
-    UsingDirective usingDirective = 5;
-    TypedefDeclaration typedefDeclaration = 6;
-    EnumDeclaration enumDeclaration = 7;
-    IncludeDeclaration includeDeclaration = 8;
-    ValueDeclaration valueDeclaration = 9;
-    NamespaceDeclaration namespaceDeclaration = 10;
-  }
-}
-
-message EnumConstantDeclaration {
-}
-
-message ValueDeclaration {
-  oneof valueDeclaration {
-    EnumConstantDeclaration enumConstantDeclaration = 1;
-    VariableDeclaration variableDeclaration = 2;
-    ParamVariableDeclaration paramVariableDeclaration = 3;
-    FieldDeclaration fieldDeclaration = 4;
-    FunctionDeclaration functionDeclaration = 5;
-  }
-  NodeIndex type = 6;
-  repeated NodeIndex possibleSubTypes = 7;
-  repeated TypeListener typeListeners = 8;
-}
-
-message ProblemDeclaration {
-  string filename = 1;
-  string problem = 2;
-  string problemLocation = 3;
-}
-
-message RecordDeclaration {
-  string kind = 1;
-  repeated PropertyEdge fields = 2;
-  repeated PropertyEdge methods = 3;
-  repeated PropertyEdge constructors = 4;
-  repeated PropertyEdge records = 5;
-  repeated NodeIndex superClasses = 6;
-  repeated NodeIndex implementedInterfaces = 7;
-  repeated NodeIndex superTypeDeclarations = 8;
-  repeated string importStatements = 9;
-  repeated NodeIndex imports = 10;
-  repeated string staticImportStatements = 11;
-  repeated NodeIndex staticImports = 12;
-}
-
-message TranslationUnitDeclaration {
-  repeated PropertyEdge declarations = 1;
-  repeated PropertyEdge includes = 2;
-  repeated PropertyEdge namespaces = 3;
-}
-
-message UsingDirective {
-  string qualifiedName = 1;
+message PropertyEdge {
+  NodeIndex start = 1;
+  NodeIndex end = 2;
+  repeated PropertyEdgeProperties properties = 3;
 }
 
 message TypedefDeclaration {
@@ -712,28 +538,20 @@ message TypedefDeclaration {
   NodeIndex alias = 2;
 }
 
-message VariableDeclaration {
-  NodeIndex initializer = 1;
-  bool implicitInitializerAllowed = 2;
-  bool isArray = 3;
-}
-
-message FunctionDeclaration {
-  oneof functionDeclaration {
-    MethodDeclaration methodDeclaration = 1;
+message Declaration {
+  oneof Declaration {
+    TypedefDeclaration TypedefDeclaration = 1;
+    EnumDeclaration EnumDeclaration = 2;
+    TranslationUnitDeclaration TranslationUnitDeclaration = 3;
+    TemplateDeclaration TemplateDeclaration = 4;
+    DeclarationSequence DeclarationSequence = 5;
+    ProblemDeclaration ProblemDeclaration = 6;
+    IncludeDeclaration IncludeDeclaration = 7;
+    NamespaceDeclaration NamespaceDeclaration = 8;
+    UsingDirective UsingDirective = 9;
+    RecordDeclaration RecordDeclaration = 10;
+    ValueDeclaration ValueDeclaration = 11;
   }
-  NodeIndex body = 2;
-  repeated PropertyEdge records = 3;
-  repeated PropertyEdge parameters = 4;
-  repeated PropertyEdge throwsTypes = 5;
-  repeated PropertyEdge overriddenBy = 6;
-  repeated PropertyEdge overrides = 7;
-  bool isDefinition = 8;
-  NodeIndex definition = 9;
-}
-
-message ParamVariableDeclaration {
-  bool variadic = 1;
 }
 
 message FieldDeclaration {
@@ -745,10 +563,90 @@ message FieldDeclaration {
   repeated string modifiers = 6;
 }
 
+message ValueDeclaration {
+  oneof ValueDeclaration {
+    FieldDeclaration FieldDeclaration = 1;
+    EnumConstantDeclaration EnumConstantDeclaration = 2;
+    FunctionDeclaration FunctionDeclaration = 3;
+    ParamVariableDeclaration ParamVariableDeclaration = 4;
+    TypeParamDeclaration TypeParamDeclaration = 5;
+    VariableDeclaration VariableDeclaration = 6;
+  }
+  NodeIndex type = 7;
+  repeated NodeIndex possibleSubTypes = 8;
+  repeated TypeListener typeListeners = 9;
+}
+
+message EnumConstantDeclaration {
+}
+
 message EnumDeclaration {
   repeated PropertyEdge entries = 1;
   repeated PropertyEdge superTypes = 2;
   repeated NodeIndex superTypeDeclarations = 3;
+}
+
+message ConstructorDeclaration {
+}
+
+message MethodDeclaration {
+  oneof MethodDeclaration {
+    ConstructorDeclaration ConstructorDeclaration = 1;
+  }
+  bool isStatic = 2;
+  NodeIndex recordDeclaration = 3;
+  NodeIndex receiver = 4;
+}
+
+message TranslationUnitDeclaration {
+  repeated PropertyEdge declarations = 1;
+  repeated PropertyEdge includes = 2;
+  repeated PropertyEdge namespaces = 3;
+}
+
+message FunctionDeclaration {
+  oneof FunctionDeclaration {
+    MethodDeclaration MethodDeclaration = 1;
+  }
+  NodeIndex body = 2;
+  repeated PropertyEdge records = 3;
+  repeated PropertyEdge parameters = 4;
+  repeated PropertyEdge throwsTypes = 5;
+  repeated PropertyEdge overriddenBy = 6;
+  repeated PropertyEdge overrides = 7;
+  bool isDefinition = 8;
+  NodeIndex definition = 9;
+}
+
+message TemplateDeclaration {
+  oneof TemplateDeclaration {
+    FunctionTemplateDeclaration FunctionTemplateDeclaration = 1;
+    ClassTemplateDeclaration ClassTemplateDeclaration = 2;
+  }
+  repeated PropertyEdge parameters = 3;
+}
+
+message ParamVariableDeclaration {
+  bool variadic = 1;
+  NodeIndex defaultValue = 2;
+}
+
+message TypeParamDeclaration {
+  NodeIndex defaultType = 1;
+}
+
+message DeclarationSequence {
+  repeated PropertyEdge children = 1;
+}
+
+message ProblemDeclaration {
+  string filename = 1;
+  string problem = 2;
+  string problemLocation = 3;
+}
+
+message FunctionTemplateDeclaration {
+  repeated PropertyEdge realization = 1;
 }
 
 message IncludeDeclaration {
@@ -761,6 +659,57 @@ message NamespaceDeclaration {
   repeated NodeIndex declarations = 1;
 }
 
+message UsingDirective {
+  string qualifiedName = 1;
+}
+
+message RecordDeclaration {
+  string kind = 1;
+  repeated PropertyEdge fields = 2;
+  repeated PropertyEdge methods = 3;
+  repeated PropertyEdge constructors = 4;
+  repeated PropertyEdge records = 5;
+  repeated PropertyEdge templates = 6;
+  repeated NodeIndex superClasses = 7;
+  repeated NodeIndex implementedInterfaces = 8;
+  repeated NodeIndex superTypeDeclarations = 9;
+  repeated string importStatements = 10;
+  repeated NodeIndex imports = 11;
+  repeated string staticImportStatements = 12;
+  repeated NodeIndex staticImports = 13;
+}
+
+message ClassTemplateDeclaration {
+  repeated PropertyEdge realization = 1;
+}
+
+message VariableDeclaration {
+  NodeIndex initializer = 1;
+  repeated NodeIndex templateParameters = 2;
+  bool implicitInitializerAllowed = 3;
+  bool isArray = 4;
+}
+
+message UnknownType {
+}
+
+message Type {
+  oneof Type {
+    UnknownType UnknownType = 1;
+    PointerType PointerType = 2;
+    IncompleteType IncompleteType = 3;
+    ReferenceType ReferenceType = 4;
+    ParameterizedType ParameterizedType = 5;
+    ObjectType ObjectType = 6;
+    FunctionPointerType FunctionPointerType = 7;
+  }
+  repeated NodeIndex superTypes = 8;
+  Storage storage = 9;
+  bool primitive = 10;
+  Qualifier qualifier = 11;
+  Origin origin = 12;
+}
+
 enum PointerOrigin {
   POINTER = 0;
   ARRAY = 1;
@@ -771,25 +720,14 @@ message PointerType {
   PointerOrigin pointerOrigin = 2;
 }
 
-message Type {
-  oneof type {
-    PointerType pointerType = 1;
-    ReferenceType referenceType = 2;
-    ObjectType objectType = 3;
-    UnknownType unknownType = 4;
-    ParameterizedType parameterizedType = 5;
-    IncompleteType incompleteType = 6;
-    FunctionPointerType functionPointerType = 7;
-  }
-  repeated NodeIndex superTypes = 8;
-  Storage storage = 9;
-  bool primitive = 10;
-  Qualifier qualifier = 11;
-  Origin origin = 12;
+message IncompleteType {
 }
 
 message ReferenceType {
   NodeIndex reference = 1;
+}
+
+message ParameterizedType {
 }
 
 enum Modifier {
@@ -802,15 +740,6 @@ message ObjectType {
   Modifier modifier = 1;
   NodeIndex recordDeclaration = 2;
   repeated PropertyEdge generics = 3;
-}
-
-message UnknownType {
-}
-
-message ParameterizedType {
-}
-
-message IncompleteType {
 }
 
 message FunctionPointerType {
@@ -839,68 +768,8 @@ message Qualifier {
   bool isAtomic = 4;
 }
 
-enum AccessValues {
-  READ = 0;
-  WRITE = 1;
-  READWRITE = 2;
-}
-
-message TranslationConfiguration {
-  bool debugParser = 1;
-  bool loadIncludes = 2;
-  repeated string includePaths = 3;
-  repeated string includeWhitelist = 4;
-  repeated string includeBlacklist = 5;
-  bool disableCleanup = 6;
-  bool codeInNodes = 7;
-  bool processAnnotations = 8;
-  bool failOnError = 9;
-  map<string, string> symbols = 10;
-  bool useUnityBuild = 11;
-  repeated Pass passes = 12;
-}
-
-message TriConsumer {
-}
-
-message IterativeGraphWalker {
-  repeated NodeIndex todo = 1;
-  repeated NodeIndex backlog = 2;
-}
-
-message ScopedWalker {
-  repeated NodeIndex currentClass = 1;
-  IterativeGraphWalker walker = 2;
-  LanguageFrontend lang = 3;
-  repeated TriConsumer handlers = 4;
-}
-
-message TranslationManager {
-  TranslationConfiguration config = 1;
-}
-
-message TranslationResult {
-  TranslationManager translationManager = 1;
-  repeated NodeIndex translationUnits = 2;
-}
-
-message Region {
-  int32 startLine = 1;
-  int32 startColumn = 2;
-  int32 endLine = 3;
-  int32 endColumn = 4;
-}
-
-message ArtifactLocation {
-}
-
-message PhysicalLocation {
-  ArtifactLocation artifactLocation = 1;
-  Region region = 2;
-}
-
 message NodeIndex {
-  int64 nodeIndex = 1;
+  int64 NodeIndex = 1;
 }
 
 service TransferCpg {

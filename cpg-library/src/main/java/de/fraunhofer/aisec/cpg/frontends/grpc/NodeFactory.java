@@ -87,7 +87,7 @@ public class NodeFactory {
     cpgNode.setComment(grpcNode.getComment());
     cpgNode.setFile(grpcNode.getFile());
 
-    cpgNode.setImplicit(grpcNode.getImplicit());
+    cpgNode.setImplicit(grpcNode.getIsImplicit());
     cpgNode.setArgumentIndex(grpcNode.getArgumentIndex());
 
     // id (GeneratedValue) and dummy (deprecated) are not set
@@ -131,13 +131,13 @@ public class NodeFactory {
     }
     cpgNode.addAnnotations(annotations);
 
-    for (var a : grpcNode.getPrevEOGList()) {
-      var pe = NodeFactory.<Node>createPropertyEdgeNode(a, grpcNodes, cpgNodes);
+    for (var a : grpcNode.getPrevEOGEdgesList()) {
+      var pe = createPropertyEdgeNode(a, grpcNodes, cpgNodes);
       cpgNode.getPrevEOGEdges().add(pe);
     }
 
-    for (var a : grpcNode.getNextEOGList()) {
-      var pe = NodeFactory.<Node>createPropertyEdgeNode(a, grpcNodes, cpgNodes);
+    for (var a : grpcNode.getNextEOGEdgesList()) {
+      var pe = createPropertyEdgeNode(a, grpcNodes, cpgNodes);
       cpgNode.getNextEOGEdges().add(pe);
     }
 
@@ -146,23 +146,6 @@ public class NodeFactory {
     //  var pe = NodeFactory.<Node>createPropertyEdgeNode(a, grpcNodes, cpgNodes);
     //  cpgNode.getNextCFG().add(pe);
     // }
-
-    /*
-    There are 2 different Functions: leaf and no-leaf
-    A leaf will create the Node itself and will add it to the list.
-    A No-leaf will skip that part
-
-    Leaves:
-    1. Create Node itself
-    2. Add node to list (only in leaf functions)
-
-    No-Leaves:
-    1. Call lower level function to create node
-
-    3. Set parameters of that level
-    4. Set all connected nodes of that level with createNode()
-    5. return created node
-    */
 
     return cpgNode;
   }
@@ -939,9 +922,6 @@ public class NodeFactory {
               e.getCompoundStatementExpression(), index, grpcNodes, cpgNodes);
     } else if (e.hasLiteral()) {
       expression = createLiteral(e.getLiteral(), index, grpcNodes, cpgNodes);
-    } else if (e.hasConstructExpression()) {
-      expression =
-          createConstructExpression(e.getConstructExpression(), index, grpcNodes, cpgNodes);
     } else if (e.hasDesignatedInitializerExpression()) {
       expression =
           createDesignatedInitializerExpression(

@@ -44,7 +44,7 @@ import org.slf4j.LoggerFactory
 /** The base class for all graph objects that are going to be persisted in the database. */
 open class Node : IVisitable<Node>, Persistable {
     /** A human readable name. */
-    open var name = EMPTY_NAME // initialize it with an empty string
+    open var name: String = EMPTY_NAME // initialize it with an empty string
 
     /**
      * Original code snippet of this node. Most nodes will have a corresponding "code", but in cases

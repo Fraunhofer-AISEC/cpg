@@ -151,7 +151,8 @@ subprojects {
                         include("build/generated-src/**")
                     }
             )
-            googleJavaFormat()
+            // TODO: Fix the problems that are occuring with this line
+            // googleJavaFormat()
             licenseHeader(headerWithStars).yearSeparator(" - ")
         }
         kotlin {
