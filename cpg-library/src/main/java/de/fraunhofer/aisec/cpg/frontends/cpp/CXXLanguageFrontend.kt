@@ -67,14 +67,20 @@ import org.slf4j.LoggerFactory
 /**
  * The language frontend for translating CXX languages into the graph. It uses Eclipse CDT to parse
  * the actual source code into an AST.
- *
- * Frontend for ONE CXX File
  */
 class CXXLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeManager?) :
     LanguageFrontend(config, scopeManager, "::"), HasDefaultArguments, HasTemplates {
 
+    /**
+     * Implements an [IncludeFileContentProvider] which features an inclusion/exclusion list for header files.
+     */
     private val includeFileContentProvider: IncludeFileContentProvider =
         object : InternalFileContentProvider() {
+            /**
+             * Returns the content of this path, without any cache.
+             *
+             * @return the content of the path of null if it is to be excluded
+             */
             private fun getContentUncached(path: String): InternalFileContent? {
                 if (!getInclusionExists(path)) {
                     LOGGER.debug("Include file not found: {}", path)
@@ -168,6 +174,7 @@ class CXXLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeM
     val statementHandler = StatementHandler(this)
     private val cachedDeclarations = HashMap<IBinding, Declaration?>()
     private val comments = HashMap<Int, String>()
+
     @Throws(TranslationException::class)
     override fun parse(file: File): TranslationUnitDeclaration {
         TypeManager.getInstance().setLanguageFrontend(this)
