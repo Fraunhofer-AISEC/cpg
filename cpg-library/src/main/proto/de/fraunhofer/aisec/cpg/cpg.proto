@@ -6,8 +6,14 @@ option java_package = "de.fraunhofer.aisec.cpg.frontends.grpc.messages";
 option java_multiple_files = true;
 option go_package = "github.com/Fraunhofer-AISEC/cpg-rpc/proto;proto";
 
+message Annotation {
+  int32 field = 1;
+  int32 anotherField = 2;
+  repeated NodeIndex members = 3;
+}
+
 message TypeResolverTypeStateValue {
-  repeated NodeIndex TypeResolverTypeStateValue = 1;
+  repeated NodeIndex element = 1;
 }
 
 message TypeResolverTypeState {
@@ -21,16 +27,16 @@ message TypeResolver {
 }
 
 message Pass {
-  oneof Pass {
-    TypeResolver TypeResolver = 1;
-    TypeHierarchyResolver TypeHierarchyResolver = 2;
-    FilenameMapper FilenameMapper = 3;
-    CallResolver CallResolver = 4;
-    ControlFlowSensitiveDFGPass ControlFlowSensitiveDFGPass = 5;
-    ImportResolver ImportResolver = 6;
-    JavaExternalTypeHierarchyResolver JavaExternalTypeHierarchyResolver = 7;
-    VariableUsageResolver VariableUsageResolver = 8;
-    EvaluationOrderGraphPass EvaluationOrderGraphPass = 9;
+  oneof pass {
+    TypeResolver typeResolver = 1;
+    TypeHierarchyResolver typeHierarchyResolver = 2;
+    FilenameMapper filenameMapper = 3;
+    CallResolver callResolver = 4;
+    ControlFlowSensitiveDFGPass controlFlowSensitiveDFGPass = 5;
+    ImportResolver importResolver = 6;
+    JavaExternalTypeHierarchyResolver javaExternalTypeHierarchyResolver = 7;
+    VariableUsageResolver variableUsageResolver = 8;
+    EvaluationOrderGraphPass evaluationOrderGraphPass = 9;
   }
 }
 
@@ -67,7 +73,7 @@ message JavaExternalTypeHierarchyResolver {
 }
 
 message VariableUsageResolverSuperTypesMapValue {
-  repeated NodeIndex VariableUsageResolverSuperTypesMapValue = 1;
+  repeated NodeIndex element = 1;
 }
 
 message VariableUsageResolverSuperTypesMap {
@@ -109,13 +115,13 @@ message TranslationResult {
 }
 
 message Node {
-  oneof Node {
-    TranslationResult TranslationResult = 1;
-    Annotation Annotation = 2;
-    Statement Statement = 3;
-    AnnotationMember AnnotationMember = 4;
-    Declaration Declaration = 5;
-    Type Type = 6;
+  oneof node {
+    TranslationResult translationResult = 1;
+    Annotation annotation = 2;
+    Statement statement = 3;
+    AnnotationMember annotationMember = 4;
+    Declaration declaration = 5;
+    Type type = 6;
   }
   string name = 7;
   string code = 8;
@@ -158,7 +164,7 @@ message TranslationManager {
 }
 
 message TranslationConfigurationFrontendsValue {
-  repeated string TranslationConfigurationFrontendsValue = 1;
+  repeated string element = 1;
 }
 
 message TranslationConfigurationFrontends {
@@ -201,8 +207,8 @@ message ScopedWalker {
 }
 
 message TypeListener {
-  oneof TypeListener {
-    ConstructExpression ConstructExpression = 1;
+  oneof typeListener {
+    ConstructExpression constructExpression = 1;
   }
 }
 
@@ -212,38 +218,34 @@ enum AccessValues {
   READWRITE = 2;
 }
 
-message Annotation {
-  repeated NodeIndex members = 1;
-}
-
 message CatchClause {
   NodeIndex parameter = 1;
   NodeIndex body = 2;
 }
 
 message Statement {
-  oneof Statement {
-    CatchClause CatchClause = 1;
-    ForStatement ForStatement = 2;
-    IfStatement IfStatement = 3;
-    CaseStatement CaseStatement = 4;
-    SwitchStatement SwitchStatement = 5;
-    DeclarationStatement DeclarationStatement = 6;
-    LabelStatement LabelStatement = 7;
-    Expression Expression = 8;
-    EmptyStatement EmptyStatement = 9;
-    ContinueStatement ContinueStatement = 10;
-    BreakStatement BreakStatement = 11;
-    DoStatement DoStatement = 12;
-    DefaultStatement DefaultStatement = 13;
-    AssertStatement AssertStatement = 14;
-    CompoundStatement CompoundStatement = 15;
-    ReturnStatement ReturnStatement = 16;
-    ForEachStatement ForEachStatement = 17;
-    TryStatement TryStatement = 18;
-    SynchronizedStatement SynchronizedStatement = 19;
-    GotoStatement GotoStatement = 20;
-    WhileStatement WhileStatement = 21;
+  oneof statement {
+    CatchClause catchClause = 1;
+    ForStatement forStatement = 2;
+    IfStatement ifStatement = 3;
+    CaseStatement caseStatement = 4;
+    SwitchStatement switchStatement = 5;
+    DeclarationStatement declarationStatement = 6;
+    LabelStatement labelStatement = 7;
+    Expression expression = 8;
+    EmptyStatement emptyStatement = 9;
+    ContinueStatement continueStatement = 10;
+    BreakStatement breakStatement = 11;
+    DoStatement doStatement = 12;
+    DefaultStatement defaultStatement = 13;
+    AssertStatement assertStatement = 14;
+    CompoundStatement compoundStatement = 15;
+    ReturnStatement returnStatement = 16;
+    ForEachStatement forEachStatement = 17;
+    TryStatement tryStatement = 18;
+    SynchronizedStatement synchronizedStatement = 19;
+    GotoStatement gotoStatement = 20;
+    WhileStatement whileStatement = 21;
   }
   repeated PropertyEdge locals = 22;
 }
@@ -277,8 +279,8 @@ message SwitchStatement {
 }
 
 message DeclarationStatement {
-  oneof DeclarationStatement {
-    ASMDeclarationStatement ASMDeclarationStatement = 1;
+  oneof declarationStatement {
+    ASMDeclarationStatement aSMDeclarationStatement = 1;
   }
   repeated PropertyEdge declarations = 2;
 }
@@ -294,27 +296,27 @@ message NewExpression {
 }
 
 message Expression {
-  oneof Expression {
-    NewExpression NewExpression = 1;
-    TypeIdExpression TypeIdExpression = 2;
-    UninitializedValue UninitializedValue = 3;
-    DesignatedInitializerExpression DesignatedInitializerExpression = 4;
-    CastExpression CastExpression = 5;
-    InitializerListExpression InitializerListExpression = 6;
-    ArrayCreationExpression ArrayCreationExpression = 7;
-    ConditionalExpression ConditionalExpression = 8;
-    BinaryOperator BinaryOperator = 9;
-    ArrayRangeExpression ArrayRangeExpression = 10;
-    ArraySubscriptionExpression ArraySubscriptionExpression = 11;
-    ExpressionList ExpressionList = 12;
-    DeclaredReferenceExpression DeclaredReferenceExpression = 13;
-    Literal Literal = 14;
-    TypeExpression TypeExpression = 15;
-    CallExpression CallExpression = 16;
-    KeyValueExpression KeyValueExpression = 17;
-    DeleteExpression DeleteExpression = 18;
-    CompoundStatementExpression CompoundStatementExpression = 19;
-    UnaryOperator UnaryOperator = 20;
+  oneof expression {
+    NewExpression newExpression = 1;
+    TypeIdExpression typeIdExpression = 2;
+    UninitializedValue uninitializedValue = 3;
+    DesignatedInitializerExpression designatedInitializerExpression = 4;
+    CastExpression castExpression = 5;
+    InitializerListExpression initializerListExpression = 6;
+    ArrayCreationExpression arrayCreationExpression = 7;
+    ConditionalExpression conditionalExpression = 8;
+    BinaryOperator binaryOperator = 9;
+    ArrayRangeExpression arrayRangeExpression = 10;
+    ArraySubscriptionExpression arraySubscriptionExpression = 11;
+    ExpressionList expressionList = 12;
+    DeclaredReferenceExpression declaredReferenceExpression = 13;
+    Literal literal = 14;
+    TypeExpression typeExpression = 15;
+    CallExpression callExpression = 16;
+    KeyValueExpression keyValueExpression = 17;
+    DeleteExpression deleteExpression = 18;
+    CompoundStatementExpression compoundStatementExpression = 19;
+    UnaryOperator unaryOperator = 20;
   }
   NodeIndex type = 21;
   repeated TypeListener typeListeners = 22;
@@ -332,11 +334,11 @@ message MemberCallExpression {
 }
 
 message CallExpression {
-  oneof CallExpression {
-    MemberCallExpression MemberCallExpression = 1;
-    StaticCallExpression StaticCallExpression = 2;
-    ConstructExpression ConstructExpression = 3;
-    ExplicitConstructorInvocation ExplicitConstructorInvocation = 4;
+  oneof callExpression {
+    MemberCallExpression memberCallExpression = 1;
+    StaticCallExpression staticCallExpression = 2;
+    ConstructExpression constructExpression = 3;
+    ExplicitConstructorInvocation explicitConstructorInvocation = 4;
   }
   repeated PropertyEdge invokes = 5;
   repeated PropertyEdge arguments = 6;
@@ -409,8 +411,8 @@ message MemberExpression {
 }
 
 message DeclaredReferenceExpression {
-  oneof DeclaredReferenceExpression {
-    MemberExpression MemberExpression = 1;
+  oneof declaredReferenceExpression {
+    MemberExpression memberExpression = 1;
   }
   NodeIndex refersTo = 2;
   AccessValues access = 3;
@@ -539,18 +541,18 @@ message TypedefDeclaration {
 }
 
 message Declaration {
-  oneof Declaration {
-    TypedefDeclaration TypedefDeclaration = 1;
-    EnumDeclaration EnumDeclaration = 2;
-    TranslationUnitDeclaration TranslationUnitDeclaration = 3;
-    TemplateDeclaration TemplateDeclaration = 4;
-    DeclarationSequence DeclarationSequence = 5;
-    ProblemDeclaration ProblemDeclaration = 6;
-    IncludeDeclaration IncludeDeclaration = 7;
-    NamespaceDeclaration NamespaceDeclaration = 8;
-    UsingDirective UsingDirective = 9;
-    RecordDeclaration RecordDeclaration = 10;
-    ValueDeclaration ValueDeclaration = 11;
+  oneof declaration {
+    TypedefDeclaration typedefDeclaration = 1;
+    EnumDeclaration enumDeclaration = 2;
+    TranslationUnitDeclaration translationUnitDeclaration = 3;
+    TemplateDeclaration templateDeclaration = 4;
+    DeclarationSequence declarationSequence = 5;
+    ProblemDeclaration problemDeclaration = 6;
+    IncludeDeclaration includeDeclaration = 7;
+    NamespaceDeclaration namespaceDeclaration = 8;
+    UsingDirective usingDirective = 9;
+    RecordDeclaration recordDeclaration = 10;
+    ValueDeclaration valueDeclaration = 11;
   }
 }
 
@@ -564,13 +566,13 @@ message FieldDeclaration {
 }
 
 message ValueDeclaration {
-  oneof ValueDeclaration {
-    FieldDeclaration FieldDeclaration = 1;
-    EnumConstantDeclaration EnumConstantDeclaration = 2;
-    FunctionDeclaration FunctionDeclaration = 3;
-    ParamVariableDeclaration ParamVariableDeclaration = 4;
-    TypeParamDeclaration TypeParamDeclaration = 5;
-    VariableDeclaration VariableDeclaration = 6;
+  oneof valueDeclaration {
+    FieldDeclaration fieldDeclaration = 1;
+    EnumConstantDeclaration enumConstantDeclaration = 2;
+    FunctionDeclaration functionDeclaration = 3;
+    ParamVariableDeclaration paramVariableDeclaration = 4;
+    TypeParamDeclaration typeParamDeclaration = 5;
+    VariableDeclaration variableDeclaration = 6;
   }
   NodeIndex type = 7;
   repeated NodeIndex possibleSubTypes = 8;
@@ -590,8 +592,8 @@ message ConstructorDeclaration {
 }
 
 message MethodDeclaration {
-  oneof MethodDeclaration {
-    ConstructorDeclaration ConstructorDeclaration = 1;
+  oneof methodDeclaration {
+    ConstructorDeclaration constructorDeclaration = 1;
   }
   bool isStatic = 2;
   NodeIndex recordDeclaration = 3;
@@ -605,8 +607,8 @@ message TranslationUnitDeclaration {
 }
 
 message FunctionDeclaration {
-  oneof FunctionDeclaration {
-    MethodDeclaration MethodDeclaration = 1;
+  oneof functionDeclaration {
+    MethodDeclaration methodDeclaration = 1;
   }
   NodeIndex body = 2;
   repeated PropertyEdge records = 3;
@@ -619,9 +621,9 @@ message FunctionDeclaration {
 }
 
 message TemplateDeclaration {
-  oneof TemplateDeclaration {
-    FunctionTemplateDeclaration FunctionTemplateDeclaration = 1;
-    ClassTemplateDeclaration ClassTemplateDeclaration = 2;
+  oneof templateDeclaration {
+    FunctionTemplateDeclaration functionTemplateDeclaration = 1;
+    ClassTemplateDeclaration classTemplateDeclaration = 2;
   }
   repeated PropertyEdge parameters = 3;
 }
@@ -694,14 +696,14 @@ message UnknownType {
 }
 
 message Type {
-  oneof Type {
-    UnknownType UnknownType = 1;
-    PointerType PointerType = 2;
-    IncompleteType IncompleteType = 3;
-    ReferenceType ReferenceType = 4;
-    ParameterizedType ParameterizedType = 5;
-    ObjectType ObjectType = 6;
-    FunctionPointerType FunctionPointerType = 7;
+  oneof type {
+    UnknownType unknownType = 1;
+    PointerType pointerType = 2;
+    IncompleteType incompleteType = 3;
+    ReferenceType referenceType = 4;
+    ParameterizedType parameterizedType = 5;
+    ObjectType objectType = 6;
+    FunctionPointerType functionPointerType = 7;
   }
   repeated NodeIndex superTypes = 8;
   Storage storage = 9;
@@ -769,7 +771,7 @@ message Qualifier {
 }
 
 message NodeIndex {
-  int64 NodeIndex = 1;
+  int64 nodeIndex = 1;
 }
 
 service TransferCpg {
