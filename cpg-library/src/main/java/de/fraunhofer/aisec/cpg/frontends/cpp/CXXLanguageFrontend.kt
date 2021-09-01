@@ -240,11 +240,13 @@ class CXXLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeM
             val node = astNode as ASTNode
             val fLocation = node.fileLocation
             if (fLocation != null) {
-                /* Yes, seriously. getRawSignature() is CPU- and heap-costly, because it does an arraycopy. If parent is the whole TranslationUnit and we are doing this repeatedly, we will end up with OOM and waste time.
-                 * We thus do a shortcut and directly access the field containing the source code of a node as a CharArray.
-                 * This may break in future versions of CDT parser, when fields are renamed (which is unlikely). In this case, we will go the standard route.
-                 * Note, the only reason we are doing this is to compute the start and end columns of the current node.
-                 */
+                // Yes, seriously. getRawSignature() is CPU- and heap-costly, because it does an
+                // arraycopy. If parent is the whole TranslationUnit and we are doing this
+                // repeatedly, we will end up with OOM and waste time. We thus do a shortcut and
+                // directly access the field containing the source code of a node as a CharArray.
+                // This may break in future versions of CDT parser, when fields are renamed (which
+                // is unlikely). In this case, we will go the standard route. Note, the only reason
+                // we are doing this is to compute the start and end columns of the current node.
                 val translationUnitRawSignature: AbstractCharArray =
                     try {
                         val fLoc = getField(fLocation.javaClass, "fLocationCtx")
@@ -255,14 +257,14 @@ class CXXLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeM
                         fSource[locCtx] as AbstractCharArray
                     } catch (e: ReflectiveOperationException) {
                         LOGGER.warn(
-                            "Reflective retrieval of AST node source failed. Cannot reliably determine content of the file that contains the node"
+                            "Reflective retrieval of AST node source failed. Falling back to getRawSignature()"
                         )
-                        return null
+                        org.eclipse.cdt.internal.core.parser.scanner.CharArray(node.rawSignature)
                     } catch (e: ClassCastException) {
                         LOGGER.warn(
-                            "Reflective retrieval of AST node source failed. Cannot reliably determine content of the file that contains the node"
+                            "Reflective retrieval of AST node source failed. Falling back to getRawSignature()"
                         )
-                        return null
+                        org.eclipse.cdt.internal.core.parser.scanner.CharArray(node.rawSignature)
                     } catch (e: NullPointerException) {
                         LOGGER.warn(
                             "Reflective retrieval of AST node source failed. Cannot reliably determine content of the file that contains the node"
