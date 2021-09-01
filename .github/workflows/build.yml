@@ -72,7 +72,7 @@ jobs:
         run: |
           if [ "$SONAR_TOKEN" != "" ]
           then
-            ./gradlew --parallel -Pversion=$VERSION -Pexperimental -PexperimentalTypeScript build sonarqube \
+            ./gradlew --scan --parallel -Pversion=$VERSION -Pexperimental -PexperimentalTypeScript build sonarqube \
             -Dsonar.projectKey=Fraunhofer-AISEC_cpg \
             -Dsonar.organization=fraunhofer-aisec \
             -Dsonar.host.url=https://sonarcloud.io \
