@@ -29,6 +29,7 @@ jobs:
         with:
           distribution: "zulu"
           java-version: "15"
+          cache: 'gradle'
       - uses: actions/setup-python@v2
         with:
           python-version: "3.9"
@@ -43,12 +44,6 @@ jobs:
         with:
           path: ~/.sonar/cache
           key: ${{ runner.os }}-sonar
-      - name: Cache Gradle packages
-        uses: actions/cache@v2
-        with:
-          path: ~/.gradle/caches
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle') }}
-          restore-keys: ${{ runner.os }}-gradle
       - name: Determine Version
         run: |
           # determine version from tag
