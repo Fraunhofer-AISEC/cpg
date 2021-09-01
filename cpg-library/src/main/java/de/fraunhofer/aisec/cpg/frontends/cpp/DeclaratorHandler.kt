@@ -232,10 +232,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
                     }
                 }
             }
-            val binding = ctx.parameters[i].declarator.name.resolveBinding()
-            if (binding != null) {
-                lang.cacheDeclaration(binding, arg)
-            }
+
             arg.argumentIndex = i
             // Note that this .addValueDeclaration call already adds arg to the function's
             // parameters.

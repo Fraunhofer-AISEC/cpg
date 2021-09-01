@@ -414,9 +414,6 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
                 val result = TypeParser.createFrom(typeString, true, lang)
                 declaration.type = result
 
-                // cache binding
-                lang.cacheDeclaration(declarator.name.resolveBinding(), declaration)
-
                 // process attributes
                 lang.processAttributes(declaration, ctx)
                 sequence.addDeclaration(declaration)
@@ -480,9 +477,6 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
             if (declaration is VariableDeclaration) {
                 declaration.templateParameters = templateParams
             }
-
-            // cache binding
-            lang.cacheDeclaration(declarator.name.resolveBinding(), declaration)
 
             // process attributes
             lang.processAttributes(declaration, ctx)

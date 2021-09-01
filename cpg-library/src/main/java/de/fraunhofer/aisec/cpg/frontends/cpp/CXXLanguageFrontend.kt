@@ -72,7 +72,8 @@ class CXXLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeM
     LanguageFrontend(config, scopeManager, "::"), HasDefaultArguments, HasTemplates {
 
     /**
-     * Implements an [IncludeFileContentProvider] which features an inclusion/exclusion list for header files.
+     * Implements an [IncludeFileContentProvider] which features an inclusion/exclusion list for
+     * header files.
      */
     private val includeFileContentProvider: IncludeFileContentProvider =
         object : InternalFileContentProvider() {
@@ -376,18 +377,6 @@ class CXXLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeM
             }
             throw e
         }
-    }
-
-    fun cacheDeclaration(binding: IBinding, declaration: Declaration?): Declaration? {
-        return cachedDeclarations.put(binding, declaration)
-    }
-
-    fun getCachedDeclaration(binding: IBinding): Declaration? {
-        return cachedDeclarations[binding]
-    }
-
-    fun getCachedDeclarations(): Map<IBinding, Declaration?> {
-        return cachedDeclarations
     }
 
     override fun <S, T> setComment(s: S, ctx: T) {

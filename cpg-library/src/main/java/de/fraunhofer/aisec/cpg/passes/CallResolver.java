@@ -891,7 +891,7 @@ public class CallResolver extends Pass {
   private List<FunctionDeclaration> resolveWithImplicitCastFunc(CallExpression call) {
     assert lang != null;
     List<FunctionDeclaration> initialInvocationCandidates =
-            new ArrayList<>(lang.getScopeManager().resolveFunctionStopScopeTraversalOnDefinition(call));
+        new ArrayList<>(lang.getScopeManager().resolveFunctionStopScopeTraversalOnDefinition(call));
     return resolveWithImplicitCast(call, initialInvocationCandidates);
   }
 
@@ -908,7 +908,7 @@ public class CallResolver extends Pass {
     for (int i = 0; i < implicitCasts.size(); i++) {
       CastExpression currentCast = implicitCasts.get(i);
 
-      if(i < implicitCastTargets.size()) {
+      if (i < implicitCastTargets.size()) {
         CastExpression otherCast = implicitCastTargets.get(i);
         if (currentCast != null && otherCast != null && !(currentCast.equals(otherCast))) {
           // If we have multiple function targets with different implicit casts we have an
