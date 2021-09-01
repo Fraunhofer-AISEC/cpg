@@ -891,9 +891,7 @@ public class CallResolver extends Pass {
   private List<FunctionDeclaration> resolveWithImplicitCastFunc(CallExpression call) {
     assert lang != null;
     List<FunctionDeclaration> initialInvocationCandidates =
-        lang.getScopeManager().resolveFunctionStopScopeTraversalOnDefinition(call).stream()
-            // .filter(f -> !f.isImplicit())
-            .collect(Collectors.toList());
+            new ArrayList<>(lang.getScopeManager().resolveFunctionStopScopeTraversalOnDefinition(call));
     return resolveWithImplicitCast(call, initialInvocationCandidates);
   }
 
@@ -909,15 +907,18 @@ public class CallResolver extends Pass {
       List<CastExpression> implicitCasts, List<CastExpression> implicitCastTargets) {
     for (int i = 0; i < implicitCasts.size(); i++) {
       CastExpression currentCast = implicitCasts.get(i);
-      CastExpression otherCast = implicitCastTargets.get(i);
-      if (currentCast != null && otherCast != null && !(currentCast.equals(otherCast))) {
-        // If we have multiple function targets with different implicit casts we have an
-        // ambiguous call and we can't have a single cast
-        CastExpression contradictoryCast = new CastExpression();
-        contradictoryCast.setImplicit(true);
-        contradictoryCast.setCastType(UnknownType.getUnknownType());
-        contradictoryCast.setExpression(currentCast.getExpression());
-        implicitCasts.set(i, contradictoryCast);
+
+      if(i < implicitCastTargets.size()) {
+        CastExpression otherCast = implicitCastTargets.get(i);
+        if (currentCast != null && otherCast != null && !(currentCast.equals(otherCast))) {
+          // If we have multiple function targets with different implicit casts we have an
+          // ambiguous call and we can't have a single cast
+          CastExpression contradictoryCast = new CastExpression();
+          contradictoryCast.setImplicit(true);
+          contradictoryCast.setCastType(UnknownType.getUnknownType());
+          contradictoryCast.setExpression(currentCast.getExpression());
+          implicitCasts.set(i, contradictoryCast);
+        }
       }
     }
   }
