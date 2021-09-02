@@ -248,7 +248,7 @@ public class TypeResolver extends Pass {
         types = typeState.keySet();
       } else {
         Type root = oldType.getRoot();
-        types = typeState.get(root);
+        types = typeState.computeIfAbsent(root, x -> new ArrayList<>());
       }
 
       updateType(node, types);
