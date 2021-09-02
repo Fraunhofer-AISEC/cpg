@@ -1773,13 +1773,15 @@ public class CallResolver extends Pass {
   private ConstructorDeclaration resolveConstructorWithImplicitCast(
       ConstructExpression constructExpression, RecordDeclaration recordDeclaration) {
     for (ConstructorDeclaration constructorDeclaration : recordDeclaration.getConstructors()) {
-      List<Type> workingSignature = new ArrayList<>(constructExpression.getSignature());
-      workingSignature.addAll(
-          constructorDeclaration
-              .getDefaultParameterSignature()
-              .subList(
-                  constructExpression.getArguments().size(),
-                  constructorDeclaration.getDefaultParameterSignature().size()));
+      var workingSignature = new ArrayList<>(constructExpression.getSignature());
+      var defaultParameterSignature = constructorDeclaration.getDefaultParameterSignature();
+
+      if (constructExpression.getArguments().size() <= defaultParameterSignature.size()) {
+        workingSignature.addAll(
+            defaultParameterSignature.subList(
+                constructExpression.getArguments().size(), defaultParameterSignature.size()));
+      }
+
       if (compatibleSignatures(
           constructExpression.getSignature(), constructorDeclaration.getSignatureTypes())) {
         List<CastExpression> implicitCasts =
