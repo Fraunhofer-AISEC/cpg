@@ -75,7 +75,7 @@ subprojects {
 
     tasks.withType<JacocoReport> {
         reports {
-            xml.isEnabled = true
+            xml.required.set(true)
         }
     }
 
@@ -90,7 +90,7 @@ subprojects {
         }
     }
 
-    var headerWithStars = """/*
+    val headerWithStars = """/*
  * Copyright (c) ${"$"}YEAR, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -150,7 +150,7 @@ subprojects {
                         include("build/generated-src/**")
                     }
             )
-            googleJavaFormat()
+            googleJavaFormat("1.11.0")
             licenseHeader(headerWithStars).yearSeparator(" - ")
         }
         kotlin {
