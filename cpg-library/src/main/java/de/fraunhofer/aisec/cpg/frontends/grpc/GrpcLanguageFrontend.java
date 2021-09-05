@@ -48,6 +48,8 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 /** Parser for the gRPC interface */
 public class GrpcLanguageFrontend extends LanguageFrontend {
 
+  public static final List<String> GRPC_EXTENSIONS = List.of(".pr");
+
   public GrpcLanguageFrontend(@NonNull TranslationConfiguration config, ScopeManager scopeManager) {
     super(config, scopeManager, ".");
   }

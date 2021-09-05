@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationManager
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.frontends.golang.GoLanguageFrontend
+import de.fraunhofer.aisec.cpg.frontends.grpc.GrpcLanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguageFrontend
 import java.io.File
 import java.net.ConnectException
@@ -139,6 +140,12 @@ class Application : Callable<Int> {
     )
     private var enableExperimentalGo: Boolean = false
 
+    @CommandLine.Option(
+        names = ["--enable-experimental-grpc"],
+        description = ["Enables the experimental language frontend for gRPC."]
+    )
+    private var enableExperimentalGrpc: Boolean = false
+
     /**
      * Pushes the whole translationResult to the neo4j db.
      *
@@ -247,6 +254,13 @@ class Application : Callable<Int> {
                 .defaultLanguages()
                 .loadIncludes(loadIncludes)
                 .debugParser(DEBUG_PARSER)
+
+        if (enableExperimentalGrpc) {
+            translationConfiguration.registerLanguage(
+                GrpcLanguageFrontend::class.java,
+                GrpcLanguageFrontend.GRPC_EXTENSIONS
+            )
+        }
 
         if (enableExperimentalPython) {
             translationConfiguration.registerLanguage(

@@ -70,4 +70,7 @@ dependencies {
     // Command line interface support
     api("info.picocli:picocli:4.6.1")
     annotationProcessor("info.picocli:picocli-codegen:4.6.1")
+
+    // Protobuf
+    api("io.grpc:grpc-okhttp:1.31.1")
 }
