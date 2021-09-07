@@ -99,7 +99,13 @@ public class TypeManager {
   // as Values
   private Set<Type> firstOrderTypes = Collections.synchronizedSet(new HashSet<>());
   private Set<Type> secondOrderTypes = Collections.synchronizedSet(new HashSet<>());
+
+  /**
+   * The language frontend that is currently active. This can be null, e.g. if we are executed in tests.
+   */
+  @org.jetbrains.annotations.Nullable
   private LanguageFrontend frontend;
+
   private boolean noFrontendWarningIssued = false;
 
   public static void reset() {
@@ -515,7 +521,7 @@ public class TypeManager {
       return Language.TYPESCRIPT;
     }
 
-    log.error("Unknown language (frontend: {})", frontend.getClass().getSimpleName());
+    log.error("Unknown language (frontend: {})", frontend != null ? frontend.getClass().getSimpleName() : null);
     return Language.UNKNOWN;
   }
 
@@ -677,6 +683,15 @@ public class TypeManager {
     }
 
     TypedefDeclaration typedef = NodeBuilder.newTypedefDeclaration(currTarget, alias, rawCode);
+
+    if (frontend == null) {
+      if (!noFrontendWarningIssued) {
+        log.warn("No frontend available. Be aware that typedef resolving cannot currently be done");
+        noFrontendWarningIssued = true;
+      }
+      return;
+    }
+
     frontend.getScopeManager().addTypedef(typedef);
   }
 
@@ -688,6 +703,7 @@ public class TypeManager {
       }
       return alias;
     }
+
     Type toCheck = alias.getRoot();
 
     Type finalToCheck = toCheck;
