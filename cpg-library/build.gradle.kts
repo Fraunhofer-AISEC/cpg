@@ -194,7 +194,7 @@ dependencies {
     implementation("org.jetbrains.kotlin:kotlin-reflect")
 
     // jep for python support
-    api("black.ninia:jep:3.9.1")
+    api("black.ninia:jep:4.0.0")
 
     // JUnit
     testImplementation("org.jetbrains.kotlin:kotlin-test")
