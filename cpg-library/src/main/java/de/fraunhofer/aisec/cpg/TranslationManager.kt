@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2021, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -46,7 +46,6 @@ import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletionException
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.atomic.AtomicBoolean
-import java.util.function.Consumer
 import java.util.stream.Collectors
 import org.slf4j.LoggerFactory
 
@@ -78,7 +77,7 @@ private constructor(
             val scopesBuildForAnalysis = ScopeManager()
             val outerBench =
                 Benchmark(TranslationManager::class.java, "Translation into full graph")
-            val passesNeedCleanup: MutableSet<Pass> = HashSet()
+            val passesNeedCleanup = mutableSetOf<Pass>()
             var frontendsNeedCleanup: Set<LanguageFrontend>? = null
 
             try {
@@ -88,8 +87,8 @@ private constructor(
                 bench.stop()
 
                 // TODO: Find a way to identify the right language during the execution of a pass
-                // (and
-                // set the lang to the scope manager)
+                // (and set the lang to the scope manager)
+
                 // Apply passes
                 for (pass in config.registeredPasses) {
                     passesNeedCleanup.add(pass)
@@ -106,13 +105,12 @@ private constructor(
                 outerBench.stop()
                 if (!config.disableCleanup) {
                     log.debug("Cleaning up {} Passes", passesNeedCleanup.size)
-                    passesNeedCleanup.forEach(Consumer { obj: Pass -> obj.cleanup() })
-                    if (frontendsNeedCleanup != null) {
-                        log.debug("Cleaning up {} Frontends", frontendsNeedCleanup.size)
-                        frontendsNeedCleanup.forEach(
-                            Consumer { obj: LanguageFrontend -> obj.cleanup() }
-                        )
-                    }
+
+                    passesNeedCleanup.forEach { it.cleanup() }
+
+                    log.debug("Cleaning up {} Frontends", frontendsNeedCleanup?.size)
+
+                    frontendsNeedCleanup?.forEach { it.cleanup() }
                     TypeManager.getInstance().cleanup()
                 }
             }
@@ -133,7 +131,7 @@ private constructor(
      *
      * @param result the translation result that is being mutated
      * @param config the translation configuration
-     * @throws TranslationException if the language front-end runs into an error and `failOnError `
+     * @throws TranslationException if the language front-end runs into an error and [TranslationConfiguration.failOnError]
      * * is `true`.
      */
     @Throws(TranslationException::class)
@@ -211,6 +209,7 @@ private constructor(
 
             result.translationUnits.forEach { SubgraphWalker.activateTypes(it, scopeManager) }
         }
+
         return usedFrontends
     }
 
@@ -223,8 +222,8 @@ private constructor(
 
         log.info("Parallel parsing started")
 
-        val futures: MutableList<CompletableFuture<Optional<LanguageFrontend>>> = ArrayList()
-        val parallelScopeManagers: MutableList<ScopeManager> = ArrayList()
+        val futures = mutableListOf<CompletableFuture<Optional<LanguageFrontend>>>()
+        val parallelScopeManagers = mutableListOf<ScopeManager>()
 
         val futureToFile: MutableMap<CompletableFuture<Optional<LanguageFrontend>>, File> =
             IdentityHashMap()
@@ -232,7 +231,16 @@ private constructor(
         for (sourceLocation in sourceLocations) {
             val scopeManager = ScopeManager()
             parallelScopeManagers.add(scopeManager)
-            val future = getParsingFuture(result, scopeManager, sourceLocation)
+
+            val future =
+                CompletableFuture.supplyAsync {
+                    try {
+                        return@supplyAsync parse(result, scopeManager, sourceLocation)
+                    } catch (e: TranslationException) {
+                        throw RuntimeException("Error parsing $sourceLocation", e)
+                    }
+                }
+
             futures.add(future)
             futureToFile[future] = sourceLocation
         }
@@ -250,26 +258,13 @@ private constructor(
                 Thread.currentThread().interrupt()
             }
         }
-        originalScopeManager.mergeFrom(parallelScopeManagers)
-        usedFrontends.forEach(
-            Consumer { f: LanguageFrontend -> f.scopeManager = originalScopeManager }
-        )
-        log.info("Parallel parsing completed")
-        return usedFrontends
-    }
 
-    private fun getParsingFuture(
-        result: TranslationResult,
-        scopeManager: ScopeManager,
-        sourceLocation: File
-    ): CompletableFuture<Optional<LanguageFrontend>> {
-        return CompletableFuture.supplyAsync {
-            try {
-                return@supplyAsync parse(result, scopeManager, sourceLocation)
-            } catch (e: TranslationException) {
-                throw RuntimeException("Error parsing $sourceLocation", e)
-            }
-        }
+        originalScopeManager.mergeFrom(parallelScopeManagers)
+        usedFrontends.forEach { it.scopeManager = originalScopeManager }
+
+        log.info("Parallel parsing completed")
+
+        return usedFrontends
     }
 
     @Throws(TranslationException::class)
@@ -278,13 +273,16 @@ private constructor(
         scopeManager: ScopeManager,
         sourceLocations: Collection<File>
     ): Set<LanguageFrontend> {
-        val usedFrontends: MutableSet<LanguageFrontend> = HashSet()
+        val usedFrontends = mutableSetOf<LanguageFrontend>()
+
         for (sourceLocation in sourceLocations) {
             log.info("Parsing {}", sourceLocation.absolutePath)
+
             parse(result, scopeManager, sourceLocation).ifPresent { f: LanguageFrontend ->
                 handleCompletion(result, usedFrontends, sourceLocation, f)
             }
         }
+
         return usedFrontends
     }
 
@@ -295,12 +293,8 @@ private constructor(
         f: LanguageFrontend
     ) {
         usedFrontends.add(f)
-        if (usedFrontends
-                .stream()
-                .map { obj: LanguageFrontend -> obj.javaClass }
-                .distinct()
-                .count() > 1
-        ) {
+
+        if (usedFrontends.map { it.javaClass }.distinct().count() > 1) {
             log.error(
                 "Different frontends are used for multiple files. This will very likely break the following passes."
             )
@@ -329,8 +323,10 @@ private constructor(
         var frontend: LanguageFrontend? = null
         try {
             frontend = getFrontend(Util.getExtension(sourceLocation), scopeManager)
+
             if (frontend == null) {
                 log.error("Found no parser frontend for {}", sourceLocation.name)
+
                 if (config.failOnError) {
                     throw TranslationException(
                         "Found no parser frontend for " + sourceLocation.name
