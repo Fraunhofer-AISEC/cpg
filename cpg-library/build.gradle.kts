@@ -194,13 +194,13 @@ dependencies {
     implementation("org.jetbrains.kotlin:kotlin-reflect")
 
     // jep for python support
-    api("black.ninia:jep:3.9.1")
+    api("black.ninia:jep:4.0.0")
 
     // JUnit
     testImplementation("org.jetbrains.kotlin:kotlin-test")
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
     testImplementation("org.junit.jupiter:junit-jupiter-api:5.7.2")
-    testImplementation("org.junit.jupiter:junit-jupiter-params:5.7.2")
+    testImplementation("org.junit.jupiter:junit-jupiter-params:5.8.0")
 
     testImplementation("org.mockito:mockito-core:3.12.4")
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.7.2")
