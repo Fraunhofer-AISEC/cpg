@@ -101,10 +101,10 @@ public class TypeManager {
   private Set<Type> secondOrderTypes = Collections.synchronizedSet(new HashSet<>());
 
   /**
-   * The language frontend that is currently active. This can be null, e.g. if we are executed in tests.
+   * The language frontend that is currently active. This can be null, e.g. if we are executed in
+   * tests.
    */
-  @org.jetbrains.annotations.Nullable
-  private LanguageFrontend frontend;
+  @org.jetbrains.annotations.Nullable private LanguageFrontend frontend;
 
   private boolean noFrontendWarningIssued = false;
 
@@ -521,7 +521,9 @@ public class TypeManager {
       return Language.TYPESCRIPT;
     }
 
-    log.error("Unknown language (frontend: {})", frontend != null ? frontend.getClass().getSimpleName() : null);
+    log.error(
+        "Unknown language (frontend: {})",
+        frontend != null ? frontend.getClass().getSimpleName() : null);
     return Language.UNKNOWN;
   }
 
