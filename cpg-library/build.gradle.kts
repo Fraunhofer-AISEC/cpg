@@ -30,7 +30,7 @@ plugins {
     `maven-publish`
     signing
 
-    id("com.github.node-gradle.node") version "3.1.0"
+    id("com.github.node-gradle.node") version "3.1.1"
 }
 
 publishing {
