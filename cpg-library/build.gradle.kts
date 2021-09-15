@@ -178,7 +178,7 @@ dependencies {
     api("com.fasterxml.jackson.module:jackson-module-kotlin:2.12.5")
 
     // Eclipse dependencies
-    api("org.eclipse.platform:org.eclipse.core.runtime:3.22.0")
+    api("org.eclipse.platform:org.eclipse.core.runtime:3.23.0")
     api("com.ibm.icu:icu4j:69.1")
 
     // CDT
