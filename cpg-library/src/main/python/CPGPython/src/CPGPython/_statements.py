@@ -384,7 +384,8 @@ def make_compound_statement(self, stmts) -> CompoundStatement:
             loglevel="WARN")
         return NodeBuilder.newCompoundStatement("")
 
-    if len(stmts) == 1:
+    if False and len(stmts) == 1:
+        """ TODO decide how to handle this... """
         s = self.handle_statement(stmts[0])
         if self.is_declaration(s):
             decl_stmt = NodeBuilder.newDeclarationStatement(DUMMY_CODE)

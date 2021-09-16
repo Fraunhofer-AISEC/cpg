@@ -99,7 +99,8 @@ class PythonLanguageFrontend(config: TranslationConfiguration, scopeManager: Sco
         var interp: SubInterpreter? = null
         try {
             JepSingleton // configure Jep
-            interp = SubInterpreter(JepConfig().setRedirectOutputStreams(true))
+            interp =
+                SubInterpreter(JepConfig().redirectStdErr(System.err).redirectStdout(System.out))
 
             // TODO: extract cpg.py in a real python module with multiple files
 

@@ -23,7 +23,7 @@ The most recent version is being published to Maven central and can be used as a
 ```
 repositories {
     ivy {
-        setUrl("https://download.eclipse.org/tools/cdt/releases/10.2/cdt-10.2.0/plugins")
+        setUrl("https://download.eclipse.org/tools/cdt/releases/10.3/cdt-10.3.2/plugins")
         metadataSources {
             artifact()
         }
@@ -34,7 +34,7 @@ repositories {
 }
 
 dependencies {
-    api("de.fraunhofer.aisec", "cpg", "3.5.1")
+    api("de.fraunhofer.aisec", "cpg", "4.0")
 }
 ```
 
@@ -44,38 +44,7 @@ A published artifact of every commit can be requested through [JitPack](https://
 
 ### On Command Line
 
-The library can be used on the command line using `jshell`, the Java shell to try out some basic queries.
-
-First, a jar consisting all the necessary dependencies should be created with `./gradlew shadowJar`. Afterwards, the shell can be launched using `jshell --class-path cpg-library/build/libs/cpg-library-all.jar`.
-
-The following snippet creates a basic `TranslationManager` with default settings to analyze a sample file in `src/test/resources/openssl/client.cpp`:
-
-```java
-import de.fraunhofer.aisec.cpg.TranslationConfiguration;
-import de.fraunhofer.aisec.cpg.TranslationManager;
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration;
-
-var path = Paths.get("src/test/resources/openssl/client.cpp");
-var config = TranslationConfiguration.builder().sourceLocations(path.toFile()).defaultPasses().defaultLanguages().debugParser(true).build();
-var analyzer = TranslationManager.builder().config(config).build();
-var result = analyzer.analyze().get();
-var tu = result.getTranslationUnits().get(0);
-```
-
-Afterwards, a list of function declarations can be obtained like this:
-
-```java
-var functions = tu.getDeclarations().stream().filter(decl -> decl instanceof FunctionDeclaration).map(FunctionDeclaration.class::cast).collect(Collectors.toList());
-```
-
-Information about specific functions can be obtained using the property getters:
-
-```java
-var func = functions.get(0);
-func.getName();
-func.getSignature();
-func.getParameters();
-```
+The library can be used on the command line using the `cpg-console` subproject. Please refer to the [README.md](./cpg-console/README.md) of the `cpg-console` as well as our small [tutorial](./tutorial.md) for further details.
 
 ### Usage of Experimental Languages
 

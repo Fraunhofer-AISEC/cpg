@@ -135,7 +135,7 @@ class PythonFrontendTest : BaseTest() {
         assertNotNull(bar)
         assertEquals(2, bar.parameters.size)
 
-        var callExpression = foo.body as? CallExpression
+        var callExpression = (foo.body as? CompoundStatement)?.statements?.get(0) as? CallExpression
         assertNotNull(callExpression)
 
         assertEquals("bar", callExpression.name)
@@ -329,7 +329,7 @@ class PythonFrontendTest : BaseTest() {
 
         assertNotNull(main)
 
-        val body = main.body as? DeclarationStatement
+        val body = (main.body as? CompoundStatement)?.statements?.get(0) as? DeclarationStatement
 
         assertNotNull(body)
 
@@ -484,24 +484,21 @@ class PythonFrontendTest : BaseTest() {
         assertEquals("i", i.name)
         assertEquals(TypeParser.createFrom("int", false), i.type)
 
-        val barBodyAssign = bar.body as? BinaryOperator
-        assertNotNull(barBodyAssign)
-        val assignLhs = barBodyAssign.lhs as? MemberExpression
-        val assignRhs = barBodyAssign.rhs as? DeclaredReferenceExpression
-        assertNotNull(assignLhs)
-        assertNotNull(assignRhs)
+        val assign = (bar.body as? CompoundStatement)?.statements?.get(0) as? BinaryOperator
+        assertNotNull(assign)
+        val lhs = assign.lhs as? MemberExpression
+        assertNotNull(lhs)
+        val rhs = assign.rhs as? DeclaredReferenceExpression
+        assertNotNull(rhs)
+        assertEquals(somevar, lhs.refersTo)
+        val base = lhs.base as? DeclaredReferenceExpression
+        assertNotNull(base)
+        assertEquals("self", base.name)
+        assertEquals(TypeParser.createFrom("Foo", false), base.type)
+        assertEquals(recv, base.refersTo)
 
-        val lhsRefTo = assignLhs.refersTo as? FieldDeclaration
-        assertNotNull(lhsRefTo)
-        assertEquals(lhsRefTo, somevar)
-
-        val rhsRefTo = assignRhs.refersTo as? ParamVariableDeclaration
-        assertNotNull(rhsRefTo)
-        assertEquals(rhsRefTo, i)
-
-        assertEquals(barBodyAssign.operatorCode, "=")
-
-        val fooMemCall = foo.body as? MemberCallExpression
+        val fooMemCall =
+            (foo.body as? CompoundStatement)?.statements?.get(0) as? MemberCallExpression
         assertNotNull(fooMemCall)
         val mem = fooMemCall.member as? DeclaredReferenceExpression
         assertNotNull(mem)
@@ -617,7 +614,7 @@ class PythonFrontendTest : BaseTest() {
         assertNotNull(countParam)
         assertEquals(countParam.name, "c")
 
-        val countStmt = methCount.body as? IfStatement
+        val countStmt = (methCount.body as? CompoundStatement)?.statements?.get(0) as? IfStatement
         assertNotNull(countStmt)
 
         val ifCond = countStmt.condition as? BinaryOperator
@@ -629,7 +626,8 @@ class PythonFrontendTest : BaseTest() {
         assertEquals(lhs.name, "inc")
         assertEquals(lhs.arguments.size, 0)
 
-        val ifThen = countStmt.thenStatement as? CallExpression
+        val ifThen =
+            (countStmt.thenStatement as? CompoundStatement)?.statements?.get(0) as? CallExpression
         assertNotNull(ifThen)
         assertEquals(ifThen.invokes.first(), methCount)
         assertEquals(

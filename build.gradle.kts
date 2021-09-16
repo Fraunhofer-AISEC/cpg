@@ -33,12 +33,14 @@ plugins {
     signing
 
     id("org.sonarqube") version "3.3"
-    id("com.diffplug.spotless") version "5.14.0"
+    id("com.diffplug.spotless") version "5.15.0"
     id("com.github.johnrengelman.shadow") version "7.0.0" apply false
-    kotlin("jvm") version "1.5.10" apply false
+    kotlin("jvm") version "1.5.30" apply false
 }
 
-group = "de.fraunhofer.aisec"
+allprojects {
+    group = "de.fraunhofer.aisec"
+}
 
 tasks.named("sonarqube") {
     subprojects.forEach {
@@ -56,7 +58,7 @@ subprojects {
         mavenCentral()
 
         ivy {
-            setUrl("https://download.eclipse.org/tools/cdt/releases/10.2/cdt-10.2.0/plugins")
+            setUrl("https://download.eclipse.org/tools/cdt/releases/10.3/cdt-10.3.2/plugins")
             metadataSources {
                 artifact()
             }
@@ -69,14 +71,11 @@ subprojects {
     tasks.withType<JavaCompile> {
         sourceCompatibility = "11"
         targetCompatibility = "11"
-
-        //withSourcesJar()
-        //withJavadocJar()
     }
 
     tasks.withType<JacocoReport> {
         reports {
-            xml.isEnabled = true
+            xml.required.set(true)
         }
     }
 
@@ -91,7 +90,7 @@ subprojects {
         }
     }
 
-    var headerWithStars = """/*
+    val headerWithStars = """/*
  * Copyright (c) ${"$"}YEAR, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -151,7 +150,7 @@ subprojects {
                         include("build/generated-src/**")
                     }
             )
-            googleJavaFormat()
+            googleJavaFormat("1.11.0")
             licenseHeader(headerWithStars).yearSeparator(" - ")
         }
         kotlin {
