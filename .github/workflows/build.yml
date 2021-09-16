@@ -63,6 +63,11 @@ jobs:
         run: |
           pip3 install jep==$(grep "black.ninia:jep" cpg-library/build.gradle.kts | cut -d ":" -f 3 | cut -d "\"" -f 1)
           sudo cp /opt/hostedtoolcache/Python/3.9*/x64/lib/python3.9/site-packages/jep/libjep.so /usr/lib/
+      - name: Build and install Python Package
+        run: |
+          cd cpg/cpg-library/src/main/python/CPGPython
+          python3 -m build 
+          pip3 install dist/CPGPython-0.0.1-py3-none-any.whl
       - name: Build ${{ steps.determine_version.outputs.version }}
         run: |
           if [ "$SONAR_TOKEN" != "" ]
