@@ -5,7 +5,7 @@ on:
     branches:
       - master
     tags:
-      - v*.*.*
+      - v*.**
   pull_request:
     types: [opened, synchronize, reopened]
 
@@ -28,7 +28,7 @@ jobs:
       - uses: actions/setup-java@v2
         with:
           distribution: "zulu"
-          java-version: "11"
+          java-version: "15"
       - uses: actions/setup-python@v2
         with:
           python-version: "3.9"
@@ -43,12 +43,6 @@ jobs:
         with:
           path: ~/.sonar/cache
           key: ${{ runner.os }}-sonar
-      - name: Cache Gradle packages
-        uses: actions/cache@v2
-        with:
-          path: ~/.gradle/caches
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle') }}
-          restore-keys: ${{ runner.os }}-gradle
       - name: Determine Version
         run: |
           # determine version from tag
@@ -66,13 +60,13 @@ jobs:
         id: determine_version
       - name: Install JEP
         run: |
-          pip3 install jep
+          pip3 install jep==4.0.0
           sudo cp /opt/hostedtoolcache/Python/3.9*/x64/lib/python3.9/site-packages/jep/libjep.so /usr/lib/
       - name: Build ${{ steps.determine_version.outputs.version }}
         run: |
           if [ "$SONAR_TOKEN" != "" ]
           then
-            ./gradlew --parallel -Pversion=$VERSION -Pexperimental -PexperimentalTypeScript build sonarqube \
+            ./gradlew --parallel -Pversion=$VERSION -Pexperimental -PexperimentalTypeScript -Pintegration build sonarqube \
             -Dsonar.projectKey=Fraunhofer-AISEC_cpg \
             -Dsonar.organization=fraunhofer-aisec \
             -Dsonar.host.url=https://sonarcloud.io \
@@ -91,23 +85,23 @@ jobs:
         with:
           name: test
           path: "**/build/reports/tests"
-      - name: JavaDoc
+      - name: Publish
+        if: startsWith(github.ref, 'refs/tags/v') && !contains(github.ref, 'beta')      
+        run: |
+          export ORG_GRADLE_PROJECT_signingKey=`echo ${{ secrets.GPG_PRIVATE_KEY }} | base64 -d`
+          ./gradlew -Dorg.gradle.internal.publish.checksums.insecure=true --parallel -Pversion=$VERSION build signMavenPublication publish javadoc
+        env:
+          VERSION: ${{ steps.determine_version.outputs.version }}
+          ORG_GRADLE_PROJECT_signingPassword: ${{ secrets.GPG_PASSWORD }}
+          ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
+          ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
+      - name: Publish JavaDoc
         if: startsWith(github.ref, 'refs/tags/v') && !contains(github.ref, 'beta')
         uses: JamesIves/github-pages-deploy-action@releases/v3
         with:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           BRANCH: gh-pages
           FOLDER: cpg-library/build/docs/javadoc
-      - name: Publish
-        if: startsWith(github.ref, 'refs/tags/v') && !contains(github.ref, 'beta')      
-        run: |
-          export ORG_GRADLE_PROJECT_signingKey=`echo ${{ secrets.GPG_PRIVATE_KEY }} | base64 -d`
-          ./gradlew -Dorg.gradle.internal.publish.checksums.insecure=true --parallel -Pversion=$VERSION build signMavenPublication publish
-        env:
-          VERSION: ${{ steps.determine_version.outputs.version }}
-          ORG_GRADLE_PROJECT_signingPassword: ${{ secrets.GPG_PASSWORD }}
-          ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
-          ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
       - name: "Create Release"
         if: startsWith(github.ref, 'refs/tags/v') && !contains(github.ref, 'beta')
         id: create_release
