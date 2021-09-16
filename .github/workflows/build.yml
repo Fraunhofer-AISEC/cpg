@@ -63,6 +63,9 @@ jobs:
         run: |
           pip3 install jep==$(grep "black.ninia:jep" cpg-library/build.gradle.kts | cut -d ":" -f 3 | cut -d "\"" -f 1)
           sudo cp /opt/hostedtoolcache/Python/3.9*/x64/lib/python3.9/site-packages/jep/libjep.so /usr/lib/
+      - name: Install Python build
+        run: |
+          pip3 install build
       - name: Build and install Python Package
         run: |
           cd cpg-library/src/main/python/CPGPython
