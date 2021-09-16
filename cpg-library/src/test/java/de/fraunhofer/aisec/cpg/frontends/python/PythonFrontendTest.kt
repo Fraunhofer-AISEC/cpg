@@ -792,11 +792,16 @@ class PythonFrontendTest : BaseTest() {
             tu.getDeclarationsByName("literal", NamespaceDeclaration::class.java).iterator().next()
         assertNotNull(p)
 
-        assertEquals("b = True", (p.declarations[0] as? VariableDeclaration)?.code)
-        assertEquals("i = 42", (p.declarations[1] as? VariableDeclaration)?.code)
-        assertEquals("f = 1.0", (p.declarations[2] as? VariableDeclaration)?.code)
-        assertEquals("t = \"Hello\"", (p.declarations[3] as? VariableDeclaration)?.code)
-        assertEquals("n = None", (p.declarations[4] as? VariableDeclaration)?.code)
+        assertEquals("b", (p.declarations[0] as? VariableDeclaration)?.code)
+        assertEquals("True", (p.declarations[0] as? VariableDeclaration)?.initializer?.code)
+        assertEquals("i", (p.declarations[1] as? VariableDeclaration)?.code)
+        assertEquals("42", (p.declarations[1] as? VariableDeclaration)?.initializer?.code)
+        assertEquals("f", (p.declarations[2] as? VariableDeclaration)?.code)
+        assertEquals("1.0", (p.declarations[2] as? VariableDeclaration)?.initializer?.code)
+        assertEquals("t", (p.declarations[3] as? VariableDeclaration)?.code)
+        assertEquals("\"Hello\"", (p.declarations[3] as? VariableDeclaration)?.initializer?.code)
+        assertEquals("n", (p.declarations[4] as? VariableDeclaration)?.code)
+        assertEquals("None", (p.declarations[4] as? VariableDeclaration)?.initializer?.code)
     }
 
     @Test

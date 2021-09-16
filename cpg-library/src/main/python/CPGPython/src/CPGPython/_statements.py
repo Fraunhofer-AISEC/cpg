@@ -30,9 +30,6 @@ from de.fraunhofer.aisec.cpg.graph.types import TypeParser
 from de.fraunhofer.aisec.cpg.graph.types import UnknownType
 import ast
 
-# TODO: Currently, I cannot access the source code...
-DUMMY_CODE = "DUMMY CODE"
-
 
 def handle_statement(self, stmt):
     self.log_with_loc("Handling statement: %s" % (ast.dump(stmt)))
@@ -49,7 +46,8 @@ def handle_statement(self, stmt):
         # "class" would automagically create a "this" receiver field.
         # However, the receiver can have any name in python (and even different
         # names per method).
-        cls = NodeBuilder.newRecordDeclaration(stmt.name, "", DUMMY_CODE)
+        cls = NodeBuilder.newRecordDeclaration(stmt.name, "",
+                                               self.get_src_code(stmt))
         self.add_loc_info(stmt, cls)
         self.scopemanager.enterScope(cls)
         bases = []
@@ -72,7 +70,8 @@ def handle_statement(self, stmt):
                 handled_stmt = self.handle_statement(s)
                 if self.is_declaration(handled_stmt):
                     # TODO wrap this in a function...
-                    decl_stmt = NodeBuilder.newDeclarationStatement(DUMMY_CODE)
+                    decl_stmt = NodeBuilder.newDeclarationStatement(
+                        self.get_src_code(s))
                     self.add_loc_info(s, decl_stmt)
                     decl_stmt.setSingleDeclaration(handled_stmt)
                     cls.addStatement(decl_stmt)
@@ -90,7 +89,7 @@ def handle_statement(self, stmt):
         self.scopemanager.addDeclaration(cls)
         return cls
     elif isinstance(stmt, ast.Return):
-        r = NodeBuilder.newReturnStatement(DUMMY_CODE)
+        r = NodeBuilder.newReturnStatement(self.get_src_code(stmt))
         self.add_loc_info(stmt, r)
         if stmt.value is not None:
             r.setReturnValue(self.handle_expression(stmt.value)
@@ -104,7 +103,7 @@ def handle_statement(self, stmt):
     elif isinstance(stmt, ast.Assign):
         if len(stmt.targets) != 1:
             self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
-            r = NodeBuilder.newBinaryOperator("=", DUMMY_CODE)
+            r = NodeBuilder.newBinaryOperator("=", self.get_src_code(stmt))
             self.add_loc_info(stmt, r)
             return r
         target = stmt.targets[0]
@@ -123,7 +122,7 @@ def handle_statement(self, stmt):
             return lhs
         else:
             # found var => BinaryOperator "="
-            binop = NodeBuilder.newBinaryOperator("=", DUMMY_CODE)
+            binop = NodeBuilder.newBinaryOperator("=", self.get_src_code(stmt))
             self.add_loc_info(stmt, binop)
             binop.setLhs(lhs)
             binop.setRhs(rhs)
@@ -140,11 +139,12 @@ def handle_statement(self, stmt):
         self.add_loc_info(stmt, r)
         return r
     elif isinstance(stmt, ast.For):
-        for_stmt = NodeBuilder.newForEachStatement(DUMMY_CODE)
+        for_stmt = NodeBuilder.newForEachStatement(self.get_src_code(stmt))
         self.add_loc_info(stmt, for_stmt)
         target = self.handle_expression(stmt.target)
         if self.is_variable_declaration(target):
-            decl_stmt = NodeBuilder.newDeclarationStatement(DUMMY_CODE)
+            decl_stmt = NodeBuilder.newDeclarationStatement(
+                self.get_src_code(stmt.target))
             self.add_loc_info(stmt.target, decl_stmt)
             decl_stmt.setSingleDeclaration(target)
             target = decl_stmt
@@ -169,7 +169,7 @@ def handle_statement(self, stmt):
         self.add_loc_info(stmt, r)
         return r
     elif isinstance(stmt, ast.If):
-        if_stmt = NodeBuilder.newIfStatement(DUMMY_CODE)
+        if_stmt = NodeBuilder.newIfStatement(self.get_src_code(stmt))
         self.add_loc_info(stmt, if_stmt)
         # Condition
         if_stmt.setCondition(self.handle_expression(stmt.test))
@@ -209,15 +209,17 @@ def handle_statement(self, stmt):
             r = NodeBuilder.newStatement("")
             self.add_loc_info(stmt, r)
             return r
-        decl_stmt = NodeBuilder.newDeclarationStatement(DUMMY_CODE)
+        decl_stmt = NodeBuilder.newDeclarationStatement(
+            self.get_src_code(stmt))
         self.add_loc_info(stmt, decl_stmt)
         for s in stmt.names:
             if s.asname is not None:
                 name = s.asname
             else:
                 name = s.name
+            tpe = UnknownType.getUnknownType()
             v = NodeBuilder.newVariableDeclaration(
-                name, UnknownType.getUnknownType(), DUMMY_CODE, False)
+                name, tpe, self.get_src_code(s), False)
             self.add_loc_info(s, v)
             self.scopemanager.addDeclaration(v)
             decl_stmt.addDeclaration(v)
@@ -234,15 +236,17 @@ def handle_statement(self, stmt):
         self.log_with_loc(
             "Cannot correctly handle \"import from\". Using an approximation.",
             loglevel="ERROR")
-        decl_stmt = NodeBuilder.newDeclarationStatement(DUMMY_CODE)
+        decl_stmt = NodeBuilder.newDeclarationStatement(
+            self.get_src_code(stmt))
         self.add_loc_info(stmt, decl_stmt)
         for s in stmt.names:
             if s.asname is not None:
                 name = s.asname
             else:
                 name = s.name
+            tpe = UnknownType.getUnknownType()
             v = NodeBuilder.newVariableDeclaration(
-                name, UnknownType.getUnknownType(), DUMMY_CODE, False)
+                name, tpe, self.get_src_code(s), False)
             self.add_loc_info(s, v)
             self.scopemanager.addDeclaration(v)
             decl_stmt.addDeclaration(v)
@@ -274,7 +278,7 @@ def handle_statement(self, stmt):
         self.add_loc_info(stmt, r)
         return r
     elif isinstance(stmt, ast.Try):
-        s = NodeBuilder.newTryStatement(DUMMY_CODE)
+        s = NodeBuilder.newTryStatement(self.get_src_code(stmt))
         self.add_loc_info(stmt, s)
         try_block = self.make_compound_statement(stmt.body)
         finally_block = self.make_compound_statement(stmt.finalbody)
@@ -311,13 +315,14 @@ def handle_function_or_method(self, node: ast.FunctionDef, record=None):
 
     if record is not None:
         if name == "__init__":
-            f = NodeBuilder.newConstructorDeclaration(name, DUMMY_CODE, record)
+            f = NodeBuilder.newConstructorDeclaration(
+                name, self.get_src_code(node), record)
         else:
             # TODO handle static
             f = NodeBuilder.newMethodDeclaration(
-                name, DUMMY_CODE, False, record)
+                name, self.get_src_code(node), False, record)
     else:
-        f = NodeBuilder.newFunctionDeclaration(name, DUMMY_CODE)
+        f = NodeBuilder.newFunctionDeclaration(name, self.get_src_code(node))
     self.add_loc_info(node, f)
 
     self.scopemanager.enterScope(f)
@@ -331,7 +336,7 @@ def handle_function_or_method(self, node: ast.FunctionDef, record=None):
             recv_node = node.args.args[0]
             tpe = TypeParser.createFrom(record.getName(), False)
             recv = NodeBuilder.newVariableDeclaration(
-                recv_node.arg, tpe, DUMMY_CODE, False)
+                recv_node.arg, tpe, self.get_src_code(recv_node), False)
             self.add_loc_info(recv_node, recv)
             f.setReceiver(recv)
             self.scopemanager.addDeclaration(recv)
@@ -372,18 +377,20 @@ def handle_function_or_method(self, node: ast.FunctionDef, record=None):
 
         if isinstance(decorator.func, ast.Attribute):
             ref = self.handle_expression(decorator.func)
-            annotation = NodeBuilder.newAnnotation(ref.getName(), DUMMY_CODE)
+            annotation = NodeBuilder.newAnnotation(
+                ref.getName(), self.get_src_code(decorator.func))
             self.add_loc_info(decorator.func, annotation)
 
             # add the base as a receiver annotation
-            member = NodeBuilder.newAnnotationMember("receiver", ref.getBase(),
-                                                     DUMMY_CODE)
+            member = NodeBuilder.newAnnotationMember(
+                "receiver", ref.getBase(), self.get_src_code(decorator.func))
             self.add_loc_info(decorator.func, member)
 
             members.append(member)
         elif isinstance(decorator.func, ast.Name):
             ref = self.handle_expression(decorator.func)
-            annotation = NodeBuilder.newAnnotation(ref.getName(), DUMMY_CODE)
+            annotation = NodeBuilder.newAnnotation(
+                ref.getName(), self.get_src_code(decorator.func))
             self.add_loc_info(decorator.func, member)
 
         else:
@@ -395,7 +402,7 @@ def handle_function_or_method(self, node: ast.FunctionDef, record=None):
             value = self.visit(arg0)
 
             member = NodeBuilder.newAnnotationMember(
-                "value", value, DUMMY_CODE)
+                "value", value, self.get_src_code(arg0))
             self.add_loc_info(arg0, member)
 
             members.append(member)
@@ -403,7 +410,8 @@ def handle_function_or_method(self, node: ast.FunctionDef, record=None):
         # loop through keywords args
         for kw in decorator.keywords:
             member = NodeBuilder.newAnnotationMember(
-                kw.arg, self.handle_expression(kw.value), DUMMY_CODE)
+                kw.arg, self.handle_expression(
+                    kw.value), self.get_src_code(kw))
             self.add_loc_info(kw, member)
 
             members.append(member)
@@ -430,7 +438,7 @@ def handle_argument(self, arg: ast.arg):
         tpe = UnknownType.getUnknownType()
     # TODO variadic
     pvd = NodeBuilder.newMethodParameterIn(arg.arg,
-                                           tpe, False, DUMMY_CODE)
+                                           tpe, False, self.get_src_code(arg))
     self.add_loc_info(arg, pvd)
     self.scopemanager.addDeclaration(pvd)
     return pvd
@@ -449,20 +457,21 @@ def make_compound_statement(self, stmts) -> CompoundStatement:
         """ TODO decide how to handle this... """
         s = self.handle_statement(stmts[0])
         if self.is_declaration(s):
-            decl_stmt = NodeBuilder.newDeclarationStatement(DUMMY_CODE)
+            decl_stmt = NodeBuilder.newDeclarationStatement(
+                self.get_src_code(stmts[0]))
             self.add_loc_info(stmts[0], decl_stmt)
             decl_stmt.setSingleDeclaration(s)
             return decl_stmt
         else:
             return s
     else:
-        compound_statement = NodeBuilder.newCompoundStatement(DUMMY_CODE)
+        compound_statement = NodeBuilder.newCompoundStatement("")
         # TODO location
         for s in stmts:
             s = self.handle_statement(s)
             if self.is_declaration(s):
-                decl_stmt = NodeBuilder.newDeclarationStatement(DUMMY_CODE)
-                self.add_loc_info(s, decl_stmt)
+                decl_stmt = NodeBuilder.newDeclarationStatement(s.getCode())
+                decl_stmt.setLocation(s.getLocation())
                 decl_stmt.setSingleDeclaration(s)
                 compound_statement.addStatement(decl_stmt)
             else:

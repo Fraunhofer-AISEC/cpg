@@ -41,10 +41,11 @@ class PythonASTToCPG(ast.NodeVisitor):
 
     # import methods from other files
     from ._expressions import handle_expression
-    from ._misc import is_declaration
-    from ._misc import is_field_declaration
     from ._misc import add_loc_info
+    from ._misc import is_declaration
+    from ._misc import get_src_code
     from ._misc import is_declared_reference
+    from ._misc import is_field_declaration
     from ._misc import is_member_expression
     from ._misc import is_statement
     from ._misc import is_variable_declaration

@@ -29,9 +29,6 @@ from de.fraunhofer.aisec.cpg.graph.types import TypeParser
 from de.fraunhofer.aisec.cpg.graph.types import UnknownType
 import ast
 
-# TODO: Currently, I cannot access the source code...
-DUMMY_CODE = "DUMMY CODE"
-
 
 def handle_expression(self, expr):
     self.log_with_loc("Handling expression: %s" % (ast.dump(expr)))
@@ -76,7 +73,8 @@ def handle_expression(self, expr):
         else:
             self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
             opcode = "DUMMY"
-        binop = NodeBuilder.newBinaryOperator(opcode, DUMMY_CODE)
+        binop = NodeBuilder.newBinaryOperator(opcode,
+                                              self.get_src_code(expr))
         self.add_loc_info(expr, binop)
         binop.setLhs(self.handle_expression(expr.left))
         binop.setRhs(self.handle_expression(expr.right))
@@ -101,7 +99,7 @@ def handle_expression(self, expr):
         return r
     elif isinstance(expr, ast.Dict):
         self.log_with_loc("Handling a \"dict\": %s" % (ast.dump(expr)))
-        ile = NodeBuilder.newInitializerListExpression(DUMMY_CODE)
+        ile = NodeBuilder.newInitializerListExpression(self.get_src_code(expr))
         self.add_loc_info(expr, ile)
 
         lst = []
@@ -122,7 +120,7 @@ def handle_expression(self, expr):
 
             # construct a key value expression
             key_value = NodeBuilder.newKeyValueExpression(
-                key_expr, value_expr, DUMMY_CODE)
+                key_expr, value_expr, self.get_src_code(expr))
             # TODO location info
 
             lst.append(key_value)
@@ -174,7 +172,7 @@ def handle_expression(self, expr):
         # Compare(expr left, cmpop* ops, expr* comparators)
         if len(expr.ops) != 1 or len(expr.comparators) != 1:
             self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
-            r = NodeBuilder.newBinaryOperator("DUMMY", DUMMY_CODE)
+            r = NodeBuilder.newBinaryOperator("DUMMY", self.get_src_code(expr))
             self.add_loc_info(expr, r)
             return r
         op = expr.ops[0]
@@ -200,10 +198,11 @@ def handle_expression(self, expr):
             op_code = "not in"
         else:
             self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
-            r = NodeBuilder.newBinaryOperator("DUMMY", DUMMY_CODE)
+            r = NodeBuilder.newBinaryOperator("DUMMY", self.get_src_code(expr))
             self.add_loc_info(expr, r)
             return r
-        comp = NodeBuilder.newBinaryOperator(op_code, DUMMY_CODE)
+        comp = NodeBuilder.newBinaryOperator(op_code,
+                                             self.get_src_code(expr))
         self.add_loc_info(expr, comp)
         comp.setLhs(self.handle_expression(expr.left))
         comp.setRhs(self.handle_expression(expr.comparators[0]))
@@ -228,10 +227,10 @@ def handle_expression(self, expr):
             fqn = "%s.%s" % (base_name, name)
 
             member = NodeBuilder.newDeclaredReferenceExpression(
-                name, UnknownType.getUnknownType(), DUMMY_CODE)
+                name, UnknownType.getUnknownType(), self.get_src_code(expr))
             self.add_loc_info(expr, member)
             call = NodeBuilder.newMemberCallExpression(
-                name, fqn, ref.getBase(), member, ".", DUMMY_CODE)
+                name, fqn, ref.getBase(), member, ".", self.get_src_code(expr))
             self.add_loc_info(expr, call)
         else:
             # this can be a simple function call or a ctor
@@ -239,7 +238,8 @@ def handle_expression(self, expr):
                 self.scopemanager.getCurrentScope(), name)
             if record is not None:
                 self.log_with_loc("Received a record: %s" % (record))
-                call = NodeBuilder.newConstructExpression(DUMMY_CODE)
+                call = NodeBuilder.newConstructExpression(
+                    self.get_src_code(expr))
                 self.add_loc_info(expr, call)
                 call.setName(expr.func.id)
                 tpe = TypeParser.createFrom(record.getName(), False)
@@ -247,14 +247,14 @@ def handle_expression(self, expr):
             else:
                 # TODO int, float, ...
                 if name == "str" and len(expr.args) == 1:
-                    cast = newCastExpression(DUMMY_CODE)
+                    cast = newCastExpression(self.get_src_code(expr))
                     cast.setCastType(TypeParser.createFrom("str", False))
                     cast.setExpression(self.handle_expression(expr.args[0])
                                        )
                     return cast
                 else:
                     call = NodeBuilder.newCallExpression(
-                        name, name, DUMMY_CODE, False)
+                        name, name, self.get_src_code(expr), False)
                     self.add_loc_info(expr, call)
         for a in expr.args:
             call.addArgument(self.handle_expression(a))
@@ -297,7 +297,7 @@ def handle_expression(self, expr):
             self.log_with_loc("Found unexpected type - using a dummy: %s" %
                               (type(expr.value)), loglevel="ERROR")
             tpe = UnknownType.getUnknownType()
-        lit = NodeBuilder.newLiteral(expr.value, tpe, DUMMY_CODE)
+        lit = NodeBuilder.newLiteral(expr.value, tpe, self.get_src_code(expr))
         self.add_loc_info(expr, lit)
         lit.setName(str(expr.value))
         return lit
@@ -305,13 +305,15 @@ def handle_expression(self, expr):
         value = self.handle_expression(expr.value)
         self.log_with_loc("Parsed base as: %s" % (value))
         mem = NodeBuilder.newMemberExpression(
-            value, UnknownType.getUnknownType(), expr.attr, ".", DUMMY_CODE)
+            value, UnknownType.getUnknownType(), expr.attr, ".",
+            self.get_src_code(expr))
         self.add_loc_info(expr, mem)
         return mem
     elif isinstance(expr, ast.Subscript):
         value = self.handle_expression(expr.value)
         slc = self.handle_expression(expr.slice)
-        exp = NodeBuilder.newArraySubscriptionExpression(DUMMY_CODE)
+        exp = NodeBuilder.newArraySubscriptionExpression(
+            self.get_src_code(expr))
         self.add_loc_info(expr, exp)
         exp.setArrayExpression(value)
         exp.setSubscriptExpression(slc)
@@ -335,11 +337,11 @@ def handle_expression(self, expr):
         # handle special cases
         if expr.id == "__name__":
             r = NodeBuilder.newDeclaredReferenceExpression(
-                expr.id, UnknownType.getUnknownType(), DUMMY_CODE)
+                expr.id, UnknownType.getUnknownType(), self.get_src_code(expr))
             self.add_loc_info(expr, r)
             return r
         ref = NodeBuilder.newDeclaredReferenceExpression(
-            expr.id, UnknownType.getUnknownType(), DUMMY_CODE)
+            expr.id, UnknownType.getUnknownType(), self.get_src_code(expr))
         self.add_loc_info(expr, ref)
         resolved = self.scopemanager.resolveReference(ref)
         inRecord = self.scopemanager.isInRecord()
@@ -348,7 +350,8 @@ def handle_expression(self, expr):
             if inRecord and inFunction and self.is_field_declaration(resolved):
                 # python has no implicit "this" / "self"
                 v = NodeBuilder.newVariableDeclaration(
-                    expr.id, UnknownType.getUnknownType(), DUMMY_CODE, False)
+                    expr.id, UnknownType.getUnknownType(),
+                    self.get_src_code(expr), False)
                 self.add_loc_info(expr, v)
                 self.scopemanager.addDeclaration(v)
                 return v
@@ -368,19 +371,20 @@ def handle_expression(self, expr):
                     (expr.id))
                 v = NodeBuilder.newFieldDeclaration(
                     expr.id, UnknownType.getUnknownType(), None,
-                    DUMMY_CODE, None, None, False)
+                    self.get_src_code(expr), None, None, False)
                 self.add_loc_info(expr, v)
             else:
                 self.log_with_loc(
                     "Could not resolve -> creating a new variable for: %s" %
                     (expr.id))
                 v = NodeBuilder.newVariableDeclaration(
-                    expr.id, UnknownType.getUnknownType(), DUMMY_CODE, False)
+                    expr.id, UnknownType.getUnknownType(),
+                    self.get_src_code(expr), False)
                 self.add_loc_info(expr, v)
             self.scopemanager.addDeclaration(v)
             return v
     elif isinstance(expr, ast.List):
-        ile = NodeBuilder.newInitializerListExpression(DUMMY_CODE)
+        ile = NodeBuilder.newInitializerListExpression(self.get_src_code(expr))
         self.add_loc_info(expr, ile)
 
         lst = []
@@ -393,7 +397,7 @@ def handle_expression(self, expr):
 
         return ile
     elif isinstance(expr, ast.Tuple):
-        ile = NodeBuilder.newInitializerListExpression(DUMMY_CODE)
+        ile = NodeBuilder.newInitializerListExpression(self.get_src_code(expr))
         self.add_loc_info(expr, ile)
 
         lst = []

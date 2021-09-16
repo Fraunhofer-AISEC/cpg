@@ -33,6 +33,13 @@ NOT_IMPLEMENTED_MSG = "This has not been implemented, yet. Using a dummy."
 CPG_JAVA = "de.fraunhofer.aisec.cpg"
 
 
+def get_src_code(self, node: ast.AST):
+    self.log_with_loc("RECEIVED: %s WITH TYPE: %s" % (node, type(node)))
+    self.log_with_loc("<--- CALLER", level=2)
+    return self.sourcecode.get_snippet(node.lineno, node.col_offset,
+                                       node.end_lineno, node.end_col_offset)
+
+
 def log_with_loc(self, string, level=1, loglevel="DEBUG"):
     callerframerecord = inspect.stack()[level]
     frame = callerframerecord[0]
