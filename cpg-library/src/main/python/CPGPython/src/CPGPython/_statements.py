@@ -203,54 +203,62 @@ def handle_statement(self, stmt):
         self.add_loc_info(stmt, r)
         return r
     elif isinstance(stmt, ast.Import):
-        # TODO IncludeDeclaration does not fit well for python's import
-        if len(stmt.names) == 0:
-            self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
-            r = NodeBuilder.newStatement("")
-            self.add_loc_info(stmt, r)
-            return r
+        """
+        ast.Import = class Import(stmt)
+         |  Import(alias* names)
+
+         Example: import Foo, Bar as Baz, Blub
+        """
+
         decl_stmt = NodeBuilder.newDeclarationStatement(
             self.get_src_code(stmt))
         self.add_loc_info(stmt, decl_stmt)
         for s in stmt.names:
             if s.asname is not None:
                 name = s.asname
+                src = name + " as " + s.asname
             else:
                 name = s.name
+                src = name
             tpe = UnknownType.getUnknownType()
             v = NodeBuilder.newVariableDeclaration(
-                name, tpe, self.get_src_code(s), False)
-            self.add_loc_info(s, v)
+                name, tpe, src, False)
+            # inacurate but ast.alias does not hold location information
+            self.add_loc_info(stmt, v)
             self.scopemanager.addDeclaration(v)
             decl_stmt.addDeclaration(v)
         return decl_stmt
     elif isinstance(stmt, ast.ImportFrom):
-        # TODO IncludeDeclaration does not fit well for python's import
-        if len(stmt.names) == 0:
-            self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
-            r = NodeBuilder.newStatement("")
-            self.add_loc_info(stmt, r)
-            return r
+        """
+        ast.ImportFrom = class ImportFrom(stmt)
+         |  ImportFrom(identifier? module, alias* names, int? level)
+
+         Example: from foo import bar, baz as blub
+        """
 
         # general warning
         self.log_with_loc(
             "Cannot correctly handle \"import from\". Using an approximation.",
             loglevel="ERROR")
+
         decl_stmt = NodeBuilder.newDeclarationStatement(
             self.get_src_code(stmt))
         self.add_loc_info(stmt, decl_stmt)
         for s in stmt.names:
             if s.asname is not None:
                 name = s.asname
+                src = name + " as " + s.asname
             else:
                 name = s.name
+                src = name
             tpe = UnknownType.getUnknownType()
             v = NodeBuilder.newVariableDeclaration(
-                name, tpe, self.get_src_code(s), False)
-            self.add_loc_info(s, v)
+                name, tpe, src, False)
+            # inacurate but ast.alias does not hold location information
+            self.add_loc_info(stmt, v)
             self.scopemanager.addDeclaration(v)
             decl_stmt.addDeclaration(v)
-        return v
+        return decl_stmt
     elif isinstance(stmt, ast.Global):
         self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         r = NodeBuilder.newStatement("")
