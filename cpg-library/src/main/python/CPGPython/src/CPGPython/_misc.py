@@ -24,6 +24,10 @@
 #
 from ._spotless_dummy import *
 import inspect
+import ast
+from de.fraunhofer.aisec.cpg.sarif import PhysicalLocation
+from de.fraunhofer.aisec.cpg.sarif import Region
+from java.net import URI
 
 NOT_IMPLEMENTED_MSG = "This has not been implemented, yet. Using a dummy."
 CPG_JAVA = "de.fraunhofer.aisec.cpg"
@@ -49,14 +53,18 @@ def log_with_loc(self, string, level=1, loglevel="DEBUG"):
 
 
 def add_loc_info(self, node, obj):
-    # Adds location information of node to obj
-    if not isinstance(node, ast.AST):
-        self.log_with_loc(type(node))
-        self.log_with_loc(node[0].lineno)
-        self.log_with_loc("<--- CALLER", level=2)
-        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
-        return
+    """
+    Add file location meta information to CPG objects.
+    """
+
     obj.setFile(self.fname)
+
+    if not isinstance(node, ast.AST):
+        self.log_with_loc(
+            "Expected an AST object but received %s. Not adding location." %
+            (type(node)), loglevel="ERROR")
+        return
+
     uri = URI("file://" + self.fname)
     obj.setLocation(PhysicalLocation(uri,
                                      Region(node.lineno,

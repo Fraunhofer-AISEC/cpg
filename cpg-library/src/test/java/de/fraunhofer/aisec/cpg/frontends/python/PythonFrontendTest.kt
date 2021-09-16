@@ -30,7 +30,6 @@ import de.fraunhofer.aisec.cpg.ExperimentalPython
 import de.fraunhofer.aisec.cpg.TestUtils
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
-import de.fraunhofer.aisec.cpg.graph.get
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
@@ -770,5 +769,80 @@ class PythonFrontendTest : BaseTest() {
         val barStmt5 = barBody.statements[5] as? DeclarationStatement
         assertNotNull(barStmt5)
         assertNotNull((barStmt5.declarations[0] as? VariableDeclaration)?.initializer)
+    }
+
+    @Test
+    fun testSourceCodeInCPG() {
+        val topLevel = Path.of("src", "test", "resources", "python")
+        val tu =
+            TestUtils.analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("literal.py").toFile()),
+                topLevel,
+                true
+            ) {
+                it.registerLanguage(
+                    PythonLanguageFrontend::class.java,
+                    PythonLanguageFrontend.PY_EXTENSIONS
+                )
+            }
+
+        assertNotNull(tu)
+
+        val p =
+            tu.getDeclarationsByName("literal", NamespaceDeclaration::class.java).iterator().next()
+        assertNotNull(p)
+
+        assertEquals("b = True", (p.declarations[0] as? VariableDeclaration)?.code)
+        assertEquals("i = 42", (p.declarations[1] as? VariableDeclaration)?.code)
+        assertEquals("f = 1.0", (p.declarations[2] as? VariableDeclaration)?.code)
+        assertEquals("t = \"Hello\"", (p.declarations[3] as? VariableDeclaration)?.code)
+        assertEquals("n = None", (p.declarations[4] as? VariableDeclaration)?.code)
+    }
+
+    @Test
+    fun testRegionInCPG() {
+        val topLevel = Path.of("src", "test", "resources", "python")
+        val tu =
+            TestUtils.analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("literal.py").toFile()),
+                topLevel,
+                true
+            ) {
+                it.registerLanguage(
+                    PythonLanguageFrontend::class.java,
+                    PythonLanguageFrontend.PY_EXTENSIONS
+                )
+            }
+
+        assertNotNull(tu)
+
+        val p =
+            tu.getDeclarationsByName("literal", NamespaceDeclaration::class.java).iterator().next()
+        assertNotNull(p)
+
+        assertEquals(
+            Region(1, 0, 1, 1),
+            (p.declarations[0] as? VariableDeclaration)?.location?.region
+        )
+        assertEquals(
+            Region(1, 4, 1, 8),
+            (p.declarations[0] as? VariableDeclaration)?.initializer?.location?.region
+        )
+        assertEquals(
+            Region(2, 0, 2, 1),
+            (p.declarations[1] as? VariableDeclaration)?.location?.region
+        )
+        assertEquals(
+            Region(3, 0, 3, 1),
+            (p.declarations[2] as? VariableDeclaration)?.location?.region
+        )
+        assertEquals(
+            Region(5, 0, 5, 1),
+            (p.declarations[3] as? VariableDeclaration)?.location?.region
+        )
+        assertEquals(
+            Region(6, 0, 6, 1),
+            (p.declarations[4] as? VariableDeclaration)?.location?.region
+        )
     }
 }

@@ -30,7 +30,8 @@ from de.fraunhofer.aisec.cpg.graph.types import TypeParser
 from de.fraunhofer.aisec.cpg.graph.types import UnknownType
 import ast
 
-DUMMY_CODE = ""  # TODO: Currently, I cannot access the source code...
+# TODO: Currently, I cannot access the source code...
+DUMMY_CODE = "DUMMY CODE"
 
 
 def handle_statement(self, stmt):
@@ -40,13 +41,16 @@ def handle_statement(self, stmt):
         return self.handle_function_or_method(stmt)
     elif isinstance(stmt, ast.AsyncFunctionDef):
         self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
-        return NodeBuilder.newStatement("")
+        r = NodeBuilder.newStatement("")
+        self.add_loc_info(stmt, r)
+        return r
     elif isinstance(stmt, ast.ClassDef):
         # TODO: NodeBuilder requires a "kind" parameters. Setting this to
         # "class" would automagically create a "this" receiver field.
         # However, the receiver can have any name in python (and even different
         # names per method).
         cls = NodeBuilder.newRecordDeclaration(stmt.name, "", DUMMY_CODE)
+        self.add_loc_info(stmt, cls)
         self.scopemanager.enterScope(cls)
         bases = []
         for base in stmt.bases:
@@ -61,7 +65,7 @@ def handle_statement(self, stmt):
         cls.setSuperClasses(bases)
         for keyword in stmt.keywords:
             self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
-        for s in stmt. body:
+        for s in stmt.body:
             if isinstance(s, ast.FunctionDef):
                 cls.addMethod(self.handle_function_or_method(s, cls))
             elif isinstance(s, ast.stmt):
@@ -69,6 +73,7 @@ def handle_statement(self, stmt):
                 if self.is_declaration(handled_stmt):
                     # TODO wrap this in a function...
                     decl_stmt = NodeBuilder.newDeclarationStatement(DUMMY_CODE)
+                    self.add_loc_info(s, decl_stmt)
                     decl_stmt.setSingleDeclaration(handled_stmt)
                     cls.addStatement(decl_stmt)
                 elif self.is_statement(handled_stmt):
@@ -86,17 +91,22 @@ def handle_statement(self, stmt):
         return cls
     elif isinstance(stmt, ast.Return):
         r = NodeBuilder.newReturnStatement(DUMMY_CODE)
+        self.add_loc_info(stmt, r)
         if stmt.value is not None:
             r.setReturnValue(self.handle_expression(stmt.value)
                              )
         return r
     elif isinstance(stmt, ast.Delete):
         self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
-        return NodeBuilder.newStatement("")
+        r = NodeBuilder.newStatement("")
+        self.add_loc_info(stmt, r)
+        return r
     elif isinstance(stmt, ast.Assign):
         if len(stmt.targets) != 1:
             self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
-            return NodeBuilder.newBinaryOperator("=", DUMMY_CODE)
+            r = NodeBuilder.newBinaryOperator("=", DUMMY_CODE)
+            self.add_loc_info(stmt, r)
+            return r
         target = stmt.targets[0]
 
         # parse LHS and RHS as expressions
@@ -114,21 +124,28 @@ def handle_statement(self, stmt):
         else:
             # found var => BinaryOperator "="
             binop = NodeBuilder.newBinaryOperator("=", DUMMY_CODE)
+            self.add_loc_info(stmt, binop)
             binop.setLhs(lhs)
             binop.setRhs(rhs)
             return binop
 
     elif isinstance(stmt, ast.AugAssign):
         self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
-        return NodeBuilder.newStatement("")
+        r = NodeBuilder.newStatement("")
+        self.add_loc_info(stmt, r)
+        return r
     elif isinstance(stmt, ast.AnnAssign):
         self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
-        return NodeBuilder.newStatement("")
+        r = NodeBuilder.newStatement("")
+        self.add_loc_info(stmt, r)
+        return r
     elif isinstance(stmt, ast.For):
         for_stmt = NodeBuilder.newForEachStatement(DUMMY_CODE)
+        self.add_loc_info(stmt, for_stmt)
         target = self.handle_expression(stmt.target)
         if self.is_variable_declaration(target):
             decl_stmt = NodeBuilder.newDeclarationStatement(DUMMY_CODE)
+            self.add_loc_info(stmt.target, decl_stmt)
             decl_stmt.setSingleDeclaration(target)
             target = decl_stmt
         for_stmt.setVariable(target)
@@ -143,12 +160,17 @@ def handle_statement(self, stmt):
         return for_stmt
     elif isinstance(stmt, ast.AsyncFor):
         self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
-        return NodeBuilder.newStatement("")
+        r = NodeBuilder.newStatement("")
+        self.add_loc_info(stmt, r)
+        return r
     elif isinstance(stmt, ast.While):
         self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
-        return NodeBuilder.newStatement("")
+        r = NodeBuilder.newStatement("")
+        self.add_loc_info(stmt, r)
+        return r
     elif isinstance(stmt, ast.If):
         if_stmt = NodeBuilder.newIfStatement(DUMMY_CODE)
+        self.add_loc_info(stmt, if_stmt)
         # Condition
         if_stmt.setCondition(self.handle_expression(stmt.test))
         # Then
@@ -162,22 +184,33 @@ def handle_statement(self, stmt):
 
     elif isinstance(stmt, ast.With):
         self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
-        return NodeBuilder.newStatement("")
+        r = NodeBuilder.newStatement("")
+        self.add_loc_info(stmt, r)
+        return r
     elif isinstance(stmt, ast.AsyncWith):
         self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
-        return NodeBuilder.newStatement("")
+        r = NodeBuilder.newStatement("")
+        self.add_loc_info(stmt, r)
+        return r
     elif isinstance(stmt, ast.Raise):
         self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
-        return NodeBuilder.newStatement("")
+        r = NodeBuilder.newStatement("")
+        self.add_loc_info(stmt, r)
+        return r
     elif isinstance(stmt, ast.Assert):
         self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
-        return NodeBuilder.newStatement("")
+        r = NodeBuilder.newStatement("")
+        self.add_loc_info(stmt, r)
+        return r
     elif isinstance(stmt, ast.Import):
         # TODO IncludeDeclaration does not fit well for python's import
         if len(stmt.names) == 0:
             self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
-            return NodeBuilder.newStatement("")
+            r = NodeBuilder.newStatement("")
+            self.add_loc_info(stmt, r)
+            return r
         decl_stmt = NodeBuilder.newDeclarationStatement(DUMMY_CODE)
+        self.add_loc_info(stmt, decl_stmt)
         for s in stmt.names:
             if s.asname is not None:
                 name = s.asname
@@ -185,6 +218,7 @@ def handle_statement(self, stmt):
                 name = s.name
             v = NodeBuilder.newVariableDeclaration(
                 name, UnknownType.getUnknownType(), DUMMY_CODE, False)
+            self.add_loc_info(s, v)
             self.scopemanager.addDeclaration(v)
             decl_stmt.addDeclaration(v)
         return decl_stmt
@@ -192,11 +226,16 @@ def handle_statement(self, stmt):
         # TODO IncludeDeclaration does not fit well for python's import
         if len(stmt.names) == 0:
             self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
-            return NodeBuilder.newStatement("")
+            r = NodeBuilder.newStatement("")
+            self.add_loc_info(stmt, r)
+            return r
+
+        # general warning
         self.log_with_loc(
             "Cannot correctly handle \"import from\". Using an approximation.",
             loglevel="ERROR")
         decl_stmt = NodeBuilder.newDeclarationStatement(DUMMY_CODE)
+        self.add_loc_info(stmt, decl_stmt)
         for s in stmt.names:
             if s.asname is not None:
                 name = s.asname
@@ -204,28 +243,39 @@ def handle_statement(self, stmt):
                 name = s.name
             v = NodeBuilder.newVariableDeclaration(
                 name, UnknownType.getUnknownType(), DUMMY_CODE, False)
+            self.add_loc_info(s, v)
             self.scopemanager.addDeclaration(v)
             decl_stmt.addDeclaration(v)
         return v
     elif isinstance(stmt, ast.Global):
         self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
-        return NodeBuilder.newStatement("")
+        r = NodeBuilder.newStatement("")
+        self.add_loc_info(stmt, r)
+        return r
     elif isinstance(stmt, ast.Nonlocal):
         self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
-        return NodeBuilder.newStatement("")
+        r = NodeBuilder.newStatement("")
+        self.add_loc_info(stmt, r)
+        return r
     elif isinstance(stmt, ast.Expr):
         return self.handle_expression(stmt.value)
     elif isinstance(stmt, ast.Pass):
         p = NodeBuilder.newEmptyStatement("pass")
+        self.add_loc_info(stmt, p)
         return p
     elif isinstance(stmt, ast.Break):
         self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
-        return NodeBuilder.newStatement("")
+        r = NodeBuilder.newStatement("")
+        self.add_loc_info(stmt, r)
+        return r
     elif isinstance(stmt, ast.Continue):
         self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
-        return NodeBuilder.newStatement("")
+        r = NodeBuilder.newStatement("")
+        self.add_loc_info(stmt, r)
+        return r
     elif isinstance(stmt, ast.Try):
         s = NodeBuilder.newTryStatement(DUMMY_CODE)
+        self.add_loc_info(stmt, s)
         try_block = self.make_compound_statement(stmt.body)
         finally_block = self.make_compound_statement(stmt.finalbody)
         if len(stmt.orelse) != 0:
@@ -243,7 +293,9 @@ def handle_statement(self, stmt):
         self.log_with_loc(
             "Received unepxected stmt: %s with type %s" %
             (stmt, type(stmt)))
-        return NodeBuilder.newStatement("")
+        r = NodeBuilder.newStatement("")
+        self.add_loc_info(stmt, r)
+        return r
 
 
 def handle_function_or_method(self, node: ast.FunctionDef, record=None):
@@ -266,6 +318,7 @@ def handle_function_or_method(self, node: ast.FunctionDef, record=None):
                 name, DUMMY_CODE, False, record)
     else:
         f = NodeBuilder.newFunctionDeclaration(name, DUMMY_CODE)
+    self.add_loc_info(node, f)
 
     self.scopemanager.enterScope(f)
 
@@ -275,9 +328,11 @@ def handle_function_or_method(self, node: ast.FunctionDef, record=None):
     # First argument is the reciver in case of a method
     if record is not None:
         if len(node.args.args) > 0:
+            recv_node = node.args.args[0]
             tpe = TypeParser.createFrom(record.getName(), False)
             recv = NodeBuilder.newVariableDeclaration(
-                node.args.args[0].arg, tpe, DUMMY_CODE, False)
+                recv_node.arg, tpe, DUMMY_CODE, False)
+            self.add_loc_info(recv_node, recv)
             f.setReceiver(recv)
             self.scopemanager.addDeclaration(recv)
         else:
@@ -318,15 +373,18 @@ def handle_function_or_method(self, node: ast.FunctionDef, record=None):
         if isinstance(decorator.func, ast.Attribute):
             ref = self.handle_expression(decorator.func)
             annotation = NodeBuilder.newAnnotation(ref.getName(), DUMMY_CODE)
+            self.add_loc_info(decorator.func, annotation)
 
             # add the base as a receiver annotation
             member = NodeBuilder.newAnnotationMember("receiver", ref.getBase(),
                                                      DUMMY_CODE)
+            self.add_loc_info(decorator.func, member)
 
             members.append(member)
         elif isinstance(decorator.func, ast.Name):
             ref = self.handle_expression(decorator.func)
             annotation = NodeBuilder.newAnnotation(ref.getName(), DUMMY_CODE)
+            self.add_loc_info(decorator.func, member)
 
         else:
             self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
@@ -338,6 +396,7 @@ def handle_function_or_method(self, node: ast.FunctionDef, record=None):
 
             member = NodeBuilder.newAnnotationMember(
                 "value", value, DUMMY_CODE)
+            self.add_loc_info(arg0, member)
 
             members.append(member)
 
@@ -345,6 +404,7 @@ def handle_function_or_method(self, node: ast.FunctionDef, record=None):
         for kw in decorator.keywords:
             member = NodeBuilder.newAnnotationMember(
                 kw.arg, self.handle_expression(kw.value), DUMMY_CODE)
+            self.add_loc_info(kw, member)
 
             members.append(member)
 
@@ -371,6 +431,7 @@ def handle_argument(self, arg: ast.arg):
     # TODO variadic
     pvd = NodeBuilder.newMethodParameterIn(arg.arg,
                                            tpe, False, DUMMY_CODE)
+    self.add_loc_info(arg, pvd)
     self.scopemanager.addDeclaration(pvd)
     return pvd
 
@@ -389,16 +450,19 @@ def make_compound_statement(self, stmts) -> CompoundStatement:
         s = self.handle_statement(stmts[0])
         if self.is_declaration(s):
             decl_stmt = NodeBuilder.newDeclarationStatement(DUMMY_CODE)
+            self.add_loc_info(stmts[0], decl_stmt)
             decl_stmt.setSingleDeclaration(s)
             return decl_stmt
         else:
             return s
     else:
         compound_statement = NodeBuilder.newCompoundStatement(DUMMY_CODE)
+        # TODO location
         for s in stmts:
             s = self.handle_statement(s)
             if self.is_declaration(s):
                 decl_stmt = NodeBuilder.newDeclarationStatement(DUMMY_CODE)
+                self.add_loc_info(s, decl_stmt)
                 decl_stmt.setSingleDeclaration(s)
                 compound_statement.addStatement(decl_stmt)
             else:
