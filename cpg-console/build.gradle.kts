@@ -57,6 +57,8 @@ dependencies {
     api(project(":cpg-library"))
     api(project(":cpg-neo4j"))
 
+    implementation("ch.qos.logback:logback-classic:1.3.0-alpha10")
+
     // JUnit
     testImplementation("org.junit.jupiter", "junit-jupiter-api", versions["junit5"])
     testImplementation("org.junit.jupiter", "junit-jupiter-params", versions["junit5"])

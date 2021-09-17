@@ -202,6 +202,8 @@ dependencies {
     testImplementation("org.junit.jupiter:junit-jupiter-api:5.8.0")
     testImplementation("org.junit.jupiter:junit-jupiter-params:5.8.0")
 
+    testImplementation("ch.qos.logback:logback-classic:1.3.0-alpha10")
+
     testImplementation("org.mockito:mockito-core:3.12.4")
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.8.0")
 }
