@@ -44,7 +44,7 @@ object JepSingleton {
 
         config.redirectStdErr(System.err)
         config.redirectStdout(System.out)
-        if (false && pyInitFile?.protocol == "file") {
+        if (pyInitFile?.protocol == "file") {
             // we can point JEP to the folder and get better debug messages with python source code
             // locations
 
