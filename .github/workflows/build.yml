@@ -61,7 +61,7 @@ jobs:
         id: determine_version
       - name: Install JEP
         run: |
-          pip3 install jep
+          pip3 install jep==4.0.0
           sudo cp /opt/hostedtoolcache/Python/3.9*/x64/lib/python3.9/site-packages/jep/libjep.so /usr/lib/
       - name: Build ${{ steps.determine_version.outputs.version }}
         run: |
