@@ -144,6 +144,7 @@ if (project.hasProperty("experimental")) {
         }
     }
 
+
     tasks.named("compileJava") {
         dependsOn(compileGolang)
     }
@@ -204,4 +205,11 @@ dependencies {
 
     testImplementation("org.mockito:mockito-core:3.12.4")
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.8.0")
+}
+
+tasks {
+    processResources {
+        from("src/main/python/CPGPython/src/")
+        include("CPGPython/*.py")
+    }
 }

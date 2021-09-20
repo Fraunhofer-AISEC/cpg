@@ -35,7 +35,6 @@ import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.io.File
 import java.nio.file.Path
-import jep.JepConfig
 import jep.JepException
 import jep.SubInterpreter
 
@@ -99,8 +98,7 @@ class PythonLanguageFrontend(config: TranslationConfiguration, scopeManager: Sco
         var interp: SubInterpreter? = null
         try {
             JepSingleton // configure Jep
-            interp =
-                SubInterpreter(JepConfig().redirectStdErr(System.err).redirectStdout(System.out))
+            interp = SubInterpreter(JepSingleton.config)
 
             // TODO: extract cpg.py in a real python module with multiple files
 
