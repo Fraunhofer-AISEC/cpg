@@ -144,9 +144,25 @@ if (project.hasProperty("experimental")) {
         }
     }
 
+    // add python src code
+    tasks {
+        processResources {
+            from("src/main/python/")
+            include("CPGPython/*.py")
+        }
+    }
+
+    // add a zip file with python src code
+    tasks.register<Zip>("packagePythonSrc") {
+        archiveFileName.set("CPGPythonSrc.zip")
+        destinationDirectory.set(layout.buildDirectory.dir("resources/main"))
+
+        from("src/main/python/CPGPython/")
+        include("*.py")
+    }
 
     tasks.named("compileJava") {
-        dependsOn(compileGolang)
+        dependsOn(compileGolang, "packagePythonSrc")
     }
 }
 
@@ -205,11 +221,4 @@ dependencies {
 
     testImplementation("org.mockito:mockito-core:3.12.4")
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.8.0")
-}
-
-tasks {
-    processResources {
-        from("src/main/python/")
-        include("CPGPython/*.py")
-    }
 }

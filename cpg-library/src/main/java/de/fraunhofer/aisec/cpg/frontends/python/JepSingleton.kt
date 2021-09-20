@@ -26,7 +26,9 @@
 package de.fraunhofer.aisec.cpg.frontends.python
 
 import java.io.File
-import java.lang.Exception
+import java.nio.file.Files.createTempDirectory
+import java.nio.file.Files.createTempFile
+import java.util.zip.ZipFile
 import jep.JepConfig
 import jep.MainInterpreter
 
@@ -53,9 +55,40 @@ object JepSingleton {
             pyFolder = pyFolder.dropLastWhile { it != File.separatorChar }
             config.addIncludePaths(pyFolder)
         } else {
-            // TODO this needs to be solved so that we can ship a jar...
-            // maybe extract all files to a temp folder???
-            throw Exception("Currently no support for .jar")
+            // Extract files to a temp folder
+            // TODO clean up after cpg finishes
+            // TODO security: an attacker could easily change our code before we execute it :(
+
+            val pyZipOnDisk = createTempFile("cpg_python", ".zip")
+            val pyFolder = createTempDirectory("cpg_python")
+            try {
+                val pyZipFile = classLoader.getResourceAsStream("/CPGPythonSrc.zip")
+
+                File(pyFolder.toString() + File.separatorChar + "CPGPython").mkdir()
+
+                pyZipOnDisk.toFile().outputStream().use { pyZipFile.copyTo(it) }
+
+                ZipFile(pyZipOnDisk.toFile()).use { zip ->
+                    zip.entries().asSequence().forEach { entry ->
+                        zip.getInputStream(entry).use { input ->
+                            val targetFile =
+                                pyFolder.toString() +
+                                    File.separatorChar +
+                                    "CPGPython" +
+                                    File.separatorChar +
+                                    entry.name
+                            File(targetFile).outputStream().use { output -> input.copyTo(output) }
+                        }
+                    }
+                }
+                pyZipOnDisk.toFile().delete()
+                config.addIncludePaths(pyFolder.toString())
+            } catch (e: Exception) {
+                pyZipOnDisk.toFile().delete()
+                pyFolder.toFile().deleteRecursively()
+
+                throw e
+            }
         }
 
         if (System.getenv("CPG_JEP_LIBRARY") != null) {
