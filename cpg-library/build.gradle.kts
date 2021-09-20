@@ -148,8 +148,8 @@ if (project.hasProperty("experimental")) {
     tasks {
         processResources {
             from("src/main/python/")
-            include("CPGPython/*.py")
-        }
+            include("CPGPython/*.py", "cpg.py")
+                    }
     }
 
     // add a zip file with python src code
