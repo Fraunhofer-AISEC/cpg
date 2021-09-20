@@ -209,7 +209,7 @@ dependencies {
 
 tasks {
     processResources {
-        from("src/main/python/CPGPython/src/")
+        from("src/main/python/")
         include("CPGPython/*.py")
     }
 }
