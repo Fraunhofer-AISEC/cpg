@@ -36,6 +36,6 @@ class PyTempFileHolder {
     protected fun finalize() {
         // clean up once no longer used
         pyZipOnDisk.toFile().delete()
-        pyFolder.toFile().deleteRecursively()
+        // pyFolder.toFile().deleteRecursively() // TODO
     }
 }
