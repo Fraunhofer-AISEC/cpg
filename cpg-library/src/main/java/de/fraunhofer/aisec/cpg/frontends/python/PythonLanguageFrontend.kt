@@ -44,7 +44,7 @@ class PythonLanguageFrontend(config: TranslationConfiguration, scopeManager: Sco
     companion object {
         @kotlin.jvm.JvmField var PY_EXTENSIONS: List<String> = listOf(".py")
     }
-    private val jep = CPGJepConfig() // configure Jep
+    private val jep = JepSingleton // configure Jep
 
     @Throws(TranslationException::class)
     override fun parse(file: File): TranslationUnitDeclaration {

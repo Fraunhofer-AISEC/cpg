@@ -32,14 +32,16 @@ import java.nio.file.Path
 import java.util.zip.ZipFile
 import jep.JepConfig
 import jep.MainInterpreter
+import org.slf4j.LoggerFactory
 
 /**
  * Takes care of configuring Jep according to some well known paths on popular operating systems.
  */
-class CPGJepConfig {
+object JepSingleton {
     var config = JepConfig()
     private var pyZipOnDisk: Path? = null
     private var pyFolder: Path? = null
+    private val LOGGER = LoggerFactory.getLogger(javaClass)
 
     init {
         val classLoader = javaClass
@@ -48,6 +50,7 @@ class CPGJepConfig {
         config.redirectStdErr(System.err)
         config.redirectStdout(System.out)
         if (pyInitFile?.protocol == "file") {
+            LOGGER.info("Found a \"file\" resource. Using python code directly.")
             // we can point JEP to the folder and get better debug messages with python source code
             // locations
 
@@ -60,6 +63,9 @@ class CPGJepConfig {
         } else {
             // Extract files to a temp folder
             // TODO security: an attacker could easily change our code before we execute it :(
+            LOGGER.info(
+                "Did not find a \"file\" resource. Using python code from the packaged zip archive."
+            )
 
             try {
                 // create temporary file and folder
@@ -149,6 +155,8 @@ class CPGJepConfig {
 
     fun cleanTempFiles() {
         pyZipOnDisk?.toFile()?.delete()
-        pyFolder?.toFile()?.deleteRecursively()
+
+        // We cannot delete it, yet. It might be used again when parsing multiple files...
+        // pyFolder?.toFile()?.deleteRecursively()
     }
 }
