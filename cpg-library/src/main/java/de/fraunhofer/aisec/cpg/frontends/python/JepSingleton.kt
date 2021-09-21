@@ -26,7 +26,10 @@
 package de.fraunhofer.aisec.cpg.frontends.python
 
 import java.io.File
-import java.util.zip.ZipFile
+import java.nio.file.Files
+import java.nio.file.Path
+import java.nio.file.Paths
+import java.nio.file.StandardCopyOption
 import jep.JepConfig
 import jep.MainInterpreter
 import org.slf4j.LoggerFactory
@@ -62,32 +65,23 @@ object JepSingleton {
             // Extract files to a temp folder
             // TODO security: an attacker could easily change our code before we execute it :(
             LOGGER.info(
-                "Did not find a \"file\" resource. Using python code from the packaged zip archive."
+                "Found a \"{}\" resource instead of\"file\" resource. Writing python src code to temp folder {}.",
+                pyInitFile?.protocol,
+                tempFileHolder.pyFolder
             )
 
             // get the python src code resource
-            val pyResourcesZip = classLoader.getResourceAsStream("/CPGPythonSrc.zip")
+            val pySrcFolderResource =
+                classLoader.getResource("/CPGPython/")
+                    ?: throw Exception("Failed to find resource \"CPGPython\"")
+            val targetPath: Path = tempFileHolder.pyFolder.resolve("CPGPython")
+            File(targetPath.toUri()).mkdir()
 
-            File(tempFileHolder.pyFolder.toString() + File.separatorChar + "CPGPython").mkdir()
-
-            tempFileHolder.pyZipOnDisk.toFile().outputStream().use { pyResourcesZip?.copyTo(it) }
-
-            // Extract the zip file. Note: this expects the zip to only contain files and no
-            // folders...
-            ZipFile(tempFileHolder.pyZipOnDisk.toFile()).use { zip ->
-                zip.entries().asSequence().forEach { entry ->
-                    zip.getInputStream(entry).use { input ->
-                        val targetFile =
-                            tempFileHolder.pyFolder.toString() +
-                                File.separatorChar +
-                                "CPGPython" +
-                                File.separatorChar +
-                                entry.name // we have to store the files in a "CPGPython" folder,
-                        // so that "import CPGPython" works in Python
-                        File(targetFile).outputStream().use { output -> input.copyTo(output) }
-                    }
-                }
+            val fileList = Files.list(Paths.get(pySrcFolderResource.toURI()))
+            fileList.forEach {
+                Files.copy(it, targetPath.resolve(it.fileName), StandardCopyOption.REPLACE_EXISTING)
             }
+
             config.addIncludePaths(tempFileHolder.pyFolder.toString())
         }
 
