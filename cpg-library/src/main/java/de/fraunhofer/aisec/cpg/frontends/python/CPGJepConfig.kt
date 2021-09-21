@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.frontends.python
 import java.io.File
 import java.nio.file.Files.createTempDirectory
 import java.nio.file.Files.createTempFile
+import java.nio.file.Path
 import java.util.zip.ZipFile
 import jep.JepConfig
 import jep.MainInterpreter
@@ -35,8 +36,10 @@ import jep.MainInterpreter
 /**
  * Takes care of configuring Jep according to some well known paths on popular operating systems.
  */
-object JepSingleton {
+class CPGJepConfig {
     var config = JepConfig()
+    private var pyZipOnDisk: Path? = null
+    private var pyFolder: Path? = null
 
     init {
         val classLoader = javaClass
@@ -56,19 +59,31 @@ object JepSingleton {
             config.addIncludePaths(pyFolder)
         } else {
             // Extract files to a temp folder
-            // TODO clean up after cpg finishes
             // TODO security: an attacker could easily change our code before we execute it :(
 
-            val pyZipOnDisk = createTempFile("cpg_python", ".zip")
-            val pyFolder = createTempDirectory("cpg_python")
             try {
-                val pyZipFile = classLoader.getResourceAsStream("/CPGPythonSrc.zip")
+                // create temporary file and folder
+                pyZipOnDisk = createTempFile("cpg_python", ".zip")
+
+                if (pyZipOnDisk == null) {
+                    throw Exception("Failed to create temp files.")
+                }
+                pyFolder = createTempDirectory("cpg_python")
+                if (pyFolder == null) {
+                    pyZipOnDisk?.toFile()?.delete()
+                    throw Exception("Failed to create temp folder.")
+                }
+
+                // get the python src code resource
+                val pyResourcesZip = classLoader.getResourceAsStream("/CPGPythonSrc.zip")
 
                 File(pyFolder.toString() + File.separatorChar + "CPGPython").mkdir()
 
-                pyZipOnDisk.toFile().outputStream().use { pyZipFile.copyTo(it) }
+                pyZipOnDisk!!.toFile().outputStream().use { pyResourcesZip?.copyTo(it) }
 
-                ZipFile(pyZipOnDisk.toFile()).use { zip ->
+                // Extract the zip file. Note: this expects the zip to only contain files and no
+                // folders...
+                ZipFile(pyZipOnDisk!!.toFile()).use { zip ->
                     zip.entries().asSequence().forEach { entry ->
                         zip.getInputStream(entry).use { input ->
                             val targetFile =
@@ -76,16 +91,16 @@ object JepSingleton {
                                     File.separatorChar +
                                     "CPGPython" +
                                     File.separatorChar +
-                                    entry.name
+                                    entry
+                                        .name // we have to store the files in a "CPGPython" folder,
+                            // so that "import CPGPython" works in Python
                             File(targetFile).outputStream().use { output -> input.copyTo(output) }
                         }
                     }
                 }
-                pyZipOnDisk.toFile().delete()
                 config.addIncludePaths(pyFolder.toString())
             } catch (e: Exception) {
-                pyZipOnDisk.toFile().delete()
-                pyFolder.toFile().deleteRecursively()
+                cleanTempFiles()
 
                 throw e
             }
@@ -95,7 +110,9 @@ object JepSingleton {
             val library = File(System.getenv("CPG_JEP_LIBRARY"))
             if (library.exists()) {
                 MainInterpreter.setJepLibraryPath(library.path)
-                config.addIncludePaths(library.toPath().parent.parent.toString())
+                config.addIncludePaths(
+                    library.toPath().parent.parent.toString()
+                ) // this assumes that the python code is also at the library's location
             }
         } else {
             var virtualEnv = "cpg"
@@ -122,9 +139,16 @@ object JepSingleton {
                     // calls
                     // to setJepLibraryPath and co result in failures.
                     MainInterpreter.setJepLibraryPath(it.path)
-                    config.addIncludePaths(it.toPath().parent.parent.toString())
+                    config.addIncludePaths(
+                        it.toPath().parent.parent.toString()
+                    ) // this assumes that the python code is also at the library's location
                 }
             }
         }
+    }
+
+    fun cleanTempFiles() {
+        pyZipOnDisk?.toFile()?.delete()
+        pyFolder?.toFile()?.deleteRecursively()
     }
 }

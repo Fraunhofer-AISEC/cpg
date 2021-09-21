@@ -44,6 +44,7 @@ class PythonLanguageFrontend(config: TranslationConfiguration, scopeManager: Sco
     companion object {
         @kotlin.jvm.JvmField var PY_EXTENSIONS: List<String> = listOf(".py")
     }
+    private val jep = CPGJepConfig() // configure Jep
 
     @Throws(TranslationException::class)
     override fun parse(file: File): TranslationUnitDeclaration {
@@ -90,18 +91,16 @@ class PythonLanguageFrontend(config: TranslationConfiguration, scopeManager: Sco
         val tu: TranslationUnitDeclaration
         var interp: SubInterpreter? = null
         try {
-            JepSingleton // configure Jep
-            interp = SubInterpreter(JepSingleton.config)
-
-            // TODO: extract cpg.py in a real python module with multiple files
+            interp = SubInterpreter(jep.config)
 
             // load script
             if (found) {
                 interp.runScript(entryScript.toString())
             } else {
+                // fall back to the cpg.py in the class's resources
                 val classLoader = javaClass
                 val pyInitFile = classLoader.getResource("/cpg.py")
-                interp.exec(pyInitFile.readText())
+                interp.exec(pyInitFile?.readText())
             }
 
             // run python function parse_code()
@@ -116,5 +115,10 @@ class PythonLanguageFrontend(config: TranslationConfiguration, scopeManager: Sco
         }
 
         return tu
+    }
+
+    override fun cleanup() {
+        jep.cleanTempFiles()
+        super.cleanup()
     }
 }
