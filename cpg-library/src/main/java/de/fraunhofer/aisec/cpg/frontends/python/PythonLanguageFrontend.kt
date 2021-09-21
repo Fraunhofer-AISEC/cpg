@@ -116,9 +116,4 @@ class PythonLanguageFrontend(config: TranslationConfiguration, scopeManager: Sco
 
         return tu
     }
-
-    override fun cleanup() {
-        jep.cleanTempFiles()
-        super.cleanup()
-    }
 }

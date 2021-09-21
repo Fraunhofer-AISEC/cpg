@@ -26,9 +26,6 @@
 package de.fraunhofer.aisec.cpg.frontends.python
 
 import java.io.File
-import java.nio.file.Files.createTempDirectory
-import java.nio.file.Files.createTempFile
-import java.nio.file.Path
 import java.util.zip.ZipFile
 import jep.JepConfig
 import jep.MainInterpreter
@@ -39,17 +36,18 @@ import org.slf4j.LoggerFactory
  */
 object JepSingleton {
     var config = JepConfig()
-    private var pyZipOnDisk: Path? = null
-    private var pyFolder: Path? = null
+
     private val LOGGER = LoggerFactory.getLogger(javaClass)
 
     init {
+        val tempFileHolder = PyTempFileHolder()
         val classLoader = javaClass
         val pyInitFile = classLoader.getResource("/CPGPython/__init__.py")
 
         config.redirectStdErr(System.err)
         config.redirectStdout(System.out)
         if (pyInitFile?.protocol == "file") {
+
             LOGGER.info("Found a \"file\" resource. Using python code directly.")
             // we can point JEP to the folder and get better debug messages with python source code
             // locations
@@ -67,49 +65,30 @@ object JepSingleton {
                 "Did not find a \"file\" resource. Using python code from the packaged zip archive."
             )
 
-            try {
-                // create temporary file and folder
-                pyZipOnDisk = createTempFile("cpg_python", ".zip")
+            // get the python src code resource
+            val pyResourcesZip = classLoader.getResourceAsStream("/CPGPythonSrc.zip")
 
-                if (pyZipOnDisk == null) {
-                    throw Exception("Failed to create temp files.")
-                }
-                pyFolder = createTempDirectory("cpg_python")
-                if (pyFolder == null) {
-                    pyZipOnDisk?.toFile()?.delete()
-                    throw Exception("Failed to create temp folder.")
-                }
+            File(tempFileHolder.pyFolder.toString() + File.separatorChar + "CPGPython").mkdir()
 
-                // get the python src code resource
-                val pyResourcesZip = classLoader.getResourceAsStream("/CPGPythonSrc.zip")
+            tempFileHolder.pyZipOnDisk.toFile().outputStream().use { pyResourcesZip?.copyTo(it) }
 
-                File(pyFolder.toString() + File.separatorChar + "CPGPython").mkdir()
-
-                pyZipOnDisk!!.toFile().outputStream().use { pyResourcesZip?.copyTo(it) }
-
-                // Extract the zip file. Note: this expects the zip to only contain files and no
-                // folders...
-                ZipFile(pyZipOnDisk!!.toFile()).use { zip ->
-                    zip.entries().asSequence().forEach { entry ->
-                        zip.getInputStream(entry).use { input ->
-                            val targetFile =
-                                pyFolder.toString() +
-                                    File.separatorChar +
-                                    "CPGPython" +
-                                    File.separatorChar +
-                                    entry
-                                        .name // we have to store the files in a "CPGPython" folder,
-                            // so that "import CPGPython" works in Python
-                            File(targetFile).outputStream().use { output -> input.copyTo(output) }
-                        }
+            // Extract the zip file. Note: this expects the zip to only contain files and no
+            // folders...
+            ZipFile(tempFileHolder.pyZipOnDisk.toFile()).use { zip ->
+                zip.entries().asSequence().forEach { entry ->
+                    zip.getInputStream(entry).use { input ->
+                        val targetFile =
+                            tempFileHolder.pyFolder.toString() +
+                                File.separatorChar +
+                                "CPGPython" +
+                                File.separatorChar +
+                                entry.name // we have to store the files in a "CPGPython" folder,
+                        // so that "import CPGPython" works in Python
+                        File(targetFile).outputStream().use { output -> input.copyTo(output) }
                     }
                 }
-                config.addIncludePaths(pyFolder.toString())
-            } catch (e: Exception) {
-                cleanTempFiles()
-
-                throw e
             }
+            config.addIncludePaths(tempFileHolder.pyFolder.toString())
         }
 
         if (System.getenv("CPG_JEP_LIBRARY") != null) {
@@ -151,12 +130,5 @@ object JepSingleton {
                 }
             }
         }
-    }
-
-    fun cleanTempFiles() {
-        pyZipOnDisk?.toFile()?.delete()
-
-        // We cannot delete it, yet. It might be used again when parsing multiple files...
-        // pyFolder?.toFile()?.deleteRecursively()
     }
 }
