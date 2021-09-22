@@ -62,13 +62,15 @@ object JepSingleton {
             // Extract files to a temp folder
             // TODO security: an attacker could easily change our code before we execute it :(
             LOGGER.info(
-                "Did not find a \"file\" resource. Using python code from the packaged zip archive."
+                "Found a \"{}\" resource instead of a \"file\" resource. Using python code from the packaged zip archive.",
+                pyInitFile?.protocol
             )
 
             // get the python src code resource
             val pyResourcesZip = classLoader.getResourceAsStream("/CPGPythonSrc.zip")
+            val targetFolder = tempFileHolder.pyFolder.resolve("CPGPython")
 
-            File(tempFileHolder.pyFolder.toString() + File.separatorChar + "CPGPython").mkdir()
+            File(targetFolder.toUri()).mkdir()
 
             tempFileHolder.pyZipOnDisk.toFile().outputStream().use { pyResourcesZip?.copyTo(it) }
 
@@ -78,13 +80,13 @@ object JepSingleton {
                 zip.entries().asSequence().forEach { entry ->
                     zip.getInputStream(entry).use { input ->
                         val targetFile =
-                            tempFileHolder.pyFolder.toString() +
-                                File.separatorChar +
-                                "CPGPython" +
-                                File.separatorChar +
-                                entry.name // we have to store the files in a "CPGPython" folder,
+                            targetFolder.resolve(
+                                entry.name
+                            ) // we have to store the files in a "CPGPython" folder,
                         // so that "import CPGPython" works in Python
-                        File(targetFile).outputStream().use { output -> input.copyTo(output) }
+                        File(targetFile.toUri()).outputStream().use { output ->
+                            input.copyTo(output)
+                        }
                     }
                 }
             }
