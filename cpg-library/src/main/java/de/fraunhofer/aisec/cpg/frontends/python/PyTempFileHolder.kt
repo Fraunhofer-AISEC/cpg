@@ -30,10 +30,12 @@ import java.nio.file.Path
 
 class PyTempFileHolder {
     // create temporary file and folder
-    val pyFolder: Path = Files.createTempDirectory("cpg_python")
+    var pyZipOnDisk: Path = Files.createTempFile("cpg_python", ".zip")
+    var pyFolder: Path = Files.createTempDirectory("cpg_python")
 
     protected fun finalize() {
         // clean up once no longer used
+        pyZipOnDisk.toFile().delete()
         // pyFolder.toFile().deleteRecursively() // TODO
     }
 }

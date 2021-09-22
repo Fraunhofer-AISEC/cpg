@@ -149,11 +149,20 @@ if (project.hasProperty("experimental")) {
         processResources {
             from("src/main/python/")
             include("CPGPython/*.py", "cpg.py")
-        }
+                    }
     }
 
-   tasks.named("compileJava") {
-        dependsOn(compileGolang)
+    // add a zip file with python src code
+    tasks.register<Zip>("packagePythonSrc") {
+        archiveFileName.set("CPGPythonSrc.zip")
+        destinationDirectory.set(layout.buildDirectory.dir("resources/main"))
+
+        from("src/main/python/CPGPython/")
+        include("*.py")
+    }
+
+    tasks.named("compileJava") {
+        dependsOn(compileGolang, "packagePythonSrc")
     }
 }
 
