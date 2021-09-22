@@ -34,9 +34,6 @@ CPG_JAVA = "de.fraunhofer.aisec.cpg"
 
 
 def get_src_code(self, node: ast.AST):
-    self.log_with_loc("RECEIVED: %s WITH TYPE: %s" % (node, type(node)))
-    self.log_with_loc("<--- CALLER", level=2)
-    self.log_with_loc("*** %s" % (ast.unparse(node)))
     return self.sourcecode.get_snippet(node.lineno, node.col_offset,
                                        node.end_lineno, node.end_col_offset)
 

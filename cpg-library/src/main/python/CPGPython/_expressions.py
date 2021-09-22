@@ -218,6 +218,7 @@ def handle_expression(self, expr):
         #
         # We parse node.func regularly using a visitor and decide what it is
         ref = self.handle_expression(expr.func)
+        self.log_with_loc("Parsed ref as %s" % (ref))
 
         name = ref.getName()
 
@@ -301,14 +302,24 @@ def handle_expression(self, expr):
         self.add_loc_info(expr, lit)
         lit.setName(str(expr.value))
         return lit
+
     elif isinstance(expr, ast.Attribute):
         value = self.handle_expression(expr.value)
-        self.log_with_loc("Parsed base as: %s" % (value))
+        self.log_with_loc("Parsed base/value as: %s" % (value))
+        if self.is_declaration(value):
+            self.log_with_loc(
+                ("Found a new declaration. "
+                 "Wrapping it in a DeclaredReferenceExpression."),
+                loglevel="DEBUG")
+            value = NodeBuilder.newDeclaredReferenceExpression(value.getName(),
+                                                               value.getType(),
+                                                               value.getCode())
         mem = NodeBuilder.newMemberExpression(
             value, UnknownType.getUnknownType(), expr.attr, ".",
             self.get_src_code(expr))
         self.add_loc_info(expr, mem)
         return mem
+
     elif isinstance(expr, ast.Subscript):
         value = self.handle_expression(expr.value)
         slc = self.handle_expression(expr.slice)

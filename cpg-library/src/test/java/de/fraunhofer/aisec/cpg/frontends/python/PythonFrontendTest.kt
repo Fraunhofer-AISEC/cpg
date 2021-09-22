@@ -850,4 +850,48 @@ class PythonFrontendTest : BaseTest() {
             (p.declarations[4] as? VariableDeclaration)?.location?.region
         )
     }
+
+    @Test
+    fun testMultiLevelMemberCall() { // TODO
+        val topLevel = Path.of("src", "test", "resources", "python")
+        val tu =
+            TestUtils.analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("multi_level_mem_call.py").toFile()),
+                topLevel,
+                true
+            ) {
+                it.registerLanguage(
+                    PythonLanguageFrontend::class.java,
+                    PythonLanguageFrontend.PY_EXTENSIONS
+                )
+            }
+
+        assertNotNull(tu)
+
+        val p =
+            tu.getDeclarationsByName("multi_level_mem_call", NamespaceDeclaration::class.java)
+                .iterator()
+                .next()
+        assertNotNull(p)
+
+        // foo = bar.baz.zzz("hello")
+        val foo = p.getDeclarationsByName("foo", VariableDeclaration::class.java)
+        assertNotNull(foo)
+
+        val initializer =
+            (foo.first() as? VariableDeclaration)?.initializer as? MemberCallExpression
+        assertNotNull(initializer)
+
+        assertEquals("zzz", initializer.name)
+        val base = initializer.base as? MemberExpression
+        assertNotNull(base)
+        assertEquals("baz", base.name)
+        val baseBase = base.base as? DeclaredReferenceExpression
+        assertNotNull(baseBase)
+        assertEquals("bar", baseBase.name)
+
+        val member = initializer.member as? DeclaredReferenceExpression
+        assertNotNull(member)
+        assertEquals("zzz", member.name)
+    }
 }
