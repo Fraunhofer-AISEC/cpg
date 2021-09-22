@@ -45,7 +45,7 @@ import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 
 @ExperimentalPython
-@Tag("experimental")
+@Tag("experimentalPython")
 class PythonFrontendTest : BaseTest() {
     // TODO ensure gradle doesn't remove those classes
     private val dummyRegion = Region()
