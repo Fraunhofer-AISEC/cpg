@@ -154,10 +154,11 @@ def handle_expression(self, expr):
         self.add_loc_info(expr, r)
         return r
     elif isinstance(expr, ast.Await):
-        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
-        r = NodeBuilder.newExpression("")
-        self.add_loc_info(expr, r)
-        return r
+        self.log_with_loc((
+            "\"await\" is currently not supported. The expression"
+            " is parsed but the \"await\" information is not available in the"
+            " graph."), loglevel="ERROR")
+        return self.handle_expression(expr.value)
     elif isinstance(expr, ast.Yield):
         self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         r = NodeBuilder.newExpression("")

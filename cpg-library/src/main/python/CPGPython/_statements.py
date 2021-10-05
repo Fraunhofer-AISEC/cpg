@@ -37,10 +37,7 @@ def handle_statement(self, stmt):
     if isinstance(stmt, ast.FunctionDef):
         return self.handle_function_or_method(stmt)
     elif isinstance(stmt, ast.AsyncFunctionDef):
-        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
-        r = NodeBuilder.newStatement("")
-        self.add_loc_info(stmt, r)
-        return r
+        return self.handle_function_or_method(stmt)
     elif isinstance(stmt, ast.ClassDef):
         # TODO: NodeBuilder requires a "kind" parameters. Setting this to
         # "class" would automagically create a "this" receiver field.
@@ -139,30 +136,9 @@ def handle_statement(self, stmt):
         self.add_loc_info(stmt, r)
         return r
     elif isinstance(stmt, ast.For):
-        for_stmt = NodeBuilder.newForEachStatement(self.get_src_code(stmt))
-        self.add_loc_info(stmt, for_stmt)
-        target = self.handle_expression(stmt.target)
-        if self.is_variable_declaration(target):
-            decl_stmt = NodeBuilder.newDeclarationStatement(
-                self.get_src_code(stmt.target))
-            self.add_loc_info(stmt.target, decl_stmt)
-            decl_stmt.setSingleDeclaration(target)
-            target = decl_stmt
-        for_stmt.setVariable(target)
-        it = self.handle_expression(stmt.iter)
-        for_stmt.setIterable(it)
-        body = self.make_compound_statement(stmt.body)
-        for_stmt.setStatement(body)
-
-        if len(stmt.orelse) != 0:
-            self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
-
-        return for_stmt
+        return self.handle_for(stmt)
     elif isinstance(stmt, ast.AsyncFor):
-        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
-        r = NodeBuilder.newStatement("")
-        self.add_loc_info(stmt, r)
-        return r
+        return self.handle_for(stmt)
     elif isinstance(stmt, ast.While):
         self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         r = NodeBuilder.newStatement("")
@@ -310,7 +286,24 @@ def handle_statement(self, stmt):
         return r
 
 
-def handle_function_or_method(self, node: ast.FunctionDef, record=None):
+def handle_function_or_method(self, node, record=None):
+    if not isinstance(
+            node,
+            ast.FunctionDef) and not isinstance(
+            node,
+            ast.AsyncFunctionDef):
+        self.log_with_loc(
+            "Expected either ast.FunctionDef or ast.AsyncFunctionDef",
+            loglevel="ERROR")
+        r = NodeBuilder.newFunctionDeclaration("DUMMY", "DUMMY")
+        self.add_loc_info(node, r)
+        return r
+
+    if isinstance(node, ast.AsyncFunctionDef):
+        self.log_with_loc(
+            "\"async\" is currently not supported and the information is lost "
+            "in the graph.", loglevel="ERROR")
+
     # FunctionDef(identifier name, arguments args, stmt* body, expr*
     # decorator_list, expr? returns, string? type_comment)
     self.log_with_loc("Handling a function/method: %s" % (ast.dump(node)))
@@ -450,6 +443,41 @@ def handle_argument(self, arg: ast.arg):
     self.add_loc_info(arg, pvd)
     self.scopemanager.addDeclaration(pvd)
     return pvd
+
+
+def handle_for(self, stmt):
+    if not isinstance(stmt, ast.AsyncFor) and not isinstance(stmt, ast.For):
+        self.log_with_loc(("Expected ast.AsyncFor or ast.For. Skipping"
+                          " evaluation."), loglevel="ERROR")
+        r = NodeBuilder.newStatement("")
+        self.add_loc_info(stmt, r)
+        return r
+    if isinstance(stmt, ast.AsyncFor):
+        self.log_with_loc((
+            "\"async\" is currently not supported. The statement"
+            " is parsed but the \"async\" information is not available in the"
+            " graph."), loglevel="ERROR")
+
+    # We can handle the AsyncFor / For statement now:
+    for_stmt = NodeBuilder.newForEachStatement(self.get_src_code(stmt))
+    self.add_loc_info(stmt, for_stmt)
+    target = self.handle_expression(stmt.target)
+    if self.is_variable_declaration(target):
+        decl_stmt = NodeBuilder.newDeclarationStatement(
+            self.get_src_code(stmt.target))
+        self.add_loc_info(stmt.target, decl_stmt)
+        decl_stmt.setSingleDeclaration(target)
+        target = decl_stmt
+    for_stmt.setVariable(target)
+    it = self.handle_expression(stmt.iter)
+    for_stmt.setIterable(it)
+    body = self.make_compound_statement(stmt.body)
+    for_stmt.setStatement(body)
+
+    if len(stmt.orelse) != 0:
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
+
+    return for_stmt
 
 
 def make_compound_statement(self, stmts) -> CompoundStatement:
