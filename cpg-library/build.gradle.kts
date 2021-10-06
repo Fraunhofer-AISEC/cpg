@@ -173,7 +173,7 @@ dependencies {
     api("org.neo4j:neo4j-ogm-core:3.2.27")
     api("org.apache.logging.log4j:log4j-slf4j18-impl:2.14.1")
     api("org.slf4j:jul-to-slf4j:2.0.0-alpha5")
-    api("com.github.javaparser:javaparser-symbol-solver-core:3.23.0")
+    api("com.github.javaparser:javaparser-symbol-solver-core:3.23.1")
 
     api("com.fasterxml.jackson.module:jackson-module-kotlin:2.13.0")
 
