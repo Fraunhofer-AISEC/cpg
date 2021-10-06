@@ -153,26 +153,13 @@ if (project.hasProperty("experimental")) {
     }
 }
 
-if(project.hasProperty("experimentalPython")) {
-    // add python src code
+if (project.hasProperty("experimentalPython")) {
+    // add python source code to resources
     tasks {
         processResources {
             from("src/main/python/")
             include("CPGPython/*.py", "cpg.py")
         }
-    }
-
-    // add a zip file with python src code
-    tasks.register<Zip>("packagePythonSrc") {
-        archiveFileName.set("CPGPythonSrc.zip")
-        destinationDirectory.set(layout.buildDirectory.dir("resources/main"))
-
-        from("src/main/python/CPGPython/")
-        include("*.py")
-    }
-
-    tasks.named("compileJava") {
-        dependsOn("packagePythonSrc")
     }
 }
 
