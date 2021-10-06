@@ -139,12 +139,9 @@ class Application : Callable<Int> {
 
     @CommandLine.Option(
         names = ["--enable-experimental-typescript"],
-        description =
-        [
-            "Enables the experimental language frontend for TypeScript."]
+        description = ["Enables the experimental language frontend for TypeScript."]
     )
     private var enableExperimentalTypeScript: Boolean = false
-
 
     /**
      * Pushes the whole translationResult to the neo4j db.
@@ -273,7 +270,7 @@ class Application : Callable<Int> {
             translationConfiguration.registerLanguage(
                 TypeScriptLanguageFrontend::class.java,
                 TypeScriptLanguageFrontend.TYPESCRIPT_EXTENSIONS +
-                        TypeScriptLanguageFrontend.JAVASCRIPT_EXTENSIONS
+                    TypeScriptLanguageFrontend.JAVASCRIPT_EXTENSIONS
             )
         }
 

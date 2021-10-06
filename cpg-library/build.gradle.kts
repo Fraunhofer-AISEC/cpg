@@ -96,6 +96,10 @@ tasks.named<Test>("test") {
         if (!project.hasProperty("experimentalTypeScript")) {
             excludeTags("experimentalTypeScript")
         }
+
+        if (!project.hasProperty("experimentalPython")) {
+            excludeTags("experimentalPython")
+        }
     }
     maxHeapSize = "4048m"
 }
@@ -149,6 +153,16 @@ if (project.hasProperty("experimental")) {
     }
 }
 
+if (project.hasProperty("experimentalPython")) {
+    // add python source code to resources
+    tasks {
+        processResources {
+            from("src/main/python/")
+            include("CPGPython/*.py", "cpg.py")
+        }
+    }
+}
+
 if (project.hasProperty("experimentalTypeScript")) {
     tasks.processResources {
         dependsOn(yarnBuild)
@@ -193,8 +207,10 @@ dependencies {
     implementation("org.jetbrains.kotlin:kotlin-stdlib")
     implementation("org.jetbrains.kotlin:kotlin-reflect")
 
-    // jep for python support
-    api("black.ninia:jep:4.0.0")
+    if(project.hasProperty("experimentalPython")) {
+        // jep for python support
+        api("black.ninia:jep:4.0.0")
+    }
 
     // JUnit
     testImplementation("org.jetbrains.kotlin:kotlin-test")

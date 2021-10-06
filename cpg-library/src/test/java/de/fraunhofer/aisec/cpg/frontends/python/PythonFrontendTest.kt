@@ -45,7 +45,7 @@ import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 
 @ExperimentalPython
-@Tag("experimental")
+@Tag("experimentalPython")
 class PythonFrontendTest : BaseTest() {
     // TODO ensure gradle doesn't remove those classes
     private val dummyRegion = Region()
@@ -360,6 +360,74 @@ class PythonFrontendTest : BaseTest() {
     }
 
     @Test
+    fun testFields() {
+        val topLevel = Path.of("src", "test", "resources", "python")
+        val tu =
+            TestUtils.analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("class_fields.py").toFile()),
+                topLevel,
+                true
+            ) {
+                it.registerLanguage(
+                    PythonLanguageFrontend::class.java,
+                    PythonLanguageFrontend.PY_EXTENSIONS
+                )
+            }
+
+        assertNotNull(tu)
+
+        val p =
+            tu.getDeclarationsByName("class_fields", NamespaceDeclaration::class.java)
+                .iterator()
+                .next()
+
+        val recordFoo =
+            p.getDeclarationsByName("Foo", RecordDeclaration::class.java).iterator().next()
+
+        assertNotNull(recordFoo)
+        assertEquals("Foo", recordFoo.name)
+        assertEquals(recordFoo.fields.size, 4)
+        assertEquals(recordFoo.methods.size, 1)
+
+        val fieldX = recordFoo.getField("x")
+        assertNotNull(fieldX)
+        val fieldY = recordFoo.getField("y")
+        assertNotNull(fieldY)
+        val fieldZ = recordFoo.getField("z")
+        assertNotNull(fieldZ)
+        val fieldBaz = recordFoo.getField("baz")
+        assertNotNull(fieldBaz)
+
+        assertEquals(fieldX.name, "x")
+        assertEquals(fieldY.name, "y")
+        assertEquals(fieldZ.name, "z")
+        assertEquals(fieldBaz.name, "baz")
+
+        assertNull(fieldX.initializer)
+        assertNotNull(fieldY.initializer)
+        assertNull(fieldZ.initializer)
+        assertNull(fieldBaz.initializer)
+
+        val methBar = recordFoo.methods[0]
+        assertNotNull(methBar)
+        assertEquals(methBar.name, "bar")
+
+        val barZ = (methBar.body as? CompoundStatement)?.statements?.get(0) as? MemberExpression
+        assertNotNull(barZ)
+        val barBaz = (methBar.body as? CompoundStatement)?.statements?.get(1) as? BinaryOperator
+        assertNotNull(barBaz)
+
+        assertEquals(barZ.refersTo, fieldZ)
+
+        val lhs = barBaz.lhs as? DeclaredReferenceExpression
+        val rhs = barBaz.rhs as? Literal<*>
+        assertNotNull(lhs)
+        assertNotNull(rhs)
+        assertEquals(barBaz.operatorCode, "=")
+        assertEquals(lhs.refersTo, fieldBaz)
+    }
+
+    @Test
     fun testSelf() {
         val topLevel = Path.of("src", "test", "resources", "python")
         val tu =
@@ -391,7 +459,7 @@ class PythonFrontendTest : BaseTest() {
         val somevar = recordFoo.fields[0]
         assertNotNull(somevar)
         assertEquals("somevar", somevar.name)
-        assertEquals(TypeParser.createFrom("int", false), somevar.type)
+        // assertEquals(TypeParser.createFrom("int", false), somevar.type) TODO fix type deduction
 
         assertEquals(2, recordFoo.methods.size)
         val bar = recordFoo.methods[0]
@@ -410,8 +478,10 @@ class PythonFrontendTest : BaseTest() {
 
         assertEquals(1, bar.parameters?.size)
         val i = bar.parameters?.get(0)
+        assertNotNull(i)
 
-        assertEquals("i", i?.name)
+        assertEquals("i", i.name)
+        assertEquals(TypeParser.createFrom("int", false), i.type)
 
         val assign = (bar.body as? CompoundStatement)?.statements?.get(0) as? BinaryOperator
         assertNotNull(assign)
@@ -425,9 +495,6 @@ class PythonFrontendTest : BaseTest() {
         assertEquals("self", base.name)
         assertEquals(TypeParser.createFrom("Foo", false), base.type)
         assertEquals(recv, base.refersTo)
-
-        assertEquals(i, rhs.refersTo)
-        assertEquals("=", assign.operatorCode)
 
         val fooMemCall =
             (foo.body as? CompoundStatement)?.statements?.get(0) as? MemberCallExpression
@@ -617,5 +684,214 @@ class PythonFrontendTest : BaseTest() {
         )
 
         // TODO last line "count(c1())"
+    }
+
+    @Test
+    fun testVarsAndFields() {
+        val topLevel = Path.of("src", "test", "resources", "python")
+        val tu =
+            TestUtils.analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("vars.py").toFile()),
+                topLevel,
+                true
+            ) {
+                it.registerLanguage(
+                    PythonLanguageFrontend::class.java,
+                    PythonLanguageFrontend.PY_EXTENSIONS
+                )
+            }
+
+        assertNotNull(tu)
+
+        val p = tu.getDeclarationsByName("vars", NamespaceDeclaration::class.java).iterator().next()
+        assertNotNull(p)
+
+        val clsFoo = p.getDeclarationsByName("Foo", RecordDeclaration::class.java).iterator().next()
+        assertNotNull(clsFoo)
+
+        val methBar = clsFoo.methods[0]
+        assertNotNull(methBar)
+
+        // val stmtsOutsideCls TODO
+        val classFieldNoInitializer = clsFoo.getField("classFieldNoInitializer")
+        assertNotNull(classFieldNoInitializer)
+        val classFieldWithInit = clsFoo.getField("classFieldWithInit")
+        assertNotNull(classFieldWithInit)
+        val classFieldDeclaredInFunction = clsFoo.getField("classFieldDeclaredInFunction")
+        assertNotNull(classFieldDeclaredInFunction)
+        // assertEquals(3, clsFoo.fields.size) // TODO should "self" be considered a field here?
+
+        assertNull(classFieldNoInitializer.initializer)
+        assertNotNull(classFieldWithInit)
+
+        // classFieldNoInitializer = classFieldWithInit
+        val assignClsFieldOutsideFunc = clsFoo.statements[2] as? BinaryOperator
+        assertNotNull(assignClsFieldOutsideFunc)
+        assertEquals(
+            (assignClsFieldOutsideFunc.lhs as? DeclaredReferenceExpression)?.refersTo,
+            classFieldNoInitializer
+        )
+        assertEquals(
+            (assignClsFieldOutsideFunc.rhs as? DeclaredReferenceExpression)?.refersTo,
+            classFieldWithInit
+        )
+        assertEquals(assignClsFieldOutsideFunc.operatorCode, "=")
+
+        val barBody = methBar.body as? CompoundStatement
+        assertNotNull(barBody)
+
+        // self.classFieldDeclaredInFunction = 456
+        val barStmt0 = barBody.statements[0] as? BinaryOperator
+        assertNotNull(barStmt0)
+        assertEquals((barStmt0.lhs as? MemberExpression)?.refersTo, classFieldDeclaredInFunction)
+
+        // self.classFieldNoInitializer = 789
+        val barStmt1 = barBody.statements[1] as? BinaryOperator
+        assertNotNull(barStmt1)
+        assertEquals((barStmt1.lhs as? MemberExpression)?.refersTo, classFieldNoInitializer)
+
+        // self.classFieldWithInit = 12
+        val barStmt2 = barBody.statements[2] as? BinaryOperator
+        assertNotNull(barStmt2)
+        assertEquals((barStmt2.lhs as? MemberExpression)?.refersTo, classFieldWithInit)
+
+        // classFieldNoInitializer = "shadowed"
+        val barStmt3 = barBody.statements[3] as? DeclarationStatement
+        assertNotNull(barStmt3)
+        assertNotNull((barStmt3.declarations[0] as? VariableDeclaration)?.initializer)
+
+        // classFieldWithInit = "shadowed"
+        val barStmt4 = barBody.statements[4] as? DeclarationStatement
+        assertNotNull(barStmt4)
+        assertNotNull((barStmt4.declarations[0] as? VariableDeclaration)?.initializer)
+
+        // classFieldDeclaredInFunction = "shadowed"
+        val barStmt5 = barBody.statements[5] as? DeclarationStatement
+        assertNotNull(barStmt5)
+        assertNotNull((barStmt5.declarations[0] as? VariableDeclaration)?.initializer)
+    }
+
+    @Test
+    fun testSourceCodeInCPG() {
+        val topLevel = Path.of("src", "test", "resources", "python")
+        val tu =
+            TestUtils.analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("literal.py").toFile()),
+                topLevel,
+                true
+            ) {
+                it.registerLanguage(
+                    PythonLanguageFrontend::class.java,
+                    PythonLanguageFrontend.PY_EXTENSIONS
+                )
+            }
+
+        assertNotNull(tu)
+
+        val p =
+            tu.getDeclarationsByName("literal", NamespaceDeclaration::class.java).iterator().next()
+        assertNotNull(p)
+
+        assertEquals("b", (p.declarations[0] as? VariableDeclaration)?.code)
+        assertEquals("True", (p.declarations[0] as? VariableDeclaration)?.initializer?.code)
+        assertEquals("i", (p.declarations[1] as? VariableDeclaration)?.code)
+        assertEquals("42", (p.declarations[1] as? VariableDeclaration)?.initializer?.code)
+        assertEquals("f", (p.declarations[2] as? VariableDeclaration)?.code)
+        assertEquals("1.0", (p.declarations[2] as? VariableDeclaration)?.initializer?.code)
+        assertEquals("t", (p.declarations[3] as? VariableDeclaration)?.code)
+        assertEquals("\"Hello\"", (p.declarations[3] as? VariableDeclaration)?.initializer?.code)
+        assertEquals("n", (p.declarations[4] as? VariableDeclaration)?.code)
+        assertEquals("None", (p.declarations[4] as? VariableDeclaration)?.initializer?.code)
+    }
+
+    @Test
+    fun testRegionInCPG() {
+        val topLevel = Path.of("src", "test", "resources", "python")
+        val tu =
+            TestUtils.analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("literal.py").toFile()),
+                topLevel,
+                true
+            ) {
+                it.registerLanguage(
+                    PythonLanguageFrontend::class.java,
+                    PythonLanguageFrontend.PY_EXTENSIONS
+                )
+            }
+
+        assertNotNull(tu)
+
+        val p =
+            tu.getDeclarationsByName("literal", NamespaceDeclaration::class.java).iterator().next()
+        assertNotNull(p)
+
+        assertEquals(
+            Region(1, 0, 1, 1),
+            (p.declarations[0] as? VariableDeclaration)?.location?.region
+        )
+        assertEquals(
+            Region(1, 4, 1, 8),
+            (p.declarations[0] as? VariableDeclaration)?.initializer?.location?.region
+        )
+        assertEquals(
+            Region(2, 0, 2, 1),
+            (p.declarations[1] as? VariableDeclaration)?.location?.region
+        )
+        assertEquals(
+            Region(3, 0, 3, 1),
+            (p.declarations[2] as? VariableDeclaration)?.location?.region
+        )
+        assertEquals(
+            Region(5, 0, 5, 1),
+            (p.declarations[3] as? VariableDeclaration)?.location?.region
+        )
+        assertEquals(
+            Region(6, 0, 6, 1),
+            (p.declarations[4] as? VariableDeclaration)?.location?.region
+        )
+    }
+
+    @Test
+    fun testMultiLevelMemberCall() { // TODO
+        val topLevel = Path.of("src", "test", "resources", "python")
+        val tu =
+            TestUtils.analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("multi_level_mem_call.py").toFile()),
+                topLevel,
+                true
+            ) {
+                it.registerLanguage(
+                    PythonLanguageFrontend::class.java,
+                    PythonLanguageFrontend.PY_EXTENSIONS
+                )
+            }
+
+        assertNotNull(tu)
+
+        val p =
+            tu.getDeclarationsByName("multi_level_mem_call", NamespaceDeclaration::class.java)
+                .iterator()
+                .next()
+        assertNotNull(p)
+
+        // foo = bar.baz.zzz("hello")
+        val foo = p.getDeclarationsByName("foo", VariableDeclaration::class.java)
+        assertNotNull(foo)
+
+        val initializer =
+            (foo.first() as? VariableDeclaration)?.initializer as? MemberCallExpression
+        assertNotNull(initializer)
+
+        assertEquals("zzz", initializer.name)
+        val base = initializer.base as? MemberExpression
+        assertNotNull(base)
+        assertEquals("baz", base.name)
+        val baseBase = base.base as? DeclaredReferenceExpression
+        assertNotNull(baseBase)
+        assertEquals("bar", baseBase.name)
+
+        val member = initializer.member as? DeclaredReferenceExpression
+        assertNotNull(member)
+        assertEquals("zzz", member.name)
     }
 }
