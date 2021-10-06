@@ -22,15 +22,35 @@
 #                   \$$$$$   |$$ |      \$$$$$   |
 #                    \______/ \__|       \______/
 #
-from CPGPython import PythonASTToCPG
+from ._spotless_dummy import *
 
 
-def parse_code(code, filename, frontend):
-    try:
-        converter = PythonASTToCPG(filename, frontend, code)
-        converter.execute()
+class CodeExtractor:
+    # Simple/ugly class to extrace code snippets given a region
+    def __init__(self, fname):
+        with open(fname) as f:
+            self.lines = f.read().splitlines()
 
-        return converter.tud
-    except Exception as e:
-        frontend.log.error("Buidling the CPG failed with exception: %s" % (e))
-        raise e
+    def get_snippet(self, lineno, col_offset, end_lineno, end_col_offset):
+        # 1 vs 0-based indexing
+        lineno -= 1
+        # col_offset -= 1
+        end_lineno -= 1
+        # end_col_offset -= 1
+        if lineno == end_lineno:
+            return self.lines[lineno][col_offset:end_col_offset]
+        else:
+            res = []
+            # first line is partially read
+            res.append(self.lines[lineno][col_offset:])
+            lineno += 1
+
+            # fill with compelte lines
+            while lineno + 1 < end_lineno:
+                res.append(self.lines[lineno][:])
+                lineno += 1
+
+            # last line is partially read
+            res.append(self.lines[end_lineno][:end_col_offset])
+
+            return "\n".join(res)

@@ -96,6 +96,10 @@ tasks.named<Test>("test") {
         if (!project.hasProperty("experimentalTypeScript")) {
             excludeTags("experimentalTypeScript")
         }
+
+        if (!project.hasProperty("experimentalPython")) {
+            excludeTags("experimentalPython")
+        }
     }
     maxHeapSize = "4048m"
 }
@@ -149,6 +153,16 @@ if (project.hasProperty("experimental")) {
     }
 }
 
+if (project.hasProperty("experimentalPython")) {
+    // add python source code to resources
+    tasks {
+        processResources {
+            from("src/main/python/")
+            include("CPGPython/*.py", "cpg.py")
+        }
+    }
+}
+
 if (project.hasProperty("experimentalTypeScript")) {
     tasks.processResources {
         dependsOn(yarnBuild)
@@ -170,7 +184,7 @@ signing {
 
 dependencies {
     api("org.apache.commons:commons-lang3:3.12.0")
-    api("org.neo4j:neo4j-ogm-core:3.2.26")
+    api("org.neo4j:neo4j-ogm-core:3.2.27")
     api("org.apache.logging.log4j:log4j-slf4j18-impl:2.14.1")
     api("org.slf4j:jul-to-slf4j:2.0.0-alpha5")
     api("com.github.javaparser:javaparser-symbol-solver-core:3.23.0")
@@ -193,8 +207,10 @@ dependencies {
     implementation("org.jetbrains.kotlin:kotlin-stdlib")
     implementation("org.jetbrains.kotlin:kotlin-reflect")
 
-    // jep for python support
-    api("black.ninia:jep:4.0.0")
+    if(project.hasProperty("experimentalPython")) {
+        // jep for python support
+        api("black.ninia:jep:4.0.0")
+    }
 
     // JUnit
     testImplementation("org.jetbrains.kotlin:kotlin-test")
