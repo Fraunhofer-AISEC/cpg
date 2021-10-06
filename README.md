@@ -48,7 +48,7 @@ The library can be used on the command line using the `cpg-console` subproject. 
 
 ### Usage of Experimental Languages
 
-Some languages, such as Golang are marked as experimental and depend on other native libraries. These are NOT YET bundled in the release jars (with exception of TypeScript), so you need to build them manually using the property `-Pexperimental` when using tasks such as `build` or `test`. For typescript, please use `-PexperimentalTypeScript`.
+Some languages, such as Golang are marked as experimental and depend on other native libraries. These are NOT YET bundled in the release jars (with exception of TypeScript), so you need to build them manually using the property `-Pexperimental` when using tasks such as `build` or `test`. For typescript, please use `-PexperimentalTypeScript`. Use `-PexperimentalPython` for Python support, respectively.
 
 #### Golang
 
@@ -56,9 +56,9 @@ In the case of Golang, the necessary native code can be found in the `src/main/g
 
 #### Python
 
-You need to install [jep](https://github.com/ninia/jep/). This can either be system wide or in a virtual environment. Furthermore, the python source, which are located in `src/main/python` need to be present in a directory with that name relative to where you execute or use CPG. We are working on extracting this into an actual python module, similar to jep. Currently, only Python 3.9 is supported.
+You need to install [jep](https://github.com/ninia/jep/). This can either be system wide or in a virtual environment. Your jep version hast to match the version used by CPG (see [build.gradle.kts](./cpg-library/build.gradle.kts)).
 
-Through the `JepSingleton`, the CPG library will look for well known paths on Linux and OS X. `JepSingleton` will prefer a virtualenv with the name `cpg`, this can be adjusted with the environment variable `CPG_PYTHON_VIRTUALENV`.
+Currently, only Python 3.9 is supported.
 
 ##### System Wide
 
@@ -69,6 +69,8 @@ Follow the instructions at https://github.com/ninia/jep/wiki/Getting-Started#ins
 - `python3 -m venv ~/.virtualenvs/cpg`
 - `source ~/.virtualenvs/cpg/bin/activate`
 - `pip3 install jep`
+
+Through the `JepSingleton`, the CPG library will look for well known paths on Linux and OS X. `JepSingleton` will prefer a virtualenv with the name `cpg`, this can be adjusted with the environment variable `CPG_PYTHON_VIRTUALENV`.
 
 #### TypeScript
 
