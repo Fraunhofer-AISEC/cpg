@@ -207,10 +207,8 @@ dependencies {
     implementation("org.jetbrains.kotlin:kotlin-stdlib")
     implementation("org.jetbrains.kotlin:kotlin-reflect")
 
-    if(project.hasProperty("experimentalPython")) {
-        // jep for python support
-        api("black.ninia:jep:4.0.0")
-    }
+    // jep for python support
+    api("black.ninia:jep:4.0.0")
 
     // JUnit
     testImplementation("org.jetbrains.kotlin:kotlin-test")
