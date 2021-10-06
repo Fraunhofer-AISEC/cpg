@@ -170,12 +170,12 @@ signing {
 
 dependencies {
     api("org.apache.commons:commons-lang3:3.12.0")
-    api("org.neo4j:neo4j-ogm-core:3.2.26")
+    api("org.neo4j:neo4j-ogm-core:3.2.27")
     api("org.apache.logging.log4j:log4j-slf4j18-impl:2.14.1")
     api("org.slf4j:jul-to-slf4j:2.0.0-alpha5")
     api("com.github.javaparser:javaparser-symbol-solver-core:3.23.0")
 
-    api("com.fasterxml.jackson.module:jackson-module-kotlin:2.12.5")
+    api("com.fasterxml.jackson.module:jackson-module-kotlin:2.13.0")
 
     // Eclipse dependencies
     api("org.eclipse.platform:org.eclipse.core.runtime:3.23.0")
@@ -199,9 +199,9 @@ dependencies {
     // JUnit
     testImplementation("org.jetbrains.kotlin:kotlin-test")
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
-    testImplementation("org.junit.jupiter:junit-jupiter-api:5.8.0")
-    testImplementation("org.junit.jupiter:junit-jupiter-params:5.8.0")
+    testImplementation("org.junit.jupiter:junit-jupiter-api:5.8.1")
+    testImplementation("org.junit.jupiter:junit-jupiter-params:5.8.1")
 
     testImplementation("org.mockito:mockito-core:3.12.4")
-    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.8.0")
+    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.8.1")
 }
