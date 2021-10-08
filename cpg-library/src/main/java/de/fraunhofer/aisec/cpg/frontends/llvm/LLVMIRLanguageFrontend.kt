@@ -31,13 +31,36 @@ import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.io.File
+import java.nio.ByteBuffer
+import org.bytedeco.javacpp.BytePointer
+import org.bytedeco.llvm.LLVM.LLVMContextRef
+import org.bytedeco.llvm.LLVM.LLVMMemoryBufferRef
 import org.bytedeco.llvm.LLVM.LLVMModuleRef
-import org.bytedeco.llvm.global.LLVM.LLVMModuleCreateWithName
+import org.bytedeco.llvm.global.LLVM.*
 
 class LLVMIRLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeManager?) :
     LanguageFrontend(config, scopeManager, "::") {
-    override fun parse(file: File?): TranslationUnitDeclaration {
-        val mod: LLVMModuleRef = LLVMModuleCreateWithName("my_module")
+    override fun parse(file: File): TranslationUnitDeclaration {
+        val mod: LLVMModuleRef = LLVMModuleRef()
+        val ctx: LLVMContextRef = LLVMContextCreate()
+        val buf: LLVMMemoryBufferRef = LLVMMemoryBufferRef()
+
+        // not sure what is going to be here then
+        val buf2 = ByteBuffer.allocate(10000)
+
+        // not sure what is going to be here then
+        val buf3 = ByteBuffer.allocate(10000)
+
+        LLVMCreateMemoryBufferWithContentsOfFile(BytePointer(file.toPath().toString()), buf, buf2)
+        val result = LLVMParseIRInContext(ctx, buf, mod, buf3)
+
+        println(result)
+        println(mod)
+
+        val func = LLVMGetFirstFunction(mod)
+        println(func)
+
+        LLVMContextDispose(ctx)
 
         return TranslationUnitDeclaration()
     }

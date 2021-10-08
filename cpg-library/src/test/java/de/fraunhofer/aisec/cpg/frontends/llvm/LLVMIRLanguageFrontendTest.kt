@@ -27,13 +27,16 @@ package de.fraunhofer.aisec.cpg.frontends.llvm
 
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
+import java.nio.file.Path
 import org.junit.jupiter.api.Test
 
 class LLVMIRLanguageFrontendTest {
     @Test
     fun test() {
+        val topLevel = Path.of("src", "test", "resources", "llvm")
+
         val frontend =
             LLVMIRLanguageFrontend(TranslationConfiguration.builder().build(), ScopeManager())
-        frontend.parse(null)
+        frontend.parse(topLevel.resolve("main.ll").toFile())
     }
 }
