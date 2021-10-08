@@ -25,12 +25,15 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.llvm
 
+import de.fraunhofer.aisec.cpg.TranslationConfiguration
+import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
 import org.junit.jupiter.api.Test
 
 class LLVMIRLanguageFrontendTest {
     @Test
     fun test() {
-        val frontend = LLVMIRLanguageFrontend()
+        val frontend =
+            LLVMIRLanguageFrontend(TranslationConfiguration.builder().build(), ScopeManager())
         frontend.parse(null)
     }
 }
