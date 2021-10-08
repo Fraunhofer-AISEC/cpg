@@ -76,6 +76,7 @@ class LLVMIRLanguageFrontend(config: TranslationConfiguration, scopeManager: Sco
         val func = LLVMGetFirstFunction(mod)
         println(func)
 
+        // TODO: actually clean them up, if we throw
         LLVMContextDispose(ctx)
         LLVMDisposeMessage(errorMessage)
 
