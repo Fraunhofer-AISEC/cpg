@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.frontends.llvm
 
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
+import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
@@ -41,18 +42,33 @@ import org.bytedeco.llvm.global.LLVM.*
 class LLVMIRLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeManager?) :
     LanguageFrontend(config, scopeManager, "::") {
     override fun parse(file: File): TranslationUnitDeclaration {
-        val mod: LLVMModuleRef = LLVMModuleRef()
+        // these will be filled by our create and parse functions later and will be passed as
+        // pointer
+        val mod = LLVMModuleRef()
+        val buf = LLVMMemoryBufferRef()
+
+        // create a new LLVM context
         val ctx: LLVMContextRef = LLVMContextCreate()
-        val buf: LLVMMemoryBufferRef = LLVMMemoryBufferRef()
 
-        // not sure what is going to be here then
-        val buf2 = ByteBuffer.allocate(10000)
+        // allocate a buffer for a possible error message
+        val errorMessage = ByteBuffer.allocate(10000)
 
-        // not sure what is going to be here then
-        val buf3 = ByteBuffer.allocate(10000)
+        var result =
+            LLVMCreateMemoryBufferWithContentsOfFile(
+                BytePointer(file.toPath().toString()),
+                buf,
+                errorMessage
+            )
+        if (result != 0) {
+            // something went wrong
+            throw TranslationException("Could not create memory buffer: $errorMessage")
+        }
 
-        LLVMCreateMemoryBufferWithContentsOfFile(BytePointer(file.toPath().toString()), buf, buf2)
-        val result = LLVMParseIRInContext(ctx, buf, mod, buf3)
+        result = LLVMParseIRInContext(ctx, buf, mod, errorMessage)
+        if (result != 0) {
+            // something went wrong
+            throw TranslationException("Could not parse IR: $errorMessage")
+        }
 
         println(result)
         println(mod)
@@ -71,7 +87,9 @@ class LLVMIRLanguageFrontend(config: TranslationConfiguration, scopeManager: Sco
             func = LLVMGetNextFunction(func)
         }
 
+        // TODO: actually clean them up, if we throw
         LLVMContextDispose(ctx)
+        LLVMDisposeMessage(errorMessage)
 
         return TranslationUnitDeclaration()
     }
