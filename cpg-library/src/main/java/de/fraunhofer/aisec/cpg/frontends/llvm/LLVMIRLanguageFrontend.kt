@@ -57,8 +57,19 @@ class LLVMIRLanguageFrontend(config: TranslationConfiguration, scopeManager: Sco
         println(result)
         println(mod)
 
-        val func = LLVMGetFirstFunction(mod)
-        println(func)
+        var func = LLVMGetFirstFunction(mod)
+        while (func != null) {
+            var bb = LLVMGetFirstBasicBlock(func)
+            while (bb != null) {
+                var instr = LLVMGetFirstInstruction(bb)
+                while (instr != null) {
+                    println(instr)
+                    instr = LLVMGetNextInstruction(instr)
+                }
+                bb = LLVMGetNextBasicBlock(bb)
+            }
+            func = LLVMGetNextFunction(func)
+        }
 
         LLVMContextDispose(ctx)
 
