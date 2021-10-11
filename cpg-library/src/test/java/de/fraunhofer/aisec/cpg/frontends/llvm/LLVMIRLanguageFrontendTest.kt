@@ -58,5 +58,7 @@ class LLVMIRLanguageFrontendTest {
 
         assertNotNull(main)
         assertNotNull(main.body)
+
+        assertEquals("i32*", main.type.name) // not sure why. it should just be i32
     }
 }

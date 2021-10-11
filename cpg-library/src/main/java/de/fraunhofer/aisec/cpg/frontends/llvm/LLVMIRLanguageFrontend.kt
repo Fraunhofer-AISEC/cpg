@@ -37,6 +37,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
+import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
@@ -110,10 +111,21 @@ class LLVMIRLanguageFrontend(config: TranslationConfiguration, scopeManager: Sco
         return tu
     }
 
+    private fun typeOf(valueRef: LLVMValueRef): Type {
+        val typeRef = LLVMTypeOf(valueRef)
+        val typeBuf = LLVMPrintTypeToString(typeRef)
+
+        // TODO: According to the doc LLVMDisposeMessage should be used, but it crashes
+
+        return TypeParser.createFrom(typeBuf.string, false)
+    }
+
     private fun handleFunction(func: LLVMValueRef): FunctionDeclaration {
         val name = LLVMGetValueName(func)
 
         val functionDeclaration = NodeBuilder.newFunctionDeclaration(name.string, "")
+
+        functionDeclaration.type = typeOf(func)
 
         scopeManager.enterScope(functionDeclaration)
 
