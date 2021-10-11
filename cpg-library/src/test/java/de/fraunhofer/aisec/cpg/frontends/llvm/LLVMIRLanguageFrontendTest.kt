@@ -25,13 +25,19 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.llvm
 
+import de.fraunhofer.aisec.cpg.TestUtils
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
 import java.nio.file.Path
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 import org.junit.jupiter.api.Test
+import kotlin.test.assertNull
 
 class LLVMIRLanguageFrontendTest {
     @Test
@@ -46,10 +52,17 @@ class LLVMIRLanguageFrontendTest {
     @Test
     fun test2() {
         val topLevel = Path.of("src", "test", "resources", "llvm")
-
-        val frontend =
-            LLVMIRLanguageFrontend(TranslationConfiguration.builder().build(), ScopeManager())
-        val tu = frontend.parse(topLevel.resolve("integer_ops.ll").toFile())
+        val tu =
+            TestUtils.analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("integer_ops.ll").toFile()),
+                topLevel,
+                true
+            ) {
+                it.registerLanguage(
+                    LLVMIRLanguageFrontend::class.java,
+                    LLVMIRLanguageFrontend.LLVM_EXTENSIONS
+                )
+            }
 
         assertEquals(2, tu.declarations.size)
 
@@ -57,8 +70,24 @@ class LLVMIRLanguageFrontendTest {
             tu.getDeclarationsByName("main", FunctionDeclaration::class.java).iterator().next()
 
         assertNotNull(main)
-        assertNotNull(main.body)
-
         assertEquals("i32*", main.type.name) // not sure why. it should just be i32
+
+        val rand =
+            tu.getDeclarationsByName("rand", FunctionDeclaration::class.java).iterator().next()
+
+        assertNotNull(rand)
+        assertNull(rand.body)
+
+        val stmt = main.getBodyStatementAs(0, DeclarationStatement::class.java)
+        assertNotNull(stmt)
+
+        val decl = stmt.singleDeclaration as? VariableDeclaration
+        assertNotNull(decl)
+        assertEquals("x", decl.name)
+
+        val call = decl.initializer as? CallExpression
+        assertNotNull(call)
+        assertEquals("rand", call.name)
+        assertTrue(call.invokes.contains(rand))
     }
 }

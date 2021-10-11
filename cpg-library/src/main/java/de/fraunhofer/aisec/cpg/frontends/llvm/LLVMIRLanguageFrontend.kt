@@ -51,6 +51,11 @@ import org.bytedeco.llvm.global.LLVM.*
 
 class LLVMIRLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeManager?) :
     LanguageFrontend(config, scopeManager, "::") {
+
+    companion object {
+        @kotlin.jvm.JvmField var LLVM_EXTENSIONS: List<String> = listOf(".ll")
+    }
+
     override fun parse(file: File): TranslationUnitDeclaration {
         TypeManager.getInstance().setLanguageFrontend(this)
 
@@ -326,7 +331,7 @@ class LLVMIRLanguageFrontend(config: TranslationConfiguration, scopeManager: Sco
                         LLVMIntSLE -> cmpPred = "<="
                         else -> cmpPred = "unknown"
                     }
-                    parseBinaryOperator(instr, cmpPred, false, unsigned)
+                    stmt.addStatement(parseBinaryOperator(instr, cmpPred, false, unsigned))
                 }
                 LLVMFCmp -> {
                     var cmpPred: String
@@ -375,13 +380,13 @@ class LLVMIRLanguageFrontend(config: TranslationConfiguration, scopeManager: Sco
                         else -> cmpPred = "unknown"
                     }
                     println("fcmp $cmpPred instruction")
-                    parseBinaryOperator(instr, cmpPred, false, false, unordered)
+                    stmt.addStatement(parseBinaryOperator(instr, cmpPred, false, false, unordered))
                 }
                 LLVMPHI -> {
                     println("phi instruction")
                 }
                 LLVMCall -> {
-                    println(parseFunctionCall(instr).toString())
+                    stmt.addStatement(parseFunctionCall(instr))
                 }
                 LLVMSelect -> {
                     println("select instruction")
