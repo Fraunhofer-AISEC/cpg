@@ -158,15 +158,20 @@ class LLVMIRLanguageFrontend(config: TranslationConfiguration, scopeManager: Sco
         while (instr != null) {
             when (LLVMGetInstructionOpcode(instr)) {
                 LLVMRet -> {
+                    val ret = NodeBuilder.newReturnStatement(getCodeFromRawNode(instr))
+
                     val numOps = LLVMGetNumOperands(instr)
                     if (numOps == 0) {
                         println("ret void instruction")
                     } else {
+                        // TODO: loop through all operands and handle them as expressions
                         val paramType =
                             LLVMPrintTypeToString(LLVMTypeOf(LLVMGetOperand(instr, 0))).string
                         val operandName = getOperandValueAtIndex(instr, 0, paramType)
                         println("ret $operandName")
                     }
+
+                    stmt.addStatement(ret)
                 }
                 LLVMBr -> {
                     println("br instruction")
