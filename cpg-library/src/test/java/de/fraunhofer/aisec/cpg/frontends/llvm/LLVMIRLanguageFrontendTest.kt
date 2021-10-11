@@ -32,11 +32,20 @@ import org.junit.jupiter.api.Test
 
 class LLVMIRLanguageFrontendTest {
     @Test
-    fun test() {
+    fun test1() {
         val topLevel = Path.of("src", "test", "resources", "llvm")
 
         val frontend =
             LLVMIRLanguageFrontend(TranslationConfiguration.builder().build(), ScopeManager())
         frontend.parse(topLevel.resolve("main.ll").toFile())
+    }
+
+    @Test
+    fun test2() {
+        val topLevel = Path.of("src", "test", "resources", "llvm")
+
+        val frontend =
+            LLVMIRLanguageFrontend(TranslationConfiguration.builder().build(), ScopeManager())
+        frontend.parse(topLevel.resolve("integer_ops.ll").toFile())
     }
 }
