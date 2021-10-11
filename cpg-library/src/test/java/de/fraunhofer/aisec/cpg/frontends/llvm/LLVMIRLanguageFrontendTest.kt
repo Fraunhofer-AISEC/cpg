@@ -28,15 +28,14 @@ package de.fraunhofer.aisec.cpg.frontends.llvm
 import de.fraunhofer.aisec.cpg.TestUtils
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
 import java.nio.file.Path
-import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
-import kotlin.test.assertNull
-import kotlin.test.assertTrue
+import kotlin.test.*
 import org.junit.jupiter.api.Test
 
 class LLVMIRLanguageFrontendTest {
@@ -89,5 +88,46 @@ class LLVMIRLanguageFrontendTest {
         assertNotNull(call)
         assertEquals("rand", call.name)
         assertTrue(call.invokes.contains(rand))
+    }
+
+    @Test
+    fun test3() {
+        val topLevel = Path.of("src", "test", "resources", "llvm")
+        val tu =
+            TestUtils.analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("struct.ll").toFile()),
+                topLevel,
+                true
+            ) {
+                it.registerLanguage(
+                    LLVMIRLanguageFrontend::class.java,
+                    LLVMIRLanguageFrontend.LLVM_EXTENSIONS
+                )
+            }
+
+        assertNotNull(tu)
+
+        val rt =
+            tu.getDeclarationsByName("struct.RT", RecordDeclaration::class.java).iterator().next()
+        assertNotNull(rt)
+
+        val st =
+            tu.getDeclarationsByName("struct.ST", RecordDeclaration::class.java).iterator().next()
+        assertNotNull(st)
+
+        assertEquals(3, st.fields.size)
+
+        var field = st.fields.firstOrNull()
+        assertNotNull(field)
+        assertEquals("i32", field.type.name)
+
+        field = st.fields[1]
+        assertNotNull(field)
+        assertEquals("double", field.type.name)
+
+        field = st.fields[2]
+        assertNotNull(field)
+        assertEquals("struct.RT", field.type.name)
+        assertSame(rt, (field.type as? ObjectType)?.recordDeclaration)
     }
 }

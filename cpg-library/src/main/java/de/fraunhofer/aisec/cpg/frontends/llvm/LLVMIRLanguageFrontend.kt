@@ -31,6 +31,7 @@ import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder
 import de.fraunhofer.aisec.cpg.graph.TypeManager
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
@@ -78,15 +79,15 @@ class LLVMIRLanguageFrontend(config: TranslationConfiguration, scopeManager: Sco
             )
         if (result != 0) {
             // something went wrong
-            val errorMsg = errorMessage.toString()
-            LLVMDisposeMessage(errorMessage)
+            val errorMsg = String(errorMessage.array())
+            // LLVMDisposeMessage(errorMessage)
             throw TranslationException("Could not create memory buffer: $errorMsg")
         }
 
         result = LLVMParseIRInContext(ctx, buf, mod, errorMessage)
         if (result != 0) {
             // something went wrong
-            val errorMsg = errorMessage.toString()
+            val errorMsg = String(errorMessage.array())
             // LLVMDisposeMessage(errorMessage)
             throw TranslationException("Could not parse IR: $errorMsg")
         }
@@ -99,8 +100,39 @@ class LLVMIRLanguageFrontend(config: TranslationConfiguration, scopeManager: Sco
         // we need to set our translation unit as the global scope
         scopeManager.resetToGlobal(tu)
 
-        var func = LLVMGetFirstFunction(mod)
+        // TODO: no idea how to enumerate them
+        val names = listOf("struct.ST", "struct.RT")
 
+        for (name in names) {
+            val typeRef = LLVMGetTypeByName2(ctx, name)
+
+            if (typeRef != null) {
+                val decl = parseStructType(typeRef)
+
+                scopeManager.addDeclaration(decl)
+            }
+        }
+
+        // loop through globals
+        var global = LLVMGetFirstGlobal(mod)
+        while (global != null) {
+            val name = LLVMGetValueName(global)
+            println(name.string)
+
+            global = LLVMGetNextGlobal(global)
+        }
+
+        // loop through named meta
+        var alias = LLVMGetFirstGlobalIFunc(mod)
+        while (alias != null) {
+            val name = LLVMGetValueName(global)
+            println(name.string)
+
+            alias = LLVMGetNextGlobal(alias)
+        }
+
+        // loop through functions
+        var func = LLVMGetFirstFunction(mod)
         while (func != null) {
             // try to parse the function (declaration)
             val declaration = handleFunction(func)
@@ -116,13 +148,65 @@ class LLVMIRLanguageFrontend(config: TranslationConfiguration, scopeManager: Sco
         return tu
     }
 
+    private fun parseStructType(typeRef: LLVMTypeRef): RecordDeclaration {
+        val name = LLVMGetStructName(typeRef).string
+
+        val record = NodeBuilder.newRecordDeclaration(name, "struct", "")
+
+        scopeManager.enterScope(record)
+
+        val size = LLVMCountStructElementTypes(typeRef)
+
+        for (i in 0 until size) {
+            val a = LLVMStructGetTypeAtIndex(typeRef, i)
+            val fieldType = typeFrom(a)
+
+            // there are no names, so we need to invent some dummy ones for easier reading
+            val fieldName = "field$i"
+
+            val field =
+                NodeBuilder.newFieldDeclaration(
+                    fieldName,
+                    fieldType,
+                    listOf(),
+                    "",
+                    null,
+                    null,
+                    false
+                )
+
+            scopeManager.addDeclaration(field)
+        }
+
+        scopeManager.leaveScope(record)
+
+        return record
+    }
+
     private fun typeOf(valueRef: LLVMValueRef): Type {
         val typeRef = LLVMTypeOf(valueRef)
+
+        return typeFrom(typeRef)
+    }
+
+    private fun typeFrom(typeRef: LLVMTypeRef): Type {
         val typeBuf = LLVMPrintTypeToString(typeRef)
 
         // TODO: According to the doc LLVMDisposeMessage should be used, but it crashes
 
-        return TypeParser.createFrom(typeBuf.string, false)
+        var s = typeBuf.string
+
+        // if the type is an identified type, i.e., it begins with a %, we get rid of the %
+        // character
+        // otherwise, the CPG will not connect it to the type. Note that the type name itself also
+        // does
+        // not include the % character.
+
+        if (s.startsWith("%")) {
+            s = s.substring(1)
+        }
+
+        return TypeParser.createFrom(s, false)
     }
 
     private fun handleFunction(func: LLVMValueRef): FunctionDeclaration {
@@ -156,6 +240,8 @@ class LLVMIRLanguageFrontend(config: TranslationConfiguration, scopeManager: Sco
 
         var instr = LLVMGetFirstInstruction(bb)
         while (instr != null) {
+            log.debug("Parsing {}", getCodeFromRawNode(instr))
+
             when (LLVMGetInstructionOpcode(instr)) {
                 LLVMRet -> {
                     val ret = NodeBuilder.newReturnStatement(getCodeFromRawNode(instr))
