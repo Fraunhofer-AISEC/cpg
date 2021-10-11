@@ -123,7 +123,8 @@ class LLVMIRLanguageFrontend(config: TranslationConfiguration, scopeManager: Sco
     private fun handleFunction(func: LLVMValueRef): FunctionDeclaration {
         val name = LLVMGetValueName(func)
 
-        val functionDeclaration = NodeBuilder.newFunctionDeclaration(name.string, "")
+        val functionDeclaration =
+            NodeBuilder.newFunctionDeclaration(name.string, this.getCodeFromRawNode(func))
 
         functionDeclaration.type = typeOf(func)
 
@@ -157,7 +158,7 @@ class LLVMIRLanguageFrontend(config: TranslationConfiguration, scopeManager: Sco
                         println("ret void instruction")
                     } else {
                         val paramType =
-                            LLVMPrintTypeToString(LLVMTypeOf(LLVMGetOperand(instr, 0))).getString()
+                            LLVMPrintTypeToString(LLVMTypeOf(LLVMGetOperand(instr, 0))).string
                         val operandName = getOperandValueAtIndex(instr, 0, paramType)
                         println("ret $operandName")
                     }
@@ -247,13 +248,12 @@ class LLVMIRLanguageFrontend(config: TranslationConfiguration, scopeManager: Sco
                     println("store instruction")
                 }
                 LLVMGetElementPtr -> {
-                    val lhs = LLVMGetValueName(instr).getString()
+                    val lhs = LLVMGetValueName(instr).string
                     val numOps = LLVMGetNumOperands(instr)
                     var args = ""
-                    for (idx: Int in 0..numOps - 1) {
+                    for (idx: Int in 0 until numOps) {
                         val paramType =
-                            LLVMPrintTypeToString(LLVMTypeOf(LLVMGetOperand(instr, idx)))
-                                .getString()
+                            LLVMPrintTypeToString(LLVMTypeOf(LLVMGetOperand(instr, idx))).string
                         val operandName = getOperandValueAtIndex(instr, idx, paramType)
                         args += "$paramType $operandName"
                     }
@@ -455,11 +455,11 @@ class LLVMIRLanguageFrontend(config: TranslationConfiguration, scopeManager: Sco
     }
 
     private fun parseFunctionCall(instr: LLVMValueRef): Statement {
-        val lhs = LLVMGetValueName(instr).getString()
+        val lhs = LLVMGetValueName(instr).string
         val calledFunc = LLVMGetCalledValue(instr)
-        val calledFuncName = LLVMGetValueName(calledFunc).getString()
+        val calledFuncName = LLVMGetValueName(calledFunc).string
         val funcType = LLVMGetCalledFunctionType(instr)
-        val retVal = LLVMPrintTypeToString(LLVMGetReturnType(funcType)).getString()
+        val retVal = LLVMPrintTypeToString(LLVMGetReturnType(funcType)).string
         var param = LLVMGetFirstParam(calledFunc)
         var idx = 0
         var args = ""
@@ -468,13 +468,12 @@ class LLVMIRLanguageFrontend(config: TranslationConfiguration, scopeManager: Sco
             NodeBuilder.newCallExpression(
                 calledFuncName,
                 calledFuncName,
-                LLVMPrintValueToString(instr).getString(),
+                LLVMPrintValueToString(instr).string,
                 false
             )
 
         while (param != null) {
-            val paramType =
-                LLVMPrintTypeToString(LLVMTypeOf(param)).getString() // Type of the argument
+            val paramType = LLVMPrintTypeToString(LLVMTypeOf(param)).string // Type of the argument
             val operandName = getOperandValueAtIndex(instr, idx, paramType)
             callExpr.addArgument(
                 NodeBuilder.newDeclaredReferenceExpression(
@@ -512,41 +511,36 @@ class LLVMIRLanguageFrontend(config: TranslationConfiguration, scopeManager: Sco
         unsigned: Boolean,
         unordered: Boolean = false
     ): Statement {
-        val lhs = LLVMGetValueName(instr).getString()
+        val lhs = LLVMGetValueName(instr).string
 
-        var op1Type = LLVMPrintTypeToString(LLVMTypeOf(LLVMGetOperand(instr, 0))).getString()
+        var op1Type = LLVMPrintTypeToString(LLVMTypeOf(LLVMGetOperand(instr, 0))).string
         val op1 = getOperandValueAtIndex(instr, 0, op1Type)
         if (unsigned) op1Type = "unsigned $op1Type"
 
-        var op2Type = LLVMPrintTypeToString(LLVMTypeOf(LLVMGetOperand(instr, 1))).getString()
+        var op2Type = LLVMPrintTypeToString(LLVMTypeOf(LLVMGetOperand(instr, 1))).string
         val op2 = getOperandValueAtIndex(instr, 1, op2Type)
         if (unsigned) op2Type = "unsigned $op2Type"
 
-        val binaryOperator =
-            NodeBuilder.newBinaryOperator(op, "($op1Type) $op1 $op ($op2Type) $op2")
+        val binaryOperator = NodeBuilder.newBinaryOperator(op, this.getCodeFromRawNode(instr))
 
         val t = TypeParser.createFrom(op1Type, true)
         if (op1Type.contains("unsigned "))
-            binaryOperator.lhs = NodeBuilder.newCastExpression("($op1Type) $op1")
+            binaryOperator.lhs = NodeBuilder.newCastExpression(this.getCodeFromRawNode(instr))
         else binaryOperator.lhs = NodeBuilder.newDeclaredReferenceExpression(op1, t, op1)
 
         if (op2Type.contains("unsigned "))
-            binaryOperator.rhs = NodeBuilder.newCastExpression("($op2Type) $op2")
+            binaryOperator.rhs = NodeBuilder.newCastExpression(this.getCodeFromRawNode(instr))
         else binaryOperator.rhs = NodeBuilder.newDeclaredReferenceExpression(op2, t, op2)
 
         var binOpUnordered: BinaryOperator? = null
         if (unordered) {
-            binOpUnordered =
-                NodeBuilder.newBinaryOperator(
-                    "||",
-                    "isunordered($op1, $op2) || ($op1Type) $op1 $op ($op2Type) $op2"
-                )
+            binOpUnordered = NodeBuilder.newBinaryOperator("||", this.getCodeFromRawNode(instr))
             binOpUnordered.rhs = binaryOperator
             val unorderedCall =
                 NodeBuilder.newCallExpression(
                     "isunordered",
                     "isunordered",
-                    LLVMPrintValueToString(instr).getString(),
+                    LLVMPrintValueToString(instr).string,
                     false
                 )
             unorderedCall.addArgument(NodeBuilder.newDeclaredReferenceExpression(op1, t, op1))
@@ -579,13 +573,13 @@ class LLVMIRLanguageFrontend(config: TranslationConfiguration, scopeManager: Sco
             } else if (type != null && type.startsWith("i")) {
                 operandName = LLVMConstIntGetSExtValue(operand).toString()
             } else if (type != null &&
-                    (type.equals("double") ||
-                        type.equals("bfloat") ||
-                        type.equals("float") ||
-                        type.equals("half") ||
-                        type.equals("fp128") ||
-                        type.equals("x86_fp80") ||
-                        type.equals("ppc_fp128"))
+                    (type == "double" ||
+                        type == "bfloat" ||
+                        type == "float" ||
+                        type == "half" ||
+                        type == "fp128" ||
+                        type == "x86_fp80" ||
+                        type == "ppc_fp128")
             ) {
                 val losesInfo = IntArray(1)
                 operandName = LLVMConstRealGetDouble(operand, losesInfo).toString()
@@ -593,7 +587,7 @@ class LLVMIRLanguageFrontend(config: TranslationConfiguration, scopeManager: Sco
                 val aliasee = LLVMAliasGetAliasee(operand)
                 operandName =
                     LLVMPrintValueToString(aliasee)
-                        .getString() // Already resolve the aliasee of the constant
+                        .string // Already resolve the aliasee of the constant
             } else {
                 operandName = "Some constant value" // TODO
             }
@@ -602,13 +596,21 @@ class LLVMIRLanguageFrontend(config: TranslationConfiguration, scopeManager: Sco
         } else if (LLVMIsPoison(operand) == 1) {
             operandName = "poison"
         } else {
-            operandName = LLVMGetValueName(operand).getString() // The argument (without the %)
+            operandName = LLVMGetValueName(operand).string // The argument (without the %)
         }
         return operandName
     }
 
     override fun <T : Any?> getCodeFromRawNode(astNode: T): String? {
-        TODO("Not yet implemented")
+        if (astNode is LLVMValueRef) {
+            val code = LLVMPrintValueToString(astNode)
+
+            // TODO: dispose?
+
+            return code.string
+        }
+
+        return null
     }
 
     override fun <T : Any?> getLocationFromRawNode(astNode: T): PhysicalLocation? {
