@@ -26,8 +26,11 @@
 package de.fraunhofer.aisec.cpg.frontends.llvm
 
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
+import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
 import java.nio.file.Path
+import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
 import org.junit.jupiter.api.Test
 
 class LLVMIRLanguageFrontendTest {
@@ -46,6 +49,14 @@ class LLVMIRLanguageFrontendTest {
 
         val frontend =
             LLVMIRLanguageFrontend(TranslationConfiguration.builder().build(), ScopeManager())
-        frontend.parse(topLevel.resolve("integer_ops.ll").toFile())
+        val tu = frontend.parse(topLevel.resolve("integer_ops.ll").toFile())
+
+        assertEquals(2, tu.declarations.size)
+
+        val main =
+            tu.getDeclarationsByName("main", FunctionDeclaration::class.java).iterator().next()
+
+        assertNotNull(main)
+        assertNotNull(main.body)
     }
 }
