@@ -218,7 +218,7 @@ class LLVMIRLanguageFrontend(config: TranslationConfiguration, scopeManager: Sco
     }
 
     override fun <T : Any?> getLocationFromRawNode(astNode: T): PhysicalLocation? {
-        TODO("Not yet implemented")
+        return null
     }
 
     override fun <S : Any?, T : Any?> setComment(s: S, ctx: T) {
