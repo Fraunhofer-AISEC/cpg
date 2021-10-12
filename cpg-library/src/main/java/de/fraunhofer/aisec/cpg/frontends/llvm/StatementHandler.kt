@@ -152,6 +152,13 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 return parseBinaryOperator(instr, ">>", false, false)
             }
             LLVMAShr -> {
+               /* BinaryOperator. Arithmetic right shift operator:
+                * Set the most significant bit with the first bit of op1, not with 0.
+                *
+                * Returns a "poison value" if
+                * 1) op2 is bigger than or equal to the number of bits in op1, or
+                * 2) "exact" is present and a non-zero value is shifted out.
+                */
                 println("ashr instruction")
             }
             LLVMAnd -> {
@@ -260,9 +267,36 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 println("fence instruction")
             }
             LLVMAtomicCmpXchg -> {
+                /*  TODO Something like:
+                    if(*pointer == cmp) {
+                        orig = *pointer;
+                        *pointer = new;
+                        return {orig, true} // A struct of {T, i1}
+                    } else {
+                        return {*pointer, false} // A struct of {T, i1}
+                    }
+                 */
                 println("atomiccmpxchg instruction")
             }
             LLVMAtomicRMW -> {
+                /* TODO: Has to be constructed of multiple operations
+                 *
+                 * atomicrmw [volatile] <operation> <ty>* <pointer>, <ty> <value> [syncscope("<target-scope>")] <ordering>[, align <alignment>]
+                 * Depending on the operation:
+                 * xchg: *ptr = val
+                 * add: *ptr = *ptr + val
+                 * sub: *ptr = *ptr - val
+                 * and: *ptr = *ptr & val
+                 * nand: *ptr = ~(*ptr & val)
+                 * or: *ptr = *ptr | val
+                 * xor: *ptr = *ptr ^ val
+                 * max: *ptr = *ptr > val ? *ptr : val (signed comparison)
+                 * min: *ptr = *ptr < val ? *ptr : val (signed comparison)
+                 * umax: *ptr = *ptr > val ? *ptr : val (unsigned comparison)
+                 * umin: *ptr = *ptr < val ? *ptr : val (unsigned comparison)
+                 * fadd: *ptr = *ptr + val (floating point arithmetic)
+                 * fsub: *ptr = *ptr - val (floating point arithmetic)
+                 */
                 println("atomicrmw instruction")
             }
             LLVMResume -> {
