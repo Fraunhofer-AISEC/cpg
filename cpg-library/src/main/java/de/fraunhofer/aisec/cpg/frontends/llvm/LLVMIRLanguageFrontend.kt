@@ -222,6 +222,6 @@ class LLVMIRLanguageFrontend(config: TranslationConfiguration, scopeManager: Sco
     }
 
     override fun <S : Any?, T : Any?> setComment(s: S, ctx: T) {
-        TODO("Not yet implemented")
+        
     }
 }
