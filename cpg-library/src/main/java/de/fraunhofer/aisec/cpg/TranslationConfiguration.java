@@ -360,6 +360,12 @@ public class TranslationConfiguration {
       return this;
     }
 
+    /** Unregisters a registered {@link de.fraunhofer.aisec.cpg.frontends.LanguageFrontend}. */
+    public Builder unregisterLanguage(@NonNull Class<? extends LanguageFrontend> frontend) {
+      this.frontends.remove(frontend);
+      return this;
+    }
+
     /**
      * Register all default {@link Pass}es.
      *
