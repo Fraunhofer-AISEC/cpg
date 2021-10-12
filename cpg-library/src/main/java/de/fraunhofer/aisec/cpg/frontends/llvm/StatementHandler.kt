@@ -35,6 +35,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ArraySubscriptionExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.types.*
 import java.util.*
 import org.bytedeco.javacpp.Pointer
@@ -71,9 +72,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 val numOps = LLVMGetNumOperands(instr)
                 if (numOps != 0) {
                     val retType = LLVMPrintTypeToString(LLVMTypeOf(LLVMGetOperand(instr, 0))).string
-                    val operandName = getOperandValueAtIndex(instr, 0, retType)
-                    val type = TypeParser.createFrom(retType, true)
-                    ret.returnValue = NodeBuilder.newDeclaredReferenceExpression(operandName, type, operandName)
+                    ret.returnValue = getOperandValueAtIndex(instr, 0, retType)
                 }
 
                 return ret
@@ -163,7 +162,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 println("store instruction")
             }
             LLVMGetElementPtr -> {
-                handleGetElementPr(instr)
+                handleGetElementPtr(instr)
             }
             LLVMTrunc -> {
                 println("trunc instruction")
@@ -240,7 +239,6 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 when (LLVMGetICmpPredicate(instr)) {
                     LLVMRealPredicateFalse -> {
                         cmpPred = "false" // TODO
-                        // continue // continue??!
                         return Statement()
                     }
                     LLVMRealOEQ -> cmpPred = "=="
@@ -367,10 +365,9 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
      * `getelementptr` allows an (infinite) chain of sub-element access within a single instruction,
      * we need to unwrap those into individual expressions.
      */
-    private fun handleGetElementPr(instr: LLVMValueRef): Statement {
+    private fun handleGetElementPtr(instr: LLVMValueRef): Statement {
         val lhs = LLVMGetValueName(instr).string
         val numOps = LLVMGetNumOperands(instr)
-        var args = ""
 
         var expr: Expression? = null
         var base: Expression? = null
@@ -387,7 +384,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             baseType = TypeParser.createFrom(paramType.substring(1), false)
 
             // construct our base expression from the first operand
-            base = NodeBuilder.newDeclaredReferenceExpression(operandName, baseType, operandName)
+            base = operandName
         } else {
             log.error(
                 "First parameter is not a structure name. This should not happen. Cannot continue"
@@ -401,14 +398,21 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             operandName = getOperandValueAtIndex(instr, idx, paramType)
 
             // try to parse index as int for now only
-            val index: Int = Integer.parseInt(operandName)
+            val index: Int
+            if (operandName is Literal<*>) {
+                val literalValue = operandName.value
+                if (literalValue is Long) {
+                    index = literalValue.toInt()
+                } else throw Exception("No index specified")
+            } else throw Exception("No index specified")
+
+            // val index: Int = Integer.parseInt(operandName)
 
             // check, if it is a pointer -> then we need to handle this as an array access
             if (baseType is PointerType) {
                 var arrayExpr = NodeBuilder.newArraySubscriptionExpression("")
                 arrayExpr.arrayExpression = base
-                arrayExpr.subscriptExpression =
-                    NodeBuilder.newLiteral(index, TypeParser.createFrom("int", false), "")
+                arrayExpr.subscriptExpression = operandName
                 expr = arrayExpr
 
                 log.info("{}", expr)
@@ -490,7 +494,6 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         val retVal = LLVMPrintTypeToString(LLVMGetReturnType(funcType)).string
         var param = LLVMGetFirstParam(calledFunc)
         var idx = 0
-        var args = ""
 
         val callExpr =
             NodeBuilder.newCallExpression(
@@ -503,19 +506,10 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         while (param != null) {
             val paramType = LLVMPrintTypeToString(LLVMTypeOf(param)).string // Type of the argument
             val operandName = getOperandValueAtIndex(instr, idx, paramType)
-            callExpr.addArgument(
-                NodeBuilder.newDeclaredReferenceExpression(
-                    operandName,
-                    TypeParser.createFrom(paramType, true),
-                    operandName
-                )
-            )
-            args += "$operandName, "
+            callExpr.addArgument(operandName)
             param = LLVMGetNextParam(param)
             idx++
         }
-
-        if (args.endsWith(", ")) args = args.substring(0, args.length - 2)
 
         if (lhs != "") {
             val decl = VariableDeclaration()
@@ -527,7 +521,6 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             declStatement.singleDeclaration = decl
             return declStatement
         } else {
-            println("call $calledFuncName($args): $retVal")
             return callExpr
         }
     }
@@ -560,12 +553,12 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
 
         var op1Type = LLVMPrintTypeToString(LLVMTypeOf(LLVMGetOperand(instr, 0))).string
         val op1 = getOperandValueAtIndex(instr, 0, op1Type)
-        if (unsigned) op1Type = "unsigned $op1Type"
+        if (unsigned) op1Type = "u$op1Type"
         val t1 = TypeParser.createFrom(op1Type, true)
 
         var op2Type = LLVMPrintTypeToString(LLVMTypeOf(LLVMGetOperand(instr, 1))).string
         val op2 = getOperandValueAtIndex(instr, 1, op2Type)
-        if (unsigned) op2Type = "unsigned $op2Type"
+        if (unsigned) op2Type = "u$op2Type"
         val t2 = TypeParser.createFrom(op2Type, true)
 
         val binaryOperator: Expression
@@ -581,8 +574,8 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                     LLVMPrintValueToString(instr).string,
                     false
                 )
-            binaryOperator.addArgument(NodeBuilder.newDeclaredReferenceExpression(op1, t1, op1))
-            binaryOperator.addArgument(NodeBuilder.newDeclaredReferenceExpression(op2, t2, op2))
+            binaryOperator.addArgument(op1)
+            binaryOperator.addArgument(op2)
         } else if (op.equals("ord")) {
             // Ordered comparison operand => Replace with !isunordered(x, y)
             // Resulting statement: i1 lhs = !isordered(op1, op2)
@@ -593,8 +586,8 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                     LLVMPrintValueToString(instr).string,
                     false
                 )
-            unorderedCall.addArgument(NodeBuilder.newDeclaredReferenceExpression(op1, t1, op1))
-            unorderedCall.addArgument(NodeBuilder.newDeclaredReferenceExpression(op2, t2, op2))
+            unorderedCall.addArgument(op1)
+            unorderedCall.addArgument(op2)
             binaryOperator =
                 NodeBuilder.newUnaryOperator(
                     "!",
@@ -607,13 +600,13 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             // Resulting statement: lhs = op1 <op> op2.
             binaryOperator = NodeBuilder.newBinaryOperator(op, lang.getCodeFromRawNode(instr))
 
-            if (op1Type.contains("unsigned "))
+            if (unsigned)
                 binaryOperator.lhs = NodeBuilder.newCastExpression(lang.getCodeFromRawNode(instr))
-            else binaryOperator.lhs = NodeBuilder.newDeclaredReferenceExpression(op1, t1, op1)
+            else binaryOperator.lhs = op1
 
-            if (op2Type.contains("unsigned "))
+            if (unsigned)
                 binaryOperator.rhs = NodeBuilder.newCastExpression(lang.getCodeFromRawNode(instr))
-            else binaryOperator.rhs = NodeBuilder.newDeclaredReferenceExpression(op2, t2, op2)
+            else binaryOperator.rhs = op2
 
             if (unordered) {
                 // Special case for floating point comparisons which check if a value is "unordered
@@ -628,8 +621,8 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                         LLVMPrintValueToString(instr).string,
                         false
                     )
-                unorderedCall.addArgument(NodeBuilder.newDeclaredReferenceExpression(op1, t1, op1))
-                unorderedCall.addArgument(NodeBuilder.newDeclaredReferenceExpression(op2, t2, op2))
+                unorderedCall.addArgument(op1)
+                unorderedCall.addArgument(op2)
                 binOpUnordered.lhs = unorderedCall
             }
         }
@@ -648,43 +641,52 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         return declStatement
     }
 
-    // TODO: this should return an expression instead and should be moved to an expressionhandler
-    private fun getOperandValueAtIndex(instr: LLVMValueRef, idx: Int, type: String?): String {
+    private fun getOperandValueAtIndex(instr: LLVMValueRef, idx: Int, type: String): Expression {
+        val cpgType = TypeParser.createFrom(type, true)
         val operand = LLVMGetOperand(instr, idx)
         val operandName: String
         if (LLVMIsConstant(operand) == 1) {
             if (LLVMIsConstantString(operand) == 1) {
                 operandName = LLVMGetAsString(operand, SizeTPointer(100)).toString()
-            } else if (type != null && type.startsWith("ui")) {
-                operandName = LLVMConstIntGetZExtValue(operand).toString()
-            } else if (type != null && type.startsWith("i")) {
-                operandName = LLVMConstIntGetSExtValue(operand).toString()
-            } else if (type != null &&
-                    (type == "double" ||
-                        type == "bfloat" ||
-                        type == "float" ||
-                        type == "half" ||
-                        type == "fp128" ||
-                        type == "x86_fp80" ||
-                        type == "ppc_fp128")
+                return NodeBuilder.newLiteral(operandName, cpgType, operandName)
+            } else if (type.startsWith("ui")) {
+                val opValue = LLVMConstIntGetZExtValue(operand)
+                return NodeBuilder.newLiteral(opValue, cpgType, opValue.toString())
+            } else if (type.startsWith("i")) {
+                val opValue = LLVMConstIntGetSExtValue(operand)
+                return NodeBuilder.newLiteral(opValue, cpgType, opValue.toString())
+            } else if (type == "double" ||
+                    type == "bfloat" ||
+                    type == "float" ||
+                    type == "half" ||
+                    type == "fp128" ||
+                    type == "x86_fp80" ||
+                    type == "ppc_fp128"
             ) {
                 val losesInfo = IntArray(1)
-                operandName = LLVMConstRealGetDouble(operand, losesInfo).toString()
+                val opValue = LLVMConstRealGetDouble(operand, losesInfo)
+                return NodeBuilder.newLiteral(opValue, cpgType, opValue.toString())
             } else if (LLVMIsAGlobalAlias(operand) != null || LLVMIsGlobalConstant(operand) == 1) {
                 val aliasee = LLVMAliasGetAliasee(operand)
                 operandName =
                     LLVMPrintValueToString(aliasee)
                         .string // Already resolve the aliasee of the constant
+                return NodeBuilder.newLiteral(operandName, cpgType, operandName)
             } else {
-                operandName = "Some constant value" // TODO
+                // TODO This does not return the actual constant but only a string representation
+                return NodeBuilder.newLiteral(
+                    LLVMPrintValueToString(operand).toString(),
+                    cpgType,
+                    LLVMPrintValueToString(operand).toString()
+                )
             }
         } else if (LLVMIsUndef(operand) == 1) {
-            operandName = "undef"
+            return NodeBuilder.newDeclaredReferenceExpression("undef", cpgType, "undef")
         } else if (LLVMIsPoison(operand) == 1) {
-            operandName = "poison"
+            return NodeBuilder.newDeclaredReferenceExpression("poison", cpgType, "poison")
         } else {
             operandName = LLVMGetValueName(operand).string // The argument (without the %)
+            return NodeBuilder.newDeclaredReferenceExpression(operandName, cpgType, operandName)
         }
-        return operandName
     }
 }
