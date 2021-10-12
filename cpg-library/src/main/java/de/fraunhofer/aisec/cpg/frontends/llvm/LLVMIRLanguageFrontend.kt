@@ -38,6 +38,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
@@ -612,26 +613,31 @@ class LLVMIRLanguageFrontend(config: TranslationConfiguration, scopeManager: Sco
         var op1Type = LLVMPrintTypeToString(LLVMTypeOf(LLVMGetOperand(instr, 0))).string
         val op1 = getOperandValueAtIndex(instr, 0, op1Type)
         if (unsigned) op1Type = "unsigned $op1Type"
+        val t1 = TypeParser.createFrom(op1Type, true)
 
         var op2Type = LLVMPrintTypeToString(LLVMTypeOf(LLVMGetOperand(instr, 1))).string
         val op2 = getOperandValueAtIndex(instr, 1, op2Type)
         if (unsigned) op2Type = "unsigned $op2Type"
+        val t2 = TypeParser.createFrom(op2Type, true)
 
-        val binaryOperator = NodeBuilder.newBinaryOperator(op, this.getCodeFromRawNode(instr))
-
-        val t = TypeParser.createFrom(op1Type, true)
-        if (op1Type.contains("unsigned "))
-            binaryOperator.lhs = NodeBuilder.newCastExpression(this.getCodeFromRawNode(instr))
-        else binaryOperator.lhs = NodeBuilder.newDeclaredReferenceExpression(op1, t, op1)
-
-        if (op2Type.contains("unsigned "))
-            binaryOperator.rhs = NodeBuilder.newCastExpression(this.getCodeFromRawNode(instr))
-        else binaryOperator.rhs = NodeBuilder.newDeclaredReferenceExpression(op2, t, op2)
-
+        val binaryOperator: Expression
         var binOpUnordered: BinaryOperator? = null
-        if (unordered) {
-            binOpUnordered = NodeBuilder.newBinaryOperator("||", this.getCodeFromRawNode(instr))
-            binOpUnordered.rhs = binaryOperator
+
+        if (op.equals("uno")) {
+            // Unordered comparison operand => Replace with a call to isunordered(x, y)
+            // Resulting statement: i1 lhs = isordered(op1, op2)
+            binaryOperator =
+                NodeBuilder.newCallExpression(
+                    "isunordered",
+                    "isunordered",
+                    LLVMPrintValueToString(instr).string,
+                    false
+                )
+            binaryOperator.addArgument(NodeBuilder.newDeclaredReferenceExpression(op1, t1, op1))
+            binaryOperator.addArgument(NodeBuilder.newDeclaredReferenceExpression(op2, t2, op2))
+        } else if (op.equals("ord")) {
+            // Ordered comparison operand => Replace with !isunordered(x, y)
+            // Resulting statement: i1 lhs = !isordered(op1, op2)
             val unorderedCall =
                 NodeBuilder.newCallExpression(
                     "isunordered",
@@ -639,16 +645,52 @@ class LLVMIRLanguageFrontend(config: TranslationConfiguration, scopeManager: Sco
                     LLVMPrintValueToString(instr).string,
                     false
                 )
-            unorderedCall.addArgument(NodeBuilder.newDeclaredReferenceExpression(op1, t, op1))
-            unorderedCall.addArgument(NodeBuilder.newDeclaredReferenceExpression(op2, t, op2))
-            binOpUnordered.lhs = unorderedCall
+            unorderedCall.addArgument(NodeBuilder.newDeclaredReferenceExpression(op1, t1, op1))
+            unorderedCall.addArgument(NodeBuilder.newDeclaredReferenceExpression(op2, t2, op2))
+            binaryOperator =
+                NodeBuilder.newUnaryOperator(
+                    "!",
+                    false,
+                    false,
+                    LLVMPrintValueToString(instr).string
+                )
+            binaryOperator.input = unorderedCall
+        } else {
+            // Resulting statement: lhs = op1 <op> op2.
+            binaryOperator = NodeBuilder.newBinaryOperator(op, this.getCodeFromRawNode(instr))
+
+            if (op1Type.contains("unsigned "))
+                binaryOperator.lhs = NodeBuilder.newCastExpression(this.getCodeFromRawNode(instr))
+            else binaryOperator.lhs = NodeBuilder.newDeclaredReferenceExpression(op1, t1, op1)
+
+            if (op2Type.contains("unsigned "))
+                binaryOperator.rhs = NodeBuilder.newCastExpression(this.getCodeFromRawNode(instr))
+            else binaryOperator.rhs = NodeBuilder.newDeclaredReferenceExpression(op2, t2, op2)
+
+            if (unordered) {
+                // Special case for floating point comparisons which check if a value is "unordered
+                // or <op>".
+                // Statement is then lhs = isunordered(op1, op2) || (op1 <op> op2)
+                binOpUnordered = NodeBuilder.newBinaryOperator("||", this.getCodeFromRawNode(instr))
+                binOpUnordered.rhs = binaryOperator
+                val unorderedCall =
+                    NodeBuilder.newCallExpression(
+                        "isunordered",
+                        "isunordered",
+                        LLVMPrintValueToString(instr).string,
+                        false
+                    )
+                unorderedCall.addArgument(NodeBuilder.newDeclaredReferenceExpression(op1, t1, op1))
+                unorderedCall.addArgument(NodeBuilder.newDeclaredReferenceExpression(op2, t2, op2))
+                binOpUnordered.lhs = unorderedCall
+            }
         }
 
         val decl = VariableDeclaration()
-        if (Arrays.asList("==", "!=", "<", "<=", ">", ">=").contains(op)) {
+        if (Arrays.asList("==", "!=", "<", "<=", ">", ">=", "ord", "uno").contains(op)) {
             decl.type = TypeParser.createFrom("i1", true) // boolean type
         } else {
-            decl.type = t
+            decl.type = t1 // use the type of op1
         }
         decl.name = lhs
         decl.initializer = if (unordered) binOpUnordered else binaryOperator
