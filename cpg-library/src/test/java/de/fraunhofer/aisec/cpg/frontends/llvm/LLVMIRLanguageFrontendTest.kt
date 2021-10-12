@@ -130,4 +130,20 @@ class LLVMIRLanguageFrontendTest {
         assertEquals("struct.RT", field.type.name)
         assertSame(rt, (field.type as? ObjectType)?.recordDeclaration)
     }
+
+    @Test
+    fun test4() {
+        val topLevel = Path.of("src", "test", "resources", "llvm")
+        val tu =
+            TestUtils.analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("switch_case.ll").toFile()),
+                topLevel,
+                true
+            ) {
+                it.registerLanguage(
+                    LLVMIRLanguageFrontend::class.java,
+                    LLVMIRLanguageFrontend.LLVM_EXTENSIONS
+                )
+            }
+    }
 }

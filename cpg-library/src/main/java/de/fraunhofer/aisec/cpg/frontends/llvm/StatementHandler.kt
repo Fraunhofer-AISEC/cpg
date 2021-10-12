@@ -81,22 +81,34 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 println("br instruction")
             }
             LLVMSwitch -> {
+                handleSwitchStatement(instr)
                 println("switch instruction")
             }
             LLVMIndirectBr -> {
                 println("indirect br instruction")
             }
             LLVMInvoke -> {
+                // TODO: Function call and an edge potentially transferring control flow to a catch
                 println("invoke instruction")
             }
             LLVMUnreachable -> {
                 println("unreachable instruction")
             }
             LLVMCallBr -> {
+                // TODO: Maps to a call but also to a goto statement?
                 println("call instruction")
             }
             LLVMFNeg -> {
-                println("fneg instruction")
+                val fneg =
+                    NodeBuilder.newUnaryOperator(
+                        "-",
+                        false,
+                        false,
+                        LLVMPrintValueToString(instr).string
+                    )
+                val opType = LLVMPrintTypeToString(LLVMTypeOf(LLVMGetOperand(instr, 0))).string
+                fneg.input = getOperandValueAtIndex(instr, 0, opType)
+                return fneg
             }
             LLVMAdd -> {
                 return parseBinaryOperator(instr, "+", false, false)
@@ -204,83 +216,10 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 println("addrspacecast instruction")
             }
             LLVMICmp -> {
-                var cmpPred: String
-                var unsigned = false
-                when (LLVMGetICmpPredicate(instr)) {
-                    LLVMIntEQ -> cmpPred = "=="
-                    LLVMIntNE -> cmpPred = "!="
-                    LLVMIntUGT -> {
-                        cmpPred = ">"
-                        unsigned = true
-                    }
-                    LLVMIntUGE -> {
-                        cmpPred = ">="
-                        unsigned = true
-                    }
-                    LLVMIntULT -> {
-                        cmpPred = "<"
-                        unsigned = true
-                    }
-                    LLVMIntULE -> {
-                        cmpPred = "<="
-                        unsigned = true
-                    }
-                    LLVMIntSGT -> cmpPred = ">"
-                    LLVMIntSGE -> cmpPred = ">="
-                    LLVMIntSLT -> cmpPred = "<"
-                    LLVMIntSLE -> cmpPred = "<="
-                    else -> cmpPred = "unknown"
-                }
-                return parseBinaryOperator(instr, cmpPred, false, unsigned)
+                return handleIntegerComparison(instr)
             }
             LLVMFCmp -> {
-                var cmpPred: String
-                var unordered = false
-                when (LLVMGetICmpPredicate(instr)) {
-                    LLVMRealPredicateFalse -> {
-                        cmpPred = "false" // TODO
-                        return Statement()
-                    }
-                    LLVMRealOEQ -> cmpPred = "=="
-                    LLVMRealOGT -> cmpPred = ">"
-                    LLVMRealOGE -> cmpPred = ">="
-                    LLVMRealOLT -> cmpPred = "<"
-                    LLVMRealOLE -> cmpPred = "<="
-                    LLVMRealONE -> cmpPred = "!="
-                    LLVMRealORD -> cmpPred = "ord"
-                    LLVMRealUNO -> cmpPred = "uno"
-                    LLVMRealUEQ -> {
-                        cmpPred = "=="
-                        unordered = true
-                    }
-                    LLVMRealUGT -> {
-                        cmpPred = ">"
-                        unordered = true
-                    }
-                    LLVMRealUGE -> {
-                        cmpPred = ">="
-                        unordered = true
-                    }
-                    LLVMRealULT -> {
-                        cmpPred = "<"
-                        unordered = true
-                    }
-                    LLVMRealULE -> {
-                        cmpPred = "<="
-                        unordered = true
-                    }
-                    LLVMRealUNE -> {
-                        cmpPred = "!="
-                        unordered = true
-                    }
-                    LLVMRealPredicateTrue -> {
-                        cmpPred = "true" // TODO
-                        return Statement()
-                    }
-                    else -> cmpPred = "unknown"
-                }
-                println("fcmp $cmpPred instruction")
-                return parseBinaryOperator(instr, cmpPred, false, false, unordered)
+                return handleFloatComparison(instr)
             }
             LLVMPHI -> {
                 println("phi instruction")
@@ -354,6 +293,86 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         }
 
         return Statement()
+    }
+
+    /** Handles comparison operators for integer values. */
+    private fun handleIntegerComparison(instr: LLVMValueRef): Statement {
+        val cmpPred: String
+        var unsigned = false
+        when (LLVMGetICmpPredicate(instr)) {
+            LLVMIntEQ -> cmpPred = "=="
+            LLVMIntNE -> cmpPred = "!="
+            LLVMIntUGT -> {
+                cmpPred = ">"
+                unsigned = true
+            }
+            LLVMIntUGE -> {
+                cmpPred = ">="
+                unsigned = true
+            }
+            LLVMIntULT -> {
+                cmpPred = "<"
+                unsigned = true
+            }
+            LLVMIntULE -> {
+                cmpPred = "<="
+                unsigned = true
+            }
+            LLVMIntSGT -> cmpPred = ">"
+            LLVMIntSGE -> cmpPred = ">="
+            LLVMIntSLT -> cmpPred = "<"
+            LLVMIntSLE -> cmpPred = "<="
+            else -> cmpPred = "unknown"
+        }
+        return parseBinaryOperator(instr, cmpPred, false, unsigned)
+    }
+
+    /** Handles comparison operators for floating point values. */
+    private fun handleFloatComparison(instr: LLVMValueRef): Statement {
+        val cmpPred: String
+        var unordered = false
+        when (LLVMGetICmpPredicate(instr)) {
+            LLVMRealPredicateFalse -> {
+                return NodeBuilder.newLiteral(false, TypeParser.createFrom("i1", true), "false")
+            }
+            LLVMRealOEQ -> cmpPred = "=="
+            LLVMRealOGT -> cmpPred = ">"
+            LLVMRealOGE -> cmpPred = ">="
+            LLVMRealOLT -> cmpPred = "<"
+            LLVMRealOLE -> cmpPred = "<="
+            LLVMRealONE -> cmpPred = "!="
+            LLVMRealORD -> cmpPred = "ord"
+            LLVMRealUNO -> cmpPred = "uno"
+            LLVMRealUEQ -> {
+                cmpPred = "=="
+                unordered = true
+            }
+            LLVMRealUGT -> {
+                cmpPred = ">"
+                unordered = true
+            }
+            LLVMRealUGE -> {
+                cmpPred = ">="
+                unordered = true
+            }
+            LLVMRealULT -> {
+                cmpPred = "<"
+                unordered = true
+            }
+            LLVMRealULE -> {
+                cmpPred = "<="
+                unordered = true
+            }
+            LLVMRealUNE -> {
+                cmpPred = "!="
+                unordered = true
+            }
+            LLVMRealPredicateTrue -> {
+                return NodeBuilder.newLiteral(true, TypeParser.createFrom("i1", true), "true")
+            }
+            else -> cmpPred = "unknown"
+        }
+        return parseBinaryOperator(instr, cmpPred, true, false, unordered)
     }
 
     /**
@@ -484,6 +503,33 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         }
 
         return record
+    }
+
+    private fun handleSwitchStatement(instr: LLVMValueRef): Statement {
+        val numOps = LLVMGetNumOperands(instr)
+        if (numOps < 2) throw Exception("Switch statement without operand and default branch")
+
+        val opType = LLVMPrintTypeToString(LLVMTypeOf(LLVMGetOperand(instr, 0))).string
+        val operand = getOperandValueAtIndex(instr, 0, opType)
+
+        val defaultLocation = LLVMGetOperand(instr, 1) // The BB of the "default" branch
+        println(LLVMGetValueName(defaultLocation).string) // Print the name of the default label
+
+        val switchStatement = NodeBuilder.newSwitchStatement(LLVMPrintValueToString(instr).string)
+        switchStatement.selector = operand
+
+        var idx = 2
+        while (idx < numOps) {
+            // TODO: Build and add the case statements
+            // "case op2" is at the label "catchLabel"
+            val op2 = getOperandValueAtIndex(instr, idx, opType)
+            println(op2.toString())
+            idx++
+            val catchLabel = LLVMGetOperand(instr, idx)
+            println(LLVMGetValueName(catchLabel).toString())
+            idx++
+        }
+        return switchStatement
     }
 
     private fun parseFunctionCall(instr: LLVMValueRef): Statement {
