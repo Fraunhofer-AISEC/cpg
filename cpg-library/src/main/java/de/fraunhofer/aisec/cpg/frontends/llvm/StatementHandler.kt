@@ -78,11 +78,10 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 return ret
             }
             LLVMBr -> {
-                println("br instruction")
+                return handleBrStatement(instr)
             }
             LLVMSwitch -> {
-                handleSwitchStatement(instr)
-                println("switch instruction")
+                return handleSwitchStatement(instr)
             }
             LLVMIndirectBr -> {
                 println("indirect br instruction")
@@ -505,6 +504,37 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         return record
     }
 
+    private fun handleBrStatement(instr: LLVMValueRef): Statement {
+        if(LLVMGetNumOperands(instr) == 3) {
+            // if(op) then {label1} else {label2}
+            val ifStatement = NodeBuilder.newIfStatement(LLVMPrintValueToString(instr).string)
+            ifStatement.condition = getOperandValueAtIndex(instr, 0, "i1")
+            val label1 = LLVMGetOperand(instr, 1) // The label of the if branch
+            val thenLabelStatement = NodeBuilder.newLabelStatement(LLVMGetValueName(label1).string)
+            thenLabelStatement.label = LLVMGetValueName(label1).string
+            ifStatement.thenStatement = thenLabelStatement
+
+            val label2 = LLVMGetOperand(instr, 2) // The label of the else branch
+            val elseLabelStatement = NodeBuilder.newLabelStatement(LLVMGetValueName(label2).string)
+            elseLabelStatement.label = LLVMGetValueName(label2).string
+            ifStatement.elseStatement = elseLabelStatement
+            // TODO: Anything else to do here?
+
+            return ifStatement
+        } else if(LLVMGetNumOperands(instr) == 1) {
+            // goto label1
+            val gotoStatement = NodeBuilder.newGotoStatement(LLVMPrintValueToString(instr).string)
+            val defaultLocation = LLVMGetOperand(instr, 0) // The BB of the target
+            val labelStatement = NodeBuilder.newLabelStatement(LLVMGetValueName(defaultLocation).string)
+            labelStatement.label = LLVMGetValueName(defaultLocation).string
+            // TODO: Anything else to do here?
+
+            return gotoStatement
+        } else {
+            throw Exception("Wrong number of operands in br statement")
+        }
+    }
+
     private fun handleSwitchStatement(instr: LLVMValueRef): Statement {
         val numOps = LLVMGetNumOperands(instr)
         if (numOps < 2) throw Exception("Switch statement without operand and default branch")
@@ -516,7 +546,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         println(LLVMGetValueName(defaultLocation).string) // Print the name of the default label
 
         val switchStatement = NodeBuilder.newSwitchStatement(LLVMPrintValueToString(instr).string)
-        switchStatement.selector = operand
+        switchStatement.selector = operand // TODO: What else do we need?
 
         var idx = 2
         while (idx < numOps) {
