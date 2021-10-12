@@ -413,10 +413,13 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 arrayExpr.subscriptExpression =
                     NodeBuilder.newLiteral(index, TypeParser.createFrom("int", false), "")
                 expr = arrayExpr
+
                 log.info("{}", expr)
 
                 // deference the type to get the new base type
                 baseType = baseType.dereference()
+                // expr is the new base
+                base = expr
             } else {
                 var record = usageOfStruct(baseType.typeName)
 
@@ -434,7 +437,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 )
 
                 // look for the field
-                var field = record.getField("field$index")
+                val field = record.getField("field$index")
 
                 // our new basetype is the type of the field
                 baseType = field?.type ?: UnknownType.getUnknownType()
@@ -442,6 +445,9 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 // construct our member expression
                 expr = NodeBuilder.newMemberExpression(base, field?.type, field?.name, ".", "")
                 log.info("{}", expr)
+
+                // expr is the new base
+                base = expr
             }
         }
 

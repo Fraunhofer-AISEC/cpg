@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.TypeManager
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.types.PointerType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
@@ -149,23 +150,30 @@ class LLVMIRLanguageFrontend(config: TranslationConfiguration, scopeManager: Sco
     }
 
     internal fun typeFrom(typeRef: LLVMTypeRef): Type {
-        val typeBuf = LLVMPrintTypeToString(typeRef)
+        // check, if it is an array type
+        if (LLVMGetTypeKind(typeRef) == LLVMArrayTypeKind) {
+            // var length = LLVMGetArrayLength(typeRef)
+            val elementType = typeFrom(LLVMGetElementType(typeRef))
 
-        // TODO: According to the doc LLVMDisposeMessage should be used, but it crashes
+            return elementType.reference(PointerType.PointerOrigin.ARRAY)
+        } else {
+            val typeBuf = LLVMPrintTypeToString(typeRef)
 
-        var s = typeBuf.string
+            // TODO: According to the doc LLVMDisposeMessage should be used, but it crashes
 
-        // if the type is an identified type, i.e., it begins with a %, we get rid of the %
-        // character
-        // otherwise, the CPG will not connect it to the type. Note that the type name itself also
-        // does
-        // not include the % character.
+            var s = typeBuf.string
 
-        if (s.startsWith("%")) {
-            s = s.substring(1)
+            // if the type is an identified type, i.e., it begins with a %, we get rid of the %
+            // character otherwise, the CPG will not connect it to the type. Note that the type name
+            // itself also
+            // does not include the % character.
+
+            if (s.startsWith("%")) {
+                s = s.substring(1)
+            }
+
+            return TypeParser.createFrom(s, false)
         }
-
-        return TypeParser.createFrom(s, false)
     }
 
     override fun <T : Any?> getCodeFromRawNode(astNode: T): String? {
