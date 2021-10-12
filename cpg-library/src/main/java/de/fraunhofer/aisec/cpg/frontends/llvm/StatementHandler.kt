@@ -27,10 +27,12 @@ package de.fraunhofer.aisec.cpg.frontends.llvm
 
 import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder
+import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.ArraySubscriptionExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser
@@ -164,16 +166,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 println("store instruction")
             }
             LLVMGetElementPtr -> {
-                val lhs = LLVMGetValueName(instr).string
-                val numOps = LLVMGetNumOperands(instr)
-                var args = ""
-                for (idx: Int in 0 until numOps) {
-                    val paramType =
-                        LLVMPrintTypeToString(LLVMTypeOf(LLVMGetOperand(instr, idx))).string
-                    val operandName = getOperandValueAtIndex(instr, idx, paramType)
-                    args += "$paramType $operandName"
-                }
-                println("$lhs = getelementptr with operands ($args)")
+                handleGetElementPr(instr)
             }
             LLVMTrunc -> {
                 println("trunc instruction")
@@ -364,6 +357,88 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 println("Something else")
             }
         }
+
+        return Statement()
+    }
+
+    /**
+     * Handles the [`getelementptr`](https://llvm.org/docs/LangRef.html#getelementptr-instruction)
+     * instruction.
+     *
+     * We try to convert it either into an [ArraySubscriptionExpression] or an
+     * [MemberAccessExpression], depending whether the accessed variable is a struct or an array.
+     * Furthermore, since `getelementptr` allows an (infinite) chain of sub-element access within a
+     * single instruction, we need to unwrap those into individual expressions.
+     */
+    private fun handleGetElementPr(instr: LLVMValueRef): Statement {
+        val lhs = LLVMGetValueName(instr).string
+        val numOps = LLVMGetNumOperands(instr)
+        var args = ""
+
+        var expr: Expression? = null
+
+        // the first operand is the type that is the basis for the calculation
+        var paramType = LLVMPrintTypeToString(LLVMTypeOf(LLVMGetOperand(instr, 0))).string
+        var operandName = getOperandValueAtIndex(instr, 0, paramType)
+
+        // try to check, if it is a struct
+        if (paramType.startsWith("%")) {
+            // remove the * (not sure if its always there)
+            paramType = paramType.substring(1, paramType.length - 1)
+
+            // TODO: extract this to somewhere else, because we probably need it multiple times
+            var record =
+                lang.scopeManager
+                    .resolve<RecordDeclaration>(lang.scopeManager.globalScope, true) {
+                        it.name == paramType
+                    }
+                    .firstOrNull()
+            if (record == null) {
+                // try to parse it
+                val typeRef = LLVMGetTypeByName2(LLVMGetGlobalContext(), paramType)
+                if (typeRef == null) {
+                    log.error(
+                        "Could not find structure type with name {}, cannot continue",
+                        paramType
+                    )
+                    return Statement()
+                } else {
+                    record = lang.declarationHandler.handle(typeRef) as RecordDeclaration
+
+                    // add it to the global scope
+                    lang.scopeManager.globalScope?.addDeclaration(record)
+                }
+            }
+
+            // construct our base expression from the first operand
+            var base =
+                NodeBuilder.newDeclaredReferenceExpression(
+                    operandName,
+                    TypeParser.createFrom(record.name, false),
+                    operandName
+                )
+
+            log.debug("Trying to access a field within the record declaration of {}", record.name)
+
+            // the second argument is the base address that we start our chain from
+            paramType = LLVMPrintTypeToString(LLVMTypeOf(LLVMGetOperand(instr, 1))).string
+            operandName = getOperandValueAtIndex(instr, 1, paramType)
+
+            // try to parse it as int for now only
+            var index = Integer.parseInt(operandName)
+
+            // look for the field
+            var field = record.getField("field$index")
+
+            // construct our member expression
+            expr = NodeBuilder.newMemberExpression(base, field?.type, field?.name, ".", "")
+
+            for (idx: Int in 2 until numOps) {
+                // the chained fun
+            }
+        }
+
+        // TODO: extract LHS wrapping into declaration handler
 
         return Statement()
     }
