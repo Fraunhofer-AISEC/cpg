@@ -31,7 +31,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
 import java.nio.file.Path
@@ -129,6 +129,53 @@ class LLVMIRLanguageFrontendTest {
         assertNotNull(field)
         assertEquals("struct.RT", field.type.name)
         assertSame(rt, (field.type as? ObjectType)?.recordDeclaration)
+
+        val foo = tu.getDeclarationsByName("foo", FunctionDeclaration::class.java).iterator().next()
+        assertNotNull(foo)
+
+        val s = foo.parameters.firstOrNull { it.name == "s" }
+        assertNotNull(s)
+
+        val arrayidx =
+            foo.getBodyStatementAs(0, DeclarationStatement::class.java)?.singleDeclaration as?
+                VariableDeclaration
+        assertNotNull(arrayidx)
+
+        // arrayidx will be assigned to a chain of the following expressions:
+        // &s[1].field2.field1[5][13]
+        // we will check them in the reverse order (after the unary operator)
+
+        val unary = arrayidx.initializer as? UnaryOperator
+        assertNotNull(unary)
+        assertEquals("&", unary.operatorCode)
+
+        var arrayExpr = unary.input as? ArraySubscriptionExpression
+        assertNotNull(arrayExpr)
+        assertEquals("13", arrayExpr.name)
+        assertEquals(13L, (arrayExpr.subscriptExpression as? Literal<*>)?.value) // should this be integer instead of long?
+
+        arrayExpr = arrayExpr.arrayExpression as? ArraySubscriptionExpression
+        assertNotNull(arrayExpr)
+        assertEquals("5", arrayExpr.name)
+        assertEquals(5L, (arrayExpr.subscriptExpression as? Literal<*>)?.value) // should this be integer instead of long?
+
+        var memberExpr = arrayExpr.arrayExpression as? MemberExpression
+        assertNotNull(memberExpr)
+        assertEquals("field1", memberExpr.name)
+
+        memberExpr = memberExpr.base as? MemberExpression
+        assertNotNull(memberExpr)
+        assertEquals("field2", memberExpr.name)
+
+        arrayExpr = memberExpr.base as? ArraySubscriptionExpression
+        assertNotNull(arrayExpr)
+        assertEquals("1", arrayExpr.name)
+        assertEquals(1L, (arrayExpr.subscriptExpression as? Literal<*>)?.value) // should this be integer instead of long?
+
+        val ref = arrayExpr.arrayExpression as? DeclaredReferenceExpression
+        assertNotNull(ref)
+        assertEquals("s", ref.name)
+        assertSame(s, ref.refersTo)
     }
 
     @Test
