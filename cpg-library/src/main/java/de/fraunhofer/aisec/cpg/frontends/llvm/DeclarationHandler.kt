@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.frontends.llvm
 import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newFunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newMethodParameterIn
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
@@ -65,6 +66,24 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
         functionDeclaration.type = lang.typeOf(func)
 
         lang.scopeManager.enterScope(functionDeclaration)
+
+        var param = LLVMGetFirstParam(func)
+        while (param != null) {
+            val type = lang.typeOf(param)
+
+            // TODO: support variardic
+            val decl =
+                newMethodParameterIn(
+                    LLVMGetValueName(param).string,
+                    type,
+                    false,
+                    lang.getCodeFromRawNode(param)
+                )
+
+            lang.scopeManager.addDeclaration(decl)
+
+            param = LLVMGetNextParam(param)
+        }
 
         var bb = LLVMGetFirstBasicBlock(func)
         while (bb != null) {
