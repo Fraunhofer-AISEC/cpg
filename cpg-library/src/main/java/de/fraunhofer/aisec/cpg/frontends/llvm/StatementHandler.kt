@@ -35,7 +35,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ArraySubscriptionExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
-import de.fraunhofer.aisec.cpg.graph.types.TypeParser
+import de.fraunhofer.aisec.cpg.graph.types.*
 import java.util.*
 import org.bytedeco.javacpp.Pointer
 import org.bytedeco.javacpp.SizeTPointer
@@ -365,10 +365,10 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
      * Handles the [`getelementptr`](https://llvm.org/docs/LangRef.html#getelementptr-instruction)
      * instruction.
      *
-     * We try to convert it either into an [ArraySubscriptionExpression] or an
-     * [MemberAccessExpression], depending whether the accessed variable is a struct or an array.
-     * Furthermore, since `getelementptr` allows an (infinite) chain of sub-element access within a
-     * single instruction, we need to unwrap those into individual expressions.
+     * We try to convert it either into an [ArraySubscriptionExpression] or an [MemberExpression],
+     * depending whether the accessed variable is a struct or an array. Furthermore, since
+     * `getelementptr` allows an (infinite) chain of sub-element access within a single instruction,
+     * we need to unwrap those into individual expressions.
      */
     private fun handleGetElementPr(instr: LLVMValueRef): Statement {
         val lhs = LLVMGetValueName(instr).string
@@ -376,71 +376,107 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         var args = ""
 
         var expr: Expression? = null
+        var base: Expression? = null
 
         // the first operand is the type that is the basis for the calculation
         var paramType = LLVMPrintTypeToString(LLVMTypeOf(LLVMGetOperand(instr, 0))).string
         var operandName = getOperandValueAtIndex(instr, 0, paramType)
 
+        var baseType: Type = UnknownType.getUnknownType()
+
         // try to check, if it is a struct
         if (paramType.startsWith("%")) {
-            // remove the * (not sure if its always there)
-            paramType = paramType.substring(1, paramType.length - 1)
+            // get the base type
+            baseType = TypeParser.createFrom(paramType.substring(1), false)
 
-            // TODO: extract this to somewhere else, because we probably need it multiple times
-            var record =
-                lang.scopeManager
-                    .resolve<RecordDeclaration>(lang.scopeManager.globalScope, true) {
-                        it.name == paramType
-                    }
-                    .firstOrNull()
-            if (record == null) {
-                // try to parse it
-                val typeRef = LLVMGetTypeByName2(LLVMGetGlobalContext(), paramType)
-                if (typeRef == null) {
+            // construct our base expression from the first operand
+            base = NodeBuilder.newDeclaredReferenceExpression(operandName, baseType, operandName)
+        } else {
+            log.error(
+                "First parameter is not a structure name. This should not happen. Cannot continue"
+            )
+            return Statement()
+        }
+
+        for (idx: Int in 1 until numOps) {
+            // the second argument is the base address that we start our chain from
+            paramType = LLVMPrintTypeToString(LLVMTypeOf(LLVMGetOperand(instr, idx))).string
+            operandName = getOperandValueAtIndex(instr, idx, paramType)
+
+            // try to parse index as int for now only
+            val index: Int = Integer.parseInt(operandName)
+
+            // check, if it is a pointer -> then we need to handle this as an array access
+            if (baseType is PointerType) {
+                var arrayExpr = NodeBuilder.newArraySubscriptionExpression("")
+                arrayExpr.arrayExpression = base
+                arrayExpr.subscriptExpression =
+                    NodeBuilder.newLiteral(index, TypeParser.createFrom("int", false), "")
+                expr = arrayExpr
+                log.info("{}", expr)
+
+                // deference the type to get the new base type
+                baseType = baseType.dereference()
+            } else {
+                var record = usageOfStruct(baseType.typeName)
+
+                if (record == null) {
                     log.error(
                         "Could not find structure type with name {}, cannot continue",
                         paramType
                     )
                     return Statement()
-                } else {
-                    record = lang.declarationHandler.handle(typeRef) as RecordDeclaration
-
-                    // add it to the global scope
-                    lang.scopeManager.globalScope?.addDeclaration(record)
                 }
-            }
 
-            // construct our base expression from the first operand
-            var base =
-                NodeBuilder.newDeclaredReferenceExpression(
-                    operandName,
-                    TypeParser.createFrom(record.name, false),
-                    operandName
+                log.debug(
+                    "Trying to access a field within the record declaration of {}",
+                    record.name
                 )
 
-            log.debug("Trying to access a field within the record declaration of {}", record.name)
+                // look for the field
+                var field = record.getField("field$index")
 
-            // the second argument is the base address that we start our chain from
-            paramType = LLVMPrintTypeToString(LLVMTypeOf(LLVMGetOperand(instr, 1))).string
-            operandName = getOperandValueAtIndex(instr, 1, paramType)
+                // our new basetype is the type of the field
+                baseType = field?.type ?: UnknownType.getUnknownType()
 
-            // try to parse it as int for now only
-            var index = Integer.parseInt(operandName)
-
-            // look for the field
-            var field = record.getField("field$index")
-
-            // construct our member expression
-            expr = NodeBuilder.newMemberExpression(base, field?.type, field?.name, ".", "")
-
-            for (idx: Int in 2 until numOps) {
-                // the chained fun
+                // construct our member expression
+                expr = NodeBuilder.newMemberExpression(base, field?.type, field?.name, ".", "")
+                log.info("{}", expr)
             }
         }
 
         // TODO: extract LHS wrapping into declaration handler
+        var decl =
+            NodeBuilder.newVariableDeclaration("result", UnknownType.getUnknownType(), "", false)
+        decl.initializer = expr
+        var declStmt = NodeBuilder.newDeclarationStatement("")
+        declStmt.singleDeclaration = decl
 
-        return Statement()
+        return declStmt
+    }
+
+    private fun usageOfStruct(name: String): RecordDeclaration? {
+        // try to see, if the struct already exists as a record declaration
+        var record =
+            lang.scopeManager
+                .resolve<RecordDeclaration>(lang.scopeManager.globalScope, true) { it.name == name }
+                .firstOrNull()
+
+        // if not, maybe we can find it as a structure type
+        if (record == null) {
+            // try to parse it
+            val typeRef = LLVMGetTypeByName2(LLVMGetGlobalContext(), name)
+            if (typeRef == null) {
+                return null
+            } else {
+                record = lang.declarationHandler.handle(typeRef) as RecordDeclaration
+
+                // add it to the global scope
+                lang.scopeManager.globalScope?.addDeclaration(record)
+            }
+        }
+
+        return record
     }
 
     private fun parseFunctionCall(instr: LLVMValueRef): Statement {
