@@ -26,19 +26,24 @@
 package de.fraunhofer.aisec.cpg.frontends.llvm
 
 import de.fraunhofer.aisec.cpg.frontends.Handler
+import de.fraunhofer.aisec.cpg.graph.NodeBuilder
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newFunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
+import org.bytedeco.javacpp.Pointer
+import org.bytedeco.llvm.LLVM.LLVMTypeRef
 import org.bytedeco.llvm.LLVM.LLVMValueRef
 import org.bytedeco.llvm.global.LLVM.*
 
 class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
-    Handler<Declaration, LLVMValueRef, LLVMIRLanguageFrontend>(::Declaration, lang) {
+    Handler<Declaration, Pointer, LLVMIRLanguageFrontend>(::Declaration, lang) {
     init {
-        map.put(LLVMValueRef::class.java, ::handleValue)
+        map.put(LLVMValueRef::class.java) { handleValue(it as LLVMValueRef) }
+        map.put(LLVMTypeRef::class.java) { handleStructType(it as LLVMTypeRef) }
     }
 
-    fun handleValue(value: LLVMValueRef): Declaration {
+    private fun handleValue(value: LLVMValueRef): Declaration {
         return handleFunction(value)
     }
 
@@ -65,5 +70,40 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
         lang.scopeManager.leaveScope(functionDeclaration)
 
         return functionDeclaration
+    }
+
+    private fun handleStructType(typeRef: LLVMTypeRef): RecordDeclaration {
+        val name = LLVMGetStructName(typeRef).string
+
+        val record = NodeBuilder.newRecordDeclaration(name, "struct", "")
+
+        lang.scopeManager.enterScope(record)
+
+        val size = LLVMCountStructElementTypes(typeRef)
+
+        for (i in 0 until size) {
+            val a = LLVMStructGetTypeAtIndex(typeRef, i)
+            val fieldType = lang.typeFrom(a)
+
+            // there are no names, so we need to invent some dummy ones for easier reading
+            val fieldName = "field$i"
+
+            val field =
+                NodeBuilder.newFieldDeclaration(
+                    fieldName,
+                    fieldType,
+                    listOf(),
+                    "",
+                    null,
+                    null,
+                    false
+                )
+
+            lang.scopeManager.addDeclaration(field)
+        }
+
+        lang.scopeManager.leaveScope(record)
+
+        return record
     }
 }

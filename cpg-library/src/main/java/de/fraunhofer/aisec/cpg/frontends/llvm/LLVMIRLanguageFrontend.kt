@@ -28,9 +28,7 @@ package de.fraunhofer.aisec.cpg.frontends.llvm
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
-import de.fraunhofer.aisec.cpg.graph.NodeBuilder
 import de.fraunhofer.aisec.cpg.graph.TypeManager
-import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser
@@ -103,7 +101,7 @@ class LLVMIRLanguageFrontend(config: TranslationConfiguration, scopeManager: Sco
             val typeRef = LLVMGetTypeByName2(ctx, name)
 
             if (typeRef != null) {
-                val decl = parseStructType(typeRef)
+                val decl = declarationHandler.handle(typeRef)
 
                 scopeManager.addDeclaration(decl)
             }
@@ -144,48 +142,13 @@ class LLVMIRLanguageFrontend(config: TranslationConfiguration, scopeManager: Sco
         return tu
     }
 
-    private fun parseStructType(typeRef: LLVMTypeRef): RecordDeclaration {
-        val name = LLVMGetStructName(typeRef).string
-
-        val record = NodeBuilder.newRecordDeclaration(name, "struct", "")
-
-        scopeManager.enterScope(record)
-
-        val size = LLVMCountStructElementTypes(typeRef)
-
-        for (i in 0 until size) {
-            val a = LLVMStructGetTypeAtIndex(typeRef, i)
-            val fieldType = typeFrom(a)
-
-            // there are no names, so we need to invent some dummy ones for easier reading
-            val fieldName = "field$i"
-
-            val field =
-                NodeBuilder.newFieldDeclaration(
-                    fieldName,
-                    fieldType,
-                    listOf(),
-                    "",
-                    null,
-                    null,
-                    false
-                )
-
-            scopeManager.addDeclaration(field)
-        }
-
-        scopeManager.leaveScope(record)
-
-        return record
-    }
-
     fun typeOf(valueRef: LLVMValueRef): Type {
         val typeRef = LLVMTypeOf(valueRef)
 
         return typeFrom(typeRef)
     }
 
-    private fun typeFrom(typeRef: LLVMTypeRef): Type {
+    internal fun typeFrom(typeRef: LLVMTypeRef): Type {
         val typeBuf = LLVMPrintTypeToString(typeRef)
 
         // TODO: According to the doc LLVMDisposeMessage should be used, but it crashes
@@ -221,7 +184,5 @@ class LLVMIRLanguageFrontend(config: TranslationConfiguration, scopeManager: Sco
         return null
     }
 
-    override fun <S : Any?, T : Any?> setComment(s: S, ctx: T) {
-        
-    }
+    override fun <S : Any?, T : Any?> setComment(s: S, ctx: T) {}
 }
