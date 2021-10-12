@@ -73,7 +73,8 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                     val retType = LLVMPrintTypeToString(LLVMTypeOf(LLVMGetOperand(instr, 0))).string
                     val operandName = getOperandValueAtIndex(instr, 0, retType)
                     val type = TypeParser.createFrom(retType, true)
-                    ret.returnValue = NodeBuilder.newDeclaredReferenceExpression(operandName, type, operandName)
+                    ret.returnValue =
+                        NodeBuilder.newDeclaredReferenceExpression(operandName, type, operandName)
                 }
 
                 return ret
@@ -163,7 +164,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 println("store instruction")
             }
             LLVMGetElementPtr -> {
-                handleGetElementPr(instr)
+                return handleGetElementPr(instr)
             }
             LLVMTrunc -> {
                 println("trunc instruction")
@@ -405,10 +406,11 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
 
             // check, if it is a pointer -> then we need to handle this as an array access
             if (baseType is PointerType) {
-                var arrayExpr = NodeBuilder.newArraySubscriptionExpression("")
+                val arrayExpr = NodeBuilder.newArraySubscriptionExpression("")
                 arrayExpr.arrayExpression = base
                 arrayExpr.subscriptExpression =
                     NodeBuilder.newLiteral(index, TypeParser.createFrom("int", false), "")
+                arrayExpr.name = index.toString()
                 expr = arrayExpr
 
                 log.info("{}", expr)
@@ -418,7 +420,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 // expr is the new base
                 base = expr
             } else {
-                var record = usageOfStruct(baseType.typeName)
+                val record = usageOfStruct(baseType.typeName)
 
                 if (record == null) {
                     log.error(
@@ -449,10 +451,15 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         }
 
         // TODO: extract LHS wrapping into declaration handler
-        var decl =
-            NodeBuilder.newVariableDeclaration("result", UnknownType.getUnknownType(), "", false)
-        decl.initializer = expr
-        var declStmt = NodeBuilder.newDeclarationStatement("")
+        val decl = NodeBuilder.newVariableDeclaration(lhs, UnknownType.getUnknownType(), "", false)
+
+        lang.scopeManager.addDeclaration(decl)
+
+        val ref = NodeBuilder.newUnaryOperator("&", false, true, "")
+        ref.input = expr
+
+        decl.initializer = ref
+        val declStmt = NodeBuilder.newDeclarationStatement("")
         declStmt.singleDeclaration = decl
 
         return declStmt

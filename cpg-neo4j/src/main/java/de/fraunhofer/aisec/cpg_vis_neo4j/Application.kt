@@ -147,8 +147,8 @@ class Application : Callable<Int> {
     @CommandLine.Option(
         names = ["--enable-experimental-llvm"],
         description =
-        [
-            "Enables the experimental language frontend for Go. Be aware, that further steps might be necessary to install native libraries such as cpgo"]
+            [
+                "Enables the experimental language frontend for Go. Be aware, that further steps might be necessary to install native libraries such as cpgo"]
     )
     private var enableExperimentalLlvm: Boolean = false
 
@@ -283,7 +283,7 @@ class Application : Callable<Int> {
             )
         }
 
-        if(enableExperimentalLlvm) {
+        if (enableExperimentalLlvm) {
             translationConfiguration.registerLanguage(
                 LLVMIRLanguageFrontend::class.java,
                 LLVMIRLanguageFrontend.LLVM_EXTENSIONS
