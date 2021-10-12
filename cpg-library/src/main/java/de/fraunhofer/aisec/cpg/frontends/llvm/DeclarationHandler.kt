@@ -36,17 +36,27 @@ import org.bytedeco.llvm.LLVM.LLVMTypeRef
 import org.bytedeco.llvm.LLVM.LLVMValueRef
 import org.bytedeco.llvm.global.LLVM.*
 
+/**
+ * This handler is in charge of parsing all LLVM IR language constructs that are related to
+ * declarations, mainly functions and types.
+ */
 class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
     Handler<Declaration, Pointer, LLVMIRLanguageFrontend>(::Declaration, lang) {
     init {
         map.put(LLVMValueRef::class.java) { handleValue(it as LLVMValueRef) }
-        map.put(LLVMTypeRef::class.java) { handleStructType(it as LLVMTypeRef) }
+        map.put(LLVMTypeRef::class.java) { handleStructureType(it as LLVMTypeRef) }
     }
 
     private fun handleValue(value: LLVMValueRef): Declaration {
         return handleFunction(value)
     }
 
+    /**
+     * Handles the parsing of [functions](https://llvm.org/docs/LangRef.html#functions). They can
+     * either be pure declarations of (external) functions, which do not have a
+     * [FunctionDeclaration.body] or complete definitions of functions including a body of at least
+     * one basic block.
+     */
     private fun handleFunction(func: LLVMValueRef): FunctionDeclaration {
         val name = LLVMGetValueName(func)
 
@@ -72,7 +82,12 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
         return functionDeclaration
     }
 
-    private fun handleStructType(typeRef: LLVMTypeRef): RecordDeclaration {
+    /**
+     * Handles the parsing of [structure types](https://llvm.org/docs/LangRef.html#structure-types).
+     * Member fields of structs in LLVM IR do not have names, so we need to assign dummy names for
+     * easier reading, such s `field0`.
+     */
+    private fun handleStructureType(typeRef: LLVMTypeRef): RecordDeclaration {
         val name = LLVMGetStructName(typeRef).string
 
         val record = NodeBuilder.newRecordDeclaration(name, "struct", "")
