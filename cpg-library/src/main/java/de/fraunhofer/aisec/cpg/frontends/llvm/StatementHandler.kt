@@ -48,6 +48,19 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         map.put(LLVMBasicBlockRef::class.java) { handleBasicBlock(it as LLVMBasicBlockRef) }
     }
 
+    /**
+     * Handles the parsing of
+     * [instructions](https://llvm.org/docs/LangRef.html#instruction-reference). Instructions are
+     * usually mapped to statements.
+     *
+     * It is noteworthy, that LLVM IR is a single state assignment form, meaning, that all
+     * instructions that perform an assignment will result in a [DeclarationStatement] and a
+     * [VariableDeclaration], with the original instruction wrapped into the
+     * [VariableDeclaration.initializer] property.
+     *
+     * Currently this wrapping is done in the individual instruction parsing functions, but should
+     * be extracted from that, e.g. by routing it through the [DeclarationHandler].
+     */
     private fun handleInstruction(instr: LLVMValueRef): Statement {
         when (LLVMGetInstructionOpcode(instr)) {
             LLVMRet -> {
