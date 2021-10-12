@@ -72,14 +72,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 val numOps = LLVMGetNumOperands(instr)
                 if (numOps != 0) {
                     val retType = LLVMPrintTypeToString(LLVMTypeOf(LLVMGetOperand(instr, 0))).string
-<<<<<<< HEAD
-                    val operandName = getOperandValueAtIndex(instr, 0, retType)
-                    val type = TypeParser.createFrom(retType, true)
-                    ret.returnValue =
-                        NodeBuilder.newDeclaredReferenceExpression(operandName, type, operandName)
-=======
                     ret.returnValue = getOperandValueAtIndex(instr, 0, retType)
->>>>>>> cb5cbb8ee496f195aa4bcc3efd2918385fe8d65f
                 }
 
                 return ret
@@ -180,11 +173,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 println("store instruction")
             }
             LLVMGetElementPtr -> {
-<<<<<<< HEAD
-                return handleGetElementPr(instr)
-=======
-                handleGetElementPtr(instr)
->>>>>>> cb5cbb8ee496f195aa4bcc3efd2918385fe8d65f
+                return handleGetElementPtr(instr)
             }
             LLVMTrunc -> {
                 println("trunc instruction")
@@ -522,7 +511,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
     }
 
     private fun handleBrStatement(instr: LLVMValueRef): Statement {
-        if(LLVMGetNumOperands(instr) == 3) {
+        if (LLVMGetNumOperands(instr) == 3) {
             // if(op) then {label1} else {label2}
             val ifStatement = NodeBuilder.newIfStatement(LLVMPrintValueToString(instr).string)
             ifStatement.condition = getOperandValueAtIndex(instr, 0, "i1")
@@ -538,11 +527,12 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             // TODO: Anything else to do here?
 
             return ifStatement
-        } else if(LLVMGetNumOperands(instr) == 1) {
+        } else if (LLVMGetNumOperands(instr) == 1) {
             // goto label1
             val gotoStatement = NodeBuilder.newGotoStatement(LLVMPrintValueToString(instr).string)
             val defaultLocation = LLVMGetOperand(instr, 0) // The BB of the target
-            val labelStatement = NodeBuilder.newLabelStatement(LLVMGetValueName(defaultLocation).string)
+            val labelStatement =
+                NodeBuilder.newLabelStatement(LLVMGetValueName(defaultLocation).string)
             labelStatement.label = LLVMGetValueName(defaultLocation).string
             // TODO: Anything else to do here?
 
