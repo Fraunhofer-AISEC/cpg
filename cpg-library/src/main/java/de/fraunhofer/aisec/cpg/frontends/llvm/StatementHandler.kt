@@ -69,14 +69,11 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 val ret = NodeBuilder.newReturnStatement(lang.getCodeFromRawNode(instr))
 
                 val numOps = LLVMGetNumOperands(instr)
-                if (numOps == 0) {
-                    println("ret void instruction")
-                } else {
-                    // TODO: loop through all operands and handle them as expressions
-                    val paramType =
-                        LLVMPrintTypeToString(LLVMTypeOf(LLVMGetOperand(instr, 0))).string
-                    val operandName = getOperandValueAtIndex(instr, 0, paramType)
-                    println("ret $operandName")
+                if (numOps != 0) {
+                    val retType = LLVMPrintTypeToString(LLVMTypeOf(LLVMGetOperand(instr, 0))).string
+                    val operandName = getOperandValueAtIndex(instr, 0, retType)
+                    val type = TypeParser.createFrom(retType, true)
+                    ret.returnValue = NodeBuilder.newDeclaredReferenceExpression(operandName, type, operandName)
                 }
 
                 return ret
