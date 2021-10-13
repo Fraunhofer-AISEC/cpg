@@ -48,6 +48,7 @@ class LLVMIRLanguageFrontend(config: TranslationConfiguration, scopeManager: Sco
     val labelMap = HashMap<String, LabelStatement>()
     val statementHandler = StatementHandler(this)
     val declarationHandler = DeclarationHandler(this)
+    val expressionHandler = ExpressionHandler(this)
 
     var ctx: LLVMContextRef? = null
 

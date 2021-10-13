@@ -944,49 +944,59 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         val operand = LLVMGetOperand(instr, idx)
         val operandName: String
         val cpgType = lang.typeOf(operand)
-        if (LLVMIsConstant(operand) == 1) {
-            if (LLVMIsConstantString(operand) == 1) {
-                operandName = LLVMGetAsString(operand, SizeTPointer(100)).toString()
-                return NodeBuilder.newLiteral(operandName, cpgType, operandName)
-            } else if (type != null && type.startsWith("ui")) {
-                val opValue = LLVMConstIntGetZExtValue(operand)
-                return NodeBuilder.newLiteral(opValue, cpgType, opValue.toString())
-            } else if (type != null && type.startsWith("i")) {
-                val opValue = LLVMConstIntGetSExtValue(operand)
-                return NodeBuilder.newLiteral(opValue, cpgType, opValue.toString())
-            } else if (type != null &&
-                    (type == "double" ||
-                        type == "bfloat" ||
-                        type == "float" ||
-                        type == "half" ||
-                        type == "fp128" ||
-                        type == "x86_fp80" ||
-                        type == "ppc_fp128")
-            ) {
-                val losesInfo = IntArray(1)
-                val opValue = LLVMConstRealGetDouble(operand, losesInfo)
-                return NodeBuilder.newLiteral(opValue, cpgType, opValue.toString())
-            } else if (LLVMIsAGlobalAlias(operand) != null || LLVMIsGlobalConstant(operand) == 1) {
-                val aliasee = LLVMAliasGetAliasee(operand)
-                operandName =
-                    LLVMPrintValueToString(aliasee)
-                        .string // Already resolve the aliasee of the constant
-                return NodeBuilder.newLiteral(operandName, cpgType, operandName)
-            } else {
-                // TODO This does not return the actual constant but only a string representation
-                return NodeBuilder.newLiteral(
-                    LLVMPrintValueToString(operand).toString(),
-                    cpgType,
-                    LLVMPrintValueToString(operand).toString()
-                )
-            }
-        } else if (LLVMIsUndef(operand) == 1) {
-            return NodeBuilder.newDeclaredReferenceExpression("undef", cpgType, "undef")
-        } else if (LLVMIsPoison(operand) == 1) {
-            return NodeBuilder.newDeclaredReferenceExpression("poison", cpgType, "poison")
+
+        val kind = LLVMGetValueKind(operand)
+
+        if (kind == LLVMConstantStructValueKind) {
+            return lang.expressionHandler.handle(operand)
         } else {
-            operandName = LLVMGetValueName(operand).string // The argument (without the %)
-            return NodeBuilder.newDeclaredReferenceExpression(operandName, cpgType, operandName)
+            // TODO also move the other stuff to the expression handler
+            if (LLVMIsConstant(operand) == 1) {
+                if (LLVMIsConstantString(operand) == 1) {
+                    operandName = LLVMGetAsString(operand, SizeTPointer(100)).toString()
+                    return NodeBuilder.newLiteral(operandName, cpgType, operandName)
+                } else if (type != null && type.startsWith("ui")) {
+                    val opValue = LLVMConstIntGetZExtValue(operand)
+                    return NodeBuilder.newLiteral(opValue, cpgType, opValue.toString())
+                } else if (type != null && type.startsWith("i")) {
+                    val opValue = LLVMConstIntGetSExtValue(operand)
+                    return NodeBuilder.newLiteral(opValue, cpgType, opValue.toString())
+                } else if (type != null &&
+                        (type == "double" ||
+                            type == "bfloat" ||
+                            type == "float" ||
+                            type == "half" ||
+                            type == "fp128" ||
+                            type == "x86_fp80" ||
+                            type == "ppc_fp128")
+                ) {
+                    val losesInfo = IntArray(1)
+                    val opValue = LLVMConstRealGetDouble(operand, losesInfo)
+                    return NodeBuilder.newLiteral(opValue, cpgType, opValue.toString())
+                } else if (LLVMIsAGlobalAlias(operand) != null || LLVMIsGlobalConstant(operand) == 1
+                ) {
+                    val aliasee = LLVMAliasGetAliasee(operand)
+                    operandName =
+                        LLVMPrintValueToString(aliasee)
+                            .string // Already resolve the aliasee of the constant
+                    return NodeBuilder.newLiteral(operandName, cpgType, operandName)
+                } else {
+                    // TODO This does not return the actual constant but only a string
+                    // representation
+                    return NodeBuilder.newLiteral(
+                        LLVMPrintValueToString(operand).toString(),
+                        cpgType,
+                        LLVMPrintValueToString(operand).toString()
+                    )
+                }
+            } else if (LLVMIsUndef(operand) == 1) {
+                return NodeBuilder.newDeclaredReferenceExpression("undef", cpgType, "undef")
+            } else if (LLVMIsPoison(operand) == 1) {
+                return NodeBuilder.newDeclaredReferenceExpression("poison", cpgType, "poison")
+            } else {
+                operandName = LLVMGetValueName(operand).string // The argument (without the %)
+                return NodeBuilder.newDeclaredReferenceExpression(operandName, cpgType, operandName)
+            }
         }
     }
 }
