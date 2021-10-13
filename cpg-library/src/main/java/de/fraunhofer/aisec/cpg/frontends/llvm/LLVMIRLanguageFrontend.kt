@@ -163,16 +163,7 @@ class LLVMIRLanguageFrontend(config: TranslationConfiguration, scopeManager: Sco
 
                 // TODO: According to the doc LLVMDisposeMessage should be used, but it crashes
 
-                var s = typeBuf.string
-
-                // if the type is an identified type, i.e., it begins with a %, we get rid of the %
-                // character otherwise, the CPG will not connect it to the type. Note that the type
-                // name
-                // itself also does not include the % character.
-
-                if (s.startsWith("%")) {
-                    s = s.substring(1)
-                }
+                val s = typeBuf.string
 
                 return TypeParser.createFrom(s, false)
             }

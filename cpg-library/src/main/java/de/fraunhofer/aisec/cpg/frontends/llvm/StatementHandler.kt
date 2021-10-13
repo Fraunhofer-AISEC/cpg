@@ -40,7 +40,6 @@ import de.fraunhofer.aisec.cpg.graph.types.*
 import java.util.*
 import org.bytedeco.javacpp.IntPointer
 import org.bytedeco.javacpp.Pointer
-import org.bytedeco.javacpp.SizeTPointer
 import org.bytedeco.llvm.LLVM.LLVMBasicBlockRef
 import org.bytedeco.llvm.LLVM.LLVMValueRef
 import org.bytedeco.llvm.global.LLVM.*
@@ -412,7 +411,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             indices = LLVMGetIndices(instr)
         }
 
-        // the first operand is the type that is the basis for the calculation
+        // the first operand is always type that is the basis for the calculation
         var paramType = lang.typeOf(LLVMGetOperand(instr, 0))
         var operand = getOperandValueAtIndex(instr, 0, paramType.typeName)
 
@@ -422,20 +421,22 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
 
         var expr = Expression()
 
+        // loop through all operands / indices
         for (idx: Int in loopStart until numOps) {
-            val index: Int
-            if (isGetElementPtr) {
-                // the second argument is the base address that we start our chain from
-                paramType = lang.typeOf(LLVMGetOperand(instr, idx))
-                operand = getOperandValueAtIndex(instr, idx, paramType.typeName)
+            val index =
+                if (isGetElementPtr) {
+                    // the second argument is the base address that we start our chain from
+                    paramType = lang.typeOf(LLVMGetOperand(instr, idx))
+                    operand = getOperandValueAtIndex(instr, idx, paramType.typeName)
 
-                // Parse index as int for now only
-                index = ((operand as Literal<*>).value as Long).toInt()
-            } else {
-                index = indices.get(idx.toLong())
-            }
+                    // Parse index as int for now only
+                    ((operand as Literal<*>).value as Long).toInt()
+                } else {
+                    indices.get(idx.toLong())
+                }
 
-            // check, if it is a pointer -> then we need to handle this as an array access
+            // check, if the current base type is a pointer -> then we need to handle this as an
+            // array access
             if (baseType is PointerType) {
                 val arrayExpr = NodeBuilder.newArraySubscriptionExpression("")
                 arrayExpr.arrayExpression = base
@@ -447,17 +448,21 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
 
                 // deference the type to get the new base type
                 baseType = baseType.dereference()
-                // expr is the new base
+
+                // the current expression is the new base
                 base = expr
             } else {
+                // otherwise, this is a member field access, where the index denotes the n-th field
+                // in the structure
                 val record = (baseType as? ObjectType)?.recordDeclaration
 
+                // this should not happen at this point, we cannot continue
                 if (record == null) {
                     log.error(
                         "Could not find structure type with name {}, cannot continue",
                         baseType.typeName
                     )
-                    return Statement()
+                    break
                 }
 
                 log.debug(
@@ -468,19 +473,20 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 // look for the field
                 val field = record.getField("field_$index")
 
-                // our new basetype is the type of the field
+                // our new base-type is the type of the field
                 baseType = field?.type ?: UnknownType.getUnknownType()
 
                 // construct our member expression
                 expr = NodeBuilder.newMemberExpression(base, field?.type, field?.name, ".", "")
                 log.info("{}", expr)
 
-                // expr is the new base
+                // the current expression is the new base
                 base = expr
             }
         }
 
-        // since getelementpr returns the *address*, we need to do a final unary operation
+        // since getelementpr returns the *address*, whereas extractvalue returns a *value*, we need
+        // to do a final unary & operation
         if (isGetElementPtr) {
             val ref = NodeBuilder.newUnaryOperator("&", false, true, "")
             ref.input = expr
@@ -491,15 +497,15 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
     }
 
     /**
-     * Parses the `atomicrmw` instruction. It returns either a single [Statement] or a
-     * [CompoundStatement] if the value is assigned to another variable. Performs the following
-     * operation atomically:
+     * Parses the [`atomicrmw`](https://llvm.org/docs/LangRef.html#atomicrmw-instruction)
+     * instruction. It returns either a single [Statement] or a [CompoundStatement] if the value is
+     * assigned to another variable. Performs the following operation atomically:
      * ```
      * lhs = {*pointer, *pointer == cmp} // A struct of {T, i1}
      * if(*pointer == cmp) { *pointer = new }
      * ```
-     * Returns a [CompoundStatement] with those two instructions or, if lhs doesn't exist, only the
-     * if-then statement.
+     * Returns a [CompoundStatement] with those two instructions or, if `lhs` doesn't exist, only
+     * the if-then statement.
      */
     private fun handleAtomiccmpxchg(instr: LLVMValueRef): Statement {
         val instrStr = lang.getCodeFromRawNode(instr)
@@ -949,61 +955,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
 
     private fun getOperandValueAtIndex(instr: LLVMValueRef, idx: Int, type: String?): Expression {
         val operand = LLVMGetOperand(instr, idx)
-        val operandName: String
-        val cpgType = lang.typeOf(operand)
 
-        val kind = LLVMGetValueKind(operand)
-
-        if (kind == LLVMConstantStructValueKind) {
-            return lang.expressionHandler.handle(operand)
-        } else {
-            // TODO also move the other stuff to the expression handler
-            if (LLVMIsConstant(operand) == 1) {
-                if (LLVMIsConstantString(operand) == 1) {
-                    operandName = LLVMGetAsString(operand, SizeTPointer(100)).toString()
-                    return NodeBuilder.newLiteral(operandName, cpgType, operandName)
-                } else if (type != null && type.startsWith("ui")) {
-                    val opValue = LLVMConstIntGetZExtValue(operand)
-                    return NodeBuilder.newLiteral(opValue, cpgType, opValue.toString())
-                } else if (type != null && type.startsWith("i")) {
-                    val opValue = LLVMConstIntGetSExtValue(operand)
-                    return NodeBuilder.newLiteral(opValue, cpgType, opValue.toString())
-                } else if (type != null &&
-                        (type == "double" ||
-                            type == "bfloat" ||
-                            type == "float" ||
-                            type == "half" ||
-                            type == "fp128" ||
-                            type == "x86_fp80" ||
-                            type == "ppc_fp128")
-                ) {
-                    val losesInfo = IntArray(1)
-                    val opValue = LLVMConstRealGetDouble(operand, losesInfo)
-                    return NodeBuilder.newLiteral(opValue, cpgType, opValue.toString())
-                } else if (LLVMIsAGlobalAlias(operand) != null || LLVMIsGlobalConstant(operand) == 1
-                ) {
-                    val aliasee = LLVMAliasGetAliasee(operand)
-                    operandName =
-                        LLVMPrintValueToString(aliasee)
-                            .string // Already resolve the aliasee of the constant
-                    return NodeBuilder.newLiteral(operandName, cpgType, operandName)
-                } else {
-                    // TODO This does not return the actual constant but only a string
-                    // representation
-                    return NodeBuilder.newLiteral(
-                        LLVMPrintValueToString(operand).toString(),
-                        cpgType,
-                        LLVMPrintValueToString(operand).toString()
-                    )
-                }
-            } else if (LLVMIsUndef(operand) == 1) {
-                return NodeBuilder.newDeclaredReferenceExpression("undef", cpgType, "undef")
-            } else if (LLVMIsPoison(operand) == 1) {
-                return NodeBuilder.newDeclaredReferenceExpression("poison", cpgType, "poison")
-            } else {
-                operandName = LLVMGetValueName(operand).string // The argument (without the %)
-                return NodeBuilder.newDeclaredReferenceExpression(operandName, cpgType, operandName)
-            }
-        }
+        return lang.expressionHandler.handle(operand)
     }
 }

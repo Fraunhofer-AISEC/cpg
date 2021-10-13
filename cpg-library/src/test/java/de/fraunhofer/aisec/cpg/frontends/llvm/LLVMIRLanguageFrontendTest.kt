@@ -31,6 +31,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
+import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
@@ -251,5 +252,30 @@ class LLVMIRLanguageFrontendTest {
             }
 
         assertNotNull(tu)
+
+        val foo = tu.getDeclarationsByName("foo", FunctionDeclaration::class.java).iterator().next()
+        assertNotNull(foo)
+        assertEquals("literal_i32_i8", foo.type.typeName)
+
+        val record = (foo.type as? ObjectType)?.recordDeclaration
+        assertNotNull(record)
+        assertEquals(2, record.fields.size)
+
+        val returnStatement = foo.getBodyStatementAs(0, ReturnStatement::class.java)
+        assertNotNull(returnStatement)
+
+        val construct = returnStatement.returnValue as? ConstructExpression
+        assertNotNull(construct)
+        assertEquals(2, construct.arguments.size)
+
+        var arg = construct.arguments.getOrNull(0) as? Literal<*>
+        assertNotNull(arg)
+        assertEquals("i32", arg.type.typeName)
+        assertEquals(4L, arg.value)
+
+        arg = construct.arguments.getOrNull(1) as? Literal<*>
+        assertNotNull(arg)
+        assertEquals("i8", arg.type.typeName)
+        assertEquals(2L, arg.value)
     }
 }
