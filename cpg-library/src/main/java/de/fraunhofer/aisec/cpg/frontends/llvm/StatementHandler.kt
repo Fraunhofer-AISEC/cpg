@@ -257,7 +257,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 println("shufflevector instruction")
             }
             LLVMExtractValue -> {
-                println("extractvalue instruction")
+                return handleGetElementPtr(instr)
             }
             LLVMInsertValue -> {
                 println("insertvalue instruction")
@@ -967,27 +967,28 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         return declStatement
     }
 
-    private fun getOperandValueAtIndex(instr: LLVMValueRef, idx: Int, type: String): Expression {
-        val cpgType = TypeParser.createFrom(type, true)
+    private fun getOperandValueAtIndex(instr: LLVMValueRef, idx: Int, type: String?): Expression {
         val operand = LLVMGetOperand(instr, idx)
         val operandName: String
+        val cpgType = lang.typeOf(operand)
         if (LLVMIsConstant(operand) == 1) {
             if (LLVMIsConstantString(operand) == 1) {
                 operandName = LLVMGetAsString(operand, SizeTPointer(100)).toString()
                 return NodeBuilder.newLiteral(operandName, cpgType, operandName)
-            } else if (type.startsWith("ui")) {
+            } else if (type != null && type.startsWith("ui")) {
                 val opValue = LLVMConstIntGetZExtValue(operand)
                 return NodeBuilder.newLiteral(opValue, cpgType, opValue.toString())
-            } else if (type.startsWith("i")) {
+            } else if (type != null && type.startsWith("i")) {
                 val opValue = LLVMConstIntGetSExtValue(operand)
                 return NodeBuilder.newLiteral(opValue, cpgType, opValue.toString())
-            } else if (type == "double" ||
-                    type == "bfloat" ||
-                    type == "float" ||
-                    type == "half" ||
-                    type == "fp128" ||
-                    type == "x86_fp80" ||
-                    type == "ppc_fp128"
+            } else if (type != null &&
+                    (type == "double" ||
+                        type == "bfloat" ||
+                        type == "float" ||
+                        type == "half" ||
+                        type == "fp128" ||
+                        type == "x86_fp80" ||
+                        type == "ppc_fp128")
             ) {
                 val losesInfo = IntArray(1)
                 val opValue = LLVMConstRealGetDouble(operand, losesInfo)
