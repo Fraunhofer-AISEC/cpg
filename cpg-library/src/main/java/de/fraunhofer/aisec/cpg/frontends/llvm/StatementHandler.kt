@@ -39,6 +39,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.types.*
 import java.util.*
+import org.bytedeco.javacpp.IntPointer
 import org.bytedeco.javacpp.Pointer
 import org.bytedeco.javacpp.SizeTPointer
 import org.bytedeco.llvm.LLVM.LLVMBasicBlockRef
@@ -182,7 +183,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 println("store instruction")
             }
             LLVMGetElementPtr -> {
-                return handleGetElementPtr(instr)
+                return handleGetElementPtr(instr, true)
             }
             LLVMTrunc -> {
                 println("trunc instruction")
@@ -257,7 +258,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 println("shufflevector instruction")
             }
             LLVMExtractValue -> {
-                return handleGetElementPtr(instr)
+                return handleGetElementPtr(instr, false)
             }
             LLVMInsertValue -> {
                 println("insertvalue instruction")
@@ -385,16 +386,27 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
 
     /**
      * Handles the [`getelementptr`](https://llvm.org/docs/LangRef.html#getelementptr-instruction)
-     * instruction.
+     * instruction and the `extractvalue` instruction which works in a similar way.
      *
      * We try to convert it either into an [ArraySubscriptionExpression] or an [MemberExpression],
      * depending whether the accessed variable is a struct or an array. Furthermore, since
      * `getelementptr` allows an (infinite) chain of sub-element access within a single instruction,
      * we need to unwrap those into individual expressions.
      */
-    private fun handleGetElementPtr(instr: LLVMValueRef): Statement {
+    private fun handleGetElementPtr(instr: LLVMValueRef, getElementPtr: Boolean): Statement {
         val lhs = LLVMGetValueName(instr).string
-        val numOps = LLVMGetNumOperands(instr)
+
+        val numOps: Int
+        val loopStart: Int
+        var indices = IntPointer()
+        if (getElementPtr) {
+            numOps = LLVMGetNumOperands(instr)
+            loopStart = 1
+        } else {
+            numOps = LLVMGetNumIndices(instr)
+            loopStart = 0
+            indices = LLVMGetIndices(instr)
+        }
 
         var expr: Expression? = null
         var base: Expression? = null
@@ -412,6 +424,9 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
 
             // construct our base expression from the first operand
             base = operand
+        } else if (paramType.startsWith("{") && paramType.endsWith("}")) {
+            baseType = lang.typeOf(LLVMGetOperand(instr, 0))
+            base = operand
         } else {
             log.error(
                 "First parameter is not a structure name. This should not happen. Cannot continue"
@@ -419,19 +434,18 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             return Statement()
         }
 
-        for (idx: Int in 1 until numOps) {
-            // the second argument is the base address that we start our chain from
-            paramType = LLVMPrintTypeToString(LLVMTypeOf(LLVMGetOperand(instr, idx))).string
-            operand = getOperandValueAtIndex(instr, idx, paramType)
-
-            // try to parse index as int for now only
+        for (idx: Int in loopStart until numOps) {
             val index: Int
-            if (operand is Literal<*>) {
-                val literalValue = operand.value
-                if (literalValue is Long) {
-                    index = literalValue.toInt()
-                } else throw Exception("No index specified")
-            } else throw Exception("No index specified")
+            if (getElementPtr) {
+                // the second argument is the base address that we start our chain from
+                paramType = LLVMPrintTypeToString(LLVMTypeOf(LLVMGetOperand(instr, idx))).string
+                operand = getOperandValueAtIndex(instr, idx, paramType)
+
+                // Parse index as int for now only
+                index = ((operand as Literal<*>).value as Long).toInt()
+            } else {
+                index = indices.get(idx.toLong())
+            }
 
             // check, if it is a pointer -> then we need to handle this as an array access
             if (baseType is PointerType) {
