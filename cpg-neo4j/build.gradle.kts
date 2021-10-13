@@ -58,7 +58,7 @@ dependencies {
     api(project(":cpg-library"))
 
     implementation("org.slf4j:slf4j-impl:1.7.32")
-    
+
     // neo4j
     api("org.neo4j", "neo4j-ogm-core", versions["neo4j-ogm"])
     api("org.neo4j", "neo4j-ogm", versions["neo4j-ogm"])
