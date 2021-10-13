@@ -69,7 +69,7 @@ class LLVMIRLanguageFrontendTest {
             tu.getDeclarationsByName("main", FunctionDeclaration::class.java).iterator().next()
 
         assertNotNull(main)
-        assertEquals("i32*", main.type.name) // not sure why. it should just be i32
+        assertEquals("i32", main.type.name)
 
         val rand =
             tu.getDeclarationsByName("rand", FunctionDeclaration::class.java).iterator().next()
@@ -167,11 +167,11 @@ class LLVMIRLanguageFrontendTest {
 
         var memberExpr = arrayExpr.arrayExpression as? MemberExpression
         assertNotNull(memberExpr)
-        assertEquals("field1", memberExpr.name)
+        assertEquals("field_1", memberExpr.name)
 
         memberExpr = memberExpr.base as? MemberExpression
         assertNotNull(memberExpr)
-        assertEquals("field2", memberExpr.name)
+        assertEquals("field_2", memberExpr.name)
 
         arrayExpr = memberExpr.base as? ArraySubscriptionExpression
         assertNotNull(arrayExpr)
