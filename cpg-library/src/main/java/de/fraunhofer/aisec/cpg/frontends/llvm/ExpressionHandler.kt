@@ -32,11 +32,13 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.ConstructExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
-import kotlin.reflect.typeOf
-import org.bytedeco.javacpp.SizeTPointer
 import org.bytedeco.llvm.LLVM.LLVMValueRef
 import org.bytedeco.llvm.global.LLVM.*
 
+/**
+ * This handler primarily handles operands, as returned by [LLVMGetOperand] and turns them into an
+ * [Expression]. Operands are basically arguments to an instruction.
+ */
 class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
     Handler<Expression, LLVMValueRef, LLVMIRLanguageFrontend>(::Expression, lang) {
     init {
@@ -44,21 +46,24 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
     }
 
     private fun handleValue(value: LLVMValueRef): Expression {
-        val kind = LLVMGetValueKind(value)
-
-        when (kind) {
+        when (val kind = LLVMGetValueKind(value)) {
             LLVMConstantStructValueKind -> {
                 return handleConstantStructValue(value)
             }
             LLVMConstantIntValueKind -> {
                 return handleConstantInt(value)
             }
-            LLVMArgumentValueKind, LLVMInstructionValueKind -> {
-                // this is a little tricky. It seems weird, that an instruction value kind turns
-                // up here. What is happening is, that this is a variable reference in the form of
-                // %var. In this case LLVMGetValueKind will return LLVMInstructionValueKind because
-                // it actually points to the instruction where this variable was defined. However,
-                // we are only interested in its name and type.
+            LLVMConstantFPValueKind -> {
+                return handleConstantFP(value)
+            }
+            LLVMArgumentValueKind,
+            LLVMGlobalVariableValueKind,
+            // this is a little tricky. It seems weird, that an instruction value kind turns
+            // up here. What is happening is, that this is a variable reference in the form of
+            // %var. In this case LLVMGetValueKind will return LLVMInstructionValueKind because
+            // it actually points to the instruction where this variable was defined. However,
+            // we are only interested in its name and type.
+            LLVMInstructionValueKind -> {
                 return handleReference(value)
             }
             else -> {
@@ -73,38 +78,16 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
                 // old stuff from getOperandValue, needs to be refactored to the when above
                 // TODO also move the other stuff to the expression handler
                 if (LLVMIsConstant(value) == 1) {
-                    if (LLVMIsConstantString(value) == 1) {
-                        operandName = LLVMGetAsString(value, SizeTPointer(100)).toString()
-                        return NodeBuilder.newLiteral(operandName, cpgType, operandName)
-                    } else if (type != null && type.startsWith("ui")) {
-                        val opValue = LLVMConstIntGetZExtValue(value)
-                        return NodeBuilder.newLiteral(opValue, cpgType, opValue.toString())
-                    } else if (type != null && type.startsWith("i")) {
-                        val opValue = LLVMConstIntGetSExtValue(value)
-                        return NodeBuilder.newLiteral(opValue, cpgType, opValue.toString())
-                    } else if (type != null &&
-                            (type == "double" ||
-                                type == "bfloat" ||
-                                type == "float" ||
-                                type == "half" ||
-                                type == "fp128" ||
-                                type == "x86_fp80" ||
-                                type == "ppc_fp128")
-                    ) {
-                        val losesInfo = IntArray(1)
-                        val opValue = LLVMConstRealGetDouble(value, losesInfo)
-                        return NodeBuilder.newLiteral(opValue, cpgType, opValue.toString())
-                    } else if (LLVMIsAGlobalAlias(value) != null || LLVMIsGlobalConstant(value) == 1
-                    ) {
+                    if (LLVMIsAGlobalAlias(value) != null || LLVMIsGlobalConstant(value) == 1) {
                         val aliasee = LLVMAliasGetAliasee(value)
                         operandName =
                             LLVMPrintValueToString(aliasee)
                                 .string // Already resolve the aliasee of the constant
-                        return NodeBuilder.newLiteral(operandName, cpgType, operandName)
+                        return newLiteral(operandName, cpgType, operandName)
                     } else {
                         // TODO This does not return the actual constant but only a string
                         // representation
-                        return NodeBuilder.newLiteral(
+                        return newLiteral(
                             LLVMPrintValueToString(value).toString(),
                             cpgType,
                             LLVMPrintValueToString(value).toString()
@@ -134,7 +117,26 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
      * [simple constants](https://llvm.org/docs/LangRef.html#simple-constants).
      */
     private fun handleConstantInt(valueRef: LLVMValueRef): Literal<Long> {
-        val value = LLVMConstIntGetSExtValue(valueRef)
+        val type = lang.typeOf(valueRef)
+
+        val value =
+            if (type.typeName.startsWith("ui")) {
+                LLVMConstIntGetZExtValue(valueRef)
+            } else {
+                LLVMConstIntGetSExtValue(valueRef)
+            }
+
+        return newLiteral(value, type, value.toString())
+    }
+
+    /**
+     * Handles a constant floating point value, which belongs to the
+     * [simple constants](https://llvm.org/docs/LangRef.html#simple-constants) and needs to be a
+     * [floating-point type](https://llvm.org/docs/LangRef.html#t-floating).
+     */
+    private fun handleConstantFP(valueRef: LLVMValueRef): Literal<Double> {
+        val losesInfo = IntArray(1)
+        val value = LLVMConstRealGetDouble(valueRef, losesInfo)
 
         return newLiteral(value, lang.typeOf(valueRef), value.toString())
     }
