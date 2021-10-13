@@ -27,7 +27,6 @@ package de.fraunhofer.aisec.cpg.frontends.llvm
 
 import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder
-import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
@@ -400,29 +399,17 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         var base: Expression? = null
 
         // the first operand is the type that is the basis for the calculation
-        var paramType = LLVMPrintTypeToString(LLVMTypeOf(LLVMGetOperand(instr, 0))).string
-        var operand = getOperandValueAtIndex(instr, 0, paramType)
+        var paramType = lang.typeOf(LLVMGetOperand(instr, 0))
+        var operand = getOperandValueAtIndex(instr, 0, paramType.typeName)
 
-        var baseType: Type = UnknownType.getUnknownType()
-
-        // try to check, if it is a struct
-        if (paramType.startsWith("%")) {
-            // get the base type
-            baseType = TypeParser.createFrom(paramType.substring(1), false)
-
-            // construct our base expression from the first operand
-            base = operand
-        } else {
-            log.error(
-                "First parameter is not a structure name. This should not happen. Cannot continue"
-            )
-            return Statement()
-        }
+        // the start
+        var baseType = paramType
+        base = operand
 
         for (idx: Int in 1 until numOps) {
             // the second argument is the base address that we start our chain from
-            paramType = LLVMPrintTypeToString(LLVMTypeOf(LLVMGetOperand(instr, idx))).string
-            operand = getOperandValueAtIndex(instr, idx, paramType)
+            paramType = lang.typeOf(LLVMGetOperand(instr, idx))
+            operand = getOperandValueAtIndex(instr, idx, paramType.typeName)
 
             // try to parse index as int for now only
             val index: Int
@@ -448,7 +435,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 // expr is the new base
                 base = expr
             } else {
-                val record = usageOfStruct(baseType.typeName)
+                val record = (baseType as? ObjectType)?.recordDeclaration
 
                 if (record == null) {
                     log.error(
@@ -487,30 +474,6 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         ref.input = expr
 
         return declarationOrNot(ref, lhs)
-    }
-
-    private fun usageOfStruct(name: String): RecordDeclaration? {
-        // try to see, if the struct already exists as a record declaration
-        var record =
-            lang.scopeManager
-                .resolve<RecordDeclaration>(lang.scopeManager.globalScope, true) { it.name == name }
-                .firstOrNull()
-
-        // if not, maybe we can find it as a structure type
-        if (record == null) {
-            // try to parse it
-            val typeRef = LLVMGetTypeByName2(lang.ctx, name)
-            if (typeRef == null) {
-                return null
-            } else {
-                record = lang.declarationHandler.handle(typeRef) as RecordDeclaration
-
-                // add it to the global scope
-                lang.scopeManager.globalScope?.addDeclaration(record)
-            }
-        }
-
-        return record
     }
 
     /**

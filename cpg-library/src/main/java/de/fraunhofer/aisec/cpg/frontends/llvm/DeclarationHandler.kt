@@ -126,16 +126,33 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
      * its element types.
      */
     private fun handleStructureType(typeRef: LLVMTypeRef): RecordDeclaration {
-        // if this is a literal struct, we will give it a pseudo name, which we will fill according
-        // to the element types
+        // if this is a literal struct, we will give it a pseudo name
         var name =
             if (LLVMIsLiteralStruct(typeRef) == 1) {
-                "literal"
+                getLiteralStructName(typeRef)
             } else {
                 LLVMGetStructName(typeRef).string
             }
 
-        val record = newRecordDeclaration(name, "struct", "")
+        // try to see, if the struct already exists as a record declaration
+        var record =
+            lang.scopeManager
+                .resolve<RecordDeclaration>(lang.scopeManager.globalScope, true) { it.name == name }
+                .firstOrNull()
+
+        // if yes, return it
+        if (record != null) {
+            return record
+        }
+
+        // try to parse it
+        val typeRef = LLVMGetTypeByName2(lang.ctx, name)
+        if (typeRef == null) {
+            log.error("Could not find type")
+            return RecordDeclaration()
+        }
+
+        record = newRecordDeclaration(name, "struct", "")
 
         lang.scopeManager.enterScope(record)
 
@@ -172,6 +189,24 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
 
         lang.scopeManager.leaveScope(record)
 
+        // add it to the global scope
+        lang.scopeManager.globalScope?.addDeclaration(record)
+
         return record
+    }
+
+    private fun getLiteralStructName(typeRef: LLVMTypeRef): String {
+        var name = "literal_"
+
+        val size = LLVMCountStructElementTypes(typeRef)
+
+        for (i in 0 until size) {
+            val field = LLVMStructGetTypeAtIndex(typeRef, i)
+            val fieldType = lang.typeFrom(field)
+
+            name += "_$fieldType"
+        }
+
+        return name
     }
 }
