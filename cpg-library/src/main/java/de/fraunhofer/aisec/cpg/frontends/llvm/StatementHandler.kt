@@ -269,16 +269,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 println("fence instruction")
             }
             LLVMAtomicCmpXchg -> {
-                /*  TODO Something like:
-                   if(*pointer == cmp) {
-                       orig = *pointer;
-                       *pointer = new;
-                       return {orig, true} // A struct of {T, i1}
-                   } else {
-                       return {*pointer, false} // A struct of {T, i1}
-                   }
-                */
-                println("atomiccmpxchg instruction")
+                return handleAtomiccmpxchg(instr)
             }
             LLVMAtomicRMW -> {
                 return handleAtomicrmw(instr)
@@ -524,26 +515,69 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
 
     /**
      * Parses the `atomicrmw` instruction. It returns either a single [Statement] or a
-     * [CompoundStatement] if the value is assigned to another variable.
+     * [CompoundStatement] if the value is assigned to another variable. Performs the following
+     * operation atomically:
+     * ```
+     * lhs = {*pointer, *pointer == cmp} // A struct of {T, i1}
+     * if(*pointer == cmp) { *pointer = new }
+     * ```
+     * Returns a [CompoundStatement] with those two instructions or, if lhs doesn't exist, only the
+     * if-then statement.
+     */
+    private fun handleAtomiccmpxchg(instr: LLVMValueRef): Statement {
+        val instrStr = lang.getCodeFromRawNode(instr)
+        val compoundStatement = NodeBuilder.newCompoundStatement(instrStr)
+        compoundStatement.name = "atomiccmpxchg"
+        val tyPtr = LLVMPrintTypeToString(LLVMTypeOf(LLVMGetOperand(instr, 0))).string
+        val ptr = getOperandValueAtIndex(instr, 0, tyPtr)
+        val ty = tyPtr.substring(0, tyPtr.length - 1) // Remove the *
+        val cmp = getOperandValueAtIndex(instr, 1, ty)
+        val value = getOperandValueAtIndex(instr, 2, ty)
+
+        val ptrDeref = NodeBuilder.newUnaryOperator("*", false, false, instrStr)
+        ptrDeref.input = ptr
+
+        val cmpExpr = NodeBuilder.newBinaryOperator("==", instrStr)
+        cmpExpr.lhs = ptrDeref
+        cmpExpr.rhs = cmp
+
+        val lhs = LLVMGetValueName(instr).string
+        if (lhs != "") {
+            val structValue = Expression()
+            // TODO: Create the anonymous struct if necessary and initialize the values.
+            val decl = declarationOrNot(structValue, lhs)
+            compoundStatement.addStatement(decl)
+        }
+        val assignment = NodeBuilder.newBinaryOperator("=", instrStr)
+        assignment.lhs = ptrDeref
+        assignment.rhs = value
+
+        val ifStatement = NodeBuilder.newIfStatement(instrStr)
+        ifStatement.condition = cmpExpr
+        ifStatement.thenStatement = assignment
+
+        compoundStatement.addStatement(ifStatement)
+
+        return compoundStatement
+    }
+
+    /**
+     * Parses the `atomicrmw` instruction. It returns either a single [Statement] or a
+     * [CompoundStatement] if the value is assigned to another variable. >>>>>>> Start with cmpxchg
+     * instruction
      */
     private fun handleAtomicrmw(instr: LLVMValueRef): Statement {
         val lhs = LLVMGetValueName(instr).string
         val instrStr = lang.getCodeFromRawNode(instr)
         val operation = LLVMGetAtomicRMWBinOp(instr)
         val tyPtr = LLVMPrintTypeToString(LLVMTypeOf(LLVMGetOperand(instr, 0))).string
-        val ptr = getOperandValueAtIndex(instr, 1, tyPtr)
+        val ptr = getOperandValueAtIndex(instr, 0, tyPtr)
         val ty = tyPtr.substring(0, tyPtr.length - 1) // Remove the *
         val value = getOperandValueAtIndex(instr, 1, ty)
         val exchOp = NodeBuilder.newBinaryOperator("=", instrStr)
         exchOp.name = "atomicrmw"
 
-        val ptrDeref =
-            NodeBuilder.newUnaryOperator(
-                "*",
-                false,
-                false,
-                "*" + LLVMGetValueName(LLVMGetOperand(instr, 0)).string
-            )
+        val ptrDeref = NodeBuilder.newUnaryOperator("*", false, false, instrStr)
         ptrDeref.input = ptr
         exchOp.lhs = ptrDeref
 
