@@ -462,7 +462,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 if (record == null) {
                     log.error(
                         "Could not find structure type with name {}, cannot continue",
-                        paramType
+                        baseType.typeName
                     )
                     return Statement()
                 }
@@ -495,11 +495,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         val ref = NodeBuilder.newUnaryOperator("&", false, true, "")
         ref.input = expr
 
-        decl.initializer = ref
-        val declStmt = NodeBuilder.newDeclarationStatement("")
-        declStmt.singleDeclaration = decl
-
-        return declStmt
+        return declarationOrNot(ref, lhs)
     }
 
     private fun usageOfStruct(name: String): RecordDeclaration? {
@@ -512,7 +508,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         // if not, maybe we can find it as a structure type
         if (record == null) {
             // try to parse it
-            val typeRef = LLVMGetTypeByName2(LLVMGetGlobalContext(), name)
+            val typeRef = LLVMGetTypeByName2(lang.ctx, name)
             if (typeRef == null) {
                 return null
             } else {
@@ -527,8 +523,8 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
     }
 
     /**
-     * Parses the `atomicrmw` instruction. It returns either a single [Statement] or a [CompoundStatement]
-     * if the value is assigned to another variable.
+     * Parses the `atomicrmw` instruction. It returns either a single [Statement] or a
+     * [CompoundStatement] if the value is assigned to another variable.
      */
     private fun handleAtomicrmw(instr: LLVMValueRef): Statement {
         val lhs = LLVMGetValueName(instr).string
@@ -556,46 +552,39 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 exchOp.rhs = value
             }
             LLVMAtomicRMWBinOpAdd -> {
-                val binaryOperator =
-                    NodeBuilder.newBinaryOperator("+", instrStr)
+                val binaryOperator = NodeBuilder.newBinaryOperator("+", instrStr)
                 binaryOperator.lhs = ptrDeref
                 binaryOperator.rhs = value
                 exchOp.rhs = binaryOperator
             }
             LLVMAtomicRMWBinOpSub -> {
-                val binaryOperator =
-                    NodeBuilder.newBinaryOperator("-", instrStr)
+                val binaryOperator = NodeBuilder.newBinaryOperator("-", instrStr)
                 binaryOperator.lhs = ptrDeref
                 binaryOperator.rhs = value
                 exchOp.rhs = binaryOperator
             }
             LLVMAtomicRMWBinOpAnd -> {
-                val binaryOperator =
-                    NodeBuilder.newBinaryOperator("&", instrStr)
+                val binaryOperator = NodeBuilder.newBinaryOperator("&", instrStr)
                 binaryOperator.lhs = ptrDeref
                 binaryOperator.rhs = value
                 exchOp.rhs = binaryOperator
             }
             LLVMAtomicRMWBinOpNand -> {
-                val binaryOperator =
-                    NodeBuilder.newBinaryOperator("|", instrStr)
+                val binaryOperator = NodeBuilder.newBinaryOperator("|", instrStr)
                 binaryOperator.lhs = ptrDeref
                 binaryOperator.rhs = value
-                val unaryOperator =
-                    NodeBuilder.newUnaryOperator("~", false, false, instrStr)
+                val unaryOperator = NodeBuilder.newUnaryOperator("~", false, false, instrStr)
                 unaryOperator.input = binaryOperator
                 exchOp.rhs = unaryOperator
             }
             LLVMAtomicRMWBinOpOr -> {
-                val binaryOperator =
-                    NodeBuilder.newBinaryOperator("|", instrStr)
+                val binaryOperator = NodeBuilder.newBinaryOperator("|", instrStr)
                 binaryOperator.lhs = ptrDeref
                 binaryOperator.rhs = value
                 exchOp.rhs = binaryOperator
             }
             LLVMAtomicRMWBinOpXor -> {
-                val binaryOperator =
-                    NodeBuilder.newBinaryOperator("^", instrStr)
+                val binaryOperator = NodeBuilder.newBinaryOperator("^", instrStr)
                 binaryOperator.lhs = ptrDeref
                 binaryOperator.rhs = value
                 exchOp.rhs = binaryOperator
@@ -605,8 +594,12 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 condition.lhs = ptrDeref
                 condition.rhs = value
                 val conditional =
-                        NodeBuilder.newConditionalExpression(condition, ptrDeref, value, TypeParser.createFrom(ty, true)
-                )
+                    NodeBuilder.newConditionalExpression(
+                        condition,
+                        ptrDeref,
+                        value,
+                        TypeParser.createFrom(ty, true)
+                    )
                 exchOp.rhs = conditional
             }
             LLVMAtomicRMWBinOpMin -> {
@@ -614,9 +607,14 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 condition.lhs = ptrDeref
                 condition.rhs = value
                 val conditional =
-                        NodeBuilder.newConditionalExpression(condition, ptrDeref, value, TypeParser.createFrom(ty, true)
-                        )
-                exchOp.rhs = conditional}
+                    NodeBuilder.newConditionalExpression(
+                        condition,
+                        ptrDeref,
+                        value,
+                        TypeParser.createFrom(ty, true)
+                    )
+                exchOp.rhs = conditional
+            }
             LLVMAtomicRMWBinOpUMax -> {
                 val condition = NodeBuilder.newBinaryOperator(">", instrStr)
                 ptrDeref.input.type = TypeParser.createFrom("u$ty", true)
@@ -624,8 +622,12 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 value.type = TypeParser.createFrom("u$ty", true)
                 condition.rhs = value
                 val conditional =
-                        NodeBuilder.newConditionalExpression(condition, ptrDeref, value, TypeParser.createFrom(ty, true)
-                        )
+                    NodeBuilder.newConditionalExpression(
+                        condition,
+                        ptrDeref,
+                        value,
+                        TypeParser.createFrom(ty, true)
+                    )
                 exchOp.rhs = conditional
             }
             LLVMAtomicRMWBinOpUMin -> {
@@ -635,20 +637,22 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 value.type = TypeParser.createFrom("u$ty", true)
                 condition.rhs = value
                 val conditional =
-                        NodeBuilder.newConditionalExpression(condition, ptrDeref, value, TypeParser.createFrom(ty, true)
-                        )
+                    NodeBuilder.newConditionalExpression(
+                        condition,
+                        ptrDeref,
+                        value,
+                        TypeParser.createFrom(ty, true)
+                    )
                 exchOp.rhs = conditional
             }
             LLVMAtomicRMWBinOpFAdd -> {
-                val binaryOperator =
-                    NodeBuilder.newBinaryOperator("+", instrStr)
+                val binaryOperator = NodeBuilder.newBinaryOperator("+", instrStr)
                 binaryOperator.lhs = ptrDeref
                 binaryOperator.rhs = value
                 exchOp.rhs = binaryOperator
             }
             LLVMAtomicRMWBinOpFSub -> {
-                val binaryOperator =
-                    NodeBuilder.newBinaryOperator("-", instrStr)
+                val binaryOperator = NodeBuilder.newBinaryOperator("-", instrStr)
                 binaryOperator.lhs = ptrDeref
                 binaryOperator.rhs = value
                 exchOp.rhs = binaryOperator
@@ -661,8 +665,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         if (lhs != "") {
             // set lhs = *ptr, then perform the replacement
             val compoundStatement = NodeBuilder.newCompoundStatement(instrStr)
-            compoundStatement.statements =
-                Arrays.asList(declarationOrNot(ptrDeref, ty, lhs), exchOp)
+            compoundStatement.statements = Arrays.asList(declarationOrNot(ptrDeref, lhs), exchOp)
             return compoundStatement
         } else {
             // only perform the replacement
@@ -670,10 +673,12 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         }
     }
 
+    /** Handles a [`br`](https://llvm.org/docs/LangRef.html#br-instruction) instruction. */
     private fun handleBrStatement(instr: LLVMValueRef): Statement {
         if (LLVMGetNumOperands(instr) == 3) {
             // if(op) then {label1} else {label2}
-            val ifStatement = NodeBuilder.newConditionalBranchStatement(lang.getCodeFromRawNode(instr))
+            val ifStatement =
+                NodeBuilder.newConditionalBranchStatement(lang.getCodeFromRawNode(instr))
             val condition = getOperandValueAtIndex(instr, 0, "i1")
             val label1Name = LLVMGetValueName(LLVMGetOperand(instr, 1)).string
 
@@ -687,7 +692,8 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             ifStatement.addConditionalTarget(condition, thenLabelStatement)
 
             // Set the default branch ("else")
-            val label2Name = LLVMGetValueName(LLVMGetOperand(instr, 2)).string // The label of the else branch
+            val label2Name =
+                LLVMGetValueName(LLVMGetOperand(instr, 2)).string // The label of the else branch
             val elseLabelStatement: LabelStatement
             if (lang.labelMap.contains(label2Name)) {
                 elseLabelStatement = lang.labelMap.get(label2Name)!!
@@ -725,9 +731,11 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         val opType = LLVMPrintTypeToString(LLVMTypeOf(LLVMGetOperand(instr, 0))).string
         val operand = getOperandValueAtIndex(instr, 0, opType)
 
-        val switchStatement = NodeBuilder.newConditionalBranchStatement(lang.getCodeFromRawNode(instr))
+        val switchStatement =
+            NodeBuilder.newConditionalBranchStatement(lang.getCodeFromRawNode(instr))
 
-        val defaultLocation = LLVMGetValueName(LLVMGetOperand(instr, 1)).string // The label of the "default" branch
+        val defaultLocation =
+            LLVMGetValueName(LLVMGetOperand(instr, 1)).string // The label of the "default" branch
         val defaultLabelStatement: LabelStatement
         if (lang.labelMap.contains(defaultLocation)) {
             defaultLabelStatement = lang.labelMap.get(defaultLocation)!!
@@ -782,25 +790,34 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             idx++
         }
 
-        return declarationOrNot(callExpr, retVal, lhs)
+        return declarationOrNot(callExpr, lhs)
     }
 
-    private fun declarationOrNot(rhs: Expression, retType: String, lhs: String): Statement {
-        if (lhs != "") {
+    /**
+     * Most instructions in LLVM have a variable assignment as part of their instruction. Since LLVM
+     * IR is SSA, we need to declare a new variable in this case, which is named according to [lhs].
+     * In case [lhs] is an empty string, the variable assignment is optional and we directly return
+     * the [Expression] associated with the instruction.
+     */
+    private fun declarationOrNot(rhs: Expression, lhs: String): Statement {
+        return if (lhs != "") {
             val decl = VariableDeclaration()
-            decl.type = TypeParser.createFrom(retType, true)
             decl.name = lhs
             decl.initializer = rhs
 
             val declStatement = DeclarationStatement()
             declStatement.singleDeclaration = decl
-            return declStatement
+            declStatement
         } else {
-            return rhs
+            rhs
         }
     }
 
-    private fun handleBasicBlock(bb: LLVMBasicBlockRef?): CompoundStatement {
+    /**
+     * Handles a basic block and returns a [CompoundStatement] comprised of the statements of this
+     * block.
+     */
+    private fun handleBasicBlock(bb: LLVMBasicBlockRef): CompoundStatement {
         val compound = NodeBuilder.newCompoundStatement("")
 
         var instr = LLVMGetFirstInstruction(bb)

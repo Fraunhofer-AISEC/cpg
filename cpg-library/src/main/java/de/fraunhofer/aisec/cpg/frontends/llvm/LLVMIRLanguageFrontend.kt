@@ -50,6 +50,8 @@ class LLVMIRLanguageFrontend(config: TranslationConfiguration, scopeManager: Sco
     val statementHandler = StatementHandler(this)
     val declarationHandler = DeclarationHandler(this)
 
+    var ctx: LLVMContextRef? = null
+
     companion object {
         @kotlin.jvm.JvmField var LLVM_EXTENSIONS: List<String> = listOf(".ll")
     }
@@ -63,7 +65,7 @@ class LLVMIRLanguageFrontend(config: TranslationConfiguration, scopeManager: Sco
         val buf = LLVMMemoryBufferRef()
 
         // create a new LLVM context
-        val ctx: LLVMContextRef = LLVMContextCreate()
+        ctx = LLVMContextCreate()
 
         // allocate a buffer for a possible error message
         val errorMessage = ByteBuffer.allocate(10000)
@@ -96,19 +98,6 @@ class LLVMIRLanguageFrontend(config: TranslationConfiguration, scopeManager: Sco
 
         // we need to set our translation unit as the global scope
         scopeManager.resetToGlobal(tu)
-
-        // TODO: no idea how to enumerate them
-        val names = listOf("struct.ST", "struct.RT")
-
-        for (name in names) {
-            val typeRef = LLVMGetTypeByName2(ctx, name)
-
-            if (typeRef != null) {
-                val decl = declarationHandler.handle(typeRef)
-
-                scopeManager.addDeclaration(decl)
-            }
-        }
 
         // loop through globals
         var global = LLVMGetFirstGlobal(mod)
