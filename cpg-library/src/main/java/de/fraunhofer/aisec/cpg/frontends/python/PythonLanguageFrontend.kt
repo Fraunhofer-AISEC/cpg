@@ -34,9 +34,9 @@ import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.io.File
-import java.lang.Exception
 import java.nio.file.Path
-import jep.*
+import jep.JepException
+import jep.SubInterpreter
 
 @ExperimentalPython
 class PythonLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeManager?) :
@@ -44,6 +44,7 @@ class PythonLanguageFrontend(config: TranslationConfiguration, scopeManager: Sco
     companion object {
         @kotlin.jvm.JvmField var PY_EXTENSIONS: List<String> = listOf(".py")
     }
+    private val jep = JepSingleton // configure Jep
 
     @Throws(TranslationException::class)
     override fun parse(file: File): TranslationUnitDeclaration {
@@ -87,24 +88,20 @@ class PythonLanguageFrontend(config: TranslationConfiguration, scopeManager: Sco
             }
         }
 
-        if (!found) {
-            log.error("Could not find cpg.py")
-            throw TranslationException(
-                "Could not find cpg.py. We expect it to be either in the current working directory, in src/main/python/cpg.py or in cpg-library/src/main/python/cpg.py."
-            )
-        }
-
         val tu: TranslationUnitDeclaration
         var interp: SubInterpreter? = null
         try {
-            JepSingleton // configure Jep
-            interp =
-                SubInterpreter(JepConfig().redirectStdErr(System.err).redirectStdout(System.out))
-
-            // TODO: extract cpg.py in a real python module with multiple files
+            interp = SubInterpreter(jep.config)
 
             // load script
-            interp.runScript(entryScript.toString())
+            if (found) {
+                interp.runScript(entryScript.toString())
+            } else {
+                // fall back to the cpg.py in the class's resources
+                val classLoader = javaClass
+                val pyInitFile = classLoader.getResource("/cpg.py")
+                interp.exec(pyInitFile?.readText())
+            }
 
             // run python function parse_code()
             tu = interp.invoke("parse_code", code, path, this) as TranslationUnitDeclaration

@@ -25,12 +25,10 @@
  */
 package de.fraunhofer.aisec.cpg_vis_neo4j
 
-import de.fraunhofer.aisec.cpg.ExperimentalPython
-import de.fraunhofer.aisec.cpg.TranslationConfiguration
-import de.fraunhofer.aisec.cpg.TranslationManager
-import de.fraunhofer.aisec.cpg.TranslationResult
+import de.fraunhofer.aisec.cpg.*
 import de.fraunhofer.aisec.cpg.frontends.golang.GoLanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguageFrontend
+import de.fraunhofer.aisec.cpg.frontends.typescript.TypeScriptLanguageFrontend
 import java.io.File
 import java.net.ConnectException
 import java.nio.file.Paths
@@ -139,6 +137,12 @@ class Application : Callable<Int> {
     )
     private var enableExperimentalGo: Boolean = false
 
+    @CommandLine.Option(
+        names = ["--enable-experimental-typescript"],
+        description = ["Enables the experimental language frontend for TypeScript."]
+    )
+    private var enableExperimentalTypeScript: Boolean = false
+
     /**
      * Pushes the whole translationResult to the neo4j db.
      *
@@ -219,7 +223,7 @@ class Application : Callable<Int> {
      * point to a file, is a directory or point to a hidden file or the paths does not have the same
      * top level path.
      */
-    @OptIn(ExperimentalPython::class, de.fraunhofer.aisec.cpg.ExperimentalGolang::class)
+    @OptIn(ExperimentalPython::class, ExperimentalGolang::class, ExperimentalTypeScript::class)
     private fun setupTranslationConfiguration(): TranslationConfiguration {
         assert(files.isNotEmpty())
         val filePaths = arrayOfNulls<File>(files.size)
@@ -259,6 +263,14 @@ class Application : Callable<Int> {
             translationConfiguration.registerLanguage(
                 GoLanguageFrontend::class.java,
                 GoLanguageFrontend.GOLANG_EXTENSIONS
+            )
+        }
+
+        if (enableExperimentalTypeScript) {
+            translationConfiguration.registerLanguage(
+                TypeScriptLanguageFrontend::class.java,
+                TypeScriptLanguageFrontend.TYPESCRIPT_EXTENSIONS +
+                    TypeScriptLanguageFrontend.JAVASCRIPT_EXTENSIONS
             )
         }
 
