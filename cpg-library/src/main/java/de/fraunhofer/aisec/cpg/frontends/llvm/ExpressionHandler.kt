@@ -53,6 +53,14 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
             LLVMConstantIntValueKind -> {
                 return handleConstantInt(value)
             }
+            LLVMArgumentValueKind, LLVMInstructionValueKind -> {
+                // this is a little tricky. It seems weird, that an instruction value kind turns
+                // up here. What is happening is, that this is a variable reference in the form of
+                // %var. In this case LLVMGetValueKind will return LLVMInstructionValueKind because
+                // it actually points to the instruction where this variable was defined. However,
+                // we are only interested in its name and type.
+                return handleReference(value)
+            }
             else -> {
                 log.info(
                     "Not handling value kind {} in handleValue yet. Falling back to the legacy way. Please change",
@@ -107,15 +115,18 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
                 } else if (LLVMIsPoison(value) == 1) {
                     return NodeBuilder.newDeclaredReferenceExpression("poison", cpgType, "poison")
                 } else {
-                    operandName = LLVMGetValueName(value).string // The argument (without the %)
-                    return NodeBuilder.newDeclaredReferenceExpression(
-                        operandName,
-                        cpgType,
-                        operandName
-                    )
+                    log.error("Unknown expression")
+                    return Expression()
                 }
             }
         }
+    }
+
+    private fun handleReference(value: LLVMValueRef): Expression {
+        val name = LLVMGetValueName(value).string
+        val type = lang.typeOf(value)
+
+        return NodeBuilder.newDeclaredReferenceExpression(name, type, "${type.typeName} $name")
     }
 
     /**

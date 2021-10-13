@@ -956,6 +956,8 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
     private fun getOperandValueAtIndex(instr: LLVMValueRef, idx: Int, type: String?): Expression {
         val operand = LLVMGetOperand(instr, idx)
 
+        // there is also LLVMGetOperandUse, which might be of use to us
+
         return lang.expressionHandler.handle(operand)
     }
 }
