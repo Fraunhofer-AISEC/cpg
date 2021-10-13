@@ -32,6 +32,7 @@ import de.fraunhofer.aisec.cpg.frontends.java.ExpressionHandler
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.TypeManager
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.types.PointerType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
@@ -39,11 +40,7 @@ import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.io.File
 import org.bytedeco.javacpp.IntPointer
-import org.bytedeco.llvm.clang.CXClientData
-import org.bytedeco.llvm.clang.CXCursor
-import org.bytedeco.llvm.clang.CXCursorVisitor
-import org.bytedeco.llvm.clang.CXToken
-import org.bytedeco.llvm.global.clang
+import org.bytedeco.llvm.clang.*
 import org.bytedeco.llvm.global.clang.*
 
 class CXXExperimentalFrontend(config: TranslationConfiguration, scopeManager: ScopeManager?) :
@@ -66,7 +63,9 @@ class CXXExperimentalFrontend(config: TranslationConfiguration, scopeManager: Sc
                 0,
                 null,
                 0,
-                CXTranslationUnit_Incomplete
+                CXTranslationUnit_Incomplete or
+                    CXTranslationUnit_KeepGoing or
+                    CXTranslationUnit_SingleFileParse
             )
 
         if (unit == null) {
@@ -83,9 +82,26 @@ class CXXExperimentalFrontend(config: TranslationConfiguration, scopeManager: Sc
     }
 
     fun typeOf(cursor: CXCursor): Type {
-        val type = clang_getCursorType(cursor) ?: return UnknownType.getUnknownType()
+        val typeRef = clang_getCursorType(cursor) ?: return UnknownType.getUnknownType()
 
-        return TypeParser.createFrom(clang_getTypeSpelling(type).string, false)
+        return typeFrom(typeRef)
+    }
+
+    fun typeFrom(typeRef: CXType): Type {
+        val kind = typeRef.kind()
+
+        return when (kind) {
+            CXType_Pointer -> {
+                val elementType = clang_getPointeeType(typeRef)
+
+                typeFrom(elementType).reference(PointerType.PointerOrigin.POINTER)
+            }
+            else -> {
+                val name = clang_getTypeSpelling(typeRef).string
+
+                return TypeParser.createFrom(name, false)
+            }
+        }
     }
 
     override fun <T : Any?> getCodeFromRawNode(astNode: T): String? {
@@ -142,8 +158,7 @@ class CXXExperimentalFrontend(config: TranslationConfiguration, scopeManager: Sc
                             "Cursor '" +
                                 clang_getCursorSpelling(child).string +
                                 "' of kind '" +
-                                clang.clang_getCursorKindSpelling(clang_getCursorKind(child))
-                                    .string +
+                                clang_getCursorKindSpelling(clang_getCursorKind(child)).string +
                                 "'"
                         )
 

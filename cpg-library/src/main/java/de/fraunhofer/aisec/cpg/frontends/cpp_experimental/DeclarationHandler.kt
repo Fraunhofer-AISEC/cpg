@@ -30,11 +30,12 @@ import de.fraunhofer.aisec.cpg.graph.NodeBuilder
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.ParamVariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.types.Type
+import de.fraunhofer.aisec.cpg.graph.types.TypeParser
+import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import org.bytedeco.javacpp.Pointer
-import org.bytedeco.llvm.clang.CXClientData
-import org.bytedeco.llvm.clang.CXCursor
-import org.bytedeco.llvm.clang.CXCursorVisitor
-import org.bytedeco.llvm.clang.CXTranslationUnit
+import org.bytedeco.llvm.clang.*
 import org.bytedeco.llvm.global.clang.*
 
 class DeclarationHandler(lang: CXXExperimentalFrontend) :
@@ -47,6 +48,7 @@ class DeclarationHandler(lang: CXXExperimentalFrontend) :
     private fun handleDeclaration(cursor: CXCursor): Declaration {
         return when (val kind = clang_getCursorKind(cursor)) {
             CXCursor_FunctionDecl -> handleFunctionDecl(cursor)
+            CXCursor_VarDecl -> handleVarDecl(cursor)
             CXCursor_ParmDecl -> handleParmVarDecl(cursor)
             else -> {
                 log.error("Not handling cursor kind {} yet", kind)
@@ -93,10 +95,10 @@ class DeclarationHandler(lang: CXXExperimentalFrontend) :
      * which is either a function declaration or a definition.
      */
     private fun handleFunctionDecl(cursor: CXCursor): FunctionDeclaration {
-        val name = clang_getCursorSpelling(cursor)
+        val name = clang_getCursorSpelling(cursor).string
         val type = lang.typeOf(cursor)
 
-        val decl = NodeBuilder.newFunctionDeclaration(name.string, "")
+        val decl = NodeBuilder.newFunctionDeclaration(name, "")
         decl.type = type
 
         lang.scopeManager.enterScope(decl)
@@ -140,11 +142,60 @@ class DeclarationHandler(lang: CXXExperimentalFrontend) :
      * is a parameter of a function.
      */
     private fun handleParmVarDecl(cursor: CXCursor): ParamVariableDeclaration {
-        val name = clang_getCursorDisplayName(cursor)
+        val name = clang_getCursorSpelling(cursor).string
         val type = lang.typeOf(cursor)
 
-        val param = NodeBuilder.newMethodParameterIn(name.string, type, false, "")
+        val param = NodeBuilder.newMethodParameterIn(name, type, false, "")
 
         return param
+    }
+
+    /** Handles a [VarDecl](https://clang.llvm.org/doxygen/classclang_1_1VarDecl.html). */
+    private fun handleVarDecl(cursor: CXCursor): VariableDeclaration {
+        val name = clang_getCursorSpelling(cursor).string
+        var type = lang.typeOf(cursor)
+
+        var initCursor = clang_Cursor_getVarDeclInitializer(cursor)
+        if (clang_Cursor_isNull(initCursor) != 0) {
+            initCursor = null
+        }
+
+        val code = lang.getCodeFromRawNode(cursor)
+
+        if (type.typeName == "int*" || type.typeName == "int") {
+            type = guessType(code, initCursor, name) ?: type
+        }
+
+        val decl = NodeBuilder.newVariableDeclaration(name, type, code, false)
+
+        initCursor?.let { decl.initializer = lang.expressionHandler.handle(it) }
+
+        val size = clang_Cursor_getNumArguments(cursor)
+
+        if (name == "text") {
+            CXXExperimentalFrontend.visitChildren(
+                cursor,
+                { lang.expressionHandler.handle(it) },
+                { it, _ -> println(it) }
+            )
+        }
+
+        return decl
+    }
+
+    private fun guessType(code: String?, initCursor: CXCursor?, name: String): Type? {
+        val initializerCode = lang.getCodeFromRawNode(initCursor)
+
+        // clang's type system will not see the original type if it is an unknown type, so we need
+        // to some dirty tricks here
+        val type =
+            code?.substring(0, code.length - name.length - (initializerCode?.length?.plus(1) ?: 0))
+                ?.let { TypeParser.createFrom(it, false) }
+
+        if (type is UnknownType) {
+            return null
+        }
+
+        return type
     }
 }

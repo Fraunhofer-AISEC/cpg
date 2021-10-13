@@ -26,18 +26,21 @@
 package de.fraunhofer.aisec.cpg.frontends.cpp_experimental
 
 import de.fraunhofer.aisec.cpg.TestUtils.analyzeAndGetFirstTU
+import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend.log
 import de.fraunhofer.aisec.cpg.frontends.cpp.CXXLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
+import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
+import de.fraunhofer.aisec.cpg.graph.statements.Statement
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
+import de.fraunhofer.aisec.cpg.graph.types.ObjectType
+import de.fraunhofer.aisec.cpg.graph.types.TypeParser
 import java.io.File
-import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
-import kotlin.test.assertSame
-import kotlin.test.assertTrue
+import java.util.function.Consumer
+import kotlin.test.*
 import org.junit.jupiter.api.Test
 
 class CXXExperimentalFrontendTest {
@@ -92,5 +95,112 @@ class CXXExperimentalFrontendTest {
         assertNotNull(call)
         assertEquals("someFunc", call.name)
         assertTrue(call.invokes.contains(someFunc))
+    }
+
+    @Test
+    fun testDeclarations() {
+        val file = File("src/test/resources/declstmt.cpp")
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.unregisterLanguage(CXXLanguageFrontend::class.java)
+                it.registerLanguage(
+                    CXXExperimentalFrontend::class.java,
+                    CXXLanguageFrontend.CXX_EXTENSIONS
+                )
+            }
+
+        assertNotNull(tu)
+
+        val function = tu.getDeclarationAs(0, FunctionDeclaration::class.java)
+        assertNotNull(function)
+
+        val statements: List<Statement> = getStatementsOfFunction(function)
+
+        statements.forEach(
+            Consumer { node: Statement ->
+                log.debug("{}", node)
+                assertTrue(
+                    node is DeclarationStatement ||
+                        statements.indexOf(node) == statements.size - 1 && node is ReturnStatement
+                )
+            }
+        )
+
+        val declFromMultiplicateExpression =
+            (statements[0] as DeclarationStatement).getSingleDeclarationAs(
+                VariableDeclaration::class.java
+            )
+
+        assertEquals(TypeParser.createFrom("SSL_CTX*", true), declFromMultiplicateExpression.type)
+        assertEquals("ptr", declFromMultiplicateExpression.name)
+
+        val withInitializer =
+            (statements[1] as DeclarationStatement).getSingleDeclarationAs(
+                VariableDeclaration::class.java
+            )
+        var initializer = withInitializer.initializer
+
+        assertNotNull(initializer)
+        assertTrue(initializer is Literal<*>)
+        assertEquals(1, (initializer as Literal<*>).value)
+
+        val twoDeclarations = (statements[2] as DeclarationStatement).declarations
+
+        assertEquals(2, twoDeclarations.size)
+        val b = twoDeclarations[0] as VariableDeclaration
+        assertNotNull(b)
+        assertEquals("b", b.name)
+        assertEquals(TypeParser.createFrom("int*", false), b.type)
+
+        val c = twoDeclarations[1] as VariableDeclaration
+        assertNotNull(c)
+        assertEquals("c", c.name)
+        assertEquals(TypeParser.createFrom("int", false), c.type)
+
+        val withoutInitializer =
+            (statements[3] as DeclarationStatement).getSingleDeclarationAs(
+                VariableDeclaration::class.java
+            )
+        initializer = withoutInitializer.initializer
+
+        assertEquals(TypeParser.createFrom("int*", true), withoutInitializer.type)
+        assertEquals("d", withoutInitializer.name)
+
+        assertNull(initializer)
+
+        val qualifiedType =
+            (statements[4] as DeclarationStatement).getSingleDeclarationAs(
+                VariableDeclaration::class.java
+            )
+
+        assertEquals(TypeParser.createFrom("std.string", true), qualifiedType.type)
+        assertEquals("text", qualifiedType.name)
+        assertTrue(qualifiedType.initializer is Literal<*>)
+        assertEquals("some text", (qualifiedType.initializer as Literal<*>).value)
+
+        val pointerWithAssign =
+            (statements[5] as DeclarationStatement).getSingleDeclarationAs(
+                VariableDeclaration::class.java
+            )
+
+        assertEquals(TypeParser.createFrom("void*", true), pointerWithAssign.type)
+        assertEquals("ptr2", pointerWithAssign.name)
+        assertEquals("NULL", pointerWithAssign.initializer?.name)
+
+        val classWithVariable = (statements[6] as DeclarationStatement).declarations
+        assertEquals(2, classWithVariable.size)
+
+        val classA = classWithVariable[0] as RecordDeclaration
+        assertNotNull(classA)
+        assertEquals("A", classA.name)
+
+        val myA = classWithVariable[1] as VariableDeclaration
+        assertNotNull(myA)
+        assertEquals("myA", myA.name)
+        assertEquals(classA, (myA.type as ObjectType).recordDeclaration)
+    }
+
+    private fun getStatementsOfFunction(declaration: FunctionDeclaration): List<Statement> {
+        return (declaration.body as CompoundStatement).statements
     }
 }

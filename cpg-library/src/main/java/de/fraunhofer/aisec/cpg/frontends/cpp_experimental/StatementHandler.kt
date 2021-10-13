@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.frontends.cpp_experimental
 
 import de.fraunhofer.aisec.cpg.frontends.Handler
+import de.fraunhofer.aisec.cpg.frontends.cpp_experimental.CXXExperimentalFrontend.Companion.visitChildren
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder
 import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
@@ -34,8 +35,7 @@ import org.bytedeco.llvm.clang.CXClientData
 import org.bytedeco.llvm.clang.CXCursor
 import org.bytedeco.llvm.clang.CXCursorVisitor
 import org.bytedeco.llvm.global.clang
-import org.bytedeco.llvm.global.clang.CXCursor_FirstExpr
-import org.bytedeco.llvm.global.clang.CXCursor_LastExpr
+import org.bytedeco.llvm.global.clang.*
 
 class StatementHandler(lang: CXXExperimentalFrontend) :
     Handler<Statement, CXCursor, CXXExperimentalFrontend>(::Statement, lang) {
@@ -44,13 +44,14 @@ class StatementHandler(lang: CXXExperimentalFrontend) :
     }
 
     private fun visitStatement(cursor: CXCursor): Statement {
-        val kind = clang.clang_getCursorKind(cursor)
+        val kind = clang_getCursorKind(cursor)
 
         return when (kind) {
             // forward expressions to the expression handler
             in CXCursor_FirstExpr..CXCursor_LastExpr -> lang.expressionHandler.handle(cursor)
-            clang.CXCursor_CompoundStmt -> handleCompoundStatement(cursor)
-            clang.CXCursor_ReturnStmt -> handleReturnStatement(cursor)
+            CXCursor_CompoundStmt -> handleCompoundStatement(cursor)
+            CXCursor_ReturnStmt -> handleReturnStatement(cursor)
+            CXCursor_DeclStmt -> handleDeclStmt(cursor)
             else -> Statement()
         }
     }
@@ -58,30 +59,10 @@ class StatementHandler(lang: CXXExperimentalFrontend) :
     private fun handleCompoundStatement(cursor: CXCursor): CompoundStatement {
         val compoundStatement = NodeBuilder.newCompoundStatement("")
 
-        clang.clang_visitChildren(
+        visitChildren(
             cursor,
-            object : CXCursorVisitor() {
-                override fun call(
-                    child: CXCursor,
-                    parent: CXCursor?,
-                    client_data: CXClientData?
-                ): Int {
-                    println(
-                        "C: Cursor '" +
-                            clang.clang_getCursorSpelling(child).string +
-                            "' of kind '" +
-                            clang.clang_getCursorKindSpelling(clang.clang_getCursorKind(child))
-                                .string +
-                            "'"
-                    )
-
-                    val stmt = handle(child)
-                    compoundStatement.addStatement(stmt)
-
-                    return clang.CXChildVisit_Continue
-                }
-            },
-            null
+            { handle(it) },
+            { it, _ -> compoundStatement.addStatement(it) },
         )
 
         return compoundStatement
@@ -90,7 +71,7 @@ class StatementHandler(lang: CXXExperimentalFrontend) :
     private fun handleReturnStatement(cursor: CXCursor): ReturnStatement {
         val returnStatement = NodeBuilder.newReturnStatement("")
 
-        clang.clang_visitChildren(
+        clang_visitChildren(
             cursor,
             object : CXCursorVisitor() {
                 override fun call(
@@ -102,8 +83,7 @@ class StatementHandler(lang: CXXExperimentalFrontend) :
                         "R: Cursor '" +
                             clang.clang_getCursorSpelling(child).string +
                             "' of kind '" +
-                            clang.clang_getCursorKindSpelling(clang.clang_getCursorKind(child))
-                                .string +
+                            clang.clang_getCursorKindSpelling(clang_getCursorKind(child)).string +
                             "'"
                     )
 
@@ -117,5 +97,24 @@ class StatementHandler(lang: CXXExperimentalFrontend) :
         )
 
         return returnStatement
+    }
+
+    /**
+     * Handles a [DeclStmt](https://clang.llvm.org/doxygen/classclang_1_1DeclStmt.html), which
+     * represents a statement that declares something.
+     */
+    private fun handleDeclStmt(cursor: CXCursor): Statement {
+        val stmt = NodeBuilder.newDeclarationStatement(lang.getCodeFromRawNode(cursor))
+
+        visitChildren(
+            cursor,
+            { lang.declarationHandler.handle(it) },
+            { it, _ ->
+                stmt.addToPropertyEdgeDeclaration(it)
+                lang.scopeManager.addDeclaration(it)
+            },
+        )
+
+        return stmt
     }
 }

@@ -32,12 +32,11 @@ import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newCallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
-import org.bytedeco.javacpp.IntPointer
 import org.bytedeco.llvm.clang.CXClientData
 import org.bytedeco.llvm.clang.CXCursor
 import org.bytedeco.llvm.clang.CXCursorVisitor
 import org.bytedeco.llvm.global.clang
-import org.bytedeco.llvm.global.clang.clang_getCursorSpelling
+import org.bytedeco.llvm.global.clang.*
 
 class ExpressionHandler(lang: CXXExperimentalFrontend) :
     Handler<Expression, CXCursor, CXXExperimentalFrontend>(::Expression, lang) {
@@ -54,7 +53,10 @@ class ExpressionHandler(lang: CXXExperimentalFrontend) :
             clang.CXCursor_CallExpr -> handleCallExpr(cursor)
             clang.CXCursor_IntegerLiteral -> handleIntegerLiteral(cursor)
             clang.CXCursor_BinaryOperator -> handleBinaryOperator(cursor)
-            else -> Expression()
+            else -> {
+                log.error("Not handling cursor kind {} yet", kind)
+                Expression()
+            }
         }
     }
 
@@ -118,12 +120,12 @@ class ExpressionHandler(lang: CXXExperimentalFrontend) :
 
         val call = newCallExpression(name, fqn, lang.getCodeFromRawNode(cursor), false)
 
-        visitChildren(
-            cursor,
-            { lang.expressionHandler.handle(it) },
-            { it, _ -> call.addArgument(it) },
-            1 // skip first child, because it is just the identifier anyway
-        )
+        val length = clang_Cursor_getNumArguments(cursor)
+
+        for (i in 0 until length) {
+            val arg = lang.expressionHandler.handle(clang_Cursor_getArgument(cursor, i))
+            call.addArgument(arg)
+        }
 
         return call
     }
@@ -146,36 +148,18 @@ class ExpressionHandler(lang: CXXExperimentalFrontend) :
 
         val binOp = NodeBuilder.newBinaryOperator(opCode, lang.getCodeFromRawNode(cursor))
 
-        clang.clang_visitChildren(
+        visitChildren(
             cursor,
-            object : CXCursorVisitor() {
-                override fun call(
-                    child: CXCursor,
-                    parent: CXCursor?,
-                    client_data: CXClientData
-                ): Int {
-                    val idx = client_data.getPointer(IntPointer::class.java, 0)
-
-                    println(
-                        "binOp: Cursor '" +
-                            clang_getCursorSpelling(child).string +
-                            "' of kind '" +
-                            clang.clang_getCursorKindSpelling(clang.clang_getCursorKind(child))
-                                .string +
-                            "'"
-                    )
-
-                    if (idx.get() == 0) {
-                        binOp.lhs = handleExpression(child)
-                        idx.put(0L, 1)
-                        return clang.CXChildVisit_Continue
-                    }
-
-                    binOp.rhs = handleExpression(child)
-                    return clang.CXChildVisit_Break
+            { lang.expressionHandler.handle(it) },
+            { it, i ->
+                if (i == 0) {
+                    binOp.lhs = it
+                } else if (i == 1) {
+                    binOp.rhs = it
                 }
             },
-            CXClientData(IntPointer(0))
+            0,
+            2 // max 2 arguments
         )
 
         return binOp
