@@ -182,7 +182,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 println("store instruction")
             }
             LLVMGetElementPtr -> {
-                return handleGetElementPtr(instr, true)
+                return handleGetElementPtr(instr)
             }
             LLVMTrunc -> {
                 println("trunc instruction")
@@ -257,7 +257,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 println("shufflevector instruction")
             }
             LLVMExtractValue -> {
-                return handleGetElementPtr(instr, false)
+                return handleGetElementPtr(instr)
             }
             LLVMInsertValue -> {
                 println("insertvalue instruction")
@@ -385,20 +385,25 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
 
     /**
      * Handles the [`getelementptr`](https://llvm.org/docs/LangRef.html#getelementptr-instruction)
-     * instruction and the `extractvalue` instruction which works in a similar way.
+     * instruction and the
+     * [`extractvalue`](https://llvm.org/docs/LangRef.html#extractvalue-instruction) instruction
+     * which works in a similar way.
      *
      * We try to convert it either into an [ArraySubscriptionExpression] or an [MemberExpression],
      * depending whether the accessed variable is a struct or an array. Furthermore, since
      * `getelementptr` allows an (infinite) chain of sub-element access within a single instruction,
      * we need to unwrap those into individual expressions.
      */
-    private fun handleGetElementPtr(instr: LLVMValueRef, getElementPtr: Boolean): Statement {
+    private fun handleGetElementPtr(instr: LLVMValueRef): Statement {
         val lhs = LLVMGetValueName(instr).string
+
+        val isGetElementPtr = LLVMGetInstructionOpcode(instr) == LLVMGetElementPtr
 
         val numOps: Int
         val loopStart: Int
         var indices = IntPointer()
-        if (getElementPtr) {
+
+        if (isGetElementPtr) {
             numOps = LLVMGetNumOperands(instr)
             loopStart = 1
         } else {
@@ -407,21 +412,21 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             indices = LLVMGetIndices(instr)
         }
 
-        var expr: Expression? = null
-        var base: Expression? = null
-
         // the first operand is the type that is the basis for the calculation
         var paramType = lang.typeOf(LLVMGetOperand(instr, 0))
         var operand = getOperandValueAtIndex(instr, 0, paramType.typeName)
 
         // the start
         var baseType = paramType
-        base = operand
+        var base = operand
+
+        var expr = Expression()
+
         for (idx: Int in loopStart until numOps) {
             val index: Int
-            if (getElementPtr) {
+            if (isGetElementPtr) {
                 // the second argument is the base address that we start our chain from
-                paramType = lang.typeOf(LLVMGetOperand(instr, 0))
+                paramType = lang.typeOf(LLVMGetOperand(instr, idx))
                 operand = getOperandValueAtIndex(instr, idx, paramType.typeName)
 
                 // Parse index as int for now only
@@ -475,15 +480,14 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             }
         }
 
-        // TODO: extract LHS wrapping into declaration handler
-        val decl = NodeBuilder.newVariableDeclaration(lhs, UnknownType.getUnknownType(), "", false)
+        // since getelementpr returns the *address*, we need to do a final unary operation
+        if (isGetElementPtr) {
+            val ref = NodeBuilder.newUnaryOperator("&", false, true, "")
+            ref.input = expr
+            expr = ref
+        }
 
-        lang.scopeManager.addDeclaration(decl)
-
-        val ref = NodeBuilder.newUnaryOperator("&", false, true, "")
-        ref.input = expr
-
-        return declarationOrNot(ref, lhs)
+        return declarationOrNot(expr, lhs)
     }
 
     /**
@@ -669,14 +673,14 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             }
         }
 
-        if (lhs != "") {
+        return if (lhs != "") {
             // set lhs = *ptr, then perform the replacement
             val compoundStatement = NodeBuilder.newCompoundStatement(instrStr)
-            compoundStatement.statements = Arrays.asList(declarationOrNot(ptrDeref, lhs), exchOp)
-            return compoundStatement
+            compoundStatement.statements = listOf(declarationOrNot(ptrDeref, lhs), exchOp)
+            compoundStatement
         } else {
             // only perform the replacement
-            return exchOp
+            exchOp
         }
     }
 
@@ -803,7 +807,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
     /**
      * Most instructions in LLVM have a variable assignment as part of their instruction. Since LLVM
      * IR is SSA, we need to declare a new variable in this case, which is named according to [lhs].
-     * In case [lhs] is an empty string, the variable assignment is optional and we directly return
+     * In case [lhs] is an empty string, the variable assignment is optional, and we directly return
      * the [Expression] associated with the instruction.
      */
     private fun declarationOrNot(rhs: Expression, lhs: String): Statement {
@@ -811,6 +815,9 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             val decl = VariableDeclaration()
             decl.name = lhs
             decl.initializer = rhs
+
+            // add the declaration to the current scope
+            lang.scopeManager.addDeclaration(decl)
 
             val declStatement = DeclarationStatement()
             declStatement.singleDeclaration = decl
