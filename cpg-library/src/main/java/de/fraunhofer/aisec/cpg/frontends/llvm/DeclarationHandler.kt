@@ -27,8 +27,7 @@ package de.fraunhofer.aisec.cpg.frontends.llvm
 
 import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder
-import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newFunctionDeclaration
-import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newMethodParameterIn
+import de.fraunhofer.aisec.cpg.graph.NodeBuilder.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
@@ -88,10 +87,18 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
         var bb = LLVMGetFirstBasicBlock(func)
         while (bb != null) {
             val stmt = lang.statementHandler.handle(bb)
+            val labelName = LLVMGetBasicBlockName(bb).string
+            println(labelName)
+            if (labelName != "") {
+                if (!lang.labelMap.contains(labelName))
+                    lang.labelMap.put(labelName, newLabelStatement(labelName))
+                val labelStatement = lang.labelMap.get(labelName)
+                labelStatement!!.subStatement = stmt
+            }
 
             // TODO: there are probably more than one basic block in a function, for now just take
             // one
-            functionDeclaration.body = stmt
+            if (functionDeclaration.body == null) functionDeclaration.body = stmt
 
             bb = LLVMGetNextBasicBlock(bb)
         }

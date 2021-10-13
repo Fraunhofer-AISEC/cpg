@@ -684,6 +684,13 @@ public class NodeBuilder {
     return node;
   }
 
+  public static ConditionalBranchStatement newConditionalBranchStatement(String code) {
+    ConditionalBranchStatement node = new ConditionalBranchStatement();
+    node.setCode(code);
+    log(node);
+    return node;
+  }
+
   public static CaseStatement newCaseStatement(String code) {
     CaseStatement node = new CaseStatement();
     node.setCode(code);

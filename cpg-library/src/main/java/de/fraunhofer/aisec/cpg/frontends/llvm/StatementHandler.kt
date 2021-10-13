@@ -31,6 +31,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
+import de.fraunhofer.aisec.cpg.graph.statements.LabelStatement
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ArraySubscriptionExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
@@ -91,7 +92,8 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 println("invoke instruction")
             }
             LLVMUnreachable -> {
-                println("unreachable instruction")
+                // Does nothing
+                return Statement()
             }
             LLVMCallBr -> {
                 // TODO: Maps to a call but also to a goto statement?
@@ -152,13 +154,13 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 return parseBinaryOperator(instr, ">>", false, false)
             }
             LLVMAShr -> {
-               /* BinaryOperator. Arithmetic right shift operator:
-                * Set the most significant bit with the first bit of op1, not with 0.
-                *
-                * Returns a "poison value" if
-                * 1) op2 is bigger than or equal to the number of bits in op1, or
-                * 2) "exact" is present and a non-zero value is shifted out.
-                */
+                /* BinaryOperator. Arithmetic right shift operator:
+                 * Set the most significant bit with the first bit of op1, not with 0.
+                 *
+                 * Returns a "poison value" if
+                 * 1) op2 is bigger than or equal to the number of bits in op1, or
+                 * 2) "exact" is present and a non-zero value is shifted out.
+                 */
                 println("ashr instruction")
             }
             LLVMAnd -> {
@@ -268,35 +270,17 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             }
             LLVMAtomicCmpXchg -> {
                 /*  TODO Something like:
-                    if(*pointer == cmp) {
-                        orig = *pointer;
-                        *pointer = new;
-                        return {orig, true} // A struct of {T, i1}
-                    } else {
-                        return {*pointer, false} // A struct of {T, i1}
-                    }
-                 */
+                   if(*pointer == cmp) {
+                       orig = *pointer;
+                       *pointer = new;
+                       return {orig, true} // A struct of {T, i1}
+                   } else {
+                       return {*pointer, false} // A struct of {T, i1}
+                   }
+                */
                 println("atomiccmpxchg instruction")
             }
             LLVMAtomicRMW -> {
-                /* TODO: Has to be constructed of multiple operations
-                 *
-                 * atomicrmw [volatile] <operation> <ty>* <pointer>, <ty> <value> [syncscope("<target-scope>")] <ordering>[, align <alignment>]
-                 * Depending on the operation:
-                 * xchg: *ptr = val
-                 * add: *ptr = *ptr + val
-                 * sub: *ptr = *ptr - val
-                 * and: *ptr = *ptr & val
-                 * nand: *ptr = ~(*ptr & val)
-                 * or: *ptr = *ptr | val
-                 * xor: *ptr = *ptr ^ val
-                 * max: *ptr = *ptr > val ? *ptr : val (signed comparison)
-                 * min: *ptr = *ptr < val ? *ptr : val (signed comparison)
-                 * umax: *ptr = *ptr > val ? *ptr : val (unsigned comparison)
-                 * umin: *ptr = *ptr < val ? *ptr : val (unsigned comparison)
-                 * fadd: *ptr = *ptr + val (floating point arithmetic)
-                 * fsub: *ptr = *ptr - val (floating point arithmetic)
-                 */
                 println("atomicrmw instruction")
             }
             LLVMResume -> {
@@ -458,8 +442,6 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 } else throw Exception("No index specified")
             } else throw Exception("No index specified")
 
-            // val index: Int = Integer.parseInt(operandName)
-
             // check, if it is a pointer -> then we need to handle this as an array access
             if (baseType is PointerType) {
                 val arrayExpr = NodeBuilder.newArraySubscriptionExpression("")
@@ -544,31 +526,48 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         return record
     }
 
+
     private fun handleBrStatement(instr: LLVMValueRef): Statement {
         if (LLVMGetNumOperands(instr) == 3) {
             // if(op) then {label1} else {label2}
-            val ifStatement = NodeBuilder.newIfStatement(LLVMPrintValueToString(instr).string)
-            ifStatement.condition = getOperandValueAtIndex(instr, 0, "i1")
-            val label1 = LLVMGetOperand(instr, 1) // The label of the if branch
-            val thenLabelStatement = NodeBuilder.newLabelStatement(LLVMGetValueName(label1).string)
-            thenLabelStatement.label = LLVMGetValueName(label1).string
-            ifStatement.thenStatement = thenLabelStatement
+            val ifStatement = NodeBuilder.newConditionalBranchStatement(lang.getCodeFromRawNode(instr))
+            val condition = getOperandValueAtIndex(instr, 0, "i1")
+            val label1Name = LLVMGetValueName(LLVMGetOperand(instr, 1)).string
 
-            val label2 = LLVMGetOperand(instr, 2) // The label of the else branch
-            val elseLabelStatement = NodeBuilder.newLabelStatement(LLVMGetValueName(label2).string)
-            elseLabelStatement.label = LLVMGetValueName(label2).string
-            ifStatement.elseStatement = elseLabelStatement
-            // TODO: Anything else to do here?
+            val thenLabelStatement: LabelStatement
+            if (lang.labelMap.contains(label1Name)) {
+                thenLabelStatement = lang.labelMap.get(label1Name)!!
+            } else {
+                thenLabelStatement = NodeBuilder.newLabelStatement(label1Name)
+                thenLabelStatement.name = label1Name
+            }
+            ifStatement.addConditionalTarget(condition, thenLabelStatement)
+
+            // Set the default branch ("else")
+            val label2Name = LLVMGetValueName(LLVMGetOperand(instr, 2)).string // The label of the else branch
+            val elseLabelStatement: LabelStatement
+            if (lang.labelMap.contains(label2Name)) {
+                elseLabelStatement = lang.labelMap.get(label2Name)!!
+            } else {
+                elseLabelStatement = NodeBuilder.newLabelStatement(label2Name)
+                elseLabelStatement.name = label2Name
+            }
+            ifStatement.setDefaultTargetLabel(elseLabelStatement)
 
             return ifStatement
         } else if (LLVMGetNumOperands(instr) == 1) {
-            // goto label1
-            val gotoStatement = NodeBuilder.newGotoStatement(LLVMPrintValueToString(instr).string)
+            // goto defaultLocation
+            val gotoStatement = NodeBuilder.newGotoStatement(lang.getCodeFromRawNode(instr))
             val defaultLocation = LLVMGetOperand(instr, 0) // The BB of the target
-            val labelStatement =
-                NodeBuilder.newLabelStatement(LLVMGetValueName(defaultLocation).string)
-            labelStatement.label = LLVMGetValueName(defaultLocation).string
-            // TODO: Anything else to do here?
+            val labelStatement: LabelStatement
+            val labelName = LLVMGetValueName(defaultLocation).string
+            if (lang.labelMap.contains(labelName)) labelStatement = lang.labelMap.get(labelName)!!
+            else {
+                labelStatement = NodeBuilder.newLabelStatement(labelName)
+                labelStatement.label = labelName
+            }
+            gotoStatement.labelName = labelName
+            gotoStatement.targetLabel = labelStatement
 
             return gotoStatement
         } else {
@@ -583,21 +582,33 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         val opType = LLVMPrintTypeToString(LLVMTypeOf(LLVMGetOperand(instr, 0))).string
         val operand = getOperandValueAtIndex(instr, 0, opType)
 
-        val defaultLocation = LLVMGetOperand(instr, 1) // The BB of the "default" branch
-        println(LLVMGetValueName(defaultLocation).string) // Print the name of the default label
+        val switchStatement = NodeBuilder.newConditionalBranchStatement(lang.getCodeFromRawNode(instr))
 
-        val switchStatement = NodeBuilder.newSwitchStatement(LLVMPrintValueToString(instr).string)
-        switchStatement.selector = operand // TODO: What else do we need?
+        val defaultLocation = LLVMGetValueName(LLVMGetOperand(instr, 1)).string // The label of the "default" branch
+        val defaultLabelStatement: LabelStatement
+        if (lang.labelMap.contains(defaultLocation)) {
+            defaultLabelStatement = lang.labelMap.get(defaultLocation)!!
+        } else {
+            defaultLabelStatement = NodeBuilder.newLabelStatement(defaultLocation)
+            defaultLabelStatement.name = defaultLocation
+        }
+        switchStatement.setDefaultTargetLabel(defaultLabelStatement)
 
         var idx = 2
         while (idx < numOps) {
-            // TODO: Build and add the case statements
-            // "case op2" is at the label "catchLabel"
-            val op2 = getOperandValueAtIndex(instr, idx, opType)
-            println(op2.toString())
+            val binaryOperator = NodeBuilder.newBinaryOperator("==", lang.getCodeFromRawNode(instr))
+            binaryOperator.lhs = operand
+            binaryOperator.rhs = getOperandValueAtIndex(instr, idx, opType)
             idx++
-            val catchLabel = LLVMGetOperand(instr, idx)
-            println(LLVMGetValueName(catchLabel).toString())
+            val catchLabel = LLVMGetValueName(LLVMGetOperand(instr, idx)).string
+            val catchLabelStatement: LabelStatement
+            if (lang.labelMap.contains(catchLabel)) {
+                catchLabelStatement = lang.labelMap.get(catchLabel)!!
+            } else {
+                catchLabelStatement = NodeBuilder.newLabelStatement(catchLabel)
+                catchLabelStatement.name = catchLabel
+            }
+            switchStatement.addConditionalTarget(binaryOperator, catchLabelStatement)
             idx++
         }
         return switchStatement
@@ -628,17 +639,21 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             idx++
         }
 
+        return declarationOrNot(callExpr, retVal, lhs)
+    }
+
+    private fun declarationOrNot(rhs: Expression, retType: String, lhs: String): Statement {
         if (lhs != "") {
             val decl = VariableDeclaration()
-            decl.type = TypeParser.createFrom(retVal, true)
+            decl.type = TypeParser.createFrom(retType, true)
             decl.name = lhs
-            decl.initializer = callExpr
+            decl.initializer = rhs
 
             val declStatement = DeclarationStatement()
             declStatement.singleDeclaration = decl
             return declStatement
         } else {
-            return callExpr
+            return rhs
         }
     }
 
