@@ -91,7 +91,7 @@ class LLVMIRLanguageFrontendTest {
     }
 
     @Test
-    fun test3() {
+    fun testIdentifiedStruct() {
         val topLevel = Path.of("src", "test", "resources", "llvm")
         val tu =
             TestUtils.analyzeAndGetFirstTU(
