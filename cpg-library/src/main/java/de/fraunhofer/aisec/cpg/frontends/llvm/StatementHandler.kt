@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.frontends.llvm
 
 import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder
+import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newConstructExpression
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
@@ -526,9 +527,17 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
 
         val lhs = LLVMGetValueName(instr).string
         if (lhs != "") {
-            val structValue = Expression()
-            // TODO: Create the anonymous struct if necessary and initialize the values.
-            val decl = declarationOrNot(structValue, lhs)
+            // we need to create a crazy struct here. the target type can be found here
+            val targetType = lang.typeOf(instr)
+
+            // construct it
+            val construct = newConstructExpression("")
+            construct.instantiates = (targetType as? ObjectType)?.recordDeclaration
+
+            construct.addArgument(ptrDeref)
+            construct.addArgument(cmpExpr)
+
+            val decl = declarationOrNot(construct, lhs)
             compoundStatement.addStatement(decl)
         }
         val assignment = NodeBuilder.newBinaryOperator("=", instrStr)
