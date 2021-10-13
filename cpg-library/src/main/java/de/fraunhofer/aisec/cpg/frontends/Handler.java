@@ -29,7 +29,9 @@ import static de.fraunhofer.aisec.cpg.helpers.Util.errorWithFileLocation;
 
 import java.lang.reflect.ParameterizedType;
 import java.util.HashMap;
+import java.util.function.Function;
 import java.util.function.Supplier;
+import org.checkerframework.checker.nullness.qual.NonNull;
 import org.eclipse.cdt.internal.core.dom.parser.ASTNode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -46,7 +48,8 @@ public abstract class Handler<S, T, L extends LanguageFrontend> {
 
   protected static final Logger log = LoggerFactory.getLogger(Handler.class);
 
-  protected final HashMap<Class<? extends T>, HandlerInterface<S, T>> map = new HashMap<>();
+  protected final HashMap<Class<? extends T>, @NonNull Function<T, @NonNull S>> map =
+      new HashMap<>();
   private final Supplier<S> configConstructor;
   protected L lang;
   private Class<S> typeOfT =
@@ -88,7 +91,7 @@ public abstract class Handler<S, T, L extends LanguageFrontend> {
     }
 
     Class<?> toHandle = ctx.getClass();
-    HandlerInterface<S, T> handler = map.get(toHandle);
+    var handler = map.get(toHandle);
     while (handler == null) {
       toHandle = toHandle.getSuperclass();
       handler = map.get(toHandle);
@@ -107,7 +110,7 @@ public abstract class Handler<S, T, L extends LanguageFrontend> {
       if (toHandle == typeOfT || !typeOfT.isAssignableFrom(toHandle)) break;
     }
     if (handler != null) {
-      S s = handler.handle(ctx);
+      S s = handler.apply(ctx);
       lang.setCodeAndRegion(s, ctx);
       lang.setComment(s, ctx);
       ret = s;
