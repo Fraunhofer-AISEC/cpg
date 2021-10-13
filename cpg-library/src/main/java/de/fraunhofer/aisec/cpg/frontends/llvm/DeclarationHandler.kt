@@ -62,7 +62,13 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
 
         val functionDeclaration = newFunctionDeclaration(name.string, lang.getCodeFromRawNode(func))
 
-        functionDeclaration.type = lang.typeOf(func)
+        // return types are a bit tricky, because the type of the function is a pointer to the
+        // function type, which then has the return type in it
+        val funcPtrType = LLVMTypeOf(func)
+        val funcType = LLVMGetElementType(funcPtrType)
+        val returnType = LLVMGetReturnType(funcType)
+
+        functionDeclaration.type = lang.typeFrom(returnType)
 
         lang.scopeManager.enterScope(functionDeclaration)
 
@@ -112,11 +118,24 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
      * Handles the parsing of [structure types](https://llvm.org/docs/LangRef.html#structure-types).
      * Member fields of structs in LLVM IR do not have names, so we need to assign dummy names for
      * easier reading, such s `field0`.
+     *
+     * there are two different types of structs:
+     * - identified structs, which have a name are explicitly declared
+     * - literal structs, which do not have a name, but are structurally unique To emulate this
+     * uniqueness, we create a RecordDeclaration for each literal struct and name it according to
+     * its element types.
      */
     private fun handleStructureType(typeRef: LLVMTypeRef): RecordDeclaration {
-        val name = LLVMGetStructName(typeRef).string
+        // if this is a literal struct, we will give it a pseudo name, which we will fill according
+        // to the element types
+        var name =
+            if (LLVMIsLiteralStruct(typeRef) == 1) {
+                "literal"
+            } else {
+                LLVMGetStructName(typeRef).string
+            }
 
-        val record = NodeBuilder.newRecordDeclaration(name, "struct", "")
+        val record = newRecordDeclaration(name, "struct", "")
 
         lang.scopeManager.enterScope(record)
 
@@ -127,7 +146,12 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
             val fieldType = lang.typeFrom(a)
 
             // there are no names, so we need to invent some dummy ones for easier reading
-            val fieldName = "field$i"
+            val fieldName = "field_$i"
+
+            // if this is a literal struct, append the field types to the name
+            if (LLVMIsLiteralStruct(typeRef) == 1) {
+                name += "_${fieldType.typeName}"
+            }
 
             val field =
                 NodeBuilder.newFieldDeclaration(
@@ -142,6 +166,9 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
 
             lang.scopeManager.addDeclaration(field)
         }
+
+        // make sure to update the name
+        record.name = name
 
         lang.scopeManager.leaveScope(record)
 

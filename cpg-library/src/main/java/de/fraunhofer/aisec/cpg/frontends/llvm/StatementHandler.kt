@@ -464,7 +464,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 )
 
                 // look for the field
-                val field = record.getField("field$index")
+                val field = record.getField("field_$index")
 
                 // our new basetype is the type of the field
                 baseType = field?.type ?: UnknownType.getUnknownType()

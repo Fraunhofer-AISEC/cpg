@@ -141,29 +141,41 @@ class LLVMIRLanguageFrontend(config: TranslationConfiguration, scopeManager: Sco
     }
 
     internal fun typeFrom(typeRef: LLVMTypeRef): Type {
-        // check, if it is an array type
-        if (LLVMGetTypeKind(typeRef) == LLVMArrayTypeKind) {
-            // var length = LLVMGetArrayLength(typeRef)
-            val elementType = typeFrom(LLVMGetElementType(typeRef))
+        when (LLVMGetTypeKind(typeRef)) {
+            LLVMArrayTypeKind -> {
+                // var length = LLVMGetArrayLength(typeRef)
+                val elementType = typeFrom(LLVMGetElementType(typeRef))
 
-            return elementType.reference(PointerType.PointerOrigin.ARRAY)
-        } else {
-            val typeBuf = LLVMPrintTypeToString(typeRef)
-
-            // TODO: According to the doc LLVMDisposeMessage should be used, but it crashes
-
-            var s = typeBuf.string
-
-            // if the type is an identified type, i.e., it begins with a %, we get rid of the %
-            // character otherwise, the CPG will not connect it to the type. Note that the type name
-            // itself also
-            // does not include the % character.
-
-            if (s.startsWith("%")) {
-                s = s.substring(1)
+                return elementType.reference(PointerType.PointerOrigin.ARRAY)
             }
+            LLVMPointerTypeKind -> {
+                val elementType = typeFrom(LLVMGetElementType(typeRef))
 
-            return TypeParser.createFrom(s, false)
+                return elementType.reference(PointerType.PointerOrigin.POINTER)
+            }
+            LLVMStructTypeKind -> {
+                var record = declarationHandler.handle(typeRef)
+
+                return TypeParser.createFrom(record.name, false)
+            }
+            else -> {
+                val typeBuf = LLVMPrintTypeToString(typeRef)
+
+                // TODO: According to the doc LLVMDisposeMessage should be used, but it crashes
+
+                var s = typeBuf.string
+
+                // if the type is an identified type, i.e., it begins with a %, we get rid of the %
+                // character otherwise, the CPG will not connect it to the type. Note that the type
+                // name
+                // itself also does not include the % character.
+
+                if (s.startsWith("%")) {
+                    s = s.substring(1)
+                }
+
+                return TypeParser.createFrom(s, false)
+            }
         }
     }
 
