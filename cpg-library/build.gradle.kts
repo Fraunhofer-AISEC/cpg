@@ -209,10 +209,8 @@ dependencies {
     implementation("org.jetbrains.kotlin:kotlin-stdlib")
     implementation("org.jetbrains.kotlin:kotlin-reflect")
 
-    if(project.hasProperty("experimentalPython")) {
-        // jep for python support
-        api("black.ninia:jep:4.0.0")
-    }
+    // jep for python support
+    api("black.ninia:jep:4.0.0")
 
     // JUnit
     testImplementation("org.jetbrains.kotlin:kotlin-test")
@@ -222,6 +220,7 @@ dependencies {
 
     testImplementation("ch.qos.logback:logback-classic:1.3.0-alpha10")
 
-    testImplementation("org.mockito:mockito-core:3.12.4")
+    testImplementation("org.mockito:mockito-core:4.0.0")
+    
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.8.1")
 }
