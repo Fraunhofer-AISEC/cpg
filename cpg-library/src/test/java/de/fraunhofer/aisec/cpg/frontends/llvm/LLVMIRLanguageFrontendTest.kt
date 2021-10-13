@@ -152,12 +152,18 @@ class LLVMIRLanguageFrontendTest {
         var arrayExpr = unary.input as? ArraySubscriptionExpression
         assertNotNull(arrayExpr)
         assertEquals("13", arrayExpr.name)
-        assertEquals(13L, (arrayExpr.subscriptExpression as? Literal<*>)?.value) // should this be integer instead of long?
+        assertEquals(
+            13L,
+            (arrayExpr.subscriptExpression as? Literal<*>)?.value
+        ) // should this be integer instead of long?
 
         arrayExpr = arrayExpr.arrayExpression as? ArraySubscriptionExpression
         assertNotNull(arrayExpr)
         assertEquals("5", arrayExpr.name)
-        assertEquals(5L, (arrayExpr.subscriptExpression as? Literal<*>)?.value) // should this be integer instead of long?
+        assertEquals(
+            5L,
+            (arrayExpr.subscriptExpression as? Literal<*>)?.value
+        ) // should this be integer instead of long?
 
         var memberExpr = arrayExpr.arrayExpression as? MemberExpression
         assertNotNull(memberExpr)
@@ -170,7 +176,10 @@ class LLVMIRLanguageFrontendTest {
         arrayExpr = memberExpr.base as? ArraySubscriptionExpression
         assertNotNull(arrayExpr)
         assertEquals("1", arrayExpr.name)
-        assertEquals(1L, (arrayExpr.subscriptExpression as? Literal<*>)?.value) // should this be integer instead of long?
+        assertEquals(
+            1L,
+            (arrayExpr.subscriptExpression as? Literal<*>)?.value
+        ) // should this be integer instead of long?
 
         val ref = arrayExpr.arrayExpression as? DeclaredReferenceExpression
         assertNotNull(ref)
@@ -200,6 +209,22 @@ class LLVMIRLanguageFrontendTest {
         val tu =
             TestUtils.analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("br.ll").toFile()),
+                topLevel,
+                true
+            ) {
+                it.registerLanguage(
+                    LLVMIRLanguageFrontend::class.java,
+                    LLVMIRLanguageFrontend.LLVM_EXTENSIONS
+                )
+            }
+    }
+
+    @Test
+    fun test6() {
+        val topLevel = Path.of("src", "test", "resources", "llvm")
+        val tu =
+            TestUtils.analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("atomicrmw.ll").toFile()),
                 topLevel,
                 true
             ) {
