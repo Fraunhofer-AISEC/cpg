@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.frontends.cpp_experimental
 
 import de.fraunhofer.aisec.cpg.frontends.Handler
+import de.fraunhofer.aisec.cpg.frontends.cpp_experimental.CXXExperimentalFrontend.Companion.visitChildren
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newCallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
@@ -36,6 +37,7 @@ import org.bytedeco.llvm.clang.CXClientData
 import org.bytedeco.llvm.clang.CXCursor
 import org.bytedeco.llvm.clang.CXCursorVisitor
 import org.bytedeco.llvm.global.clang
+import org.bytedeco.llvm.global.clang.clang_getCursorSpelling
 
 class ExpressionHandler(lang: CXXExperimentalFrontend) :
     Handler<Expression, CXCursor, CXXExperimentalFrontend>(::Expression, lang) {
@@ -70,7 +72,7 @@ class ExpressionHandler(lang: CXXExperimentalFrontend) :
                 ): Int {
                     println(
                         "unexposed: Cursor '" +
-                            clang.clang_getCursorSpelling(child).string +
+                            clang_getCursorSpelling(child).string +
                             "' of kind '" +
                             clang.clang_getCursorKindSpelling(clang.clang_getCursorKind(child))
                                 .string +
@@ -93,7 +95,7 @@ class ExpressionHandler(lang: CXXExperimentalFrontend) :
      * is basically a reference to a declaration.
      */
     private fun handleDeclRefExpr(cursor: CXCursor): DeclaredReferenceExpression {
-        val name = clang.clang_getCursorSpelling(cursor)
+        val name = clang_getCursorSpelling(cursor)
         val type = lang.typeOf(cursor)
 
         val ref =
@@ -111,10 +113,17 @@ class ExpressionHandler(lang: CXXExperimentalFrontend) :
      * represents a function call and is mapped to a [CallExpression].
      */
     private fun handleCallExpr(cursor: CXCursor): CallExpression {
-        val name = ""
-        val fqn = ""
+        val name = clang_getCursorSpelling(cursor).string
+        val fqn = name
 
         val call = newCallExpression(name, fqn, lang.getCodeFromRawNode(cursor), false)
+
+        visitChildren(
+            cursor,
+            { lang.expressionHandler.handle(it) },
+            { it, _ -> call.addArgument(it) },
+            1 // skip first child, because it is just the identifier anyway
+        )
 
         return call
     }
@@ -149,7 +158,7 @@ class ExpressionHandler(lang: CXXExperimentalFrontend) :
 
                     println(
                         "binOp: Cursor '" +
-                            clang.clang_getCursorSpelling(child).string +
+                            clang_getCursorSpelling(child).string +
                             "' of kind '" +
                             clang.clang_getCursorKindSpelling(clang.clang_getCursorKind(child))
                                 .string +

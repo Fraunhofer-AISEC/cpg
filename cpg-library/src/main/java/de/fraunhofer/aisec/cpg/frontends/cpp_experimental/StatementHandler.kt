@@ -34,6 +34,8 @@ import org.bytedeco.llvm.clang.CXClientData
 import org.bytedeco.llvm.clang.CXCursor
 import org.bytedeco.llvm.clang.CXCursorVisitor
 import org.bytedeco.llvm.global.clang
+import org.bytedeco.llvm.global.clang.CXCursor_FirstExpr
+import org.bytedeco.llvm.global.clang.CXCursor_LastExpr
 
 class StatementHandler(lang: CXXExperimentalFrontend) :
     Handler<Statement, CXCursor, CXXExperimentalFrontend>(::Statement, lang) {
@@ -45,6 +47,8 @@ class StatementHandler(lang: CXXExperimentalFrontend) :
         val kind = clang.clang_getCursorKind(cursor)
 
         return when (kind) {
+            // forward expressions to the expression handler
+            in CXCursor_FirstExpr..CXCursor_LastExpr -> lang.expressionHandler.handle(cursor)
             clang.CXCursor_CompoundStmt -> handleCompoundStatement(cursor)
             clang.CXCursor_ReturnStmt -> handleReturnStatement(cursor)
             else -> Statement()
@@ -71,7 +75,7 @@ class StatementHandler(lang: CXXExperimentalFrontend) :
                             "'"
                     )
 
-                    val stmt = visitStatement(child)
+                    val stmt = handle(child)
                     compoundStatement.addStatement(stmt)
 
                     return clang.CXChildVisit_Continue
@@ -84,7 +88,7 @@ class StatementHandler(lang: CXXExperimentalFrontend) :
     }
 
     private fun handleReturnStatement(cursor: CXCursor): ReturnStatement {
-        var returnStatement = NodeBuilder.newReturnStatement("")
+        val returnStatement = NodeBuilder.newReturnStatement("")
 
         clang.clang_visitChildren(
             cursor,

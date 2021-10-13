@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.frontends.java.ExpressionHandler
+import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.TypeManager
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.types.Type
@@ -37,8 +38,12 @@ import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.io.File
+import org.bytedeco.javacpp.IntPointer
+import org.bytedeco.llvm.clang.CXClientData
 import org.bytedeco.llvm.clang.CXCursor
+import org.bytedeco.llvm.clang.CXCursorVisitor
 import org.bytedeco.llvm.clang.CXToken
+import org.bytedeco.llvm.global.clang
 import org.bytedeco.llvm.global.clang.*
 
 class CXXExperimentalFrontend(config: TranslationConfiguration, scopeManager: ScopeManager?) :
@@ -57,7 +62,7 @@ class CXXExperimentalFrontend(config: TranslationConfiguration, scopeManager: Sc
             clang_parseTranslationUnit(
                 index,
                 file.path,
-                null as? ByteArray,
+                ByteArray(0),
                 0,
                 null,
                 0,
@@ -87,10 +92,10 @@ class CXXExperimentalFrontend(config: TranslationConfiguration, scopeManager: Sc
         if (astNode is CXCursor) {
             var code = ""
 
-            var unit = clang_Cursor_getTranslationUnit(astNode)
+            val unit = clang_Cursor_getTranslationUnit(astNode)
             var loc = clang_getCursorLocation(astNode)
 
-            var range = clang_getCursorExtent(astNode)
+            val range = clang_getCursorExtent(astNode)
 
             val tokens = CXToken()
             val numTokens = IntArray(1)
@@ -114,4 +119,51 @@ class CXXExperimentalFrontend(config: TranslationConfiguration, scopeManager: Sc
     }
 
     override fun <S : Any?, T : Any?> setComment(s: S, ctx: T) {}
+
+    companion object {
+        internal fun <T : Node> visitChildren(
+            cursor: CXCursor,
+            function: (CXCursor) -> T,
+            apply: (T, Int) -> Unit,
+            after: Int = 0,
+            before: Int = -1,
+        ) {
+            clang_visitChildren(
+                cursor,
+                object : CXCursorVisitor() {
+                    override fun call(
+                        child: CXCursor,
+                        parent: CXCursor?,
+                        client_data: CXClientData
+                    ): Int {
+                        val idx = client_data.getPointer(IntPointer::class.java, 0)
+
+                        println(
+                            "Cursor '" +
+                                clang_getCursorSpelling(child).string +
+                                "' of kind '" +
+                                clang.clang_getCursorKindSpelling(clang_getCursorKind(child))
+                                    .string +
+                                "'"
+                        )
+
+                        val i = idx.get()
+
+                        if (before != -1 && i >= before) {
+                            return CXChildVisit_Break
+                        }
+
+                        if (i >= after) {
+                            apply(function(child), i)
+                        }
+
+                        idx.put(0L, i + 1)
+
+                        return CXChildVisit_Continue
+                    }
+                },
+                CXClientData(IntPointer(0))
+            )
+        }
+    }
 }

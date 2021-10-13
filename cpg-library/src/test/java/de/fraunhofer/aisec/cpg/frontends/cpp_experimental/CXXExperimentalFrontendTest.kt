@@ -30,12 +30,14 @@ import de.fraunhofer.aisec.cpg.frontends.cpp.CXXLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import java.io.File
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertSame
+import kotlin.test.assertTrue
 import org.junit.jupiter.api.Test
 
 class CXXExperimentalFrontendTest {
@@ -58,6 +60,7 @@ class CXXExperimentalFrontendTest {
             tu.getDeclarationsByName("someFunc", FunctionDeclaration::class.java).iterator().next()
         assertNotNull(someFunc)
         assertEquals("someFunc", someFunc.name)
+        assertEquals("int", someFunc.type.typeName)
         assertEquals(1, someFunc.parameters.size)
 
         val a = someFunc.parameters.firstOrNull { it.name == "a" }
@@ -78,5 +81,16 @@ class CXXExperimentalFrontendTest {
         val literal = binOp.rhs as? Literal<*>
         assertNotNull(literal)
         assertEquals(1, literal.value)
+
+        val main =
+            tu.getDeclarationsByName("main", FunctionDeclaration::class.java).iterator().next()
+        assertNotNull(main)
+        assertEquals("main", main.name)
+        assertEquals("int", main.type.typeName)
+
+        val call = main.getBodyStatementAs(0, CallExpression::class.java)
+        assertNotNull(call)
+        assertEquals("someFunc", call.name)
+        assertTrue(call.invokes.contains(someFunc))
     }
 }

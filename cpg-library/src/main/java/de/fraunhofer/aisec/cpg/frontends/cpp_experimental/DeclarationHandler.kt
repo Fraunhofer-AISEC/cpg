@@ -35,7 +35,7 @@ import org.bytedeco.llvm.clang.CXClientData
 import org.bytedeco.llvm.clang.CXCursor
 import org.bytedeco.llvm.clang.CXCursorVisitor
 import org.bytedeco.llvm.clang.CXTranslationUnit
-import org.bytedeco.llvm.global.clang
+import org.bytedeco.llvm.global.clang.*
 
 class DeclarationHandler(lang: CXXExperimentalFrontend) :
     Handler<Declaration, Pointer, CXXExperimentalFrontend>(::Declaration, lang) {
@@ -45,12 +45,13 @@ class DeclarationHandler(lang: CXXExperimentalFrontend) :
     }
 
     private fun handleDeclaration(cursor: CXCursor): Declaration {
-        val kind = clang.clang_getCursorKind(cursor)
-
-        return if (kind == clang.CXCursor_FunctionDecl) {
-            handleFunctionDecl(cursor)
-        } else {
-            Declaration()
+        return when (val kind = clang_getCursorKind(cursor)) {
+            CXCursor_FunctionDecl -> handleFunctionDecl(cursor)
+            CXCursor_ParmDecl -> handleParmVarDecl(cursor)
+            else -> {
+                log.error("Not handling cursor kind {} yet", kind)
+                Declaration()
+            }
         }
     }
 
@@ -68,33 +69,35 @@ class DeclarationHandler(lang: CXXExperimentalFrontend) :
                 ): Int {
                     println(
                         "Cursor '" +
-                            clang.clang_getCursorSpelling(child).string +
+                            clang_getCursorSpelling(child).string +
                             "' of kind '" +
-                            clang.clang_getCursorKindSpelling(clang.clang_getCursorKind(child))
-                                .string +
+                            clang_getCursorKindSpelling(clang_getCursorKind(child)).string +
                             "'"
                     )
 
-                    var decl = handle(child)
+                    val decl = handle(child)
+                    lang.scopeManager.addDeclaration(decl)
 
-                    if (decl != null) {
-                        lang.scopeManager.addDeclaration(decl)
-                    }
-
-                    return clang.CXChildVisit_Continue
+                    return CXChildVisit_Continue
                 }
             }
 
-        var cursor = clang.clang_getTranslationUnitCursor(unit)
-        clang.clang_visitChildren(cursor, visitor, null)
+        val cursor = clang_getTranslationUnitCursor(unit)
+        clang_visitChildren(cursor, visitor, null)
 
         return tu
     }
 
+    /**
+     * Handles a [FunctionDecl](https://clang.llvm.org/doxygen/classclang_1_1FunctionDecl.html),
+     * which is either a function declaration or a definition.
+     */
     private fun handleFunctionDecl(cursor: CXCursor): FunctionDeclaration {
-        val name = clang.clang_getCursorSpelling(cursor)
+        val name = clang_getCursorSpelling(cursor)
+        val type = lang.typeOf(cursor)
 
         val decl = NodeBuilder.newFunctionDeclaration(name.string, "")
+        decl.type = type
 
         lang.scopeManager.enterScope(decl)
 
@@ -107,37 +110,37 @@ class DeclarationHandler(lang: CXXExperimentalFrontend) :
                 ): Int {
                     println(
                         "F: Cursor '" +
-                            clang.clang_getCursorSpelling(child).string +
+                            clang_getCursorSpelling(child).string +
                             "' of kind '" +
-                            clang.clang_getCursorKindSpelling(clang.clang_getCursorKind(child))
-                                .string +
+                            clang_getCursorKindSpelling(clang_getCursorKind(child)).string +
                             "'"
                     )
 
-                    val kind = clang.clang_getCursorKind(child)
+                    val kind = clang_getCursorKind(child)
 
-                    if (kind == clang.CXCursor_ParmDecl) {
-                        val param = handleParmDecl(child)
-
-                        lang.scopeManager.addDeclaration(param)
-                    } else if (kind == clang.CXCursor_CompoundStmt) {
+                    if (kind in CXCursor_FirstDecl..CXCursor_LastDecl) {
+                        lang.scopeManager.addDeclaration(handle(child))
+                    } else if (kind in CXCursor_FirstStmt..CXCursor_LastStmt) {
                         decl.body = lang.statementHandler.handle(child)
                     }
 
-                    return clang.CXChildVisit_Continue
+                    return CXChildVisit_Continue
                 }
             }
 
-        clang.clang_visitChildren(cursor, visitor, null)
+        clang_visitChildren(cursor, visitor, null)
 
         lang.scopeManager.leaveScope(decl)
 
         return decl
     }
 
-    private fun handleParmDecl(cursor: CXCursor): ParamVariableDeclaration {
-        val name = clang.clang_getCursorDisplayName(cursor)
-
+    /**
+     * Handles a [ParmVarDecl](https://clang.llvm.org/doxygen/classclang_1_1ParmVarDecl.html), which
+     * is a parameter of a function.
+     */
+    private fun handleParmVarDecl(cursor: CXCursor): ParamVariableDeclaration {
+        val name = clang_getCursorDisplayName(cursor)
         val type = lang.typeOf(cursor)
 
         val param = NodeBuilder.newMethodParameterIn(name.string, type, false, "")
