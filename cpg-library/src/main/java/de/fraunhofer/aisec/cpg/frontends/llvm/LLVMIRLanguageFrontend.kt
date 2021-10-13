@@ -29,11 +29,10 @@ import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.TypeManager
+import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.LabelStatement
-import de.fraunhofer.aisec.cpg.graph.types.PointerType
-import de.fraunhofer.aisec.cpg.graph.types.Type
-import de.fraunhofer.aisec.cpg.graph.types.TypeParser
+import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.io.File
@@ -154,9 +153,9 @@ class LLVMIRLanguageFrontend(config: TranslationConfiguration, scopeManager: Sco
                 return elementType.reference(PointerType.PointerOrigin.POINTER)
             }
             LLVMStructTypeKind -> {
-                var record = declarationHandler.handle(typeRef)
+                val record = declarationHandler.handle(typeRef) as? RecordDeclaration
 
-                return TypeParser.createFrom(record.name, false)
+                return record?.toType() ?: UnknownType.getUnknownType()
             }
             else -> {
                 val typeBuf = LLVMPrintTypeToString(typeRef)
