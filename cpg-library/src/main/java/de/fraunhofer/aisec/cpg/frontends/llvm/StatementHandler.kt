@@ -518,7 +518,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         val cmp = getOperandValueAtIndex(instr, 1, ty)
         val value = getOperandValueAtIndex(instr, 2, ty)
 
-        val ptrDeref = NodeBuilder.newUnaryOperator("*", false, false, instrStr)
+        val ptrDeref = NodeBuilder.newUnaryOperator("*", false, true, instrStr)
         ptrDeref.input = ptr
 
         val cmpExpr = NodeBuilder.newBinaryOperator("==", instrStr)
