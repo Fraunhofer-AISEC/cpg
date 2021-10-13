@@ -145,13 +145,6 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
             return record
         }
 
-        // try to parse it
-        val typeRef = LLVMGetTypeByName2(lang.ctx, name)
-        if (typeRef == null) {
-            log.error("Could not find type")
-            return RecordDeclaration()
-        }
-
         record = newRecordDeclaration(name, "struct", "")
 
         lang.scopeManager.enterScope(record)
@@ -164,11 +157,6 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
 
             // there are no names, so we need to invent some dummy ones for easier reading
             val fieldName = "field_$i"
-
-            // if this is a literal struct, append the field types to the name
-            if (LLVMIsLiteralStruct(typeRef) == 1) {
-                name += "_${fieldType.typeName}"
-            }
 
             val field =
                 NodeBuilder.newFieldDeclaration(
@@ -184,9 +172,6 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
             lang.scopeManager.addDeclaration(field)
         }
 
-        // make sure to update the name
-        record.name = name
-
         lang.scopeManager.leaveScope(record)
 
         // add it to the global scope
@@ -196,7 +181,7 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
     }
 
     private fun getLiteralStructName(typeRef: LLVMTypeRef): String {
-        var name = "literal_"
+        var name = "literal"
 
         val size = LLVMCountStructElementTypes(typeRef)
 
@@ -204,7 +189,7 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
             val field = LLVMStructGetTypeAtIndex(typeRef, i)
             val fieldType = lang.typeFrom(field)
 
-            name += "_$fieldType"
+            name += "_${fieldType.typeName}"
         }
 
         return name
