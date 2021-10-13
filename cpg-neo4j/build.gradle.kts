@@ -57,8 +57,8 @@ dependencies {
     // CPG
     api(project(":cpg-library"))
 
-    implementation("ch.qos.logback:logback-classic:1.3.0-alpha10")
-
+    implementation("org.slf4j:slf4j-impl:1.7.32")
+    
     // neo4j
     api("org.neo4j", "neo4j-ogm-core", versions["neo4j-ogm"])
     api("org.neo4j", "neo4j-ogm", versions["neo4j-ogm"])
