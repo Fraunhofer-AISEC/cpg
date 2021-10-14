@@ -30,6 +30,8 @@ import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
+import de.fraunhofer.aisec.cpg.graph.statements.ConditionalBranchStatement
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
@@ -205,7 +207,7 @@ class LLVMIRLanguageFrontendTest {
     }
 
     @Test
-    fun test5() {
+    fun testBrStatements() {
         val topLevel = Path.of("src", "test", "resources", "llvm")
         val tu =
             TestUtils.analyzeAndGetFirstTU(
@@ -218,6 +220,30 @@ class LLVMIRLanguageFrontendTest {
                     LLVMIRLanguageFrontend.LLVM_EXTENSIONS
                 )
             }
+
+        assertEquals(2, tu.declarations.size)
+
+        val main =
+            tu.getDeclarationsByName("main", FunctionDeclaration::class.java).iterator().next()
+        assertNotNull(main)
+
+        // Check that the jump targets are set correctly
+        val brStatement = main.getBodyStatementAs(2, ConditionalBranchStatement::class.java)
+        assertNotNull(brStatement)
+        assertEquals("IfUnequal", brStatement.defaultTargetLabel.name)
+        assertEquals("IfEqual", brStatement.conditionalTargets.get(0).second.name)
+
+        // Check that the condition is set correctly
+        val brCondition = brStatement.conditionalTargets.get(0).first
+        assertEquals("cond", brCondition.name)
+        assertEquals("i1", brCondition.type.typeName)
+
+        val ifBranch =
+            brStatement.conditionalTargets.get(0).second.subStatement as CompoundStatement
+        assertEquals(1, ifBranch.statements.size)
+
+        val elseBranch = brStatement.defaultTargetLabel.subStatement as CompoundStatement
+        assertEquals(2, elseBranch.statements.size)
     }
 
     @Test
