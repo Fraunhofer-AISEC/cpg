@@ -618,20 +618,30 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             }
             LLVMAtomicRMWBinOpUMax -> {
                 val condition = NodeBuilder.newBinaryOperator(">", instrStr)
-                ptrDeref.input.type = TypeParser.createFrom("u${ty.name}", false) // TODO: Fix this!
-                condition.lhs = ptrDeref
-                value.type = TypeParser.createFrom("u${ty.name}", false)
-                condition.rhs = value
+                val castExprLhs = NodeBuilder.newCastExpression(lang.getCodeFromRawNode(instr))
+                castExprLhs.castType = TypeParser.createFrom("u${ty.name}", true)
+                castExprLhs.expression = ptrDeref
+                condition.lhs = castExprLhs
+
+                val castExprRhs = NodeBuilder.newCastExpression(lang.getCodeFromRawNode(instr))
+                castExprRhs.castType = TypeParser.createFrom("u${ty.name}", true)
+                castExprRhs.expression = value
+                condition.rhs = castExprRhs
                 val conditional =
                     NodeBuilder.newConditionalExpression(condition, ptrDeref, value, ty)
                 exchOp.rhs = conditional
             }
             LLVMAtomicRMWBinOpUMin -> {
                 val condition = NodeBuilder.newBinaryOperator("<", instrStr)
-                ptrDeref.input.type = TypeParser.createFrom("u${ty.name}", false) // TODO: Fix this!
-                condition.lhs = ptrDeref
-                value.type = TypeParser.createFrom("u${ty.name}", false)
-                condition.rhs = value
+                val castExprLhs = NodeBuilder.newCastExpression(lang.getCodeFromRawNode(instr))
+                castExprLhs.castType = TypeParser.createFrom("u${ty.name}", true)
+                castExprLhs.expression = ptrDeref
+                condition.lhs = castExprLhs
+
+                val castExprRhs = NodeBuilder.newCastExpression(lang.getCodeFromRawNode(instr))
+                castExprRhs.castType = TypeParser.createFrom("u${ty.name}", true)
+                castExprRhs.expression = value
+                condition.rhs = castExprRhs
                 val conditional =
                     NodeBuilder.newConditionalExpression(condition, ptrDeref, value, ty)
                 exchOp.rhs = conditional
