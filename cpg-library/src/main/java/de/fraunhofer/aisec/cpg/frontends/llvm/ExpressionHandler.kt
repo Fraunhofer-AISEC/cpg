@@ -32,6 +32,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.ConstructExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
+import de.fraunhofer.aisec.cpg.passes.VariableUsageResolver
 import org.bytedeco.llvm.LLVM.LLVMValueRef
 import org.bytedeco.llvm.global.LLVM.*
 
@@ -105,11 +106,36 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
         }
     }
 
-    private fun handleReference(value: LLVMValueRef): Expression {
-        val name = LLVMGetValueName(value).string
-        val type = lang.typeOf(value)
+    /**
+     * Handles a reference to an [identifier](https://llvm.org/docs/LangRef.html#identifiers). It
+     * can either be a reference to a global or local one, depending on the prefix.
+     *
+     * This function will also take care of actually resolving the reference. This is a) faster and
+     * b) needed because the [VariableUsageResolver] is not familiar with the prefix system,
+     * determining the scope of the variable.
+     */
+    private fun handleReference(valueRef: LLVMValueRef): Expression {
+        val name = LLVMGetValueName(valueRef).string
 
-        return NodeBuilder.newDeclaredReferenceExpression(name, type, "${type.typeName} $name")
+        val type = lang.typeOf(valueRef)
+
+        val ref = NodeBuilder.newDeclaredReferenceExpression(name, type, "${type.typeName} $name")
+
+        // try to resolve the reference. actually the valueRef is already referring to the resolved
+        // variable because we obtain it using LLVMGetOperand, so we just need to look it up in the
+        // cache bindings
+        val decl = lang.bindingsCache[valueRef.symbolName]
+
+        if (decl == null) {
+
+            // there is something seriously wrong here, if this happens, because all variables need
+            // to be declared before use and we _should_ have seen the variable
+            log.warn("Could not resolve reference ${valueRef.symbolName}. This should not happen.")
+        } else {
+            ref.refersTo = decl
+        }
+
+        return ref
     }
 
     /**

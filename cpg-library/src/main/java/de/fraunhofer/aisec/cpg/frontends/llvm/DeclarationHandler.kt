@@ -48,7 +48,45 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
     }
 
     private fun handleValue(value: LLVMValueRef): Declaration {
-        return handleFunction(value)
+        return when (val kind = LLVMGetValueKind((value))) {
+            LLVMFunctionValueKind -> handleFunction(value)
+            LLVMGlobalVariableValueKind -> handleGlobal(value)
+            else -> {
+                log.error("Not handling declaration kind {} yet", kind)
+                Declaration()
+            }
+        }
+    }
+
+    private fun handleGlobal(valueRef: LLVMValueRef): Declaration {
+        val name = LLVMGetValueName(valueRef).string
+
+        // this would return the non-pointer type, but i think we need the pointer type
+        // val type = lang.typeFrom(LLVMGlobalGetValueType(valueRef))
+
+        val type = lang.typeOf(valueRef)
+
+        val variableDeclaration =
+            newVariableDeclaration(name, type, lang.getCodeFromRawNode(valueRef), false)
+
+        val symbol =
+            if (LLVMGetValueKind(valueRef) == LLVMGlobalVariableValueKind) {
+                "@"
+            } else {
+                "%"
+            }
+
+        // cache binding
+        lang.bindingsCache["$symbol$name"] = variableDeclaration
+
+        val size = LLVMGetNumOperands(valueRef)
+        // the first operand (if it exists) is an initializer
+        if (size >= 0) {
+            val expr = lang.expressionHandler.handle(LLVMGetOperand(valueRef, 0))
+            variableDeclaration.initializer = expr
+        }
+
+        return variableDeclaration
     }
 
     /**

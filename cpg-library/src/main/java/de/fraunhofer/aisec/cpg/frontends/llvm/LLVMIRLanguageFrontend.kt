@@ -29,15 +29,18 @@ import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.TypeManager
+import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.LabelStatement
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
 import de.fraunhofer.aisec.cpg.graph.types.*
+import de.fraunhofer.aisec.cpg.passes.VariableUsageResolver
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.io.File
 import java.nio.ByteBuffer
-import kotlin.collections.HashMap
 import org.bytedeco.javacpp.BytePointer
 import org.bytedeco.llvm.LLVM.*
 import org.bytedeco.llvm.global.LLVM.*
@@ -45,18 +48,30 @@ import org.bytedeco.llvm.global.LLVM.*
 class LLVMIRLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeManager?) :
     LanguageFrontend(config, scopeManager, "::") {
 
-    val labelMap = HashMap<String, LabelStatement>()
+    val labelMap = mutableMapOf<String, LabelStatement>()
     val statementHandler = StatementHandler(this)
     val declarationHandler = DeclarationHandler(this)
     val expressionHandler = ExpressionHandler(this)
 
     var ctx: LLVMContextRef? = null
 
+    /**
+     * This contains a cache binding between an LLVMValueRef (representing a variable) and its
+     * [VariableDeclaration] in the graph. We need this, because this way we can lookup and connect
+     * a [DeclaredReferenceExpression] to its [Declaration] already in the language frontend. This
+     * in turn is needed because of the local/global system we cannot rely on the
+     * [VariableUsageResolver].
+     */
+    var bindingsCache = mutableMapOf<String, VariableDeclaration>()
+
     companion object {
         @kotlin.jvm.JvmField var LLVM_EXTENSIONS: List<String> = listOf(".ll")
     }
 
     override fun parse(file: File): TranslationUnitDeclaration {
+        // clear the bindings cache, because it is just valid within one module
+        bindingsCache.clear()
+
         TypeManager.getInstance().setLanguageFrontend(this)
 
         // these will be filled by our create and parse functions later and will be passed as
@@ -102,20 +117,12 @@ class LLVMIRLanguageFrontend(config: TranslationConfiguration, scopeManager: Sco
         // loop through globals
         var global = LLVMGetFirstGlobal(mod)
         while (global != null) {
-            val name = LLVMGetValueName(global)
-            // TODO: Get the globals here and store them to the graph!
-            println(name.string)
+            // try to parse the variable (declaration)
+            val declaration = declarationHandler.handle(global)
+
+            scopeManager.addDeclaration(declaration)
 
             global = LLVMGetNextGlobal(global)
-        }
-
-        // loop through named meta
-        var alias = LLVMGetFirstGlobalIFunc(mod)
-        while (alias != null) {
-            val name = LLVMGetValueName(global)
-            println(name.string)
-
-            alias = LLVMGetNextGlobal(alias)
         }
 
         // loop through functions
@@ -189,3 +196,20 @@ class LLVMIRLanguageFrontend(config: TranslationConfiguration, scopeManager: Sco
 
     override fun <S : Any?, T : Any?> setComment(s: S, ctx: T) {}
 }
+
+val LLVMValueRef.symbolName: String
+    get() {
+        val symbol =
+            if (LLVMGetValueKind(this) == LLVMGlobalVariableValueKind) {
+                "@"
+            } else {
+                "%"
+            }
+
+        return "$symbol${this.name}"
+    }
+
+private inline val LLVMValueRef.name: String
+    get() {
+        return LLVMGetValueName(this).string
+    }

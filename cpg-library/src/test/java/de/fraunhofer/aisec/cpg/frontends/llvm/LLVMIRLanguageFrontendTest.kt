@@ -514,17 +514,34 @@ class LLVMIRLanguageFrontendTest {
             tu.getDeclarationsByName("main", FunctionDeclaration::class.java).iterator().next()
         assertNotNull(main)
 
+        val globalX =
+            tu.getDeclarationsByName("x", VariableDeclaration::class.java).iterator().next()
+        assertNotNull(globalX)
+        assertEquals(
+            "i32*",
+            globalX.type.typeName
+        ) // TODO: should this actually always be a pointer?!
+
+        val globalA =
+            tu.getDeclarationsByName("a", VariableDeclaration::class.java).iterator().next()
+        assertNotNull(globalA)
+        assertEquals(
+            "i32*",
+            globalA.type.typeName
+        ) // TODO: should this actually always be a pointer?!
+
         val loadXStatement = main.getBodyStatementAs(1, DeclarationStatement::class.java)
         assertNotNull(loadXStatement)
         assertEquals("locX", loadXStatement.singleDeclaration.name)
+
         val initXOp =
             (loadXStatement.singleDeclaration as VariableDeclaration).initializer as UnaryOperator
         assertEquals("*", initXOp.operatorCode)
-        assertEquals("x", initXOp.input.name)
-        assertEquals("@x = global i32 10", initXOp.input.code)
-        // Currently, we don't have the globals in the graph => It should be null.
-        // TODO: Fix when we have the globals available
-        assertNull((initXOp.input as DeclaredReferenceExpression).refersTo)
+
+        var ref = initXOp.input as? DeclaredReferenceExpression
+        assertNotNull(ref)
+        assertEquals("x", ref.name)
+        assertSame(globalX, ref.refersTo)
 
         val loadAStatement = main.getBodyStatementAs(2, DeclarationStatement::class.java)
         assertNotNull(loadAStatement)
@@ -532,10 +549,10 @@ class LLVMIRLanguageFrontendTest {
         val initAOp =
             (loadAStatement.singleDeclaration as VariableDeclaration).initializer as UnaryOperator
         assertEquals("*", initAOp.operatorCode)
-        assertEquals("a", initAOp.input.name)
-        assertEquals("@a = global i32 8", initAOp.input.code)
-        // Currently, we don't have the globals in the graph => It should be null.
-        // TODO: Fix when we have the globals available
-        assertNull((initAOp.input as DeclaredReferenceExpression).refersTo)
+
+        ref = initAOp.input as? DeclaredReferenceExpression
+        assertNotNull(ref)
+        assertEquals("a", ref.name)
+        assertSame(globalA, ref.refersTo)
     }
 }

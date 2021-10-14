@@ -379,7 +379,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         val ref = NodeBuilder.newUnaryOperator("*", false, true, "")
         ref.input = getOperandValueAtIndex(instr, 0)
 
-        return declarationOrNot(ref, lhs)
+        return declarationOrNot(ref, instr)
     }
 
     /**
@@ -491,7 +491,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             expr = ref
         }
 
-        return declarationOrNot(expr, lhs)
+        return declarationOrNot(expr, instr)
     }
 
     /**
@@ -532,7 +532,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             construct.addArgument(ptrDeref)
             construct.addArgument(cmpExpr)
 
-            val decl = declarationOrNot(construct, lhs)
+            val decl = declarationOrNot(construct, instr)
             compoundStatement.addStatement(decl)
         }
         val assignment = NodeBuilder.newBinaryOperator("=", instrStr)
@@ -675,7 +675,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         return if (lhs != "") {
             // set lhs = *ptr, then perform the replacement
             val compoundStatement = NodeBuilder.newCompoundStatement(instrStr)
-            compoundStatement.statements = listOf(declarationOrNot(ptrDeref, lhs), exchOp)
+            compoundStatement.statements = listOf(declarationOrNot(ptrDeref, instr), exchOp)
             compoundStatement
         } else {
             // only perform the replacement
@@ -798,7 +798,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             idx++
         }
 
-        return declarationOrNot(callExpr, lhs)
+        return declarationOrNot(callExpr, instr)
     }
 
     /**
@@ -807,7 +807,9 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
      * In case [lhs] is an empty string, the variable assignment is optional, and we directly return
      * the [Expression] associated with the instruction.
      */
-    private fun declarationOrNot(rhs: Expression, lhs: String): Statement {
+    private fun declarationOrNot(rhs: Expression, valueRef: LLVMValueRef): Statement {
+        val lhs = LLVMGetValueName(valueRef).string
+
         return if (lhs != "") {
             val decl = VariableDeclaration()
             decl.name = lhs
@@ -815,6 +817,9 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
 
             // add the declaration to the current scope
             lang.scopeManager.addDeclaration(decl)
+
+            // add it to our bindings cache
+            lang.bindingsCache.put("${valueRef.symbolName}", decl)
 
             val declStatement = DeclarationStatement()
             declStatement.singleDeclaration = decl
@@ -929,6 +934,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             }
         }
 
+        // TODO: can we merge this with declarationOrNot?
         val decl = VariableDeclaration()
         if (listOf("==", "!=", "<", "<=", ">", ">=", "ord", "uno").contains(op)) {
             decl.type = TypeParser.createFrom("i1", true) // boolean type
@@ -937,6 +943,9 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         }
         decl.name = lhs
         decl.initializer = if (unordered) binOpUnordered else binaryOperator
+
+        // cache binding
+        lang.bindingsCache[instr.symbolName] = decl
 
         val declStatement = DeclarationStatement()
         declStatement.singleDeclaration = decl
