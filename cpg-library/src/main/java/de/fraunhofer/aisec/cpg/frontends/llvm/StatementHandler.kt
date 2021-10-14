@@ -104,7 +104,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                     NodeBuilder.newUnaryOperator(
                         "-",
                         false,
-                        false,
+                        true,
                         LLVMPrintValueToString(instr).string
                     )
                 val opType = LLVMPrintTypeToString(LLVMTypeOf(LLVMGetOperand(instr, 0))).string
@@ -569,7 +569,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         val exchOp = NodeBuilder.newBinaryOperator("=", instrStr)
         exchOp.name = "atomicrmw"
 
-        val ptrDeref = NodeBuilder.newUnaryOperator("*", false, false, instrStr)
+        val ptrDeref = NodeBuilder.newUnaryOperator("*", false, true, instrStr)
         ptrDeref.input = ptr
         exchOp.lhs = ptrDeref
 
@@ -599,7 +599,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 val binaryOperator = NodeBuilder.newBinaryOperator("|", instrStr)
                 binaryOperator.lhs = ptrDeref
                 binaryOperator.rhs = value
-                val unaryOperator = NodeBuilder.newUnaryOperator("~", false, false, instrStr)
+                val unaryOperator = NodeBuilder.newUnaryOperator("~", false, true, instrStr)
                 unaryOperator.input = binaryOperator
                 exchOp.rhs = unaryOperator
             }
@@ -913,7 +913,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 NodeBuilder.newUnaryOperator(
                     "!",
                     false,
-                    false,
+                    true,
                     LLVMPrintValueToString(instr).string
                 )
             binaryOperator.input = unorderedCall
