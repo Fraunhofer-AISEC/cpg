@@ -135,10 +135,12 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 return parseBinaryOperator(instr, "%", false, true)
             }
             LLVMSRem -> {
-                println("srem instruction")
+                // TODO: This is not 100% accurate and needs to be handled later or needs a new
+                // operator
+                return parseBinaryOperator(instr, "%", false, false)
             }
             LLVMFRem -> {
-                println("frem instruction")
+                return parseBinaryOperator(instr, "%", true, false)
             }
             LLVMShl -> {
                 return parseBinaryOperator(instr, "<<", false, false)
@@ -147,14 +149,9 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 return parseBinaryOperator(instr, ">>", false, false)
             }
             LLVMAShr -> {
-                /* BinaryOperator. Arithmetic right shift operator:
-                 * Set the most significant bit with the first bit of op1, not with 0.
-                 *
-                 * Returns a "poison value" if
-                 * 1) op2 is bigger than or equal to the number of bits in op1, or
-                 * 2) "exact" is present and a non-zero value is shifted out.
-                 */
-                println("ashr instruction")
+                // TODO: This is not 100% accurate and needs to be handled later or needs a new
+                // operator
+                return parseBinaryOperator(instr, ">>", false, true)
             }
             LLVMAnd -> {
                 return parseBinaryOperator(instr, "&", false, false)
