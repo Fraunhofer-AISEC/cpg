@@ -72,8 +72,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
 
                 val numOps = LLVMGetNumOperands(instr)
                 if (numOps != 0) {
-                    val retType = LLVMPrintTypeToString(LLVMTypeOf(LLVMGetOperand(instr, 0))).string
-                    ret.returnValue = getOperandValueAtIndex(instr, 0, retType)
+                    ret.returnValue = getOperandValueAtIndex(instr, 0)
                 }
 
                 return ret
@@ -101,14 +100,8 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             }
             LLVMFNeg -> {
                 val fneg =
-                    NodeBuilder.newUnaryOperator(
-                        "-",
-                        false,
-                        true,
-                        LLVMPrintValueToString(instr).string
-                    )
-                val opType = LLVMPrintTypeToString(LLVMTypeOf(LLVMGetOperand(instr, 0))).string
-                fneg.input = getOperandValueAtIndex(instr, 0, opType)
+                    NodeBuilder.newUnaryOperator("-", false, true, lang.getCodeFromRawNode(instr))
+                fneg.input = getOperandValueAtIndex(instr, 0)
                 return fneg
             }
             LLVMAdd -> {
@@ -413,11 +406,10 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         }
 
         // the first operand is always type that is the basis for the calculation
-        var paramType = lang.typeOf(LLVMGetOperand(instr, 0))
-        var operand = getOperandValueAtIndex(instr, 0, paramType.typeName)
+        var baseType = lang.typeOf(LLVMGetOperand(instr, 0))
+        var operand = getOperandValueAtIndex(instr, 0)
 
         // the start
-        var baseType = paramType
         var base = operand
 
         var expr = Expression()
@@ -427,8 +419,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             val index =
                 if (isGetElementPtr) {
                     // the second argument is the base address that we start our chain from
-                    paramType = lang.typeOf(LLVMGetOperand(instr, idx))
-                    operand = getOperandValueAtIndex(instr, idx, paramType.typeName)
+                    operand = getOperandValueAtIndex(instr, idx)
 
                     // Parse index as int for now only
                     ((operand as Literal<*>).value as Long).toInt()
@@ -512,11 +503,9 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         val instrStr = lang.getCodeFromRawNode(instr)
         val compoundStatement = NodeBuilder.newCompoundStatement(instrStr)
         compoundStatement.name = "atomiccmpxchg"
-        val tyPtr = LLVMPrintTypeToString(LLVMTypeOf(LLVMGetOperand(instr, 0))).string
-        val ptr = getOperandValueAtIndex(instr, 0, tyPtr)
-        val ty = tyPtr.substring(0, tyPtr.length - 1) // Remove the *
-        val cmp = getOperandValueAtIndex(instr, 1, ty)
-        val value = getOperandValueAtIndex(instr, 2, ty)
+        val ptr = getOperandValueAtIndex(instr, 0)
+        val cmp = getOperandValueAtIndex(instr, 1)
+        val value = getOperandValueAtIndex(instr, 2)
 
         val ptrDeref = NodeBuilder.newUnaryOperator("*", false, true, instrStr)
         ptrDeref.input = ptr
@@ -562,10 +551,9 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         val lhs = LLVMGetValueName(instr).string
         val instrStr = lang.getCodeFromRawNode(instr)
         val operation = LLVMGetAtomicRMWBinOp(instr)
-        val tyPtr = LLVMPrintTypeToString(LLVMTypeOf(LLVMGetOperand(instr, 0))).string
-        val ptr = getOperandValueAtIndex(instr, 0, tyPtr)
-        val ty = tyPtr.substring(0, tyPtr.length - 1) // Remove the *
-        val value = getOperandValueAtIndex(instr, 1, ty)
+        val ptr = getOperandValueAtIndex(instr, 0)
+        val value = getOperandValueAtIndex(instr, 1)
+        val ty = value.type
         val exchOp = NodeBuilder.newBinaryOperator("=", instrStr)
         exchOp.name = "atomicrmw"
 
@@ -620,12 +608,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 condition.lhs = ptrDeref
                 condition.rhs = value
                 val conditional =
-                    NodeBuilder.newConditionalExpression(
-                        condition,
-                        ptrDeref,
-                        value,
-                        TypeParser.createFrom(ty, true)
-                    )
+                    NodeBuilder.newConditionalExpression(condition, ptrDeref, value, ty)
                 exchOp.rhs = conditional
             }
             LLVMAtomicRMWBinOpMin -> {
@@ -633,42 +616,27 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 condition.lhs = ptrDeref
                 condition.rhs = value
                 val conditional =
-                    NodeBuilder.newConditionalExpression(
-                        condition,
-                        ptrDeref,
-                        value,
-                        TypeParser.createFrom(ty, true)
-                    )
+                    NodeBuilder.newConditionalExpression(condition, ptrDeref, value, ty)
                 exchOp.rhs = conditional
             }
             LLVMAtomicRMWBinOpUMax -> {
                 val condition = NodeBuilder.newBinaryOperator(">", instrStr)
-                ptrDeref.input.type = TypeParser.createFrom("u$ty", true)
+                ptrDeref.input.type = TypeParser.createFrom("u${ty.name}", false) // TODO: Fix this!
                 condition.lhs = ptrDeref
-                value.type = TypeParser.createFrom("u$ty", true)
+                value.type = TypeParser.createFrom("u${ty.name}", false)
                 condition.rhs = value
                 val conditional =
-                    NodeBuilder.newConditionalExpression(
-                        condition,
-                        ptrDeref,
-                        value,
-                        TypeParser.createFrom(ty, true)
-                    )
+                    NodeBuilder.newConditionalExpression(condition, ptrDeref, value, ty)
                 exchOp.rhs = conditional
             }
             LLVMAtomicRMWBinOpUMin -> {
                 val condition = NodeBuilder.newBinaryOperator("<", instrStr)
-                ptrDeref.input.type = TypeParser.createFrom("u$ty", true)
+                ptrDeref.input.type = TypeParser.createFrom("u${ty.name}", false) // TODO: Fix this!
                 condition.lhs = ptrDeref
-                value.type = TypeParser.createFrom("u$ty", true)
+                value.type = TypeParser.createFrom("u${ty.name}", false)
                 condition.rhs = value
                 val conditional =
-                    NodeBuilder.newConditionalExpression(
-                        condition,
-                        ptrDeref,
-                        value,
-                        TypeParser.createFrom(ty, true)
-                    )
+                    NodeBuilder.newConditionalExpression(condition, ptrDeref, value, ty)
                 exchOp.rhs = conditional
             }
             LLVMAtomicRMWBinOpFAdd -> {
@@ -705,29 +673,35 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             // if(op) then {label1} else {label2}
             val ifStatement =
                 NodeBuilder.newConditionalBranchStatement(lang.getCodeFromRawNode(instr))
-            val condition = getOperandValueAtIndex(instr, 0, "i1")
+            val condition =
+                getOperandValueAtIndex(
+                    instr,
+                    0
+                ) // TODO: Check if the type is correct here (expected: i1)
             val label1Name = LLVMGetValueName(LLVMGetOperand(instr, 1)).string
 
-            val thenLabelStatement: LabelStatement
+            // Set the default branch ("else")
+            val elseLabelStatement: LabelStatement
             if (lang.labelMap.contains(label1Name)) {
-                thenLabelStatement = lang.labelMap.get(label1Name)!!
+                elseLabelStatement = lang.labelMap.get(label1Name)!!
             } else {
-                thenLabelStatement = NodeBuilder.newLabelStatement(label1Name)
-                thenLabelStatement.name = label1Name
+                elseLabelStatement = NodeBuilder.newLabelStatement(label1Name)
+                elseLabelStatement.name = label1Name
+                lang.labelMap[label1Name] = elseLabelStatement
+            }
+            ifStatement.defaultTargetLabel = elseLabelStatement
+
+            val label2Name =
+                LLVMGetValueName(LLVMGetOperand(instr, 2)).string // The label of the if branch
+            val thenLabelStatement: LabelStatement
+            if (lang.labelMap.contains(label2Name)) {
+                thenLabelStatement = lang.labelMap.get(label2Name)!!
+            } else {
+                thenLabelStatement = NodeBuilder.newLabelStatement(label2Name)
+                thenLabelStatement.name = label2Name
+                lang.labelMap[label2Name] = thenLabelStatement
             }
             ifStatement.addConditionalTarget(condition, thenLabelStatement)
-
-            // Set the default branch ("else")
-            val label2Name =
-                LLVMGetValueName(LLVMGetOperand(instr, 2)).string // The label of the else branch
-            val elseLabelStatement: LabelStatement
-            if (lang.labelMap.contains(label2Name)) {
-                elseLabelStatement = lang.labelMap.get(label2Name)!!
-            } else {
-                elseLabelStatement = NodeBuilder.newLabelStatement(label2Name)
-                elseLabelStatement.name = label2Name
-            }
-            ifStatement.setDefaultTargetLabel(elseLabelStatement)
 
             return ifStatement
         } else if (LLVMGetNumOperands(instr) == 1) {
@@ -754,8 +728,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         val numOps = LLVMGetNumOperands(instr)
         if (numOps < 2) throw Exception("Switch statement without operand and default branch")
 
-        val opType = LLVMPrintTypeToString(LLVMTypeOf(LLVMGetOperand(instr, 0))).string
-        val operand = getOperandValueAtIndex(instr, 0, opType)
+        val operand = getOperandValueAtIndex(instr, 0)
 
         val switchStatement =
             NodeBuilder.newConditionalBranchStatement(lang.getCodeFromRawNode(instr))
@@ -775,7 +748,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         while (idx < numOps) {
             val binaryOperator = NodeBuilder.newBinaryOperator("==", lang.getCodeFromRawNode(instr))
             binaryOperator.lhs = operand
-            binaryOperator.rhs = getOperandValueAtIndex(instr, idx, opType)
+            binaryOperator.rhs = getOperandValueAtIndex(instr, idx)
             idx++
             val catchLabel = LLVMGetValueName(LLVMGetOperand(instr, idx)).string
             val catchLabelStatement: LabelStatement
@@ -795,8 +768,6 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         val lhs = LLVMGetValueName(instr).string
         val calledFunc = LLVMGetCalledValue(instr)
         val calledFuncName = LLVMGetValueName(calledFunc).string
-        val funcType = LLVMGetCalledFunctionType(instr)
-        val retVal = LLVMPrintTypeToString(LLVMGetReturnType(funcType)).string
         var param = LLVMGetFirstParam(calledFunc)
         var idx = 0
 
@@ -809,8 +780,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             )
 
         while (param != null) {
-            val paramType = LLVMPrintTypeToString(LLVMTypeOf(param)).string // Type of the argument
-            val operandName = getOperandValueAtIndex(instr, idx, paramType)
+            val operandName = getOperandValueAtIndex(instr, idx)
             callExpr.addArgument(operandName)
             param = LLVMGetNextParam(param)
             idx++
@@ -873,13 +843,13 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         val lhs = LLVMGetValueName(instr).string
 
         var op1Type = LLVMPrintTypeToString(LLVMTypeOf(LLVMGetOperand(instr, 0))).string
-        val op1 = getOperandValueAtIndex(instr, 0, op1Type)
-        if (unsigned) op1Type = "u$op1Type"
+        val op1 = getOperandValueAtIndex(instr, 0)
+        if (unsigned) op1Type = "u$op1Type" // TODO: Fix this
         val t1 = TypeParser.createFrom(op1Type, true)
 
         var op2Type = LLVMPrintTypeToString(LLVMTypeOf(LLVMGetOperand(instr, 1))).string
-        val op2 = getOperandValueAtIndex(instr, 1, op2Type)
-        if (unsigned) op2Type = "u$op2Type"
+        val op2 = getOperandValueAtIndex(instr, 1)
+        if (unsigned) op2Type = "u$op2Type" // TODO: Fix this!
         val t2 = TypeParser.createFrom(op2Type, true)
 
         val binaryOperator: Expression
@@ -910,12 +880,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             unorderedCall.addArgument(op1)
             unorderedCall.addArgument(op2)
             binaryOperator =
-                NodeBuilder.newUnaryOperator(
-                    "!",
-                    false,
-                    true,
-                    LLVMPrintValueToString(instr).string
-                )
+                NodeBuilder.newUnaryOperator("!", false, true, LLVMPrintValueToString(instr).string)
             binaryOperator.input = unorderedCall
         } else {
             // Resulting statement: lhs = op1 <op> op2.
@@ -949,7 +914,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         }
 
         val decl = VariableDeclaration()
-        if (Arrays.asList("==", "!=", "<", "<=", ">", ">=", "ord", "uno").contains(op)) {
+        if (listOf("==", "!=", "<", "<=", ">", ">=", "ord", "uno").contains(op)) {
             decl.type = TypeParser.createFrom("i1", true) // boolean type
         } else {
             decl.type = t1 // use the type of op1
@@ -962,7 +927,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         return declStatement
     }
 
-    private fun getOperandValueAtIndex(instr: LLVMValueRef, idx: Int, type: String?): Expression {
+    private fun getOperandValueAtIndex(instr: LLVMValueRef, idx: Int): Expression {
         val operand = LLVMGetOperand(instr, idx)
 
         // there is also LLVMGetOperandUse, which might be of use to us

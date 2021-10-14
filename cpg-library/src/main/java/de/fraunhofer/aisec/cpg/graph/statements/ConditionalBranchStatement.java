@@ -35,7 +35,7 @@ public class ConditionalBranchStatement extends Statement {
   private LabelStatement defaultTargetLabel;
   private List<Pair<Expression, LabelStatement>> conditionalTargets = new ArrayList<>();
 
-  public LabelStatement setDefaultTargetLabel() {
+  public LabelStatement getDefaultTargetLabel() {
     return defaultTargetLabel;
   }
 

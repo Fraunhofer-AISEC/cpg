@@ -94,11 +94,11 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
         while (bb != null) {
             val stmt = lang.statementHandler.handle(bb)
             val labelName = LLVMGetBasicBlockName(bb).string
-            println(labelName)
+
             if (labelName != "") {
                 if (!lang.labelMap.contains(labelName))
-                    lang.labelMap.put(labelName, newLabelStatement(labelName))
-                val labelStatement = lang.labelMap.get(labelName)
+                    lang.labelMap[labelName] = newLabelStatement(labelName)
+                val labelStatement = lang.labelMap[labelName]
                 labelStatement!!.subStatement = stmt
             }
 
