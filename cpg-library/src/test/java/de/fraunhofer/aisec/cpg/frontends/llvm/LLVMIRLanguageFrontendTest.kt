@@ -30,10 +30,7 @@ import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
-import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
-import de.fraunhofer.aisec.cpg.graph.statements.ConditionalBranchStatement
-import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
-import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
+import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser
@@ -53,7 +50,7 @@ class LLVMIRLanguageFrontendTest {
     }
 
     @Test
-    fun test2() {
+    fun testIntegerOps() {
         val topLevel = Path.of("src", "test", "resources", "llvm")
         val tu =
             TestUtils.analyzeAndGetFirstTU(
@@ -307,7 +304,7 @@ class LLVMIRLanguageFrontendTest {
     }
 
     @Test
-    fun test6() {
+    fun testAtomicrmw() {
         val topLevel = Path.of("src", "test", "resources", "llvm")
         val tu =
             TestUtils.analyzeAndGetFirstTU(
@@ -320,6 +317,116 @@ class LLVMIRLanguageFrontendTest {
                     LLVMIRLanguageFrontend.LLVM_EXTENSIONS
                 )
             }
+
+        val foo = tu.getDeclarationsByName("foo", FunctionDeclaration::class.java).iterator().next()
+        assertNotNull(foo)
+
+        val atomicrmwStatement = foo.getBodyStatementAs(0, CompoundStatement::class.java)
+        assertNotNull(atomicrmwStatement)
+
+        // Check that the value is assigned to
+        val decl = (atomicrmwStatement.statements[0].declarations[0] as VariableDeclaration)
+        assertEquals("old", decl.name)
+        assertEquals("i32", decl.type.typeName)
+        assertEquals("*", (decl.initializer as UnaryOperator).operatorCode)
+        assertEquals("ptr", (decl.initializer as UnaryOperator).input.name)
+
+        // Check that the replacement equals *ptr = *ptr + 1
+        val replacement = (atomicrmwStatement.statements[1] as BinaryOperator)
+        assertEquals("=", replacement.operatorCode)
+        assertEquals("*", (replacement.lhs as UnaryOperator).operatorCode)
+        assertEquals("ptr", (replacement.lhs as UnaryOperator).input.name)
+        // Check that the rhs is equal to *ptr + 1
+        val add = replacement.rhs as BinaryOperator
+        assertEquals("+", add.operatorCode)
+        assertEquals("*", (add.lhs as UnaryOperator).operatorCode)
+        assertEquals("ptr", (add.lhs as UnaryOperator).input.name)
+        assertEquals(1L, (add.rhs as Literal<*>).value as Long)
+    }
+
+    @Test
+    fun testCmpxchg() {
+        val topLevel = Path.of("src", "test", "resources", "llvm")
+        val tu =
+            TestUtils.analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("atomicrmw.ll").toFile()),
+                topLevel,
+                true
+            ) {
+                it.registerLanguage(
+                    LLVMIRLanguageFrontend::class.java,
+                    LLVMIRLanguageFrontend.LLVM_EXTENSIONS
+                )
+            }
+
+        val foo = tu.getDeclarationsByName("foo", FunctionDeclaration::class.java).iterator().next()
+        assertNotNull(foo)
+
+        val cmpxchgStatement = foo.getBodyStatementAs(1, CompoundStatement::class.java)
+        assertNotNull(cmpxchgStatement)
+        assertEquals(2, cmpxchgStatement.statements.size)
+
+        // Check that the first statement is "literal_i32_i1 val_success = literal_i32_i1(*ptr, *ptr
+        // == 5)"
+        val decl = (cmpxchgStatement.statements[0].declarations[0] as VariableDeclaration)
+        assertEquals("val_success", decl.name)
+        assertEquals("literal_i32_i1", decl.type.typeName)
+
+        // Check that the first value is *ptr
+        val value1 = (decl.initializer as ConstructExpression).arguments[0] as UnaryOperator
+        assertEquals("*", value1.operatorCode)
+        assertEquals("ptr", value1.input.name)
+
+        // Check that the first value is *ptr == 5
+        val value2 = (decl.initializer as ConstructExpression).arguments[1] as BinaryOperator
+        assertEquals("==", value2.operatorCode)
+        assertEquals("*", (value2.lhs as UnaryOperator).operatorCode)
+        assertEquals("ptr", (value2.lhs as UnaryOperator).input.name)
+        assertEquals(5L, (value2.rhs as Literal<*>).value as Long)
+
+        val ifStatement = cmpxchgStatement.statements[1] as IfStatement
+        // The condition is the same as the second value above
+        val ifExpr = ifStatement.condition as BinaryOperator
+        assertEquals("==", ifExpr.operatorCode)
+        assertEquals("*", (ifExpr.lhs as UnaryOperator).operatorCode)
+        assertEquals("ptr", (ifExpr.lhs as UnaryOperator).input.name)
+        assertEquals(5L, (ifExpr.rhs as Literal<*>).value as Long)
+
+        val thenExpr = ifStatement.thenStatement as BinaryOperator
+        assertEquals("=", thenExpr.operatorCode)
+        assertEquals("*", (thenExpr.lhs as UnaryOperator).operatorCode)
+        assertEquals("ptr", (thenExpr.lhs as UnaryOperator).input.name)
+        assertEquals("old", (thenExpr.rhs as DeclaredReferenceExpression).name)
+        assertEquals("old", (thenExpr.rhs as DeclaredReferenceExpression).refersTo!!.name)
+    }
+
+    @Test
+    fun testExtractvalue() {
+        val topLevel = Path.of("src", "test", "resources", "llvm")
+        val tu =
+            TestUtils.analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("atomicrmw.ll").toFile()),
+                topLevel,
+                true
+            ) {
+                it.registerLanguage(
+                    LLVMIRLanguageFrontend::class.java,
+                    LLVMIRLanguageFrontend.LLVM_EXTENSIONS
+                )
+            }
+
+        val foo = tu.getDeclarationsByName("foo", FunctionDeclaration::class.java).iterator().next()
+        assertNotNull(foo)
+
+        val extractvalueStatement = foo.getBodyStatementAs(2, DeclarationStatement::class.java)
+        assertNotNull(extractvalueStatement)
+        val decl = (extractvalueStatement.declarations[0] as VariableDeclaration)
+        assertEquals("value_loaded", decl.name)
+        assertEquals("i1", decl.type.typeName)
+
+        assertEquals("val_success", (decl.initializer as MemberExpression).base.name)
+        assertEquals(".", (decl.initializer as MemberExpression).operatorCode)
+        assertEquals("field_1", (decl.initializer as MemberExpression).name)
     }
 
     @Test
