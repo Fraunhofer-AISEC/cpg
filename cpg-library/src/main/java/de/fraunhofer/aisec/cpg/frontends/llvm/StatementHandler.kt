@@ -166,6 +166,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 println("alloca instruction")
             }
             LLVMLoad -> {
+                return handleLoad(instr)
                 println("load instruction")
             }
             LLVMStore -> {
@@ -371,6 +372,14 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             else -> cmpPred = "unknown"
         }
         return parseBinaryOperator(instr, cmpPred, true, false, unordered)
+    }
+
+    private fun handleLoad(instr: LLVMValueRef): Statement {
+        val lhs = LLVMGetValueName(instr).string
+        val ref = NodeBuilder.newUnaryOperator("*", false, true, "")
+        ref.input = getOperandValueAtIndex(instr, 0)
+
+        return declarationOrNot(ref, lhs)
     }
 
     /**
