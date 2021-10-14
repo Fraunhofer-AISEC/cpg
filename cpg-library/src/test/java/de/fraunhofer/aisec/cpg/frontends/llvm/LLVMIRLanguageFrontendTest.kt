@@ -89,6 +89,18 @@ class LLVMIRLanguageFrontendTest {
         assertNotNull(call)
         assertEquals("rand", call.name)
         assertTrue(call.invokes.contains(rand))
+
+        val xorStatement = main.getBodyStatementAs(3, DeclarationStatement::class.java)
+        assertNotNull(xorStatement)
+
+        val xorDecl = xorStatement.singleDeclaration as? VariableDeclaration
+        assertNotNull(xorDecl)
+        assertEquals("a", xorDecl.name)
+        assertEquals("i32", xorDecl.type.typeName)
+
+        val xor = xorDecl.initializer as? BinaryOperator
+        assertNotNull(xor)
+        assertEquals("^", xor.operatorCode)
     }
 
     @Test
@@ -207,6 +219,14 @@ class LLVMIRLanguageFrontendTest {
             tu.getDeclarationsByName("main", FunctionDeclaration::class.java).iterator().next()
         assertNotNull(main)
 
+        // Check that the type of %a is i32
+        val xorStatement = main.getBodyStatementAs(3, DeclarationStatement::class.java)
+        assertNotNull(xorStatement)
+        val xorDecl = xorStatement.singleDeclaration as? VariableDeclaration
+        assertNotNull(xorDecl)
+        assertEquals("a", xorDecl.name)
+        assertEquals("i32", xorDecl.type.typeName)
+
         // Check that the jump targets are set correctly
         val brStatement = main.getBodyStatementAs(4, ConditionalBranchStatement::class.java)
         assertNotNull(brStatement)
@@ -220,7 +240,8 @@ class LLVMIRLanguageFrontendTest {
         assertEquals("==", (brCondition1 as BinaryOperator).operatorCode)
         assertEquals(0L, (brCondition1.rhs as Literal<*>).value as Long)
         assertEquals("a", (brCondition1.lhs as DeclaredReferenceExpression).name)
-        // TODO: brCondition1.lhs.refersTo is null. Why?? Is that expected/intended?
+        assertEquals("i32", (brCondition1.lhs as DeclaredReferenceExpression).type.typeName)
+        // TODO: brCondition1.lhs.refersTo is null. Is that expected/intended?
 
         // Check that the condition is set correctly
         val brCondition2 = brStatement.conditionalTargets[1].first
@@ -228,7 +249,7 @@ class LLVMIRLanguageFrontendTest {
         assertEquals("==", (brCondition2 as BinaryOperator).operatorCode)
         assertEquals(1L, (brCondition2.rhs as Literal<*>).value as Long)
         assertEquals("a", (brCondition2.lhs as DeclaredReferenceExpression).name)
-        // TODO: brCondition2.lhs.refersTo is null. Why?? Is that expected/intended?
+        // TODO: brCondition2.lhs.refersTo is null. Is that expected/intended?
     }
 
     @Test
@@ -300,7 +321,7 @@ class LLVMIRLanguageFrontendTest {
         val declRefExpr = ifBranchCompLhs.expression as DeclaredReferenceExpression
         assertEquals(-3, ((ifBranchCompRhs.expression as Literal<*>).value as Long))
         assertEquals("x", declRefExpr.name)
-        // TODO: declRefExpr.refersTo is null. Why?? Is that expected/intended?
+        // TODO: declRefExpr.refersTo is null. Is that expected/intended?
     }
 
     @Test
@@ -470,5 +491,21 @@ class LLVMIRLanguageFrontendTest {
         assertNotNull(arg)
         assertEquals("i8", arg.type.typeName)
         assertEquals(2L, arg.value)
+    }
+
+    @Test
+    fun testVariableScope() {
+        val topLevel = Path.of("src", "test", "resources", "llvm")
+        val tu =
+            TestUtils.analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("global_local_var.ll").toFile()),
+                topLevel,
+                true
+            ) {
+                it.registerLanguage(
+                    LLVMIRLanguageFrontend::class.java,
+                    LLVMIRLanguageFrontend.LLVM_EXTENSIONS
+                )
+            }
     }
 }
