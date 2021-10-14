@@ -192,7 +192,7 @@ class LLVMIRLanguageFrontendTest {
     }
 
     @Test
-    fun test4() {
+    fun testSwitchCase() {
         val topLevel = Path.of("src", "test", "resources", "llvm")
         val tu =
             TestUtils.analyzeAndGetFirstTU(
@@ -205,6 +205,33 @@ class LLVMIRLanguageFrontendTest {
                     LLVMIRLanguageFrontend.LLVM_EXTENSIONS
                 )
             }
+
+        val main =
+            tu.getDeclarationsByName("main", FunctionDeclaration::class.java).iterator().next()
+        assertNotNull(main)
+
+        // Check that the jump targets are set correctly
+        val brStatement = main.getBodyStatementAs(4, ConditionalBranchStatement::class.java)
+        assertNotNull(brStatement)
+        assertEquals("otherwise", brStatement.defaultTargetLabel.name)
+        assertEquals("onzero", brStatement.conditionalTargets[0].second.name)
+        assertEquals("onone", brStatement.conditionalTargets[1].second.name)
+
+        // Check that the condition is set correctly
+        val brCondition1 = brStatement.conditionalTargets[0].first
+        assertEquals(BinaryOperator::class, brCondition1::class)
+        assertEquals("==", (brCondition1 as BinaryOperator).operatorCode)
+        assertEquals(0L, (brCondition1.rhs as Literal<*>).value as Long)
+        assertEquals("a", (brCondition1.lhs as DeclaredReferenceExpression).name)
+        // TODO: brCondition1.lhs.refersTo is null. Why?? Is that expected/intended?
+
+        // Check that the condition is set correctly
+        val brCondition2 = brStatement.conditionalTargets[1].first
+        assertEquals(BinaryOperator::class, brCondition1::class)
+        assertEquals("==", (brCondition2 as BinaryOperator).operatorCode)
+        assertEquals(1L, (brCondition2.rhs as Literal<*>).value as Long)
+        assertEquals("a", (brCondition2.lhs as DeclaredReferenceExpression).name)
+        // TODO: brCondition2.lhs.refersTo is null. Why?? Is that expected/intended?
     }
 
     @Test
@@ -231,7 +258,7 @@ class LLVMIRLanguageFrontendTest {
         // Test that the types and values of the comparison expression are correct
         val icmpStatement = main.getBodyStatementAs(1, DeclarationStatement::class.java)
         assertNotNull(icmpStatement)
-        val variableDecl = icmpStatement.declarations.get(0) as VariableDeclaration
+        val variableDecl = icmpStatement.declarations[0] as VariableDeclaration
         val comparison = variableDecl.initializer as BinaryOperator
         assertEquals("==", comparison.operatorCode)
         val rhs = (comparison.rhs as Literal<*>)
@@ -246,23 +273,21 @@ class LLVMIRLanguageFrontendTest {
         val brStatement = main.getBodyStatementAs(2, ConditionalBranchStatement::class.java)
         assertNotNull(brStatement)
         assertEquals("IfUnequal", brStatement.defaultTargetLabel.name)
-        assertEquals("IfEqual", brStatement.conditionalTargets.get(0).second.name)
+        assertEquals("IfEqual", brStatement.conditionalTargets[0].second.name)
 
         // Check that the condition is set correctly
-        val brCondition = brStatement.conditionalTargets.get(0).first
+        val brCondition = brStatement.conditionalTargets[0].first
         assertEquals("cond", brCondition.name)
         assertEquals("i1", brCondition.type.typeName)
 
         val elseBranch = brStatement.defaultTargetLabel.subStatement as CompoundStatement
         assertEquals(2, elseBranch.statements.size)
 
-        val ifBranch =
-            brStatement.conditionalTargets.get(0).second.subStatement as CompoundStatement
+        val ifBranch = brStatement.conditionalTargets[0].second.subStatement as CompoundStatement
         assertEquals(2, ifBranch.statements.size)
 
         val ifBranchVariableDecl =
-            (ifBranch.statements.get(0) as DeclarationStatement).declarations.get(0) as
-                VariableDeclaration
+            (ifBranch.statements[0] as DeclarationStatement).declarations[0] as VariableDeclaration
         val ifBranchComp = ifBranchVariableDecl.initializer as BinaryOperator
         assertEquals(">", ifBranchComp.operatorCode)
         assertEquals(CastExpression::class, ifBranchComp.rhs::class)
@@ -278,7 +303,7 @@ class LLVMIRLanguageFrontendTest {
         val declRefExpr = ifBranchCompLhs.expression as DeclaredReferenceExpression
         assertEquals(-3, ((ifBranchCompRhs.expression as Literal<*>).value as Long))
         assertEquals("x", declRefExpr.name)
-        // TODO: declRefExpr.refersTo is null. Why??
+        // TODO: declRefExpr.refersTo is null. Why?? Is that expected/intended?
     }
 
     @Test
