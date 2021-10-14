@@ -245,7 +245,7 @@ class CXXExperimentalFrontend(config: TranslationConfiguration, scopeManager: Sc
             val currentLevel = client_data.getPointer(IntPointer::class.java).get()
             val nextLevel = currentLevel + 1
 
-            println(
+            log.debug(
                 "-".repeat(currentLevel) +
                     " " +
                     clang_getCursorKindSpelling(kind).string +

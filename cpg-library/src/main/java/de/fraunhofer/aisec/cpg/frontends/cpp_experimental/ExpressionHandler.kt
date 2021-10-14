@@ -152,8 +152,6 @@ class ExpressionHandler(lang: CXXExperimentalFrontend) :
 
         val binOp = NodeBuilder.newBinaryOperator(opCode, lang.getCodeFromRawNode(cursor))
 
-        var size = clang_Cursor_getNumArguments(cursor)
-
         visitChildren(
             cursor,
             { lang.expressionHandler.handle(it) },

@@ -49,6 +49,7 @@ class DeclarationHandler(lang: CXXExperimentalFrontend) :
 
     private fun handleDeclaration(cursor: CXCursor): Declaration {
         return when (val kind = clang_getCursorKind(cursor)) {
+            CXCursor_ClassDecl -> handleClassDecl(cursor)
             CXCursor_FunctionDecl -> handleFunctionDecl(cursor)
             CXCursor_VarDecl -> handleVarDecl(cursor)
             CXCursor_ParmDecl -> handleParmVarDecl(cursor)
@@ -57,6 +58,12 @@ class DeclarationHandler(lang: CXXExperimentalFrontend) :
                 Declaration()
             }
         }
+    }
+
+    private fun handleClassDecl(cursor: CXCursor): Declaration {
+        var recordDeclaration = NodeBuilder.newRecordDeclaration("", "", "")
+
+        return recordDeclaration
     }
 
     /**

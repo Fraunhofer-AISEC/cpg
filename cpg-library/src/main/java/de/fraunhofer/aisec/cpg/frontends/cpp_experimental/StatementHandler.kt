@@ -26,7 +26,6 @@
 package de.fraunhofer.aisec.cpg.frontends.cpp_experimental
 
 import de.fraunhofer.aisec.cpg.frontends.Handler
-import de.fraunhofer.aisec.cpg.frontends.cpp_experimental.CXXExperimentalFrontend.Companion.visitChildren
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder
 import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
@@ -34,7 +33,6 @@ import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import org.bytedeco.llvm.clang.CXClientData
 import org.bytedeco.llvm.clang.CXCursor
 import org.bytedeco.llvm.clang.CXCursorVisitor
-import org.bytedeco.llvm.global.clang
 import org.bytedeco.llvm.global.clang.*
 
 class StatementHandler(lang: CXXExperimentalFrontend) :
@@ -59,10 +57,20 @@ class StatementHandler(lang: CXXExperimentalFrontend) :
     private fun handleCompoundStatement(cursor: CXCursor): CompoundStatement {
         val compoundStatement = NodeBuilder.newCompoundStatement("")
 
-        visitChildren(
+        // loop through all child statements
+        clang_visitChildren(
             cursor,
-            { handle(it) },
-            { it, _ -> compoundStatement.addStatement(it) },
+            object : CXCursorVisitor() {
+                override fun call(
+                    child: CXCursor,
+                    parent: CXCursor?,
+                    client_data: CXClientData?
+                ): Int {
+                    compoundStatement.addStatement(handle(child))
+                    return CXChildVisit_Continue
+                }
+            },
+            null
         )
 
         return compoundStatement
@@ -79,18 +87,9 @@ class StatementHandler(lang: CXXExperimentalFrontend) :
                     parent: CXCursor?,
                     client_data: CXClientData?
                 ): Int {
-                    println(
-                        "R: Cursor '" +
-                            clang.clang_getCursorSpelling(child).string +
-                            "' of kind '" +
-                            clang.clang_getCursorKindSpelling(clang_getCursorKind(child)).string +
-                            "'"
-                    )
+                    returnStatement.returnValue = lang.expressionHandler.handle(child)
 
-                    val expr = lang.expressionHandler.handle(child)
-                    returnStatement.returnValue = expr
-
-                    return clang.CXChildVisit_Continue
+                    return CXChildVisit_Continue
                 }
             },
             null
@@ -113,20 +112,23 @@ class StatementHandler(lang: CXXExperimentalFrontend) :
         println(size)
         println(type.string)
 
-        visitChildren(
+        clang_visitChildren(
             cursor,
-            {
-                println("inside handleDeclStmt pre-handle")
-                val expr = lang.declarationHandler.handle(it)
-                println("inside handleDeclStmt post-handle")
-                expr
+            object : CXCursorVisitor() {
+                override fun call(
+                    child: CXCursor,
+                    parent: CXCursor?,
+                    client_data: CXClientData?
+                ): Int {
+                    val decl = lang.declarationHandler.handle(child)
+
+                    stmt.addToPropertyEdgeDeclaration(decl)
+                    lang.scopeManager.addDeclaration(decl)
+
+                    return CXChildVisit_Continue
+                }
             },
-            { it, _ ->
-                println("inside handleDeclStmt pre-add")
-                stmt.addToPropertyEdgeDeclaration(it)
-                lang.scopeManager.addDeclaration(it)
-                println("inside handleDeclStmt post-add")
-            },
+            null
         )
 
         return stmt

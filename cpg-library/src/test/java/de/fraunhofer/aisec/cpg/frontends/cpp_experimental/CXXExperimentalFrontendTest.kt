@@ -98,6 +98,21 @@ class CXXExperimentalFrontendTest {
     }
 
     @Test
+    fun testDeclarations2() {
+        val file = File("src/test/resources/declstmt2.cpp")
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.unregisterLanguage(CXXLanguageFrontend::class.java)
+                it.registerLanguage(
+                    CXXExperimentalFrontend::class.java,
+                    CXXLanguageFrontend.CXX_EXTENSIONS
+                )
+            }
+
+        assertNotNull(tu)
+    }
+
+    @Test
     fun testDeclarations() {
         val file = File("src/test/resources/declstmt.cpp")
         val tu =
