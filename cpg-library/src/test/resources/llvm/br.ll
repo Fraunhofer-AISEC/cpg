@@ -8,7 +8,12 @@ define i32 @main() {   ; i32()*
   br i1 %cond, label %IfEqual, label %IfUnequal
 
 IfEqual:
+  %condUnsigned = icmp ugt i32 %x, -3
+  br i1 %cond, label %Target2, label %IfUnequal
+
+Target2:
   ret i32 1
+
 IfUnequal:
   %y = mul i32 %x, 32768
   br label %randomTarget

@@ -673,11 +673,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             // if(op) then {label1} else {label2}
             val ifStatement =
                 NodeBuilder.newConditionalBranchStatement(lang.getCodeFromRawNode(instr))
-            val condition =
-                getOperandValueAtIndex(
-                    instr,
-                    0
-                ) // TODO: Check if the type is correct here (expected: i1)
+            val condition = getOperandValueAtIndex(instr, 0)
             val label1Name = LLVMGetValueName(LLVMGetOperand(instr, 1)).string
 
             // Set the default branch ("else")
@@ -842,15 +838,9 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
     ): Statement {
         val lhs = LLVMGetValueName(instr).string
 
-        var op1Type = LLVMPrintTypeToString(LLVMTypeOf(LLVMGetOperand(instr, 0))).string
         val op1 = getOperandValueAtIndex(instr, 0)
-        if (unsigned) op1Type = "u$op1Type" // TODO: Fix this
-        val t1 = TypeParser.createFrom(op1Type, true)
-
-        var op2Type = LLVMPrintTypeToString(LLVMTypeOf(LLVMGetOperand(instr, 1))).string
         val op2 = getOperandValueAtIndex(instr, 1)
-        if (unsigned) op2Type = "u$op2Type" // TODO: Fix this!
-        val t2 = TypeParser.createFrom(op2Type, true)
+        var t1 = op1.type
 
         val binaryOperator: Expression
         var binOpUnordered: BinaryOperator? = null
@@ -886,13 +876,23 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             // Resulting statement: lhs = op1 <op> op2.
             binaryOperator = NodeBuilder.newBinaryOperator(op, lang.getCodeFromRawNode(instr))
 
-            if (unsigned)
-                binaryOperator.lhs = NodeBuilder.newCastExpression(lang.getCodeFromRawNode(instr))
-            else binaryOperator.lhs = op1
+            if (unsigned) {
+                val op1Type = "u${op1.type.typeName}"
+                t1 = TypeParser.createFrom(op1Type, true)
+                val castExprLhs = NodeBuilder.newCastExpression(lang.getCodeFromRawNode(instr))
+                castExprLhs.castType = t1
+                castExprLhs.expression = op1
+                binaryOperator.lhs = castExprLhs
 
-            if (unsigned)
-                binaryOperator.rhs = NodeBuilder.newCastExpression(lang.getCodeFromRawNode(instr))
-            else binaryOperator.rhs = op2
+                val op2Type = "u${op2.type.typeName}"
+                val castExprRhs = NodeBuilder.newCastExpression(lang.getCodeFromRawNode(instr))
+                castExprRhs.castType = TypeParser.createFrom(op2Type, true)
+                castExprRhs.expression = op2
+                binaryOperator.rhs = castExprRhs
+            } else {
+                binaryOperator.lhs = op1
+                binaryOperator.rhs = op2
+            }
 
             if (unordered) {
                 // Special case for floating point comparisons which check if a value is "unordered

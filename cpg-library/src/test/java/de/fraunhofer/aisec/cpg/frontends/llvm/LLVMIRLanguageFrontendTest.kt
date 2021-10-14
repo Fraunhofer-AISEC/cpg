@@ -36,6 +36,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
+import de.fraunhofer.aisec.cpg.graph.types.TypeParser
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
 import java.nio.file.Path
 import kotlin.test.*
@@ -227,6 +228,20 @@ class LLVMIRLanguageFrontendTest {
             tu.getDeclarationsByName("main", FunctionDeclaration::class.java).iterator().next()
         assertNotNull(main)
 
+        // Test that the types and values of the comparison expression are correct
+        val icmpStatement = main.getBodyStatementAs(1, DeclarationStatement::class.java)
+        assertNotNull(icmpStatement)
+        val variableDecl = icmpStatement.declarations.get(0) as VariableDeclaration
+        val comparison = variableDecl.initializer as BinaryOperator
+        assertEquals("==", comparison.operatorCode)
+        val rhs = (comparison.rhs as Literal<*>)
+        val lhs = (comparison.lhs as DeclaredReferenceExpression).refersTo as VariableDeclaration
+        assertEquals(10L, (rhs.value as Long))
+        assertEquals(TypeParser.createFrom("i32", true), rhs.type)
+        assertEquals("x", (comparison.lhs as DeclaredReferenceExpression).name)
+        assertEquals("x", lhs.name)
+        assertEquals(TypeParser.createFrom("i32", true), lhs.type)
+
         // Check that the jump targets are set correctly
         val brStatement = main.getBodyStatementAs(2, ConditionalBranchStatement::class.java)
         assertNotNull(brStatement)
@@ -238,12 +253,32 @@ class LLVMIRLanguageFrontendTest {
         assertEquals("cond", brCondition.name)
         assertEquals("i1", brCondition.type.typeName)
 
-        val ifBranch =
-            brStatement.conditionalTargets.get(0).second.subStatement as CompoundStatement
-        assertEquals(1, ifBranch.statements.size)
-
         val elseBranch = brStatement.defaultTargetLabel.subStatement as CompoundStatement
         assertEquals(2, elseBranch.statements.size)
+
+        val ifBranch =
+            brStatement.conditionalTargets.get(0).second.subStatement as CompoundStatement
+        assertEquals(2, ifBranch.statements.size)
+
+        val ifBranchVariableDecl =
+            (ifBranch.statements.get(0) as DeclarationStatement).declarations.get(0) as
+                VariableDeclaration
+        val ifBranchComp = ifBranchVariableDecl.initializer as BinaryOperator
+        assertEquals(">", ifBranchComp.operatorCode)
+        assertEquals(CastExpression::class, ifBranchComp.rhs::class)
+        assertEquals(CastExpression::class, ifBranchComp.lhs::class)
+
+        val ifBranchCompRhs = ifBranchComp.rhs as CastExpression
+        assertEquals(TypeParser.createFrom("ui32", true), ifBranchCompRhs.castType)
+        assertEquals(TypeParser.createFrom("ui32", true), ifBranchCompRhs.type)
+        val ifBranchCompLhs = ifBranchComp.lhs as CastExpression
+        assertEquals(TypeParser.createFrom("ui32", true), ifBranchCompLhs.castType)
+        assertEquals(TypeParser.createFrom("ui32", true), ifBranchCompLhs.type)
+
+        val declRefExpr = ifBranchCompLhs.expression as DeclaredReferenceExpression
+        assertEquals(-3, ((ifBranchCompRhs.expression as Literal<*>).value as Long))
+        assertEquals("x", declRefExpr.name)
+        // TODO: declRefExpr.refersTo is null. Why??
     }
 
     @Test
