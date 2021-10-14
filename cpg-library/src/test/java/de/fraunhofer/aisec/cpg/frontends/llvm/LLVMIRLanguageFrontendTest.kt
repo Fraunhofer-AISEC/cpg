@@ -555,4 +555,52 @@ class LLVMIRLanguageFrontendTest {
         assertEquals("a", ref.name)
         assertSame(globalA, ref.refersTo)
     }
+
+    @Test
+    fun testAlloca() {
+        val topLevel = Path.of("src", "test", "resources", "llvm")
+        val tu =
+            TestUtils.analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("alloca.ll").toFile()),
+                topLevel,
+                true
+            ) {
+                it.registerLanguage(
+                    LLVMIRLanguageFrontend::class.java,
+                    LLVMIRLanguageFrontend.LLVM_EXTENSIONS
+                )
+            }
+
+        assertNotNull(tu)
+
+        val main =
+            tu.getDeclarationsByName("main", FunctionDeclaration::class.java).iterator().next()
+        assertNotNull(main)
+
+        // %ptr = alloca i32
+        val ptr =
+            main.getBodyStatementAs(0, DeclarationStatement::class.java)?.singleDeclaration as?
+                VariableDeclaration
+        assertNotNull(ptr)
+
+        val alloca = ptr.initializer as? ArrayCreationExpression
+        assertNotNull(alloca)
+        assertEquals("i32*", alloca.type.typeName)
+
+        // store i32 3, i32* %ptr
+        val store = main.getBodyStatementAs(1, BinaryOperator::class.java)
+        assertNotNull(store)
+        assertEquals("=", store.operatorCode)
+
+        val dereferencePtr = store.lhs as? UnaryOperator
+        assertNotNull(dereferencePtr)
+        assertEquals("*", dereferencePtr.operatorCode)
+        assertEquals("i32", dereferencePtr.type.typeName)
+        assertSame(ptr, (dereferencePtr.input as? DeclaredReferenceExpression)?.refersTo)
+
+        val value = store.rhs as? Literal<*>
+        assertNotNull(value)
+        assertEquals(3L, value.value)
+        assertEquals("i32", value.type.typeName)
+    }
 }

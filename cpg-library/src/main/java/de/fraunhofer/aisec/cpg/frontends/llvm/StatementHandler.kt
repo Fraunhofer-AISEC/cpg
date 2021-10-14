@@ -27,16 +27,13 @@ package de.fraunhofer.aisec.cpg.frontends.llvm
 
 import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder
-import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newConstructExpression
+import de.fraunhofer.aisec.cpg.graph.NodeBuilder.*
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.LabelStatement
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.ArraySubscriptionExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.*
 import java.util.*
 import org.bytedeco.javacpp.IntPointer
@@ -163,14 +160,13 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 return parseBinaryOperator(instr, "^", false, false)
             }
             LLVMAlloca -> {
-                println("alloca instruction")
+                return handleAlloca(instr)
             }
             LLVMLoad -> {
                 return handleLoad(instr)
-                println("load instruction")
             }
             LLVMStore -> {
-                println("store instruction")
+                return handleStore(instr)
             }
             LLVMGetElementPtr -> {
                 return handleGetElementPtr(instr)
@@ -294,6 +290,42 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         return Statement()
     }
 
+    /**
+     * Handles the ['alloca'](https://llvm.org/docs/LangRef.html#alloca-instruction) instruction,
+     * which allocates a defined block of memory. The closest what we have in the graph is the
+     * [ArrayCreationExpression], which creates a fixed sized array, i.e., a block of memory.
+     */
+    private fun handleAlloca(instr: LLVMValueRef): Statement {
+        val array = newArrayCreationExpression(lang.getCodeFromRawNode(instr))
+
+        array.type = lang.typeOf(instr)
+
+        // LLVM is quite forthcoming here. in case the optional length parameter is omitted in the
+        // source code, it will automatically be set to 1
+        val size = getOperandValueAtIndex(instr, 0)
+
+        array.addDimension(size)
+
+        return declarationOrNot(array, instr)
+    }
+
+    /**
+     * Handles the [`store`](https://llvm.org/docs/LangRef.html#store-instruction) instruction. It
+     * stores a particular value at a pointer address. This is the rough equivalent to an assignment
+     * of a de-referenced pointer in C like `*a = 1`.
+     */
+    private fun handleStore(instr: LLVMValueRef): Statement {
+        val binOp = newBinaryOperator("=", lang.getCodeFromRawNode(instr))
+
+        val dereference = newUnaryOperator("*", false, true, "")
+        dereference.input = getOperandValueAtIndex(instr, 1)
+
+        binOp.lhs = dereference
+        binOp.rhs = getOperandValueAtIndex(instr, 0)
+
+        return binOp
+    }
+
     /** Handles comparison operators for integer values. */
     private fun handleIntegerComparison(instr: LLVMValueRef): Statement {
         val cmpPred: String
@@ -374,8 +406,11 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         return parseBinaryOperator(instr, cmpPred, true, false, unordered)
     }
 
+    /**
+     * Handles the [`load`](https://llvm.org/docs/LangRef.html#load-instruction) instruction, which
+     * is basically just a pointer de-reference.
+     */
     private fun handleLoad(instr: LLVMValueRef): Statement {
-        val lhs = LLVMGetValueName(instr).string
         val ref = NodeBuilder.newUnaryOperator("*", false, true, "")
         ref.input = getOperandValueAtIndex(instr, 0)
 
