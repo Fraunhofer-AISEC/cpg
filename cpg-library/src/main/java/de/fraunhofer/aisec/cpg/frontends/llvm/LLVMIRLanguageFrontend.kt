@@ -103,6 +103,7 @@ class LLVMIRLanguageFrontend(config: TranslationConfiguration, scopeManager: Sco
         var global = LLVMGetFirstGlobal(mod)
         while (global != null) {
             val name = LLVMGetValueName(global)
+            // TODO: Get the globals here and store them to the graph!
             println(name.string)
 
             global = LLVMGetNextGlobal(global)

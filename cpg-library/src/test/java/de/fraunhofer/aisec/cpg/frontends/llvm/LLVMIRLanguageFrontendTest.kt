@@ -507,5 +507,35 @@ class LLVMIRLanguageFrontendTest {
                     LLVMIRLanguageFrontend.LLVM_EXTENSIONS
                 )
             }
+
+        assertNotNull(tu)
+
+        val main =
+            tu.getDeclarationsByName("main", FunctionDeclaration::class.java).iterator().next()
+        assertNotNull(main)
+
+        val loadXStatement = main.getBodyStatementAs(1, DeclarationStatement::class.java)
+        assertNotNull(loadXStatement)
+        assertEquals("locX", loadXStatement.singleDeclaration.name)
+        val initXOp =
+            (loadXStatement.singleDeclaration as VariableDeclaration).initializer as UnaryOperator
+        assertEquals("*", initXOp.operatorCode)
+        assertEquals("x", initXOp.input.name)
+        assertEquals("@x = global i32 10", initXOp.input.code)
+        // Currently, we don't have the globals in the graph => It should be null.
+        // TODO: Fix when we have the globals available
+        assertNull((initXOp.input as DeclaredReferenceExpression).refersTo)
+
+        val loadAStatement = main.getBodyStatementAs(2, DeclarationStatement::class.java)
+        assertNotNull(loadAStatement)
+        assertEquals("locA", loadAStatement.singleDeclaration.name)
+        val initAOp =
+            (loadAStatement.singleDeclaration as VariableDeclaration).initializer as UnaryOperator
+        assertEquals("*", initAOp.operatorCode)
+        assertEquals("a", initAOp.input.name)
+        assertEquals("@a = global i32 8", initAOp.input.code)
+        // Currently, we don't have the globals in the graph => It should be null.
+        // TODO: Fix when we have the globals available
+        assertNull((initAOp.input as DeclaredReferenceExpression).refersTo)
     }
 }
