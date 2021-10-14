@@ -106,12 +106,26 @@ class StatementHandler(lang: CXXExperimentalFrontend) :
     private fun handleDeclStmt(cursor: CXCursor): Statement {
         val stmt = NodeBuilder.newDeclarationStatement(lang.getCodeFromRawNode(cursor))
 
+        var size = clang_Cursor_getNumArguments(cursor)
+
+        val type = clang_getTypeSpelling(clang_getCursorType(cursor))
+
+        println(size)
+        println(type.string)
+
         visitChildren(
             cursor,
-            { lang.declarationHandler.handle(it) },
+            {
+                println("inside handleDeclStmt pre-handle")
+                val expr = lang.declarationHandler.handle(it)
+                println("inside handleDeclStmt post-handle")
+                expr
+            },
             { it, _ ->
+                println("inside handleDeclStmt pre-add")
                 stmt.addToPropertyEdgeDeclaration(it)
                 lang.scopeManager.addDeclaration(it)
+                println("inside handleDeclStmt post-add")
             },
         )
 

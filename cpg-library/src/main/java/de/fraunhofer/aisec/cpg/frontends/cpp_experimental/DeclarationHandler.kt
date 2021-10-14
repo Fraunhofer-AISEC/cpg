@@ -42,7 +42,9 @@ class DeclarationHandler(lang: CXXExperimentalFrontend) :
     Handler<Declaration, Pointer, CXXExperimentalFrontend>(::Declaration, lang) {
     init {
         map.put(CXCursor::class.java) { handleDeclaration(it as CXCursor) }
-        map.put(CXTranslationUnit::class.java) { handleTranslationUnit(it as CXTranslationUnit) }
+        map.put(CXTranslationUnit::class.java) {
+            handleTranslationUnitDecl(it as CXTranslationUnit)
+        }
     }
 
     private fun handleDeclaration(cursor: CXCursor): Declaration {
@@ -57,7 +59,12 @@ class DeclarationHandler(lang: CXXExperimentalFrontend) :
         }
     }
 
-    private fun handleTranslationUnit(unit: CXTranslationUnit): Declaration {
+    /**
+     * Handles a
+     * [TranslationUnitDecl](https://clang.llvm.org/doxygen/classclang_1_1TranslationUnitDecl.html)
+     * which represents a translation unit containing all other nodes.
+     */
+    private fun handleTranslationUnitDecl(unit: CXTranslationUnit): Declaration {
         val tu = NodeBuilder.newTranslationUnitDeclaration("", "")
 
         lang.scopeManager.resetToGlobal(tu)
@@ -103,34 +110,29 @@ class DeclarationHandler(lang: CXXExperimentalFrontend) :
 
         lang.scopeManager.enterScope(decl)
 
-        val visitor =
+        clang_visitChildren(
+            cursor,
             object : CXCursorVisitor() {
                 override fun call(
                     child: CXCursor,
                     parent: CXCursor?,
                     client_data: CXClientData?
                 ): Int {
-                    println(
-                        "F: Cursor '" +
-                            clang_getCursorSpelling(child).string +
-                            "' of kind '" +
-                            clang_getCursorKindSpelling(clang_getCursorKind(child)).string +
-                            "'"
-                    )
-
                     val kind = clang_getCursorKind(child)
 
                     if (kind in CXCursor_FirstDecl..CXCursor_LastDecl) {
                         lang.scopeManager.addDeclaration(handle(child))
                     } else if (kind in CXCursor_FirstStmt..CXCursor_LastStmt) {
                         decl.body = lang.statementHandler.handle(child)
+
+                        return CXChildVisit_Break
                     }
 
                     return CXChildVisit_Continue
                 }
-            }
-
-        clang_visitChildren(cursor, visitor, null)
+            },
+            null
+        )
 
         lang.scopeManager.leaveScope(decl)
 
@@ -155,13 +157,18 @@ class DeclarationHandler(lang: CXXExperimentalFrontend) :
         val name = clang_getCursorSpelling(cursor).string
         var type = lang.typeOf(cursor)
 
+        // be aware, that if clang considers the declaration to be "invalid", e.g. if the type is
+        // not known, it will NOT parse the initializer
         var initCursor = clang_Cursor_getVarDeclInitializer(cursor)
+
+        // we need to use clang_Cursor_isNull to check for NULL
         if (clang_Cursor_isNull(initCursor) != 0) {
             initCursor = null
         }
 
         val code = lang.getCodeFromRawNode(cursor)
 
+        // clang defaults back to those types if they are not known, so we try to guess them
         if (type.typeName == "int*" || type.typeName == "int") {
             type = guessType(code, initCursor, name) ?: type
         }
@@ -169,16 +176,6 @@ class DeclarationHandler(lang: CXXExperimentalFrontend) :
         val decl = NodeBuilder.newVariableDeclaration(name, type, code, false)
 
         initCursor?.let { decl.initializer = lang.expressionHandler.handle(it) }
-
-        val size = clang_Cursor_getNumArguments(cursor)
-
-        if (name == "text") {
-            CXXExperimentalFrontend.visitChildren(
-                cursor,
-                { lang.expressionHandler.handle(it) },
-                { it, _ -> println(it) }
-            )
-        }
 
         return decl
     }

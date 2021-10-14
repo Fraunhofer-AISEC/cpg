@@ -1,4 +1,5 @@
 //#include <openssl/ssl.h>
+#include <cstddef>
 
 int main() {
   SSL_CTX* ptr;
@@ -8,7 +9,7 @@ int main() {
   int* d;
 
   std::string text = "some ""text";
-  void* ptr2 = NULL;
+  void* ptr2 = nullptr;
 
   class A {
     int myField;

@@ -29,9 +29,11 @@ import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.frontends.cpp_experimental.CXXExperimentalFrontend.Companion.visitChildren
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newCallExpression
+import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newLiteral
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+import de.fraunhofer.aisec.cpg.graph.types.TypeParser
 import org.bytedeco.llvm.clang.CXClientData
 import org.bytedeco.llvm.clang.CXCursor
 import org.bytedeco.llvm.clang.CXCursorVisitor
@@ -45,14 +47,15 @@ class ExpressionHandler(lang: CXXExperimentalFrontend) :
     }
 
     private fun handleExpression(cursor: CXCursor): Expression {
-        val kind = clang.clang_getCursorKind(cursor)
+        val kind = clang_getCursorKind(cursor)
 
         return when (kind) {
-            clang.CXCursor_UnexposedExpr -> handleUnexposedExpr(cursor)
-            clang.CXCursor_DeclRefExpr -> handleDeclRefExpr(cursor)
-            clang.CXCursor_CallExpr -> handleCallExpr(cursor)
-            clang.CXCursor_IntegerLiteral -> handleIntegerLiteral(cursor)
-            clang.CXCursor_BinaryOperator -> handleBinaryOperator(cursor)
+            CXCursor_UnexposedExpr -> handleUnexposedExpr(cursor)
+            CXCursor_DeclRefExpr -> handleDeclRefExpr(cursor)
+            CXCursor_CallExpr -> handleCallExpr(cursor)
+            CXCursor_IntegerLiteral -> handleIntegerLiteral(cursor)
+            CXCursor_BinaryOperator -> handleBinaryOperator(cursor)
+            CXCursor_CXXNullPtrLiteralExpr -> handleNullptrLiteral(cursor)
             else -> {
                 log.error("Not handling cursor kind {} yet", kind)
                 Expression()
@@ -60,11 +63,21 @@ class ExpressionHandler(lang: CXXExperimentalFrontend) :
         }
     }
 
+    private fun handleNullptrLiteral(cursor: CXCursor): Expression {
+        return newLiteral(
+            null,
+            TypeParser.createFrom("std::nullptr_t", false),
+            lang.getCodeFromRawNode(cursor)
+        )
+    }
+
     private fun handleUnexposedExpr(cursor: CXCursor): Expression {
         var expression: Expression? = null
 
+        var size = clang_Cursor_getNumArguments(cursor)
+
         // just seems to be a simple wrapper
-        clang.clang_visitChildren(
+        clang_visitChildren(
             cursor,
             object : CXCursorVisitor() {
                 override fun call(
@@ -72,15 +85,6 @@ class ExpressionHandler(lang: CXXExperimentalFrontend) :
                     parent: CXCursor?,
                     client_data: CXClientData?
                 ): Int {
-                    println(
-                        "unexposed: Cursor '" +
-                            clang_getCursorSpelling(child).string +
-                            "' of kind '" +
-                            clang.clang_getCursorKindSpelling(clang.clang_getCursorKind(child))
-                                .string +
-                            "'"
-                    )
-
                     expression = handleExpression(child)
 
                     return clang.CXCursor_BreakStmt
@@ -131,8 +135,8 @@ class ExpressionHandler(lang: CXXExperimentalFrontend) :
     }
 
     private fun handleIntegerLiteral(cursor: CXCursor): Expression {
-        val result = clang.clang_Cursor_Evaluate(cursor)
-        val value = clang.clang_EvalResult_getAsInt(result)
+        val result = clang_Cursor_Evaluate(cursor)
+        val value = clang_EvalResult_getAsInt(result)
 
         val literal =
             NodeBuilder.newLiteral(value, lang.typeOf(cursor), lang.getCodeFromRawNode(cursor))
@@ -147,6 +151,8 @@ class ExpressionHandler(lang: CXXExperimentalFrontend) :
         val opCode = ""
 
         val binOp = NodeBuilder.newBinaryOperator(opCode, lang.getCodeFromRawNode(cursor))
+
+        var size = clang_Cursor_getNumArguments(cursor)
 
         visitChildren(
             cursor,
