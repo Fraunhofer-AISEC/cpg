@@ -31,6 +31,7 @@ import de.fraunhofer.aisec.cpg.graph.NodeBuilder.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
+import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
 import org.bytedeco.javacpp.Pointer
 import org.bytedeco.llvm.LLVM.LLVMTypeRef
 import org.bytedeco.llvm.LLVM.LLVMValueRef
@@ -133,16 +134,37 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
             val stmt = lang.statementHandler.handle(bb)
             val labelName = LLVMGetBasicBlockName(bb).string
 
+            // Notice: we have one fundamental challenge here. Basic blocks in LLVM have a flat
+            // hierarchy, meaning that a function has a list of basic blocks, of which one can
+            // be unlabeled and is considered to be the entry. All other blocks need to have
+            // labels and can be reached by branching or jump instructions. If all blocks are
+            // labeled, then the first one is considered to be the entry.
+            //
+            // For our translation into the CPG we translate a basic block into a compound
+            // statement, i.e. a list of statements. However, in the CPG structure, a function
+            // definition does not have an entry, which specifies the first block, but it has a
+            // *body*, which comprises *all* statements within the abstract syntax tree of
+            // that function, hierarchically organized by compound statements. To emulate that, we
+            // take the first basic block as our body and add subsequent blocks as statements to
+            // the body. More specifically, we use the CPG node LabelStatement, which denotes the
+            // use of a label, Its property substatement contains the original basic block, parsed
+            // as a compound statement
+
+            // Take the first block as our body
+            if (functionDeclaration.body == null) functionDeclaration.body = stmt
+
+            // All further numbered basic blocks are then added to the body through its label
+            // (statement)
             if (labelName != "") {
                 if (!lang.labelMap.contains(labelName))
                     lang.labelMap[labelName] = newLabelStatement(labelName)
                 val labelStatement = lang.labelMap[labelName]
                 labelStatement!!.subStatement = stmt
-            }
 
-            // TODO: there are probably more than one basic block in a function, for now just take
-            // one
-            if (functionDeclaration.body == null) functionDeclaration.body = stmt
+                // add the label statement, containing this basic block as a compound statement to
+                // our body (if we have none, which we should)
+                (functionDeclaration.body as? CompoundStatement)?.addStatement(labelStatement)
+            }
 
             bb = LLVMGetNextBasicBlock(bb)
         }

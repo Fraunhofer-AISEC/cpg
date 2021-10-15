@@ -197,6 +197,10 @@ class LLVMIRLanguageFrontend(config: TranslationConfiguration, scopeManager: Sco
     override fun <S : Any?, T : Any?> setComment(s: S, ctx: T) {}
 }
 
+/**
+ * Returns the name / identified of a value, if it is a variable, including the "scope" symbol,
+ * i.e., % for local and @ for global variables.
+ */
 val LLVMValueRef.symbolName: String
     get() {
         val symbol =
@@ -209,12 +213,18 @@ val LLVMValueRef.symbolName: String
         return "$symbol${this.name}"
     }
 
+/** Returns the name of a value using [LLVMGetValueName]. */
 inline val LLVMValueRef.name: String
     get() {
         return LLVMGetValueName(this).string
     }
 
-
+/**
+ * Returns the opcode for an instruction using [LLVMGetInstructionOpcode].
+ *
+ * See also:
+ * [llvm::Instruction::getOpCode()](https://llvm.org/doxygen/classllvm_1_1Instruction.html)
+ */
 inline val LLVMValueRef.opCode: Int
     get() {
         return LLVMGetInstructionOpcode(this)

@@ -231,6 +231,10 @@ class LLVMIRLanguageFrontendTest {
         val brStatement = main.getBodyStatementAs(4, ConditionalBranchStatement::class.java)
         assertNotNull(brStatement)
         assertEquals("otherwise", brStatement.defaultTargetLabel.name)
+
+        var onzeroLabel = brStatement.conditionalTargets[0].second
+        assertEquals("onzero", onzeroLabel.name)
+
         assertEquals("onzero", brStatement.conditionalTargets[0].second.name)
         assertEquals("onone", brStatement.conditionalTargets[1].second.name)
 
