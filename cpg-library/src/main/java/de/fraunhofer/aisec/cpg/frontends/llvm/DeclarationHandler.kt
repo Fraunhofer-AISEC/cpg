@@ -31,7 +31,6 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
-import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import org.bytedeco.javacpp.Pointer
 import org.bytedeco.llvm.LLVM.LLVMTypeRef
 import org.bytedeco.llvm.LLVM.LLVMValueRef
@@ -154,7 +153,6 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
                 functionDeclaration.body = stmt
             } else {
                 // All further labeled basic blocks are then added to the body wrapped in a label
-                // label
                 // statement
                 val labelName = LLVMGetBasicBlockName(bb).string
 
@@ -176,8 +174,6 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
         }
 
         lang.scopeManager.leaveScope(functionDeclaration)
-
-        var test = SubgraphWalker.getAstChildren(functionDeclaration)
 
         return functionDeclaration
     }

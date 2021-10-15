@@ -219,41 +219,54 @@ class LLVMIRLanguageFrontendTest {
             tu.getDeclarationsByName("main", FunctionDeclaration::class.java).iterator().next()
         assertNotNull(main)
 
+        val onzeroLabel = main.getBodyStatementAs(5, LabelStatement::class.java)
+        assertNotNull(onzeroLabel)
+        assertEquals("onzero", onzeroLabel.name)
+        assertTrue(onzeroLabel.subStatement is CompoundStatement)
+
+        val ononeLabel = main.getBodyStatementAs(6, LabelStatement::class.java)
+        assertNotNull(ononeLabel)
+        assertEquals("onone", ononeLabel.name)
+        assertTrue(ononeLabel.subStatement is CompoundStatement)
+
         // Check that the type of %a is i32
         val xorStatement = main.getBodyStatementAs(3, DeclarationStatement::class.java)
         assertNotNull(xorStatement)
-        val xorDecl = xorStatement.singleDeclaration as? VariableDeclaration
-        assertNotNull(xorDecl)
-        assertEquals("a", xorDecl.name)
-        assertEquals("i32", xorDecl.type.typeName)
+        val a = xorStatement.singleDeclaration as? VariableDeclaration
+        assertNotNull(a)
+        assertEquals("a", a.name)
+        assertEquals("i32", a.type.typeName)
 
         // Check that the jump targets are set correctly
         val brStatement = main.getBodyStatementAs(4, ConditionalBranchStatement::class.java)
         assertNotNull(brStatement)
         assertEquals("otherwise", brStatement.defaultTargetLabel.name)
-
-        var onzeroLabel = brStatement.conditionalTargets[0].second
-        assertEquals("onzero", onzeroLabel.name)
-
-        assertEquals("onzero", brStatement.conditionalTargets[0].second.name)
-        assertEquals("onone", brStatement.conditionalTargets[1].second.name)
+        assertSame(onzeroLabel, brStatement.conditionalTargets[0].second)
+        assertSame(ononeLabel, brStatement.conditionalTargets[1].second)
 
         // Check that the condition is set correctly
         val brCondition1 = brStatement.conditionalTargets[0].first
         assertEquals(BinaryOperator::class, brCondition1::class)
         assertEquals("==", (brCondition1 as BinaryOperator).operatorCode)
         assertEquals(0L, (brCondition1.rhs as Literal<*>).value as Long)
-        assertEquals("a", (brCondition1.lhs as DeclaredReferenceExpression).name)
-        assertEquals("i32", (brCondition1.lhs as DeclaredReferenceExpression).type.typeName)
-        // TODO: brCondition1.lhs.refersTo is null. Is that expected/intended?
+
+        var lhs = brCondition1.lhs as? DeclaredReferenceExpression
+        assertNotNull(lhs)
+        assertEquals("a", lhs.name)
+        assertEquals("i32", lhs.type.typeName)
+        assertSame(a, lhs.refersTo)
 
         // Check that the condition is set correctly
         val brCondition2 = brStatement.conditionalTargets[1].first
         assertEquals(BinaryOperator::class, brCondition1::class)
         assertEquals("==", (brCondition2 as BinaryOperator).operatorCode)
         assertEquals(1L, (brCondition2.rhs as Literal<*>).value as Long)
-        assertEquals("a", (brCondition2.lhs as DeclaredReferenceExpression).name)
-        // TODO: brCondition2.lhs.refersTo is null. Is that expected/intended?
+
+        lhs = brCondition2.lhs as? DeclaredReferenceExpression
+        assertNotNull(lhs)
+        assertEquals("a", lhs.name)
+        assertEquals("i32", lhs.type.typeName)
+        assertSame(a, lhs.refersTo)
     }
 
     @Test
