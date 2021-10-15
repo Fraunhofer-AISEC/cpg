@@ -27,14 +27,15 @@ package de.fraunhofer.aisec.cpg.frontends.llvm
 
 import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder
+import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newInitializerListExpression
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newLiteral
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.ConstructExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
+import de.fraunhofer.aisec.cpg.graph.statements.Statement
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.passes.VariableUsageResolver
+import org.bytedeco.javacpp.SizeTPointer
 import org.bytedeco.llvm.LLVM.LLVMValueRef
 import org.bytedeco.llvm.global.LLVM.*
 
@@ -49,19 +50,13 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
     }
 
     private fun handleValue(value: LLVMValueRef): Expression {
-        when (val kind = LLVMGetValueKind(value)) {
-            LLVMConstantStructValueKind -> {
-                return handleConstantStructValue(value)
-            }
-            LLVMConstantIntValueKind -> {
-                return handleConstantInt(value)
-            }
-            LLVMConstantFPValueKind -> {
-                return handleConstantFP(value)
-            }
-            LLVMUndefValueValueKind -> {
-                return handleUndefValue(value)
-            }
+        return when (val kind = LLVMGetValueKind(value)) {
+            LLVMConstantExprValueKind -> handleConstantExprValueKind(value)
+            LLVMConstantStructValueKind -> handleConstantStructValue(value)
+            LLVMConstantDataArrayValueKind -> handleConstantDataArrayValue(value)
+            LLVMConstantIntValueKind -> handleConstantInt(value)
+            LLVMConstantFPValueKind -> handleConstantFP(value)
+            LLVMUndefValueValueKind -> handleUndefValue(value)
             LLVMArgumentValueKind,
             LLVMGlobalVariableValueKind,
             // this is a little tricky. It seems weird, that an instruction value kind turns
@@ -69,9 +64,7 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
             // %var. In this case LLVMGetValueKind will return LLVMInstructionValueKind because
             // it actually points to the instruction where this variable was defined. However,
             // we are only interested in its name and type.
-            LLVMInstructionValueKind -> {
-                return handleReference(value)
-            }
+            LLVMInstructionValueKind -> handleReference(value)
             else -> {
                 log.info(
                     "Not handling value kind {} in handleValue yet. Falling back to the legacy way. Please change",
@@ -120,7 +113,15 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
      * determining the scope of the variable.
      */
     private fun handleReference(valueRef: LLVMValueRef): Expression {
-        val name = LLVMGetValueName(valueRef).string
+        var name = valueRef.name
+        var symbolName = valueRef.symbolName
+
+        // The name could be empty because of an unnamed variable. In this we need to apply some
+        // dirty tricks to get its "name", unless we find a function that returns the slot number
+        if (name == "") {
+            name = lang.guessSlotNumber(valueRef)
+            symbolName = "%$name"
+        }
 
         val type = lang.typeOf(valueRef)
 
@@ -129,13 +130,12 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
         // try to resolve the reference. actually the valueRef is already referring to the resolved
         // variable because we obtain it using LLVMGetOperand, so we just need to look it up in the
         // cache bindings
-        val decl = lang.bindingsCache[valueRef.symbolName]
+        val decl = lang.bindingsCache[symbolName]
 
         if (decl == null) {
-
             // there is something seriously wrong here, if this happens, because all variables need
             // to be declared before use and we _should_ have seen the variable
-            log.warn("Could not resolve reference ${valueRef.symbolName}. This should not happen.")
+            log.warn("Could not resolve reference ${symbolName}. This should not happen.")
         } else {
             ref.refersTo = decl
         }
@@ -173,6 +173,17 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
     }
 
     /**
+     * Handles [constant expressions](https://llvm.org/docs/LangRef.html#constant-expressions). They
+     * are basically constants involving certain operations on other constants. In the future we
+     * might treat them differently in the graph, but for now we basically just parse them as a
+     * regular expression.
+     */
+    private fun handleConstantExprValueKind(value: LLVMValueRef): Expression {
+        // TODO: actually do it
+        return Expression()
+    }
+
+    /**
      * Handles a constant struct value, which belongs to the
      * [complex constants](https://llvm.org/docs/LangRef.html#complex-constants). Its type needs to
      * be a structure type (either identified or literal) and we currently map this to a
@@ -190,11 +201,47 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
         // loop through the operands
         for (i in 0 until LLVMGetNumOperands(value)) {
             // and handle them as expressions themselves
-            val arg = this.handle(LLVMGetOperand(value, i))
+            val arg = this.handle(LLVMGetOperand(value, i)) as? Expression
             expr.addArgument(arg)
         }
 
         return expr
+    }
+
+    /**
+     * Handles a constant array value, which belongs to the
+     * [complex constants](https://llvm.org/docs/LangRef.html#complex-constants). Their element
+     * types and number of elements needs to match the specified array type. We parse the array
+     * contents as an [InitializerListExpression], similar to the C syntax of `int a[] = { 1, 2 }`.
+     *
+     * There is a special case, in which LLVM allows to represented the array as a double-quoted
+     * string, prefixed with `c`. In this case we
+     */
+    private fun handleConstantDataArrayValue(valueRef: LLVMValueRef): Expression {
+        if (LLVMIsConstantString(valueRef) == 1) {
+            val string = LLVMGetAsString(valueRef, SizeTPointer(0)).string
+
+            val literal =
+                newLiteral(string, lang.typeOf(valueRef), lang.getCodeFromRawNode(valueRef))
+
+            return literal
+        }
+
+        val list = newInitializerListExpression(lang.getCodeFromRawNode(valueRef))
+        val arrayType = LLVMTypeOf(valueRef)
+        val length = LLVMGetArrayLength(arrayType)
+
+        val initializers = mutableListOf<Expression>()
+
+        for (i in 0 until length) {
+            val expr = handle(LLVMGetElementAsConstant(valueRef, i)) as Expression
+
+            initializers += expr
+        }
+
+        list.initializers = initializers
+
+        return list
     }
 
     private fun initializeAsUndef(type: Type, code: String): Expression {

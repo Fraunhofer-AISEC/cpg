@@ -433,7 +433,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
      * `getelementptr` allows an (infinite) chain of sub-element access within a single instruction,
      * we need to unwrap those into individual expressions.
      */
-    private fun handleGetElementPtr(instr: LLVMValueRef): Statement {
+    internal fun handleGetElementPtr(instr: LLVMValueRef): Statement {
         val isGetElementPtr = LLVMGetInstructionOpcode(instr) == LLVMGetElementPtr
 
         val numOps: Int
@@ -561,7 +561,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                     )
             }
         }
-        var expr = Expression()
+        var expr: Expression
 
         for (idx: Int in 0 until numOps) {
             val index = indices.get(idx.toLong())
@@ -933,8 +933,16 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
      * [Expression] associated with the instruction.
      */
     private fun declarationOrNot(rhs: Expression, valueRef: LLVMValueRef): Statement {
-        val lhs = valueRef.name
+        var lhs = valueRef.name
+        var symbolName = valueRef.symbolName
 
+        // it could be an unnamed variable
+        if (lhs == "") {
+            lhs = lang.guessSlotNumber(valueRef)
+            symbolName = "%$lhs"
+        }
+
+        // if it is still empty, we probably do not have a left shide
         return if (lhs != "") {
             val decl = VariableDeclaration()
             decl.name = lhs
@@ -944,7 +952,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             lang.scopeManager.addDeclaration(decl)
 
             // add it to our bindings cache
-            lang.bindingsCache[valueRef.symbolName] = decl
+            lang.bindingsCache[symbolName] = decl
 
             val declStatement = DeclarationStatement()
             declStatement.singleDeclaration = decl
@@ -1070,6 +1078,6 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
 
         // there is also LLVMGetOperandUse, which might be of use to us
 
-        return lang.expressionHandler.handle(operand)
+        return lang.expressionHandler.handle(operand) as Expression
     }
 }

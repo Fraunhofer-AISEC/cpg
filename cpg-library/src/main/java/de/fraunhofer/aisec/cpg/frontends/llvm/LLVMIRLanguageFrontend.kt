@@ -195,9 +195,14 @@ class LLVMIRLanguageFrontend(config: TranslationConfiguration, scopeManager: Sco
 
     /** Determines if a struct with [name] exists in the scope. */
     fun isKnownStructTypeName(name: String): Boolean {
-        return !this.scopeManager
+        return this.scopeManager
             .resolve<RecordDeclaration>(this.scopeManager.globalScope, true) { it.name == name }
-            .isEmpty()
+            .isNotEmpty()
+    }
+
+    fun guessSlotNumber(valueRef: LLVMValueRef): String {
+        val code = getCodeFromRawNode(valueRef)
+        return code?.split("=")?.firstOrNull()?.trim()?.trim('%') ?: ""
     }
 }
 

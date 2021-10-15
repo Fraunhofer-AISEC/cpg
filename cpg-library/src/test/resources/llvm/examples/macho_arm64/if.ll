@@ -1,6 +1,7 @@
 source_filename = "test"
 target datalayout = "e-m:e-i64:64-i128:128-n32:64-S128"
 
+@test = constant [11 x i32] [ i32 42, i32 11, i32 74, i32 42, i32 11, i32 74, i32 11, i32 74, i32 1, i32 74, i32 1 ]
 @global_var_100003f94 = constant [11 x i8] c"it was 1!\0A\00"
 @global_var_100003f9f = constant [22 x i8] c"it was something else\00"
 @global_var_100008000 = local_unnamed_addr global i64 4294983548
