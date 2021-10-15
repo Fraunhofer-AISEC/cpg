@@ -881,11 +881,8 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         unsigned: Boolean,
         unordered: Boolean = false
     ): Statement {
-        val lhs = LLVMGetValueName(instr).string
-
         val op1 = getOperandValueAtIndex(instr, 0)
         val op2 = getOperandValueAtIndex(instr, 1)
-        var t1 = op1.type
 
         val binaryOperator: Expression
         var binOpUnordered: BinaryOperator? = null
@@ -923,9 +920,8 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
 
             if (unsigned) {
                 val op1Type = "u${op1.type.typeName}"
-                t1 = TypeParser.createFrom(op1Type, true)
                 val castExprLhs = newCastExpression(lang.getCodeFromRawNode(instr))
-                castExprLhs.castType = t1
+                castExprLhs.castType = TypeParser.createFrom(op1Type, true)
                 castExprLhs.expression = op1
                 binaryOperator.lhs = castExprLhs
 
@@ -958,22 +954,12 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             }
         }
 
-        // TODO: can we merge this with declarationOrNot?
-        val decl = VariableDeclaration()
-        if (listOf("==", "!=", "<", "<=", ">", ">=", "ord", "uno").contains(op)) {
-            decl.type = TypeParser.createFrom("i1", true) // boolean type
-        } else {
-            decl.type = t1 // use the type of op1
-        }
-        decl.name = lhs
-        decl.initializer = if (unordered) binOpUnordered else binaryOperator
+        val declOp = if (unordered) binOpUnordered else binaryOperator
+        val decl = declarationOrNot(declOp!!, instr) as DeclarationStatement
 
         // cache binding
-        lang.bindingsCache[instr.symbolName] = decl
-
-        val declStatement = DeclarationStatement()
-        declStatement.singleDeclaration = decl
-        return declStatement
+        lang.bindingsCache[instr.symbolName] = decl.singleDeclaration as VariableDeclaration
+        return decl
     }
 
     private fun getOperandValueAtIndex(instr: LLVMValueRef, idx: Int): Expression {
