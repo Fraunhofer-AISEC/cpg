@@ -31,6 +31,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
+import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import org.bytedeco.javacpp.Pointer
 import org.bytedeco.llvm.LLVM.LLVMTypeRef
 import org.bytedeco.llvm.LLVM.LLVMValueRef
@@ -131,7 +132,6 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
         var bb = LLVMGetFirstBasicBlock(func)
         while (bb != null) {
             val stmt = lang.statementHandler.handle(bb)
-            val labelName = LLVMGetBasicBlockName(bb).string
 
             // Notice: we have one fundamental challenge here. Basic blocks in LLVM have a flat
             // hierarchy, meaning that a function has a list of basic blocks, of which one can
@@ -150,11 +150,13 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
             // as a compound statement
 
             // Take the first block as our body
-            if (functionDeclaration.body == null) functionDeclaration.body = stmt
+            if (LLVMGetEntryBasicBlock(func) == bb) {
+                functionDeclaration.body = stmt
+            } else {
+                // All further labeled basic blocks are then added to the body through its label
+                // (statement)
+                val labelName = LLVMGetBasicBlockName(bb).string
 
-            // All further numbered basic blocks are then added to the body through its label
-            // (statement)
-            if (labelName != "") {
                 if (!lang.labelMap.contains(labelName))
                     lang.labelMap[labelName] = newLabelStatement(labelName)
                 val labelStatement = lang.labelMap[labelName]
@@ -169,6 +171,8 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
         }
 
         lang.scopeManager.leaveScope(functionDeclaration)
+
+        var test = SubgraphWalker.getAstChildren(functionDeclaration)
 
         return functionDeclaration
     }
@@ -186,7 +190,7 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
      */
     private fun handleStructureType(typeRef: LLVMTypeRef): RecordDeclaration {
         // if this is a literal struct, we will give it a pseudo name
-        var name =
+        val name =
             if (LLVMIsLiteralStruct(typeRef) == 1) {
                 getLiteralStructName(typeRef)
             } else {
