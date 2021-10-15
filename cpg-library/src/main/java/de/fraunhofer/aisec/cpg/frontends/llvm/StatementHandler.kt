@@ -246,7 +246,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 return handleGetElementPtr(instr)
             }
             LLVMInsertValue -> {
-                println("insertvalue instruction")
+                return handleInsertValue(instr)
             }
             LLVMFreeze -> {
                 println("freeze instruction")
@@ -523,6 +523,91 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         }
 
         return declarationOrNot(expr, instr)
+    }
+
+    /**
+     * Handles the [`insertvalue`](https://llvm.org/docs/LangRef.html#insertvalue-instruction)
+     * instruction.
+     *
+     * We use it similar to a constructor and assign the individual sub-elements.
+     */
+    private fun handleInsertValue(instr: LLVMValueRef): Statement {
+        val numOps = LLVMGetNumIndices(instr)
+        val indices = LLVMGetIndices(instr)
+
+        var baseType = lang.typeOf(LLVMGetOperand(instr, 0))
+        val operand = getOperandValueAtIndex(instr, 0)
+        val valueToSet = getOperandValueAtIndex(instr, 1)
+
+        var base = operand
+
+        // Make a copy of the operand
+        var copy = Statement()
+        if (operand !is ConstructExpression) {
+            copy = declarationOrNot(operand, instr)
+            if (copy is DeclarationStatement) {
+                base =
+                    newDeclaredReferenceExpression(
+                        copy.singleDeclaration.name,
+                        (copy.singleDeclaration as VariableDeclaration).type,
+                        lang.getCodeFromRawNode(instr)
+                    )
+            }
+        }
+        var expr = Expression()
+
+        for (idx: Int in 0 until numOps) {
+            val index = indices.get(idx.toLong())
+
+            if (base is ConstructExpression) {
+                if (idx == numOps - 1) {
+                    base.setArgument(index, valueToSet)
+                    return declarationOrNot(operand, instr)
+                }
+                base = base.arguments[index]
+            } else {
+                // otherwise, this is a member field access, where the index denotes the n-th field
+                // in the structure
+                val record = (baseType as? ObjectType)?.recordDeclaration
+
+                // this should not happen at this point, we cannot continue
+                if (record == null) {
+                    log.error(
+                        "Could not find structure type with name {}, cannot continue",
+                        baseType.typeName
+                    )
+                    break
+                }
+
+                log.debug(
+                    "Trying to access a field within the record declaration of {}",
+                    record.name
+                )
+
+                // look for the field
+                val field = record.getField("field_$index")
+
+                // our new base-type is the type of the field
+                baseType = field?.type ?: UnknownType.getUnknownType()
+
+                // construct our member expression
+                expr = newMemberExpression(base, field?.type, field?.name, ".", "")
+                log.info("{}", expr)
+
+                // the current expression is the new base
+                base = expr
+            }
+        }
+
+        val compoundStatement = newCompoundStatement(lang.getCodeFromRawNode(instr))
+
+        val assignment = newBinaryOperator("=", lang.getCodeFromRawNode(instr))
+        assignment.lhs = base
+        assignment.rhs = valueToSet
+        compoundStatement.addStatement(copy)
+        compoundStatement.addStatement(assignment)
+
+        return compoundStatement
     }
 
     /**

@@ -636,7 +636,23 @@ class LLVMIRLanguageFrontendTest {
         val args = (varDecl.initializer as ConstructExpression).arguments
         assertEquals(2, args.size)
         assertEquals(100L, (args[0] as Literal<*>).value as Long)
-        val arg1 = args[1]
-        println(arg1)
+        assertNull((args[1] as Literal<*>).value)
+
+        val compoundStatement = foo.getBodyStatementAs(1, CompoundStatement::class.java)
+        assertNotNull(compoundStatement)
+        // First copy a to b
+        val copyStatement =
+            (compoundStatement.statements[0] as DeclarationStatement).singleDeclaration as
+                VariableDeclaration
+        assertEquals("b", copyStatement.name)
+        assertEquals("literal_i32_i8", copyStatement.type.typeName)
+
+        // Now, we set b.field_1 to 7
+        val assignment = (compoundStatement.statements[1] as BinaryOperator)
+        assertEquals("=", assignment.operatorCode)
+        assertEquals("b", (assignment.lhs as MemberExpression).base.name)
+        assertEquals(".", (assignment.lhs as MemberExpression).operatorCode)
+        assertEquals("field_1", (assignment.lhs as MemberExpression).name)
+        assertEquals(7L, (assignment.rhs as Literal<*>).value as Long)
     }
 }
