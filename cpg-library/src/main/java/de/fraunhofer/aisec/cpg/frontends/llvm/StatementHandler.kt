@@ -30,7 +30,6 @@ import de.fraunhofer.aisec.cpg.graph.NodeBuilder.*
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
-import de.fraunhofer.aisec.cpg.graph.statements.LabelStatement
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.*
@@ -58,11 +57,13 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
      * [VariableDeclaration], with the original instruction wrapped into the
      * [VariableDeclaration.initializer] property.
      *
-     * Currently this wrapping is done in the individual instruction parsing functions, but should
+     * Currently, this wrapping is done in the individual instruction parsing functions, but should
      * be extracted from that, e.g. by routing it through the [DeclarationHandler].
      */
     private fun handleInstruction(instr: LLVMValueRef): Statement {
-        when (LLVMGetInstructionOpcode(instr)) {
+        val opcode = instr.opCode
+
+        when (opcode) {
             LLVMRet -> {
                 val ret = newReturnStatement(lang.getCodeFromRawNode(instr))
 
@@ -100,62 +101,62 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 return fneg
             }
             LLVMAdd -> {
-                return parseBinaryOperator(instr, "+", false, false)
+                return handleBinaryOperator(instr, "+", false)
             }
             LLVMFAdd -> {
-                return parseBinaryOperator(instr, "+", true, false)
+                return handleBinaryOperator(instr, "+", false)
             }
             LLVMSub -> {
-                return parseBinaryOperator(instr, "-", false, false)
+                return handleBinaryOperator(instr, "-", false)
             }
             LLVMFSub -> {
-                return parseBinaryOperator(instr, "-", true, false)
+                return handleBinaryOperator(instr, "-", false)
             }
             LLVMMul -> {
-                return parseBinaryOperator(instr, "*", false, false)
+                return handleBinaryOperator(instr, "*", false)
             }
             LLVMFMul -> {
-                return parseBinaryOperator(instr, "*", true, false)
+                return handleBinaryOperator(instr, "*", false)
             }
             LLVMUDiv -> {
-                return parseBinaryOperator(instr, "+", false, true)
+                return handleBinaryOperator(instr, "+", true)
             }
             LLVMSDiv -> {
-                return parseBinaryOperator(instr, "/", false, false)
+                return handleBinaryOperator(instr, "/", false)
             }
             LLVMFDiv -> {
-                return parseBinaryOperator(instr, "/", true, false)
+                return handleBinaryOperator(instr, "/", false)
             }
             LLVMURem -> {
-                return parseBinaryOperator(instr, "%", false, true)
+                return handleBinaryOperator(instr, "%", true)
             }
             LLVMSRem -> {
                 // TODO: This is not 100% accurate and needs to be handled later or needs a new
                 // operator
-                return parseBinaryOperator(instr, "%", false, false)
+                return handleBinaryOperator(instr, "%", false)
             }
             LLVMFRem -> {
-                return parseBinaryOperator(instr, "%", true, false)
+                return handleBinaryOperator(instr, "%", false)
             }
             LLVMShl -> {
-                return parseBinaryOperator(instr, "<<", false, false)
+                return handleBinaryOperator(instr, "<<", false)
             }
             LLVMLShr -> {
-                return parseBinaryOperator(instr, ">>", false, false)
+                return handleBinaryOperator(instr, ">>", false)
             }
             LLVMAShr -> {
                 // TODO: This is not 100% accurate and needs to be handled later or needs a new
                 // operator
-                return parseBinaryOperator(instr, ">>", false, true)
+                return handleBinaryOperator(instr, ">>", true)
             }
             LLVMAnd -> {
-                return parseBinaryOperator(instr, "&", false, false)
+                return handleBinaryOperator(instr, "&", false)
             }
             LLVMOr -> {
-                return parseBinaryOperator(instr, "|", false, false)
+                return handleBinaryOperator(instr, "|", false)
             }
             LLVMXor -> {
-                return parseBinaryOperator(instr, "^", false, false)
+                return handleBinaryOperator(instr, "^", false)
             }
             LLVMAlloca -> {
                 return handleAlloca(instr)
@@ -280,11 +281,9 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             LLVMCatchSwitch -> {
                 println("catchswitch instruction")
             }
-            else -> {
-                println("Something else")
-            }
         }
 
+        log.error("Not handling instruction opcode {} yet", opcode)
         return Statement()
     }
 
@@ -364,7 +363,8 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             LLVMIntSLE -> cmpPred = "<="
             else -> cmpPred = "unknown"
         }
-        return parseBinaryOperator(instr, cmpPred, false, unsigned)
+
+        return handleBinaryOperator(instr, cmpPred, unsigned)
     }
 
     /** Handles comparison operators for floating point values. */
@@ -412,7 +412,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             }
             else -> cmpPred = "unknown"
         }
-        return parseBinaryOperator(instr, cmpPred, true, false, unordered)
+        return handleBinaryOperator(instr, cmpPred, false, unordered)
     }
 
     /**
@@ -719,26 +719,22 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             val label1Name = LLVMGetValueName(LLVMGetOperand(instr, 1)).string
 
             // Set the default branch ("else")
-            val elseLabelStatement: LabelStatement
-            if (lang.labelMap.contains(label1Name)) {
-                elseLabelStatement = lang.labelMap.get(label1Name)!!
-            } else {
-                elseLabelStatement = newLabelStatement(label1Name)
-                elseLabelStatement.name = label1Name
-                lang.labelMap[label1Name] = elseLabelStatement
-            }
+            val elseLabelStatement =
+                lang.labelMap.computeIfAbsent(label1Name) {
+                    val label = newLabelStatement(label1Name)
+                    label.name = label1Name
+                    label
+                }
             ifStatement.defaultTargetLabel = elseLabelStatement
 
             val label2Name =
                 LLVMGetValueName(LLVMGetOperand(instr, 2)).string // The label of the if branch
-            val thenLabelStatement: LabelStatement
-            if (lang.labelMap.contains(label2Name)) {
-                thenLabelStatement = lang.labelMap.get(label2Name)!!
-            } else {
-                thenLabelStatement = newLabelStatement(label2Name)
-                thenLabelStatement.name = label2Name
-                lang.labelMap[label2Name] = thenLabelStatement
-            }
+            val thenLabelStatement =
+                lang.labelMap.computeIfAbsent(label2Name) {
+                    val label = newLabelStatement(label2Name)
+                    label.name = label2Name
+                    label
+                }
             ifStatement.addConditionalTarget(condition, thenLabelStatement)
 
             return ifStatement
@@ -746,13 +742,14 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             // goto defaultLocation
             val gotoStatement = newGotoStatement(lang.getCodeFromRawNode(instr))
             val defaultLocation = LLVMGetOperand(instr, 0) // The BB of the target
-            val labelStatement: LabelStatement
             val labelName = LLVMGetValueName(defaultLocation).string
-            if (lang.labelMap.contains(labelName)) labelStatement = lang.labelMap.get(labelName)!!
-            else {
-                labelStatement = newLabelStatement(labelName)
-                labelStatement.label = labelName
-            }
+
+            val labelStatement =
+                lang.labelMap.computeIfAbsent(labelName) {
+                    val label = newLabelStatement(labelName)
+                    label.name = labelName
+                    label
+                }
             gotoStatement.labelName = labelName
             gotoStatement.targetLabel = labelStatement
 
@@ -772,14 +769,15 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
 
         val defaultLocation =
             LLVMGetValueName(LLVMGetOperand(instr, 1)).string // The label of the "default" branch
-        val defaultLabelStatement: LabelStatement
-        if (lang.labelMap.contains(defaultLocation)) {
-            defaultLabelStatement = lang.labelMap.get(defaultLocation)!!
-        } else {
-            defaultLabelStatement = newLabelStatement(defaultLocation)
-            defaultLabelStatement.name = defaultLocation
-        }
-        switchStatement.setDefaultTargetLabel(defaultLabelStatement)
+
+        val defaultLabelStatement =
+            lang.labelMap.computeIfAbsent(defaultLocation) {
+                val label = newLabelStatement(defaultLocation)
+                label.name = defaultLocation
+                label
+            }
+
+        switchStatement.defaultTargetLabel = defaultLabelStatement
 
         var idx = 2
         while (idx < numOps) {
@@ -788,13 +786,14 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             binaryOperator.rhs = getOperandValueAtIndex(instr, idx)
             idx++
             val catchLabel = LLVMGetValueName(LLVMGetOperand(instr, idx)).string
-            val catchLabelStatement: LabelStatement
-            if (lang.labelMap.contains(catchLabel)) {
-                catchLabelStatement = lang.labelMap.get(catchLabel)!!
-            } else {
-                catchLabelStatement = newLabelStatement(catchLabel)
-                catchLabelStatement.name = catchLabel
-            }
+
+            val catchLabelStatement =
+                lang.labelMap.computeIfAbsent(catchLabel) {
+                    val label = newLabelStatement(catchLabel)
+                    label.name = catchLabel
+                    label
+                }
+
             switchStatement.addConditionalTarget(binaryOperator, catchLabelStatement)
             idx++
         }
@@ -843,7 +842,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             lang.scopeManager.addDeclaration(decl)
 
             // add it to our bindings cache
-            lang.bindingsCache.put("${valueRef.symbolName}", decl)
+            lang.bindingsCache.put(valueRef.symbolName, decl)
 
             val declStatement = DeclarationStatement()
             declStatement.singleDeclaration = decl
@@ -874,10 +873,9 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         return compound
     }
 
-    private fun parseBinaryOperator(
+    private fun handleBinaryOperator(
         instr: LLVMValueRef,
         op: String,
-        float: Boolean,
         unsigned: Boolean,
         unordered: Boolean = false
     ): Statement {
@@ -887,7 +885,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         val binaryOperator: Expression
         var binOpUnordered: BinaryOperator? = null
 
-        if (op.equals("uno")) {
+        if (op == "uno") {
             // Unordered comparison operand => Replace with a call to isunordered(x, y)
             // Resulting statement: i1 lhs = isordered(op1, op2)
             binaryOperator =
@@ -899,7 +897,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 )
             binaryOperator.addArgument(op1)
             binaryOperator.addArgument(op2)
-        } else if (op.equals("ord")) {
+        } else if (op == "ord") {
             // Ordered comparison operand => Replace with !isunordered(x, y)
             // Resulting statement: i1 lhs = !isordered(op1, op2)
             val unorderedCall =
@@ -959,6 +957,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
 
         // cache binding
         lang.bindingsCache[instr.symbolName] = decl.singleDeclaration as VariableDeclaration
+
         return decl
     }
 
