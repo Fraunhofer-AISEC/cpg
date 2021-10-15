@@ -35,6 +35,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.LabelStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.passes.VariableUsageResolver
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
@@ -198,6 +199,14 @@ class LLVMIRLanguageFrontend(config: TranslationConfiguration, scopeManager: Sco
         return this.scopeManager
             .resolve<RecordDeclaration>(this.scopeManager.globalScope, true) { it.name == name }
             .isNotEmpty()
+    }
+
+    fun getOperandValueAtIndex(instr: LLVMValueRef, idx: Int): Expression {
+        val operand = LLVMGetOperand(instr, idx)
+
+        // there is also LLVMGetOperandUse, which might be of use to us
+
+        return this.expressionHandler.handle(operand) as Expression
     }
 
     fun guessSlotNumber(valueRef: LLVMValueRef): String {

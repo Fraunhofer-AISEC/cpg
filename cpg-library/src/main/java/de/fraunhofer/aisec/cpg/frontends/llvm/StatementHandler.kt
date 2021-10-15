@@ -34,7 +34,6 @@ import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.*
 import java.util.*
-import org.bytedeco.javacpp.IntPointer
 import org.bytedeco.javacpp.Pointer
 import org.bytedeco.llvm.LLVM.LLVMBasicBlockRef
 import org.bytedeco.llvm.LLVM.LLVMValueRef
@@ -69,7 +68,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
 
                 val numOps = LLVMGetNumOperands(instr)
                 if (numOps != 0) {
-                    ret.returnValue = getOperandValueAtIndex(instr, 0)
+                    ret.returnValue = lang.getOperandValueAtIndex(instr, 0)
                 }
 
                 return ret
@@ -97,7 +96,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             }
             LLVMFNeg -> {
                 val fneg = newUnaryOperator("-", false, true, lang.getCodeFromRawNode(instr))
-                fneg.input = getOperandValueAtIndex(instr, 0)
+                fneg.input = lang.getOperandValueAtIndex(instr, 0)
                 return fneg
             }
             LLVMAdd -> {
@@ -168,7 +167,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 return handleStore(instr)
             }
             LLVMGetElementPtr -> {
-                return handleGetElementPtr(instr)
+                return declarationOrNot(lang.expressionHandler.handleGetElementPtr(instr), instr)
             }
             LLVMTrunc -> {
                 println("trunc instruction")
@@ -222,7 +221,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 return parseFunctionCall(instr)
             }
             LLVMSelect -> {
-                return handleSelect(instr)
+                return declarationOrNot(lang.expressionHandler.handleSelect(instr), instr)
             }
             LLVMUserOp1 -> {
                 println("userop1 instruction")
@@ -243,7 +242,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 println("shufflevector instruction")
             }
             LLVMExtractValue -> {
-                return handleGetElementPtr(instr)
+                return declarationOrNot(lang.expressionHandler.handleGetElementPtr(instr), instr)
             }
             LLVMInsertValue -> {
                 return handleInsertValue(instr)
@@ -299,7 +298,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
 
         // LLVM is quite forthcoming here. in case the optional length parameter is omitted in the
         // source code, it will automatically be set to 1
-        val size = getOperandValueAtIndex(instr, 0)
+        val size = lang.getOperandValueAtIndex(instr, 0)
 
         array.addDimension(size)
 
@@ -315,10 +314,10 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         val binOp = newBinaryOperator("=", lang.getCodeFromRawNode(instr))
 
         val dereference = newUnaryOperator("*", false, true, "")
-        dereference.input = getOperandValueAtIndex(instr, 1)
+        dereference.input = lang.getOperandValueAtIndex(instr, 1)
 
         binOp.lhs = dereference
-        binOp.rhs = getOperandValueAtIndex(instr, 0)
+        binOp.rhs = lang.getOperandValueAtIndex(instr, 0)
 
         return binOp
     }
@@ -329,7 +328,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
      */
     private fun handleLoad(instr: LLVMValueRef): Statement {
         val ref = newUnaryOperator("*", false, true, "")
-        ref.input = getOperandValueAtIndex(instr, 0)
+        ref.input = lang.getOperandValueAtIndex(instr, 0)
 
         return declarationOrNot(ref, instr)
     }
@@ -423,116 +422,6 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
     }
 
     /**
-     * Handles the [`getelementptr`](https://llvm.org/docs/LangRef.html#getelementptr-instruction)
-     * instruction and the
-     * [`extractvalue`](https://llvm.org/docs/LangRef.html#extractvalue-instruction) instruction
-     * which works in a similar way.
-     *
-     * We try to convert it either into an [ArraySubscriptionExpression] or an [MemberExpression],
-     * depending whether the accessed variable is a struct or an array. Furthermore, since
-     * `getelementptr` allows an (infinite) chain of sub-element access within a single instruction,
-     * we need to unwrap those into individual expressions.
-     */
-    internal fun handleGetElementPtr(instr: LLVMValueRef): Statement {
-        val isGetElementPtr = LLVMGetInstructionOpcode(instr) == LLVMGetElementPtr
-
-        val numOps: Int
-        val loopStart: Int
-        var indices = IntPointer()
-
-        if (isGetElementPtr) {
-            numOps = LLVMGetNumOperands(instr)
-            loopStart = 1
-        } else {
-            numOps = LLVMGetNumIndices(instr)
-            loopStart = 0
-            indices = LLVMGetIndices(instr)
-        }
-
-        // the first operand is always type that is the basis for the calculation
-        var baseType = lang.typeOf(LLVMGetOperand(instr, 0))
-        var operand = getOperandValueAtIndex(instr, 0)
-
-        // the start
-        var base = operand
-
-        var expr = Expression()
-
-        // loop through all operands / indices
-        for (idx: Int in loopStart until numOps) {
-            val index =
-                if (isGetElementPtr) {
-                    // the second argument is the base address that we start our chain from
-                    operand = getOperandValueAtIndex(instr, idx)
-
-                    // Parse index as int for now only
-                    ((operand as Literal<*>).value as Long).toInt()
-                } else {
-                    indices.get(idx.toLong())
-                }
-
-            // check, if the current base type is a pointer -> then we need to handle this as an
-            // array access
-            if (baseType is PointerType) {
-                val arrayExpr = newArraySubscriptionExpression("")
-                arrayExpr.arrayExpression = base
-                arrayExpr.name = index.toString()
-                arrayExpr.subscriptExpression = operand
-                expr = arrayExpr
-
-                log.info("{}", expr)
-
-                // deference the type to get the new base type
-                baseType = baseType.dereference()
-
-                // the current expression is the new base
-                base = expr
-            } else {
-                // otherwise, this is a member field access, where the index denotes the n-th field
-                // in the structure
-                val record = (baseType as? ObjectType)?.recordDeclaration
-
-                // this should not happen at this point, we cannot continue
-                if (record == null) {
-                    log.error(
-                        "Could not find structure type with name {}, cannot continue",
-                        baseType.typeName
-                    )
-                    break
-                }
-
-                log.debug(
-                    "Trying to access a field within the record declaration of {}",
-                    record.name
-                )
-
-                // look for the field
-                val field = record.getField("field_$index")
-
-                // our new base-type is the type of the field
-                baseType = field?.type ?: UnknownType.getUnknownType()
-
-                // construct our member expression
-                expr = newMemberExpression(base, field?.type, field?.name, ".", "")
-                log.info("{}", expr)
-
-                // the current expression is the new base
-                base = expr
-            }
-        }
-
-        // since getelementpr returns the *address*, whereas extractvalue returns a *value*, we need
-        // to do a final unary & operation
-        if (isGetElementPtr) {
-            val ref = newUnaryOperator("&", false, true, "")
-            ref.input = expr
-            expr = ref
-        }
-
-        return declarationOrNot(expr, instr)
-    }
-
-    /**
      * Handles the [`insertvalue`](https://llvm.org/docs/LangRef.html#insertvalue-instruction)
      * instruction.
      *
@@ -543,8 +432,8 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         val indices = LLVMGetIndices(instr)
 
         var baseType = lang.typeOf(LLVMGetOperand(instr, 0))
-        val operand = getOperandValueAtIndex(instr, 0)
-        val valueToSet = getOperandValueAtIndex(instr, 1)
+        val operand = lang.getOperandValueAtIndex(instr, 0)
+        val valueToSet = lang.getOperandValueAtIndex(instr, 1)
 
         var base = operand
 
@@ -632,9 +521,9 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         val instrStr = lang.getCodeFromRawNode(instr)
         val compoundStatement = newCompoundStatement(instrStr)
         compoundStatement.name = "atomiccmpxchg"
-        val ptr = getOperandValueAtIndex(instr, 0)
-        val cmp = getOperandValueAtIndex(instr, 1)
-        val value = getOperandValueAtIndex(instr, 2)
+        val ptr = lang.getOperandValueAtIndex(instr, 0)
+        val cmp = lang.getOperandValueAtIndex(instr, 1)
+        val value = lang.getOperandValueAtIndex(instr, 2)
 
         val ptrDeref = newUnaryOperator("*", false, true, instrStr)
         ptrDeref.input = ptr
@@ -680,8 +569,8 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         val lhs = LLVMGetValueName(instr).string
         val instrStr = lang.getCodeFromRawNode(instr)
         val operation = LLVMGetAtomicRMWBinOp(instr)
-        val ptr = getOperandValueAtIndex(instr, 0)
-        val value = getOperandValueAtIndex(instr, 1)
+        val ptr = lang.getOperandValueAtIndex(instr, 0)
+        val value = lang.getOperandValueAtIndex(instr, 1)
         val ty = value.type
         val exchOp = newBinaryOperator("=", instrStr)
         exchOp.name = "atomicrmw"
@@ -802,22 +691,12 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         }
     }
 
-    private fun handleSelect(instr: LLVMValueRef): Statement {
-        val cond = getOperandValueAtIndex(instr, 0)
-        val value1 = getOperandValueAtIndex(instr, 1)
-        val value2 = getOperandValueAtIndex(instr, 2)
-
-        val conditionalExpr = newConditionalExpression(cond, value1, value2, value1.type)
-
-        return declarationOrNot(conditionalExpr, instr)
-    }
-
     /** Handles a [`br`](https://llvm.org/docs/LangRef.html#br-instruction) instruction. */
     private fun handleBrStatement(instr: LLVMValueRef): Statement {
         if (LLVMGetNumOperands(instr) == 3) {
             // if(op) then {label1} else {label2}
             val ifStatement = newConditionalBranchStatement(lang.getCodeFromRawNode(instr))
-            val condition = getOperandValueAtIndex(instr, 0)
+            val condition = lang.getOperandValueAtIndex(instr, 0)
             val label1Name = LLVMGetValueName(LLVMGetOperand(instr, 1)).string
 
             // Set the default branch ("else")
@@ -865,7 +744,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         val numOps = LLVMGetNumOperands(instr)
         if (numOps < 2) throw Exception("Switch statement without operand and default branch")
 
-        val operand = getOperandValueAtIndex(instr, 0)
+        val operand = lang.getOperandValueAtIndex(instr, 0)
 
         val switchStatement = newConditionalBranchStatement(lang.getCodeFromRawNode(instr))
 
@@ -885,7 +764,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         while (idx < numOps) {
             val binaryOperator = newBinaryOperator("==", lang.getCodeFromRawNode(instr))
             binaryOperator.lhs = operand
-            binaryOperator.rhs = getOperandValueAtIndex(instr, idx)
+            binaryOperator.rhs = lang.getOperandValueAtIndex(instr, idx)
             idx++
             val catchLabel = LLVMGetValueName(LLVMGetOperand(instr, idx)).string
 
@@ -917,7 +796,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             )
 
         while (param != null) {
-            val operandName = getOperandValueAtIndex(instr, idx)
+            val operandName = lang.getOperandValueAtIndex(instr, idx)
             callExpr.addArgument(operandName)
             param = LLVMGetNextParam(param)
             idx++
@@ -989,8 +868,8 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         unsigned: Boolean,
         unordered: Boolean = false
     ): Statement {
-        val op1 = getOperandValueAtIndex(instr, 0)
-        val op2 = getOperandValueAtIndex(instr, 1)
+        val op1 = lang.getOperandValueAtIndex(instr, 0)
+        val op2 = lang.getOperandValueAtIndex(instr, 1)
 
         val binaryOperator: Expression
         var binOpUnordered: BinaryOperator? = null
@@ -1071,13 +950,5 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         }
 
         return decl
-    }
-
-    private fun getOperandValueAtIndex(instr: LLVMValueRef, idx: Int): Expression {
-        val operand = LLVMGetOperand(instr, idx)
-
-        // there is also LLVMGetOperandUse, which might be of use to us
-
-        return lang.expressionHandler.handle(operand) as Expression
     }
 }

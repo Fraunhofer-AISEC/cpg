@@ -30,11 +30,13 @@ import de.fraunhofer.aisec.cpg.graph.NodeBuilder
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newInitializerListExpression
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newLiteral
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
-import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
+import de.fraunhofer.aisec.cpg.graph.types.PointerType
 import de.fraunhofer.aisec.cpg.graph.types.Type
+import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import de.fraunhofer.aisec.cpg.passes.VariableUsageResolver
+import org.bytedeco.javacpp.IntPointer
 import org.bytedeco.javacpp.SizeTPointer
 import org.bytedeco.llvm.LLVM.LLVMValueRef
 import org.bytedeco.llvm.global.LLVM.*
@@ -179,8 +181,17 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
      * regular expression.
      */
     private fun handleConstantExprValueKind(value: LLVMValueRef): Expression {
-        // TODO: actually do it
-        return Expression()
+        val expr =
+            when (val kind = LLVMGetConstOpcode(value)) {
+                LLVMGetElementPtr -> handleGetElementPtr(value)
+                LLVMSelect -> handleSelect(value)
+                else -> {
+                    log.error("Not handling constant expression of opcode {} yet", kind)
+                    Expression()
+                }
+            }
+
+        return expr
     }
 
     /**
@@ -271,5 +282,132 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
         val type = lang.typeOf(value)
 
         return initializeAsUndef(type, lang.getCodeFromRawNode(value)!!)
+    }
+
+    /**
+     * Handles the [`getelementptr`](https://llvm.org/docs/LangRef.html#getelementptr-instruction)
+     * instruction and the
+     * [`extractvalue`](https://llvm.org/docs/LangRef.html#extractvalue-instruction) instruction
+     * which works in a similar way.
+     *
+     * We try to convert it either into an [ArraySubscriptionExpression] or an [MemberExpression],
+     * depending whether the accessed variable is a struct or an array. Furthermore, since
+     * `getelementptr` allows an (infinite) chain of sub-element access within a single instruction,
+     * we need to unwrap those into individual expressions.
+     */
+    internal fun handleGetElementPtr(instr: LLVMValueRef): Expression {
+        val isGetElementPtr =
+            LLVMGetInstructionOpcode(instr) == LLVMGetElementPtr ||
+                LLVMGetConstOpcode(instr) == LLVMGetElementPtr
+
+        val numOps: Int
+        val loopStart: Int
+        var indices = IntPointer()
+
+        if (isGetElementPtr) {
+            numOps = LLVMGetNumOperands(instr)
+            loopStart = 1
+        } else {
+            numOps = LLVMGetNumIndices(instr)
+            loopStart = 0
+            indices = LLVMGetIndices(instr)
+        }
+
+        // the first operand is always type that is the basis for the calculation
+        var baseType = lang.typeOf(LLVMGetOperand(instr, 0))
+        var operand = lang.getOperandValueAtIndex(instr, 0)
+
+        // the start
+        var base = operand
+
+        var expr = Expression()
+
+        // loop through all operands / indices
+        for (idx: Int in loopStart until numOps) {
+            val index =
+                if (isGetElementPtr) {
+                    // the second argument is the base address that we start our chain from
+                    operand = lang.getOperandValueAtIndex(instr, idx)
+
+                    // Parse index as int for now only
+                    ((operand as Literal<*>).value as Long).toInt()
+                } else {
+                    indices.get(idx.toLong())
+                }
+
+            // check, if the current base type is a pointer -> then we need to handle this as an
+            // array access
+            if (baseType is PointerType) {
+                val arrayExpr = NodeBuilder.newArraySubscriptionExpression("")
+                arrayExpr.arrayExpression = base
+                arrayExpr.name = index.toString()
+                arrayExpr.subscriptExpression = operand
+                expr = arrayExpr
+
+                log.info("{}", expr)
+
+                // deference the type to get the new base type
+                baseType = baseType.dereference()
+
+                // the current expression is the new base
+                base = expr
+            } else {
+                // otherwise, this is a member field access, where the index denotes the n-th field
+                // in the structure
+                val record = (baseType as? ObjectType)?.recordDeclaration
+
+                // this should not happen at this point, we cannot continue
+                if (record == null) {
+                    log.error(
+                        "Could not find structure type with name {}, cannot continue",
+                        baseType.typeName
+                    )
+                    break
+                }
+
+                log.debug(
+                    "Trying to access a field within the record declaration of {}",
+                    record.name
+                )
+
+                // look for the field
+                val field = record.getField("field_$index")
+
+                // our new base-type is the type of the field
+                baseType = field?.type ?: UnknownType.getUnknownType()
+
+                // construct our member expression
+                expr = NodeBuilder.newMemberExpression(base, field?.type, field?.name, ".", "")
+                log.info("{}", expr)
+
+                // the current expression is the new base
+                base = expr
+            }
+        }
+
+        // since getelementpr returns the *address*, whereas extractvalue returns a *value*, we need
+        // to do a final unary & operation
+        if (isGetElementPtr) {
+            val ref = NodeBuilder.newUnaryOperator("&", false, true, "")
+            ref.input = expr
+            expr = ref
+        }
+
+        return expr
+    }
+
+    /**
+     * Handles the [`select`](https://llvm.org/docs/LangRef.html#i-select) instruction, which
+     * behaves like a [ConditionalExpression].
+     */
+    fun handleSelect(instr: LLVMValueRef): Expression {
+        val cond = lang.getOperandValueAtIndex(instr, 0)
+        val value1 = lang.getOperandValueAtIndex(instr, 1)
+        val value2 = lang.getOperandValueAtIndex(instr, 2)
+
+        val conditionalExpr =
+            NodeBuilder.newConditionalExpression(cond, value1, value2, value1.type)
+
+        return conditionalExpr
     }
 }
