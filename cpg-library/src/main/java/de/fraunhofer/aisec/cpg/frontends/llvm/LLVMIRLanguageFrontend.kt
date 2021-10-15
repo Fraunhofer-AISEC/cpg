@@ -209,7 +209,13 @@ val LLVMValueRef.symbolName: String
         return "$symbol${this.name}"
     }
 
-private inline val LLVMValueRef.name: String
+inline val LLVMValueRef.name: String
     get() {
         return LLVMGetValueName(this).string
+    }
+
+
+inline val LLVMValueRef.opCode: Int
+    get() {
+        return LLVMGetInstructionOpcode(this)
     }

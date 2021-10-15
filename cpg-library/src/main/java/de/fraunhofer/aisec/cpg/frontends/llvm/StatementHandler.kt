@@ -62,7 +62,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
      * be extracted from that, e.g. by routing it through the [DeclarationHandler].
      */
     private fun handleInstruction(instr: LLVMValueRef): Statement {
-        when (LLVMGetInstructionOpcode(instr)) {
+        when (instr.opCode) {
             LLVMRet -> {
                 val ret = newReturnStatement(lang.getCodeFromRawNode(instr))
 
