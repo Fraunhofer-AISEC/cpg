@@ -58,26 +58,21 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
         }
     }
 
+    /**
+     * Handles parsing of [global variables](https://llvm.org/docs/LangRef.html#global-variables).
+     */
     private fun handleGlobal(valueRef: LLVMValueRef): Declaration {
         val name = LLVMGetValueName(valueRef).string
 
-        // this would return the non-pointer type, but i think we need the pointer type
-        // val type = lang.typeFrom(LLVMGlobalGetValueType(valueRef))
-
+        // beware, that globals are always pointers to the type they specify. This already returns
+        // the pointer type
         val type = lang.typeOf(valueRef)
 
         val variableDeclaration =
             newVariableDeclaration(name, type, lang.getCodeFromRawNode(valueRef), false)
 
-        val symbol =
-            if (LLVMGetValueKind(valueRef) == LLVMGlobalVariableValueKind) {
-                "@"
-            } else {
-                "%"
-            }
-
         // cache binding
-        lang.bindingsCache["$symbol$name"] = variableDeclaration
+        lang.bindingsCache[valueRef.symbolName] = variableDeclaration
 
         val size = LLVMGetNumOperands(valueRef)
         // the first operand (if it exists) is an initializer
@@ -152,8 +147,10 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
             if (LLVMGetEntryBasicBlock(func) == bb) {
                 functionDeclaration.body = stmt
             } else {
-                // All further labeled basic blocks are then added to the body wrapped in a label
+                // All further basic blocks are then added to the body wrapped in a label
                 // statement
+                // TODO: it seems that blocks are assigned an implicit counter-based label if it is
+                // not specified
                 val labelName = LLVMGetBasicBlockName(bb).string
 
                 val labelStatement =
@@ -181,13 +178,13 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
     /**
      * Handles the parsing of [structure types](https://llvm.org/docs/LangRef.html#structure-types).
      * Member fields of structs in LLVM IR do not have names, so we need to assign dummy names for
-     * easier reading, such s `field0`.
+     * easier reading, such s `field_0`.
      *
      * there are two different types of structs:
      * - identified structs, which have a name are explicitly declared
      * - literal structs, which do not have a name, but are structurally unique To emulate this
-     * uniqueness, we create a RecordDeclaration for each literal struct and name it according to
-     * its element types.
+     * uniqueness, we create a [RecordDeclaration] for each literal struct and name it according to
+     * its element types (see [getLiteralStructName]).
      */
     private fun handleStructureType(typeRef: LLVMTypeRef): RecordDeclaration {
         // if this is a literal struct, we will give it a pseudo name
@@ -235,6 +232,11 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
         return record
     }
 
+    /**
+     * A small internal helper function to retrieve a unique name for literal structs. The idea is
+     * that, because they are unique according to their structure layout, we can commonly refer to
+     * two literal structures with the same layout by the same name.
+     */
     private fun getLiteralStructName(typeRef: LLVMTypeRef): String {
         var name = "literal"
 

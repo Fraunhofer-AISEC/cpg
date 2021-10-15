@@ -27,7 +27,6 @@ package de.fraunhofer.aisec.cpg_vis_neo4j
 
 import de.fraunhofer.aisec.cpg.*
 import de.fraunhofer.aisec.cpg.frontends.golang.GoLanguageFrontend
-import de.fraunhofer.aisec.cpg.frontends.llvm.LLVMIRLanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.typescript.TypeScriptLanguageFrontend
 import java.io.File

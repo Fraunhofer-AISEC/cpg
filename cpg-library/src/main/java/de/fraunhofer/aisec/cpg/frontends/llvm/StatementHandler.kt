@@ -334,84 +334,91 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         return declarationOrNot(ref, instr)
     }
 
-    /** Handles comparison operators for integer values. */
+    /**
+     * Handles the [`icmp`](https://llvm.org/docs/LangRef.html#icmp-instruction) instruction for
+     * comparing integer values.
+     */
     private fun handleIntegerComparison(instr: LLVMValueRef): Statement {
-        val cmpPred: String
         var unsigned = false
-        when (LLVMGetICmpPredicate(instr)) {
-            LLVMIntEQ -> cmpPred = "=="
-            LLVMIntNE -> cmpPred = "!="
-            LLVMIntUGT -> {
-                cmpPred = ">"
-                unsigned = true
+        val cmpPred =
+            when (LLVMGetICmpPredicate(instr)) {
+                LLVMIntEQ -> "=="
+                LLVMIntNE -> "!="
+                LLVMIntUGT -> {
+                    unsigned = true
+                    ">"
+                }
+                LLVMIntUGE -> {
+                    unsigned = true
+                    ">="
+                }
+                LLVMIntULT -> {
+                    unsigned = true
+                    "<"
+                }
+                LLVMIntULE -> {
+                    unsigned = true
+                    "<="
+                }
+                LLVMIntSGT -> ">"
+                LLVMIntSGE -> ">="
+                LLVMIntSLT -> "<"
+                LLVMIntSLE -> "<="
+                else -> "unknown"
             }
-            LLVMIntUGE -> {
-                cmpPred = ">="
-                unsigned = true
-            }
-            LLVMIntULT -> {
-                cmpPred = "<"
-                unsigned = true
-            }
-            LLVMIntULE -> {
-                cmpPred = "<="
-                unsigned = true
-            }
-            LLVMIntSGT -> cmpPred = ">"
-            LLVMIntSGE -> cmpPred = ">="
-            LLVMIntSLT -> cmpPred = "<"
-            LLVMIntSLE -> cmpPred = "<="
-            else -> cmpPred = "unknown"
-        }
 
         return handleBinaryOperator(instr, cmpPred, unsigned)
     }
 
-    /** Handles comparison operators for floating point values. */
+    /**
+     * Handles the [`fcmp`](https://llvm.org/docs/LangRef.html#fcmp-instruction) instruction for
+     * comparing floating point values.
+     */
     private fun handleFloatComparison(instr: LLVMValueRef): Statement {
-        val cmpPred: String
         var unordered = false
-        when (LLVMGetICmpPredicate(instr)) {
-            LLVMRealPredicateFalse -> {
-                return newLiteral(false, TypeParser.createFrom("i1", true), "false")
+        val cmpPred =
+            when (LLVMGetFCmpPredicate(instr)) {
+                LLVMRealPredicateFalse -> {
+                    return newLiteral(false, TypeParser.createFrom("i1", true), "false")
+                }
+                LLVMRealOEQ -> "=="
+                LLVMRealOGT -> ">"
+                LLVMRealOGE -> ">="
+                LLVMRealOLT -> "<"
+                LLVMRealOLE -> "<="
+                LLVMRealONE -> "!="
+                LLVMRealORD -> "ord"
+                LLVMRealUNO -> "uno"
+                LLVMRealUEQ -> {
+                    unordered = true
+                    "=="
+                }
+                LLVMRealUGT -> {
+                    unordered = true
+                    ">"
+                }
+                LLVMRealUGE -> {
+                    unordered = true
+                    ">="
+                }
+                LLVMRealULT -> {
+                    unordered = true
+                    "<"
+                }
+                LLVMRealULE -> {
+                    unordered = true
+                    "<="
+                }
+                LLVMRealUNE -> {
+                    unordered = true
+                    "!="
+                }
+                LLVMRealPredicateTrue -> {
+                    return newLiteral(true, TypeParser.createFrom("i1", true), "true")
+                }
+                else -> "unknown"
             }
-            LLVMRealOEQ -> cmpPred = "=="
-            LLVMRealOGT -> cmpPred = ">"
-            LLVMRealOGE -> cmpPred = ">="
-            LLVMRealOLT -> cmpPred = "<"
-            LLVMRealOLE -> cmpPred = "<="
-            LLVMRealONE -> cmpPred = "!="
-            LLVMRealORD -> cmpPred = "ord"
-            LLVMRealUNO -> cmpPred = "uno"
-            LLVMRealUEQ -> {
-                cmpPred = "=="
-                unordered = true
-            }
-            LLVMRealUGT -> {
-                cmpPred = ">"
-                unordered = true
-            }
-            LLVMRealUGE -> {
-                cmpPred = ">="
-                unordered = true
-            }
-            LLVMRealULT -> {
-                cmpPred = "<"
-                unordered = true
-            }
-            LLVMRealULE -> {
-                cmpPred = "<="
-                unordered = true
-            }
-            LLVMRealUNE -> {
-                cmpPred = "!="
-                unordered = true
-            }
-            LLVMRealPredicateTrue -> {
-                return newLiteral(true, TypeParser.createFrom("i1", true), "true")
-            }
-            else -> cmpPred = "unknown"
-        }
+
         return handleBinaryOperator(instr, cmpPred, false, unordered)
     }
 
@@ -921,12 +928,12 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
 
     /**
      * Most instructions in LLVM have a variable assignment as part of their instruction. Since LLVM
-     * IR is SSA, we need to declare a new variable in this case, which is named according to [lhs].
-     * In case [lhs] is an empty string, the variable assignment is optional, and we directly return
-     * the [Expression] associated with the instruction.
+     * IR is SSA, we need to declare a new variable in this case, which is named according to
+     * [valueRef]. In case the variable assignment is optional, and we directly return the
+     * [Expression] associated with the instruction.
      */
     private fun declarationOrNot(rhs: Expression, valueRef: LLVMValueRef): Statement {
-        val lhs = LLVMGetValueName(valueRef).string
+        val lhs = valueRef.name
 
         return if (lhs != "") {
             val decl = VariableDeclaration()
@@ -937,7 +944,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             lang.scopeManager.addDeclaration(decl)
 
             // add it to our bindings cache
-            lang.bindingsCache.put(valueRef.symbolName, decl)
+            lang.bindingsCache[valueRef.symbolName] = decl
 
             val declStatement = DeclarationStatement()
             declStatement.singleDeclaration = decl
