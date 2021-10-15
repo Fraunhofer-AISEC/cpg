@@ -28,10 +28,12 @@ package de.fraunhofer.aisec.cpg.frontends.llvm
 import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newLiteral
+import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ConstructExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
+import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.passes.VariableUsageResolver
 import org.bytedeco.llvm.LLVM.LLVMValueRef
 import org.bytedeco.llvm.global.LLVM.*
@@ -56,6 +58,9 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
             }
             LLVMConstantFPValueKind -> {
                 return handleConstantFP(value)
+            }
+            LLVMUndefValueValueKind -> {
+                return handleUndefValue(value)
             }
             LLVMArgumentValueKind,
             LLVMGlobalVariableValueKind,
@@ -190,5 +195,31 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
         }
 
         return expr
+    }
+
+    private fun initializeAsUndef(type: Type, code: String): Expression {
+        if (!type.name.contains("literal")) { // TODO: We need a comparison for primitive types.
+            return newLiteral(null, type, code)
+        } else {
+            val expr: ConstructExpression = NodeBuilder.newConstructExpression(code)
+            // map the construct expression to the record declaration of the type
+            expr.instantiates = (type as? ObjectType)?.recordDeclaration
+
+            // loop through the operands
+            for (field in (expr.instantiates as RecordDeclaration).fields) {
+                // and handle them as expressions themselves
+                val arg = initializeAsUndef(field.type, code)
+                expr.addArgument(arg)
+            }
+
+            return expr
+        }
+    }
+
+    private fun handleUndefValue(value: LLVMValueRef): Expression {
+        // retrieve the type
+        val type = lang.typeOf(value)
+
+        return initializeAsUndef(type, lang.getCodeFromRawNode(value)!!)
     }
 }

@@ -597,4 +597,42 @@ class LLVMIRLanguageFrontendTest {
         assertEquals(3L, value.value)
         assertEquals("i32", value.type.typeName)
     }
+
+    @Test
+    fun testUndefInsertvalue() {
+        val topLevel = Path.of("src", "test", "resources", "llvm")
+        val tu =
+            TestUtils.analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("undef_insertvalue.ll").toFile()),
+                topLevel,
+                true
+            ) {
+                it.registerLanguage(
+                    LLVMIRLanguageFrontend::class.java,
+                    LLVMIRLanguageFrontend.LLVM_EXTENSIONS
+                )
+            }
+
+        assertNotNull(tu)
+
+        val foo = tu.getDeclarationsByName("foo", FunctionDeclaration::class.java).iterator().next()
+        assertNotNull(foo)
+        assertEquals("literal_i32_i8", foo.type.typeName)
+
+        val record = (foo.type as? ObjectType)?.recordDeclaration
+        assertNotNull(record)
+        assertEquals(2, record.fields.size)
+
+        val declStatement = foo.getBodyStatementAs(0, DeclarationStatement::class.java)
+        assertNotNull(declStatement)
+
+        val varDecl = declStatement.singleDeclaration as VariableDeclaration
+        assertEquals("a", varDecl.name)
+        assertEquals("literal_i32_i8", varDecl.type.typeName)
+        val args = (varDecl.initializer as ConstructExpression).arguments
+        assertEquals(2, args.size)
+        assertEquals(100L, (args[0] as Literal<*>).value as Long)
+        val arg1 = args[1]
+        println(arg1)
+    }
 }
