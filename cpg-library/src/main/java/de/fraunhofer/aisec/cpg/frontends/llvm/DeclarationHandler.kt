@@ -26,7 +26,6 @@
 package de.fraunhofer.aisec.cpg.frontends.llvm
 
 import de.fraunhofer.aisec.cpg.frontends.Handler
-import de.fraunhofer.aisec.cpg.graph.NodeBuilder
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
@@ -218,16 +217,7 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
             // there are no names, so we need to invent some dummy ones for easier reading
             val fieldName = "field_$i"
 
-            val field =
-                NodeBuilder.newFieldDeclaration(
-                    fieldName,
-                    fieldType,
-                    listOf(),
-                    "",
-                    null,
-                    null,
-                    false
-                )
+            val field = newFieldDeclaration(fieldName, fieldType, listOf(), "", null, null, false)
 
             lang.scopeManager.addDeclaration(field)
         }
