@@ -222,7 +222,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 return parseFunctionCall(instr)
             }
             LLVMSelect -> {
-                println("select instruction")
+                return handleSelect(instr)
             }
             LLVMUserOp1 -> {
                 println("userop1 instruction")
@@ -708,6 +708,16 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             // only perform the replacement
             exchOp
         }
+    }
+
+    private fun handleSelect(instr: LLVMValueRef): Statement {
+        val cond = getOperandValueAtIndex(instr, 0)
+        val value1 = getOperandValueAtIndex(instr, 1)
+        val value2 = getOperandValueAtIndex(instr, 2)
+
+        val conditionalExpr = newConditionalExpression(cond, value1, value2, value1.type)
+
+        return declarationOrNot(conditionalExpr, instr)
     }
 
     /** Handles a [`br`](https://llvm.org/docs/LangRef.html#br-instruction) instruction. */
