@@ -198,7 +198,7 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
     }
 
     private fun initializeAsUndef(type: Type, code: String): Expression {
-        if (!type.name.contains("literal")) { // TODO: We need a comparison for primitive types.
+        if (!lang.isKnownStructTypeName(type.name)) {
             return newLiteral(null, type, code)
         } else {
             val expr: ConstructExpression = NodeBuilder.newConstructExpression(code)

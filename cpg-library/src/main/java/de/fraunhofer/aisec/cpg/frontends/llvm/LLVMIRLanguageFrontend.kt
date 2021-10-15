@@ -195,7 +195,14 @@ class LLVMIRLanguageFrontend(config: TranslationConfiguration, scopeManager: Sco
     }
 
     override fun <S : Any?, T : Any?> setComment(s: S, ctx: T) {}
+
+    /** Determines if a struct with [name] exists in the scope. */
+    fun isKnownStructTypeName(name: String): Boolean {
+        return this.scopeManager.resolve<RecordDeclaration>(this.scopeManager.globalScope, true) { it.name == name }
+                .isEmpty()
+    }
 }
+
 
 /**
  * Returns the name / identified of a value, if it is a variable, including the "scope" symbol,
