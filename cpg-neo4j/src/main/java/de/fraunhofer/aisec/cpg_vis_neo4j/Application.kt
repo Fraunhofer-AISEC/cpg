@@ -144,14 +144,6 @@ class Application : Callable<Int> {
     )
     private var enableExperimentalTypeScript: Boolean = false
 
-    @CommandLine.Option(
-        names = ["--enable-experimental-llvm"],
-        description =
-            [
-                "Enables the experimental language frontend for Go. Be aware, that further steps might be necessary to install native libraries such as cpgo"]
-    )
-    private var enableExperimentalLlvm: Boolean = false
-
     /**
      * Pushes the whole translationResult to the neo4j db.
      *
@@ -280,13 +272,6 @@ class Application : Callable<Int> {
                 TypeScriptLanguageFrontend::class.java,
                 TypeScriptLanguageFrontend.TYPESCRIPT_EXTENSIONS +
                     TypeScriptLanguageFrontend.JAVASCRIPT_EXTENSIONS
-            )
-        }
-
-        if (enableExperimentalLlvm) {
-            translationConfiguration.registerLanguage(
-                LLVMIRLanguageFrontend::class.java,
-                LLVMIRLanguageFrontend.LLVM_EXTENSIONS
             )
         }
 
