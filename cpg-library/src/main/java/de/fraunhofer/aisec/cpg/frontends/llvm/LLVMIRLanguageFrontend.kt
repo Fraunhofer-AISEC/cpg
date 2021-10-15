@@ -106,9 +106,6 @@ class LLVMIRLanguageFrontend(config: TranslationConfiguration, scopeManager: Sco
             throw TranslationException("Could not parse IR: $errorMsg")
         }
 
-        // println(result)
-        // println(mod)
-
         val tu = TranslationUnitDeclaration()
 
         // we need to set our translation unit as the global scope
@@ -182,9 +179,9 @@ class LLVMIRLanguageFrontend(config: TranslationConfiguration, scopeManager: Sco
         if (astNode is LLVMValueRef) {
             val code = LLVMPrintValueToString(astNode)
 
-            // TODO: dispose?
-
             return code.string
+        } else if (astNode is LLVMBasicBlockRef) {
+            return this.getCodeFromRawNode(LLVMBasicBlockAsValue(astNode))
         }
 
         return null

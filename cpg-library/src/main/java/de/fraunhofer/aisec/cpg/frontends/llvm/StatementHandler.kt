@@ -1055,10 +1055,12 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         }
 
         val declOp = if (unordered) binOpUnordered else binaryOperator
-        val decl = declarationOrNot(declOp!!, instr) as DeclarationStatement
+        val decl = declarationOrNot(declOp!!, instr)
 
-        // cache binding
-        lang.bindingsCache[instr.symbolName] = decl.singleDeclaration as VariableDeclaration
+        (decl as? DeclarationStatement)?.let {
+            // cache binding
+            lang.bindingsCache[instr.symbolName] = decl.singleDeclaration as VariableDeclaration
+        }
 
         return decl
     }
