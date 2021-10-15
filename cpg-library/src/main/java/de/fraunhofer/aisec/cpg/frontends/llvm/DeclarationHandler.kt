@@ -149,18 +149,23 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
             // use of a label, Its property substatement contains the original basic block, parsed
             // as a compound statement
 
-            // Take the first block as our body
+            // Take the entry block as our body
             if (LLVMGetEntryBasicBlock(func) == bb) {
                 functionDeclaration.body = stmt
             } else {
-                // All further labeled basic blocks are then added to the body through its label
-                // (statement)
+                // All further labeled basic blocks are then added to the body wrapped in a label
+                // label
+                // statement
                 val labelName = LLVMGetBasicBlockName(bb).string
 
-                if (!lang.labelMap.contains(labelName))
-                    lang.labelMap[labelName] = newLabelStatement(labelName)
-                val labelStatement = lang.labelMap[labelName]
-                labelStatement!!.subStatement = stmt
+                val labelStatement =
+                    lang.labelMap.computeIfAbsent(labelName) {
+                        val label = newLabelStatement(labelName)
+                        label.name = labelName
+                        label
+                    }
+
+                labelStatement.subStatement = stmt
 
                 // add the label statement, containing this basic block as a compound statement to
                 // our body (if we have none, which we should)
