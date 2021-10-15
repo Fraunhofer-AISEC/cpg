@@ -1,7 +1,7 @@
 ; External declaration of the rand function
 declare i32 @rand() nounwind
 @a = global i32 8
-@x = global i32 10
+@x = constant i32 10
 
 define i32 @main() {   ; i32()*
   %a = call i32 @rand()

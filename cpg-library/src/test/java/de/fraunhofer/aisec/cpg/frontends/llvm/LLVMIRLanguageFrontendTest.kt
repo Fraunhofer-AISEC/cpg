@@ -517,18 +517,12 @@ class LLVMIRLanguageFrontendTest {
         val globalX =
             tu.getDeclarationsByName("x", VariableDeclaration::class.java).iterator().next()
         assertNotNull(globalX)
-        assertEquals(
-            "i32*",
-            globalX.type.typeName
-        ) // TODO: should this actually always be a pointer?!
+        assertEquals("i32*", globalX.type.typeName)
 
         val globalA =
             tu.getDeclarationsByName("a", VariableDeclaration::class.java).iterator().next()
         assertNotNull(globalA)
-        assertEquals(
-            "i32*",
-            globalA.type.typeName
-        ) // TODO: should this actually always be a pointer?!
+        assertEquals("i32*", globalA.type.typeName)
 
         val loadXStatement = main.getBodyStatementAs(1, DeclarationStatement::class.java)
         assertNotNull(loadXStatement)
