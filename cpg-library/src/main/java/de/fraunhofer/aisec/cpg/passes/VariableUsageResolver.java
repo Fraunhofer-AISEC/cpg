@@ -199,8 +199,11 @@ public class VariableUsageResolver extends Pass {
         return;
       }
 
-      Optional<? extends ValueDeclaration> refersTo =
-          Optional.ofNullable(lang.getScopeManager().resolveReference(ref));
+      // only consider resolving, if the language frontend did not specify a resolution
+      Optional<? extends Declaration> refersTo =
+          ref.getRefersTo() == null
+              ? Optional.ofNullable(lang.getScopeManager().resolveReference(ref))
+              : Optional.of(ref.getRefersTo());
 
       Type recordDeclType = null;
       if (currentClass != null) {
