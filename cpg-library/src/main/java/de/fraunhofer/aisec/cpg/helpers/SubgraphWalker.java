@@ -257,7 +257,7 @@ public class SubgraphWalker {
      * place where usual graph manipulation will happen. The current node is the single argument
      * passed to the function
      */
-    private List<Consumer<Node>> onNodeVisit = new ArrayList<>();
+    private final List<Consumer<Node>> onNodeVisit = new ArrayList<>();
 
     /**
      * The callback that is designed to tell the user when we leave the current scope. The exited
@@ -280,7 +280,7 @@ public class SubgraphWalker {
      * tracking declaration scopes, as e.g. anything declared in "child1" is also visible to
      * "subchild", but not to "child2".
      */
-    private List<Consumer<Node>> onScopeExit = new ArrayList<>();
+    private final List<Consumer<Node>> onScopeExit = new ArrayList<>();
 
     /**
      * The core iterative AST traversal algorithm: In a depth-first way we descend into the tree,
@@ -350,12 +350,12 @@ public class SubgraphWalker {
   public static class ScopedWalker {
 
     // declarationScope -> (parentScope, declarations)
-    private Map<Node, Pair<Node, List<ValueDeclaration>>>
+    private final Map<Node, Pair<Node, List<ValueDeclaration>>>
         nodeToParentBlockAndContainedValueDeclarations = new IdentityHashMap<>();
-    private Deque<RecordDeclaration> currentClass = new ArrayDeque<>();
+    private final Deque<RecordDeclaration> currentClass = new ArrayDeque<>();
     private IterativeGraphWalker walker;
 
-    private LanguageFrontend lang;
+    private final LanguageFrontend lang;
 
     public ScopedWalker(LanguageFrontend lang) {
       this.lang = lang;
@@ -367,7 +367,7 @@ public class SubgraphWalker {
      * root can be passed to {@link ScopedWalker#getAllDeclarationsForScope} in order to retrieve
      * the currently available declarations.
      */
-    private List<TriConsumer<RecordDeclaration, Node, Node>> handlers = new ArrayList<>();
+    private final List<TriConsumer<RecordDeclaration, Node, Node>> handlers = new ArrayList<>();
 
     public void clearCallbacks() {
       handlers.clear();

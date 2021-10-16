@@ -32,7 +32,7 @@ package de.fraunhofer.aisec.cpg.graph;
  */
 public interface HasDefault<T extends Node> {
 
-  public T getDefault();
+  T getDefault();
 
-  public void setDefault(T t);
+  void setDefault(T t);
 }

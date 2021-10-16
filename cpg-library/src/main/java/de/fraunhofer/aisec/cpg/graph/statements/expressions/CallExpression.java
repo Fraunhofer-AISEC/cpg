@@ -332,7 +332,7 @@ public class CallExpression extends Expression
       Type previous = this.type;
       List<Type> types =
           invokes.stream()
-              .map(PropertyEdge<FunctionDeclaration>::getEnd)
+              .map(PropertyEdge::getEnd)
               .map(FunctionDeclaration::getType)
               .filter(Objects::nonNull)
               .collect(Collectors.toList());

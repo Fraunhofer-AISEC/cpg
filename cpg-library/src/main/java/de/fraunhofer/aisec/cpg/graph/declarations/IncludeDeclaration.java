@@ -39,11 +39,11 @@ public class IncludeDeclaration extends Declaration {
 
   @Relationship(value = "INCLUDES", direction = "OUTGOING")
   @SubGraph("AST")
-  private List<PropertyEdge<IncludeDeclaration>> includes = new ArrayList<>();
+  private final List<PropertyEdge<IncludeDeclaration>> includes = new ArrayList<>();
 
   @Relationship(value = "PROBLEMS", direction = "OUTGOING")
   @SubGraph("AST")
-  private List<PropertyEdge<ProblemDeclaration>> problems = new ArrayList<>();
+  private final List<PropertyEdge<ProblemDeclaration>> problems = new ArrayList<>();
 
   private String filename;
 

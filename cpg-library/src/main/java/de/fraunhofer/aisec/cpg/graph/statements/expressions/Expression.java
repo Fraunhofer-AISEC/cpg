@@ -60,7 +60,7 @@ public class Expression extends Statement implements HasType {
   /** The type of the value after evaluation. */
   protected Type type = UnknownType.getUnknownType();
 
-  @Transient private Set<TypeListener> typeListeners = new HashSet<>();
+  @Transient private final Set<TypeListener> typeListeners = new HashSet<>();
 
   private Set<Type> possibleSubTypes = new HashSet<>();
 

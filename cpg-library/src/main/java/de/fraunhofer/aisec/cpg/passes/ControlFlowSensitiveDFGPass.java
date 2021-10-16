@@ -103,7 +103,7 @@ public class ControlFlowSensitiveDFGPass extends Pass {
   }
 
   private interface IterationFunction {
-    public Map<VariableDeclaration, Set<Node>> iterate(
+    Map<VariableDeclaration, Set<Node>> iterate(
         Node node, Map<VariableDeclaration, Set<Node>> variables, Node endNode, boolean stopBefore);
   }
 
@@ -115,7 +115,7 @@ public class ControlFlowSensitiveDFGPass extends Pass {
      */
     private Map<Node, Set<Node>> removes = new HashMap<>();
 
-    private Map<Node, Map<VariableDeclaration, Set<Node>>> joinPoints = new HashMap<>();
+    private final Map<Node, Map<VariableDeclaration, Set<Node>>> joinPoints = new HashMap<>();
 
     public void handle(Node functionRoot) {
       iterateTillFixpoint(functionRoot, new HashMap<>(), null, false);

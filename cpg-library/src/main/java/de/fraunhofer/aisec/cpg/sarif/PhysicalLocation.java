@@ -103,7 +103,7 @@ public class PhysicalLocation {
 
   @Override
   public String toString() {
-    return artifactLocation.toString() + "(" + region.toString() + ")";
+    return artifactLocation + "(" + region + ")";
   }
 
   @Override

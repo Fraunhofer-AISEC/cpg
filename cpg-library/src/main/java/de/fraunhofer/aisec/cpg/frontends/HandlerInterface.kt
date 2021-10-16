@@ -23,9 +23,8 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.frontends;
+package de.fraunhofer.aisec.cpg.frontends
 
-@FunctionalInterface
-public interface HandlerInterface<S, T> {
-  S handle(T expr);
+fun interface HandlerInterface<S, T> {
+    fun handle(expr: T): S?
 }

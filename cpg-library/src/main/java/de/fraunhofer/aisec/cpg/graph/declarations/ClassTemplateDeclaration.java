@@ -45,7 +45,7 @@ public class ClassTemplateDeclaration extends TemplateDeclaration {
    */
   @Relationship(value = "REALIZATION", direction = "OUTGOING")
   @SubGraph("AST")
-  private List<PropertyEdge<RecordDeclaration>> realization = new ArrayList<>();
+  private final List<PropertyEdge<RecordDeclaration>> realization = new ArrayList<>();
 
   public List<RecordDeclaration> getRealization() {
     return unwrap(this.realization);

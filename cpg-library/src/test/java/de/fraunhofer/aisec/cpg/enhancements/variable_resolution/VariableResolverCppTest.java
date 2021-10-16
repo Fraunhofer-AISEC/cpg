@@ -92,7 +92,7 @@ class VariableResolverCppTest extends BaseTest {
   private MethodDeclaration innerFunction1;
   private MethodDeclaration innerFunction2;
 
-  private Map<String, Expression> callParamMap = new HashMap<>();
+  private final Map<String, Expression> callParamMap = new HashMap<>();
 
   @BeforeAll
   void initTests() throws ExecutionException, InterruptedException {

@@ -62,7 +62,7 @@ public abstract class LanguageFrontend {
   protected Map<BiPredicate<Object, Object>, BiConsumer<Object, Object>> predicateListeners =
       new HashMap<>();
   protected Map<Object, Object> processedMapping = new HashMap<>();
-  private String namespaceDelimiter;
+  private final String namespaceDelimiter;
   protected TranslationUnitDeclaration currentTU = null;
 
   // Todo Moving this to scope manager and add listeners and processedMappings to specified scopes.
@@ -189,7 +189,7 @@ public abstract class LanguageFrontend {
           if (code != null) {
             ((Node) cpgNode).setCode(code);
           } else {
-            log.warn("Unexpected: No code for node {}", astNode.toString());
+            log.warn("Unexpected: No code for node {}", astNode);
           }
         }
       }
@@ -210,7 +210,7 @@ public abstract class LanguageFrontend {
         return nl;
       }
     }
-    log.debug("Could not determine newline type. Assuming \\n. {}", node.toString());
+    log.debug("Could not determine newline type. Assuming \\n. {}", node);
     return "\n";
   }
 

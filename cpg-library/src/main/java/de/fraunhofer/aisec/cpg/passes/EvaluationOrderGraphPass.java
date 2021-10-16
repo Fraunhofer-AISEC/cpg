@@ -78,11 +78,11 @@ public class EvaluationOrderGraphPass extends Pass {
       new HashMap<>();
 
   private List<Node> currentEOG = new ArrayList<>();
-  private EnumMap<Properties, Object> currentProperties = new EnumMap<>(Properties.class);
+  private final EnumMap<Properties, Object> currentProperties = new EnumMap<>(Properties.class);
 
   // Some nodes will have no incoming nor outgoing edges but still need to be associated to the next
   // eog relevant node.
-  private List<Node> intermediateNodes = new ArrayList<>();
+  private final List<Node> intermediateNodes = new ArrayList<>();
 
   public EvaluationOrderGraphPass() {
     map.put(TranslationUnitDeclaration.class, this::handleTranslationUnitDeclaration);
@@ -606,7 +606,7 @@ public class EvaluationOrderGraphPass extends Pass {
     TryStatement tryStatement = (TryStatement) node;
     lang.getScopeManager().enterScope(tryStatement);
     TryScope tryScope = (TryScope) lang.getScopeManager().getCurrentScope();
-    TryStatement tryStmt = (TryStatement) tryStatement;
+    TryStatement tryStmt = tryStatement;
     if (tryStmt.getResources() != null) {
       tryStmt.getResources().forEach(this::createEOG);
     }
@@ -929,7 +929,7 @@ public class EvaluationOrderGraphPass extends Pass {
     if (currentLoopScope != null) {
       exitLoop(doStatement, currentLoopScope);
     } else {
-      LOGGER.error("Trying to exit do loop, but no loop scope: {}", doStatement.toString());
+      LOGGER.error("Trying to exit do loop, but no loop scope: {}", doStatement);
     }
   }
 
@@ -953,8 +953,7 @@ public class EvaluationOrderGraphPass extends Pass {
     if (currentLoopScope != null) {
       exitLoop(forEachStatement, currentLoopScope);
     } else {
-      LOGGER.error(
-          "Trying to exit foreach loop, but not in loop scope: {}", forEachStatement.toString());
+      LOGGER.error("Trying to exit foreach loop, but not in loop scope: {}", forEachStatement);
     }
 
     currentEOG.addAll(tmpEOGNodes);
@@ -986,7 +985,7 @@ public class EvaluationOrderGraphPass extends Pass {
     if (currentLoopScope != null) {
       exitLoop(forStatement, currentLoopScope);
     } else {
-      LOGGER.error("Trying to exit for loop, but no loop scope: {}", forStatement.toString());
+      LOGGER.error("Trying to exit for loop, but no loop scope: {}", forStatement);
     }
 
     currentEOG.addAll(tmpEOGNodes);
@@ -1060,8 +1059,7 @@ public class EvaluationOrderGraphPass extends Pass {
     if (switchScope != null) {
       this.currentEOG.addAll(switchScope.getBreakStatements());
     } else {
-      LOGGER.error(
-          "Handling switch statement, but not in switch scope: {}", switchStatement.toString());
+      LOGGER.error("Handling switch statement, but not in switch scope: {}", switchStatement);
     }
   }
 
@@ -1088,7 +1086,7 @@ public class EvaluationOrderGraphPass extends Pass {
     if (currentLoopScope != null) {
       exitLoop(whileStatement, currentLoopScope);
     } else {
-      LOGGER.error("Trying to exit while loop, but no loop scope: {}", whileStatement.toString());
+      LOGGER.error("Trying to exit while loop, but no loop scope: {}", whileStatement);
     }
 
     currentEOG.addAll(tmpEOGNodes);

@@ -602,7 +602,7 @@ public class StatementAnalyzer
 
     for (de.fraunhofer.aisec.cpg.graph.statements.Statement r : resources) {
       if (r instanceof DeclarationStatement) {
-        for (Declaration d : ((DeclarationStatement) r).getDeclarations()) {
+        for (Declaration d : r.getDeclarations()) {
           if (d instanceof VariableDeclaration) {
             lang.getScopeManager().addDeclaration(d);
           }
