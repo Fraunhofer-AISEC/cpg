@@ -26,7 +26,10 @@
 package de.fraunhofer.aisec.cpg.analysis
 
 import de.fraunhofer.aisec.cpg.TranslationResult
+import de.fraunhofer.aisec.cpg.console.fancyCode
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.ValueEvaluator
+import de.fraunhofer.aisec.cpg.graph.capacity
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ArrayCreationExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ArraySubscriptionExpression
@@ -52,8 +55,8 @@ class OutOfBoundsCheck {
                 Strategy::AST_FORWARD,
                 object : IVisitor<Node?>() {
                     fun visit(v: ArraySubscriptionExpression) {
-                        val resolver = ValueResolver()
-                        val resolvedIndex = resolver.resolve(v.subscriptExpression)
+                        val evaluator = ValueEvaluator()
+                        val resolvedIndex = evaluator.evaluate(v.subscriptExpression)
 
                         if (resolvedIndex is Int) {
                             // check, if we know that the array was initialized with a fixed length
@@ -97,7 +100,7 @@ class OutOfBoundsCheck {
                                         )
                                         } being ${AttributedString(""+resolvedIndex, DEFAULT.foreground(AttributedStyle.CYAN)).toAnsi()}:"
                                     )
-                                    for (p in resolver.path) {
+                                    for (p in evaluator.path) {
 
                                         println(
                                             "${AttributedString(
