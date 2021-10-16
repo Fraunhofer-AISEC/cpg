@@ -63,4 +63,32 @@ class InferenceTest {
         assertNotNull(nextField)
         assertEquals("T*", nextField.type.typeName)
     }
+
+    @Test
+    fun testRecordInferencePointer() {
+        val file = File("src/test/resources/inference/record_ptr.cpp")
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.inferenceConfiguration(
+                    InferenceConfiguration.builder().inferRecords(true).build()
+                )
+            }
+
+        assertNotNull(tu)
+
+        val record = tu.byNameOrNull<RecordDeclaration>("T")
+        assertNotNull(record)
+        assertEquals("T", record.name)
+        assertEquals(true, record.isInferred)
+
+        assertEquals(2, record.fields.size)
+
+        val valueField = record.getField("value")
+        assertNotNull(valueField)
+        assertEquals("int", valueField.type.typeName)
+
+        val nextField = record.getField("next")
+        assertNotNull(nextField)
+        assertEquals("T*", nextField.type.typeName)
+    }
 }

@@ -391,6 +391,11 @@ public class VariableUsageResolver extends Pass {
   }
 
   private FieldDeclaration handleUnknownField(Type base, String name, Type type) {
+    // unwrap a potential pointer-type
+    if (base instanceof PointerType) {
+      return handleUnknownField(((PointerType) base).getElementType(), name, type);
+    }
+
     if (!recordMap.containsKey(base)) {
       if (lang != null && lang.getConfig().getInferenceConfiguration().getInferRecords()) {
         // we have an access to an unknown field of an unknown record. so we need to handle that
@@ -405,8 +410,11 @@ public class VariableUsageResolver extends Pass {
         return null;
       }
     }
+
     // fields.putIfAbsent(base, new ArrayList<>());
-    List<FieldDeclaration> declarations = recordMap.get(base).getFields();
+    var record = recordMap.get(base);
+
+    List<FieldDeclaration> declarations = record.getFields();
     Optional<FieldDeclaration> target =
         declarations.stream().filter(f -> f.getName().equals(name)).findFirst();
     if (target.isEmpty()) {
