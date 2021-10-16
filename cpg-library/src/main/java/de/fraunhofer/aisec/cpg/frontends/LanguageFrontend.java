@@ -50,6 +50,7 @@ public abstract class LanguageFrontend {
 
   // Allow non-Java frontends to access the logger (i.e. jep)
   public static final Logger log = LoggerFactory.getLogger(LanguageFrontend.class);
+
   protected final TranslationConfiguration config;
 
   protected ScopeManager scopeManager;
@@ -289,4 +290,8 @@ public abstract class LanguageFrontend {
   }
 
   public abstract <S, T> void setComment(S s, T ctx);
+
+  public TranslationConfiguration getConfig() {
+    return config;
+  }
 }
