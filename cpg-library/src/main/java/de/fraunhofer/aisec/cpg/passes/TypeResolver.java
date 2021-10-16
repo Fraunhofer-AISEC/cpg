@@ -34,8 +34,8 @@ import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker;
 import java.util.*;
 
 public class TypeResolver extends Pass {
-  private Set<Type> firstOrderTypes = new HashSet<>();
-  private Map<Type, List<Type>> typeState = new HashMap<>();
+  private final Set<Type> firstOrderTypes = new HashSet<>();
+  private final Map<Type, List<Type>> typeState = new HashMap<>();
 
   /**
    * Reduce the SecondOrderTypes to store only the unique SecondOrderTypes

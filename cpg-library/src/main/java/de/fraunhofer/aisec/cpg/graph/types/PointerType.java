@@ -91,7 +91,7 @@ public class PointerType extends Type implements SecondOrderType {
   @Override
   public void refreshNames() {
     if (this.getElementType() instanceof PointerType) {
-      ((PointerType) this.getElementType()).refreshNames();
+      this.getElementType().refreshNames();
     }
     if (this.pointerOrigin == PointerOrigin.ARRAY) {
       this.setName(this.getElementType().getName() + "[]");

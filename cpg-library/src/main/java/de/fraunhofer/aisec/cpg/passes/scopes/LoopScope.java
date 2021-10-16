@@ -50,8 +50,8 @@ public class LoopScope extends ValueDeclarationScope implements Breakable, Conti
   /** Statements that constitute the start of the Loop condition evaluation, mostly of size 1 */
   private List<Node> conditions = new ArrayList<>();
 
-  private List<BreakStatement> breaks = new ArrayList<>();
-  private List<ContinueStatement> continues = new ArrayList<>();
+  private final List<BreakStatement> breaks = new ArrayList<>();
+  private final List<ContinueStatement> continues = new ArrayList<>();
 
   public LoopScope(Statement loopStatement) {
     super(loopStatement);

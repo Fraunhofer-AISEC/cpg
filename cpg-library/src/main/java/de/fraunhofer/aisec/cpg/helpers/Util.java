@@ -438,17 +438,17 @@ public class Util {
 
   public enum Connect {
     NODE,
-    SUBTREE;
+    SUBTREE
   }
 
   public enum Quantifier {
     ANY,
-    ALL;
+    ALL
   }
 
   public enum Edge {
     ENTRIES,
-    EXITS;
+    EXITS
   }
 
   /**

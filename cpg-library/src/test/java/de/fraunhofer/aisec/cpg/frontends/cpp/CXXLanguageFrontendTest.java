@@ -479,8 +479,7 @@ class CXXLanguageFrontendTest extends BaseTest {
     assertTrue(initializer instanceof Literal);
     assertEquals(1, ((Literal) initializer).getValue());
 
-    List<Declaration> twoDeclarations =
-        ((DeclarationStatement) statements.get(2)).getDeclarations();
+    List<Declaration> twoDeclarations = statements.get(2).getDeclarations();
 
     assertEquals(2, twoDeclarations.size());
     VariableDeclaration b = (VariableDeclaration) twoDeclarations.get(0);
@@ -520,8 +519,7 @@ class CXXLanguageFrontendTest extends BaseTest {
     assertEquals("ptr2", pointerWithAssign.getName());
     assertEquals("NULL", pointerWithAssign.getInitializer().getName());
 
-    List<Declaration> classWithVariable =
-        ((DeclarationStatement) statements.get(6)).getDeclarations();
+    List<Declaration> classWithVariable = statements.get(6).getDeclarations();
     assertEquals(2, classWithVariable.size());
 
     RecordDeclaration classA = (RecordDeclaration) classWithVariable.get(0);
@@ -628,7 +626,7 @@ class CXXLanguageFrontendTest extends BaseTest {
 
     // a++
     UnaryOperator postfix = (UnaryOperator) statements.get(++line);
-    Expression input = (Expression) postfix.getInput();
+    Expression input = postfix.getInput();
 
     assertEquals("a", input.getName());
     assertEquals("++", postfix.getOperatorCode());
@@ -1054,7 +1052,7 @@ class CXXLanguageFrontendTest extends BaseTest {
             ((InitializerListExpression) initializer).getInitializers().get(0);
     assertTrue(die.getLhs().get(0) instanceof DeclaredReferenceExpression);
     assertTrue(die.getRhs() instanceof Literal);
-    assertEquals("y", ((DeclaredReferenceExpression) die.getLhs().get(0)).getName());
+    assertEquals("y", die.getLhs().get(0).getName());
     assertEquals(0, ((Literal) die.getRhs()).getValue());
 
     die =
@@ -1062,7 +1060,7 @@ class CXXLanguageFrontendTest extends BaseTest {
             ((InitializerListExpression) initializer).getInitializers().get(1);
     assertTrue(die.getLhs().get(0) instanceof DeclaredReferenceExpression);
     assertTrue(die.getRhs() instanceof Literal);
-    assertEquals("z", ((DeclaredReferenceExpression) die.getLhs().get(0)).getName());
+    assertEquals("z", die.getLhs().get(0).getName());
     assertEquals(1, ((Literal) die.getRhs()).getValue());
 
     die =
@@ -1070,7 +1068,7 @@ class CXXLanguageFrontendTest extends BaseTest {
             ((InitializerListExpression) initializer).getInitializers().get(2);
     assertTrue(die.getLhs().get(0) instanceof DeclaredReferenceExpression);
     assertTrue(die.getRhs() instanceof Literal);
-    assertEquals("x", ((DeclaredReferenceExpression) die.getLhs().get(0)).getName());
+    assertEquals("x", die.getLhs().get(0).getName());
     assertEquals(2, ((Literal) die.getRhs()).getValue());
 
     initializer =
@@ -1088,7 +1086,7 @@ class CXXLanguageFrontendTest extends BaseTest {
             ((InitializerListExpression) initializer).getInitializers().get(0);
     assertTrue(die.getLhs().get(0) instanceof DeclaredReferenceExpression);
     assertTrue(die.getRhs() instanceof Literal);
-    assertEquals("x", ((DeclaredReferenceExpression) die.getLhs().get(0)).getName());
+    assertEquals("x", die.getLhs().get(0).getName());
     assertEquals(20, ((Literal) die.getRhs()).getValue());
 
     initializer =
