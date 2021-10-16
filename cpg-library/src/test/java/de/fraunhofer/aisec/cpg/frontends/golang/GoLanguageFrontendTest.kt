@@ -28,6 +28,8 @@ package de.fraunhofer.aisec.cpg.frontends.golang
 import de.fraunhofer.aisec.cpg.BaseTest
 import de.fraunhofer.aisec.cpg.ExperimentalGolang
 import de.fraunhofer.aisec.cpg.TestUtils
+import de.fraunhofer.aisec.cpg.graph.body
+import de.fraunhofer.aisec.cpg.graph.byNameOrNull
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
@@ -60,32 +62,22 @@ class GoLanguageFrontendTest : BaseTest() {
 
         assertNotNull(tu)
 
-        val p = tu.getDeclarationsByName("p", NamespaceDeclaration::class.java).iterator().next()
-
+        val p = tu.byNameOrNull<NamespaceDeclaration>("p")
         assertNotNull(p)
 
-        val myStruct =
-            p.getDeclarationsByName("p.MyStruct", RecordDeclaration::class.java).iterator().next()
-
+        val myStruct = p.byNameOrNull<RecordDeclaration>("p.MyStruct")
         assertNotNull(myStruct)
 
-        val main =
-            p.getDeclarationsByName("main", FunctionDeclaration::class.java).iterator().next()
-
+        val main = p.byNameOrNull<FunctionDeclaration>("main")
         assertNotNull(main)
 
         val body = main.body as? CompoundStatement
-
         assertNotNull(body)
 
-        // new
-
-        var stmt = body.statements.first() as? DeclarationStatement
-
+        var stmt = main.body<DeclarationStatement>(0)
         assertNotNull(stmt)
 
         var decl = stmt.singleDeclaration as? VariableDeclaration
-
         assertNotNull(decl)
 
         val new = decl.initializer as? NewExpression
@@ -100,8 +92,7 @@ class GoLanguageFrontendTest : BaseTest() {
 
         // make array
 
-        stmt = body.statements[1] as? DeclarationStatement
-
+        stmt = main.body(1)
         assertNotNull(stmt)
 
         decl = stmt.singleDeclaration as? VariableDeclaration
@@ -122,8 +113,7 @@ class GoLanguageFrontendTest : BaseTest() {
 
         // make map
 
-        stmt = body.statements[2] as? DeclarationStatement
-
+        stmt = main.body(2)
         assertNotNull(stmt)
 
         decl = stmt.singleDeclaration as? VariableDeclaration
@@ -138,16 +128,13 @@ class GoLanguageFrontendTest : BaseTest() {
 
         // make channel
 
-        stmt = body.statements[3] as? DeclarationStatement
-
+        stmt = main.body(3)
         assertNotNull(stmt)
 
         decl = stmt.singleDeclaration as? VariableDeclaration
-
         assertNotNull(decl)
 
         make = decl.initializer
-
         assertNotNull(make)
         assertTrue(make is ConstructExpression)
         assertEquals(TypeParser.createFrom("chan<int>", false), make.type)
@@ -170,28 +157,28 @@ class GoLanguageFrontendTest : BaseTest() {
 
         assertNotNull(tu)
 
-        val p = tu.getDeclarationsByName("p", NamespaceDeclaration::class.java).iterator().next()
+        val p = tu.byNameOrNull<NamespaceDeclaration>("p")
         assertNotNull(p)
 
-        val a = p.getDeclarationsByName("a", VariableDeclaration::class.java).iterator().next()
+        val a = p.byNameOrNull<VariableDeclaration>("a")
         assertNotNull(a)
         assertNotNull(a.location)
 
         assertEquals("a", a.name)
         assertEquals(TypeParser.createFrom("int", false), a.type)
 
-        val s = p.getDeclarationsByName("s", VariableDeclaration::class.java).iterator().next()
-
+        val s = p.byNameOrNull<VariableDeclaration>("s")
+        assertNotNull(s)
         assertEquals("s", s.name)
         assertEquals(TypeParser.createFrom("string", false), s.type)
 
-        val f = p.getDeclarationsByName("f", VariableDeclaration::class.java).iterator().next()
-
+        val f = p.byNameOrNull<VariableDeclaration>("f")
+        assertNotNull(f)
         assertEquals("f", f.name)
         assertEquals(TypeParser.createFrom("float64", false), f.type)
 
-        val f32 = p.getDeclarationsByName("f32", VariableDeclaration::class.java).iterator().next()
-
+        val f32 = p.byNameOrNull<VariableDeclaration>("f32")
+        assertNotNull(f32)
         assertEquals("f32", f32.name)
         assertEquals(TypeParser.createFrom("float32", false), f32.type)
     }

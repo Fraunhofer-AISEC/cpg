@@ -267,6 +267,10 @@ public class TypeManager {
     return secondOrderTypes;
   }
 
+  public boolean typeExists(String name) {
+    return firstOrderTypes.stream().anyMatch(type -> type.getRoot().getName().equals(name));
+  }
+
   private TypeManager() {}
 
   public static TypeManager getInstance() {

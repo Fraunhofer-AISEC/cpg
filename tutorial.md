@@ -124,20 +124,20 @@ This also demonstrates quite nicely, that queries on the CPG work independently 
 
 ### Looking for software errors
 
-In a next step, we want to identify, which of those expression are accessing an array index that is greater than its capacity, thus leading to an error. From the code output we have seen before we can already identify two array indicies: `0` and `11`. But the other two are using a variable `b` as the index. Using the `resolve` function, we can try to resolve the variable `b`, to check if it has a constant value.
+In a next step, we want to identify, which of those expression are accessing an array index that is greater than its capacity, thus leading to an error. From the code output we have seen before we can already identify two array indicies: `0` and `11`. But the other two are using a variable `b` as the index. Using the `evaluate` function, we can try to evaluate the variable `b`, to check if it has a constant value.
 
 ```kotlin
-[6] result.all<ArraySubscriptionExpression>().map { it.subscriptExpression.resolve() }
+[6] result.all<ArraySubscriptionExpression>().map { it.subscriptExpression.evaluate() }
 res6: List<Any?> = [11, 5, 5, 0]
 ```
 
-In this case we are in luck and we see that, next to the `0` and `11` we already know, the other two expression were resolved to `5`.
+In this case we are in luck and we see that, next to the `0` and `11` we already know, the other two expression were evaluated to `5`.
 
 In a next step, we want to check to capacity of the array the access is referring to. We can make use of two helper functions `dfgFrom` and `capacity` to quickly check this, using the built-in data flow analysis.
 
 ```kotlin
 [7] var expr = result.all<ArraySubscriptionExpression>().map { Triple(
-        it.subscriptExpression.resolve() as Int,
+        it.subscriptExpression.evaluate() as Int,
         it.arrayExpression.dfgFrom<ArrayCreationExpression>().first().capacity,
         it
     ) }
@@ -152,7 +152,7 @@ res8: List<Triple<Int, Int, de.fraunhofer.aisec.cpg.graph.statements.expressions
 
 This gives us a triple of the array index, the array capacity and a reference to the node in the graph.
 
-Lastly, we can make use of the `filter` function to return only those nodes where the resolved index is greater or equal to the capacity, leading to an out of bounds error, and a possible program crash.
+Lastly, we can make use of the `filter` function to return only those nodes where the evaluated index is greater or equal to the capacity, leading to an out of bounds error, and a possible program crash.
 
 ```kotlin
 [9] expr.filter { it.first >= it.second }

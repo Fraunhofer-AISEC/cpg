@@ -409,9 +409,13 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
             handleTemplateUsage(declSpecifier, ctx, sequence)
         } else {
             for (declarator in ctx.declarators) {
-                val declaration = lang.declaratorHandler.handle(declarator) as ValueDeclaration
                 val typeString = declarator.getTypeString(ctx.declSpecifier)
+
+                // make sure, the type manager knows about this type before parsing the declarator
                 val result = TypeParser.createFrom(typeString, true, lang)
+
+                val declaration = lang.declaratorHandler.handle(declarator) as ValueDeclaration
+
                 declaration.type = result
 
                 // process attributes
