@@ -31,6 +31,7 @@ import java.lang.reflect.ParameterizedType;
 import java.util.HashMap;
 import java.util.function.Supplier;
 import org.eclipse.cdt.internal.core.dom.parser.ASTNode;
+import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -48,12 +49,12 @@ public abstract class Handler<S, T, L extends LanguageFrontend> {
 
   protected final HashMap<Class<? extends T>, HandlerInterface<S, T>> map = new HashMap<>();
   private final Supplier<S> configConstructor;
-  protected L lang;
-  private Class<S> typeOfT =
+  protected @NotNull L lang;
+  private final Class<S> typeOfT =
       (Class<S>)
           ((ParameterizedType) getClass().getGenericSuperclass()).getActualTypeArguments()[1];
 
-  public Handler(Supplier<S> configConstructor, L lang) {
+  public Handler(Supplier<S> configConstructor, @NotNull L lang) {
     this.configConstructor = configConstructor;
     this.lang = lang;
   }

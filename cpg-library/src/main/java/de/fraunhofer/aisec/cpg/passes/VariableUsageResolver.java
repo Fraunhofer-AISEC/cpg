@@ -70,9 +70,9 @@ import org.slf4j.LoggerFactory;
 public class VariableUsageResolver extends Pass {
 
   private static final Logger log = LoggerFactory.getLogger(VariableUsageResolver.class);
-  private Map<Type, List<Type>> superTypesMap = new HashMap<>();
-  private Map<Type, RecordDeclaration> recordMap = new HashMap<>();
-  private Map<Type, EnumDeclaration> enumMap = new HashMap<>();
+  private final Map<Type, List<Type>> superTypesMap = new HashMap<>();
+  private final Map<Type, RecordDeclaration> recordMap = new HashMap<>();
+  private final Map<Type, EnumDeclaration> enumMap = new HashMap<>();
   private TranslationUnitDeclaration currTu;
   private ScopedWalker walker;
 

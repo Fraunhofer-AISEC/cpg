@@ -64,9 +64,9 @@ public class CallResolver extends Pass {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(CallResolver.class);
 
-  private Map<String, RecordDeclaration> recordMap = new HashMap<>();
-  private List<TemplateDeclaration> templateList = new ArrayList<>();
-  private Map<FunctionDeclaration, Type> containingType = new HashMap<>();
+  private final Map<String, RecordDeclaration> recordMap = new HashMap<>();
+  private final List<TemplateDeclaration> templateList = new ArrayList<>();
+  private final Map<FunctionDeclaration, Type> containingType = new HashMap<>();
   @Nullable private TranslationUnitDeclaration currentTU;
   private ScopedWalker walker;
 
@@ -1355,14 +1355,12 @@ public class CallResolver extends Pass {
       } else if (declaration instanceof ParamVariableDeclaration) {
         declaredNonTypeTemplate.add((ParamVariableDeclaration) declaration);
         if (parametersWithDefaults.contains(declaration)
-            && (((ParamVariableDeclaration) declaration).getDefault()
-                        instanceof DeclaredReferenceExpression
-                    && !declaredNonTypeTemplate.contains(
-                        ((DeclaredReferenceExpression)
-                                ((ParamVariableDeclaration) declaration).getDefault())
-                            .getRefersTo())
-                || !(((ParamVariableDeclaration) declaration).getDefault()
-                    instanceof DeclaredReferenceExpression))) {
+            && (!(((ParamVariableDeclaration) declaration).getDefault()
+                    instanceof DeclaredReferenceExpression)
+                || !declaredNonTypeTemplate.contains(
+                    ((DeclaredReferenceExpression)
+                            ((ParamVariableDeclaration) declaration).getDefault())
+                        .getRefersTo()))) {
           templateParameterRealDefaultInitialization.put(
               declaration, ((ParamVariableDeclaration) declaration).getDefault());
         }
@@ -1459,8 +1457,7 @@ public class CallResolver extends Pass {
     // We had an import for this method name, just not the correct signature. Let's just add
     // an inferred node to any class that might be affected
     if (curClass == null) {
-      LOGGER.warn(
-          "Cannot generate inferred nodes for imports of a null class: {}", call.toString());
+      LOGGER.warn("Cannot generate inferred nodes for imports of a null class: {}", call);
       return;
     }
     List<RecordDeclaration> containingRecords =
@@ -1593,7 +1590,7 @@ public class CallResolver extends Pass {
     if (node instanceof MemberCallExpression) {
       MemberCallExpression memberCall = (MemberCallExpression) node;
       if (memberCall.getBase() instanceof HasType) {
-        HasType base = (HasType) memberCall.getBase();
+        HasType base = memberCall.getBase();
         possibleTypes.add(base.getType());
         possibleTypes.addAll(base.getPossibleSubTypes());
       }

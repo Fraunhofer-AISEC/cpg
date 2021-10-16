@@ -62,7 +62,7 @@ public class UnaryOperator extends Expression implements TypeListener {
   /** Specifies, whether this a pre fix operation. */
   private boolean prefix;
 
-  @Transient private Set<TypeListener> checked = new HashSet<>();
+  @Transient private final Set<TypeListener> checked = new HashSet<>();
 
   public Expression getInput() {
     return input;

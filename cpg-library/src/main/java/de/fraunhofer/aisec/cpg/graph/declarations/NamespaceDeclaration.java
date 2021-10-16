@@ -59,7 +59,7 @@ public class NamespaceDeclaration extends Declaration
    * Edges to nested namespaces, records, functions, fields etc. contained in the current namespace.
    */
   @SubGraph("AST")
-  private List<Declaration> declarations = new ArrayList<>();
+  private final List<Declaration> declarations = new ArrayList<>();
 
   /** The list of statements. */
   @Relationship(value = "STATEMENTS", direction = "OUTGOING")

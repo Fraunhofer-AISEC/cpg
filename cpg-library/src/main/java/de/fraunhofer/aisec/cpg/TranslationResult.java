@@ -48,7 +48,7 @@ public class TranslationResult extends Node {
   private final List<TranslationUnitDeclaration> translationUnits = new ArrayList<>();
 
   /** A free-for-use HashMap where passes can store whatever they want. */
-  private Map<String, Object> scratch = new ConcurrentHashMap<>();
+  private final Map<String, Object> scratch = new ConcurrentHashMap<>();
 
   public TranslationResult(TranslationManager translationManager) {
     this.translationManager = translationManager;

@@ -33,7 +33,7 @@ import de.fraunhofer.aisec.cpg.graph.types.TypeParser
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 
 @ExperimentalTypeScript
-class TypeHandler(lang: TypeScriptLanguageFrontend?) :
+class TypeHandler(lang: TypeScriptLanguageFrontend) :
     Handler<Type, TypeScriptNode, TypeScriptLanguageFrontend>(
         { UnknownType.getUnknownType() },
         lang,

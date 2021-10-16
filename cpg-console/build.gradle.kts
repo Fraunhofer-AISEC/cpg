@@ -57,6 +57,8 @@ dependencies {
     api(project(":cpg-library"))
     api(project(":cpg-neo4j"))
 
+    implementation("org.apache.logging.log4j:log4j-slf4j18-impl:2.14.1")
+
     // JUnit
     testImplementation("org.junit.jupiter", "junit-jupiter-api", versions["junit5"])
     testImplementation("org.junit.jupiter", "junit-jupiter-params", versions["junit5"])

@@ -40,8 +40,8 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 
 public class ImportResolver extends Pass {
 
-  private List<RecordDeclaration> records = new ArrayList<>();
-  private Map<String, Declaration> importables = new HashMap<>();
+  private final List<RecordDeclaration> records = new ArrayList<>();
+  private final Map<String, Declaration> importables = new HashMap<>();
 
   @Override
   @Nullable

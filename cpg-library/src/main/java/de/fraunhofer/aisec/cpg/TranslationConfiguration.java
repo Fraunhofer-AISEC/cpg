@@ -89,7 +89,7 @@ public class TranslationConfiguration {
    * This map contains a list of language frontends classes and the file types they are registered
    * for.
    */
-  private Map<Class<? extends LanguageFrontend>, List<String>> frontends;
+  private final Map<Class<? extends LanguageFrontend>, List<String>> frontends;
 
   /**
    * Switch off cleaning up TypeManager memory after analysis.
@@ -220,7 +220,7 @@ public class TranslationConfiguration {
    */
   public static class Builder {
     private List<File> sourceLocations = new ArrayList<>();
-    private Map<Class<? extends LanguageFrontend>, List<String>> frontends = new HashMap<>();
+    private final Map<Class<? extends LanguageFrontend>, List<String>> frontends = new HashMap<>();
     private File topLevel = null;
     private boolean debugParser = false;
     private boolean failOnError = false;
