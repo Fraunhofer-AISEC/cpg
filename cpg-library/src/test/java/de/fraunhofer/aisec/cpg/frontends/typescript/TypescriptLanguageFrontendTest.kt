@@ -254,10 +254,10 @@ class TypescriptLanguageFrontendTest {
 
         assertEquals("then", chainedCall.name)
 
-        val funcArg = chainedCall.arguments.firstOrNull() as? DeclaredReferenceExpression
+        val funcArg = chainedCall.arguments.firstOrNull() as? LambdaExpression
         assertNotNull(funcArg)
 
-        val arrowFunction = funcArg.refersTo as? FunctionDeclaration
+        val arrowFunction = funcArg.function
         assertNotNull(arrowFunction)
         assertNotNull(arrowFunction.body)
 
@@ -314,7 +314,7 @@ class TypescriptLanguageFrontendTest {
         assertEquals("Users", usersComponent.name)
         assertEquals(1, usersComponent.constructors.size)
         assertEquals(/*2*/ 3 /* because of a dummy node */, usersComponent.methods.size)
-        assertEquals(/*0*/ 2 /* because of dummy nodes */, usersComponent.fields.size)
+        assertEquals(/*0*/ 3 /* because of dummy nodes */, usersComponent.fields.size)
 
         val render = usersComponent.methods.firstOrNull { it.name == "render" }
         assertNotNull(render)
@@ -423,10 +423,10 @@ class TypescriptLanguageFrontendTest {
                 MemberCallExpression
         assertNotNull(onPost)
 
-        val stmt = onPost.arguments.drop(1).firstOrNull() as? DeclaredReferenceExpression
-        assertNotNull(stmt)
+        val lambda = onPost.arguments.drop(1).firstOrNull() as? LambdaExpression
+        assertNotNull(lambda)
 
-        val func = stmt.refersTo as? FunctionDeclaration
+        val func = lambda.function
         assertNotNull(func)
 
         assertEquals(2, func.parameters.size)
