@@ -52,6 +52,7 @@ class InferenceTest {
         assertNotNull(record)
         assertEquals("T", record.name)
         assertEquals(true, record.isInferred)
+        assertEquals("struct", record.kind)
 
         assertEquals(2, record.fields.size)
 
@@ -80,6 +81,7 @@ class InferenceTest {
         assertNotNull(record)
         assertEquals("T", record.name)
         assertEquals(true, record.isInferred)
+        assertEquals("class", record.kind)
 
         assertEquals(2, record.fields.size)
 

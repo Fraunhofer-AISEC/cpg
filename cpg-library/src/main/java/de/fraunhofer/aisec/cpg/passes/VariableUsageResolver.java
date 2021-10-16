@@ -412,16 +412,21 @@ public class VariableUsageResolver extends Pass {
     }
 
     // fields.putIfAbsent(base, new ArrayList<>());
-    var record = recordMap.get(base);
+    var recordDeclaration = recordMap.get(base);
 
-    List<FieldDeclaration> declarations = record.getFields();
+    if (recordDeclaration == null) {
+      log.error("This should not happen. Inferred record is not in the record map.");
+      return null;
+    }
+
+    List<FieldDeclaration> declarations = recordDeclaration.getFields();
     Optional<FieldDeclaration> target =
         declarations.stream().filter(f -> f.getName().equals(name)).findFirst();
     if (target.isEmpty()) {
       FieldDeclaration declaration =
           NodeBuilder.newFieldDeclaration(
               name, type, Collections.emptyList(), "", null, null, false);
-      recordMap.get(base).addField(declaration);
+      recordDeclaration.addField(declaration);
       declaration.setInferred(true);
       // lang.getScopeManager().addValueDeclaration(declaration);
       return declaration;
@@ -482,13 +487,11 @@ public class VariableUsageResolver extends Pass {
   private RecordDeclaration inferRecordDeclaration(Type type) {
     if (type instanceof ObjectType) {
       log.debug(
-          "Encountered an unknown record type {} during a field access. Need to infer that record",
+          "Encountered an unknown record type {} during a field access. We are going to infer that record",
           type.getTypeName());
 
-      // TODO: is there a logic, when it is a class or a struct?
-      // maybe we need to adjust the kind later on when we discover a member call expression
-      // it would also better to merge this with the CallResolver, because it does essentially the
-      // same
+      // We start out with a simple struct. We can later adjust the kind when we discover a member
+      // call expression
       var declaration = newRecordDeclaration(type.getTypeName(), "struct", "");
       declaration.setInferred(true);
 
