@@ -60,6 +60,8 @@ dependencies {
     implementation("org.apache.logging.log4j:log4j-slf4j18-impl:2.14.1")
 
     // JUnit
+    testImplementation("org.jetbrains.kotlin:kotlin-test")
+    testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
     testImplementation("org.junit.jupiter", "junit-jupiter-api", versions["junit5"])
     testImplementation("org.junit.jupiter", "junit-jupiter-params", versions["junit5"])
     testRuntimeOnly("org.junit.jupiter", "junit-jupiter-engine", versions["junit5"])
