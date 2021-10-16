@@ -35,11 +35,11 @@ import org.junit.jupiter.api.Test
 class ExamplesTest {
     @Test
     fun testIf() {
-        val topLevel = Path.of("src", "test", "resources", "llvm", "examples", "macho_arm64")
+        val topLevel = Path.of("src", "test", "resources", "llvm", "examples", "llvm")
 
         val tu =
             TestUtils.analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("if.ll").toFile()),
+                listOf(topLevel.resolve("client.ll").toFile()),
                 topLevel,
                 true
             ) {

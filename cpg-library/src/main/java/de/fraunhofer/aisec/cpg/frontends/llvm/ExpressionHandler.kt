@@ -74,7 +74,7 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
                 )
                 val cpgType = lang.typeOf(value)
                 val operandName: String
-                val type = cpgType.typeName
+                cpgType.typeName
 
                 // old stuff from getOperandValue, needs to be refactored to the when above
                 // TODO also move the other stuff to the expression handler
@@ -343,8 +343,6 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
                 arrayExpr.name = index.toString()
                 arrayExpr.subscriptExpression = operand
                 expr = arrayExpr
-
-                log.info("{}", expr)
 
                 // deference the type to get the new base type
                 baseType = baseType.dereference()
