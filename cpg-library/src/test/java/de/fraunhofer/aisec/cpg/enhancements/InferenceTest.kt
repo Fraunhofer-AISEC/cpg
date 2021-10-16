@@ -25,9 +25,13 @@
  */
 package de.fraunhofer.aisec.cpg.enhancements
 
+import de.fraunhofer.aisec.cpg.InferenceConfiguration
 import de.fraunhofer.aisec.cpg.TestUtils.analyzeAndGetFirstTU
+import de.fraunhofer.aisec.cpg.graph.byNameOrNull
+import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import java.io.File
-import java.util.List
+import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
 import org.junit.jupiter.api.Test
 
 class InferenceTest {
@@ -35,9 +39,28 @@ class InferenceTest {
     @Test
     fun testRecordInference() {
         val file = File("src/test/resources/inference/record.cpp")
-        val tu = analyzeAndGetFirstTU(List.of(file), file.parentFile.toPath(), true)
-        System.out.println(tu)
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.inferenceConfiguration(
+                    InferenceConfiguration.builder().inferRecords(true).build()
+                )
+            }
 
-        // TODO: assert
+        assertNotNull(tu)
+
+        val record = tu.byNameOrNull<RecordDeclaration>("T")
+        assertNotNull(record)
+        assertEquals("T", record.name)
+        assertEquals(true, record.isInferred)
+
+        assertEquals(2, record.fields.size)
+
+        val valueField = record.getField("value")
+        assertNotNull(valueField)
+        assertEquals("int", valueField.type.typeName)
+
+        val nextField = record.getField("next")
+        assertNotNull(nextField)
+        assertEquals("T*", nextField.type.typeName)
     }
 }

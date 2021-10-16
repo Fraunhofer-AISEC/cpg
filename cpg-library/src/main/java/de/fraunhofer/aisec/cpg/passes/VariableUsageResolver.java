@@ -392,12 +392,16 @@ public class VariableUsageResolver extends Pass {
 
   private FieldDeclaration handleUnknownField(Type base, String name, Type type) {
     if (!recordMap.containsKey(base)) {
-      // we have an access to an unknown field of an unknown record. so we need to handle that
-      var inferredRecord = inferRecordDeclaration(base);
+      if (lang != null && lang.getConfig().getInferenceConfiguration().getInferRecords()) {
+        // we have an access to an unknown field of an unknown record. so we need to handle that
+        var inferredRecord = inferRecordDeclaration(base);
 
-      if (inferredRecord == null) {
-        log.error(
-            "Can not add inferred field declaration because the record type could not be inferred.");
+        if (inferredRecord == null) {
+          log.error(
+              "Can not add inferred field declaration because the record type could not be inferred.");
+          return null;
+        }
+      } else {
         return null;
       }
     }
@@ -478,12 +482,16 @@ public class VariableUsageResolver extends Pass {
       // it would also better to merge this with the CallResolver, because it does essentially the
       // same
       var declaration = newRecordDeclaration(type.getTypeName(), "struct", "");
+      declaration.setInferred(true);
 
       // update the type
       ((ObjectType) type).setRecordDeclaration(declaration);
 
       // update the record map
       recordMap.put(type, declaration);
+
+      // add this record declaration to the current TU (this bypasses the scope manager)
+      lang.getCurrentTU().addDeclaration(declaration);
 
       return declaration;
     } else {
