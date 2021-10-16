@@ -37,7 +37,7 @@ import de.fraunhofer.aisec.cpg.graph.types.Type
  */
 class LambdaExpression : Expression(), HasType.TypeListener {
 
-    @SubGraph("AST")
+    @field:SubGraph("AST")
     var function: FunctionDeclaration? = null
         set(value: FunctionDeclaration?) {
             if (value != null) {
