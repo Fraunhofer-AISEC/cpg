@@ -141,6 +141,9 @@ public class TranslationConfiguration {
 
   @NonNull private final List<Pass> passes;
 
+  /** This sub configuration object holds all information about inference and smart-guessing. */
+  final InferenceConfiguration inferenceConfiguration;
+
   private TranslationConfiguration(
       Map<String, String> symbols,
       List<File> sourceLocations,
@@ -158,7 +161,8 @@ public class TranslationConfiguration {
       boolean disableCleanup,
       boolean useUnityBuild,
       boolean useParallelFrontends,
-      boolean typeSystemActiveInFrontend) {
+      boolean typeSystemActiveInFrontend,
+      InferenceConfiguration inferenceConfiguration) {
     this.symbols = symbols;
     this.sourceLocations = sourceLocations;
     this.topLevel = topLevel;
@@ -177,6 +181,7 @@ public class TranslationConfiguration {
     this.useUnityBuild = useUnityBuild;
     this.useParallelFrontends = useParallelFrontends;
     this.typeSystemActiveInFrontend = typeSystemActiveInFrontend;
+    this.inferenceConfiguration = inferenceConfiguration;
   }
 
   public static Builder builder() {
@@ -201,6 +206,10 @@ public class TranslationConfiguration {
 
   public Map<Class<? extends LanguageFrontend>, List<String>> getFrontends() {
     return this.frontends;
+  }
+
+  public InferenceConfiguration getInferenceConfiguration() {
+    return this.inferenceConfiguration;
   }
 
   /**
@@ -236,6 +245,8 @@ public class TranslationConfiguration {
     private boolean useUnityBuild = false;
     private boolean useParallelFrontends = false;
     private boolean typeSystemActiveInFrontend = true;
+    private InferenceConfiguration inferenceConfiguration =
+        new InferenceConfiguration.Builder().build();
 
     public Builder symbols(Map<String, String> symbols) {
       this.symbols = symbols;
@@ -466,6 +477,11 @@ public class TranslationConfiguration {
       return this;
     }
 
+    public Builder inferenceConfiguration(InferenceConfiguration configuration) {
+      this.inferenceConfiguration = configuration;
+      return this;
+    }
+
     public TranslationConfiguration build() {
       if (useParallelFrontends && typeSystemActiveInFrontend) {
         log.warn(
@@ -490,7 +506,8 @@ public class TranslationConfiguration {
           disableCleanup,
           useUnityBuild,
           useParallelFrontends,
-          typeSystemActiveInFrontend);
+          typeSystemActiveInFrontend,
+          inferenceConfiguration);
     }
   }
 }
