@@ -28,8 +28,9 @@
 package de.fraunhofer.aisec.cpg.analysis
 
 import de.fraunhofer.aisec.cpg.TranslationResult
-import de.fraunhofer.aisec.cpg.graph.HasBase
-import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.console.fancyCode
+import de.fraunhofer.aisec.cpg.console.fancyLocationLink
+import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.IfStatement
@@ -77,10 +78,10 @@ class NullPointerCheck {
             // check for all incoming DFG branches
             node.base.prevDFG.forEach {
                 var resolved: Any? = CouldNotResolve()
-                val resolver = ValueResolver()
+                val resolver = ValueEvaluator()
                 if (it is Expression) {
                     // try to resolve them
-                    resolved = resolver.resolve(it)
+                    resolved = resolver.evaluate(it)
                 } else if (it is Declaration) {
                     // try to resolve them
                     resolved = resolver.resolveDeclaration(it)

@@ -23,27 +23,20 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.analysis
+package de.fraunhofer.aisec.cpg.console
 
-import de.fraunhofer.aisec.cpg.TranslationResult
-import de.fraunhofer.aisec.cpg.graph.DeclarationHolder
 import de.fraunhofer.aisec.cpg.graph.HasType
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.IfStatement
-import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser
-import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
-import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation.locationLink
+import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
 import java.io.File
-import kotlin.jvm.Throws
 import org.jetbrains.kotlinx.ki.shell.configuration.ReplConfigurationBase
 import org.jetbrains.kotlinx.ki.shell.plugins.SyntaxPlugin
 import org.jline.utils.AttributedString
@@ -73,131 +66,6 @@ fun Collection<Node>.printCode(
     }
 
     return this
-}
-
-fun Expression.resolve(): Any? {
-    return ValueResolver().resolve(this)
-}
-
-fun Declaration.resolve(): Any? {
-    return ValueResolver().resolveDeclaration(this)
-}
-
-val ArrayCreationExpression.capacity: Int
-    get() {
-        return dimensions.first().resolve() as Int
-    }
-
-@JvmName("allNodes")
-fun TranslationResult.all(): List<Node> {
-    return this.all<Node>()
-}
-
-inline fun <reified T : Node> TranslationResult.all(): List<T> {
-    val children = SubgraphWalker.flattenAST(this)
-
-    return children.filterIsInstance<T>()
-}
-
-@JvmName("allNodes")
-fun Node.all(): List<Node> {
-    return this.all<Node>()
-}
-
-inline fun <reified T : Node> Node.all(): List<T> {
-    val children = SubgraphWalker.flattenAST(this)
-
-    return children.filterIsInstance<T>()
-}
-
-@JvmName("astNodes")
-fun Node.ast(): List<Node> {
-    return this.ast<Node>()
-}
-
-inline fun <reified T : Node> Node.ast(): List<T> {
-    val children = SubgraphWalker.getAstChildren(this)
-
-    return children.filterIsInstance<T>()
-}
-
-inline fun <reified T : Node> Node.dfgFrom(): List<T> {
-    return this.prevDFG.toList().filterIsInstance<T>()
-}
-
-@Throws(DeclarationNotFound::class)
-inline fun <reified T : Declaration> DeclarationHolder.byName(name: String): T {
-    var base = this
-    var lookup = name
-
-    // lets do a _very_ simple FQN lookup
-    // TODO(oxisto): we could do this with a for-loop for multiple nested levels
-    if (name.contains(".")) {
-        // take the most left one
-        val baseName = name.split(".")[0]
-
-        base =
-            this.declarations.filterIsInstance<DeclarationHolder>().firstOrNull {
-                (it as? Node)?.name == baseName
-            }
-                ?: throw DeclarationNotFound("base not found")
-        lookup = name.split(".")[1]
-    }
-
-    val o = base.declarations.filterIsInstance<T>().firstOrNull { it.name == lookup }
-
-    return o ?: throw DeclarationNotFound("declaration with name not found or incorrect type")
-}
-
-/**
- * This inline function returns the n'th statement (in AST order) as specified in T.
- *
- * For convenience, n defaults to zero, so that the first statement is always easy to fetch.
- */
-@Throws(StatementNotFound::class)
-inline fun <reified T : Statement> FunctionDeclaration.body(n: Int = 0): T {
-    return if (this.body is CompoundStatement) {
-        val o = (this.body as? CompoundStatement)?.statements?.filterIsInstance<T>()?.get(n)
-
-        if (o == null) {
-            throw StatementNotFound()
-        } else {
-            return o
-        }
-    } else {
-        if (n == 0 && this.body is T) {
-            this.body as T
-        } else {
-            throw StatementNotFound()
-        }
-    }
-}
-
-class StatementNotFound : Exception()
-
-class DeclarationNotFound(message: String) : Exception(message)
-
-fun Node.followPrevEOG(predicate: (PropertyEdge<*>) -> Boolean): List<PropertyEdge<*>>? {
-    val path = mutableListOf<PropertyEdge<*>>()
-
-    for (edge in this.prevEOGEdges) {
-        val source = edge.start
-
-        path.add(edge)
-
-        if (predicate(edge)) {
-            return path
-        }
-
-        val subPath = source.followPrevEOG(predicate)
-        if (subPath != null) {
-            path.addAll(subPath)
-
-            return path
-        }
-    }
-
-    return null
 }
 
 fun Node.fancyCode(linesAhead: Int = 0, showNumbers: Boolean): String? {
@@ -479,6 +347,9 @@ fun getRelativeLocation(parentRegion: Region, region: Region): Region {
 }
 
 fun Node?.fancyLocationLink(): String {
-    return AttributedString(locationLink(this?.location), DEFAULT.foreground(BLUE or BRIGHT))
+    return AttributedString(
+            PhysicalLocation.locationLink(this?.location),
+            DEFAULT.foreground(BLUE or BRIGHT)
+        )
         .toAnsi()
 }

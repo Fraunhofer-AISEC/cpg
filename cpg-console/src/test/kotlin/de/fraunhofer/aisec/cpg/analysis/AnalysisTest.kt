@@ -27,10 +27,14 @@ package de.fraunhofer.aisec.cpg.analysis
 
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationManager
+import de.fraunhofer.aisec.cpg.console.fancyCode
+import de.fraunhofer.aisec.cpg.graph.body
+import de.fraunhofer.aisec.cpg.graph.byNameOrNull
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import java.io.File
+import kotlin.test.assertNotNull
 import org.junit.jupiter.api.Test
 
 class AnalysisTest {
@@ -77,7 +81,8 @@ class AnalysisTest {
         val result = analyzer.analyze().get()
         val tu = result.translationUnits.first()
 
-        val main = tu.byName<FunctionDeclaration>("Array.main")
+        val main = tu.byNameOrNull<FunctionDeclaration>("Array.main", true)
+        assertNotNull(main)
         val call = main.body<CallExpression>(0)
 
         var code = call.fancyCode(showNumbers = false)

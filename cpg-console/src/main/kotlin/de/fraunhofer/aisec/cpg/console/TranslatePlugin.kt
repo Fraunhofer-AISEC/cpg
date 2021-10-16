@@ -57,15 +57,14 @@ class TranslatePlugin : Plugin {
                     "import de.fraunhofer.aisec.cpg.graph.statements.*",
                     "import de.fraunhofer.aisec.cpg.graph.statements.expressions.*",
                     // helper builtins
-                    "import de.fraunhofer.aisec.cpg.analysis.NodeList",
-                    "import de.fraunhofer.aisec.cpg.analysis.resolve",
-                    "import de.fraunhofer.aisec.cpg.analysis.all",
-                    "import de.fraunhofer.aisec.cpg.analysis.ast",
-                    "import de.fraunhofer.aisec.cpg.analysis.dfgFrom",
-                    "import de.fraunhofer.aisec.cpg.analysis.byName",
-                    "import de.fraunhofer.aisec.cpg.analysis.body",
-                    "import de.fraunhofer.aisec.cpg.analysis.printCode",
-                    "import de.fraunhofer.aisec.cpg.analysis.capacity",
+                    "import de.fraunhofer.aisec.cpg.graph.evaluate",
+                    "import de.fraunhofer.aisec.cpg.graph.all",
+                    "import de.fraunhofer.aisec.cpg.graph.ast",
+                    "import de.fraunhofer.aisec.cpg.graph.dfgFrom",
+                    "import de.fraunhofer.aisec.cpg.graph.byName",
+                    "import de.fraunhofer.aisec.cpg.graph.body",
+                    "import de.fraunhofer.aisec.cpg.graph.capacity",
+                    "import de.fraunhofer.aisec.cpg.console.printCode",
                     // some basic java stuff
                     "import java.io.File",
                     // lets build and analyze
