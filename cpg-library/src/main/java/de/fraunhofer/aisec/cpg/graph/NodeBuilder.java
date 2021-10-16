@@ -803,4 +803,13 @@ public class NodeBuilder {
 
     return keyValue;
   }
+
+  @NotNull
+  public static LambdaExpression newLambdaExpression(
+      @org.jetbrains.annotations.Nullable String code) {
+    var lambda = new LambdaExpression();
+    lambda.setCode(code);
+
+    return lambda;
+  }
 }

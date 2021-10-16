@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.frontends.typescript
 import de.fraunhofer.aisec.cpg.ExperimentalTypeScript
 import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder
+import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
@@ -112,19 +113,14 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
 
     private fun handleArrowFunction(node: TypeScriptNode): Expression {
         // parse as a function
-        val func = lang.declarationHandler.handle(node)
+        val func = lang.declarationHandler.handle(node) as? FunctionDeclaration
 
         // we cannot directly return a function declaration as an expression, so we
-        // wrap it into a reference expression
-        val ref =
-            NodeBuilder.newDeclaredReferenceExpression(
-                "",
-                UnknownType.getUnknownType(),
-                lang.getCodeFromRawNode(node)
-            )
-        ref.refersTo = func
+        // wrap it into a lambda expression
+        val lambda = NodeBuilder.newLambdaExpression(lang.getCodeFromRawNode(node))
+        lambda.function = func
 
-        return ref
+        return lambda
     }
 
     private fun handlePropertyAssignment(node: TypeScriptNode): KeyValueExpression {
