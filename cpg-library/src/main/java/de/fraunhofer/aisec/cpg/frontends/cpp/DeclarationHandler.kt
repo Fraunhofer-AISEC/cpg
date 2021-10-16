@@ -41,13 +41,12 @@ import de.fraunhofer.aisec.cpg.graph.types.TypeParser
 import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.passes.scopes.RecordScope
 import de.fraunhofer.aisec.cpg.passes.scopes.TemplateScope
-import org.eclipse.cdt.core.dom.ast.*
-import org.eclipse.cdt.core.dom.ast.IASTTranslationUnit.IDependencyTree.IASTInclusionNode
-import org.eclipse.cdt.internal.core.dom.parser.cpp.*
 import java.util.function.Consumer
 import java.util.function.Supplier
 import java.util.stream.Collectors
-
+import org.eclipse.cdt.core.dom.ast.*
+import org.eclipse.cdt.core.dom.ast.IASTTranslationUnit.IDependencyTree.IASTInclusionNode
+import org.eclipse.cdt.internal.core.dom.parser.cpp.*
 
 class DeclarationHandler(lang: CXXLanguageFrontend) :
     Handler<Declaration?, IASTDeclaration, CXXLanguageFrontend>(Supplier { Declaration() }, lang) {

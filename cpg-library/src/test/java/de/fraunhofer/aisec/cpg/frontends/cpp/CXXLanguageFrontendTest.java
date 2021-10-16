@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.frontends.cpp;
 import static org.junit.jupiter.api.Assertions.*;
 
 import de.fraunhofer.aisec.cpg.BaseTest;
+import de.fraunhofer.aisec.cpg.InferenceConfiguration;
 import de.fraunhofer.aisec.cpg.TestUtils;
 import de.fraunhofer.aisec.cpg.TranslationConfiguration;
 import de.fraunhofer.aisec.cpg.graph.Annotation;
@@ -1292,7 +1293,15 @@ class CXXLanguageFrontendTest extends BaseTest {
   @Test
   void testParenthesis() throws Exception {
     var file = new File("src/test/resources/parenthesis.cpp");
-    var tu = TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true);
+    var tu =
+        TestUtils.analyzeAndGetFirstTU(
+            List.of(file),
+            file.getParentFile().toPath(),
+            true,
+            config -> {
+              config.inferenceConfiguration(
+                  InferenceConfiguration.builder().guessCastExpressions(true).build());
+            });
 
     var main = tu.getDeclarationsByName("main", FunctionDeclaration.class).iterator().next();
     assertNotNull(main);
