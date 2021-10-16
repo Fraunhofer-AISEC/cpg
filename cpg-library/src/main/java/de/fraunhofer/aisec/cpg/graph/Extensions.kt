@@ -85,14 +85,16 @@ inline fun <reified T : Node> Node.dfgFrom(): List<T> {
     return this.prevDFG.toList().filterIsInstance<T>()
 }
 
-@Throws(DeclarationNotFound::class)
-inline fun <reified T : Declaration> DeclarationHolder.byName(name: String): T {
+inline fun <reified T : Declaration> DeclarationHolder.byNameOrNull(
+    name: String,
+    fqn: Boolean = false
+): T? {
     var base = this
     var lookup = name
 
     // lets do a _very_ simple FQN lookup
     // TODO(oxisto): we could do this with a for-loop for multiple nested levels
-    if (name.contains(".")) {
+    if (fqn && name.contains(".")) {
         // take the most left one
         val baseName = name.split(".")[0]
 
@@ -100,19 +102,26 @@ inline fun <reified T : Declaration> DeclarationHolder.byName(name: String): T {
             this.declarations.filterIsInstance<DeclarationHolder>().firstOrNull {
                 (it as? Node)?.name == baseName
             }
-                ?: throw DeclarationNotFound("base not found")
+                ?: return null
         lookup = name.split(".")[1]
     }
 
-    val o = base.declarations.filterIsInstance<T>().firstOrNull { it.name == lookup }
+    return base.declarations.filterIsInstance<T>().firstOrNull { it.name == lookup }
+}
 
-    return o ?: throw DeclarationNotFound("declaration with name not found or incorrect type")
+@Throws(DeclarationNotFound::class)
+inline fun <reified T : Declaration> DeclarationHolder.byName(
+    name: String,
+    fqn: Boolean = false
+): T {
+    return byNameOrNull(name, fqn)
+        ?: throw DeclarationNotFound("declaration with name not found or incorrect type")
 }
 
 /**
- * This inline function returns the n'th statement (in AST order) as specified in T.
+ * This inline function returns the `n`-th statement (in AST order) as specified in T.
  *
- * For convenience, n defaults to zero, so that the first statement is always easy to fetch.
+ * For convenience, `n` defaults to zero, so that the first statement is always easy to fetch.
  */
 @Throws(StatementNotFound::class)
 inline fun <reified T : Statement> FunctionDeclaration.body(n: Int = 0): T {

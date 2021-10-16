@@ -40,7 +40,7 @@ tasks.withType<Test> {
 }
 
 tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
-    kotlinOptions.jvmTarget = "11" // important, since ki is 1.8 and otherwise inlining wont work
+    kotlinOptions.jvmTarget = "1.8" // important, since ki is 1.8 and otherwise inlining wont work
 }
 
 tasks.withType<JavaCompile> {
