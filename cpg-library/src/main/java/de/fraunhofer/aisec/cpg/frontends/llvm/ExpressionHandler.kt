@@ -58,7 +58,9 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
             LLVMConstantDataArrayValueKind -> handleConstantDataArrayValue(value)
             LLVMConstantIntValueKind -> handleConstantInt(value)
             LLVMConstantFPValueKind -> handleConstantFP(value)
+            LLVMConstantPointerNullValueKind -> handleNullPointer(value)
             LLVMUndefValueValueKind -> handleUndefValue(value)
+            LLVMConstantAggregateZeroValueKind -> handleAggregateZero(value)
             LLVMArgumentValueKind,
             LLVMGlobalVariableValueKind,
             // this is a little tricky. It seems weird, that an instruction value kind turns
@@ -282,6 +284,40 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
         val type = lang.typeOf(value)
 
         return initializeAsUndef(type, lang.getCodeFromRawNode(value)!!)
+    }
+
+    private fun initializeAsZero(type: Type, code: String): Expression {
+        if (!lang.isKnownStructTypeName(type.name) &&
+                !type.name.contains("*") &&
+                !type.name.contains("{")
+        ) {
+            return newLiteral(0, type, code)
+        } else {
+            val expr: ConstructExpression = NodeBuilder.newConstructExpression(code)
+            // map the construct expression to the record declaration of the type
+            expr.instantiates = (type as? ObjectType)?.recordDeclaration
+
+            // loop through the operands
+            for (field in (expr.instantiates as RecordDeclaration).fields) {
+                // and handle them as expressions themselves
+                val arg = initializeAsUndef(field.type, code)
+                expr.addArgument(arg)
+            }
+
+            return expr
+        }
+    }
+
+    private fun handleAggregateZero(value: LLVMValueRef): Expression {
+        // retrieve the type
+        val type = lang.typeOf(value)
+
+        return initializeAsZero(type, lang.getCodeFromRawNode(value)!!)
+    }
+
+    private fun handleNullPointer(value: LLVMValueRef): Expression {
+        val type = lang.typeOf(value)
+        return newLiteral(null, type, lang.getCodeFromRawNode(value))
     }
 
     /**
