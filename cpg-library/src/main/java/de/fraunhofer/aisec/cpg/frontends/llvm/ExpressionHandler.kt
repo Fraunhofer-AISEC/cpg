@@ -332,7 +332,10 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
      * we need to unwrap those into individual expressions.
      */
     internal fun handleGetElementPtr(instr: LLVMValueRef): Expression {
-        val isGetElementPtr = instr.opCode == LLVMGetElementPtr
+        val isGetElementPtr =
+            instr.opCode == LLVMGetElementPtr ||
+                (LLVMIsAConstantExpr(instr) != null &&
+                    LLVMGetConstOpcode(instr) == LLVMGetElementPtr)
 
         val numOps: Int
         val loopStart: Int
