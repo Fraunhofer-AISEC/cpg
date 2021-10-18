@@ -1542,7 +1542,7 @@ define internal signext i8 @_ZNKSt3__19basic_iosIcNS_11char_traitsIcEEE5widenEc(
   store i8 %1, i8* %4, align 1
   %8 = load %"class.std::__1::basic_ios"*, %"class.std::__1::basic_ios"** %3, align 8
   %9 = bitcast %"class.std::__1::basic_ios"* %8 to %"class.std::__1::ios_base"*
-  call void @_ZNKSt3__18ios_base6getlocEv(%"class.std::__1::locale"* sret align 8 %5, %"class.std::__1::ios_base"* %9)
+  call void @_ZNKSt3__18ios_base6getlocEv(%"class.std::__1::locale"* sret(%"class.std::__1::locale") align 8 %5, %"class.std::__1::ios_base"* %9)
   %10 = invoke nonnull align 8 dereferenceable(25) %"class.std::__1::ctype"* @_ZNSt3__1L9use_facetINS_5ctypeIcEEEERKT_RKNS_6localeE(%"class.std::__1::locale"* nonnull align 8 dereferenceable(8) %5)
           to label %11 unwind label %16
 
@@ -1593,7 +1593,7 @@ define internal nonnull align 8 dereferenceable(25) %"class.std::__1::ctype"* @_
   ret %"class.std::__1::ctype"* %5
 }
 
-declare void @_ZNKSt3__18ios_base6getlocEv(%"class.std::__1::locale"* sret align 8, %"class.std::__1::ios_base"*) #2
+declare void @_ZNKSt3__18ios_base6getlocEv(%"class.std::__1::locale"* sret(%"class.std::__1::locale") align 8, %"class.std::__1::ios_base"*) #2
 
 ; Function Attrs: noinline optnone ssp uwtable
 define internal signext i8 @_ZNKSt3__15ctypeIcE5widenEc(%"class.std::__1::ctype"* %0, i8 signext %1) #1 align 2 {
