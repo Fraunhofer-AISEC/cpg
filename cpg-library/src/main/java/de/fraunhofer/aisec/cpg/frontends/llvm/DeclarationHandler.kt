@@ -76,7 +76,7 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
 
         val size = LLVMGetNumOperands(valueRef)
         // the first operand (if it exists) is an initializer
-        if (size >= 0) {
+        if (size > 0) {
             val expr = lang.expressionHandler.handle(LLVMGetOperand(valueRef, 0))
             variableDeclaration.initializer = expr
         }
