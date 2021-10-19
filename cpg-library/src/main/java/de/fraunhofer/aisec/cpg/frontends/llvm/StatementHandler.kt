@@ -30,11 +30,9 @@ import de.fraunhofer.aisec.cpg.graph.NodeBuilder.*
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
+import de.fraunhofer.aisec.cpg.graph.statements.LabelStatement
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.ArrayCreationExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.ConstructExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
@@ -87,8 +85,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 println("indirect br instruction")
             }
             LLVMInvoke -> {
-                // TODO: Function call and an edge potentially transferring control flow to a catch
-                println("invoke instruction")
+                return parseFunctionCall(instr)
             }
             LLVMUnreachable -> {
                 // Does nothing
@@ -587,15 +584,13 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             LLVMAtomicRMWBinOpXchg -> {
                 exchOp.rhs = value
             }
-            LLVMAtomicRMWBinOpFAdd,
-            LLVMAtomicRMWBinOpAdd -> {
+            LLVMAtomicRMWBinOpFAdd, LLVMAtomicRMWBinOpAdd -> {
                 val binaryOperator = newBinaryOperator("+", instrStr)
                 binaryOperator.lhs = ptrDeref
                 binaryOperator.rhs = value
                 exchOp.rhs = binaryOperator
             }
-            LLVMAtomicRMWBinOpFSub,
-            LLVMAtomicRMWBinOpSub -> {
+            LLVMAtomicRMWBinOpFSub, LLVMAtomicRMWBinOpSub -> {
                 val binaryOperator = newBinaryOperator("-", instrStr)
                 binaryOperator.lhs = ptrDeref
                 binaryOperator.rhs = value
@@ -627,26 +622,26 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 binaryOperator.rhs = value
                 exchOp.rhs = binaryOperator
             }
-            LLVMAtomicRMWBinOpMax,
-            LLVMAtomicRMWBinOpMin -> {
-                val operatorCode = if(operation == LLVMAtomicRMWBinOpMin) {
-                    "<"
-                } else {
-                    ">"
-                }
+            LLVMAtomicRMWBinOpMax, LLVMAtomicRMWBinOpMin -> {
+                val operatorCode =
+                    if (operation == LLVMAtomicRMWBinOpMin) {
+                        "<"
+                    } else {
+                        ">"
+                    }
                 val condition = newBinaryOperator(operatorCode, instrStr)
                 condition.lhs = ptrDeref
                 condition.rhs = value
                 val conditional = newConditionalExpression(condition, ptrDeref, value, ty)
                 exchOp.rhs = conditional
             }
-            LLVMAtomicRMWBinOpUMax,
-            LLVMAtomicRMWBinOpUMin -> {
-                val operatorCode = if(operation == LLVMAtomicRMWBinOpUMin) {
-                    "<"
-                } else {
-                    ">"
-                }
+            LLVMAtomicRMWBinOpUMax, LLVMAtomicRMWBinOpUMin -> {
+                val operatorCode =
+                    if (operation == LLVMAtomicRMWBinOpUMin) {
+                        "<"
+                    } else {
+                        ">"
+                    }
                 val condition = newBinaryOperator(operatorCode, instrStr)
                 val castExprLhs = newCastExpression(lang.getCodeFromRawNode(instr))
                 castExprLhs.castType = TypeParser.createFrom("u${ty.name}", true)
@@ -682,41 +677,26 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             // if(op) then {label1} else {label2}
             val ifStatement = newConditionalBranchStatement(lang.getCodeFromRawNode(instr))
             val condition = lang.getOperandValueAtIndex(instr, 0)
-            val label1Name = LLVMGetValueName(LLVMGetOperand(instr, 1)).string
 
-            // Set the default branch ("else")
-            val elseLabelStatement =
-                lang.labelMap.computeIfAbsent(label1Name) {
-                    val label = newLabelStatement(label1Name)
-                    label.name = label1Name
-                    label
-                }
-            ifStatement.defaultTargetLabel = elseLabelStatement
+            // Get the label of the "else" branch
+            val defaultLabelWrapper =
+                lang.getOperandValueAtIndex(instr, 1) as? CompoundStatementExpression
+            ifStatement.defaultTargetLabel = defaultLabelWrapper?.statement as LabelStatement
 
-            val label2Name =
-                LLVMGetValueName(LLVMGetOperand(instr, 2)).string // The label of the if branch
-            val thenLabelStatement =
-                lang.labelMap.computeIfAbsent(label2Name) {
-                    val label = newLabelStatement(label2Name)
-                    label.name = label2Name
-                    label
-                }
+            // Get the label of the "if" branch
+            val thenLabelWrapper =
+                lang.getOperandValueAtIndex(instr, 2) as? CompoundStatementExpression
+            val thenLabelStatement = thenLabelWrapper?.statement as LabelStatement
             ifStatement.addConditionalTarget(condition, thenLabelStatement)
 
             return ifStatement
         } else if (LLVMGetNumOperands(instr) == 1) {
             // goto defaultLocation
             val gotoStatement = newGotoStatement(lang.getCodeFromRawNode(instr))
-            val defaultLocation = LLVMGetOperand(instr, 0) // The BB of the target
-            val labelName = LLVMGetValueName(defaultLocation).string
-
-            val labelStatement =
-                lang.labelMap.computeIfAbsent(labelName) {
-                    val label = newLabelStatement(labelName)
-                    label.name = labelName
-                    label
-                }
-            gotoStatement.labelName = labelName
+            val defaultLabelWrapper =
+                lang.getOperandValueAtIndex(instr, 0) as? CompoundStatementExpression
+            val labelStatement = defaultLabelWrapper?.statement as LabelStatement
+            gotoStatement.labelName = labelStatement.name
             gotoStatement.targetLabel = labelStatement
 
             return gotoStatement
@@ -733,35 +713,24 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
 
         val switchStatement = newConditionalBranchStatement(lang.getCodeFromRawNode(instr))
 
-        val defaultLocation =
-            LLVMGetValueName(LLVMGetOperand(instr, 1)).string // The label of the "default" branch
-
-        val defaultLabelStatement =
-            lang.labelMap.computeIfAbsent(defaultLocation) {
-                val label = newLabelStatement(defaultLocation)
-                label.name = defaultLocation
-                label
-            }
-
-        switchStatement.defaultTargetLabel = defaultLabelStatement
+        // Get the label of the "default" branch
+        val defaultLabelWrapper =
+            lang.getOperandValueAtIndex(instr, 1) as? CompoundStatementExpression
+        switchStatement.defaultTargetLabel = defaultLabelWrapper?.statement as LabelStatement
 
         var idx = 2
         while (idx < numOps) {
+            // Get the comparison
             val binaryOperator = newBinaryOperator("==", lang.getCodeFromRawNode(instr))
             binaryOperator.lhs = operand
             binaryOperator.rhs = lang.getOperandValueAtIndex(instr, idx)
             idx++
-            val catchLabel = LLVMGetValueName(LLVMGetOperand(instr, idx)).string
-
-            val catchLabelStatement =
-                lang.labelMap.computeIfAbsent(catchLabel) {
-                    val label = newLabelStatement(catchLabel)
-                    label.name = catchLabel
-                    label
-                }
-
-            switchStatement.addConditionalTarget(binaryOperator, catchLabelStatement)
+            // Get the "case" statements
+            val caseLabelWrapper =
+                lang.getOperandValueAtIndex(instr, idx) as? CompoundStatementExpression
+            val caseLabelStatement = caseLabelWrapper?.statement as LabelStatement
             idx++
+            switchStatement.addConditionalTarget(binaryOperator, caseLabelStatement)
         }
         return switchStatement
     }
@@ -769,7 +738,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
     private fun parseFunctionCall(instr: LLVMValueRef): Statement {
         val calledFunc = LLVMGetCalledValue(instr)
         var calledFuncName = LLVMGetValueName(calledFunc).string
-        val max = LLVMGetNumOperands(instr) - 1
+        var max = LLVMGetNumOperands(instr) - 1
         var idx = 0
 
         if (calledFuncName.equals("")) {
@@ -777,6 +746,29 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             // operand
             val opName = lang.getOperandValueAtIndex(instr, max)
             calledFuncName = opName.name
+        }
+
+        val catchLabel: LabelStatement?
+        val continueLabel: LabelStatement?
+        if (instr.opCode == LLVMInvoke) {
+            max-- // Last one is the Decl.Expr of the function
+            // Get the label of the catch clause. Ugly hack: We wrap the LabelStatement in a
+            // CompoundStatementExpression
+            // and here, we retrieve the LabelStatement again
+            val catchCompoundWrapper =
+                lang.getOperandValueAtIndex(instr, max) as? CompoundStatementExpression
+            catchLabel = catchCompoundWrapper?.statement as LabelStatement
+            max--
+            // Get the label of the continue basic block (e.g. if no error occors).
+            val continueCompoundWrapper =
+                lang.getOperandValueAtIndex(instr, max) as? CompoundStatementExpression
+            continueLabel = continueCompoundWrapper?.statement as LabelStatement
+            max--
+            log.info(
+                "Invoke expression: Usually continues at ${continueLabel.name}, exception continues at ${catchLabel.name}"
+            )
+            // TODO: Assemble the whole try/catch logic (the try should surround the callExpr, the
+            // catch clause is the one at catchLabel)
         }
 
         val callExpr =

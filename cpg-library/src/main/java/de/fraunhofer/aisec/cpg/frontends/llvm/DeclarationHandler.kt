@@ -150,9 +150,16 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
             } else {
                 // All further basic blocks are then added to the body wrapped in a label
                 // statement
-                // TODO: it seems that blocks are assigned an implicit counter-based label if it is
-                // not specified
-                val labelName = LLVMGetBasicBlockName(bb).string
+                var labelName = LLVMGetBasicBlockName(bb).string
+
+                if (labelName.equals("")) {
+                    // It seems that blocks are assigned an implicit counter-based label if it is
+                    // not specified. We need to parse it from the string representation of the
+                    // basic block
+                    val bbStr = LLVMPrintValueToString(LLVMBasicBlockAsValue(bb)).string
+                    val firstLine = bbStr.trim().split("\n")[0]
+                    labelName = firstLine.substring(0, firstLine.indexOf(":"))
+                }
 
                 val labelStatement =
                     lang.labelMap.computeIfAbsent(labelName) {
