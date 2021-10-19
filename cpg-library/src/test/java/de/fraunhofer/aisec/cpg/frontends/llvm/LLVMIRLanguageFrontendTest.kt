@@ -88,6 +88,7 @@ class LLVMIRLanguageFrontendTest {
         assertNotNull(call)
         assertEquals("rand", call.name)
         assertTrue(call.invokes.contains(rand))
+        assertEquals(0, call.arguments.size)
 
         val xorStatement = main.bodyOrNull<DeclarationStatement>(3)
         assertNotNull(xorStatement)
