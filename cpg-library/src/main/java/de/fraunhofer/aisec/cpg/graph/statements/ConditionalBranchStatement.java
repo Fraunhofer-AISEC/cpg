@@ -64,4 +64,9 @@ public class ConditionalBranchStatement extends Statement {
         && Objects.equals(conditionalTargets, that.conditionalTargets)
         && Objects.equals(defaultTargetLabel, that.defaultTargetLabel);
   }
+
+  @Override
+  public int hashCode() {
+    return super.hashCode();
+  }
 }
