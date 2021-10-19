@@ -587,12 +587,14 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             LLVMAtomicRMWBinOpXchg -> {
                 exchOp.rhs = value
             }
+            LLVMAtomicRMWBinOpFAdd,
             LLVMAtomicRMWBinOpAdd -> {
                 val binaryOperator = newBinaryOperator("+", instrStr)
                 binaryOperator.lhs = ptrDeref
                 binaryOperator.rhs = value
                 exchOp.rhs = binaryOperator
             }
+            LLVMAtomicRMWBinOpFSub,
             LLVMAtomicRMWBinOpSub -> {
                 val binaryOperator = newBinaryOperator("-", instrStr)
                 binaryOperator.lhs = ptrDeref
@@ -625,36 +627,27 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 binaryOperator.rhs = value
                 exchOp.rhs = binaryOperator
             }
-            LLVMAtomicRMWBinOpMax -> {
-                val condition = newBinaryOperator(">", instrStr)
-                condition.lhs = ptrDeref
-                condition.rhs = value
-                val conditional = newConditionalExpression(condition, ptrDeref, value, ty)
-                exchOp.rhs = conditional
-            }
+            LLVMAtomicRMWBinOpMax,
             LLVMAtomicRMWBinOpMin -> {
-                val condition = newBinaryOperator("<", instrStr)
+                val operatorCode = if(operation == LLVMAtomicRMWBinOpMin) {
+                    "<"
+                } else {
+                    ">"
+                }
+                val condition = newBinaryOperator(operatorCode, instrStr)
                 condition.lhs = ptrDeref
                 condition.rhs = value
                 val conditional = newConditionalExpression(condition, ptrDeref, value, ty)
                 exchOp.rhs = conditional
             }
-            LLVMAtomicRMWBinOpUMax -> {
-                val condition = newBinaryOperator(">", instrStr)
-                val castExprLhs = newCastExpression(lang.getCodeFromRawNode(instr))
-                castExprLhs.castType = TypeParser.createFrom("u${ty.name}", true)
-                castExprLhs.expression = ptrDeref
-                condition.lhs = castExprLhs
-
-                val castExprRhs = newCastExpression(lang.getCodeFromRawNode(instr))
-                castExprRhs.castType = TypeParser.createFrom("u${ty.name}", true)
-                castExprRhs.expression = value
-                condition.rhs = castExprRhs
-                val conditional = newConditionalExpression(condition, ptrDeref, value, ty)
-                exchOp.rhs = conditional
-            }
+            LLVMAtomicRMWBinOpUMax,
             LLVMAtomicRMWBinOpUMin -> {
-                val condition = newBinaryOperator("<", instrStr)
+                val operatorCode = if(operation == LLVMAtomicRMWBinOpUMin) {
+                    "<"
+                } else {
+                    ">"
+                }
+                val condition = newBinaryOperator(operatorCode, instrStr)
                 val castExprLhs = newCastExpression(lang.getCodeFromRawNode(instr))
                 castExprLhs.castType = TypeParser.createFrom("u${ty.name}", true)
                 castExprLhs.expression = ptrDeref
@@ -666,18 +659,6 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 condition.rhs = castExprRhs
                 val conditional = newConditionalExpression(condition, ptrDeref, value, ty)
                 exchOp.rhs = conditional
-            }
-            LLVMAtomicRMWBinOpFAdd -> {
-                val binaryOperator = newBinaryOperator("+", instrStr)
-                binaryOperator.lhs = ptrDeref
-                binaryOperator.rhs = value
-                exchOp.rhs = binaryOperator
-            }
-            LLVMAtomicRMWBinOpFSub -> {
-                val binaryOperator = newBinaryOperator("-", instrStr)
-                binaryOperator.lhs = ptrDeref
-                binaryOperator.rhs = value
-                exchOp.rhs = binaryOperator
             }
             else -> {
                 throw Exception("LLVMAtomicRMWBinOp $operation not supported")
