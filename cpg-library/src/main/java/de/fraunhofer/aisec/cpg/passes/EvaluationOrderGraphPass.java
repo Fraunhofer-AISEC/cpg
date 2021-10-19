@@ -531,12 +531,20 @@ public class EvaluationOrderGraphPass extends Pass {
 
   private void handleCompoundStatement(@NonNull Node node) {
     CompoundStatement compoundStatement = (CompoundStatement) node;
-    lang.getScopeManager().enterScope(compoundStatement);
+
+    // not all language handle compound statements as scoping blocks, so we need to avoid creating
+    // new scopes here
+    lang.getScopeManager().enterScopeIfExists(compoundStatement);
+
     // analyze the contained statements
     for (Statement child : compoundStatement.getStatements()) {
       createEOG(child);
     }
-    lang.getScopeManager().leaveScope(compoundStatement);
+
+    if (lang.getScopeManager().getCurrentScope() instanceof BlockScope) {
+      lang.getScopeManager().leaveScope(compoundStatement);
+    }
+
     pushToEOG(compoundStatement);
   }
 
