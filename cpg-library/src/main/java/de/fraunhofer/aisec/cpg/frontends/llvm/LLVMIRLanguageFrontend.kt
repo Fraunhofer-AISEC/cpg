@@ -28,7 +28,6 @@ package de.fraunhofer.aisec.cpg.frontends.llvm
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
-import de.fraunhofer.aisec.cpg.graph.NodeBuilder
 import de.fraunhofer.aisec.cpg.graph.TypeManager
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
@@ -171,7 +170,7 @@ class LLVMIRLanguageFrontend(config: TranslationConfiguration, scopeManager: Sco
                 return elementType.reference(PointerType.PointerOrigin.POINTER)
             }
             LLVMStructTypeKind -> {
-                val record = handleStructureType(typeRef, alreadyVisited)
+                val record = declarationHandler.handleStructureType(typeRef, alreadyVisited)
 
                 return record.toType() ?: UnknownType.getUnknownType()
             }
@@ -181,98 +180,6 @@ class LLVMIRLanguageFrontend(config: TranslationConfiguration, scopeManager: Sco
                 return TypeParser.createFrom(typeStr, false)
             }
         }
-    }
-
-    /**
-     * Handles the parsing of [structure types](https://llvm.org/docs/LangRef.html#structure-types).
-     * Member fields of structs in LLVM IR do not have names, so we need to assign dummy names for
-     * easier reading, such s `field_0`.
-     *
-     * there are two different types of structs:
-     * - identified structs, which have a name are explicitly declared
-     * - literal structs, which do not have a name, but are structurally unique To emulate this
-     * uniqueness, we create a [RecordDeclaration] for each literal struct and name it according to
-     * its element types (see [getLiteralStructName]).
-     */
-    fun handleStructureType(
-        typeRef: LLVMTypeRef,
-        alreadyVisited: ArrayList<LLVMTypeRef> = ArrayList()
-    ): RecordDeclaration {
-        // if this is a literal struct, we will give it a pseudo name
-        val name =
-            if (LLVMIsLiteralStruct(typeRef) == 1) {
-                getLiteralStructName(typeRef, alreadyVisited)
-            } else {
-                LLVMGetStructName(typeRef).string
-            }
-
-        // try to see, if the struct already exists as a record declaration
-        var record =
-            scopeManager
-                .resolve<RecordDeclaration>(scopeManager.globalScope, true) { it.name == name }
-                .firstOrNull()
-
-        // if yes, return it
-        if (record != null) {
-            return record
-        }
-
-        record = NodeBuilder.newRecordDeclaration(name, "struct", "")
-
-        scopeManager.enterScope(record)
-
-        val size = LLVMCountStructElementTypes(typeRef)
-
-        for (i in 0 until size) {
-            val a = LLVMStructGetTypeAtIndex(typeRef, i)
-            val fieldType = typeFrom(a, alreadyVisited)
-
-            // there are no names, so we need to invent some dummy ones for easier reading
-            val fieldName = "field_$i"
-
-            val field =
-                NodeBuilder.newFieldDeclaration(
-                    fieldName,
-                    fieldType,
-                    listOf(),
-                    "",
-                    null,
-                    null,
-                    false
-                )
-
-            scopeManager.addDeclaration(field)
-        }
-
-        scopeManager.leaveScope(record)
-
-        // add it to the global scope
-        scopeManager.globalScope?.addDeclaration(record)
-
-        return record
-    }
-
-    /**
-     * A small internal helper function to retrieve a unique name for literal structs. The idea is
-     * that, because they are unique according to their structure layout, we can commonly refer to
-     * two literal structures with the same layout by the same name.
-     */
-    private fun getLiteralStructName(
-        typeRef: LLVMTypeRef,
-        alreadyVisited: ArrayList<LLVMTypeRef>
-    ): String {
-        var name = "literal"
-
-        val size = LLVMCountStructElementTypes(typeRef)
-
-        for (i in 0 until size) {
-            val field = LLVMStructGetTypeAtIndex(typeRef, i)
-            val fieldType = typeFrom(field, alreadyVisited)
-
-            name += "_${fieldType.typeName}"
-        }
-
-        return name
     }
 
     override fun <T : Any?> getCodeFromRawNode(astNode: T): String? {
