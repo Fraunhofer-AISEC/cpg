@@ -23,9 +23,8 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.analysis
+package de.fraunhofer.aisec.cpg.graph
 
-import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
@@ -34,20 +33,20 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 class CouldNotResolve
 
 /**
- * The value resolver tries to resolve the value of an [Expression] basically by following edges
+ * The value resolver tries to evaluate the value of an [Expression] basically by following edges
  * until we reach a [Literal].
  *
  * It contains some advanced mechanics such as resolution of values of arrays, if they contain
- * literal values. Furthermore, its behaviour can be adjusted by implementing the [cannotResolve]
+ * literal values. Furthermore, its behaviour can be adjusted by implementing the [cannotEvaluate]
  * function, which is called when the default behaviour would not be able to resolve the value. This
  * way, language specific features such as string formatting can be modelled.
  */
-class ValueResolver(
+class ValueEvaluator(
     /**
      * Contains a reference to a function that gets called if the value cannot be resolved by the
      * standard behaviour.
      */
-    val cannotResolve: (Node?, ValueResolver) -> Any? = { node: Node?, _: ValueResolver ->
+    val cannotEvaluate: (Node?, ValueEvaluator) -> Any? = { node: Node?, _: ValueEvaluator ->
         // end of the line, lets just keep the expression name
         if (node != null) {
             "{${node.name}}"
@@ -56,22 +55,22 @@ class ValueResolver(
         }
     }
 ) {
-    val path: MutableList<Node> = mutableListOf<Node>()
+    val path: MutableList<Node> = mutableListOf()
 
     fun resolveDeclaration(decl: Declaration?): Any? {
         decl?.let { this.path += it }
         when (decl) {
-            is VariableDeclaration -> return resolve(decl.initializer)
+            is VariableDeclaration -> return evaluate(decl.initializer)
             is FieldDeclaration -> {
-                return resolve(decl.initializer)
+                return evaluate(decl.initializer)
             }
         }
 
-        return cannotResolve(decl, this)
+        return cannotEvaluate(decl, this)
     }
 
-    /** Tries to resolve this expression. Anything can happen. */
-    fun resolve(expr: Expression?): Any? {
+    /** Tries to evaluate this expression. Anything can happen. */
+    fun evaluate(expr: Expression?): Any? {
         expr?.let { this.path += it }
 
         when (expr) {
@@ -81,10 +80,10 @@ class ValueResolver(
             is DeclaredReferenceExpression -> return resolveDeclaration(expr.refersTo)
             is BinaryOperator -> {
                 // resolve lhs
-                val lhsValue = resolve(expr.lhs)
+                val lhsValue = evaluate(expr.lhs)
 
                 // resolve rhs
-                val rhsValue = resolve(expr.rhs)
+                val rhsValue = evaluate(expr.rhs)
 
                 if (expr.operatorCode == "+") {
                     if (lhsValue is String) {
@@ -146,10 +145,10 @@ class ValueResolver(
                     }
                 }
 
-                return cannotResolve(expr, this)
+                return cannotEvaluate(expr, this)
             }
             is CastExpression -> {
-                return this.resolve(expr.expression)
+                return this.evaluate(expr.expression)
             }
             is ArraySubscriptionExpression -> {
                 val array =
@@ -158,7 +157,7 @@ class ValueResolver(
                 val ile = array?.initializer as? InitializerListExpression
 
                 ile?.let {
-                    return resolve(
+                    return evaluate(
                         it.initializers
                             .filterIsInstance(KeyValueExpression::class.java)
                             .firstOrNull { kve ->
@@ -169,25 +168,25 @@ class ValueResolver(
                     )
                 }
 
-                return cannotResolve(expr, this)
+                return cannotEvaluate(expr, this)
             }
             is ConditionalExpression -> {
                 // assume that condition is a binary operator
                 if (expr.condition is BinaryOperator) {
-                    val lhs = resolve((expr.condition as? BinaryOperator)?.lhs)
-                    val rhs = resolve((expr.condition as? BinaryOperator)?.rhs)
+                    val lhs = evaluate((expr.condition as? BinaryOperator)?.lhs)
+                    val rhs = evaluate((expr.condition as? BinaryOperator)?.rhs)
 
                     return if (lhs == rhs) {
-                        resolve(expr.thenExpr)
+                        evaluate(expr.thenExpr)
                     } else {
-                        resolve(expr.elseExpr)
+                        evaluate(expr.elseExpr)
                     }
                 }
 
-                return cannotResolve(expr, this)
+                return cannotEvaluate(expr, this)
             }
         }
 
-        return cannotResolve(expr, this)
+        return cannotEvaluate(expr, this)
     }
 }

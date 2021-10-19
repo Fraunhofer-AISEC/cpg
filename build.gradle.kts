@@ -33,7 +33,7 @@ plugins {
     signing
 
     id("org.sonarqube") version "3.3"
-    id("com.diffplug.spotless") version "5.16.0"
+    id("com.diffplug.spotless") version "5.17.0"
     id("com.github.johnrengelman.shadow") version "7.1.0" apply false
     kotlin("jvm") version "1.5.31" apply false
 }
@@ -85,7 +85,11 @@ subprojects {
 
     tasks.withType<KotlinCompile> {
         kotlinOptions {
-            jvmTarget = "11"
+            // Note: this is not recommended, but this is the only way to deal with the fact,
+            // that the kotlin interactive shell is built with 1.8 and we need to build our
+            // inline functions in 1.8 bytecode, otherwise we cannot use the fluid API in
+            // the cpg-console.
+            jvmTarget = "1.8"
             freeCompilerArgs = listOf("-Xopt-in=kotlin.RequiresOptIn")
         }
     }
