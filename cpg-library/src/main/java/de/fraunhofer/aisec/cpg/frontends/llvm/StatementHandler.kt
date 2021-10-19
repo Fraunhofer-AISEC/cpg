@@ -787,9 +787,16 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
 
     private fun parseFunctionCall(instr: LLVMValueRef): Statement {
         val calledFunc = LLVMGetCalledValue(instr)
-        val calledFuncName = LLVMGetValueName(calledFunc).string
-        var param = LLVMGetFirstParam(calledFunc)
+        var calledFuncName = LLVMGetValueName(calledFunc).string
+        val max = LLVMGetNumOperands(instr) - 1
         var idx = 0
+
+        if (calledFuncName.equals("")) {
+            // Function is probably called by a local variable. For some reason, this is the last
+            // operand
+            val opName = lang.getOperandValueAtIndex(instr, max)
+            calledFuncName = opName.name
+        }
 
         val callExpr =
             newCallExpression(
@@ -799,10 +806,9 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 false
             )
 
-        while (param != null) {
+        while (idx < max) {
             val operandName = lang.getOperandValueAtIndex(instr, idx)
             callExpr.addArgument(operandName)
-            param = LLVMGetNextParam(param)
             idx++
         }
 

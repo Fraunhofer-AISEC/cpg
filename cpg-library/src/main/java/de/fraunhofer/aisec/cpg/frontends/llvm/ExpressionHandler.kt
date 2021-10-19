@@ -260,7 +260,7 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
 
     private fun initializeAsUndef(type: Type, code: String): Expression {
         if (!lang.isKnownStructTypeName(type.name) &&
-                !type.name.contains("*") &&
+                // !type.name.contains("*") &&
                 !type.name.contains("{")
         ) {
             return newLiteral(null, type, code)
