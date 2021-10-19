@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newInitializerListExpression
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newLiteral
+import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
@@ -366,8 +367,13 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
                     // the second argument is the base address that we start our chain from
                     operand = lang.getOperandValueAtIndex(instr, idx)
 
-                    // Parse index as int for now only
-                    ((operand as Literal<*>).value as Long).toInt()
+                    if (operand is Literal<*>) {
+                        // Parse index as int
+                        (operand.value as Long).toInt()
+                    } else {
+                        // The index is some variable and thus unknown.
+                        operand as DeclaredReferenceExpression
+                    }
                 } else {
                     indices.get(idx.toLong())
                 }
@@ -406,13 +412,23 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
                 )
 
                 // look for the field
-                val field = record.getField("field_$index")
+                val field: FieldDeclaration?
+                val fieldName: String?
+                if (index is Int) {
+                    field = record.getField("field_$index")
+                    fieldName = field?.name
+                } else {
+                    // We won't find a field because it's accessed by a variable index.
+                    // We indicate this with this array-like notation for now.
+                    field = null
+                    fieldName = "[${(operand as DeclaredReferenceExpression).name}]"
+                }
 
                 // our new base-type is the type of the field
                 baseType = field?.type ?: UnknownType.getUnknownType()
 
                 // construct our member expression
-                expr = NodeBuilder.newMemberExpression(base, field?.type, field?.name, ".", "")
+                expr = NodeBuilder.newMemberExpression(base, field?.type, fieldName, ".", "")
                 log.info("{}", expr)
 
                 // the current expression is the new base
