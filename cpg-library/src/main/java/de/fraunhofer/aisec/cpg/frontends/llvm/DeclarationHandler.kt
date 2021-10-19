@@ -29,7 +29,6 @@ import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
 import org.bytedeco.javacpp.Pointer
 import org.bytedeco.llvm.LLVM.LLVMTypeRef
@@ -44,7 +43,7 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
     Handler<Declaration, Pointer, LLVMIRLanguageFrontend>(::Declaration, lang) {
     init {
         map.put(LLVMValueRef::class.java) { handleValue(it as LLVMValueRef) }
-        map.put(LLVMTypeRef::class.java) { handleStructureType(it as LLVMTypeRef) }
+        map.put(LLVMTypeRef::class.java) { lang.handleStructureType(it as LLVMTypeRef) }
     }
 
     private fun handleValue(value: LLVMValueRef): Declaration {
@@ -173,82 +172,5 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
         lang.scopeManager.leaveScope(functionDeclaration)
 
         return functionDeclaration
-    }
-
-    /**
-     * Handles the parsing of [structure types](https://llvm.org/docs/LangRef.html#structure-types).
-     * Member fields of structs in LLVM IR do not have names, so we need to assign dummy names for
-     * easier reading, such s `field_0`.
-     *
-     * there are two different types of structs:
-     * - identified structs, which have a name are explicitly declared
-     * - literal structs, which do not have a name, but are structurally unique To emulate this
-     * uniqueness, we create a [RecordDeclaration] for each literal struct and name it according to
-     * its element types (see [getLiteralStructName]).
-     */
-    private fun handleStructureType(typeRef: LLVMTypeRef): RecordDeclaration {
-        // if this is a literal struct, we will give it a pseudo name
-        val name =
-            if (LLVMIsLiteralStruct(typeRef) == 1) {
-                getLiteralStructName(typeRef)
-            } else {
-                LLVMGetStructName(typeRef).string
-            }
-
-        // try to see, if the struct already exists as a record declaration
-        var record =
-            lang.scopeManager
-                .resolve<RecordDeclaration>(lang.scopeManager.globalScope, true) { it.name == name }
-                .firstOrNull()
-
-        // if yes, return it
-        if (record != null) {
-            return record
-        }
-
-        record = newRecordDeclaration(name, "struct", "")
-
-        lang.scopeManager.enterScope(record)
-
-        val size = LLVMCountStructElementTypes(typeRef)
-
-        for (i in 0 until size) {
-            val a = LLVMStructGetTypeAtIndex(typeRef, i)
-            val fieldType = lang.typeFrom(a)
-
-            // there are no names, so we need to invent some dummy ones for easier reading
-            val fieldName = "field_$i"
-
-            val field = newFieldDeclaration(fieldName, fieldType, listOf(), "", null, null, false)
-
-            lang.scopeManager.addDeclaration(field)
-        }
-
-        lang.scopeManager.leaveScope(record)
-
-        // add it to the global scope
-        lang.scopeManager.globalScope?.addDeclaration(record)
-
-        return record
-    }
-
-    /**
-     * A small internal helper function to retrieve a unique name for literal structs. The idea is
-     * that, because they are unique according to their structure layout, we can commonly refer to
-     * two literal structures with the same layout by the same name.
-     */
-    private fun getLiteralStructName(typeRef: LLVMTypeRef): String {
-        var name = "literal"
-
-        val size = LLVMCountStructElementTypes(typeRef)
-
-        for (i in 0 until size) {
-            val field = LLVMStructGetTypeAtIndex(typeRef, i)
-            val fieldType = lang.typeFrom(field)
-
-            name += "_${fieldType.typeName}"
-        }
-
-        return name
     }
 }
