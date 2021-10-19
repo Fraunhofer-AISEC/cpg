@@ -184,15 +184,15 @@ public abstract class LanguageFrontend {
     if (cpgNode instanceof Node) {
       if (config.codeInNodes) {
         // only set code, if its not already set or empty
-        if (((Node) cpgNode).getCode() == null || Objects.equals(((Node) cpgNode).getCode(), "")) {
-          String code = getCodeFromRawNode(astNode);
+        /*if (((Node) cpgNode).getCode() == null || Objects.equals(((Node) cpgNode).getCode(), "")) {*/
+        String code = getCodeFromRawNode(astNode);
 
-          if (code != null) {
-            ((Node) cpgNode).setCode(code);
-          } else {
-            log.warn("Unexpected: No code for node {}", astNode);
-          }
+        if (code != null) {
+          ((Node) cpgNode).setCode(code);
+        } else {
+          log.warn("Unexpected: No code for node {}", astNode);
         }
+        // }
       }
       ((Node) cpgNode).setLocation(getLocationFromRawNode(astNode));
     }
