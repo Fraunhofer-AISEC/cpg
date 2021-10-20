@@ -113,7 +113,6 @@ public class EvaluationOrderGraphPass extends Pass {
     map.put(SwitchStatement.class, this::handleSwitchStatement);
     map.put(LabelStatement.class, this::handleLabelStatement);
     map.put(GotoStatement.class, this::handleGotoStatement);
-    map.put(ConditionalBranchStatement.class, this::handleConditionalBranchStatement);
     map.put(CaseStatement.class, this::handleCaseStatement);
     map.put(SynchronizedStatement.class, this::handleSynchronizedStatement);
     map.put(NewExpression.class, this::handleNewExpression);
@@ -710,17 +709,6 @@ public class EvaluationOrderGraphPass extends Pass {
     LabelStatement labelStatement = (LabelStatement) node;
     lang.getScopeManager().addLabelStatement(labelStatement);
     createEOG(labelStatement.getSubStatement());
-  }
-
-  private void handleConditionalBranchStatement(@NonNull Node node) {
-    var statement = (ConditionalBranchStatement) node;
-    pushToEOG(statement);
-
-    // TODO(kweiss): proper handling EOG of conditional branch
-    for (var targetPair : statement.getConditionalTargets()) {
-      lang.registerObjectListener(
-          targetPair.getSecond(), (from, to) -> addEOGEdge(statement, (Node) to));
-    }
   }
 
   private void handleGotoStatement(@NonNull Node node) {
