@@ -27,7 +27,6 @@ package de.fraunhofer.aisec.cpg.frontends.llvm
 
 import de.fraunhofer.aisec.cpg.TestUtils
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
-import de.fraunhofer.aisec.cpg.graph.body
 import de.fraunhofer.aisec.cpg.graph.bodyOrNull
 import de.fraunhofer.aisec.cpg.graph.byNameOrNull
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
@@ -236,7 +235,7 @@ class LLVMIRLanguageFrontendTest {
         // Check that the jump targets are set correctly
         val brStatement = main.bodyOrNull<ConditionalBranchStatement>()
         assertNotNull(brStatement)
-        assertEquals("otherwise", brStatement.defaultTargetLabel.name)
+        assertEquals("otherwise", brStatement.defaultTargetLabel!!.name)
         assertSame(onzeroLabel, brStatement.conditionalTargets[0].second)
         assertSame(ononeLabel, brStatement.conditionalTargets[1].second)
 
@@ -302,7 +301,7 @@ class LLVMIRLanguageFrontendTest {
         // Check that the jump targets are set correctly
         val brStatement = main.bodyOrNull<ConditionalBranchStatement>(0)
         assertNotNull(brStatement)
-        assertEquals("IfUnequal", brStatement.defaultTargetLabel.name)
+        assertEquals("IfUnequal", brStatement.defaultTargetLabel!!.name)
         assertEquals("IfEqual", brStatement.conditionalTargets[0].second.name)
 
         // Check that the condition is set correctly
@@ -310,7 +309,7 @@ class LLVMIRLanguageFrontendTest {
         assertEquals("cond", brCondition.name)
         assertEquals("i1", brCondition.type.typeName)
 
-        val elseBranch = brStatement.defaultTargetLabel.subStatement as CompoundStatement
+        val elseBranch = brStatement.defaultTargetLabel!!.subStatement as CompoundStatement
         assertEquals(2, elseBranch.statements.size)
 
         val ifBranch = brStatement.conditionalTargets[0].second.subStatement as CompoundStatement

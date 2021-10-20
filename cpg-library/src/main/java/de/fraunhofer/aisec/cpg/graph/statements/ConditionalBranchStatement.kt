@@ -30,10 +30,7 @@ import java.util.ArrayList
 
 class ConditionalBranchStatement : Statement() {
     var defaultTargetLabel: LabelStatement? = null
-    private val conditionalTargets: MutableList<Pair<Expression, LabelStatement>> = ArrayList()
-    fun getConditionalTargets(): List<Pair<Expression, LabelStatement>> {
-        return conditionalTargets
-    }
+    val conditionalTargets: MutableList<Pair<Expression, LabelStatement>> = ArrayList()
 
     fun addConditionalTarget(condition: Expression, label: LabelStatement) {
         conditionalTargets.add(Pair(condition, label))
@@ -47,9 +44,9 @@ class ConditionalBranchStatement : Statement() {
             return false
         }
         val that = other
-        return (super.equals(that)
-                && conditionalTargets == that.conditionalTargets
-                && defaultTargetLabel == that.defaultTargetLabel)
+        return (super.equals(that) &&
+            conditionalTargets == that.conditionalTargets &&
+            defaultTargetLabel == that.defaultTargetLabel)
     }
 
     override fun hashCode(): Int {
