@@ -53,7 +53,6 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
 
     private fun handleValue(value: LLVMValueRef): Expression {
         return when (val kind = LLVMGetValueKind(value)) {
-            LLVMBasicBlockValueKind -> handleBBValueKind(value)
             LLVMConstantExprValueKind -> handleConstantExprValueKind(value)
             LLVMConstantStructValueKind -> handleConstantStructValue(value)
             LLVMConstantDataArrayValueKind -> handleConstantDataArrayValue(value)
@@ -109,27 +108,6 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
                 }
             }
         }
-    }
-
-    private fun handleBBValueKind(valueRef: LLVMValueRef): Expression {
-        val bb = LLVMValueAsBasicBlock(valueRef)
-        var labelName = LLVMGetBasicBlockName(bb).string
-
-        if (labelName.equals("")) {
-            val bbStr = LLVMPrintValueToString(valueRef).string
-            val firstLine = bbStr.trim().split("\n")[0]
-            labelName = firstLine.substring(0, firstLine.indexOf(":"))
-        }
-
-        val labelStatement =
-            lang.labelMap.computeIfAbsent(labelName) {
-                val label = newLabelStatement(labelName)
-                label.name = labelName
-                label
-            }
-        val compoundWrapper = newCompoundStatementExpression("")
-        compoundWrapper.statement = labelStatement
-        return compoundWrapper
     }
 
     /**

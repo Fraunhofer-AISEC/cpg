@@ -680,23 +680,17 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             val condition = lang.getOperandValueAtIndex(instr, 0)
 
             // Get the label of the "else" branch
-            val defaultLabelWrapper =
-                lang.getOperandValueAtIndex(instr, 1) as? CompoundStatementExpression
-            ifStatement.defaultTargetLabel = defaultLabelWrapper?.statement as LabelStatement
+            ifStatement.defaultTargetLabel = extractBasicBlockLabel(LLVMGetOperand(instr, 1))
 
             // Get the label of the "if" branch
-            val thenLabelWrapper =
-                lang.getOperandValueAtIndex(instr, 2) as? CompoundStatementExpression
-            val thenLabelStatement = thenLabelWrapper?.statement as LabelStatement
+            val thenLabelStatement = extractBasicBlockLabel(LLVMGetOperand(instr, 2))
             ifStatement.addConditionalTarget(condition, thenLabelStatement)
 
             return ifStatement
         } else if (LLVMGetNumOperands(instr) == 1) {
             // goto defaultLocation
             val gotoStatement = newGotoStatement(lang.getCodeFromRawNode(instr))
-            val defaultLabelWrapper =
-                lang.getOperandValueAtIndex(instr, 0) as? CompoundStatementExpression
-            val labelStatement = defaultLabelWrapper?.statement as LabelStatement
+            val labelStatement = extractBasicBlockLabel(LLVMGetOperand(instr, 0))
             gotoStatement.labelName = labelStatement.name
             gotoStatement.targetLabel = labelStatement
 
@@ -724,9 +718,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         val switchStatement = newConditionalBranchStatement(lang.getCodeFromRawNode(instr))
 
         // Get the label of the "default" branch
-        val defaultLabelWrapper =
-            lang.getOperandValueAtIndex(instr, 1) as? CompoundStatementExpression
-        switchStatement.defaultTargetLabel = defaultLabelWrapper?.statement as LabelStatement
+        switchStatement.defaultTargetLabel = extractBasicBlockLabel(LLVMGetOperand(instr, 1))
 
         var idx = 2
         while (idx < numOps) {
@@ -736,9 +728,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             binaryOperator.rhs = lang.getOperandValueAtIndex(instr, idx)
             idx++
             // Get the "case" statements
-            val caseLabelWrapper =
-                lang.getOperandValueAtIndex(instr, idx) as? CompoundStatementExpression
-            val caseLabelStatement = caseLabelWrapper?.statement as LabelStatement
+            val caseLabelStatement = extractBasicBlockLabel(LLVMGetOperand(instr, idx))
             idx++
             switchStatement.addConditionalTarget(binaryOperator, caseLabelStatement)
         }
@@ -769,17 +759,11 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         val continueLabel: LabelStatement?
         if (instr.opCode == LLVMInvoke) {
             max-- // Last one is the Decl.Expr of the function
-            // Get the label of the catch clause. Ugly hack: We wrap the LabelStatement in a
-            // CompoundStatementExpression
-            // and here, we retrieve the LabelStatement again
-            val catchCompoundWrapper =
-                lang.getOperandValueAtIndex(instr, max) as? CompoundStatementExpression
-            catchLabel = catchCompoundWrapper?.statement as LabelStatement
+            // Get the label of the catch clause.
+            catchLabel = extractBasicBlockLabel(LLVMGetOperand(instr, max))
             max--
             // Get the label of the continue basic block (e.g. if no error occors).
-            val continueCompoundWrapper =
-                lang.getOperandValueAtIndex(instr, max) as? CompoundStatementExpression
-            continueLabel = continueCompoundWrapper?.statement as LabelStatement
+            continueLabel = extractBasicBlockLabel(LLVMGetOperand(instr, max))
             max--
             log.info(
                 "Invoke expression: Usually continues at ${continueLabel.name}, exception continues at ${catchLabel.name}"
@@ -955,5 +939,25 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         }
 
         return decl
+    }
+
+    /** Returns a [LabelStatement] for the basic block represented by [valueRef]. */
+    private fun extractBasicBlockLabel(valueRef: LLVMValueRef): LabelStatement {
+        val bb = LLVMValueAsBasicBlock(valueRef)
+        var labelName = LLVMGetBasicBlockName(bb).string
+
+        if (labelName.equals("")) {
+            val bbStr = LLVMPrintValueToString(valueRef).string
+            val firstLine = bbStr.trim().split("\n")[0]
+            labelName = firstLine.substring(0, firstLine.indexOf(":"))
+        }
+
+        val labelStatement =
+            lang.labelMap.computeIfAbsent(labelName) {
+                val label = newLabelStatement(labelName)
+                label.name = labelName
+                label
+            }
+        return labelStatement
     }
 }
