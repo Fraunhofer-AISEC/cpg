@@ -60,8 +60,10 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
             LLVMConstantIntValueKind -> handleConstantInt(value)
             LLVMConstantFPValueKind -> handleConstantFP(value)
             LLVMConstantPointerNullValueKind -> handleNullPointer(value)
-            LLVMUndefValueValueKind -> initializeAsUndef(lang.typeOf(value), lang.getCodeFromRawNode(value)!!)
-            LLVMConstantAggregateZeroValueKind -> initializeAsZero(lang.typeOf(value), lang.getCodeFromRawNode(value)!!)
+            LLVMUndefValueValueKind ->
+                initializeAsUndef(lang.typeOf(value), lang.getCodeFromRawNode(value)!!)
+            LLVMConstantAggregateZeroValueKind ->
+                initializeAsZero(lang.typeOf(value), lang.getCodeFromRawNode(value)!!)
             LLVMArgumentValueKind,
             LLVMGlobalVariableValueKind,
             // this is a little tricky. It seems weird, that an instruction value kind turns
@@ -280,15 +282,13 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
     }
 
     /**
-     * Recursively creates a structure of [type] and initializes all its fields with
-     * a `null`-[Literal] as this is closest to `undef`.
+     * Recursively creates a structure of [type] and initializes all its fields with a `null`-
+     * [Literal] as this is closest to `undef`.
      *
      * Returns a [ConstructExpression].
      */
     private fun initializeAsUndef(type: Type, code: String): Expression {
-        if (!lang.isKnownStructTypeName(type.name) &&
-                !type.name.contains("{")
-        ) {
+        if (!lang.isKnownStructTypeName(type.name) && !type.name.contains("{")) {
             return newLiteral(null, type, code)
         } else {
             val expr: ConstructExpression = newConstructExpression(code)
@@ -307,15 +307,12 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
     }
 
     /**
-     * Recursively creates a structure of [type] and initializes all its fields with
-     * 0-[Literal].
+     * Recursively creates a structure of [type] and initializes all its fields with 0-[Literal].
      *
      * Returns a [ConstructExpression].
      */
     private fun initializeAsZero(type: Type, code: String): Expression {
-        if (!lang.isKnownStructTypeName(type.name) &&
-                !type.name.contains("{")
-        ) {
+        if (!lang.isKnownStructTypeName(type.name) && !type.name.contains("{")) {
             return newLiteral(0, type, code)
         } else {
             val expr: ConstructExpression = NodeBuilder.newConstructExpression(code)
@@ -333,9 +330,7 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
         }
     }
 
-    /**
-     * Returns a literal with the type of [value] and value `null`.
-     */
+    /** Returns a literal with the type of [value] and value `null`. */
     private fun handleNullPointer(value: LLVMValueRef): Expression {
         val type = lang.typeOf(value)
         return newLiteral(null, type, lang.getCodeFromRawNode(value))
@@ -476,8 +471,7 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
         val value1 = lang.getOperandValueAtIndex(instr, 1)
         val value2 = lang.getOperandValueAtIndex(instr, 2)
 
-        val conditionalExpr =
-            newConditionalExpression(cond, value1, value2, value1.type)
+        val conditionalExpr = newConditionalExpression(cond, value1, value2, value1.type)
 
         return conditionalExpr
     }

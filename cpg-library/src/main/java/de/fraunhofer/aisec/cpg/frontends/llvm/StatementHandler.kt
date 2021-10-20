@@ -509,9 +509,9 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
     }
 
     /**
-     * Parses the [`cmpxchg`](https://llvm.org/docs/LangRef.html#cmpxchg-instruction)
-     * instruction. It returns a single [Statement] or a [CompoundStatement] if the value is
-     * assigned to another variable. Performs the following operation atomically:
+     * Parses the [`cmpxchg`](https://llvm.org/docs/LangRef.html#cmpxchg-instruction) instruction.
+     * It returns a single [Statement] or a [CompoundStatement] if the value is assigned to another
+     * variable. Performs the following operation atomically:
      * ```
      * lhs = {*pointer, *pointer == cmp} // A struct of {T, i1}
      * if(*pointer == cmp) { *pointer = new }
@@ -708,15 +708,16 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
 
     /**
      * Handles a [`switch`](https://llvm.org/docs/LangRef.html#switch-instruction) instruction.
-     * Throws a [TranslationException] if there are less than 2 operands specified (the first
-     * one is used for the comparison of the "case" statements, the second one is the default
-     * location) or if the number of operands is not even.
+     * Throws a [TranslationException] if there are less than 2 operands specified (the first one is
+     * used for the comparison of the "case" statements, the second one is the default location) or
+     * if the number of operands is not even.
      *
      * Returns a [ConditionalBranchStatement].
      */
     private fun handleSwitchStatement(instr: LLVMValueRef): Statement {
         val numOps = LLVMGetNumOperands(instr)
-        if (numOps < 2 || numOps % 2 != 0) throw TranslationException("Switch statement without operand and default branch")
+        if (numOps < 2 || numOps % 2 != 0)
+            throw TranslationException("Switch statement without operand and default branch")
 
         val operand = lang.getOperandValueAtIndex(instr, 0)
 
@@ -788,12 +789,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         }
 
         val callExpr =
-            newCallExpression(
-                calledFuncName,
-                calledFuncName,
-                lang.getCodeFromRawNode(instr),
-                false
-            )
+            newCallExpression(calledFuncName, calledFuncName, lang.getCodeFromRawNode(instr), false)
 
         while (idx < max) {
             val operandName = lang.getOperandValueAtIndex(instr, idx)
@@ -865,11 +861,11 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
      * Handles a binary operation and returns either a [BinaryOperator], [UnaryOperator],
      * [CallExpression] or a [DeclarationStatement].
      *
-     * It expects the llvm-instruction in [instr] and the operator in [op]. The
-     * argument [unsigned] indicates if the operands have to be treated as unsigned integer
-     * values. In this case, a cast expression is used to ensure that the information is represented
-     * in the graph. The argument [unordered] indicates if a floating-point comparison needs to be
-     * `or`ed with a check to whether the value is unordered (i.e., NAN).
+     * It expects the llvm-instruction in [instr] and the operator in [op]. The argument [unsigned]
+     * indicates if the operands have to be treated as unsigned integer values. In this case, a cast
+     * expression is used to ensure that the information is represented in the graph. The argument
+     * [unordered] indicates if a floating-point comparison needs to be `or`ed with a check to
+     * whether the value is unordered (i.e., NAN).
      */
     private fun handleBinaryOperator(
         instr: LLVMValueRef,
