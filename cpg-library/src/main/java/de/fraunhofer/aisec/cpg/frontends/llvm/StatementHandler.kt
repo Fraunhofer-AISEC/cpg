@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.frontends.llvm
 
 import de.fraunhofer.aisec.cpg.frontends.Handler
+import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.*
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
@@ -85,7 +86,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 println("indirect br instruction")
             }
             LLVMInvoke -> {
-                return parseFunctionCall(instr)
+                return handleFunctionCall(instr)
             }
             LLVMUnreachable -> {
                 // Does nothing
@@ -219,7 +220,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 println("phi instruction")
             }
             LLVMCall -> {
-                return parseFunctionCall(instr)
+                return handleFunctionCall(instr)
             }
             LLVMSelect -> {
                 return declarationOrNot(lang.expressionHandler.handleSelect(instr), instr)
@@ -508,8 +509,8 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
     }
 
     /**
-     * Parses the [`atomicrmw`](https://llvm.org/docs/LangRef.html#atomicrmw-instruction)
-     * instruction. It returns either a single [Statement] or a [CompoundStatement] if the value is
+     * Parses the [`cmpxchg`](https://llvm.org/docs/LangRef.html#cmpxchg-instruction)
+     * instruction. It returns a single [Statement] or a [CompoundStatement] if the value is
      * assigned to another variable. Performs the following operation atomically:
      * ```
      * lhs = {*pointer, *pointer == cmp} // A struct of {T, i1}
@@ -656,7 +657,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 exchOp.rhs = conditional
             }
             else -> {
-                throw Exception("LLVMAtomicRMWBinOp $operation not supported")
+                throw TranslationException("LLVMAtomicRMWBinOp $operation not supported")
             }
         }
 
@@ -701,13 +702,21 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
 
             return gotoStatement
         } else {
-            throw Exception("Wrong number of operands in br statement")
+            throw TranslationException("Wrong number of operands in br statement")
         }
     }
 
+    /**
+     * Handles a [`switch`](https://llvm.org/docs/LangRef.html#switch-instruction) instruction.
+     * Throws a [TranslationException] if there are less than 2 operands specified (the first
+     * one is used for the comparison of the "case" statements, the second one is the default
+     * location) or if the number of operands is not even.
+     *
+     * Returns a [ConditionalBranchStatement].
+     */
     private fun handleSwitchStatement(instr: LLVMValueRef): Statement {
         val numOps = LLVMGetNumOperands(instr)
-        if (numOps < 2) throw Exception("Switch statement without operand and default branch")
+        if (numOps < 2 || numOps % 2 != 0) throw TranslationException("Switch statement without operand and default branch")
 
         val operand = lang.getOperandValueAtIndex(instr, 0)
 
@@ -735,7 +744,14 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         return switchStatement
     }
 
-    private fun parseFunctionCall(instr: LLVMValueRef): Statement {
+    /**
+     * Handles different types of function calls, including the
+     * [`call`](https://llvm.org/docs/LangRef.html#call-instruction) and the
+     * [`invoke`](https://llvm.org/docs/LangRef.html#invoke-instruction).
+     *
+     * Returns either a [DeclarationStatement] or a [CallExpression].
+     */
+    private fun handleFunctionCall(instr: LLVMValueRef): Statement {
         val calledFunc = LLVMGetCalledValue(instr)
         var calledFuncName = LLVMGetValueName(calledFunc).string
         var max = LLVMGetNumOperands(instr) - 1
@@ -775,7 +791,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             newCallExpression(
                 calledFuncName,
                 calledFuncName,
-                LLVMPrintValueToString(instr).string,
+                lang.getCodeFromRawNode(instr),
                 false
             )
 
@@ -845,6 +861,16 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         return compound
     }
 
+    /**
+     * Handles a binary operation and returns either a [BinaryOperator], [UnaryOperator],
+     * [CallExpression] or a [DeclarationStatement].
+     *
+     * It expects the llvm-instruction in [instr] and the operator in [op]. The
+     * argument [unsigned] indicates if the operands have to be treated as unsigned integer
+     * values. In this case, a cast expression is used to ensure that the information is represented
+     * in the graph. The argument [unordered] indicates if a floating-point comparison needs to be
+     * `or`ed with a check to whether the value is unordered (i.e., NAN).
+     */
     private fun handleBinaryOperator(
         instr: LLVMValueRef,
         op: String,

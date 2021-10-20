@@ -60,8 +60,8 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
             LLVMConstantIntValueKind -> handleConstantInt(value)
             LLVMConstantFPValueKind -> handleConstantFP(value)
             LLVMConstantPointerNullValueKind -> handleNullPointer(value)
-            LLVMUndefValueValueKind -> handleUndefValue(value)
-            LLVMConstantAggregateZeroValueKind -> handleAggregateZero(value)
+            LLVMUndefValueValueKind -> initializeAsUndef(lang.typeOf(value), lang.getCodeFromRawNode(value)!!)
+            LLVMConstantAggregateZeroValueKind -> initializeAsZero(lang.typeOf(value), lang.getCodeFromRawNode(value)!!)
             LLVMArgumentValueKind,
             LLVMGlobalVariableValueKind,
             // this is a little tricky. It seems weird, that an instruction value kind turns
@@ -279,14 +279,19 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
         return list
     }
 
+    /**
+     * Recursively creates a structure of [type] and initializes all its fields with
+     * a `null`-[Literal] as this is closest to `undef`.
+     *
+     * Returns a [ConstructExpression].
+     */
     private fun initializeAsUndef(type: Type, code: String): Expression {
         if (!lang.isKnownStructTypeName(type.name) &&
-                // !type.name.contains("*") &&
                 !type.name.contains("{")
         ) {
             return newLiteral(null, type, code)
         } else {
-            val expr: ConstructExpression = NodeBuilder.newConstructExpression(code)
+            val expr: ConstructExpression = newConstructExpression(code)
             // map the construct expression to the record declaration of the type
             expr.instantiates = (type as? ObjectType)?.recordDeclaration
 
@@ -301,16 +306,14 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
         }
     }
 
-    private fun handleUndefValue(value: LLVMValueRef): Expression {
-        // retrieve the type
-        val type = lang.typeOf(value)
-
-        return initializeAsUndef(type, lang.getCodeFromRawNode(value)!!)
-    }
-
+    /**
+     * Recursively creates a structure of [type] and initializes all its fields with
+     * 0-[Literal].
+     *
+     * Returns a [ConstructExpression].
+     */
     private fun initializeAsZero(type: Type, code: String): Expression {
         if (!lang.isKnownStructTypeName(type.name) &&
-                !type.name.contains("*") &&
                 !type.name.contains("{")
         ) {
             return newLiteral(0, type, code)
@@ -322,7 +325,7 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
             // loop through the operands
             for (field in (expr.instantiates as RecordDeclaration).fields) {
                 // and handle them as expressions themselves
-                val arg = initializeAsUndef(field.type, code)
+                val arg = initializeAsZero(field.type, code)
                 expr.addArgument(arg)
             }
 
@@ -330,13 +333,9 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
         }
     }
 
-    private fun handleAggregateZero(value: LLVMValueRef): Expression {
-        // retrieve the type
-        val type = lang.typeOf(value)
-
-        return initializeAsZero(type, lang.getCodeFromRawNode(value)!!)
-    }
-
+    /**
+     * Returns a literal with the type of [value] and value `null`.
+     */
     private fun handleNullPointer(value: LLVMValueRef): Expression {
         val type = lang.typeOf(value)
         return newLiteral(null, type, lang.getCodeFromRawNode(value))
@@ -402,7 +401,7 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
             // check, if the current base type is a pointer -> then we need to handle this as an
             // array access
             if (baseType is PointerType) {
-                val arrayExpr = NodeBuilder.newArraySubscriptionExpression("")
+                val arrayExpr = newArraySubscriptionExpression("")
                 arrayExpr.arrayExpression = base
                 arrayExpr.name = index.toString()
                 arrayExpr.subscriptExpression = operand
@@ -449,7 +448,7 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
                 baseType = field?.type ?: UnknownType.getUnknownType()
 
                 // construct our member expression
-                expr = NodeBuilder.newMemberExpression(base, field?.type, fieldName, ".", "")
+                expr = newMemberExpression(base, field?.type, fieldName, ".", "")
                 log.info("{}", expr)
 
                 // the current expression is the new base
@@ -460,7 +459,7 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
         // since getelementpr returns the *address*, whereas extractvalue returns a *value*, we need
         // to do a final unary & operation
         if (isGetElementPtr) {
-            val ref = NodeBuilder.newUnaryOperator("&", false, true, "")
+            val ref = newUnaryOperator("&", false, true, "")
             ref.input = expr
             expr = ref
         }
@@ -478,7 +477,7 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
         val value2 = lang.getOperandValueAtIndex(instr, 2)
 
         val conditionalExpr =
-            NodeBuilder.newConditionalExpression(cond, value1, value2, value1.type)
+            newConditionalExpression(cond, value1, value2, value1.type)
 
         return conditionalExpr
     }
