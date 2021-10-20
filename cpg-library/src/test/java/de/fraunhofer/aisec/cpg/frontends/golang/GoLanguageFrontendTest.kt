@@ -81,12 +81,10 @@ class GoLanguageFrontendTest : BaseTest() {
         assertNotNull(decl)
 
         val new = decl.initializer as? NewExpression
-
         assertNotNull(new)
         assertEquals(TypeParser.createFrom("p.MyStruct*", false), new.type)
 
         val construct = new.initializer as? ConstructExpression
-
         assertNotNull(construct)
         assertEquals(myStruct, construct.instantiates)
 
@@ -96,18 +94,15 @@ class GoLanguageFrontendTest : BaseTest() {
         assertNotNull(stmt)
 
         decl = stmt.singleDeclaration as? VariableDeclaration
-
         assertNotNull(decl)
 
         var make = decl.initializer
-
         assertNotNull(make)
         assertEquals(TypeParser.createFrom("int[]", false), make.type)
 
         assertTrue(make is ArrayCreationExpression)
 
         val dimension = make.dimensions.first() as? Literal<*>
-
         assertNotNull(dimension)
         assertEquals(5, dimension.value)
 
@@ -117,11 +112,9 @@ class GoLanguageFrontendTest : BaseTest() {
         assertNotNull(stmt)
 
         decl = stmt.singleDeclaration as? VariableDeclaration
-
         assertNotNull(decl)
 
         make = decl.initializer
-
         assertNotNull(make)
         assertTrue(make is ConstructExpression)
         assertEquals(TypeParser.createFrom("map<string,string>", false), make.type)
@@ -685,7 +678,7 @@ class GoLanguageFrontendTest : BaseTest() {
 
         assertNotNull(tus)
 
-        val tu0 = tus.get(0)
+        val tu0 = tus[0]
         assertNotNull(tu0)
 
         val awesome =
@@ -699,7 +692,7 @@ class GoLanguageFrontendTest : BaseTest() {
                 .next()
         assertNotNull(newAwesome)
 
-        val tu1 = tus.get(1)
+        val tu1 = tus[1]
         assertNotNull(tu1)
 
         val mainNamespace =

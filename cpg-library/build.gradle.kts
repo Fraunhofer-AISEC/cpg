@@ -213,6 +213,9 @@ dependencies {
     // jep for python support
     api("black.ninia:jep:4.0.0")
 
+    // llvm
+    implementation("org.bytedeco:llvm-platform:12.0.1-1.5.6")
+
     // JUnit
     testImplementation("org.jetbrains.kotlin:kotlin-test")
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")

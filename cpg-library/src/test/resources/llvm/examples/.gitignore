@@ -1,0 +1,5 @@
+*.config.json
+*.dsm
+a.out
+*.out
+*.out*
