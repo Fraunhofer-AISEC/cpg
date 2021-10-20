@@ -727,12 +727,12 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
 
         var idx = 2
         while (idx < numOps) {
-            // Get the comparison value and add it to the CompoundStatement
+            // Get the comparison value and add it to the CaseStatement
             val caseStatement = newCaseStatement(nodeCode)
             caseStatement.caseExpression = lang.getOperandValueAtIndex(instr, idx)
             caseStatements.addStatement(caseStatement)
             idx++
-            // Get the "case" statements and add it to the CompoundStatement
+            // Get the "case" statements and add it to the CaseStatement
             val caseLabelStatement = extractBasicBlockLabel(LLVMGetOperand(instr, idx))
             val gotoStatement = newGotoStatement(nodeCode)
             gotoStatement.targetLabel = caseLabelStatement
@@ -757,7 +757,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
     /**
      * Handles different types of function calls, including the
      * [`call`](https://llvm.org/docs/LangRef.html#call-instruction) and the
-     * [`invoke`](https://llvm.org/docs/LangRef.html#invoke-instruction).
+     * [`invoke`](https://llvm.org/docs/LangRef.html#invoke-instruction) instruction.
      *
      * Returns either a [DeclarationStatement] or a [CallExpression].
      */
