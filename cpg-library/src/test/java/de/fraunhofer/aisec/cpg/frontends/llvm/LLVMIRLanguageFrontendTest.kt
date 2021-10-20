@@ -295,20 +295,23 @@ class LLVMIRLanguageFrontendTest {
         assertEquals(TypeParser.createFrom("i32", true), lhs.type)
 
         // Check that the jump targets are set correctly
-        val brStatement = main.bodyOrNull<ConditionalBranchStatement>(0)
-        assertNotNull(brStatement)
-        assertEquals("IfUnequal", brStatement.defaultTargetLabel!!.name)
-        assertEquals("IfEqual", brStatement.conditionalTargets[0].second.name)
+        val ifStatement = main.bodyOrNull<IfStatement>(0)
+        assertNotNull(ifStatement)
+        assertEquals("IfUnequal", (ifStatement.elseStatement!! as GotoStatement).labelName)
+        assertEquals("IfEqual", (ifStatement.thenStatement as GotoStatement).labelName)
 
         // Check that the condition is set correctly
-        val brCondition = brStatement.conditionalTargets[0].first
-        assertEquals("cond", brCondition.name)
-        assertEquals("i1", brCondition.type.typeName)
+        val ifCondition = ifStatement.condition
+        assertSame(variableDecl, (ifCondition as DeclaredReferenceExpression).refersTo)
 
-        val elseBranch = brStatement.defaultTargetLabel!!.subStatement as CompoundStatement
+        val elseBranch =
+            (ifStatement.elseStatement!! as GotoStatement).targetLabel.subStatement as
+                CompoundStatement
         assertEquals(2, elseBranch.statements.size)
 
-        val ifBranch = brStatement.conditionalTargets[0].second.subStatement as CompoundStatement
+        val ifBranch =
+            (ifStatement.thenStatement as GotoStatement).targetLabel.subStatement as
+                CompoundStatement
         assertEquals(2, ifBranch.statements.size)
 
         val ifBranchVariableDecl =

@@ -676,15 +676,23 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
     private fun handleBrStatement(instr: LLVMValueRef): Statement {
         if (LLVMGetNumOperands(instr) == 3) {
             // if(op) then {goto label1} else {goto label2}
-            val ifStatement = newConditionalBranchStatement(lang.getCodeFromRawNode(instr))
+            val ifStatement = newIfStatement(lang.getCodeFromRawNode(instr))
             val condition = lang.getOperandValueAtIndex(instr, 0)
+            ifStatement.condition = condition
 
             // Get the label of the "else" branch
-            ifStatement.defaultTargetLabel = extractBasicBlockLabel(LLVMGetOperand(instr, 1))
+            val elseGoto = newGotoStatement(lang.getCodeFromRawNode(instr))
+            val elseLabel = extractBasicBlockLabel(LLVMGetOperand(instr, 1))
+            elseGoto.targetLabel = elseLabel
+            elseGoto.labelName = elseLabel.name
+            ifStatement.elseStatement = elseGoto
 
             // Get the label of the "if" branch
+            val ifGoto = newGotoStatement(lang.getCodeFromRawNode(instr))
             val thenLabelStatement = extractBasicBlockLabel(LLVMGetOperand(instr, 2))
-            ifStatement.addConditionalTarget(condition, thenLabelStatement)
+            ifGoto.targetLabel = thenLabelStatement
+            ifGoto.labelName = thenLabelStatement.name
+            ifStatement.thenStatement = ifGoto
 
             return ifStatement
         } else if (LLVMGetNumOperands(instr) == 1) {
