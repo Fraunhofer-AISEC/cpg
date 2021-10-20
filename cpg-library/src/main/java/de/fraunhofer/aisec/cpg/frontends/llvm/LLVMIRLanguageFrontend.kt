@@ -42,7 +42,6 @@ import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.io.File
 import java.nio.ByteBuffer
-import java.util.*
 import kotlin.collections.ArrayList
 import org.bytedeco.javacpp.BytePointer
 import org.bytedeco.llvm.LLVM.*
@@ -97,7 +96,7 @@ class LLVMIRLanguageFrontend(config: TranslationConfiguration, scopeManager: Sco
         if (result != 0) {
             // something went wrong
             val errorMsg = String(errorMessage.array())
-            // LLVMDisposeMessage(errorMessage)
+            LLVMContextDispose(ctx)
             throw TranslationException("Could not create memory buffer: $errorMsg")
         }
 
@@ -105,7 +104,7 @@ class LLVMIRLanguageFrontend(config: TranslationConfiguration, scopeManager: Sco
         if (result != 0) {
             // something went wrong
             val errorMsg = String(errorMessage.array())
-            // LLVMDisposeMessage(errorMessage)
+            LLVMContextDispose(ctx)
             throw TranslationException("Could not parse IR: $errorMsg")
         }
 
@@ -136,7 +135,6 @@ class LLVMIRLanguageFrontend(config: TranslationConfiguration, scopeManager: Sco
             func = LLVMGetNextFunction(func)
         }
 
-        // TODO: actually clean them up, if we throw
         LLVMContextDispose(ctx)
 
         return tu

@@ -93,7 +93,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 return Statement()
             }
             LLVMCallBr -> {
-                // TODO: Maps to a call but also to a goto statement?
+                // Maps to a call but also to a goto statement? Barely used => not relevant
                 println("call instruction")
             }
             LLVMFNeg -> {
@@ -132,8 +132,6 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 return handleBinaryOperator(instr, "%", true)
             }
             LLVMSRem -> {
-                // TODO: This is not 100% accurate and needs to be handled later or needs a new
-                // operator
                 return handleBinaryOperator(instr, "%", false)
             }
             LLVMFRem -> {
@@ -143,12 +141,10 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 return handleBinaryOperator(instr, "<<", false)
             }
             LLVMLShr -> {
-                return handleBinaryOperator(instr, ">>", false)
+                return handleBinaryOperator(instr, ">>", true)
             }
             LLVMAShr -> {
-                // TODO: This is not 100% accurate and needs to be handled later or needs a new
-                // operator
-                return handleBinaryOperator(instr, ">>", true)
+                return handleBinaryOperator(instr, ">>", false)
             }
             LLVMAnd -> {
                 return handleBinaryOperator(instr, "&", false)
