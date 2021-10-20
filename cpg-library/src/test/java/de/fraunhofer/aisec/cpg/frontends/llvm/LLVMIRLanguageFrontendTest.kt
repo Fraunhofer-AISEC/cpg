@@ -224,6 +224,11 @@ class LLVMIRLanguageFrontendTest {
         assertEquals("onone", ononeLabel.name)
         assertTrue(ononeLabel.subStatement is CompoundStatement)
 
+        val defaultLabel = main.bodyOrNull<LabelStatement>(2)
+        assertNotNull(defaultLabel)
+        assertEquals("otherwise", defaultLabel.name)
+        assertTrue(defaultLabel.subStatement is CompoundStatement)
+
         // Check that the type of %a is i32
         val xorStatement = main.bodyOrNull<DeclarationStatement>(3)
         assertNotNull(xorStatement)
@@ -233,35 +238,26 @@ class LLVMIRLanguageFrontendTest {
         assertEquals("i32", a.type.typeName)
 
         // Check that the jump targets are set correctly
-        val brStatement = main.bodyOrNull<ConditionalBranchStatement>()
-        assertNotNull(brStatement)
-        assertEquals("otherwise", brStatement.defaultTargetLabel!!.name)
-        assertSame(onzeroLabel, brStatement.conditionalTargets[0].second)
-        assertSame(ononeLabel, brStatement.conditionalTargets[1].second)
+        val switchStatement = main.bodyOrNull<SwitchStatement>()
+        assertNotNull(switchStatement)
 
-        // Check that the condition is set correctly
-        val brCondition1 = brStatement.conditionalTargets[0].first
-        assertEquals(BinaryOperator::class, brCondition1::class)
-        assertEquals("==", (brCondition1 as BinaryOperator).operatorCode)
-        assertEquals(0L, (brCondition1.rhs as Literal<*>).value as Long)
+        // Check that we have switch(a)
+        assertSame(a, (switchStatement.selector as DeclaredReferenceExpression).refersTo)
 
-        var lhs = brCondition1.lhs as? DeclaredReferenceExpression
-        assertNotNull(lhs)
-        assertEquals("a", lhs.name)
-        assertEquals("i32", lhs.type.typeName)
-        assertSame(a, lhs.refersTo)
+        val cases = switchStatement.statement as CompoundStatement
+        // Check that the first case is case 0 -> goto onzero
+        val case1 = cases.statements[0] as CaseStatement
+        assertEquals(0L, (case1.caseExpression as Literal<*>).value as Long)
+        assertEquals(onzeroLabel, (cases.statements[1] as GotoStatement).targetLabel)
+        // Check that the second case is case 1 -> goto onone
+        val case2 = cases.statements[2] as CaseStatement
+        assertEquals(1L, (case2.caseExpression as Literal<*>).value as Long)
+        assertEquals(ononeLabel, (cases.statements[3] as GotoStatement).targetLabel)
 
-        // Check that the condition is set correctly
-        val brCondition2 = brStatement.conditionalTargets[1].first
-        assertEquals(BinaryOperator::class, brCondition1::class)
-        assertEquals("==", (brCondition2 as BinaryOperator).operatorCode)
-        assertEquals(1L, (brCondition2.rhs as Literal<*>).value as Long)
-
-        lhs = brCondition2.lhs as? DeclaredReferenceExpression
-        assertNotNull(lhs)
-        assertEquals("a", lhs.name)
-        assertEquals("i32", lhs.type.typeName)
-        assertSame(a, lhs.refersTo)
+        // Check that the default location is set to
+        val defaultStatement = cases.statements[4] as? DefaultStatement
+        assertNotNull(defaultStatement)
+        assertEquals(defaultLabel, (cases.statements[5] as GotoStatement).targetLabel)
     }
 
     @Test

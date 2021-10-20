@@ -675,7 +675,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
     /** Handles a [`br`](https://llvm.org/docs/LangRef.html#br-instruction) instruction. */
     private fun handleBrStatement(instr: LLVMValueRef): Statement {
         if (LLVMGetNumOperands(instr) == 3) {
-            // if(op) then {label1} else {label2}
+            // if(op) then {goto label1} else {goto label2}
             val ifStatement = newConditionalBranchStatement(lang.getCodeFromRawNode(instr))
             val condition = lang.getOperandValueAtIndex(instr, 0)
 
@@ -706,32 +706,47 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
      * used for the comparison of the "case" statements, the second one is the default location) or
      * if the number of operands is not even.
      *
-     * Returns a [ConditionalBranchStatement].
+     * Returns a [SwitchStatement].
      */
     private fun handleSwitchStatement(instr: LLVMValueRef): Statement {
         val numOps = LLVMGetNumOperands(instr)
+        val nodeCode = lang.getCodeFromRawNode(instr)
         if (numOps < 2 || numOps % 2 != 0)
             throw TranslationException("Switch statement without operand and default branch")
 
         val operand = lang.getOperandValueAtIndex(instr, 0)
 
-        val switchStatement = newConditionalBranchStatement(lang.getCodeFromRawNode(instr))
+        val switchStatement = newSwitchStatement(nodeCode)
+        switchStatement.selector = operand
 
-        // Get the label of the "default" branch
-        switchStatement.defaultTargetLabel = extractBasicBlockLabel(LLVMGetOperand(instr, 1))
+        val caseStatements = newCompoundStatement(nodeCode)
 
         var idx = 2
         while (idx < numOps) {
-            // Get the comparison
-            val binaryOperator = newBinaryOperator("==", lang.getCodeFromRawNode(instr))
-            binaryOperator.lhs = operand
-            binaryOperator.rhs = lang.getOperandValueAtIndex(instr, idx)
+            // Get the comparison value and add it to the CompoundStatement
+            val caseStatement = newCaseStatement(nodeCode)
+            caseStatement.caseExpression = lang.getOperandValueAtIndex(instr, idx)
+            caseStatements.addStatement(caseStatement)
             idx++
-            // Get the "case" statements
+            // Get the "case" statements and add it to the CompoundStatement
             val caseLabelStatement = extractBasicBlockLabel(LLVMGetOperand(instr, idx))
+            val gotoStatement = newGotoStatement(nodeCode)
+            gotoStatement.targetLabel = caseLabelStatement
+            gotoStatement.labelName = caseLabelStatement.name
+            caseStatements.addStatement(gotoStatement)
             idx++
-            switchStatement.addConditionalTarget(binaryOperator, caseLabelStatement)
         }
+
+        // Get the label of the "default" branch
+        caseStatements.addStatement(newDefaultStatement(nodeCode))
+        val defaultLabel = extractBasicBlockLabel(LLVMGetOperand(instr, 1))
+        val defaultGoto = newGotoStatement(nodeCode)
+        defaultGoto.targetLabel = defaultLabel
+        defaultGoto.labelName = defaultLabel.name
+        caseStatements.addStatement(defaultGoto)
+
+        switchStatement.statement = caseStatements
+
         return switchStatement
     }
 
