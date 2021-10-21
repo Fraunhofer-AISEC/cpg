@@ -990,7 +990,7 @@ public class EvaluationOrderGraphPass extends Pass {
   private void handleIfStatement(@NonNull Node node) {
     IfStatement ifStatement = (IfStatement) node;
     List<Node> openBranchNodes = new ArrayList<>();
-    lang.getScopeManager().enterScope(ifStatement);
+    lang.getScopeManager().enterScopeIfExists(ifStatement);
     createEOG(ifStatement.getInitializerStatement());
     createEOG(ifStatement.getConditionDeclaration());
     createEOG(ifStatement.getCondition());
@@ -1020,7 +1020,7 @@ public class EvaluationOrderGraphPass extends Pass {
 
   private void handleSwitchStatement(@NonNull Node node) {
     SwitchStatement switchStatement = (SwitchStatement) node;
-    lang.getScopeManager().enterScope(switchStatement);
+    lang.getScopeManager().enterScopeIfExists(switchStatement);
 
     createEOG(switchStatement.getInitializerStatement());
 

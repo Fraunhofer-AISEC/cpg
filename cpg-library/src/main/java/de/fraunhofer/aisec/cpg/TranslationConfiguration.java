@@ -392,6 +392,7 @@ public class TranslationConfiguration {
      * @return
      */
     public Builder defaultPasses() {
+      registerPass(new CompressLLVMPass());
       registerPass(new TypeHierarchyResolver());
       registerPass(new JavaExternalTypeHierarchyResolver());
       registerPass(new ImportResolver());

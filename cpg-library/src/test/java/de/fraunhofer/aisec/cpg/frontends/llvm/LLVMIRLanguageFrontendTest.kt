@@ -197,7 +197,7 @@ class LLVMIRLanguageFrontendTest {
     }
 
     @Test
-    fun testSwitchCase() {
+    fun testSwitchCase() { // TODO: Update the test
         val topLevel = Path.of("src", "test", "resources", "llvm")
         val tu =
             TestUtils.analyzeAndGetFirstTU(
@@ -261,7 +261,7 @@ class LLVMIRLanguageFrontendTest {
     }
 
     @Test
-    fun testBrStatements() {
+    fun testBrStatements() { // TODO: Update the rest of the test
         val topLevel = Path.of("src", "test", "resources", "llvm")
         val tu =
             TestUtils.analyzeAndGetFirstTU(
@@ -298,7 +298,7 @@ class LLVMIRLanguageFrontendTest {
         val ifStatement = main.bodyOrNull<IfStatement>(0)
         assertNotNull(ifStatement)
         assertEquals("IfUnequal", (ifStatement.elseStatement!! as GotoStatement).labelName)
-        assertEquals("IfEqual", (ifStatement.thenStatement as GotoStatement).labelName)
+        val ifBranch = (ifStatement.thenStatement as CompoundStatement)
 
         // Check that the condition is set correctly
         val ifCondition = ifStatement.condition
@@ -309,10 +309,9 @@ class LLVMIRLanguageFrontendTest {
                 CompoundStatement
         assertEquals(2, elseBranch.statements.size)
 
-        val ifBranch =
-            (ifStatement.thenStatement as GotoStatement).targetLabel.subStatement as
-                CompoundStatement
+        // Check that it's  the correct then-branch
         assertEquals(2, ifBranch.statements.size)
+        assertEquals("  %condUnsigned = icmp ugt i32 %x, -3", ifBranch.statements[0].code)
 
         val ifBranchVariableDecl =
             (ifBranch.statements[0] as DeclarationStatement).declarations[0] as VariableDeclaration
