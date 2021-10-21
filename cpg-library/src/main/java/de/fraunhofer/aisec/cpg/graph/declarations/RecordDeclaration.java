@@ -33,7 +33,9 @@ import de.fraunhofer.aisec.cpg.graph.StatementHolder;
 import de.fraunhofer.aisec.cpg.graph.SubGraph;
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import de.fraunhofer.aisec.cpg.graph.statements.Statement;
+import de.fraunhofer.aisec.cpg.graph.types.ObjectType;
 import de.fraunhofer.aisec.cpg.graph.types.Type;
+import de.fraunhofer.aisec.cpg.graph.types.TypeParser;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -378,5 +380,23 @@ public class RecordDeclaration extends Declaration implements DeclarationHolder,
     } else if (declaration instanceof TemplateDeclaration) {
       addIfNotContains(this.templates, (TemplateDeclaration) declaration);
     }
+  }
+
+  /**
+   * Returns a type represented by this record.
+   *
+   * @return the type
+   */
+  public Type toType() {
+    var type = TypeParser.createFrom(this.getName(), false);
+
+    if (type instanceof ObjectType) {
+      // as a shortcut, directly set the record declaration. This will be otherwise done
+      // later by a pass, but for some frontends we need this immediately, so we set
+      // this here.
+      ((ObjectType) type).setRecordDeclaration(this);
+    }
+
+    return type;
   }
 }
