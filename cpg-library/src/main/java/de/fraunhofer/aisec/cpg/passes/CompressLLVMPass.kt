@@ -63,6 +63,7 @@ class CompressLLVMPass() : Pass() {
                 val caseBodyStatements = node.statement as CompoundStatement
                 for (i in 0 until caseBodyStatements.statements.size) {
                     if (caseBodyStatements.statements[i] in gotosToReplace) {
+                        // TODO: This replacement doesn't work!
                         caseBodyStatements.statements[i] =
                             (caseBodyStatements.statements[i] as GotoStatement)
                                 .targetLabel
@@ -72,10 +73,12 @@ class CompressLLVMPass() : Pass() {
             } else if (node is CompoundStatement) {
                 // Iterate over all statements in a CompoundStatement and replace a goto statement
                 // iff it is the only one jumping to the target
-                for (i in 0 until node.statements.size) {
-                    if (node.statements[i] in gotosToReplace) {
-                        node.statements[i] =
-                            (node.statements[i] as GotoStatement).targetLabel.subStatement
+               val iterator = node.statements.listIterator()
+                while (iterator.hasNext()) {
+                    val statement = iterator.next()
+                    if (statement in gotosToReplace) {
+                        val subStatement = (statement as GotoStatement).targetLabel.subStatement
+                        iterator.set(subStatement) // TODO: This replacement doesn't work!
                     }
                 }
             }

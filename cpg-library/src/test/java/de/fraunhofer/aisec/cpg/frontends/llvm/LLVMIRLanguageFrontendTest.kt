@@ -261,7 +261,7 @@ class LLVMIRLanguageFrontendTest {
     }
 
     @Test
-    fun testBrStatements() { // TODO: Update the rest of the test
+    fun testBrStatements() {
         val topLevel = Path.of("src", "test", "resources", "llvm")
         val tu =
             TestUtils.analyzeAndGetFirstTU(
@@ -308,6 +308,8 @@ class LLVMIRLanguageFrontendTest {
             (ifStatement.elseStatement!! as GotoStatement).targetLabel.subStatement as
                 CompoundStatement
         assertEquals(2, elseBranch.statements.size)
+        assertEquals("  %y = mul i32 %x, 32768", elseBranch.statements[0].code)
+        assertEquals("  ret i32 %y", elseBranch.statements[1].code)
 
         // Check that it's  the correct then-branch
         assertEquals(2, ifBranch.statements.size)
