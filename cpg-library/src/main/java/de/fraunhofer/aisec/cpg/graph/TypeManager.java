@@ -292,7 +292,10 @@ public class TypeManager {
 
   public synchronized void cacheType(HasType node, Type type) {
     if (!isUnknown(type)) {
-      typeCache.computeIfAbsent(node, n -> new ArrayList<>()).add(type);
+      var list = typeCache.computeIfAbsent(node, n -> new ArrayList<>());
+      if (!list.contains(type)) {
+        list.add(type);
+      }
     }
   }
 
