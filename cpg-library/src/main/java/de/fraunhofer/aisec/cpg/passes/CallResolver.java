@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.passes;
 import de.fraunhofer.aisec.cpg.TranslationResult;
 import de.fraunhofer.aisec.cpg.frontends.HasTemplates;
 import de.fraunhofer.aisec.cpg.frontends.cpp.CXXLanguageFrontend;
+import de.fraunhofer.aisec.cpg.frontends.cpp2.CXXLanguageFrontend2;
 import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguageFrontend;
 import de.fraunhofer.aisec.cpg.graph.*;
 import de.fraunhofer.aisec.cpg.graph.declarations.*;
@@ -1073,7 +1074,7 @@ public class CallResolver extends Pass {
 
     // Find function targets
     if (invocationCandidates.isEmpty() && lang != null) {
-      if (lang instanceof CXXLanguageFrontend) {
+      if (lang instanceof CXXLanguageFrontend || lang instanceof CXXLanguageFrontend2) {
         invocationCandidates = handleCXXMethodCall(curClass, call);
 
       } else {

@@ -75,7 +75,7 @@ public class Expression extends Statement implements HasType {
       result =
           TypeManager.getInstance()
               .getTypeCache()
-              .computeIfAbsent(this, n -> Collections.emptySet())
+              .computeIfAbsent(this, n -> Collections.emptyList())
               .stream()
               .findAny()
               .orElse(UnknownType.getUnknownType());
@@ -164,7 +164,8 @@ public class Expression extends Statement implements HasType {
   @Override
   public Set<Type> getPossibleSubTypes() {
     if (!TypeManager.isTypeSystemActive()) {
-      return TypeManager.getInstance().getTypeCache().getOrDefault(this, Collections.emptySet());
+      return new HashSet<>(
+          TypeManager.getInstance().getTypeCache().getOrDefault(this, Collections.emptyList()));
     }
     return possibleSubTypes;
   }

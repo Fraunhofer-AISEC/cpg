@@ -55,6 +55,7 @@ subprojects {
     apply(plugin = "com.diffplug.spotless")
 
     repositories {
+        mavenLocal()
         mavenCentral()
 
         ivy {

@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.graph;
 
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
 import de.fraunhofer.aisec.cpg.frontends.cpp.CXXLanguageFrontend;
+import de.fraunhofer.aisec.cpg.frontends.cpp2.CXXLanguageFrontend2;
 import de.fraunhofer.aisec.cpg.frontends.golang.GoLanguageFrontend;
 import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguageFrontend;
 import de.fraunhofer.aisec.cpg.frontends.llvm.LLVMIRLanguageFrontend;
@@ -74,7 +75,7 @@ public class TypeManager {
   }
 
   @NonNull
-  private final Map<HasType, Set<Type>> typeCache =
+  private final Map<HasType, List<Type>> typeCache =
       Collections.synchronizedMap(new IdentityHashMap<>());
 
   @NonNull
@@ -285,13 +286,23 @@ public class TypeManager {
     typeSystemActive = active;
   }
 
-  public Map<HasType, Set<Type>> getTypeCache() {
+  public Map<HasType, List<Type>> getTypeCache() {
     return typeCache;
   }
 
   public synchronized void cacheType(HasType node, Type type) {
     if (!isUnknown(type)) {
-      typeCache.computeIfAbsent(node, n -> new HashSet<>()).add(type);
+      var list = typeCache.computeIfAbsent(node, n -> new ArrayList<>());
+
+      // make sure, that the list is really modifiable and not an empty immutable list
+      if (list.isEmpty()) {
+        list = new ArrayList<>();
+        typeCache.put(node, list);
+      }
+
+      if (!list.contains(type)) {
+        list.add(type);
+      }
     }
   }
 
@@ -519,7 +530,8 @@ public class TypeManager {
   public Language getLanguage() {
     if (frontend instanceof JavaLanguageFrontend) {
       return Language.JAVA;
-    } else if (frontend instanceof CXXLanguageFrontend) {
+    } else if (frontend instanceof CXXLanguageFrontend
+        || frontend instanceof CXXLanguageFrontend2) {
       return Language.CXX;
     } else if (frontend instanceof GoLanguageFrontend) {
       return Language.GO;

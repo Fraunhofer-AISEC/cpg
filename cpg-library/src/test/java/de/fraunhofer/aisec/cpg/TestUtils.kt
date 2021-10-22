@@ -27,16 +27,19 @@ package de.fraunhofer.aisec.cpg
 
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.TypeManager
+import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.helpers.Util
 import java.io.File
 import java.nio.file.Files
 import java.nio.file.Path
-import java.util.*
 import java.util.function.Consumer
 import java.util.function.Predicate
 import java.util.stream.Collectors
+import kotlin.test.assertSame
 import org.apache.commons.lang3.reflect.FieldUtils
 import org.junit.jupiter.api.Assertions
 import org.mockito.Mockito
@@ -259,6 +262,14 @@ object TestUtils {
             loc.region.startLine == toCompare
         } else {
             loc.region.endLine == toCompare
+        }
+    }
+
+    fun assertRefersTo(expression: Expression, b: Declaration) {
+        if (expression is DeclaredReferenceExpression) {
+            assertSame(b, expression.refersTo)
+        } else {
+            Assertions.fail<Any>()
         }
     }
 }

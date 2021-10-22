@@ -25,12 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements.expressions;
 
-import de.fraunhofer.aisec.cpg.graph.HasBase;
-import de.fraunhofer.aisec.cpg.graph.HasType;
+import de.fraunhofer.aisec.cpg.graph.*;
 import de.fraunhofer.aisec.cpg.graph.HasType.TypeListener;
-import de.fraunhofer.aisec.cpg.graph.Node;
-import de.fraunhofer.aisec.cpg.graph.SubGraph;
-import de.fraunhofer.aisec.cpg.graph.TypeManager;
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration;
 import de.fraunhofer.aisec.cpg.graph.declarations.TemplateDeclaration;
 import de.fraunhofer.aisec.cpg.graph.edge.Properties;
@@ -72,6 +68,14 @@ public class CallExpression extends Expression
   @SubGraph("AST")
   private Expression base;
 
+  /**
+   * The fully qualified name of this call.
+   *
+   * <p>Note: Since this depends on the type of the {@link #base} this value will get overridden, if
+   * the type of the base changes using our type listener system. Therefore, it is sufficient to
+   * ignore this value in a language frontend and let the type system set this property later. See
+   * {@link #typeChanged(HasType src, HasType root, Type oldType)}.
+   */
   private String fqn;
 
   @NotNull
@@ -326,6 +330,7 @@ public class CallExpression extends Expression
     if (!TypeManager.isTypeSystemActive()) {
       return;
     }
+    // if the source is our base, then we need to update the fqn accordingly
     if (src == base) {
       setFqn(src.getType().getRoot().getTypeName() + "." + this.getName());
     } else {
