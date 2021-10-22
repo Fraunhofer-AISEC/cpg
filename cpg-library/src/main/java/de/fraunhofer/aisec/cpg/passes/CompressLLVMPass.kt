@@ -43,7 +43,14 @@ class CompressLLVMPass() : Pass() {
         val gotosToReplace =
             allGotos.filter { g -> (g as GotoStatement).targetLabel in singleEntryLabels }
 
-        for (node in flatAST) {
+        // Enforce the order: First IfStatements, then SwitchStatements, then the rest. This
+        // prevents to treat the final goto in the case or default statement as a normal compound
+        // statement which would lead to inlining the instructions BB but we want to keep the BB
+        // inside a CompoundStatement.
+        for (node in
+            flatAST.sortedBy { n ->
+                if (n is IfStatement) 1 else if (n is SwitchStatement) 2 else 3
+            }) {
             if (node is IfStatement) {
                 // Replace the then-statement with the basic block it jumps to iff we found that its
                 // goto statement is the only one jumping to the target
@@ -61,15 +68,14 @@ class CompressLLVMPass() : Pass() {
                 // Iterate over all statements in a body of the switch/case and replace a goto
                 // statement iff it is the only one jumping to the target
                 val caseBodyStatements = node.statement as CompoundStatement
-                for (i in 0 until caseBodyStatements.statements.size) {
-                    if (caseBodyStatements.statements[i] in gotosToReplace) {
-                        // TODO: This replacement doesn't work!
-                        caseBodyStatements.statements[i] =
-                            (caseBodyStatements.statements[i] as GotoStatement)
-                                .targetLabel
-                                .subStatement
+                val newStatements = caseBodyStatements.statements.toMutableList()
+                for (i in 0 until newStatements.size) {
+                    if (newStatements[i] in gotosToReplace) {
+                        newStatements[i] =
+                            (newStatements[i] as GotoStatement).targetLabel.subStatement
                     }
                 }
+                (node.statement as CompoundStatement).statements = newStatements
             } else if (node is CompoundStatement) {
                 // Get the last statement in a CompoundStatement and replace a goto statement
                 // iff it is the only one jumping to the target

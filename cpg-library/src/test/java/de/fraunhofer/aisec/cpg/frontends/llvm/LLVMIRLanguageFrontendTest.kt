@@ -245,19 +245,19 @@ class LLVMIRLanguageFrontendTest {
         assertSame(a, (switchStatement.selector as DeclaredReferenceExpression).refersTo)
 
         val cases = switchStatement.statement as CompoundStatement
-        // Check that the first case is case 0 -> goto onzero
+        // Check that the first case is case 0 -> goto onzero and that the BB is inlined
         val case1 = cases.statements[0] as CaseStatement
         assertEquals(0L, (case1.caseExpression as Literal<*>).value as Long)
-        assertEquals(onzeroLabel, (cases.statements[1] as GotoStatement).targetLabel)
-        // Check that the second case is case 1 -> goto onone
+        assertSame(onzeroLabel.subStatement, cases.statements[1])
+        // Check that the second case is case 1 -> goto onone and that the BB is inlined
         val case2 = cases.statements[2] as CaseStatement
         assertEquals(1L, (case2.caseExpression as Literal<*>).value as Long)
-        assertEquals(ononeLabel, (cases.statements[3] as GotoStatement).targetLabel)
+        assertSame(ononeLabel.subStatement, cases.statements[3])
 
-        // Check that the default location is set to
+        // Check that the default location is inlined
         val defaultStatement = cases.statements[4] as? DefaultStatement
         assertNotNull(defaultStatement)
-        assertEquals(defaultLabel, (cases.statements[5] as GotoStatement).targetLabel)
+        assertSame(defaultLabel.subStatement, cases.statements[5])
     }
 
     @Test
