@@ -38,6 +38,6 @@ class CXXTreeSitterLanguageFrontendTest {
                 TranslationConfiguration.builder().build(),
                 ScopeManager()
             )
-        frontend.parse(File("src/test/resources/cfg/switch.cpp"))
+        frontend.parse(File("src/test/resources/declstmt.cpp"))
     }
 }

@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.graph;
 
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
 import de.fraunhofer.aisec.cpg.frontends.cpp.CXXLanguageFrontend;
+import de.fraunhofer.aisec.cpg.frontends.cpp2.CXXTreeSitterLanguageFrontend;
 import de.fraunhofer.aisec.cpg.frontends.golang.GoLanguageFrontend;
 import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguageFrontend;
 import de.fraunhofer.aisec.cpg.frontends.llvm.LLVMIRLanguageFrontend;
@@ -519,7 +520,8 @@ public class TypeManager {
   public Language getLanguage() {
     if (frontend instanceof JavaLanguageFrontend) {
       return Language.JAVA;
-    } else if (frontend instanceof CXXLanguageFrontend) {
+    } else if (frontend instanceof CXXLanguageFrontend
+        || frontend instanceof CXXTreeSitterLanguageFrontend) {
       return Language.CXX;
     } else if (frontend instanceof GoLanguageFrontend) {
       return Language.GO;
