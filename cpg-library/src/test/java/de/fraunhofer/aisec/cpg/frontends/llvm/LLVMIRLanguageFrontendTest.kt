@@ -333,6 +333,13 @@ class LLVMIRLanguageFrontendTest {
         assertEquals(-3, ((ifBranchCompRhs.expression as Literal<*>).value as Long))
         assertEquals("x", declRefExpr.name)
         // TODO: declRefExpr.refersTo is null. Is that expected/intended?
+
+        val ifBranchSecondStatement = ifBranch.statements[1] as? IfStatement
+        assertNotNull(ifBranchSecondStatement)
+        val ifRet = ifBranchSecondStatement.thenStatement as? CompoundStatement
+        assertNotNull(ifRet)
+        assertEquals(1, ifRet.statements.size)
+        assertEquals("  ret i32 1", ifRet.statements[0].code)
     }
 
     @Test

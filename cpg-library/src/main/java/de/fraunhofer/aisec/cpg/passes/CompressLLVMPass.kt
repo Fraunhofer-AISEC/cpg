@@ -71,15 +71,14 @@ class CompressLLVMPass() : Pass() {
                     }
                 }
             } else if (node is CompoundStatement) {
-                // Iterate over all statements in a CompoundStatement and replace a goto statement
+                // Get the last statement in a CompoundStatement and replace a goto statement
                 // iff it is the only one jumping to the target
-               val iterator = node.statements.listIterator()
-                while (iterator.hasNext()) {
-                    val statement = iterator.next()
-                    if (statement in gotosToReplace) {
-                        val subStatement = (statement as GotoStatement).targetLabel.subStatement
-                        iterator.set(subStatement) // TODO: This replacement doesn't work!
-                    }
+                val goto = node.statements.lastOrNull()
+                if (goto != null && goto in gotosToReplace) {
+                    val subStatement = (goto as GotoStatement).targetLabel.subStatement
+                    val newStatements = node.statements.dropLast(1).toMutableList()
+                    newStatements.addAll((subStatement as CompoundStatement).statements)
+                    node.statements = newStatements
                 }
             }
         }
