@@ -683,11 +683,11 @@ class CXXLanguageFrontendTest extends BaseTest {
   @Test
   void testBinaryOperator() throws Exception {
     File file = new File("src/test/resources/binaryoperator.cpp");
-    TranslationUnitDeclaration declaration =
+    TranslationUnitDeclaration tu =
         TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true);
 
     List<Statement> statements =
-        getStatementsOfFunction(declaration.getDeclarationAs(0, FunctionDeclaration.class));
+        getStatementsOfFunction(tu.getDeclarationAs(0, FunctionDeclaration.class));
 
     // first two statements are just declarations
 

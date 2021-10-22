@@ -115,11 +115,17 @@ class CXXTreeSitterLanguageFrontend(config: TranslationConfiguration, scopeManag
         return when (val type = node.type) {
             "compound_statement" -> handleCompoundStatement(node)
             "declaration" -> handleDeclarationStatement(node)
+            "expression_statement" -> handleExpressionStatement(node)
             else -> {
-                log.error("Not handling declarator of type {} yet", type)
+                log.error("Not handling statement of type {} yet", type)
                 newStatement(getCodeFromRawNode(node))
             }
         }
+    }
+
+    private fun handleExpressionStatement(node: TSNode): Statement {
+        // forward the first (and only child) to the expression handler
+        return handleExpression(ts_node_named_child(node, 0))
     }
 
     private fun handleDeclarationStatement(node: TSNode): Statement {
@@ -141,17 +147,19 @@ class CXXTreeSitterLanguageFrontend(config: TranslationConfiguration, scopeManag
     }
 
     private fun handleCompoundStatement(node: TSNode): Statement {
-        val stmt = newCompoundStatement(getCodeFromRawNode(node))
+        val compoundStatement = newCompoundStatement(getCodeFromRawNode(node))
 
-        scopeManager.enterScope(stmt)
+        scopeManager.enterScope(compoundStatement)
 
         for (i in 0 until ts_node_named_child_count(node)) {
-            handleStatement(ts_node_named_child(node, i))
+            val statement = handleStatement(ts_node_named_child(node, i))
+
+            compoundStatement.addStatement(statement)
         }
 
-        scopeManager.leaveScope(stmt)
+        scopeManager.leaveScope(compoundStatement)
 
-        return stmt
+        return compoundStatement
     }
 
     private fun processDeclarator(node: TSNode, declaration: ValueDeclaration) {
@@ -174,22 +182,29 @@ class CXXTreeSitterLanguageFrontend(config: TranslationConfiguration, scopeManag
     }
 
     private fun processInitDeclarator(node: TSNode, declaration: ValueDeclaration) {
-        var hasInitializer = declaration as? HasInitializer
+        // going forward in the declarator chain
+        processDeclarator(
+            ts_node_child_by_field_name(node, "declarator", "declarator".length),
+            declaration
+        )
+
+        val hasInitializer = declaration as? HasInitializer
         hasInitializer?.let {
-            hasInitializer.initializer =
-                handleExpression(
-                    ts_node_child_by_field_name(node, "declarator", "declarator".length)
-                )
+            // the value is nested in the init declarator
+            val expression =
+                handleExpression(ts_node_child_by_field_name(node, "value", "value".length))
+
+            hasInitializer.initializer = expression
         }
     }
 
     private fun handleExpression(node: TSNode): Expression {
         return when (node.type) {
-            "identifier" -> {
-                newLiteral(1, UnknownType.getUnknownType(), "1")
-            }
+            "identifier" -> handleIdentifier(node)
+            "assignment_expression" -> handleAssignmentExpression(node)
+            "binary_expression" -> handleBinaryExpression(node)
+            "number_literal" -> handleNumberLiteral(node)
             else -> {
-                println(ts_node_string(node).string)
                 log.error(
                     "Not handling expression of type {} yet: {}",
                     node.type,
@@ -200,14 +215,62 @@ class CXXTreeSitterLanguageFrontend(config: TranslationConfiguration, scopeManag
         }
     }
 
+    private fun handleIdentifier(node: TSNode): Expression {
+        val name = getCodeFromRawNode(node)
+
+        val ref = newDeclaredReferenceExpression(name, UnknownType.getUnknownType(), name)
+
+        return ref
+    }
+
+    private fun handleNumberLiteral(node: TSNode): Expression {
+        val value = getCodeFromRawNode(node)?.toInt()
+        val literal =
+            newLiteral(value, TypeParser.createFrom("int", false), getCodeFromRawNode(node))
+
+        return literal
+    }
+
+    private fun handleBinaryExpression(node: TSNode): Expression {
+        val symbol = getCodeFromRawNode(ts_node_child(node, 1))
+
+        val expression = newBinaryOperator(symbol, getCodeFromRawNode(node))
+
+        expression.lhs = handleExpression(ts_node_child_by_field_name(node, "left", "left".length))
+        expression.rhs =
+            handleExpression(ts_node_child_by_field_name(node, "right", "right".length))
+
+        return expression
+    }
+
+    private fun handleAssignmentExpression(node: TSNode): Expression {
+        val expression = newBinaryOperator("=", getCodeFromRawNode(node))
+
+        expression.lhs = handleExpression(ts_node_child_by_field_name(node, "left", "left".length))
+        expression.rhs =
+            handleExpression(ts_node_child_by_field_name(node, "right", "right".length))
+
+        return expression
+    }
+
     private fun processPointerDeclarator(node: TSNode, declaration: ValueDeclaration) {
         processDeclarator(
             ts_node_child_by_field_name(node, "declarator", "declarator".length),
             declaration
         )
 
+        log.debug("Type was: {}", declaration.type)
+
+        var type =
+            TypeParser.createFrom(declaration.type.typeName, false)
+                .reference(PointerType.PointerOrigin.POINTER)
+
+        log.debug("Type should be: {}", type)
+
         // reference the type using a pointer
-        declaration.type = declaration.type.reference(PointerType.PointerOrigin.POINTER)
+        declaration.type = type
+
+        log.debug("Type is: {}", type)
     }
 
     private fun handleFunctionDefinition(node: TSNode): FunctionDeclaration {
@@ -218,6 +281,8 @@ class CXXTreeSitterLanguageFrontend(config: TranslationConfiguration, scopeManag
         // name will be filled later by handleDeclarator
         val func = newFunctionDeclaration("", getCodeFromRawNode(node))
         func.type = nonPointerType
+
+        scopeManager.enterScope(func)
 
         processDeclarator(
             ts_node_child_by_field_name(node, "declarator", "declarator".length),
@@ -231,6 +296,8 @@ class CXXTreeSitterLanguageFrontend(config: TranslationConfiguration, scopeManag
 
         func.body = handleStatement(ts_node_child_by_field_name(node, "body", "body".length))
 
+        scopeManager.leaveScope(func)
+
         return func
     }
 
@@ -240,16 +307,12 @@ class CXXTreeSitterLanguageFrontend(config: TranslationConfiguration, scopeManag
             func
         )
 
-        scopeManager.enterScope(func)
-
         val parameterList = ts_node_child_by_field_name(node, "parameters", "parameters".length)
         for (i in 0 until ts_node_named_child_count(parameterList)) {
             val declaration = handleDeclaration(ts_node_named_child(parameterList, i))
 
             scopeManager.addDeclaration(declaration)
         }
-
-        scopeManager.leaveScope(func)
     }
 
     private fun handleType(node: TSNode): Type {
@@ -257,6 +320,9 @@ class CXXTreeSitterLanguageFrontend(config: TranslationConfiguration, scopeManag
             "primitive_type" -> getCodeFromRawNode(node)?.let { TypeParser.createFrom(it, false) }
                     ?: UnknownType.getUnknownType()
             "type_identifier" -> getCodeFromRawNode(node)?.let { TypeParser.createFrom(it, false) }
+                    ?: UnknownType.getUnknownType()
+            "scoped_type_identifier" ->
+                getCodeFromRawNode(node)?.let { TypeParser.createFrom(it, false) }
                     ?: UnknownType.getUnknownType()
             else -> {
                 log.error("Not handling type of type {} yet", node.type)
