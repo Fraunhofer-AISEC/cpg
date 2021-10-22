@@ -215,6 +215,7 @@ dependencies {
 
     // llvm
     implementation("org.bytedeco:llvm-platform:12.0.1-1.5.6")
+    implementation("org.bytedeco:tree-sitter:0.20.0-1.5.7-SNAPSHOT")
 
     // JUnit
     testImplementation("org.jetbrains.kotlin:kotlin-test")

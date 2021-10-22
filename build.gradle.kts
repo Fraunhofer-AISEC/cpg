@@ -56,6 +56,7 @@ subprojects {
 
     repositories {
         mavenCentral()
+        mavenLocal()
 
         ivy {
             setUrl("https://download.eclipse.org/tools/cdt/releases/10.3/cdt-10.3.2/plugins")
