@@ -663,4 +663,60 @@ class LLVMIRLanguageFrontendTest {
         assertEquals("field_1", (assignment.lhs as MemberExpression).name)
         assertEquals(7L, (assignment.rhs as Literal<*>).value as Long)
     }
+
+    @Test
+    fun testTryCatch() {
+        val topLevel = Path.of("src", "test", "resources", "llvm")
+        val tu =
+            TestUtils.analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("try_catch.ll").toFile()),
+                topLevel,
+                true
+            ) {
+                it.registerLanguage(
+                    LLVMIRLanguageFrontend::class.java,
+                    LLVMIRLanguageFrontend.LLVM_EXTENSIONS
+                )
+            }
+
+        val throwingFoo = tu.byNameOrNull<FunctionDeclaration>("throwingFoo")
+
+        val main = tu.byNameOrNull<FunctionDeclaration>("main")
+        assertNotNull(main)
+
+        val mainBody = main.body as CompoundStatement
+        val tryStatement = mainBody.statements[0] as? TryStatement
+        assertNotNull(tryStatement)
+
+        // Check the assignment of the function call
+        val resDecl =
+            (tryStatement.tryBlock.statements[0] as? DeclarationStatement)?.singleDeclaration as?
+                VariableDeclaration
+        assertNotNull(resDecl)
+        assertEquals("res", resDecl.name)
+        val call = resDecl.initializer as? CallExpression
+        assertNotNull(call)
+        assertEquals("throwingFoo", call.name)
+        assertTrue(call.invokes.contains(throwingFoo))
+        assertEquals(0, call.arguments.size)
+
+        // Check that the second part of the try-block is inlined by the pass
+        val aDecl =
+            (tryStatement.tryBlock.statements[1] as? DeclarationStatement)?.singleDeclaration as?
+                VariableDeclaration
+        assertNotNull(aDecl)
+        assertEquals("a", aDecl.name)
+        val resStatement = tryStatement.tryBlock.statements[2] as? ReturnStatement
+        assertNotNull(resStatement)
+
+        // Check that the catch block is inlined by the pass
+        assertEquals(1, tryStatement.catchClauses.size)
+        assertEquals(2, tryStatement.catchClauses[0].body.statements.size)
+        assertNotNull(
+            tryStatement.catchClauses[0].body.statements[0]
+        ) // TODO Adapt once the landingpad instruction is handled properly
+        val catchReturn = tryStatement.catchClauses[0].body.statements[1] as? ReturnStatement
+        assertNotNull(catchReturn)
+        assertEquals(0L, (catchReturn.returnValue as Literal<*>).value)
+    }
 }

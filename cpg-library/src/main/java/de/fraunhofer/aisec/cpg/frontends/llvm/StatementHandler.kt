@@ -762,6 +762,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
      * Returns either a [DeclarationStatement] or a [CallExpression].
      */
     private fun handleFunctionCall(instr: LLVMValueRef): Statement {
+        val instrStr = lang.getCodeFromRawNode(instr)
         val calledFunc = LLVMGetCalledValue(instr)
         var calledFuncName = LLVMGetValueName(calledFunc).string
         var max = LLVMGetNumOperands(instr) - 1
@@ -774,8 +775,8 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             calledFuncName = opName.name
         }
 
-        val catchLabel: LabelStatement?
-        val continueLabel: LabelStatement?
+        var catchLabel = LabelStatement()
+        var continueLabel = LabelStatement()
         if (instr.opCode == LLVMInvoke) {
             max-- // Last one is the Decl.Expr of the function
             // Get the label of the catch clause.
@@ -791,13 +792,32 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             // catch clause is the one at catchLabel)
         }
 
-        val callExpr =
-            newCallExpression(calledFuncName, calledFuncName, lang.getCodeFromRawNode(instr), false)
+        val callExpr = newCallExpression(calledFuncName, calledFuncName, instrStr, false)
 
         while (idx < max) {
             val operandName = lang.getOperandValueAtIndex(instr, idx)
             callExpr.addArgument(operandName)
             idx++
+        }
+
+        if (instr.opCode == LLVMInvoke) {
+            val tryStatement = newTryStatement(instrStr!!)
+            val tryBlock = newCompoundStatement(instrStr)
+            tryBlock.addStatement(declarationOrNot(callExpr, instr))
+            val tryContinue = newGotoStatement(instrStr)
+            tryContinue.targetLabel = continueLabel
+            tryBlock.addStatement(tryContinue)
+            tryStatement.tryBlock = tryBlock
+
+            val catchClause = newCatchClause(instrStr)
+            val gotoCatch = newGotoStatement(instrStr)
+            gotoCatch.targetLabel = catchLabel
+            val catchCompoundStatement = newCompoundStatement(instrStr)
+            catchCompoundStatement.addStatement(gotoCatch)
+            catchClause.body = catchCompoundStatement
+            tryStatement.catchClauses = mutableListOf(catchClause)
+
+            return tryStatement
         }
 
         return declarationOrNot(callExpr, instr)
