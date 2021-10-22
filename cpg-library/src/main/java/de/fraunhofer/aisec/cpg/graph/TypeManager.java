@@ -75,7 +75,7 @@ public class TypeManager {
   }
 
   @NonNull
-  private final Map<HasType, Set<Type>> typeCache =
+  private final Map<HasType, List<Type>> typeCache =
       Collections.synchronizedMap(new IdentityHashMap<>());
 
   @NonNull
@@ -286,13 +286,13 @@ public class TypeManager {
     typeSystemActive = active;
   }
 
-  public Map<HasType, Set<Type>> getTypeCache() {
+  public Map<HasType, List<Type>> getTypeCache() {
     return typeCache;
   }
 
   public synchronized void cacheType(HasType node, Type type) {
     if (!isUnknown(type)) {
-      typeCache.computeIfAbsent(node, n -> new HashSet<>()).add(type);
+      typeCache.computeIfAbsent(node, n -> new ArrayList<>()).add(type);
     }
   }
 
