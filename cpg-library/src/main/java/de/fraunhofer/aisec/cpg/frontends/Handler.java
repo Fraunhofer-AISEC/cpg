@@ -48,7 +48,7 @@ public abstract class Handler<S, T, L extends LanguageFrontend> {
   protected static final Logger log = LoggerFactory.getLogger(Handler.class);
 
   protected final HashMap<Class<? extends T>, HandlerInterface<S, T>> map = new HashMap<>();
-  private final Supplier<S> configConstructor;
+  protected final Supplier<S> configConstructor;
   protected @NotNull L lang;
   private final Class<S> typeOfT =
       (Class<S>)
