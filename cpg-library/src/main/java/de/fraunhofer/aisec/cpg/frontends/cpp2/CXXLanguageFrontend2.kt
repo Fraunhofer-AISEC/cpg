@@ -94,6 +94,11 @@ class CXXLanguageFrontend2(config: TranslationConfiguration, scopeManager: Scope
     }
 
     fun handleType(node: TSNode): Type {
+        // make sure this node is really valid
+        if (ts_node_is_null(node)) {
+            return UnknownType.getUnknownType()
+        }
+
         return when (node.type) {
             "primitive_type" -> getCodeFromRawNode(node)?.let { TypeParser.createFrom(it, false) }
                     ?: UnknownType.getUnknownType()

@@ -29,11 +29,12 @@ import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.frontends.cpp2.CXXLanguageFrontend2.Companion.ts_node_child_by_field_name
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newDeclarationStatement
+import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import org.bytedeco.treesitter.TSNode
 import org.bytedeco.treesitter.global.treesitter
-import org.bytedeco.treesitter.global.treesitter.ts_node_is_null
+import org.bytedeco.treesitter.global.treesitter.*
 
 class StatementHandler(lang: CXXLanguageFrontend2) :
     Handler<Statement, TSNode, CXXLanguageFrontend2>(::Statement, lang) {
@@ -46,11 +47,26 @@ class StatementHandler(lang: CXXLanguageFrontend2) :
             "compound_statement" -> handleCompoundStatement(node)
             "declaration" -> handleDeclarationStatement(node)
             "expression_statement" -> handleExpressionStatement(node)
+            "return_statement" -> handleReturnStatement(node)
             else -> {
                 log.error("Not handling statement of type {} yet", type)
                 configConstructor.get()
             }
         }
+    }
+
+    private fun handleReturnStatement(node: TSNode): Statement {
+        val returnStatement = newReturnStatement(lang.getCodeFromRawNode(node))
+
+        if (ts_node_child_count(node) > 0) {
+            val child = ts_node_named_child(node, 0)
+
+            val expression = lang.expressionHandler.handle(child)
+
+            returnStatement.returnValue = expression
+        }
+
+        return returnStatement
     }
 
     private fun handleExpressionStatement(node: TSNode): Statement {

@@ -26,7 +26,9 @@
 package de.fraunhofer.aisec.cpg.frontends.cpp2
 
 import de.fraunhofer.aisec.cpg.TestUtils.analyzeAndGetFirstTU
+import de.fraunhofer.aisec.cpg.TestUtils.assertRefersTo
 import de.fraunhofer.aisec.cpg.frontends.cpp.CXXLanguageFrontend
+import de.fraunhofer.aisec.cpg.graph.byNameOrNull
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
@@ -269,7 +271,7 @@ class CXXLanguageFrontend2Test {
 
         val constructorDefinition = tu.getDeclarationAs(3, ConstructorDeclaration::class.java)
         assertNotNull(constructorDefinition)
-        assertEquals(1, constructorDefinition!!.parameters.size)
+        assertEquals(1, constructorDefinition.parameters.size)
         assertEquals(TypeParser.createFrom("int", true), constructorDefinition.parameters[0].type)
         assertEquals(TypeParser.createFrom("SomeClass", true), constructorDefinition.type)
         assertTrue(constructorDefinition.hasBody())
@@ -288,5 +290,57 @@ class CXXLanguageFrontend2Test {
 
         val arg = methodCallWithConstant.arguments[0]
         assertSame(constant, (arg as DeclaredReferenceExpression).refersTo)
+    }
+
+    @Test
+    @Throws(java.lang.Exception::class)
+    fun testAssignmentExpression() {
+        val file = File("src/test/resources/assignmentexpression.cpp")
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.unregisterLanguage(CXXLanguageFrontend::class.java)
+                it.registerLanguage(
+                    CXXLanguageFrontend2::class.java,
+                    CXXLanguageFrontend.CXX_EXTENSIONS
+                )
+            }
+
+        val statements =
+            (tu.byNameOrNull<FunctionDeclaration>("main")?.body as? CompoundStatement)?.statements
+                ?: listOf()
+
+        val declareA = statements[0]
+        val a = (declareA as DeclarationStatement).singleDeclaration
+        val assignA = statements[1]
+        assertTrue(assignA is BinaryOperator)
+
+        var lhs = assignA.lhs
+        var rhs = assignA.rhs
+        assertEquals("a", lhs.name)
+        assertEquals(2, (rhs as Literal<*>).value)
+        assertRefersTo(lhs, a)
+
+        val declareB = statements[2]
+        assertTrue(declareB is DeclarationStatement)
+        val b = declareB.singleDeclaration
+
+        // a = b
+        val assignB = statements[3]
+        assertTrue(assignB is BinaryOperator)
+        lhs = assignB.lhs
+        rhs = assignB.rhs
+        assertEquals("a", lhs.name)
+        assertTrue(rhs is DeclaredReferenceExpression)
+        assertEquals("b", rhs.name)
+        assertRefersTo(rhs, b)
+
+        val assignBWithFunction = statements[4]
+        assertTrue(assignBWithFunction is BinaryOperator)
+        assertEquals("a", assignBWithFunction.lhs.name)
+        assertTrue(assignBWithFunction.rhs is CallExpression)
+
+        val call = assignBWithFunction.rhs as CallExpression
+        assertEquals("someFunction", call.name)
+        assertRefersTo(call.arguments[0], b)
     }
 }

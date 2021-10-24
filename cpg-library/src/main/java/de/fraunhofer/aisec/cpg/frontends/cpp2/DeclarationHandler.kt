@@ -30,12 +30,10 @@ import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.cpp2.CXXLanguageFrontend2.Companion.ts_node_child_by_field_name
 import de.fraunhofer.aisec.cpg.graph.HasInitializer
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder
-import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newFieldDeclaration
-import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newFunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.NodeBuilder.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.types.PointerType
 import org.bytedeco.treesitter.TSNode
-import org.bytedeco.treesitter.global.treesitter
 import org.bytedeco.treesitter.global.treesitter.*
 
 class DeclarationHandler(lang: CXXLanguageFrontend2) :
@@ -94,7 +92,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend2) :
 
         // process the declarator to adjust name and type of this declaration
         processDeclarator(
-            treesitter.ts_node_child_by_field_name(node, "declarator", "declarator".length),
+            ts_node_child_by_field_name(node, "declarator", "declarator".length),
             param
         )
 
@@ -108,7 +106,15 @@ class DeclarationHandler(lang: CXXLanguageFrontend2) :
         val declarator = ts_node_child_by_field_name(node, "declarator")
         val declaration =
             if (isReallyAFunctionDeclaration(declarator)) {
-                newFunctionDeclaration("", lang.getCodeFromRawNode(node))
+                val method =
+                    newMethodDeclaration(
+                        "",
+                        lang.getCodeFromRawNode(node),
+                        false,
+                        lang.scopeManager.currentRecord
+                    )
+                method.type = startType
+                method
             } else {
                 newFieldDeclaration(
                     "",
@@ -123,7 +129,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend2) :
 
         // process the declarator to adjust name and type of this declaration
         processDeclarator(
-            treesitter.ts_node_child_by_field_name(node, "declarator", "declarator".length),
+            ts_node_child_by_field_name(node, "declarator", "declarator".length),
             declaration
         )
 
@@ -140,7 +146,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend2) :
     private fun isReallyAFunctionDeclaration(node: TSNode): Boolean {
         // TODO: we can probably do this with a query
 
-        var declarator = ts_node_child_by_field_name(node, "declarator")
+        val declarator = ts_node_child_by_field_name(node, "declarator")
         if (!ts_node_is_null(declarator)) {
             if (ts_node_type(declarator).string == "function_declarator") {
                 return true
@@ -154,13 +160,41 @@ class DeclarationHandler(lang: CXXLanguageFrontend2) :
         return false
     }
 
+    /**
+     * This function checks whether the function declaration is really a method declaration, e.g.,
+     * if it contains a scoped_identifier.
+     */
+    private fun isMethodDeclaration(node: TSNode): Boolean {
+        // TODO: we can probably do this with a query
+
+        val declarator = ts_node_child_by_field_name(node, "declarator")
+        if (!ts_node_is_null(declarator)) {
+            if (ts_node_type(declarator).string == "scoped_identifier") {
+                return true
+            } else {
+                if (isReallyAFunctionDeclaration(declarator)) {
+                    return true
+                }
+            }
+        }
+
+        return false
+    }
+
     private fun handleFunctionDefinition(node: TSNode): FunctionDeclaration {
-        println(treesitter.ts_node_string(node).string)
+        println(ts_node_string(node).string)
 
         val nonPointerType = lang.handleType(ts_node_child_by_field_name(node, "type"))
 
-        // name will be filled later by handleDeclarator
-        val func = NodeBuilder.newFunctionDeclaration("", lang.getCodeFromRawNode(node))
+        // peek whether this is really a method declaration, e.g. if it has a scoped_identifier
+        val func =
+            if (isMethodDeclaration(node)) {
+                // name and record declaration will be filled later by processDeclarator
+                newMethodDeclaration("", lang.getCodeFromRawNode(node), false, null)
+            } else {
+                // name will be filled later by handleDeclarator
+                newFunctionDeclaration("", lang.getCodeFromRawNode(node))
+            }
         func.type = nonPointerType
 
         lang.scopeManager.enterScope(func)
