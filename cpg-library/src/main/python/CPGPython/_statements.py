@@ -140,10 +140,22 @@ def handle_statement(self, stmt):
     elif isinstance(stmt, ast.AsyncFor):
         return self.handle_for(stmt)
     elif isinstance(stmt, ast.While):
-        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
-        r = NodeBuilder.newStatement("")
-        self.add_loc_info(stmt, r)
-        return r
+        # While(expr test, stmt* body, stmt* orelse)
+        whl_stmt = NodeBuilder.newWhileStatement(self.get_src_code(stmt))
+        self.add_loc_info(stmt, whl_stmt)
+        expr = self.handle_expression(stmt.test)
+        if self.is_declaration(expr):
+            whl_stmt.setConditionDeclaration(expr)
+        else:
+            whl_stmt.setCondition(expr)
+        body = self.make_compound_statement(stmt.body)
+        whl_stmt.setStatement(body)
+        if stmt.orelse is not None and len(stmt.orelse) != 0:
+            self.log_with_loc(
+                "\"orelse\" is currently not suppoorted for "
+                "\"while\" statments -> skipping",
+                loglevel="ERROR")
+        return whl_stmt
     elif isinstance(stmt, ast.If):
         if_stmt = NodeBuilder.newIfStatement(self.get_src_code(stmt))
         self.add_loc_info(stmt, if_stmt)
@@ -252,10 +264,9 @@ def handle_statement(self, stmt):
         self.add_loc_info(stmt, p)
         return p
     elif isinstance(stmt, ast.Break):
-        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
-        r = NodeBuilder.newStatement("")
-        self.add_loc_info(stmt, r)
-        return r
+        brk = NodeBuilder.newBreakStatement(self.get_src_code(stmt))
+        self.add_loc_info(stmt, brk)
+        return brk
     elif isinstance(stmt, ast.Continue):
         self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         r = NodeBuilder.newStatement("")
@@ -266,7 +277,7 @@ def handle_statement(self, stmt):
         self.add_loc_info(stmt, s)
         try_block = self.make_compound_statement(stmt.body)
         finally_block = self.make_compound_statement(stmt.finalbody)
-        if len(stmt.orelse) != 0:
+        if stmt.orelse is not None and len(stmt.orelse) != 0:
             self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         if len(stmt.handlers) != 0:
             self.log_with_loc(
@@ -474,7 +485,7 @@ def handle_for(self, stmt):
     body = self.make_compound_statement(stmt.body)
     for_stmt.setStatement(body)
 
-    if len(stmt.orelse) != 0:
+    if stmt.orelse is not None and len(stmt.orelse) != 0:
         self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
 
     return for_stmt
