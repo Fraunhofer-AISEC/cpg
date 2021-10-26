@@ -411,7 +411,7 @@ def handle_function_or_method(self, node, record=None):
         # add first arg as value
         if len(decorator.args) > 0:
             arg0 = decorator.args[0]
-            value = self.visit(arg0)
+            value = self.handle_expression(arg0)
 
             member = NodeBuilder.newAnnotationMember(
                 "value", value, self.get_src_code(arg0))
