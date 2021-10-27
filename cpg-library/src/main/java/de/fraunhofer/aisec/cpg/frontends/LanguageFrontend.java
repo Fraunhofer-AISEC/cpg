@@ -32,11 +32,7 @@ import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager;
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation;
 import de.fraunhofer.aisec.cpg.sarif.Region;
 import java.io.File;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.Map.Entry;
 import java.util.function.BiConsumer;
 import java.util.function.BiPredicate;
@@ -187,12 +183,16 @@ public abstract class LanguageFrontend {
   public <N, S> void setCodeAndRegion(@NonNull N cpgNode, @NonNull S astNode) {
     if (cpgNode instanceof Node) {
       if (config.codeInNodes) {
+        // only set code, if its not already set or empty
+        /*if (((Node) cpgNode).getCode() == null || Objects.equals(((Node) cpgNode).getCode(), "")) {*/
         String code = getCodeFromRawNode(astNode);
+
         if (code != null) {
           ((Node) cpgNode).setCode(code);
         } else {
           log.warn("Unexpected: No code for node {}", astNode);
         }
+        // }
       }
       ((Node) cpgNode).setLocation(getLocationFromRawNode(astNode));
     }

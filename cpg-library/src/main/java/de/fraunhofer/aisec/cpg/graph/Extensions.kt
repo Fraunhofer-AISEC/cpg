@@ -119,27 +119,32 @@ inline fun <reified T : Declaration> DeclarationHolder.byName(
 }
 
 /**
- * This inline function returns the `n`-th statement (in AST order) as specified in T.
+ * This inline function returns the `n`-th body statement (in AST order) as specified in T or `null`
+ * if it does not exist or the type does not match.
+ *
+ * For convenience, `n` defaults to zero, so that the first statement is always easy to fetch.
+ */
+inline fun <reified T : Statement> FunctionDeclaration.bodyOrNull(n: Int = 0): T? {
+    return if (this.body is CompoundStatement) {
+        return (body as? CompoundStatement)?.statements?.filterIsInstance<T>()?.getOrNull(n)
+    } else {
+        if (n == 0 && this.body is T) {
+            this.body as T
+        } else {
+            return null
+        }
+    }
+}
+
+/**
+ * This inline function returns the `n`-th body statement (in AST order) as specified in T. It
+ * throws a [StatementNotFound] exception if it does not exist or match the type.
  *
  * For convenience, `n` defaults to zero, so that the first statement is always easy to fetch.
  */
 @Throws(StatementNotFound::class)
 inline fun <reified T : Statement> FunctionDeclaration.body(n: Int = 0): T {
-    return if (this.body is CompoundStatement) {
-        val o = (this.body as? CompoundStatement)?.statements?.filterIsInstance<T>()?.get(n)
-
-        if (o == null) {
-            throw StatementNotFound()
-        } else {
-            return o
-        }
-    } else {
-        if (n == 0 && this.body is T) {
-            this.body as T
-        } else {
-            throw StatementNotFound()
-        }
-    }
+    return bodyOrNull(n) ?: throw StatementNotFound()
 }
 
 class StatementNotFound : Exception()
