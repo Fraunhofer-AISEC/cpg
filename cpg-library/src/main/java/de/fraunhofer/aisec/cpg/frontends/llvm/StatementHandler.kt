@@ -261,7 +261,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 println("resume instruction")
             }
             LLVMLandingPad -> {
-                println("landingpad instruction")
+                return handleLandingpad(instr)
             }
             LLVMCleanupRet -> {
                 println("cleanupret instruction")
@@ -821,6 +821,40 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         }
 
         return declarationOrNot(callExpr, instr)
+    }
+
+    private fun handleLandingpad(instr: LLVMValueRef): Statement {
+        val catchInstr = newCatchClause(lang.getCodeFromRawNode(instr)!!)
+        /* Get the number of clauses on the landingpad instruction and iterate through the clauses to get all types for the catch clauses */
+        val numClauses = LLVMGetNumClauses(instr)
+        var catchType = ""
+        for (i in 0 until numClauses) {
+            val clause = LLVMGetClause(instr, i)
+            if (LLVMIsAConstantArray(clause) == null) {
+                if (LLVMIsNull(clause) == 1) {
+                    catchType += "..." + " | "
+                } else {
+                    catchType += LLVMGetValueName(clause).string + " | "
+                }
+            } else {
+                // TODO: filter not handled yet
+            }
+        }
+        if (catchType.endsWith(" | ")) catchType = catchType.substring(0, catchType.length - 3)
+
+        val except =
+            newVariableDeclaration(
+                "e_${instr.address()}",
+                TypeParser.createFrom(
+                    catchType,
+                    false
+                ), // TODO: This doesn't work for multiple types to catch
+                lang.getCodeFromRawNode(instr),
+                false
+            )
+        catchInstr.setParameter(except)
+        catchInstr.name = catchType
+        return catchInstr
     }
 
     /**

@@ -711,12 +711,16 @@ class LLVMIRLanguageFrontendTest {
 
         // Check that the catch block is inlined by the pass
         assertEquals(1, tryStatement.catchClauses.size)
-        assertEquals(2, tryStatement.catchClauses[0].body.statements.size)
-        assertNotNull(
-            tryStatement.catchClauses[0].body.statements[0]
-        ) // TODO Adapt once the landingpad instruction is handled properly
-        val catchReturn = tryStatement.catchClauses[0].body.statements[1] as? ReturnStatement
-        assertNotNull(catchReturn)
-        assertEquals(0L, (catchReturn.returnValue as Literal<*>).value)
+        assertEquals(5, tryStatement.catchClauses[0].body.statements.size)
+        assertEquals("_ZTIi | ...", tryStatement.catchClauses[0].name)
+        val ifStatement = tryStatement.catchClauses[0].body.statements[4] as? IfStatement
+        assertNotNull(ifStatement)
+        assertTrue(ifStatement.thenStatement is CompoundStatement)
+        assertEquals(4, (ifStatement.thenStatement as CompoundStatement).statements.size)
+        assertTrue(ifStatement.elseStatement is CompoundStatement)
+        assertEquals(1, (ifStatement.elseStatement as CompoundStatement).statements.size)
     }
+
+    // TODO: Write test for calling a vararg function (e.g. printf). LLVM code snippets can already
+    // be found in client.ll.
 }
