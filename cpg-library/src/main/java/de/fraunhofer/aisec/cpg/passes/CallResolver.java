@@ -1558,6 +1558,16 @@ public class CallResolver extends Pass {
       inferred.setParameters(parameters);
 
       containingRecord.addMethod(inferred);
+
+      // "upgrade" our struct to a class, if it was inferred by us, since we are calling methods on
+      // it
+      if (lang != null
+          && lang.getConfig().getInferenceConfiguration().getInferRecords()
+          && containingRecord.isInferred()
+          && containingRecord.getKind().equals("struct")) {
+        containingRecord.setKind("class");
+      }
+
       return inferred;
     } else {
       // function declaration, not inside a class

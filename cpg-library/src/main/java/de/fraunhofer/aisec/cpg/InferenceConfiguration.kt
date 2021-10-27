@@ -34,11 +34,15 @@ import de.fraunhofer.aisec.cpg.frontends.cpp.CXXLanguageFrontend
 class InferenceConfiguration
 private constructor(
     /** Enables smart guessing of cast vs. call expressions in the [CXXLanguageFrontend] */
-    val guessCastExpressions: Boolean
+    val guessCastExpressions: Boolean,
+
+    /** Enables the inference of record declarations */
+    val inferRecords: Boolean
 ) {
-    class Builder(var guessCastExpressions: Boolean = false) {
+    class Builder(var guessCastExpressions: Boolean = false, var inferRecords: Boolean = false) {
         fun guessCastExpressions(guess: Boolean) = apply { this.guessCastExpressions = guess }
-        fun build() = InferenceConfiguration(guessCastExpressions)
+        fun inferRecords(infer: Boolean) = apply { this.inferRecords = infer }
+        fun build() = InferenceConfiguration(guessCastExpressions, inferRecords)
     }
 
     companion object {
