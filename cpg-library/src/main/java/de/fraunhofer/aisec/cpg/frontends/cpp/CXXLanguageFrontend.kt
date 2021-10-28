@@ -187,6 +187,11 @@ class CXXLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeM
             includePaths.add(config.topLevel.toPath().toAbsolutePath().toString())
         }
         includePaths.addAll(listOf(*config.includePaths))
+
+        // this is a little bit of a hack, to properly support the NULL literal even though we are
+        // not parsing header files
+        config.symbols["NULL"] = "nullptr"
+
         val scannerInfo = ScannerInfo(config.symbols, includePaths.toTypedArray())
         val log = DefaultLogService()
         val opts = ILanguage.OPTION_PARSE_INACTIVE_CODE // | ILanguage.OPTION_ADD_COMMENTS;

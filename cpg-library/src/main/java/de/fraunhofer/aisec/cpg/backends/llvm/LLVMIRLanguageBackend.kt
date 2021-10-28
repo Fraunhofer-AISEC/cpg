@@ -26,8 +26,10 @@
 package de.fraunhofer.aisec.cpg.backends.llvm
 
 import de.fraunhofer.aisec.cpg.backends.LanguageBackend
+import de.fraunhofer.aisec.cpg.graph.HasInitializer
 import de.fraunhofer.aisec.cpg.graph.HasType
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newRecordDeclaration
+import de.fraunhofer.aisec.cpg.graph.TypeManager
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
@@ -55,16 +57,14 @@ class LLVMIRLanguageBackend : LanguageBackend<LLVMTypeRef>() {
         ctx = LLVMContextCreate()
         builder = LLVMCreateBuilderInContext(ctx)
 
-        var mod = LLVMModuleCreateWithName(tu.name)
+        val mod = LLVMModuleCreateWithName(tu.name)
 
-        // TODO: this should have been inferred
-        tu.addDeclaration(newRecordDeclaration("std.string", "struct", ""))
+        inferMissingRecordTypes(tu)
 
         for (record in tu.declarations.filterIsInstance<RecordDeclaration>()) {
             generateStruct(mod, record)
         }
 
-        // LLVMPrintModuleToFile
         for (func in tu.declarations.filterIsInstance<FunctionDeclaration>()) {
             // check, if it is only a declaration for an existing definition and skip it
             if (!func.isDefinition && func.definition != null) {
@@ -119,29 +119,55 @@ class LLVMIRLanguageBackend : LanguageBackend<LLVMTypeRef>() {
         }
     }
 
+    /**
+     * Handles individual declarations in a [DeclarationStatement]. For reach [Declaration] an
+     * [`alloc`](https://llvm.org/docs/LangRef.html#alloca-instruction) instruction is generated,
+     * which allocates an appropriate amount of memory and stores its into a named identifier.
+     *
+     * If the declaration has an initializer (see [HasInitializer]), its expression value (see
+     * [generateExpression] will be stored into the memory address using the
+     * [`store`](https://llvm.org/docs/LangRef.html#store-instruction) instruction.
+     */
     private fun generateDeclarationStatement(stmt: DeclarationStatement) {
-        // TODO: support multiple declarations
-        var decl = stmt.singleDeclaration
+        // loop through all declarations
+        for (declaration in stmt.declarations) {
+            // we only support variable declarations for now
+            (declaration as? VariableDeclaration)?.let {
+                val type = typeOf(declaration)
 
-        // only variable declarations for now
-        (decl as? VariableDeclaration)?.let {
-            val type = typeOf(decl)
+                // just like LLVM, we are handling everything as an `alloca`. we might be able to
+                // optimize this later, e.g., when variables can be directly created on the stack
+                val valueRef = LLVMBuildAlloca(builder, type, declaration.name)
 
-            // just like LLVM, we are handling everything as an alloca. we might be able to optimize
-            // this later, e.g., when variables can be directly created on the stack
-            val valueRef = LLVMBuildAlloca(builder, type, decl.name)
+                variableMap[declaration] = valueRef
 
-            variableMap[decl] = valueRef
+                // handle the initializer as a `store`, if any
+                declaration.initializer?.let {
+                    var expression = generateExpression(it)
 
-            // handle the initializer as a store, if any
-            decl.initializer?.let { LLVMBuildStore(builder, generateExpression(it), valueRef) }
+                    if (expression.isNull) {
+                        log.error(
+                            "Initializer of store associated to a variable declaration resulted in an invalid LLVM value"
+                        )
+                    } else {
+                        LLVMBuildStore(builder, expression, valueRef)
+                    }
+                }
+            }
         }
     }
 
+    /**
+     * Generates a [`ret'](https://llvm.org/docs/LangRef.html#ret-instruction) instruction out of a
+     * [ReturnStatement], with an optional return value.
+     */
     private fun generateReturnStatement(returnStatement: ReturnStatement): LLVMValueRef {
-        val valueRef = LLVMBuildRetVoid(builder)
-
-        // LLVMInsertIntoBuilder(builder, valueRef)
+        val valueRef =
+            if (returnStatement.returnValue == null) {
+                LLVMBuildRetVoid(builder)
+            } else {
+                LLVMBuildRet(builder, generateExpression(returnStatement.returnValue))
+            }
 
         return valueRef
     }
@@ -158,10 +184,13 @@ class LLVMIRLanguageBackend : LanguageBackend<LLVMTypeRef>() {
     private fun generateLiteral(expression: Literal<*>): LLVMValueRef {
         val type = typeOf(expression)
 
-        return if (expression.value == null) {
-            LLVMConstNull(type)
-        } else {
-            LLVMConstInt(type, (expression.value as Int).toLong(), 0)
+        return when (expression.value) {
+            null -> LLVMConstNull(type)
+            is String -> {
+                val nullTerminated = expression.value as String + '\u0000'
+                LLVMConstString(nullTerminated, nullTerminated.length, 0)
+            }
+            else -> LLVMConstInt(type, (expression.value as Int).toLong(), 0)
         }
     }
 
@@ -208,7 +237,12 @@ class LLVMIRLanguageBackend : LanguageBackend<LLVMTypeRef>() {
     }
 
     private fun generateDeclRef(ref: DeclaredReferenceExpression): LLVMValueRef {
-        val valueRef = variableMap[ref.refersTo]
+        var valueRef = variableMap[ref.refersTo]
+
+        if (valueRef == null) {
+            log.error("Danger!")
+            valueRef = LLVMConstNull(typeOf(ref))
+        }
 
         // in order to access this variable, we need to load it
         return LLVMBuildLoad(builder, valueRef, "")
@@ -231,6 +265,26 @@ class LLVMIRLanguageBackend : LanguageBackend<LLVMTypeRef>() {
         } else {
             log.error("Not translating type {} yet. Assuming i64", type.typeName)
             LLVMIntType(64)
+        }
+    }
+
+    /**
+     * It seems that not all missing object types actually have an inferred record declaration. So
+     * we create one for these types.
+     *
+     * TODO: What about types that are common across multiple translation units?
+     */
+    private fun inferMissingRecordTypes(tu: TranslationUnitDeclaration) {
+        val typesToInfer =
+            TypeManager.getInstance().firstOrderTypes.filter {
+                it is ObjectType && it.recordDeclaration == null
+                !it.isPrimitive
+            }
+
+        typesToInfer.forEach {
+            val record = newRecordDeclaration(it.name, "struct", "")
+
+            tu.addDeclaration(record)
         }
     }
 }

@@ -32,8 +32,17 @@ import org.junit.jupiter.api.Test
 class LLVMIRLanguageBackendTest {
 
     @Test
-    fun test() {
+    fun testBinaryOperator() {
         val file = File("src/test/resources/binaryoperator.cpp")
+        val tu = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
+
+        val backend = LLVMIRLanguageBackend()
+        backend.generate(tu)
+    }
+
+    @Test
+    fun testDeclarations() {
+        val file = File("src/test/resources/declstmt.cpp")
         val tu = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
 
         val backend = LLVMIRLanguageBackend()

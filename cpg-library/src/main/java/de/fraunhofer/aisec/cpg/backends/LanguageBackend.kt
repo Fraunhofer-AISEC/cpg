@@ -32,11 +32,22 @@ import de.fraunhofer.aisec.cpg.graph.types.Type
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
-/** A language backend */
+/** A language backend is responsible to emit a Code Property Graph into a specific language. */
 abstract class LanguageBackend<TypeClass> {
     val log: Logger = LoggerFactory.getLogger(LanguageFrontend::class.java)
 
+    /**
+     * The main entry point for a backend. This gets called for each [TranslationUnitDeclaration] in
+     * the graph.
+     */
     abstract fun generate(tu: TranslationUnitDeclaration)
+
+    /**
+     * This function extracts a language-specific [TypeClass] object out of a node, which implements
+     * [HasType].
+     */
     abstract fun typeOf(node: HasType): TypeClass
+
+    /** This function converts a CPG [Type] into a language specific [TypeClass] object. */
     abstract fun typeFrom(type: Type): TypeClass
 }
