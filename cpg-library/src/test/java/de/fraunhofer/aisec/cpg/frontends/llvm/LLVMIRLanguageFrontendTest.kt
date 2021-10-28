@@ -721,6 +721,60 @@ class LLVMIRLanguageFrontendTest {
         assertEquals(1, (ifStatement.elseStatement as CompoundStatement).statements.size)
     }
 
+    @Test
+    fun testPhi() {
+        val topLevel = Path.of("src", "test", "resources", "llvm")
+        val tu =
+            TestUtils.analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("phi.ll").toFile()),
+                topLevel,
+                true
+            ) {
+                it.registerLanguage(
+                    LLVMIRLanguageFrontend::class.java,
+                    LLVMIRLanguageFrontend.LLVM_EXTENSIONS
+                )
+            }
+        val main = tu.byNameOrNull<FunctionDeclaration>("main")
+        assertNotNull(main)
+
+        val mainBody = main.body as CompoundStatement
+        val ifStatement = mainBody.statements[2] as? IfStatement
+        assertNotNull(ifStatement)
+
+        val thenStmt = ifStatement.thenStatement as? CompoundStatement
+        assertNotNull(thenStmt)
+        assertEquals(3, thenStmt.statements.size)
+        val aDecl =
+            (thenStmt.statements[0] as DeclarationStatement).singleDeclaration as
+                VariableDeclaration
+        assertNotNull(thenStmt.statements[1] as? DeclarationStatement)
+        assertSame(
+            aDecl,
+            (((thenStmt.statements[1] as DeclarationStatement).singleDeclaration as
+                        VariableDeclaration)
+                    .initializer as
+                    DeclaredReferenceExpression)
+                .refersTo
+        )
+
+        val elseStmt = ifStatement.elseStatement as? CompoundStatement
+        assertNotNull(elseStmt)
+        assertEquals(3, elseStmt.statements.size)
+        val bDecl =
+            (elseStmt.statements[0] as DeclarationStatement).singleDeclaration as
+                VariableDeclaration
+        assertNotNull(elseStmt.statements[1] as? DeclarationStatement)
+        assertSame(
+            bDecl,
+            (((elseStmt.statements[1] as DeclarationStatement).singleDeclaration as
+                        VariableDeclaration)
+                    .initializer as
+                    DeclaredReferenceExpression)
+                .refersTo
+        )
+    }
+
     // TODO: Write test for calling a vararg function (e.g. printf). LLVM code snippets can already
     // be found in client.ll.
 }

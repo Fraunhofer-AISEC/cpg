@@ -883,7 +883,11 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         for (l in labelMap.keys) {
             val basicBlock = l.subStatement as? CompoundStatement
             val decl = declarationOrNot(labelMap[l]!!, instr)
-            basicBlock?.statements?.add(basicBlock.statements.size - 1, decl)
+            val mutableStatements = basicBlock?.statements?.toMutableList()
+            mutableStatements?.add(basicBlock.statements.size - 1, decl)
+            if (mutableStatements != null) {
+                basicBlock.statements = mutableStatements
+            }
         }
     }
 
