@@ -293,6 +293,13 @@ public class TypeManager {
   public synchronized void cacheType(HasType node, Type type) {
     if (!isUnknown(type)) {
       var list = typeCache.computeIfAbsent(node, n -> new ArrayList<>());
+
+      // make sure, that the list is really modifiable and not an empty immutable list
+      if (list.isEmpty()) {
+        list = new ArrayList<>();
+        typeCache.put(node, list);
+      }
+
       if (!list.contains(type)) {
         list.add(type);
       }

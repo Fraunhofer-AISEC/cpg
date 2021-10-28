@@ -165,10 +165,33 @@ class ExpressionHandler(lang: CXXLanguageFrontend2) :
         )
     }
 
+    /**
+     * Handles an identifier and translates it into a [DeclaredReferenceExpression]. It will also
+     * try to resolve this reference (locally). See comments in the function body for more details
+     * about this resolution.
+     */
     private fun handleIdentifier(node: TSNode): Expression {
         val name = lang.getCodeFromRawNode(node)
 
-        return newDeclaredReferenceExpression(name, UnknownType.getUnknownType(), name)
+        val ref = newDeclaredReferenceExpression(name, UnknownType.getUnknownType(), name)
+
+        // Note: in the long run, we might want to get rid of this resolution. The problem is that
+        // certain parsing steps, for example the FQN of a MemberCallExpression depends on knowing
+        // the (estimated) type of a reference. This can only be achieved if we attempt to to
+        // resolve the reference using the local scope manager. This scope manager has only a
+        // limited view on the overall source graph, i.e., it is limited to the declaration in the
+        // current translation unit that have been parsed before. However, for most use cases this
+        // is sufficient because mostly local variables are needed.
+        val declaration = lang.scopeManager.resolveReference(ref)
+
+        declaration?.let {
+            ref.refersTo = it
+
+            // update the type
+            ref.setType(it.type, it)
+        }
+
+        return ref
     }
 
     private fun handleNumberLiteral(node: TSNode): Expression {

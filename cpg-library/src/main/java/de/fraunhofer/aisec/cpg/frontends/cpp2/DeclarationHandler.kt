@@ -67,7 +67,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend2) :
         if (!ts_node_is_null(classBody)) {
             // loop through fields
             for (i in 0 until ts_node_named_child_count(classBody)) {
-                var childNode = ts_node_named_child(classBody, i)
+                val childNode = ts_node_named_child(classBody, i)
 
                 // skip access_specifier for now
                 if (ts_node_type(childNode).string == "access_specifier") {
