@@ -55,6 +55,8 @@ class LLVMIRLanguageFrontend(config: TranslationConfiguration, scopeManager: Sco
     val declarationHandler = DeclarationHandler(this)
     val expressionHandler = ExpressionHandler(this)
 
+    val phiList = mutableListOf<LLVMValueRef>()
+
     var ctx: LLVMContextRef? = null
 
     /**
@@ -133,6 +135,10 @@ class LLVMIRLanguageFrontend(config: TranslationConfiguration, scopeManager: Sco
             scopeManager.addDeclaration(declaration)
 
             func = LLVMGetNextFunction(func)
+        }
+
+        for (phiInstr in phiList) {
+            statementHandler.handlePhi(phiInstr)
         }
 
         LLVMContextDispose(ctx)

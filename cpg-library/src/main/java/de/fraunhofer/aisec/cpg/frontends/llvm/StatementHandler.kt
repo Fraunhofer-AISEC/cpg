@@ -213,7 +213,8 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 return handleFloatComparison(instr)
             }
             LLVMPHI -> {
-                println("phi instruction")
+                lang.phiList.add(instr)
+                return newEmptyStatement(lang.getCodeFromRawNode(instr))
             }
             LLVMCall -> {
                 return handleFunctionCall(instr)
@@ -823,6 +824,11 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         return declarationOrNot(callExpr, instr)
     }
 
+    /**
+     * Handles a [`landingpad`](https://llvm.org/docs/LangRef.html#landingpad-instruction) by
+     * replacing it with a catch instruction containing all possible catchable types. Later, the
+     * [CompressLLVMPass] will move this instruction to the correct location
+     */
     private fun handleLandingpad(instr: LLVMValueRef): Statement {
         val catchInstr = newCatchClause(lang.getCodeFromRawNode(instr)!!)
         /* Get the number of clauses on the landingpad instruction and iterate through the clauses to get all types for the catch clauses */
@@ -855,6 +861,30 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         catchInstr.setParameter(except)
         catchInstr.name = catchType
         return catchInstr
+    }
+
+    /**
+     * Handles the [`phi`](https://llvm.org/docs/LangRef.html#phi-instruction) instruction. It
+     * therefore adds dummy statements to the end of basic blocks where a certain variable is
+     * declared and initialized. The original phi instruction is not added to the CPG.
+     */
+    fun handlePhi(instr: LLVMValueRef) {
+        val labelMap = mutableMapOf<LabelStatement, Expression>()
+        val numOps = LLVMGetNumOperands(instr)
+        var i = 0
+        while (i < numOps) {
+            val valI = lang.getOperandValueAtIndex(instr, i)
+            val labelI =
+                extractBasicBlockLabel(LLVMBasicBlockAsValue(LLVMGetIncomingBlock(instr, i)))
+            i++
+            labelMap[labelI] = valI
+        }
+
+        for (l in labelMap.keys) {
+            val basicBlock = l.subStatement as? CompoundStatement
+            val decl = declarationOrNot(labelMap[l]!!, instr)
+            basicBlock?.statements?.add(basicBlock.statements.size - 1, decl)
+        }
     }
 
     /**
@@ -1019,7 +1049,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         val bb = LLVMValueAsBasicBlock(valueRef)
         var labelName = LLVMGetBasicBlockName(bb).string
 
-        if (labelName.equals("")) {
+        if (labelName.isNullOrEmpty()) {
             val bbStr = LLVMPrintValueToString(valueRef).string
             val firstLine = bbStr.trim().split("\n")[0]
             labelName = firstLine.substring(0, firstLine.indexOf(":"))

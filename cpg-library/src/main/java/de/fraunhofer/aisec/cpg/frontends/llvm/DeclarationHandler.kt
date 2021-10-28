@@ -165,6 +165,7 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
                     lang.labelMap.computeIfAbsent(labelName) {
                         val label = newLabelStatement(labelName)
                         label.name = labelName
+                        label.label = labelName
                         label
                     }
 
