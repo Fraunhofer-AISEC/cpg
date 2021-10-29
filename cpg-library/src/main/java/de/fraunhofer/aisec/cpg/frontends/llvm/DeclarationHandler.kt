@@ -26,8 +26,12 @@
 package de.fraunhofer.aisec.cpg.frontends.llvm
 
 import de.fraunhofer.aisec.cpg.frontends.Handler
-import de.fraunhofer.aisec.cpg.graph.NodeBuilder
-import de.fraunhofer.aisec.cpg.graph.NodeBuilder.*
+import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newFieldDeclaration
+import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newFunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newLabelStatement
+import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newMethodParameterIn
+import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newRecordDeclaration
+import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newVariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
@@ -217,7 +221,7 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
             return record
         }
 
-        record = NodeBuilder.newRecordDeclaration(name, "struct", "")
+        record = newRecordDeclaration(name, "struct", "")
 
         lang.scopeManager.enterScope(record)
 
@@ -230,16 +234,7 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
             // there are no names, so we need to invent some dummy ones for easier reading
             val fieldName = "field_$i"
 
-            val field =
-                NodeBuilder.newFieldDeclaration(
-                    fieldName,
-                    fieldType,
-                    listOf(),
-                    "",
-                    null,
-                    null,
-                    false
-                )
+            val field = newFieldDeclaration(fieldName, fieldType, listOf(), "", null, null, false)
 
             lang.scopeManager.addDeclaration(field)
         }
