@@ -36,6 +36,8 @@ import org.slf4j.LoggerFactory
 /** Builder for construction code property graph nodes. */
 object NodeBuilder {
     private val LOGGER = LoggerFactory.getLogger(NodeBuilder::class.java)
+
+    @JvmStatic
     fun newUsingDirective(code: String?, qualifiedName: String?): UsingDirective {
         val using = UsingDirective()
         using.qualifiedName = qualifiedName
@@ -84,6 +86,7 @@ object NodeBuilder {
         return node
     }
 
+    @JvmStatic
     fun newTypeIdExpression(
         operatorCode: String?,
         type: Type?,
@@ -161,6 +164,7 @@ object NodeBuilder {
         return node
     }
 
+    @JvmStatic
     fun newArrayRangeExpression(
         floor: Expression?,
         ceil: Expression?,
@@ -175,9 +179,9 @@ object NodeBuilder {
     }
 
     @JvmStatic
-    fun newFunctionDeclaration(name: String?, code: String?): FunctionDeclaration {
+    fun newFunctionDeclaration(name: String, code: String?): FunctionDeclaration {
         val node = FunctionDeclaration()
-        node.name = name!!
+        node.name = name
         node.code = code
         log(node)
         return node
@@ -389,6 +393,7 @@ object NodeBuilder {
         return node
     }
 
+    @JvmStatic
     fun newContinueStatement(code: String?): ContinueStatement {
         val node = ContinueStatement()
         node.code = code
@@ -396,6 +401,7 @@ object NodeBuilder {
         return node
     }
 
+    @JvmStatic
     fun newBreakStatement(code: String?): BreakStatement {
         val node = BreakStatement()
         node.code = code
@@ -404,10 +410,10 @@ object NodeBuilder {
     }
 
     @JvmStatic
-    fun newBinaryOperator(operatorCode: String?, code: String?): BinaryOperator {
+    fun newBinaryOperator(operatorCode: String, code: String?): BinaryOperator {
         val node = BinaryOperator()
         node.operatorCode = operatorCode
-        node.name = operatorCode!!
+        node.name = operatorCode
         node.code = code
         log(node)
         return node
@@ -477,6 +483,7 @@ object NodeBuilder {
         return node
     }
 
+    @JvmStatic
     fun newClassTemplateDeclaration(name: String?, code: String?): ClassTemplateDeclaration {
         val node = ClassTemplateDeclaration()
         node.name = name!!
@@ -544,6 +551,7 @@ object NodeBuilder {
         return node
     }
 
+    @JvmStatic
     fun newStatement(code: String?): Statement {
         val node = Statement()
         node.code = code
@@ -551,6 +559,7 @@ object NodeBuilder {
         return node
     }
 
+    @JvmStatic
     fun newExpression(code: String?): Expression {
         val node = Expression()
         node.code = code
@@ -566,6 +575,7 @@ object NodeBuilder {
         return node
     }
 
+    @JvmStatic
     fun newDesignatedInitializerExpression(code: String?): DesignatedInitializerExpression {
         val node = DesignatedInitializerExpression()
         node.code = code
@@ -619,13 +629,7 @@ object NodeBuilder {
         return node
     }
 
-    fun newDeclaration(code: String?): Declaration {
-        val node = Declaration()
-        node.code = code
-        log(node)
-        return node
-    }
-
+    @JvmStatic
     fun newProblemDeclaration(
         filename: String?,
         problem: String?,
@@ -747,12 +751,14 @@ object NodeBuilder {
         return assertStatement
     }
 
+    @JvmStatic
     fun newASMDeclarationStatement(code: String): ASMDeclarationStatement {
         val asmStatement = ASMDeclarationStatement()
         asmStatement.code = code
         return asmStatement
     }
 
+    @JvmStatic
     fun newCompoundStatementExpression(code: String): CompoundStatementExpression {
         val cse = CompoundStatementExpression()
         cse.code = code
@@ -776,6 +782,7 @@ object NodeBuilder {
         return member
     }
 
+    @JvmStatic
     fun newKeyValueExpression(
         key: Expression?,
         value: Expression?,
