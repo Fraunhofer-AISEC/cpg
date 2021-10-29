@@ -30,7 +30,9 @@ import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.cpp2.CXXLanguageFrontend2.Companion.ts_node_child_by_field_name
 import de.fraunhofer.aisec.cpg.graph.HasInitializer
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder
-import de.fraunhofer.aisec.cpg.graph.NodeBuilder.*
+import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newFieldDeclaration
+import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newFunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newMethodDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.types.PointerType
 import org.bytedeco.treesitter.TSNode
@@ -56,7 +58,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend2) :
     }
 
     private fun handleClassSpecifier(node: TSNode): Declaration {
-        val name = lang.getCodeFromRawNode(ts_node_child_by_field_name(node, "name"))
+        val name = lang.getCodeFromRawNode(ts_node_child_by_field_name(node, "name")) ?: ""
 
         val recordDeclaration =
             NodeBuilder.newRecordDeclaration(name, "class", lang.getCodeFromRawNode(node))

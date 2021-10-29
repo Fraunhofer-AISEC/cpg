@@ -29,7 +29,12 @@ import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.frontends.cpp2.CXXLanguageFrontend2.Companion.ts_node_child_by_field_name
-import de.fraunhofer.aisec.cpg.graph.NodeBuilder.*
+import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newBinaryOperator
+import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newCallExpression
+import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newDeclaredReferenceExpression
+import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newLiteral
+import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newMemberCallExpression
+import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newMemberExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser
@@ -50,6 +55,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend2) :
     private fun handleExpression(node: TSNode): Expression {
         return when (node.type) {
             "identifier" -> handleIdentifier(node)
+            "scoped_identifier" -> handleScopedIdentifier(node)
             "field_expression" -> handleFieldExpression(node)
             "assignment_expression" -> handleAssignmentExpression(node)
             "binary_expression" -> handleBinaryExpression(node)
@@ -66,6 +72,14 @@ class ExpressionHandler(lang: CXXLanguageFrontend2) :
                 configConstructor.get()
             }
         }
+    }
+
+    private fun handleScopedIdentifier(node: TSNode): Expression {
+        // until we properly handle namespaces, we just forward it to handleIdentifier
+
+        val ref = handleIdentifier(node)
+
+        return ref
     }
 
     private fun handleFieldExpression(node: TSNode): Expression {
@@ -203,7 +217,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend2) :
     private fun handleBinaryExpression(node: TSNode): Expression {
         val symbol = lang.getCodeFromRawNode(ts_node_child(node, 1))
 
-        val expression = newBinaryOperator(symbol, lang.getCodeFromRawNode(node))
+        val expression = newBinaryOperator(symbol ?: "", lang.getCodeFromRawNode(node))
 
         expression.lhs = handleExpression(ts_node_child_by_field_name(node, "left"))
         expression.rhs = handleExpression(ts_node_child_by_field_name(node, "right"))

@@ -27,7 +27,7 @@ package de.fraunhofer.aisec.cpg.frontends.cpp2
 
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
-import de.fraunhofer.aisec.cpg.graph.NodeBuilder.*
+import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newTranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.TypeManager
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
