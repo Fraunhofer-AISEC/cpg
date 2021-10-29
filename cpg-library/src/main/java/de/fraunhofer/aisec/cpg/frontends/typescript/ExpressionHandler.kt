@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.frontends.typescript
 import de.fraunhofer.aisec.cpg.ExperimentalTypeScript
 import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder
+import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newLiteral
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
@@ -156,8 +157,9 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
                 ?.replace("\"", "")
                 ?.replace("`", "")
                 ?.replace("'", "")
+                ?: ""
 
-        return NodeBuilder.newLiteral(
+        return newLiteral(
             value,
             TypeParser.createFrom("String", false),
             lang.getCodeFromRawNode(node)

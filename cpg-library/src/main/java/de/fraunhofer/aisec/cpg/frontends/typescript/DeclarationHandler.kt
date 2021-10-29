@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.frontends.typescript
 import de.fraunhofer.aisec.cpg.ExperimentalTypeScript
 import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder
+import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newRecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 
@@ -83,14 +84,15 @@ class DeclarationHandler(lang: TypeScriptLanguageFrontend) :
         val name = this.lang.getIdentifierName(node)
 
         val record =
-            NodeBuilder.newRecordDeclaration(
+            newRecordDeclaration(
                 name,
                 if (node.type == "InterfaceDeclaration") {
                     "interface"
                 } else {
                     "class"
                 },
-                this.lang.getCodeFromRawNode(node)
+                this.lang.getCodeFromRawNode(node),
+                false
             )
 
         this.lang.scopeManager.enterScope(record)
