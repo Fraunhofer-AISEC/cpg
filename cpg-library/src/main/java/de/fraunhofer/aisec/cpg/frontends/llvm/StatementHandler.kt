@@ -63,6 +63,12 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
      * be extracted from that, e.g. by routing it through the [DeclarationHandler].
      */
     private fun handleInstruction(instr: LLVMValueRef): Statement {
+        if (LLVMIsABinaryOperator(instr) != null) {
+            return handleBinaryInstruction(instr)
+        } else if (LLVMIsACastInst(instr) != null) {
+            return handleCastInstruction(instr)
+        }
+
         val opcode = instr.opCode
 
         when (opcode) {
@@ -85,7 +91,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             LLVMIndirectBr -> {
                 println("indirect br instruction")
             }
-            LLVMInvoke -> {
+            LLVMCall, LLVMInvoke -> {
                 return handleFunctionCall(instr)
             }
             LLVMUnreachable -> {
@@ -101,60 +107,6 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 fneg.input = lang.getOperandValueAtIndex(instr, 0)
                 return fneg
             }
-            LLVMAdd -> {
-                return handleBinaryOperator(instr, "+", false)
-            }
-            LLVMFAdd -> {
-                return handleBinaryOperator(instr, "+", false)
-            }
-            LLVMSub -> {
-                return handleBinaryOperator(instr, "-", false)
-            }
-            LLVMFSub -> {
-                return handleBinaryOperator(instr, "-", false)
-            }
-            LLVMMul -> {
-                return handleBinaryOperator(instr, "*", false)
-            }
-            LLVMFMul -> {
-                return handleBinaryOperator(instr, "*", false)
-            }
-            LLVMUDiv -> {
-                return handleBinaryOperator(instr, "+", true)
-            }
-            LLVMSDiv -> {
-                return handleBinaryOperator(instr, "/", false)
-            }
-            LLVMFDiv -> {
-                return handleBinaryOperator(instr, "/", false)
-            }
-            LLVMURem -> {
-                return handleBinaryOperator(instr, "%", true)
-            }
-            LLVMSRem -> {
-                return handleBinaryOperator(instr, "%", false)
-            }
-            LLVMFRem -> {
-                return handleBinaryOperator(instr, "%", false)
-            }
-            LLVMShl -> {
-                return handleBinaryOperator(instr, "<<", false)
-            }
-            LLVMLShr -> {
-                return handleBinaryOperator(instr, ">>", true)
-            }
-            LLVMAShr -> {
-                return handleBinaryOperator(instr, ">>", false)
-            }
-            LLVMAnd -> {
-                return handleBinaryOperator(instr, "&", false)
-            }
-            LLVMOr -> {
-                return handleBinaryOperator(instr, "|", false)
-            }
-            LLVMXor -> {
-                return handleBinaryOperator(instr, "^", false)
-            }
             LLVMAlloca -> {
                 return handleAlloca(instr)
             }
@@ -164,47 +116,8 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             LLVMStore -> {
                 return handleStore(instr)
             }
-            LLVMGetElementPtr -> {
+            LLVMExtractValue, LLVMGetElementPtr -> {
                 return declarationOrNot(lang.expressionHandler.handleGetElementPtr(instr), instr)
-            }
-            LLVMTrunc -> {
-                println("trunc instruction")
-            }
-            LLVMZExt -> {
-                println("zext instruction")
-            }
-            LLVMSExt -> {
-                println("sext instruction")
-            }
-            LLVMFPToUI -> {
-                println("fptoui instruction")
-            }
-            LLVMFPToSI -> {
-                println("fptosi instruction")
-            }
-            LLVMUIToFP -> {
-                println("uitofp instruction")
-            }
-            LLVMSIToFP -> {
-                println("sitofp instruction")
-            }
-            LLVMFPTrunc -> {
-                println("fptrunc instruction")
-            }
-            LLVMFPExt -> {
-                println("fpext instruction")
-            }
-            LLVMPtrToInt -> {
-                println("ptrtoint instruction")
-            }
-            LLVMIntToPtr -> {
-                println("inttoptr instruction")
-            }
-            LLVMBitCast -> {
-                println("bitcast instruction")
-            }
-            LLVMAddrSpaceCast -> {
-                println("addrspacecast instruction")
             }
             LLVMICmp -> {
                 return handleIntegerComparison(instr)
@@ -215,9 +128,6 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             LLVMPHI -> {
                 lang.phiList.add(instr)
                 return newEmptyStatement(lang.getCodeFromRawNode(instr))
-            }
-            LLVMCall -> {
-                return handleFunctionCall(instr)
             }
             LLVMSelect -> {
                 return declarationOrNot(lang.expressionHandler.handleSelect(instr), instr)
@@ -240,9 +150,6 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             LLVMShuffleVector -> {
                 println("shufflevector instruction")
             }
-            LLVMExtractValue -> {
-                return declarationOrNot(lang.expressionHandler.handleGetElementPtr(instr), instr)
-            }
             LLVMInsertValue -> {
                 return handleInsertValue(instr)
             }
@@ -259,6 +166,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 return handleAtomicrmw(instr)
             }
             LLVMResume -> {
+                // Marks the end of a sequence of catch statements
                 println("resume instruction")
             }
             LLVMLandingPad -> {
@@ -283,6 +191,58 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
 
         log.error("Not handling instruction opcode {} yet", opcode)
         return Statement()
+    }
+
+    /** Handles all kinds of instructions which are a arithmetic or logical binary instruction. */
+    private fun handleBinaryInstruction(instr: LLVMValueRef): Statement {
+        when (instr.opCode) {
+            LLVMAdd, LLVMFAdd -> {
+                return handleBinaryOperator(instr, "+", false)
+            }
+            LLVMSub, LLVMFSub -> {
+                return handleBinaryOperator(instr, "-", false)
+            }
+            LLVMMul, LLVMFMul -> {
+                return handleBinaryOperator(instr, "*", false)
+            }
+            LLVMUDiv -> {
+                return handleBinaryOperator(instr, "/", true)
+            }
+            LLVMSDiv, LLVMFDiv -> {
+                return handleBinaryOperator(instr, "/", false)
+            }
+            LLVMURem -> {
+                return handleBinaryOperator(instr, "%", true)
+            }
+            LLVMSRem, LLVMFRem -> {
+                return handleBinaryOperator(instr, "%", false)
+            }
+            LLVMShl -> {
+                return handleBinaryOperator(instr, "<<", false)
+            }
+            LLVMLShr -> {
+                return handleBinaryOperator(instr, ">>", true)
+            }
+            LLVMAShr -> {
+                return handleBinaryOperator(instr, ">>", false)
+            }
+            LLVMAnd -> {
+                return handleBinaryOperator(instr, "&", false)
+            }
+            LLVMOr -> {
+                return handleBinaryOperator(instr, "|", false)
+            }
+            LLVMXor -> {
+                return handleBinaryOperator(instr, "^", false)
+            }
+        }
+        return Statement()
+    }
+    /** Handles all kinds of instructions which are a cast instruction. */
+    private fun handleCastInstruction(instr: LLVMValueRef): Statement {
+        val castExpr = newCastExpression(lang.getCodeFromRawNode(instr))
+        castExpr.castType = lang.typeOf(instr)
+        return castExpr
     }
 
     /**
