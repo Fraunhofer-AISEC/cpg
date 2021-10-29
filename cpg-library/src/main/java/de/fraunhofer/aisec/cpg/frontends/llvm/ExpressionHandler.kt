@@ -131,7 +131,7 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
 
         val type = lang.typeOf(valueRef)
 
-        val ref = NodeBuilder.newDeclaredReferenceExpression(name, type, "${type.typeName} $name")
+        val ref = newDeclaredReferenceExpression(name, type, "${type.typeName} $name")
 
         // try to resolve the reference. actually the valueRef is already referring to the resolved
         // variable because we obtain it using LLVMGetOperand, so we just need to look it up in the
@@ -222,7 +222,7 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
         val type = lang.typeOf(value)
 
         val expr: ConstructExpression =
-            NodeBuilder.newConstructExpression(lang.getCodeFromRawNode(value))
+            newConstructExpression(lang.getCodeFromRawNode(value))
         // map the construct expression to the record declaration of the type
         expr.instantiates = (type as? ObjectType)?.recordDeclaration
 

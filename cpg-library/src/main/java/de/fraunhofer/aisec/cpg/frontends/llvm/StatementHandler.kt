@@ -89,18 +89,18 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 return handleSwitchStatement(instr)
             }
             LLVMIndirectBr -> {
-                println("indirect br instruction")
+                log.error("Cannot parse indirect br instruction yet")
             }
             LLVMCall, LLVMInvoke -> {
                 return handleFunctionCall(instr)
             }
             LLVMUnreachable -> {
                 // Does nothing
-                return Statement()
+                return newEmptyStatement(lang.getCodeFromRawNode(instr))
             }
             LLVMCallBr -> {
                 // Maps to a call but also to a goto statement? Barely used => not relevant
-                println("call instruction")
+                log.error("Cannot parse callbr instruction yet")
             }
             LLVMFNeg -> {
                 val fneg = newUnaryOperator("-", false, true, lang.getCodeFromRawNode(instr))
@@ -132,32 +132,33 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             LLVMSelect -> {
                 return declarationOrNot(lang.expressionHandler.handleSelect(instr), instr)
             }
-            LLVMUserOp1 -> {
-                println("userop1 instruction")
-            }
-            LLVMUserOp2 -> {
-                println("userop2 instruction")
+            LLVMUserOp1, LLVMUserOp2 -> {
+                log.info("userop instruction is not a real instruction. Replacing it with empty statement")
+                return newEmptyStatement(lang.getCodeFromRawNode(instr))
             }
             LLVMVAArg -> {
-                println("va_arg instruction")
+                log.error("Cannot parse va_arg instruction yet")
             }
             LLVMExtractElement -> {
-                println("extractelement instruction")
+                // Operation on a "vector". We could represent that as an array e.g. with x = array[y]
+                log.error("Cannot parse extractelement instruction yet")
             }
             LLVMInsertElement -> {
-                println("insertelement instruction")
+                // Operation on a "vector". We could represent that as an array e.g. with array[x] = y
+                log.error("Cannot parse insertelement instruction yet")
             }
             LLVMShuffleVector -> {
-                println("shufflevector instruction")
+                // Merges two vectors into one result: arrayRes = array1 + array2
+                log.error("Cannot parse shufflevector instruction yet")
             }
             LLVMInsertValue -> {
                 return handleInsertValue(instr)
             }
             LLVMFreeze -> {
-                println("freeze instruction")
+                log.error("Cannot parse freeze instruction yet")
             }
             LLVMFence -> {
-                println("fence instruction")
+                log.error("Cannot parse fence instruction yet")
             }
             LLVMAtomicCmpXchg -> {
                 return handleAtomiccmpxchg(instr)
@@ -167,25 +168,25 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             }
             LLVMResume -> {
                 // Marks the end of a sequence of catch statements
-                println("resume instruction")
+                log.error("Cannot parse resume instruction yet")
             }
             LLVMLandingPad -> {
                 return handleLandingpad(instr)
             }
             LLVMCleanupRet -> {
-                println("cleanupret instruction")
+                log.error("Cannot parse cleanupret instruction yet")
             }
             LLVMCatchRet -> {
-                println("catchret instruction")
+                log.error("Cannot parse catchret instruction yet")
             }
             LLVMCatchPad -> {
-                println("catchpad instruction")
+                log.error("Cannot parse catchpad instruction yet")
             }
             LLVMCleanupPad -> {
-                println("cleanuppad instruction")
+                log.error("Cannot parse cleanuppad instruction yet")
             }
             LLVMCatchSwitch -> {
-                println("catchswitch instruction")
+                log.error("Cannot parse catchswitch instruction yet")
             }
         }
 
@@ -835,6 +836,8 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         }
 
         for (l in labelMap.keys) {
+            // TODO: Currently, we have multiple declarations (one per incoming BB). We may want to move the declaration
+            // to the beginning of the function and only make an assignment in each BB. Opinions?
             val basicBlock = l.subStatement as? CompoundStatement
             val decl = declarationOrNot(labelMap[l]!!, instr)
             val mutableStatements = basicBlock?.statements?.toMutableList()
