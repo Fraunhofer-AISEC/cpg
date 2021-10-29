@@ -28,7 +28,9 @@ package de.fraunhofer.aisec.cpg.frontends.typescript
 import de.fraunhofer.aisec.cpg.ExperimentalTypeScript
 import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder
+import de.fraunhofer.aisec.cpg.graph.bodyOrNull
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
@@ -114,6 +116,22 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
     private fun handleArrowFunction(node: TypeScriptNode): Expression {
         // parse as a function
         val func = lang.declarationHandler.handle(node) as? FunctionDeclaration
+
+        // the function will (probably) not have a defined return type, so we try to deduce this
+        // from a return statement
+        if (func?.type == UnknownType.getUnknownType()) {
+            val returnValue = func.bodyOrNull<ReturnStatement>()?.returnValue
+
+            /*if (returnValue == null) {
+                // we have a void function
+                func.type = TypeParser.createFrom("void", false)
+            } else {*/
+
+            val returnType = returnValue?.type ?: UnknownType.getUnknownType()
+
+            func.type = returnType
+            // }
+        }
 
         // we cannot directly return a function declaration as an expression, so we
         // wrap it into a lambda expression

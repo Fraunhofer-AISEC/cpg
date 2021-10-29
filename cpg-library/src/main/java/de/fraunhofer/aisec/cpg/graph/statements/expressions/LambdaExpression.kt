@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.graph.HasType
 import de.fraunhofer.aisec.cpg.graph.SubGraph
 import de.fraunhofer.aisec.cpg.graph.TypeManager
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 
 /**
@@ -39,7 +40,7 @@ class LambdaExpression : Expression(), HasType.TypeListener {
 
     @field:SubGraph("AST")
     var function: FunctionDeclaration? = null
-        set(value: FunctionDeclaration?) {
+        set(value) {
             if (value != null) {
                 removePrevDFG(value)
                 value.unregisterTypeListener(this)
@@ -51,13 +52,6 @@ class LambdaExpression : Expression(), HasType.TypeListener {
             if (value != null) {
                 addPrevDFG(value)
                 value.registerTypeListener(this)
-
-                // if the initializer implements a type listener, inform it about our type changes
-                // since the type is tied to the declaration, but it is convenient to have the type
-                // information in the initializer, i.e. in a ConstructExpression.
-                if (value is HasType.TypeListener) {
-                    registerTypeListener(value as HasType.TypeListener?)
-                }
             }
         }
 
@@ -70,10 +64,27 @@ class LambdaExpression : Expression(), HasType.TypeListener {
             return
         }
 
-        val previous = type
-        val newType: Type = src!!.propagationType
+        if (src !is FunctionDeclaration) {
+            return
+        }
 
-        setType(newType, root)
+        val previous = type
+
+        val parameterTypes = src.parameters.map { it.type }
+        val returnType = src.propagationType
+
+        // the incoming "type" is associated to the function and it is only its return type (if it
+        // is known). what we really want is to construct a function type, or rather a function
+        // pointer type, since this is the closest to what we have
+        val functionType =
+            FunctionPointerType(
+                Type.Qualifier(false, false, false, false),
+                Type.Storage.AUTO,
+                parameterTypes,
+                returnType
+            )
+
+        setType(functionType, root)
         if (previous != type) {
             type.typeOrigin = Type.Origin.DATAFLOW
         }
@@ -84,11 +95,6 @@ class LambdaExpression : Expression(), HasType.TypeListener {
         root: HasType?,
         oldSubTypes: MutableSet<Type>?
     ) {
-        if (!TypeManager.isTypeSystemActive()) {
-            return
-        }
-        val subTypes: MutableSet<Type> = HashSet(possibleSubTypes)
-        subTypes.addAll(src!!.possibleSubTypes)
-        setPossibleSubTypes(subTypes, root)
+        // do not take sub types from the listener
     }
 }
