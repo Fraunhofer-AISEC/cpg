@@ -23,32 +23,32 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg
+package de.fraunhofer.aisec.cpg.frontends.llvm
 
-import de.fraunhofer.aisec.cpg.frontends.cpp.CXXLanguageFrontend
+import de.fraunhofer.aisec.cpg.TestUtils
+import java.nio.file.Path
+import kotlin.test.assertNotNull
+import org.junit.jupiter.api.Tag
+import org.junit.jupiter.api.Test
 
-/**
- * This class holds configuration options for the inference of certain constructs and auto-guessing
- * when executing language frontends.
- */
-class InferenceConfiguration
-private constructor(
-    /** Enables smart guessing of cast vs. call expressions in the [CXXLanguageFrontend] */
-    val guessCastExpressions: Boolean,
+@Tag("llvm-examples")
+class ExamplesTest {
+    @Test
+    fun testIf() {
+        val topLevel = Path.of("src", "test", "resources", "llvm", "examples", "llvm")
 
-    /** Enables the inference of record declarations */
-    val inferRecords: Boolean
-) {
-    class Builder(var guessCastExpressions: Boolean = false, var inferRecords: Boolean = false) {
-        fun guessCastExpressions(guess: Boolean) = apply { this.guessCastExpressions = guess }
-        fun inferRecords(infer: Boolean) = apply { this.inferRecords = infer }
-        fun build() = InferenceConfiguration(guessCastExpressions, inferRecords)
-    }
+        val tu =
+            TestUtils.analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("client.ll").toFile()),
+                topLevel,
+                true
+            ) {
+                it.registerLanguage(
+                    LLVMIRLanguageFrontend::class.java,
+                    LLVMIRLanguageFrontend.LLVM_EXTENSIONS
+                )
+            }
 
-    companion object {
-        @JvmStatic
-        fun builder(): Builder {
-            return Builder()
-        }
+        assertNotNull(tu)
     }
 }

@@ -68,7 +68,7 @@ dependencies {
 
     implementation("org.jetbrains.kotlin:kotlin-reflect")
     implementation("org.jetbrains.kotlin:kotlin-script-runtime")
-    implementation("org.jline:jline:3.20.0")
+    implementation("org.jline:jline:3.21.0")
 
     implementation("org.jetbrains.kotlinx:ki-shell:0.3.3")
 }

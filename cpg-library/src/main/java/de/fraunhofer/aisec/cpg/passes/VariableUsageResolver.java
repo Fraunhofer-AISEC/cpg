@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.passes;
 
+import static de.fraunhofer.aisec.cpg.graph.NodeBuilder.newRecordDeclaration;
 import static de.fraunhofer.aisec.cpg.helpers.Util.warnWithFileLocation;
 
 import de.fraunhofer.aisec.cpg.TranslationResult;
@@ -34,10 +35,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.*;
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression;
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression;
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression;
-import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType;
-import de.fraunhofer.aisec.cpg.graph.types.Type;
-import de.fraunhofer.aisec.cpg.graph.types.TypeParser;
-import de.fraunhofer.aisec.cpg.graph.types.UnknownType;
+import de.fraunhofer.aisec.cpg.graph.types.*;
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.ScopedWalker;
 import de.fraunhofer.aisec.cpg.helpers.Util;
 import java.util.*;
@@ -199,8 +197,11 @@ public class VariableUsageResolver extends Pass {
         return;
       }
 
-      Optional<? extends ValueDeclaration> refersTo =
-          Optional.ofNullable(lang.getScopeManager().resolveReference(ref));
+      // only consider resolving, if the language frontend did not specify a resolution
+      Optional<? extends Declaration> refersTo =
+          ref.getRefersTo() == null
+              ? Optional.ofNullable(lang.getScopeManager().resolveReference(ref))
+              : Optional.of(ref.getRefersTo());
 
       Type recordDeclType = null;
       if (currentClass != null) {
@@ -393,18 +394,42 @@ public class VariableUsageResolver extends Pass {
   }
 
   private FieldDeclaration handleUnknownField(Type base, String name, Type type) {
+    // unwrap a potential pointer-type
+    if (base instanceof PointerType) {
+      return handleUnknownField(((PointerType) base).getElementType(), name, type);
+    }
+
     if (!recordMap.containsKey(base)) {
+      if (lang != null && lang.getConfig().getInferenceConfiguration().getInferRecords()) {
+        // we have an access to an unknown field of an unknown record. so we need to handle that
+        var inferredRecord = inferRecordDeclaration(base);
+
+        if (inferredRecord == null) {
+          log.error(
+              "Can not add inferred field declaration because the record type could not be inferred.");
+          return null;
+        }
+      } else {
+        return null;
+      }
+    }
+
+    // fields.putIfAbsent(base, new ArrayList<>());
+    var recordDeclaration = recordMap.get(base);
+
+    if (recordDeclaration == null) {
+      log.error("This should not happen. Inferred record is not in the record map.");
       return null;
     }
-    // fields.putIfAbsent(base, new ArrayList<>());
-    List<FieldDeclaration> declarations = recordMap.get(base).getFields();
+
+    List<FieldDeclaration> declarations = recordDeclaration.getFields();
     Optional<FieldDeclaration> target =
         declarations.stream().filter(f -> f.getName().equals(name)).findFirst();
     if (target.isEmpty()) {
       FieldDeclaration declaration =
           NodeBuilder.newFieldDeclaration(
               name, type, Collections.emptyList(), "", null, null, false);
-      recordMap.get(base).addField(declaration);
+      recordDeclaration.addField(declaration);
       declaration.setInferred(true);
       // lang.getScopeManager().addValueDeclaration(declaration);
       return declaration;
@@ -460,5 +485,34 @@ public class VariableUsageResolver extends Pass {
     } else {
       return target.get();
     }
+  }
+
+  private RecordDeclaration inferRecordDeclaration(Type type) {
+    if (type instanceof ObjectType) {
+      log.debug(
+          "Encountered an unknown record type {} during a field access. We are going to infer that record",
+          type.getTypeName());
+
+      // We start out with a simple struct. We can later adjust the kind when we discover a member
+      // call expression
+      var declaration = newRecordDeclaration(type.getTypeName(), "struct", "");
+      declaration.setInferred(true);
+
+      // update the type
+      ((ObjectType) type).setRecordDeclaration(declaration);
+
+      // update the record map
+      recordMap.put(type, declaration);
+
+      // add this record declaration to the current TU (this bypasses the scope manager)
+      lang.getCurrentTU().addDeclaration(declaration);
+
+      return declaration;
+    } else {
+      log.error(
+          "Trying to infer a record declaration of a non-object type. Not sure what to do? Should we change the type?");
+    }
+
+    return null;
   }
 }

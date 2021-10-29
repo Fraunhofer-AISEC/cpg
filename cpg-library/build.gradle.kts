@@ -196,7 +196,7 @@ dependencies {
 
     // Eclipse dependencies
     api("org.eclipse.platform:org.eclipse.core.runtime:3.23.0")
-    api("com.ibm.icu:icu4j:69.1")
+    api("com.ibm.icu:icu4j:70.1")
 
     // CDT
     api("org.eclipse.cdt:core:7.2.100.202105180159")
@@ -212,6 +212,9 @@ dependencies {
 
     // jep for python support
     api("black.ninia:jep:4.0.0")
+
+    // llvm
+    implementation("org.bytedeco:llvm-platform:12.0.1-1.5.6")
 
     // JUnit
     testImplementation("org.jetbrains.kotlin:kotlin-test")

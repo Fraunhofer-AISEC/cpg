@@ -2,13 +2,13 @@
 [![Actions Status](https://github.com/Fraunhofer-AISEC/cpg/workflows/build/badge.svg)](https://github.com/Fraunhofer-AISEC/cpg/actions)
  [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=Fraunhofer-AISEC_cpg&metric=alert_status)](https://sonarcloud.io/dashboard?id=Fraunhofer-AISEC_cpg) [![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=Fraunhofer-AISEC_cpg&metric=security_rating)](https://sonarcloud.io/dashboard?id=Fraunhofer-AISEC_cpg) [![Coverage](https://sonarcloud.io/api/project_badges/measure?project=Fraunhofer-AISEC_cpg&metric=coverage)](https://sonarcloud.io/dashboard?id=Fraunhofer-AISEC_cpg) [![](https://jitpack.io/v/Fraunhofer-AISEC/cpg.svg)](https://jitpack.io/#Fraunhofer-AISEC/cpg)
 
-A simple library to extract a *code property graph* out of source code. It has support for multiple passes that can extend the analysis after the graph is constructed. It currently supports C/C++ (C17), Java (Java 13) and has experimental support for Golang, Python and TypeScript.
+A simple library to extract a *code property graph* out of source code. It has support for multiple passes that can extend the analysis after the graph is constructed. It currently supports C/C++ (C17), Java (Java 13) and has experimental support for Golang, Python and TypeScript. Furthermore, it has support for the [LLVM IR](http://llvm.org/docs/LangRef.html) and thus, theoretically support for all languages that compile using LLVM. 
 
 ## What is this?
 
 A code property graph (CPG) is a representation of source code in form of a labelled directed multi-graph. Think of it as directed a graph where each node and edge is assigned a (possibly empty) set of key-value pairs (_properties_). This representation is supported by a range of graph databases such as Neptune, Cosmos, Neo4j, Titan, and Apache Tinkergraph and can be used to store source code of a program in a searchable data structure. Thus, the code property graph allows to use existing graph query languages such as Cypher, NQL, SQL, or Gremlin in order to either manually navigate through interesting parts of the source code or to automatically find "interesting" patterns.
 
-This library uses [Eclipse CDT](https://www.eclipse.org/cdt/) for parsing C/C++ source code and [JavaParser](https://javaparser.org/) for parsing Java. In contrast to compiler AST generators, both are "forgiving" parsers that can cope with incomplete or even syntactically incorrect source code. That makes it possible to analyze source code even without being able to compile it (due to missing dependencies or minor syntax errors). 
+This library uses [Eclipse CDT](https://www.eclipse.org/cdt/) for parsing C/C++ source code [JavaParser](https://javaparser.org/) for parsing Java. In contrast to compiler AST generators, both are "forgiving" parsers that can cope with incomplete or even semantically incorrect source code. That makes it possible to analyze source code even without being able to compile it (due to missing dependencies or minor syntax errors). Furthermore, it uses [LLVM](https://llvm.org) through the [javacpp](https://github.com/bytedeco/javacpp) project to parse LLVM IR. Note that the LLVM IR parser is *not* forgiving, i.e., the LLVM IR code needs to be at least considered valid by LLVM. The necessary native libraries are shipped by the javacpp project for most platforms, with the exception currently being macOS on arm64 (until [bytedeco/javacpp-presets/1092](https://github.com/bytedeco/javacpp-presets/pull/1092) is merged).
 
 
 ## Usage
@@ -34,7 +34,7 @@ repositories {
 }
 
 dependencies {
-    api("de.fraunhofer.aisec", "cpg", "4.0")
+    api("de.fraunhofer.aisec", "cpg", "4.1.1")
 }
 ```
 
@@ -111,6 +111,7 @@ The following authors have contributed to this project (in alphabetical order):
 * [fwendland](https://github.com/fwendland)
 * [JulianSchuette](https://github.com/JulianSchuette)
 * [konradweiss](https://github.com/konradweiss)
+* [KuechA](https://github.com/KuechA)
 * [Masrepus](https://github.com/Masrepus)
 * [maximiliankaul](https://github.com/maximiliankaul)
 * [obraunsdorf](https://github.com/obraunsdorf)
