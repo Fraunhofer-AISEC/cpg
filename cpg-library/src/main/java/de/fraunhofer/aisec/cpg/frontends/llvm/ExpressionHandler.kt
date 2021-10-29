@@ -189,6 +189,19 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
             when (val kind = LLVMGetConstOpcode(value)) {
                 LLVMGetElementPtr -> handleGetElementPtr(value)
                 LLVMSelect -> handleSelect(value)
+                LLVMTrunc,
+                LLVMZExt,
+                LLVMSExt,
+                LLVMFPToUI,
+                LLVMFPToSI,
+                LLVMUIToFP,
+                LLVMSIToFP,
+                LLVMFPTrunc,
+                LLVMFPExt,
+                LLVMPtrToInt,
+                LLVMIntToPtr,
+                LLVMBitCast,
+                LLVMAddrSpaceCast -> handleCastInstruction(value)
                 else -> {
                     log.error("Not handling constant expression of opcode {} yet", kind)
                     Expression()
@@ -452,5 +465,15 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
         val conditionalExpr = newConditionalExpression(cond, value1, value2, value1.type)
 
         return conditionalExpr
+    }
+
+    /**
+     * Handles all kinds of instructions which are a
+     * [cast instruction](https://llvm.org/docs/LangRef.html#conversion-operations).
+     */
+    fun handleCastInstruction(instr: LLVMValueRef): Expression {
+        val castExpr = newCastExpression(lang.getCodeFromRawNode(instr))
+        castExpr.castType = lang.typeOf(instr)
+        return castExpr
     }
 }

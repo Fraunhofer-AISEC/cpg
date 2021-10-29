@@ -66,7 +66,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         if (LLVMIsABinaryOperator(instr) != null) {
             return handleBinaryInstruction(instr)
         } else if (LLVMIsACastInst(instr) != null) {
-            return handleCastInstruction(instr)
+            return declarationOrNot(lang.expressionHandler.handleCastInstruction(instr), instr)
         }
 
         val opcode = instr.opCode
@@ -237,12 +237,6 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             }
         }
         return Statement()
-    }
-    /** Handles all kinds of instructions which are a cast instruction. */
-    private fun handleCastInstruction(instr: LLVMValueRef): Statement {
-        val castExpr = newCastExpression(lang.getCodeFromRawNode(instr))
-        castExpr.castType = lang.typeOf(instr)
-        return castExpr
     }
 
     /**
