@@ -221,8 +221,7 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
         // retrieve the type
         val type = lang.typeOf(value)
 
-        val expr: ConstructExpression =
-            newConstructExpression(lang.getCodeFromRawNode(value))
+        val expr: ConstructExpression = newConstructExpression(lang.getCodeFromRawNode(value))
         // map the construct expression to the record declaration of the type
         expr.instantiates = (type as? ObjectType)?.recordDeclaration
 

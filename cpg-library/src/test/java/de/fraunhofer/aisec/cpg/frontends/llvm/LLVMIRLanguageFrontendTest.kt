@@ -749,14 +749,10 @@ class LLVMIRLanguageFrontendTest {
             (thenStmt.statements[0] as DeclarationStatement).singleDeclaration as
                 VariableDeclaration
         assertNotNull(thenStmt.statements[1] as? DeclarationStatement)
-        assertSame(
-            aDecl,
-            (((thenStmt.statements[1] as DeclarationStatement).singleDeclaration as
-                        VariableDeclaration)
-                    .initializer as
-                    DeclaredReferenceExpression)
-                .refersTo
-        )
+        val thenY =
+            ((thenStmt.statements[1] as DeclarationStatement).singleDeclaration as
+                VariableDeclaration)
+        assertSame(aDecl, (thenY.initializer as DeclaredReferenceExpression).refersTo)
 
         val elseStmt = ifStatement.elseStatement as? CompoundStatement
         assertNotNull(elseStmt)
@@ -765,11 +761,24 @@ class LLVMIRLanguageFrontendTest {
             (elseStmt.statements[0] as DeclarationStatement).singleDeclaration as
                 VariableDeclaration
         assertNotNull(elseStmt.statements[1] as? DeclarationStatement)
-        assertSame(
-            bDecl,
-            (((elseStmt.statements[1] as DeclarationStatement).singleDeclaration as
-                        VariableDeclaration)
-                    .initializer as
+        val elseY =
+            ((elseStmt.statements[1] as DeclarationStatement).singleDeclaration as
+                VariableDeclaration)
+        assertSame(bDecl, (elseY.initializer as DeclaredReferenceExpression).refersTo)
+
+        val continueBlock =
+            (thenStmt.statements[2] as? GotoStatement)?.targetLabel?.subStatement as?
+                CompoundStatement
+        assertNotNull(continueBlock)
+        assertEquals(
+            thenY,
+            ((continueBlock.statements[1] as ReturnStatement).returnValue as
+                    DeclaredReferenceExpression)
+                .refersTo
+        )
+        assertEquals(
+            elseY,
+            ((continueBlock.statements[1] as ReturnStatement).returnValue as
                     DeclaredReferenceExpression)
                 .refersTo
         )

@@ -133,18 +133,22 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 return declarationOrNot(lang.expressionHandler.handleSelect(instr), instr)
             }
             LLVMUserOp1, LLVMUserOp2 -> {
-                log.info("userop instruction is not a real instruction. Replacing it with empty statement")
+                log.info(
+                    "userop instruction is not a real instruction. Replacing it with empty statement"
+                )
                 return newEmptyStatement(lang.getCodeFromRawNode(instr))
             }
             LLVMVAArg -> {
                 log.error("Cannot parse va_arg instruction yet")
             }
             LLVMExtractElement -> {
-                // Operation on a "vector". We could represent that as an array e.g. with x = array[y]
+                // Operation on a "vector". We could represent that as an array e.g. with x =
+                // array[y]
                 log.error("Cannot parse extractelement instruction yet")
             }
             LLVMInsertElement -> {
-                // Operation on a "vector". We could represent that as an array e.g. with array[x] = y
+                // Operation on a "vector". We could represent that as an array e.g. with array[x] =
+                // y
                 log.error("Cannot parse insertelement instruction yet")
             }
             LLVMShuffleVector -> {
@@ -836,7 +840,8 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         }
 
         for (l in labelMap.keys) {
-            // TODO: Currently, we have multiple declarations (one per incoming BB). We may want to move the declaration
+            // TODO: Currently, we have multiple declarations (one per incoming BB). We may want to
+            // move the declaration
             // to the beginning of the function and only make an assignment in each BB. Opinions?
             val basicBlock = l.subStatement as? CompoundStatement
             val decl = declarationOrNot(labelMap[l]!!, instr)
