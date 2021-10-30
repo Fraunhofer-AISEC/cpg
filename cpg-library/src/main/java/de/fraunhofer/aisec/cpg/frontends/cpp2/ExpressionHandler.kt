@@ -128,9 +128,14 @@ class ExpressionHandler(lang: CXXLanguageFrontend2) :
                             reference.name
                         )
                     member.location = lang.getLocationFromRawNode<Expression>(reference)
+
+                    // this is probably incomplete / invalid, but the type system will update this
+                    // later if the type of the base is correctly determined
+                    val fqn = baseTypename + "." + member.name
+
                     newMemberCallExpression(
                         member.name,
-                        baseTypename + "." + member.name,
+                        fqn,
                         reference.base,
                         member,
                         reference.operatorCode,
@@ -199,10 +204,10 @@ class ExpressionHandler(lang: CXXLanguageFrontend2) :
         val declaration = lang.scopeManager.resolveReference(ref)
 
         declaration?.let {
-            ref.refersTo = it
+            /*ref.refersTo = it
 
             // update the type
-            ref.setType(it.type, it)
+            ref.setType(it.type, it)*/
         }
 
         return ref

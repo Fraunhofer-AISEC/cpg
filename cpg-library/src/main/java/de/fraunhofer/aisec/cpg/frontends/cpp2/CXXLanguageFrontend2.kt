@@ -95,7 +95,7 @@ class CXXLanguageFrontend2(config: TranslationConfiguration, scopeManager: Scope
 
     fun handleType(node: TSNode): Type {
         // make sure this node is really valid
-        if (ts_node_is_null(node)) {
+        if (node.isNull || ts_node_is_null(node)) {
             return UnknownType.getUnknownType()
         }
 
@@ -126,7 +126,7 @@ class CXXLanguageFrontend2(config: TranslationConfiguration, scopeManager: Scope
     }
 
     override fun <T : Any?> getCodeFromRawNode(astNode: T): String? {
-        if (astNode is TSNode) {
+        if (astNode is TSNode && !astNode.isNull && !ts_node_is_null(astNode)) {
             val start = ts_node_start_byte(astNode)
             val end = ts_node_end_byte(astNode)
 
