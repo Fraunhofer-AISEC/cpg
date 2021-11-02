@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.helpers;
 
+import static de.fraunhofer.aisec.cpg.graph.NodeBuilder.newMethodParameterIn;
 import static de.fraunhofer.aisec.cpg.sarif.PhysicalLocation.locationLink;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
@@ -366,7 +367,7 @@ public class Util {
       Type targetType = signature.get(i);
       String paramName = generateParamName(i, targetType);
       ParamVariableDeclaration param =
-          NodeBuilder.newMethodParameterIn(paramName, targetType, false, "");
+          newMethodParameterIn(paramName, targetType, false, "");
       param.setInferred(true);
       param.setArgumentIndex(i);
       params.add(param);
