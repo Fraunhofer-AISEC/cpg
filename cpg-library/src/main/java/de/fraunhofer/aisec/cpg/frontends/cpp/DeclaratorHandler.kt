@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.frontends.cpp
 import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.frontends.HandlerInterface
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder
+import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newRecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.types.IncompleteType
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser
@@ -341,10 +342,11 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
             }
 
         val recordDeclaration =
-            NodeBuilder.newRecordDeclaration(
+            newRecordDeclaration(
                 lang.scopeManager.currentNamePrefixWithDelimiter + ctx.name.toString(),
                 kind,
-                ctx.rawSignature
+                ctx.rawSignature,
+                true
             )
         recordDeclaration.superClasses =
             Arrays.stream(ctx.baseSpecifiers)

@@ -28,6 +28,8 @@ package de.fraunhofer.aisec.cpg.frontends.typescript
 import de.fraunhofer.aisec.cpg.ExperimentalTypeScript
 import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder
+import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newLambdaExpression
+import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newLiteral
 import de.fraunhofer.aisec.cpg.graph.bodyOrNull
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
@@ -135,7 +137,7 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
 
         // we cannot directly return a function declaration as an expression, so we
         // wrap it into a lambda expression
-        val lambda = NodeBuilder.newLambdaExpression(lang.getCodeFromRawNode(node))
+        val lambda = newLambdaExpression(lang.getCodeFromRawNode(node))
         lambda.function = func
 
         return lambda
@@ -170,8 +172,9 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
                 ?.replace("\"", "")
                 ?.replace("`", "")
                 ?.replace("'", "")
+                ?: ""
 
-        return NodeBuilder.newLiteral(
+        return newLiteral(
             value,
             TypeParser.createFrom("String", false),
             lang.getCodeFromRawNode(node)

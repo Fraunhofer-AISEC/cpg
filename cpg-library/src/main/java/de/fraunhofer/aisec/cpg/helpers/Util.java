@@ -30,7 +30,6 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
 import de.fraunhofer.aisec.cpg.graph.Node;
-import de.fraunhofer.aisec.cpg.graph.NodeBuilder;
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration;
 import de.fraunhofer.aisec.cpg.graph.declarations.ParamVariableDeclaration;
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression;
