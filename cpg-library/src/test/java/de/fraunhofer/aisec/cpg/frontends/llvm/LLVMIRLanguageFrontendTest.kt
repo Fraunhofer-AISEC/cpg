@@ -739,20 +739,24 @@ class LLVMIRLanguageFrontendTest {
         assertNotNull(main)
 
         val mainBody = main.body as CompoundStatement
-        val ifStatement = mainBody.statements[2] as? IfStatement
+        val yDecl =
+            (mainBody.statements[0] as DeclarationStatement).singleDeclaration as
+                VariableDeclaration
+        assertNotNull(yDecl)
+
+        val ifStatement = mainBody.statements[3] as? IfStatement
         assertNotNull(ifStatement)
 
         val thenStmt = ifStatement.thenStatement as? CompoundStatement
         assertNotNull(thenStmt)
         assertEquals(3, thenStmt.statements.size)
+        assertNotNull(thenStmt.statements[1] as? BinaryOperator)
         val aDecl =
             (thenStmt.statements[0] as DeclarationStatement).singleDeclaration as
                 VariableDeclaration
-        assertNotNull(thenStmt.statements[1] as? DeclarationStatement)
-        val thenY =
-            ((thenStmt.statements[1] as DeclarationStatement).singleDeclaration as
-                VariableDeclaration)
-        assertSame(aDecl, (thenY.initializer as DeclaredReferenceExpression).refersTo)
+        val thenY = thenStmt.statements[1] as BinaryOperator
+        assertSame(aDecl, (thenY.rhs as DeclaredReferenceExpression).refersTo)
+        assertSame(yDecl, (thenY.lhs as DeclaredReferenceExpression).refersTo)
 
         val elseStmt = ifStatement.elseStatement as? CompoundStatement
         assertNotNull(elseStmt)
@@ -760,24 +764,17 @@ class LLVMIRLanguageFrontendTest {
         val bDecl =
             (elseStmt.statements[0] as DeclarationStatement).singleDeclaration as
                 VariableDeclaration
-        assertNotNull(elseStmt.statements[1] as? DeclarationStatement)
-        val elseY =
-            ((elseStmt.statements[1] as DeclarationStatement).singleDeclaration as
-                VariableDeclaration)
-        assertSame(bDecl, (elseY.initializer as DeclaredReferenceExpression).refersTo)
+        assertNotNull(elseStmt.statements[1] as? BinaryOperator)
+        val elseY = elseStmt.statements[1] as BinaryOperator
+        assertSame(bDecl, (elseY.rhs as DeclaredReferenceExpression).refersTo)
+        assertSame(yDecl, (elseY.lhs as DeclaredReferenceExpression).refersTo)
 
         val continueBlock =
             (thenStmt.statements[2] as? GotoStatement)?.targetLabel?.subStatement as?
                 CompoundStatement
         assertNotNull(continueBlock)
         assertEquals(
-            thenY,
-            ((continueBlock.statements[1] as ReturnStatement).returnValue as
-                    DeclaredReferenceExpression)
-                .refersTo
-        )
-        assertEquals(
-            elseY,
+            yDecl,
             ((continueBlock.statements[1] as ReturnStatement).returnValue as
                     DeclaredReferenceExpression)
                 .refersTo

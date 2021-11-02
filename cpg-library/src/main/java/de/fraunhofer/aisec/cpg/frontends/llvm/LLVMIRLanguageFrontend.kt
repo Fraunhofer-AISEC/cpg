@@ -138,7 +138,7 @@ class LLVMIRLanguageFrontend(config: TranslationConfiguration, scopeManager: Sco
         }
 
         for (phiInstr in phiList) {
-            statementHandler.handlePhi(phiInstr)
+            statementHandler.handlePhi(phiInstr, tu)
         }
 
         LLVMContextDispose(ctx)

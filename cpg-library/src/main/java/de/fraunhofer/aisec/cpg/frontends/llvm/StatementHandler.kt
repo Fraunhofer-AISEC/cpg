@@ -28,6 +28,8 @@ package de.fraunhofer.aisec.cpg.frontends.llvm
 import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.*
+import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
@@ -827,26 +829,84 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
      * therefore adds dummy statements to the end of basic blocks where a certain variable is
      * declared and initialized. The original phi instruction is not added to the CPG.
      */
-    fun handlePhi(instr: LLVMValueRef) {
+    fun handlePhi(instr: LLVMValueRef, tu: TranslationUnitDeclaration) {
         val labelMap = mutableMapOf<LabelStatement, Expression>()
         val numOps = LLVMGetNumOperands(instr)
         var i = 0
+        var bbsFunction: LLVMValueRef? = null
         while (i < numOps) {
             val valI = lang.getOperandValueAtIndex(instr, i)
-            val labelI =
-                extractBasicBlockLabel(LLVMBasicBlockAsValue(LLVMGetIncomingBlock(instr, i)))
+            val incomingBB = LLVMGetIncomingBlock(instr, i)
+            if (bbsFunction == null) {
+                bbsFunction = LLVMGetBasicBlockParent(incomingBB)
+            } else if (bbsFunction.address() != LLVMGetBasicBlockParent(incomingBB).address()) {
+                log.error(
+                    "The basic blocks of the phi instructions are in different functions. Can't handle this!"
+                )
+                throw TranslationException(
+                    "The basic blocks of the phi instructions are in different functions."
+                )
+            }
+
+            val labelI = extractBasicBlockLabel(LLVMBasicBlockAsValue(incomingBB))
             i++
             labelMap[labelI] = valI
         }
-
-        for (l in labelMap.keys) {
-            // TODO: Currently, we have multiple declarations (one per incoming BB). We may want to
-            // move the declaration
-            // to the beginning of the function and only make an assignment in each BB. Opinions?
-            val basicBlock = l.subStatement as? CompoundStatement
-            val decl = declarationOrNot(labelMap[l]!!, instr)
+        if (labelMap.keys.size == 1) {
+            // We only have a single pair, so we insert a declaration in that one BB.
+            val key = labelMap.keys.elementAt(0)
+            val basicBlock = key.subStatement as? CompoundStatement
+            val decl = declarationOrNot(labelMap[key]!!, instr)
             val mutableStatements = basicBlock?.statements?.toMutableList()
             mutableStatements?.add(basicBlock.statements.size - 1, decl)
+            if (mutableStatements != null) {
+                basicBlock.statements = mutableStatements
+            }
+            return
+        }
+        // We have multiple pairs, so we insert a declaration at the beginning of the function an
+        // make an assignment in each BB.
+        val functionName = LLVMGetValueName(bbsFunction).string
+        val functions =
+            tu.declarations.filter { d ->
+                (d as? FunctionDeclaration)?.name != null &&
+                    (d as? FunctionDeclaration)?.name.equals(functionName)
+            }
+        if (functions.size != 1) {
+            log.error(
+                "${functions.size} functions match the name of the one where the phi instruction is inserted. Can't handle this case."
+            )
+            throw TranslationException("Wrong number of functions for phi statement.")
+        }
+        // Create the dummy declaration at the beginning of the function body
+        val firstBB = (functions[0] as FunctionDeclaration).body as CompoundStatement
+        val declaration = VariableDeclaration()
+        declaration.name = instr.name
+        // add the declaration to the current scope
+        lang.scopeManager.addDeclaration(declaration)
+        // add it to our bindings cache
+        lang.bindingsCache[instr.symbolName] = declaration
+
+        val declStatement = newDeclarationStatement(lang.getCodeFromRawNode(instr))
+        declStatement.singleDeclaration = declaration
+        val mutableFunctionStatements = firstBB.statements.toMutableList()
+        mutableFunctionStatements.add(0, declStatement)
+        firstBB.statements = mutableFunctionStatements
+
+        for (l in labelMap.keys) {
+            // Now, we iterate over all the basic blocks and add an assign statement.
+            val assignment = newBinaryOperator("=", lang.getCodeFromRawNode(instr))
+            assignment.rhs = labelMap[l]!!
+            assignment.lhs =
+                newDeclaredReferenceExpression(
+                    instr.name,
+                    lang.typeOf(instr),
+                    lang.getCodeFromRawNode(instr)
+                )
+
+            val basicBlock = l.subStatement as? CompoundStatement
+            val mutableStatements = basicBlock?.statements?.toMutableList()
+            mutableStatements?.add(basicBlock.statements.size - 1, assignment)
             if (mutableStatements != null) {
                 basicBlock.statements = mutableStatements
             }
