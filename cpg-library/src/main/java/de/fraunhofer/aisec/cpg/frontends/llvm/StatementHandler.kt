@@ -141,7 +141,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 return newEmptyStatement(lang.getCodeFromRawNode(instr))
             }
             LLVMVAArg -> {
-                log.error("Cannot parse va_arg instruction yet")
+                return handleVaArg(instr)
             }
             LLVMExtractElement -> {
                 // Operation on a "vector". We could represent that as an array e.g. with x =
@@ -198,6 +198,21 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
 
         log.error("Not handling instruction opcode {} yet", opcode)
         return Statement()
+    }
+
+    /**
+     * Handles the [`va_arg`](https://llvm.org/docs/LangRef.html#va-arg-instruction) instruction. It
+     * is simulated by a call to a function called `va_arg` simulating the respective C++-macro. The
+     * function takes two arguments: the vararg-list and the type of the return value.
+     */
+    private fun handleVaArg(instr: LLVMValueRef): Statement {
+        val callExpr = newCallExpression("va_arg", "va_arg", lang.getCodeFromRawNode(instr), false)
+        val operandName = lang.getOperandValueAtIndex(instr, 0)
+        callExpr.addArgument(operandName)
+        val expectedType = lang.typeOf(instr)
+        val typeLiteral = newLiteral(expectedType, expectedType, lang.getCodeFromRawNode(instr))
+        callExpr.addArgument(typeLiteral) // TODO: Is this correct??
+        return declarationOrNot(callExpr, instr)
     }
 
     /** Handles all kinds of instructions which are a arithmetic or logical binary instruction. */
