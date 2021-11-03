@@ -366,8 +366,7 @@ public class Util {
     for (int i = 0; i < signature.size(); i++) {
       Type targetType = signature.get(i);
       String paramName = generateParamName(i, targetType);
-      ParamVariableDeclaration param =
-          newMethodParameterIn(paramName, targetType, false, "");
+      ParamVariableDeclaration param = newMethodParameterIn(paramName, targetType, false, "");
       param.setInferred(true);
       param.setArgumentIndex(i);
       params.add(param);

@@ -25,6 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.java;
 
+import static de.fraunhofer.aisec.cpg.graph.NodeBuilder.*;
+
 import com.github.javaparser.ast.ImportDeclaration;
 import com.github.javaparser.ast.NodeList;
 import com.github.javaparser.ast.body.AnnotationDeclaration;
@@ -109,7 +111,7 @@ public class DeclarationHandler
     ResolvedConstructorDeclaration resolvedConstructor = constructorDecl.resolve();
 
     de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDeclaration declaration =
-        NodeBuilder.newConstructorDeclaration(
+        newConstructorDeclaration(
             resolvedConstructor.getName(),
             constructorDecl.toString(),
             lang.getScopeManager().getCurrentRecord());
@@ -123,7 +125,7 @@ public class DeclarationHandler
 
     for (Parameter parameter : constructorDecl.getParameters()) {
       ParamVariableDeclaration param =
-          NodeBuilder.newMethodParameterIn(
+          newMethodParameterIn(
               parameter.getNameAsString(),
               this.lang.getTypeAsGoodAsPossible(parameter, parameter.resolve()),
               parameter.isVarArgs(),
@@ -164,12 +166,12 @@ public class DeclarationHandler
     var record = lang.getScopeManager().getCurrentRecord();
 
     de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration functionDeclaration =
-        NodeBuilder.newMethodDeclaration(
+        newMethodDeclaration(
             resolvedMethod.getName(), methodDecl.toString(), methodDecl.isStatic(), record);
 
     // create the receiver
     var receiver =
-        NodeBuilder.newVariableDeclaration(
+        newVariableDeclaration(
             "this",
             record != null
                 ? TypeParser.createFrom(record.getName(), false)
@@ -196,7 +198,7 @@ public class DeclarationHandler
       }
 
       ParamVariableDeclaration param =
-          NodeBuilder.newMethodParameterIn(
+          newMethodParameterIn(
               parameter.getNameAsString(),
               resolvedType,
               parameter.isVarArgs(),
@@ -246,7 +248,7 @@ public class DeclarationHandler
 
     // add a type declaration
     RecordDeclaration recordDeclaration =
-        NodeBuilder.newRecordDeclaration(fqn, "class", classInterDecl.toString());
+        newRecordDeclaration(fqn, "class", classInterDecl.toString());
     recordDeclaration.setSuperClasses(
         classInterDecl.getExtendedTypes().stream()
             .map(this.lang::getTypeAsGoodAsPossible)
@@ -317,7 +319,7 @@ public class DeclarationHandler
 
     if (recordDeclaration.getConstructors().isEmpty()) {
       de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDeclaration constructorDeclaration =
-          NodeBuilder.newConstructorDeclaration(
+          newConstructorDeclaration(
               recordDeclaration.getName(), recordDeclaration.getName(), recordDeclaration);
       recordDeclaration.addConstructor(constructorDeclaration);
       lang.getScopeManager().addDeclaration(constructorDeclaration);
@@ -369,7 +371,7 @@ public class DeclarationHandler
       }
     }
     de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration fieldDeclaration =
-        NodeBuilder.newFieldDeclaration(
+        newFieldDeclaration(
             variable.getName().asString(),
             type,
             modifiers,
@@ -390,7 +392,7 @@ public class DeclarationHandler
     PhysicalLocation location = this.lang.getLocationFromRawNode(enumDecl);
 
     de.fraunhofer.aisec.cpg.graph.declarations.EnumDeclaration enumDeclaration =
-        NodeBuilder.newEnumDeclaration(name, enumDecl.toString(), location);
+        newEnumDeclaration(name, enumDecl.toString(), location);
     List<de.fraunhofer.aisec.cpg.graph.declarations.EnumConstantDeclaration> entries =
         enumDecl.getEntries().stream()
             .map(
@@ -413,7 +415,7 @@ public class DeclarationHandler
   public de.fraunhofer.aisec.cpg.graph.declarations.EnumConstantDeclaration
       handleEnumConstantDeclaration(
           com.github.javaparser.ast.body.EnumConstantDeclaration enumConstDecl) {
-    return NodeBuilder.newEnumConstantDeclaration(
+    return newEnumConstantDeclaration(
         enumConstDecl.getNameAsString(),
         enumConstDecl.toString(),
         this.lang.getLocationFromRawNode(enumConstDecl));

@@ -25,8 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.java;
 
-import static de.fraunhofer.aisec.cpg.graph.NodeBuilder.newAnnotation;
-import static de.fraunhofer.aisec.cpg.graph.NodeBuilder.newAnnotationMember;
+import static de.fraunhofer.aisec.cpg.graph.NodeBuilder.*;
 
 import com.github.javaparser.JavaParser;
 import com.github.javaparser.ParseResult;
@@ -135,7 +134,7 @@ public class JavaLanguageFrontend extends LanguageFrontend {
 
       // starting point is always a translation declaration
       TranslationUnitDeclaration fileDeclaration =
-          NodeBuilder.newTranslationUnitDeclaration(file.toString(), context.toString());
+          newTranslationUnitDeclaration(file.toString(), context.toString());
       setCurrentTU(fileDeclaration);
 
       scopeManager.resetToGlobal(fileDeclaration);
@@ -144,8 +143,7 @@ public class JavaLanguageFrontend extends LanguageFrontend {
       NamespaceDeclaration namespaceDeclaration = null;
       if (packDecl != null) {
         namespaceDeclaration =
-            NodeBuilder.newNamespaceDeclaration(
-                packDecl.getName().asString(), getCodeFromRawNode(packDecl));
+            newNamespaceDeclaration(packDecl.getName().asString(), getCodeFromRawNode(packDecl));
         this.setCodeAndRegion(namespaceDeclaration, packDecl);
 
         scopeManager.addDeclaration(namespaceDeclaration);
@@ -159,7 +157,7 @@ public class JavaLanguageFrontend extends LanguageFrontend {
       }
 
       for (ImportDeclaration anImport : context.getImports()) {
-        IncludeDeclaration incl = NodeBuilder.newIncludeDeclaration(anImport.getNameAsString());
+        IncludeDeclaration incl = newIncludeDeclaration(anImport.getNameAsString());
         scopeManager.addDeclaration(incl);
       }
 
