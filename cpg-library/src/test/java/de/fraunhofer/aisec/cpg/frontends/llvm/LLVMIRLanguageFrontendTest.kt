@@ -781,6 +781,26 @@ class LLVMIRLanguageFrontendTest {
         )
     }
 
+    @Test
+    fun testVectorOperations() {
+        val topLevel = Path.of("src", "test", "resources", "llvm")
+        val tu =
+            TestUtils.analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("vector.ll").toFile()),
+                topLevel,
+                true
+            ) {
+                it.registerLanguage(
+                    LLVMIRLanguageFrontend::class.java,
+                    LLVMIRLanguageFrontend.LLVM_EXTENSIONS
+                )
+            }
+        val main = tu.byNameOrNull<FunctionDeclaration>("main")
+        assertNotNull(main)
+
+        val mainBody = main.body as CompoundStatement
+    }
+
     // TODO: Write test for calling a vararg function (e.g. printf). LLVM code snippets can already
     // be found in client.ll.
 }

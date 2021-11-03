@@ -150,8 +150,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 return handleInsertelement(instr)
             }
             LLVMShuffleVector -> {
-                // Merges two vectors into one result
-                log.error("Cannot parse shufflevector instruction yet")
+                return handleShufflevector(instr)
             }
             LLVMInsertValue -> {
                 return handleInsertValue(instr)
@@ -928,19 +927,21 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         val array1 = lang.getOperandValueAtIndex(instr, 0)
         val array1Length = LLVMGetVectorSize(LLVMTypeOf(LLVMGetOperand(instr, 0)))
         val array2 = lang.getOperandValueAtIndex(instr, 1)
-        val array2Length = LLVMGetVectorSize(LLVMTypeOf(LLVMGetOperand(instr, 1)))
-        val indices =
-            lang.getOperandValueAtIndex(instr, 2) as? InitializerListExpression
-                ?: throw TranslationException(
-                    "Couldn't get index array for shufflevector instruction"
-                )
+        val array2Length: Int
+        if (array2 is Literal<*> && array2.value == null) {
+            array2Length = 0
+        } else {
+            array2Length = LLVMGetVectorSize(LLVMTypeOf(LLVMGetOperand(instr, 1)))
+        }
+        val indices = LLVMGetNumMaskElements(instr)
 
-        for (idx in indices.initializers) {
-            val idxInt = (idx as Literal<*>).value as Long
+        for (idx in 0 until indices) {
+            val idxInt = LLVMGetMaskValue(instr, idx)
             if (idxInt < array1Length) {
                 val arrayExpr = newArraySubscriptionExpression(instrStr)
                 arrayExpr.arrayExpression = array1
-                arrayExpr.subscriptExpression = idx
+                arrayExpr.subscriptExpression =
+                    newLiteral(idx, TypeParser.createFrom("i32", true), instrStr)
                 initializers += arrayExpr
             } else if (idxInt < array1Length + array2Length) {
                 val arrayExpr = newArraySubscriptionExpression(instrStr)
