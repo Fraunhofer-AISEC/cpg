@@ -91,7 +91,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 return handleSwitchStatement(instr)
             }
             LLVMIndirectBr -> {
-                log.error("Cannot parse indirect br instruction yet")
+                return handleIndirectbrStatement(instr)
             }
             LLVMCall, LLVMInvoke -> {
                 return handleFunctionCall(instr)
@@ -173,8 +173,10 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 return handleAtomicrmw(instr)
             }
             LLVMResume -> {
-                // Marks the end of a sequence of catch statements
-                log.error("Cannot parse resume instruction yet")
+                // Marks the end of a sequence of catch statements => Can't do anything here.
+                val empty = newEmptyStatement(lang.getCodeFromRawNode(instr))
+                empty.name = "resume"
+                return empty
             }
             LLVMLandingPad -> {
                 return handleLandingpad(instr)
@@ -645,6 +647,44 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         }
     }
 
+    private fun handleIndirectbrStatement(instr: LLVMValueRef): Statement {
+        val numOps = LLVMGetNumOperands(instr)
+        val nodeCode = lang.getCodeFromRawNode(instr)
+        if (numOps < 2)
+            throw TranslationException(
+                "Indirectbr statement without address and at least one target"
+            )
+
+        val address = lang.getOperandValueAtIndex(instr, 0)
+
+        val switchStatement = newSwitchStatement(nodeCode)
+        switchStatement.selector = address
+
+        val caseStatements = newCompoundStatement(nodeCode)
+
+        var idx = 1
+        while (idx < numOps) {
+            // The case statement is derived from the address of the label which we can jump to
+            val caseBBAddress = LLVMValueAsBasicBlock(LLVMGetOperand(instr, idx)).address()
+            val caseStatement = newCaseStatement(nodeCode)
+            caseStatement.caseExpression =
+                newLiteral(caseBBAddress, TypeParser.createFrom("long", true), nodeCode)
+            caseStatements.addStatement(caseStatement)
+
+            // Get the label of the goto statement.
+            val caseLabelStatement = extractBasicBlockLabel(LLVMGetOperand(instr, idx))
+            val gotoStatement = newGotoStatement(nodeCode)
+            gotoStatement.targetLabel = caseLabelStatement
+            gotoStatement.labelName = caseLabelStatement.name
+            caseStatements.addStatement(gotoStatement)
+            idx++
+        }
+
+        switchStatement.statement = caseStatements
+
+        return switchStatement
+    }
+
     /** Handles a [`br`](https://llvm.org/docs/LangRef.html#br-instruction) instruction. */
     private fun handleBrStatement(instr: LLVMValueRef): Statement {
         if (LLVMGetNumOperands(instr) == 3) {
@@ -765,8 +805,6 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             log.info(
                 "Invoke expression: Usually continues at ${continueLabel.name}, exception continues at ${catchLabel.name}"
             )
-            // TODO: Assemble the whole try/catch logic (the try should surround the callExpr, the
-            // catch clause is the one at catchLabel)
         }
 
         val callExpr = newCallExpression(calledFuncName, calledFuncName, instrStr, false)
@@ -778,13 +816,18 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         }
 
         if (instr.opCode == LLVMInvoke) {
+            // For the invoke instruction, the call is surrounded by a try statement which also
+            // contains a
+            // goto statement after the call.
             val tryStatement = newTryStatement(instrStr!!)
+            lang.scopeManager.enterScope(tryStatement)
             val tryBlock = newCompoundStatement(instrStr)
             tryBlock.addStatement(declarationOrNot(callExpr, instr))
             val tryContinue = newGotoStatement(instrStr)
             tryContinue.targetLabel = continueLabel
             tryBlock.addStatement(tryContinue)
             tryStatement.tryBlock = tryBlock
+            lang.scopeManager.leaveScope(tryStatement)
 
             val catchClause = newCatchClause(instrStr)
             val gotoCatch = newGotoStatement(instrStr)

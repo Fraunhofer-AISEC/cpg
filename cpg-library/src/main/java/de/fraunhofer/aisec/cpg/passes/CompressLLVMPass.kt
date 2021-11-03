@@ -29,6 +29,11 @@ import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 
+/*
+ * TODO:
+ *  - handle `resume` instruction
+ *  - improve catch expressions
+ */
 class CompressLLVMPass() : Pass() {
     override fun accept(t: TranslationResult?) {
         val flatAST = SubgraphWalker.flattenAST(t)
