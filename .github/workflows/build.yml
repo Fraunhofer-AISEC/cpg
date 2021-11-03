@@ -70,6 +70,10 @@ jobs:
       - name: Run pycodestyle
         run: |
             find cpg-library/src/main/python -iname "*.py" -exec pycodestyle \{\} \;
+      - name: Build tree-sitter javacpp (remove once it is upstream)
+        run: |
+          git clone https://github.com/oxisto/javacpp-presets.git
+          cd javacpp-presets && mvn clean install --projects .,tree-sitter
       - name: Build ${{ steps.determine_version.outputs.version }}
         run: |
           if [ "$SONAR_TOKEN" != "" ]
