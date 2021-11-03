@@ -144,17 +144,13 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 return handleVaArg(instr)
             }
             LLVMExtractElement -> {
-                // Operation on a "vector". We could represent that as an array e.g. with x =
-                // array[y]
-                log.error("Cannot parse extractelement instruction yet")
+                return handleExtractelement(instr)
             }
             LLVMInsertElement -> {
-                // Operation on a "vector". We could represent that as an array e.g. with array[x] =
-                // y
-                log.error("Cannot parse insertelement instruction yet")
+                return handleInsertelement(instr)
             }
             LLVMShuffleVector -> {
-                // Merges two vectors into one result: arrayRes = array1 + array2
+                // Merges two vectors into one result
                 log.error("Cannot parse shufflevector instruction yet")
             }
             LLVMInsertValue -> {
@@ -880,6 +876,86 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         catchInstr.setParameter(except)
         catchInstr.name = catchType
         return catchInstr
+    }
+
+    /**
+     * Handles the [`insertelement`](https://llvm.org/docs/LangRef.html#insertelement-instruction)
+     * instruction which is modeled as access to an array at a given index. A new array with the
+     * modified value is constructed.
+     */
+    private fun handleInsertelement(instr: LLVMValueRef): Statement {
+        val instrStr = lang.getCodeFromRawNode(instr)
+        val compoundStatement = newCompoundStatement(instrStr)
+
+        // TODO: Probably we should make a proper copy of the array
+        val newArrayDecl = declarationOrNot(lang.getOperandValueAtIndex(instr, 0), instr)
+        compoundStatement.addStatement(newArrayDecl)
+
+        val decl = newArrayDecl.declarations[0] as? VariableDeclaration
+        val arrayExpr = newArraySubscriptionExpression(instrStr)
+        arrayExpr.arrayExpression = newDeclaredReferenceExpression(decl?.name, decl?.type, instrStr)
+        arrayExpr.subscriptExpression = lang.getOperandValueAtIndex(instr, 2)
+
+        val binaryExpr = newBinaryOperator("=", instrStr)
+        binaryExpr.lhs = arrayExpr
+        binaryExpr.rhs = lang.getOperandValueAtIndex(instr, 1)
+        compoundStatement.addStatement(binaryExpr)
+
+        return compoundStatement
+    }
+
+    /**
+     * Handles the [`extractelement`](https://llvm.org/docs/LangRef.html#extractelement-instruction)
+     * instruction which is modeled as access to an array at a given index.
+     */
+    private fun handleExtractelement(instr: LLVMValueRef): Statement {
+        val arrayExpr = newArraySubscriptionExpression(lang.getCodeFromRawNode(instr))
+        arrayExpr.arrayExpression = lang.getOperandValueAtIndex(instr, 0)
+        arrayExpr.subscriptExpression = lang.getOperandValueAtIndex(instr, 1)
+
+        return declarationOrNot(arrayExpr, instr)
+    }
+
+    private fun handleShufflevector(instr: LLVMValueRef): Statement {
+        val instrStr = lang.getCodeFromRawNode(instr)
+
+        val list = newInitializerListExpression(instrStr)
+        val elementType = lang.typeOf(instr).dereference()
+
+        val initializers = mutableListOf<Expression>()
+
+        // Fill the array with a loop
+        val array1 = lang.getOperandValueAtIndex(instr, 0)
+        val array1Length = LLVMGetVectorSize(LLVMTypeOf(LLVMGetOperand(instr, 0)))
+        val array2 = lang.getOperandValueAtIndex(instr, 1)
+        val array2Length = LLVMGetVectorSize(LLVMTypeOf(LLVMGetOperand(instr, 1)))
+        val indices =
+            lang.getOperandValueAtIndex(instr, 2) as? InitializerListExpression
+                ?: throw TranslationException(
+                    "Couldn't get index array for shufflevector instruction"
+                )
+
+        for (idx in indices.initializers) {
+            val idxInt = (idx as Literal<*>).value as Long
+            if (idxInt < array1Length) {
+                val arrayExpr = newArraySubscriptionExpression(instrStr)
+                arrayExpr.arrayExpression = array1
+                arrayExpr.subscriptExpression = idx
+                initializers += arrayExpr
+            } else if (idxInt < array1Length + array2Length) {
+                val arrayExpr = newArraySubscriptionExpression(instrStr)
+                arrayExpr.arrayExpression = array2
+                arrayExpr.subscriptExpression =
+                    newLiteral(idxInt - array1Length, TypeParser.createFrom("i32", true), instrStr)
+                initializers += arrayExpr
+            } else {
+                initializers += newLiteral(null, elementType, instrStr)
+            }
+        }
+
+        list.initializers = initializers
+
+        return declarationOrNot(list, instr)
     }
 
     /**

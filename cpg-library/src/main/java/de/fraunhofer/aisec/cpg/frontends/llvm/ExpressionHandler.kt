@@ -56,6 +56,8 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
             LLVMConstantExprValueKind -> handleConstantExprValueKind(value)
             LLVMConstantStructValueKind -> handleConstantStructValue(value)
             LLVMConstantDataArrayValueKind -> handleConstantDataArrayValue(value)
+            LLVMConstantVectorValueKind, LLVMConstantDataVectorValueKind ->
+                handleConstantDataArrayValue(value)
             LLVMConstantIntValueKind -> handleConstantInt(value)
             LLVMConstantFPValueKind -> handleConstantFP(value)
             LLVMConstantPointerNullValueKind -> handleNullPointer(value)
@@ -256,7 +258,12 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
 
         val list = newInitializerListExpression(lang.getCodeFromRawNode(valueRef))
         val arrayType = LLVMTypeOf(valueRef)
-        val length = LLVMGetArrayLength(arrayType)
+        val length =
+            if (LLVMIsAConstantDataArray(valueRef) != null) {
+                LLVMGetArrayLength(arrayType)
+            } else {
+                LLVMGetVectorSize(arrayType)
+            }
 
         val initializers = mutableListOf<Expression>()
 
