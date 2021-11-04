@@ -798,7 +798,106 @@ class LLVMIRLanguageFrontendTest {
         val main = tu.byNameOrNull<FunctionDeclaration>("main")
         assertNotNull(main)
 
+        // Test that x is initialized correctly
         val mainBody = main.body as CompoundStatement
+        val origX =
+            ((mainBody.statements[0] as? DeclarationStatement)?.singleDeclaration as?
+                VariableDeclaration)
+        val xInit = origX?.initializer as? InitializerListExpression
+        assertNotNull(xInit)
+        assertEquals(10L, (xInit.initializers[0] as? Literal<*>)?.value)
+        assertEquals(9L, (xInit.initializers[1] as? Literal<*>)?.value)
+        assertEquals(6L, (xInit.initializers[2] as? Literal<*>)?.value)
+        assertEquals(-100L, (xInit.initializers[3] as? Literal<*>)?.value)
+
+        // Test that y is initialized correctly
+        val origY =
+            ((mainBody.statements[1] as? DeclarationStatement)?.singleDeclaration as?
+                VariableDeclaration)
+        val yInit = origY?.initializer as? InitializerListExpression
+        assertNotNull(yInit)
+        assertEquals(15L, (yInit.initializers[0] as? Literal<*>)?.value)
+        assertEquals(34L, (yInit.initializers[1] as? Literal<*>)?.value)
+        assertEquals(99L, (yInit.initializers[2] as? Literal<*>)?.value)
+        assertEquals(1000L, (yInit.initializers[3] as? Literal<*>)?.value)
+
+        // Test that extractelement works
+        val zInit =
+            ((mainBody.statements[2] as? DeclarationStatement)?.singleDeclaration as?
+                    VariableDeclaration)
+                ?.initializer as?
+                ArraySubscriptionExpression
+        assertNotNull(zInit)
+        assertEquals(0L, (zInit.subscriptExpression as? Literal<*>)?.value)
+        assertEquals("x", (zInit.arrayExpression as? DeclaredReferenceExpression)?.name)
+        assertSame(origX, (zInit.arrayExpression as? DeclaredReferenceExpression)?.refersTo)
+
+        // Test the assignment of y to yMod
+        val yModInit =
+            ((mainBody.statements[3] as CompoundStatement).statements[0] as? DeclarationStatement)
+                ?.singleDeclaration as?
+                VariableDeclaration
+        assertNotNull(yModInit)
+        assertEquals("y", (yModInit.initializer as? DeclaredReferenceExpression)?.name)
+        assertSame(origY, (yModInit.initializer as? DeclaredReferenceExpression)?.refersTo)
+        // Now, test the modification of yMod[3] = 8
+        val yMod = ((mainBody.statements[3] as CompoundStatement).statements[1] as? BinaryOperator)
+        assertNotNull(yMod)
+        assertEquals(
+            3L,
+            ((yMod.lhs as? ArraySubscriptionExpression)?.subscriptExpression as? Literal<*>)?.value
+        )
+        assertSame(
+            yModInit,
+            ((yMod.lhs as? ArraySubscriptionExpression)?.arrayExpression as?
+                    DeclaredReferenceExpression)
+                ?.refersTo
+        )
+        assertEquals(8L, (yMod.rhs as? Literal<*>)?.value)
+
+        // Test the last shufflevector instruction which does not contain constant as initializers.
+        val shuffledInit =
+            ((mainBody.statements[4] as? DeclarationStatement)?.singleDeclaration as?
+                    VariableDeclaration)
+                ?.initializer as?
+                InitializerListExpression
+        assertNotNull(shuffledInit)
+        assertSame(
+            origX,
+            ((shuffledInit.initializers[0] as? ArraySubscriptionExpression)?.arrayExpression as?
+                    DeclaredReferenceExpression)
+                ?.refersTo
+        )
+        assertSame(
+            yModInit,
+            ((shuffledInit.initializers[1] as? ArraySubscriptionExpression)?.arrayExpression as?
+                    DeclaredReferenceExpression)
+                ?.refersTo
+        )
+        assertSame(
+            yModInit,
+            ((shuffledInit.initializers[2] as? ArraySubscriptionExpression)?.arrayExpression as?
+                    DeclaredReferenceExpression)
+                ?.refersTo
+        )
+        assertSame(
+            1,
+            ((shuffledInit.initializers[0] as? ArraySubscriptionExpression)?.subscriptExpression as?
+                    Literal<*>)
+                ?.value
+        )
+        assertSame(
+            2,
+            ((shuffledInit.initializers[1] as? ArraySubscriptionExpression)?.subscriptExpression as?
+                    Literal<*>)
+                ?.value
+        )
+        assertSame(
+            3,
+            ((shuffledInit.initializers[2] as? ArraySubscriptionExpression)?.subscriptExpression as?
+                    Literal<*>)
+                ?.value
+        )
     }
 
     // TODO: Write test for calling a vararg function (e.g. printf). LLVM code snippets can already
