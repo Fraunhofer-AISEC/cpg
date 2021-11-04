@@ -55,9 +55,9 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
         return when (val kind = LLVMGetValueKind(value)) {
             LLVMConstantExprValueKind -> handleConstantExprValueKind(value)
             LLVMConstantStructValueKind -> handleConstantStructValue(value)
-            LLVMConstantDataArrayValueKind -> handleConstantDataArrayValue(value)
-            LLVMConstantVectorValueKind, LLVMConstantDataVectorValueKind ->
-                handleConstantDataArrayValue(value)
+            LLVMConstantDataArrayValueKind,
+            LLVMConstantVectorValueKind,
+            LLVMConstantDataVectorValueKind -> handleConstantDataArrayValue(value)
             LLVMConstantIntValueKind -> handleConstantInt(value)
             LLVMConstantFPValueKind -> handleConstantFP(value)
             LLVMConstantPointerNullValueKind -> handleNullPointer(value)

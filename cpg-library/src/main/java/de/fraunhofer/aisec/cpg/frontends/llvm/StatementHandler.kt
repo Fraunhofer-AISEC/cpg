@@ -915,6 +915,14 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         return declarationOrNot(arrayExpr, instr)
     }
 
+    /**
+     * Handles the [`shufflevector`](https://llvm.org/docs/LangRef.html#shufflevector-instruction)
+     * which is used to merge two vectors (which are arrays) into one and change the order of the
+     * elements.
+     *
+     * It does not handle scalable vectors yet (where the size is unknown) but that feature is
+     * barely used and also the features of LLVM are very limited in that scenario.
+     */
     private fun handleShufflevector(instr: LLVMValueRef): Statement {
         val instrStr = lang.getCodeFromRawNode(instr)
 
@@ -923,32 +931,62 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
 
         val initializers = mutableListOf<Expression>()
 
-        // Fill the array with a loop
+        // Get the first vector and its length. The length is 0 if it's an undef value.
         val array1 = lang.getOperandValueAtIndex(instr, 0)
-        val array1Length = LLVMGetVectorSize(LLVMTypeOf(LLVMGetOperand(instr, 0)))
+        val array1Length =
+            if (array1 is Literal<*> && array1.value == null) {
+                0
+            } else {
+                LLVMGetVectorSize(LLVMTypeOf(LLVMGetOperand(instr, 0)))
+            }
+
+        // Get the second vector and its length. The length is 0 if it's an undef value.
         val array2 = lang.getOperandValueAtIndex(instr, 1)
-        val array2Length: Int
-        if (array2 is Literal<*> && array2.value == null) {
-            array2Length = 0
-        } else {
-            array2Length = LLVMGetVectorSize(LLVMTypeOf(LLVMGetOperand(instr, 1)))
-        }
+        val array2Length =
+            if (array2 is Literal<*> && array2.value == null) {
+                0
+            } else {
+                LLVMGetVectorSize(LLVMTypeOf(LLVMGetOperand(instr, 1)))
+            }
+
+        // Get the number of mask elements. They determine the ordering of the elements.
         val indices = LLVMGetNumMaskElements(instr)
 
+        // Get the respective elements depending on the mask and put them into an initializer for
+        // the resulting vector.
+        // If a vector is an initializer itself (i.e., a constant array), we directly put the values
+        // in the new initializer.
+        // Otherwise, we use the array as a variable.
         for (idx in 0 until indices) {
             val idxInt = LLVMGetMaskValue(instr, idx)
             if (idxInt < array1Length) {
-                val arrayExpr = newArraySubscriptionExpression(instrStr)
-                arrayExpr.arrayExpression = array1
-                arrayExpr.subscriptExpression =
-                    newLiteral(idx, TypeParser.createFrom("i32", true), instrStr)
-                initializers += arrayExpr
+                if (array1 is InitializerListExpression) {
+                    initializers += array1.initializers[idxInt]
+                } else if (array1 is Literal<*> && array1.value == null) {
+                    initializers += newLiteral(null, elementType, instrStr)
+                } else {
+                    val arrayExpr = newArraySubscriptionExpression(instrStr)
+                    arrayExpr.arrayExpression = array1
+                    arrayExpr.subscriptExpression =
+                        newLiteral(idxInt, TypeParser.createFrom("i32", true), instrStr)
+                    initializers += arrayExpr
+                }
             } else if (idxInt < array1Length + array2Length) {
-                val arrayExpr = newArraySubscriptionExpression(instrStr)
-                arrayExpr.arrayExpression = array2
-                arrayExpr.subscriptExpression =
-                    newLiteral(idxInt - array1Length, TypeParser.createFrom("i32", true), instrStr)
-                initializers += arrayExpr
+                if (array2 is InitializerListExpression) {
+                    initializers += array2.initializers[idxInt - array1Length]
+                } else if (array2 is Literal<*> && array2.value == null) {
+                    initializers += newLiteral(null, elementType, instrStr)
+                } else {
+                    val arrayExpr = newArraySubscriptionExpression(instrStr)
+                    arrayExpr.arrayExpression = array2
+                    arrayExpr.subscriptExpression =
+                        newLiteral(
+                            idxInt - array1Length,
+                            TypeParser.createFrom("i32", true),
+                            instrStr
+                        )
+                    initializers += arrayExpr
+                }
             } else {
                 initializers += newLiteral(null, elementType, instrStr)
             }
