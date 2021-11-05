@@ -204,6 +204,6 @@ class CompressLLVMPass() : Pass() {
     }
 
     override fun cleanup() {
-        TODO("Not yet implemented")
+        // Nothing to do
     }
 }
