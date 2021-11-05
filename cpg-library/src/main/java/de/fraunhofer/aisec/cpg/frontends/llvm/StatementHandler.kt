@@ -156,10 +156,10 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 return handleInsertValue(instr)
             }
             LLVMFreeze -> {
-                log.error("Cannot parse freeze instruction yet")
+                return handleFreeze(instr)
             }
             LLVMFence -> {
-                log.error("Cannot parse fence instruction yet")
+                return handleFence(instr)
             }
             LLVMAtomicCmpXchg -> {
                 return handleAtomiccmpxchg(instr)
@@ -476,6 +476,75 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         compoundStatement.addStatement(assignment)
 
         return compoundStatement
+    }
+
+    /**
+     * Handles the [`freeze`](https://llvm.org/docs/LangRef.html#freeze-instruction) instruction.
+     * This instruction checks if the operand is neither an undef nor a poison value (for aggregated
+     * types such as vectors, individual elements are checked) and, if so, returns the operand.
+     * Otherwise, it returns a random but non-undef and non-poison value. This initialization is
+     * modeled in the graph by a call to a implicit function "llvm.freeze" which would be adapted to
+     * each data type.
+     */
+    private fun handleFreeze(instr: LLVMValueRef): Statement {
+        val operand = lang.getOperandValueAtIndex(instr, 0)
+        val instrCode = lang.getCodeFromRawNode(instr)
+
+        // condition: arg != undef && arg != poison
+        val condition = newBinaryOperator("&&", instrCode)
+        val undefCheck = newBinaryOperator("!=", instrCode)
+        undefCheck.lhs = operand
+        undefCheck.rhs = newLiteral(null, operand.type, instrCode)
+        condition.lhs = undefCheck
+        val poisonCheck = newBinaryOperator("!=", instrCode)
+        poisonCheck.lhs = operand
+        poisonCheck.rhs =
+            newLiteral(
+                "POISON",
+                operand.type,
+                instrCode
+            ) // This could be e.g. NAN. Not sure for complex types
+        condition.rhs = poisonCheck
+
+        // Call to a dummy function "llvm.freeze" which would fill the undef or poison values
+        // randomly.
+        // The implementation of this function would depend on the data type (e.g. for integers, it
+        // could be rand())
+        val callExpression = newCallExpression("llvm.freeze", "llvm.freeze", instrCode, false)
+        callExpression.addArgument(operand)
+
+        // res = (arg != undef && arg != poison) ? arg : llvm.freeze(in)
+        val conditional = newConditionalExpression(condition, operand, callExpression, operand.type)
+        return declarationOrNot(conditional, instr)
+    }
+
+    /**
+     * Handles the [`freeze`](https://llvm.org/docs/LangRef.html#fence-instruction) instruction.
+     * This instruction is used to guarantee the atomicity of load and store operations. The
+     * subsequent load or store are affected by the instruction.
+     *
+     * In the graph, this is modeled with a call to an implicit "llvm.fence" method which accepts
+     * the ordering and an optional syncscope as argument.
+     */
+    private fun handleFence(instr: LLVMValueRef): Statement {
+        val instrString = lang.getCodeFromRawNode(instr)
+        val callExpression = newCallExpression("llvm.fence", "llvm.fence", instrString, false)
+        val ordering =
+            newLiteral(
+                LLVMGetOrdering(instr),
+                TypeParser.createFrom("i32", true),
+                lang.getCodeFromRawNode(instr)
+            )
+        callExpression.addArgument(ordering, "ordering")
+        if (instrString?.contains("syncscope") == true) {
+            val syncscope = instrString.split("\"")[1]
+            callExpression.addArgument(
+                newLiteral(syncscope, TypeParser.createFrom("String", true), instrString),
+                "syncscope"
+            )
+        }
+
+        return callExpression
     }
 
     /**

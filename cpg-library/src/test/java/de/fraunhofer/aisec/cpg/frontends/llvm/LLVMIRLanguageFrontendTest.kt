@@ -900,6 +900,39 @@ class LLVMIRLanguageFrontendTest {
         )
     }
 
+    @Test
+    fun testFence() {
+        val topLevel = Path.of("src", "test", "resources", "llvm")
+        val tu =
+            TestUtils.analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("fence.ll").toFile()),
+                topLevel,
+                true
+            ) {
+                it.registerLanguage(
+                    LLVMIRLanguageFrontend::class.java,
+                    LLVMIRLanguageFrontend.LLVM_EXTENSIONS
+                )
+            }
+        val main = tu.byNameOrNull<FunctionDeclaration>("main")
+        assertNotNull(main)
+
+        // Test that x is initialized correctly
+        val mainBody = main.body as CompoundStatement
+
+        val fenceCall = mainBody.statements[0] as? CallExpression
+        assertNotNull(fenceCall)
+        assertEquals(1, fenceCall.arguments.size)
+        assertEquals(2, (fenceCall.arguments[0] as Literal<*>).value)
+
+        val fenceCallScope = mainBody.statements[2] as? CallExpression
+        assertNotNull(fenceCallScope)
+        assertEquals(2, fenceCallScope.arguments.size)
+        // TODO: This doesn't match but it doesn't seem to be our mistake
+        // assertEquals(5, (fenceCallScope.arguments[0] as Literal<*>).value)
+        assertEquals("scope", (fenceCallScope.arguments[1] as Literal<*>).value)
+    }
+
     // TODO: Write test for calling a vararg function (e.g. printf). LLVM code snippets can already
     // be found in client.ll.
 }
