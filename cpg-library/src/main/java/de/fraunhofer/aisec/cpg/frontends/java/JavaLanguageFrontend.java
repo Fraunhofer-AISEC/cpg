@@ -61,6 +61,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.IncludeDeclaration;
 import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration;
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration;
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser;
+import de.fraunhofer.aisec.cpg.graph.types.UnknownType;
 import de.fraunhofer.aisec.cpg.helpers.Benchmark;
 import de.fraunhofer.aisec.cpg.helpers.CommonPath;
 import de.fraunhofer.aisec.cpg.passes.scopes.Scope;
@@ -256,9 +257,27 @@ public class JavaLanguageFrontend extends LanguageFrontend {
       de.fraunhofer.aisec.cpg.graph.types.Type getTypeAsGoodAsPossible(
           NodeWithType<N, T> nodeWithType, ResolvedValueDeclaration resolved) {
     try {
+      var type = nodeWithType.getTypeAsString();
+
+      if (type.equals("var")) {
+        return UnknownType.getUnknownType();
+      }
+
       return TypeParser.createFrom(resolved.getType().describe(), true);
     } catch (RuntimeException | NoClassDefFoundError ex) {
       return getTypeFromImportIfPossible(nodeWithType.getType());
+    }
+  }
+
+  public de.fraunhofer.aisec.cpg.graph.types.Type getTypeAsGoodAsPossible(Type type) {
+    try {
+      if(type.toString().equals("var")) {
+        return UnknownType.getUnknownType();
+      }
+
+      return TypeParser.createFrom(type.resolve().describe(), true);
+    } catch (RuntimeException | NoClassDefFoundError ex) {
+      return getTypeFromImportIfPossible(type);
     }
   }
 
@@ -347,14 +366,6 @@ public class JavaLanguageFrontend extends LanguageFrontend {
       }
     }
     return null;
-  }
-
-  public de.fraunhofer.aisec.cpg.graph.types.Type getTypeAsGoodAsPossible(Type type) {
-    try {
-      return TypeParser.createFrom(type.resolve().describe(), true);
-    } catch (RuntimeException | NoClassDefFoundError ex) {
-      return getTypeFromImportIfPossible(type);
-    }
   }
 
   public <N extends Node, T extends Type>
