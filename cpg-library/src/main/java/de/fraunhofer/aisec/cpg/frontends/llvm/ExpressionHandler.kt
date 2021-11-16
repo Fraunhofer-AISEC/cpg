@@ -61,6 +61,8 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
             LLVMConstantIntValueKind -> handleConstantInt(value)
             LLVMConstantFPValueKind -> handleConstantFP(value)
             LLVMConstantPointerNullValueKind -> handleNullPointer(value)
+            LLVMConstantTokenNoneValueKind ->
+                newLiteral(null, UnknownType.getUnknownType(), lang.getCodeFromRawNode(value))
             LLVMUndefValueValueKind ->
                 initializeAsUndef(lang.typeOf(value), lang.getCodeFromRawNode(value)!!)
             LLVMConstantAggregateZeroValueKind ->

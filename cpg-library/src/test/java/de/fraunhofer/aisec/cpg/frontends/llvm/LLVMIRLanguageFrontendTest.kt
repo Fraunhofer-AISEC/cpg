@@ -933,6 +933,22 @@ class LLVMIRLanguageFrontendTest {
         assertEquals("scope", (fenceCallScope.arguments[1] as Literal<*>).value)
     }
 
+    @Test
+    fun testExceptions() {
+        val topLevel = Path.of("src", "test", "resources", "llvm")
+        val tu =
+            TestUtils.analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("exceptions.ll").toFile()),
+                topLevel,
+                true
+            ) {
+                it.registerLanguage(
+                    LLVMIRLanguageFrontend::class.java,
+                    LLVMIRLanguageFrontend.LLVM_EXTENSIONS
+                )
+            }
+    }
+
     // TODO: Write test for calling a vararg function (e.g. printf). LLVM code snippets can already
     // be found in client.ll.
 }

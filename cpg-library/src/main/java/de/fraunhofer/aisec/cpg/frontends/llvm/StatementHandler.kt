@@ -31,10 +31,7 @@ import de.fraunhofer.aisec.cpg.graph.NodeBuilder.*
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
-import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
-import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
-import de.fraunhofer.aisec.cpg.graph.statements.LabelStatement
-import de.fraunhofer.aisec.cpg.graph.statements.Statement
+import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser
@@ -177,24 +174,216 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 return handleLandingpad(instr)
             }
             LLVMCleanupRet -> {
-                log.error("Cannot parse cleanupret instruction yet")
+                // End of the cleanup basic block(s)
+                // Jump to a label where handling the exception will unwind to next (e.g. a
+                // catchswitch statement)
+                return handleCatchret(instr)
             }
             LLVMCatchRet -> {
-                log.error("Cannot parse catchret instruction yet")
+                // Catch (caught by catchpad instruction) is over.
+                // Jumps to a label where the "normal" function logic continues
+                return handleCatchret(instr)
             }
             LLVMCatchPad -> {
-                log.error("Cannot parse catchpad instruction yet")
+                // Actually handles the exception.
+                return handleCatchpad(instr)
             }
             LLVMCleanupPad -> {
-                log.error("Cannot parse cleanuppad instruction yet")
+                // Beginning of the cleanup basic block(s).
+                // We should model this as the beginning of a catch block
+                return handleCleanuppad(instr)
             }
             LLVMCatchSwitch -> {
-                log.error("Cannot parse catchswitch instruction yet")
+                // Marks the beginning of a "real" catch block
+                // Jumps to one of the handlers specified or to the default handler (if specified)
+                return handleCatchswitch(instr)
             }
         }
 
         log.error("Not handling instruction opcode {} yet", opcode)
         return Statement()
+    }
+
+    /**
+     * Handles the [`catchret`](https://llvm.org/docs/LangRef.html#catchret-instruction) instruction
+     * and the [`cleanupret`](https://llvm.org/docs/LangRef.html#cleanupret-instruction). These
+     * instructions are used to end a catch block or cleanuppad and transfers control either to a
+     * specified BB or to the caller as unwind location. We model them as an empty statement or as a
+     * jump and set the name of the statement to "catchret" or "cleanupret".
+     */
+    private fun handleCatchret(instr: LLVMValueRef): Statement {
+        val unwindDest =
+            if (instr.opCode == LLVMCatchRet) {
+                LLVMGetOperand(instr, 1)
+            } else if (LLVMGetUnwindDest(instr) != null) {
+                LLVMBasicBlockAsValue(LLVMGetUnwindDest(instr))
+            } else {
+                null
+            }
+        if (unwindDest != null) { // For "unwind to caller", the destination is null
+            val unwindDestination = extractBasicBlockLabel(unwindDest)
+            val gotoStatement = newGotoStatement(lang.getCodeFromRawNode(instr))
+            gotoStatement.targetLabel = unwindDestination
+            gotoStatement.labelName = unwindDestination.name
+            gotoStatement.name =
+                if (instr.opCode == LLVMCatchRet) {
+                    "catchret"
+                } else {
+                    "cleanuppad"
+                }
+            return gotoStatement
+        } else {
+            val emptyStatement = newEmptyStatement(lang.getCodeFromRawNode(instr))
+            emptyStatement.name =
+                if (instr.opCode == LLVMCatchRet) {
+                    "catchret"
+                } else {
+                    "cleanuppad"
+                }
+            return emptyStatement
+        }
+    }
+
+    /**
+     * We simulate a [`catchswitch`](https://llvm.org/docs/LangRef.html#catchswitch-instruction)
+     * instruction with a call to a dummy function "llvm.catchswitch" which generates the parent
+     * token and nested if statements. The function iterates over the possible handlers and parses
+     * their first instruction (a `catchpad` instruction) to assemble another call to an implicit
+     * function "llvm.matchesCatchpad". This function checks if the object thrown matches the
+     * arguments of the catchpad and thus the respective handler and serves as the condition of the
+     * if statements.
+     */
+    private fun handleCatchswitch(instr: LLVMValueRef): Statement {
+        val numOps = LLVMGetNumOperands(instr)
+        val nodeCode = lang.getCodeFromRawNode(instr)
+
+        val parent = lang.getOperandValueAtIndex(instr, 0)
+
+        val compoundStatement = newCompoundStatement(nodeCode)
+
+        val dummyCall =
+            newCallExpression(
+                "llvm.catchswitch",
+                "llvm.catchswitch",
+                lang.getCodeFromRawNode(instr),
+                false
+            )
+        dummyCall.addArgument(parent, "parent")
+
+        val tokenGeneration = declarationOrNot(dummyCall, instr) as DeclarationStatement
+        compoundStatement.addStatement(tokenGeneration)
+
+        val ifStatement = newIfStatement(nodeCode)
+        var currentIfStatement: IfStatement? = null
+        var idx = 1
+        while (idx < numOps) {
+            if (currentIfStatement == null) {
+                currentIfStatement = ifStatement
+            } else {
+                val newIf = newIfStatement(nodeCode)
+                currentIfStatement.elseStatement = newIf
+                currentIfStatement = newIf
+            }
+
+            // For each of the handlers, we get the first instruction and insert a statement
+            // case llvm.matchesCatchpad(parent, args), where args are used to determine if
+            // this handler accepts the object thrown.
+            val bbTarget = LLVMGetOperand(instr, idx)
+
+            val catchpad = LLVMGetFirstInstruction(LLVMValueAsBasicBlock(bbTarget))
+            val catchOps = LLVMGetNumArgOperands(catchpad)
+
+            val matchesCatchpad =
+                newCallExpression(
+                    "llvm.matchesCatchpad",
+                    "llvm.matchesCatchpad",
+                    lang.getCodeFromRawNode(instr),
+                    false
+                )
+            matchesCatchpad.addArgument(parent, "parentCatchswitch")
+
+            for (i in 0 until catchOps) {
+                val arg = lang.getOperandValueAtIndex(catchpad, i)
+                matchesCatchpad.addArgument(arg, "args_$i")
+            }
+
+            currentIfStatement.condition = matchesCatchpad
+
+            // Get the label of the goto statement.
+            val caseLabelStatement = extractBasicBlockLabel(bbTarget)
+            val gotoStatement = newGotoStatement(nodeCode)
+            gotoStatement.targetLabel = caseLabelStatement
+            gotoStatement.labelName = caseLabelStatement.name
+            currentIfStatement.thenStatement = gotoStatement
+
+            idx++
+        }
+
+        val unwindDest = LLVMGetUnwindDest(instr)
+        if (unwindDest != null) { // For "unwind to caller", the destination is null
+            val unwindDestination = extractBasicBlockLabel(LLVMBasicBlockAsValue(unwindDest))
+            val gotoStatement = newGotoStatement(nodeCode)
+            gotoStatement.targetLabel = unwindDestination
+            gotoStatement.labelName = unwindDestination.name
+            if (currentIfStatement == null) {
+                currentIfStatement = ifStatement
+            }
+            currentIfStatement!!.elseStatement = gotoStatement
+        }
+
+        compoundStatement.addStatement(ifStatement)
+        return compoundStatement
+    }
+
+    /**
+     * We simulate a [`cleanuppad`](https://llvm.org/docs/LangRef.html#cleanuppad-instruction)
+     * instruction with a call to the dummy function "llvm.cleanuppad". The function receives the
+     * parent and the args as arguments.
+     */
+    private fun handleCleanuppad(instr: LLVMValueRef): Statement {
+        val numOps = LLVMGetNumArgOperands(instr)
+        val catchswitch = lang.getOperandValueAtIndex(instr, 0)
+
+        val dummyCall =
+            newCallExpression(
+                "llvm.cleanuppad",
+                "llvm.cleanuppad",
+                lang.getCodeFromRawNode(instr),
+                false
+            )
+        dummyCall.addArgument(catchswitch, "parentCatchswitch")
+
+        for (i in 1 until numOps) {
+            val arg = lang.getOperandValueAtIndex(instr, i)
+            dummyCall.addArgument(arg, "args_${i-1}")
+        }
+        return declarationOrNot(dummyCall, instr)
+    }
+
+    /**
+     * We simulate a [`catchpad`](https://llvm.org/docs/LangRef.html#catchpad-instruction)
+     * instruction with a call to the dummy function "llvm.catchpad". The function receives the
+     * catchswitch and the args as arguments.
+     */
+    private fun handleCatchpad(instr: LLVMValueRef): Statement {
+        val numOps = LLVMGetNumArgOperands(instr)
+        val parentCatchSwitch = LLVMGetParentCatchSwitch(instr)
+        val catchswitch = lang.expressionHandler.handle(parentCatchSwitch) as Expression
+
+        val dummyCall =
+            newCallExpression(
+                "llvm.catchpad",
+                "llvm.catchpad",
+                lang.getCodeFromRawNode(instr),
+                false
+            )
+        dummyCall.addArgument(catchswitch, "parentCatchswitch")
+
+        for (i in 0 until numOps) {
+            val arg = lang.getOperandValueAtIndex(instr, i)
+            dummyCall.addArgument(arg, "args_$i")
+        }
+        return declarationOrNot(dummyCall, instr)
     }
 
     /**
@@ -711,6 +900,10 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         }
     }
 
+    /**
+     * Handles the [`indirectbr`](https://llvm.org/docs/LangRef.html#indirectbr-instruction)
+     * instruction.
+     */
     private fun handleIndirectbrStatement(instr: LLVMValueRef): Statement {
         val numOps = LLVMGetNumOperands(instr)
         val nodeCode = lang.getCodeFromRawNode(instr)
