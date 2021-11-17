@@ -739,6 +739,14 @@ class GoLanguageFrontendTest : BaseTest() {
         assertNotNull(main)
         assertEquals("comment before function\n", main.comment)
 
+        val i = main.parameters.firstOrNull { it.name == "i" }
+        assertNotNull(i)
+        assertEquals("comment before parameter1\n", i.comment)
+
+        val j = main.parameters.firstOrNull { it.name == "j" }
+        assertNotNull(j)
+        assertEquals("comment before parameter2\n", j.comment)
+
         var declStmt = main.bodyOrNull<DeclarationStatement>()
         assertNotNull(declStmt)
         assertEquals("comment before assignment\n", declStmt.comment)
