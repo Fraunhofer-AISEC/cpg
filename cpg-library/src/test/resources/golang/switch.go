@@ -2,7 +2,7 @@ package p
 
 import ("fmt")
 
-func myFunc(i int) {
+func myFunc(/* Comment on a parameter */i int) {
     switch i {
     case 1:
         first()
