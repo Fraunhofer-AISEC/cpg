@@ -732,20 +732,27 @@ class GoLanguageFrontendTest : BaseTest() {
 
         assertNotNull(tu)
 
-        val mainNamespace =
-            tu.getDeclarationsByName("main", NamespaceDeclaration::class.java).iterator().next()
+        val mainNamespace = tu.byNameOrNull<NamespaceDeclaration>("main")
         assertNotNull(mainNamespace)
 
-        val main =
-            mainNamespace
-                .getDeclarationsByName("main", FunctionDeclaration::class.java)
-                .iterator()
-                .next()
+        val main = mainNamespace.byNameOrNull<FunctionDeclaration>("main")
         assertNotNull(main)
+        assertEquals("comment before function\n", main.comment)
 
-        val declStmt = main.bodyOrNull<DeclarationStatement>()
+        var declStmt = main.bodyOrNull<DeclarationStatement>()
         assertNotNull(declStmt)
+        assertEquals("comment before assignment\n", declStmt.comment)
 
-        assertEquals("some comment\n", declStmt.comment)
+        declStmt = main.bodyOrNull(1)
+        assertNotNull(declStmt)
+        assertEquals("comment before declaration\n", declStmt.comment)
+
+        val s = mainNamespace.byNameOrNull<RecordDeclaration>("main.s")
+        assertNotNull(s)
+        assertEquals("comment before struct\n", s.comment)
+
+        val myField = s.getField("myField")
+        assertNotNull(myField)
+        assertNotNull("comment before field\n", myField.comment)
     }
 }

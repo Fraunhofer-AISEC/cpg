@@ -137,8 +137,13 @@ func (this *GoLanguageFrontend) handleComments(node *cpg.Node, astNode ast.Node)
 
 	var comment = ""
 
-	// Lookup ast node in comment map
-	comments := this.CommentMap.Filter(astNode).Comments()
+	// Lookup ast node in comment map. One cannot use Filter() because this would actually filter all the comments
+	// that are "below" this AST node as well, e.g. in its children. We only want the comments on the node itself. Therefore we must convert
+	// the CommentMap back into an actual map
+	comments, ok := (map[ast.Node][]*ast.CommentGroup)(this.CommentMap)[astNode]
+	if !ok {
+		return
+	}
 
 	for _, c := range comments {
 		comment += c.Text()
