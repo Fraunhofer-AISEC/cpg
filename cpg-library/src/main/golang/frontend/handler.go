@@ -133,10 +133,22 @@ func (this *GoLanguageFrontend) HandleFile(fset *token.FileSet, file *ast.File, 
 
 // handleComments maps comments from ast.Node to a cpg.Node by using ast.CommentMap.
 func (this *GoLanguageFrontend) handleComments(node *cpg.Node, astNode ast.Node) {
+	this.LogDebug("Handling comments for %+v", astNode)
+
+	var comment = ""
+
 	// Lookup ast node in comment map
 	comments := this.CommentMap.Filter(astNode).Comments()
 
-	fmt.Printf("%+v", comments)
+	for _, c := range comments {
+		comment += c.Text()
+	}
+
+	if comment != "" {
+		node.SetComment(comment)
+
+		this.LogDebug("Comments: %+v", comment)
+	}
 }
 
 func (this *GoLanguageFrontend) handleDecl(fset *token.FileSet, decl ast.Decl) (d *cpg.Declaration) {

@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.BaseTest
 import de.fraunhofer.aisec.cpg.ExperimentalGolang
 import de.fraunhofer.aisec.cpg.TestUtils
 import de.fraunhofer.aisec.cpg.graph.body
+import de.fraunhofer.aisec.cpg.graph.bodyOrNull
 import de.fraunhofer.aisec.cpg.graph.byNameOrNull
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.statements.*
@@ -712,5 +713,39 @@ class GoLanguageFrontendTest : BaseTest() {
         val call = (a.singleDeclaration as? VariableDeclaration)?.initializer as? CallExpression
         assertNotNull(call)
         assertTrue(call.invokes.contains(newAwesome))
+    }
+
+    @Test
+    fun testComments() {
+        val topLevel = Path.of("src", "test", "resources", "golang")
+        val tu =
+            TestUtils.analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("comment.go").toFile()),
+                topLevel,
+                true
+            ) {
+                it.registerLanguage(
+                    GoLanguageFrontend::class.java,
+                    GoLanguageFrontend.GOLANG_EXTENSIONS
+                )
+            }
+
+        assertNotNull(tu)
+
+        val mainNamespace =
+            tu.getDeclarationsByName("main", NamespaceDeclaration::class.java).iterator().next()
+        assertNotNull(mainNamespace)
+
+        val main =
+            mainNamespace
+                .getDeclarationsByName("main", FunctionDeclaration::class.java)
+                .iterator()
+                .next()
+        assertNotNull(main)
+
+        val declStmt = main.bodyOrNull<DeclarationStatement>()
+        assertNotNull(declStmt)
+
+        assertEquals("some comment\n", declStmt.comment)
     }
 }
