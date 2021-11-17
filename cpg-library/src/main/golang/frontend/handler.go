@@ -128,7 +128,30 @@ func (this *GoLanguageFrontend) HandleFile(fset *token.FileSet, file *ast.File, 
 	// add it
 	scope.AddDeclaration((*cpg.Declaration)(p))
 
+	this.matchCommentsToNodes(fset, file, tu)
+
 	return
+}
+
+// This function returns strings of comments and the appropriate region to the java frontend to match them to the closest
+// node according to a heuristic: Comments are assigned to the closest successor node on their ast hierarchy level.
+// Only Exception, if they don't have a successor starting in the same line but they have a predecessor in the same line,
+// the comment is matched to that closest predecessor.
+func (this *GoLanguageFrontend) matchCommentsToNodes(fset *token.FileSet, file *ast.File, tu *cpg.TranslationUnitDeclaration) {
+
+	for _, c := range file.Comments{
+	    // Create Region from comment positions
+	    region := cpg.NewRegion(fset, file,
+		fset.Position(c.Pos()).Line,
+		fset.Position(c.Pos()).Column,
+		fset.Position(c.End()).Line,
+		fset.Position(c.End()).Column)
+
+	(*jnigi.ObjectRef)(this.ObjectRef).CallMethod(env, "matchCommentToNode", jnigi.Void,
+	cpg.NewString(c.Text()),
+	(*jnigi.ObjectRef)(region).Cast("de/fraunhofer/aisec/cpg/sarif/Region"),
+	(*jnigi.ObjectRef)(tu).Cast("de/fraunhofer/aisec/cpg/graph/declarations/TranslationUnitDeclaration"))
+	}
 }
 
 func (this *GoLanguageFrontend) handleDecl(fset *token.FileSet, decl ast.Decl) *cpg.Declaration {

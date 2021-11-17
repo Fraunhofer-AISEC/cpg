@@ -81,7 +81,7 @@ func Java_de_fraunhofer_aisec_cpg_frontends_golang_GoLanguageFrontend_parseInter
 	}
 
 	fset := token.NewFileSet()
-	file, err := parser.ParseFile(fset, string(path.([]byte)), string(src.([]byte)), 0)
+	file, err := parser.ParseFile(fset, string(path.([]byte)), string(src.([]byte)), parser.ParseComments)
 	if err != nil {
 		log.Fatal(err)
 	}
