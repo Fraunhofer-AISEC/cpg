@@ -1,7 +1,10 @@
 package main
 
 // comment before function
-func main() {
+func main(// comment before parameter1
+          i int,
+          // comment before parameter2
+          j int) {
     // comment before assignment
     a := "a"
 

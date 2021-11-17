@@ -138,8 +138,8 @@ func (this *GoLanguageFrontend) handleComments(node *cpg.Node, astNode ast.Node)
 	var comment = ""
 
 	// Lookup ast node in comment map. One cannot use Filter() because this would actually filter all the comments
-	// that are "below" this AST node as well, e.g. in its children. We only want the comments on the node itself. Therefore we must convert
-	// the CommentMap back into an actual map
+	// that are "below" this AST node as well, e.g. in its children. We only want the comments on the node itself.
+	// Therefore we must convert the CommentMap back into an actual map to access the stored entry for the node.
 	comments, ok := (map[ast.Node][]*ast.CommentGroup)(this.CommentMap)[astNode]
 	if !ok {
 		return
@@ -293,6 +293,8 @@ func (this *GoLanguageFrontend) handleFuncDecl(fset *token.FileSet, funcDecl *as
 
 		// add parameter to scope
 		this.GetScopeManager().AddDeclaration((*cpg.Declaration)(p))
+
+		this.handleComments((*cpg.Node)(p), param)
 	}
 
 	// parse body
