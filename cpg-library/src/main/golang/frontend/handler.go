@@ -128,45 +128,36 @@ func (this *GoLanguageFrontend) HandleFile(fset *token.FileSet, file *ast.File, 
 	// add it
 	scope.AddDeclaration((*cpg.Declaration)(p))
 
-	this.matchCommentsToNodes(fset, file, tu)
-
 	return
 }
 
-// This function returns strings of comments and the appropriate region to the java frontend to match them to the closest
-// node according to a heuristic: Comments are assigned to the closest successor node on their ast hierarchy level.
-// Only Exception, if they don't have a successor starting in the same line but they have a predecessor in the same line,
-// the comment is matched to that closest predecessor.
-func (this *GoLanguageFrontend) matchCommentsToNodes(fset *token.FileSet, file *ast.File, tu *cpg.TranslationUnitDeclaration) {
+// handleComments maps comments from ast.Node to a cpg.Node by using ast.CommentMap.
+func (this *GoLanguageFrontend) handleComments(node *cpg.Node, astNode ast.Node) {
+	// Lookup ast node in comment map
+	comments := this.CommentMap.Filter(astNode).Comments()
 
-	for _, c := range file.Comments{
-	    // Create Region from comment positions
-	    region := cpg.NewRegion(fset, file,
-		fset.Position(c.Pos()).Line,
-		fset.Position(c.Pos()).Column,
-		fset.Position(c.End()).Line,
-		fset.Position(c.End()).Column)
-
-	(*jnigi.ObjectRef)(this.ObjectRef).CallMethod(env, "matchCommentToNode", jnigi.Void,
-	cpg.NewString(c.Text()),
-	(*jnigi.ObjectRef)(region).Cast("de/fraunhofer/aisec/cpg/sarif/Region"),
-	(*jnigi.ObjectRef)(tu).Cast("de/fraunhofer/aisec/cpg/graph/declarations/TranslationUnitDeclaration"))
-	}
+	fmt.Printf("%+v", comments)
 }
 
-func (this *GoLanguageFrontend) handleDecl(fset *token.FileSet, decl ast.Decl) *cpg.Declaration {
+func (this *GoLanguageFrontend) handleDecl(fset *token.FileSet, decl ast.Decl) (d *cpg.Declaration) {
 	this.LogDebug("Handling declaration (%T): %+v", decl, decl)
 
 	switch v := decl.(type) {
 	case *ast.FuncDecl:
-		return (*cpg.Declaration)(this.handleFuncDecl(fset, v))
+		d = (*cpg.Declaration)(this.handleFuncDecl(fset, v))
 	case *ast.GenDecl:
-		return (*cpg.Declaration)(this.handleGenDecl(fset, v))
+		d = (*cpg.Declaration)(this.handleGenDecl(fset, v))
 	default:
 		this.LogError("Not parsing declaration of type %T yet: %+v", v, v)
 		// no match
-		return nil
+		d = nil
 	}
+
+	if d != nil {
+		this.handleComments((*cpg.Node)(d), decl)
+	}
+
+	return
 }
 
 func (this *GoLanguageFrontend) handleFuncDecl(fset *token.FileSet, funcDecl *ast.FuncDecl) *jnigi.ObjectRef {
@@ -566,63 +557,73 @@ func (this *GoLanguageFrontend) handleIncDecStmt(fset *token.FileSet, incDecStmt
 	return u
 }
 
-func (this *GoLanguageFrontend) handleStmt(fset *token.FileSet, stmt ast.Stmt) *cpg.Statement {
+func (this *GoLanguageFrontend) handleStmt(fset *token.FileSet, stmt ast.Stmt) (s *cpg.Statement) {
 	this.LogDebug("Handling statement (%T): %+v", stmt, stmt)
 
 	switch v := stmt.(type) {
 	case *ast.ExprStmt:
 		// in our cpg, each expression is also a statement,
 		// so we do not need an expression statement wrapper
-		return (*cpg.Statement)(this.handleExpr(fset, v.X))
+		s = (*cpg.Statement)(this.handleExpr(fset, v.X))
 	case *ast.AssignStmt:
-		return (*cpg.Statement)(this.handleAssignStmt(fset, v))
+		s = (*cpg.Statement)(this.handleAssignStmt(fset, v))
 	case *ast.DeclStmt:
-		return (*cpg.Statement)(this.handleDeclStmt(fset, v))
+		s = (*cpg.Statement)(this.handleDeclStmt(fset, v))
 	case *ast.IfStmt:
-		return (*cpg.Statement)(this.handleIfStmt(fset, v))
+		s = (*cpg.Statement)(this.handleIfStmt(fset, v))
 	case *ast.SwitchStmt:
-		return (*cpg.Statement)(this.handleSwitchStmt(fset, v))
+		s = (*cpg.Statement)(this.handleSwitchStmt(fset, v))
 	case *ast.CaseClause:
-		return (*cpg.Statement)(this.handleCaseClause(fset, v))
+		s = (*cpg.Statement)(this.handleCaseClause(fset, v))
 	case *ast.BlockStmt:
-		return (*cpg.Statement)(this.handleBlockStmt(fset, v))
+		s = (*cpg.Statement)(this.handleBlockStmt(fset, v))
 	case *ast.ForStmt:
-		return (*cpg.Statement)(this.handleForStmt(fset, v))
+		s = (*cpg.Statement)(this.handleForStmt(fset, v))
 	case *ast.ReturnStmt:
-		return (*cpg.Statement)(this.handleReturnStmt(fset, v))
+		s = (*cpg.Statement)(this.handleReturnStmt(fset, v))
 	case *ast.IncDecStmt:
-		return (*cpg.Statement)(this.handleIncDecStmt(fset, v))
+		s = (*cpg.Statement)(this.handleIncDecStmt(fset, v))
 	default:
 		this.LogError("Not parsing statement of type %T yet: %+v", v, v)
+		s = nil
 	}
 
-	return nil
+	if s != nil {
+		this.handleComments((*cpg.Node)(s), stmt)
+	}
+
+	return
 }
 
-func (this *GoLanguageFrontend) handleExpr(fset *token.FileSet, expr ast.Expr) *cpg.Expression {
+func (this *GoLanguageFrontend) handleExpr(fset *token.FileSet, expr ast.Expr) (e *cpg.Expression) {
 	this.LogDebug("Handling expression (%T): %+v", expr, expr)
 
 	switch v := expr.(type) {
 	case *ast.CallExpr:
-		return (*cpg.Expression)(this.handleCallExpr(fset, v))
+		e = (*cpg.Expression)(this.handleCallExpr(fset, v))
 	case *ast.IndexExpr:
-		return (*cpg.Expression)(this.handleIndexExpr(fset, v))
+		e = (*cpg.Expression)(this.handleIndexExpr(fset, v))
 	case *ast.BinaryExpr:
-		return (*cpg.Expression)(this.handleBinaryExpr(fset, v))
+		e = (*cpg.Expression)(this.handleBinaryExpr(fset, v))
 	case *ast.UnaryExpr:
-		return (*cpg.Expression)(this.handleUnaryExpr(fset, v))
+		e = (*cpg.Expression)(this.handleUnaryExpr(fset, v))
 	case *ast.SelectorExpr:
-		return (*cpg.Expression)(this.handleSelectorExpr(fset, v))
+		e = (*cpg.Expression)(this.handleSelectorExpr(fset, v))
 	case *ast.BasicLit:
-		return (*cpg.Expression)(this.handleBasicLit(fset, v))
+		e = (*cpg.Expression)(this.handleBasicLit(fset, v))
 	case *ast.Ident:
-		return (*cpg.Expression)(this.handleIdent(fset, v))
+		e = (*cpg.Expression)(this.handleIdent(fset, v))
 	default:
 		this.LogError("Could not parse expression of type %T: %+v", v, v)
+		// TODO: return an error instead?
+		e = nil
 	}
 
-	// TODO: return an error instead?
-	return nil
+	if e != nil {
+		this.handleComments((*cpg.Node)(e), expr)
+	}
+
+	return
 }
 
 func (this *GoLanguageFrontend) handleAssignStmt(fset *token.FileSet, assignStmt *ast.AssignStmt) (expr *cpg.Expression) {
