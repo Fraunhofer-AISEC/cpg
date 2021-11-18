@@ -36,6 +36,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
+import de.fraunhofer.aisec.cpg.helpers.annotations.FunctionReplacement
 import org.bytedeco.javacpp.Pointer
 import org.bytedeco.llvm.LLVM.LLVMBasicBlockRef
 import org.bytedeco.llvm.LLVM.LLVMValueRef
@@ -253,6 +254,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
      * arguments of the catchpad and thus the respective handler and serves as the condition of the
      * if statements.
      */
+    @FunctionReplacement(["llvm.catchswitch", "llvm.matchesCatchpad"], "catchswitch")
     private fun handleCatchswitch(instr: LLVMValueRef): Statement {
         val numOps = LLVMGetNumOperands(instr)
         val nodeCode = lang.getCodeFromRawNode(instr)
@@ -340,6 +342,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
      * instruction with a call to the dummy function "llvm.cleanuppad". The function receives the
      * parent and the args as arguments.
      */
+    @FunctionReplacement(["llvm.cleanuppad"], "cleanuppad")
     private fun handleCleanuppad(instr: LLVMValueRef): Statement {
         val numOps = LLVMGetNumArgOperands(instr)
         val catchswitch = lang.getOperandValueAtIndex(instr, 0)
@@ -365,6 +368,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
      * instruction with a call to the dummy function "llvm.catchpad". The function receives the
      * catchswitch and the args as arguments.
      */
+    @FunctionReplacement(["llvm.catchpad"], "catchpad")
     private fun handleCatchpad(instr: LLVMValueRef): Statement {
         val numOps = LLVMGetNumArgOperands(instr)
         val parentCatchSwitch = LLVMGetParentCatchSwitch(instr)
@@ -391,8 +395,9 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
      * is simulated by a call to a function called `va_arg` simulating the respective C++-macro. The
      * function takes two arguments: the vararg-list and the type of the return value.
      */
+    @FunctionReplacement(["llvm.va_arg"], "va_arg")
     private fun handleVaArg(instr: LLVMValueRef): Statement {
-        val callExpr = newCallExpression("va_arg", "va_arg", lang.getCodeFromRawNode(instr), false)
+        val callExpr = newCallExpression("llvm.va_arg", "llvm.va_arg", lang.getCodeFromRawNode(instr), false)
         val operandName = lang.getOperandValueAtIndex(instr, 0)
         callExpr.addArgument(operandName)
         val expectedType = lang.typeOf(instr)
@@ -675,6 +680,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
      * modeled in the graph by a call to a implicit function "llvm.freeze" which would be adapted to
      * each data type.
      */
+    @FunctionReplacement(["llvm.freeze"], "freeze")
     private fun handleFreeze(instr: LLVMValueRef): Statement {
         val operand = lang.getOperandValueAtIndex(instr, 0)
         val instrCode = lang.getCodeFromRawNode(instr)
@@ -715,6 +721,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
      * In the graph, this is modeled with a call to an implicit "llvm.fence" method which accepts
      * the ordering and an optional syncscope as argument.
      */
+    @FunctionReplacement(["llvm.fence"], "fence")
     private fun handleFence(instr: LLVMValueRef): Statement {
         val instrString = lang.getCodeFromRawNode(instr)
         val callExpression = newCallExpression("llvm.fence", "llvm.fence", instrString, false)
@@ -1415,6 +1422,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
      * [unordered] indicates if a floating-point comparison needs to be `or`ed with a check to
      * whether the value is unordered (i.e., NAN).
      */
+    @FunctionReplacement(["isunordered"])
     private fun handleBinaryOperator(
         instr: LLVMValueRef,
         op: String,

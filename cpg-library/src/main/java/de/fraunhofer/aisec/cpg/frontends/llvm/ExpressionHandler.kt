@@ -314,7 +314,7 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
         if (!lang.isKnownStructTypeName(type.name) && !type.name.contains("{")) {
             return newLiteral(0, type, code)
         } else {
-            val expr: ConstructExpression = NodeBuilder.newConstructExpression(code)
+            val expr: ConstructExpression = newConstructExpression(code)
             // map the construct expression to the record declaration of the type
             expr.instantiates = (type as? ObjectType)?.recordDeclaration
 
