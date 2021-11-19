@@ -91,4 +91,8 @@ public class TranslationResult extends Node {
   public Map<String, Object> getScratch() {
     return scratch;
   }
+
+  public TranslationManager getTranslationManager() {
+    return translationManager;
+  }
 }

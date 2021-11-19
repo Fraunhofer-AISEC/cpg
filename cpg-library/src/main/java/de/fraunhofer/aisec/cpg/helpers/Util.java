@@ -25,12 +25,12 @@
  */
 package de.fraunhofer.aisec.cpg.helpers;
 
+import static de.fraunhofer.aisec.cpg.graph.NodeBuilder.newMethodParameterIn;
 import static de.fraunhofer.aisec.cpg.sarif.PhysicalLocation.locationLink;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
 import de.fraunhofer.aisec.cpg.graph.Node;
-import de.fraunhofer.aisec.cpg.graph.NodeBuilder;
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration;
 import de.fraunhofer.aisec.cpg.graph.declarations.ParamVariableDeclaration;
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression;
@@ -366,8 +366,7 @@ public class Util {
     for (int i = 0; i < signature.size(); i++) {
       Type targetType = signature.get(i);
       String paramName = generateParamName(i, targetType);
-      ParamVariableDeclaration param =
-          NodeBuilder.newMethodParameterIn(paramName, targetType, false, "");
+      ParamVariableDeclaration param = newMethodParameterIn(paramName, targetType, false, "");
       param.setInferred(true);
       param.setArgumentIndex(i);
       params.add(param);
