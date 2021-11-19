@@ -32,11 +32,8 @@ import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
+import java.util.*
 
-/*
- * TODO:
- *  - handle `resume` instruction
- */
 class CompressLLVMPass() : Pass() {
     override fun accept(t: TranslationResult?) {
         val flatAST = SubgraphWalker.flattenAST(t)
@@ -192,12 +189,12 @@ class CompressLLVMPass() : Pass() {
                 catchClauses.add(clauseToAdd)
                 caseBody.statements = caseBody.statements.drop(1)
                 catchClauses[0].body = caseBody
-                if (node.catchClauses[0] != null) {
+                if (node.catchClauses[0].parameter != null) {
                     catchClauses[0].setParameter(node.catchClauses[0].parameter!!)
                 } else {
                     val error =
                         NodeBuilder.newVariableDeclaration(
-                            "e${catchClauses[0].id}",
+                            "e_${node.catchClauses[0].name}",
                             UnknownType.getUnknownType(),
                             "",
                             true
@@ -219,7 +216,7 @@ class CompressLLVMPass() : Pass() {
                 if (node.catchClauses[0].parameter == null) {
                     val error =
                         NodeBuilder.newVariableDeclaration(
-                            "e${node.catchClauses[0].id}",
+                            "e_${node.catchClauses[0].name}",
                             UnknownType.getUnknownType(),
                             "",
                             true
@@ -233,7 +230,7 @@ class CompressLLVMPass() : Pass() {
                     if (catch.parameter == null) {
                         val error =
                             NodeBuilder.newVariableDeclaration(
-                                "e${catch.id}",
+                                "e_${catch.name}",
                                 UnknownType.getUnknownType(),
                                 "",
                                 true
@@ -263,9 +260,8 @@ class CompressLLVMPass() : Pass() {
      */
     private fun fixThrowStatementsForCatch(catch: CatchClause, flatAST: MutableList<Node>) {
         val reachableThrowNodes =
-            SubgraphWalker.getAllChildrenRecursively(catch.body).filter { n ->
-                (n as? UnaryOperator)?.operatorCode?.equals("throw") == true &&
-                    (n as? UnaryOperator)?.input == null
+            getAllChildrenRecursively(catch).filter { n ->
+                n is UnaryOperator && n.operatorCode?.equals("throw") == true && n.input == null
             }
         if (reachableThrowNodes.isNotEmpty() && catch.parameter != null) {
             val exceptionReference =
@@ -274,12 +270,32 @@ class CompressLLVMPass() : Pass() {
                     catch.parameter!!.type,
                     ""
                 )
+            exceptionReference.refersTo = catch.parameter
             reachableThrowNodes.forEach { n -> (n as UnaryOperator).input = exceptionReference }
         } else if (reachableThrowNodes.isNotEmpty()) {
             // We don't have the exception here, so we should remove the dummy throw
             // nodes
             flatAST.removeAll(reachableThrowNodes)
         }
+    }
+
+    /** Iterates through all nodes which are reachable from the catch clause */
+    private fun getAllChildrenRecursively(node: CatchClause?): Set<Node> {
+        if (node == null) return LinkedHashSet()
+        val worklist: Queue<Node> = LinkedList()
+        worklist.add(node.body)
+        val alreadyChecked = LinkedHashSet<Node>()
+        while (!worklist.isEmpty()) {
+            val currentNode = worklist.remove()
+            alreadyChecked.add(currentNode)
+            // We exclude sub-try statements as they would mess up with the results
+            val toAdd =
+                SubgraphWalker.getAstChildren(currentNode).filter { n ->
+                    !(n is TryStatement) && !alreadyChecked.contains(n) && !worklist.contains(n)
+                }
+            worklist.addAll(toAdd)
+        }
+        return alreadyChecked
     }
 
     override fun cleanup() {

@@ -69,22 +69,6 @@ public class SubgraphWalker {
     return new ArrayList<>();
   }
 
-  public static Set<Node> getAllChildrenRecursively(Node node) {
-    if (node == null) return new LinkedHashSet<>();
-
-    Queue<Node> worklist = new LinkedList<>();
-    worklist.add(node);
-    LinkedHashSet<Node> alreadyChecked = new LinkedHashSet<>();
-
-    while (!worklist.isEmpty()) {
-      Node currentNode = worklist.remove();
-      alreadyChecked.add(currentNode);
-      Set<Node> toAdd = getAstChildren(currentNode);
-      worklist.addAll(toAdd);
-    }
-    return alreadyChecked;
-  }
-
   /**
    * Calls handler function of all super-classes of the current node to get the AST children of the
    * node.

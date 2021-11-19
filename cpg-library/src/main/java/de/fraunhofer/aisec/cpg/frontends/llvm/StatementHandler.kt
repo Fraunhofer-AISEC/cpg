@@ -166,10 +166,11 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 return handleAtomicrmw(instr)
             }
             LLVMResume -> {
-                // Marks the end of a sequence of catch statements => Can't do anything here.
-                val empty = newEmptyStatement(lang.getCodeFromRawNode(instr))
-                empty.name = "resume"
-                return empty
+                // Resumes propagation of an existing (in-flight) exception whose unwinding was
+                // interrupted with a landingpad instruction.
+                val throwOperation =
+                    newUnaryOperator("throw", false, true, lang.getCodeFromRawNode(instr))
+                return throwOperation
             }
             LLVMLandingPad -> {
                 return handleLandingpad(instr)
@@ -1105,8 +1106,17 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             lang.scopeManager.leaveScope(tryStatement)
 
             val catchClause = newCatchClause(instrStr)
+            catchClause.name = catchLabel.name
             val gotoCatch = newGotoStatement(instrStr)
             gotoCatch.targetLabel = catchLabel
+            catchClause.setParameter(
+                newVariableDeclaration(
+                    "e_${catchLabel.name}",
+                    UnknownType.getUnknownType(),
+                    instrStr,
+                    true
+                )
+            )
             val catchCompoundStatement = newCompoundStatement(instrStr)
             catchCompoundStatement.addStatement(gotoCatch)
             catchClause.body = catchCompoundStatement
@@ -1144,7 +1154,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
 
         val except =
             newVariableDeclaration(
-                "e_${catchInstr.id}",
+                "e_${instr.address()}",
                 TypeParser.createFrom(
                     catchType,
                     false
