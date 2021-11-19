@@ -947,6 +947,91 @@ class LLVMIRLanguageFrontendTest {
                     LLVMIRLanguageFrontend.LLVM_EXTENSIONS
                 )
             }
+
+        val funcF = tu.byNameOrNull<FunctionDeclaration>("f")
+        assertNotNull(funcF)
+
+        val tryStatement = funcF.bodyOrNull<TryStatement>(0)
+        assertNotNull(tryStatement)
+        assertEquals(2, tryStatement.tryBlock.statements.size)
+        assertEquals(
+            "_CxxThrowException",
+            (tryStatement.tryBlock.statements[0] as? CallExpression)?.fqn
+        )
+        assertEquals(
+            "end",
+            (tryStatement.tryBlock.statements[1] as? GotoStatement)?.targetLabel?.name
+        )
+
+        assertEquals(1, tryStatement.catchClauses.size)
+        val catchSwitchExpr =
+            tryStatement.catchClauses[0].body.statements[0] as? DeclarationStatement
+        assertNotNull(catchSwitchExpr)
+        val catchswitchCall =
+            (catchSwitchExpr.singleDeclaration as? VariableDeclaration)?.initializer as?
+                CallExpression
+        assertNotNull(catchswitchCall)
+        assertEquals("llvm.catchswitch", catchswitchCall.fqn)
+        val ifExceptionMatches = tryStatement.catchClauses[0].body.statements[1] as? IfStatement
+        val matchesExceptionCall = ifExceptionMatches?.condition as? CallExpression
+        assertNotNull(matchesExceptionCall)
+        assertEquals("llvm.matchesCatchpad", matchesExceptionCall.fqn)
+        assertEquals(
+            catchSwitchExpr.singleDeclaration,
+            (matchesExceptionCall.arguments[0] as DeclaredReferenceExpression).refersTo
+        )
+        assertEquals(null, (matchesExceptionCall.arguments[1] as Literal<*>).value)
+        assertEquals(64L, (matchesExceptionCall.arguments[2] as Literal<*>).value as Long)
+        assertEquals(null, (matchesExceptionCall.arguments[3] as Literal<*>).value)
+
+        val catchBlock = ifExceptionMatches.thenStatement as? CompoundStatement
+        assertNotNull(catchBlock)
+        assertEquals(
+            "llvm.catchpad",
+            (((catchBlock.statements[0] as? DeclarationStatement)?.singleDeclaration as?
+                        VariableDeclaration)
+                    ?.initializer as?
+                    CallExpression)
+                ?.fqn
+        )
+
+        val innerTry = catchBlock.statements[1] as? TryStatement
+        assertNotNull(innerTry)
+        assertEquals(
+            "_CxxThrowException",
+            (innerTry.tryBlock.statements[0] as? CallExpression)?.fqn
+        )
+        assertEquals(
+            "try.cont",
+            (innerTry.tryBlock.statements[1] as? GotoStatement)?.targetLabel?.name
+        )
+
+        val innerCatchClause =
+            (innerTry.catchClauses[0].body.statements[1] as? IfStatement)?.thenStatement as?
+                CompoundStatement
+        assertNotNull(innerCatchClause)
+        assertEquals(
+            "llvm.catchpad",
+            (((innerCatchClause.statements[0] as? DeclarationStatement)?.singleDeclaration as?
+                        VariableDeclaration)
+                    ?.initializer as?
+                    CallExpression)
+                ?.fqn
+        )
+        assertEquals(
+            "try.cont",
+            (innerCatchClause.statements[1] as? GotoStatement)?.targetLabel?.name
+        )
+
+        val innerCatchThrows =
+            (innerTry.catchClauses[0].body.statements[1] as? IfStatement)?.elseStatement as?
+                UnaryOperator
+        assertNotNull(innerCatchThrows)
+        assertNotNull(innerCatchThrows.input)
+        assertSame(
+            innerTry.catchClauses[0].parameter,
+            (innerCatchThrows.input as? DeclaredReferenceExpression)?.refersTo
+        )
     }
 
     // TODO: Write test for calling a vararg function (e.g. printf). LLVM code snippets can already

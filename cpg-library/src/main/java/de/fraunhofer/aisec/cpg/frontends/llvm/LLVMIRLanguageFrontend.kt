@@ -221,7 +221,9 @@ class LLVMIRLanguageFrontend(config: TranslationConfiguration, scopeManager: Sco
 
     fun guessSlotNumber(valueRef: LLVMValueRef): String {
         val code = getCodeFromRawNode(valueRef)
-        return code?.split("=")?.firstOrNull()?.trim()?.trim('%') ?: ""
+        if (code?.contains("=") == true) {
+            return code.split("=").firstOrNull()?.trim()?.trim('%') ?: ""
+        } else return ""
     }
 }
 

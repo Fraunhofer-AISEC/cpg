@@ -302,7 +302,10 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                     lang.getCodeFromRawNode(instr),
                     false
                 )
-            matchesCatchpad.addArgument(parent, "parentCatchswitch")
+
+            val parentCatchSwitch = LLVMGetParentCatchSwitch(catchpad)
+            val catchswitch = lang.expressionHandler.handle(parentCatchSwitch) as Expression
+            matchesCatchpad.addArgument(catchswitch, "parentCatchswitch")
 
             for (i in 0 until catchOps) {
                 val arg = lang.getOperandValueAtIndex(catchpad, i)
@@ -331,6 +334,13 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 currentIfStatement = ifStatement
             }
             currentIfStatement!!.elseStatement = gotoStatement
+        } else {
+            // "unwind to caller". As we don't know where the control flow continues,
+            // the best model would be to throw the exception again. Here, we only know
+            // that we will throw something here but we don't know what. We have to fix
+            // that later once we know in which catch-block this statement is executed.
+            val throwOperation = newUnaryOperator("throw", false, true, nodeCode)
+            currentIfStatement!!.elseStatement = throwOperation
         }
 
         compoundStatement.addStatement(ifStatement)
@@ -397,7 +407,8 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
      */
     @FunctionReplacement(["llvm.va_arg"], "va_arg")
     private fun handleVaArg(instr: LLVMValueRef): Statement {
-        val callExpr = newCallExpression("llvm.va_arg", "llvm.va_arg", lang.getCodeFromRawNode(instr), false)
+        val callExpr =
+            newCallExpression("llvm.va_arg", "llvm.va_arg", lang.getCodeFromRawNode(instr), false)
         val operandName = lang.getOperandValueAtIndex(instr, 0)
         callExpr.addArgument(operandName)
         val expectedType = lang.typeOf(instr)
@@ -1133,7 +1144,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
 
         val except =
             newVariableDeclaration(
-                "e_${instr.address()}",
+                "e_${catchInstr.id}",
                 TypeParser.createFrom(
                     catchType,
                     false

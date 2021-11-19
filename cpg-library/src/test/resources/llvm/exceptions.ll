@@ -8,7 +8,7 @@ declare void @cleanO(i32*)
 define void @f() #0 personality i8* bitcast (i32 (...)* @__CxxFrameHandler3 to i8*) {
 entry:
   invoke void @_CxxThrowException(i8* null, %eh.ThrowInfo* null) #1
-          to label %unreachable unwind label %catch.dispatch
+          to label %end unwind label %catch.dispatch
 
 catch.dispatch:                                   ; preds = %entry
   %0 = catchswitch within none [label %catch] unwind to caller
@@ -16,7 +16,7 @@ catch.dispatch:                                   ; preds = %entry
 catch:                                            ; preds = %catch.dispatch
   %1 = catchpad within %0 [i8* null, i32 64, i8* null]
   invoke void @_CxxThrowException(i8* null, %eh.ThrowInfo* null) #1
-          to label %unreachable unwind label %catch.dispatch2
+          to label %try.cont unwind label %catch.dispatch2
 
 catch.dispatch2:                                  ; preds = %catch
   %2 = catchswitch within %1 [label %catch3] unwind to caller
@@ -26,13 +26,10 @@ catch3:                                           ; preds = %catch.dispatch2
   catchret from %3 to label %try.cont
 
 try.cont:                                         ; preds = %catch3
-  catchret from %1 to label %try.cont6
+  catchret from %1 to label %end
 
-try.cont6:                                        ; preds = %try.cont
+end:                                      ; preds = %catch, %entry, %try.cont
   ret void
-
-unreachable:                                      ; preds = %catch, %entry
-  unreachable
 }
 
 define i32 @g() nounwind personality i32 (...)* @__CxxFrameHandler3 {

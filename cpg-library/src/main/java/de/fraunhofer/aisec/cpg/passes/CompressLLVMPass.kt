@@ -26,13 +26,16 @@
 package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.TranslationResult
+import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.NodeBuilder
 import de.fraunhofer.aisec.cpg.graph.statements.*
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
+import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 
 /*
  * TODO:
  *  - handle `resume` instruction
- *  - improve catch expressions
  */
 class CompressLLVMPass() : Pass() {
     override fun accept(t: TranslationResult?) {
@@ -185,10 +188,60 @@ class CompressLLVMPass() : Pass() {
                 }*/
 
                 // This is the most generic one
-                catchClauses.add(caseBody.statements[0] as CatchClause)
+                val clauseToAdd = caseBody.statements[0] as CatchClause
+                catchClauses.add(clauseToAdd)
                 caseBody.statements = caseBody.statements.drop(1)
                 catchClauses[0].body = caseBody
+                if (node.catchClauses[0] != null) {
+                    catchClauses[0].setParameter(node.catchClauses[0].parameter!!)
+                } else {
+                    val error =
+                        NodeBuilder.newVariableDeclaration(
+                            "e${catchClauses[0].id}",
+                            UnknownType.getUnknownType(),
+                            "",
+                            true
+                        )
+                    catchClauses[0].setParameter(error)
+                }
                 node.catchClauses = catchClauses
+
+                fixThrowStatementsForCatch(node.catchClauses[0], flatAST)
+            } else if (node is TryStatement &&
+                    node.catchClauses.size == 1 &&
+                    node.catchClauses[0].body.statements[0] is CompoundStatement
+            ) {
+                // A compound statement which is wrapped in the catchClause. We can simply move it
+                // one layer up and make
+                // the compound statement the body of the catch clause.
+                val innerCompound = node.catchClauses[0].body.statements[0] as CompoundStatement
+                node.catchClauses[0].body.statements = innerCompound.statements
+                if (node.catchClauses[0].parameter == null) {
+                    val error =
+                        NodeBuilder.newVariableDeclaration(
+                            "e${node.catchClauses[0].id}",
+                            UnknownType.getUnknownType(),
+                            "",
+                            true
+                        )
+                    node.catchClauses[0].setParameter(error)
+                }
+
+                fixThrowStatementsForCatch(node.catchClauses[0], flatAST)
+            } else if (node is TryStatement && node.catchClauses.size > 0) {
+                for (catch in node.catchClauses) {
+                    if (catch.parameter == null) {
+                        val error =
+                            NodeBuilder.newVariableDeclaration(
+                                "e${catch.id}",
+                                UnknownType.getUnknownType(),
+                                "",
+                                true
+                            )
+                        catch.setParameter(error)
+                    }
+                    fixThrowStatementsForCatch(catch, flatAST)
+                }
             } else if (node is CompoundStatement) {
                 // Get the last statement in a CompoundStatement and replace a goto statement
                 // iff it is the only one jumping to the target
@@ -200,6 +253,32 @@ class CompressLLVMPass() : Pass() {
                     node.statements = newStatements
                 }
             }
+        }
+    }
+
+    /**
+     * Checks if a throw statement which is included in this catch block does not have a parameter.
+     * Those statements have been artificially added e.g. by a catchswitch and need to be filled
+     * now.
+     */
+    private fun fixThrowStatementsForCatch(catch: CatchClause, flatAST: MutableList<Node>) {
+        val reachableThrowNodes =
+            SubgraphWalker.getAllChildrenRecursively(catch.body).filter { n ->
+                (n as? UnaryOperator)?.operatorCode?.equals("throw") == true &&
+                    (n as? UnaryOperator)?.input == null
+            }
+        if (reachableThrowNodes.isNotEmpty() && catch.parameter != null) {
+            val exceptionReference =
+                NodeBuilder.newDeclaredReferenceExpression(
+                    catch.parameter!!.name,
+                    catch.parameter!!.type,
+                    ""
+                )
+            reachableThrowNodes.forEach { n -> (n as UnaryOperator).input = exceptionReference }
+        } else if (reachableThrowNodes.isNotEmpty()) {
+            // We don't have the exception here, so we should remove the dummy throw
+            // nodes
+            flatAST.removeAll(reachableThrowNodes)
         }
     }
 
