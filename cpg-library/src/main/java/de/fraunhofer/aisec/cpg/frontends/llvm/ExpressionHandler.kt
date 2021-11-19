@@ -26,7 +26,15 @@
 package de.fraunhofer.aisec.cpg.frontends.llvm
 
 import de.fraunhofer.aisec.cpg.frontends.Handler
-import de.fraunhofer.aisec.cpg.graph.NodeBuilder.*
+import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newArraySubscriptionExpression
+import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newCastExpression
+import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newConditionalExpression
+import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newConstructExpression
+import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newDeclaredReferenceExpression
+import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newInitializerListExpression
+import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newLiteral
+import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newMemberExpression
+import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newUnaryOperator
 import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
