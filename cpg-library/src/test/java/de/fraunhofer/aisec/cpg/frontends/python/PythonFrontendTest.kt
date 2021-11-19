@@ -894,4 +894,48 @@ class PythonFrontendTest : BaseTest() {
         assertNotNull(member)
         assertEquals("zzz", member.name)
     }
+
+    @Test
+    fun testIssue598() { // test for added functionality: "while" and "break"
+        val topLevel = Path.of("src", "test", "resources", "python")
+        val tu =
+            TestUtils.analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("issue598.py").toFile()),
+                topLevel,
+                true
+            ) {
+                it.registerLanguage(
+                    PythonLanguageFrontend::class.java,
+                    PythonLanguageFrontend.PY_EXTENSIONS
+                )
+            }
+
+        assertNotNull(tu)
+
+        val p =
+            tu.getDeclarationsByName("issue598", NamespaceDeclaration::class.java).iterator().next()
+        assertNotNull(p)
+
+        val main = p.getDeclarationsByName("main", FunctionDeclaration::class.java).first()
+        assertNotNull(main)
+
+        val mainBody = (main as? FunctionDeclaration)?.body as? CompoundStatement
+        assertNotNull(mainBody)
+
+        val whlStmt = mainBody.statements[3] as? WhileStatement
+        assertNotNull(whlStmt)
+
+        val whlBody = whlStmt.statement as? CompoundStatement
+        assertNotNull(whlBody)
+
+        val xDeclaration = whlBody.statements[0] as? DeclarationStatement
+        assertNotNull(xDeclaration)
+
+        val ifStmt = whlBody.statements[1] as? IfStatement
+        assertNotNull(ifStmt)
+
+        val brk = ifStmt.elseStatement as? CompoundStatement
+        assertNotNull(brk)
+        brk.statements[0] as? BreakStatement
+    }
 }

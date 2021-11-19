@@ -557,7 +557,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
                 )
                 for (includeString in includesStrings) {
                     val problems = problematicIncludes[includeString]
-                    val includeDeclaration = NodeBuilder.newIncludeDeclaration(includeString)
+                    val includeDeclaration = NodeBuilder.newIncludeDeclaration(includeString ?: "")
                     if (problems != null) {
                         includeDeclaration.addProblems(problems)
                     }
