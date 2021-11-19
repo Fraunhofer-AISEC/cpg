@@ -25,8 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.java;
 
-import static de.fraunhofer.aisec.cpg.graph.NodeBuilder.newAnnotation;
-import static de.fraunhofer.aisec.cpg.graph.NodeBuilder.newAnnotationMember;
+import static de.fraunhofer.aisec.cpg.graph.NodeBuilder.*;
 
 import com.github.javaparser.JavaParser;
 import com.github.javaparser.ParseResult;
@@ -57,12 +56,12 @@ import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
 import de.fraunhofer.aisec.cpg.frontends.TranslationException;
 import de.fraunhofer.aisec.cpg.graph.Annotation;
 import de.fraunhofer.aisec.cpg.graph.AnnotationMember;
-import de.fraunhofer.aisec.cpg.graph.NodeBuilder;
 import de.fraunhofer.aisec.cpg.graph.TypeManager;
 import de.fraunhofer.aisec.cpg.graph.declarations.IncludeDeclaration;
 import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration;
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration;
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser;
+import de.fraunhofer.aisec.cpg.graph.types.UnknownType;
 import de.fraunhofer.aisec.cpg.helpers.Benchmark;
 import de.fraunhofer.aisec.cpg.helpers.CommonPath;
 import de.fraunhofer.aisec.cpg.passes.scopes.Scope;
@@ -136,7 +135,7 @@ public class JavaLanguageFrontend extends LanguageFrontend {
 
       // starting point is always a translation declaration
       TranslationUnitDeclaration fileDeclaration =
-          NodeBuilder.newTranslationUnitDeclaration(file.toString(), context.toString());
+          newTranslationUnitDeclaration(file.toString(), context.toString());
       setCurrentTU(fileDeclaration);
 
       scopeManager.resetToGlobal(fileDeclaration);
@@ -145,8 +144,7 @@ public class JavaLanguageFrontend extends LanguageFrontend {
       NamespaceDeclaration namespaceDeclaration = null;
       if (packDecl != null) {
         namespaceDeclaration =
-            NodeBuilder.newNamespaceDeclaration(
-                packDecl.getName().asString(), getCodeFromRawNode(packDecl));
+            newNamespaceDeclaration(packDecl.getName().asString(), getCodeFromRawNode(packDecl));
         this.setCodeAndRegion(namespaceDeclaration, packDecl);
 
         scopeManager.addDeclaration(namespaceDeclaration);
@@ -160,7 +158,7 @@ public class JavaLanguageFrontend extends LanguageFrontend {
       }
 
       for (ImportDeclaration anImport : context.getImports()) {
-        IncludeDeclaration incl = NodeBuilder.newIncludeDeclaration(anImport.getNameAsString());
+        IncludeDeclaration incl = newIncludeDeclaration(anImport.getNameAsString());
         scopeManager.addDeclaration(incl);
       }
 
@@ -259,9 +257,27 @@ public class JavaLanguageFrontend extends LanguageFrontend {
       de.fraunhofer.aisec.cpg.graph.types.Type getTypeAsGoodAsPossible(
           NodeWithType<N, T> nodeWithType, ResolvedValueDeclaration resolved) {
     try {
+      var type = nodeWithType.getTypeAsString();
+
+      if (type.equals("var")) {
+        return UnknownType.getUnknownType();
+      }
+
       return TypeParser.createFrom(resolved.getType().describe(), true);
     } catch (RuntimeException | NoClassDefFoundError ex) {
       return getTypeFromImportIfPossible(nodeWithType.getType());
+    }
+  }
+
+  public de.fraunhofer.aisec.cpg.graph.types.Type getTypeAsGoodAsPossible(Type type) {
+    try {
+      if(type.toString().equals("var")) {
+        return UnknownType.getUnknownType();
+      }
+
+      return TypeParser.createFrom(type.resolve().describe(), true);
+    } catch (RuntimeException | NoClassDefFoundError ex) {
+      return getTypeFromImportIfPossible(type);
     }
   }
 
@@ -350,14 +366,6 @@ public class JavaLanguageFrontend extends LanguageFrontend {
       }
     }
     return null;
-  }
-
-  public de.fraunhofer.aisec.cpg.graph.types.Type getTypeAsGoodAsPossible(Type type) {
-    try {
-      return TypeParser.createFrom(type.resolve().describe(), true);
-    } catch (RuntimeException | NoClassDefFoundError ex) {
-      return getTypeFromImportIfPossible(type);
-    }
   }
 
   public <N extends Node, T extends Type>
