@@ -45,6 +45,10 @@ func (n *Node) SetCode(s string) error {
 	return (*jnigi.ObjectRef)(n).SetField(env, "code", NewString(s))
 }
 
+func (n *Node) SetComment(s string) error {
+	return (*jnigi.ObjectRef)(n).SetField(env, "comment", NewString(s))
+}
+
 func (n *Node) SetLocation(location *PhysicalLocation) error {
 	return (*jnigi.ObjectRef)(n).SetField(env, "location", (*jnigi.ObjectRef)(location))
 }

@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.BaseTest
 import de.fraunhofer.aisec.cpg.ExperimentalGolang
 import de.fraunhofer.aisec.cpg.TestUtils
 import de.fraunhofer.aisec.cpg.graph.body
+import de.fraunhofer.aisec.cpg.graph.bodyOrNull
 import de.fraunhofer.aisec.cpg.graph.byNameOrNull
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.statements.*
@@ -712,5 +713,54 @@ class GoLanguageFrontendTest : BaseTest() {
         val call = (a.singleDeclaration as? VariableDeclaration)?.initializer as? CallExpression
         assertNotNull(call)
         assertTrue(call.invokes.contains(newAwesome))
+    }
+
+    @Test
+    fun testComments() {
+        val topLevel = Path.of("src", "test", "resources", "golang")
+        val tu =
+            TestUtils.analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("comment.go").toFile()),
+                topLevel,
+                true
+            ) {
+                it.registerLanguage(
+                    GoLanguageFrontend::class.java,
+                    GoLanguageFrontend.GOLANG_EXTENSIONS
+                )
+            }
+
+        assertNotNull(tu)
+
+        val mainNamespace = tu.byNameOrNull<NamespaceDeclaration>("main")
+        assertNotNull(mainNamespace)
+
+        val main = mainNamespace.byNameOrNull<FunctionDeclaration>("main")
+        assertNotNull(main)
+        assertEquals("comment before function", main.comment)
+
+        val i = main.parameters.firstOrNull { it.name == "i" }
+        assertNotNull(i)
+        assertEquals("comment before parameter1", i.comment)
+
+        val j = main.parameters.firstOrNull { it.name == "j" }
+        assertNotNull(j)
+        assertEquals("comment before parameter2", j.comment)
+
+        var declStmt = main.bodyOrNull<DeclarationStatement>()
+        assertNotNull(declStmt)
+        assertEquals("comment before assignment", declStmt.comment)
+
+        declStmt = main.bodyOrNull(1)
+        assertNotNull(declStmt)
+        assertEquals("comment before declaration", declStmt.comment)
+
+        val s = mainNamespace.byNameOrNull<RecordDeclaration>("main.s")
+        assertNotNull(s)
+        assertEquals("comment before struct", s.comment)
+
+        val myField = s.getField("myField")
+        assertNotNull(myField)
+        assertNotNull("comment before field", myField.comment)
     }
 }
