@@ -42,8 +42,9 @@ var env *jnigi.Env
 
 type GoLanguageFrontend struct {
 	*jnigi.ObjectRef
-	File   *ast.File
-	Module *modfile.File
+	File       *ast.File
+	Module     *modfile.File
+	CommentMap ast.CommentMap
 }
 
 func InitEnv(e *jnigi.Env) {
