@@ -58,6 +58,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
+import de.fraunhofer.aisec.cpg.graph.types.PointerType
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import de.fraunhofer.aisec.cpg.helpers.annotations.FunctionReplacement
@@ -1176,9 +1177,22 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         }
         if (catchType.endsWith(" | ")) catchType = catchType.substring(0, catchType.length - 3)
 
+        var lhs = instr.name
+
+        // it could be an unnamed variable
+        if (lhs == "") {
+            lhs = lang.guessSlotNumber(instr)
+        }
+
+        val exceptionName =
+            if (lhs != "") {
+                lhs
+            } else {
+                "e_${instr.address()}"
+            }
         val except =
             newVariableDeclaration(
-                "e_${instr.address()}",
+                exceptionName,
                 TypeParser.createFrom(
                     catchType,
                     false
@@ -1186,6 +1200,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 lang.getCodeFromRawNode(instr),
                 false
             )
+        lang.bindingsCache["%${exceptionName}"] = except
         catchInstr.setParameter(except)
         catchInstr.name = catchType
         return catchInstr

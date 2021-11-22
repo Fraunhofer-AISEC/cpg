@@ -32,7 +32,6 @@ import de.fraunhofer.aisec.cpg.graph.TypeManager
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.LabelStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
@@ -61,12 +60,12 @@ class LLVMIRLanguageFrontend(config: TranslationConfiguration, scopeManager: Sco
 
     /**
      * This contains a cache binding between an LLVMValueRef (representing a variable) and its
-     * [VariableDeclaration] in the graph. We need this, because this way we can lookup and connect
-     * a [DeclaredReferenceExpression] to its [Declaration] already in the language frontend. This
-     * in turn is needed because of the local/global system we cannot rely on the
+     * [Declaration] in the graph. We need this, because this way we can lookup and connect a
+     * [DeclaredReferenceExpression] to its [Declaration] already in the language frontend. This in
+     * turn is needed because of the local/global system we cannot rely on the
      * [VariableUsageResolver].
      */
-    var bindingsCache = mutableMapOf<String, VariableDeclaration>()
+    var bindingsCache = mutableMapOf<String, Declaration>()
 
     companion object {
         @kotlin.jvm.JvmField var LLVM_EXTENSIONS: List<String> = listOf(".ll")
@@ -223,7 +222,10 @@ class LLVMIRLanguageFrontend(config: TranslationConfiguration, scopeManager: Sco
         val code = getCodeFromRawNode(valueRef)
         if (code?.contains("=") == true) {
             return code.split("=").firstOrNull()?.trim()?.trim('%') ?: ""
-        } else return ""
+        } else {
+            log.warn(code)
+            return ""
+        }
     }
 }
 

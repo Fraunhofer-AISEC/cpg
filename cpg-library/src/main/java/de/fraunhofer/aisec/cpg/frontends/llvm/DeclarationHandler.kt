@@ -112,18 +112,24 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
 
         var param = LLVMGetFirstParam(func)
         while (param != null) {
+            var name = param.name
+            var symbolName = param.symbolName
+
+            // The name could be empty because of an unnamed variable. In this we need to apply some
+            // dirty tricks to get its "name", unless we find a function that returns the slot
+            // number
+            if (name == "") {
+                name = lang.guessSlotNumber(param)
+                symbolName = "%$name"
+            }
+
             val type = lang.typeOf(param)
 
             // TODO: support variardic
-            val decl =
-                newMethodParameterIn(
-                    LLVMGetValueName(param).string,
-                    type,
-                    false,
-                    lang.getCodeFromRawNode(param)
-                )
+            val decl = newMethodParameterIn(name, type, false, lang.getCodeFromRawNode(param))
 
             lang.scopeManager.addDeclaration(decl)
+            lang.bindingsCache[symbolName] = decl
 
             param = LLVMGetNextParam(param)
         }

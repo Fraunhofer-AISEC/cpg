@@ -51,4 +51,61 @@ class ExamplesTest {
 
         assertNotNull(tu)
     }
+
+    @Test
+    fun testLiftedClient() {
+        val topLevel = Path.of("src", "test", "resources", "llvm", "examples", "retdec")
+
+        val tu =
+            TestUtils.analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("client.ll").toFile()),
+                topLevel,
+                true
+            ) {
+                it.registerLanguage(
+                    LLVMIRLanguageFrontend::class.java,
+                    LLVMIRLanguageFrontend.LLVM_EXTENSIONS
+                )
+            }
+
+        assertNotNull(tu)
+    }
+
+    @Test
+    fun testLiftedIf() {
+        val topLevel = Path.of("src", "test", "resources", "llvm", "examples", "retdec")
+
+        val tu =
+            TestUtils.analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("if.ll").toFile()),
+                topLevel,
+                true
+            ) {
+                it.registerLanguage(
+                    LLVMIRLanguageFrontend::class.java,
+                    LLVMIRLanguageFrontend.LLVM_EXTENSIONS
+                )
+            }
+
+        assertNotNull(tu)
+    }
+
+    @Test
+    fun testLiftedMain() {
+        val topLevel = Path.of("src", "test", "resources", "llvm", "examples", "retdec")
+
+        val tu =
+            TestUtils.analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("main.ll").toFile()),
+                topLevel,
+                true
+            ) {
+                it.registerLanguage(
+                    LLVMIRLanguageFrontend::class.java,
+                    LLVMIRLanguageFrontend.LLVM_EXTENSIONS
+                )
+            }
+
+        assertNotNull(tu)
+    }
 }
