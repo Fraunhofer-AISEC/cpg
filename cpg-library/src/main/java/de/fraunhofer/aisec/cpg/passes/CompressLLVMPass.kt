@@ -191,15 +191,6 @@ class CompressLLVMPass() : Pass() {
                 catchClauses[0].body = caseBody
                 if (node.catchClauses[0].parameter != null) {
                     catchClauses[0].setParameter(node.catchClauses[0].parameter!!)
-                } else {
-                    val error =
-                        NodeBuilder.newVariableDeclaration(
-                            "e_${node.catchClauses[0].name}",
-                            UnknownType.getUnknownType(),
-                            "",
-                            true
-                        )
-                    catchClauses[0].setParameter(error)
                 }
                 node.catchClauses = catchClauses
 
@@ -213,30 +204,9 @@ class CompressLLVMPass() : Pass() {
                 // the compound statement the body of the catch clause.
                 val innerCompound = node.catchClauses[0].body.statements[0] as CompoundStatement
                 node.catchClauses[0].body.statements = innerCompound.statements
-                if (node.catchClauses[0].parameter == null) {
-                    val error =
-                        NodeBuilder.newVariableDeclaration(
-                            "e_${node.catchClauses[0].name}",
-                            UnknownType.getUnknownType(),
-                            "",
-                            true
-                        )
-                    node.catchClauses[0].setParameter(error)
-                }
-
                 fixThrowStatementsForCatch(node.catchClauses[0], flatAST)
             } else if (node is TryStatement && node.catchClauses.size > 0) {
                 for (catch in node.catchClauses) {
-                    if (catch.parameter == null) {
-                        val error =
-                            NodeBuilder.newVariableDeclaration(
-                                "e_${catch.name}",
-                                UnknownType.getUnknownType(),
-                                "",
-                                true
-                            )
-                        catch.setParameter(error)
-                    }
                     fixThrowStatementsForCatch(catch, flatAST)
                 }
             } else if (node is CompoundStatement) {
@@ -263,7 +233,17 @@ class CompressLLVMPass() : Pass() {
             getAllChildrenRecursively(catch).filter { n ->
                 n is UnaryOperator && n.operatorCode?.equals("throw") == true && n.input == null
             }
-        if (reachableThrowNodes.isNotEmpty() && catch.parameter != null) {
+        if (reachableThrowNodes.isNotEmpty()) {
+            if (catch.parameter == null) {
+                val error =
+                    NodeBuilder.newVariableDeclaration(
+                        "e_${catch.name}",
+                        UnknownType.getUnknownType(),
+                        "",
+                        true
+                    )
+                catch.setParameter(error)
+            }
             val exceptionReference =
                 NodeBuilder.newDeclaredReferenceExpression(
                     catch.parameter!!.name,
@@ -272,10 +252,6 @@ class CompressLLVMPass() : Pass() {
                 )
             exceptionReference.refersTo = catch.parameter
             reachableThrowNodes.forEach { n -> (n as UnaryOperator).input = exceptionReference }
-        } else if (reachableThrowNodes.isNotEmpty()) {
-            // We don't have the exception here, so we should remove the dummy throw
-            // nodes
-            flatAST.removeAll(reachableThrowNodes)
         }
     }
 
