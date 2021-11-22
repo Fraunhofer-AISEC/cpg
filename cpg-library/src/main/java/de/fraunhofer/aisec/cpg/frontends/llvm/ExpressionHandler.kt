@@ -83,6 +83,7 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
             // it actually points to the instruction where this variable was defined. However,
             // we are only interested in its name and type.
             LLVMInstructionValueKind -> handleReference(value)
+            LLVMFunctionValueKind -> handleFunction(value)
             else -> {
                 log.info(
                     "Not handling value kind {} in handleValue yet. Falling back to the legacy way. Please change",
@@ -120,6 +121,15 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
                 }
             }
         }
+    }
+
+    /** Returns a [DeclaredReferenceExpression] for a function (pointer). */
+    private fun handleFunction(valueRef: LLVMValueRef): Expression {
+        return newDeclaredReferenceExpression(
+            valueRef.name,
+            lang.typeOf(valueRef),
+            lang.getCodeFromRawNode(valueRef)
+        )
     }
 
     /**
