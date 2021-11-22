@@ -223,7 +223,6 @@ class LLVMIRLanguageFrontend(config: TranslationConfiguration, scopeManager: Sco
         if (code?.contains("=") == true) {
             return code.split("=").firstOrNull()?.trim()?.trim('%') ?: ""
         } else {
-            log.warn(code)
             return ""
         }
     }
