@@ -427,7 +427,19 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
             } else {
                 // otherwise, this is a member field access, where the index denotes the n-th field
                 // in the structure
-                val record = (baseType as? ObjectType)?.recordDeclaration
+                var record = (baseType as? ObjectType)?.recordDeclaration
+
+                if (record == null) {
+                    record =
+                        lang.scopeManager
+                            .resolve<RecordDeclaration>(lang.scopeManager.globalScope, true) {
+                                it.name == baseType.typeName
+                            }
+                            .firstOrNull()
+                    if (record != null) {
+                        (baseType as? ObjectType)?.recordDeclaration = record
+                    }
+                }
 
                 // this should not happen at this point, we cannot continue
                 if (record == null) {
