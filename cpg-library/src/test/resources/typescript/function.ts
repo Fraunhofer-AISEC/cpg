@@ -1,8 +1,8 @@
 /*
- Blockcomment on a function
+ Block comment on a function
 */
 function someFunction(): Number {
-    // COmment on a variable
+    // Comment on a variable
     const i = someOtherFunction("hello");
 
     return i;

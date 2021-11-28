@@ -70,6 +70,8 @@ class TypeScriptLanguageFrontend(
     val expressionHandler = ExpressionHandler(this)
     val typeHandler = TypeHandler(this)
 
+    var currentFileContent: String? = null
+
     val mapper = jacksonObjectMapper()
 
     companion object {
@@ -96,6 +98,8 @@ class TypeScriptLanguageFrontend(
     }
 
     override fun parse(file: File): TranslationUnitDeclaration {
+        // Necessary to not read file contents several times
+        currentFileContent = file.readText()
         if (!parserFile.exists()) {
             throw TranslationException("parser.js not found @ ${parserFile.absolutePath}")
         }
@@ -109,23 +113,35 @@ class TypeScriptLanguageFrontend(
 
         val translationUnit = this.declarationHandler.handle(node) as TranslationUnitDeclaration
 
-        handleComments(file)
+        handleComments(file, translationUnit)
 
         return translationUnit
     }
 
-    fun handleComments(file: File) {
+    /**
+     * Extracts comments from the file with a regular expression and calls a best effort approach
+     * function that matches them to the closes ast node in the cpg.
+     * @param file The source of comments
+     * @param translationUnit the ast root node which children get the comments associated to
+     */
+    fun handleComments(file: File, translationUnit: TranslationUnitDeclaration) {
         // Extracting comments with regex, not ideal, as you need a context sensitive parser. but
         // the parser does not support comments so we
         // use a regex as best effort approach. We may recognize something as a comment, which is
         // acceptable.
         val matches: Sequence<MatchResult> =
-            Regex("(?:/\\*(?:[^*]|(?:\\*+[^*/]))*\\*+/)|(?://.*)").findAll(file.readText())
+            Regex("(?:/\\*(?:[^*]|(?:\\*+[^*/]))*\\*+/)|(?://.*)").findAll(currentFileContent!!)
         matches.toList().forEach {
             it.groups[0]?.let {
                 val comment = it.value
 
                 val commentRegion = getRegionFromStartEnd(file, it.range.first, it.range.last)
+
+                FrontendUtils.matchCommentToNode(
+                    comment,
+                    commentRegion ?: translationUnit.location!!.region,
+                    translationUnit
+                )
             }
         }
     }
@@ -140,12 +156,23 @@ class TypeScriptLanguageFrontend(
 
     override fun <T : Any?> getLocationFromRawNode(astNode: T): PhysicalLocation? {
         return if (astNode is TypeScriptNode) {
+
+            var position = astNode.location.pos
+
+            // Correcting node positions as we have noticed that the parser computes wrong
+            // positions, it is apparent when
+            // a files starts with a comment
+            astNode.code?.let {
+                val code = it
+                currentFileContent?.let { position = it.indexOf(code, position) }
+            }
+
+            // From here on the invariant 'astNode.location.end - position != astNode.code!!.length'
+            // should hold, only exceptions
+            // are mispositioned empty ast elements
+
             val region =
-                getRegionFromStartEnd(
-                    File(astNode.location.file),
-                    astNode.location.pos,
-                    astNode.location.end
-                )
+                getRegionFromStartEnd(File(astNode.location.file), position, astNode.location.end)
             return PhysicalLocation(File(astNode.location.file).toURI(), region ?: Region())
         } else {
             null
@@ -165,9 +192,8 @@ class TypeScriptLanguageFrontend(
         val startLine = lineNumberReader.lineNumber + 1
         lineNumberReader.skip((end - start).toLong())
         val endLine = lineNumberReader.lineNumber + 1
-        println("" + startLine + ":" + endLine)
 
-        val translationUnitSignature = file.readText()
+        val translationUnitSignature = currentFileContent!!
         val region: Region? =
             FrontendUtils.parseColumnPositionsFromFile(
                 translationUnitSignature,

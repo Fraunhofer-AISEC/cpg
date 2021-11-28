@@ -9,7 +9,7 @@ export interface UsersState {
     users: User[];
 }
 
-/* Komment on a record */
+/* Comment on a record */
 export class Users extends React.Component<{}, UsersState> {
 
     // Comment on constructor
