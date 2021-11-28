@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.frontends.typescript
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import de.fraunhofer.aisec.cpg.ExperimentalTypeScript
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
+import de.fraunhofer.aisec.cpg.frontends.FrontendUtils
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.Annotation
@@ -41,6 +42,8 @@ import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
 import java.io.File
 import java.io.File.createTempFile
+import java.io.FileReader
+import java.io.LineNumberReader
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
 import org.checkerframework.checker.nullness.qual.NonNull
@@ -104,7 +107,27 @@ class TypeScriptLanguageFrontend(
 
         TypeManager.getInstance().setLanguageFrontend(this)
 
-        return this.declarationHandler.handle(node) as TranslationUnitDeclaration
+        val translationUnit = this.declarationHandler.handle(node) as TranslationUnitDeclaration
+
+        handleComments(file)
+
+        return translationUnit
+    }
+
+    fun handleComments(file: File) {
+        // Extracting comments with regex, not ideal, as you need a context sensitive parser. but
+        // the parser does not support comments so we
+        // use a regex as best effort approach. We may recognize something as a comment, which is
+        // acceptable.
+        val matches: Sequence<MatchResult> =
+            Regex("(?:/\\*(?:[^*]|(?:\\*+[^*/]))*\\*+/)|(?://.*)").findAll(file.readText())
+        matches.toList().forEach {
+            it.groups[0]?.let {
+                val comment = it.value
+
+                val commentRegion = getRegionFromStartEnd(file, it.range.first, it.range.last)
+            }
+        }
     }
 
     override fun <T : Any?> getCodeFromRawNode(astNode: T): String? {
@@ -117,13 +140,43 @@ class TypeScriptLanguageFrontend(
 
     override fun <T : Any?> getLocationFromRawNode(astNode: T): PhysicalLocation? {
         return if (astNode is TypeScriptNode) {
-            // TODO: LSP region
-            val location = PhysicalLocation(File(astNode.location.file).toURI(), Region())
-
-            return location
+            val region =
+                getRegionFromStartEnd(
+                    File(astNode.location.file),
+                    astNode.location.pos,
+                    astNode.location.end
+                )
+            return PhysicalLocation(File(astNode.location.file).toURI(), region ?: Region())
         } else {
             null
         }
+    }
+
+    fun getRegionFromStartEnd(file: File, start: Int, end: Int): Region? {
+        val lineNumberReader: LineNumberReader = LineNumberReader(FileReader(file))
+
+        // Start and end position given by the parser are sometimes including spaces in front of the
+        // code ans
+        // loc.end - loc.pos > code.length. This is cause by the parser and results in unexpected
+        // but correct regions
+        // if the start and end positions are assumed to be correct.
+
+        lineNumberReader.skip(start.toLong())
+        val startLine = lineNumberReader.lineNumber + 1
+        lineNumberReader.skip((end - start).toLong())
+        val endLine = lineNumberReader.lineNumber + 1
+        println("" + startLine + ":" + endLine)
+
+        val translationUnitSignature = file.readText()
+        val region: Region? =
+            FrontendUtils.parseColumnPositionsFromFile(
+                translationUnitSignature,
+                end - start,
+                start,
+                startLine,
+                endLine
+            )
+        return region
     }
 
     override fun <S : Any?, T : Any?> setComment(s: S, ctx: T) {

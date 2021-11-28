@@ -9,8 +9,10 @@ export interface UsersState {
     users: User[];
 }
 
+/* Komment on a record */
 export class Users extends React.Component<{}, UsersState> {
 
+    // Comment on constructor
     constructor(props: {}) {
         super(props);
 
@@ -19,6 +21,9 @@ export class Users extends React.Component<{}, UsersState> {
         }
     }
 
+    /*
+        Multiline comment inside of a file
+    */
     public componentDidMount() {
 
     }
