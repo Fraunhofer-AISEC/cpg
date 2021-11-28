@@ -130,12 +130,20 @@ class TypeScriptLanguageFrontend(
         // use a regex as best effort approach. We may recognize something as a comment, which is
         // acceptable.
         val matches: Sequence<MatchResult> =
-            Regex("(?:/\\*(?:[^*]|(?:\\*+[^*/]))*\\*+/)|(?://.*)").findAll(currentFileContent!!)
+            Regex("(?:/\\*((?:[^*]|(?:\\*+[^*/]))*)\\*+/)|(?://(.*))").findAll(currentFileContent!!)
         matches.toList().forEach {
-            it.groups[0]?.let {
-                val comment = it.value
+            val groups = it.groups
+            groups[0]?.let {
+                var comment = it.value
 
                 val commentRegion = getRegionFromStartEnd(file, it.range.first, it.range.last)
+
+                // We only want the acutal comment text and therefore take the value we captured in
+                // the first, or second group.
+                // Only as a last resoort we take the entire match, although this should never ocure
+                comment = groups[1]?.value ?: (groups[2]?.value ?: it.value)
+
+                comment = comment.trimEnd('\n')
 
                 FrontendUtils.matchCommentToNode(
                     comment,
