@@ -794,4 +794,10 @@ object NodeBuilder {
         keyValue.code = code
         return keyValue
     }
+
+    fun newLambdaExpression(code: String?): LambdaExpression {
+        val lambda = LambdaExpression()
+        lambda.code = code
+        return lambda
+    }
 }

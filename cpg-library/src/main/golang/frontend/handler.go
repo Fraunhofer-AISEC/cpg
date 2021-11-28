@@ -146,7 +146,8 @@ func (this *GoLanguageFrontend) handleComments(node *cpg.Node, astNode ast.Node)
 	}
 
 	for _, c := range comments {
-		comment += c.Text()
+		text := strings.TrimRight(c.Text(), "\n")
+		comment += text
 	}
 
 	if comment != "" {
@@ -368,7 +369,6 @@ func (this *GoLanguageFrontend) handleTypeSpec(fset *token.FileSet, typeDecl *as
 	err := this.LogInfo("Type specifier with name %s and type (%T, %+v)", typeDecl.Name.Name, typeDecl.Type, typeDecl.Type)
 	if err != nil {
 		log.Fatal(err)
-
 	}
 
 	switch v := typeDecl.Type.(type) {
