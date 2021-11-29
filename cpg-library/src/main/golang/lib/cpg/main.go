@@ -89,7 +89,6 @@ func Java_de_fraunhofer_aisec_cpg_frontends_golang_GoLanguageFrontend_parseInter
 	}
 
 	goFrontend.CommentMap = ast.NewCommentMap(fset, file, file.Comments)
-(??)
 
 	_, err = goFrontend.ParseModule(string(topLevel.([]byte)))
 	if err != nil {
