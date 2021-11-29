@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.frontends.typescript
 
 import de.fraunhofer.aisec.cpg.ExperimentalTypeScript
 import de.fraunhofer.aisec.cpg.TestUtils
+import de.fraunhofer.aisec.cpg.graph.byNameOrNull
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
@@ -34,6 +35,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser
+import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import java.nio.file.Path
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -432,5 +434,60 @@ class TypescriptLanguageFrontendTest {
         assertEquals(2, func.parameters.size)
         assertEquals("req", func.parameters.firstOrNull()?.name)
         assertEquals("res", func.parameters[1].name)
+    }
+
+    @Test
+    fun testComments() {
+        val topLevel = Path.of("src", "test", "resources", "typescript")
+        val componentTU =
+            TestUtils.analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("component.tsx").toFile()),
+                topLevel,
+                true
+            ) {
+                it.registerLanguage(
+                    TypeScriptLanguageFrontend::class.java,
+                    TypeScriptLanguageFrontend.TYPESCRIPT_EXTENSIONS
+                )
+            }
+        val functionTu =
+            TestUtils.analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("function.ts").toFile()),
+                topLevel,
+                true
+            ) {
+                it.registerLanguage(
+                    TypeScriptLanguageFrontend::class.java,
+                    TypeScriptLanguageFrontend.TYPESCRIPT_EXTENSIONS
+                )
+            }
+
+        assertNotNull(componentTU)
+        assertNotNull(functionTu)
+
+        val users = componentTU.byNameOrNull<RecordDeclaration>("Users")
+        assertNotNull(users)
+        assertEquals("Comment on a record", users.comment)
+
+        val i = users.constructors.first()
+        assertNotNull(i)
+        assertEquals("Comment on constructor", i.comment)
+
+        val j = users.methods.firstOrNull { it.name == "componentDidMount" }
+        assertNotNull(j)
+        assertEquals("Multiline comment inside of a file", j.comment)
+
+        var function = functionTu.byNameOrNull<FunctionDeclaration>("someFunction")
+        assertNotNull(function)
+        assertEquals("Block comment on a function", function.comment)
+
+        var variableDeclaration =
+            SubgraphWalker.flattenAST(function).filterIsInstance<DeclarationStatement>().first()
+        assertNotNull(variableDeclaration)
+        assertEquals("Comment on a variable", variableDeclaration.comment)
+
+        function = functionTu.byNameOrNull<FunctionDeclaration>("someOtherFunction")
+        assertNotNull(function)
+        assertEquals("Comment on a Function", function.comment)
     }
 }
