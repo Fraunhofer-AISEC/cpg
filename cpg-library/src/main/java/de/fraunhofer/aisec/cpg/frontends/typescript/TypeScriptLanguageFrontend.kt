@@ -143,7 +143,9 @@ class TypeScriptLanguageFrontend(
                 // Only as a last resoort we take the entire match, although this should never ocure
                 comment = groups[1]?.value ?: (groups[2]?.value ?: it.value)
 
-                comment = comment.trimEnd('\n')
+                comment = comment.trim()
+
+                comment = comment.trim('\n')
 
                 FrontendUtils.matchCommentToNode(
                     comment,
