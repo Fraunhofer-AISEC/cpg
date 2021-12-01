@@ -6,7 +6,9 @@
 #include <openssl/err.h>
 
 SSL *ssl;
-std::string bad_ciphers = "MD5";
+//std::string bad_ciphers = "MD5";
+// for now, we intentially use a C string here to make our LLVM analyis a little bit easier
+const char* bad_ciphers = "MD5";
 
 int callMeBack(int preverify_ok, X509_STORE_CTX *x509_ctx);
 
@@ -14,7 +16,7 @@ int connectTo(std::string ip, int test) {
   int s = socket(AF_INET, SOCK_STREAM, 0);
 
   if(!s) {
-    printf("Error creating socket.\n");
+    printf("Error creating socket.\n");kl ,-
     return -1;
   }
 
@@ -56,7 +58,7 @@ void failSetInsecureCiphersSTL(SSL_CTX* ctx) {
 }
 
 void failSetInsecureCiphersGlobal(SSL_CTX* ctx) {
-  SSL_CTX_set_cipher_list(ctx, bad_ciphers.c_str());
+  SSL_CTX_set_cipher_list(ctx, bad_ciphers);
 }
 
 void failDisableVerificationLambda(SSL_CTX* ctx) {
