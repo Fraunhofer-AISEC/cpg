@@ -4,17 +4,17 @@ target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
 target triple = "arm64-apple-macosx11.0.0"
 
 %struct.ssl_st = type opaque
+%"class.std::__1::basic_ostream" = type { i32 (...)**, %"class.std::__1::basic_ios.base" }
+%"class.std::__1::basic_ios.base" = type <{ %"class.std::__1::ios_base", %"class.std::__1::basic_ostream"*, i32 }>
+%"class.std::__1::ios_base" = type { i32 (...)**, i32, i64, i64, i32, i32, i8*, i8*, void (i32, %"class.std::__1::ios_base"*, i32)**, i32*, i64, i64, i64*, i64, i64, i8**, i64, i64 }
+%"class.std::__1::locale::id" = type <{ %"struct.std::__1::once_flag", i32, [4 x i8] }>
+%"struct.std::__1::once_flag" = type { i64 }
 %"class.std::__1::basic_string" = type { %"class.std::__1::__compressed_pair" }
 %"class.std::__1::__compressed_pair" = type { %"struct.std::__1::__compressed_pair_elem" }
 %"struct.std::__1::__compressed_pair_elem" = type { %"struct.std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep" }
 %"struct.std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep" = type { %union.anon }
 %union.anon = type { %"struct.std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__long" }
 %"struct.std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__long" = type { i8*, i64, i64 }
-%"class.std::__1::basic_ostream" = type { i32 (...)**, %"class.std::__1::basic_ios.base" }
-%"class.std::__1::basic_ios.base" = type <{ %"class.std::__1::ios_base", %"class.std::__1::basic_ostream"*, i32 }>
-%"class.std::__1::ios_base" = type { i32 (...)**, i32, i64, i64, i32, i32, i8*, i8*, void (i32, %"class.std::__1::ios_base"*, i32)**, i32*, i64, i64, i64*, i64, i64, i8**, i64, i64 }
-%"class.std::__1::locale::id" = type <{ %"struct.std::__1::once_flag", i32, [4 x i8] }>
-%"struct.std::__1::once_flag" = type { i64 }
 %struct.sockaddr_in = type { i8, i8, i16, %struct.in_addr, [8 x i8] }
 %struct.in_addr = type { i32 }
 %struct.sockaddr = type { i8, i8, [14 x i8] }
@@ -25,15 +25,15 @@ target triple = "arm64-apple-macosx11.0.0"
 %struct.ossl_init_settings_st = type opaque
 %struct.ssl_method_st = type opaque
 %struct.ssl_cipher_st = type opaque
-%"struct.std::__1::__default_init_tag" = type { i8 }
-%"class.std::__1::__basic_string_common" = type { i8 }
-%"struct.std::__1::__compressed_pair_elem.0" = type { i8 }
-%"class.std::__1::allocator" = type { i8 }
 %"class.std::__1::basic_ostream<char, std::__1::char_traits<char> >::sentry" = type { i8, %"class.std::__1::basic_ostream"* }
 %"class.std::__1::ostreambuf_iterator" = type { %"class.std::__1::basic_streambuf"* }
 %"class.std::__1::basic_streambuf" = type { i32 (...)**, %"class.std::__1::locale", i8*, i8*, i8*, i8*, i8*, i8* }
 %"class.std::__1::locale" = type { %"class.std::__1::locale::__imp"* }
 %"class.std::__1::locale::__imp" = type opaque
+%"struct.std::__1::__default_init_tag" = type { i8 }
+%"class.std::__1::__basic_string_common" = type { i8 }
+%"struct.std::__1::__compressed_pair_elem.0" = type { i8 }
+%"class.std::__1::allocator" = type { i8 }
 %"struct.std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__short" = type { [23 x i8], %struct.anon }
 %struct.anon = type { i8 }
 %"struct.std::__1::iterator" = type { i8 }
@@ -42,9 +42,8 @@ target triple = "arm64-apple-macosx11.0.0"
 %"class.std::__1::__shared_count" = type { i32 (...)**, i64 }
 
 @ssl = global %struct.ssl_st* null, align 8
-@bad_ciphers = global %"class.std::__1::basic_string" zeroinitializer, align 8
 @.str = private unnamed_addr constant [4 x i8] c"MD5\00", align 1
-@__dso_handle = external hidden global i8
+@bad_ciphers = global i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i32 0, i32 0), align 8
 @.str.1 = private unnamed_addr constant [24 x i8] c"Error creating socket.\0A\00", align 1
 @_ZNSt3__14cerrE = external global %"class.std::__1::basic_ostream", align 8
 @.str.2 = private unnamed_addr constant [15 x i8] c"Connecting to \00", align 1
@@ -59,34 +58,9 @@ target triple = "arm64-apple-macosx11.0.0"
 @.str.9 = private unnamed_addr constant [36 x i8] c"Call to SSL_get_verify_result is ok\00", align 1
 @.str.10 = private unnamed_addr constant [37 x i8] c"SSL communication established using \00", align 1
 @_ZNSt3__15ctypeIcE2idE = external global %"class.std::__1::locale::id", align 8
-@llvm.global_ctors = appending global [1 x { i32, void ()*, i8* }] [{ i32, void ()*, i8* } { i32 65535, void ()* @_GLOBAL__sub_I_client.cpp, i8* null }]
-
-; Function Attrs: noinline ssp uwtable
-define internal void @__cxx_global_var_init() #0 section "__TEXT,__StaticInit,regular,pure_instructions" {
-  %1 = call %"class.std::__1::basic_string"* @_ZNSt3__112basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEEC1INS_9nullptr_tEEEPKc(%"class.std::__1::basic_string"* @bad_ciphers, i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i64 0, i64 0))
-  %2 = call i32 @__cxa_atexit(void (i8*)* bitcast (%"class.std::__1::basic_string"* (%"class.std::__1::basic_string"*)* @_ZNSt3__112basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEED1Ev to void (i8*)*), i8* bitcast (%"class.std::__1::basic_string"* @bad_ciphers to i8*), i8* @__dso_handle) #3
-  ret void
-}
 
 ; Function Attrs: noinline optnone ssp uwtable
-define internal %"class.std::__1::basic_string"* @_ZNSt3__112basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEEC1INS_9nullptr_tEEEPKc(%"class.std::__1::basic_string"* returned %0, i8* %1) unnamed_addr #1 align 2 {
-  %3 = alloca %"class.std::__1::basic_string"*, align 8
-  %4 = alloca i8*, align 8
-  store %"class.std::__1::basic_string"* %0, %"class.std::__1::basic_string"** %3, align 8
-  store i8* %1, i8** %4, align 8
-  %5 = load %"class.std::__1::basic_string"*, %"class.std::__1::basic_string"** %3, align 8
-  %6 = load i8*, i8** %4, align 8
-  %7 = call %"class.std::__1::basic_string"* @_ZNSt3__112basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEEC2INS_9nullptr_tEEEPKc(%"class.std::__1::basic_string"* %5, i8* %6)
-  ret %"class.std::__1::basic_string"* %5
-}
-
-declare %"class.std::__1::basic_string"* @_ZNSt3__112basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEED1Ev(%"class.std::__1::basic_string"* returned) unnamed_addr #2
-
-; Function Attrs: nounwind
-declare i32 @__cxa_atexit(void (i8*)*, i8*, i8*) #3
-
-; Function Attrs: noinline optnone ssp uwtable
-define i32 @_Z9connectToNSt3__112basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEEEi(%"class.std::__1::basic_string"* %0, i32 %1) #1 {
+define i32 @_Z9connectToNSt3__112basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEEEi(%"class.std::__1::basic_string"* %0, i32 %1) #0 {
   %3 = alloca i32, align 4
   %4 = alloca i32, align 4
   %5 = alloca i32, align 4
@@ -113,7 +87,7 @@ define i32 @_Z9connectToNSt3__112basic_stringIcNS_11char_traitsIcEENS_9allocator
   call void @llvm.memset.p0i8.i64(i8* align 4 %18, i8 0, i64 16, i1 false)
   %19 = getelementptr inbounds %struct.sockaddr_in, %struct.sockaddr_in* %6, i32 0, i32 1
   store i8 2, i8* %19, align 1
-  %20 = call i8* @_ZNKSt3__112basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE5c_strEv(%"class.std::__1::basic_string"* %0) #3
+  %20 = call i8* @_ZNKSt3__112basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE5c_strEv(%"class.std::__1::basic_string"* %0) #8
   %21 = call i32 @inet_addr(i8* %20)
   %22 = getelementptr inbounds %struct.sockaddr_in, %struct.sockaddr_in* %6, i32 0, i32 3
   %23 = getelementptr inbounds %struct.in_addr, %struct.in_addr* %22, i32 0, i32 0
@@ -143,12 +117,12 @@ define i32 @_Z9connectToNSt3__112basic_stringIcNS_11char_traitsIcEENS_9allocator
   ret i32 %35
 }
 
-declare i32 @socket(i32, i32, i32) #2
+declare i32 @socket(i32, i32, i32) #1
 
-declare i32 @printf(i8*, ...) #2
+declare i32 @printf(i8*, ...) #1
 
 ; Function Attrs: noinline optnone ssp uwtable
-define linkonce_odr nonnull align 8 dereferenceable(8) %"class.std::__1::basic_ostream"* @_ZNSt3__1lsINS_11char_traitsIcEEEERNS_13basic_ostreamIcT_EES6_PKc(%"class.std::__1::basic_ostream"* nonnull align 8 dereferenceable(8) %0, i8* %1) #1 {
+define linkonce_odr nonnull align 8 dereferenceable(8) %"class.std::__1::basic_ostream"* @_ZNSt3__1lsINS_11char_traitsIcEEEERNS_13basic_ostreamIcT_EES6_PKc(%"class.std::__1::basic_ostream"* nonnull align 8 dereferenceable(8) %0, i8* %1) #0 {
   %3 = alloca %"class.std::__1::basic_ostream"*, align 8
   %4 = alloca i8*, align 8
   store %"class.std::__1::basic_ostream"* %0, %"class.std::__1::basic_ostream"** %3, align 8
@@ -156,28 +130,28 @@ define linkonce_odr nonnull align 8 dereferenceable(8) %"class.std::__1::basic_o
   %5 = load %"class.std::__1::basic_ostream"*, %"class.std::__1::basic_ostream"** %3, align 8
   %6 = load i8*, i8** %4, align 8
   %7 = load i8*, i8** %4, align 8
-  %8 = call i64 @_ZNSt3__111char_traitsIcE6lengthEPKc(i8* %7) #3
+  %8 = call i64 @_ZNSt3__111char_traitsIcE6lengthEPKc(i8* %7) #8
   %9 = call nonnull align 8 dereferenceable(8) %"class.std::__1::basic_ostream"* @_ZNSt3__124__put_character_sequenceIcNS_11char_traitsIcEEEERNS_13basic_ostreamIT_T0_EES7_PKS4_m(%"class.std::__1::basic_ostream"* nonnull align 8 dereferenceable(8) %5, i8* %6, i64 %8)
   ret %"class.std::__1::basic_ostream"* %9
 }
 
 ; Function Attrs: noinline optnone ssp uwtable
-define linkonce_odr nonnull align 8 dereferenceable(8) %"class.std::__1::basic_ostream"* @_ZNSt3__1lsIcNS_11char_traitsIcEENS_9allocatorIcEEEERNS_13basic_ostreamIT_T0_EES9_RKNS_12basic_stringIS6_S7_T1_EE(%"class.std::__1::basic_ostream"* nonnull align 8 dereferenceable(8) %0, %"class.std::__1::basic_string"* nonnull align 8 dereferenceable(24) %1) #1 {
+define linkonce_odr nonnull align 8 dereferenceable(8) %"class.std::__1::basic_ostream"* @_ZNSt3__1lsIcNS_11char_traitsIcEENS_9allocatorIcEEEERNS_13basic_ostreamIT_T0_EES9_RKNS_12basic_stringIS6_S7_T1_EE(%"class.std::__1::basic_ostream"* nonnull align 8 dereferenceable(8) %0, %"class.std::__1::basic_string"* nonnull align 8 dereferenceable(24) %1) #0 {
   %3 = alloca %"class.std::__1::basic_ostream"*, align 8
   %4 = alloca %"class.std::__1::basic_string"*, align 8
   store %"class.std::__1::basic_ostream"* %0, %"class.std::__1::basic_ostream"** %3, align 8
   store %"class.std::__1::basic_string"* %1, %"class.std::__1::basic_string"** %4, align 8
   %5 = load %"class.std::__1::basic_ostream"*, %"class.std::__1::basic_ostream"** %3, align 8
   %6 = load %"class.std::__1::basic_string"*, %"class.std::__1::basic_string"** %4, align 8
-  %7 = call i8* @_ZNKSt3__112basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE4dataEv(%"class.std::__1::basic_string"* %6) #3
+  %7 = call i8* @_ZNKSt3__112basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE4dataEv(%"class.std::__1::basic_string"* %6) #8
   %8 = load %"class.std::__1::basic_string"*, %"class.std::__1::basic_string"** %4, align 8
-  %9 = call i64 @_ZNKSt3__112basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE4sizeEv(%"class.std::__1::basic_string"* %8) #3
+  %9 = call i64 @_ZNKSt3__112basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE4sizeEv(%"class.std::__1::basic_string"* %8) #8
   %10 = call nonnull align 8 dereferenceable(8) %"class.std::__1::basic_ostream"* @_ZNSt3__124__put_character_sequenceIcNS_11char_traitsIcEEEERNS_13basic_ostreamIT_T0_EES7_PKS4_m(%"class.std::__1::basic_ostream"* nonnull align 8 dereferenceable(8) %5, i8* %7, i64 %9)
   ret %"class.std::__1::basic_ostream"* %10
 }
 
 ; Function Attrs: noinline optnone ssp uwtable
-define internal nonnull align 8 dereferenceable(8) %"class.std::__1::basic_ostream"* @_ZNSt3__113basic_ostreamIcNS_11char_traitsIcEEElsEPFRS3_S4_E(%"class.std::__1::basic_ostream"* %0, %"class.std::__1::basic_ostream"* (%"class.std::__1::basic_ostream"*)* %1) #1 align 2 {
+define internal nonnull align 8 dereferenceable(8) %"class.std::__1::basic_ostream"* @_ZNSt3__113basic_ostreamIcNS_11char_traitsIcEEElsEPFRS3_S4_E(%"class.std::__1::basic_ostream"* %0, %"class.std::__1::basic_ostream"* (%"class.std::__1::basic_ostream"*)* %1) #0 align 2 {
   %3 = alloca %"class.std::__1::basic_ostream"*, align 8
   %4 = alloca %"class.std::__1::basic_ostream"* (%"class.std::__1::basic_ostream"*)*, align 8
   store %"class.std::__1::basic_ostream"* %0, %"class.std::__1::basic_ostream"** %3, align 8
@@ -189,7 +163,7 @@ define internal nonnull align 8 dereferenceable(8) %"class.std::__1::basic_ostre
 }
 
 ; Function Attrs: noinline optnone ssp uwtable
-define linkonce_odr nonnull align 8 dereferenceable(8) %"class.std::__1::basic_ostream"* @_ZNSt3__14endlIcNS_11char_traitsIcEEEERNS_13basic_ostreamIT_T0_EES7_(%"class.std::__1::basic_ostream"* nonnull align 8 dereferenceable(8) %0) #1 {
+define linkonce_odr nonnull align 8 dereferenceable(8) %"class.std::__1::basic_ostream"* @_ZNSt3__14endlIcNS_11char_traitsIcEEEERNS_13basic_ostreamIT_T0_EES7_(%"class.std::__1::basic_ostream"* nonnull align 8 dereferenceable(8) %0) #0 {
   %2 = alloca %"class.std::__1::basic_ostream"*, align 8
   store %"class.std::__1::basic_ostream"* %0, %"class.std::__1::basic_ostream"** %2, align 8
   %3 = load %"class.std::__1::basic_ostream"*, %"class.std::__1::basic_ostream"** %2, align 8
@@ -211,23 +185,23 @@ define linkonce_odr nonnull align 8 dereferenceable(8) %"class.std::__1::basic_o
 }
 
 ; Function Attrs: argmemonly nounwind willreturn writeonly
-declare void @llvm.memset.p0i8.i64(i8* nocapture writeonly, i8, i64, i1 immarg) #4
+declare void @llvm.memset.p0i8.i64(i8* nocapture writeonly, i8, i64, i1 immarg) #2
 
-declare i32 @inet_addr(i8*) #2
+declare i32 @inet_addr(i8*) #1
 
 ; Function Attrs: noinline nounwind optnone ssp uwtable
-define internal i8* @_ZNKSt3__112basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE5c_strEv(%"class.std::__1::basic_string"* %0) #5 align 2 {
+define internal i8* @_ZNKSt3__112basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE5c_strEv(%"class.std::__1::basic_string"* %0) #3 align 2 {
   %2 = alloca %"class.std::__1::basic_string"*, align 8
   store %"class.std::__1::basic_string"* %0, %"class.std::__1::basic_string"** %2, align 8
   %3 = load %"class.std::__1::basic_string"*, %"class.std::__1::basic_string"** %2, align 8
-  %4 = call i8* @_ZNKSt3__112basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE4dataEv(%"class.std::__1::basic_string"* %3) #3
+  %4 = call i8* @_ZNKSt3__112basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE4dataEv(%"class.std::__1::basic_string"* %3) #8
   ret i8* %4
 }
 
-declare i32 @"\01_connect"(i32, %struct.sockaddr*, i32) #2
+declare i32 @"\01_connect"(i32, %struct.sockaddr*, i32) #1
 
 ; Function Attrs: noinline optnone ssp uwtable
-define void @_Z23failDisableVerificationP10ssl_ctx_st(%struct.ssl_ctx_st* %0) #1 {
+define void @_Z23failDisableVerificationP10ssl_ctx_st(%struct.ssl_ctx_st* %0) #0 {
   %2 = alloca %struct.ssl_ctx_st*, align 8
   store %struct.ssl_ctx_st* %0, %struct.ssl_ctx_st** %2, align 8
   %3 = load %struct.ssl_ctx_st*, %struct.ssl_ctx_st** %2, align 8
@@ -235,10 +209,10 @@ define void @_Z23failDisableVerificationP10ssl_ctx_st(%struct.ssl_ctx_st* %0) #1
   ret void
 }
 
-declare void @SSL_CTX_set_verify(%struct.ssl_ctx_st*, i32, i32 (i32, %struct.x509_store_ctx_st*)*) #2
+declare void @SSL_CTX_set_verify(%struct.ssl_ctx_st*, i32, i32 (i32, %struct.x509_store_ctx_st*)*) #1
 
 ; Function Attrs: noinline nounwind optnone ssp uwtable
-define i32 @_Z10callMeBackiP17x509_store_ctx_st(i32 %0, %struct.x509_store_ctx_st* %1) #5 {
+define i32 @_Z10callMeBackiP17x509_store_ctx_st(i32 %0, %struct.x509_store_ctx_st* %1) #3 {
   %3 = alloca i32, align 4
   %4 = alloca %struct.x509_store_ctx_st*, align 8
   store i32 %0, i32* %3, align 4
@@ -247,7 +221,7 @@ define i32 @_Z10callMeBackiP17x509_store_ctx_st(i32 %0, %struct.x509_store_ctx_s
 }
 
 ; Function Attrs: noinline optnone ssp uwtable
-define void @_Z22failSetInsecureCiphersP10ssl_ctx_st(%struct.ssl_ctx_st* %0) #1 {
+define void @_Z22failSetInsecureCiphersP10ssl_ctx_st(%struct.ssl_ctx_st* %0) #0 {
   %2 = alloca %struct.ssl_ctx_st*, align 8
   %3 = alloca [9 x i8], align 1
   store %struct.ssl_ctx_st* %0, %struct.ssl_ctx_st** %2, align 8
@@ -260,12 +234,12 @@ define void @_Z22failSetInsecureCiphersP10ssl_ctx_st(%struct.ssl_ctx_st* %0) #1 
 }
 
 ; Function Attrs: argmemonly nounwind willreturn
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* noalias nocapture writeonly, i8* noalias nocapture readonly, i64, i1 immarg) #6
+declare void @llvm.memcpy.p0i8.p0i8.i64(i8* noalias nocapture writeonly, i8* noalias nocapture readonly, i64, i1 immarg) #4
 
-declare i32 @SSL_CTX_set_cipher_list(%struct.ssl_ctx_st*, i8*) #2
+declare i32 @SSL_CTX_set_cipher_list(%struct.ssl_ctx_st*, i8*) #1
 
 ; Function Attrs: noinline optnone ssp uwtable
-define void @_Z29failSetInsecureCiphersLiteralP10ssl_ctx_st(%struct.ssl_ctx_st* %0) #1 {
+define void @_Z29failSetInsecureCiphersLiteralP10ssl_ctx_st(%struct.ssl_ctx_st* %0) #0 {
   %2 = alloca %struct.ssl_ctx_st*, align 8
   store %struct.ssl_ctx_st* %0, %struct.ssl_ctx_st** %2, align 8
   %3 = load %struct.ssl_ctx_st*, %struct.ssl_ctx_st** %2, align 8
@@ -274,7 +248,7 @@ define void @_Z29failSetInsecureCiphersLiteralP10ssl_ctx_st(%struct.ssl_ctx_st* 
 }
 
 ; Function Attrs: noinline optnone ssp uwtable
-define void @_Z25failSetInsecureCiphersSTLP10ssl_ctx_st(%struct.ssl_ctx_st* %0) #1 personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define void @_Z25failSetInsecureCiphersSTLP10ssl_ctx_st(%struct.ssl_ctx_st* %0) #0 personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
   %2 = alloca %struct.ssl_ctx_st*, align 8
   %3 = alloca %"class.std::__1::basic_string", align 8
   %4 = alloca i8*, align 8
@@ -282,7 +256,7 @@ define void @_Z25failSetInsecureCiphersSTLP10ssl_ctx_st(%struct.ssl_ctx_st* %0) 
   store %struct.ssl_ctx_st* %0, %struct.ssl_ctx_st** %2, align 8
   %6 = call %"class.std::__1::basic_string"* @_ZNSt3__112basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEEC1INS_9nullptr_tEEEPKc(%"class.std::__1::basic_string"* %3, i8* getelementptr inbounds ([9 x i8], [9 x i8]* @.str.5, i64 0, i64 0))
   %7 = load %struct.ssl_ctx_st*, %struct.ssl_ctx_st** %2, align 8
-  %8 = call i8* @_ZNKSt3__112basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE5c_strEv(%"class.std::__1::basic_string"* %3) #3
+  %8 = call i8* @_ZNKSt3__112basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE5c_strEv(%"class.std::__1::basic_string"* %3) #8
   %9 = invoke i32 @SSL_CTX_set_cipher_list(%struct.ssl_ctx_st* %7, i8* %8)
           to label %10 unwind label %12
 
@@ -314,16 +288,30 @@ define void @_Z25failSetInsecureCiphersSTLP10ssl_ctx_st(%struct.ssl_ctx_st* %0) 
   %24 = landingpad { i8*, i32 }
           catch i8* null
   %25 = extractvalue { i8*, i32 } %24, 0
-  call void @__clang_call_terminate(i8* %25) #10
+  call void @__clang_call_terminate(i8* %25) #9
   unreachable
+}
+
+; Function Attrs: noinline optnone ssp uwtable
+define internal %"class.std::__1::basic_string"* @_ZNSt3__112basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEEC1INS_9nullptr_tEEEPKc(%"class.std::__1::basic_string"* returned %0, i8* %1) unnamed_addr #0 align 2 {
+  %3 = alloca %"class.std::__1::basic_string"*, align 8
+  %4 = alloca i8*, align 8
+  store %"class.std::__1::basic_string"* %0, %"class.std::__1::basic_string"** %3, align 8
+  store i8* %1, i8** %4, align 8
+  %5 = load %"class.std::__1::basic_string"*, %"class.std::__1::basic_string"** %3, align 8
+  %6 = load i8*, i8** %4, align 8
+  %7 = call %"class.std::__1::basic_string"* @_ZNSt3__112basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEEC2INS_9nullptr_tEEEPKc(%"class.std::__1::basic_string"* %5, i8* %6)
+  ret %"class.std::__1::basic_string"* %5
 }
 
 declare i32 @__gxx_personality_v0(...)
 
+declare %"class.std::__1::basic_string"* @_ZNSt3__112basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEED1Ev(%"class.std::__1::basic_string"* returned) unnamed_addr #1
+
 ; Function Attrs: noinline noreturn nounwind
-define linkonce_odr hidden void @__clang_call_terminate(i8* %0) #7 {
-  %2 = call i8* @__cxa_begin_catch(i8* %0) #3
-  call void @_ZSt9terminatev() #10
+define linkonce_odr hidden void @__clang_call_terminate(i8* %0) #5 {
+  %2 = call i8* @__cxa_begin_catch(i8* %0) #8
+  call void @_ZSt9terminatev() #9
   unreachable
 }
 
@@ -332,24 +320,24 @@ declare i8* @__cxa_begin_catch(i8*)
 declare void @_ZSt9terminatev()
 
 ; Function Attrs: noinline optnone ssp uwtable
-define void @_Z28failSetInsecureCiphersGlobalP10ssl_ctx_st(%struct.ssl_ctx_st* %0) #1 {
+define void @_Z28failSetInsecureCiphersGlobalP10ssl_ctx_st(%struct.ssl_ctx_st* %0) #0 {
   %2 = alloca %struct.ssl_ctx_st*, align 8
   store %struct.ssl_ctx_st* %0, %struct.ssl_ctx_st** %2, align 8
   %3 = load %struct.ssl_ctx_st*, %struct.ssl_ctx_st** %2, align 8
-  %4 = call i8* @_ZNKSt3__112basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE5c_strEv(%"class.std::__1::basic_string"* @bad_ciphers) #3
+  %4 = load i8*, i8** @bad_ciphers, align 8
   %5 = call i32 @SSL_CTX_set_cipher_list(%struct.ssl_ctx_st* %3, i8* %4)
   ret void
 }
 
 ; Function Attrs: noinline nounwind optnone ssp uwtable
-define void @_Z29failDisableVerificationLambdaP10ssl_ctx_st(%struct.ssl_ctx_st* %0) #5 {
+define void @_Z29failDisableVerificationLambdaP10ssl_ctx_st(%struct.ssl_ctx_st* %0) #3 {
   %2 = alloca %struct.ssl_ctx_st*, align 8
   store %struct.ssl_ctx_st* %0, %struct.ssl_ctx_st** %2, align 8
   ret void
 }
 
 ; Function Attrs: noinline optnone ssp uwtable
-define %struct.ssl_ctx_st* @_Z14initTLSContextv() #1 {
+define %struct.ssl_ctx_st* @_Z14initTLSContextv() #0 {
   %1 = alloca %struct.ssl_ctx_st*, align 8
   %2 = alloca %"struct.std::__1::nullptr_t", align 8
   %3 = call i32 @OPENSSL_init_ssl(i64 0, %struct.ossl_init_settings_st* null)
@@ -378,14 +366,14 @@ define %struct.ssl_ctx_st* @_Z14initTLSContextv() #1 {
   ret %struct.ssl_ctx_st* %17
 }
 
-declare i32 @OPENSSL_init_ssl(i64, %struct.ossl_init_settings_st*) #2
+declare i32 @OPENSSL_init_ssl(i64, %struct.ossl_init_settings_st*) #1
 
-declare %struct.ssl_ctx_st* @SSL_CTX_new(%struct.ssl_method_st*) #2
+declare %struct.ssl_ctx_st* @SSL_CTX_new(%struct.ssl_method_st*) #1
 
-declare %struct.ssl_method_st* @TLSv1_2_client_method() #2
+declare %struct.ssl_method_st* @TLSv1_2_client_method() #1
 
 ; Function Attrs: noinline optnone ssp uwtable
-define internal i64 @_ZNSt3__1L15__get_nullptr_tEv() #1 {
+define internal i64 @_ZNSt3__1L15__get_nullptr_tEv() #0 {
   %1 = alloca %"struct.std::__1::nullptr_t", align 8
   %2 = call %"struct.std::__1::nullptr_t"* @_ZNSt3__19nullptr_tC1EMNS0_5__natEi(%"struct.std::__1::nullptr_t"* %1, i64 -1)
   %3 = getelementptr inbounds %"struct.std::__1::nullptr_t", %"struct.std::__1::nullptr_t"* %1, i32 0, i32 0
@@ -395,7 +383,7 @@ define internal i64 @_ZNSt3__1L15__get_nullptr_tEv() #1 {
 }
 
 ; Function Attrs: noinline nounwind optnone ssp uwtable
-define internal i32 (i32, %struct.x509_store_ctx_st*)* @_ZNKSt3__19nullptr_tcvPT_IFiiP17x509_store_ctx_stEEEv(%"struct.std::__1::nullptr_t"* %0) #5 align 2 {
+define internal i32 (i32, %struct.x509_store_ctx_st*)* @_ZNKSt3__19nullptr_tcvPT_IFiiP17x509_store_ctx_stEEEv(%"struct.std::__1::nullptr_t"* %0) #3 align 2 {
   %2 = alloca %"struct.std::__1::nullptr_t"*, align 8
   store %"struct.std::__1::nullptr_t"* %0, %"struct.std::__1::nullptr_t"** %2, align 8
   %3 = load %"struct.std::__1::nullptr_t"*, %"struct.std::__1::nullptr_t"** %2, align 8
@@ -403,7 +391,7 @@ define internal i32 (i32, %struct.x509_store_ctx_st*)* @_ZNKSt3__19nullptr_tcvPT
 }
 
 ; Function Attrs: noinline norecurse optnone ssp uwtable
-define i32 @main(i32 %0, i8** %1) #8 personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define i32 @main(i32 %0, i8** %1) #6 personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
   %3 = alloca i32, align 4
   %4 = alloca i32, align 4
   %5 = alloca i8**, align 8
@@ -547,36 +535,36 @@ define i32 @main(i32 %0, i8** %1) #8 personality i8* bitcast (i32 (...)* @__gxx_
   %93 = landingpad { i8*, i32 }
           catch i8* null
   %94 = extractvalue { i8*, i32 } %93, 0
-  call void @__clang_call_terminate(i8* %94) #10
+  call void @__clang_call_terminate(i8* %94) #9
   unreachable
 }
 
-declare %struct.ssl_st* @SSL_new(%struct.ssl_ctx_st*) #2
+declare %struct.ssl_st* @SSL_new(%struct.ssl_ctx_st*) #1
 
-declare i32 @SSL_set_fd(%struct.ssl_st*, i32) #2
+declare i32 @SSL_set_fd(%struct.ssl_st*, i32) #1
 
-declare i32 @SSL_connect(%struct.ssl_st*) #2
+declare i32 @SSL_connect(%struct.ssl_st*) #1
 
-declare i64 @ERR_get_error() #2
+declare i64 @ERR_get_error() #1
 
-declare i8* @ERR_error_string(i64, i8*) #2
+declare i8* @ERR_error_string(i64, i8*) #1
 
 ; Function Attrs: noinline nounwind optnone ssp uwtable
-define internal i8* @_ZNKSt3__19nullptr_tcvPT_IcEEv(%"struct.std::__1::nullptr_t"* %0) #5 align 2 {
+define internal i8* @_ZNKSt3__19nullptr_tcvPT_IcEEv(%"struct.std::__1::nullptr_t"* %0) #3 align 2 {
   %2 = alloca %"struct.std::__1::nullptr_t"*, align 8
   store %"struct.std::__1::nullptr_t"* %0, %"struct.std::__1::nullptr_t"** %2, align 8
   %3 = load %"struct.std::__1::nullptr_t"*, %"struct.std::__1::nullptr_t"** %2, align 8
   ret i8* null
 }
 
-declare i64 @SSL_get_verify_result(%struct.ssl_st*) #2
+declare i64 @SSL_get_verify_result(%struct.ssl_st*) #1
 
-declare i8* @SSL_CIPHER_get_name(%struct.ssl_cipher_st*) #2
+declare i8* @SSL_CIPHER_get_name(%struct.ssl_cipher_st*) #1
 
-declare %struct.ssl_cipher_st* @SSL_get_current_cipher(%struct.ssl_st*) #2
+declare %struct.ssl_cipher_st* @SSL_get_current_cipher(%struct.ssl_st*) #1
 
 ; Function Attrs: noinline optnone ssp uwtable
-define internal %"struct.std::__1::nullptr_t"* @_ZNSt3__19nullptr_tC1EMNS0_5__natEi(%"struct.std::__1::nullptr_t"* returned %0, i64 %1) unnamed_addr #1 align 2 {
+define internal %"struct.std::__1::nullptr_t"* @_ZNSt3__19nullptr_tC1EMNS0_5__natEi(%"struct.std::__1::nullptr_t"* returned %0, i64 %1) unnamed_addr #0 align 2 {
   %3 = alloca %"struct.std::__1::nullptr_t"*, align 8
   %4 = alloca i64, align 8
   store %"struct.std::__1::nullptr_t"* %0, %"struct.std::__1::nullptr_t"** %3, align 8
@@ -588,7 +576,7 @@ define internal %"struct.std::__1::nullptr_t"* @_ZNSt3__19nullptr_tC1EMNS0_5__na
 }
 
 ; Function Attrs: noinline nounwind optnone ssp uwtable
-define internal %"struct.std::__1::nullptr_t"* @_ZNSt3__19nullptr_tC2EMNS0_5__natEi(%"struct.std::__1::nullptr_t"* returned %0, i64 %1) unnamed_addr #5 align 2 {
+define internal %"struct.std::__1::nullptr_t"* @_ZNSt3__19nullptr_tC2EMNS0_5__natEi(%"struct.std::__1::nullptr_t"* returned %0, i64 %1) unnamed_addr #3 align 2 {
   %3 = alloca %"struct.std::__1::nullptr_t"*, align 8
   %4 = alloca i64, align 8
   store %"struct.std::__1::nullptr_t"* %0, %"struct.std::__1::nullptr_t"** %3, align 8
@@ -600,114 +588,7 @@ define internal %"struct.std::__1::nullptr_t"* @_ZNSt3__19nullptr_tC2EMNS0_5__na
 }
 
 ; Function Attrs: noinline optnone ssp uwtable
-define internal %"class.std::__1::basic_string"* @_ZNSt3__112basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEEC2INS_9nullptr_tEEEPKc(%"class.std::__1::basic_string"* returned %0, i8* %1) unnamed_addr #1 align 2 {
-  %3 = alloca %"class.std::__1::basic_string"*, align 8
-  %4 = alloca i8*, align 8
-  %5 = alloca %"struct.std::__1::__default_init_tag", align 1
-  %6 = alloca %"struct.std::__1::__default_init_tag", align 1
-  store %"class.std::__1::basic_string"* %0, %"class.std::__1::basic_string"** %3, align 8
-  store i8* %1, i8** %4, align 8
-  %7 = load %"class.std::__1::basic_string"*, %"class.std::__1::basic_string"** %3, align 8
-  %8 = bitcast %"class.std::__1::basic_string"* %7 to %"class.std::__1::__basic_string_common"*
-  %9 = getelementptr inbounds %"class.std::__1::basic_string", %"class.std::__1::basic_string"* %7, i32 0, i32 0
-  %10 = call %"class.std::__1::__compressed_pair"* @_ZNSt3__117__compressed_pairINS_12basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE5__repES5_EC1INS_18__default_init_tagESA_EEOT_OT0_(%"class.std::__1::__compressed_pair"* %9, %"struct.std::__1::__default_init_tag"* nonnull align 1 dereferenceable(1) %5, %"struct.std::__1::__default_init_tag"* nonnull align 1 dereferenceable(1) %6)
-  %11 = load i8*, i8** %4, align 8
-  %12 = load i8*, i8** %4, align 8
-  %13 = call i64 @_ZNSt3__111char_traitsIcE6lengthEPKc(i8* %12) #3
-  call void @_ZNSt3__112basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE6__initEPKcm(%"class.std::__1::basic_string"* %7, i8* %11, i64 %13)
-  ret %"class.std::__1::basic_string"* %7
-}
-
-; Function Attrs: noinline optnone ssp uwtable
-define internal %"class.std::__1::__compressed_pair"* @_ZNSt3__117__compressed_pairINS_12basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE5__repES5_EC1INS_18__default_init_tagESA_EEOT_OT0_(%"class.std::__1::__compressed_pair"* returned %0, %"struct.std::__1::__default_init_tag"* nonnull align 1 dereferenceable(1) %1, %"struct.std::__1::__default_init_tag"* nonnull align 1 dereferenceable(1) %2) unnamed_addr #1 align 2 {
-  %4 = alloca %"class.std::__1::__compressed_pair"*, align 8
-  %5 = alloca %"struct.std::__1::__default_init_tag"*, align 8
-  %6 = alloca %"struct.std::__1::__default_init_tag"*, align 8
-  store %"class.std::__1::__compressed_pair"* %0, %"class.std::__1::__compressed_pair"** %4, align 8
-  store %"struct.std::__1::__default_init_tag"* %1, %"struct.std::__1::__default_init_tag"** %5, align 8
-  store %"struct.std::__1::__default_init_tag"* %2, %"struct.std::__1::__default_init_tag"** %6, align 8
-  %7 = load %"class.std::__1::__compressed_pair"*, %"class.std::__1::__compressed_pair"** %4, align 8
-  %8 = load %"struct.std::__1::__default_init_tag"*, %"struct.std::__1::__default_init_tag"** %5, align 8
-  %9 = load %"struct.std::__1::__default_init_tag"*, %"struct.std::__1::__default_init_tag"** %6, align 8
-  %10 = call %"class.std::__1::__compressed_pair"* @_ZNSt3__117__compressed_pairINS_12basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE5__repES5_EC2INS_18__default_init_tagESA_EEOT_OT0_(%"class.std::__1::__compressed_pair"* %7, %"struct.std::__1::__default_init_tag"* nonnull align 1 dereferenceable(1) %8, %"struct.std::__1::__default_init_tag"* nonnull align 1 dereferenceable(1) %9)
-  ret %"class.std::__1::__compressed_pair"* %7
-}
-
-declare void @_ZNSt3__112basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE6__initEPKcm(%"class.std::__1::basic_string"*, i8*, i64) #2
-
-; Function Attrs: noinline nounwind optnone ssp uwtable
-define linkonce_odr i64 @_ZNSt3__111char_traitsIcE6lengthEPKc(i8* %0) #5 align 2 {
-  %2 = alloca i8*, align 8
-  store i8* %0, i8** %2, align 8
-  %3 = load i8*, i8** %2, align 8
-  %4 = call i64 @strlen(i8* %3) #3
-  ret i64 %4
-}
-
-; Function Attrs: noinline optnone ssp uwtable
-define internal %"class.std::__1::__compressed_pair"* @_ZNSt3__117__compressed_pairINS_12basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE5__repES5_EC2INS_18__default_init_tagESA_EEOT_OT0_(%"class.std::__1::__compressed_pair"* returned %0, %"struct.std::__1::__default_init_tag"* nonnull align 1 dereferenceable(1) %1, %"struct.std::__1::__default_init_tag"* nonnull align 1 dereferenceable(1) %2) unnamed_addr #1 align 2 {
-  %4 = alloca %"class.std::__1::__compressed_pair"*, align 8
-  %5 = alloca %"struct.std::__1::__default_init_tag"*, align 8
-  %6 = alloca %"struct.std::__1::__default_init_tag"*, align 8
-  %7 = alloca %"struct.std::__1::__default_init_tag", align 1
-  %8 = alloca %"struct.std::__1::__default_init_tag", align 1
-  store %"class.std::__1::__compressed_pair"* %0, %"class.std::__1::__compressed_pair"** %4, align 8
-  store %"struct.std::__1::__default_init_tag"* %1, %"struct.std::__1::__default_init_tag"** %5, align 8
-  store %"struct.std::__1::__default_init_tag"* %2, %"struct.std::__1::__default_init_tag"** %6, align 8
-  %9 = load %"class.std::__1::__compressed_pair"*, %"class.std::__1::__compressed_pair"** %4, align 8
-  %10 = bitcast %"class.std::__1::__compressed_pair"* %9 to %"struct.std::__1::__compressed_pair_elem"*
-  %11 = load %"struct.std::__1::__default_init_tag"*, %"struct.std::__1::__default_init_tag"** %5, align 8
-  %12 = call nonnull align 1 dereferenceable(1) %"struct.std::__1::__default_init_tag"* @_ZNSt3__1L7forwardINS_18__default_init_tagEEEOT_RNS_16remove_referenceIS2_E4typeE(%"struct.std::__1::__default_init_tag"* nonnull align 1 dereferenceable(1) %11) #3
-  %13 = call %"struct.std::__1::__compressed_pair_elem"* @_ZNSt3__122__compressed_pair_elemINS_12basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE5__repELi0ELb0EEC2ENS_18__default_init_tagE(%"struct.std::__1::__compressed_pair_elem"* %10)
-  %14 = bitcast %"class.std::__1::__compressed_pair"* %9 to %"struct.std::__1::__compressed_pair_elem.0"*
-  %15 = load %"struct.std::__1::__default_init_tag"*, %"struct.std::__1::__default_init_tag"** %6, align 8
-  %16 = call nonnull align 1 dereferenceable(1) %"struct.std::__1::__default_init_tag"* @_ZNSt3__1L7forwardINS_18__default_init_tagEEEOT_RNS_16remove_referenceIS2_E4typeE(%"struct.std::__1::__default_init_tag"* nonnull align 1 dereferenceable(1) %15) #3
-  %17 = call %"struct.std::__1::__compressed_pair_elem.0"* @_ZNSt3__122__compressed_pair_elemINS_9allocatorIcEELi1ELb1EEC2ENS_18__default_init_tagE(%"struct.std::__1::__compressed_pair_elem.0"* %14)
-  ret %"class.std::__1::__compressed_pair"* %9
-}
-
-; Function Attrs: noinline nounwind optnone ssp uwtable
-define internal nonnull align 1 dereferenceable(1) %"struct.std::__1::__default_init_tag"* @_ZNSt3__1L7forwardINS_18__default_init_tagEEEOT_RNS_16remove_referenceIS2_E4typeE(%"struct.std::__1::__default_init_tag"* nonnull align 1 dereferenceable(1) %0) #5 {
-  %2 = alloca %"struct.std::__1::__default_init_tag"*, align 8
-  store %"struct.std::__1::__default_init_tag"* %0, %"struct.std::__1::__default_init_tag"** %2, align 8
-  %3 = load %"struct.std::__1::__default_init_tag"*, %"struct.std::__1::__default_init_tag"** %2, align 8
-  ret %"struct.std::__1::__default_init_tag"* %3
-}
-
-; Function Attrs: noinline nounwind optnone ssp uwtable
-define internal %"struct.std::__1::__compressed_pair_elem"* @_ZNSt3__122__compressed_pair_elemINS_12basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE5__repELi0ELb0EEC2ENS_18__default_init_tagE(%"struct.std::__1::__compressed_pair_elem"* returned %0) unnamed_addr #5 align 2 {
-  %2 = alloca %"struct.std::__1::__default_init_tag", align 1
-  %3 = alloca %"struct.std::__1::__compressed_pair_elem"*, align 8
-  store %"struct.std::__1::__compressed_pair_elem"* %0, %"struct.std::__1::__compressed_pair_elem"** %3, align 8
-  %4 = load %"struct.std::__1::__compressed_pair_elem"*, %"struct.std::__1::__compressed_pair_elem"** %3, align 8
-  %5 = getelementptr inbounds %"struct.std::__1::__compressed_pair_elem", %"struct.std::__1::__compressed_pair_elem"* %4, i32 0, i32 0
-  ret %"struct.std::__1::__compressed_pair_elem"* %4
-}
-
-; Function Attrs: noinline nounwind optnone ssp uwtable
-define internal %"struct.std::__1::__compressed_pair_elem.0"* @_ZNSt3__122__compressed_pair_elemINS_9allocatorIcEELi1ELb1EEC2ENS_18__default_init_tagE(%"struct.std::__1::__compressed_pair_elem.0"* returned %0) unnamed_addr #5 align 2 {
-  %2 = alloca %"struct.std::__1::__default_init_tag", align 1
-  %3 = alloca %"struct.std::__1::__compressed_pair_elem.0"*, align 8
-  store %"struct.std::__1::__compressed_pair_elem.0"* %0, %"struct.std::__1::__compressed_pair_elem.0"** %3, align 8
-  %4 = load %"struct.std::__1::__compressed_pair_elem.0"*, %"struct.std::__1::__compressed_pair_elem.0"** %3, align 8
-  %5 = bitcast %"struct.std::__1::__compressed_pair_elem.0"* %4 to %"class.std::__1::allocator"*
-  %6 = call %"class.std::__1::allocator"* @_ZNSt3__19allocatorIcEC2Ev(%"class.std::__1::allocator"* %5) #3
-  ret %"struct.std::__1::__compressed_pair_elem.0"* %4
-}
-
-; Function Attrs: noinline nounwind optnone ssp uwtable
-define internal %"class.std::__1::allocator"* @_ZNSt3__19allocatorIcEC2Ev(%"class.std::__1::allocator"* returned %0) unnamed_addr #5 align 2 {
-  %2 = alloca %"class.std::__1::allocator"*, align 8
-  store %"class.std::__1::allocator"* %0, %"class.std::__1::allocator"** %2, align 8
-  %3 = load %"class.std::__1::allocator"*, %"class.std::__1::allocator"** %2, align 8
-  ret %"class.std::__1::allocator"* %3
-}
-
-; Function Attrs: nounwind
-declare i64 @strlen(i8*) #9
-
-; Function Attrs: noinline optnone ssp uwtable
-define linkonce_odr nonnull align 8 dereferenceable(8) %"class.std::__1::basic_ostream"* @_ZNSt3__124__put_character_sequenceIcNS_11char_traitsIcEEEERNS_13basic_ostreamIT_T0_EES7_PKS4_m(%"class.std::__1::basic_ostream"* nonnull align 8 dereferenceable(8) %0, i8* %1, i64 %2) #1 personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define linkonce_odr nonnull align 8 dereferenceable(8) %"class.std::__1::basic_ostream"* @_ZNSt3__124__put_character_sequenceIcNS_11char_traitsIcEEEERNS_13basic_ostreamIT_T0_EES7_PKS4_m(%"class.std::__1::basic_ostream"* nonnull align 8 dereferenceable(8) %0, i8* %1, i64 %2) #0 personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
   %4 = alloca %"class.std::__1::basic_ostream"*, align 8
   %5 = alloca i8*, align 8
   %6 = alloca i64, align 8
@@ -732,7 +613,7 @@ define linkonce_odr nonnull align 8 dereferenceable(8) %"class.std::__1::basic_o
 
 17:                                               ; preds = %16
   %18 = load %"class.std::__1::basic_ostream"*, %"class.std::__1::basic_ostream"** %4, align 8
-  %19 = call %"class.std::__1::ostreambuf_iterator"* @_ZNSt3__119ostreambuf_iteratorIcNS_11char_traitsIcEEEC1ERNS_13basic_ostreamIcS2_EE(%"class.std::__1::ostreambuf_iterator"* %11, %"class.std::__1::basic_ostream"* nonnull align 8 dereferenceable(8) %18) #3
+  %19 = call %"class.std::__1::ostreambuf_iterator"* @_ZNSt3__119ostreambuf_iteratorIcNS_11char_traitsIcEEEC1ERNS_13basic_ostreamIcS2_EE(%"class.std::__1::ostreambuf_iterator"* %11, %"class.std::__1::basic_ostream"* nonnull align 8 dereferenceable(8) %18) #8
   %20 = load i8*, i8** %5, align 8
   %21 = load %"class.std::__1::basic_ostream"*, %"class.std::__1::basic_ostream"** %4, align 8
   %22 = bitcast %"class.std::__1::basic_ostream"* %21 to i8**
@@ -798,7 +679,7 @@ define linkonce_odr nonnull align 8 dereferenceable(8) %"class.std::__1::basic_o
   %70 = getelementptr inbounds %"class.std::__1::ostreambuf_iterator", %"class.std::__1::ostreambuf_iterator"* %10, i32 0, i32 0
   %71 = inttoptr i64 %68 to %"class.std::__1::basic_streambuf"*
   store %"class.std::__1::basic_streambuf"* %71, %"class.std::__1::basic_streambuf"** %70, align 8
-  %72 = call zeroext i1 @_ZNKSt3__119ostreambuf_iteratorIcNS_11char_traitsIcEEE6failedEv(%"class.std::__1::ostreambuf_iterator"* %10) #3
+  %72 = call zeroext i1 @_ZNKSt3__119ostreambuf_iteratorIcNS_11char_traitsIcEEE6failedEv(%"class.std::__1::ostreambuf_iterator"* %10) #8
   br i1 %72, label %73, label %93
 
 73:                                               ; preds = %69
@@ -851,7 +732,7 @@ define linkonce_odr nonnull align 8 dereferenceable(8) %"class.std::__1::basic_o
 
 98:                                               ; preds = %97, %84
   %99 = load i8*, i8** %8, align 8
-  %100 = call i8* @__cxa_begin_catch(i8* %99) #3
+  %100 = call i8* @__cxa_begin_catch(i8* %99) #8
   %101 = load %"class.std::__1::basic_ostream"*, %"class.std::__1::basic_ostream"** %4, align 8
   %102 = bitcast %"class.std::__1::basic_ostream"* %101 to i8**
   %103 = load i8*, i8** %102, align 8
@@ -896,14 +777,23 @@ define linkonce_odr nonnull align 8 dereferenceable(8) %"class.std::__1::basic_o
   %124 = landingpad { i8*, i32 }
           catch i8* null
   %125 = extractvalue { i8*, i32 } %124, 0
-  call void @__clang_call_terminate(i8* %125) #10
+  call void @__clang_call_terminate(i8* %125) #9
   unreachable
 }
 
-declare %"class.std::__1::basic_ostream<char, std::__1::char_traits<char> >::sentry"* @_ZNSt3__113basic_ostreamIcNS_11char_traitsIcEEE6sentryC1ERS3_(%"class.std::__1::basic_ostream<char, std::__1::char_traits<char> >::sentry"* returned, %"class.std::__1::basic_ostream"* nonnull align 8 dereferenceable(8)) unnamed_addr #2
+; Function Attrs: noinline nounwind optnone ssp uwtable
+define linkonce_odr i64 @_ZNSt3__111char_traitsIcE6lengthEPKc(i8* %0) #3 align 2 {
+  %2 = alloca i8*, align 8
+  store i8* %0, i8** %2, align 8
+  %3 = load i8*, i8** %2, align 8
+  %4 = call i64 @strlen(i8* %3) #8
+  ret i64 %4
+}
+
+declare %"class.std::__1::basic_ostream<char, std::__1::char_traits<char> >::sentry"* @_ZNSt3__113basic_ostreamIcNS_11char_traitsIcEEE6sentryC1ERS3_(%"class.std::__1::basic_ostream<char, std::__1::char_traits<char> >::sentry"* returned, %"class.std::__1::basic_ostream"* nonnull align 8 dereferenceable(8)) unnamed_addr #1
 
 ; Function Attrs: noinline nounwind optnone ssp uwtable
-define internal zeroext i1 @_ZNKSt3__113basic_ostreamIcNS_11char_traitsIcEEE6sentrycvbEv(%"class.std::__1::basic_ostream<char, std::__1::char_traits<char> >::sentry"* %0) #5 align 2 {
+define internal zeroext i1 @_ZNKSt3__113basic_ostreamIcNS_11char_traitsIcEEE6sentrycvbEv(%"class.std::__1::basic_ostream<char, std::__1::char_traits<char> >::sentry"* %0) #3 align 2 {
   %2 = alloca %"class.std::__1::basic_ostream<char, std::__1::char_traits<char> >::sentry"*, align 8
   store %"class.std::__1::basic_ostream<char, std::__1::char_traits<char> >::sentry"* %0, %"class.std::__1::basic_ostream<char, std::__1::char_traits<char> >::sentry"** %2, align 8
   %3 = load %"class.std::__1::basic_ostream<char, std::__1::char_traits<char> >::sentry"*, %"class.std::__1::basic_ostream<char, std::__1::char_traits<char> >::sentry"** %2, align 8
@@ -914,7 +804,7 @@ define internal zeroext i1 @_ZNKSt3__113basic_ostreamIcNS_11char_traitsIcEEE6sen
 }
 
 ; Function Attrs: noinline optnone ssp uwtable
-define linkonce_odr hidden i64 @_ZNSt3__116__pad_and_outputIcNS_11char_traitsIcEEEENS_19ostreambuf_iteratorIT_T0_EES6_PKS4_S8_S8_RNS_8ios_baseES4_(i64 %0, i8* %1, i8* %2, i8* %3, %"class.std::__1::ios_base"* nonnull align 8 dereferenceable(136) %4, i8 signext %5) #1 personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define linkonce_odr hidden i64 @_ZNSt3__116__pad_and_outputIcNS_11char_traitsIcEEEENS_19ostreambuf_iteratorIT_T0_EES6_PKS4_S8_S8_RNS_8ios_baseES4_(i64 %0, i8* %1, i8* %2, i8* %3, %"class.std::__1::ios_base"* nonnull align 8 dereferenceable(136) %4, i8 signext %5) #0 personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
   %7 = alloca %"class.std::__1::ostreambuf_iterator", align 8
   %8 = alloca %"class.std::__1::ostreambuf_iterator", align 8
   %9 = alloca i8*, align 8
@@ -1031,7 +921,7 @@ define linkonce_odr hidden i64 @_ZNSt3__116__pad_and_outputIcNS_11char_traitsIcE
   %84 = call %"class.std::__1::basic_string"* @_ZNSt3__112basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEEC1Emc(%"class.std::__1::basic_string"* %19, i64 %82, i8 signext %83)
   %85 = getelementptr inbounds %"class.std::__1::ostreambuf_iterator", %"class.std::__1::ostreambuf_iterator"* %8, i32 0, i32 0
   %86 = load %"class.std::__1::basic_streambuf"*, %"class.std::__1::basic_streambuf"** %85, align 8
-  %87 = call i8* @_ZNKSt3__112basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE4dataEv(%"class.std::__1::basic_string"* %19) #3
+  %87 = call i8* @_ZNKSt3__112basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE4dataEv(%"class.std::__1::basic_string"* %19) #8
   %88 = load i64, i64* %16, align 8
   %89 = invoke i64 @_ZNSt3__115basic_streambufIcNS_11char_traitsIcEEE5sputnEPKcl(%"class.std::__1::basic_streambuf"* %86, i8* %87, i64 %88)
           to label %90 unwind label %103
@@ -1151,7 +1041,7 @@ define linkonce_odr hidden i64 @_ZNSt3__116__pad_and_outputIcNS_11char_traitsIcE
   %154 = landingpad { i8*, i32 }
           catch i8* null
   %155 = extractvalue { i8*, i32 } %154, 0
-  call void @__clang_call_terminate(i8* %155) #10
+  call void @__clang_call_terminate(i8* %155) #9
   unreachable
 
 156:                                              ; preds = %109
@@ -1159,19 +1049,19 @@ define linkonce_odr hidden i64 @_ZNSt3__116__pad_and_outputIcNS_11char_traitsIcE
 }
 
 ; Function Attrs: noinline nounwind optnone ssp uwtable
-define internal %"class.std::__1::ostreambuf_iterator"* @_ZNSt3__119ostreambuf_iteratorIcNS_11char_traitsIcEEEC1ERNS_13basic_ostreamIcS2_EE(%"class.std::__1::ostreambuf_iterator"* returned %0, %"class.std::__1::basic_ostream"* nonnull align 8 dereferenceable(8) %1) unnamed_addr #5 align 2 {
+define internal %"class.std::__1::ostreambuf_iterator"* @_ZNSt3__119ostreambuf_iteratorIcNS_11char_traitsIcEEEC1ERNS_13basic_ostreamIcS2_EE(%"class.std::__1::ostreambuf_iterator"* returned %0, %"class.std::__1::basic_ostream"* nonnull align 8 dereferenceable(8) %1) unnamed_addr #3 align 2 {
   %3 = alloca %"class.std::__1::ostreambuf_iterator"*, align 8
   %4 = alloca %"class.std::__1::basic_ostream"*, align 8
   store %"class.std::__1::ostreambuf_iterator"* %0, %"class.std::__1::ostreambuf_iterator"** %3, align 8
   store %"class.std::__1::basic_ostream"* %1, %"class.std::__1::basic_ostream"** %4, align 8
   %5 = load %"class.std::__1::ostreambuf_iterator"*, %"class.std::__1::ostreambuf_iterator"** %3, align 8
   %6 = load %"class.std::__1::basic_ostream"*, %"class.std::__1::basic_ostream"** %4, align 8
-  %7 = call %"class.std::__1::ostreambuf_iterator"* @_ZNSt3__119ostreambuf_iteratorIcNS_11char_traitsIcEEEC2ERNS_13basic_ostreamIcS2_EE(%"class.std::__1::ostreambuf_iterator"* %5, %"class.std::__1::basic_ostream"* nonnull align 8 dereferenceable(8) %6) #3
+  %7 = call %"class.std::__1::ostreambuf_iterator"* @_ZNSt3__119ostreambuf_iteratorIcNS_11char_traitsIcEEEC2ERNS_13basic_ostreamIcS2_EE(%"class.std::__1::ostreambuf_iterator"* %5, %"class.std::__1::basic_ostream"* nonnull align 8 dereferenceable(8) %6) #8
   ret %"class.std::__1::ostreambuf_iterator"* %5
 }
 
 ; Function Attrs: noinline nounwind optnone ssp uwtable
-define internal i32 @_ZNKSt3__18ios_base5flagsEv(%"class.std::__1::ios_base"* %0) #5 align 2 {
+define internal i32 @_ZNKSt3__18ios_base5flagsEv(%"class.std::__1::ios_base"* %0) #3 align 2 {
   %2 = alloca %"class.std::__1::ios_base"*, align 8
   store %"class.std::__1::ios_base"* %0, %"class.std::__1::ios_base"** %2, align 8
   %3 = load %"class.std::__1::ios_base"*, %"class.std::__1::ios_base"** %2, align 8
@@ -1181,14 +1071,14 @@ define internal i32 @_ZNKSt3__18ios_base5flagsEv(%"class.std::__1::ios_base"* %0
 }
 
 ; Function Attrs: noinline optnone ssp uwtable
-define internal signext i8 @_ZNKSt3__19basic_iosIcNS_11char_traitsIcEEE4fillEv(%"class.std::__1::basic_ios"* %0) #1 align 2 {
+define internal signext i8 @_ZNKSt3__19basic_iosIcNS_11char_traitsIcEEE4fillEv(%"class.std::__1::basic_ios"* %0) #0 align 2 {
   %2 = alloca %"class.std::__1::basic_ios"*, align 8
   store %"class.std::__1::basic_ios"* %0, %"class.std::__1::basic_ios"** %2, align 8
   %3 = load %"class.std::__1::basic_ios"*, %"class.std::__1::basic_ios"** %2, align 8
-  %4 = call i32 @_ZNSt3__111char_traitsIcE3eofEv() #3
+  %4 = call i32 @_ZNSt3__111char_traitsIcE3eofEv() #8
   %5 = getelementptr inbounds %"class.std::__1::basic_ios", %"class.std::__1::basic_ios"* %3, i32 0, i32 2
   %6 = load i32, i32* %5, align 8
-  %7 = call zeroext i1 @_ZNSt3__111char_traitsIcE11eq_int_typeEii(i32 %4, i32 %6) #3
+  %7 = call zeroext i1 @_ZNSt3__111char_traitsIcE11eq_int_typeEii(i32 %4, i32 %6) #8
   br i1 %7, label %8, label %12
 
 8:                                                ; preds = %1
@@ -1206,7 +1096,7 @@ define internal signext i8 @_ZNKSt3__19basic_iosIcNS_11char_traitsIcEEE4fillEv(%
 }
 
 ; Function Attrs: noinline nounwind optnone ssp uwtable
-define internal zeroext i1 @_ZNKSt3__119ostreambuf_iteratorIcNS_11char_traitsIcEEE6failedEv(%"class.std::__1::ostreambuf_iterator"* %0) #5 align 2 {
+define internal zeroext i1 @_ZNKSt3__119ostreambuf_iteratorIcNS_11char_traitsIcEEE6failedEv(%"class.std::__1::ostreambuf_iterator"* %0) #3 align 2 {
   %2 = alloca %"class.std::__1::ostreambuf_iterator"*, align 8
   store %"class.std::__1::ostreambuf_iterator"* %0, %"class.std::__1::ostreambuf_iterator"** %2, align 8
   %3 = load %"class.std::__1::ostreambuf_iterator"*, %"class.std::__1::ostreambuf_iterator"** %2, align 8
@@ -1217,7 +1107,7 @@ define internal zeroext i1 @_ZNKSt3__119ostreambuf_iteratorIcNS_11char_traitsIcE
 }
 
 ; Function Attrs: noinline optnone ssp uwtable
-define internal void @_ZNSt3__19basic_iosIcNS_11char_traitsIcEEE8setstateEj(%"class.std::__1::basic_ios"* %0, i32 %1) #1 align 2 {
+define internal void @_ZNSt3__19basic_iosIcNS_11char_traitsIcEEE8setstateEj(%"class.std::__1::basic_ios"* %0, i32 %1) #0 align 2 {
   %3 = alloca %"class.std::__1::basic_ios"*, align 8
   %4 = alloca i32, align 4
   store %"class.std::__1::basic_ios"* %0, %"class.std::__1::basic_ios"** %3, align 8
@@ -1229,14 +1119,14 @@ define internal void @_ZNSt3__19basic_iosIcNS_11char_traitsIcEEE8setstateEj(%"cl
   ret void
 }
 
-declare %"class.std::__1::basic_ostream<char, std::__1::char_traits<char> >::sentry"* @_ZNSt3__113basic_ostreamIcNS_11char_traitsIcEEE6sentryD1Ev(%"class.std::__1::basic_ostream<char, std::__1::char_traits<char> >::sentry"* returned) unnamed_addr #2
+declare %"class.std::__1::basic_ostream<char, std::__1::char_traits<char> >::sentry"* @_ZNSt3__113basic_ostreamIcNS_11char_traitsIcEEE6sentryD1Ev(%"class.std::__1::basic_ostream<char, std::__1::char_traits<char> >::sentry"* returned) unnamed_addr #1
 
-declare void @_ZNSt3__18ios_base33__set_badbit_and_consider_rethrowEv(%"class.std::__1::ios_base"*) #2
+declare void @_ZNSt3__18ios_base33__set_badbit_and_consider_rethrowEv(%"class.std::__1::ios_base"*) #1
 
 declare void @__cxa_end_catch()
 
 ; Function Attrs: noinline nounwind optnone ssp uwtable
-define internal %"class.std::__1::basic_streambuf"* @_ZNKSt3__19nullptr_tcvPT_INS_15basic_streambufIcNS_11char_traitsIcEEEEEEv(%"struct.std::__1::nullptr_t"* %0) #5 align 2 {
+define internal %"class.std::__1::basic_streambuf"* @_ZNKSt3__19nullptr_tcvPT_INS_15basic_streambufIcNS_11char_traitsIcEEEEEEv(%"struct.std::__1::nullptr_t"* %0) #3 align 2 {
   %2 = alloca %"struct.std::__1::nullptr_t"*, align 8
   store %"struct.std::__1::nullptr_t"* %0, %"struct.std::__1::nullptr_t"** %2, align 8
   %3 = load %"struct.std::__1::nullptr_t"*, %"struct.std::__1::nullptr_t"** %2, align 8
@@ -1244,7 +1134,7 @@ define internal %"class.std::__1::basic_streambuf"* @_ZNKSt3__19nullptr_tcvPT_IN
 }
 
 ; Function Attrs: noinline nounwind optnone ssp uwtable
-define internal i64 @_ZNKSt3__18ios_base5widthEv(%"class.std::__1::ios_base"* %0) #5 align 2 {
+define internal i64 @_ZNKSt3__18ios_base5widthEv(%"class.std::__1::ios_base"* %0) #3 align 2 {
   %2 = alloca %"class.std::__1::ios_base"*, align 8
   store %"class.std::__1::ios_base"* %0, %"class.std::__1::ios_base"** %2, align 8
   %3 = load %"class.std::__1::ios_base"*, %"class.std::__1::ios_base"** %2, align 8
@@ -1254,7 +1144,7 @@ define internal i64 @_ZNKSt3__18ios_base5widthEv(%"class.std::__1::ios_base"* %0
 }
 
 ; Function Attrs: noinline optnone ssp uwtable
-define internal i64 @_ZNSt3__115basic_streambufIcNS_11char_traitsIcEEE5sputnEPKcl(%"class.std::__1::basic_streambuf"* %0, i8* %1, i64 %2) #1 align 2 {
+define internal i64 @_ZNSt3__115basic_streambufIcNS_11char_traitsIcEEE5sputnEPKcl(%"class.std::__1::basic_streambuf"* %0, i8* %1, i64 %2) #0 align 2 {
   %4 = alloca %"class.std::__1::basic_streambuf"*, align 8
   %5 = alloca i8*, align 8
   %6 = alloca i64, align 8
@@ -1273,7 +1163,7 @@ define internal i64 @_ZNSt3__115basic_streambufIcNS_11char_traitsIcEEE5sputnEPKc
 }
 
 ; Function Attrs: noinline optnone ssp uwtable
-define internal %"class.std::__1::basic_string"* @_ZNSt3__112basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEEC1Emc(%"class.std::__1::basic_string"* returned %0, i64 %1, i8 signext %2) unnamed_addr #1 align 2 {
+define internal %"class.std::__1::basic_string"* @_ZNSt3__112basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEEC1Emc(%"class.std::__1::basic_string"* returned %0, i64 %1, i8 signext %2) unnamed_addr #0 align 2 {
   %4 = alloca %"class.std::__1::basic_string"*, align 8
   %5 = alloca i64, align 8
   %6 = alloca i8, align 1
@@ -1288,17 +1178,17 @@ define internal %"class.std::__1::basic_string"* @_ZNSt3__112basic_stringIcNS_11
 }
 
 ; Function Attrs: noinline nounwind optnone ssp uwtable
-define internal i8* @_ZNKSt3__112basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE4dataEv(%"class.std::__1::basic_string"* %0) #5 align 2 {
+define internal i8* @_ZNKSt3__112basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE4dataEv(%"class.std::__1::basic_string"* %0) #3 align 2 {
   %2 = alloca %"class.std::__1::basic_string"*, align 8
   store %"class.std::__1::basic_string"* %0, %"class.std::__1::basic_string"** %2, align 8
   %3 = load %"class.std::__1::basic_string"*, %"class.std::__1::basic_string"** %2, align 8
-  %4 = call i8* @_ZNKSt3__112basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE13__get_pointerEv(%"class.std::__1::basic_string"* %3) #3
-  %5 = call i8* @_ZNSt3__1L12__to_addressIKcEEPT_S3_(i8* %4) #3
+  %4 = call i8* @_ZNKSt3__112basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE13__get_pointerEv(%"class.std::__1::basic_string"* %3) #8
+  %5 = call i8* @_ZNSt3__1L12__to_addressIKcEEPT_S3_(i8* %4) #8
   ret i8* %5
 }
 
 ; Function Attrs: noinline nounwind optnone ssp uwtable
-define internal i64 @_ZNSt3__18ios_base5widthEl(%"class.std::__1::ios_base"* %0, i64 %1) #5 align 2 {
+define internal i64 @_ZNSt3__18ios_base5widthEl(%"class.std::__1::ios_base"* %0, i64 %1) #3 align 2 {
   %3 = alloca %"class.std::__1::ios_base"*, align 8
   %4 = alloca i64, align 8
   %5 = alloca i64, align 8
@@ -1316,7 +1206,7 @@ define internal i64 @_ZNSt3__18ios_base5widthEl(%"class.std::__1::ios_base"* %0,
 }
 
 ; Function Attrs: noinline optnone ssp uwtable
-define internal %"class.std::__1::basic_string"* @_ZNSt3__112basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEEC2Emc(%"class.std::__1::basic_string"* returned %0, i64 %1, i8 signext %2) unnamed_addr #1 align 2 {
+define internal %"class.std::__1::basic_string"* @_ZNSt3__112basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEEC2Emc(%"class.std::__1::basic_string"* returned %0, i64 %1, i8 signext %2) unnamed_addr #0 align 2 {
   %4 = alloca %"class.std::__1::basic_string"*, align 8
   %5 = alloca i64, align 8
   %6 = alloca i8, align 1
@@ -1335,10 +1225,84 @@ define internal %"class.std::__1::basic_string"* @_ZNSt3__112basic_stringIcNS_11
   ret %"class.std::__1::basic_string"* %9
 }
 
-declare void @_ZNSt3__112basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE6__initEmc(%"class.std::__1::basic_string"*, i64, i8 signext) #2
+; Function Attrs: noinline optnone ssp uwtable
+define internal %"class.std::__1::__compressed_pair"* @_ZNSt3__117__compressed_pairINS_12basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE5__repES5_EC1INS_18__default_init_tagESA_EEOT_OT0_(%"class.std::__1::__compressed_pair"* returned %0, %"struct.std::__1::__default_init_tag"* nonnull align 1 dereferenceable(1) %1, %"struct.std::__1::__default_init_tag"* nonnull align 1 dereferenceable(1) %2) unnamed_addr #0 align 2 {
+  %4 = alloca %"class.std::__1::__compressed_pair"*, align 8
+  %5 = alloca %"struct.std::__1::__default_init_tag"*, align 8
+  %6 = alloca %"struct.std::__1::__default_init_tag"*, align 8
+  store %"class.std::__1::__compressed_pair"* %0, %"class.std::__1::__compressed_pair"** %4, align 8
+  store %"struct.std::__1::__default_init_tag"* %1, %"struct.std::__1::__default_init_tag"** %5, align 8
+  store %"struct.std::__1::__default_init_tag"* %2, %"struct.std::__1::__default_init_tag"** %6, align 8
+  %7 = load %"class.std::__1::__compressed_pair"*, %"class.std::__1::__compressed_pair"** %4, align 8
+  %8 = load %"struct.std::__1::__default_init_tag"*, %"struct.std::__1::__default_init_tag"** %5, align 8
+  %9 = load %"struct.std::__1::__default_init_tag"*, %"struct.std::__1::__default_init_tag"** %6, align 8
+  %10 = call %"class.std::__1::__compressed_pair"* @_ZNSt3__117__compressed_pairINS_12basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE5__repES5_EC2INS_18__default_init_tagESA_EEOT_OT0_(%"class.std::__1::__compressed_pair"* %7, %"struct.std::__1::__default_init_tag"* nonnull align 1 dereferenceable(1) %8, %"struct.std::__1::__default_init_tag"* nonnull align 1 dereferenceable(1) %9)
+  ret %"class.std::__1::__compressed_pair"* %7
+}
+
+declare void @_ZNSt3__112basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE6__initEmc(%"class.std::__1::basic_string"*, i64, i8 signext) #1
+
+; Function Attrs: noinline optnone ssp uwtable
+define internal %"class.std::__1::__compressed_pair"* @_ZNSt3__117__compressed_pairINS_12basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE5__repES5_EC2INS_18__default_init_tagESA_EEOT_OT0_(%"class.std::__1::__compressed_pair"* returned %0, %"struct.std::__1::__default_init_tag"* nonnull align 1 dereferenceable(1) %1, %"struct.std::__1::__default_init_tag"* nonnull align 1 dereferenceable(1) %2) unnamed_addr #0 align 2 {
+  %4 = alloca %"class.std::__1::__compressed_pair"*, align 8
+  %5 = alloca %"struct.std::__1::__default_init_tag"*, align 8
+  %6 = alloca %"struct.std::__1::__default_init_tag"*, align 8
+  %7 = alloca %"struct.std::__1::__default_init_tag", align 1
+  %8 = alloca %"struct.std::__1::__default_init_tag", align 1
+  store %"class.std::__1::__compressed_pair"* %0, %"class.std::__1::__compressed_pair"** %4, align 8
+  store %"struct.std::__1::__default_init_tag"* %1, %"struct.std::__1::__default_init_tag"** %5, align 8
+  store %"struct.std::__1::__default_init_tag"* %2, %"struct.std::__1::__default_init_tag"** %6, align 8
+  %9 = load %"class.std::__1::__compressed_pair"*, %"class.std::__1::__compressed_pair"** %4, align 8
+  %10 = bitcast %"class.std::__1::__compressed_pair"* %9 to %"struct.std::__1::__compressed_pair_elem"*
+  %11 = load %"struct.std::__1::__default_init_tag"*, %"struct.std::__1::__default_init_tag"** %5, align 8
+  %12 = call nonnull align 1 dereferenceable(1) %"struct.std::__1::__default_init_tag"* @_ZNSt3__1L7forwardINS_18__default_init_tagEEEOT_RNS_16remove_referenceIS2_E4typeE(%"struct.std::__1::__default_init_tag"* nonnull align 1 dereferenceable(1) %11) #8
+  %13 = call %"struct.std::__1::__compressed_pair_elem"* @_ZNSt3__122__compressed_pair_elemINS_12basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE5__repELi0ELb0EEC2ENS_18__default_init_tagE(%"struct.std::__1::__compressed_pair_elem"* %10)
+  %14 = bitcast %"class.std::__1::__compressed_pair"* %9 to %"struct.std::__1::__compressed_pair_elem.0"*
+  %15 = load %"struct.std::__1::__default_init_tag"*, %"struct.std::__1::__default_init_tag"** %6, align 8
+  %16 = call nonnull align 1 dereferenceable(1) %"struct.std::__1::__default_init_tag"* @_ZNSt3__1L7forwardINS_18__default_init_tagEEEOT_RNS_16remove_referenceIS2_E4typeE(%"struct.std::__1::__default_init_tag"* nonnull align 1 dereferenceable(1) %15) #8
+  %17 = call %"struct.std::__1::__compressed_pair_elem.0"* @_ZNSt3__122__compressed_pair_elemINS_9allocatorIcEELi1ELb1EEC2ENS_18__default_init_tagE(%"struct.std::__1::__compressed_pair_elem.0"* %14)
+  ret %"class.std::__1::__compressed_pair"* %9
+}
 
 ; Function Attrs: noinline nounwind optnone ssp uwtable
-define internal i8* @_ZNSt3__1L12__to_addressIKcEEPT_S3_(i8* %0) #5 {
+define internal nonnull align 1 dereferenceable(1) %"struct.std::__1::__default_init_tag"* @_ZNSt3__1L7forwardINS_18__default_init_tagEEEOT_RNS_16remove_referenceIS2_E4typeE(%"struct.std::__1::__default_init_tag"* nonnull align 1 dereferenceable(1) %0) #3 {
+  %2 = alloca %"struct.std::__1::__default_init_tag"*, align 8
+  store %"struct.std::__1::__default_init_tag"* %0, %"struct.std::__1::__default_init_tag"** %2, align 8
+  %3 = load %"struct.std::__1::__default_init_tag"*, %"struct.std::__1::__default_init_tag"** %2, align 8
+  ret %"struct.std::__1::__default_init_tag"* %3
+}
+
+; Function Attrs: noinline nounwind optnone ssp uwtable
+define internal %"struct.std::__1::__compressed_pair_elem"* @_ZNSt3__122__compressed_pair_elemINS_12basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE5__repELi0ELb0EEC2ENS_18__default_init_tagE(%"struct.std::__1::__compressed_pair_elem"* returned %0) unnamed_addr #3 align 2 {
+  %2 = alloca %"struct.std::__1::__default_init_tag", align 1
+  %3 = alloca %"struct.std::__1::__compressed_pair_elem"*, align 8
+  store %"struct.std::__1::__compressed_pair_elem"* %0, %"struct.std::__1::__compressed_pair_elem"** %3, align 8
+  %4 = load %"struct.std::__1::__compressed_pair_elem"*, %"struct.std::__1::__compressed_pair_elem"** %3, align 8
+  %5 = getelementptr inbounds %"struct.std::__1::__compressed_pair_elem", %"struct.std::__1::__compressed_pair_elem"* %4, i32 0, i32 0
+  ret %"struct.std::__1::__compressed_pair_elem"* %4
+}
+
+; Function Attrs: noinline nounwind optnone ssp uwtable
+define internal %"struct.std::__1::__compressed_pair_elem.0"* @_ZNSt3__122__compressed_pair_elemINS_9allocatorIcEELi1ELb1EEC2ENS_18__default_init_tagE(%"struct.std::__1::__compressed_pair_elem.0"* returned %0) unnamed_addr #3 align 2 {
+  %2 = alloca %"struct.std::__1::__default_init_tag", align 1
+  %3 = alloca %"struct.std::__1::__compressed_pair_elem.0"*, align 8
+  store %"struct.std::__1::__compressed_pair_elem.0"* %0, %"struct.std::__1::__compressed_pair_elem.0"** %3, align 8
+  %4 = load %"struct.std::__1::__compressed_pair_elem.0"*, %"struct.std::__1::__compressed_pair_elem.0"** %3, align 8
+  %5 = bitcast %"struct.std::__1::__compressed_pair_elem.0"* %4 to %"class.std::__1::allocator"*
+  %6 = call %"class.std::__1::allocator"* @_ZNSt3__19allocatorIcEC2Ev(%"class.std::__1::allocator"* %5) #8
+  ret %"struct.std::__1::__compressed_pair_elem.0"* %4
+}
+
+; Function Attrs: noinline nounwind optnone ssp uwtable
+define internal %"class.std::__1::allocator"* @_ZNSt3__19allocatorIcEC2Ev(%"class.std::__1::allocator"* returned %0) unnamed_addr #3 align 2 {
+  %2 = alloca %"class.std::__1::allocator"*, align 8
+  store %"class.std::__1::allocator"* %0, %"class.std::__1::allocator"** %2, align 8
+  %3 = load %"class.std::__1::allocator"*, %"class.std::__1::allocator"** %2, align 8
+  ret %"class.std::__1::allocator"* %3
+}
+
+; Function Attrs: noinline nounwind optnone ssp uwtable
+define internal i8* @_ZNSt3__1L12__to_addressIKcEEPT_S3_(i8* %0) #3 {
   %2 = alloca i8*, align 8
   store i8* %0, i8** %2, align 8
   %3 = load i8*, i8** %2, align 8
@@ -1346,19 +1310,19 @@ define internal i8* @_ZNSt3__1L12__to_addressIKcEEPT_S3_(i8* %0) #5 {
 }
 
 ; Function Attrs: noinline nounwind optnone ssp uwtable
-define internal i8* @_ZNKSt3__112basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE13__get_pointerEv(%"class.std::__1::basic_string"* %0) #5 align 2 {
+define internal i8* @_ZNKSt3__112basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE13__get_pointerEv(%"class.std::__1::basic_string"* %0) #3 align 2 {
   %2 = alloca %"class.std::__1::basic_string"*, align 8
   store %"class.std::__1::basic_string"* %0, %"class.std::__1::basic_string"** %2, align 8
   %3 = load %"class.std::__1::basic_string"*, %"class.std::__1::basic_string"** %2, align 8
-  %4 = call zeroext i1 @_ZNKSt3__112basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE9__is_longEv(%"class.std::__1::basic_string"* %3) #3
+  %4 = call zeroext i1 @_ZNKSt3__112basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE9__is_longEv(%"class.std::__1::basic_string"* %3) #8
   br i1 %4, label %5, label %7
 
 5:                                                ; preds = %1
-  %6 = call i8* @_ZNKSt3__112basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE18__get_long_pointerEv(%"class.std::__1::basic_string"* %3) #3
+  %6 = call i8* @_ZNKSt3__112basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE18__get_long_pointerEv(%"class.std::__1::basic_string"* %3) #8
   br label %9
 
 7:                                                ; preds = %1
-  %8 = call i8* @_ZNKSt3__112basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE19__get_short_pointerEv(%"class.std::__1::basic_string"* %3) #3
+  %8 = call i8* @_ZNKSt3__112basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE19__get_short_pointerEv(%"class.std::__1::basic_string"* %3) #8
   br label %9
 
 9:                                                ; preds = %7, %5
@@ -1367,12 +1331,12 @@ define internal i8* @_ZNKSt3__112basic_stringIcNS_11char_traitsIcEENS_9allocator
 }
 
 ; Function Attrs: noinline nounwind optnone ssp uwtable
-define internal zeroext i1 @_ZNKSt3__112basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE9__is_longEv(%"class.std::__1::basic_string"* %0) #5 align 2 {
+define internal zeroext i1 @_ZNKSt3__112basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE9__is_longEv(%"class.std::__1::basic_string"* %0) #3 align 2 {
   %2 = alloca %"class.std::__1::basic_string"*, align 8
   store %"class.std::__1::basic_string"* %0, %"class.std::__1::basic_string"** %2, align 8
   %3 = load %"class.std::__1::basic_string"*, %"class.std::__1::basic_string"** %2, align 8
   %4 = getelementptr inbounds %"class.std::__1::basic_string", %"class.std::__1::basic_string"* %3, i32 0, i32 0
-  %5 = call nonnull align 8 dereferenceable(24) %"struct.std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep"* @_ZNKSt3__117__compressed_pairINS_12basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE5__repES5_E5firstEv(%"class.std::__1::__compressed_pair"* %4) #3
+  %5 = call nonnull align 8 dereferenceable(24) %"struct.std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep"* @_ZNKSt3__117__compressed_pairINS_12basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE5__repES5_E5firstEv(%"class.std::__1::__compressed_pair"* %4) #8
   %6 = getelementptr inbounds %"struct.std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep", %"struct.std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep"* %5, i32 0, i32 0
   %7 = bitcast %union.anon* %6 to %"struct.std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__short"*
   %8 = getelementptr inbounds %"struct.std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__short", %"struct.std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__short"* %7, i32 0, i32 1
@@ -1385,12 +1349,12 @@ define internal zeroext i1 @_ZNKSt3__112basic_stringIcNS_11char_traitsIcEENS_9al
 }
 
 ; Function Attrs: noinline nounwind optnone ssp uwtable
-define internal i8* @_ZNKSt3__112basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE18__get_long_pointerEv(%"class.std::__1::basic_string"* %0) #5 align 2 {
+define internal i8* @_ZNKSt3__112basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE18__get_long_pointerEv(%"class.std::__1::basic_string"* %0) #3 align 2 {
   %2 = alloca %"class.std::__1::basic_string"*, align 8
   store %"class.std::__1::basic_string"* %0, %"class.std::__1::basic_string"** %2, align 8
   %3 = load %"class.std::__1::basic_string"*, %"class.std::__1::basic_string"** %2, align 8
   %4 = getelementptr inbounds %"class.std::__1::basic_string", %"class.std::__1::basic_string"* %3, i32 0, i32 0
-  %5 = call nonnull align 8 dereferenceable(24) %"struct.std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep"* @_ZNKSt3__117__compressed_pairINS_12basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE5__repES5_E5firstEv(%"class.std::__1::__compressed_pair"* %4) #3
+  %5 = call nonnull align 8 dereferenceable(24) %"struct.std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep"* @_ZNKSt3__117__compressed_pairINS_12basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE5__repES5_E5firstEv(%"class.std::__1::__compressed_pair"* %4) #8
   %6 = getelementptr inbounds %"struct.std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep", %"struct.std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep"* %5, i32 0, i32 0
   %7 = bitcast %union.anon* %6 to %"struct.std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__long"*
   %8 = getelementptr inbounds %"struct.std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__long", %"struct.std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__long"* %7, i32 0, i32 0
@@ -1399,32 +1363,32 @@ define internal i8* @_ZNKSt3__112basic_stringIcNS_11char_traitsIcEENS_9allocator
 }
 
 ; Function Attrs: noinline nounwind optnone ssp uwtable
-define internal i8* @_ZNKSt3__112basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE19__get_short_pointerEv(%"class.std::__1::basic_string"* %0) #5 align 2 {
+define internal i8* @_ZNKSt3__112basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE19__get_short_pointerEv(%"class.std::__1::basic_string"* %0) #3 align 2 {
   %2 = alloca %"class.std::__1::basic_string"*, align 8
   store %"class.std::__1::basic_string"* %0, %"class.std::__1::basic_string"** %2, align 8
   %3 = load %"class.std::__1::basic_string"*, %"class.std::__1::basic_string"** %2, align 8
   %4 = getelementptr inbounds %"class.std::__1::basic_string", %"class.std::__1::basic_string"* %3, i32 0, i32 0
-  %5 = call nonnull align 8 dereferenceable(24) %"struct.std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep"* @_ZNKSt3__117__compressed_pairINS_12basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE5__repES5_E5firstEv(%"class.std::__1::__compressed_pair"* %4) #3
+  %5 = call nonnull align 8 dereferenceable(24) %"struct.std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep"* @_ZNKSt3__117__compressed_pairINS_12basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE5__repES5_E5firstEv(%"class.std::__1::__compressed_pair"* %4) #8
   %6 = getelementptr inbounds %"struct.std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep", %"struct.std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep"* %5, i32 0, i32 0
   %7 = bitcast %union.anon* %6 to %"struct.std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__short"*
   %8 = getelementptr inbounds %"struct.std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__short", %"struct.std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__short"* %7, i32 0, i32 0
   %9 = getelementptr inbounds [23 x i8], [23 x i8]* %8, i64 0, i64 0
-  %10 = call i8* @_ZNSt3__114pointer_traitsIPKcE10pointer_toERS1_(i8* nonnull align 1 dereferenceable(1) %9) #3
+  %10 = call i8* @_ZNSt3__114pointer_traitsIPKcE10pointer_toERS1_(i8* nonnull align 1 dereferenceable(1) %9) #8
   ret i8* %10
 }
 
 ; Function Attrs: noinline nounwind optnone ssp uwtable
-define internal nonnull align 8 dereferenceable(24) %"struct.std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep"* @_ZNKSt3__117__compressed_pairINS_12basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE5__repES5_E5firstEv(%"class.std::__1::__compressed_pair"* %0) #5 align 2 {
+define internal nonnull align 8 dereferenceable(24) %"struct.std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep"* @_ZNKSt3__117__compressed_pairINS_12basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE5__repES5_E5firstEv(%"class.std::__1::__compressed_pair"* %0) #3 align 2 {
   %2 = alloca %"class.std::__1::__compressed_pair"*, align 8
   store %"class.std::__1::__compressed_pair"* %0, %"class.std::__1::__compressed_pair"** %2, align 8
   %3 = load %"class.std::__1::__compressed_pair"*, %"class.std::__1::__compressed_pair"** %2, align 8
   %4 = bitcast %"class.std::__1::__compressed_pair"* %3 to %"struct.std::__1::__compressed_pair_elem"*
-  %5 = call nonnull align 8 dereferenceable(24) %"struct.std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep"* @_ZNKSt3__122__compressed_pair_elemINS_12basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE5__repELi0ELb0EE5__getEv(%"struct.std::__1::__compressed_pair_elem"* %4) #3
+  %5 = call nonnull align 8 dereferenceable(24) %"struct.std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep"* @_ZNKSt3__122__compressed_pair_elemINS_12basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE5__repELi0ELb0EE5__getEv(%"struct.std::__1::__compressed_pair_elem"* %4) #8
   ret %"struct.std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep"* %5
 }
 
 ; Function Attrs: noinline nounwind optnone ssp uwtable
-define internal nonnull align 8 dereferenceable(24) %"struct.std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep"* @_ZNKSt3__122__compressed_pair_elemINS_12basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE5__repELi0ELb0EE5__getEv(%"struct.std::__1::__compressed_pair_elem"* %0) #5 align 2 {
+define internal nonnull align 8 dereferenceable(24) %"struct.std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep"* @_ZNKSt3__122__compressed_pair_elemINS_12basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE5__repELi0ELb0EE5__getEv(%"struct.std::__1::__compressed_pair_elem"* %0) #3 align 2 {
   %2 = alloca %"struct.std::__1::__compressed_pair_elem"*, align 8
   store %"struct.std::__1::__compressed_pair_elem"* %0, %"struct.std::__1::__compressed_pair_elem"** %2, align 8
   %3 = load %"struct.std::__1::__compressed_pair_elem"*, %"struct.std::__1::__compressed_pair_elem"** %2, align 8
@@ -1433,16 +1397,16 @@ define internal nonnull align 8 dereferenceable(24) %"struct.std::__1::basic_str
 }
 
 ; Function Attrs: noinline nounwind optnone ssp uwtable
-define internal i8* @_ZNSt3__114pointer_traitsIPKcE10pointer_toERS1_(i8* nonnull align 1 dereferenceable(1) %0) #5 align 2 {
+define internal i8* @_ZNSt3__114pointer_traitsIPKcE10pointer_toERS1_(i8* nonnull align 1 dereferenceable(1) %0) #3 align 2 {
   %2 = alloca i8*, align 8
   store i8* %0, i8** %2, align 8
   %3 = load i8*, i8** %2, align 8
-  %4 = call i8* @_ZNSt3__1L9addressofIKcEEPT_RS2_(i8* nonnull align 1 dereferenceable(1) %3) #3
+  %4 = call i8* @_ZNSt3__1L9addressofIKcEEPT_RS2_(i8* nonnull align 1 dereferenceable(1) %3) #8
   ret i8* %4
 }
 
 ; Function Attrs: noinline nounwind optnone ssp uwtable
-define internal i8* @_ZNSt3__1L9addressofIKcEEPT_RS2_(i8* nonnull align 1 dereferenceable(1) %0) #5 {
+define internal i8* @_ZNSt3__1L9addressofIKcEEPT_RS2_(i8* nonnull align 1 dereferenceable(1) %0) #3 {
   %2 = alloca i8*, align 8
   store i8* %0, i8** %2, align 8
   %3 = load i8*, i8** %2, align 8
@@ -1450,7 +1414,7 @@ define internal i8* @_ZNSt3__1L9addressofIKcEEPT_RS2_(i8* nonnull align 1 derefe
 }
 
 ; Function Attrs: noinline nounwind optnone ssp uwtable
-define internal %"class.std::__1::ostreambuf_iterator"* @_ZNSt3__119ostreambuf_iteratorIcNS_11char_traitsIcEEEC2ERNS_13basic_ostreamIcS2_EE(%"class.std::__1::ostreambuf_iterator"* returned %0, %"class.std::__1::basic_ostream"* nonnull align 8 dereferenceable(8) %1) unnamed_addr #5 align 2 personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define internal %"class.std::__1::ostreambuf_iterator"* @_ZNSt3__119ostreambuf_iteratorIcNS_11char_traitsIcEEEC2ERNS_13basic_ostreamIcS2_EE(%"class.std::__1::ostreambuf_iterator"* returned %0, %"class.std::__1::basic_ostream"* nonnull align 8 dereferenceable(8) %1) unnamed_addr #3 align 2 personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
   %3 = alloca %"class.std::__1::ostreambuf_iterator"*, align 8
   %4 = alloca %"class.std::__1::basic_ostream"*, align 8
   %5 = alloca i8*, align 8
@@ -1487,12 +1451,12 @@ define internal %"class.std::__1::ostreambuf_iterator"* @_ZNSt3__119ostreambuf_i
 
 25:                                               ; preds = %21
   %26 = load i8*, i8** %5, align 8
-  call void @__cxa_call_unexpected(i8* %26) #11
+  call void @__cxa_call_unexpected(i8* %26) #10
   unreachable
 }
 
 ; Function Attrs: noinline optnone ssp uwtable
-define internal %"class.std::__1::basic_streambuf"* @_ZNKSt3__19basic_iosIcNS_11char_traitsIcEEE5rdbufEv(%"class.std::__1::basic_ios"* %0) #1 align 2 {
+define internal %"class.std::__1::basic_streambuf"* @_ZNKSt3__19basic_iosIcNS_11char_traitsIcEEE5rdbufEv(%"class.std::__1::basic_ios"* %0) #0 align 2 {
   %2 = alloca %"class.std::__1::basic_ios"*, align 8
   store %"class.std::__1::basic_ios"* %0, %"class.std::__1::basic_ios"** %2, align 8
   %3 = load %"class.std::__1::basic_ios"*, %"class.std::__1::basic_ios"** %2, align 8
@@ -1505,7 +1469,7 @@ define internal %"class.std::__1::basic_streambuf"* @_ZNKSt3__19basic_iosIcNS_11
 declare void @__cxa_call_unexpected(i8*)
 
 ; Function Attrs: noinline nounwind optnone ssp uwtable
-define internal i8* @_ZNKSt3__18ios_base5rdbufEv(%"class.std::__1::ios_base"* %0) #5 align 2 {
+define internal i8* @_ZNKSt3__18ios_base5rdbufEv(%"class.std::__1::ios_base"* %0) #3 align 2 {
   %2 = alloca %"class.std::__1::ios_base"*, align 8
   store %"class.std::__1::ios_base"* %0, %"class.std::__1::ios_base"** %2, align 8
   %3 = load %"class.std::__1::ios_base"*, %"class.std::__1::ios_base"** %2, align 8
@@ -1515,7 +1479,7 @@ define internal i8* @_ZNKSt3__18ios_base5rdbufEv(%"class.std::__1::ios_base"* %0
 }
 
 ; Function Attrs: noinline nounwind optnone ssp uwtable
-define linkonce_odr zeroext i1 @_ZNSt3__111char_traitsIcE11eq_int_typeEii(i32 %0, i32 %1) #5 align 2 {
+define linkonce_odr zeroext i1 @_ZNSt3__111char_traitsIcE11eq_int_typeEii(i32 %0, i32 %1) #3 align 2 {
   %3 = alloca i32, align 4
   %4 = alloca i32, align 4
   store i32 %0, i32* %3, align 4
@@ -1527,12 +1491,12 @@ define linkonce_odr zeroext i1 @_ZNSt3__111char_traitsIcE11eq_int_typeEii(i32 %0
 }
 
 ; Function Attrs: noinline nounwind optnone ssp uwtable
-define linkonce_odr i32 @_ZNSt3__111char_traitsIcE3eofEv() #5 align 2 {
+define linkonce_odr i32 @_ZNSt3__111char_traitsIcE3eofEv() #3 align 2 {
   ret i32 -1
 }
 
 ; Function Attrs: noinline optnone ssp uwtable
-define internal signext i8 @_ZNKSt3__19basic_iosIcNS_11char_traitsIcEEE5widenEc(%"class.std::__1::basic_ios"* %0, i8 signext %1) #1 align 2 personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define internal signext i8 @_ZNKSt3__19basic_iosIcNS_11char_traitsIcEEE5widenEc(%"class.std::__1::basic_ios"* %0, i8 signext %1) #0 align 2 personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
   %3 = alloca %"class.std::__1::basic_ios"*, align 8
   %4 = alloca i8, align 1
   %5 = alloca %"class.std::__1::locale", align 8
@@ -1579,12 +1543,12 @@ define internal signext i8 @_ZNKSt3__19basic_iosIcNS_11char_traitsIcEEE5widenEc(
   %28 = landingpad { i8*, i32 }
           catch i8* null
   %29 = extractvalue { i8*, i32 } %28, 0
-  call void @__clang_call_terminate(i8* %29) #10
+  call void @__clang_call_terminate(i8* %29) #9
   unreachable
 }
 
 ; Function Attrs: noinline optnone ssp uwtable
-define internal nonnull align 8 dereferenceable(25) %"class.std::__1::ctype"* @_ZNSt3__1L9use_facetINS_5ctypeIcEEEERKT_RKNS_6localeE(%"class.std::__1::locale"* nonnull align 8 dereferenceable(8) %0) #1 {
+define internal nonnull align 8 dereferenceable(25) %"class.std::__1::ctype"* @_ZNSt3__1L9use_facetINS_5ctypeIcEEEERKT_RKNS_6localeE(%"class.std::__1::locale"* nonnull align 8 dereferenceable(8) %0) #0 {
   %2 = alloca %"class.std::__1::locale"*, align 8
   store %"class.std::__1::locale"* %0, %"class.std::__1::locale"** %2, align 8
   %3 = load %"class.std::__1::locale"*, %"class.std::__1::locale"** %2, align 8
@@ -1593,10 +1557,10 @@ define internal nonnull align 8 dereferenceable(25) %"class.std::__1::ctype"* @_
   ret %"class.std::__1::ctype"* %5
 }
 
-declare void @_ZNKSt3__18ios_base6getlocEv(%"class.std::__1::locale"* sret(%"class.std::__1::locale") align 8, %"class.std::__1::ios_base"*) #2
+declare void @_ZNKSt3__18ios_base6getlocEv(%"class.std::__1::locale"* sret(%"class.std::__1::locale") align 8, %"class.std::__1::ios_base"*) #1
 
 ; Function Attrs: noinline optnone ssp uwtable
-define internal signext i8 @_ZNKSt3__15ctypeIcE5widenEc(%"class.std::__1::ctype"* %0, i8 signext %1) #1 align 2 {
+define internal signext i8 @_ZNKSt3__15ctypeIcE5widenEc(%"class.std::__1::ctype"* %0, i8 signext %1) #0 align 2 {
   %3 = alloca %"class.std::__1::ctype"*, align 8
   %4 = alloca i8, align 1
   store %"class.std::__1::ctype"* %0, %"class.std::__1::ctype"** %3, align 8
@@ -1611,12 +1575,12 @@ define internal signext i8 @_ZNKSt3__15ctypeIcE5widenEc(%"class.std::__1::ctype"
   ret i8 %11
 }
 
-declare %"class.std::__1::locale"* @_ZNSt3__16localeD1Ev(%"class.std::__1::locale"* returned) unnamed_addr #2
+declare %"class.std::__1::locale"* @_ZNSt3__16localeD1Ev(%"class.std::__1::locale"* returned) unnamed_addr #1
 
-declare %"class.std::__1::locale::facet"* @_ZNKSt3__16locale9use_facetERNS0_2idE(%"class.std::__1::locale"*, %"class.std::__1::locale::id"* nonnull align 8 dereferenceable(12)) #2
+declare %"class.std::__1::locale::facet"* @_ZNKSt3__16locale9use_facetERNS0_2idE(%"class.std::__1::locale"*, %"class.std::__1::locale::id"* nonnull align 8 dereferenceable(12)) #1
 
 ; Function Attrs: noinline optnone ssp uwtable
-define internal void @_ZNSt3__18ios_base8setstateEj(%"class.std::__1::ios_base"* %0, i32 %1) #1 align 2 {
+define internal void @_ZNSt3__18ios_base8setstateEj(%"class.std::__1::ios_base"* %0, i32 %1) #0 align 2 {
   %3 = alloca %"class.std::__1::ios_base"*, align 8
   %4 = alloca i32, align 4
   store %"class.std::__1::ios_base"* %0, %"class.std::__1::ios_base"** %3, align 8
@@ -1630,22 +1594,25 @@ define internal void @_ZNSt3__18ios_base8setstateEj(%"class.std::__1::ios_base"*
   ret void
 }
 
-declare void @_ZNSt3__18ios_base5clearEj(%"class.std::__1::ios_base"*, i32) #2
+declare void @_ZNSt3__18ios_base5clearEj(%"class.std::__1::ios_base"*, i32) #1
+
+; Function Attrs: nounwind
+declare i64 @strlen(i8*) #7
 
 ; Function Attrs: noinline nounwind optnone ssp uwtable
-define internal i64 @_ZNKSt3__112basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE4sizeEv(%"class.std::__1::basic_string"* %0) #5 align 2 {
+define internal i64 @_ZNKSt3__112basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE4sizeEv(%"class.std::__1::basic_string"* %0) #3 align 2 {
   %2 = alloca %"class.std::__1::basic_string"*, align 8
   store %"class.std::__1::basic_string"* %0, %"class.std::__1::basic_string"** %2, align 8
   %3 = load %"class.std::__1::basic_string"*, %"class.std::__1::basic_string"** %2, align 8
-  %4 = call zeroext i1 @_ZNKSt3__112basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE9__is_longEv(%"class.std::__1::basic_string"* %3) #3
+  %4 = call zeroext i1 @_ZNKSt3__112basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE9__is_longEv(%"class.std::__1::basic_string"* %3) #8
   br i1 %4, label %5, label %7
 
 5:                                                ; preds = %1
-  %6 = call i64 @_ZNKSt3__112basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE15__get_long_sizeEv(%"class.std::__1::basic_string"* %3) #3
+  %6 = call i64 @_ZNKSt3__112basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE15__get_long_sizeEv(%"class.std::__1::basic_string"* %3) #8
   br label %9
 
 7:                                                ; preds = %1
-  %8 = call i64 @_ZNKSt3__112basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE16__get_short_sizeEv(%"class.std::__1::basic_string"* %3) #3
+  %8 = call i64 @_ZNKSt3__112basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE16__get_short_sizeEv(%"class.std::__1::basic_string"* %3) #8
   br label %9
 
 9:                                                ; preds = %7, %5
@@ -1654,12 +1621,12 @@ define internal i64 @_ZNKSt3__112basic_stringIcNS_11char_traitsIcEENS_9allocator
 }
 
 ; Function Attrs: noinline nounwind optnone ssp uwtable
-define internal i64 @_ZNKSt3__112basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE15__get_long_sizeEv(%"class.std::__1::basic_string"* %0) #5 align 2 {
+define internal i64 @_ZNKSt3__112basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE15__get_long_sizeEv(%"class.std::__1::basic_string"* %0) #3 align 2 {
   %2 = alloca %"class.std::__1::basic_string"*, align 8
   store %"class.std::__1::basic_string"* %0, %"class.std::__1::basic_string"** %2, align 8
   %3 = load %"class.std::__1::basic_string"*, %"class.std::__1::basic_string"** %2, align 8
   %4 = getelementptr inbounds %"class.std::__1::basic_string", %"class.std::__1::basic_string"* %3, i32 0, i32 0
-  %5 = call nonnull align 8 dereferenceable(24) %"struct.std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep"* @_ZNKSt3__117__compressed_pairINS_12basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE5__repES5_E5firstEv(%"class.std::__1::__compressed_pair"* %4) #3
+  %5 = call nonnull align 8 dereferenceable(24) %"struct.std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep"* @_ZNKSt3__117__compressed_pairINS_12basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE5__repES5_E5firstEv(%"class.std::__1::__compressed_pair"* %4) #8
   %6 = getelementptr inbounds %"struct.std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep", %"struct.std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep"* %5, i32 0, i32 0
   %7 = bitcast %union.anon* %6 to %"struct.std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__long"*
   %8 = getelementptr inbounds %"struct.std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__long", %"struct.std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__long"* %7, i32 0, i32 1
@@ -1668,12 +1635,12 @@ define internal i64 @_ZNKSt3__112basic_stringIcNS_11char_traitsIcEENS_9allocator
 }
 
 ; Function Attrs: noinline nounwind optnone ssp uwtable
-define internal i64 @_ZNKSt3__112basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE16__get_short_sizeEv(%"class.std::__1::basic_string"* %0) #5 align 2 {
+define internal i64 @_ZNKSt3__112basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE16__get_short_sizeEv(%"class.std::__1::basic_string"* %0) #3 align 2 {
   %2 = alloca %"class.std::__1::basic_string"*, align 8
   store %"class.std::__1::basic_string"* %0, %"class.std::__1::basic_string"** %2, align 8
   %3 = load %"class.std::__1::basic_string"*, %"class.std::__1::basic_string"** %2, align 8
   %4 = getelementptr inbounds %"class.std::__1::basic_string", %"class.std::__1::basic_string"* %3, i32 0, i32 0
-  %5 = call nonnull align 8 dereferenceable(24) %"struct.std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep"* @_ZNKSt3__117__compressed_pairINS_12basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE5__repES5_E5firstEv(%"class.std::__1::__compressed_pair"* %4) #3
+  %5 = call nonnull align 8 dereferenceable(24) %"struct.std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep"* @_ZNKSt3__117__compressed_pairINS_12basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE5__repES5_E5firstEv(%"class.std::__1::__compressed_pair"* %4) #8
   %6 = getelementptr inbounds %"struct.std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep", %"struct.std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__rep"* %5, i32 0, i32 0
   %7 = bitcast %union.anon* %6 to %"struct.std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__short"*
   %8 = getelementptr inbounds %"struct.std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__short", %"struct.std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >::__short"* %7, i32 0, i32 1
@@ -1683,28 +1650,42 @@ define internal i64 @_ZNKSt3__112basic_stringIcNS_11char_traitsIcEENS_9allocator
   ret i64 %11
 }
 
-declare nonnull align 8 dereferenceable(8) %"class.std::__1::basic_ostream"* @_ZNSt3__113basic_ostreamIcNS_11char_traitsIcEEE3putEc(%"class.std::__1::basic_ostream"*, i8 signext) #2
+declare nonnull align 8 dereferenceable(8) %"class.std::__1::basic_ostream"* @_ZNSt3__113basic_ostreamIcNS_11char_traitsIcEEE3putEc(%"class.std::__1::basic_ostream"*, i8 signext) #1
 
-declare nonnull align 8 dereferenceable(8) %"class.std::__1::basic_ostream"* @_ZNSt3__113basic_ostreamIcNS_11char_traitsIcEEE5flushEv(%"class.std::__1::basic_ostream"*) #2
+declare nonnull align 8 dereferenceable(8) %"class.std::__1::basic_ostream"* @_ZNSt3__113basic_ostreamIcNS_11char_traitsIcEEE5flushEv(%"class.std::__1::basic_ostream"*) #1
 
-; Function Attrs: noinline ssp uwtable
-define internal void @_GLOBAL__sub_I_client.cpp() #0 section "__TEXT,__StaticInit,regular,pure_instructions" {
-  call void @__cxx_global_var_init()
-  ret void
+; Function Attrs: noinline optnone ssp uwtable
+define internal %"class.std::__1::basic_string"* @_ZNSt3__112basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEEC2INS_9nullptr_tEEEPKc(%"class.std::__1::basic_string"* returned %0, i8* %1) unnamed_addr #0 align 2 {
+  %3 = alloca %"class.std::__1::basic_string"*, align 8
+  %4 = alloca i8*, align 8
+  %5 = alloca %"struct.std::__1::__default_init_tag", align 1
+  %6 = alloca %"struct.std::__1::__default_init_tag", align 1
+  store %"class.std::__1::basic_string"* %0, %"class.std::__1::basic_string"** %3, align 8
+  store i8* %1, i8** %4, align 8
+  %7 = load %"class.std::__1::basic_string"*, %"class.std::__1::basic_string"** %3, align 8
+  %8 = bitcast %"class.std::__1::basic_string"* %7 to %"class.std::__1::__basic_string_common"*
+  %9 = getelementptr inbounds %"class.std::__1::basic_string", %"class.std::__1::basic_string"* %7, i32 0, i32 0
+  %10 = call %"class.std::__1::__compressed_pair"* @_ZNSt3__117__compressed_pairINS_12basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE5__repES5_EC1INS_18__default_init_tagESA_EEOT_OT0_(%"class.std::__1::__compressed_pair"* %9, %"struct.std::__1::__default_init_tag"* nonnull align 1 dereferenceable(1) %5, %"struct.std::__1::__default_init_tag"* nonnull align 1 dereferenceable(1) %6)
+  %11 = load i8*, i8** %4, align 8
+  %12 = load i8*, i8** %4, align 8
+  %13 = call i64 @_ZNSt3__111char_traitsIcE6lengthEPKc(i8* %12) #8
+  call void @_ZNSt3__112basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE6__initEPKcm(%"class.std::__1::basic_string"* %7, i8* %11, i64 %13)
+  ret %"class.std::__1::basic_string"* %7
 }
 
-attributes #0 = { noinline ssp uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="non-leaf" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="apple-a12" "target-features"="+aes,+crc,+crypto,+fp-armv8,+fullfp16,+lse,+neon,+ras,+rcpc,+rdm,+sha2,+v8.3a,+zcm,+zcz" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #1 = { noinline optnone ssp uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="non-leaf" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="true" "probe-stack"="__chkstk_darwin" "stack-protector-buffer-size"="8" "target-cpu"="apple-a12" "target-features"="+aes,+crc,+crypto,+fp-armv8,+fullfp16,+lse,+neon,+ras,+rcpc,+rdm,+sha2,+v8.3a,+zcm,+zcz" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #2 = { "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="non-leaf" "less-precise-fpmad"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="true" "probe-stack"="__chkstk_darwin" "stack-protector-buffer-size"="8" "target-cpu"="apple-a12" "target-features"="+aes,+crc,+crypto,+fp-armv8,+fullfp16,+lse,+neon,+ras,+rcpc,+rdm,+sha2,+v8.3a,+zcm,+zcz" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #3 = { nounwind }
-attributes #4 = { argmemonly nounwind willreturn writeonly }
-attributes #5 = { noinline nounwind optnone ssp uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="non-leaf" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="true" "probe-stack"="__chkstk_darwin" "stack-protector-buffer-size"="8" "target-cpu"="apple-a12" "target-features"="+aes,+crc,+crypto,+fp-armv8,+fullfp16,+lse,+neon,+ras,+rcpc,+rdm,+sha2,+v8.3a,+zcm,+zcz" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #6 = { argmemonly nounwind willreturn }
-attributes #7 = { noinline noreturn nounwind }
-attributes #8 = { noinline norecurse optnone ssp uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="non-leaf" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="true" "probe-stack"="__chkstk_darwin" "stack-protector-buffer-size"="8" "target-cpu"="apple-a12" "target-features"="+aes,+crc,+crypto,+fp-armv8,+fullfp16,+lse,+neon,+ras,+rcpc,+rdm,+sha2,+v8.3a,+zcm,+zcz" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #9 = { nounwind "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="non-leaf" "less-precise-fpmad"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="true" "probe-stack"="__chkstk_darwin" "stack-protector-buffer-size"="8" "target-cpu"="apple-a12" "target-features"="+aes,+crc,+crypto,+fp-armv8,+fullfp16,+lse,+neon,+ras,+rcpc,+rdm,+sha2,+v8.3a,+zcm,+zcz" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #10 = { noreturn nounwind }
-attributes #11 = { noreturn }
+declare void @_ZNSt3__112basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE6__initEPKcm(%"class.std::__1::basic_string"*, i8*, i64) #1
+
+attributes #0 = { noinline optnone ssp uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="non-leaf" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="true" "probe-stack"="__chkstk_darwin" "stack-protector-buffer-size"="8" "target-cpu"="apple-a12" "target-features"="+aes,+crc,+crypto,+fp-armv8,+fullfp16,+lse,+neon,+ras,+rcpc,+rdm,+sha2,+v8.3a,+zcm,+zcz" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #1 = { "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="non-leaf" "less-precise-fpmad"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="true" "probe-stack"="__chkstk_darwin" "stack-protector-buffer-size"="8" "target-cpu"="apple-a12" "target-features"="+aes,+crc,+crypto,+fp-armv8,+fullfp16,+lse,+neon,+ras,+rcpc,+rdm,+sha2,+v8.3a,+zcm,+zcz" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #2 = { argmemonly nounwind willreturn writeonly }
+attributes #3 = { noinline nounwind optnone ssp uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="non-leaf" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="true" "probe-stack"="__chkstk_darwin" "stack-protector-buffer-size"="8" "target-cpu"="apple-a12" "target-features"="+aes,+crc,+crypto,+fp-armv8,+fullfp16,+lse,+neon,+ras,+rcpc,+rdm,+sha2,+v8.3a,+zcm,+zcz" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #4 = { argmemonly nounwind willreturn }
+attributes #5 = { noinline noreturn nounwind }
+attributes #6 = { noinline norecurse optnone ssp uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="non-leaf" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="true" "probe-stack"="__chkstk_darwin" "stack-protector-buffer-size"="8" "target-cpu"="apple-a12" "target-features"="+aes,+crc,+crypto,+fp-armv8,+fullfp16,+lse,+neon,+ras,+rcpc,+rdm,+sha2,+v8.3a,+zcm,+zcz" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #7 = { nounwind "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="non-leaf" "less-precise-fpmad"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="true" "probe-stack"="__chkstk_darwin" "stack-protector-buffer-size"="8" "target-cpu"="apple-a12" "target-features"="+aes,+crc,+crypto,+fp-armv8,+fullfp16,+lse,+neon,+ras,+rcpc,+rdm,+sha2,+v8.3a,+zcm,+zcz" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #8 = { nounwind }
+attributes #9 = { noreturn nounwind }
+attributes #10 = { noreturn }
 
 !llvm.module.flags = !{!0, !1, !2}
 !llvm.ident = !{!3}
