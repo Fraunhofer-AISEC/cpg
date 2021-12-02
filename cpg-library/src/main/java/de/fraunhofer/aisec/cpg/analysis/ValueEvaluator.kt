@@ -29,6 +29,8 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 
 class CouldNotResolve
 
@@ -61,6 +63,9 @@ class ValueEvaluator(
         }
     }
 ) {
+    private val log: Logger
+        get() = LoggerFactory.getLogger(ValueEvaluator::class.java)
+
     /**
      * This property contains the path of the latest execution of [evaluate] or
      * [evaluateDeclaration].
@@ -95,14 +100,18 @@ class ValueEvaluator(
             is DeclaredReferenceExpression -> {
                 val prevDFG = expr.prevDFG
 
-                // We could potentially have more incoming DFG nodes, so we want to filter for
-                // "interesting" nodes
-                var expressions = prevDFG.filterIsInstance<Expression>()
+                // We are only interested in expressions
+                val expressions = prevDFG.filterIsInstance<Expression>()
 
-                // Sort them according to their name to make it more consistent
-                expressions = expressions.sortedBy { it.name }
+                if (expressions.size > 1) {
+                    // We cannot have ONE valid solution, so we need to abort
+                    log.warn(
+                        "We cannot evaluate {}: It has more than more previous DFG edges, meaning that the value is probably affected by a branch.",
+                        expr
+                    )
+                    return cannotEvaluate(expr, this)
+                }
 
-                // If we still have more than one, for now just we return the first one
                 return evaluate(expressions.firstOrNull())
             }
             // We are handling some basic arithmetic binary operations and string operations that
