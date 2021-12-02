@@ -33,8 +33,14 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 class CouldNotResolve
 
 /**
- * The value resolver tries to evaluate the value of an [Expression] basically by following DFG edges
- * until we reach a [Literal].
+ * The value evaluator tries to evaluate the (constant) value of an [Expression] basically by
+ * following DFG edges until we reach a [Literal]. It also evaluates simple binary operations, such
+ * as arithmetic operations, as well as simple string concatenations.
+ *
+ * The result can be retrieved in two ways:
+ * * The result of the [resolve] function is a JVM object which represents the constant value
+ * * Furthermore, after the execution of [evaluate] or [evaluateDeclaration], the latest evaluation
+ * path can be retrieved in the [path] property of the evaluator.
  *
  * It contains some advanced mechanics such as resolution of values of arrays, if they contain
  * literal values. Furthermore, its behaviour can be adjusted by implementing the [cannotEvaluate]
@@ -55,9 +61,14 @@ class ValueEvaluator(
         }
     }
 ) {
+    /**
+     * This property contains the path of the latest execution of [evaluate] or
+     * [evaluateDeclaration].
+     */
     val path: MutableList<Node> = mutableListOf()
 
-    fun resolveDeclaration(decl: Declaration?): Any? {
+    /** Tries to evaluate this declaration, basically using [evaluate] on its initializer. */
+    fun evaluateDeclaration(decl: Declaration?): Any? {
         decl?.let { this.path += it }
         when (decl) {
             is VariableDeclaration -> return evaluate(decl.initializer)
@@ -71,6 +82,7 @@ class ValueEvaluator(
 
     /** Tries to evaluate this expression. Anything can happen. */
     fun evaluate(expr: Expression?): Any? {
+        // add the expression to the current path
         expr?.let { this.path += it }
 
         when (expr) {

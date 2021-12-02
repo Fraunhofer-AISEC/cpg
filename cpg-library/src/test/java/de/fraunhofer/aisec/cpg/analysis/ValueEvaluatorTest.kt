@@ -23,10 +23,12 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.graph
+package de.fraunhofer.aisec.cpg.analysis
 
 import de.fraunhofer.aisec.cpg.TestUtils
+import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import java.nio.file.Path
 import kotlin.test.Test
@@ -37,7 +39,7 @@ class ValueEvaluatorTest {
 
     @Test
     fun test() {
-        val topLevel = Path.of("src", "test", "resources", "value_resolution")
+        val topLevel = Path.of("src", "test", "resources", "value_evaluation")
         val tu =
             TestUtils.analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("example.cpp").toFile()),
@@ -50,16 +52,26 @@ class ValueEvaluatorTest {
         val main = tu.byNameOrNull<FunctionDeclaration>("main")
         assertNotNull(main)
 
+        val b = main.bodyOrNull<DeclarationStatement>()?.singleDeclaration
+        assertNotNull(b)
+
+        var value = b.evaluate()
+        assertEquals(2, value)
+
         val printB = main.bodyOrNull<CallExpression>()
         assertNotNull(printB)
 
-        var value = ValueEvaluator().evaluate(printB.arguments.firstOrNull())
+        val evaluator = ValueEvaluator()
+        value = evaluator.evaluate(printB.arguments.firstOrNull())
         assertEquals(2, value)
+
+        val path = evaluator.path
+        assertEquals(4, path.size)
 
         val printA = main.bodyOrNull<CallExpression>(1)
         assertNotNull(printA)
 
-        value = ValueEvaluator().evaluate(printA.arguments.firstOrNull())
+        value = printA.arguments.firstOrNull()?.evaluate()
         assertEquals(2, value)
     }
 }
