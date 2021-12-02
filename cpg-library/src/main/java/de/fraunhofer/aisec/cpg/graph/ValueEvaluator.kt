@@ -33,7 +33,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 class CouldNotResolve
 
 /**
- * The value resolver tries to evaluate the value of an [Expression] basically by following edges
+ * The value resolver tries to evaluate the value of an [Expression] basically by following DFG edges
  * until we reach a [Literal].
  *
  * It contains some advanced mechanics such as resolution of values of arrays, if they contain
@@ -78,9 +78,17 @@ class ValueEvaluator(
                 return expr.value
             }
             is DeclaredReferenceExpression -> {
-                // TODO: assert that it is really an expression, etc.
-                return evaluate(expr.prevDFG.firstOrNull() as? Expression)
-                // return resolveDeclaration(expr.refersTo)
+                val prevDFG = expr.prevDFG
+
+                // we could potentially have more incoming DFG nodes, so we want to filter for
+                // "interesting" nodes
+                var expressions = prevDFG.filterIsInstance<Expression>()
+
+                // sort them according to their name to make it more consistent
+                expressions = expressions.sortedBy { it.name }
+
+                // if we still have more than one, for now just we return the first one
+                return evaluate(expressions.firstOrNull())
             }
             is BinaryOperator -> {
                 // resolve lhs
