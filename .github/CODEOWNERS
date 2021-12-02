@@ -4,7 +4,7 @@
 
 *.py  @maximiliankaul
 
-*.llvm @KuechA
+*.ll @KuechA
 
 build.gradle.kts @oxisto
 .github @oxisto
