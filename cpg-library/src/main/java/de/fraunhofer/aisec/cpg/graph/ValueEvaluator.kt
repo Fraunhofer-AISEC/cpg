@@ -77,7 +77,11 @@ class ValueEvaluator(
             is Literal<*> -> {
                 return expr.value
             }
-            is DeclaredReferenceExpression -> return resolveDeclaration(expr.refersTo)
+            is DeclaredReferenceExpression -> {
+                // TODO: assert that it is really an expression, etc.
+                return evaluate(expr.prevDFG.firstOrNull() as? Expression)
+                // return resolveDeclaration(expr.refersTo)
+            }
             is BinaryOperator -> {
                 // resolve lhs
                 val lhsValue = evaluate(expr.lhs)
