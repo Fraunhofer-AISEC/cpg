@@ -82,31 +82,36 @@ class ValueEvaluator(
 
     /** Tries to evaluate this expression. Anything can happen. */
     fun evaluate(expr: Expression?): Any? {
-        // add the expression to the current path
+        // Add the expression to the current path
         expr?.let { this.path += it }
 
         when (expr) {
+            // For a literal, we can just take its value, and we are finished
             is Literal<*> -> {
                 return expr.value
             }
+            // For a reference, we are interested into its last assignment into the reference
+            // denoted by the previous DFG edge
             is DeclaredReferenceExpression -> {
                 val prevDFG = expr.prevDFG
 
-                // we could potentially have more incoming DFG nodes, so we want to filter for
+                // We could potentially have more incoming DFG nodes, so we want to filter for
                 // "interesting" nodes
                 var expressions = prevDFG.filterIsInstance<Expression>()
 
-                // sort them according to their name to make it more consistent
+                // Sort them according to their name to make it more consistent
                 expressions = expressions.sortedBy { it.name }
 
-                // if we still have more than one, for now just we return the first one
+                // If we still have more than one, for now just we return the first one
                 return evaluate(expressions.firstOrNull())
             }
+            // We are handling some basic arithmetic binary operations and string operations that
+            // are more or less language-independent
             is BinaryOperator -> {
-                // resolve lhs
+                // Resolve lhs
                 val lhsValue = evaluate(expr.lhs)
 
-                // resolve rhs
+                // Resolve rhs
                 val rhsValue = evaluate(expr.rhs)
 
                 if (expr.operatorCode == "+") {
@@ -171,9 +176,13 @@ class ValueEvaluator(
 
                 return cannotEvaluate(expr, this)
             }
+            // Casts are just a wrapper in this case, we are interested in the inner expression
             is CastExpression -> {
                 return this.evaluate(expr.expression)
             }
+            // For arrays, we check whether we can actually access the contents of the array. This
+            // is basically the case if the base of the subscript expression is a
+            // list of [KeyValueExpression]s.
             is ArraySubscriptionExpression -> {
                 val array =
                     (expr.arrayExpression as? DeclaredReferenceExpression)?.refersTo as?
@@ -194,8 +203,10 @@ class ValueEvaluator(
 
                 return cannotEvaluate(expr, this)
             }
+            // While we are not handling different paths of variables with If statements, we can
+            // easily be partly path-sensitive in a conditional expression
             is ConditionalExpression -> {
-                // assume that condition is a binary operator
+                // Assume that condition is a binary operator
                 if (expr.condition is BinaryOperator) {
                     val lhs = evaluate((expr.condition as? BinaryOperator)?.lhs)
                     val rhs = evaluate((expr.condition as? BinaryOperator)?.rhs)
@@ -211,6 +222,8 @@ class ValueEvaluator(
             }
         }
 
+        // At this point, we cannot evaluate, and we are calling our [cannotEvaluate] hook, maybe
+        // this helps
         return cannotEvaluate(expr, this)
     }
 }
