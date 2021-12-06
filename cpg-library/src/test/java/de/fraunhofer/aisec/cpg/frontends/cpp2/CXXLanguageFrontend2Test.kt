@@ -178,6 +178,56 @@ class CXXLanguageFrontend2Test {
     }
 
     @Test
+    @Throws(java.lang.Exception::class)
+    fun testLiterals() {
+        val file = File("src/test/resources/literals.cpp")
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.unregisterLanguage(CXXLanguageFrontend::class.java)
+                it.registerLanguage(
+                    CXXLanguageFrontend2::class.java,
+                    CXXLanguageFrontend.CXX_EXTENSIONS
+                )
+            }
+
+        val s = tu.getDeclarationAs(0, VariableDeclaration::class.java)
+        Assertions.assertEquals(TypeParser.createFrom("char[]", true), s!!.type)
+        Assertions.assertEquals("s", s.name)
+        var initializer: Expression? = s.initializer
+        Assertions.assertEquals("string", (initializer as Literal<*>).value)
+
+        val i = tu.getDeclarationAs(1, VariableDeclaration::class.java)
+        Assertions.assertEquals(TypeParser.createFrom("int", true), i!!.type)
+        Assertions.assertEquals("i", i.name)
+        initializer = i.initializer
+        Assertions.assertEquals(1, (initializer as Literal<*>).value)
+
+        val f = tu.getDeclarationAs(2, VariableDeclaration::class.java)
+        Assertions.assertEquals(TypeParser.createFrom("float", true), f!!.type)
+        Assertions.assertEquals("f", f.name)
+        initializer = f.initializer
+        Assertions.assertEquals(0.2f, (initializer as Literal<*>).value)
+
+        val d = tu.getDeclarationAs(3, VariableDeclaration::class.java)
+        Assertions.assertEquals(TypeParser.createFrom("double", true), d!!.type)
+        Assertions.assertEquals("d", d.name)
+        initializer = d.initializer
+        Assertions.assertEquals(0.2, (initializer as Literal<*>).value)
+
+        val b = tu.getDeclarationAs(4, VariableDeclaration::class.java)
+        Assertions.assertEquals(TypeParser.createFrom("bool", true), b!!.type)
+        Assertions.assertEquals("b", b.name)
+        initializer = b.initializer
+        Assertions.assertEquals(false, (initializer as Literal<*>).value)
+
+        val c = tu.getDeclarationAs(5, VariableDeclaration::class.java)
+        Assertions.assertEquals(TypeParser.createFrom("char", true), c!!.type)
+        Assertions.assertEquals("c", c.name)
+        initializer = c.initializer
+        Assertions.assertEquals('c', (initializer as Literal<*>).value)
+    }
+
+    @Test
     @Throws(Exception::class)
     fun testDeclarationStatement() {
         val file = File("src/test/resources/declstmt.cpp")
