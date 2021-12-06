@@ -179,6 +179,24 @@ class CXXLanguageFrontend2Test {
 
     @Test
     @Throws(java.lang.Exception::class)
+    fun testShiftExpression() {
+        val file = File("src/test/resources/shiftexpression.cpp")
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.unregisterLanguage(CXXLanguageFrontend::class.java)
+                it.registerLanguage(
+                    CXXLanguageFrontend2::class.java,
+                    CXXLanguageFrontend.CXX_EXTENSIONS
+                )
+            }
+        val functionDeclaration = tu.getDeclarationAs(0, FunctionDeclaration::class.java)
+        val statements: List<Statement> =
+            (functionDeclaration?.body as CompoundStatement).statements
+        Assertions.assertTrue(statements[1] is BinaryOperator)
+    }
+
+    @Test
+    @Throws(java.lang.Exception::class)
     fun testLiterals() {
         val file = File("src/test/resources/literals.cpp")
         val tu =
