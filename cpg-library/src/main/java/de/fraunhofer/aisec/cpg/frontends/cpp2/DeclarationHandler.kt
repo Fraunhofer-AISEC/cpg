@@ -50,15 +50,25 @@ class DeclarationHandler(lang: CXXLanguageFrontend2) :
     private fun handleDeclaration(node: TSNode): Declaration {
         return when (val type = node.type) {
             "function_definition" -> handleFunctionDefinition(node)
+            "function_declarator" -> handleFunctionDeclaration(node)
             "parameter_declaration" -> handleParameterDeclaration(node)
             "field_declaration" -> handleFieldDeclaration(node)
             "class_specifier" -> handleClassSpecifier(node)
             else -> {
-                LanguageFrontend.log.error("Not handling type {} yet.", type)
-                Declaration()
+                // A declarator might be wrapped in within a declaration node, call
+                // handleDeclaration again if necessary.
+                val declarator = ts_node_child_by_field_name(node, "declarator")
+                if (!declarator.isNull && !ts_node_is_null(declarator)) {
+                    handleDeclaration(declarator)
+                } else {
+                    // Otherwise return empty declaration
+                    LanguageFrontend.log.error("Not handling type {} yet.", type)
+                    Declaration()
+                }
             }
         }
     }
+
 
     private fun handleClassSpecifier(node: TSNode): Declaration {
         val name = lang.getCodeFromRawNode(ts_node_child_by_field_name(node, "name")) ?: ""
@@ -102,6 +112,37 @@ class DeclarationHandler(lang: CXXLanguageFrontend2) :
         )
 
         return param
+    }
+
+    /**
+     * This function handles function declarations. Depending if the function declaration represents
+     * a method or a constructur, this function either returns a [ConstructorDeclaration] or a
+     * [MethodDeclaration].
+     */
+    private fun handleFunctionDeclaration(node: TSNode): Declaration {
+        val startType = lang.handleType(ts_node_child_by_field_name(node, "type"))
+
+        // Peek into the declarator to determine the type
+        val declaration =
+            createMethodOrConstructor(
+                lang.getCodeFromRawNode(ts_node_child_by_field_name(node, "declarator")).orEmpty(),
+                lang.getCodeFromRawNode(node).orEmpty(),
+                lang.scopeManager.currentRecord
+            )
+        declaration.type = startType
+
+        // If this is a method declaration, make sure to set it as active scope, so that its
+        // parameters are correctly associated when processing the declarators
+        lang.scopeManager.enterScope(declaration)
+
+        // Process the declarator to adjust name and type of this declaration and add the parameters
+        // (if this is a method).
+        processDeclarator(node, declaration)
+
+        // Leave the method scope if it exists
+        lang.scopeManager.leaveScope(declaration)
+
+        return declaration
     }
 
     /**
@@ -163,24 +204,30 @@ class DeclarationHandler(lang: CXXLanguageFrontend2) :
     }
 
     /**
+     * Sometimes function declarations are nested in other nodes. This function @return the nested
+     * function declaration if there is any. Otherwise null.
+     */
+    private fun getNestedFunctionDeclaration(node: TSNode): TSNode? {
+        val declarator = ts_node_child_by_field_name(node, "declarator")
+        if (!declarator.isNull && !ts_node_is_null(declarator)) {
+            if (ts_node_type(declarator).string == "function_declarator") {
+                return declarator
+            } else {
+                return getNestedFunctionDeclaration(declarator)
+            }
+        }
+        return null
+    }
+
+    /**
      * Pure function declarations within a class are showing up as field_declaration. However, we
      * need to peek into the (nested) declarators to find out if this is really a function
      * declaration.
      */
     private fun isReallyAFunctionDeclaration(node: TSNode): Boolean {
-        // TODO: we can probably do this with a query
-
-        val declarator = ts_node_child_by_field_name(node, "declarator")
-        if (!declarator.isNull && !ts_node_is_null(declarator)) {
-            if (ts_node_type(declarator).string == "function_declarator") {
-                return true
-            } else {
-                if (isReallyAFunctionDeclaration(declarator)) {
-                    return true
-                }
-            }
+        if (getNestedFunctionDeclaration(node) != null) {
+            return true
         }
-
         return false
     }
 
@@ -205,6 +252,36 @@ class DeclarationHandler(lang: CXXLanguageFrontend2) :
         return false
     }
 
+    /**
+     * This function is required to identify whether a function declaration is really a constructor declaration, since
+     * construction declarations are modeled as function declarations with the name of the class.
+     * @return true if the provided function declaration [node] is a constructor declaration.
+     * Otherwise, false is returned.
+     */
+    private fun isConstructorDeclaration(node: TSNode): Boolean {
+        val functionDeclarator = ts_node_child_by_field_name(node, "declarator")
+        val declarator = ts_node_child_by_field_name(functionDeclarator, "declarator")
+        if (!ts_node_is_null(declarator)) {
+            if (ts_node_type(declarator).string == "scoped_identifier") {
+                val identifier =
+                    lang.getCodeFromRawNode(
+                        ts_node_child_by_field_name(
+                            ts_node_child_by_field_name(node, "declarator"),
+                            "declarator"
+                        )
+                    )
+                if (identifier != null) {
+                    if (lang.namespaceDelimiter in identifier) {
+                        val recordName = identifier.split(lang.namespaceDelimiter)[0]
+                        val constructorName = identifier.split(lang.namespaceDelimiter)[1]
+                        return recordName == constructorName
+                    }
+                }
+            }
+        }
+        return false
+    }
+
     private fun createMethodOrConstructor(
         name: String,
         code: String,
@@ -224,7 +301,9 @@ class DeclarationHandler(lang: CXXLanguageFrontend2) :
      * * A non-scoped function definition *outside* of any record will be parsed as a
      * [FunctionDeclaration].
      * * A scoped function definition, e.g. containing a `::`, *outside* of a record will be parsed
-     * as a [MethodDeclaration] (or [ConstructorDeclaration]) and associated to its record.
+     * as a [MethodDeclaration] and associated to its record.
+     * * A scoped function definition, e.g. containing a `::`, *outside* of a record with the same
+     * name as the record will be parsed [ConstructorDeclaration] and associated to its record.
      * * A non-scoped function definition *inside* a record will be parsed as a [MethodDeclaration]
      * (or [ConstructorDeclaration]) and associated to its record.
      *
@@ -244,6 +323,29 @@ class DeclarationHandler(lang: CXXLanguageFrontend2) :
         val insideRecord = lang.scopeManager.currentRecord != null
         val func =
             when {
+                isConstructorDeclaration(node) -> {
+                    // if we have a constructor declaration we can obtain the record and directly
+                    // set the record declaration link
+                    val recordName =
+                        lang.getCodeFromRawNode(
+                                ts_node_child_by_field_name(
+                                    ts_node_child_by_field_name(node, "declarator"),
+                                    "declarator"
+                                )
+                            )!!
+                            .split(lang.namespaceDelimiter)[0]
+                    val recordDeclaration =
+                        lang.scopeManager.getRecordForName(
+                            lang.scopeManager.currentScope!!,
+                            recordName!!
+                        )
+
+                    newConstructorDeclaration(
+                        recordName,
+                        lang.getCodeFromRawNode(node),
+                        recordDeclaration
+                    )
+                }
                 isMethodDeclaration(node) -> {
                     // name and record declaration will be filled later by processDeclarator
                     newMethodDeclaration("", lang.getCodeFromRawNode(node), false, null)
@@ -382,9 +484,9 @@ class DeclarationHandler(lang: CXXLanguageFrontend2) :
         // update the definition
         var candidates: List<MethodDeclaration> =
             if (functionDeclaration is ConstructorDeclaration) {
-                recordDeclaration?.constructors
+                recordDeclaration.constructors
             } else {
-                recordDeclaration?.methods
+                recordDeclaration.methods
             }
                 ?: listOf()
 
