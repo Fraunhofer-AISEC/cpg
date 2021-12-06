@@ -197,6 +197,49 @@ class CXXLanguageFrontend2Test {
 
     @Test
     @Throws(java.lang.Exception::class)
+    fun testPostfixExpression() {
+        val file = File("src/test/resources/postfixexpression.cpp")
+
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.unregisterLanguage(CXXLanguageFrontend::class.java)
+                it.registerLanguage(
+                    CXXLanguageFrontend2::class.java,
+                    CXXLanguageFrontend.CXX_EXTENSIONS
+                )
+            }
+
+        val statements: List<Statement> =
+            (tu.getDeclarationAs(0, FunctionDeclaration::class.java)?.body as CompoundStatement)
+                .statements
+
+        Assertions.assertEquals(6, statements.size)
+        val callExpression = statements[0] as CallExpression
+        Assertions.assertEquals("printf", callExpression.name)
+        val arg = callExpression.arguments[0]
+        Assertions.assertTrue(arg is Literal<*>)
+        Assertions.assertEquals("text", (arg as Literal<*>).value)
+        val unaryOperatorPlus = statements[1] as UnaryOperator
+        Assertions.assertEquals(
+            UnaryOperator.OPERATOR_POSTFIX_INCREMENT,
+            unaryOperatorPlus.operatorCode
+        )
+        Assertions.assertTrue(unaryOperatorPlus.isPostfix)
+        val unaryOperatorMinus = statements[2] as UnaryOperator
+        Assertions.assertEquals(
+            UnaryOperator.OPERATOR_POSTFIX_DECREMENT,
+            unaryOperatorMinus.operatorCode
+        )
+        Assertions.assertTrue(unaryOperatorMinus.isPostfix)
+
+        // 4th statement is not yet parsed correctly
+        val memberCallExpression = statements[4] as MemberCallExpression
+        Assertions.assertEquals("test", memberCallExpression.base.name)
+        Assertions.assertEquals("c_str", memberCallExpression.name)
+    }
+
+    @Test
+    @Throws(java.lang.Exception::class)
     fun testLiterals() {
         val file = File("src/test/resources/literals.cpp")
         val tu =
