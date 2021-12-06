@@ -34,15 +34,13 @@ import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser
 import java.io.File
 import java.util.function.Consumer
 import kotlin.test.*
+import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 
 class CXXLanguageFrontend2Test {
@@ -107,6 +105,76 @@ class CXXLanguageFrontend2Test {
 
         assertTrue(operator.rhs is Literal<*>)
         assertEquals(0, (operator.rhs as Literal<*>).value)
+    }
+
+    @Test
+    @Throws(java.lang.Exception::class)
+    fun testUnaryOperator() {
+        val file = File("src/test/resources/unaryoperator.cpp")
+
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.unregisterLanguage(CXXLanguageFrontend::class.java)
+                it.registerLanguage(
+                    CXXLanguageFrontend2::class.java,
+                    CXXLanguageFrontend.CXX_EXTENSIONS
+                )
+            }
+
+        val statements: List<Statement> =
+            (tu.getDeclarationAs(0, FunctionDeclaration::class.java)?.body as CompoundStatement)
+                .statements
+
+        var line = -1
+
+        // int a
+        var statement = statements[++line] as DeclarationStatement
+        Assertions.assertNotNull(statement)
+
+        // a++
+        val postfix = statements[++line] as UnaryOperator
+        var input = postfix.input
+        Assertions.assertEquals("a", input.name)
+        Assertions.assertEquals("++", postfix.operatorCode)
+        Assertions.assertTrue(postfix.isPostfix)
+
+        // --a
+        val prefix = statements[++line] as UnaryOperator
+        input = prefix.input
+        Assertions.assertEquals("a", input.name)
+        Assertions.assertEquals("--", prefix.operatorCode)
+        Assertions.assertTrue(prefix.isPrefix)
+
+        // int len = sizeof(a);
+        statement = statements[++line] as DeclarationStatement
+        var declaration = statement.singleDeclaration as VariableDeclaration
+        val sizeof = declaration.initializer as UnaryOperator
+        input = sizeof.input
+        Assertions.assertEquals("a", input.name)
+        Assertions.assertEquals("sizeof", sizeof.operatorCode)
+        Assertions.assertTrue(sizeof.isPrefix)
+
+        // bool b = !false;
+        statement = statements[++line] as DeclarationStatement
+        declaration = statement.singleDeclaration as VariableDeclaration
+        val negation = declaration.initializer as UnaryOperator
+        input = negation.input
+        Assertions.assertTrue(input is Literal<*>)
+        Assertions.assertEquals(false, (input as Literal<*>).value)
+        Assertions.assertEquals("!", negation.operatorCode)
+        Assertions.assertTrue(negation.isPrefix)
+
+        // int* ptr = 0;
+        statement = statements[++line] as DeclarationStatement
+        Assertions.assertNotNull(statement)
+
+        // b = *ptr;
+        val assign = statements[++line] as BinaryOperator
+        val dereference = assign.rhs as UnaryOperator
+        input = dereference.input
+        Assertions.assertEquals("ptr", input.name)
+        Assertions.assertEquals("*", dereference.operatorCode)
+        Assertions.assertTrue(dereference.isPrefix)
     }
 
     @Test
