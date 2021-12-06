@@ -69,7 +69,6 @@ class DeclarationHandler(lang: CXXLanguageFrontend2) :
         }
     }
 
-
     private fun handleClassSpecifier(node: TSNode): Declaration {
         val name = lang.getCodeFromRawNode(ts_node_child_by_field_name(node, "name")) ?: ""
 
@@ -253,8 +252,9 @@ class DeclarationHandler(lang: CXXLanguageFrontend2) :
     }
 
     /**
-     * This function is required to identify whether a function declaration is really a constructor declaration, since
-     * construction declarations are modeled as function declarations with the name of the class.
+     * This function is required to identify whether a function declaration is really a constructor
+     * declaration, since construction declarations are modeled as function declarations with the
+     * name of the class.
      * @return true if the provided function declaration [node] is a constructor declaration.
      * Otherwise, false is returned.
      */
