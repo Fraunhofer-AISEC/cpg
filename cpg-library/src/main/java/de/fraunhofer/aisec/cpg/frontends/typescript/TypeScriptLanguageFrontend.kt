@@ -28,7 +28,6 @@ package de.fraunhofer.aisec.cpg.frontends.typescript
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import de.fraunhofer.aisec.cpg.ExperimentalTypeScript
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
-import de.fraunhofer.aisec.cpg.frontends.FrontendUtils
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.Annotation
@@ -42,8 +41,6 @@ import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
 import java.io.File
 import java.io.File.createTempFile
-import java.io.FileReader
-import java.io.LineNumberReader
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
 import org.checkerframework.checker.nullness.qual.NonNull
@@ -69,8 +66,6 @@ class TypeScriptLanguageFrontend(
     val statementHandler = StatementHandler(this)
     val expressionHandler = ExpressionHandler(this)
     val typeHandler = TypeHandler(this)
-
-    var currentFileContent: String? = null
 
     val mapper = jacksonObjectMapper()
 
@@ -98,8 +93,6 @@ class TypeScriptLanguageFrontend(
     }
 
     override fun parse(file: File): TranslationUnitDeclaration {
-        // Necessary to not read file contents several times
-        currentFileContent = file.readText()
         if (!parserFile.exists()) {
             throw TranslationException("parser.js not found @ ${parserFile.absolutePath}")
         }
@@ -111,49 +104,7 @@ class TypeScriptLanguageFrontend(
 
         TypeManager.getInstance().setLanguageFrontend(this)
 
-        val translationUnit = this.declarationHandler.handle(node) as TranslationUnitDeclaration
-
-        handleComments(file, translationUnit)
-
-        return translationUnit
-    }
-
-    /**
-     * Extracts comments from the file with a regular expression and calls a best effort approach
-     * function that matches them to the closes ast node in the cpg.
-     * @param file The source of comments
-     * @param translationUnit the ast root node which children get the comments associated to
-     */
-    fun handleComments(file: File, translationUnit: TranslationUnitDeclaration) {
-        // Extracting comments with regex, not ideal, as you need a context sensitive parser. but
-        // the parser does not support comments so we
-        // use a regex as best effort approach. We may recognize something as a comment, which is
-        // acceptable.
-        val matches: Sequence<MatchResult> =
-            Regex("(?:/\\*((?:[^*]|(?:\\*+[^*/]))*)\\*+/)|(?://(.*))").findAll(currentFileContent!!)
-        matches.toList().forEach {
-            val groups = it.groups
-            groups[0]?.let {
-                var comment = it.value
-
-                val commentRegion = getRegionFromStartEnd(file, it.range.first, it.range.last)
-
-                // We only want the acutal comment text and therefore take the value we captured in
-                // the first, or second group.
-                // Only as a last resoort we take the entire match, although this should never ocure
-                comment = groups[1]?.value ?: (groups[2]?.value ?: it.value)
-
-                comment = comment.trim()
-
-                comment = comment.trim('\n')
-
-                FrontendUtils.matchCommentToNode(
-                    comment,
-                    commentRegion ?: translationUnit.location!!.region,
-                    translationUnit
-                )
-            }
-        }
+        return this.declarationHandler.handle(node) as TranslationUnitDeclaration
     }
 
     override fun <T : Any?> getCodeFromRawNode(astNode: T): String? {
@@ -166,53 +117,13 @@ class TypeScriptLanguageFrontend(
 
     override fun <T : Any?> getLocationFromRawNode(astNode: T): PhysicalLocation? {
         return if (astNode is TypeScriptNode) {
+            // TODO: LSP region
+            val location = PhysicalLocation(File(astNode.location.file).toURI(), Region())
 
-            var position = astNode.location.pos
-
-            // Correcting node positions as we have noticed that the parser computes wrong
-            // positions, it is apparent when
-            // a files starts with a comment
-            astNode.code?.let {
-                val code = it
-                currentFileContent?.let { position = it.indexOf(code, position) }
-            }
-
-            // From here on the invariant 'astNode.location.end - position != astNode.code!!.length'
-            // should hold, only exceptions
-            // are mispositioned empty ast elements
-
-            val region =
-                getRegionFromStartEnd(File(astNode.location.file), position, astNode.location.end)
-            return PhysicalLocation(File(astNode.location.file).toURI(), region ?: Region())
+            return location
         } else {
             null
         }
-    }
-
-    fun getRegionFromStartEnd(file: File, start: Int, end: Int): Region? {
-        val lineNumberReader: LineNumberReader = LineNumberReader(FileReader(file))
-
-        // Start and end position given by the parser are sometimes including spaces in front of the
-        // code ans
-        // loc.end - loc.pos > code.length. This is cause by the parser and results in unexpected
-        // but correct regions
-        // if the start and end positions are assumed to be correct.
-
-        lineNumberReader.skip(start.toLong())
-        val startLine = lineNumberReader.lineNumber + 1
-        lineNumberReader.skip((end - start).toLong())
-        val endLine = lineNumberReader.lineNumber + 1
-
-        val translationUnitSignature = currentFileContent!!
-        val region: Region? =
-            FrontendUtils.parseColumnPositionsFromFile(
-                translationUnitSignature,
-                end - start,
-                start,
-                startLine,
-                endLine
-            )
-        return region
     }
 
     override fun <S : Any?, T : Any?> setComment(s: S, ctx: T) {
