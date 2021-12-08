@@ -669,7 +669,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
         binaryOperator.rhs = rhs
         when (expressionTypeProxy(ctx)) {
             is ProblemType, is ProblemBinding -> {
-                log.debug("CDT could not deduce type. Type is set to null")
+                log.trace("CDT could not deduce type. Type is set to null")
             }
             is TypeOfDependentExpression -> {
                 log.debug("Type of Expression depends on the type the template is initialized with")
@@ -680,6 +680,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                     TypeParser.createFrom(expressionTypeProxy(ctx).toString(), true, lang)
             }
         }
+
         return binaryOperator
     }
 

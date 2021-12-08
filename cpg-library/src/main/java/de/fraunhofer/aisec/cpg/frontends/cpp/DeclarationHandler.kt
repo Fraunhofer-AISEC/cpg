@@ -364,7 +364,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
 
     private fun handleSimpleDeclaration(ctx: CPPASTSimpleDeclaration): Declaration {
         if (isTypedef(ctx)) {
-            TypeManager.getInstance().handleTypedef(ctx.rawSignature)
+            TypeManager.getInstance().handleTypedef(lang, ctx.rawSignature)
         }
         val sequence = DeclarationSequence()
 
@@ -456,7 +456,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
         val type = TypeParser.createFrom(ctx.rawSignature, true)
         val templateParams: MutableList<Node?> = ArrayList()
 
-        if(type.root !is ObjectType) {
+        if (type.root !is ObjectType) {
             // we cannot continue in this case
             return
         }
