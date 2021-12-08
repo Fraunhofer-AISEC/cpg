@@ -208,7 +208,10 @@ private constructor(
         if (!config.typeSystemActiveInFrontend) {
             TypeManager.setTypeSystemActive(true)
 
-            result.translationUnits.forEach { SubgraphWalker.activateTypes(it, scopeManager) }
+            result.translationUnits.parallelStream().forEach {
+                log.debug("Activating types for {}", it.name)
+                SubgraphWalker.activateTypes(it, scopeManager)
+            }
         }
 
         return usedFrontends
