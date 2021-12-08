@@ -209,8 +209,9 @@ private constructor(
             TypeManager.setTypeSystemActive(true)
 
             result.translationUnits.parallelStream().forEach {
-                log.debug("Activating types for {}", it.name)
+                val bench = Benchmark(this.javaClass, "Activating types for ${it.name}", true)
                 SubgraphWalker.activateTypes(it, scopeManager)
+                bench.stop()
             }
         }
 

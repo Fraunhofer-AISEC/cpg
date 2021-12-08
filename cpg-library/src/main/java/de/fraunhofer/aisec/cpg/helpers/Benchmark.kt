@@ -23,34 +23,51 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.helpers;
+package de.fraunhofer.aisec.cpg.helpers
 
-import java.time.Duration;
-import java.time.Instant;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import java.time.Duration
+import java.time.Instant
+import org.slf4j.LoggerFactory
 
-public class Benchmark {
+open class Benchmark
+@JvmOverloads
+constructor(c: Class<*>, private val message: String, private var debug: Boolean = false) {
 
-  private static final Logger log = LoggerFactory.getLogger(Benchmark.class);
-  private final String message;
-  private final String caller;
-  private final Instant start;
-  private long duration = -1;
+    private val caller: String
+    private val start: Instant
 
-  public Benchmark(Class c, String message) {
-    this.message = message;
-    this.caller = c.getSimpleName();
-    this.start = Instant.now();
-  }
+    var duration: Long
+        private set
 
-  public long stop() {
-    duration = Duration.between(start, Instant.now()).toMillis();
-    log.info("{} {} done in {} ms", caller, message, duration);
-    return duration;
-  }
+    fun stop(): Long {
+        duration = Duration.between(start, Instant.now()).toMillis()
 
-  public long getDuration() {
-    return duration;
-  }
+        val msg = "$caller: $message done in $duration ms"
+
+        if (debug) {
+            log.debug(msg)
+        } else {
+            log.info(msg)
+        }
+
+        return duration
+    }
+
+    companion object {
+        private val log = LoggerFactory.getLogger(Benchmark::class.java)
+    }
+
+    init {
+        this.duration = -1
+        caller = c.simpleName
+        start = Instant.now()
+
+        val msg = "$caller: $message"
+
+        if (debug) {
+            log.debug(msg)
+        } else {
+            log.info(msg)
+        }
+    }
 }

@@ -456,7 +456,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
         val type = TypeParser.createFrom(ctx.rawSignature, true)
         val templateParams: MutableList<Node?> = ArrayList()
 
-        if(type.root !is ObjectType) {
+        if (type.root !is ObjectType) {
             // we cannot continue in this case
             return
         }
