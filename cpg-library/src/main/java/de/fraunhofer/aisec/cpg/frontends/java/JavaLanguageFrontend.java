@@ -271,7 +271,7 @@ public class JavaLanguageFrontend extends LanguageFrontend {
 
   public de.fraunhofer.aisec.cpg.graph.types.Type getTypeAsGoodAsPossible(Type type) {
     try {
-      if (type.toString().equals("var")) {
+      if(type.toString().equals("var")) {
         return UnknownType.getUnknownType();
       }
 

@@ -26,7 +26,10 @@
 package de.fraunhofer.aisec.cpg.frontends.cpp
 
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
-import de.fraunhofer.aisec.cpg.frontends.*
+import de.fraunhofer.aisec.cpg.frontends.HasDefaultArguments
+import de.fraunhofer.aisec.cpg.frontends.HasTemplates
+import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
+import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.Annotation
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
@@ -43,6 +46,7 @@ import java.lang.reflect.Field
 import java.nio.file.Path
 import java.util.*
 import java.util.stream.Collectors
+import kotlin.math.min
 import org.eclipse.cdt.core.dom.ast.*
 import org.eclipse.cdt.core.dom.ast.gnu.cpp.GPPLanguage
 import org.eclipse.cdt.core.index.IIndexFileLocation
@@ -267,18 +271,38 @@ class CXXLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeM
                         )
                         return null
                     }
-                val region: Region? =
-                    FrontendUtils.parseColumnPositionsFromFile(
-                        translationUnitRawSignature.toString(),
-                        node.rawSignature.length,
-                        node.fileLocation.nodeOffset,
-                        fLocation.startingLineNumber,
-                        fLocation.endingLineNumber
-                    )
 
-                region?.let {
-                    return PhysicalLocation(Path.of(node.containingFilename).toUri(), it)
+                // Get start column by stepping backwards from begin of node to first occurrence of
+                // '\n'
+                var startColumn = 1
+                for (i in node.fileLocation.nodeOffset - 1 downTo 2) {
+                    if (i >= translationUnitRawSignature.length) {
+                        // Fail gracefully, so that we can at least find out why this fails
+                        LOGGER.warn(
+                            "Requested index {} exceeds length of translation unit code ({})",
+                            i,
+                            translationUnitRawSignature.length
+                        )
+                        return null
+                    }
+                    if (translationUnitRawSignature[i] == '\n') {
+                        break
+                    }
+                    startColumn++
                 }
+                val endColumn =
+                    getEndColumnIndex(
+                        translationUnitRawSignature,
+                        node.fileLocation.nodeOffset + node.length
+                    )
+                val region =
+                    Region(
+                        fLocation.startingLineNumber,
+                        startColumn,
+                        fLocation.endingLineNumber,
+                        endColumn
+                    )
+                return PhysicalLocation(Path.of(node.containingFilename).toUri(), region)
             }
         }
         return null
@@ -374,6 +398,37 @@ class CXXLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeM
         @JvmField val CXX_EXTENSIONS = mutableListOf(".c", ".cpp", ".cc")
         @JvmField val CXX_HEADER_EXTENSIONS = mutableListOf(".h", ".hpp")
         private val LOGGER = LoggerFactory.getLogger(CXXLanguageFrontend::class.java)
+
+        /**
+         * Searches in posPrefix to the left until first occurrence of line break and returns the
+         * number of characters.
+         *
+         * This corresponds to the column number of "end" within "posPrefix".
+         *
+         * @param posPrefix
+         * - the positional prefix, which is the string before the column and contains the column
+         * defining newline.
+         */
+        private fun getEndColumnIndex(posPrefix: AbstractCharArray, end: Int): Int {
+            var mutableEnd = end
+            var column = 1
+
+            // In case the current element goes until EOF, we need to back up "end" by one.
+            try {
+                if (mutableEnd - 1 >= posPrefix.length || posPrefix[mutableEnd - 1] == '\n') {
+                    mutableEnd = min(mutableEnd - 1, posPrefix.length - 1)
+                }
+            } catch (e: ArrayIndexOutOfBoundsException) {
+                log.error("could not update end ", e)
+            }
+            for (i in mutableEnd - 1 downTo 2) {
+                if (posPrefix[i] == '\n') {
+                    break
+                }
+                column++
+            }
+            return column
+        }
 
         private fun explore(node: IASTNode, indent: Int) {
             val children = node.children
