@@ -25,7 +25,11 @@
  */
 package de.fraunhofer.aisec.cpg_vis_neo4j
 
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.module.kotlin.readValue
+import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import de.fraunhofer.aisec.cpg.*
+import de.fraunhofer.aisec.cpg.frontends.cpp.CompilationDB
 import de.fraunhofer.aisec.cpg.frontends.golang.GoLanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.typescript.TypeScriptLanguageFrontend
@@ -59,6 +63,8 @@ private const val DEFAULT_PORT = 7687
 private const val DEFAULT_USER_NAME = "neo4j"
 private const val DEFAULT_PASSWORD = "password"
 private const val DEFAULT_SAVE_DEPTH = -1
+
+data class compilationDbStructure(val directory: String, val command: String, val file: String)
 
 /**
  * An application to export the <a href="https://github.com/Fraunhofer-AISEC/cpg">cpg</a> to a <a
@@ -142,6 +148,12 @@ class Application : Callable<Int> {
         description = ["Enables the experimental language frontend for TypeScript."]
     )
     private var enableExperimentalTypeScript: Boolean = false
+
+    @CommandLine.Option(
+        names = ["--json-compilation-database"],
+        description = ["Give the json compilation database file path "]
+    )
+    private var jsonCompilationDatabase: String = ""
 
     /**
      * Pushes the whole translationResult to the neo4j db.
@@ -228,6 +240,7 @@ class Application : Callable<Int> {
         assert(files.isNotEmpty())
         val filePaths = arrayOfNulls<File>(files.size)
         var topLevel: File? = null
+        var compilationDatabase: MutableMap<File, List<String>> = mutableMapOf()
 
         for (index in files.indices) {
             val path = Paths.get(files[index]).toAbsolutePath().normalize()
@@ -251,6 +264,28 @@ class Application : Callable<Int> {
                 .defaultLanguages()
                 .loadIncludes(loadIncludes)
                 .debugParser(DEBUG_PARSER)
+
+        if (jsonCompilationDatabase != "") {
+            print("Json Compilation database is " + jsonCompilationDatabase)
+            val jsonStringFile = File(jsonCompilationDatabase).readText().toString()
+            val mapper = ObjectMapper().registerKotlinModule()
+            val obj: List<compilationDbStructure> = mapper.readValue(jsonStringFile)
+            obj.forEach {
+                val includeFiles = CompilationDB.getIncludeDirectories(it.command)
+                val fileName = it.file
+                val basedir = it.directory
+                var file: File = File(fileName)
+                if (file.isAbsolute) {
+                    compilationDatabase.put(file, includeFiles)
+                } else {
+                    compilationDatabase.put(Paths.get(basedir, fileName).toFile(), includeFiles)
+                }
+            }
+            translationConfiguration
+                .sourceLocations(compilationDatabase.keys.toList())
+                .loadCompilationDatabase(compilationDatabase)
+            println(compilationDatabase.keys.toString())
+        }
 
         if (enableExperimentalPython) {
             translationConfiguration.registerLanguage(
@@ -283,7 +318,10 @@ class Application : Callable<Int> {
                 .lines()
                 .map(String::trim)
                 .map { if (Paths.get(it).isAbsolute) it else Paths.get(baseDir, it).toString() }
-                .forEach { translationConfiguration.includePath(it) }
+                .forEach {
+                    translationConfiguration.includePath(it)
+                    println("Include file added $it")
+                }
         }
 
         return translationConfiguration.build()

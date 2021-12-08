@@ -141,7 +141,7 @@ private constructor(
         config: TranslationConfiguration,
         scopeManager: ScopeManager
     ): Set<LanguageFrontend> {
-        var sourceLocations: List<File> = ArrayList(this.config.sourceLocations)
+        var sourceLocations: List<File> = this.config.sourceLocations
 
         var useParallelFrontends = config.useParallelFrontends
 
@@ -165,7 +165,6 @@ private constructor(
                     listOf(file)
                 }
             }
-
         if (config.useUnityBuild) {
             val tmpFile = Files.createTempFile("compile", ".cpp").toFile()
             tmpFile.deleteOnExit()
@@ -222,7 +221,6 @@ private constructor(
         val usedFrontends = mutableSetOf<LanguageFrontend>()
 
         log.info("Parallel parsing started")
-
         val futures = mutableListOf<CompletableFuture<Optional<LanguageFrontend>>>()
         val parallelScopeManagers = mutableListOf<ScopeManager>()
 
@@ -276,6 +274,7 @@ private constructor(
     ): Set<LanguageFrontend> {
         val usedFrontends = mutableSetOf<LanguageFrontend>()
 
+        val compilationDatabase = config.getCompilationDatabase()
         for (sourceLocation in sourceLocations) {
             log.info("Parsing {}", sourceLocation.absolutePath)
 

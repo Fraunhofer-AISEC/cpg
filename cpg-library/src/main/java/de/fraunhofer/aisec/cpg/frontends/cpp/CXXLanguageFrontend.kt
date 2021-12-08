@@ -186,7 +186,9 @@ class CXXLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeM
         if (config.topLevel != null) {
             includePaths.add(config.topLevel.toPath().toAbsolutePath().toString())
         }
+
         includePaths.addAll(listOf(*config.includePaths))
+        config.compilationDatabase[file]?.let { includePaths.addAll(it) }
         val scannerInfo = ScannerInfo(config.symbols, includePaths.toTypedArray())
         val log = DefaultLogService()
         val opts = ILanguage.OPTION_PARSE_INACTIVE_CODE // | ILanguage.OPTION_ADD_COMMENTS;

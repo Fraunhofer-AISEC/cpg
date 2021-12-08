@@ -140,6 +140,9 @@ public class TranslationConfiguration {
    */
   final boolean typeSystemActiveInFrontend;
 
+  /** This is the data structure for storing the compilation database. */
+  final Map<File, List<String>> compilationDatabase;
+
   @NonNull private final List<Pass> passes;
 
   /** This sub configuration object holds all information about inference and smart-guessing. */
@@ -163,7 +166,8 @@ public class TranslationConfiguration {
       boolean useUnityBuild,
       boolean useParallelFrontends,
       boolean typeSystemActiveInFrontend,
-      InferenceConfiguration inferenceConfiguration) {
+      InferenceConfiguration inferenceConfiguration,
+      Map<File, List<String>> compilationDatabase) {
     this.symbols = symbols;
     this.sourceLocations = sourceLocations;
     this.topLevel = topLevel;
@@ -183,6 +187,7 @@ public class TranslationConfiguration {
     this.useParallelFrontends = useParallelFrontends;
     this.typeSystemActiveInFrontend = typeSystemActiveInFrontend;
     this.inferenceConfiguration = inferenceConfiguration;
+    this.compilationDatabase = compilationDatabase;
   }
 
   public static Builder builder() {
@@ -195,6 +200,10 @@ public class TranslationConfiguration {
 
   public List<File> getSourceLocations() {
     return this.sourceLocations;
+  }
+
+  public Map<File, List<String>> getCompilationDatabase() {
+    return this.compilationDatabase;
   }
 
   public File getTopLevel() {
@@ -248,6 +257,7 @@ public class TranslationConfiguration {
     private boolean typeSystemActiveInFrontend = true;
     private InferenceConfiguration inferenceConfiguration =
         new InferenceConfiguration.Builder().build();
+    private Map<File, List<String>> compilationDatabase = new HashMap<>();
 
     public Builder symbols(Map<String, String> symbols) {
       this.symbols = symbols;
@@ -273,6 +283,11 @@ public class TranslationConfiguration {
      */
     public Builder sourceLocations(List<File> sourceLocations) {
       this.sourceLocations = sourceLocations;
+      return this;
+    }
+
+    public Builder loadCompilationDatabase(Map<File, List<String>> compilationDatabase) {
+      this.compilationDatabase = compilationDatabase;
       return this;
     }
 
@@ -509,7 +524,8 @@ public class TranslationConfiguration {
           useUnityBuild,
           useParallelFrontends,
           typeSystemActiveInFrontend,
-          inferenceConfiguration);
+          inferenceConfiguration,
+          compilationDatabase);
     }
   }
 }
