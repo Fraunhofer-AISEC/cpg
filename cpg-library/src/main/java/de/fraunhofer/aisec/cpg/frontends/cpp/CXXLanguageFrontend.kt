@@ -191,7 +191,7 @@ class CXXLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeM
         val log = DefaultLogService()
         val opts = ILanguage.OPTION_PARSE_INACTIVE_CODE // | ILanguage.OPTION_ADD_COMMENTS;
         return try {
-            var bench = Benchmark(this.javaClass, "Parsing file ${file.name}")
+            var bench = Benchmark(this.javaClass, "Parsing sourcefile")
             val translationUnit =
                 GPPLanguage.getDefault()
                     .getASTTranslationUnit(
@@ -206,7 +206,7 @@ class CXXLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeM
             val length = translationUnit.length
             LOGGER.info("Parsed {} bytes corresponding roughly to {} LoC", length, length / 50)
             bench.stop()
-            bench = Benchmark(this.javaClass, "Transform to CPG of ${file.name}")
+            bench = Benchmark(this.javaClass, "Transform to CPG")
             if (config.debugParser) {
                 explore(translationUnit, 0)
             }
