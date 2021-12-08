@@ -364,7 +364,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
 
     private fun handleSimpleDeclaration(ctx: CPPASTSimpleDeclaration): Declaration {
         if (isTypedef(ctx)) {
-            TypeManager.getInstance().handleTypedef(ctx.rawSignature)
+            TypeManager.getInstance().handleTypedef(lang, ctx.rawSignature)
         }
         val sequence = DeclarationSequence()
 

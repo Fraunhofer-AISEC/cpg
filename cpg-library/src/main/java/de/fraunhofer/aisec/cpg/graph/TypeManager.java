@@ -624,12 +624,19 @@ public class TypeManager {
     }
   }
 
-  public void handleTypedef(String rawCode) {
+  /**
+   * Handles type defs. It is necessary to specify which language frontend this belongs to, because
+   * in a parallel run, the {@link TypeManager} does not have access to the "current" one.
+   *
+   * @param frontend
+   * @param rawCode
+   */
+  public void handleTypedef(LanguageFrontend frontend, String rawCode) {
     String cleaned = rawCode.replaceAll("(typedef|;)", "").strip();
     if (cleaned.startsWith("struct")) {
-      handleStructTypedef(rawCode, cleaned);
+      handleStructTypedef(frontend, rawCode, cleaned);
     } else if (Util.containsOnOuterLevel(cleaned, ',')) {
-      handleMultipleAliases(rawCode, cleaned);
+      handleMultipleAliases(frontend, rawCode, cleaned);
     } else {
       List<String> parts = Util.splitLeavingParenthesisContents(cleaned, " \t\r\n");
       if (parts.size() < 2) {
@@ -641,11 +648,11 @@ public class TypeManager {
           TypeParser.createFrom(
               Util.removeRedundantParentheses(String.join(" ", parts.subList(0, parts.size() - 1))),
               true);
-      handleSingleAlias(rawCode, target, parts.get(parts.size() - 1));
+      handleSingleAlias(frontend, rawCode, target, parts.get(parts.size() - 1));
     }
   }
 
-  private void handleMultipleAliases(String rawCode, String cleaned) {
+  private void handleMultipleAliases(LanguageFrontend frontend, String rawCode, String cleaned) {
     List<String> parts = Util.splitLeavingParenthesisContents(cleaned, ",");
     String[] splitFirst = parts.get(0).split("\\s+");
     if (splitFirst.length < 2) {
@@ -655,11 +662,11 @@ public class TypeManager {
     Type target = TypeParser.createFrom(splitFirst[0], true);
     parts.set(0, parts.get(0).substring(splitFirst[0].length()).strip());
     for (String part : parts) {
-      handleSingleAlias(rawCode, target, part);
+      handleSingleAlias(frontend, rawCode, target, part);
     }
   }
 
-  private void handleStructTypedef(String rawCode, String cleaned) {
+  private void handleStructTypedef(LanguageFrontend frontend, String rawCode, String cleaned) {
     int endOfStruct = cleaned.lastIndexOf('}');
     if (endOfStruct + 1 < cleaned.length()) {
       List<String> parts =
@@ -670,7 +677,7 @@ public class TypeManager {
         Type target = TypeParser.createIgnoringAlias(name.get());
         for (String part : parts) {
           if (!part.equals(name.get())) {
-            handleSingleAlias(rawCode, target, part);
+            handleSingleAlias(frontend, rawCode, target, part);
           }
         }
       } else {
@@ -681,7 +688,8 @@ public class TypeManager {
     }
   }
 
-  public void handleSingleAlias(String rawCode, Type target, String aliasString) {
+  public void handleSingleAlias(
+      LanguageFrontend frontend, String rawCode, Type target, String aliasString) {
     String cleanedPart = Util.removeRedundantParentheses(aliasString);
     Type currTarget = getTargetType(target, cleanedPart);
     Type alias = getAlias(cleanedPart);

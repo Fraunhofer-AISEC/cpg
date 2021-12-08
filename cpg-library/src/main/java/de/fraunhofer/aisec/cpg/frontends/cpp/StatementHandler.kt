@@ -259,7 +259,7 @@ class StatementHandler(lang: CXXLanguageFrontend) :
         return if (ctx.declaration is CPPASTASMDeclaration) {
             NodeBuilder.newASMDeclarationStatement(ctx.rawSignature)
         } else if (ctx.rawSignature.contains("typedef")) {
-            TypeManager.getInstance().handleTypedef(ctx.rawSignature)
+            TypeManager.getInstance().handleTypedef(lang, ctx.rawSignature)
             null
         } else {
             val declarationStatement = NodeBuilder.newDeclarationStatement(ctx.rawSignature)
