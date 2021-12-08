@@ -33,11 +33,6 @@ import de.fraunhofer.aisec.cpg.frontends.cpp.CompilationDB
 import de.fraunhofer.aisec.cpg.frontends.golang.GoLanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.typescript.TypeScriptLanguageFrontend
-import java.io.File
-import java.net.ConnectException
-import java.nio.file.Paths
-import java.util.concurrent.Callable
-import kotlin.system.exitProcess
 import org.neo4j.driver.exceptions.AuthenticationException
 import org.neo4j.ogm.config.Configuration
 import org.neo4j.ogm.exception.ConnectionException
@@ -46,6 +41,11 @@ import org.neo4j.ogm.session.SessionFactory
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import picocli.CommandLine
+import java.io.File
+import java.net.ConnectException
+import java.nio.file.Paths
+import java.util.concurrent.Callable
+import kotlin.system.exitProcess
 
 private const val S_TO_MS_FACTOR = 1000
 private const val TIME_BETWEEN_CONNECTION_TRIES: Long = 2000
@@ -266,7 +266,6 @@ class Application : Callable<Int> {
                 .debugParser(DEBUG_PARSER)
 
         if (jsonCompilationDatabase != "") {
-            print("Json Compilation database is " + jsonCompilationDatabase)
             val jsonStringFile = File(jsonCompilationDatabase).readText().toString()
             val mapper = ObjectMapper().registerKotlinModule()
             val obj: List<compilationDbStructure> = mapper.readValue(jsonStringFile)
@@ -284,7 +283,6 @@ class Application : Callable<Int> {
             translationConfiguration
                 .sourceLocations(compilationDatabase.keys.toList())
                 .loadCompilationDatabase(compilationDatabase)
-            println(compilationDatabase.keys.toString())
         }
 
         if (enableExperimentalPython) {
@@ -320,7 +318,6 @@ class Application : Callable<Int> {
                 .map { if (Paths.get(it).isAbsolute) it else Paths.get(baseDir, it).toString() }
                 .forEach {
                     translationConfiguration.includePath(it)
-                    println("Include file added $it")
                 }
         }
 

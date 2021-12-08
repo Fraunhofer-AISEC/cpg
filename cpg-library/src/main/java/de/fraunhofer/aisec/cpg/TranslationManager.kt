@@ -35,6 +35,7 @@ import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.passes.Pass
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
+import org.slf4j.LoggerFactory
 import java.io.File
 import java.io.PrintWriter
 import java.lang.reflect.InvocationTargetException
@@ -47,7 +48,6 @@ import java.util.concurrent.CompletionException
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.stream.Collectors
-import org.slf4j.LoggerFactory
 
 /** Main entry point for all source code translation for all language front-ends. */
 @OptIn(ExperimentalGolang::class)
@@ -141,7 +141,7 @@ private constructor(
         config: TranslationConfiguration,
         scopeManager: ScopeManager
     ): Set<LanguageFrontend> {
-        var sourceLocations: List<File> = this.config.sourceLocations
+        var sourceLocations: List<File> = ArrayList(this.config.sourceLocations)
 
         var useParallelFrontends = config.useParallelFrontends
 
