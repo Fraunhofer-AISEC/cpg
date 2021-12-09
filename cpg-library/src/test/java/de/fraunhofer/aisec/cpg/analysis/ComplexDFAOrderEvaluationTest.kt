@@ -35,10 +35,7 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
-import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
-import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
-import de.fraunhofer.aisec.cpg.graph.statements.IfStatement
-import de.fraunhofer.aisec.cpg.graph.statements.WhileStatement
+import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.passes.EdgeCachePass
 import de.fraunhofer.aisec.cpg.passes.IdentifierPass
 import java.nio.file.Path
@@ -453,10 +450,15 @@ class ComplexDFAOrderEvaluationTest {
         assertTrue(everythingOk, "Expected correct order")
     }
 
-    /*fun testSuccessDoWhileLoopFSM() {
-        val functionOk = tu.getDeclarationsByName("ComplexOrder", RecordDeclaration::class.java)
-            .firstOrNull()
-            ?.declarations?.firstOrNull { d -> d.name == "okDoWhile" } as FunctionDeclaration?
+    @Test
+    fun testSuccessDoWhileLoopFSM() {
+        val functionOk =
+            tu
+                .getDeclarationsByName("ComplexOrder", RecordDeclaration::class.java)
+                .firstOrNull()
+                ?.declarations
+                ?.firstOrNull { d -> d.name == "okDoWhile" } as
+                FunctionDeclaration?
 
         assertNotNull(functionOk)
 
@@ -464,11 +466,12 @@ class ComplexDFAOrderEvaluationTest {
         assertNotNull(p6Decl)
         val referencedVertices = mutableSetOf(p6Decl.declarations[0]?.id)
 
-
         val verticesToOp = mutableMapOf<Node, String>()
         verticesToOp[(functionOk.body as CompoundStatement).statements[1]] = "create()"
         verticesToOp[(functionOk.body as CompoundStatement).statements[2]] = "init()"
-        val loopBody = ((functionOk.body as CompoundStatement).statements[3] as DoWhileStatement).statement as? CompoundStatement
+        val loopBody =
+            ((functionOk.body as CompoundStatement).statements[3] as DoStatement).statement as?
+                CompoundStatement
         assertNotNull(loopBody)
         verticesToOp[loopBody.statements[0]] = "start()"
         verticesToOp[loopBody.statements[1]] = "process()"
@@ -479,6 +482,6 @@ class ComplexDFAOrderEvaluationTest {
         val orderEvaluator = DFAOrderEvaluator(referencedVertices, verticesToOp, mapOf())
         val everythingOk = orderEvaluator.evaluateOrder(dfa, p6Decl)
 
-        assertTrue(true)
-    }*/
+        assertTrue(everythingOk, "Expected correct order")
+    }
 }

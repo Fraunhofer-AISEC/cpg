@@ -129,7 +129,7 @@ public class ComplexOrder {
         p8.reset();
     }
 
-    /*void okDoWhile() {
+    void okDoWhile() {
         Botan2 p6 = new Botan2(1);
         p6.create();
         p6.init();
@@ -137,9 +137,9 @@ public class ComplexOrder {
             p6.start();
             p6.process();
             p6.finish();
-        } while(true)
+        } while(true);
         p6.reset();
-    }*/
+    }
 }
 
 public class Botan2 {
