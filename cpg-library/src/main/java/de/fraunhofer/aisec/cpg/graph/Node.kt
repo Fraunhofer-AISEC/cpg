@@ -42,7 +42,7 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
 /** The base class for all graph objects that are going to be persisted in the database. */
-open class Node : IVisitable<Node>, Persistable {
+open class Node : IVisitable<Node>, Persistable, HasLocation {
     /** A human readable name. */
     open var name = EMPTY_NAME // initialize it with an empty string
 
@@ -56,7 +56,7 @@ open class Node : IVisitable<Node>, Persistable {
     var comment: String? = null
 
     /** Location of the finding in source code. */
-    @Convert(LocationConverter::class) var location: PhysicalLocation? = null
+    @Convert(LocationConverter::class) override var location: PhysicalLocation? = null
 
     /**
      * Name of the containing file. It can be null for artificially created nodes or if just

@@ -25,16 +25,52 @@
  */
 package de.fraunhofer.aisec.cpg.graph2
 
+import de.fraunhofer.aisec.cpg.passes2.scopes.ScopeManager2
+import kotlin.test.assertEquals
 import org.junit.jupiter.api.Test
 
 class Graph2test {
     @Test
-    fun test() {
-        val a = Assignment(VariableDeclaration("a", "int"), Literal(2))
-        println(a.toPseudoCode())
+    fun testImplicitDeclaration() {
+        val a1 = Assignment(Reference("a"), Literal(2))
+        println(a1.toPseudoCode())
 
-        val b = Assignment(Reference("a"), BinaryOperation(Literal(3), "+", Literal(4)))
+        val a2 = Assignment(Reference("a"), BinaryOperation(Literal(3), "+", Literal(4)))
+        println(a2.toPseudoCode())
 
-        println(b.toPseudoCode())
+        val b = Block(listOf(a1, a2))
+
+        val ref = a2.lhs
+        assertEquals(a2, ref.parent)
+
+        val i = ImplicitDeclarator()
+        i.doPass(b)
+
+        // collect all references
+        val refs = collect<Reference>(b)
+        assertEquals(2, refs.size)
+    }
+
+    @Test
+    fun testExplicitDeclaration() {
+        val scope = ScopeManager2()
+
+        val b = Block()
+        scope.use(b) {
+            val a = Variable("a", "int")
+
+            it += a
+
+            val stmt = DeclarationStatement(listOf(a))
+
+            val a1 = Assignment(Reference("a"), Literal(2))
+
+            b += stmt
+            b += a1
+        }
+
+        // collect all variables
+        val vars = collect<Variable>(b)
+        assertEquals(1, vars.size)
     }
 }

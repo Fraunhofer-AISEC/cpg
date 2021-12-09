@@ -30,6 +30,7 @@ import static de.fraunhofer.aisec.cpg.sarif.PhysicalLocation.locationLink;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
+import de.fraunhofer.aisec.cpg.graph.HasLocation;
 import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration;
 import de.fraunhofer.aisec.cpg.graph.declarations.ParamVariableDeclaration;
@@ -216,12 +217,12 @@ public class Util {
   }
 
   public static void warnWithFileLocation(
-      @NonNull Node node, Logger log, String format, Object... arguments) {
+      @NonNull HasLocation node, Logger log, String format, Object... arguments) {
     log.warn(String.format("%s: %s", locationLink(node.getLocation()), format), arguments);
   }
 
   public static void errorWithFileLocation(
-      @NonNull Node node, Logger log, String format, Object... arguments) {
+      @NonNull HasLocation node, Logger log, String format, Object... arguments) {
     log.error(String.format("%s: %s", locationLink(node.getLocation()), format), arguments);
   }
 
