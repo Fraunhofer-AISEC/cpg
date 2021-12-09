@@ -364,7 +364,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
 
     private fun handleSimpleDeclaration(ctx: CPPASTSimpleDeclaration): Declaration {
         if (isTypedef(ctx)) {
-            TypeManager.getInstance().handleTypedef(ctx.rawSignature)
+            TypeManager.getInstance().handleTypedef(lang, ctx.rawSignature)
         }
         val sequence = DeclarationSequence()
 
@@ -455,9 +455,15 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
         val templateId = typeSpecifier.name as CPPASTTemplateId
         val type = TypeParser.createFrom(ctx.rawSignature, true)
         val templateParams: MutableList<Node?> = ArrayList()
-        assert(type.root is ObjectType)
+
+        if (type.root !is ObjectType) {
+            // we cannot continue in this case
+            return
+        }
+
         val objectType = type.root as ObjectType
         objectType.generics = emptyList()
+
         for (templateArgument in templateId.templateArguments) {
             if (templateArgument is CPPASTTypeId) {
                 val genericInstantiation =

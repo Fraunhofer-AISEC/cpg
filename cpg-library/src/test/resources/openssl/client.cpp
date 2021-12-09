@@ -6,14 +6,18 @@
 #include <openssl/err.h>
 
 SSL *ssl;
-std::string bad_ciphers = "MD5";
+// std::string bad_ciphers = "MD5";
+//  for now, we intentially use a C string here to make our LLVM analysis a little bit easier
+const char *bad_ciphers = "MD5";
 
 int callMeBack(int preverify_ok, X509_STORE_CTX *x509_ctx);
 
-int connectTo(std::string ip, int test) {
+int connectTo(std::string ip, int test)
+{
   int s = socket(AF_INET, SOCK_STREAM, 0);
 
-  if(!s) {
+  if (!s)
+  {
     printf("Error creating socket.\n");
     return -1;
   }
@@ -27,7 +31,8 @@ int connectTo(std::string ip, int test) {
   sa.sin_port = htons(443);
   socklen_t socklen = sizeof(sa);
 
-  if(connect(s, (struct sockaddr*)&sa, sizeof(sa))) {
+  if (connect(s, (struct sockaddr *)&sa, sizeof(sa)))
+  {
     std::cerr << "Error connecting to server." << std::endl;
     return -1;
   }
@@ -35,41 +40,48 @@ int connectTo(std::string ip, int test) {
   return s;
 }
 
-void failDisableVerification(SSL_CTX* ctx) {
+void failDisableVerification(SSL_CTX *ctx)
+{
   SSL_CTX_set_verify(ctx, SSL_VERIFY_PEER, callMeBack);
 }
 
-void failSetInsecureCiphers(SSL_CTX* ctx) {
+void failSetInsecureCiphers(SSL_CTX *ctx)
+{
   char ciphers[] = "ALL:!ADH";
 
   SSL_CTX_set_cipher_list(ctx, ciphers);
 }
 
-void failSetInsecureCiphersLiteral(SSL_CTX* ctx) {
+void failSetInsecureCiphersLiteral(SSL_CTX *ctx)
+{
   SSL_CTX_set_cipher_list(ctx, "ALL:!ADH");
 }
 
-void failSetInsecureCiphersSTL(SSL_CTX* ctx) {
+void failSetInsecureCiphersSTL(SSL_CTX *ctx)
+{
   std::string ciphers = "ALL:!ADH";
 
   SSL_CTX_set_cipher_list(ctx, ciphers.c_str());
 }
 
-void failSetInsecureCiphersGlobal(SSL_CTX* ctx) {
-  SSL_CTX_set_cipher_list(ctx, bad_ciphers.c_str());
+void failSetInsecureCiphersGlobal(SSL_CTX *ctx)
+{
+  SSL_CTX_set_cipher_list(ctx, bad_ciphers);
 }
 
-void failDisableVerificationLambda(SSL_CTX* ctx) {
+void failDisableVerificationLambda(SSL_CTX *ctx)
+{
   // lambdas do not work yet
   /*SSL_CTX_set_verify(ctx, SSL_VERIFY_PEER, [](int preverify_ok, X509_STORE_CTX *x509_ctx) {
     return 1;
   });*/
 }
 
-SSL_CTX* initTLSContext() {
+SSL_CTX *initTLSContext()
+{
   SSL_library_init();
   SSL_load_error_strings();
-  SSL_CTX* ctx = SSL_CTX_new(TLSv1_2_client_method());
+  SSL_CTX *ctx = SSL_CTX_new(TLSv1_2_client_method());
 
   // set insecure cipher
   failSetInsecureCiphers(ctx);
@@ -86,17 +98,20 @@ SSL_CTX* initTLSContext() {
   return ctx;
 }
 
-int main(int argc, char** argv) {
+int main(int argc, char **argv)
+{
   int s = connectTo("172.217.18.99", 2);
-  if(s < 0) {
+  if (s < 0)
+  {
     return -1;
   }
 
-  SSL_CTX* ctx = initTLSContext();
+  SSL_CTX *ctx = initTLSContext();
 
   ssl = SSL_new(ctx);
 
-  if(!ssl) {
+  if (!ssl)
+  {
     std::cerr << "Error creating SSL." << std::endl;
     return -1;
   }
@@ -105,19 +120,22 @@ int main(int argc, char** argv) {
 
   int err = SSL_connect(ssl);
   // this one confuses neo4j ogm
-  if(err <= 0) {
+  if (err <= 0)
+  {
     int sslerr = ERR_get_error();
 
     std::cerr << "Error creating SSL connection. Error Code: " << ERR_error_string(sslerr, nullptr) << std::endl;
     return -1;
   }
 
-  if(err <= 0) {
+  if (err <= 0)
+  {
     std::cerr << "Error creating SSL connection. Error Code: " << ERR_error_string(ERR_get_error(), nullptr) << std::endl;
     return -1;
   }
 
-  if (SSL_get_verify_result(ssl) == X509_V_OK) {
+  if (SSL_get_verify_result(ssl) == X509_V_OK)
+  {
     std::cout << "Call to SSL_get_verify_result is ok" << std::endl;
   }
 
@@ -126,6 +144,7 @@ int main(int argc, char** argv) {
   return 0;
 }
 
-int callMeBack(int preverify_ok, X509_STORE_CTX *x509_ctx) {
+int callMeBack(int preverify_ok, X509_STORE_CTX *x509_ctx)
+{
   return 1;
 }

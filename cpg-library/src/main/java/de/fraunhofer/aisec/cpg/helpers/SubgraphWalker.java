@@ -38,6 +38,7 @@ import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager;
 import java.lang.annotation.AnnotationFormatError;
 import java.lang.reflect.Field;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
@@ -199,6 +200,8 @@ public class SubgraphWalker {
   }
 
   public static void activateTypes(Node node, ScopeManager scopeManager) {
+    AtomicInteger num = new AtomicInteger();
+
     Map<HasType, Set<Type>> typeCache = TypeManager.getInstance().getTypeCache();
     IterativeGraphWalker walker = new IterativeGraphWalker();
     walker.registerOnNodeVisit(scopeManager::enterScopeIfExists);
@@ -214,9 +217,12 @@ public class SubgraphWalker {
                       ((HasType) n).setType(t);
                     });
             typeCache.remove((HasType) n);
+            num.getAndIncrement();
           }
         });
     walker.iterate(node);
+
+    LOGGER.debug("Activated {} nodes for {}", num, node.getName());
 
     // For some nodes it may happen that they are not reachable via AST, but we still need to set
     // their type to the requested value
