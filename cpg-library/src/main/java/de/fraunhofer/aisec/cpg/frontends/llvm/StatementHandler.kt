@@ -1176,12 +1176,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         }
         if (catchType.endsWith(" | ")) catchType = catchType.substring(0, catchType.length - 3)
 
-        var lhs = instr.name
-
-        // it could be an unnamed variable
-        if (lhs == "") {
-            lhs = lang.guessSlotNumber(instr)
-        }
+        val lhs = lang.getNameOf(instr).first
 
         val exceptionName =
             if (lhs != "") {
@@ -1421,14 +1416,9 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
      * [Expression] associated with the instruction.
      */
     private fun declarationOrNot(rhs: Expression, valueRef: LLVMValueRef): Statement {
-        var lhs = valueRef.name
-        var symbolName = valueRef.symbolName
-
-        // it could be an unnamed variable
-        if (lhs == "") {
-            lhs = lang.guessSlotNumber(valueRef)
-            symbolName = "%$lhs"
-        }
+        val namePair = lang.getNameOf(valueRef)
+        val lhs = namePair.first
+        val symbolName = namePair.second
 
         // if it is still empty, we probably do not have a left shide
         return if (lhs != "") {

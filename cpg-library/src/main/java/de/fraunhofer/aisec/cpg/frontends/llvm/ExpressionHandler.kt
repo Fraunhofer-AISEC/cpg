@@ -141,15 +141,9 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
      * determining the scope of the variable.
      */
     private fun handleReference(valueRef: LLVMValueRef): Expression {
-        var name = valueRef.name
-        var symbolName = valueRef.symbolName
-
-        // The name could be empty because of an unnamed variable. In this we need to apply some
-        // dirty tricks to get its "name", unless we find a function that returns the slot number
-        if (name == "") {
-            name = lang.guessSlotNumber(valueRef)
-            symbolName = "%$name"
-        }
+        val namePair = lang.getNameOf(valueRef)
+        val name = namePair.first
+        val symbolName = namePair.second
 
         val type = lang.typeOf(valueRef)
 

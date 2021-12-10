@@ -145,6 +145,20 @@ class LLVMIRLanguageFrontend(config: TranslationConfiguration, scopeManager: Sco
         return tu
     }
 
+    /** Returns a pair of the name and symbol name of [valueRef]. */
+    fun getNameOf(valueRef: LLVMValueRef): Pair<String, String> {
+        var name = valueRef.name
+        var symbolName = valueRef.symbolName
+
+        // The name could be empty because of an unnamed variable. In this we need to apply some
+        // dirty tricks to get its "name", unless we find a function that returns the slot number
+        if (name == "") {
+            name = guessSlotNumber(valueRef)
+            symbolName = "%$name"
+        }
+        return Pair(name, symbolName)
+    }
+
     fun typeOf(valueRef: LLVMValueRef): Type {
         val typeRef = LLVMTypeOf(valueRef)
 

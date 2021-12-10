@@ -34,8 +34,15 @@ import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import java.util.*
 
-class CompressLLVMPass() : Pass() {
+class CompressLLVMPass : Pass() {
     override fun accept(t: TranslationResult?) {
+        if (t?.translationManager?.config?.sourceLocations?.any { l ->
+                l?.name?.endsWith(".ll") == true
+            } != true
+        ) {
+            return
+        }
+
         val flatAST = SubgraphWalker.flattenAST(t)
         // Get all goto statements
         val allGotos = flatAST.filter { n -> n is GotoStatement }
@@ -94,95 +101,6 @@ class CompressLLVMPass() : Pass() {
                 val catchClauses = mutableListOf<CatchClause>()
 
                 val caseBody = node.catchClauses[0].body
-                /* TODO: This doesn't work properly yet.
-                val allCatchTypes =
-                    (caseBody.statements[0] as CatchClause).name.split(" | ").toMutableList()
-                val bigCatchClause = caseBody.statements[0] as CatchClause
-                val worklist = caseBody.statements.drop(1).toMutableList()
-                var statement = worklist.removeFirstOrNull()
-                while (statement != null) {
-                    if (statement is IfStatement) {
-                        /* This is the if condition. One of the operands is initialized by
-                         * a call to the `llvm.eh.typeid.for` intrinsic. This intrinsic receives
-                         * the type caught as an argument.
-                         */
-                        var exceptionCaught: String? =
-                            null // Contains the exception, probably together with other stuff e.g.
-                        // a cast operator
-                        val rhs =
-                            (((((statement.condition as? DeclaredReferenceExpression)?.refersTo as?
-                                                VariableDeclaration)
-                                            ?.initializer as?
-                                            BinaryOperator)
-                                        ?.rhs as?
-                                        DeclaredReferenceExpression)
-                                    ?.refersTo as?
-                                    VariableDeclaration)
-                                ?.initializer as?
-                                CallExpression
-                        if (rhs?.fqn?.equals("llvm.eh.typeid.for") == true) {
-                            exceptionCaught = rhs.arguments[0].code
-                            // Get the argument
-                        }
-                        val lhs =
-                            (((((statement.condition as? DeclaredReferenceExpression)?.refersTo as?
-                                                VariableDeclaration)
-                                            ?.initializer as?
-                                            BinaryOperator)
-                                        ?.lhs as?
-                                        DeclaredReferenceExpression)
-                                    ?.refersTo as?
-                                    VariableDeclaration)
-                                ?.initializer as?
-                                CallExpression
-                        if (lhs?.fqn?.equals("llvm.eh.typeid.for") == true) {
-                            exceptionCaught = lhs.arguments[0].name
-                            // Get the argument
-                        }
-
-                        if (exceptionCaught != null) {
-                            var toDelete: String? = null
-                            for (possibleException in allCatchTypes) {
-                                if (exceptionCaught.contains(possibleException)) {
-                                    val newClause = NodeBuilder.newCatchClause(statement.code!!)
-                                    newClause.name = possibleException
-                                    toDelete = possibleException
-                                    val except =
-                                        NodeBuilder.newVariableDeclaration(
-                                            bigCatchClause.name,
-                                            TypeParser.createFrom(possibleException, false),
-                                            bigCatchClause.code,
-                                            false
-                                        )
-                                    newClause.setParameter(except)
-                                    newClause.body = statement.thenStatement as? CompoundStatement
-                                    if (newClause.body == null) {
-                                        newClause.body =
-                                            (statement.thenStatement as? GotoStatement)
-                                                ?.targetLabel
-                                                ?.subStatement as?
-                                                CompoundStatement
-                                    }
-                                    catchClauses.add(newClause)
-                                    var elseStatements =
-                                        (statement.elseStatement as? CompoundStatement)?.statements
-                                    if (elseStatements == null) {
-                                        elseStatements =
-                                            ((statement.elseStatement as? GotoStatement)
-                                                    ?.targetLabel
-                                                    ?.subStatement as?
-                                                    CompoundStatement)
-                                                ?.statements
-                                    }
-                                    if (elseStatements != null) worklist.addAll(elseStatements)
-                                    break
-                                }
-                            }
-                            if (toDelete != null) allCatchTypes.remove(toDelete)
-                        }
-                    }
-                    statement = worklist.removeFirstOrNull()
-                }*/
 
                 // This is the most generic one
                 val clauseToAdd = caseBody.statements[0] as CatchClause
