@@ -27,6 +27,8 @@ import com.github.gradle.node.yarn.task.YarnTask
 
 plugins {
     `java-library`
+    `java-test-fixtures`
+
     `maven-publish`
     signing
 
@@ -79,7 +81,6 @@ publishing {
         }
     }
 }
-
 
 tasks.withType<GenerateModuleMetadata> {
     enabled = false
@@ -219,10 +220,10 @@ dependencies {
     // JUnit
     testImplementation("org.jetbrains.kotlin:kotlin-test")
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
-    testImplementation("org.junit.jupiter:junit-jupiter-api:5.8.1")
+    testFixturesApi("org.junit.jupiter:junit-jupiter-api:5.8.1")
     testImplementation("org.junit.jupiter:junit-jupiter-params:5.8.1")
 
-    testImplementation("org.mockito:mockito-core:4.1.0")
+    testFixturesApi("org.mockito:mockito-core:4.1.0")
     
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.8.1")
 }

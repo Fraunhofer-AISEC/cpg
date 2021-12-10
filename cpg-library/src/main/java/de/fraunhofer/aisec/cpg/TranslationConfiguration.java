@@ -33,7 +33,6 @@ import com.google.common.collect.Lists;
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
 import de.fraunhofer.aisec.cpg.frontends.cpp.CXXLanguageFrontend;
 import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguageFrontend;
-import de.fraunhofer.aisec.cpg.frontends.llvm.LLVMIRLanguageFrontend;
 import de.fraunhofer.aisec.cpg.passes.*;
 import java.io.File;
 import java.lang.reflect.InvocationTargetException;
@@ -424,7 +423,6 @@ public class TranslationConfiguration {
           CXXLanguageFrontend.class,
           Lists.newArrayList(Iterables.concat(CXX_EXTENSIONS, CXX_HEADER_EXTENSIONS)));
       registerLanguage(JavaLanguageFrontend.class, JavaLanguageFrontend.JAVA_EXTENSIONS);
-      registerLanguage(LLVMIRLanguageFrontend.class, LLVMIRLanguageFrontend.LLVM_EXTENSIONS);
 
       // do not register experimental languages by default until we have a release strategy
       // registerLanguage(GoLanguageFrontend.class, GoLanguageFrontend.GOLANG_EXTENSIONS);
