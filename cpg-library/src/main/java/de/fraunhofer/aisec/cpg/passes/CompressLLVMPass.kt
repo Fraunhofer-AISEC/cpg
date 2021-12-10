@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.TranslationResult
+import de.fraunhofer.aisec.cpg.frontends.llvm.LLVMIRLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder
 import de.fraunhofer.aisec.cpg.graph.statements.*
@@ -36,10 +37,8 @@ import java.util.*
 
 class CompressLLVMPass : Pass() {
     override fun accept(t: TranslationResult?) {
-        if (t?.translationManager?.config?.sourceLocations?.any { l ->
-                l?.name?.endsWith(".ll") == true
-            } != true
-        ) {
+        // Run only for LLVM.
+        if (this.lang !is LLVMIRLanguageFrontend) {
             return
         }
 
@@ -56,7 +55,8 @@ class CompressLLVMPass : Pass() {
             allGotos.filter { g -> (g as GotoStatement).targetLabel in singleEntryLabels }
 
         // Enforce the order: First IfStatements, then SwitchStatements, then the rest. This
-        // prevents to treat the final goto in the case or default statement as a normal compound
+        // prevents to treat the final goto in the case or default statement as a normal
+        // compound
         // statement which would lead to inlining the instructions BB but we want to keep the BB
         // inside a CompoundStatement.
         for (node in
@@ -65,13 +65,15 @@ class CompressLLVMPass : Pass() {
                 else if (n is SwitchStatement) 2 else if (n is TryStatement) 4 else 3
             }) {
             if (node is IfStatement) {
-                // Replace the then-statement with the basic block it jumps to iff we found that its
+                // Replace the then-statement with the basic block it jumps to iff we found that
+                // its
                 // goto statement is the only one jumping to the target
                 if (node.thenStatement in gotosToReplace) {
                     node.thenStatement =
                         (node.thenStatement as GotoStatement).targetLabel.subStatement
                 }
-                // Replace the else-statement with the basic block it jumps to iff we found that its
+                // Replace the else-statement with the basic block it jumps to iff we found that
+                // its
                 // goto statement is the only one jumping to the target
                 if (node.elseStatement in gotosToReplace) {
                     node.elseStatement =
@@ -117,7 +119,8 @@ class CompressLLVMPass : Pass() {
                     node.catchClauses.size == 1 &&
                     node.catchClauses[0].body.statements[0] is CompoundStatement
             ) {
-                // A compound statement which is wrapped in the catchClause. We can simply move it
+                // A compound statement which is wrapped in the catchClause. We can simply move
+                // it
                 // one layer up and make
                 // the compound statement the body of the catch clause.
                 val innerCompound = node.catchClauses[0].body.statements[0] as CompoundStatement
