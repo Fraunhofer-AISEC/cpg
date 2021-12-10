@@ -26,23 +26,22 @@
 package de.fraunhofer.aisec.cpg.frontends.cpp2
 
 import de.fraunhofer.aisec.cpg.frontends.Handler
-import de.fraunhofer.aisec.cpg.frontends.cpp2.CXXLanguageFrontend2.Companion.ts_node_child_by_field_name
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newDeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
-import org.bytedeco.treesitter.TSNode
-import org.bytedeco.treesitter.global.treesitter
-import org.bytedeco.treesitter.global.treesitter.*
+import io.github.oxisto.kotlintree.Node
+import io.github.oxisto.kotlintree.of
+import io.github.oxisto.kotlintree.ofNamed
 
 class StatementHandler(lang: CXXLanguageFrontend2) :
-    Handler<Statement, TSNode, CXXLanguageFrontend2>(::Statement, lang) {
+    Handler<Statement, Node, CXXLanguageFrontend2>(::Statement, lang) {
     init {
-        map.put(TSNode::class.java, ::handleStatement)
+        map.put(Node::class.java, ::handleStatement)
     }
 
-    private fun handleStatement(node: TSNode): Statement {
+    private fun handleStatement(node: Node): Statement {
         return when (val type = node.type) {
             "compound_statement" -> handleCompoundStatement(node)
             "declaration" -> handleDeclarationStatement(node)
@@ -55,11 +54,11 @@ class StatementHandler(lang: CXXLanguageFrontend2) :
         }
     }
 
-    private fun handleReturnStatement(node: TSNode): Statement {
+    private fun handleReturnStatement(node: Node): Statement {
         val returnStatement = newReturnStatement(lang.getCodeFromRawNode(node))
 
-        if (ts_node_child_count(node) > 0) {
-            val child = ts_node_named_child(node, 0)
+        if (node.childCount > 0) {
+            val child = node.namedChild(0)
 
             val expression = lang.expressionHandler.handle(child)
 
@@ -69,15 +68,15 @@ class StatementHandler(lang: CXXLanguageFrontend2) :
         return returnStatement
     }
 
-    private fun handleExpressionStatement(node: TSNode): Statement {
+    private fun handleExpressionStatement(node: Node): Statement {
         // forward the first (and only child) to the expression handler
-        return lang.expressionHandler.handle(treesitter.ts_node_named_child(node, 0))
+        return lang.expressionHandler.handle(0 ofNamed node)
     }
 
-    private fun handleDeclarationStatement(node: TSNode): Statement {
+    private fun handleDeclarationStatement(node: Node): Statement {
         val stmt = newDeclarationStatement(lang.getCodeFromRawNode(node))
 
-        var type = lang.handleType(ts_node_child_by_field_name(node, "type"))
+        var type = lang.handleType("type" of node)
 
         // if the type also declared something, we add it to the declaration statement
         (type as? ObjectType)?.recordDeclaration?.let {
@@ -85,7 +84,7 @@ class StatementHandler(lang: CXXLanguageFrontend2) :
             stmt.addToPropertyEdgeDeclaration(it)
         }
 
-        var declarator = ts_node_child_by_field_name(node, "declarator")
+        var declarator = "declarator" of node
         // loop through the declarators
         do {
             val declaration =
@@ -98,19 +97,19 @@ class StatementHandler(lang: CXXLanguageFrontend2) :
 
             lang.scopeManager.addDeclaration(declaration)
             stmt.addToPropertyEdgeDeclaration(declaration)
-            declarator = treesitter.ts_node_next_named_sibling(declarator)
-        } while (!ts_node_is_null(declarator))
+            declarator = declarator.nextNamedSibling
+        } while (!declarator.isNull)
 
         return stmt
     }
 
-    private fun handleCompoundStatement(node: TSNode): Statement {
+    private fun handleCompoundStatement(node: Node): Statement {
         val compoundStatement = NodeBuilder.newCompoundStatement(lang.getCodeFromRawNode(node))
 
         lang.scopeManager.enterScope(compoundStatement)
 
-        for (i in 0 until treesitter.ts_node_named_child_count(node)) {
-            val statement = handleStatement(treesitter.ts_node_named_child(node, i))
+        for (i in 0 until node.namedChildCount) {
+            val statement = handleStatement(i ofNamed node)
 
             compoundStatement.addStatement(statement)
         }

@@ -27,7 +27,6 @@ package de.fraunhofer.aisec.cpg.frontends.cpp2
 
 import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
-import de.fraunhofer.aisec.cpg.frontends.cpp2.CXXLanguageFrontend2.Companion.ts_node_child_by_field_name
 import de.fraunhofer.aisec.cpg.graph.HasInitializer
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newConstructorDeclaration
@@ -38,16 +37,15 @@ import de.fraunhofer.aisec.cpg.graph.ResolveInFrontend
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.types.PointerType
 import de.fraunhofer.aisec.cpg.passes.scopes.TemplateScope
-import org.bytedeco.treesitter.TSNode
-import org.bytedeco.treesitter.global.treesitter.*
+import io.github.oxisto.kotlintree.Node
 
 class DeclarationHandler(lang: CXXLanguageFrontend2) :
-    Handler<Declaration, TSNode, CXXLanguageFrontend2>(::Declaration, lang) {
+    Handler<Declaration, Node, CXXLanguageFrontend2>(::Declaration, lang) {
     init {
-        map.put(TSNode::class.java, ::handleDeclaration)
+        map.put(Node::class.java, ::handleDeclaration)
     }
 
-    private fun handleDeclaration(node: TSNode): Declaration {
+    private fun handleDeclaration(node: Node): Declaration {
         return when (val type = node.type) {
             "function_definition" -> handleFunctionDefinition(node)
             "parameter_declaration" -> handleParameterDeclaration(node)
@@ -60,22 +58,22 @@ class DeclarationHandler(lang: CXXLanguageFrontend2) :
         }
     }
 
-    private fun handleClassSpecifier(node: TSNode): Declaration {
-        val name = lang.getCodeFromRawNode(ts_node_child_by_field_name(node, "name")) ?: ""
+    private fun handleClassSpecifier(node: Node): Declaration {
+        val name = lang.getCodeFromRawNode(node.childByFieldName("name")) ?: ""
 
         val recordDeclaration =
             NodeBuilder.newRecordDeclaration(name, "class", lang.getCodeFromRawNode(node))
 
         lang.scopeManager.enterScope(recordDeclaration)
 
-        val classBody = ts_node_child_by_field_name(node, "body")
-        if (!ts_node_is_null(classBody)) {
+        val classBody = node.childByFieldName("body")
+        if (!classBody.isNull) {
             // loop through fields
-            for (i in 0 until ts_node_named_child_count(classBody)) {
-                val childNode = ts_node_named_child(classBody, i)
+            for (i in 0 until classBody.namedChildCount) {
+                val childNode = classBody.namedChild(i)
 
                 // skip access_specifier for now
-                if (ts_node_type(childNode).string == "access_specifier") {
+                if (childNode.type == "access_specifier") {
                     continue
                 }
 
@@ -90,16 +88,13 @@ class DeclarationHandler(lang: CXXLanguageFrontend2) :
         return recordDeclaration
     }
 
-    private fun handleParameterDeclaration(node: TSNode): ParamVariableDeclaration {
-        val startType = lang.handleType(ts_node_child_by_field_name(node, "type"))
+    private fun handleParameterDeclaration(node: Node): ParamVariableDeclaration {
+        val startType = lang.handleType(node.childByFieldName("type"))
         val param =
             NodeBuilder.newMethodParameterIn("", startType, false, lang.getCodeFromRawNode(node))
 
         // process the declarator to adjust name and type of this declaration
-        processDeclarator(
-            ts_node_child_by_field_name(node, "declarator", "declarator".length),
-            param
-        )
+        processDeclarator(node.childByFieldName("declarator"), param)
 
         return param
     }
@@ -110,11 +105,11 @@ class DeclarationHandler(lang: CXXLanguageFrontend2) :
      * "function_declarator". Therefore, this function either returns a [FieldDeclaration] or a
      * [MethodDeclaration].
      */
-    private fun handleFieldDeclaration(node: TSNode): Declaration {
-        val startType = lang.handleType(ts_node_child_by_field_name(node, "type"))
+    private fun handleFieldDeclaration(node: Node): Declaration {
+        val startType = lang.handleType(node.childByFieldName("type"))
 
         // Peek into the declarator to determine the type
-        val declarator = ts_node_child_by_field_name(node, "declarator")
+        val declarator = node.childByFieldName("declarator")
         val declaration =
             if (isReallyAFunctionDeclaration(declarator)) {
                 val method =
@@ -146,10 +141,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend2) :
 
         // Process the declarator to adjust name and type of this declaration and add the parameters
         // (if this is a method).
-        processDeclarator(
-            ts_node_child_by_field_name(node, "declarator", "declarator".length),
-            declaration
-        )
+        processDeclarator(node.childByFieldName("declarator"), declaration)
 
         // Leave the method scope if it exists
         if (declaration is MethodDeclaration) {
@@ -167,12 +159,12 @@ class DeclarationHandler(lang: CXXLanguageFrontend2) :
      * need to peek into the (nested) declarators to find out if this is really a function
      * declaration.
      */
-    private fun isReallyAFunctionDeclaration(node: TSNode): Boolean {
+    private fun isReallyAFunctionDeclaration(node: Node): Boolean {
         // TODO: we can probably do this with a query
 
-        val declarator = ts_node_child_by_field_name(node, "declarator")
-        if (!declarator.isNull && !ts_node_is_null(declarator)) {
-            if (ts_node_type(declarator).string == "function_declarator") {
+        val declarator = node.childByFieldName("declarator")
+        if (!declarator.isNull) {
+            if (declarator.type == "function_declarator") {
                 return true
             } else {
                 if (isReallyAFunctionDeclaration(declarator)) {
@@ -188,12 +180,12 @@ class DeclarationHandler(lang: CXXLanguageFrontend2) :
      * This function checks whether the function declaration is really a method declaration, e.g.,
      * if it contains a scoped_identifier.
      */
-    private fun isMethodDeclaration(node: TSNode): Boolean {
+    private fun isMethodDeclaration(node: Node): Boolean {
         // TODO: we can probably do this with a query
 
-        val declarator = ts_node_child_by_field_name(node, "declarator")
-        if (!ts_node_is_null(declarator)) {
-            if (ts_node_type(declarator).string == "scoped_identifier") {
+        val declarator = node.childByFieldName("declarator")
+        if (!declarator.isNull) {
+            if (declarator.type == "scoped_identifier") {
                 return true
             } else {
                 if (isReallyAFunctionDeclaration(declarator)) {
@@ -231,12 +223,12 @@ class DeclarationHandler(lang: CXXLanguageFrontend2) :
      * In all cases the returning object SHOULD contain a [FunctionDeclaration.body] and
      * [FunctionDeclaration.isDefinition] should be set to `true`.
      */
-    private fun handleFunctionDefinition(node: TSNode): FunctionDeclaration {
-        log.debug("Handling function: {}", ts_node_string(node).string)
+    private fun handleFunctionDefinition(node: Node): FunctionDeclaration {
+        log.debug("Handling function: {}", node.string)
 
         // Retrieve the non-pointer result type of the function. Any pointers or other array
         // modifiers will be part of the declarator.
-        val nonPointerType = lang.handleType(ts_node_child_by_field_name(node, "type"))
+        val nonPointerType = lang.handleType(node.childByFieldName("type"))
 
         // It is important to know whether we are within a record scope or outside. If we are
         // inside, every function is automatically a method. If we are outside, we need to check if
@@ -252,10 +244,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend2) :
                     // if we are inside a record, we can directly set the record declaration link
                     createMethodOrConstructor(
                         lang.getCodeFromRawNode(
-                                ts_node_child_by_field_name(
-                                    ts_node_child_by_field_name(node, "declarator"),
-                                    "declarator"
-                                )
+                                node.childByFieldName("declarator").childByFieldName("declarator")
                             )
                             .orEmpty(),
                         lang.getCodeFromRawNode(node).orEmpty(),
@@ -281,14 +270,14 @@ class DeclarationHandler(lang: CXXLanguageFrontend2) :
 
         // Process the declrator, this will set name and the record declaration in case of outside
         // methods
-        processDeclarator(ts_node_child_by_field_name(node, "declarator"), func)
+        processDeclarator(node.childByFieldName("declarator"), func)
 
         // Update code to include the whole function
         func.code = lang.getCodeFromRawNode(node)
 
         // Parse the method body. It SHOULD exist since we are parsing this as a *definition*.
-        val body = ts_node_child_by_field_name(node, "body")
-        if (body.isNull || ts_node_is_null(body)) {
+        val body = node.childByFieldName("body")
+        if (body.isNull) {
             log.error(
                 "We encountered a function definition '{}' that has no body. This was probably the result of a syntax error.",
                 func.name
@@ -318,7 +307,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend2) :
         return func
     }
 
-    internal fun processDeclarator(node: TSNode, declaration: ValueDeclaration) {
+    internal fun processDeclarator(node: Node, declaration: ValueDeclaration) {
         when (node.type) {
             "identifier" -> {
                 declaration.name = lang.getCodeFromRawNode(node) ?: ""
@@ -343,12 +332,9 @@ class DeclarationHandler(lang: CXXLanguageFrontend2) :
     }
 
     @ResolveInFrontend
-    private fun processScopedIdentifier(node: TSNode, declaration: ValueDeclaration) {
+    private fun processScopedIdentifier(node: Node, declaration: ValueDeclaration) {
         // we are interested in the namespace part first, because this points to our class
-        var namespace =
-            lang.getCodeFromRawNode(
-                ts_node_child_by_field_name(node, "namespace", "namespace".length)
-            )
+        var namespace = lang.getCodeFromRawNode(node.childByFieldName("namespace"))
 
         if (namespace == null) {
             log.error(
@@ -365,8 +351,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend2) :
             }
         }
 
-        val name =
-            lang.getCodeFromRawNode(ts_node_child_by_field_name(node, "name", "name".length)) ?: ""
+        val name = lang.getCodeFromRawNode(node.childByFieldName("name")) ?: ""
 
         declaration.name = name
     }
@@ -411,33 +396,32 @@ class DeclarationHandler(lang: CXXLanguageFrontend2) :
         }
     }
 
-    private fun processInitDeclarator(node: TSNode, declaration: ValueDeclaration) {
+    private fun processInitDeclarator(node: Node, declaration: ValueDeclaration) {
         // going forward in the declarator chain
-        processDeclarator(ts_node_child_by_field_name(node, "declarator"), declaration)
+        processDeclarator(node.childByFieldName("declarator"), declaration)
 
         val hasInitializer = declaration as? HasInitializer
         hasInitializer?.let {
             // the value is nested in the init declarator
-            val expression =
-                lang.expressionHandler.handle(ts_node_child_by_field_name(node, "value"))
+            val expression = lang.expressionHandler.handle(node.childByFieldName("value"))
 
             hasInitializer.initializer = expression
         }
     }
 
-    private fun processPointerDeclarator(node: TSNode, declaration: ValueDeclaration) {
-        processDeclarator(ts_node_child_by_field_name(node, "declarator"), declaration)
+    private fun processPointerDeclarator(node: Node, declaration: ValueDeclaration) {
+        processDeclarator(node.childByFieldName("declarator"), declaration)
 
         // reference the type using a pointer
         declaration.type = declaration.type.reference(PointerType.PointerOrigin.POINTER)
     }
 
-    private fun processFunctionDeclarator(node: TSNode, declaration: ValueDeclaration) {
-        processDeclarator(ts_node_child_by_field_name(node, "declarator"), declaration)
+    private fun processFunctionDeclarator(node: Node, declaration: ValueDeclaration) {
+        processDeclarator(node.childByFieldName("declarator"), declaration)
 
-        val parameterList = ts_node_child_by_field_name(node, "parameters")
-        for (i in 0 until ts_node_named_child_count(parameterList)) {
-            val param = handle(ts_node_named_child(parameterList, i))
+        val parameterList = node.childByFieldName("parameters")
+        for (i in 0 until parameterList.namedChildCount) {
+            val param = handle(parameterList.namedChild(i))
 
             lang.scopeManager.addDeclaration(param)
         }

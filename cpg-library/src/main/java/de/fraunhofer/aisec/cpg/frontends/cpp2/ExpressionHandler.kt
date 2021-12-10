@@ -28,7 +28,6 @@ package de.fraunhofer.aisec.cpg.frontends.cpp2
 import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
-import de.fraunhofer.aisec.cpg.frontends.cpp2.CXXLanguageFrontend2.Companion.ts_node_child_by_field_name
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newBinaryOperator
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newCallExpression
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newDeclaredReferenceExpression
@@ -39,20 +38,20 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
-import org.bytedeco.treesitter.TSNode
-import org.bytedeco.treesitter.global.treesitter.*
+import io.github.oxisto.kotlintree.Node
+import io.github.oxisto.kotlintree.of
 
 /**
  * This handler takes care of parsing
  * [expressions](https://en.cppreference.com/w/cpp/language/expressions).
  */
 class ExpressionHandler(lang: CXXLanguageFrontend2) :
-    Handler<Expression, TSNode, CXXLanguageFrontend2>(::Expression, lang) {
+    Handler<Expression, Node, CXXLanguageFrontend2>(::Expression, lang) {
     init {
-        map.put(TSNode::class.java, ::handleExpression)
+        map.put(Node::class.java, ::handleExpression)
     }
 
-    private fun handleExpression(node: TSNode): Expression {
+    private fun handleExpression(node: Node): Expression {
         return when (node.type) {
             "identifier" -> handleIdentifier(node)
             "scoped_identifier" -> handleScopedIdentifier(node)
@@ -74,7 +73,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend2) :
         }
     }
 
-    private fun handleScopedIdentifier(node: TSNode): Expression {
+    private fun handleScopedIdentifier(node: Node): Expression {
         // until we properly handle namespaces, we just forward it to handleIdentifier
 
         val ref = handleIdentifier(node)
@@ -82,20 +81,20 @@ class ExpressionHandler(lang: CXXLanguageFrontend2) :
         return ref
     }
 
-    private fun handleFieldExpression(node: TSNode): Expression {
+    private fun handleFieldExpression(node: Node): Expression {
         // check for the base
-        val base = handle(ts_node_child_by_field_name(node, "argument"))
+        val base = handle(node.childByFieldName("argument"))
 
         // check the field
-        val field = ts_node_child_by_field_name(node, "field")
+        val field = node.childByFieldName("field")
         val name =
-            if (!ts_node_is_null(field)) {
+            if (!field.isNull) {
                 lang.getCodeFromRawNode(field)
             } else {
                 ""
             }
 
-        val symbol = lang.getCodeFromRawNode(ts_node_child(node, 1))
+        val symbol = lang.getCodeFromRawNode(node.child(1))
 
         val expression =
             newMemberExpression(
@@ -110,9 +109,9 @@ class ExpressionHandler(lang: CXXLanguageFrontend2) :
     }
 
     /** Handles a call expression. */
-    private fun handleCallExpression(node: TSNode): Expression {
+    private fun handleCallExpression(node: Node): Expression {
         // try to parse the "function" child
-        val reference = handle(ts_node_child_by_field_name(node, "function"))
+        val reference = handle(node.childByFieldName("function"))
 
         val call =
             when (reference) {
@@ -157,10 +156,10 @@ class ExpressionHandler(lang: CXXLanguageFrontend2) :
             }
 
         // parse arguments
-        val arguments = ts_node_child_by_field_name(node, "arguments")
-        if (!ts_node_is_null(arguments)) {
-            for (i in 0 until ts_node_named_child_count(arguments)) {
-                val expression = handle(ts_node_named_child(arguments, 0))
+        val arguments = "arguments" of node
+        if (!arguments.isNull) {
+            for (i in 0 until arguments.namedChildCount) {
+                val expression = handle(arguments.namedChild(i))
                 call.addArgument(expression)
             }
         }
@@ -168,7 +167,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend2) :
         return call
     }
 
-    private fun handleConcatenatedString(node: TSNode): Expression {
+    private fun handleConcatenatedString(node: Node): Expression {
         val code = lang.getCodeFromRawNode(node)
 
         val value = code?.replace("\"", "")
@@ -176,7 +175,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend2) :
         return newLiteral(value, TypeParser.createFrom("const char*", false), code)
     }
 
-    private fun handleNull(node: TSNode): Literal<*> {
+    private fun handleNull(node: Node): Literal<*> {
         return newLiteral(
             null,
             TypeParser.createFrom("std::nullptr_t", false),
@@ -189,7 +188,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend2) :
      * try to resolve this reference (locally). See comments in the function body for more details
      * about this resolution.
      */
-    private fun handleIdentifier(node: TSNode): Expression {
+    private fun handleIdentifier(node: Node): Expression {
         val name = lang.getCodeFromRawNode(node)
 
         val ref = newDeclaredReferenceExpression(name, UnknownType.getUnknownType(), name)
@@ -213,19 +212,19 @@ class ExpressionHandler(lang: CXXLanguageFrontend2) :
         return ref
     }
 
-    private fun handleNumberLiteral(node: TSNode): Expression {
+    private fun handleNumberLiteral(node: Node): Expression {
         val value = lang.getCodeFromRawNode(node)?.toInt()
 
         return newLiteral(value, TypeParser.createFrom("int", false), lang.getCodeFromRawNode(node))
     }
 
-    private fun handleBinaryExpression(node: TSNode): Expression {
-        val symbol = lang.getCodeFromRawNode(ts_node_child(node, 1))
+    private fun handleBinaryExpression(node: Node): Expression {
+        val symbol = lang.getCodeFromRawNode(node.child(1))
 
         val expression = newBinaryOperator(symbol ?: "", lang.getCodeFromRawNode(node))
 
-        expression.lhs = handleExpression(ts_node_child_by_field_name(node, "left"))
-        expression.rhs = handleExpression(ts_node_child_by_field_name(node, "right"))
+        expression.lhs = handleExpression("left" of node)
+        expression.rhs = handleExpression("right" of node)
 
         return expression
     }
@@ -235,11 +234,11 @@ class ExpressionHandler(lang: CXXLanguageFrontend2) :
      * [assignment expression](https://en.cppreference.com/w/cpp/language/operator_assignment). It
      * is parsed as a [BinaryOperator].
      */
-    private fun handleAssignmentExpression(node: TSNode): BinaryOperator {
+    private fun handleAssignmentExpression(node: Node): BinaryOperator {
         val expression = newBinaryOperator("=", lang.getCodeFromRawNode(node))
 
-        expression.lhs = handleExpression(ts_node_child_by_field_name(node, "left"))
-        expression.rhs = handleExpression(ts_node_child_by_field_name(node, "right"))
+        expression.lhs = handleExpression("left" of node)
+        expression.rhs = handleExpression("right" of node)
 
         return expression
     }

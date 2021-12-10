@@ -37,14 +37,10 @@ import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
+import io.github.oxisto.kotlintree.Node
+import io.github.oxisto.kotlintree.Parser
+import io.github.oxisto.kotlintree.TreeSitterCpp
 import java.io.File
-import org.bytedeco.treesitter.TSNode
-import org.bytedeco.treesitter.global.treesitter.*
-
-val TSNode.type: String
-    get() {
-        return ts_node_type(this).string
-    }
 
 /**
  * An (experimental) language frontend for the [TypeManager.Language.CXX] language based on
@@ -63,29 +59,28 @@ class CXXLanguageFrontend2(config: TranslationConfiguration, scopeManager: Scope
     override fun parse(file: File): TranslationUnitDeclaration {
         TypeManager.getInstance().setLanguageFrontend(this)
 
-        val parser = ts_parser_new()
-
-        ts_parser_set_language(parser, tree_sitter_cpp())
+        val parser = Parser()
+        parser.language = TreeSitterCpp.INSTANCE.tree_sitter_cpp()
 
         input = file.readText()
         currentFile = file
 
-        val tree = ts_parser_parse_string(parser, null, input, input.length)
-        val root = ts_tree_root_node(tree)
+        val tree = parser.parseString(null, input)
+        val root = tree.rootNode
 
-        assert(ts_node_type(root).string == "translation_unit")
+        assert(root.type == "translation_unit")
 
         return handleTranslationUnit(root)
     }
 
-    fun handleTranslationUnit(node: TSNode): TranslationUnitDeclaration {
+    fun handleTranslationUnit(node: Node): TranslationUnitDeclaration {
         val tu = newTranslationUnitDeclaration("", getCodeFromRawNode(node))
 
         scopeManager.resetToGlobal(tu)
 
         // loop through children
-        for (i in 0 until ts_node_named_child_count(node)) {
-            val declaration = declarationHandler.handle(ts_node_named_child(node, i))
+        for (i in 0 until node.namedChildCount) {
+            val declaration = declarationHandler.handle(node.namedChild(i))
 
             scopeManager.addDeclaration(declaration)
         }
@@ -93,9 +88,9 @@ class CXXLanguageFrontend2(config: TranslationConfiguration, scopeManager: Scope
         return tu
     }
 
-    fun handleType(node: TSNode): Type {
+    fun handleType(node: Node): Type {
         // make sure this node is really valid
-        if (node.isNull || ts_node_is_null(node)) {
+        if (node.isNull) {
             return UnknownType.getUnknownType()
         }
 
@@ -119,16 +114,16 @@ class CXXLanguageFrontend2(config: TranslationConfiguration, scopeManager: Scope
         }
     }
 
-    private fun handleClassSpecifier(node: TSNode): Type {
+    private fun handleClassSpecifier(node: Node): Type {
         val recordDeclaration = declarationHandler.handle(node) as? RecordDeclaration
 
         return recordDeclaration?.toType() ?: UnknownType.getUnknownType()
     }
 
     override fun <T : Any?> getCodeFromRawNode(astNode: T): String? {
-        if (astNode is TSNode && !astNode.isNull && !ts_node_is_null(astNode)) {
-            val start = ts_node_start_byte(astNode)
-            val end = ts_node_end_byte(astNode)
+        if (astNode is Node && !astNode.isNull) {
+            val start = astNode.startByte
+            val end = astNode.endByte
 
             return input.substring(start, end)
         }
@@ -137,13 +132,13 @@ class CXXLanguageFrontend2(config: TranslationConfiguration, scopeManager: Scope
     }
 
     override fun <T : Any?> getLocationFromRawNode(astNode: T): PhysicalLocation? {
-        if (astNode is TSNode) {
-            val start = ts_node_start_point(astNode)
-            val end = ts_node_end_point(astNode)
+        if (astNode is Node) {
+            val start = astNode.startPoint
+            val end = astNode.endPoint
 
             return PhysicalLocation(
                 currentFile.toURI(),
-                Region(start.row(), start.column(), end.row(), end.column())
+                Region(start.row, start.column, end.row, end.column)
             )
         }
 
@@ -151,11 +146,4 @@ class CXXLanguageFrontend2(config: TranslationConfiguration, scopeManager: Scope
     }
 
     override fun <S : Any?, T : Any?> setComment(s: S, ctx: T) {}
-
-    companion object {
-        @JvmStatic
-        fun ts_node_child_by_field_name(node: TSNode, field: String): TSNode {
-            return ts_node_child_by_field_name(node, field, field.length)
-        }
-    }
 }

@@ -70,12 +70,10 @@ jobs:
       - name: Run pycodestyle
         run: |
           find cpg-library/src/main/python -iname "*.py" -exec pycodestyle \{\} \;
-      - name: Build tree-sitter javacpp (remove once it is upstream)
+      - name: Build kotlin-tree
         run: |
-          git clone https://github.com/bytedeco/javacpp.git
-          cd javacpp && mvn install
-          git clone https://github.com/oxisto/javacpp-presets.git
-          cd javacpp-presets && git checkout tree-sitter && mvn clean install --projects .,tree-sitter
+          git clone https://github.com/oxisto/kotlintree.git
+          ./gradlew publishToMavenLocal
       - name: Build ${{ steps.determine_version.outputs.version }}
         run: |
           if [ "$SONAR_TOKEN" != "" ]
