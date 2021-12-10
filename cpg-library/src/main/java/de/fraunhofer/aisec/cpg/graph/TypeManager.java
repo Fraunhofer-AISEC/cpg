@@ -516,6 +516,15 @@ public class TypeManager {
 
   @NonNull
   public Language getLanguage() {
+    Class<LanguageFrontend> clazz = null;
+
+    try {
+      clazz =
+          (Class<LanguageFrontend>)
+              Class.forName("de.fraunhofer.aisec.cpg.frontends.llvm.LLVMIRLanguageFrontend");
+    } catch (ClassNotFoundException ignored) {
+    }
+
     if (frontend instanceof JavaLanguageFrontend) {
       return Language.JAVA;
     } else if (frontend instanceof CXXLanguageFrontend) {
@@ -526,8 +535,7 @@ public class TypeManager {
       return Language.PYTHON;
     } else if (frontend instanceof TypeScriptLanguageFrontend) {
       return Language.TYPESCRIPT;
-    } else if (frontend != null
-        && frontend.getClass().getSimpleName().equals("LLVMIRLanguageFrontend")) {
+    } else if (frontend != null && clazz != null && clazz.isAssignableFrom(frontend.getClass())) {
       return Language.LLVM_IR;
     }
 
