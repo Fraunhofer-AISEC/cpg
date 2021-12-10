@@ -32,7 +32,7 @@ package de.fraunhofer.aisec.cpg.analysis.fsm
  * - [isAcceptingState] indicates if this State accepts the [FSM] (in our case, this means that the
  * order of statements was correct).
  */
-class State(val name: String, val isStart: Boolean = false, val isAcceptingState: Boolean = false) :
+class State(val name: String, val isStart: Boolean = false, var isAcceptingState: Boolean = false) :
     Cloneable {
 
     val outgoingEdges = mutableSetOf<BaseOpEdge>()

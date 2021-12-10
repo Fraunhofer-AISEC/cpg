@@ -145,4 +145,23 @@ open class FSM : Cloneable {
     fun isAccepted(): Boolean {
         return currentState?.isAcceptingState == true
     }
+
+    override fun equals(other: Any?): Boolean {
+        val res =
+            other != null &&
+                    other is FSM &&
+                    other.currentState!!.equals(currentState) &&
+                    other.stateCounter == stateCounter &&
+                    other.states == states
+        if (res) {
+            for (s in states) {
+                val otherState = (other as FSM).states.first { otherS -> s.name == otherS.name }
+                if (otherState.outgoingEdges != s.outgoingEdges) {
+                    return false
+                }
+            }
+        }
+
+        return res
+    }
 }
