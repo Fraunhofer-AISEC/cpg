@@ -526,7 +526,8 @@ public class TypeManager {
       return Language.PYTHON;
     } else if (frontend instanceof TypeScriptLanguageFrontend) {
       return Language.TYPESCRIPT;
-    } else if (frontend.getClass().getSimpleName().equals("LLVMIRLanguageFrontend")) {
+    } else if (frontend != null
+        && frontend.getClass().getSimpleName().equals("LLVMIRLanguageFrontend")) {
       return Language.LLVM_IR;
     }
 
