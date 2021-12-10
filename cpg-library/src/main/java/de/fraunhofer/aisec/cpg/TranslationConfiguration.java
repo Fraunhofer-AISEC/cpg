@@ -36,6 +36,7 @@ import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguageFrontend;
 import de.fraunhofer.aisec.cpg.frontends.llvm.LLVMIRLanguageFrontend;
 import de.fraunhofer.aisec.cpg.passes.*;
 import java.io.File;
+import java.lang.reflect.InvocationTargetException;
 import java.util.*;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.slf4j.Logger;
@@ -392,6 +393,15 @@ public class TranslationConfiguration {
      * @return
      */
     public Builder defaultPasses() {
+      try {
+        var llvmClazz = Class.forName("de.fraunhofer.aisec.cpg.passes.CompressLLVMPass");
+        registerPass((Pass) llvmClazz.getDeclaredConstructor().newInstance());
+      } catch (ClassNotFoundException
+          | NoSuchMethodException
+          | InstantiationException
+          | IllegalAccessException
+          | InvocationTargetException ignored) {
+      }
       registerPass(new TypeHierarchyResolver());
       registerPass(new JavaExternalTypeHierarchyResolver());
       registerPass(new ImportResolver());

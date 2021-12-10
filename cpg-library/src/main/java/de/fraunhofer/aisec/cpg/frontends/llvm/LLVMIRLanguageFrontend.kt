@@ -32,7 +32,6 @@ import de.fraunhofer.aisec.cpg.graph.TypeManager
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.LabelStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
@@ -55,16 +54,18 @@ class LLVMIRLanguageFrontend(config: TranslationConfiguration, scopeManager: Sco
     val declarationHandler = DeclarationHandler(this)
     val expressionHandler = ExpressionHandler(this)
 
+    val phiList = mutableListOf<LLVMValueRef>()
+
     var ctx: LLVMContextRef? = null
 
     /**
      * This contains a cache binding between an LLVMValueRef (representing a variable) and its
-     * [VariableDeclaration] in the graph. We need this, because this way we can lookup and connect
-     * a [DeclaredReferenceExpression] to its [Declaration] already in the language frontend. This
-     * in turn is needed because of the local/global system we cannot rely on the
+     * [Declaration] in the graph. We need this, because this way we can lookup and connect a
+     * [DeclaredReferenceExpression] to its [Declaration] already in the language frontend. This in
+     * turn is needed because of the local/global system we cannot rely on the
      * [VariableUsageResolver].
      */
-    var bindingsCache = mutableMapOf<String, VariableDeclaration>()
+    var bindingsCache = mutableMapOf<String, Declaration>()
 
     companion object {
         @kotlin.jvm.JvmField var LLVM_EXTENSIONS: List<String> = listOf(".ll")
@@ -135,9 +136,27 @@ class LLVMIRLanguageFrontend(config: TranslationConfiguration, scopeManager: Sco
             func = LLVMGetNextFunction(func)
         }
 
+        for (phiInstr in phiList) {
+            statementHandler.handlePhi(phiInstr, tu)
+        }
+
         LLVMContextDispose(ctx)
 
         return tu
+    }
+
+    /** Returns a pair of the name and symbol name of [valueRef]. */
+    fun getNameOf(valueRef: LLVMValueRef): Pair<String, String> {
+        var name = valueRef.name
+        var symbolName = valueRef.symbolName
+
+        // The name could be empty because of an unnamed variable. In this we need to apply some
+        // dirty tricks to get its "name", unless we find a function that returns the slot number
+        if (name == "") {
+            name = guessSlotNumber(valueRef)
+            symbolName = "%$name"
+        }
+        return Pair(name, symbolName)
     }
 
     fun typeOf(valueRef: LLVMValueRef): Type {
@@ -215,7 +234,11 @@ class LLVMIRLanguageFrontend(config: TranslationConfiguration, scopeManager: Sco
 
     fun guessSlotNumber(valueRef: LLVMValueRef): String {
         val code = getCodeFromRawNode(valueRef)
-        return code?.split("=")?.firstOrNull()?.trim()?.trim('%') ?: ""
+        if (code?.contains("=") == true) {
+            return code.split("=").firstOrNull()?.trim()?.trim('%') ?: ""
+        } else {
+            return ""
+        }
     }
 }
 

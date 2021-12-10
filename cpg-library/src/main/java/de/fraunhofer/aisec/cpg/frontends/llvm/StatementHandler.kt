@@ -28,32 +28,39 @@ package de.fraunhofer.aisec.cpg.frontends.llvm
 import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newArrayCreationExpression
+import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newArraySubscriptionExpression
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newBinaryOperator
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newCallExpression
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newCaseStatement
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newCastExpression
+import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newCatchClause
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newCompoundStatement
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newConditionalExpression
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newConstructExpression
+import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newDeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newDeclaredReferenceExpression
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newDefaultStatement
+import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newEmptyStatement
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newGotoStatement
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newIfStatement
+import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newInitializerListExpression
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newLabelStatement
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newLiteral
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newMemberExpression
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newReturnStatement
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newSwitchStatement
+import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newTryStatement
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newUnaryOperator
+import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newVariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
-import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
-import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
-import de.fraunhofer.aisec.cpg.graph.statements.LabelStatement
-import de.fraunhofer.aisec.cpg.graph.statements.Statement
+import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
+import de.fraunhofer.aisec.cpg.helpers.annotations.FunctionReplacement
 import org.bytedeco.javacpp.Pointer
 import org.bytedeco.llvm.LLVM.LLVMBasicBlockRef
 import org.bytedeco.llvm.LLVM.LLVMValueRef
@@ -80,6 +87,12 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
      * be extracted from that, e.g. by routing it through the [DeclarationHandler].
      */
     private fun handleInstruction(instr: LLVMValueRef): Statement {
+        if (LLVMIsABinaryOperator(instr) != null) {
+            return handleBinaryInstruction(instr)
+        } else if (LLVMIsACastInst(instr) != null) {
+            return declarationOrNot(lang.expressionHandler.handleCastInstruction(instr), instr)
+        }
+
         val opcode = instr.opCode
 
         when (opcode) {
@@ -100,58 +113,357 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 return handleSwitchStatement(instr)
             }
             LLVMIndirectBr -> {
-                println("indirect br instruction")
+                return handleIndirectbrStatement(instr)
             }
-            LLVMInvoke -> {
+            LLVMCall, LLVMInvoke -> {
                 return handleFunctionCall(instr)
             }
             LLVMUnreachable -> {
                 // Does nothing
-                return Statement()
+                return newEmptyStatement(lang.getCodeFromRawNode(instr))
             }
             LLVMCallBr -> {
                 // Maps to a call but also to a goto statement? Barely used => not relevant
-                println("call instruction")
+                log.error("Cannot parse callbr instruction yet")
             }
             LLVMFNeg -> {
                 val fneg = newUnaryOperator("-", false, true, lang.getCodeFromRawNode(instr))
                 fneg.input = lang.getOperandValueAtIndex(instr, 0)
                 return fneg
             }
-            LLVMAdd -> {
+            LLVMAlloca -> {
+                return handleAlloca(instr)
+            }
+            LLVMLoad -> {
+                return handleLoad(instr)
+            }
+            LLVMStore -> {
+                return handleStore(instr)
+            }
+            LLVMExtractValue, LLVMGetElementPtr -> {
+                return declarationOrNot(lang.expressionHandler.handleGetElementPtr(instr), instr)
+            }
+            LLVMICmp -> {
+                return handleIntegerComparison(instr)
+            }
+            LLVMFCmp -> {
+                return handleFloatComparison(instr)
+            }
+            LLVMPHI -> {
+                lang.phiList.add(instr)
+                return newEmptyStatement(lang.getCodeFromRawNode(instr))
+            }
+            LLVMSelect -> {
+                return declarationOrNot(lang.expressionHandler.handleSelect(instr), instr)
+            }
+            LLVMUserOp1, LLVMUserOp2 -> {
+                log.info(
+                    "userop instruction is not a real instruction. Replacing it with empty statement"
+                )
+                return newEmptyStatement(lang.getCodeFromRawNode(instr))
+            }
+            LLVMVAArg -> {
+                return handleVaArg(instr)
+            }
+            LLVMExtractElement -> {
+                return handleExtractelement(instr)
+            }
+            LLVMInsertElement -> {
+                return handleInsertelement(instr)
+            }
+            LLVMShuffleVector -> {
+                return handleShufflevector(instr)
+            }
+            LLVMInsertValue -> {
+                return handleInsertValue(instr)
+            }
+            LLVMFreeze -> {
+                return handleFreeze(instr)
+            }
+            LLVMFence -> {
+                return handleFence(instr)
+            }
+            LLVMAtomicCmpXchg -> {
+                return handleAtomiccmpxchg(instr)
+            }
+            LLVMAtomicRMW -> {
+                return handleAtomicrmw(instr)
+            }
+            LLVMResume -> {
+                // Resumes propagation of an existing (in-flight) exception whose unwinding was
+                // interrupted with a landingpad instruction.
+                val throwOperation =
+                    newUnaryOperator("throw", false, true, lang.getCodeFromRawNode(instr))
+                return throwOperation
+            }
+            LLVMLandingPad -> {
+                return handleLandingpad(instr)
+            }
+            LLVMCleanupRet -> {
+                // End of the cleanup basic block(s)
+                // Jump to a label where handling the exception will unwind to next (e.g. a
+                // catchswitch statement)
+                return handleCatchret(instr)
+            }
+            LLVMCatchRet -> {
+                // Catch (caught by catchpad instruction) is over.
+                // Jumps to a label where the "normal" function logic continues
+                return handleCatchret(instr)
+            }
+            LLVMCatchPad -> {
+                // Actually handles the exception.
+                return handleCatchpad(instr)
+            }
+            LLVMCleanupPad -> {
+                // Beginning of the cleanup basic block(s).
+                // We should model this as the beginning of a catch block
+                return handleCleanuppad(instr)
+            }
+            LLVMCatchSwitch -> {
+                // Marks the beginning of a "real" catch block
+                // Jumps to one of the handlers specified or to the default handler (if specified)
+                return handleCatchswitch(instr)
+            }
+        }
+
+        log.error("Not handling instruction opcode {} yet", opcode)
+        return Statement()
+    }
+
+    /**
+     * Handles the [`catchret`](https://llvm.org/docs/LangRef.html#catchret-instruction) instruction
+     * and the [`cleanupret`](https://llvm.org/docs/LangRef.html#cleanupret-instruction). These
+     * instructions are used to end a catch block or cleanuppad and transfers control either to a
+     * specified BB or to the caller as unwind location. We model them as an empty statement or as a
+     * jump and set the name of the statement to "catchret" or "cleanupret".
+     */
+    private fun handleCatchret(instr: LLVMValueRef): Statement {
+        val unwindDest =
+            if (instr.opCode == LLVMCatchRet) {
+                LLVMGetOperand(instr, 1)
+            } else if (LLVMGetUnwindDest(instr) != null) {
+                LLVMBasicBlockAsValue(LLVMGetUnwindDest(instr))
+            } else {
+                null
+            }
+        if (unwindDest != null) { // For "unwind to caller", the destination is null
+            val unwindDestination = extractBasicBlockLabel(unwindDest)
+            val gotoStatement = newGotoStatement(lang.getCodeFromRawNode(instr))
+            gotoStatement.targetLabel = unwindDestination
+            gotoStatement.labelName = unwindDestination.name
+            gotoStatement.name =
+                if (instr.opCode == LLVMCatchRet) {
+                    "catchret"
+                } else {
+                    "cleanuppad"
+                }
+            return gotoStatement
+        } else {
+            val emptyStatement = newEmptyStatement(lang.getCodeFromRawNode(instr))
+            emptyStatement.name =
+                if (instr.opCode == LLVMCatchRet) {
+                    "catchret"
+                } else {
+                    "cleanuppad"
+                }
+            return emptyStatement
+        }
+    }
+
+    /**
+     * We simulate a [`catchswitch`](https://llvm.org/docs/LangRef.html#catchswitch-instruction)
+     * instruction with a call to a dummy function "llvm.catchswitch" which generates the parent
+     * token and nested if statements. The function iterates over the possible handlers and parses
+     * their first instruction (a `catchpad` instruction) to assemble another call to an implicit
+     * function "llvm.matchesCatchpad". This function checks if the object thrown matches the
+     * arguments of the catchpad and thus the respective handler and serves as the condition of the
+     * if statements.
+     */
+    @FunctionReplacement(["llvm.catchswitch", "llvm.matchesCatchpad"], "catchswitch")
+    private fun handleCatchswitch(instr: LLVMValueRef): Statement {
+        val numOps = LLVMGetNumOperands(instr)
+        val nodeCode = lang.getCodeFromRawNode(instr)
+
+        val parent = lang.getOperandValueAtIndex(instr, 0)
+
+        val compoundStatement = newCompoundStatement(nodeCode)
+
+        val dummyCall =
+            newCallExpression(
+                "llvm.catchswitch",
+                "llvm.catchswitch",
+                lang.getCodeFromRawNode(instr),
+                false
+            )
+        dummyCall.addArgument(parent, "parent")
+
+        val tokenGeneration = declarationOrNot(dummyCall, instr) as DeclarationStatement
+        compoundStatement.addStatement(tokenGeneration)
+
+        val ifStatement = newIfStatement(nodeCode)
+        var currentIfStatement: IfStatement? = null
+        var idx = 1
+        while (idx < numOps) {
+            if (currentIfStatement == null) {
+                currentIfStatement = ifStatement
+            } else {
+                val newIf = newIfStatement(nodeCode)
+                currentIfStatement.elseStatement = newIf
+                currentIfStatement = newIf
+            }
+
+            // For each of the handlers, we get the first instruction and insert a statement
+            // case llvm.matchesCatchpad(parent, args), where args are used to determine if
+            // this handler accepts the object thrown.
+            val bbTarget = LLVMGetOperand(instr, idx)
+
+            val catchpad = LLVMGetFirstInstruction(LLVMValueAsBasicBlock(bbTarget))
+            val catchOps = LLVMGetNumArgOperands(catchpad)
+
+            val matchesCatchpad =
+                newCallExpression(
+                    "llvm.matchesCatchpad",
+                    "llvm.matchesCatchpad",
+                    lang.getCodeFromRawNode(instr),
+                    false
+                )
+
+            val parentCatchSwitch = LLVMGetParentCatchSwitch(catchpad)
+            val catchswitch = lang.expressionHandler.handle(parentCatchSwitch) as Expression
+            matchesCatchpad.addArgument(catchswitch, "parentCatchswitch")
+
+            for (i in 0 until catchOps) {
+                val arg = lang.getOperandValueAtIndex(catchpad, i)
+                matchesCatchpad.addArgument(arg, "args_$i")
+            }
+
+            currentIfStatement.condition = matchesCatchpad
+
+            // Get the label of the goto statement.
+            val caseLabelStatement = extractBasicBlockLabel(bbTarget)
+            val gotoStatement = newGotoStatement(nodeCode)
+            gotoStatement.targetLabel = caseLabelStatement
+            gotoStatement.labelName = caseLabelStatement.name
+            currentIfStatement.thenStatement = gotoStatement
+
+            idx++
+        }
+
+        val unwindDest = LLVMGetUnwindDest(instr)
+        if (unwindDest != null) { // For "unwind to caller", the destination is null
+            val unwindDestination = extractBasicBlockLabel(LLVMBasicBlockAsValue(unwindDest))
+            val gotoStatement = newGotoStatement(nodeCode)
+            gotoStatement.targetLabel = unwindDestination
+            gotoStatement.labelName = unwindDestination.name
+            if (currentIfStatement == null) {
+                currentIfStatement = ifStatement
+            }
+            currentIfStatement!!.elseStatement = gotoStatement
+        } else {
+            // "unwind to caller". As we don't know where the control flow continues,
+            // the best model would be to throw the exception again. Here, we only know
+            // that we will throw something here but we don't know what. We have to fix
+            // that later once we know in which catch-block this statement is executed.
+            val throwOperation = newUnaryOperator("throw", false, true, nodeCode)
+            currentIfStatement!!.elseStatement = throwOperation
+        }
+
+        compoundStatement.addStatement(ifStatement)
+        return compoundStatement
+    }
+
+    /**
+     * We simulate a [`cleanuppad`](https://llvm.org/docs/LangRef.html#cleanuppad-instruction)
+     * instruction with a call to the dummy function "llvm.cleanuppad". The function receives the
+     * parent and the args as arguments.
+     */
+    @FunctionReplacement(["llvm.cleanuppad"], "cleanuppad")
+    private fun handleCleanuppad(instr: LLVMValueRef): Statement {
+        val numOps = LLVMGetNumArgOperands(instr)
+        val catchswitch = lang.getOperandValueAtIndex(instr, 0)
+
+        val dummyCall =
+            newCallExpression(
+                "llvm.cleanuppad",
+                "llvm.cleanuppad",
+                lang.getCodeFromRawNode(instr),
+                false
+            )
+        dummyCall.addArgument(catchswitch, "parentCatchswitch")
+
+        for (i in 1 until numOps) {
+            val arg = lang.getOperandValueAtIndex(instr, i)
+            dummyCall.addArgument(arg, "args_${i-1}")
+        }
+        return declarationOrNot(dummyCall, instr)
+    }
+
+    /**
+     * We simulate a [`catchpad`](https://llvm.org/docs/LangRef.html#catchpad-instruction)
+     * instruction with a call to the dummy function "llvm.catchpad". The function receives the
+     * catchswitch and the args as arguments.
+     */
+    @FunctionReplacement(["llvm.catchpad"], "catchpad")
+    private fun handleCatchpad(instr: LLVMValueRef): Statement {
+        val numOps = LLVMGetNumArgOperands(instr)
+        val parentCatchSwitch = LLVMGetParentCatchSwitch(instr)
+        val catchswitch = lang.expressionHandler.handle(parentCatchSwitch) as Expression
+
+        val dummyCall =
+            newCallExpression(
+                "llvm.catchpad",
+                "llvm.catchpad",
+                lang.getCodeFromRawNode(instr),
+                false
+            )
+        dummyCall.addArgument(catchswitch, "parentCatchswitch")
+
+        for (i in 0 until numOps) {
+            val arg = lang.getOperandValueAtIndex(instr, i)
+            dummyCall.addArgument(arg, "args_$i")
+        }
+        return declarationOrNot(dummyCall, instr)
+    }
+
+    /**
+     * Handles the [`va_arg`](https://llvm.org/docs/LangRef.html#va-arg-instruction) instruction. It
+     * is simulated by a call to a function called `va_arg` simulating the respective C++-macro. The
+     * function takes two arguments: the vararg-list and the type of the return value.
+     */
+    @FunctionReplacement(["llvm.va_arg"], "va_arg")
+    private fun handleVaArg(instr: LLVMValueRef): Statement {
+        val callExpr =
+            newCallExpression("llvm.va_arg", "llvm.va_arg", lang.getCodeFromRawNode(instr), false)
+        val operandName = lang.getOperandValueAtIndex(instr, 0)
+        callExpr.addArgument(operandName)
+        val expectedType = lang.typeOf(instr)
+        val typeLiteral = newLiteral(expectedType, expectedType, lang.getCodeFromRawNode(instr))
+        callExpr.addArgument(typeLiteral) // TODO: Is this correct??
+        return declarationOrNot(callExpr, instr)
+    }
+
+    /** Handles all kinds of instructions which are a arithmetic or logical binary instruction. */
+    private fun handleBinaryInstruction(instr: LLVMValueRef): Statement {
+        when (instr.opCode) {
+            LLVMAdd, LLVMFAdd -> {
                 return handleBinaryOperator(instr, "+", false)
             }
-            LLVMFAdd -> {
-                return handleBinaryOperator(instr, "+", false)
-            }
-            LLVMSub -> {
+            LLVMSub, LLVMFSub -> {
                 return handleBinaryOperator(instr, "-", false)
             }
-            LLVMFSub -> {
-                return handleBinaryOperator(instr, "-", false)
-            }
-            LLVMMul -> {
-                return handleBinaryOperator(instr, "*", false)
-            }
-            LLVMFMul -> {
+            LLVMMul, LLVMFMul -> {
                 return handleBinaryOperator(instr, "*", false)
             }
             LLVMUDiv -> {
-                return handleBinaryOperator(instr, "+", true)
+                return handleBinaryOperator(instr, "/", true)
             }
-            LLVMSDiv -> {
-                return handleBinaryOperator(instr, "/", false)
-            }
-            LLVMFDiv -> {
+            LLVMSDiv, LLVMFDiv -> {
                 return handleBinaryOperator(instr, "/", false)
             }
             LLVMURem -> {
                 return handleBinaryOperator(instr, "%", true)
             }
-            LLVMSRem -> {
-                return handleBinaryOperator(instr, "%", false)
-            }
-            LLVMFRem -> {
+            LLVMSRem, LLVMFRem -> {
                 return handleBinaryOperator(instr, "%", false)
             }
             LLVMShl -> {
@@ -172,132 +484,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             LLVMXor -> {
                 return handleBinaryOperator(instr, "^", false)
             }
-            LLVMAlloca -> {
-                return handleAlloca(instr)
-            }
-            LLVMLoad -> {
-                return handleLoad(instr)
-            }
-            LLVMStore -> {
-                return handleStore(instr)
-            }
-            LLVMGetElementPtr -> {
-                return declarationOrNot(lang.expressionHandler.handleGetElementPtr(instr), instr)
-            }
-            LLVMTrunc -> {
-                println("trunc instruction")
-            }
-            LLVMZExt -> {
-                println("zext instruction")
-            }
-            LLVMSExt -> {
-                println("sext instruction")
-            }
-            LLVMFPToUI -> {
-                println("fptoui instruction")
-            }
-            LLVMFPToSI -> {
-                println("fptosi instruction")
-            }
-            LLVMUIToFP -> {
-                println("uitofp instruction")
-            }
-            LLVMSIToFP -> {
-                println("sitofp instruction")
-            }
-            LLVMFPTrunc -> {
-                println("fptrunc instruction")
-            }
-            LLVMFPExt -> {
-                println("fpext instruction")
-            }
-            LLVMPtrToInt -> {
-                println("ptrtoint instruction")
-            }
-            LLVMIntToPtr -> {
-                println("inttoptr instruction")
-            }
-            LLVMBitCast -> {
-                println("bitcast instruction")
-            }
-            LLVMAddrSpaceCast -> {
-                println("addrspacecast instruction")
-            }
-            LLVMICmp -> {
-                return handleIntegerComparison(instr)
-            }
-            LLVMFCmp -> {
-                return handleFloatComparison(instr)
-            }
-            LLVMPHI -> {
-                println("phi instruction")
-            }
-            LLVMCall -> {
-                return handleFunctionCall(instr)
-            }
-            LLVMSelect -> {
-                return declarationOrNot(lang.expressionHandler.handleSelect(instr), instr)
-            }
-            LLVMUserOp1 -> {
-                println("userop1 instruction")
-            }
-            LLVMUserOp2 -> {
-                println("userop2 instruction")
-            }
-            LLVMVAArg -> {
-                println("va_arg instruction")
-            }
-            LLVMExtractElement -> {
-                println("extractelement instruction")
-            }
-            LLVMInsertElement -> {
-                println("insertelement instruction")
-            }
-            LLVMShuffleVector -> {
-                println("shufflevector instruction")
-            }
-            LLVMExtractValue -> {
-                return declarationOrNot(lang.expressionHandler.handleGetElementPtr(instr), instr)
-            }
-            LLVMInsertValue -> {
-                return handleInsertValue(instr)
-            }
-            LLVMFreeze -> {
-                println("freeze instruction")
-            }
-            LLVMFence -> {
-                println("fence instruction")
-            }
-            LLVMAtomicCmpXchg -> {
-                return handleAtomiccmpxchg(instr)
-            }
-            LLVMAtomicRMW -> {
-                return handleAtomicrmw(instr)
-            }
-            LLVMResume -> {
-                println("resume instruction")
-            }
-            LLVMLandingPad -> {
-                println("landingpad instruction")
-            }
-            LLVMCleanupRet -> {
-                println("cleanupret instruction")
-            }
-            LLVMCatchRet -> {
-                println("catchret instruction")
-            }
-            LLVMCatchPad -> {
-                println("catchpad instruction")
-            }
-            LLVMCleanupPad -> {
-                println("cleanuppad instruction")
-            }
-            LLVMCatchSwitch -> {
-                println("catchswitch instruction")
-            }
         }
-
-        log.error("Not handling instruction opcode {} yet", opcode)
         return Statement()
     }
 
@@ -522,6 +709,77 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
     }
 
     /**
+     * Handles the [`freeze`](https://llvm.org/docs/LangRef.html#freeze-instruction) instruction.
+     * This instruction checks if the operand is neither an undef nor a poison value (for aggregated
+     * types such as vectors, individual elements are checked) and, if so, returns the operand.
+     * Otherwise, it returns a random but non-undef and non-poison value. This initialization is
+     * modeled in the graph by a call to a implicit function "llvm.freeze" which would be adapted to
+     * each data type.
+     */
+    @FunctionReplacement(["llvm.freeze"], "freeze")
+    private fun handleFreeze(instr: LLVMValueRef): Statement {
+        val operand = lang.getOperandValueAtIndex(instr, 0)
+        val instrCode = lang.getCodeFromRawNode(instr)
+
+        // condition: arg != undef && arg != poison
+        val condition = newBinaryOperator("&&", instrCode)
+        val undefCheck = newBinaryOperator("!=", instrCode)
+        undefCheck.lhs = operand
+        undefCheck.rhs = newLiteral(null, operand.type, instrCode)
+        condition.lhs = undefCheck
+        val poisonCheck = newBinaryOperator("!=", instrCode)
+        poisonCheck.lhs = operand
+        poisonCheck.rhs =
+            newLiteral(
+                "POISON",
+                operand.type,
+                instrCode
+            ) // This could be e.g. NAN. Not sure for complex types
+        condition.rhs = poisonCheck
+
+        // Call to a dummy function "llvm.freeze" which would fill the undef or poison values
+        // randomly.
+        // The implementation of this function would depend on the data type (e.g. for integers, it
+        // could be rand())
+        val callExpression = newCallExpression("llvm.freeze", "llvm.freeze", instrCode, false)
+        callExpression.addArgument(operand)
+
+        // res = (arg != undef && arg != poison) ? arg : llvm.freeze(in)
+        val conditional = newConditionalExpression(condition, operand, callExpression, operand.type)
+        return declarationOrNot(conditional, instr)
+    }
+
+    /**
+     * Handles the [`freeze`](https://llvm.org/docs/LangRef.html#fence-instruction) instruction.
+     * This instruction is used to guarantee the atomicity of load and store operations. The
+     * subsequent load or store are affected by the instruction.
+     *
+     * In the graph, this is modeled with a call to an implicit "llvm.fence" method which accepts
+     * the ordering and an optional syncscope as argument.
+     */
+    @FunctionReplacement(["llvm.fence"], "fence")
+    private fun handleFence(instr: LLVMValueRef): Statement {
+        val instrString = lang.getCodeFromRawNode(instr)
+        val callExpression = newCallExpression("llvm.fence", "llvm.fence", instrString, false)
+        val ordering =
+            newLiteral(
+                LLVMGetOrdering(instr),
+                TypeParser.createFrom("i32", true),
+                lang.getCodeFromRawNode(instr)
+            )
+        callExpression.addArgument(ordering, "ordering")
+        if (instrString?.contains("syncscope") == true) {
+            val syncscope = instrString.split("\"")[1]
+            callExpression.addArgument(
+                newLiteral(syncscope, TypeParser.createFrom("String", true), instrString),
+                "syncscope"
+            )
+        }
+
+        return callExpression
+    }
+
+    /**
      * Parses the [`cmpxchg`](https://llvm.org/docs/LangRef.html#cmpxchg-instruction) instruction.
      * It returns a single [Statement] or a [CompoundStatement] if the value is assigned to another
      * variable. Performs the following operation atomically:
@@ -685,6 +943,48 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         }
     }
 
+    /**
+     * Handles the [`indirectbr`](https://llvm.org/docs/LangRef.html#indirectbr-instruction)
+     * instruction.
+     */
+    private fun handleIndirectbrStatement(instr: LLVMValueRef): Statement {
+        val numOps = LLVMGetNumOperands(instr)
+        val nodeCode = lang.getCodeFromRawNode(instr)
+        if (numOps < 2)
+            throw TranslationException(
+                "Indirectbr statement without address and at least one target"
+            )
+
+        val address = lang.getOperandValueAtIndex(instr, 0)
+
+        val switchStatement = newSwitchStatement(nodeCode)
+        switchStatement.selector = address
+
+        val caseStatements = newCompoundStatement(nodeCode)
+
+        var idx = 1
+        while (idx < numOps) {
+            // The case statement is derived from the address of the label which we can jump to
+            val caseBBAddress = LLVMValueAsBasicBlock(LLVMGetOperand(instr, idx)).address()
+            val caseStatement = newCaseStatement(nodeCode)
+            caseStatement.caseExpression =
+                newLiteral(caseBBAddress, TypeParser.createFrom("long", true), nodeCode)
+            caseStatements.addStatement(caseStatement)
+
+            // Get the label of the goto statement.
+            val caseLabelStatement = extractBasicBlockLabel(LLVMGetOperand(instr, idx))
+            val gotoStatement = newGotoStatement(nodeCode)
+            gotoStatement.targetLabel = caseLabelStatement
+            gotoStatement.labelName = caseLabelStatement.name
+            caseStatements.addStatement(gotoStatement)
+            idx++
+        }
+
+        switchStatement.statement = caseStatements
+
+        return switchStatement
+    }
+
     /** Handles a [`br`](https://llvm.org/docs/LangRef.html#br-instruction) instruction. */
     private fun handleBrStatement(instr: LLVMValueRef): Statement {
         if (LLVMGetNumOperands(instr) == 3) {
@@ -779,6 +1079,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
      * Returns either a [DeclarationStatement] or a [CallExpression].
      */
     private fun handleFunctionCall(instr: LLVMValueRef): Statement {
+        val instrStr = lang.getCodeFromRawNode(instr)
         val calledFunc = LLVMGetCalledValue(instr)
         var calledFuncName = LLVMGetValueName(calledFunc).string
         var max = LLVMGetNumOperands(instr) - 1
@@ -791,8 +1092,8 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             calledFuncName = opName.name
         }
 
-        val catchLabel: LabelStatement?
-        val continueLabel: LabelStatement?
+        var catchLabel = LabelStatement()
+        var continueLabel = LabelStatement()
         if (instr.opCode == LLVMInvoke) {
             max-- // Last one is the Decl.Expr of the function
             // Get the label of the catch clause.
@@ -804,12 +1105,9 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             log.info(
                 "Invoke expression: Usually continues at ${continueLabel.name}, exception continues at ${catchLabel.name}"
             )
-            // TODO: Assemble the whole try/catch logic (the try should surround the callExpr, the
-            // catch clause is the one at catchLabel)
         }
 
-        val callExpr =
-            newCallExpression(calledFuncName, calledFuncName, lang.getCodeFromRawNode(instr), false)
+        val callExpr = newCallExpression(calledFuncName, calledFuncName, instrStr, false)
 
         while (idx < max) {
             val operandName = lang.getOperandValueAtIndex(instr, idx)
@@ -817,7 +1115,298 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             idx++
         }
 
+        if (instr.opCode == LLVMInvoke) {
+            // For the invoke instruction, the call is surrounded by a try statement which also
+            // contains a
+            // goto statement after the call.
+            val tryStatement = newTryStatement(instrStr!!)
+            lang.scopeManager.enterScope(tryStatement)
+            val tryBlock = newCompoundStatement(instrStr)
+            tryBlock.addStatement(declarationOrNot(callExpr, instr))
+            val tryContinue = newGotoStatement(instrStr)
+            tryContinue.targetLabel = continueLabel
+            tryBlock.addStatement(tryContinue)
+            tryStatement.tryBlock = tryBlock
+            lang.scopeManager.leaveScope(tryStatement)
+
+            val catchClause = newCatchClause(instrStr)
+            catchClause.name = catchLabel.name
+            val gotoCatch = newGotoStatement(instrStr)
+            gotoCatch.targetLabel = catchLabel
+            catchClause.setParameter(
+                newVariableDeclaration(
+                    "e_${catchLabel.name}",
+                    UnknownType.getUnknownType(),
+                    instrStr,
+                    true
+                )
+            )
+            val catchCompoundStatement = newCompoundStatement(instrStr)
+            catchCompoundStatement.addStatement(gotoCatch)
+            catchClause.body = catchCompoundStatement
+            tryStatement.catchClauses = mutableListOf(catchClause)
+
+            return tryStatement
+        }
+
         return declarationOrNot(callExpr, instr)
+    }
+
+    /**
+     * Handles a [`landingpad`](https://llvm.org/docs/LangRef.html#landingpad-instruction) by
+     * replacing it with a catch instruction containing all possible catchable types. Later, the
+     * [CompressLLVMPass] will move this instruction to the correct location
+     */
+    private fun handleLandingpad(instr: LLVMValueRef): Statement {
+        val catchInstr = newCatchClause(lang.getCodeFromRawNode(instr)!!)
+        /* Get the number of clauses on the landingpad instruction and iterate through the clauses to get all types for the catch clauses */
+        val numClauses = LLVMGetNumClauses(instr)
+        var catchType = ""
+        for (i in 0 until numClauses) {
+            val clause = LLVMGetClause(instr, i)
+            if (LLVMIsAConstantArray(clause) == null) {
+                if (LLVMIsNull(clause) == 1) {
+                    catchType += "..." + " | "
+                } else {
+                    catchType += LLVMGetValueName(clause).string + " | "
+                }
+            } else {
+                // TODO: filter not handled yet
+            }
+        }
+        if (catchType.endsWith(" | ")) catchType = catchType.substring(0, catchType.length - 3)
+
+        val lhs = lang.getNameOf(instr).first
+
+        val exceptionName =
+            if (lhs != "") {
+                lhs
+            } else {
+                "e_${instr.address()}"
+            }
+        val except =
+            newVariableDeclaration(
+                exceptionName,
+                TypeParser.createFrom(
+                    catchType,
+                    false
+                ), // TODO: This doesn't work for multiple types to catch
+                lang.getCodeFromRawNode(instr),
+                false
+            )
+        lang.bindingsCache["%${exceptionName}"] = except
+        catchInstr.setParameter(except)
+        catchInstr.name = catchType
+        return catchInstr
+    }
+
+    /**
+     * Handles the [`insertelement`](https://llvm.org/docs/LangRef.html#insertelement-instruction)
+     * instruction which is modeled as access to an array at a given index. A new array with the
+     * modified value is constructed.
+     */
+    private fun handleInsertelement(instr: LLVMValueRef): Statement {
+        val instrStr = lang.getCodeFromRawNode(instr)
+        val compoundStatement = newCompoundStatement(instrStr)
+
+        // TODO: Probably we should make a proper copy of the array
+        val newArrayDecl = declarationOrNot(lang.getOperandValueAtIndex(instr, 0), instr)
+        compoundStatement.addStatement(newArrayDecl)
+
+        val decl = newArrayDecl.declarations[0] as? VariableDeclaration
+        val arrayExpr = newArraySubscriptionExpression(instrStr)
+        arrayExpr.arrayExpression = newDeclaredReferenceExpression(decl?.name, decl?.type, instrStr)
+        arrayExpr.subscriptExpression = lang.getOperandValueAtIndex(instr, 2)
+
+        val binaryExpr = newBinaryOperator("=", instrStr)
+        binaryExpr.lhs = arrayExpr
+        binaryExpr.rhs = lang.getOperandValueAtIndex(instr, 1)
+        compoundStatement.addStatement(binaryExpr)
+
+        return compoundStatement
+    }
+
+    /**
+     * Handles the [`extractelement`](https://llvm.org/docs/LangRef.html#extractelement-instruction)
+     * instruction which is modeled as access to an array at a given index.
+     */
+    private fun handleExtractelement(instr: LLVMValueRef): Statement {
+        val arrayExpr = newArraySubscriptionExpression(lang.getCodeFromRawNode(instr))
+        arrayExpr.arrayExpression = lang.getOperandValueAtIndex(instr, 0)
+        arrayExpr.subscriptExpression = lang.getOperandValueAtIndex(instr, 1)
+
+        return declarationOrNot(arrayExpr, instr)
+    }
+
+    /**
+     * Handles the [`shufflevector`](https://llvm.org/docs/LangRef.html#shufflevector-instruction)
+     * which is used to merge two vectors (which are arrays) into one and change the order of the
+     * elements.
+     *
+     * It does not handle scalable vectors yet (where the size is unknown) but that feature is
+     * barely used and also the features of LLVM are very limited in that scenario.
+     */
+    private fun handleShufflevector(instr: LLVMValueRef): Statement {
+        val instrStr = lang.getCodeFromRawNode(instr)
+
+        val list = newInitializerListExpression(instrStr)
+        val elementType = lang.typeOf(instr).dereference()
+
+        val initializers = mutableListOf<Expression>()
+
+        // Get the first vector and its length. The length is 0 if it's an undef value.
+        val array1 = lang.getOperandValueAtIndex(instr, 0)
+        val array1Length =
+            if (array1 is Literal<*> && array1.value == null) {
+                0
+            } else {
+                LLVMGetVectorSize(LLVMTypeOf(LLVMGetOperand(instr, 0)))
+            }
+
+        // Get the second vector and its length. The length is 0 if it's an undef value.
+        val array2 = lang.getOperandValueAtIndex(instr, 1)
+        val array2Length =
+            if (array2 is Literal<*> && array2.value == null) {
+                0
+            } else {
+                LLVMGetVectorSize(LLVMTypeOf(LLVMGetOperand(instr, 1)))
+            }
+
+        // Get the number of mask elements. They determine the ordering of the elements.
+        val indices = LLVMGetNumMaskElements(instr)
+
+        // Get the respective elements depending on the mask and put them into an initializer for
+        // the resulting vector.
+        // If a vector is an initializer itself (i.e., a constant array), we directly put the values
+        // in the new initializer.
+        // Otherwise, we use the array as a variable.
+        for (idx in 0 until indices) {
+            val idxInt = LLVMGetMaskValue(instr, idx)
+            if (idxInt < array1Length) {
+                if (array1 is InitializerListExpression) {
+                    initializers += array1.initializers[idxInt]
+                } else if (array1 is Literal<*> && array1.value == null) {
+                    initializers += newLiteral(null, elementType, instrStr)
+                } else {
+                    val arrayExpr = newArraySubscriptionExpression(instrStr)
+                    arrayExpr.arrayExpression = array1
+                    arrayExpr.subscriptExpression =
+                        newLiteral(idxInt, TypeParser.createFrom("i32", true), instrStr)
+                    initializers += arrayExpr
+                }
+            } else if (idxInt < array1Length + array2Length) {
+                if (array2 is InitializerListExpression) {
+                    initializers += array2.initializers[idxInt - array1Length]
+                } else if (array2 is Literal<*> && array2.value == null) {
+                    initializers += newLiteral(null, elementType, instrStr)
+                } else {
+                    val arrayExpr = newArraySubscriptionExpression(instrStr)
+                    arrayExpr.arrayExpression = array2
+                    arrayExpr.subscriptExpression =
+                        newLiteral(
+                            idxInt - array1Length,
+                            TypeParser.createFrom("i32", true),
+                            instrStr
+                        )
+                    initializers += arrayExpr
+                }
+            } else {
+                initializers += newLiteral(null, elementType, instrStr)
+            }
+        }
+
+        list.initializers = initializers
+
+        return declarationOrNot(list, instr)
+    }
+
+    /**
+     * Handles the [`phi`](https://llvm.org/docs/LangRef.html#phi-instruction) instruction. It
+     * therefore adds dummy statements to the end of basic blocks where a certain variable is
+     * declared and initialized. The original phi instruction is not added to the CPG.
+     */
+    fun handlePhi(instr: LLVMValueRef, tu: TranslationUnitDeclaration) {
+        val labelMap = mutableMapOf<LabelStatement, Expression>()
+        val numOps = LLVMGetNumOperands(instr)
+        var i = 0
+        var bbsFunction: LLVMValueRef? = null
+        while (i < numOps) {
+            val valI = lang.getOperandValueAtIndex(instr, i)
+            val incomingBB = LLVMGetIncomingBlock(instr, i)
+            if (bbsFunction == null) {
+                bbsFunction = LLVMGetBasicBlockParent(incomingBB)
+            } else if (bbsFunction.address() != LLVMGetBasicBlockParent(incomingBB).address()) {
+                log.error(
+                    "The basic blocks of the phi instructions are in different functions. Can't handle this!"
+                )
+                throw TranslationException(
+                    "The basic blocks of the phi instructions are in different functions."
+                )
+            }
+
+            val labelI = extractBasicBlockLabel(LLVMBasicBlockAsValue(incomingBB))
+            i++
+            labelMap[labelI] = valI
+        }
+        if (labelMap.keys.size == 1) {
+            // We only have a single pair, so we insert a declaration in that one BB.
+            val key = labelMap.keys.elementAt(0)
+            val basicBlock = key.subStatement as? CompoundStatement
+            val decl = declarationOrNot(labelMap[key]!!, instr)
+            val mutableStatements = basicBlock?.statements?.toMutableList()
+            mutableStatements?.add(basicBlock.statements.size - 1, decl)
+            if (mutableStatements != null) {
+                basicBlock.statements = mutableStatements
+            }
+            return
+        }
+        // We have multiple pairs, so we insert a declaration at the beginning of the function an
+        // make an assignment in each BB.
+        val functionName = LLVMGetValueName(bbsFunction).string
+        val functions =
+            tu.declarations.filter { d ->
+                (d as? FunctionDeclaration)?.name != null &&
+                    (d as? FunctionDeclaration)?.name.equals(functionName)
+            }
+        if (functions.size != 1) {
+            log.error(
+                "${functions.size} functions match the name of the one where the phi instruction is inserted. Can't handle this case."
+            )
+            throw TranslationException("Wrong number of functions for phi statement.")
+        }
+        // Create the dummy declaration at the beginning of the function body
+        val firstBB = (functions[0] as FunctionDeclaration).body as CompoundStatement
+        val declaration = VariableDeclaration()
+        declaration.name = instr.name
+        // add the declaration to the current scope
+        lang.scopeManager.addDeclaration(declaration)
+        // add it to our bindings cache
+        lang.bindingsCache[instr.symbolName] = declaration
+
+        val declStatement = newDeclarationStatement(lang.getCodeFromRawNode(instr))
+        declStatement.singleDeclaration = declaration
+        val mutableFunctionStatements = firstBB.statements.toMutableList()
+        mutableFunctionStatements.add(0, declStatement)
+        firstBB.statements = mutableFunctionStatements
+
+        for (l in labelMap.keys) {
+            // Now, we iterate over all the basic blocks and add an assign statement.
+            val assignment = newBinaryOperator("=", lang.getCodeFromRawNode(instr))
+            assignment.rhs = labelMap[l]!!
+            assignment.lhs =
+                newDeclaredReferenceExpression(
+                    instr.name,
+                    lang.typeOf(instr),
+                    lang.getCodeFromRawNode(instr)
+                )
+
+            val basicBlock = l.subStatement as? CompoundStatement
+            val mutableStatements = basicBlock?.statements?.toMutableList()
+            mutableStatements?.add(basicBlock.statements.size - 1, assignment)
+            if (mutableStatements != null) {
+                basicBlock.statements = mutableStatements
+            }
+        }
     }
 
     /**
@@ -827,14 +1416,9 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
      * [Expression] associated with the instruction.
      */
     private fun declarationOrNot(rhs: Expression, valueRef: LLVMValueRef): Statement {
-        var lhs = valueRef.name
-        var symbolName = valueRef.symbolName
-
-        // it could be an unnamed variable
-        if (lhs == "") {
-            lhs = lang.guessSlotNumber(valueRef)
-            symbolName = "%$lhs"
-        }
+        val namePair = lang.getNameOf(valueRef)
+        val lhs = namePair.first
+        val symbolName = namePair.second
 
         // if it is still empty, we probably do not have a left shide
         return if (lhs != "") {
@@ -887,6 +1471,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
      * [unordered] indicates if a floating-point comparison needs to be `or`ed with a check to
      * whether the value is unordered (i.e., NAN).
      */
+    @FunctionReplacement(["isunordered"])
     private fun handleBinaryOperator(
         instr: LLVMValueRef,
         op: String,
@@ -982,7 +1567,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         val bb = LLVMValueAsBasicBlock(valueRef)
         var labelName = LLVMGetBasicBlockName(bb).string
 
-        if (labelName.equals("")) {
+        if (labelName.isNullOrEmpty()) {
             val bbStr = LLVMPrintValueToString(valueRef).string
             val firstLine = bbStr.trim().split("\n")[0]
             labelName = firstLine.substring(0, firstLine.indexOf(":"))
