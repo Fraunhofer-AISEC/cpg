@@ -72,7 +72,7 @@ jobs:
           find cpg-library/src/main/python -iname "*.py" -exec pycodestyle \{\} \;
       - name: Build kotlin-tree
         run: |
-          git clone https://github.com/oxisto/kotlintree.git
+          git clone https://github.com/oxisto/kotlintree.git && cd kotlintree
           ./gradlew publishToMavenLocal
       - name: Build ${{ steps.determine_version.outputs.version }}
         run: |
