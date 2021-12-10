@@ -114,7 +114,7 @@ class CompressLLVMPass : Pass() {
                 }
                 node.catchClauses = catchClauses
 
-                fixThrowStatementsForCatch(node.catchClauses[0], flatAST)
+                fixThrowStatementsForCatch(node.catchClauses[0])
             } else if (node is TryStatement &&
                     node.catchClauses.size == 1 &&
                     node.catchClauses[0].body.statements[0] is CompoundStatement
@@ -125,10 +125,10 @@ class CompressLLVMPass : Pass() {
                 // the compound statement the body of the catch clause.
                 val innerCompound = node.catchClauses[0].body.statements[0] as CompoundStatement
                 node.catchClauses[0].body.statements = innerCompound.statements
-                fixThrowStatementsForCatch(node.catchClauses[0], flatAST)
+                fixThrowStatementsForCatch(node.catchClauses[0])
             } else if (node is TryStatement && node.catchClauses.size > 0) {
                 for (catch in node.catchClauses) {
-                    fixThrowStatementsForCatch(catch, flatAST)
+                    fixThrowStatementsForCatch(catch)
                 }
             } else if (node is CompoundStatement) {
                 // Get the last statement in a CompoundStatement and replace a goto statement
@@ -149,7 +149,7 @@ class CompressLLVMPass : Pass() {
      * Those statements have been artificially added e.g. by a catchswitch and need to be filled
      * now.
      */
-    private fun fixThrowStatementsForCatch(catch: CatchClause, flatAST: MutableList<Node>) {
+    private fun fixThrowStatementsForCatch(catch: CatchClause) {
         val reachableThrowNodes =
             getAllChildrenRecursively(catch).filter { n ->
                 n is UnaryOperator && n.operatorCode?.equals("throw") == true && n.input == null
@@ -188,7 +188,7 @@ class CompressLLVMPass : Pass() {
             // We exclude sub-try statements as they would mess up with the results
             val toAdd =
                 SubgraphWalker.getAstChildren(currentNode).filter { n ->
-                    !(n is TryStatement) && !alreadyChecked.contains(n) && !worklist.contains(n)
+                    n !is TryStatement && !alreadyChecked.contains(n) && !worklist.contains(n)
                 }
             worklist.addAll(toAdd)
         }
