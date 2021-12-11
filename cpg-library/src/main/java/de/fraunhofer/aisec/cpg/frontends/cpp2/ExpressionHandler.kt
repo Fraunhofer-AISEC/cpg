@@ -63,6 +63,8 @@ class ExpressionHandler(lang: CXXLanguageFrontend2) :
             "number_literal" -> handleNumberLiteral(node)
             "concatenated_string" -> handleConcatenatedString(node)
             "null" -> handleNull(node)
+            "false" -> handleBooleanLiteral(node)
+            "true" -> handleBooleanLiteral(node)
             else -> {
                 LanguageFrontend.log.error(
                     "Not handling expression of type {} yet: {}",
@@ -180,6 +182,14 @@ class ExpressionHandler(lang: CXXLanguageFrontend2) :
         return newLiteral(
             null,
             TypeParser.createFrom("std::nullptr_t", false),
+            lang.getCodeFromRawNode(node)
+        )
+    }
+
+    private fun handleBooleanLiteral(node: TSNode): Literal<*> {
+        return newLiteral(
+            node.type,
+            TypeParser.createFrom("bool", true),
             lang.getCodeFromRawNode(node)
         )
     }
