@@ -227,8 +227,9 @@ class ExpressionHandler(lang: CXXLanguageFrontend2) :
     }
 
     /**
-     * Handles number literals and tries to figure out the correct type int, float or double. We identify floats if
-     * the number literal contains an f. By default, numeric values that are not covertible as int will be doubles.
+     * Handles number literals and tries to figure out the correct type int, float or double. We
+     * identify floats if the number literal contains an f. By default, numeric values that are not
+     * covertible as int will be doubles.
      */
     private fun handleNumberLiteral(node: TSNode): Expression {
         val valueStr = lang.getCodeFromRawNode(node)

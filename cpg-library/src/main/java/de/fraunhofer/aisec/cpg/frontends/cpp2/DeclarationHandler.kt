@@ -215,8 +215,9 @@ class DeclarationHandler(lang: CXXLanguageFrontend2) :
     }
 
     /**
-     * This function handles regular variable declarations. Usually we get more information from the declarator
-     * which is wrapped in a generic declaration, so we process the declarator and generate the correct type.
+     * This function handles regular variable declarations. Usually we get more information from the
+     * declarator which is wrapped in a generic declaration, so we process the declarator and
+     * generate the correct type.
      */
     private fun handleVariableDeclaration(node: TSNode): VariableDeclaration {
         val startType = ts_node_child_by_field_name(node, "type")
