@@ -112,18 +112,17 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
 
         var param = LLVMGetFirstParam(func)
         while (param != null) {
+            val namePair = lang.getNameOf(param)
+            val paramName = namePair.first
+            val paramSymbolName = namePair.second
+
             val type = lang.typeOf(param)
 
             // TODO: support variardic
-            val decl =
-                newMethodParameterIn(
-                    LLVMGetValueName(param).string,
-                    type,
-                    false,
-                    lang.getCodeFromRawNode(param)
-                )
+            val decl = newMethodParameterIn(paramName, type, false, lang.getCodeFromRawNode(param))
 
             lang.scopeManager.addDeclaration(decl)
+            lang.bindingsCache[paramSymbolName] = decl
 
             param = LLVMGetNextParam(param)
         }
@@ -169,6 +168,7 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
                     lang.labelMap.computeIfAbsent(labelName) {
                         val label = newLabelStatement(labelName)
                         label.name = labelName
+                        label.label = labelName
                         label
                     }
 
