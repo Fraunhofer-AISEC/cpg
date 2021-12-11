@@ -111,6 +111,7 @@ class StatementHandler(lang: CXXLanguageFrontend2) :
 
         for (i in 0 until treesitter.ts_node_named_child_count(node)) {
             val statement = handleStatement(treesitter.ts_node_named_child(node, i))
+            // The order in compoundstatements is important, so if we are not handling a statement we don't want it to interfere with the order of the list
             if (statement != null) {
                 compoundStatement.addStatement(statement)
             }
