@@ -34,6 +34,7 @@ import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newConstructorDeclaration
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newFieldDeclaration
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newFunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newMethodDeclaration
+import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newVariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.ResolveInFrontend
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.types.PointerType
@@ -47,19 +48,29 @@ class DeclarationHandler(lang: CXXLanguageFrontend2) :
         map.put(TSNode::class.java, ::handleDeclaration)
     }
 
-    private fun handleDeclaration(node: TSNode): Declaration {
+    private fun handleDeclaration(node: TSNode, originalType: TSNode? = null): Declaration {
         return when (val type = node.type) {
             "function_definition" -> handleFunctionDefinition(node)
-            "function_declarator" -> handleFunctionDeclaration(node)
             "parameter_declaration" -> handleParameterDeclaration(node)
             "field_declaration" -> handleFieldDeclaration(node)
             "class_specifier" -> handleClassSpecifier(node)
             else -> {
                 // A declarator might be wrapped in within a declaration node, call
                 // handleDeclaration again if necessary.
+
                 val declarator = ts_node_child_by_field_name(node, "declarator")
                 if (!declarator.isNull && !ts_node_is_null(declarator)) {
-                    handleDeclaration(declarator)
+                    return when (val declaratorType = declarator.type) {
+                        "init_declarator" -> handleInitDeclarator(node)
+                        "function_declarator" -> handleFunctionDeclaration(node)
+                        else -> {
+                            LanguageFrontend.log.error(
+                                "Not handling declarator {} yet.",
+                                declarator.type
+                            )
+                            Declaration()
+                        }
+                    }
                 } else {
                     // Otherwise return empty declaration
                     LanguageFrontend.log.error("Not handling type {} yet.", type)
@@ -199,6 +210,20 @@ class DeclarationHandler(lang: CXXLanguageFrontend2) :
         // TODO: initializers
         // TODO: check for static modifiers
 
+        return declaration
+    }
+
+    private fun handleInitDeclarator(node: TSNode): VariableDeclaration {
+        val startType = ts_node_child_by_field_name(node, "type")
+        val declarator = ts_node_child_by_field_name(node, "declarator")
+        val declaration =
+            newVariableDeclaration(
+                "",
+                lang.handleType(startType),
+                lang.getCodeFromRawNode(node),
+                true
+            )
+        processDeclarator(declarator, declaration)
         return declaration
     }
 
