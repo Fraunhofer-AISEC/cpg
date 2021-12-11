@@ -37,7 +37,7 @@ import de.fraunhofer.aisec.cpg.graph.ResolveInFrontend
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.types.PointerType
 import de.fraunhofer.aisec.cpg.passes.scopes.TemplateScope
-import io.github.oxisto.kotlintree.Node
+import io.github.oxisto.kotlintree.jvm.*
 
 class DeclarationHandler(lang: CXXLanguageFrontend2) :
     Handler<Declaration, Node, CXXLanguageFrontend2>(::Declaration, lang) {

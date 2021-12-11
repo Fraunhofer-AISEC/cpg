@@ -38,8 +38,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
-import io.github.oxisto.kotlintree.Node
-import io.github.oxisto.kotlintree.of
+import io.github.oxisto.kotlintree.jvm.*
 
 /**
  * This handler takes care of parsing

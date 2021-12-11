@@ -37,9 +37,7 @@ import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
-import io.github.oxisto.kotlintree.Node
-import io.github.oxisto.kotlintree.Parser
-import io.github.oxisto.kotlintree.TreeSitterCpp
+import io.github.oxisto.kotlintree.jvm.*
 import java.io.File
 
 /**

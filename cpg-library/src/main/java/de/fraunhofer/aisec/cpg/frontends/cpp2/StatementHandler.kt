@@ -31,9 +31,7 @@ import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newDeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
-import io.github.oxisto.kotlintree.Node
-import io.github.oxisto.kotlintree.of
-import io.github.oxisto.kotlintree.ofNamed
+import io.github.oxisto.kotlintree.jvm.*
 
 class StatementHandler(lang: CXXLanguageFrontend2) :
     Handler<Statement, Node, CXXLanguageFrontend2>(::Statement, lang) {
