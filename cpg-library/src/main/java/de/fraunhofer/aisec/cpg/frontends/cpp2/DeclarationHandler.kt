@@ -61,7 +61,8 @@ class DeclarationHandler(lang: CXXLanguageFrontend2) :
                 val declarator = ts_node_child_by_field_name(node, "declarator")
                 if (!declarator.isNull && !ts_node_is_null(declarator)) {
                     return when (val declaratorType = declarator.type) {
-                        "init_declarator" -> handleInitDeclarator(node)
+                        "init_declarator" -> handleVariableDeclaration(node)
+                        "array_declarator" -> handleVariableDeclaration(node)
                         "function_declarator" -> handleFunctionDeclaration(node)
                         else -> {
                             LanguageFrontend.log.error(
@@ -213,7 +214,11 @@ class DeclarationHandler(lang: CXXLanguageFrontend2) :
         return declaration
     }
 
-    private fun handleInitDeclarator(node: TSNode): VariableDeclaration {
+    /**
+     * This function handles regular variable declarations. Usually we get more information from the declarator
+     * which is wrapped in a generic declaration, so we process the declarator and generate the correct type.
+     */
+    private fun handleVariableDeclaration(node: TSNode): VariableDeclaration {
         val startType = ts_node_child_by_field_name(node, "type")
         val declarator = ts_node_child_by_field_name(node, "declarator")
         val declaration =
@@ -459,6 +464,9 @@ class DeclarationHandler(lang: CXXLanguageFrontend2) :
             "init_declarator" -> {
                 processInitDeclarator(node, declaration)
             }
+            "array_declarator" -> {
+                processArrayDeclarator(node, declaration)
+            }
             "pointer_declarator" -> {
                 processPointerDeclarator(node, declaration)
             }
@@ -550,6 +558,11 @@ class DeclarationHandler(lang: CXXLanguageFrontend2) :
 
             hasInitializer.initializer = expression
         }
+    }
+
+    private fun processArrayDeclarator(node: TSNode, declaration: ValueDeclaration) {
+        processDeclarator(ts_node_child_by_field_name(node, "declarator"), declaration)
+        declaration.type = declaration.type.reference(PointerType.PointerOrigin.ARRAY)
     }
 
     private fun processPointerDeclarator(node: TSNode, declaration: ValueDeclaration) {
