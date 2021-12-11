@@ -5,7 +5,7 @@ plugins {
 include(":cpg")
 include(":cpg-core")
 include(":cpg-neo4j")
-include(":cpg-llvm")
+include(":cpg-language-llvm")
 include(":cpg-console")
 
 gradleEnterprise {

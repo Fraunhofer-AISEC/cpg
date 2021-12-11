@@ -53,5 +53,5 @@ publishing {
 dependencies {
     // this exposes all of our (published) modules as dependency
     api(project(":cpg-core"))
-    api(project(":cpg-llvm"))
+    api(project(":cpg-language-llvm"))
 }

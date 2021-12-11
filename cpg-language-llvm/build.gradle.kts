@@ -36,7 +36,7 @@ publishing {
             from(components["java"])
 
             pom {
-                artifactId = "cpg-llvm"
+                artifactId = "cpg-language-llvm"
                 name.set("Code Property Graph - LLVM Frontend")
                 description.set("A LLVM language frontend for the CPG")
                 url.set("https://github.com/Fraunhofer-AISEC/cpg")

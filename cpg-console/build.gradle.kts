@@ -55,7 +55,7 @@ val versions = mapOf(
 dependencies {
     // CPG
     api(project(":cpg-core"))
-    api(project(":cpg-llvm"))
+    api(project(":cpg-language-llvm"))
     api(project(":cpg-neo4j"))
 
     implementation("org.apache.logging.log4j:log4j-slf4j18-impl:2.15.0")
