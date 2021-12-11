@@ -41,8 +41,8 @@ publishing {
             from(components["java"])
 
             pom {
-                artifactId = "cpg" // for legacy reasons (this will be renamed to cpg-core at some point)
-                name.set("Code Property Graph")
+                artifactId = "cpg-core"
+                name.set("Code Property Graph - Core")
                 description.set("A simple library to extract a code property graph out of source code. It has support for multiple passes that can extend the analysis after the graph is constructed.")
                 url.set("https://github.com/Fraunhofer-AISEC/cpg")
                 licenses {

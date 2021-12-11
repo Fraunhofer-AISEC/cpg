@@ -106,9 +106,9 @@ signing {
 }
 
 dependencies {
-    api(project(":cpg-library"))
+    api(project(":cpg-core"))
 
-    testImplementation(testFixtures(project(":cpg-library")))
+    testImplementation(testFixtures(project(":cpg-core")))
 
     // llvm
     implementation("org.bytedeco:llvm-platform:12.0.1-1.5.6")
