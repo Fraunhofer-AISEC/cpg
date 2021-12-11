@@ -17,8 +17,8 @@ jobs:
       - uses: actions/checkout@v2
       - uses: Fraunhofer-AISEC/codyze-action@v2.3
         with:
-          markDirectory: cpg-library/src/main/mark
-          directory: cpg-library/src/main/java
+          markDirectory: cpg-core/src/main/mark
+          directory: cpg-core/src/main/java
 
   build:
     runs-on: ubuntu-latest
@@ -62,14 +62,14 @@ jobs:
         id: determine_version
       - name: Install JEP
         run: |
-          pip3 install jep==$(grep "black.ninia:jep" cpg-library/build.gradle.kts | cut -d ":" -f 3 | cut -d "\"" -f 1)
+          pip3 install jep==$(grep "black.ninia:jep" cpg-core/build.gradle.kts | cut -d ":" -f 3 | cut -d "\"" -f 1)
           sudo cp /opt/hostedtoolcache/Python/3.9*/x64/lib/python3.9/site-packages/jep/libjep.so /usr/lib/
       - name: Install pycodestyle
         run: |
             pip3 install pycodestyle
       - name: Run pycodestyle
         run: |
-            find cpg-library/src/main/python -iname "*.py" -exec pycodestyle \{\} \;
+            find cpg-core/src/main/python -iname "*.py" -exec pycodestyle \{\} \;
       - name: Build ${{ steps.determine_version.outputs.version }}
         run: |
           if [ "$SONAR_TOKEN" != "" ]
@@ -109,7 +109,7 @@ jobs:
         with:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           BRANCH: gh-pages
-          FOLDER: cpg-library/build/docs/javadoc
+          FOLDER: cpg-core/build/docs/javadoc
       - name: "Create Release"
         if: startsWith(github.ref, 'refs/tags/v') && !contains(github.ref, 'beta')
         id: create_release
