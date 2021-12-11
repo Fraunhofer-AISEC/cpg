@@ -42,7 +42,7 @@ class StatementHandler(lang: CXXLanguageFrontend2) :
         map.put(TSNode::class.java, ::handleStatement)
     }
 
-    private fun handleStatement(node: TSNode): Statement {
+    private fun handleStatement(node: TSNode): Statement? {
         return when (val type = node.type) {
             "compound_statement" -> handleCompoundStatement(node)
             "declaration" -> handleDeclarationStatement(node)
@@ -50,7 +50,7 @@ class StatementHandler(lang: CXXLanguageFrontend2) :
             "return_statement" -> handleReturnStatement(node)
             else -> {
                 log.error("Not handling statement of type {} yet", type)
-                configConstructor.get()
+                null
             }
         }
     }
@@ -111,8 +111,9 @@ class StatementHandler(lang: CXXLanguageFrontend2) :
 
         for (i in 0 until treesitter.ts_node_named_child_count(node)) {
             val statement = handleStatement(treesitter.ts_node_named_child(node, i))
-
-            compoundStatement.addStatement(statement)
+            if (statement != null) {
+                compoundStatement.addStatement(statement)
+            }
         }
 
         lang.scopeManager.leaveScope(compoundStatement)
