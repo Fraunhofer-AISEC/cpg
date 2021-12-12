@@ -26,8 +26,8 @@
 package de.fraunhofer.aisec.cpg.frontends.llvm
 
 import de.fraunhofer.aisec.cpg.frontends.Handler
-import de.fraunhofer.aisec.cpg.graph.NodeBuilder
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newArraySubscriptionExpression
+import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newCastExpression
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newConditionalExpression
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newConstructExpression
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newDeclaredReferenceExpression
@@ -61,11 +61,16 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
     private fun handleValue(value: LLVMValueRef): Expression {
         return when (val kind = LLVMGetValueKind(value)) {
             LLVMConstantExprValueKind -> handleConstantExprValueKind(value)
-            LLVMConstantStructValueKind -> handleConstantStructValue(value)
-            LLVMConstantDataArrayValueKind -> handleConstantDataArrayValue(value)
+            LLVMConstantArrayValueKind, LLVMConstantStructValueKind ->
+                handleConstantStructValue(value)
+            LLVMConstantDataArrayValueKind,
+            LLVMConstantVectorValueKind,
+            LLVMConstantDataVectorValueKind -> handleConstantDataArrayValue(value)
             LLVMConstantIntValueKind -> handleConstantInt(value)
             LLVMConstantFPValueKind -> handleConstantFP(value)
             LLVMConstantPointerNullValueKind -> handleNullPointer(value)
+            LLVMConstantTokenNoneValueKind ->
+                newLiteral(null, UnknownType.getUnknownType(), lang.getCodeFromRawNode(value))
             LLVMUndefValueValueKind ->
                 initializeAsUndef(lang.typeOf(value), lang.getCodeFromRawNode(value)!!)
             LLVMConstantAggregateZeroValueKind ->
@@ -78,6 +83,7 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
             // it actually points to the instruction where this variable was defined. However,
             // we are only interested in its name and type.
             LLVMInstructionValueKind -> handleReference(value)
+            LLVMFunctionValueKind -> handleFunction(value)
             else -> {
                 log.info(
                     "Not handling value kind {} in handleValue yet. Falling back to the legacy way. Please change",
@@ -117,6 +123,15 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
         }
     }
 
+    /** Returns a [DeclaredReferenceExpression] for a function (pointer). */
+    private fun handleFunction(valueRef: LLVMValueRef): Expression {
+        return newDeclaredReferenceExpression(
+            valueRef.name,
+            lang.typeOf(valueRef),
+            lang.getCodeFromRawNode(valueRef)
+        )
+    }
+
     /**
      * Handles a reference to an [identifier](https://llvm.org/docs/LangRef.html#identifiers). It
      * can either be a reference to a global or local one, depending on the prefix.
@@ -126,19 +141,13 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
      * determining the scope of the variable.
      */
     private fun handleReference(valueRef: LLVMValueRef): Expression {
-        var name = valueRef.name
-        var symbolName = valueRef.symbolName
-
-        // The name could be empty because of an unnamed variable. In this we need to apply some
-        // dirty tricks to get its "name", unless we find a function that returns the slot number
-        if (name == "") {
-            name = lang.guessSlotNumber(valueRef)
-            symbolName = "%$name"
-        }
+        val namePair = lang.getNameOf(valueRef)
+        val name = namePair.first
+        val symbolName = namePair.second
 
         val type = lang.typeOf(valueRef)
 
-        val ref = NodeBuilder.newDeclaredReferenceExpression(name, type, "${type.typeName} $name")
+        val ref = newDeclaredReferenceExpression(name, type, "${type.typeName} $name")
 
         // try to resolve the reference. actually the valueRef is already referring to the resolved
         // variable because we obtain it using LLVMGetOperand, so we just need to look it up in the
@@ -196,6 +205,19 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
             when (val kind = LLVMGetConstOpcode(value)) {
                 LLVMGetElementPtr -> handleGetElementPtr(value)
                 LLVMSelect -> handleSelect(value)
+                LLVMTrunc,
+                LLVMZExt,
+                LLVMSExt,
+                LLVMFPToUI,
+                LLVMFPToSI,
+                LLVMUIToFP,
+                LLVMSIToFP,
+                LLVMFPTrunc,
+                LLVMFPExt,
+                LLVMPtrToInt,
+                LLVMIntToPtr,
+                LLVMBitCast,
+                LLVMAddrSpaceCast -> handleCastInstruction(value)
                 else -> {
                     log.error("Not handling constant expression of opcode {} yet", kind)
                     Expression()
@@ -215,8 +237,7 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
         // retrieve the type
         val type = lang.typeOf(value)
 
-        val expr: ConstructExpression =
-            NodeBuilder.newConstructExpression(lang.getCodeFromRawNode(value))
+        val expr: ConstructExpression = newConstructExpression(lang.getCodeFromRawNode(value))
         // map the construct expression to the record declaration of the type
         expr.instantiates = (type as? ObjectType)?.recordDeclaration
 
@@ -251,7 +272,12 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
 
         val list = newInitializerListExpression(lang.getCodeFromRawNode(valueRef))
         val arrayType = LLVMTypeOf(valueRef)
-        val length = LLVMGetArrayLength(arrayType)
+        val length =
+            if (LLVMIsAConstantDataArray(valueRef) != null) {
+                LLVMGetArrayLength(arrayType)
+            } else {
+                LLVMGetVectorSize(arrayType)
+            }
 
         val initializers = mutableListOf<Expression>()
 
@@ -300,7 +326,7 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
         if (!lang.isKnownStructTypeName(type.name) && !type.name.contains("{")) {
             return newLiteral(0, type, code)
         } else {
-            val expr: ConstructExpression = NodeBuilder.newConstructExpression(code)
+            val expr: ConstructExpression = newConstructExpression(code)
             // map the construct expression to the record declaration of the type
             expr.instantiates = (type as? ObjectType)?.recordDeclaration
 
@@ -395,7 +421,19 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
             } else {
                 // otherwise, this is a member field access, where the index denotes the n-th field
                 // in the structure
-                val record = (baseType as? ObjectType)?.recordDeclaration
+                var record = (baseType as? ObjectType)?.recordDeclaration
+
+                if (record == null) {
+                    record =
+                        lang.scopeManager
+                            .resolve<RecordDeclaration>(lang.scopeManager.globalScope, true) {
+                                it.name == baseType.typeName
+                            }
+                            .firstOrNull()
+                    if (record != null) {
+                        (baseType as? ObjectType)?.recordDeclaration = record
+                    }
+                }
 
                 // this should not happen at this point, we cannot continue
                 if (record == null) {
@@ -459,5 +497,15 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
         val conditionalExpr = newConditionalExpression(cond, value1, value2, value1.type)
 
         return conditionalExpr
+    }
+
+    /**
+     * Handles all kinds of instructions which are a
+     * [cast instruction](https://llvm.org/docs/LangRef.html#conversion-operations).
+     */
+    fun handleCastInstruction(instr: LLVMValueRef): Expression {
+        val castExpr = newCastExpression(lang.getCodeFromRawNode(instr))
+        castExpr.castType = lang.typeOf(instr)
+        return castExpr
     }
 }
