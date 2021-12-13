@@ -43,7 +43,7 @@ dependencies {
     api("de.fraunhofer.aisec", "cpg-core", cpgVersion)
     
     // or just a particular extra module, such as LLVM
-    api("de.fraunhofer.aisec", "cpg-llvm", cpgVersion)
+    api("de.fraunhofer.aisec", "cpg-language-llvm", cpgVersion)
 }
 ```
 
