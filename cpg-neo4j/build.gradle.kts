@@ -55,7 +55,8 @@ distributions {
 
 dependencies {
     // CPG
-    api(project(":cpg-library"))
+    api(project(":cpg-core"))
+    api(project(":cpg-language-llvm"))
 
     implementation("org.apache.logging.log4j:log4j-slf4j18-impl:2.15.0")
 
