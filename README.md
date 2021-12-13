@@ -34,7 +34,7 @@ repositories {
 }
 
 dependencies {
-    var cpgVersion = "4.1.1" 
+    var cpgVersion = "4.2.0" 
     
     // if you want to include all published cpg modules
     api("de.fraunhofer.aisec", "cpg", cpgVersion)
