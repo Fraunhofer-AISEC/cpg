@@ -93,13 +93,13 @@ class SimpleDFAOrderEvaluationTest {
 
         val p4Decl = (functionOk.body as CompoundStatement).statements[0] as? DeclarationStatement
         assertNotNull(p4Decl)
-        val referencedVertices = mutableSetOf(p4Decl.declarations[0]?.id)
+        val consideredDecl = mutableSetOf(p4Decl.declarations[0]?.id)
 
-        val verticesToOp = mutableMapOf<Node, String>()
-        verticesToOp[(functionOk.body as CompoundStatement).statements[1]] = "start()"
-        verticesToOp[(functionOk.body as CompoundStatement).statements[2]] = "finish()"
+        val nodesToOp = mutableMapOf<Node, String>()
+        nodesToOp[(functionOk.body as CompoundStatement).statements[1]] = "start()"
+        nodesToOp[(functionOk.body as CompoundStatement).statements[2]] = "finish()"
 
-        val orderEvaluator = DFAOrderEvaluator(referencedVertices, verticesToOp, mapOf())
+        val orderEvaluator = DFAOrderEvaluator(consideredDecl, nodesToOp)
         val everythingOk = orderEvaluator.evaluateOrder(dfa, p4Decl)
 
         assertTrue(everythingOk, "Expected correct order")
@@ -119,14 +119,14 @@ class SimpleDFAOrderEvaluationTest {
 
         val p4Decl = (functionOk.body as CompoundStatement).statements[0] as? DeclarationStatement
         assertNotNull(p4Decl)
-        val referencedVertices = mutableSetOf(p4Decl.declarations[0]?.id)
+        val consideredDecl = mutableSetOf(p4Decl.declarations[0]?.id)
 
-        val verticesToOp = mutableMapOf<Node, String>()
-        verticesToOp[(functionOk.body as CompoundStatement).statements[1]] = "start()"
+        val nodesToOp = mutableMapOf<Node, String>()
+        nodesToOp[(functionOk.body as CompoundStatement).statements[1]] = "start()"
         // We do not model the call to foo() because it does not exist in our model.
-        verticesToOp[(functionOk.body as CompoundStatement).statements[3]] = "finish()"
+        nodesToOp[(functionOk.body as CompoundStatement).statements[3]] = "finish()"
 
-        val orderEvaluator = DFAOrderEvaluator(referencedVertices, verticesToOp, mapOf())
+        val orderEvaluator = DFAOrderEvaluator(consideredDecl, nodesToOp)
         val everythingOk = orderEvaluator.evaluateOrder(dfa, p4Decl)
 
         assertTrue(everythingOk, "Expected correct order")
@@ -146,27 +146,27 @@ class SimpleDFAOrderEvaluationTest {
 
         val p4Decl = (functionOk.body as CompoundStatement).statements[0] as? DeclarationStatement
         assertNotNull(p4Decl)
-        val referencedVertices = mutableSetOf(p4Decl.declarations[0]?.id)
+        val consideredDecl = mutableSetOf(p4Decl.declarations[0]?.id)
 
-        val verticesToOp = mutableMapOf<Node, String>()
+        val nodesToOp = mutableMapOf<Node, String>()
         // We model the calls to start() for the then and the else branch
         val thenBranch =
             ((functionOk.body as CompoundStatement).statements[2] as? IfStatement)
                 ?.thenStatement as?
                 CompoundStatement
         assertNotNull(thenBranch)
-        verticesToOp[thenBranch.statements[0]] = "start()"
+        nodesToOp[thenBranch.statements[0]] = "start()"
         val elseBranch =
             ((functionOk.body as CompoundStatement).statements[2] as? IfStatement)
                 ?.elseStatement as?
                 CompoundStatement
         assertNotNull(elseBranch)
-        verticesToOp[elseBranch.statements[0]] = "start()"
+        nodesToOp[elseBranch.statements[0]] = "start()"
 
         // We do not model the call to foo() because it does not exist in our model.
-        verticesToOp[(functionOk.body as CompoundStatement).statements[3]] = "finish()"
+        nodesToOp[(functionOk.body as CompoundStatement).statements[3]] = "finish()"
 
-        val orderEvaluator = DFAOrderEvaluator(referencedVertices, verticesToOp, mapOf())
+        val orderEvaluator = DFAOrderEvaluator(consideredDecl, nodesToOp)
         val everythingOk = orderEvaluator.evaluateOrder(dfa, p4Decl)
 
         assertTrue(everythingOk, "Expected correct order")
@@ -186,16 +186,16 @@ class SimpleDFAOrderEvaluationTest {
 
         val pDecl = (functionOk.body as CompoundStatement).statements[0] as? DeclarationStatement
         assertNotNull(pDecl)
-        val referencedVertices = mutableSetOf(pDecl.declarations[0]?.id)
+        val consideredBases = mutableSetOf(pDecl.declarations[0]?.id)
 
-        val verticesToOp = mutableMapOf<Node, String>()
-        verticesToOp[(functionOk.body as CompoundStatement).statements[1]] = "set_key()"
-        verticesToOp[(functionOk.body as CompoundStatement).statements[2]] = "start()"
-        verticesToOp[(functionOk.body as CompoundStatement).statements[3]] = "finish()"
+        val nodesToOp = mutableMapOf<Node, String>()
+        nodesToOp[(functionOk.body as CompoundStatement).statements[1]] = "set_key()"
+        nodesToOp[(functionOk.body as CompoundStatement).statements[2]] = "start()"
+        nodesToOp[(functionOk.body as CompoundStatement).statements[3]] = "finish()"
         // We do not model the call to foo() because it does not exist in our model.
-        verticesToOp[(functionOk.body as CompoundStatement).statements[5]] = "set_key()"
+        nodesToOp[(functionOk.body as CompoundStatement).statements[5]] = "set_key()"
 
-        val orderEvaluator = DFAOrderEvaluator(referencedVertices, verticesToOp, mapOf())
+        val orderEvaluator = DFAOrderEvaluator(consideredBases, nodesToOp)
         val everythingOk = orderEvaluator.evaluateOrder(dfa, pDecl)
 
         assertFalse(everythingOk, "Expected incorrect order")
@@ -215,12 +215,12 @@ class SimpleDFAOrderEvaluationTest {
 
         val p2Decl = (functionOk.body as CompoundStatement).statements[0] as? DeclarationStatement
         assertNotNull(p2Decl)
-        val referencedVertices = mutableSetOf(p2Decl.declarations[0]?.id)
+        val consideredBases = mutableSetOf(p2Decl.declarations[0]?.id)
 
-        val verticesToOp = mutableMapOf<Node, String>()
-        verticesToOp[(functionOk.body as CompoundStatement).statements[1]] = "start()"
+        val nodesToOp = mutableMapOf<Node, String>()
+        nodesToOp[(functionOk.body as CompoundStatement).statements[1]] = "start()"
 
-        val orderEvaluator = DFAOrderEvaluator(referencedVertices, verticesToOp, mapOf())
+        val orderEvaluator = DFAOrderEvaluator(consideredBases, nodesToOp)
         val everythingOk = orderEvaluator.evaluateOrder(dfa, p2Decl)
 
         assertFalse(everythingOk, "Expected incorrect order")
@@ -239,18 +239,18 @@ class SimpleDFAOrderEvaluationTest {
 
         val p3Decl = (functionOk.body as CompoundStatement).statements[0] as? DeclarationStatement
         assertNotNull(p3Decl)
-        val referencedVertices = mutableSetOf(p3Decl.declarations[0]?.id)
+        val consideredDecl = mutableSetOf(p3Decl.declarations[0]?.id)
 
-        val verticesToOp = mutableMapOf<Node, String>()
+        val nodesToOp = mutableMapOf<Node, String>()
         val thenBranch =
             ((functionOk.body as CompoundStatement).statements[1] as? IfStatement)
                 ?.thenStatement as?
                 CompoundStatement
         assertNotNull(thenBranch)
-        verticesToOp[thenBranch.statements[0]] = "start()"
-        verticesToOp[(functionOk.body as CompoundStatement).statements[2]] = "finish()"
+        nodesToOp[thenBranch.statements[0]] = "start()"
+        nodesToOp[(functionOk.body as CompoundStatement).statements[2]] = "finish()"
 
-        val orderEvaluator = DFAOrderEvaluator(referencedVertices, verticesToOp, mapOf())
+        val orderEvaluator = DFAOrderEvaluator(consideredDecl, nodesToOp)
         val everythingOk = orderEvaluator.evaluateOrder(dfa, p3Decl)
 
         assertFalse(everythingOk, "Expected incorrect order")
@@ -269,20 +269,20 @@ class SimpleDFAOrderEvaluationTest {
 
         val p4Decl = (functionOk.body as CompoundStatement).statements[0] as? DeclarationStatement
         assertNotNull(p4Decl)
-        val referencedVertices = mutableSetOf(p4Decl.declarations[0]?.id)
+        val consideredDecl = mutableSetOf(p4Decl.declarations[0]?.id)
 
-        val verticesToOp = mutableMapOf<Node, String>()
+        val nodesToOp = mutableMapOf<Node, String>()
         val thenBranch =
             ((functionOk.body as CompoundStatement).statements[1] as? IfStatement)
                 ?.thenStatement as?
                 CompoundStatement
         assertNotNull(thenBranch)
-        verticesToOp[thenBranch.statements[0]] = "start()"
-        verticesToOp[thenBranch.statements[1]] = "finish()"
-        verticesToOp[(functionOk.body as CompoundStatement).statements[2]] = "start()"
-        verticesToOp[(functionOk.body as CompoundStatement).statements[4]] = "finish()"
+        nodesToOp[thenBranch.statements[0]] = "start()"
+        nodesToOp[thenBranch.statements[1]] = "finish()"
+        nodesToOp[(functionOk.body as CompoundStatement).statements[2]] = "start()"
+        nodesToOp[(functionOk.body as CompoundStatement).statements[4]] = "finish()"
 
-        val orderEvaluator = DFAOrderEvaluator(referencedVertices, verticesToOp, mapOf())
+        val orderEvaluator = DFAOrderEvaluator(consideredDecl, nodesToOp)
         val everythingOk = orderEvaluator.evaluateOrder(dfa, p4Decl)
 
         assertFalse(everythingOk, "Expected incorrect order")

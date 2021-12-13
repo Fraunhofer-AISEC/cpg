@@ -49,7 +49,7 @@ import org.slf4j.LoggerFactory
 open class DFAOrderEvaluator(
     var consideredBases: Set<Long?>,
     var nodesToOp: Map<Node, String>,
-    var thisPositionOfNode: Map<Node, Int>
+    var thisPositionOfNode: Map<Node, Int> = mapOf()
 ) {
     private val nodeIDtoEOGPathSet = mutableMapOf<Long?, MutableSet<String>>()
     private val log: Logger = LoggerFactory.getLogger(DFAOrderEvaluator::class.java)
@@ -183,25 +183,21 @@ open class DFAOrderEvaluator(
     private fun getBaseAndOpOfNode(node: CallExpression, eogPath: String): Pair<String, String>? {
         // The "base" node, on which the DFA is based on. Ideally, this is a variable declaration in
         // the end.
-        var base: Node?
-        val op = nodesToOp[node]
-
-        if (node is MemberCallExpression) {
-            base = node.base
-        } else if (node is ConstructExpression) {
-            base = node.astParent?.getSuitableDFGTarget()
-        } else {
-            if (node.hasThisPosition()) {
-                base = node.getBaseOfCallExpressionUsingArgument(node.getThisPosition())
-            } else {
-                base = node.getSuitableDFGTarget()
-                if (base != null) {
-                    if (base is ConstructExpression) {
-                        base = base.getSuitableDFGTarget()
+        var base =
+            when {
+                node is MemberCallExpression -> node.base
+                node is ConstructExpression -> node.astParent?.getSuitableDFGTarget()
+                node.hasThisPosition() ->
+                    node.getBaseOfCallExpressionUsingArgument(node.getThisPosition())
+                else -> {
+                    val dfgTarget = node.getSuitableDFGTarget()
+                    if (dfgTarget != null && dfgTarget is ConstructExpression) {
+                        dfgTarget.getSuitableDFGTarget()
+                    } else {
+                        dfgTarget
                     }
                 }
             }
-        }
 
         if (base is DeclaredReferenceExpression && base.refersTo != null) {
             base = base.refersTo
@@ -211,7 +207,7 @@ open class DFAOrderEvaluator(
             // We add the path as prefix to the base in order to differentiate between
             // the different paths of execution which both can use the same base.
             val prefixedBase = "$eogPath.${base.name}|${base.id}"
-            return Pair(prefixedBase, op!!)
+            return Pair(prefixedBase, nodesToOp[node]!!)
         }
 
         if (base == null) {
