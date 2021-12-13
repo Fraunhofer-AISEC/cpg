@@ -25,28 +25,4 @@
  */
 package de.fraunhofer.aisec.cpg.analysis.fsm
 
-/** A representation of a deterministic finite automaton (DFA). */
-class DFA : FSM() {
-    /**
-     * Creates an edge between two nodes with a given label (operator and optional base).
-     *
-     * It checks if [from] already has an outgoing edge with the same [base] and [op] but to another
-     * target node. If so, it does not add the edge end returns `false`, otherwise it creates the
-     * edge and returns `true`.
-     */
-    override fun addEdge(from: State, to: State, op: String, base: String?): Boolean {
-        if (!states.contains(from)) {
-            states.add(from)
-        }
-        if (!states.contains(to)) {
-            states.add(to)
-        }
-        if (from.outgoingEdges.any { e -> e.matches(base, op) && e.nextState != to }) {
-            throw FSMBuilderException(
-                "State already has an outgoing edge with the same label but a different target!"
-            )
-        }
-        from.addOutgoingEdge(BaseOpEdge(op, base, to))
-        return true
-    }
-}
+class FSMBuilderException(s: String) : Exception()

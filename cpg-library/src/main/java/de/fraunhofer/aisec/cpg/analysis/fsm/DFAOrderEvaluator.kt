@@ -33,32 +33,25 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.ConstructExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
 import de.fraunhofer.aisec.cpg.passes.astParent
-import java.util.stream.Collectors
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
 /**
  * This class uses a [DFA] to evaluate if the order of statements in the CPG is correct. It needs
  * the following inputs:
- * - [referencedVertices]: A set of the IDs of nodes (typically the
- * ```
- *    [VariableDeclaration]) which are considered.
- * ```
- * - [nodesToOp]: A mapping between CPG nodes and their operators used by the
- * ```
- *    respective edges in the DFA. Currently, we only consider [CallExpression]s.
- * ```
- * - [thisPositionOfNode]: If a non-object oriented language was used, this is a map
- * ```
- *    from CPG nodes (i.e., the [CallExpression]) to the argument position serving as
- *    base of the operation.
- * ```
+ * - [consideredBases]: A set of the IDs of nodes (typically the [VariableDeclaration]) which are
+ * considered.
+ * - [nodesToOp]: A mapping between CPG nodes and their operators used by the respective edges in
+ * the DFA. Currently, we only consider [CallExpression]s.
+ * - [thisPositionOfNode]: If a non-object oriented language was used, this is a map from CPG nodes
+ * (i.e., the [CallExpression]) to the argument position serving as base of the operation.
  */
 open class DFAOrderEvaluator(
-    var referencedVertices: Set<Long?>,
+    var consideredBases: Set<Long?>,
     var nodesToOp: Map<Node, String>,
     var thisPositionOfNode: Map<Node, Int>
 ) {
+    private val nodeIDtoEOGPathSet = mutableMapOf<Long?, MutableSet<String>>()
     private val log: Logger = LoggerFactory.getLogger(DFAOrderEvaluator::class.java)
 
     /**
@@ -106,67 +99,60 @@ open class DFAOrderEvaluator(
         // Stores the states (i.e., nodes and their states in the fsm) to avoid endless loops.
         val seenStates = mutableSetOf<String>()
         // Maps a node to all the paths which were followed to reach the node.
-        val nodeIDtoEOGPathSet = mutableMapOf<Long?, MutableSet<String>>()
-        nodeIDtoEOGPathSet[startNode.id] = mutableSetOf("")
+        startNode.addEogPath("")
 
         var isValidOrder = true
 
-        var worklist = mutableListOf(startNode) // Keeps the nodes which have to be processed.
+        val worklist = mutableListOf(startNode) // Keeps the nodes which have to be processed.
         while (worklist.isNotEmpty()) {
-            val newWorklist = mutableListOf<Node>()
-            // Process the whole worklist which is equal to making one step in the graph (BFS-like).
-            // In parallel, we collect all items which have to be processed in the next step.
-            for (node in worklist) {
-                // Add the node to be processed together with an encoding of the path/fsm-state
-                // to the list of already processed states.
-                val currentState = getStateSnapshot(node, baseToFSM)
-                seenStates.add(currentState)
+            // Pop the next item from the worklist.
+            val node = worklist.removeFirst()
+            // Add the node to be processed together with an encoding of the path/fsm-state
+            // to the list of already processed states.
+            val currentState = getStateSnapshot(node.id, baseToFSM)
+            seenStates.add(currentState)
 
-                val eogPathSet = nodeIDtoEOGPathSet[node.id]
-                if (eogPathSet == null) {
-                    log.debug("Error during order-evaluation, no path set for node ${node.id}")
-                    continue
-                }
+            val eogPathSet = node.getEogPaths()
+            if (eogPathSet == null) {
+                log.debug("Error during order-evaluation, no path set for node ${node.id}")
+                continue
+            }
 
-                // Iterate through the paths which can reach the current node and
-                // try to make the transition in the DFA and retrieve the next nodes
-                // to process for each of the paths.
-                for (eogPath in eogPathSet) {
-                    // Currently, we only handle CallExpressions as "operation".
-                    // Check if the current node is of interest for the DFA.
-                    // This is the case if the map nodesToOp contains the node.
-                    if (node is CallExpression && nodesToOp.contains(node)) {
-                        val baseAndOp = getBaseAndOpOfNode(node, eogPath)
+            // Iterate through the paths which can reach the current node and
+            // try to make the transition in the DFA and retrieve the next nodes
+            // to process for each of the paths.
+            for (eogPath in eogPathSet) {
+                // Currently, we only handle CallExpressions as "operation".
+                // Check if the current node is of interest for the DFA.
+                // This is the case if the map nodesToOp contains the node.
+                if (node is CallExpression && nodesToOp.contains(node)) {
+                    val baseAndOp = getBaseAndOpOfNode(node, eogPath)
 
-                        if (baseAndOp != null) {
-                            // Make a transition in the DFA. In case, it is not possible,
-                            // there was an error in the order of statements and allOk is
-                            // set to false. If this is the first time we use the base (i.e.,
-                            // we're at the starting node of the DFA), we clone the fsm and
-                            // start the analysis for that base from scratch.
-                            val allOk =
-                                baseToFSM
-                                    .computeIfAbsent(baseAndOp.first) { fsm.clone() }
-                                    .makeTransitionWithOp(baseAndOp.second, node)
+                    if (baseAndOp != null) {
+                        // Make a transition in the DFA. In case, it is not possible,
+                        // there was an error in the order of statements and allOk is
+                        // set to false. If this is the first time we use the base (i.e.,
+                        // we're at the starting node of the DFA), we clone the fsm and
+                        // start the analysis for that base from scratch.
+                        val allOk =
+                            baseToFSM
+                                .computeIfAbsent(baseAndOp.first) { fsm.clone() }
+                                .makeTransitionWithOp(baseAndOp.second, node)
 
-                            if (!allOk) {
-                                actionMissingTransitionForNode(node, baseToFSM[baseAndOp.first])
-                                isValidOrder = false
-                            }
+                        if (!allOk) {
+                            actionMissingTransitionForNode(node, baseToFSM[baseAndOp.first])
+                            isValidOrder = false
                         }
                     }
-
-                    // Retrieve all nodes which have to be processed in the next step through the
-                    // graph.
-                    newWorklist.addAll(
-                        getNextNodes(node, eogPath, nodeIDtoEOGPathSet, baseToFSM, seenStates)
-                    )
                 }
-                // The current node has been analyzed with all its eogPaths.
-                // Remove from map, if we visit it in another iteration
-                nodeIDtoEOGPathSet.remove(node.id)
+
+                // Retrieve the nodes which have to be processed later and add them at the
+                // end of the worklist.
+                worklist.addAll(getNextNodes(node, eogPath, baseToFSM, seenStates))
             }
-            worklist = newWorklist
+            // The current node has been analyzed with all its eogPaths.
+            // Remove from map, if we visit it in another iteration
+            nodeIDtoEOGPathSet.remove(node.id)
         }
 
         // Check if all the FSM are in an accepting state
@@ -192,7 +178,7 @@ open class DFAOrderEvaluator(
      * execution in the control flow.
      *
      * If the base cannot be retrieved, or if the [node] is not considered by the analysis (i.e., no
-     * entry for [node] exists in the map [referencedVertices]), the method returns `null`.
+     * entry for [node] exists in the map [consideredBases]), the method returns `null`.
      */
     private fun getBaseAndOpOfNode(node: CallExpression, eogPath: String): Pair<String, String>? {
         // The "base" node, on which the DFA is based on. Ideally, this is a variable declaration in
@@ -203,14 +189,10 @@ open class DFAOrderEvaluator(
         if (node is MemberCallExpression) {
             base = node.base
         } else if (node is ConstructExpression) {
-            val initializerBase = node.astParent
-            base = initializerBase?.getSuitableDFGTarget()
+            base = node.astParent?.getSuitableDFGTarget()
         } else {
             if (node.hasThisPosition()) {
-                base =
-                    (node as CallExpression?)?.getBaseOfCallExpressionUsingArgument(
-                        node.getThisPosition()
-                    )
+                base = node.getBaseOfCallExpressionUsingArgument(node.getThisPosition())
             } else {
                 base = node.getSuitableDFGTarget()
                 if (base != null) {
@@ -225,25 +207,28 @@ open class DFAOrderEvaluator(
             base = base.refersTo
         }
 
-        if (base != null && referencedVertices.contains(base.id)) {
-            // If we have a reference to a node in the cpg, we add this to the prefixed
-            // base this way, we could differentiate between nodes with the same base
-            // name, but referencing different variables (e.g., if they are used in
-            // different blocks)
-            val baseName = "${base.name}|${base.id}"
-
-            val prefixedBase = "$eogPath.$baseName"
+        if (base != null && consideredBases.contains(base.id)) {
+            // We add the path as prefix to the base in order to differentiate between
+            // the different paths of execution which both can use the same base.
+            val prefixedBase = "$eogPath.${base.name}|${base.id}"
             return Pair(prefixedBase, op!!)
         }
 
         if (base == null) {
-            log.warn("Base must not be null for ${node.javaClass.simpleName}")
-        } else if (!referencedVertices.contains(base.id)) {
-            println("$base")
-            log.info("this call does not reference the function we are looking at, skipping.")
+            log.warn("The base of a call expression must not be null.")
+        } else if (!consideredBases.contains(base.id)) {
+            log.info("Skipping call because the base $[base.id} is not considered.")
         }
 
         return null
+    }
+
+    private fun Node.addEogPath(path: String) {
+        nodeIDtoEOGPathSet.computeIfAbsent(this.id) { mutableSetOf() }.add(path)
+    }
+
+    private fun Node.getEogPaths(): Set<String>? {
+        return nodeIDtoEOGPathSet[this.id]
     }
 
     /**
@@ -304,7 +289,6 @@ open class DFAOrderEvaluator(
     private fun getNextNodes(
         node: Node,
         eogPath: String,
-        nodeIDtoEOGPathSet: MutableMap<Long?, MutableSet<String>>,
         baseToFSM: MutableMap<String, FSM>,
         seenStates: MutableSet<String>
     ): List<Node> {
@@ -314,12 +298,11 @@ open class DFAOrderEvaluator(
         if (outNodes.size == 1) {
             // We only have one node following this node, so we
             // simply propagate the current eogPath to the next node.
-            nodeIDtoEOGPathSet.computeIfAbsent(outNodes[0].id) { mutableSetOf() }.add(eogPath)
+            outNodes[0].addEogPath(eogPath)
         } else if (outNodes.size > 1) {
-            // We have multiple outgoig nodes, so we generate multiple new entries:
+            // We have multiple outgoing nodes, so we generate multiple new entries:
             //  - Each node gets its own eogPath which is split up
             //  - Each node gets a copy of the current DFA
-
             val newBases = mutableMapOf<String, FSM>()
             // Remove all the entries from baseToFSM which are now replaced with multiple new ones.
             // We store these entries without the eogPath prefix and update them in (1)
@@ -329,15 +312,15 @@ open class DFAOrderEvaluator(
                 if (entry.key.startsWith(eogPath)) {
                     // keep the "." before the real base, as we need it later anyway
                     newBases[entry.key.substring(eogPath.length)] = entry.value
-                    iterator
-                        .remove() // Remove the old entry as it will be replaced with 2 new ones.
+                    // Remove the old entry as it will be replaced with 2 new ones.
+                    iterator.remove()
                 }
             }
 
             // (1) Update all entries previously removed from the baseToFSM map with
             // the new eog-path as prefix to the base
             for (i in outNodes.indices.reversed()) {
-                val stateOfNext: String = getStateSnapshot(outNodes[i], baseToFSM)
+                val stateOfNext: String = getStateSnapshot(outNodes[i].id, baseToFSM)
                 if (seenStates.contains(stateOfNext)) {
                     log.debug(
                         "Node/FSM state already visited: ${stateOfNext}. Remove from next nodes."
@@ -350,9 +333,7 @@ open class DFAOrderEvaluator(
                         baseToFSM[newEOGPath + k] = v.clone()
                     }
                     // Update the eog-path directly in the map of paths for the respective node.
-                    nodeIDtoEOGPathSet
-                        .computeIfAbsent(outNodes[i].id) { mutableSetOf() }
-                        .add(newEOGPath)
+                    outNodes[i].addEogPath(newEOGPath)
                 }
             }
         }
@@ -361,26 +342,24 @@ open class DFAOrderEvaluator(
 
     /**
      * Returns a String representation of all paths that have been observed so far together with the
-     * ID of the [node]. It is used to keep track of the states which have already been analyzed and
-     * to avoid getting stuck in loops.
+     * [nodeId]. It is used to keep track of the states which have already been analyzed and to
+     * avoid getting stuck in loops.
      */
-    private fun getStateSnapshot(node: Node, baseToFSM: Map<String, FSM>): String {
-        val simplified = mutableMapOf<String, MutableSet<State>>()
+    private fun getStateSnapshot(nodeId: Long?, baseToFSM: Map<String, FSM>): String {
+        val simplified = mutableMapOf<String, MutableSet<State?>>()
         for (entry in baseToFSM.entries) {
             simplified
                 .computeIfAbsent(entry.key.split(".").toTypedArray()[1]) { mutableSetOf() }
                 .add(entry.value.currentState!!)
         }
 
-        val simplifiedList =
+        val simplifiedStr =
             simplified
                 .entries
-                .stream()
                 .map { x -> "${x.key}(${x.value.joinToString(",")})" }
-                .distinct()
                 .sorted()
-                .collect(Collectors.toList())
+                .joinToString(",")
 
-        return "${node.id} ${simplifiedList.joinToString(",")}"
+        return "$nodeId $simplifiedStr"
     }
 }
