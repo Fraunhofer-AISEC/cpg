@@ -55,6 +55,7 @@ val versions = mapOf(
 dependencies {
     // CPG
     api(project(":cpg-core"))
+    api(project(":cpg-analysis"))
     api(project(":cpg-language-llvm"))
     api(project(":cpg-neo4j"))
 
