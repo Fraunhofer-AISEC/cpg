@@ -23,13 +23,10 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.analysis
+package de.fraunhofer.aisec.cpg.analysis.fsm
 
 import de.fraunhofer.aisec.cpg.TestUtils
 import de.fraunhofer.aisec.cpg.TranslationManager
-import de.fraunhofer.aisec.cpg.analysis.fsm.DFA
-import de.fraunhofer.aisec.cpg.analysis.fsm.DFAOrderEvaluator
-import de.fraunhofer.aisec.cpg.analysis.fsm.FSM
 import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
