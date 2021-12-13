@@ -77,8 +77,13 @@ class CXXLanguageFrontend2(config: TranslationConfiguration, scopeManager: Scope
         scopeManager.resetToGlobal(tu)
 
         // loop through children
-        for (i in 0 until node.namedChildCount) {
-            val declaration = declarationHandler.handle(node.namedChild(i))
+        for (childNode in node) {
+            // skip anonymous nodes
+            if (!node.isNamed) {
+                continue
+            }
+
+            val declaration = declarationHandler.handle(childNode)
 
             scopeManager.addDeclaration(declaration)
         }
