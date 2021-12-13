@@ -206,7 +206,7 @@ open class DFAOrderEvaluator(
         if (base != null && consideredBases.contains(base.id)) {
             // We add the path as prefix to the base in order to differentiate between
             // the different paths of execution which both can use the same base.
-            val prefixedBase = "$eogPath.${base.name}|${base.id}"
+            val prefixedBase = "$eogPath|${base.id}"
             return Pair(prefixedBase, nodesToOp[node]!!)
         }
 
@@ -306,7 +306,7 @@ open class DFAOrderEvaluator(
             while (iterator.hasNext()) {
                 val entry = iterator.next()
                 if (entry.key.startsWith(eogPath)) {
-                    // keep the "." before the real base, as we need it later anyway
+                    // keep the "|" before the real base, as we need it later anyway
                     newBases[entry.key.substring(eogPath.length)] = entry.value
                     // Remove the old entry as it will be replaced with 2 new ones.
                     iterator.remove()
@@ -342,20 +342,16 @@ open class DFAOrderEvaluator(
      * avoid getting stuck in loops.
      */
     private fun getStateSnapshot(nodeId: Long?, baseToFSM: Map<String, FSM>): String {
-        val simplified = mutableMapOf<String, MutableSet<State?>>()
-        for (entry in baseToFSM.entries) {
-            simplified
-                .computeIfAbsent(entry.key.split(".").toTypedArray()[1]) { mutableSetOf() }
-                .add(entry.value.currentState!!)
-        }
-
-        val simplifiedStr =
-            simplified
+        val grouped =
+            baseToFSM
                 .entries
-                .map { x -> "${x.key}(${x.value.joinToString(",")})" }
+                .groupBy { e -> e.key.split("|")[1] }
+                .map { x ->
+                    "${x.key}(${x.value.map({ y -> y.value.currentState!! }).toSet().joinToString(",")})"
+                }
                 .sorted()
                 .joinToString(",")
 
-        return "$nodeId $simplifiedStr"
+        return "$nodeId $grouped"
     }
 }
