@@ -109,21 +109,108 @@ def handle_statement(self, stmt):
         lhs = self.handle_expression(target)
         rhs = self.handle_expression(stmt.value)
 
-        if self.is_variable_declaration(lhs) or self.is_field_declaration(lhs):
-            # new var => set initializer
-            lhs.setInitializer(rhs)
-            # lhs.setType(rhs.getType())
+        if not self.is_declared_reference(
+                lhs) and not self.is_member_expression(lhs):
             self.log_with_loc(
-                "Parsed as Variable/FieldDeclaration with initializer: %s" %
-                (lhs))
-            return lhs
-        else:
+                "Expected a DeclaredReferenceExpression or MemberExpression "
+                "but got \"%s\". Skipping." %
+                (lhs.java_name), loglevel="ERROR")
+            r = NodeBuilder.newBinaryOperator("=", self.get_src_code(stmt))
+            self.add_loc_info(stmt, r)
+            return r
+
+        resolved_lhs = self.scopemanager.resolveReference(lhs)
+        inRecord = self.scopemanager.isInRecord()
+        inFunction = self.scopemanager.isInFunction()
+
+        if resolved_lhs is not None:
             # found var => BinaryOperator "="
             binop = NodeBuilder.newBinaryOperator("=", self.get_src_code(stmt))
             self.add_loc_info(stmt, binop)
             binop.setLhs(lhs)
             binop.setRhs(rhs)
             return binop
+        else:
+            if inRecord and not inFunction:
+                """
+                class Foo:
+                    class_var = 123
+                """
+                if self.is_declared_reference(lhs):
+                    name = lhs.getName()
+                else:
+                    name = "DUMMY"
+                    self.log_with_loc(
+                        "Expected a DeclaredReferenceExpression but got a "
+                        "MemberExpression. Using a dummy.",
+                        loglevel="ERROR")
+
+                self.log_with_loc(
+                    "Could not resolve -> creating a new field for: %s" %
+                    (name))
+                v = NodeBuilder.newFieldDeclaration(
+                    name,
+                    rhs.getType(),
+                    None,
+                    self.get_src_code(stmt),
+                    None,
+                    rhs,
+                    False)  # TODO None -> infos eintragen
+                self.scopemanager.addDeclaration(v)
+                return v
+            elif inRecord and inFunction:
+                """
+                class Foo:
+                    def bar(self):
+                        baz = 123
+                        self.new_field = 456
+                """
+                if self.is_declared_reference(lhs):
+                    self.log_with_loc(
+                        "Could not resolve -> creating a new variable for: %s"
+                        % (lhs.getName()))
+                    v = NodeBuilder.newVariableDeclaration(
+                        lhs.getName(), rhs.getType(),
+                        self.get_src_code(stmt), False)
+                    v.setInitializer(rhs)
+                    self.scopemanager.addDeclaration(v)
+                    return v
+                else:  # MemberExpression
+                    self.log_with_loc(
+                        "Probably a new field for: %s" %
+                        (lhs.getName()))
+                    current_function = self.scopemanager.getCurrentFunction()
+                    recv_name = None
+                    mem_base_is_receiver = False
+                    if current_function is not None:
+                        recv = current_function.getReceiver()
+                        if recv is not None:
+                            recv_name = recv.getName()
+                    base = lhs.getBase()
+                    if self.is_declared_reference(base):
+                        mem_base_is_receiver = base.getName() == recv_name
+                    if not mem_base_is_receiver:
+                        self.log_with_loc("I'm confused.", loglevel="ERROR")
+                        return NodeBuilder.newStatement("DUMMY")
+                    v = NodeBuilder.newFieldDeclaration(
+                        lhs.getName(), rhs.getType(), None,
+                        self.get_src_code(stmt), None, rhs, False)
+                    self.scopemanager.addDeclaration(v)
+                    self.scopemanager.getCurrentRecord().addField(v)
+                    return v
+            elif not inRecord:
+                """
+                either in a function or at file top-level
+                """
+                self.log_with_loc(
+                    "Could not resolve -> creating a new variable for: %s" %
+                    (lhs.getName()))
+                v = NodeBuilder.newVariableDeclaration(
+                    lhs.getName(), rhs.getType(),
+                    self.get_src_code(stmt), False)
+                v.setInitializer(rhs)
+                self.scopemanager.addDeclaration(v)
+                return v
 
     elif isinstance(stmt, ast.AugAssign):
         self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")

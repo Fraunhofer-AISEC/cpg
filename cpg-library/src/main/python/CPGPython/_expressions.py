@@ -249,7 +249,8 @@ def handle_expression(self, expr):
             else:
                 # TODO int, float, ...
                 if name == "str" and len(expr.args) == 1:
-                    cast = NodeBuilder.newCastExpression(self.get_src_code(expr))
+                    cast = NodeBuilder.newCastExpression(
+                        self.get_src_code(expr))
                     cast.setCastType(TypeParser.createFrom("str", False))
                     cast.setExpression(self.handle_expression(expr.args[0])
                                        )
@@ -336,6 +337,10 @@ def handle_expression(self, expr):
         self.add_loc_info(expr, r)
         return r
     elif isinstance(expr, ast.Name):
+        r = NodeBuilder.newDeclaredReferenceExpression(
+            expr.id, UnknownType.getUnknownType(), self.get_src_code(expr))
+        self.add_loc_info(expr, r)
+        return r  # TODO delete code below
         # TODO FIXME!!! This ugly mess has to be refactored!!!
         """
         The following logic applies here:

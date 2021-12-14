@@ -406,7 +406,7 @@ class PythonFrontendTest : BaseTest() {
         assertNull(fieldX.initializer)
         assertNotNull(fieldY.initializer)
         assertNull(fieldZ.initializer)
-        assertNull(fieldBaz.initializer)
+        assertNotNull(fieldBaz.initializer)
 
         val methBar = recordFoo.methods[0]
         assertNotNull(methBar)
@@ -414,17 +414,15 @@ class PythonFrontendTest : BaseTest() {
 
         val barZ = (methBar.body as? CompoundStatement)?.statements?.get(0) as? MemberExpression
         assertNotNull(barZ)
-        val barBaz = (methBar.body as? CompoundStatement)?.statements?.get(1) as? BinaryOperator
-        assertNotNull(barBaz)
-
         assertEquals(barZ.refersTo, fieldZ)
 
-        val lhs = barBaz.lhs as? DeclaredReferenceExpression
-        val rhs = barBaz.rhs as? Literal<*>
-        assertNotNull(lhs)
-        assertNotNull(rhs)
-        assertEquals(barBaz.operatorCode, "=")
-        assertEquals(lhs.refersTo, fieldBaz)
+        val barBaz =
+            (methBar.body as? CompoundStatement)?.statements?.get(1) as? DeclarationStatement
+        assertNotNull(barBaz)
+        val barBazInner = barBaz.declarations.get(0) as? FieldDeclaration
+        assertNotNull(barBazInner)
+        assertEquals("baz", barBazInner.name)
+        assertNotNull(barBazInner.initializer)
     }
 
     @Test
@@ -772,7 +770,7 @@ class PythonFrontendTest : BaseTest() {
     }
 
     @Test
-    fun testSourceCodeInCPG() {
+    fun testLiterals() {
         val topLevel = Path.of("src", "test", "resources", "python")
         val tu =
             TestUtils.analyzeAndGetFirstTU(
@@ -792,15 +790,15 @@ class PythonFrontendTest : BaseTest() {
             tu.getDeclarationsByName("literal", NamespaceDeclaration::class.java).iterator().next()
         assertNotNull(p)
 
-        assertEquals("b", (p.declarations[0] as? VariableDeclaration)?.code)
+        assertEquals("b", (p.declarations[0] as? VariableDeclaration)?.name)
         assertEquals("True", (p.declarations[0] as? VariableDeclaration)?.initializer?.code)
-        assertEquals("i", (p.declarations[1] as? VariableDeclaration)?.code)
+        assertEquals("i", (p.declarations[1] as? VariableDeclaration)?.name)
         assertEquals("42", (p.declarations[1] as? VariableDeclaration)?.initializer?.code)
-        assertEquals("f", (p.declarations[2] as? VariableDeclaration)?.code)
+        assertEquals("f", (p.declarations[2] as? VariableDeclaration)?.name)
         assertEquals("1.0", (p.declarations[2] as? VariableDeclaration)?.initializer?.code)
-        assertEquals("t", (p.declarations[3] as? VariableDeclaration)?.code)
+        assertEquals("t", (p.declarations[3] as? VariableDeclaration)?.name)
         assertEquals("\"Hello\"", (p.declarations[3] as? VariableDeclaration)?.initializer?.code)
-        assertEquals("n", (p.declarations[4] as? VariableDeclaration)?.code)
+        assertEquals("n", (p.declarations[4] as? VariableDeclaration)?.name)
         assertEquals("None", (p.declarations[4] as? VariableDeclaration)?.initializer?.code)
     }
 
