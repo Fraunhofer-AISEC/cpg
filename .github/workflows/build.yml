@@ -33,7 +33,7 @@ jobs:
           cache: 'gradle'
       - uses: actions/setup-python@v2
         with:
-          python-version: "3.9"
+          python-version: "3.10"
       - uses: actions/setup-node@v2
         with:
           node-version: '16'
@@ -63,7 +63,7 @@ jobs:
       - name: Install JEP
         run: |
           pip3 install jep==$(grep "black.ninia:jep" cpg-library/build.gradle.kts | cut -d ":" -f 3 | cut -d "\"" -f 1)
-          sudo cp /opt/hostedtoolcache/Python/3.9*/x64/lib/python3.9/site-packages/jep/libjep.so /usr/lib/
+          sudo cp /opt/hostedtoolcache/Python/3.10*/x64/lib/python3.10/site-packages/jep/libjep.so /usr/lib/
       - name: Install pycodestyle
         run: |
             pip3 install pycodestyle
