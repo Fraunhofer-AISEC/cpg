@@ -94,6 +94,11 @@ open class DFAOrderEvaluator(
             return false
         }
 
+        // First dummy edge to simulate that we are in the start state.
+        fsm.executionTrace.add(
+            Triple(fsm.currentState!!, startNode, BaseOpEdge(FSM.EPSILON, "", fsm.currentState!!))
+        )
+
         // Stores the current markings in the FSM (i.e., which base is at which FSM-node).
         val baseToFSM = mutableMapOf<String, FSM>()
         // Stores the states (i.e., nodes and their states in the fsm) to avoid endless loops.
@@ -141,7 +146,7 @@ open class DFAOrderEvaluator(
 
                         if (!allOk) {
                             actionMissingTransitionForNode(node, baseToFSM[baseAndOp.first])
-                            isValidOrder = false
+                            return false
                         }
                     }
                 }
@@ -206,7 +211,7 @@ open class DFAOrderEvaluator(
         if (base != null && consideredBases.contains(base.id)) {
             // We add the path as prefix to the base in order to differentiate between
             // the different paths of execution which both can use the same base.
-            val prefixedBase = "$eogPath|${base.id}"
+            val prefixedBase = "$eogPath|${base.name}.${base.id}"
             return Pair(prefixedBase, nodesToOp[node]!!)
         }
 

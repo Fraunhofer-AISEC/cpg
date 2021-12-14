@@ -138,6 +138,8 @@ open class FSM : Cloneable {
         val newFSM = FSM()
         newFSM.currentState = this.currentState?.clone()
         newFSM.states = this.states
+        newFSM.executionTrace = mutableListOf()
+        newFSM.executionTrace.addAll(this.executionTrace)
         return newFSM
     }
 
