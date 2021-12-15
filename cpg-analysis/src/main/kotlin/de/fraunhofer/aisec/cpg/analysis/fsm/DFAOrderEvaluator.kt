@@ -86,9 +86,11 @@ open class DFAOrderEvaluator(
     /**
      * Checks if a sequence of [Node]s/statemets starting from [startNode] follows the sequence
      * given by the [DFA] [fsm]. If the sequence of statements violates the rules, the method
-     * returns `false`, if it is correct, the method returns `true`.
+     * returns `false`, if it is correct, the method returns `true`. The flag [stopOnWrongBase]
+     * makes the FSM stop evaluation of a base if an unexpected operation was observed for that
+     * base.
      */
-    fun evaluateOrder(fsm: FSM, startNode: Node): Boolean {
+    fun evaluateOrder(fsm: FSM, startNode: Node, stopOnWrongBase: Boolean = true): Boolean {
         if (fsm !is DFA) {
             log.error("fsm argument has to be a DFA.")
             return false
@@ -105,6 +107,9 @@ open class DFAOrderEvaluator(
         val seenStates = mutableSetOf<String>()
         // Maps a node to all the paths which were followed to reach the node.
         startNode.addEogPath("")
+        // Collect bases (with their eogPath) which have already been found to be incorrect due to
+        // an out-of-order call.
+        val wrongBases = mutableSetOf<String>()
 
         var isValidOrder = true
 
@@ -133,7 +138,13 @@ open class DFAOrderEvaluator(
                 if (node is CallExpression && nodesToOp.contains(node)) {
                     val baseAndOp = getBaseAndOpOfNode(node, eogPath)
 
-                    if (baseAndOp != null) {
+                    if (baseAndOp != null &&
+                            (!stopOnWrongBase ||
+                                wrongBases.none { wb ->
+                                    wb.endsWith(baseAndOp.first.split("|")[1]) &&
+                                        baseAndOp.first.startsWith(wb.split("|")[0])
+                                })
+                    ) {
                         // Make a transition in the DFA. In case, it is not possible,
                         // there was an error in the order of statements and allOk is
                         // set to false. If this is the first time we use the base (i.e.,
@@ -146,7 +157,8 @@ open class DFAOrderEvaluator(
 
                         if (!allOk) {
                             actionMissingTransitionForNode(node, baseToFSM[baseAndOp.first])
-                            return false
+                            wrongBases.add(baseAndOp.first)
+                            isValidOrder = false
                         }
                     }
                 }
