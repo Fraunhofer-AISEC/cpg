@@ -60,7 +60,7 @@ open class DFAOrderEvaluator(
      * its operator is considered by the DFA and its base is subject to analysis. This means that
      * the order is broken at [node].
      */
-    open fun actionMissingTransitionForNode(node: Node, fsm: FSM?) {
+    open fun actionMissingTransitionForNode(node: Node, fsm: DFA?) {
         log.error("There was a failure in the order of statements at node: ${node.id}")
         log.error(
             fsm?.executionTrace
@@ -74,7 +74,7 @@ open class DFAOrderEvaluator(
      * state for the given [base]. This means that not all required statements have been executed
      * for [base] so far. The [fsm] holds the execution trace found by the analysis.
      */
-    open fun actionNonAcceptingTermination(base: String, fsm: FSM) {
+    open fun actionNonAcceptingTermination(base: String, fsm: DFA) {
         log.error("Base $base did not terminate in an accepting state")
         log.error(
             fsm.executionTrace.fold("") { r, t ->
@@ -85,24 +85,18 @@ open class DFAOrderEvaluator(
 
     /**
      * Checks if a sequence of [Node]s/statemets starting from [startNode] follows the sequence
-     * given by the [DFA] [fsm]. If the sequence of statements violates the rules, the method
-     * returns `false`, if it is correct, the method returns `true`. The flag [stopOnWrongBase]
-     * makes the FSM stop evaluation of a base if an unexpected operation was observed for that
-     * base.
+     * given by the [dfa]. If the sequence of statements violates the rules, the method returns
+     * `false`, if it is correct, the method returns `true`. The flag [stopOnWrongBase] makes the
+     * FSM stop evaluation of a base if an unexpected operation was observed for that base.
      */
-    fun evaluateOrder(fsm: FSM, startNode: Node, stopOnWrongBase: Boolean = true): Boolean {
-        if (fsm !is DFA) {
-            log.error("fsm argument has to be a DFA.")
-            return false
-        }
-
+    fun evaluateOrder(dfa: DFA, startNode: Node, stopOnWrongBase: Boolean = true): Boolean {
         // First dummy edge to simulate that we are in the start state.
-        fsm.executionTrace.add(
-            Triple(fsm.currentState!!, startNode, BaseOpEdge(FSM.EPSILON, "", fsm.currentState!!))
+        dfa.executionTrace.add(
+            Triple(dfa.currentState!!, startNode, BaseOpEdge(DFA.EPSILON, "", dfa.currentState!!))
         )
 
         // Stores the current markings in the FSM (i.e., which base is at which FSM-node).
-        val baseToFSM = mutableMapOf<String, FSM>()
+        val baseToFSM = mutableMapOf<String, DFA>()
         // Stores the states (i.e., nodes and their states in the fsm) to avoid endless loops.
         val seenStates = mutableSetOf<String>()
         // Maps a node to all the paths which were followed to reach the node.
@@ -152,7 +146,7 @@ open class DFAOrderEvaluator(
                         // start the analysis for that base from scratch.
                         val allOk =
                             baseToFSM
-                                .computeIfAbsent(baseAndOp.first) { fsm.clone() }
+                                .computeIfAbsent(baseAndOp.first) { dfa.clone() }
                                 .makeTransitionWithOp(baseAndOp.second, node)
 
                         if (!allOk) {
@@ -302,7 +296,7 @@ open class DFAOrderEvaluator(
     private fun getNextNodes(
         node: Node,
         eogPath: String,
-        baseToFSM: MutableMap<String, FSM>,
+        baseToFSM: MutableMap<String, DFA>,
         seenStates: MutableSet<String>
     ): List<Node> {
         val outNodes = mutableListOf<Node>()
@@ -316,7 +310,7 @@ open class DFAOrderEvaluator(
             // We have multiple outgoing nodes, so we generate multiple new entries:
             //  - Each node gets its own eogPath which is split up
             //  - Each node gets a copy of the current DFA
-            val newBases = mutableMapOf<String, FSM>()
+            val newBases = mutableMapOf<String, DFA>()
             // Remove all the entries from baseToFSM which are now replaced with multiple new ones.
             // We store these entries without the eogPath prefix and update them in (1)
             val iterator = baseToFSM.entries.iterator()
@@ -342,7 +336,7 @@ open class DFAOrderEvaluator(
                 } else {
                     val newEOGPath = "$eogPath$i"
                     // Clone the FSM for each of the paths in the baseToFSM map.
-                    newBases.forEach { (k: String, v: FSM) ->
+                    newBases.forEach { (k: String, v: DFA) ->
                         baseToFSM[newEOGPath + k] = v.clone()
                     }
                     // Update the eog-path directly in the map of paths for the respective node.
@@ -358,7 +352,7 @@ open class DFAOrderEvaluator(
      * [nodeId]. It is used to keep track of the states which have already been analyzed and to
      * avoid getting stuck in loops.
      */
-    private fun getStateSnapshot(nodeId: Long?, baseToFSM: Map<String, FSM>): String {
+    private fun getStateSnapshot(nodeId: Long?, baseToFSM: Map<String, DFA>): String {
         val grouped =
             baseToFSM
                 .entries

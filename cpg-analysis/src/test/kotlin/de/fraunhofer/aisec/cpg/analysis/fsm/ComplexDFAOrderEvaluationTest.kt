@@ -64,7 +64,7 @@ class ComplexDFAOrderEvaluationTest {
         dfa.addEdge(q1, q2, "create()", "cm")
         dfa.addEdge(q2, q3, "init()", "cm")
         dfa.addEdge(q3, q4, "start()", "cm")
-        dfa.addEdge(q4, q5, FSM.EPSILON, "cm")
+        dfa.addEdge(q4, q5, DFA.EPSILON, "cm")
         dfa.addEdge(q5, q5, "process()", "cm")
         dfa.addEdge(q5, q6, "finish()", "cm")
         dfa.addEdge(q6, q4, "start()", "cm")

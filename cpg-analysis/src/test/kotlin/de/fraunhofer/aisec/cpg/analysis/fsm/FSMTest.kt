@@ -51,7 +51,7 @@ class FSMTest {
 
     @Test
     fun testFSMDotFile() {
-        val fsm = FSM()
+        val fsm = DFA()
         val q1 = fsm.addState(isStart = true)
         val q2 = fsm.addState(isAcceptingState = true)
         val q3 = fsm.addState(isAcceptingState = true)

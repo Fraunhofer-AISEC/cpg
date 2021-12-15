@@ -26,10 +26,10 @@
 package de.fraunhofer.aisec.cpg.analysis.fsm
 
 /**
- * A simple class representing a state in an [FSM].
- * - [name] is the name of the State and must be unique for the [FSM].
+ * A simple class representing a state in an FSM.
+ * - [name] is the name of the State and must be unique for the FSM.
  * - [isStart] indicates if it is the starting state.
- * - [isAcceptingState] indicates if this State accepts the [FSM] (in our case, this means that the
+ * - [isAcceptingState] indicates if this State accepts the FSM (in our case, this means that the
  * order of statements was correct).
  */
 class State(val name: String, val isStart: Boolean = false, var isAcceptingState: Boolean = false) :
