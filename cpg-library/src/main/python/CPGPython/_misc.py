@@ -25,6 +25,7 @@
 from ._spotless_dummy import *
 import inspect
 import ast
+from de.fraunhofer.aisec.cpg.graph import NodeBuilder
 from de.fraunhofer.aisec.cpg.sarif import PhysicalLocation
 from de.fraunhofer.aisec.cpg.sarif import Region
 from java.net import URI
@@ -126,3 +127,19 @@ def is_statement(self, target):
     n = CPG_JAVA + ".graph.statements."
     return target is not None and target.java_name.startswith(
         n)
+
+
+def wrap_declaration_to_stmt(self, stmt):
+    """
+    Wrap a single declaration in a DeclarationStatement
+    """
+    if not self.is_declaration(stmt):
+        self.log_with_loc(
+            "Expected a declaration but got \"%s\". Using a dummy." %
+            (stmt.java_name), loglevel="ERROR")
+        return NodeBuilder.newDeclarationStatement("DUMMY")
+    decl_stmt = NodeBuilder.newDeclarationStatement(
+        stmt.getCode())
+    decl_stmt.setLocation(stmt.getLocation())
+    decl_stmt.setSingleDeclaration(stmt)
+    return decl_stmt

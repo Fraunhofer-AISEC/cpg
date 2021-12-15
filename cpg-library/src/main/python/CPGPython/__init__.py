@@ -50,6 +50,7 @@ class PythonASTToCPG(ast.NodeVisitor):
     from ._misc import is_statement
     from ._misc import is_variable_declaration
     from ._misc import log_with_loc
+    from ._misc import wrap_declaration_to_stmt
     from ._statements import handle_argument
     from ._statements import handle_for
     from ._statements import handle_function_or_method
@@ -73,12 +74,8 @@ class PythonASTToCPG(ast.NodeVisitor):
                 r = self.handle_statement(stmt)
                 self.log_with_loc("Handling statement result is: %s" % (r))
                 if self.is_declaration(r):
-                    nsd.addDeclaration(r)
-                elif self.is_statement(r):
-                    nsd.addStatement(r)
-                else:
-                    self.log_with_loc("Don't know what to do with this: %s" %
-                                      (r), loglevel="ERROR")
+                    r = self.wrap_declaration_to_stmt(r)
+                nsd.addStatement(r)
 
             self.scopemanager.leaveScope(nsd)
             self.scopemanager.addDeclaration(nsd)

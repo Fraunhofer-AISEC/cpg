@@ -66,20 +66,8 @@ def handle_statement(self, stmt):
             elif isinstance(s, ast.stmt):
                 handled_stmt = self.handle_statement(s)
                 if self.is_declaration(handled_stmt):
-                    # TODO wrap this in a function...
-                    decl_stmt = NodeBuilder.newDeclarationStatement(
-                        self.get_src_code(s))
-                    self.add_loc_info(s, decl_stmt)
-                    decl_stmt.setSingleDeclaration(handled_stmt)
-                    cls.addStatement(decl_stmt)
-                elif self.is_statement(handled_stmt):
-                    cls.addStatement(handled_stmt)
-                else:
-                    self.log_with_loc(
-                        "Expected a statement or a declaration. Received %s" %
-                        (type(handled_stmt)), loglevel="ERROR")
-            else:
-                self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
+                    handled_stmt = self.wrap_declaration_to_stmt(handled_stmt)
+                cls.addStatement(handled_stmt)
         for decorator in stmt.decorator_list:
             self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         self.scopemanager.leaveScope(cls)
@@ -561,11 +549,7 @@ def handle_for(self, stmt):
     self.add_loc_info(stmt, for_stmt)
     target = self.handle_expression(stmt.target)
     if self.is_variable_declaration(target):
-        decl_stmt = NodeBuilder.newDeclarationStatement(
-            self.get_src_code(stmt.target))
-        self.add_loc_info(stmt.target, decl_stmt)
-        decl_stmt.setSingleDeclaration(target)
-        target = decl_stmt
+        target = self.wrap_declaration_to_stmt(target)
     for_stmt.setVariable(target)
     it = self.handle_expression(stmt.iter)
     for_stmt.setIterable(it)
@@ -591,24 +575,15 @@ def make_compound_statement(self, stmts) -> CompoundStatement:
         """ TODO decide how to handle this... """
         s = self.handle_statement(stmts[0])
         if self.is_declaration(s):
-            decl_stmt = NodeBuilder.newDeclarationStatement(
-                self.get_src_code(stmts[0]))
-            self.add_loc_info(stmts[0], decl_stmt)
-            decl_stmt.setSingleDeclaration(s)
-            return decl_stmt
-        else:
-            return s
+            s = self.wrap_declaration_to_stmt(s)
+        return s
     else:
         compound_statement = NodeBuilder.newCompoundStatement("")
         # TODO location
         for s in stmts:
             s = self.handle_statement(s)
             if self.is_declaration(s):
-                decl_stmt = NodeBuilder.newDeclarationStatement(s.getCode())
-                decl_stmt.setLocation(s.getLocation())
-                decl_stmt.setSingleDeclaration(s)
-                compound_statement.addStatement(decl_stmt)
-            else:
-                compound_statement.addStatement(s)
+                s = self.wrap_declaration_to_stmt(s)
+            compound_statement.addStatement(s)
 
         return compound_statement
