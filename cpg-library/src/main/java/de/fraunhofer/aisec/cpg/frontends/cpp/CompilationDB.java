@@ -35,18 +35,7 @@ import java.util.stream.Collectors;
 
 public class CompilationDB {
 
-  public static List<String> getIncludeDirectories(String stringVal) {
-    if (stringVal == null || stringVal.length() == 0) {
-      return null;
-    }
-    // get all the -I flag files
-    List<String> words = List.of(stringVal.split(" "));
-    List<String> includeFilesDirectories = new LinkedList<>();
-    for (String word : words) {
-      if (word.startsWith("-I")) {
-        includeFilesDirectories.add(word.substring(2));
-      }
-    }
+  public static List<String> getIncludeFIlesInTheFolders(List<String> includeFilesDirectories) {
     List<String> includeFiles = new LinkedList<>();
     includeFilesDirectories.forEach(
         item -> {
@@ -61,7 +50,35 @@ public class CompilationDB {
             e.printStackTrace();
           }
         });
-
     return includeFiles;
+  }
+
+  public static List<String> getIncludeDirectories(String stringVal) {
+    if (stringVal == null || stringVal.length() == 0) {
+      return null;
+    }
+    // get all the -I flag files
+    List<String> words = List.of(stringVal.split(" "));
+    List<String> includeFilesDirectories = new LinkedList<>();
+    for (String word : words) {
+      if (word.startsWith("-I")) {
+        includeFilesDirectories.add(word.substring(2)); // adds the directory excluding the -I field
+      }
+    }
+    return includeFilesDirectories;
+  }
+
+  public static List<String> getIncludeDirectories(List<String> commandVals) {
+    //     ['clang', 'main.c', '-o', 'main.c.o'],
+    // The I vals come after -I
+    List<String> includeFilesDirectories = new LinkedList<>();
+    for (int i = 0; i < commandVals.size(); i++) {
+      if (commandVals.get(i) != null && commandVals.get(i).startsWith("-I")) {
+        if (i + 1 != commandVals.size()) {
+          includeFilesDirectories.add(commandVals.get(i + 1));
+        }
+      }
+    }
+    return includeFilesDirectories;
   }
 }

@@ -64,7 +64,17 @@ private const val DEFAULT_USER_NAME = "neo4j"
 private const val DEFAULT_PASSWORD = "password"
 private const val DEFAULT_SAVE_DEPTH = -1
 
-data class compilationDbStructure(val directory: String, val command: String, val file: String)
+data class compilationDbStructureAsString(
+    val directory: String,
+    val command: Any,
+    val file: String
+)
+
+data class compilationDbStructureAsArray(
+    val directory: String,
+    val command: List<String>,
+    val file: String
+)
 
 /**
  * An application to export the <a href="https://github.com/Fraunhofer-AISEC/cpg">cpg</a> to a <a
@@ -76,13 +86,14 @@ class Application : Callable<Int> {
     private val log: Logger
         get() = LoggerFactory.getLogger(Application::class.java)
 
-    @CommandLine.Parameters(
-        arity = "1..*",
+    @CommandLine.Option(
+        names = ["files"],
+        //        required = true,
         description =
             [
                 "The paths to analyze. If module support is enabled, the paths will be looked at if they contain modules"]
     )
-    private var files: Array<String> = arrayOf(".")
+    private var files: Array<String> = arrayOf()
 
     @CommandLine.Option(
         names = ["--user"],
@@ -144,16 +155,16 @@ class Application : Callable<Int> {
     private var enableExperimentalGo: Boolean = false
 
     @CommandLine.Option(
-        names = ["--enable-experimental-typescript"],
-        description = ["Enables the experimental language frontend for TypeScript."]
-    )
-    private var enableExperimentalTypeScript: Boolean = false
-
-    @CommandLine.Option(
         names = ["--json-compilation-database"],
         description = ["Give the json compilation database file path "]
     )
     private var jsonCompilationDatabase: String = ""
+
+    @CommandLine.Option(
+        names = ["--enable-experimental-typescript"],
+        description = ["Enables the experimental language frontend for TypeScript."]
+    )
+    private var enableExperimentalTypeScript: Boolean = false
 
     /**
      * Pushes the whole translationResult to the neo4j db.
@@ -255,11 +266,16 @@ class Application : Callable<Int> {
             }
             filePaths[index] = file
         }
+        if (jsonCompilationDatabase == "" && files.isEmpty()) {
+            throw Error(
+                "Files list is empty or jsonCompilationDatabase is also empty. Please provide --files to evaluate or --json-compilation-database for CXX files"
+            )
+        }
 
         val translationConfiguration =
             TranslationConfiguration.builder()
                 .sourceLocations(*filePaths)
-                .topLevel(topLevel!!)
+                .topLevel(topLevel)
                 .defaultPasses()
                 .defaultLanguages()
                 .loadIncludes(loadIncludes)
@@ -268,11 +284,21 @@ class Application : Callable<Int> {
         if (jsonCompilationDatabase != "") {
             val jsonStringFile = File(jsonCompilationDatabase).readText().toString()
             val mapper = ObjectMapper().registerKotlinModule()
-            val obj: List<compilationDbStructure> = mapper.readValue(jsonStringFile)
-            obj.forEach {
-                val includeFiles = CompilationDB.getIncludeDirectories(it.command)
-                val fileName = it.file
-                val basedir = it.directory
+            val obj: List<compilationDbStructureAsString> = mapper.readValue(jsonStringFile)
+            for (i in obj.indices) {
+                var includeFiles: List<String> = arrayListOf()
+                val currentObject = obj[i]
+                val fileName = currentObject.file
+                includeFiles =
+                    if (currentObject.command.toString().startsWith("[")) {
+                        //                    includeFilesAsArray = mapper.readValue(it.command)
+                        val objAsArr: List<compilationDbStructureAsArray> =
+                            mapper.readValue(jsonStringFile)
+                        CompilationDB.getIncludeDirectories(objAsArr[i].command)
+                    } else {
+                        CompilationDB.getIncludeDirectories(currentObject.command.toString())
+                    }
+                val basedir = currentObject.directory
                 var file: File = File(fileName)
                 if (file.isAbsolute) {
                     compilationDatabase.put(file, includeFiles)
@@ -316,9 +342,7 @@ class Application : Callable<Int> {
                 .lines()
                 .map(String::trim)
                 .map { if (Paths.get(it).isAbsolute) it else Paths.get(baseDir, it).toString() }
-                .forEach {
-                    translationConfiguration.includePath(it)
-                }
+                .forEach { translationConfiguration.includePath(it) }
         }
 
         return translationConfiguration.build()
