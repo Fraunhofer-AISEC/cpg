@@ -181,6 +181,76 @@ class ValueEvaluator(
                     } else if (lhsValue is Float && rhsValue is Number) {
                         return lhsValue * rhsValue.toDouble()
                     }
+                } else if (expr.operatorCode == ">") {
+                    if (lhsValue is Int && rhsValue is Number) {
+                        return lhsValue > rhsValue.toInt()
+                    } else if (lhsValue is Long && rhsValue is Number) {
+                        return lhsValue > rhsValue.toLong()
+                    } else if (lhsValue is Short && rhsValue is Number) {
+                        return lhsValue > rhsValue.toShort()
+                    } else if (lhsValue is Byte && rhsValue is Number) {
+                        return lhsValue > rhsValue.toByte()
+                    } else if (lhsValue is Double && rhsValue is Number) {
+                        return lhsValue > rhsValue.toDouble()
+                    } else if (lhsValue is Float && rhsValue is Number) {
+                        return lhsValue > rhsValue.toFloat()
+                    }
+                } else if (expr.operatorCode == ">=") {
+                    if (lhsValue is Int && rhsValue is Number) {
+                        return lhsValue >= rhsValue.toInt()
+                    } else if (lhsValue is Long && rhsValue is Number) {
+                        return lhsValue >= rhsValue.toLong()
+                    } else if (lhsValue is Short && rhsValue is Number) {
+                        return lhsValue >= rhsValue.toShort()
+                    } else if (lhsValue is Byte && rhsValue is Number) {
+                        return lhsValue >= rhsValue.toByte()
+                    } else if (lhsValue is Double && rhsValue is Number) {
+                        return lhsValue >= rhsValue.toDouble()
+                    } else if (lhsValue is Float && rhsValue is Number) {
+                        return lhsValue >= rhsValue.toFloat()
+                    }
+                } else if (expr.operatorCode == "<") {
+                    if (lhsValue is Int && rhsValue is Number) {
+                        return lhsValue < rhsValue.toInt()
+                    } else if (lhsValue is Long && rhsValue is Number) {
+                        return lhsValue < rhsValue.toLong()
+                    } else if (lhsValue is Short && rhsValue is Number) {
+                        return lhsValue < rhsValue.toShort()
+                    } else if (lhsValue is Byte && rhsValue is Number) {
+                        return lhsValue < rhsValue.toByte()
+                    } else if (lhsValue is Double && rhsValue is Number) {
+                        return lhsValue < rhsValue.toDouble()
+                    } else if (lhsValue is Float && rhsValue is Number) {
+                        return lhsValue < rhsValue.toFloat()
+                    }
+                } else if (expr.operatorCode == "<=") {
+                    if (lhsValue is Int && rhsValue is Number) {
+                        return lhsValue <= rhsValue.toInt()
+                    } else if (lhsValue is Long && rhsValue is Number) {
+                        return lhsValue <= rhsValue.toLong()
+                    } else if (lhsValue is Short && rhsValue is Number) {
+                        return lhsValue <= rhsValue.toShort()
+                    } else if (lhsValue is Byte && rhsValue is Number) {
+                        return lhsValue <= rhsValue.toByte()
+                    } else if (lhsValue is Double && rhsValue is Number) {
+                        return lhsValue <= rhsValue.toDouble()
+                    } else if (lhsValue is Float && rhsValue is Number) {
+                        return lhsValue <= rhsValue.toFloat()
+                    }
+                } else if (expr.operatorCode == "==") {
+                    if (lhsValue is Int && rhsValue is Number) {
+                        return lhsValue == rhsValue.toInt()
+                    } else if (lhsValue is Long && rhsValue is Number) {
+                        return lhsValue == rhsValue.toLong()
+                    } else if (lhsValue is Short && rhsValue is Number) {
+                        return lhsValue == rhsValue.toShort()
+                    } else if (lhsValue is Byte && rhsValue is Number) {
+                        return lhsValue == rhsValue.toByte()
+                    } else if (lhsValue is Double && rhsValue is Number) {
+                        return lhsValue == rhsValue.toDouble()
+                    } else if (lhsValue is Float && rhsValue is Number) {
+                        return lhsValue == rhsValue.toFloat()
+                    }
                 }
 
                 return cannotEvaluate(expr, this)

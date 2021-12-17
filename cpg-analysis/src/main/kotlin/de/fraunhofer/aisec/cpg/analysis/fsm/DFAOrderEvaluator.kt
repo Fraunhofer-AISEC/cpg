@@ -27,6 +27,8 @@ package de.fraunhofer.aisec.cpg.analysis.fsm
 
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.edge.Properties
+import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ConstructExpression
@@ -300,12 +302,28 @@ open class DFAOrderEvaluator(
         seenStates: MutableSet<String>
     ): List<Node> {
         val outNodes = mutableListOf<Node>()
-        outNodes += node.nextEOG
+        // outNodes += node.nextEOG
+        outNodes +=
+            PropertyEdge.unwrap(
+                node.nextEOGEdges.filter { e ->
+                    e.getProperty(Properties.UNREACHABLE) == null ||
+                        e.getProperty(Properties.UNREACHABLE) == false
+                }
+            )
 
-        if (outNodes.size == 1) {
+        if (outNodes.size == 1 && node.nextEOG.size == 1) {
             // We only have one node following this node, so we
             // simply propagate the current eogPath to the next node.
             outNodes[0].addEogPath(eogPath)
+        } else if (outNodes.size == 1) {
+            // We still add this node but this time, we also check if have seen the state it before
+            // to avoid endless loops etc.
+            outNodes[0].addEogPath(eogPath)
+            val stateOfNext: String = getStateSnapshot(outNodes[0].id, baseToFSM)
+            if (seenStates.contains(stateOfNext)) {
+                log.debug("Node/FSM state already visited: ${stateOfNext}. Remove from next nodes.")
+                outNodes.removeAt(0)
+            }
         } else if (outNodes.size > 1) {
             // We have multiple outgoing nodes, so we generate multiple new entries:
             //  - Each node gets its own eogPath which is split up

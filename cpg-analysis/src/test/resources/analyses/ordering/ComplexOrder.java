@@ -1,3 +1,5 @@
+import kotlin.random.URandomKt;
+
 public class ComplexOrder {
     // DOES NOT COMPILE
     // DOES NOT MAKE REAL SENSE
@@ -106,7 +108,7 @@ public class ComplexOrder {
         Botan2 p7 = new Botan2(1);
         p7.create();
         p7.init();
-        while (true) {
+        while (URandomKt.nextUInt() > 5) {
             p7.start();
             p7.process();
             p7.finish();
@@ -129,6 +131,18 @@ public class ComplexOrder {
         p8.reset();
     }
 
+    void okWhile2() {
+        Botan2 p7 = new Botan2(1);
+        p7.create();
+        p7.init();
+        while (true) {
+            p7.start();
+            p7.process();
+            p7.finish();
+        }
+        p7.reset();
+    }
+
     void okDoWhile() {
         Botan2 p6 = new Botan2(1);
         p6.create();
@@ -137,7 +151,7 @@ public class ComplexOrder {
             p6.start();
             p6.process();
             p6.finish();
-        } while(true);
+        } while(URandomKt.nextUInt() > 5);
         p6.reset();
     }
 }

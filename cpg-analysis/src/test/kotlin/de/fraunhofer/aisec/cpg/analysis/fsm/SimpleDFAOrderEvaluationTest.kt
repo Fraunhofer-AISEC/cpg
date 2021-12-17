@@ -35,6 +35,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.IfStatement
 import de.fraunhofer.aisec.cpg.passes.EdgeCachePass
 import de.fraunhofer.aisec.cpg.passes.IdentifierPass
+import de.fraunhofer.aisec.cpg.passes.UnreachableEOGPass
 import java.nio.file.Path
 import kotlin.test.BeforeTest
 import kotlin.test.assertFalse
@@ -74,6 +75,7 @@ class SimpleDFAOrderEvaluationTest {
                         JavaLanguageFrontend::class.java,
                         JavaLanguageFrontend.JAVA_EXTENSIONS
                     )
+                    .registerPass(UnreachableEOGPass())
                     .registerPass(IdentifierPass())
                     .registerPass(EdgeCachePass())
             }

@@ -35,11 +35,9 @@ import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.passes.EdgeCachePass
 import de.fraunhofer.aisec.cpg.passes.IdentifierPass
+import de.fraunhofer.aisec.cpg.passes.UnreachableEOGPass
 import java.nio.file.Path
-import kotlin.test.BeforeTest
-import kotlin.test.assertFalse
-import kotlin.test.assertNotNull
-import kotlin.test.assertTrue
+import kotlin.test.*
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
@@ -85,6 +83,7 @@ class ComplexDFAOrderEvaluationTest {
                         JavaLanguageFrontend::class.java,
                         JavaLanguageFrontend.JAVA_EXTENSIONS
                     )
+                    .registerPass(UnreachableEOGPass())
                     .registerPass(IdentifierPass())
                     .registerPass(EdgeCachePass())
             }
@@ -407,6 +406,41 @@ class ComplexDFAOrderEvaluationTest {
         val everythingOk = orderEvaluator.evaluateOrder(dfa, p7Decl)
 
         assertFalse(everythingOk, "Expected incorrect order")
+    }
+
+    @Test
+    fun testSuccessWhileLoop2FSM() {
+        val functionOk =
+            tu
+                .getDeclarationsByName("ComplexOrder", RecordDeclaration::class.java)
+                .firstOrNull()
+                ?.declarations
+                ?.firstOrNull { d -> d.name == "okWhile2" } as
+                FunctionDeclaration?
+
+        assertNotNull(functionOk)
+
+        val p7Decl = (functionOk.body as CompoundStatement).statements[0] as? DeclarationStatement
+        assertNotNull(p7Decl)
+        val consideredDecl = mutableSetOf(p7Decl.declarations[0]?.id)
+
+        val nodesToOp = mutableMapOf<Node, String>()
+        nodesToOp[(functionOk.body as CompoundStatement).statements[1]] = "create()"
+        nodesToOp[(functionOk.body as CompoundStatement).statements[2]] = "init()"
+        val loopBody =
+            ((functionOk.body as CompoundStatement).statements[3] as? WhileStatement)?.statement as?
+                CompoundStatement
+        assertNotNull(loopBody)
+        nodesToOp[loopBody.statements[0]] = "start()"
+        nodesToOp[loopBody.statements[1]] = "process()"
+        nodesToOp[loopBody.statements[2]] = "finish()"
+
+        nodesToOp[(functionOk.body as CompoundStatement).statements[4]] = "reset()"
+
+        val orderEvaluator = DFAOrderEvaluator(consideredDecl, nodesToOp)
+        val everythingOk = orderEvaluator.evaluateOrder(dfa, p7Decl)
+
+        assertTrue(everythingOk, "Expected correct order")
     }
 
     @Test

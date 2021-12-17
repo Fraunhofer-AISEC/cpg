@@ -55,7 +55,7 @@ public class SimpleOrder {
 
     void nok3() {
         Botan p3 = new Botan(2);
-        if (3 < 4) {
+        if (URandomKt.nextUInt() < 4) {
             p3.start(iv);
         }
         p3.finish(buf);

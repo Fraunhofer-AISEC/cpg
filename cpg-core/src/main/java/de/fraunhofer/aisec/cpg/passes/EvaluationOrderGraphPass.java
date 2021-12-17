@@ -878,6 +878,7 @@ public class EvaluationOrderGraphPass extends Pass {
     PropertyEdge<Node> propertyEdge = new PropertyEdge<>(prev, next);
     propertyEdge.addProperties(this.currentProperties);
     propertyEdge.addProperty(Properties.INDEX, prev.getNextEOG().size());
+    propertyEdge.addProperty(Properties.UNREACHABLE, false);
     prev.addNextEOG(propertyEdge);
     next.addPrevEOG(propertyEdge);
   }
