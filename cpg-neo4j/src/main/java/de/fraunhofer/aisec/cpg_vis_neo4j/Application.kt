@@ -64,15 +64,10 @@ private const val DEFAULT_USER_NAME = "neo4j"
 private const val DEFAULT_PASSWORD = "password"
 private const val DEFAULT_SAVE_DEPTH = -1
 
-data class compilationDbStructureAsString(
-    val directory: String,
-    val command: Any,
-    val file: String
-)
-
-data class compilationDbStructureAsArray(
-    val directory: String,
-    val command: List<String>,
+data class compilationDbStructure(
+    val directory: String?,
+    val command: String? = null,
+    val arguments: List<String>? = null,
     val file: String
 )
 
@@ -284,19 +279,17 @@ class Application : Callable<Int> {
         if (jsonCompilationDatabase != "") {
             val jsonStringFile = File(jsonCompilationDatabase).readText().toString()
             val mapper = ObjectMapper().registerKotlinModule()
-            val obj: List<compilationDbStructureAsString> = mapper.readValue(jsonStringFile)
+            val obj: List<compilationDbStructure> = mapper.readValue(jsonStringFile)
             for (i in obj.indices) {
                 var includeFiles: List<String> = arrayListOf()
                 val currentObject = obj[i]
                 val fileName = currentObject.file
+
                 includeFiles =
-                    if (currentObject.command.toString().startsWith("[")) {
-                        //                    includeFilesAsArray = mapper.readValue(it.command)
-                        val objAsArr: List<compilationDbStructureAsArray> =
-                            mapper.readValue(jsonStringFile)
-                        CompilationDB.getIncludeDirectories(objAsArr[i].command)
+                    if (currentObject.command == null) {
+                        CompilationDB.getIncludeDirectories(obj[i].arguments)
                     } else {
-                        CompilationDB.getIncludeDirectories(currentObject.command.toString())
+                        CompilationDB.getIncludeDirectories(obj[i].command)
                     }
                 val basedir = currentObject.directory
                 var file: File = File(fileName)
