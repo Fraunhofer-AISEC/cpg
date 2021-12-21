@@ -34,9 +34,20 @@ repositories {
 }
 
 dependencies {
-    api("de.fraunhofer.aisec", "cpg", "4.1.1")
+    var cpgVersion = "4.2.0" 
+    
+    // if you want to include all published cpg modules
+    api("de.fraunhofer.aisec", "cpg", cpgVersion)
+    
+    // if you only want to include the core CPG without extra modules
+    api("de.fraunhofer.aisec", "cpg-core", cpgVersion)
+    
+    // or just a particular extra module, such as LLVM
+    api("de.fraunhofer.aisec", "cpg-language-llvm", cpgVersion)
 }
 ```
+
+Beware, that the `cpg` module includes all optional features and might potentially be HUGE (especially because of the LLVM support). If you do not need LLVM, we suggest just using the `cpg-core` module. In the future we are working on extracting more optional modules into separate modules.
 
 #### Development Builds
 
