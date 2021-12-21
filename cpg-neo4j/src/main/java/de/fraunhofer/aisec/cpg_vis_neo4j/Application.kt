@@ -68,7 +68,8 @@ data class compilationDbStructure(
     val directory: String?,
     val command: String? = null,
     val arguments: List<String>? = null,
-    val file: String
+    val file: String,
+    val output: String?
 )
 
 /**
