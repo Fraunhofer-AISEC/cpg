@@ -25,6 +25,10 @@
  */
 package de.fraunhofer.aisec.cpg.analysis.fsm
 
+/**
+ * Represents an edge of the automaton. The edge label consists of an operation (typically a method
+ * name) and a base which allows us to differentiate between multiple objects.
+ */
 class BaseOpEdge(val op: String, val base: String?, val nextState: State) {
 
     fun matches(base: String?, op: String): Boolean {

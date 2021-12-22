@@ -67,6 +67,6 @@ class FSMTest {
         fsm.addEdge(q5, q5, "check_after_update()", "v")
         fsm.addEdge(q5, q4, "update()", "v")
 
-        assertEquals(simpleStringRepresentation, fsm.toString())
+        assertEquals(simpleStringRepresentation, fsm.toDotString())
     }
 }

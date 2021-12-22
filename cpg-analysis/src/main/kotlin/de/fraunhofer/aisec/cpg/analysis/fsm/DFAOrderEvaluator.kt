@@ -41,17 +41,18 @@ import org.slf4j.LoggerFactory
  * the following inputs:
  * - [consideredBases]: A set of the IDs of nodes (typically the [VariableDeclaration]) which are
  * considered.
- * - [nodesToOp]: A mapping between CPG nodes and their operators used by the respective edges in
- * the DFA. Currently, we only consider [CallExpression]s.
+ * - [nodeToRelevantMethod]: A mapping between CPG nodes and their operators used by the respective
+ * edges in the DFA. Currently, we only consider [CallExpression]s. If a node is not contained in
+ * this list, it is not considered by the evaluation as we assume that the method is not relevant.
  * - [thisPositionOfNode]: If a non-object oriented language was used, this is a map from CPG nodes
  * (i.e., the [CallExpression]) to the argument position serving as base of the operation.
  */
 open class DFAOrderEvaluator(
-    var consideredBases: Set<Long?>,
-    var nodesToOp: Map<Node, String>,
+    var consideredBases: Set<Long>,
+    var nodeToRelevantMethod: Map<Node, String>,
     var thisPositionOfNode: Map<Node, Int> = mapOf()
 ) {
-    private val nodeIDtoEOGPathSet = mutableMapOf<Long?, MutableSet<String>>()
+    private val nodeIDtoEOGPathSet = mutableMapOf<Long, MutableSet<String>>()
     private val log: Logger = LoggerFactory.getLogger(DFAOrderEvaluator::class.java)
 
     /**
@@ -60,11 +61,11 @@ open class DFAOrderEvaluator(
      * its operator is considered by the DFA and its base is subject to analysis. This means that
      * the order is broken at [node].
      */
-    open fun actionMissingTransitionForNode(node: Node, fsm: DFA?) {
+    open fun actionMissingTransitionForNode(node: Node, fsm: DFA) {
         log.error("There was a failure in the order of statements at node: ${node.id}")
         log.error(
-            fsm?.executionTrace
-                ?.fold("") { r, t -> "$r${t.first}${t.third} (node id: ${t.second.id})\n" }
+            fsm.executionTrace
+                .fold("") { r, t -> "$r${t.first}${t.third} (node id: ${t.second.id})\n" }
                 .toString()
         )
     }
@@ -113,7 +114,7 @@ open class DFAOrderEvaluator(
             val node = worklist.removeFirst()
             // Add the node to be processed together with an encoding of the path/fsm-state
             // to the list of already processed states.
-            val currentState = getStateSnapshot(node.id, baseToFSM)
+            val currentState = getStateSnapshot(node.id!!, baseToFSM)
             seenStates.add(currentState)
 
             val eogPathSet = node.getEogPaths()
@@ -129,7 +130,7 @@ open class DFAOrderEvaluator(
                 // Currently, we only handle CallExpressions as "operation".
                 // Check if the current node is of interest for the DFA.
                 // This is the case if the map nodesToOp contains the node.
-                if (node is CallExpression && nodesToOp.contains(node)) {
+                if (node is CallExpression && nodeToRelevantMethod.contains(node)) {
                     val baseAndOp = getBaseAndOpOfNode(node, eogPath)
 
                     if (baseAndOp != null &&
@@ -150,7 +151,10 @@ open class DFAOrderEvaluator(
                                 .makeTransitionWithOp(baseAndOp.second, node)
 
                         if (!allOk) {
-                            actionMissingTransitionForNode(node, baseToFSM[baseAndOp.first])
+                            actionMissingTransitionForNode(
+                                node,
+                                baseToFSM.computeIfAbsent(baseAndOp.first) { dfa.clone() }
+                            )
                             wrongBases.add(baseAndOp.first)
                             isValidOrder = false
                         }
@@ -180,10 +184,10 @@ open class DFAOrderEvaluator(
 
     /**
      * Returns a [Pair] holding the "base" and the "operator" of the function/method call happening
-     * in [node]. The operator is retrieved from the map [nodesToOp] and is probably the name of the
-     * function called. If the call is neither a [MemberCallExpression] nor a [ConstructExpression],
-     * it probably calls a function which does not have a "base" (as it is the case for C). In that
-     * case, we try to look up the base in the map [thisPositionOfNode].
+     * in [node]. The operator is retrieved from the map [nodeToRelevantMethod] and is probably the
+     * name of the function called. If the call is neither a [MemberCallExpression] nor a
+     * [ConstructExpression], it probably calls a function which does not have a "base" (as it is
+     * the case for C). In that case, we try to look up the base in the map [thisPositionOfNode].
      *
      * The base is prefixed with [eogPath] in order to differentiate between different paths of
      * execution in the control flow.
@@ -198,8 +202,8 @@ open class DFAOrderEvaluator(
             when {
                 node is MemberCallExpression -> node.base
                 node is ConstructExpression -> node.astParent?.getSuitableDFGTarget()
-                node.hasThisPosition() ->
-                    node.getBaseOfCallExpressionUsingArgument(node.getThisPosition())
+                node.thisPosition != null ->
+                    node.getBaseOfCallExpressionUsingArgument(node.thisPosition!!)
                 else -> {
                     val dfgTarget = node.getSuitableDFGTarget()
                     if (dfgTarget != null && dfgTarget is ConstructExpression) {
@@ -218,7 +222,7 @@ open class DFAOrderEvaluator(
             // We add the path as prefix to the base in order to differentiate between
             // the different paths of execution which both can use the same base.
             val prefixedBase = "$eogPath|${base.name}.${base.id}"
-            return Pair(prefixedBase, nodesToOp[node]!!)
+            return Pair(prefixedBase, nodeToRelevantMethod[node]!!)
         }
 
         if (base == null) {
@@ -231,7 +235,7 @@ open class DFAOrderEvaluator(
     }
 
     private fun Node.addEogPath(path: String) {
-        nodeIDtoEOGPathSet.computeIfAbsent(this.id) { mutableSetOf() }.add(path)
+        nodeIDtoEOGPathSet.computeIfAbsent(this.id!!) { mutableSetOf() }.add(path)
     }
 
     private fun Node.getEogPaths(): Set<String>? {
@@ -242,14 +246,10 @@ open class DFAOrderEvaluator(
      * If it's not an object-oriented language, we need to retrieve the base in a different way.
      * Usually, it's the argument at index 0 but here, it's more obscure.
      */
-    private fun Node.getThisPosition(): Int {
-        return thisPositionOfNode[this]!!
-    }
-
-    /** Checks if the node has a specific index for `this` in the map [thisPositionOfNode] */
-    private fun Node.hasThisPosition(): Boolean {
-        return thisPositionOfNode.contains(this)
-    }
+    private val Node.thisPosition: Int?
+        get() {
+            return thisPositionOfNode[this]
+        }
 
     /** Get the argument of a function call at index [argumentIndex]. */
     private fun CallExpression.getBaseOfCallExpressionUsingArgument(argumentIndex: Int): Node? {
@@ -327,7 +327,7 @@ open class DFAOrderEvaluator(
             // (1) Update all entries previously removed from the baseToFSM map with
             // the new eog-path as prefix to the base
             for (i in outNodes.indices.reversed()) {
-                val stateOfNext: String = getStateSnapshot(outNodes[i].id, baseToFSM)
+                val stateOfNext: String = getStateSnapshot(outNodes[i].id!!, baseToFSM)
                 if (seenStates.contains(stateOfNext)) {
                     log.debug(
                         "Node/FSM state already visited: ${stateOfNext}. Remove from next nodes."
@@ -352,7 +352,7 @@ open class DFAOrderEvaluator(
      * [nodeId]. It is used to keep track of the states which have already been analyzed and to
      * avoid getting stuck in loops.
      */
-    private fun getStateSnapshot(nodeId: Long?, baseToFSM: Map<String, DFA>): String {
+    private fun getStateSnapshot(nodeId: Long, baseToFSM: Map<String, DFA>): String {
         val grouped =
             baseToFSM
                 .entries

@@ -46,12 +46,9 @@ class DFA : Cloneable {
      * edge and returns `true`.
      */
     fun addEdge(from: State, to: State, op: String, base: String?): Boolean {
-        if (!states.contains(from)) {
-            states.add(from)
-        }
-        if (!states.contains(to)) {
-            states.add(to)
-        }
+        states.add(from)
+        states.add(to)
+
         if (from.outgoingEdges.any { e -> e.matches(base, op) && e.nextState != to }) {
             throw FSMBuilderException(
                 "State already has an outgoing edge with the same label but a different target!"
@@ -76,7 +73,7 @@ class DFA : Cloneable {
      * Generates the string representing this FSM in DOT format. This allows a simple visualization
      * of the resulting automaton.
      */
-    override fun toString(): String {
+    fun toDotString(): String {
         var str = "digraph fsm {\n\t\"\" [shape=point];\n"
         var edges = ""
         for (s in states) {

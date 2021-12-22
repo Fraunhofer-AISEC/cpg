@@ -93,7 +93,7 @@ class SimpleDFAOrderEvaluationTest {
 
         val p4Decl = (functionOk.body as CompoundStatement).statements[0] as? DeclarationStatement
         assertNotNull(p4Decl)
-        val consideredDecl = mutableSetOf(p4Decl.declarations[0]?.id)
+        val consideredDecl = mutableSetOf(p4Decl.declarations[0]?.id!!)
 
         val nodesToOp = mutableMapOf<Node, String>()
         nodesToOp[(functionOk.body as CompoundStatement).statements[1]] = "start()"
@@ -119,7 +119,7 @@ class SimpleDFAOrderEvaluationTest {
 
         val p4Decl = (functionOk.body as CompoundStatement).statements[0] as? DeclarationStatement
         assertNotNull(p4Decl)
-        val consideredDecl = mutableSetOf(p4Decl.declarations[0]?.id)
+        val consideredDecl = mutableSetOf(p4Decl.declarations[0]?.id!!)
 
         val nodesToOp = mutableMapOf<Node, String>()
         nodesToOp[(functionOk.body as CompoundStatement).statements[1]] = "start()"
@@ -146,7 +146,7 @@ class SimpleDFAOrderEvaluationTest {
 
         val p4Decl = (functionOk.body as CompoundStatement).statements[0] as? DeclarationStatement
         assertNotNull(p4Decl)
-        val consideredDecl = mutableSetOf(p4Decl.declarations[0]?.id)
+        val consideredDecl = mutableSetOf(p4Decl.declarations[0]?.id!!)
 
         val nodesToOp = mutableMapOf<Node, String>()
         // We model the calls to start() for the then and the else branch
@@ -186,7 +186,7 @@ class SimpleDFAOrderEvaluationTest {
 
         val pDecl = (functionOk.body as CompoundStatement).statements[0] as? DeclarationStatement
         assertNotNull(pDecl)
-        val consideredBases = mutableSetOf(pDecl.declarations[0]?.id)
+        val consideredBases = mutableSetOf(pDecl.declarations[0]?.id!!)
 
         val nodesToOp = mutableMapOf<Node, String>()
         nodesToOp[(functionOk.body as CompoundStatement).statements[1]] = "set_key()"
@@ -215,7 +215,7 @@ class SimpleDFAOrderEvaluationTest {
 
         val p2Decl = (functionOk.body as CompoundStatement).statements[0] as? DeclarationStatement
         assertNotNull(p2Decl)
-        val consideredBases = mutableSetOf(p2Decl.declarations[0]?.id)
+        val consideredBases = mutableSetOf(p2Decl.declarations[0]?.id!!)
 
         val nodesToOp = mutableMapOf<Node, String>()
         nodesToOp[(functionOk.body as CompoundStatement).statements[1]] = "start()"
@@ -239,7 +239,7 @@ class SimpleDFAOrderEvaluationTest {
 
         val p3Decl = (functionOk.body as CompoundStatement).statements[0] as? DeclarationStatement
         assertNotNull(p3Decl)
-        val consideredDecl = mutableSetOf(p3Decl.declarations[0]?.id)
+        val consideredDecl = mutableSetOf(p3Decl.declarations[0]?.id!!)
 
         val nodesToOp = mutableMapOf<Node, String>()
         val thenBranch =
@@ -269,7 +269,7 @@ class SimpleDFAOrderEvaluationTest {
 
         val p4Decl = (functionOk.body as CompoundStatement).statements[0] as? DeclarationStatement
         assertNotNull(p4Decl)
-        val consideredDecl = mutableSetOf(p4Decl.declarations[0]?.id)
+        val consideredDecl = mutableSetOf(p4Decl.declarations[0]?.id!!)
 
         val nodesToOp = mutableMapOf<Node, String>()
         val thenBranch =
