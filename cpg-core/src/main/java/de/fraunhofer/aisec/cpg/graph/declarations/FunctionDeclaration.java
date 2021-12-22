@@ -39,11 +39,14 @@ import de.fraunhofer.aisec.cpg.graph.types.Type;
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType;
 import java.util.*;
 import java.util.stream.Collectors;
+
+import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.jetbrains.annotations.NotNull;
 import org.neo4j.ogm.annotation.Relationship;
+import org.opencypher.v9_0.ast.Return;
 
 /** Represents the declaration or definition of a function. */
 public class FunctionDeclaration extends ValueDeclaration implements DeclarationHolder {
@@ -220,10 +223,7 @@ public class FunctionDeclaration extends ValueDeclaration implements Declaration
     if (this.body instanceof ReturnStatement) {
       this.removePrevDFG(this.body);
     } else if (this.body instanceof CompoundStatement) {
-      ((CompoundStatement) this.body)
-          .getStatements().stream()
-              .filter(ReturnStatement.class::isInstance)
-              .forEach(this::removePrevDFG);
+      SubgraphWalker.flattenAST(body).stream().filter(ReturnStatement.class::isInstance).forEach(this::removePrevDFG);
     }
 
     this.body = body;
@@ -231,9 +231,12 @@ public class FunctionDeclaration extends ValueDeclaration implements Declaration
     if (body instanceof ReturnStatement) {
       this.addPrevDFG(body);
     } else if (body instanceof CompoundStatement) {
-      ((CompoundStatement) body)
-          .getStatements().stream()
-              .filter(ReturnStatement.class::isInstance)
+      List<Node> nestedFunctions = SubgraphWalker.flattenAST(body).stream().filter(FunctionDeclaration.class::isInstance).collect(Collectors.toList());
+      List<Node> irrelevantReturns = nestedFunctions.stream().flatMap(function -> SubgraphWalker.flattenAST(function).stream()).collect(Collectors.toList());
+
+      SubgraphWalker.flattenAST(body).stream()
+                      .filter(ReturnStatement.class::isInstance)
+                            .filter(returnStmt -> !irrelevantReturns.contains(returnStmt))
               .forEach(this::addPrevDFG);
     }
   }
