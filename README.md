@@ -34,9 +34,20 @@ repositories {
 }
 
 dependencies {
-    api("de.fraunhofer.aisec", "cpg", "4.1.1")
+    var cpgVersion = "4.2.0" 
+    
+    // if you want to include all published cpg modules
+    api("de.fraunhofer.aisec", "cpg", cpgVersion)
+    
+    // if you only want to include the core CPG without extra modules
+    api("de.fraunhofer.aisec", "cpg-core", cpgVersion)
+    
+    // or just a particular extra module, such as LLVM
+    api("de.fraunhofer.aisec", "cpg-language-llvm", cpgVersion)
 }
 ```
+
+Beware, that the `cpg` module includes all optional features and might potentially be HUGE (especially because of the LLVM support). If you do not need LLVM, we suggest just using the `cpg-core` module. In the future we are working on extracting more optional modules into separate modules.
 
 #### Development Builds
 
@@ -123,11 +134,11 @@ The following authors have contributed to this project (in alphabetical order):
 
 A preliminary version of this cpg has been used to analyze ARM binaries of iOS apps:
 
-[1] Julian Schütte, Dennis Titze. _liOS: Lifting iOS Apps for Fun and Profit._ Proceedings of the ESORICS International Workshop on Secure Internet of Things (SIoT), Luxembourg, 2019
+[1] Julian Schütte, Dennis Titze. _liOS: Lifting iOS Apps for Fun and Profit._ Proceedings of the ESORICS International Workshop on Secure Internet of Things (SIoT), Luxembourg, 2019. https://arxiv.org/abs/2003.12901
 
 An initial publication on the concept of using code property graphs for static analysis:
 
-[2] Yamaguchi et al. - Modeling and Discovering Vulnerabilities with Code Property Graphs https://www.sec.cs.tu-bs.de/pubs/2014-ieeesp.pdf
+[2] Yamaguchi et al. - Modeling and Discovering Vulnerabilities with Code Property Graphs. https://www.sec.cs.tu-bs.de/pubs/2014-ieeesp.pdf
 
 [3] is an unrelated, yet similar project by the authors of the above publication, that is used by the open source software Joern [4] for analysing C/C++ code. While [3] is a specification and implementation of the data structure, this project here includes various _Language frontends_ (currently C/C++ and Java, Python to com) and allows creating custom graphs by configuring _Passes_ which extend the graph as necessary for a specific analysis:
 
@@ -137,4 +148,4 @@ An initial publication on the concept of using code property graphs for static a
 
 Additional extensions of the CPG into the field of Cloud security:
 
-[5] Christian Banse, Immanuel Kunz, Angelika Schneider and Konrad Weiss. Cloud Property Graph: Connecting Cloud Security Assessments with Static Code Analysis. To appear in: IEEE CLOUD 2021 https://conferences.computer.org/cloud/2021/program/
+[5] Christian Banse, Immanuel Kunz, Angelika Schneider and Konrad Weiss. Cloud Property Graph: Connecting Cloud Security Assessments with Static Code Analysis.  IEEE CLOUD 2021. https://doi.org/10.1109/CLOUD53861.2021.00014
