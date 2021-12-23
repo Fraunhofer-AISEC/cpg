@@ -34,10 +34,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser
 import java.io.File
@@ -107,6 +104,181 @@ class CXXLanguageFrontend2Test {
 
         assertTrue(operator.rhs is Literal<*>)
         assertEquals(0, (operator.rhs as Literal<*>).value)
+    }
+
+    @Test
+    @Throws(java.lang.Exception::class)
+    fun testUnaryOperator() {
+        val file = File("src/test/resources/unaryoperator.cpp")
+
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.unregisterLanguage(CXXLanguageFrontend::class.java)
+                it.registerLanguage(
+                    CXXLanguageFrontend2::class.java,
+                    CXXLanguageFrontend.CXX_EXTENSIONS
+                )
+            }
+
+        val statements: List<Statement> =
+            (tu.getDeclarationAs(0, FunctionDeclaration::class.java)?.body as CompoundStatement)
+                .statements
+
+        var line = -1
+
+        // int a
+        var statement = statements[++line] as DeclarationStatement
+        assertNotNull(statement)
+
+        // a++
+        val postfix = statements[++line] as UnaryOperator
+        var input = postfix.input
+        assertEquals("a", input.name)
+        assertEquals("++", postfix.operatorCode)
+        assertTrue(postfix.isPostfix)
+
+        // --a
+        val prefix = statements[++line] as UnaryOperator
+        input = prefix.input
+        assertEquals("a", input.name)
+        assertEquals("--", prefix.operatorCode)
+        assertTrue(prefix.isPrefix)
+
+        // int len = sizeof(a);
+        statement = statements[++line] as DeclarationStatement
+        var declaration = statement.singleDeclaration as VariableDeclaration
+        val sizeof = declaration.initializer as UnaryOperator
+        input = sizeof.input
+        assertEquals("a", input.name)
+        assertEquals("sizeof", sizeof.operatorCode)
+        assertTrue(sizeof.isPrefix)
+
+        // bool b = !false;
+        statement = statements[++line] as DeclarationStatement
+        declaration = statement.singleDeclaration as VariableDeclaration
+        val negation = declaration.initializer as UnaryOperator
+        input = negation.input
+        assertTrue(input is Literal<*>)
+        assertEquals(false, (input as Literal<*>).value)
+        assertEquals("!", negation.operatorCode)
+        assertTrue(negation.isPrefix)
+
+        // int* ptr = 0;
+        statement = statements[++line] as DeclarationStatement
+        assertNotNull(statement)
+
+        // b = *ptr;
+        val assign = statements[++line] as BinaryOperator
+        val dereference = assign.rhs as UnaryOperator
+        input = dereference.input
+        assertEquals("ptr", input.name)
+        assertEquals("*", dereference.operatorCode)
+        assertTrue(dereference.isPrefix)
+    }
+
+    @Test
+    @Throws(java.lang.Exception::class)
+    fun testShiftExpression() {
+        val file = File("src/test/resources/shiftexpression.cpp")
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.unregisterLanguage(CXXLanguageFrontend::class.java)
+                it.registerLanguage(
+                    CXXLanguageFrontend2::class.java,
+                    CXXLanguageFrontend.CXX_EXTENSIONS
+                )
+            }
+        val functionDeclaration = tu.getDeclarationAs(0, FunctionDeclaration::class.java)
+        val statements: List<Statement> =
+            (functionDeclaration?.body as CompoundStatement).statements
+        assertTrue(statements[1] is BinaryOperator)
+    }
+
+    @Test
+    @Throws(java.lang.Exception::class)
+    fun testPostfixExpression() {
+        val file = File("src/test/resources/postfixexpression.cpp")
+
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.unregisterLanguage(CXXLanguageFrontend::class.java)
+                it.registerLanguage(
+                    CXXLanguageFrontend2::class.java,
+                    CXXLanguageFrontend.CXX_EXTENSIONS
+                )
+            }
+
+        val statements: List<Statement> =
+            (tu.getDeclarationAs(0, FunctionDeclaration::class.java)?.body as CompoundStatement)
+                .statements
+
+        assertEquals(6, statements.size)
+        val callExpression = statements[0] as CallExpression
+        assertEquals("printf", callExpression.name)
+        val arg = callExpression.arguments[0]
+        assertTrue(arg is Literal<*>)
+        assertEquals("text", (arg as Literal<*>).value)
+        val unaryOperatorPlus = statements[1] as UnaryOperator
+        assertEquals(UnaryOperator.OPERATOR_POSTFIX_INCREMENT, unaryOperatorPlus.operatorCode)
+        assertTrue(unaryOperatorPlus.isPostfix)
+        val unaryOperatorMinus = statements[2] as UnaryOperator
+        assertEquals(UnaryOperator.OPERATOR_POSTFIX_DECREMENT, unaryOperatorMinus.operatorCode)
+        assertTrue(unaryOperatorMinus.isPostfix)
+
+        // 4th statement is not yet parsed correctly
+        val memberCallExpression = statements[4] as MemberCallExpression
+        assertEquals("test", memberCallExpression.base.name)
+        assertEquals("c_str", memberCallExpression.name)
+    }
+
+    @Test
+    @Throws(java.lang.Exception::class)
+    fun testLiterals() {
+        val file = File("src/test/resources/literals.cpp")
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.unregisterLanguage(CXXLanguageFrontend::class.java)
+                it.registerLanguage(
+                    CXXLanguageFrontend2::class.java,
+                    CXXLanguageFrontend.CXX_EXTENSIONS
+                )
+            }
+
+        val s = tu.getDeclarationAs(0, VariableDeclaration::class.java)
+        assertEquals(TypeParser.createFrom("char[]", true), s!!.type)
+        assertEquals("s", s.name)
+        var initializer: Expression? = s.initializer
+        assertEquals("string", (initializer as Literal<*>).value)
+
+        val i = tu.getDeclarationAs(1, VariableDeclaration::class.java)
+        assertEquals(TypeParser.createFrom("int", true), i!!.type)
+        assertEquals("i", i.name)
+        initializer = i.initializer
+        assertEquals(1, (initializer as Literal<*>).value)
+
+        val f = tu.getDeclarationAs(2, VariableDeclaration::class.java)
+        assertEquals(TypeParser.createFrom("float", true), f!!.type)
+        assertEquals("f", f.name)
+        initializer = f.initializer
+        assertEquals(0.2f, (initializer as Literal<*>).value)
+
+        val d = tu.getDeclarationAs(3, VariableDeclaration::class.java)
+        assertEquals(TypeParser.createFrom("double", true), d!!.type)
+        assertEquals("d", d.name)
+        initializer = d.initializer
+        assertEquals(0.2, (initializer as Literal<*>).value)
+
+        val b = tu.getDeclarationAs(4, VariableDeclaration::class.java)
+        assertEquals(TypeParser.createFrom("bool", true), b!!.type)
+        assertEquals("b", b.name)
+        initializer = b.initializer
+        assertEquals(false, (initializer as Literal<*>).value)
+
+        val c = tu.getDeclarationAs(5, VariableDeclaration::class.java)
+        assertEquals(TypeParser.createFrom("char", true), c!!.type)
+        assertEquals("c", c.name)
+        initializer = c.initializer
+        assertEquals('c', (initializer as Literal<*>).value)
     }
 
     @Test

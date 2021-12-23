@@ -57,7 +57,6 @@ class StatementHandler(lang: CXXLanguageFrontend2) :
 
         if (node.childCount > 0) {
             val child = node.namedChild(0)
-
             val expression = lang.expressionHandler.handle(child)
 
             returnStatement.returnValue = expression

@@ -33,37 +33,12 @@ import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newConstructorDeclaration
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newFieldDeclaration
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newFunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newMethodDeclaration
+import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newVariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.ResolveInFrontend
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.types.PointerType
-import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.passes.scopes.TemplateScope
 import io.github.oxisto.kotlintree.jvm.*
-import org.apache.commons.lang3.builder.ToStringBuilder
-
-/**
- * Because of the way the CPP AST is designed, we first need to gather certain information in a
- * declarator before we can build the actual [Declaration].
- */
-class Declarator(var name: String, var type: Type, var namespace: String? = null) {
-    var kind: String? = null
-
-    var parameters: MutableList<Declaration> = mutableListOf()
-
-    override fun toString(): String {
-        val builder = ToStringBuilder(this, de.fraunhofer.aisec.cpg.graph.Node.TO_STRING_STYLE)
-
-        builder.append("name", name)
-        builder.append("type", type)
-        builder.append("kind", kind)
-
-        if (namespace != null) {
-            builder.append("namespace", namespace)
-        }
-
-        return builder.toString()
-    }
-}
 
 class DeclarationHandler(lang: CXXLanguageFrontend2) :
     Handler<Declaration, Node, CXXLanguageFrontend2>(::Declaration, lang) {
@@ -71,15 +46,35 @@ class DeclarationHandler(lang: CXXLanguageFrontend2) :
         map.put(Node::class.java, ::handleDeclaration)
     }
 
-    private fun handleDeclaration(node: Node): Declaration {
+    private fun handleDeclaration(node: Node, originalType: Node? = null): Declaration {
         return when (val type = node.type) {
             "function_definition" -> handleFunctionDefinition(node)
             "parameter_declaration" -> handleParameterDeclaration(node)
             "field_declaration" -> handleFieldDeclaration(node)
             "class_specifier" -> handleClassSpecifier(node)
             else -> {
-                LanguageFrontend.log.error("Not handling type {} yet.", type)
-                Declaration()
+                // A declarator might be wrapped in within a declaration node, call
+                // handleDeclaration again if necessary.
+
+                val declarator = "declarator" of node
+                if (!declarator.isNull) {
+                    return when (val declaratorType = declarator.type) {
+                        "init_declarator" -> handleVariableDeclaration(node)
+                        "array_declarator" -> handleVariableDeclaration(node)
+                        "function_declarator" -> handleFunctionDeclaration(node)
+                        else -> {
+                            LanguageFrontend.log.error(
+                                "Not handling declarator {} yet.",
+                                declarator.type
+                            )
+                            Declaration()
+                        }
+                    }
+                } else {
+                    // Otherwise return empty declaration
+                    LanguageFrontend.log.error("Not handling type {} yet.", type)
+                    Declaration()
+                }
             }
         }
     }
@@ -123,6 +118,37 @@ class DeclarationHandler(lang: CXXLanguageFrontend2) :
         processDeclarator(node.childByFieldName("declarator"), param)
 
         return param
+    }
+
+    /**
+     * This function handles function declarations. Depending if the function declaration represents
+     * a method or a constructur, this function either returns a [ConstructorDeclaration] or a
+     * [MethodDeclaration].
+     */
+    private fun handleFunctionDeclaration(node: Node): Declaration {
+        val startType = lang.handleType("type" of node)
+
+        // Peek into the declarator to determine the type
+        val declaration =
+            createMethodOrConstructor(
+                lang.getCodeFromRawNode("declarator" of node).orEmpty(),
+                lang.getCodeFromRawNode(node).orEmpty(),
+                lang.scopeManager.currentRecord
+            )
+        declaration.type = startType
+
+        // If this is a method declaration, make sure to set it as active scope, so that its
+        // parameters are correctly associated when processing the declarators
+        lang.scopeManager.enterScope(declaration)
+
+        // Process the declarator to adjust name and type of this declaration and add the parameters
+        // (if this is a method).
+        processDeclarator(node, declaration)
+
+        // Leave the method scope if it exists
+        lang.scopeManager.leaveScope(declaration)
+
+        return declaration
     }
 
     /**
@@ -181,22 +207,49 @@ class DeclarationHandler(lang: CXXLanguageFrontend2) :
     }
 
     /**
+     * This function handles regular variable declarations. Usually we get more information from the
+     * declarator which is wrapped in a generic declaration, so we process the declarator and
+     * generate the correct type.
+     */
+    private fun handleVariableDeclaration(node: Node): VariableDeclaration {
+        val startType = "type" of node
+        val declarator = "declarator" of node
+        val declaration =
+            newVariableDeclaration(
+                "",
+                lang.handleType(startType),
+                lang.getCodeFromRawNode(node),
+                true
+            )
+        processDeclarator(declarator, declaration)
+        return declaration
+    }
+
+    /**
+     * Sometimes function declarations are nested in other nodes. This function @return the nested
+     * function declaration if there is any. Otherwise null.
+     */
+    private fun getNestedFunctionDeclaration(node: Node): Node? {
+        val declarator = "declarator" of node
+        if (!declarator.isNull) {
+            return if (declarator.type == "function_declarator") {
+                declarator
+            } else {
+                getNestedFunctionDeclaration(declarator)
+            }
+        }
+
+        return null
+    }
+
+    /**
      * Pure function declarations within a class are showing up as field_declaration. However, we
      * need to peek into the (nested) declarators to find out if this is really a function
      * declaration.
      */
     private fun isReallyAFunctionDeclaration(node: Node): Boolean {
-        // TODO: we can probably do this with a query
-
-        val declarator = node.childByFieldName("declarator")
-        if (!declarator.isNull) {
-            if (declarator.type == "function_declarator") {
-                return true
-            } else {
-                if (isReallyAFunctionDeclaration(declarator)) {
-                    return true
-                }
-            }
+        if (getNestedFunctionDeclaration(node) != null) {
+            return true
         }
 
         return false
@@ -209,18 +262,42 @@ class DeclarationHandler(lang: CXXLanguageFrontend2) :
     private fun isMethodDeclaration(node: Node): Boolean {
         // TODO: we can probably do this with a query
 
-        var declarator = node.childByFieldName("declarator")
+        val declarator = "declarator" of node
         if (!declarator.isNull) {
-            if (isReallyAFunctionDeclaration(declarator)) {
+            if (declarator.type == "scoped_identifier") {
                 return true
             } else {
-                declarator = declarator.childByFieldName("declarator")
-                if (!declarator.isNull && declarator.type == "scoped_identifier") {
+                if (isReallyAFunctionDeclaration(declarator)) {
                     return true
                 }
             }
         }
 
+        return false
+    }
+
+    /**
+     * This function is required to identify whether a function declaration is really a constructor
+     * declaration, since construction declarations are modeled as function declarations with the
+     * name of the class.
+     * @return true if the provided function declaration [node] is a constructor declaration.
+     * Otherwise, false is returned.
+     */
+    private fun isConstructorDeclaration(node: Node): Boolean {
+        val functionDeclarator = "declarator" of node
+        val declarator = "declarator" of functionDeclarator
+        if (!declarator.isNull) {
+            if (declarator.type == "scoped_identifier") {
+                val identifier = lang.getCodeFromRawNode("declarator" of ("declarator" of node))
+                if (identifier != null) {
+                    if (lang.namespaceDelimiter in identifier) {
+                        val recordName = identifier.split(lang.namespaceDelimiter)[0]
+                        val constructorName = identifier.split(lang.namespaceDelimiter)[1]
+                        return recordName == constructorName
+                    }
+                }
+            }
+        }
         return false
     }
 
@@ -243,7 +320,9 @@ class DeclarationHandler(lang: CXXLanguageFrontend2) :
      * * A non-scoped function definition *outside* of any record will be parsed as a
      * [FunctionDeclaration].
      * * A scoped function definition, e.g. containing a `::`, *outside* of a record will be parsed
-     * as a [MethodDeclaration] (or [ConstructorDeclaration]) and associated to its record.
+     * as a [MethodDeclaration] and associated to its record.
+     * * A scoped function definition, e.g. containing a `::`, *outside* of a record with the same
+     * name as the record will be parsed [ConstructorDeclaration] and associated to its record.
      * * A non-scoped function definition *inside* a record will be parsed as a [MethodDeclaration]
      * (or [ConstructorDeclaration]) and associated to its record.
      *
@@ -257,34 +336,45 @@ class DeclarationHandler(lang: CXXLanguageFrontend2) :
         // modifiers will be part of the declarator.
         val nonPointerType = lang.handleType(node.childByFieldName("type"))
 
-        val declarator = handleDeclarator(node.childByFieldName("declarator"), nonPointerType)
-
         // It is important to know whether we are within a record scope or outside. If we are
         // inside, every function is automatically a method. If we are outside, we need to check if
         // the function name is scoped, then it is also a method.
         val insideRecord = lang.scopeManager.currentRecord != null
         val func =
             when {
-                declarator.kind == "method" -> {
-                    newMethodDeclaration(
-                        declarator.name,
+                isConstructorDeclaration(node) -> {
+                    // if we have a constructor declaration we can obtain the record and directly
+                    // set the record declaration link
+                    val recordName =
+                        lang.getCodeFromRawNode("declarator" of ("declarator" of node))!!.split(
+                            lang.namespaceDelimiter
+                        )[0]
+                    val recordDeclaration =
+                        lang.scopeManager.getRecordForName(
+                            lang.scopeManager.currentScope!!,
+                            recordName
+                        )
+
+                    newConstructorDeclaration(
+                        recordName,
                         lang.getCodeFromRawNode(node),
-                        false,
-                        null
+                        recordDeclaration
                     )
                 }
-                declarator.kind == "constructor" -> {
-                    newConstructorDeclaration(declarator.name, lang.getCodeFromRawNode(node), null)
+                isMethodDeclaration(node) -> {
+                    // name and record declaration will be filled later by processDeclarator
+                    newMethodDeclaration("", lang.getCodeFromRawNode(node), false, null)
                 }
                 insideRecord -> {
                     // if we are inside a record, we can directly set the record declaration link
                     createMethodOrConstructor(
-                        declarator.name,
+                        lang.getCodeFromRawNode("declarator" of ("declarator" of node)).orEmpty(),
                         lang.getCodeFromRawNode(node).orEmpty(),
                         lang.scopeManager.currentRecord
                     )
                 }
                 else -> {
+                    // `name` will be filled later by handleDeclarator
                     newFunctionDeclaration("", lang.getCodeFromRawNode(node))
                 }
             }
@@ -300,17 +390,9 @@ class DeclarationHandler(lang: CXXLanguageFrontend2) :
         // Establish a function scope
         lang.scopeManager.enterScope(func)
 
-        // Add the parameters we have gathered in the declarator
-        declarator.parameters.forEach { lang.scopeManager.addDeclaration(it) }
-
-        if (func is MethodDeclaration) {
-            // try to find the record this belongs to
-            lang.scopeManager.currentScope?.let {
-                val record =
-                    declarator.namespace?.let { it1 -> lang.scopeManager.getRecordForName(it, it1) }
-                func.recordDeclaration = record
-            }
-        }
+        // Process the declrator, this will set name and the record declaration in case of outside
+        // methods
+        processDeclarator("declarator" of node, func)
 
         // Update code to include the whole function
         func.code = lang.getCodeFromRawNode(node)
@@ -347,93 +429,6 @@ class DeclarationHandler(lang: CXXLanguageFrontend2) :
         return func
     }
 
-    /**
-     * Parses a declarator which specifies the name and kind (method, function, etc.) of the
-     * declaration.
-     */
-    private fun handleDeclarator(node: Node, startType: Type): Declarator {
-        return when (node.type) {
-            "identifier" -> {
-                Declarator(lang.getCodeFromRawNode(node) ?: "", startType)
-            }
-            "field_identifier" -> {
-                Declarator(lang.getCodeFromRawNode(node) ?: "", startType)
-            }
-            "scoped_identifier" -> {
-                handleScopedIdentifier(node, startType)
-            }
-            /*"init_declarator" -> {
-                processInitDeclarator(node, declaration)
-            }*/
-            "pointer_declarator" -> {
-                handlePointerDeclarator(node, startType)
-            }
-            "function_declarator" -> handleFunctionDeclarator(node, startType)
-            else -> {
-                LanguageFrontend.log.error("Not handling declarator of type {} yet", node.type)
-                Declarator("", startType)
-            }
-        }
-    }
-
-    @ResolveInFrontend
-    private fun handleScopedIdentifier(node: Node, startType: Type): Declarator {
-        // we are interested in the namespace part first, because this points to our class
-        val namespace = lang.getCodeFromRawNode(node.childByFieldName("namespace"))
-
-        if (namespace == null) {
-            log.error(
-                "Could not determine the namespace name in a scoped identifier. Trying to continue, but this will produce errors"
-            )
-        }
-
-        val name = lang.getCodeFromRawNode(node.childByFieldName("name")) ?: ""
-
-        val declarator = Declarator(name, startType, namespace)
-        declarator.kind =
-            if (name == namespace) {
-                "constructor"
-            } else {
-                "method"
-            }
-
-        return declarator
-    }
-
-    private fun handlePointerDeclarator(node: Node, type: Type): Declarator {
-        var declarator = handleDeclarator(node.childByFieldName("declarator"), type)
-
-        // reference the type using a pointer
-        declarator.type = declarator.type.reference(PointerType.PointerOrigin.POINTER)
-
-        return declarator
-    }
-
-    /**
-     * Handles a function declarator. It primarily takes care of gathering parameters, which we will
-     * add to the [Declaration] later as [ParamVariableDeclaration].
-     */
-    private fun handleFunctionDeclarator(node: Node, type: Type): Declarator {
-        val declarator = handleDeclarator(node.childByFieldName("declarator"), type)
-
-        // All functions inside a record are automatically methods
-        declarator.kind =
-            if (lang.scopeManager.isInRecord) {
-                "method"
-            } else {
-                "function"
-            }
-
-        val parameterList = node.childByFieldName("parameters")
-        for (i in 0 until parameterList.namedChildCount) {
-            val param = handle(parameterList.namedChild(i))
-
-            declarator.parameters += param
-        }
-
-        return declarator
-    }
-
     internal fun processDeclarator(node: Node, declaration: ValueDeclaration) {
         when (node.type) {
             "identifier" -> {
@@ -447,6 +442,9 @@ class DeclarationHandler(lang: CXXLanguageFrontend2) :
             }
             "init_declarator" -> {
                 processInitDeclarator(node, declaration)
+            }
+            "array_declarator" -> {
+                processArrayDeclarator(node, declaration)
             }
             "pointer_declarator" -> {
                 processPointerDeclarator(node, declaration)
@@ -536,8 +534,13 @@ class DeclarationHandler(lang: CXXLanguageFrontend2) :
         }
     }
 
+    private fun processArrayDeclarator(node: Node, declaration: ValueDeclaration) {
+        processDeclarator("declarator" of node, declaration)
+        declaration.type = declaration.type.reference(PointerType.PointerOrigin.ARRAY)
+    }
+
     private fun processPointerDeclarator(node: Node, declaration: ValueDeclaration) {
-        processDeclarator(node.childByFieldName("declarator"), declaration)
+        processDeclarator("declarator" of node, declaration)
 
         // reference the type using a pointer
         declaration.type = declaration.type.reference(PointerType.PointerOrigin.POINTER)

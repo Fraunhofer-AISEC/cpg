@@ -59,8 +59,12 @@ class ExpressionHandler(lang: CXXLanguageFrontend2) :
             "binary_expression" -> handleBinaryExpression(node)
             "call_expression" -> handleCallExpression(node)
             "number_literal" -> handleNumberLiteral(node)
+            "char_literal" -> handleCharLiteral(node)
+            "string_literal" -> handleStringLiteral(node)
             "concatenated_string" -> handleConcatenatedString(node)
             "null" -> handleNull(node)
+            "false" -> handleFalseBooleanLiteral(node)
+            "true" -> handleTrueBooleanLiteral(node)
             else -> {
                 LanguageFrontend.log.error(
                     "Not handling expression of type {} yet: {}",
@@ -159,6 +163,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend2) :
         if (!arguments.isNull) {
             for (i in 0 until arguments.namedChildCount) {
                 val expression = handle(arguments.namedChild(i))
+
                 call.addArgument(expression)
             }
         }
@@ -180,6 +185,14 @@ class ExpressionHandler(lang: CXXLanguageFrontend2) :
             TypeParser.createFrom("std::nullptr_t", false),
             lang.getCodeFromRawNode(node)
         )
+    }
+
+    private fun handleTrueBooleanLiteral(node: Node): Literal<*> {
+        return newLiteral(true, TypeParser.createFrom("bool", true), lang.getCodeFromRawNode(node))
+    }
+
+    private fun handleFalseBooleanLiteral(node: Node): Literal<*> {
+        return newLiteral(false, TypeParser.createFrom("bool", true), lang.getCodeFromRawNode(node))
     }
 
     /**
@@ -211,10 +224,60 @@ class ExpressionHandler(lang: CXXLanguageFrontend2) :
         return ref
     }
 
+    /**
+     * Handles number literals and tries to figure out the correct type int, float or double. We
+     * identify floats if the number literal contains an f. By default, numeric values that are not
+     * covertible as int will be doubles.
+     */
     private fun handleNumberLiteral(node: Node): Expression {
-        val value = lang.getCodeFromRawNode(node)?.toInt()
+        val valueStr = lang.getCodeFromRawNode(node)
+        try {
+            val value = valueStr?.toInt()
+            return newLiteral(
+                value,
+                TypeParser.createFrom("int", false),
+                lang.getCodeFromRawNode(node)
+            )
+        } catch (e: NumberFormatException) {}
 
-        return newLiteral(value, TypeParser.createFrom("int", false), lang.getCodeFromRawNode(node))
+        if (valueStr != null && valueStr.contains("f")) {
+            try {
+                val value = lang.getCodeFromRawNode(node)?.toFloat()
+                return newLiteral(
+                    value,
+                    TypeParser.createFrom("float", false),
+                    lang.getCodeFromRawNode(node)
+                )
+            } catch (e: NumberFormatException) {}
+        }
+
+        try {
+            val value = lang.getCodeFromRawNode(node)?.toDouble()
+            return newLiteral(
+                value,
+                TypeParser.createFrom("double", false),
+                lang.getCodeFromRawNode(node)
+            )
+        } catch (e: NumberFormatException) {}
+
+        return newLiteral(null, UnknownType.getUnknownType(), lang.getCodeFromRawNode(node))
+    }
+
+    private fun handleCharLiteral(node: Node): Expression {
+        return newLiteral(
+            lang.getCodeFromRawNode(node)?.get(1),
+            TypeParser.createFrom("char", false),
+            lang.getCodeFromRawNode(node)
+        )
+    }
+
+    private fun handleStringLiteral(node: Node): Expression {
+        val stringContent = lang.getCodeFromRawNode(node)
+        return newLiteral(
+            stringContent?.substring(1, stringContent.length - 1),
+            TypeParser.createFrom("char[]", false),
+            lang.getCodeFromRawNode(node)
+        )
     }
 
     private fun handleBinaryExpression(node: Node): Expression {

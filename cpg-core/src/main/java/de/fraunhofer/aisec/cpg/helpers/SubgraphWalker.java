@@ -33,7 +33,6 @@ import de.fraunhofer.aisec.cpg.graph.TypeManager;
 import de.fraunhofer.aisec.cpg.graph.declarations.*;
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement;
-import de.fraunhofer.aisec.cpg.graph.types.Type;
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager;
 import java.lang.annotation.AnnotationFormatError;
 import java.lang.reflect.Field;
@@ -202,7 +201,8 @@ public class SubgraphWalker {
   public static void activateTypes(Node node, ScopeManager scopeManager) {
     AtomicInteger num = new AtomicInteger();
 
-    Map<HasType, List<Type>> typeCache = TypeManager.getInstance().getTypeCache();
+    var typeCache = TypeManager.getInstance().getTypeCache();
+
     IterativeGraphWalker walker = new IterativeGraphWalker();
     walker.registerOnNodeVisit(scopeManager::enterScopeIfExists);
     walker.registerOnScopeExit(
