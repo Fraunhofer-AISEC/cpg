@@ -190,13 +190,13 @@ dependencies {
 
     api("org.slf4j:jul-to-slf4j:1.7.32")
     api("org.slf4j:slf4j-api:1.7.32")
-    implementation("org.apache.logging.log4j:log4j-slf4j18-impl:2.16.0")
+    implementation("org.apache.logging.log4j:log4j-slf4j18-impl:2.17.0")
 
     api("com.github.javaparser:javaparser-symbol-solver-core:3.23.0")
     api("com.fasterxml.jackson.module:jackson-module-kotlin:2.13.0")
 
     // Eclipse dependencies
-    api("org.eclipse.platform:org.eclipse.core.runtime:3.23.0")
+    api("org.eclipse.platform:org.eclipse.core.runtime:3.24.0")
     api("com.ibm.icu:icu4j:70.1")
 
     // CDT
@@ -220,7 +220,7 @@ dependencies {
     testFixturesApi("org.junit.jupiter:junit-jupiter-api:5.8.1")
     testImplementation("org.junit.jupiter:junit-jupiter-params:5.8.1")
 
-    testFixturesApi("org.mockito:mockito-core:4.1.0")
+    testFixturesApi("org.mockito:mockito-core:4.2.0")
     
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.8.1")
 }
