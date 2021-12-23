@@ -51,6 +51,8 @@ class TranslatePlugin : Plugin {
                     "import de.fraunhofer.aisec.cpg.TranslationManager",
                     // go
                     "import de.fraunhofer.aisec.cpg.frontends.golang.GoLanguageFrontend",
+                    // llvm
+                    "import de.fraunhofer.aisec.cpg.frontends.llvm.LLVMIRLanguageFrontend",
                     // all the graph nodes
                     "import de.fraunhofer.aisec.cpg.graph.*",
                     "import de.fraunhofer.aisec.cpg.graph.declarations.*",
@@ -77,6 +79,7 @@ class TranslatePlugin : Plugin {
                         //                      "
                         // .registerLanguage(GoLanguageFrontend::class.java,
                         // GoLanguageFrontend.GOLANG_EXTENSIONS)" +
+                        "                    .registerLanguage(LLVMIRLanguageFrontend::class.java, LLVMIRLanguageFrontend.LLVM_EXTENSIONS)" +
                         "                    .defaultPasses()\n" +
                         "                    .build()",
                     "val analyzer = TranslationManager.builder().config(config).build()",
