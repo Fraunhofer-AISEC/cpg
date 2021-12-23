@@ -39,9 +39,9 @@ import java.nio.file.Path
 import java.util.function.Consumer
 import java.util.function.Predicate
 import java.util.stream.Collectors
-import kotlin.test.assertSame
 import org.apache.commons.lang3.reflect.FieldUtils
 import org.junit.jupiter.api.Assertions
+import org.junit.jupiter.api.Assertions.assertSame
 import org.mockito.Mockito
 
 object TestUtils {

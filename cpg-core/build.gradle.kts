@@ -218,6 +218,7 @@ dependencies {
 
     // JUnit
     testImplementation("org.jetbrains.kotlin:kotlin-test")
+    testFixturesImplementation("org.jetbrains.kotlin:kotlin-test")
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
     testFixturesApi("org.junit.jupiter:junit-jupiter-api:5.8.1")
     testImplementation("org.junit.jupiter:junit-jupiter-params:5.8.1")
