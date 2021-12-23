@@ -4,6 +4,7 @@ plugins {
 
 include(":cpg")
 include(":cpg-core")
+include(":cpg-analysis")
 include(":cpg-neo4j")
 include(":cpg-language-llvm")
 include(":cpg-console")
