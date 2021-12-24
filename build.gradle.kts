@@ -33,7 +33,7 @@ plugins {
     signing
 
     id("org.sonarqube") version "3.3"
-    id("com.diffplug.spotless") version "6.0.0"
+    id("com.diffplug.spotless") version "6.1.0"
     kotlin("jvm") version "1.6.0" apply false
 }
 
