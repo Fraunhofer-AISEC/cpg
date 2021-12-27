@@ -481,18 +481,14 @@ class PythonFrontendTest : BaseTest() {
         assertEquals("i", i.name)
         assertEquals(TypeParser.createFrom("int", false), i.type)
 
-        val assign = (bar.body as? CompoundStatement)?.statements?.get(0) as? BinaryOperator
-        assertNotNull(assign)
-        val lhs = assign.lhs as? MemberExpression
-        assertNotNull(lhs)
-        val rhs = assign.rhs as? DeclaredReferenceExpression
-        assertNotNull(rhs)
-        assertEquals(somevar, lhs.refersTo)
-        val base = lhs.base as? DeclaredReferenceExpression
-        assertNotNull(base)
-        assertEquals("self", base.name)
-        assertEquals(TypeParser.createFrom("Foo", false), base.type)
-        assertEquals(recv, base.refersTo)
+        // self.somevar = i
+        val someVarDeclaration =
+            ((bar.body as? CompoundStatement)?.statements?.get(0) as? DeclarationStatement)
+                ?.declarations?.first() as?
+                FieldDeclaration
+        assertNotNull(someVarDeclaration)
+        assertEquals("somevar", someVarDeclaration.name)
+        assertEquals(i, (someVarDeclaration.initializer as? DeclaredReferenceExpression)?.refersTo)
 
         val fooMemCall =
             (foo.body as? CompoundStatement)?.statements?.get(0) as? MemberCallExpression

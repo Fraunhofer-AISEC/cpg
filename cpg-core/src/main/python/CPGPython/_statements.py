@@ -180,6 +180,10 @@ def handle_statement(self, stmt):
                     if not mem_base_is_receiver:
                         self.log_with_loc("I'm confused.", loglevel="ERROR")
                         return NodeBuilder.newStatement("DUMMY")
+                    if self.is_declared_reference(rhs):
+                        # TODO figure out why the cpg pass fails to do this...
+                        rhs.setRefersTo(
+                                self.scopemanager.resolveReference(rhs))
                     v = NodeBuilder.newFieldDeclaration(
                         lhs.getName(), rhs.getType(), None,
                         self.get_src_code(stmt), None, rhs, False)
