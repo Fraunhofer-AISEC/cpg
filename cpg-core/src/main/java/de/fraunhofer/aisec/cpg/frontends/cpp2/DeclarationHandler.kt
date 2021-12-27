@@ -55,13 +55,12 @@ class DeclarationHandler(lang: CXXLanguageFrontend2) :
             else -> {
                 // A declarator might be wrapped in within a declaration node, call
                 // handleDeclaration again if necessary.
-
                 val declarator = "declarator" of node
                 if (!declarator.isNull) {
-                    return when (val declaratorType = declarator.type) {
-                        "init_declarator" -> handleVariableDeclaration(node)
-                        "array_declarator" -> handleVariableDeclaration(node)
-                        "function_declarator" -> handleFunctionDeclaration(node)
+                    return when (declarator.type) {
+                        "init_declarator" -> handleVariableDeclaration(declarator)
+                        "array_declarator" -> handleVariableDeclaration(declarator)
+                        "function_declarator" -> handleFunctionDeclaration(declarator)
                         else -> {
                             LanguageFrontend.log.error(
                                 "Not handling declarator {} yet.",
@@ -131,7 +130,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend2) :
         // Peek into the declarator to determine the type
         val declaration =
             createMethodOrConstructor(
-                lang.getCodeFromRawNode("declarator" of node).orEmpty(),
+                lang.getCodeFromRawNode("declarator" of node) ?: "",
                 lang.getCodeFromRawNode(node).orEmpty(),
                 lang.scopeManager.currentRecord
             )
@@ -414,7 +413,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend2) :
         // because currently this will
         // a) only work if this happens in the same translation unit
         // b) we actually want to do this for regular function calls as well
-        if (func.isDefinition && func is MethodDeclaration) {
+        if (func.isDefinition && func is MethodDeclaration && !insideRecord) {
             updateDefinition(func, func.recordDeclaration)
         }
 
