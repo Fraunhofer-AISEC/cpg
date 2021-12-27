@@ -80,7 +80,7 @@ public class TranslationUnitDeclaration extends Declaration
   public <T extends Declaration> T getDeclarationAs(int i, Class<T> clazz) {
     Declaration declaration = this.declarations.get(i).getEnd();
 
-    return declaration.getClass().isAssignableFrom(clazz)
+    return clazz.isAssignableFrom(declaration.getClass())
         ? clazz.cast(this.declarations.get(i).getEnd())
         : null;
   }

@@ -413,7 +413,7 @@ class CXXLanguageFrontend2Test {
         assertEquals(TypeParser.createFrom("void*", true), method.type)
         assertFalse(method.hasBody())
 
-        var definition = method.definition as MethodDeclaration
+        var definition = method.definition as? MethodDeclaration
         assertNotNull(definition)
         assertEquals("method", definition.name)
         assertEquals(0, definition.parameters.size)
@@ -453,8 +453,7 @@ class CXXLanguageFrontend2Test {
         assertFalse(constructorDeclaration.isDefinition)
         assertEquals(constructorDefinition, constructorDeclaration.definition)
 
-        val main =
-            tu.getDeclarationsByName("main", FunctionDeclaration::class.java).iterator().next()
+        val main = tu.byNameOrNull<FunctionDeclaration>("main")
         assertNotNull(main)
 
         val methodCallWithConstant = main.getBodyStatementAs(2, CallExpression::class.java)

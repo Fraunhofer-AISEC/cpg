@@ -66,6 +66,8 @@ class CXXLanguageFrontend2(config: TranslationConfiguration, scopeManager: Scope
         val tree = parser.parseString(null, input)
         val root = tree.rootNode
 
+        println(root.string)
+
         assert(root.type == "translation_unit")
 
         return handleTranslationUnit(root)
