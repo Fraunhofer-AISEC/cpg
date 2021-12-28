@@ -402,6 +402,9 @@ class CXXLanguageFrontend2Test {
         val field = recordDeclaration.getField("field")
         assertNotNull(field)
 
+        val initializer = field.initializer
+        assertNotNull(initializer)
+
         val constant = recordDeclaration.getField("CONSTANT")
         assertNotNull(constant)
         assertEquals(TypeParser.createFrom("void*", true), field.type)
@@ -455,7 +458,7 @@ class CXXLanguageFrontend2Test {
 
         val main = tu.byNameOrNull<FunctionDeclaration>("main")
         assertNotNull(main)
-
+        ""
         val methodCallWithConstant = main.getBodyStatementAs(2, CallExpression::class.java)
         assertNotNull(methodCallWithConstant)
 

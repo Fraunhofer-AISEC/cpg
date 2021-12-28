@@ -87,7 +87,7 @@ class StatementHandler(lang: CXXLanguageFrontend2) :
             val declaration =
                 NodeBuilder.newVariableDeclaration("", type, lang.getCodeFromRawNode(node), false)
 
-            lang.declarationHandler.processDeclarator(declarator, declaration)
+            // lang.declarationHandler.processDeclarator(declarator, declaration)
 
             // update the type for the rest of the declarations
             type = declaration.type
