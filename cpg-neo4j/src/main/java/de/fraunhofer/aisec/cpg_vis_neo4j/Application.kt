@@ -41,6 +41,7 @@ import org.neo4j.ogm.session.SessionFactory
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import picocli.CommandLine
+import picocli.CommandLine.ArgGroup
 import java.io.File
 import java.net.ConnectException
 import java.nio.file.Paths
@@ -82,14 +83,23 @@ class Application : Callable<Int> {
     private val log: Logger
         get() = LoggerFactory.getLogger(Application::class.java)
 
-    @CommandLine.Option(
-        names = ["files"],
-        //        required = true,
-        description =
-            [
-                "The paths to analyze. If module support is enabled, the paths will be looked at if they contain modules"]
-    )
-    private var files: Array<String> = arrayOf()
+    @ArgGroup(exclusive = true, multiplicity = "1") lateinit var exclusive: Exclusive
+
+    class Exclusive {
+        @CommandLine.Parameters(
+            arity = "1..*",
+            description =
+                [
+                    "The paths to analyze. If module support is enabled, the paths will be looked at if they contain modules"]
+        )
+        var files: Array<String> = emptyArray()
+
+        @CommandLine.Option(
+            names = ["--json-compilation-database"],
+            description = ["Give the json compilation database file path "]
+        )
+        var jsonCompilationDatabase: String = ""
+    }
 
     @CommandLine.Option(
         names = ["--user"],
@@ -149,12 +159,6 @@ class Application : Callable<Int> {
                 "Enables the experimental language frontend for Go. Be aware, that further steps might be necessary to install native libraries such as cpgo"]
     )
     private var enableExperimentalGo: Boolean = false
-
-    @CommandLine.Option(
-        names = ["--json-compilation-database"],
-        description = ["Give the json compilation database file path "]
-    )
-    private var jsonCompilationDatabase: String = ""
 
     @CommandLine.Option(
         names = ["--enable-experimental-typescript"],
@@ -244,13 +248,13 @@ class Application : Callable<Int> {
      */
     @OptIn(ExperimentalPython::class, ExperimentalGolang::class, ExperimentalTypeScript::class)
     private fun setupTranslationConfiguration(): TranslationConfiguration {
-        assert(files.isNotEmpty())
-        val filePaths = arrayOfNulls<File>(files.size)
+        assert(exclusive.files.isNotEmpty())
+        val filePaths = arrayOfNulls<File>(exclusive.files.size)
         var topLevel: File? = null
         var compilationDatabase: MutableMap<File, List<String>> = mutableMapOf()
 
-        for (index in files.indices) {
-            val path = Paths.get(files[index]).toAbsolutePath().normalize()
+        for (index in exclusive.files.indices) {
+            val path = Paths.get(exclusive.files[index]).toAbsolutePath().normalize()
             val file = File(path.toString())
             require(file.exists() && (!file.isHidden)) {
                 "Please use a correct path. It was: $path"
@@ -262,11 +266,13 @@ class Application : Callable<Int> {
             }
             filePaths[index] = file
         }
-        if (jsonCompilationDatabase == "" && files.isEmpty()) {
+        if (exclusive.jsonCompilationDatabase == "" && exclusive.files.isEmpty()) {
             throw Error(
                 "Files list is empty or jsonCompilationDatabase is also empty. Please provide --files to evaluate or --json-compilation-database for CXX files"
             )
         }
+        println("File paths is   ")
+        filePaths.forEach { println(it) }
 
         val translationConfiguration =
             TranslationConfiguration.builder()
@@ -277,8 +283,9 @@ class Application : Callable<Int> {
                 .loadIncludes(loadIncludes)
                 .debugParser(DEBUG_PARSER)
 
-        if (jsonCompilationDatabase != "") {
-            val jsonStringFile = File(jsonCompilationDatabase).readText().toString()
+        if (exclusive.jsonCompilationDatabase != "") {
+            println("json compilation database is " + exclusive.jsonCompilationDatabase)
+            val jsonStringFile = File(exclusive.jsonCompilationDatabase).readText().toString()
             val mapper = ObjectMapper().registerKotlinModule()
             val obj: List<compilationDbStructure> = mapper.readValue(jsonStringFile)
             for (i in obj.indices) {
