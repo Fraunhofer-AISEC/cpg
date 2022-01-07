@@ -319,7 +319,7 @@ open class DFAOrderEvaluator(
             // We still add this node but this time, we also check if have seen the state it before
             // to avoid endless loops etc.
             outNodes[0].addEogPath(eogPath)
-            val stateOfNext: String = getStateSnapshot(outNodes[0].id, baseToFSM)
+            val stateOfNext: String = getStateSnapshot(outNodes[0].id!!, baseToFSM)
             if (seenStates.contains(stateOfNext)) {
                 log.debug("Node/FSM state already visited: ${stateOfNext}. Remove from next nodes.")
                 outNodes.removeAt(0)

@@ -425,7 +425,7 @@ class ComplexDFAOrderEvaluationTest {
 
         val p7Decl = (functionOk.body as CompoundStatement).statements[0] as? DeclarationStatement
         assertNotNull(p7Decl)
-        val consideredDecl = mutableSetOf(p7Decl.declarations[0]?.id)
+        val consideredDecl = mutableSetOf(p7Decl.declarations[0]?.id!!)
 
         val nodesToOp = mutableMapOf<Node, String>()
         nodesToOp[(functionOk.body as CompoundStatement).statements[1]] = "create()"
