@@ -327,7 +327,11 @@ public class CallExpression extends Expression
       return;
     }
     if (src == base) {
-      setFqn(src.getType().getRoot().getTypeName() + "." + this.getName());
+      var frontend = TypeManager.getInstance().getFrontend();
+      setFqn(
+          src.getType().getRoot().getTypeName()
+              + (frontend != null ? frontend.getNamespaceDelimiter() : ".")
+              + this.getName());
     } else {
       Type previous = this.type;
       List<Type> types =

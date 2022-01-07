@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.passes.scopes
 
 import de.fraunhofer.aisec.cpg.BaseTest
+import de.fraunhofer.aisec.cpg.TestUtils.analyzeAndGetFirstTU
 import de.fraunhofer.aisec.cpg.TestUtils.subnodesOfType
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
@@ -33,8 +34,13 @@ import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.frontends.cpp.CXXLanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder
+import de.fraunhofer.aisec.cpg.graph.bodyOrNull
+import de.fraunhofer.aisec.cpg.graph.byNameOrNull
 import de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
 import java.io.File
 import kotlin.test.*
 import org.junit.jupiter.api.Assertions
@@ -170,5 +176,53 @@ internal class ScopeManagerTest : BaseTest() {
 
         val scope = s.lookupScope("A::B")
         assertNotNull(scope)
+    }
+
+    @Test
+    @Throws(TranslationException::class)
+    fun testMemberCallResolve() {
+        val file = File("src/test/resources/foo.cpp")
+        val tu = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
+
+        assertNotNull(tu)
+
+        val main = tu.byNameOrNull<FunctionDeclaration>("main")
+
+        assertNotNull(main)
+
+        val callAFoo = main.bodyOrNull<CallExpression>(0)
+
+        assertNotNull(callAFoo)
+        assertTrue { callAFoo is MemberCallExpression }
+        assertEquals("A::foo", callAFoo.fqn)
+        assertEquals(
+            "A",
+            (callAFoo.invokes.firstOrNull() as? MethodDeclaration)?.recordDeclaration?.name
+        )
+
+        val callBFoo = main.bodyOrNull<CallExpression>(1)
+
+        assertNotNull(callBFoo)
+        assertTrue { callBFoo is MemberCallExpression }
+        assertEquals("B::foo", callBFoo.fqn)
+        assertEquals(
+            "B",
+            (callBFoo.invokes.firstOrNull() as? MethodDeclaration)?.recordDeclaration?.name
+        )
+
+        val callFoo = main.bodyOrNull<CallExpression>(2)
+
+        assertNotNull(callFoo)
+        assertEquals("foo", callFoo.fqn)
+
+        val callCFoo = main.bodyOrNull<CallExpression>(3)
+
+        assertNotNull(callCFoo)
+        assertTrue { callCFoo is MemberCallExpression }
+        assertEquals("C::foo", callCFoo.fqn)
+        assertEquals(
+            "C",
+            (callCFoo.invokes.firstOrNull() as? MethodDeclaration)?.recordDeclaration?.name
+        )
     }
 }

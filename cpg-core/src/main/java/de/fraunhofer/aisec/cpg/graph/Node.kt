@@ -43,8 +43,8 @@ import org.slf4j.LoggerFactory
 
 /** The base class for all graph objects that are going to be persisted in the database. */
 open class Node : IVisitable<Node>, Persistable {
-    /** A human readable name. */
-    open var name = EMPTY_NAME // initialize it with an empty string
+    /** A human-readable name. It can possibly be empty for unnamed nodes. */
+    open var name: Name? = null
 
     /**
      * Original code snippet of this node. Most nodes will have a corresponding "code", but in cases
@@ -220,7 +220,7 @@ open class Node : IVisitable<Node>, Persistable {
     override fun toString(): String {
         val builder = ToStringBuilder(this, TO_STRING_STYLE)
 
-        if (name != "") {
+        if (name?.isNotEmpty() == true) {
             builder.append("name", name)
         }
 
@@ -256,6 +256,6 @@ open class Node : IVisitable<Node>, Persistable {
 
         protected val log: Logger = LoggerFactory.getLogger(Node::class.java)
 
-        const val EMPTY_NAME = ""
+        val EMPTY_NAME = Name("")
     }
 }

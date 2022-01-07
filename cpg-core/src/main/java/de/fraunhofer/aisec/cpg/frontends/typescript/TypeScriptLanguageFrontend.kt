@@ -31,10 +31,8 @@ import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.FrontendUtils
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
+import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.Annotation
-import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.NodeBuilder
-import de.fraunhofer.aisec.cpg.graph.TypeManager
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
@@ -219,8 +217,9 @@ class TypeScriptLanguageFrontend(
         // not implemented
     }
 
-    internal fun getIdentifierName(node: TypeScriptNode) =
-        this.getCodeFromRawNode(node.firstChild("Identifier")) ?: ""
+    internal fun getIdentifierName(node: TypeScriptNode): Name? {
+        return this.getCodeFromRawNode(node.firstChild("Identifier"))?.fqnize(this)
+    }
 
     fun processAnnotations(node: Node, astNode: TypeScriptNode) {
         // filter for decorators
@@ -239,7 +238,7 @@ class TypeScriptLanguageFrontend(
                 NodeBuilder.newAnnotation(call.name, this.getCodeFromRawNode(node) ?: "")
 
             annotation.members =
-                call.arguments.map { NodeBuilder.newAnnotationMember("", it, it.code ?: "") }
+                call.arguments.map { NodeBuilder.newAnnotationMember(null, it, it.code ?: "") }
 
             call.disconnectFromGraph()
 

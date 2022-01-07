@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements.expressions;
 
+import de.fraunhofer.aisec.cpg.graph.TypeManager;
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration;
 import org.checkerframework.checker.nullness.qual.NonNull;
 
@@ -56,7 +57,10 @@ public class StaticCallExpression extends CallExpression {
         && !targetRecord.isEmpty()
         && getName() != null
         && !getName().isEmpty()) {
-      setFqn(targetRecord + "." + getName());
+      var frontend = TypeManager.getInstance().getFrontend();
+
+      setFqn(
+          targetRecord + (frontend != null ? frontend.getNamespaceDelimiter() : ".") + getName());
     }
   }
 }

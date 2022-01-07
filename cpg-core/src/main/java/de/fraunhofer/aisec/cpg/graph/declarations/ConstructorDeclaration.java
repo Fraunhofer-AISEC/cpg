@@ -39,7 +39,7 @@ public class ConstructorDeclaration extends MethodDeclaration {
     super.setRecordDeclaration(recordDeclaration);
     if (recordDeclaration != null) {
       // constructors always have implicitly the return type of their class
-      setType(TypeParser.createFrom(recordDeclaration.getName(), true));
+      setType(TypeParser.createFrom(recordDeclaration.getName().getSimpleName(), true));
     }
   }
 }

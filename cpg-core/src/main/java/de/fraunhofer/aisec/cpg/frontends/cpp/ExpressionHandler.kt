@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.frontends.*
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder
 import de.fraunhofer.aisec.cpg.graph.TypeManager
+import de.fraunhofer.aisec.cpg.graph.fqnize
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.graph.types.PointerType.PointerOrigin
@@ -383,7 +384,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             val recordDeclaration = lang.scopeManager.currentRecord
             base =
                 NodeBuilder.newDeclaredReferenceExpression(
-                    "this",
+                    "this" fqnize lang,
                     if (recordDeclaration != null) recordDeclaration.getThis().type
                     else UnknownType.getUnknownType(),
                     base.code
@@ -393,7 +394,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
         return NodeBuilder.newMemberExpression(
             base,
             UnknownType.getUnknownType(),
-            ctx.fieldName.toString(),
+            ctx.fieldName.toString() fqnize lang,
             if (ctx.isPointerDereference) "->" else ".",
             ctx.rawSignature
         )
@@ -470,7 +471,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                 NodeBuilder.newDeclaredReferenceExpression(
                     reference.name,
                     UnknownType.getUnknownType(),
-                    reference.name
+                    reference.name?.simpleName
                 )
             member.location = lang.getLocationFromRawNode<Expression>(reference)
             callExpression =
@@ -488,7 +489,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                 val name =
                     ((ctx.functionNameExpression as CPPASTFieldReference).fieldName as
                             CPPASTTemplateId)
-                        .templateName.toString()
+                        .templateName.toString() fqnize lang
                 callExpression.name = name
                 callExpression.addExplicitTemplateParameters(
                     getTemplateArguments(
@@ -503,7 +504,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             // dealing with function pointer calls that happen on an explicit object
             callExpression =
                 NodeBuilder.newMemberCallExpression(
-                    reference.code,
+                    reference.code?.fqnize(lang),
                     "",
                     reference.lhs,
                     reference.rhs,
@@ -519,8 +520,9 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
         ) {
             val name =
                 ((ctx.functionNameExpression as CPPASTIdExpression).name as CPPASTTemplateId)
-                    .templateName.toString()
-            callExpression = NodeBuilder.newCallExpression(name, name, ctx.rawSignature, true)
+                    .templateName.toString() fqnize lang
+            callExpression =
+                NodeBuilder.newCallExpression(name, name.fullyQualified, ctx.rawSignature, true)
             callExpression.addExplicitTemplateParameters(
                 getTemplateArguments(
                     (ctx.functionNameExpression as CPPASTIdExpression).name as CPPASTTemplateId
@@ -530,26 +532,10 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             // this really is a cast expression in disguise
             return reference
         } else {
-            var fqn = reference!!.name
-            var name = fqn
-            if (name.contains("::")) {
-                name = name.substring(name.lastIndexOf("::") + 2)
-            }
-            if (name.contains("<")) {
-                // The characters < and > are not allowed in identifier names, as they denote the
-                // usage of a
-                // template
-                name = name.substring(0, name.indexOf("<"))
-            }
-            fqn = fqn.replace("::", ".")
-            // FIXME this is only true if we are in a namespace! If we are in a class, this is
-            // wrong!
-            //  happens again in l367
-            // String fullNamePrefix = lang.getScopeManager().getFullNamePrefix();
-            // if (!fullNamePrefix.isEmpty()) {
-            //  fqn = fullNamePrefix + "." + fqn;
-            // }
-            callExpression = NodeBuilder.newCallExpression(name, fqn, ctx.rawSignature, false)
+            val name = reference?.name
+
+            callExpression =
+                NodeBuilder.newCallExpression(name, name?.fullyQualified, ctx.rawSignature, false)
         }
 
         for ((i, argument) in ctx.arguments.withIndex()) {
@@ -567,7 +553,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
     private fun handleIdExpression(ctx: CPPASTIdExpression): DeclaredReferenceExpression {
         val declaredReferenceExpression =
             NodeBuilder.newDeclaredReferenceExpression(
-                ctx.name.toString(),
+                ctx.name.toString() fqnize lang,
                 UnknownType.getUnknownType(),
                 ctx.rawSignature
             )
@@ -752,7 +738,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                     is CPPASTFieldDesignator -> {
                         oneLhs =
                             NodeBuilder.newDeclaredReferenceExpression(
-                                des.name.toString(),
+                                des.name.toString() fqnize lang,
                                 UnknownType.getUnknownType(),
                                 des.getRawSignature()
                             )

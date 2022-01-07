@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser
+import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import org.slf4j.LoggerFactory
 
@@ -48,13 +49,13 @@ object NodeBuilder {
 
     @JvmStatic
     fun newCallExpression(
-        name: String?,
+        name: Name?,
         fqn: String?,
         code: String?,
         template: Boolean
     ): CallExpression {
         val node = CallExpression()
-        node.name = name!!
+        node.name = name
         node.code = code
         node.fqn = fqn
         node.setTemplate(template)
@@ -88,7 +89,7 @@ object NodeBuilder {
 
     @JvmStatic
     fun newTypeIdExpression(
-        operatorCode: String?,
+        operatorCode: String,
         type: Type?,
         referencedType: Type?,
         code: String?
@@ -96,7 +97,7 @@ object NodeBuilder {
         val node = TypeIdExpression()
         node.code = code
         node.operatorCode = operatorCode
-        node.name = operatorCode!!
+        node.name = Name(operatorCode)
         node.type = type
         node.referencedType = referencedType
         log(node)
@@ -152,12 +153,12 @@ object NodeBuilder {
 
     @JvmStatic
     fun newDeclaredReferenceExpression(
-        name: String?,
+        name: Name?,
         typeFullName: Type?,
         code: String?
     ): DeclaredReferenceExpression {
         val node = DeclaredReferenceExpression()
-        node.name = name!!
+        node.name = name
         node.type = typeFullName
         node.code = code
         log(node)
@@ -179,7 +180,7 @@ object NodeBuilder {
     }
 
     @JvmStatic
-    fun newFunctionDeclaration(name: String, code: String?): FunctionDeclaration {
+    fun newFunctionDeclaration(name: Name?, code: String?): FunctionDeclaration {
         val node = FunctionDeclaration()
         node.name = name
         node.code = code
@@ -224,13 +225,13 @@ object NodeBuilder {
 
     @JvmStatic
     fun newMethodParameterIn(
-        name: String?,
+        name: Name?,
         type: Type?,
         variadic: Boolean,
         code: String?
     ): ParamVariableDeclaration {
         val node = ParamVariableDeclaration()
-        node.name = name!!
+        node.name = name
         node.type = type
         node.code = code
         node.isVariadic = variadic
@@ -238,9 +239,9 @@ object NodeBuilder {
     }
 
     @JvmStatic
-    fun newTypeParamDeclaration(name: String?, code: String?): TypeParamDeclaration {
+    fun newTypeParamDeclaration(name: Name?, code: String?): TypeParamDeclaration {
         val node = TypeParamDeclaration()
-        node.name = name!!
+        node.name = name
         node.code = code
         log(node)
         return node
@@ -264,7 +265,7 @@ object NodeBuilder {
 
     @JvmStatic
     fun newMemberCallExpression(
-        name: String?,
+        name: Name?,
         fqn: String?,
         base: Expression?,
         member: Node?,
@@ -272,7 +273,7 @@ object NodeBuilder {
         code: String?
     ): CallExpression {
         val node = MemberCallExpression()
-        node.name = name!!
+        node.name = name
         node.setBase(base)
         node.member = member
         node.operatorCode = operatorCode
@@ -283,9 +284,9 @@ object NodeBuilder {
     }
 
     @JvmStatic
-    fun newTypeExpression(name: String?, type: Type?): TypeExpression {
+    fun newTypeExpression(name: Name?, type: Type?): TypeExpression {
         val node = TypeExpression()
-        node.name = name!!
+        node.name = name
         node.type = type
         log(node)
         return node
@@ -307,7 +308,7 @@ object NodeBuilder {
     ): UnaryOperator {
         val node = UnaryOperator()
         node.operatorCode = operatorType
-        node.name = operatorType!!
+        node.name = Name(operatorType!!)
         node.isPostfix = postfix
         node.isPrefix = prefix
         node.code = code
@@ -317,7 +318,7 @@ object NodeBuilder {
 
     @JvmStatic
     fun newVariableDeclaration(
-        name: String?,
+        name: Name?,
         type: Type?,
         code: String?,
         implicitInitializerAllowed: Boolean
@@ -413,16 +414,16 @@ object NodeBuilder {
     fun newBinaryOperator(operatorCode: String, code: String?): BinaryOperator {
         val node = BinaryOperator()
         node.operatorCode = operatorCode
-        node.name = operatorCode
+        node.name = Name(operatorCode)
         node.code = code
         log(node)
         return node
     }
 
     @JvmStatic
-    fun newTranslationUnitDeclaration(name: String?, code: String?): TranslationUnitDeclaration {
+    fun newTranslationUnitDeclaration(name: Name?, code: String?): TranslationUnitDeclaration {
         val node = TranslationUnitDeclaration()
-        node.name = name!!
+        node.name = name
         node.code = code
         log(node)
         return node
@@ -431,21 +432,22 @@ object NodeBuilder {
     @JvmStatic
     @JvmOverloads
     fun newRecordDeclaration(
-        fqn: String,
+        name: Name?,
         kind: String,
         code: String?,
         createThis: Boolean = true
     ): RecordDeclaration {
         val node = RecordDeclaration()
-        node.name = fqn
+        node.name = name
         node.kind = kind
         node.code = code
 
         if (kind == "class" && createThis) {
             val thisDeclaration =
                 newFieldDeclaration(
-                    "this",
-                    TypeParser.createFrom(fqn, true),
+                    Name("this"),
+                    name?.simpleName?.let { TypeParser.createFrom(it, true) }
+                        ?: UnknownType.getUnknownType(),
                     listOf(),
                     "this",
                     null,
@@ -462,12 +464,12 @@ object NodeBuilder {
 
     @JvmStatic
     fun newEnumDeclaration(
-        name: String?,
+        name: Name?,
         code: String?,
         location: PhysicalLocation?
     ): EnumDeclaration {
         val node = EnumDeclaration()
-        node.name = name!!
+        node.name = name
         node.code = code
         node.location = location
         log(node)
@@ -475,18 +477,18 @@ object NodeBuilder {
     }
 
     @JvmStatic
-    fun newFunctionTemplateDeclaration(name: String?, code: String?): FunctionTemplateDeclaration {
+    fun newFunctionTemplateDeclaration(name: Name?, code: String?): FunctionTemplateDeclaration {
         val node = FunctionTemplateDeclaration()
-        node.name = name!!
+        node.name = name
         node.code = code
         log(node)
         return node
     }
 
     @JvmStatic
-    fun newClassTemplateDeclaration(name: String?, code: String?): ClassTemplateDeclaration {
+    fun newClassTemplateDeclaration(name: Name?, code: String?): ClassTemplateDeclaration {
         val node = ClassTemplateDeclaration()
-        node.name = name!!
+        node.name = name
         node.code = code
         log(node)
         return node
@@ -494,12 +496,12 @@ object NodeBuilder {
 
     @JvmStatic
     fun newEnumConstantDeclaration(
-        name: String?,
+        name: Name?,
         code: String?,
         location: PhysicalLocation?
     ): EnumConstantDeclaration {
         val node = EnumConstantDeclaration()
-        node.name = name!!
+        node.name = name
         node.code = code
         node.location = location
         log(node)
@@ -508,8 +510,8 @@ object NodeBuilder {
 
     @JvmStatic
     fun newFieldDeclaration(
-        name: String?,
-        type: Type?,
+        name: Name?,
+        type: Type,
         modifiers: List<String?>?,
         code: String?,
         location: PhysicalLocation?,
@@ -517,7 +519,7 @@ object NodeBuilder {
         implicitInitializerAllowed: Boolean
     ): FieldDeclaration {
         val node = FieldDeclaration()
-        node.name = name!!
+        node.name = name
         node.type = type
         node.modifiers = modifiers
         node.code = code
@@ -537,7 +539,7 @@ object NodeBuilder {
     fun newMemberExpression(
         base: Expression?,
         memberType: Type?,
-        name: String?,
+        name: Name?,
         operatorCode: String?,
         code: String?
     ): MemberExpression {
@@ -545,7 +547,7 @@ object NodeBuilder {
         node.setBase(base!!)
         node.operatorCode = operatorCode
         node.code = code
-        node.name = name!!
+        node.name = name
         node.type = memberType
         log(node)
         return node
@@ -601,13 +603,13 @@ object NodeBuilder {
 
     @JvmStatic
     fun newMethodDeclaration(
-        name: String?,
+        name: Name?,
         code: String?,
         isStatic: Boolean,
         recordDeclaration: RecordDeclaration?
     ): MethodDeclaration {
         val node = MethodDeclaration()
-        node.name = name!!
+        node.name = name
         node.code = code
         node.isStatic = isStatic
         node.recordDeclaration = recordDeclaration
@@ -617,12 +619,12 @@ object NodeBuilder {
 
     @JvmStatic
     fun newConstructorDeclaration(
-        name: String?,
+        name: Name?,
         code: String?,
         recordDeclaration: RecordDeclaration?
     ): ConstructorDeclaration {
         val node = ConstructorDeclaration()
-        node.name = name!!
+        node.name = name
         node.code = code
         node.recordDeclaration = recordDeclaration
         log(node)
@@ -646,7 +648,7 @@ object NodeBuilder {
     @JvmStatic
     fun newIncludeDeclaration(includeFilename: String): IncludeDeclaration {
         val node = IncludeDeclaration()
-        val name = includeFilename.substring(includeFilename.lastIndexOf('/') + 1)
+        val name = Name(includeFilename.substring(includeFilename.lastIndexOf('/') + 1))
         node.name = name
         node.filename = includeFilename
         log(node)
@@ -722,9 +724,9 @@ object NodeBuilder {
      * @return
      */
     @JvmStatic
-    fun newNamespaceDeclaration(fqn: String, code: String?): NamespaceDeclaration {
+    fun newNamespaceDeclaration(name: Name, code: String?): NamespaceDeclaration {
         val node = NamespaceDeclaration()
-        node.name = fqn
+        node.name = name
         node.code = code
         log(node)
         return node
@@ -766,17 +768,17 @@ object NodeBuilder {
     }
 
     @JvmStatic
-    fun newAnnotation(name: String?, code: String): Annotation {
+    fun newAnnotation(name: Name?, code: String): Annotation {
         val annotation = Annotation()
-        annotation.name = name!!
+        annotation.name = name
         annotation.code = code
         return annotation
     }
 
     @JvmStatic
-    fun newAnnotationMember(name: String?, value: Expression?, code: String): AnnotationMember {
+    fun newAnnotationMember(name: Name?, value: Expression?, code: String): AnnotationMember {
         val member = AnnotationMember()
-        member.name = name!!
+        member.name = name
         member.value = value
         member.code = code
         return member

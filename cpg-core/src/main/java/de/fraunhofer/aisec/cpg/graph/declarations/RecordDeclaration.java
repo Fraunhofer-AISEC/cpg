@@ -91,20 +91,6 @@ public class RecordDeclaration extends Declaration implements DeclarationHolder,
   @org.neo4j.ogm.annotation.Relationship
   private Set<ValueDeclaration> staticImports = new HashSet<>();
 
-  /**
-   * It is important to set this name to a full qualified name (FQN).
-   *
-   * @param name the FQN
-   */
-  @Override
-  public void setName(@NonNull String name) {
-    // special case for record declarations! Constructor names need to match
-    super.setName(name);
-    for (PropertyEdge<ConstructorDeclaration> constructorEdge : constructors) {
-      constructorEdge.getEnd().setName(name);
-    }
-  }
-
   public String getKind() {
     return kind;
   }
@@ -388,7 +374,7 @@ public class RecordDeclaration extends Declaration implements DeclarationHolder,
    * @return the type
    */
   public Type toType() {
-    var type = TypeParser.createFrom(this.getName(), false);
+    var type = TypeParser.createFrom(this.getName().getSimpleName(), false);
 
     if (type instanceof ObjectType) {
       // as a shortcut, directly set the record declaration. This will be otherwise done

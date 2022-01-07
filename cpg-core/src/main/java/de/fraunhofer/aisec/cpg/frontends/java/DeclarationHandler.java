@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.java;
 
+import static de.fraunhofer.aisec.cpg.graph.NameKt.fqnize;
 import static de.fraunhofer.aisec.cpg.graph.NodeBuilder.*;
 
 import com.github.javaparser.ast.ImportDeclaration;
@@ -112,7 +113,7 @@ public class DeclarationHandler
 
     de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDeclaration declaration =
         newConstructorDeclaration(
-            resolvedConstructor.getName(),
+            fqnize(resolvedConstructor.getName(), lang),
             constructorDecl.toString(),
             lang.getScopeManager().getCurrentRecord());
     lang.getScopeManager().addDeclaration(declaration);
@@ -126,7 +127,7 @@ public class DeclarationHandler
     for (Parameter parameter : constructorDecl.getParameters()) {
       ParamVariableDeclaration param =
           newMethodParameterIn(
-              parameter.getNameAsString(),
+              fqnize(parameter.getNameAsString(), lang),
               this.lang.getTypeAsGoodAsPossible(parameter, parameter.resolve()),
               parameter.isVarArgs(),
               parameter.toString());
@@ -167,14 +168,17 @@ public class DeclarationHandler
 
     de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration functionDeclaration =
         newMethodDeclaration(
-            resolvedMethod.getName(), methodDecl.toString(), methodDecl.isStatic(), record);
+            fqnize(resolvedMethod.getName(), lang),
+            methodDecl.toString(),
+            methodDecl.isStatic(),
+            record);
 
     // create the receiver
     var receiver =
         newVariableDeclaration(
             "this",
             record != null
-                ? TypeParser.createFrom(record.getName(), false)
+                ? TypeParser.createFrom(fqnize(record.getName(), lang), false)
                 : UnknownType.getUnknownType(),
             "this",
             false);
@@ -199,7 +203,7 @@ public class DeclarationHandler
 
       ParamVariableDeclaration param =
           newMethodParameterIn(
-              parameter.getNameAsString(),
+              fqnize(parameter.getNameAsString(), lang),
               resolvedType,
               parameter.isVarArgs(),
               parameter.toString());

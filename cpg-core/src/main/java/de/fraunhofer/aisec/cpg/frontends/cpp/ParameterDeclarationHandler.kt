@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.frontends.HandlerInterface
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder
 import de.fraunhofer.aisec.cpg.graph.declarations.ParamVariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.fqnize
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.InitializerListExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser
@@ -92,7 +93,7 @@ class ParameterDeclarationHandler(lang: CXXLanguageFrontend) :
         }
         val paramVariableDeclaration =
             NodeBuilder.newMethodParameterIn(
-                ctx.declarator.name.toString(),
+                ctx.declarator.name.toString() fqnize lang,
                 UnknownType.getUnknownType(),
                 false,
                 ctx.rawSignature

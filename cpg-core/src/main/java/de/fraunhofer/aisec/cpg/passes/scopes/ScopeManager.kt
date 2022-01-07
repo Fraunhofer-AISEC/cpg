@@ -205,7 +205,7 @@ class ScopeManager {
         if (scope is NameScope) {
             // for this to work, it is essential that RecordDeclaration and NamespaceDeclaration
             // nodes have a FQN as their name.
-            fqnScopeMap[scope.astNode.name] = scope
+            scope.astNode.name?.simpleName?.let { fqnScopeMap[it] = scope }
         }
         currentScope?.let {
             it.getChildren().add(scope)
@@ -284,7 +284,7 @@ class ScopeManager {
     private fun newNameScopeIfNecessary(nodeToScope: NamespaceDeclaration): NameScope? {
         val existingScope =
             currentScope?.children?.firstOrNull {
-                it is NameScope && it.scopedName == nodeToScope.name
+                it is NameScope && it.scopedName == nodeToScope.name?.simpleName
             }
 
         return if (existingScope != null) {
@@ -662,7 +662,12 @@ class ScopeManager {
                 }
         }
 
-        return resolve(s) { it.name == call.name && it.hasSignature(call.signature) }
+        var list =
+            resolve<FunctionDeclaration>(s) {
+                it.name == call.name && it.hasSignature(call.signature)
+            }
+
+        return list
     }
 
     fun resolveFunctionStopScopeTraversalOnDefinition(
@@ -719,7 +724,7 @@ class ScopeManager {
                 return declarations
             }
 
-            // go up-wards in the scope tree
+            // go upwards in the scope tree
             scope = scope.getParent()
         }
 
@@ -749,7 +754,8 @@ class ScopeManager {
      * @param name the name
      * @return the declaration, or null if it does not exist
      */
-    fun getRecordForName(scope: Scope, name: String): RecordDeclaration? {
-        return resolve<RecordDeclaration>(scope, true) { it.name == name }.firstOrNull()
+    fun getRecordForName(scope: Scope, simpleName: String): RecordDeclaration? {
+        return resolve<RecordDeclaration>(scope, true) { it.name?.simpleName == simpleName }
+            .firstOrNull()
     }
 }

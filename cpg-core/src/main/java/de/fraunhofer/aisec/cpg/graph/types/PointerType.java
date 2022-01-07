@@ -50,10 +50,10 @@ public class PointerType extends Type implements SecondOrderType {
   public PointerType(Type elementType, PointerOrigin pointerOrigin) {
     super();
     if (pointerOrigin == PointerOrigin.ARRAY) {
-      this.setName(elementType.getName() + "[]");
+      this.setName(elementType.getName().plus("[]"));
       this.pointerOrigin = PointerOrigin.ARRAY;
     } else {
-      this.setName(elementType.getName() + "*");
+      this.setName(elementType.getName().plus("*"));
       this.pointerOrigin = PointerOrigin.POINTER;
     }
     this.elementType = elementType;
@@ -62,9 +62,9 @@ public class PointerType extends Type implements SecondOrderType {
   public PointerType(Type type, Type elementType, PointerOrigin pointerOrigin) {
     super(type);
     if (pointerOrigin == PointerOrigin.ARRAY) {
-      this.setName(elementType.getName() + "[]");
+      this.setName(elementType.getName().plus("[]"));
     } else {
-      this.setName(elementType.getName() + "*");
+      this.setName(elementType.getName().plus("*"));
     }
     this.elementType = elementType;
     this.pointerOrigin = pointerOrigin;
@@ -94,9 +94,9 @@ public class PointerType extends Type implements SecondOrderType {
       this.getElementType().refreshNames();
     }
     if (this.pointerOrigin == PointerOrigin.ARRAY) {
-      this.setName(this.getElementType().getName() + "[]");
+      this.setName(this.getElementType().getName().plus("[]"));
     } else {
-      this.setName(this.getElementType().getName() + "*");
+      this.setName(this.getElementType().getName().plus("*"));
     }
   }
 

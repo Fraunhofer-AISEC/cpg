@@ -27,7 +27,7 @@ package de.fraunhofer.aisec.cpg.frontends.cpp
 
 import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.frontends.HandlerInterface
-import de.fraunhofer.aisec.cpg.graph.NodeBuilder
+import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newRecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.types.IncompleteType
@@ -72,18 +72,16 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
         if (ctx.initializer == null && ctx.nestedDeclarator is CPPASTDeclarator) {
             return handle(ctx.nestedDeclarator)
         }
-        val name = ctx.name.toString()
+        val name = Name(ctx.name.toString())
 
-        return if (lang.scopeManager.currentScope is RecordScope ||
-                name.contains(lang.namespaceDelimiter)
-        ) {
+        return if (lang.scopeManager.currentScope is RecordScope || name.isQualified) {
             // forward it to handleFieldDeclarator
             this.handleFieldDeclarator(ctx)
         } else {
             // type will be filled out later
             val declaration =
                 NodeBuilder.newVariableDeclaration(
-                    ctx.name.toString(),
+                    name,
                     UnknownType.getUnknownType(),
                     ctx.rawSignature,
                     true
@@ -100,32 +98,18 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
     private fun handleFieldDeclarator(ctx: CPPASTDeclarator): FieldDeclaration {
         val initializer = ctx.initializer?.let { lang.initializerHandler.handle(it) }
 
-        val name = ctx.name.toString()
+        val name = ctx.name.toString() fqnize lang
 
         val declaration =
-            if (name.contains(lang.namespaceDelimiter)) {
-                val rr = name.split(lang.namespaceDelimiter).toTypedArray()
-                val fieldName = rr[rr.size - 1]
-                NodeBuilder.newFieldDeclaration(
-                    fieldName,
-                    UnknownType.getUnknownType(),
-                    emptyList(),
-                    ctx.rawSignature,
-                    lang.getLocationFromRawNode(ctx),
-                    initializer,
-                    true
-                )
-            } else {
-                NodeBuilder.newFieldDeclaration(
-                    name,
-                    UnknownType.getUnknownType(),
-                    emptyList(),
-                    ctx.rawSignature,
-                    lang.getLocationFromRawNode(ctx),
-                    initializer,
-                    true
-                )
-            }
+            NodeBuilder.newFieldDeclaration(
+                name,
+                UnknownType.getUnknownType(),
+                emptyList(),
+                ctx.rawSignature,
+                lang.getLocationFromRawNode(ctx),
+                initializer,
+                true
+            )
 
         lang.scopeManager.addDeclaration(declaration)
 
@@ -133,7 +117,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
     }
 
     private fun createMethodOrConstructor(
-        name: String,
+        name: Name,
         code: String,
         recordDeclaration: RecordDeclaration?
     ): MethodDeclaration {
@@ -155,7 +139,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
                 hasPointer = true
             }
         }
-        var name = nameDecl.name.toString()
+        var name = Name(nameDecl.name.toString(), lang.namespaceDelimiter)
 
         // Attention! This might actually be a function pointer (requires at least one level of
         // parentheses and a pointer operator)
@@ -182,14 +166,13 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
         // check for function definitions that are really methods and constructors, i.e. if they
         // contain
         // a scope operator
-        if (name.contains(lang.namespaceDelimiter)) {
-            val rr = name.split(lang.namespaceDelimiter).toTypedArray()
-            val recordName =
-                java.lang.String.join(lang.namespaceDelimiter, listOf(*rr).subList(0, rr.size - 1))
-            val methodName = rr[rr.size - 1]
+        if (name.isQualified) {
+            val recordName = name.firstScopeOrNull()
             recordDeclaration =
-                lang.scopeManager.getRecordForName(lang.scopeManager.currentScope!!, recordName)
-            declaration = createMethodOrConstructor(methodName, ctx.rawSignature, recordDeclaration)
+                recordName?.let {
+                    lang.scopeManager.getRecordForName(lang.scopeManager.currentScope!!, it)
+                }
+            declaration = createMethodOrConstructor(name, ctx.rawSignature, recordDeclaration)
         } else if (lang.scopeManager.isInRecord) {
             // if it is inside a record scope, it is a method
             recordDeclaration = lang.scopeManager.currentRecord
@@ -251,7 +234,12 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
         // wraps this list
         if (ctx.takesVarArgs()) {
             val varargs =
-                NodeBuilder.newMethodParameterIn("va_args", UnknownType.getUnknownType(), true, "")
+                NodeBuilder.newMethodParameterIn(
+                    Name("va_args"),
+                    UnknownType.getUnknownType(),
+                    true,
+                    ""
+                )
             varargs.isImplicit = true
             varargs.argumentIndex = i
             lang.scopeManager.addDeclaration(varargs)
@@ -266,10 +254,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
         return declaration
     }
 
-    private fun handleFunctionPointer(
-        ctx: CPPASTFunctionDeclarator,
-        name: String
-    ): ValueDeclaration {
+    private fun handleFunctionPointer(ctx: CPPASTFunctionDeclarator, name: Name): ValueDeclaration {
         val initializer =
             if (ctx.initializer == null) null else lang.initializerHandler.handle(ctx.initializer)
         // unfortunately we are not told whether this is a field or not, so we have to find it out
@@ -291,9 +276,9 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
             val code = ctx.rawSignature
             val namePattern = Pattern.compile("\\((\\*|.+\\*)(?<name>[^)]*)")
             val matcher = namePattern.matcher(code)
-            var fieldName: String? = ""
+            var fieldName: Name? = null
             if (matcher.find()) {
-                fieldName = matcher.group("name").trim()
+                fieldName = matcher.group("name").trim() fqnize lang
             }
             result =
                 NodeBuilder.newFieldDeclaration(
@@ -343,7 +328,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
 
         val recordDeclaration =
             newRecordDeclaration(
-                lang.scopeManager.currentNamePrefixWithDelimiter + ctx.name.toString(),
+                Name(lang.scopeManager.currentNamePrefixWithDelimiter + ctx.name.toString()),
                 kind,
                 ctx.rawSignature,
                 true
@@ -366,7 +351,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
             val constructorDeclaration =
                 NodeBuilder.newConstructorDeclaration(
                     recordDeclaration.name,
-                    recordDeclaration.name,
+                    recordDeclaration.name?.simpleName,
                     recordDeclaration
                 )
 
@@ -374,7 +359,9 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
             constructorDeclaration.isImplicit = true
 
             // and set the type, constructors always have implicitly the return type of their class
-            constructorDeclaration.type = TypeParser.createFrom(recordDeclaration.name, true, lang)
+            constructorDeclaration.type =
+                recordDeclaration.name?.let { TypeParser.createFrom(it.simpleName, true, lang) }
+                    ?: UnknownType.getUnknownType()
             recordDeclaration.addConstructor(constructorDeclaration)
             lang.scopeManager.addDeclaration(constructorDeclaration)
         }
@@ -393,7 +380,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
     private fun handleTemplateTypeParameter(
         ctx: CPPASTSimpleTypeTemplateParameter
     ): TypeParamDeclaration {
-        return NodeBuilder.newTypeParamDeclaration(ctx.rawSignature, ctx.rawSignature)
+        return NodeBuilder.newTypeParamDeclaration(Name(ctx.rawSignature), ctx.rawSignature)
     }
 
     private fun processMembers(ctx: CPPASTCompositeTypeSpecifier) {

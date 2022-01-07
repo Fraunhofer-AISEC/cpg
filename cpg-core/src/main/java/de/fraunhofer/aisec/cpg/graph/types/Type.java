@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.types;
 
+import de.fraunhofer.aisec.cpg.graph.Name;
 import de.fraunhofer.aisec.cpg.graph.Node;
 import java.util.*;
 import org.apache.commons.lang3.builder.ToStringBuilder;
@@ -60,13 +61,13 @@ public abstract class Type extends Node {
   protected Origin origin;
 
   public Type() {
-    this.setName("");
+    this.setName(null);
     this.storage = Storage.AUTO;
     this.qualifier = new Qualifier(false, false, false, false);
   }
 
   public Type(String typeName) {
-    this.setName(typeName);
+    this.setName(new Name(typeName));
     this.storage = Storage.AUTO;
     this.qualifier = new Qualifier();
     this.origin = Origin.UNRESOLVED;
@@ -85,7 +86,7 @@ public abstract class Type extends Node {
   }
 
   public Type(String typeName, @Nullable Storage storage, Qualifier qualifier) {
-    this.setName(typeName);
+    this.setName(new Name(typeName));
     this.storage = storage != null ? storage : Storage.AUTO;
     this.qualifier = qualifier;
     this.origin = Origin.UNRESOLVED;
@@ -288,7 +289,7 @@ public abstract class Type extends Node {
   public abstract Type duplicate();
 
   public String getTypeName() {
-    return getName();
+    return getName().getSimpleName();
   }
 
   /**

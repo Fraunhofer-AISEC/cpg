@@ -85,13 +85,13 @@ inline fun <reified T : Declaration> DeclarationHolder.byNameOrNull(
 
         base =
             this.declarations.filterIsInstance<DeclarationHolder>().firstOrNull {
-                (it as? Node)?.name == baseName
+                (it as? Node)?.name?.simpleName == baseName
             }
                 ?: return null
         lookup = name.split(".")[1]
     }
 
-    return base.declarations.filterIsInstance<T>().firstOrNull { it.name == lookup }
+    return base.declarations.filterIsInstance<T>().firstOrNull { it.name?.simpleName == lookup }
 }
 
 @Throws(DeclarationNotFound::class)

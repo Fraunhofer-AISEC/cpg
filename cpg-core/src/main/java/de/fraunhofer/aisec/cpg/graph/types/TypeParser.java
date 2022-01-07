@@ -733,7 +733,7 @@ public class TypeParser {
    * @return new type representing the type string
    */
   @NonNull
-  private static Type createFromUnsafe(@NonNull String type, boolean resolveAlias) {
+  private static Type createFromUnsafe(@NonNull CharSequence type, boolean resolveAlias) {
     // Check if Problems during Parsing
     if (!checkValidTypeString(type)) {
       return UnknownType.getUnknownType();
@@ -882,7 +882,7 @@ public class TypeParser {
    *     UnknownType is returned
    */
   @NonNull
-  public static Type createFrom(@NonNull String type, boolean resolveAlias) {
+  public static Type createFrom(@NonNull CharSequence type, boolean resolveAlias) {
     try {
       return createFromUnsafe(type, resolveAlias);
     } catch (Exception e) {

@@ -1118,8 +1118,23 @@ public class CallResolver extends Pass {
   private List<FunctionDeclaration> handleCXXMethodCall(
       RecordDeclaration curClass, CallExpression call) {
     List<FunctionDeclaration> invocationCandidates =
-        lang.getScopeManager().resolveFunctionStopScopeTraversalOnDefinition(call).stream()
-            .filter(f -> f.hasSignature(call.getSignature()))
+        lang.getScopeManager().resolveFunction(call).stream()
+            .filter(
+                function -> {
+                  var fqn = call.getFqn();
+
+                  var scopeName = fqn.substring(0, fqn.lastIndexOf(lang.getNamespaceDelimiter()));
+
+                  // filter out some "false-positives"
+                  if (function instanceof MethodDeclaration) {
+                    var method = (MethodDeclaration) function;
+                    if (method.getRecordDeclaration() != null) {
+                      return method.getRecordDeclaration().getName().equals(scopeName);
+                    }
+                  }
+
+                  return true;
+                })
             .collect(Collectors.toList());
 
     if (invocationCandidates.isEmpty()) {
@@ -1135,10 +1150,6 @@ public class CallResolver extends Pass {
       }
     }
 
-    if (invocationCandidates.isEmpty()) {
-      // Check for usage of implicit cast
-      invocationCandidates.addAll(resolveWithImplicitCastFunc(call));
-    }
     return invocationCandidates;
   }
 

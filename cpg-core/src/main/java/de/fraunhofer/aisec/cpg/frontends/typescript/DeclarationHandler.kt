@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newRecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.*
+import de.fraunhofer.aisec.cpg.graph.fqnize
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 
 @ExperimentalTypeScript
@@ -129,7 +130,7 @@ class DeclarationHandler(lang: TypeScriptLanguageFrontend) :
     fun handleSourceFile(node: TypeScriptNode): TranslationUnitDeclaration {
         val tu =
             NodeBuilder.newTranslationUnitDeclaration(
-                node.location.file,
+                node.location.file fqnize lang,
                 this.lang.getCodeFromRawNode(node)
             )
 
@@ -171,7 +172,7 @@ class DeclarationHandler(lang: TypeScriptLanguageFrontend) :
                     val record = this.lang.scopeManager.currentRecord
 
                     NodeBuilder.newConstructorDeclaration(
-                        record?.name ?: "",
+                        record?.name,
                         this.lang.getCodeFromRawNode(node),
                         record
                     )

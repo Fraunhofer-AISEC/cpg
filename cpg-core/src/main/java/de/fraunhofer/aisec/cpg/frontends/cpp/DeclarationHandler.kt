@@ -27,17 +27,12 @@ package de.fraunhofer.aisec.cpg.frontends.cpp
 
 import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.frontends.HandlerInterface
-import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.NodeBuilder
-import de.fraunhofer.aisec.cpg.graph.TypeManager
+import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
-import de.fraunhofer.aisec.cpg.graph.types.ObjectType
-import de.fraunhofer.aisec.cpg.graph.types.ParameterizedType
-import de.fraunhofer.aisec.cpg.graph.types.Type
-import de.fraunhofer.aisec.cpg.graph.types.TypeParser
+import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.passes.scopes.RecordScope
 import de.fraunhofer.aisec.cpg.passes.scopes.TemplateScope
@@ -71,7 +66,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
     }
 
     private fun handleNamespace(ctx: CPPASTNamespaceDefinition): Declaration {
-        val fqn = lang.scopeManager.currentNamePrefixWithDelimiter + ctx.name.toString()
+        val fqn = ctx.name.toString() fqnize lang
         val declaration = NodeBuilder.newNamespaceDeclaration(fqn, lang.getCodeFromRawNode(ctx))
 
         lang.scopeManager.addDeclaration(declaration)
@@ -223,7 +218,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
     }
 
     private fun handleTemplateDeclaration(ctx: CPPASTTemplateDeclaration): Declaration {
-        val name = ctx.rawSignature.split("{").toTypedArray()[0].replace('\n', ' ').trim()
+        val name = Name(ctx.rawSignature.split("{").toTypedArray()[0].replace('\n', ' ').trim())
 
         val templateDeclaration: TemplateDeclaration =
             if (ctx.declaration is CPPASTFunctionDefinition) {
@@ -329,7 +324,8 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
         var type: Type
         type =
             if ((innerDeclaration as RecordDeclaration).getThis() == null) {
-                TypeParser.createFrom(innerDeclaration.name, true)
+                innerDeclaration.name?.simpleName?.let { TypeParser.createFrom(it, true) }
+                    ?: UnknownType.getUnknownType()
             } else {
                 innerDeclaration.getThis().type
             }
@@ -375,27 +371,30 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
             val declaration =
                 lang.declaratorHandler.handle(ctx.declSpecifier as CPPASTCompositeTypeSpecifier)
 
-            // handle typedef
-            if (declaration!!.name.isEmpty() && ctx.rawSignature.trim().startsWith("typedef")) {
-                // CDT didn't find out the name due to this thing being a typedef. We need to fix
-                // this
-                val endOfDeclaration = ctx.rawSignature.lastIndexOf('}')
-                if (endOfDeclaration + 1 < ctx.rawSignature.length) {
-                    val parts =
-                        Util.splitLeavingParenthesisContents(
-                            ctx.rawSignature.substring(endOfDeclaration + 1),
-                            ","
-                        )
-                    val name =
-                        parts
-                            .stream()
-                            .filter { p: String -> !p.contains("*") && !p.contains("[") }
-                            .findFirst()
-                    name.ifPresent { s: String -> declaration.name = s.replace(";", "") }
+            declaration?.let {
+                // handle typedef
+                if (it.name.isEmpty() && ctx.rawSignature.trim().startsWith("typedef")) {
+                    // CDT didn't find out the name due to this thing being a typedef. We need to
+                    // fix
+                    // this
+                    val endOfDeclaration = ctx.rawSignature.lastIndexOf('}')
+                    if (endOfDeclaration + 1 < ctx.rawSignature.length) {
+                        val parts =
+                            Util.splitLeavingParenthesisContents(
+                                ctx.rawSignature.substring(endOfDeclaration + 1),
+                                ","
+                            )
+                        val name =
+                            parts
+                                .stream()
+                                .filter { p: String -> !p.contains("*") && !p.contains("[") }
+                                .findFirst()
+                        name.ifPresent { s: String -> declaration.name = Name(s.replace(";", "")) }
+                    }
                 }
+                lang.processAttributes(it, ctx)
+                sequence.addDeclaration(it)
             }
-            lang.processAttributes(declaration, ctx)
-            sequence.addDeclaration(declaration)
         } else if (declSpecifier is CPPASTElaboratedTypeSpecifier) {
             Util.warnWithFileLocation(
                 lang,
@@ -511,7 +510,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
     fun handleTranslationUnit(translationUnit: CPPASTTranslationUnit): TranslationUnitDeclaration {
         val node =
             NodeBuilder.newTranslationUnitDeclaration(
-                translationUnit.filePath,
+                Name(translationUnit.filePath),
                 translationUnit.rawSignature
             )
 

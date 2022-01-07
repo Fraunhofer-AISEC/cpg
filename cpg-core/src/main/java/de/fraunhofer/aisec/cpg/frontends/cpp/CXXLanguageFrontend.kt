@@ -325,7 +325,10 @@ class CXXLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeM
         val list: MutableList<Annotation> = ArrayList()
         for (attribute in owner.attributes) {
             val annotation =
-                NodeBuilder.newAnnotation(String(attribute.name), attribute.rawSignature)
+                NodeBuilder.newAnnotation(
+                    String(attribute.name) fqnize this,
+                    attribute.rawSignature
+                )
 
             // go over the parameters
             if (attribute.argumentClause is IASTTokenList) {
@@ -354,7 +357,11 @@ class CXXLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeM
         val expression: Expression =
             when (token.tokenType) {
                 1 -> // a variable
-                NodeBuilder.newDeclaredReferenceExpression(code, UnknownType.getUnknownType(), code)
+                NodeBuilder.newDeclaredReferenceExpression(
+                        code fqnize this,
+                        UnknownType.getUnknownType(),
+                        code
+                    )
                 2 -> // an integer
                 NodeBuilder.newLiteral(code.toInt(), TypeParser.createFrom("int", true), code)
                 130 -> // a string
@@ -366,7 +373,7 @@ class CXXLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeM
                 else ->
                     NodeBuilder.newLiteral(code, TypeParser.createFrom("const char*", false), code)
             }
-        return NodeBuilder.newAnnotationMember("", expression, code)
+        return NodeBuilder.newAnnotationMember(null, expression, code)
     }
 
     @Throws(NoSuchFieldException::class)
