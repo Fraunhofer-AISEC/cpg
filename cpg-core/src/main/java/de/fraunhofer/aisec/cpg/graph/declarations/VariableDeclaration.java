@@ -198,13 +198,4 @@ public class VariableDeclaration extends ValueDeclaration implements TypeListene
     return super.hashCode();
   }
 
-  @NotNull
-  @Override
-  public List<Node> getAstChildren() {
-    var list = new ArrayList<Node>();
-
-    list.add(this.initializer);
-
-    return list;
-  }
 }

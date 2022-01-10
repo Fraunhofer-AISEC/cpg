@@ -97,7 +97,7 @@ public class SubgraphWalker {
    * @return a list of children from the node's AST
    */
   public static List<Node> getAstChildren(Node node) {
-    List<Node> children = new ArrayList<>();
+    var children = new ArrayList<Node>();
     if (node == null) return children;
 
     Class<?> classType = node.getClass();
@@ -227,7 +227,6 @@ public class SubgraphWalker {
     walker.registerOnScopeExit(
         n -> {
           if (n instanceof HasType) {
-            var b = new Benchmark(SubgraphWalker.class, "set type");
             HasType typeNode = (HasType) n;
             typeCache
                 .getOrDefault(typeNode, Collections.emptySet())
@@ -238,7 +237,6 @@ public class SubgraphWalker {
                     });
             typeCache.remove((HasType) n);
             num.getAndIncrement();
-            b.stop();
           }
         });
     walker.iterate(node);

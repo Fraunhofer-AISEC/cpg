@@ -200,15 +200,4 @@ public class TranslationUnitDeclaration extends Declaration
     return super.hashCode();
   }
 
-  @Override
-  public List<Node> getAstChildren() {
-    var list = new ArrayList<Node>();
-
-    list.addAll(unwrap(this.declarations));
-    list.addAll(unwrap(this.statements));
-    list.addAll(unwrap(this.includes));
-    list.addAll(unwrap(this.namespaces));
-
-    return list;
-  }
 }

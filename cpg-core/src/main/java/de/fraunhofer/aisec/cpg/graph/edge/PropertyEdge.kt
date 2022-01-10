@@ -43,7 +43,8 @@ open class PropertyEdge<T : Node> : Persistable {
     @field:Id @field:GeneratedValue private val id: Long? = null
 
     // Node where the edge is outgoing
-    @field:StartNode public var start: Node
+    @field:StartNode
+    var start: Node
 
     // Node where the edge is ingoing
     @field:EndNode var end: T

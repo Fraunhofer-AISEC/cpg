@@ -66,13 +66,8 @@ public class InitializerListExpression extends Expression implements TypeListene
     }
     this.initializers = PropertyEdge.transformIntoOutgoingPropertyEdgeList(initializers, this);
     for (Expression i : initializers) {
-      var b = new Benchmark(InitializerListExpression.class, "register type");
       i.registerTypeListener(this);
-      b.stop();
-
-      b = new Benchmark(InitializerListExpression.class, "add prev dfg");
       this.addPrevDFG(i);
-      b.stop();
     }
   }
 
