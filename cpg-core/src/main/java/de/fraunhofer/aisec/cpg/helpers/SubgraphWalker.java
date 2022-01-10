@@ -56,22 +56,32 @@ public class SubgraphWalker {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(SubgraphWalker.class);
 
-  private static final Map<String, Collection<Field>> cache = new HashMap<>();
+  private static final HashMap<String, List<Field>> fieldCache = new HashMap<>();
 
   // hide ctor
   private SubgraphWalker() {}
 
+  /**
+   * Returns all the field for a specific class type. Because this information is static during
+   * runtime, we do cache this information in {@link #fieldCache} for performance reasons.
+   *
+   * @param classType the class type
+   * @return its fields, including the ones from its superclass
+   */
   private static Collection<Field> getAllFields(Class<?> classType) {
     if (classType.getSuperclass() != null) {
-      if (cache.containsKey(classType.getName())) {
-        return cache.get(classType.getName());
+      var cacheKey = classType.getName();
+
+      if (fieldCache.containsKey(cacheKey)) {
+        return fieldCache.get(cacheKey);
       }
 
-      Collection<Field> fields = new ArrayList<>();
+      var fields = new ArrayList<Field>();
       fields.addAll(getAllFields(classType.getSuperclass()));
       fields.addAll(Arrays.asList(classType.getDeclaredFields()));
 
-      cache.put(classType.getName(), fields);
+      // update the cache
+      fieldCache.put(cacheKey, fields);
 
       return fields;
     }
@@ -84,13 +94,13 @@ public class SubgraphWalker {
    * node.
    *
    * @param node - Node to get the children from the AST tree structure
-   * @return a set of children from the nodes member variables
+   * @return a list of children from the node's AST
    */
-  public static Set<Node> getAstChildren(Node node) {
-    LinkedHashSet<Node> children = new LinkedHashSet<>(); // Set for duplicate elimination
+  public static List<Node> getAstChildren(Node node) {
+    List<Node> children = new ArrayList<>();
     if (node == null) return children;
 
-    Class classType = node.getClass();
+    Class<?> classType = node.getClass();
     for (Field field : getAllFields(classType)) {
       SubGraph subGraph = field.getAnnotation(SubGraph.class);
       if (subGraph != null && Arrays.asList(subGraph.value()).contains("AST")) {
@@ -114,7 +124,7 @@ public class SubgraphWalker {
           }
 
           if (PropertyEdge.checkForPropertyEdge(field, obj)) {
-            obj = PropertyEdge.unwrapPropertyEdge(obj, outgoing);
+            obj = PropertyEdge.unwrap((List<PropertyEdge<Node>>) obj, outgoing);
           }
 
           if (obj instanceof Node) {
@@ -129,61 +139,6 @@ public class SubgraphWalker {
                     + obj.getClass()
                     + " but can only used with node graph classes or collections of graph nodes");
           }
-        } catch (IllegalAccessException ex) {
-          LOGGER.error("Error while retrieving AST children: {}", ex.getMessage());
-        }
-      }
-    }
-    return children;
-  }
-
-  /**
-   * Calls handler function of all super-classes of the current node to get the AST children of the
-   * node.
-   *
-   * @param node - Node to get the children from the AST tree structure
-   * @return a set of children from the nodes member variables
-   */
-  public static Set<PropertyEdge<Node>> getAstChildrenEdges(Node node) {
-    LinkedHashSet<PropertyEdge<Node>> children =
-        new LinkedHashSet<>(); // Set for duplicate elimination
-    if (node == null) return children;
-
-    Class classType = node.getClass();
-    for (Field field : getAllFields(classType)) {
-      SubGraph subGraph = field.getAnnotation(SubGraph.class);
-      if (subGraph != null && Arrays.asList(subGraph.value()).contains("AST")) {
-        try {
-          // disable access mechanisms
-          field.trySetAccessible();
-
-          Object obj = field.get(node);
-
-          // restore old state
-          field.setAccessible(false);
-
-          // skip, if null
-          if (obj == null) {
-            continue;
-          }
-
-          boolean outgoing = true; // default
-          if (field.getAnnotation(Relationship.class) != null) {
-            outgoing = field.getAnnotation(Relationship.class).direction().equals("OUTGOING");
-          }
-
-          /*if (obj instanceof Node) {
-            children.add((Node) obj);
-          } else*/ if (obj instanceof Collection) {
-            Collection<PropertyEdge<Node>> astChildren = (Collection<PropertyEdge<Node>>) obj;
-            astChildren.removeIf(Objects::isNull);
-            children.addAll(astChildren);
-          } /*else {
-              throw new AnnotationFormatError(
-                  "Found @SubGraph(\"AST\") on field of type "
-                      + obj.getClass()
-                      + " but can only used with node graph classes or collections of graph nodes");
-            }*/
         } catch (IllegalAccessException ex) {
           LOGGER.error("Error while retrieving AST children: {}", ex.getMessage());
         }

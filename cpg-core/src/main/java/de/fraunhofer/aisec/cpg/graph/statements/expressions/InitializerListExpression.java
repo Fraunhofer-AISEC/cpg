@@ -35,9 +35,8 @@ import de.fraunhofer.aisec.cpg.graph.TypeManager;
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import de.fraunhofer.aisec.cpg.graph.types.PointerType.PointerOrigin;
 import de.fraunhofer.aisec.cpg.graph.types.Type;
-import de.fraunhofer.aisec.cpg.graph.types.UnknownType;
+import de.fraunhofer.aisec.cpg.helpers.Benchmark;
 import java.util.*;
-import java.util.stream.Collectors;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.neo4j.ogm.annotation.Relationship;
 
@@ -66,12 +65,14 @@ public class InitializerListExpression extends Expression implements TypeListene
           });
     }
     this.initializers = PropertyEdge.transformIntoOutgoingPropertyEdgeList(initializers, this);
-    if (initializers != null) {
-      initializers.forEach(
-          i -> {
-            i.registerTypeListener(this);
-            this.addPrevDFG(i);
-          });
+    for (Expression i : initializers) {
+      var b = new Benchmark(InitializerListExpression.class, "register type");
+      i.registerTypeListener(this);
+      b.stop();
+
+      b = new Benchmark(InitializerListExpression.class, "add prev dfg");
+      this.addPrevDFG(i);
+      b.stop();
     }
   }
 
@@ -90,24 +91,15 @@ public class InitializerListExpression extends Expression implements TypeListene
     Set<Type> subTypes;
 
     if (this.getInitializers().contains(src)) {
-      Set<Type> types =
-          this.initializers.parallelStream()
-              .map(PropertyEdge::getEnd)
-              .map(Expression::getType)
-              .filter(Objects::nonNull)
-              .map(t -> TypeManager.getInstance().registerType(t.reference(PointerOrigin.ARRAY)))
-              .collect(Collectors.toSet());
-      Type alternative = !types.isEmpty() ? types.iterator().next() : UnknownType.getUnknownType();
-      newType = TypeManager.getInstance().getCommonType(types).orElse(alternative);
-      subTypes = new HashSet<>(getPossibleSubTypes());
-      subTypes.remove(oldType);
-      subTypes.addAll(types);
+      // derive the new type based on an (array) reference to its element type
+      newType = src.getType().reference(PointerOrigin.ARRAY);
     } else {
       newType = src.getType();
-      subTypes = new HashSet<>(getPossibleSubTypes());
-      subTypes.remove(oldType);
-      subTypes.add(newType);
     }
+
+    subTypes = new HashSet<>(getPossibleSubTypes());
+    subTypes.remove(oldType);
+    subTypes.add(newType);
 
     setType(newType, root);
     setPossibleSubTypes(subTypes, root);

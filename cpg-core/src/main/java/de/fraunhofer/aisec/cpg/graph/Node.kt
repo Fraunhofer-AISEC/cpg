@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.graph
 import de.fraunhofer.aisec.cpg.graph.declarations.TypedefDeclaration
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
+import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.unwrap
 import de.fraunhofer.aisec.cpg.helpers.LocationConverter
 import de.fraunhofer.aisec.cpg.processing.IVisitable
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
@@ -73,6 +74,12 @@ open class Node : IVisitable<Node>, Persistable {
     @field:Relationship(value = "EOG", direction = "OUTGOING")
     var nextEOGEdges: MutableList<PropertyEdge<Node>> = ArrayList()
         protected set
+
+    /**
+     * Virtual property to return a list of children. Must be filled by the individual node types.
+     */
+    open val astChildren: List<Node>
+        get() = listOf()
 
     /** Virtual property for accessing [prevEOGEdges] without property edges. */
     var prevEOG: List<Node>
