@@ -199,5 +199,4 @@ public class TranslationUnitDeclaration extends Declaration
   public int hashCode() {
     return super.hashCode();
   }
-
 }

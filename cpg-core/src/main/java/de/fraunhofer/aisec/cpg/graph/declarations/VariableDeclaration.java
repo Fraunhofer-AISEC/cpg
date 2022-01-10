@@ -36,7 +36,6 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.InitializerListExpre
 import de.fraunhofer.aisec.cpg.graph.types.Type;
 import java.util.*;
 import org.apache.commons.lang3.builder.ToStringBuilder;
-import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.neo4j.ogm.annotation.Relationship;
 
@@ -197,5 +196,4 @@ public class VariableDeclaration extends ValueDeclaration implements TypeListene
   public int hashCode() {
     return super.hashCode();
   }
-
 }

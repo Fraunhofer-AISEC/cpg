@@ -43,8 +43,7 @@ open class PropertyEdge<T : Node> : Persistable {
     @field:Id @field:GeneratedValue private val id: Long? = null
 
     // Node where the edge is outgoing
-    @field:StartNode
-    var start: Node
+    @field:StartNode var start: Node
 
     // Node where the edge is ingoing
     @field:EndNode var end: T
@@ -243,7 +242,7 @@ open class PropertyEdge<T : Node> : Persistable {
                 return true
             } else if (obj is Collection<*>) {
                 val collectionTypes =
-                    java.util.List.of(*(f.genericType as ParameterizedType).actualTypeArguments)
+                    listOf(*(f.genericType as ParameterizedType).actualTypeArguments)
                 for (t in collectionTypes) {
                     if (t is ParameterizedType) {
                         return t.rawType == PropertyEdge::class.java

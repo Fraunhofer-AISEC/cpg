@@ -77,7 +77,8 @@ open class Node : IVisitable<Node>, Persistable {
         protected set
 
     /**
-     * Virtual property to return a list of the node's children. Uses the [SubgraphWalker] to retrieve the appropriate nodes.
+     * Virtual property to return a list of the node's children. Uses the [SubgraphWalker] to
+     * retrieve the appropriate nodes.
      */
     val astChildren: List<Node>
         get() = SubgraphWalker.getAstChildren(this)

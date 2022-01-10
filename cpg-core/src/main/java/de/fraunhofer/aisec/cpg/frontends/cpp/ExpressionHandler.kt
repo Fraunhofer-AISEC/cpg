@@ -733,10 +733,10 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
 
         for (clause in ctx.clauses) {
             handle(clause)?.let {
-                var edge = PropertyEdge(expression, it)
+                val edge = PropertyEdge(expression, it)
                 edge.addProperty(Properties.INDEX, expression.initializersPropertyEdge.size)
 
-                expression.initializersPropertyEdge.add(PropertyEdge(expression, it))
+                expression.initializersPropertyEdge.add(edge)
             }
         }
 
