@@ -1162,6 +1162,11 @@ public class CallResolver extends Pass {
                   createInferredFunctionDeclaration(
                       r, call.getName(), call.getCode(), false, call.getSignature()))
           .forEach(invocationCandidates::add);
+      if (lang.getConfig().getInferenceConfiguration().getOverapproximateDataFlows()
+          && call instanceof MemberCallExpression
+          && call.getBase() != null) {
+        invocationCandidates.forEach(candidate -> candidate.addPrevDFG(call.getBase()));
+      }
     }
   }
 
@@ -1537,6 +1542,12 @@ public class CallResolver extends Pass {
         node.addNextDFG(paramVariableDeclaration);
         nonTypeCounter++;
         inferred.addParameter(paramVariableDeclaration);
+
+        // TypeParameters that are regular expressions could in theory hold information that have to
+        // be tracked as data flows
+        if (lang.getConfig().getInferenceConfiguration().getOverapproximateDataFlows()) {
+          inferred.addPrevDFG(paramVariableDeclaration);
+        }
       }
     }
     return inferred;
@@ -1567,7 +1578,7 @@ public class CallResolver extends Pass {
           && containingRecord.getKind().equals("struct")) {
         containingRecord.setKind("class");
       }
-
+      overapproximateInferredDataFlows(inferred);
       return inferred;
     } else {
       // function declaration, not inside a class
@@ -1581,7 +1592,22 @@ public class CallResolver extends Pass {
       } else {
         currentTU.addDeclaration(inferred);
       }
+      overapproximateInferredDataFlows(inferred);
       return inferred;
+    }
+  }
+
+  /**
+   * Connects the parameters of a function with the Function itself to represent that every
+   * information flowing into the function may flow out of the function through the returned value.
+   *
+   * @param function to build the inferred df edges for
+   */
+  private void overapproximateInferredDataFlows(FunctionDeclaration function) {
+    if (lang.getConfig().getInferenceConfiguration().getOverapproximateDataFlows()) {
+      for (ParamVariableDeclaration parameter : function.getParameters()) {
+        function.addPrevDFG(parameter);
+      }
     }
   }
 
@@ -1592,6 +1618,7 @@ public class CallResolver extends Pass {
     inferred.setInferred(true);
     inferred.setParameters(Util.createInferredParameters(signature));
     containingRecord.addConstructor(inferred);
+    overapproximateInferredDataFlows(inferred);
     return inferred;
   }
 

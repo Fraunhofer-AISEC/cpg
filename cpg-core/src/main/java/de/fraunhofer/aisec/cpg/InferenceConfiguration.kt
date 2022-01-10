@@ -37,12 +37,26 @@ private constructor(
     val guessCastExpressions: Boolean,
 
     /** Enables the inference of record declarations */
-    val inferRecords: Boolean
+    val inferRecords: Boolean,
+
+    /**
+     * Enables the inference of data flow edges from the ingoing data flows, e.g. parameters, type
+     * parameters, of an inferred function to its return type
+     */
+    val overapproximateDataFlows: Boolean
 ) {
-    class Builder(var guessCastExpressions: Boolean = false, var inferRecords: Boolean = false) {
+    class Builder(
+        var guessCastExpressions: Boolean = false,
+        var inferRecords: Boolean = false,
+        var overapproximateDataFlows: Boolean = false
+    ) {
         fun guessCastExpressions(guess: Boolean) = apply { this.guessCastExpressions = guess }
         fun inferRecords(infer: Boolean) = apply { this.inferRecords = infer }
-        fun build() = InferenceConfiguration(guessCastExpressions, inferRecords)
+        fun overapproximateDataFlows(overapproximate: Boolean) = apply {
+            this.overapproximateDataFlows = overapproximate
+        }
+        fun build() =
+            InferenceConfiguration(guessCastExpressions, inferRecords, overapproximateDataFlows)
     }
 
     companion object {
