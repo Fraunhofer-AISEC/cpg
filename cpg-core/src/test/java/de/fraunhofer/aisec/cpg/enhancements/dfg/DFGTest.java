@@ -42,6 +42,7 @@ import java.nio.file.Path;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
 
 class DFGTest {
@@ -69,7 +70,11 @@ class DFGTest {
                 e -> e.getAccess().equals(AccessValues.WRITE))
             .get(0);
 
-    assertTrue(literal2.getNextDFG().contains(a2));
+    assertTrue(
+        literal2.getNextDFG().stream()
+            .flatMap(node -> node.getNextDFG().stream())
+            .collect(Collectors.toList())
+            .contains(a2));
     assertEquals(1, a2.getNextDFG().size()); // Outgoing DFG Edges only to VariableDeclaration
 
     var refersTo = a2.getRefersToAs(VariableDeclaration.class);
@@ -237,14 +242,26 @@ class DFGTest {
                 TestUtils.subnodesOfType(result, Literal.class), l -> l.getValue().equals(12))
             .get(0);
 
-    assertEquals(3, literal10.getNextDFG().size());
-    assertTrue(literal10.getNextDFG().contains(a10));
+    assertEquals(2, literal10.getNextDFG().size());
+    assertTrue(
+        literal10.getNextDFG().stream()
+            .flatMap(node -> node.getNextDFG().stream())
+            .collect(Collectors.toList())
+            .contains(a10));
 
-    assertEquals(3, literal11.getNextDFG().size());
-    assertTrue(literal11.getNextDFG().contains(a11));
+    assertEquals(2, literal11.getNextDFG().size());
+    assertTrue(
+        literal11.getNextDFG().stream()
+            .flatMap(node -> node.getNextDFG().stream())
+            .collect(Collectors.toList())
+            .contains(a11));
 
-    assertEquals(4, literal12.getNextDFG().size());
-    assertTrue(literal12.getNextDFG().contains(a12));
+    assertEquals(3, literal12.getNextDFG().size());
+    assertTrue(
+        literal12.getNextDFG().stream()
+            .flatMap(node -> node.getNextDFG().stream())
+            .collect(Collectors.toList())
+            .contains(a12));
 
     assertEquals(4, a.getPrevDFG().size());
     assertTrue(a.getPrevDFG().contains(literal0));
@@ -393,8 +410,12 @@ class DFGTest {
 
     // Check outgoing dfg edges from a of a = a + b and into
     // VariableDeclaration a)
-    assertEquals(2, binaryOperatorAddition.getNextDFG().size());
-    assertTrue(binaryOperatorAddition.getNextDFG().contains(lhsA));
+    assertEquals(1, binaryOperatorAddition.getNextDFG().size());
+    assertTrue(
+        binaryOperatorAddition.getNextDFG().stream()
+            .flatMap(node -> node.getNextDFG().stream())
+            .collect(Collectors.toList())
+            .contains(lhsA));
 
     // Check outgoing dfg edges of literal1 (VariableDeclaration b and DeclaredReferenceExpression
     // b)

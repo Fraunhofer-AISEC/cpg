@@ -93,9 +93,8 @@ public class BinaryOperator extends Expression implements TypeListener {
         this.registerTypeListener((TypeListener) lhs);
         this.registerTypeListener((TypeListener) this.lhs);
       }
-      if (this.rhs != null) {
-        lhs.addPrevDFG(rhs);
-      }
+      lhs.addPrevDFG(this);
+
     } else if (compoundOperators.contains(operatorCode)) {
       if (lhs instanceof DeclaredReferenceExpression) {
         // declared reference expr is the left hand side of an assignment -> writing to the var
@@ -121,7 +120,7 @@ public class BinaryOperator extends Expression implements TypeListener {
         unregisterTypeListener((TypeListener) this.lhs);
       }
       if (this.rhs != null) {
-        this.lhs.removePrevDFG(this.lhs);
+        this.lhs.removePrevDFG(this);
       }
       if (this.lhs instanceof TypeListener) {
         this.unregisterTypeListener((TypeListener) this.lhs);
@@ -158,9 +157,7 @@ public class BinaryOperator extends Expression implements TypeListener {
       if (rhs instanceof TypeListener) {
         this.registerTypeListener((TypeListener) rhs);
       }
-      if (this.lhs != null) {
-        this.lhs.addPrevDFG(rhs);
-      }
+      this.addPrevDFG(rhs);
     }
     this.addPrevDFG(
         rhs); // in C++ we can have a + (b = 1) so the rhs has to connected to the BinOp in all
@@ -172,9 +169,6 @@ public class BinaryOperator extends Expression implements TypeListener {
     if ("=".equals(operatorCode)) {
       if (this.rhs instanceof TypeListener) {
         unregisterTypeListener((TypeListener) this.rhs);
-      }
-      if (this.lhs != null) {
-        this.lhs.removePrevDFG(this.rhs);
       }
     }
     this.removePrevDFG(

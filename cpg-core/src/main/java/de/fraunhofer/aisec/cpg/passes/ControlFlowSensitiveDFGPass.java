@@ -168,6 +168,13 @@ public class ControlFlowSensitiveDFGPass extends Pass {
       for (Node prev : prevDFGs) {
         if (prev instanceof VariableDeclaration && variables.containsKey(prev)) {
           for (Node target : variables.get(prev)) {
+            if (target instanceof BinaryOperator
+                && "=".equals(((BinaryOperator) target).getOperatorCode())) {
+              // Avoid the "=" node in a dfg chain when possible as it adds no information relevant
+              // for the sink of a
+              // data flow and keeps it consistent with the previous representation
+              target = ((BinaryOperator) target).getRhs();
+            }
             currNode.addPrevDFG(target);
           }
           addToRemoves(currNode, prev);
