@@ -34,6 +34,10 @@ import de.fraunhofer.aisec.cpg.graph.statements.WhileStatement
 import de.fraunhofer.aisec.cpg.processing.IVisitor
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 
+/**
+ * A [Pass] which uses a simple logic to determine constant values and mark unreachable code regions
+ * by setting the [Properties.UNREACHABLE] property of an eog-edge to true.
+ */
 class UnreachableEOGPass : Pass() {
     override fun accept(t: TranslationResult) {
         for (tu in t.translationUnits) {
@@ -57,12 +61,12 @@ class UnreachableEOGPass : Pass() {
         val evalResult = ValueEvaluator().evaluate(n.condition)
         if (evalResult is Boolean && evalResult == true) {
             n.nextEOGEdges
-                .first { e -> e.getProperty(Properties.INDEX) == 1 }
-                .addProperty(Properties.UNREACHABLE, true)
+                .firstOrNull { e -> e.getProperty(Properties.INDEX) == 1 }
+                ?.addProperty(Properties.UNREACHABLE, true)
         } else if (evalResult is Boolean && evalResult == false) {
             n.nextEOGEdges
-                .first { e -> e.getProperty(Properties.INDEX) == 0 }
-                .addProperty(Properties.UNREACHABLE, true)
+                .firstOrNull { e -> e.getProperty(Properties.INDEX) == 0 }
+                ?.addProperty(Properties.UNREACHABLE, true)
         }
     }
 
@@ -78,12 +82,12 @@ class UnreachableEOGPass : Pass() {
         val evalResult = ValueEvaluator().evaluate(n.condition)
         if (evalResult is Boolean && evalResult == true) {
             n.nextEOGEdges
-                .first { e -> e.getProperty(Properties.INDEX) == 1 }
-                .addProperty(Properties.UNREACHABLE, true)
+                .firstOrNull { e -> e.getProperty(Properties.INDEX) == 1 }
+                ?.addProperty(Properties.UNREACHABLE, true)
         } else if (evalResult is Boolean && evalResult == false) {
             n.nextEOGEdges
-                .first { e -> e.getProperty(Properties.INDEX) == 0 }
-                .addProperty(Properties.UNREACHABLE, true)
+                .firstOrNull { e -> e.getProperty(Properties.INDEX) == 0 }
+                ?.addProperty(Properties.UNREACHABLE, true)
         }
     }
 

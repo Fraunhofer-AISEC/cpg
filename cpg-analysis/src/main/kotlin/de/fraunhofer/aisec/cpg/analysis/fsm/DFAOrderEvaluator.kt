@@ -52,7 +52,8 @@ import org.slf4j.LoggerFactory
 open class DFAOrderEvaluator(
     var consideredBases: Set<Long>,
     var nodeToRelevantMethod: Map<Node, String>,
-    var thisPositionOfNode: Map<Node, Int> = mapOf()
+    var thisPositionOfNode: Map<Node, Int> = mapOf(),
+    var eliminateUnreachableCode: Boolean = true
 ) {
     private val nodeIDtoEOGPathSet = mutableMapOf<Long, MutableSet<String>>()
     private val log: Logger = LoggerFactory.getLogger(DFAOrderEvaluator::class.java)
@@ -302,14 +303,17 @@ open class DFAOrderEvaluator(
         seenStates: MutableSet<String>
     ): List<Node> {
         val outNodes = mutableListOf<Node>()
-        // outNodes += node.nextEOG
-        outNodes +=
-            PropertyEdge.unwrap(
-                node.nextEOGEdges.filter { e ->
-                    e.getProperty(Properties.UNREACHABLE) == null ||
-                        e.getProperty(Properties.UNREACHABLE) == false
-                }
-            )
+        if (eliminateUnreachableCode) {
+            outNodes +=
+                PropertyEdge.unwrap(
+                    node.nextEOGEdges.filter { e ->
+                        e.getProperty(Properties.UNREACHABLE) == null ||
+                            e.getProperty(Properties.UNREACHABLE) == false
+                    }
+                )
+        } else {
+            outNodes += node.nextEOG
+        }
 
         if (outNodes.size == 1 && node.nextEOG.size == 1) {
             // We only have one node following this node, so we
