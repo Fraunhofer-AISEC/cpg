@@ -192,7 +192,7 @@ dependencies {
     api("org.slf4j:slf4j-api:1.7.32")
     implementation("org.apache.logging.log4j:log4j-slf4j18-impl:2.17.0")
 
-    api("com.github.javaparser:javaparser-symbol-solver-core:3.23.0")
+    api("com.github.javaparser:javaparser-symbol-solver-core:3.24.0")
     api("com.fasterxml.jackson.module:jackson-module-kotlin:2.13.0")
 
     // Eclipse dependencies
