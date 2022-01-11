@@ -35,6 +35,8 @@ import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newFunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newMethodDeclaration
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newVariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.*
+import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
+import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.types.PointerType
 import de.fraunhofer.aisec.cpg.graph.types.ReferenceType
@@ -522,6 +524,18 @@ class DeclarationHandler(lang: CXXLanguageFrontend2) :
             )*/
         } else {
             func.body = lang.statementHandler.handle(body)
+
+            // add an implicit return statement, if there is none
+            if (func.body is CompoundStatement) {
+                if ((func.body as CompoundStatement).statements.size == 0 ||
+                        (func.body as CompoundStatement).statements.last() !is ReturnStatement
+                ) {
+                    val returnStatement = NodeBuilder.newReturnStatement("return;")
+                    returnStatement.isImplicit = true
+                    (func.body as CompoundStatement).addStatement(returnStatement)
+                }
+            }
+
             func.setIsDefinition(func.body != null)
         }
 
