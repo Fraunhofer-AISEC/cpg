@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg
 
+import de.fraunhofer.aisec.cpg.TestUtils.analyzeAndGetFirstTU
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
@@ -35,14 +36,37 @@ import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
+import java.io.File
 import java.time.Duration
 import java.time.temporal.ChronoUnit
+import java.util.List
+import kotlin.io.path.writeText
+import kotlin.test.assertNotNull
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertTimeout
 
 class PerformanceRegressionTest {
     @Test
+    fun testParseLargeList() {
+        val range = 0..50000
+        val string = "static int my_array[] = {" + range.toList().joinToString(", ") + "}"
+
+        val tmp = kotlin.io.path.createTempFile("c_range", ".c")
+
+        tmp.writeText(string)
+
+        val tu = analyzeAndGetFirstTU(List.of(tmp.toFile()), tmp.parent, true)
+
+        assertNotNull(tu)
+    }
+
+    @Test
     fun testTraversal() {
+        val file = File("src/test/resources/ianatest.c")
+        val tu2 = analyzeAndGetFirstTU(List.of(file), file.parentFile.toPath(), true)
+
+        assertNotNull(tu2)
+
         val tu = TranslationUnitDeclaration()
         val decl = VariableDeclaration()
         val list = InitializerListExpression()
