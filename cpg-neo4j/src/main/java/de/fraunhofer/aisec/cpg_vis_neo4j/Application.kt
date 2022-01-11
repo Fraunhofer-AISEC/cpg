@@ -31,6 +31,7 @@ import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import de.fraunhofer.aisec.cpg.*
 import de.fraunhofer.aisec.cpg.frontends.cpp.CompilationDB
 import de.fraunhofer.aisec.cpg.frontends.golang.GoLanguageFrontend
+import de.fraunhofer.aisec.cpg.frontends.llvm.LLVMIRLanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.typescript.TypeScriptLanguageFrontend
 import org.neo4j.driver.exceptions.AuthenticationException
@@ -283,6 +284,7 @@ class Application : Callable<Int> {
                 .loadIncludes(loadIncludes)
                 .debugParser(DEBUG_PARSER)
 
+<<<<<<< HEAD
         if (exclusive.jsonCompilationDatabase != "") {
             println("json compilation database is " + exclusive.jsonCompilationDatabase)
             val jsonStringFile = File(exclusive.jsonCompilationDatabase).readText().toString()
@@ -311,6 +313,12 @@ class Application : Callable<Int> {
                 .sourceLocations(compilationDatabase.keys.toList())
                 .loadCompilationDatabase(compilationDatabase)
         }
+=======
+        translationConfiguration.registerLanguage(
+            LLVMIRLanguageFrontend::class.java,
+            LLVMIRLanguageFrontend.LLVM_EXTENSIONS
+        )
+>>>>>>> 67d84df59c6cebc05086633d0808f7599b7a5bd0
 
         if (enableExperimentalPython) {
             translationConfiguration.registerLanguage(

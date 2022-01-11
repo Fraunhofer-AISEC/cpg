@@ -84,7 +84,7 @@ class NullPointerCheck {
                     resolved = resolver.evaluate(it)
                 } else if (it is Declaration) {
                     // try to resolve them
-                    resolved = resolver.resolveDeclaration(it)
+                    resolved = resolver.evaluateDeclaration(it)
                 }
 
                 if (resolved == null) {
