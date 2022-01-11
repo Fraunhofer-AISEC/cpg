@@ -334,7 +334,7 @@ class CXXLanguageFrontend2Test {
         val c = twoDeclarations[1] as VariableDeclaration
         assertNotNull(c)
         assertEquals("c", c.name)
-        assertEquals(TypeParser.createFrom("int", false), c.type)
+        assertEquals(TypeParser.createFrom("int*", false), c.type)
 
         val withoutInitializer =
             (statements[3] as DeclarationStatement).getSingleDeclarationAs(
