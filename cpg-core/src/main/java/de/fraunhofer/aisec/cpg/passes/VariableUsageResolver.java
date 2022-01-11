@@ -187,6 +187,11 @@ public class VariableUsageResolver extends Pass {
   }
 
   private void resolveLocalVarUsage(RecordDeclaration currentClass, Node parent, Node current) {
+    if (lang == null) {
+      Util.errorWithFileLocation(
+          current, log, "Could not resolve local variable usage: language frontend is null");
+    }
+
     if (current instanceof DeclaredReferenceExpression && !(current instanceof MemberExpression)) {
       DeclaredReferenceExpression ref = (DeclaredReferenceExpression) current;
       if (parent instanceof MemberCallExpression
@@ -330,6 +335,10 @@ public class VariableUsageResolver extends Pass {
 
   @Nullable
   private Declaration resolveBase(DeclaredReferenceExpression reference) {
+    if (lang == null) {
+      Util.errorWithFileLocation(
+          reference, log, "Could not resolve base: language frontend is null");
+    }
 
     Declaration declaration = lang.getScopeManager().resolveReference(reference);
     if (declaration != null) {
