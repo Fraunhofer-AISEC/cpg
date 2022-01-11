@@ -302,10 +302,15 @@ class Application : Callable<Int> {
                     }
                 val basedir = currentObject.directory
                 var file: File = File(fileName)
+
                 if (file.isAbsolute) {
-                    compilationDatabase.put(file, includeFiles)
+                    if(file.exists()){
+                        compilationDatabase.put(file, includeFiles)
+                    }
                 } else {
-                    compilationDatabase.put(Paths.get(basedir, fileName).toFile(), includeFiles)
+                    if(Paths.get(basedir, fileName).toFile().exists()){
+                        compilationDatabase.put(Paths.get(basedir, fileName).toFile(), includeFiles)
+                    }
                 }
             }
             translationConfiguration
