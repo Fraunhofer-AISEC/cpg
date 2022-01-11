@@ -284,7 +284,6 @@ class Application : Callable<Int> {
                 .loadIncludes(loadIncludes)
                 .debugParser(DEBUG_PARSER)
 
-<<<<<<< HEAD
         if (exclusive.jsonCompilationDatabase != "") {
             println("json compilation database is " + exclusive.jsonCompilationDatabase)
             val jsonStringFile = File(exclusive.jsonCompilationDatabase).readText().toString()
@@ -313,12 +312,10 @@ class Application : Callable<Int> {
                 .sourceLocations(compilationDatabase.keys.toList())
                 .loadCompilationDatabase(compilationDatabase)
         }
-=======
         translationConfiguration.registerLanguage(
             LLVMIRLanguageFrontend::class.java,
             LLVMIRLanguageFrontend.LLVM_EXTENSIONS
         )
->>>>>>> 67d84df59c6cebc05086633d0808f7599b7a5bd0
 
         if (enableExperimentalPython) {
             translationConfiguration.registerLanguage(
