@@ -341,7 +341,7 @@ public class VariableUsageResolver extends Pass {
       Util.errorWithFileLocation(
           reference, log, "Could not resolve base: language frontend is null");
 
-      return;
+      return null;
     }
 
     Declaration declaration = lang.getScopeManager().resolveReference(reference);
