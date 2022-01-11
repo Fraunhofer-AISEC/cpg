@@ -167,6 +167,8 @@ public class EvaluationOrderGraphPass extends Pass {
     if (lang == null) {
       Util.errorWithFileLocation(
               result, log, "Could not create EOG: language frontend is null");
+
+      return;
     }
 
     for (TranslationUnitDeclaration tu : result.getTranslationUnits()) {

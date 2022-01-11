@@ -525,6 +525,8 @@ public class CallResolver extends Pass {
     if (lang == null) {
       Util.errorWithFileLocation(
           templateCall, log, "Could not handle template function call: language frontend is null");
+
+      return false;
     }
 
     List<FunctionTemplateDeclaration> instantiationCandidates =
@@ -896,6 +898,8 @@ public class CallResolver extends Pass {
     if (lang == null) {
       Util.errorWithFileLocation(
           call, log, "Could not resolve implicit casts: language frontend is null");
+
+      return Collections.emptyList();
     }
 
     List<FunctionDeclaration> initialInvocationCandidates =
@@ -997,6 +1001,8 @@ public class CallResolver extends Pass {
     if (lang == null) {
       Util.errorWithFileLocation(
           call, log, "Could not resolve default arguments: language frontend is null");
+
+      return Collections.emptyList();
     }
 
     List<FunctionDeclaration> invocationCandidates =
@@ -1032,6 +1038,8 @@ public class CallResolver extends Pass {
     if (lang == null) {
       Util.errorWithFileLocation(
           call, log, "Could not handle normal CXX calls: language frontend is null");
+
+      return;
     }
 
     List<FunctionDeclaration> invocationCandidates =
@@ -1137,6 +1145,8 @@ public class CallResolver extends Pass {
     if (lang == null) {
       Util.errorWithFileLocation(
           call, log, "Could not handle method CXX calls: language frontend is null");
+
+      return Collections.emptyList();
     }
 
     List<FunctionDeclaration> invocationCandidates =
@@ -1198,6 +1208,8 @@ public class CallResolver extends Pass {
     if (lang == null) {
       Util.errorWithFileLocation(
           call, log, "Could not search for invokes in parent: language frontend is null");
+
+      return false;
     }
 
     return lang.getScopeManager().resolveFunctionStopScopeTraversalOnDefinition(call).isEmpty();

@@ -190,6 +190,8 @@ public class VariableUsageResolver extends Pass {
     if (lang == null) {
       Util.errorWithFileLocation(
           current, log, "Could not resolve local variable usage: language frontend is null");
+
+      return;
     }
 
     if (current instanceof DeclaredReferenceExpression && !(current instanceof MemberExpression)) {
@@ -338,6 +340,8 @@ public class VariableUsageResolver extends Pass {
     if (lang == null) {
       Util.errorWithFileLocation(
           reference, log, "Could not resolve base: language frontend is null");
+
+      return;
     }
 
     Declaration declaration = lang.getScopeManager().resolveReference(reference);
