@@ -56,7 +56,7 @@ class PerformanceRegressionTest {
      */
     @Test
     fun testParseLargeList() {
-        val range = 0..50000
+        val range = 0..40000
         // intentionally make this one very long line, because we had problems with that
         val string = "static int my_array[] = {" + range.toList().joinToString(", ") + "};"
 
