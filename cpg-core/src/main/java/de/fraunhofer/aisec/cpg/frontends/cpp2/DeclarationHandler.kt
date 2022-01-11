@@ -78,19 +78,20 @@ class DeclarationHandler(lang: CXXLanguageFrontend2) :
         map.put(Node::class.java, ::handleDeclaration)
     }
 
-    private fun handleDeclaration(node: Node): Declaration {
+    private fun handleDeclaration(node: Node): Declaration? {
         return when (val type = node.type) {
             "function_definition" -> handleFunctionDefinition(node)
             "parameter_declaration" -> handleParameterDeclaration(node)
             "field_declaration" -> handleFieldDeclaration(node)
             "class_specifier" -> handleClassSpecifier(node)
+            ";" -> null
             else -> {
                 val declarator = node.childByFieldName("declarator")
                 if (!declarator.isNull) {
                     return when (val declaratorType = declarator.type) {
                         "init_declarator" -> handleVariableDeclaration(node)
                         "array_declarator" -> handleVariableDeclaration(node)
-                        // "function_declarator" -> handleFunctionDeclaration(node)
+                        "function_declarator" -> handleFunctionDefinition(node)
                         else -> {
                             LanguageFrontend.log.error(
                                 "Not handling declarator {} yet.",
@@ -155,37 +156,6 @@ class DeclarationHandler(lang: CXXLanguageFrontend2) :
     }
 
     /**
-     * This function handles function declarations. Depending if the function declaration represents
-     * a method or a constructur, this function either returns a [ConstructorDeclaration] or a
-     * [MethodDeclaration].
-     */
-    /*private fun handleFunctionDeclaration(node: Node): Declaration {
-        val startType = lang.handleType("type" of node)
-
-        // Peek into the declarator to determine the type
-        val declaration =
-            createMethodOrConstructor(
-                lang.getCodeFromRawNode("declarator" of node) ?: "",
-                lang.getCodeFromRawNode(node).orEmpty(),
-                lang.scopeManager.currentRecord
-            )
-        declaration.type = startType
-
-        // If this is a method declaration, make sure to set it as active scope, so that its
-        // parameters are correctly associated when processing the declarators
-        lang.scopeManager.enterScope(declaration)
-
-        // Process the declarator to adjust name and type of this declaration and add the parameters
-        // (if this is a method).
-        processDeclarator(node, declaration)
-
-        // Leave the method scope if it exists
-        lang.scopeManager.leaveScope(declaration)
-
-        return declaration
-    }*/
-
-    /**
      * This function handles field declarations. However, it is important to know that in the
      * tree-sitter syntax a method declaration inside a class will be considered a "field" with a
      * "function_declarator". Therefore, this function either returns a [FieldDeclaration] or a
@@ -221,7 +191,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend2) :
      */
     private fun handleVariableDeclaration(node: Node): ValueDeclaration {
         val startType = lang.handleType(node.childByFieldName("type"))
-        val declarator = handleDeclarator("declarator" of node, startType)
+        val declarator = handleDeclarator(node.childByFieldName("declarator"), startType)
         return declareVariable(declarator, node)
     }
 
@@ -403,7 +373,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend2) :
 
         val name = lang.getCodeFromRawNode(node.childByFieldName("name")) ?: ""
 
-        return Declarator(name, type, namespace)
+        return Declarator(name, type, null, namespace)
     }
 
     private fun handleInitDeclarator(node: Node, type: Type): Declarator {
@@ -421,7 +391,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend2) :
     private fun handleArrayDeclarator(node: Node, type: Type): Declarator {
         var declarator = handleDeclarator(node.childByFieldName("declarator"), type)
 
-        declarator.type = declarator.type.reference(PointerType.PointerOrigin.POINTER)
+        declarator.type = declarator.type.reference(PointerType.PointerOrigin.ARRAY)
         return declarator
     }
 
