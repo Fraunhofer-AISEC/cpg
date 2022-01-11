@@ -84,11 +84,26 @@ class DeclarationHandler(lang: CXXLanguageFrontend2) :
             "parameter_declaration" -> handleParameterDeclaration(node)
             "field_declaration" -> handleFieldDeclaration(node)
             "class_specifier" -> handleClassSpecifier(node)
-            "declaration" -> handleFunctionDefinition(node)
             else -> {
-                // Otherwise return empty declaration
-                LanguageFrontend.log.error("Not handling declaration type {} yet.", type)
-                Declaration()
+                val declarator = node.childByFieldName("declarator")
+                if (!declarator.isNull) {
+                    return when (val declaratorType = declarator.type) {
+                        "init_declarator" -> handleVariableDeclaration(node)
+                        "array_declarator" -> handleVariableDeclaration(node)
+                        // "function_declarator" -> handleFunctionDeclaration(node)
+                        else -> {
+                            LanguageFrontend.log.error(
+                                "Not handling declarator {} yet.",
+                                declarator.type
+                            )
+                            Declaration()
+                        }
+                    }
+                } else {
+                    // Otherwise return empty declaration
+                    LanguageFrontend.log.error("Not handling declaration type {} yet.", type)
+                    Declaration()
+                }
             }
         }
     }
@@ -204,17 +219,10 @@ class DeclarationHandler(lang: CXXLanguageFrontend2) :
      * declarator which is wrapped in a generic declaration, so we process the declarator and
      * generate the correct type.
      */
-    private fun handleVariableDeclaration(node: Node): VariableDeclaration {
-        val startType = "type" of node
-        val declarator = "declarator" of node
-        val declaration =
-            newVariableDeclaration(
-                "",
-                lang.handleType(startType),
-                lang.getCodeFromRawNode(node),
-                true
-            )
-        return declaration
+    private fun handleVariableDeclaration(node: Node): ValueDeclaration {
+        val startType = lang.handleType(node.childByFieldName("type"))
+        val declarator = handleDeclarator("declarator" of node, startType)
+        return declareVariable(declarator, node)
     }
 
     /**
@@ -366,6 +374,9 @@ class DeclarationHandler(lang: CXXLanguageFrontend2) :
             "init_declarator" -> {
                 handleInitDeclarator(node, startType)
             }
+            "array_declarator" -> {
+                handleArrayDeclarator(node, startType)
+            }
             "pointer_declarator" -> {
                 handlePointerDeclarator(node, startType)
             }
@@ -404,6 +415,13 @@ class DeclarationHandler(lang: CXXLanguageFrontend2) :
 
         declarator.initializer = expression
 
+        return declarator
+    }
+
+    private fun handleArrayDeclarator(node: Node, type: Type): Declarator {
+        var declarator = handleDeclarator(node.childByFieldName("declarator"), type)
+
+        declarator.type = declarator.type.reference(PointerType.PointerOrigin.POINTER)
         return declarator
     }
 
