@@ -39,7 +39,7 @@ class StatementHandler(lang: CXXLanguageFrontend2) :
         map.put(Node::class.java, ::handleStatement)
     }
 
-    private fun handleStatement(node: Node): Statement {
+    private fun handleStatement(node: Node): Statement? {
         return when (val type = node.type) {
             "compound_statement" -> handleCompoundStatement(node)
             "declaration" -> handleDeclarationStatement(node)
@@ -47,7 +47,7 @@ class StatementHandler(lang: CXXLanguageFrontend2) :
             "return_statement" -> handleReturnStatement(node)
             else -> {
                 log.error("Not handling statement of type {} yet", type)
-                configConstructor.get()
+                null
             }
         }
     }
@@ -85,9 +85,10 @@ class StatementHandler(lang: CXXLanguageFrontend2) :
         // loop through the declarators
         do {
             val declaration =
-                NodeBuilder.newVariableDeclaration("", type, lang.getCodeFromRawNode(node), false)
-
-            // lang.declarationHandler.processDeclarator(declarator, declaration)
+                lang.declarationHandler.declareVariable(
+                    lang.declarationHandler.handleDeclarator(declarator, type),
+                    node
+                )
 
             // update the type for the rest of the declarations
             type = declaration.type
@@ -107,8 +108,9 @@ class StatementHandler(lang: CXXLanguageFrontend2) :
 
         for (i in 0 until node.namedChildCount) {
             val statement = handleStatement(i ofNamed node)
-
-            compoundStatement.addStatement(statement)
+            if (statement != null) {
+                compoundStatement.addStatement(statement)
+            }
         }
 
         lang.scopeManager.leaveScope(compoundStatement)

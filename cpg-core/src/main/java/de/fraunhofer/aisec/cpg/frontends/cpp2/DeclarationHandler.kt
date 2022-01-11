@@ -360,7 +360,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend2) :
      * Parses a declarator which specifies the name and kind (method, function, etc.) of the
      * declaration.
      */
-    private fun handleDeclarator(node: Node, startType: Type): Declarator {
+    fun handleDeclarator(node: Node, startType: Type): Declarator {
         return when (node.type) {
             "identifier" -> {
                 Declarator(lang.getCodeFromRawNode(node) ?: "", startType)
