@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.frontends.cpp2
 import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
+import de.fraunhofer.aisec.cpg.graph.NodeBuilder
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newBinaryOperator
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newCallExpression
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newDeclaredReferenceExpression
@@ -57,6 +58,11 @@ class ExpressionHandler(lang: CXXLanguageFrontend2) :
             "field_expression" -> handleFieldExpression(node)
             "assignment_expression" -> handleAssignmentExpression(node)
             "binary_expression" -> handleBinaryExpression(node)
+            "update_expression" -> handleUnaryExpression(node)
+            "unary_expression" -> handleUnaryExpression(node)
+            "sizeof_expression" -> handleSizeOfExpression(node)
+            "pointer_expression" -> handleUnaryExpression(node)
+            "parenthesized_expression" -> handleParenthesizedExpression(node)
             "call_expression" -> handleCallExpression(node)
             "number_literal" -> handleNumberLiteral(node)
             "char_literal" -> handleCharLiteral(node)
@@ -289,6 +295,38 @@ class ExpressionHandler(lang: CXXLanguageFrontend2) :
         expression.rhs = handleExpression("right" of node)
 
         return expression
+    }
+
+    private fun handleUnaryExpression(node: Node): Expression {
+        val identifier = lang.getCodeFromRawNode(node.childByFieldName("argument"))
+        var prefix = true
+        var operator: String? = null
+        if (identifier == lang.getCodeFromRawNode(node.child(0))) {
+            prefix = false
+            operator = lang.getCodeFromRawNode(node.child(1))
+        } else {
+            operator = lang.getCodeFromRawNode(node.child(0))
+        }
+
+        val expression =
+            NodeBuilder.newUnaryOperator(operator, !prefix, prefix, lang.getCodeFromRawNode(node))
+
+        expression.input = handleExpression(node.childByFieldName("argument"))
+
+        return expression
+    }
+
+    private fun handleSizeOfExpression(node: Node): Expression {
+        val expression =
+            NodeBuilder.newUnaryOperator("sizeof", false, true, lang.getCodeFromRawNode(node))
+
+        expression.input = handleExpression(node.childByFieldName("value"))
+
+        return expression
+    }
+
+    private fun handleParenthesizedExpression(node: Node): Expression {
+        return handleExpression(node.child(1))
     }
 
     /**
