@@ -48,6 +48,10 @@ import org.slf4j.LoggerFactory
  * this list, it is not considered by the evaluation as we assume that the method is not relevant.
  * - [thisPositionOfNode]: If a non-object oriented language was used, this is a map from CPG nodes
  * (i.e., the [CallExpression]) to the argument position serving as base of the operation.
+ *
+ * To improve the results, it is useful to run [de.fraunhofer.aisec.cpg.passes.UnreachableEOGPass]
+ * prior to running the analysis and set the flag [eliminateUnreachableCode] to `true`. This removes
+ * results which may occur in unreachable code.
  */
 open class DFAOrderEvaluator(
     var consideredBases: Set<Long>,
