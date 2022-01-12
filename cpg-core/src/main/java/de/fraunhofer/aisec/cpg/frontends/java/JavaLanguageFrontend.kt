@@ -106,6 +106,7 @@ open class JavaLanguageFrontend(config: TranslationConfiguration, scopeManager: 
 
             // parse the file
             var bench = Benchmark(this.javaClass, "Parsing source file")
+
             context = parse(file, parser)
             bench.stop()
             bench = Benchmark(this.javaClass, "Transform to CPG")
@@ -124,18 +125,22 @@ open class JavaLanguageFrontend(config: TranslationConfiguration, scopeManager: 
                 scopeManager.addDeclaration(namespaceDeclaration)
                 scopeManager.enterScope(namespaceDeclaration)
             }
+
             for (type in context!!.types) {
                 // handle each type. all declaration in this type will be added by the scope manager
                 // along
                 // the way
-                declarationHandler.handle(type)
+                val declaration = declarationHandler.handle(type)
+                this.getScopeManager().addDeclaration(declaration)
             }
+
             for (anImport in context!!.imports) {
                 val incl = newIncludeDeclaration(anImport.nameAsString)
                 scopeManager.addDeclaration(incl)
             }
-            if (packDecl != null) {
-                scopeManager.leaveScope(namespaceDeclaration!!)
+
+            if (namespaceDeclaration != null) {
+                scopeManager.leaveScope(namespaceDeclaration)
             }
             bench.stop()
             fileDeclaration
@@ -269,8 +274,7 @@ open class JavaLanguageFrontend(config: TranslationConfiguration, scopeManager: 
                 val fromImport = getQualifiedNameFromImports(callExpr.nameAsString)
                 fromImport ?: (getScopeManager().currentNamePrefix + "." + callExpr.nameAsString)
                 // this is not strictly true. This could also be a function of a superclass or from
-                // a
-                // static asterisk import
+                // a static asterisk import
             }
         } catch (ex: NoClassDefFoundError) {
             val scope = callExpr.scope
@@ -303,7 +307,7 @@ open class JavaLanguageFrontend(config: TranslationConfiguration, scopeManager: 
                 } else {
                     (ex.cause as UnsolvedSymbolException?)!!.name
                 }
-            // this comes from the Javaparser!
+            // this comes from the JavaParser!
             if (qualifier.startsWith("We are unable to find") || qualifier.startsWith("Solving ")) {
                 return null
             }
@@ -454,7 +458,7 @@ open class JavaLanguageFrontend(config: TranslationConfiguration, scopeManager: 
                     val member =
                         newAnnotationMember(
                             pair.nameAsString,
-                            expressionHandler!!.handle(pair.value) as Expression,
+                            expressionHandler.handle(pair.value) as Expression,
                             getCodeFromRawNode(pair)
                         )
                     members.add(member)
@@ -466,7 +470,7 @@ open class JavaLanguageFrontend(config: TranslationConfiguration, scopeManager: 
                     val member =
                         newAnnotationMember(
                             ANNOTATION_MEMBER_VALUE,
-                            expressionHandler!!.handle(value.asLiteralExpr()) as Expression,
+                            expressionHandler.handle(value.asLiteralExpr()) as Expression,
                             getCodeFromRawNode(value)
                         )
                     members.add(member)

@@ -283,8 +283,6 @@ public class DeclarationHandler
     recordDeclaration.setStaticImportStatements(partitioned.get(true));
     recordDeclaration.setImportStatements(partitioned.get(false));
 
-    lang.getScopeManager().addDeclaration(recordDeclaration);
-
     lang.getScopeManager().enterScope(recordDeclaration);
     lang.getScopeManager().addDeclaration(recordDeclaration.getThis());
 

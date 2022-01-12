@@ -614,5 +614,11 @@ internal class JavaLanguageFrontendTest : BaseTest() {
             }
 
         assertNotNull(tu)
+
+        val compiling = tu.byNameOrNull<NamespaceDeclaration>("compiling")
+        assertNotNull(compiling)
+
+        val recordDeclaration = compiling.byNameOrNull<RecordDeclaration>("override")
+        assertNotNull(recordDeclaration)
     }
 }
