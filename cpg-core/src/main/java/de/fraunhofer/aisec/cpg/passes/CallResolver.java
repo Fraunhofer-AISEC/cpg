@@ -522,6 +522,12 @@ public class CallResolver extends Pass {
       @Nullable RecordDeclaration curClass,
       @NonNull CallExpression templateCall,
       boolean applyInference) {
+    if (lang == null) {
+      Util.errorWithFileLocation(
+          templateCall, log, "Could not handle template function call: language frontend is null");
+
+      return false;
+    }
 
     List<FunctionTemplateDeclaration> instantiationCandidates =
         lang.getScopeManager().resolveFunctionTemplateDeclaration(templateCall);
@@ -889,7 +895,13 @@ public class CallResolver extends Pass {
    * @return list of invocation candidates by applying implicit casts
    */
   private List<FunctionDeclaration> resolveWithImplicitCastFunc(CallExpression call) {
-    assert lang != null;
+    if (lang == null) {
+      Util.errorWithFileLocation(
+          call, log, "Could not resolve implicit casts: language frontend is null");
+
+      return Collections.emptyList();
+    }
+
     List<FunctionDeclaration> initialInvocationCandidates =
         new ArrayList<>(lang.getScopeManager().resolveFunctionStopScopeTraversalOnDefinition(call));
     return resolveWithImplicitCast(call, initialInvocationCandidates);
@@ -986,7 +998,13 @@ public class CallResolver extends Pass {
    *     arguments
    */
   private List<FunctionDeclaration> resolveWithDefaultArgsFunc(CallExpression call) {
-    assert lang != null;
+    if (lang == null) {
+      Util.errorWithFileLocation(
+          call, log, "Could not resolve default arguments: language frontend is null");
+
+      return Collections.emptyList();
+    }
+
     List<FunctionDeclaration> invocationCandidates =
         lang.getScopeManager().resolveFunctionStopScopeTraversalOnDefinition(call).stream()
             .filter(
@@ -1017,6 +1035,13 @@ public class CallResolver extends Pass {
   }
 
   private void handleNormalCallCXX(RecordDeclaration curClass, CallExpression call) {
+    if (lang == null) {
+      Util.errorWithFileLocation(
+          call, log, "Could not handle normal CXX calls: language frontend is null");
+
+      return;
+    }
+
     List<FunctionDeclaration> invocationCandidates =
         lang.getScopeManager().resolveFunctionStopScopeTraversalOnDefinition(call).stream()
             .filter(f -> f.hasSignature(call.getSignature()))
@@ -1117,6 +1142,13 @@ public class CallResolver extends Pass {
    */
   private List<FunctionDeclaration> handleCXXMethodCall(
       RecordDeclaration curClass, CallExpression call) {
+    if (lang == null) {
+      Util.errorWithFileLocation(
+          call, log, "Could not handle method CXX calls: language frontend is null");
+
+      return Collections.emptyList();
+    }
+
     List<FunctionDeclaration> invocationCandidates =
         lang.getScopeManager().resolveFunctionStopScopeTraversalOnDefinition(call).stream()
             .filter(f -> f.hasSignature(call.getSignature()))
@@ -1173,6 +1205,13 @@ public class CallResolver extends Pass {
    * @return true if we should stop searching parent, false otherwise
    */
   private boolean shouldSearchForInvokesInParent(CallExpression call) {
+    if (lang == null) {
+      Util.errorWithFileLocation(
+          call, log, "Could not search for invokes in parent: language frontend is null");
+
+      return false;
+    }
+
     return lang.getScopeManager().resolveFunctionStopScopeTraversalOnDefinition(call).isEmpty();
   }
 
