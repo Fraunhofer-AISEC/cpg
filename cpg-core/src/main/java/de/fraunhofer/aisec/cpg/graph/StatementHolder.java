@@ -59,7 +59,7 @@ public interface StatementHolder {
    */
   @NonNull
   default List<Statement> getStatements() {
-    return (List<Statement>) PropertyEdge.unwrapPropertyEdge(getStatementEdges(), true);
+    return PropertyEdge.unwrap(getStatementEdges(), true);
   }
 
   @NonNull
