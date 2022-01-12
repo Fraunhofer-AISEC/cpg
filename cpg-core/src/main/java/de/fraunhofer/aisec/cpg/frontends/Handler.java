@@ -50,9 +50,22 @@ public abstract class Handler<S, T, L extends LanguageFrontend> {
   protected final HashMap<Class<? extends T>, HandlerInterface<S, T>> map = new HashMap<>();
   private final Supplier<S> configConstructor;
   protected @NotNull L lang;
-  private final Class<S> typeOfT =
-      (Class<S>)
-          ((ParameterizedType) getClass().getGenericSuperclass()).getActualTypeArguments()[1];
+  private final Class<T> typeOfT;
+
+  {
+    // try to get the type of T
+    if (getClass().getGenericSuperclass() instanceof ParameterizedType) {
+      typeOfT =
+          (Class<T>)
+              ((ParameterizedType) getClass().getGenericSuperclass()).getActualTypeArguments()[1];
+    } else {
+      // it could be that this handler is extending another handler, so we need go one level deeper
+      typeOfT =
+          (Class<T>)
+              ((ParameterizedType) getClass().getSuperclass().getGenericSuperclass())
+                  .getActualTypeArguments()[1];
+    }
+  }
 
   public Handler(Supplier<S> configConstructor, @NotNull L lang) {
     this.configConstructor = configConstructor;
@@ -105,7 +118,9 @@ public abstract class Handler<S, T, L extends LanguageFrontend> {
             ctx.getClass(),
             toHandle);
       }
-      if (toHandle == typeOfT || !typeOfT.isAssignableFrom(toHandle)) break;
+      if (toHandle == typeOfT || (typeOfT != null && !typeOfT.isAssignableFrom(toHandle))) {
+        break;
+      }
     }
     if (handler != null) {
       S s = handler.handle(ctx);
