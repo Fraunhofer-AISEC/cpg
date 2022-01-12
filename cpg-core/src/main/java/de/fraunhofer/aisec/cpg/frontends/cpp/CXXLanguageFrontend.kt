@@ -287,19 +287,21 @@ class CXXLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeM
                         node.fileLocation.nodeOffset
                     } else {
                         // otherwise, we need to calculate the difference to the previous line break
-                        node.fileLocation.nodeOffset - lineBreaks[startLine - 1] - 1
+                        node.fileLocation.nodeOffset -
+                            lineBreaks[startLine - 1] -
+                            1 // additional -1 because of the '\n' itself
                     }
 
                 // our end column, index by 0
                 val endColumn =
                     if (endLine == 0) {
-                        // if we are in the first line, the start column is just the node offset
+                        // if we are in the first line, the end column is just the node offset
                         node.fileLocation.nodeOffset + node.fileLocation.nodeLength
                     } else {
                         // otherwise, we need to calculate the difference to the previous line break
                         (node.fileLocation.nodeOffset + node.fileLocation.nodeLength) -
                             lineBreaks[endLine - 1] -
-                            1
+                            1 // additional -1 because of the '\n' itself
                     }
 
                 // for a SARIF compliant format, we need to add +1, since its index begins at 1 and
@@ -417,37 +419,6 @@ class CXXLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeM
         @JvmField val CXX_EXTENSIONS = mutableListOf(".c", ".cpp", ".cc")
         @JvmField val CXX_HEADER_EXTENSIONS = mutableListOf(".h", ".hpp")
         private val LOGGER = LoggerFactory.getLogger(CXXLanguageFrontend::class.java)
-
-        /**
-         * Searches in posPrefix to the left until first occurrence of line break and returns the
-         * number of characters.
-         *
-         * This corresponds to the column number of "end" within "posPrefix".
-         *
-         * @param posPrefix
-         * - the positional prefix, which is the string before the column and contains the column
-         * defining newline.
-         */
-        private fun getEndColumnIndex(posPrefix: AbstractCharArray, end: Int): Int {
-            var mutableEnd = end
-            var column = 1
-
-            // In case the current element goes until EOF, we need to back up "end" by one.
-            try {
-                if (mutableEnd - 1 >= posPrefix.length || posPrefix[mutableEnd - 1] == '\n') {
-                    mutableEnd = min(mutableEnd - 1, posPrefix.length - 1)
-                }
-            } catch (e: ArrayIndexOutOfBoundsException) {
-                log.error("could not update end ", e)
-            }
-            for (i in mutableEnd - 1 downTo 2) {
-                if (posPrefix[i] == '\n') {
-                    break
-                }
-                column++
-            }
-            return column
-        }
 
         private fun explore(node: IASTNode, indent: Int) {
             val children = node.children
