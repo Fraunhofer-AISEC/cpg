@@ -69,6 +69,8 @@ public class Literal<T> extends Expression {
 
   @Override
   public int hashCode() {
-    return super.hashCode();
+    // include the value in the hash code, otherwise the hash set/map implementation falls back to
+    // equals() because the node's hash code only depends on the name
+    return Objects.hash(super.hashCode(), value);
   }
 }

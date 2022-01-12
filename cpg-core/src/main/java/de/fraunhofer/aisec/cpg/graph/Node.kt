@@ -28,7 +28,9 @@ package de.fraunhofer.aisec.cpg.graph
 import de.fraunhofer.aisec.cpg.graph.declarations.TypedefDeclaration
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
+import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.unwrap
 import de.fraunhofer.aisec.cpg.helpers.LocationConverter
+import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.processing.IVisitable
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.util.*
@@ -74,9 +76,16 @@ open class Node : IVisitable<Node>, Persistable {
     var nextEOGEdges: MutableList<PropertyEdge<Node>> = ArrayList()
         protected set
 
+    /**
+     * Virtual property to return a list of the node's children. Uses the [SubgraphWalker] to
+     * retrieve the appropriate nodes.
+     */
+    val astChildren: List<Node>
+        get() = SubgraphWalker.getAstChildren(this)
+
     /** Virtual property for accessing [prevEOGEdges] without property edges. */
     var prevEOG: List<Node>
-        get() = PropertyEdge.unwrap(prevEOGEdges, false)
+        get() = unwrap(prevEOGEdges, false)
         set(value) {
             val propertyEdgesEOG: MutableList<PropertyEdge<Node>> = ArrayList()
 
@@ -91,7 +100,7 @@ open class Node : IVisitable<Node>, Persistable {
 
     /** Virtual property for accessing [nextEOGEdges] without property edges. */
     var nextEOG: List<Node>
-        get() = PropertyEdge.unwrap(nextEOGEdges)
+        get() = unwrap(nextEOGEdges)
         set(value) {
             this.nextEOGEdges = PropertyEdge.transformIntoOutgoingPropertyEdgeList(value, this)
         }

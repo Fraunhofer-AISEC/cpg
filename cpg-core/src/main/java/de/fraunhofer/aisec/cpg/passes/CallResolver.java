@@ -396,9 +396,9 @@ public class CallResolver extends Pass {
   }
 
   /**
-   * Creates a Mapping between the Paramerters of the TemplateDeclaration and the Values provided
-   * for the instantiation of the template (Only the ones that are in defined in the instantiation
-   * -> no defaults or implicit). Additionally, it fills the maps and lists mentioned below:
+   * Creates a Mapping between the Parameters of the TemplateDeclaration and the Values provided for
+   * the instantiation of the template (Only the ones that are in defined in the instantiation -> no
+   * defaults or implicit). Additionally, it fills the maps and lists mentioned below:
    *
    * @param functionTemplateDeclaration functionTemplate we have identified that should be
    *     instantiated
