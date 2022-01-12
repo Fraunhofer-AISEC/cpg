@@ -164,6 +164,13 @@ public class EvaluationOrderGraphPass extends Pass {
 
   @Override
   public void accept(TranslationResult result) {
+    if (lang == null) {
+      Util.errorWithFileLocation(
+              result, log, "Could not create EOG: language frontend is null");
+
+      return;
+    }
+
     for (TranslationUnitDeclaration tu : result.getTranslationUnits()) {
       createEOG(tu);
       removeUnreachableEOGEdges(tu);
@@ -878,6 +885,7 @@ public class EvaluationOrderGraphPass extends Pass {
     PropertyEdge<Node> propertyEdge = new PropertyEdge<>(prev, next);
     propertyEdge.addProperties(this.currentProperties);
     propertyEdge.addProperty(Properties.INDEX, prev.getNextEOG().size());
+    propertyEdge.addProperty(Properties.UNREACHABLE, false);
     prev.addNextEOG(propertyEdge);
     next.addPrevEOG(propertyEdge);
   }

@@ -29,6 +29,8 @@ import de.fraunhofer.aisec.cpg.frontends.*
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder
 import de.fraunhofer.aisec.cpg.graph.TypeManager
+import de.fraunhofer.aisec.cpg.graph.edge.Properties
+import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.graph.types.PointerType.PointerOrigin
@@ -38,6 +40,7 @@ import java.math.BigInteger
 import java.util.*
 import java.util.function.Supplier
 import java.util.stream.Collectors
+import kotlin.collections.ArrayList
 import kotlin.math.max
 import org.eclipse.cdt.core.dom.ast.*
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTExpression
@@ -727,11 +730,16 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
 
     private fun handleInitializerList(ctx: CPPASTInitializerList): InitializerListExpression {
         val expression = NodeBuilder.newInitializerListExpression(ctx.rawSignature)
-        val initializers: MutableList<Expression?> = ArrayList()
+
         for (clause in ctx.clauses) {
-            initializers.add(handle(clause))
+            handle(clause)?.let {
+                val edge = PropertyEdge(expression, it)
+                edge.addProperty(Properties.INDEX, expression.initializersPropertyEdge.size)
+
+                expression.initializersPropertyEdge.add(edge)
+            }
         }
-        expression.initializers = initializers
+
         return expression
     }
 
