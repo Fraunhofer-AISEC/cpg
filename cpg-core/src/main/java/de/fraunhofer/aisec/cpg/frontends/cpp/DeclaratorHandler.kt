@@ -264,11 +264,15 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
         }
 
         // We recognize a ambiguity here, but cannot solve it at the moment
-        if (name != "" && declaration.body == null && lang.scopeManager.currentFunction != null) {
+        if (name != "" &&
+                ctx.parent is CPPASTDeclarator &&
+                declaration.body == null &&
+                lang.scopeManager.currentFunction != null
+        ) {
             val problem =
                 NodeBuilder.newProblemDeclaration(
                     null,
-                    "CDT tells us this is a (named) function declaration without a body directly within a block scope, this might be an ambiguity which we cannot solve currently.",
+                    "CDT tells us this is a (named) function declaration in parenthesis without a body directly within a block scope, this might be an ambiguity which we cannot solve currently.",
                     null
                 )
 
