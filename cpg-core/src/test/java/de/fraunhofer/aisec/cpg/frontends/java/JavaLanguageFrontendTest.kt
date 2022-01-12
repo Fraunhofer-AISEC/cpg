@@ -595,9 +595,14 @@ internal class JavaLanguageFrontendTest : BaseTest() {
                 this.declarationHandler =
                     object : DeclarationHandler(this) {
                         override fun handleClassOrInterfaceDeclaration(
-                            classInterDecl: ClassOrInterfaceDeclaration?
+                            classInterDecl: ClassOrInterfaceDeclaration
                         ): RecordDeclaration {
-                            return NodeBuilder.newRecordDeclaration("override", "class", "", false)
+                            // take the original class and replace the name
+                            val declaration =
+                                super.handleClassOrInterfaceDeclaration(classInterDecl)
+                            declaration.name = "MySimpleClass"
+
+                            return declaration
                         }
                     }
             }
@@ -618,7 +623,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         val compiling = tu.byNameOrNull<NamespaceDeclaration>("compiling")
         assertNotNull(compiling)
 
-        val recordDeclaration = compiling.byNameOrNull<RecordDeclaration>("override")
+        val recordDeclaration = compiling.byNameOrNull<RecordDeclaration>("MySimpleClass")
         assertNotNull(recordDeclaration)
     }
 }

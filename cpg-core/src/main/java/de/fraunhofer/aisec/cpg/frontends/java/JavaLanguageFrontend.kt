@@ -81,7 +81,7 @@ open class JavaLanguageFrontend(config: TranslationConfiguration, scopeManager: 
     val nativeTypeResolver = CombinedTypeSolver()
 
     protected lateinit var expressionHandler: ExpressionHandler
-    protected lateinit var statementHandler: StatementAnalyzer
+    protected lateinit var statementHandler: StatementHandler
     protected lateinit var declarationHandler: DeclarationHandler
 
     init {
@@ -90,7 +90,7 @@ open class JavaLanguageFrontend(config: TranslationConfiguration, scopeManager: 
 
     private fun setupHandlers() {
         expressionHandler = ExpressionHandler(this)
-        statementHandler = StatementAnalyzer(this)
+        statementHandler = StatementHandler(this)
         declarationHandler = DeclarationHandler(this)
     }
 
