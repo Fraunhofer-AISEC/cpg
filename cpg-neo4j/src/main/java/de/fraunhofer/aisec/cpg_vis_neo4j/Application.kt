@@ -34,6 +34,11 @@ import de.fraunhofer.aisec.cpg.frontends.golang.GoLanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.llvm.LLVMIRLanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.typescript.TypeScriptLanguageFrontend
+import java.io.File
+import java.net.ConnectException
+import java.nio.file.Paths
+import java.util.concurrent.Callable
+import kotlin.system.exitProcess
 import org.neo4j.driver.exceptions.AuthenticationException
 import org.neo4j.ogm.config.Configuration
 import org.neo4j.ogm.exception.ConnectionException
@@ -43,11 +48,6 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import picocli.CommandLine
 import picocli.CommandLine.ArgGroup
-import java.io.File
-import java.net.ConnectException
-import java.nio.file.Paths
-import java.util.concurrent.Callable
-import kotlin.system.exitProcess
 
 private const val S_TO_MS_FACTOR = 1000
 private const val TIME_BETWEEN_CONNECTION_TRIES: Long = 2000
@@ -66,7 +66,7 @@ private const val DEFAULT_USER_NAME = "neo4j"
 private const val DEFAULT_PASSWORD = "password"
 private const val DEFAULT_SAVE_DEPTH = -1
 
-data class compilationDbStructure(
+data class CompilationDbStructure(
     val directory: String?,
     val command: String? = null,
     val arguments: List<String>? = null,
@@ -83,7 +83,8 @@ data class compilationDbStructure(
 class Application : Callable<Int> {
     private val log: Logger
         get() = LoggerFactory.getLogger(Application::class.java)
-
+    // Either provide the files to evaluate or provide the path of compilation database with
+    // --json-compilation-database flag
     @ArgGroup(exclusive = true, multiplicity = "1") lateinit var exclusive: Exclusive
 
     class Exclusive {
@@ -252,7 +253,7 @@ class Application : Callable<Int> {
         assert(exclusive.files.isNotEmpty())
         val filePaths = arrayOfNulls<File>(exclusive.files.size)
         var topLevel: File? = null
-        var compilationDatabase: MutableMap<File, List<String>> = mutableMapOf()
+        val compilationDatabase: MutableMap<File, List<String>> = mutableMapOf()
 
         for (index in exclusive.files.indices) {
             val path = Paths.get(exclusive.files[index]).toAbsolutePath().normalize()
@@ -272,8 +273,6 @@ class Application : Callable<Int> {
                 "Files list is empty or jsonCompilationDatabase is also empty. Please provide --files to evaluate or --json-compilation-database for CXX files"
             )
         }
-        println("File paths is   ")
-        filePaths.forEach { println(it) }
 
         val translationConfiguration =
             TranslationConfiguration.builder()
@@ -285,31 +284,37 @@ class Application : Callable<Int> {
                 .debugParser(DEBUG_PARSER)
 
         if (exclusive.jsonCompilationDatabase != "") {
-            println("json compilation database is " + exclusive.jsonCompilationDatabase)
-            val jsonStringFile = File(exclusive.jsonCompilationDatabase).readText().toString()
+            val jsonStringFile = File(exclusive.jsonCompilationDatabase).readText()
             val mapper = ObjectMapper().registerKotlinModule()
-            val obj: List<compilationDbStructure> = mapper.readValue(jsonStringFile)
+            val obj: List<CompilationDbStructure> = mapper.readValue(jsonStringFile)
             for (i in obj.indices) {
-                var includeFiles: List<String> = arrayListOf()
+                var includeFiles: List<String>?
                 val currentObject = obj[i]
                 val fileName = currentObject.file
 
                 includeFiles =
-                    if (currentObject.command == null) {
-                        CompilationDB.getIncludeDirectories(obj[i].arguments)
+                    if (currentObject.arguments != null) {
+                        CompilationDB.getIncludeDirectories(currentObject.arguments)
+                    } else if (currentObject.command != null) {
+                        CompilationDB.getIncludeDirectories(currentObject.command)
                     } else {
-                        CompilationDB.getIncludeDirectories(obj[i].command)
+                        null
                     }
                 val basedir = currentObject.directory
-                var file: File = File(fileName)
+                val file = File(fileName)
 
-                if (file.isAbsolute) {
-                    if(file.exists()){
-                        compilationDatabase.put(file, includeFiles)
-                    }
-                } else {
-                    if(Paths.get(basedir, fileName).toFile().exists()){
-                        compilationDatabase.put(Paths.get(basedir, fileName).toFile(), includeFiles)
+                if (includeFiles != null) {
+                    if (file.isAbsolute) {
+                        if (file.exists()) {
+                            compilationDatabase[file] = includeFiles
+                        }
+                    } else {
+                        if (basedir != null) {
+                            if (Paths.get(basedir, fileName).toFile().exists()) {
+                                compilationDatabase[Paths.get(basedir, fileName).toFile()] =
+                                    includeFiles
+                            }
+                        }
                     }
                 }
             }
