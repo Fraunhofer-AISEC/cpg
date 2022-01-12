@@ -46,14 +46,11 @@ import de.fraunhofer.aisec.cpg.sarif.Region
 import java.io.File
 import java.math.BigInteger
 import java.nio.file.Path
-import java.util.*
 import java.util.stream.Collectors
 import kotlin.test.*
-import org.junit.jupiter.api.Test
 
 internal class JavaLanguageFrontendTest : BaseTest() {
     @Test
-    @Throws(Exception::class)
     fun testLargeNegativeNumber() {
         val file = File("src/test/resources/LargeNegativeNumber.java")
         val tu = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
@@ -66,40 +63,28 @@ internal class JavaLanguageFrontendTest : BaseTest() {
 
         val a = main.getVariableDeclarationByName("a").orElse(null)
         assertNotNull(a)
-        assertEquals(
-            1,
-            (Objects.requireNonNull(a.getInitializerAs(UnaryOperator::class.java))?.input as?
-                    Literal<*>)
-                ?.value
-        )
+        assertEquals(1, ((a.initializer as? UnaryOperator)?.input as? Literal<*>)?.value)
+
         val b = main.getVariableDeclarationByName("b").orElse(null)
         assertNotNull(b)
-        assertEquals(
-            2147483648L,
-            (Objects.requireNonNull(b.getInitializerAs(UnaryOperator::class.java))?.input as?
-                    Literal<*>)
-                ?.value
-        )
+        assertEquals(2147483648L, ((b.initializer as? UnaryOperator)?.input as? Literal<*>)?.value)
+
         val c = main.getVariableDeclarationByName("c").orElse(null)
         assertNotNull(c)
         assertEquals(
             BigInteger("9223372036854775808"),
-            (Objects.requireNonNull(c.getInitializerAs(UnaryOperator::class.java))?.input as?
-                    Literal<*>)
-                ?.value
+            ((c.initializer as? UnaryOperator)?.input as? Literal<*>)?.value
         )
+
         val d = main.getVariableDeclarationByName("d").orElse(null)
         assertNotNull(d)
         assertEquals(
             9223372036854775807L,
-            (Objects.requireNonNull(d.getInitializerAs(UnaryOperator::class.java))?.input as?
-                    Literal<*>)
-                ?.value
+            ((d.initializer as? UnaryOperator)?.input as? Literal<*>)?.value
         )
     }
 
     @Test
-    @Throws(Exception::class)
     fun testFor() {
         val file = File("src/test/resources/components/ForStmt.java")
         val tu = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
@@ -110,6 +95,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         val main = declaration.methods[0]
         val ls = main.getVariableDeclarationByName("ls").orElse(null)
         assertNotNull(ls)
+
         val forStatement = main.getBodyStatementAs(2, ForStatement::class.java)
         assertNotNull(forStatement)
 
@@ -124,7 +110,6 @@ internal class JavaLanguageFrontendTest : BaseTest() {
     }
 
     @Test
-    @Throws(Exception::class)
     fun testForeach() {
         val file = File("src/test/resources/components/ForEachStmt.java")
         val tu = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
@@ -160,7 +145,6 @@ internal class JavaLanguageFrontendTest : BaseTest() {
     }
 
     @Test
-    @Throws(Exception::class)
     fun testTryCatch() {
         val file = File("src/test/resources/components/TryStmt.java")
         val tu = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
@@ -180,17 +164,17 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         // first exception type was? resolved, so we can expect a FQN
         assertEquals(
             TypeParser.createFrom("java.lang.NumberFormatException", true),
-            Objects.requireNonNull(catchClauses[0].parameter)?.type
+            catchClauses[0].parameter?.type
         )
         // second one could not be resolved so we do not have an FQN
         assertEquals(
             TypeParser.createFrom("NotResolvableTypeException", true),
-            Objects.requireNonNull(catchClauses[1].parameter)?.type
+            catchClauses[1].parameter?.type
         )
         // third type should have been resolved through the import
         assertEquals(
             TypeParser.createFrom("some.ImportedException", true),
-            Objects.requireNonNull(catchClauses[2].parameter)?.type
+            (catchClauses[2].parameter)?.type
         )
 
         // and 1 finally
@@ -199,7 +183,6 @@ internal class JavaLanguageFrontendTest : BaseTest() {
     }
 
     @Test
-    @Throws(Exception::class)
     fun testLiteral() {
         val file = File("src/test/resources/components/LiteralExpr.java")
         val tu = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
@@ -211,77 +194,69 @@ internal class JavaLanguageFrontendTest : BaseTest() {
 
         // int i = 1;
         val i =
-            Objects.requireNonNull(main.getBodyStatementAs(0, DeclarationStatement::class.java))
-                ?.singleDeclaration as?
+            (main.getBodyStatementAs(0, DeclarationStatement::class.java))?.singleDeclaration as?
                 VariableDeclaration
         assertNotNull(i)
-        var literal = i.getInitializerAs(Literal::class.java)
+        var literal = i.initializer as? Literal<*>
         assertNotNull(literal)
         assertEquals(1, literal.value)
 
         // String s = "string";
         val s =
-            Objects.requireNonNull(main.getBodyStatementAs(1, DeclarationStatement::class.java))
-                ?.singleDeclaration as?
+            (main.getBodyStatementAs(1, DeclarationStatement::class.java))?.singleDeclaration as?
                 VariableDeclaration
         assertNotNull(s)
-        literal = s.getInitializerAs(Literal::class.java)
+        literal = s.initializer as? Literal<*>
         assertNotNull(literal)
         assertEquals("string", literal.value)
 
         // boolean b = true;
         val b =
-            Objects.requireNonNull(main.getBodyStatementAs(2, DeclarationStatement::class.java))
-                ?.singleDeclaration as?
+            (main.getBodyStatementAs(2, DeclarationStatement::class.java))?.singleDeclaration as?
                 VariableDeclaration
         assertNotNull(b)
-        literal = b.getInitializerAs(Literal::class.java)
+        literal = b.initializer as? Literal<*>
         assertNotNull(literal)
         assertEquals(true, literal.value)
 
         // char c = '0';
         val c =
-            Objects.requireNonNull(main.getBodyStatementAs(3, DeclarationStatement::class.java))
-                ?.singleDeclaration as?
+            (main.getBodyStatementAs(3, DeclarationStatement::class.java))?.singleDeclaration as?
                 VariableDeclaration
         assertNotNull(c)
-        literal = c.getInitializerAs(Literal::class.java)
+        literal = c.initializer as? Literal<*>
         assertNotNull(literal)
         assertEquals('0', literal.value)
 
         // double d = 1.0;
         val d =
-            Objects.requireNonNull(main.getBodyStatementAs(4, DeclarationStatement::class.java))
-                ?.singleDeclaration as?
+            (main.getBodyStatementAs(4, DeclarationStatement::class.java))?.singleDeclaration as?
                 VariableDeclaration
         assertNotNull(d)
-        literal = d.getInitializerAs(Literal::class.java)
+        literal = d.initializer as? Literal<*>
         assertNotNull(literal)
         assertEquals(1.0, literal.value)
 
         // long l = 1L;
         val l =
-            Objects.requireNonNull(main.getBodyStatementAs(5, DeclarationStatement::class.java))
-                ?.singleDeclaration as?
+            (main.getBodyStatementAs(5, DeclarationStatement::class.java))?.singleDeclaration as?
                 VariableDeclaration
         assertNotNull(l)
-        literal = l.getInitializerAs(Literal::class.java)
+        literal = l.initializer as? Literal<*>
         assertNotNull(literal)
         assertEquals(1L, literal.value)
 
         // Object o = null;
         val o =
-            Objects.requireNonNull(main.getBodyStatementAs(6, DeclarationStatement::class.java))
-                ?.singleDeclaration as?
+            (main.getBodyStatementAs(6, DeclarationStatement::class.java))?.singleDeclaration as?
                 VariableDeclaration
         assertNotNull(o)
-        literal = o.getInitializerAs(Literal::class.java)
+        literal = o.initializer as? Literal<*>
         assertNotNull(literal)
         assertNull(literal.value)
     }
 
     @Test
-    @Throws(Exception::class)
     fun testRecordDeclaration() {
         val file = File("src/test/resources/compiling/RecordDeclaration.java")
         val declaration = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
@@ -300,17 +275,18 @@ internal class JavaLanguageFrontendTest : BaseTest() {
                 .collect(Collectors.toList())
         assertTrue(fields.contains("this"))
         assertTrue(fields.contains("field"))
+
         val method = recordDeclaration.methods[0]
         assertEquals(recordDeclaration, method.recordDeclaration)
         assertEquals("method", method.name)
         assertEquals(TypeParser.createFrom("java.lang.Integer", true), method?.type)
+
         val constructor = recordDeclaration.constructors[0]
         assertEquals(recordDeclaration, constructor.recordDeclaration)
         assertEquals("SimpleClass", constructor.name)
     }
 
     @Test
-    @Throws(Exception::class)
     fun testNameExpressions() {
         val file = File("src/test/resources/compiling/NameExpression.java")
         val declaration = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
@@ -318,7 +294,6 @@ internal class JavaLanguageFrontendTest : BaseTest() {
     }
 
     @Test
-    @Throws(Exception::class)
     fun testSwitch() {
         val file = File("src/test/resources/cfg/Switch.java")
         val declaration = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
@@ -345,7 +320,6 @@ internal class JavaLanguageFrontendTest : BaseTest() {
     }
 
     @Test
-    @Throws(Exception::class)
     fun testCast() {
         val file = File("src/test/resources/components/CastExpr.java")
         val declaration = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
@@ -372,6 +346,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         // b = (BaseClass) e
         stmt = main.getBodyStatementAs(1, DeclarationStatement::class.java)
         assertNotNull(stmt)
+
         val b = stmt.getSingleDeclarationAs(VariableDeclaration::class.java)
         assertTrue(b?.type?.name == "BaseClass" || b?.type?.name == "cast.BaseClass")
 
@@ -387,7 +362,6 @@ internal class JavaLanguageFrontendTest : BaseTest() {
     }
 
     @Test
-    @Throws(Exception::class)
     fun testArrays() {
         val file = File("src/test/resources/compiling/Arrays.java")
         val tu = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
@@ -435,7 +409,6 @@ internal class JavaLanguageFrontendTest : BaseTest() {
     }
 
     @Test
-    @Throws(Exception::class)
     fun testFieldAccessExpressions() {
         val file = File("src/test/resources/compiling/FieldAccess.java")
         val tu = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
@@ -463,7 +436,6 @@ internal class JavaLanguageFrontendTest : BaseTest() {
     }
 
     @Test
-    @Throws(Exception::class)
     fun testMemberCallExpressions() {
         val file = File("src/test/resources/compiling/MemberCallExpression.java")
         val tu = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
@@ -475,7 +447,6 @@ internal class JavaLanguageFrontendTest : BaseTest() {
     }
 
     @Test
-    @Throws(Exception::class)
     fun testLocation() {
         val file = File("src/test/resources/compiling/FieldAccess.java")
         val tu = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
@@ -499,7 +470,6 @@ internal class JavaLanguageFrontendTest : BaseTest() {
     }
 
     @Test
-    @Throws(Exception::class)
     fun testAnnotations() {
         val file = File("src/test/resources/Annotation.java")
         val declarations =
@@ -552,7 +522,6 @@ internal class JavaLanguageFrontendTest : BaseTest() {
     }
 
     @Test
-    @Throws(Exception::class)
     fun testChainedCalls() {
         val file = File("src/test/resources/Issue285.java")
         val tu = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
@@ -575,6 +544,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
                 .findFirst()
                 .orElse(null)
         assertNotNull(request)
+
         val initializer = request.initializer
         assertNotNull(initializer)
         assertTrue(initializer is MemberCallExpression)
@@ -593,7 +563,6 @@ internal class JavaLanguageFrontendTest : BaseTest() {
     }
 
     @Test
-    @Throws(Exception::class)
     fun testSuperFieldUsage() {
         val file1 = File("src/test/resources/fix-328/Cat.java")
         val file2 = File("src/test/resources/fix-328/Animal.java")
@@ -601,11 +570,14 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         val tu = findByUniqueName(result, "src/test/resources/fix-328/Cat.java")
         val namespace = tu.getDeclarationAs(0, NamespaceDeclaration::class.java)
         assertNotNull(namespace)
+
         val record = namespace.getDeclarationAs(0, RecordDeclaration::class.java)
         assertNotNull(record)
+
         val constructor = record.constructors[0]
         val op = constructor.getBodyStatementAs(0, BinaryOperator::class.java)
         assertNotNull(op)
+
         val lhs = op.lhs as? MemberExpression
         val superThisField =
             (lhs?.base as? DeclaredReferenceExpression)?.refersTo as? FieldDeclaration?
