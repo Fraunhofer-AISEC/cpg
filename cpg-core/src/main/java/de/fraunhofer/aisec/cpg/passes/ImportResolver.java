@@ -188,8 +188,8 @@ public class ImportResolver extends Pass {
     } else if (node instanceof EnumDeclaration) {
       importables.putIfAbsent(node.getName(), (EnumDeclaration) node);
     }
-    for (var edge : SubgraphWalker.getAstChildren(node)) {
-      findImportables(edge);
+    for (var child : SubgraphWalker.getAstChildren(node)) {
+      findImportables(child);
     }
   }
 }

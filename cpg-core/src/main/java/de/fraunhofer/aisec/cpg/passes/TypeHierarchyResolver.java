@@ -101,8 +101,8 @@ public class TypeHierarchyResolver extends Pass {
     } else if (node instanceof EnumDeclaration) {
       enums.add((EnumDeclaration) node);
     }
-    for (var edge : SubgraphWalker.getAstChildren(node)) {
-      findRecordsAndEnums(edge);
+    for (var child : SubgraphWalker.getAstChildren(node)) {
+      findRecordsAndEnums(child);
     }
   }
 
