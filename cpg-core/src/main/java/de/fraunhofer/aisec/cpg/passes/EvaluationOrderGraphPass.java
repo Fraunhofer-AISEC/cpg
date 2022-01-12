@@ -164,6 +164,13 @@ public class EvaluationOrderGraphPass extends Pass {
 
   @Override
   public void accept(TranslationResult result) {
+    if (lang == null) {
+      Util.errorWithFileLocation(
+              result, log, "Could not create EOG: language frontend is null");
+
+      return;
+    }
+
     for (TranslationUnitDeclaration tu : result.getTranslationUnits()) {
       createEOG(tu);
       removeUnreachableEOGEdges(tu);
