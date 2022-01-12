@@ -73,5 +73,5 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.0-RC")
     implementation("org.jline:jline:3.21.0")
 
-    implementation("org.jetbrains.kotlinx:ki-shell:0.3.3")
+    implementation("org.jetbrains.kotlinx:ki-shell:0.4.1")
 }
