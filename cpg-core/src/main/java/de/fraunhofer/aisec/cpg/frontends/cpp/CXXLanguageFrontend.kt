@@ -46,7 +46,6 @@ import java.lang.reflect.Method
 import java.nio.file.Path
 import java.util.*
 import java.util.stream.Collectors
-import kotlin.math.min
 import org.eclipse.cdt.core.dom.ast.*
 import org.eclipse.cdt.core.dom.ast.gnu.cpp.GPPLanguage
 import org.eclipse.cdt.core.index.IIndexFileLocation
@@ -58,7 +57,6 @@ import org.eclipse.cdt.core.parser.ScannerInfo
 import org.eclipse.cdt.internal.core.dom.parser.ASTNode
 import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTTranslationUnit
 import org.eclipse.cdt.internal.core.parser.IMacroDictionary
-import org.eclipse.cdt.internal.core.parser.scanner.AbstractCharArray
 import org.eclipse.cdt.internal.core.parser.scanner.InternalFileContent
 import org.eclipse.cdt.internal.core.parser.scanner.InternalFileContentProvider
 import org.eclipse.core.runtime.CoreException
