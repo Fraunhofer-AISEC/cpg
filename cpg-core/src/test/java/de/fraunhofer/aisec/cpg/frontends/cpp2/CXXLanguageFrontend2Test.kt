@@ -26,21 +26,25 @@
 package de.fraunhofer.aisec.cpg.frontends.cpp2
 
 import de.fraunhofer.aisec.cpg.TestUtils.analyzeAndGetFirstTU
+import de.fraunhofer.aisec.cpg.TestUtils.analyzeWithBuilder
 import de.fraunhofer.aisec.cpg.TestUtils.assertRefersTo
+import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.cpp.CXXLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.byNameOrNull
 import de.fraunhofer.aisec.cpg.graph.declarations.*
-import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
-import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
-import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
-import de.fraunhofer.aisec.cpg.graph.statements.Statement
+import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser
+import de.fraunhofer.aisec.cpg.graph.types.UnknownType
+import de.fraunhofer.aisec.cpg.sarif.Region
+import org.junit.jupiter.api.Assertions
+import org.junit.jupiter.api.Test
 import java.io.File
+import java.nio.file.Path
+import java.util.*
 import java.util.function.Consumer
 import kotlin.test.*
-import org.junit.jupiter.api.Test
 
 class CXXLanguageFrontend2Test {
     @Test
@@ -464,6 +468,209 @@ class CXXLanguageFrontend2Test {
 
         val arg = methodCallWithConstant.arguments[0]
         assertSame(constant, (arg as DeclaredReferenceExpression).refersTo)
+    }
+
+    @Test
+    @Throws(java.lang.Exception::class)
+    fun testUnityBuild() {
+        val file = File("src/test/resources/unity")
+        val builder =
+            TranslationConfiguration.builder()
+                .sourceLocations(java.util.List.of(file))
+                .topLevel(file.parentFile)
+                .useUnityBuild(true)
+                .loadIncludes(true)
+                .defaultPasses()
+                .defaultLanguages()
+
+        builder.unregisterLanguage(CXXLanguageFrontend::class.java)
+        builder.registerLanguage(
+            CXXLanguageFrontend2::class.java,
+            CXXLanguageFrontend.CXX_EXTENSIONS
+        )
+
+        val declarations = analyzeWithBuilder(builder)
+        Assertions.assertEquals(1, declarations.size)
+
+        // should contain 3 declarations (2 include and 1 function decl from the include)
+        Assertions.assertEquals(3, declarations[0].declarations.size)
+    }
+
+    @Test
+    @Throws(java.lang.Exception::class)
+    fun testLocation() {
+        val file = File("src/test/resources/components/foreachstmt.cpp")
+        val tu =
+            analyzeAndGetFirstTU(java.util.List.of(file), file.parentFile.toPath(), true) {
+                it.unregisterLanguage(CXXLanguageFrontend::class.java)
+                it.registerLanguage(
+                    CXXLanguageFrontend2::class.java,
+                    CXXLanguageFrontend.CXX_EXTENSIONS
+                )
+            }
+        val main = tu.getDeclarationsByName("main", FunctionDeclaration::class.java)
+        Assertions.assertFalse(main.isEmpty())
+        val location = main.iterator().next().location
+        Assertions.assertNotNull(location)
+        val path = Path.of(location!!.artifactLocation.uri)
+        Assertions.assertEquals("foreachstmt.cpp", path.fileName.toString())
+        Assertions.assertEquals(Region(4, 1, 8, 2), location.region)
+    }
+
+    @Test
+    @Throws(java.lang.Exception::class)
+    fun testCompoundStatement() {
+        val file = File("src/test/resources/compoundstmt.cpp")
+        val declaration = analyzeAndGetFirstTU(java.util.List.of(file), file.parentFile.toPath(), true){
+            it.unregisterLanguage(CXXLanguageFrontend::class.java)
+            it.registerLanguage(
+                CXXLanguageFrontend2::class.java,
+                CXXLanguageFrontend.CXX_EXTENSIONS
+            )
+        }
+        val function = declaration.getDeclarationAs(
+            0,
+            FunctionDeclaration::class.java
+        )
+        Assertions.assertNotNull(function)
+        val functionBody = function!!.body
+        Assertions.assertNotNull(functionBody)
+        val statements = (functionBody as CompoundStatement).statements
+        Assertions.assertEquals(1, statements.size)
+        val returnStatement = statements[0] as ReturnStatement
+        Assertions.assertNotNull(returnStatement)
+        val returnValue = returnStatement.returnValue
+        Assertions.assertTrue(returnValue is Literal<*>)
+        Assertions.assertEquals(1, (returnValue as Literal<*>).value)
+    }
+
+    @Test
+    @Throws(java.lang.Exception::class)
+    fun testCast() {
+        val file = File("src/test/resources/components/castexpr.cpp")
+        val tu = analyzeAndGetFirstTU(java.util.List.of(file), file.parentFile.toPath(), true){
+            it.unregisterLanguage(CXXLanguageFrontend::class.java)
+            it.registerLanguage(
+                CXXLanguageFrontend2::class.java,
+                CXXLanguageFrontend.CXX_EXTENSIONS
+            )
+        }
+        val main = tu.getDeclarationAs(
+            0,
+            FunctionDeclaration::class.java
+        )
+        val e = Objects.requireNonNull(
+            main!!.getBodyStatementAs(
+                0,
+                DeclarationStatement::class.java
+            )
+        )!!.singleDeclaration as VariableDeclaration
+        Assertions.assertNotNull(e)
+        Assertions.assertEquals(TypeParser.createFrom("ExtendedClass*", true), e.type)
+        val b = Objects.requireNonNull(
+            main.getBodyStatementAs(
+                1,
+                DeclarationStatement::class.java
+            )
+        )!!.singleDeclaration as VariableDeclaration
+        Assertions.assertNotNull(b)
+        Assertions.assertEquals(TypeParser.createFrom("BaseClass*", true), b.type)
+
+        // initializer
+        var cast = b.initializer as CastExpression
+        Assertions.assertNotNull(cast)
+        Assertions.assertEquals(TypeParser.createFrom("BaseClass*", true), cast.castType)
+        val staticCast = main.getBodyStatementAs(
+            2,
+            BinaryOperator::class.java
+        )
+        Assertions.assertNotNull(staticCast)
+        cast = staticCast!!.rhs as CastExpression
+        Assertions.assertNotNull(cast)
+        Assertions.assertEquals("static_cast", cast.name)
+        val reinterpretCast = main.getBodyStatementAs(
+            3,
+            BinaryOperator::class.java
+        )
+        Assertions.assertNotNull(reinterpretCast)
+        cast = reinterpretCast!!.rhs as CastExpression
+        Assertions.assertNotNull(cast)
+        Assertions.assertEquals("reinterpret_cast", cast.name)
+        val d = Objects.requireNonNull(
+            main.getBodyStatementAs(
+                4,
+                DeclarationStatement::class.java
+            )
+        )!!.singleDeclaration as VariableDeclaration
+        Assertions.assertNotNull(d)
+        cast = d.initializer as CastExpression
+        Assertions.assertNotNull(cast)
+        Assertions.assertEquals(TypeParser.createFrom("int", true), cast.castType)
+    }
+
+    @Test
+    @Throws(java.lang.Exception::class)
+    fun testIf() {
+        val file = File("src/test/resources/if.cpp")
+        val declaration = analyzeAndGetFirstTU(java.util.List.of(file), file.parentFile.toPath(), true){
+            it.unregisterLanguage(CXXLanguageFrontend::class.java)
+            it.registerLanguage(
+                CXXLanguageFrontend2::class.java,
+                CXXLanguageFrontend.CXX_EXTENSIONS
+            )
+        }
+        val statements: List<Statement> = (declaration.getDeclarationAs(0, FunctionDeclaration::class.java)!!.body as CompoundStatement).statements
+
+        val ifStatement = statements[0] as IfStatement
+        Assertions.assertNotNull(ifStatement)
+        Assertions.assertNotNull(ifStatement.condition)
+        Assertions.assertEquals("bool", ifStatement.condition.type.typeName)
+        Assertions.assertEquals(true, (ifStatement.condition as Literal<*>).value)
+        Assertions.assertTrue(
+            (ifStatement.thenStatement as CompoundStatement).statements[0] is ReturnStatement
+        )
+        Assertions.assertTrue(
+            (ifStatement.elseStatement as CompoundStatement).statements[0] is ReturnStatement
+        )
+    }
+
+    @Test
+    @Throws(java.lang.Exception::class)
+    fun testForEach() {
+        val file = File("src/test/resources/components/foreachstmt.cpp")
+        val tu =
+            analyzeAndGetFirstTU(java.util.List.of(file), file.parentFile.toPath(), true) {
+                it.unregisterLanguage(CXXLanguageFrontend::class.java)
+                it.registerLanguage(
+                    CXXLanguageFrontend2::class.java,
+                    CXXLanguageFrontend.CXX_EXTENSIONS
+                )
+            }
+        val main = tu.getDeclarationsByName("main", FunctionDeclaration::class.java)
+        Assertions.assertFalse(main.isEmpty())
+        val decl = main.iterator().next()
+        val ls = decl.getVariableDeclarationByName("ls").orElse(null)
+        Assertions.assertNotNull(ls)
+        Assertions.assertEquals(TypeParser.createFrom("std::vector<int>", true), ls.type)
+        Assertions.assertEquals("ls", ls.name)
+        val forEachStatement = decl.getBodyStatementAs(1, ForEachStatement::class.java)
+        Assertions.assertNotNull(forEachStatement)
+
+        // should loop over ls
+        Assertions.assertEquals(
+            ls,
+            (forEachStatement!!.iterable as DeclaredReferenceExpression).refersTo
+        )
+
+        // should declare auto i (so far no concrete type inferrable)
+        val stmt = forEachStatement.variable
+        Assertions.assertNotNull(stmt)
+        Assertions.assertTrue(stmt is DeclarationStatement)
+        Assertions.assertTrue((stmt as DeclarationStatement).isSingleDeclaration)
+        val i = stmt.singleDeclaration as VariableDeclaration
+        Assertions.assertNotNull(i)
+        Assertions.assertEquals("i", i.name)
+        Assertions.assertEquals(UnknownType.getUnknownType(), i.type)
     }
 
     @Test
