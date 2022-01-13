@@ -98,7 +98,7 @@ class Application : Callable<Int> {
 
         @CommandLine.Option(
             names = ["--json-compilation-database"],
-            description = ["Give the json compilation database file path "]
+            description = ["The path to an optional a JSON compilation database"]
         )
         var jsonCompilationDatabase: String = ""
     }
