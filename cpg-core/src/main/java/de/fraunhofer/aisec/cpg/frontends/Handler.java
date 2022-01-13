@@ -52,8 +52,7 @@ public abstract class Handler<S, T, L extends LanguageFrontend> {
   protected final HashMap<Class<? extends T>, HandlerInterface<S, T>> map = new HashMap<>();
   private final Supplier<S> configConstructor;
   protected @NotNull L lang;
-  @Nullable
-  private final Class<?> typeOfT;
+  @Nullable private final Class<?> typeOfT;
 
   public Handler(Supplier<S> configConstructor, @NotNull L lang) {
     this.configConstructor = configConstructor;
