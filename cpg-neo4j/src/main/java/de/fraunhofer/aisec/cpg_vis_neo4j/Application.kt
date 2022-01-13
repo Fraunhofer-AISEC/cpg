@@ -270,7 +270,7 @@ class Application : Callable<Int> {
         }
         if (exclusive.jsonCompilationDatabase == "" && exclusive.files.isEmpty()) {
             throw Error(
-                "Files list is empty or jsonCompilationDatabase is also empty. Please provide --files to evaluate or --json-compilation-database for CXX files"
+                "Please provide either a list of files to evaluate or a compilation database using the --json-compilation-database flag"
             )
         }
 
