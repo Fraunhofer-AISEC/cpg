@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph
 
+import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
@@ -178,12 +179,22 @@ object NodeBuilder {
         return node
     }
 
+    @JvmOverloads
     @JvmStatic
-    fun newFunctionDeclaration(name: String, code: String?): FunctionDeclaration {
+    fun newFunctionDeclaration(
+        name: String,
+        code: String?,
+        lang: LanguageFrontend? = null,
+        rawNode: Any? = null
+    ): FunctionDeclaration {
         val node = FunctionDeclaration()
         node.name = name
+
+        lang?.setCodeAndRegion(node, rawNode)
+
         node.code = code
         log(node)
+
         return node
     }
 
@@ -316,18 +327,25 @@ object NodeBuilder {
     }
 
     @JvmStatic
+    @JvmOverloads
     fun newVariableDeclaration(
         name: String?,
         type: Type?,
         code: String?,
-        implicitInitializerAllowed: Boolean
+        implicitInitializerAllowed: Boolean,
+        lang: LanguageFrontend? = null,
+        rawNode: Any? = null
     ): VariableDeclaration {
         val node = VariableDeclaration()
         node.name = name!!
         node.type = type
+
+        lang?.setCodeAndRegion(node, rawNode)
+
         node.code = code
         node.isImplicitInitializerAllowed = implicitInitializerAllowed
         log(node)
+
         return node
     }
 
@@ -599,33 +617,52 @@ object NodeBuilder {
         return node
     }
 
+    @JvmOverloads
     @JvmStatic
     fun newMethodDeclaration(
         name: String?,
         code: String?,
         isStatic: Boolean,
-        recordDeclaration: RecordDeclaration?
+        recordDeclaration: RecordDeclaration?,
+        lang: LanguageFrontend? = null,
+        rawNode: Any? = null
     ): MethodDeclaration {
         val node = MethodDeclaration()
         node.name = name!!
-        node.code = code
         node.isStatic = isStatic
         node.recordDeclaration = recordDeclaration
+
+        lang?.setCodeAndRegion(node, rawNode)
+
+        if (code != null) {
+            node.code = code
+        }
+
         log(node)
         return node
     }
 
+    @JvmOverloads
     @JvmStatic
     fun newConstructorDeclaration(
         name: String?,
         code: String?,
-        recordDeclaration: RecordDeclaration?
+        recordDeclaration: RecordDeclaration?,
+        lang: LanguageFrontend? = null,
+        rawNode: Any? = null
     ): ConstructorDeclaration {
         val node = ConstructorDeclaration()
         node.name = name!!
-        node.code = code
         node.recordDeclaration = recordDeclaration
+
+        lang?.setCodeAndRegion(node, rawNode)
+
+        if (code != null) {
+            node.code = code
+        }
+
         log(node)
+
         return node
     }
 

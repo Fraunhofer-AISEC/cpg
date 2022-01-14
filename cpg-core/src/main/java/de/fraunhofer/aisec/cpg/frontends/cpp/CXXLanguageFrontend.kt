@@ -403,9 +403,9 @@ class CXXLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeM
     override fun <S, T> setComment(s: S, ctx: T) {
         if (ctx is ASTNode && s is Node) {
             val cpgNode = s as Node
-            if (comments.containsKey(cpgNode.location!!.region.endLine)
+            if (comments.containsKey(cpgNode.location?.region?.endLine)
             ) { // only exact match for now
-                cpgNode.comment = comments[cpgNode.location!!.region.endLine]
+                cpgNode.comment = comments[cpgNode.location?.region?.endLine]
             }
             // TODO: handle orphanComments? i.e. comments which do not correspond to one line
             // todo: what to do with comments which are in a line which contains multiple

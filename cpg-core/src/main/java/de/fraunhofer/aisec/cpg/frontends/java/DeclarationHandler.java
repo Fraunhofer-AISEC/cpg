@@ -258,6 +258,9 @@ public class DeclarationHandler
             .map(this.lang::getTypeAsGoodAsPossible)
             .collect(Collectors.toList()));
 
+    // make sure that we set the location, before we add it the type parameter
+    recordDeclaration.setLocation(this.lang.getLocationFromRawNode(classInterDecl));
+
     TypeManager.getInstance()
         .addTypeParameter(
             recordDeclaration,

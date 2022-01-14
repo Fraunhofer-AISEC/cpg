@@ -84,7 +84,13 @@ public class StatementAnalyzer
 
   public de.fraunhofer.aisec.cpg.graph.statements.Statement handleExpressionStatement(
       Statement stmt) {
-    return lang.getExpressionHandler().handle(stmt.asExpressionStmt().getExpression());
+    var expression = lang.getExpressionHandler().handle(stmt.asExpressionStmt().getExpression());
+
+    // update expression's code and location to match the statement
+
+    lang.setCodeAndRegion(expression, stmt);
+
+    return expression;
   }
 
   private de.fraunhofer.aisec.cpg.graph.statements.Statement handleThrowStmt(Statement stmt) {

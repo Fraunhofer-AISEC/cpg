@@ -180,8 +180,8 @@ public abstract class LanguageFrontend {
   @Nullable
   public abstract <T> PhysicalLocation getLocationFromRawNode(T astNode);
 
-  public <N, S> void setCodeAndRegion(@NonNull N cpgNode, @NonNull S astNode) {
-    if (cpgNode instanceof Node) {
+  public <N, S> void setCodeAndRegion(@NonNull N cpgNode, @Nullable S astNode) {
+    if (cpgNode instanceof Node && astNode != null) {
       if (config.codeInNodes) {
         // only set code, if its not already set or empty
         /*if (((Node) cpgNode).getCode() == null || Objects.equals(((Node) cpgNode).getCode(), "")) {*/

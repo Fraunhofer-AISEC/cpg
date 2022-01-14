@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.frontends;
 
 import static de.fraunhofer.aisec.cpg.helpers.Util.errorWithFileLocation;
 
+import de.fraunhofer.aisec.cpg.graph.Node;
 import java.lang.reflect.ParameterizedType;
 import java.util.HashMap;
 import java.util.function.Supplier;
@@ -109,7 +110,11 @@ public abstract class Handler<S, T, L extends LanguageFrontend> {
     }
     if (handler != null) {
       S s = handler.handle(ctx);
-      lang.setCodeAndRegion(s, ctx);
+
+      // TODO: remove this once all node builders are migrated
+      if (s != null && ((Node) s).getLocation() == null) {
+        lang.setCodeAndRegion(s, ctx);
+      }
       lang.setComment(s, ctx);
       ret = s;
     } else {

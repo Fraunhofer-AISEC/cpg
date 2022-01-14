@@ -83,6 +83,15 @@ class CXXLanguageFrontendTest extends BaseTest {
   private static final Logger LOGGER = LoggerFactory.getLogger(CXXLanguageFrontendTest.class);
 
   @Test
+  void testFF() throws Exception {
+    File file = new File("src/test/resources/hqxvlc.c");
+    TranslationUnitDeclaration tu =
+        TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true);
+
+    assertNotNull(tu);
+  }
+
+  @Test
   void testForEach() throws Exception {
     File file = new File("src/test/resources/components/foreachstmt.cpp");
     TranslationUnitDeclaration tu =

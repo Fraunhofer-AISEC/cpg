@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph
 
+import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.graph.declarations.TypedefDeclaration
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
@@ -256,8 +257,21 @@ open class Node : IVisitable<Node>, Persistable {
                 isImplicit == other.isImplicit
     }
 
+    /**
+     * Implementation of hash code. We are including the name and the location in this hash code as
+     * a compromise between including too few attributes and performance. Please note that this
+     * means, that two nodes that might be semantically equal, such as two record declarations with
+     * the same name but different location (e.g. because of header files) will be sorted into
+     * different hash keys.
+     *
+     * That means, that you need to be careful, if you use a [Node] as a key in a hash map. You
+     * should make sure that the [location] is set before you add it to a hash map. This can be a
+     * little tricky, since currently the [Handler] class will set the location after it has
+     * "handled" the node. This is something that we might want to change, e.g. directly set it when
+     * building a new node with the [NodeBuilder].
+     */
     override fun hashCode(): Int {
-        return Objects.hash(name, this.javaClass)
+        return Objects.hash(name, location, this.javaClass)
     }
 
     companion object {
