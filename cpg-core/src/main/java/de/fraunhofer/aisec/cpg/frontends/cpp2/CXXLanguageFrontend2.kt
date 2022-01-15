@@ -143,7 +143,7 @@ class CXXLanguageFrontend2(config: TranslationConfiguration, scopeManager: Scope
 
             return PhysicalLocation(
                 currentFile.toURI(),
-                Region(start.row, start.column, end.row, end.column)
+                Region(start.row + 1, start.column + 1, end.row + 1, end.column + 1)
             )
         }
 
