@@ -93,6 +93,8 @@ class DeclarationHandler(lang: CXXLanguageFrontend2) :
                 val declarator = node.childByFieldName("declarator")
                 if (!declarator.isNull) {
                     return when (val declaratorType = declarator.type) {
+                        "identifier" -> handleVariableDeclaration(node)
+                        "pointer_declarator" -> handleVariableDeclaration(node)
                         "init_declarator" -> handleVariableDeclaration(node)
                         "array_declarator" -> handleVariableDeclaration(node)
                         "function_declarator" -> handleFunctionDefinition(node)
@@ -579,17 +581,18 @@ class DeclarationHandler(lang: CXXLanguageFrontend2) :
                     lang.getCodeFromRawNode(node),
                     lang.getLocationFromRawNode(node),
                     declarator.initializer,
-                    false
+                    true
                 )
             } else {
                 newVariableDeclaration(
                     declarator.name,
                     declarator.type,
                     lang.getCodeFromRawNode(node),
-                    false
+                    true
                 )
             }
-
+        declaration.location = lang.getLocationFromRawNode(node)
+        declaration.code = lang.getCodeFromRawNode(node)
         declaration.initializer = declarator.initializer
 
         return declaration

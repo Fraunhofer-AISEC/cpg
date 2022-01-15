@@ -108,6 +108,9 @@ class CXXLanguageFrontend2(config: TranslationConfiguration, scopeManager: Scope
                 getCodeFromRawNode(node)?.let { TypeParser.createFrom(it, false) }
                     ?: UnknownType.getUnknownType()
             "class_specifier" -> handleClassSpecifier(node)
+            "auto" -> UnknownType.getUnknownType()
+            "template_type" -> getCodeFromRawNode(node)?.let { TypeParser.createFrom(it, false) }
+                    ?: UnknownType.getUnknownType()
             else -> {
                 log.error(
                     "Not handling type of type {} yet: {}",

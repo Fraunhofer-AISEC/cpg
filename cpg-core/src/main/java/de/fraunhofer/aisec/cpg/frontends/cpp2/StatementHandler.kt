@@ -45,6 +45,7 @@ class StatementHandler(lang: CXXLanguageFrontend2) :
             "declaration" -> handleDeclarationStatement(node)
             "expression_statement" -> handleExpressionStatement(node)
             "return_statement" -> handleReturnStatement(node)
+            "for_range_loop" -> handleForEachStatement(node)
             else -> {
                 log.error("Not handling statement of type {} yet", type)
                 null
@@ -116,5 +117,51 @@ class StatementHandler(lang: CXXLanguageFrontend2) :
         lang.scopeManager.leaveScope(compoundStatement)
 
         return compoundStatement
+    }
+
+    private fun handleForEachStatement(node: Node): Statement {
+        val forEachStatement = NodeBuilder.newForEachStatement(lang.getCodeFromRawNode(node))
+
+        lang.scopeManager.enterScope(forEachStatement)
+
+        val typeNode = node.childByFieldName("type")
+        val type = lang.handleType(typeNode)
+
+        var declarator = node.childByFieldName("declarator")
+
+        // Handle Variable Declaration
+        val declaration =
+            lang.declarationHandler.declareVariable(
+                lang.declarationHandler.handleDeclarator(declarator, type),
+                node
+            )
+
+        declaration.type = type
+        declaration.location!!.region.startLine =
+            lang.getLocationFromRawNode(typeNode)!!.region.startLine
+        declaration.location!!.region.startColumn =
+            lang.getLocationFromRawNode(typeNode)!!.region.startColumn
+        declaration.location!!.region.endLine =
+            lang.getLocationFromRawNode(declarator)!!.region.endLine
+        declaration.location!!.region.endColumn =
+            lang.getLocationFromRawNode(declarator)!!.region.endColumn
+
+        declaration.code =
+            lang.getCodeFromRawNode(typeNode) + " " + lang.getCodeFromRawNode(declarator)
+
+        val declarationStatement = newDeclarationStatement(declaration.code)
+        declarationStatement.singleDeclaration = declaration
+
+        // Handle Iterable Expression
+        val iterable = lang.expressionHandler.handle(node.childByFieldName("right"))
+
+        // Set fields in forEachStatement
+        forEachStatement.variable = declarationStatement
+        forEachStatement.iterable = iterable
+        forEachStatement.statement = handle(node.childByFieldName("body"))
+
+        lang.scopeManager.leaveScope(forEachStatement)
+
+        return forEachStatement
     }
 }
