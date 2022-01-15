@@ -86,6 +86,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend2) :
             "parameter_declaration" -> handleParameterDeclaration(node)
             "field_declaration" -> handleFieldDeclaration(node)
             "class_specifier" -> handleClassSpecifier(node)
+            "preproc_include" -> handleInclude(node)
             ";" -> null
             else -> {
                 val declarator = node.childByFieldName("declarator")
@@ -109,6 +110,11 @@ class DeclarationHandler(lang: CXXLanguageFrontend2) :
                 }
             }
         }
+    }
+
+    private fun handleInclude(node: Node): Declaration {
+        var name = lang.getCodeFromRawNode(node.childByFieldName("path"))!!.drop(1)!!.dropLast(1)
+        return NodeBuilder.newIncludeDeclaration(name)
     }
 
     private fun handleClassSpecifier(node: Node): Declaration {
@@ -487,6 +493,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend2) :
                     newFunctionDeclaration(declarator.name, lang.getCodeFromRawNode(node))
                 }
             }
+        lang.scopeManager.addDeclaration(func)
 
         func.type = declarator.type
 

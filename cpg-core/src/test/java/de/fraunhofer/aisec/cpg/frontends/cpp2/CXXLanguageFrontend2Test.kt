@@ -25,6 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.cpp2
 
+import com.google.common.collect.Iterables
+import com.google.common.collect.Lists
 import de.fraunhofer.aisec.cpg.TestUtils.analyzeAndGetFirstTU
 import de.fraunhofer.aisec.cpg.TestUtils.analyzeWithBuilder
 import de.fraunhofer.aisec.cpg.TestUtils.assertRefersTo
@@ -486,7 +488,12 @@ class CXXLanguageFrontend2Test {
         builder.unregisterLanguage(CXXLanguageFrontend::class.java)
         builder.registerLanguage(
             CXXLanguageFrontend2::class.java,
-            CXXLanguageFrontend.CXX_EXTENSIONS
+            Lists.newArrayList(
+                Iterables.concat(
+                    CXXLanguageFrontend.CXX_EXTENSIONS,
+                    CXXLanguageFrontend.CXX_HEADER_EXTENSIONS
+                )
+            )
         )
 
         val declarations = analyzeWithBuilder(builder)

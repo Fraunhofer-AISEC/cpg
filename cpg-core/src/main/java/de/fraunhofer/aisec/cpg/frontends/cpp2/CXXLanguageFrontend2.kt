@@ -70,11 +70,11 @@ class CXXLanguageFrontend2(config: TranslationConfiguration, scopeManager: Scope
 
         assert(root.type == "translation_unit")
 
-        return handleTranslationUnit(root)
+        return handleTranslationUnit(root, file.absolutePath)
     }
 
-    fun handleTranslationUnit(node: Node): TranslationUnitDeclaration {
-        val tu = newTranslationUnitDeclaration("", getCodeFromRawNode(node))
+    fun handleTranslationUnit(node: Node, path: String): TranslationUnitDeclaration {
+        val tu = newTranslationUnitDeclaration(path, getCodeFromRawNode(node))
 
         scopeManager.resetToGlobal(tu)
 
