@@ -86,7 +86,8 @@ class DeclarationHandler(lang: CXXLanguageFrontend2) :
             "parameter_declaration" -> handleParameterDeclaration(node)
             "field_declaration" -> handleFieldDeclaration(node)
             "class_specifier" -> handleClassSpecifier(node)
-            "preproc_include" -> handleInclude(node)
+            // "preproc_include" -> handleInclude(node) TODO resolve should includes be added as
+            // declarations? (handleTranslationUnit with UnityBuild Issue)
             ";" -> null
             else -> {
                 val declarator = node.childByFieldName("declarator")
@@ -113,6 +114,8 @@ class DeclarationHandler(lang: CXXLanguageFrontend2) :
     }
 
     private fun handleInclude(node: Node): Declaration {
+        // TODO resolve should includes be added as declarations? (handleTranslationUnit with
+        // UnityBuild Issue)
         var name = lang.getCodeFromRawNode(node.childByFieldName("path"))!!.drop(1)!!.dropLast(1)
         return NodeBuilder.newIncludeDeclaration(name)
     }
