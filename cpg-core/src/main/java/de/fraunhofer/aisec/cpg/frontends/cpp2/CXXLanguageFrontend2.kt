@@ -141,6 +141,8 @@ class CXXLanguageFrontend2(config: TranslationConfiguration, scopeManager: Scope
             val start = astNode.startPoint
             val end = astNode.endPoint
 
+            // In tree-sitter lines and columns start counting at 0. This is counter-intuitive to
+            // the locations shown by IDEs
             return PhysicalLocation(
                 currentFile.toURI(),
                 Region(start.row + 1, start.column + 1, end.row + 1, end.column + 1)
