@@ -71,6 +71,6 @@ public class Literal<T> extends Expression {
   public int hashCode() {
     // include the value in the hash code, otherwise the hash set/map implementation falls back to
     // equals() because the node's hash code only depends on the name
-    return Objects.hash(super.hashCode(), value);
+    return Objects.hash(super.hashCode(), value, this.getLocation());
   }
 }
