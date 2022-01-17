@@ -8,36 +8,9 @@ updates:
       - "dependencies"
     ignore:
       - dependency-name: "*"
-        update-types: ["version-update:semver-patch"]      
-  - package-ecosystem: "gradle"
-    directory: "/cpg-library"
-    schedule:
-      interval: "daily"
-    labels:
-      - "dependencies"
-    ignore:
-      - dependency-name: "*"
         update-types: ["version-update:semver-patch"]
-  - package-ecosystem: "gradle"
-    directory: "/cpg-console"
-    schedule:
-      interval: "daily"
-    labels:
-      - "dependencies"
-    ignore:
-      - dependency-name: "*"
-        update-types: ["version-update:semver-patch"]  
-  - package-ecosystem: "gradle"
-    directory: "/cpg-neo4j"
-    schedule:
-      interval: "daily"
-    labels:
-      - "dependencies"
-    ignore:
-      - dependency-name: "*"
-        update-types: ["version-update:semver-patch"]  
   - package-ecosystem: "gomod"
-    directory: "/cpg-library/src/main/golang"
+    directory: "/cpg-core/src/main/golang"
     schedule:
       interval: "daily"
     labels:
@@ -47,7 +20,7 @@ updates:
       - dependency-name: "*"
         update-types: ["version-update:semver-patch"]
   - package-ecosystem: "npm"
-    directory: "/cpg-library/src/main/golang"
+    directory: "/cpg-core/src/main/nodejs"
     schedule:
       interval: "daily"
     labels:
