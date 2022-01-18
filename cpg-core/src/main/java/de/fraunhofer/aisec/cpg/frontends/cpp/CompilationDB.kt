@@ -31,25 +31,7 @@ import java.util.*
 /** This class is used to extract the details inside a compilation database. */
 object CompilationDB {
     private val log = LoggerFactory.getLogger(CompilationDB::class.java)
-    // This method is used if you want to get all the files inside a folder
-    //  public static List<String> getIncludeFIlesInTheFolders(List<String> includeFilesDirectories)
-    // {
-    //    List<String> includeFiles = new LinkedList<>();
-    //    includeFilesDirectories.forEach(
-    //        item -> {
-    //          try {
-    //            List<String> filesInFolder =
-    //                Files.walk(Paths.get(item))
-    //                    .filter(Files::isRegularFile)
-    //                    .map(Path::toString)
-    //                    .collect(Collectors.toList());
-    //            includeFiles.addAll(filesInFolder);
-    //          } catch (IOException e) {
-    //            log.error(e.toString());
-    //          }
-    //        });
-    //    return includeFiles;
-    //  }
+
     /**
      * Gets the include directories the from the string value provided. Example for a compile
      * commdand is : "/usr/local/bin/g++-7 -I/Users/me/prj/Calendar/calendars -g -std=c++11 -o
@@ -57,7 +39,7 @@ object CompilationDB {
      *
      * This method returns the include-paths in the above the command.
      */
-    fun getIncludeDirectories(stringVal: String): List<String>? {
+    fun parseIncludeDirectories(stringVal: String): List<String>? {
         if (stringVal == null || stringVal.isEmpty()) {
             return null
         }
@@ -79,7 +61,7 @@ object CompilationDB {
      * commdand is : ['clang', 'main.c', '-o', 'main.c.o'] This method returns the include-paths in
      * the above command.
      */
-    fun getIncludeDirectories(commandVals: List<String>): List<String>? {
+    fun parseIncludeDirectories(commandVals: List<String>): List<String>? {
         //     ['clang', 'main.c', '-o', 'main.c.o'],
         // The I vals come after -I
         if (commandVals == null || commandVals.isEmpty()) {

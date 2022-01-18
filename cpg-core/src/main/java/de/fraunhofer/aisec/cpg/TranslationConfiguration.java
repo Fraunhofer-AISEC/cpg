@@ -140,7 +140,10 @@ public class TranslationConfiguration {
    */
   final boolean typeSystemActiveInFrontend;
 
-  /** This is the data structure for storing the compilation database. */
+  /** This is the data structure for storing the compilation database.It stores a mapping from the
+   *  File to the list of files that have to be included to their path, specified by the
+   *  parameter in the compilation database.
+   */
   final Map<File, List<String>> compilationDatabase;
 
   @NonNull private final List<Pass> passes;
