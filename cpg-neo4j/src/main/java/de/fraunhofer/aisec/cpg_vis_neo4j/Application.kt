@@ -31,6 +31,11 @@ import de.fraunhofer.aisec.cpg.frontends.golang.GoLanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.llvm.LLVMIRLanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.typescript.TypeScriptLanguageFrontend
+import java.io.File
+import java.net.ConnectException
+import java.nio.file.Paths
+import java.util.concurrent.Callable
+import kotlin.system.exitProcess
 import org.neo4j.driver.exceptions.AuthenticationException
 import org.neo4j.ogm.config.Configuration
 import org.neo4j.ogm.exception.ConnectionException
@@ -40,11 +45,6 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import picocli.CommandLine
 import picocli.CommandLine.ArgGroup
-import java.io.File
-import java.net.ConnectException
-import java.nio.file.Paths
-import java.util.concurrent.Callable
-import kotlin.system.exitProcess
 
 private const val S_TO_MS_FACTOR = 1000
 private const val TIME_BETWEEN_CONNECTION_TRIES: Long = 2000
@@ -270,11 +270,11 @@ class Application : Callable<Int> {
 
         if (mutuallyExclusiveParameters.jsonCompilationDatabase != null) {
 
-            val compilationDatabaseForTheFile: Map<File, List<String>>? =
+            val compilationDatabaseForTheFile: Map<File, List<String>> =
                 getCompilationDatabaseFromTheFile(
                     mutuallyExclusiveParameters.jsonCompilationDatabase!!
                 )
-            if (compilationDatabaseForTheFile != null) {
+            if (compilationDatabaseForTheFile.isNotEmpty()) {
                 translationConfiguration.useCompilationDatabase(compilationDatabaseForTheFile)
                 translationConfiguration.sourceLocations(
                     compilationDatabaseForTheFile.keys.toList()
