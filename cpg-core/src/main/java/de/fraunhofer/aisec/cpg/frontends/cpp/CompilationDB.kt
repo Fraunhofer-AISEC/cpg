@@ -38,9 +38,7 @@ class CompilationDB {
     private val log = LoggerFactory.getLogger(CompilationDB::class.java)
     companion object {
 
-        /**
-         * This is the structure of how each object inside compile_commands.json looks like.
-         */
+        /** This is the structure of how each object inside compile_commands.json looks like. */
         data class CompilationDatabaseEntry(
             val directory: String?,
             val command: String? = null,
@@ -50,7 +48,7 @@ class CompilationDB {
         )
 
         /**
-         * This function returns  Map<File, List<String>>. This function takes in File of the json
+         * This function returns Map<File, List<String>>. This function takes in File of the json
          * compilation database and returns it as a java Map.
          */
         fun getCompilationDatabaseFromTheFile(fileName: File): MutableMap<File, List<String>>? {

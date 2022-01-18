@@ -32,7 +32,6 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
 import de.fraunhofer.aisec.cpg.frontends.cpp.CXXLanguageFrontend;
-import de.fraunhofer.aisec.cpg.frontends.cpp.CompilationDB;
 import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguageFrontend;
 import de.fraunhofer.aisec.cpg.passes.*;
 import java.io.File;
@@ -291,14 +290,8 @@ public class TranslationConfiguration {
       return this;
     }
 
-    public Builder useCompilationDatabase(File compilationDatabaseFile) {
-      Map<File, List<String>> compilationDatabaseForTheFile =
-          CompilationDB.Companion.getCompilationDatabaseFromTheFile(compilationDatabaseFile);
-      if (compilationDatabaseForTheFile != null) {
-        this.compilationDatabase = compilationDatabaseForTheFile;
-        List<File> sourceFiles = new ArrayList<>(compilationDatabaseForTheFile.keySet());
-        this.sourceLocations = sourceFiles;
-      }
+    public Builder useCompilationDatabase(Map<File, List<String>> compilationDatabaseFile) {
+      this.compilationDatabase = compilationDatabaseFile;
       return this;
     }
 

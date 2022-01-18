@@ -40,13 +40,10 @@ import de.fraunhofer.aisec.cpg.helpers.Benchmark
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
-import java.io.File
-import java.lang.reflect.Field
-import java.lang.reflect.Method
-import java.nio.file.Path
-import java.util.*
-import java.util.stream.Collectors
-import org.eclipse.cdt.core.dom.ast.*
+import org.eclipse.cdt.core.dom.ast.IASTAttributeOwner
+import org.eclipse.cdt.core.dom.ast.IASTNode
+import org.eclipse.cdt.core.dom.ast.IASTToken
+import org.eclipse.cdt.core.dom.ast.IASTTokenList
 import org.eclipse.cdt.core.dom.ast.gnu.cpp.GPPLanguage
 import org.eclipse.cdt.core.index.IIndexFileLocation
 import org.eclipse.cdt.core.model.ILanguage
@@ -61,6 +58,12 @@ import org.eclipse.cdt.internal.core.parser.scanner.InternalFileContent
 import org.eclipse.cdt.internal.core.parser.scanner.InternalFileContentProvider
 import org.eclipse.core.runtime.CoreException
 import org.slf4j.LoggerFactory
+import java.io.File
+import java.lang.reflect.Field
+import java.lang.reflect.Method
+import java.nio.file.Path
+import java.util.*
+import java.util.stream.Collectors
 
 /**
  * The language frontend for translating CXX languages into the graph. It uses Eclipse CDT to parse
@@ -188,7 +191,7 @@ class CXXLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeM
         includePaths.addAll(listOf(*config.includePaths))
 
         config.compilationDatabase[file]?.let { includePaths.addAll(it) }
-        
+
         val scannerInfo = ScannerInfo(config.symbols, includePaths.toTypedArray())
         val log = DefaultLogService()
         val opts = ILanguage.OPTION_PARSE_INACTIVE_CODE // | ILanguage.OPTION_ADD_COMMENTS;

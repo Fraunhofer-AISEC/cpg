@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg_vis_neo4j
 
 import de.fraunhofer.aisec.cpg.*
+import de.fraunhofer.aisec.cpg.frontends.cpp.CompilationDB.Companion.getCompilationDatabaseFromTheFile
 import de.fraunhofer.aisec.cpg.frontends.golang.GoLanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.llvm.LLVMIRLanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguageFrontend
@@ -268,9 +269,17 @@ class Application : Callable<Int> {
                 .debugParser(DEBUG_PARSER)
 
         if (mutuallyExclusiveParameters.jsonCompilationDatabase != null) {
-            translationConfiguration.useCompilationDatabase(
-                mutuallyExclusiveParameters.jsonCompilationDatabase
-            )
+
+            val compilationDatabaseForTheFile: Map<File, List<String>>? =
+                getCompilationDatabaseFromTheFile(
+                    mutuallyExclusiveParameters.jsonCompilationDatabase!!
+                )
+            if (compilationDatabaseForTheFile != null) {
+                translationConfiguration.useCompilationDatabase(compilationDatabaseForTheFile)
+                translationConfiguration.sourceLocations(
+                    compilationDatabaseForTheFile.keys.toList()
+                )
+            }
         }
 
         translationConfiguration.registerLanguage(
