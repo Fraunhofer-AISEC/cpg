@@ -25,11 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg_vis_neo4j
 
-import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.module.kotlin.readValue
-import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import de.fraunhofer.aisec.cpg.*
-import de.fraunhofer.aisec.cpg.frontends.cpp.CompilationDB
 import de.fraunhofer.aisec.cpg.frontends.golang.GoLanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.llvm.LLVMIRLanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguageFrontend
@@ -66,14 +62,6 @@ private const val DEFAULT_USER_NAME = "neo4j"
 private const val DEFAULT_PASSWORD = "password"
 private const val DEFAULT_SAVE_DEPTH = -1
 
-data class CompliationDatabaseEntry(
-    val directory: String?,
-    val command: String? = null,
-    val arguments: List<String>? = null,
-    val file: String,
-    val output: String?
-)
-
 /**
  * An application to export the <a href="https://github.com/Fraunhofer-AISEC/cpg">cpg</a> to a <a
  * href="https://github.com/Fraunhofer-AISEC/cpg">neo4j</a> database.
@@ -85,7 +73,8 @@ class Application : Callable<Int> {
         get() = LoggerFactory.getLogger(Application::class.java)
     // Either provide the files to evaluate or provide the path of compilation database with
     // --json-compilation-database flag
-    @ArgGroup(exclusive = true, multiplicity = "1") lateinit var mutuallyExclusiveParameters: Exclusive
+    @ArgGroup(exclusive = true, multiplicity = "1")
+    lateinit var mutuallyExclusiveParameters: Exclusive
 
     class Exclusive {
         @CommandLine.Parameters(
@@ -100,7 +89,7 @@ class Application : Callable<Int> {
             names = ["--json-compilation-database"],
             description = ["Give the json compilation database file path "]
         )
-        var jsonCompilationDatabase: File? = null;
+        var jsonCompilationDatabase: File? = null
     }
 
     @CommandLine.Option(
@@ -253,10 +242,10 @@ class Application : Callable<Int> {
         assert(mutuallyExclusiveParameters.files.isNotEmpty())
         val filePaths = arrayOfNulls<File>(mutuallyExclusiveParameters.files.size)
         var topLevel: File? = null
-        val compilationDatabase: MutableMap<File, List<String>> = mutableMapOf()
 
         for (index in mutuallyExclusiveParameters.files.indices) {
-            val path = Paths.get(mutuallyExclusiveParameters.files[index]).toAbsolutePath().normalize()
+            val path =
+                Paths.get(mutuallyExclusiveParameters.files[index]).toAbsolutePath().normalize()
             val file = File(path.toString())
             require(file.exists() && (!file.isHidden)) {
                 "Please use a correct path. It was: $path"
@@ -279,44 +268,11 @@ class Application : Callable<Int> {
                 .debugParser(DEBUG_PARSER)
 
         if (mutuallyExclusiveParameters.jsonCompilationDatabase != null) {
-            val jsonStringFile = mutuallyExclusiveParameters.jsonCompilationDatabase!!.readText()
-            val mapper = ObjectMapper().registerKotlinModule()
-            val obj: List<CompliationDatabaseEntry> = mapper.readValue(jsonStringFile)
-            for (i in obj.indices) {
-                var includeFiles: List<String>?
-                val currentObject = obj[i]
-                val fileName = currentObject.file
-
-                includeFiles =
-                    if (currentObject.arguments != null) {
-                        CompilationDB.parseIncludeDirectories(currentObject.arguments)
-                    } else if (currentObject.command != null) {
-                        CompilationDB.parseIncludeDirectories(currentObject.command)
-                    } else {
-                        null
-                    }
-                val basedir = currentObject.directory
-                val file = File(fileName)
-
-                if (includeFiles != null) {
-                    if (file.isAbsolute) {
-                        if (file.exists()) {
-                            compilationDatabase[file] = includeFiles
-                        }
-                    } else {
-                        if (basedir != null) {
-                            if (Paths.get(basedir, fileName).toFile().exists()) {
-                                compilationDatabase[Paths.get(basedir, fileName).toFile()] =
-                                    includeFiles
-                            }
-                        }
-                    }
-                }
-            }
-            translationConfiguration
-                .sourceLocations(compilationDatabase.keys.toList())
-                .loadCompilationDatabase(compilationDatabase)
+            translationConfiguration.useCompilationDatabase(
+                mutuallyExclusiveParameters.jsonCompilationDatabase
+            )
         }
+
         translationConfiguration.registerLanguage(
             LLVMIRLanguageFrontend::class.java,
             LLVMIRLanguageFrontend.LLVM_EXTENSIONS

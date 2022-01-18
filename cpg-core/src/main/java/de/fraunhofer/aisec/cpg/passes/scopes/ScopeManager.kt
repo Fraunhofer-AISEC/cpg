@@ -35,9 +35,9 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExp
 import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.helpers.Util
-import org.slf4j.LoggerFactory
 import java.util.*
 import java.util.function.Predicate
+import org.slf4j.LoggerFactory
 
 /**
  * The scope manager builds a multi-tree structure of nodes associated to a scope. These scopes

@@ -32,6 +32,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
 import de.fraunhofer.aisec.cpg.frontends.cpp.CXXLanguageFrontend;
+import de.fraunhofer.aisec.cpg.frontends.cpp.CompilationDB;
 import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguageFrontend;
 import de.fraunhofer.aisec.cpg.passes.*;
 import java.io.File;
@@ -140,9 +141,10 @@ public class TranslationConfiguration {
    */
   final boolean typeSystemActiveInFrontend;
 
-  /** This is the data structure for storing the compilation database.It stores a mapping from the
-   *  File to the list of files that have to be included to their path, specified by the
-   *  parameter in the compilation database.
+  /**
+   * This is the data structure for storing the compilation database.It stores a mapping from the
+   * File to the list of files that have to be included to their path, specified by the parameter in
+   * the compilation database.
    */
   final Map<File, List<String>> compilationDatabase;
 
@@ -289,8 +291,14 @@ public class TranslationConfiguration {
       return this;
     }
 
-    public Builder loadCompilationDatabase(Map<File, List<String>> compilationDatabase) {
-      this.compilationDatabase = compilationDatabase;
+    public Builder useCompilationDatabase(File compilationDatabaseFile) {
+      Map<File, List<String>> compilationDatabaseForTheFile =
+          CompilationDB.Companion.getCompilationDatabaseFromTheFile(compilationDatabaseFile);
+      if (compilationDatabaseForTheFile != null) {
+        this.compilationDatabase = compilationDatabaseForTheFile;
+        List<File> sourceFiles = new ArrayList<>(compilationDatabaseForTheFile.keySet());
+        this.sourceLocations = sourceFiles;
+      }
       return this;
     }
 
