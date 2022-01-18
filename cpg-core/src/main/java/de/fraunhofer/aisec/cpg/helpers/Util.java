@@ -459,7 +459,7 @@ public class Util {
    */
   public static List<Node> getAdjacentDFGNodes(final Node n, boolean incoming) {
 
-    Set<Node> subnodes = SubgraphWalker.getAstChildren(n);
+    var subnodes = SubgraphWalker.getAstChildren(n);
     List<Node> adjacentNodes;
     if (incoming) {
       adjacentNodes =
