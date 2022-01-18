@@ -56,6 +56,15 @@ public class TypeManager {
 
   private static final Logger log = LoggerFactory.getLogger(TypeManager.class);
 
+  private static Class<?> llvmClass = null;
+
+  static {
+    try {
+      llvmClass = Class.forName("de.fraunhofer.aisec.cpg.frontends.llvm.LLVMIRLanguageFrontend");
+    } catch (ClassNotFoundException ignored) {
+    }
+  }
+
   private static final List<String> primitiveTypeNames =
       List.of("byte", "short", "int", "long", "float", "double", "boolean", "char");
   private static final Pattern funPointerPattern =
@@ -527,15 +536,6 @@ public class TypeManager {
 
   @NonNull
   public Language getLanguage() {
-    Class<LanguageFrontend> clazz = null;
-
-    try {
-      clazz =
-          (Class<LanguageFrontend>)
-              Class.forName("de.fraunhofer.aisec.cpg.frontends.llvm.LLVMIRLanguageFrontend");
-    } catch (ClassNotFoundException ignored) {
-    }
-
     if (frontend instanceof JavaLanguageFrontend) {
       return Language.JAVA;
     } else if (frontend instanceof CXXLanguageFrontend
@@ -547,7 +547,9 @@ public class TypeManager {
       return Language.PYTHON;
     } else if (frontend instanceof TypeScriptLanguageFrontend) {
       return Language.TYPESCRIPT;
-    } else if (frontend != null && clazz != null && clazz.isAssignableFrom(frontend.getClass())) {
+    } else if (frontend != null
+        && llvmClass != null
+        && llvmClass.isAssignableFrom(frontend.getClass())) {
       return Language.LLVM_IR;
     }
 

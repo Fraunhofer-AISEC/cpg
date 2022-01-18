@@ -242,7 +242,7 @@ open class PropertyEdge<T : Node> : Persistable {
                 return true
             } else if (obj is Collection<*>) {
                 val collectionTypes =
-                    java.util.List.of(*(f.genericType as ParameterizedType).actualTypeArguments)
+                    listOf(*(f.genericType as ParameterizedType).actualTypeArguments)
                 for (t in collectionTypes) {
                     if (t is ParameterizedType) {
                         return t.rawType == PropertyEdge::class.java

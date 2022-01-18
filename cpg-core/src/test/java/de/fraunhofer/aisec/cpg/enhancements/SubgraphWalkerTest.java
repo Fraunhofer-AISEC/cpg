@@ -30,14 +30,12 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 
 import de.fraunhofer.aisec.cpg.BaseTest;
 import de.fraunhofer.aisec.cpg.TestUtils;
-import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration;
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration;
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration;
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker;
 import java.io.File;
 import java.util.List;
-import java.util.Set;
 import org.junit.jupiter.api.Test;
 
 class SubgraphWalkerTest extends BaseTest {
@@ -51,7 +49,7 @@ class SubgraphWalkerTest extends BaseTest {
 
     RecordDeclaration recordDeclaration = namespace.getDeclarationAs(0, RecordDeclaration.class);
 
-    Set<Node> ast = SubgraphWalker.getAstChildren(recordDeclaration);
+    var ast = SubgraphWalker.getAstChildren(recordDeclaration);
 
     assertFalse(ast.isEmpty());
 

@@ -29,7 +29,6 @@ import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.frontends.HandlerInterface
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder
 import de.fraunhofer.aisec.cpg.graph.declarations.ParamVariableDeclaration
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.InitializerListExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
@@ -39,6 +38,7 @@ import org.eclipse.cdt.core.dom.ast.IASTArrayModifier
 import org.eclipse.cdt.core.dom.ast.IASTParameterDeclaration
 import org.eclipse.cdt.core.dom.ast.IASTPointerOperator
 import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTArrayDeclarator
+import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTInitializerList
 import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTParameterDeclaration
 
 class ParameterDeclarationHandler(lang: CXXLanguageFrontend) :
@@ -67,12 +67,12 @@ class ParameterDeclarationHandler(lang: CXXLanguageFrontend) :
                 .map { obj: IASTPointerOperator -> obj.rawSignature }
                 .collect(Collectors.joining())
         if (ctx.declarator is CPPASTArrayDeclarator &&
-                ctx.declarator.initializer is InitializerListExpression
+                ctx.declarator.initializer is CPPASTInitializerList
         ) {
             // narrow down array type to size of initializer list expression
             typeAdjustment +=
                 ("[" +
-                    (ctx.declarator.initializer as InitializerListExpression).initializers.size +
+                    (ctx.declarator.initializer as CPPASTInitializerList).initializers.size +
                     "]")
         } else if (ctx.declarator is CPPASTArrayDeclarator &&
                 ctx.declarator.initializer is Literal<*> &&

@@ -32,7 +32,6 @@ import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.Annotation
-import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser
@@ -43,10 +42,10 @@ import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
 import java.io.File
 import java.lang.reflect.Field
+import java.lang.reflect.Method
 import java.nio.file.Path
 import java.util.*
 import java.util.stream.Collectors
-import kotlin.math.min
 import org.eclipse.cdt.core.dom.ast.*
 import org.eclipse.cdt.core.dom.ast.gnu.cpp.GPPLanguage
 import org.eclipse.cdt.core.index.IIndexFileLocation
@@ -58,7 +57,6 @@ import org.eclipse.cdt.core.parser.ScannerInfo
 import org.eclipse.cdt.internal.core.dom.parser.ASTNode
 import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTTranslationUnit
 import org.eclipse.cdt.internal.core.parser.IMacroDictionary
-import org.eclipse.cdt.internal.core.parser.scanner.AbstractCharArray
 import org.eclipse.cdt.internal.core.parser.scanner.InternalFileContent
 import org.eclipse.cdt.internal.core.parser.scanner.InternalFileContentProvider
 import org.eclipse.core.runtime.CoreException
@@ -173,7 +171,7 @@ class CXXLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeM
     val initializerHandler = InitializerHandler(this)
     val parameterDeclarationHandler = ParameterDeclarationHandler(this)
     val statementHandler = StatementHandler(this)
-    private val cachedDeclarations = HashMap<IBinding, Declaration?>()
+
     private val comments = HashMap<Int, String>()
 
     @Throws(TranslationException::class)
@@ -186,7 +184,9 @@ class CXXLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeM
         if (config.topLevel != null) {
             includePaths.add(config.topLevel.toPath().toAbsolutePath().toString())
         }
+
         includePaths.addAll(listOf(*config.includePaths))
+
         val scannerInfo = ScannerInfo(config.symbols, includePaths.toTypedArray())
         val log = DefaultLogService()
         val opts = ILanguage.OPTION_PARSE_INACTIVE_CODE // | ILanguage.OPTION_ADD_COMMENTS;
@@ -240,31 +240,31 @@ class CXXLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeM
             val node = astNode as ASTNode
             val fLocation = node.fileLocation
             if (fLocation != null) {
-                // Yes, seriously. getRawSignature() is CPU- and heap-costly, because it does an
-                // arraycopy. If parent is the whole TranslationUnit and we are doing this
-                // repeatedly, we will end up with OOM and waste time. We thus do a shortcut and
-                // directly access the field containing the source code of a node as a CharArray.
-                // This may break in future versions of CDT parser, when fields are renamed (which
-                // is unlikely). In this case, we will go the standard route. Note, the only reason
-                // we are doing this is to compute the start and end columns of the current node.
-                val translationUnitRawSignature: AbstractCharArray =
+                val lineBreaks: IntArray =
                     try {
                         val fLoc = getField(fLocation.javaClass, "fLocationCtx")
                         fLoc.trySetAccessible()
                         val locCtx = fLoc[fLocation]
-                        val fSource = getField(locCtx.javaClass, "fSource")
-                        fSource.trySetAccessible()
-                        fSource[locCtx] as AbstractCharArray
+                        val fLineOffsets = getField(locCtx.javaClass, "fLineOffsets")
+                        val getLineNumber =
+                            getMethod(locCtx.javaClass, "getLineNumber", Int::class.java)
+                        fLineOffsets.trySetAccessible()
+
+                        // force to cache line numbers, this calls computeLineOffsets internally
+                        getLineNumber.trySetAccessible()
+                        getLineNumber.invoke(locCtx, 0)
+
+                        fLineOffsets[locCtx] as IntArray
                     } catch (e: ReflectiveOperationException) {
                         LOGGER.warn(
                             "Reflective retrieval of AST node source failed. Falling back to getRawSignature()"
                         )
-                        org.eclipse.cdt.internal.core.parser.scanner.CharArray(node.rawSignature)
+                        IntArray(0)
                     } catch (e: ClassCastException) {
                         LOGGER.warn(
                             "Reflective retrieval of AST node source failed. Falling back to getRawSignature()"
                         )
-                        org.eclipse.cdt.internal.core.parser.scanner.CharArray(node.rawSignature)
+                        IntArray(0)
                     } catch (e: NullPointerException) {
                         LOGGER.warn(
                             "Reflective retrieval of AST node source failed. Cannot reliably determine content of the file that contains the node"
@@ -272,36 +272,39 @@ class CXXLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeM
                         return null
                     }
 
-                // Get start column by stepping backwards from begin of node to first occurrence of
-                // '\n'
-                var startColumn = 1
-                for (i in node.fileLocation.nodeOffset - 1 downTo 2) {
-                    if (i >= translationUnitRawSignature.length) {
-                        // Fail gracefully, so that we can at least find out why this fails
-                        LOGGER.warn(
-                            "Requested index {} exceeds length of translation unit code ({})",
-                            i,
-                            translationUnitRawSignature.length
-                        )
-                        return null
+                // our start line, indexed by 0
+                val startLine = node.fileLocation.startingLineNumber - 1
+
+                // our end line, indexed by 0
+                val endLine = node.fileLocation.endingLineNumber - 1
+
+                // our start column, index by 0
+                val startColumn =
+                    if (startLine == 0) {
+                        // if we are in the first line, the start column is just the node offset
+                        node.fileLocation.nodeOffset
+                    } else {
+                        // otherwise, we need to calculate the difference to the previous line break
+                        node.fileLocation.nodeOffset -
+                            lineBreaks[startLine - 1] -
+                            1 // additional -1 because of the '\n' itself
                     }
-                    if (translationUnitRawSignature[i] == '\n') {
-                        break
-                    }
-                    startColumn++
-                }
+
+                // our end column, index by 0
                 val endColumn =
-                    getEndColumnIndex(
-                        translationUnitRawSignature,
-                        node.fileLocation.nodeOffset + node.length
-                    )
-                val region =
-                    Region(
-                        fLocation.startingLineNumber,
-                        startColumn,
-                        fLocation.endingLineNumber,
-                        endColumn
-                    )
+                    if (endLine == 0) {
+                        // if we are in the first line, the end column is just the node offset
+                        node.fileLocation.nodeOffset + node.fileLocation.nodeLength
+                    } else {
+                        // otherwise, we need to calculate the difference to the previous line break
+                        (node.fileLocation.nodeOffset + node.fileLocation.nodeLength) -
+                            lineBreaks[endLine - 1] -
+                            1 // additional -1 because of the '\n' itself
+                    }
+
+                // for a SARIF compliant format, we need to add +1, since its index begins at 1 and
+                // not 0
+                val region = Region(startLine + 1, startColumn + 1, endLine + 1, endColumn + 1)
                 return PhysicalLocation(Path.of(node.containingFilename).toUri(), region)
             }
         }
@@ -381,6 +384,22 @@ class CXXLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeM
         }
     }
 
+    @Throws(NoSuchMethodException::class)
+    private fun getMethod(
+        type: Class<*>,
+        methodName: String,
+        vararg parameterTypes: Class<*>
+    ): Method {
+        return try {
+            type.getDeclaredMethod(methodName, *parameterTypes)
+        } catch (e: NoSuchMethodException) {
+            if (type.superclass != null) {
+                return getMethod(type.superclass, methodName, *parameterTypes)
+            }
+            throw e
+        }
+    }
+
     override fun <S, T> setComment(s: S, ctx: T) {
         if (ctx is ASTNode && s is Node) {
             val cpgNode = s as Node
@@ -398,37 +417,6 @@ class CXXLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeM
         @JvmField val CXX_EXTENSIONS = mutableListOf(".c", ".cpp", ".cc")
         @JvmField val CXX_HEADER_EXTENSIONS = mutableListOf(".h", ".hpp")
         private val LOGGER = LoggerFactory.getLogger(CXXLanguageFrontend::class.java)
-
-        /**
-         * Searches in posPrefix to the left until first occurrence of line break and returns the
-         * number of characters.
-         *
-         * This corresponds to the column number of "end" within "posPrefix".
-         *
-         * @param posPrefix
-         * - the positional prefix, which is the string before the column and contains the column
-         * defining newline.
-         */
-        private fun getEndColumnIndex(posPrefix: AbstractCharArray, end: Int): Int {
-            var mutableEnd = end
-            var column = 1
-
-            // In case the current element goes until EOF, we need to back up "end" by one.
-            try {
-                if (mutableEnd - 1 >= posPrefix.length || posPrefix[mutableEnd - 1] == '\n') {
-                    mutableEnd = min(mutableEnd - 1, posPrefix.length - 1)
-                }
-            } catch (e: ArrayIndexOutOfBoundsException) {
-                log.error("could not update end ", e)
-            }
-            for (i in mutableEnd - 1 downTo 2) {
-                if (posPrefix[i] == '\n') {
-                    break
-                }
-                column++
-            }
-            return column
-        }
 
         private fun explore(node: IASTNode, indent: Int) {
             val children = node.children

@@ -29,12 +29,15 @@ import de.fraunhofer.aisec.cpg.TestUtils
 import de.fraunhofer.aisec.cpg.TranslationManager
 import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.bodyOrNull
+import de.fraunhofer.aisec.cpg.graph.byNameOrNull
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.IfStatement
 import de.fraunhofer.aisec.cpg.passes.EdgeCachePass
 import de.fraunhofer.aisec.cpg.passes.IdentifierPass
+import de.fraunhofer.aisec.cpg.passes.UnreachableEOGPass
 import java.nio.file.Path
 import kotlin.test.BeforeTest
 import kotlin.test.assertFalse
@@ -74,6 +77,7 @@ class SimpleDFAOrderEvaluationTest {
                         JavaLanguageFrontend::class.java,
                         JavaLanguageFrontend.JAVA_EXTENSIONS
                     )
+                    .registerPass(UnreachableEOGPass())
                     .registerPass(IdentifierPass())
                     .registerPass(EdgeCachePass())
             }
@@ -82,16 +86,11 @@ class SimpleDFAOrderEvaluationTest {
     @Test
     fun testSuccessForFSM() {
         val functionOk =
-            tu
-                .getDeclarationsByName("SimpleOrder", RecordDeclaration::class.java)
-                .firstOrNull()
-                ?.declarations
-                ?.firstOrNull { d -> d.name == "ok" } as
-                FunctionDeclaration?
-
+            tu.byNameOrNull<RecordDeclaration>("SimpleOrder")
+                ?.byNameOrNull<FunctionDeclaration>("ok")
         assertNotNull(functionOk)
 
-        val p4Decl = (functionOk.body as CompoundStatement).statements[0] as? DeclarationStatement
+        val p4Decl = functionOk.bodyOrNull<DeclarationStatement>(0)
         assertNotNull(p4Decl)
         val consideredDecl = mutableSetOf(p4Decl.declarations[0]?.id!!)
 
@@ -108,16 +107,11 @@ class SimpleDFAOrderEvaluationTest {
     @Test
     fun testSuccessWithIgnoredFunctionFSM() {
         val functionOk =
-            tu
-                .getDeclarationsByName("SimpleOrder", RecordDeclaration::class.java)
-                .firstOrNull()
-                ?.declarations
-                ?.firstOrNull { d -> d.name == "ok2" } as
-                FunctionDeclaration?
-
+            tu.byNameOrNull<RecordDeclaration>("SimpleOrder")
+                ?.byNameOrNull<FunctionDeclaration>("ok2")
         assertNotNull(functionOk)
 
-        val p4Decl = (functionOk.body as CompoundStatement).statements[0] as? DeclarationStatement
+        val p4Decl = functionOk.bodyOrNull<DeclarationStatement>(0)
         assertNotNull(p4Decl)
         val consideredDecl = mutableSetOf(p4Decl.declarations[0]?.id!!)
 
@@ -135,16 +129,11 @@ class SimpleDFAOrderEvaluationTest {
     @Test
     fun testSuccessWithIfElseFSM() {
         val functionOk =
-            tu
-                .getDeclarationsByName("SimpleOrder", RecordDeclaration::class.java)
-                .firstOrNull()
-                ?.declarations
-                ?.firstOrNull { d -> d.name == "ok3" } as
-                FunctionDeclaration?
-
+            tu.byNameOrNull<RecordDeclaration>("SimpleOrder")
+                ?.byNameOrNull<FunctionDeclaration>("ok3")
         assertNotNull(functionOk)
 
-        val p4Decl = (functionOk.body as CompoundStatement).statements[0] as? DeclarationStatement
+        val p4Decl = functionOk.bodyOrNull<DeclarationStatement>(0)
         assertNotNull(p4Decl)
         val consideredDecl = mutableSetOf(p4Decl.declarations[0]?.id!!)
 
@@ -175,16 +164,11 @@ class SimpleDFAOrderEvaluationTest {
     @Test
     fun testFailWrongStartFSM() {
         val functionOk =
-            tu
-                .getDeclarationsByName("SimpleOrder", RecordDeclaration::class.java)
-                .firstOrNull()
-                ?.declarations
-                ?.firstOrNull { d -> d.name == "nok1" } as
-                FunctionDeclaration?
-
+            tu.byNameOrNull<RecordDeclaration>("SimpleOrder")
+                ?.byNameOrNull<FunctionDeclaration>("nok1")
         assertNotNull(functionOk)
 
-        val pDecl = (functionOk.body as CompoundStatement).statements[0] as? DeclarationStatement
+        val pDecl = functionOk.bodyOrNull<DeclarationStatement>(0)
         assertNotNull(pDecl)
         val consideredBases = mutableSetOf(pDecl.declarations[0]?.id!!)
 
@@ -204,16 +188,11 @@ class SimpleDFAOrderEvaluationTest {
     @Test
     fun testFailIncompleteFSM() {
         val functionOk =
-            tu
-                .getDeclarationsByName("SimpleOrder", RecordDeclaration::class.java)
-                .firstOrNull()
-                ?.declarations
-                ?.firstOrNull { d -> d.name == "nok2" } as
-                FunctionDeclaration?
-
+            tu.byNameOrNull<RecordDeclaration>("SimpleOrder")
+                ?.byNameOrNull<FunctionDeclaration>("nok2")
         assertNotNull(functionOk)
 
-        val p2Decl = (functionOk.body as CompoundStatement).statements[0] as? DeclarationStatement
+        val p2Decl = functionOk.bodyOrNull<DeclarationStatement>(0)
         assertNotNull(p2Decl)
         val consideredBases = mutableSetOf(p2Decl.declarations[0]?.id!!)
 
@@ -229,15 +208,11 @@ class SimpleDFAOrderEvaluationTest {
     @Test
     fun testFailConditionallyIncompleteFSM() {
         val functionOk =
-            tu
-                .getDeclarationsByName("SimpleOrder", RecordDeclaration::class.java)
-                .firstOrNull()
-                ?.declarations
-                ?.firstOrNull { d -> d.name == "nok3" } as
-                FunctionDeclaration?
+            tu.byNameOrNull<RecordDeclaration>("SimpleOrder")
+                ?.byNameOrNull<FunctionDeclaration>("nok3")
         assertNotNull(functionOk)
 
-        val p3Decl = (functionOk.body as CompoundStatement).statements[0] as? DeclarationStatement
+        val p3Decl = functionOk.bodyOrNull<DeclarationStatement>(0)
         assertNotNull(p3Decl)
         val consideredDecl = mutableSetOf(p3Decl.declarations[0]?.id!!)
 
@@ -259,15 +234,11 @@ class SimpleDFAOrderEvaluationTest {
     @Test
     fun testFailDoubleInitFSM() {
         val functionOk =
-            tu
-                .getDeclarationsByName("SimpleOrder", RecordDeclaration::class.java)
-                .firstOrNull()
-                ?.declarations
-                ?.firstOrNull { d -> d.name == "nok4" } as
-                FunctionDeclaration?
+            tu.byNameOrNull<RecordDeclaration>("SimpleOrder")
+                ?.byNameOrNull<FunctionDeclaration>("nok4")
         assertNotNull(functionOk)
 
-        val p4Decl = (functionOk.body as CompoundStatement).statements[0] as? DeclarationStatement
+        val p4Decl = functionOk.bodyOrNull<DeclarationStatement>(0)
         assertNotNull(p4Decl)
         val consideredDecl = mutableSetOf(p4Decl.declarations[0]?.id!!)
 
