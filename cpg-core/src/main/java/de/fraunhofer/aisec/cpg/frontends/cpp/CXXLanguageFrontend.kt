@@ -190,7 +190,7 @@ class CXXLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeM
 
         includePaths.addAll(listOf(*config.includePaths))
 
-        config.compilationDatabase[file]?.let { includePaths.addAll(it) }
+        config.compilationDatabase?.get(file)?.let { includePaths.addAll(it) }
 
         val scannerInfo = ScannerInfo(config.symbols, includePaths.toTypedArray())
         val log = DefaultLogService()

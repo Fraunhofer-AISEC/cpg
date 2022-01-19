@@ -39,6 +39,7 @@ import java.io.File;
 import java.lang.reflect.InvocationTargetException;
 import java.util.*;
 import org.checkerframework.checker.nullness.qual.NonNull;
+import org.checkerframework.checker.nullness.qual.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -210,6 +211,7 @@ public class TranslationConfiguration {
     return this.sourceLocations;
   }
 
+  @Nullable
   public CompilationDatabase getCompilationDatabase() {
     return this.compilationDatabase;
   }
