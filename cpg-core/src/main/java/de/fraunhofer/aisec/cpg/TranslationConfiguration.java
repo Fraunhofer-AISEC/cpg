@@ -30,6 +30,7 @@ import static de.fraunhofer.aisec.cpg.frontends.cpp.CXXLanguageFrontend.CXX_HEAD
 
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import de.fraunhofer.aisec.cpg.frontends.CompilationDatabase;
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
 import de.fraunhofer.aisec.cpg.frontends.cpp.CXXLanguageFrontend;
 import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguageFrontend;
@@ -141,11 +142,14 @@ public class TranslationConfiguration {
   final boolean typeSystemActiveInFrontend;
 
   /**
-   * This is the data structure for storing the compilation database.It stores a mapping from the
+   * This is the data structure for storing the compilation database. It stores a mapping from the
    * File to the list of files that have to be included to their path, specified by the parameter in
-   * the compilation database.
+   * the compilation database. This is currently only used by the {@link CXXLanguageFrontend}.
+   *
+   * <p>[{@link CompilationDatabase.Companion#fromFile(File)} can be used to construct a new
+   * compilation database from a file.
    */
-  final Map<File, List<String>> compilationDatabase;
+  final CompilationDatabase compilationDatabase;
 
   @NonNull private final List<Pass> passes;
 
@@ -171,7 +175,7 @@ public class TranslationConfiguration {
       boolean useParallelFrontends,
       boolean typeSystemActiveInFrontend,
       InferenceConfiguration inferenceConfiguration,
-      Map<File, List<String>> compilationDatabase) {
+      CompilationDatabase compilationDatabase) {
     this.symbols = symbols;
     this.sourceLocations = sourceLocations;
     this.topLevel = topLevel;
@@ -206,7 +210,7 @@ public class TranslationConfiguration {
     return this.sourceLocations;
   }
 
-  public Map<File, List<String>> getCompilationDatabase() {
+  public CompilationDatabase getCompilationDatabase() {
     return this.compilationDatabase;
   }
 
@@ -261,7 +265,7 @@ public class TranslationConfiguration {
     private boolean typeSystemActiveInFrontend = true;
     private InferenceConfiguration inferenceConfiguration =
         new InferenceConfiguration.Builder().build();
-    private Map<File, List<String>> compilationDatabase = new HashMap<>();
+    private CompilationDatabase compilationDatabase;
 
     public Builder symbols(Map<String, String> symbols) {
       this.symbols = symbols;
@@ -290,8 +294,8 @@ public class TranslationConfiguration {
       return this;
     }
 
-    public Builder useCompilationDatabase(Map<File, List<String>> compilationDatabaseFile) {
-      this.compilationDatabase = compilationDatabaseFile;
+    public Builder useCompilationDatabase(CompilationDatabase compilationDatabase) {
+      this.compilationDatabase = compilationDatabase;
       return this;
     }
 

@@ -71,7 +71,6 @@ private constructor(
      */
     fun analyze(): CompletableFuture<TranslationResult> {
         val result = TranslationResult(this)
-        // if the compilationdatabase is null
 
         // We wrap the analysis in a CompletableFuture, i.e. in an async task.
         return CompletableFuture.supplyAsync {
@@ -279,7 +278,6 @@ private constructor(
     ): Set<LanguageFrontend> {
         val usedFrontends = mutableSetOf<LanguageFrontend>()
 
-        val compilationDatabase = config.getCompilationDatabase()
         for (sourceLocation in sourceLocations) {
             log.info("Parsing {}", sourceLocation.absolutePath)
 
