@@ -46,7 +46,10 @@ import java.lang.reflect.Method
 import java.nio.file.Path
 import java.util.*
 import java.util.stream.Collectors
-import org.eclipse.cdt.core.dom.ast.*
+import org.eclipse.cdt.core.dom.ast.IASTAttributeOwner
+import org.eclipse.cdt.core.dom.ast.IASTNode
+import org.eclipse.cdt.core.dom.ast.IASTToken
+import org.eclipse.cdt.core.dom.ast.IASTTokenList
 import org.eclipse.cdt.core.dom.ast.gnu.cpp.GPPLanguage
 import org.eclipse.cdt.core.index.IIndexFileLocation
 import org.eclipse.cdt.core.model.ILanguage
@@ -186,6 +189,8 @@ class CXXLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeM
         }
 
         includePaths.addAll(listOf(*config.includePaths))
+
+        config.compilationDatabase?.get(file)?.let { includePaths.addAll(it) }
 
         val scannerInfo = ScannerInfo(config.symbols, includePaths.toTypedArray())
         val log = DefaultLogService()
