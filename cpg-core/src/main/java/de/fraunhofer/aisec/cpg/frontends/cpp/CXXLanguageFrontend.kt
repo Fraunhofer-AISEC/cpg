@@ -53,10 +53,7 @@ import org.eclipse.cdt.core.dom.ast.IASTTokenList
 import org.eclipse.cdt.core.dom.ast.gnu.cpp.GPPLanguage
 import org.eclipse.cdt.core.index.IIndexFileLocation
 import org.eclipse.cdt.core.model.ILanguage
-import org.eclipse.cdt.core.parser.DefaultLogService
-import org.eclipse.cdt.core.parser.FileContent
-import org.eclipse.cdt.core.parser.IncludeFileContentProvider
-import org.eclipse.cdt.core.parser.ScannerInfo
+import org.eclipse.cdt.core.parser.*
 import org.eclipse.cdt.internal.core.dom.parser.ASTNode
 import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTTranslationUnit
 import org.eclipse.cdt.internal.core.parser.IMacroDictionary
