@@ -582,7 +582,11 @@ class ScopeManager {
                 scope.typedefs.forEach { typedefs.putIfAbsent(it.alias, it) }
             }
 
+<<<<<<< HEAD
             current = scope?.parent
+=======
+            current = current.parent
+>>>>>>> origin/master
         }
 
         return typedefs.values

@@ -29,10 +29,12 @@ import static de.fraunhofer.aisec.cpg.helpers.Util.errorWithFileLocation;
 
 import de.fraunhofer.aisec.cpg.graph.Node;
 import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
 import java.util.HashMap;
 import java.util.function.Supplier;
 import org.eclipse.cdt.internal.core.dom.parser.ASTNode;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -51,13 +53,12 @@ public abstract class Handler<S, T, L extends LanguageFrontend> {
   protected final HashMap<Class<? extends T>, HandlerInterface<S, T>> map = new HashMap<>();
   private final Supplier<S> configConstructor;
   protected @NotNull L lang;
-  private final Class<S> typeOfT =
-      (Class<S>)
-          ((ParameterizedType) getClass().getGenericSuperclass()).getActualTypeArguments()[1];
+  @Nullable private final Class<?> typeOfT;
 
   public Handler(Supplier<S> configConstructor, @NotNull L lang) {
     this.configConstructor = configConstructor;
     this.lang = lang;
+    this.typeOfT = retrieveTypeParameter();
   }
 
   /**
@@ -106,16 +107,22 @@ public abstract class Handler<S, T, L extends LanguageFrontend> {
             ctx.getClass(),
             toHandle);
       }
-      if (toHandle == typeOfT || !typeOfT.isAssignableFrom(toHandle)) break;
+      if (toHandle == typeOfT || (typeOfT != null && !typeOfT.isAssignableFrom(toHandle))) {
+        break;
+      }
     }
     if (handler != null) {
       S s = handler.handle(ctx);
 
-      // TODO: remove this once all node builders are migrated
-      if (s != null && ((Node) s).getLocation() == null) {
-        lang.setCodeAndRegion(s, ctx);
+      if (s != null) {
+
+        if (((Node) s).getLocation() == null) {
+          lang.setCodeAndRegion(s, ctx);
+        }
+
+        lang.setComment(s, ctx);
       }
-      lang.setComment(s, ctx);
+
       ret = s;
     } else {
       errorWithFileLocation(
@@ -125,5 +132,36 @@ public abstract class Handler<S, T, L extends LanguageFrontend> {
 
     lang.process(ctx, ret);
     return ret;
+  }
+
+  private Class<?> retrieveTypeParameter() {
+    Class<?> clazz = this.getClass();
+
+    while (clazz.getSuperclass() != null && !clazz.getSuperclass().equals(Handler.class)) {
+      clazz = clazz.getSuperclass();
+    }
+
+    var type = clazz.getGenericSuperclass();
+    if (type instanceof ParameterizedType) {
+      var parameterizedType = (ParameterizedType) type;
+
+      var rawType = parameterizedType.getActualTypeArguments()[1];
+
+      return getBaseClass(rawType);
+    }
+
+    log.error("Could not determine generic type of raw AST node in handler");
+
+    return null;
+  }
+
+  private Class<?> getBaseClass(Type type) {
+    if (type instanceof Class) {
+      return (Class<?>) type;
+    } else if (type instanceof ParameterizedType) {
+      return getBaseClass(((ParameterizedType) type).getRawType());
+    }
+
+    return null;
   }
 }

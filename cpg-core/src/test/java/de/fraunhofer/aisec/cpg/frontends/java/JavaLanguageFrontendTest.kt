@@ -25,16 +25,15 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.java
 
+import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration
 import de.fraunhofer.aisec.cpg.BaseTest
 import de.fraunhofer.aisec.cpg.TestUtils.analyze
 import de.fraunhofer.aisec.cpg.TestUtils.analyzeAndGetFirstTU
 import de.fraunhofer.aisec.cpg.TestUtils.analyzeWithBuilder
 import de.fraunhofer.aisec.cpg.TestUtils.findByUniqueName
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
+import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.Annotation
-import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.bodyOrNull
-import de.fraunhofer.aisec.cpg.graph.byNameOrNull
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
@@ -42,6 +41,7 @@ import de.fraunhofer.aisec.cpg.graph.types.TypeParser
 import de.fraunhofer.aisec.cpg.helpers.NodeComparator
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.helpers.Util
+import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
 import de.fraunhofer.aisec.cpg.sarif.Region
 import java.io.File
 import java.math.BigInteger
@@ -584,5 +584,46 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         assertNotNull(superThisField)
         assertEquals("this", superThisField.name)
         assertEquals(TypeParser.createFrom("my.Animal", false), superThisField.type)
+    }
+
+    @Test
+    fun testOverrideHandler() {
+        /** A simple extension of the [JavaLanguageFrontend] to demonstrate handler overriding. */
+        class MyJavaLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeManager) :
+            JavaLanguageFrontend(config, scopeManager) {
+            init {
+                this.declarationHandler =
+                    object : DeclarationHandler(this) {
+                        override fun handleClassOrInterfaceDeclaration(
+                            classInterDecl: ClassOrInterfaceDeclaration
+                        ): RecordDeclaration {
+                            // take the original class and replace the name
+                            val declaration =
+                                super.handleClassOrInterfaceDeclaration(classInterDecl)
+                            declaration.name = "MySimpleClass"
+
+                            return declaration
+                        }
+                    }
+            }
+        }
+
+        val file = File("src/test/resources/compiling/RecordDeclaration.java")
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.unregisterLanguage(JavaLanguageFrontend::class.java)
+                it.registerLanguage(
+                    MyJavaLanguageFrontend::class.java,
+                    JavaLanguageFrontend.JAVA_EXTENSIONS
+                )
+            }
+
+        assertNotNull(tu)
+
+        val compiling = tu.byNameOrNull<NamespaceDeclaration>("compiling")
+        assertNotNull(compiling)
+
+        val recordDeclaration = compiling.byNameOrNull<RecordDeclaration>("MySimpleClass")
+        assertNotNull(recordDeclaration)
     }
 }

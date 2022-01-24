@@ -179,7 +179,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
 
         // remember, if this is a method declaration outside of the record
         val outsideOfRecord =
-            !(lang.scopeManager.currentScope is RecordScope ||
+            !(lang.scopeManager.currentRecord != null ||
                 lang.scopeManager.currentScope is TemplateScope)
 
         // check for function definitions that are really methods and constructors, i.e. if they
@@ -266,6 +266,25 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
         if (recordDeclaration != null && outsideOfRecord) {
             lang.scopeManager.leaveScope(recordDeclaration)
         }
+
+        // We recognize a ambiguity here, but cannot solve it at the moment
+        if (name != "" &&
+                ctx.parent is CPPASTDeclarator &&
+                declaration.body == null &&
+                lang.scopeManager.currentFunction != null
+        ) {
+            val problem =
+                NodeBuilder.newProblemDeclaration(
+                    null,
+                    "CDT tells us this is a (named) function declaration in parenthesis without a body directly within a block scope, this might be an ambiguity which we cannot solve currently.",
+                    null
+                )
+
+            Util.warnWithFileLocation(lang, ctx, log, problem.problem)
+
+            return problem
+        }
+
         return declaration
     }
 
