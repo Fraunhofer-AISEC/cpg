@@ -1096,6 +1096,14 @@ public class CallResolver extends Pass {
             .flatMap(Collection::stream)
             .collect(Collectors.toList());
 
+    if (call.getName().equals("superTarget") && call.getSignature().isEmpty()) {
+      LOGGER.debug(
+          "Resolving call to {}({}) has {} invocation candidates",
+          call.getName(),
+          call.getSignature(),
+          invocationCandidates.size());
+    }
+
     // Find function targets
     if (invocationCandidates.isEmpty() && lang != null) {
       if (lang instanceof CXXLanguageFrontend) {
@@ -1104,6 +1112,14 @@ public class CallResolver extends Pass {
       } else {
         invocationCandidates = lang.getScopeManager().resolveFunction(call);
       }
+    }
+
+    if (call.getName().equals("superTarget") && call.getSignature().isEmpty()) {
+      LOGGER.debug(
+          "Resolving call to {}({}) has now {} invocation candidates (after resolve)",
+          call.getName(),
+          call.getSignature(),
+          invocationCandidates.size());
     }
 
     // Find invokes by supertypes
@@ -1116,9 +1132,24 @@ public class CallResolver extends Pass {
                 .map(t -> recordMap.get(t.getRoot().getTypeName()))
                 .filter(Objects::nonNull)
                 .collect(Collectors.toSet());
+
+        if (call.getName().equals("superTarget") && call.getSignature().isEmpty()) {
+          LOGGER.debug(
+              "Records: {}",
+              records.stream().map(RecordDeclaration::getName).collect(Collectors.toList()));
+        }
+
         invocationCandidates =
             getInvocationCandidatesFromParents(nameParts[nameParts.length - 1], call, records);
       }
+    }
+
+    if (call.getName().equals("superTarget") && call.getSignature().isEmpty()) {
+      LOGGER.debug(
+          "Resolving call to {}({}) has now {} invocation candidates (after supertype)",
+          call.getName(),
+          call.getSignature(),
+          invocationCandidates.size());
     }
 
     if (curClass != null
@@ -1129,6 +1160,14 @@ public class CallResolver extends Pass {
 
       // TODO(oxisto): this should anyway be replaced by the new receiver field
       // call.setBase(curClass.getThis());
+    }
+
+    if (call.getName().equals("superTarget") && call.getSignature().isEmpty()) {
+      LOGGER.debug(
+          "Resolving call to {}({}) still has {} invocation candidates",
+          call.getName(),
+          call.getSignature(),
+          invocationCandidates.size());
     }
 
     createMethodDummies(invocationCandidates, possibleContainingTypes, call);
@@ -1607,6 +1646,13 @@ public class CallResolver extends Pass {
         containingRecord.setKind("class");
       }
 
+      log.debug(
+          "Inferring a new method declaration {} with parameter types {}",
+          inferred.getName(),
+          inferred.getParameters().stream()
+              .map(param -> param.getType().getName())
+              .collect(Collectors.toList()));
+
       return inferred;
     } else {
       // function declaration, not inside a class
@@ -1708,6 +1754,11 @@ public class CallResolver extends Pass {
   private List<FunctionDeclaration> getInvocationCandidatesFromParents(
       String name, CallExpression call, Set<RecordDeclaration> possibleTypes) {
     Set<RecordDeclaration> workingPossibleTypes = new HashSet<>(possibleTypes);
+
+    if (call.getName().equals("superTarget") && call.getSignature().isEmpty()) {
+      log.debug("{} vs {}", workingPossibleTypes.size(), possibleTypes.size());
+    }
+
     if (possibleTypes.isEmpty()) {
       return new ArrayList<>();
     } else {
@@ -1717,9 +1768,16 @@ public class CallResolver extends Pass {
               .flatMap(Collection::stream)
               .collect(Collectors.toList());
 
+      if (call.getName().equals("superTarget") && call.getSignature().isEmpty()) {
+        LOGGER.debug(
+            "Number of first level candidates: {} of {}",
+            firstLevelCandidates.size(),
+            possibleTypes.stream().map(RecordDeclaration::getName).collect(Collectors.toList()));
+      }
+
       // C++ does not allow overloading at different hierarchy levels. If we find a
       // FunctionDeclaration with the same name as the function in the CallExpression we have to
-      // stop the search in the parent even if the FunctionDelcaration does not match with the
+      // stop the search in the parent even if the FunctionDeclaration does not match with the
       // signature of the CallExpression
       if (lang instanceof CXXLanguageFrontend) {
         workingPossibleTypes.removeIf(
@@ -1727,6 +1785,16 @@ public class CallResolver extends Pass {
       }
 
       if (firstLevelCandidates.isEmpty() && !possibleTypes.isEmpty()) {
+        if (call.getName().equals("superTarget") && call.getSignature().isEmpty()) {
+          workingPossibleTypes.forEach(
+              type -> {
+                LOGGER.debug(
+                    "Need to look for candidates from super types: {}",
+                    type.getSuperTypeDeclarations().stream()
+                        .map(RecordDeclaration::getName)
+                        .collect(Collectors.toList()));
+              });
+        }
         return workingPossibleTypes.stream()
             .map(RecordDeclaration::getSuperTypeDeclarations)
             .map(superTypes -> getInvocationCandidatesFromParents(name, call, superTypes))
@@ -1753,11 +1821,10 @@ public class CallResolver extends Pass {
             "(" + Pattern.quote(recordDeclaration.getName()) + "\\.)?" + Pattern.quote(name));
 
     List<FunctionDeclaration> invocationCandidate =
-        new ArrayList<>(
-            recordDeclaration.getMethods().stream()
-                .filter(m -> namePattern.matcher(m.getName()).matches())
-                .map(FunctionDeclaration.class::cast)
-                .collect(Collectors.toList()));
+        recordDeclaration.getMethods().stream()
+            .filter(m -> namePattern.matcher(m.getName()).matches())
+            .map(FunctionDeclaration.class::cast)
+            .collect(Collectors.toList());
 
     return invocationCandidate.isEmpty();
   }

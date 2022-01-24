@@ -77,7 +77,7 @@ class CXXLanguageFrontendTest extends BaseTest {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(CXXLanguageFrontendTest.class);
 
-  @Test
+  /*@Test
   void testFF() throws Exception {
     File file = new File("src/test/resources/hqxvlc.c");
     TranslationUnitDeclaration tu =
@@ -99,7 +99,7 @@ class CXXLanguageFrontendTest extends BaseTest {
     for (var t : types.keySet()) {
       System.out.println(t + ": " + types.get(t) + " | unique hash codes: " + codes.get(t).size());
     }
-  }
+  }*/
 
   @Test
   void testForEach() throws Exception {
