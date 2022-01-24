@@ -248,7 +248,7 @@ public class DeclarationHandler
 
     // add a type declaration
     RecordDeclaration recordDeclaration =
-        newRecordDeclaration(fqn, "class", classInterDecl.toString());
+        newRecordDeclaration(fqn, "class", null, true, lang, classInterDecl);
     recordDeclaration.setSuperClasses(
         classInterDecl.getExtendedTypes().stream()
             .map(this.lang::getTypeAsGoodAsPossible)
@@ -257,9 +257,6 @@ public class DeclarationHandler
         classInterDecl.getImplementedTypes().stream()
             .map(this.lang::getTypeAsGoodAsPossible)
             .collect(Collectors.toList()));
-
-    // make sure that we set the location, before we add it the type parameter
-    recordDeclaration.setLocation(this.lang.getLocationFromRawNode(classInterDecl));
 
     TypeManager.getInstance()
         .addTypeParameter(

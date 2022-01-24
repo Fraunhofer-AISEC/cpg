@@ -266,9 +266,9 @@ open class Node : IVisitable<Node>, Persistable {
      *
      * That means, that you need to be careful, if you use a [Node] as a key in a hash map. You
      * should make sure that the [location] is set before you add it to a hash map. This can be a
-     * little tricky, since currently the [Handler] class will set the location after it has
-     * "handled" the node. This is something that we might want to change, e.g. directly set it when
-     * building a new node with the [NodeBuilder].
+     * little tricky, since normally the [Handler] class will set the location after it has
+     * "handled" the node. However, most [NodeBuilder] will have an optional parameter to set the
+     * location already when creating the node.
      */
     override fun hashCode(): Int {
         return Objects.hash(name, location, this.javaClass)

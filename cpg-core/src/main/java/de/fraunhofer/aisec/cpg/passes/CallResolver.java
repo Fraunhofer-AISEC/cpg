@@ -1096,14 +1096,6 @@ public class CallResolver extends Pass {
             .flatMap(Collection::stream)
             .collect(Collectors.toList());
 
-    if (call.getName().equals("superTarget") && call.getSignature().isEmpty()) {
-      LOGGER.debug(
-          "Resolving call to {}({}) has {} invocation candidates",
-          call.getName(),
-          call.getSignature(),
-          invocationCandidates.size());
-    }
-
     // Find function targets
     if (invocationCandidates.isEmpty() && lang != null) {
       if (lang instanceof CXXLanguageFrontend) {
@@ -1112,14 +1104,6 @@ public class CallResolver extends Pass {
       } else {
         invocationCandidates = lang.getScopeManager().resolveFunction(call);
       }
-    }
-
-    if (call.getName().equals("superTarget") && call.getSignature().isEmpty()) {
-      LOGGER.debug(
-          "Resolving call to {}({}) has now {} invocation candidates (after resolve)",
-          call.getName(),
-          call.getSignature(),
-          invocationCandidates.size());
     }
 
     // Find invokes by supertypes
@@ -1133,41 +1117,9 @@ public class CallResolver extends Pass {
                 .filter(Objects::nonNull)
                 .collect(Collectors.toSet());
 
-        if (call.getName().equals("superTarget") && call.getSignature().isEmpty()) {
-          LOGGER.debug(
-              "Records: {}",
-              records.stream().map(RecordDeclaration::getName).collect(Collectors.toList()));
-        }
-
         invocationCandidates =
             getInvocationCandidatesFromParents(nameParts[nameParts.length - 1], call, records);
       }
-    }
-
-    if (call.getName().equals("superTarget") && call.getSignature().isEmpty()) {
-      LOGGER.debug(
-          "Resolving call to {}({}) has now {} invocation candidates (after supertype)",
-          call.getName(),
-          call.getSignature(),
-          invocationCandidates.size());
-    }
-
-    if (curClass != null
-        && !(call instanceof MemberCallExpression || call instanceof StaticCallExpression)) {
-      // COMMENT(oxisto) if we run into this condition, parsing has gone wrong on some other parts.
-      // not sure if we
-      // can heal this here, so I deactivated this line.
-
-      // TODO(oxisto): this should anyway be replaced by the new receiver field
-      // call.setBase(curClass.getThis());
-    }
-
-    if (call.getName().equals("superTarget") && call.getSignature().isEmpty()) {
-      LOGGER.debug(
-          "Resolving call to {}({}) still has {} invocation candidates",
-          call.getName(),
-          call.getSignature(),
-          invocationCandidates.size());
     }
 
     createMethodDummies(invocationCandidates, possibleContainingTypes, call);
@@ -1755,10 +1707,6 @@ public class CallResolver extends Pass {
       String name, CallExpression call, Set<RecordDeclaration> possibleTypes) {
     Set<RecordDeclaration> workingPossibleTypes = new HashSet<>(possibleTypes);
 
-    if (call.getName().equals("superTarget") && call.getSignature().isEmpty()) {
-      log.debug("{} vs {}", workingPossibleTypes.size(), possibleTypes.size());
-    }
-
     if (possibleTypes.isEmpty()) {
       return new ArrayList<>();
     } else {
@@ -1767,13 +1715,6 @@ public class CallResolver extends Pass {
               .map(r -> getInvocationCandidatesFromRecord(r, name, call))
               .flatMap(Collection::stream)
               .collect(Collectors.toList());
-
-      if (call.getName().equals("superTarget") && call.getSignature().isEmpty()) {
-        LOGGER.debug(
-            "Number of first level candidates: {} of {}",
-            firstLevelCandidates.size(),
-            possibleTypes.stream().map(RecordDeclaration::getName).collect(Collectors.toList()));
-      }
 
       // C++ does not allow overloading at different hierarchy levels. If we find a
       // FunctionDeclaration with the same name as the function in the CallExpression we have to
@@ -1785,16 +1726,6 @@ public class CallResolver extends Pass {
       }
 
       if (firstLevelCandidates.isEmpty() && !possibleTypes.isEmpty()) {
-        if (call.getName().equals("superTarget") && call.getSignature().isEmpty()) {
-          workingPossibleTypes.forEach(
-              type -> {
-                LOGGER.debug(
-                    "Need to look for candidates from super types: {}",
-                    type.getSuperTypeDeclarations().stream()
-                        .map(RecordDeclaration::getName)
-                        .collect(Collectors.toList()));
-              });
-        }
         return workingPossibleTypes.stream()
             .map(RecordDeclaration::getSuperTypeDeclarations)
             .map(superTypes -> getInvocationCandidatesFromParents(name, call, superTypes))

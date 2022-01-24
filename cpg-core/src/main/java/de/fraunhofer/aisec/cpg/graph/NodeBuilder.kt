@@ -342,7 +342,10 @@ object NodeBuilder {
 
         lang?.setCodeAndRegion(node, rawNode)
 
-        node.code = code
+        if (code != null) {
+            node.code = code
+        }
+
         node.isImplicitInitializerAllowed = implicitInitializerAllowed
         log(node)
 
@@ -452,12 +455,19 @@ object NodeBuilder {
         fqn: String,
         kind: String,
         code: String?,
-        createThis: Boolean = true
+        createThis: Boolean = true,
+        lang: LanguageFrontend? = null,
+        rawNode: Any? = null
     ): RecordDeclaration {
         val node = RecordDeclaration()
         node.name = fqn
         node.kind = kind
-        node.code = code
+
+        lang?.setCodeAndRegion(node, rawNode)
+
+        if (code != null) {
+            node.code = code
+        }
 
         if (kind == "class" && createThis) {
             val thisDeclaration =

@@ -115,7 +115,8 @@ public abstract class Handler<S, T, L extends LanguageFrontend> {
       S s = handler.handle(ctx);
 
       if (s != null) {
-
+        // The language frontend might set a location, which we should respect. Otherwise, we will
+        // set the location here.
         if (((Node) s).getLocation() == null) {
           lang.setCodeAndRegion(s, ctx);
         }
