@@ -29,7 +29,7 @@ import de.fraunhofer.aisec.cpg.graph.Node;
 import java.util.Objects;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 
-public class ProblemDeclaration extends Declaration {
+public class ProblemDeclaration extends ValueDeclaration {
   private String filename;
   private String problem;
   private String problemLocation;

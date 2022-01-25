@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg_vis_neo4j
 
 import de.fraunhofer.aisec.cpg.*
+import de.fraunhofer.aisec.cpg.frontends.CompilationDatabase.Companion.fromFile
 import de.fraunhofer.aisec.cpg.frontends.golang.GoLanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.llvm.LLVMIRLanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguageFrontend
@@ -43,6 +44,7 @@ import org.neo4j.ogm.session.SessionFactory
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import picocli.CommandLine
+import picocli.CommandLine.ArgGroup
 
 private const val S_TO_MS_FACTOR = 1000
 private const val TIME_BETWEEN_CONNECTION_TRIES: Long = 2000
@@ -70,14 +72,26 @@ private const val DEFAULT_SAVE_DEPTH = -1
 class Application : Callable<Int> {
     private val log: Logger
         get() = LoggerFactory.getLogger(Application::class.java)
+    // Either provide the files to evaluate or provide the path of compilation database with
+    // --json-compilation-database flag
+    @ArgGroup(exclusive = true, multiplicity = "1")
+    lateinit var mutuallyExclusiveParameters: Exclusive
 
-    @CommandLine.Parameters(
-        arity = "1..*",
-        description =
-            [
-                "The paths to analyze. If module support is enabled, the paths will be looked at if they contain modules"]
-    )
-    private var files: Array<String> = arrayOf(".")
+    class Exclusive {
+        @CommandLine.Parameters(
+            arity = "1..*",
+            description =
+                [
+                    "The paths to analyze. If module support is enabled, the paths will be looked at if they contain modules"]
+        )
+        var files: Array<String> = emptyArray()
+
+        @CommandLine.Option(
+            names = ["--json-compilation-database"],
+            description = ["The path to an optional a JSON compilation database"]
+        )
+        var jsonCompilationDatabase: File? = null
+    }
 
     @CommandLine.Option(
         names = ["--user"],
@@ -226,12 +240,13 @@ class Application : Callable<Int> {
      */
     @OptIn(ExperimentalPython::class, ExperimentalGolang::class, ExperimentalTypeScript::class)
     private fun setupTranslationConfiguration(): TranslationConfiguration {
-        assert(files.isNotEmpty())
-        val filePaths = arrayOfNulls<File>(files.size)
+        assert(mutuallyExclusiveParameters.files.isNotEmpty())
+        val filePaths = arrayOfNulls<File>(mutuallyExclusiveParameters.files.size)
         var topLevel: File? = null
 
-        for (index in files.indices) {
-            val path = Paths.get(files[index]).toAbsolutePath().normalize()
+        for (index in mutuallyExclusiveParameters.files.indices) {
+            val path =
+                Paths.get(mutuallyExclusiveParameters.files[index]).toAbsolutePath().normalize()
             val file = File(path.toString())
             require(file.exists() && (!file.isHidden)) {
                 "Please use a correct path. It was: $path"
@@ -247,11 +262,19 @@ class Application : Callable<Int> {
         val translationConfiguration =
             TranslationConfiguration.builder()
                 .sourceLocations(*filePaths)
-                .topLevel(topLevel!!)
+                .topLevel(topLevel)
                 .defaultPasses()
                 .defaultLanguages()
                 .loadIncludes(loadIncludes)
                 .debugParser(DEBUG_PARSER)
+
+        if (mutuallyExclusiveParameters.jsonCompilationDatabase != null) {
+            val db = fromFile(mutuallyExclusiveParameters.jsonCompilationDatabase!!)
+            if (db.isNotEmpty()) {
+                translationConfiguration.useCompilationDatabase(db)
+                translationConfiguration.sourceLocations(db.sourceFiles)
+            }
+        }
 
         translationConfiguration.registerLanguage(
             LLVMIRLanguageFrontend::class.java,

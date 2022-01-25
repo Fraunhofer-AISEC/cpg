@@ -164,6 +164,12 @@ public class EvaluationOrderGraphPass extends Pass {
 
   @Override
   public void accept(TranslationResult result) {
+    if (lang == null) {
+      Util.errorWithFileLocation(result, log, "Could not create EOG: language frontend is null");
+
+      return;
+    }
+
     for (TranslationUnitDeclaration tu : result.getTranslationUnits()) {
       createEOG(tu);
       removeUnreachableEOGEdges(tu);
@@ -355,6 +361,18 @@ public class EvaluationOrderGraphPass extends Pass {
     // reset EOG
     this.currentEOG.clear();
 
+    var needToLeaveRecord = false;
+
+    if (node instanceof MethodDeclaration
+        && ((MethodDeclaration) node).getRecordDeclaration() != null
+        && ((MethodDeclaration) node).getRecordDeclaration()
+            != lang.getScopeManager().getCurrentRecord()) {
+      // This is a method declaration outside of the AST of the record, as its possible in
+      // languages, such as C++. Therefore we need to enter the record scope as well
+      lang.getScopeManager().enterScope(((MethodDeclaration) node).getRecordDeclaration());
+      needToLeaveRecord = true;
+    }
+
     lang.getScopeManager().enterScope(funcDecl);
     // push the function declaration
     pushToEOG(funcDecl);
@@ -363,14 +381,36 @@ public class EvaluationOrderGraphPass extends Pass {
     if (funcDecl.hasBody()) {
       createEOG(funcDecl.getBody());
     }
-    FunctionScope scope = ((FunctionScope) lang.getScopeManager().getCurrentScope());
+
+    var currentScope = lang.getScopeManager().getCurrentScope();
+
+    if (!(currentScope instanceof FunctionScope)) {
+      Util.errorWithFileLocation(
+          node,
+          log,
+          "Scope of function declaration is not a function scope. EOG of function might be incorrect.");
+      // try to recover at least a little bit
+      lang.getScopeManager().leaveScope(funcDecl);
+
+      this.currentEOG.clear();
+      return;
+    }
+
+    FunctionScope scope = (FunctionScope) currentScope;
     List<Node> uncaughtEOGThrows =
         scope.getCatchesOrRelays().values().stream()
             .flatMap(Collection::stream)
             .collect(Collectors.toList());
     // Connect uncaught throws to block node
     addMultipleIncomingEOGEdges(uncaughtEOGThrows, funcDecl.getBody());
+
     lang.getScopeManager().leaveScope(funcDecl);
+
+    if (node instanceof MethodDeclaration
+        && ((MethodDeclaration) node).getRecordDeclaration() != null
+        && needToLeaveRecord) {
+      lang.getScopeManager().leaveScope(((MethodDeclaration) node).getRecordDeclaration());
+    }
 
     // Set default argument evaluation nodes
     List<Node> funcDeclNextEOG = funcDecl.getNextEOG();
@@ -878,6 +918,7 @@ public class EvaluationOrderGraphPass extends Pass {
     PropertyEdge<Node> propertyEdge = new PropertyEdge<>(prev, next);
     propertyEdge.addProperties(this.currentProperties);
     propertyEdge.addProperty(Properties.INDEX, prev.getNextEOG().size());
+    propertyEdge.addProperty(Properties.UNREACHABLE, false);
     prev.addNextEOG(propertyEdge);
     next.addPrevEOG(propertyEdge);
   }

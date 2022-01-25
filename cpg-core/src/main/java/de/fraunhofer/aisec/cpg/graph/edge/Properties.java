@@ -36,10 +36,14 @@ package de.fraunhofer.aisec.cpg.graph.edge;
  * argument
  *
  * <p>NAME:(string) An optional name for the property edge
+ *
+ * <p>[UNREACHABLE]:(boolean) True if the edge flows into unreachable code i.e. a branch condition
+ * which is always false.
  */
 public enum Properties {
   INDEX,
   BRANCH,
   NAME,
-  INSTANTIATION
+  INSTANTIATION,
+  UNREACHABLE
 }

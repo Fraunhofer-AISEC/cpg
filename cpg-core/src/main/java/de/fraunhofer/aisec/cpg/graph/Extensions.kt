@@ -31,22 +31,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.ArrayCreationExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
-
-fun Expression.evaluate(): Any? {
-    return ValueEvaluator().evaluate(this)
-}
-
-fun Declaration.evaluate(): Any? {
-    return ValueEvaluator().evaluateDeclaration(this)
-}
-
-val ArrayCreationExpression.capacity: Int
-    get() {
-        return dimensions.first().evaluate() as Int
-    }
 
 @JvmName("allNodes")
 fun TranslationResult.all(): List<Node> {

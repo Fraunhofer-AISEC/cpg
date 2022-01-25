@@ -55,10 +55,11 @@ val versions = mapOf(
 dependencies {
     // CPG
     api(project(":cpg-core"))
+    api(project(":cpg-analysis"))
     api(project(":cpg-language-llvm"))
     api(project(":cpg-neo4j"))
 
-    implementation("org.apache.logging.log4j:log4j-slf4j18-impl:2.16.0")
+    implementation("org.apache.logging.log4j:log4j-slf4j18-impl:2.17.0")
 
     // JUnit
     testImplementation("org.jetbrains.kotlin:kotlin-test")
@@ -72,5 +73,5 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.0-RC")
     implementation("org.jline:jline:3.21.0")
 
-    implementation("org.jetbrains.kotlinx:ki-shell:0.3.3")
+    implementation("org.jetbrains.kotlinx:ki-shell:0.4.1")
 }

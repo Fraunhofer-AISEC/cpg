@@ -61,7 +61,7 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 public class DeclarationHandler
-    extends Handler<Declaration, BodyDeclaration, JavaLanguageFrontend> {
+    extends Handler<Declaration, BodyDeclaration<?>, JavaLanguageFrontend> {
 
   public DeclarationHandler(JavaLanguageFrontend lang) {
     super(Declaration::new, lang);
@@ -282,8 +282,6 @@ public class DeclarationHandler
                         Collectors.toList())));
     recordDeclaration.setStaticImportStatements(partitioned.get(true));
     recordDeclaration.setImportStatements(partitioned.get(false));
-
-    lang.getScopeManager().addDeclaration(recordDeclaration);
 
     lang.getScopeManager().enterScope(recordDeclaration);
     lang.getScopeManager().addDeclaration(recordDeclaration.getThis());

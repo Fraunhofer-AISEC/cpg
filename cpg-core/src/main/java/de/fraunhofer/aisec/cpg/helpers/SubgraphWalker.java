@@ -56,13 +56,34 @@ public class SubgraphWalker {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(SubgraphWalker.class);
 
+  private static final HashMap<String, List<Field>> fieldCache = new HashMap<>();
+
   // hide ctor
   private SubgraphWalker() {}
 
+  /**
+   * Returns all the fields for a specific class type. Because this information is static during
+   * runtime, we do cache this information in {@link #fieldCache} for performance reasons.
+   *
+   * @param classType the class type
+   * @return its fields, including the ones from its superclass
+   */
   private static Collection<Field> getAllFields(Class<?> classType) {
     if (classType.getSuperclass() != null) {
-      Collection<Field> fields = getAllFields(classType.getSuperclass());
+      var cacheKey = classType.getName();
+
+      // Note: we cannot use computeIfAbsent here, because we are calling our function
+      // recursively and this would result in a ConcurrentModificationException
+      if (fieldCache.containsKey(cacheKey)) {
+        return fieldCache.get(cacheKey);
+      }
+
+      var fields = new ArrayList<Field>();
+      fields.addAll(getAllFields(classType.getSuperclass()));
       fields.addAll(Arrays.asList(classType.getDeclaredFields()));
+
+      // update the cache
+      fieldCache.put(cacheKey, fields);
 
       return fields;
     }
@@ -71,17 +92,17 @@ public class SubgraphWalker {
   }
 
   /**
-   * Calls handler function of all super-classes of the current node to get the AST children of the
-   * node.
+   * Retrieves a list of AST children of the specified node by iterating all fields that are
+   * annotated with the {@link SubGraph} annotation and its value "AST".
    *
-   * @param node - Node to get the children from the AST tree structure
-   * @return a set of children from the nodes member variables
+   * @param node the start node
+   * @return a list of children from the node's AST
    */
-  public static Set<Node> getAstChildren(Node node) {
-    LinkedHashSet<Node> children = new LinkedHashSet<>(); // Set for duplicate elimination
+  public static List<Node> getAstChildren(Node node) {
+    var children = new ArrayList<Node>();
     if (node == null) return children;
 
-    Class classType = node.getClass();
+    Class<?> classType = node.getClass();
     for (Field field : getAllFields(classType)) {
       SubGraph subGraph = field.getAnnotation(SubGraph.class);
       if (subGraph != null && Arrays.asList(subGraph.value()).contains("AST")) {
@@ -105,7 +126,7 @@ public class SubgraphWalker {
           }
 
           if (PropertyEdge.checkForPropertyEdge(field, obj)) {
-            obj = PropertyEdge.unwrapPropertyEdge(obj, outgoing);
+            obj = PropertyEdge.unwrap((List<PropertyEdge<Node>>) obj, outgoing);
           }
 
           if (obj instanceof Node) {
