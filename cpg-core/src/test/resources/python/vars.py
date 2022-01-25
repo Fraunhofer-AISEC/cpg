@@ -1,5 +1,5 @@
 class Foo:
-    classFieldNoInitializer
+    classFieldNoInitializer: int
     classFieldWithInit = 123
     classFieldNoInitializer = classFieldWithInit
 
