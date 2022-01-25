@@ -25,6 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.graph
 
+import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
+import de.fraunhofer.aisec.cpg.graph.NodeBuilder.setCodeAndRegion
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
@@ -38,24 +40,34 @@ object NodeBuilder {
     private val LOGGER = LoggerFactory.getLogger(NodeBuilder::class.java)
 
     @JvmStatic
-    fun newUsingDirective(code: String?, qualifiedName: String?): UsingDirective {
-        val using = UsingDirective()
-        using.qualifiedName = qualifiedName
-        using.code = code
-        log(using)
-        return using
+    @JvmOverloads
+    fun newUsingDirective(
+        code: String? = null,
+        qualifiedName: String?,
+        lang: LanguageFrontend? = null,
+        rawNode: Any? = null
+    ): UsingDirective {
+        val node = UsingDirective()
+        node.qualifiedName = qualifiedName
+        node.setCodeAndRegion(lang, rawNode, code)
+
+        log(node)
+        return node
     }
 
     @JvmStatic
+    @JvmOverloads
     fun newCallExpression(
         name: String?,
         fqn: String?,
-        code: String?,
-        template: Boolean
+        code: String? = null,
+        template: Boolean,
+        lang: LanguageFrontend? = null,
+        rawNode: Any? = null
     ): CallExpression {
         val node = CallExpression()
         node.name = name!!
-        node.code = code
+        node.setCodeAndRegion(lang, rawNode, code)
         node.fqn = fqn
         node.setTemplate(template)
         log(node)
@@ -63,15 +75,18 @@ object NodeBuilder {
     }
 
     @JvmStatic
+    @JvmOverloads
     fun newStaticCallExpression(
         name: String?,
         fqn: String?,
-        code: String?,
-        targetRecord: String?
+        code: String? = null,
+        targetRecord: String?,
+        lang: LanguageFrontend? = null,
+        rawNode: Any? = null
     ): StaticCallExpression {
         val node = StaticCallExpression()
         node.setName(name!!)
-        node.code = code
+        node.setCodeAndRegion(lang, rawNode, code)
         node.fqn = fqn
         node.targetRecord = targetRecord
         log(node)
@@ -79,22 +94,30 @@ object NodeBuilder {
     }
 
     @JvmStatic
-    fun newCastExpression(code: String?): CastExpression {
+    @JvmOverloads
+    fun newCastExpression(
+        code: String? = null,
+        lang: LanguageFrontend? = null,
+        rawNode: Any? = null
+    ): CastExpression {
         val node = CastExpression()
-        node.code = code
+        node.setCodeAndRegion(lang, rawNode, code)
         log(node)
         return node
     }
 
     @JvmStatic
+    @JvmOverloads
     fun newTypeIdExpression(
         operatorCode: String?,
         type: Type?,
         referencedType: Type?,
-        code: String?
+        code: String? = null,
+        lang: LanguageFrontend? = null,
+        rawNode: Any? = null
     ): TypeIdExpression {
         val node = TypeIdExpression()
-        node.code = code
+        node.setCodeAndRegion(lang, rawNode, code)
         node.operatorCode = operatorCode
         node.name = operatorCode!!
         node.type = type
@@ -104,29 +127,50 @@ object NodeBuilder {
     }
 
     @JvmStatic
-    fun newTypedefDeclaration(targetType: Type?, alias: Type?, code: String?): TypedefDeclaration {
+    @JvmOverloads
+    fun newTypedefDeclaration(
+        targetType: Type?,
+        alias: Type?,
+        code: String? = null,
+        lang: LanguageFrontend? = null,
+        rawNode: Any? = null
+    ): TypedefDeclaration {
         val node = TypedefDeclaration()
         node.type = targetType
         node.alias = alias
-        node.code = code
+        node.setCodeAndRegion(lang, rawNode, code)
         log(node)
         return node
     }
 
     @JvmStatic
-    fun newArraySubscriptionExpression(code: String?): ArraySubscriptionExpression {
+    @JvmOverloads
+    fun newArraySubscriptionExpression(
+        code: String? = null,
+        lang: LanguageFrontend? = null,
+        rawNode: Any? = null
+    ): ArraySubscriptionExpression {
         val node = ArraySubscriptionExpression()
-        node.code = code
+        node.setCodeAndRegion(lang, rawNode, code)
+
         log(node)
         return node
     }
 
     @JvmStatic
-    fun <T> newLiteral(value: T, type: Type?, code: String?): Literal<T> {
+    @JvmOverloads
+    fun <T> newLiteral(
+        value: T,
+        type: Type?,
+        code: String? = null,
+        lang: LanguageFrontend? = null,
+        rawNode: Any? = null
+    ): Literal<T> {
         val node = Literal<T>()
         node.value = value
         node.type = type
-        node.code = code
+        node.setCodeAndRegion(lang, rawNode, code)
+
         log(node)
         return node
     }
@@ -151,39 +195,55 @@ object NodeBuilder {
     }
 
     @JvmStatic
+    @JvmOverloads
     fun newDeclaredReferenceExpression(
         name: String?,
         typeFullName: Type?,
-        code: String?
+        code: String? = null,
+        lang: LanguageFrontend? = null,
+        rawNode: Any? = null
     ): DeclaredReferenceExpression {
         val node = DeclaredReferenceExpression()
         node.name = name!!
         node.type = typeFullName
-        node.code = code
+        node.setCodeAndRegion(lang, rawNode, code)
+
         log(node)
         return node
     }
 
     @JvmStatic
+    @JvmOverloads
     fun newArrayRangeExpression(
         floor: Expression?,
         ceil: Expression?,
-        code: String?
+        code: String? = null,
+        lang: LanguageFrontend? = null,
+        rawNode: Any? = null
     ): ArrayRangeExpression {
         val node = ArrayRangeExpression()
-        node.code = code
+        node.setCodeAndRegion(lang, rawNode, code)
+
         node.floor = floor
         node.ceiling = ceil
         log(node)
         return node
     }
 
+    @JvmOverloads
     @JvmStatic
-    fun newFunctionDeclaration(name: String, code: String?): FunctionDeclaration {
+    fun newFunctionDeclaration(
+        name: String,
+        code: String? = null,
+        lang: LanguageFrontend? = null,
+        rawNode: Any? = null
+    ): FunctionDeclaration {
         val node = FunctionDeclaration()
         node.name = name
-        node.code = code
+        node.setCodeAndRegion(lang, rawNode, code)
+
         log(node)
+
         return node
     }
 
@@ -192,101 +252,160 @@ object NodeBuilder {
     }
 
     @JvmStatic
-    fun newReturnStatement(code: String?): ReturnStatement {
+    @JvmOverloads
+    fun newReturnStatement(
+        code: String? = null,
+        lang: LanguageFrontend? = null,
+        rawNode: Any? = null
+    ): ReturnStatement {
         val node = ReturnStatement()
-        node.code = code
+        node.setCodeAndRegion(lang, rawNode, code)
+
         log(node)
         return node
     }
 
     @JvmStatic
-    fun newSynchronizedStatement(code: String?): SynchronizedStatement {
+    @JvmOverloads
+    fun newSynchronizedStatement(
+        code: String? = null,
+        lang: LanguageFrontend? = null,
+        rawNode: Any? = null
+    ): SynchronizedStatement {
         val node = SynchronizedStatement()
-        node.code = code
+        node.setCodeAndRegion(lang, rawNode, code)
+
         log(node)
         return node
     }
 
-    fun newDeleteExpression(code: String?): DeleteExpression {
+    @JvmStatic
+    @JvmOverloads
+    fun newDeleteExpression(
+        code: String? = null,
+        lang: LanguageFrontend? = null,
+        rawNode: Any? = null
+    ): DeleteExpression {
         val node = DeleteExpression()
-        node.code = code
+        node.setCodeAndRegion(lang, rawNode, code)
+
         log(node)
         return node
     }
 
     @JvmStatic
-    fun newEmptyStatement(code: String?): EmptyStatement {
+    @JvmOverloads
+    fun newEmptyStatement(
+        code: String? = null,
+        lang: LanguageFrontend? = null,
+        rawNode: Any? = null
+    ): EmptyStatement {
         val node = EmptyStatement()
-        node.code = code
+        node.setCodeAndRegion(lang, rawNode, code)
         log(node)
         return node
     }
 
     @JvmStatic
+    @JvmOverloads
     fun newMethodParameterIn(
         name: String?,
         type: Type?,
         variadic: Boolean,
-        code: String?
+        code: String? = null,
+        lang: LanguageFrontend? = null,
+        rawNode: Any? = null
     ): ParamVariableDeclaration {
         val node = ParamVariableDeclaration()
         node.name = name!!
         node.type = type
-        node.code = code
+        node.setCodeAndRegion(lang, rawNode, code)
+
         node.isVariadic = variadic
         return node
     }
 
     @JvmStatic
-    fun newTypeParamDeclaration(name: String?, code: String?): TypeParamDeclaration {
+    @JvmOverloads
+    fun newTypeParamDeclaration(
+        name: String?,
+        code: String? = null,
+        lang: LanguageFrontend? = null,
+        rawNode: Any? = null
+    ): TypeParamDeclaration {
         val node = TypeParamDeclaration()
         node.name = name!!
-        node.code = code
+        node.setCodeAndRegion(lang, rawNode, code)
+
         log(node)
         return node
     }
 
     @JvmStatic
-    fun newCompoundStatement(code: String?): CompoundStatement {
+    @JvmOverloads
+    fun newCompoundStatement(
+        code: String? = null,
+        lang: LanguageFrontend? = null,
+        rawNode: Any? = null
+    ): CompoundStatement {
         val node = CompoundStatement()
-        node.code = code
+        node.setCodeAndRegion(lang, rawNode, code)
+
         log(node)
         return node
     }
 
     @JvmStatic
-    fun newExpressionList(code: String?): ExpressionList {
+    @JvmOverloads
+    fun newExpressionList(
+        code: String? = null,
+        lang: LanguageFrontend? = null,
+        rawNode: Any? = null
+    ): ExpressionList {
         val node = ExpressionList()
-        node.code = code
+        node.setCodeAndRegion(lang, rawNode, code)
+
         log(node)
         return node
     }
 
     @JvmStatic
+    @JvmOverloads
     fun newMemberCallExpression(
         name: String?,
         fqn: String?,
         base: Expression?,
         member: Node?,
         operatorCode: String?,
-        code: String?
+        code: String? = null,
+        lang: LanguageFrontend? = null,
+        rawNode: Any? = null
     ): CallExpression {
         val node = MemberCallExpression()
         node.name = name!!
         node.setBase(base)
         node.member = member
         node.operatorCode = operatorCode
-        node.code = code
+        node.setCodeAndRegion(lang, rawNode, code)
+
         node.fqn = fqn
         log(node)
         return node
     }
 
     @JvmStatic
-    fun newTypeExpression(name: String?, type: Type?): TypeExpression {
+    @JvmOverloads
+    fun newTypeExpression(
+        name: String?,
+        type: Type?,
+        lang: LanguageFrontend? = null,
+        rawNode: Any? = null
+    ): TypeExpression {
         val node = TypeExpression()
         node.name = name!!
         node.type = type
+        node.setCodeAndRegion(lang, rawNode, null)
+
         log(node)
         return node
     }
@@ -299,131 +418,224 @@ object NodeBuilder {
     }
 
     @JvmStatic
+    @JvmOverloads
     fun newUnaryOperator(
         operatorType: String?,
         postfix: Boolean,
         prefix: Boolean,
-        code: String?
+        code: String? = null,
+        lang: LanguageFrontend? = null,
+        rawNode: Any? = null
     ): UnaryOperator {
         val node = UnaryOperator()
         node.operatorCode = operatorType
         node.name = operatorType!!
         node.isPostfix = postfix
         node.isPrefix = prefix
-        node.code = code
+        node.setCodeAndRegion(lang, rawNode, code)
+
         log(node)
         return node
     }
 
     @JvmStatic
+    @JvmOverloads
     fun newVariableDeclaration(
         name: String?,
         type: Type?,
-        code: String?,
-        implicitInitializerAllowed: Boolean
+        code: String? = null,
+        implicitInitializerAllowed: Boolean,
+        lang: LanguageFrontend? = null,
+        rawNode: Any? = null
     ): VariableDeclaration {
         val node = VariableDeclaration()
         node.name = name!!
         node.type = type
-        node.code = code
+        node.setCodeAndRegion(lang, rawNode, code)
+
         node.isImplicitInitializerAllowed = implicitInitializerAllowed
         log(node)
+
         return node
     }
 
     @JvmStatic
-    fun newDeclarationStatement(code: String?): DeclarationStatement {
+    @JvmOverloads
+    fun newDeclarationStatement(
+        code: String? = null,
+        lang: LanguageFrontend? = null,
+        rawNode: Any? = null
+    ): DeclarationStatement {
         val node = DeclarationStatement()
-        node.code = code
+        node.setCodeAndRegion(lang, rawNode, code)
+
         return node
     }
 
     @JvmStatic
-    fun newIfStatement(code: String?): IfStatement {
+    @JvmOverloads
+    fun newIfStatement(
+        code: String? = null,
+        lang: LanguageFrontend? = null,
+        rawNode: Any? = null
+    ): IfStatement {
         val node = IfStatement()
-        node.code = code
+        node.setCodeAndRegion(lang, rawNode, code)
+
         log(node)
         return node
     }
 
     @JvmStatic
-    fun newLabelStatement(code: String?): LabelStatement {
+    @JvmOverloads
+    fun newLabelStatement(
+        code: String? = null,
+        lang: LanguageFrontend? = null,
+        rawNode: Any? = null
+    ): LabelStatement {
         val node = LabelStatement()
-        node.code = code
+        node.setCodeAndRegion(lang, rawNode, code)
+
         log(node)
         return node
     }
 
-    fun newGotoStatement(code: String?): GotoStatement {
+    /**
+     * Sets the code and region, if a language frontend is specified in [lang] using
+     * [LanguageFrontend.setCodeAndRegion]. Additionally, if [code] is specified, the supplied code
+     * is used to override it.
+     */
+    private fun Node.setCodeAndRegion(lang: LanguageFrontend?, rawNode: Any?, code: String?) {
+        lang?.setCodeAndRegion(this, rawNode)
+        if (code != null) {
+            this.code = code
+        }
+    }
+
+    @JvmStatic
+    @JvmOverloads
+    fun newGotoStatement(
+        code: String? = null,
+        lang: LanguageFrontend? = null,
+        rawNode: Any? = null
+    ): GotoStatement {
         val node = GotoStatement()
-        node.code = code
+        node.setCodeAndRegion(lang, rawNode, code)
         log(node)
         return node
     }
 
     @JvmStatic
-    fun newWhileStatement(code: String?): WhileStatement {
+    @JvmOverloads
+    fun newWhileStatement(
+        code: String? = null,
+        lang: LanguageFrontend? = null,
+        rawNode: Any? = null
+    ): WhileStatement {
         val node = WhileStatement()
-        node.code = code
+        node.setCodeAndRegion(lang, rawNode, code)
         log(node)
         return node
     }
 
     @JvmStatic
-    fun newDoStatement(code: String?): DoStatement {
+    @JvmOverloads
+    fun newDoStatement(
+        code: String? = null,
+        lang: LanguageFrontend? = null,
+        rawNode: Any? = null
+    ): DoStatement {
         val node = DoStatement()
-        node.code = code
+        node.setCodeAndRegion(lang, rawNode, code)
         log(node)
         return node
     }
 
     @JvmStatic
-    fun newForEachStatement(code: String?): ForEachStatement {
+    @JvmOverloads
+    fun newForEachStatement(
+        code: String? = null,
+        lang: LanguageFrontend? = null,
+        rawNode: Any? = null
+    ): ForEachStatement {
         val node = ForEachStatement()
-        node.code = code
+        node.setCodeAndRegion(lang, rawNode, code)
         log(node)
         return node
     }
 
     @JvmStatic
-    fun newForStatement(code: String?): ForStatement {
+    @JvmOverloads
+    fun newForStatement(
+        code: String? = null,
+        lang: LanguageFrontend? = null,
+        rawNode: Any? = null
+    ): ForStatement {
         val node = ForStatement()
-        node.code = code
+        node.setCodeAndRegion(lang, rawNode, code)
         log(node)
         return node
     }
 
     @JvmStatic
-    fun newContinueStatement(code: String?): ContinueStatement {
+    @JvmOverloads
+    fun newContinueStatement(
+        code: String? = null,
+        lang: LanguageFrontend? = null,
+        rawNode: Any? = null
+    ): ContinueStatement {
         val node = ContinueStatement()
-        node.code = code
+        node.setCodeAndRegion(lang, rawNode, code)
         log(node)
         return node
     }
 
     @JvmStatic
-    fun newBreakStatement(code: String?): BreakStatement {
+    @JvmOverloads
+    fun newBreakStatement(
+        code: String? = null,
+        lang: LanguageFrontend? = null,
+        rawNode: Any? = null
+    ): BreakStatement {
         val node = BreakStatement()
-        node.code = code
+        node.setCodeAndRegion(lang, rawNode, code)
         log(node)
         return node
     }
 
     @JvmStatic
-    fun newBinaryOperator(operatorCode: String, code: String?): BinaryOperator {
+    @JvmOverloads
+    fun newBinaryOperator(
+        operatorCode: String,
+        code: String? = null,
+        lang: LanguageFrontend? = null,
+        rawNode: Any? = null
+    ): BinaryOperator {
         val node = BinaryOperator()
         node.operatorCode = operatorCode
         node.name = operatorCode
-        node.code = code
+        node.setCodeAndRegion(lang, rawNode, code)
         log(node)
         return node
     }
 
     @JvmStatic
-    fun newTranslationUnitDeclaration(name: String?, code: String?): TranslationUnitDeclaration {
+    @JvmOverloads
+    fun newTranslationUnitDeclaration(
+        name: String?,
+        code: String? = null,
+        lang: LanguageFrontend? = null,
+        rawNode: Any? = null
+    ): TranslationUnitDeclaration {
         val node = TranslationUnitDeclaration()
         node.name = name!!
-        node.code = code
+
+        node.setCodeAndRegion(lang, rawNode, code)
+
+        if (code != null) {
+            node.code = code
+        }
+
         log(node)
         return node
     }
@@ -433,13 +645,20 @@ object NodeBuilder {
     fun newRecordDeclaration(
         fqn: String,
         kind: String,
-        code: String?,
-        createThis: Boolean = true
+        code: String? = null,
+        createThis: Boolean = true,
+        lang: LanguageFrontend? = null,
+        rawNode: Any? = null
     ): RecordDeclaration {
         val node = RecordDeclaration()
         node.name = fqn
         node.kind = kind
-        node.code = code
+
+        node.setCodeAndRegion(lang, rawNode, code)
+
+        if (code != null) {
+            node.code = code
+        }
 
         if (kind == "class" && createThis) {
             val thisDeclaration =
@@ -461,66 +680,87 @@ object NodeBuilder {
     }
 
     @JvmStatic
+    @JvmOverloads
     fun newEnumDeclaration(
         name: String?,
-        code: String?,
-        location: PhysicalLocation?
+        code: String? = null,
+        location: PhysicalLocation?,
+        lang: LanguageFrontend? = null,
+        rawNode: Any? = null
     ): EnumDeclaration {
         val node = EnumDeclaration()
         node.name = name!!
-        node.code = code
+        node.setCodeAndRegion(lang, rawNode, code)
         node.location = location
         log(node)
         return node
     }
 
     @JvmStatic
-    fun newFunctionTemplateDeclaration(name: String?, code: String?): FunctionTemplateDeclaration {
+    @JvmOverloads
+    fun newFunctionTemplateDeclaration(
+        name: String?,
+        code: String? = null,
+        lang: LanguageFrontend? = null,
+        rawNode: Any? = null
+    ): FunctionTemplateDeclaration {
         val node = FunctionTemplateDeclaration()
         node.name = name!!
-        node.code = code
+        node.setCodeAndRegion(lang, rawNode, code)
         log(node)
         return node
     }
 
     @JvmStatic
-    fun newClassTemplateDeclaration(name: String?, code: String?): ClassTemplateDeclaration {
+    @JvmOverloads
+    fun newClassTemplateDeclaration(
+        name: String?,
+        code: String? = null,
+        lang: LanguageFrontend? = null,
+        rawNode: Any? = null
+    ): ClassTemplateDeclaration {
         val node = ClassTemplateDeclaration()
         node.name = name!!
-        node.code = code
+        node.setCodeAndRegion(lang, rawNode, code)
         log(node)
         return node
     }
 
     @JvmStatic
+    @JvmOverloads
     fun newEnumConstantDeclaration(
         name: String?,
-        code: String?,
-        location: PhysicalLocation?
+        code: String? = null,
+        location: PhysicalLocation?,
+        lang: LanguageFrontend? = null,
+        rawNode: Any? = null
     ): EnumConstantDeclaration {
         val node = EnumConstantDeclaration()
         node.name = name!!
-        node.code = code
+        node.setCodeAndRegion(lang, rawNode, code)
         node.location = location
         log(node)
         return node
     }
 
     @JvmStatic
+    @JvmOverloads
     fun newFieldDeclaration(
         name: String?,
         type: Type?,
         modifiers: List<String?>?,
-        code: String?,
+        code: String? = null,
         location: PhysicalLocation?,
         initializer: Expression?,
-        implicitInitializerAllowed: Boolean
+        implicitInitializerAllowed: Boolean,
+        lang: LanguageFrontend? = null,
+        rawNode: Any? = null
     ): FieldDeclaration {
         val node = FieldDeclaration()
         node.name = name!!
         node.type = type
         node.modifiers = modifiers
-        node.code = code
+        node.setCodeAndRegion(lang, rawNode, code)
         node.location = location
         node.isImplicitInitializerAllowed = implicitInitializerAllowed
         if (initializer != null) {
@@ -534,17 +774,20 @@ object NodeBuilder {
     }
 
     @JvmStatic
+    @JvmOverloads
     fun newMemberExpression(
         base: Expression?,
         memberType: Type?,
         name: String?,
         operatorCode: String?,
-        code: String?
+        code: String? = null,
+        lang: LanguageFrontend? = null,
+        rawNode: Any? = null
     ): MemberExpression {
         val node = MemberExpression()
         node.setBase(base!!)
         node.operatorCode = operatorCode
-        node.code = code
+        node.setCodeAndRegion(lang, rawNode, code)
         node.name = name!!
         node.type = memberType
         log(node)
@@ -552,164 +795,254 @@ object NodeBuilder {
     }
 
     @JvmStatic
-    fun newStatement(code: String?): Statement {
+    @JvmOverloads
+    fun newStatement(
+        code: String? = null,
+        lang: LanguageFrontend? = null,
+        rawNode: Any? = null
+    ): Statement {
         val node = Statement()
-        node.code = code
+        node.setCodeAndRegion(lang, rawNode, code)
         log(node)
         return node
     }
 
     @JvmStatic
-    fun newExpression(code: String?): Expression {
+    @JvmOverloads
+    fun newExpression(
+        code: String? = null,
+        lang: LanguageFrontend? = null,
+        rawNode: Any? = null
+    ): Expression {
         val node = Expression()
-        node.code = code
+        node.setCodeAndRegion(lang, rawNode, code)
         log(node)
         return node
     }
 
     @JvmStatic
-    fun newInitializerListExpression(code: String?): InitializerListExpression {
+    @JvmOverloads
+    fun newInitializerListExpression(
+        code: String? = null,
+        lang: LanguageFrontend? = null,
+        rawNode: Any? = null
+    ): InitializerListExpression {
         val node = InitializerListExpression()
-        node.code = code
+        node.setCodeAndRegion(lang, rawNode, code)
         log(node)
         return node
     }
 
     @JvmStatic
-    fun newDesignatedInitializerExpression(code: String?): DesignatedInitializerExpression {
+    @JvmOverloads
+    fun newDesignatedInitializerExpression(
+        code: String? = null,
+        lang: LanguageFrontend? = null,
+        rawNode: Any? = null
+    ): DesignatedInitializerExpression {
         val node = DesignatedInitializerExpression()
-        node.code = code
+        node.setCodeAndRegion(lang, rawNode, code)
         log(node)
         return node
     }
 
     @JvmStatic
-    fun newArrayCreationExpression(code: String?): ArrayCreationExpression {
+    @JvmOverloads
+    fun newArrayCreationExpression(
+        code: String? = null,
+        lang: LanguageFrontend? = null,
+        rawNode: Any? = null
+    ): ArrayCreationExpression {
         val node = ArrayCreationExpression()
-        node.code = code
+        node.setCodeAndRegion(lang, rawNode, code)
         log(node)
         return node
     }
 
     @JvmStatic
-    fun newConstructExpression(code: String?): ConstructExpression {
+    @JvmOverloads
+    fun newConstructExpression(
+        code: String? = null,
+        lang: LanguageFrontend? = null,
+        rawNode: Any? = null
+    ): ConstructExpression {
         val node = ConstructExpression()
-        node.code = code
+        node.setCodeAndRegion(lang, rawNode, code)
         log(node)
         return node
     }
 
+    @JvmOverloads
     @JvmStatic
     fun newMethodDeclaration(
         name: String?,
-        code: String?,
+        code: String? = null,
         isStatic: Boolean,
-        recordDeclaration: RecordDeclaration?
+        recordDeclaration: RecordDeclaration?,
+        lang: LanguageFrontend? = null,
+        rawNode: Any? = null
     ): MethodDeclaration {
         val node = MethodDeclaration()
         node.name = name!!
-        node.code = code
         node.isStatic = isStatic
         node.recordDeclaration = recordDeclaration
+
+        node.setCodeAndRegion(lang, rawNode, code)
+
+        if (code != null) {
+            node.code = code
+        }
+
         log(node)
         return node
     }
 
+    @JvmOverloads
     @JvmStatic
     fun newConstructorDeclaration(
         name: String?,
-        code: String?,
-        recordDeclaration: RecordDeclaration?
+        code: String? = null,
+        recordDeclaration: RecordDeclaration?,
+        lang: LanguageFrontend? = null,
+        rawNode: Any? = null
     ): ConstructorDeclaration {
         val node = ConstructorDeclaration()
         node.name = name!!
-        node.code = code
         node.recordDeclaration = recordDeclaration
+
+        node.setCodeAndRegion(lang, rawNode, code)
+
+        if (code != null) {
+            node.code = code
+        }
+
         log(node)
+
         return node
     }
 
     @JvmStatic
+    @JvmOverloads
     fun newProblemDeclaration(
         filename: String?,
         problem: String?,
-        problemLocation: String?
+        problemLocation: String?,
+        code: String? = null,
+        lang: LanguageFrontend? = null,
+        rawNode: Any? = null
     ): ProblemDeclaration {
         val node = ProblemDeclaration()
         node.filename = filename
         node.problem = problem
         node.problemLocation = problemLocation
+        node.setCodeAndRegion(lang, rawNode, code)
         log(node)
         return node
     }
 
     @JvmStatic
-    fun newIncludeDeclaration(includeFilename: String): IncludeDeclaration {
+    @JvmOverloads
+    fun newIncludeDeclaration(
+        includeFilename: String,
+        code: String? = null,
+        lang: LanguageFrontend? = null,
+        rawNode: Any? = null
+    ): IncludeDeclaration {
         val node = IncludeDeclaration()
         val name = includeFilename.substring(includeFilename.lastIndexOf('/') + 1)
         node.name = name
         node.filename = includeFilename
+        node.setCodeAndRegion(lang, rawNode, code)
         log(node)
         return node
     }
 
     @JvmStatic
-    fun newNewExpression(code: String?, type: Type?): NewExpression {
+    @JvmOverloads
+    fun newNewExpression(
+        code: String? = null,
+        type: Type?,
+        lang: LanguageFrontend? = null,
+        rawNode: Any? = null
+    ): NewExpression {
         val node = NewExpression()
-        node.code = code
+        node.setCodeAndRegion(lang, rawNode, code)
         node.type = type
         log(node)
         return node
     }
 
     @JvmStatic
-    fun newSwitchStatement(code: String?): SwitchStatement {
+    @JvmOverloads
+    fun newSwitchStatement(
+        code: String? = null,
+        lang: LanguageFrontend? = null,
+        rawNode: Any? = null
+    ): SwitchStatement {
         val node = SwitchStatement()
-        node.code = code
+        node.setCodeAndRegion(lang, rawNode, code)
         log(node)
         return node
     }
 
     @JvmStatic
-    fun newCaseStatement(code: String?): CaseStatement {
+    @JvmOverloads
+    fun newCaseStatement(
+        code: String? = null,
+        lang: LanguageFrontend? = null,
+        rawNode: Any? = null
+    ): CaseStatement {
         val node = CaseStatement()
-        node.code = code
+        node.setCodeAndRegion(lang, rawNode, code)
         log(node)
         return node
     }
 
     @JvmStatic
-    fun newDefaultStatement(code: String?): DefaultStatement {
+    @JvmOverloads
+    fun newDefaultStatement(
+        code: String? = null,
+        lang: LanguageFrontend? = null,
+        rawNode: Any? = null
+    ): DefaultStatement {
         val node = DefaultStatement()
-        node.code = code
+        node.setCodeAndRegion(lang, rawNode, code)
         log(node)
         return node
     }
 
     @JvmStatic
+    @JvmOverloads
     fun newConditionalExpression(
         condition: Expression?,
         thenExpr: Expression?,
         elseExpr: Expression?,
-        type: Type?
+        type: Type?,
+        code: String? = null,
+        lang: LanguageFrontend? = null,
+        rawNode: Any? = null
     ): ConditionalExpression {
         val node = ConditionalExpression()
         node.condition = condition
         node.thenExpr = thenExpr
         node.elseExpr = elseExpr
         node.type = type
+        node.setCodeAndRegion(lang, rawNode, code)
         log(node)
         return node
     }
 
     @JvmStatic
+    @JvmOverloads
     fun newExplicitConstructorInvocation(
         containingClass: String?,
-        code: String?
+        code: String? = null,
+        lang: LanguageFrontend? = null,
+        rawNode: Any? = null
     ): ExplicitConstructorInvocation {
         val node = ExplicitConstructorInvocation()
         node.containingClass = containingClass
-        node.code = code
+        node.setCodeAndRegion(lang, rawNode, code)
         log(node)
         return node
     }
@@ -722,82 +1055,138 @@ object NodeBuilder {
      * @return
      */
     @JvmStatic
-    fun newNamespaceDeclaration(fqn: String, code: String?): NamespaceDeclaration {
+    @JvmOverloads
+    fun newNamespaceDeclaration(
+        fqn: String,
+        code: String? = null,
+        lang: LanguageFrontend? = null,
+        rawNode: Any? = null
+    ): NamespaceDeclaration {
         val node = NamespaceDeclaration()
         node.name = fqn
-        node.code = code
+        node.setCodeAndRegion(lang, rawNode, code)
         log(node)
         return node
     }
 
     @JvmStatic
-    fun newCatchClause(code: String): CatchClause {
-        val catchClause = CatchClause()
-        catchClause.code = code
-        return catchClause
+    @JvmOverloads
+    fun newCatchClause(
+        code: String? = null,
+        lang: LanguageFrontend? = null,
+        rawNode: Any? = null
+    ): CatchClause {
+        val node = CatchClause()
+        node.setCodeAndRegion(lang, rawNode, code)
+        return node
     }
 
     @JvmStatic
-    fun newTryStatement(code: String): TryStatement {
-        val tryStatement = TryStatement()
-        tryStatement.code = code
-        return tryStatement
+    @JvmOverloads
+    fun newTryStatement(
+        code: String? = null,
+        lang: LanguageFrontend? = null,
+        rawNode: Any? = null
+    ): TryStatement {
+        val node = TryStatement()
+        node.setCodeAndRegion(lang, rawNode, code)
+        return node
     }
 
     @JvmStatic
-    fun newAssertStatement(code: String): AssertStatement {
-        val assertStatement = AssertStatement()
-        assertStatement.code = code
-        return assertStatement
+    @JvmOverloads
+    fun newAssertStatement(
+        code: String? = null,
+        lang: LanguageFrontend? = null,
+        rawNode: Any? = null
+    ): AssertStatement {
+        val node = AssertStatement()
+        node.setCodeAndRegion(lang, rawNode, code)
+        return node
     }
 
     @JvmStatic
-    fun newASMDeclarationStatement(code: String): ASMDeclarationStatement {
-        val asmStatement = ASMDeclarationStatement()
-        asmStatement.code = code
-        return asmStatement
+    @JvmOverloads
+    fun newASMDeclarationStatement(
+        code: String? = null,
+        lang: LanguageFrontend? = null,
+        rawNode: Any? = null
+    ): ASMDeclarationStatement {
+        val node = ASMDeclarationStatement()
+        node.setCodeAndRegion(lang, rawNode, code)
+        return node
     }
 
     @JvmStatic
-    fun newCompoundStatementExpression(code: String): CompoundStatementExpression {
+    @JvmOverloads
+    fun newCompoundStatementExpression(
+        code: String? = null,
+        lang: LanguageFrontend? = null,
+        rawNode: Any? = null
+    ): CompoundStatementExpression {
         val cse = CompoundStatementExpression()
-        cse.code = code
+        lang?.setCodeAndRegion(cse, rawNode)
+        if (code != null) {
+            cse.code = code
+        }
         return cse
     }
 
     @JvmStatic
-    fun newAnnotation(name: String?, code: String): Annotation {
-        val annotation = Annotation()
-        annotation.name = name!!
-        annotation.code = code
-        return annotation
+    @JvmOverloads
+    fun newAnnotation(
+        name: String?,
+        code: String? = null,
+        lang: LanguageFrontend? = null,
+        rawNode: Any? = null
+    ): Annotation {
+        val node = Annotation()
+        node.name = name!!
+        node.setCodeAndRegion(lang, rawNode, code)
+        return node
     }
 
     @JvmStatic
-    fun newAnnotationMember(name: String?, value: Expression?, code: String): AnnotationMember {
-        val member = AnnotationMember()
-        member.name = name!!
-        member.value = value
-        member.code = code
-        return member
+    @JvmOverloads
+    fun newAnnotationMember(
+        name: String?,
+        value: Expression?,
+        code: String? = null,
+        lang: LanguageFrontend? = null,
+        rawNode: Any? = null
+    ): AnnotationMember {
+        val node = AnnotationMember()
+        node.name = name!!
+        node.value = value
+        node.setCodeAndRegion(lang, rawNode, code)
+        return node
     }
 
     @JvmStatic
+    @JvmOverloads
     fun newKeyValueExpression(
         key: Expression?,
         value: Expression?,
-        code: String?
+        code: String? = null,
+        lang: LanguageFrontend? = null,
+        rawNode: Any? = null
     ): KeyValueExpression {
-        val keyValue = KeyValueExpression()
-        keyValue.key = key
-        keyValue.value = value
-        keyValue.code = code
-        return keyValue
+        val node = KeyValueExpression()
+        node.key = key
+        node.value = value
+        node.setCodeAndRegion(lang, rawNode, code)
+        return node
     }
 
-    fun newLambdaExpression(code: String?): LambdaExpression {
-        val lambda = LambdaExpression()
-        lambda.code = code
-        return lambda
+    @JvmStatic
+    @JvmOverloads
+    fun newLambdaExpression(
+        code: String? = null,
+        lang: LanguageFrontend? = null,
+        rawNode: Any? = null
+    ): LambdaExpression {
+        val node = LambdaExpression()
+        node.setCodeAndRegion(lang, rawNode, code)
+        return node
     }
 }

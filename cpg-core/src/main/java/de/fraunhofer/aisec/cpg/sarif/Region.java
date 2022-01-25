@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.sarif;
 
+import java.util.Objects;
 import org.checkerframework.checker.nullness.qual.NonNull;
 
 /** Code source location, in a SASP/SARIF-compliant "Region" format. */
@@ -125,12 +126,6 @@ public class Region implements Comparable<Region> {
 
   @Override
   public int hashCode() {
-    int prime = 31;
-    int result = 1;
-    result += prime * this.startColumn;
-    result += prime * this.startLine;
-    result += prime * this.endColumn;
-    result += prime * this.endLine;
-    return result;
+    return Objects.hash(this.startColumn, this.startLine, this.endColumn, this.endLine);
   }
 }
