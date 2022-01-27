@@ -96,7 +96,7 @@ class ScopeManager {
     val currentRecord: RecordDeclaration?
         get() = this.firstScopeIsInstanceOrNull<RecordScope>()?.astNode as? RecordDeclaration
 
-    val currentTypedefs: List<TypedefDeclaration>
+    val currentTypedefs: Collection<TypedefDeclaration>
         get() = this.getCurrentTypedefs(currentScope)
 
     val currentNamePrefix: String
@@ -572,23 +572,20 @@ class ScopeManager {
         }
     }
 
-    private fun getCurrentTypedefs(scope: Scope?): List<TypedefDeclaration> {
-        val curr: MutableList<TypedefDeclaration> = ArrayList()
-        if (scope is ValueDeclarationScope) {
-            curr.addAll(scope.typedefs)
-        }
-        if (scope!!.getParent() != null) {
-            for (parentTypedef in getCurrentTypedefs(scope.getParent())) {
-                if (curr.stream().map { obj: TypedefDeclaration -> obj.alias }.noneMatch { o: Type?
-                        ->
-                        parentTypedef.alias.equals(o)
-                    }
-                ) {
-                    curr.add(parentTypedef)
-                }
+    private fun getCurrentTypedefs(scope: Scope?): Collection<TypedefDeclaration> {
+        val typedefs = mutableMapOf<Type, TypedefDeclaration>()
+
+        var current = scope
+
+        while (current != null) {
+            if (scope is ValueDeclarationScope) {
+                scope.typedefs.forEach { typedefs.putIfAbsent(it.alias, it) }
             }
+
+            current = current.parent
         }
-        return curr
+
+        return typedefs.values
     }
 
     /**

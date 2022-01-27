@@ -332,10 +332,10 @@ public class SubgraphWalker {
           todo.push(current);
           onNodeVisit.forEach(c -> c.accept(current));
 
-          Set<Node> unseenChildren =
+          var unseenChildren =
               SubgraphWalker.getAstChildren(current).stream()
                   .filter(Predicate.not(seen::contains))
-                  .collect(Collectors.toSet());
+                  .collect(Collectors.toList());
           seen.addAll(unseenChildren);
           Util.reverse(unseenChildren.stream()).forEach(todo::push);
           backlog.push(current);

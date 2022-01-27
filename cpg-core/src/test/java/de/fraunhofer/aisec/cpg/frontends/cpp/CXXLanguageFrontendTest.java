@@ -66,12 +66,7 @@ import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation;
 import de.fraunhofer.aisec.cpg.sarif.Region;
 import java.io.File;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.junit.jupiter.api.Test;
@@ -81,6 +76,30 @@ import org.slf4j.LoggerFactory;
 class CXXLanguageFrontendTest extends BaseTest {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(CXXLanguageFrontendTest.class);
+
+  /*@Test
+  void testFF() throws Exception {
+    File file = new File("src/test/resources/hqxvlc.c");
+    TranslationUnitDeclaration tu =
+        TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true);
+
+    assertNotNull(tu);
+
+    var nodes = SubgraphWalker.flattenAST(tu);
+    var types = new HashMap<String, Integer>();
+    var codes = new HashMap<String, Set<Integer>>();
+    for (var n : nodes) {
+      var count = types.computeIfAbsent(n.getClass().getSimpleName(), key -> 0);
+      types.put(n.getClass().getSimpleName(), count + 1);
+
+      var code = codes.computeIfAbsent(n.getClass().getSimpleName(), key -> new HashSet<>());
+      code.add(n.hashCode());
+    }
+
+    for (var t : types.keySet()) {
+      System.out.println(t + ": " + types.get(t) + " | unique hash codes: " + codes.get(t).size());
+    }
+  }*/
 
   @Test
   void testForEach() throws Exception {

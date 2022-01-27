@@ -1117,19 +1117,10 @@ public class CallResolver extends Pass {
                 .map(t -> recordMap.get(t.getRoot().getTypeName()))
                 .filter(Objects::nonNull)
                 .collect(Collectors.toSet());
+
         invocationCandidates =
             getInvocationCandidatesFromParents(nameParts[nameParts.length - 1], call, records);
       }
-    }
-
-    if (curClass != null
-        && !(call instanceof MemberCallExpression || call instanceof StaticCallExpression)) {
-      // COMMENT(oxisto) if we run into this condition, parsing has gone wrong on some other parts.
-      // not sure if we
-      // can heal this here, so I deactivated this line.
-
-      // TODO(oxisto): this should anyway be replaced by the new receiver field
-      // call.setBase(curClass.getThis());
     }
 
     createMethodDummies(invocationCandidates, possibleContainingTypes, call);
@@ -1608,6 +1599,13 @@ public class CallResolver extends Pass {
         containingRecord.setKind("class");
       }
 
+      log.debug(
+          "Inferring a new method declaration {} with parameter types {}",
+          inferred.getName(),
+          inferred.getParameters().stream()
+              .map(param -> param.getType().getName())
+              .collect(Collectors.toList()));
+
       return inferred;
     } else {
       // function declaration, not inside a class
@@ -1709,6 +1707,7 @@ public class CallResolver extends Pass {
   private List<FunctionDeclaration> getInvocationCandidatesFromParents(
       String name, CallExpression call, Set<RecordDeclaration> possibleTypes) {
     Set<RecordDeclaration> workingPossibleTypes = new HashSet<>(possibleTypes);
+
     if (possibleTypes.isEmpty()) {
       return new ArrayList<>();
     } else {
@@ -1720,7 +1719,7 @@ public class CallResolver extends Pass {
 
       // C++ does not allow overloading at different hierarchy levels. If we find a
       // FunctionDeclaration with the same name as the function in the CallExpression we have to
-      // stop the search in the parent even if the FunctionDelcaration does not match with the
+      // stop the search in the parent even if the FunctionDeclaration does not match with the
       // signature of the CallExpression
       if (lang instanceof CXXLanguageFrontend) {
         workingPossibleTypes.removeIf(
@@ -1754,11 +1753,10 @@ public class CallResolver extends Pass {
             "(" + Pattern.quote(recordDeclaration.getName()) + "\\.)?" + Pattern.quote(name));
 
     List<FunctionDeclaration> invocationCandidate =
-        new ArrayList<>(
-            recordDeclaration.getMethods().stream()
-                .filter(m -> namePattern.matcher(m.getName()).matches())
-                .map(FunctionDeclaration.class::cast)
-                .collect(Collectors.toList()));
+        recordDeclaration.getMethods().stream()
+            .filter(m -> namePattern.matcher(m.getName()).matches())
+            .map(FunctionDeclaration.class::cast)
+            .collect(Collectors.toList());
 
     return invocationCandidate.isEmpty();
   }

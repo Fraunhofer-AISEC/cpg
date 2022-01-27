@@ -53,13 +53,13 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class StatementAnalyzer
+public class StatementHandler
     extends Handler<
         de.fraunhofer.aisec.cpg.graph.statements.Statement, Statement, JavaLanguageFrontend> {
 
-  private static final Logger log = LoggerFactory.getLogger(StatementAnalyzer.class);
+  private static final Logger log = LoggerFactory.getLogger(StatementHandler.class);
 
-  public StatementAnalyzer(JavaLanguageFrontend lang) {
+  public StatementHandler(JavaLanguageFrontend lang) {
     super(de.fraunhofer.aisec.cpg.graph.statements.Statement::new, lang);
 
     map.put(IfStmt.class, this::handleIfStatement);
@@ -84,7 +84,13 @@ public class StatementAnalyzer
 
   public de.fraunhofer.aisec.cpg.graph.statements.Statement handleExpressionStatement(
       Statement stmt) {
-    return lang.getExpressionHandler().handle(stmt.asExpressionStmt().getExpression());
+    var expression = lang.getExpressionHandler().handle(stmt.asExpressionStmt().getExpression());
+
+    // update expression's code and location to match the statement
+
+    lang.setCodeAndRegion(expression, stmt);
+
+    return expression;
   }
 
   private de.fraunhofer.aisec.cpg.graph.statements.Statement handleThrowStmt(Statement stmt) {

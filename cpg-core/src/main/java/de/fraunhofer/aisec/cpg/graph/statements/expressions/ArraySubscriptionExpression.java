@@ -114,7 +114,7 @@ public class ArraySubscriptionExpression extends Expression implements TypeListe
 
   @Override
   public int hashCode() {
-    return super.hashCode();
+    return Objects.hash(super.hashCode(), this.arrayExpression, this.subscriptExpression);
   }
 
   @NotNull
