@@ -36,6 +36,7 @@ import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newLiteral
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newMemberCallExpression
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newMemberExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
+import de.fraunhofer.aisec.cpg.graph.types.PointerType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
@@ -63,6 +64,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend2) :
             "sizeof_expression" -> handleSizeOfExpression(node)
             "pointer_expression" -> handleUnaryExpression(node)
             "parenthesized_expression" -> handleParenthesizedExpression(node)
+            "new_expression" -> handleNewExpression(node)
             "call_expression" -> handleCallExpression(node)
             "number_literal" -> handleNumberLiteral(node)
             "char_literal" -> handleCharLiteral(node)
@@ -115,6 +117,46 @@ class ExpressionHandler(lang: CXXLanguageFrontend2) :
             )
 
         return expression
+    }
+
+    private fun handleArgumentList(node: Node): List<Expression> {
+        var argumentList: MutableList<Expression> = arrayListOf()
+
+        for (namedChild in 1.rangeTo(node.namedChildCount)) {
+            argumentList.add(handle(node.child(namedChild)))
+        }
+
+        return argumentList
+    }
+
+    private fun handleNewExpression(node: Node): Expression {
+        val name = node.childByFieldName("type")
+        val type = TypeParser.createFrom(lang.getCodeFromRawNode(name)!!, true, lang)
+
+        val argumentList = handleArgumentList(node.childByFieldName("arguments"))
+        val initializer =
+            NodeBuilder.newConstructExpression(
+                lang.getCodeFromRawNode(node.childByFieldName("arguments"))
+            )
+        if (!argumentList.isEmpty()) {
+            for (argument in argumentList) {
+                initializer.addArgument(argument)
+            }
+        } else {
+            initializer.isInferred = true
+        }
+
+        initializer.type = type
+
+        val new =
+            NodeBuilder.newNewExpression(
+                lang.getCodeFromRawNode(node),
+                type.reference(PointerType.PointerOrigin.POINTER)
+            )
+
+        new.initializer = initializer
+
+        return new
     }
 
     /** Handles a call expression. */
