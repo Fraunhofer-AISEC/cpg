@@ -33,6 +33,7 @@ import de.fraunhofer.aisec.cpg.TestUtils.analyzeWithBuilder
 import de.fraunhofer.aisec.cpg.TestUtils.assertRefersTo
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.cpp.CXXLanguageFrontend
+import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.byNameOrNull
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.statements.*
@@ -43,15 +44,14 @@ import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import de.fraunhofer.aisec.cpg.helpers.NodeComparator
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.helpers.Util
+import de.fraunhofer.aisec.cpg.processing.IVisitor
+import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 import de.fraunhofer.aisec.cpg.sarif.Region
 import java.io.File
 import java.nio.file.Path
 import java.util.*
 import java.util.Map
 import java.util.function.Consumer
-import kotlin.collections.List
-import kotlin.collections.listOf
-import kotlin.collections.sortWith
 import kotlin.test.*
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
@@ -1139,5 +1139,41 @@ class CXXLanguageFrontend2Test {
         Assertions.assertNotNull(initializer)
         Assertions.assertTrue(initializer is CastExpression)
         Assertions.assertEquals("size_t", (initializer as CastExpression).castType.name)
+    }
+
+    @Test
+    @Throws(java.lang.Exception::class)
+    fun testEOGCompleteness() {
+        val file = File("src/test/resources/fix-455/main.cpp")
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.unregisterLanguage(CXXLanguageFrontend::class.java)
+                it.registerLanguage(
+                    CXXLanguageFrontend2::class.java,
+                    CXXLanguageFrontend.CXX_EXTENSIONS
+                )
+            }
+        val main =
+            tu.getDeclarationsByName("main", FunctionDeclaration::class.java).iterator().next()
+        Assertions.assertNotNull(main)
+        val body = main.body as CompoundStatement
+        Assertions.assertNotNull(body)
+        val returnStatement = body.statements[body.statements.size - 1]
+        Assertions.assertNotNull(returnStatement)
+
+        // we need to assert, that we have a consistent chain of EOG edges from the first statement
+        // to
+        // the return statement. otherwise, the EOG chain is somehow broken
+        val eogEdges = ArrayList<Node>()
+        main.accept(
+            { x: Node? -> Strategy.EOG_FORWARD(x!!) },
+            object : IVisitor<Node>() {
+                override fun visit(n: Node) {
+                    println(n)
+                    eogEdges.add(n)
+                }
+            }
+        )
+        Assertions.assertTrue(eogEdges.contains(returnStatement))
     }
 }
