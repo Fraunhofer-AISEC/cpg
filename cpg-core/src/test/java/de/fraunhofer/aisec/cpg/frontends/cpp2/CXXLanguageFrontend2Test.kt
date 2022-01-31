@@ -1298,4 +1298,28 @@ class CXXLanguageFrontend2Test {
         Assertions.assertEquals(0, method!!.parameters.size)
         Assertions.assertEquals("function5()void", method.signature)
     }
+
+    @Test
+    @Throws(java.lang.Exception::class)
+    fun testLocalVariables() {
+        val file = File("src/test/resources/variables/local_variables.cpp")
+        val declaration =
+            analyzeAndGetFirstTU(java.util.List.of(file), file.parentFile.toPath(), true)
+        val function = declaration.getDeclarationAs(2, FunctionDeclaration::class.java)
+        assertEquals("testExpressionInExpressionList()int", function!!.signature)
+
+        val locals = function.body.locals
+        // Expecting x, foo, t
+        val localNames = locals.map(Node::name).toSet()
+        Assertions.assertTrue(localNames.contains("x"))
+        Assertions.assertTrue(localNames.contains("foo"))
+        Assertions.assertTrue(localNames.contains("t"))
+
+        // ... and nothing else
+        Assertions.assertEquals(3, localNames.size)
+
+        val clazz = declaration.getDeclarationAs(0, RecordDeclaration::class.java)
+        Assertions.assertEquals("this", clazz!!.fields[0].name)
+        Assertions.assertEquals(1, clazz!!.fields.size)
+    }
 }
