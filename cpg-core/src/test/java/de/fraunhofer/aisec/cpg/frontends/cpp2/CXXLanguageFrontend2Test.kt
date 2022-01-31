@@ -1245,7 +1245,13 @@ class CXXLanguageFrontend2Test {
     fun testFunctionDeclaration() {
         val file = File("src/test/resources/functiondecl.cpp")
         val declaration =
-            analyzeAndGetFirstTU(java.util.List.of(file), file.parentFile.toPath(), true)
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.unregisterLanguage(CXXLanguageFrontend::class.java)
+                it.registerLanguage(
+                    CXXLanguageFrontend2::class.java,
+                    CXXLanguageFrontend.CXX_EXTENSIONS
+                )
+            }
 
         // should be seven function nodes
         Assertions.assertEquals(7, declaration.declarations.size)
@@ -1304,7 +1310,13 @@ class CXXLanguageFrontend2Test {
     fun testLocalVariables() {
         val file = File("src/test/resources/variables/local_variables.cpp")
         val declaration =
-            analyzeAndGetFirstTU(java.util.List.of(file), file.parentFile.toPath(), true)
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.unregisterLanguage(CXXLanguageFrontend::class.java)
+                it.registerLanguage(
+                    CXXLanguageFrontend2::class.java,
+                    CXXLanguageFrontend.CXX_EXTENSIONS
+                )
+            }
         val function = declaration.getDeclarationAs(2, FunctionDeclaration::class.java)
         assertEquals("testExpressionInExpressionList()int", function!!.signature)
 
