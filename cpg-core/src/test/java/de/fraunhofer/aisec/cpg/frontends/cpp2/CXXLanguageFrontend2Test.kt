@@ -46,6 +46,7 @@ import de.fraunhofer.aisec.cpg.sarif.Region
 import java.io.File
 import java.nio.file.Path
 import java.util.*
+import java.util.Map
 import java.util.function.Consumer
 import kotlin.test.*
 import org.junit.jupiter.api.Assertions
@@ -1039,5 +1040,73 @@ class CXXLanguageFrontend2Test {
         Assertions.assertTrue(initializer is InitializerListExpression)
         listExpression = initializer as InitializerListExpression
         Assertions.assertEquals(3, listExpression.initializers.size)
+    }
+
+    @Test
+    @Throws(java.lang.Exception::class)
+    fun testAttributes() {
+        val file = File("src/test/resources/attributes.cpp")
+
+        val builder =
+            TranslationConfiguration.builder()
+                .sourceLocations(java.util.List.of(file))
+                .topLevel(file.parentFile)
+                .defaultPasses()
+                .defaultLanguages()
+                .processAnnotations(true)
+                .symbols(Map.of("PROPERTY_ATTRIBUTE(...)", "[[property_attribute(#__VA_ARGS__)]]"))
+
+        builder.unregisterLanguage(CXXLanguageFrontend::class.java)
+        builder.registerLanguage(
+            CXXLanguageFrontend2::class.java,
+            Lists.newArrayList(
+                Iterables.concat(
+                    CXXLanguageFrontend.CXX_EXTENSIONS,
+                    CXXLanguageFrontend.CXX_HEADER_EXTENSIONS
+                )
+            )
+        )
+
+        val declarations = analyzeWithBuilder(builder)
+        Assertions.assertFalse(declarations.isEmpty())
+        val tu = declarations[0]
+        Assertions.assertNotNull(tu)
+        val main =
+            tu.getDeclarationsByName("main", FunctionDeclaration::class.java).iterator().next()
+        Assertions.assertNotNull(main)
+        Assertions.assertEquals("function_attribute", main.annotations[0].name)
+        val someClass =
+            tu.getDeclarationsByName("SomeClass", RecordDeclaration::class.java).iterator().next()
+        Assertions.assertNotNull(someClass)
+        Assertions.assertEquals("record_attribute", someClass.annotations[0].name)
+        val a =
+            someClass
+                .fields
+                .stream()
+                .filter { f: FieldDeclaration -> f.name == "a" }
+                .findAny()
+                .orElse(null)
+        Assertions.assertNotNull(a)
+        var annotation = a.annotations[0]
+        Assertions.assertNotNull(annotation)
+        Assertions.assertEquals("property_attribute", annotation.name)
+        Assertions.assertEquals(3, annotation.members.size)
+        Assertions.assertEquals("a", (annotation.members[0].value as Literal<String?>).value)
+        val b =
+            someClass
+                .fields
+                .stream()
+                .filter { f: FieldDeclaration -> f.name == "b" }
+                .findAny()
+                .orElse(null)
+        Assertions.assertNotNull(a)
+        annotation = b.annotations[0]
+        Assertions.assertNotNull(annotation)
+        Assertions.assertEquals("property_attribute", annotation.name)
+        Assertions.assertEquals(1, annotation.members.size)
+        Assertions.assertEquals(
+            "SomeCategory, SomeOtherThing",
+            (annotation.members[0].value as Literal<String?>).value
+        )
     }
 }
