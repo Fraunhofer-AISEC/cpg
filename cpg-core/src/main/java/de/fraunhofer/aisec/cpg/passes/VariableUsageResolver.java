@@ -68,11 +68,11 @@ import org.slf4j.LoggerFactory;
 public class VariableUsageResolver extends Pass {
 
   private static final Logger log = LoggerFactory.getLogger(VariableUsageResolver.class);
-  private final Map<Type, List<Type>> superTypesMap = new HashMap<>();
-  private final Map<Type, RecordDeclaration> recordMap = new HashMap<>();
-  private final Map<Type, EnumDeclaration> enumMap = new HashMap<>();
-  private TranslationUnitDeclaration currTu;
-  private ScopedWalker walker;
+  protected final Map<Type, List<Type>> superTypesMap = new HashMap<>();
+  protected final Map<Type, RecordDeclaration> recordMap = new HashMap<>();
+  protected final Map<Type, EnumDeclaration> enumMap = new HashMap<>();
+  protected TranslationUnitDeclaration currTu;
+  protected ScopedWalker walker;
 
   @Override
   public void cleanup() {
@@ -115,7 +115,7 @@ public class VariableUsageResolver extends Pass {
     }
   }
 
-  private void findRecordsAndEnums(Node node, RecordDeclaration curClass) {
+  protected void findRecordsAndEnums(Node node, RecordDeclaration curClass) {
     if (node instanceof RecordDeclaration) {
       Type type = TypeParser.createFrom(node.getName(), true);
       recordMap.putIfAbsent(type, (RecordDeclaration) node);
@@ -125,7 +125,7 @@ public class VariableUsageResolver extends Pass {
     }
   }
 
-  private Optional<? extends ValueDeclaration> resolveFunctionPtr(
+  protected Optional<? extends ValueDeclaration> resolveFunctionPtr(
       Type containingClass, DeclaredReferenceExpression reference) {
     FunctionPointerType fptrType;
     if (reference.getType() instanceof FunctionPointerType) {
@@ -186,7 +186,7 @@ public class VariableUsageResolver extends Pass {
     return target;
   }
 
-  private void resolveLocalVarUsage(RecordDeclaration currentClass, Node parent, Node current) {
+  protected void resolveLocalVarUsage(RecordDeclaration currentClass, Node parent, Node current) {
     if (lang == null) {
       Util.errorWithFileLocation(
           current, log, "Could not resolve local variable usage: language frontend is null");
@@ -262,7 +262,7 @@ public class VariableUsageResolver extends Pass {
     }
   }
 
-  private void resolveFieldUsages(Node current, RecordDeclaration curClass) {
+  protected void resolveFieldUsages(Node current, RecordDeclaration curClass) {
     if (current instanceof MemberExpression) {
       MemberExpression memberExpression = (MemberExpression) current;
       Declaration baseTarget = null;
@@ -336,7 +336,7 @@ public class VariableUsageResolver extends Pass {
   }
 
   @Nullable
-  private Declaration resolveBase(DeclaredReferenceExpression reference) {
+  protected Declaration resolveBase(DeclaredReferenceExpression reference) {
     if (lang == null) {
       Util.errorWithFileLocation(
           reference, log, "Could not resolve base: language frontend is null");
@@ -372,7 +372,7 @@ public class VariableUsageResolver extends Pass {
     }
   }
 
-  private ValueDeclaration resolveMember(
+  protected ValueDeclaration resolveMember(
       Type containingClass, DeclaredReferenceExpression reference) {
     if (lang instanceof JavaLanguageFrontend
         && reference.getName().matches("(?<class>.+\\.)?super")) {
@@ -406,7 +406,7 @@ public class VariableUsageResolver extends Pass {
         () -> handleUnknownField(containingClass, reference.getName(), reference.getType()));
   }
 
-  private FieldDeclaration handleUnknownField(Type base, String name, Type type) {
+  protected FieldDeclaration handleUnknownField(Type base, String name, Type type) {
     // unwrap a potential pointer-type
     if (base instanceof PointerType) {
       return handleUnknownField(((PointerType) base).getElementType(), name, type);
@@ -451,7 +451,7 @@ public class VariableUsageResolver extends Pass {
     }
   }
 
-  private MethodDeclaration handleUnknownClassMethod(
+  protected MethodDeclaration handleUnknownClassMethod(
       Type base, String name, Type returnType, List<Type> signature) {
     if (!recordMap.containsKey(base)) {
       return null;
@@ -477,7 +477,7 @@ public class VariableUsageResolver extends Pass {
     }
   }
 
-  private FunctionDeclaration handleUnknownMethod(
+  protected FunctionDeclaration handleUnknownMethod(
       String name, Type returnType, List<Type> signature) {
     Optional<FunctionDeclaration> target =
         currTu.getDeclarations().stream()
@@ -500,7 +500,7 @@ public class VariableUsageResolver extends Pass {
     }
   }
 
-  private RecordDeclaration inferRecordDeclaration(Type type) {
+  protected RecordDeclaration inferRecordDeclaration(Type type) {
     if (type instanceof ObjectType) {
       log.debug(
           "Encountered an unknown record type {} during a field access. We are going to infer that record",
