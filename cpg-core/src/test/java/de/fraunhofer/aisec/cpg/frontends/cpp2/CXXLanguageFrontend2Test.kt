@@ -757,4 +757,64 @@ class CXXLanguageFrontend2Test {
         Assertions.assertEquals(x, (ase.arrayExpression as DeclaredReferenceExpression).refersTo)
         Assertions.assertEquals(0, (ase.subscriptExpression as Literal<Int>).value.toInt())
     }
+
+    @Test
+    @Throws(java.lang.Exception::class)
+    fun testObjectCreation() {
+        val file = File("src/test/resources/objcreation.cpp")
+        val declaration =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.unregisterLanguage(CXXLanguageFrontend::class.java)
+                it.registerLanguage(
+                    CXXLanguageFrontend2::class.java,
+                    CXXLanguageFrontend.CXX_EXTENSIONS
+                )
+            }
+        Assertions.assertNotNull(declaration)
+
+        // get the main method
+        val main = declaration.getDeclarationAs(3, FunctionDeclaration::class.java)
+        val statement = main!!.body as CompoundStatement
+
+        // Integer i
+        val i =
+            (statement.statements[0] as DeclarationStatement).singleDeclaration as
+                VariableDeclaration
+
+        // type should be Integer
+        Assertions.assertEquals(TypeParser.createFrom("Integer", true), i.type)
+
+        // initializer should be a construct expression
+        var constructExpression = i.initializer as ConstructExpression
+
+        // type of the construct expression should also be Integer
+        Assertions.assertEquals(TypeParser.createFrom("Integer", true), constructExpression.type)
+
+        // auto (Integer) m
+        val m =
+            (statement.statements[6] as DeclarationStatement).singleDeclaration as
+                VariableDeclaration
+
+        // type should be Integer*
+        Assertions.assertEquals(TypeParser.createFrom("Integer*", true), m.type)
+
+        // initializer should be a new expression
+        val newExpression = m.initializer as NewExpression
+
+        // type of the new expression should also be Integer*
+        Assertions.assertEquals(TypeParser.createFrom("Integer*", true), newExpression.type)
+
+        // initializer should be a construct expression
+        constructExpression = newExpression.initializer as ConstructExpression
+
+        // type of the construct expression should be Integer
+        Assertions.assertEquals(TypeParser.createFrom("Integer", true), constructExpression.type)
+
+        // argument should be named k and of type m
+        val k = constructExpression.arguments[0] as DeclaredReferenceExpression
+        Assertions.assertEquals("k", k.name)
+
+        // type of the construct expression should also be Integer
+        Assertions.assertEquals(TypeParser.createFrom("int", true), k.type)
+    }
 }
