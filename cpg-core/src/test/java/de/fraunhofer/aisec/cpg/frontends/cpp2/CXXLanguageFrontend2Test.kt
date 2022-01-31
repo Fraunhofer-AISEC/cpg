@@ -39,6 +39,9 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
+import de.fraunhofer.aisec.cpg.helpers.NodeComparator
+import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
+import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.sarif.Region
 import java.io.File
 import java.nio.file.Path
@@ -816,5 +819,37 @@ class CXXLanguageFrontend2Test {
 
         // type of the construct expression should also be Integer
         Assertions.assertEquals(TypeParser.createFrom("int", true), k.type)
+    }
+
+    @Test
+    @Throws(java.lang.Exception::class)
+    fun testSwitch() {
+        val file = File("src/test/resources/cfg/switch.cpp")
+        val declaration =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.unregisterLanguage(CXXLanguageFrontend::class.java)
+                it.registerLanguage(
+                    CXXLanguageFrontend2::class.java,
+                    CXXLanguageFrontend.CXX_EXTENSIONS
+                )
+            }
+        val graphNodes = SubgraphWalker.flattenAST(declaration)
+        graphNodes.sortWith(NodeComparator())
+        Assertions.assertTrue(graphNodes.size != 0)
+        val switchStatements = Util.filterCast(graphNodes, SwitchStatement::class.java)
+        Assertions.assertTrue(switchStatements.size == 3)
+        val switchStatement = switchStatements[0]
+        Assertions.assertTrue(
+            (switchStatement.statement as CompoundStatement).statements.size == 11
+        )
+        val caseStatements =
+            Util.filterCast(SubgraphWalker.flattenAST(switchStatement), CaseStatement::class.java)
+        Assertions.assertTrue(caseStatements.size == 4)
+        val defaultStatements =
+            Util.filterCast(
+                SubgraphWalker.flattenAST(switchStatement),
+                DefaultStatement::class.java
+            )
+        Assertions.assertTrue(defaultStatements.size == 1)
     }
 }
