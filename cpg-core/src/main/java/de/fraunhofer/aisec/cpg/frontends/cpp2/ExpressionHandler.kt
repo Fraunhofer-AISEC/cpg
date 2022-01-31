@@ -35,6 +35,7 @@ import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newDeclaredReferenceExpression
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newLiteral
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newMemberCallExpression
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newMemberExpression
+import de.fraunhofer.aisec.cpg.graph.TypeManager
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.PointerType
 import de.fraunhofer.aisec.cpg.graph.types.Type
@@ -54,6 +55,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend2) :
 
     private fun handleExpression(node: Node): Expression {
         return when (node.type) {
+            "cast_expression" -> handleCastExpression(node)
             "identifier" -> handleIdentifier(node)
             "scoped_identifier" -> handleScopedIdentifier(node)
             "field_expression" -> handleFieldExpression(node)
@@ -73,6 +75,25 @@ class ExpressionHandler(lang: CXXLanguageFrontend2) :
             "null" -> handleNull(node)
             "false" -> handleFalseBooleanLiteral(node)
             "true" -> handleTrueBooleanLiteral(node)
+            "template_function" -> {
+                return when (lang.getCodeFromRawNode(node.childByFieldName("name"))) {
+                    "dynamic_cast" -> handleCastExpressionWithOperator(node, 1)
+                    "static_cast" -> handleCastExpressionWithOperator(node, 2)
+                    "reinterpret_cast" -> handleCastExpressionWithOperator(node, 3)
+                    "const_cast" -> handleCastExpressionWithOperator(node, 4)
+                    else -> {
+                        LanguageFrontend.log.error("Not handling templates yet")
+                        configConstructor.get()
+                    }
+                }
+
+                /*val name = lang.getCodeFromRawNode(node.childByFieldName("name"))
+                if (name.equals("static_cast") || name.equals("const_cast") || name.equals()) {
+                    return handleCastExpression(node)
+                } else {
+                    return configConstructor.get()
+                }*/
+            }
             else -> {
                 LanguageFrontend.log.error(
                     "Not handling expression of type {} yet: {}",
@@ -127,6 +148,44 @@ class ExpressionHandler(lang: CXXLanguageFrontend2) :
         }
 
         return argumentList
+    }
+
+    private fun handleTemplateArgumentList(node: Node): List<de.fraunhofer.aisec.cpg.graph.Node> {
+        var argumentList: MutableList<de.fraunhofer.aisec.cpg.graph.Node> = arrayListOf()
+
+        for (namedChild in 1.rangeTo(node.namedChildCount)) {
+            var child = node.child(namedChild)
+            if (child.type.equals("type_descriptor")) {
+                argumentList.add(lang.handleType(child))
+            } else {
+                argumentList.add(handle(child))
+            }
+        }
+
+        return argumentList
+    }
+
+    private fun handleCastExpressionWithOperator(node: Node, castOperator: Int): Expression {
+        val castExpression = NodeBuilder.newCastExpression(lang.getCodeFromRawNode(node))
+        castExpression.setCastOperator(castOperator)
+        castExpression.castType =
+            handleTemplateArgumentList(node.childByFieldName("arguments"))[0] as Type?
+        return castExpression
+    }
+
+    private fun handleCastExpression(node: Node): Expression {
+        val castExpression = NodeBuilder.newCastExpression(lang.getCodeFromRawNode(node))
+        castExpression.expression = handle(node.childByFieldName("value"))
+        castExpression.setCastOperator(0)
+        castExpression.castType = lang.handleType(node.childByFieldName("type"))
+
+        if (TypeManager.getInstance().isPrimitive(castExpression.castType)) {
+            castExpression.type = castExpression.castType
+        } else {
+            castExpression.expression.registerTypeListener(castExpression)
+        }
+
+        return castExpression
     }
 
     private fun handleNewExpression(node: Node): Expression {
@@ -199,6 +258,16 @@ class ExpressionHandler(lang: CXXLanguageFrontend2) :
                         lang.getCodeFromRawNode(node),
                         false
                     )
+                is CastExpression -> {
+                    reference.code = lang.getCodeFromRawNode(node)
+                    reference.expression = handleArgumentList(node.childByFieldName("arguments"))[0]
+                    if (TypeManager.getInstance().isPrimitive(reference.castType)) {
+                        reference.type = reference.castType
+                    } else {
+                        reference.expression.registerTypeListener(reference)
+                    }
+                    reference
+                }
                 else -> {
                     throw TranslationException(
                         "Trying to 'call' something which is not a reference"
@@ -206,13 +275,15 @@ class ExpressionHandler(lang: CXXLanguageFrontend2) :
                 }
             }
 
-        // parse arguments
-        val arguments = "arguments" of node
-        if (!arguments.isNull) {
-            for (i in 0 until arguments.namedChildCount) {
-                val expression = handle(arguments.namedChild(i))
+        if (call is CallExpression) {
+            // parse arguments
+            val arguments = "arguments" of node
+            if (!arguments.isNull) {
+                for (i in 0 until arguments.namedChildCount) {
+                    val expression = handle(arguments.namedChild(i))
 
-                call.addArgument(expression)
+                    call.addArgument(expression)
+                }
             }
         }
 

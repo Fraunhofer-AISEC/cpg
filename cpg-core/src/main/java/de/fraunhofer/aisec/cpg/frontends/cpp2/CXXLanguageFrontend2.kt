@@ -109,6 +109,8 @@ class CXXLanguageFrontend2(config: TranslationConfiguration, scopeManager: Scope
                     ?: UnknownType.getUnknownType()
             "class_specifier" -> handleClassSpecifier(node)
             "auto" -> UnknownType.getUnknownType()
+            "type_descriptor" -> getCodeFromRawNode(node)?.let { TypeParser.createFrom(it, false) }
+                    ?: UnknownType.getUnknownType()
             "template_type" -> getCodeFromRawNode(node)?.let { TypeParser.createFrom(it, false) }
                     ?: UnknownType.getUnknownType()
             else -> {
