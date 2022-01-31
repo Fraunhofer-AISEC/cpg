@@ -64,11 +64,11 @@ public class CallResolver extends Pass {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(CallResolver.class);
 
-  private final Map<String, RecordDeclaration> recordMap = new HashMap<>();
-  private final List<TemplateDeclaration> templateList = new ArrayList<>();
-  private final Map<FunctionDeclaration, Type> containingType = new HashMap<>();
-  @Nullable private TranslationUnitDeclaration currentTU;
-  private ScopedWalker walker;
+  protected final Map<String, RecordDeclaration> recordMap = new HashMap<>();
+  protected final List<TemplateDeclaration> templateList = new ArrayList<>();
+  protected final Map<FunctionDeclaration, Type> containingType = new HashMap<>();
+  @Nullable protected TranslationUnitDeclaration currentTU;
+  protected ScopedWalker walker;
 
   @Override
   public void cleanup() {
@@ -103,7 +103,7 @@ public class CallResolver extends Pass {
     }
   }
 
-  private void findRecords(@NonNull Node node, RecordDeclaration curClass) {
+  protected void findRecords(@NonNull Node node, RecordDeclaration curClass) {
     if (node instanceof RecordDeclaration) {
       recordMap.putIfAbsent(node.getName(), (RecordDeclaration) node);
     }
@@ -115,13 +115,13 @@ public class CallResolver extends Pass {
    * @param node
    * @param curClass
    */
-  private void findTemplates(@NonNull Node node, RecordDeclaration curClass) {
+  protected void findTemplates(@NonNull Node node, RecordDeclaration curClass) {
     if (node instanceof TemplateDeclaration) {
       templateList.add((TemplateDeclaration) node);
     }
   }
 
-  private void registerMethods(
+  protected void registerMethods(
       RecordDeclaration currentClass, Node parent, @NonNull Node currentNode) {
     if (currentNode instanceof MethodDeclaration && currentClass != null) {
       containingType.put(
@@ -129,7 +129,7 @@ public class CallResolver extends Pass {
     }
   }
 
-  private void fixInitializers(@NonNull Node node, RecordDeclaration curClass) {
+  protected void fixInitializers(@NonNull Node node, RecordDeclaration curClass) {
     if (node instanceof VariableDeclaration) {
       VariableDeclaration declaration = ((VariableDeclaration) node);
       // check if we have the corresponding class for this type
@@ -190,7 +190,7 @@ public class CallResolver extends Pass {
    * @param curClass The class containing the call
    * @param call The call to be resolved
    */
-  private void handleSuperCall(RecordDeclaration curClass, CallExpression call) {
+  protected void handleSuperCall(RecordDeclaration curClass, CallExpression call) {
     RecordDeclaration target = null;
     if (call.getBase().getName().equals("super")) {
       // direct superclass, either defined explicitly or java.lang.Object by default
@@ -214,7 +214,7 @@ public class CallResolver extends Pass {
     }
   }
 
-  private RecordDeclaration handleSpecificSupertype(
+  protected RecordDeclaration handleSpecificSupertype(
       RecordDeclaration curClass, CallExpression call) {
     String baseName =
         call.getBase().getName().substring(0, call.getBase().getName().lastIndexOf(".super"));
@@ -239,7 +239,7 @@ public class CallResolver extends Pass {
     return null;
   }
 
-  private void resolve(@NonNull Node node, RecordDeclaration curClass) {
+  protected void resolve(@NonNull Node node, RecordDeclaration curClass) {
     if (node instanceof TranslationUnitDeclaration) {
       this.currentTU = (TranslationUnitDeclaration) node;
     } else if (node instanceof ExplicitConstructorInvocation) {
@@ -261,7 +261,7 @@ public class CallResolver extends Pass {
     }
   }
 
-  private void handleCallExpression(RecordDeclaration curClass, CallExpression call) {
+  protected void handleCallExpression(RecordDeclaration curClass, CallExpression call) {
     if (lang instanceof JavaLanguageFrontend
         && call.getBase() instanceof DeclaredReferenceExpression
         && call.getBase().getName().matches("(?<class>.+\\.)?super")) {
@@ -310,7 +310,7 @@ public class CallResolver extends Pass {
    *     callParamerter must be an Expression and its type must match the type of the
    *     ParamVariableDeclaration (same type or subtype) => returns true Otherwise return false
    */
-  private boolean isInstantiated(Node callParameter, Declaration templateParameter) {
+  protected boolean isInstantiated(Node callParameter, Declaration templateParameter) {
     if (callParameter instanceof TypeExpression) {
       callParameter = ((TypeExpression) callParameter).getType();
     }
@@ -338,8 +338,8 @@ public class CallResolver extends Pass {
    * @return mapping of the parameterizedtypes to the corresponding TypeParamDeclaration in the
    *     template
    */
-  private Map<ParameterizedType, TypeParamDeclaration> getParameterizedSignaturesFromInitialization(
-      Map<Declaration, Node> intialization) {
+  protected Map<ParameterizedType, TypeParamDeclaration>
+      getParameterizedSignaturesFromInitialization(Map<Declaration, Node> intialization) {
     Map<ParameterizedType, TypeParamDeclaration> parameterizedSignature = new HashMap<>();
     for (Declaration templateParam : intialization.keySet()) {
       if (templateParam instanceof TypeParamDeclaration) {
@@ -363,7 +363,7 @@ public class CallResolver extends Pass {
    *     on resolution {@link TemplateDeclaration.TemplateInitialization}
    * @param orderedInitializationSignature mapping of the ordering of the template parameters
    */
-  private void handleImplicitTemplateParameter(
+  protected void handleImplicitTemplateParameter(
       FunctionTemplateDeclaration functionTemplateDeclaration,
       int index,
       Map<Declaration, Node> instantiationSignature,
@@ -413,7 +413,7 @@ public class CallResolver extends Pass {
    *     initialization -> initialization not possible
    */
   @Nullable
-  private Map<Declaration, Node> constructTemplateInitializationSignatureFromTemplateParameters(
+  protected Map<Declaration, Node> constructTemplateInitializationSignatureFromTemplateParameters(
       FunctionTemplateDeclaration functionTemplateDeclaration,
       CallExpression templateCall,
       Map<Node, TemplateDeclaration.TemplateInitialization> instantiationType,
@@ -470,7 +470,7 @@ public class CallResolver extends Pass {
    *     the {ParamVariableDeclaration, TypeParamDeclaration} do not match the provided value for
    *     initialization -> initialization not possible
    */
-  private Map<Declaration, Node> getTemplateInitializationSignature(
+  protected Map<Declaration, Node> getTemplateInitializationSignature(
       FunctionTemplateDeclaration functionTemplateDeclaration,
       CallExpression templateCall,
       Map<Node, TemplateDeclaration.TemplateInitialization> instantiationType,
@@ -518,7 +518,7 @@ public class CallResolver extends Pass {
    *     will resolve to a instantiation/invocation of an inferred template
    * @return true if resolution was successful, false if not
    */
-  private boolean handleTemplateFunctionCalls(
+  protected boolean handleTemplateFunctionCalls(
       @Nullable RecordDeclaration curClass,
       @NonNull CallExpression templateCall,
       boolean applyInference) {
@@ -609,7 +609,7 @@ public class CallResolver extends Pass {
    *     on resolution {@link TemplateDeclaration.TemplateInitialization}
    * @param orderedInitializationSignature mapping of the ordering of the template parameters
    */
-  private void applyTemplateInstantiation(
+  protected void applyTemplateInstantiation(
       CallExpression templateCall,
       FunctionTemplateDeclaration functionTemplateDeclaration,
       FunctionDeclaration function,
@@ -677,7 +677,7 @@ public class CallResolver extends Pass {
    * @return true if the instantiation of the template is compatible with the templatedeclaration,
    *     false otherwise
    */
-  private boolean checkArgumentValidity(
+  protected boolean checkArgumentValidity(
       FunctionDeclaration functionDeclaration,
       List<Type> functionDeclarationSignature,
       CallExpression templateCallExpression,
@@ -719,7 +719,7 @@ public class CallResolver extends Pass {
    *     ParameterizedTypes (which depend on the specific instantiation of the template) are
    *     resolved to the values the Template is instantiated with.
    */
-  private List<Type> getCallSignature(
+  protected List<Type> getCallSignature(
       FunctionDeclaration function,
       Map<ParameterizedType, TypeParamDeclaration> parameterizedTypeResolution,
       Map<Declaration, Node> initializationSignature) {
@@ -738,7 +738,7 @@ public class CallResolver extends Pass {
     return templateCallSignature;
   }
 
-  private void resolveArguments(CallExpression call, RecordDeclaration curClass) {
+  protected void resolveArguments(CallExpression call, RecordDeclaration curClass) {
     Deque<Node> worklist = new ArrayDeque<>();
     call.getArguments().forEach(worklist::push);
     while (!worklist.isEmpty()) {
@@ -763,7 +763,7 @@ public class CallResolver extends Pass {
    * @return true if the CallExpression signature can be transformed into the FunctionDeclaration
    *     signature by means of casting
    */
-  private boolean compatibleSignatures(List<Type> callSignature, List<Type> functionSignature) {
+  protected boolean compatibleSignatures(List<Type> callSignature, List<Type> functionSignature) {
     if (callSignature.size() == functionSignature.size()) {
       for (int i = 0; i < callSignature.size(); i++) {
         if ((callSignature.get(i).isPrimitive() != functionSignature.get(i).isPrimitive())
@@ -791,7 +791,7 @@ public class CallResolver extends Pass {
    *     argument at the i-th position of the FunctionDeclaration). If the list is empty the
    *     signature of the FunctionDeclaration cannot be reached through implicit casts
    */
-  private List<CastExpression> signatureWithImplicitCastTransformation(
+  protected List<CastExpression> signatureWithImplicitCastTransformation(
       List<Type> callSignature, List<Expression> arguments, List<Type> functionSignature) {
     if (callSignature.size() == functionSignature.size()) {
       List<CastExpression> implicitCasts = new ArrayList<>();
@@ -823,7 +823,7 @@ public class CallResolver extends Pass {
    * @return list containing the signature containing all argument types including the default
    *     arguments
    */
-  private List<Type> getCallSignatureWithDefaults(
+  protected List<Type> getCallSignatureWithDefaults(
       CallExpression call, FunctionDeclaration functionDeclaration) {
     List<Type> callSignature = new ArrayList<>(call.getSignature());
     if (call.getSignature().size() < functionDeclaration.getParameters().size()) {
@@ -844,7 +844,7 @@ public class CallResolver extends Pass {
    * @param call we want to find invocation targets for by performing implicit casts
    * @return list of invocation candidates by applying implicit casts
    */
-  private List<FunctionDeclaration> resolveWithImplicitCast(
+  protected List<FunctionDeclaration> resolveWithImplicitCast(
       CallExpression call, List<FunctionDeclaration> initialInvocationCandidates) {
 
     // Output list for invocationTargets obtaining a valid signature by performing implicit casts
@@ -894,7 +894,7 @@ public class CallResolver extends Pass {
    * @param call we want to find invocation targets for by performing implicit casts
    * @return list of invocation candidates by applying implicit casts
    */
-  private List<FunctionDeclaration> resolveWithImplicitCastFunc(CallExpression call) {
+  protected List<FunctionDeclaration> resolveWithImplicitCastFunc(CallExpression call) {
     if (lang == null) {
       Util.errorWithFileLocation(
           call, log, "Could not resolve implicit casts: language frontend is null");
@@ -915,7 +915,7 @@ public class CallResolver extends Pass {
    * @param implicitCasts current Cast
    * @param implicitCastTargets new Cast
    */
-  private void checkMostCommonImplicitCast(
+  protected void checkMostCommonImplicitCast(
       List<CastExpression> implicitCasts, List<CastExpression> implicitCastTargets) {
     for (int i = 0; i < implicitCasts.size(); i++) {
       CastExpression currentCast = implicitCasts.get(i);
@@ -941,7 +941,7 @@ public class CallResolver extends Pass {
    * @param call CallExpression
    * @param implicitCasts Casts
    */
-  private void applyImplicitCastToArguments(
+  protected void applyImplicitCastToArguments(
       CallExpression call, List<CastExpression> implicitCasts) {
     if (implicitCasts != null) {
       for (int i = 0; i < implicitCasts.size(); i++) {
@@ -958,7 +958,7 @@ public class CallResolver extends Pass {
    * @param constructExpression ConstructExpression
    * @param implicitCasts Casts
    */
-  private void applyImplicitCastToArguments(
+  protected void applyImplicitCastToArguments(
       ConstructExpression constructExpression, List<CastExpression> implicitCasts) {
     if (implicitCasts != null) {
       for (int i = 0; i < implicitCasts.size(); i++) {
@@ -977,7 +977,7 @@ public class CallResolver extends Pass {
    * @return List of FunctionDeclarations that are the target of the CallExpression (will be
    *     connected with an invokes edge)
    */
-  private List<FunctionDeclaration> resolveWithDefaultArgs(
+  protected List<FunctionDeclaration> resolveWithDefaultArgs(
       CallExpression call, List<FunctionDeclaration> initialInvocationCandidates) {
 
     List<FunctionDeclaration> invocationCandidatesDefaultArgs = new ArrayList<>();
@@ -997,7 +997,7 @@ public class CallResolver extends Pass {
    * @return list of invocation candidates that have matching signature when considering default
    *     arguments
    */
-  private List<FunctionDeclaration> resolveWithDefaultArgsFunc(CallExpression call) {
+  protected List<FunctionDeclaration> resolveWithDefaultArgsFunc(CallExpression call) {
     if (lang == null) {
       Util.errorWithFileLocation(
           call, log, "Could not resolve default arguments: language frontend is null");
@@ -1014,7 +1014,7 @@ public class CallResolver extends Pass {
     return resolveWithDefaultArgs(call, invocationCandidates);
   }
 
-  private void handleNormalCalls(RecordDeclaration curClass, CallExpression call) {
+  protected void handleNormalCalls(RecordDeclaration curClass, CallExpression call) {
     if (curClass == null && lang != null) {
       // Handle function (not method) calls
       // C++ allows function overloading. Make sure we have at least the same number of arguments
@@ -1034,7 +1034,7 @@ public class CallResolver extends Pass {
     }
   }
 
-  private void handleNormalCallCXX(RecordDeclaration curClass, CallExpression call) {
+  protected void handleNormalCallCXX(RecordDeclaration curClass, CallExpression call) {
     if (lang == null) {
       Util.errorWithFileLocation(
           call, log, "Could not handle normal CXX calls: language frontend is null");
@@ -1075,7 +1075,7 @@ public class CallResolver extends Pass {
     call.setInvokes(invocationCandidates);
   }
 
-  private void createInferredFunction(
+  protected void createInferredFunction(
       List<FunctionDeclaration> invocationCandidates, CallExpression call) {
     if (invocationCandidates.isEmpty()) {
       // If we still have no candidates and our current language is c++ we create an inferred
@@ -1086,7 +1086,7 @@ public class CallResolver extends Pass {
     }
   }
 
-  private void handleMethodCall(RecordDeclaration curClass, CallExpression call) {
+  protected void handleMethodCall(RecordDeclaration curClass, CallExpression call) {
     Set<Type> possibleContainingTypes = getPossibleContainingTypes(call, curClass);
 
     // Find overridden invokes
@@ -1131,7 +1131,7 @@ public class CallResolver extends Pass {
    * @return FunctionDeclarations that are invocation candidates for the MethodCall call using C++
    *     resolution techniques
    */
-  private List<FunctionDeclaration> handleCXXMethodCall(
+  protected List<FunctionDeclaration> handleCXXMethodCall(
       RecordDeclaration curClass, CallExpression call) {
     if (lang == null) {
       Util.errorWithFileLocation(
@@ -1172,7 +1172,7 @@ public class CallResolver extends Pass {
    * @param possibleContainingTypes
    * @param call
    */
-  private void createMethodDummies(
+  protected void createMethodDummies(
       List<FunctionDeclaration> invocationCandidates,
       Set<Type> possibleContainingTypes,
       CallExpression call) {
@@ -1195,7 +1195,7 @@ public class CallResolver extends Pass {
    * @param call
    * @return true if we should stop searching parent, false otherwise
    */
-  private boolean shouldSearchForInvokesInParent(CallExpression call) {
+  protected boolean shouldSearchForInvokesInParent(CallExpression call) {
     if (lang == null) {
       Util.errorWithFileLocation(
           call, log, "Could not search for invokes in parent: language frontend is null");
@@ -1206,7 +1206,7 @@ public class CallResolver extends Pass {
     return lang.getScopeManager().resolveFunctionStopScopeTraversalOnDefinition(call).isEmpty();
   }
 
-  private void resolveConstructExpression(ConstructExpression constructExpression) {
+  protected void resolveConstructExpression(ConstructExpression constructExpression) {
     String typeName = constructExpression.getType().getTypeName();
     RecordDeclaration recordDeclaration = recordMap.get(typeName);
     constructExpression.setInstantiates(recordDeclaration);
@@ -1251,12 +1251,12 @@ public class CallResolver extends Pass {
 
   /**
    * Adds the resolved default template arguments recursively to the templateParameter list of the
-   * ConstructExpression until a fixpoint is reached e.g. template<class Type1, class Type2 = Type1>
+   * ConstructExpression until a fixpoint is reached e.g. template&lt;class Type1, class Type2 = Type1&gt;
    *
    * @param constructExpression
    * @param template
    */
-  private void addRecursiveDefaultTemplateArgs(
+  protected void addRecursiveDefaultTemplateArgs(
       ConstructExpression constructExpression, ClassTemplateDeclaration template) {
     int templateParameters;
     do {
@@ -1291,7 +1291,7 @@ public class CallResolver extends Pass {
    * @param templateParameterRealDefaultInitialization mapping of template parameter to its real
    *     default (no recursive)
    */
-  private void applyMissingParams(
+  protected void applyMissingParams(
       ClassTemplateDeclaration template,
       ConstructExpression constructExpression,
       Map<Node, Node> templateParametersExplicitInitialization,
@@ -1343,7 +1343,7 @@ public class CallResolver extends Pass {
    * @param templateParametersExplicitInitialization mapping of the template parameter to the
    *     explicit instantiation
    */
-  private void handleExplicitTemplateParameters(
+  protected void handleExplicitTemplateParameters(
       ConstructExpression constructExpression,
       ClassTemplateDeclaration template,
       Map<Node, Node> templateParametersExplicitInitialization) {
@@ -1366,7 +1366,7 @@ public class CallResolver extends Pass {
    * @param templateParameterRealDefaultInitialization mapping of template parameter to its real
    *     default (no recursive)
    */
-  private void handleDefaultTemplateParameters(
+  protected void handleDefaultTemplateParameters(
       ClassTemplateDeclaration template,
       Map<Node, Node> templateParameterRealDefaultInitialization) {
     List<Type> declaredTemplateTypes = new ArrayList<>();
@@ -1398,7 +1398,7 @@ public class CallResolver extends Pass {
     }
   }
 
-  private void handleFunctionPointerCall(CallExpression call, Node pointer) {
+  protected void handleFunctionPointerCall(CallExpression call, Node pointer) {
     if (!(pointer instanceof HasType
         && ((HasType) pointer).getType() instanceof FunctionPointerType)) {
       LOGGER.error("Can't handle a function pointer call without function pointer type");
@@ -1432,7 +1432,7 @@ public class CallResolver extends Pass {
     call.setInvokes(invocationCandidates);
   }
 
-  private void resolveExplicitConstructorInvocation(ExplicitConstructorInvocation eci) {
+  protected void resolveExplicitConstructorInvocation(ExplicitConstructorInvocation eci) {
     if (eci.getContainingClass() != null) {
       RecordDeclaration recordDeclaration = recordMap.get(eci.getContainingClass());
       List<Type> signature =
@@ -1447,7 +1447,7 @@ public class CallResolver extends Pass {
     }
   }
 
-  private boolean handlePossibleStaticImport(
+  protected boolean handlePossibleStaticImport(
       @Nullable CallExpression call, RecordDeclaration curClass) {
     if (call == null || curClass == null) {
       return false;
@@ -1479,7 +1479,7 @@ public class CallResolver extends Pass {
     }
   }
 
-  private void generateInferredStaticallyImportedMethods(
+  protected void generateInferredStaticallyImportedMethods(
       @NonNull CallExpression call,
       @NonNull String name,
       @NonNull List<FunctionDeclaration> invokes,
@@ -1517,7 +1517,7 @@ public class CallResolver extends Pass {
    * @param call
    * @return inferred FunctionTemplateDeclaration which can be invoked by the call
    */
-  private FunctionTemplateDeclaration createInferredFunctionTemplate(
+  protected FunctionTemplateDeclaration createInferredFunctionTemplate(
       RecordDeclaration containingRecord, CallExpression call) {
     String name = call.getName();
     String code = call.getCode();
@@ -1573,7 +1573,7 @@ public class CallResolver extends Pass {
   }
 
   @NonNull
-  private FunctionDeclaration createInferredFunctionDeclaration(
+  protected FunctionDeclaration createInferredFunctionDeclaration(
       RecordDeclaration containingRecord,
       String name,
       String code,
@@ -1622,7 +1622,7 @@ public class CallResolver extends Pass {
     }
   }
 
-  private ConstructorDeclaration createInferredConstructor(
+  protected ConstructorDeclaration createInferredConstructor(
       @NonNull RecordDeclaration containingRecord, List<Type> signature) {
     ConstructorDeclaration inferred =
         NodeBuilder.newConstructorDeclaration(containingRecord.getName(), "", containingRecord);
@@ -1632,7 +1632,7 @@ public class CallResolver extends Pass {
     return inferred;
   }
 
-  private Set<Type> getPossibleContainingTypes(Node node, RecordDeclaration curClass) {
+  protected Set<Type> getPossibleContainingTypes(Node node, RecordDeclaration curClass) {
     Set<Type> possibleTypes = new HashSet<>();
     if (node instanceof MemberCallExpression) {
       MemberCallExpression memberCall = (MemberCallExpression) node;
@@ -1652,7 +1652,7 @@ public class CallResolver extends Pass {
     return possibleTypes;
   }
 
-  private List<FunctionDeclaration> getInvocationCandidatesFromRecord(
+  protected List<FunctionDeclaration> getInvocationCandidatesFromRecord(
       RecordDeclaration recordDeclaration, String name, CallExpression call) {
     List<Type> signature = call.getSignature();
     Pattern namePattern =
@@ -1703,7 +1703,7 @@ public class CallResolver extends Pass {
     }
   }
 
-  private List<FunctionDeclaration> getInvocationCandidatesFromParents(
+  protected List<FunctionDeclaration> getInvocationCandidatesFromParents(
       String name, CallExpression call, Set<RecordDeclaration> possibleTypes) {
     Set<RecordDeclaration> workingPossibleTypes = new HashSet<>(possibleTypes);
 
@@ -1746,7 +1746,7 @@ public class CallResolver extends Pass {
    * @return true if there is no method in the recordDeclaration where the name of the method
    *     matches with the provided name. false otherwise
    */
-  private boolean shouldContinueSearchInParent(RecordDeclaration recordDeclaration, String name) {
+  protected boolean shouldContinueSearchInParent(RecordDeclaration recordDeclaration, String name) {
     Pattern namePattern =
         Pattern.compile(
             "(" + Pattern.quote(recordDeclaration.getName()) + "\\.)?" + Pattern.quote(name));
@@ -1760,7 +1760,7 @@ public class CallResolver extends Pass {
     return invocationCandidate.isEmpty();
   }
 
-  private Set<FunctionDeclaration> getOverridingCandidates(
+  protected Set<FunctionDeclaration> getOverridingCandidates(
       Set<Type> possibleSubTypes, FunctionDeclaration declaration) {
     return declaration.getOverriddenBy().stream()
         .filter(f -> possibleSubTypes.contains(containingType.get(f)))
@@ -1772,7 +1772,7 @@ public class CallResolver extends Pass {
    * @param recordDeclaration matching the class the ConstructExpression wants to construct
    * @return ConstructorDeclaration that matches the provided signature
    */
-  private ConstructorDeclaration getConstructorDeclarationDirectMatch(
+  protected ConstructorDeclaration getConstructorDeclarationDirectMatch(
       List<Type> signature, RecordDeclaration recordDeclaration) {
     for (ConstructorDeclaration constructor : recordDeclaration.getConstructors()) {
       if (constructor.hasSignature(signature)) {
@@ -1790,7 +1790,7 @@ public class CallResolver extends Pass {
    *     added default arguments. The default arguments are added to the arguments edge of the
    *     ConstructExpression
    */
-  private ConstructorDeclaration resolveConstructorWithDefaults(
+  protected ConstructorDeclaration resolveConstructorWithDefaults(
       ConstructExpression constructExpression,
       List<Type> signature,
       RecordDeclaration recordDeclaration) {
@@ -1815,7 +1815,7 @@ public class CallResolver extends Pass {
    *     ConstructExpressions. The arguments are proxied through a CastExpression to the type
    *     required by the ConstructDeclaration.
    */
-  private ConstructorDeclaration resolveConstructorWithImplicitCast(
+  protected ConstructorDeclaration resolveConstructorWithImplicitCast(
       ConstructExpression constructExpression, RecordDeclaration recordDeclaration) {
     for (ConstructorDeclaration constructorDeclaration : recordDeclaration.getConstructors()) {
       var workingSignature = new ArrayList<>(constructExpression.getSignature());
@@ -1859,7 +1859,7 @@ public class CallResolver extends Pass {
    *     matches the ConstructExpression.
    */
   @NonNull
-  private ConstructorDeclaration getConstructorDeclaration(
+  protected ConstructorDeclaration getConstructorDeclaration(
       ConstructExpression constructExpression, RecordDeclaration recordDeclaration) {
     List<Type> signature = constructExpression.getSignature();
     ConstructorDeclaration constructorCandidate =
@@ -1886,7 +1886,7 @@ public class CallResolver extends Pass {
   }
 
   @NonNull
-  private ConstructorDeclaration getConstructorDeclarationForExplicitInvocation(
+  protected ConstructorDeclaration getConstructorDeclarationForExplicitInvocation(
       List<Type> signature, RecordDeclaration recordDeclaration) {
     return recordDeclaration.getConstructors().stream()
         .filter(f -> f.hasSignature(signature))
