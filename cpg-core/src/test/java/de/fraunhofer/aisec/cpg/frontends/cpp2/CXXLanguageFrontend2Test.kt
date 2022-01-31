@@ -52,6 +52,13 @@ import java.nio.file.Path
 import java.util.*
 import java.util.Map
 import java.util.function.Consumer
+import kotlin.collections.ArrayList
+import kotlin.collections.HashMap
+import kotlin.collections.List
+import kotlin.collections.MutableMap
+import kotlin.collections.listOf
+import kotlin.collections.set
+import kotlin.collections.sortWith
 import kotlin.test.*
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
@@ -1202,5 +1209,40 @@ class CXXLanguageFrontend2Test {
             }
         }
         Assertions.assertTrue(expected.isEmpty(), java.lang.String.join(", ", expected.keys))
+    }
+
+    @Test
+    @Throws(java.lang.Exception::class)
+    fun testTypeId() {
+        val file = File("src/test/resources/typeidexpr.cpp")
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.unregisterLanguage(CXXLanguageFrontend::class.java)
+                it.registerLanguage(
+                    CXXLanguageFrontend2::class.java,
+                    CXXLanguageFrontend.CXX_EXTENSIONS
+                )
+            }
+        val main = tu.getDeclarationsByName("main", FunctionDeclaration::class.java)
+        Assertions.assertNotNull(main)
+        val funcDecl = main.iterator().next()
+        val i = funcDecl.getVariableDeclarationByName("i").orElse(null)
+        Assertions.assertNotNull(i)
+        val sizeof = i.initializer as TypeIdExpression
+        Assertions.assertNotNull(sizeof)
+        Assertions.assertEquals("sizeof", sizeof.name)
+        Assertions.assertEquals(TypeParser.createFrom("std::size_t", true), sizeof.type)
+        val typeInfo = funcDecl.getVariableDeclarationByName("typeInfo").orElse(null)
+        Assertions.assertNotNull(typeInfo)
+        val typeid = typeInfo.initializer as TypeIdExpression
+        Assertions.assertNotNull(typeid)
+        Assertions.assertEquals("typeid", typeid.name)
+        Assertions.assertEquals(TypeParser.createFrom("const std::type_info&", true), typeid.type)
+        val j = funcDecl.getVariableDeclarationByName("j").orElse(null)
+        Assertions.assertNotNull(j)
+        val alignof = j.initializer as TypeIdExpression
+        Assertions.assertNotNull(sizeof)
+        Assertions.assertEquals("alignof", alignof.name)
+        Assertions.assertEquals(TypeParser.createFrom("std::size_t", true), alignof.type)
     }
 }
