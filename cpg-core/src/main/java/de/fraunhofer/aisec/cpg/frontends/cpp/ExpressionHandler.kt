@@ -485,7 +485,8 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                     reference.operatorCode,
                     ctx.rawSignature
                 )
-            if ((ctx.functionNameExpression as? CPPASTFieldReference)?.fieldName is CPPASTTemplateId) {
+            if ((ctx.functionNameExpression as? CPPASTFieldReference)?.fieldName is CPPASTTemplateId
+            ) {
                 // Make necessary adjustments if we are handling a function template
                 val name =
                     ((ctx.functionNameExpression as CPPASTFieldReference).fieldName as
