@@ -1176,4 +1176,31 @@ class CXXLanguageFrontend2Test {
         )
         Assertions.assertTrue(eogEdges.contains(returnStatement))
     }
+
+    @Test
+    @Throws(java.lang.Exception::class)
+    fun testRegionsCfg() {
+        val file = File("src/test/resources/cfg.cpp")
+        val declaration =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.unregisterLanguage(CXXLanguageFrontend::class.java)
+                it.registerLanguage(
+                    CXXLanguageFrontend2::class.java,
+                    CXXLanguageFrontend.CXX_EXTENSIONS
+                )
+            }
+        val fdecl = declaration.getDeclarationAs(0, FunctionDeclaration::class.java)
+        val body = fdecl!!.body as CompoundStatement
+        val expected: MutableMap<String?, Region> = HashMap()
+        expected["cout << \"bla\";"] = Region(4, 3, 4, 17)
+        expected["cout << \"blubb\";"] = Region(5, 3, 5, 19)
+        expected["return 0;"] = Region(15, 3, 15, 12)
+        for (d in body.statements) {
+            if (expected.containsKey(d.code)) {
+                Assertions.assertEquals(expected[d.code], d.location!!.region, d.code)
+                expected.remove(d.code)
+            }
+        }
+        Assertions.assertTrue(expected.isEmpty(), java.lang.String.join(", ", expected.keys))
+    }
 }
