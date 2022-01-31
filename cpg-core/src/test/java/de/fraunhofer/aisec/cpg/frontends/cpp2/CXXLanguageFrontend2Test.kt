@@ -1004,4 +1004,40 @@ class CXXLanguageFrontend2Test {
         Assertions.assertEquals(5, (die.lhs[0] as Literal<*>).value)
         Assertions.assertEquals(2, (die.rhs as Literal<*>).value)
     }
+
+    @Test
+    @Throws(java.lang.Exception::class)
+    fun testInitListExpression() {
+        val file = File("src/test/resources/initlistexpression.cpp")
+        val declaration =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.unregisterLanguage(CXXLanguageFrontend::class.java)
+                it.registerLanguage(
+                    CXXLanguageFrontend2::class.java,
+                    CXXLanguageFrontend.CXX_EXTENSIONS
+                )
+            }
+
+        // x y = { 1, 2 };
+        val y = declaration.getDeclarationAs(1, VariableDeclaration::class.java)
+        Assertions.assertEquals("y", y!!.name)
+        var initializer: Expression = y.initializer!!
+        Assertions.assertNotNull(initializer)
+        Assertions.assertTrue(initializer is InitializerListExpression)
+        var listExpression = initializer as InitializerListExpression
+        Assertions.assertEquals(2, listExpression.initializers.size)
+        val a = listExpression.initializers[0] as Literal<*>
+        val b = listExpression.initializers[1] as Literal<*>
+        Assertions.assertEquals(1, a.value)
+        Assertions.assertEquals(2, b.value)
+
+        // int z[] = { 2, 3, 4 };
+        val z = declaration.getDeclarationAs(2, VariableDeclaration::class.java)
+        Assertions.assertEquals(TypeParser.createFrom("int[]", true), z!!.type)
+        initializer = z.initializer!!
+        Assertions.assertNotNull(initializer)
+        Assertions.assertTrue(initializer is InitializerListExpression)
+        listExpression = initializer as InitializerListExpression
+        Assertions.assertEquals(3, listExpression.initializers.size)
+    }
 }
