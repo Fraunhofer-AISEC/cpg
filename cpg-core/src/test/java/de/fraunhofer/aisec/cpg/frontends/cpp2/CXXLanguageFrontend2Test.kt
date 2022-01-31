@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.frontends.cpp2
 
 import com.google.common.collect.Iterables
 import com.google.common.collect.Lists
+import de.fraunhofer.aisec.cpg.InferenceConfiguration.Companion.builder
 import de.fraunhofer.aisec.cpg.TestUtils.analyzeAndGetFirstTU
 import de.fraunhofer.aisec.cpg.TestUtils.analyzeWithBuilder
 import de.fraunhofer.aisec.cpg.TestUtils.assertRefersTo
@@ -48,6 +49,9 @@ import java.nio.file.Path
 import java.util.*
 import java.util.Map
 import java.util.function.Consumer
+import kotlin.collections.List
+import kotlin.collections.listOf
+import kotlin.collections.sortWith
 import kotlin.test.*
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
@@ -1108,5 +1112,32 @@ class CXXLanguageFrontend2Test {
             "SomeCategory, SomeOtherThing",
             (annotation.members[0].value as Literal<String?>).value
         )
+    }
+
+    @Test
+    @Throws(java.lang.Exception::class)
+    fun testParenthesis() {
+        val file = File("src/test/resources/parenthesis.cpp")
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.inferenceConfiguration(builder().guessCastExpressions(true).build())
+                it.unregisterLanguage(CXXLanguageFrontend::class.java)
+                it.registerLanguage(
+                    CXXLanguageFrontend2::class.java,
+                    CXXLanguageFrontend.CXX_EXTENSIONS
+                )
+            }
+
+        val main =
+            tu.getDeclarationsByName("main", FunctionDeclaration::class.java).iterator().next()
+        Assertions.assertNotNull(main)
+        val declStatement = main.getBodyStatementAs(0, DeclarationStatement::class.java)
+        Assertions.assertNotNull(declStatement)
+        val decl = declStatement!!.singleDeclaration as VariableDeclaration
+        Assertions.assertNotNull(decl)
+        val initializer: Expression = decl.initializer!!
+        Assertions.assertNotNull(initializer)
+        Assertions.assertTrue(initializer is CastExpression)
+        Assertions.assertEquals("size_t", (initializer as CastExpression).castType.name)
     }
 }
