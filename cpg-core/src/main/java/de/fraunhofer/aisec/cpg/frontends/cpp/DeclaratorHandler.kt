@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.frontends.cpp
 
 import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.frontends.HandlerInterface
+import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newRecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.*
@@ -43,6 +44,7 @@ import java.util.stream.Collectors
 import org.eclipse.cdt.core.dom.ast.IASTCompositeTypeSpecifier
 import org.eclipse.cdt.core.dom.ast.IASTDeclarator
 import org.eclipse.cdt.core.dom.ast.IASTNameOwner
+import org.eclipse.cdt.core.dom.ast.IASTNode
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTCompositeTypeSpecifier
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTCompositeTypeSpecifier.ICPPASTBaseSpecifier
 import org.eclipse.cdt.internal.core.dom.parser.cpp.*
@@ -134,13 +136,14 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
 
     private fun createMethodOrConstructor(
         name: String,
-        code: String,
-        recordDeclaration: RecordDeclaration?
+        recordDeclaration: RecordDeclaration?,
+        lang: LanguageFrontend,
+        ctx: IASTNode,
     ): MethodDeclaration {
         // check, if its a constructor
         return if (name == recordDeclaration?.name) {
-            NodeBuilder.newConstructorDeclaration(name, code, recordDeclaration)
-        } else NodeBuilder.newMethodDeclaration(name, code, false, recordDeclaration)
+            NodeBuilder.newConstructorDeclaration(name, null, recordDeclaration, lang, ctx)
+        } else NodeBuilder.newMethodDeclaration(name, null, false, recordDeclaration, lang, ctx)
     }
 
     private fun handleFunctionDeclarator(ctx: CPPASTFunctionDeclarator): ValueDeclaration {
@@ -176,12 +179,11 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
 
         // remember, if this is a method declaration outside of the record
         val outsideOfRecord =
-            !(lang.scopeManager.currentScope is RecordScope ||
+            !(lang.scopeManager.currentRecord != null ||
                 lang.scopeManager.currentScope is TemplateScope)
 
         // check for function definitions that are really methods and constructors, i.e. if they
-        // contain
-        // a scope operator
+        // contain a scope operator
         if (name.contains(lang.namespaceDelimiter)) {
             val rr = name.split(lang.namespaceDelimiter).toTypedArray()
             val recordName =
@@ -189,14 +191,15 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
             val methodName = rr[rr.size - 1]
             recordDeclaration =
                 lang.scopeManager.getRecordForName(lang.scopeManager.currentScope!!, recordName)
-            declaration = createMethodOrConstructor(methodName, ctx.rawSignature, recordDeclaration)
+            declaration = createMethodOrConstructor(methodName, recordDeclaration, lang, ctx.parent)
         } else if (lang.scopeManager.isInRecord) {
             // if it is inside a record scope, it is a method
             recordDeclaration = lang.scopeManager.currentRecord
-            declaration = createMethodOrConstructor(name, ctx.rawSignature, recordDeclaration)
+            declaration = createMethodOrConstructor(name, recordDeclaration, lang, ctx.parent)
         } else {
             // a plain old function, outside any record scope
-            declaration = NodeBuilder.newFunctionDeclaration(name, ctx.rawSignature)
+            declaration =
+                NodeBuilder.newFunctionDeclaration(name, ctx.rawSignature, lang, ctx.parent)
         }
         lang.scopeManager.addDeclaration(declaration)
 
@@ -263,6 +266,25 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
         if (recordDeclaration != null && outsideOfRecord) {
             lang.scopeManager.leaveScope(recordDeclaration)
         }
+
+        // We recognize a ambiguity here, but cannot solve it at the moment
+        if (name != "" &&
+                ctx.parent is CPPASTDeclarator &&
+                declaration.body == null &&
+                lang.scopeManager.currentFunction != null
+        ) {
+            val problem =
+                NodeBuilder.newProblemDeclaration(
+                    null,
+                    "CDT tells us this is a (named) function declaration in parenthesis without a body directly within a block scope, this might be an ambiguity which we cannot solve currently.",
+                    null
+                )
+
+            Util.warnWithFileLocation(lang, ctx, log, problem.problem)
+
+            return problem
+        }
+
         return declaration
     }
 

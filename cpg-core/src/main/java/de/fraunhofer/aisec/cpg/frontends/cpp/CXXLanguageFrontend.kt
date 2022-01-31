@@ -46,14 +46,14 @@ import java.lang.reflect.Method
 import java.nio.file.Path
 import java.util.*
 import java.util.stream.Collectors
-import org.eclipse.cdt.core.dom.ast.*
+import org.eclipse.cdt.core.dom.ast.IASTAttributeOwner
+import org.eclipse.cdt.core.dom.ast.IASTNode
+import org.eclipse.cdt.core.dom.ast.IASTToken
+import org.eclipse.cdt.core.dom.ast.IASTTokenList
 import org.eclipse.cdt.core.dom.ast.gnu.cpp.GPPLanguage
 import org.eclipse.cdt.core.index.IIndexFileLocation
 import org.eclipse.cdt.core.model.ILanguage
-import org.eclipse.cdt.core.parser.DefaultLogService
-import org.eclipse.cdt.core.parser.FileContent
-import org.eclipse.cdt.core.parser.IncludeFileContentProvider
-import org.eclipse.cdt.core.parser.ScannerInfo
+import org.eclipse.cdt.core.parser.*
 import org.eclipse.cdt.internal.core.dom.parser.ASTNode
 import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTTranslationUnit
 import org.eclipse.cdt.internal.core.parser.IMacroDictionary
@@ -186,6 +186,8 @@ class CXXLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeM
         }
 
         includePaths.addAll(listOf(*config.includePaths))
+
+        config.compilationDatabase?.get(file)?.let { includePaths.addAll(it) }
 
         val scannerInfo = ScannerInfo(config.symbols, includePaths.toTypedArray())
         val log = DefaultLogService()
@@ -403,9 +405,9 @@ class CXXLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeM
     override fun <S, T> setComment(s: S, ctx: T) {
         if (ctx is ASTNode && s is Node) {
             val cpgNode = s as Node
-            if (comments.containsKey(cpgNode.location!!.region.endLine)
+            if (comments.containsKey(cpgNode.location?.region?.endLine)
             ) { // only exact match for now
-                cpgNode.comment = comments[cpgNode.location!!.region.endLine]
+                cpgNode.comment = comments[cpgNode.location?.region?.endLine]
             }
             // TODO: handle orphanComments? i.e. comments which do not correspond to one line
             // todo: what to do with comments which are in a line which contains multiple

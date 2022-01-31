@@ -48,7 +48,11 @@ object TestUtils {
     @JvmStatic
     fun <S : Node?> findByUniquePredicate(nodes: Collection<S>, predicate: Predicate<S>?): S {
         val results = findByPredicate(nodes, predicate)
-        Assertions.assertEquals(1, results.size, "Expected exactly one node matching the predicate")
+        Assertions.assertEquals(
+            1,
+            results.size,
+            "Expected exactly one node matching the predicate: ${results.joinToString(",") { it.toString() }}",
+        )
         return results[0]
     }
 

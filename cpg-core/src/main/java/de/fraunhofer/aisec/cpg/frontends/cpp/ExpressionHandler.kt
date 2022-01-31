@@ -485,8 +485,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                     reference.operatorCode,
                     ctx.rawSignature
                 )
-            if ((ctx.functionNameExpression as CPPASTFieldReference).fieldName is CPPASTTemplateId
-            ) {
+            if ((ctx.functionNameExpression as? CPPASTFieldReference)?.fieldName is CPPASTTemplateId) {
                 // Make necessary adjustments if we are handling a function template
                 val name =
                     ((ctx.functionNameExpression as CPPASTFieldReference).fieldName as
@@ -502,16 +501,15 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             }
         } else if (reference is BinaryOperator && reference.operatorCode == ".") {
             // We have a dot operator that was not classified as a member expression. This happens
-            // when
-            // dealing with function pointer calls that happen on an explicit object
+            // when dealing with function pointer calls that happen on an explicit object
             callExpression =
                 NodeBuilder.newMemberCallExpression(
-                    reference.code,
+                    ctx.functionNameExpression.rawSignature,
                     "",
                     reference.lhs,
                     reference.rhs,
                     reference.operatorCode,
-                    reference.code
+                    ctx.rawSignature
                 )
         } else if (reference is UnaryOperator && reference.operatorCode == "*") {
             // Classic C-style function pointer call -> let's extract the target
