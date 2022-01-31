@@ -722,4 +722,39 @@ class CXXLanguageFrontend2Test {
         assertEquals("someFunction", call.name)
         assertRefersTo(call.arguments[0], b)
     }
+
+    @Test
+    @Throws(java.lang.Exception::class)
+    fun testArrays() {
+        val file = File("src/test/resources/arrays.cpp")
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.unregisterLanguage(CXXLanguageFrontend::class.java)
+                it.registerLanguage(
+                    CXXLanguageFrontend2::class.java,
+                    CXXLanguageFrontend.CXX_EXTENSIONS
+                )
+            }
+        val main = tu.getDeclarationAs(0, FunctionDeclaration::class.java)
+        val statement = main!!.body as CompoundStatement
+
+        // first statement is the variable declaration
+        val x =
+            (statement.statements[0] as DeclarationStatement).singleDeclaration as
+                VariableDeclaration
+        Assertions.assertNotNull(x)
+        Assertions.assertEquals(TypeParser.createFrom("int[]", true), x.type)
+
+        // initializer is a initializer list expression
+        val ile = x.initializer as InitializerListExpression
+        val initializers = ile.initializers
+        Assertions.assertNotNull(initializers)
+        Assertions.assertEquals(3, initializers.size)
+
+        // second statement is an expression directly
+        val ase = statement.statements[1] as ArraySubscriptionExpression
+        Assertions.assertNotNull(ase)
+        Assertions.assertEquals(x, (ase.arrayExpression as DeclaredReferenceExpression).refersTo)
+        Assertions.assertEquals(0, (ase.subscriptExpression as Literal<Int>).value.toInt())
+    }
 }
