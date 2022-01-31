@@ -54,8 +54,8 @@ import java.util.stream.Collectors;
  */
 public class TypeHierarchyResolver extends Pass {
 
-  private final Map<String, RecordDeclaration> recordMap = new HashMap<>();
-  private final List<EnumDeclaration> enums = new ArrayList<>();
+  protected final Map<String, RecordDeclaration> recordMap = new HashMap<>();
+  protected final List<EnumDeclaration> enums = new ArrayList<>();
 
   @Override
   public LanguageFrontend getLang() {
@@ -95,7 +95,7 @@ public class TypeHierarchyResolver extends Pass {
     translationResult.getTranslationUnits().forEach(SubgraphWalker::refreshType);
   }
 
-  private void findRecordsAndEnums(Node node) {
+  protected void findRecordsAndEnums(Node node) {
     if (node instanceof RecordDeclaration) {
       recordMap.putIfAbsent(node.getName(), (RecordDeclaration) node);
     } else if (node instanceof EnumDeclaration) {
@@ -106,7 +106,7 @@ public class TypeHierarchyResolver extends Pass {
     }
   }
 
-  private List<MethodDeclaration> getAllMethodsFromSupertypes(
+  protected List<MethodDeclaration> getAllMethodsFromSupertypes(
       Set<RecordDeclaration> supertypeRecords) {
     return supertypeRecords.stream()
         .map(RecordDeclaration::getMethods)
@@ -114,7 +114,7 @@ public class TypeHierarchyResolver extends Pass {
         .collect(Collectors.toList());
   }
 
-  private Set<RecordDeclaration> findSupertypeRecords(RecordDeclaration record) {
+  protected Set<RecordDeclaration> findSupertypeRecords(RecordDeclaration record) {
     Set<RecordDeclaration> superTypeDeclarations =
         record.getSuperTypes().stream()
             .map(Type::getTypeName)
@@ -126,7 +126,7 @@ public class TypeHierarchyResolver extends Pass {
     return superTypeDeclarations;
   }
 
-  private void analyzeOverridingMethods(
+  protected void analyzeOverridingMethods(
       RecordDeclaration declaration, List<MethodDeclaration> allMethodsFromSupertypes) {
     for (MethodDeclaration superMethod : allMethodsFromSupertypes) {
       List<MethodDeclaration> overrideCandidates =
