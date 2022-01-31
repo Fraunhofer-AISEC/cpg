@@ -52,13 +52,7 @@ import java.nio.file.Path
 import java.util.*
 import java.util.Map
 import java.util.function.Consumer
-import kotlin.collections.ArrayList
-import kotlin.collections.HashMap
-import kotlin.collections.List
-import kotlin.collections.MutableMap
-import kotlin.collections.listOf
 import kotlin.collections.set
-import kotlin.collections.sortWith
 import kotlin.test.*
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
@@ -1244,5 +1238,64 @@ class CXXLanguageFrontend2Test {
         Assertions.assertNotNull(sizeof)
         Assertions.assertEquals("alignof", alignof.name)
         Assertions.assertEquals(TypeParser.createFrom("std::size_t", true), alignof.type)
+    }
+
+    @Test
+    @Throws(java.lang.Exception::class)
+    fun testFunctionDeclaration() {
+        val file = File("src/test/resources/functiondecl.cpp")
+        val declaration =
+            analyzeAndGetFirstTU(java.util.List.of(file), file.parentFile.toPath(), true)
+
+        // should be seven function nodes
+        Assertions.assertEquals(7, declaration.declarations.size)
+
+        var method = declaration.getDeclarationAs(0, FunctionDeclaration::class.java)
+        Assertions.assertEquals("function0(int)void", method!!.signature)
+
+        method = declaration.getDeclarationAs(1, FunctionDeclaration::class.java)
+        Assertions.assertEquals(
+            "function1(int, std.string, SomeType*, AnotherType&)int",
+            method!!.signature
+        )
+        val args = method.getParameters().map(Node::name)
+        Assertions.assertEquals(java.util.List.of("arg0", "arg1", "arg2", "arg3"), args)
+
+        method = declaration.getDeclarationAs(2, FunctionDeclaration::class.java)
+        Assertions.assertEquals("function0(int)void", method!!.signature)
+
+        var statements = (method.body as CompoundStatement).statements
+        Assertions.assertFalse(statements.isEmpty())
+        Assertions.assertEquals(2, statements.size)
+
+        // last statement should be an implicit return
+        var statement = method.getBodyStatementAs(statements.size - 1, ReturnStatement::class.java)
+        Assertions.assertNotNull(statement)
+        Assertions.assertTrue(statement!!.isImplicit)
+
+        method = declaration.getDeclarationAs(3, FunctionDeclaration::class.java)
+        Assertions.assertEquals("function2()void*", method!!.signature)
+
+        statements = (method.body as CompoundStatement).statements
+        Assertions.assertFalse(statements.isEmpty())
+        Assertions.assertEquals(1, statements.size)
+
+        // should only contain 1 explicit return statement
+        statement = method.getBodyStatementAs(0, ReturnStatement::class.java)
+        Assertions.assertNotNull(statement)
+        Assertions.assertFalse(statement!!.isImplicit)
+
+        method = declaration.getDeclarationAs(4, FunctionDeclaration::class.java)
+        Assertions.assertNotNull(method)
+        Assertions.assertEquals("function3()UnknownType*", method!!.signature)
+
+        method = declaration.getDeclarationAs(5, FunctionDeclaration::class.java)
+        Assertions.assertNotNull(method)
+        Assertions.assertEquals("function4(int)void", method!!.signature)
+
+        method = declaration.getDeclarationAs(6, FunctionDeclaration::class.java)
+        Assertions.assertNotNull(method)
+        Assertions.assertEquals(0, method!!.parameters.size)
+        Assertions.assertEquals("function5()void", method.signature)
     }
 }
