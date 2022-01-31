@@ -896,4 +896,35 @@ class CXXLanguageFrontend2Test {
         parameter = catchClauses[2].parameter
         Assertions.assertNull(parameter)
     }
+
+    @Test
+    @Throws(java.lang.Exception::class)
+    fun testNamespaces() {
+        val file = File("src/test/resources/namespaces.cpp")
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.unregisterLanguage(CXXLanguageFrontend::class.java)
+                it.registerLanguage(
+                    CXXLanguageFrontend2::class.java,
+                    CXXLanguageFrontend.CXX_EXTENSIONS
+                )
+            }
+        Assertions.assertNotNull(tu)
+        val firstNamespace =
+            tu.getDeclarationsByName("FirstNamespace", NamespaceDeclaration::class.java)
+                .iterator()
+                .next()
+        Assertions.assertNotNull(firstNamespace)
+        val someClass =
+            firstNamespace
+                .getDeclarationsByName("FirstNamespace::SomeClass", RecordDeclaration::class.java)
+                .iterator()
+                .next()
+        Assertions.assertNotNull(someClass)
+        val anotherClass =
+            tu.getDeclarationsByName("AnotherClass", RecordDeclaration::class.java)
+                .iterator()
+                .next()
+        Assertions.assertNotNull(anotherClass)
+    }
 }
