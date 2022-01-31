@@ -463,11 +463,11 @@ public class ControlFlowSensitiveDFGPass extends Pass {
 
     /**
      * Merges two states asusming that both states come from valid paths. All the definition for
-     * variables are collected into the current state represented by {@ref currentJoinpoint}
+     * variables are collected into the current state represented by {@code currentJoinpoint}
      *
      * @param currentJoinpoint - The state we are merging into
      * @param variables - tje state we are merging from
-     * @return - whether or not the merging resulted into an update to {@ref currentJoinpoint}
+     * @return - whether or not the merging resulted into an update to {@code currentJoinpoint}
      */
     protected boolean mergeStates(
         Map<VariableDeclaration, Set<Node>> currentJoinpoint,

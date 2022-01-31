@@ -1251,7 +1251,7 @@ public class CallResolver extends Pass {
 
   /**
    * Adds the resolved default template arguments recursively to the templateParameter list of the
-   * ConstructExpression until a fixpoint is reached e.g. template<class Type1, class Type2 = Type1>
+   * ConstructExpression until a fixpoint is reached e.g. template&lt;class Type1, class Type2 = Type1&gt;
    *
    * @param constructExpression
    * @param template
