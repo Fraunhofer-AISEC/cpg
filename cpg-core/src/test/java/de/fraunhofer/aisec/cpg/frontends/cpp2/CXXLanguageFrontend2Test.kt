@@ -852,4 +852,48 @@ class CXXLanguageFrontend2Test {
             )
         Assertions.assertTrue(defaultStatements.size == 1)
     }
+
+    @Test
+    @Throws(java.lang.Exception::class)
+    fun testTryCatch() {
+        val file = File("src/test/resources/components/trystmt.cpp")
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.unregisterLanguage(CXXLanguageFrontend::class.java)
+                it.registerLanguage(
+                    CXXLanguageFrontend2::class.java,
+                    CXXLanguageFrontend.CXX_EXTENSIONS
+                )
+            }
+        val main = tu.getDeclarationsByName("main", FunctionDeclaration::class.java)
+        Assertions.assertFalse(main.isEmpty())
+        val tryStatement = main.iterator().next().getBodyStatementAs(0, TryStatement::class.java)
+        Assertions.assertNotNull(tryStatement)
+        val catchClauses = tryStatement!!.catchClauses
+        // should have 3 catch clauses
+        Assertions.assertEquals(3, catchClauses.size)
+
+        // declared exception variable
+        var parameter = catchClauses[0].parameter
+        Assertions.assertNotNull(parameter)
+        Assertions.assertEquals("e", parameter!!.name)
+        Assertions.assertEquals(
+            TypeParser.createFrom("const std::exception&", true),
+            parameter.type
+        )
+
+        // anonymous variable (this is not 100% handled correctly but will do for now)
+        parameter = catchClauses[1].parameter
+        Assertions.assertNotNull(parameter)
+        // this is currently our 'unnamed' parameter
+        Assertions.assertEquals("", parameter!!.name)
+        Assertions.assertEquals(
+            TypeParser.createFrom("const std::exception&", true),
+            parameter.type
+        )
+
+        // catch all
+        parameter = catchClauses[2].parameter
+        Assertions.assertNull(parameter)
+    }
 }
