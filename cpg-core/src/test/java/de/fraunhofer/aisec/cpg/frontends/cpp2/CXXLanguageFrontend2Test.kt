@@ -927,4 +927,81 @@ class CXXLanguageFrontend2Test {
                 .next()
         Assertions.assertNotNull(anotherClass)
     }
+
+    @Test
+    @Throws(java.lang.Exception::class)
+    fun testDesignatedInitializer() {
+        val file = File("src/test/resources/components/designatedInitializer.c")
+        val declaration =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.unregisterLanguage(CXXLanguageFrontend::class.java)
+                it.registerLanguage(
+                    CXXLanguageFrontend2::class.java,
+                    CXXLanguageFrontend.CXX_EXTENSIONS
+                )
+            }
+
+        // should be four method nodes
+        Assertions.assertEquals(2, declaration.declarations.size)
+        val method = declaration.getDeclarationAs(1, FunctionDeclaration::class.java)
+        Assertions.assertEquals("main()int", method!!.signature)
+        Assertions.assertTrue(method.body is CompoundStatement)
+        val statements = (method.body as CompoundStatement).statements
+        Assertions.assertEquals(4, statements.size)
+        Assertions.assertTrue(statements[0] is DeclarationStatement)
+        Assertions.assertTrue(statements[1] is DeclarationStatement)
+        Assertions.assertTrue(statements[2] is DeclarationStatement)
+        Assertions.assertTrue(statements[3] is ReturnStatement)
+        var initializer: Expression? =
+            ((statements[0] as DeclarationStatement).singleDeclaration as VariableDeclaration)
+                .initializer
+        Assertions.assertTrue(initializer is InitializerListExpression)
+        Assertions.assertEquals(3, (initializer as InitializerListExpression).initializers.size)
+        Assertions.assertTrue(initializer.initializers[0] is DesignatedInitializerExpression)
+        Assertions.assertTrue(initializer.initializers[1] is DesignatedInitializerExpression)
+        Assertions.assertTrue(initializer.initializers[2] is DesignatedInitializerExpression)
+        var die = initializer.initializers[0] as DesignatedInitializerExpression
+        Assertions.assertTrue(die.lhs[0] is DeclaredReferenceExpression)
+        Assertions.assertTrue(die.rhs is Literal<*>)
+        Assertions.assertEquals("y", die.lhs[0].name)
+        Assertions.assertEquals(0, (die.rhs as Literal<*>).value)
+        die = initializer.initializers[1] as DesignatedInitializerExpression
+        Assertions.assertTrue(die.lhs[0] is DeclaredReferenceExpression)
+        Assertions.assertTrue(die.rhs is Literal<*>)
+        Assertions.assertEquals("z", die.lhs[0].name)
+        Assertions.assertEquals(1, (die.rhs as Literal<*>).value)
+        die = initializer.initializers[2] as DesignatedInitializerExpression
+        Assertions.assertTrue(die.lhs[0] is DeclaredReferenceExpression)
+        Assertions.assertTrue(die.rhs is Literal<*>)
+        Assertions.assertEquals("x", die.lhs[0].name)
+        Assertions.assertEquals(2, (die.rhs as Literal<*>).value)
+        initializer =
+            ((statements[1] as DeclarationStatement).singleDeclaration as VariableDeclaration)
+                .initializer
+        Assertions.assertTrue(initializer is InitializerListExpression)
+        Assertions.assertEquals(1, (initializer as InitializerListExpression).initializers.size)
+        Assertions.assertTrue(initializer.initializers[0] is DesignatedInitializerExpression)
+        die = initializer.initializers[0] as DesignatedInitializerExpression
+        Assertions.assertTrue(die.lhs[0] is DeclaredReferenceExpression)
+        Assertions.assertTrue(die.rhs is Literal<*>)
+        Assertions.assertEquals("x", die.lhs[0].name)
+        Assertions.assertEquals(20, (die.rhs as Literal<*>).value)
+        initializer =
+            ((statements[2] as DeclarationStatement).singleDeclaration as VariableDeclaration)
+                .initializer
+        Assertions.assertTrue(initializer is InitializerListExpression)
+        Assertions.assertEquals(2, (initializer as InitializerListExpression).initializers.size)
+        Assertions.assertTrue(initializer.initializers[0] is DesignatedInitializerExpression)
+        Assertions.assertTrue(initializer.initializers[1] is DesignatedInitializerExpression)
+        die = initializer.initializers[0] as DesignatedInitializerExpression
+        Assertions.assertTrue(die.lhs[0] is Literal<*>)
+        Assertions.assertTrue(die.rhs is Literal<*>)
+        Assertions.assertEquals(3, (die.lhs[0] as Literal<*>).value)
+        Assertions.assertEquals(1, (die.rhs as Literal<*>).value)
+        die = initializer.initializers[1] as DesignatedInitializerExpression
+        Assertions.assertTrue(die.lhs[0] is Literal<*>)
+        Assertions.assertTrue(die.rhs is Literal<*>)
+        Assertions.assertEquals(5, (die.lhs[0] as Literal<*>).value)
+        Assertions.assertEquals(2, (die.rhs as Literal<*>).value)
+    }
 }
