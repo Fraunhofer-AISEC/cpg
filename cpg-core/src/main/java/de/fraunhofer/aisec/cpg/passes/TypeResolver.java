@@ -34,8 +34,8 @@ import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker;
 import java.util.*;
 
 public class TypeResolver extends Pass {
-  private final Set<Type> firstOrderTypes = new HashSet<>();
-  private final Map<Type, List<Type>> typeState = new HashMap<>();
+  protected final Set<Type> firstOrderTypes = new HashSet<>();
+  protected final Map<Type, List<Type>> typeState = new HashMap<>();
 
   /**
    * Reduce the SecondOrderTypes to store only the unique SecondOrderTypes
@@ -43,7 +43,7 @@ public class TypeResolver extends Pass {
    * @param type SecondOrderType that is to be eliminated if an equal is already in typeState or is
    *     added if not
    */
-  private void processSecondOrderTypes(Type type) {
+  protected void processSecondOrderTypes(Type type) {
     Type root = type.getRoot();
 
     if (typeState.get(root).contains(type)) {
@@ -116,7 +116,7 @@ public class TypeResolver extends Pass {
    *
    * @param type new type
    */
-  private void addType(Type type) {
+  protected void addType(Type type) {
     Type root = type.getRoot();
     if (root.equals(type) && !typeState.containsKey(type)) {
       // This is a rootType and is included in the map as key with empty references
@@ -137,7 +137,7 @@ public class TypeResolver extends Pass {
     }
   }
 
-  private void removeDuplicateTypes() {
+  protected void removeDuplicateTypes() {
     TypeManager typeManager = TypeManager.getInstance();
     // Remove duplicate firstOrderTypes
     firstOrderTypes.addAll(typeManager.getFirstOrderTypes());
@@ -178,7 +178,7 @@ public class TypeResolver extends Pass {
    *
    * @param t FirstOrderType
    */
-  private void removeDuplicatesInFields(Type t) {
+  protected void removeDuplicatesInFields(Type t) {
     // Remove duplicates from fields
     if (t instanceof FunctionPointerType) {
       ((FunctionPointerType) t)
@@ -217,7 +217,7 @@ public class TypeResolver extends Pass {
     }
   }
 
-  public Set<Type> ensureUniqueSubTypes(Set<Type> subTypes) {
+  protected Set<Type> ensureUniqueSubTypes(Set<Type> subTypes) {
     Set<Type> uniqueTypes = new HashSet<>();
     for (Type subType : subTypes) {
       Collection<Type> trackedTypes;
@@ -238,7 +238,7 @@ public class TypeResolver extends Pass {
     return uniqueTypes;
   }
 
-  public void ensureUniqueType(Node node) {
+  protected void ensureUniqueType(Node node) {
     // Avoid handling of ParameterizedType as they should be unique to each class and not globally
     // unique
     if (node instanceof HasType && !(((HasType) node).getType() instanceof ParameterizedType)) {
@@ -264,7 +264,7 @@ public class TypeResolver extends Pass {
    *
    * @param node implementing {@link HasType.SecondaryTypeEdge}
    */
-  public void ensureUniqueSecondaryTypeEdge(Node node) {
+  protected void ensureUniqueSecondaryTypeEdge(Node node) {
     if (node instanceof HasType.SecondaryTypeEdge) {
       ((HasType.SecondaryTypeEdge) node).updateType(typeState.keySet());
     } else if (node instanceof HasType
@@ -278,7 +278,7 @@ public class TypeResolver extends Pass {
     }
   }
 
-  private void updateType(Node node, Collection<Type> types) {
+  protected void updateType(Node node, Collection<Type> types) {
     for (Type t : types) {
       if (t.equals(((HasType) node).getType())) {
         ((HasType) node).updateType(t);
