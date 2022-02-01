@@ -252,7 +252,14 @@ class StatementHandler(lang: CXXLanguageFrontend) :
     }
 
     private fun handleExpressionStatement(ctx: CPPASTExpressionStatement): Expression? {
-        return lang.expressionHandler.handle(ctx.expression)
+        val expression = lang.expressionHandler.handle(ctx.expression)
+
+        // update the code and region to include the whole statement
+        if (expression != null) {
+            lang.setCodeAndRegion(expression, ctx)
+        }
+
+        return expression
     }
 
     private fun handleDeclarationStatement(ctx: CPPASTDeclarationStatement): DeclarationStatement? {

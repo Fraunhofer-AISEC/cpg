@@ -40,8 +40,8 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 
 public class ImportResolver extends Pass {
 
-  private final List<RecordDeclaration> records = new ArrayList<>();
-  private final Map<String, Declaration> importables = new HashMap<>();
+  protected final List<RecordDeclaration> records = new ArrayList<>();
+  protected final Map<String, Declaration> importables = new HashMap<>();
 
   @Override
   @Nullable
@@ -72,7 +72,7 @@ public class ImportResolver extends Pass {
     }
   }
 
-  private Set<ValueDeclaration> getStaticImports(RecordDeclaration record) {
+  protected Set<ValueDeclaration> getStaticImports(RecordDeclaration record) {
     Map<Boolean, List<String>> partitioned =
         record.getStaticImportStatements().stream()
             .collect(Collectors.partitioningBy(i -> i.endsWith("*")));
@@ -119,14 +119,14 @@ public class ImportResolver extends Pass {
     return staticImports;
   }
 
-  private Set<Declaration> getDeclarationsForTypeNames(List<String> targetTypes) {
+  protected Set<Declaration> getDeclarationsForTypeNames(List<String> targetTypes) {
     return targetTypes.stream()
         .map(importables::get)
         .filter(Objects::nonNull)
         .collect(Collectors.toSet());
   }
 
-  private Set<ValueDeclaration> getOrCreateMembers(EnumDeclaration base, String name) {
+  protected Set<ValueDeclaration> getOrCreateMembers(EnumDeclaration base, String name) {
     Set<ValueDeclaration> entries =
         base.getEntries().stream()
             .filter(e -> e.getName().equals(name))
@@ -134,7 +134,7 @@ public class ImportResolver extends Pass {
     return entries;
   }
 
-  private Set<ValueDeclaration> getOrCreateMembers(RecordDeclaration base, String name) {
+  protected Set<ValueDeclaration> getOrCreateMembers(RecordDeclaration base, String name) {
     Set<MethodDeclaration> memberMethods =
         base.getMethods().stream()
             .filter(m -> m.getName().endsWith(name))
@@ -181,7 +181,7 @@ public class ImportResolver extends Pass {
     return result;
   }
 
-  private void findImportables(Node node) {
+  protected void findImportables(Node node) {
     if (node instanceof RecordDeclaration) {
       records.add((RecordDeclaration) node);
       importables.putIfAbsent(node.getName(), (RecordDeclaration) node);

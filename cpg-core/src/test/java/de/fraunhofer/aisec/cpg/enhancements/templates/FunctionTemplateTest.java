@@ -40,6 +40,7 @@ import de.fraunhofer.aisec.cpg.graph.types.UnknownType;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import org.junit.jupiter.api.Test;
 
 class FunctionTemplateTest extends BaseTest {
@@ -67,10 +68,11 @@ class FunctionTemplateTest extends BaseTest {
     assertEquals(UnknownType.getUnknownType(), xDeclaredReferenceExpression.getType());
 
     List<BinaryOperator> binaryOperators = TestUtils.subnodesOfType(result, BinaryOperator.class);
-    BinaryOperator dependetOperation =
-        TestUtils.findByUniquePredicate(binaryOperators, b -> b.getCode().equals("= val * N"));
+    BinaryOperator dependentOperation =
+        TestUtils.findByUniquePredicate(
+            binaryOperators, b -> Objects.equals(b.getCode(), "val * N"));
 
-    assertEquals(UnknownType.getUnknownType(), dependetOperation.getType());
+    assertEquals(UnknownType.getUnknownType(), dependentOperation.getType());
   }
 
   void testFunctionTemplateArguments(

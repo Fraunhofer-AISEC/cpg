@@ -127,6 +127,7 @@ The following authors have contributed to this project (in alphabetical order):
 * [maximiliankaul](https://github.com/maximiliankaul)
 * [obraunsdorf](https://github.com/obraunsdorf)
 * [oxisto](https://github.com/oxisto)
+* [peckto](https://github.com/peckto)
 * [titze](https://github.com/titze)
 * [vfsrfs](https://github.com/vfsrfs)
 

@@ -151,6 +151,6 @@ public class InitializerListExpression extends Expression implements TypeListene
 
   @Override
   public int hashCode() {
-    return super.hashCode();
+    return Objects.hash(super.hashCode(), initializers);
   }
 }

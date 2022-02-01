@@ -170,7 +170,6 @@ private constructor(
                     listOf(file)
                 }
             }
-
         if (config.useUnityBuild) {
             val tmpFile = Files.createTempFile("compile", ".cpp").toFile()
             tmpFile.deleteOnExit()
@@ -231,7 +230,6 @@ private constructor(
         val usedFrontends = mutableSetOf<LanguageFrontend>()
 
         log.info("Parallel parsing started")
-
         val futures = mutableListOf<CompletableFuture<Optional<LanguageFrontend>>>()
         val parallelScopeManagers = mutableListOf<ScopeManager>()
 
