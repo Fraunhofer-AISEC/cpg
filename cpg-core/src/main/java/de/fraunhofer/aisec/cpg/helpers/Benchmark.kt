@@ -88,21 +88,23 @@ fun printMarkdown(table: List<List<Any>>, headers: List<String>) {
     var i = 0
     val header = headers.joinToString(" | ", "| ", " |") { it.padEnd(lengths[i++]) }
 
-    // println(dash)
     println()
     println(header)
     println(dash)
 
     for (row in table) {
-        var i = 0
-        val line = row.joinToString(" | ", "| ", " |") { it.toString().padEnd(lengths[i++]) }
+        var rowIndex = 0
+        val line = row.joinToString(" | ", "| ", " |") { it.toString().padEnd(lengths[rowIndex++]) }
         println(line)
     }
 
-    // println(dash)
     println()
 }
 
+/**
+ * This function will shorten / relativize the [path], if it is relative to [topLevel]. Otherwise,
+ * the full path will be returned.
+ */
 fun relativeOrAbsolute(path: Path, topLevel: Path): Path {
     return try {
         topLevel.toAbsolutePath().relativize(path)
