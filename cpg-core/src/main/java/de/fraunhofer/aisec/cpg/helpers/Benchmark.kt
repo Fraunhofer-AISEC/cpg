@@ -25,15 +25,104 @@
  */
 package de.fraunhofer.aisec.cpg.helpers
 
+import de.fraunhofer.aisec.cpg.TranslationConfiguration
+import java.nio.file.Path
 import java.time.Duration
 import java.time.Instant
+import java.util.*
+import kotlin.IllegalArgumentException
 import org.slf4j.LoggerFactory
+
+/** Interface definition to hold different statistics about the translation process. */
+interface StatisticsHolder {
+    val translatedFiles: List<String>
+    val benchmarks: List<Benchmark>
+    val config: TranslationConfiguration
+
+    fun addBenchmark(b: Benchmark)
+
+    /** Pretty-prints benchmark results for easy copying to GitHub issues. */
+    fun printBenchmark() {
+        println("# Benchmark run ${UUID.randomUUID()}")
+        printMarkdown(
+            listOf(
+                listOf(
+                    "Translation config",
+                    "`${config.toString().replace(",", ", ").replace(":", ": ")}`"
+                ),
+                listOf("Number of files translated", translatedFiles.size),
+                listOf(
+                    "Translated file(s)",
+                    translatedFiles.map {
+                        relativeOrAbsolute(Path.of(it), config.topLevel.toPath())
+                    }
+                ),
+                *benchmarks
+                    .map { listOf("${it.caller}: ${it.message}", "${it.duration} ms") }
+                    .toTypedArray(),
+            ),
+            listOf("Metric", "Value")
+        )
+    }
+}
+
+/**
+ * Prints a table of values and headers in markdown format. Table columns are automatically adjusted
+ * to the longest column.
+ */
+fun printMarkdown(table: List<List<Any>>, headers: List<String>) {
+    val lengths = IntArray(headers.size)
+
+    // first, we need to calculate the longest column per line
+    for (row in table) {
+        for (i in row.indices) {
+            val value = row[i].toString()
+            if (value.length > lengths[i]) {
+                lengths[i] = value.length
+            }
+        }
+    }
+
+    // table header
+    val dash = lengths.joinToString(" | ", "| ", " |") { ("-".repeat(it)) }
+    var i = 0
+    val header = headers.joinToString(" | ", "| ", " |") { it.padEnd(lengths[i++]) }
+
+    println()
+    println(header)
+    println(dash)
+
+    for (row in table) {
+        var rowIndex = 0
+        val line = row.joinToString(" | ", "| ", " |") { it.toString().padEnd(lengths[rowIndex++]) }
+        println(line)
+    }
+
+    println()
+}
+
+/**
+ * This function will shorten / relativize the [path], if it is relative to [topLevel]. Otherwise,
+ * the full path will be returned.
+ */
+fun relativeOrAbsolute(path: Path, topLevel: Path): Path {
+    return try {
+        topLevel.toAbsolutePath().relativize(path)
+    } catch (ex: IllegalArgumentException) {
+        path
+    }
+}
 
 open class Benchmark
 @JvmOverloads
-constructor(c: Class<*>, private val message: String, private var debug: Boolean = false) {
+constructor(
+    c: Class<*>,
+    val message: String,
+    private var debug: Boolean = false,
+    private var holder: StatisticsHolder? = null
+) {
 
-    private val caller: String
+    val caller: String
     private val start: Instant
 
     var duration: Long
@@ -49,6 +138,9 @@ constructor(c: Class<*>, private val message: String, private var debug: Boolean
         } else {
             log.info(msg)
         }
+
+        // update our holder, if we have any
+        holder?.addBenchmark(this)
 
         return duration
     }

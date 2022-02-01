@@ -38,6 +38,8 @@ import de.fraunhofer.aisec.cpg.passes.*;
 import java.io.File;
 import java.lang.reflect.InvocationTargetException;
 import java.util.*;
+import org.apache.commons.lang3.builder.ToStringBuilder;
+import org.apache.commons.lang3.builder.ToStringStyle;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.slf4j.Logger;
@@ -551,5 +553,29 @@ public class TranslationConfiguration {
           inferenceConfiguration,
           compilationDatabase);
     }
+  }
+
+  @Override
+  public String toString() {
+    return new ToStringBuilder(this, ToStringStyle.JSON_STYLE)
+        .append("debugParser", debugParser)
+        .append("loadIncludes", loadIncludes)
+        .append("includePaths", includePaths)
+        .append("includeWhitelist", includeWhitelist)
+        .append("includeBlacklist", includeBlacklist)
+        .append("frontends", frontends)
+        .append("disableCleanup", disableCleanup)
+        .append("codeInNodes", codeInNodes)
+        .append("processAnnotations", processAnnotations)
+        .append("failOnError", failOnError)
+        .append("symbols", symbols)
+        .append("sourceLocations", sourceLocations)
+        .append("topLevel", topLevel)
+        .append("useUnityBuild", useUnityBuild)
+        .append("useParallelFrontends", useParallelFrontends)
+        .append("typeSystemActiveInFrontend", typeSystemActiveInFrontend)
+        .append("passes", passes)
+        .append("inferenceConfiguration", inferenceConfiguration)
+        .toString();
   }
 }
