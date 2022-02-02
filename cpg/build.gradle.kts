@@ -23,4 +23,5 @@ dependencies {
     api(project(":cpg-analysis"))
     api(project(":cpg-language-llvm"))
     api(project(":cpg-language-python"))
+    api(project(":cpg-language-go"))
 }
