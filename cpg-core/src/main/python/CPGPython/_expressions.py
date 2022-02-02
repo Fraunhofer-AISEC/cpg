@@ -31,17 +31,24 @@ import ast
 
 
 def handle_expression(self, expr):
-    self.log_with_loc("Handling expression: %s" % (ast.dump(expr)))
+    self.log_with_loc("Start \"handle_expression\" for:\n%s\n" %
+                      (self.get_src_code(expr)))
+    r = self.handle_expression_impl(expr)
+    self.add_loc_info(expr, r)
+    self.log_with_loc("End \"handle_expr\" for:\n%s\nResult is: %s" %
+                      (self.get_src_code(expr),
+                       r))
+    return r
 
+
+def handle_expression_impl(self, expr):
     if isinstance(expr, ast.BoolOp):
         self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         r = NodeBuilder.newExpression("")
-        self.add_loc_info(expr, r)
         return r
     elif isinstance(expr, ast.NamedExpr):
         self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         r = NodeBuilder.newExpression("")
-        self.add_loc_info(expr, r)
         return r
     elif isinstance(expr, ast.BinOp):
         if isinstance(expr.op, ast.Add):
@@ -75,19 +82,16 @@ def handle_expression(self, expr):
             opcode = "DUMMY"
         binop = NodeBuilder.newBinaryOperator(opcode,
                                               self.get_src_code(expr))
-        self.add_loc_info(expr, binop)
         binop.setLhs(self.handle_expression(expr.left))
         binop.setRhs(self.handle_expression(expr.right))
         return binop
     elif isinstance(expr, ast.UnaryOp):
         self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         r = NodeBuilder.newExpression("")
-        self.add_loc_info(expr, r)
         return r
     elif isinstance(expr, ast.Lambda):
         self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         r = NodeBuilder.newExpression("")
-        self.add_loc_info(expr, r)
         return r
     elif isinstance(expr, ast.IfExp):
         test = self.handle_expression(expr.test)
@@ -95,12 +99,10 @@ def handle_expression(self, expr):
         orelse = self.handle_expression(expr.orelse)
         r = NodeBuilder.newConditionalExpression(
             test, body, orelse, UnknownType.getUnknownType())
-        self.add_loc_info(expr, r)
         return r
     elif isinstance(expr, ast.Dict):
         self.log_with_loc("Handling a \"dict\": %s" % (ast.dump(expr)))
         ile = NodeBuilder.newInitializerListExpression(self.get_src_code(expr))
-        self.add_loc_info(expr, ile)
 
         lst = []
 
@@ -131,27 +133,22 @@ def handle_expression(self, expr):
     elif isinstance(expr, ast.Set):
         self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         r = NodeBuilder.newExpression("")
-        self.add_loc_info(expr, r)
         return r
     elif isinstance(expr, ast.ListComp):
         self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         r = NodeBuilder.newExpression("")
-        self.add_loc_info(expr, r)
         return r
     elif isinstance(expr, ast.SetComp):
         self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         r = NodeBuilder.newExpression("")
-        self.add_loc_info(expr, r)
         return r
     elif isinstance(expr, ast.DictComp):
         self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         r = NodeBuilder.newExpression("")
-        self.add_loc_info(expr, r)
         return r
     elif isinstance(expr, ast.GeneratorExp):
         self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         r = NodeBuilder.newExpression("")
-        self.add_loc_info(expr, r)
         return r
     elif isinstance(expr, ast.Await):
         self.log_with_loc((
@@ -162,19 +159,16 @@ def handle_expression(self, expr):
     elif isinstance(expr, ast.Yield):
         self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         r = NodeBuilder.newExpression("")
-        self.add_loc_info(expr, r)
         return r
     elif isinstance(expr, ast.YieldFrom):
         self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         r = NodeBuilder.newExpression("")
-        self.add_loc_info(expr, r)
         return r
     elif isinstance(expr, ast.Compare):
         # Compare(expr left, cmpop* ops, expr* comparators)
         if len(expr.ops) != 1 or len(expr.comparators) != 1:
             self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
             r = NodeBuilder.newBinaryOperator("DUMMY", self.get_src_code(expr))
-            self.add_loc_info(expr, r)
             return r
         op = expr.ops[0]
         if isinstance(op, ast.Eq):
@@ -200,11 +194,9 @@ def handle_expression(self, expr):
         else:
             self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
             r = NodeBuilder.newBinaryOperator("DUMMY", self.get_src_code(expr))
-            self.add_loc_info(expr, r)
             return r
         comp = NodeBuilder.newBinaryOperator(op_code,
                                              self.get_src_code(expr))
-        self.add_loc_info(expr, comp)
         comp.setLhs(self.handle_expression(expr.left))
         comp.setRhs(self.handle_expression(expr.comparators[0]))
         return comp
@@ -230,10 +222,8 @@ def handle_expression(self, expr):
 
             member = NodeBuilder.newDeclaredReferenceExpression(
                 name, UnknownType.getUnknownType(), self.get_src_code(expr))
-            self.add_loc_info(expr, member)
             call = NodeBuilder.newMemberCallExpression(
                 name, fqn, ref.getBase(), member, ".", self.get_src_code(expr))
-            self.add_loc_info(expr, call)
         else:
             # this can be a simple function call or a ctor
             record = self.scopemanager.getRecordForName(
@@ -242,7 +232,6 @@ def handle_expression(self, expr):
                 self.log_with_loc("Received a record: %s" % (record))
                 call = NodeBuilder.newConstructExpression(
                     self.get_src_code(expr))
-                self.add_loc_info(expr, call)
                 call.setName(expr.func.id)
                 tpe = TypeParser.createFrom(record.getName(), False)
                 call.setType(tpe)
@@ -258,7 +247,6 @@ def handle_expression(self, expr):
                 else:
                     call = NodeBuilder.newCallExpression(
                         name, name, self.get_src_code(expr), False)
-                    self.add_loc_info(expr, call)
         for a in expr.args:
             call.addArgument(self.handle_expression(a))
         for keyword in expr.keywords:
@@ -274,12 +262,10 @@ def handle_expression(self, expr):
     elif isinstance(expr, ast.FormattedValue):
         self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         r = NodeBuilder.newExpression("")
-        self.add_loc_info(expr, r)
         return r
     elif isinstance(expr, ast.JoinedStr):
         self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         r = NodeBuilder.newExpression("")
-        self.add_loc_info(expr, r)
         return r
     elif isinstance(expr, ast.Constant):
         if isinstance(expr.value, type(None)):
@@ -301,7 +287,6 @@ def handle_expression(self, expr):
                               (type(expr.value)), loglevel="ERROR")
             tpe = UnknownType.getUnknownType()
         lit = NodeBuilder.newLiteral(expr.value, tpe, self.get_src_code(expr))
-        self.add_loc_info(expr, lit)
         lit.setName(str(expr.value))
         return lit
 
@@ -319,7 +304,6 @@ def handle_expression(self, expr):
         mem = NodeBuilder.newMemberExpression(
             value, UnknownType.getUnknownType(), expr.attr, ".",
             self.get_src_code(expr))
-        self.add_loc_info(expr, mem)
         return mem
 
     elif isinstance(expr, ast.Subscript):
@@ -327,19 +311,16 @@ def handle_expression(self, expr):
         slc = self.handle_expression(expr.slice)
         exp = NodeBuilder.newArraySubscriptionExpression(
             self.get_src_code(expr))
-        self.add_loc_info(expr, exp)
         exp.setArrayExpression(value)
         exp.setSubscriptExpression(slc)
         return exp
     elif isinstance(expr, ast.Starred):
         self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         r = NodeBuilder.newExpression("")
-        self.add_loc_info(expr, r)
         return r
     elif isinstance(expr, ast.Name):
         r = NodeBuilder.newDeclaredReferenceExpression(
             expr.id, UnknownType.getUnknownType(), self.get_src_code(expr))
-        self.add_loc_info(expr, r)
         return r  # TODO delete code below
         # TODO FIXME!!! This ugly mess has to be refactored!!!
         """
@@ -355,11 +336,9 @@ def handle_expression(self, expr):
         if expr.id == "__name__":
             r = NodeBuilder.newDeclaredReferenceExpression(
                 expr.id, UnknownType.getUnknownType(), self.get_src_code(expr))
-            self.add_loc_info(expr, r)
             return r
         ref = NodeBuilder.newDeclaredReferenceExpression(
             expr.id, UnknownType.getUnknownType(), self.get_src_code(expr))
-        self.add_loc_info(expr, ref)
         resolved = self.scopemanager.resolveReference(ref)
         inRecord = self.scopemanager.isInRecord()
         inFunction = self.scopemanager.isInFunction()
@@ -369,7 +348,6 @@ def handle_expression(self, expr):
                 v = NodeBuilder.newVariableDeclaration(
                     expr.id, UnknownType.getUnknownType(),
                     self.get_src_code(expr), False)
-                self.add_loc_info(expr, v)
                 self.scopemanager.addDeclaration(v)
                 return v
             else:  # VariableDeclaration
@@ -389,7 +367,6 @@ def handle_expression(self, expr):
                 v = NodeBuilder.newFieldDeclaration(
                     expr.id, UnknownType.getUnknownType(), None,
                     self.get_src_code(expr), None, None, False)
-                self.add_loc_info(expr, v)
             else:
                 self.log_with_loc(
                     "Could not resolve -> creating a new variable for: %s" %
@@ -397,12 +374,10 @@ def handle_expression(self, expr):
                 v = NodeBuilder.newVariableDeclaration(
                     expr.id, UnknownType.getUnknownType(),
                     self.get_src_code(expr), False)
-                self.add_loc_info(expr, v)
             self.scopemanager.addDeclaration(v)
             return v
     elif isinstance(expr, ast.List):
         ile = NodeBuilder.newInitializerListExpression(self.get_src_code(expr))
-        self.add_loc_info(expr, ile)
 
         lst = []
 
@@ -415,7 +390,6 @@ def handle_expression(self, expr):
         return ile
     elif isinstance(expr, ast.Tuple):
         ile = NodeBuilder.newInitializerListExpression(self.get_src_code(expr))
-        self.add_loc_info(expr, ile)
 
         lst = []
 
@@ -429,10 +403,8 @@ def handle_expression(self, expr):
     elif isinstance(expr, ast.Slice):
         self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         r = NodeBuilder.newExpression("")
-        self.add_loc_info(expr, r)
         return r
     else:
         self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         r = NodeBuilder.newExpression("")
-        self.add_loc_info(expr, r)
         return r

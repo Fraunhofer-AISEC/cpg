@@ -419,7 +419,7 @@ class PythonFrontendTest : BaseTest() {
         val barBaz =
             (methBar.body as? CompoundStatement)?.statements?.get(1) as? DeclarationStatement
         assertNotNull(barBaz)
-        val barBazInner = barBaz.declarations.get(0) as? FieldDeclaration
+        val barBazInner = barBaz.declarations[0] as? FieldDeclaration
         assertNotNull(barBazInner)
         assertEquals("baz", barBazInner.name)
         assertNotNull(barBazInner.initializer)
@@ -820,7 +820,7 @@ class PythonFrontendTest : BaseTest() {
         assertNotNull(p)
 
         assertEquals(
-            Region(1, 0, 1, 1),
+            Region(1, 0, 1, 8),
             (p.declarations[0] as? VariableDeclaration)?.location?.region
         )
         assertEquals(
@@ -828,19 +828,19 @@ class PythonFrontendTest : BaseTest() {
             (p.declarations[0] as? VariableDeclaration)?.initializer?.location?.region
         )
         assertEquals(
-            Region(2, 0, 2, 1),
+            Region(2, 0, 2, 6),
             (p.declarations[1] as? VariableDeclaration)?.location?.region
         )
         assertEquals(
-            Region(3, 0, 3, 1),
+            Region(3, 0, 3, 7),
             (p.declarations[2] as? VariableDeclaration)?.location?.region
         )
         assertEquals(
-            Region(5, 0, 5, 1),
+            Region(5, 0, 5, 11),
             (p.declarations[3] as? VariableDeclaration)?.location?.region
         )
         assertEquals(
-            Region(6, 0, 6, 1),
+            Region(6, 0, 6, 8),
             (p.declarations[4] as? VariableDeclaration)?.location?.region
         )
     }
@@ -872,8 +872,7 @@ class PythonFrontendTest : BaseTest() {
         val foo = p.getDeclarationsByName("foo", VariableDeclaration::class.java)
         assertNotNull(foo)
 
-        val initializer =
-            (foo.first() as? VariableDeclaration)?.initializer as? MemberCallExpression
+        val initializer = foo.first()?.initializer as? MemberCallExpression
         assertNotNull(initializer)
 
         assertEquals("zzz", initializer.name)
@@ -958,27 +957,27 @@ class PythonFrontendTest : BaseTest() {
         assertEquals(2, p.statements.size)
 
         // test = [(1, 2, 3)]
-        val testDeclaration = p.declarations.get(0) as? VariableDeclaration
+        val testDeclaration = p.declarations[0] as? VariableDeclaration
         assertNotNull(testDeclaration)
         assertEquals("test", testDeclaration.name)
-        val testDeclStmt = p.statements.get(0) as? DeclarationStatement
+        val testDeclStmt = p.statements[0] as? DeclarationStatement
         assertNotNull(testDeclStmt)
         assertEquals(1, testDeclStmt.declarations.size)
-        assertEquals(testDeclaration, testDeclStmt.declarations.get(0) as? VariableDeclaration)
+        assertEquals(testDeclaration, testDeclStmt.declarations[0] as? VariableDeclaration)
 
         /* for loop:
         for t1, t2, t3 in test:
             print("bug ... {} {} {}".format(t1, t2, t3))
          */
-        val forStmt = p.statements.get(1) as? ForEachStatement
+        val forStmt = p.statements[1] as? ForEachStatement
         assertNotNull(forStmt)
 
         val forVariable = forStmt.variable as? InitializerListExpression
         assertNotNull(forVariable)
         assertEquals(3, forVariable.initializers.size)
-        val t1Decl = forVariable.initializers.get(0) as? DeclaredReferenceExpression
-        val t2Decl = forVariable.initializers.get(1) as? DeclaredReferenceExpression
-        val t3Decl = forVariable.initializers.get(2) as? DeclaredReferenceExpression
+        val t1Decl = forVariable.initializers[0] as? DeclaredReferenceExpression
+        val t2Decl = forVariable.initializers[1] as? DeclaredReferenceExpression
+        val t3Decl = forVariable.initializers[2] as? DeclaredReferenceExpression
         assertNotNull(t1Decl)
         assertNotNull(t2Decl)
         assertNotNull(t3Decl)
@@ -993,17 +992,17 @@ class PythonFrontendTest : BaseTest() {
         assertEquals(1, forBody.statements.size)
 
         // print("bug ... {} {} {}".format(t1, t2, t3))
-        val forBodyStmt = forBody.statements.get(0) as? CallExpression
+        val forBodyStmt = forBody.statements[0] as? CallExpression
         assertNotNull(forBodyStmt)
         assertEquals("print", forBodyStmt.name)
 
-        val printArg = forBodyStmt.arguments.get(0) as? MemberCallExpression
+        val printArg = forBodyStmt.arguments[0] as? MemberCallExpression
         assertNotNull(printArg)
-        val formatArgT1 = printArg.arguments.get(0) as? DeclaredReferenceExpression
+        val formatArgT1 = printArg.arguments[0] as? DeclaredReferenceExpression
         assertNotNull(formatArgT1)
-        val formatArgT2 = printArg.arguments.get(1) as? DeclaredReferenceExpression
+        val formatArgT2 = printArg.arguments[1] as? DeclaredReferenceExpression
         assertNotNull(formatArgT2)
-        val formatArgT3 = printArg.arguments.get(2) as? DeclaredReferenceExpression
+        val formatArgT3 = printArg.arguments[2] as? DeclaredReferenceExpression
         assertNotNull(formatArgT3)
         // TODO check refersTo
     }

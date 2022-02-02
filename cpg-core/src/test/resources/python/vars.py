@@ -14,4 +14,3 @@ class Foo:
 foo = Foo()
 foo.classFieldNoInitializer = 345
 foo.classFieldWithInit = 678
-foo.self.classFieldDeclaredInFunction = 901
