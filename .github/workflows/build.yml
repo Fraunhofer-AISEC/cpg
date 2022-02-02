@@ -69,7 +69,7 @@ jobs:
             pip3 install pycodestyle
       - name: Run pycodestyle
         run: |
-            find cpg-core/src/main/python -iname "*.py" -exec pycodestyle \{\} \;
+            find cpg-language-python/src/main/python -iname "*.py" -exec pycodestyle \{\} \;
       - name: Build ${{ steps.determine_version.outputs.version }}
         run: |
           if [ "$SONAR_TOKEN" != "" ]
