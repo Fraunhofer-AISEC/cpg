@@ -57,6 +57,7 @@ dependencies {
     // CPG
     api(project(":cpg-core"))
     api(project(":cpg-language-llvm"))
+    api(project(":cpg-language-python"))
 
     implementation("org.apache.logging.log4j:log4j-slf4j18-impl:2.17.0")
 

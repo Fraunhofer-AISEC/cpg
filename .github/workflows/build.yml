@@ -62,25 +62,25 @@ jobs:
         id: determine_version
       - name: Install JEP
         run: |
-          pip3 install jep==$(grep "black.ninia:jep" cpg-library/build.gradle.kts | cut -d ":" -f 3 | cut -d "\"" -f 1)
-          sudo cp /opt/hostedtoolcache/Python/3.10*/x64/lib/python3.10/site-packages/jep/libjep.so /usr/lib/
+          pip3 install jep==$(grep "black.ninia:jep" cpg-language-python/build.gradle.kts | cut -d ":" -f 3 | cut -d "\"" -f 1)
+          sudo cp /opt/hostedtoolcache/Python/3.9*/x64/lib/python3.9/site-packages/jep/libjep.so /usr/lib/
       - name: Install pycodestyle
         run: |
             pip3 install pycodestyle
       - name: Run pycodestyle
         run: |
-            find cpg-core/src/main/python -iname "*.py" -exec pycodestyle \{\} \;
+            find cpg-language-python/src/main/python -iname "*.py" -exec pycodestyle \{\} \;
       - name: Build ${{ steps.determine_version.outputs.version }}
         run: |
           if [ "$SONAR_TOKEN" != "" ]
           then
-            ./gradlew --no-daemon --parallel -Pversion=$VERSION -Pexperimental -PexperimentalTypeScript -PexperimentalPython -Pintegration build sonarqube \
+            ./gradlew --no-daemon --parallel -Pversion=$VERSION -Pexperimental -PexperimentalTypeScript -Pintegration build sonarqube \
             -Dsonar.projectKey=Fraunhofer-AISEC_cpg \
             -Dsonar.organization=fraunhofer-aisec \
             -Dsonar.host.url=https://sonarcloud.io \
             -Dsonar.login=$SONAR_TOKEN
           else
-            ./gradlew --no-daemon --parallel -Pversion=$VERSION -Pexperimental -PexperimentalTypeScript -PexperimentalPython -Pintegration build
+            ./gradlew --no-daemon --parallel -Pversion=$VERSION -Pexperimental -PexperimentalTypeScript -Pintegration build
           fi
         id: build
         env:
@@ -97,7 +97,7 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/v') && !contains(github.ref, 'beta')      
         run: |
           export ORG_GRADLE_PROJECT_signingKey=`echo ${{ secrets.GPG_PRIVATE_KEY }} | base64 -d`
-          ./gradlew --no-daemon -Dorg.gradle.internal.publish.checksums.insecure=true --parallel -Pversion=$VERSION -PexperimentalTypeScript -PexperimentalPython signMavenPublication build publish javadoc
+          ./gradlew --no-daemon -Dorg.gradle.internal.publish.checksums.insecure=true --parallel -Pversion=$VERSION -PexperimentalTypeScript signMavenPublication build publish javadoc
         env:
           VERSION: ${{ steps.determine_version.outputs.version }}
           ORG_GRADLE_PROJECT_signingPassword: ${{ secrets.GPG_PASSWORD }}

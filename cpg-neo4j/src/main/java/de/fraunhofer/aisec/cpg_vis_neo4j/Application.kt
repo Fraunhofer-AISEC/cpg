@@ -27,9 +27,9 @@ package de.fraunhofer.aisec.cpg_vis_neo4j
 
 import de.fraunhofer.aisec.cpg.*
 import de.fraunhofer.aisec.cpg.frontends.CompilationDatabase.Companion.fromFile
+import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.golang.GoLanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.llvm.LLVMIRLanguageFrontend
-import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.typescript.TypeScriptLanguageFrontend
 import java.io.File
 import java.net.ConnectException
@@ -63,6 +63,8 @@ private const val DEFAULT_USER_NAME = "neo4j"
 private const val DEFAULT_PASSWORD = "password"
 private const val DEFAULT_SAVE_DEPTH = -1
 
+private var pythonClass: Class<*>? = null
+
 /**
  * An application to export the <a href="https://github.com/Fraunhofer-AISEC/cpg">cpg</a> to a <a
  * href="https://github.com/Fraunhofer-AISEC/cpg">neo4j</a> database.
@@ -70,6 +72,14 @@ private const val DEFAULT_SAVE_DEPTH = -1
  * @author Andreas Hager, andreas.hager@aisec.fraunhofer.de
  */
 class Application : Callable<Int> {
+
+    init {
+        try {
+            pythonClass =
+                Class.forName("de.fraunhofer.aisec.cpg.frontends.python.PythonLanguageFrontend")
+        } catch (ignored: ClassNotFoundException) {}
+    }
+
     private val log: Logger
         get() = LoggerFactory.getLogger(Application::class.java)
     // Either provide the files to evaluate or provide the path of compilation database with
@@ -238,7 +248,7 @@ class Application : Callable<Int> {
      * point to a file, is a directory or point to a hidden file or the paths does not have the same
      * top level path.
      */
-    @OptIn(ExperimentalPython::class, ExperimentalGolang::class, ExperimentalTypeScript::class)
+    @OptIn(ExperimentalGolang::class, ExperimentalTypeScript::class)
     private fun setupTranslationConfiguration(): TranslationConfiguration {
         assert(mutuallyExclusiveParameters.files.isNotEmpty())
         val filePaths = arrayOfNulls<File>(mutuallyExclusiveParameters.files.size)
@@ -282,10 +292,14 @@ class Application : Callable<Int> {
         )
 
         if (enableExperimentalPython) {
-            translationConfiguration.registerLanguage(
-                PythonLanguageFrontend::class.java,
-                PythonLanguageFrontend.PY_EXTENSIONS
-            )
+            if (pythonClass != null) {
+                translationConfiguration.registerLanguage(
+                    pythonClass as Class<out LanguageFrontend>,
+                    listOf(".py") // TODO FIXME
+                )
+            } else {
+                log.error("Failed to find cpg-language-python module.")
+            }
         }
 
         if (enableExperimentalGo) {
