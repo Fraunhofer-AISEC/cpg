@@ -50,7 +50,7 @@ class TranslatePlugin : Plugin {
                     "import de.fraunhofer.aisec.cpg.TranslationConfiguration",
                     "import de.fraunhofer.aisec.cpg.TranslationManager",
                     // go
-                    "import de.fraunhofer.aisec.cpg.frontends.golang.GoLanguageFrontend",
+                    "import GoLanguageFrontend",
                     // llvm
                     "import de.fraunhofer.aisec.cpg.frontends.llvm.LLVMIRLanguageFrontend",
                     // python

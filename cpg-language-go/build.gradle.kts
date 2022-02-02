@@ -25,26 +25,18 @@
  */
 plugins {
     `java-library`
-    `maven-publish`
-    signing
 }
-
 
 publishing {
     publications {
-        named<MavenPublication>("cpg-analysis") {
+        named<MavenPublication>("cpg-language-go") {
             pom {
-                artifactId = "cpg-analysis"
-                name.set("Code Property Graph - Analysis Modules")
-                description.set("Analysis modules for the CPG")
+                artifactId = "cpg-language-go"
+                name.set("Code Property Graph - Go Frontend")
+                description.set("A Go language frontend for the CPG")
             }
         }
     }
-}
-
-tasks.named<Test>("test") {
-    useJUnitPlatform()
-    maxHeapSize = "4048m"
 }
 
 dependencies {
@@ -53,10 +45,29 @@ dependencies {
     testImplementation(testFixtures(project(":cpg-core")))
 
     // JUnit
-    testImplementation("org.jetbrains.kotlin:kotlin-test")
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
     testImplementation("org.junit.jupiter:junit-jupiter-api:5.8.1")
     testImplementation("org.junit.jupiter:junit-jupiter-params:5.8.1")
 
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.8.1")
+}
+
+tasks.named<Test>("test") {
+    useJUnitPlatform {
+        systemProperty("java.library.path", project.projectDir.resolve("src/main/golang"))
+    }
+}
+
+val compileGolang = tasks.register("compileGolang") {
+    doLast {
+        project.exec {
+            commandLine("./build.sh")
+                .setStandardOutput(System.out)
+                .workingDir("src/main/golang")
+        }
+    }
+}
+
+tasks.named("compileJava") {
+    dependsOn(compileGolang)
 }
