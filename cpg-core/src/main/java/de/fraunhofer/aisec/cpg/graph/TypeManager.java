@@ -29,7 +29,6 @@ import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
 import de.fraunhofer.aisec.cpg.frontends.cpp.CXXLanguageFrontend;
 import de.fraunhofer.aisec.cpg.frontends.golang.GoLanguageFrontend;
 import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguageFrontend;
-import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguageFrontend;
 import de.fraunhofer.aisec.cpg.frontends.typescript.TypeScriptLanguageFrontend;
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration;
 import de.fraunhofer.aisec.cpg.graph.declarations.TemplateDeclaration;
@@ -56,10 +55,17 @@ public class TypeManager {
   private static final Logger log = LoggerFactory.getLogger(TypeManager.class);
 
   private static Class<?> llvmClass = null;
+  private static Class<?> pythonClass = null;
 
   static {
     try {
       llvmClass = Class.forName("de.fraunhofer.aisec.cpg.frontends.llvm.LLVMIRLanguageFrontend");
+
+    } catch (ClassNotFoundException ignored) {
+    }
+    try {
+      pythonClass =
+          Class.forName("de.fraunhofer.aisec.cpg.frontends.python.PythonLanguageFrontend");
     } catch (ClassNotFoundException ignored) {
     }
   }
@@ -531,7 +537,9 @@ public class TypeManager {
       return Language.CXX;
     } else if (frontend instanceof GoLanguageFrontend) {
       return Language.GO;
-    } else if (frontend instanceof PythonLanguageFrontend) {
+    } else if (frontend != null
+        && pythonClass != null
+        && pythonClass.isAssignableFrom(frontend.getClass())) {
       return Language.PYTHON;
     } else if (frontend instanceof TypeScriptLanguageFrontend) {
       return Language.TYPESCRIPT;
