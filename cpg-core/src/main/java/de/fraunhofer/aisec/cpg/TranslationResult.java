@@ -28,18 +28,22 @@ package de.fraunhofer.aisec.cpg;
 import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.SubGraph;
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration;
+import de.fraunhofer.aisec.cpg.helpers.Benchmark;
+import de.fraunhofer.aisec.cpg.helpers.StatisticsHolder;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * The global (intermediate) result of the translation. A {@link
  * de.fraunhofer.aisec.cpg.frontends.LanguageFrontend} will initially populate it and a {@link
  * de.fraunhofer.aisec.cpg.passes.Pass} can extend it.
  */
-public class TranslationResult extends Node {
+public class TranslationResult extends Node implements StatisticsHolder {
   public static final String SOURCE_LOCATIONS_TO_FRONTEND = "sourceLocationsToFrontend";
   private final TranslationManager translationManager;
 
@@ -49,6 +53,8 @@ public class TranslationResult extends Node {
 
   /** A free-for-use HashMap where passes can store whatever they want. */
   private final Map<String, Object> scratch = new ConcurrentHashMap<>();
+
+  private final List<Benchmark> benchmarks = new ArrayList<>();
 
   public TranslationResult(TranslationManager translationManager) {
     this.translationManager = translationManager;
@@ -94,5 +100,33 @@ public class TranslationResult extends Node {
 
   public TranslationManager getTranslationManager() {
     return translationManager;
+  }
+
+  @Override
+  public void addBenchmark(@NotNull Benchmark b) {
+    this.benchmarks.add(b);
+  }
+
+  public List<Benchmark> getBenchmarks() {
+    return benchmarks;
+  }
+
+  @Override
+  public void printBenchmark() {
+    StatisticsHolder.DefaultImpls.printBenchmark(this);
+  }
+
+  @NotNull
+  @Override
+  public List<String> getTranslatedFiles() {
+    return translationUnits.stream()
+        .map(TranslationUnitDeclaration::getName)
+        .collect(Collectors.toList());
+  }
+
+  @NotNull
+  @Override
+  public TranslationConfiguration getConfig() {
+    return translationManager.getConfig();
   }
 }

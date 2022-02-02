@@ -45,7 +45,11 @@ object TestUtils {
     @JvmStatic
     fun <S : Node?> findByUniquePredicate(nodes: Collection<S>, predicate: Predicate<S>?): S {
         val results = findByPredicate(nodes, predicate)
-        Assertions.assertEquals(1, results.size, "Expected exactly one node matching the predicate")
+        Assertions.assertEquals(
+            1,
+            results.size,
+            "Expected exactly one node matching the predicate: ${results.joinToString(",") { it.toString() }}",
+        )
         return results[0]
     }
 
@@ -115,6 +119,28 @@ object TestUtils {
         usePasses: Boolean,
         configModifier: Consumer<TranslationConfiguration.Builder>? = null
     ): List<TranslationUnitDeclaration> {
+        return analyzeWithResult(files, topLevel, usePasses, configModifier).translationUnits
+    }
+
+    /**
+     * Default way of parsing a list of files into a full CPG. All default passes are applied
+     *
+     * @param topLevel The directory to traverse while looking for files to parse
+     * @param usePasses Whether the analysis should run passes after the initial phase
+     * @param configModifier An optional modifier for the config
+     *
+     * @return A list of [TranslationUnitDeclaration] nodes, representing the CPG roots
+     * @throws Exception Any exception thrown during the parsing process
+     */
+    @JvmOverloads
+    @JvmStatic
+    @Throws(Exception::class)
+    fun analyzeWithResult(
+        files: List<File>?,
+        topLevel: Path,
+        usePasses: Boolean,
+        configModifier: Consumer<TranslationConfiguration.Builder>? = null
+    ): TranslationResult {
         val builder =
             TranslationConfiguration.builder()
                 .sourceLocations(files)
@@ -132,7 +158,7 @@ object TestUtils {
         configModifier?.accept(builder)
         val config = builder.build()
         val analyzer = TranslationManager.builder().config(config).build()
-        return analyzer.analyze().get().translationUnits
+        return analyzer.analyze().get()
     }
 
     /**

@@ -248,7 +248,7 @@ public class DeclarationHandler
 
     // add a type declaration
     RecordDeclaration recordDeclaration =
-        newRecordDeclaration(fqn, "class", classInterDecl.toString());
+        newRecordDeclaration(fqn, "class", null, true, lang, classInterDecl);
     recordDeclaration.setSuperClasses(
         classInterDecl.getExtendedTypes().stream()
             .map(this.lang::getTypeAsGoodAsPossible)

@@ -76,13 +76,18 @@ private constructor(
         return CompletableFuture.supplyAsync {
             val scopesBuildForAnalysis = ScopeManager()
             val outerBench =
-                Benchmark(TranslationManager::class.java, "Translation into full graph")
+                Benchmark(
+                    TranslationManager::class.java,
+                    "Translation into full graph",
+                    false,
+                    result
+                )
             val passesNeedCleanup = mutableSetOf<Pass>()
             var frontendsNeedCleanup: Set<LanguageFrontend>? = null
 
             try {
                 // Parse Java/C/CPP files
-                var bench = Benchmark(this.javaClass, "Frontend")
+                var bench = Benchmark(this.javaClass, "Executing Language Frontend", false, result)
                 frontendsNeedCleanup = runFrontends(result, config, scopesBuildForAnalysis)
                 bench.stop()
 
@@ -92,7 +97,7 @@ private constructor(
                 // Apply passes
                 for (pass in config.registeredPasses) {
                     passesNeedCleanup.add(pass)
-                    bench = Benchmark(pass.javaClass, "Executing Pass")
+                    bench = Benchmark(pass.javaClass, "Executing Pass", false, result)
                     pass.accept(result)
                     bench.stop()
                     if (result.isCancelled) {

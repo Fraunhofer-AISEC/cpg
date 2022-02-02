@@ -80,7 +80,7 @@ public class ControlFlowSensitiveDFGPass extends Pass {
    *
    * @param fixDFGs ControlFlowSensitiveDFG of entire Method
    */
-  private void removeValues(ControlFlowSensitiveDFGPass.FunctionLevelFixpointIterator fixDFGs) {
+  protected void removeValues(ControlFlowSensitiveDFGPass.FunctionLevelFixpointIterator fixDFGs) {
     for (Node currNode : fixDFGs.getRemoves().keySet()) {
       for (Node prev : fixDFGs.getRemoves().get(currNode)) {
         currNode.removePrevDFG(prev);
@@ -93,7 +93,7 @@ public class ControlFlowSensitiveDFGPass extends Pass {
    *
    * @param node every node in the TranslationResult
    */
-  public void handle(Node node) {
+  protected void handle(Node node) {
     if (node instanceof FunctionDeclaration || node instanceof StatementHolder) {
       ControlFlowSensitiveDFGPass.FunctionLevelFixpointIterator flfIterator =
           new ControlFlowSensitiveDFGPass.FunctionLevelFixpointIterator();
@@ -102,20 +102,20 @@ public class ControlFlowSensitiveDFGPass extends Pass {
     }
   }
 
-  private interface IterationFunction {
+  protected interface IterationFunction {
     Map<VariableDeclaration, Set<Node>> iterate(
         Node node, Map<VariableDeclaration, Set<Node>> variables, Node endNode, boolean stopBefore);
   }
 
-  private class FunctionLevelFixpointIterator {
+  protected class FunctionLevelFixpointIterator {
 
     /**
      * A Node with refined DFG edges (key) is mapped to a set of nodes that were the previous
      * (unrefined) DFG edges and need to be removed later on
      */
-    private Map<Node, Set<Node>> removes = new HashMap<>();
+    protected Map<Node, Set<Node>> removes = new HashMap<>();
 
-    private final Map<Node, Map<VariableDeclaration, Set<Node>>> joinPoints = new HashMap<>();
+    protected final Map<Node, Map<VariableDeclaration, Set<Node>>> joinPoints = new HashMap<>();
 
     public void handle(Node functionRoot) {
       iterateTillFixpoint(functionRoot, new HashMap<>(), null, false);
@@ -128,7 +128,7 @@ public class ControlFlowSensitiveDFGPass extends Pass {
       return removes;
     }
 
-    private void addToRemoves(Node curr, Node prev) {
+    protected void addToRemoves(Node curr, Node prev) {
       if (!this.removes.containsKey(curr)) {
         this.removes.put(curr, new HashSet<>());
       }
@@ -142,7 +142,7 @@ public class ControlFlowSensitiveDFGPass extends Pass {
      * @param node starting node
      * @return set containing all nodes that have been reached
      */
-    private Set<Node> eogTraversal(Node node) {
+    protected Set<Node> eogTraversal(Node node) {
       Set<Node> eogReachableNodes = new HashSet<>();
       Set<Node> checkRechable = new HashSet<>();
       checkRechable.add(node);
@@ -163,7 +163,7 @@ public class ControlFlowSensitiveDFGPass extends Pass {
      *
      * @param currNode node that is analyzed
      */
-    private void setIngoingDFG(Node currNode, Map<VariableDeclaration, Set<Node>> variables) {
+    protected void setIngoingDFG(Node currNode, Map<VariableDeclaration, Set<Node>> variables) {
       Set<Node> prevDFGs = new HashSet<>(currNode.getPrevDFG());
       for (Node prev : prevDFGs) {
         if (prev instanceof VariableDeclaration && variables.containsKey(prev)) {
@@ -181,7 +181,8 @@ public class ControlFlowSensitiveDFGPass extends Pass {
      *
      * @param currNode Node that is being analyzed
      */
-    private void registerOutgoingDFG(Node currNode, Map<VariableDeclaration, Set<Node>> variables) {
+    protected void registerOutgoingDFG(
+        Node currNode, Map<VariableDeclaration, Set<Node>> variables) {
       Set<Node> nextDFG = new HashSet<>(currNode.getNextDFG());
       for (Node next : nextDFG) {
         if (next instanceof VariableDeclaration && variables.containsKey(next)) {
@@ -197,7 +198,7 @@ public class ControlFlowSensitiveDFGPass extends Pass {
      * @param node start node of the assignment LHS DeclaredReferenceExpression
      * @return return the last (in eog order) node of the assignment
      */
-    private Node obtainAssignmentNode(Node node) {
+    protected Node obtainAssignmentNode(Node node) {
       Set<Node> nextEOG = new HashSet<>(node.getNextEOG());
       Set<Node> rechableEOGs = new HashSet<>();
       for (Node next : nextEOG) {
@@ -219,7 +220,7 @@ public class ControlFlowSensitiveDFGPass extends Pass {
      *
      * @param currNode node whose dfg edges have to be replaced
      */
-    private void modifyDFGEdges(Node currNode, Map<VariableDeclaration, Set<Node>> variables) {
+    protected void modifyDFGEdges(Node currNode, Map<VariableDeclaration, Set<Node>> variables) {
       // A DeclaredReferenceExpression makes use of one of the VariableDeclaration we are
       // tracking. Therefore we must modify the outgoing and ingoing DFG edges
       // Check for outgoing DFG edges
@@ -250,7 +251,7 @@ public class ControlFlowSensitiveDFGPass extends Pass {
      *     reached node.
      * @return The state after reaching on of the terminating conditions
      */
-    public Map<VariableDeclaration, Set<Node>> iterateTillFixpoint(
+    protected Map<VariableDeclaration, Set<Node>> iterateTillFixpoint(
         Node node,
         Map<VariableDeclaration, Set<Node>> variables,
         Node endNode,
@@ -321,7 +322,7 @@ public class ControlFlowSensitiveDFGPass extends Pass {
      * @param currNode DeclaredReferenceExpression that is found in
      * @return Node where the EOG traversal should continue
      */
-    private Node handleDeclaredReferenceExpression(
+    protected Node handleDeclaredReferenceExpression(
         DeclaredReferenceExpression currNode,
         Map<VariableDeclaration, Set<Node>> variables,
         IterationFunction iterationFunction) {
@@ -361,7 +362,7 @@ public class ControlFlowSensitiveDFGPass extends Pass {
      * Iterates over all join-points and propagates the state that is valid for the sum of incoming
      * eog-Paths to refine the dfg edges at variable usage points.
      */
-    public void propagateValues() {
+    protected void propagateValues() {
       for (Map.Entry<Node, Map<VariableDeclaration, Set<Node>>> joinPoint :
           this.joinPoints.entrySet()) {
         propagateFromJoinPoints(joinPoint.getKey(), joinPoint.getValue(), null, true);
@@ -380,7 +381,7 @@ public class ControlFlowSensitiveDFGPass extends Pass {
      *     reached node.
      * @return The state after reaching on of the terminating conditions
      */
-    public Map<VariableDeclaration, Set<Node>> propagateFromJoinPoints(
+    protected Map<VariableDeclaration, Set<Node>> propagateFromJoinPoints(
         Node node,
         Map<VariableDeclaration, Set<Node>> variables,
         Node endNode,
@@ -443,7 +444,7 @@ public class ControlFlowSensitiveDFGPass extends Pass {
      * @param prev - the defining expression to the variable
      * @param variables - the state that is updated by the DFG edge
      */
-    private void addDFGToMap(
+    protected void addDFGToMap(
         VariableDeclaration variableDeclaration,
         Node prev,
         Map<VariableDeclaration, Set<Node>> variables) {
@@ -462,13 +463,13 @@ public class ControlFlowSensitiveDFGPass extends Pass {
 
     /**
      * Merges two states asusming that both states come from valid paths. All the definition for
-     * variables are collected into the current state represented by {@ref currentJoinpoint}
+     * variables are collected into the current state represented by {@code currentJoinpoint}
      *
      * @param currentJoinpoint - The state we are merging into
      * @param variables - tje state we are merging from
-     * @return - whether or not the merging resulted into an update to {@ref currentJoinpoint}
+     * @return - whether or not the merging resulted into an update to {@code currentJoinpoint}
      */
-    public boolean mergeStates(
+    protected boolean mergeStates(
         Map<VariableDeclaration, Set<Node>> currentJoinpoint,
         Map<VariableDeclaration, Set<Node>> variables) {
       boolean changed = false;
@@ -504,7 +505,7 @@ public class ControlFlowSensitiveDFGPass extends Pass {
      * @param state
      * @return
      */
-    public Map<VariableDeclaration, Set<Node>> createShallowCopy(
+    protected Map<VariableDeclaration, Set<Node>> createShallowCopy(
         Map<VariableDeclaration, Set<Node>> state) {
       Map<VariableDeclaration, Set<Node>> shallowCopy = new LinkedHashMap<>();
       for (Map.Entry<VariableDeclaration, Set<Node>> entry : state.entrySet()) {
