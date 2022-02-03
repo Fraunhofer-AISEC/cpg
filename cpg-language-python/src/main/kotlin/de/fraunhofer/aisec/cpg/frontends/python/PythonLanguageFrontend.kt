@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.python
 
+import de.fraunhofer.aisec.cpg.ExperimentalPython
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
@@ -37,6 +38,7 @@ import java.nio.file.Path
 import jep.JepException
 import jep.SubInterpreter
 
+@ExperimentalPython
 class PythonLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeManager?) :
     LanguageFrontend(config, scopeManager, ".") {
     companion object {

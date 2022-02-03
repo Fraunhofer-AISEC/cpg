@@ -248,7 +248,7 @@ class Application : Callable<Int> {
      * point to a file, is a directory or point to a hidden file or the paths does not have the same
      * top level path.
      */
-    @OptIn(ExperimentalGolang::class, ExperimentalTypeScript::class)
+    @OptIn(ExperimentalPython::class, ExperimentalGolang::class, ExperimentalTypeScript::class)
     private fun setupTranslationConfiguration(): TranslationConfiguration {
         assert(mutuallyExclusiveParameters.files.isNotEmpty())
         val filePaths = arrayOfNulls<File>(mutuallyExclusiveParameters.files.size)

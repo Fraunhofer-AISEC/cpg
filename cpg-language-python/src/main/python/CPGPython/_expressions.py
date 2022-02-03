@@ -249,10 +249,10 @@ def handle_expression(self, expr):
             else:
                 # TODO int, float, ...
                 if name == "str" and len(expr.args) == 1:
-                    cast = NodeBuilder.newCastExpression(self.get_src_code(expr))
+                    cast = NodeBuilder.newCastExpression(
+                            self.get_src_code(expr))
                     cast.setCastType(TypeParser.createFrom("str", False))
-                    cast.setExpression(self.handle_expression(expr.args[0])
-                                       )
+                    cast.setExpression(self.handle_expression(expr.args[0]))
                     return cast
                 else:
                     call = NodeBuilder.newCallExpression(
