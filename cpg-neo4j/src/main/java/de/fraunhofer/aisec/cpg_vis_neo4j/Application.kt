@@ -27,7 +27,6 @@ package de.fraunhofer.aisec.cpg_vis_neo4j
 
 import de.fraunhofer.aisec.cpg.*
 import de.fraunhofer.aisec.cpg.frontends.CompilationDatabase.Companion.fromFile
-import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.golang.GoLanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.llvm.LLVMIRLanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguageFrontend
@@ -284,10 +283,10 @@ class Application : Callable<Int> {
         )
 
         if (enableExperimentalPython) {
-                translationConfiguration.registerLanguage(
-                    PythonLanguageFrontend::class.java,
-                    PythonLanguageFrontend.PY_EXTENSIONS
-                )
+            translationConfiguration.registerLanguage(
+                PythonLanguageFrontend::class.java,
+                PythonLanguageFrontend.PY_EXTENSIONS
+            )
         }
 
         if (enableExperimentalGo) {
