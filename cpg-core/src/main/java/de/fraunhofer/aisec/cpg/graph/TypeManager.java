@@ -62,18 +62,20 @@ public class TypeManager {
       llvmClass = Class.forName("de.fraunhofer.aisec.cpg.frontends.llvm.LLVMIRLanguageFrontend");
 
     } catch (ClassNotFoundException | ExceptionInInitializerError ignored) {
-      log.info("LLVM frontend not available.");
+      log.info("LLVM frontend not loaded.");
     }
     try {
       pythonClass =
           Class.forName("de.fraunhofer.aisec.cpg.frontends.python.PythonLanguageFrontend");
     } catch (ClassNotFoundException | ExceptionInInitializerError ignored) {
-      log.info("Python frontend not available.");
+      log.info("Python frontend not loaded.");
     }
     try {
       goClass = Class.forName("de.fraunhofer.aisec.cpg.frontends.golang.GoLanguageFrontend");
     } catch (ClassNotFoundException | ExceptionInInitializerError ignored) {
-      log.info("Go frontend not available.");
+      log.info("Go frontend not loaded.");
+    } catch (LinkageError ex) {
+      log.error("Go frontend was found, but could not be loaded", ex);
     }
   }
 

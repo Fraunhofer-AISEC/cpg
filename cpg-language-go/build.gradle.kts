@@ -53,9 +53,7 @@ dependencies {
 }
 
 tasks.named<Test>("test") {
-    useJUnitPlatform {
-        systemProperty("java.library.path", project.projectDir.resolve("src/main/golang"))
-    }
+    useJUnitPlatform()
 }
 
 val compileGolang = tasks.register("compileGolang") {
