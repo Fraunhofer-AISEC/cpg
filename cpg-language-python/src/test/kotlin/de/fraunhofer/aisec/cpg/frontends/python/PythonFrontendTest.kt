@@ -25,7 +25,6 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.python
 
-import de.fraunhofer.aisec.cpg.BaseTest
 import de.fraunhofer.aisec.cpg.ExperimentalPython
 import de.fraunhofer.aisec.cpg.TestUtils
 import de.fraunhofer.aisec.cpg.graph.declarations.*
@@ -41,12 +40,10 @@ import java.nio.file.Path
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
-import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 
 @ExperimentalPython
-@Tag("experimentalPython")
-class PythonFrontendTest : BaseTest() {
+class PythonFrontendTest {
     // TODO ensure gradle doesn't remove those classes
     private val dummyRegion = Region()
     private val dummyPhysicalLocation = PhysicalLocation(URI(""), dummyRegion)
