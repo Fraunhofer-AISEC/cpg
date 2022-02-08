@@ -557,7 +557,7 @@ def handle_assign(self, stmt):
             else:
                 v = NodeBuilder.newFieldDeclaration(
                     name,
-                    None,
+                    UnknownType.getUnknownType(),
                     None,
                     self.get_src_code(stmt),
                     None,
@@ -582,7 +582,7 @@ def handle_assign(self, stmt):
                         self.get_src_code(stmt), False)
                 else:
                     v = NodeBuilder.newVariableDeclaration(
-                        lhs.getName(), None,
+                        lhs.getName(), UnknownType.getUnknownType(),
                         self.get_src_code(stmt), False)
                 if rhs is not None:
                     v.setInitializer(rhs)
@@ -615,7 +615,7 @@ def handle_assign(self, stmt):
                         self.get_src_code(stmt), None, rhs, False)
                 else:
                     v = NodeBuilder.newFieldDeclaration(
-                        lhs.getName(), None, None,
+                        lhs.getName(), UnknownType.getUnknownType(), None,
                         self.get_src_code(stmt), None, None, False)
                 self.scopemanager.addDeclaration(v)
                 self.scopemanager.getCurrentRecord().addField(v)
@@ -633,7 +633,7 @@ def handle_assign(self, stmt):
                     self.get_src_code(stmt), False)
             else:
                 v = NodeBuilder.newVariableDeclaration(
-                    lhs.getName(), None,
+                    lhs.getName(), UnknownType.getUnknownType(),
                     self.get_src_code(stmt), False)
             if rhs is not None:
                 v.setInitializer(rhs)
