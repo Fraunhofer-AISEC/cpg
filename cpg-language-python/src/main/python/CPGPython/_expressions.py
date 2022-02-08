@@ -293,61 +293,7 @@ def handle_expression_impl(self, expr):
     elif isinstance(expr, ast.Name):
         r = NodeBuilder.newDeclaredReferenceExpression(
             expr.id, UnknownType.getUnknownType(), self.get_src_code(expr))
-        return r  # TODO delete code below
-        # TODO FIXME!!! This ugly mess has to be refactored!!!
-        """
-        The following logic applies here:
-        - not in a class & no prior declaration -> variable declaration
-        - not in a class & prior declaration found -> reference
-        - in a class & in a method -> reference
-        - in a class & not in a method & no prior declaration -> field decl
-        - in a class & not in a method & prior declaration -> reference
-        """
-
-        # handle special cases
-        if expr.id == "__name__":
-            r = NodeBuilder.newDeclaredReferenceExpression(
-                expr.id, UnknownType.getUnknownType(), self.get_src_code(expr))
-            return r
-        ref = NodeBuilder.newDeclaredReferenceExpression(
-            expr.id, UnknownType.getUnknownType(), self.get_src_code(expr))
-        resolved = self.scopemanager.resolveReference(ref)
-        inRecord = self.scopemanager.isInRecord()
-        inFunction = self.scopemanager.isInFunction()
-        if resolved is not None:
-            if inRecord and inFunction and self.is_field_declaration(resolved):
-                # python has no implicit "this" / "self"
-                v = NodeBuilder.newVariableDeclaration(
-                    expr.id, UnknownType.getUnknownType(),
-                    self.get_src_code(expr), False)
-                self.scopemanager.addDeclaration(v)
-                return v
-            else:  # VariableDeclaration
-                self.log_with_loc("Resolved. Returning a reference to: %s" %
-                                  (resolved))
-                # return the reference and not the resolved declaration
-                return ref
-        else:
-            # if inRecord and inFunction:
-            # return ref # do not create a FieldDeclaration for fields declared
-            # inside a function -> simply use a DeclaredReferenceExpression and
-            # let the CPG handle the rest
-            if inRecord and not inFunction:
-                self.log_with_loc(
-                    "Could not resolve -> creating a new field for: %s" %
-                    (expr.id))
-                v = NodeBuilder.newFieldDeclaration(
-                    expr.id, UnknownType.getUnknownType(), None,
-                    self.get_src_code(expr), None, None, False)
-            else:
-                self.log_with_loc(
-                    "Could not resolve -> creating a new variable for: %s" %
-                    (expr.id))
-                v = NodeBuilder.newVariableDeclaration(
-                    expr.id, UnknownType.getUnknownType(),
-                    self.get_src_code(expr), False)
-            self.scopemanager.addDeclaration(v)
-            return v
+        return r
     elif isinstance(expr, ast.List):
         ile = NodeBuilder.newInitializerListExpression(self.get_src_code(expr))
 

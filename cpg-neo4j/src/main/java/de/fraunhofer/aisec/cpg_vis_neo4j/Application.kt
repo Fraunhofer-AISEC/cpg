@@ -62,7 +62,6 @@ private const val DEFAULT_USER_NAME = "neo4j"
 private const val DEFAULT_PASSWORD = "password"
 private const val DEFAULT_SAVE_DEPTH = -1
 
-private var pythonClass: Class<*>? = null
 
 /**
  * An application to export the <a href="https://github.com/Fraunhofer-AISEC/cpg">cpg</a> to a <a
@@ -71,6 +70,7 @@ private var pythonClass: Class<*>? = null
  * @author Andreas Hager, andreas.hager@aisec.fraunhofer.de
  */
 class Application : Callable<Int> {
+
     private val log: Logger
         get() = LoggerFactory.getLogger(Application::class.java)
     // Either provide the files to evaluate or provide the path of compilation database with
