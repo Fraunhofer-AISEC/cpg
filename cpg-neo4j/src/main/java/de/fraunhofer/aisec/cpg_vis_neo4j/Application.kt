@@ -72,14 +72,6 @@ private var pythonClass: Class<*>? = null
  * @author Andreas Hager, andreas.hager@aisec.fraunhofer.de
  */
 class Application : Callable<Int> {
-
-    init {
-        try {
-            pythonClass =
-                Class.forName("de.fraunhofer.aisec.cpg.frontends.python.PythonLanguageFrontend")
-        } catch (ignored: ClassNotFoundException) {}
-    }
-
     private val log: Logger
         get() = LoggerFactory.getLogger(Application::class.java)
     // Either provide the files to evaluate or provide the path of compilation database with
@@ -248,7 +240,7 @@ class Application : Callable<Int> {
      * point to a file, is a directory or point to a hidden file or the paths does not have the same
      * top level path.
      */
-    @OptIn(ExperimentalGolang::class, ExperimentalTypeScript::class)
+    @OptIn(ExperimentalPython::class, ExperimentalGolang::class, ExperimentalTypeScript::class)
     private fun setupTranslationConfiguration(): TranslationConfiguration {
         assert(mutuallyExclusiveParameters.files.isNotEmpty())
         val filePaths = arrayOfNulls<File>(mutuallyExclusiveParameters.files.size)
@@ -292,14 +284,10 @@ class Application : Callable<Int> {
         )
 
         if (enableExperimentalPython) {
-            if (pythonClass != null) {
-                translationConfiguration.registerLanguage(
-                    pythonClass as Class<out LanguageFrontend>,
-                    listOf(".py") // TODO FIXME
-                )
-            } else {
-                log.error("Failed to find cpg-language-python module.")
-            }
+            translationConfiguration.registerLanguage(
+              PythonLanguageFrontend::class.java,
+              PythonLanguageFrontend.PY_EXTENSIONS
+            )
         }
 
         if (enableExperimentalGo) {
