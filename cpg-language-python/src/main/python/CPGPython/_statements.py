@@ -23,6 +23,7 @@
 #                    \______/ \__|       \______/
 #
 from ._misc import NOT_IMPLEMENTED_MSG
+from ._misc import handle_operator_code
 from ._spotless_dummy import *
 from de.fraunhofer.aisec.cpg.graph import NodeBuilder
 from de.fraunhofer.aisec.cpg.graph.statements import CompoundStatement
@@ -448,43 +449,24 @@ def make_compound_statement(self, stmts) -> CompoundStatement:
 
 
 def handle_assign(self, stmt):
+    self.log_with_loc("Start \"handle_assign\" for:\n%s\n" %
+                      (self.get_src_code(stmt)))
+    r = self.handle_assign_impl(stmt)
+    self.add_loc_info(stmt, r)
+    self.log_with_loc("End \"handle_assign\" for:\n%s\nResult is: %s" %
+                      (self.get_src_code(stmt),
+                       r))
+    return r
+
+
+def handle_assign_impl(self, stmt):
     """
     This funnction handles assignments (ast.Assign, ast.AnnAssign,
     ast.AugAssign)
     """
     if stmt is ast.AugAssign:
         target = self.handle_expression(stmt.target)
-        if isinstance(stmt.op, ast.Add):
-            op = "+"
-        elif isinstance(stmt.op, ast.Sub):
-            op = "-"
-        elif isinstance(stmt.op, ast.Mult):
-            op = "*"
-        elif isinstance(stmt.op, ast.MatMult):
-            op = "*"
-        elif isinstance(stmt.op, ast.Div):
-            op = "/"
-        elif isinstance(stmt.op, ast.Mod):
-            op = "%"
-        elif isinstance(stmt.op, ast.Pow):
-            op = "^"
-        elif isinstance(stmt.op, ast.LShift):
-            op = "<<"
-        elif isinstance(stmt.op, ast.RShift):
-            op = ">>"
-        elif isinstance(stmt.op, ast.BitOr):
-            op = "|"
-        elif isinstance(stmt.op, ast.BitXor):
-            op = "^"
-        elif isinstance(stmt.op, ast.BitAnd):
-            op = "&"
-        elif isinstance(stmt.op, ast.FloorDiv):
-            op = "//"
-        else:
-            self.log_with_loc(
-                "Failed to identify the operator. Using an empty dummy.",
-                loglevel="ERROR")
-            op = ""
+        op = self.handle_operator_code(stmt.op)
         value = self.handle_expression(stmt.value)
         r = NodeBuilder.newBinaryOperator(op, self, get_src_code(stmt)
                                           )

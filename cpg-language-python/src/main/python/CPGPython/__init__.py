@@ -44,6 +44,7 @@ class PythonASTToCPG(ast.NodeVisitor):
     from ._expressions import handle_expression_impl
     from ._misc import add_loc_info
     from ._misc import get_src_code
+    from ._misc import handle_operator_code
     from ._misc import is_declaration
     from ._misc import is_declared_reference
     from ._misc import is_field_declaration
@@ -54,6 +55,7 @@ class PythonASTToCPG(ast.NodeVisitor):
     from ._misc import wrap_declaration_to_stmt
     from ._statements import handle_argument
     from ._statements import handle_assign
+    from ._statements import handle_assign_impl
     from ._statements import handle_for
     from ._statements import handle_function_or_method
     from ._statements import handle_statement

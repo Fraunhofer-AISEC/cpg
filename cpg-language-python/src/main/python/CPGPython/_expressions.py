@@ -23,6 +23,7 @@
 #                    \______/ \__|       \______/
 #
 from ._misc import NOT_IMPLEMENTED_MSG
+from ._misc import handle_operator_code
 from ._spotless_dummy import *
 from de.fraunhofer.aisec.cpg.graph import NodeBuilder
 from de.fraunhofer.aisec.cpg.graph.types import TypeParser
@@ -51,35 +52,7 @@ def handle_expression_impl(self, expr):
         r = NodeBuilder.newExpression("")
         return r
     elif isinstance(expr, ast.BinOp):
-        if isinstance(expr.op, ast.Add):
-            opcode = "+"
-        elif isinstance(expr.op, ast.Sub):
-            opcode = "-"
-        elif isinstance(expr.op, ast.Mult):
-            opcode = "*"
-        elif isinstance(expr.op, ast.Div):
-            opcode = "/"
-        elif isinstance(expr.op, ast.FloorDiv):
-            opcode = "//"
-        elif isinstance(expr.op, ast.Mod):
-            opcode = "%"
-        elif isinstance(expr.op, ast.Pow):
-            opcode = "**"
-        elif isinstance(expr.op, ast.LShift):
-            opcode = "<<"
-        elif isinstance(expr.op, ast.RShift):
-            opcode = ">>"
-        elif isinstance(expr.op, ast.BitOr):
-            opcode = "|"
-        elif isinstance(expr.op, ast.BitXor):
-            opcode = "^"
-        elif isinstance(expr.op, ast.BitAnd):
-            opcode = "&"
-        elif isinstance(expr.op, ast.MatMult):
-            opcode = "*"
-        else:
-            self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
-            opcode = "DUMMY"
+        opcode = self.handle_operator_code(expr.op)
         binop = NodeBuilder.newBinaryOperator(opcode,
                                               self.get_src_code(expr))
         binop.setLhs(self.handle_expression(expr.left))
@@ -239,7 +212,7 @@ def handle_expression_impl(self, expr):
                 # TODO int, float, ...
                 if name == "str" and len(expr.args) == 1:
                     cast = NodeBuilder.newCastExpression(
-                            self.get_src_code(expr))
+                        self.get_src_code(expr))
                     cast.setCastType(TypeParser.createFrom("str", False))
                     cast.setExpression(self.handle_expression(expr.args[0]))
                     return cast

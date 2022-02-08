@@ -733,9 +733,11 @@ class PythonFrontendTest : BaseTest() {
         assertNotNull(barBody)
 
         // self.classFieldDeclaredInFunction = 456
-        val barStmt0 = barBody.statements[0] as? BinaryOperator
-        assertNotNull(barStmt0)
-        assertEquals((barStmt0.lhs as? MemberExpression)?.refersTo, classFieldDeclaredInFunction)
+        val barStmt0 = barBody.statements[0] as? DeclarationStatement
+        val decl0 = barStmt0?.declarations?.get(0) as? FieldDeclaration
+        assertNotNull(decl0)
+        assertEquals("classFieldDeclaredInFunction", decl0.name)
+        assertNotNull(decl0.initializer)
 
         // self.classFieldNoInitializer = 789
         val barStmt1 = barBody.statements[1] as? BinaryOperator
@@ -748,19 +750,37 @@ class PythonFrontendTest : BaseTest() {
         assertEquals((barStmt2.lhs as? MemberExpression)?.refersTo, classFieldWithInit)
 
         // classFieldNoInitializer = "shadowed"
-        val barStmt3 = barBody.statements[3] as? DeclarationStatement
+        val barStmt3 = barBody.statements[3] as? BinaryOperator
         assertNotNull(barStmt3)
-        assertNotNull((barStmt3.declarations[0] as? VariableDeclaration)?.initializer)
+        assertEquals("=", barStmt3.operatorCode)
+        assertEquals(
+            classFieldNoInitializer,
+            (barStmt3.lhs as? DeclaredReferenceExpression)?.refersTo
+        )
+        assertEquals("shadowed", (barStmt3.rhs as? Literal<String>)?.value)
 
         // classFieldWithInit = "shadowed"
-        val barStmt4 = barBody.statements[4] as? DeclarationStatement
+        val barStmt4 = barBody.statements[4] as? BinaryOperator
         assertNotNull(barStmt4)
-        assertNotNull((barStmt4.declarations[0] as? VariableDeclaration)?.initializer)
+        assertEquals("=", barStmt4.operatorCode)
+        assertEquals(classFieldWithInit, (barStmt4.lhs as? DeclaredReferenceExpression)?.refersTo)
+        assertEquals("shadowed", (barStmt4.rhs as? Literal<String>)?.value)
 
         // classFieldDeclaredInFunction = "shadowed"
-        val barStmt5 = barBody.statements[5] as? DeclarationStatement
+        val barStmt5 = barBody.statements[5] as? BinaryOperator
         assertNotNull(barStmt5)
-        assertNotNull((barStmt5.declarations[0] as? VariableDeclaration)?.initializer)
+        assertEquals("=", barStmt5.operatorCode)
+        assertEquals(
+            classFieldDeclaredInFunction,
+            (barStmt5.lhs as? DeclaredReferenceExpression)?.refersTo
+        )
+        assertEquals("shadowed", (barStmt5.rhs as? Literal<String>)?.value)
+
+        /* TODO:
+        foo = Foo()
+        foo.classFieldNoInitializer = 345
+        foo.classFieldWithInit = 678
+         */
     }
 
     @Test

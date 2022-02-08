@@ -143,3 +143,42 @@ def wrap_declaration_to_stmt(self, stmt):
     decl_stmt.setLocation(stmt.getLocation())
     decl_stmt.setSingleDeclaration(stmt)
     return decl_stmt
+
+
+def handle_operator_code(self, opcode):
+    """
+    Parses an operator code and returns its string representation.
+    Returns an empty string on error.
+    """
+    if isinstance(opcode, ast.Add):
+        op = "+"
+    elif isinstance(opcode, ast.Sub):
+        op = "-"
+    elif isinstance(opcode, ast.Mult):
+        op = "*"
+    elif isinstance(opcode, ast.MatMult):
+        op = "*"
+    elif isinstance(opcode, ast.Div):
+        op = "/"
+    elif isinstance(opcode, ast.Mod):
+        op = "%"
+    elif isinstance(opcode, ast.Pow):
+        op = "^"
+    elif isinstance(opcode, ast.LShift):
+        op = "<<"
+    elif isinstance(opcode, ast.RShift):
+        op = ">>"
+    elif isinstance(opcode, ast.BitOr):
+        op = "|"
+    elif isinstance(opcode, ast.BitXor):
+        op = "^"
+    elif isinstance(opcode, ast.BitAnd):
+        op = "&"
+    elif isinstance(opcode, ast.FloorDiv):
+        op = "//"
+    else:
+        self.log_with_loc(
+            "Failed to identify the operator. Using an empty dummy.",
+            loglevel="ERROR")
+        op = ""
+    return op
