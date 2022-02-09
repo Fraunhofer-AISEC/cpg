@@ -628,8 +628,12 @@ func (this *GoLanguageFrontend) handleExpr(fset *token.FileSet, expr ast.Expr) (
 		e = (*cpg.Expression)(this.handleUnaryExpr(fset, v))
 	case *ast.SelectorExpr:
 		e = (*cpg.Expression)(this.handleSelectorExpr(fset, v))
+	case *ast.KeyValueExpr:
+		e = (*cpg.Expression)(this.handleKeyValueExpr(fset, v))
 	case *ast.BasicLit:
 		e = (*cpg.Expression)(this.handleBasicLit(fset, v))
+	case *ast.CompositeLit:
+		e = (*cpg.Expression)(this.handleCompositeLit(fset, v))
 	case *ast.Ident:
 		e = (*cpg.Expression)(this.handleIdent(fset, v))
 	default:
@@ -1033,6 +1037,24 @@ func (this *GoLanguageFrontend) handleSelectorExpr(fset *token.FileSet, selector
 	return decl
 }
 
+func (this *GoLanguageFrontend) handleKeyValueExpr(fset *token.FileSet, expr *ast.KeyValueExpr) *cpg.KeyValueExpression {
+	this.LogDebug("Handling key value expression %+v", *expr)
+
+	k := cpg.NewKeyValueExpression(fset, expr)
+
+	keyExpr := this.handleExpr(fset, expr.Key)
+	if keyExpr != nil {
+		k.SetKey(keyExpr)
+	}
+
+	valueExpr := this.handleExpr(fset, expr.Value)
+	if valueExpr != nil {
+		k.SetValue(valueExpr)
+	}
+
+	return k
+}
+
 func (this *GoLanguageFrontend) handleBasicLit(fset *token.FileSet, lit *ast.BasicLit) *cpg.Literal {
 	this.LogDebug("Handling literal %+v", *lit)
 
@@ -1065,6 +1087,38 @@ func (this *GoLanguageFrontend) handleBasicLit(fset *token.FileSet, lit *ast.Bas
 	l.SetValue(value)
 
 	return l
+}
+
+// handleCompositeLit handles a composite literal, which we need to translate into a combination of a
+// ConstructExpression and a list of KeyValueExpressions. The problem is that we need to add the list
+// as a first argument of the construct expression.
+func (this *GoLanguageFrontend) handleCompositeLit(fset *token.FileSet, lit *ast.CompositeLit) *cpg.ConstructExpression {
+	this.LogDebug("Handling composite literal %+v", *lit)
+
+	c := cpg.NewConstructExpression(fset, lit)
+
+	// parse the type field, to see which kind of expression it is
+	var reference = this.handleExpr(fset, lit.Type)
+
+	if reference == nil {
+		return nil
+	}
+
+	(*cpg.Node)(c).SetName(reference.GetName())
+
+	l := cpg.NewInitializerListExpression(fset, lit)
+
+	c.AddArgument((*cpg.Expression)(l))
+
+	for _, elem := range lit.Elts {
+		expr := this.handleExpr(fset, elem)
+
+		if expr != nil {
+			l.AddInitializer(expr)
+		}
+	}
+
+	return c
 }
 
 func (this *GoLanguageFrontend) handleIdent(fset *token.FileSet, ident *ast.Ident) *cpg.DeclaredReferenceExpression {

@@ -39,12 +39,14 @@ type NewExpression Expression
 type ArrayCreationExpression Expression
 type ArraySubscriptionExpression Expression
 type ConstructExpression Expression
+type InitializerListExpression Expression
 type MemberCallExpression CallExpression
 type MemberExpression Expression
 type BinaryOperator Expression
 type UnaryOperator Expression
 type Literal Expression
 type DeclaredReferenceExpression Expression
+type KeyValueExpression Expression
 
 func NewCallExpression(fset *token.FileSet, astNode ast.Node) *CallExpression {
 	c, err := env.NewObject("de/fraunhofer/aisec/cpg/graph/statements/expressions/CallExpression")
@@ -137,6 +139,19 @@ func NewConstructExpression(fset *token.FileSet, astNode ast.Node) *ConstructExp
 	return (*ConstructExpression)(c)
 }
 
+func NewInitializerListExpression(fset *token.FileSet, astNode ast.Node) *InitializerListExpression {
+	l, err := env.NewObject("de/fraunhofer/aisec/cpg/graph/statements/expressions/InitializerListExpression")
+	if err != nil {
+		log.Fatal(err)
+
+	}
+
+	updateCode(fset, (*Node)(l), astNode)
+	updateLocation(fset, (*Node)(l), astNode)
+
+	return (*InitializerListExpression)(l)
+}
+
 func NewBinaryOperator(fset *token.FileSet, astNode ast.Node) *BinaryOperator {
 	c, err := env.NewObject("de/fraunhofer/aisec/cpg/graph/statements/expressions/BinaryOperator")
 	if err != nil {
@@ -187,6 +202,19 @@ func NewDeclaredReferenceExpression(fset *token.FileSet, astNode ast.Node) *Decl
 	updateLocation(fset, (*Node)(l), astNode)
 
 	return (*DeclaredReferenceExpression)(l)
+}
+
+func NewKeyValueExpression(fset *token.FileSet, astNode ast.Node) *KeyValueExpression {
+	k, err := env.NewObject("de/fraunhofer/aisec/cpg/graph/statements/expressions/KeyValueExpression")
+	if err != nil {
+		log.Fatal(err)
+
+	}
+
+	updateCode(fset, (*Node)(k), astNode)
+	updateLocation(fset, (*Node)(k), astNode)
+
+	return (*KeyValueExpression)(k)
 }
 
 func (e *Expression) SetType(t *Type) {
@@ -315,4 +343,16 @@ func (n *NewExpression) SetInitializer(e *Expression) (err error) {
 	_, err = (*jnigi.ObjectRef)(n).CallMethod(env, "setInitializer", jnigi.Void, (*jnigi.ObjectRef)(e).Cast("de/fraunhofer/aisec/cpg/graph/statements/expressions/Expression"))
 
 	return
+}
+
+func (c *InitializerListExpression) AddInitializer(e *Expression) {
+	(*jnigi.ObjectRef)(c).CallMethod(env, "addInitializer", jnigi.Void, (*jnigi.ObjectRef)(e).Cast("de/fraunhofer/aisec/cpg/graph/statements/expressions/Expression"))
+}
+
+func (k *KeyValueExpression) SetKey(e *Expression) {
+	(*jnigi.ObjectRef)(k).CallMethod(env, "setKey", jnigi.Void, (*jnigi.ObjectRef)(e).Cast("de/fraunhofer/aisec/cpg/graph/statements/expressions/Expression"))
+}
+
+func (k *KeyValueExpression) SetValue(e *Expression) {
+	(*jnigi.ObjectRef)(k).CallMethod(env, "setValue", jnigi.Void, (*jnigi.ObjectRef)(e).Cast("de/fraunhofer/aisec/cpg/graph/statements/expressions/Expression"))
 }
