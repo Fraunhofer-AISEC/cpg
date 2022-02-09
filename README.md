@@ -34,7 +34,7 @@ repositories {
 }
 
 dependencies {
-    var cpgVersion = "4.2.0" 
+    var cpgVersion = "4.3.0" 
     
     // if you want to include all published cpg modules
     api("de.fraunhofer.aisec", "cpg", cpgVersion)
@@ -42,8 +42,9 @@ dependencies {
     // if you only want to include the core CPG without extra modules
     api("de.fraunhofer.aisec", "cpg-core", cpgVersion)
     
-    // or just a particular extra module, such as LLVM
+    // or just a particular extra module, such as LLVM or Python
     api("de.fraunhofer.aisec", "cpg-language-llvm", cpgVersion)
+    api("de.fraunhofer.aisec", "cpg-language-python", cpgVersion)    
 }
 ```
 
@@ -59,7 +60,7 @@ The library can be used on the command line using the `cpg-console` subproject. 
 
 ### Usage of Experimental Languages
 
-Some languages, such as Golang are marked as experimental and depend on other native libraries. These are NOT YET bundled in the release jars (with exception of TypeScript), so you need to build them manually using the property `-Pexperimental` when using tasks such as `build` or `test`. For typescript, please use `-PexperimentalTypeScript`. Use `-PexperimentalPython` for Python support, respectively.
+Some languages, such as Golang are marked as experimental and depend on other native libraries. These are NOT YET bundled in the release jars (with exception of TypeScript), so you need to build them manually using the property `-Pexperimental` when using tasks such as `build` or `test`. For typescript, please use `-PexperimentalTypeScript`. Use the `cpg-language-python` module for Python support.
 
 #### Golang
 
@@ -67,7 +68,7 @@ In the case of Golang, the necessary native code can be found in the `src/main/g
 
 #### Python
 
-You need to install [jep](https://github.com/ninia/jep/). This can either be system wide or in a virtual environment. Your jep version hast to match the version used by CPG (see [build.gradle.kts](./cpg-library/build.gradle.kts)).
+You need to install [jep](https://github.com/ninia/jep/). This can either be system wide or in a virtual environment. Your jep version hast to match the version used by CPG (see [build.gradle.kts](./cpg-language-python/build.gradle.kts)).
 
 Currently, only Python 3.9 is supported.
 

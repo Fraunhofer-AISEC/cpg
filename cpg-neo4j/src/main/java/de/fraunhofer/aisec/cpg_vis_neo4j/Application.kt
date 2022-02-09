@@ -70,6 +70,7 @@ private const val DEFAULT_SAVE_DEPTH = -1
  * @author Andreas Hager, andreas.hager@aisec.fraunhofer.de
  */
 class Application : Callable<Int> {
+
     private val log: Logger
         get() = LoggerFactory.getLogger(Application::class.java)
     // Either provide the files to evaluate or provide the path of compilation database with

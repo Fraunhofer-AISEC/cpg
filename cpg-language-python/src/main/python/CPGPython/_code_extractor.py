@@ -42,11 +42,11 @@ class CodeExtractor:
         else:
             res = []
             # first line is partially read
-            res.append(self.lines[lineno][col_offset:])
+            res.append(" " * col_offset + self.lines[lineno][col_offset:])
             lineno += 1
 
             # fill with compelte lines
-            while lineno + 1 < end_lineno:
+            while lineno < end_lineno:
                 res.append(self.lines[lineno][:])
                 lineno += 1
 

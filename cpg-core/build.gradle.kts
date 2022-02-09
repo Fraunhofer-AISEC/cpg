@@ -32,7 +32,7 @@ plugins {
     `maven-publish`
     signing
 
-    id("com.github.node-gradle.node") version "3.1.1"
+    id("com.github.node-gradle.node") version "3.2.0"
 }
 
 publishing {
@@ -97,10 +97,6 @@ tasks.named<Test>("test") {
         if (!project.hasProperty("experimentalTypeScript")) {
             excludeTags("experimentalTypeScript")
         }
-
-        if (!project.hasProperty("experimentalPython")) {
-            excludeTags("experimentalPython")
-        }
     }
     maxHeapSize = "4048m"
 }
@@ -154,15 +150,6 @@ if (project.hasProperty("experimental")) {
     }
 }
 
-if (project.hasProperty("experimentalPython")) {
-    // add python source code to resources
-    tasks {
-        processResources {
-            from("src/main/python/")
-            include("CPGPython/*.py", "cpg.py")
-        }
-    }
-}
 
 if (project.hasProperty("experimentalTypeScript")) {
     tasks.processResources {
@@ -210,9 +197,6 @@ dependencies {
     implementation(platform("org.jetbrains.kotlin:kotlin-bom"))
     implementation("org.jetbrains.kotlin:kotlin-stdlib")
     implementation("org.jetbrains.kotlin:kotlin-reflect")
-
-    // jep for python support
-    api("black.ninia:jep:4.0.0")
 
     // JUnit
     testImplementation("org.jetbrains.kotlin:kotlin-test")
