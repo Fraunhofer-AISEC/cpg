@@ -1,5 +1,5 @@
 class Foo:
-    classFieldNoInitializer
+    classFieldNoInitializer: int
     classFieldWithInit = 123
     classFieldNoInitializer = classFieldWithInit
 
@@ -14,4 +14,3 @@ class Foo:
 foo = Foo()
 foo.classFieldNoInitializer = 345
 foo.classFieldWithInit = 678
-foo.self.classFieldDeclaredInFunction = 901
