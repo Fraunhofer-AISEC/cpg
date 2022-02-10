@@ -1,6 +1,7 @@
 *     @konradweiss @oxisto
 
 *.go  @oxisto
+cpg-language-go @oxisto
 
 *.py  @maximiliankaul
 cpg-language-python @maximiliankaul
