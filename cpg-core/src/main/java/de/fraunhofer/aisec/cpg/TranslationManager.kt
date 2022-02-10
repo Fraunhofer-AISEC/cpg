@@ -302,12 +302,6 @@ private constructor(
     ) {
         usedFrontends.add(f)
 
-        if (usedFrontends.map { it.javaClass }.distinct().count() > 1) {
-            log.error(
-                "Different frontends are used for multiple files. This will very likely break the following passes."
-            )
-        }
-
         // remember which frontend parsed each file
         val sfToFe =
             result.scratch.computeIfAbsent(TranslationResult.SOURCE_LOCATIONS_TO_FRONTEND) {
