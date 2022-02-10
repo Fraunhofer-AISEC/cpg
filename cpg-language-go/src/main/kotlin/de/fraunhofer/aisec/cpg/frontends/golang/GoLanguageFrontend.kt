@@ -34,7 +34,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.io.File
-import kotlin.Throws
+import java.io.FileOutputStream
 
 @ExperimentalGolang
 class GoLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeManager?) :
@@ -43,7 +43,33 @@ class GoLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeMa
         @kotlin.jvm.JvmField var GOLANG_EXTENSIONS: List<String> = listOf(".go")
 
         init {
-            System.loadLibrary("cpgo")
+            try {
+                val ext: String =
+                    if (System.getProperty("os.name").startsWith("Mac")) {
+                        ".dylib"
+                    } else {
+                        ".so"
+                    }
+
+                val stream = GoLanguageFrontend::class.java.getResourceAsStream("/libcpgo$ext")
+
+                val tmp = File.createTempFile("libcpgo", ext)
+                tmp.deleteOnExit()
+                val fos = FileOutputStream(tmp)
+                stream.copyTo(FileOutputStream(tmp))
+
+                fos.close()
+                stream.close()
+
+                log.info("Loading cpgo library from ${tmp.absoluteFile}")
+
+                System.load(tmp.absolutePath)
+            } catch (ex: Exception) {
+                log.error(
+                    "Error while loading cpgo library. Go frontend will not work correctly",
+                    ex
+                )
+            }
         }
     }
 

@@ -29,11 +29,11 @@ plugins {
 
 publishing {
     publications {
-        named<MavenPublication>("cpg-language-llvm") {
+        named<MavenPublication>("cpg-language-go") {
             pom {
-                artifactId = "cpg-language-llvm"
-                name.set("Code Property Graph - LLVM Frontend")
-                description.set("A LLVM language frontend for the CPG")
+                artifactId = "cpg-language-go"
+                name.set("Code Property Graph - Go Frontend")
+                description.set("A Go language frontend for the CPG")
             }
         }
     }
@@ -44,14 +44,28 @@ dependencies {
 
     testImplementation(testFixtures(project(":cpg-core")))
 
-    // llvm
-    implementation("org.bytedeco:llvm-platform:13.0.1-1.5.7")
-
     // JUnit
-    //testImplementation("org.jetbrains.kotlin:kotlin-test")
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
-    testImplementation("org.junit.jupiter:junit-jupiter-api:5.8.2")
-    testImplementation("org.junit.jupiter:junit-jupiter-params:5.8.2")
+    testImplementation("org.junit.jupiter:junit-jupiter-api:5.8.1")
+    testImplementation("org.junit.jupiter:junit-jupiter-params:5.8.1")
 
-    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.8.2")
+    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.8.1")
+}
+
+tasks.named<Test>("test") {
+    useJUnitPlatform()
+}
+
+val compileGolang = tasks.register("compileGolang") {
+    doLast {
+        project.exec {
+            commandLine("./build.sh")
+                .setStandardOutput(System.out)
+                .workingDir("src/main/golang")
+        }
+    }
+}
+
+tasks.named("compileJava") {
+    dependsOn(compileGolang)
 }
