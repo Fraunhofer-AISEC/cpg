@@ -78,7 +78,7 @@ public class CallResolver extends Pass {
 
   @Override
   public void accept(@NonNull TranslationResult translationResult) {
-    walker = new ScopedWalker(lang);
+    walker = new ScopedWalker(lang, this);
     walker.registerHandler((currClass, parent, currNode) -> walker.collectDeclarations(currNode));
     walker.registerHandler(this::findRecords);
     walker.registerHandler(this::findTemplates);
@@ -1251,7 +1251,8 @@ public class CallResolver extends Pass {
 
   /**
    * Adds the resolved default template arguments recursively to the templateParameter list of the
-   * ConstructExpression until a fixpoint is reached e.g. template&lt;class Type1, class Type2 = Type1&gt;
+   * ConstructExpression until a fixpoint is reached e.g. template&lt;class Type1, class Type2 =
+   * Type1&gt;
    *
    * @param constructExpression
    * @param template

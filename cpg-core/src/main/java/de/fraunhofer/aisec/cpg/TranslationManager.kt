@@ -96,12 +96,18 @@ private constructor(
 
                 // Apply passes
                 for (pass in config.registeredPasses) {
-                    passesNeedCleanup.add(pass)
-                    bench = Benchmark(pass.javaClass, "Executing Pass", false, result)
-                    pass.accept(result)
-                    bench.stop()
-                    if (result.isCancelled) {
-                        log.warn("Analysis interrupted, stopping Pass evaluation")
+                    try{
+                        passesNeedCleanup.add(pass)
+                        bench = Benchmark(pass.javaClass, "Executing Pass", false, result)
+                        pass.accept(result)
+                        bench.stop()
+                        if (result.isCancelled) {
+                            log.warn("Analysis interrupted, stopping Pass evaluation")
+                        }
+                    }catch (e: Exception){
+                        // Printing the stack of currently handled CPG objects when the Exception was thrown.
+                        pass.printHandlerLogTrace()
+                        throw e;
                     }
                 }
             } catch (ex: TranslationException) {
@@ -343,10 +349,19 @@ private constructor(
                 return Optional.empty()
             }
             result.addTranslationUnit(frontend.parse(sourceLocation))
-        } catch (ex: TranslationException) {
-            log.error("An error occurred during parsing of {}: {}", sourceLocation.name, ex.message)
-            if (config.failOnError) {
-                throw ex
+        } catch (e: Exception) {
+            // Printing Handler log trace on any error
+            if (frontend != null) {
+                frontend.printHandlerLogTrace()
+            }
+            // It the Exception was a TranslationException the translation is only supposed to fail if configured in that way
+            if(e is TranslationException){
+                log.error("An error occurred during parsing of {}: {}", sourceLocation.name, e.message)
+                if (config.failOnError) {
+                    throw e
+                }
+            }else{
+                throw e
             }
         }
         return Optional.ofNullable(frontend)

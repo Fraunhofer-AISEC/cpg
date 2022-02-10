@@ -68,7 +68,7 @@ public class ControlFlowSensitiveDFGPass extends Pass {
 
   @Override
   public void accept(TranslationResult translationResult) {
-    SubgraphWalker.IterativeGraphWalker walker = new SubgraphWalker.IterativeGraphWalker();
+    SubgraphWalker.IterativeGraphWalker walker = new SubgraphWalker.IterativeGraphWalker(this);
     walker.registerOnNodeVisit(this::handle);
     for (TranslationUnitDeclaration tu : translationResult.getTranslationUnits()) {
       walker.iterate(tu);

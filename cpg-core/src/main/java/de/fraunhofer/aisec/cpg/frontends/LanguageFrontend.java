@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.frontends;
 
+import de.fraunhofer.aisec.cpg.GraphTransformation;
 import de.fraunhofer.aisec.cpg.TranslationConfiguration;
 import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration;
@@ -39,10 +40,11 @@ import java.util.function.BiPredicate;
 import org.apache.commons.lang3.StringUtils;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
+import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public abstract class LanguageFrontend {
+public abstract class LanguageFrontend extends GraphTransformation {
 
   // Allow non-Java frontends to access the logger (i.e. jep)
   public static final Logger log = LoggerFactory.getLogger(LanguageFrontend.class);
@@ -168,6 +170,12 @@ public abstract class LanguageFrontend {
    */
   @Nullable
   public abstract <T> String getCodeFromRawNode(T astNode);
+
+  @NotNull
+  @Override
+  protected String getLocationString(@NotNull Object a) {
+    return getLocationFromRawNode(a).toString();
+  }
 
   /**
    * Returns the {@link Region} of the code with line and column, index starting at 1, generic for

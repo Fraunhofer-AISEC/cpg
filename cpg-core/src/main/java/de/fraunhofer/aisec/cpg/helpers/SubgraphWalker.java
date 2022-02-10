@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.helpers;
 
+import de.fraunhofer.aisec.cpg.GraphTransformation;
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
 import de.fraunhofer.aisec.cpg.graph.HasType;
 import de.fraunhofer.aisec.cpg.graph.Node;
@@ -279,6 +280,14 @@ public class SubgraphWalker {
     private Deque<Node> todo;
     private Deque<Node> backlog;
 
+    private GraphTransformation gt;
+
+    public IterativeGraphWalker(){}
+
+    public IterativeGraphWalker(GraphTransformation gt){
+      this.gt = gt;
+    }
+
     /**
      * This callback is triggered whenever a new node is visited for the first time. This is the
      * place where usual graph manipulation will happen. The current node is the single argument
@@ -330,7 +339,10 @@ public class SubgraphWalker {
           // re-place the current node as a marker for the above check to find out when we need to
           // exit a scope
           todo.push(current);
+
+          if(gt != null) { gt.pushToHandleLog(current); }// Handle logging is used to track the currently handled nodes for exception reports
           onNodeVisit.forEach(c -> c.accept(current));
+          if(gt != null) { gt.popFromHandleLog(current); }
 
           var unseenChildren =
               SubgraphWalker.getAstChildren(current).stream()
@@ -384,8 +396,15 @@ public class SubgraphWalker {
 
     private final LanguageFrontend lang;
 
+    private GraphTransformation gt;
+
     public ScopedWalker(LanguageFrontend lang) {
       this.lang = lang;
+    }
+
+    public ScopedWalker(LanguageFrontend lang, GraphTransformation gt) {
+      this.lang = lang;
+      this.gt = gt;
     }
 
     /**
@@ -414,7 +433,7 @@ public class SubgraphWalker {
      * @param root The node where AST descent is started
      */
     public void iterate(Node root) {
-      walker = new IterativeGraphWalker();
+      walker = new IterativeGraphWalker(gt);
       handlers.forEach(h -> walker.registerOnNodeVisit(n -> handleNode(n, h)));
       walker.registerOnScopeExit(this::leaveScope);
       walker.iterate(root);
