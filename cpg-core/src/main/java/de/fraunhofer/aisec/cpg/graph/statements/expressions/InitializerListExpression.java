@@ -32,6 +32,7 @@ import de.fraunhofer.aisec.cpg.graph.HasType.TypeListener;
 import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.SubGraph;
 import de.fraunhofer.aisec.cpg.graph.TypeManager;
+import de.fraunhofer.aisec.cpg.graph.edge.Properties;
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
 import de.fraunhofer.aisec.cpg.graph.types.PointerType.PointerOrigin;
 import de.fraunhofer.aisec.cpg.graph.types.Type;
@@ -55,6 +56,13 @@ public class InitializerListExpression extends Expression implements TypeListene
 
   public List<PropertyEdge<Expression>> getInitializersPropertyEdge() {
     return this.initializers;
+  }
+
+  public void addInitializer(Expression initializer) {
+    var edge = new PropertyEdge<>(this, initializer);
+    edge.addProperty(Properties.INDEX, this.initializers.size());
+
+    this.initializers.add(edge);
   }
 
   public void setInitializers(List<Expression> initializers) {
