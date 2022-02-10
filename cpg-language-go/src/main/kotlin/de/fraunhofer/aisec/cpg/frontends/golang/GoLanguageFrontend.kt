@@ -65,7 +65,10 @@ class GoLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeMa
 
                 System.load(tmp.absolutePath)
             } catch (ex: Exception) {
-                log.error("Error while loading cpgo library. Go frontend will not work correctly", ex)
+                log.error(
+                    "Error while loading cpgo library. Go frontend will not work correctly",
+                    ex
+                )
             }
         }
     }
