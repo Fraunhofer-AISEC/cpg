@@ -3,8 +3,13 @@
 *.go  @oxisto
 
 *.py  @maximiliankaul
+cpg-language-python @maximiliankaul
 
 *.ll @KuechA
+cpg-language-llvm @KuechA
+cpg-analysis @KuechA
+
+cpg-neo4j @peckto
 
 build.gradle.kts @oxisto
 .github @oxisto
