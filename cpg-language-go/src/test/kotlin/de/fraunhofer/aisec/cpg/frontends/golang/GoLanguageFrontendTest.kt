@@ -40,9 +40,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
-import org.junit.jupiter.api.Tag
 
-@Tag("experimental")
 @ExperimentalGolang
 class GoLanguageFrontendTest : BaseTest() {
 
@@ -762,5 +760,32 @@ class GoLanguageFrontendTest : BaseTest() {
         val myField = s.getField("myField")
         assertNotNull(myField)
         assertNotNull("comment before field", myField.comment)
+    }
+
+    @Test
+    fun testRef() {
+        val topLevel = Path.of("src", "test", "resources", "golang")
+        val tu =
+            TestUtils.analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("ref.go").toFile()),
+                topLevel,
+                true
+            ) {
+                it.registerLanguage(
+                    GoLanguageFrontend::class.java,
+                    GoLanguageFrontend.GOLANG_EXTENSIONS
+                )
+            }
+
+        val mainPackage = tu.byNameOrNull<NamespaceDeclaration>("main")
+        assertNotNull(mainPackage)
+
+        val main = mainPackage.byNameOrNull<FunctionDeclaration>("main")
+        assertNotNull(main)
+
+        val binOp = main.bodyOrNull<BinaryOperator>()
+        assertNotNull(binOp)
+
+        assertNotNull(tu)
     }
 }
