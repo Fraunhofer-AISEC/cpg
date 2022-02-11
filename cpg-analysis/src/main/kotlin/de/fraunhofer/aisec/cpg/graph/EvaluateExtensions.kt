@@ -34,7 +34,7 @@ fun Expression.evaluate(): Any? {
 }
 
 fun Declaration.evaluate(): Any? {
-    return ValueEvaluator().evaluateDeclaration(this)
+    return ValueEvaluator().evaluate(this)
 }
 
 val ArrayCreationExpression.capacity: Int

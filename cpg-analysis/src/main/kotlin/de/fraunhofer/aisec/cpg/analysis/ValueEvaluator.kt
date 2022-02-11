@@ -25,8 +25,6 @@
  */
 package de.fraunhofer.aisec.cpg.graph
 
-import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
-import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import org.slf4j.Logger
@@ -41,8 +39,8 @@ class CouldNotResolve
  *
  * The result can be retrieved in two ways:
  * * The result of the [resolve] function is a JVM object which represents the constant value
- * * Furthermore, after the execution of [evaluate] or [evaluateDeclaration], the latest evaluation
- * path can be retrieved in the [path] property of the evaluator.
+ * * Furthermore, after the execution of [evaluate], the latest evaluation path can be retrieved in
+ * the [path] property of the evaluator.
  *
  * It contains some advanced mechanics such as resolution of values of arrays, if they contain
  * literal values. Furthermore, its behaviour can be adjusted by implementing the [cannotEvaluate]
@@ -72,25 +70,13 @@ class ValueEvaluator(
      */
     val path: MutableList<Node> = mutableListOf()
 
-    /** Tries to evaluate this declaration, basically using [evaluate] on its initializer. */
-    fun evaluateDeclaration(decl: Declaration?): Any? {
-        decl?.let { this.path += it }
-        when (decl) {
-            is VariableDeclaration -> return evaluate(decl.initializer)
-            is FieldDeclaration -> {
-                return evaluate(decl.initializer)
-            }
-        }
-
-        return cannotEvaluate(decl, this)
-    }
-
     /** Tries to evaluate this expression. Anything can happen. */
-    fun evaluate(expr: Expression?): Any? {
+    fun evaluate(expr: Node?): Any? {
         // Add the expression to the current path
         expr?.let { this.path += it }
 
         when (expr) {
+            is VariableDeclaration -> return evaluate(expr.initializer)
             // For a literal, we can just take its value, and we are finished
             is Literal<*> -> {
                 return expr.value
@@ -104,7 +90,7 @@ class ValueEvaluator(
                 val expressions = prevDFG.filterIsInstance<Expression>()
 
                 if (expressions.size > 1) {
-                    // We cannot have ONE valid solution, so we need to abort
+                    // We cannot have more than ONE valid solution, so we need to abort
                     log.warn(
                         "We cannot evaluate {}: It has more than more previous DFG edges, meaning that the value is probably affected by a branch.",
                         expr
