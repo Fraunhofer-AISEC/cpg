@@ -244,7 +244,7 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
         // loop through the operands
         for (i in 0 until LLVMGetNumOperands(value)) {
             // and handle them as expressions themselves
-            val arg = this.handle(LLVMGetOperand(value, i)) as? Expression
+            val arg = this.handle(LLVMGetOperand(value, i))
             expr.addArgument(arg)
         }
 
@@ -257,17 +257,14 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
      * types and number of elements needs to match the specified array type. We parse the array
      * contents as an [InitializerListExpression], similar to the C syntax of `int a[] = { 1, 2 }`.
      *
-     * There is a special case, in which LLVM allows to represented the array as a double-quoted
+     * There is a special case, in which LLVM allows to represent the array as a double-quoted
      * string, prefixed with `c`. In this case we
      */
     private fun handleConstantDataArrayValue(valueRef: LLVMValueRef): Expression {
         if (LLVMIsConstantString(valueRef) == 1) {
             val string = LLVMGetAsString(valueRef, SizeTPointer(0)).string
 
-            val literal =
-                newLiteral(string, lang.typeOf(valueRef), lang.getCodeFromRawNode(valueRef))
-
-            return literal
+            return newLiteral(string, lang.typeOf(valueRef), lang.getCodeFromRawNode(valueRef))
         }
 
         val list = newInitializerListExpression(lang.getCodeFromRawNode(valueRef))
@@ -354,7 +351,7 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
      * which works in a similar way.
      *
      * We try to convert it either into an [ArraySubscriptionExpression] or an [MemberExpression],
-     * depending whether the accessed variable is a struct or an array. Furthermore, since
+     * depending on whether the accessed variable is a struct or an array. Furthermore, since
      * `getelementptr` allows an (infinite) chain of sub-element access within a single instruction,
      * we need to unwrap those into individual expressions.
      */
@@ -494,9 +491,7 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
         val value1 = lang.getOperandValueAtIndex(instr, 1)
         val value2 = lang.getOperandValueAtIndex(instr, 2)
 
-        val conditionalExpr = newConditionalExpression(cond, value1, value2, value1.type)
-
-        return conditionalExpr
+        return newConditionalExpression(cond, value1, value2, value1.type)
     }
 
     /**
