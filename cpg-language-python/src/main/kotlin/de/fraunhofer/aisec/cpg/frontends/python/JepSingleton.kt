@@ -121,6 +121,18 @@ object JepSingleton {
             val wellKnownPaths =
                 listOf(
                     File(
+                        "${System.getProperty("user.home")}/.virtualenvs/${virtualEnv}/lib/python3.11/site-packages/jep/libjep.so"
+                    ),
+                    File(
+                        "${System.getProperty("user.home")}/.virtualenvs/${virtualEnv}/lib/python3.11/site-packages/jep/libjep.jnilib"
+                    ),
+                    File(
+                        "${System.getProperty("user.home")}/.virtualenvs/${virtualEnv}/lib/python3.10/site-packages/jep/libjep.so"
+                    ),
+                    File(
+                        "${System.getProperty("user.home")}/.virtualenvs/${virtualEnv}/lib/python3.10/site-packages/jep/libjep.jnilib"
+                    ),
+                    File(
                         "${System.getProperty("user.home")}/.virtualenvs/${virtualEnv}/lib/python3.9/site-packages/jep/libjep.so"
                     ),
                     File(
