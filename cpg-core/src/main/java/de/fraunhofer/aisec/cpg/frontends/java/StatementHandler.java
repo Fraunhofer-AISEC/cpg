@@ -429,7 +429,7 @@ public class StatementHandler
       return defaultStatement;
     }
 
-    if (optionalTokenRange.isPresent()) {
+    if (optionalTokenRange.isPresent() && caseExpression.getTokenRange().isPresent()) {
       // Compute region and code for self generated case statement to match the c++ versions
       caseTokens =
           new Pair<>(
