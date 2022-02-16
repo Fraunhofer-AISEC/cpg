@@ -25,7 +25,6 @@
  */
 plugins {
     application
-    `maven-publish`
 }
 
 application {
@@ -40,9 +39,6 @@ publishing {
                 name.set("Code Property Graph - Neo4j")
                 description.set("An Application to translate and persist specified source code as a Code Property Graph to an installed instance of the Neo4j Graph Database.")
             }
-
-            suppressPomMetadataWarningsFor("testFixturesApiElements")
-            suppressPomMetadataWarningsFor("testFixturesRuntimeElements")
         }
     }
 }

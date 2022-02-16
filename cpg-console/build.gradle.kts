@@ -25,7 +25,6 @@
  */
 plugins {
     application
-    `maven-publish`
 }
 
 publishing {
@@ -36,9 +35,6 @@ publishing {
                 name.set("Code Property Graph - Console")
                 description.set("An Application to translate source code into a Code Property Graph and perform different types of analysis on the resulting graph.")
             }
-
-            suppressPomMetadataWarningsFor("testFixturesApiElements")
-            suppressPomMetadataWarningsFor("testFixturesRuntimeElements")
         }
     }
 }
