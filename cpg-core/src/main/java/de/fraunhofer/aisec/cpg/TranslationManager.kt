@@ -96,7 +96,7 @@ private constructor(
 
                 // Apply passes
                 for (pass in config.registeredPasses) {
-                    try{
+                    try {
                         passesNeedCleanup.add(pass)
                         bench = Benchmark(pass.javaClass, "Executing Pass", false, result)
                         pass.accept(result)
@@ -104,10 +104,11 @@ private constructor(
                         if (result.isCancelled) {
                             log.warn("Analysis interrupted, stopping Pass evaluation")
                         }
-                    }catch (e: Exception){
-                        // Printing the stack of currently handled CPG objects when the Exception was thrown.
+                    } catch (e: Exception) {
+                        // Printing the stack of currently handled CPG objects when the Exception
+                        // was thrown.
                         pass.printHandlerLogTrace()
-                        throw e;
+                        throw e
                     }
                 }
             } catch (ex: TranslationException) {
@@ -354,13 +355,18 @@ private constructor(
             if (frontend != null) {
                 frontend.printHandlerLogTrace()
             }
-            // It the Exception was a TranslationException the translation is only supposed to fail if configured in that way
-            if(e is TranslationException){
-                log.error("An error occurred during parsing of {}: {}", sourceLocation.name, e.message)
+            // It the Exception was a TranslationException the translation is only supposed to fail
+            // if configured in that way
+            if (e is TranslationException) {
+                log.error(
+                    "An error occurred during parsing of {}: {}",
+                    sourceLocation.name,
+                    e.message
+                )
                 if (config.failOnError) {
                     throw e
                 }
-            }else{
+            } else {
                 throw e
             }
         }

@@ -260,6 +260,7 @@ public class ControlFlowSensitiveDFGPass extends Pass {
         return variables;
       }
       do {
+        // TODO clear old node
         if (node.getPrevEOG().size() != 1) {
           // We only want to keep track of variables where they can change due to multiple incoming
           // EOG-Edges or at the root of a EOG-path
@@ -281,9 +282,11 @@ public class ControlFlowSensitiveDFGPass extends Pass {
         }
 
         if (node instanceof DeclaredReferenceExpression) {
+          popFromHandleLog(node);
           node =
               handleDeclaredReferenceExpression(
                   (DeclaredReferenceExpression) node, variables, this::iterateTillFixpoint);
+          pushToHandleLog(node);
         }
 
         if (node.equals(endNode) && !stopBefore) {
@@ -310,7 +313,9 @@ public class ControlFlowSensitiveDFGPass extends Pass {
           if (next instanceof VariableDeclaration) {
             addDFGToMap((VariableDeclaration) next, node, variables);
           }
+          popFromHandleLog(node);
           node = next;
+          pushToHandleLog(node);
         }
       } while (node != null);
       return variables;
@@ -365,7 +370,9 @@ public class ControlFlowSensitiveDFGPass extends Pass {
     protected void propagateValues() {
       for (Map.Entry<Node, Map<VariableDeclaration, Set<Node>>> joinPoint :
           this.joinPoints.entrySet()) {
+        pushToHandleLog(joinPoint.getKey());
         propagateFromJoinPoints(joinPoint.getKey(), joinPoint.getValue(), null, true);
+        popFromHandleLog(joinPoint.getKey());
       }
     }
 
@@ -395,9 +402,11 @@ public class ControlFlowSensitiveDFGPass extends Pass {
         }
 
         if (node instanceof DeclaredReferenceExpression) {
+          popFromHandleLog(node);
           node =
               handleDeclaredReferenceExpression(
                   (DeclaredReferenceExpression) node, variables, this::propagateFromJoinPoints);
+          pushToHandleLog(node);
         }
 
         if (node.equals(endNode) && !stopBefore) {
@@ -428,7 +437,9 @@ public class ControlFlowSensitiveDFGPass extends Pass {
           if (next instanceof VariableDeclaration) {
             addDFGToMap((VariableDeclaration) next, node, variables);
           }
+          popFromHandleLog(node);
           node = next;
+          pushToHandleLog(node);
           if (joinPoints.containsKey(node)) {
             break; // As we are propagating from joinpoints we stop when we reach the next joinpoint
           }

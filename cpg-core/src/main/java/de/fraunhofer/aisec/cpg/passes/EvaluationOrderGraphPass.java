@@ -452,7 +452,9 @@ public class EvaluationOrderGraphPass extends Pass {
       if (toHandle == Node.class || !Node.class.isAssignableFrom(toHandle)) break;
     }
     if (callable != null) {
+      pushToEOG(node);
       callable.dispatch(node);
+      popFromHandleLog(node);
     } else {
       LOGGER.info("Parsing of type " + node.getClass() + " is not supported (yet)");
     }

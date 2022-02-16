@@ -35,19 +35,23 @@ public class FilenameMapper extends Pass {
   @Override
   public void accept(TranslationResult translationResult) {
     for (TranslationUnitDeclaration tu : translationResult.getTranslationUnits()) {
+      pushToHandleLog(tu);
       String name = tu.getName();
       tu.getDeclarations().forEach(d -> handle(d, name));
       tu.getIncludes().forEach(d -> handle(d, name));
       tu.getNamespaces().forEach(d -> handle(d, name));
+      popFromHandleLog(tu);
     }
   }
 
   private void handle(Node node, String file) {
     if (node != null) {
+      pushToHandleLog(node);
       node.setFile(file);
       for (Node child : SubgraphWalker.getAstChildren(node)) {
         handle(child, file);
       }
+      popFromHandleLog(node);
     }
   }
 

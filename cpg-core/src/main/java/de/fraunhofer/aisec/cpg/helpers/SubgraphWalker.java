@@ -282,9 +282,9 @@ public class SubgraphWalker {
 
     private GraphTransformation gt;
 
-    public IterativeGraphWalker(){}
+    public IterativeGraphWalker() {}
 
-    public IterativeGraphWalker(GraphTransformation gt){
+    public IterativeGraphWalker(GraphTransformation gt) {
       this.gt = gt;
     }
 
@@ -340,9 +340,13 @@ public class SubgraphWalker {
           // exit a scope
           todo.push(current);
 
-          if(gt != null) { gt.pushToHandleLog(current); }// Handle logging is used to track the currently handled nodes for exception reports
+          if (gt != null) {
+            gt.pushToHandleLog(current);
+          } // Handle logging is used to track the currently handled nodes for exception reports
           onNodeVisit.forEach(c -> c.accept(current));
-          if(gt != null) { gt.popFromHandleLog(current); }
+          if (gt != null) {
+            gt.popFromHandleLog(current);
+          }
 
           var unseenChildren =
               SubgraphWalker.getAstChildren(current).stream()

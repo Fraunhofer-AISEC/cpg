@@ -72,13 +72,16 @@ public class TypeHierarchyResolver extends Pass {
     }
 
     for (RecordDeclaration record : recordMap.values()) {
+      pushToHandleLog(record);
       Set<RecordDeclaration> supertypeRecords = findSupertypeRecords(record);
       List<MethodDeclaration> allMethodsFromSupertypes =
           getAllMethodsFromSupertypes(supertypeRecords);
       analyzeOverridingMethods(record, allMethodsFromSupertypes);
+      popFromHandleLog(record);
     }
 
     for (EnumDeclaration enumDecl : enums) {
+      pushToHandleLog(enumDecl);
       Set<RecordDeclaration> directSupertypeRecords =
           enumDecl.getSuperTypes().stream()
               .map(s -> recordMap.getOrDefault(s.toString(), null))
@@ -90,12 +93,14 @@ public class TypeHierarchyResolver extends Pass {
               .flatMap(Collection::stream)
               .collect(Collectors.toSet());
       enumDecl.setSuperTypeDeclarations(allSupertypes);
+      popFromHandleLog(enumDecl);
     }
 
     translationResult.getTranslationUnits().forEach(SubgraphWalker::refreshType);
   }
 
   protected void findRecordsAndEnums(Node node) {
+    pushToHandleLog(node);
     if (node instanceof RecordDeclaration) {
       recordMap.putIfAbsent(node.getName(), (RecordDeclaration) node);
     } else if (node instanceof EnumDeclaration) {
@@ -104,6 +109,7 @@ public class TypeHierarchyResolver extends Pass {
     for (var child : SubgraphWalker.getAstChildren(node)) {
       findRecordsAndEnums(child);
     }
+    popFromHandleLog(node);
   }
 
   protected List<MethodDeclaration> getAllMethodsFromSupertypes(
@@ -115,6 +121,7 @@ public class TypeHierarchyResolver extends Pass {
   }
 
   protected Set<RecordDeclaration> findSupertypeRecords(RecordDeclaration record) {
+    pushToHandleLog(record);
     Set<RecordDeclaration> superTypeDeclarations =
         record.getSuperTypes().stream()
             .map(Type::getTypeName)
@@ -123,18 +130,21 @@ public class TypeHierarchyResolver extends Pass {
             .collect(Collectors.toSet());
 
     record.setSuperTypeDeclarations(superTypeDeclarations);
+    popFromHandleLog(record);
     return superTypeDeclarations;
   }
 
   protected void analyzeOverridingMethods(
       RecordDeclaration declaration, List<MethodDeclaration> allMethodsFromSupertypes) {
     for (MethodDeclaration superMethod : allMethodsFromSupertypes) {
+      pushToHandleLog(superMethod);
       List<MethodDeclaration> overrideCandidates =
           declaration.getMethods().stream()
               .filter(superMethod::isOverrideCandidate)
               .collect(Collectors.toList());
       superMethod.addOverriddenBy(overrideCandidates);
       overrideCandidates.forEach(o -> o.addOverrides(superMethod));
+      popFromHandleLog(superMethod);
     }
   }
 
