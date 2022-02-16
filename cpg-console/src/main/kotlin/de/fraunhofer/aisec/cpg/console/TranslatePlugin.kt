@@ -72,7 +72,7 @@ class TranslatePlugin : Plugin {
                     // some basic java stuff
                     "import java.io.File",
                     // lets build and analyze
-                    "@OptIn(de.fraunhofer.aisec.cpg.ExperimentalGolang::class) val config =\n" +
+                    "@OptIn(de.fraunhofer.aisec.cpg.ExperimentalGolang::class, de.fraunhofer.aisec.cpg.ExperimentalPython::class) val config =\n" +
                         "                TranslationConfiguration.builder()\n" +
                         "                    .sourceLocations(File(\"" +
                         path +
