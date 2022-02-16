@@ -170,7 +170,11 @@ class Application : Callable<Int> {
     @Throws(InterruptedException::class, ConnectException::class)
     fun pushToNeo4j(translationResult: TranslationResult) {
         log.info("Using import depth: $depth")
-        log.info("Count base nodes to save: " + translationResult.translationUnits.size)
+        log.info(
+            "Count base nodes to save: " +
+                translationResult.translationUnits.size +
+                translationResult.additionalNodes.size
+        )
 
         val sessionAndSessionFactoryPair = connect()
 
@@ -178,6 +182,7 @@ class Application : Callable<Int> {
         session.beginTransaction().use { transaction ->
             if (PURGE_DB) session.purgeDatabase()
             session.save(translationResult.translationUnits, depth)
+            session.save(translationResult.additionalNodes, depth)
             transaction.commit()
         }
 
