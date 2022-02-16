@@ -27,6 +27,18 @@ plugins {
     application
 }
 
+publishing {
+    publications {
+        named<MavenPublication>("cpg-console") {
+            pom {
+                artifactId = "cpg-console"
+                name.set("Code Property Graph - Console")
+                description.set("An Application to translate source code into a Code Property Graph and perform different types of analysis on the resulting graph.")
+            }
+        }
+    }
+}
+
 application {
     mainClass.set("de.fraunhofer.aisec.cpg.console.CpgConsole")
 }
