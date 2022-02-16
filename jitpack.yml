@@ -1,5 +1,4 @@
 jdk:
   - openjdk11
 install:
-  - export PATH=$PATH:~/go/bin
   - ./gradlew build -xtest -Pgroup=com.github.Fraunhofer-AISEC -PnodeDownload=true -PskipGoBuild publishToMavenLocal
