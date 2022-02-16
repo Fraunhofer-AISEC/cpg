@@ -402,9 +402,8 @@ public class StatementHandler
     PhysicalLocation parentLocation = lang.getLocationFromRawNode(sEntry);
 
     Optional<TokenRange> optionalTokenRange = sEntry.getTokenRange();
-    Pair<JavaToken, JavaToken> caseTokens = null;
+    Pair<JavaToken, JavaToken> caseTokens = new Pair<>(null, null);
     if (optionalTokenRange.isEmpty()) {
-      caseTokens = new Pair<>(null, null);
       log.error("Token for Region for Default case not available");
     }
 
@@ -429,12 +428,13 @@ public class StatementHandler
       return defaultStatement;
     }
 
-    if (optionalTokenRange.isPresent() && caseExpression.getTokenRange().isPresent()) {
+    Optional<TokenRange> caseExprTokenRange = caseExpression.getTokenRange();
+    if (optionalTokenRange.isPresent() && caseExprTokenRange.isPresent()) {
       // Compute region and code for self generated case statement to match the c++ versions
       caseTokens =
           new Pair<>(
               getPreviousTokenWith("case", optionalTokenRange.get().getBegin()),
-              getNextTokenWith(":", caseExpression.getTokenRange().get().getEnd()));
+              getNextTokenWith(":", caseExprTokenRange.get().getEnd()));
     }
 
     CaseStatement caseStatement =
@@ -442,11 +442,6 @@ public class StatementHandler
     caseStatement.setCaseExpression(
         (Expression) lang.getExpressionHandler().handle(caseExpression));
 
-    /*
-    TODO: not sure if this is really necessary, it seems to be the same location as
-     parentLocation, except that column starts 1 character later and I am not sure if
-     this is correct anyway
-    */
     caseStatement.setLocation(getLocationsFromTokens(parentLocation, caseTokens.a, caseTokens.b));
 
     return caseStatement;
