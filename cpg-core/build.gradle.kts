@@ -28,8 +28,6 @@ import com.github.gradle.node.yarn.task.YarnTask
 plugins {
     `java-library`
     `java-test-fixtures`
-
-    `maven-publish`
     signing
 
     id("com.github.node-gradle.node") version "3.2.0"
