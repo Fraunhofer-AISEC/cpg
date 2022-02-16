@@ -178,6 +178,7 @@ class Application : Callable<Int> {
         session.beginTransaction().use { transaction ->
             if (PURGE_DB) session.purgeDatabase()
             session.save(translationResult.translationUnits, depth)
+            session.save(translationResult.additionalNodes, depth)
             transaction.commit()
         }
 
