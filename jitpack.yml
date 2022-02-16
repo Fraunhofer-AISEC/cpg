@@ -1,7 +1,5 @@
 jdk:
   - openjdk11
-before_install:
-  - ./download_go.sh
 install:
   - export PATH=$PATH:~/go/bin
-  - ./gradlew build -xtest -Pgroup=com.github.Fraunhofer-AISEC -PnodeDownload=true -PexperimentalTypeScript -PexperimentalPython publishToMavenLocal
+  - ./gradlew build -xtest -Pgroup=com.github.Fraunhofer-AISEC -PnodeDownload=true -PskipGoBuild publishToMavenLocal

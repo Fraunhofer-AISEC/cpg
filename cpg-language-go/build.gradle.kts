@@ -56,16 +56,18 @@ tasks.named<Test>("test") {
     useJUnitPlatform()
 }
 
-val compileGolang = tasks.register("compileGolang") {
-    doLast {
-        project.exec {
-            commandLine("./build.sh")
-                .setStandardOutput(System.out)
-                .workingDir("src/main/golang")
+if (!project.hasProperty("skipGoBuild")) {
+    val compileGolang = tasks.register("compileGolang") {
+        doLast {
+            project.exec {
+                commandLine("./build.sh")
+                    .setStandardOutput(System.out)
+                    .workingDir("src/main/golang")
+            }
         }
     }
-}
 
-tasks.named("compileJava") {
-    dependsOn(compileGolang)
+    tasks.named("compileJava") {
+        dependsOn(compileGolang)
+    }
 }
