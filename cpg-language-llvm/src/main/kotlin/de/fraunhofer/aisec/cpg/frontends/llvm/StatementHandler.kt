@@ -538,7 +538,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
      * Handles the [`icmp`](https://llvm.org/docs/LangRef.html#icmp-instruction) instruction for
      * comparing integer values.
      */
-    private fun handleIntegerComparison(instr: LLVMValueRef): Statement {
+    fun handleIntegerComparison(instr: LLVMValueRef): Statement {
         var unsigned = false
         val cmpPred =
             when (LLVMGetICmpPredicate(instr)) {
@@ -724,8 +724,8 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
      * This instruction checks if the operand is neither an undef nor a poison value (for aggregated
      * types such as vectors, individual elements are checked) and, if so, returns the operand.
      * Otherwise, it returns a random but non-undef and non-poison value. This initialization is
-     * modeled in the graph by a call to an implicit function "llvm.freeze" which would be adapted to
-     * each data type.
+     * modeled in the graph by a call to an implicit function "llvm.freeze" which would be adapted
+     * to each data type.
      */
     @FunctionReplacement(["llvm.freeze"], "freeze")
     private fun handleFreeze(instr: LLVMValueRef): Statement {
@@ -1110,7 +1110,8 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             // Get the label of the catch clause.
             catchLabel = extractBasicBlockLabel(LLVMGetOperand(instr, max))
             max--
-            // Get the label of the basic block where the control flow continues (e.g. if no error occurs).
+            // Get the label of the basic block where the control flow continues (e.g. if no error
+            // occurs).
             continueLabel = extractBasicBlockLabel(LLVMGetOperand(instr, max))
             max--
             log.info(
@@ -1483,7 +1484,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
      * whether the value is unordered (i.e., NAN).
      */
     @FunctionReplacement(["isunordered"])
-    private fun handleBinaryOperator(
+    fun handleBinaryOperator(
         instr: LLVMValueRef,
         op: String,
         unsigned: Boolean,

@@ -218,6 +218,17 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
                 LLVMIntToPtr,
                 LLVMBitCast,
                 LLVMAddrSpaceCast -> handleCastInstruction(value)
+                LLVMAdd, LLVMFAdd ->
+                    lang.statementHandler.handleBinaryOperator(value, "+", false) as? Expression
+                        ?: Expression()
+                LLVMSub, LLVMFSub ->
+                    lang.statementHandler.handleBinaryOperator(value, "-", false) as? Expression
+                        ?: Expression()
+                LLVMAShr ->
+                    lang.statementHandler.handleBinaryOperator(value, ">>", false) as? Expression
+                        ?: Expression()
+                LLVMICmp -> lang.statementHandler.handleIntegerComparison(value) as? Expression
+                        ?: Expression()
                 else -> {
                     log.error("Not handling constant expression of opcode {} yet", kind)
                     Expression()
@@ -501,6 +512,7 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
     fun handleCastInstruction(instr: LLVMValueRef): Expression {
         val castExpr = newCastExpression(lang.getCodeFromRawNode(instr))
         castExpr.castType = lang.typeOf(instr)
+        castExpr.expression = lang.getOperandValueAtIndex(instr, 0)
         return castExpr
     }
 }
