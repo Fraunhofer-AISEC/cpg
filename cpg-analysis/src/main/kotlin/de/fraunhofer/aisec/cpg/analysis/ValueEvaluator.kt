@@ -76,6 +76,7 @@ class ValueEvaluator(
         expr?.let { this.path += it }
 
         when (expr) {
+            is ArrayCreationExpression -> return evaluate(expr.initializer)
             is VariableDeclaration -> return evaluate(expr.initializer)
             // For a literal, we can just take its value, and we are finished
             is Literal<*> -> {
@@ -85,6 +86,10 @@ class ValueEvaluator(
             // denoted by the previous DFG edge
             is DeclaredReferenceExpression -> {
                 val prevDFG = expr.prevDFG
+
+                if (prevDFG.size == 1)
+                // There's only one incoming DFG edge, so we follow this one.
+                return evaluate(prevDFG.first())
 
                 // We are only interested in expressions
                 val expressions = prevDFG.filterIsInstance<Expression>()
@@ -98,7 +103,29 @@ class ValueEvaluator(
                     return cannotEvaluate(expr, this)
                 }
 
+                if (expressions.isEmpty()) {
+                    // No previous expression?? Let's try with a variable declaration and its
+                    // initialization
+                    val decl = prevDFG.filterIsInstance<VariableDeclaration>()
+                    if (decl.size > 1) {
+                        // We cannot have more than ONE valid solution, so we need to abort
+                        log.warn(
+                            "We cannot evaluate {}: It has more than more previous DFG edges, meaning that the value is probably affected by a branch.",
+                            expr
+                        )
+                        return cannotEvaluate(expr, this)
+                    }
+                    return evaluate(decl.firstOrNull())
+                }
+
                 return evaluate(expressions.firstOrNull())
+            }
+            is UnaryOperator -> {
+                if (expr.operatorCode == "*") {
+                    return evaluate(expr.input)
+                } else if (expr.operatorCode == "&") {
+                    return evaluate(expr.input)
+                }
             }
             // We are handling some basic arithmetic binary operations and string operations that
             // are more or less language-independent
@@ -264,6 +291,13 @@ class ValueEvaluator(
                             }
                             ?.value
                     )
+                }
+                if (array?.initializer is Literal<*>) {
+                    return (array.initializer as Literal<*>).value
+                }
+
+                if (expr.arrayExpression is ArraySubscriptionExpression) {
+                    return evaluate(expr.arrayExpression)
                 }
 
                 return cannotEvaluate(expr, this)
