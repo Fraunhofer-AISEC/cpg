@@ -166,6 +166,18 @@ class Application : Callable<Int> {
     )
     private var printBenchmark: Boolean = false
 
+    @CommandLine.Option(
+        names = ["--no-default-passes"],
+        description = ["Do not register default passes [used for debugging]"]
+    )
+    private var noDefaultPasses: Boolean = false
+
+    @CommandLine.Option(
+        names = ["--no-neo4j"],
+        description = ["Do not push cpg into neo4j [used for debugging]"]
+    )
+    private var noNeo4j: Boolean = false
+
     /**
      * Pushes the whole translationResult to the neo4j db.
      *
@@ -278,10 +290,13 @@ class Application : Callable<Int> {
             TranslationConfiguration.builder()
                 .sourceLocations(*filePaths)
                 .topLevel(topLevel)
-                .defaultPasses()
                 .defaultLanguages()
                 .loadIncludes(loadIncludes)
                 .debugParser(DEBUG_PARSER)
+
+        if (!noDefaultPasses) {
+            translationConfiguration.defaultPasses()
+        }
 
         if (mutuallyExclusiveParameters.jsonCompilationDatabase != null) {
             val db = fromFile(mutuallyExclusiveParameters.jsonCompilationDatabase!!)
@@ -364,7 +379,9 @@ class Application : Callable<Int> {
             "Benchmark: analyzing code in " + (analyzingTime - startTime) / S_TO_MS_FACTOR + " s."
         )
 
-        pushToNeo4j(translationResult)
+        if (!noNeo4j) {
+            pushToNeo4j(translationResult)
+        }
 
         val pushTime = System.currentTimeMillis()
         log.info("Benchmark: push code in " + (pushTime - analyzingTime) / S_TO_MS_FACTOR + " s.")
