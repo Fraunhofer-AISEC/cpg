@@ -31,6 +31,7 @@ import de.fraunhofer.aisec.cpg.frontends.golang.GoLanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.llvm.LLVMIRLanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.typescript.TypeScriptLanguageFrontend
+import de.fraunhofer.aisec.cpg.helpers.Benchmark
 import java.io.File
 import java.net.ConnectException
 import java.nio.file.Paths
@@ -159,6 +160,12 @@ class Application : Callable<Int> {
     )
     private var enableExperimentalTypeScript: Boolean = false
 
+    @CommandLine.Option(
+        names = ["--print-benchmark"],
+        description = ["Print benchmark result as markdown table"]
+    )
+    private var printBenchmark: Boolean = false
+
     /**
      * Pushes the whole translationResult to the neo4j db.
      *
@@ -169,6 +176,7 @@ class Application : Callable<Int> {
      */
     @Throws(InterruptedException::class, ConnectException::class)
     fun pushToNeo4j(translationResult: TranslationResult) {
+        var bench = Benchmark(this.javaClass, "Push cpg to neo4j", false, translationResult)
         log.info("Using import depth: $depth")
         log.info(
             "Count base nodes to save: " +
@@ -188,6 +196,7 @@ class Application : Callable<Int> {
 
         session.clear()
         sessionAndSessionFactoryPair.second.close()
+        bench.stop()
     }
 
     /**
@@ -359,6 +368,10 @@ class Application : Callable<Int> {
 
         val pushTime = System.currentTimeMillis()
         log.info("Benchmark: push code in " + (pushTime - analyzingTime) / S_TO_MS_FACTOR + " s.")
+
+        if (printBenchmark) {
+            translationResult.printBenchmark()
+        }
 
         return EXIT_SUCCESS
     }
