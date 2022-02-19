@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg_vis_neo4j
 
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import de.fraunhofer.aisec.cpg.*
 import de.fraunhofer.aisec.cpg.frontends.CompilationDatabase.Companion.fromFile
 import de.fraunhofer.aisec.cpg.frontends.golang.GoLanguageFrontend
@@ -190,6 +191,12 @@ class Application : Callable<Int> {
                 "Set top level directory of project structure. Default: Largest common path of all source files"]
     )
     private var topLevel: File? = null
+
+    @CommandLine.Option(
+        names = ["--benchmark-json"],
+        description = ["Save benchmark results to json file"]
+    )
+    private var benchmarkJson: File? = null
 
     /**
      * Pushes the whole translationResult to the neo4j db.
@@ -392,6 +399,13 @@ class Application : Callable<Int> {
 
         if (printBenchmark) {
             translationResult.printBenchmark()
+        }
+
+        benchmarkJson?.let { theFile ->
+            log.info("Save benchmark results to file: $theFile")
+            val mapper = jacksonObjectMapper()
+            val json = translationResult.getBenchmarkResult().associate { it[0] to it[1] }
+            theFile.writeText(mapper.writeValueAsString(json))
         }
 
         return EXIT_SUCCESS

@@ -41,28 +41,23 @@ interface StatisticsHolder {
 
     fun addBenchmark(b: Benchmark)
 
+    fun getBenchmarkResult(): List<List<Any>> {
+        return listOf(
+            listOf("Translation config", config.configAsHashMap),
+            listOf("Number of files translated", translatedFiles.size),
+            listOf(
+                "Translated file(s)",
+                translatedFiles.map { relativeOrAbsolute(Path.of(it), config.topLevel.toPath()) }
+            ),
+            *benchmarks
+                .map { listOf("${it.caller}: ${it.message}", "${it.duration} ms") }
+                .toTypedArray()
+        )
+    }
     /** Pretty-prints benchmark results for easy copying to GitHub issues. */
     fun printBenchmark() {
         println("# Benchmark run ${UUID.randomUUID()}")
-        printMarkdown(
-            listOf(
-                listOf(
-                    "Translation config",
-                    "`${config.toString().replace(",", ", ").replace(":", ": ")}`"
-                ),
-                listOf("Number of files translated", translatedFiles.size),
-                listOf(
-                    "Translated file(s)",
-                    translatedFiles.map {
-                        relativeOrAbsolute(Path.of(it), config.topLevel.toPath())
-                    }
-                ),
-                *benchmarks
-                    .map { listOf("${it.caller}: ${it.message}", "${it.duration} ms") }
-                    .toTypedArray(),
-            ),
-            listOf("Metric", "Value")
-        )
+        printMarkdown(getBenchmarkResult(), listOf("Metric", "Value"))
     }
 }
 
@@ -94,7 +89,13 @@ fun printMarkdown(table: List<List<Any>>, headers: List<String>) {
 
     for (row in table) {
         var rowIndex = 0
-        val line = row.joinToString(" | ", "| ", " |") { it.toString().padEnd(lengths[rowIndex++]) }
+        val line =
+            row.joinToString(" | ", "| ", " |") {
+                val str =
+                    if (it is Map<*, *>) "`${it.toString().replace(",", ", ").replace(":", ": ")}`"
+                    else it.toString()
+                str.padEnd(lengths[rowIndex++])
+            }
         println(line)
     }
 

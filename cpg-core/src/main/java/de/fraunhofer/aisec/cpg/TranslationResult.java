@@ -113,6 +113,7 @@ public class TranslationResult extends Node implements StatisticsHolder {
     this.benchmarks.add(b);
   }
 
+  @NotNull
   public List<Benchmark> getBenchmarks() {
     return benchmarks;
   }
@@ -134,5 +135,11 @@ public class TranslationResult extends Node implements StatisticsHolder {
   @Override
   public TranslationConfiguration getConfig() {
     return translationManager.getConfig();
+  }
+
+  @NotNull
+  @Override
+  public List<List<Object>> getBenchmarkResult() {
+    return StatisticsHolder.DefaultImpls.getBenchmarkResult(this);
   }
 }
