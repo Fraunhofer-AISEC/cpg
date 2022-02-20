@@ -75,6 +75,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend2) :
             "concatenated_string" -> handleConcatenatedString(node)
             "initializer_list" -> handleInitializerList(node)
             "subscript_expression" -> handleSubscriptExpression(node)
+            "this" -> handleIdentifier(node)
             "null" -> handleNull(node)
             "false" -> handleFalseBooleanLiteral(node)
             "true" -> handleTrueBooleanLiteral(node)

@@ -37,6 +37,7 @@ import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newVariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.ConstructExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.types.PointerType
 import de.fraunhofer.aisec.cpg.graph.types.ReferenceType
@@ -394,7 +395,20 @@ class DeclarationHandler(lang: CXXLanguageFrontend2) :
         var declarator = handleDeclarator(node.childByFieldName("declarator"), type)
 
         // the value is nested in the init declarator
-        val expression = lang.expressionHandler.handle(node.childByFieldName("value"))
+        val value = node.childByFieldName("value")
+        val expression: Expression
+        if (value.type.equals("argument_list")) {
+            expression =
+                de.fraunhofer.aisec.cpg.graph.NodeBuilder.newConstructExpression(
+                    lang.getCodeFromRawNode(value)
+                )
+            for (i in 0 until value.namedChildCount) {
+                val arg = lang.expressionHandler.handle(value.namedChild(i))
+                (expression as ConstructExpression).addArgument(arg)
+            }
+        } else {
+            expression = lang.expressionHandler.handle(node.childByFieldName("value"))
+        }
 
         declarator.initializer = expression
 
