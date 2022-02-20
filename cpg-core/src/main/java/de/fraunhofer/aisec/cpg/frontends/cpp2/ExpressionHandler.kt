@@ -42,6 +42,7 @@ import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import io.github.oxisto.kotlintree.jvm.*
+import java.util.ArrayList
 
 /**
  * This handler takes care of parsing
@@ -72,6 +73,8 @@ class ExpressionHandler(lang: CXXLanguageFrontend2) :
             "char_literal" -> handleCharLiteral(node)
             "string_literal" -> handleStringLiteral(node)
             "concatenated_string" -> handleConcatenatedString(node)
+            "initializer_list" -> handleInitializerList(node)
+            "subscript_expression" -> handleSubscriptExpression(node)
             "null" -> handleNull(node)
             "false" -> handleFalseBooleanLiteral(node)
             "true" -> handleTrueBooleanLiteral(node)
@@ -186,6 +189,25 @@ class ExpressionHandler(lang: CXXLanguageFrontend2) :
         }
 
         return castExpression
+    }
+
+    private fun handleSubscriptExpression(node: Node): Expression {
+        val expression = NodeBuilder.newArraySubscriptionExpression(lang.getCodeFromRawNode(node))
+        expression.arrayExpression = handle(node.childByFieldName("argument"))
+        expression.subscriptExpression = handle(node.childByFieldName("index"))
+        return expression
+    }
+
+    private fun handleInitializerList(node: Node): Expression {
+        val expression = NodeBuilder.newInitializerListExpression(lang.getCodeFromRawNode(node))
+        val initializers: MutableList<Expression?> = ArrayList()
+
+        for (i in 0 until node.namedChildCount) {
+            initializers.add(handle(node.namedChild(i)))
+        }
+        expression.initializers = initializers
+
+        return expression
     }
 
     private fun handleNewExpression(node: Node): Expression {
