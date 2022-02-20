@@ -185,11 +185,14 @@ class CXXLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeM
             includePaths.add(config.topLevel.toPath().toAbsolutePath().toString())
         }
 
+        val symbols: HashMap<String, String> = HashMap()
+        symbols.putAll(config.symbols)
         includePaths.addAll(listOf(*config.includePaths))
 
-        config.compilationDatabase?.get(file)?.let { includePaths.addAll(it) }
+        config.compilationDatabase?.getIncludePaths(file)?.let { includePaths.addAll(it) }
+        config.compilationDatabase?.getSymbols(file)?.let { symbols.putAll(it) }
 
-        val scannerInfo = ScannerInfo(config.symbols, includePaths.toTypedArray())
+        val scannerInfo = ScannerInfo(symbols, includePaths.toTypedArray())
         val log = DefaultLogService()
         val opts = ILanguage.OPTION_PARSE_INACTIVE_CODE // | ILanguage.OPTION_ADD_COMMENTS;
         return try {
