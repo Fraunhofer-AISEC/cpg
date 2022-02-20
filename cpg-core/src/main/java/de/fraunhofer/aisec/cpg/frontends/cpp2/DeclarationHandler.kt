@@ -39,6 +39,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ConstructExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+import de.fraunhofer.aisec.cpg.graph.types.IncompleteType
 import de.fraunhofer.aisec.cpg.graph.types.PointerType
 import de.fraunhofer.aisec.cpg.graph.types.ReferenceType
 import de.fraunhofer.aisec.cpg.graph.types.Type
@@ -153,8 +154,12 @@ class DeclarationHandler(lang: CXXLanguageFrontend2) :
         return recordDeclaration
     }
 
-    private fun handleParameterDeclaration(node: Node): ParamVariableDeclaration {
+    private fun handleParameterDeclaration(node: Node): ParamVariableDeclaration? {
         val startType = lang.handleType(node.childByFieldName("type"))
+
+        if (startType is IncompleteType) {
+            return null
+        }
 
         val declarator = handleDeclarator("declarator" of node, startType)
 
@@ -472,8 +477,9 @@ class DeclarationHandler(lang: CXXLanguageFrontend2) :
         val parameterList = node.childByFieldName("parameters")
         for (i in 0 until parameterList.namedChildCount) {
             val param = handle(parameterList.namedChild(i))
-
-            declarator.parameters += param
+            if (param != null) {
+                declarator.parameters += param
+            }
         }
 
         return declarator
