@@ -757,14 +757,14 @@ class PythonFrontendTest : BaseTest() {
             classFieldNoInitializer,
             (barStmt3.lhs as? DeclaredReferenceExpression)?.refersTo
         )
-        assertEquals("shadowed", (barStmt3.rhs as? Literal<String>)?.value)
+        assertEquals("shadowed", (barStmt3.rhs as? Literal<*>)?.value)
 
         // classFieldWithInit = "shadowed"
         val barStmt4 = barBody.statements[4] as? BinaryOperator
         assertNotNull(barStmt4)
         assertEquals("=", barStmt4.operatorCode)
         assertEquals(classFieldWithInit, (barStmt4.lhs as? DeclaredReferenceExpression)?.refersTo)
-        assertEquals("shadowed", (barStmt4.rhs as? Literal<String>)?.value)
+        assertEquals("shadowed", (barStmt4.rhs as? Literal<*>)?.value)
 
         // classFieldDeclaredInFunction = "shadowed"
         val barStmt5 = barBody.statements[5] as? BinaryOperator
@@ -774,7 +774,7 @@ class PythonFrontendTest : BaseTest() {
             classFieldDeclaredInFunction,
             (barStmt5.lhs as? DeclaredReferenceExpression)?.refersTo
         )
-        assertEquals("shadowed", (barStmt5.rhs as? Literal<String>)?.value)
+        assertEquals("shadowed", (barStmt5.rhs as? Literal<*>)?.value)
 
         /* TODO:
         foo = Foo()
@@ -1023,5 +1023,64 @@ class PythonFrontendTest : BaseTest() {
         val formatArgT3 = printArg.arguments[2] as? DeclaredReferenceExpression
         assertNotNull(formatArgT3)
         // TODO check refersTo
+    }
+    @Test
+    fun testIssue473() {
+        val topLevel = Path.of("src", "test", "resources", "python")
+        val tu =
+            TestUtils.analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("issue473.py").toFile()),
+                topLevel,
+                true
+            ) {
+                it.registerLanguage(
+                    PythonLanguageFrontend::class.java,
+                    PythonLanguageFrontend.PY_EXTENSIONS
+                )
+            }
+
+        assertNotNull(tu)
+
+        val p =
+            tu.getDeclarationsByName("issue473", NamespaceDeclaration::class.java).iterator().next()
+        assertNotNull(p)
+
+        val ifStmt = p.statements.get(0) as? IfStatement
+        assertNotNull(ifStmt)
+        val ifCond = ifStmt.condition as? BinaryOperator
+        assertNotNull(ifCond)
+        val ifThen = ifStmt.thenStatement as? CompoundStatement
+        assertNotNull(ifThen)
+        val ifElse = ifStmt.elseStatement as? CompoundStatement
+        assertNotNull(ifElse)
+
+        // sys.version_info.minor > 9
+        assertEquals(">", ifCond.operatorCode)
+        assertEquals("minor", (ifCond.lhs as? DeclaredReferenceExpression)?.name)
+
+        // phr = {"user_id": user_id} | content
+        val phrDeclaration =
+            (ifThen.statements.get(0) as? DeclarationStatement)?.declarations?.get(0) as?
+                VariableDeclaration
+        assertNotNull(phrDeclaration)
+        assertEquals("phr", phrDeclaration.name)
+        val phrInintializer = phrDeclaration.initializer as? BinaryOperator
+        assertNotNull(phrInintializer)
+        assertEquals("|", phrInintializer.operatorCode)
+        assertEquals(true, phrInintializer.lhs is InitializerListExpression)
+
+        // z = {"user_id": user_id}
+        val elseStmt1 =
+            (ifElse.statements.get(0) as? DeclarationStatement)?.declarations?.get(0) as?
+                VariableDeclaration
+        assertNotNull(elseStmt1)
+        assertEquals("z", elseStmt1.name)
+
+        // phr = {**z, **content}
+        val elseStmt2 = ifElse.statements.get(1) as? BinaryOperator
+        assertNotNull(elseStmt2)
+        assertEquals("=", elseStmt2.operatorCode)
+        val elseStmt2Rhs = elseStmt2.rhs as? InitializerListExpression
+        assertNotNull(elseStmt2Rhs)
     }
 }

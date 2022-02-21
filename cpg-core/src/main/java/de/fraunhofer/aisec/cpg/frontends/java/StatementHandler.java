@@ -402,9 +402,8 @@ public class StatementHandler
     PhysicalLocation parentLocation = lang.getLocationFromRawNode(sEntry);
 
     Optional<TokenRange> optionalTokenRange = sEntry.getTokenRange();
-    Pair<JavaToken, JavaToken> caseTokens = null;
+    Pair<JavaToken, JavaToken> caseTokens = new Pair<>(null, null);
     if (optionalTokenRange.isEmpty()) {
-      caseTokens = new Pair<>(null, null);
       log.error("Token for Region for Default case not available");
     }
 
@@ -416,12 +415,11 @@ public class StatementHandler
          this is correct anyway
         */
         // Compute region and code for self generated default statement to match the c++ versions
+
         caseTokens =
-            getOuterTokensWithText(
-                "default",
-                ":",
-                optionalTokenRange.get().getBegin(),
-                optionalTokenRange.get().getEnd());
+            new Pair<>(
+                getNextTokenWith("default", optionalTokenRange.get().getBegin()),
+                getNextTokenWith(":", optionalTokenRange.get().getBegin()));
       }
       DefaultStatement defaultStatement =
           NodeBuilder.newDefaultStatement(getCodeBetweenTokens(caseTokens.a, caseTokens.b));
@@ -430,11 +428,13 @@ public class StatementHandler
       return defaultStatement;
     }
 
-    if (optionalTokenRange.isPresent()) {
+    Optional<TokenRange> caseExprTokenRange = caseExpression.getTokenRange();
+    if (optionalTokenRange.isPresent() && caseExprTokenRange.isPresent()) {
       // Compute region and code for self generated case statement to match the c++ versions
       caseTokens =
-          getOuterTokensWithText(
-              "case", ":", optionalTokenRange.get().getBegin(), optionalTokenRange.get().getEnd());
+          new Pair<>(
+              getPreviousTokenWith("case", optionalTokenRange.get().getBegin()),
+              getNextTokenWith(":", caseExprTokenRange.get().getEnd()));
     }
 
     CaseStatement caseStatement =
@@ -442,11 +442,6 @@ public class StatementHandler
     caseStatement.setCaseExpression(
         (Expression) lang.getExpressionHandler().handle(caseExpression));
 
-    /*
-    TODO: not sure if this is really necessary, it seems to be the same location as
-     parentLocation, except that column starts 1 character later and I am not sure if
-     this is correct anyway
-    */
     caseStatement.setLocation(getLocationsFromTokens(parentLocation, caseTokens.a, caseTokens.b));
 
     return caseStatement;
@@ -454,7 +449,7 @@ public class StatementHandler
 
   public JavaToken getPreviousTokenWith(String text, JavaToken token) {
     Optional<JavaToken> optional = token.getPreviousToken();
-    while (token.getText().equals(text) && optional.isPresent()) {
+    while (!token.getText().equals(text) && optional.isPresent()) {
       token = optional.get();
       optional = token.getPreviousToken();
     }
@@ -463,16 +458,11 @@ public class StatementHandler
 
   public JavaToken getNextTokenWith(String text, JavaToken token) {
     Optional<JavaToken> optional = token.getNextToken();
-    while (token.getText().equals(text) && optional.isPresent()) {
+    while (!token.getText().equals(text) && optional.isPresent()) {
       token = optional.get();
       optional = token.getNextToken();
     }
     return token;
-  }
-
-  public Pair<JavaToken, JavaToken> getOuterTokensWithText(
-      String startDelim, String endDelim, JavaToken start, JavaToken end) {
-    return new Pair<>(getPreviousTokenWith(startDelim, start), getNextTokenWith(endDelim, end));
   }
 
   @Nullable
