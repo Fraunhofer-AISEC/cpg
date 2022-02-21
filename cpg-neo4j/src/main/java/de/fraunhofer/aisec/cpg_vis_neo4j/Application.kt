@@ -183,6 +183,14 @@ class Application : Callable<Int> {
     )
     private var noPurgeDb: Boolean = false
 
+    @CommandLine.Option(
+        names = ["--top-level"],
+        description =
+            [
+                "Set top level directory of project structure. Default: Largest common path of all source files"]
+    )
+    private var topLevel: File? = null
+
     /**
      * Pushes the whole translationResult to the neo4j db.
      *
@@ -274,7 +282,6 @@ class Application : Callable<Int> {
     private fun setupTranslationConfiguration(): TranslationConfiguration {
         assert(mutuallyExclusiveParameters.files.isNotEmpty())
         val filePaths = arrayOfNulls<File>(mutuallyExclusiveParameters.files.size)
-        var topLevel: File? = null
 
         for (index in mutuallyExclusiveParameters.files.indices) {
             val path =
@@ -283,12 +290,6 @@ class Application : Callable<Int> {
             require(file.exists() && (!file.isHidden)) {
                 "Please use a correct path. It was: $path"
             }
-            val currentTopLevel = if (file.isDirectory) file else file.parentFile
-            if (topLevel == null) topLevel = currentTopLevel
-            require(topLevel.toString() == currentTopLevel.toString()) {
-                "All files should have the same top level path."
-            }
-            filePaths[index] = file
         }
 
         val translationConfiguration =
