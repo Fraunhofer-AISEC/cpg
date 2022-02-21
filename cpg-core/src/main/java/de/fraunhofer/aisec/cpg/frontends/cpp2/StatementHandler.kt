@@ -31,9 +31,12 @@ import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newDeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newIfStatement
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newReturnStatement
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newSwitchStatement
+import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newWhileStatement
 import de.fraunhofer.aisec.cpg.graph.statements.CaseStatement
+import de.fraunhofer.aisec.cpg.graph.statements.DefaultStatement
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
+import de.fraunhofer.aisec.cpg.graph.types.TypeParser
 import io.github.oxisto.kotlintree.jvm.*
 
 class StatementHandler(lang: CXXLanguageFrontend2) :
@@ -52,6 +55,7 @@ class StatementHandler(lang: CXXLanguageFrontend2) :
             "for_range_loop" -> handleForEachStatement(node)
             "if_statement" -> handleIfStatement(node)
             "switch_statement" -> handleSwitchStatement(node)
+            "while_statement" -> handleWhileStatement(node)
             "break_statement" -> handleBreakStatement(node)
             else -> {
                 log.error("Not handling statement of type {} yet", type)
@@ -118,8 +122,13 @@ class StatementHandler(lang: CXXLanguageFrontend2) :
             val statement = handleStatement(i ofNamed node)
             if (statement != null) {
                 compoundStatement.addStatement(statement)
-                if (statement is CaseStatement) {
-                    for (j in 1 until node.namedChild(i).namedChildCount) {
+                if (statement is CaseStatement || statement is DefaultStatement) {
+                    var start = 1
+                    if (statement is DefaultStatement) {
+                        // Default case does not contain a condition
+                        start = 0
+                    }
+                    for (j in start until node.namedChild(i).namedChildCount) {
                         val innerStatement = handleStatement(node.namedChild(i).namedChild(j))
                         compoundStatement.addStatement(innerStatement)
                     }
@@ -178,6 +187,24 @@ class StatementHandler(lang: CXXLanguageFrontend2) :
         return forEachStatement
     }
 
+    private fun handleWhileStatement(node: Node): Statement {
+        val whileStatement = newWhileStatement(lang.getCodeFromRawNode(node))
+        lang.scopeManager.enterScope(whileStatement)
+        val conditionclause = node.childByFieldName("condition")
+        if (!conditionclause.childByFieldName("initializer").isNull) {
+            whileStatement.conditionDeclaration =
+                lang.declarationHandler.handle(conditionclause.childByFieldName("initializer"))
+        }
+        if (!conditionclause.childByFieldName("value").isNull) {
+            whileStatement.condition =
+                lang.expressionHandler.handle(conditionclause.childByFieldName("value"))
+            whileStatement.condition.type = TypeParser.createFrom("bool", true, lang)
+        }
+        whileStatement.statement = handle(node.childByFieldName("body"))
+        lang.scopeManager.leaveScope(whileStatement)
+        return whileStatement
+    }
+
     private fun handleSwitchStatement(node: Node): Statement {
         val switchStatement = newSwitchStatement(lang.getCodeFromRawNode(node))
         lang.scopeManager.enterScope(switchStatement)
@@ -194,16 +221,18 @@ class StatementHandler(lang: CXXLanguageFrontend2) :
     }
 
     private fun handleCaseStatement(node: Node): Statement {
+        val caseStatement: Statement
+
         var caseString = lang.getCodeFromRawNode(node.child(0)) + ":"
         if (!node.childByFieldName("value").isNull) {
             caseString = caseString + " " + lang.getCodeFromRawNode(node.child(1))
-        }
-
-        val caseStatement = NodeBuilder.newCaseStatement(caseString)
-        if (!node.childByFieldName("value").isNull) {
+            caseStatement = NodeBuilder.newCaseStatement(caseString)
             caseStatement.caseExpression =
                 lang.expressionHandler.handle(node.childByFieldName("value"))
+        } else {
+            caseStatement = NodeBuilder.newDefaultStatement(caseString)
         }
+
         return caseStatement
     }
 
@@ -221,6 +250,7 @@ class StatementHandler(lang: CXXLanguageFrontend2) :
         val condition = node.childByFieldName("condition")
         val value = condition.childByFieldName("value")
         ifStatement.condition = lang.expressionHandler.handle(value)
+        ifStatement.condition.type = TypeParser.createFrom("bool", true, lang)
 
         // Handle initializer
         val initializer = condition.childByFieldName("initializer")
