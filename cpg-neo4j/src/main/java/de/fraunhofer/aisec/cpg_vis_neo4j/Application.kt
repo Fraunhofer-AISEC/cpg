@@ -201,7 +201,7 @@ class Application : Callable<Int> {
      */
     @Throws(InterruptedException::class, ConnectException::class)
     fun pushToNeo4j(translationResult: TranslationResult) {
-        var bench = Benchmark(this.javaClass, "Push cpg to neo4j", false, translationResult)
+        val bench = Benchmark(this.javaClass, "Push cpg to neo4j", false, translationResult)
         log.info("Using import depth: $depth")
         log.info(
             "Count base nodes to save: " +
@@ -280,21 +280,19 @@ class Application : Callable<Int> {
      */
     @OptIn(ExperimentalPython::class, ExperimentalGolang::class, ExperimentalTypeScript::class)
     private fun setupTranslationConfiguration(): TranslationConfiguration {
-        assert(mutuallyExclusiveParameters.files.isNotEmpty())
-        val filePaths = arrayOfNulls<File>(mutuallyExclusiveParameters.files.size)
-
-        for (index in mutuallyExclusiveParameters.files.indices) {
-            val path =
-                Paths.get(mutuallyExclusiveParameters.files[index]).toAbsolutePath().normalize()
-            val file = File(path.toString())
-            require(file.exists() && (!file.isHidden)) {
-                "Please use a correct path. It was: $path"
+        val filePaths =
+            mutuallyExclusiveParameters.files.map {
+                Paths.get(it).toAbsolutePath().normalize().toFile()
+            }
+        filePaths.forEach {
+            require(it.exists() && (!it.isHidden)) {
+                "Please use a correct path. It was: ${it.path}"
             }
         }
 
         val translationConfiguration =
             TranslationConfiguration.builder()
-                .sourceLocations(*filePaths)
+                .sourceLocations(filePaths)
                 .topLevel(topLevel)
                 .defaultLanguages()
                 .loadIncludes(loadIncludes)
