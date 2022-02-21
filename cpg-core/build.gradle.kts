@@ -28,8 +28,6 @@ import com.github.gradle.node.yarn.task.YarnTask
 plugins {
     `java-library`
     `java-test-fixtures`
-
-    `maven-publish`
     signing
 
     id("com.github.node-gradle.node") version "3.2.0"
@@ -37,63 +35,25 @@ plugins {
 
 publishing {
     publications {
-        create<MavenPublication>("maven") {
-            from(components["java"])
-
+        named<MavenPublication>("cpg-core") {
             pom {
                 artifactId = "cpg-core"
                 name.set("Code Property Graph - Core")
                 description.set("A simple library to extract a code property graph out of source code. It has support for multiple passes that can extend the analysis after the graph is constructed.")
-                url.set("https://github.com/Fraunhofer-AISEC/cpg")
-                licenses {
-                    license {
-                        name.set("The Apache License, Version 2.0")
-                        url.set("http://www.apache.org/licenses/LICENSE-2.0.txt")
-                    }
-                }
-                developers {
-                    developer {
-                        id.set("oxisto")
-                        organization.set("Fraunhofer AISEC")
-                        organizationUrl.set("https://www.aisec.fraunhofer.de")
-                    }
-                }
-                scm {
-                    connection.set("scm:git:git://github.com:Fraunhofer-AISEC/cpg.git")
-                    developerConnection.set("scm:git:ssh://github.com:Fraunhofer-AISEC/cpg.git")
-                    url.set("https://github.com/Fraunhofer-AISEC/cpg")
-                }
             }
+
+            suppressPomMetadataWarningsFor("testFixturesApiElements")
+            suppressPomMetadataWarningsFor("testFixturesRuntimeElements")
         }
     }
-
-    repositories {
-        maven {
-            url = uri("https://oss.sonatype.org/service/local/staging/deploy/maven2")
-
-            credentials {
-                val mavenCentralUsername: String? by project
-                val mavenCentralPassword: String? by project
-
-                username = mavenCentralUsername
-                password = mavenCentralPassword
-            }
-        }
-    }
-}
-
-tasks.withType<GenerateModuleMetadata> {
-    enabled = false
 }
 
 tasks.named<Test>("test") {
     useJUnitPlatform {
         if (!project.hasProperty("experimental")) {
             excludeTags("experimental")
-        } else {
-            systemProperty("java.library.path", project.projectDir.resolve("src/main/golang"))
         }
-        
+
         if (!project.hasProperty("experimentalTypeScript")) {
             excludeTags("experimentalTypeScript")
         }
@@ -104,11 +64,6 @@ tasks.named<Test>("test") {
 node {
     download.set(findProperty("nodeDownload")?.toString()?.toBoolean() ?: false)
     version.set("16.4.2")
-}
-
-java {
-    withJavadocJar()
-    withSourcesJar()
 }
 
 val yarnInstall by tasks.registering(YarnTask::class) {
@@ -134,40 +89,10 @@ val yarnBuild by tasks.registering(YarnTask::class) {
     dependsOn(yarnInstall)
 }
 
-if (project.hasProperty("experimental")) {
-    val compileGolang = tasks.register("compileGolang") {
-        doLast {
-            project.exec {
-                commandLine("./build.sh")
-                    .setStandardOutput(System.out)
-                    .workingDir("src/main/golang")
-            }
-        }
-    }
-
-    tasks.named("compileJava") {
-        dependsOn(compileGolang)
-    }
-}
-
-
 if (project.hasProperty("experimentalTypeScript")) {
     tasks.processResources {
         dependsOn(yarnBuild)
     }
-}
-
-signing {
-    val signingKey: String? by project
-    val signingPassword: String? by project
-
-    useInMemoryPgpKeys(signingKey, signingPassword)
-
-    setRequired({
-        gradle.taskGraph.hasTask("publish")
-    })
-
-    sign(publishing.publications["maven"])
 }
 
 dependencies {
@@ -191,6 +116,7 @@ dependencies {
 
     // openCypher
     api("org.opencypher:parser-9.0:9.0.20210312")
+    api("org.scala-lang:scala-library:2.12.15") // Dependency of opencypher manually upgraded due to vulnerability
 
     api("commons-io:commons-io:2.11.0")
 

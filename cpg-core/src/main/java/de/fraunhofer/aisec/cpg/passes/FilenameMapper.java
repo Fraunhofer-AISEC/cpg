@@ -36,6 +36,7 @@ public class FilenameMapper extends Pass {
   public void accept(TranslationResult translationResult) {
     for (TranslationUnitDeclaration tu : translationResult.getTranslationUnits()) {
       String name = tu.getName();
+      tu.setFile(name);
       tu.getDeclarations().forEach(d -> handle(d, name));
       tu.getIncludes().forEach(d -> handle(d, name));
       tu.getNamespaces().forEach(d -> handle(d, name));

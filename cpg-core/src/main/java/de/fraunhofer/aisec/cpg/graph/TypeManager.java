@@ -27,7 +27,6 @@ package de.fraunhofer.aisec.cpg.graph;
 
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
 import de.fraunhofer.aisec.cpg.frontends.cpp.CXXLanguageFrontend;
-import de.fraunhofer.aisec.cpg.frontends.golang.GoLanguageFrontend;
 import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguageFrontend;
 import de.fraunhofer.aisec.cpg.frontends.typescript.TypeScriptLanguageFrontend;
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration;
@@ -56,17 +55,27 @@ public class TypeManager {
 
   private static Class<?> llvmClass = null;
   private static Class<?> pythonClass = null;
+  private static Class<?> goClass = null;
 
   static {
     try {
       llvmClass = Class.forName("de.fraunhofer.aisec.cpg.frontends.llvm.LLVMIRLanguageFrontend");
 
-    } catch (ClassNotFoundException ignored) {
+    } catch (ClassNotFoundException | ExceptionInInitializerError ignored) {
+      log.info("LLVM frontend not loaded.");
     }
     try {
       pythonClass =
           Class.forName("de.fraunhofer.aisec.cpg.frontends.python.PythonLanguageFrontend");
-    } catch (ClassNotFoundException ignored) {
+    } catch (ClassNotFoundException | ExceptionInInitializerError ignored) {
+      log.info("Python frontend not loaded.");
+    }
+    try {
+      goClass = Class.forName("de.fraunhofer.aisec.cpg.frontends.golang.GoLanguageFrontend");
+    } catch (ClassNotFoundException | ExceptionInInitializerError ignored) {
+      log.info("Go frontend not loaded.");
+    } catch (LinkageError ex) {
+      log.error("Go frontend was found, but could not be loaded", ex);
     }
   }
 
@@ -535,7 +544,9 @@ public class TypeManager {
       return Language.JAVA;
     } else if (frontend instanceof CXXLanguageFrontend) {
       return Language.CXX;
-    } else if (frontend instanceof GoLanguageFrontend) {
+    } else if (frontend != null
+        && goClass != null
+        && goClass.isAssignableFrom(frontend.getClass())) {
       return Language.GO;
     } else if (frontend != null
         && pythonClass != null

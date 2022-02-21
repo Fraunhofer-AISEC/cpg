@@ -32,77 +32,19 @@ plugins {
 
 publishing {
     publications {
-        create<MavenPublication>("maven") {
-            from(components["java"])
-
+        named<MavenPublication>("cpg-analysis") {
             pom {
                 artifactId = "cpg-analysis"
                 name.set("Code Property Graph - Analysis Modules")
                 description.set("Analysis modules for the CPG")
-                url.set("https://github.com/Fraunhofer-AISEC/cpg")
-                licenses {
-                    license {
-                        name.set("The Apache License, Version 2.0")
-                        url.set("http://www.apache.org/licenses/LICENSE-2.0.txt")
-                    }
-                }
-                developers {
-                    developer {
-                        id.set("oxisto")
-                        organization.set("Fraunhofer AISEC")
-                        organizationUrl.set("https://www.aisec.fraunhofer.de")
-                    }
-                }
-                scm {
-                    connection.set("scm:git:git://github.com:Fraunhofer-AISEC/cpg.git")
-                    developerConnection.set("scm:git:ssh://github.com:Fraunhofer-AISEC/cpg.git")
-                    url.set("https://github.com/Fraunhofer-AISEC/cpg")
-                }
             }
         }
     }
-
-    repositories {
-        maven {
-            url = uri("https://oss.sonatype.org/service/local/staging/deploy/maven2")
-
-            credentials {
-                val mavenCentralUsername: String? by project
-                val mavenCentralPassword: String? by project
-
-                username = mavenCentralUsername
-                password = mavenCentralPassword
-            }
-        }
-    }
-}
-
-tasks.withType<GenerateModuleMetadata> {
-    enabled = false
 }
 
 tasks.named<Test>("test") {
     useJUnitPlatform()
     maxHeapSize = "4048m"
-}
-
-
-java {
-    withJavadocJar()
-    withSourcesJar()
-}
-
-signing {
-    val signingKey: String? by project
-    val signingPassword: String? by project
-
-    useInMemoryPgpKeys(signingKey, signingPassword)
-
-    setRequired({
-        gradle.taskGraph.hasTask("publish")
-    })
-
-    sign(publishing.publications["maven"])
 }
 
 dependencies {

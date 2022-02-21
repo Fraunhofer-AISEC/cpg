@@ -30,10 +30,7 @@ import de.fraunhofer.aisec.cpg.graph.SubGraph;
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration;
 import de.fraunhofer.aisec.cpg.helpers.Benchmark;
 import de.fraunhofer.aisec.cpg.helpers.StatisticsHolder;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import org.jetbrains.annotations.NotNull;
@@ -53,6 +50,11 @@ public class TranslationResult extends Node implements StatisticsHolder {
 
   /** A free-for-use HashMap where passes can store whatever they want. */
   private final Map<String, Object> scratch = new ConcurrentHashMap<>();
+
+  /**
+   * A free-for-use collection of unique nodes. Nodes stored here will be exported to Neo4j, too.
+   */
+  private final Set<Node> additionalNodes = new HashSet<>();
 
   private final List<Benchmark> benchmarks = new ArrayList<>();
 
@@ -96,6 +98,10 @@ public class TranslationResult extends Node implements StatisticsHolder {
 
   public Map<String, Object> getScratch() {
     return scratch;
+  }
+
+  public Set<Node> getAdditionalNodes() {
+    return additionalNodes;
   }
 
   public TranslationManager getTranslationManager() {
