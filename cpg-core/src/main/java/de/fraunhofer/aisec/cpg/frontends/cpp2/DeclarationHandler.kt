@@ -155,7 +155,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend2) :
     }
 
     private fun handleParameterDeclaration(node: Node): ParamVariableDeclaration? {
-        val startType = lang.handleType(node.childByFieldName("type"))
+        val startType = lang.handleTypeWithQualifier(node)
 
         if (startType is IncompleteType) {
             return null
@@ -170,6 +170,8 @@ class DeclarationHandler(lang: CXXLanguageFrontend2) :
                 false,
                 lang.getCodeFromRawNode(node)
             )
+
+        lang.scopeManager.addDeclaration(param)
 
         return param
     }
@@ -370,6 +372,9 @@ class DeclarationHandler(lang: CXXLanguageFrontend2) :
                 handlePointerDeclarator(node, startType)
             }
             "reference_declarator" -> {
+                handleReferenceDeclarator(node, startType)
+            }
+            "abstract_reference_declarator" -> {
                 handleReferenceDeclarator(node, startType)
             }
             "function_declarator" -> handleFunctionDeclarator(node, startType)

@@ -43,6 +43,8 @@ public class ReferenceType extends Type implements SecondOrderType {
     super();
     this.setName(reference.getName() + "&");
     this.reference = reference;
+    this.qualifier = reference.qualifier;
+    reference.qualifier = new Qualifier();
   }
 
   public ReferenceType(Type type, Type reference) {

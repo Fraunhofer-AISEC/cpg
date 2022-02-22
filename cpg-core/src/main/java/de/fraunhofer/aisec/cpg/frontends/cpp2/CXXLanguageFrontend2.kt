@@ -93,25 +93,41 @@ class CXXLanguageFrontend2(config: TranslationConfiguration, scopeManager: Scope
         return tu
     }
 
-    fun handleType(node: Node): Type {
+    fun handleTypeWithQualifier(node: Node): Type {
+        var qualifier: String = ""
+        for (i in 0 until node.namedChildCount) {
+            if (!node.namedChild(i).isNull && node.namedChild(i).type.equals("type_qualifier")) {
+                qualifier = getCodeFromRawNode(node.namedChild(i))!! + " "
+                break
+            }
+        }
+
+        return handleType(node.childByFieldName("type"), qualifier)
+    }
+
+    fun handleType(node: Node, qualifier: String = ""): Type {
         // make sure this node is really valid
         if (node.isNull) {
             return UnknownType.getUnknownType()
         }
 
         return when (node.type) {
-            "primitive_type" -> getCodeFromRawNode(node)?.let { TypeParser.createFrom(it, false) }
+            "primitive_type" ->
+                getCodeFromRawNode(node)?.let { TypeParser.createFrom(qualifier + it, false) }
                     ?: UnknownType.getUnknownType()
-            "type_identifier" -> getCodeFromRawNode(node)?.let { TypeParser.createFrom(it, false) }
+            "type_identifier" ->
+                getCodeFromRawNode(node)?.let { TypeParser.createFrom(qualifier + it, false) }
                     ?: UnknownType.getUnknownType()
             "scoped_type_identifier" ->
-                getCodeFromRawNode(node)?.let { TypeParser.createFrom(it, false) }
+                getCodeFromRawNode(node)?.let { TypeParser.createFrom(qualifier + it, false) }
                     ?: UnknownType.getUnknownType()
             "class_specifier" -> handleClassSpecifier(node)
             "auto" -> UnknownType.getUnknownType()
-            "type_descriptor" -> getCodeFromRawNode(node)?.let { TypeParser.createFrom(it, false) }
+            "type_descriptor" ->
+                getCodeFromRawNode(node)?.let { TypeParser.createFrom(qualifier + it, false) }
                     ?: UnknownType.getUnknownType()
-            "template_type" -> getCodeFromRawNode(node)?.let { TypeParser.createFrom(it, false) }
+            "template_type" ->
+                getCodeFromRawNode(node)?.let { TypeParser.createFrom(qualifier + it, false) }
                     ?: UnknownType.getUnknownType()
             else -> {
                 log.error(
