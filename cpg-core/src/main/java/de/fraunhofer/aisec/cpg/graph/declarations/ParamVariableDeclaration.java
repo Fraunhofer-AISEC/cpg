@@ -33,7 +33,7 @@ import org.jetbrains.annotations.NotNull;
 import org.neo4j.ogm.annotation.Relationship;
 
 /** A declaration of a function or nontype template parameter. */
-public class ParamVariableDeclaration extends ValueDeclaration implements HasDefault<Expression> {
+public class ParamVariableDeclaration extends VariableDeclaration implements HasDefault<Expression> {
 
   @NotNull private boolean variadic = false;
 
