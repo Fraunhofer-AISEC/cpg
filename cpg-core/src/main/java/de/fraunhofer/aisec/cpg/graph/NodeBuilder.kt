@@ -660,7 +660,8 @@ object NodeBuilder {
             node.code = code
         }
 
-        if (kind == "class" && createThis) {
+        // In cpp, structs are also classes
+        if ((kind == "class" || kind == "struct") && createThis) {
             val thisDeclaration =
                 newFieldDeclaration(
                     "this",
