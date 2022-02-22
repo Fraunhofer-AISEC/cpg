@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.helpers
 
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
+import java.io.File
 import java.nio.file.Path
 import java.time.Duration
 import java.time.Instant
@@ -47,7 +48,7 @@ interface StatisticsHolder {
             listOf("Number of files translated", translatedFiles.size),
             listOf(
                 "Translated file(s)",
-                translatedFiles.map { relativeOrAbsolute(Path.of(it), config.topLevel.toPath()) }
+                translatedFiles.map { relativeOrAbsolute(Path.of(it), config.topLevel) }
             ),
             *benchmarks
                 .map { listOf("${it.caller}: ${it.message}", "${it.duration} ms") }
@@ -106,10 +107,14 @@ fun printMarkdown(table: List<List<Any>>, headers: List<String>) {
  * This function will shorten / relativize the [path], if it is relative to [topLevel]. Otherwise,
  * the full path will be returned.
  */
-fun relativeOrAbsolute(path: Path, topLevel: Path): Path {
-    return try {
-        topLevel.toAbsolutePath().relativize(path)
-    } catch (ex: IllegalArgumentException) {
+fun relativeOrAbsolute(path: Path, topLevel: File?): Path {
+    return if (topLevel != null) {
+        try {
+            topLevel.toPath().toAbsolutePath().relativize(path)
+        } catch (ex: IllegalArgumentException) {
+            path
+        }
+    } else {
         path
     }
 }
