@@ -105,14 +105,14 @@ private constructor(
                             log.warn("Analysis interrupted, stopping Pass evaluation")
                         }
                     } catch (e: Exception) {
-                        // Printing the stack of currently handled CPG objects when the Exception
-                        // was thrown.
-                        pass.printHandlerLogTrace()
-                        throw e
+                        // Adding information given by the graph transformer and wrapping old
+                        // expression.
+                        throw GraphTransformation.getTranslationExceptionWithHandledStack(pass, e)
                     }
                 }
             } catch (ex: TranslationException) {
-                throw CompletionException(ex)
+                val compEx: CompletionException = CompletionException(githubIssueGuide, ex)
+                throw compEx
             } finally {
                 outerBench.stop()
                 if (!config.disableCleanup) {
@@ -351,9 +351,10 @@ private constructor(
             }
             result.addTranslationUnit(frontend.parse(sourceLocation))
         } catch (e: Exception) {
-            // Printing Handler log trace on any error
-            if (frontend != null) {
-                frontend.printHandlerLogTrace()
+            // Wrapping the exception into a Translation exception for later rethrows
+            var exception = e
+            frontend?.let {
+                exception = GraphTransformation.getTranslationExceptionWithHandledStack(frontend, e)
             }
             // It the Exception was a TranslationException the translation is only supposed to fail
             // if configured in that way
@@ -364,10 +365,12 @@ private constructor(
                     e.message
                 )
                 if (config.failOnError) {
-                    throw e
+                    throw exception
+                } else {
+                    exception.printStackTrace(System.out)
                 }
             } else {
-                throw e
+                throw exception
             }
         }
         return Optional.ofNullable(frontend)
@@ -421,6 +424,14 @@ private constructor(
     }
 
     companion object {
+
+        val githubIssueGuide: String =
+            "\tTo report this Issue visit https://github.com/Fraunhofer-AISEC/codyze/issues/new?title={}\n" +
+                "\tIf possible: \n" +
+                "\t\t* paste this message and stack trace for us to locate the issue.\n" +
+                "\t\t* past the parsed code that cause the issue from your source, the location is referenced by the lines 'When handling ...'" +
+                "\t\t*tell us if you used the default passes and language frontends, or made any changes, e.g. registered new passes or frontends, or deactivated any."
+
         private val log = LoggerFactory.getLogger(TranslationManager::class.java)
 
         @JvmStatic

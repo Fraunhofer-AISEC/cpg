@@ -25,6 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.frontends;
 
+import java.io.PrintStream;
+
 /**
  * A generic exception that can be thrown from a {@link LanguageFrontend}, if it reaches a state
  * where it cannot continue translating source code into the graph.
@@ -40,5 +42,14 @@ public class TranslationException extends Exception {
 
   public TranslationException(String message) {
     super(message);
+  }
+
+  public TranslationException(String message, Exception e) {
+    super(message, e);
+  }
+
+  @Override
+  public void printStackTrace(PrintStream ps) {
+    super.printStackTrace(ps);
   }
 }

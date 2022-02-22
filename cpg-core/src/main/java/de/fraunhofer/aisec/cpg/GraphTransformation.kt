@@ -25,7 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg
 
-import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
+import de.fraunhofer.aisec.cpg.frontends.TranslationException
+import java.lang.Exception
 import java.util.*
 import java.util.function.Consumer
 
@@ -46,14 +47,34 @@ abstract class GraphTransformation {
     protected abstract fun getLocationString(a: Any): String
 
     open fun printHandlerLogTrace() {
+        val stackString: String = getHandlerLogTrace()
+        System.err.println(stackString)
+    }
+
+    open fun getHandlerLogTrace(): String {
+        val stackString: StringBuilder = StringBuilder()
         parserObjectStack.forEach(
-            Consumer { parserObject: Any ->
-                LanguageFrontend.log.error(
-                    "Translating {} from Location {}",
-                    parserObject.javaClass.name,
-                    getLocationString(parserObject)
+            Consumer { logObject: Any ->
+                stackString.insert(
+                    0,
+                    "\n\tWhen handling ${logObject.javaClass.name} from ${getLocationString(logObject)}"
                 )
             }
         )
+        stackString.insert(0, "${this.javaClass} encountered and exception:")
+        return stackString.toString()
+    }
+
+    companion object {
+
+        open fun getTranslationExceptionWithHandledStack(
+            gt: GraphTransformation,
+            originalException: Exception
+        ): TranslationException {
+            val componentName = gt.javaClass.simpleName
+            val baseErrorName = originalException.javaClass.simpleName
+            var customErrorMessage = "$baseErrorName in $componentName \n${gt.getHandlerLogTrace()}"
+            return TranslationException(customErrorMessage, originalException)
+        }
     }
 }
