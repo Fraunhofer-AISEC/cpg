@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.graph
 
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
+import de.fraunhofer.aisec.cpg.frontends.cpp.CXXLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.setCodeAndRegion
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.statements.*
@@ -661,7 +662,7 @@ object NodeBuilder {
         }
 
         // In cpp, structs are also classes
-        if ((kind == "class" || kind == "struct") && createThis) {
+        if ((kind == "class" || (lang is CXXLanguageFrontend && kind == "struct")) && createThis) {
             val thisDeclaration =
                 newFieldDeclaration(
                     "this",
