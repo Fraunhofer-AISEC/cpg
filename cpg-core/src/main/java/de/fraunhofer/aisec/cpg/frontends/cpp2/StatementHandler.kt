@@ -32,9 +32,9 @@ import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newIfStatement
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newReturnStatement
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newSwitchStatement
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newWhileStatement
-import de.fraunhofer.aisec.cpg.graph.statements.CaseStatement
-import de.fraunhofer.aisec.cpg.graph.statements.DefaultStatement
-import de.fraunhofer.aisec.cpg.graph.statements.Statement
+import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
+import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser
 import io.github.oxisto.kotlintree.jvm.*
@@ -57,6 +57,8 @@ class StatementHandler(lang: CXXLanguageFrontend2) :
             "switch_statement" -> handleSwitchStatement(node)
             "while_statement" -> handleWhileStatement(node)
             "break_statement" -> handleBreakStatement(node)
+            "try_statement" -> handleTryStatement(node)
+            "catch_clause" -> handleCatchClause(node)
             else -> {
                 log.error("Not handling statement of type {} yet", type)
                 null
@@ -234,6 +236,42 @@ class StatementHandler(lang: CXXLanguageFrontend2) :
         }
 
         return caseStatement
+    }
+
+    private fun handleCatchClause(node: Node): Statement {
+        val catchClause = NodeBuilder.newCatchClause(lang.getCodeFromRawNode(node))
+        lang.scopeManager.enterScope(catchClause)
+
+        val body = handle(node.childByFieldName("body"))
+        catchClause.body = body as CompoundStatement?
+
+        val params = node.childByFieldName("parameters")
+        // TODO: can also be an 'unnamed' parameter. In this case we should not declare a variable
+        var decl: Declaration? = null
+        if (!params.namedChild(0).isNull) {
+            decl = lang.declarationHandler.handle(params.namedChild(0))
+        }
+
+        if (decl != null) {
+            catchClause.setParameter((decl as VariableDeclaration?)!!)
+        }
+
+        lang.scopeManager.leaveScope(catchClause)
+        return catchClause
+    }
+
+    private fun handleTryStatement(node: Node): Statement {
+        val tryStatement = NodeBuilder.newTryStatement(lang.getCodeFromRawNode(node))
+        lang.scopeManager.enterScope(tryStatement)
+        tryStatement.tryBlock = handle(node.childByFieldName("body")) as CompoundStatement?
+        var catchClauses: MutableList<CatchClause> = arrayListOf()
+
+        for (i in 1 until node.namedChildCount) {
+            catchClauses.add(handle(node.namedChild(i)) as CatchClause)
+        }
+        tryStatement.catchClauses = catchClauses
+        lang.scopeManager.leaveScope(tryStatement)
+        return tryStatement
     }
 
     private fun handleIfStatement(node: Node): Statement {
