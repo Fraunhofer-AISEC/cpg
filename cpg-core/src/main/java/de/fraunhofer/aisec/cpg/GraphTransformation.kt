@@ -67,14 +67,33 @@ abstract class GraphTransformation {
 
     companion object {
 
+        val githubIssueGuide: String =
+            "\tTo report this Issue visit https://github.com/Fraunhofer-AISEC/codyze/issues/new?title={}\n" +
+                "\tIf possible: \n" +
+                "\t\t* paste this message and stack trace for us to locate the issue.\n" +
+                "\t\t* past the parsed code that cause the issue from your source, the location is referenced by the lines 'at processing of ... in ...'\n" +
+                "\t\t* tell us if you used the default passes and language frontends, or made any changes, e.g. registered new passes or frontends, or deactivated any."
+
         open fun getTranslationExceptionWithHandledStack(
             gt: GraphTransformation,
             originalException: Exception
         ): TranslationException {
             val componentName = gt.javaClass.simpleName
             val baseErrorName = originalException.javaClass.simpleName
-            var customErrorMessage = "$baseErrorName in $componentName \n${gt.getHandlerLogTrace()}"
-            return TranslationException(customErrorMessage, originalException)
+            var customErrorMessage = "$baseErrorName in $componentName\n\n${githubIssueGuide}\n"
+            val size = gt.parserObjectStack.size
+            val stackTrace =
+                Array<StackTraceElement>(size) { i ->
+                    StackTraceElement(
+                        "processing of ${gt.parserObjectStack[size - 1 - i].javaClass.name} located in ${gt.getLocationString(gt.parserObjectStack[size - 1 - i])}",
+                        "",
+                        "",
+                        0
+                    )
+                }
+            val te = TranslationException(customErrorMessage, originalException)
+            te.stackTrace = stackTrace
+            return te
         }
     }
 }

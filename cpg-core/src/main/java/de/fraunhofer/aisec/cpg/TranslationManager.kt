@@ -111,8 +111,7 @@ private constructor(
                     }
                 }
             } catch (ex: TranslationException) {
-                val compEx: CompletionException = CompletionException(githubIssueGuide, ex)
-                throw compEx
+                throw CompletionException(ex)
             } finally {
                 outerBench.stop()
                 if (!config.disableCleanup) {
@@ -424,13 +423,6 @@ private constructor(
     }
 
     companion object {
-
-        val githubIssueGuide: String =
-            "\tTo report this Issue visit https://github.com/Fraunhofer-AISEC/codyze/issues/new?title={}\n" +
-                "\tIf possible: \n" +
-                "\t\t* paste this message and stack trace for us to locate the issue.\n" +
-                "\t\t* past the parsed code that cause the issue from your source, the location is referenced by the lines 'When handling ...'" +
-                "\t\t*tell us if you used the default passes and language frontends, or made any changes, e.g. registered new passes or frontends, or deactivated any."
 
         private val log = LoggerFactory.getLogger(TranslationManager::class.java)
 

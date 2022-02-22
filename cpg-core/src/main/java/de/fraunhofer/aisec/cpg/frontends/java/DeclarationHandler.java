@@ -161,7 +161,6 @@ public class DeclarationHandler
 
   public de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration handleMethodDeclaration(
       com.github.javaparser.ast.body.MethodDeclaration methodDecl) {
-    if (methodDecl != null) throw new NullPointerException();
 
     ResolvedMethodDeclaration resolvedMethod = methodDecl.resolve();
 
