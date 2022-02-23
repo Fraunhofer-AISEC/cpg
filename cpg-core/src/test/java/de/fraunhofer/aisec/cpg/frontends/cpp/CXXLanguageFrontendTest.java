@@ -1336,4 +1336,42 @@ class CXXLanguageFrontendTest extends BaseTest {
     assertTrue(initializer instanceof CastExpression);
     assertEquals("size_t", ((CastExpression) initializer).getCastType().getName());
   }
+
+  @Test
+  void testCppThisField() throws Exception {
+    var file = new File("src/test/resources/cpp-this-field.cpp");
+    var tu = TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), true);
+
+    var main = tu.getDeclarationsByName("main", FunctionDeclaration.class).iterator().next();
+    assertNotNull(main);
+
+    var classT = tu.getDeclarationsByName("T", RecordDeclaration.class).iterator().next();
+    assertNotNull(classT);
+    var classTFoo = classT.getMethods().iterator().next();
+    assertNotNull(classTFoo);
+    var classTThis = classT.getThis();
+    assertNotNull(classTThis);
+    var classTReturn = classTFoo.getBodyStatementAs(0, ReturnStatement.class);
+    assertNotNull(classTReturn);
+    var classTReturnMember = (MemberExpression) classTReturn.getReturnValue();
+    assertNotNull(classTReturnMember);
+    var classTThisExpression = (DeclaredReferenceExpression) classTReturnMember.getBase();
+    assertEquals(classTThisExpression.getRefersTo(), classTThis);
+
+    var classS = tu.getDeclarationsByName("S", RecordDeclaration.class).iterator().next();
+    assertNotNull(classS);
+    var classSFoo = classS.getMethods().iterator().next();
+    assertNotNull(classSFoo);
+    var classSThis = classS.getThis();
+    assertNotNull(classSThis);
+    var classSReturn = classSFoo.getBodyStatementAs(0, ReturnStatement.class);
+    assertNotNull(classSReturn);
+    var classSReturnMember = (MemberExpression) classSReturn.getReturnValue();
+    assertNotNull(classSReturnMember);
+    var classSThisExpression = (DeclaredReferenceExpression) classSReturnMember.getBase();
+    assertEquals(classSThisExpression.getRefersTo(), classSThis);
+
+    assertNotEquals(classTFoo, classSFoo);
+    assertNotEquals(classTThis, classSThis);
+  }
 }
