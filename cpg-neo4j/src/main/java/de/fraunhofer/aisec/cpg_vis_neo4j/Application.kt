@@ -53,7 +53,6 @@ private const val MAX_COUNT_OF_FAILS = 10
 private const val EXIT_SUCCESS = 0
 private const val EXIT_FAILURE = 1
 private const val VERIFY_CONNECTION = true
-private const val PURGE_DB = true
 private const val DEBUG_PARSER = true
 private const val AUTO_INDEX = "none"
 private const val PROTOCOL = "bolt://"
@@ -178,6 +177,12 @@ class Application : Callable<Int> {
     )
     private var noNeo4j: Boolean = false
 
+    @CommandLine.Option(
+        names = ["--no-purge-db"],
+        description = ["Do no purge neo4j database before pushing the cpg"]
+    )
+    private var noPurgeDb: Boolean = false
+
     /**
      * Pushes the whole translationResult to the neo4j db.
      *
@@ -200,7 +205,7 @@ class Application : Callable<Int> {
 
         val session = sessionAndSessionFactoryPair.first
         session.beginTransaction().use { transaction ->
-            if (PURGE_DB) session.purgeDatabase()
+            if (!noPurgeDb) session.purgeDatabase()
             session.save(translationResult.translationUnits, depth)
             session.save(translationResult.additionalNodes, depth)
             transaction.commit()
