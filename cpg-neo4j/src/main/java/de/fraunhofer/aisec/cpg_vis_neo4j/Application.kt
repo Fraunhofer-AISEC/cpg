@@ -183,6 +183,14 @@ class Application : Callable<Int> {
     )
     private var noPurgeDb: Boolean = false
 
+    @CommandLine.Option(
+        names = ["--top-level"],
+        description =
+            [
+                "Set top level directory of project structure. Default: Largest common path of all source files"]
+    )
+    private var topLevel: File? = null
+
     /**
      * Pushes the whole translationResult to the neo4j db.
      *
@@ -193,7 +201,7 @@ class Application : Callable<Int> {
      */
     @Throws(InterruptedException::class, ConnectException::class)
     fun pushToNeo4j(translationResult: TranslationResult) {
-        var bench = Benchmark(this.javaClass, "Push cpg to neo4j", false, translationResult)
+        val bench = Benchmark(this.javaClass, "Push cpg to neo4j", false, translationResult)
         log.info("Using import depth: $depth")
         log.info(
             "Count base nodes to save: " +
@@ -272,28 +280,19 @@ class Application : Callable<Int> {
      */
     @OptIn(ExperimentalPython::class, ExperimentalGolang::class, ExperimentalTypeScript::class)
     private fun setupTranslationConfiguration(): TranslationConfiguration {
-        assert(mutuallyExclusiveParameters.files.isNotEmpty())
-        val filePaths = arrayOfNulls<File>(mutuallyExclusiveParameters.files.size)
-        var topLevel: File? = null
-
-        for (index in mutuallyExclusiveParameters.files.indices) {
-            val path =
-                Paths.get(mutuallyExclusiveParameters.files[index]).toAbsolutePath().normalize()
-            val file = File(path.toString())
-            require(file.exists() && (!file.isHidden)) {
-                "Please use a correct path. It was: $path"
+        val filePaths =
+            mutuallyExclusiveParameters.files.map {
+                Paths.get(it).toAbsolutePath().normalize().toFile()
             }
-            val currentTopLevel = if (file.isDirectory) file else file.parentFile
-            if (topLevel == null) topLevel = currentTopLevel
-            require(topLevel.toString() == currentTopLevel.toString()) {
-                "All files should have the same top level path."
+        filePaths.forEach {
+            require(it.exists() && (!it.isHidden)) {
+                "Please use a correct path. It was: ${it.path}"
             }
-            filePaths[index] = file
         }
 
         val translationConfiguration =
             TranslationConfiguration.builder()
-                .sourceLocations(*filePaths)
+                .sourceLocations(filePaths)
                 .topLevel(topLevel)
                 .defaultLanguages()
                 .loadIncludes(loadIncludes)
