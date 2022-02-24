@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg
 
+import de.fraunhofer.aisec.cpg.frontends.CompilationDatabase
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.TypeManager
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
@@ -122,6 +123,28 @@ object TestUtils {
         usePasses: Boolean,
         configModifier: Consumer<TranslationConfiguration.Builder>? = null
     ): List<TranslationUnitDeclaration> {
+        return analyzeWithResult(files, topLevel, usePasses, configModifier).translationUnits
+    }
+
+    /**
+     * Default way of parsing a list of files into a full CPG. All default passes are applied
+     *
+     * @param topLevel The directory to traverse while looking for files to parse
+     * @param usePasses Whether the analysis should run passes after the initial phase
+     * @param configModifier An optional modifier for the config
+     *
+     * @return A list of [TranslationUnitDeclaration] nodes, representing the CPG roots
+     * @throws Exception Any exception thrown during the parsing process
+     */
+    @JvmOverloads
+    @JvmStatic
+    @Throws(Exception::class)
+    fun analyzeWithResult(
+        files: List<File>?,
+        topLevel: Path,
+        usePasses: Boolean,
+        configModifier: Consumer<TranslationConfiguration.Builder>? = null
+    ): TranslationResult {
         val builder =
             TranslationConfiguration.builder()
                 .sourceLocations(files)
@@ -139,7 +162,7 @@ object TestUtils {
         configModifier?.accept(builder)
         val config = builder.build()
         val analyzer = TranslationManager.builder().config(config).build()
-        return analyzer.analyze().get().translationUnits
+        return analyzer.analyze().get()
     }
 
     /**
@@ -170,6 +193,21 @@ object TestUtils {
     ): TranslationUnitDeclaration {
         val translationUnits = analyze(files, topLevel, usePasses, configModifier)
         return translationUnits.stream().findFirst().orElseThrow()
+    }
+
+    @JvmStatic
+    @Throws(Exception::class)
+    fun analyzeWithCompilationDatabase(
+        jsonCompilationDatabase: File,
+        usePasses: Boolean,
+    ): List<TranslationUnitDeclaration> {
+        return analyze(listOf(), jsonCompilationDatabase.parentFile.toPath(), usePasses) {
+            val db = CompilationDatabase.fromFile(jsonCompilationDatabase)
+            if (db.isNotEmpty()) {
+                it.useCompilationDatabase(db)
+                it.sourceLocations(db.sourceFiles)
+            }
+        }
     }
 
     @JvmStatic

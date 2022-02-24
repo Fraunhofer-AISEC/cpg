@@ -31,6 +31,7 @@ import de.fraunhofer.aisec.cpg.frontends.golang.GoLanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.llvm.LLVMIRLanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.typescript.TypeScriptLanguageFrontend
+import de.fraunhofer.aisec.cpg.helpers.Benchmark
 import java.io.File
 import java.net.ConnectException
 import java.nio.file.Paths
@@ -52,7 +53,6 @@ private const val MAX_COUNT_OF_FAILS = 10
 private const val EXIT_SUCCESS = 0
 private const val EXIT_FAILURE = 1
 private const val VERIFY_CONNECTION = true
-private const val PURGE_DB = true
 private const val DEBUG_PARSER = true
 private const val AUTO_INDEX = "none"
 private const val PROTOCOL = "bolt://"
@@ -70,6 +70,7 @@ private const val DEFAULT_SAVE_DEPTH = -1
  * @author Andreas Hager, andreas.hager@aisec.fraunhofer.de
  */
 class Application : Callable<Int> {
+
     private val log: Logger
         get() = LoggerFactory.getLogger(Application::class.java)
     // Either provide the files to evaluate or provide the path of compilation database with
@@ -158,6 +159,38 @@ class Application : Callable<Int> {
     )
     private var enableExperimentalTypeScript: Boolean = false
 
+    @CommandLine.Option(
+        names = ["--print-benchmark"],
+        description = ["Print benchmark result as markdown table"]
+    )
+    private var printBenchmark: Boolean = false
+
+    @CommandLine.Option(
+        names = ["--no-default-passes"],
+        description = ["Do not register default passes [used for debugging]"]
+    )
+    private var noDefaultPasses: Boolean = false
+
+    @CommandLine.Option(
+        names = ["--no-neo4j"],
+        description = ["Do not push cpg into neo4j [used for debugging]"]
+    )
+    private var noNeo4j: Boolean = false
+
+    @CommandLine.Option(
+        names = ["--no-purge-db"],
+        description = ["Do no purge neo4j database before pushing the cpg"]
+    )
+    private var noPurgeDb: Boolean = false
+
+    @CommandLine.Option(
+        names = ["--top-level"],
+        description =
+            [
+                "Set top level directory of project structure. Default: Largest common path of all source files"]
+    )
+    private var topLevel: File? = null
+
     /**
      * Pushes the whole translationResult to the neo4j db.
      *
@@ -168,20 +201,27 @@ class Application : Callable<Int> {
      */
     @Throws(InterruptedException::class, ConnectException::class)
     fun pushToNeo4j(translationResult: TranslationResult) {
+        val bench = Benchmark(this.javaClass, "Push cpg to neo4j", false, translationResult)
         log.info("Using import depth: $depth")
-        log.info("Count base nodes to save: " + translationResult.translationUnits.size)
+        log.info(
+            "Count base nodes to save: " +
+                translationResult.translationUnits.size +
+                translationResult.additionalNodes.size
+        )
 
         val sessionAndSessionFactoryPair = connect()
 
         val session = sessionAndSessionFactoryPair.first
         session.beginTransaction().use { transaction ->
-            if (PURGE_DB) session.purgeDatabase()
+            if (!noPurgeDb) session.purgeDatabase()
             session.save(translationResult.translationUnits, depth)
+            session.save(translationResult.additionalNodes, depth)
             transaction.commit()
         }
 
         session.clear()
         sessionAndSessionFactoryPair.second.close()
+        bench.stop()
     }
 
     /**
@@ -240,33 +280,27 @@ class Application : Callable<Int> {
      */
     @OptIn(ExperimentalPython::class, ExperimentalGolang::class, ExperimentalTypeScript::class)
     private fun setupTranslationConfiguration(): TranslationConfiguration {
-        assert(mutuallyExclusiveParameters.files.isNotEmpty())
-        val filePaths = arrayOfNulls<File>(mutuallyExclusiveParameters.files.size)
-        var topLevel: File? = null
-
-        for (index in mutuallyExclusiveParameters.files.indices) {
-            val path =
-                Paths.get(mutuallyExclusiveParameters.files[index]).toAbsolutePath().normalize()
-            val file = File(path.toString())
-            require(file.exists() && (!file.isHidden)) {
-                "Please use a correct path. It was: $path"
+        val filePaths =
+            mutuallyExclusiveParameters.files.map {
+                Paths.get(it).toAbsolutePath().normalize().toFile()
             }
-            val currentTopLevel = if (file.isDirectory) file else file.parentFile
-            if (topLevel == null) topLevel = currentTopLevel
-            require(topLevel.toString() == currentTopLevel.toString()) {
-                "All files should have the same top level path."
+        filePaths.forEach {
+            require(it.exists() && (!it.isHidden)) {
+                "Please use a correct path. It was: ${it.path}"
             }
-            filePaths[index] = file
         }
 
         val translationConfiguration =
             TranslationConfiguration.builder()
-                .sourceLocations(*filePaths)
+                .sourceLocations(filePaths)
                 .topLevel(topLevel)
-                .defaultPasses()
                 .defaultLanguages()
                 .loadIncludes(loadIncludes)
                 .debugParser(DEBUG_PARSER)
+
+        if (!noDefaultPasses) {
+            translationConfiguration.defaultPasses()
+        }
 
         if (mutuallyExclusiveParameters.jsonCompilationDatabase != null) {
             val db = fromFile(mutuallyExclusiveParameters.jsonCompilationDatabase!!)
@@ -349,10 +383,16 @@ class Application : Callable<Int> {
             "Benchmark: analyzing code in " + (analyzingTime - startTime) / S_TO_MS_FACTOR + " s."
         )
 
-        pushToNeo4j(translationResult)
+        if (!noNeo4j) {
+            pushToNeo4j(translationResult)
+        }
 
         val pushTime = System.currentTimeMillis()
         log.info("Benchmark: push code in " + (pushTime - analyzingTime) / S_TO_MS_FACTOR + " s.")
+
+        if (printBenchmark) {
+            translationResult.printBenchmark()
+        }
 
         return EXIT_SUCCESS
     }

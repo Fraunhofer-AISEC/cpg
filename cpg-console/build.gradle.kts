@@ -27,6 +27,18 @@ plugins {
     application
 }
 
+publishing {
+    publications {
+        named<MavenPublication>("cpg-console") {
+            pom {
+                artifactId = "cpg-console"
+                name.set("Code Property Graph - Console")
+                description.set("An Application to translate source code into a Code Property Graph and perform different types of analysis on the resulting graph.")
+            }
+        }
+    }
+}
+
 application {
     mainClass.set("de.fraunhofer.aisec.cpg.console.CpgConsole")
 }
@@ -57,6 +69,8 @@ dependencies {
     api(project(":cpg-core"))
     api(project(":cpg-analysis"))
     api(project(":cpg-language-llvm"))
+    api(project(":cpg-language-python"))
+    api(project(":cpg-language-go"))
     api(project(":cpg-neo4j"))
 
     implementation("org.apache.logging.log4j:log4j-slf4j18-impl:2.17.0")

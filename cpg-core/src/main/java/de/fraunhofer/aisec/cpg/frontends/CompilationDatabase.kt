@@ -44,6 +44,8 @@ import kotlin.collections.ArrayList
 class CompilationDatabase : ArrayList<CompilationDatabase.CompilationDatabaseEntry>() {
     /** A cached list of include paths for each source file specified in the compilation database */
     private val includePaths = mutableMapOf<File, List<String>>()
+    /** A cached list of symbols for each source file specified in the compilation database */
+    private val symbols = mutableMapOf<File, Map<String, String>>()
 
     val sourceFiles: List<File>
         get() {
@@ -51,8 +53,12 @@ class CompilationDatabase : ArrayList<CompilationDatabase.CompilationDatabaseEnt
         }
 
     /** Returns the include paths for the specified file. */
-    operator fun get(file: File): List<String>? {
+    fun getIncludePaths(file: File): List<String>? {
         return includePaths[file]
+    }
+    /** Returns defined symbols for the specified file. */
+    fun getSymbols(file: File): Map<String, String>? {
+        return symbols[file]
     }
 
     /** This is the structure of how each object inside compile_commands.json looks like. */
@@ -79,77 +85,124 @@ class CompilationDatabase : ArrayList<CompilationDatabase.CompilationDatabaseEnt
                     if (entry.arguments != null) {
                         parseIncludeDirectories(entry.arguments)
                     } else if (entry.command != null) {
-                        parseIncludeDirectories(entry.command)
+                        parseIncludeDirectories(splitCommand(entry.command))
                     } else {
                         null
                     }
                 val basedir = entry.directory
-                val file = File(fileNameInTheObject)
-
-                if (includes != null) {
-                    if (file.isAbsolute) {
-                        if (file.exists()) {
-                            db.includePaths[file] = includes
-                        }
-                    } else {
-                        if (basedir != null) {
-                            if (Paths.get(basedir, fileNameInTheObject).toFile().exists()) {
-                                db.includePaths[Paths.get(basedir, fileNameInTheObject).toFile()] =
-                                    includes
-                            }
+                var srcFile = File(fileNameInTheObject)
+                if (!srcFile.isAbsolute) {
+                    if (basedir != null) {
+                        if (Paths.get(basedir, fileNameInTheObject).toFile().exists()) {
+                            srcFile = Paths.get(basedir, fileNameInTheObject).toFile()
                         }
                     }
                 }
+                if (includes != null) {
+                    if (srcFile.exists()) {
+                        db.includePaths[srcFile] = includes
+                    }
+                }
+                db.symbols[srcFile] =
+                    (if (entry.arguments != null) {
+                        parseSymbols(entry.arguments)
+                    } else if (entry.command != null) {
+                        parseSymbols(splitCommand(entry.command))
+                    } else {
+                        mapOf()
+                    })
             }
 
             return db
         }
+
         /**
-         * Gets the include directories the from the string value provided. Example for a compile
-         * commdand is : "/usr/local/bin/g++-7 -I/Users/me/prj/Calendar/calendars -g -std=c++11 -o
-         * calendar_run.dir/main.cpp.o -c /Users/me/prj/Calendar/main.cpp"
+         * Split a command into its separate arguments. The current implementation uses the naive
+         * approach to split by " ". This will fail if escaping is used.
          *
-         * This method returns the include-paths in the above the command.
+         * TODO: Use escaping aware split
          */
-        private fun parseIncludeDirectories(command: String): List<String>? {
+        private fun splitCommand(command: String): List<String> {
+            if (command.isEmpty()) {
+                return listOf()
+            }
+            return listOf(*command.split(" ").toTypedArray())
+        }
+
+        /**
+         * Gets the include directories of the array value provided. Example for a compile command
+         * is: ['clang', '-Iinc', '-I', 'include', '-isystem', 'sysroot', 'main.c', '-o',
+         * 'main.c.o'] This method returns the include-paths in the above command.
+         */
+        private fun parseIncludeDirectories(command: List<String>): List<String>? {
+            //     ['clang', 'main.c', '-o', 'main.c.o'],
             if (command.isEmpty()) {
                 return null
             }
-            // get all the -I flag files
-            val words = listOf(*command.split(" ").toTypedArray())
             val includeFilesDirectories: MutableList<String> = LinkedList()
-            for (word in words) {
+            var i = 0
+            while (i < command.size) {
+                val word = command[i]
                 if (word.startsWith("-I")) {
-                    includeFilesDirectories.add(
-                        word.substring(2)
-                    ) // adds the directory excluding the -I field
+                    if (word.length == 2) {
+                        if (i + 1 != command.size) {
+                            // path is located at the next index
+                            includeFilesDirectories.add(command[++i])
+                        }
+                    } else {
+                        includeFilesDirectories.add(
+                            word.substring(2)
+                        ) // adds the directory excluding the -I field
+                    }
+                } else if (word == "-isystem") {
+                    if (i + 1 != command.size) {
+                        includeFilesDirectories.add(command[++i])
+                    }
                 }
+                i++
             }
 
             return includeFilesDirectories
         }
 
-        /**
-         * Gets the include directories the from the array value provided. Example for a compile
-         * commdand is : ['clang', 'main.c', '-o', 'main.c.o'] This method returns the include-paths
-         * in the above command.
-         */
-        private fun parseIncludeDirectories(command: List<String>): List<String>? {
-            //     ['clang', 'main.c', '-o', 'main.c.o'],
-            // The I vals come after -I
-            if (command.isEmpty()) {
-                return null
+        /** Split the symbol into key and value. Value is optional. */
+        private fun splitSymbol(sym: String): Pair<String, String> {
+            if (sym.contains("=")) {
+                val pair = sym.split("=", limit = 2)
+                return Pair(pair[0], pair[1])
             }
-            val includeFilesDirectories: MutableList<String> = LinkedList()
-            for (i in command.indices) {
-                if (command[i].startsWith("-I")) {
-                    if (i + 1 != command.size) {
-                        includeFilesDirectories.add(command[i + 1])
+            return Pair(sym, "")
+        }
+
+        /**
+         * Gets the symbols (-D) from the array value provided. Example for a compile command is:
+         * ['clang', '-DVERSION=1', '-D', 'DEBUG' 'main.c', '-o', 'main.c.o'] This method returns
+         * the symbols as Map in the above command.
+         */
+        private fun parseSymbols(command: List<String>): Map<String, String> {
+            if (command.isEmpty()) {
+                return mapOf()
+            }
+            val symbols: LinkedHashMap<String, String> = LinkedHashMap()
+            var i = 0
+            while (i < command.size) {
+                val word = command[i]
+                if (word.startsWith("-D")) {
+                    if (word.length == 2) {
+                        if (i + 1 != command.size) {
+                            // symbol is located at the next index
+                            val sym = splitSymbol(command[++i])
+                            symbols[sym.first] = sym.second
+                        }
+                    } else {
+                        val sym =
+                            splitSymbol(word.substring(2)) // adds the symbol excluding the -D field
+                        symbols[sym.first] = sym.second
                     }
                 }
+                i++
             }
-
-            return includeFilesDirectories
+            return symbols
         }
     }
 }

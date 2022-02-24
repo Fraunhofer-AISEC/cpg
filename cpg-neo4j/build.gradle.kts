@@ -31,6 +31,19 @@ application {
     mainClass.set("de.fraunhofer.aisec.cpg_vis_neo4j.ApplicationKt")
 }
 
+publishing {
+    publications {
+        named<MavenPublication>("cpg-neo4j") {
+            pom {
+                artifactId = "cpg-neo4j"
+                name.set("Code Property Graph - Neo4j")
+                description.set("An Application to translate and persist specified source code as a Code Property Graph to an installed instance of the Neo4j Graph Database.")
+            }
+        }
+    }
+}
+
+
 tasks.withType<Test> {
     useJUnitPlatform {
         if (!project.hasProperty("integration")) {
@@ -57,6 +70,8 @@ dependencies {
     // CPG
     api(project(":cpg-core"))
     api(project(":cpg-language-llvm"))
+    api(project(":cpg-language-python"))
+    api(project(":cpg-language-go"))
 
     implementation("org.apache.logging.log4j:log4j-slf4j18-impl:2.17.0")
 

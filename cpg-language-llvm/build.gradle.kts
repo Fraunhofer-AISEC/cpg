@@ -25,84 +25,18 @@
  */
 plugins {
     `java-library`
-    `maven-publish`
-    signing
 }
-
 
 publishing {
     publications {
-        create<MavenPublication>("maven") {
-            from(components["java"])
-
+        named<MavenPublication>("cpg-language-llvm") {
             pom {
                 artifactId = "cpg-language-llvm"
                 name.set("Code Property Graph - LLVM Frontend")
                 description.set("A LLVM language frontend for the CPG")
-                url.set("https://github.com/Fraunhofer-AISEC/cpg")
-                licenses {
-                    license {
-                        name.set("The Apache License, Version 2.0")
-                        url.set("http://www.apache.org/licenses/LICENSE-2.0.txt")
-                    }
-                }
-                developers {
-                    developer {
-                        id.set("oxisto")
-                        organization.set("Fraunhofer AISEC")
-                        organizationUrl.set("https://www.aisec.fraunhofer.de")
-                    }
-                }
-                scm {
-                    connection.set("scm:git:git://github.com:Fraunhofer-AISEC/cpg.git")
-                    developerConnection.set("scm:git:ssh://github.com:Fraunhofer-AISEC/cpg.git")
-                    url.set("https://github.com/Fraunhofer-AISEC/cpg")
-                }
             }
         }
     }
-
-    repositories {
-        maven {
-            url = uri("https://oss.sonatype.org/service/local/staging/deploy/maven2")
-
-            credentials {
-                val mavenCentralUsername: String? by project
-                val mavenCentralPassword: String? by project
-
-                username = mavenCentralUsername
-                password = mavenCentralPassword
-            }
-        }
-    }
-}
-
-tasks.withType<GenerateModuleMetadata> {
-    enabled = false
-}
-
-tasks.named<Test>("test") {
-    useJUnitPlatform()
-    maxHeapSize = "4048m"
-}
-
-
-java {
-    withJavadocJar()
-    withSourcesJar()
-}
-
-signing {
-    val signingKey: String? by project
-    val signingPassword: String? by project
-
-    useInMemoryPgpKeys(signingKey, signingPassword)
-
-    setRequired({
-        gradle.taskGraph.hasTask("publish")
-    })
-
-    sign(publishing.publications["maven"])
 }
 
 dependencies {
@@ -111,13 +45,13 @@ dependencies {
     testImplementation(testFixtures(project(":cpg-core")))
 
     // llvm
-    implementation("org.bytedeco:llvm-platform:12.0.1-1.5.6")
+    implementation("org.bytedeco:llvm-platform:13.0.1-1.5.7")
 
     // JUnit
-    testImplementation("org.jetbrains.kotlin:kotlin-test")
+    //testImplementation("org.jetbrains.kotlin:kotlin-test")
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
-    testImplementation("org.junit.jupiter:junit-jupiter-api:5.8.1")
-    testImplementation("org.junit.jupiter:junit-jupiter-params:5.8.1")
+    testImplementation("org.junit.jupiter:junit-jupiter-api:5.8.2")
+    testImplementation("org.junit.jupiter:junit-jupiter-params:5.8.2")
 
-    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.8.1")
+    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.8.2")
 }

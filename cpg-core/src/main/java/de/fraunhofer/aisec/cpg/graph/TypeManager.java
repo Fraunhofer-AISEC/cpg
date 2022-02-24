@@ -28,9 +28,7 @@ package de.fraunhofer.aisec.cpg.graph;
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
 import de.fraunhofer.aisec.cpg.frontends.cpp.CXXLanguageFrontend;
 import de.fraunhofer.aisec.cpg.frontends.cpp2.CXXLanguageFrontend2;
-import de.fraunhofer.aisec.cpg.frontends.golang.GoLanguageFrontend;
 import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguageFrontend;
-import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguageFrontend;
 import de.fraunhofer.aisec.cpg.frontends.typescript.TypeScriptLanguageFrontend;
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration;
 import de.fraunhofer.aisec.cpg.graph.declarations.TemplateDeclaration;
@@ -40,11 +38,6 @@ import de.fraunhofer.aisec.cpg.helpers.Util;
 import de.fraunhofer.aisec.cpg.passes.scopes.RecordScope;
 import de.fraunhofer.aisec.cpg.passes.scopes.Scope;
 import de.fraunhofer.aisec.cpg.passes.scopes.TemplateScope;
-import java.util.*;
-import java.util.function.Function;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.checkerframework.checker.nullness.qual.NonNull;
@@ -52,16 +45,39 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.*;
+import java.util.function.Function;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+
 public class TypeManager {
 
   private static final Logger log = LoggerFactory.getLogger(TypeManager.class);
 
   private static Class<?> llvmClass = null;
+  private static Class<?> pythonClass = null;
+  private static Class<?> goClass = null;
 
   static {
     try {
       llvmClass = Class.forName("de.fraunhofer.aisec.cpg.frontends.llvm.LLVMIRLanguageFrontend");
-    } catch (ClassNotFoundException ignored) {
+
+    } catch (ClassNotFoundException | ExceptionInInitializerError ignored) {
+      log.info("LLVM frontend not loaded.");
+    }
+    try {
+      pythonClass =
+          Class.forName("de.fraunhofer.aisec.cpg.frontends.python.PythonLanguageFrontend");
+    } catch (ClassNotFoundException | ExceptionInInitializerError ignored) {
+      log.info("Python frontend not loaded.");
+    }
+    try {
+      goClass = Class.forName("de.fraunhofer.aisec.cpg.frontends.golang.GoLanguageFrontend");
+    } catch (ClassNotFoundException | ExceptionInInitializerError ignored) {
+      log.info("Go frontend not loaded.");
+    } catch (LinkageError ex) {
+      log.error("Go frontend was found, but could not be loaded", ex);
     }
   }
 
@@ -541,9 +557,13 @@ public class TypeManager {
     } else if (frontend instanceof CXXLanguageFrontend
         || frontend instanceof CXXLanguageFrontend2) {
       return Language.CXX;
-    } else if (frontend instanceof GoLanguageFrontend) {
+    } else if (frontend != null
+        && goClass != null
+        && goClass.isAssignableFrom(frontend.getClass())) {
       return Language.GO;
-    } else if (frontend instanceof PythonLanguageFrontend) {
+    } else if (frontend != null
+        && pythonClass != null
+        && pythonClass.isAssignableFrom(frontend.getClass())) {
       return Language.PYTHON;
     } else if (frontend instanceof TypeScriptLanguageFrontend) {
       return Language.TYPESCRIPT;

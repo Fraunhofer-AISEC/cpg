@@ -7,6 +7,8 @@ include(":cpg-core")
 include(":cpg-analysis")
 include(":cpg-neo4j")
 include(":cpg-language-llvm")
+include(":cpg-language-python")
+include(":cpg-language-go")
 include(":cpg-console")
 
 gradleEnterprise {

@@ -1,0 +1,20 @@
+[
+  {
+    "arguments": [
+      "/usr/bin/gcc",
+      "-c",
+      "-I",
+      "includes_1",
+      "-Iincludes_2",
+      "-Isys_includes/",
+      "-DFOO=1",
+      "-D",
+      "BAR=2",
+      "-DINFO=\"hi\"",
+      "-DDEBUG=1",
+      "main.c"
+    ],
+    "directory": "src/test/resources/cxxCompilationDatabase",
+    "file": "src/test/resources/cxxCompilationDatabase/main.c"
+  }
+]
