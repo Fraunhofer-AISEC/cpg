@@ -397,15 +397,15 @@ class Application : Callable<Int> {
         val pushTime = System.currentTimeMillis()
         log.info("Benchmark: push code in " + (pushTime - analyzingTime) / S_TO_MS_FACTOR + " s.")
 
+        val benchmarkResult = translationResult.benchmarkResult
+
         if (printBenchmark) {
-            translationResult.printBenchmark()
+            benchmarkResult.print()
         }
 
         benchmarkJson?.let { theFile ->
             log.info("Save benchmark results to file: $theFile")
-            val mapper = jacksonObjectMapper()
-            val json = translationResult.getBenchmarkResult().associate { it[0] to it[1] }
-            theFile.writeText(mapper.writeValueAsString(json))
+            theFile.writeText(benchmarkResult.json)
         }
 
         return EXIT_SUCCESS

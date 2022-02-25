@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.helpers
 
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import java.io.File
 import java.nio.file.Path
@@ -34,6 +35,22 @@ import java.util.*
 import kotlin.IllegalArgumentException
 import org.slf4j.LoggerFactory
 
+class BenchmarkResults(val entries: List<List<Any>>) {
+
+    val json: String
+        get() {
+            val mapper = jacksonObjectMapper()
+
+            return mapper.writeValueAsString(entries)
+        }
+
+    /** Pretty-prints benchmark results for easy copying to GitHub issues. */
+    fun print() {
+        println("# Benchmark run ${UUID.randomUUID()}")
+        printMarkdown(entries, listOf("Metric", "Value"))
+    }
+}
+
 /** Interface definition to hold different statistics about the translation process. */
 interface StatisticsHolder {
     val translatedFiles: List<String>
@@ -42,24 +59,22 @@ interface StatisticsHolder {
 
     fun addBenchmark(b: Benchmark)
 
-    fun getBenchmarkResult(): List<List<Any>> {
-        return listOf(
-            listOf("Translation config", config.configAsHashMap),
-            listOf("Number of files translated", translatedFiles.size),
-            listOf(
-                "Translated file(s)",
-                translatedFiles.map { relativeOrAbsolute(Path.of(it), config.topLevel) }
-            ),
-            *benchmarks
-                .map { listOf("${it.caller}: ${it.message}", "${it.duration} ms") }
-                .toTypedArray()
-        )
-    }
-    /** Pretty-prints benchmark results for easy copying to GitHub issues. */
-    fun printBenchmark() {
-        println("# Benchmark run ${UUID.randomUUID()}")
-        printMarkdown(getBenchmarkResult(), listOf("Metric", "Value"))
-    }
+    val benchmarkResult: BenchmarkResults
+        get() {
+            return BenchmarkResults(
+                listOf(
+                    listOf("Translation config", config),
+                    listOf("Number of files translated", translatedFiles.size),
+                    listOf(
+                        "Translated file(s)",
+                        translatedFiles.map { relativeOrAbsolute(Path.of(it), config.topLevel) }
+                    ),
+                    *benchmarks
+                        .map { listOf("${it.caller}: ${it.message}", "${it.duration} ms") }
+                        .toTypedArray()
+                )
+            )
+        }
 }
 
 /**

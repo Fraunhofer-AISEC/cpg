@@ -28,6 +28,9 @@ package de.fraunhofer.aisec.cpg;
 import static de.fraunhofer.aisec.cpg.frontends.cpp.CXXLanguageFrontend.CXX_EXTENSIONS;
 import static de.fraunhofer.aisec.cpg.frontends.cpp.CXXLanguageFrontend.CXX_HEADER_EXTENSIONS;
 
+import com.fasterxml.jackson.annotation.JsonIdentityInfo;
+import com.fasterxml.jackson.annotation.JsonIdentityReference;
+import com.fasterxml.jackson.annotation.ObjectIdGenerators;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import de.fraunhofer.aisec.cpg.frontends.CompilationDatabase;
@@ -222,6 +225,8 @@ public class TranslationConfiguration {
     return topLevel;
   }
 
+  @JsonIdentityInfo(generator = ObjectIdGenerators.PropertyGenerator.class, property = "name")
+  @JsonIdentityReference(alwaysAsId = true)
   public List<Pass> getRegisteredPasses() {
     return this.passes;
   }
@@ -558,34 +563,5 @@ public class TranslationConfiguration {
   @Override
   public String toString() {
     return ToStringBuilder.reflectionToString(this, ToStringStyle.JSON_STYLE);
-  }
-
-  public Map<String, Object> getConfigAsHashMap() {
-    // We first need to convert the passes to string, otherwise the serialisation will fail
-    List<String> passes_names = new ArrayList<String>();
-    for (Pass p : passes) {
-      passes_names.add(p.toString());
-    }
-
-    Map<String, Object> conf = new HashMap<String, Object>();
-    conf.put("debugParser", debugParser);
-    conf.put("loadIncludes", loadIncludes);
-    conf.put("includePaths", includePaths);
-    conf.put("includeWhitelist", includeWhitelist);
-    conf.put("includeBlacklist", includeBlacklist);
-    conf.put("frontends", frontends);
-    conf.put("disableCleanup", disableCleanup);
-    conf.put("codeInNodes", codeInNodes);
-    conf.put("processAnnotations", processAnnotations);
-    conf.put("failOnError", failOnError);
-    conf.put("symbols", symbols);
-    conf.put("sourceLocations", sourceLocations);
-    conf.put("topLevel", topLevel);
-    conf.put("useUnityBuild", useUnityBuild);
-    conf.put("useParallelFrontends", useParallelFrontends);
-    conf.put("typeSystemActiveInFrontend", typeSystemActiveInFrontend);
-    conf.put("passes", passes_names);
-    conf.put("inferenceConfiguration", inferenceConfiguration);
-    return conf;
   }
 }

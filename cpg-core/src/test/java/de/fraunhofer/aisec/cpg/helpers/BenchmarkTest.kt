@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.helpers
 import de.fraunhofer.aisec.cpg.TestUtils
 import java.io.File
 import kotlin.io.path.Path
+import kotlin.test.assertContains
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import org.junit.jupiter.api.Test
@@ -59,15 +60,19 @@ class BenchmarkTest {
         val tr = TestUtils.analyzeWithResult(listOf(file), file.parentFile.toPath(), true)
 
         assertNotNull(tr)
-        val res = tr.getBenchmarkResult()
+        val res = tr.benchmarkResult
         assertNotNull(res)
 
-        val resMap = res.associate { it[0] to it[1] }
+        val resMap = res.entries.associate { it[0] to it[1] }
         assertEquals(1, resMap["Number of files translated"])
+
         val files = resMap["Translated file(s)"] as List<*>
         assertNotNull(files)
         assertEquals(1, files.size)
         assertEquals(Path("foreachstmt.cpp"), files[0])
+
+        val json = res.json
+        assertContains("{", json)
     }
 
     @Test
@@ -76,6 +81,6 @@ class BenchmarkTest {
         val tr = TestUtils.analyzeWithResult(listOf(file), file.parentFile.toPath(), true)
 
         assertNotNull(tr)
-        tr.printBenchmark()
+        tr.benchmarkResult.print()
     }
 }
