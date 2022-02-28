@@ -72,7 +72,7 @@ class BenchmarkTest {
         assertEquals(Path("foreachstmt.cpp"), files[0])
 
         val json = res.json
-        assertContains("{", json)
+        assertContains(json, "{")
     }
 
     @Test

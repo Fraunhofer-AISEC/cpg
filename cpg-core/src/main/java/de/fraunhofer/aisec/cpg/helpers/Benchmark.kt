@@ -41,7 +41,7 @@ class BenchmarkResults(val entries: List<List<Any>>) {
         get() {
             val mapper = jacksonObjectMapper()
 
-            return mapper.writeValueAsString(entries)
+            return mapper.writeValueAsString(entries.associate { it[0] to it[1] })
         }
 
     /** Pretty-prints benchmark results for easy copying to GitHub issues. */
