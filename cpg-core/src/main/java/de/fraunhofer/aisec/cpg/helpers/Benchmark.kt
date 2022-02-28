@@ -59,7 +59,7 @@ interface StatisticsHolder {
 
     fun addBenchmark(b: Benchmark)
 
-    val benchmarkResult: BenchmarkResults
+    val benchmarkResults: BenchmarkResults
         get() {
             return BenchmarkResults(
                 listOf(

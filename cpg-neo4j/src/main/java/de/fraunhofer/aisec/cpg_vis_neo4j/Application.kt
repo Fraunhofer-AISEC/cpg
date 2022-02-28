@@ -25,7 +25,6 @@
  */
 package de.fraunhofer.aisec.cpg_vis_neo4j
 
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import de.fraunhofer.aisec.cpg.*
 import de.fraunhofer.aisec.cpg.frontends.CompilationDatabase.Companion.fromFile
 import de.fraunhofer.aisec.cpg.frontends.golang.GoLanguageFrontend
@@ -397,7 +396,7 @@ class Application : Callable<Int> {
         val pushTime = System.currentTimeMillis()
         log.info("Benchmark: push code in " + (pushTime - analyzingTime) / S_TO_MS_FACTOR + " s.")
 
-        val benchmarkResult = translationResult.benchmarkResult
+        val benchmarkResult = translationResult.benchmarkResults
 
         if (printBenchmark) {
             benchmarkResult.print()

@@ -93,10 +93,6 @@ public class TranslationResult extends Node implements StatisticsHolder {
    *
    * @return the scratch storage
    */
-  //  public Scene getScene() {
-  //    return this.scene;
-  //  }
-
   public Map<String, Object> getScratch() {
     return scratch;
   }
@@ -134,7 +130,7 @@ public class TranslationResult extends Node implements StatisticsHolder {
   }
 
   @NotNull
-  public BenchmarkResults getBenchmarkResult() {
-    return StatisticsHolder.DefaultImpls.getBenchmarkResult(this);
+  public BenchmarkResults getBenchmarkResults() {
+    return StatisticsHolder.DefaultImpls.getBenchmarkResults(this);
   }
 }

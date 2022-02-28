@@ -60,7 +60,7 @@ class BenchmarkTest {
         val tr = TestUtils.analyzeWithResult(listOf(file), file.parentFile.toPath(), true)
 
         assertNotNull(tr)
-        val res = tr.benchmarkResult
+        val res = tr.benchmarkResults
         assertNotNull(res)
 
         val resMap = res.entries.associate { it[0] to it[1] }
@@ -81,6 +81,6 @@ class BenchmarkTest {
         val tr = TestUtils.analyzeWithResult(listOf(file), file.parentFile.toPath(), true)
 
         assertNotNull(tr)
-        tr.benchmarkResult.print()
+        tr.benchmarkResults.print()
     }
 }
