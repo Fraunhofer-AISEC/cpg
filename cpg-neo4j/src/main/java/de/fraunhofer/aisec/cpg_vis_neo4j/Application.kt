@@ -191,6 +191,12 @@ class Application : Callable<Int> {
     )
     private var topLevel: File? = null
 
+    @CommandLine.Option(
+        names = ["--benchmark-json"],
+        description = ["Save benchmark results to json file"]
+    )
+    private var benchmarkJson: File? = null
+
     /**
      * Pushes the whole translationResult to the neo4j db.
      *
@@ -390,8 +396,15 @@ class Application : Callable<Int> {
         val pushTime = System.currentTimeMillis()
         log.info("Benchmark: push code in " + (pushTime - analyzingTime) / S_TO_MS_FACTOR + " s.")
 
+        val benchmarkResult = translationResult.benchmarkResults
+
         if (printBenchmark) {
-            translationResult.printBenchmark()
+            benchmarkResult.print()
+        }
+
+        benchmarkJson?.let { theFile ->
+            log.info("Save benchmark results to file: $theFile")
+            theFile.writeText(benchmarkResult.json)
         }
 
         return EXIT_SUCCESS
