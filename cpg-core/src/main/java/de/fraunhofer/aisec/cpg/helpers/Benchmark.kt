@@ -105,13 +105,8 @@ fun printMarkdown(table: List<List<Any>>, headers: List<String>) {
 
     for (row in table) {
         var rowIndex = 0
-        val line =
-            row.joinToString(" | ", "| ", " |") {
-                val str =
-                    if (it is Map<*, *>) "`${it.toString().replace(",", ", ").replace(":", ": ")}`"
-                    else it.toString()
-                str.padEnd(lengths[rowIndex++])
-            }
+        // TODO: Add pretty printing for objects (e.g. List, Map)
+        val line = row.joinToString(" | ", "| ", " |") { it.toString().padEnd(lengths[rowIndex++]) }
         println(line)
     }
 
