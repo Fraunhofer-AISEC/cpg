@@ -305,6 +305,7 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
             val expr: ConstructExpression = newConstructExpression(code)
             // map the construct expression to the record declaration of the type
             expr.instantiates = (type as? ObjectType)?.recordDeclaration
+            if (expr.instantiates == null) return expr
 
             // loop through the operands
             for (field in (expr.instantiates as RecordDeclaration).fields) {
@@ -329,6 +330,7 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
             val expr: ConstructExpression = newConstructExpression(code)
             // map the construct expression to the record declaration of the type
             expr.instantiates = (type as? ObjectType)?.recordDeclaration
+            if (expr.instantiates == null) return expr
 
             // loop through the operands
             for (field in (expr.instantiates as RecordDeclaration).fields) {
