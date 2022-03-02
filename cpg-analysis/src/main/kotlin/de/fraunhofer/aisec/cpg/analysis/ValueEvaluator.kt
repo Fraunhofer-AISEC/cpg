@@ -229,7 +229,7 @@ class ValueEvaluator(
         }
     }
 
-    /** We handle some basic unary operators. These also affect pointers and dereferences for C. */
+    /** We handle some basic unary operators. These also affect pointers and dereferences for languages that support them. */
     private fun handleUnaryOp(expr: UnaryOperator): Any? {
         return when (expr.operatorCode) {
             "-" -> {
