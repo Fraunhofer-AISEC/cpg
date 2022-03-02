@@ -25,8 +25,6 @@
  */
 package de.fraunhofer.aisec.cpg.graph
 
-import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
-import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import org.slf4j.Logger
@@ -41,8 +39,8 @@ class CouldNotResolve
  *
  * The result can be retrieved in two ways:
  * * The result of the [resolve] function is a JVM object which represents the constant value
- * * Furthermore, after the execution of [evaluate] or [evaluateDeclaration], the latest evaluation
- * path can be retrieved in the [path] property of the evaluator.
+ * * Furthermore, after the execution of [evaluate], the latest evaluation path can be retrieved in
+ * the [path] property of the evaluator.
  *
  * It contains some advanced mechanics such as resolution of values of arrays, if they contain
  * literal values. Furthermore, its behaviour can be adjusted by implementing the [cannotEvaluate]
@@ -72,237 +70,272 @@ class ValueEvaluator(
      */
     val path: MutableList<Node> = mutableListOf()
 
-    /** Tries to evaluate this declaration, basically using [evaluate] on its initializer. */
-    fun evaluateDeclaration(decl: Declaration?): Any? {
-        decl?.let { this.path += it }
-        when (decl) {
-            is VariableDeclaration -> return evaluate(decl.initializer)
-            is FieldDeclaration -> {
-                return evaluate(decl.initializer)
-            }
-        }
-
-        return cannotEvaluate(decl, this)
-    }
-
-    /** Tries to evaluate this expression. Anything can happen. */
-    fun evaluate(expr: Expression?): Any? {
+    /** Tries to evaluate this node. Anything can happen. */
+    fun evaluate(node: Node?): Any? {
         // Add the expression to the current path
-        expr?.let { this.path += it }
+        node?.let { this.path += it }
 
-        when (expr) {
+        when (node) {
+            is ArrayCreationExpression -> return evaluate(node.initializer)
+            is VariableDeclaration -> return evaluate(node.initializer)
             // For a literal, we can just take its value, and we are finished
-            is Literal<*> -> {
-                return expr.value
-            }
-            // For a reference, we are interested into its last assignment into the reference
-            // denoted by the previous DFG edge
-            is DeclaredReferenceExpression -> {
-                val prevDFG = expr.prevDFG
-
-                // We are only interested in expressions
-                val expressions = prevDFG.filterIsInstance<Expression>()
-
-                if (expressions.size > 1) {
-                    // We cannot have ONE valid solution, so we need to abort
-                    log.warn(
-                        "We cannot evaluate {}: It has more than more previous DFG edges, meaning that the value is probably affected by a branch.",
-                        expr
-                    )
-                    return cannotEvaluate(expr, this)
-                }
-
-                return evaluate(expressions.firstOrNull())
-            }
-            // We are handling some basic arithmetic binary operations and string operations that
-            // are more or less language-independent
-            is BinaryOperator -> {
-                // Resolve lhs
-                val lhsValue = evaluate(expr.lhs)
-
-                // Resolve rhs
-                val rhsValue = evaluate(expr.rhs)
-
-                if (expr.operatorCode == "+") {
-                    if (lhsValue is String) {
-                        return lhsValue + rhsValue
-                    } else if (lhsValue is Int && rhsValue is Number) {
-                        return lhsValue + rhsValue.toInt()
-                    } else if (lhsValue is Long && rhsValue is Number) {
-                        return lhsValue + rhsValue.toLong()
-                    } else if (lhsValue is Short && rhsValue is Number) {
-                        return lhsValue + rhsValue.toShort()
-                    } else if (lhsValue is Byte && rhsValue is Number) {
-                        return lhsValue + rhsValue.toByte()
-                    } else if (lhsValue is Double && rhsValue is Number) {
-                        return lhsValue + rhsValue.toDouble()
-                    } else if (lhsValue is Float && rhsValue is Number) {
-                        return lhsValue + rhsValue.toDouble()
-                    }
-                } else if (expr.operatorCode == "-") {
-                    if (lhsValue is Int && rhsValue is Number) {
-                        return lhsValue - rhsValue.toInt()
-                    } else if (lhsValue is Long && rhsValue is Number) {
-                        return lhsValue - rhsValue.toLong()
-                    } else if (lhsValue is Short && rhsValue is Number) {
-                        return lhsValue - rhsValue.toShort()
-                    } else if (lhsValue is Byte && rhsValue is Number) {
-                        return lhsValue - rhsValue.toByte()
-                    } else if (lhsValue is Double && rhsValue is Number) {
-                        return lhsValue - rhsValue.toDouble()
-                    } else if (lhsValue is Float && rhsValue is Number) {
-                        return lhsValue - rhsValue.toDouble()
-                    }
-                } else if (expr.operatorCode == "/") {
-                    if (lhsValue is Int && rhsValue is Number) {
-                        return lhsValue / rhsValue.toInt()
-                    } else if (lhsValue is Long && rhsValue is Number) {
-                        return lhsValue / rhsValue.toLong()
-                    } else if (lhsValue is Short && rhsValue is Number) {
-                        return lhsValue / rhsValue.toShort()
-                    } else if (lhsValue is Byte && rhsValue is Number) {
-                        return lhsValue / rhsValue.toByte()
-                    } else if (lhsValue is Double && rhsValue is Number) {
-                        return lhsValue / rhsValue.toDouble()
-                    } else if (lhsValue is Float && rhsValue is Number) {
-                        return lhsValue / rhsValue.toDouble()
-                    }
-                } else if (expr.operatorCode == "*") {
-                    if (lhsValue is Int && rhsValue is Number) {
-                        return lhsValue * rhsValue.toInt()
-                    } else if (lhsValue is Long && rhsValue is Number) {
-                        return lhsValue * rhsValue.toLong()
-                    } else if (lhsValue is Short && rhsValue is Number) {
-                        return lhsValue * rhsValue.toShort()
-                    } else if (lhsValue is Byte && rhsValue is Number) {
-                        return lhsValue * rhsValue.toByte()
-                    } else if (lhsValue is Double && rhsValue is Number) {
-                        return lhsValue * rhsValue.toDouble()
-                    } else if (lhsValue is Float && rhsValue is Number) {
-                        return lhsValue * rhsValue.toDouble()
-                    }
-                } else if (expr.operatorCode == ">") {
-                    if (lhsValue is Int && rhsValue is Number) {
-                        return lhsValue > rhsValue.toInt()
-                    } else if (lhsValue is Long && rhsValue is Number) {
-                        return lhsValue > rhsValue.toLong()
-                    } else if (lhsValue is Short && rhsValue is Number) {
-                        return lhsValue > rhsValue.toShort()
-                    } else if (lhsValue is Byte && rhsValue is Number) {
-                        return lhsValue > rhsValue.toByte()
-                    } else if (lhsValue is Double && rhsValue is Number) {
-                        return lhsValue > rhsValue.toDouble()
-                    } else if (lhsValue is Float && rhsValue is Number) {
-                        return lhsValue > rhsValue.toFloat()
-                    }
-                } else if (expr.operatorCode == ">=") {
-                    if (lhsValue is Int && rhsValue is Number) {
-                        return lhsValue >= rhsValue.toInt()
-                    } else if (lhsValue is Long && rhsValue is Number) {
-                        return lhsValue >= rhsValue.toLong()
-                    } else if (lhsValue is Short && rhsValue is Number) {
-                        return lhsValue >= rhsValue.toShort()
-                    } else if (lhsValue is Byte && rhsValue is Number) {
-                        return lhsValue >= rhsValue.toByte()
-                    } else if (lhsValue is Double && rhsValue is Number) {
-                        return lhsValue >= rhsValue.toDouble()
-                    } else if (lhsValue is Float && rhsValue is Number) {
-                        return lhsValue >= rhsValue.toFloat()
-                    }
-                } else if (expr.operatorCode == "<") {
-                    if (lhsValue is Int && rhsValue is Number) {
-                        return lhsValue < rhsValue.toInt()
-                    } else if (lhsValue is Long && rhsValue is Number) {
-                        return lhsValue < rhsValue.toLong()
-                    } else if (lhsValue is Short && rhsValue is Number) {
-                        return lhsValue < rhsValue.toShort()
-                    } else if (lhsValue is Byte && rhsValue is Number) {
-                        return lhsValue < rhsValue.toByte()
-                    } else if (lhsValue is Double && rhsValue is Number) {
-                        return lhsValue < rhsValue.toDouble()
-                    } else if (lhsValue is Float && rhsValue is Number) {
-                        return lhsValue < rhsValue.toFloat()
-                    }
-                } else if (expr.operatorCode == "<=") {
-                    if (lhsValue is Int && rhsValue is Number) {
-                        return lhsValue <= rhsValue.toInt()
-                    } else if (lhsValue is Long && rhsValue is Number) {
-                        return lhsValue <= rhsValue.toLong()
-                    } else if (lhsValue is Short && rhsValue is Number) {
-                        return lhsValue <= rhsValue.toShort()
-                    } else if (lhsValue is Byte && rhsValue is Number) {
-                        return lhsValue <= rhsValue.toByte()
-                    } else if (lhsValue is Double && rhsValue is Number) {
-                        return lhsValue <= rhsValue.toDouble()
-                    } else if (lhsValue is Float && rhsValue is Number) {
-                        return lhsValue <= rhsValue.toFloat()
-                    }
-                } else if (expr.operatorCode == "==") {
-                    if (lhsValue is Int && rhsValue is Number) {
-                        return lhsValue == rhsValue.toInt()
-                    } else if (lhsValue is Long && rhsValue is Number) {
-                        return lhsValue == rhsValue.toLong()
-                    } else if (lhsValue is Short && rhsValue is Number) {
-                        return lhsValue == rhsValue.toShort()
-                    } else if (lhsValue is Byte && rhsValue is Number) {
-                        return lhsValue == rhsValue.toByte()
-                    } else if (lhsValue is Double && rhsValue is Number) {
-                        return lhsValue == rhsValue.toDouble()
-                    } else if (lhsValue is Float && rhsValue is Number) {
-                        return lhsValue == rhsValue.toFloat()
-                    }
-                }
-
-                return cannotEvaluate(expr, this)
-            }
+            is Literal<*> -> return node.value
+            is DeclaredReferenceExpression -> return handleDeclaredReferenceExpression(node)
+            is UnaryOperator -> return handleUnaryOp(node)
+            is BinaryOperator -> return handleBinaryOperator(node)
             // Casts are just a wrapper in this case, we are interested in the inner expression
-            is CastExpression -> {
-                return this.evaluate(expr.expression)
-            }
-            // For arrays, we check whether we can actually access the contents of the array. This
-            // is basically the case if the base of the subscript expression is a
-            // list of [KeyValueExpression]s.
-            is ArraySubscriptionExpression -> {
-                val array =
-                    (expr.arrayExpression as? DeclaredReferenceExpression)?.refersTo as?
-                        VariableDeclaration
-                val ile = array?.initializer as? InitializerListExpression
-
-                ile?.let {
-                    return evaluate(
-                        it.initializers
-                            .filterIsInstance(KeyValueExpression::class.java)
-                            .firstOrNull { kve ->
-                                (kve.key as? Literal<*>)?.value ==
-                                    (expr.subscriptExpression as? Literal<*>)?.value
-                            }
-                            ?.value
-                    )
-                }
-
-                return cannotEvaluate(expr, this)
-            }
+            is CastExpression -> return this.evaluate(node.expression)
+            is ArraySubscriptionExpression -> handleArraySubscriptionExpression(node)
             // While we are not handling different paths of variables with If statements, we can
             // easily be partly path-sensitive in a conditional expression
-            is ConditionalExpression -> {
-                // Assume that condition is a binary operator
-                if (expr.condition is BinaryOperator) {
-                    val lhs = evaluate((expr.condition as? BinaryOperator)?.lhs)
-                    val rhs = evaluate((expr.condition as? BinaryOperator)?.rhs)
-
-                    return if (lhs == rhs) {
-                        evaluate(expr.thenExpr)
-                    } else {
-                        evaluate(expr.elseExpr)
-                    }
-                }
-
-                return cannotEvaluate(expr, this)
-            }
+            is ConditionalExpression -> handleConditionalExpression(node)
         }
 
         // At this point, we cannot evaluate, and we are calling our [cannotEvaluate] hook, maybe
         // this helps
+        return cannotEvaluate(node, this)
+    }
+
+    /**
+     * We are handling some basic arithmetic binary operations and string operations that are more
+     * or less language-independent.
+     */
+    private fun handleBinaryOperator(expr: BinaryOperator): Any? {
+        // Resolve lhs
+        val lhsValue = evaluate(expr.lhs)
+        // Resolve rhs
+        val rhsValue = evaluate(expr.rhs)
+
+        return when (expr.operatorCode) {
+            "+" -> handlePlus(lhsValue, rhsValue, expr)
+            "-" -> handleMinus(lhsValue, rhsValue, expr)
+            "/" -> handleDiv(lhsValue, rhsValue, expr)
+            "*" -> handleTimes(lhsValue, rhsValue, expr)
+            ">" -> handleGreater(lhsValue, rhsValue, expr)
+            ">=" -> handleGEq(lhsValue, rhsValue, expr)
+            "<" -> handleLess(lhsValue, rhsValue, expr)
+            "<=" -> handleLEq(lhsValue, rhsValue, expr)
+            "==" -> handleEq(lhsValue, rhsValue, expr)
+            else -> cannotEvaluate(expr, this)
+        }
+    }
+
+    private fun handlePlus(lhsValue: Any?, rhsValue: Any?, expr: BinaryOperator): Any? {
+        return when {
+            lhsValue is String -> lhsValue + rhsValue
+            lhsValue is Int && rhsValue is Number -> lhsValue + rhsValue.toInt()
+            lhsValue is Long && rhsValue is Number -> lhsValue + rhsValue.toLong()
+            lhsValue is Short && rhsValue is Number -> lhsValue + rhsValue.toShort()
+            lhsValue is Byte && rhsValue is Number -> lhsValue + rhsValue.toByte()
+            lhsValue is Double && rhsValue is Number -> lhsValue + rhsValue.toDouble()
+            lhsValue is Float && rhsValue is Number -> lhsValue + rhsValue.toDouble()
+            else -> cannotEvaluate(expr, this)
+        }
+    }
+
+    private fun handleMinus(lhsValue: Any?, rhsValue: Any?, expr: BinaryOperator): Any? {
+        return when {
+            lhsValue is Int && rhsValue is Number -> lhsValue - rhsValue.toInt()
+            lhsValue is Long && rhsValue is Number -> lhsValue - rhsValue.toLong()
+            lhsValue is Short && rhsValue is Number -> lhsValue - rhsValue.toShort()
+            lhsValue is Byte && rhsValue is Number -> lhsValue - rhsValue.toByte()
+            lhsValue is Double && rhsValue is Number -> lhsValue - rhsValue.toDouble()
+            lhsValue is Float && rhsValue is Number -> lhsValue - rhsValue.toDouble()
+            else -> cannotEvaluate(expr, this)
+        }
+    }
+
+    private fun handleDiv(lhsValue: Any?, rhsValue: Any?, expr: BinaryOperator): Any? {
+        return when {
+            lhsValue is Int && rhsValue is Number -> lhsValue / rhsValue.toInt()
+            lhsValue is Long && rhsValue is Number -> lhsValue / rhsValue.toLong()
+            lhsValue is Short && rhsValue is Number -> lhsValue / rhsValue.toShort()
+            lhsValue is Byte && rhsValue is Number -> lhsValue / rhsValue.toByte()
+            lhsValue is Double && rhsValue is Number -> lhsValue / rhsValue.toDouble()
+            lhsValue is Float && rhsValue is Number -> lhsValue / rhsValue.toDouble()
+            else -> cannotEvaluate(expr, this)
+        }
+    }
+
+    private fun handleTimes(lhsValue: Any?, rhsValue: Any?, expr: BinaryOperator): Any? {
+        return when {
+            lhsValue is Int && rhsValue is Number -> lhsValue * rhsValue.toInt()
+            lhsValue is Long && rhsValue is Number -> lhsValue * rhsValue.toLong()
+            lhsValue is Short && rhsValue is Number -> lhsValue * rhsValue.toShort()
+            lhsValue is Byte && rhsValue is Number -> lhsValue * rhsValue.toByte()
+            lhsValue is Double && rhsValue is Number -> lhsValue * rhsValue.toDouble()
+            lhsValue is Float && rhsValue is Number -> lhsValue * rhsValue.toDouble()
+            else -> cannotEvaluate(expr, this)
+        }
+    }
+
+    private fun handleGreater(lhsValue: Any?, rhsValue: Any?, expr: BinaryOperator): Any? {
+        return when {
+            lhsValue is Int && rhsValue is Number -> lhsValue > rhsValue.toInt()
+            lhsValue is Long && rhsValue is Number -> lhsValue > rhsValue.toLong()
+            lhsValue is Short && rhsValue is Number -> lhsValue > rhsValue.toShort()
+            lhsValue is Byte && rhsValue is Number -> lhsValue > rhsValue.toByte()
+            lhsValue is Double && rhsValue is Number -> lhsValue > rhsValue.toDouble()
+            lhsValue is Float && rhsValue is Number -> lhsValue > rhsValue.toFloat()
+            else -> cannotEvaluate(expr, this)
+        }
+    }
+
+    private fun handleGEq(lhsValue: Any?, rhsValue: Any?, expr: BinaryOperator): Any? {
+        return when {
+            lhsValue is Int && rhsValue is Number -> lhsValue >= rhsValue.toInt()
+            lhsValue is Long && rhsValue is Number -> lhsValue >= rhsValue.toLong()
+            lhsValue is Short && rhsValue is Number -> lhsValue >= rhsValue.toShort()
+            lhsValue is Byte && rhsValue is Number -> lhsValue >= rhsValue.toByte()
+            lhsValue is Double && rhsValue is Number -> lhsValue >= rhsValue.toDouble()
+            lhsValue is Float && rhsValue is Number -> lhsValue >= rhsValue.toFloat()
+            else -> cannotEvaluate(expr, this)
+        }
+    }
+
+    private fun handleLess(lhsValue: Any?, rhsValue: Any?, expr: BinaryOperator): Any? {
+        return when {
+            lhsValue is Int && rhsValue is Number -> lhsValue < rhsValue.toInt()
+            lhsValue is Long && rhsValue is Number -> lhsValue < rhsValue.toLong()
+            lhsValue is Short && rhsValue is Number -> lhsValue < rhsValue.toShort()
+            lhsValue is Byte && rhsValue is Number -> lhsValue < rhsValue.toByte()
+            lhsValue is Double && rhsValue is Number -> lhsValue < rhsValue.toDouble()
+            lhsValue is Float && rhsValue is Number -> lhsValue < rhsValue.toFloat()
+            else -> cannotEvaluate(expr, this)
+        }
+    }
+
+    private fun handleLEq(lhsValue: Any?, rhsValue: Any?, expr: BinaryOperator): Any? {
+        return when {
+            lhsValue is Int && rhsValue is Number -> lhsValue <= rhsValue.toInt()
+            lhsValue is Long && rhsValue is Number -> lhsValue <= rhsValue.toLong()
+            lhsValue is Short && rhsValue is Number -> lhsValue <= rhsValue.toShort()
+            lhsValue is Byte && rhsValue is Number -> lhsValue <= rhsValue.toByte()
+            lhsValue is Double && rhsValue is Number -> lhsValue <= rhsValue.toDouble()
+            lhsValue is Float && rhsValue is Number -> lhsValue <= rhsValue.toFloat()
+            else -> cannotEvaluate(expr, this)
+        }
+    }
+
+    private fun handleEq(lhsValue: Any?, rhsValue: Any?, expr: BinaryOperator): Any? {
+        return when {
+            lhsValue is Int && rhsValue is Number -> lhsValue == rhsValue.toInt()
+            lhsValue is Long && rhsValue is Number -> lhsValue == rhsValue.toLong()
+            lhsValue is Short && rhsValue is Number -> lhsValue == rhsValue.toShort()
+            lhsValue is Byte && rhsValue is Number -> lhsValue == rhsValue.toByte()
+            lhsValue is Double && rhsValue is Number -> lhsValue == rhsValue.toDouble()
+            lhsValue is Float && rhsValue is Number -> lhsValue == rhsValue.toFloat()
+            else -> cannotEvaluate(expr, this)
+        }
+    }
+
+    /** We handle some basic unary operators. These also affect pointers and dereferences for languages that support them. */
+    private fun handleUnaryOp(expr: UnaryOperator): Any? {
+        return when (expr.operatorCode) {
+            "-" -> {
+                when (val input = evaluate(expr.input)) {
+                    is Int -> -input
+                    is Long -> -input
+                    is Short -> -input
+                    is Byte -> -input
+                    is Double -> -input
+                    is Float -> -input
+                    else -> cannotEvaluate(expr, this)
+                }
+            }
+            "*" -> evaluate(expr.input)
+            "&" -> evaluate(expr.input)
+            else -> cannotEvaluate(expr, this)
+        }
+    }
+
+    /**
+     * For arrays, we check whether we can actually access the contents of the array. This is
+     * basically the case if the base of the subscript expression is a list of [KeyValueExpression]
+     * s.
+     */
+    private fun handleArraySubscriptionExpression(expr: ArraySubscriptionExpression): Any? {
+        val array =
+            (expr.arrayExpression as? DeclaredReferenceExpression)?.refersTo as? VariableDeclaration
+        val ile = array?.initializer as? InitializerListExpression
+
+        ile?.let {
+            return evaluate(
+                it.initializers
+                    .filterIsInstance(KeyValueExpression::class.java)
+                    .firstOrNull { kve ->
+                        (kve.key as? Literal<*>)?.value ==
+                            (expr.subscriptExpression as? Literal<*>)?.value
+                    }
+                    ?.value
+            )
+        }
+        if (array?.initializer is Literal<*>) {
+            return (array.initializer as Literal<*>).value
+        }
+
+        if (expr.arrayExpression is ArraySubscriptionExpression) {
+            return evaluate(expr.arrayExpression)
+        }
+
         return cannotEvaluate(expr, this)
+    }
+
+    private fun handleConditionalExpression(expr: ConditionalExpression): Any? {
+        // Assume that condition is a binary operator
+        if (expr.condition is BinaryOperator) {
+            val lhs = evaluate((expr.condition as? BinaryOperator)?.lhs)
+            val rhs = evaluate((expr.condition as? BinaryOperator)?.rhs)
+
+            return if (lhs == rhs) {
+                evaluate(expr.thenExpr)
+            } else {
+                evaluate(expr.elseExpr)
+            }
+        }
+
+        return cannotEvaluate(expr, this)
+    }
+
+    /**
+     * Tries to compute the constant value of a reference. It therefore checks the incoming data
+     * flow edges.
+     */
+    private fun handleDeclaredReferenceExpression(expr: DeclaredReferenceExpression): Any? {
+        // For a reference, we are interested into its last assignment into the reference
+        // denoted by the previous DFG edge
+        val prevDFG = expr.prevDFG
+
+        if (prevDFG.size == 1)
+        // There's only one incoming DFG edge, so we follow this one.
+        return evaluate(prevDFG.first())
+
+        // We are only interested in expressions
+        val expressions = prevDFG.filterIsInstance<Expression>()
+
+        if (expressions.size > 1) {
+            // We cannot have more than ONE valid solution, so we need to abort
+            log.warn(
+                "We cannot evaluate {}: It has more than more previous DFG edges, meaning that the value is probably affected by a branch.",
+                expr
+            )
+            return cannotEvaluate(expr, this)
+        }
+
+        if (expressions.isEmpty()) {
+            // No previous expression?? Let's try with a variable declaration and its initialization
+            val decl = prevDFG.filterIsInstance<VariableDeclaration>()
+            if (decl.size > 1) {
+                // We cannot have more than ONE valid solution, so we need to abort
+                log.warn(
+                    "We cannot evaluate {}: It has more than more previous DFG edges, meaning that the value is probably affected by a branch.",
+                    expr
+                )
+                return cannotEvaluate(expr, this)
+            }
+            return evaluate(decl.firstOrNull())
+        }
+
+        return evaluate(expressions.firstOrNull())
     }
 }

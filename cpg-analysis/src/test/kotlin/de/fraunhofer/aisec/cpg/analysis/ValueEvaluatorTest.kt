@@ -33,7 +33,9 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import java.nio.file.Path
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 
 class ValueEvaluatorTest {
 
@@ -73,5 +75,53 @@ class ValueEvaluatorTest {
 
         value = printA.arguments.firstOrNull()?.evaluate()
         assertEquals(2, value)
+
+        val c = main.bodyOrNull<DeclarationStatement>(2)?.singleDeclaration
+        assertNotNull(c)
+
+        value = c.evaluate()
+        assertEquals(3, value)
+
+        val d = main.bodyOrNull<DeclarationStatement>(3)?.singleDeclaration
+        assertNotNull(d)
+
+        value = d.evaluate()
+        assertEquals(2, value)
+
+        val e = main.bodyOrNull<DeclarationStatement>(4)?.singleDeclaration
+        assertNotNull(e)
+        value = e.evaluate()
+        assertEquals(3.5, value)
+
+        val f = main.bodyOrNull<DeclarationStatement>(5)?.singleDeclaration
+        assertNotNull(f)
+        value = f.evaluate()
+        assertEquals(10, value)
+
+        val printHelloWorld = main.bodyOrNull<CallExpression>(2)
+        assertNotNull(printHelloWorld)
+
+        value = printHelloWorld.arguments.firstOrNull()?.evaluate()
+        assertEquals("Hello world", value)
+
+        val g = main.bodyOrNull<DeclarationStatement>(6)?.singleDeclaration
+        assertNotNull(g)
+        value = g.evaluate()
+        assertEquals(-3, value)
+
+        val h = main.bodyOrNull<DeclarationStatement>(7)?.singleDeclaration
+        assertNotNull(h)
+        value = h.evaluate()
+        assertFalse(value as Boolean)
+
+        val i = main.bodyOrNull<DeclarationStatement>(8)?.singleDeclaration
+        assertNotNull(i)
+        value = i.evaluate()
+        assertFalse(value as Boolean)
+
+        val j = main.bodyOrNull<DeclarationStatement>(9)?.singleDeclaration
+        assertNotNull(j)
+        value = j.evaluate()
+        assertTrue(value as Boolean)
     }
 }

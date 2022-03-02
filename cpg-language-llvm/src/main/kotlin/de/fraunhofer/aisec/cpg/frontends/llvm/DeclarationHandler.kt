@@ -144,7 +144,7 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
             // that function, hierarchically organized by compound statements. To emulate that, we
             // take the first basic block as our body and add subsequent blocks as statements to
             // the body. More specifically, we use the CPG node LabelStatement, which denotes the
-            // use of a label, Its property substatement contains the original basic block, parsed
+            // use of a label. Its property substatement contains the original basic block, parsed
             // as a compound statement
 
             // Take the entry block as our body

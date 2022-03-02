@@ -58,6 +58,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
+import de.fraunhofer.aisec.cpg.graph.types.PointerType
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import de.fraunhofer.aisec.cpg.helpers.annotations.FunctionReplacement
@@ -192,9 +193,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             LLVMResume -> {
                 // Resumes propagation of an existing (in-flight) exception whose unwinding was
                 // interrupted with a landingpad instruction.
-                val throwOperation =
-                    newUnaryOperator("throw", false, true, lang.getCodeFromRawNode(instr))
-                return throwOperation
+                return newUnaryOperator("throw", false, true, lang.getCodeFromRawNode(instr))
             }
             LLVMLandingPad -> {
                 return handleLandingpad(instr)
@@ -358,7 +357,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             if (currentIfStatement == null) {
                 currentIfStatement = ifStatement
             }
-            currentIfStatement!!.elseStatement = gotoStatement
+            currentIfStatement.elseStatement = gotoStatement
         } else {
             // "unwind to caller". As we don't know where the control flow continues,
             // the best model would be to throw the exception again. Here, we only know
@@ -442,7 +441,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         return declarationOrNot(callExpr, instr)
     }
 
-    /** Handles all kinds of instructions which are a arithmetic or logical binary instruction. */
+    /** Handles all kinds of instructions which are an arithmetic or logical binary instruction. */
     private fun handleBinaryInstruction(instr: LLVMValueRef): Statement {
         when (instr.opCode) {
             LLVMAdd, LLVMFAdd -> {
@@ -539,7 +538,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
      * Handles the [`icmp`](https://llvm.org/docs/LangRef.html#icmp-instruction) instruction for
      * comparing integer values.
      */
-    private fun handleIntegerComparison(instr: LLVMValueRef): Statement {
+    fun handleIntegerComparison(instr: LLVMValueRef): Statement {
         var unsigned = false
         val cmpPred =
             when (LLVMGetICmpPredicate(instr)) {
@@ -663,6 +662,18 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                     return declarationOrNot(operand, instr)
                 }
                 base = base.arguments[index]
+            } else if (baseType is PointerType) {
+                val arrayExpr = newArraySubscriptionExpression("")
+                arrayExpr.arrayExpression = base
+                arrayExpr.name = index.toString()
+                arrayExpr.subscriptExpression = operand
+                expr = arrayExpr
+
+                // deference the type to get the new base type
+                baseType = baseType.dereference()
+
+                // the current expression is the new base
+                base = expr
             } else {
                 // otherwise, this is a member field access, where the index denotes the n-th field
                 // in the structure
@@ -713,8 +724,8 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
      * This instruction checks if the operand is neither an undef nor a poison value (for aggregated
      * types such as vectors, individual elements are checked) and, if so, returns the operand.
      * Otherwise, it returns a random but non-undef and non-poison value. This initialization is
-     * modeled in the graph by a call to a implicit function "llvm.freeze" which would be adapted to
-     * each data type.
+     * modeled in the graph by a call to an implicit function "llvm.freeze" which would be adapted
+     * to each data type.
      */
     @FunctionReplacement(["llvm.freeze"], "freeze")
     private fun handleFreeze(instr: LLVMValueRef): Statement {
@@ -1099,7 +1110,8 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             // Get the label of the catch clause.
             catchLabel = extractBasicBlockLabel(LLVMGetOperand(instr, max))
             max--
-            // Get the label of the continue basic block (e.g. if no error occors).
+            // Get the label of the basic block where the control flow continues (e.g. if no error
+            // occurs).
             continueLabel = extractBasicBlockLabel(LLVMGetOperand(instr, max))
             max--
             log.info(
@@ -1116,7 +1128,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         }
 
         if (instr.opCode == LLVMInvoke) {
-            // For the invoke instruction, the call is surrounded by a try statement which also
+            // For the "invoke" instruction, the call is surrounded by a try statement which also
             // contains a
             // goto statement after the call.
             val tryStatement = newTryStatement(instrStr!!)
@@ -1360,7 +1372,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             }
             return
         }
-        // We have multiple pairs, so we insert a declaration at the beginning of the function an
+        // We have multiple pairs, so we insert a declaration at the beginning of the function and
         // make an assignment in each BB.
         val functionName = LLVMGetValueName(bbsFunction).string
         val functions =
@@ -1420,7 +1432,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         val lhs = namePair.first
         val symbolName = namePair.second
 
-        // if it is still empty, we probably do not have a left shide
+        // if it is still empty, we probably do not have a left side
         return if (lhs != "") {
             val decl = VariableDeclaration()
             decl.name = lhs
@@ -1472,7 +1484,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
      * whether the value is unordered (i.e., NAN).
      */
     @FunctionReplacement(["isunordered"])
-    private fun handleBinaryOperator(
+    fun handleBinaryOperator(
         instr: LLVMValueRef,
         op: String,
         unsigned: Boolean,
