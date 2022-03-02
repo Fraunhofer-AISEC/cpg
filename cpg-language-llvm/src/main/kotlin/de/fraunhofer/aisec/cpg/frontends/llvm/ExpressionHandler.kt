@@ -84,6 +84,10 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
             // we are only interested in its name and type.
             LLVMInstructionValueKind -> handleReference(value)
             LLVMFunctionValueKind -> handleFunction(value)
+            LLVMInlineAsmValueKind -> {
+                // TODO
+                return Expression()
+            }
             else -> {
                 log.info(
                     "Not handling value kind {} in handleValue yet. Falling back to the legacy way. Please change",

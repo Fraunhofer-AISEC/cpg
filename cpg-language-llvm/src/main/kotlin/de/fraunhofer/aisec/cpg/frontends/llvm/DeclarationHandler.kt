@@ -267,6 +267,6 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
             name += "_${fieldType.typeName}"
         }
 
-        return name
+        return name.replace("[]", "Array").replace("*", "Ptr")
     }
 }
