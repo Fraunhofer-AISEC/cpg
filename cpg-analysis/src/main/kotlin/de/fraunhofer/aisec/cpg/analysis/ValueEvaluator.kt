@@ -70,7 +70,7 @@ class ValueEvaluator(
      */
     val path: MutableList<Node> = mutableListOf()
 
-    /** Tries to evaluate this expression. Anything can happen. */
+    /** Tries to evaluate this node. Anything can happen. */
     fun evaluate(expr: Node?): Any? {
         // Add the expression to the current path
         expr?.let { this.path += it }
