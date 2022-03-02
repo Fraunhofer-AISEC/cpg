@@ -69,7 +69,7 @@ abstract class GraphTransformation {
     companion object {
 
         val githubIssueGuide: String =
-            "\tTo report this Issue visit https://github.com/Fraunhofer-AISEC/codyze/issues/new?title=%s\n" +
+            "\tTo report this Issue visit https://github.com/Fraunhofer-AISEC/cpg/issues/new?&template=bugreport-from-cpg-traces.md&title=%s\n" +
                 "\tIf possible: \n" +
                 "\t\t* paste this message and stack trace for us to locate the issue.\n" +
                 "\t\t* past the parsed code that cause the issue from your source, the location is referenced by the lines 'at processing of ... in ...'\n" +
