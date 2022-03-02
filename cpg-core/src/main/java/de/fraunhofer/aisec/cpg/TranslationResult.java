@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.SubGraph;
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration;
 import de.fraunhofer.aisec.cpg.helpers.Benchmark;
+import de.fraunhofer.aisec.cpg.helpers.BenchmarkResults;
 import de.fraunhofer.aisec.cpg.helpers.StatisticsHolder;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -92,10 +93,6 @@ public class TranslationResult extends Node implements StatisticsHolder {
    *
    * @return the scratch storage
    */
-  //  public Scene getScene() {
-  //    return this.scene;
-  //  }
-
   public Map<String, Object> getScratch() {
     return scratch;
   }
@@ -113,13 +110,9 @@ public class TranslationResult extends Node implements StatisticsHolder {
     this.benchmarks.add(b);
   }
 
+  @NotNull
   public List<Benchmark> getBenchmarks() {
     return benchmarks;
-  }
-
-  @Override
-  public void printBenchmark() {
-    StatisticsHolder.DefaultImpls.printBenchmark(this);
   }
 
   @NotNull
@@ -134,5 +127,10 @@ public class TranslationResult extends Node implements StatisticsHolder {
   @Override
   public TranslationConfiguration getConfig() {
     return translationManager.getConfig();
+  }
+
+  @NotNull
+  public BenchmarkResults getBenchmarkResults() {
+    return StatisticsHolder.DefaultImpls.getBenchmarkResults(this);
   }
 }

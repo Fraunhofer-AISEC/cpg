@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.passes;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import de.fraunhofer.aisec.cpg.TranslationResult;
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
 import java.util.function.Consumer;
@@ -39,14 +40,24 @@ import org.slf4j.LoggerFactory;
  */
 public abstract class Pass implements Consumer<TranslationResult> {
 
+  protected String name;
+
   protected static final Logger log = LoggerFactory.getLogger(Pass.class);
 
-  @Nullable protected LanguageFrontend lang;
+  Pass() {
+    name = this.getClass().getName();
+  }
+
+  @JsonIgnore @Nullable protected LanguageFrontend lang;
 
   /** @return May be null */
   @Nullable
   public LanguageFrontend getLang() {
     return lang;
+  }
+
+  public String getName() {
+    return name;
   }
 
   /**

@@ -1,0 +1,36 @@
+[
+  {
+    "arguments": [
+      "/usr/bin/gcc",
+      "-c",
+      "-Iincludes_1",
+      "-D",
+      "FOO=1",
+      "main_tu_1.c"
+    ],
+    "directory": "src/test/resources/cxxCompilationDatabase",
+    "file": "src/test/resources/cxxCompilationDatabase/main_tu_1.c"
+  },
+  {
+    "arguments": [
+      "/usr/bin/gcc",
+      "-c",
+      "-Iincludes_2",
+      "-D",
+      "FOO=2",
+      "main_tu_2.c"
+    ],
+    "directory": "src/test/resources/cxxCompilationDatabase",
+    "file": "src/test/resources/cxxCompilationDatabase/main_tu_2.c"
+  },
+  {
+    "arguments": [
+      "/usr/bin/gcc",
+      "-c",
+      "missing_file.c"
+    ],
+    "directory": "src/test/resources/cxxCompilationDatabase",
+    "file": "src/test/resources/cxxCompilationDatabase/missing_file.c"
+  }
+
+]
