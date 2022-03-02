@@ -393,9 +393,9 @@ class ClassTemplateTest extends BaseTest {
     assertEquals(type1ParameterizedType, pairType.getGenerics().get(0));
     assertEquals(type2ParameterizedType, pairType.getGenerics().get(1));
 
-    assertEquals(2, pair.getFields().size());
-    assertEquals(first, pair.getFields().get(0));
-    assertEquals(second, pair.getFields().get(1));
+    assertEquals(3, pair.getFields().size()); // cpp has implicit `this` field
+    assertEquals(first, pair.getFields().get(1));
+    assertEquals(second, pair.getFields().get(2));
 
     assertEquals(type1ParameterizedType, first.getType());
     assertEquals(type2ParameterizedType, second.getType());

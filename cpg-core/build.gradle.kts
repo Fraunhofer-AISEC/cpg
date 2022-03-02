@@ -28,8 +28,6 @@ import com.github.gradle.node.yarn.task.YarnTask
 plugins {
     `java-library`
     `java-test-fixtures`
-
-    `maven-publish`
     signing
 
     id("com.github.node-gradle.node") version "3.2.0"
@@ -118,6 +116,7 @@ dependencies {
 
     // openCypher
     api("org.opencypher:parser-9.0:9.0.20210312")
+    api("org.scala-lang:scala-library:2.12.15") // Dependency of opencypher manually upgraded due to vulnerability
 
     api("commons-io:commons-io:2.11.0")
 

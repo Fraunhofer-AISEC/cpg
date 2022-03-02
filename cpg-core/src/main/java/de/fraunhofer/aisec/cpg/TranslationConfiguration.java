@@ -28,6 +28,9 @@ package de.fraunhofer.aisec.cpg;
 import static de.fraunhofer.aisec.cpg.frontends.cpp.CXXLanguageFrontend.CXX_EXTENSIONS;
 import static de.fraunhofer.aisec.cpg.frontends.cpp.CXXLanguageFrontend.CXX_HEADER_EXTENSIONS;
 
+import com.fasterxml.jackson.annotation.JsonIdentityInfo;
+import com.fasterxml.jackson.annotation.JsonIdentityReference;
+import com.fasterxml.jackson.annotation.ObjectIdGenerators;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import de.fraunhofer.aisec.cpg.frontends.CompilationDatabase;
@@ -222,6 +225,8 @@ public class TranslationConfiguration {
     return topLevel;
   }
 
+  @JsonIdentityInfo(generator = ObjectIdGenerators.PropertyGenerator.class, property = "name")
+  @JsonIdentityReference(alwaysAsId = true)
   public List<Pass> getRegisteredPasses() {
     return this.passes;
   }
@@ -557,25 +562,6 @@ public class TranslationConfiguration {
 
   @Override
   public String toString() {
-    return new ToStringBuilder(this, ToStringStyle.JSON_STYLE)
-        .append("debugParser", debugParser)
-        .append("loadIncludes", loadIncludes)
-        .append("includePaths", includePaths)
-        .append("includeWhitelist", includeWhitelist)
-        .append("includeBlacklist", includeBlacklist)
-        .append("frontends", frontends)
-        .append("disableCleanup", disableCleanup)
-        .append("codeInNodes", codeInNodes)
-        .append("processAnnotations", processAnnotations)
-        .append("failOnError", failOnError)
-        .append("symbols", symbols)
-        .append("sourceLocations", sourceLocations)
-        .append("topLevel", topLevel)
-        .append("useUnityBuild", useUnityBuild)
-        .append("useParallelFrontends", useParallelFrontends)
-        .append("typeSystemActiveInFrontend", typeSystemActiveInFrontend)
-        .append("passes", passes)
-        .append("inferenceConfiguration", inferenceConfiguration)
-        .toString();
+    return ToStringBuilder.reflectionToString(this, ToStringStyle.JSON_STYLE);
   }
 }
