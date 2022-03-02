@@ -7,8 +7,8 @@ assignees: ''
 
 ---
 
-# Stacktrace
-*Stacktrace in case of an Exception*
+# Stack trace
+*Stack trace in case of an Exception*
 # Unexpected behavior
 *When the analysis terminates exception free but leads to unexpected graphs: Describe the difference between the generated graph and what you would have expected*
 # Code of interest
