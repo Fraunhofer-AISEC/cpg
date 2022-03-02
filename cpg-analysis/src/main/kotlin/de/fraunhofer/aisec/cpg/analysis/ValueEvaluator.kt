@@ -71,29 +71,29 @@ class ValueEvaluator(
     val path: MutableList<Node> = mutableListOf()
 
     /** Tries to evaluate this node. Anything can happen. */
-    fun evaluate(expr: Node?): Any? {
+    fun evaluate(node: Node?): Any? {
         // Add the expression to the current path
-        expr?.let { this.path += it }
+        node?.let { this.path += it }
 
-        when (expr) {
-            is ArrayCreationExpression -> return evaluate(expr.initializer)
-            is VariableDeclaration -> return evaluate(expr.initializer)
+        when (node) {
+            is ArrayCreationExpression -> return evaluate(node.initializer)
+            is VariableDeclaration -> return evaluate(node.initializer)
             // For a literal, we can just take its value, and we are finished
-            is Literal<*> -> return expr.value
-            is DeclaredReferenceExpression -> return handleDeclaredReferenceExpression(expr)
-            is UnaryOperator -> return handleUnaryOp(expr)
-            is BinaryOperator -> return handleBinaryOperator(expr)
+            is Literal<*> -> return node.value
+            is DeclaredReferenceExpression -> return handleDeclaredReferenceExpression(node)
+            is UnaryOperator -> return handleUnaryOp(node)
+            is BinaryOperator -> return handleBinaryOperator(node)
             // Casts are just a wrapper in this case, we are interested in the inner expression
-            is CastExpression -> return this.evaluate(expr.expression)
-            is ArraySubscriptionExpression -> handleArraySubscriptionExpression(expr)
+            is CastExpression -> return this.evaluate(node.expression)
+            is ArraySubscriptionExpression -> handleArraySubscriptionExpression(node)
             // While we are not handling different paths of variables with If statements, we can
             // easily be partly path-sensitive in a conditional expression
-            is ConditionalExpression -> handleConditionalExpression(expr)
+            is ConditionalExpression -> handleConditionalExpression(node)
         }
 
         // At this point, we cannot evaluate, and we are calling our [cannotEvaluate] hook, maybe
         // this helps
-        return cannotEvaluate(expr, this)
+        return cannotEvaluate(node, this)
     }
 
     /**
