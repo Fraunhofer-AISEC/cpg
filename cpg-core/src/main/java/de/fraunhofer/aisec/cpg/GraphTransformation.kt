@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg
 
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import java.lang.Exception
+import java.net.URLEncoder
 import java.util.*
 import java.util.function.Consumer
 
@@ -68,11 +69,11 @@ abstract class GraphTransformation {
     companion object {
 
         val githubIssueGuide: String =
-            "\tTo report this Issue visit https://github.com/Fraunhofer-AISEC/codyze/issues/new?title={}\n" +
+            "\tTo report this Issue visit https://github.com/Fraunhofer-AISEC/codyze/issues/new?title=%s\n" +
                 "\tIf possible: \n" +
                 "\t\t* paste this message and stack trace for us to locate the issue.\n" +
                 "\t\t* past the parsed code that cause the issue from your source, the location is referenced by the lines 'at processing of ... in ...'\n" +
-                "\t\t* tell us if you used the default passes and language frontends, or made any changes, e.g. registered new passes or frontends, or deactivated any."
+                "\t\t* tell us if you used the default passes and language frontends, or made any changes to the TranslationConfiguration, e.g. registered new passes or frontends, or deactivated any."
 
         open fun getTranslationExceptionWithHandledStack(
             gt: GraphTransformation,
@@ -80,7 +81,9 @@ abstract class GraphTransformation {
         ): TranslationException {
             val componentName = gt.javaClass.simpleName
             val baseErrorName = originalException.javaClass.simpleName
-            var customErrorMessage = "$baseErrorName in $componentName\n\n${githubIssueGuide}\n"
+            val exceptionMessage = "$baseErrorName in $componentName"
+            var customErrorMessage =
+                "$exceptionMessage\n\n${githubIssueGuide.format(URLEncoder.encode(exceptionMessage, "utf-8"))}\n"
             val size = gt.parserObjectStack.size
             val stackTrace =
                 Array<StackTraceElement>(size) { i ->
