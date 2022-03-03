@@ -36,6 +36,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
+import de.fraunhofer.aisec.cpg.graph.types.Type
 import org.bytedeco.javacpp.Pointer
 import org.bytedeco.llvm.LLVM.LLVMTypeRef
 import org.bytedeco.llvm.LLVM.LLVMValueRef
@@ -200,7 +201,7 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
      */
     fun handleStructureType(
         typeRef: LLVMTypeRef,
-        alreadyVisited: ArrayList<LLVMTypeRef> = ArrayList()
+        alreadyVisited: MutableMap<LLVMTypeRef, Type> = mutableMapOf()
     ): RecordDeclaration {
         // if this is a literal struct, we will give it a pseudo name
         val name =
@@ -254,7 +255,7 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
      */
     private fun getLiteralStructName(
         typeRef: LLVMTypeRef,
-        alreadyVisited: ArrayList<LLVMTypeRef>
+        alreadyVisited: MutableMap<LLVMTypeRef, Type>
     ): String {
         var name = "literal"
 

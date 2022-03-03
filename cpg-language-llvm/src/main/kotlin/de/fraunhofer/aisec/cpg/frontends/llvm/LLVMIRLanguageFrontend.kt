@@ -41,7 +41,6 @@ import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.io.File
 import java.nio.ByteBuffer
-import kotlin.collections.ArrayList
 import org.bytedeco.javacpp.BytePointer
 import org.bytedeco.llvm.LLVM.*
 import org.bytedeco.llvm.global.LLVM.*
@@ -167,36 +166,33 @@ class LLVMIRLanguageFrontend(config: TranslationConfiguration, scopeManager: Sco
 
     internal fun typeFrom(
         typeRef: LLVMTypeRef,
-        alreadyVisited: ArrayList<LLVMTypeRef> = ArrayList()
+        alreadyVisited: MutableMap<LLVMTypeRef, Type> = mutableMapOf()
     ): Type {
-        if (typeRef in alreadyVisited) {
-            return TypeParser.createFrom(LLVMPrintTypeToString(typeRef).string, false)
+        if (typeRef in alreadyVisited && alreadyVisited[typeRef] != null) {
+            return alreadyVisited[typeRef]!!
         }
-        alreadyVisited.add(typeRef)
-
-        when (LLVMGetTypeKind(typeRef)) {
-            LLVMArrayTypeKind -> {
-                // var length = LLVMGetArrayLength(typeRef)
-                val elementType = typeFrom(LLVMGetElementType(typeRef), alreadyVisited)
-
-                return elementType.reference(PointerType.PointerOrigin.ARRAY)
+        val res: Type =
+            when (LLVMGetTypeKind(typeRef)) {
+                LLVMArrayTypeKind -> {
+                    // var length = LLVMGetArrayLength(typeRef)
+                    val elementType = typeFrom(LLVMGetElementType(typeRef), alreadyVisited)
+                    elementType.reference(PointerType.PointerOrigin.ARRAY)
+                }
+                LLVMPointerTypeKind -> {
+                    val elementType = typeFrom(LLVMGetElementType(typeRef), alreadyVisited)
+                    elementType.reference(PointerType.PointerOrigin.POINTER)
+                }
+                LLVMStructTypeKind -> {
+                    val record = declarationHandler.handleStructureType(typeRef, alreadyVisited)
+                    record.toType() ?: UnknownType.getUnknownType()
+                }
+                else -> {
+                    val typeStr = LLVMPrintTypeToString(typeRef).string
+                    TypeParser.createFrom(typeStr, false)
+                }
             }
-            LLVMPointerTypeKind -> {
-                val elementType = typeFrom(LLVMGetElementType(typeRef), alreadyVisited)
-
-                return elementType.reference(PointerType.PointerOrigin.POINTER)
-            }
-            LLVMStructTypeKind -> {
-                val record = declarationHandler.handleStructureType(typeRef, alreadyVisited)
-
-                return record.toType() ?: UnknownType.getUnknownType()
-            }
-            else -> {
-                val typeStr = LLVMPrintTypeToString(typeRef).string
-
-                return TypeParser.createFrom(typeStr, false)
-            }
-        }
+        alreadyVisited[typeRef] = res
+        return res
     }
 
     override fun <T : Any?> getCodeFromRawNode(astNode: T): String? {
