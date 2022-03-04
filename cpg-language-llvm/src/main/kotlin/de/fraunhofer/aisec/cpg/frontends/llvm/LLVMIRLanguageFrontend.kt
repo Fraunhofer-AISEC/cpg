@@ -164,16 +164,26 @@ class LLVMIRLanguageFrontend(config: TranslationConfiguration, scopeManager: Sco
         return typeFrom(typeRef)
     }
 
+    private val typeCache = mutableMapOf<String, Type>()
+
     internal fun typeFrom(
         typeRef: LLVMTypeRef,
-        alreadyVisited: MutableMap<LLVMTypeRef, Type> = mutableMapOf()
+        alreadyVisited: MutableMap<LLVMTypeRef, Type?> = mutableMapOf()
     ): Type {
+        val typeStr = LLVMPrintTypeToString(typeRef).toString()
+        if (typeStr in typeCache && typeCache[typeStr] != null) {
+            return typeCache[typeStr]!!
+        }
         if (typeRef in alreadyVisited && alreadyVisited[typeRef] != null) {
             return alreadyVisited[typeRef]!!
+        } else if (typeRef in alreadyVisited) {
+            // Recursive call but we can't resolve it.
+            return UnknownType.getUnknownType()
         }
+        alreadyVisited[typeRef] = null
         val res: Type =
             when (LLVMGetTypeKind(typeRef)) {
-                LLVMArrayTypeKind -> {
+                LLVMVectorTypeKind, LLVMArrayTypeKind -> {
                     // var length = LLVMGetArrayLength(typeRef)
                     val elementType = typeFrom(LLVMGetElementType(typeRef), alreadyVisited)
                     elementType.reference(PointerType.PointerOrigin.ARRAY)
@@ -192,6 +202,7 @@ class LLVMIRLanguageFrontend(config: TranslationConfiguration, scopeManager: Sco
                 }
             }
         alreadyVisited[typeRef] = res
+        typeCache[typeStr] = res
         return res
     }
 

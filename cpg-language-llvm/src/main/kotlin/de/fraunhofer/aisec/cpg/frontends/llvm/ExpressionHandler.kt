@@ -84,7 +84,7 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
             // we are only interested in its name and type.
             LLVMInstructionValueKind -> handleReference(value)
             LLVMFunctionValueKind -> handleFunction(value)
-            LLVMInlineAsmValueKind -> {
+            LLVMMetadataAsValueValueKind, LLVMInlineAsmValueKind -> {
                 // TODO
                 return Expression()
             }
@@ -120,7 +120,7 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
                 } else if (LLVMIsPoison(value) == 1) {
                     return newDeclaredReferenceExpression("poison", cpgType, "poison")
                 } else {
-                    log.error("Unknown expression")
+                    log.error("Unknown expression {}", kind)
                     return Expression()
                 }
             }
