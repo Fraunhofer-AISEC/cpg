@@ -34,7 +34,7 @@ plugins {
     `maven-publish`
 
     id("org.sonarqube") version "3.3"
-    id("com.diffplug.spotless") version "6.2.0"
+    id("com.diffplug.spotless") version "6.3.0"
     kotlin("jvm") version "1.6.0" apply false
 }
 
