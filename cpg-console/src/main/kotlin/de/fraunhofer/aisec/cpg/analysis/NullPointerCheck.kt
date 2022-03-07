@@ -79,12 +79,9 @@ class NullPointerCheck {
             node.base.prevDFG.forEach {
                 var resolved: Any? = CouldNotResolve()
                 val resolver = ValueEvaluator()
-                if (it is Expression) {
+                if (it is Expression || it is Declaration) {
                     // try to resolve them
                     resolved = resolver.evaluate(it)
-                } else if (it is Declaration) {
-                    // try to resolve them
-                    resolved = resolver.evaluateDeclaration(it)
                 }
 
                 if (resolved == null) {
