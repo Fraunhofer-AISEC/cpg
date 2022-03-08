@@ -41,14 +41,14 @@ abstract class GraphTransformation {
 
     protected var parserObjectStack = Stack<Any>()
 
-    open fun pushToHandleLog(parserObject: Any?) {
-        parserObject?.let { parserObjectStack.push(parserObject) }
+    open fun pushToHandleLog(trackedObject: Any?) {
+        trackedObject?.let { parserObjectStack.push(trackedObject) }
     }
 
-    open fun popFromHandleLog(parserObject: Any?) {
-        parserObject?.let {
-            if (parserObjectStack.contains(parserObject)) {
-                while (parserObjectStack.pop() !== parserObject) ;
+    open fun popFromHandleLog(trackedObject: Any?) {
+        trackedObject?.let {
+            if (parserObjectStack.contains(trackedObject)) {
+                while (parserObjectStack.pop() !== trackedObject) ;
             }
         }
     }
@@ -73,29 +73,50 @@ abstract class GraphTransformation {
         stackString.insert(0, "${this.javaClass} encountered and exception:")
         return stackString.toString()
     }
-
+    /**
+     * Executes the provided block of code while holding the tracked object on the stack. This should be used when the
+     * component traverses a hierarchical construct of interest, e.g. parser-AST, CPG-AST.
+     */
     fun withNodeInLog(node: Node, f: Runnable) = withNodeInLog(node) { f.run() }
 
-    fun withNodeInLog(node: Node, block: () -> Unit) {
-        pushToHandleLog(node)
+    /**
+     * Executes the provided block of code while holding the tracked object on the stack. This should be used when the
+     * component traverses a hierarchical construct of interest, e.g. parser-AST, CPG-AST.
+     */
+    fun <S> withNodeInLog(trackedObject: S, block: () -> Unit) {
+        pushToHandleLog(trackedObject)
         block()
-        popFromHandleLog(node)
+        popFromHandleLog(trackedObject)
     }
 
-    fun <T, S> withNodeInLogReturning(node: S, block: () -> T): T {
-        pushToHandleLog(node)
+    /**
+     * Executes the provided block of code while holding the tracked object on the stack. This should be used when the
+     * component traverses a hierarchical construct of interest, e.g. parser-AST, CPG-AST, and when the block of code yields
+     * a result that has to be written into a variable.
+     *
+     */
+    fun <T, S> withNodeInLogReturning(trackedObject: S, block: () -> T): T {
+        pushToHandleLog(trackedObject)
         val ret = block()
-        popFromHandleLog(node)
+        popFromHandleLog(trackedObject)
         return ret
     }
 
-    fun <T, S> replaceWithReturningNodeInLog(node: S, block: () -> T): T {
-        popFromHandleLog(node)
+    /**
+     * An extension to <code>replaceNodeInLog<\code> with an extension that tracks another object after the execution of a block
+     */
+    fun <T, S> replaceWithReturningNodeInLog(trackedObject: S, block: () -> T): T {
+        popFromHandleLog(trackedObject)
         val ret = block()
         pushToHandleLog(ret)
         return ret
     }
 
+    /**
+     * Used to replace the provided tracked object <code>old</code> with a <code>new<\code> one. This should be used when
+     * the component handles nodes in sequence and the prior handled object does not matter for the error tracking. Currently
+     * used as default for non-hierarchical components.
+     */
     fun <S> replaceNodeInLog(old: S, new: S) {
         popFromHandleLog(old)
         pushToHandleLog(new)
