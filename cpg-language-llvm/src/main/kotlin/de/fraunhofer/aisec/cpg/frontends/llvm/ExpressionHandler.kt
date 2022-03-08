@@ -59,7 +59,6 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
     }
 
     private fun handleValue(value: LLVMValueRef): Expression {
-        // log.error("${LLVMPrintValueToString(value).string} of type ${LLVMGetValueKind(value)}")
         return when (val kind = LLVMGetValueKind(value)) {
             LLVMConstantExprValueKind -> handleConstantExprValueKind(value)
             LLVMConstantArrayValueKind, LLVMConstantStructValueKind ->
@@ -101,9 +100,18 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
 
                 // old stuff from getOperandValue, needs to be refactored to the when above
                 // TODO also move the other stuff to the expression handler
-                val const = handleConstant(value, cpgType)
-                if (const != null) {
-                    return const
+                if (LLVMIsConstant(value) != 1) {
+                    val operandName: String =
+                    if (LLVMIsAGlobalAlias(value) != null || LLVMIsGlobalConstant(value) == 1) {
+                        val aliasee = LLVMAliasGetAliasee(value)
+                        LLVMPrintValueToString(aliasee)
+                                .string // Already resolve the aliasee of the constant
+                    } else {
+                        // TODO This does not return the actual constant but only a string
+                        // representation
+                        LLVMPrintValueToString(value).string
+                    }
+                    return newLiteral(operandName, cpgType, operandName)
                 } else if (LLVMIsUndef(value) == 1) {
                     return newDeclaredReferenceExpression("undef", cpgType, "undef")
                 } else if (LLVMIsPoison(value) == 1) {
@@ -113,27 +121,6 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
                     return Expression()
                 }
             }
-        }
-    }
-
-    private fun handleConstant(value: LLVMValueRef, cpgType: Type): Expression? {
-        if (LLVMIsConstant(value) != 1) {
-            return null
-        }
-        if (LLVMIsAGlobalAlias(value) != null || LLVMIsGlobalConstant(value) == 1) {
-            val aliasee = LLVMAliasGetAliasee(value)
-            val operandName: String =
-                LLVMPrintValueToString(aliasee)
-                    .string // Already resolve the aliasee of the constant
-            return newLiteral(operandName, cpgType, operandName)
-        } else {
-            // TODO This does not return the actual constant but only a string
-            // representation
-            return newLiteral(
-                LLVMPrintValueToString(value).string,
-                cpgType,
-                LLVMPrintValueToString(value).string
-            )
         }
     }
 
