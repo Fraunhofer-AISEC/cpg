@@ -59,6 +59,7 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
     }
 
     private fun handleValue(value: LLVMValueRef): Expression {
+        // log.error("${LLVMPrintValueToString(value).string} of type ${LLVMGetValueKind(value)}")
         return when (val kind = LLVMGetValueKind(value)) {
             LLVMConstantExprValueKind -> handleConstantExprValueKind(value)
             LLVMConstantArrayValueKind, LLVMConstantStructValueKind ->
@@ -69,6 +70,9 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
             LLVMConstantIntValueKind -> handleConstantInt(value)
             LLVMConstantFPValueKind -> handleConstantFP(value)
             LLVMConstantPointerNullValueKind -> handleNullPointer(value)
+            LLVMPoisonValueValueKind -> {
+                newDeclaredReferenceExpression("poison", lang.typeOf(value), "poison")
+            }
             LLVMConstantTokenNoneValueKind ->
                 newLiteral(null, UnknownType.getUnknownType(), lang.getCodeFromRawNode(value))
             LLVMUndefValueValueKind ->
@@ -94,27 +98,12 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
                     kind
                 )
                 val cpgType = lang.typeOf(value)
-                val operandName: String
-                cpgType.typeName
 
                 // old stuff from getOperandValue, needs to be refactored to the when above
                 // TODO also move the other stuff to the expression handler
-                if (LLVMIsConstant(value) == 1) {
-                    if (LLVMIsAGlobalAlias(value) != null || LLVMIsGlobalConstant(value) == 1) {
-                        val aliasee = LLVMAliasGetAliasee(value)
-                        operandName =
-                            LLVMPrintValueToString(aliasee)
-                                .string // Already resolve the aliasee of the constant
-                        return newLiteral(operandName, cpgType, operandName)
-                    } else {
-                        // TODO This does not return the actual constant but only a string
-                        // representation
-                        return newLiteral(
-                            LLVMPrintValueToString(value).toString(),
-                            cpgType,
-                            LLVMPrintValueToString(value).toString()
-                        )
-                    }
+                val const = handleConstant(value, cpgType)
+                if (const != null) {
+                    return const
                 } else if (LLVMIsUndef(value) == 1) {
                     return newDeclaredReferenceExpression("undef", cpgType, "undef")
                 } else if (LLVMIsPoison(value) == 1) {
@@ -124,6 +113,27 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
                     return Expression()
                 }
             }
+        }
+    }
+
+    private fun handleConstant(value: LLVMValueRef, cpgType: Type): Expression? {
+        if (LLVMIsConstant(value) != 1) {
+            return null
+        }
+        if (LLVMIsAGlobalAlias(value) != null || LLVMIsGlobalConstant(value) == 1) {
+            val aliasee = LLVMAliasGetAliasee(value)
+            val operandName: String =
+                LLVMPrintValueToString(aliasee)
+                    .string // Already resolve the aliasee of the constant
+            return newLiteral(operandName, cpgType, operandName)
+        } else {
+            // TODO This does not return the actual constant but only a string
+            // representation
+            return newLiteral(
+                LLVMPrintValueToString(value).string,
+                cpgType,
+                LLVMPrintValueToString(value).string
+            )
         }
     }
 
@@ -294,7 +304,12 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
         val initializers = mutableListOf<Expression>()
 
         for (i in 0 until length) {
-            val expr = handle(LLVMGetElementAsConstant(valueRef, i)) as Expression
+            val expr =
+                if (LLVMGetValueKind(valueRef) == LLVMConstantVectorValueKind) {
+                    handle(LLVMGetOperand(valueRef, i)) as Expression
+                } else {
+                    handle(LLVMGetElementAsConstant(valueRef, i)) as Expression
+                }
 
             initializers += expr
         }
