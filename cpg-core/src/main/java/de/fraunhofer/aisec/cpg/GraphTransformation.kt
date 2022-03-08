@@ -26,22 +26,30 @@
 package de.fraunhofer.aisec.cpg
 
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
+import de.fraunhofer.aisec.cpg.graph.Node
 import java.lang.Exception
 import java.net.URLEncoder
 import java.util.*
 import java.util.function.Consumer
 
+/**
+ * A generic superclass for components that change the graph. This includes language frontends as the component that does
+ * the initial translation into the CPG-AST, as well as graph enhancing passes. The purpose of this class is to capture all
+ * behavior that we need for this components, such as tracking of handled nodes.
+ */
 abstract class GraphTransformation {
 
     protected var parserObjectStack = Stack<Any>()
 
     open fun pushToHandleLog(parserObject: Any?) {
-        parserObjectStack.push(parserObject)
+        parserObject?.let { parserObjectStack.push(parserObject) }
     }
 
-    open fun popFromHandleLog(parserObject: Any) {
-        if (parserObjectStack.contains(parserObject)) {
-            while (parserObjectStack.pop() !== parserObject) ;
+    open fun popFromHandleLog(parserObject: Any?) {
+        parserObject?.let {
+            if (parserObjectStack.contains(parserObject)) {
+                while (parserObjectStack.pop() !== parserObject) ;
+            }
         }
     }
 
@@ -64,6 +72,33 @@ abstract class GraphTransformation {
         )
         stackString.insert(0, "${this.javaClass} encountered and exception:")
         return stackString.toString()
+    }
+
+    fun withNodeInLog(node: Node, f: Runnable) = withNodeInLog(node) { f.run() }
+
+    fun withNodeInLog(node: Node, block: () -> Unit) {
+        pushToHandleLog(node)
+        block()
+        popFromHandleLog(node)
+    }
+
+    fun <T, S> withNodeInLogReturning(node: S, block: () -> T): T {
+        pushToHandleLog(node)
+        val ret = block()
+        popFromHandleLog(node)
+        return ret
+    }
+
+    fun <T, S> replaceWithReturningNodeInLog(node: S, block: () -> T): T {
+        popFromHandleLog(node)
+        val ret = block()
+        pushToHandleLog(ret)
+        return ret
+    }
+
+    fun <S> replaceNodeInLog(old: S, new: S) {
+        popFromHandleLog(old)
+        pushToHandleLog(new)
     }
 
     companion object {

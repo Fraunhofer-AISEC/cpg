@@ -282,11 +282,16 @@ public class ControlFlowSensitiveDFGPass extends Pass {
         }
 
         if (node instanceof DeclaredReferenceExpression) {
-          popFromHandleLog(node);
+          Map<VariableDeclaration, Set<Node>> finalVariables = variables;
+          Node finalNode = node;
           node =
-              handleDeclaredReferenceExpression(
-                  (DeclaredReferenceExpression) node, variables, this::iterateTillFixpoint);
-          pushToHandleLog(node);
+              replaceWithReturningNodeInLog(
+                  node,
+                  () ->
+                      handleDeclaredReferenceExpression(
+                          (DeclaredReferenceExpression) finalNode,
+                          finalVariables,
+                          this::iterateTillFixpoint));
         }
 
         if (node.equals(endNode) && !stopBefore) {
@@ -313,9 +318,8 @@ public class ControlFlowSensitiveDFGPass extends Pass {
           if (next instanceof VariableDeclaration) {
             addDFGToMap((VariableDeclaration) next, node, variables);
           }
-          popFromHandleLog(node);
+          replaceNodeInLog(node, next);
           node = next;
-          pushToHandleLog(node);
         }
       } while (node != null);
       return variables;
@@ -370,9 +374,9 @@ public class ControlFlowSensitiveDFGPass extends Pass {
     protected void propagateValues() {
       for (Map.Entry<Node, Map<VariableDeclaration, Set<Node>>> joinPoint :
           this.joinPoints.entrySet()) {
-        pushToHandleLog(joinPoint.getKey());
-        propagateFromJoinPoints(joinPoint.getKey(), joinPoint.getValue(), null, true);
-        popFromHandleLog(joinPoint.getKey());
+        withNodeInLog(
+            joinPoint.getKey(),
+            () -> propagateFromJoinPoints(joinPoint.getKey(), joinPoint.getValue(), null, true));
       }
     }
 
@@ -402,11 +406,16 @@ public class ControlFlowSensitiveDFGPass extends Pass {
         }
 
         if (node instanceof DeclaredReferenceExpression) {
-          popFromHandleLog(node);
+
+          Node finalNode = node;
           node =
-              handleDeclaredReferenceExpression(
-                  (DeclaredReferenceExpression) node, variables, this::propagateFromJoinPoints);
-          pushToHandleLog(node);
+              replaceWithReturningNodeInLog(
+                  node,
+                  () ->
+                      handleDeclaredReferenceExpression(
+                          (DeclaredReferenceExpression) finalNode,
+                          variables,
+                          this::propagateFromJoinPoints));
         }
 
         if (node.equals(endNode) && !stopBefore) {
@@ -437,9 +446,8 @@ public class ControlFlowSensitiveDFGPass extends Pass {
           if (next instanceof VariableDeclaration) {
             addDFGToMap((VariableDeclaration) next, node, variables);
           }
-          popFromHandleLog(node);
+          replaceNodeInLog(node, next);
           node = next;
-          pushToHandleLog(node);
           if (joinPoints.containsKey(node)) {
             break; // As we are propagating from joinpoints we stop when we reach the next joinpoint
           }

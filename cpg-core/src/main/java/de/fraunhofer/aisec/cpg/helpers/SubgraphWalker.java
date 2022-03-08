@@ -341,11 +341,9 @@ public class SubgraphWalker {
           todo.push(current);
 
           if (gt != null) {
-            gt.pushToHandleLog(current);
-          } // Handle logging is used to track the currently handled nodes for exception reports
-          onNodeVisit.forEach(c -> c.accept(current));
-          if (gt != null) {
-            gt.popFromHandleLog(current);
+            gt.withNodeInLog(current, () -> onNodeVisit.forEach(c -> c.accept(current)));
+          } else {
+            onNodeVisit.forEach(c -> c.accept(current));
           }
 
           var unseenChildren =

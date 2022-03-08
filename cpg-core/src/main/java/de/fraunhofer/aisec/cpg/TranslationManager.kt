@@ -96,6 +96,7 @@ private constructor(
 
                 // Apply passes
                 for (pass in config.registeredPasses) {
+
                     try {
                         passesNeedCleanup.add(pass)
                         bench = Benchmark(pass.javaClass, "Executing Pass", false, result)

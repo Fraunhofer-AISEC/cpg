@@ -112,9 +112,8 @@ public abstract class Handler<S, T, L extends LanguageFrontend> {
       }
     }
     if (handler != null) {
-      lang.pushToHandleLog(ctx);
-      S s = handler.handle(ctx);
-      lang.popFromHandleLog(ctx);
+      HandlerInterface<S, T> finalHandler = handler;
+      S s = lang.withNodeInLogReturning(ctx, () -> finalHandler.handle(ctx));
 
       if (s != null) {
         // The language frontend might set a location, which we should respect. Otherwise, we will
