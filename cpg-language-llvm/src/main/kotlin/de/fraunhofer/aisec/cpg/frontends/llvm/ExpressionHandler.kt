@@ -84,6 +84,10 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
             // we are only interested in its name and type.
             LLVMInstructionValueKind -> handleReference(value)
             LLVMFunctionValueKind -> handleFunction(value)
+            LLVMMetadataAsValueValueKind, LLVMInlineAsmValueKind -> {
+                // TODO
+                return Expression()
+            }
             else -> {
                 log.info(
                     "Not handling value kind {} in handleValue yet. Falling back to the legacy way. Please change",
@@ -116,7 +120,7 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
                 } else if (LLVMIsPoison(value) == 1) {
                     return newDeclaredReferenceExpression("poison", cpgType, "poison")
                 } else {
-                    log.error("Unknown expression")
+                    log.error("Unknown expression {}", kind)
                     return Expression()
                 }
             }
@@ -313,6 +317,7 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
             val expr: ConstructExpression = newConstructExpression(code)
             // map the construct expression to the record declaration of the type
             expr.instantiates = (type as? ObjectType)?.recordDeclaration
+            if (expr.instantiates == null) return expr
 
             // loop through the operands
             for (field in (expr.instantiates as RecordDeclaration).fields) {
@@ -337,6 +342,7 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
             val expr: ConstructExpression = newConstructExpression(code)
             // map the construct expression to the record declaration of the type
             expr.instantiates = (type as? ObjectType)?.recordDeclaration
+            if (expr.instantiates == null) return expr
 
             // loop through the operands
             for (field in (expr.instantiates as RecordDeclaration).fields) {

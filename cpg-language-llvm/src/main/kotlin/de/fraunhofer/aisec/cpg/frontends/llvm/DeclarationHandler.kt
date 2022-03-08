@@ -36,6 +36,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
+import de.fraunhofer.aisec.cpg.graph.types.Type
 import org.bytedeco.javacpp.Pointer
 import org.bytedeco.llvm.LLVM.LLVMTypeRef
 import org.bytedeco.llvm.LLVM.LLVMValueRef
@@ -97,7 +98,6 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
      */
     private fun handleFunction(func: LLVMValueRef): FunctionDeclaration {
         val name = LLVMGetValueName(func)
-
         val functionDeclaration = newFunctionDeclaration(name.string, lang.getCodeFromRawNode(func))
 
         // return types are a bit tricky, because the type of the function is a pointer to the
@@ -200,14 +200,14 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
      */
     fun handleStructureType(
         typeRef: LLVMTypeRef,
-        alreadyVisited: ArrayList<LLVMTypeRef> = ArrayList()
+        alreadyVisited: MutableMap<LLVMTypeRef, Type?> = mutableMapOf()
     ): RecordDeclaration {
         // if this is a literal struct, we will give it a pseudo name
         val name =
             if (LLVMIsLiteralStruct(typeRef) == 1) {
                 getLiteralStructName(typeRef, alreadyVisited)
             } else {
-                LLVMGetStructName(typeRef).string
+                replaceCharsInName(LLVMGetStructName(typeRef).string)
             }
 
         // try to see, if the struct already exists as a record declaration
@@ -254,8 +254,13 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
      */
     private fun getLiteralStructName(
         typeRef: LLVMTypeRef,
-        alreadyVisited: ArrayList<LLVMTypeRef>
+        alreadyVisited: MutableMap<LLVMTypeRef, Type?>
     ): String {
+        val typeStr = LLVMPrintTypeToString(typeRef).string
+        if (typeStr in lang.typeCache && lang.typeCache[typeStr] != null) {
+            return lang.typeCache[typeStr]!!.name
+        }
+
         var name = "literal"
 
         val size = LLVMCountStructElementTypes(typeRef)
@@ -267,6 +272,25 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
             name += "_${fieldType.typeName}"
         }
 
-        return name
+        return replaceCharsInName(name)
+    }
+
+    /**
+     * Replaces some "dangerous" characters in the name of structures as they can be misinterpreted
+     * by the [TypeParser].
+     */
+    private fun replaceCharsInName(name: String): String {
+        return name.replace("[]", "Array")
+            .replace("*", "Ptr")
+            .replace("+", "%2B")
+            .replace("&", "%26")
+            .replace("#", "%23")
+            .replace("<", "%3c")
+            .replace(">", "%3e")
+            .replace("@", "%40")
+            .replace("[", "%5b")
+            .replace("]", "%5d")
+            .replace("{", "%7b")
+            .replace("}", "%7d")
     }
 }

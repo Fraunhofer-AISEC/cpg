@@ -34,6 +34,25 @@ import org.junit.jupiter.api.Test
 @Tag("llvm-examples")
 class ExamplesTest {
     @Test
+    fun testRust() {
+        val topLevel = Path.of("src", "test", "resources", "llvm", "examples")
+
+        val tu =
+            TestUtils.analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("rust_sample.ll").toFile()),
+                topLevel,
+                true
+            ) {
+                it.registerLanguage(
+                    LLVMIRLanguageFrontend::class.java,
+                    LLVMIRLanguageFrontend.LLVM_EXTENSIONS
+                )
+            }
+
+        assertNotNull(tu)
+    }
+
+    @Test
     fun testIf() {
         val topLevel = Path.of("src", "test", "resources", "llvm", "examples", "llvm")
 
