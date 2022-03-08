@@ -52,6 +52,15 @@ class LLVMIRLanguageFrontendTest {
     }
 
     @Test
+    fun testVectorPoison() {
+        val topLevel = Path.of("src", "test", "resources", "llvm")
+
+        val frontend =
+            LLVMIRLanguageFrontend(TranslationConfiguration.builder().build(), ScopeManager())
+        frontend.parse(topLevel.resolve("vector_poison.ll").toFile())
+    }
+
+    @Test
     fun testIntegerOps() {
         val topLevel = Path.of("src", "test", "resources", "llvm")
         val tu =
