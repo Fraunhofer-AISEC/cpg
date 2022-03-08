@@ -53,25 +53,6 @@ class ExamplesTest {
     }
 
     @Test
-    fun testRust2() {
-        val topLevel = Path.of("src", "test", "resources", "llvm", "examples")
-
-        val tu =
-            TestUtils.analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("all.ll").toFile()),
-                topLevel,
-                true
-            ) {
-                it.registerLanguage(
-                    LLVMIRLanguageFrontend::class.java,
-                    LLVMIRLanguageFrontend.LLVM_EXTENSIONS
-                )
-            }
-
-        assertNotNull(tu)
-    }
-
-    @Test
     fun testIf() {
         val topLevel = Path.of("src", "test", "resources", "llvm", "examples", "llvm")
 

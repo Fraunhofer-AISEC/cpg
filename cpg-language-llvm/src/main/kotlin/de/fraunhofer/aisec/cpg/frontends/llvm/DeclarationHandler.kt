@@ -98,7 +98,6 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
      */
     private fun handleFunction(func: LLVMValueRef): FunctionDeclaration {
         val name = LLVMGetValueName(func)
-
         val functionDeclaration = newFunctionDeclaration(name.string, lang.getCodeFromRawNode(func))
 
         // return types are a bit tricky, because the type of the function is a pointer to the
@@ -257,6 +256,11 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
         typeRef: LLVMTypeRef,
         alreadyVisited: MutableMap<LLVMTypeRef, Type?>
     ): String {
+        val typeStr = LLVMPrintTypeToString(typeRef).string
+        if (typeStr in lang.typeCache && lang.typeCache[typeStr] != null) {
+            return lang.typeCache[typeStr]!!.name
+        }
+
         var name = "literal"
 
         val size = LLVMCountStructElementTypes(typeRef)

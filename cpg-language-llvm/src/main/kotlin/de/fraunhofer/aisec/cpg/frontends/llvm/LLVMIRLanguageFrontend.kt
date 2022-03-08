@@ -52,6 +52,7 @@ class LLVMIRLanguageFrontend(config: TranslationConfiguration, scopeManager: Sco
     val statementHandler = StatementHandler(this)
     val declarationHandler = DeclarationHandler(this)
     val expressionHandler = ExpressionHandler(this)
+    val typeCache = mutableMapOf<String, Type>()
 
     val phiList = mutableListOf<LLVMValueRef>()
 
@@ -164,13 +165,11 @@ class LLVMIRLanguageFrontend(config: TranslationConfiguration, scopeManager: Sco
         return typeFrom(typeRef)
     }
 
-    private val typeCache = mutableMapOf<String, Type>()
-
     internal fun typeFrom(
         typeRef: LLVMTypeRef,
         alreadyVisited: MutableMap<LLVMTypeRef, Type?> = mutableMapOf()
     ): Type {
-        val typeStr = LLVMPrintTypeToString(typeRef).toString()
+        val typeStr = LLVMPrintTypeToString(typeRef).string
         if (typeStr in typeCache && typeCache[typeStr] != null) {
             return typeCache[typeStr]!!
         }

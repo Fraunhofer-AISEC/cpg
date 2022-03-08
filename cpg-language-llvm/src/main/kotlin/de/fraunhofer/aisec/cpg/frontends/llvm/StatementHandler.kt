@@ -1117,8 +1117,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
 
         if (instr.opCode == LLVMInvoke) {
             // For the invoke instruction, the call is surrounded by a try statement which also
-            // contains a
-            // goto statement after the call.
+            // contains a goto statement after the call.
             val tryStatement = newTryStatement(instrStr!!)
             lang.scopeManager.enterScope(tryStatement)
             val tryBlock = newCompoundStatement(instrStr)
