@@ -44,15 +44,14 @@ class CompressLLVMPass : Pass() {
 
         val flatAST = SubgraphWalker.flattenAST(t)
         // Get all goto statements
-        val allGotos = flatAST.filter { n -> n is GotoStatement }
+        val allGotos = flatAST.filterIsInstance<GotoStatement>()
         // Get all LabelStatements which are only referenced from a single GotoStatement
         val singleEntryLabels =
-            flatAST.filter { n -> n is LabelStatement }.filter { l ->
-                allGotos.filter { g -> (g as GotoStatement).targetLabel == l }.size == 1
+            flatAST.filterIsInstance<LabelStatement>().filter { l ->
+                allGotos.filter { g -> g.targetLabel == l }.size == 1
             }
         // Get all GotoStatements which have to be replaced in the AST
-        val gotosToReplace =
-            allGotos.filter { g -> (g as GotoStatement).targetLabel in singleEntryLabels }
+        val gotosToReplace = allGotos.filter { g -> g.targetLabel in singleEntryLabels }
 
         // Enforce the order: First IfStatements, then SwitchStatements, then the rest. This
         // prevents to treat the final goto in the case or default statement as a normal

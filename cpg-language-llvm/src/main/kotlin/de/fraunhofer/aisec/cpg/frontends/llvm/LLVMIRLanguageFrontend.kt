@@ -60,7 +60,7 @@ class LLVMIRLanguageFrontend(config: TranslationConfiguration, scopeManager: Sco
 
     /**
      * This contains a cache binding between an LLVMValueRef (representing a variable) and its
-     * [Declaration] in the graph. We need this, because this way we can lookup and connect a
+     * [Declaration] in the graph. We need this, because this way we can look up and connect a
      * [DeclaredReferenceExpression] to its [Declaration] already in the language frontend. This in
      * turn is needed because of the local/global system we cannot rely on the
      * [VariableUsageResolver].
