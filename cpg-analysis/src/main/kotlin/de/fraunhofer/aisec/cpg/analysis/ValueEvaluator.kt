@@ -65,8 +65,7 @@ class ValueEvaluator(
         get() = LoggerFactory.getLogger(ValueEvaluator::class.java)
 
     /**
-     * This property contains the path of the latest execution of [evaluate] or
-     * [evaluateDeclaration].
+     * This property contains the path of the latest execution of [evaluate].
      */
     val path: MutableList<Node> = mutableListOf()
 
@@ -201,51 +200,9 @@ class ValueEvaluator(
         }
     }
 
-    private fun comparator(lhs: Number, rhs: Number): Int {
-        return when {
-            lhs is Int && rhs is Double -> lhs.compareTo(rhs)
-            lhs is Int && rhs is Float -> lhs.compareTo(rhs)
-            lhs is Int && rhs is Byte -> lhs.compareTo(rhs)
-            lhs is Int && rhs is Short -> lhs.compareTo(rhs)
-            lhs is Int && rhs is Int -> lhs.compareTo(rhs)
-            lhs is Int && rhs is Long -> lhs.compareTo(rhs)
-            lhs is Byte && rhs is Double -> lhs.compareTo(rhs)
-            lhs is Byte && rhs is Float -> lhs.compareTo(rhs)
-            lhs is Byte && rhs is Byte -> lhs.compareTo(rhs)
-            lhs is Byte && rhs is Short -> lhs.compareTo(rhs)
-            lhs is Byte && rhs is Int -> lhs.compareTo(rhs)
-            lhs is Byte && rhs is Long -> lhs.compareTo(rhs)
-            lhs is Short && rhs is Double -> lhs.compareTo(rhs)
-            lhs is Short && rhs is Float -> lhs.compareTo(rhs)
-            lhs is Short && rhs is Byte -> lhs.compareTo(rhs)
-            lhs is Short && rhs is Short -> lhs.compareTo(rhs)
-            lhs is Short && rhs is Int -> lhs.compareTo(rhs)
-            lhs is Short && rhs is Long -> lhs.compareTo(rhs)
-            lhs is Long && rhs is Double -> lhs.compareTo(rhs)
-            lhs is Long && rhs is Float -> lhs.compareTo(rhs)
-            lhs is Long && rhs is Byte -> lhs.compareTo(rhs)
-            lhs is Long && rhs is Short -> lhs.compareTo(rhs)
-            lhs is Long && rhs is Int -> lhs.compareTo(rhs)
-            lhs is Long && rhs is Long -> lhs.compareTo(rhs)
-            lhs is Float && rhs is Double -> lhs.compareTo(rhs)
-            lhs is Float && rhs is Float -> lhs.compareTo(rhs)
-            lhs is Float && rhs is Byte -> lhs.compareTo(rhs)
-            lhs is Float && rhs is Short -> lhs.compareTo(rhs)
-            lhs is Float && rhs is Int -> lhs.compareTo(rhs)
-            lhs is Float && rhs is Long -> lhs.compareTo(rhs)
-            lhs is Double && rhs is Double -> lhs.compareTo(rhs)
-            lhs is Double && rhs is Float -> lhs.compareTo(rhs)
-            lhs is Double && rhs is Byte -> lhs.compareTo(rhs)
-            lhs is Double && rhs is Short -> lhs.compareTo(rhs)
-            lhs is Double && rhs is Int -> lhs.compareTo(rhs)
-            lhs is Double && rhs is Long -> lhs.compareTo(rhs)
-            else -> 1
-        }
-    }
-
     private fun handleGreater(lhsValue: Any?, rhsValue: Any?, expr: BinaryOperator): Any? {
         return if (lhsValue is Number && rhsValue is Number) {
-            comparator(lhsValue, rhsValue) > 0
+            lhsValue.compareTo(rhsValue) > 0
         } else {
             cannotEvaluate(expr, this)
         }
@@ -253,7 +210,7 @@ class ValueEvaluator(
 
     private fun handleGEq(lhsValue: Any?, rhsValue: Any?, expr: BinaryOperator): Any? {
         return if (lhsValue is Number && rhsValue is Number) {
-            comparator(lhsValue, rhsValue) >= 0
+            lhsValue.compareTo(rhsValue) >= 0
         } else {
             cannotEvaluate(expr, this)
         }
@@ -261,7 +218,7 @@ class ValueEvaluator(
 
     private fun handleLess(lhsValue: Any?, rhsValue: Any?, expr: BinaryOperator): Any? {
         return if (lhsValue is Number && rhsValue is Number) {
-            comparator(lhsValue, rhsValue) < 0
+            lhsValue.compareTo(rhsValue) < 0
         } else {
             cannotEvaluate(expr, this)
         }
@@ -269,7 +226,7 @@ class ValueEvaluator(
 
     private fun handleLEq(lhsValue: Any?, rhsValue: Any?, expr: BinaryOperator): Any? {
         return if (lhsValue is Number && rhsValue is Number) {
-            comparator(lhsValue, rhsValue) <= 0
+            lhsValue.compareTo(rhsValue) <= 0
         } else {
             cannotEvaluate(expr, this)
         }
@@ -277,7 +234,7 @@ class ValueEvaluator(
 
     private fun handleEq(lhsValue: Any?, rhsValue: Any?, expr: BinaryOperator): Any? {
         return if (lhsValue is Number && rhsValue is Number) {
-            comparator(lhsValue, rhsValue) == 0
+            lhsValue.compareTo(rhsValue) == 0
         } else {
             cannotEvaluate(expr, this)
         }
@@ -394,5 +351,52 @@ class ValueEvaluator(
         }
 
         return evaluate(expressions.firstOrNull())
+    }
+}
+
+/**
+ * This function is a piece of pure magic. It is one of the missing pieces in the Kotlin language
+ * and compares an arbitrary [Number] with another [Number] using the dedicated compareTo functions
+ * for the individual implementations of [Number], such as [Int.compareTo].
+ */
+private fun <T: Number> Number.compareTo(other: T): Int {
+    return when {
+        this is Byte && other is Double -> this.compareTo(other)
+        this is Byte && other is Float -> this.compareTo(other)
+        this is Byte && other is Byte -> this.compareTo(other)
+        this is Byte && other is Short -> this.compareTo(other)
+        this is Byte && other is Int -> this.compareTo(other)
+        this is Byte && other is Long -> this.compareTo(other)
+        this is Short && other is Double -> this.compareTo(other)
+        this is Short && other is Float -> this.compareTo(other)
+        this is Short && other is Byte -> this.compareTo(other)
+        this is Short && other is Short -> this.compareTo(other)
+        this is Short && other is Int -> this.compareTo(other)
+        this is Short && other is Long -> this.compareTo(other)
+        this is Int && other is Double -> this.compareTo(other)
+        this is Int && other is Float -> this.compareTo(other)
+        this is Int && other is Byte -> this.compareTo(other)
+        this is Int && other is Short -> this.compareTo(other)
+        this is Int && other is Int -> this.compareTo(other)
+        this is Int && other is Long -> this.compareTo(other)
+        this is Long && other is Double -> this.compareTo(other)
+        this is Long && other is Float -> this.compareTo(other)
+        this is Long && other is Byte -> this.compareTo(other)
+        this is Long && other is Short -> this.compareTo(other)
+        this is Long && other is Int -> this.compareTo(other)
+        this is Long && other is Long -> this.compareTo(other)
+        this is Float && other is Double -> this.compareTo(other)
+        this is Float && other is Float -> this.compareTo(other)
+        this is Float && other is Byte -> this.compareTo(other)
+        this is Float && other is Short -> this.compareTo(other)
+        this is Float && other is Int -> this.compareTo(other)
+        this is Float && other is Long -> this.compareTo(other)
+        this is Double && other is Double -> this.compareTo(other)
+        this is Double && other is Float -> this.compareTo(other)
+        this is Double && other is Byte -> this.compareTo(other)
+        this is Double && other is Short -> this.compareTo(other)
+        this is Double && other is Int -> this.compareTo(other)
+        this is Double && other is Long -> this.compareTo(other)
+        else -> 1
     }
 }
