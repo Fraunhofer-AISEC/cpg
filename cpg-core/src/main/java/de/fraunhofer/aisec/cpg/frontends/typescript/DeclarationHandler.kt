@@ -34,7 +34,7 @@ import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 
 @ExperimentalTypeScript
 class DeclarationHandler(lang: TypeScriptLanguageFrontend) :
-    Handler<Declaration, TypeScriptNode, TypeScriptLanguageFrontend>(::Declaration, lang) {
+    Handler<Declaration, TypeScriptNode, TypeScriptLanguageFrontend>(::ProblemDeclaration, lang) {
     init {
         map.put(TypeScriptNode::class.java, ::handleNode)
     }
@@ -55,7 +55,7 @@ class DeclarationHandler(lang: TypeScriptLanguageFrontend) :
             "ClassDeclaration" -> return handleClassDeclaration(node)
         }
 
-        return Declaration()
+        return ProblemDeclaration("No handler was implemented for node of type " + node.type)
     }
 
     private fun handlePropertySignature(node: TypeScriptNode): FieldDeclaration {

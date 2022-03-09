@@ -28,7 +28,9 @@ package de.fraunhofer.aisec.cpg.frontends.cpp
 import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.frontends.HandlerInterface
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder
+import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.ParamVariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.ProblemDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
@@ -42,8 +44,8 @@ import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTInitializerList
 import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTParameterDeclaration
 
 class ParameterDeclarationHandler(lang: CXXLanguageFrontend) :
-    Handler<ParamVariableDeclaration?, IASTParameterDeclaration, CXXLanguageFrontend?>(
-        Supplier { ParamVariableDeclaration() },
+    Handler<Declaration?, IASTParameterDeclaration, CXXLanguageFrontend?>(
+        Supplier { ProblemDeclaration() },
         lang
     ) {
 
