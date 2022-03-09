@@ -87,6 +87,14 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
             // we are only interested in its name and type.
             LLVMInstructionValueKind -> handleReference(value)
             LLVMFunctionValueKind -> handleFunction(value)
+            LLVMGlobalAliasValueKind -> {
+                val name = lang.getNameOf(value).first
+                newDeclaredReferenceExpression(
+                    name,
+                    lang.typeOf(value),
+                    lang.getCodeFromRawNode(value)
+                )
+            }
             LLVMMetadataAsValueValueKind, LLVMInlineAsmValueKind -> {
                 // TODO
                 return Expression()
@@ -102,15 +110,15 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
                 // TODO also move the other stuff to the expression handler
                 if (LLVMIsConstant(value) != 1) {
                     val operandName: String =
-                    if (LLVMIsAGlobalAlias(value) != null || LLVMIsGlobalConstant(value) == 1) {
-                        val aliasee = LLVMAliasGetAliasee(value)
-                        LLVMPrintValueToString(aliasee)
+                        if (LLVMIsAGlobalAlias(value) != null || LLVMIsGlobalConstant(value) == 1) {
+                            val aliasee = LLVMAliasGetAliasee(value)
+                            LLVMPrintValueToString(aliasee)
                                 .string // Already resolve the aliasee of the constant
-                    } else {
-                        // TODO This does not return the actual constant but only a string
-                        // representation
-                        LLVMPrintValueToString(value).string
-                    }
+                        } else {
+                            // TODO This does not return the actual constant but only a string
+                            // representation
+                            LLVMPrintValueToString(value).string
+                        }
                     return newLiteral(operandName, cpgType, operandName)
                 } else if (LLVMIsUndef(value) == 1) {
                     return newDeclaredReferenceExpression("undef", cpgType, "undef")
