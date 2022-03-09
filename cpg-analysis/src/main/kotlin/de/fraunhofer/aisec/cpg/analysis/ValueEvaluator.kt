@@ -123,10 +123,18 @@ class ValueEvaluator(
     private fun handlePlus(lhsValue: Any?, rhsValue: Any?, expr: BinaryOperator): Any? {
         return when {
             lhsValue is String -> lhsValue + rhsValue
-            lhsValue is Int && rhsValue is Number -> lhsValue + rhsValue.toInt()
+            lhsValue is Int && (rhsValue is Double || rhsValue is Float) ->
+                lhsValue + (rhsValue as Number).toDouble()
+            lhsValue is Int && rhsValue is Number -> lhsValue + rhsValue.toLong()
+            lhsValue is Long && (rhsValue is Double || rhsValue is Float) ->
+                lhsValue + (rhsValue as Number).toDouble()
             lhsValue is Long && rhsValue is Number -> lhsValue + rhsValue.toLong()
-            lhsValue is Short && rhsValue is Number -> lhsValue + rhsValue.toShort()
-            lhsValue is Byte && rhsValue is Number -> lhsValue + rhsValue.toByte()
+            lhsValue is Short && (rhsValue is Double || rhsValue is Float) ->
+                lhsValue + (rhsValue as Number).toDouble()
+            lhsValue is Short && rhsValue is Number -> lhsValue + rhsValue.toLong()
+            lhsValue is Byte && (rhsValue is Double || rhsValue is Float) ->
+                lhsValue + (rhsValue as Number).toDouble()
+            lhsValue is Byte && rhsValue is Number -> lhsValue + rhsValue.toLong()
             lhsValue is Double && rhsValue is Number -> lhsValue + rhsValue.toDouble()
             lhsValue is Float && rhsValue is Number -> lhsValue + rhsValue.toDouble()
             else -> cannotEvaluate(expr, this)
@@ -135,9 +143,17 @@ class ValueEvaluator(
 
     private fun handleMinus(lhsValue: Any?, rhsValue: Any?, expr: BinaryOperator): Any? {
         return when {
-            lhsValue is Int && rhsValue is Number -> lhsValue - rhsValue.toInt()
+            lhsValue is Int && (rhsValue is Double || rhsValue is Float) ->
+                lhsValue - (rhsValue as Number).toDouble()
+            lhsValue is Int && rhsValue is Number -> lhsValue - rhsValue.toLong()
+            lhsValue is Long && (rhsValue is Double || rhsValue is Float) ->
+                lhsValue - (rhsValue as Number).toDouble()
             lhsValue is Long && rhsValue is Number -> lhsValue - rhsValue.toLong()
+            lhsValue is Short && (rhsValue is Double || rhsValue is Float) ->
+                lhsValue - (rhsValue as Number).toDouble()
             lhsValue is Short && rhsValue is Number -> lhsValue - rhsValue.toShort()
+            lhsValue is Byte && (rhsValue is Double || rhsValue is Float) ->
+                lhsValue - (rhsValue as Number).toDouble()
             lhsValue is Byte && rhsValue is Number -> lhsValue - rhsValue.toByte()
             lhsValue is Double && rhsValue is Number -> lhsValue - rhsValue.toDouble()
             lhsValue is Float && rhsValue is Number -> lhsValue - rhsValue.toDouble()
@@ -147,10 +163,18 @@ class ValueEvaluator(
 
     private fun handleDiv(lhsValue: Any?, rhsValue: Any?, expr: BinaryOperator): Any? {
         return when {
-            lhsValue is Int && rhsValue is Number -> lhsValue / rhsValue.toInt()
+            lhsValue is Int && (rhsValue is Double || rhsValue is Float) ->
+                lhsValue / (rhsValue as Number).toDouble()
+            lhsValue is Int && rhsValue is Number -> lhsValue / rhsValue.toLong()
+            lhsValue is Long && (rhsValue is Double || rhsValue is Float) ->
+                lhsValue / (rhsValue as Number).toDouble()
             lhsValue is Long && rhsValue is Number -> lhsValue / rhsValue.toLong()
-            lhsValue is Short && rhsValue is Number -> lhsValue / rhsValue.toShort()
-            lhsValue is Byte && rhsValue is Number -> lhsValue / rhsValue.toByte()
+            lhsValue is Short && (rhsValue is Double || rhsValue is Float) ->
+                lhsValue / (rhsValue as Number).toDouble()
+            lhsValue is Short && rhsValue is Number -> lhsValue / rhsValue.toLong()
+            lhsValue is Byte && (rhsValue is Double || rhsValue is Float) ->
+                lhsValue / (rhsValue as Number).toDouble()
+            lhsValue is Byte && rhsValue is Number -> lhsValue / rhsValue.toLong()
             lhsValue is Double && rhsValue is Number -> lhsValue / rhsValue.toDouble()
             lhsValue is Float && rhsValue is Number -> lhsValue / rhsValue.toDouble()
             else -> cannotEvaluate(expr, this)
@@ -159,77 +183,110 @@ class ValueEvaluator(
 
     private fun handleTimes(lhsValue: Any?, rhsValue: Any?, expr: BinaryOperator): Any? {
         return when {
-            lhsValue is Int && rhsValue is Number -> lhsValue * rhsValue.toInt()
+            lhsValue is Int && (rhsValue is Double || rhsValue is Float) ->
+                lhsValue * (rhsValue as Number).toDouble()
+            lhsValue is Int && rhsValue is Number -> lhsValue * rhsValue.toLong()
+            lhsValue is Long && (rhsValue is Double || rhsValue is Float) ->
+                lhsValue * (rhsValue as Number).toDouble()
             lhsValue is Long && rhsValue is Number -> lhsValue * rhsValue.toLong()
-            lhsValue is Short && rhsValue is Number -> lhsValue * rhsValue.toShort()
-            lhsValue is Byte && rhsValue is Number -> lhsValue * rhsValue.toByte()
+            lhsValue is Short && (rhsValue is Double || rhsValue is Float) ->
+                lhsValue * (rhsValue as Number).toDouble()
+            lhsValue is Short && rhsValue is Number -> lhsValue * rhsValue.toLong()
+            lhsValue is Byte && (rhsValue is Double || rhsValue is Float) ->
+                lhsValue * (rhsValue as Number).toDouble()
+            lhsValue is Byte && rhsValue is Number -> lhsValue * rhsValue.toLong()
             lhsValue is Double && rhsValue is Number -> lhsValue * rhsValue.toDouble()
             lhsValue is Float && rhsValue is Number -> lhsValue * rhsValue.toDouble()
             else -> cannotEvaluate(expr, this)
         }
     }
 
-    private fun handleGreater(lhsValue: Any?, rhsValue: Any?, expr: BinaryOperator): Any? {
+    private fun comparator(lhs: Number, rhs: Number): Int {
         return when {
-            lhsValue is Int && rhsValue is Number -> lhsValue > rhsValue.toInt()
-            lhsValue is Long && rhsValue is Number -> lhsValue > rhsValue.toLong()
-            lhsValue is Short && rhsValue is Number -> lhsValue > rhsValue.toShort()
-            lhsValue is Byte && rhsValue is Number -> lhsValue > rhsValue.toByte()
-            lhsValue is Double && rhsValue is Number -> lhsValue > rhsValue.toDouble()
-            lhsValue is Float && rhsValue is Number -> lhsValue > rhsValue.toFloat()
-            else -> cannotEvaluate(expr, this)
+            lhs is Int && rhs is Double -> lhs.compareTo(rhs)
+            lhs is Int && rhs is Float -> lhs.compareTo(rhs)
+            lhs is Int && rhs is Byte -> lhs.compareTo(rhs)
+            lhs is Int && rhs is Short -> lhs.compareTo(rhs)
+            lhs is Int && rhs is Int -> lhs.compareTo(rhs)
+            lhs is Int && rhs is Long -> lhs.compareTo(rhs)
+            lhs is Byte && rhs is Double -> lhs.compareTo(rhs)
+            lhs is Byte && rhs is Float -> lhs.compareTo(rhs)
+            lhs is Byte && rhs is Byte -> lhs.compareTo(rhs)
+            lhs is Byte && rhs is Short -> lhs.compareTo(rhs)
+            lhs is Byte && rhs is Int -> lhs.compareTo(rhs)
+            lhs is Byte && rhs is Long -> lhs.compareTo(rhs)
+            lhs is Short && rhs is Double -> lhs.compareTo(rhs)
+            lhs is Short && rhs is Float -> lhs.compareTo(rhs)
+            lhs is Short && rhs is Byte -> lhs.compareTo(rhs)
+            lhs is Short && rhs is Short -> lhs.compareTo(rhs)
+            lhs is Short && rhs is Int -> lhs.compareTo(rhs)
+            lhs is Short && rhs is Long -> lhs.compareTo(rhs)
+            lhs is Long && rhs is Double -> lhs.compareTo(rhs)
+            lhs is Long && rhs is Float -> lhs.compareTo(rhs)
+            lhs is Long && rhs is Byte -> lhs.compareTo(rhs)
+            lhs is Long && rhs is Short -> lhs.compareTo(rhs)
+            lhs is Long && rhs is Int -> lhs.compareTo(rhs)
+            lhs is Long && rhs is Long -> lhs.compareTo(rhs)
+            lhs is Float && rhs is Double -> lhs.compareTo(rhs)
+            lhs is Float && rhs is Float -> lhs.compareTo(rhs)
+            lhs is Float && rhs is Byte -> lhs.compareTo(rhs)
+            lhs is Float && rhs is Short -> lhs.compareTo(rhs)
+            lhs is Float && rhs is Int -> lhs.compareTo(rhs)
+            lhs is Float && rhs is Long -> lhs.compareTo(rhs)
+            lhs is Double && rhs is Double -> lhs.compareTo(rhs)
+            lhs is Double && rhs is Float -> lhs.compareTo(rhs)
+            lhs is Double && rhs is Byte -> lhs.compareTo(rhs)
+            lhs is Double && rhs is Short -> lhs.compareTo(rhs)
+            lhs is Double && rhs is Int -> lhs.compareTo(rhs)
+            lhs is Double && rhs is Long -> lhs.compareTo(rhs)
+            else -> 1
+        }
+    }
+
+    private fun handleGreater(lhsValue: Any?, rhsValue: Any?, expr: BinaryOperator): Any? {
+        return if (lhsValue is Number && rhsValue is Number) {
+            comparator(lhsValue, rhsValue) > 0
+        } else {
+            cannotEvaluate(expr, this)
         }
     }
 
     private fun handleGEq(lhsValue: Any?, rhsValue: Any?, expr: BinaryOperator): Any? {
-        return when {
-            lhsValue is Int && rhsValue is Number -> lhsValue >= rhsValue.toInt()
-            lhsValue is Long && rhsValue is Number -> lhsValue >= rhsValue.toLong()
-            lhsValue is Short && rhsValue is Number -> lhsValue >= rhsValue.toShort()
-            lhsValue is Byte && rhsValue is Number -> lhsValue >= rhsValue.toByte()
-            lhsValue is Double && rhsValue is Number -> lhsValue >= rhsValue.toDouble()
-            lhsValue is Float && rhsValue is Number -> lhsValue >= rhsValue.toFloat()
-            else -> cannotEvaluate(expr, this)
+        return if (lhsValue is Number && rhsValue is Number) {
+            comparator(lhsValue, rhsValue) >= 0
+        } else {
+            cannotEvaluate(expr, this)
         }
     }
 
     private fun handleLess(lhsValue: Any?, rhsValue: Any?, expr: BinaryOperator): Any? {
-        return when {
-            lhsValue is Int && rhsValue is Number -> lhsValue < rhsValue.toInt()
-            lhsValue is Long && rhsValue is Number -> lhsValue < rhsValue.toLong()
-            lhsValue is Short && rhsValue is Number -> lhsValue < rhsValue.toShort()
-            lhsValue is Byte && rhsValue is Number -> lhsValue < rhsValue.toByte()
-            lhsValue is Double && rhsValue is Number -> lhsValue < rhsValue.toDouble()
-            lhsValue is Float && rhsValue is Number -> lhsValue < rhsValue.toFloat()
-            else -> cannotEvaluate(expr, this)
+        return if (lhsValue is Number && rhsValue is Number) {
+            comparator(lhsValue, rhsValue) < 0
+        } else {
+            cannotEvaluate(expr, this)
         }
     }
 
     private fun handleLEq(lhsValue: Any?, rhsValue: Any?, expr: BinaryOperator): Any? {
-        return when {
-            lhsValue is Int && rhsValue is Number -> lhsValue <= rhsValue.toInt()
-            lhsValue is Long && rhsValue is Number -> lhsValue <= rhsValue.toLong()
-            lhsValue is Short && rhsValue is Number -> lhsValue <= rhsValue.toShort()
-            lhsValue is Byte && rhsValue is Number -> lhsValue <= rhsValue.toByte()
-            lhsValue is Double && rhsValue is Number -> lhsValue <= rhsValue.toDouble()
-            lhsValue is Float && rhsValue is Number -> lhsValue <= rhsValue.toFloat()
-            else -> cannotEvaluate(expr, this)
+        return if (lhsValue is Number && rhsValue is Number) {
+            comparator(lhsValue, rhsValue) <= 0
+        } else {
+            cannotEvaluate(expr, this)
         }
     }
 
     private fun handleEq(lhsValue: Any?, rhsValue: Any?, expr: BinaryOperator): Any? {
-        return when {
-            lhsValue is Int && rhsValue is Number -> lhsValue == rhsValue.toInt()
-            lhsValue is Long && rhsValue is Number -> lhsValue == rhsValue.toLong()
-            lhsValue is Short && rhsValue is Number -> lhsValue == rhsValue.toShort()
-            lhsValue is Byte && rhsValue is Number -> lhsValue == rhsValue.toByte()
-            lhsValue is Double && rhsValue is Number -> lhsValue == rhsValue.toDouble()
-            lhsValue is Float && rhsValue is Number -> lhsValue == rhsValue.toFloat()
-            else -> cannotEvaluate(expr, this)
+        return if (lhsValue is Number && rhsValue is Number) {
+            comparator(lhsValue, rhsValue) == 0
+        } else {
+            cannotEvaluate(expr, this)
         }
     }
 
-    /** We handle some basic unary operators. These also affect pointers and dereferences for languages that support them. */
+    /**
+     * We handle some basic unary operators. These also affect pointers and dereferences for
+     * languages that support them.
+     */
     private fun handleUnaryOp(expr: UnaryOperator): Any? {
         return when (expr.operatorCode) {
             "-" -> {
