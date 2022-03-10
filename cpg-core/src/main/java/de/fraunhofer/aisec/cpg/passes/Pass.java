@@ -44,7 +44,7 @@ public abstract class Pass implements Consumer<TranslationResult> {
 
   protected static final Logger log = LoggerFactory.getLogger(Pass.class);
 
-  public Pass() {
+  protected Pass() {
     name = this.getClass().getName();
   }
 
