@@ -20,7 +20,7 @@ jobs:
           markDirectory: cpg-core/src/main/mark
           directory: cpg-core/src/main/java
 
-  build-cgo-osx:
+  build-cpgo-osx:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v2
@@ -30,9 +30,8 @@ jobs:
         with:
           distribution: "zulu"
           java-version: "15"
-          cache: 'gradle'
       - run: |
-          cd cpg-language-llvm/src/main/golang
+          cd cpg-language-go/src/main/golang
           ./build.sh
 
   build:
