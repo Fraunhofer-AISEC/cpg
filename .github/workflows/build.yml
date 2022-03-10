@@ -94,7 +94,7 @@ jobs:
       - uses: actions/download-artifact@v3
         with:
           name: libcpgo.dylib
-          path: cpg-language-go/src/main/resources/libcpgo.dylib
+          path: cpg-language-go/src/main/resources/
       - name: Build ${{ steps.determine_version.outputs.version }}
         run: |
           if [ "$SONAR_TOKEN" != "" ]
