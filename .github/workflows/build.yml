@@ -33,6 +33,12 @@ jobs:
       - run: |
           cd cpg-language-go/src/main/golang
           ./build.sh
+      - name: Archive cpgo library
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v2
+        with:
+          name: libcpgo.dylib
+          path: cpg-language-go/src/main/resources/libcpgo.dylib
 
   build:
     runs-on: ubuntu-latest
