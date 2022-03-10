@@ -20,8 +20,29 @@ jobs:
           markDirectory: cpg-core/src/main/mark
           directory: cpg-core/src/main/java
 
+  build-cpgo-osx:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of SonarQube analysis
+      - uses: actions/setup-java@v2
+        with:
+          distribution: "zulu"
+          java-version: "15"
+      - run: |
+          cd cpg-language-go/src/main/golang
+          ./build.sh
+      - name: Archive cpgo library
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v2
+        with:
+          name: libcpgo.dylib
+          path: cpg-language-go/src/main/resources/libcpgo.dylib
+
   build:
     runs-on: ubuntu-latest
+    needs: build-cpgo-osx
     steps:
       - uses: actions/checkout@v2
         with:
@@ -70,6 +91,10 @@ jobs:
       - name: Run pycodestyle
         run: |
             find cpg-language-python/src/main/python -iname "*.py" -exec pycodestyle \{\} \;
+      - uses: actions/download-artifact@v3
+        with:
+          name: libcpgo.dylib
+          path: cpg-language-go/src/main/resources/libcpgo.dylib
       - name: Build ${{ steps.determine_version.outputs.version }}
         run: |
           if [ "$SONAR_TOKEN" != "" ]
