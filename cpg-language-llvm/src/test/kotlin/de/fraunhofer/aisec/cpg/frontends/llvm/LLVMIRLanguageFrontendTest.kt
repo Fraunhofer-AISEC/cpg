@@ -73,9 +73,7 @@ class LLVMIRLanguageFrontendTest {
         assertEquals("i32", main.type.name)
 
         val xVector =
-            (((main.body as CompoundStatement).statements[0] as? CompoundStatement)?.statements
-                    ?.get(0) as?
-                    DeclarationStatement)
+            (main.bodyOrNull<CompoundStatement>(0)?.statements?.get(0) as? DeclarationStatement)
                 ?.singleDeclaration as?
                 VariableDeclaration
         val xInit = xVector?.initializer as? InitializerListExpression
