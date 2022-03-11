@@ -44,7 +44,9 @@ class GoLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeMa
 
         init {
             try {
-                val arch = System.getProperty("os.arch").replace("aarch64", "arm64")
+                val arch = System.getProperty("os.arch")
+                    .replace("aarch64", "arm64")
+                    .replace("x86_64", "amd64")
                 val ext: String =
                     if (System.getProperty("os.name").startsWith("Mac")) {
                         ".dylib"
