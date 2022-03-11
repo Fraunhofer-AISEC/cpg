@@ -53,6 +53,36 @@ class ExamplesTest {
     }
 
     @Test
+    fun testRust2() {
+        val topLevel = Path.of("src", "test", "resources", "llvm", "failed")
+
+        /* Failing:
+         *  - alloc-04ee48fceb10d7c0.ll
+         *  - compiler_builtins-f8373ef78ecdac9a.ll
+         *  - core-e4cbdb9a079d6d85.ll
+         *  - gimli-42844e93de3eb724.ll
+         *  - memchr-f368e2194464f0ec.ll
+         *  - miniz_oxide-bdfdbcfc5f7f7f1b.ll
+         *  - rustc_demangle-0523e76fb0a24ded.ll
+         *  - proc_macro-ad55da585703b268.ll -> OutOfMemoryError
+         *  - std-b98b422506f4d0f3.ll -> OutOfMemoryError
+         */
+        val tu =
+            TestUtils.analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("gimli-42844e93de3eb724.ll").toFile()),
+                topLevel,
+                false
+            ) {
+                it.registerLanguage(
+                    LLVMIRLanguageFrontend::class.java,
+                    LLVMIRLanguageFrontend.LLVM_EXTENSIONS
+                )
+            }
+
+        assertNotNull(tu)
+    }
+
+    @Test
     fun testIf() {
         val topLevel = Path.of("src", "test", "resources", "llvm", "examples", "llvm")
 
