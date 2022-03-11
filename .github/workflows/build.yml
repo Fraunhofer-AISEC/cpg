@@ -113,13 +113,13 @@ jobs:
         run: |
           if [ "$SONAR_TOKEN" != "" ]
           then
-            ./gradlew --no-daemon --parallel -Pversion=$VERSION -Pexperimental -PexperimentalTypeScript -Pintegration build sonarqube \
+            ./gradlew --no-daemon --parallel -Pversion=$VERSION -Pexperimental -PexperimentalTypeScript -Pintegration build -x distZip -x distTar sonarqube \
             -Dsonar.projectKey=Fraunhofer-AISEC_cpg \
             -Dsonar.organization=fraunhofer-aisec \
             -Dsonar.host.url=https://sonarcloud.io \
             -Dsonar.login=$SONAR_TOKEN
           else
-            ./gradlew --no-daemon --parallel -Pversion=$VERSION -Pexperimental -PexperimentalTypeScript -Pintegration build
+            ./gradlew --no-daemon --parallel -Pversion=$VERSION -Pexperimental -PexperimentalTypeScript -Pintegration -x distZip -x distTar build
           fi
         id: build
         env:
