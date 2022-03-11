@@ -37,12 +37,18 @@ jobs:
       - run: |
           cd cpg-language-go/src/main/golang
           ./build.sh
-      - name: Archive cpgo library
+      - name: Archive cpgo library (amd64)
         if: ${{ always() }}
         uses: actions/upload-artifact@v2
         with:
-          name: libcpgo.dylib
-          path: cpg-language-go/src/main/resources/libcpgo.dylib
+          name: libcpgo-amd64.dylib
+          path: cpg-language-go/src/main/resources/libcpgo-amd64.dylib
+      - name: Archive cpgo library (arm64)
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v2
+        with:
+          name: libcpgo-arm64.dylib
+          path: cpg-language-go/src/main/resources/libcpgo-arm64.dylib
 
   build:
     runs-on: ubuntu-latest
@@ -97,7 +103,11 @@ jobs:
             find cpg-language-python/src/main/python -iname "*.py" -exec pycodestyle \{\} \;
       - uses: actions/download-artifact@v3
         with:
-          name: libcpgo.dylib
+          name: libcpgo-arm64.dylib
+          path: cpg-language-go/src/main/resources/
+      - uses: actions/download-artifact@v3
+        with:
+          name: libcpgo-amd64.dylib
           path: cpg-language-go/src/main/resources/
       - name: Build ${{ steps.determine_version.outputs.version }}
         run: |
