@@ -68,8 +68,7 @@ class UnreachableEOGPassTest {
     @Test
     fun testIfBothPossible() {
         val method =
-            tu
-                .getDeclarationsByName("TestClass", RecordDeclaration::class.java)
+            tu.getDeclarationsByName("TestClass", RecordDeclaration::class.java)
                 .firstOrNull()
                 ?.declarations
                 ?.firstOrNull { d -> d.name == "ifBothPossible" } as
@@ -88,8 +87,7 @@ class UnreachableEOGPassTest {
     @Test
     fun testIfTrue() {
         val method =
-            tu
-                .getDeclarationsByName("TestClass", RecordDeclaration::class.java)
+            tu.getDeclarationsByName("TestClass", RecordDeclaration::class.java)
                 .firstOrNull()
                 ?.declarations
                 ?.firstOrNull { d -> d.name == "ifTrue" } as
@@ -107,8 +105,7 @@ class UnreachableEOGPassTest {
     @Test
     fun testIfFalse() {
         val method =
-            tu
-                .getDeclarationsByName("TestClass", RecordDeclaration::class.java)
+            tu.getDeclarationsByName("TestClass", RecordDeclaration::class.java)
                 .firstOrNull()
                 ?.declarations
                 ?.firstOrNull { d -> d.name == "ifFalse" } as
@@ -126,8 +123,7 @@ class UnreachableEOGPassTest {
     @Test
     fun testIfTrueComputed() {
         val method =
-            tu
-                .getDeclarationsByName("TestClass", RecordDeclaration::class.java)
+            tu.getDeclarationsByName("TestClass", RecordDeclaration::class.java)
                 .firstOrNull()
                 ?.declarations
                 ?.firstOrNull { d -> d.name == "ifTrueComputed" } as
@@ -145,8 +141,7 @@ class UnreachableEOGPassTest {
     @Test
     fun testIfFalseComputed() {
         val method =
-            tu
-                .getDeclarationsByName("TestClass", RecordDeclaration::class.java)
+            tu.getDeclarationsByName("TestClass", RecordDeclaration::class.java)
                 .firstOrNull()
                 ?.declarations
                 ?.firstOrNull { d -> d.name == "ifFalseComputed" } as
@@ -164,8 +159,7 @@ class UnreachableEOGPassTest {
     @Test
     fun testWhileTrueEndless() {
         val method =
-            tu
-                .getDeclarationsByName("TestClass", RecordDeclaration::class.java)
+            tu.getDeclarationsByName("TestClass", RecordDeclaration::class.java)
                 .firstOrNull()
                 ?.declarations
                 ?.firstOrNull { d -> d.name == "whileTrueEndless" } as
@@ -183,8 +177,7 @@ class UnreachableEOGPassTest {
     @Test
     fun testWhileTrue() {
         val method =
-            tu
-                .getDeclarationsByName("TestClass", RecordDeclaration::class.java)
+            tu.getDeclarationsByName("TestClass", RecordDeclaration::class.java)
                 .firstOrNull()
                 ?.declarations
                 ?.firstOrNull { d -> d.name == "whileTrue" } as
@@ -202,8 +195,7 @@ class UnreachableEOGPassTest {
     @Test
     fun testWhileComputedTrue() {
         val method =
-            tu
-                .getDeclarationsByName("TestClass", RecordDeclaration::class.java)
+            tu.getDeclarationsByName("TestClass", RecordDeclaration::class.java)
                 .firstOrNull()
                 ?.declarations
                 ?.firstOrNull { d -> d.name == "whileComputedTrue" } as
@@ -221,8 +213,7 @@ class UnreachableEOGPassTest {
     @Test
     fun testWhileFalse() {
         val method =
-            tu
-                .getDeclarationsByName("TestClass", RecordDeclaration::class.java)
+            tu.getDeclarationsByName("TestClass", RecordDeclaration::class.java)
                 .firstOrNull()
                 ?.declarations
                 ?.firstOrNull { d -> d.name == "whileFalse" } as
@@ -240,8 +231,7 @@ class UnreachableEOGPassTest {
     @Test
     fun testWhileComputedFalse() {
         val method =
-            tu
-                .getDeclarationsByName("TestClass", RecordDeclaration::class.java)
+            tu.getDeclarationsByName("TestClass", RecordDeclaration::class.java)
                 .firstOrNull()
                 ?.declarations
                 ?.firstOrNull { d -> d.name == "whileComputedFalse" } as
@@ -259,8 +249,7 @@ class UnreachableEOGPassTest {
     @Test
     fun testWhileUnknown() {
         val method =
-            tu
-                .getDeclarationsByName("TestClass", RecordDeclaration::class.java)
+            tu.getDeclarationsByName("TestClass", RecordDeclaration::class.java)
                 .firstOrNull()
                 ?.declarations
                 ?.firstOrNull { d -> d.name == "whileUnknown" } as

@@ -14,7 +14,11 @@ int main() {
 
     println("Hello " + "world");
 
-    bool h = 5<3;
-    bool i = 3>3;
-    bool j = 3>=3;
+    bool h = 5 < 3;
+    bool i = 3 > 3;
+    bool j = 3 >= 3.2;
+    bool k = 3.1 <= 3;
+    bool l = 3L >= ((float) 3.1);
+    bool m = ((char) 3) >= 3.1;
+    bool n = 3 == 3.1;
 }
