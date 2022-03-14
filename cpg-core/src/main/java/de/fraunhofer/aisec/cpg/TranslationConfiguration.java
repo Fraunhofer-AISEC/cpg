@@ -448,6 +448,7 @@ public class TranslationConfiguration {
       registerPass(new TypeResolver());
       registerPass(new ControlFlowSensitiveDFGPass());
       registerPass(new FilenameMapper());
+      registerPass(new StatisticsCollectionPass());
       return this;
     }
 

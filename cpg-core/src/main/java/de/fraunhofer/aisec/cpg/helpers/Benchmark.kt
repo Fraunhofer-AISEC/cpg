@@ -69,9 +69,7 @@ interface StatisticsHolder {
                         "Translated file(s)",
                         translatedFiles.map { relativeOrAbsolute(Path.of(it), config.topLevel) }
                     ),
-                    *benchmarks
-                        .map { listOf("${it.caller}: ${it.message}", "${it.duration} ms") }
-                        .toTypedArray()
+                    *benchmarks.map { it.getBenchmarkedValues() }.toTypedArray()
                 )
             )
         }
@@ -129,20 +127,21 @@ fun relativeOrAbsolute(path: Path, topLevel: File?): Path {
     }
 }
 
-open class Benchmark
-@JvmOverloads
-constructor(
+open class TimeBenchmark(
     c: Class<*>,
-    val message: String,
-    private var debug: Boolean = false,
-    private var holder: StatisticsHolder? = null
-) {
+    message: String,
+    debug: Boolean = false,
+    holder: StatisticsHolder? = null
+) : Benchmark(c, message, debug, holder) {
 
-    val caller: String
     private val start: Instant
 
     var duration: Long
         private set
+
+    override fun getBenchmarkedValues(): List<String> {
+        return listOf("${caller}: ${message}", "${duration} ms")
+    }
 
     fun stop(): Long {
         duration = Duration.between(start, Instant.now()).toMillis()
@@ -167,8 +166,48 @@ constructor(
 
     init {
         this.duration = -1
-        caller = c.simpleName
         start = Instant.now()
+    }
+}
+
+open class MeasurementBenchmark(
+    c: Class<*>,
+    message: String,
+    debug: Boolean = false,
+    holder: StatisticsHolder? = null
+) : Benchmark(c, message, debug, holder) {
+
+    var measurements: MutableMap<String, String> = mutableMapOf()
+        private set
+
+    override fun getBenchmarkedValues(): List<String> {
+        return measurements.flatMap { listOf("Measured ${it.key}: ${it.value}") }
+    }
+
+    companion object {
+        private val log = LoggerFactory.getLogger(MeasurementBenchmark::class.java)
+    }
+}
+
+abstract class Benchmark
+@JvmOverloads
+constructor(
+    c: Class<*>,
+    val message: String,
+    protected var debug: Boolean = false,
+    protected var holder: StatisticsHolder? = null
+) {
+
+    val caller: String
+
+    abstract fun getBenchmarkedValues(): List<String>
+
+    companion object {
+        private val log = LoggerFactory.getLogger(Benchmark::class.java)
+    }
+
+    init {
+        caller = c.simpleName
 
         val msg = "$caller: $message"
 

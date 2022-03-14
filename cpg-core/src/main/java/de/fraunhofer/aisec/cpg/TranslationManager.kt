@@ -29,8 +29,8 @@ import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.frontends.cpp.CXXLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.TypeManager
-import de.fraunhofer.aisec.cpg.helpers.Benchmark
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
+import de.fraunhofer.aisec.cpg.helpers.TimeBenchmark
 import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.passes.Pass
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
@@ -75,7 +75,7 @@ private constructor(
         return CompletableFuture.supplyAsync {
             val scopesBuildForAnalysis = ScopeManager()
             val outerBench =
-                Benchmark(
+                TimeBenchmark(
                     TranslationManager::class.java,
                     "Translation into full graph",
                     false,
@@ -86,7 +86,8 @@ private constructor(
 
             try {
                 // Parse Java/C/CPP files
-                var bench = Benchmark(this.javaClass, "Executing Language Frontend", false, result)
+                var bench =
+                    TimeBenchmark(this.javaClass, "Executing Language Frontend", false, result)
                 frontendsNeedCleanup = runFrontends(result, config, scopesBuildForAnalysis)
                 bench.stop()
 
@@ -96,7 +97,7 @@ private constructor(
                 // Apply passes
                 for (pass in config.registeredPasses) {
                     passesNeedCleanup.add(pass)
-                    bench = Benchmark(pass.javaClass, "Executing Pass", false, result)
+                    bench = TimeBenchmark(pass.javaClass, "Executing Pass", false, result)
                     pass.accept(result)
                     bench.stop()
                     if (result.isCancelled) {
@@ -213,7 +214,7 @@ private constructor(
             TypeManager.setTypeSystemActive(true)
 
             result.translationUnits.forEach {
-                val bench = Benchmark(this.javaClass, "Activating types for ${it.name}", true)
+                val bench = TimeBenchmark(this.javaClass, "Activating types for ${it.name}", true)
                 SubgraphWalker.activateTypes(it, scopeManager)
                 bench.stop()
             }
