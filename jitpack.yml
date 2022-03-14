@@ -1,4 +1,4 @@
 jdk:
   - openjdk11
 install:
-  - ./gradlew build -xtest -Pgroup=com.github.Fraunhofer-AISEC -PnodeDownload=true -PexperimentalTypeScript -PexperimentalPython publishToMavenLocal
+  - ./gradlew build -xtest -Pgroup=com.github.Fraunhofer-AISEC -PnodeDownload=true -PskipGoBuild publishToMavenLocal

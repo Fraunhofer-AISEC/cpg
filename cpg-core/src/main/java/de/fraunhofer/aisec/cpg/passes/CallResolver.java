@@ -306,9 +306,9 @@ public class CallResolver extends Pass {
    * @param callParameter
    * @param templateParameter
    * @return If the TemplateParameter is an TypeParamDeclaration, the callParameter must be an
-   *     ObjectType => returns true If the TemplateParameter is a ParamVariableDeclaration, the
+   *     ObjectType =&gt; returns true If the TemplateParameter is a ParamVariableDeclaration, the
    *     callParamerter must be an Expression and its type must match the type of the
-   *     ParamVariableDeclaration (same type or subtype) => returns true Otherwise return false
+   *     ParamVariableDeclaration (same type or subtype) =&gt; returns true Otherwise return false
    */
   protected boolean isInstantiated(Node callParameter, Declaration templateParameter) {
     if (callParameter instanceof TypeExpression) {
@@ -397,8 +397,8 @@ public class CallResolver extends Pass {
 
   /**
    * Creates a Mapping between the Parameters of the TemplateDeclaration and the Values provided for
-   * the instantiation of the template (Only the ones that are in defined in the instantiation -> no
-   * defaults or implicit). Additionally, it fills the maps and lists mentioned below:
+   * the instantiation of the template (Only the ones that are in defined in the instantiation -&gt;
+   * no defaults or implicit). Additionally, it fills the maps and lists mentioned below:
    *
    * @param functionTemplateDeclaration functionTemplate we have identified that should be
    *     instantiated
@@ -410,7 +410,7 @@ public class CallResolver extends Pass {
    * @return mapping containing the all elements of the signature of the TemplateDeclaration as key
    *     and the Type/Expression the Parameter is initialized with. This function returns null if
    *     the {ParamVariableDeclaration, TypeParamDeclaration} do not match the provided value for
-   *     initialization -> initialization not possible
+   *     initialization -&gt; initialization not possible
    */
   @Nullable
   protected Map<Declaration, Node> constructTemplateInitializationSignatureFromTemplateParameters(
@@ -449,7 +449,7 @@ public class CallResolver extends Pass {
   }
 
   /**
-   * Creates a Mapping between the Paramerters of the TemplateDeclaration and the Values provided *
+   * Creates a Mapping between the Parameters of the TemplateDeclaration and the Values provided *
    * for the instantiation of the template.
    *
    * <p>The difference to {@link
@@ -468,7 +468,7 @@ public class CallResolver extends Pass {
    * @return mapping containing the all elements of the signature of the TemplateDeclaration as key
    *     and the Type/Expression the Parameter is initialized with. This function returns null if
    *     the {ParamVariableDeclaration, TypeParamDeclaration} do not match the provided value for
-   *     initialization -> initialization not possible
+   *     initialization -&gt; initialization not possible
    */
   protected Map<Declaration, Node> getTemplateInitializationSignature(
       FunctionTemplateDeclaration functionTemplateDeclaration,

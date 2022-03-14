@@ -41,7 +41,6 @@ import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.io.File
 import java.nio.ByteBuffer
-import kotlin.collections.ArrayList
 import org.bytedeco.javacpp.BytePointer
 import org.bytedeco.llvm.LLVM.*
 import org.bytedeco.llvm.global.LLVM.*
@@ -53,6 +52,7 @@ class LLVMIRLanguageFrontend(config: TranslationConfiguration, scopeManager: Sco
     val statementHandler = StatementHandler(this)
     val declarationHandler = DeclarationHandler(this)
     val expressionHandler = ExpressionHandler(this)
+    val typeCache = mutableMapOf<String, Type>()
 
     val phiList = mutableListOf<LLVMValueRef>()
 
@@ -60,7 +60,7 @@ class LLVMIRLanguageFrontend(config: TranslationConfiguration, scopeManager: Sco
 
     /**
      * This contains a cache binding between an LLVMValueRef (representing a variable) and its
-     * [Declaration] in the graph. We need this, because this way we can lookup and connect a
+     * [Declaration] in the graph. We need this, because this way we can look up and connect a
      * [DeclaredReferenceExpression] to its [Declaration] already in the language frontend. This in
      * turn is needed because of the local/global system we cannot rely on the
      * [VariableUsageResolver].
@@ -167,36 +167,42 @@ class LLVMIRLanguageFrontend(config: TranslationConfiguration, scopeManager: Sco
 
     internal fun typeFrom(
         typeRef: LLVMTypeRef,
-        alreadyVisited: ArrayList<LLVMTypeRef> = ArrayList()
+        alreadyVisited: MutableMap<LLVMTypeRef, Type?> = mutableMapOf()
     ): Type {
-        if (typeRef in alreadyVisited) {
-            return TypeParser.createFrom(LLVMPrintTypeToString(typeRef).string, false)
+        val typeStr = LLVMPrintTypeToString(typeRef).string
+        if (typeStr in typeCache && typeCache[typeStr] != null) {
+            return typeCache[typeStr]!!
         }
-        alreadyVisited.add(typeRef)
-
-        when (LLVMGetTypeKind(typeRef)) {
-            LLVMArrayTypeKind -> {
-                // var length = LLVMGetArrayLength(typeRef)
-                val elementType = typeFrom(LLVMGetElementType(typeRef), alreadyVisited)
-
-                return elementType.reference(PointerType.PointerOrigin.ARRAY)
-            }
-            LLVMPointerTypeKind -> {
-                val elementType = typeFrom(LLVMGetElementType(typeRef), alreadyVisited)
-
-                return elementType.reference(PointerType.PointerOrigin.POINTER)
-            }
-            LLVMStructTypeKind -> {
-                val record = declarationHandler.handleStructureType(typeRef, alreadyVisited)
-
-                return record.toType() ?: UnknownType.getUnknownType()
-            }
-            else -> {
-                val typeStr = LLVMPrintTypeToString(typeRef).string
-
-                return TypeParser.createFrom(typeStr, false)
-            }
+        if (typeRef in alreadyVisited && alreadyVisited[typeRef] != null) {
+            return alreadyVisited[typeRef]!!
+        } else if (typeRef in alreadyVisited) {
+            // Recursive call but we can't resolve it.
+            return UnknownType.getUnknownType()
         }
+        alreadyVisited[typeRef] = null
+        val res: Type =
+            when (LLVMGetTypeKind(typeRef)) {
+                LLVMVectorTypeKind, LLVMArrayTypeKind -> {
+                    // var length = LLVMGetArrayLength(typeRef)
+                    val elementType = typeFrom(LLVMGetElementType(typeRef), alreadyVisited)
+                    elementType.reference(PointerType.PointerOrigin.ARRAY)
+                }
+                LLVMPointerTypeKind -> {
+                    val elementType = typeFrom(LLVMGetElementType(typeRef), alreadyVisited)
+                    elementType.reference(PointerType.PointerOrigin.POINTER)
+                }
+                LLVMStructTypeKind -> {
+                    val record = declarationHandler.handleStructureType(typeRef, alreadyVisited)
+                    record.toType() ?: UnknownType.getUnknownType()
+                }
+                else -> {
+                    val typeStr = LLVMPrintTypeToString(typeRef).string
+                    TypeParser.createFrom(typeStr, false)
+                }
+            }
+        alreadyVisited[typeRef] = res
+        typeCache[typeStr] = res
+        return res
     }
 
     override fun <T : Any?> getCodeFromRawNode(astNode: T): String? {

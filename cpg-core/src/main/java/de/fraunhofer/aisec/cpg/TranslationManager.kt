@@ -28,7 +28,6 @@ package de.fraunhofer.aisec.cpg
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.frontends.cpp.CXXLanguageFrontend
-import de.fraunhofer.aisec.cpg.frontends.golang.GoLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.TypeManager
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
@@ -169,7 +168,8 @@ private constructor(
                         .collect(Collectors.toList())
                 } else {
                     if (useParallelFrontends &&
-                            Util.getExtension(file).frontendClass == GoLanguageFrontend::class.java
+                            Util.getExtension(file).frontendClass?.simpleName ==
+                                "GoLanguageFrontend"
                     ) {
                         log.warn("Parallel frontends are not yet supported for Go")
                         useParallelFrontends = false
@@ -308,12 +308,6 @@ private constructor(
         f: LanguageFrontend
     ) {
         usedFrontends.add(f)
-
-        if (usedFrontends.map { it.javaClass }.distinct().count() > 1) {
-            log.error(
-                "Different frontends are used for multiple files. This will very likely break the following passes."
-            )
-        }
 
         // remember which frontend parsed each file
         val sfToFe =

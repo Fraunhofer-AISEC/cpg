@@ -33,6 +33,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import java.nio.file.Path
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 
 class ValueEvaluatorTest {
@@ -56,14 +57,14 @@ class ValueEvaluatorTest {
         assertNotNull(b)
 
         var value = b.evaluate()
-        assertEquals(2, value)
+        assertEquals(2L, value)
 
         val printB = main.bodyOrNull<CallExpression>()
         assertNotNull(printB)
 
         val evaluator = ValueEvaluator()
         value = evaluator.evaluate(printB.arguments.firstOrNull())
-        assertEquals(2, value)
+        assertEquals(2L, value)
 
         val path = evaluator.path
         assertEquals(4, path.size)
@@ -73,5 +74,68 @@ class ValueEvaluatorTest {
 
         value = printA.arguments.firstOrNull()?.evaluate()
         assertEquals(2, value)
+
+        val c = main.bodyOrNull<DeclarationStatement>(2)?.singleDeclaration
+        assertNotNull(c)
+
+        value = c.evaluate()
+        assertEquals(3L, value)
+
+        val d = main.bodyOrNull<DeclarationStatement>(3)?.singleDeclaration
+        assertNotNull(d)
+
+        value = d.evaluate()
+        assertEquals(2L, value)
+
+        val e = main.bodyOrNull<DeclarationStatement>(4)?.singleDeclaration
+        assertNotNull(e)
+        value = e.evaluate()
+        assertEquals(3.5, value)
+
+        val f = main.bodyOrNull<DeclarationStatement>(5)?.singleDeclaration
+        assertNotNull(f)
+        value = f.evaluate()
+        assertEquals(10L, value)
+
+        val printHelloWorld = main.bodyOrNull<CallExpression>(2)
+        assertNotNull(printHelloWorld)
+
+        value = printHelloWorld.arguments.firstOrNull()?.evaluate()
+        assertEquals("Hello world", value)
+
+        val g = main.bodyOrNull<DeclarationStatement>(6)?.singleDeclaration
+        assertNotNull(g)
+        value = g.evaluate()
+        assertEquals(-3L, value)
+
+        val h = main.bodyOrNull<DeclarationStatement>(7)?.singleDeclaration
+        assertNotNull(h)
+        value = h.evaluate()
+        assertFalse(value as Boolean)
+
+        val i = main.bodyOrNull<DeclarationStatement>(8)?.singleDeclaration
+        assertNotNull(i)
+        value = i.evaluate()
+        assertFalse(value as Boolean)
+
+        val j = main.bodyOrNull<DeclarationStatement>(9)?.singleDeclaration
+        assertNotNull(j)
+        value = j.evaluate()
+        assertFalse(value as Boolean)
+
+        val k = main.bodyOrNull<DeclarationStatement>(10)?.singleDeclaration
+        assertNotNull(k)
+        value = k.evaluate()
+        assertFalse(value as Boolean)
+
+        val l = main.bodyOrNull<DeclarationStatement>(11)?.singleDeclaration
+        assertNotNull(l)
+        value = l.evaluate()
+        assertFalse(value as Boolean)
+
+        val m = main.bodyOrNull<DeclarationStatement>(12)?.singleDeclaration
+        assertNotNull(m)
+        value = m.evaluate()
+        assertFalse(value as Boolean)
     }
 }

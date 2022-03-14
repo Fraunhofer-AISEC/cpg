@@ -23,6 +23,7 @@
 #                    \______/ \__|       \______/
 #
 from ._misc import NOT_IMPLEMENTED_MSG
+from ._misc import handle_operator_code
 from ._spotless_dummy import *
 from de.fraunhofer.aisec.cpg.graph import NodeBuilder
 from de.fraunhofer.aisec.cpg.graph.statements import CompoundStatement
@@ -32,8 +33,17 @@ import ast
 
 
 def handle_statement(self, stmt):
-    self.log_with_loc("Handling statement: %s" % (ast.dump(stmt)))
+    self.log_with_loc("Start \"handle_statement\" for:\n%s\n" %
+                      (self.get_src_code(stmt)))
+    r = self.handle_statement_impl(stmt)
+    self.add_loc_info(stmt, r)
+    self.log_with_loc("End \"handle_statement\" for:\n%s\nResult is: %s" %
+                      (self.get_src_code(stmt),
+                       r))
+    return r
 
+
+def handle_statement_impl(self, stmt):
     if isinstance(stmt, ast.FunctionDef):
         return self.handle_function_or_method(stmt)
     elif isinstance(stmt, ast.AsyncFunctionDef):
@@ -45,7 +55,6 @@ def handle_statement(self, stmt):
         # names per method).
         cls = NodeBuilder.newRecordDeclaration(stmt.name, "",
                                                self.get_src_code(stmt))
-        self.add_loc_info(stmt, cls)
         self.scopemanager.enterScope(cls)
         bases = []
         for base in stmt.bases:
@@ -66,20 +75,8 @@ def handle_statement(self, stmt):
             elif isinstance(s, ast.stmt):
                 handled_stmt = self.handle_statement(s)
                 if self.is_declaration(handled_stmt):
-                    # TODO wrap this in a function...
-                    decl_stmt = NodeBuilder.newDeclarationStatement(
-                        self.get_src_code(s))
-                    self.add_loc_info(s, decl_stmt)
-                    decl_stmt.setSingleDeclaration(handled_stmt)
-                    cls.addStatement(decl_stmt)
-                elif self.is_statement(handled_stmt):
-                    cls.addStatement(handled_stmt)
-                else:
-                    self.log_with_loc(
-                        "Expected a statement or a declaration. Received %s" %
-                        (type(handled_stmt)), loglevel="ERROR")
-            else:
-                self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
+                    handled_stmt = self.wrap_declaration_to_stmt(handled_stmt)
+                cls.addStatement(handled_stmt)
         for decorator in stmt.decorator_list:
             self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         self.scopemanager.leaveScope(cls)
@@ -87,7 +84,6 @@ def handle_statement(self, stmt):
         return cls
     elif isinstance(stmt, ast.Return):
         r = NodeBuilder.newReturnStatement(self.get_src_code(stmt))
-        self.add_loc_info(stmt, r)
         if stmt.value is not None:
             r.setReturnValue(self.handle_expression(stmt.value)
                              )
@@ -95,46 +91,14 @@ def handle_statement(self, stmt):
     elif isinstance(stmt, ast.Delete):
         self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         r = NodeBuilder.newStatement("")
-        self.add_loc_info(stmt, r)
         return r
     elif isinstance(stmt, ast.Assign):
-        if len(stmt.targets) != 1:
-            self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
-            r = NodeBuilder.newBinaryOperator("=", self.get_src_code(stmt))
-            self.add_loc_info(stmt, r)
-            return r
-        target = stmt.targets[0]
-
-        # parse LHS and RHS as expressions
-        lhs = self.handle_expression(target)
-        rhs = self.handle_expression(stmt.value)
-
-        if self.is_variable_declaration(lhs) or self.is_field_declaration(lhs):
-            # new var => set initializer
-            lhs.setInitializer(rhs)
-            # lhs.setType(rhs.getType())
-            self.log_with_loc(
-                "Parsed as Variable/FieldDeclaration with initializer: %s" %
-                (lhs))
-            return lhs
-        else:
-            # found var => BinaryOperator "="
-            binop = NodeBuilder.newBinaryOperator("=", self.get_src_code(stmt))
-            self.add_loc_info(stmt, binop)
-            binop.setLhs(lhs)
-            binop.setRhs(rhs)
-            return binop
+        return self.handle_assign(stmt)
 
     elif isinstance(stmt, ast.AugAssign):
-        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
-        r = NodeBuilder.newStatement("")
-        self.add_loc_info(stmt, r)
-        return r
+        return self.handle_assign(stmt)
     elif isinstance(stmt, ast.AnnAssign):
-        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
-        r = NodeBuilder.newStatement("")
-        self.add_loc_info(stmt, r)
-        return r
+        return self.handle_assign(stmt)
     elif isinstance(stmt, ast.For):
         return self.handle_for(stmt)
     elif isinstance(stmt, ast.AsyncFor):
@@ -142,7 +106,6 @@ def handle_statement(self, stmt):
     elif isinstance(stmt, ast.While):
         # While(expr test, stmt* body, stmt* orelse)
         whl_stmt = NodeBuilder.newWhileStatement(self.get_src_code(stmt))
-        self.add_loc_info(stmt, whl_stmt)
         expr = self.handle_expression(stmt.test)
         if self.is_declaration(expr):
             whl_stmt.setConditionDeclaration(expr)
@@ -158,7 +121,6 @@ def handle_statement(self, stmt):
         return whl_stmt
     elif isinstance(stmt, ast.If):
         if_stmt = NodeBuilder.newIfStatement(self.get_src_code(stmt))
-        self.add_loc_info(stmt, if_stmt)
         # Condition
         if_stmt.setCondition(self.handle_expression(stmt.test))
         # Then
@@ -173,22 +135,18 @@ def handle_statement(self, stmt):
     elif isinstance(stmt, ast.With):
         self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         r = NodeBuilder.newStatement("")
-        self.add_loc_info(stmt, r)
         return r
     elif isinstance(stmt, ast.AsyncWith):
         self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         r = NodeBuilder.newStatement("")
-        self.add_loc_info(stmt, r)
         return r
     elif isinstance(stmt, ast.Raise):
         self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         r = NodeBuilder.newStatement("")
-        self.add_loc_info(stmt, r)
         return r
     elif isinstance(stmt, ast.Assert):
         self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         r = NodeBuilder.newStatement("")
-        self.add_loc_info(stmt, r)
         return r
     elif isinstance(stmt, ast.Import):
         """
@@ -200,7 +158,6 @@ def handle_statement(self, stmt):
 
         decl_stmt = NodeBuilder.newDeclarationStatement(
             self.get_src_code(stmt))
-        self.add_loc_info(stmt, decl_stmt)
         for s in stmt.names:
             if s.asname is not None:
                 name = s.asname
@@ -212,7 +169,6 @@ def handle_statement(self, stmt):
             v = NodeBuilder.newVariableDeclaration(
                 name, tpe, src, False)
             # inacurate but ast.alias does not hold location information
-            self.add_loc_info(stmt, v)
             self.scopemanager.addDeclaration(v)
             decl_stmt.addDeclaration(v)
         return decl_stmt
@@ -231,7 +187,6 @@ def handle_statement(self, stmt):
 
         decl_stmt = NodeBuilder.newDeclarationStatement(
             self.get_src_code(stmt))
-        self.add_loc_info(stmt, decl_stmt)
         for s in stmt.names:
             if s.asname is not None:
                 name = s.asname
@@ -243,38 +198,31 @@ def handle_statement(self, stmt):
             v = NodeBuilder.newVariableDeclaration(
                 name, tpe, src, False)
             # inacurate but ast.alias does not hold location information
-            self.add_loc_info(stmt, v)
             self.scopemanager.addDeclaration(v)
             decl_stmt.addDeclaration(v)
         return decl_stmt
     elif isinstance(stmt, ast.Global):
         self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         r = NodeBuilder.newStatement("")
-        self.add_loc_info(stmt, r)
         return r
     elif isinstance(stmt, ast.Nonlocal):
         self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         r = NodeBuilder.newStatement("")
-        self.add_loc_info(stmt, r)
         return r
     elif isinstance(stmt, ast.Expr):
         return self.handle_expression(stmt.value)
     elif isinstance(stmt, ast.Pass):
         p = NodeBuilder.newEmptyStatement("pass")
-        self.add_loc_info(stmt, p)
         return p
     elif isinstance(stmt, ast.Break):
         brk = NodeBuilder.newBreakStatement(self.get_src_code(stmt))
-        self.add_loc_info(stmt, brk)
         return brk
     elif isinstance(stmt, ast.Continue):
         self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
         r = NodeBuilder.newStatement("")
-        self.add_loc_info(stmt, r)
         return r
     elif isinstance(stmt, ast.Try):
         s = NodeBuilder.newTryStatement(self.get_src_code(stmt))
-        self.add_loc_info(stmt, s)
         try_block = self.make_compound_statement(stmt.body)
         finally_block = self.make_compound_statement(stmt.finalbody)
         if stmt.orelse is not None and len(stmt.orelse) != 0:
@@ -293,7 +241,6 @@ def handle_statement(self, stmt):
             "Received unepxected stmt: %s with type %s" %
             (stmt, type(stmt)))
         r = NodeBuilder.newStatement("")
-        self.add_loc_info(stmt, r)
         return r
 
 
@@ -307,7 +254,6 @@ def handle_function_or_method(self, node, record=None):
             "Expected either ast.FunctionDef or ast.AsyncFunctionDef",
             loglevel="ERROR")
         r = NodeBuilder.newFunctionDeclaration("DUMMY", "DUMMY")
-        self.add_loc_info(node, r)
         return r
 
     if isinstance(node, ast.AsyncFunctionDef):
@@ -335,7 +281,6 @@ def handle_function_or_method(self, node, record=None):
                 name, self.get_src_code(node), False, record)
     else:
         f = NodeBuilder.newFunctionDeclaration(name, self.get_src_code(node))
-    self.add_loc_info(node, f)
 
     self.scopemanager.enterScope(f)
 
@@ -349,7 +294,6 @@ def handle_function_or_method(self, node, record=None):
             tpe = TypeParser.createFrom(record.getName(), False)
             recv = NodeBuilder.newVariableDeclaration(
                 recv_node.arg, tpe, self.get_src_code(recv_node), False)
-            self.add_loc_info(recv_node, recv)
             f.setReceiver(recv)
             self.scopemanager.addDeclaration(recv)
         else:
@@ -391,19 +335,16 @@ def handle_function_or_method(self, node, record=None):
             ref = self.handle_expression(decorator.func)
             annotation = NodeBuilder.newAnnotation(
                 ref.getName(), self.get_src_code(decorator.func))
-            self.add_loc_info(decorator.func, annotation)
 
             # add the base as a receiver annotation
             member = NodeBuilder.newAnnotationMember(
                 "receiver", ref.getBase(), self.get_src_code(decorator.func))
-            self.add_loc_info(decorator.func, member)
 
             members.append(member)
         elif isinstance(decorator.func, ast.Name):
             ref = self.handle_expression(decorator.func)
             annotation = NodeBuilder.newAnnotation(
                 ref.getName(), self.get_src_code(decorator.func))
-            self.add_loc_info(decorator.func, member)
 
         else:
             self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
@@ -415,7 +356,6 @@ def handle_function_or_method(self, node, record=None):
 
             member = NodeBuilder.newAnnotationMember(
                 "value", value, self.get_src_code(arg0))
-            self.add_loc_info(arg0, member)
 
             members.append(member)
 
@@ -424,7 +364,6 @@ def handle_function_or_method(self, node, record=None):
             member = NodeBuilder.newAnnotationMember(
                 kw.arg, self.handle_expression(
                     kw.value), self.get_src_code(kw))
-            self.add_loc_info(kw, member)
 
             members.append(member)
 
@@ -451,7 +390,6 @@ def handle_argument(self, arg: ast.arg):
     # TODO variadic
     pvd = NodeBuilder.newMethodParameterIn(arg.arg,
                                            tpe, False, self.get_src_code(arg))
-    self.add_loc_info(arg, pvd)
     self.scopemanager.addDeclaration(pvd)
     return pvd
 
@@ -461,7 +399,6 @@ def handle_for(self, stmt):
         self.log_with_loc(("Expected ast.AsyncFor or ast.For. Skipping"
                           " evaluation."), loglevel="ERROR")
         r = NodeBuilder.newStatement("")
-        self.add_loc_info(stmt, r)
         return r
     if isinstance(stmt, ast.AsyncFor):
         self.log_with_loc((
@@ -471,14 +408,9 @@ def handle_for(self, stmt):
 
     # We can handle the AsyncFor / For statement now:
     for_stmt = NodeBuilder.newForEachStatement(self.get_src_code(stmt))
-    self.add_loc_info(stmt, for_stmt)
     target = self.handle_expression(stmt.target)
     if self.is_variable_declaration(target):
-        decl_stmt = NodeBuilder.newDeclarationStatement(
-            self.get_src_code(stmt.target))
-        self.add_loc_info(stmt.target, decl_stmt)
-        decl_stmt.setSingleDeclaration(target)
-        target = decl_stmt
+        target = self.wrap_declaration_to_stmt(target)
     for_stmt.setVariable(target)
     it = self.handle_expression(stmt.iter)
     for_stmt.setIterable(it)
@@ -492,8 +424,6 @@ def handle_for(self, stmt):
 
 
 def make_compound_statement(self, stmts) -> CompoundStatement:
-    self.log_with_loc("Making a CompoundStatement")
-
     if stmts is None or len(stmts) == 0:
         self.log_with_loc(
             "Expected at least one statement. Returning a dummy.",
@@ -504,24 +434,190 @@ def make_compound_statement(self, stmts) -> CompoundStatement:
         """ TODO decide how to handle this... """
         s = self.handle_statement(stmts[0])
         if self.is_declaration(s):
-            decl_stmt = NodeBuilder.newDeclarationStatement(
-                self.get_src_code(stmts[0]))
-            self.add_loc_info(stmts[0], decl_stmt)
-            decl_stmt.setSingleDeclaration(s)
-            return decl_stmt
-        else:
-            return s
+            s = self.wrap_declaration_to_stmt(s)
+        return s
     else:
         compound_statement = NodeBuilder.newCompoundStatement("")
         # TODO location
         for s in stmts:
             s = self.handle_statement(s)
             if self.is_declaration(s):
-                decl_stmt = NodeBuilder.newDeclarationStatement(s.getCode())
-                decl_stmt.setLocation(s.getLocation())
-                decl_stmt.setSingleDeclaration(s)
-                compound_statement.addStatement(decl_stmt)
-            else:
-                compound_statement.addStatement(s)
+                s = self.wrap_declaration_to_stmt(s)
+            compound_statement.addStatement(s)
 
         return compound_statement
+
+
+def handle_assign(self, stmt):
+    self.log_with_loc("Start \"handle_assign\" for:\n%s\n" %
+                      (self.get_src_code(stmt)))
+    r = self.handle_assign_impl(stmt)
+    self.add_loc_info(stmt, r)
+    self.log_with_loc("End \"handle_assign\" for:\n%s\nResult is: %s" %
+                      (self.get_src_code(stmt),
+                       r))
+    return r
+
+
+def handle_assign_impl(self, stmt):
+    """
+    This funnction handles assignments (ast.Assign, ast.AnnAssign,
+    ast.AugAssign)
+    """
+    if stmt is ast.AugAssign:
+        target = self.handle_expression(stmt.target)
+        op = self.handle_operator_code(stmt.op)
+        value = self.handle_expression(stmt.value)
+        r = NodeBuilder.newBinaryOperator(op, self, get_src_code(stmt)
+                                          )
+        r.setLhs(target)
+        r.setRhs(value)
+        return r
+    if isinstance(stmt, ast.Assign) and len(stmt.targets) != 1:
+        self.log_with_loc(NOT_IMPLEMENTED_MSG, loglevel="ERROR")
+        r = NodeBuilder.newBinaryOperator("=", self.get_src_code(stmt))
+        return r
+    if isinstance(stmt, ast.Assign):
+        target = stmt.targets[0]
+    else:
+        target = stmt.target
+
+    # parse LHS and RHS as expressions
+    lhs = self.handle_expression(target)
+    if stmt.value is not None:
+        rhs = self.handle_expression(stmt.value)
+    else:
+        rhs = None
+
+    if not self.is_declared_reference(
+            lhs) and not self.is_member_expression(lhs):
+        self.log_with_loc(
+            "Expected a DeclaredReferenceExpression or MemberExpression "
+            "but got \"%s\". Skipping." %
+            (lhs.java_name), loglevel="ERROR")
+        r = NodeBuilder.newBinaryOperator("=", self.get_src_code(stmt))
+        return r
+
+    resolved_lhs = self.scopemanager.resolveReference(lhs)
+    inRecord = self.scopemanager.isInRecord()
+    inFunction = self.scopemanager.isInFunction()
+
+    if resolved_lhs is not None:
+        # found var => BinaryOperator "="
+        binop = NodeBuilder.newBinaryOperator("=", self.get_src_code(stmt))
+        binop.setLhs(lhs)
+        if rhs is not None:
+            binop.setRhs(rhs)
+        return binop
+    else:
+        if inRecord and not inFunction:
+            """
+            class Foo:
+                class_var = 123
+            """
+            if self.is_declared_reference(lhs):
+                name = lhs.getName()
+            else:
+                name = "DUMMY"
+                self.log_with_loc(
+                    "Expected a DeclaredReferenceExpression but got a "
+                    "MemberExpression. Using a dummy.",
+                    loglevel="ERROR")
+
+            self.log_with_loc(
+                "Could not resolve -> creating a new field for: %s" %
+                (name))
+            if rhs is not None:
+                v = NodeBuilder.newFieldDeclaration(
+                    name,
+                    rhs.getType(),
+                    None,
+                    self.get_src_code(stmt),
+                    None,
+                    rhs,
+                    False)  # TODO None -> infos eintragen
+            else:
+                v = NodeBuilder.newFieldDeclaration(
+                    name,
+                    UnknownType.getUnknownType(),
+                    None,
+                    self.get_src_code(stmt),
+                    None,
+                    None,
+                    False)  # TODO None -> infos eintragen
+            self.scopemanager.addDeclaration(v)
+            return v
+        elif inRecord and inFunction:
+            """
+            class Foo:
+                def bar(self):
+                    baz = 123
+                    self.new_field = 456
+            """
+            if self.is_declared_reference(lhs):
+                self.log_with_loc(
+                    "Could not resolve -> creating a new variable for: %s"
+                    % (lhs.getName()))
+                if rhs is not None:
+                    v = NodeBuilder.newVariableDeclaration(
+                        lhs.getName(), rhs.getType(),
+                        self.get_src_code(stmt), False)
+                else:
+                    v = NodeBuilder.newVariableDeclaration(
+                        lhs.getName(), UnknownType.getUnknownType(),
+                        self.get_src_code(stmt), False)
+                if rhs is not None:
+                    v.setInitializer(rhs)
+                self.scopemanager.addDeclaration(v)
+                return v
+            else:  # MemberExpression
+                self.log_with_loc(
+                    "Probably a new field for: %s" %
+                    (lhs.getName()))
+                current_function = self.scopemanager.getCurrentFunction()
+                recv_name = None
+                mem_base_is_receiver = False
+                if current_function is not None:
+                    recv = current_function.getReceiver()
+                    if recv is not None:
+                        recv_name = recv.getName()
+                base = lhs.getBase()
+                if self.is_declared_reference(base):
+                    mem_base_is_receiver = base.getName() == recv_name
+                if not mem_base_is_receiver:
+                    self.log_with_loc("I'm confused.", loglevel="ERROR")
+                    return NodeBuilder.newStatement("DUMMY")
+                if rhs is not None and self.is_declared_reference(rhs):
+                    # TODO figure out why the cpg pass fails to do this...
+                    rhs.setRefersTo(
+                        self.scopemanager.resolveReference(rhs))
+                if rhs is not None:
+                    v = NodeBuilder.newFieldDeclaration(
+                        lhs.getName(), rhs.getType(), None,
+                        self.get_src_code(stmt), None, rhs, False)
+                else:
+                    v = NodeBuilder.newFieldDeclaration(
+                        lhs.getName(), UnknownType.getUnknownType(), None,
+                        self.get_src_code(stmt), None, None, False)
+                self.scopemanager.addDeclaration(v)
+                self.scopemanager.getCurrentRecord().addField(v)
+                return v
+        elif not inRecord:
+            """
+            either in a function or at file top-level
+            """
+            self.log_with_loc(
+                "Could not resolve -> creating a new variable for: %s" %
+                (lhs.getName()))
+            if rhs is not None:
+                v = NodeBuilder.newVariableDeclaration(
+                    lhs.getName(), rhs.getType(),
+                    self.get_src_code(stmt), False)
+            else:
+                v = NodeBuilder.newVariableDeclaration(
+                    lhs.getName(), UnknownType.getUnknownType(),
+                    self.get_src_code(stmt), False)
+            if rhs is not None:
+                v.setInitializer(rhs)
+            self.scopemanager.addDeclaration(v)
+            return v

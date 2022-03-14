@@ -20,8 +20,39 @@ jobs:
           markDirectory: cpg-core/src/main/mark
           directory: cpg-core/src/main/java
 
+  build-cpgo-osx:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of SonarQube analysis
+      - name: Setup Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.17
+      - uses: actions/setup-java@v2
+        with:
+          distribution: "zulu"
+          java-version: "15"
+      - run: |
+          cd cpg-language-go/src/main/golang
+          ./build.sh
+      - name: Archive cpgo library (amd64)
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v2
+        with:
+          name: libcpgo-amd64.dylib
+          path: cpg-language-go/src/main/resources/libcpgo-amd64.dylib
+      - name: Archive cpgo library (arm64)
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v2
+        with:
+          name: libcpgo-arm64.dylib
+          path: cpg-language-go/src/main/resources/libcpgo-arm64.dylib
+
   build:
     runs-on: ubuntu-latest
+    needs: build-cpgo-osx
     steps:
       - uses: actions/checkout@v2
         with:
@@ -33,7 +64,7 @@ jobs:
           cache: 'gradle'
       - uses: actions/setup-python@v2
         with:
-          python-version: "3.9"
+          python-version: "3.10"
       - uses: actions/setup-node@v2
         with:
           node-version: '16'
@@ -63,24 +94,32 @@ jobs:
       - name: Install JEP
         run: |
           pip3 install jep==$(grep "black.ninia:jep" cpg-language-python/build.gradle.kts | cut -d ":" -f 3 | cut -d "\"" -f 1)
-          sudo cp /opt/hostedtoolcache/Python/3.9*/x64/lib/python3.9/site-packages/jep/libjep.so /usr/lib/
+          find /opt/hostedtoolcache/Python/ -name libjep.so -exec sudo cp '{}' /usr/lib/ \;
       - name: Install pycodestyle
         run: |
             pip3 install pycodestyle
       - name: Run pycodestyle
         run: |
             find cpg-language-python/src/main/python -iname "*.py" -exec pycodestyle \{\} \;
+      - uses: actions/download-artifact@v3
+        with:
+          name: libcpgo-arm64.dylib
+          path: cpg-language-go/src/main/resources/
+      - uses: actions/download-artifact@v3
+        with:
+          name: libcpgo-amd64.dylib
+          path: cpg-language-go/src/main/resources/
       - name: Build ${{ steps.determine_version.outputs.version }}
         run: |
           if [ "$SONAR_TOKEN" != "" ]
           then
-            ./gradlew --no-daemon --parallel -Pversion=$VERSION -Pexperimental -PexperimentalTypeScript -Pintegration build sonarqube \
+            ./gradlew --no-daemon --parallel -Pversion=$VERSION -Pexperimental -PexperimentalTypeScript -Pintegration build -x distZip -x distTar sonarqube \
             -Dsonar.projectKey=Fraunhofer-AISEC_cpg \
             -Dsonar.organization=fraunhofer-aisec \
             -Dsonar.host.url=https://sonarcloud.io \
             -Dsonar.login=$SONAR_TOKEN
           else
-            ./gradlew --no-daemon --parallel -Pversion=$VERSION -Pexperimental -PexperimentalTypeScript -Pintegration build
+            ./gradlew --no-daemon --parallel -Pversion=$VERSION -Pexperimental -PexperimentalTypeScript -Pintegration -x distZip -x distTar build
           fi
         id: build
         env:

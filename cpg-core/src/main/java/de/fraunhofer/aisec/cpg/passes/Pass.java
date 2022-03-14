@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.passes;
 
 import de.fraunhofer.aisec.cpg.GraphTransformation;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import de.fraunhofer.aisec.cpg.TranslationResult;
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
 import de.fraunhofer.aisec.cpg.graph.Node;
@@ -42,14 +43,24 @@ import org.slf4j.LoggerFactory;
  */
 public abstract class Pass extends GraphTransformation implements Consumer<TranslationResult> {
 
+  protected String name;
+
   protected static final Logger log = LoggerFactory.getLogger(Pass.class);
 
-  @Nullable protected LanguageFrontend lang;
+  protected Pass() {
+    name = this.getClass().getName();
+  }
+
+  @JsonIgnore @Nullable protected LanguageFrontend lang;
 
   /** @return May be null */
   @Nullable
   public LanguageFrontend getLang() {
     return lang;
+  }
+
+  public String getName() {
+    return name;
   }
 
   /**

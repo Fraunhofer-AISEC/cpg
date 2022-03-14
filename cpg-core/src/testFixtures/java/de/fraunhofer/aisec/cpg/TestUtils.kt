@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg
 
+import de.fraunhofer.aisec.cpg.frontends.CompilationDatabase
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.TypeManager
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
@@ -33,7 +34,6 @@ import de.fraunhofer.aisec.cpg.helpers.Util
 import java.io.File
 import java.nio.file.Files
 import java.nio.file.Path
-import java.util.*
 import java.util.function.Consumer
 import java.util.function.Predicate
 import java.util.stream.Collectors
@@ -189,6 +189,21 @@ object TestUtils {
     ): TranslationUnitDeclaration {
         val translationUnits = analyze(files, topLevel, usePasses, configModifier)
         return translationUnits.stream().findFirst().orElseThrow()
+    }
+
+    @JvmStatic
+    @Throws(Exception::class)
+    fun analyzeWithCompilationDatabase(
+        jsonCompilationDatabase: File,
+        usePasses: Boolean,
+    ): List<TranslationUnitDeclaration> {
+        return analyze(listOf(), jsonCompilationDatabase.parentFile.toPath(), usePasses) {
+            val db = CompilationDatabase.fromFile(jsonCompilationDatabase)
+            if (db.isNotEmpty()) {
+                it.useCompilationDatabase(db)
+                it.sourceLocations(db.sourceFiles)
+            }
+        }
     }
 
     @JvmStatic

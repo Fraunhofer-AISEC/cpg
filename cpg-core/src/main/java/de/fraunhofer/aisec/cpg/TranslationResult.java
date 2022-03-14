@@ -29,11 +29,9 @@ import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.SubGraph;
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration;
 import de.fraunhofer.aisec.cpg.helpers.Benchmark;
+import de.fraunhofer.aisec.cpg.helpers.BenchmarkResults;
 import de.fraunhofer.aisec.cpg.helpers.StatisticsHolder;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import org.jetbrains.annotations.NotNull;
@@ -53,6 +51,11 @@ public class TranslationResult extends Node implements StatisticsHolder {
 
   /** A free-for-use HashMap where passes can store whatever they want. */
   private final Map<String, Object> scratch = new ConcurrentHashMap<>();
+
+  /**
+   * A free-for-use collection of unique nodes. Nodes stored here will be exported to Neo4j, too.
+   */
+  private final Set<Node> additionalNodes = new HashSet<>();
 
   private final List<Benchmark> benchmarks = new ArrayList<>();
 
@@ -90,12 +93,12 @@ public class TranslationResult extends Node implements StatisticsHolder {
    *
    * @return the scratch storage
    */
-  //  public Scene getScene() {
-  //    return this.scene;
-  //  }
-
   public Map<String, Object> getScratch() {
     return scratch;
+  }
+
+  public Set<Node> getAdditionalNodes() {
+    return additionalNodes;
   }
 
   public TranslationManager getTranslationManager() {
@@ -107,13 +110,9 @@ public class TranslationResult extends Node implements StatisticsHolder {
     this.benchmarks.add(b);
   }
 
+  @NotNull
   public List<Benchmark> getBenchmarks() {
     return benchmarks;
-  }
-
-  @Override
-  public void printBenchmark() {
-    StatisticsHolder.DefaultImpls.printBenchmark(this);
   }
 
   @NotNull
@@ -128,5 +127,10 @@ public class TranslationResult extends Node implements StatisticsHolder {
   @Override
   public TranslationConfiguration getConfig() {
     return translationManager.getConfig();
+  }
+
+  @NotNull
+  public BenchmarkResults getBenchmarkResults() {
+    return StatisticsHolder.DefaultImpls.getBenchmarkResults(this);
   }
 }
