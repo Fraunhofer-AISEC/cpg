@@ -177,8 +177,21 @@ open class MeasurementBenchmark(
     holder: StatisticsHolder? = null
 ) : Benchmark(c, message, debug, holder) {
 
-    var measurements: MutableMap<String, String> = mutableMapOf()
-        private set
+    private var measurements: MutableMap<String, String> = mutableMapOf()
+
+    fun addMeasurement(measurementKey: String, measurementValue: String) {
+        measurements[measurementKey] = measurementValue
+        val msg = "$caller $measurementKey: result is $measurementValue"
+
+        if (debug) {
+            MeasurementBenchmark.log.debug(msg)
+        } else {
+            MeasurementBenchmark.log.info(msg)
+        }
+
+        // update our holder, if we have any
+        holder?.addBenchmark(this)
+    }
 
     override fun getBenchmarkedValues(): List<String> {
         return measurements.flatMap { listOf("Measured ${it.key}: ${it.value}") }

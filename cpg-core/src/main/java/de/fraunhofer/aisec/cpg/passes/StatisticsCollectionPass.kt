@@ -31,7 +31,6 @@ import de.fraunhofer.aisec.cpg.graph.ProblemNode
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.helpers.MeasurementBenchmark
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.ScopedWalker
-import de.fraunhofer.aisec.cpg.helpers.TriConsumer
 
 class StatisticsCollectionPass : Pass() {
     override fun accept(translationResult: TranslationResult?) {
@@ -50,10 +49,10 @@ class StatisticsCollectionPass : Pass() {
                 walker.iterate(tu)
             }
         }
-        MeasurementBenchmark(this.javaClass, "Measuring Nodes", false, translationResult)
-            .measurements["Graph nodes"] = nodes.toString()
-        MeasurementBenchmark(this.javaClass, "Measuring ProblemNodes", false, translationResult)
-            .measurements["Problem nodes"] = problemNodes.toString()
+        val nodeMeasurement =
+            MeasurementBenchmark(this.javaClass, "Measuring Nodes", false, translationResult)
+        nodeMeasurement.addMeasurement("Graph nodes", nodes.toString())
+        nodeMeasurement.addMeasurement("Problem nodes", problemNodes.toString())
     }
 
     override fun cleanup() {}
