@@ -941,6 +941,22 @@ object NodeBuilder {
 
     @JvmStatic
     @JvmOverloads
+    fun newProblemExpression(
+        problem: String = "",
+        type: ProblemNode.ProblemType = ProblemNode.ProblemType.PARSING,
+        code: String? = null,
+        lang: LanguageFrontend? = null,
+        rawNode: Any? = null
+    ): ProblemExpression {
+        val node = ProblemExpression()
+        node.problem = problem
+        node.setCodeAndRegion(lang, rawNode, code)
+        log(node)
+        return node
+    }
+
+    @JvmStatic
+    @JvmOverloads
     fun newIncludeDeclaration(
         includeFilename: String,
         code: String? = null,

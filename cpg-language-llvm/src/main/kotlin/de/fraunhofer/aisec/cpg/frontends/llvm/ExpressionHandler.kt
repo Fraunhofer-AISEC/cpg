@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.frontends.llvm
 
 import de.fraunhofer.aisec.cpg.frontends.Handler
+import de.fraunhofer.aisec.cpg.graph.NodeBuilder
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newArraySubscriptionExpression
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newCastExpression
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newConditionalExpression
@@ -35,6 +36,7 @@ import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newInitializerListExpression
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newLiteral
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newMemberExpression
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newUnaryOperator
+import de.fraunhofer.aisec.cpg.graph.ProblemNode
 import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
@@ -53,7 +55,7 @@ import org.bytedeco.llvm.global.LLVM.*
  * [Expression]. Operands are basically arguments to an instruction.
  */
 class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
-    Handler<Expression, LLVMValueRef, LLVMIRLanguageFrontend>(::Expression, lang) {
+    Handler<Expression, LLVMValueRef, LLVMIRLanguageFrontend>(::ProblemExpression, lang) {
     init {
         map.put(LLVMValueRef::class.java) { handleValue(it) }
     }
@@ -97,7 +99,11 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
             }
             LLVMMetadataAsValueValueKind, LLVMInlineAsmValueKind -> {
                 // TODO
-                return Expression()
+                return NodeBuilder.newProblemExpression(
+                    "Metadata or ASM value kind not supported yet",
+                    ProblemNode.ProblemType.TRANSLATION,
+                    lang.getCodeFromRawNode(value)
+                )
             }
             else -> {
                 log.info(
@@ -126,7 +132,11 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
                     return newDeclaredReferenceExpression("poison", cpgType, "poison")
                 } else {
                     log.error("Unknown expression {}", kind)
-                    return Expression()
+                    return NodeBuilder.newProblemExpression(
+                        "Unknown expression ${kind}",
+                        ProblemNode.ProblemType.TRANSLATION,
+                        lang.getCodeFromRawNode(value)
+                    )
                 }
             }
         }
@@ -229,18 +239,38 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
                 LLVMAddrSpaceCast -> handleCastInstruction(value)
                 LLVMAdd, LLVMFAdd ->
                     lang.statementHandler.handleBinaryOperator(value, "+", false) as? Expression
-                        ?: Expression()
+                        ?: NodeBuilder.newProblemExpression(
+                            "Wrong type of constant binary operation +",
+                            ProblemNode.ProblemType.TRANSLATION,
+                            lang.getCodeFromRawNode(value)
+                        )
                 LLVMSub, LLVMFSub ->
                     lang.statementHandler.handleBinaryOperator(value, "-", false) as? Expression
-                        ?: Expression()
+                        ?: NodeBuilder.newProblemExpression(
+                            "Wrong type of constant binary operation -",
+                            ProblemNode.ProblemType.TRANSLATION,
+                            lang.getCodeFromRawNode(value)
+                        )
                 LLVMAShr ->
                     lang.statementHandler.handleBinaryOperator(value, ">>", false) as? Expression
-                        ?: Expression()
+                        ?: NodeBuilder.newProblemExpression(
+                            "Wrong type of constant binary operation >>",
+                            ProblemNode.ProblemType.TRANSLATION,
+                            lang.getCodeFromRawNode(value)
+                        )
                 LLVMICmp -> lang.statementHandler.handleIntegerComparison(value) as? Expression
-                        ?: Expression()
+                        ?: NodeBuilder.newProblemExpression(
+                            "Wrong type of constant comparison",
+                            ProblemNode.ProblemType.TRANSLATION,
+                            lang.getCodeFromRawNode(value)
+                        )
                 else -> {
                     log.error("Not handling constant expression of opcode {} yet", kind)
-                    Expression()
+                    NodeBuilder.newProblemExpression(
+                        "Not handling constant expression of opcode ${kind} yet",
+                        ProblemNode.ProblemType.TRANSLATION,
+                        lang.getCodeFromRawNode(value)
+                    )
                 }
             }
 
@@ -410,7 +440,12 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
         // the start
         var base = operand
 
-        var expr = Expression()
+        var expr: Expression =
+            NodeBuilder.newProblemExpression(
+                "Default node for getelementptr",
+                ProblemNode.ProblemType.TRANSLATION,
+                lang.getCodeFromRawNode(instr)
+            )
 
         // loop through all operands / indices
         for (idx: Int in loopStart until numOps) {
