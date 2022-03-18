@@ -91,6 +91,14 @@ public class SubgraphWalker {
     return new ArrayList<>();
   }
 
+  public static void printAst(Node node, String ident) {
+    System.out.println(ident + node.toString() + " (" + node.getCode() + ")");
+    List<Node> children = getAstChildren(node);
+    for (var child : children) {
+      printAst(child, ident);
+    }
+  }
+
   /**
    * Retrieves a list of AST children of the specified node by iterating all fields that are
    * annotated with the {@link SubGraph} annotation and its value "AST".

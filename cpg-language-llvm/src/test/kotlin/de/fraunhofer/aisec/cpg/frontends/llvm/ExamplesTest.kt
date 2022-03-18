@@ -71,7 +71,7 @@ class ExamplesTest {
             TestUtils.analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("gimli-42844e93de3eb724.ll").toFile()),
                 topLevel,
-                false
+                true
             ) {
                 it.registerLanguage(
                     LLVMIRLanguageFrontend::class.java,

@@ -141,6 +141,7 @@ class CompressLLVMPass : Pass() {
                 }
             }
         }
+        SubgraphWalker.printAst(t, "")
     }
 
     /**
