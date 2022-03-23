@@ -212,19 +212,11 @@ public class SubgraphWalker {
   }
 
   public static void refreshType(Node node) {
-    List<Node> worklist = new ArrayList<>();
-    worklist.add(node);
-    List<Node> checkedNodes = new ArrayList<>();
-    while (!worklist.isEmpty()) {
-      Node currentNode = worklist.remove(0);
-      if (checkedNodes.contains(currentNode)) {
-        continue;
-      }
-      if (currentNode instanceof HasType) {
-        ((HasType) currentNode).refreshType();
-      }
-      worklist.addAll(SubgraphWalker.getAstChildren(currentNode));
-      checkedNodes.add(currentNode);
+    for (Node child : getAstChildren(node)) {
+      refreshType(child);
+    }
+    if (node instanceof HasType) {
+      ((HasType) node).refreshType();
     }
   }
 

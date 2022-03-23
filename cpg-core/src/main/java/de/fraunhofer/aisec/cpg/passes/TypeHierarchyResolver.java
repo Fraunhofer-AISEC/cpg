@@ -96,21 +96,13 @@ public class TypeHierarchyResolver extends Pass {
   }
 
   protected void findRecordsAndEnums(Node node) {
-    List<Node> worklist = new ArrayList<>();
-    worklist.add(node);
-    List<Node> checkedNodes = new ArrayList<>();
-    while (!worklist.isEmpty()) {
-      Node currentNode = worklist.remove(0);
-      if (checkedNodes.contains(currentNode)) {
-        continue;
-      }
-      if (currentNode instanceof RecordDeclaration) {
-        recordMap.putIfAbsent(currentNode.getName(), (RecordDeclaration) currentNode);
-      } else if (currentNode instanceof EnumDeclaration) {
-        enums.add((EnumDeclaration) currentNode);
-      }
-      worklist.addAll(SubgraphWalker.getAstChildren(currentNode));
-      checkedNodes.add(currentNode);
+    if (node instanceof RecordDeclaration) {
+      recordMap.putIfAbsent(node.getName(), (RecordDeclaration) node);
+    } else if (node instanceof EnumDeclaration) {
+      enums.add((EnumDeclaration) node);
+    }
+    for (var child : SubgraphWalker.getAstChildren(node)) {
+      findRecordsAndEnums(child);
     }
   }
 
