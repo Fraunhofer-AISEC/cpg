@@ -95,7 +95,12 @@ class CompressLLVMPass : Pass() {
                 val caseBodyStatements = node.statement as CompoundStatement
                 val newStatements = caseBodyStatements.statements.toMutableList()
                 for (i in 0 until newStatements.size) {
-                    if (newStatements[i] in gotosToReplace && newStatements[i] !in SubgraphWalker.flattenAST((newStatements[i] as GotoStatement).targetLabel.subStatement)) {
+                    if (newStatements[i] in gotosToReplace &&
+                            newStatements[i] !in
+                                SubgraphWalker.flattenAST(
+                                    (newStatements[i] as GotoStatement).targetLabel.subStatement
+                                )
+                    ) {
                         newStatements[i] =
                             (newStatements[i] as GotoStatement).targetLabel.subStatement
                     }
