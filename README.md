@@ -134,20 +134,24 @@ The following authors have contributed to this project (in alphabetical order):
 
 ## Further reading
 
+A quick write-up of our CPG has been published on arXiv:
+
+[1] Konrad Weiss, Christian Banse. A Language-Independent Analysis Platform for Source Code. https://arxiv.org/abs/2203.08424
+
 A preliminary version of this cpg has been used to analyze ARM binaries of iOS apps:
 
-[1] Julian Schütte, Dennis Titze. _liOS: Lifting iOS Apps for Fun and Profit._ Proceedings of the ESORICS International Workshop on Secure Internet of Things (SIoT), Luxembourg, 2019. https://arxiv.org/abs/2003.12901
+[2] Julian Schütte, Dennis Titze. _liOS: Lifting iOS Apps for Fun and Profit._ Proceedings of the ESORICS International Workshop on Secure Internet of Things (SIoT), Luxembourg, 2019. https://arxiv.org/abs/2003.12901
 
 An initial publication on the concept of using code property graphs for static analysis:
 
-[2] Yamaguchi et al. - Modeling and Discovering Vulnerabilities with Code Property Graphs. https://www.sec.cs.tu-bs.de/pubs/2014-ieeesp.pdf
+[3] Yamaguchi et al. - Modeling and Discovering Vulnerabilities with Code Property Graphs. https://www.sec.cs.tu-bs.de/pubs/2014-ieeesp.pdf
 
-[3] is an unrelated, yet similar project by the authors of the above publication, that is used by the open source software Joern [4] for analysing C/C++ code. While [3] is a specification and implementation of the data structure, this project here includes various _Language frontends_ (currently C/C++ and Java, Python to com) and allows creating custom graphs by configuring _Passes_ which extend the graph as necessary for a specific analysis:
+[4] is an unrelated, yet similar project by the authors of the above publication, that is used by the open source software Joern [5] for analysing C/C++ code. While [4] is a specification and implementation of the data structure, this project here includes various _Language frontends_ (currently C/C++ and Java, Python to com) and allows creating custom graphs by configuring _Passes_ which extend the graph as necessary for a specific analysis:
 
-[3] https://github.com/ShiftLeftSecurity/codepropertygraph
+[4] https://github.com/ShiftLeftSecurity/codepropertygraph
 
-[4] https://github.com/ShiftLeftSecurity/joern/
+[5] https://github.com/ShiftLeftSecurity/joern/
 
 Additional extensions of the CPG into the field of Cloud security:
 
-[5] Christian Banse, Immanuel Kunz, Angelika Schneider and Konrad Weiss. Cloud Property Graph: Connecting Cloud Security Assessments with Static Code Analysis.  IEEE CLOUD 2021. https://doi.org/10.1109/CLOUD53861.2021.00014
+[6] Christian Banse, Immanuel Kunz, Angelika Schneider and Konrad Weiss. Cloud Property Graph: Connecting Cloud Security Assessments with Static Code Analysis.  IEEE CLOUD 2021. https://doi.org/10.1109/CLOUD53861.2021.00014

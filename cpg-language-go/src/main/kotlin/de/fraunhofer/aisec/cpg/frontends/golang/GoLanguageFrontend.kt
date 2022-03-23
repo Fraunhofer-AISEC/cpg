@@ -44,6 +44,9 @@ class GoLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeMa
 
         init {
             try {
+                val arch = System.getProperty("os.arch")
+                    .replace("aarch64", "arm64")
+                    .replace("x86_64", "amd64")
                 val ext: String =
                     if (System.getProperty("os.name").startsWith("Mac")) {
                         ".dylib"
@@ -51,7 +54,8 @@ class GoLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeMa
                         ".so"
                     }
 
-                val stream = GoLanguageFrontend::class.java.getResourceAsStream("/libcpgo$ext")
+                val stream =
+                    GoLanguageFrontend::class.java.getResourceAsStream("/libcpgo-$arch$ext")
 
                 val tmp = File.createTempFile("libcpgo", ext)
                 tmp.deleteOnExit()
