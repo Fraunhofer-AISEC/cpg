@@ -755,6 +755,24 @@ class LLVMIRLanguageFrontendTest {
     }
 
     @Test
+    fun testLoopPhi() {
+        val topLevel = Path.of("src", "test", "resources", "llvm")
+        val tu =
+            TestUtils.analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("loopPhi.ll").toFile()),
+                topLevel,
+                true
+            ) {
+                it.registerLanguage(
+                    LLVMIRLanguageFrontend::class.java,
+                    LLVMIRLanguageFrontend.LLVM_EXTENSIONS
+                )
+            }
+        val main = tu.byNameOrNull<FunctionDeclaration>("loopPhi")
+        assertNotNull(main)
+    }
+
+    @Test
     fun testPhi() {
         val topLevel = Path.of("src", "test", "resources", "llvm")
         val tu =
