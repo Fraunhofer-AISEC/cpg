@@ -97,7 +97,7 @@ public class UnaryOperator extends Expression implements TypeListener {
   }
 
   private boolean getsDataFromInput(TypeListener curr, TypeListener target) {
-    List<TypeListener> worklist = new ArrayList<TypeListener>();
+    List<TypeListener> worklist = new ArrayList<>();
     worklist.add(curr);
     while (!worklist.isEmpty()) {
       TypeListener tl = worklist.remove(0);
