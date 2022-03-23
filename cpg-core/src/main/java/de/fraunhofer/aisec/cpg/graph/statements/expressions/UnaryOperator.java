@@ -34,9 +34,7 @@ import de.fraunhofer.aisec.cpg.graph.TypeManager;
 import de.fraunhofer.aisec.cpg.graph.types.PointerType;
 import de.fraunhofer.aisec.cpg.graph.types.Type;
 import de.fraunhofer.aisec.cpg.helpers.Util;
-import java.util.HashSet;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.neo4j.ogm.annotation.Transient;
@@ -99,18 +97,21 @@ public class UnaryOperator extends Expression implements TypeListener {
   }
 
   private boolean getsDataFromInput(TypeListener curr, TypeListener target) {
-    if (checked.contains(curr)) {
-      return false;
-    }
-    checked.add(curr);
+    List<TypeListener> worklist = new ArrayList<TypeListener>();
+    worklist.add(curr);
+    while (!worklist.isEmpty()) {
+      TypeListener tl = worklist.remove(0);
+      if (!checked.contains(tl)) {
+        checked.add(tl);
 
-    if (curr == target) {
-      return true;
-    }
+        if (tl == target) {
+          return true;
+        }
 
-    if (curr instanceof HasType) {
-      return ((HasType) curr)
-          .getTypeListeners().stream().anyMatch(l -> getsDataFromInput(l, target));
+        if (curr instanceof HasType) {
+          worklist.addAll(((HasType) curr).getTypeListeners());
+        }
+      }
     }
     return false;
   }
