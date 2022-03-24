@@ -994,7 +994,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             val caseBBAddress = LLVMValueAsBasicBlock(LLVMGetOperand(instr, idx)).address()
             val caseStatement = newCaseStatement(nodeCode)
             caseStatement.caseExpression =
-                newLiteral(caseBBAddress, TypeParser.createFrom("long", true), nodeCode)
+                newLiteral(caseBBAddress, TypeParser.createFrom("i64", true), nodeCode)
             caseStatements.addStatement(caseStatement)
 
             // Get the label of the goto statement.
@@ -1402,8 +1402,13 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         }
         // Create the dummy declaration at the beginning of the function body
         val firstBB = (functions[0] as FunctionDeclaration).body as CompoundStatement
-        val declaration = VariableDeclaration()
-        declaration.name = instr.name
+        val declaration =
+            newVariableDeclaration(
+                instr.name,
+                lang.typeOf(instr),
+                lang.getCodeFromRawNode(instr),
+                false
+            )
         // add the declaration to the current scope
         lang.scopeManager.addDeclaration(declaration)
         // add it to our bindings cache
