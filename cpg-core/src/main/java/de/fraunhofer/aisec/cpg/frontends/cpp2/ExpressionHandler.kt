@@ -36,6 +36,8 @@ import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newLiteral
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newMemberCallExpression
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newMemberExpression
 import de.fraunhofer.aisec.cpg.graph.TypeManager
+import de.fraunhofer.aisec.cpg.graph.edge.Properties
+import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.PointerType
 import de.fraunhofer.aisec.cpg.graph.types.Type
@@ -204,9 +206,10 @@ class ExpressionHandler(lang: CXXLanguageFrontend2) :
         val initializers: MutableList<Expression?> = ArrayList()
 
         for (i in 0 until node.namedChildCount) {
-            initializers.add(handle(node.namedChild(i)))
+            val edge = PropertyEdge(expression, handle(node.namedChild(i)))
+            edge.addProperty(Properties.INDEX, expression.initializersPropertyEdge.size)
+            expression.initializersPropertyEdge.add(edge)
         }
-        expression.initializers = initializers
 
         return expression
     }
