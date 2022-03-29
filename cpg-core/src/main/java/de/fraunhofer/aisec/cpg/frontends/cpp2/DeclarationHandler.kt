@@ -39,10 +39,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ConstructExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
-import de.fraunhofer.aisec.cpg.graph.types.IncompleteType
-import de.fraunhofer.aisec.cpg.graph.types.PointerType
-import de.fraunhofer.aisec.cpg.graph.types.ReferenceType
-import de.fraunhofer.aisec.cpg.graph.types.Type
+import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.passes.scopes.TemplateScope
 import io.github.oxisto.kotlintree.jvm.Node
 import io.github.oxisto.kotlintree.jvm.of
@@ -87,7 +84,8 @@ class DeclarationHandler(lang: CXXLanguageFrontend2) :
             "function_definition" -> handleFunctionDefinition(node)
             "parameter_declaration" -> handleParameterDeclaration(node)
             "field_declaration" -> handleFieldDeclaration(node)
-            "class_specifier" -> handleClassSpecifier(node)
+            "class_specifier" -> handleRecordSpecifier(node, "class")
+            "struct_specifier" -> handleRecordSpecifier(node, "struct")
             // "preproc_include" -> handleInclude(node) TODO resolve should includes be added as
             // declarations? (handleTranslationUnit with UnityBuild Issue)
             ";" -> null
@@ -124,11 +122,11 @@ class DeclarationHandler(lang: CXXLanguageFrontend2) :
         return NodeBuilder.newIncludeDeclaration(name)
     }
 
-    private fun handleClassSpecifier(node: Node): Declaration {
+    private fun handleRecordSpecifier(node: Node, kind: String): Declaration {
         val name = lang.getCodeFromRawNode(node.childByFieldName("name")) ?: ""
 
         val recordDeclaration =
-            NodeBuilder.newRecordDeclaration(name, "class", lang.getCodeFromRawNode(node))
+            NodeBuilder.newRecordDeclaration(name, kind, lang.getCodeFromRawNode(node), true, lang)
 
         lang.scopeManager.enterScope(recordDeclaration)
 
@@ -147,6 +145,23 @@ class DeclarationHandler(lang: CXXLanguageFrontend2) :
 
                 lang.scopeManager.addDeclaration(declaration)
             }
+        }
+
+        if (recordDeclaration.constructors.isEmpty()) {
+            val constructorDeclaration =
+                NodeBuilder.newConstructorDeclaration(
+                    recordDeclaration.name,
+                    recordDeclaration.name,
+                    recordDeclaration
+                )
+
+            // set this as implicit
+            constructorDeclaration.isImplicit = true
+
+            // and set the type, constructors always have implicitly the return type of their class
+            constructorDeclaration.type = TypeParser.createFrom(recordDeclaration.name, true, lang)
+            recordDeclaration.addConstructor(constructorDeclaration)
+            lang.scopeManager.addDeclaration(constructorDeclaration)
         }
 
         lang.scopeManager.leaveScope(recordDeclaration)
