@@ -374,6 +374,10 @@ class ScopeManager {
      */
     fun addDeclaration(declaration: Declaration?) {
         when (declaration) {
+            is DeclarationSequence -> {
+                val sequence = declaration.asList()
+                sequence.forEach { addDeclaration(it) }
+            }
             is ProblemDeclaration, is IncludeDeclaration -> {
                 // directly add problems and includes to the global scope
                 this.globalScope?.addDeclaration(declaration)

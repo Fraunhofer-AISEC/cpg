@@ -201,23 +201,32 @@ class DeclarationHandler(lang: CXXLanguageFrontend2) :
         val startType = lang.handleType(node.childByFieldName("type"))
 
         // Peek into the declarator to determine the type
-        val declaratorNode = node.childByFieldName("declarator")
+        var sequence = DeclarationSequence()
 
-        val declarator = handleDeclarator("declarator" of node, startType)
+        for (i in 0 until node.namedChildCount) {
+            if (node.namedChild(i).type.equals("field_identifier")) {
+                val declaratorNode = node.namedChild(i)
+                val declarator = handleDeclarator(declaratorNode, startType)
 
-        if (isReallyAFunctionDeclaration(declaratorNode)) {
-            return declareFunction(declarator, node)
-        }
+                if (isReallyAFunctionDeclaration(declaratorNode)) {
+                    return declareFunction(declarator, node)
+                }
 
-        val declaration = declareVariable(declarator, node)
+                val declaration = declareVariable(declarator, node)
 
-        (declaration as? HasInitializer)?.let {
-            if (!node.childByFieldName("default_value").isNull) {
-                it.initializer = lang.expressionHandler.handle("default_value" of node)
+                (declaration as? HasInitializer)?.let {
+                    if (!node.childByFieldName("default_value").isNull) {
+                        it.initializer = lang.expressionHandler.handle("default_value" of node)
+                    }
+                }
+                sequence.addDeclaration(declaration)
             }
         }
 
-        return declaration
+        if (sequence.isSingle) {
+            return sequence.first()
+        }
+        return sequence
     }
 
     /**
