@@ -234,10 +234,22 @@ class DeclarationHandler(lang: CXXLanguageFrontend2) :
      * declarator which is wrapped in a generic declaration, so we process the declarator and
      * generate the correct type.
      */
-    private fun handleVariableDeclaration(node: Node): ValueDeclaration {
+    private fun handleVariableDeclaration(node: Node): Declaration {
         val startType = lang.handleType(node.childByFieldName("type"))
-        val declarator = handleDeclarator(node.childByFieldName("declarator"), startType)
-        return declareVariable(declarator, node)
+        val sequence = DeclarationSequence()
+        for (i in 0 until node.namedChildCount) {
+            if (node.namedChild(i).type.equals("identifier") ||
+                    node.namedChild(i).type.equals("init_declarator")
+            ) {
+                val declarator = handleDeclarator(node.namedChild(i), startType)
+                sequence.addDeclaration(declareVariable(declarator, node))
+            }
+        }
+        if (sequence.isSingle) {
+            return sequence.first()
+        }
+
+        return sequence
     }
 
     /**
