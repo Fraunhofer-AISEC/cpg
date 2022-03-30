@@ -35,7 +35,6 @@ import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newWhileStatement
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.*
-import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser
 import io.github.oxisto.kotlintree.jvm.*
 
@@ -88,12 +87,6 @@ class StatementHandler(lang: CXXLanguageFrontend2) :
         val stmt = newDeclarationStatement(lang.getCodeFromRawNode(node))
 
         var type = lang.handleType("type" of node)
-
-        // if the type also declared something, we add it to the declaration statement
-        (type as? ObjectType)?.recordDeclaration?.let {
-            // lang.scopeManager.addDeclaration(it)
-            stmt.addToPropertyEdgeDeclaration(it)
-        }
 
         var declarator = "declarator" of node
         // loop through the declarators
