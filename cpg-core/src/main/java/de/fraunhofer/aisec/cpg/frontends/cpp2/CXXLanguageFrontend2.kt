@@ -121,7 +121,8 @@ class CXXLanguageFrontend2(config: TranslationConfiguration, scopeManager: Scope
             "scoped_type_identifier" ->
                 getCodeFromRawNode(node)?.let { TypeParser.createFrom(qualifier + it, false) }
                     ?: UnknownType.getUnknownType()
-            "class_specifier" -> handleClassSpecifier(node)
+            "class_specifier" -> handleRecordSpecifier(node)
+            "struct_specifier" -> handleRecordSpecifier(node)
             "auto" -> UnknownType.getUnknownType()
             "type_descriptor" ->
                 getCodeFromRawNode(node)?.let { TypeParser.createFrom(qualifier + it, false) }
@@ -140,7 +141,7 @@ class CXXLanguageFrontend2(config: TranslationConfiguration, scopeManager: Scope
         }
     }
 
-    private fun handleClassSpecifier(node: Node): Type {
+    private fun handleRecordSpecifier(node: Node): Type {
         val recordDeclaration = declarationHandler.handle(node) as? RecordDeclaration
 
         return recordDeclaration?.toType() ?: UnknownType.getUnknownType()

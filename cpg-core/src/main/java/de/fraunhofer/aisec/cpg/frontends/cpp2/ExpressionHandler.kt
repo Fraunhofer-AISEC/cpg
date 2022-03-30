@@ -60,6 +60,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend2) :
         return when (node.type) {
             "cast_expression" -> handleCastExpression(node)
             "identifier" -> handleIdentifier(node)
+            "field_identifier" -> handleIdentifier(node)
             "scoped_identifier" -> handleScopedIdentifier(node)
             "field_expression" -> handleFieldExpression(node)
             "assignment_expression" -> handleAssignmentExpression(node)
@@ -76,6 +77,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend2) :
             "string_literal" -> handleStringLiteral(node)
             "concatenated_string" -> handleConcatenatedString(node)
             "initializer_list" -> handleInitializerList(node)
+            "initializer_pair" -> handleInitializerPair(node)
             "subscript_expression" -> handleSubscriptExpression(node)
             "this" -> handleIdentifier(node)
             "null" -> handleNull(node)
@@ -198,6 +200,27 @@ class ExpressionHandler(lang: CXXLanguageFrontend2) :
         val expression = NodeBuilder.newArraySubscriptionExpression(lang.getCodeFromRawNode(node))
         expression.arrayExpression = handle(node.childByFieldName("argument"))
         expression.subscriptExpression = handle(node.childByFieldName("index"))
+        return expression
+    }
+
+    private fun handleInitializerPair(node: Node): Expression {
+        val rhs = handle(node.childByFieldName("value"))
+        val lhs: MutableList<Expression?> = ArrayList()
+        val designatorType = node.namedChild(0).type
+        when (designatorType) {
+            "field_designator" -> {
+                val designator = handle(node.childByFieldName("designator").namedChild(0))
+                lhs.add(designator)
+            }
+            "subscript_designator" -> {
+                val designator = handle(node.childByFieldName("designator").namedChild(0))
+                lhs.add(designator)
+            }
+        }
+        val expression =
+            NodeBuilder.newDesignatedInitializerExpression(lang.getCodeFromRawNode(node))
+        expression.lhs = lhs
+        expression.rhs = rhs
         return expression
     }
 
