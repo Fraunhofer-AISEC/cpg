@@ -86,6 +86,8 @@ class DeclarationHandler(lang: CXXLanguageFrontend2) :
             "field_declaration" -> handleFieldDeclaration(node)
             "class_specifier" -> handleRecordSpecifier(node, "class")
             "struct_specifier" -> handleRecordSpecifier(node, "struct")
+            "namespace_definition" -> handleNamespaceDefinition(node)
+            "declaration_list" -> handleDeclarationList(node)
             // "preproc_include" -> handleInclude(node) TODO resolve should includes be added as
             // declarations? (handleTranslationUnit with UnityBuild Issue)
             ";" -> null
@@ -122,8 +124,43 @@ class DeclarationHandler(lang: CXXLanguageFrontend2) :
         return NodeBuilder.newIncludeDeclaration(name)
     }
 
+    private fun handleDeclarationList(node: Node): Declaration {
+        val sequence = DeclarationSequence()
+
+        for (i in 0 until node.namedChildCount) {
+            val declaration = handle(node.namedChild(i))
+            sequence.addDeclaration(declaration)
+        }
+
+        if (sequence.isSingle) {
+            return sequence.first()
+        }
+        return sequence
+    }
+
+    private fun handleNamespaceDefinition(node: Node): Declaration {
+        val fqn =
+            lang.scopeManager.currentNamePrefixWithDelimiter +
+                lang.getCodeFromRawNode(node.childByFieldName("name"))
+        val declaration = NodeBuilder.newNamespaceDeclaration(fqn, lang.getCodeFromRawNode(node))
+
+        lang.scopeManager.addDeclaration(declaration)
+        // enter the namespace scope
+        lang.scopeManager.enterScope(declaration)
+
+        val childDeclarations = handle(node.childByFieldName("body"))
+        lang.scopeManager.addDeclaration(childDeclarations)
+
+        lang.scopeManager.leaveScope(declaration)
+
+        return declaration
+    }
+
     private fun handleRecordSpecifier(node: Node, kind: String): Declaration {
-        val name = lang.getCodeFromRawNode(node.childByFieldName("name")) ?: ""
+        val name =
+            (lang.scopeManager.currentNamePrefixWithDelimiter +
+                lang.getCodeFromRawNode(node.childByFieldName("name")))
+                ?: ""
 
         val recordDeclaration =
             NodeBuilder.newRecordDeclaration(name, kind, lang.getCodeFromRawNode(node), true, lang)

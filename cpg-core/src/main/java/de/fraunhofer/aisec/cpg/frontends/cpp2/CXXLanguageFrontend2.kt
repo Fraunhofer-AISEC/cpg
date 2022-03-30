@@ -81,7 +81,7 @@ class CXXLanguageFrontend2(config: TranslationConfiguration, scopeManager: Scope
         // loop through children
         for (childNode in node) {
             // skip anonymous nodes
-            if (!node.isNamed) {
+            if (!childNode.isNamed) {
                 continue
             }
 
