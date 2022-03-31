@@ -66,7 +66,7 @@ class StatementHandler(lang: CXXLanguageFrontend2) :
     }
 
     private fun handleReturnStatement(node: Node): Statement {
-        val returnStatement = newReturnStatement(lang.getCodeFromRawNode(node))
+        val returnStatement = newReturnStatement(lang.getCodeFromRawNode(node), lang, node)
 
         if (node.childCount > 0) {
             val child = node.namedChild(0)
@@ -80,7 +80,19 @@ class StatementHandler(lang: CXXLanguageFrontend2) :
 
     private fun handleExpressionStatement(node: Node): Statement {
         // forward the first (and only child) to the expression handler
-        return lang.expressionHandler.handle(0 ofNamed node)
+        val expressionStatement = lang.expressionHandler.handle(0 ofNamed node)
+        if (lang.getCodeFromRawNode(node) != null &&
+                expressionStatement.code != null &&
+                lang.getCodeFromRawNode(node)!!.endsWith(";") &&
+                !expressionStatement.code!!.endsWith(";")
+        ) {
+            expressionStatement.code = expressionStatement.code + ";"
+            if (expressionStatement.location != null) {
+                expressionStatement.location!!.region.endColumn =
+                    expressionStatement.location!!.region.endColumn + 1
+            }
+        }
+        return expressionStatement
     }
 
     private fun handleDeclarationStatement(node: Node): Statement {

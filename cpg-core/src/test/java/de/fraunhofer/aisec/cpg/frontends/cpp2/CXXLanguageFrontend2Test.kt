@@ -1049,8 +1049,8 @@ class CXXLanguageFrontend2Test {
     }
 
     /* TODO Disabled because the symbols function that is used in TranslationConfiguration
-        that defines a macro for the attribute is not working in the tree-sitter
-     */
+       that defines a macro for the attribute is not working in the tree-sitter
+    */
     @Disabled
     @Test
     @Throws(java.lang.Exception::class)
@@ -1210,7 +1210,7 @@ class CXXLanguageFrontend2Test {
         Assertions.assertTrue(expected.isEmpty(), java.lang.String.join(", ", expected.keys))
     }
 
-    // TODO Disabled until we know what to do with sizeOf Expression (UnaryOperator vs TypeIdExpression)
+    /* TODO Disabled until we know what to do with sizeOf Expression (UnaryOperator vs TypeIdExpression) */
     @Disabled
     @Test
     @Throws(java.lang.Exception::class)
