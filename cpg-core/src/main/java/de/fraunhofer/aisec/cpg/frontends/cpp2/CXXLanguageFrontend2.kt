@@ -27,6 +27,9 @@ package de.fraunhofer.aisec.cpg.frontends.cpp2
 
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
+import de.fraunhofer.aisec.cpg.graph.Annotation
+import de.fraunhofer.aisec.cpg.graph.AnnotationMember
+import de.fraunhofer.aisec.cpg.graph.NodeBuilder
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newTranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.TypeManager
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
@@ -39,6 +42,7 @@ import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
 import io.github.oxisto.kotlintree.jvm.*
 import java.io.File
+import java.util.ArrayList
 
 /**
  * An (experimental) language frontend for the [TypeManager.Language.CXX] language based on
@@ -145,6 +149,48 @@ class CXXLanguageFrontend2(config: TranslationConfiguration, scopeManager: Scope
         val recordDeclaration = declarationHandler.handle(node) as? RecordDeclaration
 
         return recordDeclaration?.toType() ?: UnknownType.getUnknownType()
+    }
+
+    fun processAttributes(cpgNode: de.fraunhofer.aisec.cpg.graph.Node, attributeNode: Node) {
+        if (config.processAnnotations) {
+            for (i in 0 until attributeNode.namedChildCount) {
+                if (!attributeNode.namedChild(i).isNull &&
+                        attributeNode.namedChild(i).type.equals("attribute")
+                ) {
+                    // set attributes
+                    cpgNode.addAnnotation(handleAttributes(attributeNode.namedChild(i)))
+                }
+            }
+        }
+    }
+
+    private fun handleAttributes(attribute: Node): Annotation {
+        val attributeNode = attribute.namedChild(0)
+        val argumentList = attributeNode.namedChild(1)
+        val annotation =
+            NodeBuilder.newAnnotation(
+                getCodeFromRawNode(attributeNode.namedChild(0)),
+                getCodeFromRawNode(attributeNode)
+            )
+
+        val annotationMembers: MutableList<AnnotationMember> = ArrayList()
+
+        if (argumentList.type.equals("argument_list")) {
+            for (i in 0 until argumentList.namedChildCount) {
+                val expression = expressionHandler.handle(argumentList.namedChild(i))
+                annotationMembers.add(
+                    NodeBuilder.newAnnotationMember(
+                        "",
+                        expression,
+                        getCodeFromRawNode(argumentList.namedChild(i))
+                    )
+                )
+            }
+        }
+
+        annotation.members = annotationMembers
+
+        return annotation
     }
 
     override fun <T : Any?> getCodeFromRawNode(astNode: T): String? {

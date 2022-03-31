@@ -80,41 +80,53 @@ class DeclarationHandler(lang: CXXLanguageFrontend2) :
     }
 
     private fun handleDeclaration(node: Node): Declaration? {
-        return when (val type = node.type) {
-            "function_definition" -> handleFunctionDefinition(node)
-            "parameter_declaration" -> handleParameterDeclaration(node)
-            "field_declaration" -> handleFieldDeclaration(node)
-            "class_specifier" -> handleRecordSpecifier(node, "class")
-            "struct_specifier" -> handleRecordSpecifier(node, "struct")
-            "namespace_definition" -> handleNamespaceDefinition(node)
-            "declaration_list" -> handleDeclarationList(node)
-            // "preproc_include" -> handleInclude(node) TODO resolve should includes be added as
-            // declarations? (handleTranslationUnit with UnityBuild Issue)
-            ";" -> null
-            else -> {
-                val declarator = node.childByFieldName("declarator")
-                if (!declarator.isNull) {
-                    return when (val declaratorType = declarator.type) {
-                        "identifier" -> handleVariableDeclaration(node)
-                        "pointer_declarator" -> handleVariableDeclaration(node)
-                        "init_declarator" -> handleVariableDeclaration(node)
-                        "array_declarator" -> handleVariableDeclaration(node)
-                        "function_declarator" -> handleFunctionDefinition(node)
-                        else -> {
-                            LanguageFrontend.log.error(
-                                "Not handling declarator {} yet.",
-                                declarator.type
-                            )
-                            Declaration()
-                        }
-                    }
-                } else {
-                    // Otherwise return empty declaration
-                    LanguageFrontend.log.error("Not handling declaration type {} yet.", type)
-                    Declaration()
+        for (i in 0 until node.namedChildCount) {
+            if (node.namedChild(i).type.equals("attribute") && node.type.equals("declaration")) {
+                val decl = handleDeclaration(node.childByFieldName("type"))
+                if (decl != null) {
+                    lang.processAttributes(decl, node)
+                    return decl
                 }
             }
         }
+
+        val declaration =
+            when (val type = node.type) {
+                "function_definition" -> handleFunctionDefinition(node)
+                "parameter_declaration" -> handleParameterDeclaration(node)
+                "field_declaration" -> handleFieldDeclaration(node)
+                "class_specifier" -> handleRecordSpecifier(node, "class")
+                "struct_specifier" -> handleRecordSpecifier(node, "struct")
+                "namespace_definition" -> handleNamespaceDefinition(node)
+                "declaration_list" -> handleDeclarationList(node)
+                // "preproc_include" -> handleInclude(node) TODO resolve should includes be added as
+                // declarations? (handleTranslationUnit with UnityBuild Issue)
+                ";" -> null
+                else -> {
+                    val declarator = node.childByFieldName("declarator")
+                    if (!declarator.isNull) {
+                        return when (val declaratorType = declarator.type) {
+                            "identifier" -> handleVariableDeclaration(node)
+                            "pointer_declarator" -> handleVariableDeclaration(node)
+                            "init_declarator" -> handleVariableDeclaration(node)
+                            "array_declarator" -> handleVariableDeclaration(node)
+                            "function_declarator" -> handleFunctionDefinition(node)
+                            else -> {
+                                LanguageFrontend.log.error(
+                                    "Not handling declarator {} yet.",
+                                    declarator.type
+                                )
+                                Declaration()
+                            }
+                        }
+                    } else {
+                        // Otherwise return empty declaration
+                        LanguageFrontend.log.error("Not handling declaration type {} yet.", type)
+                        Declaration()
+                    }
+                }
+            }
+        return declaration
     }
 
     private fun handleInclude(node: Node): Declaration {
@@ -256,6 +268,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend2) :
                         it.initializer = lang.expressionHandler.handle("default_value" of node)
                     }
                 }
+                lang.processAttributes(declaration, node)
                 sequence.addDeclaration(declaration)
             }
         }
@@ -657,6 +670,9 @@ class DeclarationHandler(lang: CXXLanguageFrontend2) :
         if (func.isDefinition && func is MethodDeclaration && !insideRecord) {
             updateDefinition(func, func.recordDeclaration)
         }
+
+        // Handle attribute
+        lang.processAttributes(func, node)
 
         // Leave the function scope
         lang.scopeManager.leaveScope(func)

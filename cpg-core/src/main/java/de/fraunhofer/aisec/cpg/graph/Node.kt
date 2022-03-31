@@ -192,6 +192,10 @@ open class Node : IVisitable<Node>, Persistable {
         this.annotations.addAll(annotations)
     }
 
+    fun addAnnotation(annotation: Annotation) {
+        this.annotations.add(annotation)
+    }
+
     /**
      * If a node should be removed from the graph, just removing it from the AST is not enough (see
      * issue #60). It will most probably be referenced somewhere via DFG or EOG edges. Thus, if it
