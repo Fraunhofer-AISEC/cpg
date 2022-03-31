@@ -285,7 +285,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend2) :
      * generate the correct type.
      */
     private fun handleVariableDeclaration(node: Node): Declaration {
-        val startType = lang.handleType(node.childByFieldName("type"))
+        val startType = lang.handleTypeWithQualifier(node)
         val sequence = DeclarationSequence()
         for (i in 0 until node.namedChildCount) {
             if (node.namedChild(i).type.equals("identifier") ||

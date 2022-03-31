@@ -56,6 +56,8 @@ class ExpressionHandler(lang: CXXLanguageFrontend2) :
         map.put(Node::class.java, ::handleExpression)
     }
 
+    private val typeIdExpressions = listOf("typeid", "alignof", "typeof")
+
     private fun handleExpression(node: Node): Expression {
         return when (node.type) {
             "cast_expression" -> handleCastExpression(node)
@@ -269,8 +271,15 @@ class ExpressionHandler(lang: CXXLanguageFrontend2) :
 
     /** Handles a call expression. */
     private fun handleCallExpression(node: Node): Expression {
+
+        val function = node.childByFieldName("function")
+        if (typeIdExpressions.contains(lang.getCodeFromRawNode(function))) {
+            // Delegate to typeIdExpression
+            return handleTypeIdExpression(node, lang.getCodeFromRawNode(function)!!)
+        }
+
         // try to parse the "function" child
-        val reference = handle(node.childByFieldName("function"))
+        val reference = handle(function)
 
         val call =
             when (reference) {
@@ -483,6 +492,39 @@ class ExpressionHandler(lang: CXXLanguageFrontend2) :
             NodeBuilder.newUnaryOperator("sizeof", false, true, lang.getCodeFromRawNode(node))
 
         expression.input = handleExpression(node.childByFieldName("value"))
+
+        return expression
+    }
+
+    private fun handleTypeIdExpression(node: Node, operatorCode: String): Expression {
+        var reference = node.childByFieldName("arguments").namedChild(0)
+
+        val type =
+            when (operatorCode) {
+                "sizeof" -> {
+                    TypeParser.createFrom("std::size_t", true)
+                }
+                "typeid" -> {
+                    TypeParser.createFrom("const std::type_info&", true)
+                }
+                "alginof" -> {
+                    TypeParser.createFrom("std::size_t", true)
+                }
+                else -> {
+                    log.debug("Unknown typeid operator code: {}", operatorCode)
+                    UnknownType.getUnknownType()
+                }
+            }
+
+        val referenceType =
+            lang.getCodeFromRawNode(reference)?.let { TypeParser.createFrom(it, true, lang) }
+        val expression =
+            NodeBuilder.newTypeIdExpression(
+                operatorCode,
+                type,
+                referenceType,
+                lang.getCodeFromRawNode(node)
+            )
 
         return expression
     }
