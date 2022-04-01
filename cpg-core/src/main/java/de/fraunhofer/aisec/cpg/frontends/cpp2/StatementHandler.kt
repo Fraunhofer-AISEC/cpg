@@ -33,6 +33,7 @@ import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newReturnStatement
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newSwitchStatement
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newWhileStatement
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
+import de.fraunhofer.aisec.cpg.graph.declarations.DeclarationSequence
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser
@@ -97,26 +98,16 @@ class StatementHandler(lang: CXXLanguageFrontend2) :
 
     private fun handleDeclarationStatement(node: Node): Statement {
         val stmt = newDeclarationStatement(lang.getCodeFromRawNode(node))
-
-        var type = lang.handleType("type" of node)
-
-        var declarator = "declarator" of node
-        // loop through the declarators
-        do {
-            val declaration =
-                lang.declarationHandler.declareVariable(
-                    lang.declarationHandler.handleDeclarator(declarator, type),
-                    node
-                )
-
-            // update the type for the rest of the declarations
-            type = declaration.type
-
+        val declaration = lang.declarationHandler.handle(node)
+        if (declaration is DeclarationSequence) {
+            stmt.declarations = declaration.asList()
+            for (element in declaration.asList()) {
+                lang.scopeManager.addDeclaration(declaration)
+            }
+        } else {
+            stmt.singleDeclaration = declaration
             lang.scopeManager.addDeclaration(declaration)
-            stmt.addToPropertyEdgeDeclaration(declaration)
-            declarator = declarator.nextNamedSibling
-        } while (!declarator.isNull)
-
+        }
         return stmt
     }
 

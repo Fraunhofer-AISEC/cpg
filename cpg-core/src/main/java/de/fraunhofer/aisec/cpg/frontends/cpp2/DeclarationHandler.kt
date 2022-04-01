@@ -89,7 +89,16 @@ class DeclarationHandler(lang: CXXLanguageFrontend2) :
                 }
             }
         }
+        val sequence = DeclarationSequence()
+        /*TODO activating this code fixes testDeclarationStatement but breaks testDesignatedInitializer and testFunctionDeclaration
 
+                if (node.type.equals("declaration") && !node.childByFieldName("type").isNull) {
+                    val typeDecl = handleDeclaration(node.childByFieldName("type"))
+                    if (typeDecl != null && typeDecl.javaClass != Declaration::class.java) {
+                        sequence.addDeclaration(typeDecl)
+                    }
+                }
+        **/
         val declaration =
             when (val type = node.type) {
                 "function_definition" -> handleFunctionDefinition(node)
@@ -106,7 +115,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend2) :
                 else -> {
                     val declarator = node.childByFieldName("declarator")
                     if (!declarator.isNull) {
-                        return when (val declaratorType = declarator.type) {
+                        when (val declaratorType = declarator.type) {
                             "identifier" -> handleVariableDeclaration(node)
                             "pointer_declarator" -> handlePointerDeclaration(node)
                             "init_declarator" -> handleVariableDeclaration(node)
@@ -127,7 +136,16 @@ class DeclarationHandler(lang: CXXLanguageFrontend2) :
                     }
                 }
             }
-        return declaration
+        if (declaration != null && declaration.javaClass != Declaration::class.java) {
+            sequence.addDeclaration(declaration)
+        } else if (sequence.children.size == 0) {
+            return null
+        }
+
+        if (sequence.isSingle) {
+            return sequence.first()
+        }
+        return sequence
     }
 
     private fun handleInclude(node: Node): Declaration {
@@ -174,6 +192,16 @@ class DeclarationHandler(lang: CXXLanguageFrontend2) :
             (lang.scopeManager.currentNamePrefixWithDelimiter +
                 lang.getCodeFromRawNode(node.childByFieldName("name")))
                 ?: ""
+        /*
+        if (node.childByFieldName("body").isNull) {
+            return NodeBuilder.newRecordDeclaration(
+                name,
+                kind,
+                lang.getCodeFromRawNode(node),
+                true,
+                lang
+            )
+        }*/
 
         val recordDeclaration =
             NodeBuilder.newRecordDeclaration(name, kind, lang.getCodeFromRawNode(node), true, lang)
@@ -287,19 +315,36 @@ class DeclarationHandler(lang: CXXLanguageFrontend2) :
 
     private fun handlePointerDeclaration(node: Node): Declaration {
         val startType = lang.handleTypeWithQualifier(node)
-        val declarator = handlePointerDeclarator(node, startType)
-        return when (declarator.kind) {
-            "function" -> {
-                declareFunction(declarator, node)
-            }
-            else -> {
-                LanguageFrontend.log.error(
-                    "Not handling pointer_declarator of kind {} yet.",
-                    declarator.kind
-                )
-                Declaration()
-            }
+        val sequence = DeclarationSequence()
+        var declaratorNode = node.childByFieldName("declarator")
+        do {
+            val declarator = handleDeclarator(declaratorNode, startType)
+            val declaration =
+                when (declarator.kind) {
+                    "function" -> {
+                        declareFunction(declarator, node)
+                    }
+                    null -> {
+                        val decl = declareVariable(declarator, node)
+                        decl.type = startType.reference(PointerType.PointerOrigin.POINTER)
+                        decl
+                    }
+                    else -> {
+                        LanguageFrontend.log.error(
+                            "Not handling pointer_declarator of kind {} yet.",
+                            declarator.kind
+                        )
+                        Declaration()
+                    }
+                }
+            declaratorNode = declaratorNode.nextNamedSibling
+            sequence.addDeclaration(declaration)
+        } while (!declaratorNode.isNull)
+
+        if (sequence.isSingle) {
+            return sequence.first()
         }
+        return sequence
     }
 
     /**
@@ -714,8 +759,8 @@ class DeclarationHandler(lang: CXXLanguageFrontend2) :
     }
 
     fun declareVariable(declarator: Declarator, node: Node): ValueDeclaration {
-        val declaration =
-            if (declarator.kind == "field") {
+        if (declarator.kind == "field") {
+            val declaration =
                 newFieldDeclaration(
                     declarator.name,
                     declarator.type,
@@ -725,18 +770,26 @@ class DeclarationHandler(lang: CXXLanguageFrontend2) :
                     declarator.initializer,
                     true
                 )
-            } else {
+
+            declaration.location = lang.getLocationFromRawNode(node)
+            declaration.code = lang.getCodeFromRawNode(node)
+            declaration.initializer = declarator.initializer
+
+            return declaration
+        } else {
+            val declaration =
                 newVariableDeclaration(
                     declarator.name,
                     declarator.type,
                     lang.getCodeFromRawNode(node),
                     true
                 )
-            }
-        declaration.location = lang.getLocationFromRawNode(node)
-        declaration.code = lang.getCodeFromRawNode(node)
-        declaration.initializer = declarator.initializer
 
-        return declaration
+            declaration.location = lang.getLocationFromRawNode(node)
+            declaration.code = lang.getCodeFromRawNode(node)
+            declaration.initializer = declarator.initializer
+
+            return declaration
+        }
     }
 }
