@@ -107,7 +107,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend2) :
                     if (!declarator.isNull) {
                         return when (val declaratorType = declarator.type) {
                             "identifier" -> handleVariableDeclaration(node)
-                            "pointer_declarator" -> handleVariableDeclaration(node)
+                            "pointer_declarator" -> handlePointerDeclaration(node)
                             "init_declarator" -> handleVariableDeclaration(node)
                             "array_declarator" -> handleVariableDeclaration(node)
                             "function_declarator" -> handleFunctionDefinition(node)
@@ -275,6 +275,23 @@ class DeclarationHandler(lang: CXXLanguageFrontend2) :
             return sequence.first()
         }
         return sequence
+    }
+
+    private fun handlePointerDeclaration(node: Node): Declaration {
+        val startType = lang.handleTypeWithQualifier(node)
+        val declarator = handlePointerDeclarator(node, startType)
+        return when (declarator.kind) {
+            "function" -> {
+                declareFunction(declarator, node)
+            }
+            else -> {
+                LanguageFrontend.log.error(
+                    "Not handling pointer_declarator of kind {} yet.",
+                    declarator.kind
+                )
+                Declaration()
+            }
+        }
     }
 
     /**
@@ -520,7 +537,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend2) :
         var declarator = handleDeclarator(node.childByFieldName("declarator"), type)
 
         // reference the type using a pointer
-        declarator.type = declarator.type.reference(PointerType.PointerOrigin.POINTER)
+        declarator.type = type.reference(PointerType.PointerOrigin.POINTER)
 
         return declarator
     }
