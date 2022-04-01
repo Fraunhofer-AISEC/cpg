@@ -62,9 +62,9 @@ public class DeclarationSequence extends Declaration implements DeclarationHolde
       for (Declaration declarationChild : ((DeclarationSequence) declaration).getChildren()) {
         addIfNotContains(this.children, declarationChild);
       }
+    } else {
+      addIfNotContains(this.children, declaration);
     }
-
-    addIfNotContains(this.children, declaration);
   }
 
   public List<Declaration> asList() {
