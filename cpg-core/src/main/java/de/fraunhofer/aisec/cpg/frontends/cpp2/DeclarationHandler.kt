@@ -235,8 +235,6 @@ class DeclarationHandler(lang: CXXLanguageFrontend2) :
                 lang.getCodeFromRawNode(node)
             )
 
-        lang.scopeManager.addDeclaration(param)
-
         return param
     }
 
