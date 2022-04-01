@@ -94,6 +94,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend2) :
             when (val type = node.type) {
                 "function_definition" -> handleFunctionDefinition(node)
                 "parameter_declaration" -> handleParameterDeclaration(node)
+                "optional_parameter_declaration" -> handleParameterDeclaration(node)
                 "field_declaration" -> handleFieldDeclaration(node)
                 "class_specifier" -> handleRecordSpecifier(node, "class")
                 "struct_specifier" -> handleRecordSpecifier(node, "struct")
@@ -234,6 +235,13 @@ class DeclarationHandler(lang: CXXLanguageFrontend2) :
                 false,
                 lang.getCodeFromRawNode(node)
             )
+
+        if (node.type.equals("optional_parameter_declaration") &&
+                !node.childByFieldName("default_value").isNull
+        ) {
+            // The parameter has a default value
+            param.default = lang.expressionHandler.handle(node.childByFieldName("default_value"))
+        }
 
         return param
     }
@@ -640,6 +648,11 @@ class DeclarationHandler(lang: CXXLanguageFrontend2) :
 
         // Add the parameters we have gathered in the declarator
         declarator.parameters.forEach { lang.scopeManager.addDeclaration(it) }
+        declarator.parameters.forEach {
+            if (it is ParamVariableDeclaration && !func.parameters.contains(it)) {
+                func.addParameter(it)
+            }
+        }
 
         if (func is MethodDeclaration && func.recordDeclaration == null) {
             // try to find the record this belongs to

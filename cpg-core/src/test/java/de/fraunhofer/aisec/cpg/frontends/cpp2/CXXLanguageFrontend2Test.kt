@@ -1261,7 +1261,9 @@ class CXXLanguageFrontend2Test {
             }
 
         // should be seven function nodes
-        Assertions.assertEquals(7, declaration.declarations.size)
+        // increased to 8 because the tree-sitter adds the implicit function declaration of the
+        // unresolved macro
+        Assertions.assertEquals(8, declaration.declarations.size)
 
         var method = declaration.getDeclarationAs(0, FunctionDeclaration::class.java)
         Assertions.assertEquals("function0(int)void", method!!.signature)
