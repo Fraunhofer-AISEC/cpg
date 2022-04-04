@@ -118,8 +118,11 @@ public class UnaryOperator extends Expression implements TypeListener {
 
   private boolean getsDataFromInput(TypeListener listener) {
     checked.clear();
-    return input != null
-        && input.getTypeListeners().stream().anyMatch(l -> getsDataFromInput(l, listener));
+    if (input == null) return false;
+    for (var l : input.getTypeListeners()) {
+      if (getsDataFromInput(l, listener)) return true;
+    }
+    return false;
   }
 
   public String getOperatorCode() {
@@ -148,7 +151,7 @@ public class UnaryOperator extends Expression implements TypeListener {
   }
 
   @Override
-  public void typeChanged(HasType src, HasType root, Type oldType) {
+  public void typeChanged(HasType src, Set<HasType> root, Type oldType) {
     if (!TypeManager.isTypeSystemActive()) {
       return;
     }
@@ -179,7 +182,7 @@ public class UnaryOperator extends Expression implements TypeListener {
       // We are a fuzzy parser, so while this should not happen, there is no guarantee that input is
       // not null
       if (input != null) {
-        input.setType(newType, this);
+        input.setType(newType, new HashSet<>(Set.of(this)));
       }
     }
 
@@ -189,7 +192,7 @@ public class UnaryOperator extends Expression implements TypeListener {
   }
 
   @Override
-  public void possibleSubTypesChanged(HasType src, HasType root, Set<Type> oldSubTypes) {
+  public void possibleSubTypesChanged(HasType src, Set<HasType> root, Set<Type> oldSubTypes) {
     if (!TypeManager.isTypeSystemActive()) {
       return;
     }

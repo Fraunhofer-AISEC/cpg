@@ -84,18 +84,23 @@ public abstract class ValueDeclaration extends Declaration implements HasType {
   }
 
   @Override
-  public void setType(Type type, HasType root) {
+  public void setType(Type type, Set<HasType> root) {
     if (!TypeManager.isTypeSystemActive()) {
       TypeManager.getInstance().cacheType(this, type);
       return;
     }
-    if (type == null || root == this) {
+    if (type == null || (root != null && root.contains(this))) {
       return;
     }
 
     if (this.type instanceof FunctionPointerType && !(type instanceof FunctionPointerType)) {
       return;
     }
+
+    if (root == null) {
+      root = new HashSet<>();
+    }
+    root.add(this);
 
     Type oldType = this.type;
 
@@ -119,22 +124,21 @@ public abstract class ValueDeclaration extends Declaration implements HasType {
         TypeManager.getInstance()
             .registerType(TypeManager.getInstance().getCommonType(subTypes).orElse(type));
 
-    subTypes =
-        subTypes.stream()
-            .filter(s -> TypeManager.getInstance().isSupertypeOf(this.type, s))
-            .collect(Collectors.toSet());
+    Set<Type> newSubtypes = new HashSet<>();
+    for (var s : subTypes) {
+      if (TypeManager.getInstance().isSupertypeOf(this.type, s)) {
+        newSubtypes.add(TypeManager.getInstance().registerType(s));
+      }
+    }
 
-    subTypes =
-        subTypes.stream()
-            .map(s -> TypeManager.getInstance().registerType(s))
-            .collect(Collectors.toSet());
-
-    setPossibleSubTypes(subTypes);
+    setPossibleSubTypes(newSubtypes);
 
     if (!Objects.equals(oldType, type)) {
-      this.typeListeners.stream()
-          .filter(l -> !l.equals(this))
-          .forEach(l -> l.typeChanged(this, root == null ? this : root, oldType));
+      for (var l : typeListeners) {
+        if (!l.equals(this)) {
+          l.typeChanged(this, root, oldType);
+        }
+      }
     }
   }
 
@@ -146,22 +150,24 @@ public abstract class ValueDeclaration extends Declaration implements HasType {
     this.type = type;
     setPossibleSubTypes(new HashSet<>(List.of(type)));
 
+    Set<HasType> root = new HashSet<>(Set.of(this));
     if (!Objects.equals(oldType, type)) {
       this.typeListeners.stream()
           .filter(l -> !l.equals(this))
-          .forEach(l -> l.typeChanged(this, this, oldType));
+          .forEach(l -> l.typeChanged(this, root, oldType));
     }
     if (oldSubTypes.size() != 1 || !oldSubTypes.contains(type))
       this.typeListeners.stream()
           .filter(l -> !l.equals(this))
-          .forEach(l -> l.possibleSubTypesChanged(this, this, oldSubTypes));
+          .forEach(l -> l.possibleSubTypesChanged(this, root, oldSubTypes));
   }
 
   @Override
   public void registerTypeListener(TypeListener listener) {
+    Set<HasType> root = new HashSet<>(Set.of(this));
     typeListeners.add(listener);
-    listener.typeChanged(this, this, this.type);
-    listener.possibleSubTypesChanged(this, this, this.possibleSubTypes);
+    listener.typeChanged(this, root, this.type);
+    listener.possibleSubTypesChanged(this, root, this.possibleSubTypes);
   }
 
   @Override
@@ -183,7 +189,7 @@ public abstract class ValueDeclaration extends Declaration implements HasType {
   }
 
   @Override
-  public void setPossibleSubTypes(Set<Type> possibleSubTypes, HasType root) {
+  public void setPossibleSubTypes(Set<Type> possibleSubTypes, Set<HasType> root) {
     possibleSubTypes =
         possibleSubTypes.stream()
             .filter(Predicate.not(TypeManager.getInstance()::isUnknown))
@@ -194,27 +200,34 @@ public abstract class ValueDeclaration extends Declaration implements HasType {
       return;
     }
 
-    if (root == this) {
+    if (root != null && root.contains(this)) {
       return;
     }
+    if (root == null) {
+      root = new HashSet<>();
+    }
+    root.add(this);
 
-    Set<Type> oldSubTypes = this.possibleSubTypes;
-    this.possibleSubTypes = new HashSet<>(possibleSubTypes);
+    if (!this.possibleSubTypes.containsAll(possibleSubTypes)) {
+      Set<Type> oldSubTypes = this.possibleSubTypes;
+      this.possibleSubTypes = possibleSubTypes;
 
-    if (!this.possibleSubTypes.equals(oldSubTypes)) {
-      this.typeListeners.stream()
-          .filter(l -> !l.equals(this))
-          .forEach(l -> l.possibleSubTypesChanged(this, root == null ? this : root, oldSubTypes));
+      // if (!this.possibleSubTypes.equals(oldSubTypes)) {
+      for (var listener : this.typeListeners) {
+        if (!listener.equals(this)) {
+          listener.possibleSubTypesChanged(this, root, oldSubTypes);
+        }
+      }
     }
   }
 
   @Override
   public void refreshType() {
-    this.typeListeners.forEach(
-        l -> {
-          l.typeChanged(this, this, type);
-          l.possibleSubTypesChanged(this, this, possibleSubTypes);
-        });
+    Set<HasType> root = new HashSet<>(Set.of(this));
+    for (var l : this.typeListeners) {
+      l.typeChanged(this, root, type);
+      l.possibleSubTypesChanged(this, root, possibleSubTypes);
+    }
   }
 
   @NotNull
@@ -245,6 +258,9 @@ public abstract class ValueDeclaration extends Declaration implements HasType {
   @Override
   public void updateType(Type type) {
     this.type = type;
+    if (!TypeManager.isTypeSystemActive()) {
+      TypeManager.getInstance().cacheType(this, type);
+    }
   }
 
   @Override

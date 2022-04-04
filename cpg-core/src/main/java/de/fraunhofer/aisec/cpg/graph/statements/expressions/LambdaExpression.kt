@@ -55,7 +55,7 @@ class LambdaExpression : Expression(), HasType.TypeListener {
             }
         }
 
-    override fun typeChanged(src: HasType?, root: HasType?, oldType: Type?) {
+    override fun typeChanged(src: HasType?, root: MutableSet<HasType>?, oldType: Type?) {
         if (!TypeManager.isTypeSystemActive()) {
             return
         }
@@ -92,7 +92,7 @@ class LambdaExpression : Expression(), HasType.TypeListener {
 
     override fun possibleSubTypesChanged(
         src: HasType?,
-        root: HasType?,
+        root: MutableSet<HasType>?,
         oldSubTypes: MutableSet<Type>?
     ) {
         // do not take sub types from the listener

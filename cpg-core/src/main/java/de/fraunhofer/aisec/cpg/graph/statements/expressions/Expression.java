@@ -103,27 +103,30 @@ public class Expression extends Statement implements HasType {
   }
 
   @Override
-  public void setType(Type type, HasType root) {
+  public void setType(Type type, Set<HasType> root) {
     if (!TypeManager.isTypeSystemActive()) {
+      this.type = type;
       TypeManager.getInstance().cacheType(this, type);
       return;
     }
     // TODO Document this method. It is called very often (potentially for each AST node) and
     // performs less than optimal.
-    if (type == null || root == this) {
+    if (type == null
+        || (root != null && root.contains(this))
+        || TypeManager.getInstance().isUnknown(type)
+        || TypeManager.getInstance().stopPropagation(this.type, type)) {
       return;
     }
 
     if (this.type instanceof FunctionPointerType && !(type instanceof FunctionPointerType)) {
       return;
     }
+    if (root == null) {
+      root = new HashSet<>();
+    }
+    root.add(this);
 
     Type oldType = this.type;
-
-    if (TypeManager.getInstance().isUnknown(type)
-        || TypeManager.getInstance().stopPropagation(oldType, type)) {
-      return;
-    }
 
     type = type.duplicate();
     type.setQualifier(this.type.getQualifier().merge(type.getQualifier()));
@@ -142,22 +145,21 @@ public class Expression extends Statement implements HasType {
         TypeManager.getInstance()
             .registerType(TypeManager.getInstance().getCommonType(subTypes).orElse(type));
 
-    subTypes =
-        subTypes.stream()
-            .filter(s -> TypeManager.getInstance().isSupertypeOf(this.type, s))
-            .collect(Collectors.toSet());
+    Set<Type> newSubtypes = new HashSet<>();
+    for (var s : subTypes) {
+      if (TypeManager.getInstance().isSupertypeOf(this.type, s)) {
+        newSubtypes.add(TypeManager.getInstance().registerType(s));
+      }
+    }
 
-    subTypes =
-        subTypes.stream()
-            .map(s -> TypeManager.getInstance().registerType(s))
-            .collect(Collectors.toSet());
+    setPossibleSubTypes(newSubtypes);
 
-    setPossibleSubTypes(subTypes);
-
-    if (!Objects.equals(oldType, type)) {
-      this.typeListeners.stream()
-          .filter(l -> !l.equals(this))
-          .forEach(l -> l.typeChanged(this, root == null ? this : root, oldType));
+    if (!Objects.equals(oldType, type) && !TypeManager.getInstance().isSupertypeOf(oldType, type)) {
+      for (var l : typeListeners) {
+        if (!l.equals(this)) {
+          l.typeChanged(this, root, oldType);
+        }
+      }
     }
   }
 
@@ -170,7 +172,7 @@ public class Expression extends Statement implements HasType {
   }
 
   @Override
-  public void setPossibleSubTypes(Set<Type> possibleSubTypes, HasType root) {
+  public void setPossibleSubTypes(Set<Type> possibleSubTypes, Set<HasType> root) {
     possibleSubTypes =
         possibleSubTypes.stream()
             .filter(Predicate.not(TypeManager.getInstance()::isUnknown))
@@ -181,7 +183,7 @@ public class Expression extends Statement implements HasType {
       return;
     }
 
-    if (root == this) {
+    if (root != null && root.contains(this)) {
       return;
     }
 
@@ -189,13 +191,33 @@ public class Expression extends Statement implements HasType {
         && !this.possibleSubTypes.isEmpty()) {
       return;
     }
-    Set<Type> oldSubTypes = this.possibleSubTypes;
-    this.possibleSubTypes = new HashSet<>(possibleSubTypes);
+    if (root == null) {
+      root = new HashSet<>();
+    }
+    root.add(this);
 
-    if (!this.getPossibleSubTypes().equals(oldSubTypes)) {
-      this.typeListeners.stream()
-          .filter(l -> !l.equals(this))
-          .forEach(l -> l.possibleSubTypesChanged(this, root == null ? this : root, oldSubTypes));
+    if (!this.possibleSubTypes.containsAll(possibleSubTypes)) {
+      Set<Type> oldSubTypes = this.possibleSubTypes;
+      this.possibleSubTypes = possibleSubTypes;
+
+      // if (!this.getPossibleSubTypes().equals(oldSubTypes)) {
+      for (var listener : this.typeListeners) {
+        if (!listener.equals(this)) {
+          HasType src = this;
+          Set<Type> subTypes;
+          if (listener instanceof ArraySubscriptionExpression
+              || listener instanceof CallExpression
+              || listener instanceof UnaryOperator) {
+            listener.possibleSubTypesChanged(this, root, oldSubTypes);
+          } else if (listener instanceof CastExpression || listener instanceof ExpressionList) {
+            setPossibleSubTypes(src.getPossibleSubTypes(), root);
+          } else if (listener instanceof Expression) {
+            subTypes = new HashSet<>(((Expression) listener).getPossibleSubTypes());
+            subTypes.addAll(src.getPossibleSubTypes());
+            setPossibleSubTypes(subTypes, root);
+          }
+        }
+      }
     }
   }
 
@@ -209,22 +231,24 @@ public class Expression extends Statement implements HasType {
     this.type = type;
     possibleSubTypes = new HashSet<>();
 
+    Set<HasType> root = new HashSet<>(Set.of(this));
     if (!Objects.equals(oldType, type)) {
       this.typeListeners.stream()
           .filter(l -> !l.equals(this))
-          .forEach(l -> l.typeChanged(this, this, oldType));
+          .forEach(l -> l.typeChanged(this, root, oldType));
     }
     if (oldSubTypes.size() != 1 || !oldSubTypes.contains(type))
       this.typeListeners.stream()
           .filter(l -> !l.equals(this))
-          .forEach(l -> l.possibleSubTypesChanged(this, this, oldSubTypes));
+          .forEach(l -> l.possibleSubTypesChanged(this, root, oldSubTypes));
   }
 
   @Override
   public void registerTypeListener(TypeListener listener) {
+    Set<HasType> root = new HashSet<>(Set.of(this));
     this.typeListeners.add(listener);
-    listener.typeChanged(this, this, this.type);
-    listener.possibleSubTypesChanged(this, this, this.possibleSubTypes);
+    listener.typeChanged(this, root, this.type);
+    listener.possibleSubTypesChanged(this, root, this.possibleSubTypes);
   }
 
   @Override
@@ -239,11 +263,11 @@ public class Expression extends Statement implements HasType {
 
   @Override
   public void refreshType() {
-    this.typeListeners.forEach(
-        l -> {
-          l.typeChanged(this, this, type);
-          l.possibleSubTypesChanged(this, this, possibleSubTypes);
-        });
+    Set<HasType> root = new HashSet<>(Set.of(this));
+    for (var l : typeListeners) {
+      l.typeChanged(this, root, type);
+      l.possibleSubTypesChanged(this, root, possibleSubTypes);
+    }
   }
 
   @Override

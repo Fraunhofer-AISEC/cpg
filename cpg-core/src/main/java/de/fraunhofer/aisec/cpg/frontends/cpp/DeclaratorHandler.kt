@@ -53,20 +53,24 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
     Handler<Declaration?, IASTNameOwner, CXXLanguageFrontend?>(Supplier { Declaration() }, lang) {
 
     init {
-        map[CPPASTDeclarator::class.java] =
-            HandlerInterface { handleDeclarator(it as CPPASTDeclarator) }
-        map[CPPASTArrayDeclarator::class.java] =
-            HandlerInterface { handleDeclarator(it as CPPASTDeclarator) }
-        map[CPPASTFieldDeclarator::class.java] =
-            HandlerInterface { handleFieldDeclarator(it as CPPASTDeclarator) }
-        map[CPPASTFunctionDeclarator::class.java] =
-            HandlerInterface { handleFunctionDeclarator(it as CPPASTFunctionDeclarator) }
-        map[CPPASTCompositeTypeSpecifier::class.java] =
-            HandlerInterface { handleCompositeTypeSpecifier(it as CPPASTCompositeTypeSpecifier) }
-        map[CPPASTSimpleTypeTemplateParameter::class.java] =
-            HandlerInterface {
-                handleTemplateTypeParameter(it as CPPASTSimpleTypeTemplateParameter)
-            }
+        map[CPPASTDeclarator::class.java] = HandlerInterface {
+            handleDeclarator(it as CPPASTDeclarator)
+        }
+        map[CPPASTArrayDeclarator::class.java] = HandlerInterface {
+            handleDeclarator(it as CPPASTDeclarator)
+        }
+        map[CPPASTFieldDeclarator::class.java] = HandlerInterface {
+            handleFieldDeclarator(it as CPPASTDeclarator)
+        }
+        map[CPPASTFunctionDeclarator::class.java] = HandlerInterface {
+            handleFunctionDeclarator(it as CPPASTFunctionDeclarator)
+        }
+        map[CPPASTCompositeTypeSpecifier::class.java] = HandlerInterface {
+            handleCompositeTypeSpecifier(it as CPPASTCompositeTypeSpecifier)
+        }
+        map[CPPASTSimpleTypeTemplateParameter::class.java] = HandlerInterface {
+            handleTemplateTypeParameter(it as CPPASTSimpleTypeTemplateParameter)
+        }
     }
 
     private fun handleDeclarator(ctx: CPPASTDeclarator): Declaration? {

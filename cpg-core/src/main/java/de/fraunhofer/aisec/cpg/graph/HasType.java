@@ -55,12 +55,12 @@ public interface HasType {
    * Set the node's type. This may start a chain of type listener notifications
    *
    * @param type new type
-   * @param root The node that initiated the type change chain. When a node receives a type setting
-   *     command where root == this, we know that we have a type listener circle and can abort. If
-   *     root == null, the type change is seen as an externally triggered event and subsequent type
-   *     listeners receive the current node as their root.
+   * @param root The nodes which we have seen in the type change chain. When a node receives a type
+   *     setting command where root.contains(this), we know that we have a type listener circle and
+   *     can abort. If root == null, the type change is seen as an externally triggered event and
+   *     subsequent type listeners receive the current node as their root.
    */
-  void setType(Type type, HasType root);
+  void setType(Type type, Set<HasType> root);
 
   Set<Type> getPossibleSubTypes();
 
@@ -70,12 +70,12 @@ public interface HasType {
 
   /**
    * Set the node's possible subtypes. Listener circle detection works the same way as with {@link
-   * #setType(Type, HasType)}
+   * #setType(Type, Set<HasType>)}
    *
    * @param possibleSubTypes
    * @param root
    */
-  void setPossibleSubTypes(Set<Type> possibleSubTypes, HasType root);
+  void setPossibleSubTypes(Set<Type> possibleSubTypes, Set<HasType> root);
 
   void registerTypeListener(TypeListener listener);
 
@@ -95,9 +95,9 @@ public interface HasType {
 
   interface TypeListener {
 
-    void typeChanged(HasType src, HasType root, Type oldType);
+    void typeChanged(HasType src, Set<HasType> root, Type oldType);
 
-    void possibleSubTypesChanged(HasType src, HasType root, Set<Type> oldSubTypes);
+    void possibleSubTypesChanged(HasType src, Set<HasType> root, Set<Type> oldSubTypes);
   }
 
   /**
