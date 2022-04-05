@@ -109,25 +109,20 @@ public class Expression extends Statement implements HasType {
       TypeManager.getInstance().cacheType(this, type);
       return;
     }
+
+    if (root == null) {
+      root = new HashSet<>();
+    }
+
     // TODO Document this method. It is called very often (potentially for each AST node) and
     // performs less than optimal.
     if (type == null
+        || root.contains(this)
         || TypeManager.getInstance().isUnknown(type)
-        || TypeManager.getInstance().stopPropagation(this.type, type)) {
+        || TypeManager.getInstance().stopPropagation(this.type, type)
+        || (this.type instanceof FunctionPointerType && !(type instanceof FunctionPointerType))) {
       return;
     }
-
-    if (this.type instanceof FunctionPointerType && !(type instanceof FunctionPointerType)) {
-      return;
-    }
-
-    Set<HasType> newRoot;
-    if (root != null) {
-      newRoot = new HashSet<>(root);
-    } else {
-      newRoot = new HashSet<>();
-    }
-    newRoot.add(this);
 
     Type oldType = this.type;
 
@@ -157,11 +152,15 @@ public class Expression extends Statement implements HasType {
 
     setPossibleSubTypes(newSubtypes);
 
-    if (!Objects.equals(oldType, type) && !(root != null && root.contains(this))) {
-      for (var l : typeListeners) {
-        if (!l.equals(this)) {
-          l.typeChanged(this, newRoot, oldType);
-        }
+    if (Objects.equals(oldType, type)) {
+      // Nothing changed, so we do not have to notify the listeners.
+      return;
+    }
+    root.add(this); // Add current node to the set of "triggers" to detect potential loops.
+    // Notify all listeners about the changed type
+    for (var l : typeListeners) {
+      if (!l.equals(this)) {
+        l.typeChanged(this, root, oldType);
       }
     }
   }
@@ -176,6 +175,10 @@ public class Expression extends Statement implements HasType {
 
   @Override
   public void setPossibleSubTypes(Set<Type> possibleSubTypes, Set<HasType> root) {
+    if (root == null) {
+      root = new HashSet<>();
+    }
+
     possibleSubTypes =
         possibleSubTypes.stream()
             .filter(Predicate.not(TypeManager.getInstance()::isUnknown))
@@ -186,40 +189,24 @@ public class Expression extends Statement implements HasType {
       return;
     }
 
-    if (root != null && root.contains(this)) {
+    if (root.contains(this)
+        || (possibleSubTypes.stream().allMatch(TypeManager.getInstance()::isPrimitive)
+            && !this.possibleSubTypes.isEmpty())) {
       return;
     }
 
-    if (possibleSubTypes.stream().allMatch(TypeManager.getInstance()::isPrimitive)
-        && !this.possibleSubTypes.isEmpty()) {
-      return;
-    }
-    if (root == null) {
-      root = new HashSet<>();
-    }
-    root.add(this);
-
-    // if (!this.possibleSubTypes.containsAll(possibleSubTypes)) {
     Set<Type> oldSubTypes = this.possibleSubTypes;
     this.possibleSubTypes = possibleSubTypes;
 
-    if (!this.getPossibleSubTypes().equals(oldSubTypes)) {
-      for (var listener : this.typeListeners) {
-        if (!listener.equals(this)) {
-          HasType src = this;
-          Set<Type> subTypes;
-          if (listener instanceof ArraySubscriptionExpression
-              || listener instanceof CallExpression
-              || listener instanceof UnaryOperator) {
-            listener.possibleSubTypesChanged(this, root, oldSubTypes);
-          } else if (listener instanceof CastExpression || listener instanceof ExpressionList) {
-            setPossibleSubTypes(src.getPossibleSubTypes(), root);
-          } else if (listener instanceof Expression) {
-            subTypes = new HashSet<>(((Expression) listener).getPossibleSubTypes());
-            subTypes.addAll(src.getPossibleSubTypes());
-            setPossibleSubTypes(subTypes, root);
-          }
-        }
+    if (getPossibleSubTypes().equals(oldSubTypes)) {
+      // Nothing changed, so we do not have to notify the listeners.
+      return;
+    }
+    root.add(this); // Add current node to the set of "triggers" to detect potential loops.
+    // Notify all listeners about the changed type
+    for (var listener : typeListeners) {
+      if (!listener.equals(this)) {
+        listener.possibleSubTypesChanged(this, root, oldSubTypes);
       }
     }
   }
