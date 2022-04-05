@@ -112,7 +112,6 @@ public class Expression extends Statement implements HasType {
     // TODO Document this method. It is called very often (potentially for each AST node) and
     // performs less than optimal.
     if (type == null
-        || (root != null && root.contains(this))
         || TypeManager.getInstance().isUnknown(type)
         || TypeManager.getInstance().stopPropagation(this.type, type)) {
       return;
@@ -121,10 +120,14 @@ public class Expression extends Statement implements HasType {
     if (this.type instanceof FunctionPointerType && !(type instanceof FunctionPointerType)) {
       return;
     }
-    if (root == null) {
-      root = new HashSet<>();
+
+    Set<HasType> newRoot;
+    if (root != null) {
+      newRoot = new HashSet<>(root);
+    } else {
+      newRoot = new HashSet<>();
     }
-    root.add(this);
+    newRoot.add(this);
 
     Type oldType = this.type;
 
@@ -154,10 +157,10 @@ public class Expression extends Statement implements HasType {
 
     setPossibleSubTypes(newSubtypes);
 
-    if (!Objects.equals(oldType, type) && !TypeManager.getInstance().isSupertypeOf(oldType, type)) {
+    if (!Objects.equals(oldType, type) && !(root != null && root.contains(this))) {
       for (var l : typeListeners) {
         if (!l.equals(this)) {
-          l.typeChanged(this, root, oldType);
+          l.typeChanged(this, newRoot, oldType);
         }
       }
     }
@@ -196,11 +199,11 @@ public class Expression extends Statement implements HasType {
     }
     root.add(this);
 
-    if (!this.possibleSubTypes.containsAll(possibleSubTypes)) {
-      Set<Type> oldSubTypes = this.possibleSubTypes;
-      this.possibleSubTypes = possibleSubTypes;
+    // if (!this.possibleSubTypes.containsAll(possibleSubTypes)) {
+    Set<Type> oldSubTypes = this.possibleSubTypes;
+    this.possibleSubTypes = possibleSubTypes;
 
-      // if (!this.getPossibleSubTypes().equals(oldSubTypes)) {
+    if (!this.getPossibleSubTypes().equals(oldSubTypes)) {
       for (var listener : this.typeListeners) {
         if (!listener.equals(this)) {
           HasType src = this;

@@ -53,8 +53,7 @@ public abstract class ValueDeclaration extends Declaration implements HasType {
     Type result;
     if (TypeManager.isTypeSystemActive()) {
       // just to make sure that we REALLY always return a valid type in case this somehow gets set
-      // to
-      // null
+      // to null
       result = type != null ? type : UnknownType.getUnknownType();
     } else {
       result =
@@ -208,11 +207,10 @@ public abstract class ValueDeclaration extends Declaration implements HasType {
     }
     root.add(this);
 
-    if (!this.possibleSubTypes.containsAll(possibleSubTypes)) {
-      Set<Type> oldSubTypes = this.possibleSubTypes;
-      this.possibleSubTypes = possibleSubTypes;
+    Set<Type> oldSubTypes = this.possibleSubTypes;
+    this.possibleSubTypes = possibleSubTypes;
 
-      // if (!this.possibleSubTypes.equals(oldSubTypes)) {
+    if (!this.possibleSubTypes.equals(oldSubTypes)) {
       for (var listener : this.typeListeners) {
         if (!listener.equals(this)) {
           listener.possibleSubTypesChanged(this, root, oldSubTypes);
@@ -258,9 +256,6 @@ public abstract class ValueDeclaration extends Declaration implements HasType {
   @Override
   public void updateType(Type type) {
     this.type = type;
-    if (!TypeManager.isTypeSystemActive()) {
-      TypeManager.getInstance().cacheType(this, type);
-    }
   }
 
   @Override
