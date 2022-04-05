@@ -88,24 +88,19 @@ public abstract class ValueDeclaration extends Declaration implements HasType {
       TypeManager.getInstance().cacheType(this, type);
       return;
     }
-    if (type == null || (root != null && root.contains(this))) {
-      return;
-    }
-
-    if (this.type instanceof FunctionPointerType && !(type instanceof FunctionPointerType)) {
-      return;
-    }
 
     if (root == null) {
       root = new HashSet<>();
     }
-    root.add(this);
 
-    Type oldType = this.type;
-
-    if (TypeManager.getInstance().isUnknown(type)) {
+    if (type == null
+        || root.contains(this)
+        || TypeManager.getInstance().isUnknown(type)
+        || (this.type instanceof FunctionPointerType && !(type instanceof FunctionPointerType))) {
       return;
     }
+
+    Type oldType = this.type;
 
     type = type.duplicate();
     type.setQualifier(this.type.getQualifier().merge(type.getQualifier()));
@@ -132,11 +127,15 @@ public abstract class ValueDeclaration extends Declaration implements HasType {
 
     setPossibleSubTypes(newSubtypes);
 
-    if (!Objects.equals(oldType, type)) {
-      for (var l : typeListeners) {
-        if (!l.equals(this)) {
-          l.typeChanged(this, root, oldType);
-        }
+    if (Objects.equals(oldType, type)) {
+      // Nothing changed, so we do not have to notify the listeners.
+      return;
+    }
+    root.add(this); // Add current node to the set of "triggers" to detect potential loops.
+    // Notify all listeners about the changed type
+    for (var l : typeListeners) {
+      if (!l.equals(this)) {
+        l.typeChanged(this, root, oldType);
       }
     }
   }
