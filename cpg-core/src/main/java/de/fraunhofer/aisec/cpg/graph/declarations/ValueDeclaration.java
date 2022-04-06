@@ -36,6 +36,7 @@ import java.util.*;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.builder.ToStringBuilder;
+import org.jetbrains.annotations.NotNull;
 import org.neo4j.ogm.annotation.Transient;
 
 /** A declaration who has a type. */
@@ -186,10 +187,7 @@ public abstract class ValueDeclaration extends Declaration implements HasType {
   }
 
   @Override
-  public void setPossibleSubTypes(Set<Type> possibleSubTypes, Collection<HasType> root) {
-    if (root == null) {
-      root = new ArrayList<>();
-    }
+  public void setPossibleSubTypes(Set<Type> possibleSubTypes, @NotNull Collection<HasType> root) {
     possibleSubTypes =
         possibleSubTypes.stream()
             .filter(Predicate.not(TypeManager.getInstance()::isUnknown))

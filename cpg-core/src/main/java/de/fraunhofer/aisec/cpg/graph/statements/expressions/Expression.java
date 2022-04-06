@@ -35,6 +35,7 @@ import java.util.*;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.builder.ToStringBuilder;
+import org.jetbrains.annotations.NotNull;
 import org.neo4j.ogm.annotation.Transient;
 
 /**
@@ -144,7 +145,8 @@ public class Expression extends Statement implements HasType {
         TypeManager.getInstance()
             .registerType(TypeManager.getInstance().getCommonType(subTypes).orElse(type));
 
-    // TODO: Why do we need this loop? Shouldn't the condition be ensured by the previous line getting the common type??
+    // TODO: Why do we need this loop? Shouldn't the condition be ensured by the previous line
+    // getting the common type??
     Set<Type> newSubtypes = new HashSet<>();
     for (var s : subTypes) {
       if (TypeManager.getInstance().isSupertypeOf(this.type, s)) {
@@ -176,11 +178,7 @@ public class Expression extends Statement implements HasType {
   }
 
   @Override
-  public void setPossibleSubTypes(Set<Type> possibleSubTypes, Collection<HasType> root) {
-    if (root == null) {
-      root = new ArrayList<>();
-    }
-
+  public void setPossibleSubTypes(Set<Type> possibleSubTypes, @NotNull Collection<HasType> root) {
     possibleSubTypes =
         possibleSubTypes.stream()
             .filter(Predicate.not(TypeManager.getInstance()::isUnknown))
