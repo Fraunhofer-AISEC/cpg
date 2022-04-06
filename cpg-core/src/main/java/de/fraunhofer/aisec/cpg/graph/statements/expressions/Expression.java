@@ -101,6 +101,9 @@ public class Expression extends Statement implements HasType {
 
   @Override
   public void setType(Type type, Collection<HasType> root) {
+    // TODO Document this method. It is called very often (potentially for each AST node) and
+    // performs less than optimal.
+
     if (!TypeManager.isTypeSystemActive()) {
       this.type = type;
       TypeManager.getInstance().cacheType(this, type);
@@ -111,8 +114,7 @@ public class Expression extends Statement implements HasType {
       root = new ArrayList<>();
     }
 
-    // TODO Document this method. It is called very often (potentially for each AST node) and
-    // performs less than optimal.
+    // No (or only unknown) type given, loop detected? Stop early because there's nothing we can do.
     if (type == null
         || root.contains(this)
         || TypeManager.getInstance().isUnknown(type)
@@ -121,13 +123,14 @@ public class Expression extends Statement implements HasType {
       return;
     }
 
-    Type oldType = this.type;
+    Type oldType = this.type; // Backup to check if something changed
 
     type = type.duplicate();
     type.setQualifier(this.type.getQualifier().merge(type.getQualifier()));
 
     Set<Type> subTypes = new HashSet<>();
 
+    // Check all current subtypes and consider only those which are "different enough" to type.
     for (Type t : getPossibleSubTypes()) {
       if (!t.isSimilar(type)) {
         subTypes.add(t);
@@ -136,10 +139,12 @@ public class Expression extends Statement implements HasType {
 
     subTypes.add(type);
 
+    // Probably tries to get something like the best supertype of all possible subtypes.
     this.type =
         TypeManager.getInstance()
             .registerType(TypeManager.getInstance().getCommonType(subTypes).orElse(type));
 
+    // TODO: Why do we need this loop? Shouldn't the condition be ensured by the previous line getting the common type??
     Set<Type> newSubtypes = new HashSet<>();
     for (var s : subTypes) {
       if (TypeManager.getInstance().isSupertypeOf(this.type, s)) {
@@ -186,6 +191,7 @@ public class Expression extends Statement implements HasType {
       return;
     }
 
+    // Loop detected or only primitive types (which cannot have a subtype)
     if (root.contains(this)
         || (possibleSubTypes.stream().allMatch(TypeManager.getInstance()::isPrimitive)
             && !this.possibleSubTypes.isEmpty())) {

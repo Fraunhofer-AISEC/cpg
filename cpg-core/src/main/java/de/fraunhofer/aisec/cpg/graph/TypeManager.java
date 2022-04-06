@@ -455,7 +455,7 @@ public class TypeManager {
 
   @NonNull
   public Optional<Type> getCommonType(@NonNull Collection<Type> types) {
-
+    // TODO: Documentation needed.
     boolean sameType =
         types.stream().map(t -> t.getClass().getCanonicalName()).collect(Collectors.toSet()).size()
             == 1;
