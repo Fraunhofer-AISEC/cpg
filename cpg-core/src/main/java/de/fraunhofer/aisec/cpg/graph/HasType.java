@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.graph;
 
 import de.fraunhofer.aisec.cpg.graph.types.Type;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Set;
 
@@ -60,22 +61,22 @@ public interface HasType {
    *     can abort. If root == null, the type change is seen as an externally triggered event and
    *     subsequent type listeners receive the current node as their root.
    */
-  void setType(Type type, Set<HasType> root);
+  void setType(Type type, Collection<HasType> root);
 
   Set<Type> getPossibleSubTypes();
 
   default void setPossibleSubTypes(Set<Type> possibleSubTypes) {
-    setPossibleSubTypes(possibleSubTypes, null);
+    setPossibleSubTypes(possibleSubTypes, new ArrayList<>());
   }
 
   /**
    * Set the node's possible subtypes. Listener circle detection works the same way as with {@link
-   * #setType(Type, Set<HasType>)}
+   * #setType(Type, Collection<HasType>)}
    *
    * @param possibleSubTypes
    * @param root
    */
-  void setPossibleSubTypes(Set<Type> possibleSubTypes, Set<HasType> root);
+  void setPossibleSubTypes(Set<Type> possibleSubTypes, Collection<HasType> root);
 
   void registerTypeListener(TypeListener listener);
 
@@ -95,9 +96,9 @@ public interface HasType {
 
   interface TypeListener {
 
-    void typeChanged(HasType src, Set<HasType> root, Type oldType);
+    void typeChanged(HasType src, Collection<HasType> root, Type oldType);
 
-    void possibleSubTypesChanged(HasType src, Set<HasType> root, Set<Type> oldSubTypes);
+    void possibleSubTypesChanged(HasType src, Collection<HasType> root, Set<Type> oldSubTypes);
   }
 
   /**

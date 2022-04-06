@@ -46,8 +46,8 @@ import java.util.*;
  * tracking
  *
  * <p>This pass will split up at every branch in the EOG. Because of the existence of loops and
- * multiple paths being able to run to through the same Declared reference expression we have to keep
- * track of the set of values (assignments) associated to a variable at JoinPoints. If the set
+ * multiple paths being able to run to through the same Declared reference expression we have to
+ * keep track of the set of values (assignments) associated to a variable at JoinPoints. If the set
  * reaching a Joinpoint is not adding new values to one variable the path does not have to be
  * further explored. This ensures that the algorithm terminates and scales with the number of
  * different paths in the program finally reaching a fixpoint.
@@ -119,7 +119,8 @@ public class ControlFlowSensitiveDFGPass extends Pass {
 
     public void handle(Node functionRoot) {
       iterateTillFixpoint(functionRoot, new HashMap<>(), null, false);
-      this.removes = new HashMap<>(); // Resetting removes, computing removes is not necessary in the
+      this.removes =
+          new HashMap<>(); // Resetting removes, computing removes is not necessary in the
       // previous step, this can be removed
       propagateValues();
     }
@@ -234,9 +235,9 @@ public class ControlFlowSensitiveDFGPass extends Pass {
      * This function collects the set of variable definitions valid for the VariableDeclarations
      * defined in the program when reaching a join-point, a node reached by more than one incoming
      * EOG-Edge. The state is computed whenever a write access to a variable is encountered. A node
-     * may be passed by multiple paths and therefore the states have to be merged at these join-points.
-     * However, the number of paths is finite and scales well enough to make a fixpoint iteration of
-     * states at join-points is therefore terminating and feasible.
+     * may be passed by multiple paths and therefore the states have to be merged at these
+     * join-points. However, the number of paths is finite and scales well enough to make a fixpoint
+     * iteration of states at join-points is therefore terminating and feasible.
      *
      * <p>This function iterates over the entire EOG starting at a fixed node. If the execution of
      * this function is started with the function-Node which also represents the EOG-Root-Node all

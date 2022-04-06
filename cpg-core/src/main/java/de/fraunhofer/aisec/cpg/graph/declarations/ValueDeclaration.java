@@ -36,7 +36,6 @@ import java.util.*;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.builder.ToStringBuilder;
-import org.jetbrains.annotations.NotNull;
 import org.neo4j.ogm.annotation.Transient;
 
 /** A declaration who has a type. */
@@ -83,14 +82,14 @@ public abstract class ValueDeclaration extends Declaration implements HasType {
   }
 
   @Override
-  public void setType(Type type, Set<HasType> root) {
+  public void setType(Type type, Collection<HasType> root) {
     if (!TypeManager.isTypeSystemActive()) {
       TypeManager.getInstance().cacheType(this, type);
       return;
     }
 
     if (root == null) {
-      root = new HashSet<>();
+      root = new ArrayList<>();
     }
 
     if (type == null
@@ -148,7 +147,7 @@ public abstract class ValueDeclaration extends Declaration implements HasType {
     this.type = type;
     setPossibleSubTypes(new HashSet<>(List.of(type)));
 
-    Set<HasType> root = new HashSet<>(Set.of(this));
+    List<HasType> root = new ArrayList<>(List.of(this));
     if (!Objects.equals(oldType, type)) {
       this.typeListeners.stream()
           .filter(l -> !l.equals(this))
@@ -162,7 +161,7 @@ public abstract class ValueDeclaration extends Declaration implements HasType {
 
   @Override
   public void registerTypeListener(TypeListener listener) {
-    Set<HasType> root = new HashSet<>(Set.of(this));
+    List<HasType> root = new ArrayList<>(List.of(this));
     typeListeners.add(listener);
     listener.typeChanged(this, root, this.type);
     listener.possibleSubTypesChanged(this, root, this.possibleSubTypes);
@@ -187,7 +186,10 @@ public abstract class ValueDeclaration extends Declaration implements HasType {
   }
 
   @Override
-  public void setPossibleSubTypes(Set<Type> possibleSubTypes, Set<HasType> root) {
+  public void setPossibleSubTypes(Set<Type> possibleSubTypes, Collection<HasType> root) {
+    if (root == null) {
+      root = new ArrayList<>();
+    }
     possibleSubTypes =
         possibleSubTypes.stream()
             .filter(Predicate.not(TypeManager.getInstance()::isUnknown))
@@ -198,11 +200,8 @@ public abstract class ValueDeclaration extends Declaration implements HasType {
       return;
     }
 
-    if (root != null && root.contains(this)) {
+    if (root.contains(this)) {
       return;
-    }
-    if (root == null) {
-      root = new HashSet<>();
     }
     root.add(this);
 
@@ -220,14 +219,13 @@ public abstract class ValueDeclaration extends Declaration implements HasType {
 
   @Override
   public void refreshType() {
-    Set<HasType> root = new HashSet<>(Set.of(this));
+    List<HasType> root = new ArrayList<>(List.of(this));
     for (var l : this.typeListeners) {
       l.typeChanged(this, root, type);
       l.possibleSubTypesChanged(this, root, possibleSubTypes);
     }
   }
 
-  @NotNull
   @Override
   public String toString() {
     return new ToStringBuilder(this, Node.TO_STRING_STYLE).appendSuper(super.toString()).toString();

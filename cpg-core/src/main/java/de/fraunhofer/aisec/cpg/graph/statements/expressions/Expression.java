@@ -31,10 +31,7 @@ import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType;
 import de.fraunhofer.aisec.cpg.graph.types.ReferenceType;
 import de.fraunhofer.aisec.cpg.graph.types.Type;
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.builder.ToStringBuilder;
@@ -103,7 +100,7 @@ public class Expression extends Statement implements HasType {
   }
 
   @Override
-  public void setType(Type type, Set<HasType> root) {
+  public void setType(Type type, Collection<HasType> root) {
     if (!TypeManager.isTypeSystemActive()) {
       this.type = type;
       TypeManager.getInstance().cacheType(this, type);
@@ -111,7 +108,7 @@ public class Expression extends Statement implements HasType {
     }
 
     if (root == null) {
-      root = new HashSet<>();
+      root = new ArrayList<>();
     }
 
     // TODO Document this method. It is called very often (potentially for each AST node) and
@@ -174,9 +171,9 @@ public class Expression extends Statement implements HasType {
   }
 
   @Override
-  public void setPossibleSubTypes(Set<Type> possibleSubTypes, Set<HasType> root) {
+  public void setPossibleSubTypes(Set<Type> possibleSubTypes, Collection<HasType> root) {
     if (root == null) {
-      root = new HashSet<>();
+      root = new ArrayList<>();
     }
 
     possibleSubTypes =
@@ -221,7 +218,7 @@ public class Expression extends Statement implements HasType {
     this.type = type;
     possibleSubTypes = new HashSet<>();
 
-    Set<HasType> root = new HashSet<>(Set.of(this));
+    List<HasType> root = new ArrayList<>(List.of(this));
     if (!Objects.equals(oldType, type)) {
       this.typeListeners.stream()
           .filter(l -> !l.equals(this))
@@ -235,7 +232,7 @@ public class Expression extends Statement implements HasType {
 
   @Override
   public void registerTypeListener(TypeListener listener) {
-    Set<HasType> root = new HashSet<>(Set.of(this));
+    List<HasType> root = new ArrayList<>(List.of(this));
     this.typeListeners.add(listener);
     listener.typeChanged(this, root, this.type);
     listener.possibleSubTypesChanged(this, root, this.possibleSubTypes);
@@ -253,7 +250,7 @@ public class Expression extends Statement implements HasType {
 
   @Override
   public void refreshType() {
-    Set<HasType> root = new HashSet<>(Set.of(this));
+    List<HasType> root = new ArrayList<>(List.of(this));
     for (var l : typeListeners) {
       l.typeChanged(this, root, type);
       l.possibleSubTypesChanged(this, root, possibleSubTypes);

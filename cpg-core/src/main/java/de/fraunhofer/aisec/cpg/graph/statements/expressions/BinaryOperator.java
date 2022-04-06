@@ -33,10 +33,7 @@ import de.fraunhofer.aisec.cpg.graph.SubGraph;
 import de.fraunhofer.aisec.cpg.graph.TypeManager;
 import de.fraunhofer.aisec.cpg.graph.types.Type;
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.neo4j.ogm.annotation.Transient;
 
@@ -191,7 +188,7 @@ public class BinaryOperator extends Expression implements TypeListener {
   }
 
   @Override
-  public void typeChanged(HasType src, Set<HasType> root, Type oldType) {
+  public void typeChanged(HasType src, Collection<HasType> root, Type oldType) {
     if (!TypeManager.isTypeSystemActive()) {
       return;
     }
@@ -210,7 +207,8 @@ public class BinaryOperator extends Expression implements TypeListener {
   }
 
   @Override
-  public void possibleSubTypesChanged(HasType src, Set<HasType> root, Set<Type> oldSubTypes) {
+  public void possibleSubTypesChanged(
+      HasType src, Collection<HasType> root, Set<Type> oldSubTypes) {
     if (!TypeManager.isTypeSystemActive()) {
       return;
     }
