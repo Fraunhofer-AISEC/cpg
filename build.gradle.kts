@@ -35,7 +35,7 @@ plugins {
 
     id("org.sonarqube") version "3.3"
     id("com.diffplug.spotless") version "6.4.0"
-    kotlin("jvm") version "1.6.0" apply false
+    kotlin("jvm") version "1.6.20" apply false
 }
 
 allprojects {
@@ -162,7 +162,7 @@ subprojects {
             // inline functions in 1.8 bytecode, otherwise we cannot use the fluid API in
             // the cpg-console.
             jvmTarget = "1.8"
-            freeCompilerArgs = listOf("-Xopt-in=kotlin.RequiresOptIn")
+            freeCompilerArgs = listOf("-opt-in=kotlin.RequiresOptIn")
         }
     }
 
