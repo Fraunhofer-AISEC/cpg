@@ -25,4 +25,4 @@
  */
 package de.fraunhofer.aisec.cpg.analysis.fsm
 
-class FSMBuilderException(s: String) : Exception()
+class FSMBuilderException(s: String) : Exception(s)

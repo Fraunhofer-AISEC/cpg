@@ -414,7 +414,7 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
 
         // loop through all operands / indices
         for (idx: Int in loopStart until numOps) {
-            val index =
+            val index: Any =
                 if (isGetElementPtr) {
                     // the second argument is the base address that we start our chain from
                     operand = lang.getOperandValueAtIndex(instr, idx)

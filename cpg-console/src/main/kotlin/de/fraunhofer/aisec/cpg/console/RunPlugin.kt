@@ -40,9 +40,6 @@ class RunPlugin : Plugin {
         override val params = "<analyzer>"
 
         override fun execute(line: String): Command.Result {
-            val p = line.indexOf(' ')
-            val path = line.substring(p + 1).trim()
-
             return Command.Result.RunSnippets(
                 listOf(
                     // import

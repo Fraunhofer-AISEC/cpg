@@ -167,16 +167,14 @@ class FrontendUtils {
                         )
                     )
                     .firstOrNull()
-            val closestLine = closest?.location?.region?.startLine ?: location.endLine + 1
+            var closestLine = closest?.location?.region?.startLine ?: location.endLine + 1
 
             // If the closest successor is not in the same line there may be a more adequate
-            // predecessor
-            // to associated the
-            // comment to (Has to be in the same line)
+            // predecessor to associate the comment to (Has to be in the same line)
             if (closest == null || closestLine > location.endLine) {
-                var predecessor =
+                val predecessor =
                     children.filter {
-                        val nodeRegion: Region = it.location?.region?.let { it } ?: Region()
+                        val nodeRegion: Region = it.location?.region ?: Region()
                         nodeRegion.endLine <= location.startLine &&
                             (nodeRegion.endLine < location.startLine ||
                                 nodeRegion.endColumn <= location.startColumn)
@@ -190,7 +188,7 @@ class FrontendUtils {
                             )
                         )
                         .lastOrNull()
-                val closestLine =
+                closestLine =
                     closestPredecessor?.location?.region?.endLine ?: location.startLine - 1
                 if (closestPredecessor != null && closestLine == location.startLine)
                     closest = closestPredecessor
