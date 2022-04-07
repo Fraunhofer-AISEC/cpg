@@ -196,7 +196,6 @@ class LLVMIRLanguageFrontend(config: TranslationConfiguration, scopeManager: Sco
                     record.toType() ?: UnknownType.getUnknownType()
                 }
                 else -> {
-                    val typeStr = LLVMPrintTypeToString(typeRef).string
                     TypeParser.createFrom(typeStr, false)
                 }
             }

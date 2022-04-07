@@ -46,44 +46,63 @@ class StatementHandler(lang: CXXLanguageFrontend) :
     Handler<Statement?, IASTStatement, CXXLanguageFrontend>(Supplier { Statement() }, lang) {
 
     init {
-        map[CPPASTCompoundStatement::class.java] =
-            HandlerInterface { handleCompoundStatement(it as CPPASTCompoundStatement) }
-        map[CPPASTReturnStatement::class.java] =
-            HandlerInterface { handleReturnStatement(it as CPPASTReturnStatement) }
-        map[CPPASTDeclarationStatement::class.java] =
-            HandlerInterface { handleDeclarationStatement(it as CPPASTDeclarationStatement) }
-        map[CPPASTExpressionStatement::class.java] =
-            HandlerInterface { handleExpressionStatement(it as CPPASTExpressionStatement) }
-        map[CPPASTIfStatement::class.java] =
-            HandlerInterface { handleIfStatement(it as CPPASTIfStatement) }
-        map[CPPASTWhileStatement::class.java] =
-            HandlerInterface { handleWhileStatement(it as CPPASTWhileStatement) }
-        map[CPPASTDoStatement::class.java] =
-            HandlerInterface { handleDoStatement(it as CPPASTDoStatement) }
-        map[CPPASTForStatement::class.java] =
-            HandlerInterface { handleForStatement(it as CPPASTForStatement) }
-        map[CPPASTRangeBasedForStatement::class.java] =
-            HandlerInterface { handleForEachStatement(it as CPPASTRangeBasedForStatement) }
-        map[CPPASTContinueStatement::class.java] =
-            HandlerInterface { handleContinueStatement(it as CPPASTContinueStatement) }
-        map[CPPASTBreakStatement::class.java] =
-            HandlerInterface { handleBreakStatement(it as CPPASTBreakStatement) }
-        map[CPPASTLabelStatement::class.java] =
-            HandlerInterface { handleLabelStatement(it as CPPASTLabelStatement) }
-        map[CPPASTSwitchStatement::class.java] =
-            HandlerInterface { handleSwitchStatement(it as CPPASTSwitchStatement) }
-        map[CPPASTCaseStatement::class.java] =
-            HandlerInterface { handleCaseStatement(it as CPPASTCaseStatement) }
-        map[CPPASTDefaultStatement::class.java] =
-            HandlerInterface { handleDefaultStatement(it as CPPASTDefaultStatement) }
-        map[CPPASTNullStatement::class.java] =
-            HandlerInterface { handleEmptyStatement(it as CPPASTNullStatement) }
-        map[CPPASTGotoStatement::class.java] =
-            HandlerInterface { handleGotoStatement(it as CPPASTGotoStatement) }
-        map[CPPASTTryBlockStatement::class.java] =
-            HandlerInterface { handleTryBlockStatement(it as CPPASTTryBlockStatement) }
-        map[CPPASTCatchHandler::class.java] =
-            HandlerInterface { handleCatchHandler(it as ICPPASTCatchHandler) }
+        map[CPPASTCompoundStatement::class.java] = HandlerInterface {
+            handleCompoundStatement(it as CPPASTCompoundStatement)
+        }
+        map[CPPASTReturnStatement::class.java] = HandlerInterface {
+            handleReturnStatement(it as CPPASTReturnStatement)
+        }
+        map[CPPASTDeclarationStatement::class.java] = HandlerInterface {
+            handleDeclarationStatement(it as CPPASTDeclarationStatement)
+        }
+        map[CPPASTExpressionStatement::class.java] = HandlerInterface {
+            handleExpressionStatement(it as CPPASTExpressionStatement)
+        }
+        map[CPPASTIfStatement::class.java] = HandlerInterface {
+            handleIfStatement(it as CPPASTIfStatement)
+        }
+        map[CPPASTWhileStatement::class.java] = HandlerInterface {
+            handleWhileStatement(it as CPPASTWhileStatement)
+        }
+        map[CPPASTDoStatement::class.java] = HandlerInterface {
+            handleDoStatement(it as CPPASTDoStatement)
+        }
+        map[CPPASTForStatement::class.java] = HandlerInterface {
+            handleForStatement(it as CPPASTForStatement)
+        }
+        map[CPPASTRangeBasedForStatement::class.java] = HandlerInterface {
+            handleForEachStatement(it as CPPASTRangeBasedForStatement)
+        }
+        map[CPPASTContinueStatement::class.java] = HandlerInterface {
+            handleContinueStatement(it as CPPASTContinueStatement)
+        }
+        map[CPPASTBreakStatement::class.java] = HandlerInterface {
+            handleBreakStatement(it as CPPASTBreakStatement)
+        }
+        map[CPPASTLabelStatement::class.java] = HandlerInterface {
+            handleLabelStatement(it as CPPASTLabelStatement)
+        }
+        map[CPPASTSwitchStatement::class.java] = HandlerInterface {
+            handleSwitchStatement(it as CPPASTSwitchStatement)
+        }
+        map[CPPASTCaseStatement::class.java] = HandlerInterface {
+            handleCaseStatement(it as CPPASTCaseStatement)
+        }
+        map[CPPASTDefaultStatement::class.java] = HandlerInterface {
+            handleDefaultStatement(it as CPPASTDefaultStatement)
+        }
+        map[CPPASTNullStatement::class.java] = HandlerInterface {
+            handleEmptyStatement(it as CPPASTNullStatement)
+        }
+        map[CPPASTGotoStatement::class.java] = HandlerInterface {
+            handleGotoStatement(it as CPPASTGotoStatement)
+        }
+        map[CPPASTTryBlockStatement::class.java] = HandlerInterface {
+            handleTryBlockStatement(it as CPPASTTryBlockStatement)
+        }
+        map[CPPASTCatchHandler::class.java] = HandlerInterface {
+            handleCatchHandler(it as ICPPASTCatchHandler)
+        }
     }
 
     private fun handleEmptyStatement(emptyStmt: CPPASTNullStatement): EmptyStatement {
