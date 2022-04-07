@@ -493,10 +493,15 @@ open class JavaLanguageFrontend(config: TranslationConfiguration, scopeManager: 
         nativeTypeResolver.add(reflectionTypeSolver)
         var root = config.topLevel
         if (root == null) {
-            root = CommonPath.commonPath(config.sourceLocations)
+            if (config.softwareComponents.size == 1) {
+                root =
+                    CommonPath.commonPath(
+                        config.softwareComponents[config.softwareComponents.keys.first()]
+                    )
+            }
         }
         if (root == null) {
-            log.warn("Could not determine source root for {}", config.sourceLocations)
+            log.warn("Could not determine source root for {}", config.softwareComponents)
         } else {
             log.info("Source file root used for type solver: {}", root)
             val javaParserTypeSolver = JavaParserTypeSolver(root)

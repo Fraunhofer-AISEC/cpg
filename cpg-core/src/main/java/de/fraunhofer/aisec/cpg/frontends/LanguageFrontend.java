@@ -132,8 +132,10 @@ public abstract class LanguageFrontend {
 
   public List<TranslationUnitDeclaration> parseAll() throws TranslationException {
     ArrayList<TranslationUnitDeclaration> units = new ArrayList<>();
-    for (File sourceFile : this.config.getSourceLocations()) {
-      units.add(parse(sourceFile));
+    for (String component : this.config.getSoftwareComponents().keySet()) {
+      for (File sourceFile : this.config.getSoftwareComponents().get(component)) {
+        units.add(parse(sourceFile));
+      }
     }
 
     return units;
