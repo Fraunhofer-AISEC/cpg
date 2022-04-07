@@ -72,7 +72,7 @@ class ConstructExpression : CallExpression(), HasType.TypeListener {
             }
         }
 
-    override fun typeChanged(src: HasType, root: HasType, oldType: Type) {
+    override fun typeChanged(src: HasType, root: Collection<HasType>, oldType: Type) {
         if (!TypeManager.isTypeSystemActive()) {
             return
         }

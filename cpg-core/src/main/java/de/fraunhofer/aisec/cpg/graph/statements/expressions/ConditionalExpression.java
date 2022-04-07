@@ -91,7 +91,7 @@ public class ConditionalExpression extends Expression implements TypeListener {
   }
 
   @Override
-  public void typeChanged(HasType src, HasType root, Type oldType) {
+  public void typeChanged(HasType src, Collection<HasType> root, Type oldType) {
     if (!TypeManager.isTypeSystemActive()) {
       return;
     }
@@ -118,7 +118,8 @@ public class ConditionalExpression extends Expression implements TypeListener {
   }
 
   @Override
-  public void possibleSubTypesChanged(HasType src, HasType root, Set<Type> oldSubTypes) {
+  public void possibleSubTypesChanged(
+      HasType src, Collection<HasType> root, Set<Type> oldSubTypes) {
     if (!TypeManager.isTypeSystemActive()) {
       return;
     }

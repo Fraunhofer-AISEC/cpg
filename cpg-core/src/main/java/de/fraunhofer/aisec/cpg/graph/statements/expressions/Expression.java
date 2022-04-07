@@ -31,13 +31,11 @@ import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType;
 import de.fraunhofer.aisec.cpg.graph.types.ReferenceType;
 import de.fraunhofer.aisec.cpg.graph.types.Type;
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.builder.ToStringBuilder;
+import org.jetbrains.annotations.NotNull;
 import org.neo4j.ogm.annotation.Transient;
 
 /**
@@ -103,33 +101,37 @@ public class Expression extends Statement implements HasType {
   }
 
   @Override
-  public void setType(Type type, HasType root) {
+  public void setType(Type type, Collection<HasType> root) {
+    // TODO Document this method. It is called very often (potentially for each AST node) and
+    // performs less than optimal.
+
     if (!TypeManager.isTypeSystemActive()) {
+      this.type = type;
       TypeManager.getInstance().cacheType(this, type);
       return;
     }
-    // TODO Document this method. It is called very often (potentially for each AST node) and
-    // performs less than optimal.
-    if (type == null || root == this) {
+
+    if (root == null) {
+      root = new ArrayList<>();
+    }
+
+    // No (or only unknown) type given, loop detected? Stop early because there's nothing we can do.
+    if (type == null
+        || root.contains(this)
+        || TypeManager.getInstance().isUnknown(type)
+        || TypeManager.getInstance().stopPropagation(this.type, type)
+        || (this.type instanceof FunctionPointerType && !(type instanceof FunctionPointerType))) {
       return;
     }
 
-    if (this.type instanceof FunctionPointerType && !(type instanceof FunctionPointerType)) {
-      return;
-    }
-
-    Type oldType = this.type;
-
-    if (TypeManager.getInstance().isUnknown(type)
-        || TypeManager.getInstance().stopPropagation(oldType, type)) {
-      return;
-    }
+    Type oldType = this.type; // Backup to check if something changed
 
     type = type.duplicate();
     type.setQualifier(this.type.getQualifier().merge(type.getQualifier()));
 
     Set<Type> subTypes = new HashSet<>();
 
+    // Check all current subtypes and consider only those which are "different enough" to type.
     for (Type t : getPossibleSubTypes()) {
       if (!t.isSimilar(type)) {
         subTypes.add(t);
@@ -138,26 +140,32 @@ public class Expression extends Statement implements HasType {
 
     subTypes.add(type);
 
+    // Probably tries to get something like the best supertype of all possible subtypes.
     this.type =
         TypeManager.getInstance()
             .registerType(TypeManager.getInstance().getCommonType(subTypes).orElse(type));
 
-    subTypes =
-        subTypes.stream()
-            .filter(s -> TypeManager.getInstance().isSupertypeOf(this.type, s))
-            .collect(Collectors.toSet());
+    // TODO: Why do we need this loop? Shouldn't the condition be ensured by the previous line
+    // getting the common type??
+    Set<Type> newSubtypes = new HashSet<>();
+    for (var s : subTypes) {
+      if (TypeManager.getInstance().isSupertypeOf(this.type, s)) {
+        newSubtypes.add(TypeManager.getInstance().registerType(s));
+      }
+    }
 
-    subTypes =
-        subTypes.stream()
-            .map(s -> TypeManager.getInstance().registerType(s))
-            .collect(Collectors.toSet());
+    setPossibleSubTypes(newSubtypes);
 
-    setPossibleSubTypes(subTypes);
-
-    if (!Objects.equals(oldType, type)) {
-      this.typeListeners.stream()
-          .filter(l -> !l.equals(this))
-          .forEach(l -> l.typeChanged(this, root == null ? this : root, oldType));
+    if (Objects.equals(oldType, type)) {
+      // Nothing changed, so we do not have to notify the listeners.
+      return;
+    }
+    root.add(this); // Add current node to the set of "triggers" to detect potential loops.
+    // Notify all listeners about the changed type
+    for (var l : typeListeners) {
+      if (!l.equals(this)) {
+        l.typeChanged(this, root, oldType);
+      }
     }
   }
 
@@ -170,7 +178,7 @@ public class Expression extends Statement implements HasType {
   }
 
   @Override
-  public void setPossibleSubTypes(Set<Type> possibleSubTypes, HasType root) {
+  public void setPossibleSubTypes(Set<Type> possibleSubTypes, @NotNull Collection<HasType> root) {
     possibleSubTypes =
         possibleSubTypes.stream()
             .filter(Predicate.not(TypeManager.getInstance()::isUnknown))
@@ -181,21 +189,26 @@ public class Expression extends Statement implements HasType {
       return;
     }
 
-    if (root == this) {
+    // Loop detected or only primitive types (which cannot have a subtype)
+    if (root.contains(this)
+        || (possibleSubTypes.stream().allMatch(TypeManager.getInstance()::isPrimitive)
+            && !this.possibleSubTypes.isEmpty())) {
       return;
     }
 
-    if (possibleSubTypes.stream().allMatch(TypeManager.getInstance()::isPrimitive)
-        && !this.possibleSubTypes.isEmpty()) {
-      return;
-    }
     Set<Type> oldSubTypes = this.possibleSubTypes;
-    this.possibleSubTypes = new HashSet<>(possibleSubTypes);
+    this.possibleSubTypes = possibleSubTypes;
 
-    if (!this.getPossibleSubTypes().equals(oldSubTypes)) {
-      this.typeListeners.stream()
-          .filter(l -> !l.equals(this))
-          .forEach(l -> l.possibleSubTypesChanged(this, root == null ? this : root, oldSubTypes));
+    if (getPossibleSubTypes().equals(oldSubTypes)) {
+      // Nothing changed, so we do not have to notify the listeners.
+      return;
+    }
+    root.add(this); // Add current node to the set of "triggers" to detect potential loops.
+    // Notify all listeners about the changed type
+    for (var listener : typeListeners) {
+      if (!listener.equals(this)) {
+        listener.possibleSubTypesChanged(this, root, oldSubTypes);
+      }
     }
   }
 
@@ -209,22 +222,24 @@ public class Expression extends Statement implements HasType {
     this.type = type;
     possibleSubTypes = new HashSet<>();
 
+    List<HasType> root = new ArrayList<>(List.of(this));
     if (!Objects.equals(oldType, type)) {
       this.typeListeners.stream()
           .filter(l -> !l.equals(this))
-          .forEach(l -> l.typeChanged(this, this, oldType));
+          .forEach(l -> l.typeChanged(this, root, oldType));
     }
     if (oldSubTypes.size() != 1 || !oldSubTypes.contains(type))
       this.typeListeners.stream()
           .filter(l -> !l.equals(this))
-          .forEach(l -> l.possibleSubTypesChanged(this, this, oldSubTypes));
+          .forEach(l -> l.possibleSubTypesChanged(this, root, oldSubTypes));
   }
 
   @Override
   public void registerTypeListener(TypeListener listener) {
+    List<HasType> root = new ArrayList<>(List.of(this));
     this.typeListeners.add(listener);
-    listener.typeChanged(this, this, this.type);
-    listener.possibleSubTypesChanged(this, this, this.possibleSubTypes);
+    listener.typeChanged(this, root, this.type);
+    listener.possibleSubTypesChanged(this, root, this.possibleSubTypes);
   }
 
   @Override
@@ -239,11 +254,11 @@ public class Expression extends Statement implements HasType {
 
   @Override
   public void refreshType() {
-    this.typeListeners.forEach(
-        l -> {
-          l.typeChanged(this, this, type);
-          l.possibleSubTypesChanged(this, this, possibleSubTypes);
-        });
+    List<HasType> root = new ArrayList<>(List.of(this));
+    for (var l : typeListeners) {
+      l.typeChanged(this, root, type);
+      l.possibleSubTypesChanged(this, root, possibleSubTypes);
+    }
   }
 
   @Override

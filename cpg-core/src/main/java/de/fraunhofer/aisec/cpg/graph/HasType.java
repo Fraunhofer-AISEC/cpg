@@ -26,8 +26,10 @@
 package de.fraunhofer.aisec.cpg.graph;
 
 import de.fraunhofer.aisec.cpg.graph.types.Type;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Set;
+import org.checkerframework.checker.nullness.qual.NonNull;
 
 public interface HasType {
   Type getType();
@@ -55,27 +57,27 @@ public interface HasType {
    * Set the node's type. This may start a chain of type listener notifications
    *
    * @param type new type
-   * @param root The node that initiated the type change chain. When a node receives a type setting
-   *     command where root == this, we know that we have a type listener circle and can abort. If
-   *     root == null, the type change is seen as an externally triggered event and subsequent type
-   *     listeners receive the current node as their root.
+   * @param root The nodes which we have seen in the type change chain. When a node receives a type
+   *     setting command where root.contains(this), we know that we have a type listener circle and
+   *     can abort. If root is an empty list, the type change is seen as an externally triggered
+   *     event and subsequent type listeners receive the current node as their root.
    */
-  void setType(Type type, HasType root);
+  void setType(Type type, Collection<HasType> root);
 
   Set<Type> getPossibleSubTypes();
 
   default void setPossibleSubTypes(Set<Type> possibleSubTypes) {
-    setPossibleSubTypes(possibleSubTypes, null);
+    setPossibleSubTypes(possibleSubTypes, new ArrayList<>());
   }
 
   /**
    * Set the node's possible subtypes. Listener circle detection works the same way as with {@link
-   * #setType(Type, HasType)}
+   * #setType(Type, Collection<HasType>)}
    *
    * @param possibleSubTypes
-   * @param root
+   * @param root A list of already seen nodes which is used for detecting loops.
    */
-  void setPossibleSubTypes(Set<Type> possibleSubTypes, HasType root);
+  void setPossibleSubTypes(Set<Type> possibleSubTypes, @NonNull Collection<HasType> root);
 
   void registerTypeListener(TypeListener listener);
 
@@ -95,9 +97,9 @@ public interface HasType {
 
   interface TypeListener {
 
-    void typeChanged(HasType src, HasType root, Type oldType);
+    void typeChanged(HasType src, Collection<HasType> root, Type oldType);
 
-    void possibleSubTypesChanged(HasType src, HasType root, Set<Type> oldSubTypes);
+    void possibleSubTypesChanged(HasType src, Collection<HasType> root, Set<Type> oldSubTypes);
   }
 
   /**

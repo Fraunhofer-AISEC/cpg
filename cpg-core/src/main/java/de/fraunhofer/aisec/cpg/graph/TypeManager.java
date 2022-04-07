@@ -46,6 +46,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
+import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -80,7 +81,26 @@ public class TypeManager {
   }
 
   private static final List<String> primitiveTypeNames =
-      List.of("byte", "short", "int", "long", "float", "double", "boolean", "char");
+      List.of(
+          "byte",
+          "short",
+          "int",
+          "long",
+          "float",
+          "double",
+          "boolean",
+          "char",
+          // LLVM primitive types
+          "i1",
+          "i8",
+          "i32",
+          "i64",
+          "i128",
+          "half",
+          "bfloat",
+          "fp128",
+          "x86_fp80",
+          "ppc_fp128");
   private static final Pattern funPointerPattern =
       Pattern.compile("\\(?\\*(?<alias>[^()]+)\\)?\\(.*\\)");
   @NonNull private static TypeManager INSTANCE = new TypeManager();
@@ -308,6 +328,7 @@ public class TypeManager {
     typeSystemActive = active;
   }
 
+  @NotNull
   public Map<HasType, Set<Type>> getTypeCache() {
     return typeCache;
   }
@@ -434,7 +455,7 @@ public class TypeManager {
 
   @NonNull
   public Optional<Type> getCommonType(@NonNull Collection<Type> types) {
-
+    // TODO: Documentation needed.
     boolean sameType =
         types.stream().map(t -> t.getClass().getCanonicalName()).collect(Collectors.toSet()).size()
             == 1;
@@ -592,8 +613,8 @@ public class TypeManager {
     } else {
       // If array depth matches: check whether these are types from the standard library
       try {
-        Class superCls = Class.forName(superType.getTypeName());
-        Class subCls = Class.forName(subType.getTypeName());
+        Class<?> superCls = Class.forName(superType.getTypeName());
+        Class<?> subCls = Class.forName(subType.getTypeName());
         return superCls.isAssignableFrom(subCls);
       } catch (ClassNotFoundException | NoClassDefFoundError e) {
         // Not in the class path or other linkage exception, can't help here
@@ -753,9 +774,7 @@ public class TypeManager {
       return alias;
     }
 
-    Type toCheck = alias.getRoot();
-
-    Type finalToCheck = toCheck;
+    Type finalToCheck = alias.getRoot();
     Optional<Type> applicable =
         frontend.getScopeManager().getCurrentTypedefs().stream()
             .filter(t -> t.getAlias().getRoot().equals(finalToCheck))

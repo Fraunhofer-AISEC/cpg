@@ -46,8 +46,8 @@ import java.util.*;
  * tracking
  *
  * <p>This pass will split up at every branch in the EOG. Because of the existence of loops and
- * multiple paths being able to run to trough the same Declared reference expression we have to keep
- * track of the set of values (assignments) associated to a variable at JoinPoints. If the set
+ * multiple paths being able to run to through the same Declared reference expression we have to
+ * keep track of the set of values (assignments) associated to a variable at JoinPoints. If the set
  * reaching a Joinpoint is not adding new values to one variable the path does not have to be
  * further explored. This ensures that the algorithm terminates and scales with the number of
  * different paths in the program finally reaching a fixpoint.
@@ -57,7 +57,7 @@ import java.util.*;
  * for the algorithm.
  *
  * <p>We here do not solve the problem of Exception-Handling, for this we will need additional
- * semantics on Edges. --------
+ * semantics on Edges.
  */
 public class ControlFlowSensitiveDFGPass extends Pass {
 
@@ -89,7 +89,7 @@ public class ControlFlowSensitiveDFGPass extends Pass {
   }
 
   /**
-   * ControlFlowSensitiveDFG Pass is perfomed on every Method
+   * ControlFlowSensitiveDFG Pass is performed on every method.
    *
    * @param node every node in the TranslationResult
    */
@@ -119,7 +119,8 @@ public class ControlFlowSensitiveDFGPass extends Pass {
 
     public void handle(Node functionRoot) {
       iterateTillFixpoint(functionRoot, new HashMap<>(), null, false);
-      this.removes = new HashMap<>(); // Reseting removes, computing removes is not necessary in the
+      this.removes =
+          new HashMap<>(); // Resetting removes, computing removes is not necessary in the
       // previous step, this can be removed
       propagateValues();
     }
@@ -144,14 +145,14 @@ public class ControlFlowSensitiveDFGPass extends Pass {
      */
     protected Set<Node> eogTraversal(Node node) {
       Set<Node> eogReachableNodes = new HashSet<>();
-      Set<Node> checkRechable = new HashSet<>();
-      checkRechable.add(node);
+      Set<Node> checkReachable = new HashSet<>();
+      checkReachable.add(node);
 
-      while (!checkRechable.isEmpty()) {
-        Node n = checkRechable.iterator().next();
-        checkRechable.addAll(n.getNextEOG());
+      while (!checkReachable.isEmpty()) {
+        Node n = checkReachable.iterator().next();
+        checkReachable.addAll(n.getNextEOG());
         eogReachableNodes.add(n);
-        checkRechable.removeAll(eogReachableNodes);
+        checkReachable.removeAll(eogReachableNodes);
       }
 
       return eogReachableNodes;
@@ -200,12 +201,12 @@ public class ControlFlowSensitiveDFGPass extends Pass {
      */
     protected Node obtainAssignmentNode(Node node) {
       Set<Node> nextEOG = new HashSet<>(node.getNextEOG());
-      Set<Node> rechableEOGs = new HashSet<>();
+      Set<Node> reachableEOGs = new HashSet<>();
       for (Node next : nextEOG) {
-        rechableEOGs.addAll(eogTraversal(next));
+        reachableEOGs.addAll(eogTraversal(next));
       }
 
-      return rechableEOGs.stream()
+      return reachableEOGs.stream()
           .filter(
               n ->
                   n instanceof BinaryOperator
@@ -222,7 +223,7 @@ public class ControlFlowSensitiveDFGPass extends Pass {
      */
     protected void modifyDFGEdges(Node currNode, Map<VariableDeclaration, Set<Node>> variables) {
       // A DeclaredReferenceExpression makes use of one of the VariableDeclaration we are
-      // tracking. Therefore we must modify the outgoing and ingoing DFG edges
+      // tracking. Therefore, we must modify the outgoing and ingoing DFG edges
       // Check for outgoing DFG edges
       registerOutgoingDFG(currNode, variables);
 
@@ -234,9 +235,9 @@ public class ControlFlowSensitiveDFGPass extends Pass {
      * This function collects the set of variable definitions valid for the VariableDeclarations
      * defined in the program when reaching a join-point, a node reached by more than one incoming
      * EOG-Edge. The state is computed whenever a write access to a variable is encountered. A node
-     * may passed by multiple paths and therefore the states have to be merged at these join-points.
-     * However the number of paths is finite and scales well enough to make a fixpoint iteration of
-     * states at join-points is therefore terminating and feasable.
+     * may be passed by multiple paths and therefore the states have to be merged at these
+     * join-points. However, the number of paths is finite and scales well enough to make a fixpoint
+     * iteration of states at join-points is therefore terminating and feasible.
      *
      * <p>This function iterates over the entire EOG starting at a fixed node. If the execution of
      * this function is started with the function-Node which also represents the EOG-Root-Node all
@@ -462,12 +463,12 @@ public class ControlFlowSensitiveDFGPass extends Pass {
     }
 
     /**
-     * Merges two states asusming that both states come from valid paths. All the definition for
+     * Merges two states assuming that both states come from valid paths. All the definition for
      * variables are collected into the current state represented by {@code currentJoinpoint}
      *
      * @param currentJoinpoint - The state we are merging into
-     * @param variables - tje state we are merging from
-     * @return - whether or not the merging resulted into an update to {@code currentJoinpoint}
+     * @param variables - The state we are merging from
+     * @return whether or not the merging resulted into an update to {@code currentJoinpoint}
      */
     protected boolean mergeStates(
         Map<VariableDeclaration, Set<Node>> currentJoinpoint,
@@ -490,8 +491,7 @@ public class ControlFlowSensitiveDFGPass extends Pass {
               new LinkedHashSet<>(
                   entry
                       .getValue())); // We create a copy of the set to avoid changes when processing
-          // other
-          // paths
+          // other paths
           changed = true;
         }
       }
@@ -499,11 +499,11 @@ public class ControlFlowSensitiveDFGPass extends Pass {
     }
 
     /**
-     * Creates a shallow copy to the depth of the nodes. References to nodes are not copyied as new
+     * Creates a shallow copy to the depth of the nodes. References to nodes are not copied as new
      * objects. Only the collections are created sd new Objects.
      *
-     * @param state
-     * @return
+     * @param state The state to copy
+     * @return The copy
      */
     protected Map<VariableDeclaration, Set<Node>> createShallowCopy(
         Map<VariableDeclaration, Set<Node>> state) {
