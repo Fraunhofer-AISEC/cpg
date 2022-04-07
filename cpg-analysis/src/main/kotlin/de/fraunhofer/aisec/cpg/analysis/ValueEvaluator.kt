@@ -64,9 +64,7 @@ class ValueEvaluator(
     private val log: Logger
         get() = LoggerFactory.getLogger(ValueEvaluator::class.java)
 
-    /**
-     * This property contains the path of the latest execution of [evaluate].
-     */
+    /** This property contains the path of the latest execution of [evaluate]. */
     val path: MutableList<Node> = mutableListOf()
 
     /** Tries to evaluate this node. Anything can happen. */
@@ -359,7 +357,7 @@ class ValueEvaluator(
  * and compares an arbitrary [Number] with another [Number] using the dedicated compareTo functions
  * for the individual implementations of [Number], such as [Int.compareTo].
  */
-private fun <T: Number> Number.compareTo(other: T): Int {
+private fun <T : Number> Number.compareTo(other: T): Int {
     return when {
         this is Byte && other is Double -> this.compareTo(other)
         this is Byte && other is Float -> this.compareTo(other)
