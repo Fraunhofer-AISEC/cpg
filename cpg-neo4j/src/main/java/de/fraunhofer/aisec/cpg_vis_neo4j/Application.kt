@@ -78,12 +78,12 @@ class Application : Callable<Int> {
 
     class Exclusive {
         @CommandLine.Parameters(
-            arity = "1..*",
+            arity = "0..*",
             description =
                 [
                     "The paths to analyze. If module support is enabled, the paths will be looked at if they contain modules"]
         )
-        var files: Array<String> = emptyArray()
+        var files: List<String> = mutableListOf()
 
         @CommandLine.Option(
             names = ["--softwareComponents", "-S"],
@@ -285,6 +285,22 @@ class Application : Callable<Int> {
     }
 
     /**
+     * Checks if all elements in the parameter are a valid file and returns a list of files.
+     *
+     * @param filenames The filenames to check
+     * @return List of files
+     */
+    private fun getFilesOfList(filenames: Collection<String>): List<File> {
+        val filePaths = filenames.map { Paths.get(it).toAbsolutePath().normalize().toFile() }
+        filePaths.forEach {
+            require(it.exists() && (!it.isHidden)) {
+                "Please use a correct path. It was: ${it.path}"
+            }
+        }
+        return filePaths
+    }
+
+    /**
      * Parse the file paths to analyze and set up the translationConfiguration with these paths.
      *
      * @throws IllegalArgumentException, if there were no arguments provided, or the path does not
@@ -304,26 +320,11 @@ class Application : Callable<Int> {
         if (mutuallyExclusiveParameters.softwareComponents.isNotEmpty()) {
             val components = mutableMapOf<String, List<File>>()
             for (sc in mutuallyExclusiveParameters.softwareComponents) {
-                val filePaths =
-                    sc.value.split(",").map { Paths.get(it).toAbsolutePath().normalize().toFile() }
-                filePaths.forEach {
-                    require(it.exists() && (!it.isHidden)) {
-                        "Please use a correct path. It was: ${it.path}"
-                    }
-                }
-                components[sc.key] = filePaths
+                components[sc.key] = getFilesOfList(sc.value.split(","))
             }
             translationConfiguration.softwareComponents(components)
         } else {
-            val filePaths =
-                mutuallyExclusiveParameters.files.map {
-                    Paths.get(it).toAbsolutePath().normalize().toFile()
-                }
-            filePaths.forEach {
-                require(it.exists() && (!it.isHidden)) {
-                    "Please use a correct path. It was: ${it.path}"
-                }
-            }
+            val filePaths = getFilesOfList(mutuallyExclusiveParameters.files)
             translationConfiguration.sourceLocations(filePaths)
         }
 

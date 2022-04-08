@@ -492,13 +492,11 @@ open class JavaLanguageFrontend(config: TranslationConfiguration, scopeManager: 
         val reflectionTypeSolver = ReflectionTypeSolver()
         nativeTypeResolver.add(reflectionTypeSolver)
         var root = config.topLevel
-        if (root == null) {
-            if (config.softwareComponents.size == 1) {
-                root =
-                    CommonPath.commonPath(
-                        config.softwareComponents[config.softwareComponents.keys.first()]
-                    )
-            }
+        if (root == null && config.softwareComponents.size == 1) {
+            root =
+                CommonPath.commonPath(
+                    config.softwareComponents[config.softwareComponents.keys.first()]
+                )
         }
         if (root == null) {
             log.warn("Could not determine source root for {}", config.softwareComponents)
