@@ -29,6 +29,9 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.ProblemNode
 import org.apache.commons.lang3.builder.ToStringBuilder
 
+/**
+ * An expression which could not be translated by the graph. It indicates the [type] of the problem.
+ */
 class ProblemExpression(
     override var problem: String = "",
     override var type: ProblemNode.ProblemType = ProblemNode.ProblemType.TRANSLATION

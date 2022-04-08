@@ -25,13 +25,22 @@
  */
 package de.fraunhofer.aisec.cpg.graph
 
+/**
+ * Interface for a node representing some kind of failure during the translation or while parsing.
+ */
 interface ProblemNode {
 
+    /** Type of problem which occurred during the translation. */
     enum class ProblemType {
+        /** The CPG cannot handle the statement */
         TRANSLATION,
+        /**
+         * The library failed to parse the statement (probably a problem of the code under analysis)
+         */
         PARSING
     }
 
+    /** A short description of the issue. */
     var problem: String
     var type: ProblemType
 }

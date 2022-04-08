@@ -76,7 +76,7 @@ interface StatisticsHolder {
 }
 
 /**
- * Prints a table of values and headers in markdown format. Table columns are automatically adjusted
+ * Prints a table of values and headers in Markdown format. Table columns are automatically adjusted
  * to the longest column.
  */
 fun printMarkdown(table: List<List<Any>>, headers: List<String>) {
@@ -127,6 +127,7 @@ fun relativeOrAbsolute(path: Path, topLevel: File?): Path {
     }
 }
 
+/** Measures the time between creating the object to calling its stop() method. */
 open class TimeBenchmark(
     c: Class<*>,
     message: String,
@@ -170,6 +171,7 @@ open class TimeBenchmark(
     }
 }
 
+/** Basically, only a Map<String, String> */
 open class MeasurementBenchmark(
     c: Class<*>,
     message: String,
@@ -184,9 +186,9 @@ open class MeasurementBenchmark(
         val msg = "$caller $measurementKey: result is $measurementValue"
 
         if (debug) {
-            MeasurementBenchmark.log.debug(msg)
+            log.debug(msg)
         } else {
-            MeasurementBenchmark.log.info(msg)
+            log.info(msg)
         }
 
         // update our holder, if we have any
@@ -202,17 +204,23 @@ open class MeasurementBenchmark(
     }
 }
 
+/** Represents some kind of measurements, e.g., on the performance or problems. */
 abstract class Benchmark
 @JvmOverloads
 constructor(
+    /** The class which called this benchmark. */
     c: Class<*>,
+    /** A string indicating what this benchmark should measure. */
     val message: String,
+    /** Changes the level used for log output. */
     protected var debug: Boolean = false,
+    /** The class which should be updated if the value measured by this benchmark changed. */
     protected var holder: StatisticsHolder? = null
 ) {
 
     val caller: String
 
+    /** Returns a list of strings which summarize the insights gained by the benchmark. */
     abstract fun getBenchmarkedValues(): List<String>
 
     companion object {
