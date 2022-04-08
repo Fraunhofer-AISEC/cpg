@@ -62,70 +62,59 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
     The later is the appropriate Interface type for the handler.
     */
     init {
-        map[CPPASTLiteralExpression::class.java] =
-            HandlerInterface { ctx: IASTInitializerClause ->
-                handleLiteralExpression(ctx as CPPASTLiteralExpression)
-            }
-        map[CPPASTBinaryExpression::class.java] =
-            HandlerInterface { ctx: IASTInitializerClause ->
-                handleBinaryExpression(ctx as CPPASTBinaryExpression)
-            }
-        map[CPPASTUnaryExpression::class.java] =
-            HandlerInterface { ctx: IASTInitializerClause ->
-                handleUnaryExpression(ctx as CPPASTUnaryExpression)
-            }
+        map[CPPASTLiteralExpression::class.java] = HandlerInterface { ctx: IASTInitializerClause ->
+            handleLiteralExpression(ctx as CPPASTLiteralExpression)
+        }
+        map[CPPASTBinaryExpression::class.java] = HandlerInterface { ctx: IASTInitializerClause ->
+            handleBinaryExpression(ctx as CPPASTBinaryExpression)
+        }
+        map[CPPASTUnaryExpression::class.java] = HandlerInterface { ctx: IASTInitializerClause ->
+            handleUnaryExpression(ctx as CPPASTUnaryExpression)
+        }
         map[CPPASTConditionalExpression::class.java] =
             HandlerInterface { ctx: IASTInitializerClause ->
                 handleConditionalExpression(ctx as CPPASTConditionalExpression)
             }
-        map[CPPASTIdExpression::class.java] =
-            HandlerInterface { ctx: IASTInitializerClause ->
-                handleIdExpression(ctx as CPPASTIdExpression)
-            }
-        map[CPPASTFieldReference::class.java] =
-            HandlerInterface { ctx: IASTInitializerClause ->
-                handleFieldReference(ctx as CPPASTFieldReference)
-            }
+        map[CPPASTIdExpression::class.java] = HandlerInterface { ctx: IASTInitializerClause ->
+            handleIdExpression(ctx as CPPASTIdExpression)
+        }
+        map[CPPASTFieldReference::class.java] = HandlerInterface { ctx: IASTInitializerClause ->
+            handleFieldReference(ctx as CPPASTFieldReference)
+        }
         map[CPPASTFunctionCallExpression::class.java] =
             HandlerInterface { ctx: IASTInitializerClause ->
                 handleFunctionCallExpression(ctx as CPPASTFunctionCallExpression)
             }
-        map[CPPASTCastExpression::class.java] =
-            HandlerInterface { ctx: IASTInitializerClause ->
-                handleCastExpression(ctx as CPPASTCastExpression)
-            }
+        map[CPPASTCastExpression::class.java] = HandlerInterface { ctx: IASTInitializerClause ->
+            handleCastExpression(ctx as CPPASTCastExpression)
+        }
         map[CPPASTSimpleTypeConstructorExpression::class.java] =
             HandlerInterface { ctx: IASTInitializerClause ->
                 handleSimpleTypeConstructorExpression(ctx as CPPASTSimpleTypeConstructorExpression)
             }
-        map[CPPASTNewExpression::class.java] =
-            HandlerInterface { ctx: IASTInitializerClause ->
-                handleNewExpression(ctx as CPPASTNewExpression)
-            }
-        map[CPPASTInitializerList::class.java] =
-            HandlerInterface { ctx: IASTInitializerClause ->
-                handleInitializerList(ctx as CPPASTInitializerList)
-            }
+        map[CPPASTNewExpression::class.java] = HandlerInterface { ctx: IASTInitializerClause ->
+            handleNewExpression(ctx as CPPASTNewExpression)
+        }
+        map[CPPASTInitializerList::class.java] = HandlerInterface { ctx: IASTInitializerClause ->
+            handleInitializerList(ctx as CPPASTInitializerList)
+        }
         map[CPPASTDesignatedInitializer::class.java] =
             HandlerInterface { ctx: IASTInitializerClause ->
                 handleDesignatedInitializer(ctx as CPPASTDesignatedInitializer)
             }
-        map[CPPASTExpressionList::class.java] =
-            HandlerInterface { ctx: IASTInitializerClause ->
-                handleExpressionList(ctx as CPPASTExpressionList)
-            }
-        map[CPPASTDeleteExpression::class.java] =
-            HandlerInterface { ctx: IASTInitializerClause ->
-                handleDeleteExpression(ctx as CPPASTDeleteExpression)
-            }
+        map[CPPASTExpressionList::class.java] = HandlerInterface { ctx: IASTInitializerClause ->
+            handleExpressionList(ctx as CPPASTExpressionList)
+        }
+        map[CPPASTDeleteExpression::class.java] = HandlerInterface { ctx: IASTInitializerClause ->
+            handleDeleteExpression(ctx as CPPASTDeleteExpression)
+        }
         map[CPPASTArraySubscriptExpression::class.java] =
             HandlerInterface { ctx: IASTInitializerClause ->
                 handleArraySubscriptExpression(ctx as CPPASTArraySubscriptExpression)
             }
-        map[CPPASTTypeIdExpression::class.java] =
-            HandlerInterface { ctx: IASTInitializerClause ->
-                handleTypeIdExpression(ctx as CPPASTTypeIdExpression)
-            }
+        map[CPPASTTypeIdExpression::class.java] = HandlerInterface { ctx: IASTInitializerClause ->
+            handleTypeIdExpression(ctx as CPPASTTypeIdExpression)
+        }
         map[CPPASTCompoundStatementExpression::class.java] =
             HandlerInterface { ctx: IASTInitializerClause ->
                 handleCompoundStatementExpression(ctx as CPPASTCompoundStatementExpression)

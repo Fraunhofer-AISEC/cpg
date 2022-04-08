@@ -43,14 +43,12 @@ class InitializerHandler(lang: CXXLanguageFrontend) :
     ) {
 
     init {
-        map[CPPASTConstructorInitializer::class.java] =
-            HandlerInterface { ctx: IASTInitializer ->
-                handleConstructorInitializer(ctx as CPPASTConstructorInitializer)
-            }
-        map[CPPASTEqualsInitializer::class.java] =
-            HandlerInterface { ctx: IASTInitializer ->
-                handleEqualsInitializer(ctx as CPPASTEqualsInitializer)
-            }
+        map[CPPASTConstructorInitializer::class.java] = HandlerInterface { ctx: IASTInitializer ->
+            handleConstructorInitializer(ctx as CPPASTConstructorInitializer)
+        }
+        map[CPPASTEqualsInitializer::class.java] = HandlerInterface { ctx: IASTInitializer ->
+            handleEqualsInitializer(ctx as CPPASTEqualsInitializer)
+        }
 
         /* Todo Initializer List is handled in ExpressionsHandler that actually handles InitializerClauses often used where
             one expects an expression.

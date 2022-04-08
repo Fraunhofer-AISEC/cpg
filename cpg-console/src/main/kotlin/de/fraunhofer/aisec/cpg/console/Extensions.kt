@@ -326,10 +326,8 @@ private fun fancyWord(
 }
 
 fun getRelativeLocation(parentRegion: Region, region: Region): Region {
-    var columnOffset = 0
-
     // we only need a column offset, if the start line is the same
-    columnOffset =
+    var columnOffset =
         if (region.startLine == parentRegion.startLine) {
             parentRegion.startColumn
         } else {
