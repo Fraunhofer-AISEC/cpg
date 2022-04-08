@@ -305,6 +305,17 @@ public class TranslationConfiguration {
       return this;
     }
 
+    /**
+     * Files or directories containing the source code to analyze organized by different components
+     *
+     * @param softwareComponents A map holding the different components with their files
+     * @return this
+     */
+    public Builder softwareComponents(Map<String, List<File>> softwareComponents) {
+      this.softwareComponents = softwareComponents;
+      return this;
+    }
+
     public Builder useCompilationDatabase(CompilationDatabase compilationDatabase) {
       this.compilationDatabase = compilationDatabase;
       return this;
