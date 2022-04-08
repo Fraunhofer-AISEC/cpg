@@ -89,7 +89,7 @@ class Application : Callable<Int> {
             names = ["--softwareComponents", "-S"],
             description =
                 [
-                    "Maps the names of software components to their respective files. The files are separated by commas.",
+                    "Maps the names of software components to their respective files. The files are separated by commas (No whitespace!).",
                     "Example: -S App1=./file1.c,./file2.c -S App2=./Main.java,./Class.java"]
         )
         var softwareComponents: Map<String, String> = mutableMapOf()
