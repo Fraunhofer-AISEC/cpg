@@ -28,7 +28,14 @@ package de.fraunhofer.aisec.cpg.graph
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import java.util.*
 
-class SoftwareComponent : Node() {
+/**
+ * A node which presents some kind of complete piece of software, e.g., an application, a library,
+ * microservice, ...
+ *
+ * This node holds all translation units belonging to this software component as well as (potential)
+ * entry points or interactions with other software.
+ */
+open class SoftwareComponent : Node() {
     /** All translation units belonging to this application. */
     @field:SubGraph("AST")
     val translationUnits: MutableList<TranslationUnitDeclaration> = mutableListOf()
@@ -40,6 +47,6 @@ class SoftwareComponent : Node() {
      */
     val incomingInteractions: MutableList<Node> = mutableListOf()
 
-    /** All outgoing interactions such as sending data to the network or */
+    /** All outgoing interactions such as sending data to the network or some kind of IPC. */
     val outgoingInteractions: MutableList<Node> = mutableListOf()
 }
