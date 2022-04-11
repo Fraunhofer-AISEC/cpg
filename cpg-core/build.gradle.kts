@@ -109,7 +109,7 @@ dependencies {
 
     // Eclipse dependencies
     api("org.eclipse.platform:org.eclipse.core.runtime:3.24.0")
-    api("com.ibm.icu:icu4j:70.1")
+    api("com.ibm.icu:icu4j:71.1")
 
     // CDT
     api("org.eclipse.cdt:core:7.2.100.202105180159")
