@@ -50,7 +50,7 @@ class QueryBenchmark constructor(db: Graph, query: Query) :
     AutoCloseable,
     Closeable {
     override fun close() {
-        stop()
+        addMeasurement()
     }
 }
 

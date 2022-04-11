@@ -108,7 +108,7 @@ open class JavaLanguageFrontend(config: TranslationConfiguration, scopeManager: 
             var bench = TimeBenchmark(this.javaClass, "Parsing source file")
 
             context = parse(file, parser)
-            bench.stop()
+            bench.addMeasurement()
             bench = TimeBenchmark(this.javaClass, "Transform to CPG")
             context!!.setData(Node.SYMBOL_RESOLVER_KEY, javaSymbolResolver)
 
@@ -142,7 +142,7 @@ open class JavaLanguageFrontend(config: TranslationConfiguration, scopeManager: 
             if (namespaceDeclaration != null) {
                 scopeManager.leaveScope(namespaceDeclaration)
             }
-            bench.stop()
+            bench.addMeasurement()
             fileDeclaration
         } catch (ex: IOException) {
             throw TranslationException(ex)

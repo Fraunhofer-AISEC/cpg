@@ -33,6 +33,7 @@ import java.time.Duration
 import java.time.Instant
 import java.util.*
 import kotlin.IllegalArgumentException
+import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
 class BenchmarkResults(val entries: List<List<Any>>) {
@@ -137,23 +138,12 @@ open class TimeBenchmark(
 
     private val start: Instant
 
-    var duration: Long
-        private set
+    /** Stops the time and computes the difference between */
+    override fun addMeasurement(measurementKey: String?, measurementValue: String?): Any? {
+        val duration = Duration.between(start, Instant.now()).toMillis()
+        measurements["${caller}: $message"] = "$duration ms"
 
-    override fun getBenchmarkedValues(): List<String> {
-        return listOf("${caller}: ${message}", "${duration} ms")
-    }
-
-    fun stop(): Long {
-        duration = Duration.between(start, Instant.now()).toMillis()
-
-        val msg = "$caller: $message done in $duration ms"
-
-        if (debug) {
-            log.debug(msg)
-        } else {
-            log.info(msg)
-        }
+        logDebugMsg("$caller: $message done in $duration ms")
 
         // update our holder, if we have any
         holder?.addBenchmark(this)
@@ -162,50 +152,17 @@ open class TimeBenchmark(
     }
 
     companion object {
-        private val log = LoggerFactory.getLogger(Benchmark::class.java)
+        val log: Logger = LoggerFactory.getLogger(Benchmark::class.java)
     }
 
     init {
-        this.duration = -1
+        measurements["${caller}: $message"] = "No value available yet."
         start = Instant.now()
     }
 }
 
-/** Basically, only a Map<String, String> */
-open class MeasurementBenchmark(
-    c: Class<*>,
-    message: String,
-    debug: Boolean = false,
-    holder: StatisticsHolder? = null
-) : Benchmark(c, message, debug, holder) {
-
-    private var measurements: MutableMap<String, String> = mutableMapOf()
-
-    fun addMeasurement(measurementKey: String, measurementValue: String) {
-        measurements[measurementKey] = measurementValue
-        val msg = "$caller $measurementKey: result is $measurementValue"
-
-        if (debug) {
-            log.debug(msg)
-        } else {
-            log.info(msg)
-        }
-
-        // update our holder, if we have any
-        holder?.addBenchmark(this)
-    }
-
-    override fun getBenchmarkedValues(): List<String> {
-        return measurements.flatMap { listOf("Measured ${it.key}: ${it.value}") }
-    }
-
-    companion object {
-        private val log = LoggerFactory.getLogger(MeasurementBenchmark::class.java)
-    }
-}
-
 /** Represents some kind of measurements, e.g., on the performance or problems. */
-abstract class Benchmark
+open class Benchmark
 @JvmOverloads
 constructor(
     /** The class which called this benchmark. */
@@ -220,22 +177,46 @@ constructor(
 
     val caller: String
 
-    /** Returns a list of strings which summarize the insights gained by the benchmark. */
-    abstract fun getBenchmarkedValues(): List<String>
+    /** Stores the values measured by the benchmark */
+    var measurements: MutableMap<String, String> = mutableMapOf()
 
-    companion object {
-        private val log = LoggerFactory.getLogger(Benchmark::class.java)
+    /**
+     * Returns a list of strings which summarize the insights gained by the benchmark. The first
+     * item of the list is the key, the second one is the value.
+     */
+    open fun getBenchmarkedValues(): List<String> {
+        return measurements.flatMap { listOf(it.key, it.value) }
     }
 
-    init {
-        caller = c.simpleName
-
-        val msg = "$caller: $message"
-
+    fun logDebugMsg(msg: String) {
         if (debug) {
             log.debug(msg)
         } else {
             log.info(msg)
         }
+    }
+
+    /** Adds a measurement for the respective benchmark and saves it to the map. */
+    open fun addMeasurement(
+        measurementKey: String? = null,
+        measurementValue: String? = null
+    ): Any? {
+        if (measurementKey == null || measurementValue == null) return null
+
+        measurements["Measured $measurementKey"] = measurementValue
+        logDebugMsg("$caller $measurementKey: result is $measurementValue")
+
+        // update our holder, if we have any
+        holder?.addBenchmark(this)
+        return null
+    }
+
+    companion object {
+        val log: Logger = LoggerFactory.getLogger(Benchmark::class.java)
+    }
+
+    init {
+        caller = c.simpleName
+        logDebugMsg("$caller: $message")
     }
 }

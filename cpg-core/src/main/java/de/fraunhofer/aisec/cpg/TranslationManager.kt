@@ -89,7 +89,7 @@ private constructor(
                 var bench =
                     TimeBenchmark(this.javaClass, "Executing Language Frontend", false, result)
                 frontendsNeedCleanup = runFrontends(result, config, scopesBuildForAnalysis)
-                bench.stop()
+                bench.addMeasurement()
 
                 // TODO: Find a way to identify the right language during the execution of a pass
                 // (and set the lang to the scope manager)
@@ -99,7 +99,7 @@ private constructor(
                     passesNeedCleanup.add(pass)
                     bench = TimeBenchmark(pass.javaClass, "Executing Pass", false, result)
                     pass.accept(result)
-                    bench.stop()
+                    bench.addMeasurement()
                     if (result.isCancelled) {
                         log.warn("Analysis interrupted, stopping Pass evaluation")
                     }
@@ -107,7 +107,7 @@ private constructor(
             } catch (ex: TranslationException) {
                 throw CompletionException(ex)
             } finally {
-                outerBench.stop()
+                outerBench.addMeasurement()
                 if (!config.disableCleanup) {
                     log.debug("Cleaning up {} Passes", passesNeedCleanup.size)
 
@@ -216,7 +216,7 @@ private constructor(
             result.translationUnits.forEach {
                 val bench = TimeBenchmark(this.javaClass, "Activating types for ${it.name}", true)
                 SubgraphWalker.activateTypes(it, scopeManager)
-                bench.stop()
+                bench.addMeasurement()
             }
         }
 

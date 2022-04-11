@@ -105,7 +105,7 @@ class PerformanceRegressionTest {
         assertTimeout(Duration.of(1, ChronoUnit.SECONDS)) {
             val b = TimeBenchmark(PerformanceRegressionTest::class.java, "getAstChildren")
             doNothing(tu)
-            b.stop()
+            b.addMeasurement()
         }
     }
 

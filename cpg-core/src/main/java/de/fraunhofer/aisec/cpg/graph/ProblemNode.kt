@@ -42,5 +42,9 @@ interface ProblemNode {
 
     /** A short description of the issue. */
     var problem: String
+    /**
+     * The type of the problem: Either the statement could not be parsed or the kind of statement is
+     * not handled by the CPG yet. See [ProblemType]
+     */
     var type: ProblemType
 }

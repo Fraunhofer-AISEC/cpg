@@ -30,7 +30,8 @@ import de.fraunhofer.aisec.cpg.graph.ProblemNode
 import org.apache.commons.lang3.builder.ToStringBuilder
 
 /**
- * An expression which could not be translated by the graph. It indicates the [type] of the problem.
+ * A node where the statement could not be translated by the graph. We use ProblemExpressions
+ * whenever the CPG library requires an [Expression].
  */
 class ProblemExpression(
     override var problem: String = "",

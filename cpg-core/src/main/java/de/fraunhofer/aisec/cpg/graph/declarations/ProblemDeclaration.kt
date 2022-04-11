@@ -28,6 +28,10 @@ package de.fraunhofer.aisec.cpg.graph.declarations
 import de.fraunhofer.aisec.cpg.graph.ProblemNode
 import org.apache.commons.lang3.builder.ToStringBuilder
 
+/**
+ * A node where the statement could not be translated by the graph. We use ProblemExpressions
+ * whenever the CPG library requires an [Declaration].
+ */
 class ProblemDeclaration(
     override var problem: String = "",
     override var type: ProblemNode.ProblemType = ProblemNode.ProblemType.TRANSLATION

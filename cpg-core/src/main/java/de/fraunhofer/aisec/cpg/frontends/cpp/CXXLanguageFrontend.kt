@@ -210,7 +210,7 @@ class CXXLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeM
                     CPPASTTranslationUnit
             val length = translationUnit.length
             LOGGER.info("Parsed {} bytes corresponding roughly to {} LoC", length, length / 50)
-            bench.stop()
+            bench.addMeasurement()
             bench = TimeBenchmark(this.javaClass, "Transform to CPG")
             if (config.debugParser) {
                 explore(translationUnit, 0)
@@ -224,7 +224,7 @@ class CXXLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeM
             }
             val translationUnitDeclaration =
                 declarationHandler.handleTranslationUnit(translationUnit)
-            bench.stop()
+            bench.addMeasurement()
             translationUnitDeclaration
         } catch (ex: CoreException) {
             throw TranslationException(ex)
