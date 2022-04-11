@@ -70,7 +70,7 @@ interface StatisticsHolder {
                         "Translated file(s)",
                         translatedFiles.map { relativeOrAbsolute(Path.of(it), config.topLevel) }
                     ),
-                    *benchmarks.map { it.getBenchmarkedValues() }.toTypedArray()
+                    *benchmarks.map { it.benchmarkedValues }.toTypedArray()
                 )
             )
         }
@@ -184,9 +184,10 @@ constructor(
      * Returns a list of strings which summarize the insights gained by the benchmark. The first
      * item of the list is the key, the second one is the value.
      */
-    open fun getBenchmarkedValues(): List<String> {
-        return measurements.flatMap { listOf(it.key, it.value) }
-    }
+    val benchmarkedValues: List<String>
+        get() {
+            return measurements.flatMap { listOf(it.key, it.value) }
+        }
 
     fun logDebugMsg(msg: String) {
         if (debug) {
