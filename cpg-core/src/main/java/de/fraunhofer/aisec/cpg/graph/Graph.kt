@@ -35,7 +35,6 @@ import java.util.*
 import java.util.function.Predicate
 import java.util.stream.Collectors
 import java.util.stream.Stream
-import kotlin.time.Duration
 import kotlin.time.ExperimentalTime
 import org.neo4j.ogm.annotation.Relationship
 import org.opencypher.v9_0.ast.*
@@ -374,7 +373,7 @@ class Graph(var nodes: List<Node>) {
             }
         }
 
-        logger.info("Query took ${Duration.milliseconds(b.duration)}")
+        logger.info("Query took ${b.measurements.entries.firstOrNull()?.value}")
 
         return list
     }
