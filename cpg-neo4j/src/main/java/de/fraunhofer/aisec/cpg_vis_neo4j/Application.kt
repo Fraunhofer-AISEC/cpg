@@ -227,7 +227,7 @@ class Application : Callable<Int> {
 
         session.clear()
         sessionAndSessionFactoryPair.second.close()
-        bench.stop()
+        bench.addMeasurement()
     }
 
     /**
