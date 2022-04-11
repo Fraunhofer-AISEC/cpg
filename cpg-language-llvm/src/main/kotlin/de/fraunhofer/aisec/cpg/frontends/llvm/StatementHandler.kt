@@ -505,7 +505,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
     private fun handleAlloca(instr: LLVMValueRef): Statement {
         val array = newArrayCreationExpression(lang.getCodeFromRawNode(instr))
 
-        array.type = lang.typeOf(instr)
+        array.updateType(lang.typeOf(instr))
 
         // LLVM is quite forthcoming here. in case the optional length parameter is omitted in the
         // source code, it will automatically be set to 1
@@ -1402,19 +1402,17 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         }
         // Create the dummy declaration at the beginning of the function body
         val firstBB = (functions[0] as FunctionDeclaration).body as CompoundStatement
-        val declaration =
-            newVariableDeclaration(
-                instr.name,
-                lang.typeOf(instr),
-                lang.getCodeFromRawNode(instr),
-                false
-            )
+        val varName = instr.name
+        val type = lang.typeOf(instr)
+        val code = lang.getCodeFromRawNode(instr)
+        val declaration = newVariableDeclaration(varName, type, code, false)
+        declaration.updateType(type)
         // add the declaration to the current scope
         lang.scopeManager.addDeclaration(declaration)
         // add it to our bindings cache
         lang.bindingsCache[instr.symbolName] = declaration
 
-        val declStatement = newDeclarationStatement(lang.getCodeFromRawNode(instr))
+        val declStatement = newDeclarationStatement(code)
         declStatement.singleDeclaration = declaration
         val mutableFunctionStatements = firstBB.statements.toMutableList()
         mutableFunctionStatements.add(0, declStatement)
@@ -1422,14 +1420,13 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
 
         for (l in labelMap.keys) {
             // Now, we iterate over all the basic blocks and add an assign statement.
-            val assignment = newBinaryOperator("=", lang.getCodeFromRawNode(instr))
+            val assignment = newBinaryOperator("=", code)
             assignment.rhs = labelMap[l]!!
-            assignment.lhs =
-                newDeclaredReferenceExpression(
-                    instr.name,
-                    lang.typeOf(instr),
-                    lang.getCodeFromRawNode(instr)
-                )
+            assignment.lhs = newDeclaredReferenceExpression(varName, type, code)
+            assignment.lhs.type = type
+            assignment.lhs.unregisterTypeListener(assignment)
+            assignment.unregisterTypeListener(assignment.lhs as DeclaredReferenceExpression)
+            (assignment.lhs as DeclaredReferenceExpression).refersTo = declaration
 
             val basicBlock = l.subStatement as? CompoundStatement
             val mutableStatements = basicBlock?.statements?.toMutableList()
@@ -1453,8 +1450,13 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
 
         // if it is still empty, we probably do not have a left side
         return if (lhs != "") {
-            val decl = VariableDeclaration()
-            decl.name = lhs
+            val decl =
+                newVariableDeclaration(
+                    lhs,
+                    lang.typeOf(valueRef),
+                    lang.getCodeFromRawNode(valueRef),
+                    false
+                )
             decl.initializer = rhs
 
             // add the declaration to the current scope
@@ -1547,13 +1549,13 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             binaryOperator = newBinaryOperator(op, lang.getCodeFromRawNode(instr))
 
             if (unsigned) {
-                val op1Type = "u${op1.type.typeName}"
+                val op1Type = "u${op1.type.name}"
                 val castExprLhs = newCastExpression(lang.getCodeFromRawNode(instr))
                 castExprLhs.castType = TypeParser.createFrom(op1Type, true)
                 castExprLhs.expression = op1
                 binaryOperator.lhs = castExprLhs
 
-                val op2Type = "u${op2.type.typeName}"
+                val op2Type = "u${op2.type.name}"
                 val castExprRhs = newCastExpression(lang.getCodeFromRawNode(instr))
                 castExprRhs.castType = TypeParser.createFrom(op2Type, true)
                 castExprRhs.expression = op2

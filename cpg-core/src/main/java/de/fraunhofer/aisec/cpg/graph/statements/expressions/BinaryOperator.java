@@ -33,10 +33,7 @@ import de.fraunhofer.aisec.cpg.graph.SubGraph;
 import de.fraunhofer.aisec.cpg.graph.TypeManager;
 import de.fraunhofer.aisec.cpg.graph.types.Type;
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.neo4j.ogm.annotation.Transient;
 
@@ -191,19 +188,18 @@ public class BinaryOperator extends Expression implements TypeListener {
   }
 
   @Override
-  public void typeChanged(HasType src, HasType root, Type oldType) {
+  public void typeChanged(HasType src, Collection<HasType> root, Type oldType) {
     if (!TypeManager.isTypeSystemActive()) {
       return;
     }
     Type previous = this.type;
     if (this.operatorCode.equals("=")) {
       setType(src.getPropagationType(), root);
-    } else {
-      if (this.lhs != null && "java.lang.String".equals(this.lhs.getType().toString())
-          || this.rhs != null && "java.lang.String".equals(this.rhs.getType().toString())) {
-        getPossibleSubTypes().clear();
-        setType(TypeParser.createFrom("java.lang.String", true), root);
-      }
+    } else if (this.lhs != null && "java.lang.String".equals(this.lhs.getType().toString())
+        || this.rhs != null && "java.lang.String".equals(this.rhs.getType().toString())) {
+      // String + any other type results in a String
+      getPossibleSubTypes().clear();
+      setType(TypeParser.createFrom("java.lang.String", true), root);
     }
     if (!previous.equals(this.type)) {
       this.type.setTypeOrigin(Type.Origin.DATAFLOW);
@@ -211,7 +207,8 @@ public class BinaryOperator extends Expression implements TypeListener {
   }
 
   @Override
-  public void possibleSubTypesChanged(HasType src, HasType root, Set<Type> oldSubTypes) {
+  public void possibleSubTypesChanged(
+      HasType src, Collection<HasType> root, Set<Type> oldSubTypes) {
     if (!TypeManager.isTypeSystemActive()) {
       return;
     }
