@@ -28,6 +28,8 @@ package de.fraunhofer.aisec.cpg.frontends;
 import de.fraunhofer.aisec.cpg.TranslationConfiguration;
 import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration;
+import de.fraunhofer.aisec.cpg.graph.statements.GotoStatement;
+import de.fraunhofer.aisec.cpg.graph.statements.LabelStatement;
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager;
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation;
 import de.fraunhofer.aisec.cpg.sarif.Region;
@@ -79,7 +81,9 @@ public abstract class LanguageFrontend {
   }
 
   public void process(Object from, Object to) {
-    processedMapping.put(from, to);
+    if (from instanceof GotoStatement || to instanceof LabelStatement) {
+      processedMapping.put(from, to);
+    }
     BiConsumer<Object, Object> listener = objectListeners.get(from);
     if (listener != null) {
       listener.accept(from, to);
