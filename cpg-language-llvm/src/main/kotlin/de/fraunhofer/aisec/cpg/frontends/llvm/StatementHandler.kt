@@ -1448,18 +1448,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             instr = LLVMGetNextInstruction(instr)
         }
 
-        var labelName = LLVMGetBasicBlockName(bb).string
-
-        if (labelName.equals("")) {
-            // It seems that blocks are assigned an implicit counter-based label if it is
-            // not specified. We need to parse it from the string representation of the
-            // basic block
-            val bbStr = LLVMPrintValueToString(LLVMBasicBlockAsValue(bb)).string
-            val firstLine = bbStr.trim().split("\n")[0]
-            if (firstLine.contains(":")) {
-                labelName = firstLine.substring(0, firstLine.indexOf(":"))
-            }
-        }
+        val labelName = getBasicBlockName(bb)
 
         if (labelName != "") {
             val labelStatement = newLabelStatement(labelName)
@@ -1468,9 +1457,8 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             labelStatement.subStatement = compound
 
             return labelStatement
-        } else {
-            return compound
         }
+        return compound
     }
 
     /**
@@ -1574,10 +1562,15 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         return decl
     }
 
+    /**
+     * Generates a [GotoStatement] and either links it to the [LabelStatement] if that statement has
+     * already been processed or uses the listeners to generate the relation once the label
+     * statement has been processed.
+     */
     private fun assembleGotoStatement(instr: LLVMValueRef, bbTarget: LLVMValueRef): GotoStatement {
         val goto = newGotoStatement(lang.getCodeFromRawNode(instr))
         val assigneeTargetLabel = BiConsumer { _: Any, to: Any? ->
-            if (to is LabelStatement /*&& goto.targetLabel != to*/) {
+            if (to is LabelStatement) {
                 goto.targetLabel = to
             } else if (goto.targetLabel != to) {
                 log.error("$to is not a LabelStatement")
@@ -1609,9 +1602,13 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         var labelName = LLVMGetBasicBlockName(bb).string
 
         if (labelName.isNullOrEmpty()) {
+            // Blocks are assigned an implicit counter-based label if it is not specified. We need
+            // to parse it from the string representation of the basic block
             val bbStr = LLVMPrintValueToString(LLVMBasicBlockAsValue(bb)).string
             val firstLine = bbStr.trim().split("\n")[0]
-            labelName = firstLine.substring(0, firstLine.indexOf(":"))
+            if (firstLine.contains(":")) {
+                labelName = firstLine.substring(0, firstLine.indexOf(":"))
+            }
         }
         return labelName
     }

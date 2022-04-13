@@ -53,6 +53,9 @@ public abstract class LanguageFrontend {
 
   protected ScopeManager scopeManager;
 
+  protected List<Class<?>> interestingStatements =
+      List.of(GotoStatement.class, LabelStatement.class);
+
   /**
    * Two data structures used to associate Objects input to a pass to results of a pass, e.g.
    * Javaparser AST-Nodes to CPG-Nodes. The "Listeners" in processedListener are called after the
@@ -79,8 +82,6 @@ public abstract class LanguageFrontend {
     this.scopeManager = scopeManager;
     this.scopeManager.setLang(this);
   }
-
-  public List<Class<?>> interestingStatements = List.of(GotoStatement.class, LabelStatement.class);
 
   public void process(Object from, Object to) {
     if (interestingStatements.stream().anyMatch(c -> c.isInstance(from) || c.isInstance(to))) {
