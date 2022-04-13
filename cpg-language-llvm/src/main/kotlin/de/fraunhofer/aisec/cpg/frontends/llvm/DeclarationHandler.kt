@@ -26,9 +26,9 @@
 package de.fraunhofer.aisec.cpg.frontends.llvm
 
 import de.fraunhofer.aisec.cpg.frontends.Handler
+import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newCompoundStatement
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newFieldDeclaration
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newFunctionDeclaration
-import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newLabelStatement
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newMethodParameterIn
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newRecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newVariableDeclaration
@@ -148,35 +148,15 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
             // as a compound statement
 
             // Take the entry block as our body
-            if (LLVMGetEntryBasicBlock(func) == bb) {
+            if (LLVMGetEntryBasicBlock(func) == bb && stmt is CompoundStatement) {
                 functionDeclaration.body = stmt
+            } else if (LLVMGetEntryBasicBlock(func) == bb) {
+                functionDeclaration.body = newCompoundStatement()
+                (functionDeclaration.body as CompoundStatement).addStatement(stmt)
             } else {
-                // All further basic blocks are then added to the body wrapped in a label
-                // statement
-                var labelName = LLVMGetBasicBlockName(bb).string
-
-                if (labelName.equals("")) {
-                    // It seems that blocks are assigned an implicit counter-based label if it is
-                    // not specified. We need to parse it from the string representation of the
-                    // basic block
-                    val bbStr = LLVMPrintValueToString(LLVMBasicBlockAsValue(bb)).string
-                    val firstLine = bbStr.trim().split("\n")[0]
-                    labelName = firstLine.substring(0, firstLine.indexOf(":"))
-                }
-
-                val labelStatement =
-                    lang.labelMap.computeIfAbsent(labelName) {
-                        val label = newLabelStatement(labelName)
-                        label.name = labelName
-                        label.label = labelName
-                        label
-                    }
-
-                labelStatement.subStatement = stmt
-
                 // add the label statement, containing this basic block as a compound statement to
                 // our body (if we have none, which we should)
-                (functionDeclaration.body as? CompoundStatement)?.addStatement(labelStatement)
+                (functionDeclaration.body as? CompoundStatement)?.addStatement(stmt)
             }
 
             bb = LLVMGetNextBasicBlock(bb)

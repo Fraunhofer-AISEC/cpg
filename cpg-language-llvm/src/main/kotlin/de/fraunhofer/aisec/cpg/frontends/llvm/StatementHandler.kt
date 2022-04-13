@@ -61,7 +61,9 @@ import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.graph.types.PointerType
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
+import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.helpers.annotations.FunctionReplacement
+import java.util.function.BiConsumer
 import org.bytedeco.javacpp.Pointer
 import org.bytedeco.llvm.LLVM.LLVMBasicBlockRef
 import org.bytedeco.llvm.LLVM.LLVMValueRef
@@ -246,10 +248,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 null
             }
         if (unwindDest != null) { // For "unwind to caller", the destination is null
-            val unwindDestination = extractBasicBlockLabel(unwindDest)
-            val gotoStatement = newGotoStatement(lang.getCodeFromRawNode(instr))
-            gotoStatement.targetLabel = unwindDestination
-            gotoStatement.labelName = unwindDestination.name
+            val gotoStatement = assembleGotoStatement(instr, unwindDest)
             gotoStatement.name =
                 if (instr.opCode == LLVMCatchRet) {
                     "catchret"
@@ -339,10 +338,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             currentIfStatement.condition = matchesCatchpad
 
             // Get the label of the goto statement.
-            val caseLabelStatement = extractBasicBlockLabel(bbTarget)
-            val gotoStatement = newGotoStatement(nodeCode)
-            gotoStatement.targetLabel = caseLabelStatement
-            gotoStatement.labelName = caseLabelStatement.name
+            val gotoStatement = assembleGotoStatement(instr, bbTarget)
             currentIfStatement.thenStatement = gotoStatement
 
             idx++
@@ -350,10 +346,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
 
         val unwindDest = LLVMGetUnwindDest(instr)
         if (unwindDest != null) { // For "unwind to caller", the destination is null
-            val unwindDestination = extractBasicBlockLabel(LLVMBasicBlockAsValue(unwindDest))
-            val gotoStatement = newGotoStatement(nodeCode)
-            gotoStatement.targetLabel = unwindDestination
-            gotoStatement.labelName = unwindDestination.name
+            val gotoStatement = assembleGotoStatement(instr, LLVMBasicBlockAsValue(unwindDest))
             if (currentIfStatement == null) {
                 currentIfStatement = ifStatement
             }
@@ -983,10 +976,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             caseStatements.addStatement(caseStatement)
 
             // Get the label of the goto statement.
-            val caseLabelStatement = extractBasicBlockLabel(LLVMGetOperand(instr, idx))
-            val gotoStatement = newGotoStatement(nodeCode)
-            gotoStatement.targetLabel = caseLabelStatement
-            gotoStatement.labelName = caseLabelStatement.name
+            val gotoStatement = assembleGotoStatement(instr, LLVMGetOperand(instr, idx))
             caseStatements.addStatement(gotoStatement)
             idx++
         }
@@ -1005,28 +995,15 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             ifStatement.condition = condition
 
             // Get the label of the "else" branch
-            val elseGoto = newGotoStatement(lang.getCodeFromRawNode(instr))
-            val elseLabel = extractBasicBlockLabel(LLVMGetOperand(instr, 1))
-            elseGoto.targetLabel = elseLabel
-            elseGoto.labelName = elseLabel.name
-            ifStatement.elseStatement = elseGoto
+            ifStatement.elseStatement = assembleGotoStatement(instr, LLVMGetOperand(instr, 1))
 
             // Get the label of the "if" branch
-            val ifGoto = newGotoStatement(lang.getCodeFromRawNode(instr))
-            val thenLabelStatement = extractBasicBlockLabel(LLVMGetOperand(instr, 2))
-            ifGoto.targetLabel = thenLabelStatement
-            ifGoto.labelName = thenLabelStatement.name
-            ifStatement.thenStatement = ifGoto
+            ifStatement.thenStatement = assembleGotoStatement(instr, LLVMGetOperand(instr, 2))
 
             return ifStatement
         } else if (LLVMGetNumOperands(instr) == 1) {
             // goto defaultLocation
-            val gotoStatement = newGotoStatement(lang.getCodeFromRawNode(instr))
-            val labelStatement = extractBasicBlockLabel(LLVMGetOperand(instr, 0))
-            gotoStatement.labelName = labelStatement.name
-            gotoStatement.targetLabel = labelStatement
-
-            return gotoStatement
+            return assembleGotoStatement(instr, LLVMGetOperand(instr, 0))
         } else {
             throw TranslationException("Wrong number of operands in br statement")
         }
@@ -1061,20 +1038,14 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             caseStatements.addStatement(caseStatement)
             idx++
             // Get the "case" statements and add it to the CaseStatement
-            val caseLabelStatement = extractBasicBlockLabel(LLVMGetOperand(instr, idx))
-            val gotoStatement = newGotoStatement(nodeCode)
-            gotoStatement.targetLabel = caseLabelStatement
-            gotoStatement.labelName = caseLabelStatement.name
+            val gotoStatement = assembleGotoStatement(instr, LLVMGetOperand(instr, idx))
             caseStatements.addStatement(gotoStatement)
             idx++
         }
 
         // Get the label of the "default" branch
         caseStatements.addStatement(newDefaultStatement(nodeCode))
-        val defaultLabel = extractBasicBlockLabel(LLVMGetOperand(instr, 1))
-        val defaultGoto = newGotoStatement(nodeCode)
-        defaultGoto.targetLabel = defaultLabel
-        defaultGoto.labelName = defaultLabel.name
+        val defaultGoto = assembleGotoStatement(instr, LLVMGetOperand(instr, 1))
         caseStatements.addStatement(defaultGoto)
 
         switchStatement.statement = caseStatements
@@ -1103,19 +1074,19 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             calledFuncName = opName.name
         }
 
-        var catchLabel = LabelStatement()
-        var continueLabel = LabelStatement()
+        var gotoCatch: GotoStatement = newGotoStatement(instrStr)
+        var tryContinue: GotoStatement = newGotoStatement(instrStr)
         if (instr.opCode == LLVMInvoke) {
             max-- // Last one is the Decl.Expr of the function
             // Get the label of the catch clause.
-            catchLabel = extractBasicBlockLabel(LLVMGetOperand(instr, max))
+            gotoCatch = assembleGotoStatement(instr, LLVMGetOperand(instr, max))
             max--
             // Get the label of the basic block where the control flow continues (e.g. if no error
             // occurs).
-            continueLabel = extractBasicBlockLabel(LLVMGetOperand(instr, max))
+            tryContinue = assembleGotoStatement(instr, LLVMGetOperand(instr, max))
             max--
             log.info(
-                "Invoke expression: Usually continues at ${continueLabel.name}, exception continues at ${catchLabel.name}"
+                "Invoke expression: Usually continues at ${tryContinue.labelName}, exception continues at ${gotoCatch.labelName}"
             )
         }
 
@@ -1134,19 +1105,15 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             lang.scopeManager.enterScope(tryStatement)
             val tryBlock = newCompoundStatement(instrStr)
             tryBlock.addStatement(declarationOrNot(callExpr, instr))
-            val tryContinue = newGotoStatement(instrStr)
-            tryContinue.targetLabel = continueLabel
             tryBlock.addStatement(tryContinue)
             tryStatement.tryBlock = tryBlock
             lang.scopeManager.leaveScope(tryStatement)
 
             val catchClause = newCatchClause(instrStr)
-            catchClause.name = catchLabel.name
-            val gotoCatch = newGotoStatement(instrStr)
-            gotoCatch.targetLabel = catchLabel
+            catchClause.name = gotoCatch.labelName
             catchClause.setParameter(
                 newVariableDeclaration(
-                    "e_${catchLabel.name}",
+                    "e_${gotoCatch.labelName}",
                     UnknownType.getUnknownType(),
                     instrStr,
                     true
@@ -1341,6 +1308,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         val numOps = LLVMGetNumOperands(instr)
         var i = 0
         var bbsFunction: LLVMValueRef? = null
+        val flatAST = SubgraphWalker.flattenAST(tu)
         while (i < numOps) {
             val valI = lang.getOperandValueAtIndex(instr, i)
             val incomingBB = LLVMGetIncomingBlock(instr, i)
@@ -1355,9 +1323,13 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 )
             }
 
-            val labelI = extractBasicBlockLabel(LLVMBasicBlockAsValue(incomingBB))
+            val labelName = getBasicBlockName(incomingBB)
+            val labelI = flatAST.firstOrNull { s -> s is LabelStatement && s.label == labelName }
             i++
-            labelMap[labelI] = valI
+            if (labelI == null) {
+                log.error("Expecting to find a label with name $labelName for Phi statement.")
+            }
+            labelMap[labelI as LabelStatement] = valI
         }
         if (labelMap.keys.size == 1) {
             // We only have a single pair, so we insert a declaration in that one BB.
@@ -1460,9 +1432,9 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
 
     /**
      * Handles a basic block and returns a [CompoundStatement] comprised of the statements of this
-     * block.
+     * block or a [LabelStatement] if the basic block has a label.
      */
-    private fun handleBasicBlock(bb: LLVMBasicBlockRef): CompoundStatement {
+    private fun handleBasicBlock(bb: LLVMBasicBlockRef): Statement {
         val compound = newCompoundStatement("")
 
         var instr = LLVMGetFirstInstruction(bb)
@@ -1476,7 +1448,29 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             instr = LLVMGetNextInstruction(instr)
         }
 
-        return compound
+        var labelName = LLVMGetBasicBlockName(bb).string
+
+        if (labelName.equals("")) {
+            // It seems that blocks are assigned an implicit counter-based label if it is
+            // not specified. We need to parse it from the string representation of the
+            // basic block
+            val bbStr = LLVMPrintValueToString(LLVMBasicBlockAsValue(bb)).string
+            val firstLine = bbStr.trim().split("\n")[0]
+            if (firstLine.contains(":")) {
+                labelName = firstLine.substring(0, firstLine.indexOf(":"))
+            }
+        }
+
+        if (labelName != "") {
+            val labelStatement = newLabelStatement(labelName)
+            labelStatement.name = labelName
+            labelStatement.label = labelName
+            labelStatement.subStatement = compound
+
+            return labelStatement
+        } else {
+            return compound
+        }
     }
 
     /**
@@ -1580,23 +1574,45 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         return decl
     }
 
-    /** Returns a [LabelStatement] for the basic block represented by [valueRef]. */
-    private fun extractBasicBlockLabel(valueRef: LLVMValueRef): LabelStatement {
-        val bb = LLVMValueAsBasicBlock(valueRef)
+    private fun assembleGotoStatement(instr: LLVMValueRef, bbTarget: LLVMValueRef): GotoStatement {
+        val goto = newGotoStatement(lang.getCodeFromRawNode(instr))
+        val assigneeTargetLabel = BiConsumer { _: Any, to: Any? ->
+            if (to is LabelStatement /*&& goto.targetLabel != to*/) {
+                goto.targetLabel = to
+            } else if (goto.targetLabel != to) {
+                log.error("$to is not a LabelStatement")
+            }
+        }
+        val bb: LLVMBasicBlockRef = LLVMValueAsBasicBlock(bbTarget)
+        val labelName = LLVMGetBasicBlockName(bb).string
+        goto.labelName = labelName
+        try {
+            val label = newLabelStatement(labelName)
+            label.name = labelName
+            // If the bound AST node is/or was transformed into a CPG node the cpg node is bound
+            // to the CPG goto statement
+            lang.registerObjectListener(label, assigneeTargetLabel)
+            goto.targetLabel.label
+        } catch (e: Exception) {
+            // If the Label AST node could not be resolved, the matching is done based on label
+            // names of CPG nodes using the predicate listeners
+            lang.registerPredicateListener(
+                { _: Any?, to: Any? -> (to is LabelStatement && to.label == goto.labelName) },
+                assigneeTargetLabel
+            )
+        }
+        return goto
+    }
+
+    /** Returns the name of the given basic block. */
+    private fun getBasicBlockName(bb: LLVMBasicBlockRef): String {
         var labelName = LLVMGetBasicBlockName(bb).string
 
         if (labelName.isNullOrEmpty()) {
-            val bbStr = LLVMPrintValueToString(valueRef).string
+            val bbStr = LLVMPrintValueToString(LLVMBasicBlockAsValue(bb)).string
             val firstLine = bbStr.trim().split("\n")[0]
             labelName = firstLine.substring(0, firstLine.indexOf(":"))
         }
-
-        val labelStatement =
-            lang.labelMap.computeIfAbsent(labelName) {
-                val label = newLabelStatement(labelName)
-                label.name = labelName
-                label
-            }
-        return labelStatement
+        return labelName
     }
 }

@@ -80,8 +80,10 @@ public abstract class LanguageFrontend {
     this.scopeManager.setLang(this);
   }
 
+  public List<Class<?>> interestingStatements = List.of(GotoStatement.class, LabelStatement.class);
+
   public void process(Object from, Object to) {
-    if (from instanceof GotoStatement || to instanceof LabelStatement) {
+    if (interestingStatements.stream().anyMatch(c -> c.isInstance(from) || c.isInstance(to))) {
       processedMapping.put(from, to);
     }
     BiConsumer<Object, Object> listener = objectListeners.get(from);
@@ -93,15 +95,19 @@ public abstract class LanguageFrontend {
     }
     // Iterate over existing predicate based listeners, if the predicate matches the
     // listener/handler is executed on the new object.
+    Map<BiPredicate<Object, Object>, BiConsumer<Object, Object>> newPredicateListeners =
+        new HashMap<>();
     for (Map.Entry<BiPredicate<Object, Object>, BiConsumer<Object, Object>> pListener :
         predicateListeners.entrySet()) {
       if (pListener.getKey().test(from, to)) {
         pListener.getValue().accept(from, to);
+      } else {
         // Delete line if Node should be processed multiple times and should again invoke the
         // listener, e.g. refinement.
-        predicateListeners.remove(pListener.getKey());
+        newPredicateListeners.put(pListener.getKey(), pListener.getValue());
       }
     }
+    predicateListeners = newPredicateListeners;
   }
 
   public void registerObjectListener(Object from, BiConsumer<Object, Object> biConsumer) {
