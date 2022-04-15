@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.frontends.HandlerInterface
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpression
 import java.util.function.Supplier
 import org.eclipse.cdt.core.dom.ast.IASTInitializer
 import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTConstructorInitializer
@@ -36,7 +37,10 @@ import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTEqualsInitializer
 import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTInitializerList
 
 class InitializerHandler(lang: CXXLanguageFrontend) :
-    Handler<Expression?, IASTInitializer, CXXLanguageFrontend?>(Supplier { Expression() }, lang) {
+    Handler<Expression?, IASTInitializer, CXXLanguageFrontend?>(
+        Supplier { ProblemExpression() },
+        lang
+    ) {
 
     init {
         map[CPPASTConstructorInitializer::class.java] = HandlerInterface { ctx: IASTInitializer ->

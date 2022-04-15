@@ -35,8 +35,8 @@ import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.InitializerListExpression
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.graph.types.Type
-import de.fraunhofer.aisec.cpg.helpers.Benchmark
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
+import de.fraunhofer.aisec.cpg.helpers.TimeBenchmark
 import java.time.Duration
 import java.time.temporal.ChronoUnit
 import kotlin.io.path.writeText
@@ -103,9 +103,9 @@ class PerformanceRegressionTest {
         // Even on a slow machine, this should not exceed 1 second (it should be more like
         // 200-300ms)
         assertTimeout(Duration.of(1, ChronoUnit.SECONDS)) {
-            val b = Benchmark(PerformanceRegressionTest::class.java, "getAstChildren")
+            val b = TimeBenchmark(PerformanceRegressionTest::class.java, "getAstChildren")
             doNothing(tu)
-            b.stop()
+            b.addMeasurement()
         }
     }
 

@@ -53,7 +53,7 @@ import org.neo4j.ogm.annotation.Transient;
  *
  * <p>This is not possible in Java, the aforementioned code example would prompt a compile error.
  */
-public class Expression extends Statement implements HasType {
+public abstract class Expression extends Statement implements HasType {
 
   /** The type of the value after evaluation. */
   protected Type type = UnknownType.getUnknownType();

@@ -50,7 +50,10 @@ import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTCompositeTypeSpecifier.ICPPASTBas
 import org.eclipse.cdt.internal.core.dom.parser.cpp.*
 
 class DeclaratorHandler(lang: CXXLanguageFrontend) :
-    Handler<Declaration?, IASTNameOwner, CXXLanguageFrontend?>(Supplier { Declaration() }, lang) {
+    Handler<Declaration?, IASTNameOwner, CXXLanguageFrontend?>(
+        Supplier { ProblemDeclaration() },
+        lang
+    ) {
 
     init {
         map[CPPASTDeclarator::class.java] = HandlerInterface {
@@ -218,30 +221,33 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
         for (param in ctx.parameters) {
             val arg = lang.parameterDeclarationHandler.handle(param)
 
-            // check for void type parameters
-            if (arg!!.type is IncompleteType) {
-                if (arg.name.isNotEmpty()) {
-                    Util.warnWithFileLocation(
-                        declaration,
-                        log,
-                        "Named parameter cannot have void type"
-                    )
-                } else {
-                    // specifying void as first parameter is ok and means that the function has no
-                    // parameters
-                    if (i == 0) {
-                        continue
-                    } else {
+            if (arg is ParamVariableDeclaration) {
+                // check for void type parameters
+                if (arg!!.type is IncompleteType) {
+                    if (arg.name.isNotEmpty()) {
                         Util.warnWithFileLocation(
                             declaration,
                             log,
-                            "void parameter must be the first and only parameter"
+                            "Named parameter cannot have void type"
                         )
+                    } else {
+                        // specifying void as first parameter is ok and means that the function has
+                        // no
+                        // parameters
+                        if (i == 0) {
+                            continue
+                        } else {
+                            Util.warnWithFileLocation(
+                                declaration,
+                                log,
+                                "void parameter must be the first and only parameter"
+                            )
+                        }
                     }
                 }
-            }
 
-            arg.argumentIndex = i
+                arg.argumentIndex = i
+            }
             // Note that this .addValueDeclaration call already adds arg to the function's
             // parameters.
             // This is why the following line has been commented out by @KW
@@ -279,9 +285,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
         ) {
             val problem =
                 NodeBuilder.newProblemDeclaration(
-                    null,
-                    "CDT tells us this is a (named) function declaration in parenthesis without a body directly within a block scope, this might be an ambiguity which we cannot solve currently.",
-                    null
+                    "CDT tells us this is a (named) function declaration in parenthesis without a body directly within a block scope, this might be an ambiguity which we cannot solve currently."
                 )
 
             Util.warnWithFileLocation(lang, ctx, log, problem.problem)

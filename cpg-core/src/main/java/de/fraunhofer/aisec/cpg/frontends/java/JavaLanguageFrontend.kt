@@ -61,8 +61,8 @@ import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
-import de.fraunhofer.aisec.cpg.helpers.Benchmark
 import de.fraunhofer.aisec.cpg.helpers.CommonPath
+import de.fraunhofer.aisec.cpg.helpers.TimeBenchmark
 import de.fraunhofer.aisec.cpg.passes.scopes.Scope
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
@@ -105,11 +105,11 @@ open class JavaLanguageFrontend(config: TranslationConfiguration, scopeManager: 
             val parser = JavaParser(parserConfiguration)
 
             // parse the file
-            var bench = Benchmark(this.javaClass, "Parsing source file")
+            var bench = TimeBenchmark(this.javaClass, "Parsing source file")
 
             context = parse(file, parser)
-            bench.stop()
-            bench = Benchmark(this.javaClass, "Transform to CPG")
+            bench.addMeasurement()
+            bench = TimeBenchmark(this.javaClass, "Transform to CPG")
             context!!.setData(Node.SYMBOL_RESOLVER_KEY, javaSymbolResolver)
 
             // starting point is always a translation declaration
@@ -142,7 +142,7 @@ open class JavaLanguageFrontend(config: TranslationConfiguration, scopeManager: 
             if (namespaceDeclaration != null) {
                 scopeManager.leaveScope(namespaceDeclaration)
             }
-            bench.stop()
+            bench.addMeasurement()
             fileDeclaration
         } catch (ex: IOException) {
             throw TranslationException(ex)

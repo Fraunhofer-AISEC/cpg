@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.frontends;
 import static de.fraunhofer.aisec.cpg.helpers.Util.errorWithFileLocation;
 
 import de.fraunhofer.aisec.cpg.graph.Node;
+import de.fraunhofer.aisec.cpg.graph.ProblemNode;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.util.HashMap;
@@ -129,6 +130,11 @@ public abstract class Handler<S, T, L extends LanguageFrontend> {
       errorWithFileLocation(
           lang, ctx, log, "Parsing of type {} is not supported (yet)", ctx.getClass());
       ret = this.configConstructor.get();
+      if (ret instanceof ProblemNode) {
+        ProblemNode problem = (ProblemNode) ret;
+        problem.setProblem(
+            String.format("Parsing of type {} is not supported (yet)", ctx.getClass()));
+      }
     }
 
     lang.process(ctx, ret);
