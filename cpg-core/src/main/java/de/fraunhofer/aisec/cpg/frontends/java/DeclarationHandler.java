@@ -43,9 +43,11 @@ import com.github.javaparser.resolution.UnsolvedSymbolException;
 import com.github.javaparser.resolution.declarations.ResolvedConstructorDeclaration;
 import com.github.javaparser.resolution.declarations.ResolvedMethodDeclaration;
 import de.fraunhofer.aisec.cpg.frontends.Handler;
+import de.fraunhofer.aisec.cpg.graph.ProblemNode;
 import de.fraunhofer.aisec.cpg.graph.TypeManager;
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration;
 import de.fraunhofer.aisec.cpg.graph.declarations.ParamVariableDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declarations.ProblemDeclaration;
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration;
 import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement;
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression;
@@ -64,7 +66,7 @@ public class DeclarationHandler
     extends Handler<Declaration, BodyDeclaration<?>, JavaLanguageFrontend> {
 
   public DeclarationHandler(JavaLanguageFrontend lang) {
-    super(Declaration::new, lang);
+    super(ProblemDeclaration::new, lang);
     map.put(
         com.github.javaparser.ast.body.MethodDeclaration.class,
         decl -> handleMethodDeclaration((com.github.javaparser.ast.body.MethodDeclaration) decl));
@@ -421,12 +423,14 @@ public class DeclarationHandler
 
   public Declaration /* TODO refine return type*/ handleAnnotationDeclaration(
       AnnotationDeclaration annotationConstDecl) {
-    return new Declaration();
+    return new ProblemDeclaration(
+        "AnnotationDeclaration not supported yet", ProblemNode.ProblemType.TRANSLATION);
   }
 
   public Declaration /* TODO refine return type*/ handleAnnotationMemberDeclaration(
       AnnotationMemberDeclaration annotationMemberDecl) {
-    return new Declaration();
+    return new ProblemDeclaration(
+        "AnnotationMemberDeclaration not supported yet", ProblemNode.ProblemType.TRANSLATION);
   }
 
   private String getAbsoluteName(String name) {

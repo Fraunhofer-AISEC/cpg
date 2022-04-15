@@ -39,7 +39,7 @@ import org.jetbrains.annotations.NotNull;
 import org.neo4j.ogm.annotation.Relationship;
 
 /** A statement. */
-public class Statement extends Node implements DeclarationHolder {
+public abstract class Statement extends Node implements DeclarationHolder {
 
   /**
    * A list of local variables associated to this statement, defined by their {@link

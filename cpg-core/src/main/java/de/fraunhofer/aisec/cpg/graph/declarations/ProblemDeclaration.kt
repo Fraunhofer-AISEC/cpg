@@ -23,20 +23,39 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.graph.declarations;
+package de.fraunhofer.aisec.cpg.graph.declarations
 
-import de.fraunhofer.aisec.cpg.graph.Node;
+import de.fraunhofer.aisec.cpg.graph.ProblemNode
+import org.apache.commons.lang3.builder.ToStringBuilder
 
 /**
- * Represents a single declaration or definition, i.e. of a variable ({@link VariableDeclaration})
- * or function ({@link FunctionDeclaration}).
- *
- * <p>Note: We do NOT (currently) distinguish between the definition and the declaration of a
- * function. This means, that if a function is first declared and later defined with a function
- * body, we will currently have two {@link FunctionDeclaration} nodes. This is very similar to the
- * behaviour of clang, however clang does establish a connection between those nodes, we currently
- * do not.
+ * A node where the statement could not be translated by the graph. We use ProblemExpressions
+ * whenever the CPG library requires an [Declaration].
  */
-// TODO: expressionRefersToDeclaration definition and declaration nodes and introduce a field if its
-// declaration only
-public abstract class Declaration extends Node {}
+class ProblemDeclaration(
+    override var problem: String = "",
+    override var type: ProblemNode.ProblemType = ProblemNode.ProblemType.TRANSLATION
+) : ValueDeclaration(), ProblemNode {
+
+    override fun toString(): String {
+        return ToStringBuilder(this, TO_STRING_STYLE)
+            .appendSuper(super.toString())
+            .append("problem", problem)
+            .toString()
+    }
+
+    override fun equals(o: Any?): Boolean {
+        if (this === o) {
+            return true
+        }
+        if (o !is ProblemDeclaration) {
+            return false
+        }
+        val that = o
+        return (super.equals(that) && problem == that.problem)
+    }
+
+    override fun hashCode(): Int {
+        return super.hashCode()
+    }
+}

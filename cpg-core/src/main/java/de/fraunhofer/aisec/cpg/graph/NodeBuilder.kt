@@ -803,7 +803,7 @@ object NodeBuilder {
         lang: LanguageFrontend? = null,
         rawNode: Any? = null
     ): Statement {
-        val node = Statement()
+        val node = ProblemExpression()
         node.setCodeAndRegion(lang, rawNode, code)
         log(node)
         return node
@@ -816,7 +816,7 @@ object NodeBuilder {
         lang: LanguageFrontend? = null,
         rawNode: Any? = null
     ): Expression {
-        val node = Expression()
+        val node = ProblemExpression()
         node.setCodeAndRegion(lang, rawNode, code)
         log(node)
         return node
@@ -926,17 +926,30 @@ object NodeBuilder {
     @JvmStatic
     @JvmOverloads
     fun newProblemDeclaration(
-        filename: String?,
-        problem: String?,
-        problemLocation: String?,
+        problem: String = "",
+        type: ProblemNode.ProblemType = ProblemNode.ProblemType.PARSING,
         code: String? = null,
         lang: LanguageFrontend? = null,
         rawNode: Any? = null
     ): ProblemDeclaration {
         val node = ProblemDeclaration()
-        node.filename = filename
         node.problem = problem
-        node.problemLocation = problemLocation
+        node.setCodeAndRegion(lang, rawNode, code)
+        log(node)
+        return node
+    }
+
+    @JvmStatic
+    @JvmOverloads
+    fun newProblemExpression(
+        problem: String = "",
+        type: ProblemNode.ProblemType = ProblemNode.ProblemType.PARSING,
+        code: String? = null,
+        lang: LanguageFrontend? = null,
+        rawNode: Any? = null
+    ): ProblemExpression {
+        val node = ProblemExpression()
+        node.problem = problem
         node.setCodeAndRegion(lang, rawNode, code)
         log(node)
         return node

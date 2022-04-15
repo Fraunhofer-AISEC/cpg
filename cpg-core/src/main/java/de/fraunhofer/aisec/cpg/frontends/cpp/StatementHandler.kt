@@ -43,7 +43,10 @@ import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTCatchHandler
 import org.eclipse.cdt.internal.core.dom.parser.cpp.*
 
 class StatementHandler(lang: CXXLanguageFrontend) :
-    Handler<Statement?, IASTStatement, CXXLanguageFrontend>(Supplier { Statement() }, lang) {
+    Handler<Statement?, IASTStatement, CXXLanguageFrontend>(
+        Supplier { ProblemExpression() },
+        lang
+    ) {
 
     init {
         map[CPPASTCompoundStatement::class.java] = HandlerInterface {
