@@ -26,7 +26,6 @@
 package de.fraunhofer.aisec.cpg.graph
 
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
-import java.util.*
 
 /**
  * A node which presents some kind of complete piece of software, e.g., an application, a library,
@@ -35,7 +34,7 @@ import java.util.*
  * This node holds all translation units belonging to this software component as well as (potential)
  * entry points or interactions with other software.
  */
-open class SoftwareComponent : Node() {
+open class Component : Node() {
     /** All translation units belonging to this application. */
     @field:SubGraph("AST")
     val translationUnits: MutableList<TranslationUnitDeclaration> = mutableListOf()

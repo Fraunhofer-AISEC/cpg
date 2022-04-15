@@ -28,8 +28,9 @@ package de.fraunhofer.aisec.cpg
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.frontends.cpp.CXXLanguageFrontend
-import de.fraunhofer.aisec.cpg.graph.SoftwareComponent
+import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.TypeManager
+import de.fraunhofer.aisec.cpg.helpers.Benchmark
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.helpers.TimeBenchmark
 import de.fraunhofer.aisec.cpg.helpers.Util
@@ -149,9 +150,9 @@ private constructor(
     ): Set<LanguageFrontend> {
         val usedFrontends = mutableSetOf<LanguageFrontend>()
         for (sc in this.config.softwareComponents.keys) {
-            val softwareComponent = SoftwareComponent()
-            softwareComponent.name = sc
-            result.addSoftwareComponent(softwareComponent)
+            val component = Component()
+            component.name = sc
+            result.addComponent(component)
 
             var sourceLocations: List<File> = this.config.softwareComponents[sc]!!
 
@@ -214,27 +215,29 @@ private constructor(
 
             usedFrontends.addAll(
                 if (useParallelFrontends) {
-                    parseParallel(softwareComponent, result, scopeManager, sourceLocations)
+                    parseParallel(component, result, scopeManager, sourceLocations)
                 } else {
-                    parseSequentially(softwareComponent, result, scopeManager, sourceLocations)
+                    parseSequentially(component, result, scopeManager, sourceLocations)
                 }
             )
 
             if (!config.typeSystemActiveInFrontend) {
                 TypeManager.setTypeSystemActive(true)
 
-                result.softwareComponents.forEach { s ->
+                result.components.forEach { s ->
                     s.translationUnits.forEach {
                         val bench =
                             Benchmark(this.javaClass, "Activating types for ${it.name}", true)
                         SubgraphWalker.activateTypes(it, scopeManager)
-                        bench.stop()
+                        bench.addMeasurement()
                     }
                 }
-            result.translationUnits.forEach {
-                val bench = TimeBenchmark(this.javaClass, "Activating types for ${it.name}", true)
-                SubgraphWalker.activateTypes(it, scopeManager)
-                bench.addMeasurement()
+                result.translationUnits.forEach {
+                    val bench =
+                        TimeBenchmark(this.javaClass, "Activating types for ${it.name}", true)
+                    SubgraphWalker.activateTypes(it, scopeManager)
+                    bench.addMeasurement()
+                }
             }
         }
 
@@ -242,7 +245,7 @@ private constructor(
     }
 
     private fun parseParallel(
-        softwareComponent: SoftwareComponent,
+        component: Component,
         result: TranslationResult,
         originalScopeManager: ScopeManager,
         sourceLocations: Collection<File>
@@ -263,7 +266,7 @@ private constructor(
             val future =
                 CompletableFuture.supplyAsync {
                     try {
-                        return@supplyAsync parse(softwareComponent, scopeManager, sourceLocation)
+                        return@supplyAsync parse(component, scopeManager, sourceLocation)
                     } catch (e: TranslationException) {
                         throw RuntimeException("Error parsing $sourceLocation", e)
                     }
@@ -297,7 +300,7 @@ private constructor(
 
     @Throws(TranslationException::class)
     private fun parseSequentially(
-        softwareComponent: SoftwareComponent,
+        component: Component,
         result: TranslationResult,
         scopeManager: ScopeManager,
         sourceLocations: Collection<File>
@@ -307,8 +310,7 @@ private constructor(
         for (sourceLocation in sourceLocations) {
             log.info("Parsing {}", sourceLocation.absolutePath)
 
-            parse(softwareComponent, scopeManager, sourceLocation).ifPresent { f: LanguageFrontend
-                ->
+            parse(component, scopeManager, sourceLocation).ifPresent { f: LanguageFrontend ->
                 handleCompletion(result, usedFrontends, sourceLocation, f)
             }
         }
@@ -340,7 +342,7 @@ private constructor(
 
     @Throws(TranslationException::class)
     private fun parse(
-        softwareComponent: SoftwareComponent,
+        component: Component,
         scopeManager: ScopeManager,
         sourceLocation: File
     ): Optional<LanguageFrontend> {
@@ -358,7 +360,7 @@ private constructor(
                 }
                 return Optional.empty()
             }
-            softwareComponent.translationUnits.add(frontend.parse(sourceLocation))
+            component.translationUnits.add(frontend.parse(sourceLocation))
         } catch (ex: TranslationException) {
             log.error("An error occurred during parsing of {}: {}", sourceLocation.name, ex.message)
             if (config.failOnError) {

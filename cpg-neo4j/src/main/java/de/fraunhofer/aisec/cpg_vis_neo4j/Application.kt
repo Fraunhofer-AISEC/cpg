@@ -218,7 +218,7 @@ class Application : Callable<Int> {
         log.info("Using import depth: $depth")
         log.info(
             "Count base nodes to save: " +
-                translationResult.softwareComponents.size +
+                translationResult.components.size +
                 translationResult.additionalNodes.size
         )
 
@@ -227,7 +227,7 @@ class Application : Callable<Int> {
         val session = sessionAndSessionFactoryPair.first
         session.beginTransaction().use { transaction ->
             if (!noPurgeDb) session.purgeDatabase()
-            session.save(translationResult.softwareComponents, depth)
+            session.save(translationResult.components, depth)
             session.save(translationResult.additionalNodes, depth)
             transaction.commit()
         }

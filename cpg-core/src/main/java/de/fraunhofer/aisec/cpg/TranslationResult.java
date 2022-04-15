@@ -25,8 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg;
 
+import de.fraunhofer.aisec.cpg.graph.Component;
 import de.fraunhofer.aisec.cpg.graph.Node;
-import de.fraunhofer.aisec.cpg.graph.SoftwareComponent;
 import de.fraunhofer.aisec.cpg.graph.SubGraph;
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration;
 import de.fraunhofer.aisec.cpg.helpers.Benchmark;
@@ -51,7 +51,7 @@ public class TranslationResult extends Node implements StatisticsHolder {
    * software.
    */
   @SubGraph("AST")
-  private final List<SoftwareComponent> softwareComponents = new ArrayList<>();
+  private final List<Component> components = new ArrayList<>();
 
   /** A free-for-use HashMap where passes can store whatever they want. */
   private final Map<String, Object> scratch = new ConcurrentHashMap<>();
@@ -78,11 +78,11 @@ public class TranslationResult extends Node implements StatisticsHolder {
    * @return the list of all translation units.
    */
   public List<TranslationUnitDeclaration> getTranslationUnits() {
-    if (this.softwareComponents.size() == 1) {
-      return Collections.unmodifiableList(this.softwareComponents.get(0).getTranslationUnits());
+    if (this.components.size() == 1) {
+      return Collections.unmodifiableList(this.components.get(0).getTranslationUnits());
     }
     List<TranslationUnitDeclaration> result = new ArrayList<>();
-    for (var sc : softwareComponents) {
+    for (var sc : components) {
       result.addAll(sc.getTranslationUnits());
     }
     return result;
@@ -90,21 +90,21 @@ public class TranslationResult extends Node implements StatisticsHolder {
 
   /**
    * List of software components. Note that this list is immutable. Use {@link
-   * #addSoftwareComponent(SoftwareComponent)} if you wish to modify it.
+   * #addComponent(Component)} if you wish to modify it.
    *
    * @return the list of software components
    */
-  public List<SoftwareComponent> getSoftwareComponents() {
-    return Collections.unmodifiableList(this.softwareComponents);
+  public List<Component> getComponents() {
+    return Collections.unmodifiableList(this.components);
   }
 
   /**
-   * Add a {@link SoftwareComponent} to this translation result in a thread safe way.
+   * Add a {@link Component} to this translation result in a thread safe way.
    *
    * @param sc The software component to add
    */
-  public synchronized void addSoftwareComponent(SoftwareComponent sc) {
-    softwareComponents.add(sc);
+  public synchronized void addComponent(Component sc) {
+    components.add(sc);
   }
 
   /**
@@ -140,7 +140,7 @@ public class TranslationResult extends Node implements StatisticsHolder {
   @Override
   public List<String> getTranslatedFiles() {
     List<String> result = new ArrayList<>();
-    softwareComponents.forEach(
+    components.forEach(
         sc ->
             result.addAll(
                 sc.getTranslationUnits().stream()
