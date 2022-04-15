@@ -39,7 +39,7 @@ import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 
 @ExperimentalTypeScript
 class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
-    Handler<Expression, TypeScriptNode, TypeScriptLanguageFrontend>(::Expression, lang) {
+    Handler<Expression, TypeScriptNode, TypeScriptLanguageFrontend>(::ProblemExpression, lang) {
     init {
         map.put(TypeScriptNode::class.java, ::handleNode)
     }
@@ -65,7 +65,7 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
             "JsxClosingElement" -> return handleJsxClosingElement(node)
         }
 
-        return Expression()
+        return ProblemExpression("No handler was implemented for nodes of type " + node.type)
     }
 
     private fun handleJsxAttribute(node: TypeScriptNode): KeyValueExpression {

@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.frontends.llvm
 
 import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
+import de.fraunhofer.aisec.cpg.graph.NodeBuilder
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newArrayCreationExpression
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newArraySubscriptionExpression
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newBinaryOperator
@@ -52,6 +53,7 @@ import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newSwitchStatement
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newTryStatement
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newUnaryOperator
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newVariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.ProblemNode
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
@@ -68,7 +70,7 @@ import org.bytedeco.llvm.LLVM.LLVMValueRef
 import org.bytedeco.llvm.global.LLVM.*
 
 class StatementHandler(lang: LLVMIRLanguageFrontend) :
-    Handler<Statement, Pointer, LLVMIRLanguageFrontend>(::Statement, lang) {
+    Handler<Statement, Pointer, LLVMIRLanguageFrontend>(::ProblemExpression, lang) {
     init {
         map.put(LLVMValueRef::class.java) { handleInstruction(it as LLVMValueRef) }
         map.put(LLVMBasicBlockRef::class.java) { handleBasicBlock(it as LLVMBasicBlockRef) }
@@ -226,7 +228,11 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         }
 
         log.error("Not handling instruction opcode {} yet", opcode)
-        return Statement()
+        return NodeBuilder.newProblemExpression(
+            "Not handling instruction opcode ${opcode} yet",
+            ProblemNode.ProblemType.TRANSLATION,
+            lang.getCodeFromRawNode(instr)
+        )
     }
 
     /**
@@ -484,7 +490,11 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 return handleBinaryOperator(instr, "^", false)
             }
         }
-        return Statement()
+        return NodeBuilder.newProblemExpression(
+            "Not opcode found for binary operator",
+            ProblemNode.ProblemType.TRANSLATION,
+            lang.getCodeFromRawNode(instr)
+        )
     }
 
     /**
@@ -639,7 +649,12 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         var base = operand
 
         // Make a copy of the operand
-        var copy = Statement()
+        var copy: Statement =
+            NodeBuilder.newProblemExpression(
+                "Default statement for insertvalue",
+                ProblemNode.ProblemType.TRANSLATION,
+                lang.getCodeFromRawNode(instr)
+            )
         if (operand !is ConstructExpression) {
             copy = declarationOrNot(operand, instr)
             if (copy is DeclarationStatement) {

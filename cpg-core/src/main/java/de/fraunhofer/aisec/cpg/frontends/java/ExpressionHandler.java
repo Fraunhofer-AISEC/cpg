@@ -59,7 +59,7 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
   private static final Logger log = LoggerFactory.getLogger(ExpressionHandler.class);
 
   public ExpressionHandler(JavaLanguageFrontend lang) {
-    super(de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression::new, lang);
+    super(ProblemExpression::new, lang);
 
     map.put(AssignExpr.class, this::handleAssignmentExpression);
     map.put(FieldAccessExpr.class, this::handleFieldAccessExpression);

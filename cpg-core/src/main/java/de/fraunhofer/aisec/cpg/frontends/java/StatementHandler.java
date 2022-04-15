@@ -60,7 +60,7 @@ public class StatementHandler
   private static final Logger log = LoggerFactory.getLogger(StatementHandler.class);
 
   public StatementHandler(JavaLanguageFrontend lang) {
-    super(de.fraunhofer.aisec.cpg.graph.statements.Statement::new, lang);
+    super(ProblemExpression::new, lang);
 
     map.put(IfStmt.class, this::handleIfStatement);
     map.put(AssertStmt.class, this::handleAssertStatement);

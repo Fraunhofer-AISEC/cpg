@@ -26,14 +26,17 @@
 package de.fraunhofer.aisec.cpg.frontends.llvm
 
 import de.fraunhofer.aisec.cpg.frontends.Handler
+import de.fraunhofer.aisec.cpg.graph.NodeBuilder
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newFieldDeclaration
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newFunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newLabelStatement
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newMethodParameterIn
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newRecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newVariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.ProblemNode
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.ProblemDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
 import de.fraunhofer.aisec.cpg.graph.types.Type
@@ -47,7 +50,7 @@ import org.bytedeco.llvm.global.LLVM.*
  * declarations, mainly functions and types.
  */
 class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
-    Handler<Declaration, Pointer, LLVMIRLanguageFrontend>(::Declaration, lang) {
+    Handler<Declaration, Pointer, LLVMIRLanguageFrontend>(::ProblemDeclaration, lang) {
     init {
         map.put(LLVMValueRef::class.java) { handleValue(it as LLVMValueRef) }
         map.put(LLVMTypeRef::class.java) { handleStructureType(it as LLVMTypeRef) }
@@ -59,7 +62,11 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
             LLVMGlobalVariableValueKind -> handleGlobal(value)
             else -> {
                 log.error("Not handling declaration kind {} yet", kind)
-                Declaration()
+                NodeBuilder.newProblemDeclaration(
+                    "Not handling declaration kind ${kind} yet.",
+                    ProblemNode.ProblemType.TRANSLATION,
+                    lang.getCodeFromRawNode(value)
+                )
             }
         }
     }

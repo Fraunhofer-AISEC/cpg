@@ -31,7 +31,7 @@ import de.fraunhofer.aisec.cpg.frontends.golang.GoLanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.llvm.LLVMIRLanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.typescript.TypeScriptLanguageFrontend
-import de.fraunhofer.aisec.cpg.helpers.Benchmark
+import de.fraunhofer.aisec.cpg.helpers.TimeBenchmark
 import java.io.File
 import java.net.ConnectException
 import java.nio.file.Paths
@@ -207,7 +207,7 @@ class Application : Callable<Int> {
      */
     @Throws(InterruptedException::class, ConnectException::class)
     fun pushToNeo4j(translationResult: TranslationResult) {
-        val bench = Benchmark(this.javaClass, "Push cpg to neo4j", false, translationResult)
+        val bench = TimeBenchmark(this.javaClass, "Push cpg to neo4j", false, translationResult)
         log.info("Using import depth: $depth")
         log.info(
             "Count base nodes to save: " +
@@ -227,7 +227,7 @@ class Application : Callable<Int> {
 
         session.clear()
         sessionAndSessionFactoryPair.second.close()
-        bench.stop()
+        bench.addMeasurement()
     }
 
     /**

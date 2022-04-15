@@ -33,10 +33,11 @@ import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpression
 
 @ExperimentalTypeScript
 class StatementHandler(lang: TypeScriptLanguageFrontend) :
-    Handler<Statement, TypeScriptNode, TypeScriptLanguageFrontend>(::Statement, lang) {
+    Handler<Statement, TypeScriptNode, TypeScriptLanguageFrontend>(::ProblemExpression, lang) {
     init {
         map.put(TypeScriptNode::class.java, ::handleNode)
     }
@@ -51,7 +52,7 @@ class StatementHandler(lang: TypeScriptLanguageFrontend) :
             "FunctionDeclaration" -> return handleFunctionDeclaration(node)
         }
 
-        return Statement()
+        return ProblemExpression("No handler was implemented for nodes of type " + node.type)
     }
 
     private fun handleFunctionDeclaration(node: TypeScriptNode): Statement {
