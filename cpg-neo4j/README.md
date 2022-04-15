@@ -19,12 +19,19 @@ Build (and install) a distribution using Gradle
 ```
 ./build/install/cpg-neo4j/bin/cpg-neo4j [--host=<host>] [--port=<port>]
                                         [--user=<neo4jUsername>] [--password=<neo4jPassword>]
-                                        [--includes-file=<includesFile>] [--save-depth=<depth>] 
+                                        [--includes-file=<includesFile>] [--save-depth=<depth>]
+                                        [--softwareComponents <Name>=<file1>,...]*
                                         <files>...
 
       <files>...             The paths to analyze. If module support is
                                enabled, the paths will be looked at if they
                                contain modules
+      -S, --softwareComponents <Name=files>
+                             Maps the names of software components to their
+                               respective files. The files are separated by
+                               commas (but no whitespace character is allowed).
+                               Multiple such components can be specified by providing
+                               more than one -S option.
       --host=<host>          Set the host of the neo4j Database (default:
                                localhost).
       --load-includes        Enable TranslationConfiguration option loadIncludes
