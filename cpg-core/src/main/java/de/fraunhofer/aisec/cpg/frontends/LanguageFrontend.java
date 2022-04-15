@@ -28,6 +28,8 @@ package de.fraunhofer.aisec.cpg.frontends;
 import de.fraunhofer.aisec.cpg.TranslationConfiguration;
 import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration;
+import de.fraunhofer.aisec.cpg.graph.statements.GotoStatement;
+import de.fraunhofer.aisec.cpg.graph.statements.LabelStatement;
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager;
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation;
 import de.fraunhofer.aisec.cpg.sarif.Region;
@@ -50,6 +52,9 @@ public abstract class LanguageFrontend {
   protected final TranslationConfiguration config;
 
   protected ScopeManager scopeManager;
+
+  protected List<Class<?>> interestingStatements =
+      List.of(GotoStatement.class, LabelStatement.class);
 
   /**
    * Two data structures used to associate Objects input to a pass to results of a pass, e.g.
@@ -79,7 +84,9 @@ public abstract class LanguageFrontend {
   }
 
   public void process(Object from, Object to) {
-    processedMapping.put(from, to);
+    if (interestingStatements.stream().anyMatch(c -> c.isInstance(from) || c.isInstance(to))) {
+      processedMapping.put(from, to);
+    }
     BiConsumer<Object, Object> listener = objectListeners.get(from);
     if (listener != null) {
       listener.accept(from, to);
@@ -89,15 +96,19 @@ public abstract class LanguageFrontend {
     }
     // Iterate over existing predicate based listeners, if the predicate matches the
     // listener/handler is executed on the new object.
+    Map<BiPredicate<Object, Object>, BiConsumer<Object, Object>> newPredicateListeners =
+        new HashMap<>();
     for (Map.Entry<BiPredicate<Object, Object>, BiConsumer<Object, Object>> pListener :
         predicateListeners.entrySet()) {
       if (pListener.getKey().test(from, to)) {
         pListener.getValue().accept(from, to);
+      } else {
         // Delete line if Node should be processed multiple times and should again invoke the
         // listener, e.g. refinement.
-        predicateListeners.remove(pListener.getKey());
+        newPredicateListeners.put(pListener.getKey(), pListener.getValue());
       }
     }
+    predicateListeners = newPredicateListeners;
   }
 
   public void registerObjectListener(Object from, BiConsumer<Object, Object> biConsumer) {

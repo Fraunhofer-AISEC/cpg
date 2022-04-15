@@ -1002,7 +1002,10 @@ class LLVMIRLanguageFrontendTest {
         val funcF = tu.byNameOrNull<FunctionDeclaration>("f")
         assertNotNull(funcF)
 
-        val tryStatement = funcF.bodyOrNull<TryStatement>(0)
+        val tryStatement =
+            (funcF.bodyOrNull<LabelStatement>(0)?.subStatement as? CompoundStatement)?.statements
+                ?.firstOrNull { s -> s is TryStatement } as?
+                TryStatement
         assertNotNull(tryStatement)
         assertEquals(2, tryStatement.tryBlock.statements.size)
         assertEquals(

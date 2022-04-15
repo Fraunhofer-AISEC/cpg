@@ -186,14 +186,12 @@ class StatementHandler(lang: CXXLanguageFrontend) :
             if (b is ILabel) {
                 b.labelStatement
                 // If the bound AST node is/or was transformed into a CPG node the cpg node is bound
-                // to the
-                // CPG goto statement
+                // to the CPG goto statement
                 lang.registerObjectListener(b.labelStatement, assigneeTargetLabel)
             }
         } catch (e: Exception) {
-            // If the Label AST node was could not be resolved, the matchign is done based on label
-            // names
-            // of CPG nodes using the predicate listeners
+            // If the Label AST node could not be resolved, the matching is done based on label
+            // names of CPG nodes using the predicate listeners
             lang.registerPredicateListener(
                 { _: Any?, to: Any? -> (to is LabelStatement && to.label == statement.labelName) },
                 assigneeTargetLabel

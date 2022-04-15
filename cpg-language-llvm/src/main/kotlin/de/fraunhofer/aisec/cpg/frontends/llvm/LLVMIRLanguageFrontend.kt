@@ -32,7 +32,6 @@ import de.fraunhofer.aisec.cpg.graph.TypeManager
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
-import de.fraunhofer.aisec.cpg.graph.statements.LabelStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.types.*
@@ -49,7 +48,6 @@ import org.bytedeco.llvm.global.LLVM.*
 class LLVMIRLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeManager?) :
     LanguageFrontend(config, scopeManager, "::") {
 
-    val labelMap = mutableMapOf<String, LabelStatement>()
     val statementHandler = StatementHandler(this)
     val declarationHandler = DeclarationHandler(this)
     val expressionHandler = ExpressionHandler(this)
