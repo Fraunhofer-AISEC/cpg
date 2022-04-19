@@ -246,7 +246,7 @@ public class CallResolver extends Pass {
     // and its surrounding record scope correctly. It also completely unnecessary because
     // we can just retrieve the current record from the ScopeManager. To be backwards compatibly,
     // we just override curClass here and do not change the rest of the functions (yet).
-    curClass = lang.getScopeManager().getCurrentRecord();
+    var record = lang.getScopeManager().getCurrentRecord();
 
     if (node instanceof TranslationUnitDeclaration) {
       this.currentTU = (TranslationUnitDeclaration) node;
@@ -257,15 +257,15 @@ public class CallResolver extends Pass {
       // We might have call expressions inside our arguments, so in order to correctly resolve
       // this call's signature, we need to make sure any call expression arguments are fully
       // resolved
-      resolveArguments(constructExpression, curClass);
+      resolveArguments(constructExpression, record);
       resolveConstructExpression((ConstructExpression) node);
     } else if (node instanceof CallExpression) {
       CallExpression call = (CallExpression) node;
       // We might have call expressions inside our arguments, so in order to correctly resolve
       // this call's signature, we need to make sure any call expression arguments are fully
       // resolved
-      resolveArguments(call, curClass);
-      handleCallExpression(curClass, call);
+      resolveArguments(call, record);
+      handleCallExpression(record, call);
     }
   }
 
