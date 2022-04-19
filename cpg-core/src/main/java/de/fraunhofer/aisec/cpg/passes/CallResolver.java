@@ -25,6 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.passes;
 
+import static de.fraunhofer.aisec.cpg.graph.NodeBuilder.newRecordDeclaration;
+
 import de.fraunhofer.aisec.cpg.TranslationResult;
 import de.fraunhofer.aisec.cpg.frontends.HasTemplates;
 import de.fraunhofer.aisec.cpg.frontends.cpp.CXXLanguageFrontend;
@@ -896,23 +898,6 @@ public class CallResolver extends Pass {
   }
 
   /**
-   * @param call we want to find invocation targets for by performing implicit casts
-   * @return list of invocation candidates by applying implicit casts
-   */
-  protected List<FunctionDeclaration> resolveWithImplicitCastFunc(CallExpression call) {
-    if (lang == null) {
-      Util.errorWithFileLocation(
-          call, log, "Could not resolve implicit casts: language frontend is null");
-
-      return Collections.emptyList();
-    }
-
-    List<FunctionDeclaration> initialInvocationCandidates =
-        new ArrayList<>(lang.getScopeManager().resolveFunctionStopScopeTraversalOnDefinition(call));
-    return resolveWithImplicitCast(call, initialInvocationCandidates);
-  }
-
-  /**
    * Checks if the current casts are compatible with the casts necessary to match with a new
    * FunctionDeclaration. If a one argument would need to be casted in two different types it would
    * be modified to a cast to UnknownType
@@ -1074,7 +1059,7 @@ public class CallResolver extends Pass {
     if (invocationCandidates.isEmpty()) {
       // If we don't find any candidate and our current language is c/c++ we check if there is a
       // candidate with an implicit cast
-      invocationCandidates.addAll(resolveWithImplicitCastFunc(call));
+      invocationCandidates.addAll(resolveWithImplicitCast(call, invocationCandidates));
     }
     createInferredFunction(invocationCandidates, call);
     call.setInvokes(invocationCandidates);
@@ -1172,7 +1157,7 @@ public class CallResolver extends Pass {
 
     if (invocationCandidates.isEmpty()) {
       // Check for usage of implicit cast
-      invocationCandidates.addAll(resolveWithImplicitCastFunc(call));
+      invocationCandidates.addAll(resolveWithImplicitCast(call, invocationCandidates));
     }
 
     return invocationCandidates;
@@ -1191,7 +1176,18 @@ public class CallResolver extends Pass {
       CallExpression call) {
     if (invocationCandidates.isEmpty()) {
       possibleContainingTypes.stream()
-          .map(t -> recordMap.get(t.getRoot().getTypeName()))
+          .map(
+              t -> {
+                var record = recordMap.get(t.getRoot().getTypeName());
+
+                if (record == null
+                    && lang != null
+                    && lang.getConfig().getInferenceConfiguration().getInferRecords()) {
+                  record = inferRecordDeclaration(t);
+                }
+
+                return record;
+              })
           .filter(Objects::nonNull)
           .map(
               r ->
@@ -1199,6 +1195,43 @@ public class CallResolver extends Pass {
                       r, call.getName(), call.getCode(), false, call.getSignature()))
           .forEach(invocationCandidates::add);
     }
+  }
+
+  /**
+   * Infers a record declaration.
+   *
+   * <p>TODO: Merge this with the (almost) same function in the VariableUsageResolver.
+   *
+   * @param type the object type representing a record that we want to infer.
+   * @return the inferred record declaration.
+   */
+  protected RecordDeclaration inferRecordDeclaration(Type type) {
+    if (type instanceof ObjectType) {
+      log.debug(
+          "Encountered an unknown record type {} during a call. We are going to infer that record",
+          type.getTypeName());
+
+      // The kind is most likely a class, since this is a member call. However, in some languages
+      // this might be still a struct (like Go), so we might need to fine-tune this later.
+      var declaration = newRecordDeclaration(type.getTypeName(), "class", "");
+      declaration.setInferred(true);
+
+      // update the type
+      ((ObjectType) type).setRecordDeclaration(declaration);
+
+      // update the record map
+      recordMap.put(type.getRoot().getTypeName(), declaration);
+
+      // add this record declaration to the current TU (this bypasses the scope manager)
+      lang.getCurrentTU().addDeclaration(declaration);
+
+      return declaration;
+    } else {
+      log.error(
+          "Trying to infer a record declaration of a non-object type. Not sure what to do? Should we change the type?");
+    }
+
+    return null;
   }
 
   /**
