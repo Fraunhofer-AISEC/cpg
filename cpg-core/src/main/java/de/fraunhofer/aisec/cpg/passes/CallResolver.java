@@ -240,6 +240,12 @@ public class CallResolver extends Pass {
   }
 
   protected void resolve(@NonNull Node node, RecordDeclaration curClass) {
+    // Note, that curClass is MAJORLY broken because it does not deal with method declarations
+    // and its surrounding record scope correctly. It also completely unnecessary because
+    // we can just retrieve the current record from the ScopeManager. To be backwards compatibly,
+    // we just override curClass here and do not change the rest of the functions (yet).
+    curClass = lang.getScopeManager().getCurrentRecord();
+
     if (node instanceof TranslationUnitDeclaration) {
       this.currentTU = (TranslationUnitDeclaration) node;
     } else if (node instanceof ExplicitConstructorInvocation) {
@@ -274,11 +280,10 @@ public class CallResolver extends Pass {
       if (member instanceof HasType
           && ((HasType) member).getType() instanceof FunctionPointerType) {
         handleFunctionPointerCall(call, member);
-        return;
       } else {
         handleMethodCall(curClass, call);
-        return;
       }
+      return;
     }
 
     if (call.instantiatesTemplate() && lang instanceof HasTemplates) {
