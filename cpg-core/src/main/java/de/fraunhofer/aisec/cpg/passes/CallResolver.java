@@ -1099,7 +1099,7 @@ public class CallResolver extends Pass {
     // Find function targets
     if (invocationCandidates.isEmpty() && lang != null) {
       if (lang instanceof CXXLanguageFrontend) {
-        invocationCandidates = handleCXXMethodCall(curClass, call);
+        invocationCandidates = handleCXXMethodCall(curClass, possibleContainingTypes, call);
 
       } else {
         invocationCandidates = lang.getScopeManager().resolveFunction(call);
@@ -1132,7 +1132,7 @@ public class CallResolver extends Pass {
    *     resolution techniques
    */
   protected List<FunctionDeclaration> handleCXXMethodCall(
-      RecordDeclaration curClass, CallExpression call) {
+      RecordDeclaration curClass, Set<Type> possibleContainingTypes, CallExpression call) {
     if (lang == null) {
       Util.errorWithFileLocation(
           call, log, "Could not handle method CXX calls: language frontend is null");
@@ -1140,10 +1140,17 @@ public class CallResolver extends Pass {
       return Collections.emptyList();
     }
 
-    List<FunctionDeclaration> invocationCandidates =
-        lang.getScopeManager().resolveFunctionStopScopeTraversalOnDefinition(call).stream()
-            .filter(f -> f.hasSignature(call.getSignature()))
-            .collect(Collectors.toList());
+    List<FunctionDeclaration> invocationCandidates = new ArrayList<>();
+
+    var records =
+        possibleContainingTypes.stream()
+            .map(t -> recordMap.get(t.getRoot().getTypeName()))
+            .filter(Objects::nonNull)
+            .collect(Collectors.toSet());
+
+    for (var record : records) {
+      invocationCandidates.addAll(getInvocationCandidatesFromRecord(record, call.getName(), call));
+    }
 
     if (invocationCandidates.isEmpty()) {
       // Check for usage of default args
@@ -1162,6 +1169,7 @@ public class CallResolver extends Pass {
       // Check for usage of implicit cast
       invocationCandidates.addAll(resolveWithImplicitCastFunc(call));
     }
+
     return invocationCandidates;
   }
 
