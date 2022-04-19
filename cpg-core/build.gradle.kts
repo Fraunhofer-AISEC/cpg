@@ -124,6 +124,9 @@ dependencies {
     implementation("org.jetbrains.kotlin:kotlin-stdlib")
     implementation("org.jetbrains.kotlin:kotlin-reflect")
 
+    // import java language frontend for testing (makes it easier for now)
+    testImplementation(project(":cpg-language-java"))
+
     // JUnit
     testImplementation("org.jetbrains.kotlin:kotlin-test")
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")

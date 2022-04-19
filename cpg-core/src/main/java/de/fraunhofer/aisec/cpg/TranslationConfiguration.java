@@ -36,7 +36,6 @@ import com.google.common.collect.Lists;
 import de.fraunhofer.aisec.cpg.frontends.CompilationDatabase;
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
 import de.fraunhofer.aisec.cpg.frontends.cpp.CXXLanguageFrontend;
-import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguageFrontend;
 import de.fraunhofer.aisec.cpg.passes.*;
 import java.io.File;
 import java.lang.reflect.InvocationTargetException;
@@ -453,7 +452,20 @@ public class TranslationConfiguration {
           | InvocationTargetException ignored) {
       }
       registerPass(new TypeHierarchyResolver());
-      registerPass(new JavaExternalTypeHierarchyResolver());
+
+      // TODO: somehow make the langauge frontend register this default pass
+      // registerPass(new JavaExternalTypeHierarchyResolver());
+      try {
+        var javaPass =
+            Class.forName("de.fraunhofer.aisec.cpg.passes.JavaExternalTypeHierarchyResolver");
+        registerPass((Pass) javaPass.getDeclaredConstructor().newInstance());
+      } catch (ClassNotFoundException
+          | NoSuchMethodException
+          | InstantiationException
+          | IllegalAccessException
+          | InvocationTargetException ignored) {
+      }
+
       registerPass(new ImportResolver());
       registerPass(new VariableUsageResolver());
       registerPass(new CallResolver()); // creates CG
@@ -473,7 +485,17 @@ public class TranslationConfiguration {
       registerLanguage(
           CXXLanguageFrontend.class,
           Lists.newArrayList(Iterables.concat(CXX_EXTENSIONS, CXX_HEADER_EXTENSIONS)));
-      registerLanguage(JavaLanguageFrontend.class, JavaLanguageFrontend.JAVA_EXTENSIONS);
+
+      // TODO: proper frontend loading system
+      try {
+        var javaClass =
+            Class.forName("de.fraunhofer.aisec.cpg.frontends.java.JavaLanguageFrontend");
+        registerLanguage(
+            (Class<? extends LanguageFrontend>) javaClass, Lists.newArrayList(".java"));
+      } catch (ClassNotFoundException ignored) {
+      }
+
+      // registerLanguage(JavaLanguageFrontend.class, JavaLanguageFrontend.JAVA_EXTENSIONS);
 
       // do not register experimental languages by default until we have a release strategy
       // registerLanguage(GoLanguageFrontend.class, GoLanguageFrontend.GOLANG_EXTENSIONS);

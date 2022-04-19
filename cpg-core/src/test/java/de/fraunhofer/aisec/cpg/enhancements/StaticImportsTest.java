@@ -42,7 +42,7 @@ import org.junit.jupiter.api.Test;
 
 class StaticImportsTest extends BaseTest {
 
-  private final Path topLevel = Path.of("src", "test", "resources", "staticImports");
+  private final Path topLevel = Path.of("../cpg-language-java/src/test/resources/staticImports");
 
   @Test
   void testSingleStaticImport() throws Exception {

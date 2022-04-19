@@ -42,7 +42,8 @@ class SubgraphWalkerTest extends BaseTest {
 
   @Test
   void testASTChildrenGetter() throws Exception {
-    File file = new File("src/test/resources/compiling/RecordDeclaration.java");
+    File file =
+        new File("../cpg-language-java/src/test/resources/compiling/RecordDeclaration.java");
     TranslationUnitDeclaration tu =
         TestUtils.analyzeAndGetFirstTU(List.of(file), file.getParentFile().toPath(), false);
     NamespaceDeclaration namespace = tu.getDeclarationAs(0, NamespaceDeclaration.class);

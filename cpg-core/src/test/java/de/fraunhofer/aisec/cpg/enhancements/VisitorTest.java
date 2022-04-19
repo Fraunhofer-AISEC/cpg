@@ -58,7 +58,8 @@ class VisitorTest extends BaseTest {
   @BeforeAll
   public static void setup()
       throws TranslationException, InterruptedException, ExecutionException, TimeoutException {
-    File file = new File("src/test/resources/compiling/RecordDeclaration.java");
+    File file =
+        new File("../cpg-language-java/src/test/resources/compiling/RecordDeclaration.java");
     TranslationConfiguration config =
         TranslationConfiguration.builder()
             .sourceLocations(file)

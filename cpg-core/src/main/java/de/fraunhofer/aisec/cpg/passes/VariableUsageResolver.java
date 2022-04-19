@@ -29,7 +29,6 @@ import static de.fraunhofer.aisec.cpg.graph.NodeBuilder.newRecordDeclaration;
 import static de.fraunhofer.aisec.cpg.helpers.Util.warnWithFileLocation;
 
 import de.fraunhofer.aisec.cpg.TranslationResult;
-import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguageFrontend;
 import de.fraunhofer.aisec.cpg.graph.*;
 import de.fraunhofer.aisec.cpg.graph.declarations.*;
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression;
@@ -268,7 +267,7 @@ public class VariableUsageResolver extends Pass {
       Declaration baseTarget = null;
       if (memberExpression.getBase() instanceof DeclaredReferenceExpression) {
         DeclaredReferenceExpression base = (DeclaredReferenceExpression) memberExpression.getBase();
-        if (lang instanceof JavaLanguageFrontend && base.getName().equals("super")) {
+        if (isJava() && base.getName().equals("super")) {
           if (curClass != null && !curClass.getSuperClasses().isEmpty()) {
             var superType = curClass.getSuperClasses().get(0);
             var superRecord = recordMap.get(superType);
@@ -374,8 +373,7 @@ public class VariableUsageResolver extends Pass {
 
   protected ValueDeclaration resolveMember(
       Type containingClass, DeclaredReferenceExpression reference) {
-    if (lang instanceof JavaLanguageFrontend
-        && reference.getName().matches("(?<class>.+\\.)?super")) {
+    if (isJava() && reference.getName().matches("(?<class>.+\\.)?super")) {
       // if we have a "super" on the member side, this is a member call. We need to resolve this
       // in the call resolver instead
       return null;
@@ -527,5 +525,9 @@ public class VariableUsageResolver extends Pass {
     }
 
     return null;
+  }
+
+  public boolean isJava() {
+    return lang != null && lang.getClass().getSimpleName().equals("JavaLanguageFrontend");
   }
 }

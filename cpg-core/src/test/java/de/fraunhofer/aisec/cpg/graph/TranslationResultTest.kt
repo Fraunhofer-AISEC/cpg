@@ -38,7 +38,7 @@ import org.junit.jupiter.api.Test
 class TranslationResultTest : BaseTest() {
     @Test
     fun testFromTranslationUnit() {
-        val file = File("src/test/resources/compiling/RecordDeclaration.java")
+        val file = File("../cpg-language-java/src/test/resources/compiling/RecordDeclaration.java")
 
         val config =
             TranslationConfiguration.builder()

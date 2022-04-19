@@ -838,7 +838,13 @@ class TypeTests extends BaseTest {
   void getCommonTypeTestJava() throws Exception {
     TestUtils.disableTypeManagerCleanup();
 
-    Path topLevel = Path.of("src", "test", "resources", "compiling", "hierarchy");
+    Path topLevel =
+        Path.of(
+            "src",
+            "test",
+            "resources",
+            "../../../../cpg-language-java/src/test/resources/compiling",
+            "hierarchy");
     TestUtils.analyze("java", topLevel, true);
 
     Type root = TypeParser.createFrom("multistep.Root", true);
@@ -855,7 +861,14 @@ class TypeTests extends BaseTest {
   void getCommonTypeTestCpp() throws Exception {
     TestUtils.disableTypeManagerCleanup();
 
-    Path topLevel = Path.of("src", "test", "resources", "compiling", "hierarchy", "multistep");
+    Path topLevel =
+        Path.of(
+            "src",
+            "test",
+            "resources",
+            "../../../../cpg-language-java/src/test/resources/compiling",
+            "hierarchy",
+            "multistep");
     TestUtils.analyze("simple_inheritance.cpp", topLevel, true);
 
     Type root = TypeParser.createFrom("Root", true);
@@ -872,7 +885,14 @@ class TypeTests extends BaseTest {
   void getCommonTypeTestCpp_multiInheritance() throws Exception {
     TestUtils.disableTypeManagerCleanup();
 
-    Path topLevel = Path.of("src", "test", "resources", "compiling", "hierarchy", "multistep");
+    Path topLevel =
+        Path.of(
+            "src",
+            "test",
+            "resources",
+            "../../../../cpg-language-java/src/test/resources/compiling",
+            "hierarchy",
+            "multistep");
     TestUtils.analyze("multi_inheritance.cpp", topLevel, true);
 
     Type root = TypeParser.createFrom("Root", true);

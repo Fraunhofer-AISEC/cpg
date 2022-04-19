@@ -49,6 +49,7 @@ internal class ScopeManagerTest : BaseTest() {
         config = TranslationConfiguration.builder().defaultPasses().build()
     }
 
+    // TODO: move java-specific part to java language frontend
     @Test
     @Throws(TranslationException::class)
     fun testSetScope() {

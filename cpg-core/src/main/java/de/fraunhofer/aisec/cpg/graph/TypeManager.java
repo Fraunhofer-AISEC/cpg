@@ -27,7 +27,6 @@ package de.fraunhofer.aisec.cpg.graph;
 
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
 import de.fraunhofer.aisec.cpg.frontends.cpp.CXXLanguageFrontend;
-import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguageFrontend;
 import de.fraunhofer.aisec.cpg.frontends.typescript.TypeScriptLanguageFrontend;
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration;
 import de.fraunhofer.aisec.cpg.graph.declarations.TemplateDeclaration;
@@ -54,11 +53,18 @@ public class TypeManager {
 
   private static final Logger log = LoggerFactory.getLogger(TypeManager.class);
 
+  private static Class<?> javaClass = null;
   private static Class<?> llvmClass = null;
   private static Class<?> pythonClass = null;
   private static Class<?> goClass = null;
 
   static {
+    try {
+      javaClass = Class.forName("de.fraunhofer.aisec.cpg.frontends.java.JavaLanguageFrontend");
+
+    } catch (ClassNotFoundException | ExceptionInInitializerError ignored) {
+      log.info("Java frontend not loaded.");
+    }
     try {
       llvmClass = Class.forName("de.fraunhofer.aisec.cpg.frontends.llvm.LLVMIRLanguageFrontend");
 
@@ -561,7 +567,7 @@ public class TypeManager {
 
   @NonNull
   public Language getLanguage() {
-    if (frontend instanceof JavaLanguageFrontend) {
+    if (frontend != null && javaClass != null && javaClass.isAssignableFrom(frontend.getClass())) {
       return Language.JAVA;
     } else if (frontend instanceof CXXLanguageFrontend) {
       return Language.CXX;

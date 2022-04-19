@@ -25,41 +25,33 @@
  */
 plugins {
     `java-library`
-    `maven-publish`
-    signing
 }
-
 
 publishing {
     publications {
-        named<MavenPublication>("cpg-analysis") {
+        named<MavenPublication>("cpg-language-java") {
             pom {
-                artifactId = "cpg-analysis"
-                name.set("Code Property Graph - Analysis Modules")
-                description.set("Analysis modules for the CPG")
+                artifactId = "cpg-language-java"
+                name.set("Code Property Graph - Java Frontend")
+                description.set("A Java language frontend for the CPG")
             }
         }
     }
 }
 
-tasks.named<Test>("test") {
-    useJUnitPlatform()
-    maxHeapSize = "4048m"
-}
-
 dependencies {
     api(project(":cpg-core"))
 
-    // TODO: this is a little hack, because we need a language frontend to actually test the analysis
-    testApi(project(":cpg-language-java"))
-
     testImplementation(testFixtures(project(":cpg-core")))
 
-    // JUnit
-    testImplementation("org.jetbrains.kotlin:kotlin-test")
-    testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
-    testImplementation("org.junit.jupiter:junit-jupiter-api:5.8.1")
-    testImplementation("org.junit.jupiter:junit-jupiter-params:5.8.1")
+    // JavaParser
+    api("com.github.javaparser:javaparser-symbol-solver-core:3.24.0")
 
-    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.8.1")
+    // JUnit
+    //testImplementation("org.jetbrains.kotlin:kotlin-test")
+    testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
+    testImplementation("org.junit.jupiter:junit-jupiter-api:5.8.2")
+    testImplementation("org.junit.jupiter:junit-jupiter-params:5.8.2")
+
+    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.8.2")
 }
