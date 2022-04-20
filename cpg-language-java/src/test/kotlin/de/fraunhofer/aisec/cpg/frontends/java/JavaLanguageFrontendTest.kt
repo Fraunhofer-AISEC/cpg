@@ -588,23 +588,24 @@ internal class JavaLanguageFrontendTest : BaseTest() {
 
     @Test
     fun testOverrideHandler() {
+        /** A simple extension of the [DeclarationHandler] to demonstrate handler overriding. */
+        class MyDeclarationHandler(lang: JavaLanguageFrontend) : DeclarationHandler(lang) {
+            override fun handleClassOrInterfaceDeclaration(
+                classInterDecl: ClassOrInterfaceDeclaration
+            ): RecordDeclaration {
+                // take the original class and replace the name
+                val declaration = super.handleClassOrInterfaceDeclaration(classInterDecl)
+                declaration.name = "MySimpleClass"
+
+                return declaration
+            }
+        }
+
         /** A simple extension of the [JavaLanguageFrontend] to demonstrate handler overriding. */
         class MyJavaLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeManager) :
             JavaLanguageFrontend(config, scopeManager) {
             init {
-                this.declarationHandler =
-                    object : DeclarationHandler(this) {
-                        override fun handleClassOrInterfaceDeclaration(
-                            classInterDecl: ClassOrInterfaceDeclaration
-                        ): RecordDeclaration {
-                            // take the original class and replace the name
-                            val declaration =
-                                super.handleClassOrInterfaceDeclaration(classInterDecl)
-                            declaration.name = "MySimpleClass"
-
-                            return declaration
-                        }
-                    }
+                this.declarationHandler = MyDeclarationHandler(this)
             }
         }
 
