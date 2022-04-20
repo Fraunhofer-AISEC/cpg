@@ -214,7 +214,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
         // need to temporary enter the record scope. This way, we can do a little trick
         // and (manually) add the declaration to the AST element of the current scope
         // (probably the global scope), but associate it to the record scope. Otherwise, we
-        // will get a lot of false-positives when such as A::foo, when we look for the function foo.
+        // will get a lot of false-positives such as A::foo, when we look for the function foo.
         // This is not the best solution and should be optimized once we finally have a good FQN
         // system.
         if (recordDeclaration != null && outsideOfRecord) {
