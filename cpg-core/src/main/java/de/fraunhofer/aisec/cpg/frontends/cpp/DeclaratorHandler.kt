@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.frontends.cpp
 import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.frontends.HandlerInterface
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
+import de.fraunhofer.aisec.cpg.graph.DeclarationHolder
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newRecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.*
@@ -208,14 +209,37 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
             declaration =
                 NodeBuilder.newFunctionDeclaration(name, ctx.rawSignature, lang, ctx.parent)
         }
-        lang.scopeManager.addDeclaration(declaration)
 
-        // if we know our record declaration, but are outside the actual record, we
-        // need to temporary enter the record scope
+        // If we know our record declaration, but are outside the actual record, we
+        // need to temporary enter the record scope. This way, we can do a little trick
+        // and (manually) add the declaration to the AST element of the current scope
+        // (probably the global scope), but associate it to the record scope. Otherwise, we
+        // will get a lot of false-positives when such as A::foo, when we look for the function foo.
+        // This is not the best solution and should be optimized once we finally have a good FQN
+        // system.
         if (recordDeclaration != null && outsideOfRecord) {
-            // to make sure, that the scope of this function is associated to the record
+            // Bypass the scope manager and manually add it to the AST parent
+            val parent = lang.scopeManager.currentScope?.astNode
+            if (parent != null && parent is DeclarationHolder) {
+                parent.addDeclaration(declaration)
+            }
+
+            // Enter the record scope
             lang.scopeManager.enterScope(recordDeclaration)
+
+            // We also need to by-pass the scope manager for this, because it will
+            // otherwise add the declaration to the AST element of the record scope (the record
+            // declaration); in this case to the `methods` fields. However, since `methods` is an
+            // AST field, (for now) we only want those methods in  there, that were actual AST
+            // parents. This is also something that we need to figure out how we want to handle
+            // this.
+            (lang.scopeManager.currentScope as? RecordScope)?.valueDeclarations?.add(declaration)
+        } else {
+            // Add the declaration via the scope manager
+            lang.scopeManager.addDeclaration(declaration)
         }
+
+        // Enter the scope of the function itself
         lang.scopeManager.enterScope(declaration)
         var i = 0
         for (param in ctx.parameters) {
@@ -223,7 +247,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
 
             if (arg is ParamVariableDeclaration) {
                 // check for void type parameters
-                if (arg!!.type is IncompleteType) {
+                if (arg.type is IncompleteType) {
                     if (arg.name.isNotEmpty()) {
                         Util.warnWithFileLocation(
                             declaration,

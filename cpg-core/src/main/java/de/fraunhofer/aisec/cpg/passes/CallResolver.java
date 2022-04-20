@@ -898,6 +898,23 @@ public class CallResolver extends Pass {
   }
 
   /**
+   * @param call we want to find invocation targets for by performing implicit casts
+   * @return list of invocation candidates by applying implicit casts
+   */
+  protected List<FunctionDeclaration> resolveWithImplicitCastFunc(CallExpression call) {
+    if (lang == null) {
+      Util.errorWithFileLocation(
+          call, log, "Could not resolve implicit casts: language frontend is null");
+
+      return Collections.emptyList();
+    }
+
+    List<FunctionDeclaration> initialInvocationCandidates =
+        new ArrayList<>(lang.getScopeManager().resolveFunctionStopScopeTraversalOnDefinition(call));
+    return resolveWithImplicitCast(call, initialInvocationCandidates);
+  }
+
+  /**
    * Checks if the current casts are compatible with the casts necessary to match with a new
    * FunctionDeclaration. If a one argument would need to be casted in two different types it would
    * be modified to a cast to UnknownType
@@ -1059,7 +1076,7 @@ public class CallResolver extends Pass {
     if (invocationCandidates.isEmpty()) {
       // If we don't find any candidate and our current language is c/c++ we check if there is a
       // candidate with an implicit cast
-      invocationCandidates.addAll(resolveWithImplicitCast(call, invocationCandidates));
+      invocationCandidates.addAll(resolveWithImplicitCastFunc(call));
     }
     createInferredFunction(invocationCandidates, call);
     call.setInvokes(invocationCandidates);
@@ -1157,7 +1174,7 @@ public class CallResolver extends Pass {
 
     if (invocationCandidates.isEmpty()) {
       // Check for usage of implicit cast
-      invocationCandidates.addAll(resolveWithImplicitCast(call, invocationCandidates));
+      invocationCandidates.addAll(resolveWithImplicitCastFunc(call));
     }
 
     return invocationCandidates;
