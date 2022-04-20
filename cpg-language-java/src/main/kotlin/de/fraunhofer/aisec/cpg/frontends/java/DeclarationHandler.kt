@@ -275,28 +275,34 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
         // TODO: 'this' identifier for multiple instances?
         for (decl in classInterDecl.members) {
             (decl as? com.github.javaparser.ast.body.FieldDeclaration)?.let {
-                handle(it) // will be added via the scopemanager
+                handle(it) // will be added via the scope manager
             }
-                ?: if (decl is com.github.javaparser.ast.body.MethodDeclaration) {
-                    val md = handle(decl) as MethodDeclaration?
-                    recordDeclaration.addMethod(md)
-                } else if (decl is com.github.javaparser.ast.body.ConstructorDeclaration) {
-                    val c = handle(decl) as ConstructorDeclaration?
-                    recordDeclaration.addConstructor(c)
-                } else if (decl is ClassOrInterfaceDeclaration) {
-                    recordDeclaration.addDeclaration(handle(decl)!!)
-                } else if (decl is InitializerDeclaration) {
-                    val id = decl
-                    val initializerBlock = lang.statementHandler.handleBlockStatement(id.body)
-                    initializerBlock.isStaticBlock = id.isStatic
-                    recordDeclaration.addStatement(initializerBlock)
-                } else {
-                    log.debug(
-                        "Member {} of type {} is something that we do not parse yet: {}",
-                        decl,
-                        recordDeclaration.name,
-                        decl.javaClass.simpleName
-                    )
+                ?: when (decl) {
+                    is com.github.javaparser.ast.body.MethodDeclaration -> {
+                        val md = handle(decl) as MethodDeclaration?
+                        recordDeclaration.addMethod(md)
+                    }
+                    is com.github.javaparser.ast.body.ConstructorDeclaration -> {
+                        val c = handle(decl) as ConstructorDeclaration?
+                        recordDeclaration.addConstructor(c)
+                    }
+                    is ClassOrInterfaceDeclaration -> {
+                        recordDeclaration.addDeclaration(handle(decl)!!)
+                    }
+                    is InitializerDeclaration -> {
+                        val id = decl
+                        val initializerBlock = lang.statementHandler.handleBlockStatement(id.body)
+                        initializerBlock.isStaticBlock = id.isStatic
+                        recordDeclaration.addStatement(initializerBlock)
+                    }
+                    else -> {
+                        log.debug(
+                            "Member {} of type {} is something that we do not parse yet: {}",
+                            decl,
+                            recordDeclaration.name,
+                            decl.javaClass.simpleName
+                        )
+                    }
                 }
         }
         if (recordDeclaration.constructors.isEmpty()) {
@@ -444,10 +450,8 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
     }
 
     private fun getAbsoluteName(name: String): String {
-        var name = name
         val prefix = lang.scopeManager.currentNamePrefix
-        name = (if (prefix.length > 0) prefix + lang.namespaceDelimiter else "") + name
-        return name
+        return (if (prefix.isNotEmpty()) prefix + lang.namespaceDelimiter else "") + name
     }
 
     companion object {

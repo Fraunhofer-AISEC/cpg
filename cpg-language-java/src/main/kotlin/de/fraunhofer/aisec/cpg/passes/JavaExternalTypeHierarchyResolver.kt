@@ -26,7 +26,6 @@
 package de.fraunhofer.aisec.cpg.passes
 
 import com.github.javaparser.resolution.UnsolvedSymbolException
-import com.github.javaparser.symbolsolver.model.resolution.TypeSolver
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.TypeManager
@@ -38,11 +37,10 @@ class JavaExternalTypeHierarchyResolver : Pass() {
     override fun accept(translationResult: TranslationResult) {
         // Run only for Java.
         if (lang is JavaLanguageFrontend) {
-            val resolver: TypeSolver = (lang as JavaLanguageFrontend).nativeTypeResolver
-            val tm = TypeManager.getInstance()
+            val resolver = (lang as JavaLanguageFrontend).nativeTypeResolver
 
             // Iterate over all known types and add their (direct) supertypes.
-            for (t in HashSet(tm.firstOrderTypes)) {
+            for (t in TypeManager.getInstance().firstOrderTypes.toSet()) {
                 val symbol = resolver.tryToSolveType(t.typeName)
                 if (symbol.isSolved) {
                     try {
@@ -54,7 +52,7 @@ class JavaExternalTypeHierarchyResolver : Pass() {
                             t.superTypes.add(superType)
                         }
                     } catch (e: UnsolvedSymbolException) {
-                        // Even if the symbol itself is resolved, "getAnchestors()" may throw
+                        // Even if the symbol itself is resolved, "getAncestors()" may throw an
                         // exception.
                         LOGGER.warn(
                             "Could not resolve supertypes of {}",

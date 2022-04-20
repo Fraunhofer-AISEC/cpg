@@ -89,7 +89,8 @@ open class StatementHandler(lang: JavaLanguageFrontend) :
         stmt: Statement
     ): de.fraunhofer.aisec.cpg.graph.statements.Statement {
         val throwStmt = stmt as ThrowStmt
-        val throwOperation = newUnaryOperator("throw", false, true, throwStmt.toString())
+        val throwOperation =
+            newUnaryOperator("throw", postfix = false, prefix = true, code = throwStmt.toString())
         throwOperation.input = lang.expressionHandler.handle(throwStmt.expression) as Expression
         return throwOperation
     }
@@ -136,7 +137,7 @@ open class StatementHandler(lang: JavaLanguageFrontend) :
         val thenStatement = assertStmt.message
         val assertStatement = newAssertStatement(stmt.toString())
         assertStatement.condition = lang.expressionHandler.handle(conditionExpression) as Expression
-        thenStatement.ifPresent { statement: com.github.javaparser.ast.expr.Expression? ->
+        thenStatement.ifPresent {
             assertStatement.setMessage(lang.expressionHandler.handle(thenStatement.get()))
         }
         return assertStatement
@@ -390,27 +391,27 @@ open class StatementHandler(lang: JavaLanguageFrontend) :
         return caseStatement
     }
 
-    fun getPreviousTokenWith(text: String, token: JavaToken): JavaToken {
-        var token = token
-        var optional = token.previousToken
-        while (token.text != text && optional.isPresent) {
-            token = optional.get()
-            optional = token.previousToken
+    private fun getPreviousTokenWith(text: String, token: JavaToken): JavaToken {
+        var newToken = token
+        var optional = newToken.previousToken
+        while (newToken.text != text && optional.isPresent) {
+            newToken = optional.get()
+            optional = newToken.previousToken
         }
-        return token
+        return newToken
     }
 
-    fun getNextTokenWith(text: String, token: JavaToken): JavaToken {
-        var token = token
-        var optional = token.nextToken
-        while (token.text != text && optional.isPresent) {
-            token = optional.get()
-            optional = token.nextToken
+    private fun getNextTokenWith(text: String, token: JavaToken): JavaToken {
+        var newToken = token
+        var optional = newToken.nextToken
+        while (newToken.text != text && optional.isPresent) {
+            newToken = optional.get()
+            optional = newToken.nextToken
         }
-        return token
+        return newToken
     }
 
-    fun getLocationsFromTokens(
+    private fun getLocationsFromTokens(
         parentLocation: PhysicalLocation?,
         startToken: JavaToken?,
         endToken: JavaToken?
@@ -454,7 +455,7 @@ open class StatementHandler(lang: JavaLanguageFrontend) :
         return newCode.toString()
     }
 
-    fun handleSwitchStatement(stmt: Statement): SwitchStatement {
+    open fun handleSwitchStatement(stmt: Statement): SwitchStatement {
         val switchStmt = stmt.asSwitchStmt()
         val switchStatement = newSwitchStatement(stmt.toString())
 
@@ -540,8 +541,7 @@ open class StatementHandler(lang: JavaLanguageFrontend) :
                 .stream()
                 .map { catchCls: CatchClause -> handleCatchClause(catchCls) }
                 .collect(Collectors.toList())
-        val finallyBlock =
-            tryStmt.finallyBlock.map { stmt: BlockStmt -> handleBlockStatement(stmt) }.orElse(null)
+        val finallyBlock = tryStmt.finallyBlock.map { handleBlockStatement(it) }.orElse(null)
         lang.scopeManager.leaveScope(tryStatement)
         tryStatement.resources = resources
         tryStatement.tryBlock = tryBlock

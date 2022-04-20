@@ -53,6 +53,7 @@ import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newUnaryOperator
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newVariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.TypeManager
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
@@ -157,8 +158,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
         expr: com.github.javaparser.ast.expr.Expression
     ): ConditionalExpression {
         val conditionalExpr = expr.asConditionalExpr()
-        val superType: Type?
-        superType =
+        val superType: Type? =
             try {
                 TypeParser.createFrom(conditionalExpr.calculateResolvedType().describe(), true)
             } catch (e: RuntimeException) {
@@ -418,7 +418,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
             memberExpression.isStaticAccess = true
             return memberExpression
         }
-        if (base!!.location == null) {
+        if (base.location == null) {
             base.location = lang.getLocationFromRawNode(fieldAccessExpr)
         }
         return newMemberExpression(
@@ -435,46 +435,54 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
     ): Literal<*>? {
         val literalExpr = expr.asLiteralExpr()
         val value = literalExpr.toString()
-        if (literalExpr is IntegerLiteralExpr) {
-            return newLiteral(
-                literalExpr.asIntegerLiteralExpr().asNumber(),
-                TypeParser.createFrom("int", true),
-                value
-            )
-        } else if (literalExpr is StringLiteralExpr) {
-            return newLiteral(
-                literalExpr.asStringLiteralExpr().asString(),
-                TypeParser.createFrom("java.lang.String", true),
-                value
-            )
-        } else if (literalExpr is BooleanLiteralExpr) {
-            return newLiteral(
-                literalExpr.asBooleanLiteralExpr().value,
-                TypeParser.createFrom("boolean", true),
-                value
-            )
-        } else if (literalExpr is CharLiteralExpr) {
-            return newLiteral(
-                literalExpr.asCharLiteralExpr().asChar(),
-                TypeParser.createFrom("char", true),
-                value
-            )
-        } else if (literalExpr is DoubleLiteralExpr) {
-            return newLiteral(
-                literalExpr.asDoubleLiteralExpr().asDouble(),
-                TypeParser.createFrom("double", true),
-                value
-            )
-        } else if (literalExpr is LongLiteralExpr) {
-            return newLiteral(
-                literalExpr.asLongLiteralExpr().asNumber(),
-                TypeParser.createFrom("long", true),
-                value
-            )
-        } else if (literalExpr is NullLiteralExpr) {
-            return newLiteral<Any?>(null, TypeParser.createFrom("null", true), value)
+        when (literalExpr) {
+            is IntegerLiteralExpr -> {
+                return newLiteral(
+                    literalExpr.asIntegerLiteralExpr().asNumber(),
+                    TypeParser.createFrom("int", true),
+                    value
+                )
+            }
+            is StringLiteralExpr -> {
+                return newLiteral(
+                    literalExpr.asStringLiteralExpr().asString(),
+                    TypeParser.createFrom("java.lang.String", true),
+                    value
+                )
+            }
+            is BooleanLiteralExpr -> {
+                return newLiteral(
+                    literalExpr.asBooleanLiteralExpr().value,
+                    TypeParser.createFrom("boolean", true),
+                    value
+                )
+            }
+            is CharLiteralExpr -> {
+                return newLiteral(
+                    literalExpr.asCharLiteralExpr().asChar(),
+                    TypeParser.createFrom("char", true),
+                    value
+                )
+            }
+            is DoubleLiteralExpr -> {
+                return newLiteral(
+                    literalExpr.asDoubleLiteralExpr().asDouble(),
+                    TypeParser.createFrom("double", true),
+                    value
+                )
+            }
+            is LongLiteralExpr -> {
+                return newLiteral(
+                    literalExpr.asLongLiteralExpr().asNumber(),
+                    TypeParser.createFrom("long", true),
+                    value
+                )
+            }
+            is NullLiteralExpr -> {
+                return newLiteral<Any?>(null, TypeParser.createFrom("null", true), value)
+            }
+            else -> return null
         }
-        return null
     }
 
     private fun handleClassExpression(
@@ -594,8 +602,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
                 newDeclaredReferenceExpression(symbol.name, type, nameExpr.toString())
             }
         } catch (ex: UnsolvedSymbolException) {
-            val typeString: String?
-            typeString =
+            val typeString =
                 if (ex.name.startsWith(
                         "We are unable to find the value declaration corresponding to"
                     )
