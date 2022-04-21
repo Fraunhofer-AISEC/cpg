@@ -39,15 +39,15 @@ class CouldNotResolve
  *
  * The result can be retrieved in two ways:
  * * The result of the [resolve] function is a JVM object which represents the constant value
- * * Furthermore, after the execution of [evaluate], the latest evaluation path can be retrieved in
- * the [path] property of the evaluator.
+ * * Furthermore, after the execution of [evaluateInternal], the latest evaluation path can be
+ * retrieved in the [path] property of the evaluator.
  *
  * It contains some advanced mechanics such as resolution of values of arrays, if they contain
  * literal values. Furthermore, its behaviour can be adjusted by implementing the [cannotEvaluate]
  * function, which is called when the default behaviour would not be able to resolve the value. This
  * way, language specific features such as string formatting can be modelled.
  */
-class ValueEvaluator(
+open class ValueEvaluator(
     /**
      * Contains a reference to a function that gets called if the value cannot be resolved by the
      * standard behaviour.
@@ -61,31 +61,35 @@ class ValueEvaluator(
         }
     }
 ) {
-    private val log: Logger
+    protected open val log: Logger
         get() = LoggerFactory.getLogger(ValueEvaluator::class.java)
 
-    /** This property contains the path of the latest execution of [evaluate]. */
+    /** This property contains the path of the latest execution of [evaluateInternal]. */
     val path: MutableList<Node> = mutableListOf()
 
+    open fun evaluate(node: Node?): Any? {
+        return evaluateInternal(node, 0)
+    }
+
     /** Tries to evaluate this node. Anything can happen. */
-    fun evaluate(node: Node?): Any? {
+    protected open fun evaluateInternal(node: Node?, depth: Int): Any? {
         // Add the expression to the current path
         node?.let { this.path += it }
 
         when (node) {
-            is ArrayCreationExpression -> return evaluate(node.initializer)
-            is VariableDeclaration -> return evaluate(node.initializer)
+            is ArrayCreationExpression -> return evaluateInternal(node.initializer, depth + 1)
+            is VariableDeclaration -> return evaluateInternal(node.initializer, depth + 1)
             // For a literal, we can just take its value, and we are finished
             is Literal<*> -> return node.value
-            is DeclaredReferenceExpression -> return handleDeclaredReferenceExpression(node)
-            is UnaryOperator -> return handleUnaryOp(node)
-            is BinaryOperator -> return handleBinaryOperator(node)
+            is DeclaredReferenceExpression -> return handleDeclaredReferenceExpression(node, depth)
+            is UnaryOperator -> return handleUnaryOp(node, depth)
+            is BinaryOperator -> return handleBinaryOperator(node, depth)
             // Casts are just a wrapper in this case, we are interested in the inner expression
-            is CastExpression -> return this.evaluate(node.expression)
-            is ArraySubscriptionExpression -> handleArraySubscriptionExpression(node)
+            is CastExpression -> return this.evaluateInternal(node.expression, depth + 1)
+            is ArraySubscriptionExpression -> handleArraySubscriptionExpression(node, depth)
             // While we are not handling different paths of variables with If statements, we can
             // easily be partly path-sensitive in a conditional expression
-            is ConditionalExpression -> handleConditionalExpression(node)
+            is ConditionalExpression -> handleConditionalExpression(node, depth)
         }
 
         // At this point, we cannot evaluate, and we are calling our [cannotEvaluate] hook, maybe
@@ -97,12 +101,20 @@ class ValueEvaluator(
      * We are handling some basic arithmetic binary operations and string operations that are more
      * or less language-independent.
      */
-    private fun handleBinaryOperator(expr: BinaryOperator): Any? {
+    protected open fun handleBinaryOperator(expr: BinaryOperator, depth: Int): Any? {
         // Resolve lhs
-        val lhsValue = evaluate(expr.lhs)
+        val lhsValue = evaluateInternal(expr.lhs, depth + 1)
         // Resolve rhs
-        val rhsValue = evaluate(expr.rhs)
+        val rhsValue = evaluateInternal(expr.rhs, depth + 1)
 
+        return computeBinaryOpEffect(lhsValue, rhsValue, expr)
+    }
+
+    protected fun computeBinaryOpEffect(
+        lhsValue: Any?,
+        rhsValue: Any?,
+        expr: BinaryOperator
+    ): Any? {
         return when (expr.operatorCode) {
             "+" -> handlePlus(lhsValue, rhsValue, expr)
             "-" -> handleMinus(lhsValue, rhsValue, expr)
@@ -242,21 +254,22 @@ class ValueEvaluator(
      * We handle some basic unary operators. These also affect pointers and dereferences for
      * languages that support them.
      */
-    private fun handleUnaryOp(expr: UnaryOperator): Any? {
+    protected open fun handleUnaryOp(expr: UnaryOperator, depth: Int): Any? {
         return when (expr.operatorCode) {
             "-" -> {
-                when (val input = evaluate(expr.input)) {
-                    is Int -> -input
-                    is Long -> -input
-                    is Short -> -input
-                    is Byte -> -input
-                    is Double -> -input
-                    is Float -> -input
+                when (val input = evaluateInternal(expr.input, depth + 1)) {
+                    is Number -> input.negate()
                     else -> cannotEvaluate(expr, this)
                 }
             }
-            "*" -> evaluate(expr.input)
-            "&" -> evaluate(expr.input)
+            "++" -> {
+                when (val input = evaluateInternal(expr.input, depth + 1)) {
+                    is Number -> input.toLong() + 1
+                    else -> cannotEvaluate(expr, this)
+                }
+            }
+            "*" -> evaluateInternal(expr.input, depth + 1)
+            "&" -> evaluateInternal(expr.input, depth + 1)
             else -> cannotEvaluate(expr, this)
         }
     }
@@ -266,20 +279,24 @@ class ValueEvaluator(
      * basically the case if the base of the subscript expression is a list of [KeyValueExpression]
      * s.
      */
-    private fun handleArraySubscriptionExpression(expr: ArraySubscriptionExpression): Any? {
+    protected fun handleArraySubscriptionExpression(
+        expr: ArraySubscriptionExpression,
+        depth: Int
+    ): Any? {
         val array =
             (expr.arrayExpression as? DeclaredReferenceExpression)?.refersTo as? VariableDeclaration
         val ile = array?.initializer as? InitializerListExpression
 
         ile?.let {
-            return evaluate(
+            return evaluateInternal(
                 it.initializers
                     .filterIsInstance(KeyValueExpression::class.java)
                     .firstOrNull { kve ->
                         (kve.key as? Literal<*>)?.value ==
                             (expr.subscriptExpression as? Literal<*>)?.value
                     }
-                    ?.value
+                    ?.value,
+                depth + 1
             )
         }
         if (array?.initializer is Literal<*>) {
@@ -287,22 +304,22 @@ class ValueEvaluator(
         }
 
         if (expr.arrayExpression is ArraySubscriptionExpression) {
-            return evaluate(expr.arrayExpression)
+            return evaluateInternal(expr.arrayExpression, depth + 1)
         }
 
         return cannotEvaluate(expr, this)
     }
 
-    private fun handleConditionalExpression(expr: ConditionalExpression): Any? {
+    protected open fun handleConditionalExpression(expr: ConditionalExpression, depth: Int): Any? {
         // Assume that condition is a binary operator
         if (expr.condition is BinaryOperator) {
-            val lhs = evaluate((expr.condition as? BinaryOperator)?.lhs)
-            val rhs = evaluate((expr.condition as? BinaryOperator)?.rhs)
+            val lhs = evaluateInternal((expr.condition as? BinaryOperator)?.lhs, depth)
+            val rhs = evaluateInternal((expr.condition as? BinaryOperator)?.rhs, depth)
 
             return if (lhs == rhs) {
-                evaluate(expr.thenExpr)
+                evaluateInternal(expr.thenExpr, depth + 1)
             } else {
-                evaluate(expr.elseExpr)
+                evaluateInternal(expr.elseExpr, depth + 1)
             }
         }
 
@@ -313,14 +330,17 @@ class ValueEvaluator(
      * Tries to compute the constant value of a reference. It therefore checks the incoming data
      * flow edges.
      */
-    private fun handleDeclaredReferenceExpression(expr: DeclaredReferenceExpression): Any? {
+    protected open fun handleDeclaredReferenceExpression(
+        expr: DeclaredReferenceExpression,
+        depth: Int
+    ): Any? {
         // For a reference, we are interested into its last assignment into the reference
         // denoted by the previous DFG edge
         val prevDFG = expr.prevDFG
 
         if (prevDFG.size == 1)
         // There's only one incoming DFG edge, so we follow this one.
-        return evaluate(prevDFG.first())
+        return evaluateInternal(prevDFG.first(), depth + 1)
 
         // We are only interested in expressions
         val expressions = prevDFG.filterIsInstance<Expression>()
@@ -345,10 +365,22 @@ class ValueEvaluator(
                 )
                 return cannotEvaluate(expr, this)
             }
-            return evaluate(decl.firstOrNull())
+            return evaluateInternal(decl.firstOrNull(), depth + 1)
         }
 
-        return evaluate(expressions.firstOrNull())
+        return evaluateInternal(expressions.firstOrNull(), depth + 1)
+    }
+}
+
+internal fun Number.negate(): Number {
+    return when (this) {
+        is Int -> -this
+        is Long -> -this
+        is Short -> -this
+        is Byte -> -this
+        is Double -> -this
+        is Float -> -this
+        else -> 0
     }
 }
 
@@ -357,7 +389,7 @@ class ValueEvaluator(
  * and compares an arbitrary [Number] with another [Number] using the dedicated compareTo functions
  * for the individual implementations of [Number], such as [Int.compareTo].
  */
-private fun <T : Number> Number.compareTo(other: T): Int {
+fun <T : Number> Number.compareTo(other: T): Int {
     return when {
         this is Byte && other is Double -> this.compareTo(other)
         this is Byte && other is Float -> this.compareTo(other)

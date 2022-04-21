@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.analysis
 
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationManager
+import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.analysis.QueryEvaluation.Quantifier
 import de.fraunhofer.aisec.cpg.console.fancyCode
 import de.fraunhofer.aisec.cpg.graph.ValueEvaluator
@@ -35,9 +36,11 @@ import de.fraunhofer.aisec.cpg.graph.byNameOrNull
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.passes.EdgeCachePass
 import java.io.File
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 import org.junit.jupiter.api.Test
 
 class AnalysisTest {
@@ -56,18 +59,10 @@ class AnalysisTest {
         OutOfBoundsCheck().run(result)
     }
 
-    @Test
-    fun testOutOfBoundsQuery() {
-        val config =
-            TranslationConfiguration.builder()
-                .sourceLocations(File("src/test/resources/array.cpp"))
-                .defaultPasses()
-                .defaultLanguages()
-                .build()
-
-        val analyzer = TranslationManager.builder().config(config).build()
-        val result = analyzer.analyze().get()
-
+    fun createArrayOutOfBoundsQuery(
+        result: TranslationResult,
+        normalEvaluator: Boolean
+    ): QueryEvaluation.QueryExpression {
         // Query: forall (n: ArraySubscriptionExpression): |max(n.subscriptExpression)| <
         // |min(n.arrayExpression.refersTo.initializer.dimensions[0])|
         // && |min(n.subscriptExpression)| >= 0
@@ -83,7 +78,7 @@ class AnalysisTest {
                 "n.subscriptExpression",
                 "n",
                 "subscriptExpression",
-                ValueEvaluator()
+                if (normalEvaluator) ValueEvaluator() else MultiValueEvaluator()
             )
         val maxIndex =
             QueryEvaluation.UnaryExpr(
@@ -102,7 +97,7 @@ class AnalysisTest {
                 "n.arrayExpression.refersTo.initializer.dimensions[0]",
                 "n",
                 "arrayExpression.refersTo.initializer.dimensions[0]",
-                ValueEvaluator()
+                if (normalEvaluator) ValueEvaluator() else MultiValueEvaluator()
             )
         val minCapacity =
             QueryEvaluation.UnaryExpr(
@@ -140,7 +135,57 @@ class AnalysisTest {
                 checks
             )
 
-        assertFalse(forall.evaluate() as Boolean)
+        return forall
+    }
+
+    @Test
+    fun testOutOfBoundsQuery() {
+        val config =
+            TranslationConfiguration.builder()
+                .sourceLocations(File("src/test/resources/array.cpp"))
+                .defaultPasses()
+                .defaultLanguages()
+                .build()
+
+        val analyzer = TranslationManager.builder().config(config).build()
+        val result = analyzer.analyze().get()
+
+        val query = createArrayOutOfBoundsQuery(result, true)
+        assertFalse(query.evaluate() as Boolean)
+    }
+
+    @Test
+    fun testOutOfBoundsQuery2() {
+        val config =
+            TranslationConfiguration.builder()
+                .sourceLocations(File("src/test/resources/array2.cpp"))
+                .defaultPasses()
+                .defaultLanguages()
+                .registerPass(EdgeCachePass())
+                .build()
+
+        val analyzer = TranslationManager.builder().config(config).build()
+        val result = analyzer.analyze().get()
+
+        val query = createArrayOutOfBoundsQuery(result, false)
+        assertFalse(query.evaluate() as Boolean)
+    }
+
+    @Test
+    fun testOutOfBoundsQueryCorrect() {
+        val config =
+            TranslationConfiguration.builder()
+                .sourceLocations(File("src/test/resources/array_correct.cpp"))
+                .defaultPasses()
+                .defaultLanguages()
+                .registerPass(EdgeCachePass())
+                .build()
+
+        val analyzer = TranslationManager.builder().config(config).build()
+        val result = analyzer.analyze().get()
+
+        val query = createArrayOutOfBoundsQuery(result, false)
+        assertTrue(query.evaluate() as Boolean)
     }
 
     @Test

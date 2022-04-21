@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.analysis
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.ValueEvaluator
+import de.fraunhofer.aisec.cpg.graph.compareTo
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import kotlin.reflect.KProperty1
 import kotlin.reflect.jvm.isAccessible
@@ -53,54 +54,6 @@ class QueryEvaluation {
     enum class Quantifier {
         FORALL,
         EXISTS
-    }
-
-    abstract class NumberSet {
-        abstract fun min(): Long
-        abstract fun max(): Long
-        abstract fun addValue(value: Long)
-        abstract fun clear()
-    }
-
-    class Interval : NumberSet() {
-        private var min: Long = Long.MAX_VALUE
-        private var max: Long = Long.MIN_VALUE
-
-        override fun addValue(value: Long) {
-            if (value < min) {
-                min = value
-            }
-            if (value > max) {
-                max = value
-            }
-        }
-        override fun min(): Long {
-            return min
-        }
-        override fun max(): Long {
-            return max
-        }
-        override fun clear() {
-            min = Long.MAX_VALUE
-            max = Long.MIN_VALUE
-        }
-    }
-
-    class ConcreteNumberSet : NumberSet() {
-        private var values: MutableSet<Long> = mutableSetOf()
-
-        override fun addValue(value: Long) {
-            values.add(value)
-        }
-        override fun min(): Long {
-            return values.minOrNull()!!
-        }
-        override fun max(): Long {
-            return values.maxOrNull()!!
-        }
-        override fun clear() {
-            values.clear()
-        }
     }
 
     abstract class QueryExpression(open val representation: String) {
@@ -228,10 +181,14 @@ class QueryEvaluation {
                 QueryOp.OR -> lhs.evaluate(input) as Boolean || rhs.evaluate(input) as Boolean
                 QueryOp.EQ -> lhs.evaluate(input) == rhs.evaluate(input)
                 QueryOp.NE -> lhs.evaluate(input) != rhs.evaluate(input)
-                QueryOp.GT -> lhs.evaluate(input) as Long > rhs.evaluate(input) as Long
-                QueryOp.GE -> lhs.evaluate(input) as Long >= rhs.evaluate(input) as Long
-                QueryOp.LT -> (lhs.evaluate(input) as Long) < (rhs.evaluate(input) as Long)
-                QueryOp.LE -> lhs.evaluate(input) as Long <= rhs.evaluate(input) as Long
+                QueryOp.GT ->
+                    (lhs.evaluate(input) as Number).compareTo(rhs.evaluate(input) as Number) > 0
+                QueryOp.GE ->
+                    (lhs.evaluate(input) as Number).compareTo(rhs.evaluate(input) as Number) >= 0
+                QueryOp.LT ->
+                    (lhs.evaluate(input) as Number).compareTo(rhs.evaluate(input) as Number) < 0
+                QueryOp.LE ->
+                    (lhs.evaluate(input) as Number).compareTo(rhs.evaluate(input) as Number) <= 0
                 QueryOp.IS ->
                     lhs.evaluate(input).javaClass.simpleName == rhs.evaluate(input) as String
                 QueryOp.IMPLIES ->

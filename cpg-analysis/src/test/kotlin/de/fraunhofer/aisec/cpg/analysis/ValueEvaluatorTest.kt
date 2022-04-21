@@ -56,14 +56,14 @@ class ValueEvaluatorTest {
         val b = main.bodyOrNull<DeclarationStatement>()?.singleDeclaration
         assertNotNull(b)
 
-        var value = b.evaluate()
+        var value = b.evaluateInternal()
         assertEquals(2L, value)
 
         val printB = main.bodyOrNull<CallExpression>()
         assertNotNull(printB)
 
         val evaluator = ValueEvaluator()
-        value = evaluator.evaluate(printB.arguments.firstOrNull())
+        value = evaluator.evaluateInternal(printB.arguments.firstOrNull())
         assertEquals(2L, value)
 
         val path = evaluator.path
@@ -72,70 +72,70 @@ class ValueEvaluatorTest {
         val printA = main.bodyOrNull<CallExpression>(1)
         assertNotNull(printA)
 
-        value = printA.arguments.firstOrNull()?.evaluate()
+        value = printA.arguments.firstOrNull()?.evaluateInternal()
         assertEquals(2, value)
 
         val c = main.bodyOrNull<DeclarationStatement>(2)?.singleDeclaration
         assertNotNull(c)
 
-        value = c.evaluate()
+        value = c.evaluateInternal()
         assertEquals(3L, value)
 
         val d = main.bodyOrNull<DeclarationStatement>(3)?.singleDeclaration
         assertNotNull(d)
 
-        value = d.evaluate()
+        value = d.evaluateInternal()
         assertEquals(2L, value)
 
         val e = main.bodyOrNull<DeclarationStatement>(4)?.singleDeclaration
         assertNotNull(e)
-        value = e.evaluate()
+        value = e.evaluateInternal()
         assertEquals(3.5, value)
 
         val f = main.bodyOrNull<DeclarationStatement>(5)?.singleDeclaration
         assertNotNull(f)
-        value = f.evaluate()
+        value = f.evaluateInternal()
         assertEquals(10L, value)
 
         val printHelloWorld = main.bodyOrNull<CallExpression>(2)
         assertNotNull(printHelloWorld)
 
-        value = printHelloWorld.arguments.firstOrNull()?.evaluate()
+        value = printHelloWorld.arguments.firstOrNull()?.evaluateInternal()
         assertEquals("Hello world", value)
 
         val g = main.bodyOrNull<DeclarationStatement>(6)?.singleDeclaration
         assertNotNull(g)
-        value = g.evaluate()
+        value = g.evaluateInternal()
         assertEquals(-3L, value)
 
         val h = main.bodyOrNull<DeclarationStatement>(7)?.singleDeclaration
         assertNotNull(h)
-        value = h.evaluate()
+        value = h.evaluateInternal()
         assertFalse(value as Boolean)
 
         val i = main.bodyOrNull<DeclarationStatement>(8)?.singleDeclaration
         assertNotNull(i)
-        value = i.evaluate()
+        value = i.evaluateInternal()
         assertFalse(value as Boolean)
 
         val j = main.bodyOrNull<DeclarationStatement>(9)?.singleDeclaration
         assertNotNull(j)
-        value = j.evaluate()
+        value = j.evaluateInternal()
         assertFalse(value as Boolean)
 
         val k = main.bodyOrNull<DeclarationStatement>(10)?.singleDeclaration
         assertNotNull(k)
-        value = k.evaluate()
+        value = k.evaluateInternal()
         assertFalse(value as Boolean)
 
         val l = main.bodyOrNull<DeclarationStatement>(11)?.singleDeclaration
         assertNotNull(l)
-        value = l.evaluate()
+        value = l.evaluateInternal()
         assertFalse(value as Boolean)
 
         val m = main.bodyOrNull<DeclarationStatement>(12)?.singleDeclaration
         assertNotNull(m)
-        value = m.evaluate()
+        value = m.evaluateInternal()
         assertFalse(value as Boolean)
     }
 }
