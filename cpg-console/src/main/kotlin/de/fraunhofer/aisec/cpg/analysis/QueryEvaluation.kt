@@ -48,7 +48,8 @@ class QueryEvaluation {
         NOT,
         AND,
         OR,
-        IS
+        IS,
+        IN
     }
 
     enum class Quantifier {
@@ -56,30 +57,76 @@ class QueryEvaluation {
         EXISTS
     }
 
-    abstract class QueryExpression(open val representation: String) {
+    abstract class QueryExpression(open val representation: String?) {
         abstract fun evaluate(input: Map<String, Node> = mutableMapOf()): Any
     }
 
-    class NodesExpression(
-        override val representation: String,
-        val name: String,
-        private val nodeType: String,
-        private val result: TranslationResult
-    ) : QueryExpression(representation) {
+    class NodesExpression(override val representation: String? = "") :
+        QueryExpression(representation) {
+        lateinit var nodeType: String
+        lateinit var result: TranslationResult
+        var kClass: Class<Node>? = null
+
+        constructor(
+            nodeType: String,
+            result: TranslationResult,
+            representation: String? = ""
+        ) : this(representation) {
+            this.nodeType = nodeType
+            this.result = result
+        }
+
+        constructor(
+            result: TranslationResult,
+            representation: String? = ""
+        ) : this(representation) {
+            this.result = result
+        }
+
+        constructor(
+            kClass: Class<Node>,
+            result: TranslationResult,
+            representation: String? = ""
+        ) : this(representation) {
+            this.result = result
+            this.kClass = kClass
+            this.nodeType = kClass.simpleName
+        }
+
         override fun evaluate(input: Map<String, Node>): Any {
+            if (kClass != null) {
+                return SubgraphWalker.flattenAST(result).filter { n -> n.javaClass == kClass }
+            }
             return SubgraphWalker.flattenAST(result).filter { n ->
                 n.javaClass.simpleName == nodeType
             }
         }
     }
 
-    class QuantifierExpr(
-        override val representation: String,
-        private val quantifier: Quantifier,
-        private val variables: QueryExpression,
-        private val variableName: String,
-        private val inner: QueryExpression
-    ) : QueryExpression(representation) {
+    class QuantifierExpr(override val representation: String? = "") :
+        QueryExpression(representation) {
+        lateinit var quantifier: Quantifier
+        lateinit var variables: QueryExpression
+        lateinit var variableName: String
+        lateinit var inner: QueryExpression
+
+        constructor(
+            quantifier: Quantifier,
+            variables: QueryExpression,
+            variableName: String,
+            inner: QueryExpression,
+            representation: String? = ""
+        ) : this(representation) {
+            this.quantifier = quantifier
+            this.variables = variables
+            this.variableName = variableName
+            this.inner = inner
+        }
+
+        constructor(quantifier: Quantifier, representation: String? = "") : this(representation) {
+            this.quantifier = quantifier
+        }
+
         override fun evaluate(input: Map<String, Node>): Any {
             val newInput = input.toMutableMap()
             return if (quantifier == Quantifier.FORALL) {
@@ -98,12 +145,24 @@ class QueryEvaluation {
         }
     }
 
-    class FieldAccessExpr(
-        override val representation: String,
-        private val variableName: String,
-        private val fieldSpecifier: String,
-        private val evaluator: ValueEvaluator
-    ) : QueryExpression(representation) {
+    class FieldAccessExpr(override val representation: String? = "") :
+        QueryExpression(representation) {
+
+        lateinit var variableName: String
+        lateinit var fieldSpecifier: String
+        lateinit var evaluator: ValueEvaluator
+
+        constructor(
+            variableName: String,
+            fieldSpecifier: String,
+            evaluator: ValueEvaluator,
+            representation: String? = ""
+        ) : this(representation) {
+            this.variableName = variableName
+            this.fieldSpecifier = fieldSpecifier
+            this.evaluator = evaluator
+        }
+
         override fun evaluate(input: Map<String, Node>): Any {
             var currentField: Any = input[variableName]!!
             for (fs in fieldSpecifier.split(".")) {
@@ -133,18 +192,35 @@ class QueryEvaluation {
         }
     }
 
-    class ConstExpr(override val representation: String, private val value: Any) :
-        QueryExpression(representation) {
+    class ConstExpr(override val representation: String? = "") : QueryExpression(representation) {
+        lateinit var value: Any
+
+        constructor(value: Any, representation: String? = "") : this(representation) {
+            this.value = value
+        }
+
         override fun evaluate(input: Map<String, Node>): Any {
             return value
         }
     }
 
-    class UnaryExpr(
-        override val representation: String,
-        private val inner: QueryExpression,
-        private val operator: QueryOp
-    ) : QueryExpression(representation) {
+    class UnaryExpr(override val representation: String? = "") : QueryExpression(representation) {
+        lateinit var inner: QueryExpression
+        lateinit var operator: QueryOp
+
+        constructor(
+            inner: QueryExpression,
+            operator: QueryOp,
+            representation: String? = ""
+        ) : this(representation) {
+            this.inner = inner
+            this.operator = operator
+        }
+
+        constructor(operator: QueryOp, representation: String? = "") : this(representation) {
+            this.operator = operator
+        }
+
         override fun evaluate(input: Map<String, Node>): Any {
             return when (operator) {
                 QueryOp.NOT -> !(inner.evaluate(input) as Boolean)
@@ -169,30 +245,51 @@ class QueryEvaluation {
         }
     }
 
-    class BinaryExpr(
-        override val representation: String,
-        private val lhs: QueryExpression,
-        private val rhs: QueryExpression,
-        private val operator: QueryOp
-    ) : QueryExpression(representation) {
+    class BinaryExpr(override var representation: String? = "") : QueryExpression(representation) {
+        var lhs: QueryExpression? = null
+        var rhs: QueryExpression? = null
+        lateinit var operator: QueryOp
+
+        constructor(
+            lhs: QueryExpression,
+            rhs: QueryExpression,
+            operator: QueryOp,
+            representation: String? = ""
+        ) : this(representation) {
+            this.lhs = lhs
+            this.rhs = rhs
+            this.operator = operator
+        }
+
+        constructor(operator: QueryOp, representation: String? = "") : this(representation) {
+            this.operator = operator
+        }
+
         override fun evaluate(input: Map<String, Node>): Boolean {
             return when (operator) {
-                QueryOp.AND -> lhs.evaluate(input) as Boolean && rhs.evaluate(input) as Boolean
-                QueryOp.OR -> lhs.evaluate(input) as Boolean || rhs.evaluate(input) as Boolean
-                QueryOp.EQ -> lhs.evaluate(input) == rhs.evaluate(input)
-                QueryOp.NE -> lhs.evaluate(input) != rhs.evaluate(input)
+                QueryOp.AND -> lhs?.evaluate(input) as Boolean && rhs?.evaluate(input) as Boolean
+                QueryOp.OR -> lhs?.evaluate(input) as Boolean || rhs?.evaluate(input) as Boolean
+                QueryOp.EQ -> lhs?.evaluate(input) == rhs?.evaluate(input)
+                QueryOp.NE -> lhs?.evaluate(input) != rhs?.evaluate(input)
                 QueryOp.GT ->
-                    (lhs.evaluate(input) as Number).compareTo(rhs.evaluate(input) as Number) > 0
+                    (lhs?.evaluate(input) as Number).compareTo(rhs?.evaluate(input) as Number) > 0
                 QueryOp.GE ->
-                    (lhs.evaluate(input) as Number).compareTo(rhs.evaluate(input) as Number) >= 0
+                    (lhs?.evaluate(input) as Number).compareTo(rhs?.evaluate(input) as Number) >= 0
                 QueryOp.LT ->
-                    (lhs.evaluate(input) as Number).compareTo(rhs.evaluate(input) as Number) < 0
+                    (lhs?.evaluate(input) as Number).compareTo(rhs?.evaluate(input) as Number) < 0
                 QueryOp.LE ->
-                    (lhs.evaluate(input) as Number).compareTo(rhs.evaluate(input) as Number) <= 0
-                QueryOp.IS ->
-                    lhs.evaluate(input).javaClass.simpleName == rhs.evaluate(input) as String
+                    (lhs?.evaluate(input) as Number).compareTo(rhs?.evaluate(input) as Number) <= 0
+                QueryOp.IS -> {
+                    val rhsVal = rhs?.evaluate(input)
+                    if (rhsVal is String) {
+                        lhs?.evaluate(input)?.javaClass?.simpleName == rhsVal
+                    } else {
+                        lhs?.evaluate(input)?.javaClass == rhsVal
+                    }
+                }
                 QueryOp.IMPLIES ->
-                    !(lhs.evaluate(input) as Boolean) || rhs.evaluate(input) as Boolean
+                    !(lhs?.evaluate(input) as Boolean) || rhs?.evaluate(input) as Boolean
+                QueryOp.IN -> lhs?.evaluate(input) in (rhs?.evaluate(input) as Collection<*>)
                 else -> false
             }
         }
