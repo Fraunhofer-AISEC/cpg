@@ -103,8 +103,17 @@ class QueryEvaluation {
         }
     }
 
-    class QuantifierExpr(override val representation: String? = "") :
-        QueryExpression(representation) {
+    class QuantifierExpr(
+        var result: TranslationResult? = null,
+        override val representation: String? = ""
+    ) : QueryExpression(representation) {
+        var str: String? = null
+            set(value) {
+                variableName = value?.split(":")?.get(0)?.strip() ?: ""
+                val varClass = value?.split(":")?.get(1)?.strip() ?: ""
+                variables = NodesExpression(varClass, result!!)
+                field = value
+            }
         lateinit var quantifier: Quantifier
         lateinit var variables: QueryExpression
         lateinit var variableName: String
@@ -115,15 +124,20 @@ class QueryEvaluation {
             variables: QueryExpression,
             variableName: String,
             inner: QueryExpression,
+            result: TranslationResult? = null,
             representation: String? = ""
-        ) : this(representation) {
+        ) : this(result, representation) {
             this.quantifier = quantifier
             this.variables = variables
             this.variableName = variableName
             this.inner = inner
         }
 
-        constructor(quantifier: Quantifier, representation: String? = "") : this(representation) {
+        constructor(
+            quantifier: Quantifier,
+            result: TranslationResult? = null,
+            representation: String? = ""
+        ) : this(result, representation) {
             this.quantifier = quantifier
         }
 
@@ -148,9 +162,15 @@ class QueryEvaluation {
     class FieldAccessExpr(override val representation: String? = "") :
         QueryExpression(representation) {
 
+        var str: String? = null
+            set(value) {
+                variableName = value?.split(".", limit = 2)?.get(0) ?: ""
+                fieldSpecifier = value?.split(".", limit = 2)?.get(1) ?: ""
+                field = value
+            }
         lateinit var variableName: String
         lateinit var fieldSpecifier: String
-        lateinit var evaluator: ValueEvaluator
+        var evaluator: ValueEvaluator = ValueEvaluator()
 
         constructor(
             variableName: String,

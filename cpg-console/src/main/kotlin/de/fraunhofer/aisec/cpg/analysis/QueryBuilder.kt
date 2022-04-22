@@ -31,6 +31,13 @@ class QueryBuilder {
     // Quantifiers
     fun forall(block: QueryEvaluation.QuantifierExpr.() -> Unit): QueryEvaluation.QuantifierExpr =
         QueryEvaluation.QuantifierExpr(QueryEvaluation.Quantifier.FORALL).apply(block)
+
+    fun forall(
+        tr: TranslationResult,
+        block: QueryEvaluation.QuantifierExpr.() -> Unit
+    ): QueryEvaluation.QuantifierExpr =
+        QueryEvaluation.QuantifierExpr(QueryEvaluation.Quantifier.FORALL, tr).apply(block)
+
     fun exists(block: QueryEvaluation.QuantifierExpr.() -> Unit): QueryEvaluation.QuantifierExpr =
         QueryEvaluation.QuantifierExpr(QueryEvaluation.Quantifier.EXISTS).apply(block)
 
@@ -67,8 +74,11 @@ class QueryBuilder {
         QueryEvaluation.UnaryExpr(QueryEvaluation.QueryOp.MAX).apply(block)
 
     // Constant expression
-    fun const(block: QueryEvaluation.ConstExpr.() -> Unit): QueryEvaluation.ConstExpr =
-        QueryEvaluation.ConstExpr().apply(block)
+    fun const(value: Any): QueryEvaluation.ConstExpr {
+        val constExpr = QueryEvaluation.ConstExpr()
+        constExpr.value = value
+        return constExpr
+    }
 
     // Nodes expression
     fun queryNodes(
@@ -80,6 +90,21 @@ class QueryBuilder {
     fun fieldAccess(
         block: QueryEvaluation.FieldAccessExpr.() -> Unit
     ): QueryEvaluation.FieldAccessExpr = QueryEvaluation.FieldAccessExpr().apply(block)
+}
+
+fun forall(
+    translationResult: TranslationResult,
+    block: QueryEvaluation.QuantifierExpr.() -> Unit
+): QueryEvaluation.QuantifierExpr {
+    return QueryBuilder().forall(translationResult, block)
+}
+
+fun forall(block: QueryEvaluation.QuantifierExpr.() -> Unit): QueryEvaluation.QuantifierExpr {
+    return QueryBuilder().forall(block)
+}
+
+fun exists(block: QueryEvaluation.QuantifierExpr.() -> Unit): QueryEvaluation.QuantifierExpr {
+    return QueryBuilder().exists(block)
 }
 
 // forall | exists (queryNodes): <not | and | or | eq | ne | gt | lt | ge | le | implies | is | in>
@@ -187,14 +212,12 @@ fun QueryEvaluation.QuantifierExpr.IN(
 //      and | or | eq | ne | gt | lt | ge | le | implies | is | in
 // <const | fieldAccess | not | and | or | eq | ne | gt | lt | ge | le | implies | is | in | forall
 // | exists>
-fun QueryEvaluation.BinaryExpr.const(
-    block: QueryEvaluation.ConstExpr.() -> Unit
-): QueryEvaluation.BinaryExpr {
+fun QueryEvaluation.BinaryExpr.const(value: Any): QueryEvaluation.BinaryExpr {
     // Automagically pick lhs or rhs
     if (lhs == null) {
-        lhs = QueryBuilder().const(block)
+        lhs = QueryBuilder().const(value)
     } else {
-        rhs = QueryBuilder().const(block)
+        rhs = QueryBuilder().const(value)
     }
     return this
 }
@@ -389,10 +412,8 @@ fun QueryEvaluation.BinaryExpr.exists(
 //      not | min | max
 // <const | fieldAccess | not | and | or | eq | ne | gt | lt | ge | le | implies | is | in | forall
 // | exists>
-fun QueryEvaluation.UnaryExpr.const(
-    block: QueryEvaluation.ConstExpr.() -> Unit
-): QueryEvaluation.UnaryExpr {
-    inner = QueryBuilder().const(block)
+fun QueryEvaluation.UnaryExpr.const(value: Any): QueryEvaluation.UnaryExpr {
+    inner = QueryBuilder().const(value)
     return this
 }
 

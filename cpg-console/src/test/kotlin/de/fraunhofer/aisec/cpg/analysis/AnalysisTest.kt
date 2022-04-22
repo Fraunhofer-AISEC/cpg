@@ -29,7 +29,6 @@ import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationManager
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.console.fancyCode
-import de.fraunhofer.aisec.cpg.graph.ValueEvaluator
 import de.fraunhofer.aisec.cpg.graph.body
 import de.fraunhofer.aisec.cpg.graph.byNameOrNull
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
@@ -62,41 +61,34 @@ class AnalysisTest {
         result: TranslationResult,
         normalEvaluator: Boolean
     ): QueryEvaluation.QueryExpression {
-        // Query: forall (n: ArraySubscriptionExpression): |max(n.subscriptExpression)| <
-        // |min(n.arrayExpression.refersTo.initializer.dimensions[0])|
-        // && |min(n.subscriptExpression)| >= 0
-        return QueryBuilder().forall {
-            variableName = "n"
-            queryNodes(result) { nodeType = "ArraySubscriptionExpression" }
+        // Query: forall (n: ArraySubscriptionExpression): max(n.subscriptExpression) <
+        // min(n.arrayExpression.refersTo.initializer.dimensions[0])
+        // && min(n.subscriptExpression) >= 0
+        return forall(result) {
+            str = "n: ArraySubscriptionExpression"
             and {
                 lt {
                     max {
                         fieldAccess {
-                            variableName = "n"
-                            fieldSpecifier = "subscriptExpression"
-                            evaluator =
-                                if (normalEvaluator) ValueEvaluator() else MultiValueEvaluator()
+                            str = "n.subscriptExpression"
+                            if (!normalEvaluator) evaluator = MultiValueEvaluator()
                         }
                     }
                     min {
                         fieldAccess {
-                            variableName = "n"
-                            fieldSpecifier = "arrayExpression.refersTo.initializer.dimensions[0]"
-                            evaluator =
-                                if (normalEvaluator) ValueEvaluator() else MultiValueEvaluator()
+                            str = "n.arrayExpression.refersTo.initializer.dimensions[0]"
+                            if (!normalEvaluator) evaluator = MultiValueEvaluator()
                         }
                     }
                 }
                 ge {
                     min {
                         fieldAccess {
-                            variableName = "n"
-                            fieldSpecifier = "subscriptExpression"
-                            evaluator =
-                                if (normalEvaluator) ValueEvaluator() else MultiValueEvaluator()
+                            str = "n.subscriptExpression"
+                            if (!normalEvaluator) evaluator = MultiValueEvaluator()
                         }
                     }
-                    const { value = 0 }
+                    const(0)
                 }
             }
         }
