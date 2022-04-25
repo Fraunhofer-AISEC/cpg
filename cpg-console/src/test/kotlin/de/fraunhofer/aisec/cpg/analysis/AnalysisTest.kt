@@ -57,7 +57,7 @@ class AnalysisTest {
         OutOfBoundsCheck().run(result)
     }
 
-    fun createArrayOutOfBoundsQuery(
+    private fun createArrayOutOfBoundsQuery(
         result: TranslationResult,
         normalEvaluator: Boolean
     ): QueryEvaluation.QueryExpression {
@@ -194,5 +194,33 @@ class AnalysisTest {
 
         code = call.fancyCode(3, true)
         println(code)
+    }
+
+    @Test
+    fun testNullPointerQuery() {
+        val config =
+            TranslationConfiguration.builder()
+                .sourceLocations(File("src/test/resources/Array.java"))
+                .defaultPasses()
+                .defaultLanguages()
+                .build()
+
+        val analyzer = TranslationManager.builder().config(config).build()
+        val result = analyzer.analyze().get()
+
+        // forall (n: Node): n.has_base() => n.base != null
+        val query =
+            forall(result) {
+                str = "n: HasBase"
+                ne {
+                    fieldAccess {
+                        str = "n.base"
+                        evaluator = MultiValueEvaluator()
+                    }
+                    const(null)
+                }
+            }
+
+        assertFalse(query.evaluate() as Boolean)
     }
 }

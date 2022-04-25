@@ -31,6 +31,7 @@ import de.fraunhofer.aisec.cpg.graph.ValueEvaluator
 import de.fraunhofer.aisec.cpg.graph.compareTo
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import kotlin.reflect.KProperty1
+import kotlin.reflect.full.allSupertypes
 import kotlin.reflect.jvm.isAccessible
 
 class QueryEvaluation {
@@ -58,7 +59,7 @@ class QueryEvaluation {
     }
 
     abstract class QueryExpression(open val representation: String?) {
-        abstract fun evaluate(input: Map<String, Node> = mutableMapOf()): Any
+        abstract fun evaluate(input: Map<String, Node> = mutableMapOf()): Any?
     }
 
     class NodesExpression(override val representation: String? = "") :
@@ -95,11 +96,26 @@ class QueryEvaluation {
 
         override fun evaluate(input: Map<String, Node>): Any {
             if (kClass != null) {
-                return SubgraphWalker.flattenAST(result).filter { n -> n.javaClass == kClass }
+                return SubgraphWalker.flattenAST(result).filter { n ->
+                    n::class.allSupertypes.any { t -> t.javaClass == kClass } ||
+                        n.javaClass == kClass ||
+                        n.javaClass.interfaces.any { i -> i == kClass }
+                }
             }
             return SubgraphWalker.flattenAST(result).filter { n ->
-                n.javaClass.simpleName == nodeType
+                n.javaClass.simpleName == nodeType ||
+                    classNamesOfNode(n.javaClass).any { c -> c == nodeType }
             }
+        }
+
+        fun classNamesOfNode(jClass: Class<*>): Collection<String> {
+            val result = mutableListOf<String>()
+            if (jClass.superclass != null) {
+                result.add(jClass.superclass.simpleName)
+                result.addAll(classNamesOfNode(jClass.superclass))
+            }
+            result.addAll(jClass.interfaces.map { i -> i.simpleName })
+            return result
         }
     }
 
@@ -144,10 +160,16 @@ class QueryEvaluation {
         override fun evaluate(input: Map<String, Node>): Any {
             val newInput = input.toMutableMap()
             return if (quantifier == Quantifier.FORALL) {
-                (variables.evaluate(input) as Collection<Node>).all { v ->
+                var result = true
+                for (v in variables.evaluate(input) as Collection<Node>) {
                     newInput[variableName] = v
-                    inner.evaluate(newInput) as Boolean
+                    val temp = (inner.evaluate(newInput) as Boolean)
+                    if (!temp) {
+                        // TODO: Collect potential problems here
+                        result = false
+                    }
                 }
+                result
             } else if (quantifier == Quantifier.EXISTS) {
                 (variables.evaluate(input) as Collection<Node>).any { v ->
                     newInput[variableName] = v
@@ -213,13 +235,13 @@ class QueryEvaluation {
     }
 
     class ConstExpr(override val representation: String? = "") : QueryExpression(representation) {
-        lateinit var value: Any
+        var value: Any? = null
 
-        constructor(value: Any, representation: String? = "") : this(representation) {
+        constructor(value: Any?, representation: String? = "") : this(representation) {
             this.value = value
         }
 
-        override fun evaluate(input: Map<String, Node>): Any {
+        override fun evaluate(input: Map<String, Node>): Any? {
             return value
         }
     }
@@ -290,7 +312,15 @@ class QueryEvaluation {
                 QueryOp.AND -> lhs?.evaluate(input) as Boolean && rhs?.evaluate(input) as Boolean
                 QueryOp.OR -> lhs?.evaluate(input) as Boolean || rhs?.evaluate(input) as Boolean
                 QueryOp.EQ -> lhs?.evaluate(input) == rhs?.evaluate(input)
-                QueryOp.NE -> lhs?.evaluate(input) != rhs?.evaluate(input)
+                QueryOp.NE -> {
+                    val lhsVal = lhs?.evaluate(input)
+                    val rhsVal = rhs?.evaluate(input)
+                    if (lhsVal is Collection<*>) {
+                        lhsVal.all { l -> l != rhsVal }
+                    } else {
+                        lhsVal != rhsVal
+                    }
+                }
                 QueryOp.GT ->
                     (lhs?.evaluate(input) as Number).compareTo(rhs?.evaluate(input) as Number) > 0
                 QueryOp.GE ->

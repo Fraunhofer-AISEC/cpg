@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.analysis
 
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.ValueEvaluator
+import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.negate
 import de.fraunhofer.aisec.cpg.graph.statements.ForStatement
@@ -45,15 +46,17 @@ class MultiValueEvaluator : ValueEvaluator() {
 
     override fun evaluate(node: Node?): Any? {
         val result = evaluateInternal(node, 0)
-        return if (result is List<*> && result.all { r -> r is Number? })
-            ConcreteNumberSet(
-                result.filterNotNull().map { r -> (r as Number).toLong() }.toMutableSet()
-            )
+        return if (result is List<*> && result.all { r -> r is Number })
+            ConcreteNumberSet(result.map { r -> (r as Number).toLong() }.toMutableSet())
         else result
     }
 
     /** Tries to evaluate this node. Anything can happen. */
     override fun evaluateInternal(node: Node?, depth: Int): Any? {
+        if (node == null) {
+            return null
+        }
+
         if (depth > MAX_DEPTH) {
             return cannotEvaluate(node, this)
         }
@@ -61,6 +64,9 @@ class MultiValueEvaluator : ValueEvaluator() {
         node?.let { this.path += it }
 
         when (node) {
+            is FieldDeclaration -> {
+                return evaluateInternal(node.initializer, depth + 1)
+            }
             is ArrayCreationExpression -> return evaluateInternal(node.initializer, depth + 1)
             is VariableDeclaration -> return evaluateInternal(node.initializer, depth + 1)
             // For a literal, we can just take its value, and we are finished

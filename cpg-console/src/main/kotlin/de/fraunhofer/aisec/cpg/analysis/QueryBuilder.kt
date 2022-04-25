@@ -74,7 +74,7 @@ class QueryBuilder {
         QueryEvaluation.UnaryExpr(QueryEvaluation.QueryOp.MAX).apply(block)
 
     // Constant expression
-    fun const(value: Any): QueryEvaluation.ConstExpr {
+    fun const(value: Any?): QueryEvaluation.ConstExpr {
         val constExpr = QueryEvaluation.ConstExpr()
         constExpr.value = value
         return constExpr
@@ -212,12 +212,23 @@ fun QueryEvaluation.QuantifierExpr.IN(
 //      and | or | eq | ne | gt | lt | ge | le | implies | is | in
 // <const | fieldAccess | not | and | or | eq | ne | gt | lt | ge | le | implies | is | in | forall
 // | exists>
-fun QueryEvaluation.BinaryExpr.const(value: Any): QueryEvaluation.BinaryExpr {
+fun QueryEvaluation.BinaryExpr.const(value: Any?): QueryEvaluation.BinaryExpr {
     // Automagically pick lhs or rhs
     if (lhs == null) {
         lhs = QueryBuilder().const(value)
     } else {
         rhs = QueryBuilder().const(value)
+    }
+    return this
+}
+
+fun QueryEvaluation.BinaryExpr.fieldAccess(str: String): QueryEvaluation.BinaryExpr {
+    if (lhs == null) {
+        lhs = QueryEvaluation.FieldAccessExpr()
+        (lhs as QueryEvaluation.FieldAccessExpr).str = str
+    } else {
+        rhs = QueryEvaluation.FieldAccessExpr()
+        (rhs as QueryEvaluation.FieldAccessExpr).str = str
     }
     return this
 }
