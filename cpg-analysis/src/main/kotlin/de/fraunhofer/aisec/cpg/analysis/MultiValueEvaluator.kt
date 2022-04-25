@@ -44,8 +44,8 @@ class MultiValueEvaluator : ValueEvaluator() {
     override val log: Logger
         get() = LoggerFactory.getLogger(MultiValueEvaluator::class.java)
 
-    override fun evaluate(node: Node?): Any? {
-        val result = evaluateInternal(node, 0)
+    override fun evaluate(node: Any?): Any? {
+        val result = evaluateInternal(node as? Node, 0)
         return if (result is List<*> && result.all { r -> r is Number })
             ConcreteNumberSet(result.map { r -> (r as Number).toLong() }.toMutableSet())
         else result

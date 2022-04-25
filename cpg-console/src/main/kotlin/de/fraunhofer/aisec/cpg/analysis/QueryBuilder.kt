@@ -70,6 +70,8 @@ class QueryBuilder {
         QueryEvaluation.UnaryExpr(QueryEvaluation.QueryOp.NOT).apply(block)
     fun min(block: QueryEvaluation.UnaryExpr.() -> Unit): QueryEvaluation.UnaryExpr =
         QueryEvaluation.UnaryExpr(QueryEvaluation.QueryOp.MIN).apply(block)
+    fun sizeof(block: QueryEvaluation.UnaryExpr.() -> Unit): QueryEvaluation.UnaryExpr =
+        QueryEvaluation.UnaryExpr(QueryEvaluation.QueryOp.SIZEOF).apply(block)
     fun max(block: QueryEvaluation.UnaryExpr.() -> Unit): QueryEvaluation.UnaryExpr =
         QueryEvaluation.UnaryExpr(QueryEvaluation.QueryOp.MAX).apply(block)
 
@@ -277,6 +279,17 @@ fun QueryEvaluation.BinaryExpr.min(
     return this
 }
 
+fun QueryEvaluation.BinaryExpr.sizeof(
+    block: QueryEvaluation.UnaryExpr.() -> Unit
+): QueryEvaluation.BinaryExpr {
+    if (lhs == null) {
+        lhs = QueryBuilder().sizeof(block)
+    } else {
+        rhs = QueryBuilder().sizeof(block)
+    }
+    return this
+}
+
 fun QueryEvaluation.BinaryExpr.and(
     block: QueryEvaluation.BinaryExpr.() -> Unit
 ): QueryEvaluation.BinaryExpr {
@@ -420,7 +433,7 @@ fun QueryEvaluation.BinaryExpr.exists(
     return this
 }
 
-//      not | min | max
+//      not | min | max | sizeof
 // <const | fieldAccess | not | and | or | eq | ne | gt | lt | ge | le | implies | is | in | forall
 // | exists>
 fun QueryEvaluation.UnaryExpr.const(value: Any): QueryEvaluation.UnaryExpr {
@@ -453,6 +466,13 @@ fun QueryEvaluation.UnaryExpr.min(
     block: QueryEvaluation.UnaryExpr.() -> Unit
 ): QueryEvaluation.UnaryExpr {
     inner = QueryBuilder().min(block)
+    return this
+}
+
+fun QueryEvaluation.UnaryExpr.sizeof(
+    block: QueryEvaluation.UnaryExpr.() -> Unit
+): QueryEvaluation.UnaryExpr {
+    inner = QueryBuilder().sizeof(block)
     return this
 }
 

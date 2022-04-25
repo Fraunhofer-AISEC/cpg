@@ -46,6 +46,7 @@ class QueryEvaluation {
         IMPLIES,
         MAX,
         MIN,
+        SIZEOF,
         NOT,
         AND,
         OR,
@@ -222,9 +223,16 @@ class QueryEvaluation {
                     currentField = currentField[arrayIndex]!!
                     // Ugly hack to get the property where the edge points to
                     currentField = readInstanceProperty(currentField, "end")
+                } else if (currentField is List<*>) {
+                    // The query assumes a single value instead of a list. We just return the first
+                    // element.
+                    currentField = currentField[0]!!
+                    // Ugly hack to get the property where the edge points to
+                    currentField = readInstanceProperty(currentField, "end")
                 }
             }
-            return evaluator.evaluate(currentField as Node)!!
+
+            return evaluator.evaluate(currentField)!!
         }
 
         private fun readInstanceProperty(instance: Any, propertyName: String): Any {
@@ -263,7 +271,7 @@ class QueryEvaluation {
             this.operator = operator
         }
 
-        override fun evaluate(input: Map<String, Node>): Any {
+        override fun evaluate(input: Map<String, Node>): Any? {
             return when (operator) {
                 QueryOp.NOT -> !(inner.evaluate(input) as Boolean)
                 QueryOp.MAX -> {
@@ -281,6 +289,10 @@ class QueryEvaluation {
                     } else {
                         (result as NumberSet).min()
                     }
+                }
+                QueryOp.SIZEOF -> {
+                    (inner as? FieldAccessExpr)?.evaluator = SizeEvaluator()
+                    inner.evaluate(input)
                 }
                 else -> throw Exception("Unknown operation $operator on expression $inner")
             }

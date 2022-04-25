@@ -67,8 +67,10 @@ open class ValueEvaluator(
     /** This property contains the path of the latest execution of [evaluateInternal]. */
     val path: MutableList<Node> = mutableListOf()
 
-    open fun evaluate(node: Node?): Any? {
-        return evaluateInternal(node, 0)
+    open fun evaluate(node: Any?): Any? {
+        if (node !is Node) return node
+
+        return evaluateInternal(node as? Node, 0)
     }
 
     /** Tries to evaluate this node. Anything can happen. */
