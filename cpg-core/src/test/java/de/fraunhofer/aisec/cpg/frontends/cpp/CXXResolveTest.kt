@@ -39,7 +39,7 @@ import kotlin.test.*
 class CXXResolveTest {
 
     @Test
-    fun testDefinitionsAndDeclaration() {
+    fun testMethodResolve() {
         val file = File("src/test/resources/foo.cpp")
         val tu =
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
