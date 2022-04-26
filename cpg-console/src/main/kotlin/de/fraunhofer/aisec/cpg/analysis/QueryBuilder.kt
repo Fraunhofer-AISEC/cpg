@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.analysis
 
 import de.fraunhofer.aisec.cpg.TranslationResult
+import de.fraunhofer.aisec.cpg.graph.ValueEvaluator
 
 class QueryBuilder {
     // Quantifiers
@@ -82,6 +83,20 @@ class QueryBuilder {
         return constExpr
     }
 
+    // Unary expressions
+    fun sizeof(inner: QueryEvaluation.QueryExpression): QueryEvaluation.UnaryExpr {
+        return QueryEvaluation.UnaryExpr(inner, QueryEvaluation.QueryOp.SIZEOF)
+    }
+    fun min(inner: QueryEvaluation.QueryExpression): QueryEvaluation.UnaryExpr {
+        return QueryEvaluation.UnaryExpr(inner, QueryEvaluation.QueryOp.MIN)
+    }
+    fun max(inner: QueryEvaluation.QueryExpression): QueryEvaluation.UnaryExpr {
+        return QueryEvaluation.UnaryExpr(inner, QueryEvaluation.QueryOp.MAX)
+    }
+    fun not(inner: QueryEvaluation.QueryExpression): QueryEvaluation.UnaryExpr {
+        return QueryEvaluation.UnaryExpr(inner, QueryEvaluation.QueryOp.NOT)
+    }
+
     // Nodes expression
     fun queryNodes(
         result: TranslationResult,
@@ -118,7 +133,7 @@ fun QueryEvaluation.QuantifierExpr.queryNodes(
     return this
 }
 
-fun QueryEvaluation.QuantifierExpr.fieldAccess(
+fun QueryEvaluation.QuantifierExpr.field(
     block: QueryEvaluation.FieldAccessExpr.() -> Unit
 ): QueryEvaluation.QuantifierExpr {
     inner = QueryBuilder().fieldAccess(block)
@@ -209,6 +224,37 @@ fun QueryEvaluation.QuantifierExpr.IN(
     return this
 }
 
+fun const(value: Any?): QueryEvaluation.ConstExpr {
+    return QueryBuilder().const(value)
+}
+
+fun sizeof(inner: QueryEvaluation.QueryExpression): QueryEvaluation.UnaryExpr {
+    return QueryBuilder().sizeof(inner)
+}
+
+fun field(str: String, valueEvaluator: ValueEvaluator): QueryEvaluation.FieldAccessExpr {
+    return QueryEvaluation.FieldAccessExpr(str, valueEvaluator)
+}
+
+fun field(str: String): QueryEvaluation.FieldAccessExpr {
+    val res = QueryEvaluation.FieldAccessExpr()
+    res.str = str
+    return res
+}
+
+fun forall(
+    str: String,
+    inner: QueryEvaluation.QueryExpression,
+    result: TranslationResult
+): QueryEvaluation.QuantifierExpr {
+    val res = QueryEvaluation.QuantifierExpr()
+    res.result = result
+    res.quantifier = QueryEvaluation.Quantifier.FORALL
+    res.str = str
+    res.inner = inner
+    return res
+}
+
 // <const | fieldAccess | not | and | or | eq | ne | gt | lt | ge | le | implies | is | in | forall
 // | exists>
 //      and | or | eq | ne | gt | lt | ge | le | implies | is | in
@@ -224,7 +270,7 @@ fun QueryEvaluation.BinaryExpr.const(value: Any?): QueryEvaluation.BinaryExpr {
     return this
 }
 
-fun QueryEvaluation.BinaryExpr.fieldAccess(str: String): QueryEvaluation.BinaryExpr {
+fun QueryEvaluation.BinaryExpr.field(str: String): QueryEvaluation.BinaryExpr {
     if (lhs == null) {
         lhs = QueryEvaluation.FieldAccessExpr()
         (lhs as QueryEvaluation.FieldAccessExpr).str = str
@@ -235,7 +281,7 @@ fun QueryEvaluation.BinaryExpr.fieldAccess(str: String): QueryEvaluation.BinaryE
     return this
 }
 
-fun QueryEvaluation.BinaryExpr.fieldAccess(
+fun QueryEvaluation.BinaryExpr.field(
     block: QueryEvaluation.FieldAccessExpr.() -> Unit
 ): QueryEvaluation.BinaryExpr {
     if (lhs == null) {
@@ -389,7 +435,7 @@ fun QueryEvaluation.BinaryExpr.IS(
     return this
 }
 
-fun QueryEvaluation.BinaryExpr.implies(
+infix fun QueryEvaluation.BinaryExpr.implies(
     block: QueryEvaluation.BinaryExpr.() -> Unit
 ): QueryEvaluation.BinaryExpr {
     if (lhs == null) {
@@ -441,7 +487,7 @@ fun QueryEvaluation.UnaryExpr.const(value: Any): QueryEvaluation.UnaryExpr {
     return this
 }
 
-fun QueryEvaluation.UnaryExpr.fieldAccess(
+fun QueryEvaluation.UnaryExpr.field(
     block: QueryEvaluation.FieldAccessExpr.() -> Unit
 ): QueryEvaluation.UnaryExpr {
     inner = QueryBuilder().fieldAccess(block)

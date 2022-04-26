@@ -61,6 +61,34 @@ class QueryEvaluation {
 
     abstract class QueryExpression(open val representation: String?) {
         abstract fun evaluate(input: Map<String, Node> = mutableMapOf()): Any?
+
+        infix fun `==`(other: QueryExpression): BinaryExpr {
+            return BinaryExpr(this, other, QueryOp.EQ)
+        }
+
+        infix fun `!=`(other: QueryExpression): BinaryExpr {
+            return BinaryExpr(this, other, QueryOp.NE)
+        }
+
+        infix fun implies(other: QueryExpression): BinaryExpr {
+            return BinaryExpr(this, other, QueryOp.IMPLIES)
+        }
+
+        infix fun ge(other: QueryExpression): BinaryExpr {
+            return BinaryExpr(this, other, QueryOp.GE)
+        }
+
+        infix fun gt(other: QueryExpression): BinaryExpr {
+            return BinaryExpr(this, other, QueryOp.GT)
+        }
+
+        infix fun le(other: QueryExpression): BinaryExpr {
+            return BinaryExpr(this, other, QueryOp.LE)
+        }
+
+        infix fun lt(other: QueryExpression): BinaryExpr {
+            return BinaryExpr(this, other, QueryOp.LT)
+        }
     }
 
     class NodesExpression(override val representation: String? = "") :
@@ -194,6 +222,17 @@ class QueryEvaluation {
         lateinit var variableName: String
         lateinit var fieldSpecifier: String
         var evaluator: ValueEvaluator = ValueEvaluator()
+
+        constructor(
+            str: String,
+            evaluator: ValueEvaluator,
+            representation: String? = ""
+        ) : this(representation) {
+            this.str = str
+            variableName = str.split(".", limit = 2).get(0)
+            fieldSpecifier = str.split(".", limit = 2).get(1)
+            this.evaluator = evaluator
+        }
 
         constructor(
             variableName: String,

@@ -69,13 +69,13 @@ class AnalysisTest {
             and {
                 lt {
                     max {
-                        fieldAccess {
+                        field {
                             str = "n.subscriptExpression"
                             if (!normalEvaluator) evaluator = MultiValueEvaluator()
                         }
                     }
                     min {
-                        fieldAccess {
+                        field {
                             str = "n.arrayExpression.refersTo.initializer.dimensions[0]"
                             if (!normalEvaluator) evaluator = MultiValueEvaluator()
                         }
@@ -83,7 +83,7 @@ class AnalysisTest {
                 }
                 ge {
                     min {
-                        fieldAccess {
+                        field {
                             str = "n.subscriptExpression"
                             if (!normalEvaluator) evaluator = MultiValueEvaluator()
                         }
@@ -210,16 +210,7 @@ class AnalysisTest {
 
         // forall (n: Node): n.has_base() => n.base != null
         val query =
-            forall(result) {
-                str = "n: HasBase"
-                ne {
-                    fieldAccess {
-                        str = "n.base"
-                        evaluator = MultiValueEvaluator()
-                    }
-                    const(null)
-                }
-            }
+            forall("n: HasBase", field("n.base", MultiValueEvaluator()) `!=` const(null), result)
 
         assertFalse(query.evaluate() as Boolean)
     }
@@ -239,19 +230,12 @@ class AnalysisTest {
         // forall (n: CallExpression): n.invokes.name == "memcpy" => |sizeof(n.arguments[0])| <
         // |sizeof(n.arguments[2])|
         val query =
-            forall(result) {
-                str = "n: CallExpression"
-                implies {
-                    eq {
-                        fieldAccess { str = "n.invokes.name" }
-                        const("memcpy")
-                    }
-                    ge {
-                        sizeof { fieldAccess { str = "n.arguments[0]" } }
-                        sizeof { fieldAccess { str = "n.arguments[1]" } }
-                    }
-                }
-            }
+            forall(
+                "n: CallExpression",
+                ((field("n.invokes.name") `==` const("memcpy")) implies
+                    (sizeof(field("n.arguments[0]")) ge sizeof(field("n.arguments[1]")))),
+                result
+            )
 
         assertFalse(query.evaluate() as Boolean)
     }
