@@ -292,25 +292,25 @@ public class TranslationConfiguration {
 
     /**
      * Files or directories containing the source code to analyze. Generates a dummy software
-     * component called "SWC".
+     * component called "application".
      *
      * @param sourceLocations The files with the source code
      * @return this
      */
     public Builder sourceLocations(File... sourceLocations) {
-      this.softwareComponents.put("SWC", Arrays.asList(sourceLocations));
+      this.softwareComponents.put("application", Arrays.asList(sourceLocations));
       return this;
     }
 
     /**
      * Files or directories containing the source code to analyze. Generates a dummy software
-     * component called "SWC".
+     * component called "application".
      *
      * @param sourceLocations The files with the source code
      * @return this
      */
     public Builder sourceLocations(List<File> sourceLocations) {
-      this.softwareComponents.put("SWC", sourceLocations);
+      this.softwareComponents.put("application", sourceLocations);
       return this;
     }
 

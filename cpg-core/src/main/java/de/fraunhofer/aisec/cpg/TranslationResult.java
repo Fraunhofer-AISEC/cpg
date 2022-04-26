@@ -89,11 +89,14 @@ public class TranslationResult extends Node implements StatisticsHolder {
   }
 
   /**
-   * If no component exists, it generates a dummy [Component] called "SWC" and adds [tu]. If a
+   * If no component exists, it generates a [Component] called "application" and adds [tu]. If a
    * component already exists, adds the tu to this component.
    *
    * @param tu The translation unit to add.
+   * @deprecated This should not be used anymore. Instead, the corresponding component should be
+   *     selected and the translation unit should be added there.
    */
+  @Deprecated(since = "4.4.1")
   public synchronized void addTranslationUnit(TranslationUnitDeclaration tu) {
     Component swc = null;
     if (components.size() == 1) {
@@ -106,13 +109,14 @@ public class TranslationResult extends Node implements StatisticsHolder {
       components.add(swc);
     } else {
       // Multiple components exist. As we don't know where to put the tu, we check if we have the
-      // dummy component and add it there or create a new one.
+      // component we created and add it there or create a new one.
       for (var component : components) {
         if (component.getName().equals("application")) {
           swc = component;
           break;
         }
       }
+
       if (swc == null) {
         swc = new Component();
         swc.setName("application");
