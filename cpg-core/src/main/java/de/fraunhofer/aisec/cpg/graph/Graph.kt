@@ -28,8 +28,8 @@ package de.fraunhofer.aisec.cpg.graph
 import de.fraunhofer.aisec.cpg.ExperimentalGraph
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
+import de.fraunhofer.aisec.cpg.helpers.Benchmark
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
-import de.fraunhofer.aisec.cpg.helpers.TimeBenchmark
 import java.io.Closeable
 import java.util.*
 import java.util.function.Predicate
@@ -45,7 +45,7 @@ import scala.Option
 
 @ExperimentalGraph
 class QueryBenchmark constructor(db: Graph, query: Query) :
-    TimeBenchmark(db.javaClass, "totalNodes: " + db.size() + " query: " + query.toString()),
+    Benchmark(db.javaClass, "totalNodes: " + db.size() + " query: " + query.toString()),
     AutoCloseable,
     Closeable {
     override fun close() {

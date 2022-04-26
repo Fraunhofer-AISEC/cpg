@@ -55,10 +55,10 @@ class BenchmarkResults(val entries: List<List<Any>>) {
 /** Interface definition to hold different statistics about the translation process. */
 interface StatisticsHolder {
     val translatedFiles: List<String>
-    val benchmarks: List<Benchmark>
+    val benchmarks: List<MeasurementHolder>
     val config: TranslationConfiguration
 
-    fun addBenchmark(b: Benchmark)
+    fun addBenchmark(b: MeasurementHolder)
 
     val benchmarkResults: BenchmarkResults
         get() {
@@ -129,14 +129,18 @@ fun relativeOrAbsolute(path: Path, topLevel: File?): Path {
 }
 
 /** Measures the time between creating the object to calling its stop() method. */
-open class TimeBenchmark(
+open class Benchmark(
     c: Class<*>,
     message: String,
     debug: Boolean = false,
     holder: StatisticsHolder? = null
-) : Benchmark(c, message, debug, holder) {
+) : MeasurementHolder(c, message, debug, holder) {
 
     private val start: Instant
+
+    fun stop() {
+        addMeasurement()
+    }
 
     /** Stops the time and computes the difference between */
     override fun addMeasurement(measurementKey: String?, measurementValue: String?): Any? {
@@ -152,7 +156,7 @@ open class TimeBenchmark(
     }
 
     companion object {
-        val log: Logger = LoggerFactory.getLogger(Benchmark::class.java)
+        val log: Logger = LoggerFactory.getLogger(MeasurementHolder::class.java)
     }
 
     init {
@@ -162,7 +166,7 @@ open class TimeBenchmark(
 }
 
 /** Represents some kind of measurements, e.g., on the performance or problems. */
-open class Benchmark
+open class MeasurementHolder
 @JvmOverloads
 constructor(
     /** The class which called this benchmark. */
@@ -198,6 +202,7 @@ constructor(
     }
 
     /** Adds a measurement for the respective benchmark and saves it to the map. */
+    @JvmOverloads
     open fun addMeasurement(
         measurementKey: String? = null,
         measurementValue: String? = null
@@ -213,7 +218,7 @@ constructor(
     }
 
     companion object {
-        val log: Logger = LoggerFactory.getLogger(Benchmark::class.java)
+        val log: Logger = LoggerFactory.getLogger(MeasurementHolder::class.java)
     }
 
     init {
