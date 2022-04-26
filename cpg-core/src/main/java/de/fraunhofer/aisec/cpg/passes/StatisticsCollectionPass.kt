@@ -29,7 +29,7 @@ import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.ProblemNode
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
-import de.fraunhofer.aisec.cpg.helpers.Benchmark
+import de.fraunhofer.aisec.cpg.helpers.MeasurementBenchmark
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.ScopedWalker
 
 /**
@@ -54,7 +54,8 @@ class StatisticsCollectionPass : Pass() {
             walker.iterate(tu)
         }
 
-        val nodeMeasurement = Benchmark(this.javaClass, "Measuring Nodes", false, translationResult)
+        val nodeMeasurement =
+            MeasurementBenchmark(this.javaClass, "Measuring Nodes", false, translationResult)
         nodeMeasurement.addMeasurement("Graph nodes", nodes.toString())
         nodeMeasurement.addMeasurement("Problem nodes", problemNodes.toString())
     }

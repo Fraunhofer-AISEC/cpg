@@ -55,10 +55,10 @@ class BenchmarkResults(val entries: List<List<Any>>) {
 /** Interface definition to hold different statistics about the translation process. */
 interface StatisticsHolder {
     val translatedFiles: List<String>
-    val benchmarks: List<Benchmark>
+    val benchmarks: List<MeasurementBenchmark>
     val config: TranslationConfiguration
 
-    fun addBenchmark(b: Benchmark)
+    fun addBenchmark(b: MeasurementBenchmark)
 
     val benchmarkResults: BenchmarkResults
         get() {
@@ -129,14 +129,18 @@ fun relativeOrAbsolute(path: Path, topLevel: File?): Path {
 }
 
 /** Measures the time between creating the object to calling its stop() method. */
-open class TimeBenchmark(
+open class Benchmark(
     c: Class<*>,
     message: String,
     debug: Boolean = false,
     holder: StatisticsHolder? = null
-) : Benchmark(c, message, debug, holder) {
+) : MeasurementBenchmark(c, message, debug, holder) {
 
     private val start: Instant
+
+    fun stop() {
+        addMeasurement(null, null)
+    }
 
     /** Stops the time and computes the difference between */
     override fun addMeasurement(measurementKey: String?, measurementValue: String?): Any? {
@@ -152,7 +156,7 @@ open class TimeBenchmark(
     }
 
     companion object {
-        val log: Logger = LoggerFactory.getLogger(Benchmark::class.java)
+        val log: Logger = LoggerFactory.getLogger(MeasurementBenchmark::class.java)
     }
 
     init {
@@ -162,7 +166,7 @@ open class TimeBenchmark(
 }
 
 /** Represents some kind of measurements, e.g., on the performance or problems. */
-open class Benchmark
+open class MeasurementBenchmark
 @JvmOverloads
 constructor(
     /** The class which called this benchmark. */
@@ -213,7 +217,7 @@ constructor(
     }
 
     companion object {
-        val log: Logger = LoggerFactory.getLogger(Benchmark::class.java)
+        val log: Logger = LoggerFactory.getLogger(MeasurementBenchmark::class.java)
     }
 
     init {

@@ -212,6 +212,15 @@ public class TranslationConfiguration {
     return this.symbols;
   }
 
+  /** Returns a list of all analyzed files. */
+  public List<File> getSourceLocations() {
+    List<File> sourceLocations = new ArrayList<>();
+    for (var entry : softwareComponents.entrySet()) {
+      sourceLocations.addAll(entry.getValue());
+    }
+    return sourceLocations;
+  }
+
   public Map<String, List<File>> getSoftwareComponents() {
     return this.softwareComponents;
   }
