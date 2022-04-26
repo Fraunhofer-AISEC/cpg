@@ -129,7 +129,9 @@ fun relativeOrAbsolute(path: Path, topLevel: File?): Path {
 }
 
 /** Measures the time between creating the object to calling its stop() method. */
-open class Benchmark(
+open class Benchmark
+@JvmOverloads
+constructor(
     c: Class<*>,
     message: String,
     debug: Boolean = false,
