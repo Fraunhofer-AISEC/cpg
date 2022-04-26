@@ -49,7 +49,7 @@ abstract class GraphTransformation {
     open fun popFromHandleLog(trackedObject: Any?) {
         trackedObject?.let {
             if (parserObjectStack.contains(trackedObject)) {
-                while (parserObjectStack.pop() !== trackedObject) ;
+                while (parserObjectStack.pop() != trackedObject) ;
             }
         }
     }
