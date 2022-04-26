@@ -239,4 +239,29 @@ class AnalysisTest {
 
         assertFalse(query.evaluate() as Boolean)
     }
+
+    @Test
+    fun testMemcpyTooLargeQuery2() {
+        val config =
+            TranslationConfiguration.builder()
+                .sourceLocations(File("src/test/resources/vulnerable.cpp"))
+                .defaultPasses()
+                .defaultLanguages()
+                .build()
+
+        val analyzer = TranslationManager.builder().config(config).build()
+        val result = analyzer.analyze().get()
+
+        // forall (n: CallExpression): n.invokes.name == "memcpy" => |sizeof(n.arguments[0])| <
+        // |sizeof(n.arguments[2])|
+        val query =
+            forall(
+                "n: CallExpression",
+                ((field("n.invokes.name") eq const("memcpy")) implies
+                    (sizeof(field("n.arguments[0]")) ge sizeof(field("n.arguments[1]")))),
+                result
+            )
+
+        assertFalse(query.evaluate() as Boolean)
+    }
 }

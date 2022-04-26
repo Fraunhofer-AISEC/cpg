@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationManager
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.query.all
+import de.fraunhofer.aisec.cpg.query.size
 import de.fraunhofer.aisec.cpg.query.sizeof
 import java.io.File
 import kotlin.test.assertFalse
@@ -52,6 +53,27 @@ class Analysis2Test {
         val ok =
             result.all<CallExpression>({ it.name == "memcpy" }) {
                 sizeof(it.arguments[0]) > sizeof(it.arguments[1])
+            }
+
+        assertFalse(ok)
+    }
+
+    @OptIn(ExperimentalGraph::class)
+    @Test
+    fun testMemcpyTooLargeQuery() {
+        val config =
+            TranslationConfiguration.builder()
+                .sourceLocations(File("src/test/resources/vulnerable.cpp"))
+                .defaultPasses()
+                .defaultLanguages()
+                .build()
+
+        val analyzer = TranslationManager.builder().config(config).build()
+        val result = analyzer.analyze().get()
+
+        val ok =
+            result.all<CallExpression>({ it.name == "memcpy" }) {
+                it.arguments[0].size > it.arguments[1].size
             }
 
         assertFalse(ok)

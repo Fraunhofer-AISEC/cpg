@@ -66,6 +66,10 @@ class QueryEvaluation {
             return BinaryExpr(this, other, QueryOp.EQ)
         }
 
+        infix fun eq(other: QueryExpression): BinaryExpr {
+            return BinaryExpr(this, other, QueryOp.EQ)
+        }
+
         infix fun `!=`(other: QueryExpression): BinaryExpr {
             return BinaryExpr(this, other, QueryOp.NE)
         }

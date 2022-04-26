@@ -29,7 +29,9 @@ import de.fraunhofer.aisec.cpg.ExperimentalGraph
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.analysis.SizeEvaluator
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.evaluate
 import de.fraunhofer.aisec.cpg.graph.graph
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 
 @ExperimentalGraph
 inline fun <reified T : Node> TranslationResult.all(
@@ -50,3 +52,15 @@ fun sizeof(n: Node?): Int {
     // size
     return eval.evaluate(n) as? Int ?: -1
 }
+
+class QueryResult(val inner: Any? = null) {
+    operator fun compareTo(o: QueryResult): Int {
+        // for now assume that its also an int (which is not always the case of course)
+        return this.inner as Int - o.inner as Int
+    }
+}
+
+val Expression.size: QueryResult
+    get() {
+        return QueryResult(sizeof(this))
+    }
