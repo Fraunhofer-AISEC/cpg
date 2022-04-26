@@ -31,7 +31,7 @@ import de.fraunhofer.aisec.cpg.frontends.cpp.CXXLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.TypeManager
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
-import de.fraunhofer.aisec.cpg.helpers.MeasurementBenchmark
+import de.fraunhofer.aisec.cpg.helpers.MeasurementHolder
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.passes.Pass
@@ -226,7 +226,7 @@ private constructor(
                 result.components.forEach { s ->
                     s.translationUnits.forEach {
                         val bench =
-                            MeasurementBenchmark(
+                            MeasurementHolder(
                                 this.javaClass,
                                 "Activating types for ${it.name}",
                                 true

@@ -30,7 +30,7 @@ import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.SubGraph;
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration;
 import de.fraunhofer.aisec.cpg.helpers.BenchmarkResults;
-import de.fraunhofer.aisec.cpg.helpers.MeasurementBenchmark;
+import de.fraunhofer.aisec.cpg.helpers.MeasurementHolder;
 import de.fraunhofer.aisec.cpg.helpers.StatisticsHolder;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -61,7 +61,7 @@ public class TranslationResult extends Node implements StatisticsHolder {
    */
   private final Set<Node> additionalNodes = new HashSet<>();
 
-  private final List<MeasurementBenchmark> benchmarks = new ArrayList<>();
+  private final List<MeasurementHolder> benchmarks = new ArrayList<>();
 
   public TranslationResult(TranslationManager translationManager) {
     this.translationManager = translationManager;
@@ -102,20 +102,20 @@ public class TranslationResult extends Node implements StatisticsHolder {
     } else if (components.isEmpty()) {
       // No component exists, so we create the new dummy component.
       swc = new Component();
-      swc.setName("SWC");
+      swc.setName("application");
       components.add(swc);
     } else {
       // Multiple components exist. As we don't know where to put the tu, we check if we have the
       // dummy component and add it there or create a new one.
       for (var component : components) {
-        if (component.getName().equals("SWC")) {
+        if (component.getName().equals("application")) {
           swc = component;
           break;
         }
       }
       if (swc == null) {
         swc = new Component();
-        swc.setName("SWC");
+        swc.setName("application");
         components.add(swc);
       }
     }
@@ -162,12 +162,12 @@ public class TranslationResult extends Node implements StatisticsHolder {
   }
 
   @Override
-  public void addBenchmark(@NotNull MeasurementBenchmark b) {
+  public void addBenchmark(@NotNull MeasurementHolder b) {
     this.benchmarks.add(b);
   }
 
   @NotNull
-  public List<MeasurementBenchmark> getBenchmarks() {
+  public List<MeasurementHolder> getBenchmarks() {
     return benchmarks;
   }
 

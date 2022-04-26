@@ -55,10 +55,10 @@ class BenchmarkResults(val entries: List<List<Any>>) {
 /** Interface definition to hold different statistics about the translation process. */
 interface StatisticsHolder {
     val translatedFiles: List<String>
-    val benchmarks: List<MeasurementBenchmark>
+    val benchmarks: List<MeasurementHolder>
     val config: TranslationConfiguration
 
-    fun addBenchmark(b: MeasurementBenchmark)
+    fun addBenchmark(b: MeasurementHolder)
 
     val benchmarkResults: BenchmarkResults
         get() {
@@ -134,12 +134,12 @@ open class Benchmark(
     message: String,
     debug: Boolean = false,
     holder: StatisticsHolder? = null
-) : MeasurementBenchmark(c, message, debug, holder) {
+) : MeasurementHolder(c, message, debug, holder) {
 
     private val start: Instant
 
     fun stop() {
-        addMeasurement(null, null)
+        addMeasurement()
     }
 
     /** Stops the time and computes the difference between */
@@ -156,7 +156,7 @@ open class Benchmark(
     }
 
     companion object {
-        val log: Logger = LoggerFactory.getLogger(MeasurementBenchmark::class.java)
+        val log: Logger = LoggerFactory.getLogger(MeasurementHolder::class.java)
     }
 
     init {
@@ -166,7 +166,7 @@ open class Benchmark(
 }
 
 /** Represents some kind of measurements, e.g., on the performance or problems. */
-open class MeasurementBenchmark
+open class MeasurementHolder
 @JvmOverloads
 constructor(
     /** The class which called this benchmark. */
@@ -202,6 +202,7 @@ constructor(
     }
 
     /** Adds a measurement for the respective benchmark and saves it to the map. */
+    @JvmOverloads
     open fun addMeasurement(
         measurementKey: String? = null,
         measurementValue: String? = null
@@ -217,7 +218,7 @@ constructor(
     }
 
     companion object {
-        val log: Logger = LoggerFactory.getLogger(MeasurementBenchmark::class.java)
+        val log: Logger = LoggerFactory.getLogger(MeasurementHolder::class.java)
     }
 
     init {
