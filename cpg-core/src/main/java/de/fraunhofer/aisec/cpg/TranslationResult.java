@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg;
 
+import de.fraunhofer.aisec.cpg.graph.Component;
 import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.SubGraph;
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration;
@@ -45,9 +46,12 @@ public class TranslationResult extends Node implements StatisticsHolder {
   public static final String SOURCE_LOCATIONS_TO_FRONTEND = "sourceLocationsToFrontend";
   private final TranslationManager translationManager;
 
-  /** Entry points to the CPG: "TranslationUnits" refer to source files. */
+  /**
+   * Entry points to the CPG: "SoftwareComponent" refer to programs, application, other "bundles" of
+   * software.
+   */
   @SubGraph("AST")
-  private final List<TranslationUnitDeclaration> translationUnits = new ArrayList<>();
+  private final List<Component> components = new ArrayList<>();
 
   /** A free-for-use HashMap where passes can store whatever they want. */
   private final Map<String, Object> scratch = new ConcurrentHashMap<>();
@@ -68,22 +72,39 @@ public class TranslationResult extends Node implements StatisticsHolder {
   }
 
   /**
-   * List of translation units. Note that this list is immutable. Use {@link
-   * #addTranslationUnit(TranslationUnitDeclaration)} if you wish to modify it.
+   * Checks if only a single software component has been analyzed and returns its translation units.
+   * For multiple software components, it aggregates the results.
    *
-   * @return the list of translation units
+   * @return the list of all translation units.
    */
   public List<TranslationUnitDeclaration> getTranslationUnits() {
-    return Collections.unmodifiableList(this.translationUnits);
+    if (this.components.size() == 1) {
+      return Collections.unmodifiableList(this.components.get(0).getTranslationUnits());
+    }
+    List<TranslationUnitDeclaration> result = new ArrayList<>();
+    for (var sc : components) {
+      result.addAll(sc.getTranslationUnits());
+    }
+    return result;
   }
 
   /**
-   * Add a {@link TranslationUnitDeclaration} to this translation result in a thread safe way.
+   * List of software components. Note that this list is immutable. Use {@link
+   * #addComponent(Component)} if you wish to modify it.
    *
-   * @param tu The translation unit to add
+   * @return the list of software components
    */
-  public synchronized void addTranslationUnit(TranslationUnitDeclaration tu) {
-    translationUnits.add(tu);
+  public List<Component> getComponents() {
+    return Collections.unmodifiableList(this.components);
+  }
+
+  /**
+   * Add a {@link Component} to this translation result in a thread safe way.
+   *
+   * @param sc The software component to add
+   */
+  public synchronized void addComponent(Component sc) {
+    components.add(sc);
   }
 
   /**
@@ -118,9 +139,14 @@ public class TranslationResult extends Node implements StatisticsHolder {
   @NotNull
   @Override
   public List<String> getTranslatedFiles() {
-    return translationUnits.stream()
-        .map(TranslationUnitDeclaration::getName)
-        .collect(Collectors.toList());
+    List<String> result = new ArrayList<>();
+    components.forEach(
+        sc ->
+            result.addAll(
+                sc.getTranslationUnits().stream()
+                    .map(TranslationUnitDeclaration::getName)
+                    .collect(Collectors.toList())));
+    return result;
   }
 
   @NotNull

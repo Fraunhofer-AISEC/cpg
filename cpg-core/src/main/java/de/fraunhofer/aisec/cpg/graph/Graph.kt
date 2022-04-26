@@ -28,14 +28,13 @@ package de.fraunhofer.aisec.cpg.graph
 import de.fraunhofer.aisec.cpg.ExperimentalGraph
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
-import de.fraunhofer.aisec.cpg.helpers.Benchmark
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
+import de.fraunhofer.aisec.cpg.helpers.TimeBenchmark
 import java.io.Closeable
 import java.util.*
 import java.util.function.Predicate
 import java.util.stream.Collectors
 import java.util.stream.Stream
-import kotlin.time.Duration
 import kotlin.time.ExperimentalTime
 import org.neo4j.ogm.annotation.Relationship
 import org.opencypher.v9_0.ast.*
@@ -46,11 +45,11 @@ import scala.Option
 
 @ExperimentalGraph
 class QueryBenchmark constructor(db: Graph, query: Query) :
-    Benchmark(db.javaClass, "totalNodes: " + db.size() + " query: " + query.toString()),
+    TimeBenchmark(db.javaClass, "totalNodes: " + db.size() + " query: " + query.toString()),
     AutoCloseable,
     Closeable {
     override fun close() {
-        stop()
+        addMeasurement()
     }
 }
 
@@ -374,7 +373,7 @@ class Graph(var nodes: List<Node>) {
             }
         }
 
-        logger.info("Query took ${Duration.milliseconds(b.duration)}")
+        logger.info("Query took ${b.measurements.entries.firstOrNull()?.value}")
 
         return list
     }

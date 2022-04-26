@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2022, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,7 +31,7 @@ import de.fraunhofer.aisec.cpg.frontends.golang.GoLanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.llvm.LLVMIRLanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.typescript.TypeScriptLanguageFrontend
-import de.fraunhofer.aisec.cpg.helpers.Benchmark
+import de.fraunhofer.aisec.cpg.helpers.TimeBenchmark
 import java.io.File
 import java.net.ConnectException
 import java.nio.file.Paths
@@ -66,8 +66,6 @@ private const val DEFAULT_SAVE_DEPTH = -1
 /**
  * An application to export the <a href="https://github.com/Fraunhofer-AISEC/cpg">cpg</a> to a <a
  * href="https://github.com/Fraunhofer-AISEC/cpg">neo4j</a> database.
- *
- * @author Andreas Hager, andreas.hager@aisec.fraunhofer.de
  */
 class Application : Callable<Int> {
 
@@ -80,12 +78,21 @@ class Application : Callable<Int> {
 
     class Exclusive {
         @CommandLine.Parameters(
-            arity = "1..*",
+            arity = "0..*",
             description =
                 [
                     "The paths to analyze. If module support is enabled, the paths will be looked at if they contain modules"]
         )
-        var files: Array<String> = emptyArray()
+        var files: List<String> = mutableListOf()
+
+        @CommandLine.Option(
+            names = ["--softwareComponents", "-S"],
+            description =
+                [
+                    "Maps the names of software components to their respective files. The files are separated by commas (No whitespace!).",
+                    "Example: -S App1=./file1.c,./file2.c -S App2=./Main.java,./Class.java"]
+        )
+        var softwareComponents: Map<String, String> = mutableMapOf()
 
         @CommandLine.Option(
             names = ["--json-compilation-database"],
@@ -207,11 +214,11 @@ class Application : Callable<Int> {
      */
     @Throws(InterruptedException::class, ConnectException::class)
     fun pushToNeo4j(translationResult: TranslationResult) {
-        val bench = Benchmark(this.javaClass, "Push cpg to neo4j", false, translationResult)
+        val bench = TimeBenchmark(this.javaClass, "Push cpg to neo4j", false, translationResult)
         log.info("Using import depth: $depth")
         log.info(
             "Count base nodes to save: " +
-                translationResult.translationUnits.size +
+                translationResult.components.size +
                 translationResult.additionalNodes.size
         )
 
@@ -220,14 +227,14 @@ class Application : Callable<Int> {
         val session = sessionAndSessionFactoryPair.first
         session.beginTransaction().use { transaction ->
             if (!noPurgeDb) session.purgeDatabase()
-            session.save(translationResult.translationUnits, depth)
+            session.save(translationResult.components, depth)
             session.save(translationResult.additionalNodes, depth)
             transaction.commit()
         }
 
         session.clear()
         sessionAndSessionFactoryPair.second.close()
-        bench.stop()
+        bench.addMeasurement()
     }
 
     /**
@@ -278,31 +285,48 @@ class Application : Callable<Int> {
     }
 
     /**
-     * Parse the file paths to analyze and set up the translationConfiguration with these paths.
+     * Checks if all elements in the parameter are a valid file and returns a list of files.
      *
-     * @throws IllegalArgumentException, if there was no arguments provided, or the path does not
-     * point to a file, is a directory or point to a hidden file or the paths does not have the same
-     * top level path.
+     * @param filenames The filenames to check
+     * @return List of files
      */
-    @OptIn(ExperimentalPython::class, ExperimentalGolang::class, ExperimentalTypeScript::class)
-    private fun setupTranslationConfiguration(): TranslationConfiguration {
-        val filePaths =
-            mutuallyExclusiveParameters.files.map {
-                Paths.get(it).toAbsolutePath().normalize().toFile()
-            }
+    private fun getFilesOfList(filenames: Collection<String>): List<File> {
+        val filePaths = filenames.map { Paths.get(it).toAbsolutePath().normalize().toFile() }
         filePaths.forEach {
             require(it.exists() && (!it.isHidden)) {
                 "Please use a correct path. It was: ${it.path}"
             }
         }
+        return filePaths
+    }
+
+    /**
+     * Parse the file paths to analyze and set up the translationConfiguration with these paths.
+     *
+     * @throws IllegalArgumentException, if there were no arguments provided, or the path does not
+     * point to a file, is a directory or point to a hidden file or the paths does not have the same
+     * top level path.
+     */
+    @OptIn(ExperimentalPython::class, ExperimentalGolang::class, ExperimentalTypeScript::class)
+    private fun setupTranslationConfiguration(): TranslationConfiguration {
 
         val translationConfiguration =
             TranslationConfiguration.builder()
-                .sourceLocations(filePaths)
                 .topLevel(topLevel)
                 .defaultLanguages()
                 .loadIncludes(loadIncludes)
                 .debugParser(DEBUG_PARSER)
+
+        if (mutuallyExclusiveParameters.softwareComponents.isNotEmpty()) {
+            val components = mutableMapOf<String, List<File>>()
+            for (sc in mutuallyExclusiveParameters.softwareComponents) {
+                components[sc.key] = getFilesOfList(sc.value.split(","))
+            }
+            translationConfiguration.softwareComponents(components)
+        } else {
+            val filePaths = getFilesOfList(mutuallyExclusiveParameters.files)
+            translationConfiguration.sourceLocations(filePaths)
+        }
 
         if (!noDefaultPasses) {
             translationConfiguration.defaultPasses()
@@ -359,16 +383,9 @@ class Application : Callable<Int> {
     }
 
     /**
-     * A generic pair.
-     *
-     * @author Andreas Hager, andreas.hager@aisec.fraunhofer.de
-     */
-    class Pair<T, U>(val first: T, val second: U)
-
-    /**
      * The entrypoint of the cpg-vis-neo4j.
      *
-     * @throws IllegalArgumentException, if there was no arguments provided, or the path does not
+     * @throws IllegalArgumentException, if there were no arguments provided, or the path does not
      * point to a file, is a directory or point to a hidden file or the paths does not have the same
      * top level path
      * @throws InterruptedException, if the thread is interrupted while it try´s to connect to the

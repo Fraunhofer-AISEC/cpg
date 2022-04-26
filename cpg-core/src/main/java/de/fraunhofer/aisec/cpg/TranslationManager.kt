@@ -28,9 +28,11 @@ package de.fraunhofer.aisec.cpg
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.frontends.cpp.CXXLanguageFrontend
+import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.TypeManager
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
+import de.fraunhofer.aisec.cpg.helpers.TimeBenchmark
 import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.passes.Pass
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
@@ -75,7 +77,7 @@ private constructor(
         return CompletableFuture.supplyAsync {
             val scopesBuildForAnalysis = ScopeManager()
             val outerBench =
-                Benchmark(
+                TimeBenchmark(
                     TranslationManager::class.java,
                     "Translation into full graph",
                     false,
@@ -86,34 +88,28 @@ private constructor(
 
             try {
                 // Parse Java/C/CPP files
-                var bench = Benchmark(this.javaClass, "Executing Language Frontend", false, result)
+                var bench =
+                    TimeBenchmark(this.javaClass, "Executing Language Frontend", false, result)
                 frontendsNeedCleanup = runFrontends(result, config, scopesBuildForAnalysis)
-                bench.stop()
+                bench.addMeasurement()
 
                 // TODO: Find a way to identify the right language during the execution of a pass
                 // (and set the lang to the scope manager)
 
                 // Apply passes
                 for (pass in config.registeredPasses) {
-
-                    try {
-                        passesNeedCleanup.add(pass)
-                        bench = Benchmark(pass.javaClass, "Executing Pass", false, result)
-                        pass.accept(result)
-                        bench.stop()
-                        if (result.isCancelled) {
-                            log.warn("Analysis interrupted, stopping Pass evaluation")
-                        }
-                    } catch (e: Exception) {
-                        // Adding information given by the graph transformer and wrapping old
-                        // expression.
-                        throw GraphTransformation.getTranslationExceptionWithHandledStack(pass, e)
+                    passesNeedCleanup.add(pass)
+                    bench = TimeBenchmark(pass.javaClass, "Executing Pass", false, result)
+                    pass.accept(result)
+                    bench.addMeasurement()
+                    if (result.isCancelled) {
+                        log.warn("Analysis interrupted, stopping Pass evaluation")
                     }
                 }
             } catch (ex: TranslationException) {
                 throw CompletionException(ex)
             } finally {
-                outerBench.stop()
+                outerBench.addMeasurement()
                 if (!config.disableCleanup) {
                     log.debug("Cleaning up {} Passes", passesNeedCleanup.size)
 
@@ -152,77 +148,96 @@ private constructor(
         config: TranslationConfiguration,
         scopeManager: ScopeManager
     ): Set<LanguageFrontend> {
-        var sourceLocations: List<File> = ArrayList(this.config.sourceLocations)
+        val usedFrontends = mutableSetOf<LanguageFrontend>()
+        for (sc in this.config.softwareComponents.keys) {
+            val component = Component()
+            component.name = sc
+            result.addComponent(component)
 
-        var useParallelFrontends = config.useParallelFrontends
+            var sourceLocations: List<File> = this.config.softwareComponents[sc]!!
 
-        val list =
-            sourceLocations.flatMap { file ->
-                if (file.isDirectory) {
-                    Files.find(
-                            file.toPath(),
-                            999,
-                            { _: Path?, fileAttr: BasicFileAttributes -> fileAttr.isRegularFile }
-                        )
-                        .map { it.toFile() }
-                        .collect(Collectors.toList())
-                } else {
-                    if (useParallelFrontends &&
-                            Util.getExtension(file).frontendClass?.simpleName ==
-                                "GoLanguageFrontend"
-                    ) {
-                        log.warn("Parallel frontends are not yet supported for Go")
-                        useParallelFrontends = false
+            var useParallelFrontends = config.useParallelFrontends
+
+            val list =
+                sourceLocations.flatMap { file ->
+                    if (file.isDirectory) {
+                        Files.find(
+                                file.toPath(),
+                                999,
+                                { _: Path?, fileAttr: BasicFileAttributes ->
+                                    fileAttr.isRegularFile
+                                }
+                            )
+                            .map { it.toFile() }
+                            .collect(Collectors.toList())
+                    } else {
+                        if (useParallelFrontends &&
+                                Util.getExtension(file).frontendClass?.simpleName ==
+                                    "GoLanguageFrontend"
+                        ) {
+                            log.warn("Parallel frontends are not yet supported for Go")
+                            useParallelFrontends = false
+                        }
+                        listOf(file)
                     }
-                    listOf(file)
                 }
-            }
-        if (config.useUnityBuild) {
-            val tmpFile = Files.createTempFile("compile", ".cpp").toFile()
-            tmpFile.deleteOnExit()
+            if (config.useUnityBuild) {
+                val tmpFile = Files.createTempFile("compile", ".cpp").toFile()
+                tmpFile.deleteOnExit()
 
-            PrintWriter(tmpFile).use { writer ->
-                list.forEach {
-                    if (CXXLanguageFrontend.CXX_EXTENSIONS.contains(Util.getExtension(it))) {
-                        if (config.topLevel != null) {
-                            val topLevel = config.topLevel.toPath()
-                            writer.write(
-                                """
+                PrintWriter(tmpFile).use { writer ->
+                    list.forEach {
+                        if (CXXLanguageFrontend.CXX_EXTENSIONS.contains(Util.getExtension(it))) {
+                            if (config.topLevel != null) {
+                                val topLevel = config.topLevel.toPath()
+                                writer.write(
+                                    """
 #include "${topLevel.relativize(it.toPath())}"
 
 """.trimIndent()
-                            )
-                        } else {
-                            writer.write("""
+                                )
+                            } else {
+                                writer.write("""
 #include "${it.absolutePath}"
 
 """.trimIndent())
+                            }
                         }
                     }
                 }
-            }
 
-            sourceLocations = listOf(tmpFile)
-        } else {
-            sourceLocations = list
-        }
-
-        TypeManager.setTypeSystemActive(config.typeSystemActiveInFrontend)
-
-        val usedFrontends =
-            if (useParallelFrontends) {
-                parseParallel(result, scopeManager, sourceLocations)
+                sourceLocations = listOf(tmpFile)
             } else {
-                parseSequentially(result, scopeManager, sourceLocations)
+                sourceLocations = list
             }
 
-        if (!config.typeSystemActiveInFrontend) {
-            TypeManager.setTypeSystemActive(true)
+            TypeManager.setTypeSystemActive(config.typeSystemActiveInFrontend)
 
-            result.translationUnits.forEach {
-                val bench = Benchmark(this.javaClass, "Activating types for ${it.name}", true)
-                SubgraphWalker.activateTypes(it, scopeManager)
-                bench.stop()
+            usedFrontends.addAll(
+                if (useParallelFrontends) {
+                    parseParallel(component, result, scopeManager, sourceLocations)
+                } else {
+                    parseSequentially(component, result, scopeManager, sourceLocations)
+                }
+            )
+
+            if (!config.typeSystemActiveInFrontend) {
+                TypeManager.setTypeSystemActive(true)
+
+                result.components.forEach { s ->
+                    s.translationUnits.forEach {
+                        val bench =
+                            Benchmark(this.javaClass, "Activating types for ${it.name}", true)
+                        SubgraphWalker.activateTypes(it, scopeManager)
+                        bench.addMeasurement()
+                    }
+                }
+                result.translationUnits.forEach {
+                    val bench =
+                        TimeBenchmark(this.javaClass, "Activating types for ${it.name}", true)
+                    SubgraphWalker.activateTypes(it, scopeManager)
+                    bench.addMeasurement()
+                }
             }
         }
 
@@ -230,6 +245,7 @@ private constructor(
     }
 
     private fun parseParallel(
+        component: Component,
         result: TranslationResult,
         originalScopeManager: ScopeManager,
         sourceLocations: Collection<File>
@@ -250,7 +266,7 @@ private constructor(
             val future =
                 CompletableFuture.supplyAsync {
                     try {
-                        return@supplyAsync parse(result, scopeManager, sourceLocation)
+                        return@supplyAsync parse(component, scopeManager, sourceLocation)
                     } catch (e: TranslationException) {
                         throw RuntimeException("Error parsing $sourceLocation", e)
                     }
@@ -284,6 +300,7 @@ private constructor(
 
     @Throws(TranslationException::class)
     private fun parseSequentially(
+        component: Component,
         result: TranslationResult,
         scopeManager: ScopeManager,
         sourceLocations: Collection<File>
@@ -293,7 +310,7 @@ private constructor(
         for (sourceLocation in sourceLocations) {
             log.info("Parsing {}", sourceLocation.absolutePath)
 
-            parse(result, scopeManager, sourceLocation).ifPresent { f: LanguageFrontend ->
+            parse(component, scopeManager, sourceLocation).ifPresent { f: LanguageFrontend ->
                 handleCompletion(result, usedFrontends, sourceLocation, f)
             }
         }
@@ -325,7 +342,7 @@ private constructor(
 
     @Throws(TranslationException::class)
     private fun parse(
-        result: TranslationResult,
+        component: Component,
         scopeManager: ScopeManager,
         sourceLocation: File
     ): Optional<LanguageFrontend> {
@@ -343,28 +360,11 @@ private constructor(
                 }
                 return Optional.empty()
             }
-            result.addTranslationUnit(frontend.parse(sourceLocation))
-        } catch (e: Exception) {
-            // Wrapping the exception into a Translation exception for later rethrows
-            var exception = e
-            frontend?.let {
-                exception = GraphTransformation.getTranslationExceptionWithHandledStack(frontend, e)
-            }
-            // It the Exception was a TranslationException the translation is only supposed to fail
-            // if configured in that way
-            if (e is TranslationException) {
-                log.error(
-                    "An error occurred during parsing of {}: {}",
-                    sourceLocation.name,
-                    e.message
-                )
-                if (config.failOnError) {
-                    throw exception
-                } else {
-                    exception.printStackTrace(System.out)
-                }
-            } else {
-                throw exception
+            component.translationUnits.add(frontend.parse(sourceLocation))
+        } catch (ex: TranslationException) {
+            log.error("An error occurred during parsing of {}: {}", sourceLocation.name, ex.message)
+            if (config.failOnError) {
+                throw ex
             }
         }
         return Optional.ofNullable(frontend)

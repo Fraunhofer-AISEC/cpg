@@ -52,7 +52,7 @@ import org.eclipse.cdt.internal.core.dom.parser.cpp.semantics.TypeOfDependentExp
 
 class ExpressionHandler(lang: CXXLanguageFrontend) :
     Handler<Expression?, IASTInitializerClause, CXXLanguageFrontend>(
-        Supplier { Expression() },
+        Supplier { ProblemExpression() },
         lang
     ) {
 

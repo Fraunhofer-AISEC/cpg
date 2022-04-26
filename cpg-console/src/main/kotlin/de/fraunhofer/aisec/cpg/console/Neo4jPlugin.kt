@@ -40,8 +40,6 @@ class Neo4jPlugin : Plugin {
         override val params = "neo4j"
 
         override fun execute(line: String): Command.Result {
-            val p = line.indexOf(' ')
-
             return Command.Result.RunSnippets(
                 listOf(
                     "import de.fraunhofer.aisec.cpg_vis_neo4j.Application",

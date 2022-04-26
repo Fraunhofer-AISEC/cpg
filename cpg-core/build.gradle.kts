@@ -109,7 +109,7 @@ dependencies {
 
     // Eclipse dependencies
     api("org.eclipse.platform:org.eclipse.core.runtime:3.24.0")
-    api("com.ibm.icu:icu4j:70.1")
+    api("com.ibm.icu:icu4j:71.1")
 
     // CDT
     api("org.eclipse.cdt:core:7.2.100.202105180159")
@@ -130,7 +130,7 @@ dependencies {
     testFixturesApi("org.junit.jupiter:junit-jupiter-api:5.8.1")
     testImplementation("org.junit.jupiter:junit-jupiter-params:5.8.1")
 
-    testFixturesApi("org.mockito:mockito-core:4.4.0")
+    testFixturesApi("org.mockito:mockito-core:4.5.0")
     
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.8.1")
 }

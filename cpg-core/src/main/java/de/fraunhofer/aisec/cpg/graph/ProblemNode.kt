@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2022, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,6 +23,28 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.analysis.fsm
+package de.fraunhofer.aisec.cpg.graph
 
-class FSMBuilderException(s: String) : Exception(s)
+/**
+ * Interface for a node representing some kind of failure during the translation or while parsing.
+ */
+interface ProblemNode {
+
+    /** Type of problem which occurred during the translation. */
+    enum class ProblemType {
+        /** The CPG cannot handle the statement */
+        TRANSLATION,
+        /**
+         * The library failed to parse the statement (probably a problem of the code under analysis)
+         */
+        PARSING
+    }
+
+    /** A short description of the issue. */
+    var problem: String
+    /**
+     * The type of the problem: Either the statement could not be parsed or the kind of statement is
+     * not handled by the CPG yet. See [ProblemType]
+     */
+    var type: ProblemType
+}

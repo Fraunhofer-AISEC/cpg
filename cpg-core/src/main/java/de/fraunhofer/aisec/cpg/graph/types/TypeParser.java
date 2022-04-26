@@ -48,7 +48,26 @@ public class TypeParser {
 
   public static final String UNKNOWN_TYPE_STRING = "UNKNOWN";
   public static final List<String> PRIMITIVES =
-      List.of("byte", "short", "int", "long", "float", "double", "boolean", "char");
+      List.of(
+          "byte",
+          "short",
+          "int",
+          "long",
+          "float",
+          "double",
+          "boolean",
+          "char",
+          // LLVM primitive types
+          "i1",
+          "i8",
+          "i32",
+          "i64",
+          "i128",
+          "half",
+          "bfloat",
+          "fp128",
+          "x86_fp80",
+          "ppc_fp128");
   private static final Pattern functionPtrRegex =
       Pattern.compile(
           "(?:(?<functionptr>[\\h(]+[a-zA-Z0-9_$.<>:]*\\*\\h*[a-zA-Z0-9_$.<>:]*[\\h)]+)\\h*)(?<args>\\(+[a-zA-Z0-9_$.<>,\\*\\&\\h]*\\))");
