@@ -29,11 +29,10 @@ import de.fraunhofer.aisec.cpg.ExperimentalGraph
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationManager
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
-import de.fraunhofer.aisec.cpg.query.all
-import de.fraunhofer.aisec.cpg.query.size
-import de.fraunhofer.aisec.cpg.query.sizeof
+import de.fraunhofer.aisec.cpg.query.*
 import java.io.File
 import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 import org.junit.jupiter.api.Test
 
 class Analysis2Test {
@@ -77,5 +76,30 @@ class Analysis2Test {
             }
 
         assertFalse(ok)
+    }
+
+    @OptIn(ExperimentalGraph::class)
+    @Test
+    fun testParameterEqualsConst() {
+        val config =
+            TranslationConfiguration.builder()
+                .sourceLocations(File("src/test/resources/vulnerable.cpp"))
+                .defaultPasses()
+                .defaultLanguages()
+                .build()
+
+        val analyzer = TranslationManager.builder().config(config).build()
+        val result = analyzer.analyze().get()
+
+        var ok =
+            result.all<CallExpression>({ it.name == "memcpy" }) {
+                it.arguments[2].value == const(11)
+            }
+
+        assertTrue(ok)
+
+        ok = result.all<CallExpression>({ it.name == "memcpy" }) { it.arguments[2].intValue == 11 }
+
+        assertTrue(ok)
     }
 }

@@ -53,14 +53,40 @@ fun sizeof(n: Node?): Int {
     return eval.evaluate(n) as? Int ?: -1
 }
 
+fun const(n: Int): QueryResult {
+    return QueryResult(n)
+}
+
 class QueryResult(val inner: Any? = null) {
     operator fun compareTo(o: QueryResult): Int {
         // for now assume that its also an int (which is not always the case of course)
         return this.inner as Int - o.inner as Int
+    }
+
+    override fun equals(other: Any?): Boolean {
+        if (other is Int && this.inner is Int) {
+            return other == this.inner
+        }
+
+        if (other is QueryResult) {
+            return this.inner?.equals(other.inner) ?: false
+        }
+
+        return super.equals(other)
     }
 }
 
 val Expression.size: QueryResult
     get() {
         return QueryResult(sizeof(this))
+    }
+
+val Expression.value: QueryResult
+    get() {
+        return QueryResult(evaluate())
+    }
+
+val Expression.intValue: Int?
+    get() {
+        return evaluate() as? Int
     }
