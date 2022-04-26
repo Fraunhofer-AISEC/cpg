@@ -52,18 +52,24 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
     Handler<Declaration?, IASTDeclaration, CXXLanguageFrontend>(Supplier { Declaration() }, lang) {
 
     init {
-        map[CPPASTTemplateDeclaration::class.java] =
-            HandlerInterface { handleTemplateDeclaration(it as CPPASTTemplateDeclaration) }
-        map[CPPASTSimpleDeclaration::class.java] =
-            HandlerInterface { handleSimpleDeclaration(it as CPPASTSimpleDeclaration) }
-        map[CPPASTFunctionDefinition::class.java] =
-            HandlerInterface { handleFunctionDefinition(it as CPPASTFunctionDefinition) }
-        map[CPPASTProblemDeclaration::class.java] =
-            HandlerInterface { handleProblem(it as CPPASTProblemDeclaration) }
-        map[CPPASTNamespaceDefinition::class.java] =
-            HandlerInterface { handleNamespace(it as CPPASTNamespaceDefinition) }
-        map[CPPASTUsingDirective::class.java] =
-            HandlerInterface { handleUsingDirective(it as CPPASTUsingDirective) }
+        map[CPPASTTemplateDeclaration::class.java] = HandlerInterface {
+            handleTemplateDeclaration(it as CPPASTTemplateDeclaration)
+        }
+        map[CPPASTSimpleDeclaration::class.java] = HandlerInterface {
+            handleSimpleDeclaration(it as CPPASTSimpleDeclaration)
+        }
+        map[CPPASTFunctionDefinition::class.java] = HandlerInterface {
+            handleFunctionDefinition(it as CPPASTFunctionDefinition)
+        }
+        map[CPPASTProblemDeclaration::class.java] = HandlerInterface {
+            handleProblem(it as CPPASTProblemDeclaration)
+        }
+        map[CPPASTNamespaceDefinition::class.java] = HandlerInterface {
+            handleNamespace(it as CPPASTNamespaceDefinition)
+        }
+        map[CPPASTUsingDirective::class.java] = HandlerInterface {
+            handleUsingDirective(it as CPPASTUsingDirective)
+        }
     }
 
     private fun handleUsingDirective(using: CPPASTUsingDirective): Declaration {

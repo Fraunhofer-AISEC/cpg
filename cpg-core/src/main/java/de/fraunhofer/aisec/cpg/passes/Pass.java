@@ -25,8 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.passes;
 
-import de.fraunhofer.aisec.cpg.GraphTransformation;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import de.fraunhofer.aisec.cpg.GraphTransformation;
 import de.fraunhofer.aisec.cpg.TranslationResult;
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
 import de.fraunhofer.aisec.cpg.graph.Node;

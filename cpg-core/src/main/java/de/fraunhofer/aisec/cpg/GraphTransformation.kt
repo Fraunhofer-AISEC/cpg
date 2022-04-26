@@ -33,9 +33,10 @@ import java.util.*
 import java.util.function.Consumer
 
 /**
- * A generic superclass for components that change the graph. This includes language frontends as the component that does
- * the initial translation into the CPG-AST, as well as graph enhancing passes. The purpose of this class is to capture all
- * behavior that we need for this components, such as tracking of handled nodes.
+ * A generic superclass for components that change the graph. This includes language frontends as
+ * the component that does the initial translation into the CPG-AST, as well as graph enhancing
+ * passes. The purpose of this class is to capture all behavior that we need for this components,
+ * such as tracking of handled nodes.
  */
 abstract class GraphTransformation {
 
@@ -74,14 +75,16 @@ abstract class GraphTransformation {
         return stackString.toString()
     }
     /**
-     * Executes the provided block of code while holding the tracked object on the stack. This should be used when the
-     * component traverses a hierarchical construct of interest, e.g. parser-AST, CPG-AST.
+     * Executes the provided block of code while holding the tracked object on the stack. This
+     * should be used when the component traverses a hierarchical construct of interest, e.g.
+     * parser-AST, CPG-AST.
      */
     fun withNodeInLog(node: Node, f: Runnable) = withNodeInLog(node) { f.run() }
 
     /**
-     * Executes the provided block of code while holding the tracked object on the stack. This should be used when the
-     * component traverses a hierarchical construct of interest, e.g. parser-AST, CPG-AST.
+     * Executes the provided block of code while holding the tracked object on the stack. This
+     * should be used when the component traverses a hierarchical construct of interest, e.g.
+     * parser-AST, CPG-AST.
      */
     fun <S> withNodeInLog(trackedObject: S, block: () -> Unit) {
         pushToHandleLog(trackedObject)
@@ -90,10 +93,10 @@ abstract class GraphTransformation {
     }
 
     /**
-     * Executes the provided block of code while holding the tracked object on the stack. This should be used when the
-     * component traverses a hierarchical construct of interest, e.g. parser-AST, CPG-AST, and when the block of code yields
-     * a result that has to be written into a variable.
-     *
+     * Executes the provided block of code while holding the tracked object on the stack. This
+     * should be used when the component traverses a hierarchical construct of interest, e.g.
+     * parser-AST, CPG-AST, and when the block of code yields a result that has to be written into a
+     * variable.
      */
     fun <T, S> withNodeInLogReturning(trackedObject: S, block: () -> T): T {
         pushToHandleLog(trackedObject)
@@ -103,7 +106,8 @@ abstract class GraphTransformation {
     }
 
     /**
-     * An extension to <code>replaceNodeInLog<\code> with an extension that tracks another object after the execution of a block
+     * An extension to <code>replaceNodeInLog<\code> with an extension that tracks another object
+     * after the execution of a block
      */
     fun <T, S> replaceWithReturningNodeInLog(trackedObject: S, block: () -> T): T {
         popFromHandleLog(trackedObject)
@@ -113,9 +117,10 @@ abstract class GraphTransformation {
     }
 
     /**
-     * Used to replace the provided tracked object <code>old</code> with a <code>new<\code> one. This should be used when
-     * the component handles nodes in sequence and the prior handled object does not matter for the error tracking. Currently
-     * used as default for non-hierarchical components.
+     * Used to replace the provided tracked object <code>old</code> with a <code>new<\code> one.
+     * This should be used when the component handles nodes in sequence and the prior handled object
+     * does not matter for the error tracking. Currently used as default for non-hierarchical
+     * components.
      */
     fun <S> replaceNodeInLog(old: S, new: S) {
         popFromHandleLog(old)
