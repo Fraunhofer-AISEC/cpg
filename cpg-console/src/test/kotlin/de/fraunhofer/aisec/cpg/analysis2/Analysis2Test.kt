@@ -36,8 +36,8 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 import org.junit.jupiter.api.Test
 
+@ExperimentalGraph
 class Analysis2Test {
-    @OptIn(ExperimentalGraph::class)
     @Test
     fun testMemcpyTooLargeQuery2() {
         val config =
@@ -58,7 +58,6 @@ class Analysis2Test {
         assertFalse(ok)
     }
 
-    @OptIn(ExperimentalGraph::class)
     @Test
     fun testMemcpyTooLargeQuery() {
         val config =
@@ -79,7 +78,6 @@ class Analysis2Test {
         assertFalse(ok)
     }
 
-    @OptIn(ExperimentalGraph::class)
     @Test
     fun testParameterEqualsConst() {
         val config =
@@ -104,7 +102,6 @@ class Analysis2Test {
         assertTrue(ok)
     }
 
-    @OptIn(ExperimentalGraph::class)
     @Test
     fun testAssign() {
         val config =

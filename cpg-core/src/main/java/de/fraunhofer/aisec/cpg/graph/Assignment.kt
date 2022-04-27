@@ -25,6 +25,9 @@
  */
 package de.fraunhofer.aisec.cpg.graph
 
+import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 
 /** An assignment assigns a certain value (usually an [Expression]) to a certain target. */
@@ -35,11 +38,16 @@ interface Assignment {
      * the target is only non-null for operations that have a == operator.
      */
     val target: AssignmentTarget?
+
+    /**
+     * The value expression that is assigned to the target. This is intentionally nullable for the same
+     * reason as [target].
+     */
     val value: Expression?
 }
 
 /**
- * The target of an assignment. The target is usually either a [Declaration] or a
+ * The target of an assignment. The target is usually either a [VariableDeclaration] or a
  * [DeclaredReferenceExpression].
  */
 interface AssignmentTarget {

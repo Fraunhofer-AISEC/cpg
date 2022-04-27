@@ -59,6 +59,10 @@ fun sizeof(n: Node?): Int {
     return eval.evaluate(n) as? Int ?: -1
 }
 
+/**
+ * This is a small wrapper to create a [QueryResult] containing a constant value, so that it can be
+ * used to in comparison with other [QueryResult] objects.
+ */
 fun const(n: Int): QueryResult {
     return QueryResult(n)
 }
@@ -69,24 +73,28 @@ operator fun Expression?.invoke(): QueryResult {
 
 class QueryResult(val inner: Any? = null) {
     operator fun compareTo(o: QueryResult): Int {
-        if (this.inner is Int && o.inner is Int) {
+        return if (this.inner is Int && o.inner is Int) {
             // for now assume that its also an int (which is not always the case of course)
-            return this.inner as Int - o.inner as Int
+            this.inner - o.inner
         } else {
-            return -1
+            -1
         }
     }
 
     override fun equals(other: Any?): Boolean {
-        if (other is Int && this.inner is Int) {
-            return other == this.inner
-        }
-
         if (other is QueryResult) {
             return this.inner?.equals(other.inner) ?: false
         }
 
         return super.equals(other)
+    }
+
+    override fun toString(): String {
+        return inner.toString()
+    }
+
+    override fun hashCode(): Int {
+        return inner?.hashCode() ?: 0
     }
 }
 
