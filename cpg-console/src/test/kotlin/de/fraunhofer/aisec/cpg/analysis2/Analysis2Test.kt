@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.analysis2
 import de.fraunhofer.aisec.cpg.ExperimentalGraph
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationManager
+import de.fraunhofer.aisec.cpg.graph.Assignment
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.query.*
 import java.io.File
@@ -99,6 +100,24 @@ class Analysis2Test {
         assertTrue(ok)
 
         ok = result.all<CallExpression>({ it.name == "memcpy" }) { it.arguments[2].intValue == 11 }
+
+        assertTrue(ok)
+    }
+
+    @OptIn(ExperimentalGraph::class)
+    @Test
+    fun testAssign() {
+        val config =
+            TranslationConfiguration.builder()
+                .sourceLocations(File("src/test/resources/assign.cpp"))
+                .defaultPasses()
+                .defaultLanguages()
+                .build()
+
+        val analyzer = TranslationManager.builder().config(config).build()
+        val result = analyzer.analyze().get()
+
+        val ok = result.all<Assignment> { it.value() < const(5) }
 
         assertTrue(ok)
     }

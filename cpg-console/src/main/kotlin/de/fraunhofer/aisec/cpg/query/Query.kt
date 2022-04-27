@@ -34,14 +34,20 @@ import de.fraunhofer.aisec.cpg.graph.graph
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 
 @ExperimentalGraph
-inline fun <reified T : Node> TranslationResult.all(
-    sel: (T) -> Boolean,
-    mustSatisfy: (T) -> Boolean
+inline fun <reified T> TranslationResult.all(
+    noinline sel: ((T) -> Boolean)? = null,
+    noinline mustSatisfy: (T) -> Boolean
 ): Boolean {
+    println("${this.graph.nodes.size} before filter")
+
     var nodes = this.graph.nodes.filterIsInstance<T>()
 
+    println("${nodes.size} nodes after filter")
+
     // filter the nodes according to the selector
-    nodes = nodes.filter(sel)
+    if (sel != null) {
+        nodes = nodes.filter(sel)
+    }
 
     return nodes.all(mustSatisfy)
 }
@@ -57,10 +63,18 @@ fun const(n: Int): QueryResult {
     return QueryResult(n)
 }
 
+operator fun Expression?.invoke(): QueryResult {
+    return QueryResult(this?.evaluate())
+}
+
 class QueryResult(val inner: Any? = null) {
     operator fun compareTo(o: QueryResult): Int {
-        // for now assume that its also an int (which is not always the case of course)
-        return this.inner as Int - o.inner as Int
+        if (this.inner is Int && o.inner is Int) {
+            // for now assume that its also an int (which is not always the case of course)
+            return this.inner as Int - o.inner as Int
+        } else {
+            return -1
+        }
     }
 
     override fun equals(other: Any?): Boolean {

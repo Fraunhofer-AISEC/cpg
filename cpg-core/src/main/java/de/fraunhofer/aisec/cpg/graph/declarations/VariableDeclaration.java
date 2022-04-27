@@ -25,12 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.graph.declarations;
 
-import de.fraunhofer.aisec.cpg.graph.HasInitializer;
-import de.fraunhofer.aisec.cpg.graph.HasType;
+import de.fraunhofer.aisec.cpg.graph.*;
 import de.fraunhofer.aisec.cpg.graph.HasType.TypeListener;
-import de.fraunhofer.aisec.cpg.graph.Node;
-import de.fraunhofer.aisec.cpg.graph.SubGraph;
-import de.fraunhofer.aisec.cpg.graph.TypeManager;
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression;
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.InitializerListExpression;
 import de.fraunhofer.aisec.cpg.graph.types.Type;
@@ -40,7 +36,8 @@ import org.jetbrains.annotations.Nullable;
 import org.neo4j.ogm.annotation.Relationship;
 
 /** Represents the declaration of a variable. */
-public class VariableDeclaration extends ValueDeclaration implements TypeListener, HasInitializer {
+public class VariableDeclaration extends ValueDeclaration
+    implements TypeListener, HasInitializer, Assignment, AssignmentTarget {
 
   /** The (optional) initializer of the declaration. */
   @SubGraph("AST")
@@ -196,5 +193,17 @@ public class VariableDeclaration extends ValueDeclaration implements TypeListene
   @Override
   public int hashCode() {
     return super.hashCode();
+  }
+
+  @Nullable
+  @Override
+  public AssignmentTarget getTarget() {
+    return this;
+  }
+
+  @Nullable
+  @Override
+  public Expression getValue() {
+    return initializer;
   }
 }

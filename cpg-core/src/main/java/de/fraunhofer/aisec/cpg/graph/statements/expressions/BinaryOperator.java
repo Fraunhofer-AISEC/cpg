@@ -25,23 +25,20 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements.expressions;
 
-import de.fraunhofer.aisec.cpg.graph.AccessValues;
-import de.fraunhofer.aisec.cpg.graph.HasType;
+import de.fraunhofer.aisec.cpg.graph.*;
 import de.fraunhofer.aisec.cpg.graph.HasType.TypeListener;
-import de.fraunhofer.aisec.cpg.graph.Node;
-import de.fraunhofer.aisec.cpg.graph.SubGraph;
-import de.fraunhofer.aisec.cpg.graph.TypeManager;
 import de.fraunhofer.aisec.cpg.graph.types.Type;
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser;
 import java.util.*;
 import org.apache.commons.lang3.builder.ToStringBuilder;
+import org.jetbrains.annotations.Nullable;
 import org.neo4j.ogm.annotation.Transient;
 
 /**
  * A binary operation expression, such as "a + b". It consists of a left hand expression (lhs), a
  * right hand expression (rhs) and an operatorCode.
  */
-public class BinaryOperator extends Expression implements TypeListener {
+public class BinaryOperator extends Expression implements TypeListener, Assignment {
 
   /** The left hand expression. */
   @SubGraph("AST")
@@ -244,5 +241,28 @@ public class BinaryOperator extends Expression implements TypeListener {
   @Override
   public int hashCode() {
     return super.hashCode();
+  }
+
+  @Nullable
+  @Override
+  public AssignmentTarget getTarget() {
+    // We only want to supply a target if this is an assignment
+    return isAssignment()
+        ? (lhs instanceof AssignmentTarget ? (AssignmentTarget) lhs : null)
+        : null;
+  }
+
+  @Nullable
+  @Override
+  public Expression getValue() {
+    return isAssignment() ? rhs : null;
+  }
+
+  public boolean isAssignment() {
+    // TODO(oxisto): We need to discuss, if the other operators are also assignments and if we
+    // really want them
+    return this.operatorCode.equals(
+        "==") /*||this.operatorCode.equals("+=") ||this.operatorCode.equals("-=")
+              ||this.operatorCode.equals("/=")  ||this.operatorCode.equals("*=")*/;
   }
 }
