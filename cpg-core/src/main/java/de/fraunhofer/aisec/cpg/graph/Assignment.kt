@@ -40,8 +40,8 @@ interface Assignment {
     val target: AssignmentTarget?
 
     /**
-     * The value expression that is assigned to the target. This is intentionally nullable for the same
-     * reason as [target].
+     * The value expression that is assigned to the target. This is intentionally nullable for the
+     * same reason as [target].
      */
     val value: Expression?
 }
