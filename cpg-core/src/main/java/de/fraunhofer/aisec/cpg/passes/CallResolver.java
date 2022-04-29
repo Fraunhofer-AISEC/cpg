@@ -1177,6 +1177,16 @@ public class CallResolver extends Pass {
       invocationCandidates.addAll(resolveWithImplicitCastFunc(call));
     }
 
+    // Make sure, that our invocation candidates for member call expressions are really METHODS,
+    // otherwise this will lead to
+    // false positives. This is a hotfix until we rework the call resolver completely.
+    if (call instanceof MemberCallExpression) {
+      invocationCandidates =
+          invocationCandidates.stream()
+              .filter(func -> func instanceof MethodDeclaration)
+              .collect(Collectors.toList());
+    }
+
     return invocationCandidates;
   }
 

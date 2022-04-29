@@ -105,4 +105,37 @@ class CXXResolveTest {
         assertEquals("C", c.name)
         assertTrue(c.isInferred)
     }
+
+    @Test
+    fun testMethodResolve2() {
+        val file = File("src/test/resources/foo2.cpp")
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                // we want to infer records (namely class C in our file)
+                it.inferenceConfiguration(
+                    InferenceConfiguration.builder().inferRecords(true).build()
+                )
+            }
+
+        assertNotNull(tu)
+
+        val main = tu.byNameOrNull<FunctionDeclaration>("main")
+        assertNotNull(main)
+
+        val foo = main.bodyOrNull<CallExpression>(0)
+        assertNotNull(foo)
+
+        var func = foo.invokes.firstOrNull()
+        assertNotNull(func)
+        assertFalse(func.isInferred)
+        assertFalse(func is MethodDeclaration)
+
+        val cFoo = main.bodyOrNull<MemberCallExpression>(0)
+        assertNotNull(cFoo)
+
+        func = cFoo.invokes.firstOrNull()
+        assertNotNull(func)
+        assertTrue(func.isInferred)
+        assertTrue(func is MethodDeclaration)
+    }
 }
