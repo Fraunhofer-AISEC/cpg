@@ -181,7 +181,7 @@ fun getCode(file: String, region: Region): String {
 
 val styles = SyntaxPlugin.HighlightStylesFromConfiguration(object : ReplConfigurationBase() {})
 
-fun getFanciesFor(original: Node, node: Node): List<Pair<AttributedStyle, Region>> {
+fun getFanciesFor(original: Node?, node: Node?): List<Pair<AttributedStyle, Region>> {
     val list = mutableListOf<Pair<AttributedStyle, Region>>()
 
     when (node) {
