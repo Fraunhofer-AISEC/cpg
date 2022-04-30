@@ -4,7 +4,7 @@ public class Calls extends SuperClass {
   private void innerTarget(int param1, int param2) {}
   private void innerTarget(int param1, String param2) {}
 
-  public static void main(String[] args) {
+  public void someFunction() {
     innerTarget();
     innerTarget(1, 2);
     innerTarget(1, "2");

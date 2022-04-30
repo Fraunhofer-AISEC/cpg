@@ -58,11 +58,12 @@ public class NewExpression extends Expression implements HasInitializer {
   @Nullable
   private List<Node> templateParameters = null;
 
+  @Nullable
   public List<Node> getTemplateParameters() {
     return templateParameters;
   }
 
-  public void setTemplateParameters(List<Node> templateParameters) {
+  public void setTemplateParameters(@Nullable List<Node> templateParameters) {
     this.templateParameters = templateParameters;
   }
 

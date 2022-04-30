@@ -342,8 +342,8 @@ class LLVMIRLanguageFrontendTest {
             (ifBranch.statements[0] as DeclarationStatement).declarations[0] as VariableDeclaration
         val ifBranchComp = ifBranchVariableDecl.initializer as BinaryOperator
         assertEquals(">", ifBranchComp.operatorCode)
-        assertEquals(CastExpression::class, ifBranchComp.rhs::class)
-        assertEquals(CastExpression::class, ifBranchComp.lhs::class)
+        assertTrue(ifBranchComp.rhs is CastExpression)
+        assertTrue(ifBranchComp.lhs is CastExpression)
 
         val ifBranchCompRhs = ifBranchComp.rhs as CastExpression
         assertEquals(TypeParser.createFrom("ui32", LLVMIRLanguage()), ifBranchCompRhs.castType)

@@ -34,6 +34,7 @@ import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.helpers.Util
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import java.util.stream.Collectors
 
 /**
  * Is a scope where local variables can be declared and independent of specific language constructs.
@@ -93,5 +94,14 @@ open class ValueDeclarationScope(override var astNode: Node?) : Scope(astNode) {
     companion object {
         @JvmStatic
         protected val log: Logger = LoggerFactory.getLogger(ValueDeclarationScope::class.java)
+    }
+
+    override fun resolveSymbol(name: String): List<Declaration> {
+        return valueDeclarations
+            .filter { declaration: ValueDeclaration ->
+                declaration.name.equals(
+                    name
+                )
+            }
     }
 }

@@ -27,13 +27,17 @@ package de.fraunhofer.aisec.cpg.passes.scopes
 
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.statements.LabelStatement
 
 /**
  * Represent semantic scopes in the language. Depending on the language scopes can have visibility
  * restriction and can act as namespaces to avoid name collisions.
  */
-abstract class Scope(open var astNode: Node?) {
+abstract class Scope(/**
+                      * This property represents the AST node in the graph which defines the scope, for example a
+                      * [FunctionDeclaration] for a [FunctionScope].
+                      */ open var astNode: Node?) {
 
     /** FQN Name currently valid */
     var scopedName: String? = null
@@ -75,4 +79,11 @@ abstract class Scope(open var astNode: Node?) {
 
             return scope
         }
+
+    /**
+     * Resolves a symbol by its name in this current scope (and only in this scope). Since some
+     * languages allow overloading of symbols, such as functions, a list of [Declaration]s is
+     * returned.
+     */
+    abstract fun resolveSymbol(name: String): List<Declaration>
 }

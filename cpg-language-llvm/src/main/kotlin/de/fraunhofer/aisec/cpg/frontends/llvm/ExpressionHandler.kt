@@ -34,7 +34,6 @@ import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.graph.types.PointerType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
-import de.fraunhofer.aisec.cpg.passes.VariableUsageResolver
 import org.bytedeco.javacpp.IntPointer
 import org.bytedeco.javacpp.SizeTPointer
 import org.bytedeco.llvm.LLVM.LLVMValueRef
@@ -532,7 +531,7 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
                 baseType = field?.type ?: UnknownType.getUnknownType(language)
 
                 // construct our member expression
-                expr = newMemberExpression(fieldName, base, field?.type, ".", "")
+                expr = newMemberExpression(base, field?.type, fieldName, ".", "")
                 log.info("{}", expr)
 
                 // the current expression is the new base

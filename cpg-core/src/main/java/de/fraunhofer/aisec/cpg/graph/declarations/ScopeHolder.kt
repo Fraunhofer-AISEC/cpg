@@ -23,30 +23,15 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.graph
+package de.fraunhofer.aisec.cpg.graph.declarations
 
-import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
-
-/** An assignment assigns a certain value (usually an [Expression]) to a certain target. */
-interface Assignment {
-    /**
-     * The target of this assignment. Note that this is intentionally nullable, because while
-     * [BinaryOperator] implements [Assignment], not all binary operations are assignments. Thus,
-     * the target is only non-null for operations that have a == operator.
-     */
-    val target: AssignmentTarget?
-
-    /**
-     * The value expression that is assigned to the target. This is intentionally nullable for the
-     * same reason as [target].
-     */
-    val value: Expression?
-}
+import de.fraunhofer.aisec.cpg.passes.scopes.FunctionScope
+import de.fraunhofer.aisec.cpg.passes.scopes.Scope
 
 /**
- * The target of an assignment. The target is usually either a [VariableDeclaration] or a
- * [DeclaredReferenceExpression].
+ * Represents a class that defines a new scope, for example a [FunctionDeclaration] defines a
+ * [FunctionScope].
  */
-interface AssignmentTarget : HasType {}
+interface ScopeHolder<T : Scope> {
+    fun newScope(parent: Scope?)
+}

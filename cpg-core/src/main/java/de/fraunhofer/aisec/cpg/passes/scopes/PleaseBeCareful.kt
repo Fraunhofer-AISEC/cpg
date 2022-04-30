@@ -23,30 +23,10 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.graph
-
-import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
-
-/** An assignment assigns a certain value (usually an [Expression]) to a certain target. */
-interface Assignment {
-    /**
-     * The target of this assignment. Note that this is intentionally nullable, because while
-     * [BinaryOperator] implements [Assignment], not all binary operations are assignments. Thus,
-     * the target is only non-null for operations that have a == operator.
-     */
-    val target: AssignmentTarget?
-
-    /**
-     * The value expression that is assigned to the target. This is intentionally nullable for the
-     * same reason as [target].
-     */
-    val value: Expression?
-}
+package de.fraunhofer.aisec.cpg.passes.scopes
 
 /**
- * The target of an assignment. The target is usually either a [VariableDeclaration] or a
- * [DeclaredReferenceExpression].
+ * Annotation used to mark functions that could potentially be dangerous, in a way that could modify
+ * or alter the CPG tree structure that one does not intent to.
  */
-interface AssignmentTarget : HasType {}
+annotation class PleaseBeCareful

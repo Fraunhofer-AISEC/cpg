@@ -99,8 +99,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
                     UnknownType.getUnknownType(language), // Type will be filled out later by
                     // handleSimpleDeclaration
                     ctx.rawSignature,
-                    implicitInitializerAllowed,
-                    frontend.language
+                    implicitInitializerAllowed
                 )
 
             // Parse the initializer, if we have one

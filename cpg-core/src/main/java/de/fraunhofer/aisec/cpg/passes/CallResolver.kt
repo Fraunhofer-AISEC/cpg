@@ -166,16 +166,16 @@ open class CallResolver : SymbolResolverPass() {
     }
 
     private fun handleCallExpression(curClass: RecordDeclaration?, call: CallExpression) {
-        if (
-            call.base is DeclaredReferenceExpression &&
-                isSuperclassReference(call.base as DeclaredReferenceExpression)
+        if (call is MemberCallExpression &&
+            call.callee is DeclaredReferenceExpression &&
+                isSuperclassReference(call.callee as DeclaredReferenceExpression)
         ) {
             handleSuperCall(curClass!!, call)
             return
         }
 
         if (call is MemberCallExpression) {
-            val member = call.member
+            val member = call.callee as? MemberExpression
             if (!(member is HasType && (member as HasType).type is FunctionPointerType)) {
                 // function pointers are handled by extra pass
                 handleMethodCall(curClass, call)

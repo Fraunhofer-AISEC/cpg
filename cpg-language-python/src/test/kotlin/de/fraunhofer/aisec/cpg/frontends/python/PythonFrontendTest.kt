@@ -134,7 +134,7 @@ class PythonFrontendTest : BaseTest() {
         assertLocalName("bar", callExpression)
         assertEquals(bar, callExpression.invokes.iterator().next())
 
-        val edge = callExpression.argumentsEdges[1]
+        val edge = callExpression.argumentEdges[1]
         assertNotNull(edge)
         assertEquals("s2", edge.getProperty(Properties.NAME))
 
@@ -446,7 +446,7 @@ class PythonFrontendTest : BaseTest() {
         val fooMemCall =
             (foo.body as? CompoundStatement)?.statements?.get(0) as? MemberCallExpression
         assertNotNull(fooMemCall)
-        val mem = fooMemCall.member as? DeclaredReferenceExpression
+        val mem = fooMemCall.callee as? MemberExpression
         assertNotNull(mem)
         assertLocalName("bar", mem)
         assertEquals(".", fooMemCall.operatorCode)
@@ -804,7 +804,8 @@ class PythonFrontendTest : BaseTest() {
         assertNotNull(baseBase)
         assertLocalName("bar", baseBase)
 
-        val member = initializer.member as? DeclaredReferenceExpression
+        // TODO: probably wrong
+        val member = initializer.callee as? DeclaredReferenceExpression
         assertNotNull(member)
         assertLocalName("zzz", member)
     }

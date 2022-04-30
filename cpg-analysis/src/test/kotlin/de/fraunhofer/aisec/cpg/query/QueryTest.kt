@@ -676,14 +676,14 @@ class QueryTest {
         val queryTreeResult =
             result.all<BinaryOperator>(
                 { it.operatorCode == "/" },
-                { !(it.rhs.evaluate(MultiValueEvaluator()) as NumberSet).maybe(0) }
+                { !(it.rhs?.evaluate(MultiValueEvaluator()) as NumberSet).maybe(0) }
             )
         assertFalse(queryTreeResult.first)
 
         val queryTreeResult2 =
             result.allExtended<BinaryOperator>(
                 { it.operatorCode == "/" },
-                { not((it.rhs.evaluate(MultiValueEvaluator()) as NumberSet).maybe(0)) }
+                { not((it.rhs?.evaluate(MultiValueEvaluator()) as NumberSet).maybe(0)) }
             )
 
         assertFalse(queryTreeResult2.value)

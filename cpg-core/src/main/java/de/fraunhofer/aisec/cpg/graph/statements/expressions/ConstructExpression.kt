@@ -36,7 +36,7 @@ import de.fraunhofer.aisec.cpg.graph.types.FunctionType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
-import de.fraunhofer.aisec.cpg.passes.CallResolver
+import de.fraunhofer.aisec.cpg.passes.NewResolver
 import org.apache.commons.lang3.builder.ToStringBuilder
 
 /**
@@ -51,7 +51,7 @@ class ConstructExpression : CallExpression(), HasType.TypeListener {
      * The link to the [ConstructorDeclaration]. This is populated by the
      * [de.fraunhofer.aisec.cpg.passes.CallResolver] later.
      */
-    @PopulatedByPass(CallResolver::class)
+    @PopulatedByPass(NewResolver::class)
     var constructor: ConstructorDeclaration? = null
         set(value) {
             field = value
@@ -63,7 +63,7 @@ class ConstructExpression : CallExpression(), HasType.TypeListener {
         }
 
     /** The [Declaration] of the type this expression instantiates. */
-    @PopulatedByPass(CallResolver::class)
+    @PopulatedByPass(NewResolver::class)
     var instantiates: Declaration? = null
         set(value) {
             field = value

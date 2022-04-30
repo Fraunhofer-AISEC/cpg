@@ -30,13 +30,7 @@ import static de.fraunhofer.aisec.cpg.graph.NodeBuilderKt.*;
 
 import com.github.javaparser.ast.ImportDeclaration;
 import com.github.javaparser.ast.NodeList;
-import com.github.javaparser.ast.body.AnnotationDeclaration;
-import com.github.javaparser.ast.body.AnnotationMemberDeclaration;
-import com.github.javaparser.ast.body.BodyDeclaration;
-import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
-import com.github.javaparser.ast.body.InitializerDeclaration;
-import com.github.javaparser.ast.body.Parameter;
-import com.github.javaparser.ast.body.VariableDeclarator;
+import com.github.javaparser.ast.body.*;
 import com.github.javaparser.ast.stmt.BlockStmt;
 import com.github.javaparser.ast.stmt.ReturnStmt;
 import com.github.javaparser.ast.stmt.Statement;
@@ -47,6 +41,8 @@ import de.fraunhofer.aisec.cpg.frontends.Handler;
 import de.fraunhofer.aisec.cpg.graph.ProblemNode;
 import de.fraunhofer.aisec.cpg.graph.TypeManager;
 import de.fraunhofer.aisec.cpg.graph.declarations.*;
+import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration;
 import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement;
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression;
 import de.fraunhofer.aisec.cpg.graph.types.*;
@@ -163,7 +159,7 @@ public class DeclarationHandler
       com.github.javaparser.ast.body.MethodDeclaration methodDecl) {
     ResolvedMethodDeclaration resolvedMethod = methodDecl.resolve();
 
-    var currentRecordDecl = frontend.getScopeManager().getCurrentRecord();
+    var record = frontend.getScopeManager().getCurrentRecord();
 
     de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration functionDeclaration =
         newMethodDeclaration(
@@ -171,11 +167,11 @@ public class DeclarationHandler
             resolvedMethod.getName(),
             methodDecl.toString(),
             methodDecl.isStatic(),
-            currentRecordDecl);
+                record);
 
     frontend.getScopeManager().enterScope(functionDeclaration);
 
-    createMethodReceiver(currentRecordDecl, functionDeclaration);
+    createMethodReceiver(record, functionDeclaration);
 
     functionDeclaration.addThrowTypes(
         methodDecl.getThrownExceptions().stream()
@@ -301,13 +297,13 @@ public class DeclarationHandler
       } else if (decl instanceof com.github.javaparser.ast.body.MethodDeclaration) {
         de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration md =
             (de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration) handle(decl);
-        recordDeclaration.addMethod(md);
+        frontend.getScopeManager().addDeclaration(md);
       } else if (decl instanceof com.github.javaparser.ast.body.ConstructorDeclaration) {
         de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDeclaration c =
             (de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDeclaration) handle(decl);
-        recordDeclaration.addConstructor(c);
+          frontend.getScopeManager().addDeclaration(c);
       } else if (decl instanceof com.github.javaparser.ast.body.ClassOrInterfaceDeclaration) {
-        recordDeclaration.addDeclaration(handle(decl));
+          frontend.getScopeManager().addDeclaration((handle(decl)));
       } else if (decl instanceof com.github.javaparser.ast.body.InitializerDeclaration) {
         InitializerDeclaration id = (InitializerDeclaration) decl;
         CompoundStatement initializerBlock =

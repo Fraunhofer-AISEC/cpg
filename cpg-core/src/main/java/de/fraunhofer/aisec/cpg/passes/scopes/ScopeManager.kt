@@ -194,7 +194,7 @@ class ScopeManager : ScopeProvider {
             return
         }
         scopeMap[scope.astNode] = scope
-        if (scope is NameScope) {
+        if (scope is NameScope && scope.astNode != null) {
             // for this to work, it is essential that RecordDeclaration and NamespaceDeclaration
             // nodes have a FQN as their name.
             fqnScopeMap[scope.astNode!!.name.toString()] = scope
@@ -597,10 +597,9 @@ class ScopeManager : ScopeProvider {
         scope: Scope? = currentScope
     ): ValueDeclaration? {
         return resolve<ValueDeclaration>(scope) {
-                if (
-                    it.name.lastPartsMatch(ref.name)
-                ) { // TODO: This place is likely to make things fail
-                    // If the reference seems to point to a function the entire signature is checked
+                if (it.name == ref.name) {
+                    // If the reference seems to point to a function, the entire signature is
+                    // checked
                     // for equality
                     if (ref.type is FunctionPointerType && it is FunctionDeclaration) {
                         val fptrType = (ref as HasType).type as FunctionPointerType
@@ -672,7 +671,17 @@ class ScopeManager : ScopeProvider {
     }
 
     /**
-     * Traverses the scope upwards and looks for declarations of type [T] which matches the
+     * Tries to resolve the given symbol name in the given scope (and its parents). A symbol could
+     * potentially occur more than once in the scope (and its parents), so the caller needs to
+     * decide, which one is the most appropriate. Additional filtering, such as based on the type of
+     * declaration might also be needed. The list is ordered by scope depth (local scope first).
+     */
+    fun resolveSymbols(name: String, scope: Scope): List<Declaration> {
+        return this.resolve(scope) { it.name.toString() == name }
+    }
+
+    /**
+     * Traverses the scope up-wards and looks for declarations of type [T] which matches the
      * condition [predicate].
      *
      * It returns a list of all declarations that match the predicate, ordered by reachability in
@@ -686,7 +695,7 @@ class ScopeManager : ScopeProvider {
     inline fun <reified T : Declaration> resolve(
         searchScope: Scope?,
         stopIfFound: Boolean = false,
-        predicate: (T) -> Boolean
+        noinline predicate: (T) -> Boolean
     ): List<T> {
         var scope = searchScope
         val declarations = mutableListOf<T>()
@@ -791,5 +800,137 @@ class ScopeManager : ScopeProvider {
                 }
             )
         }
+    }
+
+    /**
+     * This method tries to look up a symbol by a fully qualified name specified in [name], e.g., in
+     * the form of A::foo and returns a list of possible candidates. The idea behind a qualified
+     * lookup is that we directly specify the scope we want to limit our search to (e.g., a class or
+     * a namespace). This is in contrast to an unqualified lookup (see [lookupUnqualified], in which
+     * the current scope is used first, but then all parent scopes are searched for the symbol, if
+     * it is not found in the current scope.
+     */
+    fun lookupQualified(name: Name): List<Declaration> {
+        return lookupQualified(listOf(name))
+    }
+
+    fun lookupQualified(names: List<Name>): List<Declaration> {
+        val list = mutableListOf<Declaration>()
+
+        for (name in names) {
+            // Since the fqnScopeMap already contains a FQN of a scope
+            // we can just take the parent of the name as scope. For example, if we are looking
+            // for A::B::foo, the local name is foo and the scopeName we are looking for is A::B.
+            val localName = name.localName
+            val scopeName = name.parent.toString()
+
+            // Jump to the appropriate scope.
+            val scope = fqnScopeMap[scopeName]
+
+            // Resolve the symbol within the scope
+            scope?.resolveSymbol(localName)?.let { list.addAll(it) }
+        }
+
+        return list
+    }
+
+    /**
+     * This function does an unqualified lookup of a symbol based on a [name]. The idea of an
+     * unqualified lookup is that we do not know where in which scope the symbol is located. It is
+     * based on the principle of visibility. For example, in a function, all local variables might
+     * be visible. But furthermore, all global variables as well as parameters of the functions
+     * might be visible as well. We therefore need to do a lookup based on a reverse scope
+     * traversal, beginning from [searchScope] upwards.
+     *
+     * It returns a map of all symbols / declarations that match the name, ordered by reachability
+     * in the scope stack. This means that "local" declarations will be in the list first, global
+     * items will be last. It always returns the complete list of candidates and the caller needs to
+     * decide which is the most appropriate declaration to chose from. The reasoning behind this, is
+     * that factors such as default arguments and function overloading might have an effect on which
+     * item to chose and this information is only available to the caller of this function. If this
+     * is not desired, the parameter [stopIfFound] can be set to true, in which case the search is
+     * aborted once one symbol is found. This is especially helpful, if a language does not have the
+     * concept of overloading and saves some unnecessary lookup time.
+     */
+    fun lookupUnqualified(
+        searchScope: Scope?,
+        name: Name,
+        stopIfFound: Boolean = false,
+    ): List<Declaration> {
+        var scope = searchScope
+        val declarations = mutableListOf<Declaration>()
+
+        while (scope != null) {
+            declarations.addAll(scope.resolveSymbol(name.localName))
+
+            // some languages require us to stop immediately if we found something on this
+            // scope.
+            if (stopIfFound && declarations.isNotEmpty()) {
+                return declarations
+            }
+
+            // go up-wards in the scope tree
+            scope = scope.parent
+        }
+
+        return declarations
+    }
+
+    /**
+     * Directly jumps to a given scope.
+     *
+     * Handle with care, here be dragons. Should not be exposed outside of the cpg-core module.
+     */
+    @PleaseBeCareful
+    internal fun jumpTo(scope: Scope?) {
+        currentScope = scope
+    }
+
+    /**
+     * Injects a (potentially inferred) node into the CPG structure at a given scope. Needed by the
+     * [Inference] system to inject nodes in certain places. It also sets the current scope using
+     * [jumpTo], so further scope-based operations can be done on the node.
+     *
+     * Handle with care, here be dragons. Should not be exposed outside of the cpg-core module.
+     */
+    @PleaseBeCareful
+    internal fun inject(scope: Scope?, declaration: Declaration) {
+        if (scope is ValueDeclarationScope) {
+            jumpTo(scope)
+
+            addDeclaration(declaration)
+            declaration.scope = scope
+        } else {
+            LOGGER.error("Could not inject an node into a scope which cannot hold declarations")
+        }
+    }
+
+    /**
+     * This function can be used to wrap multiple statements contained in [init] into the scope of
+     * [node]. It will execute [enterScope] before calling [init] and [leaveScope] afterwards.
+     */
+    fun <T : Node> withScope(node: T, init: (T.() -> Unit)) {
+        enterScope(node)
+
+        init(node)
+
+        leaveScope(node)
+    }
+
+    /**
+     * This function can be used to wrap multiple statements contained in [init] into the scope of
+     * [declaration]. It will execute [enterScope] before calling [init] and [leaveScope]
+     * afterwards.
+     *
+     * Additionally, it declares the [declaration] using [addDeclaration] in the parent scope.
+     */
+    fun <T : Declaration> declareWithScope(declaration: T, init: (T.() -> Unit)): T {
+        // Add it to the current scope
+        addDeclaration(declaration)
+
+        // Enter, init and leave
+        withScope(declaration, init)
+
+        return declaration
     }
 }

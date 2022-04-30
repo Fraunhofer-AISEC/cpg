@@ -189,7 +189,6 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
 
         val memberExpression =
             newMemberExpression(
-                name,
                 base,
                 UnknownType.getUnknownType(language),
                 ".",
@@ -208,33 +207,19 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
         if (propertyAccess != null) {
             val memberExpression = this.handle(propertyAccess) as MemberExpression
 
-            // we need to build a declared reference expression out of the MemberExpression, because
-            // member calls are not really handled well in the CPG. See
-            // https://github.com/Fraunhofer-AISEC/cpg/issues/298
-            val member =
-                newDeclaredReferenceExpression(
-                    memberExpression.name,
-                    memberExpression.type,
-                    memberExpression.name.toString()
-                )
-
             call =
-                newMemberCallExpression(
-                    memberExpression.name.localName,
-                    memberExpression.name.toString(),
-                    memberExpression.base,
-                    member,
-                    ".",
+                newMemberCallExpression(null, memberExpression.name.toString(),
+                    memberExpression,
                     this.frontend.getCodeFromRawNode(node)
                 )
         } else {
+            val ref = this.handle(node.firstChild("Identifier"))
+
             // TODO: fqn - how?
-            val fqn = this.frontend.getIdentifierName(node)
+            val fqn = ref.name
             // regular function call
-
-            val ref = newDeclaredReferenceExpression(fqn)
-
-            call = newCallExpression(ref, fqn, this.frontend.getCodeFromRawNode(node), false)
+            call =
+                newCallExpression(ref, fqn, this.frontend.getCodeFromRawNode(node), false)
         }
 
         // parse the arguments. the first node is the identifier, so we skip that

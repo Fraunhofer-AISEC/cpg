@@ -33,7 +33,16 @@ import de.fraunhofer.aisec.cpg.frontends.cpp.CPPLanguage
 import de.fraunhofer.aisec.cpg.frontends.cpp.CXXLanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage
 import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguageFrontend
+<<<<<<< HEAD
 import de.fraunhofer.aisec.cpg.graph.*
+=======
+import de.fraunhofer.aisec.cpg.graph.NodeBuilder
+import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newMethodDeclaration
+import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newNamespaceDeclaration
+import de.fraunhofer.aisec.cpg.graph.NodeBuilder.newRecordDeclaration
+import de.fraunhofer.aisec.cpg.graph.TypeManager
+import de.fraunhofer.aisec.cpg.graph.allChildren
+>>>>>>> ee961c366 (Restructuring of `CallExpression` and `MemberCallExpression`)
 import de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
 import java.io.File
@@ -137,8 +146,13 @@ internal class ScopeManagerTest : BaseTest() {
 
         // resolve symbol
         val call =
+<<<<<<< HEAD
             frontend.newCallExpression(
                 frontend.newDeclaredReferenceExpression("A::func1"),
+=======
+            NodeBuilder.newCallExpression(
+                NodeBuilder.newDeclaredReferenceExpression("func1"),
+>>>>>>> ee961c366 (Restructuring of `CallExpression` and `MemberCallExpression`)
                 "A::func1",
                 null,
                 false
@@ -177,5 +191,28 @@ internal class ScopeManagerTest : BaseTest() {
 
         val scope = s.lookupScope("A::B")
         assertNotNull(scope)
+    }
+
+    @Test
+    fun testLookupQualified() {
+        val sm = ScopeManager()
+        var method: MethodDeclaration? = null
+
+        sm.lang = CXXLanguageFrontend(TranslationConfiguration.builder().build(), sm)
+        TypeManager.getInstance().setLanguageFrontend(sm.lang as CXXLanguageFrontend)
+
+        // Push some example scopes to populate FQN map
+        sm.withScope(newNamespaceDeclaration("A")) {
+            val record = newRecordDeclaration("A::B", "class")
+            sm.addDeclaration(record)
+            sm.withScope(record) {
+                method = newMethodDeclaration("foo", null, false, record)
+                sm.addDeclaration(method)
+            }
+        }
+
+        val list = sm.lookupQualified("A::B::foo")
+
+        assertEquals(listOf(method!!), list)
     }
 }

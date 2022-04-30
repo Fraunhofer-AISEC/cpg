@@ -27,8 +27,6 @@ package de.fraunhofer.aisec.cpg.graph.declarations
 
 import de.fraunhofer.aisec.cpg.graph.SubGraph
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
-import de.fraunhofer.aisec.cpg.passes.CallResolver
-import de.fraunhofer.aisec.cpg.passes.VariableUsageResolver
 
 /**
  * A method declaration is a [FunctionDeclaration] that is part of to a specific [RecordDeclaration]

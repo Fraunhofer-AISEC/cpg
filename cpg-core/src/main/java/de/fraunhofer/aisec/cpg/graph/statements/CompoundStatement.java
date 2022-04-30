@@ -29,19 +29,24 @@ import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.StatementHolder;
 import de.fraunhofer.aisec.cpg.graph.SubGraph;
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declarations.ScopeHolder;
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge;
+import de.fraunhofer.aisec.cpg.passes.scopes.BlockScope;
+import de.fraunhofer.aisec.cpg.passes.scopes.Scope;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.neo4j.ogm.annotation.Relationship;
 
 /**
  * A statement which contains a list of statements. A common example is a function body within a
  * {@link FunctionDeclaration}.
  */
-public class CompoundStatement extends Statement implements StatementHolder {
+public class CompoundStatement extends Statement
+    implements StatementHolder, ScopeHolder<BlockScope> {
 
   /** The list of statements. */
   @Relationship(value = "STATEMENTS", direction = "OUTGOING")
@@ -97,5 +102,19 @@ public class CompoundStatement extends Statement implements StatementHolder {
   @Override
   public int hashCode() {
     return super.hashCode();
+  }
+
+  @Override
+  public void newScope(@Nullable Scope parent) {
+    // TODO(oxisto): This functionality should be called somewhere else, the class should only
+    // create the new scope
+    var scope = new BlockScope(this);
+
+    if (parent != null) {
+      scope.setParent(parent);
+      parent.getChildren().add(scope);
+    }
+
+    this.setScope(scope);
   }
 }

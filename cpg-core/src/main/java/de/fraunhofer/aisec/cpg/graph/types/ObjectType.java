@@ -165,6 +165,7 @@ public class ObjectType extends Type implements HasType.SecondaryTypeEdge {
   public Type duplicate() {
     ObjectType newObject =
         new ObjectType(this, this.getGenerics(), this.modifier, this.primitive, this.getLanguage());
+    newObject.recordDeclaration = this.recordDeclaration;
     newObject.setLanguage(this.getLanguage());
     return newObject;
   }

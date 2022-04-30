@@ -83,4 +83,13 @@ public interface StatementHolder {
     propertyEdge.addProperty(Properties.INDEX, getStatementEdges().size());
     getStatementEdges().add(propertyEdge);
   }
+
+  /**
+   * This is an alias for addStatement to support Kotlin operator += syntax.
+   *
+   * <p>* @param s the statement to add
+   */
+  default void plusAssign(Statement s) {
+    addStatement(s);
+  }
 }

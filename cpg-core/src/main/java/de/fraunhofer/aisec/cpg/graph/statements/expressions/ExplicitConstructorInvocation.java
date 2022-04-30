@@ -30,6 +30,7 @@ import java.util.Objects;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.jetbrains.annotations.NotNull;
 
+@Deprecated
 public class ExplicitConstructorInvocation extends CallExpression {
 
   private String containingClass;

@@ -285,8 +285,7 @@ fun MetadataProvider.newExplicitConstructorInvocation(
 fun MetadataProvider.newMemberCallExpression(
     name: CharSequence?,
     fqn: String?,
-    base: Expression?,
-    member: Node?,
+    callee: Expression?,
     operatorCode: String? = ".",
     code: String? = null,
     rawNode: Any? = null
@@ -303,9 +302,7 @@ fun MetadataProvider.newMemberCallExpression(
         code,
     )
 
-    node.base = base
-    node.member = member
-    node.operatorCode = operatorCode
+    node.callee = callee
 
     log(node)
     return node
@@ -319,7 +316,6 @@ fun MetadataProvider.newMemberCallExpression(
  */
 @JvmOverloads
 fun MetadataProvider.newMemberExpression(
-    name: CharSequence?,
     base: Expression,
     memberType: Type? = UnknownType.getUnknownType(),
     operatorCode: String? = ".",
@@ -327,9 +323,9 @@ fun MetadataProvider.newMemberExpression(
     rawNode: Any? = null
 ): MemberExpression {
     val node = MemberExpression()
-    node.applyMetadata(this, name, rawNode, code, true)
+    node.applyMetadata(this, EMPTY_NAME, rawNode, code, true)
 
-    node.setBase(base)
+    node.base = base
     node.operatorCode = operatorCode
     node.type = memberType
 

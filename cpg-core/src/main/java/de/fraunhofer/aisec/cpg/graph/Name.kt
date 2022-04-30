@@ -103,6 +103,13 @@ class Name(
 
     /** Compare names according to the string representation of the [fullName]. */
     override fun compareTo(other: Name) = fullName.compareTo(other.toString())
+
+    /**
+     * A name is qualified, if any [parent] is specified, otherwise only the local name is set and thus, the name is unqualified.
+     */
+    fun isQualified(): Boolean {
+        return parent != null
+    }
 }
 
 /**

@@ -133,7 +133,7 @@ open class VariableUsageResolver : SymbolResolverPass() {
         if (current !is DeclaredReferenceExpression || current is MemberExpression) return
         if (
             parent is MemberCallExpression &&
-                current === parent.member &&
+                current === parent.callee &&
                 current.type !is FunctionPointerType
         ) {
             // members of a MemberCallExpression are no variables to be resolved, unless we have
@@ -294,7 +294,7 @@ open class VariableUsageResolver : SymbolResolverPass() {
                 return
             }
         }
-        var baseType = current.base.type
+        var baseType = current.base?.type ?: UnknownType.getUnknownType()
         if (baseType.name !in recordMap) {
             val fqnResolvedType = recordMap.keys.firstOrNull { it.lastPartsMatch(baseType.name) }
             if (fqnResolvedType != null) {

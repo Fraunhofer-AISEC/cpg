@@ -442,7 +442,7 @@ private constructor(
             registerPass(JavaExternalTypeHierarchyResolver())
             registerPass(ImportResolver())
             registerPass(VariableUsageResolver())
-            registerPass(CallResolver()) // creates CG
+            registerPass(NewResolver()) // creates CG
             registerPass(DFGPass())
             registerPass(FunctionPointerCallResolver())
             registerPass(EvaluationOrderGraphPass()) // creates EOG

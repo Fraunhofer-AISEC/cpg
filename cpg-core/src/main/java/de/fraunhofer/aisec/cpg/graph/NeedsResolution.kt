@@ -25,28 +25,15 @@
  */
 package de.fraunhofer.aisec.cpg.graph
 
-import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 
-/** An assignment assigns a certain value (usually an [Expression]) to a certain target. */
-interface Assignment {
-    /**
-     * The target of this assignment. Note that this is intentionally nullable, because while
-     * [BinaryOperator] implements [Assignment], not all binary operations are assignments. Thus,
-     * the target is only non-null for operations that have a == operator.
-     */
-    val target: AssignmentTarget?
+interface NeedsResolution<SourceType : Node> {
 
-    /**
-     * The value expression that is assigned to the target. This is intentionally nullable for the
-     * same reason as [target].
-     */
-    val value: Expression?
+    var resolutionDecider: ResolutionDecider<*, SourceType>?
 }
 
-/**
- * The target of an assignment. The target is usually either a [VariableDeclaration] or a
- * [DeclaredReferenceExpression].
- */
-interface AssignmentTarget : HasType {}
+interface ResolutionDecider<TargetType : Node, SourceType : Node> {
+
+    fun decide(symbols: List<Declaration>, source: SourceType, tu: TranslationUnitDeclaration): Declaration?
+}

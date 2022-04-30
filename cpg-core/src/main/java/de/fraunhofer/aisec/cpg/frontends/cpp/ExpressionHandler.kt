@@ -32,7 +32,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.graph.types.PointerType.PointerOrigin
 import de.fraunhofer.aisec.cpg.helpers.Util
-import de.fraunhofer.aisec.cpg.passes.CallResolver
+import de.fraunhofer.aisec.cpg.passes.addImplicitTemplateParametersToCall
 import java.math.BigInteger
 import java.util.*
 import java.util.function.Supplier
@@ -209,11 +209,11 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             // expression since the construct expression will do the actual template instantiation
             if (
                 newExpression.templateParameters != null &&
-                    newExpression.templateParameters.isNotEmpty()
+                    newExpression.templateParameters!!.isNotEmpty()
             ) {
-                CallResolver.addImplicitTemplateParametersToCall(
+                addImplicitTemplateParametersToCall(
                     newExpression.templateParameters,
-                    initializer as ConstructExpression
+                    initializer as? ConstructExpression
                 )
             }
 
@@ -329,8 +329,8 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
      * [member access](https://en.cppreference.com/w/cpp/language/operator_member_access) into a
      * [MemberExpression].
      */
-    private fun handleFieldReference(ctx: IASTFieldReference): Expression {
-        var base = handle(ctx.fieldOwner)
+    private fun handleFieldReference(ctx: IASTFieldReference): MemberExpression {
+        var base = handle(ctx.fieldOwner) ?: ProblemExpression("could not parse base")
 
         // Replace Literal this with a reference pointing to the receiver, which also called an
         // implicit object parameter in C++ (see
@@ -341,16 +341,11 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             base.location = location
         }
 
-        if (base == null) {
-            return newProblemExpression("base of field is null")
-        }
-
         return newMemberExpression(
-            ctx.fieldName.toString(),
             base,
             UnknownType.getUnknownType(language),
             if (ctx.isPointerDereference) "->" else ".",
-            ctx.rawSignature
+            ctx.rawSignature,
         )
     }
 
@@ -414,12 +409,12 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
     }
 
     private fun handleFunctionCallExpression(ctx: IASTFunctionCallExpression): Expression {
-        val reference = handle(ctx.functionNameExpression)
+        var reference = handle(ctx.functionNameExpression)
         val callExpression: CallExpression
         if (reference is MemberExpression) {
             val baseTypename: String
             // Pointer types contain * or []. We do not want that here.
-            val baseType: Type = reference.base.type.root
+            val baseType: Type = reference.base?.type?.root ?: UnknownType.getUnknownType()
             assert(baseType !is SecondOrderType)
             baseTypename = baseType.typeName
             val member =
@@ -431,11 +426,9 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             member.location = frontend.getLocationFromRawNode(ctx.functionNameExpression)
             callExpression =
                 newMemberCallExpression(
-                    member.name.localName,
-                    baseTypename + language.namespaceDelimiter + member.name.localName,
-                    reference.base,
-                    member,
-                    reference.operatorCode,
+                    member.name,
+                    baseTypename + "." + member.name,
+                    reference,
                     ctx.rawSignature
                 )
             if (
@@ -456,16 +449,21 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             }
         } else if (reference is BinaryOperator && reference.operatorCode == ".") {
             // We have a dot operator that was not classified as a member expression. This happens
-            // when dealing with function pointer calls that happen on an explicit object
-            callExpression =
-                newMemberCallExpression(
-                    ctx.functionNameExpression.rawSignature,
-                    "",
-                    reference.lhs,
-                    reference.rhs,
+            // when dealing with function pointer calls that happen on an explicit object. We need
+            // to create a new member expression out of the binary operator
+            reference =
+                newMemberExpression(
+                    reference.lhs
+                        ?: ProblemExpression(
+                            "unable to parse base",
+                            ProblemNode.ProblemType.TRANSLATION
+                        ),
+                    reference.type,
                     reference.operatorCode,
-                    ctx.rawSignature
+                    reference.code,
+                    ctx.functionNameExpression
                 )
+            callExpression = newMemberCallExpression(null, "", reference,  ctx.rawSignature)
         } else if (reference is UnaryOperator && reference.operatorCode == "*") {
             // Classic C-style function pointer call -> let's extract the target
             callExpression = newCallExpression(reference, "", reference.code, false)
@@ -477,7 +475,8 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                 ((ctx.functionNameExpression as IASTIdExpression).name as CPPASTTemplateId)
                     .templateName
                     .toString()
-            val ref = newDeclaredReferenceExpression(name)
+            val ref = newDeclaredReferenceExpression(name, UnknownType.getUnknownType())
+
             callExpression = newCallExpression(ref, name, ctx.rawSignature, true)
             getTemplateArguments(
                     (ctx.functionNameExpression as IASTIdExpression).name as CPPASTTemplateId

@@ -375,7 +375,6 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
       MemberExpression memberExpression =
           newMemberExpression(
               this,
-              fieldAccessExpr.getName().getIdentifier(),
               base,
               fieldType,
               "." // there is only "." in java
@@ -389,7 +388,12 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
     }
 
     return newMemberExpression(
-        this, fieldAccessExpr.getName().getIdentifier(), base, fieldType, ".");
+            this,
+        base,
+        fieldType,
+        fieldAccessExpr.getName().getIdentifier(),
+        ".",
+        fieldAccessExpr.toString());
   }
 
   private Literal handleLiteralExpression(Expression expr) {
@@ -459,7 +463,8 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
     }
 
     DeclaredReferenceExpression thisExpression =
-        newDeclaredReferenceExpression(this, name, type, thisExpr.toString());
+        newDeclaredReferenceExpression(this,
+            thisExpr.toString(), type, thisExpr.toString());
     frontend.setCodeAndLocation(thisExpression, thisExpr);
 
     return thisExpression;
@@ -707,17 +712,18 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
       }
 
       if (!isStatic) {
-        DeclaredReferenceExpression member =
-            newDeclaredReferenceExpression(
-                this, name, UnknownType.getUnknownType(getLanguage()), "");
+        // TODO: we should probably have the same code as we would when parsing a field access
+
+        var callee =
+            newMemberExpression(this,
+                base, UnknownType.getUnknownType(), ".");
 
         frontend.setCodeAndLocation(
-            member,
+            callee,
             methodCallExpr
                 .getName()); // This will also overwrite the code set to the empty string set above
         callExpression =
-            newMemberCallExpression(
-                this, name, qualifiedName, base, member, ".", methodCallExpr.toString());
+            newMemberCallExpression(this, null, qualifiedName, callee, methodCallExpr.toString());
       } else {
         String targetClass;
         if (resolved != null) {
@@ -734,9 +740,30 @@ public class ExpressionHandler extends Handler<Statement, Expression, JavaLangua
             newStaticCallExpression(this, qualifiedName, methodCallExpr.toString(), targetClass);
       }
     } else {
-      var ref = newDeclaredReferenceExpression(this, name);
+      // In case there is no scope that (usually) means, that this is an member call expression
+      // using an implicit this
+      var record = frontend.getScopeManager().getCurrentRecord();
+
+      Type type;
+      if (record != null) {
+        type = frontend.getScopeManager().getCurrentRecord().toType();
+      } else {
+        type = UnknownType.getUnknownType();
+      }
+
+      var thisExpression = newDeclaredReferenceExpression(this, "this", type, "this");
+      thisExpression.setImplicit(true);
+
+      var callee =
+          newMemberExpression(this,
+              thisExpression, UnknownType.getUnknownType(), name, "." );
+
+      frontend.setCodeAndLocation(
+          callee,
+          methodCallExpr
+              .getName()); // This will also overwrite the code set to the empty string set above
       callExpression =
-          newCallExpression(this, ref, qualifiedName, methodCallExpr.toString(), false);
+          newMemberCallExpression(this, null, qualifiedName, callee, methodCallExpr.toString());
     }
 
     callExpression.setType(parseType(this, typeString));

@@ -42,6 +42,7 @@ import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.passes.scopes.GlobalScope
 import de.fraunhofer.aisec.cpg.passes.scopes.RecordScope
 import de.fraunhofer.aisec.cpg.passes.scopes.Scope
+import de.fraunhofer.aisec.cpg.passes.scopes.*
 import de.fraunhofer.aisec.cpg.processing.IVisitable
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.util.*
@@ -146,13 +147,14 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
 
     @field:Relationship(value = "DFG") var nextDFG: MutableSet<Node> = HashSet()
 
+    @Deprecated(message = "The typedef system is deprecated and will be reworked")
     var typedefs: MutableSet<TypedefDeclaration> = HashSet()
 
     /**
      * If a node is marked as being inferred, it means that it was created artificially and does not
-     * necessarily have a real counterpart in the scanned source code. However, the nodes
-     * represented should have been part of parser output and represents missing code that is
-     * inferred by the CPG construction, e.g. missing functions, records, files etc.
+     * necessarily have a real counterpart in the parsed source code. However, the nodes represented
+     * should have been part of parser output and represents missing code that is inferred by the
+     * CPG construction, e.g. missing functions, records, files etc.
      */
     var isInferred = false
 
@@ -166,7 +168,14 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
     /** Required field for object graph mapping. It contains the node id. */
     @field:Id @field:GeneratedValue var id: Long? = null
 
+    /**
+     * The parent of this node. This node will be part of the future AST parent system, for now do
+     * not count on this to be populated.
+     */
+    var parent: Node? = null
+
     /** Index of the argument if this node is used in a function call or parameter list. */
+    @Deprecated(message = "This property is deprecated and property edges should be used instead.")
     var argumentIndex = 0
 
     /** List of annotations associated with that node. */
@@ -236,6 +245,7 @@ open class Node : IVisitable<Node>, Persistable, LanguageProvider, ScopeProvider
         }
     }
 
+    @Deprecated(message = "The typedef system is deprecated and will be reworked")
     fun addTypedef(typedef: TypedefDeclaration) {
         typedefs.add(typedef)
     }

@@ -513,7 +513,11 @@ internal class CXXLanguageFrontendTest : BaseTest() {
 
         var lhs = assignA.lhs
         var rhs = assignA.rhs
+<<<<<<< HEAD
         assertLocalName("a", lhs)
+=======
+        assertEquals("a", lhs?.name)
+>>>>>>> ee961c366 (Restructuring of `CallExpression` and `MemberCallExpression`)
         assertEquals(2, (rhs as? Literal<*>)?.value)
         assertRefersTo(assignA.lhs, a)
 
@@ -528,14 +532,22 @@ internal class CXXLanguageFrontendTest : BaseTest() {
 
         lhs = assignB.lhs
         rhs = assignB.rhs
+<<<<<<< HEAD
         assertLocalName("a", lhs)
+=======
+        assertEquals("a", lhs?.name)
+>>>>>>> ee961c366 (Restructuring of `CallExpression` and `MemberCallExpression`)
         assertTrue(rhs is DeclaredReferenceExpression)
         assertLocalName("b", rhs)
         assertRefersTo(rhs, b)
 
         val assignBWithFunction = statements[4]
         assertTrue(assignBWithFunction is BinaryOperator)
+<<<<<<< HEAD
         assertLocalName("a", assignBWithFunction.lhs)
+=======
+        assertEquals("a", assignBWithFunction.lhs?.name)
+>>>>>>> ee961c366 (Restructuring of `CallExpression` and `MemberCallExpression`)
         assertTrue(assignBWithFunction.rhs is CallExpression)
 
         val call = assignBWithFunction.rhs as CallExpression
@@ -631,19 +643,31 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         // a = b * 2
         var operator = statements[2] as? BinaryOperator
         assertNotNull(operator)
+<<<<<<< HEAD
         assertLocalName("a", operator.lhs)
+=======
+        assertEquals("a", operator.lhs?.name)
+>>>>>>> ee961c366 (Restructuring of `CallExpression` and `MemberCallExpression`)
         assertTrue(operator.rhs is BinaryOperator)
 
         var rhs = operator.rhs as BinaryOperator
         assertTrue(rhs.lhs is DeclaredReferenceExpression)
+<<<<<<< HEAD
         assertLocalName("b", rhs.lhs)
+=======
+        assertEquals("b", rhs.lhs?.name)
+>>>>>>> ee961c366 (Restructuring of `CallExpression` and `MemberCallExpression`)
         assertTrue(rhs.rhs is Literal<*>)
         assertEquals(2, (rhs.rhs as Literal<*>).value)
 
         // a = 1 * 1
         operator = statements[3] as? BinaryOperator
         assertNotNull(operator)
+<<<<<<< HEAD
         assertLocalName("a", operator.lhs)
+=======
+        assertEquals("a", operator.lhs?.name)
+>>>>>>> ee961c366 (Restructuring of `CallExpression` and `MemberCallExpression`)
         assertTrue(operator.rhs is BinaryOperator)
 
         rhs = operator.rhs as BinaryOperator

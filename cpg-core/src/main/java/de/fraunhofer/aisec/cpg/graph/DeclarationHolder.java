@@ -87,4 +87,8 @@ public interface DeclarationHolder {
 
   @NotNull
   List<Declaration> getDeclarations();
+
+  default void plusAssign(@NotNull Declaration declaration) {
+    this.addDeclaration(declaration);
+  }
 }

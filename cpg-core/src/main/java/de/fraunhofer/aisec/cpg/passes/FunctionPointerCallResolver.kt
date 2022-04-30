@@ -108,9 +108,9 @@ class FunctionPointerCallResolver : Pass() {
      * [MemberCallExpression.member] field needs to have a [FunctionPointerType].
      */
     private fun handleMemberCallExpression(call: MemberCallExpression) {
-        val member = call.member
+        val member = call.callee
         if (member is HasType && (member as HasType).type is FunctionPointerType) {
-            handleFunctionPointerCall(call, call.member)
+            handleFunctionPointerCall(call, call.callee)
         }
     }
 

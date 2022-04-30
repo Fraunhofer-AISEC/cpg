@@ -34,7 +34,6 @@ import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.CompoundStatement
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.IfStatement
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ConstructExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
@@ -240,35 +239,35 @@ class ShortcutsTest {
             (ifStatement.thenStatement as CompoundStatement).statements[0] as IfStatement
         expected.add(thenStatement)
         expected.add(thenStatement.condition)
-        expected.add((thenStatement.condition as BinaryOperator).lhs)
+        (thenStatement.condition as BinaryOperator).lhs?.let { expected.add(it) }
         expected.add(((thenStatement.condition as BinaryOperator).lhs as MemberExpression).base)
-        expected.add((thenStatement.condition as BinaryOperator).rhs)
+        (thenStatement.condition as BinaryOperator).rhs?.let { expected.add(it) }
         val nestedThen = thenStatement.thenStatement as CompoundStatement
         expected.add(nestedThen)
         expected.add(nestedThen.statements[0])
-        expected.add((nestedThen.statements[0] as BinaryOperator).lhs)
+        (nestedThen.statements[0] as BinaryOperator).lhs?.let { expected.add(it) }
         expected.add(((nestedThen.statements[0] as BinaryOperator).lhs as MemberExpression).base)
-        expected.add((nestedThen.statements[0] as BinaryOperator).rhs)
+        (nestedThen.statements[0] as BinaryOperator).rhs?.let { expected.add(it) }
         val nestedElse = thenStatement.elseStatement as CompoundStatement
         expected.add(nestedElse)
         expected.add(nestedElse.statements[0])
-        expected.add((nestedElse.statements[0] as BinaryOperator).lhs)
+        (nestedElse.statements[0] as BinaryOperator).lhs?.let { expected.add(it) }
         expected.add(((nestedElse.statements[0] as BinaryOperator).lhs as MemberExpression).base)
-        expected.add((nestedElse.statements[0] as BinaryOperator).rhs)
+        (nestedElse.statements[0] as BinaryOperator).rhs?.let { expected.add(it) }
 
         expected.add(ifStatement.elseStatement)
         expected.add((ifStatement.elseStatement as CompoundStatement).statements[0])
-        expected.add(
-            ((ifStatement.elseStatement as CompoundStatement).statements[0] as BinaryOperator).lhs
-        )
+        ((ifStatement.elseStatement as CompoundStatement).statements[0] as BinaryOperator)
+            .lhs
+            ?.let { expected.add(it) }
         expected.add(
             (((ifStatement.elseStatement as CompoundStatement).statements[0] as BinaryOperator).lhs
                     as MemberExpression)
                 .base
         )
-        expected.add(
-            ((ifStatement.elseStatement as CompoundStatement).statements[0] as BinaryOperator).rhs
-        )
+        ((ifStatement.elseStatement as CompoundStatement).statements[0] as BinaryOperator)
+            .rhs
+            ?.let { expected.add(it) }
 
         assertTrue(expected.containsAll(actual))
         assertTrue(actual.containsAll(expected))
@@ -348,7 +347,8 @@ class ShortcutsTest {
                     as BinaryOperator)
                 .lhs
 
-        val paramPassed = attrAssignment.followPrevDFGEdgesUntilHit { it is Literal<*> }
+        val paramPassed = attrAssignment?.followPrevDFGEdgesUntilHit { it is Literal<*> }
+        assertNotNull(paramPassed)
         assertEquals(1, paramPassed.fulfilled.size)
         assertEquals(0, paramPassed.failed.size)
         assertEquals(3, (paramPassed.fulfilled[0].last() as? Literal<*>)?.value)
@@ -379,7 +379,8 @@ class ShortcutsTest {
                     as BinaryOperator)
                 .lhs
 
-        val paramPassed = attrAssignment.followPrevEOGEdgesUntilHit { it is Literal<*> }
+        val paramPassed = attrAssignment?.followPrevEOGEdgesUntilHit { it is Literal<*> }
+        assertNotNull(paramPassed)
         assertEquals(1, paramPassed.fulfilled.size)
         assertEquals(0, paramPassed.failed.size)
         assertEquals(
@@ -446,7 +447,7 @@ class ShortcutsTest {
                     as BinaryOperator)
                 .lhs
 
-        val paramPassed = attrAssignment.followPrevDFG { it is Literal<*> }
+        val paramPassed = attrAssignment?.followPrevDFG { it is Literal<*> }
         assertNotNull(paramPassed)
         assertEquals(3, (paramPassed.last() as? Literal<*>)?.value)
     }

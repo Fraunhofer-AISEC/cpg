@@ -37,7 +37,6 @@ import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.edge.Properties
 import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.statements.*
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
@@ -291,7 +290,7 @@ internal class EOGTest : BaseTest() {
                     refs = listOf(bo.lhs)
                 )
             )
-            assertTrue(bo.lhs.nextEOG.size == 2)
+            assertTrue(bo.lhs?.nextEOG?.size == 2)
         }
     }
 

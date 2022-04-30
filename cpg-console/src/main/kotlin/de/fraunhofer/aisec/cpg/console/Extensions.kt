@@ -181,18 +181,18 @@ fun getCode(file: String, region: Region): String {
 
 val styles = SyntaxPlugin.HighlightStylesFromConfiguration(object : ReplConfigurationBase() {})
 
-fun getFanciesFor(original: Node, node: Node): List<Pair<AttributedStyle, Region>> {
+fun getFanciesFor(original: Node?, node: Node?): List<Pair<AttributedStyle, Region>> {
     val list = mutableListOf<Pair<AttributedStyle, Region>>()
 
     when (node) {
         is MemberCallExpression -> {
             // only color the member
-            list.addAll(getFanciesFor(node, node.member))
+            list.addAll(getFanciesFor(node, node.callee!!))
 
             return list
         }
         is DeclaredReferenceExpression -> {
-            if ((original as? MemberCallExpression)?.member == node) {
+            if ((original as? MemberCallExpression)?.callee == node) {
                 node.location?.let { list += Pair(styles.identifier!!, it.region) }
             }
 

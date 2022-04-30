@@ -99,7 +99,7 @@ class DFGPass : Pass() {
         inferDfgForUnresolvedCalls: Boolean
     ) {
         if (node.refersTo == null && inferDfgForUnresolvedCalls) {
-            node.addPrevDFG(node.base)
+            node.base?.let { node.addPrevDFG(it) }
         } else {
             handleDeclaredReferenceExpression(node)
         }
@@ -311,7 +311,7 @@ class DFGPass : Pass() {
         call.prevDFG.forEach { it.nextDFG.remove(call) }
         call.prevDFG.clear()
 
-        if (call.invokes.isEmpty() && inferDfgForUnresolvedSymbols) {
+        if (call.invokes.isEmpty() && inferDfgForUnresolvedSymbols && call is MemberCallExpression) {
             // Unresolved call expression
             handleUnresolvedCalls(call)
         } else if (call.invokes.isNotEmpty()) {
@@ -327,7 +327,7 @@ class DFGPass : Pass() {
      * - from base (if available) to the CallExpression
      * - from all arguments to the CallExpression
      */
-    private fun handleUnresolvedCalls(call: CallExpression) {
+    private fun handleUnresolvedCalls(call: MemberCallExpression) {
         call.base?.let { call.addPrevDFG(it) }
         call.arguments.forEach { call.addPrevDFG(it) }
     }
