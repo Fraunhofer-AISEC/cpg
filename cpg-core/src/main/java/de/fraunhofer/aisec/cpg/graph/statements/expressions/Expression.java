@@ -60,7 +60,7 @@ public abstract class Expression extends Statement implements HasType {
 
   @Transient private final Set<TypeListener> typeListeners = new HashSet<>();
 
-  private Set<Type> possibleSubTypes = new HashSet<>();
+  private List<Type> possibleSubTypes = new ArrayList<>();
 
   @Override
   public Type getType() {
@@ -73,7 +73,7 @@ public abstract class Expression extends Statement implements HasType {
       result =
           TypeManager.getInstance()
               .getTypeCache()
-              .computeIfAbsent(this, n -> Collections.emptySet())
+              .computeIfAbsent(this, n -> Collections.emptyList())
               .stream()
               .findAny()
               .orElse(UnknownType.getUnknownType());
@@ -96,12 +96,12 @@ public abstract class Expression extends Statement implements HasType {
   }
 
   @Override
-  public void updatePossibleSubtypes(Set<Type> types) {
+  public void updatePossibleSubtypes(List<Type> types) {
     this.possibleSubTypes = types;
   }
 
   @Override
-  public void setType(Type type, Collection<HasType> root) {
+  public void setType(Type type, List<HasType> root) {
     // TODO Document this method. It is called very often (potentially for each AST node) and
     // performs less than optimal.
 
@@ -147,7 +147,7 @@ public abstract class Expression extends Statement implements HasType {
 
     // TODO: Why do we need this loop? Shouldn't the condition be ensured by the previous line
     // getting the common type??
-    Set<Type> newSubtypes = new HashSet<>();
+    List<Type> newSubtypes = new ArrayList<>();
     for (var s : subTypes) {
       if (TypeManager.getInstance().isSupertypeOf(this.type, s)) {
         newSubtypes.add(TypeManager.getInstance().registerType(s));
@@ -170,19 +170,20 @@ public abstract class Expression extends Statement implements HasType {
   }
 
   @Override
-  public Set<Type> getPossibleSubTypes() {
+  public List<Type> getPossibleSubTypes() {
     if (!TypeManager.isTypeSystemActive()) {
-      return TypeManager.getInstance().getTypeCache().getOrDefault(this, Collections.emptySet());
+      return TypeManager.getInstance().getTypeCache().getOrDefault(this, Collections.emptyList());
     }
     return possibleSubTypes;
   }
 
   @Override
-  public void setPossibleSubTypes(Set<Type> possibleSubTypes, @NotNull Collection<HasType> root) {
+  public void setPossibleSubTypes(List<Type> possibleSubTypes, @NotNull List<HasType> root) {
     possibleSubTypes =
         possibleSubTypes.stream()
             .filter(Predicate.not(TypeManager.getInstance()::isUnknown))
-            .collect(Collectors.toSet());
+            .distinct()
+            .collect(Collectors.toList());
 
     if (!TypeManager.isTypeSystemActive()) {
       possibleSubTypes.forEach(t -> TypeManager.getInstance().cacheType(this, t));
@@ -196,8 +197,8 @@ public abstract class Expression extends Statement implements HasType {
       return;
     }
 
-    Set<Type> oldSubTypes = this.possibleSubTypes;
-    this.possibleSubTypes = possibleSubTypes;
+    List<Type> oldSubTypes = this.possibleSubTypes;
+    this.possibleSubTypes = possibleSubTypes.stream().distinct().collect(Collectors.toList());
 
     if (getPossibleSubTypes().equals(oldSubTypes)) {
       // Nothing changed, so we do not have to notify the listeners.
@@ -215,12 +216,12 @@ public abstract class Expression extends Statement implements HasType {
   @Override
   public void resetTypes(Type type) {
 
-    Set<Type> oldSubTypes = new HashSet<>(getPossibleSubTypes());
+    List<Type> oldSubTypes = new ArrayList<>(getPossibleSubTypes());
 
     Type oldType = this.type;
 
     this.type = type;
-    possibleSubTypes = new HashSet<>();
+    possibleSubTypes = new ArrayList<>();
 
     List<HasType> root = new ArrayList<>(List.of(this));
     if (!Objects.equals(oldType, type)) {

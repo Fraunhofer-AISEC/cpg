@@ -223,7 +223,7 @@ public class SubgraphWalker {
   public static void activateTypes(Node node, ScopeManager scopeManager) {
     AtomicInteger num = new AtomicInteger();
 
-    Map<HasType, Set<Type>> typeCache = TypeManager.getInstance().getTypeCache();
+    Map<HasType, List<Type>> typeCache = TypeManager.getInstance().getTypeCache();
     IterativeGraphWalker walker = new IterativeGraphWalker();
     walker.registerOnNodeVisit(scopeManager::enterScopeIfExists);
     walker.registerOnScopeExit(
@@ -231,7 +231,7 @@ public class SubgraphWalker {
           if (n instanceof HasType) {
             HasType typeNode = (HasType) n;
             typeCache
-                .getOrDefault(typeNode, Collections.emptySet())
+                .getOrDefault(typeNode, Collections.emptyList())
                 .forEach(
                     t -> {
                       t = TypeManager.getInstance().resolvePossibleTypedef(t);

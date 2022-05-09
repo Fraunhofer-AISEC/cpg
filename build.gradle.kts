@@ -138,6 +138,10 @@ subprojects {
 
     tasks.named<Test>("test") {
         useJUnitPlatform()
+        // This is only needed for the bigger LLVM samples.
+        //minHeapSize = "1024m"
+        //maxHeapSize = "4096m"
+        //jvmArgs = listOf("-XX:MaxPermSize=2048m")
     }
 
     java {

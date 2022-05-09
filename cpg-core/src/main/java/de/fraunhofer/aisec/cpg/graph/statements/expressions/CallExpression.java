@@ -322,7 +322,7 @@ public class CallExpression extends Expression
   }
 
   @Override
-  public void typeChanged(HasType src, Collection<HasType> root, Type oldType) {
+  public void typeChanged(HasType src, List<HasType> root, Type oldType) {
     if (!TypeManager.isTypeSystemActive()) {
       return;
     }
@@ -338,7 +338,7 @@ public class CallExpression extends Expression
               .collect(Collectors.toList());
       Type alternative = !types.isEmpty() ? types.get(0) : null;
       Type commonType = TypeManager.getInstance().getCommonType(types).orElse(alternative);
-      Set<Type> subTypes = new HashSet<>(getPossibleSubTypes());
+      List<Type> subTypes = new ArrayList<>(getPossibleSubTypes());
       subTypes.remove(oldType);
       subTypes.addAll(types);
 
@@ -352,13 +352,12 @@ public class CallExpression extends Expression
   }
 
   @Override
-  public void possibleSubTypesChanged(
-      HasType src, Collection<HasType> root, Set<Type> oldSubTypes) {
+  public void possibleSubTypesChanged(HasType src, List<HasType> root, List<Type> oldSubTypes) {
     if (!TypeManager.isTypeSystemActive()) {
       return;
     }
     if (src != base) {
-      Set<Type> subTypes = new HashSet<>(getPossibleSubTypes());
+      List<Type> subTypes = new ArrayList<>(getPossibleSubTypes());
       subTypes.addAll(src.getPossibleSubTypes());
       setPossibleSubTypes(subTypes, root);
     }

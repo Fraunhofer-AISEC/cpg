@@ -84,7 +84,7 @@ public class InitializerListExpression extends Expression implements TypeListene
   }
 
   @Override
-  public void typeChanged(HasType src, Collection<HasType> root, Type oldType) {
+  public void typeChanged(HasType src, List<HasType> root, Type oldType) {
     if (!TypeManager.isTypeSystemActive()) {
       return;
     }
@@ -95,7 +95,7 @@ public class InitializerListExpression extends Expression implements TypeListene
 
     Type previous = this.type;
     Type newType;
-    Set<Type> subTypes;
+    List<Type> subTypes;
 
     if (this.getInitializers().contains(src)) {
       Set<Type> types =
@@ -107,12 +107,12 @@ public class InitializerListExpression extends Expression implements TypeListene
               .collect(Collectors.toSet());
       Type alternative = !types.isEmpty() ? types.iterator().next() : UnknownType.getUnknownType();
       newType = TypeManager.getInstance().getCommonType(types).orElse(alternative);
-      subTypes = new HashSet<>(getPossibleSubTypes());
+      subTypes = new ArrayList<>(getPossibleSubTypes());
       subTypes.remove(oldType);
       subTypes.addAll(types);
     } else {
       newType = src.getType();
-      subTypes = new HashSet<>(getPossibleSubTypes());
+      subTypes = new ArrayList<>(getPossibleSubTypes());
       subTypes.remove(oldType);
       subTypes.add(newType);
     }
@@ -126,12 +126,11 @@ public class InitializerListExpression extends Expression implements TypeListene
   }
 
   @Override
-  public void possibleSubTypesChanged(
-      HasType src, Collection<HasType> root, Set<Type> oldSubTypes) {
+  public void possibleSubTypesChanged(HasType src, List<HasType> root, List<Type> oldSubTypes) {
     if (!TypeManager.isTypeSystemActive()) {
       return;
     }
-    Set<Type> subTypes = new HashSet<>(getPossibleSubTypes());
+    List<Type> subTypes = new ArrayList<>(getPossibleSubTypes());
     subTypes.addAll(src.getPossibleSubTypes());
     setPossibleSubTypes(subTypes, root);
   }

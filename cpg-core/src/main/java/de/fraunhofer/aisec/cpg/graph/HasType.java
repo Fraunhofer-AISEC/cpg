@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.graph;
 import de.fraunhofer.aisec.cpg.graph.types.Type;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 import java.util.Set;
 import org.checkerframework.checker.nullness.qual.NonNull;
 
@@ -51,7 +52,7 @@ public interface HasType {
    */
   void updateType(Type type);
 
-  void updatePossibleSubtypes(Set<Type> types);
+  void updatePossibleSubtypes(List<Type> types);
 
   /**
    * Set the node's type. This may start a chain of type listener notifications
@@ -62,22 +63,22 @@ public interface HasType {
    *     can abort. If root is an empty list, the type change is seen as an externally triggered
    *     event and subsequent type listeners receive the current node as their root.
    */
-  void setType(Type type, Collection<HasType> root);
+  void setType(Type type, List<HasType> root);
 
-  Set<Type> getPossibleSubTypes();
+  List<Type> getPossibleSubTypes();
 
-  default void setPossibleSubTypes(Set<Type> possibleSubTypes) {
+  default void setPossibleSubTypes(List<Type> possibleSubTypes) {
     setPossibleSubTypes(possibleSubTypes, new ArrayList<>());
   }
 
   /**
    * Set the node's possible subtypes. Listener circle detection works the same way as with {@link
-   * #setType(Type, Collection<HasType>)}
+   * #setType(Type, List<HasType>)}
    *
    * @param possibleSubTypes
    * @param root A list of already seen nodes which is used for detecting loops.
    */
-  void setPossibleSubTypes(Set<Type> possibleSubTypes, @NonNull Collection<HasType> root);
+  void setPossibleSubTypes(List<Type> possibleSubTypes, @NonNull List<HasType> root);
 
   void registerTypeListener(TypeListener listener);
 
@@ -97,9 +98,9 @@ public interface HasType {
 
   interface TypeListener {
 
-    void typeChanged(HasType src, Collection<HasType> root, Type oldType);
+    void typeChanged(HasType src, List<HasType> root, Type oldType);
 
-    void possibleSubTypesChanged(HasType src, Collection<HasType> root, Set<Type> oldSubTypes);
+    void possibleSubTypesChanged(HasType src, List<HasType> root, List<Type> oldSubTypes);
   }
 
   /**

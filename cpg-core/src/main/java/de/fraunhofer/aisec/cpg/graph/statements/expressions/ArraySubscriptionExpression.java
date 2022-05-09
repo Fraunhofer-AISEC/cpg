@@ -31,10 +31,7 @@ import de.fraunhofer.aisec.cpg.graph.HasType.TypeListener;
 import de.fraunhofer.aisec.cpg.graph.SubGraph;
 import de.fraunhofer.aisec.cpg.graph.TypeManager;
 import de.fraunhofer.aisec.cpg.graph.types.Type;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 import org.jetbrains.annotations.NotNull;
 
@@ -75,7 +72,7 @@ public class ArraySubscriptionExpression extends Expression implements TypeListe
   }
 
   @Override
-  public void typeChanged(HasType src, Collection<HasType> root, Type oldType) {
+  public void typeChanged(HasType src, List<HasType> root, Type oldType) {
     if (!TypeManager.isTypeSystemActive()) {
       return;
     }
@@ -87,12 +84,11 @@ public class ArraySubscriptionExpression extends Expression implements TypeListe
   }
 
   @Override
-  public void possibleSubTypesChanged(
-      HasType src, Collection<HasType> root, Set<Type> oldSubTypes) {
+  public void possibleSubTypesChanged(HasType src, List<HasType> root, List<Type> oldSubTypes) {
     if (!TypeManager.isTypeSystemActive()) {
       return;
     }
-    Set<Type> subTypes = new HashSet<>(getPossibleSubTypes());
+    List<Type> subTypes = new ArrayList<>(getPossibleSubTypes());
     subTypes.addAll(
         src.getPossibleSubTypes().stream()
             .map(this::getSubscriptType)

@@ -44,7 +44,7 @@ public abstract class ValueDeclaration extends Declaration implements HasType {
 
   protected Type type = UnknownType.getUnknownType();
 
-  protected Set<Type> possibleSubTypes = new HashSet<>();
+  protected List<Type> possibleSubTypes = new ArrayList<>();
 
   @Transient private final Set<TypeListener> typeListeners = new HashSet<>();
 
@@ -59,7 +59,7 @@ public abstract class ValueDeclaration extends Declaration implements HasType {
       result =
           TypeManager.getInstance()
               .getTypeCache()
-              .computeIfAbsent(this, n -> Collections.emptySet())
+              .computeIfAbsent(this, n -> Collections.emptyList())
               .stream()
               .findAny()
               .orElse(UnknownType.getUnknownType());
@@ -83,7 +83,7 @@ public abstract class ValueDeclaration extends Declaration implements HasType {
   }
 
   @Override
-  public void setType(Type type, Collection<HasType> root) {
+  public void setType(Type type, List<HasType> root) {
     if (!TypeManager.isTypeSystemActive()) {
       TypeManager.getInstance().cacheType(this, type);
       return;
@@ -118,7 +118,7 @@ public abstract class ValueDeclaration extends Declaration implements HasType {
         TypeManager.getInstance()
             .registerType(TypeManager.getInstance().getCommonType(subTypes).orElse(type));
 
-    Set<Type> newSubtypes = new HashSet<>();
+    List<Type> newSubtypes = new ArrayList<>();
     for (var s : subTypes) {
       if (TypeManager.getInstance().isSupertypeOf(this.type, s)) {
         newSubtypes.add(TypeManager.getInstance().registerType(s));
@@ -142,11 +142,11 @@ public abstract class ValueDeclaration extends Declaration implements HasType {
 
   @Override
   public void resetTypes(Type type) {
-    Set<Type> oldSubTypes = new HashSet<>(getPossibleSubTypes());
+    List<Type> oldSubTypes = new ArrayList<>(getPossibleSubTypes());
     Type oldType = this.type;
 
     this.type = type;
-    setPossibleSubTypes(new HashSet<>(List.of(type)));
+    setPossibleSubTypes(new ArrayList<>(List.of(type)));
 
     List<HasType> root = new ArrayList<>(List.of(this));
     if (!Objects.equals(oldType, type)) {
@@ -179,19 +179,19 @@ public abstract class ValueDeclaration extends Declaration implements HasType {
   }
 
   @Override
-  public Set<Type> getPossibleSubTypes() {
+  public List<Type> getPossibleSubTypes() {
     if (!TypeManager.isTypeSystemActive()) {
-      return TypeManager.getInstance().getTypeCache().getOrDefault(this, Collections.emptySet());
+      return TypeManager.getInstance().getTypeCache().getOrDefault(this, Collections.emptyList());
     }
     return possibleSubTypes;
   }
 
   @Override
-  public void setPossibleSubTypes(Set<Type> possibleSubTypes, @NotNull Collection<HasType> root) {
+  public void setPossibleSubTypes(List<Type> possibleSubTypes, @NotNull List<HasType> root) {
     possibleSubTypes =
         possibleSubTypes.stream()
             .filter(Predicate.not(TypeManager.getInstance()::isUnknown))
-            .collect(Collectors.toSet());
+            .collect(Collectors.toList());
 
     if (!TypeManager.isTypeSystemActive()) {
       possibleSubTypes.forEach(t -> TypeManager.getInstance().cacheType(this, t));
@@ -203,8 +203,8 @@ public abstract class ValueDeclaration extends Declaration implements HasType {
     }
     root.add(this);
 
-    Set<Type> oldSubTypes = this.possibleSubTypes;
-    this.possibleSubTypes = possibleSubTypes;
+    List<Type> oldSubTypes = this.possibleSubTypes;
+    this.possibleSubTypes = possibleSubTypes.stream().distinct().collect(Collectors.toList());
 
     if (!this.possibleSubTypes.equals(oldSubTypes)) {
       for (var listener : this.typeListeners) {
@@ -254,7 +254,7 @@ public abstract class ValueDeclaration extends Declaration implements HasType {
   }
 
   @Override
-  public void updatePossibleSubtypes(Set<Type> types) {
+  public void updatePossibleSubtypes(List<Type> types) {
     this.possibleSubTypes = types;
   }
 }

@@ -30,9 +30,8 @@ import de.fraunhofer.aisec.cpg.graph.HasType.TypeListener;
 import de.fraunhofer.aisec.cpg.graph.SubGraph;
 import de.fraunhofer.aisec.cpg.graph.TypeManager;
 import de.fraunhofer.aisec.cpg.graph.types.Type;
-import java.util.Collection;
+import java.util.List;
 import java.util.Objects;
-import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -77,7 +76,7 @@ public class CastExpression extends Expression implements TypeListener {
   }
 
   @Override
-  public void typeChanged(HasType src, Collection<HasType> root, Type oldType) {
+  public void typeChanged(HasType src, List<HasType> root, Type oldType) {
     if (!TypeManager.isTypeSystemActive()) {
       return;
     }
@@ -95,8 +94,7 @@ public class CastExpression extends Expression implements TypeListener {
   }
 
   @Override
-  public void possibleSubTypesChanged(
-      HasType src, Collection<HasType> root, Set<Type> oldSubTypes) {
+  public void possibleSubTypesChanged(HasType src, List<HasType> root, List<Type> oldSubTypes) {
     if (!TypeManager.isTypeSystemActive()) {
       return;
     }
