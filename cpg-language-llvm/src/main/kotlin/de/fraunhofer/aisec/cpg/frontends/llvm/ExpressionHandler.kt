@@ -198,7 +198,9 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
                 LLVMConstIntGetSExtValue(valueRef)
             }
 
-        return newLiteral(value, type, value.toString())
+        val literal = newLiteral(value, type, value.toString())
+        literal.name = value.toString()
+        return literal
     }
 
     /**
@@ -210,7 +212,9 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
         val losesInfo = IntArray(1)
         val value = LLVMConstRealGetDouble(valueRef, losesInfo)
 
-        return newLiteral(value, lang.typeOf(valueRef), value.toString())
+        val literal = newLiteral(value, lang.typeOf(valueRef), value.toString())
+        literal.name = value.toString()
+        return literal
     }
 
     /**
