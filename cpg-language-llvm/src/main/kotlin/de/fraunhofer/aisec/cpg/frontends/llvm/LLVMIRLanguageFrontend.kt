@@ -36,6 +36,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExp
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
+import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.passes.VariableUsageResolver
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
@@ -138,8 +139,11 @@ class LLVMIRLanguageFrontend(config: TranslationConfiguration, scopeManager: Sco
             func = LLVMGetNextFunction(func)
         }
 
+        var counter = 0
+        val flatAST = SubgraphWalker.flattenAST(tu)
         for (phiInstr in phiList) {
-            statementHandler.handlePhi(phiInstr, tu)
+            statementHandler.handlePhi(phiInstr, tu, flatAST)
+            counter++
         }
 
         LLVMContextDispose(ctx)
