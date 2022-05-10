@@ -61,7 +61,7 @@ class MultiValueEvaluator : ValueEvaluator() {
             return cannotEvaluate(node, this)
         }
         // Add the expression to the current path
-        node?.let { this.path += it }
+        this.path += node
 
         when (node) {
             is FieldDeclaration -> {

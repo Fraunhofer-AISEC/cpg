@@ -263,5 +263,6 @@ class AnalysisTest {
             )
 
         assertFalse(query.evaluate() as Boolean)
+        println(query.paths)
     }
 }

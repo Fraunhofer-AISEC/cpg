@@ -60,6 +60,7 @@ class QueryEvaluation {
     }
 
     abstract class QueryExpression(open val representation: String?) {
+        open var paths: Pair<Any?, Any?> = Pair(null, null)
         abstract fun evaluate(input: Map<String, Node> = mutableMapOf()): Any?
 
         infix fun `==`(other: QueryExpression): BinaryExpr {
@@ -135,10 +136,13 @@ class QueryEvaluation {
                         n.javaClass.interfaces.any { i -> i == kClass }
                 }
             }
-            return SubgraphWalker.flattenAST(result).filter { n ->
-                n.javaClass.simpleName == nodeType ||
-                    classNamesOfNode(n.javaClass).any { c -> c == nodeType }
-            }
+            val result =
+                SubgraphWalker.flattenAST(result).filter { n ->
+                    n.javaClass.simpleName == nodeType ||
+                        classNamesOfNode(n.javaClass).any { c -> c == nodeType }
+                }
+            this.paths = Pair(result, result)
+            return result
         }
 
         fun classNamesOfNode(jClass: Class<*>): Collection<String> {
@@ -191,24 +195,35 @@ class QueryEvaluation {
         }
 
         override fun evaluate(input: Map<String, Node>): Any {
+            val paths = mutableListOf<Pair<Any?, Boolean>>()
             val newInput = input.toMutableMap()
+            val evaluationResult = variables.evaluate(input) as Collection<Node>
             return if (quantifier == Quantifier.FORALL) {
                 var result = true
-                for (v in variables.evaluate(input) as Collection<Node>) {
+                for (v in evaluationResult) {
                     newInput[variableName] = v
                     val temp = (inner.evaluate(newInput) as Boolean)
+                    paths.add(Pair(inner.paths, temp))
                     if (!temp) {
-                        // TODO: Collect potential problems here
                         result = false
                     }
                 }
+                this.paths = Pair(paths, result)
                 result
             } else if (quantifier == Quantifier.EXISTS) {
-                (variables.evaluate(input) as Collection<Node>).any { v ->
+                var result = false
+                for (v in evaluationResult) {
                     newInput[variableName] = v
-                    inner.evaluate(newInput) as Boolean
+                    val temp = inner.evaluate(newInput) as Boolean
+                    paths.add(Pair(inner.paths, temp))
+                    if (temp) {
+                        result = true
+                    }
                 }
+                this.paths = Pair(paths, result)
+                result
             } else {
+                this.paths = Pair("Unknown Quantifier", result)
                 false
             }
         }
@@ -275,7 +290,9 @@ class QueryEvaluation {
                 }
             }
 
-            return evaluator.evaluate(currentField)!!
+            val returnValue = evaluator.evaluate(currentField)!!
+            this.paths = Pair(evaluator.path, returnValue)
+            return returnValue
         }
 
         private fun readInstanceProperty(instance: Any, propertyName: String): Any {
@@ -293,6 +310,7 @@ class QueryEvaluation {
         }
 
         override fun evaluate(input: Map<String, Node>): Any? {
+            this.paths = Pair(value, value)
             return value
         }
     }
@@ -315,30 +333,35 @@ class QueryEvaluation {
         }
 
         override fun evaluate(input: Map<String, Node>): Any? {
-            return when (operator) {
-                QueryOp.NOT -> !(inner.evaluate(input) as Boolean)
-                QueryOp.MAX -> {
-                    val result = inner.evaluate(input)
-                    if (result is Number) {
-                        result.toLong()
-                    } else {
-                        (result as NumberSet).max()
+            val returnValue =
+                when (operator) {
+                    QueryOp.NOT -> !(inner.evaluate(input) as Boolean)
+                    QueryOp.MAX -> {
+                        val result = inner.evaluate(input)
+                        if (result is Number) {
+                            result.toLong()
+                        } else {
+                            (result as NumberSet).max()
+                        }
                     }
-                }
-                QueryOp.MIN -> {
-                    val result = inner.evaluate(input)
-                    if (result is Number) {
-                        result.toLong()
-                    } else {
-                        (result as NumberSet).min()
+                    QueryOp.MIN -> {
+                        val result = inner.evaluate(input)
+                        if (result is Number) {
+                            result.toLong()
+                        } else {
+                            (result as NumberSet).min()
+                        }
                     }
+                    QueryOp.SIZEOF -> {
+                        if ((inner as? FieldAccessExpr)?.evaluator !is SizeEvaluator) {
+                            (inner as? FieldAccessExpr)?.evaluator = SizeEvaluator()
+                        }
+                        inner.evaluate(input)
+                    }
+                    else -> throw Exception("Unknown operation $operator on expression $inner")
                 }
-                QueryOp.SIZEOF -> {
-                    (inner as? FieldAccessExpr)?.evaluator = SizeEvaluator()
-                    inner.evaluate(input)
-                }
-                else -> throw Exception("Unknown operation $operator on expression $inner")
-            }
+            this.paths = Pair(inner.paths, returnValue)
+            return returnValue
         }
     }
 
@@ -363,40 +386,50 @@ class QueryEvaluation {
         }
 
         override fun evaluate(input: Map<String, Node>): Boolean {
-            return when (operator) {
-                QueryOp.AND -> lhs?.evaluate(input) as Boolean && rhs?.evaluate(input) as Boolean
-                QueryOp.OR -> lhs?.evaluate(input) as Boolean || rhs?.evaluate(input) as Boolean
-                QueryOp.EQ -> lhs?.evaluate(input) == rhs?.evaluate(input)
-                QueryOp.NE -> {
-                    val lhsVal = lhs?.evaluate(input)
-                    val rhsVal = rhs?.evaluate(input)
-                    if (lhsVal is Collection<*>) {
-                        lhsVal.all { l -> l != rhsVal }
-                    } else {
-                        lhsVal != rhsVal
+            val returnValue =
+                when (operator) {
+                    QueryOp.AND ->
+                        lhs?.evaluate(input) as Boolean && rhs?.evaluate(input) as Boolean
+                    QueryOp.OR -> lhs?.evaluate(input) as Boolean || rhs?.evaluate(input) as Boolean
+                    QueryOp.EQ -> lhs?.evaluate(input) == rhs?.evaluate(input)
+                    QueryOp.NE -> {
+                        val lhsVal = lhs?.evaluate(input)
+                        val rhsVal = rhs?.evaluate(input)
+                        if (lhsVal is Collection<*>) {
+                            lhsVal.all { l -> l != rhsVal }
+                        } else {
+                            lhsVal != rhsVal
+                        }
                     }
-                }
-                QueryOp.GT ->
-                    (lhs?.evaluate(input) as Number).compareTo(rhs?.evaluate(input) as Number) > 0
-                QueryOp.GE ->
-                    (lhs?.evaluate(input) as Number).compareTo(rhs?.evaluate(input) as Number) >= 0
-                QueryOp.LT ->
-                    (lhs?.evaluate(input) as Number).compareTo(rhs?.evaluate(input) as Number) < 0
-                QueryOp.LE ->
-                    (lhs?.evaluate(input) as Number).compareTo(rhs?.evaluate(input) as Number) <= 0
-                QueryOp.IS -> {
-                    val rhsVal = rhs?.evaluate(input)
-                    if (rhsVal is String) {
-                        lhs?.evaluate(input)?.javaClass?.simpleName == rhsVal
-                    } else {
-                        lhs?.evaluate(input)?.javaClass == rhsVal
+                    QueryOp.GT ->
+                        (lhs?.evaluate(input) as Number).compareTo(rhs?.evaluate(input) as Number) >
+                            0
+                    QueryOp.GE ->
+                        (lhs?.evaluate(input) as Number).compareTo(
+                            rhs?.evaluate(input) as Number
+                        ) >= 0
+                    QueryOp.LT ->
+                        (lhs?.evaluate(input) as Number).compareTo(rhs?.evaluate(input) as Number) <
+                            0
+                    QueryOp.LE ->
+                        (lhs?.evaluate(input) as Number).compareTo(
+                            rhs?.evaluate(input) as Number
+                        ) <= 0
+                    QueryOp.IS -> {
+                        val rhsVal = rhs?.evaluate(input)
+                        if (rhsVal is String) {
+                            lhs?.evaluate(input)?.javaClass?.simpleName == rhsVal
+                        } else {
+                            lhs?.evaluate(input)?.javaClass == rhsVal
+                        }
                     }
+                    QueryOp.IMPLIES ->
+                        !(lhs?.evaluate(input) as Boolean) || rhs?.evaluate(input) as Boolean
+                    QueryOp.IN -> lhs?.evaluate(input) in (rhs?.evaluate(input) as Collection<*>)
+                    else -> false
                 }
-                QueryOp.IMPLIES ->
-                    !(lhs?.evaluate(input) as Boolean) || rhs?.evaluate(input) as Boolean
-                QueryOp.IN -> lhs?.evaluate(input) in (rhs?.evaluate(input) as Collection<*>)
-                else -> false
-            }
+            this.paths = Pair(Pair(lhs?.paths, rhs?.paths), returnValue)
+            return returnValue
         }
     }
 }
