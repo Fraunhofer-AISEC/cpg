@@ -126,7 +126,7 @@ public class InitializerListExpression extends Expression implements TypeListene
   }
 
   @Override
-  public void possibleSubTypesChanged(HasType src, List<HasType> root, List<Type> oldSubTypes) {
+  public void possibleSubTypesChanged(HasType src, List<HasType> root) {
     if (!TypeManager.isTypeSystemActive()) {
       return;
     }

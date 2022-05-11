@@ -142,11 +142,11 @@ public abstract class ValueDeclaration extends Declaration implements HasType {
 
   @Override
   public void resetTypes(Type type) {
-    List<Type> oldSubTypes = new ArrayList<>(getPossibleSubTypes());
+    List<Type> oldSubTypes = getPossibleSubTypes();
     Type oldType = this.type;
 
     this.type = type;
-    setPossibleSubTypes(new ArrayList<>(List.of(type)));
+    setPossibleSubTypes(List.of(type));
 
     List<HasType> root = new ArrayList<>(List.of(this));
     if (!Objects.equals(oldType, type)) {
@@ -157,7 +157,7 @@ public abstract class ValueDeclaration extends Declaration implements HasType {
     if (oldSubTypes.size() != 1 || !oldSubTypes.contains(type))
       this.typeListeners.stream()
           .filter(l -> !l.equals(this))
-          .forEach(l -> l.possibleSubTypesChanged(this, root, oldSubTypes));
+          .forEach(l -> l.possibleSubTypesChanged(this, root));
   }
 
   @Override
@@ -165,7 +165,7 @@ public abstract class ValueDeclaration extends Declaration implements HasType {
     List<HasType> root = new ArrayList<>(List.of(this));
     typeListeners.add(listener);
     listener.typeChanged(this, root, this.type);
-    listener.possibleSubTypesChanged(this, root, this.possibleSubTypes);
+    listener.possibleSubTypesChanged(this, root);
   }
 
   @Override
@@ -191,6 +191,7 @@ public abstract class ValueDeclaration extends Declaration implements HasType {
     possibleSubTypes =
         possibleSubTypes.stream()
             .filter(Predicate.not(TypeManager.getInstance()::isUnknown))
+            .distinct()
             .collect(Collectors.toList());
 
     if (!TypeManager.isTypeSystemActive()) {
@@ -201,16 +202,19 @@ public abstract class ValueDeclaration extends Declaration implements HasType {
     if (root.contains(this)) {
       return;
     }
-    root.add(this);
 
     List<Type> oldSubTypes = this.possibleSubTypes;
-    this.possibleSubTypes = possibleSubTypes.stream().distinct().collect(Collectors.toList());
+    this.possibleSubTypes = possibleSubTypes;
 
-    if (!this.possibleSubTypes.equals(oldSubTypes)) {
-      for (var listener : this.typeListeners) {
-        if (!listener.equals(this)) {
-          listener.possibleSubTypesChanged(this, root, oldSubTypes);
-        }
+    if (new HashSet<>(oldSubTypes).containsAll(getPossibleSubTypes())) {
+      // Nothing changed, so we do not have to notify the listeners.
+      return;
+    }
+    root.add(this); // Add current node to the set of "triggers" to detect potential loops.
+    // Notify all listeners about the changed type
+    for (var listener : this.typeListeners) {
+      if (!listener.equals(this)) {
+        listener.possibleSubTypesChanged(this, root);
       }
     }
   }
@@ -220,7 +224,7 @@ public abstract class ValueDeclaration extends Declaration implements HasType {
     List<HasType> root = new ArrayList<>(List.of(this));
     for (var l : this.typeListeners) {
       l.typeChanged(this, root, type);
-      l.possibleSubTypesChanged(this, root, possibleSubTypes);
+      l.possibleSubTypesChanged(this, root);
     }
   }
 

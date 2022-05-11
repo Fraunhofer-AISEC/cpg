@@ -198,9 +198,9 @@ public abstract class Expression extends Statement implements HasType {
     }
 
     List<Type> oldSubTypes = this.possibleSubTypes;
-    this.possibleSubTypes = possibleSubTypes.stream().distinct().collect(Collectors.toList());
+    this.possibleSubTypes = possibleSubTypes;
 
-    if (getPossibleSubTypes().equals(oldSubTypes)) {
+    if (new HashSet<>(oldSubTypes).containsAll(getPossibleSubTypes())) {
       // Nothing changed, so we do not have to notify the listeners.
       return;
     }
@@ -208,15 +208,14 @@ public abstract class Expression extends Statement implements HasType {
     // Notify all listeners about the changed type
     for (var listener : typeListeners) {
       if (!listener.equals(this)) {
-        listener.possibleSubTypesChanged(this, root, oldSubTypes);
+        listener.possibleSubTypesChanged(this, root);
       }
     }
   }
 
   @Override
   public void resetTypes(Type type) {
-
-    List<Type> oldSubTypes = new ArrayList<>(getPossibleSubTypes());
+    List<Type> oldSubTypes = getPossibleSubTypes();
 
     Type oldType = this.type;
 
@@ -232,7 +231,7 @@ public abstract class Expression extends Statement implements HasType {
     if (oldSubTypes.size() != 1 || !oldSubTypes.contains(type))
       this.typeListeners.stream()
           .filter(l -> !l.equals(this))
-          .forEach(l -> l.possibleSubTypesChanged(this, root, oldSubTypes));
+          .forEach(l -> l.possibleSubTypesChanged(this, root));
   }
 
   @Override
@@ -240,7 +239,7 @@ public abstract class Expression extends Statement implements HasType {
     List<HasType> root = new ArrayList<>(List.of(this));
     this.typeListeners.add(listener);
     listener.typeChanged(this, root, this.type);
-    listener.possibleSubTypesChanged(this, root, this.possibleSubTypes);
+    listener.possibleSubTypesChanged(this, root);
   }
 
   @Override
@@ -258,7 +257,7 @@ public abstract class Expression extends Statement implements HasType {
     List<HasType> root = new ArrayList<>(List.of(this));
     for (var l : typeListeners) {
       l.typeChanged(this, root, type);
-      l.possibleSubTypesChanged(this, root, possibleSubTypes);
+      l.possibleSubTypesChanged(this, root);
     }
   }
 

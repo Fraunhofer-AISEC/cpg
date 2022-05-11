@@ -147,7 +147,7 @@ public class DeclaredReferenceExpression extends Expression implements TypeListe
   }
 
   @Override
-  public void possibleSubTypesChanged(HasType src, List<HasType> root, List<Type> oldSubTypes) {
+  public void possibleSubTypesChanged(HasType src, List<HasType> root) {
     if (!TypeManager.isTypeSystemActive()) {
       return;
     }

@@ -90,11 +90,7 @@ class LambdaExpression : Expression(), HasType.TypeListener {
         }
     }
 
-    override fun possibleSubTypesChanged(
-        src: HasType?,
-        root: MutableList<HasType>?,
-        oldSubTypes: MutableList<Type>?
-    ) {
+    override fun possibleSubTypesChanged(src: HasType?, root: MutableList<HasType>?) {
         // do not take sub types from the listener
     }
 }

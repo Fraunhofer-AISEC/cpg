@@ -35,7 +35,6 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression;
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.InitializerListExpression;
 import de.fraunhofer.aisec.cpg.graph.types.Type;
 import java.util.*;
-import java.util.stream.Collectors;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.jetbrains.annotations.Nullable;
 import org.neo4j.ogm.annotation.Relationship;
@@ -163,13 +162,13 @@ public class VariableDeclaration extends ValueDeclaration implements TypeListene
   }
 
   @Override
-  public void possibleSubTypesChanged(HasType src, List<HasType> root, List<Type> oldSubTypes) {
+  public void possibleSubTypesChanged(HasType src, List<HasType> root) {
     if (!TypeManager.isTypeSystemActive()) {
       return;
     }
     List<Type> subTypes = new ArrayList<>(getPossibleSubTypes());
     subTypes.addAll(src.getPossibleSubTypes());
-    setPossibleSubTypes(subTypes.stream().distinct().collect(Collectors.toList()), root);
+    setPossibleSubTypes(subTypes, root);
   }
 
   @Override

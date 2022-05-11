@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.graph.HasType.TypeListener;
 import de.fraunhofer.aisec.cpg.graph.SubGraph;
 import de.fraunhofer.aisec.cpg.graph.TypeManager;
 import de.fraunhofer.aisec.cpg.graph.types.Type;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import org.slf4j.Logger;
@@ -94,11 +95,11 @@ public class CastExpression extends Expression implements TypeListener {
   }
 
   @Override
-  public void possibleSubTypesChanged(HasType src, List<HasType> root, List<Type> oldSubTypes) {
+  public void possibleSubTypesChanged(HasType src, List<HasType> root) {
     if (!TypeManager.isTypeSystemActive()) {
       return;
     }
-    setPossibleSubTypes(src.getPossibleSubTypes(), root);
+    setPossibleSubTypes(new ArrayList<>(src.getPossibleSubTypes()), root);
   }
 
   public void setCastOperator(int operatorCode) {

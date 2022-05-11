@@ -217,8 +217,8 @@ public class TypeResolver extends Pass {
     }
   }
 
-  protected Set<Type> ensureUniqueSubTypes(List<Type> subTypes) {
-    Set<Type> uniqueTypes = new HashSet<>();
+  protected List<Type> ensureUniqueSubTypes(Collection<Type> subTypes) {
+    List<Type> uniqueTypes = new ArrayList<>();
     for (Type subType : subTypes) {
       Collection<Type> trackedTypes;
       if (subType.isFirstOrderType()) {
@@ -230,7 +230,9 @@ public class TypeResolver extends Pass {
 
       for (Type t : trackedTypes) {
         if (t.equals(subType)) {
-          uniqueTypes.add(t);
+          if (!uniqueTypes.contains(t)) {
+            uniqueTypes.add(t);
+          }
           break;
         }
       }
@@ -254,8 +256,7 @@ public class TypeResolver extends Pass {
       updateType(node, types);
 
       ((HasType) node)
-          .updatePossibleSubtypes(
-              new ArrayList<>(ensureUniqueSubTypes(((HasType) node).getPossibleSubTypes())));
+          .updatePossibleSubtypes(ensureUniqueSubTypes(((HasType) node).getPossibleSubTypes()));
     }
   }
 

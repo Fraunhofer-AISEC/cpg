@@ -100,7 +100,7 @@ public interface HasType {
 
     void typeChanged(HasType src, List<HasType> root, Type oldType);
 
-    void possibleSubTypesChanged(HasType src, List<HasType> root, List<Type> oldSubTypes);
+    void possibleSubTypesChanged(HasType src, List<HasType> root);
   }
 
   /**

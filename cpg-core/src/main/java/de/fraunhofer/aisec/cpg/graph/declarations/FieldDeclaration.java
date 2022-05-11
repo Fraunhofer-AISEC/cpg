@@ -163,7 +163,7 @@ public class FieldDeclaration extends ValueDeclaration implements TypeListener, 
   }
 
   @Override
-  public void possibleSubTypesChanged(HasType src, List<HasType> root, List<Type> oldSubTypes) {
+  public void possibleSubTypesChanged(HasType src, List<HasType> root) {
     if (!TypeManager.isTypeSystemActive()) {
       return;
     }

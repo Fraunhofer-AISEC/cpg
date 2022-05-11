@@ -192,7 +192,7 @@ public class UnaryOperator extends Expression implements TypeListener {
   }
 
   @Override
-  public void possibleSubTypesChanged(HasType src, List<HasType> root, List<Type> oldSubTypes) {
+  public void possibleSubTypesChanged(HasType src, List<HasType> root) {
     if (!TypeManager.isTypeSystemActive()) {
       return;
     }
@@ -208,14 +208,12 @@ public class UnaryOperator extends Expression implements TypeListener {
           currSubTypes.stream()
               .filter(Util.distinctBy(Type::getTypeName))
               .map(Type::dereference)
-              .distinct()
               .collect(Collectors.toList());
     } else if (operatorCode.equals("&")) {
       currSubTypes =
           currSubTypes.stream()
               .filter(Util.distinctBy(Type::getTypeName))
               .map(t -> t.reference(PointerType.PointerOrigin.POINTER))
-              .distinct()
               .collect(Collectors.toList());
     }
 
