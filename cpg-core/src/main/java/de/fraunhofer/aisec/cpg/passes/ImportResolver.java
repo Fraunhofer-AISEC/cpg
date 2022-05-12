@@ -61,7 +61,7 @@ public class ImportResolver extends Pass {
   @Override
   public void accept(TranslationResult result) {
     for (TranslationUnitDeclaration tu : result.getTranslationUnits()) {
-      withNodeInLog(tu, () -> findImportables(tu));
+      findImportables(tu);
     }
 
     for (RecordDeclaration record : records) {
@@ -189,7 +189,7 @@ public class ImportResolver extends Pass {
       importables.putIfAbsent(node.getName(), (EnumDeclaration) node);
     }
     for (var child : SubgraphWalker.getAstChildren(node)) {
-      withNodeInLog(node, () -> findImportables(child));
+      findImportables(child);
     }
   }
 }

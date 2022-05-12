@@ -68,7 +68,7 @@ public class ControlFlowSensitiveDFGPass extends Pass {
 
   @Override
   public void accept(TranslationResult translationResult) {
-    SubgraphWalker.IterativeGraphWalker walker = new SubgraphWalker.IterativeGraphWalker(this);
+    SubgraphWalker.IterativeGraphWalker walker = new SubgraphWalker.IterativeGraphWalker();
     walker.registerOnNodeVisit(this::handle);
     for (TranslationUnitDeclaration tu : translationResult.getTranslationUnits()) {
       walker.iterate(tu);
@@ -261,7 +261,6 @@ public class ControlFlowSensitiveDFGPass extends Pass {
         return variables;
       }
       do {
-        // TODO clear old node
         if (node.getPrevEOG().size() != 1) {
           // We only want to keep track of variables where they can change due to multiple incoming
           // EOG-Edges or at the root of a EOG-path
@@ -283,16 +282,9 @@ public class ControlFlowSensitiveDFGPass extends Pass {
         }
 
         if (node instanceof DeclaredReferenceExpression) {
-          Map<VariableDeclaration, Set<Node>> finalVariables = variables;
-          Node finalNode = node;
           node =
-              replaceWithReturningNodeInLog(
-                  node,
-                  () ->
-                      handleDeclaredReferenceExpression(
-                          (DeclaredReferenceExpression) finalNode,
-                          finalVariables,
-                          this::iterateTillFixpoint));
+              handleDeclaredReferenceExpression(
+                  (DeclaredReferenceExpression) node, variables, this::iterateTillFixpoint);
         }
 
         if (node.equals(endNode) && !stopBefore) {
@@ -319,7 +311,6 @@ public class ControlFlowSensitiveDFGPass extends Pass {
           if (next instanceof VariableDeclaration) {
             addDFGToMap((VariableDeclaration) next, node, variables);
           }
-          replaceNodeInLog(node, next);
           node = next;
         }
       } while (node != null);
@@ -375,9 +366,7 @@ public class ControlFlowSensitiveDFGPass extends Pass {
     protected void propagateValues() {
       for (Map.Entry<Node, Map<VariableDeclaration, Set<Node>>> joinPoint :
           this.joinPoints.entrySet()) {
-        withNodeInLog(
-            joinPoint.getKey(),
-            () -> propagateFromJoinPoints(joinPoint.getKey(), joinPoint.getValue(), null, true));
+        propagateFromJoinPoints(joinPoint.getKey(), joinPoint.getValue(), null, true);
       }
     }
 
@@ -407,16 +396,9 @@ public class ControlFlowSensitiveDFGPass extends Pass {
         }
 
         if (node instanceof DeclaredReferenceExpression) {
-
-          Node finalNode = node;
           node =
-              replaceWithReturningNodeInLog(
-                  node,
-                  () ->
-                      handleDeclaredReferenceExpression(
-                          (DeclaredReferenceExpression) finalNode,
-                          variables,
-                          this::propagateFromJoinPoints));
+              handleDeclaredReferenceExpression(
+                  (DeclaredReferenceExpression) node, variables, this::propagateFromJoinPoints);
         }
 
         if (node.equals(endNode) && !stopBefore) {
@@ -447,7 +429,6 @@ public class ControlFlowSensitiveDFGPass extends Pass {
           if (next instanceof VariableDeclaration) {
             addDFGToMap((VariableDeclaration) next, node, variables);
           }
-          replaceNodeInLog(node, next);
           node = next;
           if (joinPoints.containsKey(node)) {
             break; // As we are propagating from joinpoints we stop when we reach the next joinpoint

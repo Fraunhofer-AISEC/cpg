@@ -97,18 +97,13 @@ private constructor(
 
                 // Apply passes
                 for (pass in config.registeredPasses) {
-                    try {
-                        passesNeedCleanup.add(pass)
-                        bench = Benchmark(pass.javaClass, "Executing Pass", false, result)
-                        pass.accept(result)
-                        bench.addMeasurement()
-                        if (result.isCancelled) {
-                            log.warn("Analysis interrupted, stopping Pass evaluation")
-                        }
-                    } catch (e: Exception) {
-                        // Adding information given by the graph transformer and wrapping old
-                        // expression.
-                        throw GraphTransformation.getTranslationExceptionWithHandledStack(pass, e)
+
+                    passesNeedCleanup.add(pass)
+                    bench = Benchmark(pass.javaClass, "Executing Pass", false, result)
+                    pass.accept(result)
+                    bench.addMeasurement()
+                    if (result.isCancelled) {
+                        log.warn("Analysis interrupted, stopping Pass evaluation")
                     }
                 }
             } catch (ex: TranslationException) {

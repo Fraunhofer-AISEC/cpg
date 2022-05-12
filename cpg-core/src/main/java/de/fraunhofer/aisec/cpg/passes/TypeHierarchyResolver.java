@@ -72,52 +72,38 @@ public class TypeHierarchyResolver extends Pass {
     }
 
     for (RecordDeclaration record : recordMap.values()) {
-
-      withNodeInLog(
-          record,
-          () -> {
-            Set<RecordDeclaration> supertypeRecords = findSupertypeRecords(record);
-            List<MethodDeclaration> allMethodsFromSupertypes =
-                getAllMethodsFromSupertypes(supertypeRecords);
-            analyzeOverridingMethods(record, allMethodsFromSupertypes);
-          });
+      Set<RecordDeclaration> supertypeRecords = findSupertypeRecords(record);
+      List<MethodDeclaration> allMethodsFromSupertypes =
+          getAllMethodsFromSupertypes(supertypeRecords);
+      analyzeOverridingMethods(record, allMethodsFromSupertypes);
     }
 
     for (EnumDeclaration enumDecl : enums) {
-
-      withNodeInLog(
-          enumDecl,
-          () -> {
-            Set<RecordDeclaration> directSupertypeRecords =
-                enumDecl.getSuperTypes().stream()
-                    .map(s -> recordMap.getOrDefault(s.toString(), null))
-                    .filter(Objects::nonNull)
-                    .collect(Collectors.toSet());
-            Set<RecordDeclaration> allSupertypes =
-                directSupertypeRecords.stream()
-                    .map(this::findSupertypeRecords)
-                    .flatMap(Collection::stream)
-                    .collect(Collectors.toSet());
-            enumDecl.setSuperTypeDeclarations(allSupertypes);
-          });
+      Set<RecordDeclaration> directSupertypeRecords =
+          enumDecl.getSuperTypes().stream()
+              .map(s -> recordMap.getOrDefault(s.toString(), null))
+              .filter(Objects::nonNull)
+              .collect(Collectors.toSet());
+      Set<RecordDeclaration> allSupertypes =
+          directSupertypeRecords.stream()
+              .map(this::findSupertypeRecords)
+              .flatMap(Collection::stream)
+              .collect(Collectors.toSet());
+      enumDecl.setSuperTypeDeclarations(allSupertypes);
     }
 
     translationResult.getTranslationUnits().forEach(SubgraphWalker::refreshType);
   }
 
   protected void findRecordsAndEnums(Node node) {
-    withNodeInLog(
-        node,
-        () -> {
-          if (node instanceof RecordDeclaration) {
-            recordMap.putIfAbsent(node.getName(), (RecordDeclaration) node);
-          } else if (node instanceof EnumDeclaration) {
-            enums.add((EnumDeclaration) node);
-          }
-          for (var child : SubgraphWalker.getAstChildren(node)) {
-            findRecordsAndEnums(child);
-          }
-        });
+    if (node instanceof RecordDeclaration) {
+      recordMap.putIfAbsent(node.getName(), (RecordDeclaration) node);
+    } else if (node instanceof EnumDeclaration) {
+      enums.add((EnumDeclaration) node);
+    }
+    for (var child : SubgraphWalker.getAstChildren(node)) {
+      findRecordsAndEnums(child);
+    }
   }
 
   protected List<MethodDeclaration> getAllMethodsFromSupertypes(
@@ -130,14 +116,12 @@ public class TypeHierarchyResolver extends Pass {
 
   protected Set<RecordDeclaration> findSupertypeRecords(RecordDeclaration record) {
     Set<RecordDeclaration> superTypeDeclarations =
-        withNodeInLogReturning(
-            record,
-            () ->
-                record.getSuperTypes().stream()
-                    .map(Type::getTypeName)
-                    .map(recordMap::get)
-                    .filter(Objects::nonNull)
-                    .collect(Collectors.toSet()));
+        record.getSuperTypes().stream()
+            .map(Type::getTypeName)
+            .map(recordMap::get)
+            .filter(Objects::nonNull)
+            .collect(Collectors.toSet());
+
     record.setSuperTypeDeclarations(superTypeDeclarations);
     return superTypeDeclarations;
   }
@@ -145,16 +129,12 @@ public class TypeHierarchyResolver extends Pass {
   protected void analyzeOverridingMethods(
       RecordDeclaration declaration, List<MethodDeclaration> allMethodsFromSupertypes) {
     for (MethodDeclaration superMethod : allMethodsFromSupertypes) {
-      withNodeInLog(
-          superMethod,
-          () -> {
-            List<MethodDeclaration> overrideCandidates =
-                declaration.getMethods().stream()
-                    .filter(superMethod::isOverrideCandidate)
-                    .collect(Collectors.toList());
-            superMethod.addOverriddenBy(overrideCandidates);
-            overrideCandidates.forEach(o -> o.addOverrides(superMethod));
-          });
+      List<MethodDeclaration> overrideCandidates =
+          declaration.getMethods().stream()
+              .filter(superMethod::isOverrideCandidate)
+              .collect(Collectors.toList());
+      superMethod.addOverriddenBy(overrideCandidates);
+      overrideCandidates.forEach(o -> o.addOverrides(superMethod));
     }
   }
 

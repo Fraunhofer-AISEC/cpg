@@ -26,13 +26,10 @@
 package de.fraunhofer.aisec.cpg.passes;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import de.fraunhofer.aisec.cpg.GraphTransformation;
 import de.fraunhofer.aisec.cpg.TranslationResult;
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
-import de.fraunhofer.aisec.cpg.graph.Node;
 import java.util.function.Consumer;
 import org.checkerframework.checker.nullness.qual.Nullable;
-import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,7 +38,7 @@ import org.slf4j.LoggerFactory;
  *
  * <p>Passes are expected to mutate the {@code TranslationResult}.
  */
-public abstract class Pass extends GraphTransformation implements Consumer<TranslationResult> {
+public abstract class Pass implements Consumer<TranslationResult> {
 
   protected String name;
 
@@ -70,12 +67,6 @@ public abstract class Pass extends GraphTransformation implements Consumer<Trans
    */
   public void setLang(@Nullable LanguageFrontend lang) {
     this.lang = lang;
-  }
-
-  @NotNull
-  @Override
-  protected String getLocationString(@NotNull Object a) {
-    return ((Node) a).getLocation().toString();
   }
 
   public abstract void cleanup();

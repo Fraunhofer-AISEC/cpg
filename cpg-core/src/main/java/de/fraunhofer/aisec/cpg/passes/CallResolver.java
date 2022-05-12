@@ -80,7 +80,7 @@ public class CallResolver extends Pass {
 
   @Override
   public void accept(@NonNull TranslationResult translationResult) {
-    walker = new ScopedWalker(lang, this);
+    walker = new ScopedWalker(lang);
     walker.registerHandler((currClass, parent, currNode) -> walker.collectDeclarations(currNode));
     walker.registerHandler(this::findRecords);
     walker.registerHandler(this::findTemplates);
