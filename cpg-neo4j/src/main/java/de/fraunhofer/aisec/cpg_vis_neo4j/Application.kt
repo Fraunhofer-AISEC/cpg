@@ -86,20 +86,20 @@ class Application : Callable<Int> {
         var files: List<String> = mutableListOf()
 
         @CommandLine.Option(
-            names = ["--softwareComponents", "-S"],
-            description =
-                [
-                    "Maps the names of software components to their respective files. The files are separated by commas (No whitespace!).",
-                    "Example: -S App1=./file1.c,./file2.c -S App2=./Main.java,./Class.java"]
-        )
-        var softwareComponents: Map<String, String> = mutableMapOf()
-
-        @CommandLine.Option(
             names = ["--json-compilation-database"],
             description = ["The path to an optional a JSON compilation database"]
         )
         var jsonCompilationDatabase: File? = null
     }
+
+    @CommandLine.Option(
+        names = ["--softwareComponents", "-S"],
+        description =
+            [
+                "Maps the names of software components to their respective files. The files are separated by commas (No whitespace!).",
+                "Example: -S App1=./file1.c,./file2.c -S App2=./Main.java,./Class.java"]
+    )
+    var softwareComponents: Map<String, String> = mutableMapOf()
 
     @CommandLine.Option(
         names = ["--user"],
@@ -317,9 +317,9 @@ class Application : Callable<Int> {
                 .loadIncludes(loadIncludes)
                 .debugParser(DEBUG_PARSER)
 
-        if (mutuallyExclusiveParameters.softwareComponents.isNotEmpty()) {
+        if (softwareComponents.isNotEmpty()) {
             val components = mutableMapOf<String, List<File>>()
-            for (sc in mutuallyExclusiveParameters.softwareComponents) {
+            for (sc in softwareComponents) {
                 components[sc.key] = getFilesOfList(sc.value.split(","))
             }
             translationConfiguration.softwareComponents(components)
