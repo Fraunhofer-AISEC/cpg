@@ -35,7 +35,7 @@ import java.util.function.Consumer
 /**
  * A generic superclass for components that change the graph. This includes language frontends as
  * the component that does the initial translation into the CPG-AST, as well as graph enhancing
- * passes. The purpose of this class is to capture all behavior that we need for this components,
+ * passes. The purpose of this class is to capture all behavior that we need for these components,
  * such as tracking of handled nodes.
  */
 abstract class GraphTransformation {
@@ -86,7 +86,7 @@ abstract class GraphTransformation {
      * should be used when the component traverses a hierarchical construct of interest, e.g.
      * parser-AST, CPG-AST.
      */
-    fun <S> withNodeInLog(trackedObject: S, block: () -> Unit) {
+    private fun <S> withNodeInLog(trackedObject: S, block: () -> Unit) {
         pushToHandleLog(trackedObject)
         block()
         popFromHandleLog(trackedObject)
@@ -119,7 +119,7 @@ abstract class GraphTransformation {
     /**
      * Used to replace the provided tracked object <code>old</code> with a <code>new<\code> one.
      * This should be used when the component handles nodes in sequence and the prior handled object
-     * does not matter for the error tracking. Currently used as default for non-hierarchical
+     * does not matter for the error tracking. Currently, used as default for non-hierarchical
      * components.
      */
     fun <S> replaceNodeInLog(old: S, new: S) {
@@ -129,25 +129,25 @@ abstract class GraphTransformation {
 
     companion object {
 
-        val githubIssueGuide: String =
+        private const val githubIssueGuide: String =
             "\tTo report this Issue visit https://github.com/Fraunhofer-AISEC/cpg/issues/new?&template=bugreport-from-cpg-traces.md&title=%s\n" +
                 "\tIf possible: \n" +
                 "\t\t* paste this message and stack trace for us to locate the issue.\n" +
                 "\t\t* past the parsed code that cause the issue from your source, the location is referenced by the lines 'at processing of ... in ...'\n" +
                 "\t\t* tell us if you used the default passes and language frontends, or made any changes to the TranslationConfiguration, e.g. registered new passes or frontends, or deactivated any."
 
-        open fun getTranslationExceptionWithHandledStack(
+        fun getTranslationExceptionWithHandledStack(
             gt: GraphTransformation,
             originalException: Exception
         ): TranslationException {
             val componentName = gt.javaClass.simpleName
             val baseErrorName = originalException.javaClass.simpleName
             val exceptionMessage = "$baseErrorName in $componentName"
-            var customErrorMessage =
+            val customErrorMessage =
                 "$exceptionMessage\n\n${githubIssueGuide.format(URLEncoder.encode(exceptionMessage, "utf-8"))}\n"
             val size = gt.parserObjectStack.size
             val stackTrace =
-                Array<StackTraceElement>(size) { i ->
+                Array(size) { i ->
                     StackTraceElement(
                         "processing of ${gt.parserObjectStack[size - 1 - i].javaClass.name} located in ${gt.getLocationString(gt.parserObjectStack[size - 1 - i])}",
                         "",

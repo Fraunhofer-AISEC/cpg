@@ -97,12 +97,18 @@ private constructor(
 
                 // Apply passes
                 for (pass in config.registeredPasses) {
-                    passesNeedCleanup.add(pass)
-                    bench = Benchmark(pass.javaClass, "Executing Pass", false, result)
-                    pass.accept(result)
-                    bench.addMeasurement()
-                    if (result.isCancelled) {
-                        log.warn("Analysis interrupted, stopping Pass evaluation")
+                    try {
+                        passesNeedCleanup.add(pass)
+                        bench = Benchmark(pass.javaClass, "Executing Pass", false, result)
+                        pass.accept(result)
+                        bench.addMeasurement()
+                        if (result.isCancelled) {
+                            log.warn("Analysis interrupted, stopping Pass evaluation")
+                        }
+                    } catch (e: Exception) {
+                        // Adding information given by the graph transformer and wrapping old
+                        // expression.
+                        throw GraphTransformation.getTranslationExceptionWithHandledStack(pass, e)
                     }
                 }
             } catch (ex: TranslationException) {
@@ -363,10 +369,27 @@ private constructor(
                 return Optional.empty()
             }
             component.translationUnits.add(frontend.parse(sourceLocation))
-        } catch (ex: TranslationException) {
-            log.error("An error occurred during parsing of {}: {}", sourceLocation.name, ex.message)
-            if (config.failOnError) {
-                throw ex
+        } catch (e: Exception) {
+            // Wrapping the exception into a Translation exception for later rethrows
+            var exception = e
+            frontend?.let {
+                exception = GraphTransformation.getTranslationExceptionWithHandledStack(frontend, e)
+            }
+            // It the Exception was a TranslationException the translation is only supposed to fail
+            // if configured in that way
+            if (e is TranslationException) {
+                log.error(
+                    "An error occurred during parsing of {}: {}",
+                    sourceLocation.name,
+                    e.message
+                )
+                if (config.failOnError) {
+                    throw exception
+                } else {
+                    exception.printStackTrace(System.out)
+                }
+            } else {
+                throw exception
             }
         }
         return Optional.ofNullable(frontend)
