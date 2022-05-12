@@ -32,7 +32,9 @@ import de.fraunhofer.aisec.cpg.TestUtils;
 import de.fraunhofer.aisec.cpg.graph.TypeManager;
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration;
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration;
+import de.fraunhofer.aisec.cpg.graph.declarations.TypedefDeclaration;
 import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration;
+import de.fraunhofer.aisec.cpg.graph.types.ObjectType;
 import java.nio.file.Path;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -116,6 +118,7 @@ class TypedefTest extends BaseTest {
   void testMultiple() throws Exception {
     List<TranslationUnitDeclaration> result = TestUtils.analyze("cpp", topLevel, true);
     List<ValueDeclaration> variables = TestUtils.subnodesOfType(result, ValueDeclaration.class);
+    List<ObjectType> types = TestUtils.subnodesOfType(result, ObjectType.class);
 
     // simple type
     ValueDeclaration i1 = TestUtils.findByUniqueName(variables, "i1");
@@ -136,6 +139,13 @@ class TypedefTest extends BaseTest {
     ValueDeclaration fPtr1 = TestUtils.findByUniqueName(variables, "intFptr1");
     ValueDeclaration fPtr2 = TestUtils.findByUniqueName(variables, "intFptr2");
     assertEquals(fPtr1.getType(), fPtr2.getType());
+
+    // template, not to be confused with multiple typedef
+    TypedefDeclaration template =
+        TestUtils.findByUniquePredicate(
+            result.get(0).getTypedefs(),
+            (n) -> n.getType().getTypeName().equals("template_class_A"));
+    assertEquals(template.getAlias().getTypeName(), "type_B");
   }
 
   @Test
