@@ -41,8 +41,11 @@ publishing {
 
 dependencies {
     api(project(":cpg-core"))
+    api(project(":cpg-analysis"))
 
     testImplementation(testFixtures(project(":cpg-core")))
+    implementation("de.fraunhofer.aisec:cpg-analysis")
+
 
     // llvm
     implementation("org.bytedeco:llvm-platform:13.0.1-1.5.7")
