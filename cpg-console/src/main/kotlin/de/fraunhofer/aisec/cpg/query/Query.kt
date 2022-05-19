@@ -37,7 +37,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 inline fun <reified T> TranslationResult.all(
     noinline sel: ((T) -> Boolean)? = null,
     noinline mustSatisfy: (T) -> Boolean
-): Boolean {
+): Pair<Boolean, List<Node>> {
     println("${this.graph.nodes.size} before filter")
 
     var nodes = this.graph.nodes.filterIsInstance<T>()
@@ -49,7 +49,28 @@ inline fun <reified T> TranslationResult.all(
         nodes = nodes.filter(sel)
     }
 
-    return nodes.all(mustSatisfy)
+    return Pair(nodes.all(mustSatisfy), listOf())
+}
+
+@ExperimentalGraph
+inline fun <reified T> Node.all(
+    noinline sel: ((T) -> Boolean)? = null,
+    noinline mustSatisfy: (T) -> Boolean
+): Pair<Boolean, List<Node>> {
+    val children = this.astChildren
+
+    println("${children.size} before filter")
+
+    var nodes = children.filterIsInstance<T>()
+
+    println("${nodes.size} nodes after filter")
+
+    // filter the nodes according to the selector
+    if (sel != null) {
+        nodes = nodes.filter(sel)
+    }
+
+    return Pair(nodes.all(mustSatisfy), listOf())
 }
 
 fun sizeof(n: Node?): Int {

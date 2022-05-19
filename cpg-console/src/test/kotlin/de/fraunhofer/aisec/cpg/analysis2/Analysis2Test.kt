@@ -30,6 +30,8 @@ import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationManager
 import de.fraunhofer.aisec.cpg.graph.Assignment
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
+import de.fraunhofer.aisec.cpg.passes.followNextEOG
 import de.fraunhofer.aisec.cpg.query.*
 import java.io.File
 import kotlin.test.assertFalse
@@ -50,12 +52,13 @@ class Analysis2Test {
         val analyzer = TranslationManager.builder().config(config).build()
         val result = analyzer.analyze().get()
 
-        val ok =
+        val (ok, fails) =
             result.all<CallExpression>({ it.name == "memcpy" }) {
-                sizeof(it.arguments[0]) > sizeof(it.arguments[1])
+                sizeof(it.arguments[0]) > sizeof(it.arguments[1]) && 1 > 25
             }
 
         assertFalse(ok)
+        println(fails)
     }
 
     @Test
@@ -70,7 +73,7 @@ class Analysis2Test {
         val analyzer = TranslationManager.builder().config(config).build()
         val result = analyzer.analyze().get()
 
-        val ok =
+        val (ok, _) =
             result.all<CallExpression>({ it.name == "memcpy" }) {
                 it.arguments[0].size > it.arguments[1].size
             }
@@ -90,14 +93,20 @@ class Analysis2Test {
         val analyzer = TranslationManager.builder().config(config).build()
         val result = analyzer.analyze().get()
 
-        var ok =
-            result.all<CallExpression>({ it.name == "memcpy" }) {
-                it.arguments[2].value == const(11)
+        val (ok, _) =
+            result.all<CallExpression>({ it.name == "free" }) { outer ->
+                val path =
+                    outer.followNextEOG {
+                        (it.end as? DeclaredReferenceExpression)?.refersTo ==
+                            (outer.arguments[0] as? DeclaredReferenceExpression)?.refersTo
+                    }
+                return@all path?.isEmpty() == true
             }
 
         assertTrue(ok)
 
-        ok = result.all<CallExpression>({ it.name == "memcpy" }) { it.arguments[2].intValue == 11 }
+        // (ok, _) = result.all<CallExpression>({ it.name == "memcpy" }) { it.arguments[2].intValue
+        // == 11 }
 
         assertTrue(ok)
     }
