@@ -50,7 +50,6 @@ def parse_comments(code, tud, frontend):
         nl_position = -1
         cmt_position = 0
         for token in comment_tokens:
-            print(token)
             # comment = next(comment_tokens, None)
             if token.type == tokenize.COMMENT:
                 comment = code[token.start[1]:]
