@@ -73,10 +73,10 @@ def add_loc_info(self, node, obj):
 
     uri = URI("file://" + self.fname)
     obj.setLocation(PhysicalLocation(uri,
-                                     Region(node.lineno,
-                                            node.col_offset,
-                                            node.end_lineno,
-                                            node.end_col_offset)
+                                     Region(node.lineno + 1 ,
+                                            node.col_offset + 1 ,
+                                            node.end_lineno + 1 ,
+                                            node.end_col_offset + 1 )
                                      )
                     )
     obj.setCode(self.sourcecode.get_snippet(node.lineno,

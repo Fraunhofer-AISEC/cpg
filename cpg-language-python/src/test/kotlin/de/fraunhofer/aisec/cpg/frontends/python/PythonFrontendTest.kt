@@ -838,27 +838,27 @@ class PythonFrontendTest : BaseTest() {
         assertNotNull(p)
 
         assertEquals(
-            Region(1, 0, 1, 8),
+            Region(2, 1, 2, 9),
             (p.declarations[0] as? VariableDeclaration)?.location?.region
         )
         assertEquals(
-            Region(1, 4, 1, 8),
+            Region(2, 5, 2, 9),
             (p.declarations[0] as? VariableDeclaration)?.initializer?.location?.region
         )
         assertEquals(
-            Region(2, 0, 2, 6),
+            Region(3, 1, 3, 7),
             (p.declarations[1] as? VariableDeclaration)?.location?.region
         )
         assertEquals(
-            Region(3, 0, 3, 7),
+            Region(4, 1, 4, 8),
             (p.declarations[2] as? VariableDeclaration)?.location?.region
         )
         assertEquals(
-            Region(5, 0, 5, 11),
+            Region(6, 1, 6, 12),
             (p.declarations[3] as? VariableDeclaration)?.location?.region
         )
         assertEquals(
-            Region(6, 0, 6, 8),
+            Region(7, 1, 7, 9),
             (p.declarations[4] as? VariableDeclaration)?.location?.region
         )
     }
