@@ -390,6 +390,7 @@ def handle_argument(self, arg: ast.arg):
     # TODO variadic
     pvd = NodeBuilder.newMethodParameterIn(arg.arg,
                                            tpe, False, self.get_src_code(arg))
+    self.add_loc_info(arg,pvd)
     self.scopemanager.addDeclaration(pvd)
     return pvd
 
@@ -444,6 +445,8 @@ def make_compound_statement(self, stmts) -> CompoundStatement:
             if self.is_declaration(s):
                 s = self.wrap_declaration_to_stmt(s)
             compound_statement.addStatement(s)
+        if len(stmts) > 0:
+            self.add_mul_loc_infos(stmts[0], stmts[-1], compound_statement)
 
         return compound_statement
 
