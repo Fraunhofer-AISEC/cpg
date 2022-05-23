@@ -86,7 +86,10 @@ public class ClassTemplateDeclaration extends TemplateDeclaration {
     if (o == null || getClass() != o.getClass()) return false;
     if (!super.equals(o)) return false;
     ClassTemplateDeclaration that = (ClassTemplateDeclaration) o;
-    return realization.equals(that.realization) && PropertyEdge.propertyEqualsList(parameters, that.parameters);
+    return Objects.equals(getRealization(), that.getRealization())
+        && PropertyEdge.propertyEqualsList(realization, that.realization)
+        && Objects.equals(getParameters(), that.getParameters())
+        && PropertyEdge.propertyEqualsList(parameters, that.parameters);
   }
 
   // Do NOT add parameters to hashcode, as they are added incrementally to the list. If the
