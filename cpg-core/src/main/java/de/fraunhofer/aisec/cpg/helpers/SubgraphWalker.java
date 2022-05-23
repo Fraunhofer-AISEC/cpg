@@ -453,7 +453,12 @@ public class SubgraphWalker {
       lang.getScopeManager().leaveScope(exiting);
     }
 
+    /**
+     * Deprecated because this is MAJORLY broken in scenarios where we have external method
+     * declarations, such as in CXX.
+     */
     @Nullable
+    @Deprecated
     public RecordDeclaration getCurrentClass() {
       return currentClass.isEmpty() ? null : currentClass.peek();
     }

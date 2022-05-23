@@ -35,7 +35,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.types.*
-import de.fraunhofer.aisec.cpg.helpers.TimeBenchmark
+import de.fraunhofer.aisec.cpg.helpers.Benchmark
 import de.fraunhofer.aisec.cpg.passes.VariableUsageResolver
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
@@ -71,7 +71,7 @@ class LLVMIRLanguageFrontend(config: TranslationConfiguration, scopeManager: Sco
     }
 
     override fun parse(file: File): TranslationUnitDeclaration {
-        var bench = TimeBenchmark(this.javaClass, "Parsing sourcefile")
+        var bench = Benchmark(this.javaClass, "Parsing sourcefile")
         // clear the bindings cache, because it is just valid within one module
         bindingsCache.clear()
 
@@ -109,7 +109,7 @@ class LLVMIRLanguageFrontend(config: TranslationConfiguration, scopeManager: Sco
             throw TranslationException("Could not parse IR: $errorMsg")
         }
         bench.addMeasurement()
-        bench = TimeBenchmark(this.javaClass, "Transform to CPG")
+        bench = Benchmark(this.javaClass, "Transform to CPG")
 
         val tu = TranslationUnitDeclaration()
 
