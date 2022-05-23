@@ -121,6 +121,28 @@ class PythonLanguageFrontend(config: TranslationConfiguration, scopeManager: Sco
         return tu
     }
 
+    fun getEnclosingChild(node: Node, location: Region): Node {
+        var children = SubgraphWalker.getAstChildren(node)
+        children.addAll(
+            children.filterIsInstance<NamespaceDeclaration>().flatMap {
+                SubgraphWalker.getAstChildren(it).filter { !children.contains(it) }
+            }
+        )
+        var enclosing =
+            children
+                .filter {
+                    val nodeRegion: Region = it.location?.let { it.region } ?: Region()
+                    nodeRegion.startLine <= location.startLine &&
+                        nodeRegion.endLine >= location.endLine &&
+                        (nodeRegion.startLine != location.startLine ||
+                            nodeRegion.startColumn <= location.startColumn) &&
+                        (nodeRegion.endLine != location.endLine ||
+                            nodeRegion.endColumn >= location.endColumn)
+                }
+                .firstOrNull()
+        return enclosing ?: node
+    }
+
     /**
      * This function matches a comment to the closest node according to a heuristic: Comments are
      * assigned to the closest successor node on their ast hierarchy level. Only Exception, if they
@@ -128,33 +150,17 @@ class PythonLanguageFrontend(config: TranslationConfiguration, scopeManager: Sco
      * line, the comment is matched to that closest predecessor.
      */
     fun matchCommentToNode(comment: String, location: Region, tu: TranslationUnitDeclaration) {
-        val nodes: List<Node> = SubgraphWalker.flattenAST(tu)
-        println(comment)
-        println(location)
-
-        // Get a List of all Nodes that enclose the comment
-        var enclosingNodes =
-            nodes.filter {
-                val nodeRegion: Region = it.location?.let { it.region } ?: Region()
-                nodeRegion.startLine <= location.startLine &&
-                    nodeRegion.endLine >= location.endLine &&
-                    (nodeRegion.startLine != location.startLine ||
-                        nodeRegion.startColumn <= location.startColumn) &&
-                    (nodeRegion.endLine != location.endLine ||
-                        nodeRegion.endColumn >= location.endColumn)
-            }
-        if (!enclosingNodes.contains(tu)) {
-            enclosingNodes += tu
+        var enclosingNode: Node = tu
+        var smallestEnclosingNode: Node = getEnclosingChild(tu, location)
+        while (enclosingNode != smallestEnclosingNode) {
+            enclosingNode = smallestEnclosingNode
+            smallestEnclosingNode = getEnclosingChild(smallestEnclosingNode, location)
         }
-
-        // Order then by code length to find the nearest ast-parent
-        val smallestEnclosingNode =
-            enclosingNodes.sortedWith(compareBy { it.code?.length ?: 10000 }).first()
 
         var children = SubgraphWalker.getAstChildren(smallestEnclosingNode)
 
-        // Because in GO we wrap all elements into a NamespaceDeclaration we have to extract the
-        // natural children
+        // Because we sometimes wrap all elements into a NamespaceDeclaration we have to extract the
+        // children with a location
         children.addAll(
             children.filterIsInstance<NamespaceDeclaration>().flatMap {
                 SubgraphWalker.getAstChildren(it).filter { !children.contains(it) }
@@ -203,8 +209,9 @@ class PythonLanguageFrontend(config: TranslationConfiguration, scopeManager: Sco
                     .lastOrNull()
             val closestLine =
                 closestPredecessor?.location?.region?.endLine ?: location.startLine - 1
-            if (closestPredecessor != null && closestLine == location.startLine)
+            if (closestPredecessor != null && closestLine == location.startLine) {
                 closest = closestPredecessor
+            }
         }
         // If we have neither have identified a predecessor nor a successor, we associate the
         // comment to the enclosing node
