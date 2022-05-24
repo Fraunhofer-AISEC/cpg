@@ -27,8 +27,11 @@ package de.fraunhofer.aisec.cpg.query
 
 import de.fraunhofer.aisec.cpg.ExperimentalGraph
 import de.fraunhofer.aisec.cpg.TranslationResult
+import de.fraunhofer.aisec.cpg.analysis.ConcreteNumberSet
+import de.fraunhofer.aisec.cpg.analysis.MultiValueEvaluator
 import de.fraunhofer.aisec.cpg.analysis.SizeEvaluator
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.ValueEvaluator
 import de.fraunhofer.aisec.cpg.graph.evaluate
 import de.fraunhofer.aisec.cpg.graph.graph
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
@@ -38,18 +41,16 @@ inline fun <reified T> TranslationResult.all(
     noinline sel: ((T) -> Boolean)? = null,
     noinline mustSatisfy: (T) -> Boolean
 ): Pair<Boolean, List<Node>> {
-    println("${this.graph.nodes.size} before filter")
-
     var nodes = this.graph.nodes.filterIsInstance<T>()
-
-    println("${nodes.size} nodes after filter")
 
     // filter the nodes according to the selector
     if (sel != null) {
         nodes = nodes.filter(sel)
     }
 
-    return Pair(nodes.all(mustSatisfy), listOf())
+    val failed = nodes.filterNot(mustSatisfy)
+
+    return Pair(nodes.all(mustSatisfy), failed as List<Node>)
 }
 
 @ExperimentalGraph
@@ -59,18 +60,16 @@ inline fun <reified T> Node.all(
 ): Pair<Boolean, List<Node>> {
     val children = this.astChildren
 
-    println("${children.size} before filter")
-
     var nodes = children.filterIsInstance<T>()
-
-    println("${nodes.size} nodes after filter")
 
     // filter the nodes according to the selector
     if (sel != null) {
         nodes = nodes.filter(sel)
     }
 
-    return Pair(nodes.all(mustSatisfy), listOf())
+    val failed = nodes.filterNot(mustSatisfy)
+
+    return Pair(nodes.all(mustSatisfy), failed as List<Node>)
 }
 
 fun sizeof(n: Node?): Int {
@@ -78,6 +77,24 @@ fun sizeof(n: Node?): Int {
     // TODO(oxisto): This cast could potentially go wrong, but if its not an int, its not really a
     // size
     return eval.evaluate(n) as? Int ?: -1
+}
+
+fun min(n: Node?, eval: ValueEvaluator = MultiValueEvaluator()): Long {
+    val evalRes = eval.evaluate(n)
+    if (evalRes is Number) {
+        return evalRes.toLong()
+    }
+    // TODO: Extend this when we have other evaluators.
+    return (evalRes as? ConcreteNumberSet)?.min() ?: -1
+}
+
+fun max(n: Node?, eval: ValueEvaluator = MultiValueEvaluator()): Long {
+    val evalRes = eval.evaluate(n)
+    if (evalRes is Number) {
+        return evalRes.toLong()
+    }
+    // TODO: Extend this when we have other evaluators.
+    return (evalRes as? ConcreteNumberSet)?.max() ?: -1
 }
 
 /**
