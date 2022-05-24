@@ -219,8 +219,8 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
         } else {
             // Resolve possible templates
             var templateParameters: List<Node?> = emptyList<Node>()
-            val declSpecifier = ctx.typeId.declSpecifier
-            if ((declSpecifier as CPPASTNamedTypeSpecifier).name is CPPASTTemplateId) {
+            val declSpecifier = ctx.typeId.declSpecifier as? CPPASTNamedTypeSpecifier
+            if (declSpecifier?.name is CPPASTTemplateId) {
                 templateParameters = getTemplateArguments(declSpecifier.name as CPPASTTemplateId)
                 assert(t.root is ObjectType)
                 val objectType = t.root as? ObjectType
@@ -598,7 +598,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                 type?.addGeneric(TypeParser.createFrom(templateArgument.toString(), true))
             }
         }
-        declaredReferenceExpression.type = type
+        type?.let {  declaredReferenceExpression.type = it }
     }
 
     private fun handleExpressionList(exprList: CPPASTExpressionList): ExpressionList {

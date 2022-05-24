@@ -237,10 +237,16 @@ public class TypeManager {
   public ParameterizedType searchTemplateScopeForDefinedParameterizedTypes(
       Scope scope, String name) {
     if (scope instanceof TemplateScope) {
-      TemplateDeclaration template = (TemplateDeclaration) scope.getAstNode();
-      ParameterizedType parameterizedType = getTypeParameter(template, name);
-      if (parameterizedType != null) {
-        return parameterizedType;
+      var node = scope.getAstNode();
+
+      // We need an additional check here, because of parsing or other errors, the AST node might
+      // not necessarily be a template declaration.
+      if (node instanceof TemplateDeclaration) {
+        TemplateDeclaration template = (TemplateDeclaration) node;
+        ParameterizedType parameterizedType = getTypeParameter(template, name);
+        if (parameterizedType != null) {
+          return parameterizedType;
+        }
       }
     }
 
