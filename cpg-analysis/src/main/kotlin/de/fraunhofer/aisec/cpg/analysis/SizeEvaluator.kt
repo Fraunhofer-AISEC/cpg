@@ -32,6 +32,10 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
+/**
+ * Simple evaluation of the size of an object. Right now, it can only support a statically given
+ * size of arrays and strings.
+ */
 class SizeEvaluator : ValueEvaluator() {
     override val log: Logger
         get() = LoggerFactory.getLogger(MultiValueEvaluator::class.java)

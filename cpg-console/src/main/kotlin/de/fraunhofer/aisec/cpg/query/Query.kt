@@ -50,7 +50,7 @@ inline fun <reified T> TranslationResult.all(
 
     val failed = nodes.filterNot(mustSatisfy)
 
-    return Pair(nodes.all(mustSatisfy), failed as List<Node>)
+    return Pair(failed.isEmpty(), failed as List<Node>)
 }
 
 @ExperimentalGraph
@@ -69,9 +69,10 @@ inline fun <reified T> Node.all(
 
     val failed = nodes.filterNot(mustSatisfy)
 
-    return Pair(nodes.all(mustSatisfy), failed as List<Node>)
+    return Pair(failed.isEmpty(), failed as List<Node>)
 }
 
+/** Evaluates the size of a node. The implementation is very very basic! */
 fun sizeof(n: Node?): Int {
     val eval = SizeEvaluator()
     // TODO(oxisto): This cast could potentially go wrong, but if its not an int, its not really a
@@ -79,6 +80,11 @@ fun sizeof(n: Node?): Int {
     return eval.evaluate(n) as? Int ?: -1
 }
 
+/**
+ * Retrieves the minimal value of the node.
+ *
+ * @eval can be used to specify the evaluator but this method has to interpret the result correctly!
+ */
 fun min(n: Node?, eval: ValueEvaluator = MultiValueEvaluator()): Long {
     val evalRes = eval.evaluate(n)
     if (evalRes is Number) {
@@ -88,6 +94,11 @@ fun min(n: Node?, eval: ValueEvaluator = MultiValueEvaluator()): Long {
     return (evalRes as? ConcreteNumberSet)?.min() ?: -1
 }
 
+/**
+ * Retrieves the minimal value of the node.
+ *
+ * @eval can be used to specify the evaluator but this method has to interpret the result correctly!
+ */
 fun max(n: Node?, eval: ValueEvaluator = MultiValueEvaluator()): Long {
     val evalRes = eval.evaluate(n)
     if (evalRes is Number) {
@@ -139,6 +150,16 @@ class QueryResult(val inner: Any? = null) {
 val Expression.size: QueryResult
     get() {
         return QueryResult(sizeof(this))
+    }
+
+val Expression.min: QueryResult
+    get() {
+        return QueryResult(min(this))
+    }
+
+val Expression.max: QueryResult
+    get() {
+        return QueryResult(max(this))
     }
 
 val Expression.value: QueryResult
