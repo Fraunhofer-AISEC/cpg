@@ -420,13 +420,15 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
                 // make sure, the type manager knows about this type before parsing the declarator
                 val result = TypeParser.createFrom(typeString, true, lang)
 
-                val declaration = lang.declaratorHandler.handle(declarator) as ValueDeclaration
+                val declaration = lang.declaratorHandler.handle(declarator) as? ValueDeclaration
 
-                declaration.type = result
+                if (declaration != null) {
+                    declaration.type = result
 
-                // process attributes
-                lang.processAttributes(declaration, ctx)
-                sequence.addDeclaration(declaration)
+                    // process attributes
+                    lang.processAttributes(declaration, ctx)
+                    sequence.addDeclaration(declaration)
+                }
             }
         }
 

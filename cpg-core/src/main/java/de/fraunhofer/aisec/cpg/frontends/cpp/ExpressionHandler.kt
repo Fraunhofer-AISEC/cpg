@@ -598,7 +598,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                 type?.addGeneric(TypeParser.createFrom(templateArgument.toString(), true))
             }
         }
-        type?.let {  declaredReferenceExpression.type = it }
+        type?.let { declaredReferenceExpression.type = it }
     }
 
     private fun handleExpressionList(exprList: CPPASTExpressionList): ExpressionList {
