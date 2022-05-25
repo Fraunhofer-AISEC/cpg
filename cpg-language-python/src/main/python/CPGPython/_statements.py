@@ -390,7 +390,7 @@ def handle_argument(self, arg: ast.arg):
     # TODO variadic
     pvd = NodeBuilder.newMethodParameterIn(arg.arg,
                                            tpe, False, self.get_src_code(arg))
-    self.add_loc_info(arg,pvd)
+    self.add_loc_info(arg, pvd)
     self.scopemanager.addDeclaration(pvd)
     return pvd
 
