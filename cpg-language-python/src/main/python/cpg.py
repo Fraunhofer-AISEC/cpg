@@ -35,30 +35,15 @@ def parse_code(code, filename, frontend):
 
         tud = converter.tud
 
-        parse_comments(code, tud, frontend)
+        parse_comments(filename, code, tud, frontend)
 
         return tud
     except Exception as e:
         frontend.log.error("Buidling the CPG failed with exception: %s" % (e))
         raise e
 
-def parse_comments(code, tud, frontend):
-        reader = io.StringIO(code).read
-        comment_tokens = (t for t in tokenize.generate_tokens(reader) if t.type == tokenize.COMMENT or t.type == tokenize.NL or t.type == tokenize.NEWLINE)
-        comment = None
-        nr_newlines = 0
-        nl_position = -1
-        cmt_position = 0
+def parse_comments(filename, code, tud, frontend):
+        reader = tokenize.open(filename).readline
+        comment_tokens = (t for t in tokenize.generate_tokens(reader) if t.type == tokenize.COMMENT)
         for token in comment_tokens:
-            # comment = next(comment_tokens, None)
-            if token.type == tokenize.COMMENT:
-                comment = code[token.start[1]:]
-                cmt_position = token.start[1]
-            if token.type == tokenize.NL or token.type == tokenize.NEWLINE:
-                if comment:
-                    comment = comment[:token.start[1] - (len(code) - len(comment))]
-                    frontend.matchCommentToNode(comment, Region(nr_newlines + 1,cmt_position - nl_position,nr_newlines + 1,token.start[1]-nl_position), tud)
-                    comment = None
-
-                nr_newlines += 1
-                nl_position = token.start[1]
+            frontend.matchCommentToNode(token.string, Region(token.start[0],token.start[1] + 1,token.end[0],token.end[1] + 1), tud)
