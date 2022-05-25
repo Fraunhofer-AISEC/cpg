@@ -28,9 +28,7 @@ package de.fraunhofer.aisec.cpg.frontends.golang
 import de.fraunhofer.aisec.cpg.BaseTest
 import de.fraunhofer.aisec.cpg.ExperimentalGolang
 import de.fraunhofer.aisec.cpg.TestUtils
-import de.fraunhofer.aisec.cpg.graph.body
-import de.fraunhofer.aisec.cpg.graph.bodyOrNull
-import de.fraunhofer.aisec.cpg.graph.byNameOrNull
+import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
@@ -43,6 +41,41 @@ import kotlin.test.assertTrue
 
 @ExperimentalGolang
 class GoLanguageFrontendTest : BaseTest() {
+
+    @Test
+    fun testDFG() {
+        val topLevel = Path.of("src", "test", "resources", "golang")
+        val tu =
+            TestUtils.analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("dfg.go").toFile()),
+                topLevel,
+                true
+            ) {
+                it.registerLanguage(
+                    GoLanguageFrontend::class.java,
+                    GoLanguageFrontend.GOLANG_EXTENSIONS
+                )
+            }
+        assertNotNull(tu)
+
+        val p = tu.byNameOrNull<NamespaceDeclaration>("p")
+        assertNotNull(p)
+
+        val main = p.byNameOrNull<FunctionDeclaration>("main")
+
+        assertNotNull(main)
+
+        val data = main.bodyOrNull<DeclarationStatement>(0)?.singleDeclaration
+
+        assertNotNull(data)
+
+        // We should be able to follow the DFG backwards from the declaration to the individual
+        // key/value expressions
+        val path = data.followPrevDFG { it is KeyValueExpression }
+
+        assertNotNull(path)
+        assertEquals(4, path.size)
+    }
 
     @Test
     fun testConstruct() {

@@ -1110,6 +1110,11 @@ func (this *GoLanguageFrontend) handleCompositeLit(fset *token.FileSet, lit *ast
 
 	c.AddArgument((*cpg.Expression)(l))
 
+	// Normally, the construct expression would not have DFG edge, but in this case we are mis-using it
+	// to simulate an object literal, so we need to add a DFG here, otherwise a declaration is disconnected
+	// from its initialization.
+	c.AddPrevDFG((*cpg.Node)(l))
+
 	for _, elem := range lit.Elts {
 		expr := this.handleExpr(fset, elem)
 
