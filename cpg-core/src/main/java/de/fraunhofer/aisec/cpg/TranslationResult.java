@@ -29,8 +29,8 @@ import de.fraunhofer.aisec.cpg.graph.Component;
 import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.SubGraph;
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration;
-import de.fraunhofer.aisec.cpg.helpers.Benchmark;
 import de.fraunhofer.aisec.cpg.helpers.BenchmarkResults;
+import de.fraunhofer.aisec.cpg.helpers.MeasurementHolder;
 import de.fraunhofer.aisec.cpg.helpers.StatisticsHolder;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -61,7 +61,7 @@ public class TranslationResult extends Node implements StatisticsHolder {
    */
   private final Set<Node> additionalNodes = new HashSet<>();
 
-  private final List<Benchmark> benchmarks = new ArrayList<>();
+  private final List<MeasurementHolder> benchmarks = new ArrayList<>();
 
   public TranslationResult(TranslationManager translationManager) {
     this.translationManager = translationManager;
@@ -86,6 +86,45 @@ public class TranslationResult extends Node implements StatisticsHolder {
       result.addAll(sc.getTranslationUnits());
     }
     return result;
+  }
+
+  /**
+   * If no component exists, it generates a [Component] called "application" and adds [tu]. If a
+   * component already exists, adds the tu to this component.
+   *
+   * @param tu The translation unit to add.
+   * @deprecated This should not be used anymore. Instead, the corresponding component should be
+   *     selected and the translation unit should be added there.
+   */
+  @Deprecated(since = "4.4.1")
+  public synchronized void addTranslationUnit(TranslationUnitDeclaration tu) {
+    Component swc = null;
+    if (components.size() == 1) {
+      // Only one component exists, so we take this one
+      swc = components.get(0);
+    } else if (components.isEmpty()) {
+      // No component exists, so we create the new dummy component.
+      swc = new Component();
+      swc.setName("application");
+      components.add(swc);
+    } else {
+      // Multiple components exist. As we don't know where to put the tu, we check if we have the
+      // component we created and add it there or create a new one.
+      for (var component : components) {
+        if (component.getName().equals("application")) {
+          swc = component;
+          break;
+        }
+      }
+
+      if (swc == null) {
+        swc = new Component();
+        swc.setName("application");
+        components.add(swc);
+      }
+    }
+
+    swc.getTranslationUnits().add(tu);
   }
 
   /**
@@ -127,12 +166,12 @@ public class TranslationResult extends Node implements StatisticsHolder {
   }
 
   @Override
-  public void addBenchmark(@NotNull Benchmark b) {
+  public void addBenchmark(@NotNull MeasurementHolder b) {
     this.benchmarks.add(b);
   }
 
   @NotNull
-  public List<Benchmark> getBenchmarks() {
+  public List<MeasurementHolder> getBenchmarks() {
     return benchmarks;
   }
 

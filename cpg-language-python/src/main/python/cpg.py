@@ -35,7 +35,7 @@ def parse_code(code, filename, frontend):
 
         tud = converter.tud
 
-        parse_comments(filename, code, tud, frontend)
+        parse_comments(code, tud, frontend)
 
         return tud
     except Exception as e:

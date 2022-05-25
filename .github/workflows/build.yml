@@ -100,7 +100,7 @@ jobs:
           pip3 install pycodestyle
       - name: Run pycodestyle
         run: |
-          find cpg-language-python/src/main/python -iname "*.py" -exec pycodestyle \{\} \;
+          find cpg-language-python/src/main/python -iname "*.py" -print0 | xargs -n 1 -0 pycodestyle
       - uses: actions/download-artifact@v3
         with:
           name: libcpgo-arm64.dylib

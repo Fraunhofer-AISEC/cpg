@@ -64,25 +64,32 @@ def add_loc_info(self, node, obj):
     """
     self.add_mul_loc_infos(node, node, obj)
 
+
 def add_mul_loc_infos(self, start_node, end_node, obj):
     """
-    Add file location meta information to CPG objects spanning from a start to an end node
+    Add file location meta information to CPG objects spanning from a start to
+    an end node
     """
 
     obj.setFile(self.fname)
 
-    if not isinstance(start_node, ast.AST) or not isinstance(end_node,ast.AST):
+    if not isinstance(
+            start_node,
+            ast.AST) or not isinstance(
+            end_node,
+            ast.AST):
         self.log_with_loc(
-            "Expected an AST object but received %s and %s. Not adding location." %
-            (type(start_node)),(type(end_node)), loglevel="ERROR")
+            "Expected an AST object but received %s and %s."
+            "Not adding location." %
+            (type(start_node)), (type(end_node)), loglevel="ERROR")
         return
 
     uri = URI("file://" + self.fname)
     obj.setLocation(PhysicalLocation(uri,
                                      Region(start_node.lineno,
-                                            start_node.col_offset + 1 ,
+                                            start_node.col_offset + 1,
                                             end_node.end_lineno,
-                                            end_node.end_col_offset + 1 )
+                                            end_node.end_col_offset + 1)
                                      )
                     )
     obj.setCode(self.sourcecode.get_snippet(start_node.lineno,
