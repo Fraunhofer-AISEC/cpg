@@ -46,7 +46,8 @@ def parse_code(code, filename, frontend):
 def parse_comments(code, tud, frontend):
     reader = io.StringIO(code).read
     comment_tokens = (t for t in tokenize.generate_tokens(reader) if t.type ==
-                      tokenize.COMMENT or t.type == tokenize.NL or t.type == tokenize.NEWLINE)
+                      tokenize.COMMENT or t.type == tokenize.NL or
+                      t.type == tokenize.NEWLINE)
     comment = None
     nr_newlines = 0
     nl_position = -1

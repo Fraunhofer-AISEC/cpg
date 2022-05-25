@@ -67,7 +67,8 @@ def add_loc_info(self, node, obj):
 
 def add_mul_loc_infos(self, start_node, end_node, obj):
     """
-    Add file location meta information to CPG objects spanning from a start to an end node
+    Add file location meta information to CPG objects spanning from a start to
+    an end node
     """
 
     obj.setFile(self.fname)
@@ -78,7 +79,8 @@ def add_mul_loc_infos(self, start_node, end_node, obj):
             end_node,
             ast.AST):
         self.log_with_loc(
-            "Expected an AST object but received %s and %s. Not adding location." %
+            "Expected an AST object but received %s and %s."
+            "Not adding location." %
             (type(start_node)), (type(end_node)), loglevel="ERROR")
         return
 
