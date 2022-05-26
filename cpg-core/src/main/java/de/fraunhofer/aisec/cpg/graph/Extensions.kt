@@ -158,3 +158,24 @@ fun Node.followPrevEOG(predicate: (PropertyEdge<*>) -> Boolean): List<PropertyEd
 
     return null
 }
+
+fun Node.followPrevDFG(predicate: (Node) -> Boolean): MutableList<Node>? {
+    val path = mutableListOf<Node>()
+
+    for (prev in this.prevDFG) {
+        path.add(prev)
+
+        if (predicate(prev)) {
+            return path
+        }
+
+        val subPath = prev.followPrevDFG(predicate)
+        if (subPath != null) {
+            path.addAll(subPath)
+        }
+
+        return path
+    }
+
+    return null
+}
