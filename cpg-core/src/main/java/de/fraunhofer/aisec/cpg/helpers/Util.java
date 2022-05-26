@@ -32,15 +32,12 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
 import de.fraunhofer.aisec.cpg.graph.Node;
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration;
-import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration;
 import de.fraunhofer.aisec.cpg.graph.declarations.ParamVariableDeclaration;
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration;
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression;
 import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType;
 import de.fraunhofer.aisec.cpg.graph.types.PointerType;
 import de.fraunhofer.aisec.cpg.graph.types.ReferenceType;
 import de.fraunhofer.aisec.cpg.graph.types.Type;
-import de.fraunhofer.aisec.cpg.sarif.Region;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
@@ -503,142 +500,5 @@ public class Util {
       conditionNodes = getAdjacentDFGNodes(branchingDecl, true);
     }
     conditionNodes.forEach(c -> n.addPrevDFG(c));
-  }
-
-  public static Region getRegionOrDefault(Node n) {
-    return n.getLocation() == null || n.getLocation().getRegion() == null
-        ? new Region()
-        : n.getLocation().getRegion();
-  }
-
-  public static Node getEnclosingChild(Node node, Region location) {
-    var children = SubgraphWalker.getAstChildren(node);
-    children.addAll(
-        filterCast(children, NamespaceDeclaration.class).stream()
-            .flatMap(
-                it ->
-                    SubgraphWalker.getAstChildren(it).stream().filter(ot -> !children.contains(ot)))
-            .collect(Collectors.toList()));
-    var enclosing =
-        children.stream()
-            .filter(
-                it -> {
-                  Region nodeRegion =
-                      it.getLocation() != null ? it.getLocation().getRegion() : new Region();
-                  return nodeRegion.getStartLine() <= location.getStartLine()
-                      && nodeRegion.getEndLine() >= location.getEndLine()
-                      && (nodeRegion.getStartLine() != location.getStartLine()
-                          || nodeRegion.getStartColumn() <= location.getStartColumn())
-                      && (nodeRegion.getEndLine() != location.getEndLine()
-                          || nodeRegion.getEndColumn() >= location.getEndColumn());
-                })
-            .findFirst()
-            .orElse(null);
-    return enclosing != null ? enclosing : node;
-  }
-
-  /**
-   * This function matches a comment to the closest node according to a heuristic: Comments are
-   * assigned to the closest successor node on their ast hierarchy level. Only Exception, if they
-   * don't have a successor starting in the same line but they have a predecessor in the same line,
-   * the comment is matched to that closest predecessor.
-   */
-  public static void matchCommentToNode(
-      String comment, Region location, TranslationUnitDeclaration tu) {
-    Node enclosingNode = tu;
-    Node smallestEnclosingNode = getEnclosingChild(tu, location);
-    while (enclosingNode != smallestEnclosingNode) {
-      enclosingNode = smallestEnclosingNode;
-      smallestEnclosingNode = getEnclosingChild(smallestEnclosingNode, location);
-    }
-
-    var children = SubgraphWalker.getAstChildren(smallestEnclosingNode);
-
-    // Because we sometimes wrap all elements into a NamespaceDeclaration we have to extract the
-    // children with a location
-    children.addAll(
-        filterCast(children, NamespaceDeclaration.class).stream()
-            .flatMap(
-                it ->
-                    SubgraphWalker.getAstChildren(it).stream().filter(ot -> !children.contains(ot)))
-            .collect(Collectors.toList()));
-
-    // Searching for the closest successor to our comment amongst the children of the smallest
-    // enclosing nodes
-    var successors =
-        children.stream()
-            .filter(
-                it -> {
-                  Region nodeRegion =
-                      it.getLocation() != null && it.getLocation().getRegion() != null
-                          ? it.getLocation().getRegion()
-                          : new Region();
-                  return nodeRegion.getStartLine() >= location.getEndLine()
-                      && (nodeRegion.getStartLine() > location.getEndLine()
-                          || nodeRegion.getStartColumn() >= location.getEndColumn());
-                });
-    Node closest =
-        successors
-            .sorted(
-                (Node a, Node b) -> {
-                  int result =
-                      Integer.valueOf(getRegionOrDefault(a).getStartLine())
-                          .compareTo(getRegionOrDefault(b).getStartLine());
-                  if (result == 0)
-                    result =
-                        Integer.valueOf(getRegionOrDefault(a).getStartColumn())
-                            .compareTo(getRegionOrDefault(b).getStartColumn());
-                  return result;
-                })
-            .findFirst()
-            .orElse(null);
-    int closestLine = getRegionOrDefault(closest).getStartLine() + 1;
-
-    // If the closest successor is not in the same line there may be a more adequate predecessor
-    // to associated the
-    // comment to (Has to be in the same line)
-    if (closest == null || closestLine > location.getEndLine()) {
-      var predecessor =
-          children.stream()
-              .filter(
-                  it -> {
-                    Region nodeRegion = getRegionOrDefault(it);
-                    return nodeRegion.getEndLine() <= location.getStartLine()
-                        && (nodeRegion.getEndLine() < location.getStartLine()
-                            || nodeRegion.getEndColumn() <= location.getStartColumn());
-                  });
-
-      Node closestPredecessor =
-          successors
-              .sorted(
-                  (Node a, Node b) -> {
-                    int result =
-                        Integer.valueOf(getRegionOrDefault(a).getEndLine())
-                            .compareTo(getRegionOrDefault(b).getEndLine());
-                    if (result == 0)
-                      result =
-                          Integer.valueOf(getRegionOrDefault(a).getEndColumn())
-                              .compareTo(getRegionOrDefault(b).getEndColumn());
-                    return result;
-                  })
-              .findFirst()
-              .orElse(null);
-      closestLine = location.getStartLine() - 1;
-      if (closestPredecessor != null
-          && closestPredecessor.getLocation() != null
-          && closestPredecessor.getLocation().getRegion() != null) {
-        closestLine = closestPredecessor.getLocation().getRegion().getEndLine();
-      }
-      if (closestPredecessor != null && closestLine == location.getStartLine()) {
-        closest = closestPredecessor;
-      }
-    }
-    // If we have neither have identified a predecessor nor a successor, we associate the
-    // comment to the enclosing node
-    if (closest == null) {
-      closest = smallestEnclosingNode;
-    }
-
-    closest.setComment((closest.getComment() != null ? closest.getComment() : "") + comment);
   }
 }
