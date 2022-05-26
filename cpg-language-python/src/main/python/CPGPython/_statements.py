@@ -439,7 +439,6 @@ def make_compound_statement(self, stmts) -> CompoundStatement:
         return s
     else:
         compound_statement = NodeBuilder.newCompoundStatement("")
-        # TODO location
         for s in stmts:
             s = self.handle_statement(s)
             if self.is_declaration(s):
