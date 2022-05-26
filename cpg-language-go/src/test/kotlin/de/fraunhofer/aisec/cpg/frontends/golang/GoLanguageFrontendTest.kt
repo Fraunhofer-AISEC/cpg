@@ -43,6 +43,47 @@ import kotlin.test.assertTrue
 class GoLanguageFrontendTest : BaseTest() {
 
     @Test
+    fun testArrayCompositeLiteral() {
+        val topLevel = Path.of("src", "test", "resources", "golang")
+        val tu =
+            TestUtils.analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("values.go").toFile()),
+                topLevel,
+                true
+            ) {
+                it.registerLanguage(
+                    GoLanguageFrontend::class.java,
+                    GoLanguageFrontend.GOLANG_EXTENSIONS
+                )
+            }
+        assertNotNull(tu)
+
+        val p = tu.byNameOrNull<NamespaceDeclaration>("p")
+        assertNotNull(p)
+
+        val main = p.byNameOrNull<FunctionDeclaration>("main")
+
+        assertNotNull(main)
+
+        val message =
+            main.bodyOrNull<DeclarationStatement>(2)?.singleDeclaration as? VariableDeclaration
+
+        assertNotNull(message)
+
+        val map =
+            ((message.initializer as? ConstructExpression)?.arguments?.firstOrNull() as?
+                InitializerListExpression)
+
+        assertNotNull(map)
+
+        val nameEntry = map.initializers.firstOrNull() as? KeyValueExpression
+
+        assertNotNull(nameEntry)
+
+        assertEquals("string[]", (nameEntry.value as? ConstructExpression)?.name)
+    }
+
+    @Test
     fun testDFG() {
         val topLevel = Path.of("src", "test", "resources", "golang")
         val tu =

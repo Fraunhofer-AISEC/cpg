@@ -1098,13 +1098,12 @@ func (this *GoLanguageFrontend) handleCompositeLit(fset *token.FileSet, lit *ast
 	c := cpg.NewConstructExpression(fset, lit)
 
 	// parse the type field, to see which kind of expression it is
-	var reference = this.handleExpr(fset, lit.Type)
+	var typ = this.handleType(lit.Type)
 
-	if reference == nil {
-		return nil
+	if typ != nil {
+		(*cpg.Node)(c).SetName((*cpg.Node)(typ).GetName())
+		(*cpg.Expression)(c).SetType(typ)
 	}
-
-	(*cpg.Node)(c).SetName(reference.GetName())
 
 	l := cpg.NewInitializerListExpression(fset, lit)
 
