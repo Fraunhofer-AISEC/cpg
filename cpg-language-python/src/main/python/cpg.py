@@ -42,10 +42,16 @@ def parse_code(code, filename, frontend):
         frontend.log.error("Buidling the CPG failed with exception: %s" % (e))
         raise e
 
+
 def parse_comments(filename, code, tud, frontend):
-        reader = tokenize.open(filename).readline
-        comment_tokens = (t for t in tokenize.generate_tokens(reader) if t.type == tokenize.COMMENT)
-        for token in comment_tokens:
-            frontend.matchCommentToNode(token.string,
-                Region(token.start[0],token.start[1] + 1,token.end[0],token.end[1] + 1),
+    reader = tokenize.open(filename).readline
+    comment_tokens = (t for t in tokenize.generate_tokens(reader)
+        if t.type == tokenize.COMMENT)
+    for token in comment_tokens:
+        frontend.matchCommentToNode(token.string,
+            Region(
+                token.start[0],
+                    token.start[1] + 1,
+                    token.end[0],
+                    token.end[1] + 1),
                 tud)
