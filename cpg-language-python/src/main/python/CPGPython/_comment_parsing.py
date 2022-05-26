@@ -23,6 +23,7 @@
 #                    \______/ \__|       \______/
 #
 from de.fraunhofer.aisec.cpg.sarif import Region
+from de.fraunhofer.aisec.cpg.helpers import Util
 import tokenize
 
 
@@ -31,7 +32,7 @@ def parse_comments(code, filename, frontend, tud):
     comment_tokens = (t for t in tokenize.generate_tokens(reader)
         if t.type == tokenize.COMMENT)
     for token in comment_tokens:
-        frontend.matchCommentToNode(token.string,
+        Util.matchCommentToNode(token.string,
             Region(
                 token.start[0],
                     token.start[1] + 1,
