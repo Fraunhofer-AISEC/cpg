@@ -109,8 +109,10 @@ class PythonLanguageFrontend(config: TranslationConfiguration, scopeManager: Sco
             if (config.matchCommentsToNodes) {
                 // Parse comments and attach to nodes
                 val pyOptional = javaClass.getResource("/CPGPython/_comment_parsing.py")
-                interp.exec(pyOptional?.readText())
-                interp.invoke("parse_comments", code, path, this, tu)
+                pyOptional?.let {
+                    interp.exec(it.readText())
+                    interp.invoke("parse_comments", code, path, this, tu)
+                }
             }
         } catch (e: JepException) {
             e.printStackTrace()

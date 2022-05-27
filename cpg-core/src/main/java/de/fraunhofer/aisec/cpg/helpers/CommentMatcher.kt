@@ -30,9 +30,21 @@ import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.sarif.Region
 
+/**
+ * Class used to encapsulate functions used for the heuristic comment matching. Comments are matched
+ * to the closest AST node with priority on predecessor nodes in the same line as the comment, then
+ * successor nodes and lastly enclosing nodes.
+ */
 class CommentMatcher {
+
+    /**
+     * Searches amongst the children of the node to find the child that contains the provided
+     * region.
+     */
     fun getEnclosingChild(node: Node, location: Region): Node {
         var children = SubgraphWalker.getAstChildren(node)
+        // As some frontends add regional implicit namespaces we have to search amongst its children
+        // instead.
         children.addAll(
             children.filterIsInstance<NamespaceDeclaration>().flatMap {
                 SubgraphWalker.getAstChildren(it).filter { !children.contains(it) }
@@ -98,8 +110,7 @@ class CommentMatcher {
         val closestLine = closest?.location?.region?.startLine ?: location.endLine + 1
 
         // If the closest successor is not in the same line there may be a more adequate predecessor
-        // to associated the
-        // comment to (Has to be in the same line)
+        // to associated the comment to (Has to be in the same line)
         if (closest == null || closestLine > location.endLine) {
             var predecessor =
                 children.filter {
