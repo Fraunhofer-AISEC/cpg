@@ -31,8 +31,6 @@ import java.lang.reflect.Field
 import java.lang.reflect.InvocationTargetException
 import java.lang.reflect.ParameterizedType
 import java.util.*
-import java.util.function.Predicate
-import java.util.stream.Collectors
 import org.neo4j.ogm.annotation.*
 import org.neo4j.ogm.annotation.typeconversion.Convert
 import org.slf4j.LoggerFactory
@@ -95,7 +93,7 @@ open class PropertyEdge<T : Node> : Persistable {
         return (properties == other.properties && start == other.start && end == other.end)
     }
 
-    fun propertyEquals(obj: Any): Boolean {
+    fun propertyEquals(obj: Any?): Boolean {
         if (this === obj) return true
         if (obj !is PropertyEdge<*>) return false
         return properties == obj.properties
@@ -107,11 +105,12 @@ open class PropertyEdge<T : Node> : Persistable {
 
     companion object {
         protected val log = LoggerFactory.getLogger(PropertyEdge::class.java)
+
         fun <S : PropertyEdge<*>?> findPropertyEdgesByPredicate(
             edges: Collection<S>,
-            predicate: Predicate<S>?
+            predicate: (S) -> Boolean
         ): List<S> {
-            return edges.stream().filter(predicate).collect(Collectors.toList())
+            return edges.filter(predicate)
         }
 
         /**
@@ -274,12 +273,20 @@ open class PropertyEdge<T : Node> : Persistable {
 
         @JvmStatic
         fun <E : Node> propertyEqualsList(
-            propertyEdges: List<PropertyEdge<E>>,
-            propertyEdges2: List<PropertyEdge<E>?>
+            propertyEdges: List<PropertyEdge<E>>?,
+            propertyEdges2: List<PropertyEdge<E>>?
         ): Boolean {
-            if (propertyEdges.size == propertyEdges2.size) {
+            // Check, if the first edge is null
+            if (propertyEdges == null) {
+                // They can only be equal now, if the second one is also null
+                return propertyEdges2 == null
+            }
+
+            // Otherwise, try to compare the contents of the lists with the propertyEquals (the
+            // second one still might be null)
+            if (propertyEdges.size == propertyEdges2?.size) {
                 for (i in propertyEdges.indices) {
-                    if (!propertyEdges[i].propertyEquals(propertyEdges2[i]!!)) {
+                    if (!propertyEdges[i].propertyEquals(propertyEdges2[i])) {
                         return false
                     }
                 }
