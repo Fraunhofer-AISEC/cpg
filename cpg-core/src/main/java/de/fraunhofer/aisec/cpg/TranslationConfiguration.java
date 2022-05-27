@@ -157,6 +157,12 @@ public class TranslationConfiguration {
    */
   final CompilationDatabase compilationDatabase;
 
+  /**
+   * If true the frontend shall use a heuristic matching of comments found in the source file to
+   * match them to the closest AST node and save it in the comment property.
+   */
+  public final boolean matchCommentsToNodes;
+
   @NonNull private final List<Pass> passes;
 
   /** This sub configuration object holds all information about inference and smart-guessing. */
@@ -181,7 +187,8 @@ public class TranslationConfiguration {
       boolean useParallelFrontends,
       boolean typeSystemActiveInFrontend,
       InferenceConfiguration inferenceConfiguration,
-      CompilationDatabase compilationDatabase) {
+      CompilationDatabase compilationDatabase,
+      boolean matchCommentsToNodes) {
     this.symbols = symbols;
     this.softwareComponents = softwareComponents;
     this.topLevel = topLevel;
@@ -202,6 +209,7 @@ public class TranslationConfiguration {
     this.typeSystemActiveInFrontend = typeSystemActiveInFrontend;
     this.inferenceConfiguration = inferenceConfiguration;
     this.compilationDatabase = compilationDatabase;
+    this.matchCommentsToNodes = matchCommentsToNodes;
   }
 
   public static Builder builder() {
@@ -284,6 +292,7 @@ public class TranslationConfiguration {
     private InferenceConfiguration inferenceConfiguration =
         new InferenceConfiguration.Builder().build();
     private CompilationDatabase compilationDatabase;
+    private boolean matchCommentsToNodes = false;
 
     public Builder symbols(Map<String, String> symbols) {
       this.symbols = symbols;
@@ -343,6 +352,17 @@ public class TranslationConfiguration {
      */
     public Builder debugParser(boolean debugParser) {
       this.debugParser = debugParser;
+      return this;
+    }
+
+    /**
+     * Match comments found in source files to nodes according to a heuristic.
+     *
+     * @param matchCommentsToNodes
+     * @return
+     */
+    public Builder matchCommentsToNodes(boolean matchCommentsToNodes) {
+      this.matchCommentsToNodes = matchCommentsToNodes;
       return this;
     }
 
@@ -578,7 +598,8 @@ public class TranslationConfiguration {
           useParallelFrontends,
           typeSystemActiveInFrontend,
           inferenceConfiguration,
-          compilationDatabase);
+          compilationDatabase,
+          matchCommentsToNodes);
     }
   }
 
