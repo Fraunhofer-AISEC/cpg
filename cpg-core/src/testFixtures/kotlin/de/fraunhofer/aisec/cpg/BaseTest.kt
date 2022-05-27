@@ -27,9 +27,9 @@ package de.fraunhofer.aisec.cpg
 
 import de.fraunhofer.aisec.cpg.graph.TypeManager
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser
+import kotlin.test.BeforeTest
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import kotlin.test.BeforeTest
 
 abstract class BaseTest {
     protected var log: Logger = LoggerFactory.getLogger(this.javaClass)
