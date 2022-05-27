@@ -34,6 +34,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser
+import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
 import java.net.URI
@@ -838,27 +839,27 @@ class PythonFrontendTest : BaseTest() {
         assertNotNull(p)
 
         assertEquals(
-            Region(1, 0, 1, 8),
+            Region(1, 1, 1, 9),
             (p.declarations[0] as? VariableDeclaration)?.location?.region
         )
         assertEquals(
-            Region(1, 4, 1, 8),
+            Region(1, 5, 1, 9),
             (p.declarations[0] as? VariableDeclaration)?.initializer?.location?.region
         )
         assertEquals(
-            Region(2, 0, 2, 6),
+            Region(2, 1, 2, 7),
             (p.declarations[1] as? VariableDeclaration)?.location?.region
         )
         assertEquals(
-            Region(3, 0, 3, 7),
+            Region(3, 1, 3, 8),
             (p.declarations[2] as? VariableDeclaration)?.location?.region
         )
         assertEquals(
-            Region(5, 0, 5, 11),
+            Region(5, 1, 5, 12),
             (p.declarations[3] as? VariableDeclaration)?.location?.region
         )
         assertEquals(
-            Region(6, 0, 6, 8),
+            Region(6, 1, 6, 9),
             (p.declarations[4] as? VariableDeclaration)?.location?.region
         )
     }
@@ -1082,5 +1083,65 @@ class PythonFrontendTest : BaseTest() {
         assertEquals("=", elseStmt2.operatorCode)
         val elseStmt2Rhs = elseStmt2.rhs as? InitializerListExpression
         assertNotNull(elseStmt2Rhs)
+    }
+
+    @Test
+    fun testCommentMatching() {
+        val topLevel = Path.of("src", "test", "resources", "python")
+        val tu =
+            TestUtils.analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("comments.py").toFile()),
+                topLevel,
+                true
+            ) {
+                it.registerLanguage(
+                        PythonLanguageFrontend::class.java,
+                        PythonLanguageFrontend.PY_EXTENSIONS
+                    )
+                    .matchCommentsToNodes(true)
+            }
+
+        assertNotNull(tu)
+
+        val commentedNodes = SubgraphWalker.flattenAST(tu).filter { it.comment != null }
+
+        assertEquals(commentedNodes.size, 10)
+
+        val functions = commentedNodes.filterIsInstance<FunctionDeclaration>()
+        assertEquals(functions.size, 1)
+        assertEquals(functions.first().comment, "# a function")
+
+        val literals = commentedNodes.filterIsInstance<Literal<String>>()
+        assertEquals(literals.size, 1)
+        assertEquals(literals.first().comment, "# comment start")
+
+        val params = commentedNodes.filterIsInstance<ParamVariableDeclaration>()
+        assertEquals(params.size, 2)
+        assertEquals(params.filter { it.name.equals("i") }.first().comment, "# a parameter")
+        assertEquals(params.filter { it.name.equals("j") }.first().comment, "# another parameter")
+
+        val variable = commentedNodes.filterIsInstance<VariableDeclaration>()
+        assertEquals(variable.size, 1)
+        assertEquals(variable.first().comment, "# A comment")
+
+        val block = commentedNodes.filterIsInstance<CompoundStatement>()
+        assertEquals(block.size, 1)
+        assertEquals(block.first().comment, "# foo")
+
+        val kvs = commentedNodes.filterIsInstance<KeyValueExpression>()
+        assertEquals(kvs.size, 2)
+        assertEquals(kvs.filter { it.code?.contains("a") ?: false }.first().comment, "# a entry")
+        assertEquals(kvs.filter { it.code?.contains("b") ?: false }.first().comment, "# b entry")
+
+        val declStmts = commentedNodes.filterIsInstance<DeclarationStatement>()
+        assertEquals(declStmts.size, 2)
+        assertEquals(
+            declStmts.filter { it.location?.region?.startLine == 3 }.first().comment,
+            "# a number"
+        )
+        assertEquals(
+            declStmts.filter { it.location?.region?.startLine == 16 }.first().comment,
+            "# comment end"
+        )
     }
 }
