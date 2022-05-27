@@ -29,8 +29,8 @@ import tokenize
 
 def parse_comments(code, filename, frontend, tud):
     reader = tokenize.open(filename).readline
-    comment_tokens =
-    (t for t in tokenize.generate_tokens(reader) if t.type == tokenize.COMMENT)
+    tokens = tokenize.generate_tokens(reader)
+    comment_tokens = (t for t in tokens if t.type == tokenize.COMMENT)
     for token in comment_tokens:
         CommentMatcher().matchCommentToNode(
             token.string,
