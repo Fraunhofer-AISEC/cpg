@@ -56,7 +56,6 @@ class CXXAmbiguitiesTest {
     fun testCallVsFunctionDeclaration() {
         val file = File("src/test/resources/call_me_crazy.h")
         val tu = TestUtils.analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
-
         assertNotNull(tu)
 
         // make sure we still have only one declaration in the file (the record)

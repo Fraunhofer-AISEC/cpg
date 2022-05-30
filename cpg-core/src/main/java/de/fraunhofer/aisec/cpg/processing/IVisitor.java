@@ -29,6 +29,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Collection;
 import java.util.HashSet;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * Reflective visitor that visits the most specific implementation of visit() methods.
@@ -42,7 +43,7 @@ public abstract class IVisitor<V extends IVisitable> {
     return visited;
   }
 
-  public void visit(V t) {
+  public void visit(@NotNull V t) {
     try {
       Method mostSpecificVisit = this.getClass().getMethod("visit", t.getClass());
 
