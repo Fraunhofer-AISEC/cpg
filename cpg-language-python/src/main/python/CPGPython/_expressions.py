@@ -96,7 +96,8 @@ def handle_expression_impl(self, expr):
             # construct a key value expression
             key_value = NodeBuilder.newKeyValueExpression(
                 key_expr, value_expr, self.get_src_code(expr))
-            # TODO location info
+            if key is not None and value is not None:
+                self.add_mul_loc_infos(key, value, key_value)
 
             lst.append(key_value)
 

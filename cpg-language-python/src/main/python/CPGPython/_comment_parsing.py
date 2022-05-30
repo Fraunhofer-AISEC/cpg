@@ -22,17 +22,23 @@
 #                   \$$$$$   |$$ |      \$$$$$   |
 #                    \______/ \__|       \______/
 #
-from CPGPython import PythonASTToCPG
+from de.fraunhofer.aisec.cpg.sarif import Region
+from de.fraunhofer.aisec.cpg.helpers import CommentMatcher
+import tokenize
 
 
-def parse_code(code, filename, frontend):
-    try:
-        converter = PythonASTToCPG(filename, frontend, code)
-        converter.execute()
-
-        tud = converter.tud
-
-        return tud
-    except Exception as e:
-        frontend.log.error("Buidling the CPG failed with exception: %s" % (e))
-        raise e
+def parse_comments(code, filename, frontend, tud):
+    reader = tokenize.open(filename).readline
+    tokens = tokenize.generate_tokens(reader)
+    comment_tokens = (t for t in tokens if t.type == tokenize.COMMENT)
+    for token in comment_tokens:
+        CommentMatcher().matchCommentToNode(
+            token.string,
+            Region(
+                token.start[0],
+                token.start[1] + 1,
+                token.end[0],
+                token.end[1] + 1
+            ),
+            tud
+        )

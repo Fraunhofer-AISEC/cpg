@@ -105,6 +105,15 @@ class PythonLanguageFrontend(config: TranslationConfiguration, scopeManager: Sco
 
             // run python function parse_code()
             tu = interp.invoke("parse_code", code, path, this) as TranslationUnitDeclaration
+
+            if (config.matchCommentsToNodes) {
+                // Parse comments and attach to nodes
+                val pyOptional = javaClass.getResource("/CPGPython/_comment_parsing.py")
+                pyOptional?.let {
+                    interp.exec(it.readText())
+                    interp.invoke("parse_comments", code, path, this, tu)
+                }
+            }
         } catch (e: JepException) {
             e.printStackTrace()
             throw TranslationException("Python failed with message: $e")
