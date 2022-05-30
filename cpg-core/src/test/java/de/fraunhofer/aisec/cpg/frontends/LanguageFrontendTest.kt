@@ -23,29 +23,31 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.frontends;
+package de.fraunhofer.aisec.cpg.frontends
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import de.fraunhofer.aisec.cpg.BaseTest
+import de.fraunhofer.aisec.cpg.TranslationConfiguration
+import de.fraunhofer.aisec.cpg.TranslationManager.Companion.builder
+import java.io.File
+import java.util.concurrent.ExecutionException
+import kotlin.test.Test
+import kotlin.test.assertEquals
 
-import de.fraunhofer.aisec.cpg.*;
-import java.io.File;
-import java.util.concurrent.ExecutionException;
-import org.junit.jupiter.api.Test;
-
-class LanguageFrontendTest extends BaseTest {
-
-  @Test
-  void testParseDirectory() throws ExecutionException, InterruptedException {
-    TranslationManager analyzer =
-        TranslationManager.builder()
-            .config(
-                TranslationConfiguration.builder()
-                    .sourceLocations(new File("src/test/resources/botan"))
-                    .debugParser(true)
-                    .defaultLanguages()
-                    .build())
-            .build();
-    TranslationResult res = analyzer.analyze().get();
-    assertEquals(3, res.getTranslationUnits().size());
-  }
+internal class LanguageFrontendTest : BaseTest() {
+    @Test
+    @Throws(ExecutionException::class, InterruptedException::class)
+    fun testParseDirectory() {
+        val analyzer =
+            builder()
+                .config(
+                    TranslationConfiguration.builder()
+                        .sourceLocations(File("src/test/resources/botan"))
+                        .debugParser(true)
+                        .defaultLanguages()
+                        .build()
+                )
+                .build()
+        val res = analyzer.analyze().get()
+        assertEquals(3, res.translationUnits.size)
+    }
 }

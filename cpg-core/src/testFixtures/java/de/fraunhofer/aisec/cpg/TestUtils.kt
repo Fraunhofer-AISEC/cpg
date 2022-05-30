@@ -28,7 +28,12 @@ package de.fraunhofer.aisec.cpg
 import de.fraunhofer.aisec.cpg.frontends.CompilationDatabase
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.TypeManager
+import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
+import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.helpers.Util
 import java.io.File
@@ -37,15 +42,15 @@ import java.nio.file.Path
 import java.util.function.Consumer
 import java.util.function.Predicate
 import java.util.stream.Collectors
+import kotlin.test.*
 import org.apache.commons.lang3.reflect.FieldUtils
-import org.junit.jupiter.api.Assertions
 import org.mockito.Mockito
 
 object TestUtils {
     @JvmStatic
     fun <S : Node?> findByUniquePredicate(nodes: Collection<S>, predicate: Predicate<S>?): S {
         val results = findByPredicate(nodes, predicate)
-        Assertions.assertEquals(
+        assertEquals(
             1,
             results.size,
             "Expected exactly one node matching the predicate: ${results.joinToString(",") { it.toString() }}",
@@ -301,5 +306,26 @@ object TestUtils {
         } else {
             loc.region.endLine == toCompare
         }
+    }
+
+    /**
+     * Asserts, that the expression given in [expression] refers to the expected declaration [b].
+     */
+    @JvmStatic
+    fun assertRefersTo(expression: Expression?, b: Declaration?) {
+        if (expression is DeclaredReferenceExpression) {
+            assertEquals(b, (expression as DeclaredReferenceExpression?)?.refersTo)
+        } else {
+            fail("not a reference")
+        }
+    }
+
+    /**
+     * Asserts, that the call expression given in [call] refers to the expected function declaration
+     * [func].
+     */
+    @JvmStatic
+    fun assertInvokes(call: CallExpression, func: FunctionDeclaration?) {
+        assertContains(call.invokes, func)
     }
 }
