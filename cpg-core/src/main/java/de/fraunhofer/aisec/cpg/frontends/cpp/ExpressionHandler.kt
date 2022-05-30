@@ -588,16 +588,8 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
         declaredReferenceExpression: DeclaredReferenceExpression
     ) {
         val type =
-<<<<<<< HEAD
-            TypeParser.createFrom(
-                (proxy as CPPClassInstance).templateDefinition.toString(),
-                true
-            ) as?
-                ObjectType
-=======
             TypeParser.createFrom((proxy as CPPClassInstance).templateDefinition.toString(), true)
-                as ObjectType
->>>>>>> b51ea5fc (Formatting)
+                as? ObjectType
         for (templateArgument in proxy.templateArguments) {
             if (templateArgument is CPPTemplateTypeArgument) {
                 type?.addGeneric(TypeParser.createFrom(templateArgument.toString(), true))
