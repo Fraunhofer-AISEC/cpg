@@ -37,7 +37,6 @@ import java.io.File
 import kotlin.test.*
 
 class CXXResolveTest {
-
     @Test
     fun testMethodResolve() {
         val file = File("src/test/resources/foo.cpp")
@@ -48,15 +47,12 @@ class CXXResolveTest {
                     InferenceConfiguration.builder().inferRecords(true).build()
                 )
             }
-
         assertNotNull(tu)
 
         val main = tu.byNameOrNull<FunctionDeclaration>("main")
-
         assertNotNull(main)
 
         val aFoo = main.bodyOrNull<MemberCallExpression>(0)
-
         assertNotNull(aFoo)
         assertEquals("foo", aFoo.name)
         assertEquals("a", aFoo.base.name)
@@ -67,7 +63,6 @@ class CXXResolveTest {
         )
 
         val bFoo = main.bodyOrNull<MemberCallExpression>(1)
-
         assertNotNull(bFoo)
         assertEquals("foo", bFoo.name)
         assertEquals("b", bFoo.base.name)
@@ -78,19 +73,16 @@ class CXXResolveTest {
         )
 
         val foo = main.bodyOrNull<CallExpression>(2)
-
         assertNotNull(foo)
 
         // foo should be connected to an inferred non-method function
         val func = foo.invokes.firstOrNull()
-
         assertNotNull(func)
         assertEquals("foo", func.name)
         assertFalse(func is MethodDeclaration)
         assertTrue(func.isInferred)
 
         val cFoo = main.bodyOrNull<CallExpression>(3)
-
         assertNotNull(cFoo)
 
         // c.foo should connect to C::foo
@@ -116,7 +108,6 @@ class CXXResolveTest {
                     InferenceConfiguration.builder().inferRecords(true).build()
                 )
             }
-
         assertNotNull(tu)
 
         val main = tu.byNameOrNull<FunctionDeclaration>("main")
