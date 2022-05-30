@@ -130,7 +130,7 @@ dependencies {
     testFixturesApi("org.junit.jupiter:junit-jupiter-api:5.8.1")
     testImplementation("org.junit.jupiter:junit-jupiter-params:5.8.1")
 
-    testFixturesApi("org.mockito:mockito-core:4.5.0")
+    testFixturesApi("org.mockito:mockito-core:4.6.0")
     
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.8.1")
 }
