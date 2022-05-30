@@ -219,18 +219,18 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
         } else {
             // Resolve possible templates
             var templateParameters: List<Node?> = emptyList<Node>()
-            val declSpecifier = ctx.typeId.declSpecifier
-            if ((declSpecifier as CPPASTNamedTypeSpecifier).name is CPPASTTemplateId) {
+            val declSpecifier = ctx.typeId.declSpecifier as? CPPASTNamedTypeSpecifier
+            if (declSpecifier?.name is CPPASTTemplateId) {
                 templateParameters = getTemplateArguments(declSpecifier.name as CPPASTTemplateId)
                 assert(t.root is ObjectType)
-                val objectType = t.root as ObjectType
+                val objectType = t.root as? ObjectType
                 val generics =
                     templateParameters
                         .stream()
                         .filter { obj: Node? -> TypeExpression::class.java.isInstance(obj) }
                         .map { e: Node? -> (e as TypeExpression?)!!.type }
                         .collect(Collectors.toList())
-                objectType.generics = generics
+                objectType?.generics = generics
             }
 
             // new returns a pointer, so we need to reference the type by pointer
@@ -591,14 +591,14 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             TypeParser.createFrom(
                 (proxy as CPPClassInstance).templateDefinition.toString(),
                 true
-            ) as
+            ) as?
                 ObjectType
         for (templateArgument in proxy.templateArguments) {
             if (templateArgument is CPPTemplateTypeArgument) {
-                type.addGeneric(TypeParser.createFrom(templateArgument.toString(), true))
+                type?.addGeneric(TypeParser.createFrom(templateArgument.toString(), true))
             }
         }
-        declaredReferenceExpression.type = type
+        type?.let { declaredReferenceExpression.type = it }
     }
 
     private fun handleExpressionList(exprList: CPPASTExpressionList): ExpressionList {

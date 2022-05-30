@@ -134,7 +134,7 @@ public abstract class TemplateDeclaration extends Declaration implements Declara
     if (o == null || getClass() != o.getClass()) return false;
     if (!super.equals(o)) return false;
     TemplateDeclaration that = (TemplateDeclaration) o;
-    return Objects.equals(parameters, that.parameters)
+    return Objects.equals(getParameters(), that.getParameters())
         && PropertyEdge.propertyEqualsList(parameters, that.parameters);
   }
 
