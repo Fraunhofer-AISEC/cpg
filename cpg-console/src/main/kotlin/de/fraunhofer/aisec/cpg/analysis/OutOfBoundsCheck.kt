@@ -62,8 +62,8 @@ class OutOfBoundsCheck {
                             // check, if we know that the array was initialized with a fixed length
                             // TODO(oxisto): it would be nice to have a helper that follows the expr
                             val decl =
-                                (v.arrayExpression as? DeclaredReferenceExpression)?.refersTo as?
-                                    VariableDeclaration
+                                (v.arrayExpression as? DeclaredReferenceExpression)?.refersTo
+                                    as? VariableDeclaration
                             (decl?.initializer as? ArrayCreationExpression)?.let {
                                 val capacity = it.capacity
 

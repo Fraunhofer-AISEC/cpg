@@ -398,10 +398,10 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
         }
         var operatorCode = ""
         when (ctx.operator) {
-            IASTUnaryExpression.op_prefixIncr, IASTUnaryExpression.op_postFixIncr ->
-                operatorCode = "++"
-            IASTUnaryExpression.op_prefixDecr, IASTUnaryExpression.op_postFixDecr ->
-                operatorCode = "--"
+            IASTUnaryExpression.op_prefixIncr,
+            IASTUnaryExpression.op_postFixIncr -> operatorCode = "++"
+            IASTUnaryExpression.op_prefixDecr,
+            IASTUnaryExpression.op_postFixDecr -> operatorCode = "--"
             IASTUnaryExpression.op_plus -> operatorCode = "+"
             IASTUnaryExpression.op_minus -> operatorCode = "-"
             IASTUnaryExpression.op_star -> operatorCode = "*"
@@ -478,14 +478,14 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             ) {
                 // Make necessary adjustments if we are handling a function template
                 val name =
-                    ((ctx.functionNameExpression as CPPASTFieldReference).fieldName as
-                            CPPASTTemplateId)
+                    ((ctx.functionNameExpression as CPPASTFieldReference).fieldName
+                            as CPPASTTemplateId)
                         .templateName.toString()
                 callExpression.name = name
                 callExpression.addExplicitTemplateParameters(
                     getTemplateArguments(
-                        (ctx.functionNameExpression as CPPASTFieldReference).fieldName as
-                            CPPASTTemplateId
+                        (ctx.functionNameExpression as CPPASTFieldReference).fieldName
+                            as CPPASTTemplateId
                     )
                 )
             }
@@ -588,11 +588,8 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
         declaredReferenceExpression: DeclaredReferenceExpression
     ) {
         val type =
-            TypeParser.createFrom(
-                (proxy as CPPClassInstance).templateDefinition.toString(),
-                true
-            ) as?
-                ObjectType
+            TypeParser.createFrom((proxy as CPPClassInstance).templateDefinition.toString(), true)
+                as? ObjectType
         for (templateArgument in proxy.templateArguments) {
             if (templateArgument is CPPTemplateTypeArgument) {
                 type?.addGeneric(TypeParser.createFrom(templateArgument.toString(), true))
@@ -659,7 +656,8 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
         binaryOperator.lhs = lhs
         binaryOperator.rhs = rhs
         when (expressionTypeProxy(ctx)) {
-            is ProblemType, is ProblemBinding -> {
+            is ProblemType,
+            is ProblemBinding -> {
                 log.trace("CDT could not deduce type. Type is set to null")
             }
             is TypeOfDependentExpression -> {

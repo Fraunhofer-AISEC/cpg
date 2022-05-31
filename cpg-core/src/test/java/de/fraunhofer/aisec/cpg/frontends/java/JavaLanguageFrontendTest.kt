@@ -194,8 +194,8 @@ internal class JavaLanguageFrontendTest : BaseTest() {
 
         // int i = 1;
         val i =
-            (main.getBodyStatementAs(0, DeclarationStatement::class.java))?.singleDeclaration as?
-                VariableDeclaration
+            (main.getBodyStatementAs(0, DeclarationStatement::class.java))?.singleDeclaration
+                as? VariableDeclaration
         assertNotNull(i)
         var literal = i.initializer as? Literal<*>
         assertNotNull(literal)
@@ -203,8 +203,8 @@ internal class JavaLanguageFrontendTest : BaseTest() {
 
         // String s = "string";
         val s =
-            (main.getBodyStatementAs(1, DeclarationStatement::class.java))?.singleDeclaration as?
-                VariableDeclaration
+            (main.getBodyStatementAs(1, DeclarationStatement::class.java))?.singleDeclaration
+                as? VariableDeclaration
         assertNotNull(s)
         literal = s.initializer as? Literal<*>
         assertNotNull(literal)
@@ -212,8 +212,8 @@ internal class JavaLanguageFrontendTest : BaseTest() {
 
         // boolean b = true;
         val b =
-            (main.getBodyStatementAs(2, DeclarationStatement::class.java))?.singleDeclaration as?
-                VariableDeclaration
+            (main.getBodyStatementAs(2, DeclarationStatement::class.java))?.singleDeclaration
+                as? VariableDeclaration
         assertNotNull(b)
         literal = b.initializer as? Literal<*>
         assertNotNull(literal)
@@ -221,8 +221,8 @@ internal class JavaLanguageFrontendTest : BaseTest() {
 
         // char c = '0';
         val c =
-            (main.getBodyStatementAs(3, DeclarationStatement::class.java))?.singleDeclaration as?
-                VariableDeclaration
+            (main.getBodyStatementAs(3, DeclarationStatement::class.java))?.singleDeclaration
+                as? VariableDeclaration
         assertNotNull(c)
         literal = c.initializer as? Literal<*>
         assertNotNull(literal)
@@ -230,8 +230,8 @@ internal class JavaLanguageFrontendTest : BaseTest() {
 
         // double d = 1.0;
         val d =
-            (main.getBodyStatementAs(4, DeclarationStatement::class.java))?.singleDeclaration as?
-                VariableDeclaration
+            (main.getBodyStatementAs(4, DeclarationStatement::class.java))?.singleDeclaration
+                as? VariableDeclaration
         assertNotNull(d)
         literal = d.initializer as? Literal<*>
         assertNotNull(literal)
@@ -239,8 +239,8 @@ internal class JavaLanguageFrontendTest : BaseTest() {
 
         // long l = 1L;
         val l =
-            (main.getBodyStatementAs(5, DeclarationStatement::class.java))?.singleDeclaration as?
-                VariableDeclaration
+            (main.getBodyStatementAs(5, DeclarationStatement::class.java))?.singleDeclaration
+                as? VariableDeclaration
         assertNotNull(l)
         literal = l.initializer as? Literal<*>
         assertNotNull(literal)
@@ -248,8 +248,8 @@ internal class JavaLanguageFrontendTest : BaseTest() {
 
         // Object o = null;
         val o =
-            (main.getBodyStatementAs(6, DeclarationStatement::class.java))?.singleDeclaration as?
-                VariableDeclaration
+            (main.getBodyStatementAs(6, DeclarationStatement::class.java))?.singleDeclaration
+                as? VariableDeclaration
         assertNotNull(o)
         literal = o.initializer as? Literal<*>
         assertNotNull(literal)
@@ -268,8 +268,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         assertNotNull(recordDeclaration)
 
         val fields =
-            recordDeclaration
-                .fields
+            recordDeclaration.fields
                 .stream()
                 .map(FieldDeclaration::name)
                 .collect(Collectors.toList())

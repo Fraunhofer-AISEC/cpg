@@ -190,8 +190,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
 
         // Check for declarations of the same function
         val declarationCandidates =
-            lang.currentTU
-                .declarations
+            lang.currentTU.declarations
                 .stream()
                 .filter { obj: Declaration? -> FunctionDeclaration::class.java.isInstance(obj) }
                 .map { obj: Declaration? -> FunctionDeclaration::class.java.cast(obj) }

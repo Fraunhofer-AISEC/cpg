@@ -168,9 +168,9 @@ class ScopeManager {
                     // The only way to do this, is to filter for the particular
                     // scope (the value of the map) and return the keys (the nodes)
                     val keys =
-                        manager.scopeMap.filter { it.value.astNode == entry.value.astNode }.map {
-                            it.key
-                        }
+                        manager.scopeMap
+                            .filter { it.value.astNode == entry.value.astNode }
+                            .map { it.key }
 
                     // now, we redirect it to the existing scope
                     keys.forEach { manager.scopeMap[it] = existing }
@@ -234,9 +234,11 @@ class ScopeManager {
             newScope =
                 when (nodeToScope) {
                     is CompoundStatement -> BlockScope(nodeToScope)
-                    is WhileStatement, is DoStatement, is AssertStatement ->
-                        LoopScope(nodeToScope as Statement)
-                    is ForStatement, is ForEachStatement -> LoopScope(nodeToScope as Statement)
+                    is WhileStatement,
+                    is DoStatement,
+                    is AssertStatement -> LoopScope(nodeToScope as Statement)
+                    is ForStatement,
+                    is ForEachStatement -> LoopScope(nodeToScope as Statement)
                     is SwitchStatement -> SwitchScope(nodeToScope)
                     is FunctionDeclaration -> FunctionScope(nodeToScope)
                     is IfStatement -> ValueDeclarationScope(nodeToScope)
@@ -374,7 +376,8 @@ class ScopeManager {
      */
     fun addDeclaration(declaration: Declaration?) {
         when (declaration) {
-            is ProblemDeclaration, is IncludeDeclaration -> {
+            is ProblemDeclaration,
+            is IncludeDeclaration -> {
                 // directly add problems and includes to the global scope
                 this.globalScope?.addDeclaration(declaration)
             }

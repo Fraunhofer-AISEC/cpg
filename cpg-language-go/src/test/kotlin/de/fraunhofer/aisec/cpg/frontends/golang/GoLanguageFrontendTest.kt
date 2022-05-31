@@ -71,8 +71,8 @@ class GoLanguageFrontendTest : BaseTest() {
         assertNotNull(message)
 
         val map =
-            ((message.initializer as? ConstructExpression)?.arguments?.firstOrNull() as?
-                InitializerListExpression)
+            ((message.initializer as? ConstructExpression)?.arguments?.firstOrNull()
+                as? InitializerListExpression)
 
         assertNotNull(map)
 
@@ -543,8 +543,8 @@ class GoLanguageFrontendTest : BaseTest() {
         assertNotNull(body)
 
         val b =
-            (body.statements.first() as? DeclarationStatement)?.singleDeclaration as?
-                VariableDeclaration
+            (body.statements.first() as? DeclarationStatement)?.singleDeclaration
+                as? VariableDeclaration
 
         assertNotNull(b)
         assertEquals("b", b.name)

@@ -167,15 +167,13 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         val main = tu.getDeclarationAs(0, FunctionDeclaration::class.java)
         val e =
             Objects.requireNonNull(main!!.getBodyStatementAs(0, DeclarationStatement::class.java))
-                ?.singleDeclaration as
-                VariableDeclaration
+                ?.singleDeclaration as VariableDeclaration
         assertNotNull(e)
         assertEquals(TypeParser.createFrom("ExtendedClass*", true), e.type)
 
         val b =
             Objects.requireNonNull(main.getBodyStatementAs(1, DeclarationStatement::class.java))
-                ?.singleDeclaration as
-                VariableDeclaration
+                ?.singleDeclaration as VariableDeclaration
         assertNotNull(b)
         assertEquals(TypeParser.createFrom("BaseClass*", true), b.type)
 
@@ -198,8 +196,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
 
         val d =
             Objects.requireNonNull(main.getBodyStatementAs(4, DeclarationStatement::class.java))
-                ?.singleDeclaration as
-                VariableDeclaration
+                ?.singleDeclaration as VariableDeclaration
         assertNotNull(d)
 
         cast = d.initializer as? CastExpression
@@ -217,8 +214,8 @@ internal class CXXLanguageFrontendTest : BaseTest() {
 
         // first statement is the variable declaration
         val x =
-            (statement.statements[0] as DeclarationStatement).singleDeclaration as
-                VariableDeclaration
+            (statement.statements[0] as DeclarationStatement).singleDeclaration
+                as VariableDeclaration
         assertNotNull(x)
         assertEquals(TypeParser.createFrom("int[]", true), x.type)
 
@@ -837,8 +834,8 @@ internal class CXXLanguageFrontendTest : BaseTest() {
 
         // Integer i
         val i =
-            (statement.statements[0] as DeclarationStatement).singleDeclaration as
-                VariableDeclaration
+            (statement.statements[0] as DeclarationStatement).singleDeclaration
+                as VariableDeclaration
         // type should be Integer
         assertEquals(TypeParser.createFrom("Integer", true), i.type)
 
@@ -850,8 +847,8 @@ internal class CXXLanguageFrontendTest : BaseTest() {
 
         // auto (Integer) m
         val m =
-            (statement.statements[6] as DeclarationStatement).singleDeclaration as
-                VariableDeclaration
+            (statement.statements[6] as DeclarationStatement).singleDeclaration
+                as VariableDeclaration
         // type should be Integer*
         assertEquals(TypeParser.createFrom("Integer*", true), m.type)
 
@@ -1080,8 +1077,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         assertEquals("record_attribute", someClass.annotations[0].name)
 
         val a =
-            someClass
-                .fields
+            someClass.fields
                 .stream()
                 .filter { f: FieldDeclaration -> f.name == "a" }
                 .findAny()
@@ -1095,8 +1091,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         assertEquals("a", (annotation.members[0].value as Literal<*>).value)
 
         val b =
-            someClass
-                .fields
+            someClass.fields
                 .stream()
                 .filter { f: FieldDeclaration -> f.name == "b" }
                 .findAny()
