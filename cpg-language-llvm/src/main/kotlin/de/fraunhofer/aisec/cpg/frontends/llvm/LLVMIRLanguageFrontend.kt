@@ -185,7 +185,8 @@ class LLVMIRLanguageFrontend(config: TranslationConfiguration, scopeManager: Sco
         alreadyVisited[typeRef] = null
         val res: Type =
             when (LLVMGetTypeKind(typeRef)) {
-                LLVMVectorTypeKind, LLVMArrayTypeKind -> {
+                LLVMVectorTypeKind,
+                LLVMArrayTypeKind -> {
                     // var length = LLVMGetArrayLength(typeRef)
                     val elementType = typeFrom(LLVMGetElementType(typeRef), alreadyVisited)
                     elementType.reference(PointerType.PointerOrigin.ARRAY)

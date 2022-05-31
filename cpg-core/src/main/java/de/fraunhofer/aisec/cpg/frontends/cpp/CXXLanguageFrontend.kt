@@ -206,8 +206,7 @@ class CXXLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeM
                         null,
                         opts,
                         log
-                    ) as
-                    CPPASTTranslationUnit
+                    ) as CPPASTTranslationUnit
             val length = translationUnit.length
             LOGGER.info("Parsed {} bytes corresponding roughly to {} LoC", length, length / 50)
             bench.addMeasurement()

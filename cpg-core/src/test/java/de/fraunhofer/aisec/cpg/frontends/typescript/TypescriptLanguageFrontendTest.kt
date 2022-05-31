@@ -190,8 +190,8 @@ class TypescriptLanguageFrontendTest {
         assertEquals("event", preventDefault.base.name)
 
         val apiUrl =
-            function.getBodyStatementAs(1, DeclarationStatement::class.java)?.singleDeclaration as?
-                VariableDeclaration
+            function.getBodyStatementAs(1, DeclarationStatement::class.java)?.singleDeclaration
+                as? VariableDeclaration
         assertNotNull(apiUrl)
 
         assertNotNull("apiUrl", apiUrl.name)
@@ -202,8 +202,8 @@ class TypescriptLanguageFrontendTest {
         assertEquals("/api/v1/groups", literalInitializer.value)
 
         val token =
-            function.getBodyStatementAs(2, DeclarationStatement::class.java)?.singleDeclaration as?
-                VariableDeclaration
+            function.getBodyStatementAs(2, DeclarationStatement::class.java)?.singleDeclaration
+                as? VariableDeclaration
         assertNotNull(token)
 
         assertNotNull("token", token.name)
@@ -421,8 +421,8 @@ class TypescriptLanguageFrontendTest {
         assertNotNull(tu)
 
         val onPost =
-            tu.statements.firstOrNull { it is MemberCallExpression && it.name == "onPost" } as?
-                MemberCallExpression
+            tu.statements.firstOrNull { it is MemberCallExpression && it.name == "onPost" }
+                as? MemberCallExpression
         assertNotNull(onPost)
 
         val lambda = onPost.arguments.drop(1).firstOrNull() as? LambdaExpression

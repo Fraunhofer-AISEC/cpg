@@ -226,8 +226,8 @@ class PythonFrontendTest : BaseTest() {
         assertNotNull(body)
 
         val sel =
-            (body.statements.first() as? DeclarationStatement)?.singleDeclaration as?
-                VariableDeclaration
+            (body.statements.first() as? DeclarationStatement)?.singleDeclaration
+                as? VariableDeclaration
         assertNotNull(sel)
         assertEquals("sel", sel.name)
         assertEquals(TypeParser.createFrom("bool", false), sel.type)
@@ -483,8 +483,7 @@ class PythonFrontendTest : BaseTest() {
         // self.somevar = i
         val someVarDeclaration =
             ((bar.body as? CompoundStatement)?.statements?.get(0) as? DeclarationStatement)
-                ?.declarations?.first() as?
-                FieldDeclaration
+                ?.declarations?.first() as? FieldDeclaration
         assertNotNull(someVarDeclaration)
         assertEquals("somevar", someVarDeclaration.name)
         assertEquals(i, (someVarDeclaration.initializer as? DeclaredReferenceExpression)?.refersTo)
@@ -664,8 +663,8 @@ class PythonFrontendTest : BaseTest() {
         assertEquals(assignRhs.operatorCode, "+")
 
         val assignRhsLhs =
-            assignRhs.lhs as?
-                MemberExpression // the second "self.total" in "self.total = self.total + 1"
+            assignRhs.lhs
+                as? MemberExpression // the second "self.total" in "self.total = self.total + 1"
         assertNotNull(assignRhsLhs)
         assertEquals((assignRhsLhs.base as? DeclaredReferenceExpression)?.refersTo, selfReceiver)
 
@@ -1061,8 +1060,8 @@ class PythonFrontendTest : BaseTest() {
 
         // phr = {"user_id": user_id} | content
         val phrDeclaration =
-            (ifThen.statements.get(0) as? DeclarationStatement)?.declarations?.get(0) as?
-                VariableDeclaration
+            (ifThen.statements.get(0) as? DeclarationStatement)?.declarations?.get(0)
+                as? VariableDeclaration
         assertNotNull(phrDeclaration)
         assertEquals("phr", phrDeclaration.name)
         val phrInintializer = phrDeclaration.initializer as? BinaryOperator
@@ -1072,8 +1071,8 @@ class PythonFrontendTest : BaseTest() {
 
         // z = {"user_id": user_id}
         val elseStmt1 =
-            (ifElse.statements.get(0) as? DeclarationStatement)?.declarations?.get(0) as?
-                VariableDeclaration
+            (ifElse.statements.get(0) as? DeclarationStatement)?.declarations?.get(0)
+                as? VariableDeclaration
         assertNotNull(elseStmt1)
         assertEquals("z", elseStmt1.name)
 

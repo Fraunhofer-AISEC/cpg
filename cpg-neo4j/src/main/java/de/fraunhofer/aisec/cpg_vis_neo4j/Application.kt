@@ -81,7 +81,8 @@ class Application : Callable<Int> {
             arity = "0..*",
             description =
                 [
-                    "The paths to analyze. If module support is enabled, the paths will be looked at if they contain modules"]
+                    "The paths to analyze. If module support is enabled, the paths will be looked at if they contain modules"
+                ]
         )
         var files: List<String> = mutableListOf()
 
@@ -90,7 +91,8 @@ class Application : Callable<Int> {
             description =
                 [
                     "Maps the names of software components to their respective files. The files are separated by commas (No whitespace!).",
-                    "Example: -S App1=./file1.c,./file2.c -S App2=./Main.java,./Class.java"]
+                    "Example: -S App1=./file1.c,./file2.c -S App2=./Main.java,./Class.java"
+                ]
         )
         var softwareComponents: Map<String, String> = mutableMapOf()
 
@@ -131,7 +133,8 @@ class Application : Callable<Int> {
             [
                 "Performance optimisation: " +
                     "Limit recursion depth form neo4j OGM when leaving the AST. " +
-                    "$DEFAULT_SAVE_DEPTH (default) means no limit is used."]
+                    "$DEFAULT_SAVE_DEPTH (default) means no limit is used."
+            ]
     )
     private var depth: Int = DEFAULT_SAVE_DEPTH
 
@@ -148,7 +151,8 @@ class Application : Callable<Int> {
         names = ["--enable-experimental-python"],
         description =
             [
-                "Enables the experimental language frontend for Python. Be aware, that further steps might be necessary to install native libraries such as jep"]
+                "Enables the experimental language frontend for Python. Be aware, that further steps might be necessary to install native libraries such as jep"
+            ]
     )
     private var enableExperimentalPython: Boolean = false
 
@@ -156,7 +160,8 @@ class Application : Callable<Int> {
         names = ["--enable-experimental-go"],
         description =
             [
-                "Enables the experimental language frontend for Go. Be aware, that further steps might be necessary to install native libraries such as cpgo"]
+                "Enables the experimental language frontend for Go. Be aware, that further steps might be necessary to install native libraries such as cpgo"
+            ]
     )
     private var enableExperimentalGo: Boolean = false
 
@@ -194,7 +199,8 @@ class Application : Callable<Int> {
         names = ["--top-level"],
         description =
             [
-                "Set top level directory of project structure. Default: Largest common path of all source files"]
+                "Set top level directory of project structure. Default: Largest common path of all source files"
+            ]
     )
     private var topLevel: File? = null
 

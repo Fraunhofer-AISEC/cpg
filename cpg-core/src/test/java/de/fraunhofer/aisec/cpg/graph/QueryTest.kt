@@ -46,8 +46,7 @@ class QueryTest {
                 "MATCH (n:FunctionDeclaration)-[:PARAMETERS]->(m:ParamVariableDeclaration) RETURN n",
                 null,
                 null
-            ) as
-                Query
+            ) as Query
 
         val nodes: List<Node> = db.executeQuery(query)
 
@@ -61,8 +60,7 @@ class QueryTest {
                 "MATCH (n:FunctionDeclaration)-[:PARAMETERS]->(m:ParamVariableDeclaration) RETURN m",
                 null,
                 null
-            ) as
-                Query
+            ) as Query
 
         val nodes = db.executeQuery(query)
 
@@ -76,8 +74,7 @@ class QueryTest {
                 "MATCH (n:FunctionDeclaration)-[:PARAMETERS]->(m:ParamVariableDeclaration) WHERE m.name = 'paramB' RETURN n",
                 null,
                 null
-            ) as
-                Query
+            ) as Query
 
         val nodes = db.executeQuery(query)
 
@@ -92,8 +89,7 @@ class QueryTest {
                 "MATCH (n:VariableDeclaration) WHERE n.name = 'myVar' RETURN n",
                 null,
                 null
-            ) as
-                Query
+            ) as Query
         println(query)
 
         val nodes = db.executeQuery(query)
