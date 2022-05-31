@@ -128,5 +128,5 @@ dependencies {
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.8.1")
 
     // jep for python support
-    api("black.ninia:jep:4.0.0")
+    api("black.ninia:jep:4.0.3")
 }
