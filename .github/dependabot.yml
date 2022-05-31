@@ -1,7 +1,7 @@
 version: 2
 updates:
   - package-ecosystem: "gradle"
-    directory: "/"
+    directory: "/cpg-core"
     schedule:
       interval: "daily"
     labels:
@@ -10,7 +10,7 @@ updates:
       - dependency-name: "*"
         update-types: ["version-update:semver-patch"]
   - package-ecosystem: "gomod"
-    directory: "/cpg-core/src/main/golang"
+    directory: "/cpg-cpg-language-go/src/main/golang"
     schedule:
       interval: "daily"
     labels:
