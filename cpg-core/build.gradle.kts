@@ -104,8 +104,8 @@ dependencies {
     api("org.slf4j:slf4j-api:1.7.32")
     implementation("org.apache.logging.log4j:log4j-slf4j18-impl:2.17.0")
 
-    api("com.github.javaparser:javaparser-symbol-solver-core:3.24.0")
-    api("com.fasterxml.jackson.module:jackson-module-kotlin:2.13.0")
+    api("com.github.javaparser:javaparser-symbol-solver-core:3.24.2")
+    api("com.fasterxml.jackson.module:jackson-module-kotlin:2.13.3")
 
     // Eclipse dependencies
     api("org.eclipse.platform:org.eclipse.core.runtime:3.24.0")
@@ -130,7 +130,7 @@ dependencies {
     testFixturesApi("org.junit.jupiter:junit-jupiter-api:5.8.1")
     testFixturesImplementation("org.jetbrains.kotlin:kotlin-test")
     testFixturesImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
-    testImplementation("org.junit.jupiter:junit-jupiter-params:5.8.1")
+    testImplementation("org.junit.jupiter:junit-jupiter-params:5.8.2")
     testFixturesApi("org.mockito:mockito-core:4.6.0")
     
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.8.1")
