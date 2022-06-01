@@ -105,8 +105,8 @@ public class ArrayCreationExpression extends Expression implements TypeListener 
     ArrayCreationExpression that = (ArrayCreationExpression) o;
     return super.equals(that)
         && Objects.equals(initializer, that.initializer)
-        && Objects.equals(dimensions, that.dimensions)
-        && Objects.equals(this.getDimensions(), that.getDimensions());
+        && Objects.equals(this.getDimensions(), that.getDimensions())
+        && PropertyEdge.propertyEqualsList(dimensions, that.dimensions);
   }
 
   @Override

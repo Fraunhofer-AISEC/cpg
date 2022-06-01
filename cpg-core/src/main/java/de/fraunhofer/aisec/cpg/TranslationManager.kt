@@ -332,8 +332,7 @@ private constructor(
         val sfToFe =
             result.scratch.computeIfAbsent(TranslationResult.SOURCE_LOCATIONS_TO_FRONTEND) {
                 mutableMapOf<String, String>()
-            } as
-                MutableMap<String, String>
+            } as MutableMap<String, String>
         sfToFe[sourceLocation!!.name] = f.javaClass.simpleName
 
         // Set frontend so passes know what language they are working on.
@@ -398,9 +397,7 @@ private constructor(
 
     private val String.frontendClass: Class<out LanguageFrontend>?
         get() {
-            return config
-                .frontends
-                .entries
+            return config.frontends.entries
                 .filter { it.value.contains(this) }
                 .map { it.key }
                 .firstOrNull()

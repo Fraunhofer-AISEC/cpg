@@ -1098,17 +1098,21 @@ func (this *GoLanguageFrontend) handleCompositeLit(fset *token.FileSet, lit *ast
 	c := cpg.NewConstructExpression(fset, lit)
 
 	// parse the type field, to see which kind of expression it is
-	var reference = this.handleExpr(fset, lit.Type)
+	var typ = this.handleType(lit.Type)
 
-	if reference == nil {
-		return nil
+	if typ != nil {
+		(*cpg.Node)(c).SetName((*cpg.Node)(typ).GetName())
+		(*cpg.Expression)(c).SetType(typ)
 	}
-
-	(*cpg.Node)(c).SetName(reference.GetName())
 
 	l := cpg.NewInitializerListExpression(fset, lit)
 
 	c.AddArgument((*cpg.Expression)(l))
+
+	// Normally, the construct expression would not have DFG edge, but in this case we are mis-using it
+	// to simulate an object literal, so we need to add a DFG here, otherwise a declaration is disconnected
+	// from its initialization.
+	c.AddPrevDFG((*cpg.Node)(l))
 
 	for _, elem := range lit.Elts {
 		expr := this.handleExpr(fset, elem)

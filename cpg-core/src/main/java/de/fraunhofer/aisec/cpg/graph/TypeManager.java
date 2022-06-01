@@ -237,10 +237,16 @@ public class TypeManager {
   public ParameterizedType searchTemplateScopeForDefinedParameterizedTypes(
       Scope scope, String name) {
     if (scope instanceof TemplateScope) {
-      TemplateDeclaration template = (TemplateDeclaration) scope.getAstNode();
-      ParameterizedType parameterizedType = getTypeParameter(template, name);
-      if (parameterizedType != null) {
-        return parameterizedType;
+      var node = scope.getAstNode();
+
+      // We need an additional check here, because of parsing or other errors, the AST node might
+      // not necessarily be a template declaration.
+      if (node instanceof TemplateDeclaration) {
+        TemplateDeclaration template = (TemplateDeclaration) node;
+        ParameterizedType parameterizedType = getTypeParameter(template, name);
+        if (parameterizedType != null) {
+          return parameterizedType;
+        }
       }
     }
 
@@ -483,10 +489,18 @@ public class TypeManager {
     typeToRecord =
         frontend
             .getScopeManager()
-            .filterScopesDistinctBy(RecordScope.class::isInstance, s -> s.getAstNode().getName())
+            .filterScopesDistinctBy(
+                scope -> {
+                  // It seems that somehow other node types get mixed into the ast node of a record
+                  // scope sometimes. So we need to be extra sure that our ast node is a record
+                  // declaration
+                  return scope instanceof RecordScope
+                      && scope.getAstNode() instanceof RecordDeclaration;
+                },
+                s -> s.getAstNode().getName())
             .stream()
             .map(s -> (RecordDeclaration) s.getAstNode())
-            .collect(Collectors.toMap(RecordDeclaration::getName, Function.identity()));
+            .collect(Collectors.toMap(Node::getName, Function.identity()));
 
     List<Set<Ancestor>> allAncestors =
         types.stream()

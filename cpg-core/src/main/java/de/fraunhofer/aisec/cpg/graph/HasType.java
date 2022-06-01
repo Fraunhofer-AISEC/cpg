@@ -73,9 +73,9 @@ public interface HasType {
 
   /**
    * Set the node's possible subtypes. Listener circle detection works the same way as with {@link
-   * #setType(Type, List<HasType>)}
+   * #setType(Type, List)}
    *
-   * @param possibleSubTypes
+   * @param possibleSubTypes the set of possible sub types
    * @param root A list of already seen nodes which is used for detecting loops.
    */
   void setPossibleSubTypes(List<Type> possibleSubTypes, @NonNull List<HasType> root);

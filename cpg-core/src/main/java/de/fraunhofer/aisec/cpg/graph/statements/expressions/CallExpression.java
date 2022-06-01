@@ -395,11 +395,9 @@ public class CallExpression extends Expression
         && Objects.equals(this.getInvokes(), that.getInvokes())
         && PropertyEdge.propertyEqualsList(invokes, that.invokes)
         && Objects.equals(base, that.base)
-        && ((templateParameters == that.templateParameters)
-            || (templateParameters.equals(that.templateParameters)
-                && PropertyEdge.propertyEqualsList(templateParameters, that.templateParameters)))
-        && ((templateInstantiation == that.templateInstantiation)
-            || (templateInstantiation.equals(that.templateInstantiation)))
+        && Objects.equals(getTemplateParameters(), that.getTemplateParameters())
+        && PropertyEdge.propertyEqualsList(templateParameters, that.templateParameters)
+        && Objects.equals(templateInstantiation, that.templateInstantiation)
         && template == that.template;
   }
 

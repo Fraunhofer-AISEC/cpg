@@ -300,12 +300,17 @@ public class Util {
 
   public static boolean containsOnOuterLevel(String input, char marker) {
     int openParentheses = 0;
+    int openTemplate = 0;
     for (char c : input.toCharArray()) {
       if (c == '(') {
         openParentheses++;
       } else if (c == ')') {
         openParentheses--;
-      } else if (c == marker && openParentheses == 0) {
+      } else if (c == '<') {
+        openTemplate++;
+      } else if (c == '>') {
+        openTemplate--;
+      } else if (c == marker && openParentheses == 0 && openTemplate == 0) {
         return true;
       }
     }

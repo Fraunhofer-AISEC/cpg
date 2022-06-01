@@ -733,15 +733,23 @@ public class CallResolver extends Pass {
     List<Type> templateCallSignature = new ArrayList<>();
     for (ParamVariableDeclaration argument : function.getParameters()) {
       if (argument.getType() instanceof ParameterizedType) {
-        templateCallSignature.add(
-            ((TypeExpression)
-                    initializationSignature.get(
-                        parameterizedTypeResolution.get(argument.getType())))
-                .getType());
+        Type type = UnknownType.getUnknownType();
+
+        var typeParamDeclaration = parameterizedTypeResolution.get(argument.getType());
+
+        if (typeParamDeclaration != null) {
+          Node node = initializationSignature.get(typeParamDeclaration);
+          if (node instanceof TypeExpression) {
+            type = ((TypeExpression) node).getType();
+          }
+        }
+
+        templateCallSignature.add(type);
       } else {
         templateCallSignature.add(argument.getType());
       }
     }
+
     return templateCallSignature;
   }
 

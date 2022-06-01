@@ -267,7 +267,8 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
      * by the [TypeParser].
      */
     private fun replaceCharsInName(name: String): String {
-        return name.replace("[]", "Array")
+        return name
+            .replace("[]", "Array")
             .replace("*", "Ptr")
             .replace("+", "%2B")
             .replace("&", "%26")

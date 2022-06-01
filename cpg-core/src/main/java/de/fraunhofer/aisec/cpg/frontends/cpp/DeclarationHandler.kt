@@ -190,8 +190,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
 
         // Check for declarations of the same function
         val declarationCandidates =
-            lang.currentTU
-                .declarations
+            lang.currentTU.declarations
                 .stream()
                 .filter { obj: Declaration? -> FunctionDeclaration::class.java.isInstance(obj) }
                 .map { obj: Declaration? -> FunctionDeclaration::class.java.cast(obj) }
@@ -420,13 +419,15 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
                 // make sure, the type manager knows about this type before parsing the declarator
                 val result = TypeParser.createFrom(typeString, true, lang)
 
-                val declaration = lang.declaratorHandler.handle(declarator) as ValueDeclaration
+                val declaration = lang.declaratorHandler.handle(declarator) as? ValueDeclaration
 
-                declaration.type = result
+                if (declaration != null) {
+                    declaration.type = result
 
-                // process attributes
-                lang.processAttributes(declaration, ctx)
-                sequence.addDeclaration(declaration)
+                    // process attributes
+                    lang.processAttributes(declaration, ctx)
+                    sequence.addDeclaration(declaration)
+                }
             }
         }
 
