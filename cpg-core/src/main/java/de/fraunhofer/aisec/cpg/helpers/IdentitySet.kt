@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.helpers
 import de.fraunhofer.aisec.cpg.graph.Node
 import java.lang.UnsupportedOperationException
 import java.util.*
+import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * This class implements the [MutableSet] interface with an underlying map and reference-equality
@@ -49,7 +50,8 @@ class IdentitySet<T : Any> : MutableSet<T> {
      * value of the map is not used and is always true. A [Boolean] is used because it seems to be
      * the smallest data type possible.
      */
-    private val map: IdentityHashMap<T, Boolean> = IdentityHashMap()
+    private val map: IdentityHashMap<T, Int> = IdentityHashMap()
+    private val counter = AtomicInteger()
 
     override operator fun contains(element: T): Boolean {
         // We are using the backing reference-equality based map to check, if the element is already
@@ -60,7 +62,7 @@ class IdentitySet<T : Any> : MutableSet<T> {
     override fun add(element: T): Boolean {
         // Since we are a Set, we only want to add elements that are not already there
         if (!contains(element)) {
-            map[element] = true
+            map[element] = counter.addAndGet(1)
             return true
         }
 
@@ -77,6 +79,15 @@ class IdentitySet<T : Any> : MutableSet<T> {
 
     override fun iterator(): MutableIterator<T> {
         return map.keys.iterator()
+    }
+
+    /**
+     * Returns the contents of this [IdentitySet] as a sorted [List] according to order the nodes
+     * were inserted to. This is particularly useful, if you need to look up values in the list
+     * according to their "closeness" to the root AST node.
+     */
+    fun toSortedList(): List<T> {
+        return map.entries.sortedBy { it.value }.map { it.key }
     }
 
     override fun addAll(elements: Collection<T>): Boolean {

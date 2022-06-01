@@ -34,9 +34,9 @@ import de.fraunhofer.aisec.cpg.helpers.Benchmark
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import java.time.Duration
 import java.time.temporal.ChronoUnit
+import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
-import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertTimeout
 
 class WalkerTest : BaseTest() {

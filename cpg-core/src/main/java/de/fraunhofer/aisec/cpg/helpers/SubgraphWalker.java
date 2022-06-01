@@ -164,12 +164,7 @@ public class SubgraphWalker {
 
     flattenASTInternal(identitySet, n);
 
-    List<Node> list = new ArrayList<>(identitySet);
-
-    // sort it
-    list.sort(new NodeComparator());
-
-    return list;
+    return identitySet.toSortedList();
   }
 
   private static void flattenASTInternal(@NonNull Set<Node> identitySet, @NonNull Node n) {

@@ -34,10 +34,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import java.io.File
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertFalse
-import kotlin.test.assertNotNull
+import kotlin.test.*
 
 internal class SubgraphWalkerTest : BaseTest() {
     @Test
@@ -71,6 +68,6 @@ internal class SubgraphWalkerTest : BaseTest() {
 
         val flat = SubgraphWalker.flattenAST(tu)
 
-        assertEquals(listOf<Node>(tu, func, name), flat)
+        assertEquals(listOf<Node>(tu, name, func), flat)
     }
 }
