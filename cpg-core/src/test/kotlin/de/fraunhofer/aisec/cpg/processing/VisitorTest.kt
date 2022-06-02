@@ -104,7 +104,7 @@ class VisitorTest : BaseTest() {
         val nodeList = mutableListOf<Node>()
         recordDeclaration.accept(
             Strategy::AST_FORWARD,
-            object : IVisitor<Node?>() {
+            object : IVisitor<Node>() {
                 override fun visit(n: Node) {
                     log.info("Node: $n")
                     nodeList.add(n)

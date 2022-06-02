@@ -34,7 +34,6 @@ import de.fraunhofer.aisec.cpg.TranslationManager.Companion.builder
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.statements.ForStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
-import de.fraunhofer.aisec.cpg.helpers.NodeComparator
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.helpers.Util
 import java.io.File
@@ -248,7 +247,7 @@ internal class VariableResolverJavaTest : BaseTest() {
                     }
                     .collect(Collectors.toList())
             val calls = findByName(Util.filterCast(nodes, CallExpression::class.java), "printLog")
-            calls.sortedWith(NodeComparator())
+
             val records = Util.filterCast(nodes, RecordDeclaration::class.java)
 
             // Extract all Variable declarations and field declarations for matching
