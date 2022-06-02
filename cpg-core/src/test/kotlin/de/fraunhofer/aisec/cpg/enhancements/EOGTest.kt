@@ -41,7 +41,6 @@ import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
-import de.fraunhofer.aisec.cpg.helpers.NodeComparator
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.helpers.Util.Connect
@@ -812,7 +811,6 @@ internal class EOGTest : BaseTest() {
         //  set properly
         nodes =
             nodes.stream().filter { node: Node -> node.code != null }.collect(Collectors.toList())
-        nodes.sortWith(NodeComparator())
         return nodes
     }
 
