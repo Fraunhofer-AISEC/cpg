@@ -89,5 +89,5 @@ dependencies {
 
     // Command line interface support
     api("info.picocli:picocli:4.6.3")
-    annotationProcessor("info.picocli:picocli-codegen:4.6.1")
+    annotationProcessor("info.picocli:picocli-codegen:4.6.3")
 }
