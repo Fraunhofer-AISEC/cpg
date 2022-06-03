@@ -418,9 +418,9 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
 
             // process attributes
             lang.processAttributes(declaration, ctx)
-        } else if (declSpecifier is CPPASTNamedTypeSpecifier &&
-                declSpecifier.name is CPPASTTemplateId
-        ) {
+        }
+
+        if (declSpecifier is CPPASTNamedTypeSpecifier && declSpecifier.name is CPPASTTemplateId) {
             handleTemplateUsage(declSpecifier, ctx, sequence)
         } else {
             for (declarator in ctx.declarators) {

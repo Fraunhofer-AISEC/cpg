@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.passes.scopes
 
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
+import de.fraunhofer.aisec.cpg.graph.DeclarationHolder
 import de.fraunhofer.aisec.cpg.graph.HasType
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.*
@@ -372,7 +373,15 @@ class ScopeManager {
      * that is associated with the current scope through [ValueDeclarationScope.addValueDeclaration]
      * and [StructureDeclarationScope.addStructureDeclaration].
      *
-     * @param declaration
+     * Setting [Scope.astNode] to false is useful, if you want to make sure a certain declaration is
+     * visible within a scope, but is not directly part of the scope's AST. An example is the way
+     * C/C++ handles unscoped enum constants. They are visible in the enclosing scope, e.g., a
+     * translation unit, but they are added to the AST of their enum declaration, not the
+     * translation unit. The enum declaration is then added to the translation unit.
+     *
+     * @param declaration the declaration to add
+     * @param addToAST specifies, whether the declaration also gets added to the [Scope.astNode] of
+     * the current scope (if it implements [DeclarationHolder]). Defaults to true.
      */
     @JvmOverloads
     fun addDeclaration(declaration: Declaration?, addToAST: Boolean = true) {
