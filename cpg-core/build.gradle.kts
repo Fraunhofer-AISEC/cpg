@@ -100,7 +100,7 @@ dependencies {
 
     api("org.neo4j:neo4j-ogm-core:3.2.27")
 
-    api("org.slf4j:jul-to-slf4j:1.7.32")
+    api("org.slf4j:jul-to-slf4j:1.7.36")
     api("org.slf4j:slf4j-api:1.7.32")
     implementation("org.apache.logging.log4j:log4j-slf4j18-impl:2.17.0")
 
