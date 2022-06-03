@@ -39,7 +39,6 @@ import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.TypeParser
-import de.fraunhofer.aisec.cpg.helpers.NodeComparator
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.passes.scopes.ScopeManager
@@ -301,7 +300,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         val file = File("src/test/resources/cfg/Switch.java")
         val declaration = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
         val graphNodes = SubgraphWalker.flattenAST(declaration)
-        graphNodes.sortWith(NodeComparator())
+
         assertTrue(graphNodes.size != 0)
 
         val switchStatements = Util.filterCast(graphNodes, SwitchStatement::class.java)
