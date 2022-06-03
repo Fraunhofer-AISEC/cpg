@@ -34,7 +34,6 @@ import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeclaredReferenceExpression
 import de.fraunhofer.aisec.cpg.sarif.Region
 import java.io.File
-import java.nio.file.Path
 import kotlin.test.*
 import org.junit.jupiter.api.Test
 
@@ -255,22 +254,5 @@ internal class CXXIncludeTest : BaseTest() {
         val recordDeclaration =
             translationUnitDeclarations[0].getDeclarationAs(0, RecordDeclaration::class.java)
         assertNull(recordDeclaration)
-    }
-
-    @Test
-    fun testDeduplication() {
-        val root = Path.of("src/test/resources/cxx/includetest")
-        val files = listOf(root.resolve("a.cpp"), root.resolve("b.cpp"))
-        val tus =
-            analyzeWithBuilder(
-                TranslationConfiguration.builder()
-                    .sourceLocations(files.map { it.toFile() })
-                    .topLevel(root.toFile())
-                    .loadIncludes(true)
-                    .debugParser(true)
-                    .defaultLanguages()
-                    .failOnError(true)
-            )
-        assertNotNull(tus)
     }
 }

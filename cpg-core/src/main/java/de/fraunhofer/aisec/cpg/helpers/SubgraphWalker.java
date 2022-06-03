@@ -217,16 +217,12 @@ public class SubgraphWalker {
         Strategy::AST_FORWARD,
         new IVisitor<>() {
           @Override
-          public void visit(@NotNull Node node) {
-            if (node instanceof HasType) {
-              ((HasType) node).refreshType();
+          public void visit(@NotNull Node child) {
+            if (child instanceof HasType) {
+              ((HasType) child).refreshType();
             }
           }
         });
-
-    if (node instanceof HasType) {
-      ((HasType) node).refreshType();
-    }
   }
 
   public static void activateTypes(Node node) {

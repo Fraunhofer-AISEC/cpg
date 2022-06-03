@@ -190,13 +190,11 @@ public class ImportResolver extends Pass {
         new IVisitor<>() {
           @Override
           public void visit(@NotNull Node child) {
-            if (child instanceof HasType) {
-              if (child instanceof RecordDeclaration) {
-                records.add((RecordDeclaration) child);
-                importables.putIfAbsent(child.getName(), (RecordDeclaration) child);
-              } else if (child instanceof EnumDeclaration) {
-                importables.putIfAbsent(child.getName(), (EnumDeclaration) child);
-              }
+            if (child instanceof RecordDeclaration) {
+              records.add((RecordDeclaration) child);
+              importables.putIfAbsent(child.getName(), (RecordDeclaration) child);
+            } else if (child instanceof EnumDeclaration) {
+              importables.putIfAbsent(child.getName(), (EnumDeclaration) child);
             }
           }
         });
