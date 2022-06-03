@@ -402,13 +402,8 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
             lang.processAttributes(declaration, ctx)
             sequence.addDeclaration(declaration)
         } else if (declSpecifier is CPPASTElaboratedTypeSpecifier) {
-            Util.warnWithFileLocation(
-                lang,
-                ctx,
-                log,
-                "Parsing elaborated type specifiers is not supported (yet)",
-                declSpecifier.javaClass
-            )
+            // In the future, we might want to have declaration chains, but for now, there is
+            // nothing to do
         } else if (declSpecifier is CPPASTEnumerationSpecifier) {
             // Handle it as an enum
             val declaration = handleEnum(ctx, declSpecifier)

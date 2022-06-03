@@ -33,6 +33,7 @@ import de.fraunhofer.aisec.cpg.TestUtils.assertRefersTo
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.bodyOrNull
+import de.fraunhofer.aisec.cpg.graph.byNameOrNull
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
@@ -56,7 +57,6 @@ import kotlin.collections.MutableMap
 import kotlin.collections.set
 import kotlin.test.*
 import kotlin.test.Test
-import org.slf4j.LoggerFactory
 
 internal class CXXLanguageFrontendTest : BaseTest() {
     @Test
@@ -402,7 +402,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         assertNotNull(statements)
         statements.forEach(
             Consumer { node: Statement ->
-                LOGGER.debug("{}", node)
+                log.debug("{}", node)
                 assertTrue(
                     node is DeclarationStatement ||
                         statements.indexOf(node) == statements.size - 1 && node is ReturnStatement
@@ -1249,7 +1249,24 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         assertNotNull((returnStmt.returnValue as? DeclaredReferenceExpression)?.refersTo)
     }
 
-    companion object {
-        private val LOGGER = LoggerFactory.getLogger(CXXLanguageFrontendTest::class.java)
+    @Test
+    @Throws(Exception::class)
+    fun testStruct() {
+        val file = File("src/test/resources/c/struct.c")
+        val tu = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
+
+        val main = tu.byNameOrNull<FunctionDeclaration>("main")
+        assertNotNull(main)
+
+        val myStruct = tu.byNameOrNull<RecordDeclaration>("MyStruct")
+        assertNotNull(myStruct)
+
+        val field = myStruct.byNameOrNull<FieldDeclaration>("field")
+        assertNotNull(field)
+
+        val s = main.bodyOrNull<DeclarationStatement>()?.singleDeclaration as? VariableDeclaration
+        assertNotNull(s)
+
+        assertEquals(myStruct, (s.type as? ObjectType)?.recordDeclaration)
     }
 }
