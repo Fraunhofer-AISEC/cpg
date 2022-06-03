@@ -129,7 +129,9 @@ public class ObjectType extends Type implements HasType.SecondaryTypeEdge {
     this.recordDeclaration = recordDeclaration;
   }
 
-  /** @return PointerType to a ObjectType, e.g. int* */
+  /**
+   * @return PointerType to a ObjectType, e.g. int*
+   */
   @Override
   public PointerType reference(PointerType.PointerOrigin pointerOrigin) {
     return new PointerType(this, pointerOrigin);
