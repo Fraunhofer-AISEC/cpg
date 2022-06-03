@@ -96,13 +96,14 @@ public class TypeHierarchyResolver extends Pass {
   }
 
   protected void findRecordsAndEnums(Node node) {
-    if (node instanceof RecordDeclaration) {
-      recordMap.putIfAbsent(node.getName(), (RecordDeclaration) node);
-    } else if (node instanceof EnumDeclaration) {
-      enums.add((EnumDeclaration) node);
-    }
-    for (var child : SubgraphWalker.getAstChildren(node)) {
-      findRecordsAndEnums(child);
+    // Flatten the AST structure and look for records and enums
+    var flat = SubgraphWalker.flattenAST(node);
+    for (var child : flat) {
+      if (child instanceof RecordDeclaration) {
+        recordMap.putIfAbsent(child.getName(), (RecordDeclaration) child);
+      } else if (child instanceof EnumDeclaration) {
+        enums.add((EnumDeclaration) child);
+      }
     }
   }
 

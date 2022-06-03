@@ -30,13 +30,15 @@ import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend;
 import de.fraunhofer.aisec.cpg.graph.*;
 import de.fraunhofer.aisec.cpg.graph.declarations.*;
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType;
-import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker;
+import de.fraunhofer.aisec.cpg.processing.IVisitor;
+import de.fraunhofer.aisec.cpg.processing.strategy.Strategy;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.checkerframework.checker.nullness.qual.Nullable;
+import org.jetbrains.annotations.NotNull;
 
 public class ImportResolver extends Pass {
 
@@ -182,14 +184,21 @@ public class ImportResolver extends Pass {
   }
 
   protected void findImportables(Node node) {
-    if (node instanceof RecordDeclaration) {
-      records.add((RecordDeclaration) node);
-      importables.putIfAbsent(node.getName(), (RecordDeclaration) node);
-    } else if (node instanceof EnumDeclaration) {
-      importables.putIfAbsent(node.getName(), (EnumDeclaration) node);
-    }
-    for (var child : SubgraphWalker.getAstChildren(node)) {
-      findImportables(child);
-    }
+    // Using a visitor to avoid loops in the AST
+    node.accept(
+        Strategy::AST_FORWARD,
+        new IVisitor<>() {
+          @Override
+          public void visit(@NotNull Node child) {
+            if (child instanceof HasType) {
+              if (child instanceof RecordDeclaration) {
+                records.add((RecordDeclaration) child);
+                importables.putIfAbsent(child.getName(), (RecordDeclaration) child);
+              } else if (child instanceof EnumDeclaration) {
+                importables.putIfAbsent(child.getName(), (EnumDeclaration) child);
+              }
+            }
+          }
+        });
   }
 }

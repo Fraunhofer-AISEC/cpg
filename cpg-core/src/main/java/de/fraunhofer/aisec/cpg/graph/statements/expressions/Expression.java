@@ -147,14 +147,14 @@ public abstract class Expression extends Statement implements HasType {
 
     // TODO: Why do we need this loop? Shouldn't the condition be ensured by the previous line
     // getting the common type??
-    Set<Type> newSubtypes = new HashSet<>();
+    /*Set<Type> newSubtypes = new HashSet<>();
     for (var s : subTypes) {
       if (TypeManager.getInstance().isSupertypeOf(this.type, s)) {
         newSubtypes.add(TypeManager.getInstance().registerType(s));
       }
     }
 
-    setPossibleSubTypes(newSubtypes);
+    setPossibleSubTypes(newSubtypes);*/
 
     if (Objects.equals(oldType, type)) {
       // Nothing changed, so we do not have to notify the listeners.

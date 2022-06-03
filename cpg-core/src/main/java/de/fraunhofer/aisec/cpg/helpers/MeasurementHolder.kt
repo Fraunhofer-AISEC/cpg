@@ -140,6 +140,7 @@ constructor(
 
     private val start: Instant
 
+    /** Stops this benchmark and adds its measurement to the its [StatisticsHolder]. */
     fun stop() {
         addMeasurement()
     }
