@@ -49,9 +49,6 @@ class StatementHandler(lang: CXXLanguageFrontend) :
 
     override fun handleNode(node: IASTStatement): Statement? {
         return when (node) {
-            is CPPASTRangeBasedForStatement -> handleForEachStatement(node)
-            is CPPASTTryBlockStatement -> handleTryBlockStatement(node)
-            is CPPASTCatchHandler -> handleCatchHandler(node)
             is IASTCompoundStatement -> handleCompoundStatement(node)
             is IASTReturnStatement -> handleReturnStatement(node)
             is IASTDeclarationStatement -> handleDeclarationStatement(node)
@@ -69,6 +66,9 @@ class StatementHandler(lang: CXXLanguageFrontend) :
             is IASTNullStatement -> handleEmptyStatement(node)
             is IASTGotoStatement -> handleGotoStatement(node)
             is IASTProblemStatement -> handleProblemStatement(node)
+            is CPPASTRangeBasedForStatement -> handleForEachStatement(node)
+            is CPPASTTryBlockStatement -> handleTryBlockStatement(node)
+            is CPPASTCatchHandler -> handleCatchHandler(node)
             else -> {
                 return ProblemExpression("no handler found for ${node.javaClass.name}")
             }

@@ -25,8 +25,6 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.cpp
 
-import de.fraunhofer.aisec.cpg.frontends.Handler
-import de.fraunhofer.aisec.cpg.frontends.HandlerInterface
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.ParamVariableDeclaration
@@ -36,29 +34,23 @@ import de.fraunhofer.aisec.cpg.graph.types.TypeParser
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import java.util.function.Supplier
 import java.util.stream.Collectors
-import org.eclipse.cdt.core.dom.ast.IASTArrayModifier
-import org.eclipse.cdt.core.dom.ast.IASTParameterDeclaration
-import org.eclipse.cdt.core.dom.ast.IASTPointerOperator
+import org.eclipse.cdt.core.dom.ast.*
 import org.eclipse.cdt.internal.core.dom.parser.c.CASTParameterDeclaration
 import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTArrayDeclarator
-import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTInitializerList
 import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTParameterDeclaration
+import org.eclipse.cdt.internal.core.model.ASTStringUtil
 
 class ParameterDeclarationHandler(lang: CXXLanguageFrontend) :
-    Handler<Declaration?, IASTParameterDeclaration, CXXLanguageFrontend?>(
-        Supplier { ProblemDeclaration() },
-        lang
-    ) {
+    CXXHandler<Declaration?, IASTParameterDeclaration>(Supplier(::ProblemDeclaration), lang) {
 
-    init {
-        map[CPPASTParameterDeclaration::class.java] =
-            HandlerInterface { ctx: IASTParameterDeclaration ->
-                handleParameterDeclaration(ctx as CPPASTParameterDeclaration)
+    override fun handleNode(node: IASTParameterDeclaration): Declaration {
+        return when (node) {
+            is CPPASTParameterDeclaration -> handleParameterDeclaration(node)
+            is CASTParameterDeclaration -> handleParameterDeclaration(node)
+            else -> {
+                return ProblemDeclaration("no handler found for ${node.javaClass.name}")
             }
-        map[CASTParameterDeclaration::class.java] =
-            HandlerInterface { ctx: IASTParameterDeclaration ->
-                handleParameterDeclaration(ctx as CASTParameterDeclaration)
-            }
+        }
     }
 
     private fun handleParameterDeclaration(
@@ -74,14 +66,12 @@ class ParameterDeclarationHandler(lang: CXXLanguageFrontend) :
                 .map { obj: IASTPointerOperator -> obj.rawSignature }
                 .collect(Collectors.joining())
         if (ctx.declarator is CPPASTArrayDeclarator &&
-                ctx.declarator.initializer is CPPASTInitializerList
+                ctx.declarator.initializer is IASTInitializerList
         ) {
             // narrow down array type to size of initializer list expression
             typeAdjustment +=
-                ("[" +
-                    (ctx.declarator.initializer as CPPASTInitializerList).initializers.size +
-                    "]")
-        } else if (ctx.declarator is CPPASTArrayDeclarator &&
+                ("[" + (ctx.declarator.initializer as IASTInitializerList).initializers.size + "]")
+        } else if (ctx.declarator is IASTArrayDeclarator &&
                 ctx.declarator.initializer is Literal<*> &&
                 (ctx.declarator.initializer as Literal<*>).value is String
         ) {
@@ -90,9 +80,9 @@ class ParameterDeclarationHandler(lang: CXXLanguageFrontend) :
                 ("[" +
                     (((ctx.declarator.initializer as Literal<*>).value as String).length + 1) +
                     "]")
-        } else if (ctx.declarator is CPPASTArrayDeclarator) {
+        } else if (ctx.declarator is IASTArrayDeclarator) {
             typeAdjustment +=
-                mutableListOf(*(ctx.declarator as CPPASTArrayDeclarator).arrayModifiers)
+                mutableListOf(*(ctx.declarator as IASTArrayDeclarator).arrayModifiers)
                     .stream()
                     .map { obj: IASTArrayModifier -> obj.rawSignature }
                     .collect(Collectors.joining())
@@ -106,10 +96,18 @@ class ParameterDeclarationHandler(lang: CXXLanguageFrontend) :
             )
         if (typeAdjustment.isNotEmpty()) {
             paramVariableDeclaration.type =
-                TypeParser.createFrom(ctx.declSpecifier.toString() + typeAdjustment, true, lang)
+                TypeParser.createFrom(
+                    ASTStringUtil.getSignatureString(ctx.declSpecifier, null) + typeAdjustment,
+                    true,
+                    lang
+                )
         } else {
             paramVariableDeclaration.type =
-                TypeParser.createFrom(ctx.declSpecifier.toString(), true, lang)
+                TypeParser.createFrom(
+                    ASTStringUtil.getSignatureString(ctx.declSpecifier, null),
+                    true,
+                    lang
+                )
         }
 
         // Add default values

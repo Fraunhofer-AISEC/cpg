@@ -45,6 +45,7 @@ import org.eclipse.cdt.core.dom.ast.IASTNode
 import org.eclipse.cdt.core.dom.ast.IASTToken
 import org.eclipse.cdt.core.dom.ast.IASTTokenList
 import org.eclipse.cdt.core.dom.ast.gnu.c.GCCLanguage
+import org.eclipse.cdt.core.dom.ast.gnu.cpp.GPPLanguage
 import org.eclipse.cdt.core.index.IIndexFileLocation
 import org.eclipse.cdt.core.model.ILanguage
 import org.eclipse.cdt.core.parser.DefaultLogService
@@ -200,16 +201,24 @@ class CXXLanguageFrontend(config: TranslationConfiguration, scopeManager: ScopeM
         val opts = ILanguage.OPTION_PARSE_INACTIVE_CODE // | ILanguage.OPTION_ADD_COMMENTS;
         return try {
             var bench = Benchmark(this.javaClass, "Parsing sourcefile")
+
+            // Set parser language, based on file extension
+            val language =
+                if (file.extension == "c") {
+                    GCCLanguage.getDefault()
+                } else {
+                    GPPLanguage.getDefault()
+                }
+
             val translationUnit =
-                GCCLanguage.getDefault()
-                    .getASTTranslationUnit(
-                        content,
-                        scannerInfo,
-                        includeFileContentProvider,
-                        null,
-                        opts,
-                        log
-                    ) as ASTTranslationUnit
+                language.getASTTranslationUnit(
+                    content,
+                    scannerInfo,
+                    includeFileContentProvider,
+                    null,
+                    opts,
+                    log
+                ) as ASTTranslationUnit
             val length = translationUnit.length
             LOGGER.info(
                 "Parsed {} bytes in ${file.name} corresponding roughly to {} LoC",

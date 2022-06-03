@@ -890,7 +890,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
 
         for (d in body.statements) {
             if (expected.containsKey(d.code)) {
-                assertEquals(expected[d.code], d.location!!.region, d.code)
+                assertEquals(expected[d.code], d.location?.region, d.code)
                 expected.remove(d.code)
             }
         }
@@ -900,7 +900,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
     @Test
     @Throws(Exception::class)
     fun testDesignatedInitializer() {
-        val file = File("src/test/resources/components/designatedInitializer.c")
+        val file = File("src/test/resources/components/designatedInitializer.cpp")
         val declaration = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
 
         // should be four method nodes

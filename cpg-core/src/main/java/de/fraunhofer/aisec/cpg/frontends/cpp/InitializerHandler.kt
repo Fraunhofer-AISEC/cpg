@@ -25,50 +25,46 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.cpp
 
-import de.fraunhofer.aisec.cpg.frontends.Handler
-import de.fraunhofer.aisec.cpg.frontends.HandlerInterface
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpression
 import java.util.function.Supplier
+import org.eclipse.cdt.core.dom.ast.IASTEqualsInitializer
 import org.eclipse.cdt.core.dom.ast.IASTInitializer
+import org.eclipse.cdt.core.dom.ast.IASTInitializerList
 import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTConstructorInitializer
-import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTEqualsInitializer
-import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTInitializerList
 
 class InitializerHandler(lang: CXXLanguageFrontend) :
-    Handler<Expression?, IASTInitializer, CXXLanguageFrontend?>(
-        Supplier { ProblemExpression() },
-        lang
-    ) {
+    CXXHandler<Expression?, IASTInitializer>(Supplier(::ProblemExpression), lang) {
 
-    init {
-        map[CPPASTConstructorInitializer::class.java] = HandlerInterface { ctx: IASTInitializer ->
-            handleConstructorInitializer(ctx as CPPASTConstructorInitializer)
-        }
-        map[CPPASTEqualsInitializer::class.java] = HandlerInterface { ctx: IASTInitializer ->
-            handleEqualsInitializer(ctx as CPPASTEqualsInitializer)
-        }
-
-        /* Todo Initializer List is handled in ExpressionsHandler that actually handles InitializerClauses often used where
-            one expects an expression.
-        */ map[CPPASTInitializerList::class.java] =
-            HandlerInterface { ctx: IASTInitializer ->
-                lang.expressionHandler.handle(ctx as CPPASTInitializerList)
+    override fun handleNode(node: IASTInitializer): Expression {
+        return when (node) {
+            is IASTEqualsInitializer -> handleEqualsInitializer(node)
+            // TODO: Initializer List is handled in ExpressionsHandler that actually handles
+            // InitializerClauses often used where
+            //  one expects an expression.
+            is IASTInitializerList -> lang.expressionHandler.handle(node) as Expression
+            is CPPASTConstructorInitializer -> handleConstructorInitializer(node)
+            else -> {
+                return ProblemExpression("no handler found for ${node.javaClass.name}")
             }
+        }
     }
 
     private fun handleConstructorInitializer(ctx: CPPASTConstructorInitializer): Expression {
         val constructExpression = NodeBuilder.newConstructExpression(ctx.rawSignature)
+
         for ((i, argument) in ctx.arguments.withIndex()) {
             val arg = lang.expressionHandler.handle(argument)
             arg!!.argumentIndex = i
             constructExpression.addArgument(arg)
         }
+
         return constructExpression
     }
 
-    private fun handleEqualsInitializer(ctx: CPPASTEqualsInitializer): Expression? {
+    private fun handleEqualsInitializer(ctx: IASTEqualsInitializer): Expression {
         return lang.expressionHandler.handle(ctx.initializerClause)
+            ?: return NodeBuilder.newProblemExpression("could not parse initializer clause")
     }
 }

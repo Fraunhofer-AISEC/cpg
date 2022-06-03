@@ -50,11 +50,11 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
 
     override fun handleNode(node: IASTNameOwner): Declaration? {
         return when (node) {
-            is CPPASTDeclarator -> handleDeclarator(node)
-            is CPPASTArrayDeclarator -> handleDeclarator(node)
-            is IASTFieldDeclarator -> handleFieldDeclarator(node)
             is IASTStandardFunctionDeclarator -> handleFunctionDeclarator(node)
-            is CPPASTCompositeTypeSpecifier -> handleCompositeTypeSpecifier(node)
+            is IASTFieldDeclarator -> handleFieldDeclarator(node)
+            is IASTDeclarator -> handleDeclarator(node)
+            is IASTCompositeTypeSpecifier -> handleCompositeTypeSpecifier(node)
+            is CPPASTArrayDeclarator -> handleDeclarator(node)
             is CPPASTSimpleTypeTemplateParameter -> handleTemplateTypeParameter(node)
             else -> {
                 return ProblemDeclaration("no handler found for ${node.javaClass.name}")
@@ -64,13 +64,13 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
 
     private fun handleDeclarator(ctx: IASTDeclarator): Declaration? {
         // this is just a nested declarator, i.e. () wrapping the real declarator
-        if (ctx.initializer == null && ctx.nestedDeclarator is CPPASTDeclarator) {
+        if (ctx.initializer == null && ctx.nestedDeclarator is IASTDeclarator) {
             return handle(ctx.nestedDeclarator)
         }
         val name = ctx.name.toString()
 
         return if ((lang.scopeManager.currentScope is RecordScope ||
-                name.contains(lang.namespaceDelimiter)) && ctx is IASTFieldDeclarator
+                name.contains(lang.namespaceDelimiter))
         ) {
             // forward it to handleFieldDeclarator
             this.handleFieldDeclarator(ctx)
@@ -92,7 +92,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
         }
     }
 
-    private fun handleFieldDeclarator(ctx: IASTFieldDeclarator): FieldDeclaration {
+    private fun handleFieldDeclarator(ctx: IASTDeclarator): FieldDeclaration {
         val initializer = ctx.initializer?.let { lang.initializerHandler.handle(it) }
 
         val name = ctx.name.toString()
@@ -367,7 +367,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
         return result
     }
 
-    private fun handleCompositeTypeSpecifier(ctx: CPPASTCompositeTypeSpecifier): RecordDeclaration {
+    private fun handleCompositeTypeSpecifier(ctx: IASTCompositeTypeSpecifier): RecordDeclaration {
         val kind: String =
             when (ctx.key) {
                 IASTCompositeTypeSpecifier.k_struct -> "struct"
@@ -384,12 +384,16 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
                 true,
                 lang
             )
-        recordDeclaration.superClasses =
-            Arrays.stream(ctx.baseSpecifiers)
-                .map { b: ICPPASTBaseSpecifier ->
-                    TypeParser.createFrom(b.nameSpecifier.toString(), true, lang)
-                }
-                .collect(Collectors.toList())
+
+        // Handle c++ classes
+        if (ctx is CPPASTCompositeTypeSpecifier) {
+            recordDeclaration.superClasses =
+                Arrays.stream(ctx.baseSpecifiers)
+                    .map { b: ICPPASTBaseSpecifier ->
+                        TypeParser.createFrom(b.nameSpecifier.toString(), true, lang)
+                    }
+                    .collect(Collectors.toList())
+        }
 
         lang.scopeManager.addDeclaration(recordDeclaration)
 
@@ -398,6 +402,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
         lang.scopeManager.addDeclaration(recordDeclaration.getThis())
 
         processMembers(ctx)
+
         if (recordDeclaration.constructors.isEmpty()) {
             val constructorDeclaration =
                 NodeBuilder.newConstructorDeclaration(
@@ -432,7 +437,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
         return NodeBuilder.newTypeParamDeclaration(ctx.rawSignature, ctx.rawSignature)
     }
 
-    private fun processMembers(ctx: CPPASTCompositeTypeSpecifier) {
+    private fun processMembers(ctx: IASTCompositeTypeSpecifier) {
         for (member in ctx.members) {
             if (member is CPPASTVisibilityLabel) {
                 // TODO: parse visibility

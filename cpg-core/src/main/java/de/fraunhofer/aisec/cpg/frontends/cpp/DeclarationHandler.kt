@@ -44,20 +44,20 @@ import java.util.function.Supplier
 import java.util.stream.Collectors
 import org.eclipse.cdt.core.dom.ast.*
 import org.eclipse.cdt.core.dom.ast.IASTTranslationUnit.IDependencyTree.IASTInclusionNode
-import org.eclipse.cdt.internal.core.dom.parser.c.CASTTranslationUnit
 import org.eclipse.cdt.internal.core.dom.parser.cpp.*
+import org.eclipse.cdt.internal.core.model.ASTStringUtil
 
 class DeclarationHandler(lang: CXXLanguageFrontend) :
     CXXHandler<Declaration, IASTDeclaration>(Supplier(::ProblemDeclaration), lang) {
 
     override fun handleNode(node: IASTDeclaration): Declaration {
         return when (node) {
-            is CPPASTTemplateDeclaration -> handleTemplateDeclaration(node)
-            is CPPASTNamespaceDefinition -> handleNamespace(node)
-            is CPPASTUsingDirective -> handleUsingDirective(node)
             is IASTSimpleDeclaration -> handleSimpleDeclaration(node)
             is IASTFunctionDefinition -> handleFunctionDefinition(node)
             is IASTProblemDeclaration -> handleProblem(node)
+            is CPPASTTemplateDeclaration -> handleTemplateDeclaration(node)
+            is CPPASTNamespaceDefinition -> handleNamespace(node)
+            is CPPASTUsingDirective -> handleUsingDirective(node)
             else -> {
                 return ProblemDeclaration("no handler found for ${node.javaClass.name}")
             }
@@ -96,7 +96,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
     }
 
     private fun handleFunctionDefinition(ctx: IASTFunctionDefinition): Declaration {
-        // Todo: A problem with cpp functions is that we cannot know if they may throw an exception
+        // TODO: A problem with cpp functions is that we cannot know if they may throw an exception
         //  as throw(...) is not compiler enforced (Problem for TryStatement)
         val declarator = lang.declaratorHandler.handle(ctx.declarator)
 
@@ -368,43 +368,47 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
         // check, whether the declaration specifier also contains declarations, i.e. class
         // definitions
         val declSpecifier = ctx.declSpecifier
-        if (declSpecifier is CPPASTCompositeTypeSpecifier) {
-            val declaration =
-                lang.declaratorHandler.handle(ctx.declSpecifier as CPPASTCompositeTypeSpecifier)
+        when (declSpecifier) {
+            is IASTCompositeTypeSpecifier -> {
+                val declaration =
+                    lang.declaratorHandler.handle(ctx.declSpecifier as IASTCompositeTypeSpecifier)
 
-            // handle typedef
-            if (declaration!!.name.isEmpty() && ctx.rawSignature.trim().startsWith("typedef")) {
-                // CDT didn't find out the name due to this thing being a typedef. We need to fix
-                // this
-                val endOfDeclaration = ctx.rawSignature.lastIndexOf('}')
-                if (endOfDeclaration + 1 < ctx.rawSignature.length) {
-                    val parts =
-                        Util.splitLeavingParenthesisContents(
-                            ctx.rawSignature.substring(endOfDeclaration + 1),
-                            ","
-                        )
-                    val name =
-                        parts
-                            .stream()
-                            .filter { p: String -> !p.contains("*") && !p.contains("[") }
-                            .findFirst()
-                    name.ifPresent { s: String -> declaration.name = s.replace(";", "") }
+                // handle typedef
+                if (declaration!!.name.isEmpty() && ctx.rawSignature.trim().startsWith("typedef")) {
+                    // CDT didn't find out the name due to this thing being a typedef. We need to
+                    // fix this
+                    val endOfDeclaration = ctx.rawSignature.lastIndexOf('}')
+                    if (endOfDeclaration + 1 < ctx.rawSignature.length) {
+                        val parts =
+                            Util.splitLeavingParenthesisContents(
+                                ctx.rawSignature.substring(endOfDeclaration + 1),
+                                ","
+                            )
+                        val name =
+                            parts
+                                .stream()
+                                .filter { p: String -> !p.contains("*") && !p.contains("[") }
+                                .findFirst()
+                        name.ifPresent { s: String -> declaration.name = s.replace(";", "") }
+                    }
                 }
+                lang.processAttributes(declaration, ctx)
+                sequence.addDeclaration(declaration)
             }
-            lang.processAttributes(declaration, ctx)
-            sequence.addDeclaration(declaration)
-        } else if (declSpecifier is CPPASTElaboratedTypeSpecifier) {
-            // In the future, we might want to have declaration chains, but for now, there is
-            // nothing to do
-        } else if (declSpecifier is CPPASTEnumerationSpecifier) {
-            // Handle it as an enum
-            val declaration = handleEnum(ctx, declSpecifier)
+            is IASTElaboratedTypeSpecifier -> {
+                // In the future, we might want to have declaration chains, but for now, there is
+                // nothing to do
+            }
+            is IASTEnumerationSpecifier -> {
+                // Handle it as an enum
+                val declaration = handleEnum(ctx, declSpecifier)
 
-            sequence.addDeclaration(declaration)
-            lang.scopeManager.addDeclaration(declaration)
+                sequence.addDeclaration(declaration)
+                lang.scopeManager.addDeclaration(declaration)
 
-            // process attributes
-            lang.processAttributes(declaration, ctx)
+                // process attributes
+                lang.processAttributes(declaration, ctx)
+            }
         }
 
         if (declSpecifier is CPPASTNamedTypeSpecifier && declSpecifier.name is CPPASTTemplateId) {
@@ -643,15 +647,16 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
          */
         fun IASTDeclarator.getTypeString(declSpecifier: IASTDeclSpecifier): String {
             // use the declaration specifier as basis
-            val typeString = StringBuilder(declSpecifier.toString())
+            var typeString = ASTStringUtil.getSignatureString(declSpecifier, null)
 
             // append names, pointer operators and array modifiers and such
             for (node in this.children) {
                 if (node is IASTPointerOperator || node is IASTArrayModifier) {
-                    typeString.append(node.rawSignature)
+                    typeString += node.rawSignature
                 }
             }
-            return typeString.toString()
+
+            return typeString
         }
     }
 }

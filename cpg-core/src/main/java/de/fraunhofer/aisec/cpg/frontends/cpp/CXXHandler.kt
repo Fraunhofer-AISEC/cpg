@@ -26,18 +26,17 @@
 package de.fraunhofer.aisec.cpg.frontends.cpp
 
 import de.fraunhofer.aisec.cpg.frontends.Handler
+import de.fraunhofer.aisec.cpg.graph.Node
 import java.util.function.Supplier
 import org.eclipse.cdt.internal.core.dom.parser.ASTNode
 
-abstract class CXXHandler<S, T>(configConstructor: Supplier<S>, lang: CXXLanguageFrontend) :
+abstract class CXXHandler<S : Node?, T>(configConstructor: Supplier<S>, lang: CXXLanguageFrontend) :
     Handler<S, T, CXXLanguageFrontend>(configConstructor, lang) {
     /**
      * We intentionally override the logic of [Handler.handle] because we do not want the map-based
      * logic, but rather want to make use of the Kotlin-when syntax.
      */
     override fun handle(ctx: T): S? {
-        // If we do not want to load includes into the CPG and the current fileLocation was included
-
         // If we do not want to load includes into the CPG and the current fileLocation was included
         if (!lang.config.loadIncludes && ctx is ASTNode) {
             val astNode = ctx as ASTNode
@@ -49,7 +48,18 @@ abstract class CXXHandler<S, T>(configConstructor: Supplier<S>, lang: CXXLanguag
             }
         }
 
-        return handleNode(ctx)
+        val node = handleNode(ctx)
+
+        // The language frontend might set a location, which we should respect. Otherwise, we will
+        // set the location here.
+        if (node != null && node.location == null) {
+            lang.setCodeAndRegion<S, T>(node, ctx)
+        }
+
+        lang.setComment(node, ctx)
+        lang.process(node, ctx)
+
+        return node
     }
 
     abstract fun handleNode(node: T): S

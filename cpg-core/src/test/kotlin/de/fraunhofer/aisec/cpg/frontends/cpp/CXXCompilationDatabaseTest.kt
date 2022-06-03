@@ -105,6 +105,7 @@ class CXXCompilationDatabaseTest {
 
         val s0 = mainFunc.getBodyStatementAs(0, ReturnStatement::class.java)
         assertNotNull(s0)
+
         val retVal = s0.returnValue as Literal<*>
         assertEquals(retVal.value, 1)
     }
