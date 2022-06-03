@@ -35,7 +35,7 @@ plugins {
 
     id("org.sonarqube") version "3.3"
     id("com.diffplug.spotless") version "6.6.1"
-    kotlin("jvm") version "1.6.20" apply false
+    kotlin("jvm") version "1.6.21" apply false
 }
 
 allprojects {
