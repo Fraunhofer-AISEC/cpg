@@ -32,6 +32,7 @@ import de.fraunhofer.aisec.cpg.TestUtils.analyzeWithBuilder
 import de.fraunhofer.aisec.cpg.TestUtils.assertRefersTo
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.bodyOrNull
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
@@ -1228,6 +1229,24 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         assertEquals(classSThisExpression.refersTo, classSThis)
         assertNotEquals(classTFoo, classSFoo)
         assertNotEquals(classTThis, classSThis)
+    }
+
+    @Test
+    @Throws(Exception::class)
+    fun testEnum() {
+        val file = File("src/test/resources/c/enum.c")
+        val tu = analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true)
+        // TU should only contains two AST declarations (EnumDeclaration and FunctionDeclaration),
+        // but NOT any EnumConstantDeclarations
+        assertEquals(2, tu.declarations.size)
+
+        val main =
+            tu.getDeclarationsByName("main", FunctionDeclaration::class.java).iterator().next()
+        assertNotNull(main)
+
+        val returnStmt = main.bodyOrNull<ReturnStatement>()
+        assertNotNull(returnStmt)
+        assertNotNull((returnStmt.returnValue as? DeclaredReferenceExpression)?.refersTo)
     }
 
     companion object {

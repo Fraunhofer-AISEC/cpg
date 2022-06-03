@@ -374,23 +374,24 @@ class ScopeManager {
      *
      * @param declaration
      */
-    fun addDeclaration(declaration: Declaration?) {
+    @JvmOverloads
+    fun addDeclaration(declaration: Declaration?, addToAST: Boolean = true) {
         when (declaration) {
             is ProblemDeclaration,
             is IncludeDeclaration -> {
                 // directly add problems and includes to the global scope
-                this.globalScope?.addDeclaration(declaration)
+                this.globalScope?.addDeclaration(declaration, addToAST)
             }
             is ValueDeclaration -> {
                 val scope = this.firstScopeIsInstanceOrNull<ValueDeclarationScope>()
-                scope?.addValueDeclaration(declaration)
+                scope?.addValueDeclaration(declaration, addToAST)
             }
             is RecordDeclaration,
             is NamespaceDeclaration,
             is EnumDeclaration,
             is TemplateDeclaration -> {
                 val scope = this.firstScopeIsInstanceOrNull<StructureDeclarationScope>()
-                scope?.addDeclaration(declaration)
+                scope?.addDeclaration(declaration, addToAST)
             }
         }
     }

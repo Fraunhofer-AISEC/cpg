@@ -75,9 +75,9 @@ public class ValueDeclarationScope extends Scope {
     this.typedefs.add(typedef);
   }
 
-  public void addDeclaration(@NonNull Declaration declaration) {
+  public void addDeclaration(@NonNull Declaration declaration, boolean addToAST) {
     if (declaration instanceof ValueDeclaration) {
-      addValueDeclaration((ValueDeclaration) declaration);
+      addValueDeclaration((ValueDeclaration) declaration, addToAST);
     } else {
       errorWithFileLocation(
           declaration, log, "A non ValueDeclaration can not be added to a DeclarationScope");
@@ -89,18 +89,21 @@ public class ValueDeclarationScope extends Scope {
    * the outer
    *
    * @param valueDeclaration the {@link ValueDeclaration}
+   * @param addToAST whether to also add the declaration to the AST of its holder.
    */
-  void addValueDeclaration(ValueDeclaration valueDeclaration) {
+  void addValueDeclaration(ValueDeclaration valueDeclaration, boolean addToAST) {
     this.valueDeclarations.add(valueDeclaration);
 
-    if (astNode instanceof DeclarationHolder) {
-      var holder = (DeclarationHolder) astNode;
-      holder.addDeclaration(valueDeclaration);
-    } else {
-      errorWithFileLocation(
-          valueDeclaration,
-          log,
-          "Trying to add a value declaration to a scope which does not have a declaration holder AST node");
+    if (addToAST) {
+      if (astNode instanceof DeclarationHolder) {
+        var holder = (DeclarationHolder) astNode;
+        holder.addDeclaration(valueDeclaration);
+      } else {
+        errorWithFileLocation(
+            valueDeclaration,
+            log,
+            "Trying to add a value declaration to a scope which does not have a declaration holder AST node");
+      }
     }
     /*
      There are nodes where we do not set the declaration when storing them in the scope,

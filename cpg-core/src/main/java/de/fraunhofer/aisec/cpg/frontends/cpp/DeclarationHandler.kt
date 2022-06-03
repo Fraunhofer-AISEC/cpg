@@ -409,8 +409,18 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
                 "Parsing elaborated type specifiers is not supported (yet)",
                 declSpecifier.javaClass
             )
-        }
-        if (declSpecifier is CPPASTNamedTypeSpecifier && declSpecifier.name is CPPASTTemplateId) {
+        } else if (declSpecifier is CPPASTEnumerationSpecifier) {
+            // Handle it as an enum
+            val declaration = handleEnum(ctx, declSpecifier)
+
+            sequence.addDeclaration(declaration)
+            lang.scopeManager.addDeclaration(declaration)
+
+            // process attributes
+            lang.processAttributes(declaration, ctx)
+        } else if (declSpecifier is CPPASTNamedTypeSpecifier &&
+                declSpecifier.name is CPPASTTemplateId
+        ) {
             handleTemplateUsage(declSpecifier, ctx, sequence)
         } else {
             for (declarator in ctx.declarators) {
@@ -432,6 +442,44 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
         }
 
         return simplifySequence(sequence)
+    }
+
+    private fun handleEnum(
+        ctx: CPPASTSimpleDeclaration,
+        declSpecifier: CPPASTEnumerationSpecifier
+    ): EnumDeclaration {
+        val entries = mutableListOf<EnumConstantDeclaration>()
+        val enum =
+            NodeBuilder.newEnumDeclaration(
+                name = declSpecifier.name.toString(),
+                location = lang.getLocationFromRawNode(ctx),
+                lang = lang
+            )
+
+        // Loop through its members
+        for (enumerator in declSpecifier.enumerators) {
+            val enumConst =
+                NodeBuilder.newEnumConstantDeclaration(
+                    enumerator.name.toString(),
+                    lang.getCodeFromRawNode(enumerator),
+                    lang.getLocationFromRawNode(enumerator),
+                    lang = lang
+                )
+
+            // In C/C++, default enums are of type int
+            enumConst.type = TypeParser.createFrom("int", false)
+
+            // We need to make them visible to the enclosing scope. However, we do NOT
+            // want to add it to the AST of the enclosing scope, but to the AST of the
+            // EnumDeclaration
+            lang.scopeManager.addDeclaration(enumConst, false)
+
+            entries += enumConst
+        }
+
+        enum.entries = entries
+
+        return enum
     }
 
     /**
